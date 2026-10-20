@@ -152,30 +152,32 @@ final class ItemRepository extends WorkshopRepository
         // Kurs EUR (WDT w PLN przeliczane jak w Rentowności) : średnia cena kartonu i koszt surowców w €.
         $rate = (float) ($this->all('SELECT exchange_rate_euro FROM erp_company_other_settings ORDER BY id LIMIT 1')[0]['exchange_rate_euro'] ?? 0) ?: 1.0;
         $params = [$rate, $rate, $days];
-        $where = "i.item_type = 'product'";
-        if ($groupId !== null) { $where .= ' AND s.id_primary_group = ?'; $params[] = $groupId; }
-        return $this->all("SELECT i.id, i.id_final_product, fp.name, fp.id_category, cp.name AS category, fp.ppc, fp.cpp, fp.active AS erp_active,
-                                  s.mode, s.never_frozen, s.stock_min, s.stock_max, s.stock_calc_at, s.id_primary_group, s.status,
+        // Wszystkie aktywne produkty ERP (bez karty : MTO, grupa z działu ERP) oraz karty produktów nieaktywnych.
+        $where = '(i.id IS NOT NULL OR fp.active = 1)';
+        if ($groupId !== null) { $where .= ' AND COALESCE(s.id_primary_group, dg.id) = ?'; $params[] = $groupId; }
+        return $this->all("SELECT i.id, fp.id AS id_final_product, fp.name, fp.id_category, cp.name AS category, fp.ppc, fp.cpp, fp.active AS erp_active,
+                                  s.mode, s.never_frozen, s.stock_min, s.stock_max, s.stock_calc_at, COALESCE(s.id_primary_group, dg.id) AS id_primary_group, s.status,
                                   COALESCE(w.cartons, 0) AS shipped_cartons, COALESCE(w.shops, 0) AS shops, COALESCE(w.value_eur, 0) AS shipped_value_eur,
                                   pr.precalculated_material_cost / ? AS material_cost_eur,
                                   COALESCE(cs.cartons, 0) AS free_cartons, COALESCE(oo.cartons, 0) AS ordered_cartons, COALESCE(mo.pieces, 0) AS in_production
-                           FROM tfb_prod_item i
-                           JOIN final_product fp ON fp.id = i.id_final_product
+                           FROM final_product fp
+                           LEFT JOIN tfb_prod_item i ON i.id_final_product = fp.id AND i.item_type = 'product'
                            LEFT JOIN category_product cp ON cp.id = fp.id_category
                            LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id
+                           LEFT JOIN (SELECT id_section, MIN(id) AS id FROM tfb_prod_group WHERE active = 1 AND id_section IS NOT NULL GROUP BY id_section) dg ON dg.id_section = fp.id_section
                            LEFT JOIN product_recipe pr ON pr.id = fp.id_recipe
                            LEFT JOIN (SELECT p.id_product, SUM(p.quantity) AS cartons, COUNT(DISTINCT w.id_customer) AS shops,
                                              SUM(CASE WHEN UPPER(w.currency) = 'PLN' THEN p.quantity * p.price_carton / ? ELSE p.quantity * p.price_carton END) AS value_eur
                                       FROM document_wdt w JOIN document_wdt_product p ON p.id_document_wdt = w.id
                                       WHERE w.established_date >= CURDATE() - INTERVAL ? DAY AND w.established_date < CURDATE()
                                         AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
-                                      GROUP BY p.id_product) w ON w.id_product = i.id_final_product
-                           LEFT JOIN (SELECT id_product, COUNT(*) AS cartons FROM carton_stock WHERE status = 1 GROUP BY id_product) cs ON cs.id_product = i.id_final_product
+                                      GROUP BY p.id_product) w ON w.id_product = fp.id
+                           LEFT JOIN (SELECT id_product, COUNT(*) AS cartons FROM carton_stock WHERE status = 1 GROUP BY id_product) cs ON cs.id_product = fp.id
                            LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co JOIN customer_order_product cop ON cop.id_order = co.id
-                                      WHERE co.id_wdt IS NULL AND co.status IN (1, 2) GROUP BY cop.id_product) oo ON oo.id_product = i.id_final_product
+                                      WHERE co.id_wdt IS NULL AND co.status IN (1, 2) GROUP BY cop.id_product) oo ON oo.id_product = fp.id
                            LEFT JOIN (SELECT id_item, SUM(quantity) AS pieces FROM tfb_prod_order WHERE origin = 'MTS' AND status IN ('planned', 'released', 'in_progress') GROUP BY id_item) mo ON mo.id_item = i.id
                            WHERE {$where}
-                           ORDER BY cp.name IS NULL, cp.name, fp.name, i.id", $params);
+                           ORDER BY cp.name IS NULL, cp.name, fp.name, fp.id", $params);
     }
 
     /** Listy wyboru kroku « Produkt » : kategorie produktów i działy produkcji ERP. */

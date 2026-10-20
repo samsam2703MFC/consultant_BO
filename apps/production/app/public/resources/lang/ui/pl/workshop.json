@@ -308,5 +308,7 @@
   "st.bulk_skipped": "Pominięte bez sprzedaży i bez stanu maks. : {n}.",
   "col.category": "Kategoria",
   "total": "Razem",
-  "st.no_price_n": "{n} bez ceny"
+  "st.no_price_n": "{n} bez ceny",
+  "st.no_card": "bez karty",
+  "st.no_card_help": "Produkt nie ma jeszcze karty produkcyjnej : powstanie przy pierwszej zmianie (MTS, stany)."
 }

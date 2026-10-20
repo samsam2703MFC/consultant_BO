@@ -107,7 +107,9 @@ final class ItemService
             $key = $r['id_category'] !== null ? (int) $r['id_category'] : 0;
             $categories[$key] ??= ['id' => $key ?: null, 'name' => $r['category'], 'items' => [], 'totals' => $emptyTotals];
             $item = [
-                'id' => (int) $r['id'], 'final_product_id' => (int) $r['id_final_product'], 'name' => $r['name'], 'erp_active' => (bool) $r['erp_active'],
+                // Produkt bez karty : id null (karta powstaje przy pierwszym przełączeniu na MTS / zmianie stanów).
+                'id' => $r['id'] !== null ? (int) $r['id'] : null, 'has_card' => $r['id'] !== null,
+                'final_product_id' => (int) $r['id_final_product'], 'name' => $r['name'], 'erp_active' => (bool) $r['erp_active'],
                 'group_id' => $r['id_primary_group'] !== null ? (int) $r['id_primary_group'] : null, 'status' => $r['status'] ?? 'draft',
                 'mode' => $r['mode'] ?? 'MTO', 'never_frozen' => (bool) ($r['never_frozen'] ?? false), 'ppc' => $ppc, 'cpp' => $cpp,
                 'stock_min' => $this->num($r['stock_min']), 'stock_max' => $this->num($r['stock_max']),

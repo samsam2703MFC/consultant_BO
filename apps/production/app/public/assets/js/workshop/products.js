@@ -106,8 +106,8 @@
         const lastCalc = (v) => v ? new Date(String(v).replace(' ', 'T')).toLocaleDateString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL') : '—';
         const row = (i) => {
             const noPpc = !i.ppc;
-            return `<tr data-id="${i.id}" class="${i.mode === 'MTS' ? 'tfb-stock-mts' : ''}">
-                <td><a href="#/item/${i.id}/4"><strong>${esc(i.name)}</strong></a>${i.erp_active ? '' : ` <span class="badge bg-secondary">${esc(t('erp.inactive'))}</span>`}
+            return `<tr data-fp="${i.final_product_id}" class="${i.mode === 'MTS' ? 'tfb-stock-mts' : ''}">
+                <td><a href="${i.id ? `#/item/${i.id}/4` : `#/product/${i.final_product_id}`}"><strong>${esc(i.name)}</strong></a>${i.erp_active ? '' : ` <span class="badge bg-secondary">${esc(t('erp.inactive'))}</span>`}${i.has_card ? '' : ` <span class="badge bg-light text-muted" title="${esc(t('st.no_card_help'))}">${esc(t('st.no_card'))}</span>`}
                     <div class="small text-muted">${esc(groupName(i.group_id))}${i.ppc ? ' · ' + esc(t('st.ppc', {ppc: i.ppc})) : ''}</div></td>
                 <td class="text-center"><div class="form-check form-switch d-inline-block m-0" title="${esc(i.never_frozen ? t('f.never_frozen') : t('st.toggle_help'))}">
                     <input class="form-check-input" type="checkbox" role="switch" data-mts ${i.mode === 'MTS' ? 'checked' : ''} ${i.never_frozen ? 'disabled' : ''} aria-label="${esc(t('mode.MTS'))}"></div>
@@ -170,10 +170,10 @@
                         <th class="text-end" title="${esc(t('st.col_target_help', {max: n(p.max_weeks)}))}">${esc(t('st.col_target'))}</th><th class="text-center">${esc(t('st.col_calc'))}</th></tr></thead>
                     <tbody>${c.items.map(row).join('')}</tbody></table></div></div></div>`).join('') || `<p class="text-muted">${esc(t('empty_list'))}</p>`}`;
         if (message) ui.notify(true, message);
-        const find = (id) => all.find(i => i.id === id);
+        const find = (fp) => all.find(i => i.final_product_id === fp);
         const save = async (item, body, ok) => {
             try {
-                await api.patch(`/produits/items/${item.id}/settings`, body);
+                await api.patch(`/produits/items/${await ensureCard(item)}/settings`, body);
                 const y = window.scrollY;
                 await renderStock(ok);
                 window.scrollTo(0, y);
@@ -181,8 +181,8 @@
             } catch (err) { fail(null, err); return false; }
         };
         el.querySelector('[data-group]').addEventListener('change', (e) => { location.hash = '#/stock' + (e.target.value ? '?group_id=' + e.target.value : ''); });
-        el.querySelectorAll('tr[data-id]').forEach(tr => {
-            const i = find(Number(tr.dataset.id));
+        el.querySelectorAll('tr[data-fp]').forEach(tr => {
+            const i = find(Number(tr.dataset.fp));
             tr.querySelector('[data-mts]').addEventListener('change', (e) => modeSwitch(e.target, i, save));
             tr.querySelectorAll('[data-stock]').forEach(input => input.addEventListener('change', () => {
                 const c = ui.num(input.value);
@@ -207,7 +207,7 @@
             let done = 0;
             for (const i of go) {
                 const body = mode === 'MTS' && i.stock_max === null ? {mode, ...suggested(i)} : {mode};
-                try { await api.patch(`/produits/items/${i.id}/settings`, body); done++; } catch (err) { /* produit suivant */ }
+                try { await api.patch(`/produits/items/${await ensureCard(i)}/settings`, body); done++; } catch (err) { /* produit suivant */ }
                 btn.textContent = `${done}/${go.length}`;
             }
             const y = window.scrollY;
@@ -242,6 +242,15 @@
             }
             await renderStock(t('st.recalc_done', {n: done}));
         });
+    }
+
+    // Produkt ERP bez karty : karta tworzona przy pierwszej zmianie (grupa domyślna z działu ERP).
+    async function ensureCard(i) {
+        if (i.id) return i.id;
+        const item = await api.post('/produits/items', {item_type: 'product', final_product_id: i.final_product_id});
+        i.id = item.id;
+        i.has_card = true;
+        return i.id;
     }
 
     // Stany ze sprzedaży (min = tygodnie min., maks. = tygodnie maks.), w sztukach.
@@ -287,8 +296,8 @@
                     <th class="text-end" title="${esc(t('lv.in_production_help'))}">${esc(t('lv.in_production'))}</th><th class="text-end" title="${esc(t('lv.available_help'))}">${esc(t('lv.available'))}</th>
                     <th class="text-end">${esc(t('lv.min'))}</th><th class="text-end">${esc(t('lv.max'))}</th>
                     <th class="text-end" title="${esc(t('lv.to_produce_help'))}">${esc(t('lv.to_produce'))}</th></tr></thead>
-                <tbody>${rows.map(i => `<tr data-id="${i.id}" class="${i.below_min ? 'tfb-level-low' : ''}">
-                    <td><a href="#/item/${i.id}/4"><strong>${esc(i.name)}</strong></a><div class="small text-muted">${esc(i.category)} · ${esc(groupName(i.group_id))}${i.ppc ? ' · ' + esc(t('st.ppc', {ppc: i.ppc})) : ''}</div></td>
+                <tbody>${rows.map(i => `<tr data-fp="${i.final_product_id}" class="${i.below_min ? 'tfb-level-low' : ''}">
+                    <td><a href="${i.id ? `#/item/${i.id}/4` : `#/product/${i.final_product_id}`}"><strong>${esc(i.name)}</strong></a><div class="small text-muted">${esc(i.category)} · ${esc(groupName(i.group_id))}${i.ppc ? ' · ' + esc(t('st.ppc', {ppc: i.ppc})) : ''}</div></td>
                     <td class="text-center"><div class="form-check form-switch d-inline-block m-0" title="${esc(i.never_frozen ? t('f.never_frozen') : t('st.toggle_help'))}">
                         <input class="form-check-input" type="checkbox" role="switch" data-mts ${i.mode === 'MTS' ? 'checked' : ''} ${i.never_frozen ? 'disabled' : ''} aria-label="${esc(t('mode.MTS'))}"></div></td>
                     <td class="text-end">${n(i.free_cartons)}</td>
@@ -307,7 +316,7 @@
         if (message) ui.notify(true, message);
         const save = async (item, body, ok) => {
             try {
-                await api.patch(`/produits/items/${item.id}/settings`, body);
+                await api.patch(`/produits/items/${await ensureCard(item)}/settings`, body);
                 const y = window.scrollY;
                 await renderLevels(ok);
                 window.scrollTo(0, y);
@@ -315,8 +324,8 @@
             } catch (err) { fail(null, err); return false; }
         };
         el.querySelector('[data-group]').addEventListener('change', (e) => { location.hash = '#/levels?' + new URLSearchParams({...(e.target.value ? {group_id: e.target.value} : {}), mode}); });
-        el.querySelectorAll('tr[data-id]').forEach(tr => {
-            const i = all.find(x => x.id === Number(tr.dataset.id));
+        el.querySelectorAll('tr[data-fp]').forEach(tr => {
+            const i = all.find(x => x.final_product_id === Number(tr.dataset.fp));
             tr.querySelector('[data-mts]').addEventListener('change', (e) => modeSwitch(e.target, i, save));
         });
     }
