@@ -907,3 +907,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T15:31:54Z e-mail contrôle qualité 19:00
 2026-10-20T15:39:15Z Audyt ERP 4, 6, 7
 2026-10-20T15:53:36Z Rail : zakładki BDO, PPWR, zwroty, archiwum
+2026-10-20T16:09:46Z Zapas MTS : wartość, kartony, palety wg grupy i kategorii
