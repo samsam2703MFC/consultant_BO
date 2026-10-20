@@ -82,6 +82,7 @@ require __DIR__ . '/../../src/connecteurs.php';
 require __DIR__ . '/../../src/mesure.php';
 require __DIR__ . '/../../src/taches_suivi.php';
 require __DIR__ . '/../../src/cq_mail.php';
+require __DIR__ . '/../../src/pointages_mail.php';
 require __DIR__ . '/../../src/controles_qualite.php';
 require __DIR__ . '/../../src/kpi_table.php';
 require __DIR__ . '/../../src/tablette.php';
