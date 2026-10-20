@@ -29,6 +29,18 @@ final class WeekController
         return new ApiResult($this->week->distribute($request->body(), $request->context));
     }
 
+    /** Godzina startu bloku w dniu (i stałej partii 📌 tego dnia tygodnia). */
+    public function time(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->week->time($request->body(), $request->context));
+    }
+
+    /** « Wyczyść tydzień » : wszystko z dni od dzisiaj z powrotem do « Do zrobienia ». */
+    public function clear(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->week->clear($request->body(), $request->context));
+    }
+
     /** 📌 « Co tydzień » : stała partia produktu w tym dniu tygodnia (albo odpięcie). */
     public function pin(ApiRequest $request): ApiResult
     {

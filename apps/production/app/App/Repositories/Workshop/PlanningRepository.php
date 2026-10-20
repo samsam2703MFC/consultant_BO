@@ -32,7 +32,7 @@ final class PlanningRepository extends WorkshopRepository
     /** Stałe partie co tydzień (📌) : produkt, dzień tygodnia ISO, ilość. */
     public function fixedRules(): array
     {
-        return $this->all('SELECT id, id_item, weekday, quantity FROM tfb_prod_fixed_batch ORDER BY id_item, weekday');
+        return $this->all('SELECT id, id_item, weekday, quantity, start_time FROM tfb_prod_fixed_batch ORDER BY id_item, weekday');
     }
 
     /** Lignes de commandes clients pas encore expédiées, à expédier entre deux dates. */

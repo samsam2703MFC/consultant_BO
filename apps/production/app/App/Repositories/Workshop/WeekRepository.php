@@ -8,10 +8,26 @@ final class WeekRepository extends WorkshopRepository
 {
     protected string $table = 'tfb_prod_week_slot';
 
-    /** @return list<array{id_item:string, work_date:string, quantity:string}> */
+    /** @return list<array{id_item:string, work_date:string, quantity:string, start_time:?string}> */
     public function slots(string $weekStart): array
     {
-        return $this->all('SELECT id_item, work_date, quantity FROM tfb_prod_week_slot WHERE week_start = ? ORDER BY work_date, id_item', [$weekStart]);
+        return $this->all('SELECT id_item, work_date, quantity, start_time FROM tfb_prod_week_slot WHERE week_start = ? ORDER BY work_date, id_item', [$weekStart]);
+    }
+
+    /** Godzina startu partii w dniu (NULL = bez godziny). */
+    public function setSlotTime(string $weekStart, int $itemId, string $day, ?string $time): void
+    {
+        $this->db->prepare('UPDATE tfb_prod_week_slot SET start_time = ? WHERE week_start = ? AND id_item = ? AND work_date = ?')->execute([$time, $weekStart, $itemId, $day]);
+    }
+
+    /** Zdejmuje produkty z dni od danego dnia (wracają do « Do zrobienia »). @param list<int> $itemIds */
+    public function clearFrom(string $weekStart, array $itemIds, string $fromDay): int
+    {
+        if (!$itemIds) return 0;
+        $in = implode(',', array_fill(0, count($itemIds), '?'));
+        $st = $this->db->prepare("DELETE FROM tfb_prod_week_slot WHERE week_start = ? AND work_date >= ? AND id_item IN ({$in})");
+        $st->execute([$weekStart, $fromDay, ...$itemIds]);
+        return $st->rowCount();
     }
 
     /** Ustawia ilość produktu na dzień ; 0 usuwa wiersz. */
@@ -66,13 +82,18 @@ final class WeekRepository extends WorkshopRepository
 
     public function fixedRule(int $itemId, int $weekday): ?array
     {
-        return $this->all('SELECT id, id_item, weekday, quantity FROM tfb_prod_fixed_batch WHERE id_item = ? AND weekday = ?', [$itemId, $weekday])[0] ?? null;
+        return $this->all('SELECT id, id_item, weekday, quantity, start_time FROM tfb_prod_fixed_batch WHERE id_item = ? AND weekday = ?', [$itemId, $weekday])[0] ?? null;
     }
 
-    public function saveFixedRule(int $itemId, int $weekday, float $quantity, ?int $userId): void
+    public function saveFixedRule(int $itemId, int $weekday, float $quantity, ?string $time, ?int $userId): void
     {
-        $this->db->prepare('INSERT INTO tfb_prod_fixed_batch (id_item, weekday, quantity, created_by) VALUES (?, ?, ?, ?)
-                            ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)')->execute([$itemId, $weekday, round($quantity, 3), $userId]);
+        $this->db->prepare('INSERT INTO tfb_prod_fixed_batch (id_item, weekday, quantity, start_time, created_by) VALUES (?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), start_time = VALUES(start_time)')->execute([$itemId, $weekday, round($quantity, 3), $time, $userId]);
+    }
+
+    public function setFixedRuleTime(int $itemId, int $weekday, ?string $time): void
+    {
+        $this->db->prepare('UPDATE tfb_prod_fixed_batch SET start_time = ? WHERE id_item = ? AND weekday = ?')->execute([$time, $itemId, $weekday]);
     }
 
     public function deleteFixedRule(int $itemId, int $weekday): void

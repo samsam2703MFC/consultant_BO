@@ -89,6 +89,10 @@ final class WeekService
         $this->tx->execute(function () use ($data, $p, $from, $to, $qty, $context, $itemId) {
             if ($from !== null) $this->repo->setSlot($data['start'], $itemId, $from, ($p['slots'][$from] ?? 0.0) - $qty, $context->userId);
             if ($to !== null) $this->repo->setSlot($data['start'], $itemId, $to, ($p['slots'][$to] ?? 0.0) + $qty, $context->userId);
+            // Cały blok na pusty dzień : godzina startu idzie razem z nim.
+            if ($from !== null && $to !== null && !isset($p['slots'][$to]) && isset($p['times'][$from]) && $qty >= ($p['slots'][$from] ?? 0.0) - self::EPS) {
+                $this->repo->setSlotTime($data['start'], $itemId, $to, $p['times'][$from] . ':00');
+            }
             $this->audit->record($context, 'move', 'week_slot', $itemId, ['week' => $data['start'], 'day' => $from, 'quantity' => round($qty, 3)],
                 ['week' => $data['start'], 'day' => $to, 'quantity' => round($qty, 3)]);
         });
@@ -121,7 +125,7 @@ final class WeekService
         if ($pinned && $qty <= self::EPS) throw ApiException::validation([['field' => 'day', 'code' => 'NOTHING_ON_DAY', 'params' => []]]);
         if (!$pinned && $rule === null) throw ApiException::validation([['field' => 'day', 'code' => 'NOT_PINNED', 'params' => []]]);
 
-        $this->tx->execute(function () use ($data, $itemId, $weekday, $day, $qty, $pinned, $rule, $context) {
+        $this->tx->execute(function () use ($data, $p, $itemId, $weekday, $day, $qty, $pinned, $rule, $context) {
             foreach ($this->repo->laterFixedWeeks($itemId, $weekday, $data['start']) as $w) {
                 if ((float) $w['placed'] > self::EPS) {
                     $slot = $this->repo->slotQuantity($w['week_start'], $itemId, $w['work_date']);
@@ -130,14 +134,75 @@ final class WeekService
                 $this->repo->deleteFixedWeek($w['week_start'], $itemId, $w['work_date']);
             }
             if ($pinned) {
-                $this->repo->saveFixedRule($itemId, $weekday, $qty, $context->userId);
+                $this->repo->saveFixedRule($itemId, $weekday, $qty, isset($p['times'][$day]) ? $p['times'][$day] . ':00' : null, $context->userId);
                 $this->repo->markFixedWeek($data['start'], $itemId, $day, $qty, 0.0, true);
             } else {
                 $this->repo->deleteFixedRule($itemId, $weekday);
+                // Blok już zdjęty z tego dnia (np. przeniesiony « co tydzień » na inny dzień) : partia tego dnia
+                // nie liczy się już w tym tygodniu ; blok, który jest na dniu, zostaje jak jest.
+                if ($qty <= self::EPS) $this->repo->deleteFixedWeek($data['start'], $itemId, $day);
             }
             $this->audit->record($context, $pinned ? 'pin' : 'unpin', 'fixed_batch', $itemId,
                 $rule ? ['weekday' => $weekday, 'quantity' => (float) $rule['quantity']] : null,
                 $pinned ? ['weekday' => $weekday, 'quantity' => round($qty, 3), 'week' => $data['start']] : null);
+        });
+        return $this->present($this->data($data['start'], $context, $now), $context, $now);
+    }
+
+    /**
+     * Godzina startu bloku w dniu (tydzień typowy) ; stała partia (📌) tego dnia tygodnia dostaje tę samą
+     * godzinę. time = null usuwa godzinę.
+     */
+    public function time(array $body, ApiContext $context, ?int $now = null): array
+    {
+        $now ??= time();
+        $v = (new Validator($body))->only(['date', 'item_id', 'day', 'time'])->date('date', true, false)->integer('item_id', true, 1)->date('day', true, false);
+        $clear = !array_key_exists('time', $body) || $body['time'] === null || $body['time'] === '';
+        if (!$clear) $v->time('time');
+        $v->throwIfInvalid();
+        $data = $this->data($this->weekStart($v->value('date')), $context, $now);
+        $itemId = (int) $v->value('item_id');
+        $p = $data['products'][$itemId] ?? throw ApiException::validation([['field' => 'item_id', 'code' => 'NOT_IN_WEEK', 'params' => []]]);
+        if (!$context->canInGroup('prod.gantt.move', $p['group_id'])) {
+            throw new ApiException('FORBIDDEN', 403, [], ['permission' => 'prod.gantt.move']);
+        }
+        $day = (string) $v->value('day');
+        if (($p['slots'][$day] ?? 0.0) <= self::EPS) throw ApiException::validation([['field' => 'day', 'code' => 'NOTHING_ON_DAY', 'params' => []]]);
+        $time = $clear ? null : (string) $v->value('time');
+        $weekday = (int) date('N', strtotime($day));
+        $rule = $this->repo->fixedRule($itemId, $weekday);
+        $this->tx->execute(function () use ($data, $itemId, $day, $time, $weekday, $rule, $p, $context) {
+            $this->repo->setSlotTime($data['start'], $itemId, $day, $time);
+            if ($rule !== null) {
+                // Stała partia : nowa godzina w regule i w tygodniach późniejszych, do których partia już weszła.
+                $this->repo->setFixedRuleTime($itemId, $weekday, $time);
+                foreach ($this->repo->laterFixedWeeks($itemId, $weekday, $data['start']) as $w) {
+                    if ((float) $w['placed'] > self::EPS) $this->repo->setSlotTime($w['week_start'], $itemId, $w['work_date'], $time);
+                }
+            }
+            $this->audit->record($context, 'time', 'week_slot', $itemId, ['day' => $day, 'time' => $p['times'][$day] ?? null],
+                ['day' => $day, 'time' => $time !== null ? substr($time, 0, 5) : null, 'fixed' => $rule !== null]);
+        });
+        return $this->present($this->data($data['start'], $context, $now), $context, $now);
+    }
+
+    /**
+     * « Wyczyść tydzień » : zdejmuje wszystkie produkty z dni od dzisiaj (dni minione zostają) do « Do zrobienia »
+     * — w grupach, w których użytkownik może przesuwać. Stałe partie (📌) nie wracają same w tym tygodniu ;
+     * « Ułóż tydzień » kładzie je najpierw na ich dni.
+     */
+    public function clear(array $body, ApiContext $context, ?int $now = null): array
+    {
+        $now ??= time();
+        $v = (new Validator($body))->only(['date'])->date('date', true, false);
+        $v->throwIfInvalid();
+        $data = $this->data($this->weekStart($v->value('date')), $context, $now);
+        if (!array_filter($data['days'], fn($d) => $d >= $data['today'])) throw new ApiException('WEEK_IN_PAST', 409, [], ['week' => $data['start']]);
+        $movable = array_keys(array_filter($data['products'], fn($p) => $context->canInGroup('prod.gantt.move', $p['group_id'])));
+        if (!$movable && $data['products']) throw new ApiException('FORBIDDEN', 403, [], ['permission' => 'prod.gantt.move']);
+        $this->tx->execute(function () use ($data, $movable, $context) {
+            $removed = $this->repo->clearFrom($data['start'], $movable, $data['today']);
+            $this->audit->record($context, 'clear', 'week', $data['start'], null, ['from' => $data['today'], 'slots' => $removed]);
         });
         return $this->present($this->data($data['start'], $context, $now), $context, $now);
     }
@@ -348,7 +413,9 @@ final class WeekService
         unset($p);
         foreach ($this->repo->slots($start) as $s) {
             $id = (int) $s['id_item'];
-            if (isset($products[$id])) $products[$id]['slots'][$s['work_date']] = (float) $s['quantity'];
+            if (!isset($products[$id])) continue;
+            $products[$id]['slots'][$s['work_date']] = (float) $s['quantity'];
+            if ($s['start_time'] !== null) $products[$id]['times'][$s['work_date']] = substr($s['start_time'], 0, 5);
         }
         foreach ($products as &$p) {
             $assigned = array_sum($p['slots']);
@@ -393,7 +460,7 @@ final class WeekService
             $pins[(int) $r['id_item']][] = ['item_id' => (int) $r['id_item'], 'name' => $it['name'], 'group_id' => $it['id_primary_group'] !== null ? (int) $it['id_primary_group'] : null,
                 'unit' => $it['base_unit'], 'ppc' => $it['item_type'] === 'product' && (int) $it['ppc'] > 0 ? (int) $it['ppc'] : null,
                 'batch' => (float) $it['batch_multiple'] > 0 ? (float) $it['batch_multiple'] : null,
-                'weekday' => (int) $r['weekday'], 'quantity' => (float) $r['quantity'],
+                'weekday' => (int) $r['weekday'], 'quantity' => (float) $r['quantity'], 'time' => $r['start_time'] !== null ? substr($r['start_time'], 0, 5) : null,
                 'day' => date('Y-m-d', strtotime($start . ' +' . (((int) $r['weekday'] - $startN + 7) % 7) . ' days'))];
         }
 
@@ -409,7 +476,7 @@ final class WeekService
             'group_id' => $it['id_primary_group'] !== null ? (int) $it['id_primary_group'] : null, 'unit' => $it['base_unit'],
             'ppc' => $it['item_type'] === 'product' && (int) $it['ppc'] > 0 ? (int) $it['ppc'] : null,
             'batch' => (float) $it['batch_multiple'] > 0 ? (float) $it['batch_multiple'] : null,
-            'quantity' => 0.0, 'direct' => 0.0, 'stock' => 0.0, 'direct_parts' => [], 'due_date' => null, 'slots' => []];
+            'quantity' => 0.0, 'direct' => 0.0, 'stock' => 0.0, 'direct_parts' => [], 'due_date' => null, 'slots' => [], 'times' => []];
     }
 
     /**
@@ -429,14 +496,15 @@ final class WeekService
             $day = date('Y-m-d', strtotime($start . ' +' . (((int) $r['weekday'] - $startN + 7) % 7) . ' days'));
             if (isset($done[$id][$day]) || $day < $today || !in_array($day, $days, true)) continue;
             if ($it['erp_active'] !== null && !(int) $it['erp_active']) continue;
-            $new[] = [$id, $day, (float) $r['quantity'], ($capacity[$it['id_primary_group'] ?? 0][$day]['available_h'] ?? 0.0) > 0];
+            $new[] = [$id, $day, (float) $r['quantity'], ($capacity[$it['id_primary_group'] ?? 0][$day]['available_h'] ?? 0.0) > 0, $r['start_time']];
         }
         if (!$new) return;
         $this->tx->execute(function () use ($new, $start, $context) {
-            foreach ($new as [$id, $day, $qty, $shift]) {
+            foreach ($new as [$id, $day, $qty, $shift, $time]) {
                 $existing = $this->repo->slotQuantity($start, $id, $day);
                 $add = $shift ? max(0.0, $qty - $existing) : 0.0;
                 if ($add > self::EPS) $this->repo->setSlot($start, $id, $day, $existing + $add, $context->userId);
+                if ($add > self::EPS && $existing <= self::EPS && $time !== null) $this->repo->setSlotTime($start, $id, $day, $time);
                 $this->repo->markFixedWeek($start, $id, $day, $qty, $add);
             }
             $this->audit->record($context, 'seed_fixed', 'week', $start, null, ['batches' => count($new)]);
@@ -481,7 +549,7 @@ final class WeekService
                 unset($left);
                 if ($isLate) $late++;
                 $directH = $qty > 0 ? $h * $directQty / $qty : 0.0;
-                $slots[] = ['day' => $day, 'quantity' => round($qty, 3), 'cartons' => $cartons($qty), 'batches' => $batches($qty),
+                $slots[] = ['day' => $day, 'time' => $p['times'][$day] ?? null, 'quantity' => round($qty, 3), 'cartons' => $cartons($qty), 'batches' => $batches($qty),
                     'direct_qty' => round($directQty, 3), 'stock_qty' => round($qty - $directQty, 3),
                     'direct_cartons' => $cartons($directQty), 'stock_cartons' => $cartons($qty - $directQty),
                     'hours' => round($h, 2), 'direct_h' => round($directH, 2), 'done_h' => round($slotDone, 2), 'late' => $isLate,

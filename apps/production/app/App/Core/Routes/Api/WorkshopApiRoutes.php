@@ -107,6 +107,8 @@ final class WorkshopApiRoutes
             ['POST', '/planning/week/move', WeekController::class, 'move', 'prod.gantt.move'],
             ['POST', '/planning/week/distribute', WeekController::class, 'distribute', 'prod.gantt.move'],
             ['POST', '/planning/week/pin', WeekController::class, 'pin', 'prod.gantt.move'],
+            ['POST', '/planning/week/time', WeekController::class, 'time', 'prod.gantt.move'],
+            ['POST', '/planning/week/clear', WeekController::class, 'clear', 'prod.gantt.move'],
 
             ['GET', '/kiosk/devices', ExecutionController::class, 'devices', 'prod.employees.write'],
             ['POST', '/kiosk/devices', ExecutionController::class, 'createDevice', 'prod.employees.write'],

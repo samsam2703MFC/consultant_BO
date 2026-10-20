@@ -5356,6 +5356,161 @@
                 "x-permission": "prod.gantt.move"
             }
         },
+        "/planning/week/time": {
+            "post": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Godzina startu bloku / Heure de début du bloc",
+                "operationId": "setWeekSlotTime",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Week"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Semaine type : heure de début du produit ce jour-là (time null = sans heure). Si le produit a un lot fixe 📌 ce jour de la semaine, le lot fixe prend la même heure (posé à cette heure chaque semaine). Un bloc déplacé en entier vers un jour vide garde son heure. 422 NOTHING_ON_DAY, INVALID_TIME.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WeekTimeInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.gantt.move"
+            }
+        },
+        "/planning/week/clear": {
+            "post": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Wyczyść tydzień / Tout annuler",
+                "operationId": "clearWeek",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Week"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Retire tous les produits des jours à partir d'aujourd'hui (jours passés inchangés), dans les groupes où l'utilisateur a prod.gantt.move : tout revient dans « À produire ». Les lots fixes 📌 restent des règles et ne reviennent pas d'eux-mêmes cette semaine ; « Organiser la semaine » les replace d'abord sur leurs jours.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WeekDistributeInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.gantt.move"
+            }
+        },
         "/kiosk/devices": {
             "get": {
                 "tags": [
@@ -10967,6 +11122,11 @@
                                                 "type": "string",
                                                 "format": "date"
                                             },
+                                            "time": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "description": "heure de début HH:MM"
+                                            },
                                             "quantity": {
                                                 "type": "number"
                                             },
@@ -11089,6 +11249,34 @@
                     }
                 }
             },
+            "WeekTimeInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "item_id",
+                    "day"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "day": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "time": {
+                        "type": "string",
+                        "nullable": true,
+                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                        "description": "HH:MM ; null = sans heure"
+                    }
+                }
+            },
             "WeekPinInput": {
                 "type": "object",
                 "additionalProperties": false,
@@ -11151,6 +11339,11 @@
                         "type": "string",
                         "format": "date",
                         "description": "ce jour dans la semaine affichée"
+                    },
+                    "time": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "heure de début HH:MM (semaine type)"
                     }
                 }
             },

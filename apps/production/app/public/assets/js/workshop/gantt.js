@@ -331,7 +331,8 @@
                     <p class="text-muted mb-0 small">${esc(source)}</p></div>
                 <div class="tfb-head-actions">
                     ${w.can_move ? `<button type="button" class="btn btn-primary btn-sm" data-distribute ${tot.unassigned ? '' : 'disabled'} title="${esc(t('week.arrange_help', {days: stockDays(w)}))}"><i class="bi bi-magic"></i> ${esc(t('week.distribute'))}</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-redistribute>${esc(t('week.redistribute'))}</button>` : ''}
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-redistribute>${esc(t('week.redistribute'))}</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" data-clear-week title="${esc(t('week.clear_help'))}"><i class="bi bi-x-circle"></i> ${esc(t('week.clear'))}</button>` : ''}
                     ${w.can_schedule && w.source.type === 'plan' ? `<button type="button" class="btn btn-outline-primary btn-sm" data-schedule title="${esc(t('week.schedule_hint'))}"><i class="bi bi-diagram-3"></i> ${esc(t('week.schedule'))}</button>` : ''}
                 </div>
             </div>
@@ -388,6 +389,8 @@
                 const day = w.days[i];
                 const blocks = [];
                 for (const p of products) for (const s of p.slots) if (s.day === d.date) blocks.push({p, s});
+                // Tydzień typowy : najpierw bloki z godziną startu (po godzinie), potem bez godziny.
+                blocks.sort((a, b) => (a.s.time || '99').localeCompare(b.s.time || '99'));
                 const scale = Math.max(d.available_h, d.required_h, 0.01);
                 const over = d.required_h - d.available_h;
                 const now = day.today && d.elapsed > 0 && d.elapsed < 1 ? `<span class="tfb-week-now" style="left:${(d.elapsed * Math.min(1, d.available_h / scale) * 100).toFixed(2)}%" title="${esc(t('now'))}"></span>` : '';
@@ -430,12 +433,16 @@
         const title = [p.name, qtyText(p, s.quantity), hrs(s.hours),
             s.direct_qty > 0 ? '🚚 ' + t('week.direct_part', {qty: qtyText(p, s.direct_qty)}) : null, s.stock_qty > 0 ? '📦 ' + t('week.stock_part', {qty: qtyText(p, s.stock_qty)}) : null,
             p.due_date ? t('week.due') + ' ' + dayLabel(p.due_date) : null, s.late ? t('week.late') : null, s.behind ? t('week.behind') : null,
-            pinned ? '📌 ' + t('week.pinned') : null,
+            s.time ? t('week.at', {time: s.time}) : null, pinned ? '📌 ' + t('week.pinned') : null,
             done > 0 ? t('week.done_part', {pct: fmt(done, 0)}) : null].filter(Boolean).join(' · ');
-        return `<button type="button" class="tfb-week-block ${kind} ${p.movable ? 'is-movable' : ''} ${s.late ? 'is-late' : ''} ${s.behind ? 'is-behind' : ''} ${finished ? 'is-finished' : ''}"
+        const pinTitle = pinned ? t('week.toggle_on', {day: weekdayName(s.day), time: s.time ? ' ' + t('week.at', {time: s.time}) : ''}) : t('week.toggle_off', {day: weekdayName(s.day)});
+        const toggle = p.movable
+            ? `<button type="button" class="tfb-week-pintoggle ${pinned ? 'is-on' : ''}" data-pin-toggle data-pin-item="${p.item_id}" data-day="${s.day}" aria-pressed="${pinned}" title="${esc(pinTitle)}" aria-label="${esc(pinTitle)}">📌</button>`
+            : (pinned ? `<span class="tfb-week-pintoggle is-on is-static" title="${esc(pinTitle)}">📌</span>` : '');
+        return `<div class="tfb-week-blockrow"><button type="button" class="tfb-week-block ${kind} ${p.movable ? 'is-movable' : ''} ${s.late ? 'is-late' : ''} ${s.behind ? 'is-behind' : ''} ${finished ? 'is-finished' : ''} ${pinned ? 'is-pinned' : ''}"
             style="--group-color:${esc(color)};--share:${width.toFixed(2)}%" data-item="${p.item_id}" data-from="${s.day}" title="${esc(title)}" aria-label="${esc(title)}">
-            <span class="tfb-week-block-text">${finished ? '✓ ' : ''}${pinned ? '<span class="tfb-week-pin">📌</span>' : ''}<span class="tfb-week-block-icon">${icon}</span> ${esc(p.name)}</span><span class="tfb-week-block-h">${p.batch ? esc(batchText(p, s.quantity)) + ' · ' : (s.cartons !== null ? fmt(s.cartons, 0) + ' ' + esc(t('week.cart')) + ' · ' : '')}${fmt(s.hours, 1)} h</span>
-            ${done > 0 ? `<span class="tfb-week-block-done" style="width:${done.toFixed(1)}%"></span>` : ''}</button>`;
+            <span class="tfb-week-block-text">${finished ? '✓ ' : ''}${s.time ? `<span class="tfb-week-time">${esc(s.time)}</span>` : ''}<span class="tfb-week-block-icon">${icon}</span> ${esc(p.name)}</span><span class="tfb-week-block-h">${p.batch ? esc(batchText(p, s.quantity)) + ' · ' : (s.cartons !== null ? fmt(s.cartons, 0) + ' ' + esc(t('week.cart')) + ' · ' : '')}${fmt(s.hours, 1)} h</span>
+            ${done > 0 ? `<span class="tfb-week-block-done" style="width:${done.toFixed(1)}%"></span>` : ''}</button>${toggle}</div>`;
     }
 
     // 📌 Stałe partie co tydzień : lista pod tablicą (dzień tygodnia, ilość, partie).
@@ -446,7 +453,7 @@
         if (!pins.length) return `<p class="text-muted small mb-0 mt-1">📌 ${esc(t('week.pins_none'))}</p>`;
         const groupName = (id) => (w.groups.find(g => g.id === id) || {}).name || t('week.no_group');
         return `<details class="tfb-week-pins mt-2"><summary>📌 ${esc(t('week.pins_title', {n: pins.length}))}</summary>
-            <ul>${[...pins].sort((a, b) => a.day.localeCompare(b.day) || a.name.localeCompare(b.name)).map(x => `<li><strong>${esc(weekdayName(x.day))}</strong> · ${esc(x.name)}
+            <ul>${[...pins].sort((a, b) => a.day.localeCompare(b.day) || (a.time || '99').localeCompare(b.time || '99') || a.name.localeCompare(b.name)).map(x => `<li><strong>${esc(weekdayName(x.day))}${x.time ? ' ' + esc(x.time) : ''}</strong> · ${esc(x.name)}
                 <span class="text-muted">· ${esc(groupName(x.group_id))} · ${esc(pinQty(x))}</span></li>`).join('')}</ul></details>`;
     }
 
@@ -455,7 +462,7 @@
         const pins = p.pins || [];
         const slot = from ? p.slots.find(s => s.day === from) : null;
         const onDay = from ? pins.find(x => x.day === from) : null;
-        const list = pins.map(x => `<div>📌 <strong>${esc(weekdayName(x.day))}</strong> · ${esc(pinQty({...p, quantity: x.quantity}))}
+        const list = pins.map(x => `<div>📌 <strong>${esc(weekdayName(x.day))}${x.time ? ' ' + esc(x.time) : ''}</strong> · ${esc(pinQty({...p, quantity: x.quantity}))}
             ${p.movable ? `<button type="button" class="btn btn-link btn-sm p-0 ms-1" data-unpin="${x.day}">${esc(t('week.unpin'))}</button>` : ''}</div>`).join('');
         const action = p.movable && slot && !onDay
             ? `<button type="button" class="btn btn-sm btn-outline-primary mt-1" data-pin="${slot.day}">📌 ${esc(t('week.pin', {day: weekdayName(slot.day), qty: pinQty({...p, quantity: slot.quantity})}))}</button>
@@ -463,15 +470,28 @@
         return `<dt>${esc(t('week.pins'))}</dt><dd>${list || `<span class="text-muted">${esc(t('week.pins_product_none'))}</span>`}${action}</dd>`;
     }
 
-    async function pinProduct(itemId, day, pinned) {
+    async function pinProduct(itemId, day, pinned, openDetail = true) {
         try {
             week = await api.post('/planning/week/pin', {date: week.week_start, item_id: itemId, day, pinned});
             ui.notify(true, t(pinned ? 'week.pin_saved' : 'week.unpin_saved'));
             drawWeek();
-            openProduct(itemId, day);
+            if (openDetail) openProduct(itemId, day);
+            return true;
         } catch (err) {
             ui.notify(false, ((err.body && err.body.errors) || []).map(x => x.message).join(' ') || err.message);
+            drawWeek();
+            return false;
         }
+    }
+
+    // Godzina startu bloku w dniu (i stałej partii 📌 tego dnia tygodnia).
+    function timeDetail(p, from) {
+        const slot = from ? p.slots.find(s => s.day === from) : null;
+        if (!slot) return '';
+        const pinned = (p.pins || []).some(x => x.day === from);
+        return `<dt>${esc(t('week.start_time'))}</dt><dd><div class="d-flex align-items-center gap-2 flex-wrap">
+            <input type="time" class="form-control form-control-sm" style="width:auto" data-slot-time="${slot.day}" value="${esc(slot.time || '')}" ${p.movable ? '' : 'disabled'} aria-label="${esc(t('week.start_time'))}">
+            <span class="text-muted small">${esc(dayLabel(slot.day, true))}${pinned ? ' · 📌 ' + esc(t('week.time_every_week')) : ''}</span></div></dd>`;
     }
 
     function productTable(w) {
@@ -519,6 +539,15 @@
     function bindWeek(root) {
         root.querySelector('[data-distribute]')?.addEventListener('click', () => distribute(false));
         root.querySelector('[data-redistribute]')?.addEventListener('click', () => { if (window.confirm(t('week.redistribute_confirm'))) distribute(true); });
+        root.querySelector('[data-clear-week]')?.addEventListener('click', async (e) => {
+            if (!window.confirm(t('week.clear_confirm'))) return;
+            e.target.disabled = true;
+            try {
+                week = await api.post('/planning/week/clear', {date: week.week_start});
+                ui.notify(true, t('week.cleared'));
+            } catch (err) { ui.notify(false, err.message); }
+            drawWeek();
+        });
         root.querySelector('[data-schedule]')?.addEventListener('click', async (e) => {
             e.target.disabled = true;
             try {
@@ -545,6 +574,12 @@
         const gantt = root.querySelector('.tfb-week-scroll');
         let drag = null;
         gantt.addEventListener('click', (e) => {
+            const tog = e.target.closest('[data-pin-toggle]');
+            if (tog) {
+                tog.disabled = true;
+                pinProduct(Number(tog.dataset.pinItem), tog.dataset.day, tog.getAttribute('aria-pressed') !== 'true', false);
+                return;
+            }
             const b = e.target.closest('[data-item]');
             if (!b) return;
             if (drag && drag.moved) return;
@@ -598,6 +633,7 @@
         const day = target.dataset.dropDay;
         const p = week.products.find(x => x.item_id === d.item);
         if (!day || !p) return moveProduct(d.item, d.from, day);
+        if (d.from && (p.pins || []).some(x => x.day === d.from)) return dropPinned(d, p, day, point);
         const qty = d.from ? (p.slots.find(s => s.day === d.from)?.quantity ?? 0) : p.unassigned_qty;
         const hours = d.from ? (p.slots.find(s => s.day === d.from)?.hours ?? 0) : p.unassigned_h;
         const g = week.groups.find(x => String(x.id ?? 0) === target.dataset.group);
@@ -623,6 +659,29 @@
             if (!b) return;
             close();
             await moveProduct(d.item, d.from, day, b.dataset.qty === 'all' ? null : Number(b.dataset.qty));
+        });
+    }
+
+    // Przypięty blok (📌) na inny dzień : tylko w tym tygodniu (reguła zostaje) albo co tydzień w nowy dzień.
+    function dropPinned(d, p, day, point) {
+        document.querySelector('.tfb-week-dropmenu')?.remove();
+        const menu = document.createElement('div');
+        menu.className = 'tfb-week-dropmenu';
+        menu.style.left = `${Math.min(point.x, window.innerWidth - 280)}px`;
+        menu.style.top = `${point.y + 6}px`;
+        menu.innerHTML = `<div class="small text-muted mb-1">${esc(t('week.drop_pinned', {name: p.name, from: weekdayName(d.from), to: weekdayName(day)}))}</div>
+            <button type="button" class="btn btn-sm btn-primary" data-choice="every">📌 ${esc(t('week.drop_pinned_every', {day: weekdayName(day)}))}</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-choice="once">${esc(t('week.drop_pinned_once'))}</button>`;
+        document.body.appendChild(menu);
+        const close = () => { menu.remove(); document.removeEventListener('pointerdown', outside, true); };
+        const outside = (e) => { if (!menu.contains(e.target)) close(); };
+        setTimeout(() => document.addEventListener('pointerdown', outside, true), 0);
+        menu.addEventListener('click', async (e) => {
+            const b = e.target.closest('[data-choice]');
+            if (!b) return;
+            close();
+            if (!await moveProduct(d.item, d.from, day)) return;
+            if (b.dataset.choice === 'every' && await pinProduct(d.item, day, true, false)) await pinProduct(d.item, d.from, false, false);
         });
     }
 
@@ -658,6 +717,7 @@
                     <dt>${esc(t('week.col_days'))}</dt><dd>${p.slots.map(s => `${esc(dayLabel(s.day, true))}: ${esc(qtyText(p, s.quantity))} · ${hrs(s.hours)}${s.late ? ' · <span class="text-danger">' + esc(t('week.late')) + '</span>' : ''}`).join('<br>') || '—'}
                         ${p.unassigned_qty > 0 ? `<div class="text-warning">${esc(t('week.waiting', {qty: qtyText(p, p.unassigned_qty)}))}</div>` : ''}</dd>
                     <dt>${esc(t('week.col_done'))}</dt><dd>${hrs(p.done_h)} · ${p.done_pct === null ? '—' : fmt(p.done_pct, 0) + ' %'} · ${esc(t('week.state.' + p.state))}</dd>
+                    ${timeDetail(p, from)}
                     ${pinsDetail(p, from)}
                 </dl>
                 ${p.movable && sources.length && days.length ? `<form class="tfb-form tfb-week-move" data-move>
@@ -670,6 +730,14 @@
             </div></div>`;
         box.querySelector('[data-close]').addEventListener('click', () => { box.innerHTML = ''; });
         box.querySelectorAll('[data-pin]').forEach(b => b.addEventListener('click', () => pinProduct(p.item_id, b.dataset.pin, true)));
+        box.querySelector('[data-slot-time]')?.addEventListener('change', async (e) => {
+            try {
+                week = await api.post('/planning/week/time', {date: week.week_start, item_id: p.item_id, day: e.target.dataset.slotTime, time: e.target.value || null});
+                ui.notify(true, t('saved'));
+                drawWeek();
+                openProduct(p.item_id, e.target.dataset.slotTime);
+            } catch (err) { ui.notify(false, ((err.body && err.body.errors) || []).map(x => x.message).join(' ') || err.message); }
+        });
         box.querySelectorAll('[data-unpin]').forEach(b => b.addEventListener('click', () => pinProduct(p.item_id, b.dataset.unpin, false)));
         const form = box.querySelector('[data-move]');
         if (form) {

@@ -981,10 +981,16 @@ check($s === 403, 'direction does not pin batches');
 check($s === 422 && $codes($b) === ['day:NOTHING_ON_DAY'], 'only a block placed on a day can be pinned');
 [$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'pinned' => false], $access);
 check($s === 422 && $codes($b) === ['day:NOT_PINNED'], 'nothing to unpin');
+[$s, $b] = $call('POST', '/planning/week/time', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'time' => '25:00'], $access);
+check($s === 422 && $codes($b) === ['time:INVALID_TIME'], 'start time checked');
+[$s, $b] = $call('POST', '/planning/week/time', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'time' => '05:30'], $access);
+$bp = array_column($b['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
+check($s === 200 && $bp && array_column($bp['slots'], 'time', 'day')[$pinDay] === '05:30', 'typical week: start time of the block on its day');
 [$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'pinned' => true], $access);
 $bp = array_column($b['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
 check($s === 200 && $bp && count($bp['pins']) === 1 && $bp['pins'][0]['weekday'] === (int) date('N', strtotime($pinDay)) && $bp['pins'][0]['quantity'] == $pinQty
-    && $bp['fixed_qty'] == $pinQty && array_column($b['data']['pins'], 'item_id') === [$itemId], 'pin: the block becomes a fixed batch, every week on this weekday');
+    && $bp['fixed_qty'] == $pinQty && array_column($b['data']['pins'], 'item_id') === [$itemId] && $bp['pins'][0]['time'] === '05:30',
+    'pin: the block becomes a fixed batch, every week on this weekday at its start time');
 $nextDay = date('Y-m-d', strtotime($pinDay . ' +7 days'));
 [$s, $n] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
 $np = array_column($n['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
@@ -993,6 +999,12 @@ $noShift = in_array('FIXED_NO_SHIFT', array_column($n['data']['warnings'] ?? [],
 check($s === 200 && $n['data']['source']['type'] === 'demand' && $np && $np['quantity'] >= $pinQty
     && ($onDay($np, $nextDay) == $pinQty || ($noShift && $np['unassigned_qty'] >= $pinQty)),
     'next week: the fixed batch is on its day by itself (waits in « to do » when the group has no shift that day)');
+check($onDay($np, $nextDay) == 0 || array_column($np['slots'], 'time', 'day')[$nextDay] === '05:30', 'next week: the fixed batch keeps its start time');
+[$s, $b] = $call('POST', '/planning/week/time', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'time' => '06:00'], $access);
+check($s === 200 && array_column($b['data']['products'], null, 'item_id')[$itemId]['pins'][0]['time'] === '06:00', 'changing the time of a pinned block changes the fixed batch time');
+[$s, $n1] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
+$np1 = array_column($n1['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
+check($onDay($np1, $nextDay) == 0 || array_column($np1['slots'], 'time', 'day')[$nextDay] === '06:00', '… also in the later week where the batch is already placed');
 [$s, $dm] = $call('GET', '/planning/demand?from=' . $n['data']['week_start'] . '&to=' . $n['data']['week_end'], null, $access);
 check(array_sum(array_map(fn($l) => $l['item_id'] === $itemId ? $l['qty_proposed'] : 0, $dm['data']['lines'] ?? [])) >= $pinQty - 0.001,
     'proposal: fixed batches are the minimum of the week (the rest above orders and refill goes to stock)');
@@ -1011,6 +1023,22 @@ $np3 = array_column($n3['data']['products'] ?? [], null, 'item_id')[$itemId] ?? 
 check($s === 200 && $onDay($np3, $nextDay) == 0 && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_fixed_batch_week WHERE week_start > '{$monday}'")->fetchColumn() === 0,
     'unpin: the later week where the batch was already placed is undone');
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE entity = 'fixed_batch'")->fetchColumn() === 2, 'pin and unpin are audited');
+// « Wyczyść tydzień » : wszystko z dni od dzisiaj wraca do « Do zrobienia »
+[$s, $b] = $call('POST', '/planning/week/clear', ['date' => $today], $dir);
+check($s === 403, 'direction does not clear the week');
+[$s, $b] = $call('POST', '/planning/week/clear', ['date' => $today], $access);
+$left = array_sum(array_map(fn($p) => count(array_filter($p['slots'], fn($x) => $x['day'] >= $today)), $b['data']['products'] ?? []));
+check($s === 200 && $left === 0 && $b['data']['totals']['unassigned'] > 0, 'clear the week: every product from today is back in « to do »');
+// Przypięty blok zdjęty z dnia, potem odpięty : partia tego dnia nie liczy się już w tygodniu (bez podwójnej ilości)
+$call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 'to' => $today], $access);
+[$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $today, 'pinned' => true], $access);
+$call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 'from' => $today, 'to' => null], $access);
+[$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $today, 'pinned' => false], $access);
+$bp = array_column($b['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
+$others = (float) $pdo->query("SELECT COALESCE(SUM(quantity), 0) FROM tfb_prod_fixed_batch_week WHERE week_start = '{$monday}' AND id_item = {$itemId} AND work_date <> '{$today}'")->fetchColumn();
+$todayMarks = (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_fixed_batch_week WHERE week_start = '{$monday}' AND id_item = {$itemId} AND work_date = '{$today}'")->fetchColumn();
+check($s === 200 && $bp && $todayMarks === 0 && abs($bp['fixed_qty'] - $others) < 0.001 && $bp['pins'] === [],
+    'pinned block moved off its day then unpinned: no fixed batch left on that day this week');
 
 // Pracownik dodany w ERP : obsada zmiany dziennej grupy działu nadąża (osoby × 40 h w Gantcie tygodnia).
 $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (12, 'Ola', 'Wiśniewska', 5100, 1)");

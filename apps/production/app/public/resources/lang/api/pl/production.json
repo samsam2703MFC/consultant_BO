@@ -314,7 +314,8 @@
     "ocr_text": "tekst OCR",
     "cancelled": "anulowana",
     "day": "dzień",
-    "pinned": "co tydzień"
+    "pinned": "co tydzień",
+    "time": "godzina"
   },
   "entities": {
     "group": "grupa",
