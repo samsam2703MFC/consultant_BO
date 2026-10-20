@@ -12,6 +12,7 @@ use App\Services\Product\Category\ProductCategoryService;
 use App\Services\Product\ProductService;
 use App\Services\Recipe\RecipeService;
 use App\Services\Utils\CompanyCostService;
+use App\Services\Workshop\Product\ProductionSummaryService;
 use Symfony\Component\HttpFoundation\Request;
 
 
@@ -28,7 +29,8 @@ class ProductController extends BaseController
         private RecipeService $recipeService,
         private ProductionEmployeeService $productionEmployeeService,
         private WDTService $wdtService,
-        private ClientProductPriceService $clientProductPriceService
+        private ClientProductPriceService $clientProductPriceService,
+        private ProductionSummaryService $productionSummary
     )
     {
     }
@@ -61,6 +63,14 @@ class ProductController extends BaseController
         $data['row'] = $this->productService->first($id);
         $data['production_sections'] = $this->productionSectionService->getAll();
         $data['category_product'] = $this->productCategoryService->findAll();
+        // Produkcja i Gantt : karta produkcyjna produktu (wydajność, etapy, plan tygodnia) ; bez modułu pracowni — nic.
+        try {
+            $data['production'] = $this->productionSummary->forFinalProduct((int) $id);
+            $data['production_available'] = true;
+        } catch (\Throwable $e) {
+            $data['production'] = null;
+            $data['production_available'] = false;
+        }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($this->productService->validate($_POST)) {

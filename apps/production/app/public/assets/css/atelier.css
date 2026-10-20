@@ -1344,3 +1344,17 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-week-move { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 .tfb-week-move .tfb-nav { grid-column: 1 / -1; }
 @media (max-width: 768px) { .tfb-week-move { grid-template-columns: 1fr; } .tfb-week-tray { padding-left: 14px; } }
+
+/* Produkcja i Gantt na stronie edycji produktu. */
+.at-prodsum { margin-top: 16px; }
+.at-prodsum .at-sub { color: var(--at-muted); font-size: 11.5px; font-weight: 400; }
+.at-prodsum-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+@media (max-width: 992px) { .at-prodsum-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.at-prodsum-kpis > div { border: 1px solid var(--at-line); border-radius: var(--at-radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.at-prodsum-kpis span { color: var(--at-muted); font-size: 12px; }
+.at-prodsum-kpis strong { font-size: 18px; }
+.at-prodsum-kpis small { color: var(--at-muted); font-size: 12px; }
+.at-prodsum-week { background: var(--at-bg-2); border-radius: var(--at-radius); padding: 10px 12px; margin-bottom: 14px; font-size: 13px; line-height: 1.7; }
+.at-prodsum-table th, .at-prodsum-table td { vertical-align: top; }
+.at-prodsum-table td { white-space: nowrap; }
+.at-prodsum-table td:first-child { white-space: normal; min-width: 160px; }

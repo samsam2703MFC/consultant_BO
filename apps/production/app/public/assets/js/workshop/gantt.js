@@ -15,7 +15,7 @@
     const {WorkshopApi, ui} = window.TfbWorkshop;
     const api = new WorkshopApi(el);
     const esc = ui.esc;
-    const VIEWS = {day: {days: 1, pph: 64, tick: 1}, three: {days: 3, pph: 24, tick: 3}, week: {days: 7, pph: 10, tick: 6}};
+    const VIEWS = {day: {days: 1, pph: 64, tick: 1}, week: {days: 7, pph: 10, tick: 6}};
     const SNAP_MIN = 5;
     let groups = [];
     let workstations = [];
@@ -43,7 +43,7 @@
     function readHash() {
         const p = new URLSearchParams(location.hash.replace(/^#\/?\??/, ''));
         const from = /^\d{4}-\d{2}-\d{2}$/.test(p.get('from') || '') ? p.get('from') : null;
-        return {from: from || null, view: VIEWS[p.get('view')] ? p.get('view') : 'three', group: Number(p.get('group')) || 0};
+        return {from: from || null, view: VIEWS[p.get('view')] ? p.get('view') : 'week', group: Number(p.get('group')) || 0};
     }
     function writeHash() {
         const p = new URLSearchParams({from: state.from, view: state.view});

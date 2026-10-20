@@ -122,7 +122,7 @@
                     <td>${editable ? `<input class="form-control form-control-sm" data-field="adjust_reason" value="${esc(l.adjust_reason || '')}" maxlength="255">` : esc(l.adjust_reason || '')}</td>
                     <td class="text-end">${fmt(l.standard_hours, 2)}</td></tr>`).join('')}</tbody></table></div>
                 ${editable ? `<div class="tfb-nav"><span></span><button type="button" class="btn btn-primary" data-validate>${esc(t('validate'))}</button></div>` : ''}
-                ${canWrite && ['validated', 'frozen'].includes(plan.status) ? `<div class="tfb-nav"><a class="btn btn-outline-primary" href="${esc(api.root)}/workshop/gantt#from=${plan.period_start}&view=three">${esc(t('open_gantt'))}</a>
+                ${canWrite && ['validated', 'frozen'].includes(plan.status) ? `<div class="tfb-nav"><a class="btn btn-outline-primary" href="${esc(api.root)}/workshop/gantt#from=${plan.period_start}&view=week">${esc(t('open_gantt'))}</a>
                     <button type="button" class="btn btn-primary" data-schedule>${esc(t('schedule'))}</button></div><div data-schedule-result></div>` : ''}
             </div></div></div>
             <div class="col-12 col-lg-6 col-xl-4"><div class="card"><div class="card-header"><h4 class="card-title">${esc(t('hours_by_group'))}</h4></div><div class="card-body pt-0">
