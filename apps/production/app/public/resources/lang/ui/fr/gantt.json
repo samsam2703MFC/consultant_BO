@@ -87,7 +87,7 @@
   "week.help_move": "Glissez un produit sur un autre jour ou dans « À répartir » (dans son groupe) ; un clic ouvre la fiche pour déplacer une partie de la quantité. Trait = heures disponibles du jour, rouge = heures manquantes.",
   "week.help_read": "Lecture seule : déplacer les produits demande la permission prod.gantt.move.",
   "week.empty": "Aucun groupe avec du monde ou des produits cette semaine.",
-  "week.group_hours": "Groupe · heures de la semaine",
+  "week.group_hours": "Groupe · heures",
   "week.today": "aujourd'hui",
   "week.no_team": "pas d'équipe",
   "week.no_shift": "sans shift",
@@ -96,8 +96,6 @@
   "week.tray_drop": "À répartir (déposez ici)",
   "week.tray_short": "À répartir",
   "week.due": "échéance",
-  "week.group_line": "{people} pers. · {hours} / {available} h · {pct} %",
-  "week.group_done": "réalisé {hours} h",
   "week.mode.MTO": "sur commande",
   "week.mode.MTS": "pour le stock",
   "week.mode.semi": "semi-fini",
@@ -122,5 +120,6 @@
   "week.move_qty": "Quantité ({unit})",
   "week.move_hint": "Une partie de la quantité partage le produit sur deux jours.",
   "week.move": "Déplacer",
-  "week.open_card": "Fiche produit"
+  "week.open_card": "Fiche produit",
+  "week.group_hours_title": "{people} pers. × 40 h = {hours} h dans la semaine"
 }

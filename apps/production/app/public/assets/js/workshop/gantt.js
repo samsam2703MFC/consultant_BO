@@ -373,9 +373,8 @@
             </div>`;
             return `<div class="tfb-week-group" style="--group-color:${esc(color)}">
                 <div class="tfb-week-row" style="--days:${w.days.length}">
-                    <div class="tfb-week-label"><strong>${esc(g.name || t('week.no_group'))}</strong>
-                        <span>${esc(t('week.group_line', {people: g.people, hours: fmt(g.hours, 1), available: fmt(g.available_h, 1), pct: g.load_pct === null ? '—' : fmt(g.load_pct, 0)}))}</span>
-                        ${w.source.type === 'plan' ? `<span class="${g.expected_h - g.done_h > 0.5 ? 'is-bad' : 'is-ok'}">${esc(t('week.group_done', {hours: fmt(g.done_h, 1)}))}${g.expected_h - g.done_h > 0.5 ? ' · −' + fmt(g.expected_h - g.done_h, 1) + ' h' : ''}</span>` : ''}
+                    <div class="tfb-week-label" title="${esc(t('week.group_hours_title', {people: g.people, hours: fmt(g.available_h, 0)}))}"><strong>${esc(g.name || t('week.no_group'))}</strong>
+                        <span>${fmt(g.available_h, 0)} h</span>
                     </div>${cells}
                 </div>${tray}</div>`;
         }).join('');
