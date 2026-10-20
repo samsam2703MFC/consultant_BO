@@ -6,7 +6,7 @@
     <title>Connexion · Production · L'Atelier</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/bootstrap.css">
-    <link rel="stylesheet" href="<?=ROOT?>/assets/vendors/bootstrap-icons/bootstrap-icons.css">
+    <link rel="stylesheet" href="<?=ROOT?>/assets/vendors/bootstrap-icons/bootstrap-icons.css?v=1.11.3">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/app.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/pages/auth.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/atelier.css">

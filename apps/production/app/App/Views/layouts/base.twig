@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ root }}/assets/css/bootstrap.css">
     <link rel="stylesheet" href="{{ root }}/assets/vendors/perfect-scrollbar/perfect-scrollbar.css">
-    <link rel="stylesheet" href="{{ root }}/assets/vendors/bootstrap-icons/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ root }}/assets/vendors/bootstrap-icons/bootstrap-icons.css?v=1.11.3">
     <link rel="stylesheet" href="{{ root }}/assets/css/app.css">
     <link rel="icon" href="{{ root }}/assets/images/atelier-logo.png" type="image/png">
     <link rel="stylesheet" href="{{ root }}/assets/css/snackbarStyle.css">
@@ -68,6 +68,7 @@
         {% include "page_components/app_notifications.twig" %}
 
         <div id="main-content">
+            {{ page_tabs_html() }}
             {% block page_heading %}{% endblock %}
             {% block content %}{% endblock %}
         </div>

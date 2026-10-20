@@ -1399,3 +1399,11 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-week-block.is-late, .tfb-week-block.is-behind { box-shadow: inset 0 0 0 2px var(--at-danger); }
 .tfb-week-block-icon { font-size: 10px; }
 .tfb-stock-table tr.tfb-level-low td:first-child { box-shadow: inset 3px 0 0 var(--at-danger, #C41E3A); }
+
+/* Grupy stron jako zakładki (App\Core\Web\PageTabs) : BDO, PPWR, zwroty, archiwum — jedna pozycja w railu */
+.at-page-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; padding: 6px; border-radius: var(--at-radius-lg); background: var(--at-surface); border: 1px solid var(--at-line); }
+.at-page-tabs-title { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; margin-right: 4px; font-weight: 600; color: var(--at-muted); border-right: 1px solid var(--at-line); white-space: nowrap; }
+.at-page-tab { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--at-radius); color: var(--at-text); font-size: .9rem; text-decoration: none; white-space: nowrap; }
+.at-page-tab:hover { background: var(--at-primary-soft); color: var(--at-primary); }
+.at-page-tab.active { background: var(--at-primary); color: #fff; }
+@media (max-width: 576px) { .at-page-tabs { flex-wrap: nowrap; overflow-x: auto; } .at-page-tabs-title { display: none; } }

@@ -184,43 +184,20 @@
                     </ul>
                 </li>
 
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
-                        <i class="bi bi-clipboard-data"></i>
-                        <span>Opakowania i audyty</span>
+                {% set g = page_tab_groups().bdo %}
+                <li class="sidebar-item">
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
                     </a>
-                    <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/audits/product-weights">
-                                <i class="bi bi-speedometer"></i> Wagi produktów
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/audits/packaging-data">
-                                <i class="bi bi-box-seam"></i> Dane opakowań BDO
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/audits/packaging-reports">
-                                <i class="bi bi-bar-chart"></i> Raporty BDO
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/ppwr/register">
-                                <i class="bi bi-arrow-repeat"></i> Rejestr PPWR
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/ppwr/sales-packaging">
-                                <i class="bi bi-box"></i> Kartony sprzedażowe PPWR
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/ppwr/reports">
-                                <i class="bi bi-file-earmark-bar-graph"></i> Raporty PPWR
-                            </a>
-                        </li>
-                    </ul>
+                </li>
+
+                {% set g = page_tab_groups().ppwr %}
+                <li class="sidebar-item">
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
+                    </a>
                 </li>
 
                 <li class="sidebar-title">Zamówienia</li>
@@ -284,33 +261,12 @@
                     </ul>
                 </li>
 
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
-                        <i class="bi bi-box-arrow-in-left"></i>
-                        <span>Zwroty</span>
+                {% set g = page_tab_groups().returns %}
+                <li class="sidebar-item">
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
                     </a>
-                    <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/client-complaints/pending-products">
-                                <i class="bi bi-box-seam"></i> Oczekujące produkty
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/client-complaints/pending-shipment">
-                                <i class="bi bi-truck"></i> Oczekujące zwroty (wysyłka)
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/client-complaints/picking-list">
-                                <i class="bi bi-card-checklist"></i> Listy kompletacyjne
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/client-complaints/shipping-documents">
-                                <i class="bi bi-box-arrow-in-left"></i> Dokumenty zwrotów
-                            </a>
-                        </li>
-                    </ul>
                 </li>
 
                 <li class="sidebar-item has-sub">
@@ -342,38 +298,12 @@
                     </ul>
                 </li>
 
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
-                        <i class="bi bi-archive-fill"></i>
-                        <span>Archiwum</span>
+                {% set g = page_tab_groups().archive %}
+                <li class="sidebar-item">
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
                     </a>
-                    <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/archive/documents/shipping/wz">
-                                <i class="bi bi-file-earmark"></i> WZ
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/archive/documents/shipping/cmr">
-                                <i class="bi bi-file-earmark-text"></i> CMR
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/archive/documents/shipping/wdt">
-                                <i class="bi bi-file-earmark-spreadsheet"></i> WDT
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/archive/documents/shipping/difference">
-                                <i class="bi bi-file-earmark-diff"></i> Dokumenty różnic
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/archive/documents/picking-lists">
-                                <i class="bi bi-card-checklist"></i> Listy kompletacyjne
-                            </a>
-                        </li>
-                    </ul>
                 </li>
 
                 <li class="sidebar-title">Logistyka</li>
@@ -537,6 +467,20 @@
                 </li>
 
             </ul>
+            {# Wyszukiwarka : strony bez własnej pozycji w railu (zakładki grup, przyciski na stronach). #}
+            <ul class="d-none" data-search-extra aria-hidden="true">
+                {% for g in page_tab_groups() %}{% for t in g.tabs %}
+                <li><a href="{{ root }}{{ t[0] }}" data-where="{{ g.section }} › {{ g.label }}"><i class="bi {{ t[2] }}"></i> {{ t[1] }}</a></li>
+                {% endfor %}{% endfor %}
+                <li><a href="{{ root }}/semi-products" data-where="Produkt › Receptury"><i class="bi bi-diagram-2"></i> Półprodukty</a></li>
+                <li><a href="{{ root }}/compositions" data-where="Produkt › Receptury"><i class="bi bi-layers"></i> Kompozycje</a></li>
+                <li><a href="{{ root }}/products/new-with-recipe" data-where="Produkt › Produkty"><i class="bi bi-plus-circle"></i> Nowy produkt z recepturą</a></li>
+                <li><a href="{{ root }}/workshop/gantt#view=day" data-where="Produkcja › Tydzień produkcji"><i class="bi bi-bar-chart-steps"></i> Dzień : godziny</a></li>
+                <li><a href="{{ root }}/client-orders/archive" data-where="Zamówienia › Zamówienia klientów"><i class="bi bi-archive"></i> Archiwum zamówień</a></li>
+                <li><a href="{{ root }}/devices/logs" data-where="Administracja › Urządzenia"><i class="bi bi-journal-text"></i> Logi urządzeń</a></li>
+                <li><a href="{{ root }}/devices/new" data-where="Administracja › Urządzenia"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
+                <li><a href="{{ root }}/purchases" data-where="Finanse › Faktury zakupowe KSeF"><i class="bi bi-archive"></i> Archiwum dostaw (ręczne)</a></li>
+            </ul>
         </div>
 
         <button class="sidebar-toggler btn x"><i data-feather="x"></i></button>
@@ -548,10 +492,16 @@
     (function () {
         var here = location.pathname.replace(/\/+$/, '');
         var best = null, bestLen = -1;
+        // Prefiks aplikacji (np. /production) : z linku logo /dashboard.
+        var base = (document.querySelector('#sidebar .logo a') || {pathname: ''}).pathname.replace(/\/dashboard\/?$/, '');
         document.querySelectorAll('#sidebar .menu a[href]').forEach(function (a) {
             if (a.getAttribute('href') === '#') return;
-            var p = a.pathname.replace(/\/+$/, '');
-            if ((here === p || here.indexOf(p + '/') === 0) && p.length > bestLen) { best = a; bestLen = p.length; }
+            // Grupa z zakładkami (data-also) : pozycja aktywna na każdej stronie grupy.
+            var paths = [a.pathname].concat((a.dataset.also || '').split(' ').filter(Boolean).map(function (u) { return base + u; }));
+            paths.forEach(function (raw) {
+                var p = raw.replace(/\/+$/, '');
+                if ((here === p || here.indexOf(p + '/') === 0) && p.length > bestLen) { best = a; bestLen = p.length; }
+            });
         });
         if (!best) return;
         var li = best.closest('li');

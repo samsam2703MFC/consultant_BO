@@ -19,6 +19,9 @@ class AppExtension extends AbstractExtension
     {
         return [
             new TwigFunction('old', [ $this, 'getOld' ]),
+            // Zakładki grupy stron (BDO, PPWR, zwroty, archiwum) nad nagłówkiem ; lista grup dla railu i wyszukiwarki.
+            new TwigFunction('page_tabs_html', fn() => \App\Core\Web\PageTabs::html(ROOT), ['is_safe' => ['html']]),
+            new TwigFunction('page_tab_groups', fn() => \App\Core\Web\PageTabs::GROUPS),
             new TwigFunction('can', function(string $perm, array $perms = null) {
                 $perms = $perms ?? (GlobalRegistry::get('user')['permissions'] ?? []);
                 return in_array($perm, $perms, true);

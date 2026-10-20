@@ -77,6 +77,14 @@
                             label: fold(label), where: fold(where) });
             });
         });
+        // Strony bez pozycji w railu (zakładki grup, przyciski) : ukryta lista w menu.
+        document.querySelectorAll('#sidebar [data-search-extra] a[href]').forEach(function (a) {
+            var label = clean(a);
+            var where = a.dataset.where || '';
+            var icon = a.querySelector('i.bi');
+            menu.push({ title: label, sub: where, href: a.href, icon: icon ? icon.className.replace(/^.*?(bi-[\w-]+).*$/, '$1') : '',
+                        label: fold(label), where: fold(where) });
+        });
         return menu;
     }
 
