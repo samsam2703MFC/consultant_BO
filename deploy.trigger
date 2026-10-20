@@ -873,3 +873,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T07:09:30Z rentowność : zakupy miesiąca według kategorii i dostawcy, surowce z receptur
 2026-10-20T07:15:48Z migracja 019 : indeks daty WDT dla kolumny tekstowej
 2026-10-20T08:00:02Z rentowność : sprzedaż na osobę, tabela 18 miesięcy
+2026-10-20T08:16:18Z rentowność : co wyprodukowały grupy, menu Analiza
