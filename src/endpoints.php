@@ -1817,6 +1817,44 @@ function exVendeurs($r): ?array
     return $out;
 }
 
+/**
+ * GET /exploitation/equipe-heures?shop=4&date=YYYY-MM-DD — les ventes de chaque personne, heure par heure (dashboard
+ * magasin, l'équipe du jour, une ligne dépliée ; 20/10/2026). Une lecture de la liste des tickets du jour au panel
+ * (`/shops/{id}/transactions?date=`) : le vendeur (`id_employee`, nommé comme au planning), l'heure (`insert_timestamp`,
+ * la même heure que la séparation des clients pro) et le montant. Rend {personnes: {nom: {h6: [ca, tickets], …}}}.
+ * Gardé dix minutes ; un jour lu le lendemain ou plus tard est clos et se garde.
+ */
+function ep_exploitation_equipe_heures(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(400); return ['error' => 'shop et date (AAAA-MM-JJ) attendus']; }
+    $cle = 'eqH' . $sid . ':' . $date;
+    $c = setting($cle);
+    if (is_array($c) && isset($c['p'], $c['q']) && (date('Y-m-d', (int) $c['q']) > $date || (int) $c['q'] > time() - 600)) {
+        return ['shop' => (string) $sid, 'date' => $date, 'personnes' => $c['p'], 'sansNom' => $c['s'] ?? null, 'lu' => date('H:i', (int) $c['q'])];
+    }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['shop' => (string) $sid, 'date' => $date, 'indispo' => true, 'motif' => 'compte du panel non configuré']; }
+    $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
+    if (!is_array($liste)) { return ['shop' => (string) $sid, 'date' => $date, 'indispo' => true, 'motif' => 'le panel n’a pas rendu les tickets du jour']; }
+    $noms = function_exists('venteEmployes') ? venteEmployes() : [];
+    $P = []; $sans = [];
+    foreach (analyseListe($liste) as $t) {
+        if (!is_array($t)) { continue; }
+        $ts = (string) ($t['insert_timestamp'] ?? '');
+        if (strlen($ts) < 13) { continue; }
+        // La clé « h6 », jamais « 6 » : des heures 0, 1, 2… feraient une liste JSON au lieu d'un objet.
+        $h = 'h' . (int) substr($ts, 11, 2);
+        $m = (float) ($t['total_gross_amount_after_discount'] ?? $t['total_value_after_discount'] ?? 0);
+        $ide = (int) ($t['id_employee'] ?? 0);
+        $nom = $ide > 0 ? ($noms[$ide]['nom'] ?? ('Employé ' . $ide)) : '';
+        if ($nom === '') { $sans[$h] = [round(($sans[$h][0] ?? 0) + $m, 2), ($sans[$h][1] ?? 0) + 1]; continue; }
+        $P[$nom][$h] = [round(($P[$nom][$h][0] ?? 0) + $m, 2), ($P[$nom][$h][1] ?? 0) + 1];
+    }
+    try { svGrave($cle, ['q' => time(), 'p' => $P, 's' => $sans]); } catch (Throwable $e) { /* sans cache */ }
+    return ['shop' => (string) $sid, 'date' => $date, 'personnes' => $P, 'sansNom' => $sans, 'lu' => date('H:i')];
+}
+
 /** GET /exploitation/jour?date= — le calcul (exJourCalcul) gardé : trois minutes pour aujourd'hui, un quart d'heure pour hier, une heure avant. */
 function ep_exploitation_jour(): array
 {

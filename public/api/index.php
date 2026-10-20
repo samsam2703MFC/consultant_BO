@@ -265,6 +265,7 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/reseau'           => ep_exploitation_reseau(),
             $path === '/exploitation/rentabilite'      => ep_exploitation_rentabilite(),
             $path === '/exploitation/jour'             => ep_exploitation_jour(),
+            $path === '/exploitation/equipe-heures'    => ep_exploitation_equipe_heures(),
             $path === '/exploitation/ponderation-jours' => ep_ponderation_jours(),
             $path === '/exploitation/periode'          => ep_exploitation_periode(),
             $path === '/exploitation/mois.pdf'         => ep_exploitation_mois_pdf(),
