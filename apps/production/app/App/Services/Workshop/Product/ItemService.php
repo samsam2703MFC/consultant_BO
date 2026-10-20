@@ -60,6 +60,32 @@ final class ItemService
         return array_map(fn($row) => $this->summary($row, $context), $this->items->list($type, $groupId, $status, $mode, $search, $finalProductId));
     }
 
+    /**
+     * Stany z ostatnich tygodni sprzedaży (krok « Tryb i zapasy ») : średnia tygodniowa z WDT,
+     * min = stock.suggest_min_weeks tygodni, maks = stock.suggest_max_weeks tygodni, w pełnych kartonach.
+     */
+    public function stockSuggestion(int $id): array
+    {
+        $row = $this->load($id);
+        if ($row['item_type'] !== 'product') throw new ApiException('NOT_ALLOWED_FOR_TYPE', 409, [], ['item_type' => $row['item_type']]);
+        $weeks = max(1, (int) $this->params->get('stock.suggest_weeks', '6'));
+        $minWeeks = max(0.0, (float) $this->params->get('stock.suggest_min_weeks', '1'));
+        $maxWeeks = max($minWeeks, (float) $this->params->get('stock.suggest_max_weeks', '3'));
+        $ppc = max(1, (int) $row['ppc']);
+        $cartons = $this->items->shippedCartons((int) $row['id_final_product'], $weeks * 7);
+        $weekly = $cartons / $weeks;
+        $whole = fn(float $c) => (int) ceil(round($c, 6));
+        return [
+            'weeks' => $weeks, 'from' => date('Y-m-d', strtotime('-' . ($weeks * 7) . ' days')), 'to' => date('Y-m-d', strtotime('-1 day')),
+            'unit' => $row['base_unit'], 'ppc' => $ppc,
+            'shipped_cartons' => round($cartons, 1), 'shipped_quantity' => round($cartons * $ppc, 1),
+            'weekly_cartons' => round($weekly, 1), 'weekly_quantity' => round($weekly * $ppc, 1),
+            'min_weeks' => $minWeeks, 'max_weeks' => $maxWeeks,
+            'stock_min' => $whole($weekly * $minWeeks) * $ppc, 'stock_max' => $whole($weekly * $maxWeeks) * $ppc,
+            'stock_min_cartons' => $whole($weekly * $minWeeks), 'stock_max_cartons' => $whole($weekly * $maxWeeks),
+        ];
+    }
+
     /** Listy wyboru kroku « Produkt ». */
     public function erpOptions(): array
     {

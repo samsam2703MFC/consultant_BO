@@ -77,6 +77,7 @@ final class WorkshopApiRoutes
             ['PUT', '/produits/items/{id:\d+}/product', ItemController::class, 'updateProduct', 'prod.products.write'],
             ['PUT', '/produits/items/{id:\d+}/logistics', ItemController::class, 'updateLogistics', 'prod.products.write'],
             ['GET', '/produits/items/{id:\d+}/production-summary', ItemController::class, 'productionSummary', 'prod.products.read'],
+            ['GET', '/produits/items/{id:\d+}/stock-suggestion', ItemController::class, 'stockSuggestion', 'prod.products.read'],
             ['PUT', '/produits/items/{id:\d+}/routing', ItemController::class, 'replaceRouting', 'prod.products.write'],
             ['PUT', '/produits/items/{id:\d+}/bom-losses', ItemController::class, 'saveBomLosses', 'prod.products.write'],
             ['POST', '/produits/items/{id:\d+}/validate', ItemController::class, 'validate', 'prod.products.write'],

@@ -396,6 +396,10 @@ $pdo->exec("INSERT INTO customer_order_product (id_order, id_product, quantity_c
 $pdo->exec("INSERT INTO carton_stock (id_carton, batch_number, id_product, status) VALUES (1, 1, 501, 1), (2, 1, 501, 1), (3, 1, 501, 1), (4, 1, 501, 3)");
 $pdo->exec("INSERT INTO document_wdt (id, doc_num, id_customer, established_date, currency) VALUES (1, 'W/1', 1, CURDATE() - INTERVAL 10 DAY, 'eur')");
 $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, name, quantity, price_carton) VALUES (1, 501, 'Croissant test', 42, 40)");
+// Stany z ostatnich 6 tygodni (krok « Tryb i zapasy ») : 42 kartony / 6 tyg. = 7 kart./tydz. → min 1 tydz., maks 3 tyg.
+[$s, $st] = $call('GET', "/produits/items/{$itemId}/stock-suggestion", null, $dir);
+check($s === 200 && $st['data']['weeks'] === 6 && $st['data']['shipped_cartons'] == 42 && $st['data']['weekly_cartons'] == 7
+    && $st['data']['stock_min_cartons'] === 7 && $st['data']['stock_max_cartons'] === 21 && $st['data']['stock_min'] === 7 * 60 && $st['data']['stock_max'] === 21 * 60, 'stock suggestion: min 1 week, max 3 weeks of sales, whole cartons');
 $period = '?from=' . date('Y-m-d') . '&to=' . date('Y-m-d', strtotime('+6 days'));
 
 [$s, $b] = $call('GET', '/planning/demand' . $period, null, $lead);

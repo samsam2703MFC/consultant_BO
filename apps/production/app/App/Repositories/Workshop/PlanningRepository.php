@@ -51,6 +51,7 @@ final class PlanningRepository extends WorkshopRepository
         $rows = $this->all(
             'SELECT p.id_product, SUM(p.quantity) AS cartons FROM document_wdt w JOIN document_wdt_product p ON p.id_document_wdt = w.id
              WHERE w.established_date >= CURDATE() - INTERVAL ? DAY AND w.established_date < CURDATE()
+               AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
              GROUP BY p.id_product',
             [$days]
         );

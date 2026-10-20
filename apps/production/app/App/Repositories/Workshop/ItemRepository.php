@@ -132,6 +132,17 @@ final class ItemRepository extends WorkshopRepository
         $this->db->prepare("UPDATE final_product SET {$set} WHERE id = ?")->execute([...array_values($data), $finalProductId]);
     }
 
+    /** Kartony produktu wysłane (WDT bez duplikatów) w ostatnich $days dniach, bez dzisiaj. */
+    public function shippedCartons(int $finalProductId, int $days): float
+    {
+        return (float) ($this->all(
+            'SELECT COALESCE(SUM(p.quantity), 0) AS cartons FROM document_wdt w JOIN document_wdt_product p ON p.id_document_wdt = w.id
+             WHERE p.id_product = ? AND w.established_date >= CURDATE() - INTERVAL ? DAY AND w.established_date < CURDATE()
+               AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)',
+            [$finalProductId, $days]
+        )[0]['cartons'] ?? 0);
+    }
+
     /** Listy wyboru kroku « Produkt » : kategorie produktów i działy produkcji ERP. */
     public function erpOptions(): array
     {

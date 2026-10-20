@@ -216,5 +216,9 @@
   "s.at_once": "tout de suite",
   "s.end": "fin",
   "s.help": "Temps des étapes (étape « Étapes et temps ») : temps fixe par passage + temps par pièce × quantité. Étape suivante « J+1 » quand l'attente après l'étape dure 8 h ou plus (ex. nuit en chambre froide).",
-  "s.day": "J"
+  "s.day": "J",
+  "m.suggest": "Calculer sur les ventes des 6 dernières semaines",
+  "m.suggest_help": "Min = 1 semaine de ventes, max = 3 semaines (cartons entiers). Puis enregistrez.",
+  "m.suggest_none": "Aucune vente (WDT) sur les {weeks} dernières semaines : saisissez les stocks à la main.",
+  "m.suggest_done": "Ventes {weeks} sem. : {cartons} cart. (moyenne {weekly} cart./sem.) → min {min} {unit} ({min_c} cart., {min_w} sem.), max {max} {unit} ({max_c} cart., {max_w} sem.). Enregistrez pour garder."
 }

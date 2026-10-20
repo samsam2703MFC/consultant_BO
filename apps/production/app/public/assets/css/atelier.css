@@ -1367,3 +1367,5 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .at-prodsum h5 { margin-bottom: 10px; }
 .at-steps-compact li { padding: 12px 10px; gap: 8px; }
 .at-steps-compact li::before { width: 22px; height: 22px; font-size: 11px; }
+.tfb-suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.tfb-suggest[hidden] { display: none; }

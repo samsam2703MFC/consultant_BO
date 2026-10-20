@@ -216,5 +216,9 @@
   "s.at_once": "od razu",
   "s.end": "koniec",
   "s.help": "Czasy z etapów (krok „Etapy i czasy”): czas stały na przejście + czas na sztukę × ilość. Następny etap „D+1”, gdy czekanie po etapie trwa od 8 h (np. noc w chłodni).",
-  "s.day": "D"
+  "s.day": "D",
+  "m.suggest": "Oblicz ze sprzedaży ostatnich 6 tygodni",
+  "m.suggest_help": "Min = 1 tydzień sprzedaży, maks = 3 tygodnie (pełne kartony). Potem zapisz.",
+  "m.suggest_none": "Brak sprzedaży (WDT) w ostatnich {weeks} tygodniach — wpisz stany ręcznie.",
+  "m.suggest_done": "Sprzedaż {weeks} tyg.: {cartons} kart. (średnio {weekly} kart./tydz.) → min {min} {unit} ({min_c} kart., {min_w} tydz.), maks {max} {unit} ({max_c} kart., {max_w} tydz.). Zapisz, aby zachować."
 }

@@ -3087,6 +3087,81 @@
                 "x-permission": "prod.products.read"
             }
         },
+        "/produits/items/{id}/stock-suggestion": {
+            "get": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Stany ze sprzedaży / Stocks depuis les ventes (étape 4)",
+                "operationId": "getItemStockSuggestion",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/StockSuggestion"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Ventes WDT (sans doublons) des stock.suggest_weeks dernières semaines : moyenne par semaine ; stock min = stock.suggest_min_weeks semaines, max = stock.suggest_max_weeks semaines, arrondis aux cartons entiers. Rien n'est enregistré.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.read"
+            }
+        },
         "/produits/items/{id}/routing": {
             "put": {
                 "tags": [
@@ -7826,6 +7901,58 @@
                         "type": "integer",
                         "minimum": 0,
                         "description": "cartons (liste de production ERP)"
+                    }
+                }
+            },
+            "StockSuggestion": {
+                "type": "object",
+                "properties": {
+                    "weeks": {
+                        "type": "integer"
+                    },
+                    "from": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "to": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "ppc": {
+                        "type": "integer"
+                    },
+                    "shipped_cartons": {
+                        "type": "number"
+                    },
+                    "shipped_quantity": {
+                        "type": "number"
+                    },
+                    "weekly_cartons": {
+                        "type": "number"
+                    },
+                    "weekly_quantity": {
+                        "type": "number"
+                    },
+                    "min_weeks": {
+                        "type": "number"
+                    },
+                    "max_weeks": {
+                        "type": "number"
+                    },
+                    "stock_min": {
+                        "type": "integer"
+                    },
+                    "stock_max": {
+                        "type": "integer"
+                    },
+                    "stock_min_cartons": {
+                        "type": "integer"
+                    },
+                    "stock_max_cartons": {
+                        "type": "integer"
                     }
                 }
             },

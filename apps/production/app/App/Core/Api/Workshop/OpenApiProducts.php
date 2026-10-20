@@ -30,6 +30,8 @@ final class OpenApiProducts
                 'description' => "Mêmes champs que l'ancien formulaire d'édition du produit (final_product). Changer de département place la fiche dans le groupe de ce département. Produits seulement (409 NOT_ALLOWED_FOR_TYPE)."],
             'GET /produits/items/{id:\d+}/production-summary' => ['tag' => $t, 'id' => 'getItemProductionSummary', 'summary' => 'Produkcja i Gantt / Production et Gantt (étape 7)', 'response' => 'ProductionSummary', 'errors' => [404],
                 'description' => "Rendement (pièces par heure de travail, par personne et pour le groupe), temps par carton et pour 1000 pièces, durée du début à la fin d'un lot (palette, sinon lot minimum, sinon 1000), étapes avec début depuis le départ et étape suivante : tout de suite, + minutes ou J+1 quand l'attente dure 8 h ou plus ; quantité de la semaine (plan), jours du Gantt de la semaine, opérations."],
+            'GET /produits/items/{id:\d+}/stock-suggestion' => ['tag' => $t, 'id' => 'getItemStockSuggestion', 'summary' => 'Stany ze sprzedaży / Stocks depuis les ventes (étape 4)', 'response' => 'StockSuggestion', 'errors' => [404, 409],
+                'description' => "Ventes WDT (sans doublons) des stock.suggest_weeks dernières semaines : moyenne par semaine ; stock min = stock.suggest_min_weeks semaines, max = stock.suggest_max_weeks semaines, arrondis aux cartons entiers. Rien n'est enregistré."],
             'PUT /produits/items/{id:\d+}/logistics' => ['tag' => $t, 'id' => 'updateItemLogistics', 'summary' => 'Logistyka: karton, paleta, przechowywanie / Logistique : carton, palette, conservation (étape 1)', 'body' => 'ItemLogisticsInput', 'response' => 'Item', 'errors' => [400, 404, 409, 422],
                 'description' => 'Poids, pièces par sachet / carton, cartons par couche et par palette : champs de l\'ERP (final_product). Carton (dimensions, tare, type, EAN), palette et conservation : fiche de production. 409 NOT_ALLOWED_FOR_TYPE pour un semi-fini ; cpp ≤ cpl × lpp (PALLET_OVER_LAYERS).'],
             'PUT /produits/items/{id:\d+}/routing' => ['tag' => $t, 'id' => 'replaceItemRouting', 'summary' => 'Marszruta / Gamme opératoire (étape 5)', 'body' => 'RoutingInput', 'response' => 'Item', 'errors' => [400, 404, 422],
@@ -128,6 +130,12 @@ final class OpenApiProducts
                 'name' => ['type' => 'string', 'maxLength' => 255], 'category_id' => ['type' => 'integer', 'minimum' => 1], 'section_id' => ['type' => 'integer', 'minimum' => 1],
                 'label_type' => ['type' => 'integer', 'enum' => ItemService::LABEL_TYPES], 'shelf_life' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 3650],
                 'stock_minimum' => ['type' => 'integer', 'minimum' => 0, 'description' => 'cartons (liste de production ERP)'],
+            ]],
+            'StockSuggestion' => ['type' => 'object', 'properties' => [
+                'weeks' => ['type' => 'integer'], 'from' => ['type' => 'string', 'format' => 'date'], 'to' => ['type' => 'string', 'format' => 'date'],
+                'unit' => ['type' => 'string'], 'ppc' => ['type' => 'integer'], 'shipped_cartons' => ['type' => 'number'], 'shipped_quantity' => ['type' => 'number'],
+                'weekly_cartons' => ['type' => 'number'], 'weekly_quantity' => ['type' => 'number'], 'min_weeks' => ['type' => 'number'], 'max_weeks' => ['type' => 'number'],
+                'stock_min' => ['type' => 'integer'], 'stock_max' => ['type' => 'integer'], 'stock_min_cartons' => ['type' => 'integer'], 'stock_max_cartons' => ['type' => 'integer'],
             ]],
             'ErpOptions' => ['type' => 'object', 'properties' => [
                 'categories' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string']]]],

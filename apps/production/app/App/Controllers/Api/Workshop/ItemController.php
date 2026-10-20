@@ -41,6 +41,11 @@ final class ItemController
         return new ApiResult($this->items->updateProduct($request->id(), $request->body(), $request->context));
     }
 
+    public function stockSuggestion(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->items->stockSuggestion($request->id()));
+    }
+
     public function productionSummary(ApiRequest $request): ApiResult
     {
         return new ApiResult($this->summary->forItem($request->id()) ?? throw ApiException::notFound('item', $request->id()));

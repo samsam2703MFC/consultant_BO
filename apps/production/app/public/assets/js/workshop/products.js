@@ -324,6 +324,9 @@
                 <span class="form-text d-block">${esc(t('help.never_frozen'))}</span></label>
             ${['stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple'].map(f => `<label>${esc(t('f.' + f))}
                 <input class="form-control" name="${f}" data-field="${f}" inputmode="decimal" value="${s[f] ?? ''}"></label>`).join('')}
+            ${item.item_type === 'product' ? `<div class="tfb-full tfb-suggest" data-suggest-box>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-suggest data-write><i class="bi bi-calculator"></i> ${esc(t('m.suggest'))}</button>
+                <span class="form-text" data-suggest-info>${esc(t('m.suggest_help'))}</span></div>` : ''}
             <p class="form-text tfb-full">${esc(t('help.mts'))}</p>
             ${nav(4)}</form>`;
         const form = body.querySelector('[data-form]');
@@ -335,7 +338,23 @@
             form.querySelectorAll('[data-mode-label]').forEach(x => x.classList.toggle('is-on', (x.dataset.modeLabel === 'MTS') === mts));
             form.querySelector('[data-mode-help]').textContent = t(mts ? 'help.mode_mts' : 'help.mode_mto');
             ['stock_min', 'stock_max', 'coverage_days'].forEach(f => { form[f].closest('label').hidden = !mts; });
+            const box = form.querySelector('[data-suggest-box]');
+            if (box) box.hidden = !mts;
         };
+        // Stany ze sprzedaży ostatnich tygodni : min = 1 tydzień, maks = 3 tygodnie (parametry), w pełnych kartonach.
+        form.querySelector('[data-suggest]')?.addEventListener('click', async () => {
+            const info = form.querySelector('[data-suggest-info]');
+            try {
+                const r = await api.get(`/produits/items/${item.id}/stock-suggestion`);
+                const q = (v) => ui.fmt(v, 0, api.lang);
+                if (r.shipped_cartons <= 0) { info.textContent = t('m.suggest_none', {weeks: r.weeks}); return; }
+                form.stock_min.value = r.stock_min;
+                form.stock_max.value = r.stock_max;
+                info.textContent = t('m.suggest_done', {weeks: r.weeks, cartons: q(r.shipped_cartons), weekly: ui.fmt(r.weekly_cartons, 1, api.lang),
+                    min: q(r.stock_min), min_c: q(r.stock_min_cartons), min_w: ui.fmt(r.min_weeks, 0, api.lang),
+                    max: q(r.stock_max), max_c: q(r.stock_max_cartons), max_w: ui.fmt(r.max_weeks, 0, api.lang), unit: r.unit});
+            } catch (err) { fail(form, err); }
+        });
         form.addEventListener('change', sync);
         sync();
         form.addEventListener('submit', (e) => {
