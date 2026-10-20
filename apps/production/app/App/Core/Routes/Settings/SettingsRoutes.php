@@ -38,6 +38,11 @@ return function(RouteCollector $r) {
         'method' => 'ajaxCheck'
     ]);
 
+    $r->addRoute('GET', '/settings/page-usage', [
+        'controller' => App\Controllers\Web\Settings\PageUsageController::class,
+        'method'     => 'index'
+    ]);
+
     $r->addRoute('GET', '/settings/languages', [
         'controller' => App\Controllers\Web\Settings\LanguageController::class,
         'method'     => 'index'

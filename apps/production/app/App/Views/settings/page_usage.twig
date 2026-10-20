@@ -1,0 +1,163 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Licznik stron{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Licznik stron</h3>
+            <p class="text-subtitle text-muted">Które strony ERP są używane, przez kogo i jak często — po miesiącu widać, co uprościć w menu</p>
+        </div>
+        <div class="at-logi-week-nav">
+            {% for p in periods %}
+                <a class="btn {{ p == days ? 'btn-primary' : 'btn-outline-primary' }}" href="{{ root }}/settings/page-usage?days={{ p }}">{{ p ? p ~ ' dni' : 'Od początku' }}</a>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-page-usage">
+    <div class="at-tiles">
+        <div class="at-tile">
+            <span class="at-tile-label"><i class="bi bi-calendar-check"></i> Licznik działa od</span>
+            <strong class="at-tile-value">{{ totals.first ? totals.first|date('d.m.Y') : '—' }}</strong>
+            <span class="at-tile-meta">{{ totals.first ? 'zliczane są otwarcia stron przez zalogowanych' : 'pierwsze wyświetlenia pojawią się po otwarciu stron' }}</span>
+        </div>
+        <div class="at-tile">
+            <span class="at-tile-label"><i class="bi bi-eye"></i> Wyświetlenia</span>
+            <strong class="at-tile-value">{{ totals.views|number_format(0, ',', ' ') }}</strong>
+            <span class="at-tile-meta">{{ days ? 'ostatnie ' ~ days ~ ' dni' : 'od początku' }}</span>
+        </div>
+        <div class="at-tile">
+            <span class="at-tile-label"><i class="bi bi-window-stack"></i> Używane strony</span>
+            <strong class="at-tile-value">{{ rows|length }}</strong>
+            <span class="at-tile-meta" id="puMenuMeta">pozycje menu: liczenie…</span>
+        </div>
+        <div class="at-tile">
+            <span class="at-tile-label"><i class="bi bi-people"></i> Użytkownicy</span>
+            <strong class="at-tile-value">{{ totals.users }}</strong>
+            <span class="at-tile-meta">otwierali strony w tym okresie</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Strony według wyświetleń</h4>
+            <input type="search" class="form-control form-control-sm" style="max-width: 260px" placeholder="Filtruj strony…" id="puFilter">
+        </div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle" id="puTable">
+                    <thead>
+                        <tr>
+                            <th>Strona</th>
+                            <th>Adres</th>
+                            <th class="text-end">Wyświetlenia</th>
+                            <th class="text-end">Dni z użyciem</th>
+                            <th>Kto (wyświetlenia)</th>
+                            <th class="text-end">Ostatnio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% set top = rows ? rows|first.views : 0 %}
+                    {% for r in rows %}
+                        <tr data-route="{{ r.route }}">
+                            <td><span class="pu-label fw-semibold">—</span><div class="pu-section small text-muted"></div></td>
+                            <td><a href="{{ root }}{{ r.last_path }}" class="small font-monospace">{{ r.route }}</a></td>
+                            <td class="text-end">
+                                <strong>{{ r.views|number_format(0, ',', ' ') }}</strong>
+                                <div class="progress mt-1" style="height: 4px; min-width: 80px;"><div class="progress-bar" style="width: {{ top ? (r.views / top * 100)|round(1) : 0 }}%"></div></div>
+                            </td>
+                            <td class="text-end">{{ r.days }}</td>
+                            <td class="small" title="{{ r.who|join(', ') }}">{{ r.users|plural_pl('osoba', 'osoby', 'osób') }} · <span class="text-muted">{{ r.who|slice(0, 3)|join(', ') }}{{ r.who|length > 3 ? '…' : '' }}</span></td>
+                            <td class="text-end small text-nowrap">{{ r.last_at|date('d.m H:i') }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6" class="at-empty">Brak wyświetleń w tym okresie — licznik zapisuje każde otwarcie strony od wdrożenia.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h4 class="card-title mb-0">Pozycje menu bez wizyt <span class="badge bg-secondary" id="puUnusedCount"></span></h4>
+            <p class="text-muted small mb-0">Kandydaci do ukrycia lub połączenia z inną stroną, jeśli po miesiącu nadal nikt ich nie otwiera.</p>
+        </div>
+        <div class="card-body pt-0">
+            <ul class="list-unstyled mb-0 row" id="puUnused"></ul>
+        </div>
+    </div>
+    <p class="at-profit-note mb-0">Liczone są otwarcia stron (nie wywołania w tle). Strony z parametrem są łączone: <code>/products/{id}/edit</code> to wszystkie karty produktów. Widoki przełączane po <code>#</code> na tej samej stronie (np. Gantt tygodnia / dnia, sekcje Rentowności) liczą się razem pod adresem strony.</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var base = new URL('{{ root }}/', location.href).pathname.replace(/\/+$/, '');
+    var esc = function (s) { return s.replace(/[.*+?^$()|[\]\\]/g, '\\$&'); };
+    var rows = [].slice.call(document.querySelectorAll('#puTable tbody tr[data-route]')).map(function (tr) {
+        var route = tr.getAttribute('data-route');
+        return {tr: tr, route: route, re: new RegExp('^' + esc(route).replace(/\{[^}]+\}/g, '[^/]+') + '/?$')};
+    });
+
+    // Pozycje menu z paska bocznego : sekcja › grupa › pozycja.
+    var entries = [];
+    var section = '';
+    document.querySelectorAll('#sidebar .menu > li').forEach(function (li) {
+        if (li.classList.contains('sidebar-title')) { section = li.textContent.trim(); return; }
+        var top = li.querySelector(':scope > .sidebar-link');
+        var topLabel = top ? top.textContent.replace(/\s+/g, ' ').trim() : '';
+        var links = li.classList.contains('has-sub') ? li.querySelectorAll('.submenu a[href]') : (top ? [top] : []);
+        [].forEach.call(links, function (a) {
+            if (a.getAttribute('href') === '#') return;
+            var path = a.pathname.replace(/\/+$/, '');
+            if (path.indexOf(base) === 0) path = path.slice(base.length);
+            entries.push({label: a.textContent.replace(/\s+/g, ' ').trim(), group: li.classList.contains('has-sub') ? topLabel : '', section: section,
+                          where: [section, li.classList.contains('has-sub') ? topLabel : ''].filter(Boolean).join(' › '),
+                          path: path || '/', hash: a.hash, href: a.getAttribute('href')});
+        });
+    });
+
+    // Strona = pozycja menu z tym adresem ; kilka widoków po # tej samej strony = nazwa grupy menu albo nazwy widoków.
+    rows.forEach(function (r) {
+        var hits = entries.filter(function (e) { return r.re.test(e.path); });
+        var plain = hits.filter(function (e) { return !e.hash; })[0];
+        var label = 'Poza menu', where = '';
+        if (plain) { label = plain.label; where = plain.where; }
+        else if (hits.length) {
+            var same = hits.every(function (e) { return e.group && e.group === hits[0].group; });
+            label = same ? hits[0].group : hits.map(function (e) { return e.label; }).join(' / ');
+            where = same ? hits[0].section : hits[0].where;
+        }
+        r.tr.querySelector('.pu-label').textContent = label;
+        if (!hits.length) r.tr.querySelector('.pu-label').classList.add('text-muted');
+        r.tr.querySelector('.pu-section').textContent = where;
+    });
+
+    var unused = entries.filter(function (e) { return !rows.some(function (r) { return r.re.test(e.path); }); });
+    var list = document.getElementById('puUnused');
+    unused.forEach(function (e) {
+        var li = document.createElement('li');
+        li.className = 'col-12 col-md-6 col-xl-4 py-1';
+        li.innerHTML = '<a></a> <span class="small text-muted"></span>';
+        li.firstChild.href = e.href;
+        li.firstChild.textContent = e.label;
+        li.lastChild.textContent = e.where;
+        list.appendChild(li);
+    });
+    if (!unused.length) list.innerHTML = '<li class="col-12 text-muted">Wszystkie pozycje menu były otwierane w tym okresie.</li>';
+    document.getElementById('puUnusedCount').textContent = unused.length;
+    document.getElementById('puMenuMeta').textContent = 'pozycje menu: ' + (entries.length - unused.length) + ' z ' + entries.length + ' otwierane';
+
+    document.getElementById('puFilter').addEventListener('input', function () {
+        var q = this.value.toLowerCase();
+        rows.forEach(function (r) { r.tr.style.display = !q || r.tr.textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none'; });
+    });
+})();
+</script>
+{% endblock %}

@@ -8,6 +8,25 @@ class App
 	private $controller = 'Home';
 	private $method 	= 'index';
 
+	/**
+	 * Licznik stron (Ustawienia › Licznik stron) : jedno wyświetlenie strony na trasę z parametrami
+	 * zastąpionymi nazwami (/products/{id}/edit), dzień i użytkownika. Błąd licznika nie zatrzymuje strony.
+	 */
+	private function countPageView($container, string $uri, array $vars): void
+	{
+		try {
+			$segments = explode('/', $uri);
+			foreach ($segments as &$segment) {
+				$name = array_search($segment, array_map('strval', $vars), true);
+				if ($name !== false && $segment !== '') $segment = '{' . $name . '}';
+			}
+			$route = implode('/', $segments) ?: '/';
+			$container->get(\App\Repositories\Settings\PageViewRepository::class)->hit($route, $uri, (int) (user('id') ?? 0));
+		} catch (\Throwable $e) {
+			error_log('[page-view] ' . $e->getMessage());
+		}
+	}
+
 	private function splitURL()
 	{
 		$URL = $_GET['url'] ?? 'login';
@@ -58,6 +77,10 @@ class App
                 [$_, $handler, $vars] = $routeInfo;
                 $controllerFQCN = $handler['controller'];
                 $action         = $handler['method'];
+
+                if ($method === 'GET' && !str_starts_with($uri, '/ajax/') && !empty($_SESSION['USER'])) {
+                    $this->countPageView($container, $uri, $vars);
+                }
 
                 try {
                     $controller = $container->get($controllerFQCN);
