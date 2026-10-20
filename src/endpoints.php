@@ -1821,8 +1821,11 @@ function exVendeurs($r): ?array
  * GET /exploitation/equipe-heures?shop=4&date=YYYY-MM-DD — les ventes de chaque personne, heure par heure (dashboard
  * magasin, l'équipe du jour, une ligne dépliée ; 20/10/2026). Une lecture de la liste des tickets du jour au panel
  * (`/shops/{id}/transactions?date=`) : le vendeur (`id_employee`, nommé comme au planning), l'heure (`insert_timestamp`,
- * la même heure que la séparation des clients pro) et le montant. Rend {personnes: {nom: {h6: [ca, tickets], …}}}.
- * Gardé dix minutes ; un jour lu le lendemain ou plus tard est clos et se garde.
+ * la même heure que la séparation des clients pro) et le montant. Rend {personnes: {nom: {h6: [ca, tickets, articles,
+ * tickets aux articles lus], …}}, aLire}. Gardé dix minutes ; un jour lu le lendemain ou plus tard est clos et se garde.
+ * Les articles (20/10/2026, demandé par Sam : les articles par ticket de l'heure) : la liste ne les porte pas, chaque
+ * ticket se relit avec ses lignes (`/transactions/{id}?include=products`) — une fois, gardé ticket par ticket
+ * (`eqA{magasin}:{date}`), dans un budget de temps ; `aLire` compte ce qui attend le passage suivant.
  */
 function ep_exploitation_equipe_heures(): array
 {
@@ -1831,28 +1834,62 @@ function ep_exploitation_equipe_heures(): array
     if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(400); return ['error' => 'shop et date (AAAA-MM-JJ) attendus']; }
     $cle = 'eqH' . $sid . ':' . $date;
     $c = setting($cle);
-    if (is_array($c) && isset($c['p'], $c['q']) && (date('Y-m-d', (int) $c['q']) > $date || (int) $c['q'] > time() - 600)) {
-        return ['shop' => (string) $sid, 'date' => $date, 'personnes' => $c['p'], 'sansNom' => $c['s'] ?? null, 'lu' => date('H:i', (int) $c['q'])];
+    // `v` 2 : les heures portent leurs articles ; un relevé plus ancien (sans eux) se refait.
+    if (is_array($c) && (int) ($c['v'] ?? 0) >= 2 && isset($c['p'], $c['q']) && (date('Y-m-d', (int) $c['q']) > $date || (int) $c['q'] > time() - 600)) {
+        return ['shop' => (string) $sid, 'date' => $date, 'personnes' => $c['p'], 'sansNom' => $c['s'] ?? null, 'aLire' => 0, 'lu' => date('H:i', (int) $c['q'])];
     }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['shop' => (string) $sid, 'date' => $date, 'indispo' => true, 'motif' => 'compte du panel non configuré']; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
     if (!is_array($liste)) { return ['shop' => (string) $sid, 'date' => $date, 'indispo' => true, 'motif' => 'le panel n’a pas rendu les tickets du jour']; }
     $noms = function_exists('venteEmployes') ? venteEmployes() : [];
-    $P = []; $sans = [];
+    $T = [];
     foreach (analyseListe($liste) as $t) {
         if (!is_array($t)) { continue; }
         $ts = (string) ($t['insert_timestamp'] ?? '');
         if (strlen($ts) < 13) { continue; }
         // La clé « h6 », jamais « 6 » : des heures 0, 1, 2… feraient une liste JSON au lieu d'un objet.
-        $h = 'h' . (int) substr($ts, 11, 2);
-        $m = (float) ($t['total_gross_amount_after_discount'] ?? $t['total_value_after_discount'] ?? 0);
         $ide = (int) ($t['id_employee'] ?? 0);
-        $nom = $ide > 0 ? ($noms[$ide]['nom'] ?? ('Employé ' . $ide)) : '';
-        if ($nom === '') { $sans[$h] = [round(($sans[$h][0] ?? 0) + $m, 2), ($sans[$h][1] ?? 0) + 1]; continue; }
-        $P[$nom][$h] = [round(($P[$nom][$h][0] ?? 0) + $m, 2), ($P[$nom][$h][1] ?? 0) + 1];
+        $T[] = ['id' => (int) ($t['id'] ?? 0), 'h' => 'h' . (int) substr($ts, 11, 2),
+            'm' => (float) ($t['total_gross_amount_after_discount'] ?? $t['total_value_after_discount'] ?? 0),
+            'nom' => $ide > 0 ? ($noms[$ide]['nom'] ?? ('Employé ' . $ide)) : ''];
     }
-    try { svGrave($cle, ['q' => time(), 'p' => $P, 's' => $sans]); } catch (Throwable $e) { /* sans cache */ }
-    return ['shop' => (string) $sid, 'date' => $date, 'personnes' => $P, 'sansNom' => $sans, 'lu' => date('H:i')];
+    // Les articles, ticket par ticket : ceux déjà lus viennent du relevé gardé, les autres se lisent dans le budget.
+    $cleA = 'eqA' . $sid . ':' . $date;
+    $A = setting($cleA);
+    $A = is_array($A) ? $A : [];
+    $manque = array_values(array_filter(array_map(static fn ($x) => $x['id'], $T), static fn ($id) => $id > 0 && !isset($A[$id])));
+    $fin = microtime(true) + 20;
+    foreach (array_chunk($manque, 40) as $lot) {
+        if (microtime(true) > $fin) { break; }
+        $chemins = [];
+        foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
+        foreach (PanelApi::getParallele($chemins, 4) as $id => $tk) {
+            if (!is_array($tk) || !isset($tk['products'])) { continue; }
+            // Un article = une pièce : la quantité de chaque ligne produit ; une ligne au poids (quantité non entière) en vaut une.
+            $n = 0.0;
+            foreach ((array) $tk['products'] as $l) {
+                if ((int) ($l['id_product'] ?? 0) <= 0) { continue; }
+                $q = (float) ($l['quantity'] ?? 0);
+                $n += $q > 0 && abs($q - round($q)) < 0.001 ? round($q) : 1;
+            }
+            $A[$id] = $n;
+        }
+    }
+    if (count($A) > 0 && $manque !== []) { try { svGrave($cleA, $A); } catch (Throwable $e) { /* relu la prochaine fois */ } }
+    $P = []; $sans = []; $aLire = 0;
+    $ajoute = static function (?array $x, float $m, ?float $a): array {
+        $x = $x ?? [0.0, 0, 0.0, 0];
+        return [round($x[0] + $m, 2), $x[1] + 1, $a !== null ? $x[2] + $a : ($x[2] ?? 0), ($x[3] ?? 0) + ($a !== null ? 1 : 0)];
+    };
+    foreach ($T as $x) {
+        $a = $x['id'] > 0 && isset($A[$x['id']]) ? (float) $A[$x['id']] : null;
+        if ($a === null) { $aLire++; }
+        if ($x['nom'] === '') { $sans[$x['h']] = $ajoute($sans[$x['h']] ?? null, $x['m'], $a); continue; }
+        $P[$x['nom']][$x['h']] = $ajoute($P[$x['nom']][$x['h']] ?? null, $x['m'], $a);
+    }
+    // Gardé seulement complet : un relevé à qui manquent des articles se reprend à la lecture suivante.
+    if ($aLire === 0) { try { svGrave($cle, ['v' => 2, 'q' => time(), 'p' => $P, 's' => $sans]); } catch (Throwable $e) { /* sans cache */ } }
+    return ['shop' => (string) $sid, 'date' => $date, 'personnes' => $P, 'sansNom' => $sans, 'aLire' => $aLire, 'lu' => date('H:i')];
 }
 
 /** GET /exploitation/jour?date= — le calcul (exJourCalcul) gardé : trois minutes pour aujourd'hui, un quart d'heure pour hier, une heure avant. */

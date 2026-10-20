@@ -2976,6 +2976,15 @@
     // la production quand le magasin ne vend pas encore. Lue au premier dépliage, pour ce magasin et ce jour.
     const cleEqh = 'eqh|' + S.shop + '|' + S.date;
     const magH = {}; ((m && m.heures) || []).forEach(x => { magH[+x.h] = +x.ca || 0; });
+    // Les articles arrivent par lots (le serveur lit chaque ticket, vingt secondes par passage) : on relit tant que
+    // ça avance, cinq fois au plus.
+    const eqhRelance = n => {
+      const R = S.eqhRel || (S.eqhRel = {});
+      const r = R[cleEqh] || (R[cleEqh] = { n: 0, avant: null, prevu: false });
+      if (r.prevu || S.enCours[cleEqh] || r.n >= 5 || r.avant === n) { return; }
+      r.prevu = true; r.avant = n; r.n++;
+      setTimeout(() => { r.prevu = false; if (S.eqOuvert && S.eqDeplie) { lireAux(cleEqh, '/exploitation/equipe-heures?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, true); } }, 1500);
+    };
     const deplie = l => {
       if (l.hors || !l.srv) { return ''; }
       lireAux(cleEqh, '/exploitation/equipe-heures?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date);
@@ -2984,7 +2993,9 @@
         if (!HD) { return `<div class="db-mini" style="padding:8px 0">${S.err[cleEqh] ? esc(S.err[cleEqh]) : 'lecture des tickets du jour…'}</div>`; }
         if (HD.indispo) { return `<div class="db-mini" style="padding:8px 0">${esc(HD.motif || 'tickets du jour indisponibles')}</div>`; }
         const P = HD.personnes || {}, cle = Object.keys(P).find(n => cleNom(n) === l.k), V2 = cle ? P[cle] : {};
-        const vh = h => { const x = V2['h' + h]; return x ? { ca: +x[0] || 0, t: +x[1] || 0 } : null; };
+        // [ca, tickets, articles, tickets aux articles lus] : les articles se lisent ticket par ticket, `aLire` attend encore.
+        const vh = h => { const x = V2['h' + h]; return x ? { ca: +x[0] || 0, t: +x[1] || 0, a: +x[2] || 0, ta: +x[3] || 0 } : null; };
+        if (HD.aLire > 0) { eqhRelance(HD.aLire); }
         const h0 = Math.floor(Math.min(...l.srv.map(s2 => s2[0])) / 60), h1 = Math.ceil(Math.max(...l.srv.map(s2 => s2[1])) / 60);
         const dansPoste = h => l.srv.some(s2 => ov(s2[0], s2[1], h * 60, h * 60 + 60) > 0);
         const HS = []; for (let h = h0; h < h1; h++) { if (dansPoste(h)) { HS.push(h); } }
@@ -2995,7 +3006,7 @@
           const fo = fours.filter(c => Math.floor(opMin(c.four) / 60) === h).map(c => `<span class="eq-four">four ${esc(c.four)} · ${fN(c.pieces)} p.</span>`).join('');
           let c2;
           if (v && v.ca > 0) {
-            c2 = `<i class="eq-bar" style="height:${Math.max(4, Math.round(52 * v.ca / mxV))}px"></i><b>${fE(v.ca)}</b><small>${fN(v.t)} ticket${v.t > 1 ? 's' : ''} · ${fU(v.ca / Math.max(1, v.t))}</small><small>${mg > 0 ? Math.min(100, Math.round(100 * v.ca / mg)) + ' % du magasin' : ''}</small>`;
+            c2 = `<i class="eq-bar" style="height:${Math.max(4, Math.round(52 * v.ca / mxV))}px"></i><b>${fE(v.ca)}</b><small>${fN(v.t)} ticket${v.t > 1 ? 's' : ''} · ${fU(v.ca / Math.max(1, v.t))}</small><small>${v.ta ? nf(v.a / v.ta, 1) + ' art./ticket' : (HD.aLire ? 'articles : lecture…' : '')}</small><small>${mg > 0 ? Math.min(100, Math.round(100 * v.ca / mg)) + ' % du magasin' : ''}</small>`;
           } else if (futur) { c2 = `<span class="mu">à venir</span>`; }
           else if (enCours) { c2 = `<span class="mu">pas encore de vente</span>`; }
           else if (mg <= 0) { c2 = `${l.prodPoste ? '<span class="eq-prod">production</span>' : '<span class="mu">—</span>'}<small>magasin fermé</small>`; }
@@ -3008,7 +3019,7 @@
         if (l.prodPoste && HS.length && venteH.length && HS[0] < venteH[0]) { pills.push(`<span class="pill pr">production ${String(HS[0]).padStart(2, '0')}:00 → ${String(venteH[0]).padStart(2, '0')}:00</span>`); }
         if (venteH.length) { pills.push(`<span class="pill ve">vente ${String(venteH[0]).padStart(2, '0')}:00 → ${String(Math.min(h1, venteH[venteH.length - 1] + 1)).padStart(2, '0')}:00</span>`); }
         const avec = L.filter(o => o.k !== l.k && o.srv && o.srv.some(a => l.srv.some(b2 => venteH.some(h => ov(Math.max(a[0], b2[0]), Math.min(a[1], b2[1]), h * 60, h * 60 + 60) > 0)))).map(o => o.nom);
-        return `<div class="eq-dt"><span class="k">${esc(l.nom)}, heure par heure</span>${pills.join('')}${avec.length ? `<span class="mu">au comptoir avec ${esc(avec.join(', '))}</span>` : ''}${HD.lu ? `<span class="mu" style="margin-left:auto">tickets lus à ${esc(HD.lu)}</span>` : ''}</div><div class="eq-h">${cases || '<span class="db-mini">aucune heure de poste</span>'}</div>`;
+        return `<div class="eq-dt"><span class="k">${esc(l.nom)}, heure par heure</span>${pills.join('')}${avec.length ? `<span class="mu">au comptoir avec ${esc(avec.join(', '))}</span>` : ''}${HD.lu ? `<span class="mu" style="margin-left:auto">tickets lus à ${esc(HD.lu)}${HD.aLire ? ' · articles de ' + fN(HD.aLire) + ' ticket' + (HD.aLire > 1 ? 's' : '') + ' en lecture' : ''}</span>` : ''}</div><div class="eq-h">${cases || '<span class="db-mini">aucune heure de poste</span>'}</div>`;
       })();
       return `<tr class="eq-dep"><td colspan="9">${corps}</td></tr>`;
     };
