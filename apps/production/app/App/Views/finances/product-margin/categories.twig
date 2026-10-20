@@ -94,10 +94,16 @@
                     </div>
                 </div>
             </form>
-            <div class="form-text mt-2" id="recalcInfo">
+            <div class="form-text mt-2" id="targetInfo">
+                <i class="bi bi-bullseye me-1"></i> Ceny wg marży docelowej każdej kategorii (Cel marży) : obrót na miesiąc zmieniłby się o
+                <strong class="{{ targets.month_eur >= 0 ? 'text-success' : 'text-danger' }}">{{ targets.month_eur >= 0 ? '+' : '' }}{{ targets.month_eur|number_format(0, ',', ' ') }} €</strong>
+                (różnica ceny kartonu × średnia sprzedaż kartonów na miesiąc ; kategorie bez celu pominięte, ceny nie są zmieniane).
+            </div>
+            <div class="form-text mt-1" id="recalcInfo">
                 {% if recalc.at %}
                     <i class="bi bi-clock-history me-1"></i> Ostatnie przeliczenie kosztów: <strong>{{ recalc.at|date('d.m.Y H:i') }}</strong>{{ recalc.by ? ' · ' ~ recalc.by : '' }}
-                    — kolumna „Efekt na sztukę” pokazuje zmianę kosztu surowców jednej sztuki i marży przy obecnej cenie.
+                    — kolumna „Efekt na sztukę” pokazuje zmianę kosztu surowców jednej sztuki i marży przy obecnej cenie ;
+                    na miesiąc razem : <strong class="{{ recalc.month_eur >= 0 ? 'text-success' : 'text-danger' }}">{{ recalc.month_eur >= 0 ? '+' : '' }}{{ recalc.month_eur|number_format(0, ',', ' ') }} € marży</strong>.
                 {% else %}
                     <i class="bi bi-info-circle me-1"></i> „Przelicz wszystkie marże” przelicza koszt surowców receptur po bieżących cenach surowców (ceny sprzedaży bez zmian) i pokazuje efekt na sztukę.
                 {% endif %}
@@ -234,7 +240,8 @@
                                                     <th class="text-end">Koszt wytworzenia <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
                                                     <th class="text-end">Cena sprzedaży <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
                                                     <th class="text-center" style="width:130px;">{{ translations.category_margin_current|default('Marża') }}</th>
-                                                    <th class="text-end" style="width:150px;" title="Zmiana kosztu surowców jednej sztuki po ostatnim przeliczeniu; w nawiasie zmiana marży przy obecnej cenie">Efekt na sztukę <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
+                                                    <th class="text-end" style="width:150px;" title="Zmiana kosztu surowców jednej sztuki po ostatnim przeliczeniu; w nawiasie zmiana marży przy obecnej cenie ; na miesiąc = zmiana kosztu kartonu × sprzedaż kartonów na miesiąc">Efekt na sztukę <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
+                                                    <th class="text-end" style="width:160px;" title="Cena kartonu dająca marżę docelową kategorii ({{ cat.target_margin|number_format(1) }}%) i zmiana obrotu na miesiąc przy tej cenie (różnica ceny × sprzedaż kartonów na miesiąc)">Cena wg celu {{ cat.target_margin > 0 ? cat.target_margin|number_format(0) ~ '%' : '' }} · CA / mies.</th>
                                                     <th class="text-center" style="width:140px;">
                                                         <i class="bi bi-box-seam me-1 text-primary"></i>Sprzedaż <span class="badge bg-primary" style="font-size:.65rem;">WDT</span>
                                                     </th>
@@ -302,9 +309,7 @@
                                                                 {{ p.margin_percent|number_format(1) }}%
                                                             </span>
                                                             {% if cat.target_margin > 0 %}
-                                                                <span class="small ms-1 prod-margin-gap {{ pGap >= 0 ? 'text-success' : 'text-danger' }}">
-                                                                    ({{ pGap >= 0 ? '+' : '' }}{{ pGap|number_format(1) }}pp)
-                                                                </span>
+                                                                <div class="small prod-margin-gap {{ pGap >= 0 ? 'text-success' : 'text-danger' }}" title="Odchylenie od marży docelowej kategorii ({{ cat.target_margin|number_format(1) }}%)">({{ pGap >= 0 ? '+' : '' }}{{ pGap|number_format(1) }}pp)</div>
                                                             {% endif %}
                                                         {% else %}
                                                             <span class="badge bg-secondary">brak ceny</span>
@@ -317,7 +322,7 @@
                                                         {% if fx and fx.delta_eur_unit is not null %}
                                                             {% set up = fx.delta_eur_unit > 0.00005 %}
                                                             {% set down = fx.delta_eur_unit < -0.00005 %}
-                                                            <span class="fw-semibold {{ up ? 'text-danger' : (down ? 'text-success' : 'text-muted') }}"
+                                                            <span class="fw-semibold text-nowrap {{ up ? 'text-danger' : (down ? 'text-success' : 'text-muted') }}"
                                                                   title="Koszt surowców sztuki: {{ fx.old_unit_eur|number_format(4, ',', ' ') }} € → {{ fx.new_unit_eur|number_format(4, ',', ' ') }} €">
                                                                 {{ up ? '+' : '' }}{{ fx.delta_eur_unit|number_format(fx.delta_eur_unit|abs < 0.01 ? 4 : 3, ',', ' ') }} €
                                                                 {% if fx.delta_pct is not null %}({{ fx.delta_pct > 0 ? '+' : '' }}{{ fx.delta_pct|number_format(1, ',', ' ') }} %){% endif %}
@@ -325,6 +330,23 @@
                                                             {% if fx.margin_pp is not null and (up or down) %}
                                                                 <br><span class="text-muted" style="font-size:.7rem;">marża {{ fx.margin_pp > 0 ? '+' : '' }}{{ fx.margin_pp|number_format(1, ',', ' ') }} pp</span>
                                                             {% endif %}
+                                                            {% if fx.month_eur is not null and fx.month_eur|abs >= 0.5 %}
+                                                                <br><span class="text-nowrap {{ fx.month_eur >= 0 ? 'text-success' : 'text-danger' }}" style="font-size:.72rem;" title="Zmiana kosztu kartonu × średnia sprzedaż kartonów na miesiąc">≈ {{ fx.month_eur >= 0 ? '+' : '' }}{{ fx.month_eur|number_format(0, ',', ' ') }} €/mies. marży</span>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <span class="text-muted">—</span>
+                                                        {% endif %}
+                                                    </td>
+
+                                                    {# ── CENA WG MARŻY DOCELOWEJ KATEGORII I ZMIANA CA NA MIESIĄC ── #}
+                                                    {% set tg = targets.products[p.product_id] ?? null %}
+                                                    <td class="text-end small">
+                                                        {% if tg %}
+                                                            <span class="fw-semibold text-nowrap">{{ tg.price_eur|number_format(2, ',', ' ') }} €</span>
+                                                            <span class="text-muted text-nowrap" style="font-size:.7rem;">({{ tg.delta_pct >= 0 ? '+' : '' }}{{ tg.delta_pct|number_format(1, ',', ' ') }} %)</span>
+                                                            <br><span class="{{ tg.ca_month_eur > 0.5 ? 'text-success' : (tg.ca_month_eur < -0.5 ? 'text-danger' : 'text-muted') }}" style="font-size:.72rem;">CA {{ tg.ca_month_eur >= 0 ? '+' : '' }}{{ tg.ca_month_eur|number_format(0, ',', ' ') }} €/mies.</span>
+                                                        {% elseif cat.target_margin <= 0 %}
+                                                            <span class="text-muted" title="Kategoria nie ma marży docelowej">brak celu</span>
                                                         {% else %}
                                                             <span class="text-muted">—</span>
                                                         {% endif %}
@@ -386,6 +408,16 @@
                                                 </tr>
                                             {% endfor %}
                                             </tbody>
+                                            {% set catFx = recalc.categories[cat.category_id] ?? null %}
+                                            {% set catCa = targets.categories[cat.category_id] ?? null %}
+                                            {% if catFx is not null or catCa is not null %}
+                                            <tfoot><tr class="small">
+                                                <td colspan="6" class="ps-5 text-muted">Razem kategoria na miesiąc</td>
+                                                <td class="text-end">{% if catFx is not null %}<span class="fw-semibold {{ catFx >= 0 ? 'text-success' : 'text-danger' }}">{{ catFx >= 0 ? '+' : '' }}{{ catFx|number_format(0, ',', ' ') }} €</span><br><span class="text-muted" style="font-size:.7rem;">marża po przeliczeniu</span>{% endif %}</td>
+                                                <td class="text-end">{% if catCa is not null %}<span class="fw-semibold {{ catCa >= 0 ? 'text-success' : 'text-danger' }}">CA {{ catCa >= 0 ? '+' : '' }}{{ catCa|number_format(0, ',', ' ') }} €</span><br><span class="text-muted" style="font-size:.7rem;">przy cenach celu {{ cat.target_margin|number_format(0) }}%</span>{% endif %}</td>
+                                                <td colspan="2"></td>
+                                            </tr></tfoot>
+                                            {% endif %}
                                         </table>
                                         {% else %}
                                             <div class="p-3 text-muted small">

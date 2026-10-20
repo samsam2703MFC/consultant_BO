@@ -35,6 +35,7 @@ class CategoryMarginController extends BaseController
             'available_months_count' => $available,
             'result'                 => $result,
             'recalc'                 => $this->recalcEffects($result),
+            'targets'                => $this->targetEffects($result),
         ]);
     }
 
@@ -77,7 +78,10 @@ class CategoryMarginController extends BaseController
                 $ppc = max(1, (int) ($r['ppc'] ?? 1));
                 $delta = (float) $r['new_cost_carton'] - (float) $r['old_cost_carton'];
                 $sale = (float) ($p['sale_price_pln'] ?? 0);
+                // Miesiąc : zmiana kosztu kartonu × średnia sprzedaż kartonów na miesiąc (WDT) — efekt na marży.
+                $monthPln = -$delta * (float) ($p['avg_sold_qty_per_month'] ?? 0);
                 $products[$p['product_id']] = [
+                    'month_pln' => $monthPln, 'month_eur' => $rate > 0 ? $monthPln / $rate : null,
                     'delta_pln_unit' => $delta / $ppc,
                     'delta_eur_unit' => $rate > 0 ? $delta / $ppc / $rate : null,
                     'delta_pct' => (float) $r['old_cost_carton'] > 0 ? $delta / (float) $r['old_cost_carton'] * 100 : null,
@@ -88,7 +92,43 @@ class CategoryMarginController extends BaseController
             }
         }
         $first = reset($rows);
-        return ['at' => $first['recalculated_at'], 'by' => $first['by_name'] ?? null, 'products' => $products];
+        $categories = [];
+        foreach ($result['categories'] ?? [] as $cat) {
+            foreach ($cat['products'] as $p) {
+                if (isset($products[$p['product_id']]['month_eur'])) $categories[$cat['category_id']] = ($categories[$cat['category_id']] ?? 0) + $products[$p['product_id']]['month_eur'];
+            }
+        }
+        return ['at' => $first['recalculated_at'], 'by' => $first['by_name'] ?? null, 'products' => $products,
+            'categories' => $categories, 'month_eur' => array_sum($categories)];
+    }
+
+    /**
+     * Ceny wg marży docelowej kategorii (category_product.target_margin_percentage) : cena kartonu dająca
+     * marżę celu = koszt wytworzenia ÷ (1 − cel) i zmiana obrotu (CA) na miesiąc przy tej cenie =
+     * (cena celu − obecna cena) × średnia sprzedaż kartonów na miesiąc. Kategoria bez celu : brak.
+     * @return array{products: array<int, array>, categories: array<int, float>, month_eur: float}
+     */
+    private function targetEffects(array $result): array
+    {
+        $rate = (float) ($result['exchange_rate'] ?? 0);
+        $products = [];
+        $categories = [];
+        foreach ($result['categories'] ?? [] as $cat) {
+            if ((float) $cat['target_margin'] <= 0 || (float) $cat['target_margin'] >= 100 || $rate <= 0) continue;
+            foreach ($cat['products'] as $p) {
+                if (empty($p['has_data']) || $p['suggested_price_pln'] === null || (float) $p['sale_price_pln'] <= 0) continue;
+                $deltaPln = (float) $p['suggested_price_pln'] - (float) $p['sale_price_pln'];
+                $monthEur = $deltaPln * (float) ($p['avg_sold_qty_per_month'] ?? 0) / $rate;
+                $products[$p['product_id']] = [
+                    'price_eur' => (float) $p['suggested_price_pln'] / $rate,
+                    'delta_pct' => $deltaPln / (float) $p['sale_price_pln'] * 100,
+                    'ca_month_eur' => $monthEur,
+                    'target' => (float) $cat['target_margin'],
+                ];
+                $categories[$cat['category_id']] = ($categories[$cat['category_id']] ?? 0) + $monthEur;
+            }
+        }
+        return ['products' => $products, 'categories' => $categories, 'month_eur' => array_sum($categories)];
     }
 
     /**
