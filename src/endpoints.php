@@ -1797,6 +1797,26 @@ function exPrechauffer(): string
     return implode(' · ', $dit);
 }
 
+/**
+ * Les ventes d'une journée par vendeuse : /shops/{id}/statistics/sales/employees/{date} → [{nom, ca, tickets,
+ * articles}] (articles : null si la route ne les rend pas). null quand la route n'a rien rendu de lisible.
+ */
+function exVendeurs($r): ?array
+{
+    if (!is_array($r)) { return null; }
+    $out = [];
+    foreach (analyseListe($r) as $x) {
+        if (!is_array($x)) { continue; }
+        $nom = trim((string) ($x['display_name'] ?? $x['name'] ?? ''));
+        $t = (int) (nombreOuNull($x, ['transactions_qty', 'tickets', 'receipts']) ?? 0);
+        $ca = (float) (nombreOuNull($x, ['total_receipt_value', 'ca', 'turnover']) ?? 0);
+        if ($t === 0 && $ca == 0.0) { continue; }
+        $a = nombreOuNull($x, ['products_qty', 'items_qty', 'products', 'items']);
+        $out[] = ['nom' => $nom, 'ca' => round($ca, 2), 'tickets' => $t, 'articles' => $a !== null ? (int) round($a) : null];
+    }
+    return $out;
+}
+
 /** GET /exploitation/jour?date= — le calcul (exJourCalcul) gardé : trois minutes pour aujourd'hui, un quart d'heure pour hier, une heure avant. */
 function ep_exploitation_jour(): array
 {
@@ -1928,6 +1948,9 @@ function exJourCalcul(): array
         // marché. La route rend aussi des secrets (hachages, jetons) : on ne
         // garde que le taux et le rôle, rien d'autre ne sort de la mémoire.
         $paths['emp' . $id] = '/shops/' . $id . '/employees';
+        // Les VENTES de chaque vendeuse sur la journée (le vendeur sur le ticket) : l'équipe du jour du dashboard magasin
+        // (20/10/2026) les met face à ses heures et à son coût.
+        $paths['sve' . $id] = '/shops/' . $id . '/statistics/sales/employees/' . $date;
         // Les HEURES de la journée regardée : c'est la part déjà écoulée qui
         // permet de projeter la fin de journée. Une seule date, sinon la
         // route agrège les heures de toute la fenêtre.
@@ -2470,6 +2493,9 @@ function exJourCalcul(): array
             'heures' => array_map(static fn ($h9) => ['h' => $h9, 'ca' => $heuresCa[$h9]], array_keys($heuresCa)),
             'planning' => $planM,
             'planningSource' => $planSrc[(string) $id] ?? 'aucune réponse',
+            // Ce que chaque personne a vendu, au nom du planning (le même display_name au panel) ; null si la route n'a
+            // pas répondu — jamais une équipe à zéro inventée.
+            'vendeurs' => exVendeurs($res['sve' . $id] ?? null),
             // Le planning en euros : ce que coûtent les services au taux du
             // panel, et les heures qui n'y coûtent rien.
             'planningHeures' => round($hPlan, 2),

@@ -1313,6 +1313,12 @@ body.pp-emb{background:var(--color-bg)}
 .op-fl .pis b.eq{background:#8a7f72;height:12px}.op-fl .pis b.eq.hors{background:#bdb3a6}
 .op-fl .pis b.fo{background:#D9822B}.op-fl .pis b.fo.av{background:#fff;border:1.5px dashed #D9822B}
 .op-fl .pis b.vi{background:#E8CBA0;color:#6b4a14}
+.op-fl .pis b.eq[data-eqsel]{cursor:pointer}.op-fl .pis b.eq[data-eqsel]:hover{filter:brightness(.9)}.op-fl .pis b.eq.choisi{background:#221E1A;box-shadow:0 0 0 2px #fff,0 0 0 3.5px #221E1A;z-index:2}
+.eq-ouvre{margin-left:auto;border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;padding:4px 11px;font:600 11.5px var(--font-ui);color:var(--color-text);cursor:pointer}.eq-ouvre.on{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+.eq-carte>.ct{gap:10px}.eq-ferme{margin-left:auto;border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;width:26px;height:26px;cursor:pointer;color:var(--color-text-muted);font-size:15px;line-height:1}
+.eq-defil{overflow-x:auto}.eq-tab{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}.eq-tab th{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);text-align:right;padding:8px 10px;border-bottom:.5px solid var(--color-border-secondary);white-space:nowrap}
+.eq-tab td{padding:8px 10px;border-bottom:.5px solid var(--color-border-tertiary);text-align:right;white-space:nowrap;vertical-align:top}.eq-tab .l{text-align:left}.eq-tab td small{display:block;font-size:10.5px;color:var(--color-text-muted);font-weight:500;margin-top:1px}
+.eq-tab tbody tr[data-eqsel]{cursor:pointer}.eq-tab tbody tr[data-eqsel]:hover td{background:#faf6f0}.eq-tab tr.on td{background:#fff6e8}.eq-tab tr.on td:first-child{box-shadow:inset 3px 0 0 #C9781E}.eq-tab tr.tot td{background:var(--color-background-secondary);border-bottom:none}
 .op-fl .pis b.cmd{background:#2F6EA5;width:9px;height:9px;padding:0;border-radius:50%;top:6px}
 .op-fl .pis .lbl{position:absolute;top:5px;font:600 9.5px var(--font-ui);color:#8a5a12;white-space:nowrap}
 .op-fl .pis .vide{position:absolute;left:8px;top:4px;font-size:10px;color:var(--color-text-muted)}
