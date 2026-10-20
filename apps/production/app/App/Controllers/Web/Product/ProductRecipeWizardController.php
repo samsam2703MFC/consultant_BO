@@ -114,6 +114,7 @@ class ProductRecipeWizardController extends BaseController
             return $this->json(['message' => 'Nie udało się utworzyć produktu z recepturą. Nic nie zostało zapisane.'], 500);
         }
 
-        return $this->json($created + ['redirect' => ROOT . '/recipes/' . $created['id_recipe'] . '/calculation']);
+        // Ciąg dalszy w tym samym kreatorze : karta produktu od logistyki (tryb, grupa, etapy i czasy).
+        return $this->json($created + ['redirect' => ROOT . '/workshop/products#/product/' . $created['id_product'] . '?step=2']);
     }
 }

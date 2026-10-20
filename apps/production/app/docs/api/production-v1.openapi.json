@@ -2420,6 +2420,15 @@
                         }
                     },
                     {
+                        "name": "final_product_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "karta produktu ERP (edycja produktu otwiera tę kartę)"
+                        }
+                    },
+                    {
                         "$ref": "#/components/parameters/Lang"
                     }
                 ],
@@ -2605,6 +2614,66 @@
                 "x-permission": "prod.products.read"
             }
         },
+        "/produits/erp-options": {
+            "get": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Listy kroku « Produkt » / Listes de l'étape « Produit »",
+                "operationId": "getItemErpOptions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ErpOptions"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Catégories de produits et départements de production de l'ERP, types d'étiquette (0 petite, 1 grande).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.read"
+            }
+        },
         "/produits/items/{id}": {
             "get": {
                 "tags": [
@@ -2764,6 +2833,97 @@
                 "x-permission": "prod.products.write"
             }
         },
+        "/produits/items/{id}/product": {
+            "put": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Dane produktu ERP / Données du produit ERP (étape 1)",
+                "operationId": "updateItemProduct",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Item"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Mêmes champs que l'ancien formulaire d'édition du produit (final_product). Changer de département place la fiche dans le groupe de ce département. Produits seulement (409 NOT_ALLOWED_FOR_TYPE).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemProductInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.write"
+            }
+        },
         "/produits/items/{id}/logistics": {
             "put": {
                 "tags": [
@@ -2853,6 +3013,78 @@
                     }
                 ],
                 "x-permission": "prod.products.write"
+            }
+        },
+        "/produits/items/{id}/production-summary": {
+            "get": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Produkcja i Gantt / Production et Gantt (étape 7)",
+                "operationId": "getItemProductionSummary",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProductionSummary"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Rendement (pièces par heure de travail, par personne et pour le groupe), temps par carton et pour 1000 pièces, durée du début à la fin d'un lot (palette, sinon lot minimum, sinon 1000), étapes avec début depuis le départ et étape suivante : tout de suite, + minutes ou J+1 quand l'attente dure 8 h ou plus ; quantité de la semaine (plan), jours du Gantt de la semaine, opérations.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.read"
             }
         },
         "/produits/items/{id}/routing": {
@@ -7559,6 +7791,193 @@
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 7
+                    }
+                }
+            },
+            "ItemProductInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "category_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "section_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "label_type": {
+                        "type": "integer",
+                        "enum": [
+                            0,
+                            1
+                        ]
+                    },
+                    "shelf_life": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 3650
+                    },
+                    "stock_minimum": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "cartons (liste de production ERP)"
+                    }
+                }
+            },
+            "ErpOptions": {
+                "type": "object",
+                "properties": {
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "sections": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "label_types": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            },
+            "ProductionSummary": {
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "group": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "group_people": {
+                        "type": "integer"
+                    },
+                    "reference": {
+                        "type": "object",
+                        "properties": {
+                            "quantity": {
+                                "type": "number"
+                            },
+                            "kind": {
+                                "type": "string",
+                                "enum": [
+                                    "pallet",
+                                    "batch",
+                                    "thousand"
+                                ]
+                            },
+                            "cartons": {
+                                "type": "number",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "per_hour": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "per_hour_group": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "minutes_per_carton": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "hours_per_1000": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "labour_s": {
+                        "type": "number"
+                    },
+                    "lead_time_s": {
+                        "type": "number"
+                    },
+                    "next_day": {
+                        "type": "boolean"
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "step_no": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "workstation": {
+                                    "type": "string"
+                                },
+                                "passes": {
+                                    "type": "integer"
+                                },
+                                "work_s": {
+                                    "type": "number"
+                                },
+                                "per_hour": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "start_s": {
+                                    "type": "number"
+                                },
+                                "gap": {
+                                    "type": "object",
+                                    "properties": {
+                                        "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                                "none",
+                                                "minutes",
+                                                "next_day"
+                                            ]
+                                        },
+                                        "seconds": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                },
+                                "delay_place": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "week": {
+                        "type": "object"
                     }
                 }
             },

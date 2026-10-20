@@ -40,7 +40,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -241,6 +241,21 @@ check(count($item['data']['bom']) === 2 && $item['data']['bom'][0]['child_kind']
 [$s, $b] = $call('POST', '/produits/items', ['item_type' => 'product', 'final_product_id' => 501], $access);
 check($s === 409 && $b['description'] === 'ITEM_EXISTS', 'one sheet per ERP product');
 
+// Jeden kreator : krok « Produkt » (dane ERP z dawnego formularza edycji), karta produktu ERP, podsumowanie produkcji.
+$pdo->exec("INSERT INTO category_product (id, name) VALUES (1, 'Wiennoiserie'), (2, 'Pieczywo')");
+[$s, $o] = $call('GET', '/produits/erp-options', null, $dir);
+check($s === 200 && array_column($o['data']['categories'], 'name') === ['Pieczywo', 'Wiennoiserie'] && array_column($o['data']['sections'], 'id') === [1] && $o['data']['label_types'] === [0, 1], 'ERP options of the product step');
+[$s, $b] = $call('GET', '/produits/items?final_product_id=501', null, $dir);
+check($s === 200 && array_column($b['data'], 'id') === [$itemId], 'the sheet of an ERP product is found by final_product_id (product edit opens it)');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/product", ['name' => '  ', 'category_id' => 99, 'section_id' => 77, 'label_type' => 2], $access);
+check($s === 422 && $codes($b) === ['name:REQUIRED', 'label_type:OUT_OF_RANGE', 'category_id:REFERENCE_NOT_FOUND', 'section_id:REFERENCE_NOT_FOUND'], 'product step checks (name, category, section, label)');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/product", ['name' => 'Croissant test 75', 'category_id' => 1, 'label_type' => 1, 'shelf_life' => 180, 'stock_minimum' => 12], $dir);
+check($s === 403, 'direction does not edit products');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/product", ['name' => 'Croissant test 75', 'category_id' => 1, 'label_type' => 1, 'shelf_life' => 180, 'stock_minimum' => 12], $access);
+$fp = $pdo->query("SELECT name, id_category, label_type, shelf_life, stock_minimum FROM final_product WHERE id = 501")->fetch();
+check($s === 200 && $b['data']['name'] === 'Croissant test 75' && $b['data']['erp']['label_type'] === 1 && $b['data']['erp']['category_id'] === 1
+    && $fp['name'] === 'Croissant test 75' && (int) $fp['shelf_life'] === 180 && (int) $fp['stock_minimum'] === 12, 'product step writes the ERP product');
+
 [$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['never_frozen' => true, 'mode' => 'MTS'], $access);
 check($s === 422 && $codes($b) === ['mode:NEVER_FROZEN_MTS', 'stock_max:REQUIRED_FOR_MTS'], 'never frozen ⇒ never MTS, MTS needs a max stock');
 [$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['mode' => 'MTS', 'stock_min' => 100, 'stock_max' => 50], $access);
@@ -316,7 +331,10 @@ check($s === 422 && $codes($b) === ['bake_state:INVALID_CHOICE'], 'baking state 
 [$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['bake_state' => 'baked'], $access);
 check($s === 200 && $b['data']['settings']['bake_state'] === 'baked', 'baking state saved');
 [$s, $b] = $call('POST', "/produits/items/{$itemId}/validate", null, $access);
-check($s === 200 && $b['data']['settings']['status'] === 'validated' && $b['data']['settings']['wizard_step'] === 7, 'sheet validated (baked, oven in the routing)');
+check($s === 200 && $b['data']['settings']['status'] === 'validated' && $b['data']['settings']['wizard_step'] === 8, 'sheet validated (baked, oven in the routing)');
+[$s, $ps] = $call('GET', "/produits/items/{$itemId}/production-summary", null, $dir);
+check($s === 200 && $ps['data']['reference']['kind'] === 'pallet' && $ps['data']['reference']['quantity'] == 60 * 48 && $ps['data']['per_hour'] > 0
+    && count($ps['data']['steps']) === count($b['data']['routing']) && $ps['data']['steps'][0]['start_s'] == 0, 'production summary: pieces per hour for one pallet, steps from the start');
 [$s, $b] = $call('GET', '/produits/items?status=validated&mode=MTS', null, $dir);
 check($s === 200 && array_column($b['data'], 'id') === [$itemId], 'list filters');
 

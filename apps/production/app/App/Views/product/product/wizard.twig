@@ -20,12 +20,16 @@
          data-semi="{{ semiProducts|json_encode }}"
          data-preparations="{{ preparations|json_encode }}">
 
-    <ol class="at-steps" aria-label="Kroki kreatora">
+    <ol class="at-steps at-steps-compact" aria-label="Kroki kreatora">
         <li data-step-tab="1"><span>Produkt</span></li>
-        <li data-step-tab="2"><span>Opakowanie i waga</span></li>
+        <li data-step-tab="2"><span>Logistyka</span></li>
         <li data-step-tab="3"><span>Receptura</span></li>
         <li data-step-tab="4"><span>Przygotowanie</span></li>
-        <li data-step-tab="5"><span>Podsumowanie</span></li>
+        <li data-step-tab="5"><span>Zapis</span></li>
+        <li class="at-step-later" title="Po zapisie, w karcie produktu"><span>Tryb i zapasy</span></li>
+        <li class="at-step-later" title="Po zapisie, w karcie produktu"><span>Grupa i wypiek</span></li>
+        <li class="at-step-later" title="Po zapisie, w karcie produktu"><span>Etapy i czasy</span></li>
+        <li class="at-step-later" title="Po zapisie, w karcie produktu"><span>Zatwierdzenie</span></li>
     </ol>
 
     <div class="card">
@@ -167,7 +171,7 @@
                 <div class="at-note at-note-safe">
                     <i class="bi bi-shield-check"></i><strong>Produkt i receptura powstaną razem, w jednej transakcji.</strong>
                     Jeśli zapis receptury (lub jej spłaszczenie, etykieta czy przeliczenie kosztu) się nie uda, produkt też nie zostanie utworzony — nic nie zostanie zapisane.
-                    Po zapisie przejdziesz do kalkulacji receptury.
+                    Po zapisie kreator przechodzi do karty produktu: logistyka kartonu i palety, produkcja na zamówienie czy na stan, grupa i wypiek, etapy pracy z czasami (Gantt), zatwierdzenie. Kalkulacja receptury jest dostępna w kroku „Receptura”.
                 </div>
             </div>
 
@@ -504,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
         if (res.ok && res.redirect) {
-            setHint('Zapisano. Przechodzę do kalkulacji receptury…');
+            setHint('Zapisano. Przechodzę do karty produktu…');
             window.location.href = res.redirect;
             return;
         }

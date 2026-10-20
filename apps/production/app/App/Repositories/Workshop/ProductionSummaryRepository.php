@@ -10,6 +10,16 @@ final class ProductionSummaryRepository extends WorkshopRepository
 
     public function item(int $finalProductId): ?array
     {
+        return $this->itemWhere('i.id_final_product = ?', $finalProductId);
+    }
+
+    public function itemById(int $itemId): ?array
+    {
+        return $this->itemWhere('i.id = ?', $itemId);
+    }
+
+    private function itemWhere(string $where, int $id): ?array
+    {
         return $this->all(
             "SELECT i.id, i.item_type, i.base_unit, fp.ppc, fp.cpp, fp.weight,
                     s.mode, s.status, s.bake_state, s.batch_min, s.batch_multiple, s.stock_min, s.stock_max, s.id_primary_group,
@@ -17,11 +27,11 @@ final class ProductionSummaryRepository extends WorkshopRepository
                     (SELECT COALESCE(SUM(t.planned_headcount), 0) FROM tfb_prod_team t JOIN tfb_prod_shift_template sh ON sh.id = t.id_shift_template
                      WHERE t.id_group = s.id_primary_group AND t.active = 1 AND sh.is_night = 0) AS group_people
              FROM tfb_prod_item i
-             JOIN final_product fp ON fp.id = i.id_final_product
+             LEFT JOIN final_product fp ON fp.id = i.id_final_product
              LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id
              LEFT JOIN tfb_prod_group g ON g.id = s.id_primary_group
-             WHERE i.id_final_product = ? LIMIT 1",
-            [$finalProductId]
+             WHERE {$where} LIMIT 1",
+            [$id]
         )[0] ?? null;
     }
 

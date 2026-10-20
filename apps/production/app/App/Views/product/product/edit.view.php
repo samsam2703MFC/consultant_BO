@@ -161,7 +161,6 @@
             <?php endif; ?>
         </div>
     </div>
-    <?php if (!empty($row)) require __DIR__ . '/_production.view.php'; ?>
     </section>
 </div>
 <?php $this->view("page_components/footer"); ?>

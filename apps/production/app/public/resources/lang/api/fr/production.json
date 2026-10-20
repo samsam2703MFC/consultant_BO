@@ -55,7 +55,7 @@
     "WEEK_IN_PAST": "La semaine {week} est passée : plus aucun jour sur lequel répartir la production.",
     "WEEK_WARNING_NO_PLAN": "Pas de plan validé pour cette semaine : quantités de la proposition (commandes + réassort du stock). Validez le plan dans « Plans » pour suivre la réalisation.",
     "WEEK_WARNING_UNASSIGNED": "{count} produits ({hours} h) attendent dans « À répartir » : glissez-les sur un jour ou utilisez « Répartir par jour ».",
-    "WEEK_WARNING_GROUP_OVERLOAD": "{group} : il manque {hours} h sur les jours surchargés — déplacez des produits ou ajoutez du monde (Optimisation des shifts).",
+    "WEEK_WARNING_GROUP_OVERLOAD": "{group} : il manque {hours} h sur les jours surchargés — déplacez des produits ou ajoutez du monde au département (liste des employés).",
     "WEEK_WARNING_AFTER_DUE": "{count} blocs sont après l’échéance de la commande.",
     "WEEK_WARNING_NO_HOURS": "{count} produits sans norme de temps (gamme) : 0 h dans le Gantt."
   },
@@ -294,7 +294,11 @@
     "temperature_c": "Température (°C)",
     "date": "Date",
     "item_id": "Produit",
-    "reset": "Recommencer"
+    "reset": "Recommencer",
+    "category_id": "Catégorie",
+    "label_type": "Type d'étiquette",
+    "shelf_life": "Durée de conservation (jours)",
+    "stock_minimum": "Stock minimum"
   },
   "entities": {
     "group": "groupe",

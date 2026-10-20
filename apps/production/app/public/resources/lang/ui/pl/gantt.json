@@ -54,7 +54,6 @@
   "read_only": "Tylko podgląd — przesuwanie wymaga uprawnienia prod.gantt.move.",
   "due_title": "Termin",
   "team_title": "Zespół",
-  "optimizer": "Optymalizacja zmian",
   "week.title": "Tydzień {week} · {from} – {to}",
   "week.cartons": "kart.",
   "week.source_plan": "Plan v{version} ({from} – {to}), {status}",

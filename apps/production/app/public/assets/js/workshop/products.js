@@ -1,8 +1,9 @@
 /*
  * Karty produkcyjne / Fiches de production (P2) : liste, nouvelle fiche depuis l'ERP, assistant
- * en 7 étapes (article et logistique, mode et stocks, groupe, cuisson et durées de vie,
- * nomenclature et pertes, gamme, contrôle des temps avec chronométrages, validation).
- * Tout passe par l'API.
+ * unique du produit en 8 étapes, dans l'ordre de « Nowy produkt z recepturą » : produit (données
+ * ERP), logistique, recette et pertes, mode et stocks, groupe et cuisson, étapes et temps (gamme),
+ * contrôle des temps (résumé de production, chronométrages), validation. L'édition d'un produit ERP
+ * (/products/{id}/edit) ouvre cet assistant (#/product/{id}, fiche créée si besoin). Tout passe par l'API.
  */
 (async function () {
     'use strict';
@@ -11,7 +12,8 @@
     const {WorkshopApi, ui} = window.TfbWorkshop;
     const api = new WorkshopApi(el);
     const esc = ui.esc;
-    const state = {groups: [], workstations: [], item: null, studies: {}};
+    const state = {groups: [], workstations: [], erp: {categories: [], sections: [], label_types: [0, 1]}, item: null, studies: {}};
+    const STEPS = 8;
 
     try {
         await api.init();
@@ -34,9 +36,10 @@
     };
 
     async function loadReferences() {
-        const [groups, workstations] = await Promise.all([api.list('/referentiels/groups?active=true'), api.list('/referentiels/workstations?active=true')]);
+        const [groups, workstations, erp] = await Promise.all([api.list('/referentiels/groups?active=true'), api.list('/referentiels/workstations?active=true'), api.get('/produits/erp-options')]);
         state.groups = groups.data;
         state.workstations = workstations.data;
+        state.erp = erp;
     }
 
     function header(extra) {
@@ -65,7 +68,7 @@
             <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-hover mb-0">
                 <thead><tr><th>${esc(t('col.name'))}</th><th>${esc(t('col.type'))}</th><th>${esc(t('col.group'))}</th><th>${esc(t('col.mode'))}</th><th class="text-end">${esc(t('col.steps'))}</th><th>${esc(t('col.status'))}</th></tr></thead>
                 <tbody>${res.data.map(i => `<tr>
-                    <td><a href="#/item/${i.id}/${i.settings.status === 'validated' ? 6 : Math.max(2, i.settings.wizard_step)}"><strong>${esc(i.name)}</strong></a>${i.erp.active ? '' : ` <span class="badge bg-secondary">${esc(t('erp.inactive'))}</span>`}</td>
+                    <td><a href="#/item/${i.id}/${i.settings.status === 'validated' ? 7 : Math.max(1, i.settings.wizard_step)}"><strong>${esc(i.name)}</strong></a>${i.erp.active ? '' : ` <span class="badge bg-secondary">${esc(t('erp.inactive'))}</span>`}</td>
                     <td>${esc(t('type.' + i.item_type))}</td>
                     <td>${esc(groupName(i.settings.primary_group_id))}</td>
                     <td>${esc(t('mode.' + i.settings.mode))}${i.settings.never_frozen ? ' <i class="bi bi-snow" title="' + esc(t('f.never_frozen')) + '"></i>' : ''}</td>
@@ -88,6 +91,7 @@
         el.innerHTML = header(`<a class="btn btn-outline-primary btn-sm" href="#/">${esc(t('back_to_list'))}</a>`) + `
             <div class="card"><div class="card-body">
                 <h4>${esc(t('new.title'))}</h4><p class="text-muted">${esc(t('new.help'))}</p>
+                <p><a class="btn btn-sm btn-outline-primary" href="${esc(api.root)}/products/new-with-recipe"><i class="bi bi-plus-lg"></i> ${esc(t('new.with_recipe'))}</a></p>
                 <div class="tfb-filters">
                     <select class="form-select form-select-sm" data-type>${['product', 'semi'].map(s => `<option value="${s}">${esc(t('type.' + s))}</option>`).join('')}</select>
                     <input class="form-control form-control-sm" data-search placeholder="${esc(t('search'))}">
@@ -113,10 +117,29 @@
             try {
                 const body = type.value === 'product' ? {item_type: 'product', final_product_id: Number(b.dataset.id)} : {item_type: 'semi', recipe_id: Number(b.dataset.id)};
                 const item = await api.post('/produits/items', body);
-                location.hash = `#/item/${item.id}/2`;
+                location.hash = `#/item/${item.id}/1`;
             } catch (err) { b.disabled = false; fail(null, err); }
         });
         await load();
+    }
+
+    // --- Produit ERP → sa fiche (créée si besoin) : point d'entrée de l'édition d'un produit ---
+    async function openProduct(productId, step) {
+        const found = await api.list(`/produits/items?final_product_id=${productId}`);
+        let item = found.data[0];
+        if (!item) {
+            try {
+                item = await api.post('/produits/items', {item_type: 'product', final_product_id: productId});
+                // Après « Nowy produkt z recepturą » : produit déjà saisi, l'assistant reprend à la logistique.
+                if (step > 1) await api.patch(`/produits/items/${item.id}/settings`, {wizard_step: Math.min(STEPS, step)});
+            } catch (err) {
+                el.innerHTML = header() + `<div class="alert alert-warning">${esc(err.message)}</div>
+                    <a class="btn btn-outline-secondary" href="${esc(api.root)}/products/${productId}/edit?classic=1">${esc(t('p.classic_form'))}</a>`;
+                return;
+            }
+        }
+        history.replaceState(null, '', `#/item/${item.id}/${Math.min(STEPS, Math.max(1, step))}`);
+        await renderItem(item.id, Math.min(STEPS, Math.max(1, step)));
     }
 
     // --- Fiche : assistant -------------------------------------------------------------
@@ -129,11 +152,11 @@
                 <span class="badge ${item.settings.status === 'validated' ? 'bg-success' : 'bg-warning'}">${esc(t('status.' + item.settings.status))}</span>
                 <span class="text-muted">${esc(t('type.' + item.item_type))} · ${esc(groupName(item.settings.primary_group_id))}</span></div>
             ${ro ? `<div class="alert alert-info">${esc(t('read_only'))}</div>` : ''}
-            <ol class="tfb-stepper">${[1, 2, 3, 4, 5, 6, 7].map(n => `<li class="${n === step ? 'is-current' : ''} ${n < item.settings.wizard_step || item.settings.status === 'validated' ? 'is-done' : ''}">
-                <a href="#/item/${id}/${n}"><span>${n}</span>${esc(t('step.' + n))}</a></li>`).join('')}</ol>
+            <ol class="at-steps at-steps-links at-steps-compact" aria-label="${esc(t('steps'))}">${Array.from({length: STEPS}, (_, k) => k + 1).map(n => `<li class="${n === step ? 'is-active' : ''} ${n !== step && (n < item.settings.wizard_step || item.settings.status === 'validated') ? 'is-done' : ''}">
+                <a href="#/item/${id}/${n}" ${n === step ? 'aria-current="step"' : ''}><span>${esc(t('step.' + n))}</span></a></li>`).join('')}</ol>
             <div class="card"><div class="card-body" data-step-body></div></div>`;
         const body = el.querySelector('[data-step-body]');
-        const renderers = {1: stepArticle, 2: stepMode, 3: stepGroup, 4: stepBom, 5: stepRouting, 6: stepTimes, 7: stepValidate};
+        const renderers = {1: stepProduct, 2: stepArticle, 3: stepBom, 4: stepMode, 5: stepGroup, 6: stepRouting, 7: stepTimes, 8: stepValidate};
         await renderers[step](body, item, ro);
         if (ro) body.querySelectorAll('input, select, textarea, button[data-write]').forEach(x => x.disabled = true);
     }
@@ -141,7 +164,7 @@
     function nav(step, saveLabel) {
         return `<div class="tfb-nav">
             ${step > 1 ? `<a class="btn btn-outline-secondary" href="#/item/${state.item.id}/${step - 1}">${esc(t('back'))}</a>` : '<span></span>'}
-            ${saveLabel === false ? (step < 7 ? `<a class="btn btn-primary" href="#/item/${state.item.id}/${step + 1}">${esc(t('next'))}</a>` : '')
+            ${saveLabel === false ? (step < STEPS ? `<a class="btn btn-primary" href="#/item/${state.item.id}/${step + 1}">${esc(t('next'))}</a>` : '')
                 : `<button type="submit" class="btn btn-primary" data-write>${esc(saveLabel || t('save_next'))}</button>`}
         </div>`;
     }
@@ -155,6 +178,76 @@
         } catch (err) { fail(form, err); }
     }
 
+    // --- 1. Produit : données de l'ERP (mêmes champs que l'ancien formulaire d'édition) ----------
+    function stepProduct(body, item) {
+        const e = item.erp;
+        if (item.item_type !== 'product') {
+            body.innerHTML = `<dl class="tfb-dl"><dt>${esc(t('col.name'))}</dt><dd>${esc(item.name)}</dd><dt>${esc(t('col.type'))}</dt><dd>${esc(t('type.' + item.item_type))}</dd>
+                <dt>${esc(t('erp.unit'))}</dt><dd>${esc(item.base_unit)}</dd></dl><p class="text-muted">${esc(t('p.semi_help'))}</p>${nav(1, false)}`;
+            return;
+        }
+        const options = (list, current) => `<option value="">—</option>` + list.map(o => `<option value="${o.id}" ${o.id === current ? 'selected' : ''}>${esc(o.name)}</option>`).join('');
+        body.innerHTML = `<form class="tfb-form" data-form>
+            <label class="tfb-full">${esc(t('p.name'))}<input class="form-control" name="name" data-field="name" maxlength="255" required value="${esc(e.name || item.name)}"></label>
+            <label>${esc(t('p.category'))}<select class="form-select" name="category_id" data-field="category_id" required>${options(state.erp.categories, e.category_id)}</select></label>
+            <label>${esc(t('p.section'))}<select class="form-select" name="section_id" data-field="section_id" required>${options(state.erp.sections, e.section_id)}</select>
+                <span class="form-text">${esc(t('p.section_help'))}</span></label>
+            <label>${esc(t('p.label_type'))}<select class="form-select" name="label_type" data-field="label_type">
+                ${state.erp.label_types.map(v => `<option value="${v}" ${v === e.label_type ? 'selected' : ''}>${esc(t('p.label_type.' + v))}</option>`).join('')}</select></label>
+            <label>${esc(t('p.shelf_life'))}<input class="form-control" name="shelf_life" data-field="shelf_life" inputmode="numeric" value="${e.shelf_life ?? ''}"></label>
+            <label>${esc(t('p.stock_minimum'))}<input class="form-control" name="stock_minimum" data-field="stock_minimum" inputmode="numeric" value="${e.stock_minimum ?? ''}">
+                <span class="form-text">${esc(t('p.stock_minimum_help'))}</span></label>
+            <p class="form-text tfb-full">${esc(t('p.help'))}</p>
+            ${nav(1)}</form>`;
+        const form = body.querySelector('[data-form]');
+        form.addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            ui.clearErrors(form);
+            const data = {name: form.name.value.trim(), label_type: Number(form.label_type.value)};
+            for (const f of ['category_id', 'section_id', 'shelf_life', 'stock_minimum']) { const v = ui.num(form[f].value); if (v !== null) data[f] = v; }
+            try {
+                await api.put(`/produits/items/${item.id}/product`, data);
+                await saveSettings(form, {}, 2);
+            } catch (err) { fail(form, err); }
+        });
+    }
+
+    // Recette : liens vers la kalkulacja (composition, préparation, coût) ou vers la création.
+    function recipeLinks(item) {
+        return item.recipe_id
+            ? `<p class="tfb-recipe-links"><a class="btn btn-sm btn-outline-primary" href="${esc(api.root)}/recipes/${item.recipe_id}/calculation"><i class="bi bi-calculator"></i> ${esc(t('bom.calculation'))}</a>
+                <span class="form-text">${esc(t('bom.calculation_help'))}</span></p>`
+            : `<p class="alert alert-warning">${esc(t('bom.no_recipe'))}</p>`;
+    }
+
+    // Résumé de production (pièces/heure, étapes et délais D+1, plan de la semaine) : /production-summary.
+    async function productionSummary(box, item) {
+        if (!box) return;
+        let p;
+        try { p = await api.get(`/produits/items/${item.id}/production-summary`); } catch (err) { box.innerHTML = ''; return; }
+        const n = (v, d = 0) => v === null || v === undefined ? '—' : ui.fmt(v, d, api.lang);
+        const dur = (s) => ui.duration(Math.round(s), api);
+        const offset = (s) => { const d = Math.floor(s / 86400), r = s % 86400; return (d ? t('s.day') + '+' + d + ' ' : '') + '+' + Math.floor(r / 3600) + ':' + String(Math.floor(r % 3600 / 60)).padStart(2, '0'); };
+        const day = (d) => new Date(d + 'T00:00:00').toLocaleDateString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'short', day: '2-digit', month: '2-digit'});
+        const gap = (g, last) => g.kind === 'next_day' ? `<span class="at-pill at-pill-warn">${esc(t('s.day'))}+1</span> ${esc(t('s.after', {time: dur(g.seconds)}))}`
+            : g.kind === 'minutes' ? `<span class="at-pill">+${esc(dur(g.seconds))}</span>` : `<span class="text-muted">${esc(t(last ? 's.end' : 's.at_once'))}</span>`;
+        const w = p.week;
+        box.innerHTML = `<div class="at-prodsum"><h5>${esc(t('s.title'))}</h5>
+            <div class="at-prodsum-kpis">
+                <div><span>${esc(t('s.per_hour'))}</span><strong>${n(p.per_hour)} ${esc(t('s.pcs_h'))}</strong><small>${esc(t('s.per_person'))}${p.per_hour_group !== null ? ' · ' + esc(t('s.group', {people: p.group_people, value: n(p.per_hour_group)})) : ''}</small></div>
+                <div><span>${esc(t('s.labour'))}</span><strong>${p.minutes_per_carton !== null ? n(p.minutes_per_carton, 1) + ' ' + esc(t('s.min_carton')) : dur(p.labour_s)}</strong><small>${n(p.hours_per_1000, 1)} ${esc(t('s.h_1000'))}</small></div>
+                <div><span>${esc(t('s.lead'))}</span><strong>${esc(dur(p.lead_time_s))}</strong><small>${esc(t('s.reference.' + p.reference.kind))}: ${n(p.reference.quantity)} ${esc(item.base_unit)}${p.next_day ? ' · ' + esc(t('s.next_day')) : ''}</small></div>
+                <div><span>${esc(t('s.week', {week: w.iso_week}))}</span><strong>${w.quantity > 0 ? n(w.quantity) + ' ' + esc(item.base_unit) : '—'}</strong>
+                    <small>${w.slots.length ? w.slots.map(x => esc(day(x.day)) + ': ' + n(x.quantity)).join(' · ') : esc(t('s.no_days'))}${w.operations ? ' · ' + esc(t('s.operations', {count: w.operations, done: w.done})) : ''}</small></div>
+            </div>
+            ${p.steps.length ? `<div class="table-responsive"><table class="table table-sm at-prodsum-table"><thead><tr><th>${esc(t('s.step'))}</th><th class="text-end">${esc(t('s.passes'))}</th>
+                <th class="text-end">${esc(t('s.pcs_h'))}</th><th>${esc(t('s.start'))}</th><th>${esc(t('s.next'))}</th></tr></thead>
+                <tbody>${p.steps.map((x, i) => `<tr><td><strong>${x.step_no}. ${esc(x.name)}</strong><div class="text-muted small">${esc(x.workstation)}</div></td>
+                    <td class="text-end">${x.passes} · ${esc(dur(x.work_s))}</td><td class="text-end">${n(x.per_hour)}</td><td>${esc(offset(x.start_s))}</td>
+                    <td>${gap(x.gap, i === p.steps.length - 1)}${x.delay_place ? `<div class="text-muted small">${esc(x.delay_place)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>` : ''}
+            <p class="form-text">${esc(t('s.help'))}</p></div>`;
+    }
+
     function stepArticle(body, item) {
         const info = `<dl class="tfb-dl">
             <dt>${esc(t('col.name'))}</dt><dd>${esc(item.name)}</dd>
@@ -162,7 +255,7 @@
             <dt>${esc(t('erp.unit'))}</dt><dd>${esc(item.base_unit)}</dd>
         </dl>`;
         if (item.item_type !== 'product') {
-            body.innerHTML = `${info}${item.erp.weight ? `<p>${esc(t('erp.weight'))}: ${ui.fmt(item.erp.weight, 1, api.lang)}</p>` : ''}<p class="text-muted">${esc(t('new.help'))}</p>${nav(1, false)}`;
+            body.innerHTML = `${info}${item.erp.weight ? `<p>${esc(t('erp.weight'))}: ${ui.fmt(item.erp.weight, 1, api.lang)}</p>` : ''}<p class="text-muted">${esc(t('new.help'))}</p>${nav(2, false)}`;
             return;
         }
         const e = item.erp;
@@ -191,7 +284,7 @@
                 ${out(t('l.labour_carton'), c.labour_s_per_carton ? ui.duration(c.labour_s_per_carton, api) : '—')}
             </div>
             <p class="form-text tfb-full">${esc(t('help.logistics'))}</p>
-            ${nav(1)}</form>`;
+            ${nav(2)}</form>`;
         const form = body.querySelector('[data-form]');
         // Cartons par palette proposés = couches × cartons par couche, tant que l'utilisateur ne l'a pas saisi.
         const syncPallet = () => {
@@ -213,7 +306,7 @@
             data.carton_ean = form.carton_ean.value.trim() || null;
             try {
                 await api.put(`/produits/items/${item.id}/logistics`, data);
-                await saveSettings(form, {}, 2);
+                await saveSettings(form, {}, 3);
             } catch (err) { fail(form, err); }
         });
     }
@@ -232,7 +325,7 @@
             ${['stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple'].map(f => `<label>${esc(t('f.' + f))}
                 <input class="form-control" name="${f}" data-field="${f}" inputmode="decimal" value="${s[f] ?? ''}"></label>`).join('')}
             <p class="form-text tfb-full">${esc(t('help.mts'))}</p>
-            ${nav(2)}</form>`;
+            ${nav(4)}</form>`;
         const form = body.querySelector('[data-form]');
         const sync = () => {
             const never = form.never_frozen.checked;
@@ -249,7 +342,7 @@
             e.preventDefault();
             const data = {mode: form.mts.checked ? 'MTS' : 'MTO', never_frozen: form.never_frozen.checked};
             for (const f of ['stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple']) data[f] = ui.num(form[f].value);
-            saveSettings(form, data, 3);
+            saveSettings(form, data, 5);
         });
     }
 
@@ -268,8 +361,8 @@
             ${['shelf_life_workshop_days', 'shelf_life_shop_days'].map(f => `<label>${esc(t('f.' + f))}
                 <input class="form-control" name="${f}" data-field="${f}" inputmode="decimal" value="${s[f] ?? ''}"></label>`).join('')}
             <div class="tfb-full"><h5>${esc(t('eq.title'))}</h5>${equipment}
-                <p class="form-text">${esc(t('eq.help'))} <a href="#/item/${item.id}/5">${esc(t('step.5'))}</a></p></div>
-            ${nav(3)}</form>`;
+                <p class="form-text">${esc(t('eq.help'))} <a href="#/item/${item.id}/6">${esc(t('step.6'))}</a></p></div>
+            ${nav(5)}</form>`;
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -279,22 +372,22 @@
                 shelf_life_shop_days: ui.num(form.shelf_life_shop_days.value),
             };
             if (product) data.bake_state = form.bake_state.value || null;
-            saveSettings(form, data, 4);
+            saveSettings(form, data, 6);
         });
     }
 
     function stepBom(body, item) {
         if (!item.bom.length) {
-            body.innerHTML = `<p class="text-muted">${esc(t('bom.empty'))}</p>${nav(4, false)}`;
+            body.innerHTML = `${recipeLinks(item)}<p class="text-muted">${esc(t('bom.empty'))}</p>${nav(3, false)}`;
             return;
         }
-        body.innerHTML = `<form data-form><div class="table-responsive"><table class="table">
+        body.innerHTML = `${recipeLinks(item)}<form data-form><div class="table-responsive"><table class="table">
             <thead><tr><th>${esc(t('bom.component'))}</th><th class="text-end">${esc(t('bom.quantity'))}</th><th style="width:140px">${esc(t('bom.loss'))}</th></tr></thead>
             <tbody>${item.bom.map((b, i) => `<tr data-row="${i}">
                 <td>${esc(b.name)} <span class="text-muted">(${esc(t('bom.kind.' + b.child_kind))})</span></td>
                 <td class="text-end">${ui.fmt(b.quantity, 3, api.lang)} ${esc(b.unit || '')}</td>
                 <td><input class="form-control form-control-sm" inputmode="decimal" data-field="losses.${i}.loss_pct" value="${b.loss_pct}"></td></tr>`).join('')}</tbody>
-            </table></div>${nav(4)}</form>`;
+            </table></div>${nav(3)}</form>`;
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -302,7 +395,7 @@
             const losses = item.bom.map((b, i) => ({child_kind: b.child_kind, child_id: b.child_id, loss_pct: ui.num(form.querySelector(`[data-field="losses.${i}.loss_pct"]`).value) ?? 0}));
             try {
                 await api.put(`/produits/items/${item.id}/bom-losses`, {losses});
-                await saveSettings(form, {}, 5);
+                await saveSettings(form, {}, 4);
             } catch (err) { fail(form, err); }
         });
     }
@@ -337,7 +430,7 @@
                         <label class="tfb-wide">${esc(t('r.alternatives'))}<select class="form-select form-select-sm" multiple size="3" data-k="alternatives" data-field="steps.${i}.alternatives">${wsOptions(null, w => w.id !== s.workstation_id).replace(/<option value="(\d+)"/g, (m, id) => s.alternatives.some(a => a.workstation_id === Number(id)) ? `<option value="${id}" selected` : m)}</select></label>
                     </div></div>`).join('')}
                 <button type="button" class="btn btn-outline-primary btn-sm" data-add data-write><i class="bi bi-plus"></i> ${esc(t('r.add_step'))}</button>
-                ${nav(5)}</form>`;
+                ${nav(6)}</form>`;
             const form = body.querySelector('[data-form]');
             form.addEventListener('input', collect);
             form.addEventListener('change', (e) => { collect(); if (e.target.dataset.k === 'workstation_id') draw(); });
@@ -402,7 +495,7 @@
             });
             try {
                 await api.put(`/produits/items/${item.id}/routing`, {steps: payload});
-                await saveSettings(form, {}, 6);
+                await saveSettings(form, {}, 7);
             } catch (err) { fail(form, err); }
         };
         draw();
@@ -422,17 +515,18 @@
 
     async function stepTimes(body, item) {
         if (!item.routing.length) {
-            body.innerHTML = `<p class="text-muted">${esc(t('r.empty'))}</p>${nav(6, false)}`;
+            body.innerHTML = `<p class="text-muted">${esc(t('r.empty'))}</p>${nav(7, false)}`;
             return;
         }
-        body.innerHTML = `<div class="tfb-samples">${item.durations.map(d => `<div class="tfb-sample"><h6>${esc(t('t.quantity'))}: ${ui.fmt(d.quantity, 0, api.lang)} ${esc(item.base_unit)}</h6>${durationTable(d)}</div>`).join('')}</div>
+        body.innerHTML = `<div data-summary></div><div class="tfb-samples">${item.durations.map(d => `<div class="tfb-sample"><h6>${esc(t('t.quantity'))}: ${ui.fmt(d.quantity, 0, api.lang)} ${esc(item.base_unit)}</h6>${durationTable(d)}</div>`).join('')}</div>
             <form class="tfb-filters" data-qty><input class="form-control form-control-sm" inputmode="decimal" name="q" placeholder="${esc(t('t.quantity'))}">
                 <button class="btn btn-sm btn-outline-primary">${esc(t('t.compute'))}</button></form><div data-custom></div>
             <h5 class="mt-4">${esc(t('t.studies'))}</h5>
             ${item.routing.map(s => `<details class="tfb-study" data-step="${s.id}"><summary><strong>${s.step_no}. ${esc(s.name)}</strong>
                 <span class="text-muted">${esc(s.workstation.name)} · ${s.fixed_time_s} ${esc(t('unit.s'))} ${esc(t('t.component.fixed'))} · ${ui.fmt(s.variable_time_s, 3, api.lang)} ${esc(t('unit.s'))} ${esc(t('t.component.variable'))}</span></summary>
                 <div data-study-body>${esc(t('loading'))}</div></details>`).join('')}
-            ${nav(6, false)}`;
+            ${nav(7, false)}`;
+        productionSummary(body.querySelector('[data-summary]'), item);
         body.querySelector('[data-qty]').addEventListener('submit', async (e) => {
             e.preventDefault();
             try {
@@ -488,7 +582,7 @@
             try {
                 await api.post(`/produits/routing-steps/${stepId}/apply-standard`, {component: b.dataset.apply});
                 ui.notify(true, t('saved'));
-                location.hash = `#/item/${state.item.id}/6?r=${Date.now()}`;
+                location.hash = `#/item/${state.item.id}/7?r=${Date.now()}`;
             } catch (err) { fail(null, err); }
         }));
     }
@@ -499,11 +593,11 @@
         const ready = item.checklist.every(c => c.ok);
         body.innerHTML = `<ul class="tfb-checklist">${item.checklist.map(c => `<li class="${c.ok ? 'ok' : 'ko'}"><i class="bi ${c.ok ? 'bi-check-circle' : 'bi-x-circle'}"></i> ${esc(label(c))}</li>`).join('')}</ul>
             ${item.settings.status === 'validated' ? `<p class="text-success">${esc(t('v.validated', {date: (item.settings.validated_at || '').slice(0, 16)}))}</p>` : (ready ? `<p>${esc(t('v.ready'))}</p>` : '')}
-            <form data-form>${nav(7, t('v.validate'))}</form>`;
+            <form data-form>${nav(8, t('v.validate'))}</form>`;
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            try { await api.post(`/produits/items/${item.id}/validate`); ui.notify(true, t('saved')); location.hash = `#/item/${item.id}/7?r=${Date.now()}`; }
+            try { await api.post(`/produits/items/${item.id}/validate`); ui.notify(true, t('saved')); location.hash = `#/item/${item.id}/8?r=${Date.now()}`; }
             catch (err) { fail(form, err); }
         });
     }
@@ -516,7 +610,8 @@
         try {
             let m;
             if (path === '/new') await renderNew();
-            else if ((m = path.match(/^\/item\/(\d+)\/([1-7])$/))) await renderItem(Number(m[1]), Number(m[2]));
+            else if ((m = path.match(/^\/product\/(\d+)$/))) await openProduct(Number(m[1]), Number(new URLSearchParams(hash.split('?')[1] || '').get('step')) || 1);
+            else if ((m = path.match(/^\/item\/(\d+)\/([1-8])$/))) await renderItem(Number(m[1]), Number(m[2]));
             else await renderList();
         } catch (err) {
             el.innerHTML = header() + `<div class="alert alert-danger">${esc(err.message)}</div>`;

@@ -24,7 +24,7 @@ final class ItemRepository extends WorkshopRepository
 
     private const SELECT = "SELECT i.id, i.item_type, i.id_final_product, i.id_recipe, i.base_unit, i.created_at,
             COALESCE(fp.name, pr.name) AS name, fp.ppc, fp.weight, fp.id_section, fp.active AS erp_active, fp.id_recipe AS product_recipe_id,
-            fp.ppb, fp.bpc, fp.cpl, fp.lpp, fp.cpp,
+            fp.ppb, fp.bpc, fp.cpl, fp.lpp, fp.cpp, fp.id_category, fp.label_type, fp.shelf_life, fp.stock_minimum,
             s.mode, s.never_frozen, s.bake_state, s.stock_min, s.stock_max, s.coverage_days, s.batch_min, s.batch_multiple,
             s.shelf_life_workshop_days, s.shelf_life_shop_days, s.id_primary_group, s.status, s.wizard_step,
             s.validated_at, s.validated_by, s.updated_at AS settings_updated_at,
@@ -36,10 +36,11 @@ final class ItemRepository extends WorkshopRepository
         LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id
         LEFT JOIN tfb_prod_item_logistics lg ON lg.id_item = i.id";
 
-    public function list(?string $type, ?int $groupId, ?string $status, ?string $mode, ?string $search): array
+    public function list(?string $type, ?int $groupId, ?string $status, ?string $mode, ?string $search, ?int $finalProductId = null): array
     {
         $where = [];
         $params = [];
+        if ($finalProductId !== null) { $where[] = 'i.id_final_product = ?'; $params[] = $finalProductId; }
         if ($type !== null) { $where[] = 'i.item_type = ?'; $params[] = $type; }
         if ($groupId !== null) { $where[] = 's.id_primary_group = ?'; $params[] = $groupId; }
         if ($status !== null) { $where[] = "COALESCE(s.status, 'draft') = ?"; $params[] = $status; }
@@ -122,6 +123,34 @@ final class ItemRepository extends WorkshopRepository
     }
 
     /** Pola logistyczne produktu w ERP (waga, sztuk / opakowanie / karton, kartony na warstwę i paletę). */
+    /** Dane produktu ERP z kroku « Produkt » (nazwa, kategoria, dział, etykieta, przydatność, stan minimalny). */
+    public function updateErpProduct(int $finalProductId, array $data): void
+    {
+        $data = array_intersect_key($data, array_flip(['name', 'id_category', 'id_section', 'label_type', 'shelf_life', 'stock_minimum']));
+        if (!$data) return;
+        $set = implode(', ', array_map(fn($c) => "{$c} = ?", array_keys($data)));
+        $this->db->prepare("UPDATE final_product SET {$set} WHERE id = ?")->execute([...array_values($data), $finalProductId]);
+    }
+
+    /** Listy wyboru kroku « Produkt » : kategorie produktów i działy produkcji ERP. */
+    public function erpOptions(): array
+    {
+        return [
+            'categories' => $this->all('SELECT id, name FROM category_product ORDER BY name'),
+            'sections' => $this->all('SELECT id, name FROM production_sections ORDER BY name'),
+        ];
+    }
+
+    public function categoryExists(int $id): bool
+    {
+        return (bool) $this->all('SELECT 1 FROM category_product WHERE id = ?', [$id]);
+    }
+
+    public function sectionExists(int $id): bool
+    {
+        return (bool) $this->all('SELECT 1 FROM production_sections WHERE id = ?', [$id]);
+    }
+
     public function updateErpLogistics(int $finalProductId, array $data): void
     {
         $data = array_intersect_key($data, array_flip(self::ERP_LOGISTICS));

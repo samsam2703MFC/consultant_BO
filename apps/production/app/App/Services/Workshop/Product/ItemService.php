@@ -30,6 +30,8 @@ final class ItemService
     public const CARTON_TYPES = ['klapowy', 'fasonowy', 'inny'];
     public const PALLET_TYPES = ['eur', 'industrial', 'other'];
     public const STORAGES = ['frozen', 'chilled', 'ambient'];
+    /** Typ etykiety ERP (final_product.label_type) : 0 = mała, 1 = duża. */
+    public const LABEL_TYPES = [0, 1];
     private const DELAY_TYPES = ['fermentation', 'froid', 'surgelation'];
     /** Postes où l'étape a une température (four, pousse, froid, surgélation). */
     private const TEMPERATURE_TYPES = ['four', 'fermentation', 'froid', 'surgelation'];
@@ -53,9 +55,61 @@ final class ItemService
     ) {
     }
 
-    public function list(?string $type, ?int $groupId, ?string $status, ?string $mode, ?string $search, ApiContext $context): array
+    public function list(?string $type, ?int $groupId, ?string $status, ?string $mode, ?string $search, ApiContext $context, ?int $finalProductId = null): array
     {
-        return array_map(fn($row) => $this->summary($row, $context), $this->items->list($type, $groupId, $status, $mode, $search));
+        return array_map(fn($row) => $this->summary($row, $context), $this->items->list($type, $groupId, $status, $mode, $search, $finalProductId));
+    }
+
+    /** Listy wyboru kroku « Produkt ». */
+    public function erpOptions(): array
+    {
+        $o = $this->items->erpOptions();
+        return [
+            'categories' => array_map(fn($c) => ['id' => (int) $c['id'], 'name' => $c['name']], $o['categories']),
+            'sections' => array_map(fn($c) => ['id' => (int) $c['id'], 'name' => $c['name']], $o['sections']),
+            'label_types' => self::LABEL_TYPES,
+        ];
+    }
+
+    /**
+     * Krok « Produkt » : dane produktu ERP (te same co formularz edycji produktu). Zmiana działu
+     * przenosi kartę do grupy pracowni tego działu, jeśli taka jest.
+     */
+    public function updateProduct(int $id, array $input, ApiContext $context): array
+    {
+        $row = $this->load($id);
+        $this->requireWrite($row, $context);
+        if ($row['item_type'] !== 'product') throw new ApiException('NOT_ALLOWED_FOR_TYPE', 409, [], ['item_type' => $row['item_type']]);
+        $v = (new Validator($input, true))->only(['name', 'category_id', 'section_id', 'label_type', 'shelf_life', 'stock_minimum'])
+            ->string('name', 255)
+            ->integer('category_id', false, 1)
+            ->integer('section_id', false, 1)
+            ->integer('label_type', false, 0, 1)
+            ->integer('shelf_life', false, 0, 3650)
+            ->integer('stock_minimum', false, 0, 1000000);
+        if ($v->provided('name') && trim((string) $v->value('name')) === '' && !$v->hasError('name')) $v->add('name', 'REQUIRED');
+        if ($v->value('category_id') !== null && !$v->hasError('category_id') && !$this->items->categoryExists((int) $v->value('category_id'))) $v->add('category_id', 'REFERENCE_NOT_FOUND', ['id' => $v->value('category_id')]);
+        if ($v->value('section_id') !== null && !$v->hasError('section_id') && !$this->items->sectionExists((int) $v->value('section_id'))) $v->add('section_id', 'REFERENCE_NOT_FOUND', ['id' => $v->value('section_id')]);
+        $v->throwIfInvalid();
+        $clean = $v->clean();
+        $data = [];
+        foreach (['name' => 'name', 'category_id' => 'id_category', 'section_id' => 'id_section', 'label_type' => 'label_type', 'shelf_life' => 'shelf_life', 'stock_minimum' => 'stock_minimum'] as $in => $col) {
+            if (array_key_exists($in, $clean)) $data[$col] = $in === 'name' ? trim((string) $clean[$in]) : $clean[$in];
+        }
+        $group = null;
+        if (isset($data['id_section']) && (int) $data['id_section'] !== (int) $row['id_section']) {
+            foreach ($this->groups->list(null) as $g) {
+                if ((int) $g['id_section'] === (int) $data['id_section'] && $g['active']) { $group = (int) $g['id']; break; }
+            }
+        }
+        $before = ['name' => $row['name'], 'id_category' => $row['id_category'], 'id_section' => $row['id_section'], 'label_type' => $row['label_type'],
+            'shelf_life' => $row['shelf_life'], 'stock_minimum' => $row['stock_minimum']];
+        $this->tx->execute(function () use ($id, $row, $data, $group, $before, $context) {
+            if ($data) $this->items->updateErpProduct((int) $row['id_final_product'], $data);
+            if ($group !== null) $this->items->saveSettings($id, ['id_primary_group' => $group, 'updated_by' => $context->userId]);
+            $this->audit->record($context, 'update', 'item_product', $id, array_intersect_key($before, $data), $data + ($group !== null ? ['primary_group_id' => $group] : []));
+        });
+        return $this->get($id, $context);
     }
 
     public function candidates(string $type, ?string $search): array
@@ -133,7 +187,7 @@ final class ItemService
                 'id_recipe' => $type === 'semi' ? (int) $erp['id'] : null,
                 'base_unit' => $type === 'product' ? 'szt' : 'kg',
             ]);
-            $this->items->saveSettings($id, ['mode' => 'MTO', 'never_frozen' => 0, 'id_primary_group' => $groupId, 'status' => 'draft', 'wizard_step' => 2, 'updated_by' => $context->userId]);
+            $this->items->saveSettings($id, ['mode' => 'MTO', 'never_frozen' => 0, 'id_primary_group' => $groupId, 'status' => 'draft', 'wizard_step' => 1, 'updated_by' => $context->userId]);
             $this->audit->record($context, 'create', 'item', $id, null, ['item_type' => $type, 'erp_id' => (int) $erp['id'], 'primary_group_id' => $groupId]);
             return $id;
         });
@@ -156,7 +210,7 @@ final class ItemService
             ->decimal('shelf_life_workshop_days', false, 0, 3650, true)
             ->decimal('shelf_life_shop_days', false, 0, 3650, true)
             ->integer('primary_group_id', false, 1, null, true)
-            ->integer('wizard_step', false, 1, 7);
+            ->integer('wizard_step', false, 1, 8);
         if ($v->value('primary_group_id') !== null && !$this->groups->exists($v->value('primary_group_id'))) {
             $v->add('primary_group_id', 'REFERENCE_NOT_FOUND', ['id' => $v->value('primary_group_id')]);
         }
@@ -392,7 +446,7 @@ final class ItemService
             throw ApiException::validation(array_map(fn($c) => ['field' => $c['field'], 'code' => $c['code']], $missing));
         }
         $this->tx->execute(function () use ($id, $context) {
-            $this->items->saveSettings($id, ['status' => 'validated', 'wizard_step' => 7, 'validated_at' => date('Y-m-d H:i:s'), 'validated_by' => $context->userId, 'updated_by' => $context->userId]);
+            $this->items->saveSettings($id, ['status' => 'validated', 'wizard_step' => 8, 'validated_at' => date('Y-m-d H:i:s'), 'validated_by' => $context->userId, 'updated_by' => $context->userId]);
             $this->audit->record($context, 'validate', 'item', $id, null, null);
         });
         return $this->get($id, $context);
@@ -461,6 +515,11 @@ final class ItemService
                 'lpp' => $row['lpp'] !== null ? (int) $row['lpp'] : null,
                 'cpp' => $row['cpp'] !== null ? (int) $row['cpp'] : null,
                 'section_id' => $row['id_section'] !== null ? (int) $row['id_section'] : null,
+                'name' => $row['id_final_product'] !== null ? $row['name'] : null,
+                'category_id' => isset($row['id_category']) ? (int) $row['id_category'] : null,
+                'label_type' => isset($row['label_type']) ? (int) $row['label_type'] : null,
+                'shelf_life' => isset($row['shelf_life']) ? (int) $row['shelf_life'] : null,
+                'stock_minimum' => isset($row['stock_minimum']) ? (int) $row['stock_minimum'] : null,
                 'active' => $row['erp_active'] === null ? true : (bool) $row['erp_active'],
             ],
             'settings' => [

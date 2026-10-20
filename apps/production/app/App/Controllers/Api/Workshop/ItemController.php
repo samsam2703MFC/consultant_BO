@@ -7,13 +7,14 @@ use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\ApiRequest;
 use App\Core\Api\Workshop\ApiResult;
 use App\Services\Workshop\Product\ItemService;
+use App\Services\Workshop\Product\ProductionSummaryService;
 
 /** Fiches de production des articles (assistant P2). */
 final class ItemController
 {
     use QueryFilters;
 
-    public function __construct(private ItemService $items)
+    public function __construct(private ItemService $items, private ProductionSummaryService $summary)
     {
     }
 
@@ -25,8 +26,24 @@ final class ItemController
             $this->choiceFilter($request, 'status', ItemService::STATUSES),
             $this->choiceFilter($request, 'mode', ItemService::MODES),
             $this->searchFilter($request),
-            $request->context
+            $request->context,
+            $this->intFilter($request, 'final_product_id')
         ));
+    }
+
+    public function erpOptions(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->items->erpOptions());
+    }
+
+    public function updateProduct(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->items->updateProduct($request->id(), $request->body(), $request->context));
+    }
+
+    public function productionSummary(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->summary->forItem($request->id()) ?? throw ApiException::notFound('item', $request->id()));
     }
 
     public function candidates(ApiRequest $request): ApiResult

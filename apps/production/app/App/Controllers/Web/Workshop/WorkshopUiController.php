@@ -34,11 +34,6 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/gantt', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
-    public function optimizer()
-    {
-        $this->view('workshop/optimizer', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
-    }
-
     /** Hala : tablety, identyfikatory, godziny pracy, wskaźniki (kierownik). */
     public function execution()
     {

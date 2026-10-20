@@ -24,9 +24,19 @@ final class ProductionSummaryService
 
     public function forFinalProduct(int $productId, ?int $now = null): ?array
     {
-        $now ??= time();
         $item = $this->repo->item($productId);
-        if ($item === null) return null;
+        return $item === null ? null : $this->build($item, $now ?? time());
+    }
+
+    /** To samo dla karty produkcyjnej (także półproduktu). */
+    public function forItem(int $itemId, ?int $now = null): ?array
+    {
+        $item = $this->repo->itemById($itemId);
+        return $item === null ? null : $this->build($item, $now ?? time());
+    }
+
+    private function build(array $item, int $now): array
+    {
         $itemId = (int) $item['id'];
         $steps = $this->repo->steps($itemId);
         $ppc = (int) $item['ppc'];
