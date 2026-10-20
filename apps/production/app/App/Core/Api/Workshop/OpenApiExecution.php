@@ -54,6 +54,12 @@ final class OpenApiExecution
                 'description' => "Produits planifiés ce jour (Gantt de la semaine) ou déjà saisis, avec leurs lots ; catalogue des fiches du groupe. 409 DEVICE_WITHOUT_GROUP si la tablette n'a pas de groupe."],
             'POST /kiosk/production' => ['tag' => 'kiosk', 'id' => 'recordOutput', 'summary' => 'Nowa partia wyrobu / Nouveau lot de fabrication', 'body' => 'OutputInput', 'response' => 'OutputBatch', 'ok' => 201, 'errors' => [400, 401, 409, 422],
                 'description' => "Quantité dans l'unité de la fiche (pièces / kg). Numéro de lot RRMMDD-GROUPE-NN. client_uuid : rejouable sans doublon. Jours modifiables : kiosk.output_edit_days."],
+            'GET /kiosk/quality' => ['tag' => 'kiosk', 'id' => 'qualityDay', 'summary' => 'Kontrola jakości dnia / Contrôle qualité du jour', 'response' => 'QualityDay', 'errors' => [401, 409],
+                'description' => "Lots du jour du groupe de la tablette avec leur contrôle (OK / non-conformité), non-conformités signalées par le groupe ces 14 derniers jours, fiches du groupe."],
+            'POST /kiosk/quality/batches/{id:\d+}' => ['tag' => 'kiosk', 'id' => 'qualityCheck', 'summary' => 'Kontrola partii / Contrôle d\'un lot', 'body' => 'QualityCheckInput', 'response' => 'QualityDay', 'errors' => [400, 401, 403, 404, 409, 422],
+                'description' => "result ok : contrôlé conforme (qui, quand). result nc : description obligatoire ; crée une non-conformité au registre de l'ERP (source production, produit, quantité du lot, numéro de lot, personne). 409 QC_ALREADY_NC, OUTPUT_CANCELLED."],
+            'POST /kiosk/quality/reports' => ['tag' => 'kiosk', 'id' => 'qualityReport', 'summary' => 'Zgłoś niezgodność / Signaler une non-conformité', 'body' => 'QualityReportInput', 'response' => 'QualityDay', 'ok' => 201, 'errors' => [400, 401, 409, 422],
+                'description' => "Non-conformité sans lot (produit du groupe ou générale) au registre de l'ERP, source production, avec la personne et la tablette."],
             'GET /kiosk/production/{id:\d+}' => ['tag' => 'kiosk', 'id' => 'outputBatch', 'summary' => 'Partia z recepturą i partiami surowców / Lot avec recette et lots des matières', 'response' => 'OutputBatch', 'errors' => [401, 403, 404]],
             'PATCH /kiosk/production/{id:\d+}' => ['tag' => 'kiosk', 'id' => 'updateOutput', 'summary' => 'Popraw lub anuluj partię / Corriger ou annuler un lot', 'body' => 'OutputUpdateInput', 'response' => 'OutputBatch', 'errors' => [400, 401, 403, 404, 409, 422]],
             'PUT /kiosk/production/{id:\d+}/lots/{material:\d+}' => ['tag' => 'kiosk', 'id' => 'outputLot', 'summary' => 'Partia surowca: numer, data, zdjęcie, OCR / Lot matière : numéro, date, photo, OCR', 'body' => 'OutputLotInput', 'response' => 'OutputBatch', 'errors' => [400, 401, 403, 404, 409, 422],
@@ -112,6 +118,28 @@ final class OpenApiExecution
             'SignatureInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['purpose', 'ref', 'image'], 'properties' => [
                 'purpose' => ['type' => 'string', 'enum' => ['clock_out', 'timesheet_month', 'operation']], 'ref' => ['type' => 'string', 'description' => 'id du pointage, AAAA-MM ou id de l\'opération'],
                 'image' => ['type' => 'string', 'description' => 'data:image/png;base64,…']]],
+            'QualityCheckInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['result'], 'properties' => [
+                'result' => ['type' => 'string', 'enum' => ['ok', 'nc']], 'note' => ['type' => 'string', 'nullable' => true, 'maxLength' => 255],
+                'description' => ['type' => 'string', 'maxLength' => 2000, 'description' => 'obligatoire pour nc'], 'severity' => ['type' => 'string', 'enum' => ['minor', 'major', 'critical']],
+            ]],
+            'QualityReportInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['description'], 'properties' => [
+                'item_id' => $nInt, 'description' => ['type' => 'string', 'maxLength' => 2000], 'severity' => ['type' => 'string', 'enum' => ['minor', 'major', 'critical']],
+                'quantity' => ['type' => 'number', 'nullable' => true],
+            ]],
+            'QualityDay' => ['type' => 'object', 'properties' => [
+                'date' => ['type' => 'string', 'format' => 'date'], 'group' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => $str]],
+                'batches' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'id' => $int, 'item_id' => $int, 'name' => $str, 'unit' => $str, 'ppc' => $nInt, 'quantity' => $num, 'lot_code' => $str, 'created_at' => $str,
+                    'employee' => ['type' => 'string', 'nullable' => true],
+                    'qc' => ['type' => 'object', 'nullable' => true, 'properties' => ['status' => ['type' => 'string', 'enum' => ['ok', 'nc']], 'at' => $str,
+                        'employee' => ['type' => 'string', 'nullable' => true], 'note' => ['type' => 'string', 'nullable' => true], 'nc_number' => ['type' => 'string', 'nullable' => true]]],
+                ]]],
+                'reports' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'id' => $int, 'number' => $str, 'reported_at' => ['type' => 'string', 'format' => 'date'], 'product' => ['type' => 'string', 'nullable' => true],
+                    'description' => $str, 'severity' => $str, 'status' => ['type' => 'string', 'enum' => ['open', 'in_progress', 'closed']],
+                ]]],
+                'catalog' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['item_id' => $int, 'name' => $str]]],
+            ]],
             'OutputItem' => ['type' => 'object', 'properties' => ['item_id' => $int, 'name' => $str, 'type' => ['type' => 'string', 'enum' => ['product', 'semi']], 'unit' => $str, 'ppc' => $nInt,
                 'batch' => ['type' => 'number', 'nullable' => true, 'description' => 'lot de production de la fiche : une vignette par lot prévu, un lot proposé à la fois']]],
             'OutputRow' => ['type' => 'object', 'properties' => ['id' => $int, 'item_id' => $int, 'date' => $str, 'quantity' => $num, 'lot_code' => ['type' => 'string', 'example' => '261020-PIEK-01'],

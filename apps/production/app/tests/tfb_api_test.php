@@ -792,6 +792,29 @@ $pdo->exec("INSERT INTO tfb_prod_output (work_date, id_group, id_item, quantity,
 $foreign = (int) $pdo->lastInsertId();
 [$s, $b] = $kiosk('GET', "/kiosk/production/{$foreign}", null, $device, $emp);
 check($s === 403 && $b['description'] === 'OUTPUT_NOT_IN_YOUR_GROUPS', 'batches of another group hidden');
+// --- Kontrola jakości na tablecie : partia OK albo niezgodność (rejestr niezgodności ERP)
+[$s, $q] = $kiosk('GET', '/kiosk/quality', null, $device, $emp);
+$qb = array_column($q['data']['batches'] ?? [], null, 'id');
+check($s === 200 && isset($qb[$batchId]) && $qb[$batchId]['qc'] === null && !isset($qb[$b2['data']['id']]) && !isset($qb[$foreign]) && $q['data']['catalog'],
+    'quality: batches of the day of the tablet group (not cancelled), not checked yet');
+[$s, $b] = $kiosk('POST', "/kiosk/quality/batches/{$batchId}", ['result' => 'nc'], $device, $emp);
+check($s === 422 && $codes($b) === ['description:REQUIRED'], 'a non-conformity needs a description');
+[$s, $q] = $kiosk('POST', "/kiosk/quality/batches/{$batchId}", ['result' => 'ok', 'note' => 'waga OK'], $device, $emp);
+$qb = array_column($q['data']['batches'] ?? [], null, 'id');
+check($s === 200 && $qb[$batchId]['qc']['status'] === 'ok' && $qb[$batchId]['qc']['note'] === 'waga OK' && $qb[$batchId]['qc']['employee'] !== null, 'batch checked OK (who, when)');
+[$s, $q] = $kiosk('POST', "/kiosk/quality/batches/{$batchId}", ['result' => 'nc', 'description' => 'Za jasne, niedopieczone', 'severity' => 'major'], $device, $emp);
+$qb = array_column($q['data']['batches'] ?? [], null, 'id');
+$nc = $pdo->query("SELECT * FROM tfb_nc WHERE id = (SELECT id_nc FROM tfb_prod_output WHERE id = {$batchId})")->fetch();
+check($s === 200 && $qb[$batchId]['qc']['status'] === 'nc' && $nc && $nc['source'] === 'production' && $nc['severity'] === 'major' && (int) $nc['id_prod_group'] === 1
+    && (int) $nc['id_final_product'] === 501 && $nc['quantity'] == 120 && str_contains($nc['description'], $prefix . '01') && $qb[$batchId]['qc']['nc_number'] === $nc['number']
+    && in_array($nc['number'], array_column($q['data']['reports'], 'number'), true), 'non-conformity of a batch: in the ERP register (production, product, quantity, lot, group)');
+[$s, $b] = $kiosk('POST', "/kiosk/quality/batches/{$batchId}", ['result' => 'ok'], $device, $emp);
+check($s === 409 && $b['description'] === 'QC_ALREADY_NC', 'a batch with a non-conformity is followed in the ERP');
+[$s, $b] = $kiosk('POST', "/kiosk/quality/batches/{$foreign}", ['result' => 'ok'], $device, $emp);
+check($s === 403, 'batches of another group are not checked');
+[$s, $q] = $kiosk('POST', '/kiosk/quality/reports', ['item_id' => $croissant, 'description' => 'Folia rozdarta na rolce', 'severity' => 'minor'], $device, $emp);
+check($s === 201 && count($q['data']['reports']) === 2 && (int) $pdo->query("SELECT COUNT(*) FROM tfb_nc WHERE source = 'production' AND id_prod_group = 1")->fetchColumn() === 2,
+    'non-conformity reported from the tablet without a batch');
 $pdo->exec("UPDATE tfb_prod_device SET id_group = NULL WHERE id = {$dev['data']['id']}");
 [$s, $b] = $kiosk('GET', '/kiosk/production', null, $device, $emp);
 check($s === 409 && $b['description'] === 'DEVICE_WITHOUT_GROUP', 'tablet without group');

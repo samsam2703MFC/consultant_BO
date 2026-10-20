@@ -61,7 +61,8 @@
     "OUTPUT_NOT_IN_YOUR_GROUPS": "Ta partia nie należy do Twojej grupy.",
     "OUTPUT_LOCKED": "Partii z tego dnia nie można już zmieniać na tablecie (edycja przez {days} dni).",
     "OUTPUT_CANCELLED": "Ta partia jest anulowana.",
-    "WEEK_WARNING_FIXED_NO_SHIFT": "Stała partia 📌 „{product}” ({day}) : grupa nie ma tego dnia zmiany — partia czeka w „Do zrobienia”."
+    "WEEK_WARNING_FIXED_NO_SHIFT": "Stała partia 📌 „{product}” ({day}) : grupa nie ma tego dnia zmiany — partia czeka w „Do zrobienia”.",
+    "QC_ALREADY_NC": "Ta partia ma już zgłoszoną niezgodność — dalej w rejestrze niezgodności w ERP."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -315,7 +316,8 @@
     "cancelled": "anulowana",
     "day": "dzień",
     "pinned": "co tydzień",
-    "time": "godzina"
+    "time": "godzina",
+    "result": "wynik"
   },
   "entities": {
     "group": "grupa",

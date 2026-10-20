@@ -61,7 +61,8 @@
     "OUTPUT_NOT_IN_YOUR_GROUPS": "Ce lot n’appartient pas à votre groupe.",
     "OUTPUT_LOCKED": "Les lots de ce jour ne sont plus modifiables sur la tablette (modification pendant {days} jours).",
     "OUTPUT_CANCELLED": "Ce lot est annulé.",
-    "WEEK_WARNING_FIXED_NO_SHIFT": "Lot fixe 📌 « {product} » ({day}) : le groupe n'a pas d'équipe ce jour-là — le lot attend dans « À produire »."
+    "WEEK_WARNING_FIXED_NO_SHIFT": "Lot fixe 📌 « {product} » ({day}) : le groupe n'a pas d'équipe ce jour-là — le lot attend dans « À produire ».",
+    "QC_ALREADY_NC": "Ce lot a déjà une non-conformité — la suite dans le registre des non-conformités de l'ERP."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -315,7 +316,8 @@
     "cancelled": "annulé",
     "day": "jour",
     "pinned": "chaque semaine",
-    "time": "heure"
+    "time": "heure",
+    "result": "résultat"
   },
   "entities": {
     "group": "groupe",

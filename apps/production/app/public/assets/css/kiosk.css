@@ -104,3 +104,20 @@ details.kiosk-section summary { cursor: pointer; font-weight: 600; padding: 8px 
 .kiosk-batch-tiles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
 .kiosk-batch-tile { min-width: 64px; padding: 8px 12px; border: 2px dashed var(--k-line); border-radius: 10px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
 .kiosk-batch-tile.is-done { border: 2px solid var(--k-ok); background: color-mix(in srgb, var(--k-ok) 14%, #fff); color: var(--k-ok); }
+/* Menu osoby : Czas pracy / Produkcja / Kontrola jakości */
+.kiosk-tabs { display: flex; gap: 6px; padding: 6px; margin-bottom: 14px; background: var(--k-surface); border-radius: var(--k-radius); box-shadow: 0 1px 3px rgba(0, 0, 0, .06); }
+.kiosk-tab { flex: 1; min-height: 60px; padding: 10px 12px; border: 0; border-radius: 10px; background: transparent; color: var(--k-text); font-size: 19px; font-weight: 700; cursor: pointer; }
+.kiosk-tab.is-active { background: var(--k-primary); color: #fff; }
+.kiosk-tab:not(.is-active):hover { background: var(--k-bg); }
+/* Kontrola jakości */
+.kiosk-qc { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.kiosk-qc-row { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 12px 14px; border: 2px solid var(--k-line); border-radius: 12px; font-size: 17px; }
+.kiosk-qc-row.is-ok { border-color: var(--k-ok); background: color-mix(in srgb, var(--k-ok) 8%, #fff); }
+.kiosk-qc-row.is-nc { border-color: var(--k-danger); background: color-mix(in srgb, var(--k-danger) 7%, #fff); }
+.kiosk-qc-state { margin-top: 4px; font-weight: 600; }
+.kiosk-qc-actions { display: flex; gap: 8px; }
+.kiosk-qc-badge { padding: 6px 10px; border-radius: 8px; background: var(--k-bg); font-size: 15px; font-weight: 600; }
+.kiosk-qc-badge.is-major { background: color-mix(in srgb, var(--k-warn) 22%, #fff); }
+.kiosk-qc-badge.is-critical { background: var(--k-danger); color: #fff; }
+.kiosk-nc-form .is-wide { grid-column: 1 / -1; }
+.kiosk-form textarea { font-size: 20px; padding: 12px; border-radius: 10px; border: 2px solid var(--k-line); width: 100%; font-family: inherit; }

@@ -539,13 +539,25 @@
             <span class="text-muted small">${esc(dayLabel(slot.day, true))}${pinned ? ' · 📌 ' + esc(t('week.time_every_week')) : ''}</span></div></dd>`;
     }
 
+    // Kolumny partii : sztuk w partii (karta, « Etapy i czasy ») i liczba partii w tygodniu (w górę do pełnych),
+    // z tym, ile już jest na dniach ; bez partii — « — » z odnośnikiem do karty.
+    function batchCells(p) {
+        if (!p.batch) return `<td class="text-end"><a class="text-muted small" href="${esc(api.root)}/workshop/products#/item/${p.item_id}/6" title="${esc(t('week.batch_set'))}">—</a></td><td class="text-end text-muted">—</td>`;
+        const total = Math.ceil(p.quantity / p.batch - 1e-6);
+        const placed = p.slots.reduce((a, x) => a + x.quantity, 0) / p.batch;
+        const partial = p.quantity / p.batch % 1 > 0.001 && p.quantity / p.batch % 1 < 0.999;
+        return `<td class="text-end">${fmt(p.batch, p.unit === 'kg' ? 1 : 0)} ${esc(p.unit)}${p.ppc ? `<div class="text-muted small">${esc(cartonsText(p, p.batch))}</div>` : ''}</td>
+            <td class="text-end"><strong>${fmt(total, 0)}</strong>${partial ? ` <span class="text-warning small" title="${esc(t('week.batch_partial_help'))}">(${esc(t('week.batch_partial'))})</span>` : ''}
+                <div class="text-muted small">${esc(t('week.batches_placed', {n: fmt(Math.min(placed, total), placed % 1 > 0.001 ? 1 : 0)}))}</div></td>`;
+    }
+
     function productTable(w) {
         const rows = w.products.filter(p => !state.group || p.group_id === state.group);
         if (!rows.length) return '';
         const groupName = (id) => (w.groups.find(g => g.id === id) || {}).name || t('week.no_group');
         let last;
         const body = rows.map(p => {
-            const sep = p.group_id !== last ? `<tr class="tfb-week-table-group"><th colspan="7">${esc(groupName(p.group_id))}</th></tr>` : '';
+            const sep = p.group_id !== last ? `<tr class="tfb-week-table-group"><th colspan="9">${esc(groupName(p.group_id))}</th></tr>` : '';
             last = p.group_id;
             const days = p.slots.map(s => `<span class="${s.late ? 'text-danger' : ''}">${esc(dayLabel(s.day).split(',')[0].replace('.', ''))}</span>`).join(', ');
             return sep + `<tr data-item-row="${p.item_id}">
@@ -553,6 +565,7 @@
                 <td class="text-end">${p.direct > 0 ? `<strong>🚚 ${esc(qtyText(p, p.direct))}</strong>${p.direct_parts.map(d => `<div class="text-muted small">${esc(t('week.truck', {day: dayLabel(d.due_date)}))}${p.direct_parts.length > 1 ? ' · ' + esc(qtyText(p, d.quantity)) : ''}</div>`).join('')}` : '—'}</td>
                 <td class="text-end">${p.stock > 0 ? `<strong>📦 ${esc(qtyText(p, p.stock))}</strong>` : '—'}</td>
                 <td class="text-end">${esc(qtyText(p, p.quantity))}${p.item_type === 'semi' ? `<div class="text-muted small">${esc(t('week.mode.semi'))}</div>` : ''}</td>
+                ${batchCells(p)}
                 <td class="text-end">${hrs(p.hours)}</td>
                 <td>${days || ''}${p.unassigned_qty > 0 ? `<div class="text-warning small">${esc(t('week.waiting', {qty: qtyText(p, p.unassigned_qty)}))}</div>` : ''}</td>
                 <td class="tfb-week-progress"><span class="tfb-week-progress-bar"><span style="width:${p.done_pct ?? 0}%"></span></span>
@@ -561,7 +574,8 @@
         return `<div class="card"><div class="card-body">
             <h5>${esc(t('week.table_title'))}</h5>
             <div class="table-responsive"><table class="table table-sm mb-0 tfb-week-table">
-                <thead><tr><th>${esc(t('week.col_product'))}</th><th class="text-end">${esc(t('week.col_direct'))}</th><th class="text-end">${esc(t('week.col_stock'))}</th><th class="text-end">${esc(t('week.col_qty'))}</th><th class="text-end">${esc(t('week.col_hours'))}</th><th>${esc(t('week.col_days'))}</th><th>${esc(t('week.col_done'))}</th></tr></thead>
+                <thead><tr><th>${esc(t('week.col_product'))}</th><th class="text-end">${esc(t('week.col_direct'))}</th><th class="text-end">${esc(t('week.col_stock'))}</th><th class="text-end">${esc(t('week.col_qty'))}</th>
+                    <th class="text-end">${esc(t('week.col_batch_size'))}</th><th class="text-end" title="${esc(t('week.col_batches_help'))}">${esc(t('week.col_batches'))}</th><th class="text-end">${esc(t('week.col_hours'))}</th><th>${esc(t('week.col_days'))}</th><th>${esc(t('week.col_done'))}</th></tr></thead>
                 <tbody>${body}</tbody></table></div>
             <p class="text-muted small mb-0 mt-2">${esc(t('week.table_note'))}</p></div></div>`;
     }

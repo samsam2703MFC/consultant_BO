@@ -9,6 +9,7 @@ use App\Services\Workshop\Execution\ExecutionService;
 use App\Services\Workshop\Execution\KioskAuthService;
 use App\Services\Workshop\Execution\KpiService;
 use App\Services\Workshop\Execution\OutputService;
+use App\Services\Workshop\Execution\QualityService;
 use App\Services\Workshop\Execution\TimesheetService;
 
 /** P7 : tablettes (appairage, identification, pointage, opérations, signatures), pointage au téléphone par QR code, heures, KPIs, cockpit. */
@@ -22,6 +23,7 @@ final class ExecutionController
         private TimesheetService $timesheets,
         private KpiService $kpis,
         private OutputService $outputs,
+        private QualityService $quality,
     ) {
     }
 
@@ -82,4 +84,8 @@ final class ExecutionController
     public function output(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->batch($request->id(), $request->context)); }
     public function updateOutput(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->update($request->id(), $request->body(), $request->context)); }
     public function outputLot(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->setLot($request->id(), $request->id('material'), $request->body(), $request->context)); }
+    // Kontrola jakości (tablet grupy)
+    public function quality(ApiRequest $request): ApiResult { return new ApiResult($this->quality->day($request->context)); }
+    public function qualityCheck(ApiRequest $request): ApiResult { return new ApiResult($this->quality->check($request->id(), $request->body(), $request->context)); }
+    public function qualityReport(ApiRequest $request): ApiResult { return new ApiResult($this->quality->report($request->body(), $request->context), 201); }
 }

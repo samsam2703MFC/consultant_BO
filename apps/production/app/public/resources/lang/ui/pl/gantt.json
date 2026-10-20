@@ -167,5 +167,11 @@
   "week.batch_partial": "niepełna",
   "week.batch_day": "w dniu razem {qty}",
   "week.batch_direct": "pokrywa zamówienia (na wysyłkę)",
-  "week.batch_stock": "na magazyn"
+  "week.batch_stock": "na magazyn",
+  "week.col_batch_size": "Sztuk w partii",
+  "week.col_batches": "Partii w tygodniu",
+  "week.col_batches_help": "Ilość tygodnia ÷ sztuk w partii, w górę do pełnych partii",
+  "week.batches_placed": "na dniach : {n}",
+  "week.batch_set": "Brak partii — ustaw w karcie produktu (Etapy i czasy)",
+  "week.batch_partial_help": "Ilość tygodnia nie jest wielokrotnością partii — ostatnia partia niepełna"
 }

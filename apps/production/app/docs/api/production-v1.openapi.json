@@ -7419,6 +7419,230 @@
                 ]
             }
         },
+        "/kiosk/quality": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Kontrola jakości dnia / Contrôle qualité du jour",
+                "operationId": "qualityDay",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Lots du jour du groupe de la tablette avec leur contrôle (OK / non-conformité), non-conformités signalées par le groupe ces 14 derniers jours, fiches du groupe.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality/batches/{id}": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Kontrola partii / Contrôle d'un lot",
+                "operationId": "qualityCheck",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "result ok : contrôlé conforme (qui, quand). result nc : description obligatoire ; crée une non-conformité au registre de l'ERP (source production, produit, quantité du lot, numéro de lot, personne). 409 QC_ALREADY_NC, OUTPUT_CANCELLED.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QualityCheckInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/quality/reports": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zgłoś niezgodność / Signaler une non-conformité",
+                "operationId": "qualityReport",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/QualityDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Non-conformité sans lot (produit du groupe ou générale) au registre de l'ERP, source production, avec la personne et la tablette.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QualityReportInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/qr": {
             "get": {
                 "tags": [
@@ -11842,6 +12066,204 @@
                     "image": {
                         "type": "string",
                         "description": "data:image/png;base64,…"
+                    }
+                }
+            },
+            "QualityCheckInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "result"
+                ],
+                "properties": {
+                    "result": {
+                        "type": "string",
+                        "enum": [
+                            "ok",
+                            "nc"
+                        ]
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "description": {
+                        "type": "string",
+                        "maxLength": 2000,
+                        "description": "obligatoire pour nc"
+                    },
+                    "severity": {
+                        "type": "string",
+                        "enum": [
+                            "minor",
+                            "major",
+                            "critical"
+                        ]
+                    }
+                }
+            },
+            "QualityReportInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "description"
+                ],
+                "properties": {
+                    "item_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "maxLength": 2000
+                    },
+                    "severity": {
+                        "type": "string",
+                        "enum": [
+                            "minor",
+                            "major",
+                            "critical"
+                        ]
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "nullable": true
+                    }
+                }
+            },
+            "QualityDay": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "group": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "batches": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "item_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "ppc": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "lot_code": {
+                                    "type": "string"
+                                },
+                                "created_at": {
+                                    "type": "string"
+                                },
+                                "employee": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "qc": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok",
+                                                "nc"
+                                            ]
+                                        },
+                                        "at": {
+                                            "type": "string"
+                                        },
+                                        "employee": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "note": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "nc_number": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "reports": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "number": {
+                                    "type": "string"
+                                },
+                                "reported_at": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "product": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "description": {
+                                    "type": "string"
+                                },
+                                "severity": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "open",
+                                        "in_progress",
+                                        "closed"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "catalog": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "item_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },

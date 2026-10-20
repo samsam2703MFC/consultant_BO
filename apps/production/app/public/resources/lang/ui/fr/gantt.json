@@ -167,5 +167,11 @@
   "week.batch_partial": "incomplet",
   "week.batch_day": "au total ce jour {qty}",
   "week.batch_direct": "couvre des commandes (à expédier)",
-  "week.batch_stock": "pour le stock"
+  "week.batch_stock": "pour le stock",
+  "week.col_batch_size": "Pièces par lot",
+  "week.col_batches": "Lots cette semaine",
+  "week.col_batches_help": "Quantité de la semaine ÷ pièces par lot, arrondi au lot entier supérieur",
+  "week.batches_placed": "sur les jours : {n}",
+  "week.batch_set": "Pas de lot — à définir dans la fiche produit (Étapes et temps)",
+  "week.batch_partial_help": "La quantité de la semaine n'est pas un multiple du lot — dernier lot incomplet"
 }

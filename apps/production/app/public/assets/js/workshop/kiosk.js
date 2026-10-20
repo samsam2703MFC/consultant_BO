@@ -228,33 +228,55 @@
         idleTimer = window.setTimeout(() => renderHome(), 30000);
     }
 
-    // --- Ma journée ----------------------------------------------------------------------------------
+    // --- Menu osoby : Czas pracy / Produkcja / Kontrola jakości ---------------------------------------
+    const TABS = [['clock', '⏱', 'tab_clock'], ['production', '📦', 'tab_production'], ['quality', '✅', 'tab_quality']];
+    const personHeader = () => header(`<button type="button" class="kiosk-btn is-small" data-logout>${esc(t('logout'))}</button>`);
+    function tabs(active) {
+        if (session) session.tab = active;
+        return `<nav class="kiosk-tabs" role="tablist" aria-label="${esc(t('tabs'))}">${TABS.map(([k, icon, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
+            role="tab" aria-selected="${k === active}" data-tab="${k}"><span aria-hidden="true">${icon}</span> ${esc(t(label))}</button>`).join('')}</nav>`;
+    }
+    function bindTabs() {
+        el.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { if (!b.classList.contains('is-active')) openTab(b.dataset.tab); }));
+        el.querySelector('[data-logout]')?.addEventListener('click', () => logout());
+    }
+    function openTab(k, message) {
+        return k === 'production' ? renderProduction(message) : (k === 'quality' ? renderQuality(message) : renderMe(message));
+    }
+
+    // --- Czas pracy (pointeuse) ----------------------------------------------------------------------
     async function renderMe(message) {
         longIdle = false;
         let me;
         try { me = await api('GET', '/kiosk/me', undefined, true); } catch (err) { if (!err.code) toast(err.message, true); return; }
         idleSeconds = me.idle_logout_s || 45;
         resetIdle();
-        const working = new Set(me.working_on);
-        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-logout>${esc(t('logout'))}</button>`) + `
+        el.innerHTML = personHeader() + tabs('clock') + `
             <section class="kiosk-card"><h2>${esc(t('hello', {name: me.employee.name}))}</h2>
                 <button type="button" class="kiosk-btn kiosk-big ${me.clocked_in ? 'is-danger' : 'is-ok'}" data-clock-tap>
                     ${esc(me.clocked_in ? t('clock_out') : t('clock_in'))}</button>
                 <p class="kiosk-status">${me.clocked_in ? esc(t('since', {time: hhmm(me.clock.clock_in), hours: fmt(me.clock.hours)})) : esc(t('not_in'))}</p>
-                <div class="kiosk-row"><button type="button" class="kiosk-btn is-primary" data-production>📦 ${esc(t('prod_open'))}</button>
-                    <button type="button" class="kiosk-btn is-small" data-sign-month>${esc(t('sign_month'))}</button></div></section>
-            <section class="kiosk-card"><h2>${esc(t('operations'))}</h2><div class="kiosk-ops">
-                ${me.operations.length ? me.operations.map(o => `<article class="kiosk-card kiosk-op is-${esc(o.status)} ${o.late ? 'is-late' : ''}" data-op="${o.id}">
-                    <div><h3>${esc(o.order_code)} · ${esc(o.item)}</h3>
-                        <div class="kiosk-muted">${o.step_no ? esc(o.step_no) + '. ' : ''}${esc(o.step || t('kind.' + o.kind))} · ${esc(o.workstation)} · ${fmt(o.quantity)} ${esc(o.unit)}</div>
-                        <div class="kiosk-op-time">${esc(hhmm(o.start))}–${esc(hhmm(o.end))} · ${esc(t('status.' + o.status))}${working.has(o.id) ? ' · ' + esc(t('you_work')) : ''}</div></div>
-                    <div class="kiosk-op-actions">${actions(o, working.has(o.id), me.clocked_in)}</div></article>`).join('') : `<p class="kiosk-muted">${esc(t('no_operations'))}</p>`}
-            </div></section>`;
+                <div class="kiosk-row"><button type="button" class="kiosk-btn is-small" data-sign-month>${esc(t('sign_month'))}</button></div></section>`;
         if (message) toast(message);
-        el.querySelector('[data-logout]').addEventListener('click', () => logout());
+        bindTabs();
         el.querySelector('[data-clock-tap]').addEventListener('click', (e) => clockTap(e.currentTarget, me.clocked_in ? 'out' : 'in'));
         el.querySelector('[data-sign-month]').addEventListener('click', () => renderSignature('timesheet_month', new Date().toISOString().slice(0, 7), t('sign_month_help')));
-        el.querySelector('[data-production]').addEventListener('click', () => renderProduction());
+    }
+
+    // Operacje zleceń osoby (start, pauza, koniec) : w zakładce « Produkcja », gdy są.
+    function operationsCard(me) {
+        if (!me || !me.operations.length) return '';
+        const working = new Set(me.working_on);
+        return `<section class="kiosk-card"><h2>${esc(t('operations'))}</h2><div class="kiosk-ops">
+            ${me.operations.map(o => `<article class="kiosk-card kiosk-op is-${esc(o.status)} ${o.late ? 'is-late' : ''}" data-op="${o.id}">
+                <div><h3>${esc(o.order_code)} · ${esc(o.item)}</h3>
+                    <div class="kiosk-muted">${o.step_no ? esc(o.step_no) + '. ' : ''}${esc(o.step || t('kind.' + o.kind))} · ${esc(o.workstation)} · ${fmt(o.quantity)} ${esc(o.unit)}</div>
+                    <div class="kiosk-op-time">${esc(hhmm(o.start))}–${esc(hhmm(o.end))} · ${esc(t('status.' + o.status))}${working.has(o.id) ? ' · ' + esc(t('you_work')) : ''}</div></div>
+                <div class="kiosk-op-actions">${actions(o, working.has(o.id), me.clocked_in)}</div></article>`).join('')}
+        </div></section>`;
+    }
+    function bindOperations(me) {
+        if (!me) return;
         el.querySelectorAll('[data-op]').forEach(card => card.addEventListener('click', (e) => {
             const b = e.target.closest('[data-action]');
             if (!b) return;
@@ -291,7 +313,7 @@
         button.disabled = true;
         try {
             await api('POST', `/kiosk/operations/${id}/${action}`, action === 'start' ? {client_uuid: uuid()} : undefined, true);
-            renderMe(t('saved'));
+            renderProduction(t('saved'));
         } catch (err) { button.disabled = false; toast(err.message, true); }
     }
 
@@ -306,13 +328,13 @@
             <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-back>${esc(t('cancel'))}</button><button type="button" class="kiosk-btn is-primary" data-save>${esc(t('finish'))}</button></div></section>`;
         const form = el.querySelector('[data-finish]');
         form.addEventListener('input', resetIdle);
-        el.querySelector('[data-back]').addEventListener('click', () => renderMe());
+        el.querySelector('[data-back]').addEventListener('click', () => renderProduction());
         el.querySelector('[data-save]').addEventListener('click', async (e) => {
             e.target.disabled = true;
             const num = (v) => Number(String(v).replace(',', '.'));
             try {
                 await api('POST', `/kiosk/operations/${op.id}/finish`, {qty_good: num(form.qty_good.value), qty_scrap: num(form.qty_scrap.value || 0), scrap_reason: form.scrap_reason.value.trim() || null}, true);
-                renderMe(t('saved'));
+                renderProduction(t('saved'));
             } catch (err) { e.target.disabled = false; el.querySelector('[data-error]').textContent = err.message; }
         });
     }
@@ -331,10 +353,12 @@
     async function renderProduction(message) {
         longIdle = true;
         resetIdle();
-        let day;
-        try { day = await api('GET', '/kiosk/production', undefined, true); } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        let day, me;
+        try {
+            [day, me] = await Promise.all([api('GET', '/kiosk/production', undefined, true), api('GET', '/kiosk/me', undefined, true).catch(() => null)]);
+        } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
         const others = day.catalog.filter(c => !day.items.some(i => i.item_id === c.item_id));
-        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-back>${esc(t('back'))}</button>`) + `
+        el.innerHTML = personHeader() + tabs('production') + `
             <section class="kiosk-card"><h2>${esc(t('prod_title', {group: day.group.name}))}</h2>
                 <p class="kiosk-muted">${esc(t('prod_help'))}</p></section>
             <div class="kiosk-prod">${day.items.length ? day.items.map(i => {
@@ -354,10 +378,12 @@
             }).join('') : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('prod_nothing'))}</p></section>`}</div>
             ${day.editable && others.length ? `<section class="kiosk-card"><h2>${esc(t('prod_other'))}</h2><div class="kiosk-row">
                 <select class="kiosk-select" data-other><option value="">—</option>${others.map(c => `<option value="${c.item_id}">${esc(c.name)}</option>`).join('')}</select>
-                <button type="button" class="kiosk-btn is-ok" data-other-go>＋ ${esc(t('prod_batch'))}</button></div></section>` : ''}`;
+                <button type="button" class="kiosk-btn is-ok" data-other-go>＋ ${esc(t('prod_batch'))}</button></div></section>` : ''}
+            ${operationsCard(me)}`;
         if (message) toast(message);
         const find = (id) => day.items.find(i => i.item_id === id) || day.catalog.find(c => c.item_id === id);
-        el.querySelector('[data-back]').addEventListener('click', () => renderMe());
+        bindTabs();
+        bindOperations(me);
         el.querySelectorAll('[data-new]').forEach(b => b.addEventListener('click', () => renderNewBatch(find(Number(b.dataset.new)))));
         el.querySelectorAll('[data-batch]').forEach(b => b.addEventListener('click', () => renderBatch(Number(b.dataset.batch))));
         const go = el.querySelector('[data-other-go]');
@@ -373,6 +399,81 @@
         return `<div class="kiosk-batch-tiles" aria-label="${esc(t('prod_batches', {done, total, size: qty(i.batch, i)}))}">${Array.from({length: total}, (_, k) =>
             `<span class="kiosk-batch-tile ${k < done ? 'is-done' : ''}">${k < done ? '✓ ' : ''}${k + 1}/${total}</span>`).join('')}
             <span class="kiosk-muted">${esc(t('prod_batch_size', {size: qty(i.batch, i)}))}</span></div>`;
+    }
+
+    // --- Kontrola jakości : każda partia dnia OK albo niezgodność (rejestr niezgodności ERP) -------------
+    async function renderQuality(message) {
+        longIdle = true;
+        resetIdle();
+        let q;
+        try { q = await api('GET', '/kiosk/quality', undefined, true); } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        const todo = q.batches.filter(b => !b.qc).length;
+        el.innerHTML = personHeader() + tabs('quality') + `
+            <section class="kiosk-card"><h2>${esc(t('qc_title', {group: q.group.name}))}</h2>
+                <p class="kiosk-muted">${esc(t('qc_help'))}</p>
+                <div class="kiosk-row"><button type="button" class="kiosk-btn is-danger" data-report>⚠ ${esc(t('qc_report'))}</button></div></section>
+            <section class="kiosk-card"><h2>${esc(t('qc_batches', {todo, total: q.batches.length}))}</h2>
+                ${q.batches.length ? `<ul class="kiosk-qc">${q.batches.map(b => `<li class="kiosk-qc-row ${b.qc ? 'is-' + esc(b.qc.status) : ''}">
+                    <div><strong>${esc(b.lot_code)}</strong> · ${esc(b.name)}
+                        <div class="kiosk-muted">${esc(qty(b.quantity, b))} · ${esc(hhmm(b.created_at))}${b.employee ? ' · ' + esc(b.employee) : ''}</div>
+                        ${b.qc ? `<div class="kiosk-qc-state">${b.qc.status === 'ok' ? '✓ ' + esc(t('qc_done_ok')) : '✗ ' + esc(t('qc_done_nc', {number: b.qc.nc_number || ''}))} · ${esc(hhmm(b.qc.at))}${b.qc.employee ? ' · ' + esc(b.qc.employee) : ''}${b.qc.note ? ' · ' + esc(b.qc.note) : ''}</div>` : ''}</div>
+                    <div class="kiosk-qc-actions">${b.qc && b.qc.status === 'nc' ? '' : `${b.qc ? '' : `<button type="button" class="kiosk-btn is-ok" data-qc-ok="${b.id}">✓ ${esc(t('qc_ok'))}</button>`}
+                        <button type="button" class="kiosk-btn is-danger is-small" data-qc-nc="${b.id}">✗ ${esc(t('qc_nc'))}</button>`}</div></li>`).join('')}</ul>`
+                    : `<p class="kiosk-muted">${esc(t('qc_no_batches'))}</p>`}</section>
+            <section class="kiosk-card"><h2>${esc(t('qc_reports'))}</h2>
+                ${q.reports.length ? `<ul class="kiosk-qc">${q.reports.map(r => `<li class="kiosk-qc-row is-report">
+                    <div><strong>${esc(r.number)}</strong> · ${esc(r.reported_at)}${r.product ? ' · ' + esc(r.product) : ''}<div class="kiosk-muted">${esc(r.description)}</div></div>
+                    <span class="kiosk-qc-badge is-${esc(r.severity)}">${esc(t('sev_' + r.severity))} · ${esc(t('nc_' + r.status))}</span></li>`).join('')}</ul>`
+                    : `<p class="kiosk-muted">${esc(t('qc_no_reports'))}</p>`}</section>`;
+        if (message) toast(message);
+        bindTabs();
+        el.querySelector('[data-report]').addEventListener('click', () => renderNcForm(q, null));
+        el.querySelectorAll('[data-qc-ok]').forEach(b => b.addEventListener('click', async () => {
+            b.disabled = true;
+            try { await api('POST', `/kiosk/quality/batches/${b.dataset.qcOk}`, {result: 'ok'}, true); renderQuality(t('qc_saved_ok')); }
+            catch (err) { b.disabled = false; toast(err.message, true); }
+        }));
+        el.querySelectorAll('[data-qc-nc]').forEach(b => b.addEventListener('click', () => renderNcForm(q, q.batches.find(x => x.id === Number(b.dataset.qcNc)))));
+    }
+
+    // Niezgodność partii (z kontroli) albo zgłoszona osobno : opis, waga, produkt i ilość (bez partii).
+    function renderNcForm(q, batch) {
+        resetIdle();
+        let severity = 'minor';
+        el.innerHTML = header() + `<section class="kiosk-card"><h2>${esc(batch ? t('qc_nc_batch', {lot: batch.lot_code, name: batch.name}) : t('qc_report'))}</h2>
+            <form class="kiosk-form kiosk-nc-form" data-nc>
+                ${batch ? '' : `<label>${esc(t('qc_product'))}<select class="kiosk-select" name="item_id"><option value="">${esc(t('qc_general'))}</option>
+                    ${q.catalog.map(c => `<option value="${c.item_id}">${esc(c.name)}</option>`).join('')}</select></label>`}
+                <label class="is-wide">${esc(t('qc_description'))}<textarea name="description" rows="3" maxlength="2000" required></textarea></label>
+                <div class="is-wide"><span class="kiosk-muted">${esc(t('qc_severity'))}</span><div class="kiosk-row" data-sev>${['minor', 'major', 'critical'].map(k =>
+                    `<button type="button" class="kiosk-btn is-small ${k === severity ? 'is-primary' : ''}" data-sev-k="${k}">${esc(t('sev_' + k))}</button>`).join('')}</div></div>
+                ${batch ? `<label class="is-wide">${esc(t('qc_action'))}<input name="note" maxlength="255"></label>` : `<label>${esc(t('qc_quantity'))}<input name="quantity" inputmode="decimal"></label>`}
+            </form><p class="kiosk-error" data-error></p>
+            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-cancel>${esc(t('cancel'))}</button>
+                <button type="button" class="kiosk-btn is-danger" data-save>${esc(t('qc_send'))}</button></div></section>`;
+        const form = el.querySelector('[data-nc]');
+        el.querySelector('[data-sev]').addEventListener('click', (e) => {
+            const b = e.target.closest('[data-sev-k]');
+            if (!b) return;
+            severity = b.dataset.sevK;
+            el.querySelectorAll('[data-sev-k]').forEach(x => x.classList.toggle('is-primary', x === b));
+        });
+        el.querySelector('[data-cancel]').addEventListener('click', () => renderQuality());
+        el.querySelector('[data-save]').addEventListener('click', async (e) => {
+            const description = form.description.value.trim();
+            if (!description) { el.querySelector('[data-error]').textContent = t('qc_description_required'); form.description.focus(); return; }
+            e.target.disabled = true;
+            try {
+                if (batch) {
+                    await api('POST', `/kiosk/quality/batches/${batch.id}`, {result: 'nc', description, severity, note: form.note.value.trim() || null}, true);
+                } else {
+                    const quantity = form.quantity.value.trim() ? Number(form.quantity.value.replace(',', '.')) : null;
+                    await api('POST', '/kiosk/quality/reports', {item_id: form.item_id.value ? Number(form.item_id.value) : null, description, severity, quantity}, true);
+                }
+                renderQuality(t('qc_saved_nc'));
+            } catch (err) { e.target.disabled = false; el.querySelector('[data-error]').textContent = err.message; }
+        });
+        form.description.focus();
     }
 
     function renderNewBatch(item) {
@@ -607,7 +708,7 @@
             lang = lang === 'pl' ? 'fr' : 'pl';
             store.set(LANG_KEY, lang);
             await loadLabels();
-            session ? (longIdle ? renderProduction() : renderMe()) : renderHome();
+            session ? openTab(session.tab || 'clock') : renderHome();
         }
     });
     ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (session) resetIdle(); }, {passive: true}));
