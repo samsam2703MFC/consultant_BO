@@ -240,7 +240,7 @@
                                                     <th class="text-end">Koszt wytworzenia <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
                                                     <th class="text-end">Cena sprzedaży <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
                                                     <th class="text-center" style="width:130px;">{{ translations.category_margin_current|default('Marża') }}</th>
-                                                    <th class="text-end" style="width:150px;" title="Zmiana kosztu surowców jednej sztuki po ostatnim przeliczeniu; w nawiasie zmiana marży przy obecnej cenie ; na miesiąc = zmiana kosztu kartonu × sprzedaż kartonów na miesiąc">Efekt na sztukę <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
+                                                    <th class="text-end" style="width:150px;" title="Zmiana kosztu surowców jednej sztuki po ostatnim przeliczeniu (€ i %) ; na miesiąc = zmiana kosztu kartonu × sprzedaż kartonów na miesiąc">Efekt na sztukę <span class="badge bg-secondary" style="font-size:.65rem;">EUR</span></th>
                                                     <th class="text-end" style="width:160px;" title="Cena kartonu dająca marżę docelową kategorii ({{ cat.target_margin|number_format(1) }}%) i zmiana obrotu na miesiąc przy tej cenie (różnica ceny × sprzedaż kartonów na miesiąc)">Cena wg celu {{ cat.target_margin > 0 ? cat.target_margin|number_format(0) ~ '%' : '' }} · CA / mies.</th>
                                                     <th class="text-center" style="width:140px;">
                                                         <i class="bi bi-box-seam me-1 text-primary"></i>Sprzedaż <span class="badge bg-primary" style="font-size:.65rem;">WDT</span>
@@ -320,16 +320,15 @@
                                                     {% set fx = recalc.products[p.product_id] ?? null %}
                                                     <td class="text-end small">
                                                         {% if fx and fx.delta_eur_unit is not null %}
-                                                            {% set up = fx.delta_eur_unit > 0.00005 %}
-                                                            {% set down = fx.delta_eur_unit < -0.00005 %}
+                                                            {# Kwota na sztukę maks. 2 miejsca po przecinku : zmiana poniżej 0,005 € = 0,00 €. #}
+                                                            {% set unit = fx.delta_eur_unit|round(2) %}
+                                                            {% set up = unit > 0 %}
+                                                            {% set down = unit < 0 %}
                                                             <span class="fw-semibold text-nowrap {{ up ? 'text-danger' : (down ? 'text-success' : 'text-muted') }}"
-                                                                  title="Koszt surowców sztuki: {{ fx.old_unit_eur|number_format(4, ',', ' ') }} € → {{ fx.new_unit_eur|number_format(4, ',', ' ') }} €">
-                                                                {{ up ? '+' : '' }}{{ fx.delta_eur_unit|number_format(fx.delta_eur_unit|abs < 0.01 ? 4 : 3, ',', ' ') }} €
+                                                                  title="Koszt surowców sztuki: {{ fx.old_unit_eur|number_format(2, ',', ' ') }} € → {{ fx.new_unit_eur|number_format(2, ',', ' ') }} €">
+                                                                {{ up ? '+' : '' }}{{ (up or down ? unit : 0)|number_format(2, ',', ' ') }} €
                                                                 {% if fx.delta_pct is not null %}({{ fx.delta_pct > 0 ? '+' : '' }}{{ fx.delta_pct|number_format(1, ',', ' ') }} %){% endif %}
                                                             </span>
-                                                            {% if fx.margin_pp is not null and (up or down) %}
-                                                                <br><span class="text-muted" style="font-size:.7rem;">marża {{ fx.margin_pp > 0 ? '+' : '' }}{{ fx.margin_pp|number_format(1, ',', ' ') }} pp</span>
-                                                            {% endif %}
                                                             {% if fx.month_eur is not null and fx.month_eur|abs >= 0.5 %}
                                                                 <br><span class="text-nowrap {{ fx.month_eur >= 0 ? 'text-success' : 'text-danger' }}" style="font-size:.72rem;" title="Zmiana kosztu kartonu × średnia sprzedaż kartonów na miesiąc">≈ {{ fx.month_eur >= 0 ? '+' : '' }}{{ fx.month_eur|number_format(0, ',', ' ') }} €/mies. marży</span>
                                                             {% endif %}
