@@ -154,7 +154,8 @@ final class ItemRepository extends WorkshopRepository
         if ($groupId !== null) { $where .= ' AND s.id_primary_group = ?'; $params[] = $groupId; }
         return $this->all("SELECT i.id, i.id_final_product, fp.name, fp.id_category, cp.name AS category, fp.ppc, fp.cpp, fp.active AS erp_active,
                                   s.mode, s.never_frozen, s.stock_min, s.stock_max, s.stock_calc_at, s.id_primary_group, s.status,
-                                  COALESCE(w.cartons, 0) AS shipped_cartons, COALESCE(w.shops, 0) AS shops
+                                  COALESCE(w.cartons, 0) AS shipped_cartons, COALESCE(w.shops, 0) AS shops,
+                                  COALESCE(cs.cartons, 0) AS free_cartons, COALESCE(oo.cartons, 0) AS ordered_cartons, COALESCE(mo.pieces, 0) AS in_production
                            FROM tfb_prod_item i
                            JOIN final_product fp ON fp.id = i.id_final_product
                            LEFT JOIN category_product cp ON cp.id = fp.id_category
@@ -164,6 +165,10 @@ final class ItemRepository extends WorkshopRepository
                                       WHERE w.established_date >= CURDATE() - INTERVAL ? DAY AND w.established_date < CURDATE()
                                         AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                                       GROUP BY p.id_product) w ON w.id_product = i.id_final_product
+                           LEFT JOIN (SELECT id_product, COUNT(*) AS cartons FROM carton_stock WHERE status = 1 GROUP BY id_product) cs ON cs.id_product = i.id_final_product
+                           LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co JOIN customer_order_product cop ON cop.id_order = co.id
+                                      WHERE co.id_wdt IS NULL AND co.status IN (1, 2) AND COALESCE(co.is_freebie, 0) = 0 GROUP BY cop.id_product) oo ON oo.id_product = i.id_final_product
+                           LEFT JOIN (SELECT id_item, SUM(quantity) AS pieces FROM tfb_prod_order WHERE origin = 'MTS' AND status IN ('planned', 'released', 'in_progress') GROUP BY id_item) mo ON mo.id_item = i.id
                            WHERE {$where}
                            ORDER BY cp.name IS NULL, cp.name, fp.name, i.id", $params);
     }

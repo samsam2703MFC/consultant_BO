@@ -1392,3 +1392,4 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-week-block.is-mixed { box-shadow: inset 3px 0 0 var(--group-color), inset -3px 0 0 #2E7D4F; }
 .tfb-week-block.is-late, .tfb-week-block.is-behind { box-shadow: inset 0 0 0 2px var(--at-danger); }
 .tfb-week-block-icon { font-size: 10px; }
+.tfb-stock-table tr.tfb-level-low td:first-child { box-shadow: inset 3px 0 0 var(--at-danger, #C41E3A); }

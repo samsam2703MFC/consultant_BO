@@ -94,7 +94,7 @@ final class ItemService
                 'per_shop_weekly_quantity' => $shops && $ppc ? round($weekly / $shops * $ppc, 1) : null,
                 'suggested_min_cartons' => $whole($weekly * $minWeeks), 'suggested_max_cartons' => $optimal,
                 'optimal_cartons' => $optimal, 'optimal_pallets' => $cpp ? round($optimal / $cpp, 2) : null,
-            ];
+            ] + $this->stockLevel($r, $ppc, $whole);
             $categories[$key]['items'][] = $item;
             $t = &$categories[$key]['totals'];
             $t['products']++;
@@ -107,6 +107,29 @@ final class ItemService
         return ['params' => ['weeks' => $weeks, 'min_weeks' => $minWeeks, 'max_weeks' => $maxWeeks,
                     'from' => date('Y-m-d', strtotime('-' . ($weeks * 7) . ' days')), 'to' => date('Y-m-d', strtotime('-1 day'))],
             'categories' => array_values($categories)];
+    }
+
+    /**
+     * Stan magazynu produktu (kartony) : wolny stan (carton_stock status 1), zamówienia otwarte jeszcze
+     * nie paletyzowane (Nowe, W realizacji — paletyzowane kartony już zeszły ze stanu wolnego), zlecenia MTS
+     * w toku ; dostępne = stan − zamówienia + w produkcji ; do produkcji poza zamówieniami = do stanu min.
+     * (i do maks.) ; na zamówienie (MTO) : zamówienia ponad stan.
+     */
+    private function stockLevel(array $r, ?int $ppc, callable $whole): array
+    {
+        $free = (float) $r['free_cartons'];
+        $ordered = (float) $r['ordered_cartons'];
+        $inProduction = $ppc ? round((float) $r['in_production'] / $ppc, 1) : 0.0;
+        $available = round($free - $ordered + $inProduction, 1);
+        $min = $r['stock_min'] !== null && $ppc ? (float) $r['stock_min'] / $ppc : null;
+        $max = $r['stock_max'] !== null && $ppc ? (float) $r['stock_max'] / $ppc : null;
+        return [
+            'free_cartons' => $free, 'ordered_cartons' => $ordered, 'in_production_cartons' => $inProduction, 'available_cartons' => $available,
+            'to_min_cartons' => $min !== null ? $whole(max(0.0, $min - $available)) : null,
+            'to_max_cartons' => $max !== null ? $whole(max(0.0, $max - $available)) : null,
+            'orders_over_stock_cartons' => $whole(max(0.0, $ordered - $free)),
+            'below_min' => $min !== null && $available < $min,
+        ];
     }
 
     /**

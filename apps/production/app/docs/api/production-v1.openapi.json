@@ -8595,6 +8595,38 @@
                                             "optimal_pallets": {
                                                 "type": "number",
                                                 "nullable": true
+                                            },
+                                            "free_cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "ordered_cartons": {
+                                                "type": "number",
+                                                "description": "commandes ouvertes Nowe + W realizacji"
+                                            },
+                                            "in_production_cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "available_cartons": {
+                                                "type": "number",
+                                                "description": "stock libre − commandes + OF MTS en cours"
+                                            },
+                                            "to_min_cartons": {
+                                                "type": "integer",
+                                                "nullable": true,
+                                                "description": "à produire hors commandes pour revenir au stock min."
+                                            },
+                                            "to_max_cartons": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "orders_over_stock_cartons": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "below_min": {
+                                                "type": "boolean"
                                             }
                                         }
                                     }
@@ -10399,6 +10431,10 @@
                                 },
                                 "today": {
                                     "type": "boolean"
+                                },
+                                "stock_day": {
+                                    "type": "boolean",
+                                    "description": "jour de production pour le stock (week.stock_days)"
                                 }
                             }
                         }
@@ -10475,6 +10511,12 @@
                                 "movable": {
                                     "type": "boolean"
                                 },
+                                "direct_h": {
+                                    "type": "number"
+                                },
+                                "stock_h": {
+                                    "type": "number"
+                                },
                                 "days": {
                                     "type": "array",
                                     "items": {
@@ -10494,6 +10536,12 @@
                                                 "type": "number"
                                             },
                                             "free_h": {
+                                                "type": "number"
+                                            },
+                                            "direct_h": {
+                                                "type": "number"
+                                            },
+                                            "stock_h": {
                                                 "type": "number"
                                             },
                                             "load_pct": {
@@ -10558,6 +10606,47 @@
                                 "hours": {
                                     "type": "number"
                                 },
+                                "direct": {
+                                    "type": "number",
+                                    "description": "à expédier : commandes MTO et semi-finis, avant le départ du camion"
+                                },
+                                "stock": {
+                                    "type": "number",
+                                    "description": "pour le stock (MTS), jours week.stock_days"
+                                },
+                                "direct_cartons": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "stock_cartons": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "direct_h": {
+                                    "type": "number"
+                                },
+                                "stock_h": {
+                                    "type": "number"
+                                },
+                                "direct_parts": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "due_date": {
+                                                "type": "string",
+                                                "format": "date"
+                                            },
+                                            "quantity": {
+                                                "type": "number"
+                                            },
+                                            "cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            }
+                                        }
+                                    }
+                                },
                                 "due_date": {
                                     "type": "string",
                                     "format": "date",
@@ -10615,6 +10704,27 @@
                                             },
                                             "done_h": {
                                                 "type": "number"
+                                            },
+                                            "direct_qty": {
+                                                "type": "number"
+                                            },
+                                            "stock_qty": {
+                                                "type": "number"
+                                            },
+                                            "direct_cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "stock_cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "direct_h": {
+                                                "type": "number"
+                                            },
+                                            "stock_off_day": {
+                                                "type": "boolean",
+                                                "description": "stock placé hors des jours de stock"
                                             },
                                             "late": {
                                                 "type": "boolean",

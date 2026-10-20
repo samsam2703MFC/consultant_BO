@@ -406,6 +406,11 @@ $row = null;
 foreach ($ov['data']['categories'] ?? [] as $c) foreach ($c['items'] as $i) if ($i['id'] === $itemId) $row = $i;
 check($s === 200 && $ov['data']['params']['max_weeks'] == 3 && $row && $row['weekly_cartons'] == 7 && $row['shops'] === 1 && $row['per_shop_weekly_cartons'] == 7
     && $row['per_shop_weekly_quantity'] == 420 && $row['optimal_cartons'] === 21 && $row['optimal_pallets'] == round(21 / 48, 2) && $row['suggested_min_cartons'] === 7, 'stock overview: weekly sales, per shop per week, optimal cartons and pallets');
+// Stan magazynu : 3 kartony wolne (1 paletyzowany się nie liczy), zamówienie 903 « Nowe » na 3 kartony ;
+// do produkcji poza zamówieniami = stan min. − dostępne.
+check($row['free_cartons'] == 3 && $row['ordered_cartons'] == 3 && $row['available_cartons'] == round(3 - 3 + $row['in_production_cartons'], 1)
+    && ($row['stock_min_cartons'] === null ? $row['to_min_cartons'] === null : $row['to_min_cartons'] === (int) ceil(round(max(0, $row['stock_min_cartons'] - $row['available_cartons']), 6))),
+    'stock level: free cartons, open orders, available and to produce back to the minimum');
 $period = '?from=' . date('Y-m-d') . '&to=' . date('Y-m-d', strtotime('+6 days'));
 
 [$s, $b] = $call('GET', '/planning/demand' . $period, null, $lead);

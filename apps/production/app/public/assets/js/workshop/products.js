@@ -91,7 +91,8 @@
     function viewTabs(current) {
         return `<ul class="nav nav-pills tfb-view-tabs mb-3">
             <li class="nav-item"><a class="nav-link ${current === 'list' ? 'active' : ''}" href="#/"><i class="bi bi-list-ul"></i> ${esc(t('view.list'))}</a></li>
-            <li class="nav-item"><a class="nav-link ${current === 'stock' ? 'active' : ''}" href="#/stock"><i class="bi bi-boxes"></i> ${esc(t('view.stock'))}</a></li></ul>`;
+            <li class="nav-item"><a class="nav-link ${current === 'stock' ? 'active' : ''}" href="#/stock"><i class="bi bi-boxes"></i> ${esc(t('view.stock'))}</a></li>
+            <li class="nav-item"><a class="nav-link ${current === 'levels' ? 'active' : ''}" href="#/levels"><i class="bi bi-bar-chart-line"></i> ${esc(t('view.levels'))}</a></li></ul>`;
     }
 
     // --- Zapasy wg kategorii : szybki MTS / MTO, stany min. / maks. w kartonach, sprzedaż, zapas optymalny ---
@@ -154,19 +155,10 @@
                 return true;
             } catch (err) { fail(null, err); return false; }
         };
-        const suggested = (i) => ({stock_min: i.suggested_min_cartons * i.ppc, stock_max: i.suggested_max_cartons * i.ppc, stock_calculated: true});
         el.querySelector('[data-group]').addEventListener('change', (e) => { location.hash = '#/stock' + (e.target.value ? '?group_id=' + e.target.value : ''); });
         el.querySelectorAll('tr[data-id]').forEach(tr => {
             const i = find(Number(tr.dataset.id));
-            tr.querySelector('[data-mts]').addEventListener('change', async (e) => {
-                const on = e.target.checked;
-                let body = {mode: on ? 'MTS' : 'MTO'};
-                if (on && i.stock_max === null) {
-                    if (!i.ppc || i.suggested_max_cartons <= 0) { e.target.checked = false; ui.notify(false, t('st.need_max')); return; }
-                    body = {...body, ...suggested(i)};
-                }
-                if (!(await save(i, body, t(on ? 'st.now_mts' : 'st.now_mto', {name: i.name})))) e.target.checked = !on;
-            });
+            tr.querySelector('[data-mts]').addEventListener('change', (e) => modeSwitch(e.target, i, save));
             tr.querySelectorAll('[data-stock]').forEach(input => input.addEventListener('change', () => {
                 const c = ui.num(input.value);
                 if (c !== null && typeof c !== 'number') { ui.notify(false, t('st.number')); return; }
@@ -188,6 +180,82 @@
                 e.target.textContent = `${done}/${todo.length}`;
             }
             await renderStock(t('st.recalc_done', {n: done}));
+        });
+    }
+
+    // Stany ze sprzedaży (min = tygodnie min., maks. = tygodnie maks.), w sztukach.
+    const suggested = (i) => ({stock_min: i.suggested_min_cartons * i.ppc, stock_max: i.suggested_max_cartons * i.ppc, stock_calculated: true});
+
+    // Przełącznik na magazyn (MTS) / na zamówienie (MTO) : włączenie bez stanu maks. bierze stany ze sprzedaży.
+    async function modeSwitch(input, i, save) {
+        const on = input.checked;
+        let body = {mode: on ? 'MTS' : 'MTO'};
+        if (on && i.stock_max === null) {
+            if (!i.ppc || i.suggested_max_cartons <= 0) { input.checked = false; ui.notify(false, t('st.need_max')); return; }
+            body = {...body, ...suggested(i)};
+        }
+        if (!(await save(i, body, t(on ? 'st.now_mts' : 'st.now_mto', {name: i.name})))) input.checked = !on;
+    }
+
+    // --- Stan magazynu : stan wolny, zamówienia, min. / maks., do produkcji poza zamówieniami --------
+    async function renderLevels(message) {
+        const params = new URLSearchParams(location.hash.split('?')[1] || '');
+        const group = params.get('group_id') || '';
+        const mode = params.get('mode') || 'MTS';
+        const data = await api.get('/produits/stock-overview' + (group ? '?group_id=' + group : ''));
+        const n = (v, d) => v === null || v === undefined ? '—' : ui.fmt(v, d ?? 0, api.lang);
+        const all = data.categories.flatMap(c => c.items.map(i => ({...i, category: c.name || t('st.no_category')})));
+        const rows = all.filter(i => mode === 'all' || i.mode === mode)
+            .sort((a, b) => (b.to_min_cartons || 0) - (a.to_min_cartons || 0) || (b.orders_over_stock_cartons || 0) - (a.orders_over_stock_cartons || 0) || a.name.localeCompare(b.name));
+        const mts = rows.filter(i => i.mode === 'MTS');
+        const below = mts.filter(i => i.below_min);
+        const sum = (list, f) => list.reduce((a, i) => a + (i[f] || 0), 0);
+        const link = (m) => '#/levels?' + new URLSearchParams({...(group ? {group_id: group} : {}), mode: m});
+        el.innerHTML = header() + viewTabs('levels') + `
+            <div class="tfb-stock-bar card"><div class="card-body d-flex flex-wrap gap-3 align-items-center justify-content-between">
+                <div class="btn-group btn-group-sm" role="group" aria-label="${esc(t('col.mode'))}">
+                    ${['MTS', 'MTO', 'all'].map(m => `<a class="btn ${mode === m ? 'btn-primary' : 'btn-outline-primary'}" href="${link(m)}">${esc(t('lv.mode_' + m))}</a>`).join('')}</div>
+                <select class="form-select form-select-sm" data-group style="width:auto"><option value="">${esc(t('col.group'))}: ${esc(t('all'))}</option>
+                    ${state.groups.map(g => `<option value="${g.id}" ${group === String(g.id) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
+                <div class="small">${mode !== 'MTO' ? esc(t('lv.summary', {below: below.length, products: mts.length, to_min: n(sum(mts, 'to_min_cartons')), to_max: n(sum(mts, 'to_max_cartons'))}))
+                    : esc(t('lv.summary_mto', {products: rows.length, over: n(sum(rows, 'orders_over_stock_cartons'))}))}</div>
+            </div></div>
+            <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0 tfb-stock-table">
+                <thead><tr><th>${esc(t('col.name'))}</th><th class="text-center">${esc(t('st.col_mode'))}</th>
+                    <th class="text-end" title="${esc(t('lv.free_help'))}">${esc(t('lv.free'))}</th><th class="text-end" title="${esc(t('lv.ordered_help'))}">${esc(t('lv.ordered'))}</th>
+                    <th class="text-end" title="${esc(t('lv.in_production_help'))}">${esc(t('lv.in_production'))}</th><th class="text-end" title="${esc(t('lv.available_help'))}">${esc(t('lv.available'))}</th>
+                    <th class="text-end">${esc(t('lv.min'))}</th><th class="text-end">${esc(t('lv.max'))}</th>
+                    <th class="text-end" title="${esc(t('lv.to_produce_help'))}">${esc(t('lv.to_produce'))}</th></tr></thead>
+                <tbody>${rows.map(i => `<tr data-id="${i.id}" class="${i.below_min ? 'tfb-level-low' : ''}">
+                    <td><a href="#/item/${i.id}/4"><strong>${esc(i.name)}</strong></a><div class="small text-muted">${esc(i.category)} · ${esc(groupName(i.group_id))}${i.ppc ? ' · ' + esc(t('st.ppc', {ppc: i.ppc})) : ''}</div></td>
+                    <td class="text-center"><div class="form-check form-switch d-inline-block m-0" title="${esc(i.never_frozen ? t('f.never_frozen') : t('st.toggle_help'))}">
+                        <input class="form-check-input" type="checkbox" role="switch" data-mts ${i.mode === 'MTS' ? 'checked' : ''} ${i.never_frozen ? 'disabled' : ''} aria-label="${esc(t('mode.MTS'))}"></div></td>
+                    <td class="text-end">${n(i.free_cartons)}</td>
+                    <td class="text-end">${i.ordered_cartons ? n(i.ordered_cartons) : '—'}</td>
+                    <td class="text-end">${i.in_production_cartons ? n(i.in_production_cartons, 1) : '—'}</td>
+                    <td class="text-end"><strong class="${i.available_cartons < 0 ? 'text-danger' : ''}">${n(i.available_cartons, 1)}</strong></td>
+                    <td class="text-end">${n(i.stock_min_cartons, 1)}</td><td class="text-end">${n(i.stock_max_cartons, 1)}</td>
+                    <td class="text-end">${i.mode === 'MTS'
+                        ? (i.to_min_cartons === null ? `<span class="text-muted small">${esc(t('lv.no_min'))}</span>`
+                            : `<strong class="${i.to_min_cartons > 0 ? 'text-danger' : 'text-success'}">${i.to_min_cartons > 0 ? n(i.to_min_cartons) + ' ' + esc(t('st.cart')) : '✓ 0'}</strong>
+                               ${i.to_max_cartons ? `<div class="small text-muted">${esc(t('lv.to_max', {c: n(i.to_max_cartons)}))}</div>` : ''}`)
+                        : (i.orders_over_stock_cartons > 0 ? `<strong>${n(i.orders_over_stock_cartons)} ${esc(t('st.cart'))}</strong><div class="small text-muted">${esc(t('lv.for_orders'))}</div>` : '<span class="text-muted">—</span>')}</td>
+                </tr>`).join('') || `<tr><td colspan="9" class="text-muted">${esc(t('empty_list'))}</td></tr>`}</tbody></table></div>
+                <p class="text-muted small mb-0 mt-2">${esc(t('lv.note'))}</p></div></div>`;
+        if (message) ui.notify(true, message);
+        const save = async (item, body, ok) => {
+            try {
+                await api.patch(`/produits/items/${item.id}/settings`, body);
+                const y = window.scrollY;
+                await renderLevels(ok);
+                window.scrollTo(0, y);
+                return true;
+            } catch (err) { fail(null, err); return false; }
+        };
+        el.querySelector('[data-group]').addEventListener('change', (e) => { location.hash = '#/levels?' + new URLSearchParams({...(e.target.value ? {group_id: e.target.value} : {}), mode}); });
+        el.querySelectorAll('tr[data-id]').forEach(tr => {
+            const i = all.find(x => x.id === Number(tr.dataset.id));
+            tr.querySelector('[data-mts]').addEventListener('change', (e) => modeSwitch(e.target, i, save));
         });
     }
 
@@ -741,6 +809,7 @@
             let m;
             if (path === '/new') await renderNew();
             else if (path === '/stock') await renderStock();
+            else if (path === '/levels') await renderLevels();
             else if ((m = path.match(/^\/product\/(\d+)$/))) await openProduct(Number(m[1]), Number(new URLSearchParams(hash.split('?')[1] || '').get('step')) || 1);
             else if ((m = path.match(/^\/item\/(\d+)\/([1-8])$/))) await renderItem(Number(m[1]), Number(m[2]));
             else await renderList();
