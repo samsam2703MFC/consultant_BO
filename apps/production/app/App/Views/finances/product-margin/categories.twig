@@ -101,8 +101,8 @@
             </div>
             <div class="form-text mt-1" id="recalcInfo">
                 {% if recalc.at %}
-                    <i class="bi bi-clock-history me-1"></i> Ostatnie przeliczenie kosztów: <strong>{{ recalc.at|date('d.m.Y H:i') }}</strong>{{ recalc.by ? ' · ' ~ recalc.by : '' }}
-                    — kolumna „Efekt na sztukę” pokazuje zmianę kosztu surowców jednej sztuki i marży przy obecnej cenie ;
+                    <i class="bi bi-clock-history me-1"></i> Ostatnie przeliczenie kosztów: <strong>{{ recalc.at|date('d.m.Y H:i') }}</strong>{{ recalc.by ? ' · ' ~ recalc.by : '' }}{{ recalc.run_changed is not null ? ' · zmian w tym przeliczeniu : ' ~ recalc.run_changed : '' }}
+                    — kolumna „Efekt na sztukę” pokazuje ostatnią zmianę kosztu surowców jednej sztuki (data w podpowiedzi) ;
                     na miesiąc razem : <strong class="{{ recalc.month_eur >= 0 ? 'text-success' : 'text-danger' }}">{{ recalc.month_eur >= 0 ? '+' : '' }}{{ recalc.month_eur|number_format(0, ',', ' ') }} € marży</strong>.
                 {% else %}
                     <i class="bi bi-info-circle me-1"></i> „Przelicz wszystkie marże” przelicza koszt surowców receptur po bieżących cenach surowców (ceny sprzedaży bez zmian) i pokazuje efekt na sztukę.
@@ -325,7 +325,7 @@
                                                             {% set up = unit > 0 %}
                                                             {% set down = unit < 0 %}
                                                             <span class="fw-semibold text-nowrap {{ up ? 'text-danger' : (down ? 'text-success' : 'text-muted') }}"
-                                                                  title="Koszt surowców sztuki: {{ fx.old_unit_eur|number_format(2, ',', ' ') }} € → {{ fx.new_unit_eur|number_format(2, ',', ' ') }} €">
+                                                                  title="Koszt surowców sztuki: {{ fx.old_unit_eur|number_format(2, ',', ' ') }} € → {{ fx.new_unit_eur|number_format(2, ',', ' ') }} €{{ fx.changed_at ? ' · zmiana z ' ~ fx.changed_at|date('d.m.Y H:i') : ' · bez zmiany kosztu' }}">
                                                                 {{ up ? '+' : '' }}{{ (up or down ? unit : 0)|number_format(2, ',', ' ') }} €
                                                                 {% if fx.delta_pct is not null %}({{ fx.delta_pct > 0 ? '+' : '' }}{{ fx.delta_pct|number_format(1, ',', ' ') }} %){% endif %}
                                                             </span>

@@ -3,9 +3,15 @@ namespace App\Repositories\Analysis;
 
 use App\Core\Helpers\BaseRepository;
 
-/** Koszt surowców kartonu przed i po ostatnim « Przelicz wszystkie marże » (tfb_margin_recalc). */
+/**
+ * « Przelicz wszystkie marże » : ostatnia rzeczywista zmiana kosztu surowców kartonu każdego produktu
+ * (tfb_margin_recalc) i dziennik przeliczeń (tfb_margin_recalc_run).
+ */
 class MarginRecalcRepository extends BaseRepository
 {
+    /** Zmiana kosztu kartonu mniejsza niż to (PLN) = brak zmiany. */
+    private const EPS = 0.00005;
+
     protected string $table = 'tfb_margin_recalc';
 
     /** @return array<int, array{cost: float, ppc: ?int}> produkt aktywny z recepturą => koszt surowców kartonu */
@@ -19,20 +25,35 @@ class MarginRecalcRepository extends BaseRepository
         return $out;
     }
 
-    /** Zapisuje przeliczenie (poprzednie zastępowane). */
-    public function save(array $before, array $after, ?int $userId): int
+    /**
+     * Zapisuje przeliczenie : produkt, którego koszt się zmienił, dostaje nową parę przed / po ; produkt bez
+     * zmiany zachowuje ostatnią zmianę (albo dostaje parę bez zmiany, gdy jeszcze jej nie miał).
+     * @return array{products: int, changed: int}
+     */
+    public function save(array $before, array $after, ?int $userId, int $recipes): array
     {
-        $this->db->exec('DELETE FROM tfb_margin_recalc');
-        $stmt = $this->db->prepare('INSERT INTO tfb_margin_recalc (id_product, old_cost_carton, new_cost_carton, ppc, recalculated_at, recalculated_by) VALUES (?, ?, ?, ?, ?, ?)');
         $now = date('Y-m-d H:i:s');
+        $replace = $this->db->prepare('REPLACE INTO tfb_margin_recalc (id_product, old_cost_carton, new_cost_carton, ppc, recalculated_at, recalculated_by) VALUES (?, ?, ?, ?, ?, ?)');
+        $keep = $this->db->prepare('INSERT IGNORE INTO tfb_margin_recalc (id_product, old_cost_carton, new_cost_carton, ppc, recalculated_at, recalculated_by) VALUES (?, ?, ?, ?, ?, ?)');
+        $products = 0;
+        $changed = 0;
         foreach ($after as $id => $a) {
             if (!isset($before[$id])) continue;
-            $stmt->execute([$id, round($before[$id]['cost'], 4), round($a['cost'], 4), $a['ppc'], $now, $userId]);
+            $products++;
+            $row = [$id, round($before[$id]['cost'], 4), round($a['cost'], 4), $a['ppc'], $now, $userId];
+            if (abs($a['cost'] - $before[$id]['cost']) >= self::EPS) {
+                $replace->execute($row);
+                $changed++;
+            } else {
+                $keep->execute($row);
+            }
         }
-        return count(array_intersect_key($after, $before));
+        $this->db->prepare('INSERT INTO tfb_margin_recalc_run (run_at, run_by, recipes, products, changed) VALUES (?, ?, ?, ?, ?)')
+            ->execute([$now, $userId, $recipes, $products, $changed]);
+        return ['products' => $products, 'changed' => $changed];
     }
 
-    /** @return array<int, array> produkt => wiersz ostatniego przeliczenia */
+    /** @return array<int, array> produkt => ostatnia zmiana kosztu */
     public function last(): array
     {
         $out = [];
@@ -40,5 +61,12 @@ class MarginRecalcRepository extends BaseRepository
             $out[(int) $r['id_product']] = $r;
         }
         return $out;
+    }
+
+    /** Ostatnie przeliczenie (kiedy, kto, ile zmian) albo null. */
+    public function lastRun(): ?array
+    {
+        $rows = $this->query('SELECT r.*, u.displayed_name AS by_name FROM tfb_margin_recalc_run r LEFT JOIN user u ON u.id = r.run_by ORDER BY r.id DESC LIMIT 1');
+        return $rows ? $rows[0] : null;
     }
 }

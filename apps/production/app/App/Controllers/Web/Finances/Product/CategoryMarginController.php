@@ -51,10 +51,12 @@ class CategoryMarginController extends BaseController
             $run = $this->recipeCosts->recalcForAll();
             $after = $this->recalc->currentCosts();
             $id = user('id');
-            $saved = $this->recalc->save($before, $after, $id ? (int) $id : null);
-            $changed = count(array_filter($after, fn($a, $pid) => isset($before[$pid]) && abs($a['cost'] - $before[$pid]['cost']) >= 0.005, ARRAY_FILTER_USE_BOTH));
-            return $this->json(['ok' => true, 'recipes' => (int) ($run['recipes'] ?? 0), 'products' => $saved, 'changed' => $changed,
-                'message' => "Przeliczono koszty {$run['recipes']} receptur — zmiana kosztu u {$changed} z {$saved} produktów."]);
+            $recipes = (int) ($run['recipes'] ?? 0);
+            $saved = $this->recalc->save($before, $after, $id ? (int) $id : null, $recipes);
+            $message = $saved['changed']
+                ? "Przeliczono koszty {$recipes} receptur — zmiana kosztu u {$saved['changed']} z {$saved['products']} produktów."
+                : "Przeliczono koszty {$recipes} receptur — ceny surowców bez zmian od ostatniego przeliczenia ; kolumna « Efekt na sztukę » pokazuje ostatnią zmianę każdego produktu.";
+            return $this->json(['ok' => true, 'recipes' => $recipes, 'products' => $saved['products'], 'changed' => $saved['changed'], 'message' => $message]);
         } catch (\Throwable $e) {
             error_log('[category-margin] recalculate failed: ' . $e->getMessage());
             return $this->json(['ok' => false, 'error' => 'Nie udało się przeliczyć kosztów receptur.'], 500);
@@ -86,11 +88,13 @@ class CategoryMarginController extends BaseController
                     'delta_eur_unit' => $rate > 0 ? $delta / $ppc / $rate : null,
                     'delta_pct' => (float) $r['old_cost_carton'] > 0 ? $delta / (float) $r['old_cost_carton'] * 100 : null,
                     'margin_pp' => $sale > 0 ? -$delta / $sale * 100 : null,
+                    'changed_at' => abs($delta) >= 0.00005 ? $r['recalculated_at'] : null,
                     'old_unit_eur' => $rate > 0 ? (float) $r['old_cost_carton'] / $ppc / $rate : null,
                     'new_unit_eur' => $rate > 0 ? (float) $r['new_cost_carton'] / $ppc / $rate : null,
                 ];
             }
         }
+        $lastRun = $this->recalc->lastRun();
         $first = reset($rows);
         $categories = [];
         foreach ($result['categories'] ?? [] as $cat) {
@@ -98,7 +102,8 @@ class CategoryMarginController extends BaseController
                 if (isset($products[$p['product_id']]['month_eur'])) $categories[$cat['category_id']] = ($categories[$cat['category_id']] ?? 0) + $products[$p['product_id']]['month_eur'];
             }
         }
-        return ['at' => $first['recalculated_at'], 'by' => $first['by_name'] ?? null, 'products' => $products,
+        return ['at' => $lastRun['run_at'] ?? max(array_column($rows, 'recalculated_at')), 'by' => $lastRun['by_name'] ?? ($first['by_name'] ?? null),
+            'run_changed' => $lastRun !== null ? (int) $lastRun['changed'] : null, 'products' => $products,
             'categories' => $categories, 'month_eur' => array_sum($categories)];
     }
 
