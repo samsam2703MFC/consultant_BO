@@ -29,6 +29,14 @@
     {# ── Filtry ─────────────────────────────────────────────────── #}
     <div class="card">
         <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Szybkie okresy">
+                {% for p in presets %}
+                    {% set active = date_from == p.from and date_to == p.to %}
+                    <a class="btn btn-sm {{ active ? 'btn-primary' : 'btn-outline-primary' }}"
+                       href="{{ root }}/finances/sales-analytics?date_from={{ p.from }}&date_to={{ p.to }}{{ customer_id ? '&customer_id=' ~ customer_id : '' }}"
+                       title="{{ p.from }} → {{ p.to }}">{{ p.label }}</a>
+                {% endfor %}
+            </div>
             <form method="get" action="{{ root }}/finances/sales-analytics" class="row g-3 align-items-end">
                 <div class="col-12 col-md-3">
                     <label class="form-label" for="input_date_from">Miesiąc od</label>

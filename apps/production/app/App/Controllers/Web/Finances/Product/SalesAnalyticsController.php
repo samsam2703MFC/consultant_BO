@@ -37,9 +37,30 @@ class SalesAnalyticsController extends BaseController
             'summary'       => $summary,
             'monthly_chart' => $monthlyChart,
             'products'      => $products,
+            'presets'       => $this->presets(),
         ];
 
         $this->view('finances/sales-analytics/overview', $data);
+    }
+
+    /**
+     * Szybkie okresy (miesiące RRRR-MM) : ten miesiąc, ten kwartał, ten rok do ostatniego zamkniętego
+     * miesiąca (w styczniu : styczeń), ostatnie 12 zamkniętych miesięcy.
+     * @return list<array{key: string, label: string, from: string, to: string}>
+     */
+    private function presets(?int $now = null): array
+    {
+        $now ??= time();
+        $month = date('Y-m', $now);
+        $lastClosed = date('Y-m', strtotime(date('Y-m-01', $now) . ' -1 month'));
+        $quarterStart = date('Y', $now) . '-' . sprintf('%02d', (int) (floor(((int) date('n', $now) - 1) / 3) * 3 + 1));
+        $year = date('Y', $now);
+        return [
+            ['key' => 'month', 'label' => 'Ten miesiąc', 'from' => $month, 'to' => $month],
+            ['key' => 'quarter', 'label' => 'Ten kwartał', 'from' => $quarterStart, 'to' => $month],
+            ['key' => 'year', 'label' => 'Ten rok (do ost. zamkniętego mies.)', 'from' => $year . '-01', 'to' => $lastClosed >= $year . '-01' ? $lastClosed : $month],
+            ['key' => '12m', 'label' => 'Ostatnie 12 mies.', 'from' => date('Y-m', strtotime(date('Y-m-01', $now) . ' -12 months')), 'to' => $lastClosed],
+        ];
     }
 
     /**
