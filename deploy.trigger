@@ -875,3 +875,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T08:00:02Z rentowność : sprzedaż na osobę, tabela 18 miesięcy
 2026-10-20T08:16:18Z rentowność : co wyprodukowały grupy, menu Analiza
 2026-10-20T08:26:41Z rentowność : marża brutto, działy wspólne osobno
+2026-10-20T08:34:44Z wdrożenie : świeże szablony Twig (marża brutto, działy wspólne)
