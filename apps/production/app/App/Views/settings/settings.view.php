@@ -63,10 +63,52 @@
             </div>
         </div>
 
+        <?php $sp = $stock_params ?? []; ?>
+        <div class="card" id="stock-params">
+            <div class="card-header">
+                <h4 class="card-title mb-0">Zapasy produktów na magazynie (MTS)</h4>
+                <p class="text-muted small mb-0">Stany min. / maks. liczone ze średniej sprzedaży (WDT) — przycisk w karcie produktu i widok « Zapasy wg kategorii » w Kartach produktów.</p>
+            </div>
+            <div class="card-body">
+                <form class="row g-3 align-items-end" id="stockParamsForm">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="spMin">Zapas minimalny (tygodnie sprzedaży)</label>
+                        <input class="form-control" id="spMin" name="stock.suggest_min_weeks" inputmode="decimal" value="<?= htmlspecialchars(str_replace('.', ',', (string) ($sp['stock.suggest_min_weeks'] ?? '1'))) ?>">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="spMax">Zapas maksymalny (tygodnie sprzedaży)</label>
+                        <input class="form-control" id="spMax" name="stock.suggest_max_weeks" inputmode="decimal" value="<?= htmlspecialchars(str_replace('.', ',', (string) ($sp['stock.suggest_max_weeks'] ?? '3'))) ?>">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="spWeeks">Średnia sprzedaży z ostatnich (tygodni)</label>
+                        <input class="form-control" id="spWeeks" name="stock.suggest_weeks" inputmode="numeric" value="<?= htmlspecialchars((string) ($sp['stock.suggest_weeks'] ?? '6')) ?>">
+                    </div>
+                    <div class="col-12 col-md-3 d-grid">
+                        <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Zapisz parametry zapasów</button>
+                    </div>
+                    <div class="col-12 form-text" id="stockParamsInfo">Przykład : średnio 10 kartonów sprzedaży na tydzień, minimum 1 tydzień i maksimum 3 tygodnie → stan min. 10 kartonów, maks. 30 kartonów.</div>
+                </form>
+            </div>
+        </div>
+
     </section>
 </div>
 
 <script>
+    // Parametry zapasów MTS (tfb_prod_param) : tygodnie min. / maks. i okres średniej sprzedaży.
+    document.getElementById('stockParamsForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const form = e.target;
+        const body = {};
+        new FormData(form).forEach((v, k) => { body[k] = v; });
+        form.querySelectorAll('.is-invalid').forEach(i => i.classList.remove('is-invalid'));
+        const res = await fetch('<?= ROOT ?>/ajax/settings/stock-params', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}, body: JSON.stringify(body)});
+        const json = await res.json().catch(() => ({}));
+        Object.keys(json.errors || {}).forEach(k => { const i = form.querySelector('[name="' + k + '"]'); if (i) i.classList.add('is-invalid'); });
+        const msg = json.message || json.error || 'Błąd zapisu.';
+        if (typeof Swal !== 'undefined') Swal.fire({icon: json.ok ? 'success' : 'error', text: msg}); else alert(msg);
+    });
+
     async function flatAllRecipes() {
         // Loader na czas długiego przeliczania
         const hasSwal = (typeof Swal !== 'undefined' && Swal && typeof Swal.fire === 'function');

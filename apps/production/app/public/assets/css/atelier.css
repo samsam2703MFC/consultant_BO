@@ -1373,3 +1373,10 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 /* Partie i identyfikowalność */
 .at-trace-photo { width: 90px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid var(--at-line, #ddd); background: #fff; }
 .at-trace-ocr { max-width: 280px; white-space: pre-line; }
+
+/* Karty produktów : zapasy wg kategorii */
+.tfb-view-tabs .nav-link { padding: 6px 14px; }
+.tfb-stock-bar { margin-bottom: 16px; }
+.tfb-stock-cat .card-header h5 { font-size: 16px; }
+.tfb-stock-table tr.tfb-stock-mts td:first-child { box-shadow: inset 3px 0 0 var(--bs-success, #2E7D4F); }
+.tfb-stock-table input[data-stock] { min-width: 80px; }

@@ -400,6 +400,12 @@ $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, name,
 [$s, $st] = $call('GET', "/produits/items/{$itemId}/stock-suggestion", null, $dir);
 check($s === 200 && $st['data']['weeks'] === 6 && $st['data']['shipped_cartons'] == 42 && $st['data']['weekly_cartons'] == 7
     && $st['data']['stock_min_cartons'] === 7 && $st['data']['stock_max_cartons'] === 21 && $st['data']['stock_min'] === 7 * 60 && $st['data']['stock_max'] === 21 * 60, 'stock suggestion: min 1 week, max 3 weeks of sales, whole cartons');
+// Zapasy wg kategorii : 7 kart./tydz. od 1 sklepu, zapas optymalny 21 kart. = 21 / 48 palety.
+[$s, $ov] = $call('GET', '/produits/stock-overview', null, $dir);
+$row = null;
+foreach ($ov['data']['categories'] ?? [] as $c) foreach ($c['items'] as $i) if ($i['id'] === $itemId) $row = $i;
+check($s === 200 && $ov['data']['params']['max_weeks'] == 3 && $row && $row['weekly_cartons'] == 7 && $row['shops'] === 1 && $row['per_shop_weekly_cartons'] == 7
+    && $row['per_shop_weekly_quantity'] == 420 && $row['optimal_cartons'] === 21 && $row['optimal_pallets'] == round(21 / 48, 2) && $row['suggested_min_cartons'] === 7, 'stock overview: weekly sales, per shop per week, optimal cartons and pallets');
 $period = '?from=' . date('Y-m-d') . '&to=' . date('Y-m-d', strtotime('+6 days'));
 
 [$s, $b] = $call('GET', '/planning/demand' . $period, null, $lead);

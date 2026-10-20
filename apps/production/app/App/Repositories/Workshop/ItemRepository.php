@@ -143,6 +143,31 @@ final class ItemRepository extends WorkshopRepository
         )[0]['cartons'] ?? 0);
     }
 
+    /**
+     * Zapasy wg kategorii (lista kart) : produkty z trybem, stanami, kartonami na paletę i sprzedażą WDT
+     * z ostatnich $days dni (bez dokumentów zastąpionych) — kartony i liczba sklepów (klientów), które kupiły.
+     */
+    public function stockOverview(int $days, ?int $groupId): array
+    {
+        $params = [$days];
+        $where = "i.item_type = 'product'";
+        if ($groupId !== null) { $where .= ' AND s.id_primary_group = ?'; $params[] = $groupId; }
+        return $this->all("SELECT i.id, i.id_final_product, fp.name, fp.id_category, cp.name AS category, fp.ppc, fp.cpp, fp.active AS erp_active,
+                                  s.mode, s.never_frozen, s.stock_min, s.stock_max, s.stock_calc_at, s.id_primary_group, s.status,
+                                  COALESCE(w.cartons, 0) AS shipped_cartons, COALESCE(w.shops, 0) AS shops
+                           FROM tfb_prod_item i
+                           JOIN final_product fp ON fp.id = i.id_final_product
+                           LEFT JOIN category_product cp ON cp.id = fp.id_category
+                           LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id
+                           LEFT JOIN (SELECT p.id_product, SUM(p.quantity) AS cartons, COUNT(DISTINCT w.id_customer) AS shops
+                                      FROM document_wdt w JOIN document_wdt_product p ON p.id_document_wdt = w.id
+                                      WHERE w.established_date >= CURDATE() - INTERVAL ? DAY AND w.established_date < CURDATE()
+                                        AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
+                                      GROUP BY p.id_product) w ON w.id_product = i.id_final_product
+                           WHERE {$where}
+                           ORDER BY cp.name IS NULL, cp.name, fp.name, i.id", $params);
+    }
+
     /** Listy wyboru kroku « Produkt » : kategorie produktów i działy produkcji ERP. */
     public function erpOptions(): array
     {

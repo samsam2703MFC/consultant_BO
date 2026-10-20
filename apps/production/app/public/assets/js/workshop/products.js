@@ -55,7 +55,7 @@
         const query = new URLSearchParams();
         for (const k of ['search', 'status', 'item_type', 'group_id']) if (params.get(k)) query.set(k, params.get(k));
         const res = await api.list('/produits/items' + (query.toString() ? '?' + query : ''));
-        el.innerHTML = header(`<a class="btn btn-primary btn-sm" href="#/new"><i class="bi bi-plus"></i> ${esc(t('new_sheet'))}</a>`) + `
+        el.innerHTML = header(`<a class="btn btn-primary btn-sm" href="#/new"><i class="bi bi-plus"></i> ${esc(t('new_sheet'))}</a>`) + viewTabs('list') + `
             <form class="tfb-filters" data-filters>
                 <input class="form-control form-control-sm" name="search" placeholder="${esc(t('search'))}" value="${esc(params.get('search') || '')}">
                 <select class="form-select form-select-sm" name="status"><option value="">${esc(t('col.status'))}: ${esc(t('all'))}</option>
@@ -84,6 +84,111 @@
         };
         form.addEventListener('change', apply);
         form.addEventListener('submit', (e) => { e.preventDefault(); apply(); });
+    }
+
+
+    // Widok listy : karty albo zapasy wg kategorii.
+    function viewTabs(current) {
+        return `<ul class="nav nav-pills tfb-view-tabs mb-3">
+            <li class="nav-item"><a class="nav-link ${current === 'list' ? 'active' : ''}" href="#/"><i class="bi bi-list-ul"></i> ${esc(t('view.list'))}</a></li>
+            <li class="nav-item"><a class="nav-link ${current === 'stock' ? 'active' : ''}" href="#/stock"><i class="bi bi-boxes"></i> ${esc(t('view.stock'))}</a></li></ul>`;
+    }
+
+    // --- Zapasy wg kategorii : szybki MTS / MTO, stany min. / maks. w kartonach, sprzedaż, zapas optymalny ---
+    async function renderStock(message) {
+        const params = new URLSearchParams(location.hash.split('?')[1] || '');
+        const group = params.get('group_id') || '';
+        const data = await api.get('/produits/stock-overview' + (group ? '?group_id=' + group : ''));
+        const p = data.params;
+        const n = (v, d) => v === null || v === undefined ? '—' : ui.fmt(v, d ?? 1, api.lang);
+        const lastCalc = (v) => v ? new Date(String(v).replace(' ', 'T')).toLocaleDateString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL') : '—';
+        const row = (i) => {
+            const noPpc = !i.ppc;
+            return `<tr data-id="${i.id}" class="${i.mode === 'MTS' ? 'tfb-stock-mts' : ''}">
+                <td><a href="#/item/${i.id}/4"><strong>${esc(i.name)}</strong></a>${i.erp_active ? '' : ` <span class="badge bg-secondary">${esc(t('erp.inactive'))}</span>`}
+                    <div class="small text-muted">${esc(groupName(i.group_id))}${i.ppc ? ' · ' + esc(t('st.ppc', {ppc: i.ppc})) : ''}</div></td>
+                <td class="text-center"><div class="form-check form-switch d-inline-block m-0" title="${esc(i.never_frozen ? t('f.never_frozen') : t('st.toggle_help'))}">
+                    <input class="form-check-input" type="checkbox" role="switch" data-mts ${i.mode === 'MTS' ? 'checked' : ''} ${i.never_frozen ? 'disabled' : ''} aria-label="${esc(t('mode.MTS'))}"></div>
+                    <div class="small ${i.mode === 'MTS' ? 'text-success' : 'text-muted'}">${esc(i.mode === 'MTS' ? t('st.mts') : t('st.mto'))}</div></td>
+                <td class="text-end">${n(i.weekly_cartons)}<div class="small text-muted">${esc(t('st.shipped', {c: n(i.shipped_cartons, 0)}))}</div></td>
+                <td class="text-end">${i.per_shop_weekly_cartons !== null ? `${n(i.per_shop_weekly_cartons, 2)} ${esc(t('st.cart'))}<div class="small text-muted">${i.per_shop_weekly_quantity !== null ? n(i.per_shop_weekly_quantity, 0) + ' ' + esc(t('st.pcs')) + ' · ' : ''}${esc(t('st.shops', {n: i.shops}))}</div>` : '—'}</td>
+                <td><input class="form-control form-control-sm text-end" data-stock="stock_min" inputmode="decimal" value="${i.stock_min_cartons ?? ''}" ${noPpc ? 'disabled' : ''} aria-label="${esc(t('f.stock_min'))}">
+                    <div class="small text-muted text-end">${i.stock_min !== null ? n(i.stock_min, 0) + ' ' + esc(t('st.pcs')) : ''}</div></td>
+                <td><input class="form-control form-control-sm text-end" data-stock="stock_max" inputmode="decimal" value="${i.stock_max_cartons ?? ''}" ${noPpc ? 'disabled' : ''} aria-label="${esc(t('f.stock_max'))}">
+                    <div class="small text-muted text-end">${i.stock_max !== null ? n(i.stock_max, 0) + ' ' + esc(t('st.pcs')) : ''}</div></td>
+                <td class="text-end"><strong>${n(i.optimal_cartons, 0)} ${esc(t('st.cart'))}</strong>
+                    <div class="small text-muted">${i.optimal_pallets !== null ? n(i.optimal_pallets, 2) + ' ' + esc(t('st.pal')) : esc(t('st.no_cpp'))} · min ${n(i.suggested_min_cartons, 0)}</div></td>
+                <td class="text-center text-nowrap"><button type="button" class="btn btn-sm btn-outline-primary" data-recalc ${noPpc ? 'disabled' : ''} title="${esc(t('st.recalc_help'))}"><i class="bi bi-arrow-repeat"></i></button>
+                    <div class="small text-muted">${esc(lastCalc(i.stock_calc_at))}</div></td></tr>`;
+        };
+        const all = data.categories.flatMap(c => c.items);
+        const sum = (f) => data.categories.reduce((a, c) => a + (c.totals[f] || 0), 0);
+        el.innerHTML = header() + viewTabs('stock') + `
+            <div class="tfb-stock-bar card"><div class="card-body d-flex flex-wrap gap-3 align-items-center justify-content-between">
+                <div>${esc(t('st.params', {min: n(p.min_weeks), max: n(p.max_weeks), weeks: p.weeks}))}
+                    <a href="${esc(api.root || '')}/other-settings#stock-params" class="ms-1">${esc(t('st.params_edit'))}</a></div>
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <select class="form-select form-select-sm" data-group style="width:auto"><option value="">${esc(t('col.group'))}: ${esc(t('all'))}</option>
+                        ${state.groups.map(g => `<option value="${g.id}" ${group === String(g.id) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
+                    <button type="button" class="btn btn-sm btn-primary" data-recalc-all><i class="bi bi-arrow-repeat"></i> ${esc(t('st.recalc_all'))}</button></div>
+                <div class="w-100 small text-muted">${esc(t('st.summary', {products: all.length, mts: all.filter(i => i.mode === 'MTS').length, cartons: n(sum('optimal_cartons'), 0), pallets: n(sum('optimal_pallets'), 1)}))}</div>
+            </div></div>
+            ${data.categories.map(c => `<div class="card tfb-stock-cat"><div class="card-header d-flex flex-wrap justify-content-between gap-2">
+                    <h5 class="mb-0">${esc(c.name || t('st.no_category'))}</h5>
+                    <span class="text-muted small">${esc(t('st.cat_totals', {products: c.totals.products, mts: c.totals.mts, weekly: n(c.totals.weekly_cartons), cartons: n(c.totals.optimal_cartons, 0), pallets: n(c.totals.optimal_pallets, 1)}))}</span></div>
+                <div class="card-body pt-0"><div class="table-responsive"><table class="table table-sm align-middle mb-0 tfb-stock-table">
+                    <thead><tr><th>${esc(t('col.name'))}</th><th class="text-center">${esc(t('st.col_mode'))}</th>
+                        <th class="text-end" title="${esc(t('st.col_weekly_help', {weeks: p.weeks}))}">${esc(t('st.col_weekly'))}</th>
+                        <th class="text-end" title="${esc(t('st.col_shop_help'))}">${esc(t('st.col_shop'))}</th>
+                        <th class="text-end" style="width:110px">${esc(t('st.col_min'))}</th><th class="text-end" style="width:110px">${esc(t('st.col_max'))}</th>
+                        <th class="text-end" title="${esc(t('st.col_optimal_help', {max: n(p.max_weeks)}))}">${esc(t('st.col_optimal'))}</th><th class="text-center">${esc(t('st.col_calc'))}</th></tr></thead>
+                    <tbody>${c.items.map(row).join('')}</tbody></table></div></div></div>`).join('') || `<p class="text-muted">${esc(t('empty_list'))}</p>`}`;
+        if (message) ui.notify(true, message);
+        const find = (id) => all.find(i => i.id === id);
+        const save = async (item, body, ok) => {
+            try {
+                await api.patch(`/produits/items/${item.id}/settings`, body);
+                const y = window.scrollY;
+                await renderStock(ok);
+                window.scrollTo(0, y);
+                return true;
+            } catch (err) { fail(null, err); return false; }
+        };
+        const suggested = (i) => ({stock_min: i.suggested_min_cartons * i.ppc, stock_max: i.suggested_max_cartons * i.ppc, stock_calculated: true});
+        el.querySelector('[data-group]').addEventListener('change', (e) => { location.hash = '#/stock' + (e.target.value ? '?group_id=' + e.target.value : ''); });
+        el.querySelectorAll('tr[data-id]').forEach(tr => {
+            const i = find(Number(tr.dataset.id));
+            tr.querySelector('[data-mts]').addEventListener('change', async (e) => {
+                const on = e.target.checked;
+                let body = {mode: on ? 'MTS' : 'MTO'};
+                if (on && i.stock_max === null) {
+                    if (!i.ppc || i.suggested_max_cartons <= 0) { e.target.checked = false; ui.notify(false, t('st.need_max')); return; }
+                    body = {...body, ...suggested(i)};
+                }
+                if (!(await save(i, body, t(on ? 'st.now_mts' : 'st.now_mto', {name: i.name})))) e.target.checked = !on;
+            });
+            tr.querySelectorAll('[data-stock]').forEach(input => input.addEventListener('change', () => {
+                const c = ui.num(input.value);
+                if (c !== null && typeof c !== 'number') { ui.notify(false, t('st.number')); return; }
+                save(i, {[input.dataset.stock]: c === null ? null : Math.round(c * i.ppc)}, t('saved'));
+            }));
+            tr.querySelector('[data-recalc]').addEventListener('click', () => {
+                if (i.suggested_max_cartons <= 0) { ui.notify(false, t('st.no_sales')); return; }
+                save(i, suggested(i), t('st.recalculated', {name: i.name}));
+            });
+        });
+        el.querySelector('[data-recalc-all]').addEventListener('click', async (e) => {
+            const todo = all.filter(i => i.mode === 'MTS' && i.ppc && i.suggested_max_cartons > 0);
+            if (!todo.length) { ui.notify(false, t('st.recalc_none')); return; }
+            if (!window.confirm(t('st.recalc_confirm', {n: todo.length}))) return;
+            e.target.disabled = true;
+            let done = 0;
+            for (const i of todo) {
+                try { await api.patch(`/produits/items/${i.id}/settings`, suggested(i)); done++; } catch (err) { /* produit suivant */ }
+                e.target.textContent = `${done}/${todo.length}`;
+            }
+            await renderStock(t('st.recalc_done', {n: done}));
+        });
     }
 
     // --- Nouvelle fiche (étape 1) ---------------------------------------------------
@@ -635,6 +740,7 @@
         try {
             let m;
             if (path === '/new') await renderNew();
+            else if (path === '/stock') await renderStock();
             else if ((m = path.match(/^\/product\/(\d+)$/))) await openProduct(Number(m[1]), Number(new URLSearchParams(hash.split('?')[1] || '').get('step')) || 1);
             else if ((m = path.match(/^\/item\/(\d+)\/([1-8])$/))) await renderItem(Number(m[1]), Number(m[2]));
             else await renderList();

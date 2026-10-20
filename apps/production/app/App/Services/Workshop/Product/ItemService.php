@@ -61,6 +61,55 @@ final class ItemService
     }
 
     /**
+     * Zapasy wg kategorii (lista kart) : tryb MTS / MTO, stany min. / maks., sprzedaż tygodniowa i średnio
+     * na sklep na tydzień (WDT z stock.suggest_weeks tygodni ; sklep = klient, który kupił w tym okresie),
+     * stany proponowane (stock.suggest_min_weeks / stock.suggest_max_weeks tygodni sprzedaży) i zapas
+     * optymalny (stan maks. proponowany) w kartonach i paletach (kartony ÷ kartony na paletę z ERP).
+     */
+    public function stockOverview(?int $groupId): array
+    {
+        $weeks = max(1, (int) $this->params->get('stock.suggest_weeks', '6'));
+        $minWeeks = max(0.0, (float) $this->params->get('stock.suggest_min_weeks', '1'));
+        $maxWeeks = max($minWeeks, (float) $this->params->get('stock.suggest_max_weeks', '3'));
+        $whole = fn(float $c) => (int) ceil(round($c, 6));
+        $categories = [];
+        foreach ($this->items->stockOverview($weeks * 7, $groupId) as $r) {
+            $ppc = (int) $r['ppc'] > 0 ? (int) $r['ppc'] : null;
+            $cpp = (int) $r['cpp'] > 0 ? (int) $r['cpp'] : null;
+            $weekly = (float) $r['shipped_cartons'] / $weeks;
+            $shops = (int) $r['shops'];
+            $optimal = $whole($weekly * $maxWeeks);
+            $cartons = fn($q) => $q === null || !$ppc ? null : round((float) $q / $ppc, 2);
+            $key = $r['id_category'] !== null ? (int) $r['id_category'] : 0;
+            $categories[$key] ??= ['id' => $key ?: null, 'name' => $r['category'], 'items' => [],
+                'totals' => ['products' => 0, 'mts' => 0, 'weekly_cartons' => 0.0, 'optimal_cartons' => 0, 'optimal_pallets' => 0.0]];
+            $item = [
+                'id' => (int) $r['id'], 'final_product_id' => (int) $r['id_final_product'], 'name' => $r['name'], 'erp_active' => (bool) $r['erp_active'],
+                'group_id' => $r['id_primary_group'] !== null ? (int) $r['id_primary_group'] : null, 'status' => $r['status'] ?? 'draft',
+                'mode' => $r['mode'] ?? 'MTO', 'never_frozen' => (bool) ($r['never_frozen'] ?? false), 'ppc' => $ppc, 'cpp' => $cpp,
+                'stock_min' => $this->num($r['stock_min']), 'stock_max' => $this->num($r['stock_max']),
+                'stock_min_cartons' => $cartons($r['stock_min']), 'stock_max_cartons' => $cartons($r['stock_max']), 'stock_calc_at' => $r['stock_calc_at'],
+                'shipped_cartons' => round((float) $r['shipped_cartons'], 1), 'weekly_cartons' => round($weekly, 2), 'shops' => $shops,
+                'per_shop_weekly_cartons' => $shops ? round($weekly / $shops, 2) : null,
+                'per_shop_weekly_quantity' => $shops && $ppc ? round($weekly / $shops * $ppc, 1) : null,
+                'suggested_min_cartons' => $whole($weekly * $minWeeks), 'suggested_max_cartons' => $optimal,
+                'optimal_cartons' => $optimal, 'optimal_pallets' => $cpp ? round($optimal / $cpp, 2) : null,
+            ];
+            $categories[$key]['items'][] = $item;
+            $t = &$categories[$key]['totals'];
+            $t['products']++;
+            $t['mts'] += $item['mode'] === 'MTS' ? 1 : 0;
+            $t['weekly_cartons'] = round($t['weekly_cartons'] + $weekly, 2);
+            $t['optimal_cartons'] += $optimal;
+            $t['optimal_pallets'] = round($t['optimal_pallets'] + ($item['optimal_pallets'] ?? 0), 2);
+            unset($t);
+        }
+        return ['params' => ['weeks' => $weeks, 'min_weeks' => $minWeeks, 'max_weeks' => $maxWeeks,
+                    'from' => date('Y-m-d', strtotime('-' . ($weeks * 7) . ' days')), 'to' => date('Y-m-d', strtotime('-1 day'))],
+            'categories' => array_values($categories)];
+    }
+
+    /**
      * Stany z ostatnich tygodni sprzedaży (krok « Tryb i zapasy ») : średnia tygodniowa z WDT,
      * min = stock.suggest_min_weeks tygodni, maks = stock.suggest_max_weeks tygodni, w pełnych kartonach.
      */

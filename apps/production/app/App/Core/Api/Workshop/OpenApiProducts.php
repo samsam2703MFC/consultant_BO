@@ -30,6 +30,9 @@ final class OpenApiProducts
                 'description' => "Mêmes champs que l'ancien formulaire d'édition du produit (final_product). Changer de département place la fiche dans le groupe de ce département. Produits seulement (409 NOT_ALLOWED_FOR_TYPE)."],
             'GET /produits/items/{id:\d+}/production-summary' => ['tag' => $t, 'id' => 'getItemProductionSummary', 'summary' => 'Produkcja i Gantt / Production et Gantt (étape 7)', 'response' => 'ProductionSummary', 'errors' => [404],
                 'description' => "Rendement (pièces par heure de travail, par personne et pour le groupe), temps par carton et pour 1000 pièces, durée du début à la fin d'un lot (palette, sinon lot minimum, sinon 1000), étapes avec début depuis le départ et étape suivante : tout de suite, + minutes ou J+1 quand l'attente dure 8 h ou plus ; quantité de la semaine (plan), jours du Gantt de la semaine, opérations."],
+            'GET /produits/stock-overview' => ['tag' => $t, 'id' => 'getStockOverview', 'summary' => 'Zapasy wg kategorii / Stocks par catégorie', 'response' => 'StockOverview', 'errors' => [401, 403],
+                'query' => ['group_id' => ['type' => 'integer']],
+                'description' => "Produits par catégorie : mode MTS / MTO, stocks min./max., ventes WDT (stock.suggest_weeks semaines), moyenne par magasin et par semaine, stock optimal (stock.suggest_max_weeks semaines) en cartons et palettes."],
             'GET /produits/items/{id:\d+}/stock-suggestion' => ['tag' => $t, 'id' => 'getItemStockSuggestion', 'summary' => 'Stany ze sprzedaży / Stocks depuis les ventes (étape 4)', 'response' => 'StockSuggestion', 'errors' => [404, 409],
                 'description' => "Ventes WDT (sans doublons) des stock.suggest_weeks dernières semaines : moyenne par semaine ; stock min = stock.suggest_min_weeks semaines, max = stock.suggest_max_weeks semaines, arrondis aux cartons entiers. Rien n'est enregistré."],
             'PUT /produits/items/{id:\d+}/logistics' => ['tag' => $t, 'id' => 'updateItemLogistics', 'summary' => 'Logistyka: karton, paleta, przechowywanie / Logistique : carton, palette, conservation (étape 1)', 'body' => 'ItemLogisticsInput', 'response' => 'Item', 'errors' => [400, 404, 409, 422],
@@ -132,6 +135,23 @@ final class OpenApiProducts
                 'name' => ['type' => 'string', 'maxLength' => 255], 'category_id' => ['type' => 'integer', 'minimum' => 1], 'section_id' => ['type' => 'integer', 'minimum' => 1],
                 'label_type' => ['type' => 'integer', 'enum' => ItemService::LABEL_TYPES], 'shelf_life' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 3650],
                 'stock_minimum' => ['type' => 'integer', 'minimum' => 0, 'description' => 'cartons (liste de production ERP)'],
+            ]],
+            'StockOverview' => ['type' => 'object', 'properties' => [
+                'params' => ['type' => 'object', 'properties' => ['weeks' => $int, 'min_weeks' => $num, 'max_weeks' => $num, 'from' => ['type' => 'string'], 'to' => ['type' => 'string']]],
+                'categories' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'id' => ['type' => 'integer', 'nullable' => true], 'name' => ['type' => 'string', 'nullable' => true],
+                    'totals' => ['type' => 'object', 'properties' => ['products' => $int, 'mts' => $int, 'weekly_cartons' => $num, 'optimal_cartons' => $int, 'optimal_pallets' => $num]],
+                    'items' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        'id' => $int, 'final_product_id' => $int, 'name' => ['type' => 'string'], 'erp_active' => ['type' => 'boolean'], 'group_id' => ['type' => 'integer', 'nullable' => true],
+                        'status' => ['type' => 'string'], 'mode' => ['type' => 'string', 'enum' => ItemService::MODES], 'never_frozen' => ['type' => 'boolean'],
+                        'ppc' => ['type' => 'integer', 'nullable' => true], 'cpp' => ['type' => 'integer', 'nullable' => true],
+                        'stock_min' => ['type' => 'number', 'nullable' => true], 'stock_max' => ['type' => 'number', 'nullable' => true],
+                        'stock_min_cartons' => ['type' => 'number', 'nullable' => true], 'stock_max_cartons' => ['type' => 'number', 'nullable' => true], 'stock_calc_at' => ['type' => 'string', 'nullable' => true],
+                        'shipped_cartons' => $num, 'weekly_cartons' => $num, 'shops' => $int,
+                        'per_shop_weekly_cartons' => ['type' => 'number', 'nullable' => true], 'per_shop_weekly_quantity' => ['type' => 'number', 'nullable' => true],
+                        'suggested_min_cartons' => $int, 'suggested_max_cartons' => $int, 'optimal_cartons' => $int, 'optimal_pallets' => ['type' => 'number', 'nullable' => true],
+                    ]]],
+                ]]],
             ]],
             'StockSuggestion' => ['type' => 'object', 'properties' => [
                 'weeks' => ['type' => 'integer'], 'from' => ['type' => 'string', 'format' => 'date'], 'to' => ['type' => 'string', 'format' => 'date'],

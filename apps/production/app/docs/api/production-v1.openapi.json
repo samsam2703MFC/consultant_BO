@@ -2674,6 +2674,74 @@
                 "x-permission": "prod.products.read"
             }
         },
+        "/produits/stock-overview": {
+            "get": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Zapasy wg kategorii / Stocks par catégorie",
+                "operationId": "getStockOverview",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/StockOverview"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Produits par catégorie : mode MTS / MTO, stocks min./max., ventes WDT (stock.suggest_weeks semaines), moyenne par magasin et par semaine, stock optimal (stock.suggest_max_weeks semaines) en cartons et palettes.",
+                "parameters": [
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.read"
+            }
+        },
         "/produits/items/{id}": {
             "get": {
                 "tags": [
@@ -8361,6 +8429,178 @@
                         "type": "integer",
                         "minimum": 0,
                         "description": "cartons (liste de production ERP)"
+                    }
+                }
+            },
+            "StockOverview": {
+                "type": "object",
+                "properties": {
+                    "params": {
+                        "type": "object",
+                        "properties": {
+                            "weeks": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "min_weeks": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "max_weeks": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "from": {
+                                "type": "string"
+                            },
+                            "to": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "totals": {
+                                    "type": "object",
+                                    "properties": {
+                                        "products": {
+                                            "type": "integer",
+                                            "nullable": true
+                                        },
+                                        "mts": {
+                                            "type": "integer",
+                                            "nullable": true
+                                        },
+                                        "weekly_cartons": {
+                                            "type": "number",
+                                            "nullable": true
+                                        },
+                                        "optimal_cartons": {
+                                            "type": "integer",
+                                            "nullable": true
+                                        },
+                                        "optimal_pallets": {
+                                            "type": "number",
+                                            "nullable": true
+                                        }
+                                    }
+                                },
+                                "items": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "final_product_id": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "erp_active": {
+                                                "type": "boolean"
+                                            },
+                                            "group_id": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "status": {
+                                                "type": "string"
+                                            },
+                                            "mode": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "MTO",
+                                                    "MTS"
+                                                ]
+                                            },
+                                            "never_frozen": {
+                                                "type": "boolean"
+                                            },
+                                            "ppc": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "cpp": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "stock_min": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "stock_max": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "stock_min_cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "stock_max_cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "stock_calc_at": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "shipped_cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "weekly_cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "shops": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "per_shop_weekly_cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "per_shop_weekly_quantity": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "suggested_min_cartons": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "suggested_max_cartons": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "optimal_cartons": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "optimal_pallets": {
+                                                "type": "number",
+                                                "nullable": true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },

@@ -8,6 +8,11 @@ return function(RouteCollector $r) {
         'method'     => 'index'
     ]);
 
+    $r->addRoute('POST', '/ajax/settings/stock-params', [
+        'controller' => App\Controllers\Web\Settings\SettingsController::class,
+        'method'     => 'saveStockParams'
+    ]);
+
     $r->addRoute('GET', '/settings/ksef', [
         'controller' => App\Controllers\Web\Settings\KsefSettingsController::class,
         'method' => 'index'

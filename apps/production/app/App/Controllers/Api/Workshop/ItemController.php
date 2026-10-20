@@ -41,6 +41,12 @@ final class ItemController
         return new ApiResult($this->items->updateProduct($request->id(), $request->body(), $request->context));
     }
 
+    public function stockOverview(ApiRequest $request): ApiResult
+    {
+        $group = $request->query('group_id');
+        return new ApiResult($this->items->stockOverview($group !== null && ctype_digit($group) ? (int) $group : null));
+    }
+
     public function stockSuggestion(ApiRequest $request): ApiResult
     {
         return new ApiResult($this->items->stockSuggestion($request->id()));
