@@ -881,3 +881,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T11:49:31Z Gantt tygodnia : produkty na dni, przeciągnij i upuść
 2026-10-20T11:55:14Z Dzisiaj : jedna karta na szerokość
 2026-10-20T12:12:15Z Gantt tygodnia : etykieta grupy = nazwa + godziny
+2026-10-20T12:32:05Z grupy = działy produkcji ERP (migracja 024)
