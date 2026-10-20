@@ -62,5 +62,15 @@
   "schedule": "Uszereguj zlecenia (Gantt)",
   "schedule_done": "Uszeregowano {n} operacji.",
   "conflicts": "Nie zaplanowano",
-  "open_gantt": "Otwórz Gantt"
+  "open_gantt": "Otwórz Gantt",
+  "cartons_short": "kart.",
+  "mat.title": "Surowce i opakowania na plan",
+  "mat.help": "Klient zamawia kartony → kartony × sztuk w kartonie = sztuki do produkcji → czas pracy (marszruta) i surowce (receptura na karton). Ilości wg ilości końcowych planu.",
+  "mat.name": "Surowiec",
+  "mat.quantity": "Potrzeba",
+  "mat.value": "Wartość",
+  "mat.products": "Produkty",
+  "mat.raw": "Surowce ({n})",
+  "mat.packaging": "Opakowania ({n})",
+  "mat.empty": "Brak receptur dla produktów planu — uzupełnij receptury w ERP."
 }

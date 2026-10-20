@@ -140,6 +140,30 @@ final class PlanningRepository extends WorkshopRepository
         );
     }
 
+    /**
+     * Surowce i opakowania planu : sztuki do produkcji ÷ sztuk w kartonie × receptura na karton
+     * (receptura wypłaszczona : surowce półproduktów już w niej, więc linie półproduktów się nie liczą).
+     */
+    public function materials(int $planId): array
+    {
+        return $this->all(
+            "SELECT rm.id, rm.name, u.name AS unit, rm.price_per_unit, COALESCE(c.id_group, 0) = 1 AS packaging,
+                    SUM(l.qty_final / fp.ppc * fri.quantity) AS quantity, SUM(l.qty_final / fp.ppc * fri.quantity) * rm.price_per_unit AS value,
+                    COUNT(DISTINCT i.id) AS products
+             FROM tfb_prod_plan_line l
+             JOIN tfb_prod_item i ON i.id = l.id_item AND i.item_type = 'product'
+             JOIN final_product fp ON fp.id = i.id_final_product AND fp.ppc > 0
+             JOIN flattened_recipe_ingredient fri ON fri.recipe_id = fp.id_recipe
+             JOIN raw_material rm ON rm.id = fri.material_id
+             LEFT JOIN unit u ON u.id = rm.id_unit
+             LEFT JOIN category_material c ON c.id = rm.id_category
+             WHERE l.id_plan = ? AND l.qty_final > 0
+             GROUP BY rm.id, rm.name, u.name, rm.price_per_unit, packaging
+             ORDER BY packaging, value DESC, rm.name",
+            [$planId]
+        );
+    }
+
     public function line(int $planId, int $lineId): ?array
     {
         return $this->all('SELECT * FROM tfb_prod_plan_line WHERE id = ? AND id_plan = ?', [$lineId, $planId])[0] ?? null;

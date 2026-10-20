@@ -96,6 +96,9 @@ final class OpenApiPlanning
                     'adjusted' => ['type' => 'boolean'], 'adjust_reason' => ['type' => 'string', 'nullable' => true],
                 ] + $qty]],
                 'hours_by_group' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['group_id' => $nInt, 'standard_hours' => $num]]],
+                'materials' => ['type' => 'array', 'description' => 'Surowce i opakowania : sztuki ÷ szt./karton × receptura na karton (wypłaszczona)', 'items' => ['type' => 'object', 'properties' => [
+                    'material_id' => $int, 'name' => ['type' => 'string'], 'unit' => ['type' => 'string', 'nullable' => true], 'packaging' => ['type' => 'boolean'],
+                    'quantity' => $num, 'price_per_unit' => ['type' => 'number', 'nullable' => true], 'value' => ['type' => 'number', 'nullable' => true], 'products' => $int]]],
                 'orders' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'id' => $int, 'code' => ['type' => 'string', 'example' => 'OF-20261020-001'], 'item_id' => $int, 'name' => ['type' => 'string'],
                     'quantity' => $num, 'unit' => ['type' => 'string'], 'origin' => ['type' => 'string', 'enum' => ['MTO', 'MTS', 'SEMI']], 'parent_order_id' => $nInt,

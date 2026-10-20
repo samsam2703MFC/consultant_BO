@@ -93,8 +93,38 @@
                 ${l.parents.length ? ' · ' + esc(t('for_parents', {names: [...new Set(l.parents.map(p => names[p.item_id] || '#' + p.item_id))].join(', ')})) : ''}</div></td>
                 <td>${esc(l.item_type === 'semi' ? t('origin.SEMI') : t('mode.' + l.mode))}</td>
                 <td class="text-end">${l.qty_mto ? fmt(l.qty_mto, 0) : ''}</td><td class="text-end">${l.qty_mts ? fmt(l.qty_mts, 0) : ''}</td><td class="text-end">${l.qty_semi ? fmt(l.qty_semi, 2) : ''}</td>
-                <td class="text-end"><strong>${fmt(l.qty_proposed, l.unit === 'kg' ? 1 : 0)}</strong> ${esc(l.unit)}</td><td class="text-end">${fmt(l.standard_hours, 2)}</td></tr>`).join('')}
+                <td class="text-end"><strong>${fmt(l.qty_proposed, l.unit === 'kg' ? 1 : 0)}</strong> ${esc(l.unit)}${cartons(l.qty_proposed, l)}</td><td class="text-end">${fmt(l.standard_hours, 2)}</td></tr>`).join('')}
             </tbody></table></div>`).join('') + `<h6 class="mt-3">${esc(t('hours_by_group'))}</h6>` + hoursTable(Object.entries(hours).map(([g, h]) => ({group_id: Number(g) || null, hours: h})));
+    }
+
+
+    // Sztuki → kartony (produkty) : klient zamawia kartony, w kartonie są sztuki do produkcji.
+    function cartons(q, l) {
+        if (!l.ppc || l.item_type === 'semi' || !q) return '';
+        return `<div class="small text-muted">= ${fmt(q / l.ppc, 1)} ${esc(t('cartons_short'))} × ${l.ppc}</div>`;
+    }
+
+    // Ilość surowca : gramy / mililitry powyżej 1000 jako kg / l.
+    function amount(q, unit) {
+        if (unit === 'g' && Math.abs(q) >= 1000) return fmt(q / 1000, 1) + ' kg';
+        if (unit === 'ml' && Math.abs(q) >= 1000) return fmt(q / 1000, 1) + ' l';
+        return fmt(q, q >= 100 ? 0 : 2) + ' ' + (unit || '');
+    }
+
+    // Surowce i opakowania planu : sztuki ÷ szt./karton × receptura na karton.
+    function materialsCard(list) {
+        const table = (rows) => `<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>${esc(t('mat.name'))}</th>
+            <th class="text-end">${esc(t('mat.quantity'))}</th><th class="text-end">${esc(t('mat.value'))}</th><th class="text-end">${esc(t('mat.products'))}</th></tr></thead>
+            <tbody>${rows.map(m => `<tr><td>${esc(m.name)}</td><td class="text-end text-nowrap">${esc(amount(m.quantity, m.unit))}</td>
+                <td class="text-end text-nowrap">${m.value !== null ? fmt(m.value, 0) + ' zł' : '—'}</td><td class="text-end">${m.products}</td></tr>`).join('')}</tbody>
+            <tfoot><tr><th>${esc(t('total'))}</th><th></th><th class="text-end text-nowrap">${fmt(rows.reduce((a, m) => a + (m.value || 0), 0), 0)} zł</th><th></th></tr></tfoot></table></div>`;
+        const raw = list.filter(m => !m.packaging);
+        const pack = list.filter(m => m.packaging);
+        return `<div class="card"><div class="card-header"><h4 class="card-title">${esc(t('mat.title'))}</h4>
+            <p class="text-muted small mb-0">${esc(t('mat.help'))}</p></div><div class="card-body pt-0">
+            ${list.length ? `${raw.length ? `<h6>${esc(t('mat.raw', {n: raw.length}))}</h6>${table(raw)}` : ''}
+                ${pack.length ? `<details class="mt-3"><summary class="fw-semibold">${esc(t('mat.packaging', {n: pack.length}))}</summary>${table(pack)}</details>` : ''}`
+                : `<p class="text-muted mb-0">${esc(t('mat.empty'))}</p>`}</div></div>`;
     }
 
     function warnings(list) {
@@ -117,8 +147,8 @@
                 <tbody>${plan.lines.map(l => `<tr data-line="${l.id}" data-proposed="${l.qty_proposed}">
                     <td class="text-nowrap">${esc(l.due_date)}</td><td><strong>${esc(l.name)}</strong><div class="small text-muted">${esc(groupName(l.group_id))}</div></td>
                     <td class="text-end">${l.qty_mto ? fmt(l.qty_mto, 0) : ''}</td><td class="text-end">${l.qty_mts ? fmt(l.qty_mts, 0) : ''}</td><td class="text-end">${l.qty_semi ? fmt(l.qty_semi, 2) : ''}</td>
-                    <td class="text-end">${fmt(l.qty_proposed, l.unit === 'kg' ? 1 : 0)} ${esc(l.unit)}</td>
-                    <td>${editable ? `<input class="form-control form-control-sm" inputmode="decimal" data-field="qty_final" value="${l.qty_final}">` : `<strong>${fmt(l.qty_final, l.unit === 'kg' ? 1 : 0)}</strong>`}</td>
+                    <td class="text-end">${fmt(l.qty_proposed, l.unit === 'kg' ? 1 : 0)} ${esc(l.unit)}${cartons(l.qty_proposed, l)}</td>
+                    <td>${editable ? `<input class="form-control form-control-sm" inputmode="decimal" data-field="qty_final" value="${l.qty_final}">` : `<strong>${fmt(l.qty_final, l.unit === 'kg' ? 1 : 0)}</strong>`}${cartons(l.qty_final, l)}</td>
                     <td>${editable ? `<input class="form-control form-control-sm" data-field="adjust_reason" value="${esc(l.adjust_reason || '')}" maxlength="255">` : esc(l.adjust_reason || '')}</td>
                     <td class="text-end">${fmt(l.standard_hours, 2)}</td></tr>`).join('')}</tbody></table></div>
                 ${editable ? `<div class="tfb-nav"><span></span><button type="button" class="btn btn-primary" data-validate>${esc(t('validate'))}</button></div>` : ''}
@@ -126,7 +156,8 @@
                     <button type="button" class="btn btn-primary" data-schedule>${esc(t('schedule'))}</button></div><div data-schedule-result></div>` : ''}
             </div></div></div>
             <div class="col-12 col-lg-6 col-xl-4"><div class="card"><div class="card-header"><h4 class="card-title">${esc(t('hours_by_group'))}</h4></div><div class="card-body pt-0">
-                ${hoursTable(plan.hours_by_group.map(h => ({group_id: h.group_id, hours: h.standard_hours})))}</div></div></div></div>
+                ${hoursTable(plan.hours_by_group.map(h => ({group_id: h.group_id, hours: h.standard_hours})))}</div></div></div>
+            <div class="col-12 col-lg-6 col-xl-8">${materialsCard(plan.materials || [])}</div></div>
             ${plan.orders.length ? `<div class="card"><div class="card-header"><h4 class="card-title">${esc(t('orders'))}</h4></div><div class="card-body pt-0"><div class="table-responsive">
                 <table class="table table-sm"><thead><tr><th>${esc(t('col.code'))}</th><th>${esc(t('col.item'))}</th><th>${esc(t('col.origin'))}</th><th class="text-end">${esc(t('col.qty'))}</th><th>${esc(t('col.due'))}</th><th class="text-end">${esc(t('col.customers'))}</th></tr></thead>
                 <tbody>${plan.orders.map(o => `<tr><td><strong>${esc(o.code)}</strong></td><td>${esc(o.name)}${o.parent_order_id ? ` <span class="small text-muted">← ${esc((plan.orders.find(p => p.id === o.parent_order_id) || {}).code || '')}</span>` : ''}</td>

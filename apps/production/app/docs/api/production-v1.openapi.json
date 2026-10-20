@@ -9662,6 +9662,42 @@
                             }
                         }
                     },
+                    "materials": {
+                        "type": "array",
+                        "description": "Surowce i opakowania : sztuki ÷ szt./karton × receptura na karton (wypłaszczona)",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "material_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "packaging": {
+                                    "type": "boolean"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "price_per_unit": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "value": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "products": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
                     "orders": {
                         "type": "array",
                         "items": {

@@ -62,5 +62,15 @@
   "schedule": "Ordonnancer les OF (Gantt)",
   "schedule_done": "{n} opérations ordonnancées.",
   "conflicts": "Non placés",
-  "open_gantt": "Ouvrir le Gantt"
+  "open_gantt": "Ouvrir le Gantt",
+  "cartons_short": "cart.",
+  "mat.title": "Matières et emballages du plan",
+  "mat.help": "Le client commande des cartons → cartons × pièces par carton = pièces à produire → temps de production (gamme) et matières (recette par carton). Quantités finales du plan.",
+  "mat.name": "Matière",
+  "mat.quantity": "Besoin",
+  "mat.value": "Valeur",
+  "mat.products": "Produits",
+  "mat.raw": "Matières ({n})",
+  "mat.packaging": "Emballages ({n})",
+  "mat.empty": "Aucune recette pour les produits du plan — complétez les recettes dans l’ERP."
 }

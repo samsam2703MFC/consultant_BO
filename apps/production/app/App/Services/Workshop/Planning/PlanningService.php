@@ -216,6 +216,12 @@ final class PlanningService
                 'standard_hours' => (float) $l['standard_hours'], 'adjusted' => $l['adjusted_at'] !== null, 'adjust_reason' => $l['adjust_reason'],
             ], $lines),
             'hours_by_group' => array_map(fn($g, $h) => ['group_id' => $g ?: null, 'standard_hours' => round($h, 2)], array_keys($hoursByGroup), array_values($hoursByGroup)),
+            // Klient zamawia kartony → sztuki do produkcji → czas (marszruta) i surowce (receptura na karton).
+            'materials' => array_map(fn($m) => [
+                'material_id' => (int) $m['id'], 'name' => $m['name'], 'unit' => $m['unit'], 'packaging' => (bool) $m['packaging'],
+                'quantity' => round((float) $m['quantity'], 3), 'price_per_unit' => $m['price_per_unit'] !== null ? (float) $m['price_per_unit'] : null,
+                'value' => $m['value'] !== null ? round((float) $m['value'], 2) : null, 'products' => (int) $m['products'],
+            ], $this->planning->materials($id)),
             'orders' => array_map(fn($o) => [
                 'id' => (int) $o['id'], 'code' => $o['code'], 'item_id' => (int) $o['id_item'], 'name' => $o['name'], 'quantity' => (float) $o['quantity'],
                 'unit' => $o['base_unit'], 'origin' => $o['origin'], 'parent_order_id' => $o['id_parent_order'] !== null ? (int) $o['id_parent_order'] : null,

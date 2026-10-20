@@ -774,6 +774,12 @@ $pdo->exec("UPDATE tfb_prod_device SET id_group = NULL WHERE id = {$dev['data'][
 check($s === 409 && $b['description'] === 'DEVICE_WITHOUT_GROUP', 'tablet without group');
 $pdo->exec("UPDATE tfb_prod_device SET id_group = 1 WHERE id = {$dev['data']['id']}");
 $pdo->exec("DELETE FROM tfb_prod_week_slot WHERE id_item = {$croissant}");
+// Plan : sztuki do produkcji ÷ szt./karton × receptura na karton = surowce planu (półprodukty już w recepturze wypłaszczonej).
+$finalCroissant = (float) $pdo->query("SELECT SUM(qty_final) FROM tfb_prod_plan_line WHERE id_plan = {$planId} AND id_item = {$croissant}")->fetchColumn();
+[$s, $pl] = $call('GET', "/planning/plans/{$planId}", null, $access);
+$mat = array_column($pl['data']['materials'] ?? [], null, 'material_id');
+check($s === 200 && $finalCroissant > 0 && isset($mat[900], $mat[902]) && abs($mat[900]['quantity'] - $finalCroissant / 60 * 1500) < 0.01 && $mat[902]['packaging'] && !$mat[900]['packaging']
+    && abs($mat[900]['value'] - $finalCroissant / 60 * 1500 * 0.004) < 0.01, 'plan materials: pieces ÷ pieces per carton × recipe per carton, with value');
 
 [$s, $b] = $call('PATCH', "/kiosk/clocks/{$out['data']['clock']['id']}", ['clock_in' => date('Y-m-d H:i', strtotime('-2 hours'))], $access);
 check($s === 422 && $codes($b) === ['note:REQUIRED'], 'a correction needs a reason');
