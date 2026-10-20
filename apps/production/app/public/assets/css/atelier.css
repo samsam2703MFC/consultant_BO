@@ -539,6 +539,25 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-ppl-table tr.at-ppl-est td { color: var(--at-muted); }
 .at-ppl-table tr.at-ppl-current td { background: rgba(0, 0, 0, .02); }
 .at-ppl-table td.at-ppl-best { background: rgba(46, 125, 79, .1); color: inherit; font-weight: 600; }
+/* Rentowność : co wyprodukowały grupy (grupa → kategoria → produkt) */
+.at-anchor { scroll-margin-top: 80px; }
+.at-made-tabs { display: flex; flex-wrap: wrap; border-radius: var(--at-radius-sm); background: var(--at-bg-2); }
+.at-made-tab-sub { font-size: 11.5px; opacity: .75; margin-left: 4px; }
+.at-made-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.at-made-kpis > div { background: var(--at-bg-2); border-radius: var(--at-radius-sm); padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; }
+.at-made-kpis strong { font-size: 15px; }
+.at-made-kpis .at-sub { color: var(--at-muted); font-size: 11.5px; }
+.at-made-head, .at-made-panel .at-made-item > summary { display: grid; grid-template-columns: minmax(0, 1fr) 90px 90px 90px 90px 52px; gap: 10px; align-items: center; }
+.at-made-head { padding: 0 14px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--at-muted); white-space: nowrap; }
+.at-made-head span:nth-child(n+3) { text-align: right; }
+.at-made-panel .at-buy-list { background: var(--at-bg-2); padding: 4px; border-radius: var(--at-radius-sm); }
+.at-made-num { text-align: right; white-space: nowrap; }
+.at-made-detail th { padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--at-muted); text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
+@media (max-width: 767px) {
+  .at-made-head { display: none; }
+  .at-made-panel .at-made-item > summary { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .at-made-item .at-buy-bar, .at-made-item .at-buy-pct, .at-made-item .at-made-cartons { display: none; }
+}
 /* Rentowność : zakupy surowców i opakowań (rozwijane, kategorie / dostawcy) */
 .at-buy-toggle { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .at-buy-toggle .bi { transition: transform .15s; font-size: 12px; }

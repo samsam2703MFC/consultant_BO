@@ -56,6 +56,23 @@ final class ProfitabilityRepository extends WorkshopRepository
         );
     }
 
+    /** Produits vendus (WDT) sur [from, to] : groupe, catégorie, cartons, pièces / carton, poids (g) et ventes (EUR). */
+    public function producedProducts(string $from, string $to, float $eurRate): array
+    {
+        return $this->all(
+            "SELECT fp.id_section, fp.id AS product_id, fp.name AS product, fp.id_category, cp.name AS category,
+                    COALESCE(fp.ppc, 0) AS ppc, COALESCE(fp.weight, 0) AS weight, SUM(p.quantity) AS cartons,
+                    SUM(CASE WHEN UPPER(w.currency) = 'PLN' THEN p.quantity * p.price_carton / :rate1 ELSE p.quantity * p.price_carton END) AS revenue_eur
+             FROM document_wdt w
+             JOIN document_wdt_product p ON p.id_document_wdt = w.id
+             JOIN final_product fp ON fp.id = p.id_product
+             LEFT JOIN category_product cp ON cp.id = fp.id_category
+             WHERE w.established_date BETWEEN :from AND :to
+             GROUP BY fp.id_section, fp.id, fp.name, fp.id_category, cp.name, fp.ppc, fp.weight",
+            ['rate1' => $eurRate > 0 ? $eurRate : 1, 'from' => $from, 'to' => $to]
+        );
+    }
+
     /** Recettes aplaties (ingrédients et emballages d'un carton, sous-recettes comprises). */
     public function recipeIngredients(array $recipeIds): array
     {

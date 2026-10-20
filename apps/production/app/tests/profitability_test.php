@@ -313,8 +313,29 @@ try {
     $pdo->exec("INSERT INTO final_product (id, name, id_section, id_recipe, pre_calculated_raw_price_per_carton, active) VALUES (902, 'Rogal', 1, 910, 99, 1), (903, 'Tarta', 1, NULL, 8, 1)");
     $pdo->exec("INSERT INTO document_wdt (id, doc_num, established_date, currency) VALUES (900, 'W/900', '2026-08-20', 'eur')");
     $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, name, quantity, price_carton) VALUES (900, 902, 'Rogal', 10, 30), (900, 903, 'Tarta', 5, 20)");
+    // Rogal : kategoria Viennoiserie, 64 szt. × 75 g w kartonie ; Tarta bez kategorii.
+    $pdo->exec("INSERT INTO category_product (id, name, target_margin_percentage) VALUES (77, 'Viennoiserie', 0)");
+    $pdo->exec("UPDATE final_product SET id_category = 77, ppc = 64, weight = 75 WHERE id = 902");
     $aug = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)))->overview('2026-08', $today);
     $buy = $aug['purchases'];
+    // Co wyprodukowały grupy : Piekarnia → Viennoiserie (Rogal) i Bez kategorii (Tarta).
+    $made = $aug['production'];
+    expectProfit(count($made['groups']) === 1 && $made['groups'][0]['name'] === 'Piekarnia', 'produkcja : jedna grupa w sierpniu');
+    $mg = $made['groups'][0];
+    near($mg['revenue'], 400, 'produkcja grupy : 10 × 30 € + 5 × 20 €');
+    near($mg['cartons'], 15, 'produkcja grupy : kartony');
+    near($mg['materials'], 25, 'produkcja grupy : surowce = zakupy');
+    expectProfit(array_column($mg['categories'], 'name') === ['Viennoiserie', 'Bez kategorii'] && $mg['products'] === 2, 'kategorie według sprzedaży');
+    $vi = $mg['categories'][0];
+    near($vi['pct'], 75, 'udział kategorii w grupie');
+    $rogal = $vi['products'][0];
+    expectProfit($rogal['name'] === 'Rogal', 'produkt w kategorii');
+    near($rogal['pieces'], 640, 'sztuki = kartony × sztuk w kartonie');
+    near($rogal['kg'], 48, 'waga = sztuki × 75 g');
+    near($rogal['materials'], 15, 'surowce produktu z receptury (60 zł / 4)');
+    near($rogal['margin_pct'], 95, 'marża po surowcach');
+    near($rogal['price_carton'], 30, 'cena za karton');
+    near($mg['categories'][1]['products'][0]['materials'], 10, 'produkt bez receptury : koszt z karty');
     // Rogal : 10 × 1000 g × 0,002 (cena z sierpnia) = 20 zł + 10 × 200 g × 0,02 = 40 zł ; Tarta 5 × 8 zł = 40 zł ; razem 100 zł = 25 €.
     near($aug['totals']['materials'], 25, 'surowce sierpnia = receptury po cenach z sierpnia + produkt bez receptury');
     near($buy['total'], 25, 'zakupy = ta sama kwota co surowce w rachunku');

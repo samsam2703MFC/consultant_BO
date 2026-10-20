@@ -66,6 +66,7 @@ final class ProfitabilityService
 
         $data = $this->compute($spec, $sales, $open, $rate);
         $data['purchases'] = $this->purchases($spec['from'], $spec['to'], $rate);
+        $data['production'] = $this->production($spec['from'], $spec['to'], $rate);
         $monthly = $this->monthly($today, $rate, self::MONTHLY_SERIES, $all);
         $data['trend'] = array_slice($monthly, -6);
         $data['per_person'] = $this->perPerson($monthly);
@@ -250,6 +251,64 @@ final class ProfitabilityService
     }
 
     /**
+     * Ce que les groupes ont produit (cartons vendus WDT) sur [from, to] : par groupe, puis par catégorie de
+     * produit, puis par produit — cartons, pièces, kg, ventes (EUR), matières des recettes (EUR) et marge
+     * après matières. Groupes, catégories et produits classés par ventes.
+     */
+    public function production(string $from, string $to, float $rate): array
+    {
+        $rate = $rate > 0 ? $rate : 1.0;
+        $materials = $this->materialRun($from, $to)['products'];
+        $names = array_column($this->repo->sections(), 'name', 'id');
+        $empty = ['cartons' => 0.0, 'pieces' => 0.0, 'kg' => 0.0, 'revenue' => 0.0, 'materials' => 0.0];
+        $add = function (array &$into, array $p): void {
+            foreach (['cartons', 'pieces', 'kg', 'revenue', 'materials'] as $k) $into[$k] += $p[$k];
+        };
+        $groups = [];
+        foreach ($this->repo->producedProducts($from, $to, $rate) as $r) {
+            $cartons = (float) $r['cartons'];
+            if ($cartons == 0.0 && (float) $r['revenue_eur'] == 0.0) continue;
+            $pieces = $cartons * (int) $r['ppc'];
+            $p = [
+                'id' => (int) $r['product_id'], 'name' => $r['product'],
+                'cartons' => $cartons, 'pieces' => $pieces, 'kg' => $pieces * (int) $r['weight'] / 1000,
+                'revenue' => (float) $r['revenue_eur'], 'materials' => ($materials[(int) $r['product_id']] ?? 0.0) / $rate,
+            ];
+            $sectionId = (int) $r['id_section'];
+            $category = $r['category'] ?? null;
+            $categoryKey = $category === null ? 0 : (int) $r['id_category'];
+            $groups[$sectionId] ??= ['id' => $sectionId, 'name' => $names[$sectionId] ?? 'Bez grupy', 'categories' => []] + $empty;
+            $groups[$sectionId]['categories'][$categoryKey] ??= ['name' => $category ?? 'Bez kategorii', 'products' => []] + $empty;
+            $groups[$sectionId]['categories'][$categoryKey]['products'][] = $p;
+            $add($groups[$sectionId]['categories'][$categoryKey], $p);
+            $add($groups[$sectionId], $p);
+        }
+        $finish = function (array $row, float $parentRevenue): array {
+            $row['pct'] = $parentRevenue > 0 ? $row['revenue'] / $parentRevenue * 100 : null;
+            $row['margin_pct'] = $row['revenue'] > 0 ? ($row['revenue'] - $row['materials']) / $row['revenue'] * 100 : null;
+            $row['price_carton'] = $row['cartons'] > 0 ? $row['revenue'] / $row['cartons'] : null;
+            return $row;
+        };
+        $byRevenue = fn($a, $b) => $b['revenue'] <=> $a['revenue'];
+        $total = array_sum(array_column($groups, 'revenue'));
+        foreach ($groups as &$g) {
+            foreach ($g['categories'] as &$c) {
+                usort($c['products'], $byRevenue);
+                $c['products'] = array_map(fn($p) => $finish($p, $c['revenue']), $c['products']);
+                $c = $finish($c, $g['revenue']);
+            }
+            unset($c);
+            usort($g['categories'], $byRevenue);
+            $g['categories'] = array_values($g['categories']);
+            $g['products'] = array_sum(array_map(fn($c) => count($c['products']), $g['categories']));
+            $g = $finish($g, $total);
+        }
+        unset($g);
+        usort($groups, $byRevenue);
+        return ['groups' => $groups, 'total' => $total];
+    }
+
+    /**
      * Valorisation des cartons vendus sur [from, to] (mois entiers) : par mois et groupe (PLN), par mois et
      * matière (quantité, montant, fournisseur), produits sans recette (coût de la fiche produit). Chaque mois
      * est calculé une fois par requête (période, tendance et tableau des périodes se recouvrent).
@@ -260,11 +319,12 @@ final class ProfitabilityService
         for ($m = new DateTimeImmutable(substr($from, 0, 7) . '-01'); $m->format('Y-m') <= substr($to, 0, 7); $m = $m->modify('+1 month')) $months[] = $m->format('Y-m');
         $missing = array_values(array_diff($months, array_keys($this->materialRuns)));
         if ($missing) $this->computeMonths($missing);
-        $run = ['by_key' => [], 'materials' => [], 'no_recipe' => [], 'card_total' => 0.0];
+        $run = ['by_key' => [], 'materials' => [], 'no_recipe' => [], 'card_total' => 0.0, 'products' => []];
         foreach ($months as $ym) {
             $m = $this->materialRuns[$ym];
             $run['by_key'] += $m['by_key'];
             $run['materials'][$ym] = $m['materials'];
+            foreach ($m['products'] as $id => $pln) $run['products'][$id] = ($run['products'][$id] ?? 0.0) + $pln;
             foreach ($m['no_recipe'] as $id => $p) {
                 $run['no_recipe'][$id] ??= ['product' => $p['product'], 'cartons' => 0.0, 'pln' => 0.0];
                 $run['no_recipe'][$id]['cartons'] += $p['cartons'];
@@ -281,7 +341,7 @@ final class ProfitabilityService
         sort($months);
         $sold = $this->repo->soldProducts($months[0] . '-01', (new DateTimeImmutable(end($months) . '-01'))->format('Y-m-t'));
         $this->loadBom(array_column($sold, 'id_recipe'));
-        foreach ($months as $ym) $this->materialRuns[$ym] = ['by_key' => [], 'materials' => [], 'no_recipe' => [], 'card_total' => 0.0];
+        foreach ($months as $ym) $this->materialRuns[$ym] = ['by_key' => [], 'materials' => [], 'no_recipe' => [], 'card_total' => 0.0, 'products' => []];
         $prices = [];
         foreach ($sold as $p) {
             if (!isset($this->materialRuns[$p['ym']])) continue;
@@ -293,6 +353,7 @@ final class ProfitabilityService
             if (!$ingredients) {
                 $pln = $cartons * (float) $p['card_cost'];
                 $run['by_key'][$groupKey] = ($run['by_key'][$groupKey] ?? 0.0) + $pln;
+                $run['products'][(int) $p['product_id']] = ($run['products'][(int) $p['product_id']] ?? 0.0) + $pln;
                 $run['no_recipe'][(int) $p['product_id']] ??= ['product' => $p['product'], 'cartons' => 0.0, 'pln' => 0.0];
                 $run['no_recipe'][(int) $p['product_id']]['cartons'] += $cartons;
                 $run['no_recipe'][(int) $p['product_id']]['pln'] += $pln;
@@ -307,6 +368,7 @@ final class ProfitabilityService
                 $used = $cartons * $qty;
                 $pln = $used * $price;
                 $run['by_key'][$groupKey] = ($run['by_key'][$groupKey] ?? 0.0) + $pln;
+                $run['products'][(int) $p['product_id']] = ($run['products'][(int) $p['product_id']] ?? 0.0) + $pln;
                 $run['materials'][$materialId] ??= ['qty' => 0.0, 'pln' => 0.0, 'supplier' => $supplier];
                 $run['materials'][$materialId]['qty'] += $used;
                 $run['materials'][$materialId]['pln'] += $pln;

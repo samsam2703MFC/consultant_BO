@@ -17,17 +17,53 @@
             <ul class="menu">
 
                 <li class="sidebar-item">
-                    <a href="{{ root }}/dashboard" class="sidebar-link">
-                        <i class="bi bi-graph-up"></i>
-                        <span>Rentowność</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
                     <a href="{{ root }}/today" class="sidebar-link">
                         <i class="bi bi-grid-1x2-fill"></i>
                         <span>Dzisiaj</span>
                     </a>
+                </li>
+
+                <li class="sidebar-title">Analiza</li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Rentowność produkcji</span>
+                    </a>
+                    <ul class="submenu" data-rail-dashboard>
+                        <li class="submenu-item"><a href="{{ root }}/dashboard#grupy"><i class="bi bi-people"></i> Grupy: sprzedaż a personel</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/dashboard#produkcja"><i class="bi bi-box-seam"></i> Co wyprodukowały grupy</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/dashboard#wynik"><i class="bi bi-bar-chart-steps"></i> Od sprzedaży do wyniku</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/dashboard#zakupy"><i class="bi bi-basket"></i> Zakupy: kategorie i dostawcy</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/dashboard#trend"><i class="bi bi-clock-history"></i> Ostatnie 6 miesięcy</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/dashboard#na-osobe"><i class="bi bi-person-lines-fill"></i> Sprzedaż na osobę (18 mies.)</a></li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-percent"></i>
+                        <span>Marża i ceny</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item"><a href="{{ root }}/finances/product-margin"><i class="bi bi-percent"></i> Marża obowiązująca</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/category-margin"><i class="bi bi-bar-chart-line"></i> Przegląd marży kategorii</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/cost-analysis"><i class="bi bi-search"></i> Analiza kosztów produktu</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/cost-analysis/section"><i class="bi bi-cash"></i> {{ translations.product_price_structure }}</a></li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-bar-chart-line"></i>
+                        <span>Sprzedaż i koszty</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item"><a href="{{ root }}/finances/sales-analytics"><i class="bi bi-bar-chart-steps"></i> Analiza sprzedaży WDT</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/sales-by-department"><i class="bi bi-diagram-3"></i> Sprzedaż wg działów</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/section-dashboard"><i class="bi bi-building"></i> Dashboard finansowy działów</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/cost-calculator"><i class="bi bi-calculator"></i> Kalkulator kosztów</a></li>
+                    </ul>
                 </li>
 
                 <li class="sidebar-title">Produkcja</li>
@@ -504,45 +540,6 @@
                         <li class="submenu-item"><a href="{{ root }}/purchasing/offers"><i class="bi bi-tags"></i> Oferty cenowe</a></li>
                         <li class="submenu-item"><a href="{{ root }}/purchasing/tenders"><i class="bi bi-envelope"></i> Zapytania ofertowe</a></li>
                         <li class="submenu-item"><a href="{{ root }}/purchasing/nc"><i class="bi bi-exclamation-octagon"></i> Niezgodności</a></li>
-                    </ul>
-                </li>
-
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
-                        <i class="bi bi-graph-up"></i>
-                        <span>Marża i koszty</span>
-                    </a>
-                    <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/finances/product-margin">
-                                <i class="bi bi-percent"></i> Marża obowiązująca
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/finances/category-margin">
-                                <i class="bi bi-bar-chart-line"></i> Przegląd marży kategorii
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/finances/section-dashboard">
-                                <i class="bi bi-building"></i> Dashboard finansowy działów
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/cost-calculator">
-                                <i class="bi bi-calculator"></i> Kalkulator kosztów
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/finances/sales-analytics">
-                                <i class="bi bi-bar-chart-steps"></i> Analiza sprzedaży WDT
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/finances/cost-analysis/section">
-                                <i class="bi bi-cash"></i> {{ translations.product_price_structure }}
-                            </a>
-                        </li>
                     </ul>
                 </li>
 

@@ -123,7 +123,7 @@
     </div>
 
     {# --- Grupy produktów -------------------------------------------------------- #}
-    <div class="card">
+    <div class="card at-anchor" id="grupy">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="card-title mb-0">Grupy produktów: sprzedaż a koszt personelu</h4>
             <span class="d-flex gap-2 flex-wrap">
@@ -305,17 +305,89 @@
         </div>
     </div>
 
+    {# --- Co wyprodukowały grupy : grupa → kategoria → produkt ------------------ #}
+    {% set made = production %}
+    {% if made.groups %}
+    <div class="card at-anchor" id="produkcja">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Co wyprodukowały grupy — {{ period.label }}</h4>
+            <span class="at-sub">kartony sprzedane (WDT) · kategorie produktów, potem produkty</span>
+        </div>
+        <div class="card-body pt-0">
+            <div class="at-buy-tabs at-made-tabs" role="tablist" aria-label="Grupy produktów">
+                {% for g in made.groups %}
+                    <button type="button" role="tab" id="madeTab{{ g.id }}" aria-controls="madePanel{{ g.id }}" aria-selected="{{ loop.first ? 'true' : 'false' }}" data-made-tab="{{ g.id }}">{{ g.name }} <span class="at-made-tab-sub">{{ g.revenue|eur }}</span></button>
+                {% endfor %}
+            </div>
+            {% for g in made.groups %}
+            <div class="at-made-panel" id="madePanel{{ g.id }}" role="tabpanel" aria-labelledby="madeTab{{ g.id }}" data-made-panel="{{ g.id }}" {{ loop.first ? '' : 'hidden' }}>
+                <div class="at-made-kpis">
+                    <div><span class="at-sub">Kartony</span><strong>{{ g.cartons|number_format(0, ',', ' ') }}</strong></div>
+                    <div><span class="at-sub">Sztuki</span><strong>{{ g.pieces > 0 ? g.pieces|number_format(0, ',', ' ') : '—' }}</strong></div>
+                    <div><span class="at-sub">Waga</span><strong>{{ g.kg >= 1000 ? (g.kg / 1000)|number_format(1, ',', ' ') ~ ' t' : g.kg|number_format(0, ',', ' ') ~ ' kg' }}</strong></div>
+                    <div><span class="at-sub">Sprzedaż</span><strong>{{ g.revenue|eur }}</strong><span class="at-sub">{{ g.pct|pct(0) }} firmy</span></div>
+                    <div><span class="at-sub">Surowce (receptury)</span><strong>{{ g.materials|eur }}</strong></div>
+                    <div><span class="at-sub">Marża po surowcach</span><strong>{{ g.margin_pct|pct(0) }}</strong><span class="at-sub">{{ (g.revenue - g.materials)|eur }}</span></div>
+                    <div><span class="at-sub">Produkty</span><strong>{{ g.products }}</strong><span class="at-sub">{{ g.categories|length|plural_pl('kategoria', 'kategorie', 'kategorii') }}</span></div>
+                </div>
+                <div class="at-made-head" aria-hidden="true"><span>Kategoria</span><span></span><span>Kartony</span><span>Sprzedaż</span><span>Marża po sur.</span><span>Udział</span></div>
+                <div class="at-buy-list">
+                    {% for c in g.categories %}
+                    <details class="at-buy-item at-made-item {{ c.name == 'Bez kategorii' ? 'is-warn' : '' }}">
+                        <summary>
+                            <span class="at-buy-name" title="{{ c.name }}">{{ c.name }} <span class="at-sub">· {{ c.products|length }}</span></span>
+                            <span class="at-buy-bar" aria-hidden="true"><span style="width: {{ min(100, c.pct ?? 0)|round(1) }}%"></span></span>
+                            <span class="at-made-num at-made-cartons">{{ c.cartons|number_format(0, ',', ' ') }} <span class="at-sub">kart.</span></span>
+                            <span class="at-buy-amount">{{ c.revenue|eur }}</span>
+                            <span class="at-made-num {{ c.margin_pct is not null and c.margin_pct < 50 ? 'text-danger' : '' }}">{{ c.margin_pct|pct(0) }}</span>
+                            <span class="at-buy-pct">{{ c.pct|pct(0) }}</span>
+                        </summary>
+                        <div class="table-responsive">
+                            <table class="at-buy-detail at-made-detail">
+                                <thead>
+                                    <tr>
+                                        <th>Produkt</th><th class="text-end">Kartony</th><th class="text-end d-none d-md-table-cell">Sztuki</th><th class="text-end d-none d-md-table-cell">kg</th>
+                                        <th class="text-end">Sprzedaż</th><th class="text-end d-none d-md-table-cell">€ / karton</th><th class="text-end d-none d-md-table-cell">Surowce</th><th class="text-end">Marża po sur.</th><th class="text-end d-none d-md-table-cell">Udział</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% for i in c.products %}
+                                    <tr>
+                                        <td>{{ i.name }}</td>
+                                        <td class="text-end text-nowrap">{{ i.cartons|number_format(i.cartons == i.cartons|round ? 0 : 1, ',', ' ') }}</td>
+                                        <td class="text-end text-nowrap at-sub d-none d-md-table-cell">{{ i.pieces > 0 ? i.pieces|number_format(0, ',', ' ') : '—' }}</td>
+                                        <td class="text-end text-nowrap at-sub d-none d-md-table-cell">{{ i.kg > 0 ? i.kg|number_format(i.kg < 10 ? 1 : 0, ',', ' ') : '—' }}</td>
+                                        <td class="text-end text-nowrap">{{ i.revenue|eur }}</td>
+                                        <td class="text-end text-nowrap at-sub d-none d-md-table-cell">{{ i.price_carton|eur(2) }}</td>
+                                        <td class="text-end text-nowrap at-sub d-none d-md-table-cell">{{ i.materials|eur }}</td>
+                                        <td class="text-end text-nowrap {{ i.margin_pct is not null and i.margin_pct < 50 ? 'text-danger' : '' }}">{{ i.margin_pct|pct(0) }}</td>
+                                        <td class="text-end text-nowrap at-sub d-none d-md-table-cell">{{ i.pct|pct(0) }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            <p class="at-profit-note">Produkcja = kartony wysłane na dokumentach WDT w okresie (data wystawienia); sztuki = kartony × sztuk w kartonie, waga = sztuki × waga sztuki (karta produktu). Surowce: receptura × kartony po cenach z końca miesiąca (bez receptury: koszt z karty produktu). Marża po surowcach poniżej 50 % na czerwono. Udział: w sprzedaży kategorii (produkt), grupy (kategoria) i firmy (grupa).</p>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row">
         {# --- Od sprzedaży do wyniku ------------------------------------------- #}
         <div class="col-12 col-xl-5">
-            <div class="card">
+            <div class="card at-anchor" id="wynik">
                 <div class="card-header"><h4 class="card-title">Od sprzedaży do wyniku</h4></div>
                 <div class="card-body pt-0">
                     <table class="table mb-0 at-profit-cascade">
                         <tbody>
                             <tr><td>Sprzedaż</td><td class="text-end"><strong>{{ t.revenue|eur }}</strong></td><td class="text-end at-sub">100 %</td></tr>
                             {% set buy = purchases ?? null %}
-                            <tr class="at-buy-row">
+                            <tr class="at-buy-row at-anchor" id="zakupy">
                                 <td>{% if buy and (buy.categories or buy.suppliers) %}<button type="button" class="at-buy-toggle" data-buy-toggle aria-expanded="false" aria-controls="atBuyPanel"><i class="bi bi-chevron-right" aria-hidden="true"></i> − Surowce i opakowania <span class="at-sub">(zakupy: kategorie, dostawcy)</span></button>{% else %}− Surowce i opakowania{% endif %}</td>
                                 <td class="text-end">{{ t.materials|eur }}</td><td class="text-end at-sub">{{ t.materials_pct|pct(0) }}</td>
                             </tr>
@@ -372,7 +444,7 @@
 
         {# --- Ostatnie 6 miesięcy ----------------------------------------------- #}
         <div class="col-12 col-xl-7">
-            <div class="card">
+            <div class="card at-anchor" id="trend">
                 <div class="card-header"><h4 class="card-title">Ostatnie 6 miesięcy</h4></div>
                 <div class="card-body pt-0">
                     <div class="table-responsive">
@@ -406,7 +478,7 @@
     {# --- Sprzedaż na osobę : grupy × ostatnie 18 miesięcy ----------------------- #}
     {% set pp = per_person %}
     {% if pp.groups %}
-    <div class="card">
+    <div class="card at-anchor" id="na-osobe">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="card-title mb-0">Sprzedaż na osobę — ostatnie {{ pp.count }} miesięcy</h4>
             <span class="at-sub">sprzedaż grupy ÷ osoby opłacone w miesiącu · {{ pp.real }} z {{ pp.count }} mies. z wprowadzonymi kosztami</span>
@@ -496,6 +568,25 @@
             buyPanel.querySelectorAll('[data-buy-list]').forEach(list => { list.hidden = list.dataset.buyList !== tab.dataset.buyView; });
         }));
     }
+    // Co wyprodukowały grupy : jedna zakładka na grupę.
+    document.querySelectorAll('[data-made-tab]').forEach(tab => tab.addEventListener('click', () => {
+        document.querySelectorAll('[data-made-tab]').forEach(t => t.setAttribute('aria-selected', String(t === tab)));
+        document.querySelectorAll('[data-made-panel]').forEach(panel => { panel.hidden = panel.dataset.madePanel !== tab.dataset.madeTab; });
+    }));
+    // Rail « Analiza » : sur cette page, sous-menu ouvert et liens limités à l'ancre (période conservée).
+    const railMenu = document.querySelector('[data-rail-dashboard]');
+    if (railMenu) {
+        railMenu.classList.add('active');
+        railMenu.querySelectorAll('a').forEach(a => { a.href = location.pathname + location.search + a.hash; });
+    }
+    // Ancre courante : entrée du rail en surbrillance ; #zakupy ouvre le détail des achats.
+    const openFromHash = () => {
+        const hash = location.hash || '#grupy';
+        railMenu?.querySelectorAll('.submenu-item').forEach(li => li.classList.toggle('active', li.querySelector('a').hash === hash));
+        if (hash === '#zakupy' && buyToggle && buyToggle.getAttribute('aria-expanded') !== 'true') buyToggle.click();
+    };
+    openFromHash();
+    window.addEventListener('hashchange', openFromHash);
     // Wiersz tabeli okresów : całe pole klikalne (link w pierwszej kolumnie dla klawiatury).
     document.querySelectorAll('.at-period-table tr[data-href]').forEach(row => row.addEventListener('click', (e) => {
         if (!e.target.closest('a')) window.location.href = row.dataset.href;
