@@ -2214,6 +2214,7 @@
   const cleOpSuivi = () => 'opSuivi|' + S.shop + '|' + S.date;
   function opCharger(force) {
     lireAux(cleOpSuivi(), '/production/flux/suivi?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force);
+    if (S.eqOuvert && S.eqDeplie) { lireAux('eqh|' + S.shop + '|' + S.date, '/exploitation/equipe-heures?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); }
     lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force);
     lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force);
     lireAux('cmd|' + S.shop, '/ventes/commandes?shop=' + encodeURIComponent(S.shop), force);
@@ -2958,7 +2959,7 @@
       const debut = Math.min(...o.srv.map(s2 => s2[0])), finS = Math.max(...o.srv.map(s2 => s2[1]));
       const etat = now == null ? 'journée close' : (now < debut ? 'arrive à ' + o.srv[0][2] : (o.srv.some(s2 => now >= s2[0] && now < s2[1]) ? 'en poste' : (now >= finS ? 'fini' : 'en pause')));
       const cout = o.franchise || o.taux == null ? null : o.taux * fait;
-      return { k, nom: o.nom, horaires: o.srv.map(s2 => s2[2] + '–' + s2[3]).join(' · '), postes: o.postes, prevu, fait, hV, etat,
+      return { k, nom: o.nom, srv: o.srv, prodPoste, horaires: o.srv.map(s2 => s2[2] + '–' + s2[3]).join(' · '), postes: o.postes, prevu, fait, hV, etat,
         ca: v ? v.ca : (V ? 0 : null), tickets: v ? v.tickets : null, articles: v && v.artLu && v.tickets ? v.articles / v.tickets : null,
         parH: v && hV >= 0.25 ? v.ca / hV : null, pieces: cs.reduce((a, c) => a + (+c.pieces || 0), 0), cuissons: cs.map(c => c.nom + ' ' + c.four),
         taux: o.taux, franchise: o.franchise, cout };
@@ -2969,8 +2970,60 @@
     L.sort((a, b) => (b.parH == null ? -1 : b.parH) - (a.parH == null ? -1 : a.parH) || (b.ca || 0) - (a.ca || 0));
     const hh = x => { const t = Math.round(x * 60); return Math.floor(t / 60) + ' h ' + String(t % 60).padStart(2, '0'); };
     const pct = (a, b) => b ? Math.round(100 * a / b) + ' %' : '—';
-    const sel = S.eqSel ? cleNom(S.eqSel) : null;
-    const ligne = l => `<tr data-eqsel="${esc(l.nom)}" class="${sel === l.k ? 'on' : ''}"><td class="l"><b>${esc(l.nom)}</b><small>${l.hors ? 'vend sans être au planning' : esc(l.postes.join(' · ') || '—')}</small></td>
+    const sel = S.eqSel ? cleNom(S.eqSel) : null, dep = S.eqDeplie ? cleNom(S.eqDeplie) : null;
+    // La ligne dépliée (20/10/2026, maquette A choisie par Sam) : une case par heure de son poste — ce qu'elle a vendu
+    // (la liste des tickets du jour, au panel : le vendeur et l'heure de chaque ticket), ses cuissons à l'heure du four,
+    // la production quand le magasin ne vend pas encore. Lue au premier dépliage, pour ce magasin et ce jour.
+    const cleEqh = 'eqh|' + S.shop + '|' + S.date;
+    const magH = {}; ((m && m.heures) || []).forEach(x => { magH[+x.h] = +x.ca || 0; });
+    // Les articles arrivent par lots (le serveur lit chaque ticket, vingt secondes par passage) : on relit tant que
+    // ça avance, cinq fois au plus.
+    const eqhRelance = n => {
+      const R = S.eqhRel || (S.eqhRel = {});
+      const r = R[cleEqh] || (R[cleEqh] = { n: 0, avant: null, prevu: false });
+      if (r.prevu || S.enCours[cleEqh] || r.n >= 5 || r.avant === n) { return; }
+      r.prevu = true; r.avant = n; r.n++;
+      setTimeout(() => { r.prevu = false; if (S.eqOuvert && S.eqDeplie) { lireAux(cleEqh, '/exploitation/equipe-heures?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, true); } }, 1500);
+    };
+    const deplie = l => {
+      if (l.hors || !l.srv) { return ''; }
+      lireAux(cleEqh, '/exploitation/equipe-heures?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date);
+      const HD = S.aux[cleEqh];
+      const corps = (() => {
+        if (!HD) { return `<div class="db-mini" style="padding:8px 0">${S.err[cleEqh] ? esc(S.err[cleEqh]) : 'lecture des tickets du jour…'}</div>`; }
+        if (HD.indispo) { return `<div class="db-mini" style="padding:8px 0">${esc(HD.motif || 'tickets du jour indisponibles')}</div>`; }
+        const P = HD.personnes || {}, cle = Object.keys(P).find(n => cleNom(n) === l.k), V2 = cle ? P[cle] : {};
+        // [ca, tickets, articles, tickets aux articles lus] : les articles se lisent ticket par ticket, `aLire` attend encore.
+        const vh = h => { const x = V2['h' + h]; return x ? { ca: +x[0] || 0, t: +x[1] || 0, a: +x[2] || 0, ta: +x[3] || 0 } : null; };
+        if (HD.aLire > 0) { eqhRelance(HD.aLire); }
+        const h0 = Math.floor(Math.min(...l.srv.map(s2 => s2[0])) / 60), h1 = Math.ceil(Math.max(...l.srv.map(s2 => s2[1])) / 60);
+        const dansPoste = h => l.srv.some(s2 => ov(s2[0], s2[1], h * 60, h * 60 + 60) > 0);
+        const HS = []; for (let h = h0; h < h1; h++) { if (dansPoste(h)) { HS.push(h); } }
+        const mxV = Math.max(1, ...HS.map(h => (vh(h) || { ca: 0 }).ca));
+        const fours = (cuissons || []).filter(c => l.prodPoste && l.srv.some(s2 => opMin(c.four) >= s2[0] && opMin(c.four) < s2[1]));
+        const cases = HS.map(h => {
+          const v = vh(h), futur = now != null && h * 60 >= now, enCours = now != null && h * 60 < now && now < h * 60 + 60, mg = magH[h] || 0;
+          const fo = fours.filter(c => Math.floor(opMin(c.four) / 60) === h).map(c => `<span class="eq-four">four ${esc(c.four)} · ${fN(c.pieces)} p.</span>`).join('');
+          let c2;
+          if (v && v.ca > 0) {
+            c2 = `<i class="eq-bar" style="height:${Math.max(4, Math.round(52 * v.ca / mxV))}px"></i><b>${fE(v.ca)}</b><small>${fN(v.t)} ticket${v.t > 1 ? 's' : ''} · ${fU(v.ca / Math.max(1, v.t))}</small><small>${v.ta ? nf(v.a / v.ta, 1) + ' art./ticket' : (HD.aLire ? 'articles : lecture…' : '')}</small><small>${mg > 0 ? Math.min(100, Math.round(100 * v.ca / mg)) + ' % du magasin' : ''}</small>`;
+          } else if (futur) { c2 = `<span class="mu">à venir</span>`; }
+          else if (enCours) { c2 = `<span class="mu">pas encore de vente</span>`; }
+          else if (mg <= 0) { c2 = `${l.prodPoste ? '<span class="eq-prod">production</span>' : '<span class="mu">—</span>'}<small>magasin fermé</small>`; }
+          else { c2 = `${l.prodPoste ? '<span class="eq-prod">production</span>' : ''}<small>aucune vente à son nom</small>`; }
+          return `<div class="eq-c${futur ? ' fut' : ''}${enCours ? ' cur' : ''}${!(v && v.ca > 0) && !futur ? ' vide' : ''}"><div class="hh">${h} h – ${h + 1} h${enCours ? ' · en cours' : ''}</div>${fo}<div class="cz">${c2}</div></div>`;
+        }).join('');
+        // Le bandeau : la production avant les premières ventes du magasin, la vente ensuite, et qui était au comptoir avec elle.
+        const venteH = HS.filter(h => (magH[h] || 0) > 0);
+        const pills = [];
+        if (l.prodPoste && HS.length && venteH.length && HS[0] < venteH[0]) { pills.push(`<span class="pill pr">production ${String(HS[0]).padStart(2, '0')}:00 → ${String(venteH[0]).padStart(2, '0')}:00</span>`); }
+        if (venteH.length) { pills.push(`<span class="pill ve">vente ${String(venteH[0]).padStart(2, '0')}:00 → ${String(Math.min(h1, venteH[venteH.length - 1] + 1)).padStart(2, '0')}:00</span>`); }
+        const avec = L.filter(o => o.k !== l.k && o.srv && o.srv.some(a => l.srv.some(b2 => venteH.some(h => ov(Math.max(a[0], b2[0]), Math.min(a[1], b2[1]), h * 60, h * 60 + 60) > 0)))).map(o => o.nom);
+        return `<div class="eq-dt"><span class="k">${esc(l.nom)}, heure par heure</span>${pills.join('')}${avec.length ? `<span class="mu">au comptoir avec ${esc(avec.join(', '))}</span>` : ''}${HD.lu ? `<span class="mu" style="margin-left:auto">tickets lus à ${esc(HD.lu)}${HD.aLire ? ' · articles de ' + fN(HD.aLire) + ' ticket' + (HD.aLire > 1 ? 's' : '') + ' en lecture' : ''}</span>` : ''}</div><div class="eq-h">${cases || '<span class="db-mini">aucune heure de poste</span>'}</div>`;
+      })();
+      return `<tr class="eq-dep"><td colspan="9">${corps}</td></tr>`;
+    };
+    const ligne = l => `<tr data-eqsel="${esc(l.nom)}" class="${sel === l.k ? 'on' : ''}"><td class="l"><b>${esc(l.nom)}</b>${!l.hors ? `<span class="eq-hp">${dep === l.k ? '▾' : '▸'} heure par heure</span>` : ''}<small>${l.hors ? 'vend sans être au planning' : esc(l.postes.join(' · ') || '—')}</small></td>
       <td>${l.hors ? '—' : esc(l.horaires)}<small>${l.hors ? '' : nf(l.prevu, 1) + ' h'}</small></td>
       <td>${l.hors ? '—' : hh(l.fait)}<small>${l.hors ? '' : esc(l.etat)}</small></td>
       <td>${l.ca == null ? '<span class="mu">—</span>' : '<b>' + fE(l.ca) + '</b>'}<small>${l.tickets != null ? fN(l.tickets) + ' ticket' + (l.tickets > 1 ? 's' : '') : ''}</small></td>
@@ -2978,7 +3031,7 @@
       <td>${l.tickets ? fU(l.ca / l.tickets) : '<span class="mu">—</span>'}<small>${l.articles != null ? nf(l.articles, 1) + ' art./client' : ''}</small></td>
       <td>${l.pieces ? fN(l.pieces) + ' p.' : '<span class="mu">—</span>'}<small>${l.pieces ? esc(l.cuissons.join(' · ')) : ''}</small></td>
       <td>${l.hors ? '—' : (l.franchise ? '<span class="mu">franchisé</span>' : (l.cout == null ? '<span class="mu">—</span>' : fE(l.cout)))}<small>${l.hors ? '' : (l.franchise ? 'hors P&amp;L' : (l.taux != null ? fU(l.taux) + '/h' : 'taux absent au panel'))}</small></td>
-      <td>${l.cout != null && l.ca ? '<b>' + pct(l.cout, l.ca) + '</b>' : '<span class="mu">—</span>'}<small>${l.cout && l.ca ? nf(l.ca / l.cout, 1) + ' ×' : ''}</small></td></tr>`;
+      <td>${l.cout != null && l.ca ? '<b>' + pct(l.cout, l.ca) + '</b>' : '<span class="mu">—</span>'}<small>${l.cout && l.ca ? nf(l.ca / l.cout, 1) + ' ×' : ''}</small></td></tr>${dep === l.k ? deplie(l) : ''}`;
     const T = L.concat(horsPl);
     const tCa = T.reduce((a, l) => a + (l.ca || 0), 0), tTk = T.reduce((a, l) => a + (l.tickets || 0), 0);
     const tHV = L.reduce((a, l) => a + l.hV, 0), tCout = L.reduce((a, l) => a + (l.cout || 0), 0), tPcs = L.reduce((a, l) => a + l.pieces, 0);
@@ -2986,7 +3039,7 @@
       <td><b>${V ? fE(tCa) : '—'}</b><small>${V ? fN(tTk) + ' tickets' : ''}</small></td><td><b>${V && tHV ? fE(tCa / tHV) + '/h' : '—'}</b></td><td>${tTk ? fU(tCa / tTk) : '—'}</td>
       <td>${tPcs ? fN(tPcs) + ' p.' : '—'}</td><td>${tCout ? fE(tCout) : '—'}</td><td><b>${tCout && tCa ? pct(tCout, tCa) : '—'}</b></td></tr>`;
     const avert = V === null ? `<div class="db-note" style="padding:10px 16px 0">Les ventes par vendeuse ne sont pas encore lues pour cette journée (panel) : les heures et les coûts se lisent, pas les ventes.</div>` : '';
-    return `<div class="db-card eq-carte"><div class="ct"><span class="op-h2">L’équipe du jour, ${now == null ? 'la journée' : 'à ' + heureT}</span><span class="db-mini">rangée par ventes à l’heure de vente · un clic sur une barre de la frise ou sur une ligne</span><button type="button" class="eq-ferme" data-eqferme aria-label="Fermer l’équipe du jour">×</button></div>${avert}
+    return `<div class="db-card eq-carte"><div class="ct"><span class="op-h2">L’équipe du jour, ${now == null ? 'la journée' : 'à ' + heureT}</span><span class="db-mini">rangée par ventes à l’heure de vente · un clic sur une personne déplie son heure par heure</span><button type="button" class="eq-ferme" data-eqferme aria-label="Fermer l’équipe du jour">×</button></div>${avert}
       <div class="eq-defil"><table class="eq-tab"><thead><tr><th class="l">Personne</th><th>Planning</th><th>Faites</th><th>Vendu</th><th>Par heure</th><th>Panier</th><th>Produit</th><th>Coût</th><th>Coût / ventes</th></tr></thead>
       <tbody>${T.map(ligne).join('')}${pied}</tbody></table></div>
       <div class="db-note" style="padding:8px 16px 12px">Vendu : le vendeur sur chaque ticket. Par heure : ses ventes ÷ les heures de son poste où le magasin a vendu. Produit : les cuissons de son poste, si elle tient un poste de production. Coût : son taux horaire au panel × ses heures faites (un franchisé ne pèse pas au P&amp;L).</div></div>`;
@@ -6896,9 +6949,12 @@
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; rendre(); }));
     // L'équipe du jour : une barre ou une ligne choisit la personne (un second clic sur la même referme), × ferme.
     $.querySelectorAll('[data-eqsel]').forEach(b => b.addEventListener('click', () => { const n = b.dataset.eqsel;
-      if (S.eqOuvert && S.eqSel === n && b.tagName === 'B') { S.eqOuvert = false; S.eqSel = null; } else { S.eqOuvert = true; S.eqSel = n; } rendre(); }));
-    $.querySelectorAll('[data-eqouvre]').forEach(b => b.addEventListener('click', () => { S.eqOuvert = !S.eqOuvert; if (!S.eqOuvert) { S.eqSel = null; } rendre(); }));
-    $.querySelectorAll('[data-eqferme]').forEach(b => b.addEventListener('click', () => { S.eqOuvert = false; S.eqSel = null; rendre(); }));
+      if (b.tagName === 'B') {
+        if (S.eqOuvert && S.eqSel === n) { S.eqOuvert = false; S.eqSel = null; S.eqDeplie = null; } else { S.eqOuvert = true; S.eqSel = n; S.eqDeplie = n; }
+      } else { S.eqSel = n; S.eqDeplie = S.eqDeplie === n ? null : n; }
+      rendre(); }));
+    $.querySelectorAll('[data-eqouvre]').forEach(b => b.addEventListener('click', () => { S.eqOuvert = !S.eqOuvert; if (!S.eqOuvert) { S.eqSel = null; S.eqDeplie = null; } rendre(); }));
+    $.querySelectorAll('[data-eqferme]').forEach(b => b.addEventListener('click', () => { S.eqOuvert = false; S.eqSel = null; S.eqDeplie = null; rendre(); }));
     // Les douze semaines : clients, panier moyen ou articles par client (gardé pour la prochaine visite).
     $.querySelectorAll('[data-s12m]').forEach(b => b.addEventListener('click', () => { S.s12m = b.dataset.s12m; try { localStorage.setItem('db.s12m', S.s12m); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-vdrop]').forEach(b => b.addEventListener('click', () => { S.valoOuvert = !S.valoOuvert; rendre(); }));

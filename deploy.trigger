@@ -901,3 +901,5 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T14:48:11Z audyt : przekierowania i porządki
 2026-10-20T14:51:05Z Dashboard magasin : Contrôle au téléphone, « sur l'objectif »
 2026-10-20T14:55:29Z Dashboard magasin : l'équipe du jour
+2026-10-20T15:14:55Z L'équipe du jour : heure par heure
+2026-10-20T15:21:47Z l'heure par heure : articles par ticket
