@@ -744,6 +744,8 @@ $emp = $b['data']['employee_token'];
 $row = array_values(array_filter($pd['data']['items'] ?? [], fn($i) => $i['item_id'] === $croissant))[0] ?? null;
 check($s === 200 && $pd['data']['group']['id'] === 1 && $row && $row['planned'] == 120.0 && $row['produced'] == 0.0 && $row['ppc'] === 60
     && in_array($croissant, array_column($pd['data']['catalog'], 'item_id'), true), 'production of the day: planned from the week Gantt, group catalog');
+$batchOf = (float) $pdo->query("SELECT COALESCE(batch_multiple, 0) FROM tfb_prod_product_settings WHERE id_item = {$croissant}")->fetchColumn();
+check(($row['batch'] ?? null) == ($batchOf > 0 ? $batchOf : null), 'tablet: production batch of the card (one tile per planned batch)');
 [$s, $b] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 0], $device, $emp);
 check($s === 422 && $codes($b) === ['quantity:OUT_OF_RANGE'], 'quantity above zero');
 $outUuid = '5b1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c4d';

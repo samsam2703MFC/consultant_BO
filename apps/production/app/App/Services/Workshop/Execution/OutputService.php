@@ -250,7 +250,9 @@ final class OutputService
     private function itemRow(array $i): array
     {
         return ['item_id' => (int) $i['id'], 'name' => $i['name'], 'type' => $i['item_type'], 'unit' => $i['base_unit'],
-            'ppc' => $i['ppc'] !== null && (int) $i['ppc'] > 0 ? (int) $i['ppc'] : null];
+            'ppc' => $i['ppc'] !== null && (int) $i['ppc'] > 0 ? (int) $i['ppc'] : null,
+            // Partia produkcyjna karty : tablet pokazuje kafelkę na partię i proponuje jedną partię naraz.
+            'batch' => isset($i['batch_multiple']) && (float) $i['batch_multiple'] > 0 ? (float) $i['batch_multiple'] : null];
     }
 
     private function batchRow(array $o): array

@@ -345,6 +345,7 @@
                         <div class="kiosk-muted">${i.planned !== null ? esc(t('prod_planned', {q: qty(i.planned, i)})) + ' · ' : ''}${esc(t('prod_done', {q: qty(i.produced, i)}))}</div></div>
                         ${day.editable ? `<button type="button" class="kiosk-btn is-ok" data-new="${i.item_id}">＋ ${esc(t('prod_batch'))}</button>` : ''}</div>
                     ${pct !== null ? `<div class="kiosk-bar"><span style="width:${pct}%"></span></div>` : ''}
+                    ${batchTiles(i)}
                     ${i.batches.length ? `<ul class="kiosk-batches">${i.batches.map(b => `<li class="${b.cancelled ? 'is-cancelled' : ''}">
                         <button type="button" class="kiosk-batch" data-batch="${b.id}"><strong>${esc(b.lot_code)}</strong>
                         <span>${esc(qty(b.quantity, i))}</span><span class="kiosk-muted">${esc(hhmm(b.created_at))}${b.employee ? ' · ' + esc(b.employee) : ''}</span>
@@ -363,9 +364,22 @@
         if (go) go.addEventListener('click', () => { const v = Number(el.querySelector('[data-other]').value); if (v) renderNewBatch(find(v)); });
     }
 
+    // Partia produkcyjna : kafelka na każdą zaplanowaną partię (zrobione ✓ według ilości zapisanej na tablecie).
+    function batchTiles(i) {
+        if (!i.batch || !i.planned) return '';
+        const total = Math.ceil(i.planned / i.batch - 1e-6);
+        const done = Math.min(total, Math.floor((i.produced || 0) / i.batch + 1e-6));
+        if (total > 30) return `<p class="kiosk-muted">${esc(t('prod_batches', {done, total, size: qty(i.batch, i)}))}</p>`;
+        return `<div class="kiosk-batch-tiles" aria-label="${esc(t('prod_batches', {done, total, size: qty(i.batch, i)}))}">${Array.from({length: total}, (_, k) =>
+            `<span class="kiosk-batch-tile ${k < done ? 'is-done' : ''}">${k < done ? '✓ ' : ''}${k + 1}/${total}</span>`).join('')}
+            <span class="kiosk-muted">${esc(t('prod_batch_size', {size: qty(i.batch, i)}))}</span></div>`;
+    }
+
     function renderNewBatch(item) {
         resetIdle();
-        const left = item.planned !== null && item.planned !== undefined ? Math.max(0, item.planned - (item.produced || 0)) : 0;
+        // Z partią produkcyjną : jedna partia naraz (albo reszta, gdy mniej niż partia).
+        const rest = item.planned !== null && item.planned !== undefined ? Math.max(0, item.planned - (item.produced || 0)) : 0;
+        const left = item.batch ? (rest > 0 ? Math.min(rest, item.batch) : item.batch) : rest;
         const cartons = item.ppc ? Math.floor(left / item.ppc) : 0;
         const loose = item.ppc ? Math.round(left - cartons * item.ppc) : left;
         el.innerHTML = header() + `<section class="kiosk-card"><h2>${esc(t('prod_new', {name: item.name}))}</h2>

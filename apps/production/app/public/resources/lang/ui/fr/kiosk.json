@@ -117,5 +117,7 @@
   "ocr_pick": "Touchez pour insérer :",
   "ocr_lot": "LOT",
   "ocr_date": "Date",
-  "photo_error": "Impossible de lire la photo."
+  "photo_error": "Impossible de lire la photo.",
+  "prod_batches": "Lots : {done} / {total} (1 lot = {size})",
+  "prod_batch_size": "1 lot = {size}"
 }

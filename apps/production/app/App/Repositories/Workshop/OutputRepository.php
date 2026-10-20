@@ -10,7 +10,7 @@ final class OutputRepository extends WorkshopRepository
     protected array $writable = ['work_date', 'id_group', 'id_item', 'quantity', 'lot_code', 'id_employee', 'id_device', 'client_uuid', 'note', 'cancelled_at', 'cancelled_by'];
 
     private const ITEM = "SELECT i.id, i.item_type, i.base_unit, i.id_final_product, COALESCE(i.id_recipe, fp.id_recipe) AS id_recipe,
-            COALESCE(fp.name, pr.name) AS name, fp.ppc, s.id_primary_group
+            COALESCE(fp.name, pr.name) AS name, fp.ppc, s.id_primary_group, s.batch_multiple
         FROM tfb_prod_item i
         LEFT JOIN final_product fp ON fp.id = i.id_final_product
         LEFT JOIN product_recipe pr ON pr.id = i.id_recipe

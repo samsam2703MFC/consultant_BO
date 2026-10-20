@@ -162,5 +162,10 @@
   "week.time_every_week": "ta sama godzina co tydzień",
   "week.drop_pinned": "„{name}” — stała partia 📌 ({from}). Przenieść na {to} :",
   "week.drop_pinned_every": "Co tydzień : {day}",
-  "week.drop_pinned_once": "Tylko w tym tygodniu"
+  "week.drop_pinned_once": "Tylko w tym tygodniu",
+  "week.batch_no": "partia {n}",
+  "week.batch_partial": "niepełna",
+  "week.batch_day": "w dniu razem {qty}",
+  "week.batch_direct": "pokrywa zamówienia (na wysyłkę)",
+  "week.batch_stock": "na magazyn"
 }

@@ -11867,6 +11867,11 @@
                     "ppc": {
                         "type": "integer",
                         "nullable": true
+                    },
+                    "batch": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "lot de production de la fiche : une vignette par lot prévu, un lot proposé à la fois"
                     }
                 }
             },

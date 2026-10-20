@@ -314,6 +314,28 @@
     const cartonsText = (p, q) => p.ppc ? `${fmt(q / p.ppc, q / p.ppc >= 10 ? 0 : 1)} ${t('week.cart')}` : `${fmt(q, p.unit === 'kg' ? 1 : 0)} ${p.unit}`;
     const partText = (p, q) => p.batch ? `${batchText(p, q)} · ${cartonsText(p, q)}` : cartonsText(p, q);
 
+    // Jedna kafelka na partię produkcyjną : pełne partie + ewentualna reszta (niepełna partia). Przy wielu partiach
+    // jednego produktu w jednym miejscu ostatnia kafelka zbiera resztę. Numeracja w tygodniu produktu : dni po
+    // kolei, potem « Do zrobienia » (offset = ilość przed kafelkami).
+    const MAX_TILES = 6;
+    function batchTiles(p, qty, offset) {
+        if (!p.batch || qty <= 0.0005) return [{qty, label: null}];
+        const n = Math.floor(qty / p.batch + 1e-6);
+        const parts = Array(n).fill(p.batch);
+        const rest = Math.round((qty - n * p.batch) * 1000) / 1000;
+        if (rest > 0.0005) parts.push(rest);
+        if (parts.length > MAX_TILES) parts.push(Math.round(parts.splice(MAX_TILES - 1).reduce((a, b) => a + b, 0) * 1000) / 1000);
+        const total = Math.max(1, Math.ceil(p.quantity / p.batch - 1e-6));
+        let a = offset;
+        return parts.map(q => {
+            const first = Math.floor(a / p.batch + 1e-6) + 1;
+            const last = Math.max(first, Math.ceil((a + q) / p.batch - 1e-6));
+            a += q;
+            return {qty: q, label: `${first === last ? first : first + '–' + last}/${total}`, partial: q < p.batch - 0.0005 && first === last};
+        });
+    }
+    const slotOffset = (p, day) => p.slots.filter(x => x.day < day).reduce((a, x) => a + x.quantity, 0);
+
     function drawWeek() {
         const root = el.querySelector('[data-week-root]');
         if (!root || !week) return;
@@ -388,7 +410,10 @@
             const cells = g.days.map((d, i) => {
                 const day = w.days[i];
                 const blocks = [];
-                for (const p of products) for (const s of p.slots) if (s.day === d.date) blocks.push({p, s});
+                for (const p of products) for (const s of p.slots) if (s.day === d.date) {
+                    const tiles = batchTiles(p, s.quantity, slotOffset(p, s.day));
+                    tiles.forEach((tile, i) => blocks.push({p, s, tile: tiles.length > 1 || tile.label ? tile : null, split: tiles.length > 1, first: i === 0}));
+                }
                 // Tydzień typowy : najpierw bloki z godziną startu (po godzinie), potem bez godziny.
                 blocks.sort((a, b) => (a.s.time || '99').localeCompare(b.s.time || '99'));
                 const scale = Math.max(d.available_h, d.required_h, 0.01);
@@ -397,9 +422,9 @@
                 const cap = d.available_h > 0 ? `${fmt(d.required_h, 1)} / ${fmt(d.available_h, 1)} h` : (d.required_h > 0 ? t('week.no_team') : t('week.no_shift'));
                 return `<div class="tfb-week-cell is-${esc(d.status)} ${day.past ? 'is-past' : ''} ${day.today ? 'is-today' : ''}" data-drop-day="${d.date}" data-group="${g.id ?? 0}">
                     <div class="tfb-week-cap"><span>${esc(cap)}</span>${over > 0.05 && d.available_h > 0 ? `<b>+${fmt(over, 1)} h</b>` : (d.available_h - d.required_h > 0.05 && d.required_h > 0 ? `<em>${esc(t('week.free', {hours: fmt(d.available_h - d.required_h, 1)}))}</em>` : '')}</div>
-                    <div class="tfb-week-load">${blocks.map(({p, s}) => `<span class="${s.late || s.behind ? 'is-late' : ''}" style="width:${(s.hours / scale * 100).toFixed(2)}%" title="${esc(p.name)} · ${hrs(s.hours)}"></span>`).join('')}
+                    <div class="tfb-week-load">${blocks.filter(x => x.first).map(({p, s}) => `<span class="${s.late || s.behind ? 'is-late' : ''}" style="width:${(s.hours / scale * 100).toFixed(2)}%" title="${esc(p.name)} · ${hrs(s.hours)}"></span>`).join('')}
                         ${d.available_h > 0 && d.required_h > d.available_h ? `<span class="tfb-week-capline" style="left:${(d.available_h / scale * 100).toFixed(2)}%"></span>` : ''}${now}</div>
-                    <div class="tfb-week-track">${blocks.map(({p, s}) => block(p, s, scale, color)).join('')}</div>
+                    <div class="tfb-week-track">${blocks.map(({p, s, tile, split}) => block(p, s, scale, color, tile, split)).join('')}</div>
                 </div>`;
             }).join('');
             // Do zrobienia : najpierw wysyłka (najbliższy termin), potem magazyn ; ilości w kartonach.
@@ -408,11 +433,10 @@
             const todoCartons = todo.reduce((a, x) => a + (x.p.ppc ? x.p.unassigned_qty / x.p.ppc : 0), 0);
             const tray = `<div class="tfb-week-cell tfb-week-todo ${todo.length ? '' : 'is-empty'}" data-drop-day="" data-group="${g.id ?? 0}">
                 <div class="tfb-week-cap"><span>${todo.length ? esc(t('week.todo_total', {cartons: fmt(todoCartons, 0), hours: fmt(g.unassigned_h, 1)})) : esc(t('week.todo_empty'))}</span></div>
-                <div class="tfb-week-track">${todo.map(({p, direct, stock}) => `<button type="button" class="tfb-week-chip ${p.movable ? 'is-movable' : ''} ${direct > 0 ? 'is-direct' : 'is-stock'}" style="--group-color:${esc(color)}" data-item="${p.item_id}" data-from=""
-                    title="${esc([p.name, direct > 0 ? '🚚 ' + t('week.direct_part', {qty: qtyText(p, direct)}) + (p.due_date ? ' · ' + t('week.due') + ' ' + dayLabel(p.due_date) : '') : null, stock > 0 ? '📦 ' + t('week.stock_part', {qty: qtyText(p, stock)}) : null, hrs(p.unassigned_h)].filter(Boolean).join(' · '))}">
-                    <span class="tfb-week-chip-name">${esc(p.name)}</span>
-                    <span class="tfb-week-chip-qty">${direct > 0 ? '🚚 ' + esc(cartonsText(p, direct)) : ''}${direct > 0 && stock > 0 ? ' · ' : ''}${stock > 0 ? '📦 ' + esc(cartonsText(p, stock)) : ''} <small>${hrs(p.unassigned_h)}</small></span>
-                    ${p.batch ? `<span class="tfb-week-chip-batch">${esc(batchText(p, p.unassigned_qty))} ${fmt(p.batch, 0)} ${esc(p.unit)}</span>` : ''}</button>`).join('')}</div>
+                <div class="tfb-week-track">${todo.map(x => x.p.batch ? batchChips(x, color) : `<button type="button" class="tfb-week-chip ${x.p.movable ? 'is-movable' : ''} ${x.direct > 0 ? 'is-direct' : 'is-stock'}" style="--group-color:${esc(color)}" data-item="${x.p.item_id}" data-from=""
+                    title="${esc([x.p.name, x.direct > 0 ? '🚚 ' + t('week.direct_part', {qty: qtyText(x.p, x.direct)}) + (x.p.due_date ? ' · ' + t('week.due') + ' ' + dayLabel(x.p.due_date) : '') : null, x.stock > 0 ? '📦 ' + t('week.stock_part', {qty: qtyText(x.p, x.stock)}) : null, hrs(x.p.unassigned_h)].filter(Boolean).join(' · '))}">
+                    <span class="tfb-week-chip-name">${esc(x.p.name)}</span>
+                    <span class="tfb-week-chip-qty">${x.direct > 0 ? '🚚 ' + esc(cartonsText(x.p, x.direct)) : ''}${x.direct > 0 && x.stock > 0 ? ' · ' : ''}${x.stock > 0 ? '📦 ' + esc(cartonsText(x.p, x.stock)) : ''} <small>${hrs(x.p.unassigned_h)}</small></span></button>`).join('')}</div>
             </div>`;
             return `<div class="tfb-week-group" style="--group-color:${esc(color)}">
                 <div class="tfb-week-row" style="--days:${w.days.length}">
@@ -423,14 +447,35 @@
         }).join('');
     }
 
-    function block(p, s, scale, color) {
-        const width = Math.min(100, Math.max(0, s.hours / scale * 100));
+    // « Do zrobienia » produktu z partią : jedna kafelka na partię (najpierw na wysyłkę — partie, które pokrywają
+    // zamówienia — potem na magazyn) ; każdą przeciąga się osobno na dzień.
+    function batchChips({p, direct}, color) {
+        const offset = p.slots.reduce((a, x) => a + x.quantity, 0);
+        const tiles = batchTiles(p, p.unassigned_qty, offset);
+        let a = 0;
+        return tiles.map(tile => {
+            const isDirect = a < direct - 0.0005;
+            a += tile.qty;
+            const h = p.unassigned_qty > 0 ? p.unassigned_h * tile.qty / p.unassigned_qty : 0;
+            const title = [p.name, t('week.batch_no', {n: tile.label}) + (tile.partial ? ' (' + t('week.batch_partial') + ')' : ''), qtyText(p, tile.qty), hrs(h),
+                isDirect ? '🚚 ' + t('week.batch_direct') + (p.due_date ? ' · ' + t('week.due') + ' ' + dayLabel(p.due_date) : '') : '📦 ' + t('week.batch_stock')].join(' · ');
+            return `<button type="button" class="tfb-week-chip is-batch ${p.movable ? 'is-movable' : ''} ${isDirect ? 'is-direct' : 'is-stock'}" style="--group-color:${esc(color)}" data-item="${p.item_id}" data-from=""
+                ${tiles.length > 1 ? `data-qty="${tile.qty}"` : ''} title="${esc(title)}" aria-label="${esc(title)}">
+                <span class="tfb-week-chip-name">${esc(p.name)}</span>
+                <span class="tfb-week-chip-qty">${isDirect ? '🚚' : '📦'} <b class="tfb-week-batchno ${tile.partial ? 'is-partial' : ''}">${esc(t('week.batch_no', {n: tile.label}))}</b> · ${esc(p.ppc ? cartonsText(p, tile.qty) : fmt(tile.qty, p.unit === 'kg' ? 1 : 0) + ' ' + p.unit)} <small>${hrs(h)}</small></span></button>`;
+        }).join('');
+    }
+
+    function block(p, s, scale, color, tile = null, split = false) {
+        const tileH = tile ? s.hours * tile.qty / Math.max(s.quantity, 0.001) : s.hours;
+        const width = Math.min(100, Math.max(0, tileH / scale * 100));
         const done = s.hours > 0 ? Math.min(100, s.done_h / s.hours * 100) : (p.state === 'done' ? 100 : 0);
         const finished = done >= 99.9;
         const kind = s.direct_qty > 0 && s.stock_qty > 0 ? 'is-mixed' : (s.stock_qty > 0 ? 'is-stock' : 'is-direct');
         const icon = kind === 'is-mixed' ? '🚚📦' : (kind === 'is-stock' ? '📦' : '🚚');
         const pinned = (p.pins || []).some(x => x.day === s.day);
-        const title = [p.name, qtyText(p, s.quantity), hrs(s.hours),
+        const title = [p.name, tile ? t('week.batch_no', {n: tile.label}) + (tile.partial ? ' (' + t('week.batch_partial') + ')' : '') : null,
+            qtyText(p, tile ? tile.qty : s.quantity), hrs(tileH), tile && split ? t('week.batch_day', {qty: qtyText(p, s.quantity)}) : null,
             s.direct_qty > 0 ? '🚚 ' + t('week.direct_part', {qty: qtyText(p, s.direct_qty)}) : null, s.stock_qty > 0 ? '📦 ' + t('week.stock_part', {qty: qtyText(p, s.stock_qty)}) : null,
             p.due_date ? t('week.due') + ' ' + dayLabel(p.due_date) : null, s.late ? t('week.late') : null, s.behind ? t('week.behind') : null,
             s.time ? t('week.at', {time: s.time}) : null, pinned ? '📌 ' + t('week.pinned') : null,
@@ -440,8 +485,8 @@
             ? `<button type="button" class="tfb-week-pintoggle ${pinned ? 'is-on' : ''}" data-pin-toggle data-pin-item="${p.item_id}" data-day="${s.day}" aria-pressed="${pinned}" title="${esc(pinTitle)}" aria-label="${esc(pinTitle)}">📌</button>`
             : (pinned ? `<span class="tfb-week-pintoggle is-on is-static" title="${esc(pinTitle)}">📌</span>` : '');
         return `<div class="tfb-week-blockrow"><button type="button" class="tfb-week-block ${kind} ${p.movable ? 'is-movable' : ''} ${s.late ? 'is-late' : ''} ${s.behind ? 'is-behind' : ''} ${finished ? 'is-finished' : ''} ${pinned ? 'is-pinned' : ''}"
-            style="--group-color:${esc(color)};--share:${width.toFixed(2)}%" data-item="${p.item_id}" data-from="${s.day}" title="${esc(title)}" aria-label="${esc(title)}">
-            <span class="tfb-week-block-text">${finished ? '✓ ' : ''}${s.time ? `<span class="tfb-week-time">${esc(s.time)}</span>` : ''}<span class="tfb-week-block-icon">${icon}</span> ${esc(p.name)}</span><span class="tfb-week-block-h">${p.batch ? esc(batchText(p, s.quantity)) + ' · ' : (s.cartons !== null ? fmt(s.cartons, 0) + ' ' + esc(t('week.cart')) + ' · ' : '')}${fmt(s.hours, 1)} h</span>
+            style="--group-color:${esc(color)};--share:${width.toFixed(2)}%" data-item="${p.item_id}" data-from="${s.day}" ${split ? `data-qty="${tile.qty}"` : ''} title="${esc(title)}" aria-label="${esc(title)}">
+            <span class="tfb-week-block-text">${finished ? '✓ ' : ''}${s.time ? `<span class="tfb-week-time">${esc(s.time)}</span>` : ''}<span class="tfb-week-block-icon">${icon}</span> ${esc(p.name)}</span><span class="tfb-week-block-h">${tile ? `<b class="tfb-week-batchno ${tile.partial ? 'is-partial' : ''}">${esc(tile.label)}</b> · ` : (s.cartons !== null ? fmt(s.cartons, 0) + ' ' + esc(t('week.cart')) + ' · ' : '')}${fmt(tileH, 1)} h</span>
             ${done > 0 ? `<span class="tfb-week-block-done" style="width:${done.toFixed(1)}%"></span>` : ''}</button>${toggle}</div>`;
     }
 
@@ -588,7 +633,8 @@
         gantt.addEventListener('pointerdown', (e) => {
             const b = e.target.closest('[data-item].is-movable');
             if (!b || e.button !== 0) return;
-            drag = {el: b, item: Number(b.dataset.item), from: b.dataset.from || '', group: b.closest('[data-group]').dataset.group, x0: e.clientX, y0: e.clientY, moved: false, ghost: null};
+            drag = {el: b, item: Number(b.dataset.item), from: b.dataset.from || '', qty: b.dataset.qty ? Number(b.dataset.qty) : null,
+                group: b.closest('[data-group]').dataset.group, x0: e.clientX, y0: e.clientY, moved: false, ghost: null};
             b.setPointerCapture(e.pointerId);
         });
         let lastPoint = {x: 0, y: 0};
@@ -632,6 +678,8 @@
     async function dropOn(d, target, point) {
         const day = target.dataset.dropDay;
         const p = week.products.find(x => x.item_id === d.item);
+        // Kafelka partii : jedna partia przenosi się w całości (na dzień albo z powrotem do « Do zrobienia »).
+        if (d.qty) return moveProduct(d.item, d.from, day, d.qty);
         if (!day || !p) return moveProduct(d.item, d.from, day);
         if (d.from && (p.pins || []).some(x => x.day === d.from)) return dropPinned(d, p, day, point);
         const qty = d.from ? (p.slots.find(s => s.day === d.from)?.quantity ?? 0) : p.unassigned_qty;

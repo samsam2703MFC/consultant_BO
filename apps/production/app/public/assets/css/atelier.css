@@ -1440,3 +1440,7 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-week-pintoggle.is-static { cursor: default; }
 .tfb-week-block.is-pinned { outline: 1px solid color-mix(in srgb, var(--at-primary) 45%, transparent); outline-offset: -1px; }
 .tfb-week-time { margin-right: 4px; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Kafelka na partię produkcyjną (Do zrobienia i dni) */
+.tfb-week-batchno { font-weight: 700; color: var(--at-text); font-variant-numeric: tabular-nums; }
+.tfb-week-batchno.is-partial { color: var(--at-warning, #b26a00); }
+.tfb-week-chip.is-batch { padding-top: 4px; padding-bottom: 4px; }

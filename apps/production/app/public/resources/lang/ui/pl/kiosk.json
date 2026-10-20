@@ -117,5 +117,7 @@
   "ocr_pick": "Dotknij, aby wstawić :",
   "ocr_lot": "LOT",
   "ocr_date": "Data",
-  "photo_error": "Nie udało się wczytać zdjęcia."
+  "photo_error": "Nie udało się wczytać zdjęcia.",
+  "prod_batches": "Partie : {done} / {total} (1 partia = {size})",
+  "prod_batch_size": "1 partia = {size}"
 }

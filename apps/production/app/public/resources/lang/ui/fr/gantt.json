@@ -162,5 +162,10 @@
   "week.time_every_week": "même heure chaque semaine",
   "week.drop_pinned": "« {name} » est un lot fixe le {from}. Le déplacer au {to} :",
   "week.drop_pinned_every": "Chaque semaine le {day}",
-  "week.drop_pinned_once": "Cette semaine seulement"
+  "week.drop_pinned_once": "Cette semaine seulement",
+  "week.batch_no": "lot {n}",
+  "week.batch_partial": "incomplet",
+  "week.batch_day": "au total ce jour {qty}",
+  "week.batch_direct": "couvre des commandes (à expédier)",
+  "week.batch_stock": "pour le stock"
 }

@@ -112,7 +112,8 @@ final class OpenApiExecution
             'SignatureInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['purpose', 'ref', 'image'], 'properties' => [
                 'purpose' => ['type' => 'string', 'enum' => ['clock_out', 'timesheet_month', 'operation']], 'ref' => ['type' => 'string', 'description' => 'id du pointage, AAAA-MM ou id de l\'opération'],
                 'image' => ['type' => 'string', 'description' => 'data:image/png;base64,…']]],
-            'OutputItem' => ['type' => 'object', 'properties' => ['item_id' => $int, 'name' => $str, 'type' => ['type' => 'string', 'enum' => ['product', 'semi']], 'unit' => $str, 'ppc' => $nInt]],
+            'OutputItem' => ['type' => 'object', 'properties' => ['item_id' => $int, 'name' => $str, 'type' => ['type' => 'string', 'enum' => ['product', 'semi']], 'unit' => $str, 'ppc' => $nInt,
+                'batch' => ['type' => 'number', 'nullable' => true, 'description' => 'lot de production de la fiche : une vignette par lot prévu, un lot proposé à la fois']]],
             'OutputRow' => ['type' => 'object', 'properties' => ['id' => $int, 'item_id' => $int, 'date' => $str, 'quantity' => $num, 'lot_code' => ['type' => 'string', 'example' => '261020-PIEK-01'],
                 'employee' => $nStr, 'note' => $nStr, 'created_at' => $dt, 'cancelled' => $bool, 'lots_done' => $nInt, 'lots_total' => $int, 'editable' => $bool]],
             'ProductionDay' => ['type' => 'object', 'properties' => ['date' => $str, 'editable' => $bool, 'group' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => $str]],
