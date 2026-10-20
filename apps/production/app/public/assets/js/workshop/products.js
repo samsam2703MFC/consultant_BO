@@ -549,8 +549,8 @@
 
     function stepMode(body, item) {
         const s = item.settings;
-        // Produkt z kartonem : stany min. / maks. w kartonach lub sztukach (zapis w sztukach) ; pokrycie i partie
-        // nie są już w kreatorze (wartości zapisane wcześniej zostają w planowaniu).
+        // Produkt z kartonem : stany min. / maks. w kartonach lub sztukach (zapis w sztukach) ; pokrycia nie ma
+        // w kreatorze, partia produkcyjna jest w kroku « Etapy i czasy ».
         const ppc = item.item_type === 'product' && item.erp && item.erp.ppc > 0 ? item.erp.ppc : 0;
         const PAIRED = ['stock_min', 'stock_max'];
         const cartons = (v) => v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? '' : String(Math.round(Number(v) / ppc * 100) / 100).replace('.', ',');
@@ -674,8 +674,24 @@
     function stepRouting(body, item) {
         let steps = item.routing.map(s => ({...s, alternatives: s.alternatives.map(a => ({...a}))}));
         const delayFilter = (w) => ['fermentation', 'froid', 'surgelation'].includes(w.type);
+        // Partia produkcyjna (np. pistolet : 1300 szt. naraz) : plan proponuje pełne partie, tydzień rozkłada je w całości.
+        let batch = item.settings.batch_multiple ?? null;
+        const ppc = item.item_type === 'product' && item.erp && item.erp.ppc > 0 ? item.erp.ppc : 0;
+        const batchInfo = () => {
+            if (typeof batch !== 'number' || batch <= 0) return '';
+            const out = [];
+            if (ppc) out.push(t('r.batch_cartons', {cartons: ui.fmt(batch / ppc, batch % ppc ? 1 : 0, api.lang)}));
+            const max = item.settings.mode === 'MTS' ? item.settings.stock_max : null;
+            if (max !== null && max !== undefined && Number(max) < batch) out.push('⚠ ' + t('r.batch_over_max', {max: ui.fmt(max, 0, api.lang), unit: item.base_unit}));
+            return out.join(' · ');
+        };
         const draw = () => {
             body.innerHTML = `<p class="form-text">${esc(t('r.help'))}</p><form data-form>
+                <div class="tfb-batch">
+                    <label>${esc(t('r.batch'))}<div class="input-group input-group-sm"><input class="form-control" name="batch" data-field="batch_multiple" inputmode="decimal" value="${batch ?? ''}" placeholder="—">
+                        <span class="input-group-text">${esc(item.base_unit)}</span></div></label>
+                    <div><strong class="form-text d-block" data-batch-info>${esc(batchInfo())}</strong><span class="form-text d-block">${esc(t('r.batch_help'))}</span></div>
+                </div>
                 ${steps.length ? '' : `<p class="text-muted">${esc(t('r.empty'))}</p>`}
                 ${steps.map((s, i) => `<div class="tfb-step" data-index="${i}">
                     <div class="tfb-step-head"><strong>${i + 1}.</strong>
@@ -717,6 +733,11 @@
             if (!item.can_edit) form.querySelectorAll('input, select, button[data-write]').forEach(x => x.disabled = true);
         };
         const collect = () => {
+            const batchInput = body.querySelector('input[name=batch]');
+            if (batchInput) {
+                batch = batchInput.value.trim() === '' ? null : ui.num(batchInput.value);
+                body.querySelector('[data-batch-info]').textContent = batchInfo();
+            }
             body.querySelectorAll('[data-index]').forEach(card => {
                 const s = steps[Number(card.dataset.index)];
                 card.querySelectorAll('[data-k]').forEach(input => {
@@ -765,7 +786,7 @@
             });
             try {
                 await api.put(`/produits/items/${item.id}/routing`, {steps: payload});
-                await saveSettings(form, {}, 7);
+                await saveSettings(form, {batch_multiple: batch}, 7);
             } catch (err) { fail(form, err); }
         };
         draw();

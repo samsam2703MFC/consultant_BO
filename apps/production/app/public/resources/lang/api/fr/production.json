@@ -225,7 +225,7 @@
     "stock_max": "Stock maximum",
     "coverage_days": "Couverture (jours)",
     "batch_min": "Lot minimum",
-    "batch_multiple": "Multiple de lot",
+    "batch_multiple": "Lot de production",
     "shelf_life_workshop_days": "Durée de vie atelier (jours)",
     "shelf_life_shop_days": "Durée de vie boutique (jours)",
     "wizard_step": "Étape de l'assistant",

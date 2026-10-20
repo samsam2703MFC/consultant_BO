@@ -126,7 +126,8 @@ final class OpenApiProducts
             'ItemSettingsInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
                 'mode' => ['type' => 'string', 'enum' => ItemService::MODES], 'never_frozen' => ['type' => 'boolean'],
                 'bake_state' => ['type' => 'string', 'enum' => ItemService::BAKE_STATES, 'nullable' => true],
-                'stock_min' => $num, 'stock_max' => $num, 'coverage_days' => $num, 'batch_min' => $num, 'batch_multiple' => $num,
+                'stock_min' => $num, 'stock_max' => $num, 'coverage_days' => $num, 'batch_min' => $num,
+                'batch_multiple' => ['type' => 'number', 'nullable' => true, 'description' => 'partie de production (ex. 1300 pcs) : le plan arrondit au multiple supérieur'],
                 'shelf_life_workshop_days' => $num, 'shelf_life_shop_days' => $num, 'primary_group_id' => $int,
                 'stock_calculated' => ['type' => 'boolean', 'description' => 'true : stocks issus du calcul sur les ventes → stock_calc_at = maintenant'],
                 'wizard_step' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 8],

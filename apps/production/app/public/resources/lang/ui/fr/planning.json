@@ -73,5 +73,6 @@
   "mat.raw": "Matières ({n})",
   "mat.packaging": "Emballages ({n})",
   "mat.empty": "Aucune recette pour les produits du plan — complétez les recettes dans l’ERP.",
-  "pdf_lists": "Listes de production PDF"
+  "pdf_lists": "Listes de production PDF",
+  "batches_line": "{n} × lot de {size} {unit}"
 }

@@ -139,5 +139,7 @@
   "week.todo_empty": "Tout est placé ✓",
   "week.drop_full": "{day} : {free} h libres, le produit demande {hours} h.",
   "week.drop_fit": "Ce qui tient : {qty}",
-  "week.drop_all": "Tout : {qty} (jour surchargé)"
+  "week.drop_all": "Tout : {qty} (jour surchargé)",
+  "week.batches": "{n} × lot",
+  "week.batch": "Lot de production"
 }

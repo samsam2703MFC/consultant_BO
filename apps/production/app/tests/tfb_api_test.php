@@ -470,6 +470,8 @@ check($s === 201 && $plan['data']['status'] === 'proposed' && count($plan['data'
 $planId = $plan['data']['id'];
 $lines = [];
 foreach ($plan['data']['lines'] as $l) $lines[$l['item_id']] = $l;
+check($lines[$itemId]['batch_size'] == 160 && $lines[$itemId]['batches'] === 1 && $lines[$semiId]['batch_size'] == 5 && $lines[$semiId]['batches'] === 2
+    && $byItem[$itemId]['batch_size'] == 160 && $byItem[$itemId]['ppc'] === 60, 'plan and proposal show the production batch (number and size)');
 [$s, $b] = $call('PATCH', "/planning/plans/{$planId}/lines/{$lines[1]['id']}", ['qty_final' => 200, 'adjust_reason' => 'x'], $access);
 check($s === 422 && $codes($b) === ['qty_final:BELOW_ORDERS'], 'never below the customer orders');
 [$s, $b] = $call('PATCH', "/planning/plans/{$planId}/lines/{$lines[1]['id']}", ['qty_final' => 288], $access);
@@ -961,6 +963,10 @@ check($s === 200 && count($stockDay) === 1 && $stockDay[0]['date'] === $weekSund
 check(array_sum(array_map(fn($p) => count(array_filter($p['slots'], fn($sl) => $sl['direct_qty'] > 0 && $sl['day'] > $p['latest_day'])), $directP)) === 0
     && $r['data']['totals']['direct_h'] > 0 && abs($r['data']['totals']['direct_h'] + $r['data']['totals']['stock_h'] - $r['data']['totals']['hours']) < 0.05,
     'shipping first: orders never after the truck day; hours split shipping / stock');
+$rp = array_column($r['data']['products'], null, 'item_id');
+check($rp[$itemId]['batch'] == 160 && $rp[$itemId]['batches'] == $rp[$itemId]['quantity'] / 160 && $rp[$semiId]['batch'] == 5
+    && array_sum(array_column($rp[$semiId]['slots'], 'quantity')) == $rp[$semiId]['quantity'] && fmod($rp[$semiId]['quantity'], 5.0) == 0.0,
+    'week: production batch of the product card, quantities in whole batches');
 $call('PATCH', '/referentiels/params/week.stock_days', ['value' => '3,4,5'], $access);
 
 // Pracownik dodany w ERP : obsada zmiany dziennej grupy działu nadąża (osoby × 40 h w Gantcie tygodnia).

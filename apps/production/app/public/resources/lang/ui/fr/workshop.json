@@ -50,7 +50,7 @@
   "f.stock_max": "Stock maximum",
   "f.coverage_days": "Couverture (jours)",
   "f.batch_min": "Lot minimum",
-  "f.batch_multiple": "Multiple de lot",
+  "f.batch_multiple": "Lot de production",
   "f.primary_group_id": "Groupe de production",
   "f.shelf_life_workshop_days": "Durée de vie à l'atelier (jours)",
   "f.shelf_life_shop_days": "Durée de vie en boutique (jours)",
@@ -202,7 +202,7 @@
   "s.h_1000": "h pour 1000 pcs",
   "s.lead": "Du début à la fin",
   "s.reference.pallet": "lot : une palette",
-  "s.reference.batch": "lot minimum",
+  "s.reference.batch": "lot de production",
   "s.reference.thousand": "lot : 1000 pcs",
   "s.next_day": "étape le lendemain",
   "s.week": "Semaine {week}",
@@ -311,5 +311,9 @@
   "st.no_price_n": "{n} sans prix",
   "st.no_card": "sans fiche",
   "st.no_card_help": "Le produit n’a pas encore de fiche de production : elle sera créée à la première modification (MTS, stocks).",
-  "st.stock_all": "Stock aujourd’hui (tous les produits, cartons libres) : {cartons} cart. · {value}."
+  "st.stock_all": "Stock aujourd’hui (tous les produits, cartons libres) : {cartons} cart. · {value}.",
+  "r.batch": "Lot de production",
+  "r.batch_help": "Ce qu'on fait d'un coup (ex. pistolet : 1300 pcs d'une même pâte). Le plan propose des lots entiers — quantité arrondie au multiple du lot — et « Organiser la semaine » place des lots entiers sur les jours. Vide = sans lot.",
+  "r.batch_cartons": "1 lot = {cartons} cart.",
+  "r.batch_over_max": "le stock max. ({max} {unit}) est inférieur au lot — le réassort ne peut pas contenir un lot entier"
 }

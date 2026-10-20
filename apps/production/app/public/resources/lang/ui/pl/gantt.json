@@ -139,5 +139,7 @@
   "week.todo_empty": "Wszystko na dniach ✓",
   "week.drop_full": "{day} : wolne {free} h, produkt potrzebuje {hours} h.",
   "week.drop_fit": "Tyle, ile się mieści : {qty}",
-  "week.drop_all": "Całość : {qty} (przeciążenie dnia)"
+  "week.drop_all": "Całość : {qty} (przeciążenie dnia)",
+  "week.batches": "{n} × partia",
+  "week.batch": "Partia produkcyjna"
 }

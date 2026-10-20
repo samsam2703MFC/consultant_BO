@@ -65,7 +65,8 @@ final class OpenApiPlanning
         $num = ['type' => 'number'];
         $int = ['type' => 'integer'];
         $nInt = ['type' => 'integer', 'nullable' => true];
-        $qty = ['qty_mto' => $num, 'qty_mts' => $num, 'qty_semi' => $num, 'qty_proposed' => $num, 'batches' => $int, 'standard_hours' => $num];
+        $qty = ['qty_mto' => $num, 'qty_mts' => $num, 'qty_semi' => $num, 'qty_proposed' => $num, 'batches' => $int, 'standard_hours' => $num,
+            'batch_size' => ['type' => 'number', 'nullable' => true, 'description' => 'partie de production (fiche, étape « Etapy i czasy ») ; quantités arrondies au multiple']];
         $planSummary = [
             'id' => $int, 'period_start' => ['type' => 'string', 'format' => 'date'], 'period_end' => ['type' => 'string', 'format' => 'date'],
             'status' => ['type' => 'string', 'enum' => PlanningService::STATUSES], 'version' => $int, 'notes' => ['type' => 'string', 'nullable' => true],
@@ -79,7 +80,7 @@ final class OpenApiPlanning
                 'lines' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'item_id' => $int, 'name' => ['type' => 'string'], 'item_type' => ['type' => 'string'], 'mode' => ['type' => 'string'], 'group_id' => $nInt,
                     'due_date' => ['type' => 'string', 'format' => 'date'], 'due_at' => ['type' => 'string', 'description' => 'départ du camion moins le chargement'],
-                    'unit' => ['type' => 'string'], 'customer_orders' => $int, 'late_orders' => ['type' => 'integer', 'description' => 'passées après la clôture'],
+                    'unit' => ['type' => 'string'], 'ppc' => $nInt, 'customer_orders' => $int, 'late_orders' => ['type' => 'integer', 'description' => 'passées après la clôture'],
                     'mts' => ['type' => 'object', 'nullable' => true, 'properties' => [
                         'projected' => $num, 'target' => $num, 'need' => $num, 'qty' => $num, 'capped' => ['type' => 'boolean'], 'below_batch_min' => ['type' => 'boolean'],
                         'daily' => $num, 'coverage_days' => $num, 'free_stock' => $num, 'reason' => ['type' => 'string'],
@@ -203,6 +204,8 @@ final class OpenApiPlanning
                 'products' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'item_id' => $int, 'name' => ['type' => 'string'], 'item_type' => ['type' => 'string'], 'mode' => ['type' => 'string'], 'group_id' => ['type' => 'integer', 'nullable' => true],
                     'unit' => ['type' => 'string'], 'ppc' => ['type' => 'integer', 'nullable' => true], 'quantity' => $num, 'cartons' => ['type' => 'number', 'nullable' => true], 'hours' => $num,
+                    'batch' => ['type' => 'number', 'nullable' => true, 'description' => 'partie de production ; « Ułóż tydzień » et « ce qui tient » placent des parties entières'],
+                    'batches' => ['type' => 'number', 'nullable' => true],
                     'direct' => ['type' => 'number', 'description' => 'à expédier : commandes MTO et semi-finis, avant le départ du camion'], 'stock' => ['type' => 'number', 'description' => 'pour le stock (MTS), jours week.stock_days'],
                     'direct_cartons' => ['type' => 'number', 'nullable' => true], 'stock_cartons' => ['type' => 'number', 'nullable' => true], 'direct_h' => $num, 'stock_h' => $num,
                     'direct_parts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['due_date' => ['type' => 'string', 'format' => 'date'], 'quantity' => $num, 'cartons' => ['type' => 'number', 'nullable' => true]]]],
@@ -210,7 +213,7 @@ final class OpenApiPlanning
                     'done_h' => $num, 'done_pct' => ['type' => 'number', 'nullable' => true], 'state' => ['type' => 'string', 'enum' => ['planned', 'in_progress', 'done']],
                     'unassigned_qty' => $num, 'unassigned_h' => $num, 'over_qty' => $num, 'movable' => ['type' => 'boolean'],
                     'slots' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
-                        'day' => ['type' => 'string', 'format' => 'date'], 'quantity' => $num, 'cartons' => ['type' => 'number', 'nullable' => true], 'hours' => $num, 'done_h' => $num,
+                        'day' => ['type' => 'string', 'format' => 'date'], 'quantity' => $num, 'cartons' => ['type' => 'number', 'nullable' => true], 'batches' => ['type' => 'number', 'nullable' => true], 'hours' => $num, 'done_h' => $num,
                         'direct_qty' => $num, 'stock_qty' => $num, 'direct_cartons' => ['type' => 'number', 'nullable' => true], 'stock_cartons' => ['type' => 'number', 'nullable' => true], 'direct_h' => $num,
                         'stock_off_day' => ['type' => 'boolean', 'description' => 'stock placé hors des jours de stock'],
                         'late' => ['type' => 'boolean', 'description' => 'après l\'échéance de la commande'], 'behind' => ['type' => 'boolean', 'description' => 'jour passé, pas terminé'],

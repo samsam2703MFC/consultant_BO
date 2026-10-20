@@ -133,25 +133,17 @@ final class WeekService
         }
         unset($p);
 
-        // Zadania : części « na wysyłkę » (każdy termin osobno ; to, co już przydzielone, pokrywa najpierw
-        // najbliższe terminy), potem reszta « na magazyn ».
+        // Zadania : części « na wysyłkę » (każdy termin osobno), potem reszta « na magazyn » — w pełnych partiach
+        // produkcyjnych, gdy produkt ma partię (WeekSplit).
         $direct = [];
         $stock = [];
         foreach ($movable as $id => $p) {
             if ($p['unassigned_qty'] <= self::EPS) continue;
-            $assigned = array_sum($p['slots']);
-            $cover = $assigned;
-            $directLeft = 0.0;
-            foreach ($p['direct_parts'] as $due => $qty) {
-                $take = min($qty, $cover);
-                $cover -= $take;
-                if ($qty - $take > self::EPS) {
-                    $direct[] = ['id' => $id, 'qty' => $qty - $take, 'latest' => $this->latestDay($data['days'], $due), 'semi' => $p['item_type'] === 'semi'];
-                    $directLeft += $qty - $take;
-                }
+            $split = WeekSplit::tasks($p['unassigned_qty'], array_sum($p['slots']), $p['direct_parts'], $p['batch']);
+            foreach ($split['direct'] as $due => $qty) {
+                $direct[] = ['id' => $id, 'qty' => $qty, 'latest' => $this->latestDay($data['days'], (string) $due), 'semi' => $p['item_type'] === 'semi'];
             }
-            $stockLeft = round($p['unassigned_qty'] - $directLeft, 3);
-            if ($stockLeft > self::EPS) $stock[] = ['id' => $id, 'qty' => $stockLeft];
+            if ($split['stock'] > self::EPS) $stock[] = ['id' => $id, 'qty' => $split['stock']];
         }
         usort($direct, fn($a, $b) => [$a['latest'], $a['semi'] ? 0 : 1, -$this->hours($data['routings'], $a['id'], $a['qty'])]
             <=> [$b['latest'], $b['semi'] ? 0 : 1, -$this->hours($data['routings'], $b['id'], $b['qty'])]);
@@ -168,7 +160,8 @@ final class WeekService
                 $win = $window ?? (array_values(array_filter($days, fn($d) => $d <= $task['latest'])) ?: [$days[0]]);
                 $free = [];
                 foreach ($win as $day) $free[$day] = ($data['capacity'][$g][$day]['available_h'] ?? 0.0) - ($used[$g][$day] ?? 0.0);
-                foreach ($this->place($task['qty'], $win, $p['ppc'], $p['unit'], $free, fn(float $q) => $this->hours($data['routings'], $id, $q)) as $day => $qty) {
+                $unit = $p['batch'] ?? (float) ($p['ppc'] ?: ($p['unit'] === 'kg' ? 0.1 : 1));
+                foreach (WeekSplit::place($task['qty'], $win, $unit, $free, fn(float $q) => $this->hours($data['routings'], $id, $q)) as $day => $qty) {
                     $slots[$id][$day] = ($slots[$id][$day] ?? 0.0) + $qty;
                     $writes[$id][$day] = $slots[$id][$day];
                     $used[$g][$day] = ($used[$g][$day] ?? 0.0) + $this->hours($data['routings'], $id, $qty);
@@ -182,32 +175,6 @@ final class WeekService
             $this->audit->record($context, 'distribute', 'week', $data['start'], null, ['reset' => $reset, 'slots' => $placed]);
         });
         return $this->present($this->data($data['start'], $context, $now), $context, $now);
-    }
-
-    /**
-     * Wypełnia dni okna po kolei (najwcześniej) ; dzieli na pełne kartony, gdy dzień jest pełny.
-     * To, co się nie mieści, idzie na ostatni dzień okna (przeciążenie).
-     * @param array<string,float> $free wolne godziny w dniach @return array<string,float> dzień => ilość
-     */
-    private function place(float $qty, array $window, ?int $ppc, string $unitName, array $free, callable $hours): array
-    {
-        $unit = $ppc ? (float) $ppc : ($unitName === 'kg' ? 0.1 : 1.0);
-        $out = [];
-        foreach ($window as $i => $day) {
-            if ($qty <= self::EPS) break;
-            $room = max(0.0, $free[$day] ?? 0.0);
-            if ($i === count($window) - 1 || $hours($qty) <= $room + 0.01) {
-                $out[$day] = $qty;
-                break;
-            }
-            if ($room < 0.25) continue;
-            $part = floor($qty * $room / max(0.001, $hours($qty)) / $unit) * $unit;
-            for ($n = 0; $part > 0 && $hours($part) > $room + 0.01 && $n < 50; $n++) $part -= $unit;
-            if ($part < $unit - self::EPS || $part >= $qty - self::EPS) continue;
-            $out[$day] = round($part, 3);
-            $qty = round($qty - $part, 3);
-        }
-        return $out;
     }
 
     /** Dane tygodnia : dni, źródło, produkty z przydziałami, zdolność grup, wykonanie. */
@@ -260,6 +227,7 @@ final class WeekService
             $p ??= ['item_id' => $l['item_id'], 'name' => $it['name'], 'item_type' => $it['item_type'], 'mode' => $it['mode'],
                 'group_id' => $it['id_primary_group'] !== null ? (int) $it['id_primary_group'] : null, 'unit' => $it['base_unit'],
                 'ppc' => $it['item_type'] === 'product' && (int) $it['ppc'] > 0 ? (int) $it['ppc'] : null,
+                'batch' => (float) $it['batch_multiple'] > 0 ? (float) $it['batch_multiple'] : null,
                 'quantity' => 0.0, 'direct' => 0.0, 'stock' => 0.0, 'direct_parts' => [], 'due_date' => null, 'slots' => []];
             $p['quantity'] += $l['qty'];
             if ($l['direct'] > self::EPS) {
@@ -353,6 +321,7 @@ final class WeekService
             // Wysyłka liczy się od najwcześniejszych przydziałów : każdy dzień pokrywa najpierw najbliższe terminy.
             $parts = $p['direct_parts'];
             $cartons = fn(float $q) => $p['ppc'] ? round($q / $p['ppc'], 1) : null;
+            $batches = fn(float $q) => $p['batch'] ? round($q / $p['batch'], 2) : null;
             foreach ($p['slots'] as $day => $qty) {
                 $h = $this->hours($data['routings'], $id, $qty);
                 $slotDone = min($h, $done);
@@ -369,7 +338,7 @@ final class WeekService
                 unset($left);
                 if ($isLate) $late++;
                 $directH = $qty > 0 ? $h * $directQty / $qty : 0.0;
-                $slots[] = ['day' => $day, 'quantity' => round($qty, 3), 'cartons' => $cartons($qty),
+                $slots[] = ['day' => $day, 'quantity' => round($qty, 3), 'cartons' => $cartons($qty), 'batches' => $batches($qty),
                     'direct_qty' => round($directQty, 3), 'stock_qty' => round($qty - $directQty, 3),
                     'direct_cartons' => $cartons($directQty), 'stock_cartons' => $cartons($qty - $directQty),
                     'hours' => round($h, 2), 'direct_h' => round($directH, 2), 'done_h' => round($slotDone, 2), 'late' => $isLate,
@@ -388,7 +357,8 @@ final class WeekService
             $lanes[$g]['direct_h'] = ($lanes[$g]['direct_h'] ?? 0.0) + $directH;
             $products[] = [
                 'item_id' => $id, 'name' => $p['name'], 'item_type' => $p['item_type'], 'mode' => $p['mode'], 'group_id' => $p['group_id'],
-                'unit' => $p['unit'], 'ppc' => $p['ppc'], 'quantity' => $p['quantity'], 'cartons' => $p['ppc'] ? round($p['quantity'] / $p['ppc'], 1) : null,
+                'unit' => $p['unit'], 'ppc' => $p['ppc'], 'batch' => $p['batch'], 'quantity' => $p['quantity'], 'cartons' => $p['ppc'] ? round($p['quantity'] / $p['ppc'], 1) : null,
+                'batches' => $batches($p['quantity']),
                 'direct' => $p['direct'], 'stock' => $p['stock'], 'direct_cartons' => $cartons($p['direct']), 'stock_cartons' => $cartons($p['stock']),
                 'direct_h' => round($directH, 2), 'stock_h' => round($p['hours'] - $directH, 2),
                 'direct_parts' => array_map(fn($d, $q) => ['due_date' => $d, 'quantity' => round($q, 3), 'cartons' => $cartons($q)], array_keys($p['direct_parts']), array_values($p['direct_parts'])),

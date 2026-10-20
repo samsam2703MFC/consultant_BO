@@ -18,6 +18,7 @@ use App\Services\Workshop\Auth\AuthService;
 use App\Services\Workshop\Migration\MigrationRunner;
 use App\Services\Workshop\Planning\DemandCalculator;
 use App\Services\Workshop\Planning\PlanningService;
+use App\Services\Workshop\Planning\WeekSplit;
 use App\Services\Workshop\Product\StandardTime;
 use App\Services\Workshop\Scheduling\Scheduler;
 use App\Services\Workshop\Scheduling\ShiftOptimizer;
@@ -121,6 +122,24 @@ check(StandardTime::defaultComponent($oven) === 'fixed' && StandardTime::default
 // --- Besoins (P3) : lots, MTS plafonné au stock max, surgélateur, semi-finis
 check(DemandCalculator::roundBatch(50, 240, 24) === 240.0 && DemandCalculator::roundBatch(250, 240, 24) === 264.0, 'batch: at least the minimum, in multiples');
 check(DemandCalculator::roundBatch(0, 240, 24) === 0.0 && DemandCalculator::roundBatch(7, null, null) === 7.0, 'no batch rules, no rounding');
+check(DemandCalculator::roundBatch(900, null, 1300) === 1300.0 && DemandCalculator::roundBatch(1400, null, 1300) === 2600.0, 'production batch (pistolet 1300): whole batches');
+
+// --- Tydzień : partia produkcyjna — zadania na wysyłkę w pełnych partiach, dni dzielone na pełne partie
+check(WeekSplit::tasks(2600.0, 0.0, ['2026-10-22' => 900.0], 1300.0) === ['direct' => ['2026-10-22' => 1300.0], 'stock' => 1300.0],
+    'week: 900 pieces to ship = 1 whole batch of 1300 before the truck, the other batch for stock');
+check(WeekSplit::tasks(2600.0, 0.0, ['2026-10-22' => 900.0, '2026-10-23' => 300.0], 1300.0) === ['direct' => ['2026-10-22' => 1300.0], 'stock' => 1300.0],
+    'week: the surplus of a batch covers the next truck');
+check(WeekSplit::tasks(1300.0, 0.0, ['2026-10-22' => 900.0], null) === ['direct' => ['2026-10-22' => 900.0], 'stock' => 400.0],
+    'week without batch: the ordered quantity to ship, the rest for stock');
+check(WeekSplit::tasks(1300.0, 1300.0, ['2026-10-22' => 900.0], 1300.0) === ['direct' => [], 'stock' => 1300.0],
+    'week: what is already on a day covers the nearest truck first');
+$perBatch = fn(float $q) => $q / 1300 * 2.0; // 2 h na partię
+check(WeekSplit::place(3900.0, ['d1', 'd2'], 1300.0, ['d1' => 5.0, 'd2' => 8.0], $perBatch) === ['d1' => 2600.0, 'd2' => 1300.0],
+    'week: a full day takes whole batches (2 of 3 fit in 5 h), the next batch goes to the next day');
+check(WeekSplit::place(3900.0, ['d1', 'd2'], 60.0, ['d1' => 5.0, 'd2' => 8.0], $perBatch) === ['d1' => 3240.0, 'd2' => 660.0],
+    'week without batch: whole cartons');
+check(WeekSplit::place(1300.0, ['d1', 'd2'], 1300.0, ['d1' => 1.0, 'd2' => 8.0], $perBatch) === ['d2' => 1300.0],
+    'week: a batch is never cut — it goes whole to the first day with room');
 $mts = DemandCalculator::mts(60, 7, 60, 600, 180, 0, 180, null, null);
 check($mts['projected'] === 0.0 && $mts['target'] === 420.0 && $mts['qty'] === 420.0, 'MTS: back to coverage × consumption');
 $mts = DemandCalculator::mts(60, 7, 60, 300, 0, 0, 0, null, null);

@@ -225,7 +225,7 @@
     "stock_max": "Stan maksymalny",
     "coverage_days": "Pokrycie (dni)",
     "batch_min": "Partia minimalna",
-    "batch_multiple": "Wielokrotność partii",
+    "batch_multiple": "Partia produkcyjna",
     "shelf_life_workshop_days": "Trwałość w pracowni (dni)",
     "shelf_life_shop_days": "Trwałość w sklepie (dni)",
     "wizard_step": "Krok kreatora",

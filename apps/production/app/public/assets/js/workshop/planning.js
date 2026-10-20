@@ -102,9 +102,13 @@
 
 
     // Sztuki → kartony (produkty) : klient zamawia kartony, w kartonie są sztuki do produkcji.
+    // Pod ilością : kartony (produkt) i partie produkcyjne (karta produktu, krok « Etapy i czasy »).
     function cartons(q, l) {
-        if (!l.ppc || l.item_type === 'semi' || !q) return '';
-        return `<div class="small text-muted">= ${fmt(q / l.ppc, 1)} ${esc(t('cartons_short'))} × ${l.ppc}</div>`;
+        if (!q) return '';
+        const n = l.batch_size ? q / l.batch_size : 0;
+        const batches = l.batch_size ? `<div class="small tfb-plan-batch">${esc(t('batches_line', {n: fmt(n, Math.abs(n - Math.round(n)) < 0.01 ? 0 : 1), size: fmt(l.batch_size, 0), unit: l.unit}))}</div>` : '';
+        if (!l.ppc || l.item_type === 'semi') return batches;
+        return `<div class="small text-muted">= ${fmt(q / l.ppc, 1)} ${esc(t('cartons_short'))} × ${l.ppc}</div>` + batches;
     }
 
     // Ilość surowca : gramy / mililitry powyżej 1000 jako kg / l.

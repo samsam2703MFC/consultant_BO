@@ -41,9 +41,10 @@ final class ProductionSummaryService
         $steps = $this->repo->steps($itemId);
         $ppc = (int) $item['ppc'];
         $cpp = (int) $item['cpp'];
+        // Czasy na partię produkcyjną (krok « Etapy i czasy »), inaczej na paletę albo na 1000.
         [$ref, $refKind] = match (true) {
+            (float) $item['batch_multiple'] > 0 => [(float) $item['batch_multiple'], 'batch'],
             $ppc > 0 && $cpp > 0 => [(float) ($ppc * $cpp), 'pallet'],
-            (float) $item['batch_min'] > 0 => [(float) $item['batch_min'], 'batch'],
             default => [1000.0, 'thousand'],
         };
         $calc = StandardTime::routing($steps, $ref);

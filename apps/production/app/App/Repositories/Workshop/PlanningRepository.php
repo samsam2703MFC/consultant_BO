@@ -129,7 +129,7 @@ final class PlanningRepository extends WorkshopRepository
     public function lines(int $planId): array
     {
         return $this->all(
-            'SELECT l.*, i.item_type, i.base_unit, COALESCE(fp.name, pr.name) AS name, fp.ppc, s.mode, s.id_primary_group, s.stock_max, s.never_frozen
+            'SELECT l.*, i.item_type, i.base_unit, COALESCE(fp.name, pr.name) AS name, fp.ppc, s.mode, s.id_primary_group, s.stock_max, s.never_frozen, s.batch_multiple
              FROM tfb_prod_plan_line l
              JOIN tfb_prod_item i ON i.id = l.id_item
              LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id

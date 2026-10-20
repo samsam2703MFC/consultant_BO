@@ -8372,7 +8372,8 @@
                     },
                     "batch_multiple": {
                         "type": "number",
-                        "nullable": true
+                        "nullable": true,
+                        "description": "partie de production (ex. 1300 pcs) : le plan arrondit au multiple supérieur"
                     },
                     "shelf_life_workshop_days": {
                         "type": "number",
@@ -9507,6 +9508,10 @@
                                 "unit": {
                                     "type": "string"
                                 },
+                                "ppc": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
                                 "customer_orders": {
                                     "type": "integer"
                                 },
@@ -9584,6 +9589,11 @@
                                 },
                                 "standard_hours": {
                                     "type": "number"
+                                },
+                                "batch_size": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "partie de production (fiche, étape « Etapy i czasy ») ; quantités arrondies au multiple"
                                 }
                             }
                         }
@@ -9771,6 +9781,11 @@
                                 },
                                 "standard_hours": {
                                     "type": "number"
+                                },
+                                "batch_size": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "partie de production (fiche, étape « Etapy i czasy ») ; quantités arrondies au multiple"
                                 }
                             }
                         }
@@ -10709,6 +10724,15 @@
                                 "hours": {
                                     "type": "number"
                                 },
+                                "batch": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "partie de production ; « Ułóż tydzień » et « ce qui tient » placent des parties entières"
+                                },
+                                "batches": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
                                 "direct": {
                                     "type": "number",
                                     "description": "à expédier : commandes MTO et semi-finis, avant le départ du camion"
@@ -10799,6 +10823,10 @@
                                                 "type": "number"
                                             },
                                             "cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "batches": {
                                                 "type": "number",
                                                 "nullable": true
                                             },

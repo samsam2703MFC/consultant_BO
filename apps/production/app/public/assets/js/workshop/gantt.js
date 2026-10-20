@@ -278,7 +278,13 @@
     let week = null;
     const dayLabel = (s, long) => parse(s + ' 00:00:00').toLocaleDateString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL', long ? {weekday: 'long', day: '2-digit', month: '2-digit'} : {weekday: 'short', day: '2-digit', month: '2-digit'});
     const hrs = (n) => `${fmt(n, 1)} h`;
-    const qtyText = (p, q) => p.ppc ? `${fmt(q, 0)} ${p.unit} · ${fmt(q / p.ppc, q / p.ppc >= 10 ? 0 : 1)} ${t('week.cartons')}` : `${fmt(q, p.unit === 'kg' ? 1 : 0)} ${p.unit}`;
+    // Partia produkcyjna (karta produktu, krok « Etapy i czasy ») : liczba partii, z ułamkiem tylko gdy niepełna.
+    const batchText = (p, q) => {
+        const n = q / p.batch;
+        return t('week.batches', {n: fmt(n, Math.abs(n - Math.round(n)) < 0.01 ? 0 : 1)});
+    };
+    const qtyText = (p, q) => (p.ppc ? `${fmt(q, 0)} ${p.unit} · ${fmt(q / p.ppc, q / p.ppc >= 10 ? 0 : 1)} ${t('week.cartons')}` : `${fmt(q, p.unit === 'kg' ? 1 : 0)} ${p.unit}`)
+        + (p.batch ? ` · ${batchText(p, q)}` : '');
 
     async function renderWeek() {
         el.innerHTML = header() + filters() + `<div data-week-root><p class="text-muted">${esc(t('loading'))}</p></div><div data-detail></div>`;
@@ -307,6 +313,7 @@
         return {direct: Math.min(direct, p.unassigned_qty), stock: Math.max(0, p.unassigned_qty - direct)};
     }
     const cartonsText = (p, q) => p.ppc ? `${fmt(q / p.ppc, q / p.ppc >= 10 ? 0 : 1)} ${t('week.cart')}` : `${fmt(q, p.unit === 'kg' ? 1 : 0)} ${p.unit}`;
+    const partText = (p, q) => p.batch ? `${batchText(p, q)} · ${cartonsText(p, q)}` : cartonsText(p, q);
 
     function drawWeek() {
         const root = el.querySelector('[data-week-root]');
@@ -401,7 +408,8 @@
                 <div class="tfb-week-track">${todo.map(({p, direct, stock}) => `<button type="button" class="tfb-week-chip ${p.movable ? 'is-movable' : ''} ${direct > 0 ? 'is-direct' : 'is-stock'}" style="--group-color:${esc(color)}" data-item="${p.item_id}" data-from=""
                     title="${esc([p.name, direct > 0 ? '🚚 ' + t('week.direct_part', {qty: qtyText(p, direct)}) + (p.due_date ? ' · ' + t('week.due') + ' ' + dayLabel(p.due_date) : '') : null, stock > 0 ? '📦 ' + t('week.stock_part', {qty: qtyText(p, stock)}) : null, hrs(p.unassigned_h)].filter(Boolean).join(' · '))}">
                     <span class="tfb-week-chip-name">${esc(p.name)}</span>
-                    <span class="tfb-week-chip-qty">${direct > 0 ? '🚚 ' + esc(cartonsText(p, direct)) : ''}${direct > 0 && stock > 0 ? ' · ' : ''}${stock > 0 ? '📦 ' + esc(cartonsText(p, stock)) : ''} <small>${hrs(p.unassigned_h)}</small></span></button>`).join('')}</div>
+                    <span class="tfb-week-chip-qty">${direct > 0 ? '🚚 ' + esc(cartonsText(p, direct)) : ''}${direct > 0 && stock > 0 ? ' · ' : ''}${stock > 0 ? '📦 ' + esc(cartonsText(p, stock)) : ''} <small>${hrs(p.unassigned_h)}</small></span>
+                    ${p.batch ? `<span class="tfb-week-chip-batch">${esc(batchText(p, p.unassigned_qty))} ${fmt(p.batch, 0)} ${esc(p.unit)}</span>` : ''}</button>`).join('')}</div>
             </div>`;
             return `<div class="tfb-week-group" style="--group-color:${esc(color)}">
                 <div class="tfb-week-row" style="--days:${w.days.length}">
@@ -424,7 +432,7 @@
             done > 0 ? t('week.done_part', {pct: fmt(done, 0)}) : null].filter(Boolean).join(' · ');
         return `<button type="button" class="tfb-week-block ${kind} ${p.movable ? 'is-movable' : ''} ${s.late ? 'is-late' : ''} ${s.behind ? 'is-behind' : ''} ${finished ? 'is-finished' : ''}"
             style="--group-color:${esc(color)};--share:${width.toFixed(2)}%" data-item="${p.item_id}" data-from="${s.day}" title="${esc(title)}" aria-label="${esc(title)}">
-            <span class="tfb-week-block-text">${finished ? '✓ ' : ''}<span class="tfb-week-block-icon">${icon}</span> ${esc(p.name)}</span><span class="tfb-week-block-h">${s.cartons !== null ? fmt(s.cartons, 0) + ' ' + esc(t('week.cart')) + ' · ' : ''}${fmt(s.hours, 1)} h</span>
+            <span class="tfb-week-block-text">${finished ? '✓ ' : ''}<span class="tfb-week-block-icon">${icon}</span> ${esc(p.name)}</span><span class="tfb-week-block-h">${p.batch ? esc(batchText(p, s.quantity)) + ' · ' : (s.cartons !== null ? fmt(s.cartons, 0) + ' ' + esc(t('week.cart')) + ' · ' : '')}${fmt(s.hours, 1)} h</span>
             ${done > 0 ? `<span class="tfb-week-block-done" style="width:${done.toFixed(1)}%"></span>` : ''}</button>`;
     }
 
@@ -547,7 +555,7 @@
     }
 
     // Upuszczenie na dzień : gdy produkt nie mieści się w wolnych godzinach grupy, wybór « całość » albo
-    // « tyle, ile się mieści » (pełne kartony) ; z powrotem do « Do zrobienia » — zawsze całość.
+    // « tyle, ile się mieści » (pełne partie produkcyjne, inaczej pełne kartony) ; z powrotem do « Do zrobienia » — zawsze całość.
     async function dropOn(d, target, point) {
         const day = target.dataset.dropDay;
         const p = week.products.find(x => x.item_id === d.item);
@@ -557,7 +565,7 @@
         const g = week.groups.find(x => String(x.id ?? 0) === target.dataset.group);
         const dayRow = g ? g.days.find(x => x.date === day) : null;
         const free = dayRow ? dayRow.available_h - dayRow.required_h : 0;
-        const unit = p.ppc || (p.unit === 'kg' ? 0.1 : 1);
+        const unit = p.batch || p.ppc || (p.unit === 'kg' ? 0.1 : 1);
         const fits = hours > 0 && free > 0 ? Math.floor(qty * Math.min(1, free / hours) / unit) * unit : 0;
         if (hours <= free + 0.05 || fits <= 0 || fits >= qty) return moveProduct(d.item, d.from, day);
         document.querySelector('.tfb-week-dropmenu')?.remove();
@@ -566,8 +574,8 @@
         menu.style.left = `${Math.min(point.x, window.innerWidth - 280)}px`;
         menu.style.top = `${point.y + 6}px`;
         menu.innerHTML = `<div class="small text-muted mb-1">${esc(t('week.drop_full', {day: dayLabel(day), free: fmt(Math.max(0, free), 1), hours: fmt(hours, 1)}))}</div>
-            <button type="button" class="btn btn-sm btn-primary" data-qty="${fits}">${esc(t('week.drop_fit', {qty: cartonsText(p, fits)}))}</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-qty="all">${esc(t('week.drop_all', {qty: cartonsText(p, qty)}))}</button>`;
+            <button type="button" class="btn btn-sm btn-primary" data-qty="${fits}">${esc(t('week.drop_fit', {qty: partText(p, fits)}))}</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-qty="all">${esc(t('week.drop_all', {qty: partText(p, qty)}))}</button>`;
         document.body.appendChild(menu);
         const close = () => { menu.remove(); document.removeEventListener('pointerdown', outside, true); };
         const outside = (e) => { if (!menu.contains(e.target)) close(); };
@@ -608,6 +616,7 @@
                 <dl class="tfb-dl">
                     <dt>${esc(t('week.col_mode'))}</dt><dd>${esc(t('week.mode.' + (p.item_type === 'semi' ? 'semi' : p.mode)))}${p.due_date ? ' · ' + esc(t('week.due')) + ' ' + esc(dayLabel(p.due_date, true)) : ''}</dd>
                     <dt>${esc(t('week.col_qty'))}</dt><dd>${esc(qtyText(p, p.quantity))} · ${hrs(p.hours)}</dd>
+                    ${p.batch ? `<dt>${esc(t('week.batch'))}</dt><dd>${fmt(p.batch, p.unit === 'kg' ? 1 : 0)} ${esc(p.unit)}${p.ppc ? ' · ' + esc(cartonsText(p, p.batch)) : ''}</dd>` : ''}
                     <dt>${esc(t('week.col_days'))}</dt><dd>${p.slots.map(s => `${esc(dayLabel(s.day, true))}: ${esc(qtyText(p, s.quantity))} · ${hrs(s.hours)}${s.late ? ' · <span class="text-danger">' + esc(t('week.late')) + '</span>' : ''}`).join('<br>') || '—'}
                         ${p.unassigned_qty > 0 ? `<div class="text-warning">${esc(t('week.waiting', {qty: qtyText(p, p.unassigned_qty)}))}</div>` : ''}</dd>
                     <dt>${esc(t('week.col_done'))}</dt><dd>${week.source.type === 'plan' ? `${hrs(p.done_h)} · ${p.done_pct === null ? '—' : fmt(p.done_pct, 0) + ' %'} · ${esc(t('week.state.' + p.state))}` : '—'}</dd>

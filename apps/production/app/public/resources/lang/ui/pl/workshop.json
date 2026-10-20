@@ -50,7 +50,7 @@
   "f.stock_max": "Stan maksymalny",
   "f.coverage_days": "Pokrycie (dni)",
   "f.batch_min": "Partia minimalna",
-  "f.batch_multiple": "Wielokrotność partii",
+  "f.batch_multiple": "Partia produkcyjna",
   "f.primary_group_id": "Grupa produkcyjna",
   "f.shelf_life_workshop_days": "Trwałość w pracowni (dni)",
   "f.shelf_life_shop_days": "Trwałość w sklepie (dni)",
@@ -202,7 +202,7 @@
   "s.h_1000": "h na 1000 szt.",
   "s.lead": "Od startu do końca",
   "s.reference.pallet": "partia: paleta",
-  "s.reference.batch": "partia minimalna",
+  "s.reference.batch": "partia produkcyjna",
   "s.reference.thousand": "partia: 1000 szt.",
   "s.next_day": "etap następnego dnia",
   "s.week": "Tydzień {week}",
@@ -311,5 +311,9 @@
   "st.no_price_n": "{n} bez ceny",
   "st.no_card": "bez karty",
   "st.no_card_help": "Produkt nie ma jeszcze karty produkcyjnej : powstanie przy pierwszej zmianie (MTS, stany).",
-  "st.stock_all": "Magazyn dziś (wszystkie produkty, kartony wolne) : {cartons} kart. · {value}."
+  "st.stock_all": "Magazyn dziś (wszystkie produkty, kartony wolne) : {cartons} kart. · {value}.",
+  "r.batch": "Partia produkcyjna",
+  "r.batch_help": "Ile robi się naraz (np. pistolet : 1300 szt. z jednego ciasta). Plan proponuje pełne partie — ilość w górę do wielokrotności partii — a „Ułóż tydzień” kładzie na dni całe partie. Puste = bez partii.",
+  "r.batch_cartons": "1 partia = {cartons} kart.",
+  "r.batch_over_max": "stan maks. ({max} {unit}) jest mniejszy niż partia — uzupełnienie magazynu nie zmieści całej partii"
 }
