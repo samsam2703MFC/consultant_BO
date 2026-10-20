@@ -1407,3 +1407,7 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .at-page-tab:hover { background: var(--at-primary-soft); color: var(--at-primary); }
 .at-page-tab.active { background: var(--at-primary); color: #fff; }
 @media (max-width: 576px) { .at-page-tabs { flex-wrap: nowrap; overflow-x: auto; } .at-page-tabs-title { display: none; } }
+.tfb-stock-sum { margin-bottom: 16px; }
+.tfb-stock-sum .card-header h5 { font-size: 16px; }
+.tfb-stock-sumtable td, .tfb-stock-sumtable th { white-space: nowrap; }
+.tfb-stock-sumtable tfoot th { border-top: 2px solid var(--at-line); }

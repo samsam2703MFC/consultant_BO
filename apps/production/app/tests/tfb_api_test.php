@@ -40,7 +40,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -414,6 +414,12 @@ $row = null;
 foreach ($ov['data']['categories'] ?? [] as $c) foreach ($c['items'] as $i) if ($i['id'] === $itemId) $row = $i;
 check($s === 200 && $ov['data']['params']['max_weeks'] == 3 && $row && $row['weekly_cartons'] == 7 && $row['shops'] === 1 && $row['per_shop_weekly_cartons'] == 7
     && $row['per_shop_weekly_quantity'] == 420 && $row['optimal_cartons'] === 21 && $row['optimal_pallets'] == round(21 / 48, 2) && $row['suggested_min_cartons'] === 7, 'stock overview: weekly sales, per shop per week, optimal cartons and pallets');
+// Zapas docelowy MTS = stan maks. 300 szt. / 60 = 5 kart. ; cena kartonu z WDT 40 € → wartość 200 € ; sumy grupy i całość.
+$grp = null;
+foreach ($ov['data']['groups'] ?? [] as $g) if ($g['id'] === $row['group_id']) $grp = $g['totals'];
+check($row['mode'] === 'MTS' && $row['target_cartons'] === 5 && $row['price_eur'] == 40 && $row['target_value_eur'] == 200 && $row['target_pallets'] == round(5 / 48, 2)
+    && $grp && $grp['target_cartons'] >= 5 && $grp['target_value_eur'] >= 200 && $ov['data']['totals']['mts'] >= 1 && $ov['data']['totals']['target_value_eur'] >= 200,
+    'stock overview: MTS target stock in cartons, pallets and value, totals by group and overall');
 // Stan magazynu : 3 kartony wolne (1 paletyzowany się nie liczy), zamówienie 903 « Nowe » na 3 kartony ;
 // do produkcji poza zamówieniami = stan min. − dostępne.
 check($row['free_cartons'] == 3 && $row['ordered_cartons'] == 3 && $row['available_cartons'] == round(3 - 3 + $row['in_production_cartons'], 1)

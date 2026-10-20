@@ -102,6 +102,7 @@
         const data = await api.get('/produits/stock-overview' + (group ? '?group_id=' + group : ''));
         const p = data.params;
         const n = (v, d) => v === null || v === undefined ? '—' : ui.fmt(v, d ?? 1, api.lang);
+        const eur = (v) => v === null || v === undefined ? '—' : ui.fmt(v, 0, api.lang) + ' €';
         const lastCalc = (v) => v ? new Date(String(v).replace(' ', 'T')).toLocaleDateString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL') : '—';
         const row = (i) => {
             const noPpc = !i.ppc;
@@ -117,13 +118,26 @@
                     <div class="small text-muted text-end">${i.stock_min !== null ? n(i.stock_min, 0) + ' ' + esc(t('st.pcs')) : ''}</div></td>
                 <td><input class="form-control form-control-sm text-end" data-stock="stock_max" inputmode="decimal" value="${i.stock_max_cartons ?? ''}" ${noPpc ? 'disabled' : ''} aria-label="${esc(t('f.stock_max'))}">
                     <div class="small text-muted text-end">${i.stock_max !== null ? n(i.stock_max, 0) + ' ' + esc(t('st.pcs')) : ''}</div></td>
-                <td class="text-end"><strong>${n(i.optimal_cartons, 0)} ${esc(t('st.cart'))}</strong>
-                    <div class="small text-muted">${i.optimal_pallets !== null ? n(i.optimal_pallets, 2) + ' ' + esc(t('st.pal')) : esc(t('st.no_cpp'))} · min ${n(i.suggested_min_cartons, 0)}</div></td>
+                <td class="text-end">${i.mode === 'MTS'
+                    ? `<strong>${n(i.target_cartons, 0)} ${esc(t('st.cart'))}</strong>
+                       <div class="small">${i.target_pallets !== null ? n(i.target_pallets, 2) + ' ' + esc(t('st.pal')) : esc(t('st.no_cpp'))}${i.target_value_eur !== null ? ' · ' + eur(i.target_value_eur) : ''}</div>`
+                    : `<span class="text-muted">—</span>`}
+                    <div class="small text-muted">${esc(t('st.suggest', {c: n(i.optimal_cartons, 0)}))}</div></td>
                 <td class="text-center text-nowrap"><button type="button" class="btn btn-sm btn-outline-primary" data-recalc ${noPpc ? 'disabled' : ''} title="${esc(t('st.recalc_help'))}"><i class="bi bi-arrow-repeat"></i></button>
                     <div class="small text-muted">${esc(lastCalc(i.stock_calc_at))}</div></td></tr>`;
         };
         const all = data.categories.flatMap(c => c.items);
-        const sum = (f) => data.categories.reduce((a, c) => a + (c.totals[f] || 0), 0);
+        const tot = data.totals;
+        // Zapas MTS wg grupy / kategorii : kartony, palety, wartość (cena sprzedaży), surowce, stan dziś.
+        const sumTable = (label, rows) => `<div class="table-responsive"><table class="table table-sm mb-0 tfb-stock-sumtable">
+            <thead><tr><th>${esc(label)}</th><th class="text-end">MTS</th><th class="text-end">${esc(t('st.cart'))}</th><th class="text-end">${esc(t('st.pal'))}</th>
+                <th class="text-end">${esc(t('st.value'))}</th><th class="text-end">${esc(t('st.cost'))}</th><th class="text-end">${esc(t('st.now'))}</th></tr></thead>
+            <tbody>${rows.filter(r => r.totals.mts > 0).map(r => `<tr><td>${esc(r.name)}</td><td class="text-end">${r.totals.mts}/${r.totals.products}</td>
+                <td class="text-end">${n(r.totals.target_cartons, 0)}</td><td class="text-end">${n(r.totals.target_pallets, 1)}</td>
+                <td class="text-end"><strong>${eur(r.totals.target_value_eur)}</strong>${r.totals.no_price ? `<div class="small text-warning">${esc(t('st.no_price_n', {n: r.totals.no_price}))}</div>` : ''}</td><td class="text-end">${eur(r.totals.target_cost_eur)}</td>
+                <td class="text-end">${n(r.totals.current_cartons, 0)} · ${eur(r.totals.current_value_eur)}</td></tr>`).join('') || `<tr><td colspan="7" class="text-muted">${esc(t('st.sum_empty'))}</td></tr>`}</tbody>
+            <tfoot><tr><th>${esc(t('total'))}</th><th class="text-end">${tot.mts}/${tot.products}</th><th class="text-end">${n(tot.target_cartons, 0)}</th><th class="text-end">${n(tot.target_pallets, 1)}</th>
+                <th class="text-end">${eur(tot.target_value_eur)}</th><th class="text-end">${eur(tot.target_cost_eur)}</th><th class="text-end">${n(tot.current_cartons, 0)} · ${eur(tot.current_value_eur)}</th></tr></tfoot></table></div>`;
         el.innerHTML = header() + viewTabs('stock') + `
             <div class="tfb-stock-bar card"><div class="card-body d-flex flex-wrap gap-3 align-items-center justify-content-between">
                 <div>${esc(t('st.params', {min: n(p.min_weeks), max: n(p.max_weeks), weeks: p.weeks}))}
@@ -132,17 +146,28 @@
                     <select class="form-select form-select-sm" data-group style="width:auto"><option value="">${esc(t('col.group'))}: ${esc(t('all'))}</option>
                         ${state.groups.map(g => `<option value="${g.id}" ${group === String(g.id) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
                     <button type="button" class="btn btn-sm btn-primary" data-recalc-all><i class="bi bi-arrow-repeat"></i> ${esc(t('st.recalc_all'))}</button></div>
-                <div class="w-100 small text-muted">${esc(t('st.summary', {products: all.length, mts: all.filter(i => i.mode === 'MTS').length, cartons: n(sum('optimal_cartons'), 0), pallets: n(sum('optimal_pallets'), 1)}))}</div>
+                <div class="w-100 small text-muted">${esc(t('st.summary', {products: all.length, mts: tot.mts, cartons: n(tot.target_cartons, 0), pallets: n(tot.target_pallets, 1), value: eur(tot.target_value_eur)}))}</div>
             </div></div>
+            <div class="card tfb-stock-sum"><div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h5 class="mb-0">${esc(t('st.sum_title'))}</h5>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-csv><i class="bi bi-filetype-csv"></i> ${esc(t('st.csv'))}</button></div>
+                <div class="card-body pt-0"><div class="row g-3">
+                    <div class="col-12">${sumTable(t('col.group'), data.groups.map(g => ({name: groupName(g.id), totals: g.totals})).sort((a, b) => b.totals.target_value_eur - a.totals.target_value_eur))}</div>
+                    <div class="col-12">${sumTable(t('col.category'), data.categories.map(c => ({name: c.name || t('st.no_category'), totals: c.totals})).sort((a, b) => b.totals.target_value_eur - a.totals.target_value_eur))}</div>
+                </div><p class="small text-muted mb-0 mt-2">${esc(t('st.sum_note', {weeks: p.weeks}))}${tot.no_price ? ' ' + esc(t('st.sum_no_price', {n: tot.no_price})) : ''}</p></div></div>
             ${data.categories.map(c => `<div class="card tfb-stock-cat"><div class="card-header d-flex flex-wrap justify-content-between gap-2">
                     <h5 class="mb-0">${esc(c.name || t('st.no_category'))}</h5>
-                    <span class="text-muted small">${esc(t('st.cat_totals', {products: c.totals.products, mts: c.totals.mts, weekly: n(c.totals.weekly_cartons), cartons: n(c.totals.optimal_cartons, 0), pallets: n(c.totals.optimal_pallets, 1)}))}</span></div>
+                    <span class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="text-muted small">${esc(t('st.cat_totals', {products: c.totals.products, mts: c.totals.mts, weekly: n(c.totals.weekly_cartons), cartons: n(c.totals.target_cartons, 0), pallets: n(c.totals.target_pallets, 1), value: eur(c.totals.target_value_eur)}))}</span>
+                        <span class="btn-group btn-group-sm" role="group" aria-label="${esc(t('st.bulk'))}">
+                            <button type="button" class="btn btn-outline-success" data-bulk="MTS" data-cat="${c.id ?? ''}">${esc(t('st.bulk_mts'))}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-bulk="MTO" data-cat="${c.id ?? ''}">${esc(t('st.bulk_mto'))}</button></span></span></div>
                 <div class="card-body pt-0"><div class="table-responsive"><table class="table table-sm align-middle mb-0 tfb-stock-table">
                     <thead><tr><th>${esc(t('col.name'))}</th><th class="text-center">${esc(t('st.col_mode'))}</th>
                         <th class="text-end" title="${esc(t('st.col_weekly_help', {weeks: p.weeks}))}">${esc(t('st.col_weekly'))}</th>
                         <th class="text-end" title="${esc(t('st.col_shop_help'))}">${esc(t('st.col_shop'))}</th>
                         <th class="text-end" style="width:110px">${esc(t('st.col_min'))}</th><th class="text-end" style="width:110px">${esc(t('st.col_max'))}</th>
-                        <th class="text-end" title="${esc(t('st.col_optimal_help', {max: n(p.max_weeks)}))}">${esc(t('st.col_optimal'))}</th><th class="text-center">${esc(t('st.col_calc'))}</th></tr></thead>
+                        <th class="text-end" title="${esc(t('st.col_target_help', {max: n(p.max_weeks)}))}">${esc(t('st.col_target'))}</th><th class="text-center">${esc(t('st.col_calc'))}</th></tr></thead>
                     <tbody>${c.items.map(row).join('')}</tbody></table></div></div></div>`).join('') || `<p class="text-muted">${esc(t('empty_list'))}</p>`}`;
         if (message) ui.notify(true, message);
         const find = (id) => all.find(i => i.id === id);
@@ -168,6 +193,42 @@
                 if (i.suggested_max_cartons <= 0) { ui.notify(false, t('st.no_sales')); return; }
                 save(i, suggested(i), t('st.recalculated', {name: i.name}));
             });
+        });
+        // Cała kategoria na magazyn / na zamówienie : MTS bez stanu maks. dostaje stany ze sprzedaży, bez sprzedaży pomijany.
+        el.querySelectorAll('[data-bulk]').forEach(btn => btn.addEventListener('click', async () => {
+            const mode = btn.dataset.bulk;
+            const cat = data.categories.find(c => String(c.id ?? '') === btn.dataset.cat);
+            const todo = cat.items.filter(i => i.mode !== mode && !(mode === 'MTS' && i.never_frozen));
+            const skipped = mode === 'MTS' ? todo.filter(i => i.stock_max === null && (!i.ppc || i.suggested_max_cartons <= 0)) : [];
+            const go = todo.filter(i => !skipped.includes(i));
+            if (!go.length) { ui.notify(false, t('st.bulk_none')); return; }
+            if (!window.confirm(t('st.bulk_confirm', {n: go.length, mode: t(mode === 'MTS' ? 'st.mts' : 'st.mto'), cat: cat.name || t('st.no_category')}))) return;
+            btn.disabled = true;
+            let done = 0;
+            for (const i of go) {
+                const body = mode === 'MTS' && i.stock_max === null ? {mode, ...suggested(i)} : {mode};
+                try { await api.patch(`/produits/items/${i.id}/settings`, body); done++; } catch (err) { /* produit suivant */ }
+                btn.textContent = `${done}/${go.length}`;
+            }
+            const y = window.scrollY;
+            await renderStock(t('st.bulk_done', {n: done}) + (skipped.length ? ' ' + t('st.bulk_skipped', {n: skipped.length}) : ''));
+            window.scrollTo(0, y);
+        }));
+        // Eksport CSV (średnik, przecinek dziesiętny) : produkty z zapasem docelowym i wartością.
+        el.querySelector('[data-csv]').addEventListener('click', () => {
+            const num = (v, d) => v === null || v === undefined ? '' : Number(v).toFixed(d).replace('.', ',');
+            const cell = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+            const head = ['Grupa', 'Kategoria', 'Produkt', 'Tryb', 'Szt./karton', 'Kart./paleta', 'Sprzedaż kart./tydz.', 'Stan min. (kart.)', 'Stan maks. (kart.)',
+                'Zapas docelowy (kart.)', 'Palety', 'Cena €/karton', 'Wartość zapasu €', 'Surowce €/karton', 'Surowce zapasu €', 'Stan dziś (kart.)', 'Wartość dziś €'];
+            const lines = data.categories.flatMap(c => c.items.map(i => [groupName(i.group_id), c.name || t('st.no_category'), i.name, i.mode, i.ppc ?? '', i.cpp ?? '',
+                num(i.weekly_cartons, 2), num(i.stock_min_cartons, 1), num(i.stock_max_cartons, 1), i.target_cartons, num(i.target_pallets, 2),
+                num(i.price_eur, 2), num(i.target_value_eur, 2), num(i.cost_eur, 2), num(i.target_cost_eur, 2), num(i.free_cartons, 0), num(i.current_value_eur, 2)]));
+            const csv = '\ufeff' + [head, ...lines].map(r => r.map(cell).join(';')).join('\r\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+            a.download = 'zapas-mts-' + new Date().toISOString().slice(0, 10) + '.csv';
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
         });
         el.querySelector('[data-recalc-all]').addEventListener('click', async (e) => {
             const todo = all.filter(i => i.mode === 'MTS' && i.ppc && i.suggested_max_cartons > 0);

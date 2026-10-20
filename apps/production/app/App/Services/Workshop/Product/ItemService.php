@@ -74,6 +74,29 @@ final class ItemService
         $maxWeeks = max($minWeeks, (float) $this->params->get('stock.suggest_max_weeks', '3'));
         $whole = fn(float $c) => (int) ceil(round($c, 6));
         $categories = [];
+        $groups = [];
+        // Zapas MTS (cel = stan maks. karty, bez maks. : propozycja ze sprzedaży) : kartony, palety, wartość
+        // po średniej cenie sprzedaży kartonu (WDT okresu) i po koszcie surowców ; stan wolny dziś obok.
+        $emptyTotals = ['products' => 0, 'mts' => 0, 'weekly_cartons' => 0.0, 'optimal_cartons' => 0, 'optimal_pallets' => 0.0,
+            'target_cartons' => 0, 'target_pallets' => 0.0, 'target_value_eur' => 0.0, 'target_cost_eur' => 0.0,
+            'current_cartons' => 0.0, 'current_value_eur' => 0.0, 'no_price' => 0, 'no_cpp' => 0];
+        $all = $emptyTotals;
+        $add = function (array &$t, array $item, float $weekly, int $optimal) {
+            $t['products']++;
+            $t['weekly_cartons'] = round($t['weekly_cartons'] + $weekly, 2);
+            $t['optimal_cartons'] += $optimal;
+            $t['optimal_pallets'] = round($t['optimal_pallets'] + ($item['optimal_pallets'] ?? 0), 2);
+            if ($item['mode'] !== 'MTS') return;
+            $t['mts']++;
+            $t['target_cartons'] += $item['target_cartons'];
+            $t['target_pallets'] = round($t['target_pallets'] + ($item['target_pallets'] ?? 0), 2);
+            $t['target_value_eur'] = round($t['target_value_eur'] + ($item['target_value_eur'] ?? 0), 2);
+            $t['target_cost_eur'] = round($t['target_cost_eur'] + ($item['target_cost_eur'] ?? 0), 2);
+            $t['current_cartons'] += $item['free_cartons'];
+            $t['current_value_eur'] = round($t['current_value_eur'] + ($item['current_value_eur'] ?? 0), 2);
+            if ($item['price_eur'] === null) $t['no_price']++;
+            if ($item['target_cartons'] > 0 && $item['cpp'] === null) $t['no_cpp']++;
+        };
         foreach ($this->items->stockOverview($weeks * 7, $groupId) as $r) {
             $ppc = (int) $r['ppc'] > 0 ? (int) $r['ppc'] : null;
             $cpp = (int) $r['cpp'] > 0 ? (int) $r['cpp'] : null;
@@ -82,8 +105,7 @@ final class ItemService
             $optimal = $whole($weekly * $maxWeeks);
             $cartons = fn($q) => $q === null || !$ppc ? null : round((float) $q / $ppc, 2);
             $key = $r['id_category'] !== null ? (int) $r['id_category'] : 0;
-            $categories[$key] ??= ['id' => $key ?: null, 'name' => $r['category'], 'items' => [],
-                'totals' => ['products' => 0, 'mts' => 0, 'weekly_cartons' => 0.0, 'optimal_cartons' => 0, 'optimal_pallets' => 0.0]];
+            $categories[$key] ??= ['id' => $key ?: null, 'name' => $r['category'], 'items' => [], 'totals' => $emptyTotals];
             $item = [
                 'id' => (int) $r['id'], 'final_product_id' => (int) $r['id_final_product'], 'name' => $r['name'], 'erp_active' => (bool) $r['erp_active'],
                 'group_id' => $r['id_primary_group'] !== null ? (int) $r['id_primary_group'] : null, 'status' => $r['status'] ?? 'draft',
@@ -96,18 +118,25 @@ final class ItemService
                 'suggested_min_cartons' => $whole($weekly * $minWeeks), 'suggested_max_cartons' => $optimal,
                 'optimal_cartons' => $optimal, 'optimal_pallets' => $cpp ? round($optimal / $cpp, 2) : null,
             ] + $this->stockLevel($r, $ppc, $whole);
+            $shipped = (float) $r['shipped_cartons'];
+            $item['price_eur'] = $shipped > 0 ? round((float) $r['shipped_value_eur'] / $shipped, 2) : null;
+            $item['cost_eur'] = $r['material_cost_eur'] !== null && (float) $r['material_cost_eur'] > 0 ? round((float) $r['material_cost_eur'], 2) : null;
+            $target = $item['mode'] !== 'MTS' ? 0 : ($item['stock_max_cartons'] !== null ? $whole($item['stock_max_cartons']) : $optimal);
+            $item['target_cartons'] = $target;
+            $item['target_pallets'] = $cpp && $target ? round($target / $cpp, 2) : ($target ? null : 0.0);
+            $item['target_value_eur'] = $item['price_eur'] !== null ? round($target * $item['price_eur'], 2) : null;
+            $item['target_cost_eur'] = $item['cost_eur'] !== null ? round($target * $item['cost_eur'], 2) : null;
+            $item['current_value_eur'] = $item['price_eur'] !== null ? round($item['free_cartons'] * $item['price_eur'], 2) : null;
             $categories[$key]['items'][] = $item;
-            $t = &$categories[$key]['totals'];
-            $t['products']++;
-            $t['mts'] += $item['mode'] === 'MTS' ? 1 : 0;
-            $t['weekly_cartons'] = round($t['weekly_cartons'] + $weekly, 2);
-            $t['optimal_cartons'] += $optimal;
-            $t['optimal_pallets'] = round($t['optimal_pallets'] + ($item['optimal_pallets'] ?? 0), 2);
-            unset($t);
+            $add($categories[$key]['totals'], $item, $weekly, $optimal);
+            $g = $item['group_id'] ?? 0;
+            $groups[$g] ??= ['id' => $item['group_id'], 'totals' => $emptyTotals];
+            $add($groups[$g]['totals'], $item, $weekly, $optimal);
+            $add($all, $item, $weekly, $optimal);
         }
         return ['params' => ['weeks' => $weeks, 'min_weeks' => $minWeeks, 'max_weeks' => $maxWeeks,
                     'from' => date('Y-m-d', strtotime('-' . ($weeks * 7) . ' days')), 'to' => date('Y-m-d', strtotime('-1 day'))],
-            'categories' => array_values($categories)];
+            'categories' => array_values($categories), 'groups' => array_values($groups), 'totals' => $all];
     }
 
     /**

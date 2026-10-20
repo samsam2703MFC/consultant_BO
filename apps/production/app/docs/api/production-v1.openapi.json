@@ -2717,7 +2717,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Produits par catégorie : mode MTS / MTO, stocks min./max., ventes WDT (stock.suggest_weeks semaines), moyenne par magasin et par semaine, stock optimal (stock.suggest_max_weeks semaines) en cartons et palettes.",
+                "description": "Produits par catégorie : mode MTS / MTO, stocks min./max., ventes WDT (stock.suggest_weeks semaines), moyenne par magasin et par semaine, stock optimal (stock.suggest_max_weeks semaines) en cartons et palettes ; stock cible MTS (stock max.) en cartons, palettes et valeur (prix moyen de vente, coût matières), totaux par catégorie, par groupe et au total.",
                 "parameters": [
                     {
                         "name": "group_id",
@@ -8472,29 +8472,7 @@
                                     "nullable": true
                                 },
                                 "totals": {
-                                    "type": "object",
-                                    "properties": {
-                                        "products": {
-                                            "type": "integer",
-                                            "nullable": true
-                                        },
-                                        "mts": {
-                                            "type": "integer",
-                                            "nullable": true
-                                        },
-                                        "weekly_cartons": {
-                                            "type": "number",
-                                            "nullable": true
-                                        },
-                                        "optimal_cartons": {
-                                            "type": "integer",
-                                            "nullable": true
-                                        },
-                                        "optimal_pallets": {
-                                            "type": "number",
-                                            "nullable": true
-                                        }
-                                    }
+                                    "$ref": "#/components/schemas/StockTotals"
                                 },
                                 "items": {
                                     "type": "array",
@@ -8627,12 +8605,122 @@
                                             },
                                             "below_min": {
                                                 "type": "boolean"
+                                            },
+                                            "to_produce_cartons": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "price_eur": {
+                                                "type": "number",
+                                                "nullable": true,
+                                                "description": "prix moyen du carton (WDT de la période, PLN → € au taux de la société)"
+                                            },
+                                            "cost_eur": {
+                                                "type": "number",
+                                                "nullable": true,
+                                                "description": "coût matières du carton (recette ERP)"
+                                            },
+                                            "target_cartons": {
+                                                "type": "integer",
+                                                "description": "stock cible MTS : stock max. de la fiche (sinon proposition) ; 0 en MTO"
+                                            },
+                                            "target_pallets": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "target_value_eur": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "target_cost_eur": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "current_value_eur": {
+                                                "type": "number",
+                                                "nullable": true
                                             }
                                         }
                                     }
                                 }
                             }
                         }
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "nullable": true,
+                                    "description": "groupe principal de production"
+                                },
+                                "totals": {
+                                    "$ref": "#/components/schemas/StockTotals"
+                                }
+                            }
+                        }
+                    },
+                    "totals": {
+                        "$ref": "#/components/schemas/StockTotals"
+                    }
+                }
+            },
+            "StockTotals": {
+                "type": "object",
+                "properties": {
+                    "products": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "mts": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "weekly_cartons": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "optimal_cartons": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "optimal_pallets": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "target_cartons": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "target_pallets": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "target_value_eur": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "target_cost_eur": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "current_cartons": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "current_value_eur": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "no_price": {
+                        "type": "integer",
+                        "description": "produits MTS sans vente sur la période (valeur non comptée)"
+                    },
+                    "no_cpp": {
+                        "type": "integer",
+                        "description": "produits MTS sans cartons par palette"
                     }
                 }
             },

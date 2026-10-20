@@ -149,18 +149,23 @@ final class ItemRepository extends WorkshopRepository
      */
     public function stockOverview(int $days, ?int $groupId): array
     {
-        $params = [$days];
+        // Kurs EUR (WDT w PLN przeliczane jak w Rentowności) : średnia cena kartonu i koszt surowców w €.
+        $rate = (float) ($this->all('SELECT exchange_rate_euro FROM erp_company_other_settings ORDER BY id LIMIT 1')[0]['exchange_rate_euro'] ?? 0) ?: 1.0;
+        $params = [$rate, $rate, $days];
         $where = "i.item_type = 'product'";
         if ($groupId !== null) { $where .= ' AND s.id_primary_group = ?'; $params[] = $groupId; }
         return $this->all("SELECT i.id, i.id_final_product, fp.name, fp.id_category, cp.name AS category, fp.ppc, fp.cpp, fp.active AS erp_active,
                                   s.mode, s.never_frozen, s.stock_min, s.stock_max, s.stock_calc_at, s.id_primary_group, s.status,
-                                  COALESCE(w.cartons, 0) AS shipped_cartons, COALESCE(w.shops, 0) AS shops,
+                                  COALESCE(w.cartons, 0) AS shipped_cartons, COALESCE(w.shops, 0) AS shops, COALESCE(w.value_eur, 0) AS shipped_value_eur,
+                                  pr.precalculated_material_cost / ? AS material_cost_eur,
                                   COALESCE(cs.cartons, 0) AS free_cartons, COALESCE(oo.cartons, 0) AS ordered_cartons, COALESCE(mo.pieces, 0) AS in_production
                            FROM tfb_prod_item i
                            JOIN final_product fp ON fp.id = i.id_final_product
                            LEFT JOIN category_product cp ON cp.id = fp.id_category
                            LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id
-                           LEFT JOIN (SELECT p.id_product, SUM(p.quantity) AS cartons, COUNT(DISTINCT w.id_customer) AS shops
+                           LEFT JOIN product_recipe pr ON pr.id = fp.id_recipe
+                           LEFT JOIN (SELECT p.id_product, SUM(p.quantity) AS cartons, COUNT(DISTINCT w.id_customer) AS shops,
+                                             SUM(CASE WHEN UPPER(w.currency) = 'PLN' THEN p.quantity * p.price_carton / ? ELSE p.quantity * p.price_carton END) AS value_eur
                                       FROM document_wdt w JOIN document_wdt_product p ON p.id_document_wdt = w.id
                                       WHERE w.established_date >= CURDATE() - INTERVAL ? DAY AND w.established_date < CURDATE()
                                         AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)

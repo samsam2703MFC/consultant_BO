@@ -32,7 +32,7 @@ final class OpenApiProducts
                 'description' => "Rendement (pièces par heure de travail, par personne et pour le groupe), temps par carton et pour 1000 pièces, durée du début à la fin d'un lot (palette, sinon lot minimum, sinon 1000), étapes avec début depuis le départ et étape suivante : tout de suite, + minutes ou J+1 quand l'attente dure 8 h ou plus ; quantité de la semaine (plan), jours du Gantt de la semaine, opérations."],
             'GET /produits/stock-overview' => ['tag' => $t, 'id' => 'getStockOverview', 'summary' => 'Zapasy wg kategorii / Stocks par catégorie', 'response' => 'StockOverview', 'errors' => [401, 403],
                 'query' => ['group_id' => ['type' => 'integer']],
-                'description' => "Produits par catégorie : mode MTS / MTO, stocks min./max., ventes WDT (stock.suggest_weeks semaines), moyenne par magasin et par semaine, stock optimal (stock.suggest_max_weeks semaines) en cartons et palettes."],
+                'description' => "Produits par catégorie : mode MTS / MTO, stocks min./max., ventes WDT (stock.suggest_weeks semaines), moyenne par magasin et par semaine, stock optimal (stock.suggest_max_weeks semaines) en cartons et palettes ; stock cible MTS (stock max.) en cartons, palettes et valeur (prix moyen de vente, coût matières), totaux par catégorie, par groupe et au total."],
             'GET /produits/items/{id:\d+}/stock-suggestion' => ['tag' => $t, 'id' => 'getItemStockSuggestion', 'summary' => 'Stany ze sprzedaży / Stocks depuis les ventes (étape 4)', 'response' => 'StockSuggestion', 'errors' => [404, 409],
                 'description' => "Ventes WDT (sans doublons) des stock.suggest_weeks dernières semaines : moyenne par semaine ; stock min = stock.suggest_min_weeks semaines, max = stock.suggest_max_weeks semaines, arrondis aux cartons entiers. Rien n'est enregistré."],
             'PUT /produits/items/{id:\d+}/logistics' => ['tag' => $t, 'id' => 'updateItemLogistics', 'summary' => 'Logistyka: karton, paleta, przechowywanie / Logistique : carton, palette, conservation (étape 1)', 'body' => 'ItemLogisticsInput', 'response' => 'Item', 'errors' => [400, 404, 409, 422],
@@ -140,7 +140,7 @@ final class OpenApiProducts
                 'params' => ['type' => 'object', 'properties' => ['weeks' => $int, 'min_weeks' => $num, 'max_weeks' => $num, 'from' => ['type' => 'string'], 'to' => ['type' => 'string']]],
                 'categories' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'id' => ['type' => 'integer', 'nullable' => true], 'name' => ['type' => 'string', 'nullable' => true],
-                    'totals' => ['type' => 'object', 'properties' => ['products' => $int, 'mts' => $int, 'weekly_cartons' => $num, 'optimal_cartons' => $int, 'optimal_pallets' => $num]],
+                    'totals' => ['$ref' => '#/components/schemas/StockTotals'],
                     'items' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                         'id' => $int, 'final_product_id' => $int, 'name' => ['type' => 'string'], 'erp_active' => ['type' => 'boolean'], 'group_id' => ['type' => 'integer', 'nullable' => true],
                         'status' => ['type' => 'string'], 'mode' => ['type' => 'string', 'enum' => ItemService::MODES], 'never_frozen' => ['type' => 'boolean'],
@@ -154,9 +154,23 @@ final class OpenApiProducts
                         'available_cartons' => ['type' => 'number', 'description' => 'stock libre − commandes + OF MTS en cours'],
                         'to_min_cartons' => ['type' => 'integer', 'nullable' => true, 'description' => 'à produire hors commandes pour revenir au stock min.'],
                         'to_max_cartons' => ['type' => 'integer', 'nullable' => true], 'orders_over_stock_cartons' => $int, 'below_min' => ['type' => 'boolean'],
+                        'to_produce_cartons' => $int,
+                        'price_eur' => ['type' => 'number', 'nullable' => true, 'description' => 'prix moyen du carton (WDT de la période, PLN → € au taux de la société)'],
+                        'cost_eur' => ['type' => 'number', 'nullable' => true, 'description' => 'coût matières du carton (recette ERP)'],
+                        'target_cartons' => ['type' => 'integer', 'description' => 'stock cible MTS : stock max. de la fiche (sinon proposition) ; 0 en MTO'],
+                        'target_pallets' => ['type' => 'number', 'nullable' => true], 'target_value_eur' => $num, 'target_cost_eur' => $num, 'current_value_eur' => $num,
                     ]]],
                 ]]],
+                'groups' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'id' => ['type' => 'integer', 'nullable' => true, 'description' => 'groupe principal de production'], 'totals' => ['$ref' => '#/components/schemas/StockTotals']]]],
+                'totals' => ['$ref' => '#/components/schemas/StockTotals'],
             ]],
+            'StockTotals' => ['type' => 'object', 'properties' => [
+                'products' => $int, 'mts' => $int, 'weekly_cartons' => $num, 'optimal_cartons' => $int, 'optimal_pallets' => $num,
+                'target_cartons' => $int, 'target_pallets' => $num, 'target_value_eur' => $num, 'target_cost_eur' => $num,
+                'current_cartons' => $num, 'current_value_eur' => $num,
+                'no_price' => ['type' => 'integer', 'description' => 'produits MTS sans vente sur la période (valeur non comptée)'],
+                'no_cpp' => ['type' => 'integer', 'description' => 'produits MTS sans cartons par palette']]],
             'StockSuggestion' => ['type' => 'object', 'properties' => [
                 'weeks' => ['type' => 'integer'], 'from' => ['type' => 'string', 'format' => 'date'], 'to' => ['type' => 'string', 'format' => 'date'],
                 'unit' => ['type' => 'string'], 'ppc' => ['type' => 'integer'], 'shipped_cartons' => ['type' => 'number'], 'shipped_quantity' => ['type' => 'number'],
