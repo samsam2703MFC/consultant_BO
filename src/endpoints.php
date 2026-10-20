@@ -315,6 +315,8 @@ function todoTaskNames(): array
  */
 function ep_pwa_tasks(): array
 {
+    // L'adresse publique du cockpit, vue d'un navigateur : le bouton de l'e-mail de 19:00 en a besoin (cq_mail.php).
+    if (function_exists('cqMailBase')) { try { cqMailBase(); } catch (Throwable $eB) { /* le bouton attendra */ } }
     $date = $_GET['date'] ?? null;
     if ($date === null || !preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date)) { $date = null; }
 
