@@ -23,11 +23,13 @@ final class OpenApiProducts
             'GET /produits/items/{id:\d+}' => ['tag' => $t, 'id' => 'getItem', 'summary' => 'Karta produkcyjna / Fiche de production complète', 'response' => 'Item', 'errors' => [404]],
             'PATCH /produits/items/{id:\d+}/settings' => ['tag' => $t, 'id' => 'updateItemSettings', 'summary' => 'Tryb, zapasy, grupa, trwałość / Mode, stocks, groupe, durées de vie (étapes 2–3)', 'body' => 'ItemSettingsInput', 'response' => 'Item', 'errors' => [400, 404, 422],
                 'description' => 'Jamais congelé ⇒ jamais MTS (NEVER_FROZEN_MTS) ; MTS ⇒ stock_max obligatoire ; stock_max ≥ stock_min.'],
+            'PUT /produits/items/{id:\d+}/logistics' => ['tag' => $t, 'id' => 'updateItemLogistics', 'summary' => 'Logistyka: karton, paleta, przechowywanie / Logistique : carton, palette, conservation (étape 1)', 'body' => 'ItemLogisticsInput', 'response' => 'Item', 'errors' => [400, 404, 409, 422],
+                'description' => 'Poids, pièces par sachet / carton, cartons par couche et par palette : champs de l\'ERP (final_product). Carton (dimensions, tare, type, EAN), palette et conservation : fiche de production. 409 NOT_ALLOWED_FOR_TYPE pour un semi-fini ; cpp ≤ cpl × lpp (PALLET_OVER_LAYERS).'],
             'PUT /produits/items/{id:\d+}/routing' => ['tag' => $t, 'id' => 'replaceItemRouting', 'summary' => 'Marszruta / Gamme opératoire (étape 5)', 'body' => 'RoutingInput', 'response' => 'Item', 'errors' => [400, 404, 422],
                 'description' => 'Remplace la gamme : étapes avec id mises à jour, sans id créées, absentes supprimées (avec leurs chronométrages). Durée d\'une étape = temps fixe × ⌈quantité ÷ capacité⌉ + temps par pièce × quantité.'],
             'PUT /produits/items/{id:\d+}/bom-losses' => ['tag' => $t, 'id' => 'saveItemBomLosses', 'summary' => 'Straty składników / Pertes de la nomenclature (étape 4)', 'body' => 'BomLossesInput', 'response' => 'Item', 'errors' => [400, 404, 422]],
             'POST /produits/items/{id:\d+}/validate' => ['tag' => $t, 'id' => 'validateItem', 'summary' => 'Zatwierdź kartę / Valider la fiche (étape 7)', 'response' => 'Item', 'errors' => [404, 422],
-                'description' => 'Refusé (422) tant que la liste de contrôle n\'est pas complète : groupe, mode cohérent, stock max en MTS, au moins une étape, un temps par étape.'],
+                'description' => 'Refusé (422) tant que la liste de contrôle n\'est pas complète : groupe, mode cohérent, stock max en MTS, au moins une étape, un temps par étape ; produit : pièces par carton, cuisson renseignée, four dans la gamme si cuit ou précuit (BAKE_WITHOUT_OVEN).'],
             'GET /produits/items/{id:\d+}/duration' => ['tag' => $t, 'id' => 'getItemDuration', 'summary' => 'Czas standardowy dla ilości / Temps standard pour une quantité (étape 6)', 'response' => 'Duration', 'errors' => [404, 422],
                 'query' => ['quantity' => ['type' => 'number', 'exclusiveMinimum' => true, 'minimum' => 0]]],
             'GET /produits/routing-steps/{id:\d+}/time-studies' => ['tag' => $t, 'id' => 'listTimeStudies', 'summary' => 'Pomiary czasu i propozycja normy / Chronométrages et norme proposée', 'response' => 'TimeStudies', 'errors' => [404]],
@@ -51,6 +53,7 @@ final class OpenApiProducts
         return [
             'ItemSettings' => ['type' => 'object', 'properties' => [
                 'mode' => ['type' => 'string', 'enum' => ItemService::MODES], 'never_frozen' => ['type' => 'boolean'],
+                'bake_state' => ['type' => 'string', 'enum' => ItemService::BAKE_STATES, 'nullable' => true, 'description' => 'none = cru, par_baked = précuit, baked = cuit'],
                 'stock_min' => $num, 'stock_max' => $num, 'coverage_days' => $num, 'batch_min' => $num, 'batch_multiple' => $num,
                 'shelf_life_workshop_days' => $num, 'shelf_life_shop_days' => $num, 'primary_group_id' => $int,
                 'status' => ['type' => 'string', 'enum' => ItemService::STATUSES], 'wizard_step' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 7],
@@ -60,11 +63,26 @@ final class OpenApiProducts
                 'id' => ['type' => 'integer'], 'item_type' => ['type' => 'string', 'enum' => ItemService::TYPES],
                 'final_product_id' => $int, 'recipe_id' => $int, 'name' => ['type' => 'string', 'description' => 'nom dans l\'ERP'],
                 'base_unit' => ['type' => 'string', 'example' => 'szt'],
-                'erp' => ['type' => 'object', 'properties' => ['ppc' => $int, 'weight' => $num, 'section_id' => $int, 'active' => ['type' => 'boolean']]],
+                'erp' => ['type' => 'object', 'properties' => ['ppc' => $int, 'weight' => $num, 'ppb' => $int, 'bpc' => $int, 'cpl' => $int, 'lpp' => $int, 'cpp' => $int,
+                    'section_id' => $int, 'active' => ['type' => 'boolean']]],
                 'settings' => ['$ref' => '#/components/schemas/ItemSettings'], 'step_count' => ['type' => 'integer'],
                 'can_edit' => ['type' => 'boolean', 'description' => 'prod.products.write dans le groupe de l\'article'],
             ]],
             'Item' => ['allOf' => [['$ref' => '#/components/schemas/ItemSummary'], ['type' => 'object', 'properties' => [
+                'logistics' => ['type' => 'object', 'nullable' => true, 'description' => 'produit seulement', 'properties' => [
+                    'carton_length_mm' => $int, 'carton_width_mm' => $int, 'carton_height_mm' => $int, 'carton_tare_g' => $int,
+                    'carton_type' => ['type' => 'string', 'nullable' => true], 'carton_ean' => ['type' => 'string', 'nullable' => true],
+                    'pallet_type' => ['type' => 'string', 'nullable' => true], 'storage' => ['type' => 'string', 'nullable' => true],
+                    'computed' => ['type' => 'object', 'properties' => [
+                        'carton_net_kg' => $num, 'carton_gross_kg' => $num, 'pallet_units' => $int, 'pallet_net_kg' => $num, 'pallet_gross_kg' => $num,
+                        'pallet_height_mm' => $int, 'pallet_footprint_mm' => ['type' => 'array', 'nullable' => true, 'items' => ['type' => 'integer']],
+                        'labour_s_per_carton' => $num + ['description' => 'travail par carton pour une palette de production'],
+                    ]],
+                ]],
+                'equipment' => ['type' => 'array', 'description' => 'postes de la gamme (machines, fours…)', 'items' => ['type' => 'object', 'properties' => [
+                    'workstation_id' => ['type' => 'integer'], 'code' => ['type' => 'string'], 'name' => ['type' => 'string'], 'type' => ['type' => 'string'],
+                    'steps' => ['type' => 'array', 'items' => ['type' => 'integer']], 'temperatures_c' => ['type' => 'array', 'items' => ['type' => 'number']],
+                ]]],
                 'routing' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/RoutingStep']],
                 'bom' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'child_kind' => ['type' => 'string', 'enum' => ['material', 'recipe']], 'child_id' => ['type' => 'integer'], 'name' => ['type' => 'string'],
@@ -79,7 +97,7 @@ final class OpenApiProducts
                 'id' => ['type' => 'integer'], 'step_no' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'name_pl' => ['type' => 'string'], 'name_fr' => ['type' => 'string'],
                 'workstation_id' => ['type' => 'integer'], 'workstation' => ['type' => 'object', 'properties' => ['code' => ['type' => 'string'], 'name' => ['type' => 'string'], 'type' => ['type' => 'string']]],
                 'operators_required' => ['type' => 'number'], 'min_level_order' => $int, 'delay_after_s' => ['type' => 'integer'], 'delay_workstation_id' => $int,
-                'cleaning_required' => ['type' => 'boolean'], 'cleaning_time_s' => ['type' => 'integer'],
+                'cleaning_required' => ['type' => 'boolean'], 'cleaning_time_s' => ['type' => 'integer'], 'temperature_c' => $num,
                 'alternatives' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'workstation_id' => ['type' => 'integer'], 'priority' => ['type' => 'integer'],
                 ] + $stepTimes]],
@@ -94,9 +112,24 @@ final class OpenApiProducts
             ]],
             'ItemSettingsInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
                 'mode' => ['type' => 'string', 'enum' => ItemService::MODES], 'never_frozen' => ['type' => 'boolean'],
+                'bake_state' => ['type' => 'string', 'enum' => ItemService::BAKE_STATES, 'nullable' => true],
                 'stock_min' => $num, 'stock_max' => $num, 'coverage_days' => $num, 'batch_min' => $num, 'batch_multiple' => $num,
                 'shelf_life_workshop_days' => $num, 'shelf_life_shop_days' => $num, 'primary_group_id' => $int,
                 'wizard_step' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 7],
+            ]],
+            'ItemLogisticsInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
+                'weight' => ['type' => 'integer', 'minimum' => 1, 'description' => 'g par pièce (ERP)'],
+                'ppc' => ['type' => 'integer', 'minimum' => 1, 'description' => 'pièces par carton (ERP)'],
+                'ppb' => ['type' => 'integer', 'minimum' => 0, 'description' => 'pièces par sachet (ERP, 0 = sans sachet)'],
+                'bpc' => ['type' => 'integer', 'minimum' => 0, 'description' => 'sachets par carton (ERP)'],
+                'cpl' => ['type' => 'integer', 'minimum' => 0, 'description' => 'cartons par couche (ERP)'],
+                'lpp' => ['type' => 'integer', 'minimum' => 0, 'description' => 'couches par palette (ERP)'],
+                'cpp' => ['type' => 'integer', 'minimum' => 0, 'description' => 'cartons par palette (ERP), ≤ cpl × lpp'],
+                'carton_length_mm' => $int, 'carton_width_mm' => $int, 'carton_height_mm' => $int, 'carton_tare_g' => $int,
+                'carton_type' => ['type' => 'string', 'enum' => ItemService::CARTON_TYPES, 'nullable' => true],
+                'carton_ean' => ['type' => 'string', 'pattern' => '^[0-9]{8,14}$', 'nullable' => true],
+                'pallet_type' => ['type' => 'string', 'enum' => ItemService::PALLET_TYPES, 'nullable' => true],
+                'storage' => ['type' => 'string', 'enum' => ItemService::STORAGES, 'nullable' => true],
             ]],
             'RoutingInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['steps'], 'properties' => [
                 'steps' => ['type' => 'array', 'maxItems' => 30, 'items' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['name_pl', 'workstation_id'], 'properties' => [
@@ -106,6 +139,7 @@ final class OpenApiProducts
                     'min_level_order' => $int, 'delay_after_s' => ['type' => 'integer', 'minimum' => 0],
                     'delay_workstation_id' => $int + ['description' => 'poste de type fermentation, froid ou surgelation'],
                     'cleaning_required' => ['type' => 'boolean'], 'cleaning_time_s' => ['type' => 'integer', 'minimum' => 0],
+                    'temperature_c' => $num + ['minimum' => -60, 'maximum' => 400, 'description' => 'four, pousse, froid ou surgélation'],
                     'alternatives' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['workstation_id'], 'properties' => [
                         'workstation_id' => ['type' => 'integer'], 'priority' => ['type' => 'integer', 'minimum' => 1],
                     ] + $stepTimes]],

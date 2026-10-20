@@ -282,6 +282,63 @@ final class LogisticsService
     }
 
     /**
+     * Tydzień logistyki : pojazdy dzień po dniu z paletami, miejscami i wypełnieniem (%), klienci bez
+     * pojazdu i sumy dnia. Pn–pt zawsze, sobota i niedziela tylko z wysyłkami.
+     */
+    public function week(string $date): array
+    {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !strtotime($date)) throw new CustomException('Nieprawidłowa data.', 'errors', 422);
+        $t = strtotime($date);
+        $monday = date('Y-m-d', strtotime('-' . ((int) date('N', $t) - 1) . ' days', $t));
+        $days = [];
+        $trucks = [];
+        for ($i = 0; $i < 7; $i++) {
+            $d = date('Y-m-d', strtotime($monday . " +{$i} days"));
+            $day = $this->day($d);
+            if ($i >= 5 && !$day['totals']['customers']) continue;
+            $used = array_values(array_filter($day['fleet'], fn($v) => $v['customers']));
+            foreach ($used as $v) {
+                $trucks[$v['id']] ??= ['id' => $v['id'], 'label' => $v['label'], 'carrier' => $v['carrier'], 'places' => $v['places'], 'days' => []];
+                $trucks[$v['id']]['days'][$d] = [
+                    'pallets' => $v['pallets'], 'places' => $v['places'], 'fill_pct' => $v['fill_pct'], 'weight_kg' => $v['weight_kg'], 'weight_pct' => $v['weight_pct'],
+                    'over' => $v['over'], 'departure' => $v['departure'],
+                    'customers' => array_map(fn($cid) => $day['by_id'][$cid]['name'], $v['customers']),
+                ];
+            }
+            $places = array_sum(array_map(fn($v) => (int) $v['places'], $used));
+            $loaded = array_sum(array_column($used, 'pallets'));
+            $days[] = [
+                'date' => $d, 'customers' => $day['totals']['customers'], 'orders' => $day['totals']['orders'], 'cartons' => $day['totals']['cartons'],
+                'pallets' => $day['totals']['pallets'], 'loaded' => $loaded, 'places' => $places, 'trucks' => count($used),
+                'fill_pct' => $places > 0 ? $loaded / $places * 100 : null,
+                'unassigned' => ['customers' => count($day['unassigned']), 'pallets' => array_sum(array_column($day['unassigned'], 'pallets'))],
+                'warnings' => count($day['warnings']),
+            ];
+        }
+        foreach ($trucks as &$v) {
+            $v['pallets'] = array_sum(array_column($v['days'], 'pallets'));
+            $v['places_used'] = array_sum(array_map(fn($x) => (int) $x['places'], $v['days']));
+            $v['fill_pct'] = $v['places_used'] > 0 ? $v['pallets'] / $v['places_used'] * 100 : null;
+        }
+        unset($v);
+        usort($trucks, fn($a, $b) => [-count($a['days']), $a['label']] <=> [-count($b['days']), $b['label']]);
+        $places = array_sum(array_column($days, 'places'));
+        $loaded = array_sum(array_column($days, 'loaded'));
+        return [
+            'week_start' => $monday, 'week_end' => date('Y-m-d', strtotime($monday . ' +6 days')), 'iso_week' => (int) date('W', strtotime($monday)),
+            'prev' => date('Y-m-d', strtotime($monday . ' -7 days')), 'next' => date('Y-m-d', strtotime($monday . ' +7 days')), 'today' => date('Y-m-d'),
+            'days' => $days, 'trucks' => $trucks,
+            'totals' => [
+                'customers' => array_sum(array_column($days, 'customers')), 'pallets' => array_sum(array_column($days, 'pallets')),
+                'loaded' => $loaded, 'places' => $places, 'fill_pct' => $places > 0 ? $loaded / $places * 100 : null,
+                'runs' => array_sum(array_column($days, 'trucks')),
+                'unassigned' => array_sum(array_map(fn($d) => $d['unassigned']['pallets'], $days)),
+                'unassigned_customers' => array_sum(array_map(fn($d) => $d['unassigned']['customers'], $days)),
+            ],
+        ];
+    }
+
+    /**
      * Przydział klienta na dzień : trasa (tour_id ; brak klucza = trasa klienta), pojazd (vehicle_id ;
      * „auto” = z pojazdów trasy), kolejność. remember : klient na stałe w wybranej trasie (true) albo
      * usunięty z niej (false).

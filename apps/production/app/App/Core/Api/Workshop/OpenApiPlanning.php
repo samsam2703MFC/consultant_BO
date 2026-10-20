@@ -45,6 +45,16 @@ final class OpenApiPlanning
                 'description' => 'Charge recalculée avec une autre obsada (personnes, heures sup.) ; rien n\'est enregistré.'],
             'PUT /planning/staffing' => ['tag' => $t, 'id' => 'saveStaffing', 'summary' => 'Obsada dnia / Effectif du jour', 'body' => 'StaffingInput', 'response' => 'Load', 'errors' => [400, 422],
                 'description' => 'Effectif d\'un groupe sur un shift un jour donné (remplace les équipes) ; headcount null = retour aux équipes.'],
+            'GET /planning/week' => ['tag' => $t, 'id' => 'getWeek', 'summary' => 'Gantt tygodnia / Gantt de la semaine', 'response' => 'Week', 'errors' => [422],
+                'query' => ['date' => ['type' => 'string', 'format' => 'date', 'description' => 'un jour de la semaine (défaut : aujourd\'hui)']],
+                'description' => "Production à la semaine : un bloc = un produit sur un jour. Quantités des plans validés (figés, clos) dont l'échéance tombe dans la semaine, sinon proposition (commandes + réassort). "
+                    . "Heures = normes des fiches × quantité ; disponibles = effectif × shift sur les jours week.production_days. Ce qui n'est sur aucun jour attend dans unassigned_qty. Réalisé = part des opérations terminées des OF du plan."],
+            'POST /planning/week/move' => ['tag' => $t, 'id' => 'moveWeekProduct', 'summary' => 'Przenieś produkt na dzień / Déplacer un produit sur un jour', 'body' => 'WeekMoveInput', 'response' => 'Week', 'errors' => [400, 403, 422],
+                'description' => "from / to null = « À répartir ». quantity absente = tout le bloc. Jamais vers un jour passé (DAY_IN_PAST) ni hors semaine (DAY_NOT_IN_WEEK). Un bloc après l'échéance de la commande est signalé (late), pas refusé. "
+                    . "À l'ordonnancement, un OF finit au plus tard le dernier jour où son produit est placé (MTS : ce jour devient l'échéance)."],
+            'POST /planning/week/distribute' => ['tag' => $t, 'id' => 'distributeWeek', 'summary' => 'Rozdziel na dni / Répartir par jour', 'body' => 'WeekDistributeInput', 'response' => 'Week', 'errors' => [400, 403, 409, 422],
+                'description' => "Remplit les jours à partir d'aujourd'hui, au plus tôt, échéances les plus proches d'abord ; découpe en cartons entiers quand un jour est plein, jamais après l'échéance (sauf échéance passée). "
+                    . "reset = retire d'abord les placements à partir d'aujourd'hui. Seulement les groupes où l'utilisateur a prod.gantt.move. 409 WEEK_IN_PAST si la semaine est finie."],
             'POST /planning/plans/{id:\d+}/validate' => ['tag' => $t, 'id' => 'validatePlan', 'summary' => 'Zatwierdź plan i utwórz zlecenia / Valider et créer les OF', 'response' => 'Plan', 'errors' => [404, 409],
                 'description' => 'Un seul plan validé par période (409 PLAN_OVERLAP). OF MTO reliés aux commandes clients, OF SEMI reliés à leur OF parent et dus à son démarrage au plus tard.'],
         ];
@@ -168,6 +178,44 @@ final class OpenApiPlanning
                 'headcount' => $int, 'base_headcount' => $int, 'overtime_h' => $num, 'staffing' => ['type' => 'string', 'nullable' => true], 'shift_h' => $num, 'max_operators' => $int,
                 'available_h' => $num, 'required_h' => $num, 'load_pct' => ['type' => 'number', 'nullable' => true], 'target_pct' => $num,
                 'status' => ['type' => 'string', 'enum' => ['under', 'ok', 'over', 'no_team']],
+            ]],
+            'Week' => ['type' => 'object', 'properties' => [
+                'week_start' => ['type' => 'string', 'format' => 'date'], 'week_end' => ['type' => 'string', 'format' => 'date'], 'iso_week' => $int,
+                'today' => ['type' => 'string', 'format' => 'date'], 'now' => ['type' => 'string'],
+                'days' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['date' => ['type' => 'string', 'format' => 'date'], 'weekday' => $int, 'past' => ['type' => 'boolean'], 'today' => ['type' => 'boolean']]]],
+                'source' => ['type' => 'object', 'properties' => ['type' => ['type' => 'string', 'enum' => ['plan', 'demand']], 'plans' => ['type' => 'array', 'items' => ['type' => 'object']]]],
+                'can_move' => ['type' => 'boolean'], 'can_schedule' => ['type' => 'boolean'],
+                'groups' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'id' => ['type' => 'integer', 'nullable' => true], 'name' => ['type' => 'string', 'nullable' => true], 'color' => ['type' => 'string', 'nullable' => true], 'people' => $int,
+                    'hours' => $num, 'available_h' => $num, 'required_h' => $num, 'load_pct' => ['type' => 'number', 'nullable' => true], 'unassigned_h' => $num, 'over_h' => $num,
+                    'done_h' => $num, 'expected_h' => $num, 'movable' => ['type' => 'boolean'],
+                    'days' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        'date' => ['type' => 'string', 'format' => 'date'], 'people' => $int, 'available_h' => $num, 'required_h' => $num, 'free_h' => $num,
+                        'load_pct' => ['type' => 'number', 'nullable' => true], 'status' => ['type' => 'string', 'enum' => ['under', 'ok', 'over', 'no_team', 'free']],
+                    ]]],
+                ]]],
+                'products' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'item_id' => $int, 'name' => ['type' => 'string'], 'item_type' => ['type' => 'string'], 'mode' => ['type' => 'string'], 'group_id' => ['type' => 'integer', 'nullable' => true],
+                    'unit' => ['type' => 'string'], 'ppc' => ['type' => 'integer', 'nullable' => true], 'quantity' => $num, 'cartons' => ['type' => 'number', 'nullable' => true], 'hours' => $num,
+                    'due_date' => ['type' => 'string', 'format' => 'date', 'nullable' => true], 'latest_day' => ['type' => 'string', 'format' => 'date'],
+                    'done_h' => $num, 'done_pct' => ['type' => 'number', 'nullable' => true], 'state' => ['type' => 'string', 'enum' => ['planned', 'in_progress', 'done']],
+                    'unassigned_qty' => $num, 'unassigned_h' => $num, 'over_qty' => $num, 'movable' => ['type' => 'boolean'],
+                    'slots' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        'day' => ['type' => 'string', 'format' => 'date'], 'quantity' => $num, 'cartons' => ['type' => 'number', 'nullable' => true], 'hours' => $num, 'done_h' => $num,
+                        'late' => ['type' => 'boolean', 'description' => 'après l\'échéance de la commande'], 'behind' => ['type' => 'boolean', 'description' => 'jour passé, pas terminé'],
+                    ]]],
+                ]]],
+                'totals' => ['type' => 'object'],
+                'warnings' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['code' => ['type' => 'string'], 'message' => ['type' => 'string']]]],
+            ]],
+            'WeekMoveInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date', 'item_id'], 'properties' => [
+                'date' => ['type' => 'string', 'format' => 'date'], 'item_id' => $int,
+                'from' => ['type' => 'string', 'format' => 'date', 'nullable' => true, 'description' => 'null = « À répartir »'],
+                'to' => ['type' => 'string', 'format' => 'date', 'nullable' => true, 'description' => 'null = retour dans « À répartir »'],
+                'quantity' => ['type' => 'number', 'minimum' => 0, 'exclusiveMinimum' => true, 'nullable' => true],
+            ]],
+            'WeekDistributeInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date'], 'properties' => [
+                'date' => ['type' => 'string', 'format' => 'date'], 'reset' => ['type' => 'boolean'],
             ]],
             'PlanInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['from', 'to'], 'properties' => [
                 'from' => ['type' => 'string', 'format' => 'date'], 'to' => ['type' => 'string', 'format' => 'date', 'description' => 'au plus planning.max_period_days jours'],

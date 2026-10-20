@@ -2764,6 +2764,97 @@
                 "x-permission": "prod.products.write"
             }
         },
+        "/produits/items/{id}/logistics": {
+            "put": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Logistyka: karton, paleta, przechowywanie / Logistique : carton, palette, conservation (étape 1)",
+                "operationId": "updateItemLogistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Item"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Poids, pièces par sachet / carton, cartons par couche et par palette : champs de l'ERP (final_product). Carton (dimensions, tare, type, EAN), palette et conservation : fiche de production. 409 NOT_ALLOWED_FOR_TYPE pour un semi-fini ; cpp ≤ cpl × lpp (PALLET_OVER_LAYERS).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemLogisticsInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.write"
+            }
+        },
         "/produits/items/{id}/routing": {
             "put": {
                 "tags": [
@@ -2988,7 +3079,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Refusé (422) tant que la liste de contrôle n'est pas complète : groupe, mode cohérent, stock max en MTS, au moins une étape, un temps par étape.",
+                "description": "Refusé (422) tant que la liste de contrôle n'est pas complète : groupe, mode cohérent, stock max en MTS, au moins une étape, un temps par étape ; produit : pièces par carton, cuisson renseignée, four dans la gamme si cuit ou précuit (BAKE_WITHOUT_OVEN).",
                 "parameters": [
                     {
                         "name": "id",
@@ -4584,6 +4675,234 @@
                     }
                 ],
                 "x-permission": "prod.plan.validate"
+            }
+        },
+        "/planning/week": {
+            "get": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Gantt tygodnia / Gantt de la semaine",
+                "operationId": "getWeek",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Week"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Production à la semaine : un bloc = un produit sur un jour. Quantités des plans validés (figés, clos) dont l'échéance tombe dans la semaine, sinon proposition (commandes + réassort). Heures = normes des fiches × quantité ; disponibles = effectif × shift sur les jours week.production_days. Ce qui n'est sur aucun jour attend dans unassigned_qty. Réalisé = part des opérations terminées des OF du plan.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "un jour de la semaine (défaut : aujourd'hui)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.read"
+            }
+        },
+        "/planning/week/move": {
+            "post": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Przenieś produkt na dzień / Déplacer un produit sur un jour",
+                "operationId": "moveWeekProduct",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Week"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "from / to null = « À répartir ». quantity absente = tout le bloc. Jamais vers un jour passé (DAY_IN_PAST) ni hors semaine (DAY_NOT_IN_WEEK). Un bloc après l'échéance de la commande est signalé (late), pas refusé. À l'ordonnancement, un OF finit au plus tard le dernier jour où son produit est placé (MTS : ce jour devient l'échéance).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WeekMoveInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.gantt.move"
+            }
+        },
+        "/planning/week/distribute": {
+            "post": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Rozdziel na dni / Répartir par jour",
+                "operationId": "distributeWeek",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Week"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Remplit les jours à partir d'aujourd'hui, au plus tôt, échéances les plus proches d'abord ; découpe en cartons entiers quand un jour est plein, jamais après l'échéance (sauf échéance passée). reset = retire d'abord les placements à partir d'aujourd'hui. Seulement les groupes où l'utilisateur a prod.gantt.move. 409 WEEK_IN_PAST si la semaine est finie.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WeekDistributeInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.gantt.move"
             }
         },
         "/kiosk/devices": {
@@ -6700,6 +7019,16 @@
                     "never_frozen": {
                         "type": "boolean"
                     },
+                    "bake_state": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "par_baked",
+                            "baked"
+                        ],
+                        "nullable": true,
+                        "description": "none = cru, par_baked = précuit, baked = cuit"
+                    },
                     "stock_min": {
                         "type": "number",
                         "nullable": true
@@ -6790,6 +7119,26 @@
                                 "type": "number",
                                 "nullable": true
                             },
+                            "ppb": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "bpc": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "cpl": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "lpp": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "cpp": {
+                                "type": "integer",
+                                "nullable": true
+                            },
                             "section_id": {
                                 "type": "integer",
                                 "nullable": true
@@ -6819,6 +7168,119 @@
                     {
                         "type": "object",
                         "properties": {
+                            "logistics": {
+                                "type": "object",
+                                "nullable": true,
+                                "description": "produit seulement",
+                                "properties": {
+                                    "carton_length_mm": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "carton_width_mm": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "carton_height_mm": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "carton_tare_g": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "carton_type": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "carton_ean": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "pallet_type": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "storage": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "computed": {
+                                        "type": "object",
+                                        "properties": {
+                                            "carton_net_kg": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "carton_gross_kg": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "pallet_units": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "pallet_net_kg": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "pallet_gross_kg": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "pallet_height_mm": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
+                                            "pallet_footprint_mm": {
+                                                "type": "array",
+                                                "nullable": true,
+                                                "items": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "labour_s_per_carton": {
+                                                "type": "number",
+                                                "nullable": true,
+                                                "description": "travail par carton pour une palette de production"
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "equipment": {
+                                "type": "array",
+                                "description": "postes de la gamme (machines, fours…)",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "workstation_id": {
+                                            "type": "integer"
+                                        },
+                                        "code": {
+                                            "type": "string"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "type": {
+                                            "type": "string"
+                                        },
+                                        "steps": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "temperatures_c": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "number"
+                                            }
+                                        }
+                                    }
+                                }
+                            },
                             "routing": {
                                 "type": "array",
                                 "items": {
@@ -6939,6 +7401,10 @@
                     "cleaning_time_s": {
                         "type": "integer"
                     },
+                    "temperature_c": {
+                        "type": "number",
+                        "nullable": true
+                    },
                     "alternatives": {
                         "type": "array",
                         "items": {
@@ -7048,6 +7514,15 @@
                     "never_frozen": {
                         "type": "boolean"
                     },
+                    "bake_state": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "par_baked",
+                            "baked"
+                        ],
+                        "nullable": true
+                    },
                     "stock_min": {
                         "type": "number",
                         "nullable": true
@@ -7084,6 +7559,95 @@
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 7
+                    }
+                }
+            },
+            "ItemLogisticsInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "weight": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "g par pièce (ERP)"
+                    },
+                    "ppc": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "pièces par carton (ERP)"
+                    },
+                    "ppb": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "pièces par sachet (ERP, 0 = sans sachet)"
+                    },
+                    "bpc": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "sachets par carton (ERP)"
+                    },
+                    "cpl": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "cartons par couche (ERP)"
+                    },
+                    "lpp": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "couches par palette (ERP)"
+                    },
+                    "cpp": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "cartons par palette (ERP), ≤ cpl × lpp"
+                    },
+                    "carton_length_mm": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "carton_width_mm": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "carton_height_mm": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "carton_tare_g": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "carton_type": {
+                        "type": "string",
+                        "enum": [
+                            "klapowy",
+                            "fasonowy",
+                            "inny"
+                        ],
+                        "nullable": true
+                    },
+                    "carton_ean": {
+                        "type": "string",
+                        "pattern": "^[0-9]{8,14}$",
+                        "nullable": true
+                    },
+                    "pallet_type": {
+                        "type": "string",
+                        "enum": [
+                            "eur",
+                            "industrial",
+                            "other"
+                        ],
+                        "nullable": true
+                    },
+                    "storage": {
+                        "type": "string",
+                        "enum": [
+                            "frozen",
+                            "chilled",
+                            "ambient"
+                        ],
+                        "nullable": true
                     }
                 }
             },
@@ -7144,6 +7708,13 @@
                                 "cleaning_time_s": {
                                     "type": "integer",
                                     "minimum": 0
+                                },
+                                "temperature_c": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "minimum": -60,
+                                    "maximum": 400,
+                                    "description": "four, pousse, froid ou surgélation"
                                 },
                                 "alternatives": {
                                     "type": "array",
@@ -8505,6 +9076,341 @@
                             "over",
                             "no_team"
                         ]
+                    }
+                }
+            },
+            "Week": {
+                "type": "object",
+                "properties": {
+                    "week_start": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "week_end": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "iso_week": {
+                        "type": "integer"
+                    },
+                    "today": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "now": {
+                        "type": "string"
+                    },
+                    "days": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "date": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "weekday": {
+                                    "type": "integer"
+                                },
+                                "past": {
+                                    "type": "boolean"
+                                },
+                                "today": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    },
+                    "source": {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "plan",
+                                    "demand"
+                                ]
+                            },
+                            "plans": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "can_move": {
+                        "type": "boolean"
+                    },
+                    "can_schedule": {
+                        "type": "boolean"
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "color": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "people": {
+                                    "type": "integer"
+                                },
+                                "hours": {
+                                    "type": "number"
+                                },
+                                "available_h": {
+                                    "type": "number"
+                                },
+                                "required_h": {
+                                    "type": "number"
+                                },
+                                "load_pct": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "unassigned_h": {
+                                    "type": "number"
+                                },
+                                "over_h": {
+                                    "type": "number"
+                                },
+                                "done_h": {
+                                    "type": "number"
+                                },
+                                "expected_h": {
+                                    "type": "number"
+                                },
+                                "movable": {
+                                    "type": "boolean"
+                                },
+                                "days": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "date": {
+                                                "type": "string",
+                                                "format": "date"
+                                            },
+                                            "people": {
+                                                "type": "integer"
+                                            },
+                                            "available_h": {
+                                                "type": "number"
+                                            },
+                                            "required_h": {
+                                                "type": "number"
+                                            },
+                                            "free_h": {
+                                                "type": "number"
+                                            },
+                                            "load_pct": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "under",
+                                                    "ok",
+                                                    "over",
+                                                    "no_team",
+                                                    "free"
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "products": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "item_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "item_type": {
+                                    "type": "string"
+                                },
+                                "mode": {
+                                    "type": "string"
+                                },
+                                "group_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "ppc": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "cartons": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "hours": {
+                                    "type": "number"
+                                },
+                                "due_date": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "latest_day": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "done_h": {
+                                    "type": "number"
+                                },
+                                "done_pct": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "state": {
+                                    "type": "string",
+                                    "enum": [
+                                        "planned",
+                                        "in_progress",
+                                        "done"
+                                    ]
+                                },
+                                "unassigned_qty": {
+                                    "type": "number"
+                                },
+                                "unassigned_h": {
+                                    "type": "number"
+                                },
+                                "over_qty": {
+                                    "type": "number"
+                                },
+                                "movable": {
+                                    "type": "boolean"
+                                },
+                                "slots": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "day": {
+                                                "type": "string",
+                                                "format": "date"
+                                            },
+                                            "quantity": {
+                                                "type": "number"
+                                            },
+                                            "cartons": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "hours": {
+                                                "type": "number"
+                                            },
+                                            "done_h": {
+                                                "type": "number"
+                                            },
+                                            "late": {
+                                                "type": "boolean",
+                                                "description": "après l'échéance de la commande"
+                                            },
+                                            "behind": {
+                                                "type": "boolean",
+                                                "description": "jour passé, pas terminé"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "totals": {
+                        "type": "object"
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "WeekMoveInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "item_id"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "null = « À répartir »"
+                    },
+                    "to": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "null = retour dans « À répartir »"
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "minimum": 0,
+                        "exclusiveMinimum": true,
+                        "nullable": true
+                    }
+                }
+            },
+            "WeekDistributeInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "reset": {
+                        "type": "boolean"
                     }
                 }
             },

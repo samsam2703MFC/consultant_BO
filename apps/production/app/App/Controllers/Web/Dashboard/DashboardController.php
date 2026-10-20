@@ -6,6 +6,7 @@ use App\Core\Web\JsonErrors;
 use App\Services\Dashboard\GrowthActionService;
 use App\Services\Dashboard\ProfitabilityService;
 use App\Services\Dashboard\TodayService;
+use App\Services\Organization\PositionTaskService;
 use App\Services\Staff\StaffBudgetService;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -18,6 +19,7 @@ class DashboardController extends BaseController
         private ProfitabilityService $profitability,
         private GrowthActionService $growth,
         private StaffBudgetService $staffBudget,
+        private PositionTaskService $tasks,
     ) {}
 
     /** Strona startowa: rentowność produkcji (sprzedaż a koszt personelu na dział, brakująca sprzedaż do celu). */
@@ -36,9 +38,40 @@ class DashboardController extends BaseController
     }
 
     /** „Dzisiaj”: wysyłki, braki produkcji, reklamacje, proformy. */
+    /**
+     * Dzisiaj : zadania stanowiska użytkownika, „Do zrobienia” oznaczone według stanowisk i rentowność
+     * grup bieżącego miesiąca (personel / sprzedaż wobec celu, brakująca sprzedaż w €).
+     */
     public function today()
     {
-        $this->view('dashboard/dashboard', $this->today->overview());
+        $data = $this->today->overview();
+        $userId = $this->userId();
+        $mine = $userId ? $this->tasks->myTasks($userId) : ['user' => null, 'groups' => [], 'overdue' => [], 'counts' => []];
+        $names = array_column($this->tasks->positions(), 'name_pl', 'code');
+        $data['todo'] = $this->today->markTodo($data['todo'], $mine['user']['position_code'] ?? null, $names);
+        $data['member'] = $mine['user'];
+        $data['my_counts'] = $mine['counts'];
+        $data['my_tasks'] = $this->openTasks($mine);
+        try {
+            $data['profit'] = $this->profitability->snapshot();
+        } catch (\Throwable $e) {
+            $data['profit'] = null;
+        }
+        $this->view('dashboard/dashboard', $data);
+    }
+
+    /** Zadania stanowiska do zrobienia : zaległe, potem okres bieżący według terminu. */
+    private function openTasks(array $mine): array
+    {
+        $items = array_map(fn($o) => ['task' => $o['task'], 'occurrence' => $o, 'overdue' => true], $mine['overdue']);
+        $current = [];
+        foreach ($mine['groups'] as $group) {
+            foreach ($group['items'] as $it) {
+                if ($it['occurrence'] && $it['occurrence']['status'] === 'open') $current[] = $it + ['overdue' => false, 'frequency' => $group['label']];
+            }
+        }
+        usort($current, fn($a, $b) => $a['occurrence']['due_date'] <=> $b['occurrence']['due_date']);
+        return array_merge($items, $current);
     }
 
     /** Liczniki przy pozycjach menu i wskaźnik rentowności w górnym pasku (assets/js/notifications.js). */

@@ -68,6 +68,23 @@ class TodayService
         ];
     }
 
+    /**
+     * „Do zrobienia” oznaczone według stanowisk : każda pozycja ma stanowiska odpowiedzialne (kody
+     * tfb_position) ; pozycje stanowiska użytkownika są oznaczone jako jego i idą na początek listy.
+     * @param array<string,string> $positionNames kod => nazwa
+     */
+    public function markTodo(array $todo, ?string $positionCode, array $positionNames): array
+    {
+        foreach ($todo as $i => &$item) {
+            $item['mine'] = $positionCode !== null && in_array($positionCode, $item['positions'] ?? [], true);
+            $item['owners'] = array_values(array_filter(array_map(fn($code) => $positionNames[$code] ?? null, $item['positions'] ?? [])));
+            $item['order'] = $i;
+        }
+        unset($item);
+        usort($todo, fn($a, $b) => [$a['mine'] ? 0 : 1, $a['order']] <=> [$b['mine'] ? 0 : 1, $b['order']]);
+        return $todo;
+    }
+
     /** Lista „Do zrobienia”: tylko to, co wymaga ruchu; każda pozycja prowadzi do właściwej strony. */
     private function todo(array $days, array $complaints, array $proformas, int $readyPallets, int $belowMinimum, int $withoutRecipe, ?int $complaintAgeDays): array
     {
@@ -76,40 +93,40 @@ class TodayService
         if ($overdue) {
             $items[] = ['tone' => 'danger', 'icon' => 'bi-calendar-x', 'count' => array_sum(array_column($overdue, 'orders')),
                 'one' => 'zamówienie po terminie wysyłki', 'few' => 'zamówienia po terminie wysyłki', 'many' => 'zamówień po terminie wysyłki',
-                'url' => '/client-orders'];
+                'url' => '/client-orders', 'positions' => ['LOGISTYKA', 'KIEROWNIK_PRODUKCJI']];
         }
         $new = (int) ($complaints['new_count'] ?? 0);
         if ($new) {
             $items[] = ['tone' => $complaintAgeDays !== null && $complaintAgeDays > 7 ? 'danger' : 'warning', 'icon' => 'bi-exclamation-triangle',
                 'count' => $new, 'one' => 'nowa reklamacja czeka na decyzję', 'few' => 'nowe reklamacje czekają na decyzję', 'many' => 'nowych reklamacji czeka na decyzję',
                 'note' => $complaintAgeDays !== null ? 'najstarsza od ' . $complaintAgeDays . ' ' . ($complaintAgeDays === 1 ? 'dnia' : 'dni') : null,
-                'url' => '/franchise-complaints'];
+                'url' => '/franchise-complaints', 'positions' => ['JAKOSC']];
         }
         $review = (int) ($complaints['review_count'] ?? 0);
         if ($review) {
             $items[] = ['tone' => 'warning', 'icon' => 'bi-hourglass-split', 'count' => $review,
-                'one' => 'reklamacja w weryfikacji', 'few' => 'reklamacje w weryfikacji', 'many' => 'reklamacji w weryfikacji', 'url' => '/franchise-complaints'];
+                'one' => 'reklamacja w weryfikacji', 'few' => 'reklamacje w weryfikacji', 'many' => 'reklamacji w weryfikacji', 'url' => '/franchise-complaints', 'positions' => ['JAKOSC']];
         }
         if ($readyPallets) {
             $items[] = ['tone' => 'warning', 'icon' => 'bi-truck', 'count' => $readyPallets,
                 'one' => 'wysyłka gotowa do wystawienia dokumentów', 'few' => 'wysyłki gotowe do wystawienia dokumentów', 'many' => 'wysyłek gotowych do wystawienia dokumentów',
-                'url' => '/shipping-documents/create'];
+                'url' => '/shipping-documents/create', 'positions' => ['LOGISTYKA']];
         }
         if ((int) ($proformas['missing'] ?? 0)) {
             $items[] = ['tone' => 'warning', 'icon' => 'bi-file-earmark-plus', 'count' => (int) $proformas['missing'],
-                'one' => 'otwarte zamówienie bez proformy', 'few' => 'otwarte zamówienia bez proformy', 'many' => 'otwartych zamówień bez proformy', 'url' => '/client-orders'];
+                'one' => 'otwarte zamówienie bez proformy', 'few' => 'otwarte zamówienia bez proformy', 'many' => 'otwartych zamówień bez proformy', 'url' => '/client-orders', 'positions' => ['ADMINISTRACJA']];
         }
         if ((int) ($proformas['not_sent'] ?? 0)) {
             $items[] = ['tone' => 'info', 'icon' => 'bi-envelope', 'count' => (int) $proformas['not_sent'],
-                'one' => 'proforma niewysłana do klienta', 'few' => 'proformy niewysłane do klienta', 'many' => 'proform niewysłanych do klienta', 'url' => '/client-orders'];
+                'one' => 'proforma niewysłana do klienta', 'few' => 'proformy niewysłane do klienta', 'many' => 'proform niewysłanych do klienta', 'url' => '/client-orders', 'positions' => ['ADMINISTRACJA']];
         }
         if ($withoutRecipe) {
             $items[] = ['tone' => 'info', 'icon' => 'bi-journal-x', 'count' => $withoutRecipe,
-                'one' => 'aktywny produkt bez receptury', 'few' => 'aktywne produkty bez receptury', 'many' => 'aktywnych produktów bez receptury', 'url' => '/recipes/new'];
+                'one' => 'aktywny produkt bez receptury', 'few' => 'aktywne produkty bez receptury', 'many' => 'aktywnych produktów bez receptury', 'url' => '/recipes/new', 'positions' => ['KIEROWNIK_PRODUKCJI']];
         }
         if ($belowMinimum) {
             $items[] = ['tone' => 'info', 'icon' => 'bi-box-seam', 'count' => $belowMinimum,
-                'one' => 'produkt poniżej stanu minimalnego', 'few' => 'produkty poniżej stanu minimalnego', 'many' => 'produktów poniżej stanu minimalnego', 'url' => '/stock'];
+                'one' => 'produkt poniżej stanu minimalnego', 'few' => 'produkty poniżej stanu minimalnego', 'many' => 'produktów poniżej stanu minimalnego', 'url' => '/stock', 'positions' => ['KIEROWNIK_PRODUKCJI', 'LOGISTYKA']];
         }
         return $items;
     }

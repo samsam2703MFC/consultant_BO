@@ -15,6 +15,7 @@ use App\Controllers\Api\Workshop\SchedulingController;
 use App\Controllers\Api\Workshop\ShiftTemplateController;
 use App\Controllers\Api\Workshop\TeamController;
 use App\Controllers\Api\Workshop\TimeStudyController;
+use App\Controllers\Api\Workshop\WeekController;
 use App\Controllers\Api\Workshop\WorkstationController;
 
 /**
@@ -72,6 +73,7 @@ final class WorkshopApiRoutes
             ['GET', '/produits/candidates', ItemController::class, 'candidates', 'prod.products.read'],
             ['GET', '/produits/items/{id:\d+}', ItemController::class, 'get', 'prod.products.read'],
             ['PATCH', '/produits/items/{id:\d+}/settings', ItemController::class, 'updateSettings', 'prod.products.write'],
+            ['PUT', '/produits/items/{id:\d+}/logistics', ItemController::class, 'updateLogistics', 'prod.products.write'],
             ['PUT', '/produits/items/{id:\d+}/routing', ItemController::class, 'replaceRouting', 'prod.products.write'],
             ['PUT', '/produits/items/{id:\d+}/bom-losses', ItemController::class, 'saveBomLosses', 'prod.products.write'],
             ['POST', '/produits/items/{id:\d+}/validate', ItemController::class, 'validate', 'prod.products.write'],
@@ -96,6 +98,9 @@ final class WorkshopApiRoutes
             ['POST', '/planning/optimizer/apply', SchedulingController::class, 'applyOptimizer', 'prod.plan.validate'],
             ['POST', '/planning/simulate', SchedulingController::class, 'simulate', 'prod.plan.read'],
             ['PUT', '/planning/staffing', SchedulingController::class, 'saveStaffing', 'prod.plan.validate'],
+            ['GET', '/planning/week', WeekController::class, 'get', 'prod.plan.read'],
+            ['POST', '/planning/week/move', WeekController::class, 'move', 'prod.gantt.move'],
+            ['POST', '/planning/week/distribute', WeekController::class, 'distribute', 'prod.gantt.move'],
 
             ['GET', '/kiosk/devices', ExecutionController::class, 'devices', 'prod.employees.write'],
             ['POST', '/kiosk/devices', ExecutionController::class, 'createDevice', 'prod.employees.write'],

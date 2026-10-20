@@ -14,22 +14,34 @@ use App\Services\Workshop\Referentiel\AuditTrail;
 
 /**
  * Fiche de production d'un article (assistant en 7 étapes) :
- * 1 article de l'ERP · 2 mode et stocks · 3 groupe et durées de vie · 4 nomenclature et pertes ·
- * 5 gamme · 6 contrôle des temps · 7 validation.
+ * 1 article et logistique (carton, palette) · 2 mode et stocks · 3 groupe, cuisson et durées de vie ·
+ * 4 nomenclature et pertes · 5 gamme · 6 contrôle des temps · 7 validation.
  * Règles : jamais congelé ⇒ jamais MTS ; MTS ⇒ stock maximum renseigné ; stock max ≥ stock min ;
  * une étape a un poste actif, une capacité > 0 et au moins un temps ; le poste d'attente
- * (pousse, froid) est un poste de fermentation, de froid ou de surgélation.
+ * (pousse, froid) est un poste de fermentation, de froid ou de surgélation ; un produit cuit ou
+ * précuit passe par un four de sa gamme (le four est un poste : gestion des fours et investissements).
  */
 final class ItemService
 {
     public const TYPES = ['product', 'semi'];
     public const MODES = ['MTO', 'MTS'];
     public const STATUSES = ['draft', 'validated'];
+    public const BAKE_STATES = ['none', 'par_baked', 'baked'];
+    public const CARTON_TYPES = ['klapowy', 'fasonowy', 'inny'];
+    public const PALLET_TYPES = ['eur', 'industrial', 'other'];
+    public const STORAGES = ['frozen', 'chilled', 'ambient'];
     private const DELAY_TYPES = ['fermentation', 'froid', 'surgelation'];
-    private const SETTINGS_FIELDS = ['mode', 'never_frozen', 'stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple',
+    /** Postes où l'étape a une température (four, pousse, froid, surgélation). */
+    private const TEMPERATURE_TYPES = ['four', 'fermentation', 'froid', 'surgelation'];
+    /** Palettes : hauteur du support (mm) et poids à vide (kg) pour la hauteur et le poids brut. */
+    private const PALLETS = ['eur' => ['length_mm' => 1200, 'width_mm' => 800, 'base_mm' => 144, 'tare_kg' => 25.0],
+        'industrial' => ['length_mm' => 1200, 'width_mm' => 1000, 'base_mm' => 144, 'tare_kg' => 30.0]];
+    private const SETTINGS_FIELDS = ['mode', 'never_frozen', 'bake_state', 'stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple',
         'shelf_life_workshop_days', 'shelf_life_shop_days', 'primary_group_id', 'wizard_step'];
+    private const LOGISTICS_FIELDS = ['weight', 'ppc', 'ppb', 'bpc', 'cpl', 'lpp', 'cpp', 'carton_length_mm', 'carton_width_mm', 'carton_height_mm',
+        'carton_tare_g', 'carton_type', 'carton_ean', 'pallet_type', 'storage'];
     private const STEP_FIELDS = ['id', 'name_pl', 'name_fr', 'workstation_id', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass',
-        'operators_required', 'min_level_order', 'delay_after_s', 'delay_workstation_id', 'cleaning_required', 'cleaning_time_s', 'alternatives'];
+        'operators_required', 'min_level_order', 'delay_after_s', 'delay_workstation_id', 'cleaning_required', 'cleaning_time_s', 'temperature_c', 'alternatives'];
     private const ALT_FIELDS = ['workstation_id', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'priority'];
 
     public function __construct(
@@ -66,6 +78,8 @@ final class ItemService
         $samples = json_decode($this->params->get('timing.sample_quantities', '[10,60,240]'), true) ?: [10, 60, 240];
         $lang = $context->translator->lang();
         return $this->summary($row, $context) + [
+            'logistics' => $this->logistics($row, $steps),
+            'equipment' => $this->equipment($steps, $lang),
             'routing' => array_map(fn($s) => $this->presentStep($s, $alternatives[(int) $s['id']] ?? [], $lang), $steps),
             'bom' => $recipeId ? array_map(fn($b) => [
                 'child_kind' => $b['child_kind'],
@@ -133,6 +147,7 @@ final class ItemService
         $v = (new Validator($input, true))->only(self::SETTINGS_FIELDS)
             ->choice('mode', self::MODES)
             ->boolean('never_frozen')
+            ->choice('bake_state', self::BAKE_STATES, false, true)
             ->decimal('stock_min', false, 0, null, true)
             ->decimal('stock_max', false, 0, null, true)
             ->decimal('coverage_days', false, 0, 365, true)
@@ -168,6 +183,54 @@ final class ItemService
         $this->tx->execute(function () use ($id, $data, $row, $context) {
             $this->items->saveSettings($id, $data);
             $this->audit->record($context, 'update', 'item_settings', $id, $row, $data);
+        });
+        return $this->get($id, $context);
+    }
+
+    /**
+     * Étape 1 : logistique du produit. Poids, pièces par sachet / carton, cartons par couche et par
+     * palette restent dans l'ERP (final_product) ; carton (dimensions, tare, type, EAN), palette et
+     * conservation vont dans tfb_prod_item_logistics. Un semi-fini n'a pas de logistique.
+     */
+    public function updateLogistics(int $id, array $input, ApiContext $context): array
+    {
+        $row = $this->load($id);
+        $this->requireWrite($row, $context);
+        if ($row['item_type'] !== 'product') throw new ApiException('NOT_ALLOWED_FOR_TYPE', 409, [], ['item_type' => $row['item_type']]);
+        $v = (new Validator($input, true))->only(self::LOGISTICS_FIELDS)
+            // Colonnes NOT NULL de l'ERP (entiers, 0 = non renseigné) : jamais vidées depuis la fiche.
+            ->integer('weight', false, 1, 100000)
+            ->integer('ppc', false, 1, 100000)
+            ->integer('ppb', false, 0, 100000)
+            ->integer('bpc', false, 0, 100000)
+            ->integer('cpl', false, 0, 1000)
+            ->integer('lpp', false, 0, 100)
+            ->integer('cpp', false, 0, 10000)
+            ->integer('carton_length_mm', false, 1, 3000, true)
+            ->integer('carton_width_mm', false, 1, 3000, true)
+            ->integer('carton_height_mm', false, 1, 3000, true)
+            ->integer('carton_tare_g', false, 0, 100000, true)
+            ->choice('carton_type', self::CARTON_TYPES, false, true)
+            ->string('carton_ean', 14, false, true, '/^[0-9]{8,14}$/', 'INVALID_EAN')
+            ->choice('pallet_type', self::PALLET_TYPES, false, true)
+            ->choice('storage', self::STORAGES, false, true);
+        // Palette : jamais plus de cartons que couches × cartons par couche (valeurs finales).
+        $final = fn(string $f) => $v->provided($f) ? $v->value($f) : $row[$f];
+        $cpl = $final('cpl');
+        $lpp = $final('lpp');
+        $cpp = $final('cpp');
+        if ((int) $cpl > 0 && (int) $lpp > 0 && (int) $cpp > (int) $cpl * (int) $lpp && !$v->hasError('cpp')) {
+            $v->add('cpp', 'PALLET_OVER_LAYERS', ['max' => (int) $cpl * (int) $lpp]);
+        }
+        $v->throwIfInvalid();
+        $data = $v->clean();
+        $erp = array_intersect_key($data, array_flip(['weight', 'ppc', 'ppb', 'bpc', 'cpl', 'lpp', 'cpp']));
+        $own = array_diff_key($data, $erp);
+        $before = array_intersect_key($row, $data);
+        $this->tx->execute(function () use ($id, $row, $erp, $own, $before, $data, $context) {
+            if ($erp) $this->items->updateErpLogistics((int) $row['id_final_product'], $erp);
+            if ($own) $this->items->saveLogistics($id, $own + ['updated_by' => $context->userId]);
+            $this->audit->record($context, 'update', 'item_logistics', $id, $before, $data);
         });
         return $this->get($id, $context);
     }
@@ -209,7 +272,8 @@ final class ItemService
                 ->integer('delay_after_s', false, 0, 7 * 86400)
                 ->integer('delay_workstation_id', false, 1, null, true)
                 ->boolean('cleaning_required')
-                ->integer('cleaning_time_s', false, 0, 86400);
+                ->integer('cleaning_time_s', false, 0, 86400)
+                ->decimal('temperature_c', false, -60, 400, true);
             $stepId = $v->value('id');
             if ($stepId !== null && !isset($current[$stepId])) $v->add('id', 'REFERENCE_NOT_FOUND', ['id' => $stepId]);
             $ws = $workstations[(int) $v->value('workstation_id')] ?? null;
@@ -225,6 +289,7 @@ final class ItemService
             if (!$v->hasError('fixed_time_s') && !$v->hasError('variable_time_s') && $fixed === 0 && $variable == 0.0) $v->add('variable_time_s', 'NO_TIME');
             $cleaning = (bool) $v->value('cleaning_required', false);
             if (!$cleaning && (int) $v->value('cleaning_time_s', 0) > 0) $v->add('cleaning_time_s', 'CLEANING_NOT_REQUIRED');
+            if ($v->value('temperature_c') !== null && $ws && !in_array($ws['type'], self::TEMPERATURE_TYPES, true)) $v->add('temperature_c', 'TEMPERATURE_NOT_FOR_WORKSTATION');
 
             $alternatives = [];
             $altErrors = [];
@@ -269,6 +334,7 @@ final class ItemService
                 'delay_id_workstation' => $v->value('delay_workstation_id'),
                 'cleaning_required' => $cleaning,
                 'cleaning_time_s' => $cleaning ? (int) $v->value('cleaning_time_s', 0) : 0,
+                'temperature_c' => $v->value('temperature_c'),
                 'alternatives' => $alternatives,
             ];
         }
@@ -363,6 +429,12 @@ final class ItemService
             ['field' => 'stock_max', 'code' => 'REQUIRED_FOR_MTS', 'ok' => $row['mode'] !== 'MTS' || $row['stock_max'] !== null],
             ['field' => 'routing', 'code' => 'ROUTING_EMPTY', 'ok' => count($steps) > 0],
         ];
+        if ($row['item_type'] === 'product') {
+            $checks[] = ['field' => 'ppc', 'code' => 'REQUIRED', 'ok' => (int) ($row['ppc'] ?? 0) > 0];
+            $checks[] = ['field' => 'bake_state', 'code' => 'REQUIRED', 'ok' => $row['bake_state'] !== null];
+            $hasOven = (bool) array_filter($steps, fn($s) => $s['workstation_type'] === 'four');
+            $checks[] = ['field' => 'bake_state', 'code' => 'BAKE_WITHOUT_OVEN', 'ok' => !in_array($row['bake_state'], ['par_baked', 'baked'], true) || $hasOven];
+        }
         foreach ($steps as $s) {
             if ((int) $s['fixed_time_s'] === 0 && (float) $s['variable_time_s'] == 0.0) {
                 $checks[] = ['field' => 'routing.' . $s['step_no'], 'code' => 'NO_TIME', 'ok' => false];
@@ -383,12 +455,18 @@ final class ItemService
             'erp' => [
                 'ppc' => $row['ppc'] !== null ? (int) $row['ppc'] : null,
                 'weight' => $row['weight'] !== null ? (float) $row['weight'] : null,
+                'ppb' => $row['ppb'] !== null ? (int) $row['ppb'] : null,
+                'bpc' => $row['bpc'] !== null ? (int) $row['bpc'] : null,
+                'cpl' => $row['cpl'] !== null ? (int) $row['cpl'] : null,
+                'lpp' => $row['lpp'] !== null ? (int) $row['lpp'] : null,
+                'cpp' => $row['cpp'] !== null ? (int) $row['cpp'] : null,
                 'section_id' => $row['id_section'] !== null ? (int) $row['id_section'] : null,
                 'active' => $row['erp_active'] === null ? true : (bool) $row['erp_active'],
             ],
             'settings' => [
                 'mode' => $row['mode'] ?? 'MTO',
                 'never_frozen' => (bool) ($row['never_frozen'] ?? false),
+                'bake_state' => $row['bake_state'] ?? null,
                 'stock_min' => $this->num($row['stock_min']),
                 'stock_max' => $this->num($row['stock_max']),
                 'coverage_days' => $this->num($row['coverage_days']),
@@ -426,6 +504,7 @@ final class ItemService
             'delay_workstation' => $s['delay_id_workstation'] !== null ? ['code' => $s['delay_workstation_code'], 'name' => $s['delay_workstation_name_' . $lang]] : null,
             'cleaning_required' => (bool) $s['cleaning_required'],
             'cleaning_time_s' => (int) $s['cleaning_time_s'],
+            'temperature_c' => $s['temperature_c'] !== null ? (float) $s['temperature_c'] : null,
             'alternatives' => array_map(fn($a) => [
                 'workstation_id' => (int) $a['id_workstation'],
                 'workstation' => ['code' => $a['workstation_code'], 'name' => $a['workstation_name_' . $lang]],
@@ -435,6 +514,66 @@ final class ItemService
                 'priority' => (int) $a['priority'],
             ], $alternatives),
         ];
+    }
+
+    /**
+     * Logistique : champs saisis et valeurs calculées (carton net / brut, palette : pièces, poids,
+     * hauteur ; temps de travail par carton pour une palette de production).
+     */
+    private function logistics(array $row, array $steps): ?array
+    {
+        if ($row['item_type'] !== 'product') return null;
+        $int = fn($v) => $v === null || (int) $v === 0 ? null : (int) $v;
+        $ppc = $int($row['ppc']);
+        $weight = $row['weight'] !== null && (float) $row['weight'] > 0 ? (float) $row['weight'] : null;
+        $cpp = $int($row['cpp']);
+        $lpp = $int($row['lpp']);
+        $tare = $int($row['carton_tare_g']);
+        $height = $int($row['carton_height_mm']);
+        $pallet = self::PALLETS[$row['pallet_type'] ?? ''] ?? null;
+        $cartonNet = $ppc && $weight !== null ? $ppc * $weight / 1000 : null;
+        $cartonGross = $cartonNet !== null && $tare !== null ? $cartonNet + $tare / 1000 : null;
+        $palletUnits = $ppc && $cpp ? $ppc * $cpp : null;
+        $labourPerCarton = null;
+        if ($ppc && $steps) {
+            $quantity = $palletUnits ?: $ppc * 10;
+            $calc = StandardTime::routing($steps, (float) $quantity);
+            $labourPerCarton = $calc['labour_s_per_unit'] === null ? null : round($calc['labour_s_per_unit'] * $ppc, 1);
+        }
+        return [
+            'carton_length_mm' => $int($row['carton_length_mm']),
+            'carton_width_mm' => $int($row['carton_width_mm']),
+            'carton_height_mm' => $height,
+            'carton_tare_g' => $tare,
+            'carton_type' => $row['carton_type'],
+            'carton_ean' => $row['carton_ean'],
+            'pallet_type' => $row['pallet_type'],
+            'storage' => $row['storage'],
+            'computed' => [
+                'carton_net_kg' => $cartonNet === null ? null : round($cartonNet, 3),
+                'carton_gross_kg' => $cartonGross === null ? null : round($cartonGross, 3),
+                'pallet_units' => $palletUnits,
+                'pallet_net_kg' => $cartonNet !== null && $cpp ? round($cartonNet * $cpp, 1) : null,
+                'pallet_gross_kg' => $cartonGross !== null && $cpp && $pallet ? round($cartonGross * $cpp + $pallet['tare_kg'], 1) : null,
+                'pallet_height_mm' => $height && $lpp && $pallet ? $height * $lpp + $pallet['base_mm'] : null,
+                'pallet_footprint_mm' => $pallet ? [$pallet['length_mm'], $pallet['width_mm']] : null,
+                'labour_s_per_carton' => $labourPerCarton,
+            ],
+        ];
+    }
+
+    /** Postes de la gamme (machines, fours, robots…) : base de la gestion des fours et des investissements. */
+    private function equipment(array $steps, string $lang): array
+    {
+        $out = [];
+        foreach ($steps as $s) {
+            $id = (int) $s['id_workstation'];
+            $out[$id] ??= ['workstation_id' => $id, 'code' => $s['workstation_code'], 'name' => $s['workstation_name_' . $lang],
+                'type' => $s['workstation_type'], 'steps' => [], 'temperatures_c' => []];
+            $out[$id]['steps'][] = (int) $s['step_no'];
+            if ($s['temperature_c'] !== null) $out[$id]['temperatures_c'][] = (float) $s['temperature_c'];
+        }
+        return array_values($out);
     }
 
     private function recipeId(array $row): ?int

@@ -318,55 +318,6 @@
 
                 <li class="sidebar-item has-sub">
                     <a href="#" class="sidebar-link">
-                        <i class="bi bi-truck"></i>
-                        <span>Wysyłka</span>
-                    </a>
-                    <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/logistics">
-                                <i class="bi bi-stack"></i> Załadunek: klienci i palety
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/logistics/tours">
-                                <i class="bi bi-signpost-split"></i> Trasy
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/logistics/vehicles">
-                                <i class="bi bi-truck"></i> Pojazdy i pojemność
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/shipping/wizard">
-                                <i class="bi bi-calendar-check"></i> Wyślij dzień
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/shipping-documents/create">
-                                <i class="bi bi-file-earmark-plus"></i> WZ + CMR
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/shipments">
-                                <i class="bi bi-check2-square"></i> Wysyłki (wygenerowane)
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/shipping-transport-documents">
-                                <i class="bi bi-truck"></i> Dokumenty transportowe
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/product-carriers">
-                                <i class="bi bi-truck"></i> Przewoźnicy
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
                         <i class="bi bi-file-earmark-text"></i>
                         <span>Proformy i faktury</span>
                     </a>
@@ -516,6 +467,75 @@
                         <li class="submenu-item">
                             <a href="{{ root }}/archive/documents/future/complaint-picking-lists">
                                 <i class="bi bi-card-checklist"></i> Listy kompletacyjne zwrotów
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-title">Logistyka</li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/logistics/week" class="sidebar-link">
+                        <i class="bi bi-calendar-week"></i>
+                        <span>Tydzień: ciężarówki</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/logistics" class="sidebar-link">
+                        <i class="bi bi-stack"></i>
+                        <span>Załadunek dnia</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-signpost-split"></i>
+                        <span>Trasy i pojazdy</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/logistics/tours">
+                                <i class="bi bi-signpost-split"></i> Trasy
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/logistics/vehicles">
+                                <i class="bi bi-truck"></i> Pojazdy i pojemność
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-truck"></i>
+                        <span>Wysyłka</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/shipping/wizard">
+                                <i class="bi bi-calendar-check"></i> Wyślij dzień
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/shipping-documents/create">
+                                <i class="bi bi-file-earmark-plus"></i> WZ + CMR
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/shipments">
+                                <i class="bi bi-check2-square"></i> Wysyłki (wygenerowane)
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/shipping-transport-documents">
+                                <i class="bi bi-truck"></i> Dokumenty transportowe
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/product-carriers">
+                                <i class="bi bi-truck"></i> Przewoźnicy
                             </a>
                         </li>
                     </ul>

@@ -14,21 +14,27 @@ final class ItemRepository extends WorkshopRepository
     protected array $writable = ['item_type', 'id_final_product', 'id_recipe', 'base_unit'];
 
     private const SETTINGS = ['mode', 'never_frozen', 'stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple',
-        'shelf_life_workshop_days', 'shelf_life_shop_days', 'id_primary_group', 'status', 'wizard_step', 'validated_at', 'validated_by', 'updated_by'];
+        'shelf_life_workshop_days', 'shelf_life_shop_days', 'id_primary_group', 'status', 'wizard_step', 'validated_at', 'validated_by', 'updated_by', 'bake_state'];
     private const STEP = ['step_no', 'name_pl', 'name_fr', 'id_workstation', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass',
-        'operators_required', 'min_level_order', 'delay_after_s', 'delay_id_workstation', 'cleaning_required', 'cleaning_time_s'];
+        'operators_required', 'min_level_order', 'delay_after_s', 'delay_id_workstation', 'cleaning_required', 'cleaning_time_s', 'temperature_c'];
+    private const LOGISTICS = ['carton_length_mm', 'carton_width_mm', 'carton_height_mm', 'carton_tare_g', 'carton_type', 'carton_ean', 'pallet_type', 'storage', 'updated_by'];
+    /** Champs logistiques de l'ERP (final_product) modifiables depuis la fiche. */
+    private const ERP_LOGISTICS = ['weight', 'ppc', 'ppb', 'bpc', 'cpl', 'lpp', 'cpp'];
     private const ALT = ['id_workstation', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'priority'];
 
     private const SELECT = "SELECT i.id, i.item_type, i.id_final_product, i.id_recipe, i.base_unit, i.created_at,
             COALESCE(fp.name, pr.name) AS name, fp.ppc, fp.weight, fp.id_section, fp.active AS erp_active, fp.id_recipe AS product_recipe_id,
-            s.mode, s.never_frozen, s.stock_min, s.stock_max, s.coverage_days, s.batch_min, s.batch_multiple,
+            fp.ppb, fp.bpc, fp.cpl, fp.lpp, fp.cpp,
+            s.mode, s.never_frozen, s.bake_state, s.stock_min, s.stock_max, s.coverage_days, s.batch_min, s.batch_multiple,
             s.shelf_life_workshop_days, s.shelf_life_shop_days, s.id_primary_group, s.status, s.wizard_step,
             s.validated_at, s.validated_by, s.updated_at AS settings_updated_at,
+            lg.carton_length_mm, lg.carton_width_mm, lg.carton_height_mm, lg.carton_tare_g, lg.carton_type, lg.carton_ean, lg.pallet_type, lg.storage,
             (SELECT COUNT(*) FROM tfb_prod_routing_step r WHERE r.id_item = i.id) AS step_count
         FROM tfb_prod_item i
         LEFT JOIN final_product fp ON fp.id = i.id_final_product
         LEFT JOIN product_recipe pr ON pr.id = i.id_recipe
-        LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id";
+        LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id
+        LEFT JOIN tfb_prod_item_logistics lg ON lg.id_item = i.id";
 
     public function list(?string $type, ?int $groupId, ?string $status, ?string $mode, ?string $search): array
     {
@@ -100,6 +106,28 @@ final class ItemRepository extends WorkshopRepository
             $columns ? implode(', ', array_map(fn($c) => "{$c} = VALUES({$c})", $columns)) : 'id_item = id_item'
         );
         $this->db->prepare($sql)->execute([$itemId, ...array_map(fn($v) => is_bool($v) ? (int) $v : $v, array_values($data))]);
+    }
+
+    public function saveLogistics(int $itemId, array $data): void
+    {
+        $data = array_intersect_key($data, array_flip(self::LOGISTICS));
+        if (!$data) return;
+        $columns = array_keys($data);
+        $sql = sprintf(
+            'INSERT INTO tfb_prod_item_logistics (id_item, %s) VALUES (?%s) ON DUPLICATE KEY UPDATE %s',
+            implode(', ', $columns), str_repeat(', ?', count($columns)),
+            implode(', ', array_map(fn($c) => "{$c} = VALUES({$c})", $columns))
+        );
+        $this->db->prepare($sql)->execute([$itemId, ...array_values($data)]);
+    }
+
+    /** Pola logistyczne produktu w ERP (waga, sztuk / opakowanie / karton, kartony na warstwę i paletę). */
+    public function updateErpLogistics(int $finalProductId, array $data): void
+    {
+        $data = array_intersect_key($data, array_flip(self::ERP_LOGISTICS));
+        if (!$data) return;
+        $set = implode(', ', array_map(fn($c) => "{$c} = ?", array_keys($data)));
+        $this->db->prepare("UPDATE final_product SET {$set} WHERE id = ?")->execute([...array_values($data), $finalProductId]);
     }
 
     public function steps(int $itemId): array

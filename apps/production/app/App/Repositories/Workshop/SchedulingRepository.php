@@ -124,6 +124,11 @@ final class SchedulingRepository extends WorkshopRepository
         $this->db->prepare("DELETE FROM tfb_prod_order WHERE id IN ({$in}) AND status = 'planned'")->execute(array_values($orderIds));
     }
 
+    public function setOrderDue(int $orderId, string $dueAt): void
+    {
+        $this->db->prepare('UPDATE tfb_prod_order SET due_at = ? WHERE id = ?')->execute([$dueAt, $orderId]);
+    }
+
     public function deleteUnlocked(array $orderIds): void
     {
         if (!$orderIds) return;

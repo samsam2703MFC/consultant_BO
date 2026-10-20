@@ -49,6 +49,11 @@ final class ItemController
         return new ApiResult($this->items->updateSettings($request->id(), $request->body(), $request->context));
     }
 
+    public function updateLogistics(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->items->updateLogistics($request->id(), $request->body(), $request->context));
+    }
+
     public function replaceRouting(ApiRequest $request): ApiResult
     {
         return new ApiResult($this->items->replaceRouting($request->id(), $request->body(), $request->context));

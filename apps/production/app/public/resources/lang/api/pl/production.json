@@ -50,7 +50,14 @@
     "QR_EXPIRED": "Kod QR wygasł — zeskanuj ponownie kod na tablecie.",
     "QR_INVALID": "Nieprawidłowy kod QR — zeskanuj kod wyświetlany na tablecie.",
     "PHONE_UNAUTHENTICATED": "Telefon nie jest zarejestrowany — wybierz swoje nazwisko i podaj PIN.",
-    "PHONE_REVOKED": "Rejestracja telefonu wygasła lub została odwołana — zarejestruj telefon ponownie."
+    "PHONE_REVOKED": "Rejestracja telefonu wygasła lub została odwołana — zarejestruj telefon ponownie.",
+    "NOT_ALLOWED_FOR_TYPE": "Niedostępne dla tego typu artykułu.",
+    "WEEK_IN_PAST": "Tydzień {week} już minął — nie ma dni, na które można rozdzielić produkcję.",
+    "WEEK_WARNING_NO_PLAN": "Brak zatwierdzonego planu na ten tydzień — ilości z propozycji (zamówienia + uzupełnienie stanów). Zatwierdź plan w „Plany”, aby śledzić wykonanie.",
+    "WEEK_WARNING_UNASSIGNED": "{count} produktów ({hours} h) czeka w „Do rozplanowania” — przeciągnij je na dzień albo użyj „Rozdziel na dni”.",
+    "WEEK_WARNING_GROUP_OVERLOAD": "{group}: brakuje {hours} h w dniach przeciążonych — przesuń produkty albo dodaj ludzi (Optymalizacja zmian).",
+    "WEEK_WARNING_AFTER_DUE": "{count} bloków jest po terminie zamówienia.",
+    "WEEK_WARNING_NO_HOURS": "{count} produktów nie ma normy czasu (marszruty) — 0 h w Gantcie."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -117,7 +124,16 @@
     "IMAGE_TOO_LARGE": "Obraz podpisu jest za duży (maks. {max_kb} KB).",
     "SIGNATURE_REF_INVALID": "Podpis nie odnosi się do Twojego wpisu.",
     "INVALID_UUID": "Nieprawidłowy identyfikator UUID.",
-    "INVALID_MONTH": "Miesiąc w formacie RRRR-MM."
+    "INVALID_MONTH": "Miesiąc w formacie RRRR-MM.",
+    "PALLET_OVER_LAYERS": "Więcej kartonów niż warstwy × kartony na warstwę (maks. {max}).",
+    "INVALID_EAN": "EAN: od 8 do 14 cyfr.",
+    "TEMPERATURE_NOT_FOR_WORKSTATION": "Temperatura tylko dla pieca, komory fermentacyjnej, chłodni lub mroźni.",
+    "BAKE_WITHOUT_OVEN": "Produkt pieczony lub podpieczony: dodaj etap na piecu w marszrucie.",
+    "NOT_IN_WEEK": "Tego produktu nie ma w produkcji tego tygodnia.",
+    "DAY_NOT_IN_WEEK": "Ten dzień nie jest dniem produkcji tego tygodnia.",
+    "DAY_IN_PAST": "Nie można zaplanować produkcji na dzień, który już minął.",
+    "SAME_DAY": "Produkt jest już na ten dzień.",
+    "NOTHING_TO_MOVE": "W tym miejscu nie ma ilości tego produktu do przeniesienia."
   },
   "fields": {
     "code": "kod",
@@ -258,7 +274,27 @@
     "employee_id": "Pracownik",
     "month": "Miesiąc",
     "unlock": "Odblokuj",
-    "base": "adres strony"
+    "base": "adres strony",
+    "weight": "Waga sztuki (g)",
+    "ppc": "Sztuk w kartonie",
+    "ppb": "Sztuk w opakowaniu",
+    "bpc": "Opakowań w kartonie",
+    "cpl": "Kartonów na warstwę",
+    "lpp": "Warstw na palecie",
+    "cpp": "Kartonów na paletę",
+    "carton_length_mm": "Długość kartonu (mm)",
+    "carton_width_mm": "Szerokość kartonu (mm)",
+    "carton_height_mm": "Wysokość kartonu (mm)",
+    "carton_tare_g": "Waga pustego kartonu (g)",
+    "carton_type": "Typ kartonu",
+    "carton_ean": "EAN kartonu",
+    "pallet_type": "Paleta",
+    "storage": "Przechowywanie",
+    "bake_state": "Wypiek",
+    "temperature_c": "Temperatura (°C)",
+    "date": "Data",
+    "item_id": "Produkt",
+    "reset": "Od nowa"
   },
   "entities": {
     "group": "grupa",

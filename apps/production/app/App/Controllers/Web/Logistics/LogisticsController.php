@@ -27,6 +27,17 @@ class LogisticsController extends BaseController
         $this->view('logistics/day', $data);
     }
 
+    /** Tydzień : ciężarówki dzień po dniu z wypełnieniem (palety i %). */
+    public function week()
+    {
+        try {
+            $data = $this->logistics->week((string) ($_GET['date'] ?? '') ?: date('Y-m-d'));
+        } catch (\Throwable $e) {
+            $data = $this->logistics->week(date('Y-m-d'));
+        }
+        $this->view('logistics/week', $data);
+    }
+
     public function loadingList()
     {
         $data = $this->logistics->day((string) ($_GET['date'] ?? date('Y-m-d')));

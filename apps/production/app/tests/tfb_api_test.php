@@ -244,7 +244,20 @@ check($s === 200 && $b['data']['settings']['mode'] === 'MTS' && $b['data']['sett
 check($s === 422 && $codes($b) === ['mode:NEVER_FROZEN_MTS'], 'an MTS item cannot become never frozen');
 
 [$s, $b] = $call('POST', "/produits/items/{$itemId}/validate", null, $access);
-check($s === 422 && $codes($b) === ['routing:ROUTING_EMPTY'], 'no validation without a routing');
+check($s === 422 && $codes($b) === ['routing:ROUTING_EMPTY', 'bake_state:REQUIRED'], 'no validation without a routing nor a baking state');
+
+// Logistique (étape 1) : champs de l'ERP + carton, palette, conservation ; valeurs calculées
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/logistics", ['cpp' => 100, 'carton_ean' => 'abc', 'carton_type' => 'x', 'ppc' => 0], $access);
+check($s === 422 && $codes($b) === ['ppc:OUT_OF_RANGE', 'carton_type:INVALID_CHOICE', 'carton_ean:INVALID_EAN', 'cpp:PALLET_OVER_LAYERS'], 'logistics checks (pallet ≤ layers × cartons per layer)');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/logistics", ['weight' => 72, 'carton_length_mm' => 400, 'carton_width_mm' => 300, 'carton_height_mm' => 200,
+    'carton_tare_g' => 350, 'carton_type' => 'klapowy', 'carton_ean' => '5901234123457', 'pallet_type' => 'eur', 'storage' => 'frozen'], $access);
+$lg = $b['data']['logistics'] ?? [];
+check($s === 200 && $b['data']['erp']['weight'] === 72.0 && $lg['carton_type'] === 'klapowy' && $lg['carton_ean'] === '5901234123457'
+    && $lg['computed']['carton_net_kg'] === 4.32 && $lg['computed']['carton_gross_kg'] === 4.67 && $lg['computed']['pallet_units'] === 2880
+    && $lg['computed']['pallet_net_kg'] === 207.4 && $lg['computed']['pallet_gross_kg'] === 249.2 && $lg['computed']['pallet_height_mm'] === 1344, 'logistics saved, ERP weight updated, carton and pallet computed');
+check((float) $pdo->query('SELECT weight FROM final_product WHERE id = 501')->fetchColumn() === 72.0, 'ERP product weight written');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/logistics", ['carton_tare_g' => 1], $dir);
+check($s === 403, 'direction cannot change logistics');
 [$s, $b] = $call('PUT', "/produits/items/{$itemId}/routing", ['steps' => [
     ['name_pl' => 'Formowanie', 'workstation_id' => 90, 'delay_after_s' => 0, 'delay_workstation_id' => 91],
     ['name_pl' => 'Pieczenie', 'workstation_id' => 91, 'fixed_time_s' => 1080, 'cleaning_time_s' => 300, 'alternatives' => [['workstation_id' => 91]]],
@@ -263,6 +276,18 @@ check($s === 200 && count($b['data']['routing']) === 2 && $b['data']['routing'][
     && $b['data']['routing'][1]['alternatives'][0]['fixed_time_s'] === 1080 && $b['data']['routing'][0]['name_fr'] === 'Façonnage', 'routing saved, oven capacity and times inherited');
 $step1 = $b['data']['routing'][0]['id'];
 $step2 = $b['data']['routing'][1]['id'];
+$withTemp = $routing;
+$withTemp['steps'][0]['temperature_c'] = 30;
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/routing", $withTemp, $access);
+check($s === 422 && $codes($b) === ['steps.0.temperature_c:TEMPERATURE_NOT_FOR_WORKSTATION'], 'temperature only on an oven, proofing or cold step');
+$withTemp = $routing;
+$withTemp['steps'][0]['id'] = $step1;
+$withTemp['steps'][1]['id'] = $step2;
+$withTemp['steps'][1]['temperature_c'] = 220;
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/routing", $withTemp, $access);
+check($s === 200 && $b['data']['routing'][1]['temperature_c'] === 220.0 && $b['data']['routing'][1]['id'] === $step2
+    && array_column($b['data']['equipment'], 'type') === ['manuel', 'four'] && $b['data']['equipment'][1]['temperatures_c'] === [220.0]
+    && $b['data']['logistics']['computed']['labour_s_per_carton'] > 0, 'oven temperature kept; equipment of the routing listed; labour per carton');
 
 // Test d'acceptation : même temps fixe pour 10 et 60 pièces dans un passage
 [$s, $d10] = $call('GET', "/produits/items/{$itemId}/duration?quantity=10", null, $dir);
@@ -279,8 +304,12 @@ check($s === 422 && $codes($b) === ['losses.0.child_id:NOT_IN_BOM'], 'loss only 
 [$s, $b] = $call('PUT', "/produits/items/{$itemId}/bom-losses", ['losses' => [['child_kind' => 'material', 'child_id' => 901, 'loss_pct' => 3.5], ['child_kind' => 'recipe', 'child_id' => 701, 'loss_pct' => 1]]], $access);
 check($s === 200 && array_column($b['data']['bom'], 'loss_pct') === [1.0, 3.5], 'BOM losses saved');
 
+[$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['bake_state' => 'roasted'], $access);
+check($s === 422 && $codes($b) === ['bake_state:INVALID_CHOICE'], 'baking state is none, par_baked or baked');
+[$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['bake_state' => 'baked'], $access);
+check($s === 200 && $b['data']['settings']['bake_state'] === 'baked', 'baking state saved');
 [$s, $b] = $call('POST', "/produits/items/{$itemId}/validate", null, $access);
-check($s === 200 && $b['data']['settings']['status'] === 'validated' && $b['data']['settings']['wizard_step'] === 7, 'sheet validated');
+check($s === 200 && $b['data']['settings']['status'] === 'validated' && $b['data']['settings']['wizard_step'] === 7, 'sheet validated (baked, oven in the routing)');
 [$s, $b] = $call('GET', '/produits/items?status=validated&mode=MTS', null, $dir);
 check($s === 200 && array_column($b['data'], 'id') === [$itemId], 'list filters');
 
@@ -329,6 +358,8 @@ check($s === 201, 'semi-finished sheet');
 $semiId = $semi['data']['id'];
 $call('PATCH', "/produits/items/{$semiId}/settings", ['primary_group_id' => 1, 'batch_multiple' => 5], $access);
 $call('PUT', "/produits/items/{$semiId}/routing", ['steps' => [['name_pl' => 'Laminowanie', 'workstation_id' => 90, 'fixed_time_s' => 600, 'variable_time_s' => 30]]], $access);
+[$s, $b] = $call('PUT', "/produits/items/{$semiId}/logistics", ['ppc' => 10], $access);
+check($s === 409 && $b['description'] === 'NOT_ALLOWED_FOR_TYPE', 'a semi-finished item has no carton logistics');
 $pdo->exec("UPDATE tfb_prod_product_settings SET stock_min = 60, stock_max = 300, batch_min = NULL, batch_multiple = 160, coverage_days = NULL WHERE id_item = {$itemId}");
 $d1 = date('Y-m-d', strtotime('+2 days'));
 $cutoff = date('Y-m-d', strtotime('+0 days')) . ' 13:00:00';
@@ -725,6 +756,64 @@ check($s === 403 && $b['description'] === 'DEVICE_DISABLED', 'blocked tablet ref
 check($s === 401 && isset($re['data']['pairing_code']), 'new pairing code revokes the old tablet token');
 [$s, $devices] = $call('GET', '/kiosk/devices', null, $access);
 check($devices['data'][0]['pairing_pending'] && !$devices['data'][0]['paired'], 'device list shows pending pairing');
+
+// --- Gantt tygodnia : produkty na dni (przeciągnij i upuść), « Rozdziel na dni », godziny i wykonanie
+// Wszystkie dni tygodnia produkcyjne : test nie zależy od dnia, w którym działa.
+[$s] = $call('PATCH', '/referentiels/params/week.production_days', ['value' => '1,2,3,4,5,6,7'], $access);
+check($s === 200, 'production days are a parameter');
+$today = date('Y-m-d');
+$monday = date('Y-m-d', strtotime('-' . ((int) date('N') - 1) . ' days', strtotime($today)));
+[$s, $w] = $call('GET', "/planning/week?date={$today}", null, $dir);
+$wp = array_column($w['data']['products'] ?? [], null, 'item_id');
+check($s === 200 && $w['data']['week_start'] === $monday && count($w['data']['days']) === 7 && $w['data']['source']['type'] === 'plan'
+    && in_array($planId, array_column($w['data']['source']['plans'], 'id'), true), 'week: quantities of the validated plan, every day of the week');
+check(isset($wp[$itemId]) && $wp[$itemId]['hours'] > 0 && $wp[$itemId]['unassigned_qty'] == $wp[$itemId]['quantity'] && $wp[$itemId]['slots'] === []
+    && in_array('UNASSIGNED', array_column($w['data']['warnings'], 'code'), true), 'week: products wait in « to assign » with their standard hours');
+$g1 = array_column($w['data']['groups'], null, 'id')[1] ?? null;
+check($g1 !== null && $g1['days'][0]['available_h'] == 16 && $g1['days'][6]['available_h'] == 0 && $g1['available_h'] == 16 * 6 && $w['data']['totals']['done_h'] > 0,
+    'week: hours available = 2 people × 8 h on the days of the shift (no Sunday shift); done hours from finished operations');
+[$s, $b] = $call('GET', '/planning/week?date=jutro', null, $dir);
+check($s === 422 && $codes($b) === ['date:INVALID_DATE'], 'week: date checked');
+[$s, $b] = $call('POST', '/planning/week/distribute', ['date' => $today], $dir);
+check($s === 403, 'direction does not plan the days');
+[$s, $b] = $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 'to' => date('Y-m-d', strtotime($monday . ' +8 days'))], $lead);
+check($s === 422 && $codes($b) === ['to:DAY_NOT_IN_WEEK'], 'a product moves only to a day of the week');
+if ($today !== $monday) {
+    [$s, $b] = $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 'to' => $monday], $lead);
+    check($s === 422 && $codes($b) === ['to:DAY_IN_PAST'], 'no production planned on a past day');
+}
+[$s, $b] = $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => 999, 'to' => $today], $lead);
+check($s === 422 && $codes($b) === ['item_id:NOT_IN_WEEK'], 'only products of the week');
+[$s, $d] = $call('POST', '/planning/week/distribute', ['date' => $today], $access);
+$dp = array_column($d['data']['products'], null, 'item_id');
+check($s === 200 && $d['data']['totals']['unassigned'] === 0 && $dp[$itemId]['slots'][0]['day'] >= $today && $dp[$itemId]['unassigned_qty'] == 0
+    && !in_array('UNASSIGNED', array_column($d['data']['warnings'], 'code'), true), 'distribute by day: every product on a day from today');
+$slotDay = $dp[$itemId]['slots'][0]['day'];
+$qty = $dp[$itemId]['slots'][0]['quantity'];
+[$s, $b] = $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 'to' => $slotDay], $lead);
+check($s === 422 && $codes($b) === ['from:NOTHING_TO_MOVE'], 'nothing left in « to assign »');
+[$s, $b] = $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 'from' => $slotDay, 'to' => null, 'quantity' => $qty + 1], $lead);
+check($s === 422 && $codes($b) === ['quantity:OUT_OF_RANGE'], 'cannot move more than the block');
+[$s, $b] = $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 'from' => $slotDay, 'to' => null, 'quantity' => 16], $lead);
+$bp = array_column($b['data']['products'], null, 'item_id')[$itemId];
+check($s === 200 && $bp['unassigned_qty'] == 16 && $bp['slots'][0]['quantity'] == $qty - 16, 'team lead puts part of a block back to « to assign »');
+$sunday = date('Y-m-d', strtotime($monday . ' +6 days'));
+if ($slotDay < $sunday) {
+    $other = date('Y-m-d', strtotime($slotDay . ' +1 day'));
+    [$s, $b] = $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 'from' => $slotDay, 'to' => $other], $lead);
+    $bp = array_column($b['data']['products'], null, 'item_id')[$itemId];
+    check($s === 200 && count($bp['slots']) === 1 && $bp['slots'][0]['day'] === $other && $bp['slots'][0]['quantity'] == $qty - 16, 'drag and drop: the block moves to another day');
+    check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE entity = 'week_slot' AND action = 'move'")->fetchColumn() === 2, 'day moves are audited');
+    // Uszeregowanie : zlecenie MTS kończy się najpóźniej w dniu z Gantta tygodnia.
+    $mtsOrder = (int) $pdo->query("SELECT id FROM tfb_prod_order WHERE id_plan = {$planId} AND origin = 'MTS'")->fetchColumn();
+    [$s, $b] = $call('POST', "/planning/plans/{$planId}/schedule", null, $access);
+    $due = $pdo->query("SELECT due_at FROM tfb_prod_order WHERE id = {$mtsOrder}")->fetchColumn();
+    $lastEnd = $pdo->query("SELECT MAX(planned_end) FROM tfb_prod_operation WHERE id_order = {$mtsOrder} AND status = 'planned'")->fetchColumn();
+    check($s === 200 && $due === $other . ' 23:59:00' && ($lastEnd === null || $lastEnd <= $due), 'scheduling: the MTS order is due on its day of the week Gantt');
+}
+[$s, $r] = $call('POST', '/planning/week/distribute', ['date' => $today, 'reset' => true], $access);
+$rp = array_column($r['data']['products'], null, 'item_id');
+check($s === 200 && $rp[$itemId]['unassigned_qty'] == 0 && $rp[$itemId]['slots'][0]['day'] === $slotDay, 'distribute again from scratch');
 
 // Journal, en-têtes, JSON invalide, OpenAPI public
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');

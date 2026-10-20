@@ -497,51 +497,71 @@
     {% if pp.groups %}
     <div class="card at-anchor" id="na-osobe">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h4 class="card-title mb-0">Sprzedaż na osobę — ostatnie {{ pp.count }} miesięcy</h4>
-            <span class="at-sub">sprzedaż grupy ÷ osoby opłacone w miesiącu · {{ pp.real }} z {{ pp.count }} mies. z wprowadzonymi kosztami</span>
+            <div>
+                <h4 class="card-title mb-0">Sprzedaż na osobę — ostatnie {{ pp.count }} miesięcy</h4>
+                <span class="at-sub">sprzedaż grupy ÷ osoby opłacone w miesiącu · {{ pp.real }} z {{ pp.count }} mies. z wprowadzonymi kosztami</span>
+            </div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Widok">
+                <button type="button" class="btn btn-outline-primary active" data-ppl-view="table" aria-pressed="true"><i class="bi bi-table"></i> Tabela</button>
+                <button type="button" class="btn btn-outline-primary" data-ppl-view="chart" aria-pressed="false"><i class="bi bi-graph-up"></i> Wykres</button>
+            </div>
         </div>
         <div class="card-body pt-0">
-            <div class="table-responsive at-ppl-scroll">
+            {% set months = pp.months|reverse %}
+            <div class="table-responsive at-ppl-scroll" data-ppl-panel="table">
                 <table class="table mb-0 at-ppl-table">
                     <thead>
                         <tr>
-                            <th>Miesiąc</th>
-                            {% for g in pp.groups %}<th class="text-end">{{ g.name }}</th>{% endfor %}
-                            <th class="text-end at-ppl-sum">Produkcja</th>
-                            <th class="text-end at-ppl-sum">Cała firma</th>
+                            <th class="at-ppl-name">Grupa</th>
+                            {% for m in months %}
+                                <th class="text-end{{ m.estimated ? ' at-ppl-est' : '' }}{{ m.current ? ' at-ppl-current' : '' }}">
+                                    <a href="{{ root }}/dashboard?period={{ m.current ? 'month' : m.ym }}">{{ m.label }}</a>
+                                    {% if m.current %}<div class="at-sub">tempo</div>{% elseif m.estimated_from %}<div class="at-sub" title="Koszty i osoby tego miesiąca nie są wprowadzone w kalkulatorze kosztów — przyjęto {{ m.estimated_from }}">os. szac.</div>{% endif %}
+                                </th>
+                            {% endfor %}
+                            <th class="text-end at-ppl-sum">Średnio</th>
                         </tr>
                     </thead>
                     <tbody>
-                    {% for m in pp.months %}
-                        <tr class="{{ m.estimated ? 'at-ppl-est' : '' }}{{ m.current ? ' at-ppl-current' : '' }}">
-                            <td>
-                                <a href="{{ root }}/dashboard?period={{ m.current ? 'month' : m.ym }}"><strong>{{ m.label }}</strong></a>
-                                {% if m.current %}<div class="at-sub">tempo do końca miesiąca</div>{% endif %}
-                                {% if m.estimated_from %}<div class="at-sub" title="Koszty i osoby tego miesiąca nie są wprowadzone w kalkulatorze kosztów — przyjęto {{ m.estimated_from }}">os. szac. ({{ m.estimated_from }})</div>{% endif %}
-                            </td>
-                            {% for g in pp.groups %}
+                    {% for g in pp.groups %}
+                        <tr>
+                            <th class="at-ppl-name" scope="row">{{ g.name }}</th>
+                            {% for m in months %}
                                 {% set c = m.groups[g.id] ?? null %}
-                                <td class="text-end{{ c and not m.current and c.revenue_per_person is not null and c.revenue_per_person == g.best ? ' at-ppl-best' : '' }}">
+                                <td class="text-end{{ m.estimated ? ' at-ppl-est' : '' }}{{ m.current ? ' at-ppl-current' : '' }}{{ c and not m.current and c.revenue_per_person is not null and c.revenue_per_person == g.best ? ' at-ppl-best' : '' }}">
                                     {% if c and c.revenue_per_person is not null %}{{ c.revenue_per_person|eur }}<div class="at-sub">{{ c.people|number_format(c.people == c.people|round ? 0 : 1, ',', ' ') }} os.</div>
                                     {% elseif c and c.revenue > 0 %}<span class="at-sub" title="Sprzedaż {{ c.revenue|eur }} bez osób w kalkulatorze kosztów">bez osób</span>
                                     {% else %}<span class="at-sub">—</span>{% endif %}
                                 </td>
                             {% endfor %}
-                            <td class="text-end at-ppl-sum"><strong>{{ m.revenue_per_person_production|eur }}</strong><div class="at-sub">{{ m.people_production ? m.people_production|number_format(0, ',', ' ') ~ ' os.' : '' }}</div></td>
-                            <td class="text-end at-ppl-sum"><strong>{{ m.revenue_per_person|eur }}</strong><div class="at-sub">{{ m.people ? m.people|number_format(0, ',', ' ') ~ ' os.' : '' }}</div></td>
+                            <td class="text-end at-ppl-sum"><strong>{{ g.average|eur }}</strong><div class="at-sub">sprzedaż {{ g.revenue|eur }}</div></td>
                         </tr>
                     {% endfor %}
                     </tbody>
                     <tfoot>
                         <tr class="at-profit-total">
-                            <td><strong>Średnio</strong><div class="at-sub">{{ pp.count }} mies.</div></td>
-                            {% for g in pp.groups %}<td class="text-end"><strong>{{ g.average|eur }}</strong><div class="at-sub">sprzedaż {{ g.revenue|eur }}</div></td>{% endfor %}
+                            <th class="at-ppl-name" scope="row">Produkcja</th>
+                            {% for m in months %}<td class="text-end{{ m.estimated ? ' at-ppl-est' : '' }}{{ m.current ? ' at-ppl-current' : '' }}"><strong>{{ m.revenue_per_person_production|eur }}</strong><div class="at-sub">{{ m.people_production ? m.people_production|number_format(0, ',', ' ') ~ ' os.' : '' }}</div></td>{% endfor %}
                             <td class="text-end at-ppl-sum"><strong>{{ pp.average_production|eur }}</strong></td>
+                        </tr>
+                        <tr class="at-profit-total">
+                            <th class="at-ppl-name" scope="row">Cała firma</th>
+                            {% for m in months %}<td class="text-end{{ m.estimated ? ' at-ppl-est' : '' }}{{ m.current ? ' at-ppl-current' : '' }}"><strong>{{ m.revenue_per_person|eur }}</strong><div class="at-sub">{{ m.people ? m.people|number_format(0, ',', ' ') ~ ' os.' : '' }}</div></td>{% endfor %}
                             <td class="text-end at-ppl-sum"><strong>{{ pp.average|eur }}</strong></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
+            <div class="at-ppl-chart" data-ppl-panel="chart" hidden>
+                <canvas id="atPplChart" aria-label="Sprzedaż na osobę według grup, ostatnie {{ pp.count }} miesięcy" role="img"></canvas>
+            </div>
+            <script type="application/json" id="atPplData">{{ {
+                labels: months|map(m => m.label ~ (m.current ? ' (tempo)' : '')),
+                estimated: months|map(m => m.estimated),
+                groups: pp.groups|map(g => {name: g.name, values: months|map(m => (m.groups[g.id] ?? null) ? m.groups[g.id].revenue_per_person : null)}),
+                production: months|map(m => m.revenue_per_person_production),
+                company: months|map(m => m.revenue_per_person)
+            }|json_encode|raw }}</script>
             <p class="at-profit-note">Sprzedaż WDT grupy w miesiącu na jedną osobę opłaconą w tym miesiącu (osoby z <a href="{{ root }}/cost-calculator">kalkulatora kosztów</a>, pozycje wliczone). Miesiące bez wprowadzonych kosztów (os. szac., szare) przyjmują osoby z najbliższego znanego miesiąca — uzupełnij je w kalkulatorze, aby wynik był dokładny. Bieżący miesiąc: tempo (sprzedaż do dziś przeliczona na cały miesiąc). Średnio: sprzedaż okresu ÷ suma osobo-miesięcy. Wyróżnienie: najlepszy miesiąc grupy.</p>
         </div>
     </div>
@@ -585,6 +605,44 @@
             buyPanel.querySelectorAll('[data-buy-list]').forEach(list => { list.hidden = list.dataset.buyList !== tab.dataset.buyView; });
         }));
     }
+    // Sprzedaż na osobę : tabela (grupy × miesiące) albo wykres ; Chart.js ładowany przy pierwszym otwarciu wykresu.
+    const pplScroll = document.querySelector('[data-ppl-panel="table"]');
+    if (pplScroll) pplScroll.scrollLeft = pplScroll.scrollWidth;
+    let pplChart = null;
+    const drawPpl = () => {
+        if (pplChart) return;
+        const data = JSON.parse(document.getElementById('atPplData').textContent);
+        const palette = ['#8D1D2C', '#B5651D', '#C9A227', '#6D4C8F', '#2E7D4F', '#4A6FA5', '#9B5DE5', '#E07A5F', '#3D405B', '#81B29A'];
+        const eur = (v) => v === null || v === undefined ? '—' : new Intl.NumberFormat('pl-PL', {maximumFractionDigits: 0}).format(v) + ' €';
+        const point = data.estimated.map(e => e ? 'rectRot' : 'circle');
+        const sets = data.groups.map((g, i) => ({label: g.name, data: g.values, borderColor: palette[i % palette.length], backgroundColor: palette[i % palette.length],
+            tension: .25, spanGaps: true, pointStyle: point, pointRadius: 3, borderWidth: 2}));
+        sets.push({label: 'Produkcja', data: data.production, borderColor: '#222222', backgroundColor: '#222222', borderDash: [6, 4], borderWidth: 3, tension: .25, spanGaps: true, pointStyle: point, pointRadius: 3});
+        sets.push({label: 'Cała firma', data: data.company, borderColor: '#777777', backgroundColor: '#777777', borderDash: [2, 3], borderWidth: 2, tension: .25, spanGaps: true, pointStyle: point, pointRadius: 3});
+        pplChart = new Chart(document.getElementById('atPplChart'), {
+            type: 'line',
+            data: {labels: data.labels, datasets: sets},
+            options: {
+                responsive: true, maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
+                plugins: {legend: {position: 'bottom', labels: {usePointStyle: true}},
+                    tooltip: {callbacks: {label: (c) => `${c.dataset.label}: ${eur(c.parsed.y)}`, footer: (items) => data.estimated[items[0].dataIndex] ? 'osoby szacowane' : ''}}},
+                scales: {y: {beginAtZero: true, ticks: {callback: (v) => eur(v)}, title: {display: true, text: '€ na osobę'}}},
+            },
+        });
+    };
+    const loadChart = () => window.Chart ? Promise.resolve() : new Promise((resolve, reject) => {
+        const tag = document.createElement('script');
+        tag.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+        tag.onload = resolve;
+        tag.onerror = reject;
+        document.head.appendChild(tag);
+    });
+    document.querySelectorAll('[data-ppl-view]').forEach(btn => btn.addEventListener('click', () => {
+        const view = btn.dataset.pplView;
+        document.querySelectorAll('[data-ppl-view]').forEach(b => { b.classList.toggle('active', b === btn); b.setAttribute('aria-pressed', String(b === btn)); });
+        document.querySelectorAll('[data-ppl-panel]').forEach(panel => { panel.hidden = panel.dataset.pplPanel !== view; });
+        if (view === 'chart') loadChart().then(drawPpl).catch(() => notify(false, 'Nie udało się wczytać wykresu.'));
+    }));
     // Co wyprodukowały grupy : jedna zakładka na grupę.
     document.querySelectorAll('[data-made-tab]').forEach(tab => tab.addEventListener('click', () => {
         document.querySelectorAll('[data-made-tab]').forEach(t => t.setAttribute('aria-selected', String(t === tab)));

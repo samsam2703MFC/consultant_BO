@@ -68,7 +68,7 @@ final class PositionRepository extends WorkshopRepository
     {
         return $this->all(
             'SELECT u.id, u.displayed_name, u.name, u.surname, u.email, u.phone, u.login, up.id_position, up.since,
-                    p.name_pl AS position_name, p.name_fr AS position_name_fr, p.description AS position_description
+                    p.code AS position_code, p.name_pl AS position_name, p.name_fr AS position_name_fr, p.description AS position_description
              FROM user u LEFT JOIN tfb_user_position up ON up.id_user = u.id LEFT JOIN tfb_position p ON p.id = up.id_position
              WHERE u.id = ?',
             [$id]

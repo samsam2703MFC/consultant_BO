@@ -1,7 +1,8 @@
 /*
  * Karty produkcyjne / Fiches de production (P2) : liste, nouvelle fiche depuis l'ERP, assistant
- * en 7 étapes (article, mode et stocks, groupe et durées de vie, nomenclature et pertes, gamme,
- * contrôle des temps avec chronométrages, validation). Tout passe par l'API.
+ * en 7 étapes (article et logistique, mode et stocks, groupe, cuisson et durées de vie,
+ * nomenclature et pertes, gamme, contrôle des temps avec chronométrages, validation).
+ * Tout passe par l'API.
  */
 (async function () {
     'use strict';
@@ -20,6 +21,9 @@
     }
 
     const t = (k, p) => api.t(k, p);
+    // Postes où l'étape a une température : four, pousse, froid, surgélation (comme l'API).
+    const TEMPERATURE_TYPES = ['four', 'fermentation', 'froid', 'surgelation'];
+    const wsType = (id) => (state.workstations.find(w => w.id === id) || {}).type;
     const groupName = (id) => (state.groups.find(g => g.id === id) || {}).name || '—';
     const wsOptions = (selected, filter) => state.workstations.filter(w => !filter || filter(w))
         .map(w => `<option value="${w.id}" ${w.id === selected ? 'selected' : ''}>${esc(w.code)} — ${esc(w.name)}</option>`).join('');
@@ -64,7 +68,7 @@
                     <td><a href="#/item/${i.id}/${i.settings.status === 'validated' ? 6 : Math.max(2, i.settings.wizard_step)}"><strong>${esc(i.name)}</strong></a>${i.erp.active ? '' : ` <span class="badge bg-secondary">${esc(t('erp.inactive'))}</span>`}</td>
                     <td>${esc(t('type.' + i.item_type))}</td>
                     <td>${esc(groupName(i.settings.primary_group_id))}</td>
-                    <td>${esc(i.settings.mode)}${i.settings.never_frozen ? ' <i class="bi bi-snow" title="' + esc(t('f.never_frozen')) + '"></i>' : ''}</td>
+                    <td>${esc(t('mode.' + i.settings.mode))}${i.settings.never_frozen ? ' <i class="bi bi-snow" title="' + esc(t('f.never_frozen')) + '"></i>' : ''}</td>
                     <td class="text-end">${i.step_count}</td>
                     <td><span class="badge ${i.settings.status === 'validated' ? 'bg-success' : 'bg-warning'}">${esc(t('status.' + i.settings.status))}</span></td>
                 </tr>`).join('') || `<tr><td colspan="6" class="text-muted">${esc(t('empty_list'))}</td></tr>`}</tbody>
@@ -152,21 +156,77 @@
     }
 
     function stepArticle(body, item) {
-        body.innerHTML = `<dl class="tfb-dl">
+        const info = `<dl class="tfb-dl">
             <dt>${esc(t('col.name'))}</dt><dd>${esc(item.name)}</dd>
             <dt>${esc(t('col.type'))}</dt><dd>${esc(t('type.' + item.item_type))}</dd>
-            ${item.erp.ppc ? `<dt>${esc(t('erp.ppc'))}</dt><dd>${item.erp.ppc}</dd>` : ''}
-            ${item.erp.weight ? `<dt>${esc(t('erp.weight'))}</dt><dd>${ui.fmt(item.erp.weight, 1, api.lang)}</dd>` : ''}
             <dt>${esc(t('erp.unit'))}</dt><dd>${esc(item.base_unit)}</dd>
-        </dl><p class="text-muted">${esc(t('new.help'))}</p>${nav(1, false)}`;
+        </dl>`;
+        if (item.item_type !== 'product') {
+            body.innerHTML = `${info}${item.erp.weight ? `<p>${esc(t('erp.weight'))}: ${ui.fmt(item.erp.weight, 1, api.lang)}</p>` : ''}<p class="text-muted">${esc(t('new.help'))}</p>${nav(1, false)}`;
+            return;
+        }
+        const e = item.erp;
+        const lg = item.logistics || {computed: {}};
+        const c = lg.computed || {};
+        const field = (name, value) => `<label>${esc(t('l.' + name))}<input class="form-control" name="${name}" data-field="${name}" inputmode="numeric" value="${value ? value : ''}"></label>`;
+        const choice = (name, values, current) => `<label>${esc(t('l.' + name))}<select class="form-select" name="${name}" data-field="${name}"><option value="">—</option>
+            ${values.map(v => `<option value="${v}" ${current === v ? 'selected' : ''}>${esc(t('l.' + name + '.' + v))}</option>`).join('')}</select></label>`;
+        const out = (label, value) => `<div class="tfb-calc"><span>${esc(label)}</span><strong>${value}</strong></div>`;
+        const kg = (v) => v === null || v === undefined ? '—' : ui.fmt(v, v < 10 ? 2 : 1, api.lang) + ' kg';
+        body.innerHTML = `${info}<form class="tfb-form" data-form>
+            <h5 class="tfb-full">${esc(t('l.title_units'))}</h5>
+            ${field('weight', e.weight)}${field('ppb', e.ppb)}${field('bpc', e.bpc)}${field('ppc', e.ppc)}
+            <h5 class="tfb-full">${esc(t('l.title_carton'))}</h5>
+            ${field('carton_length_mm', lg.carton_length_mm)}${field('carton_width_mm', lg.carton_width_mm)}${field('carton_height_mm', lg.carton_height_mm)}
+            ${field('carton_tare_g', lg.carton_tare_g)}${choice('carton_type', ['klapowy', 'fasonowy', 'inny'], lg.carton_type)}
+            <label>${esc(t('l.carton_ean'))}<input class="form-control" name="carton_ean" data-field="carton_ean" inputmode="numeric" maxlength="14" value="${esc(lg.carton_ean || '')}"></label>
+            <h5 class="tfb-full">${esc(t('l.title_pallet'))}</h5>
+            ${field('cpl', e.cpl)}${field('lpp', e.lpp)}${field('cpp', e.cpp)}
+            ${choice('pallet_type', ['eur', 'industrial', 'other'], lg.pallet_type)}${choice('storage', ['frozen', 'chilled', 'ambient'], lg.storage)}
+            <div class="tfb-full tfb-calcs">
+                ${out(t('l.carton_net'), kg(c.carton_net_kg))}${out(t('l.carton_gross'), kg(c.carton_gross_kg))}
+                ${out(t('l.pallet_units'), c.pallet_units ? ui.fmt(c.pallet_units, 0, api.lang) : '—')}
+                ${out(t('l.pallet_gross'), kg(c.pallet_gross_kg ?? c.pallet_net_kg))}
+                ${out(t('l.pallet_height'), c.pallet_height_mm ? ui.fmt(c.pallet_height_mm, 0, api.lang) + ' mm' : '—')}
+                ${out(t('l.labour_carton'), c.labour_s_per_carton ? ui.duration(c.labour_s_per_carton, api) : '—')}
+            </div>
+            <p class="form-text tfb-full">${esc(t('help.logistics'))}</p>
+            ${nav(1)}</form>`;
+        const form = body.querySelector('[data-form]');
+        // Cartons par palette proposés = couches × cartons par couche, tant que l'utilisateur ne l'a pas saisi.
+        const syncPallet = () => {
+            const cpl = ui.num(form.cpl.value);
+            const lpp = ui.num(form.lpp.value);
+            if (cpl && lpp && !form.cpp.dataset.touched) form.cpp.value = cpl * lpp;
+        };
+        form.cpp.addEventListener('input', () => { form.cpp.dataset.touched = '1'; });
+        form.cpl.addEventListener('input', syncPallet);
+        form.lpp.addEventListener('input', syncPallet);
+        form.addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            ui.clearErrors(form);
+            const data = {};
+            // Champs de l'ERP : un champ vide garde la valeur de l'ERP ; champs de la fiche : vide = effacé.
+            for (const f of ['weight', 'ppb', 'bpc', 'ppc', 'cpl', 'lpp', 'cpp']) { const v = ui.num(form[f].value); if (v !== null) data[f] = v; }
+            for (const f of ['carton_length_mm', 'carton_width_mm', 'carton_height_mm', 'carton_tare_g']) data[f] = ui.num(form[f].value);
+            for (const f of ['carton_type', 'pallet_type', 'storage']) data[f] = form[f].value || null;
+            data.carton_ean = form.carton_ean.value.trim() || null;
+            try {
+                await api.put(`/produits/items/${item.id}/logistics`, data);
+                await saveSettings(form, {}, 2);
+            } catch (err) { fail(form, err); }
+        });
     }
 
     function stepMode(body, item) {
         const s = item.settings;
         body.innerHTML = `<form class="tfb-form" data-form>
-            <fieldset class="tfb-full"><legend>${esc(t('f.mode'))}</legend>
-                ${['MTO', 'MTS'].map(m => `<label class="form-check form-check-inline"><input class="form-check-input" type="radio" name="mode" value="${m}" data-field="mode" ${s.mode === m ? 'checked' : ''}> ${esc(t('mode.' + m))}</label>`).join('')}
-            </fieldset>
+            <div class="tfb-full tfb-mode" data-field="mode">
+                <span class="tfb-mode-label" data-mode-label="MTO">${esc(t('mode.MTO'))}</span>
+                <label class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" name="mts" aria-label="${esc(t('f.mode'))}: ${esc(t('mode.MTS'))}" ${s.mode === 'MTS' ? 'checked' : ''}></label>
+                <span class="tfb-mode-label" data-mode-label="MTS">${esc(t('mode.MTS'))}</span>
+                <span class="form-text" data-mode-help></span>
+            </div>
             <label class="form-check tfb-full"><input class="form-check-input" type="checkbox" name="never_frozen" data-field="never_frozen" ${s.never_frozen ? 'checked' : ''}> ${esc(t('f.never_frozen'))}
                 <span class="form-text d-block">${esc(t('help.never_frozen'))}</span></label>
             ${['stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple'].map(f => `<label>${esc(t('f.' + f))}
@@ -176,15 +236,18 @@
         const form = body.querySelector('[data-form]');
         const sync = () => {
             const never = form.never_frozen.checked;
-            const mts = form.querySelector('[value="MTS"]');
-            mts.disabled = never;
-            if (never && mts.checked) form.querySelector('[value="MTO"]').checked = true;
+            form.mts.disabled = never;
+            if (never) form.mts.checked = false;
+            const mts = form.mts.checked;
+            form.querySelectorAll('[data-mode-label]').forEach(x => x.classList.toggle('is-on', (x.dataset.modeLabel === 'MTS') === mts));
+            form.querySelector('[data-mode-help]').textContent = t(mts ? 'help.mode_mts' : 'help.mode_mto');
+            ['stock_min', 'stock_max', 'coverage_days'].forEach(f => { form[f].closest('label').hidden = !mts; });
         };
         form.addEventListener('change', sync);
         sync();
         form.addEventListener('submit', (e) => {
             e.preventDefault();
-            const data = {mode: form.querySelector('[name=mode]:checked').value, never_frozen: form.never_frozen.checked};
+            const data = {mode: form.mts.checked ? 'MTS' : 'MTO', never_frozen: form.never_frozen.checked};
             for (const f of ['stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple']) data[f] = ui.num(form[f].value);
             saveSettings(form, data, 3);
         });
@@ -192,20 +255,31 @@
 
     function stepGroup(body, item) {
         const s = item.settings;
+        const product = item.item_type === 'product';
+        const equipment = item.equipment.length ? `<ul class="tfb-equipment">${item.equipment.map(w => `<li class="${w.type === 'four' ? 'is-oven' : ''}">
+                <strong>${esc(w.name)}</strong> <span class="badge bg-light text-dark">${esc(t('ws.' + w.type))}</span>
+                <span class="text-muted">${esc(t('eq.steps', {steps: w.steps.join(', ')}))}${w.temperatures_c.length ? ' · ' + w.temperatures_c.map(x => ui.fmt(x, 0, api.lang) + ' °C').join(', ') : ''}</span></li>`).join('')}</ul>`
+            : `<p class="text-muted">${esc(t('eq.none'))}</p>`;
         body.innerHTML = `<form class="tfb-form" data-form>
             <label>${esc(t('f.primary_group_id'))}<select class="form-select" name="primary_group_id" data-field="primary_group_id">
                 <option value="">—</option>${state.groups.map(g => `<option value="${g.id}" ${s.primary_group_id === g.id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select></label>
+            ${product ? `<label>${esc(t('f.bake_state'))}<select class="form-select" name="bake_state" data-field="bake_state"><option value="">—</option>
+                ${['none', 'par_baked', 'baked'].map(b => `<option value="${b}" ${s.bake_state === b ? 'selected' : ''}>${esc(t('bake.' + b))}</option>`).join('')}</select></label>` : ''}
             ${['shelf_life_workshop_days', 'shelf_life_shop_days'].map(f => `<label>${esc(t('f.' + f))}
                 <input class="form-control" name="${f}" data-field="${f}" inputmode="decimal" value="${s[f] ?? ''}"></label>`).join('')}
+            <div class="tfb-full"><h5>${esc(t('eq.title'))}</h5>${equipment}
+                <p class="form-text">${esc(t('eq.help'))} <a href="#/item/${item.id}/5">${esc(t('step.5'))}</a></p></div>
             ${nav(3)}</form>`;
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', (e) => {
             e.preventDefault();
-            saveSettings(form, {
+            const data = {
                 primary_group_id: form.primary_group_id.value ? Number(form.primary_group_id.value) : null,
                 shelf_life_workshop_days: ui.num(form.shelf_life_workshop_days.value),
                 shelf_life_shop_days: ui.num(form.shelf_life_shop_days.value),
-            }, 4);
+            };
+            if (product) data.bake_state = form.bake_state.value || null;
+            saveSettings(form, data, 4);
         });
     }
 
@@ -250,7 +324,8 @@
                             <button type="button" class="btn btn-sm btn-outline-danger" data-remove data-write>${esc(t('r.remove'))}</button></span>
                     </div>
                     <div class="tfb-step-grid">
-                        <label>${esc(t('r.workstation'))}<select class="form-select form-select-sm" data-k="workstation_id" data-field="steps.${i}.workstation_id"><option value="">—</option>${wsOptions(s.workstation_id)}</select></label>
+                        <label>${esc(t('r.workstation'))}${s.workstation_id ? ` <span class="badge bg-light text-dark">${esc(t('ws.' + wsType(s.workstation_id)))}</span>` : ''}<select class="form-select form-select-sm" data-k="workstation_id" data-field="steps.${i}.workstation_id"><option value="">—</option>${wsOptions(s.workstation_id)}</select></label>
+                        ${TEMPERATURE_TYPES.includes(wsType(s.workstation_id)) ? `<label>${esc(t('r.temperature'))}<input class="form-control form-control-sm" inputmode="decimal" data-k="temperature_c" data-field="steps.${i}.temperature_c" value="${s.temperature_c ?? ''}"></label>` : ''}
                         <label>${esc(t('r.fixed'))}<input class="form-control form-control-sm" inputmode="numeric" data-k="fixed_time_s" data-field="steps.${i}.fixed_time_s" value="${s.fixed_time_s ?? 0}"></label>
                         <label>${esc(t('r.variable'))}<input class="form-control form-control-sm" inputmode="decimal" data-k="variable_time_s" data-field="steps.${i}.variable_time_s" value="${s.variable_time_s ?? 0}"></label>
                         <label>${esc(t('r.capacity'))}<input class="form-control form-control-sm" inputmode="decimal" data-k="capacity_per_pass" data-field="steps.${i}.capacity_per_pass" value="${s.capacity_per_pass ?? ''}"></label>
@@ -313,6 +388,7 @@
                     delay_workstation_id: s.delay_workstation_id ?? null,
                     cleaning_required: (s.cleaning_time_s || 0) > 0, cleaning_time_s: s.cleaning_time_s || 0,
                     min_level_order: s.min_level_order ?? null,
+                    temperature_c: TEMPERATURE_TYPES.includes(wsType(s.workstation_id)) ? (s.temperature_c ?? null) : null,
                     alternatives: s.alternatives.map(a => {
                         const alt = {workstation_id: a.workstation_id};
                         for (const k of ['fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'priority']) if (a[k] !== undefined) alt[k] = a[k];
@@ -418,7 +494,8 @@
     }
 
     function stepValidate(body, item) {
-        const label = (c) => c.field.startsWith('routing.') ? t('check.step_time', {no: c.field.split('.')[1]}) : t('check.' + c.field);
+        const label = (c) => c.field.startsWith('routing.') ? t('check.step_time', {no: c.field.split('.')[1]})
+            : c.code === 'BAKE_WITHOUT_OVEN' ? t('check.bake_oven') : t('check.' + c.field);
         const ready = item.checklist.every(c => c.ok);
         body.innerHTML = `<ul class="tfb-checklist">${item.checklist.map(c => `<li class="${c.ok ? 'ok' : 'ko'}"><i class="bi ${c.ok ? 'bi-check-circle' : 'bi-x-circle'}"></i> ${esc(label(c))}</li>`).join('')}</ul>
             ${item.settings.status === 'validated' ? `<p class="text-success">${esc(t('v.validated', {date: (item.settings.validated_at || '').slice(0, 16)}))}</p>` : (ready ? `<p>${esc(t('v.ready'))}</p>` : '')}

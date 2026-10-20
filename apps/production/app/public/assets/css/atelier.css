@@ -538,8 +538,6 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-ppl-table td a { color: inherit; }
 .at-ppl-table .at-sub { color: var(--at-muted); font-size: 11.5px; font-weight: 400; }
 .at-ppl-table .at-ppl-sum { border-left: 1px solid var(--at-line); }
-.at-ppl-table tr.at-ppl-est td { color: var(--at-muted); }
-.at-ppl-table tr.at-ppl-current td { background: rgba(0, 0, 0, .02); }
 .at-ppl-table td.at-ppl-best { background: rgba(46, 125, 79, .1); color: inherit; font-weight: 600; }
 /* Rentowność : co wyprodukowały grupy (grupa → kategoria → produkt) */
 .at-anchor { scroll-margin-top: 80px; }
@@ -1203,3 +1201,70 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .at-logi-cat ul { margin: 6px 0 2px; padding-left: 16px; color: var(--at-muted); }
 @media (max-width: 575px) { .at-pallet { width: 78px; height: 66px; } }
 .at-pallet-mini.is-formats, .at-pallet.is-formats .at-pallet-fill { background: repeating-linear-gradient(45deg, #9fb7c8, #9fb7c8 6px, #d6e2ea 6px, #d6e2ea 12px); }
+
+/* Karta produkcyjna : przełącznik trybu, obliczenia logistyki, urządzenia z marszruty */
+.tfb-mode { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 14px; background: var(--at-bg-2); border-radius: var(--at-radius); }
+.tfb-mode .form-switch .form-check-input { width: 3em; height: 1.5em; cursor: pointer; }
+.tfb-mode-label { color: var(--at-muted); font-weight: 500; }
+.tfb-mode-label.is-on { color: var(--at-primary); font-weight: 700; }
+.tfb-mode .form-text { flex-basis: 100%; margin: 0; }
+.tfb-form h5 { margin: 8px 0 0; font-size: 14px; }
+.tfb-calcs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.tfb-calc { background: var(--at-bg-2); border-radius: var(--at-radius-sm); padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+.tfb-calc span { color: var(--at-muted); font-size: 12px; }
+.tfb-equipment { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.tfb-equipment li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 6px 10px; border-radius: var(--at-radius-sm); background: var(--at-bg-2); }
+.tfb-equipment li.is-oven { box-shadow: inset 3px 0 0 #B5651D; }
+
+/* Sprzedaż na osobę : grupy w wierszach, miesiące w kolumnach (pierwsza kolumna przyklejona), wykres. */
+.at-ppl-table .at-ppl-name { position: sticky; left: 0; z-index: 1; background: var(--at-surface); min-width: 170px; text-align: left; border-right: 1px solid var(--at-line); }
+.at-ppl-table thead .at-ppl-name { z-index: 3; }
+.at-ppl-table th.at-ppl-est, .at-ppl-table td.at-ppl-est { color: var(--at-muted); }
+.at-ppl-table th.at-ppl-current, .at-ppl-table td.at-ppl-current { background: rgba(0, 0, 0, .02); }
+.at-ppl-table tfoot th, .at-ppl-table tfoot td { border-top: 2px solid var(--at-line); }
+.at-ppl-chart { position: relative; height: 420px; }
+
+/* Dzisiaj : zadania stanowiska, „Do zrobienia” według stanowisk, rentowność grup. */
+.at-todo li.is-mine { background: rgba(141, 29, 44, .045); box-shadow: inset 3px 0 0 var(--at-primary); }
+.at-todo li.is-mine a { padding-left: 10px; }
+.at-todo-owner { display: block; color: var(--at-muted); font-size: 11.5px; }
+.at-todo-mine { display: inline-block; padding: 0 6px; border-radius: 999px; background: var(--at-primary); color: #fff; font-weight: 600; font-size: 10.5px; letter-spacing: .02em; }
+.at-tasks-compact .at-task { padding: 8px 0; }
+.at-tasks-compact .at-task.is-overdue { padding-left: 10px; }
+.at-mytasks .at-link { display: inline-block; margin-top: 8px; }
+.at-today-profit-table th, .at-today-profit-table td { vertical-align: middle; }
+.at-today-profit-table .at-ratio { width: 110px; display: inline-block; vertical-align: middle; margin-right: 6px; }
+.at-today-profit-table td:nth-child(3) { white-space: nowrap; }
+.at-mytasks .at-sub, .at-today-profit .at-sub { color: var(--at-muted); font-size: 11.5px; font-weight: 400; }
+.at-today-profit-table td:last-child { min-width: 170px; }
+.at-today-profit-table td:last-child strong { white-space: nowrap; }
+.at-today-profit-table .at-profit-badge.is-covered { background: var(--at-bg-2); color: var(--at-text); }
+
+/* Logistyka tygodnia : pojazdy × dni, wypełnienie miejsc paletowych. */
+.at-logi-week-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.at-logi-week-label { padding: 6px 14px; border: 1px solid var(--at-line); border-radius: var(--at-radius); background: var(--at-surface); font-weight: 600; }
+.at-logi-legend { display: flex; flex-wrap: wrap; gap: 12px; list-style: none; margin: 0; padding: 0; font-size: 12px; color: var(--at-muted); }
+.at-logi-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.at-logi-sample { display: inline-block; width: 18px; height: 8px; border-radius: 4px; background: var(--logi-fill); }
+.at-logi-sample.is-low, .at-logi-cell.is-low { --logi-fill: #b9b2a8; }
+.at-logi-sample.is-mid, .at-logi-cell.is-mid { --logi-fill: #d79a4e; }
+.at-logi-sample.is-full, .at-logi-cell.is-full { --logi-fill: #2e7d4f; }
+.at-logi-sample.is-over, .at-logi-cell.is-over { --logi-fill: var(--at-danger); }
+.at-logi-cell.is-unknown { --logi-fill: #b9b2a8; }
+.at-logi-scroll { overflow-x: auto; }
+.at-logi-week-table th, .at-logi-week-table td { vertical-align: top; white-space: nowrap; }
+.at-logi-week-table thead th a { color: inherit; }
+.at-logi-week-table .at-sub { color: var(--at-muted); font-size: 11.5px; font-weight: 400; }
+.at-logi-week-table .at-logi-name { position: sticky; left: 0; z-index: 1; background: var(--at-surface); min-width: 160px; text-align: left; border-right: 1px solid var(--at-line); }
+.at-logi-week-table .is-today { background: rgba(141, 29, 44, .04); }
+.at-logi-week-table thead th.is-today a { color: var(--at-primary); }
+.at-logi-week-table .at-logi-sum { border-left: 1px solid var(--at-line); }
+.at-logi-week-table tfoot th, .at-logi-week-table tfoot td { border-top: 2px solid var(--at-line); }
+.at-logi-cell { display: block; min-width: 132px; color: var(--at-text); text-decoration: none; }
+.at-logi-cell:hover .at-logi-value strong { color: var(--at-primary); }
+.at-logi-bar { display: block; height: 8px; border-radius: 4px; background: var(--at-bg-2); overflow: hidden; margin-bottom: 4px; }
+.at-logi-bar > span { display: block; height: 100%; background: var(--logi-fill); }
+.at-logi-cell.is-over .at-logi-value { color: var(--at-danger); }
+.at-logi-value { display: block; font-size: 12.5px; }
+.at-logi-week-table tbody th, .at-logi-week-table tfoot th, .at-ppl-table tbody th, .at-ppl-table tfoot th { text-transform: none; letter-spacing: normal; font-size: 13px; color: var(--at-text); font-weight: 600; }
+.at-logi-week-table .at-logi-name { white-space: normal; max-width: 230px; }

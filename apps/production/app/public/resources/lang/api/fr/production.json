@@ -50,7 +50,14 @@
     "QR_EXPIRED": "QR code expiré — scannez à nouveau le code de la tablette.",
     "QR_INVALID": "QR code invalide — scannez le code affiché sur la tablette.",
     "PHONE_UNAUTHENTICATED": "Téléphone non enregistré — choisissez votre nom et saisissez votre PIN.",
-    "PHONE_REVOKED": "Enregistrement du téléphone expiré ou révoqué — enregistrez à nouveau le téléphone."
+    "PHONE_REVOKED": "Enregistrement du téléphone expiré ou révoqué — enregistrez à nouveau le téléphone.",
+    "NOT_ALLOWED_FOR_TYPE": "Non disponible pour ce type d'article.",
+    "WEEK_IN_PAST": "La semaine {week} est passée : plus aucun jour sur lequel répartir la production.",
+    "WEEK_WARNING_NO_PLAN": "Pas de plan validé pour cette semaine : quantités de la proposition (commandes + réassort du stock). Validez le plan dans « Plans » pour suivre la réalisation.",
+    "WEEK_WARNING_UNASSIGNED": "{count} produits ({hours} h) attendent dans « À répartir » : glissez-les sur un jour ou utilisez « Répartir par jour ».",
+    "WEEK_WARNING_GROUP_OVERLOAD": "{group} : il manque {hours} h sur les jours surchargés — déplacez des produits ou ajoutez du monde (Optimisation des shifts).",
+    "WEEK_WARNING_AFTER_DUE": "{count} blocs sont après l’échéance de la commande.",
+    "WEEK_WARNING_NO_HOURS": "{count} produits sans norme de temps (gamme) : 0 h dans le Gantt."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -117,7 +124,16 @@
     "IMAGE_TOO_LARGE": "Image de signature trop grande ({max_kb} Ko max.).",
     "SIGNATURE_REF_INVALID": "La signature ne porte pas sur une de vos entrées.",
     "INVALID_UUID": "Identifiant UUID invalide.",
-    "INVALID_MONTH": "Mois au format AAAA-MM."
+    "INVALID_MONTH": "Mois au format AAAA-MM.",
+    "PALLET_OVER_LAYERS": "Plus de cartons que couches × cartons par couche (max. {max}).",
+    "INVALID_EAN": "EAN : de 8 à 14 chiffres.",
+    "TEMPERATURE_NOT_FOR_WORKSTATION": "Température seulement pour un four, une chambre de pousse, un froid ou une surgélation.",
+    "BAKE_WITHOUT_OVEN": "Produit cuit ou précuit : ajoutez une étape sur un four dans la gamme.",
+    "NOT_IN_WEEK": "Ce produit ne fait pas partie de la production de la semaine.",
+    "DAY_NOT_IN_WEEK": "Ce jour n’est pas un jour de production de la semaine.",
+    "DAY_IN_PAST": "Impossible de planifier la production sur un jour passé.",
+    "SAME_DAY": "Le produit est déjà sur ce jour.",
+    "NOTHING_TO_MOVE": "Aucune quantité de ce produit à déplacer depuis cet endroit."
   },
   "fields": {
     "code": "code",
@@ -258,7 +274,27 @@
     "employee_id": "Salarié",
     "month": "Mois",
     "unlock": "Débloquer",
-    "base": "adresse de la page"
+    "base": "adresse de la page",
+    "weight": "Poids unitaire (g)",
+    "ppc": "Pièces par carton",
+    "ppb": "Pièces par sachet",
+    "bpc": "Sachets par carton",
+    "cpl": "Cartons par couche",
+    "lpp": "Couches par palette",
+    "cpp": "Cartons par palette",
+    "carton_length_mm": "Longueur du carton (mm)",
+    "carton_width_mm": "Largeur du carton (mm)",
+    "carton_height_mm": "Hauteur du carton (mm)",
+    "carton_tare_g": "Poids du carton vide (g)",
+    "carton_type": "Type de carton",
+    "carton_ean": "EAN du carton",
+    "pallet_type": "Palette",
+    "storage": "Conservation",
+    "bake_state": "Cuisson",
+    "temperature_c": "Température (°C)",
+    "date": "Date",
+    "item_id": "Produit",
+    "reset": "Recommencer"
   },
   "entities": {
     "group": "groupe",

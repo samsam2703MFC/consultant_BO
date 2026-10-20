@@ -76,6 +76,16 @@ final class ProfitabilityService
         return $data;
     }
 
+    /** Mois en cours seul (page « Dzisiaj ») : groupes, objectifs et ventes manquantes, sans séries ni analyses. */
+    public function snapshot(?DateTimeImmutable $today = null): array
+    {
+        $today ??= new DateTimeImmutable('today');
+        $spec = $this->period('month', $today);
+        $rate = $this->repo->eurRate();
+        $sales = $this->sales($spec['from'], $today->format('Y-m-d'), $rate);
+        return $this->compute($spec, $sales, $this->repo->openOrders($today->format('Y-m-d'), $spec['end']), $rate);
+    }
+
     /** Ratio personnel / ventes et résultat des 6 derniers mois (mois en cours compris). */
     public function trend(DateTimeImmutable $today, float $rate, ?array $sales = null): array
     {

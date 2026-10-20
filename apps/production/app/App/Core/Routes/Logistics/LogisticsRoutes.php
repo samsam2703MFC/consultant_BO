@@ -5,6 +5,7 @@ return function(RouteCollector $r) {
     $c = App\Controllers\Web\Logistics\LogisticsController::class;
 
     $r->addRoute('GET', '/logistics', ['controller' => $c, 'method' => 'day']);
+    $r->addRoute('GET', '/logistics/week', ['controller' => $c, 'method' => 'week']);
     $r->addRoute('GET', '/logistics/vehicles', ['controller' => $c, 'method' => 'vehicles']);
     $r->addRoute('GET', '/logistics/tours', ['controller' => $c, 'method' => 'tours']);
     $r->addRoute('GET', '/logistics/loading-list', ['controller' => $c, 'method' => 'loadingList']);

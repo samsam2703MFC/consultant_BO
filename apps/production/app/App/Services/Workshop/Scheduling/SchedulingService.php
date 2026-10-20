@@ -9,6 +9,7 @@ use App\Core\Api\Workshop\Validator;
 use App\Core\TransactionManager;
 use App\Repositories\Workshop\ParamRepository;
 use App\Repositories\Workshop\SchedulingRepository;
+use App\Repositories\Workshop\WeekRepository;
 use App\Services\Workshop\Referentiel\AuditTrail;
 
 /**
@@ -33,6 +34,7 @@ final class SchedulingService
         private ParamRepository $params,
         private TransactionManager $tx,
         private AuditTrail $audit,
+        private WeekRepository $week,
     ) {
     }
 
@@ -64,7 +66,8 @@ final class SchedulingService
 
         $now ??= time();
         $earliest = max((int) (ceil($now / 900) * 900), strtotime($plan['period_start'] . ' -1 day'));
-        $horizonEnd = max(array_map(fn($o) => strtotime($o['due_at']), $orders)) + 86400;
+        $due = $this->dueByWeekDay($orders);
+        $horizonEnd = max($due) + 86400;
         $from = date('Y-m-d H:i:s', $earliest - 86400);
         $to = date('Y-m-d H:i:s', $horizonEnd);
 
@@ -128,7 +131,7 @@ final class SchedulingService
                     ], $alternatives[(int) $s['id']] ?? []),
                 ];
             }
-            $input[] = ['id' => (int) $o['id'], 'due' => strtotime($o['due_at']), 'qty' => (float) $o['quantity'],
+            $input[] = ['id' => (int) $o['id'], 'due' => $due[(int) $o['id']], 'qty' => (float) $o['quantity'],
                 'parent' => $o['id_parent_order'] !== null && in_array((int) $o['id_parent_order'], $orderIds, true) ? (int) $o['id_parent_order'] : null, 'steps' => $steps];
         }
         $result = $engine->schedule($input);
@@ -142,7 +145,11 @@ final class SchedulingService
             }
             return null;
         };
-        $this->tx->execute(function () use ($orderIds, $result, $teamFor, $context, $planId) {
+        $this->tx->execute(function () use ($orderIds, $result, $teamFor, $context, $planId, $orders, $due) {
+            // MTS : termin = dzień z Gantta tygodnia (przesuwanie operacji sprawdza ten termin).
+            foreach ($orders as $o) {
+                if ($o['origin'] === 'MTS' && $due[(int) $o['id']] !== strtotime($o['due_at'])) $this->repo->setOrderDue((int) $o['id'], date('Y-m-d H:i:s', $due[(int) $o['id']]));
+            }
             $this->repo->deleteUnlocked($orderIds);
             foreach ($result['operations'] as $op) {
                 $this->repo->insert([
@@ -163,6 +170,29 @@ final class SchedulingService
             'conflicts' => array_map(fn($c) => $c + $names[$c['order_id']] + ['message' => $context->translator->error('SCHEDULE_' . $c['reason'], $names[$c['order_id']])], $result['conflicts']),
             'load' => $this->load(date('Y-m-d', $earliest), date('Y-m-d', $horizonEnd - 86400), $context),
         ];
+    }
+
+    /**
+     * Termin zlecenia dla szeregowania : produkt przydzielony w Gantcie tygodnia kończy się najpóźniej
+     * w ostatnim dniu przydziału (MTS : ten dzień zastępuje termin, bo stan nie ma daty wyjazdu).
+     * @return array<int,int> zlecenie => termin (timestamp)
+     */
+    private function dueByWeekDay(array $orders): array
+    {
+        $monday = fn(int $t) => date('Y-m-d', strtotime('-' . ((int) date('N', $t) - 1) . ' days', strtotime(date('Y-m-d', $t))));
+        $times = array_map(fn($o) => strtotime($o['due_at']), $orders);
+        $lastDays = $this->week->lastDays(array_values(array_unique(array_map(fn($o) => (int) $o['id_item'], $orders))), $monday(min($times)), $monday(max($times)));
+        $out = [];
+        foreach ($orders as $o) {
+            $due = strtotime($o['due_at']);
+            $day = $lastDays[(int) $o['id_item']][$monday($due)] ?? null;
+            if ($day !== null) {
+                $end = strtotime($day . ' 23:59:00');
+                $due = $o['origin'] === 'MTS' ? $end : min($due, $end);
+            }
+            $out[(int) $o['id']] = $due;
+        }
+        return $out;
     }
 
     public function operations(string $from, string $to, ?int $groupId, ApiContext $context): array

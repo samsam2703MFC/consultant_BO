@@ -58,6 +58,117 @@
     </div>
 
     <div class="row">
+        {# --- Moje zadania : zadania stanowiska użytkownika ---------------------- #}
+        <div class="col-12 col-xl-5">
+            <div class="card at-mytasks">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h4 class="card-title mb-0">Moje zadania</h4>
+                        <span class="at-sub">{{ member and member.position_name ? member.position_name : 'bez stanowiska' }}</span>
+                    </div>
+                    {% if member and member.id_position %}
+                        <span class="d-flex gap-1 flex-wrap">
+                            <span class="badge bg-info">do zrobienia {{ my_counts.open ?? 0 }}</span>
+                            <span class="badge bg-success">zrobione {{ my_counts.done ?? 0 }}</span>
+                            {% if my_counts.overdue ?? 0 %}<span class="badge bg-danger">zaległe {{ my_counts.overdue }}</span>{% endif %}
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="card-body pt-0">
+                    {% if not member or not member.id_position %}
+                        <p class="at-empty mb-2">Nie masz przypisanego stanowiska — przypisz je, aby widzieć tu swoje zadania.</p>
+                        <a class="btn btn-sm btn-outline-primary" href="{{ root }}/organization/positions">Stanowiska i zadania</a>
+                    {% elseif my_tasks %}
+                        <ul class="at-tasks at-tasks-compact">
+                        {% for it in my_tasks %}
+                            {% set o = it.occurrence %}
+                            <li class="at-task is-{{ o.status }}{{ it.overdue ? ' is-overdue' : '' }}" data-occurrence="{{ o.id }}">
+                                <div class="at-task-main">
+                                    <strong>{{ it.task.title_pl }}</strong>
+                                    <div class="at-sub">{% if it.overdue %}zaległe · termin {{ o.due_date|date('d.m') }}{% else %}{{ it.frequency }} · termin {{ o.due_date|date('d.m') }}{% endif %}</div>
+                                </div>
+                                <div class="at-task-actions">
+                                    {% if it.task.link_path %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}{{ it.task.link_path }}">Otwórz</a>{% endif %}
+                                    <button class="btn btn-sm btn-primary" data-status="done" title="Zrobione"><i class="bi bi-check"></i></button>
+                                </div>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                        <a class="at-link" href="{{ root }}/my-tasks">Wszystkie moje zadania</a>
+                    {% else %}
+                        <p class="at-empty"><i class="bi bi-check2-circle"></i> Wszystkie zadania stanowiska zrobione.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# --- Rentowność grup : personel / sprzedaż wobec celu, brakująca sprzedaż --- #}
+        <div class="col-12 col-xl-7">
+            <div class="card at-today-profit">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h4 class="card-title mb-0">Rentowność grup</h4>
+                        <span class="at-sub">bieżący miesiąc · koszt personelu / sprzedaż wobec celu</span>
+                    </div>
+                    <a class="at-link" href="{{ root }}/dashboard#grupy">Szczegóły</a>
+                </div>
+                <div class="card-body pt-0">
+                    {% if profit and profit.groups %}
+                        {% set t = profit.totals %}
+                        <div class="table-responsive">
+                            <table class="table mb-0 at-today-profit-table">
+                                <thead>
+                                    <tr>
+                                        <th>Grupa</th>
+                                        <th class="text-end">Sprzedaż</th>
+                                        <th>Personel / sprzedaż</th>
+                                        <th class="text-end" title="Sprzedaż − surowce i opakowania">Marża brutto</th>
+                                        <th class="text-end" title="Sprzedaż brakująca do celu personel / sprzedaż za cały miesiąc">Brakuje do celu<div class="at-sub">cały miesiąc</div></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% for g in profit.groups %}
+                                    {% set width = g.staff_pct is null ? 100 : min(100, g.staff_pct / max(g.staff_target, 1) * 50) %}
+                                    <tr class="{{ g.ok ? 'at-profit-ok' : 'at-profit-bad' }}">
+                                        <td><strong>{{ g.name }}</strong></td>
+                                        <td class="text-end">{{ g.revenue|eur }}</td>
+                                        <td>
+                                            <div class="at-ratio at-ratio-sm"><span class="at-ratio-bar {{ g.staff_pct is not null and g.staff_pct <= g.staff_target ? 'ok' : '' }}" style="width: {{ width|round(1) }}%"></span><span class="at-ratio-target" style="left: 50%"></span></div>
+                                            <span class="at-ratio-value {{ g.staff_pct is not null and g.staff_pct <= g.staff_target ? 'text-success' : 'text-danger' }}">{{ g.staff_pct|pct }}</span> <span class="at-sub">cel ≤ {{ g.staff_target|pct(0) }}</span>
+                                        </td>
+                                        <td class="text-end">{{ g.gross_pct|pct(0) }}</td>
+                                        <td class="text-end">
+                                            {% if g.missing > 0 %}
+                                                <strong class="{{ profit.period.current and g.missing_after_open <= 0 ? '' : 'text-danger' }}">{{ g.missing|eur }}</strong>{% if g.missing_pct is not null %} <span class="at-profit-badge{{ profit.period.current and g.missing_after_open <= 0 ? ' is-covered' : '' }}">+{{ g.missing_pct|pct(0) }}</span>{% endif %}
+                                                {% if profit.period.current %}<div class="at-sub">{{ g.missing_after_open > 0 ? 'po zamówieniach ' ~ g.missing_after_open|eur : 'pokryte zamówieniami' }}</div>{% endif %}
+                                            {% else %}
+                                                <span class="text-success"><i class="bi bi-check-circle"></i> w normie</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr class="at-profit-total">
+                                        <td><strong>Razem</strong><div class="at-sub">z działami wspólnymi</div></td>
+                                        <td class="text-end"><strong>{{ t.revenue|eur }}</strong></td>
+                                        <td><span class="at-ratio-value {{ t.staff_pct is not null and t.staff_pct <= t.staff_target ? 'text-success' : 'text-danger' }}">{{ t.staff_pct|pct }}</span> <span class="at-sub">cel ≤ {{ t.staff_target|pct(0) }}</span></td>
+                                        <td class="text-end">{{ t.gross_pct|pct(0) }}</td>
+                                        <td class="text-end">{% if t.staff_missing > 0 %}<strong class="text-danger">{{ t.staff_missing|eur }}</strong>{% else %}<span class="text-success"><i class="bi bi-check-circle"></i> w normie</span>{% endif %}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <p class="at-profit-note mb-0">Personel / sprzedaż : koszt personelu do dziś ÷ sprzedaż do dziś. Brakuje do celu : sprzedaż, której brakuje w tym miesiącu, aby koszt personelu całego miesiąca mieścił się w celu ; „pokryte zamówieniami” — otwarte zamówienia do końca miesiąca wystarczą.</p>
+                    {% else %}
+                        <p class="at-empty">Brak danych o sprzedaży lub kosztach w tym miesiącu.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
         {# --- Plan wysyłek ------------------------------------------------------ #}
         <div class="col-12 col-xl-8">
             <div class="card">
@@ -120,12 +231,13 @@
                     {% if todo %}
                     <ul class="at-todo">
                         {% for t in todo %}
-                            <li class="at-todo-{{ t.tone }}">
+                            <li class="at-todo-{{ t.tone }}{{ t.mine ? ' is-mine' : '' }}">
                                 <a href="{{ root }}{{ t.url }}">
                                     <i class="bi {{ t.icon }}"></i>
                                     <span>
                                         <strong>{{ t.count|plural_pl(t.one, t.few, t.many) }}</strong>
                                         {% if t.note %}<small>{{ t.note }}</small>{% endif %}
+                                        {% if t.owners %}<small class="at-todo-owner">{% if t.mine %}<span class="at-todo-mine">Twoje</span> {% endif %}{{ t.owners|join(' · ') }}</small>{% endif %}
                                     </span>
                                     <i class="bi bi-chevron-right at-todo-go"></i>
                                 </a>
@@ -174,4 +286,22 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    // Moje zadania : « Zrobione » prosto ze strony Dzisiaj.
+    document.querySelectorAll('.at-mytasks [data-occurrence] [data-status]').forEach(button => button.addEventListener('click', () => {
+        const li = button.closest('[data-occurrence]');
+        button.disabled = true;
+        at.send(`/ajax/my-tasks/${li.dataset.occurrence}`, 'PATCH', {status: button.dataset.status, note: null}).then(res => {
+            at.notify(res.ok, res.message);
+            if (res.ok) window.setTimeout(() => window.location.reload(), 400);
+            else button.disabled = false;
+        });
+    }));
+})();
+</script>
 {% endblock %}
