@@ -883,3 +883,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T12:12:15Z Gantt tygodnia : etykieta grupy = nazwa + godziny
 2026-10-20T12:32:05Z grupy = działy produkcji ERP (migracja 024)
 2026-10-20T12:42:14Z produkt : produkcja i Gantt ; Gantt bez 3 dni
+2026-10-20T13:02:34Z jeden kreator produktu, bez optymalizatora (migracja 025)
