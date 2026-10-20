@@ -21,7 +21,7 @@
             <div class="card">
                 <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h4 class="card-title mb-0">Oczekujące zamówienia</h4>
-                    <div class="d-flex gap-2 flex-wrap"><a class="btn btn-primary btn-sm" href="<?= ROOT ?>/production/plan-wizard"><i class="bi bi-calendar-check me-1"></i>Planuj produkcję (kreator)</a><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/future/production-lists">Archiwum list produkcyjnych</a><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/future/requirement-lists">Archiwum zapotrzebowania</a><a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/future/complaint-production-lists">Archiwum zwrotów</a></div>
+                    <div class="d-flex gap-2 flex-wrap"><a class="btn btn-primary btn-sm" href="<?= ROOT ?>/production/plan-wizard"><i class="bi bi-calendar-check me-1"></i>Planuj produkcję (kreator)</a></div>
                 </div>
                 <div class="card-body">
                     <form method="POST" id="id_form">

@@ -75,6 +75,17 @@ class App
         switch ($routeInfo[0]) {
             case Dispatcher::FOUND:
                 [$_, $handler, $vars] = $routeInfo;
+
+                // Strona zastąpiona inną (audyt : jedna strona zamiast dwóch) : przekierowanie, zapytanie zachowane.
+                if (isset($handler['redirect'])) {
+                    $target = $handler['redirect'];
+                    foreach ($vars as $k => $v) $target = str_replace('{' . $k . '}', rawurlencode((string) $v), $target);
+                    $query = $_GET;
+                    unset($query['url']);
+                    header('Location: ' . ROOT . $target . ($query ? (str_contains($target, '?') ? '&' : '?') . http_build_query($query) : ''), true, 302);
+                    return;
+                }
+
                 $controllerFQCN = $handler['controller'];
                 $action         = $handler['method'];
 

@@ -4,10 +4,7 @@ use FastRoute\RouteCollector;
 
 return function (RouteCollector $r) {
 
-    $r->addRoute('GET', '/products/price-structure', [
-        'controller' => App\Controllers\Web\Finances\Product\PriceStructureController::class,
-        'method' => 'overview'
-    ]);
+    $r->addRoute('GET', '/products/price-structure', ['redirect' => '/products/all']);
 
     $r->addRoute('GET', '/finances/cost-analysis', [
         'controller' => App\Controllers\Web\Finances\Product\CostAnalysisController::class,

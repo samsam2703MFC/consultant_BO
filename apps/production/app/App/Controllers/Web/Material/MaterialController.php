@@ -24,12 +24,6 @@ class MaterialController extends BaseController
     }
 
 
-    public function overview()
-    {
-        $data['rows'] = $this->materialCategoryService->getUsed();
-
-        $this->view("material/category/overview", $data);
-    }
 
     public function newMaterial($idCategory = null)
     {

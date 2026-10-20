@@ -9,10 +9,7 @@ return function(RouteCollector $r) {
         'method'     => 'overview'
     ]);
 
-    $r->addRoute('GET', '/invoice-documents/new', [
-        'controller' => App\Controllers\Web\Document\InvoiceController::class,
-        'method'     => 'newInvoice'
-    ]);
+    $r->addRoute('GET', '/invoice-documents/new', ['redirect' => '/invoice-documents']);
 
     $r->addRoute('POST', '/invoice-documents/new', [
         'controller' => App\Controllers\Web\Document\InvoiceController::class,

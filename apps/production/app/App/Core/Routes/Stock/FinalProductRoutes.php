@@ -14,10 +14,7 @@ return function(RouteCollector $r) {
         'method'     => 'ajaxSupplyMonitor'
     ]);
 
-    $r->addRoute('GET', '/products/stock/all', [
-        'controller' => App\Controllers\Web\Stock\FinalProductStockController::class,
-        'method'     => 'stockState'
-    ]);
+    $r->addRoute('GET', '/products/stock/all', ['redirect' => '/stock']);
 
     $r->addRoute('GET', '/ajax/stock/stock-state', [
         'controller' => App\Controllers\Web\Document\StockDocumentController::class,

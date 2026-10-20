@@ -134,22 +134,4 @@ class ProductController extends BaseController
         $this->view("product/product/filter", $data);
     }
 
-    public function profitability($id)
-    {
-
-        $product = $this->productService->getById($id);
-
-        $data['product_data'] = $product;
-        $data['product_data']['price'] = $this->clientProductPriceService->getProductPriceByCustomer($id);
-        $data['recipe_price'] = $this->recipeService->getRecipeSummary($product['id_recipe'])['total_ingredient_cost'];
-        $data['employee_cost'] = $this->productionEmployeeService->getCostBySection($product['id_section']);
-        $data['sales_data_last_30_days'] = $this->wdtService->getSoldDataInLast30Days($id);
-        $data['section_cost'] = $this->productionSectionService->getById($product['id_section']);
-
-        $data['sum_direct_cost'] = ($data['recipe_price'] + $data['employee_cost']);
-        $data['sum_indirect_fixed_cost'] = $data['section_cost']['depreciation'];
-        $data['sum_indirect_variable_cost'] = ($data['section_cost']['water_cost'] + $data['section_cost']['power_supply_cost'] + $data['section_cost']['fuel_cost'] + $data['section_cost']['other_cost']);
-
-        $this->view("product/product/profitability", $data);
-    }
 }

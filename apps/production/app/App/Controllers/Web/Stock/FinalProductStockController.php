@@ -17,12 +17,6 @@ class FinalProductStockController extends  BaseController
         $this->finalProductStockService = $finalProductStockService;
     }
 
-    public function overview()
-    {
-        $data['categories'] = $this->finalProductStockService->getCategoryProductInStock();
-
-        $this->view("stock/final_product/overview", $data);
-    }
 
     public function supplyMonitor()
     {
@@ -44,17 +38,5 @@ class FinalProductStockController extends  BaseController
         return $this->json($this->finalProductStockService->getSupplyMonitorData($orderIds));
     }
 
-    public function stockState()
-    {
-        $data['rows'] = $this->finalProductStockService->getStockState();
 
-        $this->view("stock/final_product/stock_state", $data);
-    }
-
-    public function filterByCategory($idCategory)
-    {
-        $data['rows'] = $this->finalProductStockService->getStockStateByCategory($idCategory);
-
-        $this->view("stock/final_product/filter", $data);
-    }
 }

@@ -3,18 +3,12 @@
 use FastRoute\RouteCollector;
 
 return function (RouteCollector $r): void {
-    $r->addRoute('GET', '/settings/api-devices', [
-        'controller' => App\Controllers\Web\Integration\InternalApiDeviceController::class,
-        'method' => 'overview',
-    ]);
+    $r->addRoute('GET', '/settings/api-devices', ['redirect' => '/devices']);
     $r->addRoute('GET', '/devices', [
         'controller' => App\Controllers\Web\Integration\InternalApiDeviceController::class,
         'method' => 'overview',
     ]);
-    $r->addRoute('GET', '/settings/api-devices/new', [
-        'controller' => App\Controllers\Web\Integration\InternalApiDeviceController::class,
-        'method' => 'create',
-    ]);
+    $r->addRoute('GET', '/settings/api-devices/new', ['redirect' => '/devices/new']);
     $r->addRoute('POST', '/settings/api-devices/new', [
         'controller' => App\Controllers\Web\Integration\InternalApiDeviceController::class,
         'method' => 'create',
@@ -39,26 +33,14 @@ return function (RouteCollector $r): void {
         'controller' => App\Controllers\Web\Integration\InternalApiDeviceController::class,
         'method' => 'toggle',
     ]);
-    $r->addRoute('GET', '/settings/picking-list-generations', [
-        'controller' => App\Controllers\Web\Integration\PickingListGenerationController::class,
-        'method' => 'overview',
-    ]);
+    $r->addRoute('GET', '/settings/picking-list-generations', ['redirect' => '/archive/documents/picking-lists']);
     $r->addRoute('GET', '/settings/picking-list-generations/{id:\\d+}', [
         'controller' => App\Controllers\Web\Integration\PickingListGenerationController::class,
         'method' => 'show',
     ]);
-    $r->addRoute('GET', '/archive/documents/proformas', [
-        'controller' => App\Controllers\Web\Document\ProformaController::class,
-        'method' => 'overview',
-    ]);
-    $r->addRoute('GET', '/archive/documents/invoices', [
-        'controller' => App\Controllers\Web\Document\InvoiceController::class,
-        'method' => 'overview',
-    ]);
-    $r->addRoute('GET', '/archive/documents/returns', [
-        'controller' => App\Controllers\Web\Client\Complaint\ComplaintController::class,
-        'method' => 'shippingDocuments',
-    ]);
+    $r->addRoute('GET', '/archive/documents/proformas', ['redirect' => '/proforma-documents']);
+    $r->addRoute('GET', '/archive/documents/invoices', ['redirect' => '/invoice-documents']);
+    $r->addRoute('GET', '/archive/documents/returns', ['redirect' => '/client-complaints/shipping-documents']);
     $r->addRoute('GET', '/archive/documents/picking-lists', [
         'controller' => App\Controllers\Web\Integration\PickingListGenerationController::class,
         'method' => 'overview',

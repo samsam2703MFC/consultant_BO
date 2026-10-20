@@ -4,13 +4,15 @@
     <div class="card-header">
         <h4 class="card-title">Lista produktów
             <?php if (isset($category['id'])): ?>
-                <a href="<?= ROOT ?>/product-categories/<?= $category['id'] ?>/products/new" class="btn btn-primary"
-                   role="button">Dodaj nowy</a>
-                <a href="<?= ROOT ?>/products/new-with-recipe?category=<?= (int) $category['id'] ?>" class="btn btn-outline-primary"
-                   role="button">Nowy produkt z recepturą</a>
+                <a href="<?= ROOT ?>/products/new-with-recipe?category=<?= (int) $category['id'] ?>" class="btn btn-primary"
+                   role="button">Nowy produkt</a>
+                <a href="<?= ROOT ?>/product-categories/<?= $category['id'] ?>/products/new" class="btn btn-outline-secondary btn-sm"
+                   role="button" title="Produkt bez receptury (np. towar handlowy)">bez receptury</a>
             <?php else: ?>
-                <a href="<?= ROOT ?>/products/new" class="btn btn-primary"
-                   role="button">Dodaj nowy</a>
+                <a href="<?= ROOT ?>/products/new-with-recipe" class="btn btn-primary"
+                   role="button">Nowy produkt</a>
+                <a href="<?= ROOT ?>/products/new" class="btn btn-outline-secondary btn-sm"
+                   role="button" title="Produkt bez receptury (np. towar handlowy)">bez receptury</a>
             <?php endif; ?>
         </h4>
     </div>

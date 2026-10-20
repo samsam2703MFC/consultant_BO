@@ -181,7 +181,7 @@
                 <tbody>
                 {% for p in list %}
                     <tr data-product="{{ p.id }}">
-                        <td><a href="{{ root }}/products/{{ p.id }}/edit">{{ p.name }}</a>
+                        <td><a href="{{ root }}/workshop/products#/product/{{ p.id }}">{{ p.name }}</a>
                             <div class="at-sub">{{ p.cpp ? 'warstwy × kartony = ' ~ ((p.cpl ?? 0) * (p.lpp ?? 0)) ~ ' ≠ ' ~ p.cpp : 'brak kartonów na paletę' }}</div></td>
                         <td><input class="form-control form-control-sm at-logi-num" name="cpl" inputmode="numeric" value="{{ p.cpl }}" aria-label="Kartony na warstwę {{ p.name }}"></td>
                         <td><input class="form-control form-control-sm at-logi-num" name="lpp" inputmode="numeric" value="{{ p.lpp }}" aria-label="Warstwy {{ p.name }}"></td>

@@ -27,30 +27,6 @@ class ProductionListController extends BaseController
     {
         $data['rows'] = $this->orderService->getPending();
 
-        if($_SERVER['REQUEST_METHOD'] == "POST"){
-
-            if(isset($_POST['production_list']) && $_POST['production_list'] == 1){
-                $this->productionService->getProductionListPDF($_POST);
-            }
-            else if(isset($_POST['requirements_list']) && $_POST['requirements_list'] == 1){
-                $recipeModel = new RecipeModel();
-
-                $productionData = $productionModel->getProductionListData($_POST);
-
-                $stock_minimum_flag = false;
-
-
-                if(isset($_POST['stock_minimum'])){
-                    $stock_minimum_flag = true;
-                }
-
-                $recipeModel->getMaterialRequirementsForProductList($productionData, $stock_minimum_flag);
-
-                exit();
-            }
-
-        }
-
         $this->view("production/production_list/planning", $data);
     }
 

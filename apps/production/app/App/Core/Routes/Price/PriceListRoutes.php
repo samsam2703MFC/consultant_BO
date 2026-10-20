@@ -17,10 +17,7 @@ return function (RouteCollector $r) {
     ]);
 
 
-    $r->addRoute('GET', '/price-lists/clients', [
-        'controller' => App\Controllers\Web\Product\Price\PriceListController::class,
-        'method' => 'clientOverview'
-    ]);
+    $r->addRoute('GET', '/price-lists/clients', ['redirect' => '/clients']);
 
     $r->addRoute('GET', '/price-lists/general', [
         'controller' => App\Controllers\Web\Product\Price\PriceListController::class,
