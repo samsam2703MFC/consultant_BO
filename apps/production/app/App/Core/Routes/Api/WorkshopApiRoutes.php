@@ -104,6 +104,7 @@ final class WorkshopApiRoutes
             ['POST', '/planning/simulate', SchedulingController::class, 'simulate', 'prod.plan.read'],
             ['PUT', '/planning/staffing', SchedulingController::class, 'saveStaffing', 'prod.plan.validate'],
             ['GET', '/planning/week', WeekController::class, 'get', 'prod.plan.read'],
+            ['GET', '/planning/sheet', WeekController::class, 'sheet', 'prod.plan.read'],
             ['POST', '/planning/week/move', WeekController::class, 'move', 'prod.gantt.move'],
             ['POST', '/planning/week/distribute', WeekController::class, 'distribute', 'prod.gantt.move'],
             ['POST', '/planning/week/pin', WeekController::class, 'pin', 'prod.gantt.move'],

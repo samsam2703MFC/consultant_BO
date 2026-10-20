@@ -446,11 +446,12 @@ $pdo->exec("UPDATE tfb_tour SET weekdays = 127 & ~(1 << (" . date('N', strtotime
 check($toured[1] === $d1 . ' 15:00:00' && array_column($b['data']['lines'], 'due_at', 'item_id')[1] === $d1 . ' 19:00:00', 'MTO due before the earliest tour departure of its customers');
 $pdo->exec('DELETE FROM tfb_tour');
 $m = $byItem[$itemId]['mts'];
-check($m['free_stock'] == 180.0 && $m['projected'] == 0.0 && $m['target'] == 300.0 && $byItem[$itemId]['qty_mts'] == 160.0 && $m['capped'],
-    'MTS: free stock 3 cartons − 3 ordered = 0; target capped at max 300; batch 160 fits, 320 would not');
-check($m['projected'] + $byItem[$itemId]['qty_mts'] <= 300, 'acceptance: MTS stays within the max stock');
-check(abs($byItem[$semiId]['qty_semi'] - 160 / 60 * 2.0 * 1.01) < 0.001 && $byItem[$semiId]['qty_proposed'] == 10.0 && $byItem[$semiId]['parents'][0]['item_id'] === $itemId,
-    'semi-finished from the BOM: 2.67 cartons × 2 kg + 1 % loss (P2) = 5.39 kg, rounded to a 5 kg batch multiple');
+check($m['free_stock'] == 180.0 && $m['available'] == 0.0 && $m['min'] == 60.0 && $m['max'] == 300.0 && $m['reason'] === 'below_min' && $byItem[$itemId]['qty_mts'] == 300.0,
+    'MTS (simple rule): free stock 3 cartons − 3 ordered = 0 available, below min 60 → refill up to max 300');
+check($byItem[$itemId]['qty_batch'] == 20.0 && $byItem[$itemId]['qty_proposed'] == 320.0 && $byItem[$itemId]['batches'] === 2,
+    'week rounded to whole batches: 300 → 2 batches of 160 = 320 (20 more for stock)');
+check(abs($byItem[$semiId]['qty_semi'] - 320 / 60 * 2.0 * 1.01) < 0.001 && $byItem[$semiId]['qty_proposed'] == 15.0 && $byItem[$semiId]['parents'][0]['item_id'] === $itemId,
+    'semi-finished from the BOM: 5.33 cartons × 2 kg + 1 % loss (P2) = 10.77 kg, rounded to a 5 kg batch multiple');
 check(in_array('FREEZER_CAPACITY_NOT_SET', array_column($b['data']['warnings'], 'code'), true), 'freezer capacity not set is reported');
 
 // Surgélateur : 1 carton libre au-delà des 3 cartons présents
@@ -470,14 +471,14 @@ check($s === 201 && $plan['data']['status'] === 'proposed' && count($plan['data'
 $planId = $plan['data']['id'];
 $lines = [];
 foreach ($plan['data']['lines'] as $l) $lines[$l['item_id']] = $l;
-check($lines[$itemId]['batch_size'] == 160 && $lines[$itemId]['batches'] === 1 && $lines[$semiId]['batch_size'] == 5 && $lines[$semiId]['batches'] === 2
+check($lines[$itemId]['batch_size'] == 160 && $lines[$itemId]['batches'] === 2 && $lines[$semiId]['batch_size'] == 5 && $lines[$semiId]['batches'] === 3
     && $byItem[$itemId]['batch_size'] == 160 && $byItem[$itemId]['ppc'] === 60, 'plan and proposal show the production batch (number and size)');
 [$s, $b] = $call('PATCH', "/planning/plans/{$planId}/lines/{$lines[1]['id']}", ['qty_final' => 200, 'adjust_reason' => 'x'], $access);
 check($s === 422 && $codes($b) === ['qty_final:BELOW_ORDERS'], 'never below the customer orders');
 [$s, $b] = $call('PATCH', "/planning/plans/{$planId}/lines/{$lines[1]['id']}", ['qty_final' => 288], $access);
 check($s === 422 && $codes($b) === ['adjust_reason:REQUIRED'], 'a change needs a reason');
-[$s, $b] = $call('PATCH', "/planning/plans/{$planId}/lines/{$lines[$itemId]['id']}", ['qty_final' => 320, 'adjust_reason' => 'więcej'], $access);
-check($s === 422 && $codes($b) === ['qty_final:MTS_ABOVE_STOCK_MAX'], 'acceptance: an MTS adjustment cannot exceed the max stock');
+[$s, $b] = $call('PATCH', "/planning/plans/{$planId}/lines/{$lines[$itemId]['id']}", ['qty_final' => 480, 'adjust_reason' => 'więcej'], $access);
+check($s === 422 && $codes($b) === ['qty_final:MTS_ABOVE_STOCK_MAX'], 'acceptance: an MTS adjustment cannot exceed the max stock (in whole batches: 300 → 320)');
 [$s, $b] = $call('PATCH', "/planning/plans/{$planId}/lines/{$lines[1]['id']}", ['qty_final' => 288, 'adjust_reason' => 'pełna blacha'], $access);
 check($s === 200 && array_values(array_filter($b['data']['lines'], fn($l) => $l['item_id'] === 1))[0]['qty_final'] == 288.0, 'MTO line adjusted with a reason');
 
@@ -486,7 +487,7 @@ check($s === 200 && $b['data']['status'] === 'validated' && count($b['data']['or
 $orders = [];
 foreach ($b['data']['orders'] as $o) $orders[$o['origin']] = $o;
 check($orders['MTO']['quantity'] == 288.0 && $orders['MTO']['customer_orders'] === 2 && $orders['MTO']['due_at'] === $d1 . ' 19:00:00', 'MTO order linked to its 2 customer orders, due before departure');
-check($orders['MTS']['quantity'] == 160.0 && $orders['MTS']['priority'] > $orders['MTO']['priority'], 'MTS order after MTO in priority');
+check($orders['MTS']['quantity'] == 320.0 && $orders['MTS']['priority'] > $orders['MTO']['priority'], 'MTS order after MTO in priority');
 check($orders['SEMI']['parent_order_id'] === $orders['MTS']['id'] && $orders['SEMI']['due_at'] < $orders['MTS']['due_at'], 'semi-finished order tied to its parent and due before it starts');
 check(preg_match('/^OF-\d{8}-\d{3}$/', $orders['MTO']['code']) === 1, 'order codes');
 [$s, $b] = $call('POST', "/planning/plans/{$planId}/validate", null, $access);
@@ -497,7 +498,7 @@ check($plan2['data']['version'] === 1, 'another period starts at version 1');
 check($s === 409 && $b['description'] === 'PLAN_OVERLAP', 'one validated plan per day');
 [$s, $b] = $call('GET', '/planning/demand' . $period, null, $access);
 $mtsAgain = array_values(array_filter($b['data']['lines'], fn($l) => $l['item_id'] === $itemId))[0]['mts'] ?? null;
-check($mtsAgain === null || $mtsAgain['projected'] >= 160, 'released MTS orders count in the projected stock');
+check($mtsAgain === null || $mtsAgain['available'] >= 160, 'released MTS orders count in the available stock');
 [$s, $b] = $call('GET', '/planning/plans?status=validated', null, $dir);
 check($s === 200 && array_column($b['data'], 'id') === [$planId], 'direction reads validated plans');
 
@@ -932,6 +933,12 @@ $sundayRow = $g1 ? array_values(array_filter($g1['days'], fn($d) => (int) date('
 check($g1 !== null && $g1['days'][0]['available_h'] == 16 && $sundayRow && $sundayRow['available_h'] == 0 && $g1['available_h'] == 16 * 6 && $w['data']['totals']['done_h'] > 0,
     'week: hours available = 2 people × 8 h on the days of the shift (no Sunday shift); done hours from finished operations');
 check($w['data']['fte_hours'] == 40, 'week: full-time hours (FTE = group hours ÷ 40 h, parameter week.fte_hours)');
+[$s, $sh] = $call('GET', "/planning/sheet?date={$today}", null, $dir);
+$sr = array_column($sh['data']['rows'] ?? [], null, 'item_id');
+check($s === 200 && isset($sr[$itemId]) && $sr[$itemId]['mode'] === 'MTS' && $sr[$itemId]['batch'] == 160 && $sr[$itemId]['stock_max'] !== null
+    && $sr[$itemId]['batches'] === (int) ceil($sr[$itemId]['to_produce'] / 160 - 1e-9) && $sr[$itemId]['to_produce'] == $wp[$itemId]['quantity']
+    && $sh['data']['fte_hours'] == 40 && $sh['data']['groups'] && $sh['data']['can_edit'] === false,
+    'sheet: one line per product (same quantity as the week board, batches = to produce ÷ pieces per batch, rounded up)');
 [$s, $b] = $call('GET', '/planning/week?date=jutro', null, $dir);
 check($s === 422 && $codes($b) === ['date:INVALID_DATE'], 'week: date checked');
 [$s, $b] = $call('POST', '/planning/week/distribute', ['date' => $today], $dir);

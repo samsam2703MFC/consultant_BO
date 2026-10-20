@@ -19,6 +19,12 @@ final class WeekController
         return new ApiResult($this->week->week((string) $request->query('date', date('Y-m-d')), $request->context));
     }
 
+    /** Arkusz tygodnia : jeden wiersz na produkt (stan, min., maks., zamówienia, uzupełnienie, partie, godziny). */
+    public function sheet(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->week->sheet((string) $request->query('date', date('Y-m-d')), $request->context));
+    }
+
     public function move(ApiRequest $request): ApiResult
     {
         return new ApiResult($this->week->move($request->body(), $request->context));

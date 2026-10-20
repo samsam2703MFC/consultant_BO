@@ -150,6 +150,69 @@ final class WeekService
     }
 
     /**
+     * Arkusz tygodnia (cała produkcja na jednej kartce) : jeden wiersz na kartę — produkty z ilością w tygodniu
+     * i produkty « na magazyn » zawsze (stan, dostępne, min., maks.), zamówienia, uzupełnienie (dostępne < min. →
+     * do maks.), do produkcji = tydzień produktu w pełnych partiach, sztuk w partii, partie, godziny, dni ; grupy :
+     * dostępne godziny i osoby (ETP = godziny ÷ week.fte_hours po stronie widoku).
+     */
+    public function sheet(string $date, ApiContext $context, ?int $now = null): array
+    {
+        $now ??= time();
+        $data = $this->data($this->weekStart($date), $context, $now);
+        $demand = $data['demand'] ?? $this->plans->compute($data['start'], $data['end']);
+        $week = $this->present($data, $context, $now);
+        $products = array_column($week['products'], null, 'item_id');
+        $empty = ['orders' => 0.0, 'refill' => 0.0, 'semi' => 0.0, 'fixed' => 0.0, 'batch_extra' => 0.0];
+        $parts = [];
+        foreach ($demand['lines'] as $l) {
+            $p = &$parts[(int) $l['item']['id']];
+            $p ??= $empty;
+            $p['orders'] += $l['qty_mto'];
+            $p['refill'] += $l['qty_mts'];
+            $p['semi'] += $l['qty_semi'];
+            $p['fixed'] += $l['qty_fixed'];
+            $p['batch_extra'] += $l['qty_batch'] ?? 0.0;
+            unset($p);
+        }
+        $free = $this->planning->freeStockCartons();
+        $num = fn($v) => $v === null ? null : (float) $v;
+        $rows = [];
+        foreach ($this->planning->items() as $it) {
+            $id = (int) $it['id'];
+            if ($it['erp_active'] !== null && !(int) $it['erp_active']) continue;
+            $w = $products[$id] ?? null;
+            if ($w === null && $it['mode'] !== 'MTS') continue;
+            $ppc = $it['item_type'] === 'product' && (int) $it['ppc'] > 0 ? (int) $it['ppc'] : null;
+            $batch = (float) $it['batch_multiple'] > 0 ? (float) $it['batch_multiple'] : null;
+            $qty = (float) ($w['quantity'] ?? 0.0);
+            $pr = $parts[$id] ?? $empty;
+            $s = $demand['stock'][$id] ?? null;
+            $rows[] = [
+                'item_id' => $id, 'name' => $it['name'], 'item_type' => $it['item_type'],
+                'group_id' => $it['id_primary_group'] !== null ? (int) $it['id_primary_group'] : null,
+                'mode' => $it['mode'], 'never_frozen' => (bool) $it['never_frozen'], 'unit' => $it['base_unit'], 'ppc' => $ppc, 'batch' => $batch,
+                'stock_min' => $num($it['stock_min']), 'stock_max' => $num($it['stock_max']),
+                'stock' => $ppc && $it['id_final_product'] ? (float) (($free[(int) $it['id_final_product']] ?? 0) * $ppc) : null,
+                'available' => $s ? round($s['available'], 3) : null, 'in_production' => $s ? round($s['in_production'], 3) : null,
+                'orders_from_stock' => $s ? round($s['orders_from_stock'], 3) : null,
+                'orders' => round($pr['orders'] + $pr['semi'], 3), 'refill' => round($pr['refill'], 3), 'fixed' => round($pr['fixed'], 3),
+                'batch_extra' => round($pr['batch_extra'], 3), 'to_produce' => round($qty, 3),
+                'batches' => $batch ? (int) ceil(round($qty / $batch, 6)) : null,
+                'hours' => (float) ($w['hours'] ?? 0.0), 'placed' => $w ? round(array_sum(array_column($w['slots'], 'quantity')), 3) : 0.0,
+                'days' => $w ? array_column($w['slots'], 'day') : [],
+            ];
+        }
+        usort($rows, fn($a, $b) => [$a['group_id'] ?? 999, $a['to_produce'] <= 0, $a['name']] <=> [$b['group_id'] ?? 999, $b['to_produce'] <= 0, $b['name']]);
+        return [
+            'week_start' => $week['week_start'], 'week_end' => $week['week_end'], 'iso_week' => $week['iso_week'], 'today' => $week['today'],
+            'days' => $week['days'], 'fte_hours' => $week['fte_hours'], 'source' => $week['source'],
+            'groups' => array_map(fn($g) => ['id' => $g['id'], 'name' => $g['name'], 'color' => $g['color'], 'available_h' => $g['available_h'], 'people' => $g['people']], $week['groups']),
+            'rows' => $rows,
+            'can_edit' => $context->can('prod.products.write'),
+        ];
+    }
+
+    /**
      * Godzina startu bloku w dniu (tydzień typowy) ; stała partia (📌) tego dnia tygodnia dostaje tę samą
      * godzinę. time = null usuwa godzinę.
      */
@@ -350,6 +413,7 @@ final class WeekService
         $plans = $active ?: $plans;
         $lines = [];
         $warnings = [];
+        $demand = null;
         if ($plans) {
             foreach ($plans as $plan) {
                 foreach ($this->planning->lines((int) $plan['id']) as $l) {
@@ -466,7 +530,7 @@ final class WeekService
 
         return ['start' => $start, 'end' => $end, 'days' => array_values($days), 'stock_days' => $stockDays, 'today' => $today,
             'plans' => $plans, 'products' => $products, 'capacity' => $capacity, 'routings' => $routings, 'warnings' => $warnings,
-            'pins' => $pins, 'fixed_week' => $fixedWeek];
+            'pins' => $pins, 'fixed_week' => $fixedWeek, 'demand' => $demand];
     }
 
     /** Nowy produkt tygodnia (z karty produkcyjnej). */

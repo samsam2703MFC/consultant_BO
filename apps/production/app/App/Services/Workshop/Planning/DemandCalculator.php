@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace App\Services\Workshop\Planning;
 
 /**
- * Calcul des besoins (sans base) : arrondi au lot, réapprovisionnement MTS plafonné au stock
- * maximum, plafond du surgélateur. Quantités dans l'unité de base de l'article.
+ * Calcul des besoins (sans base) : arrondi au lot, réapprovisionnement MTS (sous le min. → jusqu'au max.),
+ * plafond du surgélateur. Quantités dans l'unité de base de l'article.
  */
 final class DemandCalculator
 {
@@ -20,39 +20,14 @@ final class DemandCalculator
     }
 
     /**
-     * Réapprovisionnement d'un article MTS.
-     * stock projeté = stock libre + OF MTS en cours − commandes confirmées servies sur stock ;
-     * cible = couverture (jours) × consommation journalière, bornée par stock min et stock max ;
-     * quantité = cible − projeté, arrondie au lot, sans jamais dépasser le stock max
-     * (le stock max l'emporte sur le lot minimum : la quantité est alors réduite et signalée).
-     *
-     * @return array{projected:float, target:float, need:float, qty:float, capped:bool, below_batch_min:bool, reason:string}
+     * Uzupełnienie magazynu (prosta reguła) : gdy dostępne < stan min., do stanu maks. ; inaczej nic. Bez stanu
+     * min. próg = stan maks. Partie liczy się potem dla całego tygodnia produktu (w górę do pełnych partii).
+     * @return array{available:float, min:?float, max:float, qty:float, reason:string}
      */
-    public static function mts(float $dailyConsumption, float $coverageDays, ?float $stockMin, float $stockMax,
-                               float $freeStock, float $openOrders, float $committed, ?float $batchMin, ?float $batchMultiple,
-                               bool $reorderOnMin = true): array
+    public static function refill(float $available, ?float $min, float $max): array
     {
-        $projected = $freeStock + $openOrders - $committed;
-        $target = $dailyConsumption * max(0.0, $coverageDays);
-        if ($stockMin !== null) $target = max($target, $stockMin);
-        $target = min($target, $stockMax);
-        $trigger = $reorderOnMin && $stockMin !== null ? $projected < $stockMin : $projected < $target;
-        $result = ['projected' => $projected, 'target' => $target, 'need' => 0.0, 'qty' => 0.0, 'capped' => false, 'below_batch_min' => false,
-            'reason' => $trigger ? 'below_target' : 'stock_sufficient'];
-        if (!$trigger || $target - $projected <= 0) return $result;
-
-        $need = $target - $projected;
-        $qty = self::roundBatch($need, $batchMin, $batchMultiple);
-        $room = $stockMax - $projected;
-        if ($qty > $room) {
-            $step = $batchMultiple !== null && $batchMultiple > 0 ? $batchMultiple : 1.0;
-            $qty = max(0.0, floor(round($room / $step, 6)) * $step);
-            $result['capped'] = true;
-        }
-        $result['need'] = $need;
-        $result['qty'] = (float) $qty;
-        $result['below_batch_min'] = $qty > 0 && $batchMin !== null && $qty < $batchMin;
-        return $result;
+        $qty = $available < ($min ?? $max) ? max(0.0, $max - $available) : 0.0;
+        return ['available' => $available, 'min' => $min, 'max' => $max, 'qty' => (float) $qty, 'reason' => $qty > 0 ? 'below_min' : 'stock_sufficient'];
     }
 
     /**

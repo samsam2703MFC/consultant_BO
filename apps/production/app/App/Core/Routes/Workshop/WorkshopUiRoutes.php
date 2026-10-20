@@ -7,6 +7,7 @@ return function (RouteCollector $r) {
     // « Plan tygodnia i surowce » usunięty : planuje się na tablicy « Tydzień produkcji ».
     $r->addRoute('GET', '/workshop/planning', ['redirect' => '/workshop/gantt']);
     $r->addRoute('GET', '/workshop/gantt', ['controller' => $c, 'method' => 'gantt']);
+    $r->addRoute('GET', '/workshop/sheet', ['controller' => $c, 'method' => 'sheet']);
     $r->addRoute('GET', '/workshop/execution', ['controller' => $c, 'method' => 'execution']);
     $r->addRoute('GET', '/workshop/timesheet', ['controller' => $c, 'method' => 'timesheet']);
     $r->addRoute('GET', '/workshop/traceability', ['controller' => App\Controllers\Web\Workshop\TraceabilityController::class, 'method' => 'index']);

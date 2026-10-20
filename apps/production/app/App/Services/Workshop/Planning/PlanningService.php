@@ -61,11 +61,7 @@ final class PlanningService
         $loadingMin = (int) $this->params->get('planning.loading_time_min', '60');
         $cutoffDays = (int) $this->params->get('planning.default_cutoff_days_before', '2');
         $cutoffTime = $this->params->get('planning.default_cutoff_time', '12:00');
-        $weeks = max(1, (int) $this->params->get('planning.consumption_weeks', '6'));
-        $defaultCoverage = (float) $this->params->get('planning.default_coverage_days', '7');
-        $coverageByGroup = json_decode($this->params->get('planning.coverage_days_by_group', '{}'), true) ?: [];
-        $reorderOnMin = $this->params->get('planning.mts_reorder_on_min', '1') === '1';
-        $roundMto = $this->params->get('planning.round_mto_to_batch', '1') === '1';
+        $roundBatches = $this->params->get('planning.round_mto_to_batch', '1') === '1';
         $capacity = (int) $this->params->get('cold.freezer_capacity_cartons', '0');
 
         $warnings = [];
@@ -97,24 +93,25 @@ final class PlanningService
         }
         if ($unplanned) $warnings[] = ['code' => 'UNPLANNED_PRODUCTS', 'count' => count($unplanned)];
 
-        // --- MTS : réapprovisionnement le premier jour de la période
-        $shipped = $this->planning->shippedCartons($weeks * 7);
+        // --- MTS (prosta reguła) : gdy dostępne < stan min., uzupełnienie do stanu maks. (pierwszy dzień okresu) ;
+        // dostępne = stan wolny + zlecenia MTS w toku − zamówienia obsłużone z magazynu.
         $stock = $this->planning->freeStockCartons();
         $openMts = $this->planning->openMtsOrders();
         $freezerLines = [];
+        $stockInfo = [];
         foreach ($items as $it) {
             if ($it['mode'] !== 'MTS' || $it['item_type'] !== 'product') continue;
             if ($it['stock_max'] === null) { $warnings[] = ['code' => 'MTS_WITHOUT_MAX', 'item_id' => (int) $it['id']]; continue; }
             $ppc = max(1, (int) $it['ppc']);
-            $daily = ($shipped[(int) $it['id_final_product']] ?? 0) * $ppc / ($weeks * 7);
-            $coverage = $it['coverage_days'] !== null ? (float) $it['coverage_days'] : (float) ($coverageByGroup[$it['group_code']] ?? $defaultCoverage);
-            $r = DemandCalculator::mts($daily, $coverage, $it['stock_min'] !== null ? (float) $it['stock_min'] : null, (float) $it['stock_max'],
-                ($stock[(int) $it['id_final_product']] ?? 0) * $ppc, $openMts[(int) $it['id']] ?? 0.0, $committed[(int) $it['id']] ?? 0.0,
-                $this->num($it['batch_min']), $this->num($it['batch_multiple']), $reorderOnMin);
+            $free = ($stock[(int) $it['id_final_product']] ?? 0) * $ppc;
+            $inProduction = $openMts[(int) $it['id']] ?? 0.0;
+            $fromStock = $committed[(int) $it['id']] ?? 0.0;
+            $r = DemandCalculator::refill($free + $inProduction - $fromStock, $it['stock_min'] !== null ? (float) $it['stock_min'] : null, (float) $it['stock_max']);
+            $stockInfo[(int) $it['id']] = ['free' => $free, 'in_production' => $inProduction, 'orders_from_stock' => $fromStock] + $r;
             if ($r['qty'] <= 0) continue;
             $key = $line($it, $from);
             $lines[$key]['qty_mts'] = $r['qty'];
-            $lines[$key]['mts'] = $r + ['daily' => $daily, 'coverage_days' => $coverage, 'free_stock' => ($stock[(int) $it['id_final_product']] ?? 0) * $ppc];
+            $lines[$key]['mts'] = $r + ['free_stock' => $free];
             $freezerLines[] = ['key' => $key, 'qty' => $r['qty'], 'ppc' => $ppc, 'multiple' => $this->num($it['batch_multiple'])];
         }
         $cap = DemandCalculator::capFreezer($freezerLines, $capacity, $capacity > 0 ? $this->planning->freezerOccupancy() : 0);
@@ -124,7 +121,7 @@ final class PlanningService
 
         // --- Quantités proposées des produits, puis semi-finis (jusqu'à 3 niveaux)
         foreach ($lines as $key => &$l) {
-            $l['qty_proposed'] = $this->proposed($l, $roundMto);
+            $l['qty_proposed'] = $this->proposed($l);
         }
         unset($l);
 
@@ -148,6 +145,23 @@ final class PlanningService
             $lines[$key]['qty_fixed'] += $extra;
             $lines[$key]['qty_proposed'] = ($lines[$key]['qty_proposed'] ?? 0.0) + $extra;
         }
+
+        // --- Partie : ilość tygodnia produktu (zamówienia + uzupełnienie + stałe partie) w górę do pełnych partii
+        // (planning.round_mto_to_batch) ; nadwyżka idzie na magazyn — do linii uzupełnienia, inaczej najwcześniejszej.
+        if ($roundBatches) {
+            $keysOf = [];
+            foreach ($lines as $key => $l) if ($l['item']['item_type'] === 'product' && ($l['qty_proposed'] ?? 0.0) > 0) $keysOf[(int) $l['item']['id']][] = $key;
+            foreach ($keysOf as $keys) {
+                $multiple = $this->num($lines[$keys[0]]['item']['batch_multiple']);
+                if (!$multiple) continue;
+                $total = array_sum(array_map(fn($k) => $lines[$k]['qty_proposed'], $keys));
+                $extra = DemandCalculator::roundBatch($total, null, $multiple) - $total;
+                if ($extra <= 0.0005) continue;
+                usort($keys, fn($a, $b) => [$lines[$b]['qty_mts'] > 0, $lines[$a]['due_date']] <=> [$lines[$a]['qty_mts'] > 0, $lines[$b]['due_date']]);
+                $lines[$keys[0]]['qty_batch'] = round($extra, 3);
+                $lines[$keys[0]]['qty_proposed'] += $extra;
+            }
+        }
         $graph = $this->planning->recipeGraph();
         $semiByRecipe = [];
         foreach ($items as $it) if ($it['item_type'] === 'semi' && $it['id_recipe'] !== null) $semiByRecipe[(int) $it['id_recipe']] = $it;
@@ -165,7 +179,7 @@ final class PlanningService
                     $next[$semiKey] = true;
                 }
             }
-            foreach (array_keys($next) as $semiKey) $lines[$semiKey]['qty_proposed'] = $this->proposed($lines[$semiKey], $roundMto);
+            foreach (array_keys($next) as $semiKey) $lines[$semiKey]['qty_proposed'] = $this->proposed($lines[$semiKey]);
             $pending = array_keys($next);
         }
 
@@ -186,7 +200,7 @@ final class PlanningService
         }
         unset($l);
         uasort($lines, fn($a, $b) => [$a['due_date'], $a['item']['id_primary_group'], $a['item']['name']] <=> [$b['due_date'], $b['item']['id_primary_group'], $b['item']['name']]);
-        return ['from' => $from, 'to' => $to, 'lines' => array_values($lines), 'warnings' => $this->uniqueWarnings($warnings)];
+        return ['from' => $from, 'to' => $to, 'lines' => array_values($lines), 'warnings' => $this->uniqueWarnings($warnings), 'stock' => $stockInfo];
     }
 
     public function createPlan(array $input, ApiContext $context): array
@@ -399,30 +413,33 @@ final class PlanningService
         return isset($factors[$from]) && $factors[$from][0] === $to ? $q * $factors[$from][1] : $q;
     }
 
-    /** Place restante sous le stock max pour un article MTS (null si l'article n'est pas MTS). */
+    /**
+     * Place restante sous le stock max pour un article MTS (null si l'article n'est pas MTS), arrondie au lot entier
+     * supérieur (le réassort se fait en lots entiers, la dernière fournée peut dépasser un peu le max.).
+     */
     private function mtsRoom(int $itemId, string $from, string $to): ?float
     {
         $demand = $this->compute($from, $to);
         foreach ($this->planning->items() as $it) {
             if ((int) $it['id'] !== $itemId) continue;
             if ($it['mode'] !== 'MTS' || $it['stock_max'] === null || $it['item_type'] !== 'product') return null;
-            foreach ($demand['lines'] as $l) {
-                if ((int) $l['item']['id'] === $itemId && $l['mts'] !== null) return max(0.0, (float) $it['stock_max'] - $l['mts']['projected']);
+            $available = $demand['stock'][$itemId]['available'] ?? null;
+            if ($available === null) {
+                $ppc = max(1, (int) $it['ppc']);
+                $available = ($this->planning->freeStockCartons()[(int) $it['id_final_product']] ?? 0) * $ppc + ($this->planning->openMtsOrders()[$itemId] ?? 0.0);
             }
-            // Pas de réapprovisionnement proposé : la place se calcule avec le stock projeté courant.
-            $ppc = max(1, (int) $it['ppc']);
-            $free = ($this->planning->freeStockCartons()[(int) $it['id_final_product']] ?? 0) * $ppc;
-            return max(0.0, (float) $it['stock_max'] - $free - ($this->planning->openMtsOrders()[$itemId] ?? 0.0));
+            $room = max(0.0, (float) $it['stock_max'] - $available);
+            return DemandCalculator::roundBatch($room, null, $this->num($it['batch_multiple']));
         }
         return null;
     }
 
-    private function proposed(array $l, bool $roundMto): float
+    /** Produkt : zamówienia + uzupełnienie (partie liczone dla całego tygodnia produktu) ; półprodukt : w górę do partii linii. */
+    private function proposed(array $l): float
     {
         $item = $l['item'];
         $total = $l['qty_mto'] + $l['qty_mts'] + $l['qty_semi'];
-        if ($l['qty_mts'] > 0 && $l['qty_mto'] == 0.0 && $l['qty_semi'] == 0.0) return $l['qty_mts']; // déjà arrondi et plafonné
-        if (!$roundMto && $item['item_type'] === 'product') return $total;
+        if ($item['item_type'] === 'product') return $total;
         return DemandCalculator::roundBatch($total, $this->num($item['batch_min']), $this->num($item['batch_multiple']));
     }
 
@@ -438,7 +455,7 @@ final class PlanningService
                 'ppc' => $l['item']['item_type'] === 'product' && (int) $l['item']['ppc'] > 0 ? (int) $l['item']['ppc'] : null,
                 'batch_size' => $this->num($l['item']['batch_multiple']),
                 'qty_mto' => round($l['qty_mto'], 3), 'qty_mts' => round($l['qty_mts'], 3), 'qty_semi' => round($l['qty_semi'], 3),
-                'qty_fixed' => round($l['qty_fixed'], 3),
+                'qty_fixed' => round($l['qty_fixed'], 3), 'qty_batch' => round($l['qty_batch'] ?? 0.0, 3),
                 'qty_proposed' => round($l['qty_proposed'], 3), 'batches' => $l['batches'], 'standard_hours' => $l['standard_hours'],
                 'customer_orders' => count($l['orders']), 'late_orders' => $l['late_orders'],
                 'mts' => $l['mts'] === null ? null : array_map(fn($x) => is_float($x) ? round($x, 3) : $x, $l['mts']),

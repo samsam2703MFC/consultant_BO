@@ -51,6 +51,11 @@ final class OpenApiPlanning
                     . "Heures = normes des fiches × quantité ; disponibles = effectif × shift sur les jours week.production_days. Ce qui n'est sur aucun jour attend dans unassigned_qty. "
                     . "Réalisé = part des opérations terminées des OF du plan, sans plan : part de la quantité produite (lots saisis sur les tablettes). "
                     . "Lots fixes 📌 : à la première ouverture de la semaine, chaque lot fixe est posé sur son jour (à partir d'aujourd'hui, jours avec équipe), une seule fois par semaine."],
+            'GET /planning/sheet' => ['tag' => $t, 'id' => 'getWeekSheet', 'summary' => 'Arkusz tygodnia / Feuille de production de la semaine', 'response' => 'WeekSheet', 'errors' => [422],
+                'query' => ['date' => ['type' => 'string', 'format' => 'date', 'description' => 'un jour de la semaine (défaut : aujourd\'hui)']],
+                'description' => "Une ligne par fiche : produits avec une quantité dans la semaine et produits « sur stock » (toujours). "
+                    . "À produire = commandes + réassort (disponible < stock min. → jusqu'au stock max.) + lots fixes, arrondi aux lots entiers de la semaine du produit (surplus pour le stock). "
+                    . "Lots = à produire ÷ pièces par lot. Groupes : heures disponibles et personnes (ETP = heures ÷ fte_hours)."],
             'POST /planning/week/move' => ['tag' => $t, 'id' => 'moveWeekProduct', 'summary' => 'Przenieś produkt na dzień / Déplacer un produit sur un jour', 'body' => 'WeekMoveInput', 'response' => 'Week', 'errors' => [400, 403, 422],
                 'description' => "from / to null = « À répartir ». quantity absente = tout le bloc. Jamais vers un jour passé (DAY_IN_PAST) ni hors semaine (DAY_NOT_IN_WEEK). Un bloc après l'échéance de la commande est signalé (late), pas refusé. "
                     . "À l'ordonnancement, un OF finit au plus tard le dernier jour où son produit est placé (MTS : ce jour devient l'échéance)."],
@@ -93,10 +98,12 @@ final class OpenApiPlanning
                     'item_id' => $int, 'name' => ['type' => 'string'], 'item_type' => ['type' => 'string'], 'mode' => ['type' => 'string'], 'group_id' => $nInt,
                     'due_date' => ['type' => 'string', 'format' => 'date'], 'due_at' => ['type' => 'string', 'description' => 'départ du camion moins le chargement'],
                     'unit' => ['type' => 'string'], 'ppc' => $nInt, 'customer_orders' => $int, 'late_orders' => ['type' => 'integer', 'description' => 'passées après la clôture'],
-                    'mts' => ['type' => 'object', 'nullable' => true, 'properties' => [
-                        'projected' => $num, 'target' => $num, 'need' => $num, 'qty' => $num, 'capped' => ['type' => 'boolean'], 'below_batch_min' => ['type' => 'boolean'],
-                        'daily' => $num, 'coverage_days' => $num, 'free_stock' => $num, 'reason' => ['type' => 'string'],
+                    'mts' => ['type' => 'object', 'nullable' => true, 'description' => 'réassort : si disponible < stock min. → jusqu\'au stock max.', 'properties' => [
+                        'available' => ['type' => 'number', 'description' => 'stock libre + OF MTS en cours − commandes servies sur stock'],
+                        'min' => ['type' => 'number', 'nullable' => true], 'max' => $num, 'qty' => $num, 'free_stock' => $num,
+                        'reason' => ['type' => 'string', 'enum' => ['below_min', 'stock_sufficient']],
                     ]],
+                    'qty_batch' => ['type' => 'number', 'description' => 'arrondi aux lots entiers de la semaine du produit (surplus pour le stock)'],
                     'parents' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['item_id' => $int, 'due_date' => ['type' => 'string'], 'qty' => $num]]],
                 ] + $qty]],
                 'warnings' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['code' => ['type' => 'string'], 'message' => ['type' => 'string']], 'additionalProperties' => true]],
@@ -251,6 +258,24 @@ final class OpenApiPlanning
             'WeekTimeInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date', 'item_id', 'day'], 'properties' => [
                 'date' => ['type' => 'string', 'format' => 'date'], 'item_id' => ['type' => 'integer'], 'day' => ['type' => 'string', 'format' => 'date'],
                 'time' => ['type' => 'string', 'nullable' => true, 'pattern' => '^([01]\\d|2[0-3]):[0-5]\\d$', 'description' => 'HH:MM ; null = sans heure'],
+            ]],
+            'WeekSheet' => ['type' => 'object', 'properties' => [
+                'week_start' => ['type' => 'string', 'format' => 'date'], 'week_end' => ['type' => 'string', 'format' => 'date'], 'iso_week' => $int, 'today' => ['type' => 'string', 'format' => 'date'],
+                'days' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]], 'fte_hours' => $num,
+                'source' => ['type' => 'object', 'additionalProperties' => true], 'can_edit' => ['type' => 'boolean'],
+                'groups' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => $nInt, 'name' => ['type' => 'string', 'nullable' => true],
+                    'color' => ['type' => 'string', 'nullable' => true], 'available_h' => $num, 'people' => $int]]],
+                'rows' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'item_id' => $int, 'name' => ['type' => 'string'], 'item_type' => ['type' => 'string'], 'group_id' => $nInt, 'mode' => ['type' => 'string'],
+                    'never_frozen' => ['type' => 'boolean'], 'unit' => ['type' => 'string'], 'ppc' => $nInt, 'batch' => ['type' => 'number', 'nullable' => true],
+                    'stock_min' => ['type' => 'number', 'nullable' => true], 'stock_max' => ['type' => 'number', 'nullable' => true],
+                    'stock' => ['type' => 'number', 'nullable' => true, 'description' => 'stock libre (pièces)'],
+                    'available' => ['type' => 'number', 'nullable' => true, 'description' => 'stock + en production − commandes servies sur stock (MTS)'],
+                    'in_production' => ['type' => 'number', 'nullable' => true], 'orders_from_stock' => ['type' => 'number', 'nullable' => true],
+                    'orders' => $num, 'refill' => $num, 'fixed' => $num, 'batch_extra' => $num, 'to_produce' => $num,
+                    'batches' => ['type' => 'integer', 'nullable' => true], 'hours' => $num, 'placed' => $num,
+                    'days' => ['type' => 'array', 'items' => ['type' => 'string', 'format' => 'date']],
+                ]]],
             ]],
             'WeekPinInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date', 'item_id', 'day', 'pinned'], 'properties' => [
                 'date' => ['type' => 'string', 'format' => 'date'], 'item_id' => ['type' => 'integer'], 'day' => ['type' => 'string', 'format' => 'date'], 'pinned' => ['type' => 'boolean'],

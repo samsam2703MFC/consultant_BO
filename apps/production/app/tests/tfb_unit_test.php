@@ -140,17 +140,13 @@ check(WeekSplit::place(3900.0, ['d1', 'd2'], 60.0, ['d1' => 5.0, 'd2' => 8.0], $
     'week without batch: whole cartons');
 check(WeekSplit::place(1300.0, ['d1', 'd2'], 1300.0, ['d1' => 1.0, 'd2' => 8.0], $perBatch) === ['d2' => 1300.0],
     'week: a batch is never cut — it goes whole to the first day with room');
-$mts = DemandCalculator::mts(60, 7, 60, 600, 180, 0, 180, null, null);
-check($mts['projected'] === 0.0 && $mts['target'] === 420.0 && $mts['qty'] === 420.0, 'MTS: back to coverage × consumption');
-$mts = DemandCalculator::mts(60, 7, 60, 300, 0, 0, 0, null, null);
-check($mts['target'] === 300.0 && $mts['qty'] === 300.0, 'MTS target capped at the max stock');
-$mts = DemandCalculator::mts(60, 7, 60, 300, 0, 0, 0, null, 160);
-check($mts['qty'] === 160.0 && $mts['capped'] && $mts['qty'] <= 300, 'MTS: the max stock wins over batch rounding (acceptance)');
-foreach ([[0, 0, 0], [100, 50, 20], [250, 0, 400], [599, 1, 0]] as [$free, $open, $committed]) {
-    $r = DemandCalculator::mts(80, 10, 50, 600, $free, $open, $committed, 100, 48);
-    check($r['projected'] + $r['qty'] <= 600 + 1e-9, "MTS never above max stock (free {$free}, open {$open}, committed {$committed})");
-}
-check(DemandCalculator::mts(10, 7, 60, 600, 100, 0, 0, null, null)['qty'] === 0.0, 'MTS: nothing while the projected stock is above the minimum');
+// Prosta reguła magazynu : dostępne < stan min. → uzupełnienie do stanu maks. ; inaczej nic.
+$r = DemandCalculator::refill(1200, 1800, 3600);
+check($r['qty'] === 2400.0 && $r['reason'] === 'below_min', 'refill: below the minimum, back up to the maximum (croissant 1200 → 3600)');
+check(DemandCalculator::refill(1800, 1800, 3600)['qty'] === 0.0 && DemandCalculator::refill(2500, 1800, 3600)['qty'] === 0.0, 'refill: nothing at or above the minimum');
+check(DemandCalculator::refill(-500, 1800, 3600)['qty'] === 4100.0, 'refill: orders above stock (negative available) included');
+check(DemandCalculator::refill(100, null, 300)['qty'] === 200.0 && DemandCalculator::refill(300, null, 300)['qty'] === 0.0, 'refill without a minimum: threshold = maximum');
+check(DemandCalculator::roundBatch(2400, null, 240) / 240 === 10.0, 'refill 2400 with batches of 240 = 10 batches');
 $cap = DemandCalculator::capFreezer([['key' => 'a', 'qty' => 600, 'ppc' => 60, 'multiple' => 60], ['key' => 'b', 'qty' => 240, 'ppc' => 24, 'multiple' => 24]], 1010, 1000);
 check($cap['limited'] && ($cap['lines']['a'] / 60 + $cap['lines']['b'] / 24) <= 10, 'freezer: proposed cartons fit the free space');
 check(DemandCalculator::capFreezer([['key' => 'a', 'qty' => 600, 'ppc' => 60, 'multiple' => null]], 0, 99999)['limited'] === false, 'freezer capacity not set: no limit');

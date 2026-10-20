@@ -55,38 +55,12 @@
 
                 <li class="sidebar-title">Produkcja</li>
 
+                {# Produkcja : jedna strona z zakładkami (PageTabs « production ») #}
+                {% set g = page_tab_groups().production %}
                 <li class="sidebar-item">
-                    <a href="{{ root }}/workshop/gantt#view=week" class="sidebar-link">
-                        <i class="bi bi-calendar-week"></i>
-                        <span>Tydzień produkcji</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{{ root }}/production/plan-wizard" class="sidebar-link">
-                        <i class="bi bi-list-check"></i>
-                        <span>Listy produkcyjne PDF</span>
-                    </a>
-                </li>
-
-<li class="sidebar-item">
-                    <a href="{{ root }}/workshop/execution" class="sidebar-link">
-                        <i class="bi bi-tablet"></i>
-                        <span>Hala: tablety i czas pracy</span>
-                    </a>
-                </li>
-
-<li class="sidebar-item">
-                    <a href="{{ root }}/workshop/traceability" class="sidebar-link">
-                        <i class="bi bi-upc-scan"></i>
-                        <span>Partie i identyfikowalność</span>
-                    </a>
-                </li>
-
-<li class="sidebar-item">
-                    <a href="{{ root }}/stock" class="sidebar-link">
-                        <i class="bi bi-building"></i>
-                        <span>Stany magazynowe</span>
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
                     </a>
                 </li>
 

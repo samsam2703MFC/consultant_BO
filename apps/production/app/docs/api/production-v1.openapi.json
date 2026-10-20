@@ -5125,6 +5125,79 @@
                 "x-permission": "prod.plan.read"
             }
         },
+        "/planning/sheet": {
+            "get": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Arkusz tygodnia / Feuille de production de la semaine",
+                "operationId": "getWeekSheet",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/WeekSheet"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Une ligne par fiche : produits avec une quantité dans la semaine et produits « sur stock » (toujours). À produire = commandes + réassort (disponible < stock min. → jusqu'au stock max.) + lots fixes, arrondi aux lots entiers de la semaine du produit (surplus pour le stock). Lots = à produire ÷ pièces par lot. Groupes : heures disponibles et personnes (ETP = heures ÷ fte_hours).",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "un jour de la semaine (défaut : aujourd'hui)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.read"
+            }
+        },
         "/planning/week/move": {
             "post": {
                 "tags": [
@@ -10024,38 +10097,37 @@
                                 "mts": {
                                     "type": "object",
                                     "nullable": true,
+                                    "description": "réassort : si disponible < stock min. → jusqu'au stock max.",
                                     "properties": {
-                                        "projected": {
-                                            "type": "number"
+                                        "available": {
+                                            "type": "number",
+                                            "description": "stock libre + OF MTS en cours − commandes servies sur stock"
                                         },
-                                        "target": {
-                                            "type": "number"
+                                        "min": {
+                                            "type": "number",
+                                            "nullable": true
                                         },
-                                        "need": {
+                                        "max": {
                                             "type": "number"
                                         },
                                         "qty": {
-                                            "type": "number"
-                                        },
-                                        "capped": {
-                                            "type": "boolean"
-                                        },
-                                        "below_batch_min": {
-                                            "type": "boolean"
-                                        },
-                                        "daily": {
-                                            "type": "number"
-                                        },
-                                        "coverage_days": {
                                             "type": "number"
                                         },
                                         "free_stock": {
                                             "type": "number"
                                         },
                                         "reason": {
-                                            "type": "string"
+                                            "type": "string",
+                                            "enum": [
+                                                "below_min",
+                                                "stock_sufficient"
+                                            ]
                                         }
                                     }
+                                },
+                                "qty_batch": {
+                                    "type": "number",
+                                    "description": "arrondi aux lots entiers de la semaine du produit (surplus pour le stock)"
                                 },
                                 "parents": {
                                     "type": "array",
@@ -11502,6 +11574,165 @@
                         "nullable": true,
                         "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
                         "description": "HH:MM ; null = sans heure"
+                    }
+                }
+            },
+            "WeekSheet": {
+                "type": "object",
+                "properties": {
+                    "week_start": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "week_end": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "iso_week": {
+                        "type": "integer"
+                    },
+                    "today": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "days": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "fte_hours": {
+                        "type": "number"
+                    },
+                    "source": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "can_edit": {
+                        "type": "boolean"
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "color": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "available_h": {
+                                    "type": "number"
+                                },
+                                "people": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "item_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "item_type": {
+                                    "type": "string"
+                                },
+                                "group_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "mode": {
+                                    "type": "string"
+                                },
+                                "never_frozen": {
+                                    "type": "boolean"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "ppc": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "batch": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "stock_min": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "stock_max": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "stock": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "stock libre (pièces)"
+                                },
+                                "available": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "stock + en production − commandes servies sur stock (MTS)"
+                                },
+                                "in_production": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "orders_from_stock": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "orders": {
+                                    "type": "number"
+                                },
+                                "refill": {
+                                    "type": "number"
+                                },
+                                "fixed": {
+                                    "type": "number"
+                                },
+                                "batch_extra": {
+                                    "type": "number"
+                                },
+                                "to_produce": {
+                                    "type": "number"
+                                },
+                                "batches": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "hours": {
+                                    "type": "number"
+                                },
+                                "placed": {
+                                    "type": "number"
+                                },
+                                "days": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "format": "date"
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },

@@ -24,6 +24,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/products', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
+    /** Arkusz tygodnia : cała produkcja tygodnia na jednej kartce (jeden wiersz na produkt). */
+    public function sheet()
+    {
+        $this->view('workshop/sheet', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
+    }
+
     public function gantt()
     {
         $this->view('workshop/gantt', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
