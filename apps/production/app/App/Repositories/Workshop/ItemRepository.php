@@ -14,7 +14,7 @@ final class ItemRepository extends WorkshopRepository
     protected array $writable = ['item_type', 'id_final_product', 'id_recipe', 'base_unit'];
 
     private const SETTINGS = ['mode', 'never_frozen', 'stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple',
-        'shelf_life_workshop_days', 'shelf_life_shop_days', 'id_primary_group', 'status', 'wizard_step', 'validated_at', 'validated_by', 'updated_by', 'bake_state'];
+        'shelf_life_workshop_days', 'shelf_life_shop_days', 'id_primary_group', 'status', 'wizard_step', 'validated_at', 'validated_by', 'updated_by', 'bake_state', 'stock_calc_at'];
     private const STEP = ['step_no', 'name_pl', 'name_fr', 'id_workstation', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass',
         'operators_required', 'min_level_order', 'delay_after_s', 'delay_id_workstation', 'cleaning_required', 'cleaning_time_s', 'temperature_c'];
     private const LOGISTICS = ['carton_length_mm', 'carton_width_mm', 'carton_height_mm', 'carton_tare_g', 'carton_type', 'carton_ean', 'pallet_type', 'storage', 'updated_by'];
@@ -25,7 +25,7 @@ final class ItemRepository extends WorkshopRepository
     private const SELECT = "SELECT i.id, i.item_type, i.id_final_product, i.id_recipe, i.base_unit, i.created_at,
             COALESCE(fp.name, pr.name) AS name, fp.ppc, fp.weight, fp.id_section, fp.active AS erp_active, fp.id_recipe AS product_recipe_id,
             fp.ppb, fp.bpc, fp.cpl, fp.lpp, fp.cpp, fp.id_category, fp.label_type, fp.shelf_life, fp.stock_minimum,
-            s.mode, s.never_frozen, s.bake_state, s.stock_min, s.stock_max, s.coverage_days, s.batch_min, s.batch_multiple,
+            s.mode, s.never_frozen, s.bake_state, s.stock_min, s.stock_max, s.coverage_days, s.batch_min, s.batch_multiple, s.stock_calc_at,
             s.shelf_life_workshop_days, s.shelf_life_shop_days, s.id_primary_group, s.status, s.wizard_step,
             s.validated_at, s.validated_by, s.updated_at AS settings_updated_at,
             lg.carton_length_mm, lg.carton_width_mm, lg.carton_height_mm, lg.carton_tare_g, lg.carton_type, lg.carton_ean, lg.pallet_type, lg.storage,

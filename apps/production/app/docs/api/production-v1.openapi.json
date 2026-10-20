@@ -7750,6 +7750,11 @@
                         "type": "number",
                         "nullable": true
                     },
+                    "stock_calc_at": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "dernier calcul des stocks min./max. depuis les ventes"
+                    },
                     "shelf_life_workshop_days": {
                         "type": "number",
                         "nullable": true
@@ -7772,7 +7777,7 @@
                     "wizard_step": {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 7
+                        "maximum": 8
                     },
                     "validated_at": {
                         "type": "string",
@@ -8256,10 +8261,14 @@
                         "type": "integer",
                         "nullable": true
                     },
+                    "stock_calculated": {
+                        "type": "boolean",
+                        "description": "true : stocks issus du calcul sur les ventes → stock_calc_at = maintenant"
+                    },
                     "wizard_step": {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 7
+                        "maximum": 8
                     }
                 }
             },

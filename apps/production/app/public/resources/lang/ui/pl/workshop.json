@@ -223,5 +223,8 @@
   "m.suggest_done": "Sprzedaż {weeks} tyg.: {cartons} kart. (średnio {weekly} kart./tydz.) → min {min} {unit} ({min_c} kart., {min_w} tydz.), maks {max} {unit} ({max_c} kart., {max_w} tydz.). Zapisz, aby zachować.",
   "m.cartons": "kart.",
   "m.pieces": "szt.",
-  "m.per_carton": "1 karton = {ppc} szt. — wpisz w kartonach albo w sztukach, drugie pole przelicza się samo (zapis w sztukach)."
+  "m.per_carton": "1 karton = {ppc} szt. — wpisz w kartonach albo w sztukach, drugie pole przelicza się samo (zapis w sztukach).",
+  "m.suggest_last": "Ostatnie obliczenie: {date}.",
+  "m.suggest_never": "Stany jeszcze nie były obliczane ze sprzedaży.",
+  "m.suggest_pending": "Obliczono teraz — zapisz, aby zachować stany i datę obliczenia."
 }

@@ -223,5 +223,8 @@
   "m.suggest_done": "Ventes {weeks} sem. : {cartons} cart. (moyenne {weekly} cart./sem.) → min {min} {unit} ({min_c} cart., {min_w} sem.), max {max} {unit} ({max_c} cart., {max_w} sem.). Enregistrez pour garder.",
   "m.cartons": "cart.",
   "m.pieces": "pcs",
-  "m.per_carton": "1 carton = {ppc} pièces — saisissez en cartons ou en pièces, l’autre champ se calcule (enregistré en pièces)."
+  "m.per_carton": "1 carton = {ppc} pièces — saisissez en cartons ou en pièces, l’autre champ se calcule (enregistré en pièces).",
+  "m.suggest_last": "Dernier calcul : {date}.",
+  "m.suggest_never": "Stocks jamais calculés depuis les ventes.",
+  "m.suggest_pending": "Calculé à l’instant — enregistrez pour garder les stocks et la date du calcul."
 }

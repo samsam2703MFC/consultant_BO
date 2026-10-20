@@ -195,8 +195,6 @@
             <label>${esc(t('p.label_type'))}<select class="form-select" name="label_type" data-field="label_type">
                 ${state.erp.label_types.map(v => `<option value="${v}" ${v === e.label_type ? 'selected' : ''}>${esc(t('p.label_type.' + v))}</option>`).join('')}</select></label>
             <label>${esc(t('p.shelf_life'))}<input class="form-control" name="shelf_life" data-field="shelf_life" inputmode="numeric" value="${e.shelf_life ?? ''}"></label>
-            <label>${esc(t('p.stock_minimum'))}<input class="form-control" name="stock_minimum" data-field="stock_minimum" inputmode="numeric" value="${e.stock_minimum ?? ''}">
-                <span class="form-text">${esc(t('p.stock_minimum_help'))}</span></label>
             <p class="form-text tfb-full">${esc(t('p.help'))}</p>
             ${nav(1)}</form>`;
         const form = body.querySelector('[data-form]');
@@ -204,7 +202,7 @@
             ev.preventDefault();
             ui.clearErrors(form);
             const data = {name: form.name.value.trim(), label_type: Number(form.label_type.value)};
-            for (const f of ['category_id', 'section_id', 'shelf_life', 'stock_minimum']) { const v = ui.num(form[f].value); if (v !== null) data[f] = v; }
+            for (const f of ['category_id', 'section_id', 'shelf_life']) { const v = ui.num(form[f].value); if (v !== null) data[f] = v; }
             try {
                 await api.put(`/produits/items/${item.id}/product`, data);
                 await saveSettings(form, {}, 2);
@@ -269,18 +267,13 @@
         body.innerHTML = `${info}<form class="tfb-form" data-form>
             <h5 class="tfb-full">${esc(t('l.title_units'))}</h5>
             ${field('weight', e.weight)}${field('ppb', e.ppb)}${field('bpc', e.bpc)}${field('ppc', e.ppc)}
-            <h5 class="tfb-full">${esc(t('l.title_carton'))}</h5>
-            ${field('carton_length_mm', lg.carton_length_mm)}${field('carton_width_mm', lg.carton_width_mm)}${field('carton_height_mm', lg.carton_height_mm)}
-            ${field('carton_tare_g', lg.carton_tare_g)}${choice('carton_type', ['klapowy', 'fasonowy', 'inny'], lg.carton_type)}
-            <label>${esc(t('l.carton_ean'))}<input class="form-control" name="carton_ean" data-field="carton_ean" inputmode="numeric" maxlength="14" value="${esc(lg.carton_ean || '')}"></label>
             <h5 class="tfb-full">${esc(t('l.title_pallet'))}</h5>
             ${field('cpl', e.cpl)}${field('lpp', e.lpp)}${field('cpp', e.cpp)}
             ${choice('pallet_type', ['eur', 'industrial', 'other'], lg.pallet_type)}${choice('storage', ['frozen', 'chilled', 'ambient'], lg.storage)}
             <div class="tfb-full tfb-calcs">
-                ${out(t('l.carton_net'), kg(c.carton_net_kg))}${out(t('l.carton_gross'), kg(c.carton_gross_kg))}
+                ${out(t('l.carton_net'), kg(c.carton_net_kg))}
                 ${out(t('l.pallet_units'), c.pallet_units ? ui.fmt(c.pallet_units, 0, api.lang) : '—')}
                 ${out(t('l.pallet_gross'), kg(c.pallet_gross_kg ?? c.pallet_net_kg))}
-                ${out(t('l.pallet_height'), c.pallet_height_mm ? ui.fmt(c.pallet_height_mm, 0, api.lang) + ' mm' : '—')}
                 ${out(t('l.labour_carton'), c.labour_s_per_carton ? ui.duration(c.labour_s_per_carton, api) : '—')}
             </div>
             <p class="form-text tfb-full">${esc(t('help.logistics'))}</p>
@@ -301,9 +294,7 @@
             const data = {};
             // Champs de l'ERP : un champ vide garde la valeur de l'ERP ; champs de la fiche : vide = effacé.
             for (const f of ['weight', 'ppb', 'bpc', 'ppc', 'cpl', 'lpp', 'cpp']) { const v = ui.num(form[f].value); if (v !== null) data[f] = v; }
-            for (const f of ['carton_length_mm', 'carton_width_mm', 'carton_height_mm', 'carton_tare_g']) data[f] = ui.num(form[f].value);
-            for (const f of ['carton_type', 'pallet_type', 'storage']) data[f] = form[f].value || null;
-            data.carton_ean = form.carton_ean.value.trim() || null;
+            for (const f of ['pallet_type', 'storage']) data[f] = form[f].value || null;
             try {
                 await api.put(`/produits/items/${item.id}/logistics`, data);
                 await saveSettings(form, {}, 3);
@@ -337,7 +328,8 @@
             ${ppc ? `<p class="form-text tfb-full mt-0">${esc(t('m.per_carton', {ppc}))}</p>` : ''}
             ${item.item_type === 'product' ? `<div class="tfb-full tfb-suggest" data-suggest-box>
                 <button type="button" class="btn btn-sm btn-outline-primary" data-suggest data-write><i class="bi bi-calculator"></i> ${esc(t('m.suggest'))}</button>
-                <span class="form-text" data-suggest-info>${esc(t('m.suggest_help'))}</span></div>` : ''}
+                <span class="form-text" data-suggest-info>${esc(t('m.suggest_help'))}</span>
+                <span class="form-text tfb-suggest-last" data-suggest-last>${esc(s.stock_calc_at ? t('m.suggest_last', {date: new Date(String(s.stock_calc_at).replace(' ', 'T')).toLocaleString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}) : t('m.suggest_never'))}</span></div>` : ''}
             <p class="form-text tfb-full">${esc(t('help.mts'))}</p>
             ${nav(4)}</form>`;
         const form = body.querySelector('[data-form]');
@@ -355,10 +347,10 @@
             form.querySelectorAll('[data-mode-label]').forEach(x => x.classList.toggle('is-on', (x.dataset.modeLabel === 'MTS') === mts));
             form.querySelector('[data-mode-help]').textContent = t(mts ? 'help.mode_mts' : 'help.mode_mto');
             ['stock_min', 'stock_max', 'coverage_days'].forEach(f => { form[f].closest('label').hidden = !mts; });
-            const box = form.querySelector('[data-suggest-box]');
-            if (box) box.hidden = !mts;
         };
         // Stany ze sprzedaży ostatnich tygodni : min = 1 tydzień, maks = 3 tygodnie (parametry), w pełnych kartonach.
+        // Obliczenie przełącza na « Na magazyn » ; data obliczenia zapisuje się razem ze stanami.
+        let calculated = false;
         form.querySelector('[data-suggest]')?.addEventListener('click', async () => {
             const info = form.querySelector('[data-suggest-info]');
             try {
@@ -369,6 +361,9 @@
                 form.stock_max.value = r.stock_max;
                 fillCartons('stock_min');
                 fillCartons('stock_max');
+                calculated = true;
+                if (!form.mts.checked && !form.never_frozen.checked) { form.mts.checked = true; sync(); }
+                form.querySelector('[data-suggest-last]').textContent = t('m.suggest_pending');
                 info.textContent = t('m.suggest_done', {weeks: r.weeks, cartons: q(r.shipped_cartons), weekly: ui.fmt(r.weekly_cartons, 1, api.lang),
                     min: q(r.stock_min), min_c: q(r.stock_min_cartons), min_w: ui.fmt(r.min_weeks, 0, api.lang),
                     max: q(r.stock_max), max_c: q(r.stock_max_cartons), max_w: ui.fmt(r.max_weeks, 0, api.lang), unit: r.unit});
@@ -380,6 +375,7 @@
             e.preventDefault();
             const data = {mode: form.mts.checked ? 'MTS' : 'MTO', never_frozen: form.never_frozen.checked};
             for (const f of ['stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple']) data[f] = ui.num(form[f].value);
+            if (calculated) data.stock_calculated = true;
             saveSettings(form, data, 5);
         });
     }
@@ -387,27 +383,17 @@
     function stepGroup(body, item) {
         const s = item.settings;
         const product = item.item_type === 'product';
-        const equipment = item.equipment.length ? `<ul class="tfb-equipment">${item.equipment.map(w => `<li class="${w.type === 'four' ? 'is-oven' : ''}">
-                <strong>${esc(w.name)}</strong> <span class="badge bg-light text-dark">${esc(t('ws.' + w.type))}</span>
-                <span class="text-muted">${esc(t('eq.steps', {steps: w.steps.join(', ')}))}${w.temperatures_c.length ? ' · ' + w.temperatures_c.map(x => ui.fmt(x, 0, api.lang) + ' °C').join(', ') : ''}</span></li>`).join('')}</ul>`
-            : `<p class="text-muted">${esc(t('eq.none'))}</p>`;
         body.innerHTML = `<form class="tfb-form" data-form>
             <label>${esc(t('f.primary_group_id'))}<select class="form-select" name="primary_group_id" data-field="primary_group_id">
                 <option value="">—</option>${state.groups.map(g => `<option value="${g.id}" ${s.primary_group_id === g.id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select></label>
             ${product ? `<label>${esc(t('f.bake_state'))}<select class="form-select" name="bake_state" data-field="bake_state"><option value="">—</option>
                 ${['none', 'par_baked', 'baked'].map(b => `<option value="${b}" ${s.bake_state === b ? 'selected' : ''}>${esc(t('bake.' + b))}</option>`).join('')}</select></label>` : ''}
-            ${['shelf_life_workshop_days', 'shelf_life_shop_days'].map(f => `<label>${esc(t('f.' + f))}
-                <input class="form-control" name="${f}" data-field="${f}" inputmode="decimal" value="${s[f] ?? ''}"></label>`).join('')}
-            <div class="tfb-full"><h5>${esc(t('eq.title'))}</h5>${equipment}
-                <p class="form-text">${esc(t('eq.help'))} <a href="#/item/${item.id}/6">${esc(t('step.6'))}</a></p></div>
             ${nav(5)}</form>`;
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const data = {
                 primary_group_id: form.primary_group_id.value ? Number(form.primary_group_id.value) : null,
-                shelf_life_workshop_days: ui.num(form.shelf_life_workshop_days.value),
-                shelf_life_shop_days: ui.num(form.shelf_life_shop_days.value),
             };
             if (product) data.bake_state = form.bake_state.value || null;
             saveSettings(form, data, 6);

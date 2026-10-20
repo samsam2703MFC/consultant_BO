@@ -64,8 +64,9 @@ final class OpenApiProducts
                 'mode' => ['type' => 'string', 'enum' => ItemService::MODES], 'never_frozen' => ['type' => 'boolean'],
                 'bake_state' => ['type' => 'string', 'enum' => ItemService::BAKE_STATES, 'nullable' => true, 'description' => 'none = cru, par_baked = précuit, baked = cuit'],
                 'stock_min' => $num, 'stock_max' => $num, 'coverage_days' => $num, 'batch_min' => $num, 'batch_multiple' => $num,
+                'stock_calc_at' => ['type' => 'string', 'nullable' => true, 'description' => 'dernier calcul des stocks min./max. depuis les ventes'],
                 'shelf_life_workshop_days' => $num, 'shelf_life_shop_days' => $num, 'primary_group_id' => $int,
-                'status' => ['type' => 'string', 'enum' => ItemService::STATUSES], 'wizard_step' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 7],
+                'status' => ['type' => 'string', 'enum' => ItemService::STATUSES], 'wizard_step' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 8],
                 'validated_at' => ['type' => 'string', 'nullable' => true],
             ]],
             'ItemSummary' => ['type' => 'object', 'properties' => [
@@ -124,7 +125,8 @@ final class OpenApiProducts
                 'bake_state' => ['type' => 'string', 'enum' => ItemService::BAKE_STATES, 'nullable' => true],
                 'stock_min' => $num, 'stock_max' => $num, 'coverage_days' => $num, 'batch_min' => $num, 'batch_multiple' => $num,
                 'shelf_life_workshop_days' => $num, 'shelf_life_shop_days' => $num, 'primary_group_id' => $int,
-                'wizard_step' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 7],
+                'stock_calculated' => ['type' => 'boolean', 'description' => 'true : stocks issus du calcul sur les ventes → stock_calc_at = maintenant'],
+                'wizard_step' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 8],
             ]],
             'ItemProductInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
                 'name' => ['type' => 'string', 'maxLength' => 255], 'category_id' => ['type' => 'integer', 'minimum' => 1], 'section_id' => ['type' => 'integer', 'minimum' => 1],
