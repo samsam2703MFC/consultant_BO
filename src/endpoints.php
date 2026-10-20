@@ -466,6 +466,9 @@ function ep_pwa_tasks(): array
                 'statut'      => $valide ? 'notee' : 'aControler',
                 // La checklist aussi pour une tâche notée : la fiche franchisé range les tâches du jour par checklist.
                 'checklist'   => trim((string) ($apiTaches[$sid . '|' . $tid]['checklist_name'] ?? '')) ?: null,
+                // Le drapeau du panel aussi (20/10/2026) : sans lui, le relevé gardait une tâche notée pour
+                // facultative et le mois des tâches obligatoires la perdait. null = le panel ne l'a pas dit.
+                'obligatoire' => array_key_exists('is_mandatory', $apiTaches[$sid . '|' . $tid] ?? []) ? !empty($apiTaches[$sid . '|' . $tid]['is_mandatory']) : null,
             ];
             $tot['taches']++;
             if ($valide) { $tot['valides']++; } else { $tot['aValider']++; }
