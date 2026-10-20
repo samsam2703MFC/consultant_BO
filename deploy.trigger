@@ -919,3 +919,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T19:31:07Z Tydzień typowy : przełącznik 📌, godzina, wyczyść tydzień
 2026-10-20T19:42:57Z Kafelka na partię
 2026-10-20T19:58:35Z Tablet : zakładki + kontrola jakości ; partie w tabeli tygodnia
+2026-10-20T20:05:15Z Godziny i ETP grup w tabeli tygodnia
