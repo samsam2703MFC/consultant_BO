@@ -912,3 +912,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T16:16:16Z Zapasy : wszystkie produkty ERP
 2026-10-20T16:16:59Z retrait réattribution
 2026-10-20T16:21:02Z pointages suspects
+2026-10-20T16:27:52Z Zapasy : wartość magazynu dziś
