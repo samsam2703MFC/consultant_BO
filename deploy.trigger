@@ -878,3 +878,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T08:34:44Z wdrożenie : świeże szablony Twig (marża brutto, działy wspólne)
 2026-10-20T09:17:40Z dostęp bcrypt 5, duplikaty WDT, kategorie surowców
 2026-10-20T11:43:23Z karta produkcyjna, Gantt tygodnia API, Dzisiaj, logistyka tygodnia
+2026-10-20T11:49:31Z Gantt tygodnia : produkty na dni, przeciągnij i upuść
