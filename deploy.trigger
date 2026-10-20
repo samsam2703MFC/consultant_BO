@@ -893,3 +893,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T13:47:40Z zapasy wg kategorii + identyfikowalność
 2026-10-20T13:59:53Z czyszczenie pokrycia i partii
 2026-10-20T14:05:59Z plan : kartony i surowce
+2026-10-20T14:18:18Z tydzień : wysyłka / magazyn
