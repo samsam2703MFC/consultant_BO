@@ -208,6 +208,67 @@ final class ErpApi
     }
 
     /**
+     * Plusieurs GET d'un coup (21/10/2026 : les fiches des promotions, relues à l'ouverture de l'onglet Promotions du
+     * dashboard) : [clé => corps (`data`, sinon le corps entier) | null], dans l'ordre des chemins. Une file de quatre
+     * requêtes de front, comme PanelApi::getParallele. Un 401 refait le jeton et relance les seules requêtes refusées.
+     */
+    public static function getParallele(array $paths, int $front = 4): array
+    {
+        $out = array_fill_keys(array_keys($paths), null);
+        if ($paths === []) { return $out; }
+        $tok = self::token();
+        if ($tok === null) { return $out; }
+        $refus = self::file($paths, $tok, $front, $out);
+        if ($refus !== []) {
+            $tok = self::token(true);
+            if ($tok !== null) { self::file(array_intersect_key($paths, array_flip($refus)), $tok, $front, $out); }
+        }
+        return $out;
+    }
+
+    /** La file de GET : remplit $out ; rend les clés refusées en 401. */
+    private static function file(array $paths, string $tok, int $front, array &$out): array
+    {
+        $base = self::config()['base'];
+        $multi = curl_multi_init();
+        $file = array_keys($paths); $cle = []; $actifs = 0; $refus = [];
+        $lancer = static function () use (&$file, &$cle, &$actifs, $multi, $paths, $base, $tok): void {
+            $k = array_shift($file);
+            $ch = curl_init($base . $paths[$k]);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER     => ['Accept: application/json', 'Authorization: Bearer ' . $tok],
+                CURLOPT_TIMEOUT        => 20,
+                CURLOPT_CONNECTTIMEOUT => 6,
+            ]);
+            curl_multi_add_handle($multi, $ch);
+            $cle[spl_object_id($ch)] = $k;
+            $actifs++;
+        };
+        while ($actifs < max(1, $front) && $file) { $lancer(); }
+        do {
+            $st = curl_multi_exec($multi, $en);
+            while (($info = curl_multi_info_read($multi)) !== false) {
+                $ch = $info['handle'];
+                $k = $cle[spl_object_id($ch)];
+                $raw = curl_multi_getcontent($ch);
+                $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_multi_remove_handle($multi, $ch);
+                curl_close($ch);
+                $actifs--;
+                $res = is_string($raw) ? json_decode($raw, true) : null;
+                if ($code === 401) { $refus[] = $k; }
+                elseif ($code < 200 || $code >= 300) { self::$lastError = 'GET ' . $paths[$k] . ' → HTTP ' . $code; $out[$k] = null; }
+                else { $out[$k] = is_array($res) ? ($res['data'] ?? $res) : null; }
+                if ($file) { $lancer(); }
+            }
+            if ($actifs > 0 && curl_multi_select($multi, 1.0) === -1) { usleep(2000); }
+        } while ($actifs > 0 && $st === CURLM_OK);
+        curl_multi_close($multi);
+        return $refus;
+    }
+
+    /**
      * Une écriture (POST, PUT, PATCH, DELETE) : {code, corps, erreur}. Les promotions des magasins (17/10/2026)
      * s'écrivent au panel par là ; l'erreur reprend le message du panel et le détail de ses champs refusés.
      */

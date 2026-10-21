@@ -20,6 +20,7 @@ declare(strict_types=1);
  */
 
 const PV_CACHE_REGLES = 600;   // les règles relues toutes les 10 minutes
+const PV_RELU_RECENT = 20;     // une relecture demandée (?frais=1) se contente d'une lecture de moins de 20 s
 
 /**
  * Les règles de promotion du panel, normalisées. Gardées 10 minutes ; si le panel se tait, la dernière lecture ressert.
@@ -31,22 +32,31 @@ function pvRegles(bool $frais = false): array
     if (!$frais && isset($GLOBALS['pvReglesMemo'])) { return $GLOBALS['pvReglesMemo']; }
     $c = setting('pvRegles');
     if (is_string($c)) { $c = json_decode($c, true); }
-    if (!$frais && is_array($c) && isset($c['ts'], $c['r']) && time() - (int) $c['ts'] < PV_CACHE_REGLES) { return $GLOBALS['pvReglesMemo'] = ['regles' => (array) $c['r'], 'erreur' => null]; }
+    $ts = is_array($c) ? (int) ($c['ts'] ?? 0) : 0;
+    // Relire « tout de suite » (l'onglet Promotions à son ouverture, 21/10/2026) : une relecture de moins de vingt
+    // secondes suffit — deux onglets ouverts ensemble ne relisent pas deux fois le panel.
+    if (is_array($c) && isset($c['r']) && time() - $ts < ($frais ? PV_RELU_RECENT : PV_CACHE_REGLES)) { return $GLOBALS['pvReglesMemo'] = ['regles' => (array) $c['r'], 'erreur' => null, 'ts' => $ts]; }
     if (!class_exists('ErpApi') || !ErpApi::disponible()) {
-        return $GLOBALS['pvReglesMemo'] = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => 'compte admin du panel non configuré'];
+        return $GLOBALS['pvReglesMemo'] = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => 'compte admin du panel non configuré', 'ts' => $ts];
     }
     ErpApi::$lastError = null;
     $L = pvListe();
-    if ($L === null) { return $GLOBALS['pvReglesMemo'] = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => ErpApi::$lastError ?: 'règles illisibles']; }
+    if ($L === null) { return $GLOBALS['pvReglesMemo'] = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => ErpApi::$lastError ?: 'règles illisibles', 'ts' => $ts]; }
+    // Les fiches que la liste ne rend pas, lues ensemble (quatre de front) plutôt qu'une à une.
+    $chemins = [];
+    foreach ($L['ids'] as $id => $type) {
+        if (!isset($L['fiches'][$id])) { $chemins[$id] = '/admin/promotions/' . ($type === 'BUNDLE_PROMOTION' ? 'bundles/' : 'buy-x-get-y/') . $id; }
+    }
+    $lues = $chemins !== [] ? ErpApi::getParallele($chemins, 4) : [];
     $out = [];
     foreach ($L['ids'] as $id => $type) {
-        $bundle = $type === 'BUNDLE_PROMOTION';
-        $d = $L['fiches'][$id] ?? ErpApi::get('/admin/promotions/' . ($bundle ? 'bundles/' : 'buy-x-get-y/') . $id);
+        $d = $L['fiches'][$id] ?? $lues[$id] ?? null;
         if (!is_array($d) || (int) ($d['id'] ?? 0) <= 0) { continue; }
         $out[] = pvNormaliser($d);
     }
-    try { svGrave('pvRegles', ['ts' => time(), 'r' => $out]); } catch (Throwable $e) { /* sans mémo */ }
-    return $GLOBALS['pvReglesMemo'] = ['regles' => $out, 'erreur' => null];
+    $ts = time();
+    try { svGrave('pvRegles', ['ts' => $ts, 'r' => $out]); } catch (Throwable $e) { /* sans mémo */ }
+    return $GLOBALS['pvReglesMemo'] = ['regles' => $out, 'erreur' => null, 'ts' => $ts];
 }
 
 /** Les lignes d'une réponse de liste du panel : une liste, ou sous `data` / `items` (une page de Laravel comprise). */

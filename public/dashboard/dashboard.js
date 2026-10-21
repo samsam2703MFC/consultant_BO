@@ -125,7 +125,8 @@
     if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
     // Et où elles s'appliquent : comptoir, click & collect, livraison (18/10/2026).
-    if (S.vue === 'promos') { lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
+    // Le panel est relu à chaque ouverture de l'onglet (21/10/2026, Sam) : voir pmRelire().
+    if (S.vue === 'promos') { S.pmRelu = null; lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee' || S.vue === 'trimestre') {
       lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
@@ -3323,10 +3324,26 @@
     const rang = { active: 0, en_caisse: 0, a_venir: 2, brouillon: 4, inactive: 5, terminee: 6 };
     return L.sort((a, b) => (rang[a.etat] ?? 9) - (rang[b.etat] ?? 9) || String(a.du || '').localeCompare(String(b.du || '')));
   }
+  /**
+   * Le panel relu (21/10/2026, Sam) : une promotion créée ou changée directement au panel se voit à l'ouverture de
+   * l'onglet, sans attendre les dix minutes de la lecture gardée. La liste gardée s'affiche d'abord ; la relecture
+   * (`&frais=1`) la remplace dès qu'elle arrive, jamais par une lecture plus ancienne.
+   */
+  function pmRelire() {
+    const k = clePM(), sh = S.shop;
+    if (S.pmRelecture) { return; }
+    S.pmRelecture = true; S.pmRelErr = null; rendre();
+    lire(cheminPM() + '&frais=1').then(d => { if (S.shop === sh && d && (!S.aux[k] || (+d.luTs || 0) >= (+S.aux[k].luTs || 0))) { S.aux[k] = d; S.auxLu[k] = Date.now(); delete S.err[k]; } })
+      .catch(e => { S.pmRelErr = e.message; }).finally(() => { S.pmRelecture = false; rendre(); });
+  }
   function rendPromos() {
     if (S.pmW) { return rendPmAssistant(); }
     const P = S.aux[clePM()], k = clePM();
-    let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Promotions</div><div class="pm-titre">Promotions du magasin</div></div><span style="flex:1"></span>
+    if (P && S.pmRelu !== k && !S.pmRelecture) { S.pmRelu = k; setTimeout(pmRelire, 0); }
+    const relu = S.pmRelecture ? 'relecture du panel…'
+      : (S.pmRelErr ? 'relecture du panel impossible : ' + esc(S.pmRelErr) : (P && P.lu ? 'relu au panel ' + (P.luJour && P.luJour !== AUJ ? 'le ' + esc(P.luJour.slice(8, 10) + '/' + P.luJour.slice(5, 7)) + ' ' : '') + 'à ' + esc(P.lu) : ''));
+    let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Promotions</div><div class="pm-titre">Promotions du magasin</div>
+      <div class="db-mini pm-relu">${relu}${S.pmRelecture ? '' : ` <button class="pm-lien" data-pmrelire="1">↻ relire le panel</button>`}</div></div><span style="flex:1"></span>
       <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
       <button class="db-btn prim pm-gros" data-pmnew="1">+ Nouvelle promotion</button></div>`;
     if (S.pmMsg) { h += `<div class="pm-ok">${S.pmMsg}<button class="pm-x" data-pmmsg="1" aria-label="fermer">✕</button></div>`; }
@@ -3830,6 +3847,7 @@
     on('[data-pmq]', 'input', el => { S.pmQ = el.value; rendre(); });
     on('[data-pmmsg]', 'click', () => { S.pmMsg = null; rendre(); });
     on('[data-pmnew]', 'click', () => pmOuvrir(pmNouvelle(), 1));
+    on('[data-pmrelire]', 'click', () => pmRelire());
     on('[data-pmedit]', 'click', el => {
       const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit);
       if (d) { pmOuvrir(pmDepuis(pmNommer(d)), PM_FIN); S.pmW.enCaisse = d.statut === 'en_caisse' ? (d.panelId || true) : null; rendre(); }
