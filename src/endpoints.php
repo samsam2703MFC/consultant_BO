@@ -8886,6 +8886,9 @@ function ep_scouting_demarchage(): array
     return $d;
 }
 
+/** Le CA réel des mois clos du réseau, gardé ce temps-là (secondes). */
+const SCOUTING_RESEAU_CA_TTL = 21600;
+
 function ep_scouting_reseau(): array
 {
     try {
@@ -8910,17 +8913,32 @@ function ep_scouting_reseau(): array
     // mensuel du panel, complété par les ventes caisse pour les mois qu'il ne
     // porte pas encore (ep_perf). Lire la seule table P&L ne donnait que deux
     // mois d'été, annualisés — un CA moitié trop bas.
-    $cellules = [];
-    $_GET['annees'] = ((int) date('Y') - 1) . ',' . date('Y');
-    try {
-        foreach (ep_perf() as $cell) {
-            if (!is_array($cell) || ($cell['ca'] ?? null) === null || (float) $cell['ca'] <= 0) { continue; }
-            if ((int) $cell['annee'] * 12 + (int) $cell['mois'] - 1 >= $courant) { continue; }
-            $cellules[(string) $cell['storeId']][] = [(int) $cell['annee'], (int) $cell['mois'], (float) $cell['ca']];
-        }
-        foreach ($cellules as &$l) { usort($l, static fn ($a, $b) => ($b[0] * 12 + $b[1]) <=> ($a[0] * 12 + $a[1])); }
-        unset($l);
-    } catch (Throwable $e) { /* P&L indisponible : CA réel inconnu */ }
+    // Ces mois sont clos : leur CA ne bouge plus qu'à la marge (un P&L corrigé).
+    // Le relire à chaque ouverture du scouting coûtait 18 à 33 s (ep_perf sur deux
+    // ans, au panel) — au-delà des 30 s de l'écran, qui abandonnait : plus de
+    // magasins, plus de CA réel dans le plan d'expansion (21/10/2026). Gardé six
+    // heures, et refait dès qu'un mois se clôt.
+    $memo = setting('scoutingReseauCa');
+    $cellules = is_array($memo) && ($memo['mois'] ?? '') === date('Y-m') && (int) ($memo['le'] ?? 0) > time() - SCOUTING_RESEAU_CA_TTL
+        && is_array($memo['cellules'] ?? null) ? $memo['cellules'] : null;
+    if ($cellules === null) {
+        $cellules = [];
+        $_GET['annees'] = ((int) date('Y') - 1) . ',' . date('Y');
+        try {
+            foreach (ep_perf() as $cell) {
+                if (!is_array($cell) || ($cell['ca'] ?? null) === null || (float) $cell['ca'] <= 0) { continue; }
+                if ((int) $cell['annee'] * 12 + (int) $cell['mois'] - 1 >= $courant) { continue; }
+                $cellules[(string) $cell['storeId']][] = [(int) $cell['annee'], (int) $cell['mois'], (float) $cell['ca']];
+            }
+            foreach ($cellules as &$l) { usort($l, static fn ($a, $b) => ($b[0] * 12 + $b[1]) <=> ($a[0] * 12 + $a[1])); }
+            unset($l);
+            // Rien lu (panel muet) : on ne garde pas un vide, la prochaine ouverture relit.
+            if ($cellules !== []) {
+                Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                    ['scoutingReseauCa', json_encode(['mois' => date('Y-m'), 'le' => time(), 'cellules' => $cellules], JSON_UNESCAPED_UNICODE)]);
+            }
+        } catch (Throwable $e) { /* P&L indisponible : CA réel inconnu */ }
+    }
     $out = [];
     $saisies = setting('scoutingMagasins');
     if (!is_array($saisies)) { $saisies = []; }
