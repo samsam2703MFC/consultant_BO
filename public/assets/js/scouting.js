@@ -17,6 +17,7 @@
  */
 import { API_BASE } from './api.js';
 import * as T from './scouting-tpl.js';
+import { planTextes, LANGUES } from './scouting-plan-i18n.js';
 
 const PROV = [
   { code: 'BRU', name: 'Bruxelles-Capitale', reg: 'Bruxelles' },
@@ -168,7 +169,8 @@ const ISO_URL = 'https://valhalla1.openstreetmap.de/isochrone';
 const MATRICE_URL = 'https://valhalla1.openstreetmap.de/sources_to_targets';
 // « Atelier by Max & Sandra - Gosselies » → « magasin de Gosselies » : dans
 // les tableaux du plan, c'est la ville qui compte, et la place est comptée.
-const nomMagasin = n => { const m = /\s[-–—]\s([^-–—]+)$/.exec(n || ''); return 'magasin de ' + (m ? m[1].trim() : (n || '').replace(/^Atelier by\s*/i, '') || 'réseau'); };
+const villeMagasin = n => { const m = /\s[-–—]\s([^-–—]+)$/.exec(n || ''); return m ? m[1].trim() : (n || '').replace(/^Atelier by\s*/i, ''); };
+const nomMagasin = n => 'magasin de ' + (villeMagasin(n) || 'réseau');
 const ISO_CHOIX = [['auto10', '10 min en voiture'], ['auto15', '15 min en voiture'], ['auto20', '20 min en voiture'], ['pedestrian15', '15 min à pied']];
 const LEAFLET_DIR = 'assets/vendor/leaflet/';
 const GRID_URL = 'assets/data/population_grid_2021.json';   // grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)
@@ -577,6 +579,11 @@ export class Scouting {
       planRoute: true, planSel: null, planCalc: null,
       // Le CA annuel estimé minimum d'une ouverture du plan (0 = aucun).
       planCaMin: 0,
+      // La langue du document (fr / nl), la page affichée (« synthese » ou le
+      // code d'une province), la liste des provinces dépliée, les réglages en
+      // cours d'édition dans la modale (null = fermée) et les cartes des pages
+      // de province déjà assemblées.
+      planLang: 'fr', planOnglet: 'synthese', planProvOuvert: false, planReglages: null, planCartes: {}, planCartesBusy: '',
       // L'étude de marché locale du point du dossier (GET /scouting/etude,
       // ou Overpass depuis le navigateur en repli) : entreprises, zonings,
       // écoles, générateurs de flux, concurrence indirecte.
@@ -645,6 +652,7 @@ export class Scouting {
     if (['maille', 'commune', 'arrondissement'].includes(vue.echelle)) s.echelle = vue.echelle;
     if (THEMES.some(t => t[0] === vue.trio2 && t[0] !== 'aucun')) s.trio2 = vue.trio2;
     if (THEMES.some(t => t[0] === vue.trio3 && t[0] !== 'aucun')) s.trio3 = vue.trio3;
+    if (LANGUES.some(l => l[0] === vue.planLang)) s.planLang = vue.planLang;
     s.ratings = ls.get('ratings') || {};
     s.notes = ls.get('notes') || {};
     s.candidates = ls.get('cand') || [];
@@ -664,7 +672,7 @@ export class Scouting {
   setVue(patch){
     this.setState(patch);
     const s = this.state;
-    ls.set('vue', { theme: s.theme, themeOff: s.themeOff, plis: s.plis, iso: s.iso, echelle: s.echelle, trio2: s.trio2, trio3: s.trio3 });
+    ls.set('vue', { theme: s.theme, themeOff: s.themeOff, plis: s.plis, iso: s.iso, echelle: s.echelle, trio2: s.trio2, trio3: s.trio3, planLang: s.planLang });
   }
 
   render(){
@@ -1450,7 +1458,7 @@ export class Scouting {
         const ca = hh * s.spend * emprise / (1 - s.passage / 100);
         const score = Math.max(0, Math.min(100, Math.round((hh / 14000) * 60 + emprise / eMax * 40)));
         const k = com.name + '|' + com.arr;
-        if (!best[k] || score > best[k].score) best[k] = { lat: lat, lng: lng, hh: hh, ca: ca, score: score, emprise: emprise, n: near.length, commune: com.name, arr: com.arr };
+        if (!best[k] || score > best[k].score) best[k] = { lat: lat, lng: lng, hh: hh, ca: ca, score: score, emprise: emprise, n: near.length, commune: com.name, nl: com.nl || com.name, arr: com.arr };
       }
     }
     return Object.keys(best).map(k => best[k]);
@@ -1997,28 +2005,101 @@ export class Scouting {
   // Le Top 5 par province, mis en plan : N zones par province, ce que chacune
   // peut dégager, le total pour le réseau, la carte des points. Deux clics :
   // le bouton, le PDF.
+  // Depuis le 21/10/2026 (demande de Sam) : les provinces se cochent dans une
+  // liste du plan lui-même, les réglages vivent dans une modale, chaque
+  // province a sa page (marché, concurrence, arrondissements, réseau), et le
+  // document sort en français ou en néerlandais.
   ouvrirPlan(){
-    this.setState({ plan: true, planImg: '', dossier: false, compare: false, reseau: false, view: 'map' });
+    this.setState({ plan: true, planImg: '', planOnglet: 'synthese', planProvOuvert: false, planReglages: null, dossier: false, compare: false, reseau: false, view: 'map' });
     this.carteStatiquePlan().then(uri => { if (this.state.plan) this.setState({ planImg: uri }); });
   }
 
-  fermerPlan(){ this._planCle = null; this.setState({ plan: false, planCalc: null }); }
+  fermerPlan(){ this._planCle = null; this.setState({ plan: false, planCalc: null, planProvOuvert: false, planReglages: null }); }
 
+  // Tout ce qui change la sélection : la carte du plan et celles des pages de
+  // province sont à refaire.
   setPlan(patch){
-    this.setState(patch);
+    this.setState(Object.assign({ planCartes: {} }, patch));
     this._planImgKey = null;
     this.carteStatiquePlan().then(uri => { if (this.state.plan) this.setState({ planImg: uri }); });
+    this.carteOnglet();
+  }
+
+  // Les provinces du plan sont celles de la carte (`prov`) : cocher ici coche
+  // là-bas, une seule sélection fait foi. Un arrondissement choisi hors des
+  // provinces restantes n'a plus de sens : on revient à « tous ».
+  planProvinces(patch){
+    const s = this.state, prov = Object.assign({}, s.prov, patch);
+    const arrOk = s.arr === 'all' || s.communes.some(c => c.arr === s.arr && prov[c.prov]);
+    const onglet = s.planOnglet !== 'synthese' && !prov[s.planOnglet] ? 'synthese' : s.planOnglet;
+    this.setPlan({ prov: prov, arr: arrOk ? s.arr : 'all', sel: null, planOnglet: onglet });
+  }
+
+  ongletPlan(k){
+    this._scroll['sc-plan'] = 0;
+    this.setState({ planOnglet: k, planProvOuvert: false });
+    this.carteOnglet();
+  }
+
+  // La carte de la page ouverte, si c'est une province et qu'elle manque.
+  carteOnglet(){
+    const k = this.state.planOnglet;
+    if (!this.state.plan || !k || k === 'synthese' || this.state.planCartes[k]) return;
+    this.carteProvince(k).then(uri => { if (this.state.plan && uri) this.setState({ planCartes: Object.assign({}, this.state.planCartes, { [k]: uri }) }); });
+  }
+
+  setLangPlan(l){ if (LANGUES.some(x => x[0] === l)) this.setVue({ planLang: l }); }
+
+  /* La modale des réglages : on édite une copie, rien ne bouge avant
+   * « Appliquer » — un plan par la route relance des centaines de trajets, il
+   * ne doit repartir qu'une fois. Les hypothèses du modèle (rayon, seuils,
+   * dépense, passage, surface, emprise) sont celles de toute la carte. */
+  ouvrirReglagesPlan(){
+    const s = this.state;
+    this.setState({ planProvOuvert: false, planReglages: {
+      N: Math.max(1, Math.min(10, s.planN || 5)), seuil: !!s.planSeuil, minScore: s.minScore, caMin: s.planCaMin > 0 ? s.planCaMin : '',
+      ecart: Math.max(0, +s.planEcart || 0), reseau: !!s.planReseau, route: s.planRoute !== false, lang: s.planLang,
+      radius: s.radius, weak: s.weak, thresh: s.thresh, spend: s.spend, passage: s.passage, surface: s.surface, empriseMax: s.empriseMax
+    } });
+  }
+
+  // Une case, une liste, un bouton radio : on redessine. Une saisie au clavier
+  // se garde sans redessiner — le champ ne doit pas être remplacé sous les
+  // doigts, ni le bouton « Appliquer » sous la souris.
+  reglagePlan(k, v, redessiner){
+    const r = this.state.planReglages;
+    if (!r) return;
+    if (redessiner) this.setState({ planReglages: Object.assign({}, r, { [k]: v }) });
+    else r[k] = v;
+  }
+
+  appliquerReglagesPlan(){
+    const s = this.state, r = s.planReglages;
+    if (!r) return;
+    const num = (v, d, lo, hi) => { const n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? d : Math.max(lo, Math.min(hi, n)); };
+    const modele = {
+      radius: num(r.radius, s.radius, 0.5, 5), thresh: num(r.thresh, s.thresh, 3.5, 5), weak: num(r.weak, s.weak, 0, 4.9),
+      spend: num(r.spend, s.spend, 1, 100000), passage: num(r.passage, s.passage, 0, 95), surface: num(r.surface, s.surface, 1, 100000),
+      empriseMax: num(r.empriseMax, s.empriseMax, 1, 100), minScore: Math.round(num(r.minScore, s.minScore, 0, 100))
+    };
+    // « pas un concurrent sous » reste sous « concurrent fort dès »
+    if (modele.weak >= modele.thresh) modele.weak = Math.max(0, +(modele.thresh - 0.1).toFixed(1));
+    const caMin = Math.max(0, parseInt(String(r.caMin).replace(/[^\d]/g, ''), 10) || 0);
+    this.setParam(modele);
+    if (r.lang !== s.planLang) this.setLangPlan(r.lang);
+    this.setPlan({ planReglages: null, planN: Math.max(1, Math.min(10, parseInt(r.N, 10) || 5)), planSeuil: !!r.seuil, planCaMin: caMin,
+      planEcart: Math.max(0, parseInt(r.ecart, 10) || 0), planReseau: !!r.reseau, planRoute: !!r.route });
   }
 
   // Ce qui entre dans la sélection du plan : les candidates au score, dans
   // tout le pays, et la clé qui dit si la sélection par la route est à jour.
   planSelection(){
     const s = this.state;
-    const N = Math.max(1, Math.min(5, s.planN || 5)), seuil = !!s.planSeuil;
+    const N = Math.max(1, Math.min(10, s.planN || 5)), seuil = !!s.planSeuil;
     const minutes = Math.max(0, +s.planEcart || 0), ecartKm = minutes * 45 / 60;
     const ouverts = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null)
-      .map(m => ({ lat: +m.lat, lng: +m.lng, nom: nomMagasin(m.nom || m.name || ''), fixe: true }));
-    const groupes = this.scanTop5(ecartKm > 0 || s.planCaMin > 0 ? 40 : 5);
+      .map(m => ({ lat: +m.lat, lng: +m.lng, nom: m.nom || m.name || '', fixe: true }));
+    const groupes = this.scanTop5(ecartKm > 0 || s.planCaMin > 0 ? Math.max(40, N * 8) : Math.max(5, N));
     const caMin = Math.max(0, +s.planCaMin || 0);
     const cands = [];
     groupes.forEach(g => g.zones.forEach(z => { if ((!seuil || z.score >= s.minScore) && (!caMin || z.ca >= caMin)) cands.push(Object.assign({ prov: g.prov, code: g.code }, z)); }));
@@ -2033,9 +2114,10 @@ export class Scouting {
 
   planDonnees(){
     const s = this.state, self = this;
+    const t = planTextes(s.planLang), f = t.f;
     const P = this.planSelection();
     const N = P.N, seuil = P.seuil, caMin = P.caMin, minutes = P.minutes, ecartKm = P.ecartKm, cut = P.cut, groupes = P.groupes;
-    const caMinTxt = caMin ? ' · CA ≥ ' + fmtEur(caMin) : '';
+    const caMinTxt = caMin ? ' · ' + t.caMin(f.eur(caMin)) : '';
     const fixes = s.planReseau ? P.ouverts : [];
     let retenues = [], ecartes = 0, ecartesProv = {}, temps = {}, sel = null, enCours = false;
     if (P.route){
@@ -2058,58 +2140,245 @@ export class Scouting {
         retenues.push(z);
       });
     }
-    const de = n => /^magasin /.test(n) ? 'du ' + n : (/^[aeiouyàâéèêëîïôûùh]/i.test(n) ? 'd’' : 'de ') + n;
+    // le voisin d'une zone : un magasin du réseau se nomme par sa ville
+    const deNom = v => v.fixe ? t.duMagasin(villeMagasin(v.nom)) : t.de(self.nomCommune(v.nom, t));
+    // La densité de toute la sélection, pour situer chaque province.
+    const stats = {};
+    let selHh = 0, selN = 0;
+    groupes.forEach(g => { const st = self.provinceStats(g.code); stats[g.code] = st; selHh += st.hh; selN += st.n; });
+    const selDens = selN ? selHh / selN : null;
     const provinces = [], tous = [];
     let total = 0, hhTot = 0, k = 0;
     groupes.forEach(g => {
+      const P0 = PROV.find(p => p.code === g.code) || { code: g.code, name: g.prov, reg: '' };
+      const nomP = t.province(P0);
       const zones = retenues.filter(z => z.code === g.code);
       const lignes = zones.map((z, i) => {
         const cc = self.concurrenceAu(z.lat, z.lng, s.radius);
         k++;
         const v = ecartKm > 0 ? self.voisinDe(z, retenues.concat(fixes), temps, cut, P.route) : null;
-        const voisinTxt = !(ecartKm > 0) ? '' : v ? (P.route ? 'à ' + Math.round(v.sec / 60) + ' min ' + de(v.nom) + (v.approx ? ' (estimé)' : '') : 'à ' + Math.round(v.km) + ' km ' + de(v.nom) + ' à vol d’oiseau') : (P.route ? 'rien à moins de ' + Math.round(cut) + ' km' : '');
-        return { rang: i + 1, num: k, commune: z.commune, arr: z.arr, prov: g.prov, score: z.score, hh: z.hh, n: z.n, forts: cc.forts, chaines: cc.chainesTxt,
+        const voisinTxt = !(ecartKm > 0) ? '' : v ? (P.route ? t.voisinRoute(Math.round(v.sec / 60), deNom(v), v.approx) : t.voisinVol(Math.round(v.km), deNom(v))) : (P.route ? t.rienAMoins(Math.round(cut)) : '');
+        return { rang: i + 1, num: k, commune: t.lang === 'nl' ? (z.nl || self.nomCommune(z.commune, t)) : z.commune, arr: t.arr(z.arr), arrFr: z.arr, prov: nomP, code: g.code, score: z.score, hh: z.hh, n: z.n, forts: cc.forts, chaines: cc.chainesTxt,
           emprise: z.emprise, ca: z.ca, m2: z.ca / s.surface, lat: z.lat, lng: z.lng, voisin: v, voisinTxt: voisinTxt, dossier: () => self.ouvrirDossierPoint(z.lat, z.lng) };
       });
       const sous = lignes.reduce((a, l) => a + l.ca, 0);
       total += sous; hhTot += lignes.reduce((a, l) => a + l.hh, 0);
-      const manque = ecartKm > 0 && lignes.length < N && ecartesProv[g.code] ? ' · ' + ecartesProv[g.code] + ' zone' + (ecartesProv[g.code] > 1 ? 's' : '') + ' écartée' + (ecartesProv[g.code] > 1 ? 's' : '') + ' pour proximité' : '';
-      provinces.push({ nom: g.prov, code: g.code, detail: fmtInt(g.communes) + ' communes · ' + fmtInt(g.shops) + ' commerces dans la sélection' + manque, lignes: lignes, sousTotal: sous });
+      const manque = ecartKm > 0 && lignes.length < N && ecartesProv[g.code] ? t.ecarteesProv(ecartesProv[g.code]) : '';
+      provinces.push({ nom: nomP, code: g.code, type: t.typeProv(P0), detail: t.detailProv(f.nf(g.communes), f.nf(g.shops)) + manque, lignes: lignes, sousTotal: sous,
+        page: self.provincePage(P0, lignes, stats[g.code], t, selDens) });
       lignes.forEach(l => tous.push(l));
     });
     const reseau = (s.magasins || []).filter(m => m.ouvert && m.caAnnuel);
     const caReseau = reseau.reduce((a, m) => a + m.caAnnuel, 0);
     const nProv = provinces.filter(p => p.lignes.length).length;
-    const R = s.radius.toFixed(1).replace('.', ',') + ' km';
-    let ecartTxt = 'sans écart minimum entre elles';
-    if (ecartKm > 0 && P.route) ecartTxt = 'à ' + minutes + ' min de voiture au moins les unes des autres' + (s.planReseau ? ' et des magasins ouverts' : '') + ' — minutes de route du service Valhalla sur OpenStreetMap, ' + fmtInt(sel ? sel.trajets : 0) + ' trajets calculés' + (sel && sel.approx ? ', ' + sel.approx + ' estimé' + (sel.approx > 1 ? 's' : '') + ' à vol d’oiseau faute de réponse' : '') + ' ; au-delà de ' + Math.round(cut) + ' km à vol d’oiseau, l’écart est acquis sans calcul';
-    else if (ecartKm > 0) ecartTxt = 'à ' + minutes + ' min de voiture au moins les unes des autres' + (s.planReseau ? ' et des magasins ouverts' : '') + ' (' + Math.round(ecartKm) + ' km à vol d’oiseau, à 45 km/h de moyenne)';
+    const R = f.km(s.radius);
+    let ecartTxt = t.sansEcart;
+    if (ecartKm > 0 && P.route) ecartTxt = t.ecartBase(minutes) + (s.planReseau ? t.etOuverts : '') + t.ecartRoute(f.nf(sel ? sel.trajets : 0), sel && sel.approx ? sel.approx : 0, Math.round(cut));
+    else if (ecartKm > 0) ecartTxt = t.ecartBase(minutes) + (s.planReseau ? t.etOuverts : '') + t.ecartVol(Math.round(ecartKm));
+    const H = t.hyp;
     return {
-      enCours: enCours, calc: s.planCalc, route: P.route, cut: cut,
-      titre: 'Plan d’expansion — ' + tous.length + ' ouverture' + (tous.length > 1 ? 's' : '') + ' dans ' + nProv + ' province' + (nProv > 1 ? 's' : ''),
-      date: new Date().toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' }),
+      t: t, lang: t.lang, enCours: enCours, calc: s.planCalc, route: P.route, cut: cut,
+      titre: t.titre(tous.length, nProv),
+      date: f.date(),
       N: N, seuil: seuil, minScore: s.minScore, caMin: caMin, caMinTxt: caMinTxt, minutes: minutes, ecartes: ecartes, ecartTxt: ecartTxt,
       total: total, hhTot: hhTot, nPts: tous.length, nProv: nProv, caReseau: caReseau, nReseau: reseau.length,
+      sousTitre: [t.parProvMax(N), seuil ? t.scoreMin(s.minScore) : t.sansScore].join(' · ') + caMinTxt + (minutes ? ' · ' + t.ecartCourt(minutes) : ''),
       resume: [
-        ['CA annuel estimé TTC, toutes ouvertures', fmtEur(total), fmtEur(total / 52) + ' par semaine'],
-        ['Ouvertures retenues', String(tous.length), N + ' par province au plus' + (seuil ? ', score ≥ ' + s.minScore : '') + caMinTxt + (ecartKm > 0 ? ' · ' + minutes + ' min entre elles' + (P.route ? ' par la route' : '') + (ecartes ? ' · ' + ecartes + ' écartée' + (ecartes > 1 ? 's' : '') + ' pour proximité' : '') : '')],
-        ['Ménages accessibles cumulés', fmtInt(hhTot), tous.length ? fmtInt(hhTot / tous.length) + ' par point en moyenne' : ''],
-        caReseau ? ['Le réseau aujourd’hui', fmtEur(caReseau), reseau.length + ' magasin' + (reseau.length > 1 ? 's' : '') + ' ouverts · le plan ajouterait + ' + Math.round(total / caReseau * 100) + ' %'] : ['CA moyen par ouverture', tous.length ? fmtEur(total / tous.length) : '—', 'sur ' + s.surface + ' m²']
+        [t.rCa, f.eur(total), t.parSemaine(f.eur(total / 52))],
+        [t.rOuv, String(tous.length), t.parProvMax(N) + (seuil ? ', ' + t.scoreMin(s.minScore) : '') + caMinTxt + (ecartKm > 0 ? ' · ' + t.entreElles(minutes) + (P.route ? t.parRoute : '') + (ecartes ? ' · ' + t.ecartees(ecartes) : '') : '')],
+        [t.rMen, f.nf(hhTot), tous.length ? t.parPoint(f.nf(hhTot / tous.length)) : ''],
+        caReseau ? [t.rRes, f.eur(caReseau), t.resAjout(reseau.length, Math.round(total / caReseau * 100))] : [t.rMoy, tous.length ? f.eur(total / tous.length) : '—', t.surM2(s.surface)]
       ],
       provinces: provinces,
+      // la synthèse : une ligne par province, de quoi les comparer d'un coup d'œil
+      parProvince: provinces.map(p => ({ nom: p.nom, code: p.code, nOuv: p.lignes.length, hh: p.page.hh, n: p.page.n, forts: p.page.forts,
+        perShop: p.page.perShop, nMags: p.page.reseau.length, ca: p.sousTotal, aller: () => self.ongletPlan(p.code) })),
+      selHh: selHh, selN: selN, selDens: selDens,
       classement: tous.slice().sort((a, b) => b.ca - a.ca).slice(0, 10),
-      carteNote: 'Les ronds verts numérotés : les zones retenues, dans l’ordre du plan. Les carrés noirs : les magasins du réseau déjà ouverts. Fond de carte © OpenStreetMap.',
-      methode: 'Chaque province cochée est balayée sur toute son emprise, à la maille d’un rayon ; en chaque point, les ménages du recensement dans ' + R + ', les concurrents et leur pression, l’emprise et le CA du modèle de la fiche. Une zone par commune, hors des rayons d’exclusion des concurrents forts, les ' + N + ' meilleures au score par province' + (seuil ? ', au-dessus du score ' + s.minScore : ' — sans score minimum, le score dit ce qu’elles valent') + (caMin ? ', au CA annuel estimé d’au moins ' + fmtEur(caMin) : '') + ', ' + ecartTxt + (ecartes ? ' ; ' + ecartes + ' zone' + (ecartes > 1 ? 's' : '') + ' mieux classée' + (ecartes > 1 ? 's' : '') + ' ' + (ecartes > 1 ? 'ont' : 'a') + ' cédé la place pour cause de proximité' : '') + '. Les CA s’additionnent comme si chaque ouverture était seule : deux zones voisines se partageraient une partie du marché.',
+      carteNote: t.carteNote,
+      methode: t.methode({ R: R, N: N, seuil: seuil, minScore: s.minScore, caMin: caMin ? f.eur(caMin) : '', ecartTxt: ecartTxt, ecartes: ecartes }),
       hypotheses: [
-        ['Dépense par ménage', fmtEur(s.spend) + ' / an'], ['Part du passage', s.passage + ' %'], ['Surface nette cible', s.surface + ' m²'],
-        ['Emprise', s.emprise > 0 ? 'imposée ' + s.emprise + ' %' : 'calculée, max ' + s.empriseMax + ' %'], ['Sensibilité à la concurrence', String(s.compK).replace('.', ',')],
-        ['Rayon', R], ['Concurrent fort dès', (+s.thresh).toFixed(1).replace('.', ',') + ' ★'], ['Score minimum', String(s.minScore)],
-        ['Écart entre ouvertures', ecartKm > 0 ? minutes + ' min de voiture' + (P.route ? ', temps de route' : ', ≈ ' + Math.round(ecartKm) + ' km') + (s.planReseau ? ', magasins ouverts compris' : '') : 'aucun'],
-        ['CA annuel minimum', caMin ? fmtEur(caMin) : 'aucun']
+        [H.depense, H.parAn(f.eur(s.spend))], [H.passage, f.pct(s.passage, 0)], [H.surface, s.surface + ' m²'],
+        [H.emprise, s.emprise > 0 ? H.imposee(f.pct(s.emprise, 0)) : H.calculee(f.pct(s.empriseMax, 0))], [H.compK, String(s.compK).replace('.', ',')],
+        [H.rayon, R], [H.weak, f.dec(s.weak, 1) + ' ★'], [H.thresh, f.dec(s.thresh, 1) + ' ★'], [H.minScore, String(s.minScore)],
+        [H.ecart, ecartKm > 0 ? H.ecartV(minutes, P.route, Math.round(ecartKm), s.planReseau) : H.aucun],
+        [H.caMin, caMin ? f.eur(caMin) : H.aucun]
       ],
-      sources: 'Commerces et communes : OpenStreetMap' + (self.osmDate() ? ', cache du serveur relu le ' + self.osmDate() : '') + ' · population : grille 1 km² du recensement 2021 (StatBel, diffusion Eurostat)'
-        + ' · dépense par ménage, emprise et surface : étude GeoConsulting (Halle, 28/08/2024)' + (self.googleOk() ? ' · notes : Google Places' : '') + (ecartKm > 0 && P.route ? ' · temps de route : Valhalla (FOSSGIS) sur OpenStreetMap' : '') + ' · CA réel du réseau : ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises, TTC) pour les mois sans P&L, douze derniers mois clos.'
+      sources: t.sources({ osm: self.osmDate(), google: self.googleOk(), route: ecartKm > 0 && P.route })
     };
+  }
+
+  /* ---------- la page d'une province du plan ---------- */
+  // Le nom d'une commune dans la langue du plan. Les secteurs OpenStreetMap
+  // portent les deux : `name` (le français s'il existe) et `nl` (le nom local —
+  // néerlandais en Flandre, français en Wallonie, bilingue à Bruxelles).
+  nomCommune(nom, t){
+    if (!nom || t.lang !== 'nl') return nom;
+    const cs = this.state.communes;
+    if (!this._nlNoms || this._nlNoms.n !== cs.length){
+      const m = {};
+      cs.forEach(c => { if (c.name && c.nl && !m[c.name]) m[c.name] = c.nl; });
+      this._nlNoms = { n: cs.length, m: m };
+    }
+    return this._nlNoms.m[nom] || nom;
+  }
+
+  // La province la plus proche d'un point : celle de la commune la plus proche.
+  provinceAu(lat, lng){
+    let cm = null, cd = 1e9;
+    this.state.communes.forEach(c => { const d = dist(lat, lng, c.lat, c.lng); if (d < cd){ cd = d; cm = c; } });
+    return cm ? cm.prov : null;
+  }
+
+  // Ce qu'une province contient, lu dans la sélection : son marché (ménages,
+  // population), sa concurrence (forts, chaînes, notes), ses arrondissements,
+  // les magasins du réseau qui y sont déjà. Les mêmes commerces que le plan —
+  // sans les dormants, aux filtres de la carte — pour que les chiffres d'une
+  // page se recoupent avec ceux du plan. Gardé tant que rien ne bouge : la
+  // page se redessine à chaque geste, le calcul ne doit pas la suivre.
+  provinceStats(code){
+    const s = this.state;
+    const base = [this._top5Key, this._rev, s.weak, s.thresh, s.spend, s.communes.length, (s.magasins || []).length, Object.keys(s.ratings).length, Object.keys(s.quals || {}).length].join('|');
+    if (!this._pst || this._pst.base !== base) this._pst = { base: base, shops: this.shops(), par: {} };
+    if (this._pst.par[code]) return this._pst.par[code];
+    const cs = s.communes.filter(c => c.prov === code);
+    const bs = this._pst.shops.filter(b => b.prov === code);
+    const w = s.weak, th = s.thresh;
+    const pop = cs.reduce((a, c) => a + (c.pop || 0), 0), hh = cs.reduce((a, c) => a + (c.hh || 0), 0);
+    const avis = b => { const rv = s.ratings[b.id]; return rv && rv.n ? +rv.n : 0; };
+    const notes = bs.map(b => this.rating(b)).filter(Boolean);
+    const forts = bs.filter(b => this.isStrong(b));
+    const chaines = bs.filter(b => this.estChaine(b));
+    // par arrondissement : communes et ménages d'un côté, commerces de l'autre
+    const parArr = {};
+    const arrDe = nom => parArr[nom] || (parArr[nom] = { arr: nom, communes: 0, hh: 0, pop: 0, n: 0, forts: 0, notes: [] });
+    cs.forEach(c => { const a = arrDe(c.arr || '—'); a.communes++; a.hh += c.hh || 0; a.pop += c.pop || 0; });
+    bs.forEach(b => { const a = arrDe(b.arr || '—'); a.n++; if (this.isStrong(b)) a.forts++; const r = this.rating(b); if (r) a.notes.push(r); });
+    const arrs = Object.keys(parArr).map(k => parArr[k]).filter(a => a.communes > 0)
+      .map(a => Object.assign(a, { avg: a.notes.length ? a.notes.reduce((x, y) => x + y, 0) / a.notes.length : null, perShop: a.n ? a.hh / a.n : null }))
+      .sort((a, b) => b.hh - a.hh);
+    const top = bs.map(b => ({ b: b, f: this.strength(b), n: avis(b), r: this.rating(b) }))
+      .sort((a, b) => (b.f - a.f) || (b.n - a.n) || ((b.r || 0) - (a.r || 0))).slice(0, 10);
+    const mags = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null && this.provinceAu(+m.lat, +m.lng) === code);
+    const out = {
+      code: code, communes: cs.length, pop: pop, hh: hh, n: bs.length, forts: forts.length, chaines: chaines.length,
+      marques: this.marquesDe(chaines),
+      avg: notes.length ? notes.reduce((a, b) => a + b, 0) / notes.length : null,
+      notes: { total: notes.length, non: bs.length - notes.length, sous: notes.filter(r => r < w).length, comptes: notes.filter(r => r >= w && r < th).length, forts: notes.filter(r => r >= th).length },
+      arrs: arrs, top: top, mags: mags,
+      // l'emprise de la province, pour sa carte
+      bb: cs.length ? boitePoly(cs.map(c => [c.lat, c.lng])) : null,
+      shops: bs
+    };
+    this._pst.par[code] = out;
+    return out;
+  }
+
+  // La page d'une province, mise en forme dans la langue du plan.
+  provincePage(P0, lignes, st, t, selDens){
+    const s = this.state, f = t.f;
+    const caOuv = lignes.reduce((a, l) => a + l.ca, 0);
+    const ouvArr = {};
+    lignes.forEach(l => { const a = ouvArr[l.arrFr] || (ouvArr[l.arrFr] = { n: 0, ca: 0 }); a.n++; a.ca += l.ca; });
+    const caMags = st.mags.reduce((a, m) => a + (m.caAnnuel || 0), 0);
+    const avecCa = st.mags.filter(m => m.caAnnuel);
+    // la période du CA réel : celle des magasins, si elle est commune
+    const du = avecCa.length ? avecCa.map(m => m.du).filter(Boolean).sort()[0] : '', au = avecCa.length ? avecCa.map(m => m.au).filter(Boolean).sort().pop() : '';
+    const periode = du && au ? t.periode(f.mois(du), f.mois(au)) : '';
+    const pctDe = (n, tot) => tot ? f.pct(100 * n / tot, 0) : '—';
+    const nb = st.n, wTxt = f.dec(s.weak, 1), thTxt = f.dec(s.thresh, 1);
+    return {
+      code: P0.code, nom: t.province(P0), type: t.typeProv(P0), nOuv: lignes.length, caOuv: caOuv,
+      hh: st.hh, n: st.n, forts: st.forts, perShop: st.n ? st.hh / st.n : null,
+      tuiles: [
+        [t.tMenages, f.nf(st.hh), t.tMenagesS(f.nf(st.pop), f.eur(st.hh * s.spend))],
+        [t.tConc, f.nf(st.n), t.tConcS(st.forts, st.chaines, st.avg ? f.dec(st.avg, 1) : '')],
+        [t.tDens, st.n ? f.nf(st.hh / st.n) : '—', t.tDensS(st.pop ? f.dec(st.n / (st.pop / 10000), 1) : '—', selDens ? f.nf(selDens) : '')],
+        st.mags.length ? [t.tRes, caMags ? f.eur(caMags) : '—', t.tResS(st.mags.length, periode)] : [t.tRes, t.tResVide, t.tResVideS]
+      ],
+      notes: [[t.notesNon, st.notes.non], [t.notesSous(wTxt), st.notes.sous], [t.notesComptes(wTxt, thTxt), st.notes.comptes], [t.notesForts(thTxt), st.notes.forts]]
+        .map(r => [r[0], f.nf(r[1]), pctDe(r[1], nb), nb ? r[1] / nb : 0]),
+      noteMoy: st.avg ? t.noteMoyenne(f.dec(st.avg, 1), st.notes.total) : '',
+      marques: st.marques.slice(0, 10).map(m => [m.nom, f.nf(m.n)]),
+      top: st.top.map((o, i) => [String(i + 1), o.b.name || '—', this.nomCommune(o.b.commune || '', t), o.r ? f.dec(o.r, 1) : '—', o.n ? f.nf(o.n) : '—', f.pct(o.f * 100, 0), this.estChaine(o.b) ? t.chaine : '', this.isStrong(o.b)]),
+      arrs: st.arrs.map(a => [t.arr(a.arr), f.nf(a.communes), f.nf(a.hh), f.nf(a.n), f.nf(a.forts), a.perShop ? f.nf(a.perShop) : '—', a.avg ? f.dec(a.avg, 1) : '—',
+        ouvArr[a.arr] ? String(ouvArr[a.arr].n) : '—', ouvArr[a.arr] ? f.eur(ouvArr[a.arr].ca) : '—']),
+      arrTot: [t.total, f.nf(st.communes), f.nf(st.hh), f.nf(st.n), f.nf(st.forts), st.n ? f.nf(st.hh / st.n) : '—', st.avg ? f.dec(st.avg, 1) : '—', String(lignes.length), lignes.length ? f.eur(caOuv) : '—'],
+      reseau: st.mags.map(m => [m.nom || '—', m.ville || '', m.caAnnuel ? f.eur(m.caAnnuel) : '—', m.du && m.au ? t.periode(f.mois(m.du), f.mois(m.au)) : '']),
+      carteNote: t.carteNoteProv
+    };
+  }
+
+  // Ce que l'écran du plan montre autour du document : la liste des
+  // provinces, le résumé des réglages, les onglets, la modale. L'outil reste
+  // en français ; seul le document suit la langue choisie.
+  planVue(){
+    const s = this.state, self = this, d = this.planDonnees();
+    const nl = planTextes('nl');
+    const REG = ['Bruxelles', 'Flandre', 'Wallonie'];
+    const cochees = PROV.filter(p => s.prov[p.code]);
+    const coche = (choix) => self.planProvinces(PROV.reduce((a, p) => { a[p.code] = !!choix(p); return a; }, {}));
+    const provSel = {
+      ouvert: !!s.planProvOuvert, n: cochees.length, total: PROV.length,
+      label: cochees.length === PROV.length ? 'toutes' : !cochees.length ? 'aucune' : cochees.length <= 2 ? cochees.map(p => p.name).join(', ') : cochees.length + ' sur ' + PROV.length,
+      communes: fmtInt(s.communes.filter(c => s.prov[c.prov]).length),
+      toggle: () => self.setState({ planProvOuvert: !s.planProvOuvert }),
+      fermer: () => self.setState({ planProvOuvert: false }),
+      raccourcis: [['Toutes', () => true], ['Aucune', () => false]].concat(REG.map(r => [r, p => p.reg === r]))
+        .map(([nom, choix]) => ({ nom: nom, on: PROV.every(p => !!choix(p) === !!s.prov[p.code]), go: () => coche(choix) })),
+      groupes: REG.map(r => ({ reg: r, items: PROV.filter(p => p.reg === r).map(p => ({
+        code: p.code, nom: p.name, nl: nl.province(p), on: !!s.prov[p.code],
+        detail: fmtInt(s.communes.filter(c => c.prov === p.code).length) + ' communes · ' + fmtInt(s.bakeries.filter(b => b.prov === p.code).length) + ' commerces',
+        toggle: () => self.planProvinces({ [p.code]: !s.prov[p.code] })
+      })) }))
+    };
+    const onglet = s.planOnglet !== 'synthese' && d.provinces.some(p => p.code === s.planOnglet) ? s.planOnglet : 'synthese';
+    const onglets = [{ k: 'synthese', nom: 'Synthèse', n: d.nPts, on: onglet === 'synthese', go: () => self.ongletPlan('synthese') }]
+      .concat(d.provinces.map(p => ({ k: p.code, nom: (PROV.find(x => x.code === p.code) || {}).name || p.nom, n: p.lignes.length, on: onglet === p.code, go: () => self.ongletPlan(p.code) })));
+    const pCour = onglet !== 'synthese' ? d.provinces.find(p => p.code === onglet) : null;
+    const etoiles = v => (+v).toFixed(1).replace('.', ',') + ' ★';
+    const resume = [
+      d.N + ' par province au plus',
+      d.seuil ? 'score ≥ ' + s.minScore : 'sans score minimum',
+      d.caMin ? 'CA ≥ ' + fmtEur(d.caMin) : 'sans CA minimum',
+      d.minutes ? d.minutes + ' min entre elles' + (s.planReseau ? ', magasins ouverts compris' : '') + (d.route ? ' · temps de route réels' : ' · à vol d’oiseau') : 'sans écart minimum',
+      'rayon ' + s.radius.toFixed(1).replace('.', ',') + ' km · concurrent dès ' + etoiles(s.weak) + ' · fort dès ' + etoiles(s.thresh)
+    ];
+    const R = s.planReglages;
+    const champ = (k, label, unite, step, tip, placeholder) => ({ id: 'sc-pr-' + k, k: k, label: label, unite: unite, step: step, tip: tip || '', placeholder: placeholder || '',
+      v: R && R[k] != null ? R[k] : '', set: e => self.reglagePlan(k, e.target.value, false) });
+    return Object.assign(d, {
+      img: s.planImg, busy: s.planBusy, cartesBusy: s.planCartesBusy, onglet: onglet, onglets: onglets,
+      cartes: s.planCartes, provSel: provSel, resumeReglages: resume,
+      arrFiltre: s.arr !== 'all' ? { nom: s.arr, retirer: () => self.setPlan({ arr: 'all' }) } : null,
+      aucuneProv: !cochees.length,
+      langues: LANGUES.map(([code, nom]) => ({ code: code, nom: nom, on: s.planLang === code, go: () => self.setLangPlan(code) })),
+      ouvrirReglages: () => self.ouvrirReglagesPlan(),
+      provCourante: pCour ? { nom: (PROV.find(x => x.code === pCour.code) || {}).name || pCour.nom, pdf: () => self.telechargerPlanPdf(pCour.code) } : null,
+      reglages: R ? {
+        nChoix: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => ({ value: String(n), label: n + ' par province' })), nVal: String(R.N),
+        setN: e => self.reglagePlan('N', parseInt(e.target.value, 10) || 5, true),
+        seuil: !!R.seuil, toggleSeuil: () => self.reglagePlan('seuil', !R.seuil, true),
+        ecartChoix: [[0, 'sans écart minimum'], [10, '10 min de voiture'], [15, '15 min de voiture'], [20, '20 min de voiture'], [30, '30 min de voiture'], [45, '45 min de voiture']].map(c => ({ value: String(c[0]), label: c[1] })),
+        ecartVal: String(R.ecart), setEcart: e => self.reglagePlan('ecart', parseInt(e.target.value, 10) || 0, true),
+        reseau: !!R.reseau, toggleReseau: () => self.reglagePlan('reseau', !R.reseau, true),
+        route: !!R.route, toggleRoute: () => self.reglagePlan('route', !R.route, true),
+        langues: LANGUES.map(([code, nom]) => ({ code: code, nom: nom, on: R.lang === code, go: () => self.reglagePlan('lang', code, true) })),
+        minScore: champ('minScore', 'au-dessus du score', '', 1, TIP_REGL.minScore),
+        caMin: champ('caMin', 'CA annuel estimé minimum', '€', 50000, 'Seules les zones dont le CA annuel estimé atteint ce montant entrent dans le plan. Vide : aucun minimum.', 'aucun minimum'),
+        modele: [
+          champ('radius', 'Rayon d’exclusion et d’évaluation', 'km', 0.1, TIP_REGL.radius),
+          champ('weak', 'Pas un concurrent sous', '★', 0.1, TIP_REGL.weak),
+          champ('thresh', 'Concurrent fort dès', '★', 0.1, TIP_REGL.thresh),
+          champ('spend', 'Dépense boulangerie par ménage', '€ / an', 1, TIP_HYP['Dépense boulangerie / ménage (€/an)']),
+          champ('passage', 'Part du passage', '%', 1, TIP_HYP['Part du passage (%)']),
+          champ('surface', 'Surface nette cible', 'm²', 10, TIP_HYP['Surface nette cible (m²)']),
+          champ('empriseMax', 'Emprise maximale du modèle', '%', 1, TIP_HYP['Emprise maximale du modèle (%)'])
+        ],
+        appliquer: () => self.appliquerReglagesPlan(), annuler: () => self.setState({ planReglages: null })
+      } : null,
+      fermer: () => self.fermerPlan(), pdf: () => self.telechargerPlanPdf(), csv: () => self.exporterPlanCsv(), imprimer: () => self.imprimerPlan()
+    });
   }
 
   /* ---------- l'écart entre ouvertures, en vraies minutes de route ---------- */
@@ -2182,8 +2451,9 @@ export class Scouting {
     if (run.trajets === 0 && run.echecs) this.notify('Le service de routage n’a pas répondu : les écarts sont estimés à vol d’oiseau (45 km/h)');
     else if (run.coupe) this.notify('Service de routage lent : au-delà de ' + run.appels + ' appels, les derniers écarts sont estimés à vol d’oiseau');
     this._planImgKey = null;
-    this.setState({ planCalc: null, planSel: { cle: P.cle, retenues: retenues, ecartes: ecartes, ecartesProv: ecartesProv, temps: temps, trajets: run.trajets, appels: run.appels, approx: run.approx, echecs: run.echecs, duree: Date.now() - run.t0 } });
+    this.setState({ planCalc: null, planCartes: {}, planSel: { cle: P.cle, retenues: retenues, ecartes: ecartes, ecartesProv: ecartesProv, temps: temps, trajets: run.trajets, appels: run.appels, approx: run.approx, echecs: run.echecs, duree: Date.now() - run.t0 } });
     this.carteStatiquePlan().then(uri => { if (this.state.plan) this.setState({ planImg: uri }); });
+    this.carteOnglet();
   }
 
   // Les secondes de route entre deux points, si on les a demandées ; sinon
@@ -2208,8 +2478,8 @@ export class Scouting {
         const x = z.lat.toFixed(4) + ',' + z.lng.toFixed(4), y = r.lat.toFixed(4) + ',' + r.lng.toFixed(4);
         const v = temps[x < y ? x + '|' + y : y + '|' + x];
         const sec = v !== undefined ? v : d / 45 * 3600;
-        if (!best || sec < best.sec) best = { nom: r.commune || r.nom, sec: sec, km: d, approx: v === undefined };
-      } else if (!best || d < best.km) best = { nom: r.commune || r.nom, km: d, sec: d / 45 * 3600, approx: true };
+        if (!best || sec < best.sec) best = { nom: r.commune || r.nom, fixe: !!r.fixe, sec: sec, km: d, approx: v === undefined };
+      } else if (!best || d < best.km) best = { nom: r.commune || r.nom, fixe: !!r.fixe, km: d, sec: d / 45 * 3600, approx: true };
     });
     return best;
   }
@@ -2260,21 +2530,12 @@ export class Scouting {
     return grille;
   }
 
-  // La carte du plan : le pays (ou l'emprise des points), les zones retenues
-  // numérotées, les magasins ouverts. Même assemblage de tuiles que le dossier.
-  carteStatiquePlan(){
-    const s = this.state, d = this.planDonnees();
-    if (d.enCours) return Promise.resolve('');
-    const pts = [];
-    d.provinces.forEach(p => p.lignes.forEach(l => pts.push(l)));
-    const mags = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null);
-    if (!pts.length && !mags.length) return Promise.resolve('');
-    const key = pts.map(l => l.lat.toFixed(4) + ',' + l.lng.toFixed(4)).join(';') + '|' + mags.length;
-    if (this._planImgKey === key && this._planImgP) return this._planImgP;
-    // Le pays entier tient au zoom 8 dans 740 × 540 : un cran de moins et la
-    // Belgique n'occupait que le tiers de l'image.
-    const W = 740, H = 540;
-    const bb = boitePoly(pts.map(l => [l.lat, l.lng]).concat(mags.map(m => [+m.lat, +m.lng])));
+  // Une carte statique : les tuiles OpenStreetMap au zoom qui fait tenir
+  // l'emprise, un voile clair, puis les repères — les concurrents en petits
+  // points (en bordeaux les forts), les magasins du réseau en carrés noirs, les
+  // zones retenues en ronds verts numérotés. Sert au plan (le pays) et à chaque
+  // page de province ; même assemblage de tuiles que le dossier.
+  carteAssemblee(bb, W, H, pts, mags, concs){
     let z = 12;
     for (; z > 6; z--){ const a = merc(bb.n, bb.w, z), b = merc(bb.s, bb.e, z); if (b[0] - a[0] <= W * 0.97 && b[1] - a[1] <= H * 0.97) break; }
     const c = merc((bb.n + bb.s) / 2, (bb.w + bb.e) / 2, z), x0 = c[0] - W / 2, y0 = c[1] - H / 2;
@@ -2293,10 +2554,15 @@ export class Scouting {
       }));
     }
     const P = ll => { const m = merc(ll[0], ll[1], z); return [m[0] - x0, m[1] - y0]; };
-    this._planImgKey = key;
-    this._planImgP = Promise.all(charges).then(() => {
+    return Promise.all(charges).then(() => {
       // un voile clair : les repères doivent se lire sur le fond
       cx.fillStyle = 'rgba(255,255,255,.28)'; cx.fillRect(0, 0, W, H);
+      // les faibles d'abord, les forts par-dessus
+      (concs || []).slice().sort((a, b) => (a.fort ? 1 : 0) - (b.fort ? 1 : 0)).forEach(o => {
+        const p = P([o.lat, o.lng]);
+        cx.beginPath(); cx.arc(p[0], p[1], o.fort ? 3.2 : 2.3, 0, 6.2832);
+        cx.fillStyle = o.fort ? 'rgba(141,29,44,.9)' : 'rgba(120,85,75,.5)'; cx.fill();
+      });
       mags.forEach(m => {
         const p = P([+m.lat, +m.lng]);
         cx.fillStyle = '#221E1A'; cx.fillRect(p[0] - 6, p[1] - 6, 12, 12);
@@ -2314,18 +2580,91 @@ export class Scouting {
       const txt = '© OpenStreetMap', wt = cx.measureText(txt).width + 10;
       cx.fillStyle = 'rgba(255,255,255,.85)'; cx.fillRect(W - wt - 4, H - 18, wt, 16);
       cx.fillStyle = '#333'; cx.fillText(txt, W - wt + 1, H - 6);
-      try { return canvas.toDataURL('image/jpeg', 0.88); } catch (e) { console.warn('[scouting] carte du plan :', e.message); return ''; }
+      try { return canvas.toDataURL('image/jpeg', 0.86); } catch (e) { console.warn('[scouting] carte statique :', e.message); return ''; }
     });
+  }
+
+  // La carte du plan : le pays (ou l'emprise des points), les zones retenues
+  // numérotées, les magasins ouverts.
+  carteStatiquePlan(){
+    const s = this.state, d = this.planDonnees();
+    if (d.enCours) return Promise.resolve('');
+    const pts = [];
+    d.provinces.forEach(p => p.lignes.forEach(l => pts.push(l)));
+    const mags = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null);
+    if (!pts.length && !mags.length) return Promise.resolve('');
+    const key = pts.map(l => l.lat.toFixed(4) + ',' + l.lng.toFixed(4)).join(';') + '|' + mags.length;
+    if (this._planImgKey === key && this._planImgP) return this._planImgP;
+    // Le pays entier tient au zoom 8 dans 740 × 540 : un cran de moins et la
+    // Belgique n'occupait que le tiers de l'image.
+    const bb = boitePoly(pts.map(l => [l.lat, l.lng]).concat(mags.map(m => [+m.lat, +m.lng])));
+    this._planImgKey = key;
+    this._planImgP = this.carteAssemblee(bb, 740, 540, pts, mags, null);
     return this._planImgP;
   }
 
-  planPayload(d){
+  // La carte d'une page de province : l'emprise de ses communes, ses zones
+  // retenues (au numéro du plan), les magasins du réseau à portée et les
+  // concurrents de la sélection — la concurrence se lit sur la carte avant de
+  // se lire dans les tableaux.
+  carteProvince(code){
+    const s = this.state, d = this.planDonnees();
+    if (d.enCours) return Promise.resolve('');
+    const p = d.provinces.find(x => x.code === code), st = this.provinceStats(code);
+    if (!p || !st.bb) return Promise.resolve('');
+    const bb = st.bb;
+    const dans = (lat, lng) => lat >= bb.s - 0.05 && lat <= bb.n + 0.05 && lng >= bb.w - 0.08 && lng <= bb.e + 0.08;
+    const mags = (s.magasins || []).filter(m => m.ouvert && m.lat != null && m.lng != null && dans(+m.lat, +m.lng));
+    const concs = st.shops.map(b => ({ lat: b.lat, lng: b.lng, fort: this.isStrong(b) }));
+    const key = p.lignes.map(l => l.num + '@' + l.lat.toFixed(4) + ',' + l.lng.toFixed(4)).join(';') + '|' + mags.length + '|' + concs.length + '|' + concs.filter(o => o.fort).length;
+    this._provCartes = this._provCartes || {};
+    const c = this._provCartes[code];
+    if (c && c.key === key) return c.p;
+    const pr = this.carteAssemblee(bb, 740, 470, p.lignes, mags, concs).catch(() => '');
+    this._provCartes[code] = { key: key, p: pr };
+    return pr;
+  }
+
+  // Les cartes de province qui manquent, une à une — les tuiles viennent d'un
+  // service communautaire ; l'avancement s'affiche dans le bouton.
+  async cartesProvinces(codes){
+    const out = Object.assign({}, this.state.planCartes);
+    for (let i = 0; i < codes.length; i++){
+      const k = codes[i];
+      if (out[k]) continue;
+      this.setState({ planCartesBusy: (i + 1) + '/' + codes.length });
+      out[k] = await this.carteProvince(k);
+    }
+    this.setState({ planCartes: out, planCartesBusy: '' });
+    return out;
+  }
+
+  // Ce que le serveur met en page : les textes déjà formés dans la langue du
+  // plan ; le serveur n'y ajoute que ses intitulés, dans la même langue.
+  // `code` : le PDF d'une seule province (sa page, puis la méthode).
+  planPayload(d, code){
+    const t = d.t, f = t.f;
+    const provs = code ? d.provinces.filter(p => p.code === code) : d.provinces;
+    const seule = code && provs[0] ? provs[0] : null;
+    const ligne = l => [String(l.num), l.commune, l.arr + (l.voisinTxt ? ' · ' + l.voisinTxt : ''), String(l.score), f.nf(l.hh), l.n + (l.forts ? ' ' + t.fort(l.forts) : ''), l.chaines || '—', f.pct(l.emprise * 100), f.eur(l.ca), f.eur(l.m2)];
+    const somme = k => d.parProvince.reduce((a, r) => a + (r[k] || 0), 0);
     return {
-      titre: d.titre, date: d.date, total: fmtEur(d.total), sousTitre: d.nPts + ' ouverture' + (d.nPts > 1 ? 's' : '') + ' · ' + d.N + ' par province au plus' + (d.seuil ? ' · score ≥ ' + d.minScore : '') + (d.caMinTxt || '') + (d.minutes ? ' · ' + d.minutes + ' min de voiture au moins entre elles' : ''),
-      resume: d.resume, carte: d.carte || '', carteNote: d.carteNote,
-      provinces: d.provinces.map(p => ({ nom: p.nom, detail: p.detail, sousTotal: fmtEur(p.sousTotal),
-        lignes: p.lignes.map(l => [String(l.num), l.commune, l.arr + (l.voisinTxt ? ' · ' + l.voisinTxt : ''), String(l.score), fmtInt(l.hh), l.n + (l.forts ? ' (' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')' : ''), l.chaines || '—', pct1(l.emprise), fmtEur(l.ca), fmtEur(l.m2)]) })),
-      classement: d.classement.map(l => [String(l.num), l.commune, l.prov, String(l.score), fmtEur(l.ca)]),
+      lang: d.lang, synthese: !seule,
+      titre: seule ? t.titreProv(seule.nom) : d.titre, date: d.date,
+      total: f.eur(seule ? seule.sousTotal : d.total),
+      sousTitre: (seule ? t.nOuv(seule.lignes.length) : t.nOuv(d.nPts)) + ' · ' + d.sousTitre,
+      resume: d.resume, carte: seule ? '' : (d.carte || ''), carteNote: d.carteNote,
+      parProvince: d.parProvince.map(r => [r.nom, String(r.nOuv), f.nf(r.hh), f.nf(r.n), f.nf(r.forts), r.perShop ? f.nf(r.perShop) : '—', String(r.nMags), r.nOuv ? f.eur(r.ca) : '—']),
+      parProvinceTot: [t.total, String(d.nPts), f.nf(d.selHh), f.nf(d.selN), f.nf(somme('forts')), d.selDens ? f.nf(d.selDens) : '—', String(somme('nMags')), f.eur(d.total)],
+      provinces: provs.map(p => {
+        const g = p.page;
+        // la date est déjà dans l'en-tête de chaque page du PDF
+        return { nom: p.nom, type: g.type, sousTitre: t.pOuvRetenues(g.nOuv, ''), detail: p.detail, sousTotal: f.eur(p.sousTotal),
+          tuiles: g.tuiles, carte: (d.cartes && d.cartes[p.code]) || '', carteNote: g.carteNote,
+          lignes: p.lignes.map(ligne), notes: g.notes.map(r => [r[0], r[1], r[2]]), noteMoy: g.noteMoy, marques: g.marques,
+          forts: g.top.map(r => r.slice(0, 7)), arrs: g.arrs, arrTot: g.arrTot, reseau: g.reseau };
+      }),
+      classement: d.classement.map(l => [String(l.num), l.commune, l.prov, String(l.score), f.eur(l.ca)]),
       hypotheses: d.hypotheses, methode: d.methode, sources: d.sources
     };
   }
@@ -2336,56 +2675,70 @@ export class Scouting {
     return false;
   }
 
-  async telechargerPlanPdf(){
+  // Le nom du fichier : dans la langue du document, la province s'il n'y en a qu'une.
+  planFichier(d, code, ext){
+    const p = code ? d.provinces.find(x => x.code === code) : null;
+    const slug = v => sansAccent(v).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return (d.lang === 'nl' ? 'uitbreidingsplan' : 'plan-expansion') + (p ? '-' + slug(p.nom) : '') + '-' + new Date().toISOString().slice(0, 10) + '.' + ext;
+  }
+
+  async telechargerPlanPdf(code){
     const d = this.planDonnees();
     if (!this.planPret(d)) return;
-    if (!this.useApi()){ this.imprimerPlan(); return; }
+    if (!this.useApi()){ this.imprimerPlan(code); return; }
     this.setState({ planBusy: true });
     try {
-      d.carte = await this.carteStatiquePlan();
+      d.carte = code ? '' : await this.carteStatiquePlan();
+      d.cartes = await this.cartesProvinces(code ? [code] : d.provinces.map(p => p.code));
       const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), 60000);
+      const t = setTimeout(() => ctl.abort(), 90000);
       const r = await fetch(API_BASE + '/scouting/plan.pdf', {
         method: 'POST', credentials: 'same-origin', signal: ctl.signal,
-        headers: { 'Content-Type': 'application/json', Accept: 'application/pdf' }, body: JSON.stringify(this.planPayload(d))
+        headers: { 'Content-Type': 'application/json', Accept: 'application/pdf' }, body: JSON.stringify(this.planPayload(d, code))
       });
       clearTimeout(t);
-      if (r.status === 501){ this.notify('Aucun moteur PDF sur ce serveur : la fenêtre d’impression produit le même document.'); this.imprimerPlan(); return; }
+      if (r.status === 501){ this.notify('Aucun moteur PDF sur ce serveur : la fenêtre d’impression produit le même document.'); this.imprimerPlan(code); return; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const url = URL.createObjectURL(await r.blob());
       const a = document.createElement('a');
-      a.href = url; a.download = 'plan-expansion-' + new Date().toISOString().slice(0, 10) + '.pdf'; a.click();
+      a.href = url; a.download = this.planFichier(d, code, 'pdf'); a.click();
       setTimeout(() => URL.revokeObjectURL(url), 4000);
-      this.notify('Plan d’expansion téléchargé — ' + d.nPts + ' ouvertures, ' + fmtEur(d.total));
+      const p = code ? d.provinces.find(x => x.code === code) : null;
+      this.notify(p ? 'Plan de la province téléchargé — ' + p.nom + ', ' + p.lignes.length + ' ouvertures, ' + fmtEur(p.sousTotal)
+        : 'Plan d’expansion téléchargé — ' + d.nPts + ' ouvertures, ' + fmtEur(d.total) + (d.lang === 'nl' ? ' (en néerlandais)' : ''));
     } catch (e) {
       this.notify('PDF impossible (' + (e.name === 'AbortError' ? 'délai dépassé' : e.message) + ') — la fenêtre d’impression prend le relais');
-      this.imprimerPlan();
+      this.imprimerPlan(code);
     } finally {
-      this.setState({ planBusy: false });
+      this.setState({ planBusy: false, planCartesBusy: '' });
     }
   }
 
-  imprimerPlan(){
+  // La fenêtre s'ouvre tout de suite — dans le geste de l'utilisateur, sinon le
+  // navigateur la bloque — et se remplit quand les cartes des provinces sont prêtes.
+  async imprimerPlan(code){
     const d = this.planDonnees();
     if (!this.planPret(d)) return;
-    d.carte = this.state.planImg || '';
-    const logo = new URL('assets/img/logo.png', document.baseURI).href;
-    const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' + esc(d.titre) + '</title><style>' + T.DOSS_CSS + T.DOSS_PRINT + '</style></head><body>'
-      + T.planPage(d, esc, logo) + '</body></html>';
     const w = window.open('', '_blank');
     if (!w){ this.notify('Fenêtre bloquée par le navigateur — autorise les fenêtres surgissantes pour imprimer le plan.'); return; }
-    w.document.open(); w.document.write(html); w.document.close();
-    setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* fenêtre fermée */ } }, 600);
+    try { w.document.write('<p style="font-family:Helvetica,Arial,sans-serif;color:#7a736a;padding:24px">' + (d.lang === 'nl' ? 'Plan wordt voorbereid…' : 'Préparation du plan…') + '</p>'); } catch (e) { /* fenêtre fermée */ }
+    d.carte = this.state.planImg || '';
+    d.cartes = await this.cartesProvinces(code ? [code] : d.provinces.map(p => p.code));
+    const logo = new URL('assets/img/logo.png', document.baseURI).href;
+    const html = '<!doctype html><html lang="' + d.lang + '"><head><meta charset="utf-8"><title>' + esc(code ? d.t.titreProv((d.provinces.find(p => p.code === code) || {}).nom || '') : d.titre) + '</title><style>' + T.DOSS_CSS + T.DOSS_PRINT + '</style></head><body>'
+      + T.planPage(d, esc, logo, null, code || 'tout', true) + '</body></html>';
+    try { w.document.open(); w.document.write(html); w.document.close(); } catch (e) { return; }
+    setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* fenêtre fermée */ } }, 700);
   }
 
   exporterPlanCsv(){
-    const d = this.planDonnees(), s = this.state;
+    const d = this.planDonnees(), t = d.t;
     if (!this.planPret(d)) return;
     const rows = [];
     d.provinces.forEach(p => p.lignes.forEach(l => rows.push([l.num, p.nom, l.rang, l.commune, l.arr, l.score, Math.round(l.hh), l.n, l.forts, l.chaines, (l.emprise * 100).toFixed(1), Math.round(l.ca), Math.round(l.m2), l.lat.toFixed(5), l.lng.toFixed(5),
-      l.voisin ? l.voisin.nom : '', l.voisin ? l.voisin.km.toFixed(1) : '', l.voisin && d.route && !l.voisin.approx ? Math.round(l.voisin.sec / 60) : ''])));
-    rows.push(['', 'TOTAL', '', d.nPts + ' ouvertures', '', '', Math.round(d.hhTot), '', '', '', '', Math.round(d.total), '', '', '', '', '', '']);
-    this.csv('plan_expansion', ['numero', 'province', 'rang_province', 'commune', 'arrondissement', 'score', 'menages', 'concurrents', 'concurrents_forts', 'chaines', 'emprise_pct', 'ca_annuel_ttc', 'ca_par_m2', 'lat', 'lng', 'plus_proche', 'plus_proche_km_vol_oiseau', 'plus_proche_min_route'], rows);
+      l.voisin ? (l.voisin.fixe ? villeMagasin(l.voisin.nom) : this.nomCommune(l.voisin.nom, t)) : '', l.voisin ? l.voisin.km.toFixed(1) : '', l.voisin && d.route && !l.voisin.approx ? Math.round(l.voisin.sec / 60) : ''])));
+    rows.push(['', t.csvTotal, '', t.nOuv(d.nPts), '', '', Math.round(d.hhTot), '', '', '', '', Math.round(d.total), '', '', '', '', '', '']);
+    this.csv(t.csvNom, t.csvEntete, rows);
   }
 
   /* ---------- la concurrence d'un point, lue pour les listes ---------- */
@@ -4834,19 +5187,7 @@ export class Scouting {
       })),
       ouvrirDossier: () => self.ouvrirDossier(null),
       ouvrirPlan: () => self.ouvrirPlan(),
-      plan: s.plan ? Object.assign(self.planDonnees(), {
-        img: s.planImg, busy: s.planBusy,
-        nChoix: [1, 2, 3, 5].map(n => ({ value: String(n), label: n + ' par province' })), nVal: String(Math.max(1, Math.min(5, s.planN || 5))),
-        setN: e => self.setPlan({ planN: parseInt(e.target.value, 10) || 5 }),
-        seuilOn: !!s.planSeuil, toggleSeuil: () => self.setPlan({ planSeuil: !s.planSeuil }),
-        ecartChoix: [[0, 'sans écart minimum'], [10, '10 min entre elles'], [15, '15 min entre elles'], [20, '20 min entre elles'], [30, '30 min entre elles']].map(c => ({ value: String(c[0]), label: c[1] })),
-        ecartVal: String(Math.max(0, +s.planEcart || 0)), setEcart: e => self.setPlan({ planEcart: parseInt(e.target.value, 10) || 0 }),
-        reseauOn: !!s.planReseau, toggleReseau: () => self.setPlan({ planReseau: !s.planReseau }),
-        routeOn: s.planRoute !== false, toggleRoute: () => self.setPlan({ planRoute: s.planRoute === false }),
-        caMinVal: s.planCaMin > 0 ? String(s.planCaMin) : '',
-        setCaMin: e => { const v = parseInt(String(e.target.value).replace(/[^\d]/g, ''), 10); self.setPlan({ planCaMin: isNaN(v) ? 0 : Math.max(0, v) }); },
-        fermer: () => self.fermerPlan(), pdf: () => self.telechargerPlanPdf(), csv: () => self.exporterPlanCsv(), imprimer: () => self.imprimerPlan()
-      }) : null,
+      plan: s.plan ? self.planVue() : null,
       dossier: s.dossier && x ? Object.assign(self.dossierDonnees(), {
         img: s.dossierImg, busy: s.dossierBusy, busyTxt: s.dossierBusyTxt || '', terrainForm: self.terrainVm(),
         fermer: () => self.fermerDossier(),

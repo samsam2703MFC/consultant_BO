@@ -3729,3 +3729,46 @@ service, droits et jetons : `docs/publication-reseaux.md`.
 - Écritures existantes : `POST /marketing/social/posts` accepte `reseaux` et `campagneId` ; une **validation**
   (`PATCH …/{id}` à `valide`) programme le post si « Programmer à la validation » est coché ; « marqué publié » à la
   main annule ce qui était programmé.
+
+### Scouting — le plan d'expansion par province, en français ou en néerlandais (21/10/2026, demande de Sam)
+
+L'écran du plan (Scouting › « Plan d'expansion ») :
+
+- **Provinces** : une liste à cocher (Bruxelles, Flandre, Wallonie ; raccourcis Toutes, Aucune, par région), avec le nom
+  néerlandais et le compte de communes et de commerces. Ce sont les provinces de la carte (`prov`) : une seule sélection
+  fait foi. Un arrondissement choisi hors des provinces restantes revient à « tous ».
+- **Paramètres** : une modale. Ouvertures par province (1 à 10), score minimum, CA annuel estimé minimum, écart entre deux
+  ouvertures, magasins ouverts compris, temps de route réels, les hypothèses du modèle (rayon, « pas un concurrent sous »,
+  « concurrent fort dès », dépense par ménage, passage, surface, emprise maximale — celles de toute la carte) et la langue
+  du document. Rien ne bouge avant « Appliquer » : le calcul par la route ne repart qu'une fois.
+- **FR | NL** : la langue du document — l'écran du plan, l'impression, le PDF et le CSV. L'outil reste en français. Textes,
+  noms des provinces et des arrondissements, forme des nombres (« 1 234 € » / « € 1.234 ») : `scouting-plan-i18n.js`.
+  Les communes prennent le nom local des secteurs OpenStreetMap (`nl` : Anvers → Antwerpen, Lierre → Lier). La langue est
+  une préférence de ce navigateur (`ceo_scouting_vue.planLang`).
+- **Une page par province** (onglets Synthèse | provinces) : ménages, population et marché ; concurrents (forts, chaînes,
+  note moyenne) ; ménages par point de vente ; le réseau (magasins ouverts et leur CA réel des douze derniers mois clos) ;
+  une carte de la province (zones retenues, magasins, concurrents — en bordeaux les forts) ; les ouvertures ; la
+  concurrence (notes Google coupées par les deux seuils, enseignes de chaîne, les dix plus forts) ; les arrondissements ;
+  les magasins du réseau. Les mêmes commerces que le plan (sans les dormants, aux filtres de la carte). La synthèse gagne
+  un tableau « Par province ».
+
+`POST /scouting/plan.pdf` reçoit en plus :
+
+| Champ | Contenu |
+| --- | --- |
+| `lang` | `fr` (défaut) ou `nl` — les intitulés du serveur (`scoutingPlanLib`), le pied de page, le nom du fichier |
+| `synthese` | `false` : le PDF d'une seule province (sa page, puis méthode, hypothèses et sources) |
+| `parProvince`, `parProvinceTot` | lignes de 8 textes (province, ouvertures, ménages, concurrents, forts, ménages / point, magasins du réseau, CA) |
+| `provinces[].type`, `.sousTitre` | « Province · Wallonie », « 5 ouvertures retenues » |
+| `provinces[].tuiles` | 4 × [libellé, valeur, précision] |
+| `provinces[].carte` | data URI JPEG/PNG de la carte de la province (1,5 Mo au plus) ; `carteNote` |
+| `provinces[].notes` | 4 × [libellé, nombre, part] ; `noteMoy` |
+| `provinces[].marques` | ≤ 10 × [enseigne, points de vente] |
+| `provinces[].forts` | ≤ 10 × [rang, nom, commune, note, avis, force, « chaîne »] |
+| `provinces[].arrs`, `.arrTot` | ≤ 12 × 9 textes (arrondissement … CA estimé) |
+| `provinces[].reseau` | ≤ 20 × [magasin, ville, CA réel, période] |
+| `provinces[].lignes` | ≤ 10 ouvertures (au lieu de 5) |
+
+Tous les textes arrivent formés dans la langue du plan ; le serveur n'y ajoute que ses intitulés. Le plan entier : la
+synthèse, puis une page par province (saut de page), puis la méthode. `rapPdfRendu()` accepte `genereLib` (« Gegenereerd
+op ») pour le pied de page.
