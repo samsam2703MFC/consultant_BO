@@ -500,26 +500,78 @@ function scoutingDossierHtml(array $d): string
     return $h . '</div>';
 }
 
-/** POST /scouting/plan.pdf — le plan d'expansion, en PDF. */
+/**
+ * POST /scouting/plan.pdf — le plan d'expansion, en PDF.
+ *
+ * Depuis le 21/10/2026 : en français ou en néerlandais (`lang`), la synthèse
+ * puis une page par province, ou une seule province (`synthese` à false). Les
+ * textes arrivent formés dans la langue du plan ; le serveur n'y ajoute que
+ * ses intitulés (scoutingPlanLib), dans la même langue.
+ */
 function wr_scouting_plan_pdf(): array
 {
     $d = scoutingPlanValide(body());
     if ($d === null) { http_response_code(422); return ['error' => 'plan vide : aucune province']; }
-    $doc = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'
+    $L = scoutingPlanLib($d['lang']);
+    $doc = '<!doctype html><html lang="' . $d['lang'] . '"><head><meta charset="utf-8"><title>'
         . htmlspecialchars($d['titre'], ENT_QUOTES, 'UTF-8') . '</title></head><body>'
         . scoutingPlanHtml($d) . '</body></html>';
     $pdf = rapPdfRendu($doc, [
-        'magasin' => 'Réseau',
-        'rapport' => 'Plan d’expansion',
-        'genere' => date('d/m/Y à H:i'),
+        'magasin' => $L['reseau'],
+        'rapport' => $d['synthese'] || count($d['provinces']) !== 1 ? $L['plan'] : $L['plan'] . ' — ' . $d['provinces'][0]['nom'],
+        'genere' => date($L['dateHeure']),
+        'genereLib' => $L['genere'],
         'envoye' => '',
     ]);
     if ($pdf === null) { http_response_code(501); return ['error' => 'aucun moteur PDF sur ce serveur']; }
-    journalAdd('CEO', 'Scouting', '—', 'Plan d’expansion édité — ' . $d['sousTitre'] . ' · ' . $d['total']);
+    journalAdd('CEO', 'Scouting', '—', 'Plan d’expansion édité' . ($d['lang'] === 'nl' ? ' en néerlandais' : '')
+        . ($d['synthese'] ? '' : ' (province : ' . implode(', ', array_column($d['provinces'], 'nom')) . ')') . ' — ' . $d['sousTitre'] . ' · ' . $d['total']);
     header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="plan-expansion-' . date('Y-m-d') . '.pdf"');
+    header('Content-Disposition: attachment; filename="' . ($d['lang'] === 'nl' ? 'uitbreidingsplan-' : 'plan-expansion-') . date('Y-m-d') . '.pdf"');
     echo $pdf;
     exit;
+}
+
+/** Les intitulés du PDF du plan, dans sa langue. */
+function scoutingPlanLib(string $lang): array
+{
+    $fr = [
+        'reseau' => 'Réseau', 'plan' => 'Plan d’expansion', 'genere' => 'Généré le', 'dateHeure' => 'd/m/Y à H:i', 'edite' => 'édité le',
+        'caAnnuel' => 'CA annuel estimé', 'caOuv' => 'CA annuel estimé des ouvertures',
+        'degager' => 'Ce que le plan peut dégager', 'ouOuvrir' => 'Où ouvrir', 'carteDefaut' => 'Fond de carte © OpenStreetMap.',
+        'parProvince' => 'Par province', 'ouOuvrirProv' => 'Où ouvrir dans la province', 'ouOuvrirReg' => 'Où ouvrir dans la région',
+        'aucuneZone' => 'Aucune zone retenue dans cette province.',
+        'concurrence' => 'La concurrence', 'notes' => 'Les notes Google, coupées par les deux seuils', 'chaines' => 'Les enseignes de chaîne',
+        'aucuneChaine' => 'Aucune enseigne de chaîne relevée dans la sélection.', 'plusForts' => 'Les concurrents les plus forts',
+        'parArr' => 'Par arrondissement', 'reseauProv' => 'Le réseau dans la province', 'reseauReg' => 'Le réseau dans la région',
+        'aucunReseau' => 'Aucun magasin du réseau ici : le plan y serait une première implantation.',
+        'dix' => 'Les dix meilleures, toutes provinces', 'methode' => 'Méthode.', 'hypotheses' => 'Les hypothèses au moment de l’édition', 'sources' => 'Sources.',
+        'ouverture' => 'ouverture', 'ouvertures' => 'ouvertures',
+        'col' => ['#' => '#', 'commune' => 'Commune', 'arr' => 'Arrondissement', 'score' => 'Score', 'menages' => 'Ménages', 'concurrents' => 'Concurrents',
+            'chaines' => 'Chaînes', 'emprise' => 'Emprise', 'ca' => 'CA estimé', 'm2' => '€/m²', 'province' => 'Province', 'ouv' => 'Ouvertures', 'forts' => 'Forts',
+            'parPoint' => 'Ménages / point de vente', 'magsReseau' => 'Magasins du réseau', 'caOuv' => 'CA estimé des ouvertures', 'communes' => 'Communes',
+            'noteMoy' => 'Note moy.', 'enseigne' => 'Enseigne', 'points' => 'Points de vente', 'nom' => 'Nom', 'note' => 'Note', 'avis' => 'Avis', 'force' => 'Force',
+            'magasin' => 'Magasin', 'ville' => 'Ville', 'caReel' => 'CA réel TTC, 12 mois', 'periode' => 'Période'],
+    ];
+    $nl = [
+        'reseau' => 'Netwerk', 'plan' => 'Uitbreidingsplan', 'genere' => 'Gegenereerd op', 'dateHeure' => 'd/m/Y \o\m H:i', 'edite' => 'opgemaakt op',
+        'caAnnuel' => 'Geschatte jaaromzet', 'caOuv' => 'Geschatte jaaromzet van de openingen',
+        'degager' => 'Wat het plan kan opbrengen', 'ouOuvrir' => 'Waar openen', 'carteDefaut' => 'Achtergrondkaart © OpenStreetMap.',
+        'parProvince' => 'Per provincie', 'ouOuvrirProv' => 'Waar openen in de provincie', 'ouOuvrirReg' => 'Waar openen in het gewest',
+        'aucuneZone' => 'Geen weerhouden zone in deze provincie.',
+        'concurrence' => 'De concurrentie', 'notes' => 'De Google-scores, verdeeld door de twee drempels', 'chaines' => 'De ketens',
+        'aucuneChaine' => 'Geen keten gevonden in de selectie.', 'plusForts' => 'De sterkste concurrenten',
+        'parArr' => 'Per arrondissement', 'reseauProv' => 'Het netwerk in de provincie', 'reseauReg' => 'Het netwerk in het gewest',
+        'aucunReseau' => 'Hier is nog geen netwerkwinkel: het plan zou er een eerste vestiging zijn.',
+        'dix' => 'De tien beste, alle provincies', 'methode' => 'Methode.', 'hypotheses' => 'De hypotheses bij het opmaken', 'sources' => 'Bronnen.',
+        'ouverture' => 'opening', 'ouvertures' => 'openingen',
+        'col' => ['#' => '#', 'commune' => 'Gemeente', 'arr' => 'Arrondissement', 'score' => 'Score', 'menages' => 'Huishoudens', 'concurrents' => 'Concurrenten',
+            'chaines' => 'Ketens', 'emprise' => 'Marktaandeel', 'ca' => 'Geschatte omzet', 'm2' => '€/m²', 'province' => 'Provincie', 'ouv' => 'Openingen', 'forts' => 'Sterke',
+            'parPoint' => 'Huishoudens / verkooppunt', 'magsReseau' => 'Netwerkwinkels', 'caOuv' => 'Geschatte omzet openingen', 'communes' => 'Gemeenten',
+            'noteMoy' => 'Gem. score', 'enseigne' => 'Keten', 'points' => 'Verkooppunten', 'nom' => 'Naam', 'note' => 'Score', 'avis' => 'Reviews', 'force' => 'Kracht',
+            'magasin' => 'Winkel', 'ville' => 'Plaats', 'caReel' => 'Werkelijke omzet incl. btw, 12 maanden', 'periode' => 'Periode'],
+    ];
+    return $lang === 'nl' ? $nl : $fr;
 }
 
 /** @return array<string,mixed>|null */
@@ -538,37 +590,53 @@ function scoutingPlanValide(array $b): ?array
         }
         return $out;
     };
-    $carte = (string) ($b['carte'] ?? '');
-    if ($carte !== '' && (strlen($carte) > 3000000 || preg_match('#^data:image/(png|jpeg);base64,[A-Za-z0-9+/=]+$#', $carte) !== 1)) { $carte = ''; }
+    // Une carte : une image en data URI, rien d'autre (le moteur PDF ne va rien chercher ailleurs).
+    $image = static function ($v, int $max): string {
+        $c = is_string($v) ? $v : '';
+        return $c !== '' && strlen($c) <= $max && preg_match('#^data:image/(png|jpeg);base64,[A-Za-z0-9+/=]+$#', $c) === 1 ? $c : '';
+    };
     $provinces = [];
     foreach ((array) ($b['provinces'] ?? []) as $p) {
         if (!is_array($p)) { continue; }
         $nom = $s($p['nom'] ?? '', 60);
         if ($nom === '') { continue; }
-        $provinces[] = ['nom' => $nom, 'detail' => $s($p['detail'] ?? '', 120), 'sousTotal' => $s($p['sousTotal'] ?? '', 40),
-            'lignes' => $lignes($p['lignes'] ?? [], 10, 5, 120)];
+        $provinces[] = ['nom' => $nom, 'type' => $s($p['type'] ?? '', 60), 'sousTitre' => $s($p['sousTitre'] ?? '', 160),
+            'detail' => $s($p['detail'] ?? '', 160), 'sousTotal' => $s($p['sousTotal'] ?? '', 40),
+            'tuiles' => $lignes($p['tuiles'] ?? [], 3, 4, 160),
+            'carte' => $image($p['carte'] ?? '', 1500000), 'carteNote' => $s($p['carteNote'] ?? '', 300),
+            'lignes' => $lignes($p['lignes'] ?? [], 10, 10, 160),
+            'notes' => $lignes($p['notes'] ?? [], 3, 4, 80), 'noteMoy' => $s($p['noteMoy'] ?? '', 120),
+            'marques' => $lignes($p['marques'] ?? [], 2, 10, 80),
+            'forts' => $lignes($p['forts'] ?? [], 7, 10, 80),
+            'arrs' => $lignes($p['arrs'] ?? [], 9, 12, 60), 'arrTot' => $lignes([$p['arrTot'] ?? []], 9, 1, 60)[0] ?? [],
+            'reseau' => $lignes($p['reseau'] ?? [], 4, 20, 80)];
         if (count($provinces) >= 11) { break; }
     }
     if ($provinces === []) { return null; }
     return [
+        'lang' => ($b['lang'] ?? 'fr') === 'nl' ? 'nl' : 'fr',
+        'synthese' => ($b['synthese'] ?? true) !== false,
         'titre' => $s($b['titre'] ?? 'Plan d’expansion', 160),
-        'sousTitre' => $s($b['sousTitre'] ?? '', 160),
+        'sousTitre' => $s($b['sousTitre'] ?? '', 240),
         'date' => $s($b['date'] ?? date('d/m/Y'), 60),
         'total' => $s($b['total'] ?? '', 40),
-        'resume' => $lignes($b['resume'] ?? [], 3, 6, 120),
-        'carte' => $carte, 'carteNote' => $s($b['carteNote'] ?? '', 240),
+        'resume' => $lignes($b['resume'] ?? [], 3, 6, 160),
+        'carte' => $image($b['carte'] ?? '', 3000000), 'carteNote' => $s($b['carteNote'] ?? '', 300),
+        'parProvince' => $lignes($b['parProvince'] ?? [], 8, 11, 60), 'parProvinceTot' => $lignes([$b['parProvinceTot'] ?? []], 8, 1, 60)[0] ?? [],
         'provinces' => $provinces,
         'classement' => $lignes($b['classement'] ?? [], 5, 10, 80),
         'hypotheses' => $lignes($b['hypotheses'] ?? [], 2, 20, 120),
-        'methode' => $s($b['methode'] ?? '', 900),
-        'sources' => $s($b['sources'] ?? '', 700),
+        'methode' => $s($b['methode'] ?? '', 1200),
+        'sources' => $s($b['sources'] ?? '', 900),
     ];
 }
 
-/** La mise en page du plan — les conventions du dossier. */
+/** La mise en page du plan — les conventions du dossier. Une province par page. */
 function scoutingPlanHtml(array $d): string
 {
     $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $L = scoutingPlanLib($d['lang']);
+    $C = $L['col'];
     $logo = rapLogoDataUri();
     $css = '<style>
       .doc{font-family:Helvetica,Arial,sans-serif;color:#221E1A;font-size:9pt}
@@ -576,9 +644,12 @@ function scoutingPlanHtml(array $d): string
       .k{font-size:7.2pt;letter-spacing:.09em;text-transform:uppercase;color:#7a736a;font-weight:normal}
       .mut{color:#7a736a}.acc{color:#8D1D2C}.ok{color:#2d7a3e}
       .h1{font-size:20pt;letter-spacing:-.01em;margin:4mm 0 1mm}
+      .surtitre{font-size:7.5pt;letter-spacing:.09em;text-transform:uppercase;color:#8D1D2C;font-weight:bold;margin-top:4mm}
+      .surtitre + .h1{margin-top:1mm}
       .soustitre{font-size:9pt;color:#7a736a;margin:0 0 5mm}
-      .sec{font-family:Georgia,"DejaVu Serif",serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C}
+      .sec{font-family:Georgia,"DejaVu Serif",serif;font-size:12pt;margin:0 0 2.5mm;padding-bottom:1.2mm;border-bottom:1.4pt solid #8D1D2C;page-break-after:avoid}
       .sec small{font-family:Helvetica,Arial,sans-serif;font-size:7.5pt;color:#7a736a;margin-left:3mm}
+      .sous{font-size:7.2pt;letter-spacing:.08em;text-transform:uppercase;color:#7a736a;margin:0 0 1.5mm}
       .tile{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm}
       .tile .v{font-family:Georgia,"DejaVu Serif",serif;font-size:15pt;margin-top:1mm}
       .tile .s{font-size:7.5pt;color:#7a736a;margin-top:.8mm;line-height:1.45}
@@ -587,61 +658,137 @@ function scoutingPlanHtml(array $d): string
       .t th{font-size:6.8pt;letter-spacing:.07em;text-transform:uppercase;color:#7a736a;font-weight:normal;text-align:right;padding:1.5mm 2mm;border-bottom:1pt solid #221E1A}
       .t td{font-size:8.4pt;text-align:right;padding:1.3mm 2mm;border-bottom:.5pt solid #EAE3D8;vertical-align:top}
       .t .l{text-align:left}
+      .t tr{page-break-inside:avoid}
       .t tr.tot td{font-weight:bold;border-top:1pt solid #221E1A;border-bottom:0;background:#fbf9f5}
       .carte{width:100%;height:auto;display:block;border:1px solid #e6e0d8;border-radius:6px}
       .legende{font-size:7.5pt;color:#7a736a;margin:1.5mm 0 5mm;line-height:1.5}
       .total{font-family:Georgia,"DejaVu Serif",serif;font-size:20pt;color:#2d7a3e;line-height:1;white-space:nowrap}
       .methode{border:1px solid #e6e0d8;border-radius:8px;background:#fbf9f5;padding:3mm 3.5mm;font-size:7.6pt;color:#7a736a;line-height:1.6;margin-bottom:4mm}
+      .saut{page-break-before:always}
+      .barre{display:block;height:2mm;border-radius:1mm;background:#d8cfc3}
+      .tag{font-size:6.8pt;font-weight:bold;color:#5f574f;background:#EEE9E1;border-radius:3mm;padding:0 1.5mm;margin-left:1.5mm}
     </style>';
-    $h = $css . '<div class="doc">'
-        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
-        . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">' : '<strong style="font-size:12pt">L’Atelier by</strong>') . '</td>'
-        . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">Plan d’expansion<br>édité le ' . $e($d['date']) . '</td></tr></table>'
-        . '<table width="100%" cellpadding="0" cellspacing="0"><tr><td valign="top"><div class="serif h1">' . $e($d['titre']) . '</div>'
-        . '<p class="soustitre">' . $e($d['sousTitre']) . '</p></td>'
-        . '<td align="right" valign="top" style="width:48mm;padding-top:5mm"><div class="total">' . $e($d['total']) . '</div><div class="k">CA annuel estimé</div></td></tr></table>';
-    if ($d['resume'] !== []) {
-        $h .= '<div class="sec">Ce que le plan peut dégager</div><table class="grille" cellpadding="0" cellspacing="0"><tr>';
-        $w = (int) floor(100 / max(1, count($d['resume'])));
-        foreach ($d['resume'] as $t) {
+    // L'en-tête d'une page : la marque et la date, puis le titre et le chiffre.
+    $tete = static function (string $titre, string $sous, string $total, string $totalLib, string $sur = '') use ($e, $logo, $L, $d): string {
+        return '<table width="100%" cellpadding="0" cellspacing="0" style="border-bottom:2px solid #8D1D2C;padding-bottom:2.6mm"><tr>'
+            . '<td>' . ($logo !== '' ? '<img src="' . $logo . '" alt="L’Atelier by" style="height:34px">' : '<strong style="font-size:12pt">L’Atelier by</strong>') . '</td>'
+            . '<td align="right" style="font-size:7.5pt;color:#7a736a;line-height:1.6">' . $e($L['plan']) . '<br>' . $e($L['edite']) . ' ' . $e($d['date']) . '</td></tr></table>'
+            . '<table width="100%" cellpadding="0" cellspacing="0"><tr><td valign="top">' . ($sur !== '' ? '<div class="surtitre">' . $e($sur) . '</div>' : '')
+            . '<div class="serif h1">' . $e($titre) . '</div><p class="soustitre">' . $e($sous) . '</p></td>'
+            . '<td align="right" valign="top" style="width:58mm;padding-top:5mm"><div class="total">' . $e($total) . '</div><div class="k">' . $e($totalLib) . '</div></td></tr></table>';
+    };
+    $tuiles = static function (array $ts) use ($e): string {
+        if ($ts === []) { return ''; }
+        $h = '<table class="grille" cellpadding="0" cellspacing="0"><tr>';
+        $w = (int) floor(100 / max(1, count($ts)));
+        foreach ($ts as $t) {
             $h .= '<td width="' . $w . '%" valign="top" class="tile"><div class="k">' . $e($t[0]) . '</div><div class="v">' . $e($t[1]) . '</div>'
                 . ($t[2] !== '' ? '<div class="s">' . $e($t[2]) . '</div>' : '') . '</td>';
         }
-        $h .= '</tr></table>';
-    }
-    if ($d['carte'] !== '') {
-        $h .= '<div class="sec">Où ouvrir</div><img class="carte" src="' . $d['carte'] . '" alt="">'
-            . '<div class="legende">' . $e($d['carteNote'] !== '' ? $d['carteNote'] : 'Fond de carte © OpenStreetMap.') . '</div>';
-    }
-    foreach ($d['provinces'] as $p) {
-        $h .= '<div class="sec">' . $e($p['nom']) . '<small>' . $e($p['detail']) . '</small></div>';
-        if ($p['lignes'] === []) { $h .= '<p class="mut" style="font-size:8.5pt;margin:0 0 5mm">Aucune zone retenue dans cette province.</p>'; continue; }
-        $h .= '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Arrondissement</th><th>Score</th><th>Ménages</th><th>Concurrents</th><th class="l">Chaînes</th><th>Emprise</th><th>CA estimé</th><th>€/m²</th></tr>';
-        foreach ($p['lignes'] as $l) {
-            $h .= '<tr><td class="l mut">' . $e($l[0]) . '</td><td class="l"><b>' . $e($l[1]) . '</b></td><td class="l mut">' . $e($l[2]) . '</td><td>' . $e($l[3]) . '</td><td>' . $e($l[4]) . '</td>'
-                . '<td>' . $e($l[5]) . '</td><td class="l mut">' . $e($l[6]) . '</td><td>' . $e($l[7]) . '</td><td style="white-space:nowrap"><b>' . $e($l[8]) . '</b></td><td class="mut">' . $e($l[9]) . '</td></tr>';
-        }
-        $h .= '<tr class="tot"><td colspan="8" class="l">' . count($p['lignes']) . ' ouverture' . (count($p['lignes']) > 1 ? 's' : '') . '</td><td style="white-space:nowrap">' . $e($p['sousTotal']) . '</td><td></td></tr></table>';
-    }
-    if ($d['classement'] !== []) {
-        $h .= '<div class="sec">Les dix meilleures, toutes provinces</div><table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Province</th><th>Score</th><th>CA estimé</th></tr>';
-        foreach ($d['classement'] as $l) {
-            $h .= '<tr><td class="l mut">' . $e($l[0]) . '</td><td class="l"><b>' . $e($l[1]) . '</b></td><td class="l mut">' . $e($l[2]) . '</td><td>' . $e($l[3]) . '</td><td style="white-space:nowrap"><b>' . $e($l[4]) . '</b></td></tr>';
-        }
-        $h .= '</table>';
-    }
-    if ($d['methode'] !== '') { $h .= '<div class="methode"><b style="color:#221E1A">Méthode.</b> ' . $e($d['methode']) . '</div>'; }
-    if ($d['hypotheses'] !== []) {
-        $h .= '<div class="sec">Les hypothèses au moment de l’édition</div><table class="t" cellpadding="0" cellspacing="0">';
-        $cols = array_chunk($d['hypotheses'], (int) ceil(count($d['hypotheses']) / 2));
-        $n = max(array_map('count', $cols));
-        for ($i = 0; $i < $n; $i++) {
+        return $h . '</tr></table>';
+    };
+    // Un tableau : les en-têtes (le premier à gauche), les lignes, la ligne de total.
+    $tableau = static function (array $tetes, array $rows, array $tot = [], int $gauche = 1, ?callable $cellule = null) use ($e): string {
+        $h = '<table class="t" cellpadding="0" cellspacing="0">';
+        // sans intitulés (la répartition des notes), pas de ligne d'en-tête
+        if (implode('', $tetes) !== '') {
             $h .= '<tr>';
-            foreach ($cols as $col) { $r = $col[$i] ?? ['', '']; $h .= '<td class="l mut" style="width:32%">' . $e($r[0]) . '</td><td class="l" style="width:18%"><b>' . $e($r[1]) . '</b></td>'; }
+            foreach ($tetes as $i => $t) { $h .= '<th' . ($i < $gauche ? ' class="l"' : '') . '>' . $e($t) . '</th>'; }
             $h .= '</tr>';
         }
-        $h .= '</table>';
+        foreach ($rows as $r) {
+            $h .= '<tr>';
+            foreach (array_slice($r, 0, count($tetes)) as $i => $v) {
+                $h .= $cellule !== null ? $cellule($i, $v, $r) : '<td' . ($i < $gauche ? ' class="l"' : ' style="white-space:nowrap"') . '>' . ($i === 0 ? '<b>' . $e($v) . '</b>' : $e($v)) . '</td>';
+            }
+            $h .= '</tr>';
+        }
+        if ($tot !== []) {
+            $h .= '<tr class="tot">';
+            foreach (array_slice($tot, 0, count($tetes)) as $i => $v) { $h .= '<td' . ($i < $gauche ? ' class="l"' : ' style="white-space:nowrap"') . '>' . $e($v) . '</td>'; }
+            $h .= '</tr>';
+        }
+        return $h . '</table>';
+    };
+    $ouvertures = static function (array $p) use ($e, $C, $L): string {
+        if ($p['lignes'] === []) { return '<p class="mut" style="font-size:8.5pt;margin:0 0 5mm">' . $e($L['aucuneZone']) . '</p>'; }
+        $h = '<table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">#</th><th class="l">' . $e($C['commune']) . '</th><th class="l">' . $e($C['arr']) . '</th><th>' . $e($C['score'])
+            . '</th><th>' . $e($C['menages']) . '</th><th>' . $e($C['concurrents']) . '</th><th class="l">' . $e($C['chaines']) . '</th><th>' . $e($C['emprise']) . '</th><th>' . $e($C['ca']) . '</th><th>' . $e($C['m2']) . '</th></tr>';
+        foreach ($p['lignes'] as $l) {
+            $h .= '<tr><td class="l mut">' . $e($l[0]) . '</td><td class="l"><b>' . $e($l[1]) . '</b></td><td class="l mut">' . $e($l[2]) . '</td><td>' . $e($l[3]) . '</td><td>' . $e($l[4]) . '</td>'
+                . '<td>' . $e($l[5]) . '</td><td class="l mut">' . $e($l[6]) . '</td><td>' . $e($l[7]) . '</td><td style="white-space:nowrap"><b>' . $e($l[8]) . '</b></td><td class="mut" style="white-space:nowrap">' . $e($l[9]) . '</td></tr>';
+        }
+        $n = count($p['lignes']);
+        return $h . '<tr class="tot"><td colspan="8" class="l">' . $n . ' ' . $e($n > 1 ? $L['ouvertures'] : $L['ouverture']) . '</td><td style="white-space:nowrap">' . $e($p['sousTotal']) . '</td><td></td></tr></table>';
+    };
+    $methode = static function () use ($e, $d, $L): string {
+        $h = '';
+        if ($d['methode'] !== '') { $h .= '<div class="methode"><b style="color:#221E1A">' . $e($L['methode']) . '</b> ' . $e($d['methode']) . '</div>'; }
+        if ($d['hypotheses'] !== []) {
+            $h .= '<div class="sec">' . $e($L['hypotheses']) . '</div><table class="t" cellpadding="0" cellspacing="0">';
+            $cols = array_chunk($d['hypotheses'], (int) ceil(count($d['hypotheses']) / 2));
+            $n = max(array_map('count', $cols));
+            for ($i = 0; $i < $n; $i++) {
+                $h .= '<tr>';
+                foreach ($cols as $col) { $r = $col[$i] ?? ['', '']; $h .= '<td class="l mut" style="width:32%">' . $e($r[0]) . '</td><td class="l" style="width:18%"><b>' . $e($r[1]) . '</b></td>'; }
+                $h .= '</tr>';
+            }
+            $h .= '</table>';
+        }
+        if ($d['sources'] !== '') { $h .= '<div class="methode"><b style="color:#221E1A">' . $e($L['sources']) . '</b> ' . $e($d['sources']) . '</div>'; }
+        return $h;
+    };
+
+    $h = $css . '<div class="doc">';
+    // La synthèse : ce que le plan dégage, la carte, une ligne par province, les dix meilleures.
+    if ($d['synthese']) {
+        $h .= $tete($d['titre'], $d['sousTitre'], $d['total'], $L['caAnnuel']);
+        if ($d['resume'] !== []) { $h .= '<div class="sec">' . $e($L['degager']) . '</div>' . $tuiles($d['resume']); }
+        if ($d['carte'] !== '') {
+            $h .= '<div class="sec">' . $e($L['ouOuvrir']) . '</div><img class="carte" src="' . $d['carte'] . '" alt="">'
+                . '<div class="legende">' . $e($d['carteNote'] !== '' ? $d['carteNote'] : $L['carteDefaut']) . '</div>';
+        }
+        if ($d['parProvince'] !== []) {
+            $h .= '<div class="sec">' . $e($L['parProvince']) . '</div>'
+                . $tableau([$C['province'], $C['ouv'], $C['menages'], $C['concurrents'], $C['forts'], $C['parPoint'], $C['magsReseau'], $C['caOuv']], $d['parProvince'], $d['parProvinceTot']);
+        }
+        if ($d['classement'] !== []) {
+            $h .= '<div class="sec">' . $e($L['dix']) . '</div><table class="t" cellpadding="0" cellspacing="0"><tr><th class="l">#</th><th class="l">' . $e($C['commune']) . '</th><th class="l">' . $e($C['province']) . '</th><th>' . $e($C['score']) . '</th><th>' . $e($C['ca']) . '</th></tr>';
+            foreach ($d['classement'] as $l) {
+                $h .= '<tr><td class="l mut">' . $e($l[0]) . '</td><td class="l"><b>' . $e($l[1]) . '</b></td><td class="l mut">' . $e($l[2]) . '</td><td>' . $e($l[3]) . '</td><td style="white-space:nowrap"><b>' . $e($l[4]) . '</b></td></tr>';
+            }
+            $h .= '</table>';
+        }
     }
-    if ($d['sources'] !== '') { $h .= '<div class="methode"><b style="color:#221E1A">Sources.</b> ' . $e($d['sources']) . '</div>'; }
-    return $h . '</div>';
+    // Une page par province.
+    foreach ($d['provinces'] as $i => $p) {
+        $region = str_starts_with($p['type'], 'Région') || str_starts_with($p['type'], 'Gewest');
+        $h .= '<div' . ($d['synthese'] || $i > 0 ? ' class="saut"' : '') . '>';
+        $h .= $tete($p['nom'], $p['sousTitre'], $p['sousTotal'], $L['caOuv'], $p['type']);
+        $h .= $tuiles($p['tuiles']);
+        $h .= '<div class="sec">' . $e($region ? $L['ouOuvrirReg'] : $L['ouOuvrirProv']) . '<small>' . $e($p['detail']) . '</small></div>';
+        if ($p['carte'] !== '') { $h .= '<img class="carte" src="' . $p['carte'] . '" alt=""><div class="legende">' . $e($p['carteNote'] !== '' ? $p['carteNote'] : $L['carteDefaut']) . '</div>'; }
+        $h .= $ouvertures($p);
+        $h .= '<div class="sec">' . $e($L['concurrence']) . '</div><table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:2mm"><tr><td valign="top" style="width:50%;padding-right:4mm">'
+            . '<div class="sous">' . $e($L['notes']) . '</div>'
+            . $tableau(['', '', ''], $p['notes'], [], 1, static fn ($i, $v) => '<td' . ($i === 0 ? ' class="l"' : ' style="white-space:nowrap"') . '>' . $e($v) . '</td>')
+            . ($p['noteMoy'] !== '' ? '<div class="legende" style="margin-top:-3mm">' . $e($p['noteMoy']) . '</div>' : '')
+            . '</td><td valign="top" style="width:50%;padding-left:4mm"><div class="sous">' . $e($L['chaines']) . '</div>'
+            . ($p['marques'] !== [] ? $tableau([$C['enseigne'], $C['points']], $p['marques']) : '<p class="mut" style="font-size:8.5pt">' . $e($L['aucuneChaine']) . '</p>')
+            . '</td></tr></table>';
+        if ($p['forts'] !== []) {
+            $h .= '<div class="sous">' . $e($L['plusForts']) . '</div>'
+                . $tableau(['#', $C['nom'], $C['commune'], $C['note'], $C['avis'], $C['force']], $p['forts'], [], 3,
+                    static fn ($i, $v, $r) => '<td' . ($i < 3 ? ' class="l' . ($i === 1 ? '' : ' mut') . '"' : '') . '>' . ($i === 1 ? '<b>' . $e($v) . '</b>' . (($r[6] ?? '') !== '' ? '<span class="tag">' . $e($r[6]) . '</span>' : '') : $e($v)) . '</td>');
+        }
+        if ($p['arrs'] !== []) {
+            $h .= '<div class="sec">' . $e($L['parArr']) . '</div>'
+                . $tableau([$C['arr'], $C['communes'], $C['menages'], $C['concurrents'], $C['forts'], $C['parPoint'], $C['noteMoy'], $C['ouv'], $C['ca']], $p['arrs'], $p['arrTot']);
+        }
+        $h .= '<div class="sec">' . $e($region ? $L['reseauReg'] : $L['reseauProv']) . '</div>'
+            . ($p['reseau'] !== [] ? $tableau([$C['magasin'], $C['ville'], $C['caReel'], $C['periode']], $p['reseau'], [], 2) : '<p class="mut" style="font-size:8.5pt;margin:0 0 5mm">' . $e($L['aucunReseau']) . '</p>');
+        $h .= '</div>';
+    }
+    // Le plan entier finit sur sa page de méthode ; une province seule la garde à sa suite.
+    return $h . '<div' . ($d['synthese'] ? ' class="saut"' : ' style="margin-top:6mm"') . '>' . $methode() . '</div></div>';
 }

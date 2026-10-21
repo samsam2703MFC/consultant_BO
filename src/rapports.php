@@ -2580,7 +2580,8 @@ function rapPdfPiedHtml(array $meta): string
     $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
     $F = "font-family:Helvetica,Arial,sans-serif";
     $logo = rapLogoDataUri();
-    $dates = 'Généré le ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
+    // `genereLib` : le libellé dans la langue du document (le plan d'expansion sort aussi en néerlandais).
+    $dates = $e($meta['genereLib'] ?? 'Généré le') . ' ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
         . (($meta['envoye'] ?? '') !== '' ? ' · envoyé le ' . $e($meta['envoye']) : '');
     // Un rapport composé porte souvent le magasin DANS son nom (« … —
     // Gosselies ») : le pied l'écrivait alors deux fois. Le magasin reste à

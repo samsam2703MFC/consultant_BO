@@ -112,6 +112,10 @@
       }).catch(e => { S.err[cle] = e.message; }).finally(() => { S.enCours[cle] = false; rendre(); });
     }
   }
+  /** Les mois des deux années (/stores/perf), avec le split pro de CE magasin (`pro=`, 21/10/2026 : le panier des mois
+   * hors clients pro) — la clé porte donc le magasin. */
+  function clePerf() { return 'perf|' + annee() + '|' + S.shop; }
+  function cheminPerf() { return '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee() + '&pro=' + encodeURIComponent(S.shop); }
   function charger(force) {
     // Le plan d'action n'est pas une période : le module des visites lit lui-même.
     if (S.vue === 'actions' || S.vue === 'campagne') { rendre(); return; }
@@ -125,7 +129,7 @@
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee' || S.vue === 'trimestre') {
       lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
-      lireAux('perf|' + annee(), '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee(), force);
+      lireAux(clePerf(), cheminPerf(), force);
       lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
       rendre(); return;
     }
@@ -166,12 +170,13 @@
     lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
     // Les douze dernières semaines face au N-1 (19/10/2026, avant six) : sur la vue Semaine seulement. Treize lues : douze
-    // closes et, si la semaine choisie est en cours, celle-ci à part.
-    if (S.vue === 'semaine') { lireAux('s12|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=13&articles=1', force); }
+    // closes et, si la semaine choisie est en cours, celle-ci à part. `pro=1` : le comptoir de chaque semaine, pour le panier hors
+    // clients pro (21/10/2026).
+    if (S.vue === 'semaine') { lireAux('s12|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=13&articles=1&pro=1', force); }
     // La frise des périodes (10/10/2026), au bureau : les jours, les semaines ou les mois autour de la période regardée.
     if (!EMBED && !estMobile()) {
       if (S.vue === 'ops' || S.vue === 'semaine') { [...new Set(friseJours().map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
-      if (S.vue === 'mois') { lireAux('perf|' + annee(), '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee(), force); }
+      if (S.vue === 'mois') { lireAux(clePerf(), cheminPerf(), force); }
     }
     // Le stock est vivant : il se relit avec la page, et la page se relit
     // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
@@ -674,6 +679,47 @@
     }).join('')}</div>`;
   }
 
+  /* --- Le panier moyen hors clients pro (21/10/2026, demande de Sam : « dans le panier moyen sortir les commandes b2b,
+   * elles faussent le panier moyen ») ---------------------------------------------------------------------------------
+   * Le serveur le compte : CA comptoir ÷ tickets comptoir, les tickets pro (TVA valide) retirés des deux côtés
+   * (`panierRetenu`) ; tant que les tickets pro d'un jour ne sont pas lus, le total, dit (`panierBase` = total). Mesuré le
+   * 20/10 à Gosselies : deux tickets pro pour 1 110 € faisaient un panier de 17,92 € quand le comptoir était à 9,59 €.
+   * Règle de toute comparaison (J−7, réseau, rang, semaines, mois) : deux paniers sur la même base, jamais un hors pro
+   * face à un pro compris. `panier` reste le total : les clients manquants sur le CA total s'en servent. */
+  /** Le panier d'une ligne : { v, base } — base null pour une réponse gardée d'avant le 21/10/2026 (pas de mention). */
+  function panDe(m) {
+    if (!m) { return { v: null, base: null }; }
+    return m.panierBase ? { v: m.panierRetenu, base: m.panierBase } : { v: m.panier, base: null };
+  }
+  /** La clé du panier à classer : le retenu quand le serveur le donne. */
+  const kPan = m => m && m.panierBase ? 'panierRetenu' : 'panier';
+  /** La mention, en sous-titre : ce que le panier compte. */
+  const panSous = base => base === 'comptoir' ? 'hors clients pro' : (base === 'total' ? 'tickets pro pas encore lus' : '');
+  /** « panier 9,59 € hors pro » ; « (pro compris) » tant que le pro n'est pas lu. */
+  const panTxt = (P, mot) => P.v == null ? '' : (mot === false ? '' : 'panier ') + fU(P.v) + (P.base === 'comptoir' ? ' hors pro' : (P.base === 'total' ? ' (pro compris)' : ''));
+  /** La case « Panier » d'un tableau de mois ou de trimestres : hors pro quand le pro est lu ; sinon le total, en gris. */
+  const PAN_TH = 'hors clients pro quand leurs tickets sont lus ; en gris, clients pro compris (tickets pro pas encore lus)';
+  const panTd = P => `<td${P.base === 'total' ? ' class="mu" title="tickets pro pas encore lus : clients pro compris"' : (P.base === 'comptoir' ? ' title="hors clients pro"' : '')}>${P.v == null ? '—' : fU(P.v)}</td>`;
+  /** Les valeurs du réseau pour un classement : un panier ne se range qu'entre magasins de même base. */
+  function valsRang(L, k, m) {
+    return L.filter(x => x[k] != null && isFinite(x[k]) && (k !== 'panierRetenu' || !m || x.panierBase === m.panierBase)).map(x => x[k]).sort((a, b) => b - a);
+  }
+  /** Le panier du réseau face à celui du magasin, sur sa base : le comptoir des magasins lus, ou le total. */
+  function panReseau(R, base) {
+    if (!R) { return null; }
+    return base === 'comptoir' ? (R.panierComptoir != null ? R.panierComptoir : null) : (R.panier || null);
+  }
+  /**
+   * Deux paniers face à face (J−7, N−1) : hors pro quand les deux côtés ont leurs tickets pro lus, sinon tous les deux
+   * pro compris. a, b : { ca, tk, caC, tkC } — caC et tkC null tant que le pro n'est pas lu.
+   */
+  function panPaire(a, b) {
+    const lu = x => !!x && x.caC != null && x.tkC != null;
+    const comptoir = lu(a) && lu(b);
+    const p = x => !x ? null : (comptoir ? (x.tkC > 0 ? x.caC / x.tkC : null) : (x.tk > 0 ? x.ca / x.tk : null));
+    return { a: p(a), b: p(b), base: a && b ? (comptoir ? 'comptoir' : 'total') : null };
+  }
+
   /**
    * Les clients manquants du jour : au comptoir quand le serveur les a comptés
    * ((CA comptoir − objectif) ÷ panier comptoir, le CA des clients pro exclu),
@@ -726,11 +772,11 @@
     const L = (d.magasins || []).filter(x => x.ouvert !== false);
     if (!m || L.length < 2) { return ''; }
     const jour = S.vue === 'jour';
-    const defs = [['Chiffre d’affaires', jour ? 'ca' : 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))]];
+    const defs = [['Chiffre d’affaires', jour ? 'ca' : 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen' + (panDe(m).base === 'comptoir' ? ' <em>· hors pro</em>' : ''), kPan(m), fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))]];
     const ord = n => n === 1 ? '1er' : n + 'e';
     let premiers = 0;
     const cols = defs.map(([lib, k, f, fd]) => {
-      const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
+      const vals = valsRang(L, k, m);
       const v = m[k];
       if (v == null || !vals.length) { return `<div class="mb-cl"><div class="k">${lib}</div><div class="rg mu">—</div><div class="v">—</div><div class="s">pas de valeur</div></div>`; }
       const n = vals.length, rang = vals.findIndex(x => x <= v) + 1;
@@ -970,7 +1016,7 @@
   /** Le rang du magasin dans le réseau sur une mesure (le plus haut d'abord) : [rang, nombre] ou null. */
   function maRang(d, m, k) {
     if (!d || !m || m[k] == null) { return null; }
-    const v = (d.magasins || []).filter(x => x.ouvert !== false && x[k] != null && isFinite(x[k])).map(x => x[k]).sort((a, b) => b - a);
+    const v = valsRang((d.magasins || []).filter(x => x.ouvert !== false), k, m);
     return v.length >= 2 ? [v.findIndex(x => x <= m[k]) + 1, v.length] : null;
   }
   const maRangPt = r => !r ? 'n' : (r[0] <= Math.ceil(r[1] / 2) ? 'v' : (r[0] < r[1] ? 'o' : 'r'));
@@ -1005,7 +1051,7 @@
     const proj = enCours && m.projectionAtteinte != null ? 100 * m.projectionAtteinte : null;
     const CJ = clientsJour(m), cl = CJ ? Math.abs(CJ.n) : null;
     const I = maInvJour();
-    const rc = maRang(d, m, 'ca'), rt = maRang(d, m, 'tickets'), rp = maRang(d, m, 'panier');
+    const rc = maRang(d, m, 'ca'), rt = maRang(d, m, 'tickets'), rp = maRang(d, m, kPan(m)), PM = panDe(m);
     const C = S.aux['canaux|' + S.shop + '|' + S.date], web = C && !C.error && C.jour ? C.jour.webshop : null;
     const H = Array.isArray(m.heures) ? m.heures : [];
     const pic = H.reduce((a, x) => (x.ca || 0) > ((a && a.ca) || 0) ? x : a, null);
@@ -1019,7 +1065,7 @@
     T.push({ k: 'Résultat', court: 'le résultat', pt: auj || m.net == null ? 'n' : MA.net(m.netPct),
       v: m.net != null ? fS(m.net) : '—', s: m.netPct != null ? fPS(m.netPct) + ' des ventes' + (auj ? ' · la journée continue' : '') : 'P&amp;L incomplet' });
     T.push({ k: 'Clients', court: 'les clients', pt: MA.cli(m.tickets, m.j7 && m.j7.tickets),
-      v: m.tickets != null ? fN(m.tickets) + j7Delta(m) : '—', s: [m.j7 && m.j7.tickets != null ? fN(m.j7.tickets) + ' à J−7' : '', m.panier ? 'panier ' + fU(m.panier) : ''].filter(Boolean).join(' · ') });
+      v: m.tickets != null ? fN(m.tickets) + j7Delta(m) : '—', s: [m.j7 && m.j7.tickets != null ? fN(m.j7.tickets) + ' à J−7' : '', panTxt(PM)].filter(Boolean).join(' · ') });
     T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct), v: fP(m.coutMatierePct),
       s: 'seuil 35 %' + (m.margeBrutePct != null ? ' · marge brute ' + fP(m.margeBrutePct) : '') });
     T.push({ k: 'Main-d’œuvre', court: 'la main-d’œuvre', pt: auj ? 'n' : MA.mo(m.labourPct), v: m.labourPct != null ? fP(m.labourPct) : '—',
@@ -1125,7 +1171,7 @@
     T.push({ k: 'Poubelle', court: 'la poubelle', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true), pt: m.invendus == null ? 'n' : MA.poub(m.invendusPct),
       v: m.invendus != null ? fE(m.invendus) : '—', s: m.invendusPieces != null ? maPl(m.invendusPieces, 'pièce') + (m.invendusPct != null ? ' · ' + fP(m.invendusPct) + ' du chiffre' : '') : 'pas déclarée' });
     T.push({ k: 'Réseau', court: 'le rang', ouvre: 'rgdrop', ouvert: S.rgOuvert, tir: () => murClassement(m, d), pt: maRangPt(rc),
-      v: rc ? maOrd(rc[0]) + ' / ' + rc[1] : '—', s: m.panier ? 'panier ' + fU(m.panier) : '' });
+      v: rc ? maOrd(rc[0]) + ' / ' + rc[1] : '—', s: panTxt(panDe(m)) });
     return { T: T, J: J, NET: NET, X: X, SJ: SJ, att: att, dessous: dessous.map(jl), dessus: dessus.map(jl) };
   }
   function maDamier(R) {
@@ -1380,7 +1426,10 @@
     const mini = 'comptoir = tickets caisse (dont clients pro) · click & collect = commande webshop retirée en boutique · livraison = commande webshop livrée'
       + (per && J.joursEcoules && J.joursLus < J.joursEcoules ? ' · caisse lue sur ' + J.joursLus + ' jour' + (J.joursLus > 1 ? 's' : '') + ' sur ' + J.joursEcoules : '');
     const bar = lue && total > 0 ? `<div class="db-split-bar" title="comptoir ${fP(pct(comptoir))} · click & collect ${fP(pct(cc.ca))} · livraison ${fP(pct(liv.ca))}"><i class="c" style="width:${pct(comptoir).toFixed(1)}%"></i><i class="w" style="width:${pct(cc.ca).toFixed(1)}%"></i><i class="l" style="width:${pct(liv.ca).toFixed(1)}%"></i></div>` : '';
-    const sC = lue ? [fP(pct(comptoir)) + ' du CA', fN(J.tickets) + ' ticket' + (J.tickets > 1 ? 's' : ''), J.tickets ? 'panier ' + fU(comptoir / J.tickets) : ''].filter(Boolean).join(' · ')
+    // Le panier du comptoir sans les clients pro quand ils sont lus (21/10/2026) : un ticket pro de 500 € le ferait monter.
+    const proLu = caPro != null && tkPro != null && (!per || !!(m && m.proComplet)), tkHP = proLu ? J.tickets - tkPro : null;
+    const panC = proLu ? (tkHP > 0 ? 'panier ' + fU(Math.max(0, comptoir - caPro) / tkHP) + ' hors pro' : '') : (J.tickets ? 'panier ' + fU(comptoir / J.tickets) : '');
+    const sC = lue ? [fP(pct(comptoir)) + ' du CA', fN(J.tickets) + ' ticket' + (J.tickets > 1 ? 's' : ''), panC].filter(Boolean).join(' · ')
       + (caPro != null && tkPro ? `<br>dont clients pro <b>${fE(caPro)}</b> (${fN(tkPro)} ticket${tkPro > 1 ? 's' : ''}${PJ && PJ.aFacturer ? ', à facturer ' + fE(PJ.aFacturer) : ''})${partPro != null ? ' · ' + proPart(partPro, per) : ''}` : (X && X.manque ? '<br>' + esc(X.manque) : '')) : 'caisse pas encore lue';
     const sW = cc.n ? [fP(pct(cc.ca)) + ' du CA', cc.n + ' commande' + (cc.n > 1 ? 's' : ''), 'panier ' + fU(cc.ca / cc.n)].join(' · ') + (per ? '' : '<br>' + [nSt('cc', 'remise') ? `<b>${nSt('cc', 'remise')} remise${nSt('cc', 'remise') > 1 ? 's' : ''}</b>` : '', nSt('cc', 'prête') ? nSt('cc', 'prête') + ' prête' + (nSt('cc', 'prête') > 1 ? 's' : '') : '', nSt('cc', 'à préparer') + nSt('cc', 'en préparation') ? (nSt('cc', 'à préparer') + nSt('cc', 'en préparation')) + ' à préparer' : ''].filter(Boolean).join(' · ')) : 'aucune commande ' + (per ? 'sur ' + perLib() : ceJour());
     const sL = liv.n ? [fP(pct(liv.ca)) + ' du CA', liv.n + ' commande' + (liv.n > 1 ? 's' : ''), 'panier ' + fU(liv.ca / liv.n)].join(' · ') + (per ? '' : '<br>' + [nSt('liv', 'livrée') ? `<b>${nSt('liv', 'livrée')} livrée${nSt('liv', 'livrée') > 1 ? 's' : ''}</b>` : '', nSt('liv', 'en route') ? nSt('liv', 'en route') + ' en route' : ''].filter(Boolean).join(' · ')) : 'aucune livraison ' + (per ? 'sur ' + perLib() : ceJour());
@@ -2701,7 +2750,14 @@
     const proj = m && !fin && m.projection != null && m.projectionPart != null && m.projectionPart < 100 ? m.projection : null;
     const dCa = j7 && j7.ca && ca != null ? 100 * (ca - j7.ca) / j7.ca : null;
     const dTk = j7 && j7.tickets && tk != null ? 100 * (tk - j7.tickets) / j7.tickets : null;
-    const panA = tk ? ca / tk : null, pan7 = j7 && j7.tickets ? j7.ca / j7.tickets : null;
+    // Le panier face à J−7 (21/10/2026) : hors clients pro quand les deux jours ont leurs tickets pro lus, sinon les deux
+    // pro compris (panPaire). Aujourd'hui : le chiffre en direct moins les tickets pro que le Résultat du jour a lus.
+    const proA = m && m.caPro != null && m.ticketsPro != null && ca != null && tk != null;
+    const PP = panPaire({ ca, tk, caC: proA ? Math.max(0, ca - m.caPro) : null, tkC: proA ? Math.max(0, tk - m.ticketsPro) : null },
+      j7 ? { ca: j7.ca, tk: j7.tickets, caC: j7.caComptoir, tkC: j7.ticketsComptoir } : null);
+    const panA = j7 ? PP.a : (tk ? (proA ? (tk - m.ticketsPro > 0 ? Math.max(0, ca - m.caPro) / (tk - m.ticketsPro) : null) : ca / tk) : null);
+    const panBase = j7 ? PP.base : (proA ? 'comptoir' : 'total'), pan7 = j7 ? PP.b : null;
+    const pan7J = j7 ? (panBase === 'comptoir' ? (j7.ticketsComptoirJour > 0 ? j7.caComptoirJour / j7.ticketsComptoirJour : null) : (j7.ticketsJour ? j7.caJour / j7.ticketsJour : null)) : null;
     const dPan = panA != null && pan7 ? 100 * (panA - pan7) / pan7 : null;
     const dProj = proj != null && j7 && j7.caJour ? 100 * (proj - j7.caJour) / j7.caJour : null;
     const mb7 = j7 && j7.mb != null && j7.ca ? j7.mb : null, mb7Pct = mb7 != null ? 100 * mb7 / j7.ca : null;
@@ -2709,7 +2765,7 @@
     const dMb = mbPct != null && mb7Pct != null ? mbPct - mb7Pct : null;
     const jourNom = JOURS_L ? JOURS_L[new Date(S.date + 'T12:00:00').getDay()] : 'J−7';
     const lblB = j7 ? (j7.moment ? jourNom + ' dernier à ' + j7.moment : jourNom + ' dernier') : 'J−7';
-    return { j7, obj, proj, dCa, dTk, dPan, dProj, panA, pan7, mb7, mb7Pct, mbPct, dMb, jourNom, lblB, moment: j7 && j7.moment ? j7.moment : null };
+    return { j7, obj, proj, dCa, dTk, dPan, dProj, panA, pan7, pan7J, panBase, mb7, mb7Pct, mbPct, dMb, jourNom, lblB, moment: j7 && j7.moment ? j7.moment : null };
   }
   const JOURS_L = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
   /** La carte du duel : deux pistes sur la même échelle (l'objectif), le curseur du temps, le verdict. */
@@ -2826,7 +2882,8 @@
     let h = `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Le duel, chiffre par chiffre</span></div><div class="op-dt${sansJ ? ' sans-j' : ''}">`;
     if (!sansCa) h += ligne('Chiffre d’affaires', '', [fE(ca), m.objectifJour ? fP0(100 * (ca || 0) / m.objectifJour) + ' de l’objectif' : ''], [j7 ? fE(j7.ca) : eq, ''], ecart(B.dCa), [j7 && j7.moment ? fE(j7.caJour) : eq, j7 && j7.moment && m.objectifJour ? fP0(100 * j7.caJour / m.objectifJour) + ' de l’objectif' : ''], [m.refCa != null ? fE(m.refCa) : eq, esc(ref.libelle || '')]);
     h += ligne('Clients', '', [fN(tk), ''], [j7 ? fN(j7.tickets) : eq, ''], ecart(B.dTk), [j7 && j7.moment ? fN(j7.ticketsJour) : eq, ''], [m.refTickets != null ? fN(m.refTickets) : eq, m.ticketsDelta != null ? fSP(m.ticketsDelta) + ' face à la référence' : '']);
-    h += ligne('Panier moyen', '', [fU(B.panA), m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''], [B.pan7 != null ? fU(B.pan7) : eq, ''], ecart(B.dPan), [j7 && j7.moment && j7.ticketsJour ? fU(j7.caJour / j7.ticketsJour) : eq, ''], [JD && JD.reseau && JD.reseau.panier ? fU(JD.reseau.panier) : eq, 'réseau ' + (fin ? 'ce jour-là' : 'aujourd’hui')]);
+    const panR = JD ? panReseau(JD.reseau, B.panBase) : null;
+    h += ligne('Panier moyen', panSous(B.panBase), [fU(B.panA), m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''], [B.pan7 != null ? fU(B.pan7) : eq, ''], ecart(B.dPan), [j7 && j7.moment && B.pan7J != null ? fU(B.pan7J) : eq, ''], [panR ? fU(panR) : eq, 'réseau ' + (fin ? 'ce jour-là' : 'aujourd’hui')]);
     // Marge brute, projection et résultat net retirés du duel (10/10/2026) : ils restent dans le P&L court.
     return h + '</div></div>';
   }
@@ -3931,7 +3988,7 @@
     const ligne = (lib, sous, v, pct, coul, w, fort, note, attr) => `<div class="db-cl${fort ? ' fort' : ''}${attr ? ' clic' : ''}"${attr || ''}><span><b>${lib}</b>${sous ? `<br><span class="mu">${sous}</span>` : ''}</span><span class="b"><i style="width:${w}%;background:${coul}"></i></span><span class="v">${v}</span><span class="p" style="color:${coul}">${pct}</span><span class="n mu">${note || ''}</span></div>`;
     const fr = m.planningHeuresFranchise ? 'hors ' + nf(m.planningHeuresFranchise, 1) + ' h de franchisé (' + esc((m.planningFranchiseNoms || []).join(', ')) + ')' : '';
     return `<div class="db-cascade">
-      ${ligne('Chiffre d’affaires', m.tickets != null ? fN(m.tickets) + ' clients · ' + fU(m.panier) : '', fE(ca), '100 %', 'var(--color-text)', 100, true, '')}
+      ${ligne('Chiffre d’affaires', m.tickets != null ? [fN(m.tickets) + ' clients', panTxt(panDe(m))].filter(Boolean).join(' · ') : '', fE(ca), '100 %', 'var(--color-text)', 100, true, '')}
       ${ligne('− Coût matière', se.food != null ? 'seuil ' + fP(se.food) : '', m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
       ${ligne('= Marge brute', '', fE(m.margeBrute), fP(mbPct), 'var(--color-text)', barre(mbPct), true)}
       ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? (m.invendusPieces ? fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#C0182B' : '#D97706') : 'var(--color-text-muted)', barre(m.invendusPct), false, 'les saisies ▸', ' data-invmodale="1" role="button" tabindex="0" title="Le détail des saisies : heure, opérateur, produit, quantité"')}
@@ -3943,7 +4000,7 @@
   function cascadeVieille(m) {
     const ov = m.overhead == null ? null : m.overhead;
     return `<div class="db-casc">
-      <div><div class="k">Chiffre d’affaires</div><div class="v">${fK(m.ca != null ? m.ca : m.realise)}</div><div class="s">${m.tickets != null ? fN(m.tickets) + ' clients · ' + fU(m.panier) : ''}</div></div>
+      <div><div class="k">Chiffre d’affaires</div><div class="v">${fK(m.ca != null ? m.ca : m.realise)}</div><div class="s">${m.tickets != null ? [fN(m.tickets) + ' clients', panTxt(panDe(m))].filter(Boolean).join(' · ') : ''}</div></div>
       <div><div class="k">− Coût matière</div><div class="v">${fK(m.coutMatiere)}</div><div class="s">${fP(m.coutMatierePct)} · food cost${m.coutMatiereSource && m.coutMatiereSource !== 'panel' ? ' · ' + esc(m.coutMatiereSource) : ''}</div></div>
       <div><div class="k">= Marge brute</div><div class="v">${fK(m.margeBrute)}</div><div class="s">${fP(m.margeBrutePct != null ? m.margeBrutePct : (m.ca ? 100 * m.margeBrute / m.ca : null))}</div></div>
       <div><div class="k">− Personnel</div><div class="v">${fK(m.labour)}</div><div class="s">${fP(m.labourPct)}${m.labourSource ? ' · ' + esc(m.labourSource) : ''}</div></div>
@@ -4003,11 +4060,18 @@
     // Aujourd'hui, chaque tuile se compare à J−7 à la même heure (08/10/2026) ; un jour passé, au dernier même jour entier.
     const J7 = d.estAujourdhui && m.j7 && m.j7.moment ? m.j7 : null;
     const c7 = (val, quoi) => J7 && val ? { val, lib: 'vs J−7 à ' + esc(J7.moment), titre: quoi + ' de J−7 (' + fD(J7.date) + ') à ' + J7.moment } : null;
+    // Le panier moyen hors clients pro quand ils sont lus (21/10/2026) : la tendance, J−7 et le réseau sur la même base —
+    // un jour de la tendance sans tickets pro lus sort de la courbe plutôt que d'y entrer pro compris.
+    const PM = panDe(m), pCpt = PM.base === 'comptoir';
+    const panJ = j => pCpt ? (j.panierBase === 'comptoir' ? j.panierComptoir : null) : j.panier;
+    const pan7 = !J7 ? null : (pCpt ? (J7.panierBase === 'comptoir' ? J7.panierRetenu : null) : (J7.tickets ? J7.ca / J7.tickets : null));
+    const derP = TJ.slice().reverse().find(j => panJ(j) != null), panRes = panReseau(d.reseau, PM.base);
+    const cmpP = c7(pan7, 'panier') || (derP && derP !== TJ[TJ.length - 1] ? { val: panJ(derP), lib: 'vs ' + esc(fD(derP.date)), titre: 'panier du ' + esc(fD(derP.date)) } : null);
     let h = `<div class="db-tuiles">
       ${tuileTend('CA du jour', fK(m.ca), m.objectifJour ? 'objectif ' + fK(m.objectifJour) + ' · ' + fP(100 * (m.objectifAtteinte || 0)) + ' atteint' + ((CJ => !CJ ? '' : (CJ.n > 0 ? ' · <b class="ko">−' + fN(CJ.n) + ' clients' + (CJ.comptoir ? ' comptoir' : '') + '</b> (' + fE(Math.abs(CJ.ecart)) + ' ÷ ' + fU(CJ.panier) + ')' : ' · <b class="ok">+' + fN(-CJ.n) + ' clients' + (CJ.comptoir ? ' comptoir' : '') + '</b> d’avance'))(clientsJour(m))) : 'pas d’objectif du jour', '', TJ.map(j => j.ca), m.ca, fK, false, c7(J7 && J7.ca, 'CA'))}
       ${tuileTend('Marge brute', fK(m.margeBrute), fP(m.margeBrutePct != null ? m.margeBrutePct : (m.ca ? 100 * m.margeBrute / m.ca : null)) + ' des ventes · matière ' + fK(m.coutMatiere), '', TJ.map(j => j.mb), m.margeBrute, fK, false, c7(J7 && J7.mb, 'marge brute'))}
       ${tuileTend('Clients', fN(m.tickets) + j7Delta(m), [j7Texte(m), 'référence ' + fN(m.refTickets) + (m.ticketsDelta != null ? ' · ' + (m.ticketsDelta >= 0 ? '+ ' : '− ') + fP(Math.abs(m.ticketsDelta)) : ''), m.produits ? fN(m.produits) + ' produits vendus' : ''].filter(Boolean).join(' · '), '', TJ.map(j => j.tickets), m.tickets, fN, false, c7(J7 && J7.tickets, 'clients'))}
-      ${tuileTend('Panier moyen', fU(m.panier), (d.reseau && d.reseau.panier ? 'réseau ' + fU(d.reseau.panier) + ' · ' : '') + (m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''), '', TJ.map(j => j.panier), m.panier, fU, false, c7(J7 && J7.tickets ? J7.ca / J7.tickets : null, 'panier'))}
+      ${tuileTend('Panier moyen', fU(PM.v), [panSous(PM.base), panRes ? 'réseau ' + fU(panRes) : '', m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''].filter(Boolean).join(' · '), '', TJ.map(panJ), PM.v, fU, false, cmpP)}
       ${tuile('Projection fin de journée', m.projection != null ? fK(m.projection) : '—', m.projection != null ? (m.projectionPart != null ? fP(m.projectionPart) + ' de la journée écoulée' : '') + (m.projectionRythme ? ' · au rythme : ' + fK(m.projectionRythme) : '') : esc(m.projectionMotif || ''))}
       ${tuile('Résultat net du jour', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
     </div>`;
@@ -4198,7 +4262,7 @@
       const face = J7 ? `face au ${esc(fD(J7.date))} à ${esc(J7.moment)}` : (der ? `face au ${esc(fD(der.date))}` : '');
       const mx = Math.max(0, ...LH.map(x => x.ca));
       return { v: fK(m.ca),
-        s: [fN(m.tickets) + ' clients' + j7Delta(m), 'panier ' + fU(m.panier), dp != null ? `<span class="${dp >= 0 ? 'ok' : 'ko'}">${dp >= 0 ? '+ ' : '− '}${fP(Math.abs(dp))}</span> ${face}` : '',
+        s: [fN(m.tickets) + ' clients' + j7Delta(m), panTxt(panDe(m)), dp != null ? `<span class="${dp >= 0 ? 'ok' : 'ko'}">${dp >= 0 ? '+ ' : '− '}${fP(Math.abs(dp))}</span> ${face}` : '',
           m.projection != null && m.projectionPart != null && m.projectionPart < 100 ? 'projection ' + fK(m.projection) : ''].filter(Boolean).join(' · '),
         vd: 'neutre', mini: LH.length ? a4Barres(LH.map(x => x.ca), v => v === mx ? 'var(--color-primary)' : '#cfa3a9') : '' };
     }), m ? P.tuiles : attente(1));
@@ -4229,10 +4293,10 @@
     ajoute('reseau', 'chiffre', 'Place dans le réseau', resume(() => {
       const R = (d.magasins || []).filter(x => x.ouvert !== false);
       if (R.length < 2) { return { v: '—', s: 'un seul magasin ouvert', vd: 'neutre', mini: '' }; }
-      const rang = k => { const v = R.map(x => x[k]).filter(x => x != null && isFinite(x)).sort((a, b) => b - a); return m[k] == null || !v.length ? null : v.findIndex(x => x <= m[k]) + 1; };
+      const rang = k => { const v = valsRang(R, k, m); return m[k] == null || !v.length ? null : v.findIndex(x => x <= m[k]) + 1; };
       const ord = n => n === 1 ? '1er' : n + 'e';
       const rCa = rang('ca');
-      const premiers = [['clients', 'tickets'], ['panier', 'panier'], ['marge brute', 'margeBrutePct'], ['résultat net', 'netPct']].filter(([, k]) => rang(k) === 1).map(([l]) => l);
+      const premiers = [['clients', 'tickets'], [panDe(m).base === 'comptoir' ? 'panier hors pro' : 'panier', kPan(m)], ['marge brute', 'margeBrutePct'], ['résultat net', 'netPct']].filter(([, k]) => rang(k) === 1).map(([l]) => l);
       const tete = R.map(x => x.ca).filter(x => x != null).sort((a, b) => b - a)[0];
       return { v: rCa ? ord(rCa) + ' / ' + R.length : '—',
         s: 'en chiffre d’affaires sur ' + R.length + ' magasins ouverts' + (premiers.length ? ' · <b>1er en ' + premiers.join(', ') + '</b>' : '') + (rCa > 1 ? ' · le 1er vend ' + fK(tete) : '') + ' · anonyme',
@@ -5147,7 +5211,7 @@
       ${tuile('Atteinte', sansO ? '—' : fP(100 * m.realise / m.attendu), sansO ? '' : 'à ce jour · ' + fSK(m.ecart) + ' · ' + fN(Math.abs(m.clientsManquants)) + ' clients ' + (m.clientsManquants > 0 ? 'manquants' : 'd’avance'), sansO ? '' : (m.ecart < 0 ? 'vif' : 'bon'))}
       ${tuile('Projection', proj == null ? '—' : fK(proj), proj == null ? '' : 'au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', proj == null ? '' : (proj < m.objectif ? 'vif' : 'bon'))}
       ${tuile('Reste à faire', sansO ? '—' : fK(m.reste), sansO ? '' : (restants.length ? restants.length + ' jour' + (restants.length > 1 ? 's' : '') + ' · ' + fK(m.reste / restants.length) + ' par jour' : (sem ? 'semaine close' : 'mois clos')))}
-      ${tuile('Par jour ouvert', fE(m.realise / nJ), fN(m.tickets / nJ) + ' clients · panier ' + fU(m.panier).replace(' €', '\u00a0€'))}
+      ${tuile('Par jour ouvert', fE(m.realise / nJ), [fN(m.tickets / nJ) + ' clients', panTxt(panDe(m)).replace(' €', '\u00a0€')].filter(Boolean).join(' · '))}
       ${tuile('Marge brute', m.margeBrutePct != null ? fP(m.margeBrutePct) : '—', fK(m.margeBrute || 0) + ' · matière ' + fP(m.coutMatierePct) + ' (seuil ' + fP((d.seuils || {}).food || 32) + ')')}
       ${tuile('Résultat net', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
       ${tuile('Record', record ? fE(record.ca) : '—', record ? record.court + ' · ' + fN(record.tickets) + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) >= 100 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', 'or')}
@@ -5161,6 +5225,7 @@
     // La journée en cours n'est pas jugée (hachurée) ; un jour futur montre son objectif.
     if (jours.length) {
       const cv = ['ca', 'att', 'cli'].includes(S.calVal) ? S.calVal : 'ca';
+      // Le panier total, clients pro compris (21/10/2026) : l'objectif clients se compare aux clients du jour, pro compris.
       const pan = m.panier || null;
       const objCli = j => j.objectif && pan ? Math.round(j.objectif / pan) : null;
       const fini = j => j.passe && !j.aujourdhui && j.ca != null && !j.ferme;
@@ -5175,7 +5240,7 @@
           v: j => [fN(j.ca), '€'], l: j => j.objectif ? 'objectif ' + fE(j.objectif) + ' · ' + sg(j.ca - j.objectif, ' €') : 'pas d’objectif', f: j => j.objectif ? 'objectif ' + fE(j.objectif) : '', leg: 'le CA face à l’objectif du jour' },
         att: { t: sem ? 'L’atteinte de chaque jour' : 'L’atteinte de chaque jour du mois', s: 'En grand : le CA en % de l’objectif du jour.', p: pCa,
           v: j => j.objectif ? [fN(pCa(j)), '%'] : ['—', ''], l: j => j.objectif ? fE(j.ca) + ' sur ' + fE(j.objectif) : fE(j.ca) + ' · pas d’objectif', f: j => j.objectif ? 'objectif ' + fE(j.objectif) : '', leg: 'l’atteinte de l’objectif du jour' },
-        cli: { t: sem ? 'Les clients de chaque jour' : 'Les clients de chaque jour du mois', s: 'En grand : les clients du jour. Couleur et jauge : face à l’objectif clients (objectif CA ÷ panier moyen ' + (pan ? fU(pan) : '—') + ').', p: pCli,
+        cli: { t: sem ? 'Les clients de chaque jour' : 'Les clients de chaque jour du mois', s: 'En grand : les clients du jour. Couleur et jauge : face à l’objectif clients (objectif CA ÷ panier moyen ' + (pan ? fU(pan) : '—') + (panDe(m).base === 'comptoir' ? ', clients pro compris comme les clients du jour' : '') + ').', p: pCli,
           v: j => [fN(j.tickets), 'clients'], l: j => objCli(j) ? 'objectif ' + fN(objCli(j)) + ' · ' + sg(j.tickets - objCli(j)) : 'pas d’objectif', f: j => objCli(j) ? 'objectif ' + fN(objCli(j)) + ' clients' : '', leg: 'les clients face à l’objectif clients du jour' }
       };
       const X = MODE[cv];
@@ -5232,11 +5297,16 @@
    * à la place de la tuile.
    */
   function rendSemaines() {
+    // Le panier hors clients pro (21/10/2026) : la courbe l'est quand chacune de ses semaines closes a ses tickets pro lus
+    // (`caComptoir` du serveur), et le N-1 ne s'y montre alors que hors pro lui aussi — sans relevé pro un an plus tôt,
+    // il se tait plutôt que de comparer un panier pro compris. Sinon toute la carte reste pro compris, et le dit.
+    let pCpt = false;
     const S12_MESURES = {
       clients: { nom: 'Clients', titre: 'clients', unite: 'clients de la semaine',
         v: x => x && x.tickets > 0 ? x.tickets : null, cumul: L => ({ a: L.reduce((t, x) => t + x.tickets, 0), b: 1 }), f: v => fN(v) },
       panier: { nom: 'Panier moyen', titre: 'panier moyen', unite: 'panier moyen de la semaine',
-        v: x => x && x.tickets > 0 ? x.ca / x.tickets : null, cumul: L => ({ a: L.reduce((t, x) => t + x.ca, 0), b: L.reduce((t, x) => t + x.tickets, 0) }), f: v => fU(v) },
+        v: x => !x ? null : (pCpt ? (x.caComptoir != null && x.ticketsComptoir > 0 ? x.caComptoir / x.ticketsComptoir : null) : (x.tickets > 0 ? x.ca / x.tickets : null)),
+        cumul: L => pCpt ? { a: L.reduce((t, x) => t + x.caComptoir, 0), b: L.reduce((t, x) => t + x.ticketsComptoir, 0) } : { a: L.reduce((t, x) => t + x.ca, 0), b: L.reduce((t, x) => t + x.tickets, 0) }, f: v => fU(v) },
       articles: { nom: 'Articles par client', titre: 'articles par client', unite: 'articles par client de la semaine',
         v: x => x && x.tickets > 0 && x.articles != null ? x.articles / x.tickets : null, cumul: L => ({ a: L.reduce((t, x) => t + x.articles, 0), b: L.reduce((t, x) => t + x.tickets, 0) }), f: v => nf(v, 2) }
     };
@@ -5257,6 +5327,11 @@
     const enCours = lues.length && lues[lues.length - 1].enCours ? lues[lues.length - 1] : null;
     const W = lues.filter(w => !w.enCours).slice(-12);
     if (!W.length) { return carte(`<div class="db-note">Aucune semaine close lue pour ce magasin.</div>`); }
+    const pLu = mk === 'panier' && W.some(w => 'caComptoir' in w);   // une réponse d'avant le 21/10/2026 n'en dit rien
+    pCpt = pLu && W.filter(w => w.source).every(w => w.caComptoir != null);
+    const n1Motif = pCpt && W.some(w => w.n1 && w.n1.source) && !W.some(w => w.n1 && w.n1.caComptoir != null)
+      ? 'N-1 sans ses tickets pro lus : pas de comparaison hors clients pro' : D.n1Motif;
+    const unite = M.unite + (pCpt ? ' hors clients pro' : (pLu ? ' (pro compris : tickets pro pas encore lus)' : ''));
     const v = w => w.source ? M.v(w) : null, v1 = w => w.n1 ? M.v(w.n1) : null;
     if (!W.some(w => v(w) != null)) {
       return carte(`<div class="db-note">${mk === 'articles' ? 'Le panel ne rend pas les articles vendus pour ce magasin sur ces semaines.' : 'Aucune semaine close lue pour ce magasin.'}</div>`);
@@ -5319,12 +5394,12 @@
     const lib12 = 'Douze semaines';
     const tuiles = [
       eT != null ? tuile(lib12 + ' vs N-1', sg(eT) + ' %', M.f(gN) + ' contre ' + M.f(g1), eT >= 0 ? 'bon' : 'vif')
-        : tuile(lib12, gT != null ? M.f(gT) : '—', esc(D.n1Motif || 'pas de N-1')),
+        : tuile(lib12, gT != null ? M.f(gT) : '—', esc(n1Motif || 'pas de N-1')),
       tCur,
       tuile(mk === 'clients' ? 'Meilleure semaine' : 'Semaine la plus haute', meilleure ? M.f(v(meilleure)) : '—', meilleure ? 'S' + meilleure.iso + ' · ' + fD(meilleure.du) + ' → ' + fD(meilleure.au) : '')
     ].join('');
     const corps = `<div class="db-s6"><div>${svg}
-        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:#8D1D2C;border-radius:50%"></i>${M.unite}</span>${avecN1 ? `<span><i class="c" style="background:#b9b1a6;border-radius:50%"></i>même semaine en N-1 (pointillé)</span><span><i class="c" style="background:${HAUT};opacity:.45"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.45"></i>en dessous</span>` : `<span>${esc(D.n1Motif || '')}</span>`}</div>
+        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:#8D1D2C;border-radius:50%"></i>${esc(unite)}</span>${avecN1 ? `<span><i class="c" style="background:#b9b1a6;border-radius:50%"></i>même semaine en N-1 (pointillé)</span><span><i class="c" style="background:${HAUT};opacity:.45"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.45"></i>en dessous</span>` : `<span>${esc(n1Motif || '')}</span>`}</div>
         <div class="db-s6ch">${chips}</div></div>
       <div class="db-s6t">${tuiles}</div></div>`;
     return carte(corps, 'S' + W[0].iso + ' → S' + der.iso + ' · ' + (D.source || ''));
@@ -5393,7 +5468,7 @@
       }).join('');
     } else if (S.vue === 'trimestre') {
       // Les 4 trimestres de l'année (10/10/2026) : le CA des mois lus, face à l'objectif des trois mois.
-      const Y = annee(), P = S.aux['perf|' + Y], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
+      const Y = annee(), P = S.aux[clePerf()], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
       const qAuj = +AUJ.slice(0, 4) === Y ? Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 : (+AUJ.slice(0, 4) > Y ? 5 : 0);
       tete = `<button type="button" class="fr-an" data-fan="-1">‹</button>${Y}<button type="button" class="fr-an" data-fan="1"${Y >= +AUJ.slice(0, 4) ? ' disabled' : ''}>›</button>`;
       chips = !L ? sk(4) : [1, 2, 3, 4].map(q => {
@@ -5408,7 +5483,7 @@
         return `<button type="button" class="fr-c${on ? ' on' : ''}" data-trim="${q}"><span class="n">${lib}${cours ? '<em>en cours</em>' : ''}</span><b>${fK(ca)}</b><i class="jg"><em style="width:${Math.min(100, p || 0).toFixed(0)}%;background:${on ? 'var(--color-primary)' : col(p)}"></em></i><small>${p != null ? fN(p) + ' % de l’objectif' + (obj ? ' ' + fK(obj) : '') : 'sans objectif'}</small></button>`;
       }).join('');
     } else {
-      const Y = annee(), P = S.aux['perf|' + Y], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
+      const Y = annee(), P = S.aux[clePerf()], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
       tete = `<button type="button" class="fr-an" data-fan="-1">‹</button>${Y}<button type="button" class="fr-an" data-fan="1"${Y >= +AUJ.slice(0, 4) ? ' disabled' : ''}>›</button>`;
       chips = !L ? sk(12) : Array.from({ length: 12 }, (_, i) => {
         const x = L.find(r => +r.mois === i + 1) || {}, ym = Y + '-' + String(i + 1).padStart(2, '0'), on = S.date.slice(0, 7) === ym, cours = ym === AUJ.slice(0, 7);
@@ -5425,15 +5500,17 @@
   function rendBench(m, d) {
     const L = (d.magasins || []).filter(x => x.ouvert !== false);
     const jour = S.vue === 'jour' || S.vue === 'ops';   // l'Opérationnel lit la journée, comme la vue Jour
+    // Le panier se classe hors clients pro, entre magasins lus de la même façon (21/10/2026).
+    const PB = panDe(m).base, defP = ['Panier moyen', kPan(m), fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v)), () => panSous(PB)];
     const defs = jour
-      ? [['Chiffre d’affaires', 'ca', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))], ['Marge brute', 'margeBrutePct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']]
-      : [['Chiffre d’affaires', 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(100 * v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']];
+      ? [['Chiffre d’affaires', 'ca', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], defP, ['Marge brute', 'margeBrutePct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']]
+      : [['Chiffre d’affaires', 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], defP, ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(100 * v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']];
     // Le B2B (10/10/2026), à la place des messages du panel : le CA des clients pro, sa part du CA dessous.
     defs.splice(4, defs.length - 4, ['B2B · clients pro', 'caPro', fK, v => fSK(v), x => x.partPro != null ? fP(x.partPro) + ' du CA' : '']);
     const ord = n => n === 1 ? '1er' : n + 'e';
     let premiers = 0;
     const tuiles = defs.map(([lib, k, f, fd, extra]) => {
-      const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
+      const vals = valsRang(L, k, m);
       const v = m[k];
       if (v == null || !vals.length) { return `<div class="db-bt"><div class="k">${lib}</div><span class="rg mu">—</span><div class="v mu">—</div><div class="s">pas de valeur</div></div>`; }
       const n = vals.length, rang = vals.findIndex(x => x <= v) + 1;
@@ -6611,9 +6688,9 @@
   }
   function rendTrimestre() {
     const Y = annee(), q = trimestre();
-    const perf = S.aux['perf|' + Y], plan = S.aux['plan|' + S.shop + '|' + Y];
+    const perf = S.aux[clePerf()], plan = S.aux['plan|' + S.shop + '|' + Y];
     let h = '';
-    if (S.err['perf|' + Y]) { h += `<div class="db-err">Mois : ${esc(S.err['perf|' + Y])}</div>`; }
+    if (S.err[clePerf()]) { h += `<div class="db-err">Mois : ${esc(S.err[clePerf()])}</div>`; }
     if (S.err['plan|' + S.shop + '|' + Y]) { h += `<div class="db-err">Plan : ${esc(S.err['plan|' + S.shop + '|' + Y])}</div>`; }
     h += `<div class="db-sec">Résultat — le trimestre T${q} ${Y}<small>objectif du plan de développement, attendu au rythme des budgets mensuels</small></div>`;
     if (!plan && !S.err['plan|' + S.shop + '|' + Y]) { return h + squelette(3); }
@@ -6636,7 +6713,7 @@
     const moisAuj = +AUJ.slice(5, 7), anAuj = +AUJ.slice(0, 4);
     h += `<div class="db-g2" style="grid-template-columns:1.4fr 1fr;margin-bottom:12px">
       <div class="db-card"><div class="ct"><span class="db-lab">Les 3 mois du trimestre</span><span class="db-mini">gris : budget du mois · couleur : réalisé (vert ≥ 95 %, rouge sinon, orange = mois en cours)</span></div>
-        ${!perf && !S.err['perf|' + Y] ? squelette(1) : `<div class="db-mo">${M.map(x => { const bud = x.caBudget || x.caTheorique || 0, ca = x.ca || 0, pct = bud ? 100 * ca / bud : null; const enc = Y === anAuj && +x.mois === moisAuj, futur = Y > anAuj || (Y === anAuj && +x.mois > moisAuj);
+        ${!perf && !S.err[clePerf()] ? squelette(1) : `<div class="db-mo">${M.map(x => { const bud = x.caBudget || x.caTheorique || 0, ca = x.ca || 0, pct = bud ? 100 * ca / bud : null; const enc = Y === anAuj && +x.mois === moisAuj, futur = Y > anAuj || (Y === anAuj && +x.mois > moisAuj);
           return `<div><div class="bars"><i class="b" style="height:${(140 * bud / mx).toFixed(0)}px" title="budget ${fE(bud)}"></i><i class="r ${enc ? 'enc' : (pct != null && pct >= 95 ? 'ok' : '')}" style="height:${(140 * ca / mx).toFixed(0)}px" title="réalisé ${fE(ca)}"></i></div><div class="n">${MO[x.mois - 1]} · ${futur ? '—' : fK(ca)}</div><div class="d">budget ${fK(bud)}${pct != null && !futur ? ' · ' + fP(pct) : ''}${enc ? ' · en cours' : ''}${x.tickets ? ' · ' + fN(x.tickets) + ' clients' : ''}</div></div>`; }).join('')}</div>`}
       </div>
       <div class="db-card"><div class="ct"><span class="db-lab">Les annotations du trimestre</span><span class="db-mini">plan de développement</span></div><div style="padding:10px 16px 12px">${blocNotes(plan, t)}</div></div>
@@ -6656,18 +6733,18 @@
       const notes = t.notes || {}, acts = actionsDe(plan, t.t), et = (t.revue && t.revue.etape) || 1;
       const an = VOIX.filter(v => notes[v[0]] && notes[v[0]].texte).map(v => `<div><i class="v ${v[2]}"></i><b>${esc(nomVoix(plan, v))}</b> — ${esc(notes[v[0]].texte.length > 140 ? notes[v[0]].texte.slice(0, 140) + '…' : notes[v[0]].texte)}</div>`).join('');
       const pied = `${acts.length ? acts.length + ' action(s) · ' + acts.filter(a => stAct(a) === 'ok').length + ' faite(s) · ' : ''}rituel ${et}/5${t.revue && t.revue.valideLe ? ' validé' : ''}`;
-      return `<tr data-trimq="${t.t}"><td class="l"><b>${esc(t.label)}</b>${tag(t)}<br><span class="mu">${t.mois.map(m => MO[m - 1]).join(' · ')}</span></td><td>${fK(t.objectif)}</td><td>${fK(t.realise)}</td><td>${fK(t.attendu)}</td><td style="color:${t.ecart == null ? 'inherit' : (t.ecart >= 0 ? 'var(--color-success,#2d7a3e)' : 'var(--color-primary)')}">${t.ecart == null ? '—' : fSK(t.ecart)}</td><td>${att == null ? '—' : `<span class="db-pill" style="background:${col(att)}">${fP(att)}</span>`}</td><td>${t.clients == null ? '—' : '− ' + fN(t.clients)}</td><td>${t.panier == null ? '—' : fU(t.panier)}</td><td>${fP(t.food)}</td><td>${fP(t.labour)}</td><td>${fP(t.netPct)}</td><td class="an">${an || '<span class="mu" style="font-style:italic">pas encore d’annotation</span>'}<div class="mu" style="margin-top:2px">${pied}</div></td></tr>`; }).join('');
+      return `<tr data-trimq="${t.t}"><td class="l"><b>${esc(t.label)}</b>${tag(t)}<br><span class="mu">${t.mois.map(m => MO[m - 1]).join(' · ')}</span></td><td>${fK(t.objectif)}</td><td>${fK(t.realise)}</td><td>${fK(t.attendu)}</td><td style="color:${t.ecart == null ? 'inherit' : (t.ecart >= 0 ? 'var(--color-success,#2d7a3e)' : 'var(--color-primary)')}">${t.ecart == null ? '—' : fSK(t.ecart)}</td><td>${att == null ? '—' : `<span class="db-pill" style="background:${col(att)}">${fP(att)}</span>`}</td><td>${t.clients == null ? '—' : '− ' + fN(t.clients)}</td>${panTd(panDe(t))}<td>${fP(t.food)}</td><td>${fP(t.labour)}</td><td>${fP(t.netPct)}</td><td class="an">${an || '<span class="mu" style="font-style:italic">pas encore d’annotation</span>'}<div class="mu" style="margin-top:2px">${pied}</div></td></tr>`; }).join('');
     const A = plan.annee || {};
     return `<div class="db-card"><div class="ct"><span class="db-lab">${Y}, trimestre par trimestre</span><span class="db-mini">objectif du plan · réalisé · les annotations des trois voix, et les actions · cliquer un trimestre pour l’ouvrir</span></div>
-      <div style="padding:4px 16px 12px;overflow-x:auto"><table class="db-t db-tq"><tr><th>Trimestre</th><th>Objectif</th><th>Réalisé</th><th>Attendu</th><th>Écart</th><th>Atteinte</th><th>Clients</th><th>Panier</th><th>Food</th><th>Labour</th><th>Marge nette</th><th class="l">Annotations</th></tr>${rows}
+      <div style="padding:4px 16px 12px;overflow-x:auto"><table class="db-t db-tq"><tr><th>Trimestre</th><th>Objectif</th><th>Réalisé</th><th>Attendu</th><th>Écart</th><th>Atteinte</th><th>Clients</th><th title="${esc(PAN_TH)}">Panier</th><th>Food</th><th>Labour</th><th>Marge nette</th><th class="l">Annotations</th></tr>${rows}
       <tr class="tot"><td class="l">${Y}</td><td>${fK(tot.o)}</td><td>${fK(tot.r)}</td><td>${fK(tot.a)}</td><td style="color:${tot.r - tot.a >= 0 ? 'var(--color-success,#2d7a3e)' : 'var(--color-primary)'}">${fSK(tot.r - tot.a)}</td><td>${tot.a ? `<span class="db-pill" style="background:${col(100 * tot.r / tot.a)}">${fP(100 * tot.r / tot.a)}</span>` : '—'}</td><td colspan="5"></td><td class="an mu">${A.objectif ? 'objectif de l’année ' + fK(A.objectif) : ''}${A.projection ? ' · projection ' + fK(A.projection) : ''}</td></tr></table></div></div>`;
   }
 
   function rendAnnee() {
     const Y = annee();
-    const perf = S.aux['perf|' + Y], plan = S.aux['plan|' + S.shop + '|' + Y];
+    const perf = S.aux[clePerf()], plan = S.aux['plan|' + S.shop + '|' + Y];
     let h = '';
-    if (S.err['perf|' + Y]) { h += `<div class="db-err">Mois : ${esc(S.err['perf|' + Y])}</div>`; }
+    if (S.err[clePerf()]) { h += `<div class="db-err">Mois : ${esc(S.err[clePerf()])}</div>`; }
     if (S.err['plan|' + S.shop + '|' + Y]) { h += `<div class="db-err">Objectif : ${esc(S.err['plan|' + S.shop + '|' + Y])}</div>`; }
     // --- l'objectif de l'année, et la rampe
     h += `<div class="db-sec">L’objectif — ${Y}, 3 ans, 5 ans<small>engagement du franchisé, sinon la rampe de l’étude de marché</small></div>`;
@@ -6697,7 +6774,7 @@
     } else if (plan) { h += `<div class="db-alerte">${esc(plan.error || 'Pas de plan pour ce magasin.')}</div>`; }
     // --- la heatmap des mois
     h += `<div class="db-sec">Les mois — ${Y - 1} et ${Y}<small>CA du mois et atteinte du budget, magasin seul</small></div>`;
-    if (!perf && !S.err['perf|' + Y]) { h += squelette(2); }
+    if (!perf && !S.err[clePerf()]) { h += squelette(2); }
     else if (perf) {
       const cells = (Array.isArray(perf) ? perf : []).filter(c => String(c.storeId) === String(S.shop));
       const MO = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
@@ -6716,16 +6793,16 @@
             const pct = c && bud ? 100 * c.ca / bud : null; const futur = an > auj.getFullYear() || (an === auj.getFullYear() && i > auj.getMonth());
             const enCours = an === auj.getFullYear() && i === auj.getMonth();
             if (!c || futur || !c.ca) { return `<div style="${tPct(null)};border-radius:6px;min-height:46px;display:flex;align-items:center;justify-content:center;font-size:10.5px">${futur ? '' : '—'}</div>`; }
-            return `<div title="${an}-${String(i + 1).padStart(2, '0')} · CA ${fE(c.ca)}${bud ? ' · budget ' + fE(bud) + ' · ' + fP(pct) : ''} · ${fN(c.tickets)} tickets · panier ${fU(c.panierMoyen)}" style="${S.hmMetric === 'pct' ? tPct(pct) : tCa(c.ca)};border-radius:6px;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.2;${enCours ? 'outline:2px dashed #222;outline-offset:-2px' : ''}"><b>${S.hmMetric === 'pct' ? (pct == null ? '—' : Math.round(pct) + ' %') : fK(c.ca)}</b><span style="font-size:9.5px;opacity:.85">${S.hmMetric === 'pct' ? fK(c.ca) : (pct == null ? '' : Math.round(pct) + ' %')}</span></div>`; }).join('')).join('')}
+            return `<div title="${an}-${String(i + 1).padStart(2, '0')} · CA ${fE(c.ca)}${bud ? ' · budget ' + fE(bud) + ' · ' + fP(pct) : ''} · ${fN(c.tickets)} tickets · ${esc(panTxt(panDe({ panierBase: c.panierBase, panierRetenu: c.panierRetenu, panier: c.panierMoyen })))}" style="${S.hmMetric === 'pct' ? tPct(pct) : tCa(c.ca)};border-radius:6px;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.2;${enCours ? 'outline:2px dashed #222;outline-offset:-2px' : ''}"><b>${S.hmMetric === 'pct' ? (pct == null ? '—' : Math.round(pct) + ' %') : fK(c.ca)}</b><span style="font-size:9.5px;opacity:.85">${S.hmMetric === 'pct' ? fK(c.ca) : (pct == null ? '' : Math.round(pct) + ' %')}</span></div>`; }).join('')).join('')}
         </div></div>
         <div class="db-note">Atteinte : rouge &lt; 80 % · orange 80–95 · vert 95–105 · doré &gt; 105 %. Survolez une case : CA, budget, tickets, panier.</div></div>`;
       // Le tableau des mois de l'année : tickets, panier, marge, ratios.
       const an = cells.filter(c => +c.annee === Y && c.ca).sort((a, b) => a.mois - b.mois);
       if (an.length) {
         h += `<div class="db-card"><div class="ct"><span class="db-lab">${Y}, mois par mois</span></div>
-          <table class="db-t"><tr><th>Mois</th><th>CA</th><th>Budget</th><th>Atteinte</th><th>Clients</th><th>Panier</th><th>Food cost</th><th>Labour</th><th>Overhead</th><th>Marge nette</th></tr>
+          <table class="db-t"><tr><th>Mois</th><th>CA</th><th>Budget</th><th>Atteinte</th><th>Clients</th><th title="${esc(PAN_TH)}">Panier</th><th>Food cost</th><th>Labour</th><th>Overhead</th><th>Marge nette</th></tr>
           ${an.map(c => { const bud = c.caBudget || c.caTheorique; const pct = bud ? 100 * c.ca / bud : null;
-            return `<tr><td>${MO[c.mois - 1]} ${Y}</td><td>${fK(c.ca)}</td><td class="mu">${fK(bud)}</td><td class="${pct == null ? 'mu' : (pct >= 100 ? 'ok' : (pct >= 90 ? 'wa' : 'ko'))}">${fP(pct)}</td><td>${fN(c.tickets)}</td><td>${fU(c.panierMoyen)}</td><td>${fP(c.foodCostPct)}</td><td>${c.coutsManque ? '<span class="mu" title="le P&L mensuel du panel ne répond pas pour ce mois">…</span>' : fP(c.labourCostPct)}${c.sansPlanning ? ` <b class="ko" title="${c.sansPlanning} jour${c.sansPlanning > 1 ? 's' : ''} vendu${c.sansPlanning > 1 ? 's' : ''} sans planning au panel : la main-d’œuvre du mois est incomplète">!</b>` : ''}</td><td>${c.coutsManque ? '<span class="mu">…</span>' : fP(c.overheadPct)}</td><td class="${c.margePct == null ? 'mu' : (c.margePct >= 0.15 ? 'ok' : (c.margePct >= 0.05 ? 'wa' : 'ko'))}">${c.margePct == null ? '—' : fP(100 * c.margePct)}${c.margeNette != null ? ' <span class="mu">· ' + fK(c.margeNette) + '</span>' : ''}</td></tr>`; }).join('')}</table></div>`;
+            return `<tr><td>${MO[c.mois - 1]} ${Y}</td><td>${fK(c.ca)}</td><td class="mu">${fK(bud)}</td><td class="${pct == null ? 'mu' : (pct >= 100 ? 'ok' : (pct >= 90 ? 'wa' : 'ko'))}">${fP(pct)}</td><td>${fN(c.tickets)}</td>${panTd(panDe({ panierBase: c.panierBase, panierRetenu: c.panierRetenu, panier: c.panierMoyen }))}<td>${fP(c.foodCostPct)}</td><td>${c.coutsManque ? '<span class="mu" title="le P&L mensuel du panel ne répond pas pour ce mois">…</span>' : fP(c.labourCostPct)}${c.sansPlanning ? ` <b class="ko" title="${c.sansPlanning} jour${c.sansPlanning > 1 ? 's' : ''} vendu${c.sansPlanning > 1 ? 's' : ''} sans planning au panel : la main-d’œuvre du mois est incomplète">!</b>` : ''}</td><td>${c.coutsManque ? '<span class="mu">…</span>' : fP(c.overheadPct)}</td><td class="${c.margePct == null ? 'mu' : (c.margePct >= 0.15 ? 'ok' : (c.margePct >= 0.05 ? 'wa' : 'ko'))}">${c.margePct == null ? '—' : fP(100 * c.margePct)}${c.margeNette != null ? ' <span class="mu">· ' + fK(c.margeNette) + '</span>' : ''}</td></tr>`; }).join('')}</table></div>`;
       }
     }
     return h;
@@ -6744,7 +6821,7 @@
     const LH = Array.isArray(st.heures) ? st.heures.filter(x => x.ca > 0) : [];
     const hCli = LH.length ? LH.reduce((m, x) => x.tickets > m.tickets ? x : m) : null, hCa = LH.length ? LH.reduce((m, x) => x.ca > m.ca ? x : m) : null;
     let h = `<div class="db-tuiles">
-      ${hCli ? tuile('Heure avec le plus de clients', hCli.h + ' – ' + (hCli.h + 1) + ' h', fN(moy ? hCli.moy.tickets : hCli.tickets) + ' clients' + (moy ? ' par jour ouvert' : '') + ' · panier ' + fU(hCli.panier) + ' · ' + fP(tot.tickets ? 100 * hCli.tickets / tot.tickets : null) + ' des clients') : tuile('Heure avec le plus de clients', '—', '')}
+      ${hCli ? tuile('Heure avec le plus de clients', hCli.h + ' – ' + (hCli.h + 1) + ' h', fN(moy ? hCli.moy.tickets : hCli.tickets) + ' clients' + (moy ? ' par jour ouvert' : '') + ' · ' + panTxt(panDe(hCli)) + ' · ' + fP(tot.tickets ? 100 * hCli.tickets / tot.tickets : null) + ' des clients') : tuile('Heure avec le plus de clients', '—', '')}
       ${hCa ? tuile('Heure avec le plus de CA', hCa.h + ' – ' + (hCa.h + 1) + ' h', fK(moy ? hCa.moy.ca : hCa.ca) + (moy ? ' par jour ouvert' : '') + ' · ' + fP(tot.ca ? 100 * hCa.ca / tot.ca : null) + ' des ventes · matière ' + fP(hCa.mbPct == null ? null : 100 - hCa.mbPct)) : tuile('Heure avec le plus de CA', '—', '')}
       ${tuile('Marge brute', fK(tot.mb), fP(tot.mbPct) + ' des ventes')}
       ${tuile('Marge nette des heures', fSK(tot.res), fP(tot.resPct) + ' des ventes · rémunération ' + fK(tot.trav), tot.res >= 0 ? 'bon' : 'vif')}
@@ -6781,10 +6858,10 @@
     // Tableau + panneau.
     h += `<div class="db-g2">`;
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Heure par heure — ventes − matière = marge brute · marge brute − rémunération = marge nette</span></div>
-      <table class="db-t"><tr><th>Heure</th><th>Clients</th><th>Panier</th><th>Ventes</th><th>− Matière</th><th>= Marge brute</th><th>En poste</th><th>− Rémunération</th><th>= Marge nette</th></tr>
-      ${L.map(l => `<tr class="hv${l.h === sel.h ? ' sel' : ''}${val(l, 'res') < 0 ? ' perte' : ''}" data-h="${l.h}"><td>${l.h === sel.h ? '▾' : '▸'} ${l.h} – ${l.h + 1} h</td><td>${moy ? nf(l.moy.tickets, 0) : fN(l.tickets)}</td><td>${fU(l.panier)}</td><td>${fE(val(l, 'ca'))}</td><td class="mu">${fE(val(l, 'mat'))}</td><td><b>${fE(val(l, 'mb'))}</b> <span class="mu" style="font-weight:400">${fP(l.mbPct)}</span></td><td>${l.poste}</td><td class="mu">${fE(val(l, 'trav'))}</td><td class="${coul(val(l, 'res'))}"><b>${fS(val(l, 'res'))}</b></td></tr>`).join('')}
-      <tr class="tot"><td>${S.vue === 'jour' ? 'Journée' : (moy ? 'Jour type' : 'Période')}</td><td>${fN(tot.tickets / (moy ? nJ : 1))}</td><td>${fU(tot.panier)}</td><td>${fE(tot.ca / (moy ? nJ : 1))}</td><td>${fE(tot.mat / (moy ? nJ : 1))}</td><td>${fE(tot.mb / (moy ? nJ : 1))} <span class="mu" style="font-weight:400">${fP(tot.mbPct)}</span></td><td>—</td><td>${fE(tot.trav / (moy ? nJ : 1))}</td><td class="${coul(tot.res)}">${fS(tot.res / (moy ? nJ : 1))}</td></tr></table>
-      <div class="db-note" style="padding-top:10px">Ventes, matière, rémunération et marge de l’heure viennent du panel (répartition horaire). Le personnel en poste est la moyenne des jours ouverts.</div></div>`;
+      <table class="db-t"><tr><th>Heure</th><th>Clients</th><th${panDe(tot).base ? ` title="${esc(panSous(panDe(tot).base))}"` : ''}>Panier${panDe(tot).base === 'comptoir' ? ' <small class="mu">hors pro</small>' : ''}</th><th>Ventes</th><th>− Matière</th><th>= Marge brute</th><th>En poste</th><th>− Rémunération</th><th>= Marge nette</th></tr>
+      ${L.map(l => `<tr class="hv${l.h === sel.h ? ' sel' : ''}${val(l, 'res') < 0 ? ' perte' : ''}" data-h="${l.h}"><td>${l.h === sel.h ? '▾' : '▸'} ${l.h} – ${l.h + 1} h</td><td>${moy ? nf(l.moy.tickets, 0) : fN(l.tickets)}</td><td>${fU(panDe(l).v)}</td><td>${fE(val(l, 'ca'))}</td><td class="mu">${fE(val(l, 'mat'))}</td><td><b>${fE(val(l, 'mb'))}</b> <span class="mu" style="font-weight:400">${fP(l.mbPct)}</span></td><td>${l.poste}</td><td class="mu">${fE(val(l, 'trav'))}</td><td class="${coul(val(l, 'res'))}"><b>${fS(val(l, 'res'))}</b></td></tr>`).join('')}
+      <tr class="tot"><td>${S.vue === 'jour' ? 'Journée' : (moy ? 'Jour type' : 'Période')}</td><td>${fN(tot.tickets / (moy ? nJ : 1))}</td><td>${fU(panDe(tot).v)}</td><td>${fE(tot.ca / (moy ? nJ : 1))}</td><td>${fE(tot.mat / (moy ? nJ : 1))}</td><td>${fE(tot.mb / (moy ? nJ : 1))} <span class="mu" style="font-weight:400">${fP(tot.mbPct)}</span></td><td>—</td><td>${fE(tot.trav / (moy ? nJ : 1))}</td><td class="${coul(tot.res)}">${fS(tot.res / (moy ? nJ : 1))}</td></tr></table>
+      <div class="db-note" style="padding-top:10px">Ventes, matière, rémunération et marge de l’heure viennent du panel (répartition horaire). Le personnel en poste est la moyenne des jours ouverts.${panDe(tot).base === 'comptoir' ? ' Le panier est hors clients pro.' : (panDe(tot).base === 'total' ? ' Le panier compte les clients pro : leurs tickets ne sont pas encore lus sur toute la période.' : '')}</div></div>`;
     h += rendPanneau(st, sel, moy, nJ);
     h += `</div>`;
     return h;
@@ -6867,7 +6944,7 @@
     const mx = Math.max(...top.map(x => x.v), 1);
     const pr = st.produits || {};
     const couv = pr.total ? `${pr.jours.length} jour(s) sur ${pr.total}` : '';
-    return `<div class="db-card"><div class="ct"><span class="db-lab">${l.h} – ${l.h + 1} h</span><span class="db-mini">${moy ? nf(l.moy.tickets, 0) : fN(l.tickets)} clients · panier ${fU(l.panier)}${moy ? ' · par jour ouvert' : ''}</span></div>
+    return `<div class="db-card"><div class="ct"><span class="db-lab">${l.h} – ${l.h + 1} h</span><span class="db-mini">${moy ? nf(l.moy.tickets, 0) : fN(l.tickets)} clients · ${esc(panTxt(panDe(l)))}${moy ? ' · par jour ouvert' : ''}</span></div>
       <div class="db-wf">${rows.map((r, k) => `<div class="r${k === 4 ? ' tot' : ''}"><span class="n">${r[0]}</span><span class="b"><i style="left:${Math.max(0, 100 * r[2] / base).toFixed(1)}%;width:${Math.max(0, 100 * (r[3] - r[2]) / base).toFixed(1)}%;background:${r[4]}"></i></span><span class="v ${k === 4 ? coul(R) : ''}">${k === 4 ? fS(R) : fE(r[1])}</span></div>`).join('')}</div>
       <div class="ct" style="border-top:.5px solid var(--color-border-tertiary);border-bottom:none;padding:10px 16px 4px"><span class="db-lab">Top 5 de l’heure — par marge brute</span><span class="db-mini">■ marge &nbsp;<span style="color:#c9a36a">■</span> coût matière</span></div>
       ${top.length ? `<div class="db-pl">${top.map((x, k) => `<div class="r"><b class="n">${k + 1}</b><span title="${esc(x.nom)}">${esc(x.nom)}</span><span class="v mu">${nf(x.q, 0)} pcs</span><span class="b"><i style="width:${(100 * x.v / mx).toFixed(1)}%;background:#e5c9a0"></i>${x.m != null ? `<i style="width:${(100 * Math.max(0, x.m) / mx).toFixed(1)}%"></i>` : ''}</span><span class="v"><b>${x.m != null ? fU(x.m) : fU(x.v)}</b></span><span class="v ${x.taux == null ? 'mu' : (x.taux < 50 ? 'wa' : 'ok')}">${x.taux != null ? nf(x.taux, 0) + ' %' : 'sans coût'}</span></div>`).join('')}</div>

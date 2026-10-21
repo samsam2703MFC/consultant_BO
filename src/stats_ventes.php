@@ -376,7 +376,7 @@ function ep_stats_tendance(): array
     if (empty($_GET['force'])) {
         $v = setting($cle);
         if (is_string($v)) { $v = json_decode($v, true); }
-        if (is_array($v) && isset($v['jours'])) { return $v + ['cache' => true]; }
+        if (is_array($v) && isset($v['jours'])) { return svTendPro($sid, $v) + ['cache' => true]; }
     }
     $jd = new DateTimeImmutable($date);
     $wd = (int) $jd->format('N');
@@ -401,6 +401,24 @@ function ep_stats_tendance(): array
     $jours = array_values(array_slice($jours, -7));
     $out = ['shop' => $sid, 'date' => $date, 'jourSemaine' => $wd, 'jours' => $jours, 'quand' => date('c')];
     if ($jours !== []) { try { svGrave($cle, $out); } catch (Throwable $e) { /* sans cache */ } }
+    return svTendPro($sid, $out);
+}
+
+/**
+ * Le panier de chaque jour de la tendance hors clients pro (21/10/2026) : ajouté à la lecture, pas gravé — les tendances
+ * gravées avant en profitent, et une fiche client complétée plus tard (TVA) compte dès la lecture suivante. Un jour sans
+ * tickets pro lus garde `panierComptoir` null (`panierBase` = total) : le dashboard ne le range pas à côté d'un hors pro.
+ */
+function svTendPro(int $sid, array $out): array
+{
+    if (!function_exists('vpLu') || !function_exists('vpSplit') || !is_array($out['jours'] ?? null)) { return $out; }
+    foreach ($out['jours'] as $i => $j) {
+        $dt = (string) ($j['date'] ?? '');
+        $b = $dt === '' || (defined('SV_DEBUT') && $dt < SV_DEBUT) ? null : vpLu($sid, $dt);
+        $s = vpSplit($b, (float) ($j['ca'] ?? 0), (int) ($j['tickets'] ?? 0));
+        $out['jours'][$i]['panierComptoir'] = $b === null ? null : ($s['panierComptoir'] ?? null);
+        $out['jours'][$i]['panierBase'] = $b === null ? 'total' : 'comptoir';
+    }
     return $out;
 }
 
@@ -1259,6 +1277,21 @@ function ep_stats_ventes(): array
     $tot['mbPct'] = $tot['ca'] > 0 ? round(100 * $tot['mb'] / $tot['ca'], 1) : null;
     $tot['resPct'] = $tot['ca'] > 0 ? round(100 * $tot['res'] / $tot['ca'], 1) : null;
     foreach (['ca', 'mat', 'trav', 'res'] as $k) { $tot[$k] = round($tot[$k], 2); }
+    // Le panier hors clients pro, heure par heure (21/10/2026) : les tickets pro gravés de chaque jour ouvert (vpJoursLus,
+    // quatre listes relues au plus — la journée en cours se relit passé dix minutes) se retirent de leur heure. Seulement
+    // si tous les jours ouverts sont lus ; sinon chaque heure garde le panier total et le dit (`panierBase` = total).
+    if (function_exists('vpPanier') && function_exists('vpProJours') && function_exists('vpJoursLus')) {
+        $proH = null;
+        if ($joursOuverts !== [] && (!defined('SV_DEBUT') || min($joursOuverts) >= SV_DEBUT)) {
+            $pH = vpProJours($sid, $joursOuverts, true, vpJoursLus([$sid], $joursOuverts, 4)[$sid] ?? []);
+            if ($pH['lus'] === $pH['jours']) { $proH = $pH; }
+        }
+        foreach ($lignes as $i => $l) {
+            $x = $proH['h'][(int) $l['h']] ?? [0.0, 0];
+            $lignes[$i] += vpPanier($proH === null ? null : max(0.0, $l['ca'] - $x[0]), $proH === null ? null : max(0, $l['tickets'] - $x[1]), $l['panier']);
+        }
+        $tot += vpPanier($proH === null ? null : max(0.0, $tot['ca'] - $proH['ca']), $proH === null ? null : max(0, $tot['tickets'] - $proH['tk']), $tot['panier']);
+    }
     $meilleure = null; $pire = null;
     foreach ($lignes as $l) {
         if ($meilleure === null || $l['res'] > $meilleure['res']) { $meilleure = $l; }

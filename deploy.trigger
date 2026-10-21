@@ -921,3 +921,5 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T19:58:35Z Tablet : zakładki + kontrola jakości ; partie w tabeli tygodnia
 2026-10-20T20:05:15Z Godziny i ETP grup w tabeli tygodnia
 2026-10-20T20:30:23Z arkusz tygodnia + zakładki Produkcja
+2026-10-21T20:02:10Z plan d'expansion par province FR/NL + panier moyen hors clients pro
+2026-10-21T20:10:55Z scouting : CA reel du reseau garde six heures
