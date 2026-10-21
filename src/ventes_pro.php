@@ -186,6 +186,56 @@ function vpSplit(?array $b, float $ca, int $tickets): array
 }
 
 /**
+ * Le panier moyen hors clients pro (21/10/2026, demande de Sam : « dans le panier moyen sortir les commandes b2b, elles
+ * faussent le panier moyen ») : CA comptoir ÷ tickets comptoir, les tickets pro (TVA valide, vpFiltreTva) retirés du CA
+ * ET des tickets. Mesuré le 20/10 à Gosselies : deux tickets pro pour 1 110,05 € portaient le panier à 17,92 € quand le
+ * comptoir faisait 9,59 € — et le réseau à 13,20 € pour 11,18 €. `panierRetenu` est le panier que le dashboard montre
+ * et classe ; `panier` reste le total (les clients manquants sur le CA total, le PDF, le cockpit le lisent ainsi).
+ * Sans split lu, le panier retenu reste le total et le dit (`panierBase` = total) : un panier pro compris ne se range
+ * jamais à côté d'un panier hors pro. Split lu sans aucun ticket comptoir (que du pro) : base comptoir, panier null.
+ */
+function vpPanier(?float $caComptoir, ?int $ticketsComptoir, ?float $panierTotal): array
+{
+    if ($caComptoir !== null && $ticketsComptoir !== null) {
+        return ['panierRetenu' => $ticketsComptoir > 0 ? round($caComptoir / $ticketsComptoir, 2) : null, 'panierBase' => 'comptoir'];
+    }
+    return ['panierRetenu' => $panierTotal !== null ? round($panierTotal, 2) : null, 'panierBase' => 'total'];
+}
+
+/**
+ * Le pro gravé de plusieurs jours d'un magasin, additionné, sans appel au panel (vpLu) : ['ca', 'tk', 'lus', 'jours',
+ * 'h' => [heure => [CA, tickets]]] — la forme que resProSplit attend. Un jour d'avant SV_DEBUT n'a jamais été lu : il
+ * compte manquant sans relire de relevé. `$arret` : on s'arrête au premier jour manquant (un split incomplet ne sert
+ * pas, autant ne pas lire les relevés suivants). `$lus` : le pro déjà en main, [date => b] (vpJoursLus) — il fait foi,
+ * un jour qui n'y est pas est manquant.
+ */
+function vpProJours(int $sid, array $jours, bool $arret = false, ?array $lus = null): array
+{
+    $p = ['ca' => 0.0, 'tk' => 0, 'lus' => 0, 'jours' => count($jours), 'h' => []];
+    foreach ($jours as $j) {
+        $j = (string) $j;
+        $b = $lus !== null ? ($lus[$j] ?? null) : ((defined('SV_DEBUT') && $j < SV_DEBUT) ? null : vpLu($sid, $j));
+        if ($b === null) { if ($arret) { break; } continue; }
+        $p['lus']++; $p['tk'] += count($b['t']);
+        foreach ($b['t'] as $t) { $p['ca'] += (float) $t[2]; }
+        foreach ((array) ($b['h'] ?? []) as $hh => $v) {
+            $p['h'][(int) $hh] = [($p['h'][(int) $hh][0] ?? 0.0) + (float) $v[0], ($p['h'][(int) $hh][1] ?? 0) + (int) $v[1]];
+        }
+    }
+    return $p;
+}
+
+/**
+ * Le CA et les tickets comptoir d'une étendue dont on a additionné le pro (vpProJours) : le reste du total, seulement si
+ * tous ses jours sont lus — sinon null, le comptoir porterait le pro des jours manquants.
+ */
+function vpComptoirDe(array $p, float $ca, int $tickets): array
+{
+    if ($p['jours'] <= 0 || $p['lus'] !== $p['jours']) { return ['caComptoir' => null, 'ticketsComptoir' => null]; }
+    return ['caComptoir' => round(max(0.0, $ca - $p['ca']), 2), 'ticketsComptoir' => max(0, $tickets - (int) $p['tk'])];
+}
+
+/**
  * Les clients manquants au COMPTOIR : (CA comptoir − objectif) ÷ panier
  * comptoir. Le CA des clients pro ne compte pas — ni pour atteindre l'objectif,
  * ni dans le panier : un client qui manque est un client du comptoir. Positif =

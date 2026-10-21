@@ -423,6 +423,18 @@ plus `proJours` (jours ouverts de l'étendue), `proJoursLus` et `proComplet` : l
 gravés, complétés par au plus 30 listes lues en parallèle, les plus récentes d'abord) ; le comptoir et la part ne sont
 rendus que si tous les jours ouverts sont lus. Les champs valent `null` quand rien n'est lu.
 
+**Le panier moyen hors clients pro (21/10/2026).** Le dashboard magasin montre, classe et compare un panier sans les
+tickets pro (TVA valide) : `panierRetenu` = CA comptoir ÷ tickets comptoir, et `panierBase` = `comptoir` ; tant que le
+pro de la journée ou de l'étendue n'est pas lu en entier, `panierRetenu` = le panier total et `panierBase` = `total`.
+`panier` reste le total (clients manquants sur le CA total, PDF, cockpit). Portés par chaque magasin et le réseau de
+`/exploitation/jour` (réseau : comptoir seulement si tous les magasins ouverts sont lus) et de `/exploitation/periode` ;
+par `j7` (`caComptoir`, `ticketsComptoir` au même moment, `caComptoirJour`, `ticketsComptoirJour`, `panierRetenu`,
+`panierRetenuJour`, `panierBase`) ; par chaque jour de `/ventes/tendance` (`panierComptoir`, `panierBase`) ; par chaque
+heure et `totaux` de `/ventes/stats` ; par chaque période et son `n1` de `/ventes/semaines?…&pro=1` (`caComptoir`,
+`ticketsComptoir`) ; par les mois d'un magasin de `/stores/perf?…&pro={shop}` (`caComptoir`, `ticketsComptoir`,
+`panierRetenu`, `panierBase`) et les trimestres de `/plan`. Le dashboard ne range jamais un panier `comptoir` à côté
+d'un panier `total` : deux côtés lus, hors pro ; sinon les deux pro compris.
+
 
 ### `/production/plan` — la gestion de production (module franchisé)
 
