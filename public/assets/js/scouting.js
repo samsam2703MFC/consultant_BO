@@ -844,7 +844,8 @@ export class Scouting {
     this._pulled = true;
     // Les magasins du réseau (position, CA réel) arrivent à part : la fiche
     // Google peut prendre quelques secondes la première fois.
-    apiGet('/scouting/reseau', 30000).then(r => { this.setState({ magasins: (r && r.magasins) || [], panier: (r && r.panier) || null }); }).catch(e => console.warn('[scouting] /scouting/reseau :', e.message));
+    // 60 s : le premier calcul du CA réel après six heures relit deux ans de P&L au panel
+    apiGet('/scouting/reseau', 60000).then(r => { this.setState({ magasins: (r && r.magasins) || [], panier: (r && r.panier) || null }); }).catch(e => console.warn('[scouting] /scouting/reseau :', e.message));
     if (!d) return;
     this._serverTiles = {};
     (d.tiles || []).forEach(t => { this._serverTiles[t.sector] = t; });
