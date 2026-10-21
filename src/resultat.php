@@ -538,6 +538,12 @@ function exPeriodeCalcul(): array
             $iL = count($lignes) - 1;
             $lignes[$iL] = array_merge($lignes[$iL], vpClientsComptoir($lignes[$iL], (float) $attendu));
         }
+        // Le panier moyen du dashboard (21/10/2026) : hors clients pro quand tous les jours vendus ont leurs tickets pro
+        // lus (resProSplit complet), sinon le total, dit ; `panier` reste le total.
+        if (function_exists('vpPanier')) {
+            $iL = count($lignes) - 1;
+            $lignes[$iL] += vpPanier($lignes[$iL]['caComptoir'] ?? null, $lignes[$iL]['ticketsComptoir'] ?? null, $panier);
+        }
     }
     usort($lignes, static fn ($a, $b) => ($b['realise'] ?? -1) <=> ($a['realise'] ?? -1));
     $out['magasins'] = $lignes;
@@ -609,6 +615,10 @@ function exPeriodeCalcul(): array
             'objectif' => $e['aObjectif'] ? round($e['objectif'], 2) : null, 'ca' => $e['passe'] ? round($e['ca'], 2) : null,
             'passe' => $e['passe'], 'aujourdhui' => $e['aujourdhui']], $parJourR))]
         + resProSplit($proAucun ? null : $proR, $ca, (int) $t['tickets']);
+    // Le panier du réseau hors clients pro : quand tous les jours de tous les magasins ouverts sont lus (21/10/2026).
+    if (function_exists('vpPanier')) {
+        $out['reseau'] += vpPanier($out['reseau']['caComptoir'] ?? null, $out['reseau']['ticketsComptoir'] ?? null, $panierR);
+    }
     return $out;
 }
 
