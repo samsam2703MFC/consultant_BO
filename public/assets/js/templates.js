@@ -3906,6 +3906,31 @@ function tplPeriodes(g, x){
     </div>`;
 }
 
+/** Les six leviers, magasin par magasin — Résultat › Mois (21/10/2026). Les valeurs viennent de valsLeviers(). */
+function tplLeviers(L, x){
+  const { esc } = x;
+  if (L.chargement) { return `<div class="lv-card"><div class="lv-hd"><b>Les six leviers</b></div><div class="lv-vide">Lecture des six leviers…</div></div>`; }
+  if (L.erreur) { return `<div class="lv-card"><div class="lv-hd"><b>Les six leviers</b></div><div class="lv-vide">${esc(L.erreur)}</div></div>`; }
+  const pa = n => n ? `<i class="lv-p ${esc(n)}"></i>` : '';
+  const cas = k => `<td><div class="v${k.mu ? ' mu' : ''}">${esc(k.v)}${pa(k.pas)}</div>`
+    + (k.n1 ? `<div class="n1">${esc(k.n1)}</div>` : '')
+    + (k.puce ? `<span class="lv-c ${esc(k.puce.ton)}">${esc(k.puce.txt)}</span>` : '')
+    + (k.tags || []).map(t => `<span class="lv-tag">${esc(t)}</span>`).join('')
+    + (k.alertes || []).map(t => `<span class="lv-al">${esc(t)}</span>`).join('') + '</td>';
+  const ligne = (l, res) => `<tr${res ? ' class="res"' : ''}><td><b>${esc(l.nom)}</b><span>${esc(l.sous)}</span></td>${l.cases.map(cas).join('')}</tr>`;
+  return `<div class="lv-card">
+    <div class="lv-hd"><b>${esc(L.titre)}</b><span>${esc(L.sousTitre)}</span>
+      <div class="lv-seg">${L.onglets.map(o => `<button ${o.off ? 'disabled title="le cumul commence avec le premier mois clos"' : x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div></div>
+    <div class="lv-defil"><table class="lv-t">
+      <tr><th>Magasin</th>${L.colonnes.map(c => `<th><u style="background:${esc(c.couleur)}${c.vide ? ';opacity:.45' : ''}"></u>${esc(c.nom)}<small>${esc(c.mesure)}</small></th>`).join('')}</tr>
+      ${L.lignes.map(l => ligne(l, false)).join('')}${ligne(L.reseau, true)}
+    </table></div>
+    <div class="lv-leg"><span><b>Pastille</b> — seuils de la <button ${x.A(L.seuilsKpi)} style="border:none;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer">Table KPI</button> :${pa('v')}sous l’alerte${pa('o')}entre alerte et critique${pa('r')}au-delà</span>
+      <span><b>Écart</b> — vert : mieux qu’en ${esc(L.anneeN1)} (plus de clients, meilleure note, coût plus bas)</span></div>
+    ${L.notes.length ? `<ul class="lv-not">${L.notes.map(n => `<li><b>${esc(n.lead)}</b> ${esc(n.txt)}</li>`).join('')}</ul>` : ''}
+  </div>`;
+}
+
 function tplResultatPeriode(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
@@ -4073,6 +4098,7 @@ function tplResultatPeriode(c, x){
     </div>
 
     ${c.rpRentab && c.exRentDet ? tplExploitRentModal(c.exRentDet, x) : ''}
+    ${c.rpMois && c.lev ? tplLeviers(c.lev, x) : ''}
     ${c.rpMois ? `
     <div style="${carte};padding:17px 19px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:12px">
