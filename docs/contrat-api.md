@@ -3788,3 +3788,40 @@ L'écran du plan (Scouting › « Plan d'expansion ») :
 Tous les textes arrivent formés dans la langue du plan ; le serveur n'y ajoute que ses intitulés. Le plan entier : la
 synthèse, puis une page par province (saut de page), puis la méthode. `rapPdfRendu()` accepte `genereLib` (« Gegenereerd
 op ») pour le pied de page.
+
+### `GET /leviers/magasins?annee=AAAA&mois=M` — les six leviers, magasin par magasin (21/10/2026, demande de Sam)
+
+Une réponse, deux écrans : la carte « Les six leviers » de Résultat › Mois (Tableau des magasins) et les six tuiles du
+dashboard magasin en vue Mois. Un chiffre ne peut donc pas différer de l'un à l'autre. `_cache=900` accepté (les deux
+écrans le demandent). Mois futur → le mois en cours ; mois invalide → 400.
+
+Sources, aucune nouvelle :
+
+| Levier | Mesure | Source |
+|---|---|---|
+| Trafic | clients (tickets) — **par jour** au mois, total au cumul | P&L mensuel (`ep_perf`, `/stores/perf`) |
+| Récurrence | — (`vide: true`, laissée vide pour l'instant) | — |
+| Expérience client | note Google · avis | `mar_avis_fiche` (aujourd'hui) ; `mac_google_rating_snapshot` (relevé mensuel du panel, pour un mois passé et le N-1) |
+| Food / Labour / Overhead cost | % du CA | P&L mensuel (`ep_perf`) |
+
+Réponse :
+
+- `leviers[]` — `{cle, nom, type, couleur, mesureMois, mesureCumul, vide}` dans l'ordre du référentiel (`ep_leviers`).
+- `annee`, `mois`, `moisEnCours`, `jours` (jours comptés : à date si le mois est en cours), `cumulAu` (dernier mois clos
+  du cumul, `null` en janvier en cours), `seuils` (les seuils actifs de la Table KPI : `trafic-clients`, `note-google`,
+  `food-cost-pct`, `labour-pct`, `overhead-pct`), `serieMois` (les douze mois des courbes), `googleN1Des` (le premier
+  mois qui aura un N-1 de la note Google).
+- `magasins[]` — `{id, nom, ville, franchise, ouverture, mois, cumul, horsNorme, serie}` :
+  - `mois.trafic {v, n1, delta (%), ecartReseau (%), niveau}` — la pastille du trafic suit l'écart au réseau ;
+  - `mois.food|labour|overhead {v, n1, delta (pt), niveau, nonSaisi?}` — `nonSaisi` : le mois a un P&L mais ce coût à 0 % ;
+  - `mois.xp {v, avis, n1, delta, niveau}` ; `mois.ouverture` : le mois d'ouverture, partiel, ne se compare pas ;
+  - `cumul.moisComparables[]`, `cumul.trafic {v, comp, n1, delta}`, `cumul.food|labour|overhead {v, comp, n1, delta,
+    moisCompares, niveau}` — `v` sur tous les mois, `comp` vs `n1` sur les seuls mois comparables les deux années ;
+  - `horsNorme[] {mois, v}` — food cost à plus de 15 points de la médiane du magasin, à vérifier au P&L ;
+  - `serie.{trafic, food, labour, overhead}[12]` — `null` au mois d'ouverture ou sans P&L.
+- `reseau.mois` / `reseau.cumul` — trafic (moyenne par magasin au mois, total au cumul), coûts pondérés au CA,
+  `comp` vs `n1` à périmètre constant ; note Google pondérée par le nombre d'avis.
+
+Règles : comparer à mois égaux, toujours. L'ouverture vient de Scouting › Magasins du réseau (au mois près), sinon de
+l'année du panel. Des frais généraux à 0 % ne sont pas saisis : ils ne se comparent pas et sortent de la moyenne du
+réseau. Les pastilles : vert sous l'alerte, orange entre alerte et critique, rouge au-delà, dans le sens du KPI.

@@ -9886,6 +9886,154 @@ class App {
     });
   }
   /**
+   * Les six leviers, magasin par magasin, sous le tableau de Résultat › Mois (21/10/2026, Sam).
+   * Une lecture par mois affiché — GET /leviers/magasins, la même réponse que le dashboard
+   * magasin — gardée ensuite ; le serveur la garde un quart d'heure.
+   */
+  levCharge(annee, mois, force){
+    const cle = annee + '-' + mois;
+    if (!this._lev) { this._lev = {}; }
+    if (this._levEnCours === cle || (this._lev[cle] && !force)) { return; }
+    this._levEnCours = cle;
+    readOne('/leviers/magasins?annee=' + annee + '&mois=' + mois + '&_cache=900' + (force ? '&rafraichir=1' : '')).then(d => {
+      this._levEnCours = null;
+      this._lev[cle] = d && d.magasins ? d : { erreur: (d && d.error) || 'La lecture de /leviers/magasins a échoué — voir Diagnostic API.' };
+      this.setState({});
+    });
+  }
+  /**
+   * La carte des six leviers : « Le mois » (le mois choisi, à date s'il est en cours, face au
+   * même mois de l'année d'avant et au réseau) ou « Cumul de l'année » (janvier → le dernier
+   * mois clos, face aux mêmes mois). Chaque cellule dit sa valeur, sa pastille (seuils de la
+   * Table KPI), ce qu'elle compare et l'écart ; quand l'écart porte sur moins de mois que la
+   * valeur (ouverture, frais non saisis, périmètre du réseau), elle dit les deux chiffres
+   * comparés. La Récurrence reste vide : elle attend sa mesure.
+   */
+  valsLeviers(du){
+    const S = this.state;
+    const annee = +du.slice(0, 4), mois = +du.slice(5, 7);
+    this.levCharge(annee, mois);
+    const L = (this._lev || {})[annee + '-' + mois];
+    const out = { chargement: !L, erreur: L && L.erreur ? L.erreur : '' };
+    if (!L || L.erreur) { return out; }
+    if (!L.magasins.length) { out.erreur = 'Aucun magasin n’a de P&L pour ce mois : les six leviers se liront quand il sera saisi.'; return out; }
+    const vue = S.levVue === 'mois' || !L.cumulAu ? 'mois' : 'cumul', cumul = vue === 'cumul';
+    out.onglets = [['mois', 'Le mois'], ['cumul', 'Cumul de l’année']].map(o => ({ nom: o[1], on: vue === o[0],
+      off: o[0] === 'cumul' && !L.cumulAu, go: () => this.setState({ levVue: o[0] }) }));
+
+    const nf = n => Math.round(n).toLocaleString('fr-BE');
+    const dc = (n, d) => n.toFixed(d).replace('.', ',');
+    const sg = (n, d, u) => (n > 0 ? '+' : (n < 0 ? '−' : '±')) + dc(Math.abs(n), d) + u;
+    const nomMois = (m, long) => new Date(2000, m - 1, 15).toLocaleDateString('fr-BE', { month: long ? 'long' : 'short' });
+    const moisAn = (ym, long) => nomMois(+ym.slice(5, 7), long) + ' ' + ym.slice(0, 4);
+    // L'écart est bon quand il y a plus de clients, une meilleure note, un coût plus bas.
+    const puce = (d, dec, u, hausseBonne) => d == null ? null : { txt: sg(d, dec, u), ton: d === 0 ? 'z' : ((d > 0) === hausseBonne ? 'b' : 'm') };
+    const neutre = txt => ({ txt, ton: 'z' });
+    const pct = v => dc(v, 1) + ' %';
+    const etendue = l => l.length ? nomMois(l[0]) + ' → ' + nomMois(l[l.length - 1]) : '';
+    const xpN1 = L.googleN1Des ? neutre('N-1 : ' + moisAn(L.googleN1Des)) : neutre('pas de N-1');
+
+    const colonnes = (L.leviers || []).map(l => ({ cle: l.cle, nom: l.nom, couleur: l.couleur, vide: l.vide,
+      mesure: l.vide ? 'à définir' : (l.cle === 'trafic' ? (cumul ? 'clients' : 'clients par jour') : (l.cle === 'xp' ? 'note Google · avis' : l.mesureMois)) }));
+    const COUTS = ['food', 'labour', 'overhead'];
+    const NOM_COUT = { food: 'coût matière', labour: 'main-d’œuvre', overhead: 'frais généraux' };
+
+    const celluleMag = (g, cle) => {
+      const ouvLib = g.ouverture ? 'ouvert en ' + moisAn(g.ouverture, true) : 'pas de N-1';
+      if (cle === 'xp') {
+        const x = (cumul ? g.cumul : g.mois).xp || {};
+        if (x.v == null) { return { v: '—', mu: true, n1: cumul ? 'pas de fiche Google' : 'pas de relevé ce mois-là' }; }
+        return { v: dc(x.v, 1) + ' ★', pas: x.niveau, n1: nf(x.avis || 0) + ' avis', puce: x.n1 != null ? puce(x.delta, 2, '', true) : xpN1 };
+      }
+      if (!cumul) {
+        const x = g.mois[cle] || {};
+        if (cle === 'trafic') {
+          if (x.v == null) { return { v: '—', mu: true, n1: 'pas de P&L ce mois' }; }
+          if (g.mois.ouverture) { return { v: nf(x.v), n1: 'mois d’ouverture', puce: neutre('pas comparable') }; }
+          const tags = x.ecartReseau != null ? ['réseau ' + sg(x.ecartReseau, 0, ' %')] : [];
+          if (x.n1 == null) { return { v: nf(x.v), pas: x.niveau, n1: ouvLib, puce: neutre('pas de N-1'), tags }; }
+          return { v: nf(x.v), pas: x.niveau, n1: 'N-1 ' + nf(x.n1), puce: puce(x.delta, 1, ' %', true), tags };
+        }
+        const ym = L.annee + '-' + String(L.mois).padStart(2, '0'), ym1 = (L.annee - 1) + '-' + String(L.mois).padStart(2, '0');
+        const alertes = cle === 'food' ? (g.horsNorme || []).filter(h => h.mois === ym || h.mois === ym1).map(h => '⚠ ' + moisAn(h.mois) + ' : ' + pct(h.v) + ' — à vérifier') : [];
+        if (x.nonSaisi) { return { v: '—', mu: true, n1: 'pas saisi', puce: neutre('hors du réseau') }; }
+        if (x.v == null) { return { v: '—', mu: true, n1: 'pas de P&L ce mois' }; }
+        if (x.n1 == null) { return { v: pct(x.v), pas: x.niveau, n1: g.mois.ouverture ? 'mois d’ouverture' : ouvLib, puce: neutre(g.mois.ouverture ? 'pas comparable' : 'pas de N-1'), alertes }; }
+        return { v: pct(x.v), pas: x.niveau, n1: 'N-1 ' + pct(x.n1), puce: puce(x.delta, 1, ' pt', false), alertes };
+      }
+      const c = g.cumul, mc = c.moisComparables || [];
+      const memesMois = mc.length && mc.length < L.cumulAu ? 'mêmes mois : ' + etendue(mc) : '';
+      if (cle === 'trafic') {
+        const x = c.trafic;
+        if (x.comp == null) { return { v: nf(x.v), n1: ouvLib, puce: neutre('pas de N-1') }; }
+        if (memesMois) { return { v: nf(x.v), n1: nf(x.comp) + ' vs ' + nf(x.n1), puce: puce(x.delta, 1, ' %', true), tags: [memesMois] }; }
+        return { v: nf(x.v), n1: 'N-1 ' + nf(x.n1), puce: puce(x.delta, 1, ' %', true) };
+      }
+      const x = c[cle] || {};
+      const alertes = cle === 'food' ? (g.horsNorme || []).filter(h => +h.mois.slice(5, 7) <= L.cumulAu).map(h => '⚠ ' + moisAn(h.mois) + ' : ' + pct(h.v)) : [];
+      if (x.v == null) { return { v: '—', mu: true, n1: 'pas saisi' }; }
+      if (x.comp == null || x.n1 == null) { return { v: pct(x.v), pas: x.niveau, n1: mc.length ? 'pas saisi l’an dernier' : ouvLib, puce: neutre('pas de N-1'), alertes }; }
+      const tag = x.moisCompares < mc.length ? 'sur ' + x.moisCompares + ' mois saisis les deux années' : memesMois;
+      if (tag) { return { v: pct(x.v), pas: x.niveau, n1: pct(x.comp) + ' vs ' + pct(x.n1), puce: puce(x.delta, 1, ' pt', false), tags: [tag], alertes }; }
+      return { v: pct(x.v), pas: x.niveau, n1: 'N-1 ' + pct(x.n1), puce: puce(x.delta, 1, ' pt', false), alertes };
+    };
+
+    const R = cumul ? L.reseau.cumul : L.reseau.mois;
+    const nMag = L.magasins.length;
+    const celluleRes = cle => {
+      const x = R[cle] || {};
+      if (cle === 'xp') { return x.v == null ? { v: '—', mu: true, n1: 'pas de relevé ce mois-là' } : { v: dc(x.v, 2) + ' ★', pas: x.niveau, n1: nf(x.avis || 0) + ' avis', puce: xpN1 }; }
+      if (x.v == null) { return { v: '—', mu: true }; }
+      const v = cle === 'trafic' ? nf(x.v) : pct(x.v);
+      const f = n => cle === 'trafic' ? nf(n) : pct(n);
+      const p = cle === 'trafic' ? puce(x.delta, 1, ' %', true) : puce(x.delta, 1, ' pt', false);
+      if (x.comp == null || x.n1 == null) { return { v, pas: x.niveau, n1: 'pas de N-1' }; }
+      return { v, pas: x.niveau, n1: f(x.comp) + ' vs ' + f(x.n1), puce: p, tags: ['à périmètre constant'] };
+    };
+    const cases = cel => colonnes.map(c => c.vide ? { v: '—', mu: true, tags: ['à définir'] } : cel(c.cle));
+    out.colonnes = colonnes;
+    out.lignes = L.magasins.filter(g => cumul ? g.cumul : true).map(g => ({ nom: g.ville || g.nom, sous: g.nom + (g.franchise ? ' · ' + g.franchise : ''), cases: cases(cle => celluleMag(g, cle)) }));
+    out.reseau = { nom: 'Réseau', sous: nMag + ' magasins · ' + (cumul ? 'total clients' : 'moyenne par magasin') + ' · coûts pondérés au CA', cases: cases(celluleRes) };
+
+    const moisLib = moisAn(L.annee + '-' + String(L.mois).padStart(2, '0'), true);
+    if (cumul) {
+      out.titre = 'Les six leviers — cumul ' + L.annee;
+      out.sousTitre = 'janvier → ' + nomMois(L.cumulAu, true) + ', face aux mêmes mois de ' + (L.annee - 1) + (L.moisEnCours ? ' · le mois en cours n’entre pas' : '');
+    } else {
+      out.titre = 'Les six leviers — ' + moisLib;
+      out.sousTitre = (L.moisEnCours ? 'à date (' + L.jours + ' jours), ' : '') + 'face à ' + moisAn((L.annee - 1) + '-' + String(L.mois).padStart(2, '0'), true) + ' et au réseau';
+    }
+    out.anneeN1 = L.annee - 1;
+
+    // Les notes : ce qui rend une comparaison partielle, nommé magasin par magasin.
+    const notes = [];
+    const nomG = g => g.ville || g.nom;
+    if (cumul) {
+      const part = L.magasins.filter(g => g.cumul && (g.cumul.moisComparables || []).length > 0 && g.cumul.moisComparables.length < L.cumulAu);
+      const sans = L.magasins.filter(g => g.cumul && !(g.cumul.moisComparables || []).length);
+      if (part.length || sans.length) {
+        notes.push({ lead: 'Comparaison à mois égaux.', txt: [...part.map(g => nomG(g) + (g.ouverture ? ' (ouvert en ' + moisAn(g.ouverture, true) + ')' : '') + ' se compare sur ' + etendue(g.cumul.moisComparables)),
+          ...sans.map(g => nomG(g) + (g.ouverture ? ' (ouvert en ' + moisAn(g.ouverture, true) + ')' : '') + ' n’a pas encore de N-1')].join(' ; ') + '. Le réseau compare les magasins sur leurs mois communs.' });
+      }
+      const oh = L.magasins.filter(g => g.cumul && g.cumul.overhead && g.cumul.overhead.comp != null && g.cumul.overhead.moisCompares < (g.cumul.moisComparables || []).length);
+      if (oh.length) { notes.push({ lead: 'Frais généraux :', txt: 'à 0 % certains mois du P&L, ils n’étaient pas saisis — l’écart ne porte que sur les mois saisis les deux années (' + oh.map(g => nomG(g) + ' ' + g.cumul.overhead.moisCompares + ' mois').join(', ') + ').' }); }
+    } else {
+      const sans = L.magasins.filter(g => !g.mois.ouverture && g.mois.trafic.v != null && g.mois.trafic.n1 == null);
+      const ouv = L.magasins.filter(g => g.mois.ouverture);
+      if (sans.length || ouv.length) { notes.push({ lead: 'Comparaison au même mois.', txt: [...ouv.map(g => nomG(g) + ' ouvre ce mois-là : mois partiel, il ne se compare pas'), ...sans.map(g => nomG(g) + (g.ouverture ? ' (ouvert en ' + moisAn(g.ouverture, true) + ')' : '') + ' n’a pas encore de N-1')].join(' ; ') + '. Le réseau face au N-1 ne compte que les magasins comparables.' }); }
+      const ns = L.magasins.filter(g => COUTS.some(k => g.mois[k] && g.mois[k].nonSaisi));
+      if (ns.length) { notes.push({ lead: 'Pas encore saisi :', txt: ns.map(g => nomG(g) + ' — ' + COUTS.filter(k => g.mois[k] && g.mois[k].nonSaisi).map(k => NOM_COUT[k]).join(', ')).join(' ; ') + ' (à 0 % au P&L du mois). ' + (ns.length > 1 ? 'Ces magasins sortent' : 'Il sort') + ' de la moyenne du réseau pour ce coût.' }); }
+      if (L.moisEnCours) { notes.push({ lead: moisLib.charAt(0).toUpperCase() + moisLib.slice(1) + ' est en cours :', txt: 'chiffres à date (' + L.jours + ' jours) ; le trafic se lit en clients par jour, pour comparer à un mois plein. La pastille du trafic suit l’écart au réseau.' }); }
+    }
+    const hors = L.magasins.flatMap(g => (g.horsNorme || []).map(h => nomG(g) + ' ' + moisAn(h.mois, true) + ' (' + pct(h.v) + ')'));
+    if (hors.length) { notes.push({ lead: 'Food cost :', txt: (hors.length > 1 ? hors.length + ' mois hors norme' : 'un mois hors norme') + ' dans le P&L du panel, à vérifier : ' + hors.join(', ') + '.' }); }
+    notes.push({ lead: 'Expérience client', txt: '= la note Google de la fiche' + (L.googleN1Des ? ' ; elle se relève chaque mois, le premier N-1 viendra en ' + moisAn(L.googleN1Des, true) + '.' : ' ; pas encore de relevé mensuel, donc pas de N-1.') });
+    if (colonnes.some(c => c.vide)) { notes.push({ lead: 'Récurrence :', txt: 'laissée vide pour l’instant — la colonne attend sa mesure.' }); }
+    out.notes = notes;
+    out.seuilsKpi = () => this.setState({ screen: 'kpiTable' });
+    return out;
+  }
+  /**
    * Les périodes de la semaine d'un magasin — matin 6 – 10 h, midi 11 – 14 h,
    * après-midi 15 – 19 h — dans le drop de Résultat › Semaine.
    *
@@ -10095,10 +10243,12 @@ class App {
     common.rpMois = vue === 'mois'; common.rpSemaine = vue === 'semaine';
     common.rpLignes = []; common.rpDetail = null; common.rpTuiles = []; common.rpJours = []; common.rpReseau = null;
     common.rpMaj = S.rpMaj === 'en-cours' ? 'lecture…' : (S.rpMaj ? 'lu à ' + S.rpMaj : '');
-    common.rpRefresh = () => this.rpCharge(true, undefined, true);
+    common.rpRefresh = () => { this.rpCharge(true, undefined, true); if (vue === 'mois' && r && r.du) { this.levCharge(+r.du.slice(0, 4), +r.du.slice(5, 7), true); } };
     common.rpRegler = () => this.setState({ screen: 'budgetparam' });
+    common.lev = null;
     common.rpChargementTxt = vue === 'semaine' ? 'Lecture de la semaine…' : 'Lecture du mois…';
     if (!r || common.rpErreur) { return; }
+    if (vue === 'mois' && r.du) { common.lev = this.valsLeviers(r.du); }
 
     const seuils = r.seuils || { food: 32, labour: 33, overhead: 13.5 };
     const fE = n => this.fE(n);
