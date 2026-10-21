@@ -925,3 +925,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-21T20:10:55Z scouting : CA reel du reseau garde six heures
 2026-10-21T20:11:18Z stałe partie 📌 na żywo
 2026-10-21T20:19:36Z promotions relues au panel
+2026-10-21T20:34:20Z promotions : structure API portions
