@@ -923,3 +923,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-20T20:30:23Z arkusz tygodnia + zakładki Produkcja
 2026-10-21T20:02:10Z plan d'expansion par province FR/NL + panier moyen hors clients pro
 2026-10-21T20:10:55Z scouting : CA reel du reseau garde six heures
+2026-10-21T20:11:18Z stałe partie 📌 na żywo
