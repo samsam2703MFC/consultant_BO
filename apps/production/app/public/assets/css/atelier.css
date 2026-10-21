@@ -1462,3 +1462,6 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-sheet .tfb-sheet-stock { width: 92px; }
 .tfb-sheet .tfb-sheet-batch { width: 112px; }
 .tfb-sheet .input-group-text { padding: 0 6px; font-size: 11px; }
+/* 📌 Miejsce przypiętego dnia bez partii (partii tygodnia jest mniej niż miejsca). */
+.tfb-week-pinslot { margin-top: 3px; padding: 3px 6px; border: 1px dashed var(--at-line-2, var(--at-line)); border-radius: 4px; color: var(--at-muted, #6c757d); font-size: 11px; line-height: 1.3; overflow-wrap: anywhere; }
+.tfb-week-pinslot span { font-weight: 600; }

@@ -2,7 +2,8 @@
  * Arkusz tygodnia / Feuille de production de la semaine : toute la production de la semaine sur une feuille,
  * une ligne par produit — stock, disponible, min., max., commandes, réassort, à produire, pièces par lot, lots,
  * heures, jours ; par groupe : heures → ETP. Règle : réassort si disponible < min. (jusqu'au max.), à produire
- * = commandes + réassort (+ lots fixes 📌), arrondi aux lots entiers. Lecture : GET /planning/sheet ; dans la
+ * = commandes + réassort, arrondi aux lots entiers ; les lots vont d'abord sur les jours 📌, le reste attend dans
+ * « À produire ». Lecture : GET /planning/sheet ; dans la
  * ligne : mode, stocks min./max. et lot → PATCH /produits/items/{id}/settings, puis la feuille est recalculée.
  */
 (async function () {
@@ -64,18 +65,17 @@
             <div class="tfb-head-actions"><button type="button" class="btn btn-outline-secondary btn-sm" data-lang-switch>${esc(t('lang_switch'))}</button></div></div>`;
     }
 
-    // Obliczenie w jednej linii : zamówienia + uzupełnienie (+ stałe partie) = potrzeba → partie → do produkcji.
+    // Obliczenie w jednej linii : zamówienia + uzupełnienie = potrzeba → partie → do produkcji.
     function calc(r) {
         const parts = [];
         if (r.orders > 0) parts.push(`🚚 ${q(r, r.orders)}`);
         if (r.refill > 0) parts.push(`📦 ${q(r, r.refill)} (${t('calc_refill', {max: q(r, r.stock_max), available: q(r, r.available)})})`);
-        if (r.fixed > 0) parts.push(`📌 ${q(r, r.fixed)}`);
         if (!parts.length) {
             if (r.to_produce > 0) return `= ${q(r, r.to_produce)}`;
             return r.mode === 'MTS' && r.available !== null
                 ? t(r.stock_max === null ? 'calc_no_max' : 'calc_enough', {available: q(r, r.available), min: q(r, r.stock_min ?? r.stock_max)}) : '';
         }
-        const need = r.orders + r.refill + r.fixed;
+        const need = r.orders + r.refill;
         let s = parts.join(' + ') + (parts.length > 1 ? ` = ${q(r, need)}` : '');
         if (r.batch && need > 0) {
             s += ` → ${pieces(r, need)} ÷ ${pieces(r, r.batch)} = ${fmt(need / r.batch, 2)} → ${t('calc_batches', {n: r.batches})} = ${pieces(r, r.to_produce)}`;
@@ -108,7 +108,6 @@
             const mts = r.mode === 'MTS';
             const low = mts && r.available !== null && r.stock_min !== null && r.available < r.stock_min;
             const days = r.days.map(d => `<span title="${esc(d)}">${esc(dayName(d))}</span>`).join(', ');
-            const placedBatches = r.batch ? r.placed / r.batch : null;
             return sep + `<tr data-item="${r.item_id}" class="${r.to_produce > 0 ? '' : 'is-idle'}">
                 <td><a href="${esc(api.root)}/workshop/products#/item/${r.item_id}/4"><strong>${esc(r.name)}</strong></a>${r.item_type === 'semi' ? ` <span class="badge bg-light text-dark">${esc(t('semi'))}</span>` : ''}
                     <div class="tfb-sheet-calc">${esc(calc(r))}</div></td>
@@ -116,15 +115,15 @@
                     <input class="form-check-input" type="checkbox" role="switch" data-mode ${mts ? 'checked' : ''} ${r.never_frozen || !editable ? 'disabled' : ''} aria-label="${esc(t('mode_mts'))}"></div>
                     <div class="small text-muted">${esc(t(mts ? 'mode_mts' : 'mode_mto'))}</div>` : '<span class="text-muted">—</span>'}</td>
                 <td class="text-end" title="${esc(pieces(r, r.stock))}">${q(r, r.stock)}</td>
-                <td class="text-end ${low ? 'text-danger fw-semibold' : ''}" title="${esc(r.available === null ? '' : t('available_help', {stock: pieces(r, r.stock), production: pieces(r, r.in_production), orders: pieces(r, r.orders_from_stock)}))}">${mts ? q(r, r.available) : '—'}</td>
+                <td class="text-end ${low ? 'text-danger fw-semibold' : ''}" title="${esc(r.available === null ? '' : t('available_help', {stock: pieces(r, r.stock), production: pieces(r, r.in_production), orders: pieces(r, r.orders_from_stock), made: pieces(r, r.made)}))}">${mts ? q(r, r.available) : '—'}${mts && r.made > 0 ? `<div class="small text-muted">${esc(t('made_week', {qty: q(r, r.made)}))}</div>` : ''}</td>
                 <td>${mts ? stockInput(r, 'stock_min', editable) : '<span class="text-muted">—</span>'}</td>
                 <td>${mts ? stockInput(r, 'stock_max', editable) : '<span class="text-muted">—</span>'}</td>
                 <td class="text-end">${r.orders > 0 ? q(r, r.orders) : '—'}</td>
-                <td class="text-end">${r.refill > 0 ? q(r, r.refill) : '—'}${r.fixed > 0 ? `<div class="small text-muted">📌 ${q(r, r.fixed)}</div>` : ''}</td>
+                <td class="text-end">${r.refill > 0 ? q(r, r.refill) : '—'}</td>
                 <td class="text-end"><strong>${r.to_produce > 0 ? q(r, r.to_produce) : '—'}</strong>${r.to_produce > 0 && cartons(r) ? `<div class="small text-muted">${esc(pieces(r, r.to_produce))}</div>` : ''}</td>
                 <td><div class="input-group input-group-sm tfb-sheet-batch"><input class="form-control" inputmode="decimal" data-batch value="${r.batch ?? ''}" placeholder="—" ${editable ? '' : 'disabled'}
                     aria-label="${esc(t('col_batch'))}"><span class="input-group-text">${esc(r.unit)}</span></div>${r.batch && cartons(r) ? `<div class="small text-muted">${esc(q(r, r.batch))}</div>` : ''}</td>
-                <td class="text-end"><strong class="tfb-sheet-batches">${r.batches ?? '—'}</strong>${r.batches ? `<div class="small text-muted">${esc(t('placed', {n: fmt(Math.min(placedBatches, r.batches), placedBatches % 1 > 0.001 ? 1 : 0)}))}</div>` : ''}</td>
+                <td class="text-end"><strong class="tfb-sheet-batches">${r.batches ?? (r.to_produce > 0 ? q(r, r.to_produce) : '—')}</strong>${split(r)}</td>
                 <td class="text-end">${r.hours > 0 ? fmt(r.hours, 1) + ' h' : '—'}<div class="small text-muted">${days}</div></td>
             </tr>`;
         }).join('');
@@ -152,6 +151,17 @@
                 <tfoot><tr class="tfb-week-table-total"><th colspan="12">${esc(t('total'))} <span class="tfb-week-fte">${esc(need(total))} · ${esc(t('total_batches', {n: totalBatches}))}</span></th></tr></tfoot>
             </table></div></div></div>`;
         bind();
+    }
+
+    // Partie tygodnia : 📌 na przypiętych dniach (z miejsca), ułożone ręcznie, ⏳ czekają w « Do zrobienia ».
+    function split(r) {
+        const n = (v) => r.batch ? fmt(v / r.batch, Math.abs(v / r.batch % 1) > 0.001 ? 1 : 0) : q(r, v);
+        const room = (r.pins || []).filter(x => !x.past && !x.released).reduce((a, x) => a + x.room, 0);
+        const lines = [];
+        if (room > 0 || r.pinned > 0) lines.push(['pinned', {n: n(r.pinned), room: n(room)}]);
+        if (r.placed - r.pinned > 0.001) lines.push(['placed', {n: n(r.placed - r.pinned)}]);
+        if (r.waiting > 0.001) lines.push(['waiting', {n: n(r.waiting)}]);
+        return lines.map(([k, p]) => `<div class="small ${k === 'waiting' ? 'text-warning-emphasis' : 'text-muted'}" title="${esc(t('split_' + k + '_title', p))}">${esc(t('split_' + k, p))}</div>`).join('');
     }
 
     function stockInput(r, field, editable) {

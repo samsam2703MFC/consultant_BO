@@ -401,7 +401,8 @@ $pdo->exec("INSERT INTO customer_order (id, id_customer, status, expected_shippi
     (903, 1, 1, '{$d1}', NOW() - INTERVAL 3 DAY, NULL), (904, 1, 5, '{$d1}', NOW(), NULL)");
 $pdo->exec("INSERT INTO customer_order_product (id_order, id_product, quantity_carton, purchase_price) VALUES
     (901, 500, 10, 30), (902, 500, 5, 30), (903, 501, 3, 40), (904, 500, 99, 30)");
-$pdo->exec("INSERT INTO carton_stock (id_carton, batch_number, id_product, status) VALUES (1, 1, 501, 1), (2, 1, 501, 1), (3, 1, 501, 1), (4, 1, 501, 3)");
+$pdo->exec("INSERT INTO carton_stock (id_carton, batch_number, id_product, status, date_add) VALUES (1, 1, 501, 1, CURDATE() - INTERVAL 30 DAY), (2, 1, 501, 1, CURDATE() - INTERVAL 30 DAY),
+    (3, 1, 501, 1, CURDATE() - INTERVAL 30 DAY), (4, 1, 501, 3, CURDATE() - INTERVAL 30 DAY)");
 $pdo->exec("INSERT INTO document_wdt (id, doc_num, id_customer, established_date, currency) VALUES (1, 'W/1', 1, CURDATE() - INTERVAL 10 DAY, 'eur')");
 $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, name, quantity, price_carton) VALUES (1, 501, 'Croissant test', 42, 40)");
 // Stany z ostatnich 6 tygodni (krok « Tryb i zapasy ») : 42 kartony / 6 tyg. = 7 kart./tydz. → min 1 tydz., maks 3 tyg.
@@ -450,6 +451,13 @@ check($m['free_stock'] == 180.0 && $m['available'] == 0.0 && $m['min'] == 60.0 &
     'MTS (simple rule): free stock 3 cartons − 3 ordered = 0 available, below min 60 → refill up to max 300');
 check($byItem[$itemId]['qty_batch'] == 20.0 && $byItem[$itemId]['qty_proposed'] == 320.0 && $byItem[$itemId]['batches'] === 2,
     'week rounded to whole batches: 300 → 2 batches of 160 = 320 (20 more for stock)');
+// Partie zrobione w tym okresie (kartony dodane od początku okresu) nie zmniejszają potrzeby okresu.
+$pdo->exec("INSERT INTO carton_stock (id_carton, batch_number, id_product, status, date_add) VALUES (5, 2, 501, 1, CURDATE()), (6, 2, 501, 1, CURDATE())");
+[, $made] = $call('GET', '/planning/demand' . $period, null, $lead);
+$madeLine = array_column($made['data']['lines'], null, 'item_id')[$itemId] ?? null;
+check($madeLine && $madeLine['mts']['free_stock'] == 300.0 && $madeLine['mts']['made'] == 120.0 && $madeLine['mts']['available'] == 0.0 && $madeLine['qty_mts'] == 300.0,
+    'cartons made this week stay counted in the week: 2 more cartons in stock, the need of the week does not drop');
+$pdo->exec('DELETE FROM carton_stock WHERE id_carton IN (5, 6)');
 check(abs($byItem[$semiId]['qty_semi'] - 320 / 60 * 2.0 * 1.01) < 0.001 && $byItem[$semiId]['qty_proposed'] == 15.0 && $byItem[$semiId]['parents'][0]['item_id'] === $itemId,
     'semi-finished from the BOM: 5.33 cartons × 2 kg + 1 % loss (P2) = 10.77 kg, rounded to a 5 kg batch multiple');
 check(in_array('FREEZER_CAPACITY_NOT_SET', array_column($b['data']['warnings'], 'code'), true), 'freezer capacity not set is reported');
@@ -1022,40 +1030,82 @@ check($s === 200 && $bp && array_column($bp['slots'], 'time', 'day')[$pinDay] ==
 [$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'pinned' => true], $access);
 $bp = array_column($b['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
 check($s === 200 && $bp && count($bp['pins']) === 1 && $bp['pins'][0]['weekday'] === (int) date('N', strtotime($pinDay)) && $bp['pins'][0]['quantity'] == $pinQty
-    && $bp['fixed_qty'] == $pinQty && array_column($b['data']['pins'], 'item_id') === [$itemId] && $bp['pins'][0]['time'] === '05:30',
+    && $bp['fixed_qty'] == $pinQty && $bp['pins'][0]['filled'] == $pinQty && array_column($b['data']['pins'], 'item_id') === [$itemId] && $bp['pins'][0]['time'] === '05:30',
     'pin: the block becomes a fixed batch, every week on this weekday at its start time');
+// Tydzień później : partie tygodnia (na żywo) wchodzą najpierw na przypięty dzień, do miejsca (ilość przypięta w pełnych
+// partiach) ; nadmiar czeka w « Do zrobienia » ; przypięcie nie dokłada produkcji.
 $nextDay = date('Y-m-d', strtotime($pinDay . ' +7 days'));
+$room = ceil($pinQty / 160) * 160;
+$onDay = fn($p, $day) => $p ? array_sum(array_map(fn($x) => $x['day'] === $day ? $x['quantity'] : 0, $p['slots'])) : 0;
+$need = function (string $day) use ($call, $access, $itemId) {
+    [, $w] = $call('GET', "/planning/week?date={$day}", null, $access);
+    [, $dm] = $call('GET', '/planning/demand?from=' . $w['data']['week_start'] . '&to=' . $w['data']['week_end'], null, $access);
+    $lines = array_filter($dm['data']['lines'] ?? [], fn($l) => $l['item_id'] === $itemId);
+    return [array_sum(array_column($lines, 'qty_proposed')), array_sum(array_column($lines, 'qty_fixed'))];
+};
+// Potrzeba na następny tydzień : wysoki stan min./maks. (uzupełnienie kilku partii).
+$pdo->exec("UPDATE tfb_prod_product_settings SET stock_min = 5000, stock_max = 5000 WHERE id_item = {$itemId}");
+[$qNext, $fixedNext] = $need($nextDay);
 [$s, $n] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
 $np = array_column($n['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
-$onDay = fn($p, $day) => $p ? array_sum(array_map(fn($x) => $x['day'] === $day ? $x['quantity'] : 0, $p['slots'])) : 0;
 $noShift = in_array('FIXED_NO_SHIFT', array_column($n['data']['warnings'] ?? [], 'code'), true);
-check($s === 200 && $n['data']['source']['type'] === 'demand' && $np && $np['quantity'] >= $pinQty
-    && ($onDay($np, $nextDay) == $pinQty || ($noShift && $np['unassigned_qty'] >= $pinQty)),
-    'next week: the fixed batch is on its day by itself (waits in « to do » when the group has no shift that day)');
-check($onDay($np, $nextDay) == 0 || array_column($np['slots'], 'time', 'day')[$nextDay] === '05:30', 'next week: the fixed batch keeps its start time');
+$expect = $noShift ? 0.0 : min($room, $qNext);
+check($s === 200 && $n['data']['source']['type'] === 'demand' && $fixedNext == 0 && $qNext > $room && $np && $np['quantity'] == $qNext,
+    'a pin adds no production: the week quantity is the live need (orders + refill, whole batches)');
+check($onDay($np, $nextDay) == $expect && abs($np['unassigned_qty'] - ($qNext - $expect)) < 0.001 && $np['pins'][0]['filled'] == $expect && $np['fixed_qty'] == $expect,
+    'next week: the batches of the week go first on the pinned day (up to its room), the rest waits in « to do »');
+check($onDay($np, $nextDay) == 0 || array_column($np['slots'], 'time', 'day')[$nextDay] === '05:30', 'next week: the pinned day keeps its start time');
 [$s, $b] = $call('POST', '/planning/week/time', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'time' => '06:00'], $access);
 check($s === 200 && array_column($b['data']['products'], null, 'item_id')[$itemId]['pins'][0]['time'] === '06:00', 'changing the time of a pinned block changes the fixed batch time');
 [$s, $n1] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
 $np1 = array_column($n1['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
 check($onDay($np1, $nextDay) == 0 || array_column($np1['slots'], 'time', 'day')[$nextDay] === '06:00', '… also in the later week where the batch is already placed');
-[$s, $dm] = $call('GET', '/planning/demand?from=' . $n['data']['week_start'] . '&to=' . $n['data']['week_end'], null, $access);
-check(array_sum(array_map(fn($l) => $l['item_id'] === $itemId ? $l['qty_proposed'] : 0, $dm['data']['lines'] ?? [])) >= $pinQty - 0.001,
-    'proposal: fixed batches are the minimum of the week (the rest above orders and refill goes to stock)');
-if ($onDay($np, $nextDay) > 0) {
-    $call('POST', '/planning/week/move', ['date' => $nextDay, 'item_id' => $itemId, 'from' => $nextDay, 'to' => null], $access);
-    [$s, $n2] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
+if (!$noShift) {
+    $weekday = (int) date('N', strtotime($pinDay));
+    // Więcej miejsca niż partii : dzień dostaje wszystkie partie tygodnia, nic nie czeka, miejsce zostaje częściowo wolne.
+    $pdo->exec("UPDATE tfb_prod_fixed_batch SET quantity = " . ($qNext + 3 * 160) . " WHERE id_item = {$itemId} AND weekday = {$weekday}");
+    [, $n2] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
     $np2 = array_column($n2['data']['products'], null, 'item_id')[$itemId];
-    check($onDay($np2, $nextDay) == 0 && $np2['unassigned_qty'] >= $pinQty, 'a fixed batch taken off its day in one week does not come back that week');
-    $call('POST', '/planning/week/move', ['date' => $nextDay, 'item_id' => $itemId, 'to' => $nextDay, 'quantity' => $pinQty], $access);
+    check($onDay($np2, $nextDay) == $qNext && $np2['unassigned_qty'] == 0 && $np2['pins'][0]['filled'] == $qNext && $np2['pins'][0]['room'] == $qNext + 3 * 160,
+        'not enough batches for the pinned room: the day gets what the week needs, the rest of the room stays free');
+    // Na żywo : potrzeba spada do zera (stan maks. = 0) → przypięty dzień pustoszeje ; wraca, gdy potrzeba wraca.
+    $pdo->exec("UPDATE tfb_prod_product_settings SET stock_min = NULL, stock_max = 0 WHERE id_item = {$itemId}");
+    [, $n3] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
+    $np3 = array_column($n3['data']['products'], null, 'item_id')[$itemId] ?? null;
+    $emptied = (float) $pdo->query("SELECT COALESCE(SUM(quantity), 0) FROM tfb_prod_week_slot WHERE week_start = '{$n3['data']['week_start']}' AND id_item = {$itemId} AND work_date = '{$nextDay}'")->fetchColumn();
+    $pdo->exec("UPDATE tfb_prod_product_settings SET stock_min = 5000, stock_max = 5000 WHERE id_item = {$itemId}");
+    [, $n4] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
+    $np4 = array_column($n4['data']['products'], null, 'item_id')[$itemId];
+    check($np3 === null && $emptied == 0 && $onDay($np4, $nextDay) == $qNext, 'live: no need → the pinned day is empty; the need comes back → the batches go back on the pinned day');
+    $pdo->exec("UPDATE tfb_prod_fixed_batch SET quantity = {$pinQty} WHERE id_item = {$itemId} AND weekday = {$weekday}");
+    [, $n5] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
+    $np5 = array_column($n5['data']['products'], null, 'item_id')[$itemId];
+    check($onDay($np5, $nextDay) == $expect && abs($np5['unassigned_qty'] - ($qNext - $expect)) < 0.001, 'smaller pin again: the surplus is back in « to do »');
+    // Partia zdjęta ręcznie z przypiętego dnia : w tym tygodniu dzień nie bierze już partii sam ; « Ułóż tydzień » znów go wypełnia.
+    $call('POST', '/planning/week/move', ['date' => $nextDay, 'item_id' => $itemId, 'from' => $nextDay, 'to' => null], $access);
+    [, $n6] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
+    $np6 = array_column($n6['data']['products'], null, 'item_id')[$itemId];
+    check($onDay($np6, $nextDay) == 0 && $np6['unassigned_qty'] == $qNext && $np6['pins'][0]['released'], 'a pinned batch taken off its day by hand does not come back by itself that week');
+    [$s, $n7] = $call('POST', '/planning/week/distribute', ['date' => $nextDay], $access);
+    $np7 = array_column($n7['data']['products'], null, 'item_id')[$itemId];
+    check($s === 200 && $onDay($np7, $nextDay) >= $expect && !$np7['pins'][0]['released'] && $np7['pins'][0]['filled'] == $expect, '« arrange the week » fills the pinned day first again');
 }
+[$s, $dm] = $call('GET', '/planning/demand?from=' . $n['data']['week_start'] . '&to=' . $n['data']['week_end'], null, $access);
+check(array_sum(array_column(array_filter($dm['data']['lines'] ?? [], fn($l) => $l['item_id'] === $itemId), 'qty_proposed')) == $qNext,
+    'proposal: unchanged by the pin (no minimum from fixed batches)');
+[, $before] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
+$bpNext = array_column($before['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
+$placedNext = (float) $pdo->query("SELECT COALESCE(SUM(placed), 0) FROM tfb_prod_fixed_batch_week WHERE week_start > '{$monday}' AND id_item = {$itemId}")->fetchColumn();
 [$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'pinned' => false], $access);
 $bp = array_column($b['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
 check($s === 200 && $bp && $bp['pins'] === [] && $b['data']['pins'] === [] && $onDay($bp, $pinDay) == $pinQty, 'unpin: this week stays as it is');
 [$s, $n3] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
 $np3 = array_column($n3['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
-check($s === 200 && $onDay($np3, $nextDay) == 0 && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_fixed_batch_week WHERE week_start > '{$monday}'")->fetchColumn() === 0,
-    'unpin: the later week where the batch was already placed is undone');
+check($s === 200 && abs($onDay($np3, $nextDay) - ($onDay($bpNext, $nextDay) - $placedNext)) < 0.001
+    && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_fixed_batch_week WHERE week_start > '{$monday}'")->fetchColumn() === 0,
+    'unpin: what the pin put in the later week is undone (what was placed by hand stays)');
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE entity = 'fixed_batch'")->fetchColumn() === 2, 'pin and unpin are audited');
+$pdo->exec("UPDATE tfb_prod_product_settings SET stock_min = 60, stock_max = 300 WHERE id_item = {$itemId}");
 // « Wyczyść tydzień » : wszystko z dni od dzisiaj wraca do « Do zrobienia »
 [$s, $b] = $call('POST', '/planning/week/clear', ['date' => $today], $dir);
 check($s === 403, 'direction does not clear the week');
@@ -1068,7 +1118,7 @@ $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 't
 $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 'from' => $today, 'to' => null], $access);
 [$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $today, 'pinned' => false], $access);
 $bp = array_column($b['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
-$others = (float) $pdo->query("SELECT COALESCE(SUM(quantity), 0) FROM tfb_prod_fixed_batch_week WHERE week_start = '{$monday}' AND id_item = {$itemId} AND work_date <> '{$today}'")->fetchColumn();
+$others = (float) $pdo->query("SELECT COALESCE(SUM(placed), 0) FROM tfb_prod_fixed_batch_week WHERE week_start = '{$monday}' AND id_item = {$itemId} AND work_date <> '{$today}'")->fetchColumn();
 $todayMarks = (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_fixed_batch_week WHERE week_start = '{$monday}' AND id_item = {$itemId} AND work_date = '{$today}'")->fetchColumn();
 check($s === 200 && $bp && $todayMarks === 0 && abs($bp['fixed_qty'] - $others) < 0.001 && $bp['pins'] === [],
     'pinned block moved off its day then unpinned: no fixed batch left on that day this week');

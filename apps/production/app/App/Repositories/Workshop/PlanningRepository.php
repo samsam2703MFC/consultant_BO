@@ -70,6 +70,15 @@ final class PlanningRepository extends WorkshopRepository
         return array_map('intval', array_column($this->all('SELECT id_product, COUNT(*) AS n FROM carton_stock WHERE status = 1 GROUP BY id_product'), 'n', 'id_product'));
     }
 
+    /**
+     * Cartons entrés en stock (étiquetés) entre deux dates, quel que soit leur état depuis (en stock, palettisés,
+     * expédiés). @return array<int,int> produit ERP => cartons
+     */
+    public function cartonsAdded(string $from, string $to): array
+    {
+        return array_map('intval', array_column($this->all('SELECT id_product, COUNT(*) AS n FROM carton_stock WHERE date_add BETWEEN ? AND ? GROUP BY id_product', [$from, $to]), 'n', 'id_product'));
+    }
+
     /** Cartons physiquement au froid : en stock et palettisés pas encore expédiés. */
     public function freezerOccupancy(): int
     {

@@ -82,7 +82,7 @@ final class OpenApiPlanning
         $num = ['type' => 'number'];
         $int = ['type' => 'integer'];
         $nInt = ['type' => 'integer', 'nullable' => true];
-        $qty = ['qty_mto' => $num, 'qty_mts' => $num, 'qty_semi' => $num, 'qty_fixed' => ['type' => 'number', 'description' => 'lots fixes 📌 au-delà des commandes et du réassort'], 'qty_proposed' => $num, 'batches' => $int, 'standard_hours' => $num,
+        $qty = ['qty_mto' => $num, 'qty_mts' => $num, 'qty_semi' => $num, 'qty_fixed' => ['type' => 'number', 'description' => 'toujours 0 : les lots fixes 📌 n\'ajoutent pas de production (ce sont les jours où les lots de la semaine vont d\'abord)'], 'qty_proposed' => $num, 'batches' => $int, 'standard_hours' => $num,
             'batch_size' => ['type' => 'number', 'nullable' => true, 'description' => 'partie de production (fiche, étape « Etapy i czasy ») ; quantités arrondies au multiple']];
         $planSummary = [
             'id' => $int, 'period_start' => ['type' => 'string', 'format' => 'date'], 'period_end' => ['type' => 'string', 'format' => 'date'],
@@ -99,8 +99,9 @@ final class OpenApiPlanning
                     'due_date' => ['type' => 'string', 'format' => 'date'], 'due_at' => ['type' => 'string', 'description' => 'départ du camion moins le chargement'],
                     'unit' => ['type' => 'string'], 'ppc' => $nInt, 'customer_orders' => $int, 'late_orders' => ['type' => 'integer', 'description' => 'passées après la clôture'],
                     'mts' => ['type' => 'object', 'nullable' => true, 'description' => 'réassort : si disponible < stock min. → jusqu\'au stock max.', 'properties' => [
-                        'available' => ['type' => 'number', 'description' => 'stock libre + OF MTS en cours − commandes servies sur stock'],
+                        'available' => ['type' => 'number', 'description' => 'stock libre − cartons entrés en stock depuis le début de la période + OF MTS en cours − commandes servies sur stock'],
                         'min' => ['type' => 'number', 'nullable' => true], 'max' => $num, 'qty' => $num, 'free_stock' => $num,
+                        'made' => ['type' => 'number', 'description' => 'pièces entrées en stock depuis le début de la période (lots de la semaine) : elles ne réduisent pas le besoin de la période'],
                         'reason' => ['type' => 'string', 'enum' => ['below_min', 'stock_sufficient']],
                     ]],
                     'qty_batch' => ['type' => 'number', 'description' => 'arrondi aux lots entiers de la semaine du produit (surplus pour le stock)'],
@@ -233,7 +234,7 @@ final class OpenApiPlanning
                     'due_date' => ['type' => 'string', 'format' => 'date', 'nullable' => true], 'latest_day' => ['type' => 'string', 'format' => 'date'],
                     'done_h' => $num, 'done_pct' => ['type' => 'number', 'nullable' => true], 'state' => ['type' => 'string', 'enum' => ['planned', 'in_progress', 'done']],
                     'unassigned_qty' => $num, 'unassigned_h' => $num, 'over_qty' => $num, 'movable' => ['type' => 'boolean'],
-                    'fixed_qty' => ['type' => 'number', 'description' => 'lots fixes 📌 posés dans la semaine (quantité minimale de la semaine)'],
+                    'fixed_qty' => ['type' => 'number', 'description' => 'quantité de la semaine posée sur les jours 📌 (les lots vont d\'abord sur les jours épinglés, le surplus attend dans « À produire »)'],
                     'pins' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/WeekPin']],
                     'slots' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                         'day' => ['type' => 'string', 'format' => 'date'], 'time' => ['type' => 'string', 'nullable' => true, 'description' => 'heure de début HH:MM'],
@@ -270,11 +271,15 @@ final class OpenApiPlanning
                     'never_frozen' => ['type' => 'boolean'], 'unit' => ['type' => 'string'], 'ppc' => $nInt, 'batch' => ['type' => 'number', 'nullable' => true],
                     'stock_min' => ['type' => 'number', 'nullable' => true], 'stock_max' => ['type' => 'number', 'nullable' => true],
                     'stock' => ['type' => 'number', 'nullable' => true, 'description' => 'stock libre (pièces)'],
-                    'available' => ['type' => 'number', 'nullable' => true, 'description' => 'stock + en production − commandes servies sur stock (MTS)'],
+                    'available' => ['type' => 'number', 'nullable' => true, 'description' => 'stock − fait cette semaine + en production − commandes servies sur stock (MTS)'],
                     'in_production' => ['type' => 'number', 'nullable' => true], 'orders_from_stock' => ['type' => 'number', 'nullable' => true],
+                    'made' => ['type' => 'number', 'nullable' => true, 'description' => 'pièces entrées en stock depuis le début de la semaine'],
                     'orders' => $num, 'refill' => $num, 'fixed' => $num, 'batch_extra' => $num, 'to_produce' => $num,
                     'batches' => ['type' => 'integer', 'nullable' => true], 'hours' => $num, 'placed' => $num,
                     'days' => ['type' => 'array', 'items' => ['type' => 'string', 'format' => 'date']],
+                    'pins' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['day' => ['type' => 'string', 'format' => 'date'], 'room' => $num, 'filled' => $num,
+                        'released' => ['type' => 'boolean'], 'past' => ['type' => 'boolean']]]],
+                    'pinned' => ['type' => 'number', 'description' => 'quantité posée sur les jours 📌'], 'waiting' => ['type' => 'number', 'description' => 'quantité en attente dans « À produire »'],
                 ]]],
             ]],
             'WeekPinInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date', 'item_id', 'day', 'pinned'], 'properties' => [
@@ -285,6 +290,10 @@ final class OpenApiPlanning
                 'batch' => ['type' => 'number', 'nullable' => true], 'weekday' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 7],
                 'quantity' => ['type' => 'number'], 'day' => ['type' => 'string', 'format' => 'date', 'description' => 'ce jour dans la semaine affichée'],
                 'time' => ['type' => 'string', 'nullable' => true, 'description' => 'heure de début HH:MM (semaine type)'],
+                'room' => ['type' => 'number', 'description' => 'place du jour : quantité épinglée en lots entiers'],
+                'filled' => ['type' => 'number', 'description' => 'quantité de la semaine reçue par ce jour (≤ room ; moins de lots que de place = moins ou rien)'],
+                'released' => ['type' => 'boolean', 'description' => 'jour modifié à la main cette semaine : plus rempli automatiquement'],
+                'past' => ['type' => 'boolean'], 'production_day' => ['type' => 'boolean'],
             ]],
             'PlanInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['from', 'to'], 'properties' => [
                 'from' => ['type' => 'string', 'format' => 'date'], 'to' => ['type' => 'string', 'format' => 'date', 'description' => 'au plus planning.max_period_days jours'],

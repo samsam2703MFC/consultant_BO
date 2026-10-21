@@ -31,6 +31,8 @@ use App\Services\Workshop\Scheduling\SchedulingService;
  * potem magazyn — tylko w dni magazynowe (week.stock_days, domyślnie śr–pt), w wolnych godzinach.
  * Produkt dzieli się na pełne kartony, gdy dzień jest pełny. W dniu ilość wysyłki liczy się od
  * najwcześniejszych przydziałów (FIFO). Wykonanie = udział zakończonych operacji zleceń planu.
+ * Stałe partie (📌) to miejsca w tygodniu typowym : partie tygodnia wchodzą najpierw na przypięte dni (fillPins),
+ * nadmiar czeka w « Do zrobienia » ; przypięcie nie dokłada produkcji.
  */
 final class WeekService
 {
@@ -88,6 +90,9 @@ final class WeekService
 
         $this->tx->execute(function () use ($data, $p, $from, $to, $qty, $context, $itemId) {
             if ($from !== null) $this->repo->setSlot($data['start'], $itemId, $from, ($p['slots'][$from] ?? 0.0) - $qty, $context->userId);
+            // Partia zdjęta ręcznie z przypiętego dnia : w tym tygodniu ten dzień nie jest już uzupełniany sam.
+            $mark = $from !== null ? ($data['fixed_week'][$itemId][$from] ?? null) : null;
+            if ($mark !== null && !$mark['released']) $this->repo->setFixedWeek($data['start'], $itemId, $from, $mark['quantity'], 0.0, true);
             if ($to !== null) $this->repo->setSlot($data['start'], $itemId, $to, ($p['slots'][$to] ?? 0.0) + $qty, $context->userId);
             // Cały blok na pusty dzień : godzina startu idzie razem z nim.
             if ($from !== null && $to !== null && !isset($p['slots'][$to]) && isset($p['times'][$from]) && $qty >= ($p['slots'][$from] ?? 0.0) - self::EPS) {
@@ -100,9 +105,9 @@ final class WeekService
     }
 
     /**
-     * 📌 « Co tydzień » : blok produktu w dniu staje się stałą partią (ten dzień tygodnia, ta ilość, w każdym
-     * kolejnym tygodniu) albo przestaje nią być. Ten tydzień zostaje jak jest ; tygodnie późniejsze, do których
-     * partia już weszła, są cofane (wejdą na nowo z nową ilością albo wcale).
+     * 📌 « Co tydzień » : blok produktu w dniu staje się stałą partią — miejscem na tyle partii w ten dzień tygodnia
+     * w każdym kolejnym tygodniu (wypełnianym z partii tygodnia, gdy są) — albo przestaje nią być. Ten tydzień zostaje
+     * jak jest ; tygodnie późniejsze, do których partia już weszła, są cofane (wejdą na nowo przy otwarciu albo wcale).
      */
     public function pin(array $body, ApiContext $context, ?int $now = null): array
     {
@@ -135,12 +140,12 @@ final class WeekService
             }
             if ($pinned) {
                 $this->repo->saveFixedRule($itemId, $weekday, $qty, isset($p['times'][$day]) ? $p['times'][$day] . ':00' : null, $context->userId);
-                $this->repo->markFixedWeek($data['start'], $itemId, $day, $qty, 0.0, true);
+                // Blok tego dnia jest odtąd partią przypiętą (dzień idzie za partiami tygodnia).
+                $this->repo->setFixedWeek($data['start'], $itemId, $day, $qty, $qty);
             } else {
                 $this->repo->deleteFixedRule($itemId, $weekday);
-                // Blok już zdjęty z tego dnia (np. przeniesiony « co tydzień » na inny dzień) : partia tego dnia
-                // nie liczy się już w tym tygodniu ; blok, który jest na dniu, zostaje jak jest.
-                if ($qty <= self::EPS) $this->repo->deleteFixedWeek($data['start'], $itemId, $day);
+                // Blok na dniu zostaje jak jest (jak ułożony ręcznie).
+                $this->repo->deleteFixedWeek($data['start'], $itemId, $day);
             }
             $this->audit->record($context, $pinned ? 'pin' : 'unpin', 'fixed_batch', $itemId,
                 $rule ? ['weekday' => $weekday, 'quantity' => (float) $rule['quantity']] : null,
@@ -152,7 +157,8 @@ final class WeekService
     /**
      * Arkusz tygodnia (cała produkcja na jednej kartce) : jeden wiersz na kartę — produkty z ilością w tygodniu
      * i produkty « na magazyn » zawsze (stan, dostępne, min., maks.), zamówienia, uzupełnienie (dostępne < min. →
-     * do maks.), do produkcji = tydzień produktu w pełnych partiach, sztuk w partii, partie, godziny, dni ; grupy :
+     * do maks.), do produkcji = tydzień produktu w pełnych partiach, sztuk w partii, partie (📌 na przypiętych dniach,
+     * reszta czeka), godziny, dni ; grupy :
      * dostępne godziny i osoby (ETP = godziny ÷ week.fte_hours po stronie widoku).
      */
     public function sheet(string $date, ApiContext $context, ?int $now = null): array
@@ -194,12 +200,15 @@ final class WeekService
                 'stock_min' => $num($it['stock_min']), 'stock_max' => $num($it['stock_max']),
                 'stock' => $ppc && $it['id_final_product'] ? (float) (($free[(int) $it['id_final_product']] ?? 0) * $ppc) : null,
                 'available' => $s ? round($s['available'], 3) : null, 'in_production' => $s ? round($s['in_production'], 3) : null,
-                'orders_from_stock' => $s ? round($s['orders_from_stock'], 3) : null,
+                'orders_from_stock' => $s ? round($s['orders_from_stock'], 3) : null, 'made' => $s ? round($s['made'] ?? 0.0, 3) : null,
                 'orders' => round($pr['orders'] + $pr['semi'], 3), 'refill' => round($pr['refill'], 3), 'fixed' => round($pr['fixed'], 3),
                 'batch_extra' => round($pr['batch_extra'], 3), 'to_produce' => round($qty, 3),
                 'batches' => $batch ? (int) ceil(round($qty / $batch, 6)) : null,
                 'hours' => (float) ($w['hours'] ?? 0.0), 'placed' => $w ? round(array_sum(array_column($w['slots'], 'quantity')), 3) : 0.0,
                 'days' => $w ? array_column($w['slots'], 'day') : [],
+                // 📌 przypięte dni tygodnia : miejsce i ile partii tygodnia dostały ; waiting = czeka w « Do zrobienia ».
+                'pins' => array_map(fn($x) => ['day' => $x['day'], 'room' => $x['room'], 'filled' => $x['filled'], 'released' => $x['released'], 'past' => $x['past']], $data['pins'][$id] ?? []),
+                'pinned' => round(array_sum(array_column($data['fixed_week'][$id] ?? [], 'placed')), 3), 'waiting' => (float) ($w['unassigned_qty'] ?? 0.0),
             ];
         }
         usort($rows, fn($a, $b) => [$a['group_id'] ?? 999, $a['to_produce'] <= 0, $a['name']] <=> [$b['group_id'] ?? 999, $b['to_produce'] <= 0, $b['name']]);
@@ -251,8 +260,8 @@ final class WeekService
 
     /**
      * « Wyczyść tydzień » : zdejmuje wszystkie produkty z dni od dzisiaj (dni minione zostają) do « Do zrobienia »
-     * — w grupach, w których użytkownik może przesuwać. Stałe partie (📌) nie wracają same w tym tygodniu ;
-     * « Ułóż tydzień » kładzie je najpierw na ich dni.
+     * — w grupach, w których użytkownik może przesuwać. Przypięte dni (📌) nie biorą już partii same w tym tygodniu ;
+     * « Ułóż tydzień » znów je wypełnia najpierw.
      */
     public function clear(array $body, ApiContext $context, ?int $now = null): array
     {
@@ -265,6 +274,7 @@ final class WeekService
         if (!$movable && $data['products']) throw new ApiException('FORBIDDEN', 403, [], ['permission' => 'prod.gantt.move']);
         $this->tx->execute(function () use ($data, $movable, $context) {
             $removed = $this->repo->clearFrom($data['start'], $movable, $data['today']);
+            $this->repo->releaseFixedFrom($data['start'], $movable, $data['today']);
             $this->audit->record($context, 'clear', 'week', $data['start'], null, ['from' => $data['today'], 'slots' => $removed]);
         });
         return $this->present($this->data($data['start'], $context, $now), $context, $now);
@@ -288,39 +298,26 @@ final class WeekService
         $movable = array_filter($data['products'], fn($p) => $context->canInGroup('prod.gantt.move', $p['group_id']));
         if (!$movable) throw new ApiException('FORBIDDEN', 403, [], ['permission' => 'prod.gantt.move']);
 
+        // reset : dni od dzisiaj puste ; przypięte dni (📌) znów biorą partie tygodnia najpierw (przy ponownym odczycie).
+        $this->tx->execute(function () use ($data, $movable, $reset) {
+            $ids = array_keys($movable);
+            if ($reset) {
+                $this->repo->clearFrom($data['start'], $ids, $data['today']);
+                $this->repo->releaseFixedFrom($data['start'], $ids, $data['today']);
+            }
+            $this->repo->restoreFixedFrom($data['start'], $ids, $data['today']);
+        });
+        $data = $this->data($data['start'], $context, $now);
+        $movable = array_filter($data['products'], fn($p) => $context->canInGroup('prod.gantt.move', $p['group_id']));
+
         // Godziny już zajęte w dniach (wszystkie grupy, także te, których użytkownik nie przesuwa).
         $used = [];
         foreach ($data['products'] as $id => $p) {
             foreach ($p['slots'] as $day => $qty) {
-                if ($reset && isset($movable[$id]) && $day >= $data['today']) continue;
                 $used[$p['group_id'] ?? 0][$day] = ($used[$p['group_id'] ?? 0][$day] ?? 0.0) + $this->hours($data['routings'], $id, $qty);
             }
         }
         $writes = [];
-        foreach ($movable as $id => &$p) {
-            if (!$reset) continue;
-            foreach ($p['slots'] as $day => $qty) {
-                if ($day < $data['today']) continue;
-                $writes[$id][$day] = 0.0;
-                $p['unassigned_qty'] += $qty;
-                unset($p['slots'][$day]);
-            }
-        }
-        unset($p);
-
-        // Stałe partie (📌) najpierw na swoje dni (od dzisiaj, w dni ze zmianą grupy).
-        foreach ($movable as $id => &$p) {
-            foreach ($data['fixed_week'][$id] ?? [] as $day => $f) {
-                $g = $p['group_id'] ?? 0;
-                $missing = min($p['unassigned_qty'], $f['quantity'] - ($p['slots'][$day] ?? 0.0));
-                if ($day < $data['today'] || $missing <= self::EPS || ($data['capacity'][$g][$day]['available_h'] ?? 0.0) <= 0) continue;
-                $p['slots'][$day] = ($p['slots'][$day] ?? 0.0) + $missing;
-                $p['unassigned_qty'] = round($p['unassigned_qty'] - $missing, 3);
-                $writes[$id][$day] = $p['slots'][$day];
-                $used[$g][$day] = ($used[$g][$day] ?? 0.0) + $this->hours($data['routings'], $id, $missing);
-            }
-        }
-        unset($p);
 
         // Zadania : części « na wysyłkę » (każdy termin osobno), potem reszta « na magazyn » — w pełnych partiach
         // produkcyjnych, gdy produkt ma partię (WeekSplit).
@@ -401,13 +398,11 @@ final class WeekService
             unset($c);
         }
 
-        // Stałe partie (📌 co tydzień) : wchodzą do tygodnia przy pierwszym otwarciu, potem są zwykłymi przydziałami.
+        // Stałe partie (📌 co tydzień) : dni, na które partie tygodnia wchodzą najpierw (fillPins).
         $rules = array_values(array_filter($this->planning->fixedRules(), fn($r) => isset($items[(int) $r['id_item']])));
-        $this->seedFixed($start, $days, $today, $items, $capacity, $rules, $context);
-        $fixedWeek = $this->repo->fixedWeek($start);
 
         // Źródło : plan zaczynający się w tym tygodniu produkcji (zatwierdzony, zamrożony, inaczej zamknięty),
-        // inaczej propozycja na żywo (zamówienia + uzupełnienie stanów + stałe partie).
+        // inaczej propozycja na żywo (zamówienia + uzupełnienie stanów, w pełnych partiach).
         $plans = $this->repo->plans($start, $end);
         $active = array_values(array_filter($plans, fn($p) => $p['status'] !== 'closed'));
         $plans = $active ?: $plans;
@@ -446,21 +441,6 @@ final class WeekService
             $p['stock'] += max(0.0, $l['qty'] - $l['direct']);
             unset($p);
         }
-        // Ilość tygodnia co najmniej taka, jak stałe partie, które weszły do tygodnia : nadwyżka ponad zamówienia
-        // i uzupełnienie stanu idzie na magazyn (np. plan sprzed przypięcia albo partia większa niż potrzeba).
-        foreach ($fixedWeek as $id => $byDay) {
-            $it = $items[$id] ?? null;
-            $fixedQty = array_sum(array_column($byDay, 'quantity'));
-            if ($it === null || $fixedQty <= self::EPS) continue;
-            $p = &$products[$id];
-            $p ??= $this->newProduct($id, $it);
-            $extra = $fixedQty - $p['quantity'];
-            if ($extra > self::EPS) {
-                $p['quantity'] += $extra;
-                $p['stock'] += $extra;
-            }
-            unset($p);
-        }
         foreach ($products as $id => &$p) {
             $p['quantity'] = round($p['quantity'], 3);
             $p['direct'] = round($p['direct'], 3);
@@ -481,6 +461,7 @@ final class WeekService
             $products[$id]['slots'][$s['work_date']] = (float) $s['quantity'];
             if ($s['start_time'] !== null) $products[$id]['times'][$s['work_date']] = substr($s['start_time'], 0, 5);
         }
+        $fixedWeek = $this->fillPins($start, $days, $today, $items, $capacity, $rules, $products, $context);
         foreach ($products as &$p) {
             $assigned = array_sum($p['slots']);
             $p['unassigned_qty'] = round(max(0.0, $p['quantity'] - $assigned), 3);
@@ -509,23 +490,24 @@ final class WeekService
         }
         unset($p);
 
-        // Stała partia w dniu bez zmiany grupy : czeka w « Do zrobienia ».
-        foreach ($fixedWeek as $id => $byDay) {
-            foreach ($byDay as $day => $f) {
-                if (!isset($products[$id]) || $day < $today || $f['quantity'] <= self::EPS) continue;
-                if (($capacity[$products[$id]['group_id'] ?? 0][$day]['available_h'] ?? 0.0) > 0) continue;
+        // Przypięty dzień bez zmiany grupy : partie czekają w « Do zrobienia ».
+        $pins = [];
+        foreach ($rules as $r) {
+            $id = (int) $r['id_item'];
+            $it = $items[$id];
+            $day = $this->ruleDay($start, (int) $r['weekday']);
+            $mark = $fixedWeek[$id][$day] ?? null;
+            $batch = (float) $it['batch_multiple'] > 0 ? (float) $it['batch_multiple'] : null;
+            $production = in_array($day, $days, true);
+            if (isset($products[$id]) && $production && $day >= $today && ($capacity[$products[$id]['group_id'] ?? 0][$day]['available_h'] ?? 0.0) <= 0) {
                 $warnings[] = ['code' => 'FIXED_NO_SHIFT', 'product' => $products[$id]['name'], 'day' => date('d.m', strtotime($day))];
             }
-        }
-        $pins = [];
-        $startN = (int) date('N', strtotime($start));
-        foreach ($rules as $r) {
-            $it = $items[(int) $r['id_item']];
-            $pins[(int) $r['id_item']][] = ['item_id' => (int) $r['id_item'], 'name' => $it['name'], 'group_id' => $it['id_primary_group'] !== null ? (int) $it['id_primary_group'] : null,
-                'unit' => $it['base_unit'], 'ppc' => $it['item_type'] === 'product' && (int) $it['ppc'] > 0 ? (int) $it['ppc'] : null,
-                'batch' => (float) $it['batch_multiple'] > 0 ? (float) $it['batch_multiple'] : null,
-                'weekday' => (int) $r['weekday'], 'quantity' => (float) $r['quantity'], 'time' => $r['start_time'] !== null ? substr($r['start_time'], 0, 5) : null,
-                'day' => date('Y-m-d', strtotime($start . ' +' . (((int) $r['weekday'] - $startN + 7) % 7) . ' days'))];
+            // room = miejsce dnia (ilość przypięta w pełnych partiach) ; filled = ile partii tygodnia dzień dostał.
+            $pins[$id][] = ['item_id' => $id, 'name' => $it['name'], 'group_id' => $it['id_primary_group'] !== null ? (int) $it['id_primary_group'] : null,
+                'unit' => $it['base_unit'], 'ppc' => $it['item_type'] === 'product' && (int) $it['ppc'] > 0 ? (int) $it['ppc'] : null, 'batch' => $batch,
+                'weekday' => (int) $r['weekday'], 'quantity' => (float) $r['quantity'], 'room' => $this->room((float) $r['quantity'], $batch),
+                'time' => $r['start_time'] !== null ? substr($r['start_time'], 0, 5) : null, 'day' => $day,
+                'filled' => round($mark['placed'] ?? 0.0, 3), 'released' => (bool) ($mark['released'] ?? false), 'past' => $day < $today, 'production_day' => $production];
         }
 
         return ['start' => $start, 'end' => $end, 'days' => array_values($days), 'stock_days' => $stockDays, 'today' => $today,
@@ -544,35 +526,77 @@ final class WeekService
     }
 
     /**
-     * Stałe partie (📌) wchodzą do tygodnia raz : na swój dzień tygodnia, od dzisiaj, w dni produkcji. Dzień, który
-     * już ma tyle, zostaje bez zmian ; w dniu bez zmiany grupy partia czeka w « Do zrobienia ». Przesunięcie albo
-     * zdjęcie partii w tygodniu zostaje (wejście tygodnia jest zapisane).
+     * 📌 Stałe partie = miejsca w tygodniu typowym. Ilość tygodnia produktu (zamówienia + uzupełnienie stanu, w pełnych
+     * partiach, na żywo) wchodzi najpierw na jego przypięte dni — od dzisiaj, w dni ze zmianą grupy, po kolei, każdy do
+     * ilości przypiętej (w pełnych partiach) ; nadmiar czeka w « Do zrobienia ». Za mało partii : przypięty dzień
+     * dostaje mniej albo nic (przypięcie nie dokłada produkcji). Liczone przy każdym otwarciu tygodnia ; dni minione
+     * zostają, a dzień zmieniony ręcznie (released) nie jest już uzupełniany w tym tygodniu.
+     * @return array<int, array<string, array{quantity:float, placed:float, released:bool}>> stałe partie tygodnia
      */
-    private function seedFixed(string $start, array $days, string $today, array $items, array $capacity, array $rules, ApiContext $context): void
+    private function fillPins(string $start, array $days, string $today, array $items, array $capacity, array $rules, array &$products, ApiContext $context): array
     {
-        if (!$rules) return;
-        $done = $this->repo->fixedWeek($start);
-        $startN = (int) date('N', strtotime($start));
-        $new = [];
+        $marks = $this->repo->fixedWeek($start);
+        $pinDays = [];
         foreach ($rules as $r) {
             $id = (int) $r['id_item'];
             $it = $items[$id];
-            $day = date('Y-m-d', strtotime($start . ' +' . (((int) $r['weekday'] - $startN + 7) % 7) . ' days'));
-            if (isset($done[$id][$day]) || $day < $today || !in_array($day, $days, true)) continue;
+            $day = $this->ruleDay($start, (int) $r['weekday']);
+            $mark = $marks[$id][$day] ?? null;
+            if ($day < $today || !in_array($day, $days, true) || ($mark['released'] ?? false)) continue;
             if ($it['erp_active'] !== null && !(int) $it['erp_active']) continue;
-            $new[] = [$id, $day, (float) $r['quantity'], ($capacity[$it['id_primary_group'] ?? 0][$day]['available_h'] ?? 0.0) > 0, $r['start_time']];
+            $shift = ($capacity[$it['id_primary_group'] ?? 0][$day]['available_h'] ?? 0.0) > 0;
+            $batch = (float) $it['batch_multiple'] > 0 ? (float) $it['batch_multiple'] : null;
+            $pinDays[$id][$day] = ['quantity' => (float) $r['quantity'], 'room' => $shift ? $this->room((float) $r['quantity'], $batch) : 0.0,
+                'placed' => $mark['placed'] ?? 0.0, 'time' => $r['start_time']];
         }
-        if (!$new) return;
-        $this->tx->execute(function () use ($new, $start, $context) {
-            foreach ($new as [$id, $day, $qty, $shift, $time]) {
-                $existing = $this->repo->slotQuantity($start, $id, $day);
-                $add = $shift ? max(0.0, $qty - $existing) : 0.0;
-                if ($add > self::EPS) $this->repo->setSlot($start, $id, $day, $existing + $add, $context->userId);
-                if ($add > self::EPS && $existing <= self::EPS && $time !== null) $this->repo->setSlotTime($start, $id, $day, $time);
-                $this->repo->markFixedWeek($start, $id, $day, $qty, $add);
+        if (!$pinDays) return $marks;
+        $slots = [];
+        foreach ($this->repo->slots($start) as $s) $slots[(int) $s['id_item']][$s['work_date']] = (float) $s['quantity'];
+        $writes = [];
+        foreach ($pinDays as $id => $byDay) {
+            ksort($byDay);
+            $hasProduct = isset($products[$id]);
+            // Do rozdania : ilość tygodnia bez tego, co leży na dniach poza miejscami przypiętymi (ręcznie, dni minione).
+            $pool = max(0.0, ($products[$id]['quantity'] ?? 0.0) - (array_sum($slots[$id] ?? []) - array_sum(array_column($byDay, 'placed'))));
+            foreach ($byDay as $day => $d) {
+                $take = round(min($d['room'], $pool), 3);
+                $pool = max(0.0, $pool - $take);
+                if (abs($take - $d['placed']) <= self::EPS) continue;
+                $before = $slots[$id][$day] ?? 0.0;
+                $qty = round(max(0.0, $before - $d['placed'] + $take), 3);
+                $time = $before <= self::EPS && $take > self::EPS ? $d['time'] : null;
+                $writes[] = [$id, $day, $d['quantity'], $take, $qty, $time];
+                $marks[$id][$day] = ['quantity' => $d['quantity'], 'placed' => $take, 'released' => false];
+                if (!$hasProduct) continue;
+                if ($qty > self::EPS) $products[$id]['slots'][$day] = $qty;
+                else unset($products[$id]['slots'][$day], $products[$id]['times'][$day]);
+                if ($time !== null) $products[$id]['times'][$day] = substr($time, 0, 5);
             }
-            $this->audit->record($context, 'seed_fixed', 'week', $start, null, ['batches' => count($new)]);
-        });
+        }
+        if ($writes) {
+            $this->tx->execute(function () use ($writes, $start, $context) {
+                foreach ($writes as [$id, $day, $quantity, $placed, $qty, $time]) {
+                    $this->repo->setSlot($start, $id, $day, $qty, $context->userId);
+                    if ($time !== null) $this->repo->setSlotTime($start, $id, $day, $time);
+                    $this->repo->setFixedWeek($start, $id, $day, $quantity, $placed);
+                }
+                $this->audit->record($context, 'fill_pins', 'week', $start, null, ['days' => count($writes)]);
+            });
+        }
+        return $marks;
+    }
+
+    /** Dzień tygodnia (od $start) dla dnia tygodnia ISO stałej partii. */
+    private function ruleDay(string $start, int $weekday): string
+    {
+        $startN = (int) date('N', strtotime($start));
+        return date('Y-m-d', strtotime($start . ' +' . (($weekday - $startN + 7) % 7) . ' days'));
+    }
+
+    /** Miejsce przypiętego dnia : ilość przypięta w pełnych partiach produkcyjnych. */
+    private function room(float $quantity, ?float $batch): float
+    {
+        return $batch ? ceil(round($quantity / $batch, 6)) * $batch : $quantity;
     }
 
     private function present(array $data, ApiContext $context, int $now): array
@@ -641,7 +665,7 @@ final class WeekService
                 'done_h' => round($p['done_h'], 2), 'done_pct' => $p['hours'] > 0 ? round($p['done_h'] / $p['hours'] * 100, 1) : null, 'state' => $p['state'],
                 'unassigned_qty' => $p['unassigned_qty'], 'unassigned_h' => round($unassignedH, 2), 'over_qty' => $p['over_qty'],
                 'slots' => $slots, 'movable' => $context->canInGroup('prod.gantt.move', $p['group_id']),
-                'pins' => $data['pins'][$id] ?? [], 'fixed_qty' => round(array_sum(array_column($data['fixed_week'][$id] ?? [], 'quantity')), 3),
+                'pins' => $data['pins'][$id] ?? [], 'fixed_qty' => round(array_sum(array_column($data['fixed_week'][$id] ?? [], 'placed')), 3),
             ];
         }
         usort($products, fn($a, $b) => [$a['group_id'] ?? 999, $a['slots'][0]['day'] ?? '9', $a['latest_day'], $a['name']] <=> [$b['group_id'] ?? 999, $b['slots'][0]['day'] ?? '9', $b['latest_day'], $b['name']]);

@@ -10101,7 +10101,7 @@
                                     "properties": {
                                         "available": {
                                             "type": "number",
-                                            "description": "stock libre + OF MTS en cours − commandes servies sur stock"
+                                            "description": "stock libre − cartons entrés en stock depuis le début de la période + OF MTS en cours − commandes servies sur stock"
                                         },
                                         "min": {
                                             "type": "number",
@@ -10115,6 +10115,10 @@
                                         },
                                         "free_stock": {
                                             "type": "number"
+                                        },
+                                        "made": {
+                                            "type": "number",
+                                            "description": "pièces entrées en stock depuis le début de la période (lots de la semaine) : elles ne réduisent pas le besoin de la période"
                                         },
                                         "reason": {
                                             "type": "string",
@@ -10157,7 +10161,7 @@
                                 },
                                 "qty_fixed": {
                                     "type": "number",
-                                    "description": "lots fixes 📌 au-delà des commandes et du réassort"
+                                    "description": "toujours 0 : les lots fixes 📌 n'ajoutent pas de production (ce sont les jours où les lots de la semaine vont d'abord)"
                                 },
                                 "qty_proposed": {
                                     "type": "number"
@@ -10353,7 +10357,7 @@
                                 },
                                 "qty_fixed": {
                                     "type": "number",
-                                    "description": "lots fixes 📌 au-delà des commandes et du réassort"
+                                    "description": "toujours 0 : les lots fixes 📌 n'ajoutent pas de production (ce sont les jours où les lots de la semaine vont d'abord)"
                                 },
                                 "qty_proposed": {
                                     "type": "number"
@@ -11405,7 +11409,7 @@
                                 },
                                 "fixed_qty": {
                                     "type": "number",
-                                    "description": "lots fixes 📌 posés dans la semaine (quantité minimale de la semaine)"
+                                    "description": "quantité de la semaine posée sur les jours 📌 (les lots vont d'abord sur les jours épinglés, le surplus attend dans « À produire »)"
                                 },
                                 "pins": {
                                     "type": "array",
@@ -11689,7 +11693,7 @@
                                 "available": {
                                     "type": "number",
                                     "nullable": true,
-                                    "description": "stock + en production − commandes servies sur stock (MTS)"
+                                    "description": "stock − fait cette semaine + en production − commandes servies sur stock (MTS)"
                                 },
                                 "in_production": {
                                     "type": "number",
@@ -11698,6 +11702,11 @@
                                 "orders_from_stock": {
                                     "type": "number",
                                     "nullable": true
+                                },
+                                "made": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "pièces entrées en stock depuis le début de la semaine"
                                 },
                                 "orders": {
                                     "type": "number"
@@ -11730,6 +11739,38 @@
                                         "type": "string",
                                         "format": "date"
                                     }
+                                },
+                                "pins": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "day": {
+                                                "type": "string",
+                                                "format": "date"
+                                            },
+                                            "room": {
+                                                "type": "number"
+                                            },
+                                            "filled": {
+                                                "type": "number"
+                                            },
+                                            "released": {
+                                                "type": "boolean"
+                                            },
+                                            "past": {
+                                                "type": "boolean"
+                                            }
+                                        }
+                                    }
+                                },
+                                "pinned": {
+                                    "type": "number",
+                                    "description": "quantité posée sur les jours 📌"
+                                },
+                                "waiting": {
+                                    "type": "number",
+                                    "description": "quantité en attente dans « À produire »"
                                 }
                             }
                         }
@@ -11803,6 +11844,24 @@
                         "type": "string",
                         "nullable": true,
                         "description": "heure de début HH:MM (semaine type)"
+                    },
+                    "room": {
+                        "type": "number",
+                        "description": "place du jour : quantité épinglée en lots entiers"
+                    },
+                    "filled": {
+                        "type": "number",
+                        "description": "quantité de la semaine reçue par ce jour (≤ room ; moins de lots que de place = moins ou rien)"
+                    },
+                    "released": {
+                        "type": "boolean",
+                        "description": "jour modifié à la main cette semaine : plus rempli automatiquement"
+                    },
+                    "past": {
+                        "type": "boolean"
+                    },
+                    "production_day": {
+                        "type": "boolean"
                     }
                 }
             },

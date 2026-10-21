@@ -94,8 +94,12 @@ final class PlanningService
         if ($unplanned) $warnings[] = ['code' => 'UNPLANNED_PRODUCTS', 'count' => count($unplanned)];
 
         // --- MTS (prosta reguła) : gdy dostępne < stan min., uzupełnienie do stanu maks. (pierwszy dzień okresu) ;
-        // dostępne = stan wolny + zlecenia MTS w toku − zamówienia obsłużone z magazynu.
+        // dostępne = stan wolny + zlecenia MTS w toku − zamówienia obsłużone z magazynu. Kartony, które weszły na
+        // magazyn od początku okresu (partie tego tygodnia), nie zmniejszają potrzeby okresu : zrobione partie
+        // zostają w tygodniu jako zrobione, a potrzeba nie znika, gdy stan przekroczy min. w trakcie tygodnia.
         $stock = $this->planning->freeStockCartons();
+        $today = date('Y-m-d');
+        $added = $from <= $today ? $this->planning->cartonsAdded($from, min($to, $today)) : [];
         $openMts = $this->planning->openMtsOrders();
         $freezerLines = [];
         $stockInfo = [];
@@ -104,14 +108,15 @@ final class PlanningService
             if ($it['stock_max'] === null) { $warnings[] = ['code' => 'MTS_WITHOUT_MAX', 'item_id' => (int) $it['id']]; continue; }
             $ppc = max(1, (int) $it['ppc']);
             $free = ($stock[(int) $it['id_final_product']] ?? 0) * $ppc;
+            $made = ($added[(int) $it['id_final_product']] ?? 0) * $ppc;
             $inProduction = $openMts[(int) $it['id']] ?? 0.0;
             $fromStock = $committed[(int) $it['id']] ?? 0.0;
-            $r = DemandCalculator::refill($free + $inProduction - $fromStock, $it['stock_min'] !== null ? (float) $it['stock_min'] : null, (float) $it['stock_max']);
-            $stockInfo[(int) $it['id']] = ['free' => $free, 'in_production' => $inProduction, 'orders_from_stock' => $fromStock] + $r;
+            $r = DemandCalculator::refill($free - $made + $inProduction - $fromStock, $it['stock_min'] !== null ? (float) $it['stock_min'] : null, (float) $it['stock_max']);
+            $stockInfo[(int) $it['id']] = ['free' => $free, 'made' => $made, 'in_production' => $inProduction, 'orders_from_stock' => $fromStock] + $r;
             if ($r['qty'] <= 0) continue;
             $key = $line($it, $from);
             $lines[$key]['qty_mts'] = $r['qty'];
-            $lines[$key]['mts'] = $r + ['free_stock' => $free];
+            $lines[$key]['mts'] = $r + ['free_stock' => $free, 'made' => $made];
             $freezerLines[] = ['key' => $key, 'qty' => $r['qty'], 'ppc' => $ppc, 'multiple' => $this->num($it['batch_multiple'])];
         }
         $cap = DemandCalculator::capFreezer($freezerLines, $capacity, $capacity > 0 ? $this->planning->freezerOccupancy() : 0);
@@ -125,29 +130,9 @@ final class PlanningService
         }
         unset($l);
 
-        // --- Stałe partie (📌 co tydzień, od dzisiaj) : minimum produkcji produktu w okresie ; nadwyżka ponad
-        // zamówienia i uzupełnienie stanu idzie na magazyn, w linii dnia pierwszej stałej partii.
-        $fixed = [];
-        $first = max($from, date('Y-m-d'));
-        foreach ($this->planning->fixedRules() as $r) {
-            for ($d = $first; $d <= $to; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
-                if ((int) date('N', strtotime($d)) === (int) $r['weekday']) $fixed[(int) $r['id_item']][$d] = (float) $r['quantity'];
-            }
-        }
-        foreach ($fixed as $itemId => $byDay) {
-            $it = $byId[$itemId] ?? null;
-            if ($it === null || ($it['erp_active'] !== null && !(int) $it['erp_active'])) continue;
-            $planned = array_sum(array_map(fn($l) => (int) $l['item']['id'] === $itemId ? $l['qty_proposed'] : 0.0, $lines));
-            $extra = array_sum($byDay) - $planned;
-            if ($extra <= 0.0005) continue;
-            ksort($byDay);
-            $key = $line($it, (string) array_key_first($byDay));
-            $lines[$key]['qty_fixed'] += $extra;
-            $lines[$key]['qty_proposed'] = ($lines[$key]['qty_proposed'] ?? 0.0) + $extra;
-        }
-
-        // --- Partie : ilość tygodnia produktu (zamówienia + uzupełnienie + stałe partie) w górę do pełnych partii
+        // --- Partie : ilość tygodnia produktu (zamówienia + uzupełnienie) w górę do pełnych partii
         // (planning.round_mto_to_batch) ; nadwyżka idzie na magazyn — do linii uzupełnienia, inaczej najwcześniejszej.
+        // Stałe partie (📌) nie dokładają produkcji : to dni, na które partie tygodnia wchodzą najpierw (WeekService).
         if ($roundBatches) {
             $keysOf = [];
             foreach ($lines as $key => $l) if ($l['item']['item_type'] === 'product' && ($l['qty_proposed'] ?? 0.0) > 0) $keysOf[(int) $l['item']['id']][] = $key;

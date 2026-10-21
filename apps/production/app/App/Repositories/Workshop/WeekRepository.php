@@ -50,22 +50,46 @@ final class WeekRepository extends WorkshopRepository
         $this->db->prepare("DELETE FROM tfb_prod_week_slot WHERE week_start = ? AND id_item IN ({$in})")->execute([$weekStart, ...$itemIds]);
     }
 
-    /** Stałe partie, które już weszły do tygodnia. @return array<int, array<string, array{quantity:float, placed:float}>> */
+    /**
+     * Stałe partie (📌) w tygodniu : ilość przypięta, ile dzień dostał z partii tygodnia (placed), released = dzień
+     * zmieniony ręcznie. @return array<int, array<string, array{quantity:float, placed:float, released:bool}>>
+     */
     public function fixedWeek(string $weekStart): array
     {
         $out = [];
-        foreach ($this->all('SELECT id_item, work_date, quantity, placed FROM tfb_prod_fixed_batch_week WHERE week_start = ?', [$weekStart]) as $r) {
-            $out[(int) $r['id_item']][$r['work_date']] = ['quantity' => (float) $r['quantity'], 'placed' => (float) $r['placed']];
+        foreach ($this->all('SELECT id_item, work_date, quantity, placed, released FROM tfb_prod_fixed_batch_week WHERE week_start = ?', [$weekStart]) as $r) {
+            $out[(int) $r['id_item']][$r['work_date']] = ['quantity' => (float) $r['quantity'], 'placed' => (float) $r['placed'], 'released' => (bool) $r['released']];
         }
         return $out;
     }
 
-    /** Stała partia w tygodniu (pierwsze wejście zostaje ; $replace — przypięcie z bloku tego tygodnia). */
-    public function markFixedWeek(string $weekStart, int $itemId, string $day, float $quantity, float $placed, bool $replace = false): void
+    /** Stała partia w dniu tygodnia : ilość przypięta, ile dostała, czy dzień jest zmieniony ręcznie. */
+    public function setFixedWeek(string $weekStart, int $itemId, string $day, float $quantity, float $placed, bool $released = false): void
     {
-        $sql = 'INSERT ' . ($replace ? '' : 'IGNORE ') . 'INTO tfb_prod_fixed_batch_week (week_start, id_item, work_date, quantity, placed) VALUES (?, ?, ?, ?, ?)'
-            . ($replace ? ' ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)' : '');
-        $this->db->prepare($sql)->execute([$weekStart, $itemId, $day, round($quantity, 3), round($placed, 3)]);
+        $this->db->prepare('INSERT INTO tfb_prod_fixed_batch_week (week_start, id_item, work_date, quantity, placed, released) VALUES (?, ?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), placed = VALUES(placed), released = VALUES(released)')
+            ->execute([$weekStart, $itemId, $day, round($quantity, 3), round($placed, 3), (int) $released]);
+    }
+
+    /**
+     * Przypięte dni od danego dnia zmienione ręcznie (« Wyczyść tydzień ») : nie biorą już partii tygodnia same,
+     * placed = 0 (ilość w dniu, jeśli jest, liczy się odtąd jak ułożona ręcznie). @param list<int> $itemIds
+     */
+    public function releaseFixedFrom(string $weekStart, array $itemIds, string $fromDay): void
+    {
+        if (!$itemIds) return;
+        $in = implode(',', array_fill(0, count($itemIds), '?'));
+        $this->db->prepare("UPDATE tfb_prod_fixed_batch_week SET placed = 0, released = 1 WHERE week_start = ? AND work_date >= ? AND id_item IN ({$in})")
+            ->execute([$weekStart, $fromDay, ...$itemIds]);
+    }
+
+    /** Przypięte dni od danego dnia znów biorą partie tygodnia same (« Ułóż tydzień »). @param list<int> $itemIds */
+    public function restoreFixedFrom(string $weekStart, array $itemIds, string $fromDay): void
+    {
+        if (!$itemIds) return;
+        $in = implode(',', array_fill(0, count($itemIds), '?'));
+        $this->db->prepare("UPDATE tfb_prod_fixed_batch_week SET released = 0 WHERE released = 1 AND week_start = ? AND work_date >= ? AND id_item IN ({$in})")
+            ->execute([$weekStart, $fromDay, ...$itemIds]);
     }
 
     /** Wejścia stałej partii (produkt, dzień tygodnia ISO) w tygodniach po danym tygodniu. */

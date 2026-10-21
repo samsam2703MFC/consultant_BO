@@ -424,7 +424,7 @@
                     <div class="tfb-week-cap"><span>${esc(cap)}</span>${over > 0.05 && d.available_h > 0 ? `<b>+${fmt(over, 1)} h</b>` : (d.available_h - d.required_h > 0.05 && d.required_h > 0 ? `<em>${esc(t('week.free', {hours: fmt(d.available_h - d.required_h, 1)}))}</em>` : '')}</div>
                     <div class="tfb-week-load">${blocks.filter(x => x.first).map(({p, s}) => `<span class="${s.late || s.behind ? 'is-late' : ''}" style="width:${(s.hours / scale * 100).toFixed(2)}%" title="${esc(p.name)} · ${hrs(s.hours)}"></span>`).join('')}
                         ${d.available_h > 0 && d.required_h > d.available_h ? `<span class="tfb-week-capline" style="left:${(d.available_h / scale * 100).toFixed(2)}%"></span>` : ''}${now}</div>
-                    <div class="tfb-week-track">${blocks.map(({p, s, tile, split}) => block(p, s, scale, color, tile, split)).join('')}</div>
+                    <div class="tfb-week-track">${blocks.map(({p, s, tile, split}) => block(p, s, scale, color, tile, split)).join('')}${pinSlots(w, g, d, day)}</div>
                 </div>`;
             }).join('');
             // Do zrobienia : najpierw wysyłka (najbliższy termin), potem magazyn ; ilości w kartonach.
@@ -490,6 +490,18 @@
             ${done > 0 ? `<span class="tfb-week-block-done" style="width:${done.toFixed(1)}%"></span>` : ''}</button>${toggle}</div>`;
     }
 
+    // 📌 Miejsce przypiętego dnia bez partii : partii tygodnia jest mniej niż miejsca (dzień dostał mniej albo nic).
+    function pinSlots(w, g, d, day) {
+        if (day.past || d.available_h <= 0) return '';
+        return (w.pins || []).filter(x => x.day === d.date && (x.group_id ?? null) === (g.id ?? null) && !x.released && x.room - x.filled > 0.0005)
+            .map(x => {
+                const title = t('week.pin_slot_title', {name: x.name, room: pinQty({...x, quantity: x.room}), filled: pinQty({...x, quantity: x.filled})});
+                return `<div class="tfb-week-pinslot" title="${esc(title)}">📌 ${esc(t('week.pin_slot', {free: pinQty({...x, quantity: x.room - x.filled})}))} · <span>${esc(x.name)}</span></div>`;
+            }).join('');
+    }
+    // Stan przypiętego dnia w tym tygodniu : ile partii tygodnia dostał z miejsca.
+    const pinFill = (x) => x.past ? '' : (x.released ? t('week.pin_released') : t('week.pin_fill', {filled: pinQty({...x, quantity: x.filled}), room: pinQty({...x, quantity: x.room})}));
+
     // 📌 Stałe partie co tydzień : lista pod tablicą (dzień tygodnia, ilość, partie).
     const weekdayName = (day) => dayLabel(day, true).split(',')[0];
     const pinQty = (x) => (x.batch ? batchText(x, x.quantity) + ' · ' : '') + (x.ppc ? cartonsText(x, x.quantity) : `${fmt(x.quantity, x.unit === 'kg' ? 1 : 0)} ${x.unit}`);
@@ -499,7 +511,7 @@
         const groupName = (id) => (w.groups.find(g => g.id === id) || {}).name || t('week.no_group');
         return `<details class="tfb-week-pins mt-2"><summary>📌 ${esc(t('week.pins_title', {n: pins.length}))}</summary>
             <ul>${[...pins].sort((a, b) => a.day.localeCompare(b.day) || (a.time || '99').localeCompare(b.time || '99') || a.name.localeCompare(b.name)).map(x => `<li><strong>${esc(weekdayName(x.day))}${x.time ? ' ' + esc(x.time) : ''}</strong> · ${esc(x.name)}
-                <span class="text-muted">· ${esc(groupName(x.group_id))} · ${esc(pinQty(x))}</span></li>`).join('')}</ul></details>`;
+                <span class="text-muted">· ${esc(groupName(x.group_id))} · ${esc(pinQty(x))}${pinFill(x) ? ' · ' + esc(pinFill(x)) : ''}</span></li>`).join('')}</ul></details>`;
     }
 
     // Szczegóły produktu : stałe partie produktu i przycisk 📌 dla wybranego dnia.
@@ -507,7 +519,7 @@
         const pins = p.pins || [];
         const slot = from ? p.slots.find(s => s.day === from) : null;
         const onDay = from ? pins.find(x => x.day === from) : null;
-        const list = pins.map(x => `<div>📌 <strong>${esc(weekdayName(x.day))}${x.time ? ' ' + esc(x.time) : ''}</strong> · ${esc(pinQty({...p, quantity: x.quantity}))}
+        const list = pins.map(x => `<div>📌 <strong>${esc(weekdayName(x.day))}${x.time ? ' ' + esc(x.time) : ''}</strong> · ${esc(pinQty({...p, quantity: x.quantity}))}${pinFill(x) ? ` <span class="text-muted small">· ${esc(pinFill(x))}</span>` : ''}
             ${p.movable ? `<button type="button" class="btn btn-link btn-sm p-0 ms-1" data-unpin="${x.day}">${esc(t('week.unpin'))}</button>` : ''}</div>`).join('');
         const action = p.movable && slot && !onDay
             ? `<button type="button" class="btn btn-sm btn-outline-primary mt-1" data-pin="${slot.day}">📌 ${esc(t('week.pin', {day: weekdayName(slot.day), qty: pinQty({...p, quantity: slot.quantity})}))}</button>
