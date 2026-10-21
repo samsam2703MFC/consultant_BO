@@ -824,6 +824,9 @@ function ep_promos_magasin_demandes(): array
     $shop = (int) ($_GET['shop'] ?? 0);
     if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
     $auj = date('Y-m-d');
+    // ?frais=1 (21/10/2026, Sam) : le panel relu à l'ouverture de l'onglet — une promotion créée ou changée au panel
+    // se voit tout de suite, sans attendre les dix minutes de la lecture gardée.
+    $R0 = function_exists('pvRegles') ? pvRegles(!empty($_GET['frais'])) : ['ts' => 0];
     [$demandes, $err] = pmMiennes($shop);
     $panel = [];
     if (function_exists('pvRegles')) {
@@ -836,7 +839,9 @@ function ep_promos_magasin_demandes(): array
                 'x' => $r['declenche'], 'y' => $r['recoit'], 'recompense' => $r['recompense']];
         }
     }
+    $ts = (int) ($R0['ts'] ?? 0);
     return ['shop' => (string) $shop, 'demandes' => $demandes, 'panel' => $panel, 'erreurPanel' => $err, 'source' => 'panel',
+        'lu' => $ts > 0 ? date('H:i', $ts) : null, 'luTs' => $ts, 'luJour' => $ts > 0 ? date('Y-m-d', $ts) : null,
         'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS]];
 }
 

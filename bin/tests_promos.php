@@ -100,6 +100,13 @@ final class ErpApi
         self::$appels[] = 'GET ' . $path;
         return preg_match('#^/admin/promotions/buy-x-get-y/(\d+)$#', $path, $x) ? (self::$promos[(int) $x[1]] ?? null) : null;
     }
+    /** Les fiches lues ensemble (pvRegles, 21/10/2026) : ici, une à une par get(). */
+    public static function getParallele(array $paths, int $front = 4): array
+    {
+        $o = [];
+        foreach ($paths as $k => $p) { $o[$k] = self::get($p); }
+        return $o;
+    }
     public static function sondeGet(string $path): array
     {
         if (!str_starts_with($path, '/admin/promotions/buy-x-get-y?')) { return ['code' => 404, 'corps' => null, 'erreur' => 'HTTP 404']; }
@@ -326,6 +333,8 @@ verifie('les deux plus récentes que la liste ne rend pas : lues aux numéros qu
     && count(array_filter(ErpApi::$appels, static fn ($a) => str_starts_with($a, 'GET'))) === 5, json_encode([array_keys($L['ids']), ErpApi::$appels]));
 $R = pvRegles(true);
 verifie('les règles relues à frais les comptent', count($R['regles']) === count($tous) && $R['erreur'] === null);
+$oublie(); $_GET = ['shop' => '4', 'frais' => '1']; $l = ep_promos_magasin_demandes(); $_GET = [];
+verifie('l’onglet relu au panel (?frais=1) dit l’heure de la lecture', preg_match('/^\d\d:\d\d$/', (string) ($l['lu'] ?? '')) === 1 && ($l['luTs'] ?? 0) > time() - 60 && ($l['luJour'] ?? '') === date('Y-m-d'), json_encode([$l['lu'] ?? null, $l['luTs'] ?? null]));
 ErpApi::$listeMax = null;
 
 echo "La vue de la marque\n";
