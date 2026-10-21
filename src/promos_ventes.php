@@ -151,15 +151,28 @@ function pvNormaliser(array $d): array
             $por = (int) ($x['id_product_portion'] ?? $x['product_portion_id'] ?? 0);
             if ($pid > 0) { $p[$por > 0 ? $pid . ':' . $por : (string) $pid] = trim((string) ($x['name'] ?? '')); }
         }
-        foreach ((array) ($c['product_ids'] ?? []) as $pid) { if ((int) $pid > 0 && !isset($p[(string) (int) $pid])) { $p[(string) (int) $pid] = ''; } }
+        // Une cible produit : un entier, ou {id_product, id_product_portion} — la portion d'un produit (21/10/2026, l'API).
+        $vises = [];
+        foreach ((array) ($c['product_ids'] ?? []) as $x) {
+            $pid = is_array($x) ? (int) ($x['id_product'] ?? $x['product_id'] ?? $x['id'] ?? 0) : (int) $x;
+            $por = is_array($x) ? (int) ($x['id_product_portion'] ?? $x['product_portion_id'] ?? 0) : 0;
+            if ($pid <= 0) { continue; }
+            $k = $por > 0 ? $pid . ':' . $por : (string) $pid;
+            if (!isset($p[$k])) { $p[$k] = ''; }
+            $vises[] = [$pid, $por];
+        }
         $cats = [];
         foreach ((array) ($c['categories'] ?? []) as $x) { if ((int) ($x['id'] ?? 0) > 0) { $cats[(string) (int) $x['id']] = trim((string) ($x['name'] ?? '')); } }
         foreach ((array) ($c['category_ids'] ?? []) as $cid) { if ((int) $cid > 0 && !isset($cats[(string) (int) $cid])) { $cats[(string) (int) $cid] = ''; } }
         $exc = [];
-        foreach ((array) ($c['excluded_product_ids'] ?? []) as $pid) { if ((int) $pid > 0) { $exc[] = (int) $pid; } }
-        // La portion visée (« 4 Quarts + 1 Gratuit » : portion_scope ONE_QUARTER sur chaque cible), quand toutes les cibles la partagent.
+        foreach ((array) ($c['excluded_product_ids'] ?? []) as $x) { $pid = is_array($x) ? (int) ($x['id_product'] ?? $x['product_id'] ?? $x['id'] ?? 0) : (int) $x; if ($pid > 0) { $exc[] = $pid; } }
+        // La portion visée, quand toutes les cibles la partagent : l'ancienne forme (`portion_scope` sur des cibles,
+        // « 4 Quarts + 1 Gratuit » le 17/10/2026), ou la portion de chaque produit, reconnue par son n° (pmPortionTypeDe).
         $scopes = [];
         foreach (['category_targets', 'product_targets'] as $t) { foreach ((array) ($c[$t] ?? []) as $x) { if (is_array($x)) { $scopes[strtoupper((string) ($x['portion_scope'] ?? ''))] = true; } } }
+        if ($scopes === [] && $vises !== [] && $cats === [] && array_filter($vises, static fn ($v) => $v[1] <= 0) === [] && function_exists('pmPortionTypeDe')) {
+            foreach ($vises as [$pid, $por]) { $scopes[(string) pmPortionTypeDe($pid, $por)] = true; }
+        }
         $portion = count($scopes) === 1 && in_array(array_key_first($scopes), ['ONE_HALF', 'ONE_QUARTER'], true) ? array_key_first($scopes) : null;
         return ['q' => (float) ($c['quantity'] ?? 1) ?: 1.0, 'p' => $p, 'c' => $cats, 'x' => $exc, 'portion' => $portion];
     };

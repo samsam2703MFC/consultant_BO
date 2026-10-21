@@ -457,6 +457,157 @@ function pmEtatPanel(array $r, string $auj): string
     return ($r['du'] ?? null) !== null && $r['du'] > $auj ? 'a_venir' : 'active';
 }
 
+/* --- les portions d'un produit (21/10/2026) --------------------------------------------------------------------- */
+
+/**
+ * La sorte d'une portion du panel (½ ou ¼), d'après son type (`ONE_QUARTER`…), sa fraction (0,25 ou 25) ou son libellé
+ * (« ¼ », « 1/4 », « quart ») ; null pour une autre part. Les noms des champs ne sont pas documentés par le panel : on
+ * lit les plus probables.
+ */
+function pmPortionType(array $x): ?string
+{
+    foreach (['type', 'portion_type', 'product_portion_type', 'portion_scope', 'scope', 'code', 'key'] as $k) {
+        $v = strtoupper(trim((string) (is_scalar($x[$k] ?? null) ? $x[$k] : '')));
+        if (isset(PM_PORTIONS[$v])) { return $v; }
+        if ($v === 'HALF') { return 'ONE_HALF'; }
+        if ($v === 'QUARTER') { return 'ONE_QUARTER'; }
+    }
+    foreach (['fraction', 'portion_fraction', 'ratio', 'share', 'part'] as $k) {
+        if (isset($x[$k]) && is_numeric($x[$k]) && (float) $x[$k] > 0) {
+            $f = (float) $x[$k]; if ($f > 1) { $f /= 100; }
+            foreach (PM_PORTIONS as $t => $ff) { if (abs($f - $ff) < 0.01) { return $t; } }
+        }
+    }
+    foreach (['label', 'name', 'display_name', 'product_portion_label'] as $k) {
+        $v = mb_strtolower(trim((string) (is_scalar($x[$k] ?? null) ? $x[$k] : '')));
+        if ($v === '') { continue; }
+        if (preg_match('/½|\b1\s*\/\s*2\b|demi|half/u', $v)) { return 'ONE_HALF'; }
+        if (preg_match('/¼|\b1\s*\/\s*4\b|quart|quarter/u', $v)) { return 'ONE_QUARTER'; }
+    }
+    return null;
+}
+
+/**
+ * Les portions ½ et ¼ des produits, lues au panel : [pid => [type => n° de la portion]] — un produit sans ces portions
+ * rend []. L'API d'abord (/products/{id}/portions, compte admin, sinon consultant), la table `product_portion` sinon.
+ * Gardées un jour (`pmPortions`) ; un produit qu'aucune source ne rend n'est pas gardé.
+ */
+function pmPortionsDe(array $pids): array
+{
+    static $memo = [];
+    $pids = array_values(array_unique(array_filter(array_map('intval', $pids), static fn ($p) => $p > 0)));
+    $c = setting('pmPortions');
+    $c = is_array($c) ? $c : [];
+    $manque = [];
+    foreach ($pids as $p) {
+        if (isset($memo[$p])) { continue; }
+        $g = $c[(string) $p] ?? null;
+        if (is_array($g) && (int) ($g['ts'] ?? 0) > time() - 86400) { $memo[$p] = (array) ($g['t'] ?? []); } else { $manque[] = $p; }
+    }
+    if ($manque !== []) {
+        $lus = pmPortionsLues($manque);
+        foreach ($manque as $p) {
+            $memo[$p] = $lus[$p] ?? [];
+            if (isset($lus[$p])) { $c[(string) $p] = ['ts' => time(), 't' => (object) $lus[$p]]; }
+        }
+        try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['pmPortions', json_encode($c)]); }
+        catch (Throwable $e) { /* relu la prochaine fois */ }
+    }
+    $out = [];
+    foreach ($pids as $p) { $out[$p] = (array) ($memo[$p] ?? []); }
+    return $out;
+}
+
+/** La lecture elle-même : [pid => [type => n°]] pour les produits qu'une source a rendus. */
+function pmPortionsLues(array $pids): array
+{
+    $out = [];
+    $prendre = static function (int $p, $corps) use (&$out): void {
+        $l = is_array($corps) && isset($corps['portions']) && is_array($corps['portions']) ? $corps['portions'] : $corps;
+        $l = function_exists('pvItems') ? pvItems($l) : (is_array($l) && array_is_list($l) ? $l : []);
+        $t = [];
+        foreach ($l as $x) {
+            if (!is_array($x)) { continue; }
+            if (($x['is_active'] ?? $x['active'] ?? true) === false || (string) ($x['is_active'] ?? $x['active'] ?? '1') === '0' || !empty($x['deleted_at'])) { continue; }
+            $id = (int) ($x['id_product_portion'] ?? $x['product_portion_id'] ?? $x['id'] ?? 0);
+            $ty = pmPortionType($x);
+            if ($id > 0 && $ty !== null && !isset($t[$ty])) { $t[$ty] = $id; }
+        }
+        $out[$p] = $t;
+    };
+    $ch = [];
+    foreach ($pids as $p) { $ch[$p] = '/products/' . $p . '/portions'; }
+    $r = class_exists('ErpApi') && ErpApi::disponible() ? ErpApi::getParallele($ch, 4) : [];
+    foreach ($pids as $p) { if (is_array($r[$p] ?? null)) { $prendre($p, $r[$p]); } }
+    $reste = array_values(array_filter($pids, static fn ($p) => !isset($out[$p])));
+    if ($reste !== [] && class_exists('PanelApi') && PanelApi::configured()) {
+        $r = PanelApi::getParallele(array_intersect_key($ch, array_flip($reste)), 4);
+        foreach ($reste as $p) { if (is_array($r[$p] ?? null)) { $prendre($p, $r[$p]); } }
+        $reste = array_values(array_filter($reste, static fn ($p) => !isset($out[$p])));
+    }
+    if ($reste !== []) {
+        try {
+            $cols = array_column(Db::rows('SHOW COLUMNS FROM product_portion'), 'Field');
+            $col = in_array('id_product', $cols, true) ? 'id_product' : (in_array('product_id', $cols, true) ? 'product_id' : null);
+            if ($col !== null) {
+                $par = [];
+                foreach (Db::rows('SELECT * FROM product_portion WHERE ' . $col . ' IN (' . implode(',', array_map('intval', $reste)) . ')') as $x) { $par[(int) $x[$col]][] = $x; }
+                foreach ($reste as $p) { $prendre($p, $par[$p] ?? []); }
+            }
+        } catch (Throwable $e) { /* pas de table : le produit reste sans portion connue */ }
+    }
+    return $out;
+}
+
+/** La sorte (½, ¼) de la portion n° $por du produit $pid, ou null. */
+function pmPortionTypeDe(int $pid, int $por): ?string
+{
+    if ($pid <= 0 || $por <= 0) { return null; }
+    $t = array_search($por, pmPortionsDe([$pid])[$pid] ?? [], true);
+    return is_string($t) ? $t : null;
+}
+
+/**
+ * Les cibles d'un côté qui vise une portion (21/10/2026) : chaque produit choisi, et chaque produit du magasin dans
+ * les catégories choisies (hors exclusions), avec le n° de sa portion au panel. Un produit choisi sans cette portion
+ * se dit ; un produit d'une catégorie qui ne l'a pas est passé. Rend [demande, erreurs].
+ */
+function pmCiblesPortions(array $d, int $shop): array
+{
+    $err = [];
+    $produits = null;
+    foreach (['x' => 'ce que le client achète', 'y' => 'ce que le client reçoit'] as $k => $mot) {
+        $c = $d[$k] ?? [];
+        $P = (string) ($c['portion'] ?? '');
+        if ($P === '' || !isset(PM_PORTIONS[$P])) { continue; }
+        $lib = $P === 'ONE_HALF' ? '½' : '¼';
+        $exclus = array_flip(array_map(static fn ($o) => (int) $o['id'], (array) ($c['exclus'] ?? [])));
+        $choisis = array_map(static fn ($o) => (int) $o['id'], (array) ($c['prods'] ?? []));
+        $cats = array_flip(array_map(static fn ($o) => (int) $o['id'], (array) ($c['cats'] ?? [])));
+        $deCat = [];
+        if ($cats !== []) {
+            $produits = $produits ?? (pmProduits($shop) ?? []);
+            foreach ($produits as $p) { if (isset($cats[(int) $p['catId']]) && !isset($exclus[(int) $p['id']])) { $deCat[] = (int) $p['id']; } }
+        }
+        $tous = array_values(array_unique(array_merge($choisis, $deCat)));
+        $por = pmPortionsDe($tous);
+        $cibles = []; $sans = [];
+        foreach ($tous as $pid) {
+            $n = (int) ($por[$pid][$P] ?? 0);
+            if ($n > 0) { $cibles[] = [$pid, $n]; } elseif (in_array($pid, $choisis, true)) { $sans[] = $pid; }
+        }
+        if ($sans !== []) {
+            $noms = [];
+            foreach ((array) ($c['prods'] ?? []) as $o) { if (in_array((int) $o['id'], $sans, true)) { $noms[] = trim((string) ($o['nom'] ?? '')) ?: ('produit ' . $o['id']); } }
+            $err[] = 'Pas de portion ' . $lib . ' au panel pour ' . implode(', ', $noms) . ' (' . $mot . ') : retirez-les, ou visez la pièce entière.';
+        } elseif ($cibles === []) {
+            $err[] = 'Aucun produit de ' . $mot . ' n’a de portion ' . $lib . ' au panel.';
+        }
+        $d[$k]['cibles'] = $cibles;
+    }
+    return [$d, $err];
+}
+
 /* --- l'écriture au panel ----------------------------------------------------------------------------------- */
 
 /**
@@ -486,10 +637,12 @@ function pmPanelCorps(array $d, string $statut, bool $secondes = true): array
     $ids = static fn (array $l): array => array_values(array_map(static fn ($o) => (int) $o['id'], $l));
     $cote = static function (array $c) use ($ids): array {
         $out = ['quantity' => (int) $c['q'], 'product_ids' => $ids($c['prods']), 'category_ids' => $ids($c['cats']), 'excluded_product_ids' => $ids($c['exclus'])];
-        // Une portion visée : chaque cible la porte (`portion_scope`), comme dans la fiche « 4 Quarts + 1 Gratuit ».
-        if (!empty($c['portion'])) {
-            $out['category_targets'] = array_map(static fn ($id) => ['id_category' => $id, 'portion_scope' => $c['portion']], $out['category_ids']);
-            $out['product_targets'] = array_map(static fn ($id) => ['id_product' => $id, 'portion_scope' => $c['portion']], $out['product_ids']);
+        // Une portion visée (21/10/2026, l'API du panel) : la portion de chaque produit, par son identifiant —
+        // `product_ids: [{id_product, id_product_portion}]`. Une catégorie ne porte pas de portion : ses produits la
+        // remplacent (pmCiblesPortions, qui a mis les cibles dans `cibles`).
+        if (!empty($c['portion']) && isset($c['cibles'])) {
+            $out['product_ids'] = array_map(static fn ($t) => ['id_product' => (int) $t[0], 'id_product_portion' => (int) $t[1]], $c['cibles']);
+            $out['category_ids'] = [];
         }
         return $out;
     };
@@ -506,6 +659,19 @@ function pmPanelCorps(array $d, string $statut, bool $secondes = true): array
     ];
 }
 
+/** Le produit d'une cible du panel : un entier, ou {id_product | product_id | id, id_product_portion…}. */
+function pmCibleProduit($x): int
+{
+    return is_array($x) ? (int) ($x['id_product'] ?? $x['product_id'] ?? $x['id'] ?? 0) : (int) $x;
+}
+
+/** La clé d'une cible produit : « 12 », ou « 12:77 » quand elle vise la portion n° 77 du produit 12. */
+function pmCibleCle($x): string
+{
+    $por = is_array($x) ? (int) ($x['id_product_portion'] ?? $x['product_portion_id'] ?? 0) : 0;
+    return pmCibleProduit($x) . ($por > 0 ? ':' . $por : '');
+}
+
 /** Ce que la fiche relue au panel ne reprend pas de ce qui a été envoyé : une liste de mots (vide = identique). */
 function pmPanelEcarts(array $envoye, array $relu): array
 {
@@ -520,15 +686,15 @@ function pmPanelEcarts(array $envoye, array $relu): array
     foreach (['trigger' => 'ce qu’on achète', 'reward' => 'ce qu’on reçoit'] as $k => $mot) {
         $a = $envoye[$k]; $b = is_array($relu[$k] ?? null) ? $relu[$k] : [];
         if ((int) ($b['quantity'] ?? 0) !== $a['quantity']) { $e[] = $mot . ' (quantité)'; }
-        foreach (['product_ids' => 'produits', 'category_ids' => 'catégories', 'excluded_product_ids' => 'exclusions'] as $c => $m) {
-            if ($ens($b[$c] ?? []) !== $ens($a[$c])) { $e[] = $mot . ' (' . $m . ')'; }
+        foreach (['category_ids' => 'catégories', 'excluded_product_ids' => 'exclusions'] as $c => $m) {
+            if ($ens(array_map('pmCibleProduit', (array) ($b[$c] ?? []))) !== $ens(array_map('pmCibleProduit', $a[$c]))) { $e[] = $mot . ' (' . $m . ')'; }
         }
-        // La portion : chaque cible relue porte la même `portion_scope` que l'envoi (sinon toutes les variantes seraient visées).
-        foreach (['category_targets', 'product_targets'] as $c) {
-            if (!isset($a[$c])) { continue; }
-            $voulu = $a[$c] !== [] ? (string) $a[$c][0]['portion_scope'] : '';
-            $scopes = array_map(static fn ($t) => is_array($t) ? strtoupper((string) ($t['portion_scope'] ?? '')) : '', (array) ($b[$c] ?? []));
-            if (count($scopes) !== count($a[$c]) || array_filter($scopes, static fn ($v) => $v !== $voulu) !== []) { $e[] = $mot . ' (portion)'; break; }
+        // Les produits avec leur portion (« 12:77 ») : relue sans sa portion, la cible viserait toutes les variantes.
+        $cl = static function (array $l): array { $v = array_map('pmCibleCle', $l); sort($v); return $v; };
+        $ra = $cl((array) $a['product_ids']); $rb = $cl((array) ($b['product_ids'] ?? []));
+        if ($ra !== $rb) {
+            $sans = static fn (array $l) => array_map(static fn ($x) => strtok($x, ':'), $l);
+            $e[] = $mot . ($sans($ra) === $sans($rb) ? ' (portion)' : ' (produits)');
         }
     }
     $r = is_array($relu['reward'] ?? null) ? $relu['reward'] : [];
@@ -550,13 +716,19 @@ function pmPanelEnvoyer(array $d, ?int $panelId, bool $activer = true): array
     if (!class_exists('ErpApi') || !ErpApi::disponible()) { return ['ok' => false, 'id' => $panelId, 'erreur' => 'compte admin du panel indisponible']; }
     $base = '/admin/promotions/buy-x-get-y';
     $sec = true;
+    // Modifier = PATCH …/{id} (21/10/2026 : la documentation de l'API ne connaît que PATCH sur une promotion), PUT en
+    // repli pour un panel qui ne le prendrait pas.
+    $maj = static function (int $id, array $corps) use ($base): array {
+        $w = ErpApi::ecrire('PATCH', $base . '/' . $id, $corps);
+        return $w['erreur'] !== null && in_array($w['code'], [404, 405], true) ? ErpApi::ecrire('PUT', $base . '/' . $id, $corps) : $w;
+    };
     $corps = pmPanelCorps($d, 'INACTIVE', $sec);
-    $w = $panelId !== null ? ErpApi::ecrire('PUT', $base . '/' . $panelId, $corps) : ErpApi::ecrire('POST', $base, $corps);
+    $w = $panelId !== null ? $maj($panelId, $corps) : ErpApi::ecrire('POST', $base, $corps);
     // L'heure des créneaux refusée pour son format (pas pour son absence) : une fois l'autre, avec ou sans secondes.
     if ($w['erreur'] !== null && ($d['creneaux'] ?? []) !== [] && preg_match('/time_(from|to)/', (string) $w['erreur']) === 1 && preg_match('/time_(from|to) is required/', (string) $w['erreur']) !== 1) {
         $sec = false;
         $corps = pmPanelCorps($d, 'INACTIVE', $sec);
-        $w = $panelId !== null ? ErpApi::ecrire('PUT', $base . '/' . $panelId, $corps) : ErpApi::ecrire('POST', $base, $corps);
+        $w = $panelId !== null ? $maj($panelId, $corps) : ErpApi::ecrire('POST', $base, $corps);
     }
     if ($w['erreur'] !== null) { return ['ok' => false, 'id' => $panelId, 'erreur' => 'le panel refuse la promotion : ' . $w['erreur']]; }
     $c = is_array($w['corps']) ? $w['corps'] : [];
@@ -572,7 +744,7 @@ function pmPanelEnvoyer(array $d, ?int $panelId, bool $activer = true): array
     if ($ecarts !== []) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . ') : le panel ne reprend pas ' . implode(', ', $ecarts)]; }
     // Un brouillon : écrit et relu, il reste inactif.
     if (!$activer) { return ['ok' => true, 'id' => $id, 'erreur' => null]; }
-    $a = ErpApi::ecrire('PUT', $base . '/' . $id, pmPanelCorps($d, 'ACTIVE', $sec));
+    $a = $maj($id, pmPanelCorps($d, 'ACTIVE', $sec));
     if ($a['erreur'] !== null && in_array($a['code'], [404, 405], true)) { $a = ErpApi::ecrire('PATCH', $base . '/' . $id, ['status' => 'ACTIVE']); }
     if ($a['erreur'] !== null) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . '), activation refusée : ' . $a['erreur']]; }
     $relu = $lire();
@@ -686,14 +858,14 @@ function ep_promos_sonde_portions(): array
     $extrait = static fn ($c) => is_array($c) ? mb_substr((string) json_encode($c, JSON_UNESCAPED_UNICODE), 0, 2500) : null;
     if ($pid > 0) {
         $api = [];
-        foreach (['/products/' . $pid, '/products/' . $pid . '/portions', '/shops/' . $shop . '/products/' . $pid, '/product-portions?product_id=' . $pid] as $c) {
+        foreach (['/products/' . $pid, '/products/' . $pid . '/portions', '/shops/' . $shop . '/products/' . $pid . '/portions/prices', '/shops/' . $shop . '/products/' . $pid, '/product-portions?product_id=' . $pid] as $c) {
             $r = PanelApi::sondeGet($c, 8);
             $api[$c] = ['code' => $r['code'] ?? null, 'extrait' => $extrait($r['corps'] ?? null)];
         }
         $out['apiConsultant'] = $api;
         if (class_exists('ErpApi') && ErpApi::disponible()) {
             $adm = [];
-            foreach (['/admin/products/' . $pid, '/admin/products/' . $pid . '/portions', '/admin/product-portions?product_id=' . $pid] as $c) {
+            foreach (['/products/' . $pid . '/portions', '/shops/' . $shop . '/products/' . $pid . '/portions/prices', '/admin/products/' . $pid, '/admin/products/' . $pid . '/portions', '/admin/product-portions?product_id=' . $pid] as $c) {
                 $r = ErpApi::sondeGet($c);
                 $adm[$c] = ['code' => $r['code'], 'extrait' => $extrait($r['corps'])];
             }
@@ -704,6 +876,9 @@ function ep_promos_sonde_portions(): array
         $out['base'] = ['colonnes' => array_column(Db::rows('SHOW COLUMNS FROM product_portion'), 'Field'),
             'n' => (int) (Db::row('SELECT COUNT(*) n FROM product_portion')['n'] ?? 0), 'exemples' => Db::rows('SELECT * FROM product_portion LIMIT 8')];
     } catch (Throwable $e) { $out['base'] = ['erreur' => mb_substr($e->getMessage(), 0, 200)]; }
+    // Ce que le cockpit en retient pour les promotions (21/10/2026) : la portion ½ et ¼ de chaque produit visé.
+    $ids = array_values(array_filter(array_map(static fn ($l) => (int) ($l['id'] ?? $l['id_product'] ?? 0), array_slice($vises, 0, 6))));
+    $out['retenu'] = $ids !== [] ? pmPortionsLues($ids) : [];
     return $out;
 }
 
@@ -889,6 +1064,9 @@ function wr_promos_magasin(): array
         $err = pmErreurs($saisie, [], null, '0000-00-00 00:00');
     }
     if ($err !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $err, 'coef' => $coef]; }
+    // Une portion visée : la portion de chaque produit, lue au panel (21/10/2026).
+    [$d, $errP] = pmCiblesPortions($d, $shop);
+    if ($errP !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $errP, 'coef' => $coef]; }
     // Un envoi à la fois par magasin : un double clic ne crée pas deux promotions au panel (17/10/2026 : « Test » n° 20 et 21).
     $verrou = @fopen(sys_get_temp_dir() . '/cockpit-promo-magasin-' . $shop . '.lock', 'c');
     if ($verrou !== false && !flock($verrou, LOCK_EX | LOCK_NB)) {
