@@ -3203,7 +3203,8 @@
   const pmTtc = p => p.prixTtc != null ? +p.prixTtc : (p.prixHt != null ? +p.prixHt * (1 + (+p.tva || 0) / 100) : null);
   /** Ce qu'un côté vise vraiment : la catégorie (moins les exclus) ou les produits, selon le mode choisi. */
   const pmEffectif = c => ({ q: Math.max(1, +c.q || 1), cats: c.mode === 'cats' ? c.cats : [], prods: c.mode === 'prods' ? c.prods : [], exclus: c.mode === 'cats' ? c.exclus : [], portion: c.portion || null });
-  /** Les variantes d'un côté (17/10/2026) : la portion du panel (`portion_scope`), sa fraction, ses mots. Sans : toutes les variantes. */
+  /** Les variantes d'un côté (17/10/2026) : la portion du panel, sa fraction, ses mots. Sans : toutes les variantes. Au panel, la
+   * portion de chaque produit par son n° (21/10/2026, `id_product_portion`) : une catégorie part produit par produit. */
   const PM_PORTIONS = { ONE_HALF: { f: 0.5, lib: '½', un: 'demi', des: 'demis' }, ONE_QUARTER: { f: 0.25, lib: '¼', un: 'quart', des: 'quarts' } };
   const pmFrac = c => (PM_PORTIONS[c.portion] || { f: 1 }).f;
   function pmEligibles(prods, c) {
@@ -3690,7 +3691,7 @@
   function pmCible(W, cote) {
     const c = W.d[cote], prods = pmProduits() || [], cats = pmCategories();
     const ex = c.mode === 'cats' && c.cats.length ? prods.filter(p => c.cats.some(o => +o.id === +p.catId) && !c.exclus.some(o => +o.id === +p.id)) : [];
-    const variante = `<div class="pm-f"><label>Variante</label><select class="pm-in" data-pmportion="${cote}"><option value="">Toutes les variantes</option>${Object.entries(PM_PORTIONS).map(([k, v]) => `<option value="${k}"${c.portion === k ? ' selected' : ''}>${v.lib} seulement (${v.un})</option>`).join('')}</select></div>`;
+    const variante = `<div class="pm-f"><label>Variante</label><select class="pm-in" data-pmportion="${cote}"><option value="">Toutes les variantes</option>${Object.entries(PM_PORTIONS).map(([k, v]) => `<option value="${k}"${c.portion === k ? ' selected' : ''}>${v.lib} seulement (${v.un})</option>`).join('')}</select>${c.portion ? `<small class="db-mini">au panel, la part ${PM_PORTIONS[c.portion].lib} de chaque produit${c.mode === 'cats' ? ' de la catégorie qui en a une' : ''}</small>` : ''}</div>`;
     let h = `<div class="pm-row" style="grid-template-columns:auto 190px 1fr"><div class="pm-f"><label>Sur</label><span class="pm-seg"><button class="${c.mode === 'cats' ? 'on' : ''}" data-pmmode="${cote}|cats">Catégorie</button><button class="${c.mode === 'prods' ? 'on' : ''}" data-pmmode="${cote}|prods">Produits</button></span></div>${variante}`;
     if (c.mode === 'cats') {
       h += `<div class="pm-f"><label>Catégorie</label><select class="pm-in" data-pmaddcat="${cote}"><option value="">${cats.length ? '+ Ajouter une catégorie…' : 'lecture des catégories…'}</option>${cats.filter(o => !c.cats.some(z => +z.id === +o.id)).map(o => `<option value="${o.id}">${esc(o.nom)} (${o.n} produit${o.n > 1 ? 's' : ''})</option>`).join('')}</select></div></div>`;
