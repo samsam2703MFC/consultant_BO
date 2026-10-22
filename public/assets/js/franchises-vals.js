@@ -33,6 +33,60 @@ export function ffCharge(app, shop, force){
   app.setState({ ff: { shop, chargement: true, d: b && b.shop === shop ? b.d : null } });
   readOne('/franchises/fiche?shop=' + encodeURIComponent(shop) + '&_cache=300' + (force ? '&rafraichir=1' : '')).then(d => { app._ffEnCours = null; app.setState({ ff: { shop, chargement: false, d: d || { error: 'injoignable' } } }); });
 }
+/* L'onglet Documents (22/10/2026, Sam) : les documents du magasin — rapports de réunion, contrats de mise à
+ * disposition, le reste — déposés ici, lus par l'API (le dossier des fichiers est fermé à l'accès direct). */
+export function ffDocsCharge(app, shop, force){
+  const b = app.state.ffDocs;
+  if (!shop || (!force && b && b.shop === shop && (b.d || b.chargement))) { return; }
+  app.setState({ ffDocs: { shop, chargement: true, d: b && b.shop === shop ? b.d : null } });
+  readOne('/franchises/documents?shop=' + encodeURIComponent(shop)).then(d => app.setState({ ffDocs: { shop, chargement: false, d: d || { error: 'injoignable' } } }));
+}
+function valsFFDocs(app, f, shop){
+  const S = app.state;
+  ffDocsCharge(app, shop, false);
+  const B = S.ffDocs || {}, D = B.shop === shop && B.d && !B.d.error ? B.d : null;
+  const F = Object.assign({ sorte: 'reunion', titre: '', date: auj(), note: '' }, S.ffDocForm || {});
+  const maj = k => e => app.setState({ ffDocForm: Object.assign({}, F, { [k]: e.target.value }) });
+  const taille = o => o >= 1048576 ? nf(o / 1048576, 1) + ' Mo' : Math.max(1, Math.round(o / 1024)) + ' Ko';
+  // Les fichiers choisis restent hors de l'état (des objets File) : un nouveau rendu ne les perd pas.
+  const choisis = (app._ffDocFichiers && app._ffDocFichiers.shop === shop) ? app._ffDocFichiers.l : [];
+  const fichier = id => API_BASE + '/franchises/documents/fichier?id=' + id;
+  const deposer = () => {
+    if (!D || !choisis.length || S.ffDocEnvoi) { return; }
+    const lourds = choisis.filter(x => x.size > D.maxOctets);
+    if (lourds.length) { app.setState({ ffDocMsg: { ko: true, txt: 'Trop lourd, ' + taille(D.maxOctets) + ' au plus par fichier : ' + lourds.map(x => x.name).join(', ') } }); return; }
+    const fd = new FormData();
+    [['shop', shop], ['sorte', F.sorte], ['titre', F.titre], ['date', F.date], ['note', F.note]].forEach(([k, v]) => fd.append(k, v || ''));
+    choisis.forEach(x => fd.append('fichiers[]', x, x.name));
+    app.setState({ ffDocEnvoi: true, ffDocMsg: null });
+    fetch(API_BASE + '/franchises/documents', { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(r => r.json().catch(() => ({ error: 'HTTP ' + r.status })))
+      .then(j => {
+        const n = (j.ajoutes || []).length, refus = j.refuses || [];
+        if (n) { app._ffDocFichiers = null; }
+        app.setState({ ffDocEnvoi: false, ffDocForm: n ? Object.assign({}, F, { titre: '', note: '' }) : F,
+          ffDocMsg: { ko: !n, txt: (n ? pl(n, 'document') + ' rangé' + (n > 1 ? 's' : '') + '.' : (j.error || 'Rien n’a été rangé.')) + (refus.length ? ' Refusé : ' + refus.map(x => x.nom + ' (' + x.motif + ')').join(', ') + '.' : '') } });
+        if (n) { ffDocsCharge(app, shop, true); }
+      })
+      .catch(e => app.setState({ ffDocEnvoi: false, ffDocMsg: { ko: true, txt: 'Envoi impossible : ' + e.message } }));
+  };
+  const docs = D ? D.documents : [];
+  f.docs = {
+    chargement: !!B.chargement && !D, erreur: B.d && B.d.error ? 'Les documents ne se lisent pas : ' + B.d.error : '',
+    sortes: (D ? D.sortes : []).map(o => ({ v: o.v, nom: o.nom, on: o.v === F.sorte })),
+    form: F, setSorte: maj('sorte'), setTitre: maj('titre'), setDate: maj('date'), setNote: maj('note'),
+    max: D ? taille(D.maxOctets) : '', accept: D ? D.extensions.map(e => '.' + e).join(',') : '',
+    choisis: choisis.map(x => x.name + ' · ' + taille(x.size)),
+    setFichiers: e => { app._ffDocFichiers = { shop, l: Array.from(e.target.files || []) }; app.setState({ ffDocMsg: null }); },
+    envoi: !!S.ffDocEnvoi, peutDeposer: !!D && choisis.length > 0 && !S.ffDocEnvoi, deposer, msg: S.ffDocMsg || null, n: docs.length,
+    groupes: (D ? D.sortes : []).map(o => ({ nom: o.nom, docs: docs.filter(x => x.sorte === o.v).map(x => ({
+      titre: x.titre, note: x.note || '', fichier: x.nom + ' · ' + taille(x.octets), date: x.date ? fmtD(x.date) + '/' + x.date.slice(0, 4) : '—',
+      depose: 'déposé le ' + fmtD(x.deposeLe.slice(0, 10)) + '/' + x.deposeLe.slice(0, 4) + ' à ' + x.deposeLe.slice(11, 16),
+      ouvrir: fichier(x.id), telecharger: fichier(x.id) + '&telecharger=1',
+      retirer: () => { if (!window.confirm('Retirer « ' + x.titre + ' » des documents de ' + f.shopNom + ' ? Le fichier est effacé.')) { return; }
+        write('api', 'DELETE', '/franchises/documents?id=' + x.id).then(r => { if (!r.ok) { app.setState({ ffDocMsg: { ko: true, txt: 'Retrait impossible : ' + (r.error || 'HTTP ' + r.status) } }); } ffDocsCharge(app, shop, true); }); } })) }))
+      .filter(g => g.docs.length) };
+}
 export function valsFF(app, common){
   const S = app.state; const auj0 = auj();
   ffTableCharge(app, false);
@@ -41,11 +95,11 @@ export function valsFF(app, common){
   const shop = String(S.ffShop || (mags[0] || {}).id || '');
   // Fiche et scoring ne font qu'une entrée (B2) ; la visite et le client mystère en sont sortis (16/10/2026) :
   // deux lectures, ce magasin et le réseau. Un ancien onglet (agenda, checklist, météo, client mystère) ouvre ce magasin.
-  const onglet = ({ tableau: 'reseau', scoring: 'reseau', reseau: 'reseau' })[S.ffOnglet] || 'sante';
+  const onglet = ({ tableau: 'reseau', scoring: 'reseau', reseau: 'reseau', docs: 'docs' })[S.ffOnglet] || 'sante';
   if (shop) { ffCharge(app, shop, false); }
   const B = S.ff || {}, d = B.shop === shop && B.d && !B.d.error ? B.d : null;
   const go = (screen, extra) => () => app.setState(Object.assign({ screen }, extra || {}));
-  const VUES = [['sante', 'Ce magasin'], ['reseau', 'Le réseau']].map(([v, nom]) => ({ v, nom, on: onglet === v, choisir: () => app.setState({ ffOnglet: v }) }));
+  const VUES = [['sante', 'Ce magasin'], ['docs', 'Documents'], ['reseau', 'Le réseau']].map(([v, nom]) => ({ v, nom, on: onglet === v, choisir: () => app.setState({ ffOnglet: v }) }));
   const f = { onglet, onglets: VUES,
     magasins: mags.map(m => ({ v: m.id, nom: m.court, on: String(m.id) === shop })), setShop: e => app.setState({ ffShop: e.target.value }),
     menu: () => app.setState({ railOuvert: !S.railOuvert }),
@@ -54,6 +108,8 @@ export function valsFF(app, common){
     shopNom: (mags.find(m => String(m.id) === shop) || {}).court || shop, tableau: null, tableauChargement: !!TB.chargement && !T,
     chargement: !!B.chargement && !d, indispo: !B.chargement && B.d && !d ? 'Lecture impossible — API injoignable.' : '', kpis: [], journalier: [], terrain: [], journal: [], sous: '' };
   common.ff = f;
+  // Documents ne lit que les documents : la fiche du magasin (lente, parfois muette) ne le retient pas.
+  if (onglet === 'docs') { if (shop) { valsFFDocs(app, f, shop); } return; }
   if (T) {
     f.tableau = { mini: (T.trimestre ? 'scoring ' + T.trimestre.lib + ' · ' : '') + 'CA et B2B du mois · tâches, notes et réclamations sur 30 jours · invendus en % du CA sur 7 jours · relu ' + (T.lu || ''),
       rows: T.magasins.map(m => { const j = m.journalier, t = m.terrain; return { id: String(m.id), on: String(m.id) === shop, choisir: () => app.setState({ ffShop: m.id, ffOnglet: 'fiche' }), feu: m.feu, court: m.court, sous: (m.responsable ? m.responsable + ' · ' : '') + ((m.motifs || [])[0] || m.due || 'aucune alerte'),
