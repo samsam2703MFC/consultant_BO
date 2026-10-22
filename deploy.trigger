@@ -961,3 +961,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-22T18:15:33Z tablet : skan numeru partii kamerą (OCR wideo)
 2026-10-22T18:24:42Z tablet : nowe produkty (receptura, film, zdjęcia, notatki ; migracja 051)
 2026-10-22T18:33:17Z aktywność w ERP : sesje, strony, kliknięcia, koszt czasu (migracja 052)
+2026-10-22T19:15:00Z tablet : nowy wygląd (menu na dole, ikony Lucide) + parowanie zapamiętane (ciasteczko)
