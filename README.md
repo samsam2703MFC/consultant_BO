@@ -184,8 +184,9 @@ aussi au démarrage par `ensureFacebook()` pour les bases déjà en service).
 ## Module Marketing
 
 > **Retiré le 22/10/2026.** Il ne reste que le Marketing servi à `/marketing/` (dépôt
-> `marketing`) : `public/marketing/index.html` n'est plus qu'un renvoi vers lui, et la
-> console (Marketing › Aujourd'hui) y mène. Les routes `/api/cockpit/marketing/…` restent
+> `marketing`) : `public/marketing/index.html` n'est plus qu'un renvoi vers lui ; la
+> console (Marketing › Aujourd'hui) et le rail (Marque & marketing → « Marketing ↗ ») y
+> mènent. Les routes `/api/cockpit/marketing/…` restent
 > en service (lecture du hub par la console, Brand Guard, avis). Ce qui suit décrit
 > l'ancien portail.
 

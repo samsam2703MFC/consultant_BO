@@ -1437,6 +1437,9 @@ class App {
       ['Marque & marketing', [
         // Une seule entrée (16/10/2026) : le hub, ses deux portes vers le portail, et les onglets de campagne.
         ['marketing', 'Marketing', ((((this.state.mh || {}).d || {}).aFaire) || []).filter(a => a.niveau === 'urgent' && a.canal !== 'social').length, ['mktCampagnes', 'mktCalendrier', 'bxcampagnes', 'mesure']],
+        // Le Marketing lui-même (dépôt marketing, servi à /marketing/ à côté du cockpit) : campagnes et leur
+        // assistant, réseaux sociaux, publicités Meta. Il s'ouvre dans un onglet à part.
+        ['ext:../marketing/', 'Marketing ↗', 0],
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
