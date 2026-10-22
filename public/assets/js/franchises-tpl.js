@@ -21,6 +21,33 @@ export function tplFF(c, x){
   // B2 : le réseau — le classement du trimestre et le benchmark dans une seule table, puis les
   // règles du scoring et l'envoi du rapport A4.
   const st = x.sqSt;
+  // Documents (22/10/2026) : déposer en tête, puis les documents du magasin par sorte.
+  if (f.onglet === 'docs') {
+    const D = f.docs || {};
+    const tete = `<div class="gc-titre"><h1>${esc(f.shopNom)}</h1><span class="ss">Documents · rapports de réunion, contrats de mise à disposition et autres pièces du magasin</span></div>`;
+    if (D.erreur) { return page(tete + attente(D.erreur)); }
+    if (D.chargement || !D.sortes) { return page(tete + attente('Lecture des documents…')); }
+    const fm = D.form;
+    const champ = (lab, html, cls) => `<label class="ffd-c${cls ? ' ' + cls : ''}"><span class="mko-lab">${esc(lab)}</span>${html}</label>`;
+    const depot = `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-corps"><h2 class="ff-h2">Déposer un document</h2>
+      <div class="ffd-form">
+        ${champ('Sorte', `<select ${x.C(D.setSorte)} class="mko-sel">${D.sortes.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>`)}
+        ${champ('Titre', `<input class="mko-inp" value="${esc(fm.titre)}" placeholder="ex. Réunion du 21/10 — plan d’action" ${x.C(D.setTitre)}>`)}
+        ${champ('Date du document', `<input class="mko-inp" type="date" value="${esc(fm.date)}" ${x.C(D.setDate)}>`)}
+        ${champ('Note', `<input class="mko-inp" value="${esc(fm.note)}" placeholder="facultatif" ${x.C(D.setNote)}>`)}
+      </div>
+      <div class="ffd-bas"><label class="sq-drop ffd-drop"><b>${D.choisis.length ? esc(D.choisis.length > 1 ? D.choisis.length + ' fichiers choisis' : D.choisis[0]) : 'Choisir le ou les fichiers'}</b>${D.choisis.length > 1 ? esc(D.choisis.join(' · ')) : 'PDF, Word, Excel, photos… · ' + esc(D.max) + ' au plus par fichier'}<input type="file" multiple accept="${esc(D.accept)}" ${x.C(D.setFichiers)} style="display:none"></label>
+        <button ${x.A(D.deposer)} class="cx-btn prim ffd-ok" ${D.peutDeposer ? '' : 'disabled'}>${D.envoi ? 'Envoi…' : 'Déposer'}</button></div>
+      ${D.msg ? `<div class="ffd-msg ${D.msg.ko ? 'ko' : 'ok'}">${esc(D.msg.txt)}</div>` : ''}
+    </div></div>`;
+    const liste = D.groupes.length ? D.groupes.map(g => `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">${esc(g.nom)}</span><span class="mko-mini">${g.docs.length}</span></div>
+      <div style="overflow-x:auto"><table class="mko-tab ffd-tab"><thead><tr><th>Titre</th><th>Fichier</th><th>Date</th><th></th></tr></thead><tbody>
+      ${g.docs.map(d => `<tr><td><b>${esc(d.titre)}</b>${d.note ? `<small>${esc(d.note)}</small>` : ''}</td><td>${esc(d.fichier)}<small>${esc(d.depose)}</small></td><td>${esc(d.date)}</td>
+        <td class="ffd-act"><a class="mko-pied-btn" href="${esc(d.ouvrir)}" target="_blank" rel="noopener">Ouvrir ↗</a><a class="mko-pied-btn" href="${esc(d.telecharger)}">Télécharger</a><button ${x.A(d.retirer)} class="mko-pied-btn">Retirer</button></td></tr>`).join('')}
+      </tbody></table></div></div>`).join('')
+      : attente('Aucun document pour ' + f.shopNom + ' : déposez le premier rapport de réunion ou contrat ci-dessus.');
+    return page(tete + depot + liste);
+  }
   if (f.onglet === 'reseau') {
     if (c.sqIndispo && !f.reseau) { return page(attente(c.sqIndispo)); }
     if (!f.reseau) { return page(attente(f.tableauChargement ? 'Lecture du réseau…' : 'Le benchmark du réseau ne se lit pas.')); }

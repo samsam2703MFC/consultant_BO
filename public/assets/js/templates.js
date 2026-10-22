@@ -5317,6 +5317,33 @@ function tplBrandGuard(c, x){
 }
 
 /* --- Reporting --------------------------------------------------------------- */
+/* L'envoi ponctuel du CA net d'un mois, tous les magasins (22/10/2026) : en tête du Reporting. */
+function tplCaNet(c, x){
+  const { esc } = x, n = c.caNet;
+  if (!n) { return ''; }
+  const bord = 'border-bottom:0.5px solid var(--color-border-tertiary)';
+  const th = (t, g) => `<th style="text-align:${g ? 'left' : 'right'};font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);font-weight:600;padding:6px 10px;${bord}">${t}</th>`;
+  const td = (t, b, g) => `<td style="text-align:${g ? 'left' : 'right'};padding:7px 10px;font-size:12.5px;${bord};white-space:nowrap${b ? ';font-weight:700' : ''}">${t}</td>`;
+  const corps = n.erreur ? `<div style="color:#8D1D2C;font-size:12.5px">${esc(n.erreur)}</div>`
+    : n.chargement ? `<div style="color:var(--color-text-muted);font-size:12.5px">Lecture du mois au panel…</div>`
+    : `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px"><thead><tr>${th('Magasin', true)}${th('CA net (HTVA)')}${th('TVA')}${th('CA TTC')}${th('Tickets')}</tr></thead><tbody>
+      ${n.lignes.map(l => `<tr>${td(esc(l.nom) + (l.lu ? ` <small style="color:var(--color-text-muted);font-weight:400">${esc(l.lu)}</small>` : ''), false, true)}${td(esc(l.net), true)}${td(esc(l.tva))}${td(esc(l.brut))}${td(esc(l.tickets))}</tr>`).join('')}
+      ${n.reseau ? `<tr>${td('Réseau', true, true)}${td(esc(n.reseau.net), true)}${td(esc(n.reseau.tva))}${td(esc(n.reseau.brut))}${td(esc(n.reseau.tickets))}</tr>` : ''}
+      </tbody></table></div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">${esc(n.etat)}${n.sansAdresse ? ' · Aucune adresse connue du cockpit : ajoutez un destinataire à un rapport ci-dessous.' : ''}${n.smtp ? '' : ' · SMTP non configuré (Paramètres).'}</div>`;
+  return `<div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+    <div style="padding:14px 18px;${bord};display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px"><div style="font-size:13px;font-weight:500">Envoi ponctuel — le CA net d’un mois, tous les magasins</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Hors TVA : le montant TTC après remise moins la TVA, ticket par ticket (caisse du panel), clients pro compris.</div></div>
+      <select class="mko-sel" ${x.C(n.setMois)} aria-label="Mois">${n.moisOpts.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>
+      ${n.adresses.length ? `<select class="mko-sel" ${x.C(n.setA)} aria-label="Destinataire">${n.adresses.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>` : ''}
+      <button ${x.A(n.envoyer)} class="cx-btn prim" ${n.pret ? '' : 'disabled'}>${n.envoi ? 'Envoi…' : 'Envoyer par e-mail'}</button>
+    </div>
+    <div style="padding:10px 18px 14px">${corps}
+      ${n.msg ? `<div style="margin-top:8px;font-size:12.5px;padding:8px 10px;border-radius:8px;${n.msg.ok ? 'background:#EAF3EC;color:#2d6a3a' : 'background:#FBEFE7;color:#8A3F14'}">${esc(n.msg.txt)}</div>` : ''}
+    </div></div>`;
+}
+
 function tplReporting(c, x){
   const { esc } = x;
   return `
@@ -5324,6 +5351,7 @@ function tplReporting(c, x){
        se lisaient en zigzag, et la liste des rapports — le contenu principal —
        se retrouvait comprimée par un panneau secondaire. -->
   <div data-screen="reporting" style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
+    ${tplCaNet(c, x)}
     <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
       <div style="padding:14px 18px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
         <div style="flex:1;min-width:260px">
