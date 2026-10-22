@@ -275,5 +275,18 @@
   "inv.confirm_delete": "Usunąć fakturę {number} z kontroli ? (Nie zmienia nic w KSeF.)",
   "inv.mappings_help": "Nazwy z faktur dostawców przypisane do naszych surowców ; stosowane automatycznie przy następnych fakturach.",
   "inv.mappings_empty": "Brak przypisań — powstają przy kontroli pierwszej faktury dostawcy.",
-  "inv.confirm_unmap": "Usunąć przypisanie « {name} » → {material} ?"
+  "inv.confirm_unmap": "Usunąć przypisanie « {name} » → {material} ?",
+  "inv.import_title": "Import do kartoteki surowców",
+  "inv.import_help": "Ceny : cena netto z faktury na jednostkę surowca zastępuje cenę w kartotece (z historią cen, koszty receptur przeliczone). Ilości : przyjęcie na stan — do zamówienia albo, bez zamówienia, przez zamówienie utworzone z faktury.",
+  "inv.col.invoice_price": "Cena z faktury",
+  "inv.col.catalog_price": "Cena w kartotece",
+  "inv.col.diff": "Różnica",
+  "inv.act.prices": "Aktualizuj ceny w kartotece ({n})",
+  "inv.act.stock": "Przyjmij ilości na stan (bez zamówienia)",
+  "inv.confirm_prices": "Zastąpić ceny {n} surowców cenami z faktury ? Koszty receptur zostaną przeliczone.",
+  "inv.confirm_stock": "Przyjąć ilości z faktury na stan ? Powstanie zamówienie « przyjęte » od dostawcy {supplier}, powiązane z fakturą.",
+  "inv.prices_ok": "Zaktualizowano ceny {n} surowców (koszty receptur przeliczone).",
+  "inv.prices_skipped": "Pominięte (brak jednostki, dostawcy albo opakowania) : {list}.",
+  "inv.prices_done": "Ceny zaimportowane {at}",
+  "inv.stock_ok": "Ilości przyjęte na stan."
 }

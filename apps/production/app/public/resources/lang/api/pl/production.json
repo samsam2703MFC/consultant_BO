@@ -76,7 +76,9 @@
     "INVOICE_LINES_READ_ONLY": "Linie faktury z KSeF / XML nie są edytowalne.",
     "INVOICE_NO_ORDER": "Faktura nie jest powiązana z zamówieniem.",
     "INVOICE_NOTHING_TO_RECEIVE": "Żadna linia faktury nie jest przypisana do surowca z zamówienia.",
-    "PDF_TEXT_UNAVAILABLE": "Nie można odczytać tekstu PDF na serwerze (pdftotext) — wpisz linie ręcznie lub zaimportuj XML KSeF."
+    "PDF_TEXT_UNAVAILABLE": "Nie można odczytać tekstu PDF na serwerze (pdftotext) — wpisz linie ręcznie lub zaimportuj XML KSeF.",
+    "INVOICE_NO_SUPPLIER": "Faktura nie ma dostawcy — wybierz dostawcę, aby przyjąć ilości.",
+    "INVOICE_NO_PRICES": "Brak przypisanych pozycji z ceną — nie ma cen do zaktualizowania."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",

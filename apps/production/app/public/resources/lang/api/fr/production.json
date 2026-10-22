@@ -76,7 +76,9 @@
     "INVOICE_LINES_READ_ONLY": "Les lignes d’une facture KSeF / XML ne se modifient pas.",
     "INVOICE_NO_ORDER": "La facture n’est liée à aucune commande.",
     "INVOICE_NOTHING_TO_RECEIVE": "Aucune ligne de la facture n’est reliée à une matière de la commande.",
-    "PDF_TEXT_UNAVAILABLE": "Lecture du texte PDF impossible sur le serveur (pdftotext) — saisissez les lignes ou importez le XML KSeF."
+    "PDF_TEXT_UNAVAILABLE": "Lecture du texte PDF impossible sur le serveur (pdftotext) — saisissez les lignes ou importez le XML KSeF.",
+    "INVOICE_NO_SUPPLIER": "La facture n'a pas de fournisseur — choisissez-le pour réceptionner les quantités.",
+    "INVOICE_NO_PRICES": "Aucune ligne reliée avec un prix — aucun prix à mettre à jour."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",

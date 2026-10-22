@@ -11,7 +11,7 @@ final class InvoiceRepository extends WorkshopRepository
 {
     protected string $table = 'tfb_inv';
     protected array $writable = ['source', 'ksef_number', 'id_supplier', 'seller_nip', 'seller_name', 'number', 'issue_date', 'currency', 'total_net', 'total_gross',
-        'id_po', 'status', 'note', 'decided_by', 'decided_at', 'created_by'];
+        'id_po', 'status', 'note', 'decided_by', 'decided_at', 'prices_imported_at', 'prices_imported_by', 'created_by'];
 
     public function invoices(?string $status): array
     {
@@ -198,7 +198,8 @@ final class InvoiceRepository extends WorkshopRepository
 
     public function material(int $id): ?array
     {
-        return $this->all('SELECT rm.id, u.name AS unit, rm.package_size_in_base_unit AS package_size FROM raw_material rm LEFT JOIN unit u ON u.id = rm.id_unit WHERE rm.id = ?', [$id])[0] ?? null;
+        return $this->all('SELECT rm.id, rm.name, rm.id_unit, rm.id_current_supplier, rm.price_per_unit, u.name AS unit, rm.package_size_in_base_unit AS package_size
+                           FROM raw_material rm LEFT JOIN unit u ON u.id = rm.id_unit WHERE rm.id = ?', [$id])[0] ?? null;
     }
 
     public function companyNip(): ?string

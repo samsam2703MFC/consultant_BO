@@ -9,6 +9,7 @@ use App\Core\Api\Workshop\Validator;
 use App\Core\TransactionManager;
 use App\Repositories\Workshop\InvoiceRepository;
 use App\Repositories\Workshop\SupplyRepository;
+use App\Services\Material\MaterialPriceService;
 use App\Services\Purchasing\CostOptimizationService;
 use App\Services\Workshop\Referentiel\AuditTrail;
 
@@ -34,6 +35,7 @@ final class InvoiceService
         private KsefInvoiceSource $ksef,
         private TransactionManager $tx,
         private AuditTrail $audit,
+        private MaterialPriceService $prices,
     ) {
     }
 
@@ -72,7 +74,12 @@ final class InvoiceService
             'text' => $i['source'] === 'pdf' ? $this->repo->fileText($id) : null,
             'can_write' => $context->can('prod.supply.write'), 'editable' => $i['status'] === 'open' && $context->can('prod.supply.write'),
             'lines_editable' => in_array($i['source'], ['pdf', 'manual'], true) && $i['status'] === 'open' && $context->can('prod.supply.write'),
-            'can_receive' => $i['id_po'] !== null && in_array($i['po_status'], ['sent', 'partial'], true) && $context->can('prod.supply.write') && $control['summary']['mapped'] > 0,
+            // Ilości : do zamówienia (wysłane / częściowo przyjęte) albo — bez zamówienia — przez zamówienie utworzone z faktury.
+            'can_receive' => $i['status'] === 'open' && $context->can('prod.supply.write') && $control['summary']['mapped'] > 0
+                && ($i['id_po'] !== null ? in_array($i['po_status'], ['sent', 'partial'], true) : $i['id_supplier'] !== null),
+            'receive_mode' => $i['id_po'] !== null ? 'order' : 'invoice',
+            'can_import_prices' => $i['status'] !== 'disputed' && $context->can('prod.supply.write') && $control['summary']['mapped'] > 0,
+            'prices_imported_at' => $i['prices_imported_at'],
         ];
     }
 
@@ -456,7 +463,7 @@ final class InvoiceService
     public function receive(int $id, ApiContext $context): array
     {
         $inv = $this->open($id);
-        if ($inv['id_po'] === null) throw new ApiException('INVOICE_NO_ORDER', 422);
+        if ($inv['id_po'] === null) return $this->receiveWithoutOrder($inv, $context);
         $po = [];
         foreach ($this->supply->lines((int) $inv['id_po']) as $pl) $po[(int) $pl['id_raw_material']] = (int) $pl['id'];
         $lines = [];
@@ -470,6 +477,84 @@ final class InvoiceService
         $day = $inv['issue_date'] && $inv['issue_date'] <= date('Y-m-d') ? $inv['issue_date'] : date('Y-m-d');
         $this->orders->receive((int) $inv['id_po'], ['received_on' => $day, 'lines' => $lines], $context);
         return $this->detail($id, $context);
+    }
+
+    /**
+     * Bez zamówienia : zamówienie « przyjęte » utworzone z faktury (linie przypisane, ilość × przelicznik, cena netto
+     * na jednostkę bazową) — ilości wchodzą na stan jak każde przyjęcie ; faktura zostaje z nim powiązana.
+     */
+    private function receiveWithoutOrder(array $inv, ApiContext $context): array
+    {
+        if ($inv['id_supplier'] === null) throw new ApiException('INVOICE_NO_SUPPLIER', 422);
+        $lines = $this->materialLines($this->repo->lines((int) $inv['id']));
+        if (!$lines) throw new ApiException('INVOICE_NOTHING_TO_RECEIVE', 422);
+        $day = $inv['issue_date'] && $inv['issue_date'] <= date('Y-m-d') ? $inv['issue_date'] : date('Y-m-d');
+        $this->tx->execute(function () use ($inv, $lines, $day, $context) {
+            $po = $this->supply->insertReceived((int) $inv['id_supplier'], $day, 'Faktura ' . ($inv['number'] ?: '#' . $inv['id']), $context->userId);
+            foreach ($lines as $mid => $l) {
+                $m = $this->repo->material($mid);
+                $lineId = $this->supply->insertLine($po, $mid, $l['quantity'], $m && (float) $m['package_size'] > 0 ? (float) $m['package_size'] : null, $l['price']);
+                $this->supply->addReceipt($lineId, $day, $l['quantity'], $l['price'], $context->userId);
+            }
+            $this->repo->update((int) $inv['id'], ['id_po' => $po]);
+            $this->audit->record($context, 'receive', 'purchase_invoice', (int) $inv['id'], null, ['order_id' => $po, 'lines' => count($lines), 'received_on' => $day]);
+        });
+        return $this->detail((int) $inv['id'], $context);
+    }
+
+    /**
+     * Ostatnie ceny z faktury do kartoteki surowców : cena netto na jednostkę bazową (kilka linii tego samego surowca —
+     * średnia ważona), dostawca faktury jako bieżący ; przez MaterialPriceService (historia cen, przeliczenie receptur).
+     * line_ids : tylko wybrane linie (domyślnie wszystkie przypisane).
+     */
+    public function importPrices(int $id, array $body, ApiContext $context): array
+    {
+        $inv = $this->load($id);
+        if ($inv['status'] === 'disputed') throw new ApiException('INVOICE_CLOSED', 409, [], ['status' => $inv['status']]);
+        $v = (new Validator($body))->only(['line_ids']);
+        $wanted = $body['line_ids'] ?? null;
+        if ($wanted !== null && (!is_array($wanted) || array_filter($wanted, fn($x) => !is_int($x)))) $v->add('line_ids', 'NOT_ARRAY');
+        $v->throwIfInvalid();
+        $rows = array_filter($this->repo->lines($id), fn($l) => $wanted === null || in_array((int) $l['id'], $wanted, true));
+        $lines = array_filter($this->materialLines($rows), fn($l) => $l['price'] !== null && $l['price'] > 0);
+        if (!$lines) throw new ApiException('INVOICE_NO_PRICES', 422);
+        $changes = [];
+        $skipped = [];
+        foreach ($lines as $mid => $l) {
+            $m = $this->repo->material($mid);
+            $supplier = $inv['id_supplier'] !== null ? (int) $inv['id_supplier'] : ($m['id_current_supplier'] !== null ? (int) $m['id_current_supplier'] : null);
+            $package = (float) $m['package_size'] > 0 ? (float) $m['package_size'] : (float) CostOptimizationService::displayUnit($m['unit'])['factor'];
+            $packPrice = round($l['price'] * $package, 2);
+            // Kartoteka : cena za opakowanie (2 miejsca) ÷ opakowanie w całych jednostkach bazowych.
+            if ($supplier === null || !$m['id_unit'] || $packPrice <= 0 || abs($package - round($package)) > 1e-9) { $skipped[] = $m['name']; continue; }
+            $this->prices->update($mid, ['id_raw_material' => $mid, 'id_current_supplier' => $supplier, 'package_size_in_base_unit' => (int) round($package),
+                'id_unit' => (int) $m['id_unit'], 'pack_price' => $packPrice]);
+            $unit = CostOptimizationService::displayUnit($m['unit']);
+            $changes[] = ['raw_material_id' => $mid, 'name' => $m['name'], 'unit' => $unit['label'], 'factor' => $unit['factor'],
+                'old_price' => $m['price_per_unit'] !== null ? (float) $m['price_per_unit'] : null, 'new_price' => round($packPrice / round($package), 5)];
+        }
+        if ($changes) {
+            $this->repo->update($id, ['prices_imported_at' => date('Y-m-d H:i:s'), 'prices_imported_by' => $context->userId]);
+            $this->audit->record($context, 'import_prices', 'purchase_invoice', $id, null, ['materials' => array_map(fn($c) => [$c['raw_material_id'], $c['old_price'], $c['new_price']], $changes)]);
+        }
+        return $this->detail($id, $context) + ['imported_prices' => $changes, 'skipped' => $skipped];
+    }
+
+    /** Linie przypisane według surowca : ilość w jednostkach bazowych i cena netto za jednostkę bazową (ważona). */
+    private function materialLines(array $lines): array
+    {
+        $out = [];
+        foreach ($lines as $l) {
+            if ($l['id_raw_material'] === null) continue;
+            $qty = (float) $l['quantity'] * (float) ($l['factor'] ?: 1);
+            if ($qty <= 0) continue;
+            $net = $l['net_value'] !== null ? (float) $l['net_value'] : ($l['unit_price'] !== null ? (float) $l['unit_price'] * (float) $l['quantity'] : null);
+            $mid = (int) $l['id_raw_material'];
+            $out[$mid] ??= ['quantity' => 0.0, 'value' => 0.0, 'priced' => 0.0];
+            $out[$mid]['quantity'] += $qty;
+            if ($net !== null) { $out[$mid]['value'] += $net; $out[$mid]['priced'] += $qty; }
+        }
+        return array_map(fn($x) => ['quantity' => round($x['quantity'], 3), 'price' => $x['priced'] > 0 ? $x['value'] / $x['priced'] : null], $out);
     }
 
     public function delete(int $id, ApiContext $context): array

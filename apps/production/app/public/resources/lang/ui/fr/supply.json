@@ -275,5 +275,18 @@
   "inv.confirm_delete": "Retirer la facture {number} du contrôle ? (Rien ne change dans KSeF.)",
   "inv.mappings_help": "Libellés des factures fournisseurs reliés à nos matières ; appliqués automatiquement aux factures suivantes.",
   "inv.mappings_empty": "Aucune correspondance — elles se créent au contrôle de la première facture d'un fournisseur.",
-  "inv.confirm_unmap": "Supprimer la correspondance « {name} » → {material} ?"
+  "inv.confirm_unmap": "Supprimer la correspondance « {name} » → {material} ?",
+  "inv.import_title": "Import vers les fiches matières",
+  "inv.import_help": "Prix : le prix net de la facture par unité de matière remplace le prix de la fiche (avec historique des prix, coûts des recettes recalculés). Quantités : entrée en stock — dans la commande, ou sans commande via une commande créée depuis la facture.",
+  "inv.col.invoice_price": "Prix facture",
+  "inv.col.catalog_price": "Prix fiche",
+  "inv.col.diff": "Écart",
+  "inv.act.prices": "Mettre à jour les prix des fiches ({n})",
+  "inv.act.stock": "Entrer les quantités en stock (sans commande)",
+  "inv.confirm_prices": "Remplacer le prix de {n} matière(s) par celui de la facture ? Les coûts des recettes seront recalculés.",
+  "inv.confirm_stock": "Entrer les quantités de la facture en stock ? Une commande « reçue » sera créée pour le fournisseur {supplier}, liée à la facture.",
+  "inv.prices_ok": "Prix mis à jour pour {n} matière(s) (coûts des recettes recalculés).",
+  "inv.prices_skipped": "Ignorées (unité, fournisseur ou conditionnement manquant) : {list}.",
+  "inv.prices_done": "Prix importés le {at}",
+  "inv.stock_ok": "Quantités entrées en stock."
 }

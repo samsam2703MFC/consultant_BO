@@ -712,7 +712,6 @@
             <tfoot><tr><th colspan="3" class="text-end">${esc(t('total'))}</th><th class="text-end">${esc(cur(c.lines_net, i.currency))}</th><th colspan="4"></th></tr></tfoot></table></div>`;
         const actions = [];
         if (i.lines_editable && !iv.editLines) actions.push(`<button type="button" class="btn btn-sm btn-outline-secondary" data-iact="edit-lines"><i class="bi bi-pencil"></i> ${esc(t('inv.act.edit_lines'))}</button>`);
-        if (i.can_receive) actions.push(`<button type="button" class="btn btn-sm btn-outline-primary" data-iact="receive" title="${esc(t('inv.act.receive_help'))}"><i class="bi bi-box-arrow-in-down"></i> ${esc(t('inv.act.receive'))}</button>`);
         if (edit) {
             actions.push(`<button type="button" class="btn btn-sm btn-success" data-iact="accept"><i class="bi bi-check2-circle"></i> ${esc(t('inv.act.accept'))}</button>`);
             actions.push(`<button type="button" class="btn btn-sm btn-outline-danger" data-iact="dispute"><i class="bi bi-exclamation-octagon"></i> ${esc(t('inv.act.dispute'))}</button>`);
@@ -739,10 +738,45 @@
                 <div class="alert ${ALERT_CLS[c.state] || 'alert-secondary'} py-2 small mb-2">${esc(summary)}
                     ${c.total_mismatch ? `<div>${esc(t('inv.sum.total_mismatch', {lines: cur(c.lines_net, i.currency), total: cur(i.total_net, i.currency)}))}</div>` : ''}</div>
                 ${lines}
+                ${iv.editLines ? '' : importBox(i)}
                 ${i.note ? `<div class="small mb-2"><strong>${esc(t('f.note'))} :</strong> ${esc(i.note)}</div>` : ''}
                 ${i.text ? `<details class="tfb-inv-text mb-2"><summary class="small">${esc(t('inv.pdf_text'))}</summary><pre>${esc(i.text)}</pre></details>` : ''}
                 <div class="d-flex flex-wrap gap-2 mt-2">${actions.join('')}</div></div></div>
             ${viewer}`;
+    }
+
+    // Import do kartoteki : cena z faktury (netto na jednostkę surowca, ważona przy kilku liniach) wobec ceny w kartotece ;
+    // ceny → kartoteka surowców, ilości → przyjęcie (do zamówienia albo bez zamówienia).
+    function importBox(i) {
+        if (!i.can_import_prices && !i.can_receive && !i.prices_imported_at) return '';
+        const byMaterial = new Map();
+        for (const l of i.lines) {
+            if (!l.material || !l.control.quantity_base) continue;
+            const net = l.net_value ?? (l.unit_price !== null ? l.unit_price * l.quantity : null);
+            const m = byMaterial.get(l.material.id) || {material: l.material, qty: 0, value: 0, priced: 0, catalog: l.control.catalog_price};
+            m.qty += l.control.quantity_base;
+            if (net !== null) { m.value += net; m.priced += l.control.quantity_base; }
+            byMaterial.set(l.material.id, m);
+        }
+        const rows = [...byMaterial.values()].map(m => {
+            const u = {unit: m.material.unit, factor: m.material.factor_display};
+            const price = m.priced > 0 ? m.value / m.priced : null;
+            const gap = price !== null && m.catalog ? (price - m.catalog) / m.catalog * 100 : null;
+            return `<tr><td><strong>${esc(m.material.name)}</strong></td><td class="text-end text-nowrap">${esc(q(u, m.qty))}</td>
+                <td class="text-end text-nowrap">${esc(unitPrice(u, price))}</td><td class="text-end text-nowrap">${esc(unitPrice(u, m.catalog))}</td>
+                <td class="text-end text-nowrap ${gap === null || Math.abs(gap) < 0.05 ? 'text-muted' : gap > 0 ? 'text-danger' : 'text-success'}">${gap === null ? '—' : esc(pct(gap))}</td></tr>`;
+        });
+        if (!rows.length) return '';
+        const buttons = [];
+        if (i.can_import_prices) buttons.push(`<button type="button" class="btn btn-sm btn-primary" data-iact="prices"><i class="bi bi-tags"></i> ${esc(t('inv.act.prices', {n: rows.length}))}</button>`);
+        if (i.can_receive) buttons.push(`<button type="button" class="btn btn-sm btn-outline-primary" data-iact="receive" title="${esc(t('inv.act.receive_help'))}"><i class="bi bi-box-arrow-in-down"></i> ${esc(t(i.receive_mode === 'order' ? 'inv.act.receive' : 'inv.act.stock'))}</button>`);
+        return `<div class="card tfb-inv-import mb-2"><div class="card-body">
+            <h6 class="tfb-team-title mb-1">${esc(t('inv.import_title'))}</h6><p class="small text-muted mb-2">${esc(t('inv.import_help'))}</p>
+            <div class="table-responsive"><table class="table table-sm align-middle mb-2"><thead><tr><th>${esc(t('inv.col.material'))}</th><th class="text-end">${esc(t('col.quantity'))}</th>
+                <th class="text-end">${esc(t('inv.col.invoice_price'))}</th><th class="text-end">${esc(t('inv.col.catalog_price'))}</th><th class="text-end">${esc(t('inv.col.diff'))}</th></tr></thead>
+                <tbody>${rows.join('')}</tbody></table></div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">${buttons.join('')}
+                ${i.prices_imported_at ? `<span class="small text-success"><i class="bi bi-check2"></i> ${esc(t('inv.prices_done', {at: fullDay(i.prices_imported_at.slice(0, 10)) + ' ' + i.prices_imported_at.slice(11, 16)}))}</span>` : ''}</div></div></div>`;
     }
 
     function invoiceLine(l, edit) {
@@ -908,8 +942,19 @@
                 return;
             }
             if (act === 'receive') {
-                if (!window.confirm(t('inv.confirm_receive', {code: i.order.code}))) return;
-                return run(b, () => api.post(`/supply/invoices/${i.id}/receive`, {}), t('received_ok'));
+                if (!window.confirm(i.order ? t('inv.confirm_receive', {code: i.order.code}) : t('inv.confirm_stock', {supplier: i.supplier ? i.supplier.name : ''}))) return;
+                return run(b, () => api.post(`/supply/invoices/${i.id}/receive`, {}), t(i.order ? 'received_ok' : 'inv.stock_ok'));
+            }
+            if (act === 'prices') {
+                const n = new Set(i.lines.filter(l => l.material).map(l => l.material.id)).size;
+                if (!window.confirm(t('inv.confirm_prices', {n}))) return;
+                b.disabled = true;
+                try {
+                    const res = await api.post(`/supply/invoices/${i.id}/prices`, {});
+                    ui.notify(true, t('inv.prices_ok', {n: res.imported_prices.length}) + (res.skipped.length ? ' ' + t('inv.prices_skipped', {list: res.skipped.join(', ')}) : ''));
+                    await showInvoice(res);
+                } catch (err) { ui.notify(false, errText(err)); b.disabled = false; }
+                return;
             }
             if (act === 'accept') {
                 if (i.control.state !== 'clean' && !window.confirm(t('inv.confirm_accept_gaps'))) return;

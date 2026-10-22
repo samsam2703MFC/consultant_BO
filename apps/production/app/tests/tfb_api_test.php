@@ -40,7 +40,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings', 'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month', 'cost_media_section_allocation', 'cost_media_type', 'communication_message', 'communication_message_attachment', 'communication_email_account', 'erp_company_data'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings', 'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month', 'cost_media_section_allocation', 'cost_media_type', 'communication_message', 'communication_message_attachment', 'communication_email_account', 'erp_company_data', 'flattened_recipe_recipe', 'product_preparation_type', 'product_recipe_preparation_connection', 'product_recipe_type'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -1463,9 +1463,30 @@ if (trim((string) shell_exec('command -v pdftotext'))) {
     [, $po] = $call('GET', "/supply/orders/{$boxOrder}", null, $access);
     check($s === 200 && $po['data']['status'] === 'received' && $po['data']['lines'][0]['received_qty'] == 300 && abs($po['data']['lines'][0]['last_price'] - 3.5) < 1e-6,
         'delivery received from the invoice: quantities and prices into the order');
+    // Ostatnie ceny z faktury do kartoteki : 3,50 zł/szt. dla kartonu 60, dostawca faktury, historia cen.
+    $logBefore = (int) $pdo->query('SELECT COUNT(*) FROM raw_material_price_changelog WHERE id_raw_material = 902')->fetchColumn();
+    [$s, $ip] = $call('POST', "/supply/invoices/{$pid}/prices", [], $access);
+    $mat = $pdo->query('SELECT price_per_unit, id_current_supplier FROM raw_material WHERE id = 902')->fetch();
+    check($s === 200 && abs((float) $mat['price_per_unit'] - 3.5) < 1e-6 && (int) $mat['id_current_supplier'] === 61 && ($ip['data']['imported_prices'][0]['new_price'] ?? null) == 3.5
+        && (int) $pdo->query('SELECT COUNT(*) FROM raw_material_price_changelog WHERE id_raw_material = 902')->fetchColumn() === $logBefore + 1 && $ip['data']['prices_imported_at'] !== null,
+        'invoice prices imported into the material file (price per unit, supplier, price history)');
+    [$s, $b] = $call('POST', "/supply/invoices/{$pid}/prices", ['line_ids' => [999999]], $access);
+    check($s === 422 && $b['description'] === 'INVOICE_NO_PRICES', 'no mapped line chosen → nothing to import');
+    // Przeliczenie receptur po zmianie ceny spłaszcza recepturę z tabel receptur (w danych testowych niepełnych) : stan wyjściowy.
+    $pdo->exec('DELETE FROM flattened_recipe_ingredient WHERE recipe_id = 700');
+    $pdo->exec('INSERT INTO flattened_recipe_ingredient (recipe_id, material_id, quantity) VALUES (700, 900, 1500), (700, 901, 300), (700, 902, 1)');
     [$s, $b] = $call('POST', "/supply/invoices/{$pid}/decision", ['status' => 'accepted'], $access);
     check($s === 200 && $b['data']['status'] === 'accepted', 'invoice accepted');
 }
+// Bez zamówienia : ilości na stan przez zamówienie « przyjęte » utworzone z faktury.
+[, $x2d] = $call('GET', "/supply/invoices/{$x2['data']['id']}", null, $access);
+[$s, $xr] = $call('POST', "/supply/invoices/{$x2['data']['id']}/receive", null, $access);
+$newPo = $xr['data']['order']['id'] ?? 0;
+[, $npo] = $call('GET', "/supply/orders/{$newPo}", null, $access);
+check($x2d['data']['order'] === null && $x2d['data']['can_receive'] && $x2d['data']['receive_mode'] === 'invoice' && $s === 200 && $newPo > 0
+    && $npo['data']['status'] === 'received' && $npo['data']['supplier']['id'] === 60 && $npo['data']['lines'][0]['raw_material_id'] === 900
+    && $npo['data']['lines'][0]['received_qty'] == 25000 && abs($npo['data']['lines'][0]['last_price'] - 0.004) < 1e-9 && !$xr['data']['can_receive'],
+    'invoice without order: quantities into stock through a received order created from the invoice');
 [$s, $list] = $call('GET', '/supply/invoices?status=all', null, $access);
 $states = array_column(array_map(fn($i) => ['id' => $i['id'], 'state' => $i['control']['state']], $list['data']['invoices'] ?? []), 'state', 'id');
 check($s === 200 && ($states[$invId] ?? null) === 'gaps', 'invoice list with the control state of each invoice');

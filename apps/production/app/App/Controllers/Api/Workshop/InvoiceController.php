@@ -24,6 +24,7 @@ final class InvoiceController
     public function saveLines(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->saveLines($request->id(), $request->body(), $request->context)); }
     public function mapLine(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->mapLine($request->id(), $request->id('lineId'), $request->body(), $request->context)); }
     public function decide(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->decide($request->id(), $request->body(), $request->context)); }
+    public function importPrices(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->importPrices($request->id(), $request->body(), $request->context)); }
     public function receive(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->receive($request->id(), $request->context)); }
     public function delete(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->delete($request->id(), $request->context)); }
     public function mappings(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->mappings($request->context)); }

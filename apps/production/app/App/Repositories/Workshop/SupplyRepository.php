@@ -241,6 +241,13 @@ final class SupplyRepository extends WorkshopRepository
         );
     }
 
+    /** Zamówienie utworzone z faktury (dostawa już przyjęta). */
+    public function insertReceived(int $supplierId, string $day, string $note, ?int $userId): int
+    {
+        return $this->insert(['code' => $this->nextCode(date('Y-m-d')), 'id_supplier' => $supplierId, 'status' => 'received', 'delivery_date' => $day,
+            'language' => 'pl', 'note' => mb_substr($note, 0, 1000), 'sent_at' => date('Y-m-d H:i:s'), 'sent_by' => 'manual', 'created_by' => $userId]);
+    }
+
     public function insertLine(int $orderId, int $materialId, float $quantity, ?float $packageSize, ?float $unitPrice): int
     {
         $this->db->prepare('INSERT INTO tfb_po_line (id_po, id_raw_material, quantity, package_size, unit_price) VALUES (?, ?, ?, ?, ?)')
