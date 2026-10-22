@@ -1515,3 +1515,13 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-sheet .tfb-sheet-labour .form-control { padding-left: 4px; padding-right: 4px; }
 .tfb-sheet .tfb-sheet-subhead { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 11px; }
 .tfb-sheet .tfb-sheet-x { color: var(--at-muted, #6c757d); }
+
+/* Karty produktów : kategorie do rozwinięcia (lista), partia i przełącznik MTO / MTS w wierszu. */
+.tfb-list-cat { margin-bottom: 10px; }
+.tfb-list-cat > summary { cursor: pointer; list-style: none; user-select: none; }
+.tfb-list-cat > summary::-webkit-details-marker { display: none; }
+.tfb-list-cat > summary h5 { font-size: 16px; }
+.tfb-list-cat:not([open]) > summary { border-bottom: 0; border-radius: inherit; }
+.tfb-list-chevron { transition: transform .15s ease; }
+.tfb-list-cat[open] .tfb-list-chevron { transform: rotate(90deg); }
+.tfb-list-batch { width: 150px; margin-left: auto; }

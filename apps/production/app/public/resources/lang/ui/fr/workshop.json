@@ -227,7 +227,7 @@
   "m.suggest_last": "Dernier calcul : {date}.",
   "m.suggest_never": "Stocks jamais calculés depuis les ventes.",
   "m.suggest_pending": "Calculé à l’instant — enregistrez pour garder les stocks et la date du calcul.",
-  "view.list": "Liste des fiches",
+  "view.list": "Produits par catégorie",
   "view.stock": "Stocks par catégorie",
   "st.ppc": "{ppc} pcs/carton",
   "st.toggle_help": "Activé : sur stock (MTS, stocks min./max.) ; désactivé : flux direct à la commande (MTO).",
@@ -327,5 +327,13 @@
   "m.batch_min_ok": "Stock min. ({min} cart.) couvert — pas de lot nécessaire",
   "m.batch_to_max": "Jusqu'au stock max. ({max} cart.) il manque {missing} cart. = {exact} lots → {whole} × lot tiennent",
   "lv.batches": "lots : jusqu'au min. {min} · jusqu'au max. {max}",
-  "m.batch_with_orders": "(y compris les commandes au-delà du stock)"
+  "m.batch_with_orders": "(y compris les commandes au-delà du stock)",
+  "list.semi": "Semi-produits",
+  "list.batch_cart": "= {c} cart.",
+  "list.batch_help": "Combien de pièces donne un lot de production (ex. pistolet 1300). Vide = sans lot. Enregistré tout de suite.",
+  "list.batch_invalid": "Lot : un nombre supérieur à 0 ou vide.",
+  "list.open_all": "Tout déplier",
+  "list.close_all": "Tout replier",
+  "list.help": "Cliquez une catégorie pour voir ses produits : la bascule MTO / MTS et le lot s’enregistrent tout de suite.",
+  "list.cat_counts": "{n} prod. · MTS {mts} · avec lot {batch}"
 }

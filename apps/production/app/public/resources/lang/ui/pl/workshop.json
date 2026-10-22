@@ -227,7 +227,7 @@
   "m.suggest_last": "Ostatnie obliczenie: {date}.",
   "m.suggest_never": "Stany jeszcze nie były obliczane ze sprzedaży.",
   "m.suggest_pending": "Obliczono teraz — zapisz, aby zachować stany i datę obliczenia.",
-  "view.list": "Lista kart",
+  "view.list": "Produkty wg kategorii",
   "view.stock": "Zapasy wg kategorii",
   "st.ppc": "{ppc} szt./karton",
   "st.toggle_help": "Włączone : na magazyn (MTS, stany min./maks.) ; wyłączone : przepływ bezpośredni na zamówienie (MTO).",
@@ -327,5 +327,13 @@
   "m.batch_min_ok": "Stan min. ({min} kart.) pokryty — partia nie jest potrzebna",
   "m.batch_to_max": "Do stanu maks. ({max} kart.) brakuje {missing} kart. = {exact} partii → mieści się {whole} × partia",
   "lv.batches": "partie : do min. {min} · do maks. {max}",
-  "m.batch_with_orders": "(razem z zamówieniami ponad stan)"
+  "m.batch_with_orders": "(razem z zamówieniami ponad stan)",
+  "list.semi": "Półprodukty",
+  "list.batch_cart": "= {c} kart.",
+  "list.batch_help": "Ile sztuk daje jedna partia produkcyjna (np. pistolet 1300). Puste = bez partii. Zapis od razu.",
+  "list.batch_invalid": "Partia : liczba większa od 0 albo puste pole.",
+  "list.open_all": "Rozwiń wszystkie",
+  "list.close_all": "Zwiń wszystkie",
+  "list.help": "Kliknij kategorię, aby zobaczyć jej produkty : przełącznik MTO / MTS i partia zapisują się od razu.",
+  "list.cat_counts": "{n} prod. · MTS {mts} · z partią {batch}"
 }

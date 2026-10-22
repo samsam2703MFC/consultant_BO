@@ -49,33 +49,85 @@
         </div>`;
     }
 
-    // --- Liste ------------------------------------------------------------------
+    // --- Lista : kategorie ERP do rozwinięcia ; w każdej produkty z przełącznikiem MTO / MTS i partią -------------
+    // Wszystkie produkty ERP (zestawienie zapasów) i karty (status, etapy) ; półprodukty w osobnej kategorii.
+    // Zapis od razu, bez ponownego wczytania : dane listy trzymane do wyjścia z widoku.
+    const OPEN_KEY = 'tfb.products.open';
+    let listData = null;
+    let searchFocus = false;
+    const openCats = () => { try { return new Set(JSON.parse(window.sessionStorage.getItem(OPEN_KEY) || '[]')); } catch (e) { return new Set(); } };
+    const keepOpen = (set) => { try { window.sessionStorage.setItem(OPEN_KEY, JSON.stringify([...set])); } catch (e) { /* stockage indisponible */ } };
+
     async function renderList() {
         const params = new URLSearchParams(location.hash.split('?')[1] || '');
-        const query = new URLSearchParams();
-        for (const k of ['search', 'status', 'item_type', 'group_id']) if (params.get(k)) query.set(k, params.get(k));
-        const res = await api.list('/produits/items' + (query.toString() ? '?' + query : ''));
+        const group = params.get('group_id') || '';
+        if (!listData || listData.group !== group) {
+            el.innerHTML = header(`<a class="btn btn-primary btn-sm" href="#/new"><i class="bi bi-plus"></i> ${esc(t('new_sheet'))}</a>`) + viewTabs('list') + `<p class="text-muted">${esc(t('loading'))}</p>`;
+            const q = group ? '?group_id=' + group : '';
+            const [cards, overview] = await Promise.all([api.list('/produits/items' + q), api.get('/produits/stock-overview' + q)]);
+            listData = {group, cards: cards.data, overview};
+        }
+        drawList(params);
+    }
+
+    function drawList(params) {
+        const search = (params.get('search') || '').trim().toLowerCase();
+        const status = params.get('status') || '';
+        const type = params.get('item_type') || '';
+        const n = (v, d) => ui.fmt(v, d ?? 1, api.lang);
+        const cardOf = new Map(listData.cards.filter(c => c.final_product_id).map(c => [c.final_product_id, c]));
+        const keep = (name, card) => (!search || name.toLowerCase().includes(search)) && (!status || (card && card.settings.status === status));
+        const cats = type === 'semi' ? [] : listData.overview.categories.map(c => ({key: 'c' + (c.id ?? 0), name: c.name || t('st.no_category'),
+            rows: c.items.map(i => ({semi: false, i, card: cardOf.get(i.final_product_id) || null})).filter(r => keep(r.i.name, r.card))}));
+        if (type !== 'product') cats.push({key: 'semi', name: t('list.semi'),
+            rows: listData.cards.filter(c => c.item_type === 'semi').map(c => ({semi: true, i: null, card: c})).filter(r => keep(r.card.name, r.card))});
+        const shown = cats.filter(c => c.rows.length);
+        const opened = openCats();
+        const isOpen = (c) => search !== '' || opened.has(c.key);
+        const batchOf = (r) => r.semi ? r.card.settings.batch_multiple : r.i.batch;
+        const link = (r) => r.card ? `#/item/${r.card.id}/${r.card.settings.status === 'validated' ? 7 : Math.max(1, r.card.settings.wizard_step)}` : `#/product/${r.i.final_product_id}`;
+        const row = (r) => {
+            const name = r.semi ? r.card.name : r.i.name;
+            const groupId = r.semi ? r.card.settings.primary_group_id : r.i.group_id;
+            const ppc = r.semi ? null : r.i.ppc;
+            const batch = batchOf(r);
+            const inactive = r.semi ? r.card.erp.active === false : !r.i.erp_active;
+            return `<tr data-row="${r.semi ? 's' + r.card.id : 'p' + r.i.final_product_id}">
+                <td><a href="${link(r)}"><strong>${esc(name)}</strong></a>${inactive ? ` <span class="badge bg-secondary">${esc(t('erp.inactive'))}</span>` : ''}
+                    <div class="small text-muted">${esc(groupName(groupId))}${ppc ? ' · ' + esc(t('st.ppc', {ppc})) : ''}</div></td>
+                <td class="text-center">${r.semi ? '<span class="text-muted">—</span>' : `<div class="form-check form-switch d-inline-block m-0" title="${esc(r.i.never_frozen ? t('f.never_frozen') : t('st.toggle_help'))}">
+                    <input class="form-check-input" type="checkbox" role="switch" data-mts ${r.i.mode === 'MTS' ? 'checked' : ''} ${r.i.never_frozen ? 'disabled' : ''} aria-label="${esc(t('mode.MTS'))}"></div>
+                    <div class="small ${r.i.mode === 'MTS' ? 'text-success' : 'text-muted'}">${esc(r.i.mode === 'MTS' ? t('st.mts') : t('st.mto'))}</div>`}</td>
+                <td><div class="input-group input-group-sm tfb-list-batch"><input class="form-control text-end" inputmode="decimal" data-batch value="${batch ?? ''}" placeholder="—" aria-label="${esc(t('f.batch_multiple'))}">
+                    <span class="input-group-text">${esc(r.semi ? r.card.base_unit : t('st.pcs'))}</span></div>
+                    ${batch && ppc ? `<div class="small text-muted text-end">${esc(t('list.batch_cart', {c: n(batch / ppc)}))}</div>` : ''}</td>
+                <td class="text-end">${r.card ? r.card.step_count : '<span class="text-muted">—</span>'}</td>
+                <td>${r.card ? `<span class="badge ${r.card.settings.status === 'validated' ? 'bg-success' : 'bg-warning'}">${esc(t('status.' + r.card.settings.status))}</span>`
+                    : `<span class="badge bg-light text-muted" title="${esc(t('st.no_card_help'))}">${esc(t('st.no_card'))}</span>`}</td></tr>`;
+        };
+        const y = window.scrollY;
         el.innerHTML = header(`<a class="btn btn-primary btn-sm" href="#/new"><i class="bi bi-plus"></i> ${esc(t('new_sheet'))}</a>`) + viewTabs('list') + `
             <form class="tfb-filters" data-filters>
                 <input class="form-control form-control-sm" name="search" placeholder="${esc(t('search'))}" value="${esc(params.get('search') || '')}">
                 <select class="form-select form-select-sm" name="status"><option value="">${esc(t('col.status'))}: ${esc(t('all'))}</option>
-                    ${['draft', 'validated'].map(s => `<option value="${s}" ${params.get('status') === s ? 'selected' : ''}>${esc(t('status.' + s))}</option>`).join('')}</select>
+                    ${['draft', 'validated'].map(s2 => `<option value="${s2}" ${status === s2 ? 'selected' : ''}>${esc(t('status.' + s2))}</option>`).join('')}</select>
                 <select class="form-select form-select-sm" name="item_type"><option value="">${esc(t('col.type'))}: ${esc(t('all'))}</option>
-                    ${['product', 'semi'].map(s => `<option value="${s}" ${params.get('item_type') === s ? 'selected' : ''}>${esc(t('type.' + s))}</option>`).join('')}</select>
+                    ${['product', 'semi'].map(s2 => `<option value="${s2}" ${type === s2 ? 'selected' : ''}>${esc(t('type.' + s2))}</option>`).join('')}</select>
                 <select class="form-select form-select-sm" name="group_id"><option value="">${esc(t('col.group'))}: ${esc(t('all'))}</option>
-                    ${state.groups.map(g => `<option value="${g.id}" ${params.get('group_id') === String(g.id) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
+                    ${state.groups.map(g => `<option value="${g.id}" ${listData.group === String(g.id) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
             </form>
-            <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-hover mb-0">
-                <thead><tr><th>${esc(t('col.name'))}</th><th>${esc(t('col.type'))}</th><th>${esc(t('col.group'))}</th><th>${esc(t('col.mode'))}</th><th class="text-end">${esc(t('col.steps'))}</th><th>${esc(t('col.status'))}</th></tr></thead>
-                <tbody>${res.data.map(i => `<tr>
-                    <td><a href="#/item/${i.id}/${i.settings.status === 'validated' ? 7 : Math.max(1, i.settings.wizard_step)}"><strong>${esc(i.name)}</strong></a>${i.erp.active ? '' : ` <span class="badge bg-secondary">${esc(t('erp.inactive'))}</span>`}</td>
-                    <td>${esc(t('type.' + i.item_type))}</td>
-                    <td>${esc(groupName(i.settings.primary_group_id))}</td>
-                    <td>${esc(t('mode.' + i.settings.mode))}${i.settings.never_frozen ? ' <i class="bi bi-snow" title="' + esc(t('f.never_frozen')) + '"></i>' : ''}</td>
-                    <td class="text-end">${i.step_count}</td>
-                    <td><span class="badge ${i.settings.status === 'validated' ? 'bg-success' : 'bg-warning'}">${esc(t('status.' + i.settings.status))}</span></td>
-                </tr>`).join('') || `<tr><td colspan="6" class="text-muted">${esc(t('empty_list'))}</td></tr>`}</tbody>
-            </table></div></div></div>`;
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                <span class="small text-muted">${esc(t('list.help'))}</span>
+                <span class="ms-auto btn-group btn-group-sm"><button type="button" class="btn btn-outline-secondary" data-open-all>${esc(t('list.open_all'))}</button>
+                    <button type="button" class="btn btn-outline-secondary" data-close-all>${esc(t('list.close_all'))}</button></span></div>
+            ${shown.map(c => `<details class="card tfb-list-cat" data-cat="${c.key}" ${isOpen(c) ? 'open' : ''}>
+                <summary class="card-header d-flex flex-wrap align-items-center gap-2"><i class="bi bi-chevron-right tfb-list-chevron"></i><h5 class="mb-0">${esc(c.name)}</h5>
+                    <span class="small text-muted ms-auto">${esc(t('list.cat_counts', {n: c.rows.length, mts: c.rows.filter(r => !r.semi && r.i.mode === 'MTS').length, batch: c.rows.filter(r => batchOf(r)).length}))}</span></summary>
+                <div class="card-body pt-0"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
+                    <thead><tr><th>${esc(t('col.name'))}</th><th class="text-center">${esc(t('col.mode'))}</th><th style="width:170px" title="${esc(t('list.batch_help'))}">${esc(t('f.batch_multiple'))}</th>
+                        <th class="text-end">${esc(t('col.steps'))}</th><th>${esc(t('col.status'))}</th></tr></thead>
+                    <tbody>${c.rows.map(row).join('')}</tbody></table></div></div></details>`).join('') || `<p class="text-muted">${esc(t('empty_list'))}</p>`}`;
+        window.scrollTo(0, y);
         const form = el.querySelector('[data-filters]');
         const apply = () => {
             const q = new URLSearchParams();
@@ -84,6 +136,50 @@
         };
         form.addEventListener('change', apply);
         form.addEventListener('submit', (e) => { e.preventDefault(); apply(); });
+        // Szukanie na bieżąco : lista filtrowana w trakcie pisania, kursor zostaje w polu.
+        const searchInput = form.querySelector('[name=search]');
+        if (searchFocus) { searchFocus = false; searchInput.focus(); searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length); }
+        let typing = null;
+        searchInput.addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(() => { searchFocus = true; apply(); }, 300); });
+        searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(typing); searchFocus = true; apply(); } });
+        el.querySelectorAll('details[data-cat]').forEach(d => d.addEventListener('toggle', () => {
+            if (search) return;
+            const set = openCats();
+            if (d.open) set.add(d.dataset.cat); else set.delete(d.dataset.cat);
+            keepOpen(set);
+        }));
+        const all = (open) => () => { keepOpen(open ? new Set(shown.map(c => c.key)) : new Set()); drawList(params); };
+        el.querySelector('[data-open-all]').addEventListener('click', all(true));
+        el.querySelector('[data-close-all]').addEventListener('click', all(false));
+        // Zapis : karta tworzona przy pierwszej zmianie produktu bez karty ; lista poprawiana na miejscu.
+        const save = async (r, body, ok) => {
+            try {
+                const id = r.semi ? r.card.id : await ensureCard(r.i);
+                const card = await api.patch(`/produits/items/${id}/settings`, body);
+                listData.cards = [...listData.cards.filter(c => c.id !== card.id), card];
+                if (!r.semi) {
+                    const st = card.settings;
+                    Object.assign(r.i, {mode: st.mode, stock_min: st.stock_min, stock_max: st.stock_max, batch: st.batch_multiple,
+                        stock_min_cartons: st.stock_min !== null && r.i.ppc ? st.stock_min / r.i.ppc : null,
+                        stock_max_cartons: st.stock_max !== null && r.i.ppc ? st.stock_max / r.i.ppc : null});
+                }
+                drawList(params);
+                ui.notify(true, ok);
+                return true;
+            } catch (err) { fail(null, err); return false; }
+        };
+        const rows = shown.flatMap(c => c.rows);
+        el.querySelectorAll('tr[data-row]').forEach(tr => {
+            const r = rows.find(x => (x.semi ? 's' + x.card.id : 'p' + x.i.final_product_id) === tr.dataset.row);
+            tr.querySelector('[data-mts]')?.addEventListener('change', (e) => modeSwitch(e.target, r.i, (i, body, ok) => save(r, body, ok)));
+            const input = tr.querySelector('[data-batch]');
+            input.addEventListener('change', () => {
+                const v = ui.num(input.value);
+                if (v !== null && (typeof v !== 'number' || v <= 0)) { ui.notify(false, t('list.batch_invalid')); input.value = batchOf(r) ?? ''; return; }
+                input.disabled = true;
+                save(r, {batch_multiple: v}, t('saved')).then(ok => { if (!ok) { input.disabled = false; input.value = batchOf(r) ?? ''; } });
+            });
+        });
     }
 
 
@@ -957,6 +1053,8 @@
         const hash = location.hash.replace(/^#/, '') || '/';
         const path = hash.split('?')[0];
         el.setAttribute('aria-busy', 'true');
+        // Lista wczytywana od nowa po powrocie z innego widoku (zmiany w karcie, w zapasach).
+        if (path !== '/') listData = null;
         try {
             let m;
             if (path === '/new') await renderNew();
