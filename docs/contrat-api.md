@@ -2134,6 +2134,10 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **L'e-mail « pointages suspects » de fin de journée (20/10/2026, demandé par Sam).** Une vendeuse seule au comptoir qui ne s'identifie pas à la caisse encaisse au compte de la session ouverte. Le dashboard laisse chaque ticket où il est ; le soir, le magasin reçoit le constat. Un cas = au moins 3 tickets encaissés au compte de quelqu'un qui n'est pas en poste à cette minute (parti, pas encore arrivé, pas au planning comme « Caisse 2 », ou sans vendeur) pendant qu'une seule personne était en vente (poste vente, caisse ou comptoir ; tout le monde si le planning ne dit pas de poste) ; dix minutes de grâce autour d'un poste ; deux personnes en vente = pas de cas. La phrase : « X (planning 13:00–18:30) était la seule personne en vente, mais n'a pas pointé à la caisse : de 13:12 à 18:09, 34 tickets (392,10 €) ont été encaissés au compte de Y, dont le poste se terminait à 13:00 » (« n'a pas toujours pointé » si elle a quelques tickets à son nom pendant ce temps). Une ligne du reporting (code `pointages-suspects`, quotidien, 21 h, par magasin) : carnet de la ligne, sinon celui de l'affiche du mois ; les destinataires réseau de la ligne reçoivent un récapitulatif de tous les magasins concernés. Un magasin n'est servi qu'une fois par jour (`psMailEnvoyes`) ; pas de planning ou pas de tickets lus = rien. « Générer » montre le récapitulatif sans rien envoyer. Le planning vient de `/exploitation/jour` (identifiant et horaires de chacun), les tickets de `/shops/{id}/transactions?date=` (vendeur et minute). `src/pointages_mail.php`, `bin/tests_pointages.php`.
 
+**Promotions du magasin : le panel relu à l'ouverture de l'onglet (21/10/2026, demandé par Sam).** Une promotion créée ou changée directement au panel ne se voyait dans l'onglet qu'après les dix minutes de la lecture gardée. À chaque ouverture de l'onglet, la liste gardée s'affiche d'abord, puis le dashboard relit le panel (`GET /exploitation/promos-magasin?shop=&frais=1`) et remplace la liste dès que la relecture arrive (jamais par une lecture plus ancienne : `luTs`). En tête : « relu au panel à HH:MM » et un bouton « ↻ relire le panel ». La réponse porte `lu` (HH:MM), `luTs`, `luJour`. Une relecture demandée se contente d'une lecture de moins de 20 secondes (`PV_RELU_RECENT`) : deux onglets ouverts ensemble ne relisent pas deux fois le panel. Les fiches que la liste du panel ne rend pas se lisent ensemble, quatre de front (`ErpApi::getParallele`, qui refait le jeton sur un 401 et ne relance que les requêtes refusées), au lieu d'une à une — mesuré sur un faux panel à 0,3 s la fiche : 12 fiches en 1,2 s au lieu de 3,6 s.
+
+**Promotions : la structure de l'API du panel (21/10/2026, demandé par Sam).** La documentation publique du panel (Swagger : `https://atelierby.tfbuddy.com/api/documentation/`, spécification `…/api/documentation/api.php`, OpenAPI 3, 933 routes) décrit les « Buy X Get Y » ainsi : `trigger` et `reward` portent `quantity`, `product_ids`, `category_ids`, `excluded_product_ids` ; une cible produit est un entier **ou `{id_product, id_product_portion}`** — la portion d'un produit se vise par son numéro ; une catégorie ne porte pas de portion ; `category_targets` / `portion_scope` n'y figurent plus. Une promotion se modifie par **`PATCH …/{id}`** (pas de PUT documenté). `status` : `DRAFT`, `ACTIVE`, `INACTIVE` (le cockpit garde `INACTIVE` pour ses brouillons) ; nouveaux : `activation_mode: VOUCHER_ONLY`, `voucher_campaign_id`. Le cockpit suit : (1) une portion visée part produit par produit, `product_ids: [{id_product, id_product_portion}]`, et une catégorie choisie avec une portion part en ses produits du magasin qui ont cette portion (hors exclusions) — `category_ids` vide ; un produit choisi sans cette portion au panel se dit (422) avant tout envoi ; (2) les portions de chaque produit se lisent à `/products/{id}/portions` (compte admin, sinon consultant ; type `ONE_QUARTER`/`ONE_HALF`, fraction 0,25/0,5 ou libellé « 1/4 »), sinon dans la table `product_portion`, et se gardent un jour (`pmPortions`) ; (3) modifier et activer : `PATCH` (corps complet), `PUT` en repli si le panel répond 404/405 ; (4) la relecture compare les produits avec leur portion (« 12:77 ») et reconnaît la portion d'une promotion relue par le numéro de ses portions (½, ¼ dans l'assistant). La sonde `GET /ventes/promos/sonde-portions?shop=4&q=tarte` lit aussi `/products/{id}/portions` et `/shops/{magasin}/products/{id}/portions/prices`, et dit ce que le cockpit en retient (`retenu`).
+
 **L'e-mail « contrôle qualité non réalisé » de 19:00 (20/10/2026, maquette validée par Sam).** Une ligne du reporting automatisé, semée au premier chargement de l'écran Rapports : code `cq-non-realise`, quotidien, 19 h, par magasin — heure, activation et carnet d'adresses s'y règlent comme les autres. Au passage du cron horaire de 19 h, chaque magasin qui a des contrôles obligatoires ce jour-là et **aucune** photo (aucune tâche notée ni à contrôler ; « cochée sans photo » ne compte pas) reçoit un e-mail : le constat (« 0 photo sur N contrôles attendus »), le mot (« Bonjour, nous vous informons que les tâches de contrôle qualité n'ont pas été réalisées aujourd'hui… »), les contrôles attendus (tâche par tâche jusqu'à huit, par checklist au-delà), le mois en calendrier (une case par jour : contrôles faits avec photo sur attendus — réalisé, partiel, aucun, aucun contrôle prévu, pas encore relevé, à venir) et un bouton vers les contrôles du jour au dashboard. Un magasin avec au moins une photo, ou sans contrôle prévu, ne reçoit rien. Panel muet : aucun envoi. Adresses : le carnet de la ligne, sinon celui de l'affiche du mois. Un magasin n'est servi qu'une fois par jour, envoi à la main compris (`cqMailEnvoyes`) ; « Générer » montre l'e-mail d'un magasin concerné sans rien envoyer. Le lien du bouton garde l'adresse publique du cockpit vue par un navigateur (`cqMailBase`), le cron appelant par 127.0.0.1. Le mois se lit dans le relevé des tâches (`ceo_tache_jour`, tâches obligatoires), la journée en direct (`/pwa/tasks`).
 
 **Le relevé des tâches : les tâches notées restent obligatoires (20/10/2026).** `/pwa/tasks` ne donnait pas aux tâches déjà notées le drapeau `obligatoire` du panel : le relevé les gardait « facultatives » (0) et le mois des tâches obligatoires (dashboard magasin, `?obligatoires=1`) les perdait — des jours faits paraissaient moins faits. Les tâches notées portent maintenant le drapeau du panel (`null` s'il ne le dit pas), le relevé garde `NULL` pour « inconnu », et les tâches notées déjà relevées à 0 repassent à `NULL`, une fois (`tachesNoteeObligReset`). Le scoring n'en dépend pas (une tâche notée est faite).
@@ -3784,3 +3788,40 @@ L'écran du plan (Scouting › « Plan d'expansion ») :
 Tous les textes arrivent formés dans la langue du plan ; le serveur n'y ajoute que ses intitulés. Le plan entier : la
 synthèse, puis une page par province (saut de page), puis la méthode. `rapPdfRendu()` accepte `genereLib` (« Gegenereerd
 op ») pour le pied de page.
+
+### `GET /leviers/magasins?annee=AAAA&mois=M` — les six leviers, magasin par magasin (21/10/2026, demande de Sam)
+
+Une réponse, deux écrans : la carte « Les six leviers » de Résultat › Mois (Tableau des magasins) et les six tuiles du
+dashboard magasin en vue Mois. Un chiffre ne peut donc pas différer de l'un à l'autre. `_cache=900` accepté (les deux
+écrans le demandent). Mois futur → le mois en cours ; mois invalide → 400.
+
+Sources, aucune nouvelle :
+
+| Levier | Mesure | Source |
+|---|---|---|
+| Trafic | clients (tickets) — **par jour** au mois, total au cumul | P&L mensuel (`ep_perf`, `/stores/perf`) |
+| Récurrence | — (`vide: true`, laissée vide pour l'instant) | — |
+| Expérience client | note Google · avis | `mar_avis_fiche` (aujourd'hui) ; `mac_google_rating_snapshot` (relevé mensuel du panel, pour un mois passé et le N-1) |
+| Food / Labour / Overhead cost | % du CA | P&L mensuel (`ep_perf`) |
+
+Réponse :
+
+- `leviers[]` — `{cle, nom, type, couleur, mesureMois, mesureCumul, vide}` dans l'ordre du référentiel (`ep_leviers`).
+- `annee`, `mois`, `moisEnCours`, `jours` (jours comptés : à date si le mois est en cours), `cumulAu` (dernier mois clos
+  du cumul, `null` en janvier en cours), `seuils` (les seuils actifs de la Table KPI : `trafic-clients`, `note-google`,
+  `food-cost-pct`, `labour-pct`, `overhead-pct`), `serieMois` (les douze mois des courbes), `googleN1Des` (le premier
+  mois qui aura un N-1 de la note Google).
+- `magasins[]` — `{id, nom, ville, franchise, ouverture, mois, cumul, horsNorme, serie}` :
+  - `mois.trafic {v, n1, delta (%), ecartReseau (%), niveau}` — la pastille du trafic suit l'écart au réseau ;
+  - `mois.food|labour|overhead {v, n1, delta (pt), niveau, nonSaisi?}` — `nonSaisi` : le mois a un P&L mais ce coût à 0 % ;
+  - `mois.xp {v, avis, n1, delta, niveau}` ; `mois.ouverture` : le mois d'ouverture, partiel, ne se compare pas ;
+  - `cumul.moisComparables[]`, `cumul.trafic {v, comp, n1, delta}`, `cumul.food|labour|overhead {v, comp, n1, delta,
+    moisCompares, niveau}` — `v` sur tous les mois, `comp` vs `n1` sur les seuls mois comparables les deux années ;
+  - `horsNorme[] {mois, v}` — food cost à plus de 15 points de la médiane du magasin, à vérifier au P&L ;
+  - `serie.{trafic, food, labour, overhead}[12]` — `null` au mois d'ouverture ou sans P&L.
+- `reseau.mois` / `reseau.cumul` — trafic (moyenne par magasin au mois, total au cumul), coûts pondérés au CA,
+  `comp` vs `n1` à périmètre constant ; note Google pondérée par le nombre d'avis.
+
+Règles : comparer à mois égaux, toujours. L'ouverture vient de Scouting › Magasins du réseau (au mois près), sinon de
+l'année du panel. Des frais généraux à 0 % ne sont pas saisis : ils ne se comparent pas et sortent de la moyenne du
+réseau. Les pastilles : vert sous l'alerte, orange entre alerte et critique, rouge au-delà, dans le sens du KPI.

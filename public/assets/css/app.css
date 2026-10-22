@@ -1128,3 +1128,42 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{
 [data-screen="inventaires"] .in-q.moy{border-left-color:#e0a33a}[data-screen="inventaires"] .in-q.ko{border-left-color:#C0182B}
 [data-screen="inventaires"] .in-q span{color:var(--color-text-muted)}
 [data-screen="inventaires"] .in-methode{font-size:11px;color:var(--color-text-muted);line-height:1.5;margin:12px 4px 4px}
+
+/* Les six leviers, magasin par magasin — Résultat › Mois (21/10/2026). */
+.lv-card { background: var(--color-surface); border: .5px solid var(--color-border-tertiary); border-radius: 12px; overflow: hidden; }
+.lv-hd { display: flex; align-items: baseline; gap: 6px 12px; flex-wrap: wrap; padding: 14px 19px; border-bottom: .5px solid var(--color-border-tertiary); }
+.lv-hd b { font-size: 14px; font-weight: 600; }
+.lv-hd span { font-size: 11.5px; color: var(--color-text-muted); }
+.lv-seg { margin-left: auto; display: inline-flex; background: var(--color-background-secondary); border-radius: 9px; padding: 3px; }
+.lv-seg button { font: 600 11.5px var(--font-ui); padding: 5px 12px; border-radius: 7px; border: none; background: transparent; color: var(--color-text-muted); cursor: pointer; }
+.lv-seg button.on { background: var(--color-primary); color: #fff; }
+.lv-seg button:disabled { opacity: .45; cursor: default; }
+.lv-defil { overflow-x: auto; }
+.lv-t { width: 100%; border-collapse: collapse; min-width: 860px; }
+.lv-t th { padding: 12px 10px 8px; text-align: center; vertical-align: bottom; font-weight: 600; font-size: 12.5px; border-bottom: .5px solid var(--color-border-tertiary); }
+.lv-t th:first-child { text-align: left; padding-left: 19px; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--color-text-muted); }
+.lv-t th u { display: block; height: 4px; border-radius: 2px; margin: 0 6px 8px; text-decoration: none; }
+.lv-t th small { display: block; font-weight: 500; font-size: 10.5px; color: var(--color-text-muted); margin-top: 2px; }
+.lv-t td { padding: 10px; text-align: center; vertical-align: middle; border-bottom: .5px solid var(--color-border-tertiary); font-variant-numeric: tabular-nums; }
+.lv-t td:first-child { text-align: left; padding-left: 19px; width: 210px; }
+.lv-t td:first-child b { display: block; font-size: 13px; font-weight: 600; }
+.lv-t td:first-child span { display: block; font-size: 11px; line-height: 1.4; margin-top: 2px; color: var(--color-text-muted); }
+.lv-t td .v { font-size: 16px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.lv-t td .v.mu { color: var(--color-text-muted); font-weight: 500; }
+.lv-t td .n1 { font-size: 11px; color: var(--color-text-muted); margin: 1px 0 4px; }
+.lv-t tr.res td { background: var(--color-background-secondary); }
+.lv-t tr:last-child td { border-bottom: none; }
+.lv-p { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.lv-p.v { background: #2d7a3e; } .lv-p.o { background: #D97706; } .lv-p.r { background: #C0182B; }
+.lv-c { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.lv-c.b { background: rgba(45,122,62,.12); color: #2d7a3e; } .lv-c.m { background: rgba(192,24,43,.1); color: #C0182B; }
+.lv-c.z { background: var(--color-background-secondary); color: var(--color-text-muted); font-weight: 600; }
+.lv-tag { display: block; font-size: 10px; color: var(--color-text-muted); margin-top: 3px; }
+.lv-al { display: block; font-size: 10px; color: #B45309; margin-top: 3px; font-weight: 600; }
+.lv-leg { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 11px 19px; font-size: 11px; color: var(--color-text-muted); border-top: .5px solid var(--color-border-tertiary); }
+.lv-leg b { color: var(--color-text); }
+.lv-leg .lv-p { margin: 0 3px 0 6px; vertical-align: -1px; }
+.lv-not { margin: 0; padding: 10px 19px 14px 36px; font-size: 11px; line-height: 1.6; color: var(--color-text-muted); border-top: .5px solid var(--color-border-tertiary); }
+.lv-not li { margin: 2px 0; text-wrap: pretty; }
+.lv-not b { color: var(--color-text); font-weight: 600; }
+.lv-vide { padding: 18px 19px; font-size: 12px; color: var(--color-text-muted); }

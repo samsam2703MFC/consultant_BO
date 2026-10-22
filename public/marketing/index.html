@@ -1,32 +1,19 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Marketing — L'Atelier by</title>
-<!-- Chemins RELATIFS : la page vit sous /marketing/, l'API sous ../api/cockpit.
-     Le module Marketing : campagnes, réseaux sociaux et emailing réunis — la
-     marque (sans ?shop=) ou un magasin (?shop={id}). Même données que le cockpit. -->
-<link rel="icon" href="../assets/img/logo.png">
-<link rel="stylesheet" href="../assets/ds/global.css">
-<link rel="stylesheet" href="marketing.css">
-</head>
-<body>
-<div id="mk">
-  <!-- Le rail : le menu du portail, comme celui du cockpit — redessiné avec la
-       page (ses compteurs bougent), hors de la colonne de contenu. Au téléphone
-       il sort de la gauche (bouton ☰ de l'en-tête). -->
-  <aside id="mk-rail" class="mk-rail" aria-label="Menu du marketing"></aside>
-  <div id="mk-voile" class="mk-voile" hidden></div>
-  <main class="mk-col">
-    <div id="mk-app"><div class="mk-attente">Lecture du marketing…</div></div>
-    <!-- La newsletter est un module à part (../assets/js/newsletter.js) qui tient
-         son DOM : son hôte reste hors de la zone redessinée, il est seulement
-         montré ou caché selon l'étape. -->
-    <div id="mk-nl" hidden></div>
-  </main>
-</div>
-<script src="../assets/js/newsletter.js"></script>
-<script src="marketing.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="../assets/img/logo.png" />
+    <title>Marketing</title>
+    <script>
+      // L'ancien portail Marketing du cockpit est retiré (22/10/2026, demande de Sam) :
+      // il ne reste que le Marketing servi à /marketing/ (dépôt `marketing`), où vivent
+      // les campagnes, les newsletters et le module Social & Ads. Cette page n'est plus
+      // qu'un renvoi, pour les liens et favoris existants (?onglet=…, ?shop=…).
+      window.location.replace('/marketing/');
+    </script>
+  </head>
+  <body>
+    <p>Le Marketing est désormais ici : <a href="/marketing/">/marketing/</a>.</p>
+  </body>
 </html>

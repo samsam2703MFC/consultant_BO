@@ -20,6 +20,7 @@ declare(strict_types=1);
  */
 
 const PV_CACHE_REGLES = 600;   // les règles relues toutes les 10 minutes
+const PV_RELU_RECENT = 20;     // une relecture demandée (?frais=1) se contente d'une lecture de moins de 20 s
 
 /**
  * Les règles de promotion du panel, normalisées. Gardées 10 minutes ; si le panel se tait, la dernière lecture ressert.
@@ -31,22 +32,31 @@ function pvRegles(bool $frais = false): array
     if (!$frais && isset($GLOBALS['pvReglesMemo'])) { return $GLOBALS['pvReglesMemo']; }
     $c = setting('pvRegles');
     if (is_string($c)) { $c = json_decode($c, true); }
-    if (!$frais && is_array($c) && isset($c['ts'], $c['r']) && time() - (int) $c['ts'] < PV_CACHE_REGLES) { return $GLOBALS['pvReglesMemo'] = ['regles' => (array) $c['r'], 'erreur' => null]; }
+    $ts = is_array($c) ? (int) ($c['ts'] ?? 0) : 0;
+    // Relire « tout de suite » (l'onglet Promotions à son ouverture, 21/10/2026) : une relecture de moins de vingt
+    // secondes suffit — deux onglets ouverts ensemble ne relisent pas deux fois le panel.
+    if (is_array($c) && isset($c['r']) && time() - $ts < ($frais ? PV_RELU_RECENT : PV_CACHE_REGLES)) { return $GLOBALS['pvReglesMemo'] = ['regles' => (array) $c['r'], 'erreur' => null, 'ts' => $ts]; }
     if (!class_exists('ErpApi') || !ErpApi::disponible()) {
-        return $GLOBALS['pvReglesMemo'] = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => 'compte admin du panel non configuré'];
+        return $GLOBALS['pvReglesMemo'] = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => 'compte admin du panel non configuré', 'ts' => $ts];
     }
     ErpApi::$lastError = null;
     $L = pvListe();
-    if ($L === null) { return $GLOBALS['pvReglesMemo'] = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => ErpApi::$lastError ?: 'règles illisibles']; }
+    if ($L === null) { return $GLOBALS['pvReglesMemo'] = ['regles' => is_array($c) ? (array) ($c['r'] ?? []) : [], 'erreur' => ErpApi::$lastError ?: 'règles illisibles', 'ts' => $ts]; }
+    // Les fiches que la liste ne rend pas, lues ensemble (quatre de front) plutôt qu'une à une.
+    $chemins = [];
+    foreach ($L['ids'] as $id => $type) {
+        if (!isset($L['fiches'][$id])) { $chemins[$id] = '/admin/promotions/' . ($type === 'BUNDLE_PROMOTION' ? 'bundles/' : 'buy-x-get-y/') . $id; }
+    }
+    $lues = $chemins !== [] ? ErpApi::getParallele($chemins, 4) : [];
     $out = [];
     foreach ($L['ids'] as $id => $type) {
-        $bundle = $type === 'BUNDLE_PROMOTION';
-        $d = $L['fiches'][$id] ?? ErpApi::get('/admin/promotions/' . ($bundle ? 'bundles/' : 'buy-x-get-y/') . $id);
+        $d = $L['fiches'][$id] ?? $lues[$id] ?? null;
         if (!is_array($d) || (int) ($d['id'] ?? 0) <= 0) { continue; }
         $out[] = pvNormaliser($d);
     }
-    try { svGrave('pvRegles', ['ts' => time(), 'r' => $out]); } catch (Throwable $e) { /* sans mémo */ }
-    return $GLOBALS['pvReglesMemo'] = ['regles' => $out, 'erreur' => null];
+    $ts = time();
+    try { svGrave('pvRegles', ['ts' => $ts, 'r' => $out]); } catch (Throwable $e) { /* sans mémo */ }
+    return $GLOBALS['pvReglesMemo'] = ['regles' => $out, 'erreur' => null, 'ts' => $ts];
 }
 
 /** Les lignes d'une réponse de liste du panel : une liste, ou sous `data` / `items` (une page de Laravel comprise). */
@@ -141,15 +151,28 @@ function pvNormaliser(array $d): array
             $por = (int) ($x['id_product_portion'] ?? $x['product_portion_id'] ?? 0);
             if ($pid > 0) { $p[$por > 0 ? $pid . ':' . $por : (string) $pid] = trim((string) ($x['name'] ?? '')); }
         }
-        foreach ((array) ($c['product_ids'] ?? []) as $pid) { if ((int) $pid > 0 && !isset($p[(string) (int) $pid])) { $p[(string) (int) $pid] = ''; } }
+        // Une cible produit : un entier, ou {id_product, id_product_portion} — la portion d'un produit (21/10/2026, l'API).
+        $vises = [];
+        foreach ((array) ($c['product_ids'] ?? []) as $x) {
+            $pid = is_array($x) ? (int) ($x['id_product'] ?? $x['product_id'] ?? $x['id'] ?? 0) : (int) $x;
+            $por = is_array($x) ? (int) ($x['id_product_portion'] ?? $x['product_portion_id'] ?? 0) : 0;
+            if ($pid <= 0) { continue; }
+            $k = $por > 0 ? $pid . ':' . $por : (string) $pid;
+            if (!isset($p[$k])) { $p[$k] = ''; }
+            $vises[] = [$pid, $por];
+        }
         $cats = [];
         foreach ((array) ($c['categories'] ?? []) as $x) { if ((int) ($x['id'] ?? 0) > 0) { $cats[(string) (int) $x['id']] = trim((string) ($x['name'] ?? '')); } }
         foreach ((array) ($c['category_ids'] ?? []) as $cid) { if ((int) $cid > 0 && !isset($cats[(string) (int) $cid])) { $cats[(string) (int) $cid] = ''; } }
         $exc = [];
-        foreach ((array) ($c['excluded_product_ids'] ?? []) as $pid) { if ((int) $pid > 0) { $exc[] = (int) $pid; } }
-        // La portion visée (« 4 Quarts + 1 Gratuit » : portion_scope ONE_QUARTER sur chaque cible), quand toutes les cibles la partagent.
+        foreach ((array) ($c['excluded_product_ids'] ?? []) as $x) { $pid = is_array($x) ? (int) ($x['id_product'] ?? $x['product_id'] ?? $x['id'] ?? 0) : (int) $x; if ($pid > 0) { $exc[] = $pid; } }
+        // La portion visée, quand toutes les cibles la partagent : l'ancienne forme (`portion_scope` sur des cibles,
+        // « 4 Quarts + 1 Gratuit » le 17/10/2026), ou la portion de chaque produit, reconnue par son n° (pmPortionTypeDe).
         $scopes = [];
         foreach (['category_targets', 'product_targets'] as $t) { foreach ((array) ($c[$t] ?? []) as $x) { if (is_array($x)) { $scopes[strtoupper((string) ($x['portion_scope'] ?? ''))] = true; } } }
+        if ($scopes === [] && $vises !== [] && $cats === [] && array_filter($vises, static fn ($v) => $v[1] <= 0) === [] && function_exists('pmPortionTypeDe')) {
+            foreach ($vises as [$pid, $por]) { $scopes[(string) pmPortionTypeDe($pid, $por)] = true; }
+        }
         $portion = count($scopes) === 1 && in_array(array_key_first($scopes), ['ONE_HALF', 'ONE_QUARTER'], true) ? array_key_first($scopes) : null;
         return ['q' => (float) ($c['quantity'] ?? 1) ?: 1.0, 'p' => $p, 'c' => $cats, 'x' => $exc, 'portion' => $portion];
     };

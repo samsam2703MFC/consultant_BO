@@ -24,6 +24,7 @@
     auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
     calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
+    levVue: (function () { try { return localStorage.getItem('db.levVue') === 'cumul' ? 'cumul' : 'mois'; } catch (e) { return 'mois'; } })(),
     stockOuvert: false, stockVues: null, cmdOuvert: false, invOuvert: false, cmdListeOuvert: false,
     ppOnglet: ['plan', 'suivi', 'params'].includes(q.get('onglet')) ? q.get('onglet') : 'plan', ppEdit: null, ppOuvert: {}, ppMsg: null, ppEnvoi: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false, coCanal: null,
@@ -98,7 +99,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300 };
+  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -125,7 +126,8 @@
     if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
     // Et où elles s'appliquent : comptoir, click & collect, livraison (18/10/2026).
-    if (S.vue === 'promos') { lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
+    // Le panel est relu à chaque ouverture de l'onglet (21/10/2026, Sam) : voir pmRelire().
+    if (S.vue === 'promos') { S.pmRelu = null; lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee' || S.vue === 'trimestre') {
       lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
@@ -185,7 +187,7 @@
     else if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); }
     if (coPer()) { lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
-    if (S.vue === 'mois') { lireAux(cleCanM(), cheminCanM(), force); }
+    if (S.vue === 'mois') { lireAux(cleCanM(), cheminCanM(), force); lireAux(cleLev(), cheminLev(), force); }
     if (S.vue === 'jour' || coPer()) { lireAux(cleInv(), cheminInv(), force); }
     // Les commandes clients et les livraisons : une seule lecture, elle porte
     // les deux et ne dépend pas de la période regardée.
@@ -3202,7 +3204,8 @@
   const pmTtc = p => p.prixTtc != null ? +p.prixTtc : (p.prixHt != null ? +p.prixHt * (1 + (+p.tva || 0) / 100) : null);
   /** Ce qu'un côté vise vraiment : la catégorie (moins les exclus) ou les produits, selon le mode choisi. */
   const pmEffectif = c => ({ q: Math.max(1, +c.q || 1), cats: c.mode === 'cats' ? c.cats : [], prods: c.mode === 'prods' ? c.prods : [], exclus: c.mode === 'cats' ? c.exclus : [], portion: c.portion || null });
-  /** Les variantes d'un côté (17/10/2026) : la portion du panel (`portion_scope`), sa fraction, ses mots. Sans : toutes les variantes. */
+  /** Les variantes d'un côté (17/10/2026) : la portion du panel, sa fraction, ses mots. Sans : toutes les variantes. Au panel, la
+   * portion de chaque produit par son n° (21/10/2026, `id_product_portion`) : une catégorie part produit par produit. */
   const PM_PORTIONS = { ONE_HALF: { f: 0.5, lib: '½', un: 'demi', des: 'demis' }, ONE_QUARTER: { f: 0.25, lib: '¼', un: 'quart', des: 'quarts' } };
   const pmFrac = c => (PM_PORTIONS[c.portion] || { f: 1 }).f;
   function pmEligibles(prods, c) {
@@ -3323,10 +3326,26 @@
     const rang = { active: 0, en_caisse: 0, a_venir: 2, brouillon: 4, inactive: 5, terminee: 6 };
     return L.sort((a, b) => (rang[a.etat] ?? 9) - (rang[b.etat] ?? 9) || String(a.du || '').localeCompare(String(b.du || '')));
   }
+  /**
+   * Le panel relu (21/10/2026, Sam) : une promotion créée ou changée directement au panel se voit à l'ouverture de
+   * l'onglet, sans attendre les dix minutes de la lecture gardée. La liste gardée s'affiche d'abord ; la relecture
+   * (`&frais=1`) la remplace dès qu'elle arrive, jamais par une lecture plus ancienne.
+   */
+  function pmRelire() {
+    const k = clePM(), sh = S.shop;
+    if (S.pmRelecture) { return; }
+    S.pmRelecture = true; S.pmRelErr = null; rendre();
+    lire(cheminPM() + '&frais=1').then(d => { if (S.shop === sh && d && (!S.aux[k] || (+d.luTs || 0) >= (+S.aux[k].luTs || 0))) { S.aux[k] = d; S.auxLu[k] = Date.now(); delete S.err[k]; } })
+      .catch(e => { S.pmRelErr = e.message; }).finally(() => { S.pmRelecture = false; rendre(); });
+  }
   function rendPromos() {
     if (S.pmW) { return rendPmAssistant(); }
     const P = S.aux[clePM()], k = clePM();
-    let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Promotions</div><div class="pm-titre">Promotions du magasin</div></div><span style="flex:1"></span>
+    if (P && S.pmRelu !== k && !S.pmRelecture) { S.pmRelu = k; setTimeout(pmRelire, 0); }
+    const relu = S.pmRelecture ? 'relecture du panel…'
+      : (S.pmRelErr ? 'relecture du panel impossible : ' + esc(S.pmRelErr) : (P && P.lu ? 'relu au panel ' + (P.luJour && P.luJour !== AUJ ? 'le ' + esc(P.luJour.slice(8, 10) + '/' + P.luJour.slice(5, 7)) + ' ' : '') + 'à ' + esc(P.lu) : ''));
+    let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Promotions</div><div class="pm-titre">Promotions du magasin</div>
+      <div class="db-mini pm-relu">${relu}${S.pmRelecture ? '' : ` <button class="pm-lien" data-pmrelire="1">↻ relire le panel</button>`}</div></div><span style="flex:1"></span>
       <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
       <button class="db-btn prim pm-gros" data-pmnew="1">+ Nouvelle promotion</button></div>`;
     if (S.pmMsg) { h += `<div class="pm-ok">${S.pmMsg}<button class="pm-x" data-pmmsg="1" aria-label="fermer">✕</button></div>`; }
@@ -3673,7 +3692,7 @@
   function pmCible(W, cote) {
     const c = W.d[cote], prods = pmProduits() || [], cats = pmCategories();
     const ex = c.mode === 'cats' && c.cats.length ? prods.filter(p => c.cats.some(o => +o.id === +p.catId) && !c.exclus.some(o => +o.id === +p.id)) : [];
-    const variante = `<div class="pm-f"><label>Variante</label><select class="pm-in" data-pmportion="${cote}"><option value="">Toutes les variantes</option>${Object.entries(PM_PORTIONS).map(([k, v]) => `<option value="${k}"${c.portion === k ? ' selected' : ''}>${v.lib} seulement (${v.un})</option>`).join('')}</select></div>`;
+    const variante = `<div class="pm-f"><label>Variante</label><select class="pm-in" data-pmportion="${cote}"><option value="">Toutes les variantes</option>${Object.entries(PM_PORTIONS).map(([k, v]) => `<option value="${k}"${c.portion === k ? ' selected' : ''}>${v.lib} seulement (${v.un})</option>`).join('')}</select>${c.portion ? `<small class="db-mini">au panel, la part ${PM_PORTIONS[c.portion].lib} de chaque produit${c.mode === 'cats' ? ' de la catégorie qui en a une' : ''}</small>` : ''}</div>`;
     let h = `<div class="pm-row" style="grid-template-columns:auto 190px 1fr"><div class="pm-f"><label>Sur</label><span class="pm-seg"><button class="${c.mode === 'cats' ? 'on' : ''}" data-pmmode="${cote}|cats">Catégorie</button><button class="${c.mode === 'prods' ? 'on' : ''}" data-pmmode="${cote}|prods">Produits</button></span></div>${variante}`;
     if (c.mode === 'cats') {
       h += `<div class="pm-f"><label>Catégorie</label><select class="pm-in" data-pmaddcat="${cote}"><option value="">${cats.length ? '+ Ajouter une catégorie…' : 'lecture des catégories…'}</option>${cats.filter(o => !c.cats.some(z => +z.id === +o.id)).map(o => `<option value="${o.id}">${esc(o.nom)} (${o.n} produit${o.n > 1 ? 's' : ''})</option>`).join('')}</select></div></div>`;
@@ -3830,6 +3849,7 @@
     on('[data-pmq]', 'input', el => { S.pmQ = el.value; rendre(); });
     on('[data-pmmsg]', 'click', () => { S.pmMsg = null; rendre(); });
     on('[data-pmnew]', 'click', () => pmOuvrir(pmNouvelle(), 1));
+    on('[data-pmrelire]', 'click', () => pmRelire());
     on('[data-pmedit]', 'click', el => {
       const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit);
       if (d) { pmOuvrir(pmDepuis(pmNommer(d)), PM_FIN); S.pmW.enCaisse = d.statut === 'en_caisse' ? (d.panelId || true) : null; rendre(); }
@@ -3941,6 +3961,7 @@
     if (m) { h += rendBench(m, d); }
     h += rendTaches();
     h += rendCQ(false);
+    if (S.vue === 'mois') { h += rendLeviers(); }
     // La barre du stock ne s'affiche plus en vues Semaine et Mois (10/10/2026) : elle reste dans Opérationnel.
     h += `<div class="db-sec">Résultat — ${S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')}<small>${S.vue === 'jour' ? 'budget du jour, référence des mêmes jours, P&amp;L court' : 'objectif réparti par la pondération réseau, attendu à ce jour, P&amp;L'}</small></div>`;
     if (!d && !S.err[kr]) { h += squelette(3); }
@@ -3957,6 +3978,101 @@
     brancher();
     noteRestaurer(garde);
     cqRestaurer(cqPos);
+  }
+  /** Les six leviers du mois, une lecture pour tout le réseau (la même que Résultat › Mois au cockpit). */
+  function cleLev() { return 'lev|' + S.date.slice(0, 7); }
+  function cheminLev() { return '/leviers/magasins?annee=' + S.date.slice(0, 4) + '&mois=' + (+S.date.slice(5, 7)); }
+  /**
+   * Les six leviers du magasin, vue Mois (21/10/2026, demande de Sam) : une tuile par levier — la valeur du mois (à date
+   * s'il est en cours), sa pastille (seuils de la Table KPI), l'écart au même mois de l'année d'avant, le réseau et le
+   * seuil, la courbe des douze derniers mois. « Cumul de l'année » : janvier → le dernier mois clos, face aux mêmes mois.
+   * Quand l'écart porte sur moins de mois que la valeur (ouverture, frais non saisis), la tuile dit les deux chiffres
+   * comparés. La Récurrence reste grise : elle attend sa mesure.
+   */
+  function rendLeviers() {
+    const k = cleLev(), L = S.aux[k];
+    if (S.err[k]) { return `<div class="db-err">Les six leviers : ${esc(S.err[k])}</div>`; }
+    if (!L) { return `<div class="db-card lv-card"><div class="ct"><span class="db-lab">Les six leviers</span><span class="db-mini">lecture…</span></div><div class="lv-g">${Array.from({ length: 6 }, () => '<div class="lv-tu"><div class="db-sk" style="width:55%;margin-top:12px"></div><div class="db-sk" style="height:22px;margin:10px 0 6px;width:60%"></div><div class="db-sk" style="width:85%"></div></div>').join('')}</div></div>`; }
+    const g = (L.magasins || []).find(x => String(x.id) === String(S.shop));
+    if (!g) { return `<div class="db-card lv-card"><div class="ct"><span class="db-lab">Les six leviers</span></div><div class="lv-vide">Pas de P&amp;L pour ce magasin ce mois-ci : les six leviers se liront quand il sera saisi.</div></div>`; }
+    const cumul = S.levVue === 'cumul' && !!L.cumulAu && !!g.cumul;
+    const dc = (n, d) => nf(n, d);
+    const sg = (n, d, u) => (n > 0 ? '+' : (n < 0 ? '−' : '±')) + dc(Math.abs(n), d) + u;
+    const nomMois = (m, long) => new Date(2000, m - 1, 15).toLocaleDateString('fr-BE', { month: long ? 'long' : 'short' });
+    const moisAn = (ym, long) => nomMois(+ym.slice(5, 7), long) + ' ' + ym.slice(0, 4);
+    const pct = v => dc(v, 1) + ' %';
+    const pa = n => n ? `<i class="lv-p ${n}"></i>` : '';
+    // L'écart est bon quand il y a plus de clients, une meilleure note, un coût plus bas.
+    const puce = (d, dec, u, hausseBonne) => d == null ? '' : `<span class="lv-c ${d === 0 ? 'z' : ((d > 0) === hausseBonne ? 'b' : 'm')}">${sg(d, dec, u)}</span>`;
+    const neutre = t => `<span class="lv-c z">${esc(t)}</span>`;
+    const etendue = l => l.length ? nomMois(l[0]) + ' → ' + nomMois(l[l.length - 1]) : '';
+    const seuil = (cle, f) => { const x = (L.seuils || {})[cle]; return x && x.alerte != null ? 'seuil ' + f(x.alerte) : ''; };
+    const R = cumul ? L.reseau.cumul : L.reseau.mois;
+    const ouvLib = g.ouverture ? 'ouvert en ' + moisAn(g.ouverture, true) : 'pas de N-1';
+    const mc = cumul ? (g.cumul.moisComparables || []) : [];
+    const memesMois = cumul && mc.length && mc.length < L.cumulAu ? 'mêmes mois : ' + etendue(mc) : '';
+    const ymSel = L.annee + '-' + String(L.mois).padStart(2, '0');
+    // La courbe des douze derniers mois : un trait, le dernier point marqué ; chaque mois se lit au survol.
+    const courbe = (vals, coul, f) => {
+      const W = 160, H = 34, v = (vals || []).map(x => x == null ? null : +x), ok = v.filter(x => x != null);
+      if (ok.length < 2) { return ''; }
+      const lo = Math.min(...ok), hi = Math.max(...ok), sx = W / Math.max(1, v.length - 1);
+      const y = x => H - 4 - (hi === lo ? 0.5 : (x - lo) / (hi - lo)) * (H - 8);
+      let d = '', lev = true;
+      v.forEach((x, i) => { if (x == null) { lev = true; return; } d += (lev ? 'M' : 'L') + (i * sx).toFixed(1) + ' ' + y(x).toFixed(1); lev = false; });
+      const last = v.length - 1;
+      const pts = v.map((x, i) => x == null ? '' : `<circle cx="${(i * sx).toFixed(1)}" cy="${y(x).toFixed(1)}" r="7" fill="transparent"><title>${esc(moisAn(L.serieMois[i]) + ' : ' + f(x))}</title></circle>`).join('');
+      return `<svg class="lv-sp" viewBox="-3 0 ${W + 6} ${H}" preserveAspectRatio="none" height="34" role="img" aria-label="les douze derniers mois"><path d="${d}" fill="none" stroke="${coul}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>${v[last] != null ? `<circle cx="${(last * sx).toFixed(1)}" cy="${y(v[last]).toFixed(1)}" r="2.8" fill="${coul}"/>` : ''}${pts}</svg>`;
+    };
+    const tuile = (l, val, pas, l1, l2, spark, q) => `<div class="lv-tu"><div class="bar" style="background:${esc(l.couleur)}"></div><div class="k" style="color:${esc(l.couleur)}">${esc(l.nom)}</div><div class="q">${esc(q)}</div>
+      <div class="v${val === '—' ? ' mu' : ''}">${esc(val)}${pa(pas)}</div><div class="l">${l1}</div>${l2 ? `<div class="l">${l2}</div>` : ''}${spark || ''}</div>`;
+    const tuiles = (L.leviers || []).map(l => {
+      if (l.vide) { return `<div class="lv-tu vide"><div class="bar" style="background:${esc(l.couleur)}"></div><div class="k" style="color:${esc(l.couleur)}">${esc(l.nom)}</div><div class="q">à définir</div><div class="v mu">—</div><div class="l">laissée vide pour l’instant</div></div>`; }
+      if (l.cle === 'trafic') {
+        const fT = x => nf(x, 0) + (cumul ? '' : ' /j');
+        if (cumul) {
+          const x = g.cumul.trafic, r = R.trafic || {};
+          const l1 = x.comp == null ? neutre('pas de N-1') + ' ' + esc(ouvLib) : puce(x.delta, 1, ' %', true) + ' ' + esc(memesMois ? nf(x.comp, 0) + ' vs ' + nf(x.n1, 0) : 'N-1 ' + nf(x.n1, 0));
+          return tuile(l, nf(x.v, 0), null, l1, esc((memesMois ? memesMois + ' · ' : '') + (r.delta != null ? 'réseau ' + sg(r.delta, 1, ' %') : '')), courbe(g.serie.trafic, l.couleur, fT), 'clients · janvier → ' + nomMois(L.cumulAu, true));
+        }
+        const x = g.mois.trafic, r = R.trafic || {};
+        if (x.v == null) { return tuile(l, '—', null, 'pas de P&amp;L ce mois', '', courbe(g.serie.trafic, l.couleur, fT), 'clients par jour'); }
+        const l1 = g.mois.ouverture ? neutre('mois d’ouverture') : (x.n1 == null ? neutre('pas de N-1') + ' ' + esc(ouvLib) : puce(x.delta, 1, ' %', true) + ' N-1 ' + nf(x.n1, 0));
+        return tuile(l, nf(x.v, 0), x.niveau, l1, esc('réseau ' + (r.v != null ? nf(r.v, 0) : '—') + (x.ecartReseau != null ? ' · ' + sg(x.ecartReseau, 0, ' %') : '')), courbe(g.serie.trafic, l.couleur, fT), 'clients par jour' + (L.moisEnCours ? ' · ' + L.jours + ' jours' : ''));
+      }
+      if (l.cle === 'xp') {
+        const x = (cumul ? g.cumul : g.mois).xp || {}, r = R.xp || {};
+        const n1 = x.n1 != null ? puce(x.delta, 2, '', true) + ' N-1 ' + dc(x.n1, 1) + ' ★' : neutre(L.googleN1Des ? 'N-1 : ' + moisAn(L.googleN1Des) : 'pas de N-1');
+        const deb = L.googleN1Des ? moisAn(String(+L.googleN1Des.slice(0, 4) - 1) + L.googleN1Des.slice(4)) : '';
+        return tuile(l, x.v != null ? dc(x.v, 1) + ' ★' : '—', x.niveau, x.v != null ? n1 : 'pas de relevé ce mois-là',
+          esc('réseau ' + (r.v != null ? dc(r.v, 2) + ' ★' : '—') + (seuil('xp', a => dc(a, 1)) ? ' · ' + seuil('xp', a => dc(a, 1)) : '')),
+          `<div class="l lv-pied">${esc(deb ? 'relevé mensuel depuis ' + deb : 'la note de la fiche, aujourd’hui')}</div>`, 'note Google' + (x.avis ? ' · ' + nf(x.avis, 0) + ' avis' : ''));
+      }
+      const r = R[l.cle] || {}, s = seuil(l.cle, a => pct(a));
+      const l2 = esc('réseau ' + (r.v != null ? pct(r.v) : '—') + (s ? ' · ' + s : ''));
+      const sp = courbe(g.serie[l.cle], l.couleur, pct);
+      if (cumul) {
+        const x = g.cumul[l.cle] || {};
+        if (x.v == null) { return tuile(l, '—', null, 'pas saisi', l2, sp, '% du CA · janvier → ' + nomMois(L.cumulAu, true)); }
+        const part = x.comp != null && x.moisCompares < mc.length ? 'sur ' + x.moisCompares + ' mois saisis les deux années' : memesMois;
+        const l1 = x.comp == null || x.n1 == null ? neutre('pas de N-1') + ' ' + esc(mc.length ? 'pas saisi l’an dernier' : ouvLib)
+          : puce(x.delta, 1, ' pt', false) + ' ' + esc(part ? pct(x.comp) + ' vs ' + pct(x.n1) : 'N-1 ' + pct(x.n1));
+        return tuile(l, pct(x.v), x.niveau, l1, (part ? esc(part) + '<br>' : '') + l2, sp, '% du CA · janvier → ' + nomMois(L.cumulAu, true));
+      }
+      const x = g.mois[l.cle] || {};
+      if (x.nonSaisi) { return tuile(l, '—', null, neutre('pas saisi ce mois'), l2, sp, '% du CA'); }
+      if (x.v == null) { return tuile(l, '—', null, 'pas de P&amp;L ce mois', l2, sp, '% du CA'); }
+      const l1 = x.n1 == null ? neutre(g.mois.ouverture ? 'mois d’ouverture' : 'pas de N-1') + (g.mois.ouverture ? '' : ' ' + esc(ouvLib)) : puce(x.delta, 1, ' pt', false) + ' N-1 ' + pct(x.n1);
+      const hors = l.cle === 'food' && (g.horsNorme || []).some(h => h.mois === ymSel) ? '<span class="lv-al">⚠ hors norme, à vérifier au P&amp;L</span>' : '';
+      return tuile(l, pct(x.v), x.niveau, l1 + hors, l2, sp, '% du CA');
+    }).join('');
+    const titre = cumul ? 'cumul ' + L.annee : moisAn(ymSel, true);
+    const sous = cumul ? 'janvier → ' + nomMois(L.cumulAu, true) + ', face aux mêmes mois de ' + (L.annee - 1) + (L.moisEnCours ? ' · le mois en cours n’entre pas' : '')
+      : (L.moisEnCours ? 'à date (' + L.jours + ' jours), ' : '') + 'face à ' + moisAn((L.annee - 1) + '-' + String(L.mois).padStart(2, '0'), true) + ' et au réseau';
+    const seg = `<div class="lv-seg">${[['mois', 'Le mois'], ['cumul', 'Cumul de l’année']].map(o => `<button data-levvue="${o[0]}" class="${(cumul ? 'cumul' : 'mois') === o[0] ? 'on' : ''}"${o[0] === 'cumul' && !(L.cumulAu && g.cumul) ? ' disabled title="le cumul commence avec le premier mois clos"' : ''}>${o[1]}</button>`).join('')}</div>`;
+    return `<div class="db-card lv-card"><div class="ct"><span class="db-lab">Les six leviers — ${esc(titre)}</span><span class="db-mini lv-st">${esc(sous)}</span>${seg}</div>
+      <div class="lv-g">${tuiles}</div>
+      <div class="db-perleg lv-leg"><span>Pastille — seuils de la Table KPI : ${pa('v')} sous l’alerte ${pa('o')} entre alerte et critique ${pa('r')} au-delà${cumul ? '' : ' · trafic : l’écart au réseau'}</span><span>Écart vert : mieux qu’en ${L.annee - 1}</span><span>Courbe : les douze derniers mois${L.moisEnCours ? ', le dernier à date' : ''}</span></div></div>`;
   }
   function squelette(n) {
     return `<div class="db-tuiles">${Array.from({ length: 5 }, () => `<div class="db-tui"><div class="db-sk" style="width:60%"></div><div class="db-sk" style="height:24px;margin:8px 0 6px"></div><div class="db-sk" style="width:80%"></div></div>`).join('')}</div>
@@ -7021,6 +7137,7 @@
     $.querySelectorAll('[data-pdrop]').forEach(b => b.addEventListener('click', () => { S.pOuvert = !S.pOuvert; rendre(); }));
     $.querySelectorAll('[data-perdrop]').forEach(b => b.addEventListener('click', () => { S.perOuvert = !S.perOuvert; rendre(); }));
     $.querySelectorAll('[data-percol]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.perCol = b.dataset.percol; rendre(); }));
+    $.querySelectorAll('[data-levvue]').forEach(b => b.addEventListener('click', () => { S.levVue = b.dataset.levvue === 'cumul' ? 'cumul' : 'mois'; try { localStorage.setItem('db.levVue', S.levVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-calval]').forEach(b => b.addEventListener('click', () => { S.calVal = ['ca', 'att', 'cli'].includes(b.dataset.calval) ? b.dataset.calval : 'ca'; try { localStorage.setItem('db.calVal', S.calVal); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; rendre(); }));
