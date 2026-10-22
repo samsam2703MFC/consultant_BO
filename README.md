@@ -299,6 +299,13 @@ installée sur les tablettes : il ne change plus de nom.
   `.htaccess` (qui fait de même en production : sans cela le shell du cockpit
   partait en 200 à la place d'un morceau de script ou d'une image).
 
+## Marketing (/marketing/)
+
+Campagnes et leur assistant, réseaux sociaux (Facebook, Instagram), publicités Meta :
+un **module indépendant** (dépôt `marketing`, adresse **/marketing/**, le module Social
+servi sous `/marketing/social/`), ouvert depuis le rail du cockpit (Marque & marketing →
+« Marketing ↗ »). L'ancien assistant de campagne du cockpit y renvoie.
+
 ## Scouting commercial
 
 Écran « Scouting commercial » (rail, groupe *Développement*) — implémentation
