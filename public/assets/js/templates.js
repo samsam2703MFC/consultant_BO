@@ -934,6 +934,7 @@ function tplObjectifs(c, x){
       <button ${x.A(c.hz3)} style="${c.hz3St}">${c.hzLabel3}</button>
       <button ${x.A(c.hz5)} style="${c.hz5St}">${c.hzLabel5}</button>
     </div>
+    ${c.perfMsg ? `<div style="${c.perfMsgSt}"><span style="flex:1">${esc(c.perfMsg)}</span>${c.perfRelire ? `<button ${x.A(c.perfRelire)} style="border:0.5px solid currentColor;background:#fff;color:inherit;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font-ui)">Relire</button>` : ''}</div>` : ''}
     ${c.isH1 ? `
       <div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">
         <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
