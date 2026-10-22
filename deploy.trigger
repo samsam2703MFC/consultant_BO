@@ -933,3 +933,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-22T08:08:44Z karta stanowiska : maksimum absolutne
 2026-10-22T08:26:24Z rola modułu + moje wskaźniki
 2026-10-22T08:38:31Z czas partii + wskaźniki kierownika dla dyrekcji
+2026-10-22T09:01:40Z nettoyage marketing retire : les tables du module restent
