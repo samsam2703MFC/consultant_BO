@@ -935,3 +935,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-22T08:38:31Z czas partii + wskaźniki kierownika dla dyrekcji
 2026-10-22T09:01:40Z nettoyage marketing retire : les tables du module restent
 2026-10-22T09:11:43Z paramètres produits de l'Arkusz tygodnia, bascule Liste / Calendrier des campagnes
+2026-10-22T09:14:10Z rail : entree Marketing vers /marketing/
