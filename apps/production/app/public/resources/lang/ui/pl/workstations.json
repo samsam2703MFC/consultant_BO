@@ -53,5 +53,8 @@
   "unit.kg": "kg",
   "unit.chariot": "wózek",
   "unit.bac": "pojemnik",
-  "unit.litre": "l"
+  "unit.litre": "l",
+  "col_oee": "TRS",
+  "oee_on": "na tablecie",
+  "f.oee": "TRS na tablecie grupy (praca / postoje)"
 }

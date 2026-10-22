@@ -194,6 +194,8 @@ final class WorkshopApiRoutes
             ['PATCH', '/kiosk/waste/{id:\d+}', ExecutionController::class, 'updateWaste', 'kiosk_employee'],
             ['GET', '/kiosk/recipes', ExecutionController::class, 'recipes', 'kiosk_employee'],
             ['GET', '/kiosk/recipes/{id:\d+}', ExecutionController::class, 'recipe', 'kiosk_employee'],
+            ['GET', '/kiosk/machines', ExecutionController::class, 'machines', 'kiosk_employee'],
+            ['POST', '/kiosk/machines/{id:\d+}/state', ExecutionController::class, 'machineState', 'kiosk_employee'],
             ['GET', '/kiosk/quality', ExecutionController::class, 'quality', 'kiosk_employee'],
             ['POST', '/kiosk/quality/batches/{id:\d+}', ExecutionController::class, 'qualityCheck', 'kiosk_employee'],
             ['POST', '/kiosk/quality/reports', ExecutionController::class, 'qualityReport', 'kiosk_employee'],

@@ -79,14 +79,15 @@
                 </div>
                 ${byGroup.length ? `<div class="table-responsive"><table class="table table-sm align-middle mb-0">
                     <thead><tr><th>${esc(t('col_station'))}</th><th>${esc(t('col_type'))}</th><th>${esc(t('col_mode'))}</th><th class="text-end">${esc(t('col_capacity'))}</th>
-                        <th class="text-end">${esc(t('col_cost'))}</th><th>${esc(t('col_active'))}</th><th></th></tr></thead>
-                    <tbody>${byGroup.map(({g, rows}) => `<tr class="tfb-week-table-group"><th colspan="7">${esc(g.name)}</th></tr>` + rows.map(w => `
+                        <th class="text-end">${esc(t('col_cost'))}</th><th>${esc(t('col_oee'))}</th><th>${esc(t('col_active'))}</th><th></th></tr></thead>
+                    <tbody>${byGroup.map(({g, rows}) => `<tr class="tfb-week-table-group"><th colspan="8">${esc(g.name)}</th></tr>` + rows.map(w => `
                         <tr class="${w.active ? '' : 'text-muted'}" data-id="${w.id}">
                             <td><strong>${esc(w.name)}</strong><div class="small text-muted">${esc(w.code)}</div></td>
                             <td>${typeBadge(w)}</td>
                             <td>${esc(modeText(w)) || '<span class="text-muted">—</span>'}</td>
                             <td class="text-end">${n(w.capacity_per_pass, 2)} ${esc(t('unit.' + w.capacity_unit))}</td>
                             <td class="text-end">${n(w.hourly_cost, 2)}</td>
+                            <td>${w.oee_tracked ? '📊 ' + esc(t('oee_on')) : '<span class="text-muted">—</span>'}</td>
                             <td>${w.active ? '✓' : esc(t('inactive'))}</td>
                             <td class="text-end">${canWrite ? `<button type="button" class="btn btn-sm btn-outline-primary" data-edit="${w.id}">${esc(t('edit'))}</button>` : ''}</td>
                         </tr>`).join('')).join('')}</tbody></table></div>` : `<p class="text-muted mb-0">${esc(t('empty'))}</p>`}
@@ -114,6 +115,7 @@
                     <select class="form-select" name="capacity_unit" data-field="capacity_unit" aria-label="${esc(t('f.unit'))}">${units.map(u => `<option value="${esc(u)}" ${u === w.capacity_unit ? 'selected' : ''}>${esc(t('unit.' + u))}</option>`).join('')}</select></div></label>
                 <label>${esc(t('col_cost'))}<input class="form-control form-control-sm" name="hourly_cost" data-field="hourly_cost" inputmode="decimal" value="${w.hourly_cost ?? 0}"></label>
                 <label class="tfb-wide">${esc(t('f.notes'))}<input class="form-control form-control-sm" name="notes" data-field="notes" value="${esc(w.notes || '')}" maxlength="500"></label>
+                <label class="form-check"><input class="form-check-input" type="checkbox" name="oee_tracked" ${w.oee_tracked ? 'checked' : ''}> ${esc(t('f.oee'))}</label>
                 <label class="form-check"><input class="form-check-input" type="checkbox" name="active" ${w.active === false ? '' : 'checked'}> ${esc(t('col_active'))}</label>
                 <div class="tfb-wide d-flex gap-2 justify-content-end"><button type="button" class="btn btn-outline-secondary btn-sm" data-cancel>${esc(t('cancel'))}</button>
                     <button class="btn btn-primary btn-sm">${esc(t('save'))}</button></div>
@@ -130,7 +132,8 @@
         const v = (name) => f.elements[name] ? f.elements[name].value.trim() : undefined;
         editing = {...editing, code: v('code') ?? editing.code, name_pl: v('name_pl'), name_fr: v('name_fr'), group_id: Number(v('group_id')), type: v('type'),
             robot_mode: v('robot_mode') ?? editing.robot_mode, operator_share: f.elements.operator_share ? ui.num(f.elements.operator_share.value) : editing.operator_share,
-            capacity_per_pass: ui.num(v('capacity_per_pass')), capacity_unit: v('capacity_unit'), hourly_cost: ui.num(v('hourly_cost')), notes: v('notes'), active: f.elements.active.checked};
+            capacity_per_pass: ui.num(v('capacity_per_pass')), capacity_unit: v('capacity_unit'), hourly_cost: ui.num(v('hourly_cost')), notes: v('notes'), active: f.elements.active.checked,
+            oee_tracked: f.elements.oee_tracked.checked};
     }
 
     function bind() {
@@ -140,7 +143,7 @@
             const cobot = b.dataset.new === 'cobot';
             editing = {id: null, code: '', name_pl: cobot ? 'Cobot ' : '', name_fr: cobot ? 'Cobot ' : '', group_id: Number(filter.group) || (groups[0] || {}).id,
                 type: cobot ? 'robot' : 'manuel', robot_mode: cobot ? 'collaboratif' : null, operator_share: cobot ? 0.25 : null,
-                capacity_per_pass: 1, capacity_unit: units[0], hourly_cost: 0, notes: '', active: true};
+                capacity_per_pass: 1, capacity_unit: units[0], hourly_cost: 0, notes: '', active: true, oee_tracked: cobot};
             draw();
             el.querySelector('[name=code]').focus();
         }));
@@ -171,7 +174,7 @@
             const w = editing;
             const body = {name_pl: w.name_pl, name_fr: w.name_fr || w.name_pl, group_id: w.group_id, type: w.type,
                 robot_mode: w.type === 'robot' ? w.robot_mode : null, capacity_per_pass: w.capacity_per_pass, capacity_unit: w.capacity_unit,
-                hourly_cost: w.hourly_cost ?? 0, notes: w.notes || null, active: w.active};
+                hourly_cost: w.hourly_cost ?? 0, notes: w.notes || null, active: w.active, oee_tracked: !!w.oee_tracked};
             if (w.type === 'robot' && w.robot_mode === 'collaboratif') body.operator_share = w.operator_share ?? null;
             const button = f.querySelector('button.btn-primary');
             button.disabled = true;

@@ -212,6 +212,8 @@ check($s === 200 && $b['data']['operator_share'] === null && !$b['data']['collab
 check($s === 422 && $codes($b) === ['operator_share:OPERATOR_SHARE_REQUIRED'], 'back to cobot needs the share again');
 [$s, $b] = $call('PATCH', "/referentiels/workstations/{$cobotId}", ['robot_mode' => 'collaboratif', 'operator_share' => 0.5], $access);
 check($s === 200 && $b['data']['operator_share'] === 0.5 && $b['data']['collaborative'], 'cobot again (1 person for 2 cobots)');
+[$s, $b] = $call('PATCH', "/referentiels/workstations/{$cobotId}", ['oee_tracked' => true], $access);
+check($s === 200 && $b['data']['oee_tracked'] === true, 'cobot followed in TRS on the group tablet');
 [$s, $b] = $call('PATCH', "/referentiels/workstations/{$wsId}", ['photo_url' => 'https://elsewhere.test/a.jpg'], $access);
 check($s === 422 && $codes($b) === ['photo_url:URL_NOT_R2'], 'photo must be a direct R2 link');
 [$s, $b] = $call('PATCH', "/referentiels/workstations/{$wsId}", ['type' => 'four'], $access);
@@ -881,6 +883,61 @@ check($s === 200 && !$pd['data']['closed']['changed'] && $pd['data']['closed']['
 check($s === 409 && $b['description'] === 'OUTPUT_LOCKED', 'old days are not validated on the tablet');
 $weekGood = (new \App\Repositories\Workshop\WeekRepository($pdo))->produced(date('Y-m-d'), date('Y-m-d'));
 check(abs(($weekGood[$croissant] ?? 0) - (120 + 5 - 12 - 2)) < 0.001, 'week progress counts good quantity (produced − waste)');
+// --- TRS na tablecie : stany maszyny (praca, postój z powodem, koniec), TRS dnia = dostępność × wydajność × jakość
+[$s, $b] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'stop'], $device, $emp);
+check($s === 422 && $codes($b) === ['reason:STOP_REASON_REQUIRED'], 'a stop needs a reason');
+[$s, $b] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'stop', 'reason' => 'other'], $device, $emp);
+check($s === 422 && $codes($b) === ['note:STOP_NOTE_REQUIRED'], 'reason « other » needs a note');
+[$s, $b] = $kiosk('POST', "/kiosk/machines/999999/state", ['state' => 'run'], $device, $emp);
+check($s === 404, 'unknown machine');
+$pdo->exec("INSERT INTO tfb_prod_workstation (code, id_group, name_pl, name_fr, type, capacity_per_pass, hourly_cost, oee_tracked, active) VALUES ('OEE_OTHER', 2, 'Maszyna grupy 2', 'Machine groupe 2', 'machine', 1, 0, 1, 1)");
+$otherWs = (int) $pdo->lastInsertId();
+[$s, $b] = $kiosk('POST', "/kiosk/machines/{$otherWs}/state", ['state' => 'run'], $device, $emp);
+check($s === 403 && $b['description'] === 'MACHINE_NOT_IN_YOUR_GROUP', 'machines of another group are not driven from this tablet');
+$stateUuid = '7d3e4f50-6172-4c8d-9e0f-1a2b3c4d5e6f';
+[$s, $m] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'run', 'client_uuid' => $stateUuid], $device, $emp);
+$mine = array_column($m['data']['machines'] ?? [], null, 'id')[$cobotId] ?? null;
+check($s === 200 && $mine && $mine['state']['state'] === 'run' && $mine['collaborative'] && !in_array($otherWs, array_column($m['data']['machines'], 'id'), true), 'machine running (tablet group only)');
+[$s, $m] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'run', 'client_uuid' => $stateUuid], $device, $emp);
+[$s2] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'run'], $device, $emp);
+check($s === 200 && $m['data']['replayed'] && $s2 === 200 && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_ws_state WHERE id_workstation = {$cobotId}")->fetchColumn() === 1, 'replay and same state: no new record');
+[$s, $m] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'stop', 'reason' => 'breakdown', 'note' => 'chwytak'], $device, $emp);
+$mine = array_column($m['data']['machines'] ?? [], null, 'id')[$cobotId] ?? null;
+check($s === 200 && $mine['state']['state'] === 'stop' && $mine['state']['reason'] === 'breakdown' && $mine['state']['note'] === 'chwytak'
+    && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_ws_state WHERE id_workstation = {$cobotId} AND ended_at IS NULL")->fetchColumn() === 1, 'stop: previous state closed, one open state');
+[$s, $m] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'off'], $device, $emp);
+$mine = array_column($m['data']['machines'] ?? [], null, 'id')[$cobotId] ?? null;
+check($s === 200 && $mine['state'] === null && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_ws_state WHERE id_workstation = {$cobotId} AND ended_at IS NULL")->fetchColumn() === 0, 'end of work: no open state');
+// Wczoraj : praca 08:00–10:00, awaria 10:00–10:30, przerwa 10:30–10:45 (planowana), praca 10:45–11:45 ; 600 rogali na cobocie (15 s/szt.), 30 strat.
+$yday = date('Y-m-d', strtotime('-1 day'));
+$pdo->exec("INSERT INTO tfb_prod_ws_state (id_workstation, state, reason, started_at, ended_at) VALUES
+    ({$cobotId}, 'run', NULL, '{$yday} 08:00:00', '{$yday} 10:00:00'), ({$cobotId}, 'stop', 'breakdown', '{$yday} 10:00:00', '{$yday} 10:30:00'),
+    ({$cobotId}, 'stop', 'break', '{$yday} 10:30:00', '{$yday} 10:45:00'), ({$cobotId}, 'run', NULL, '{$yday} 10:45:00', '{$yday} 11:45:00')");
+[, $ci] = $call('GET', "/produits/items/{$croissant}", null, $access);
+$croissantRouting = array_map(fn($st) => array_intersect_key($st, array_flip(['id', 'name_pl', 'name_fr', 'workstation_id', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'operators_required',
+    'min_level_order', 'delay_after_s', 'delay_workstation_id', 'cleaning_required', 'cleaning_time_s', 'temperature_c'])) + ['alternatives' => array_map(fn($a) => array_intersect_key($a,
+    array_flip(['workstation_id', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'priority'])), $st['alternatives'])], $ci['data']['routing'] ?? []);
+// Etap 1 rogala przechodzi na cobota (własna kadencja 15 s/szt.) ; bez marszruty — jeden etap ręczny z cobotem.
+$manualWs = (int) $pdo->query("SELECT id FROM tfb_prod_workstation WHERE id_group = 1 AND type = 'manuel' AND active = 1 ORDER BY id LIMIT 1")->fetchColumn();
+$oeeRouting = $croissantRouting ?: [['name_pl' => 'Zwijanie', 'workstation_id' => $manualWs, 'fixed_time_s' => 0, 'variable_time_s' => 20, 'capacity_per_pass' => 1, 'operators_required' => 1, 'alternatives' => []]];
+$oeeRouting[0]['alternatives'][] = ['workstation_id' => $cobotId, 'fixed_time_s' => 0, 'variable_time_s' => 15, 'capacity_per_pass' => 1];
+[$s] = $call('PUT', "/produits/items/{$croissant}/routing", ['steps' => $oeeRouting], $access);
+$pdo->exec("INSERT INTO tfb_prod_output (work_date, id_group, id_item, quantity, lot_code) VALUES ('{$yday}', 1, {$croissant}, 600, 'OEE-TEST-1')");
+$oeeOutput = (int) $pdo->lastInsertId();
+$pdo->exec("INSERT INTO tfb_prod_waste (work_date, id_group, id_item, quantity, reason) VALUES ('{$yday}', 1, {$croissant}, 30, 'quality')");
+$oeeWaste = (int) $pdo->lastInsertId();
+[$s2, $m] = $kiosk('GET', "/kiosk/machines?date={$yday}", null, $device, $emp);
+$mine = array_column($m['data']['machines'] ?? [], null, 'id')[$cobotId] ?? null;
+$stops = array_column($mine['stops'] ?? [], null, 'reason');
+check($s === 200 && $s2 === 200 && $mine && $mine['run_h'] == 3.0 && $mine['stop_h'] == 0.5 && $mine['planned_stop_h'] == 0.25 && $stops['breakdown']['minutes'] == 30.0 && $stops['break']['planned']
+    && $mine['ideal_h'] == 2.5 && $mine['pieces'] == 600.0 && $mine['availability'] == 85.7 && $mine['performance'] == 83.3 && $mine['quality'] == 95.0 && $mine['oee'] == 67.9
+    && count($mine['segments']) === 4 && $mine['items'][0]['item_id'] === $croissant, 'TRS of the day: 85.7 % × 83.3 % × 95 % = 67.9 % (cobot cadence from the routing)');
+$pdo->exec("DELETE FROM tfb_prod_waste WHERE id = {$oeeWaste}");
+$pdo->exec("DELETE FROM tfb_prod_output WHERE id = {$oeeOutput}");
+$pdo->exec("DELETE FROM tfb_prod_ws_state WHERE id_workstation = {$cobotId}");
+$pdo->exec("DELETE FROM tfb_prod_workstation WHERE id = {$otherWs}");
+[$s] = $call('PUT', "/produits/items/{$croissant}/routing", ['steps' => $croissantRouting], $access);
+check($s === 200, 'croissant routing restored');
 // --- Receptury na tablecie : drzewo receptury na karton (podreceptury, surowce, etapy) i etapy produkcji karty
 $pdo->exec("INSERT INTO product_recipe_connection (parent_recipe_id, child_recipe_id, child_ingredient_id, quantity) VALUES (701, NULL, 900, 750)");
 $pdo->exec("INSERT INTO product_recipe_preparation_step (recipe_id, step_number, step_description) VALUES (701, 2, 'Laminować 3 × 4'), (701, 1, 'Wymieszać 4 min')");

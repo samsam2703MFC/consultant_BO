@@ -11567,6 +11567,164 @@
                 ]
             }
         },
+        "/kiosk/machines": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "TRS maszyn grupy tabletu / TRS des machines du groupe de la tablette",
+                "operationId": "kioskMachines",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OeeDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Machines suivies (oee_tracked) du groupe de la tablette : état en cours, déroulé du jour, TRS = disponibilité × performance × qualité. Disponibilité = marche ÷ (marche + arrêts non planifiés ; pause et nettoyage = arrêts planifiés). Performance = temps standard des lots du jour sur la machine (gamme ; cobot = étape passée sur le cobot) ÷ temps de marche, au plus 100 %. Qualité = (produit − pertes) ÷ produit.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "défaut : aujourd'hui"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/machines/{id}/state": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Stan maszyny : praca, postój, koniec / État de la machine : marche, arrêt, fin",
+                "operationId": "kioskMachineState",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OeeDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Ferme l'état en cours et ouvre le nouveau (run, stop avec raison) ; off = fin de travail. Même état et même raison : rien ne change. 422 STOP_REASON_REQUIRED, STOP_NOTE_REQUIRED (raison other) ; 403 MACHINE_NOT_IN_YOUR_GROUP. client_uuid rejouable.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MachineStateInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/quality": {
             "get": {
                 "tags": [
@@ -16994,6 +17152,236 @@
                     }
                 }
             },
+            "OeeMachine": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "group_id": {
+                        "type": "integer"
+                    },
+                    "group": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "collaborative": {
+                        "type": "boolean"
+                    },
+                    "state": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "state": {
+                                "type": "string",
+                                "enum": [
+                                    "run",
+                                    "stop"
+                                ]
+                            },
+                            "reason": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "note": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "since": {
+                                "type": "string",
+                                "example": "2026-10-20 06:02:00"
+                            },
+                            "stale": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "run_h": {
+                        "type": "number"
+                    },
+                    "stop_h": {
+                        "type": "number"
+                    },
+                    "planned_stop_h": {
+                        "type": "number"
+                    },
+                    "ideal_h": {
+                        "type": "number"
+                    },
+                    "pieces": {
+                        "type": "number"
+                    },
+                    "waste": {
+                        "type": "number"
+                    },
+                    "has_routing": {
+                        "type": "boolean"
+                    },
+                    "stops": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "reason": {
+                                    "type": "string"
+                                },
+                                "planned": {
+                                    "type": "boolean"
+                                },
+                                "minutes": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "item_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "availability": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "performance": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "performance_raw": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "quality": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "oee": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "segments": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "state": {
+                                    "type": "string"
+                                },
+                                "reason": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "note": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "start": {
+                                    "type": "string",
+                                    "example": "2026-10-20 06:02:00"
+                                },
+                                "end": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "minutes": {
+                                    "type": "number"
+                                },
+                                "employee": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "OeeDay": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "today": {
+                        "type": "boolean"
+                    },
+                    "machines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OeeMachine"
+                        }
+                    },
+                    "stop_reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "planned_stops": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "MachineStateInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "state"
+                ],
+                "properties": {
+                    "state": {
+                        "type": "string",
+                        "enum": [
+                            "run",
+                            "stop",
+                            "off"
+                        ]
+                    },
+                    "reason": {
+                        "type": "string",
+                        "enum": [
+                            "breakdown",
+                            "setup",
+                            "waiting",
+                            "cleaning",
+                            "break",
+                            "other"
+                        ],
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
             "WasteRow": {
                 "type": "object",
                 "properties": {
@@ -21201,6 +21589,10 @@
                         "type": "boolean",
                         "description": "cobot : robot collaboratif"
                     },
+                    "oee_tracked": {
+                        "type": "boolean",
+                        "description": "TRS suivi sur la tablette du groupe"
+                    },
                     "night_compatible": {
                         "type": "boolean",
                         "description": "robot autonome uniquement"
@@ -21310,6 +21702,10 @@
                         "minimum": 0,
                         "maximum": 1,
                         "description": "obligatoire si robot_mode = collaboratif (cobot) : part du temps d'une personne ; heures de l'étape sur le cobot = temps × part"
+                    },
+                    "oee_tracked": {
+                        "type": "boolean",
+                        "description": "TRS suivi sur la tablette du groupe (marche / arrêts)"
                     },
                     "capacity_per_pass": {
                         "type": "number",

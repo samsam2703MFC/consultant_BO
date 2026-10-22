@@ -53,5 +53,8 @@
   "unit.kg": "kg",
   "unit.chariot": "chariot",
   "unit.bac": "bac",
-  "unit.litre": "l"
+  "unit.litre": "l",
+  "col_oee": "TRS",
+  "oee_on": "sur la tablette",
+  "f.oee": "TRS sur la tablette du groupe (marche / arrêts)"
 }

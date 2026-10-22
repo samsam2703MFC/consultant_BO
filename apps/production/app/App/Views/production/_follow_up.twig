@@ -50,6 +50,31 @@
     <p class="at-empty">Brak planu i produkcji z tabletów w tym okresie.</p>
 {% endif %}
 
+{% if f.machines is defined and f.machines %}
+{% set reasons_pl = {breakdown: 'awaria', setup: 'przezbrojenie', waiting: 'brak produktu', cleaning: 'mycie', break: 'przerwa', other: 'inne'} %}
+<h5 class="at-follow-h"><i class="bi bi-speedometer2"></i> TRS maszyn (stany z tabletów)</h5>
+<div class="table-responsive">
+    <table class="table table-sm at-follow-table">
+        <thead><tr><th>Maszyna</th><th class="text-end">Praca</th><th class="text-end">Postoje</th><th>Główne postoje</th><th class="text-end">Dostępność</th><th class="text-end">Wydajność</th><th class="text-end">Jakość</th><th class="text-end">TRS</th></tr></thead>
+        <tbody>
+        {% for m in f.machines %}
+            <tr>
+                <td><strong>{{ m.collaborative ? '🤖 ' : '' }}{{ m.name }}</strong> <span class="at-sub">{{ m.group }}</span></td>
+                <td class="text-end">{{ m.run_h|number_format(1, ',', ' ') }} h</td>
+                <td class="text-end">{{ m.stop_h|number_format(1, ',', ' ') }} h{% if m.planned_stop_h > 0 %} <span class="at-sub">(+{{ m.planned_stop_h|number_format(1, ',', ' ') }} h plan.)</span>{% endif %}</td>
+                <td class="at-sub">{% for s in m.stops|filter(s => not s.planned)|sort((a, b) => b.minutes <=> a.minutes)|slice(0, 3) %}{{ reasons_pl[s.reason] ?? s.reason }} {{ s.minutes|number_format(0, ',', ' ') }} min{{ not loop.last ? ', ' : '' }}{% endfor %}</td>
+                <td class="text-end">{{ m.availability|pct }}</td>
+                <td class="text-end" {% if m.performance_raw is not null and m.performance_raw > 110 %}title="Wydajność surowa {{ m.performance_raw|pct }} — sprawdź normy czasu"{% endif %}>{{ m.performance|pct }}{% if not m.has_routing %} <span class="at-sub" title="Żaden etap marszruty nie jest na tej maszynie">brak norm</span>{% endif %}</td>
+                <td class="text-end">{{ m.quality|pct }}</td>
+                <td class="text-end"><strong class="{{ m.oee is null ? '' : (m.oee >= 85 ? 'text-success' : (m.oee >= 60 ? 'text-warning' : 'text-danger')) }}">{{ m.oee|pct }}</strong></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="at-sub mb-3">TRS = dostępność (praca ÷ praca + postoje nieplanowane ; przerwa i mycie to postoje planowane) × wydajność (czas normatywny partii zrobionych na maszynie ÷ czas pracy) × jakość (dobre ÷ zrobione).</p>
+{% endif %}
+
 <div class="row g-3">
     {% if f.days %}
     <div class="col-12 col-xl-6">

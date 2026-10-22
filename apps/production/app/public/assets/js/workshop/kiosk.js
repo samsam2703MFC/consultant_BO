@@ -313,11 +313,12 @@
     }
 
     // --- Menu osoby : Czas pracy / Produkcja / Kontrola jakości / Receptury ---------------------------
-    const TABS = [['clock', '⏱', 'tab_clock'], ['production', '📦', 'tab_production'], ['quality', '✅', 'tab_quality'], ['recipes', '📖', 'tab_recipes']];
+    const TABS = [['clock', '⏱', 'tab_clock'], ['production', '📦', 'tab_production'], ['quality', '✅', 'tab_quality'], ['recipes', '📖', 'tab_recipes'], ['machines', '🤖', 'tab_machines']];
     const personHeader = () => header(`<button type="button" class="kiosk-btn is-small" data-logout>${esc(t('logout'))}</button>`);
     function tabs(active) {
         if (session) session.tab = active;
-        return `<nav class="kiosk-tabs" role="tablist" aria-label="${esc(t('tabs'))}">${TABS.map(([k, icon, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
+        // Zakładka Maszyny (TRS) tylko, gdy grupa tabletu ma maszyny z TRS.
+        return `<nav class="kiosk-tabs" role="tablist" aria-label="${esc(t('tabs'))}">${TABS.filter(([k]) => k !== 'machines' || (session && session.machines > 0)).map(([k, icon, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
             role="tab" aria-selected="${k === active}" data-tab="${k}"><span aria-hidden="true">${icon}</span> ${esc(t(label))}</button>`).join('')}</nav>`;
     }
     function bindTabs() {
@@ -326,6 +327,7 @@
     }
     function openTab(k, message) {
         if (k === 'recipes') return renderRecipes(message);
+        if (k === 'machines') return renderMachines(message);
         return k === 'production' ? renderProduction(message) : (k === 'quality' ? renderQuality(message) : renderMe(message));
     }
 
@@ -333,7 +335,11 @@
     async function renderMe(message) {
         longIdle = false;
         let me;
-        try { me = await api('GET', '/kiosk/me', undefined, true); } catch (err) { if (!err.code) toast(err.message, true); return; }
+        try {
+            let machines;
+            [me, machines] = await Promise.all([api('GET', '/kiosk/me', undefined, true), api('GET', '/kiosk/machines', undefined, true).catch(() => null)]);
+            if (session) session.machines = machines ? machines.machines.length : 0;
+        } catch (err) { if (!err.code) toast(err.message, true); return; }
         idleSeconds = me.idle_logout_s || 45;
         resetIdle();
         el.innerHTML = personHeader() + tabs('clock') + `
@@ -685,6 +691,88 @@
         });
         mark();
         draw();
+    }
+
+    // --- Maszyny (TRS) : stan maszyny jednym dotknięciem — praca, postój z powodem, koniec pracy ; TRS dnia ----------
+    const REASON_ICON = {breakdown: '🔧', setup: '⚙️', waiting: '⏳', cleaning: '🧽', break: '☕', other: '✏️'};
+    const pct = (v) => v === null || v === undefined ? '—' : `${fmt(v)} %`;
+    const level = (v) => v === null || v === undefined ? '' : (v >= 85 ? 'is-ok' : (v >= 60 ? 'is-warn' : 'is-bad'));
+
+    async function renderMachines(message) {
+        longIdle = true;
+        resetIdle();
+        let d;
+        try { d = await api('GET', '/kiosk/machines', undefined, true); } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        drawMachines(d, message);
+    }
+
+    function timeline(m) {
+        const segs = m.segments || [];
+        if (!segs.length) return '';
+        const t0 = new Date(segs[0].start.replace(' ', 'T')).getTime();
+        const end = (sg) => sg.end ? new Date(sg.end.replace(' ', 'T')).getTime() : Date.now();
+        const t1 = Math.max(...segs.map(end));
+        const span = Math.max(60000, t1 - t0);
+        return `<div class="kiosk-timeline" aria-hidden="true">${segs.map(sg => {
+            const a = (new Date(sg.start.replace(' ', 'T')).getTime() - t0) / span * 100;
+            const w = Math.max(0.5, (end(sg) - new Date(sg.start.replace(' ', 'T')).getTime()) / span * 100);
+            const cls = sg.state === 'run' ? 'is-run' : (['cleaning', 'break'].includes(sg.reason) ? 'is-planned' : 'is-stop');
+            return `<span class="${cls}" style="left:${a}%;width:${w}%" title="${esc(hhmm(sg.start))}–${esc(sg.end ? hhmm(sg.end) : '…')} ${esc(sg.state === 'run' ? t('mach_run_short') : t('reason.' + sg.reason))}"></span>`;
+        }).join('')}</div><div class="kiosk-timeline-scale"><span>${esc(hhmm(segs[0].start))}</span><span>${esc(new Date(t1).toTimeString().slice(0, 5))}</span></div>`;
+    }
+
+    function machineCard(m, reasons) {
+        const st = m.state;
+        const cls = st ? (st.state === 'run' ? 'is-run' : 'is-stop') : 'is-off';
+        const status = !st ? `⏹ ${t('mach_off_state')}` : (st.state === 'run' ? `▶ ${t('mach_running', {time: hhmm(st.since)})}`
+            : `${REASON_ICON[st.reason] || '⏸'} ${t('mach_stopped', {reason: t('reason.' + st.reason), time: hhmm(st.since)})}${st.note ? ' — ' + st.note : ''}`);
+        const tiles = [['availability', 'kpi_availability'], ['performance', 'kpi_performance'], ['quality', 'kpi_quality'], ['oee', 'kpi_oee']];
+        return `<article class="kiosk-card kiosk-machine ${cls}" data-machine="${m.id}">
+            <div class="kiosk-machine-head"><div><h3>${m.collaborative ? '🤖 ' : ''}${esc(m.name)}</h3><div class="kiosk-muted">${esc(m.code)}</div></div>
+                <div class="kiosk-machine-state">${esc(status)}${st && st.stale ? `<div class="kiosk-error">⚠ ${esc(t('mach_stale'))}</div>` : ''}</div></div>
+            <div class="kiosk-machine-actions">
+                ${!st || st.state !== 'run' ? `<button type="button" class="kiosk-btn is-ok" data-run>▶ ${esc(t('mach_run'))}</button>` : ''}
+                <button type="button" class="kiosk-btn is-danger" data-stop>⏸ ${esc(t(st && st.state === 'stop' ? 'mach_stop_change' : 'mach_stop'))}</button>
+                ${st ? `<button type="button" class="kiosk-btn" data-off>⏹ ${esc(t('mach_off'))}</button>` : ''}</div>
+            <div class="kiosk-reasons" data-reasons hidden>${reasons.map(r => `<button type="button" class="kiosk-btn kiosk-reason" data-reason="${r}"><span aria-hidden="true">${REASON_ICON[r]}</span> ${esc(t('reason.' + r))}</button>`).join('')}
+                <label class="kiosk-reason-note">${esc(t('mach_note'))}<input data-note maxlength="255"></label></div>
+            <div class="kiosk-oee">${tiles.map(([k, label]) => `<div class="kiosk-oee-tile ${k === 'oee' ? 'is-main ' : ''}${level(m[k])}"><span>${esc(t(label))}</span><strong>${pct(m[k])}</strong></div>`).join('')}</div>
+            <p class="kiosk-muted">${esc(t('mach_details', {run: fmt(m.run_h), stop: fmt(m.stop_h), planned: fmt(m.planned_stop_h), pieces: fmt(m.pieces), ideal: fmt(m.ideal_h)}))}
+                ${m.performance_raw !== null && m.performance_raw > 110 ? ' · ⚠ ' + esc(t('mach_perf_over', {pct: fmt(m.performance_raw)})) : ''}</p>
+            ${m.has_routing ? '' : `<p class="kiosk-muted">${esc(t('mach_no_routing'))}</p>`}
+            ${timeline(m)}
+            ${m.stops.length ? `<ul class="kiosk-stops">${m.stops.map(x => `<li>${REASON_ICON[x.reason] || ''} ${esc(t('reason.' + x.reason))}${x.planned ? ' <span class="kiosk-muted">(' + esc(t('mach_planned')) + ')</span>' : ''} · <strong>${x.minutes < 1 ? '&lt; 1' : fmt(x.minutes)} min</strong></li>`).join('')}</ul>` : ''}
+        </article>`;
+    }
+
+    function drawMachines(d, message) {
+        el.innerHTML = personHeader() + tabs('machines') + `
+            <section class="kiosk-card"><h2>${esc(t('mach_title'))}</h2><p class="kiosk-muted">${esc(t('mach_help'))}</p></section>
+            ${d.machines.length ? d.machines.map(m => machineCard(m, d.stop_reasons)).join('') : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('mach_empty'))}</p></section>`}`;
+        if (message) toast(message);
+        bindTabs();
+        const send = async (card, body, done) => {
+            card.querySelectorAll('button').forEach(b => b.disabled = true);
+            try {
+                const r = await api('POST', `/kiosk/machines/${card.dataset.machine}/state`, {...body, client_uuid: uuid()}, true);
+                drawMachines(r, done);
+            } catch (err) {
+                card.querySelectorAll('button').forEach(b => b.disabled = false);
+                toast(err.offline ? t('offline_retry') : err.message, true);
+            }
+        };
+        el.querySelectorAll('[data-machine]').forEach(card => {
+            const m = d.machines.find(x => x.id === Number(card.dataset.machine));
+            card.querySelector('[data-run]')?.addEventListener('click', () => send(card, {state: 'run'}, t('mach_saved_run', {name: m.name})));
+            card.querySelector('[data-off]')?.addEventListener('click', () => { if (window.confirm(t('mach_off_confirm', {name: m.name}))) send(card, {state: 'off'}, t('mach_saved_off', {name: m.name})); });
+            card.querySelector('[data-stop]').addEventListener('click', () => { const box = card.querySelector('[data-reasons]'); box.hidden = !box.hidden; resetIdle(); });
+            card.querySelectorAll('[data-reason]').forEach(b => b.addEventListener('click', () => {
+                const reason = b.dataset.reason;
+                const note = card.querySelector('[data-note]').value.trim();
+                if (reason === 'other' && !note) { toast(t('mach_note_required'), true); card.querySelector('[data-note]').focus(); return; }
+                send(card, {state: 'stop', reason, note: note || null}, t('mach_saved_stop', {name: m.name, reason: t('reason.' + reason)}));
+            }));
+        });
     }
 
     // Partia produkcyjna : kafelka na każdą zaplanowaną partię (zrobione ✓ według ilości zapisanej na tablecie).

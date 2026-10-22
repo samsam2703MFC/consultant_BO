@@ -10,6 +10,7 @@ use App\Services\Workshop\Execution\ExecutionService;
 use App\Services\Workshop\Execution\KioskAuthService;
 use App\Services\Workshop\Execution\KioskRecipeService;
 use App\Services\Workshop\Execution\KpiService;
+use App\Services\Workshop\Execution\OeeService;
 use App\Services\Workshop\Execution\OutputService;
 use App\Services\Workshop\Execution\QualityService;
 use App\Services\Workshop\Execution\TimesheetService;
@@ -29,6 +30,7 @@ final class ExecutionController
         private QualityService $quality,
         private TeamSheetService $teams,
         private KioskRecipeService $recipes,
+        private OeeService $oee,
     ) {
     }
 
@@ -102,6 +104,9 @@ final class ExecutionController
     public function closeDay(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->closeDay($request->body(), $request->context)); }
     public function recipes(ApiRequest $request): ApiResult { return new ApiResult($this->recipes->list($request->context, $request->query('date'))); }
     public function recipe(ApiRequest $request): ApiResult { return new ApiResult($this->recipes->recipe($request->id(), $request->context, $request->query('date'))); }
+    // TRS : stany maszyn grupy tabletu (praca, postój z powodem, koniec pracy).
+    public function machines(ApiRequest $request): ApiResult { return new ApiResult($this->oee->day($request->context, $request->query('date'))); }
+    public function machineState(ApiRequest $request): ApiResult { return new ApiResult($this->oee->setState($request->id(), $request->body(), $request->context)); }
     // Kontrola jakości (tablet grupy)
     public function quality(ApiRequest $request): ApiResult { return new ApiResult($this->quality->day($request->context)); }
     public function qualityCheck(ApiRequest $request): ApiResult { return new ApiResult($this->quality->check($request->id(), $request->body(), $request->context)); }

@@ -188,4 +188,35 @@ details.kiosk-section summary { cursor: pointer; font-weight: 600; padding: 8px 
 .kiosk-rec-steps { margin: 0 0 10px; padding-left: 26px; font-size: 18px; line-height: 1.5; }
 .kiosk-rec-pack { margin-top: 10px; }
 .kiosk-rec-pack summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
-@media (max-width: 600px) { .kiosk-tab { font-size: 15px; padding: 8px 4px; } .kiosk-prod-actions { justify-content: flex-start; } }
+@media (max-width: 600px) { .kiosk-tabs { flex-wrap: wrap; } .kiosk-tab { flex: 1 1 30%; min-height: 52px; font-size: 15px; padding: 8px 4px; } .kiosk-prod-actions { justify-content: flex-start; } }
+/* Maszyny (TRS) : stan, przyciski, wskaźniki, przebieg dnia */
+.kiosk-machine { border-left: 8px solid #b9b2a8; }
+.kiosk-machine.is-run { border-left-color: var(--k-ok); }
+.kiosk-machine.is-stop { border-left-color: var(--k-danger); }
+.kiosk-machine-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.kiosk-machine-head h3 { margin: 0 0 4px; font-size: 22px; }
+.kiosk-machine-state { font-size: 20px; font-weight: 700; text-align: right; }
+.kiosk-machine.is-run .kiosk-machine-state { color: var(--k-ok); }
+.kiosk-machine.is-stop .kiosk-machine-state { color: var(--k-danger); }
+.kiosk-machine-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.kiosk-machine-actions .kiosk-btn { flex: 1; min-width: 150px; font-size: 22px; }
+.kiosk-reason-note { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; font-size: 15px; }
+.kiosk-reason-note input { font-size: 20px; padding: 10px; border-radius: 10px; border: 2px solid var(--k-line); }
+.kiosk-reasons[hidden] { display: none; }
+.kiosk-reasons { margin-bottom: 12px; }
+.kiosk-oee { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 8px 0; }
+.kiosk-oee-tile { background: var(--k-bg); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+.kiosk-oee-tile span { font-size: 14px; color: var(--k-muted); }
+.kiosk-oee-tile strong { font-size: 24px; }
+.kiosk-oee-tile.is-main strong { font-size: 30px; }
+.kiosk-oee-tile.is-ok strong { color: var(--k-ok); }
+.kiosk-oee-tile.is-warn strong { color: var(--k-warn); }
+.kiosk-oee-tile.is-bad strong { color: var(--k-danger); }
+.kiosk-timeline { position: relative; height: 18px; border-radius: 9px; background: #eee9e2; overflow: hidden; margin-top: 10px; }
+.kiosk-timeline span { position: absolute; top: 0; bottom: 0; }
+.kiosk-timeline .is-run { background: var(--k-ok); }
+.kiosk-timeline .is-stop { background: var(--k-danger); }
+.kiosk-timeline .is-planned { background: #b9b2a8; }
+.kiosk-timeline-scale { display: flex; justify-content: space-between; font-size: 13px; color: var(--k-muted); }
+.kiosk-stops { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 16px; }
+@media (max-width: 600px) { .kiosk-oee { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kiosk-machine-state { text-align: left; } .kiosk-machine-actions .kiosk-btn { min-width: 0; font-size: 18px; } }

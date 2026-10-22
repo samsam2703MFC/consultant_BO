@@ -22,7 +22,7 @@ final class WorkstationService
     public const TYPES = ['machine', 'four', 'robot', 'manuel', 'fermentation', 'froid', 'surgelation'];
     /** autonome : bez obsługi (także w nocy) ; avec_operateur : z własnym operatorem ; collaboratif : cobot, część czasu osoby. */
     public const ROBOT_MODES = ['autonome', 'avec_operateur', 'collaboratif'];
-    private const FIELDS = ['code', 'group_id', 'name_pl', 'name_fr', 'type', 'robot_mode', 'operator_share', 'capacity_per_pass', 'capacity_unit', 'hourly_cost', 'photo_url', 'notes', 'active', 'shift_availability'];
+    private const FIELDS = ['code', 'group_id', 'name_pl', 'name_fr', 'type', 'robot_mode', 'operator_share', 'oee_tracked', 'capacity_per_pass', 'capacity_unit', 'hourly_cost', 'photo_url', 'notes', 'active', 'shift_availability'];
 
     public function __construct(
         private WorkstationRepository $workstations,
@@ -86,6 +86,7 @@ final class WorkstationService
             ->choice('type', self::TYPES)
             ->choice('robot_mode', self::ROBOT_MODES, false, true)
             ->decimal('operator_share', false, 0, 1, true, true)
+            ->boolean('oee_tracked')
             ->decimal('capacity_per_pass', false, 0, null, false, true)
             ->choice('capacity_unit', array_values(array_map('strval', $units)), false)
             ->decimal('hourly_cost', false, 0)
@@ -188,6 +189,7 @@ final class WorkstationService
             'robot_mode' => $row['robot_mode'],
             'operator_share' => $row['operator_share'] !== null ? (float) $row['operator_share'] : null,
             'collaborative' => $row['type'] === 'robot' && $row['robot_mode'] === 'collaboratif',
+            'oee_tracked' => (bool) ($row['oee_tracked'] ?? false),
             'night_compatible' => $row['type'] === 'robot' && $row['robot_mode'] === 'autonome',
             'capacity_per_pass' => (float) $row['capacity_per_pass'],
             'capacity_unit' => $row['capacity_unit'],

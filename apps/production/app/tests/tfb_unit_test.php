@@ -23,6 +23,7 @@ use App\Services\Workshop\Product\CobotRouting;
 use App\Services\Workshop\Product\StandardTime;
 use App\Services\Workshop\Scheduling\Scheduler;
 use App\Services\Workshop\Scheduling\ShiftOptimizer;
+use App\Services\Workshop\Execution\OeeService;
 use App\Services\Workshop\Execution\TimesheetService;
 use App\Services\Workshop\Manager\ManagerIndicators;
 use App\Services\Workshop\Supply\InvoiceParser;
@@ -131,6 +132,15 @@ check(abs(CobotRouting::savedHours($withCobot, 100) - 1100 / 3600) < 1e-9 && Cob
 check(StandardTime::routing(CobotRouting::manual($withCobot), 100)['totals']['labour_s'] === StandardTime::routing([$manualStep, $plainStep], 100)['totals']['labour_s'], 'manual routing restored');
 $sameCadence = CobotRouting::apply([$manualStep], [7 => ['id_workstation' => 55, 'fixed_time_s' => 0, 'variable_time_s' => 0, 'capacity_per_pass' => 1, 'operator_share' => 0.5]]);
 check($sameCadence[0]['variable_time_s'] === 6 && StandardTime::routing($sameCadence, 100)['totals']['labour_s'] === 300.0, 'cobot without own cadence: step times, labour × share');
+
+// --- TRS : dostępność × wydajność × jakość (postoje planowane poza czasem otwarcia)
+$f = OeeService::figures(10800, 1800, 9000, 1000, 50);
+check($f['availability'] === 85.7 && $f['performance'] === 83.3 && $f['quality'] === 95.0 && $f['oee'] === 67.9, 'TRS: 3 h run, 30 min breakdown, 2.5 h standard, 5 % waste');
+$f = OeeService::figures(3600, 0, 4500, 100, 0);
+check($f['performance'] === 100.0 && $f['performance_raw'] === 125.0 && $f['oee'] === 100.0, 'performance capped at 100 % (raw value kept)');
+$f = OeeService::figures(3600, 600, 0, 0, 0);
+check($f['availability'] === 85.7 && $f['performance'] === null && $f['quality'] === null && $f['oee'] === null, 'no production linked: availability only');
+check(OeeService::figures(0, 0, 0, 0, 0)['availability'] === null, 'nothing logged: no figures');
 
 // --- Temps standards (P2) : durée = temps fixe × passages + temps par pièce × quantité
 $oven = ['fixed_time_s' => 1080, 'variable_time_s' => 0, 'capacity_per_pass' => 60, 'operators_required' => 1];

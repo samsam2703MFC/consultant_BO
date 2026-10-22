@@ -6,7 +6,7 @@ namespace App\Repositories\Workshop;
 final class WorkstationRepository extends WorkshopRepository
 {
     protected string $table = 'tfb_prod_workstation';
-    protected array $writable = ['code', 'id_group', 'name_pl', 'name_fr', 'type', 'robot_mode', 'operator_share', 'capacity_per_pass', 'capacity_unit', 'hourly_cost', 'photo_url', 'notes', 'active'];
+    protected array $writable = ['code', 'id_group', 'name_pl', 'name_fr', 'type', 'robot_mode', 'operator_share', 'oee_tracked', 'capacity_per_pass', 'capacity_unit', 'hourly_cost', 'photo_url', 'notes', 'active'];
 
     public function list(?int $groupId, ?string $type, ?bool $active): array
     {

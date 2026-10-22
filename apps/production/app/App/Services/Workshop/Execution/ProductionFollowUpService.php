@@ -8,13 +8,13 @@ use App\Repositories\Workshop\FollowUpRepository;
 /**
  * Śledzenie produkcji okresu (produkty, sztuki) : plan z Gantta tygodnia wobec partii i strat zapisanych na
  * tabletach, dni zatwierdzone przez zespoły, niezgodności produkcji. Na grupę, na dzień, straty według powodu
- * i produkty poniżej planu. Strona « Śledzenie produkcji » i protokół zebrania produkcyjnego.
+ * i produkty poniżej planu, TRS maszyn. Strona « Śledzenie produkcji » i protokół zebrania produkcyjnego.
  */
 final class ProductionFollowUpService
 {
     public const MAX_DAYS = 92;
 
-    public function __construct(private FollowUpRepository $repo)
+    public function __construct(private FollowUpRepository $repo, private OeeService $oee)
     {
     }
 
@@ -146,6 +146,8 @@ final class ProductionFollowUpService
             'reasons' => array_filter(array_map(fn($q) => round($q, 3), $reasons)),
             'below_plan' => array_slice($below, 0, 15),
             'top_waste' => array_slice($topWaste, 0, 10),
+            // TRS maszyn (stany z tabletów) : tylko maszyny z pracą lub postojami w okresie.
+            'machines' => array_values(array_filter($this->oee->summary($from, $to), fn($m) => $m['run_h'] > 0 || $m['stop_h'] > 0 || $m['planned_stop_h'] > 0)),
             'nc' => array_map(fn($n) => ['number' => $n['number'], 'day' => $n['day'], 'severity' => $n['severity'], 'status' => $n['status'],
                 'group' => $n['id_prod_group'] !== null ? ($groupNames[(int) $n['id_prod_group']] ?? null) : null, 'description' => mb_substr((string) $n['description'], 0, 160)], $nc),
         ];
