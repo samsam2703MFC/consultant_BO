@@ -19,6 +19,7 @@ use App\Services\Workshop\Migration\MigrationRunner;
 use App\Services\Workshop\Planning\DemandCalculator;
 use App\Services\Workshop\Planning\PlanningService;
 use App\Services\Workshop\Planning\WeekSplit;
+use App\Services\Workshop\Product\CobotRouting;
 use App\Services\Workshop\Product\StandardTime;
 use App\Services\Workshop\Scheduling\Scheduler;
 use App\Services\Workshop\Scheduling\ShiftOptimizer;
@@ -117,6 +118,19 @@ foreach (['errors', 'field_errors', 'fields', 'entities'] as $section) {
 }
 check(Translator::negotiate(null, 'fr-BE,fr;q=0.9', 'pl') === 'fr' && Translator::negotiate('xx', 'de', 'pl') === 'pl', 'language negotiation');
 check((new Translator('fr'))->fieldError('robot_mode', 'ROBOT_MODE_REQUIRED') !== 'ROBOT_MODE_REQUIRED', 'field error is translated');
+
+// --- Coboty : etap na cobocie (kadencja cobota, godziny = czas × część osoby), oszczędzone godziny
+$manualStep = ['id' => 7, 'fixed_time_s' => 0, 'variable_time_s' => 6, 'capacity_per_pass' => 1, 'operators_required' => 2];
+$plainStep = ['id' => 8, 'fixed_time_s' => 600, 'variable_time_s' => 0, 'capacity_per_pass' => 100, 'operators_required' => 1];
+$withCobot = CobotRouting::apply([$manualStep, $plainStep], [7 => ['id_workstation' => 55, 'fixed_time_s' => 0, 'variable_time_s' => 4, 'capacity_per_pass' => 1, 'operator_share' => 0.25, 'name' => 'Cobot A']]);
+check($withCobot[0]['operators_required'] === 0.25 && $withCobot[0]['variable_time_s'] === 4.0 && $withCobot[0]['cobot']['name'] === 'Cobot A' && $withCobot[0]['manual']['operators_required'] === 2
+    && !isset($withCobot[1]['cobot']), 'cobot step: cobot cadence, share of a person; other steps unchanged');
+// 100 szt. : ręcznie 6 s × 100 × 2 os. = 1200 s, cobot 4 s × 100 × 0,25 = 100 s ; etap 2 : 600 s w obu → oszczędność 1100 s
+check(abs(CobotRouting::savedHours($withCobot, 100) - 1100 / 3600) < 1e-9 && CobotRouting::savedHours([$manualStep], 100) === 0.0 && CobotRouting::savedHours($withCobot, 0) === 0.0,
+    'saved hours = manual routing − routing with cobots');
+check(StandardTime::routing(CobotRouting::manual($withCobot), 100)['totals']['labour_s'] === StandardTime::routing([$manualStep, $plainStep], 100)['totals']['labour_s'], 'manual routing restored');
+$sameCadence = CobotRouting::apply([$manualStep], [7 => ['id_workstation' => 55, 'fixed_time_s' => 0, 'variable_time_s' => 0, 'capacity_per_pass' => 1, 'operator_share' => 0.5]]);
+check($sameCadence[0]['variable_time_s'] === 6 && StandardTime::routing($sameCadence, 100)['totals']['labour_s'] === 300.0, 'cobot without own cadence: step times, labour × share');
 
 // --- Temps standards (P2) : durée = temps fixe × passages + temps par pièce × quantité
 $oven = ['fixed_time_s' => 1080, 'variable_time_s' => 0, 'capacity_per_pass' => 60, 'operators_required' => 1];

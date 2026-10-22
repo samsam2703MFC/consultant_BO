@@ -10,6 +10,8 @@
   "calc_no_max": "brak stanu maks. — ustaw go, żeby liczyć uzupełnienie",
   "calc_batches": "{n} × partia",
   "group_need": "{hours} h w tygodniu → {fte} ETP ({hours} h ÷ {base} h)",
+  "cobot_saved": "🤖 −{hours} h dzięki cobotom",
+  "cobot_saved_help": "Roboczogodziny oszczędzone : etapy na cobotach (część osoby) zamiast pracy ręcznej — już odjęte.",
   "group_has": "dostępne {hours} h · {people} os. ({fte} ETP)",
   "no_group": "Bez grupy",
   "semi": "półprodukt",

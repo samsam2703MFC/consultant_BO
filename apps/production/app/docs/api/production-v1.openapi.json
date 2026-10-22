@@ -21187,9 +21187,19 @@
                         "type": "string",
                         "enum": [
                             "autonome",
-                            "avec_operateur"
+                            "avec_operateur",
+                            "collaboratif"
                         ],
                         "nullable": true
+                    },
+                    "operator_share": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "cobot (robot_mode collaboratif) : part du temps d'une personne, 0,25 = 1 personne pour 4 cobots"
+                    },
+                    "collaborative": {
+                        "type": "boolean",
+                        "description": "cobot : robot collaboratif"
                     },
                     "night_compatible": {
                         "type": "boolean",
@@ -21287,10 +21297,19 @@
                         "type": "string",
                         "enum": [
                             "autonome",
-                            "avec_operateur"
+                            "avec_operateur",
+                            "collaboratif"
                         ],
                         "nullable": true,
                         "description": "obligatoire si type = robot, interdit sinon"
+                    },
+                    "operator_share": {
+                        "type": "number",
+                        "nullable": true,
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "maximum": 1,
+                        "description": "obligatoire si robot_mode = collaboratif (cobot) : part du temps d'une personne ; heures de l'étape sur le cobot = temps × part"
                     },
                     "capacity_per_pass": {
                         "type": "number",

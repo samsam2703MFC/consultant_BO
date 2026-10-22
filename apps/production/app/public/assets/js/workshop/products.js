@@ -28,7 +28,8 @@
     const wsType = (id) => (state.workstations.find(w => w.id === id) || {}).type;
     const groupName = (id) => (state.groups.find(g => g.id === id) || {}).name || '—';
     const wsOptions = (selected, filter) => state.workstations.filter(w => !filter || filter(w))
-        .map(w => `<option value="${w.id}" ${w.id === selected ? 'selected' : ''}>${esc(w.code)} — ${esc(w.name)}</option>`).join('');
+        .map(w => `<option value="${w.id}" ${w.id === selected ? 'selected' : ''}>${w.collaborative ? '🤖 ' : ''}${esc(w.code)} — ${esc(w.name)}</option>`).join('');
+    const cobotOf = (id) => state.workstations.find(w => w.id === id && w.collaborative) || null;
     const fail = (container, err) => {
         if (err.status === 401 || err.status === 403) { ui.notify(false, err.message); return; }
         const orphans = container ? ui.fieldErrors(container, err) : [];
@@ -866,6 +867,31 @@
             if (max !== null && max !== undefined && Number(max) < batch) out.push('⚠ ' + t('r.batch_over_max', {max: ui.fmt(max, 0, api.lang), unit: item.base_unit}));
             return out.join(' · ');
         };
+        // Cobot jako stanowisko alternatywne : własna kadencja (puste = jak etap) i porównanie roboczogodzin z pracą ręczną.
+        const labour = (fixed, variable, capacity, people, q) => ((Number(fixed) || 0) * Math.ceil(q / (Number(capacity) > 0 ? Number(capacity) : 1)) + (Number(variable) || 0) * q) * people;
+        const compare = (s, a) => {
+            const c = cobotOf(a.workstation_id);
+            const q = typeof batch === 'number' && batch > 0 ? batch : 100;
+            const manual = labour(s.fixed_time_s, s.variable_time_s, s.capacity_per_pass, Number(s.operators_required ?? 1), q);
+            // Pole puste = wartość etapu (jak zapis po stronie serwera).
+            const pick = (k) => a[k] !== undefined && a[k] !== null && a[k] !== '' ? a[k] : s[k];
+            const cobot = labour(pick('fixed_time_s'), pick('variable_time_s'), pick('capacity_per_pass'), c.operator_share, q);
+            if (manual <= 0) return t('r.cobot_no_time');
+            const pct = Math.round((cobot / manual - 1) * 100);
+            return t('r.cobot_compare', {q: ui.fmt(q, 0, api.lang), unit: item.base_unit, manual: ui.fmt(manual / 60, 1, api.lang), cobot: ui.fmt(cobot / 60, 1, api.lang),
+                delta: (pct > 0 ? '+' : (pct < 0 ? '−' : '')) + ui.fmt(Math.abs(pct), 0, api.lang)});
+        };
+        const cobotBlock = (s, a, i, j) => {
+            const c = cobotOf(a.workstation_id);
+            if (!c) return '';
+            // Puste : kadencja jak w etapie (zapis po stronie serwera).
+            const input = (k, label, mode) => `<label>${esc(label)}<input class="form-control form-control-sm" inputmode="${mode}" data-alt="${k}" data-alt-ws="${a.workstation_id}"
+                data-field="steps.${i}.alternatives.${j}.${k}" value="${a[k] ?? ''}" placeholder="${esc(String(s[k] ?? ''))}"></label>`;
+            return `<div class="tfb-cobot" data-cobot="${a.workstation_id}"><div class="tfb-cobot-head">🤖 <strong>${esc(c.name)}</strong>
+                    <span class="badge bg-light text-dark">${esc(t('r.cobot_share', {share: ui.fmt(c.operator_share, 2, api.lang), n: ui.fmt(1 / c.operator_share, 1, api.lang)}))}</span></div>
+                <div class="tfb-step-grid">${input('fixed_time_s', t('r.fixed'), 'numeric')}${input('variable_time_s', t('r.variable'), 'decimal')}${input('capacity_per_pass', t('r.capacity'), 'decimal')}</div>
+                <p class="form-text mb-0" data-cobot-compare>${esc(compare(s, a))}</p><p class="form-text mb-0">${esc(t('r.cobot_help'))}</p></div>`;
+        };
         const draw = () => {
             body.innerHTML = `<p class="form-text">${esc(t('r.help'))}</p><form data-form>
                 <div class="tfb-batch">
@@ -898,7 +924,7 @@
                         <label>${esc(t('r.delay_ws'))}<select class="form-select form-select-sm" data-k="delay_workstation_id" data-field="steps.${i}.delay_workstation_id"><option value="">${esc(t('r.none_ws'))}</option>${wsOptions(s.delay_workstation_id, delayFilter)}</select></label>
                         <label>${esc(t('r.cleaning'))}<input class="form-control form-control-sm" inputmode="decimal" data-k="cleaning_min" data-field="steps.${i}.cleaning_time_s" value="${s.cleaning_time_s ? s.cleaning_time_s / 60 : ''}"></label>
                         <label class="tfb-wide">${esc(t('r.alternatives'))}<select class="form-select form-select-sm" multiple size="3" data-k="alternatives" data-field="steps.${i}.alternatives">${wsOptions(null, w => w.id !== s.workstation_id).replace(/<option value="(\d+)"/g, (m, id) => s.alternatives.some(a => a.workstation_id === Number(id)) ? `<option value="${id}" selected` : m)}</select></label>
-                    </div></div>`).join('')}
+                    </div>${s.alternatives.map((a, j) => cobotBlock(s, a, i, j)).join('')}</div>`).join('')}
                 <button type="button" class="btn btn-outline-primary btn-sm" data-add data-write><i class="bi bi-plus"></i> ${esc(t('r.add_step'))}</button>
                 ${nav(6)}</form>`;
             const form = body.querySelector('[data-form]');
@@ -908,7 +934,7 @@
                 form.batch.addEventListener('input', () => { const q = ui.num(form.batch.value); form.batch_cartons.value = typeof q === 'number' ? String(Math.round(q / ppc * 100) / 100).replace('.', ',') : ''; });
             }
             form.addEventListener('input', collect);
-            form.addEventListener('change', (e) => { collect(); if (e.target.dataset.k === 'workstation_id') draw(); });
+            form.addEventListener('change', (e) => { collect(); if (['workstation_id', 'alternatives'].includes(e.target.dataset.k)) draw(); });
             form.querySelector('[data-add]').addEventListener('click', () => { collect(); steps.push({name_pl: '', name_fr: '', fixed_time_s: 0, variable_time_s: 0, operators_required: 1, alternatives: []}); draw(); });
             form.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => { collect(); steps.splice(Number(b.closest('[data-index]').dataset.index), 1); draw(); }));
             form.querySelectorAll('[data-move]').forEach(b => b.addEventListener('click', () => {
@@ -929,6 +955,10 @@
             }
             body.querySelectorAll('[data-index]').forEach(card => {
                 const s = steps[Number(card.dataset.index)];
+                card.querySelectorAll('[data-alt]').forEach(input => {
+                    const a = s.alternatives.find(x => x.workstation_id === Number(input.dataset.altWs));
+                    if (a) a[input.dataset.alt] = input.value.trim() === '' ? undefined : ui.num(input.value);
+                });
                 card.querySelectorAll('[data-k]').forEach(input => {
                     const k = input.dataset.k;
                     if (k === 'alternatives') {
@@ -947,7 +977,14 @@
                     }
                 });
             });
+            body.querySelectorAll('[data-cobot]').forEach(box => {
+                const s = steps[Number(box.closest('[data-index]').dataset.index)];
+                const a = s && s.alternatives.find(x => x.workstation_id === Number(box.dataset.cobot));
+                const out = box.querySelector('[data-cobot-compare]');
+                if (a && out) out.textContent = compare(s, a);
+            });
         };
+
         const save = async (e) => {
             e.preventDefault();
             collect();
@@ -964,7 +1001,7 @@
                     temperature_c: TEMPERATURE_TYPES.includes(wsType(s.workstation_id)) ? (s.temperature_c ?? null) : null,
                     alternatives: s.alternatives.map(a => {
                         const alt = {workstation_id: a.workstation_id};
-                        for (const k of ['fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'priority']) if (a[k] !== undefined) alt[k] = a[k];
+                        for (const k of ['fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'priority']) if (a[k] !== undefined && a[k] !== null) alt[k] = a[k];
                         return alt;
                     }),
                 };

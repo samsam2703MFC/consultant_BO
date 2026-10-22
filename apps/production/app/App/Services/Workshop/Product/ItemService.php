@@ -534,11 +534,12 @@ final class ItemService
                     if ($a->value('workstation_id') !== null && $a->value('workstation_id') === $v->value('workstation_id')) $a->add('workstation_id', 'SAME_AS_MAIN_WORKSTATION');
                     foreach ($alternatives as $prev) if ($prev['id_workstation'] === $a->value('workstation_id')) $a->add('workstation_id', 'DUPLICATE_IN_LIST', ['id' => $a->value('workstation_id')]);
                     foreach ($a->errors() as $err) $altErrors[] = ['field' => "steps.{$i}.alternatives.{$j}.{$err['field']}"] + $err;
+                    // Pole puste = wartość etapu (czas stały, czas na sztukę, pojemność) : alternatywa ma tę samą kadencję, chyba że podano inną.
                     $alternatives[] = [
                         'id_workstation' => $a->value('workstation_id'),
                         'fixed_time_s' => (int) $a->value('fixed_time_s', $fixed),
                         'variable_time_s' => (float) $a->value('variable_time_s', $variable),
-                        'capacity_per_pass' => (float) $a->value('capacity_per_pass', $altWs['capacity_per_pass'] ?? 1),
+                        'capacity_per_pass' => (float) $a->value('capacity_per_pass', $v->value('capacity_per_pass') ?? ($ws['capacity_per_pass'] ?? 1)),
                         'priority' => (int) $a->value('priority', $j + 1),
                     ];
                 }

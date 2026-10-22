@@ -48,6 +48,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/team_sheet', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
+    /** Stanowiska i coboty : typ, tryb robota (cobot = część osoby), pojemność, koszt godziny, aktywność. */
+    public function workstations()
+    {
+        $this->view('workshop/workstations', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
+    }
+
     public function gantt()
     {
         $this->view('workshop/gantt', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);

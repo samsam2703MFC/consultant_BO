@@ -93,12 +93,16 @@
         const hoursOf = {};
         for (const r of rows) hoursOf[r.group_id ?? 0] = (hoursOf[r.group_id ?? 0] || 0) + r.hours;
         const need = (h) => t('group_need', {hours: fmt(h, 1), fte: fmt(h / fteH, 1), base: fmt(fteH, 0)});
+        // Coboty : roboczogodziny oszczędzone wobec pracy ręcznej (już odjęte od godzin).
+        const savedOf = {};
+        for (const r of rows) savedOf[r.group_id ?? 0] = (savedOf[r.group_id ?? 0] || 0) + (r.cobot_saved_h || 0);
+        const saved = (h) => h > 0.05 ? ` <span class="tfb-cobot-saved" title="${esc(t('cobot_saved_help'))}">${esc(t('cobot_saved', {hours: fmt(h, 1)}))}</span>` : '';
         const groupHead = (id) => {
             const g = groupOf(id);
             const h = hoursOf[id ?? 0] || 0;
             const short = g && g.available_h > 0 && h > g.available_h + 0.05;
             return `<tr class="tfb-week-table-group"><th colspan="12">${esc(g?.name || t('no_group'))}
-                <span class="tfb-week-fte ${short ? 'is-short' : ''}">${esc(need(h))}${g ? ' · ' + esc(t('group_has', {hours: fmt(g.available_h, 0), people: g.people, fte: fmt(g.available_h / fteH, 1)})) : ''}</span></th></tr>`;
+                <span class="tfb-week-fte ${short ? 'is-short' : ''}">${esc(need(h))}${g ? ' · ' + esc(t('group_has', {hours: fmt(g.available_h, 0), people: g.people, fte: fmt(g.available_h / fteH, 1)})) : ''}</span>${saved(savedOf[id ?? 0] || 0)}</th></tr>`;
         };
         const editable = s.can_edit;
         let last;
@@ -124,7 +128,7 @@
                 <td><div class="input-group input-group-sm tfb-sheet-batch"><input class="form-control" inputmode="decimal" data-minutes value="${r.batch_minutes ?? ''}" placeholder="—" ${editable ? '' : 'disabled'}
                     aria-label="${esc(t('col_batch_minutes'))}"><span class="input-group-text">min</span></div>${r.batch ? '' : `<div class="small text-muted">${esc(t('no_batch'))}</div>`}</td>
                 <td class="text-end"><strong class="tfb-sheet-batches">${r.batches ?? (r.to_produce > 0 ? q(r, r.to_produce) : '—')}</strong>${split(r)}</td>
-                <td class="text-end">${r.hours > 0 ? fmt(r.hours, 1) + ' h' : '—'}<div class="small text-muted" title="${esc(t('hours_' + r.hours_source + '_help'))}">${esc(t('hours_' + r.hours_source))}${days ? ' · ' + days : ''}</div></td>
+                <td class="text-end">${r.hours > 0 ? fmt(r.hours, 1) + ' h' : '—'}${r.cobot_saved_h > 0.05 ? `<div class="small tfb-cobot-saved" title="${esc((r.cobots || []).join(', '))}">🤖 −${fmt(r.cobot_saved_h, 1)} h</div>` : ''}<div class="small text-muted" title="${esc(t('hours_' + r.hours_source + '_help'))}">${esc(t('hours_' + r.hours_source))}${days ? ' · ' + days : ''}</div></td>
             </tr>`;
         }).join('');
         const total = Object.values(hoursOf).reduce((a, b) => a + b, 0);
@@ -140,7 +144,7 @@
                     <th title="${esc(t('col_batch_minutes_help'))}">${esc(t('col_batch_minutes'))}</th><th class="text-end">${esc(t('col_batches'))}</th>
                     <th class="text-end">${esc(t('col_hours'))}</th></tr></thead>
                 <tbody>${body || `<tr><td colspan="12" class="text-muted">${esc(t('empty'))}</td></tr>`}</tbody>
-                <tfoot><tr class="tfb-week-table-total"><th colspan="12">${esc(t('total'))} <span class="tfb-week-fte">${esc(need(total))} · ${esc(t('total_batches', {n: totalBatches}))}</span></th></tr></tfoot>
+                <tfoot><tr class="tfb-week-table-total"><th colspan="12">${esc(t('total'))} <span class="tfb-week-fte">${esc(need(total))} · ${esc(t('total_batches', {n: totalBatches}))}</span>${saved(Object.values(savedOf).reduce((a, b) => a + b, 0))}</th></tr></tfoot>
             </table></div></div></div>`;
         bind();
     }

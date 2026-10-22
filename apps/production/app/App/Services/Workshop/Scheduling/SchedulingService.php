@@ -125,10 +125,18 @@ final class SchedulingService
                     'operators_required' => $operators, 'delay_after_s' => (int) $s['delay_after_s'],
                     'delay_workstation_id' => $s['delay_id_workstation'] !== null ? (int) $s['delay_id_workstation'] : null,
                     'cleaning_time_s' => (int) $s['cleaning_time_s'], 'window_key' => $windowKey((int) $s['id_workstation'], $operators),
-                    'alternatives' => array_map(fn($a) => [
-                        'workstation_id' => (int) $a['id_workstation'], 'fixed_time_s' => (int) $a['fixed_time_s'], 'variable_time_s' => (float) $a['variable_time_s'],
-                        'capacity_per_pass' => (float) $a['capacity_per_pass'], 'window_key' => $windowKey((int) $a['id_workstation'], $operators),
-                    ], $alternatives[(int) $s['id']] ?? []),
+                    'alternatives' => array_map(function ($a) use ($s, $operators, $windowKey, $workstations) {
+                        // Alternatywa bez własnej kadencji : czasy etapu. Cobot (tryb współpracujący) : część osoby cobota.
+                        $own = (float) $a['fixed_time_s'] > 0 || (float) $a['variable_time_s'] > 0;
+                        $w = $workstations[(int) $a['id_workstation']] ?? null;
+                        $ops = $w && $w['type'] === 'robot' && $w['robot_mode'] === 'collaboratif' && $w['operator_share'] !== null ? (float) $w['operator_share'] : $operators;
+                        return [
+                            'workstation_id' => (int) $a['id_workstation'],
+                            'fixed_time_s' => (int) ($own ? $a['fixed_time_s'] : $s['fixed_time_s']), 'variable_time_s' => (float) ($own ? $a['variable_time_s'] : $s['variable_time_s']),
+                            'capacity_per_pass' => (float) ($own && (float) $a['capacity_per_pass'] > 0 ? $a['capacity_per_pass'] : $s['capacity_per_pass']),
+                            'operators_required' => $ops, 'window_key' => $windowKey((int) $a['id_workstation'], $ops),
+                        ];
+                    }, $alternatives[(int) $s['id']] ?? []),
                 ];
             }
             $input[] = ['id' => (int) $o['id'], 'due' => $due[(int) $o['id']], 'qty' => (float) $o['quantity'],

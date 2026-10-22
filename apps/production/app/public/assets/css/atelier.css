@@ -1607,3 +1607,11 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
   body.at-printing .at-print-area .at-noprint { display: none !important; }
   body.at-printing .at-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+/* Coboty : stanowisko alternatywne etapu (kadencja, porównanie z pracą ręczną), oszczędzone godziny */
+.tfb-cobot { margin: 8px 0 4px; padding: 10px 12px; border: 1px dashed var(--at-line-2); border-radius: var(--at-radius, 10px); background: var(--at-surface-2, #f6f3ef); }
+.tfb-cobot-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
+.tfb-cobot-saved { color: var(--at-success, #2e7d32); font-weight: 500; white-space: nowrap; }
+.tfb-ws-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 14px; align-items: start; }
+.tfb-ws-form > label { display: flex; flex-direction: column; gap: 4px; margin: 0; }
+.tfb-ws-form > label.form-check { flex-direction: row; align-items: center; gap: 6px; align-self: end; }
+.tfb-ws-form .tfb-wide { grid-column: 1 / -1; }

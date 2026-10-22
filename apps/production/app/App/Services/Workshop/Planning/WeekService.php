@@ -11,6 +11,7 @@ use App\Repositories\Workshop\ParamRepository;
 use App\Repositories\Workshop\PlanningRepository;
 use App\Repositories\Workshop\SchedulingRepository;
 use App\Repositories\Workshop\WeekRepository;
+use App\Services\Workshop\Product\CobotRouting;
 use App\Services\Workshop\Product\StandardTime;
 use App\Services\Workshop\Referentiel\AuditTrail;
 use App\Services\Workshop\Scheduling\SchedulingService;
@@ -208,7 +209,7 @@ final class WeekService
                 'orders' => round($pr['orders'] + $pr['semi'], 3), 'refill' => round($pr['refill'], 3), 'fixed' => round($pr['fixed'], 3),
                 'batch_extra' => round($pr['batch_extra'], 3), 'to_produce' => round($qty, 3),
                 'batches' => $batch ? (int) ceil(round($qty / $batch, 6)) : null,
-                'hours' => (float) ($w['hours'] ?? 0.0), 'placed' => $w ? round(array_sum(array_column($w['slots'], 'quantity')), 3) : 0.0,
+                'hours' => (float) ($w['hours'] ?? 0.0), 'cobot_saved_h' => (float) ($w['cobot_saved_h'] ?? 0.0), 'cobots' => $w['cobots'] ?? [], 'placed' => $w ? round(array_sum(array_column($w['slots'], 'quantity')), 3) : 0.0,
                 'days' => $w ? array_column($w['slots'], 'day') : [],
                 // 📌 przypięte dni tygodnia : miejsce i ile partii tygodnia dostały ; waiting = czeka w « Do zrobienia ».
                 'pins' => array_map(fn($x) => ['day' => $x['day'], 'room' => $x['room'], 'filled' => $x['filled'], 'released' => $x['released'], 'past' => $x['past']], $data['pins'][$id] ?? []),
@@ -223,7 +224,8 @@ final class WeekService
         return [
             'week_start' => $week['week_start'], 'week_end' => $week['week_end'], 'iso_week' => $week['iso_week'], 'today' => $week['today'],
             'days' => $week['days'], 'fte_hours' => $week['fte_hours'], 'source' => $week['source'],
-            'groups' => array_map(fn($g) => ['id' => $g['id'], 'name' => $g['name'], 'color' => $g['color'], 'available_h' => $g['available_h'], 'people' => $g['people']], $week['groups']),
+            'groups' => array_map(fn($g) => ['id' => $g['id'], 'name' => $g['name'], 'color' => $g['color'], 'available_h' => $g['available_h'], 'people' => $g['people'],
+                'cobot_saved_h' => $g['cobot_saved_h'] ?? 0.0], $week['groups']),
             'rows' => $rows,
             'can_edit' => $context->can('prod.products.write'),
         ];
@@ -460,6 +462,7 @@ final class WeekService
             $p['stock'] = round($p['stock'], 3);
             ksort($p['direct_parts']);
             $p['hours'] = $this->hours($routings, $id, $p['quantity']);
+            $p['cobot_saved_h'] = $this->cobotSaved($routings, $id, $p['quantity']);
             // Ostatni dzień produkcji nie później niż termin (MTO, półprodukt) ; MTS — do końca tygodnia.
             $p['latest_day'] = $lastDay;
             if ($p['due_date'] !== null) {
@@ -664,6 +667,7 @@ final class WeekService
             $lanes[$g]['unassigned_h'] = ($lanes[$g]['unassigned_h'] ?? 0.0) + $unassignedH;
             $lanes[$g]['done_h'] = ($lanes[$g]['done_h'] ?? 0.0) + $p['done_h'];
             $lanes[$g]['hours'] = ($lanes[$g]['hours'] ?? 0.0) + $p['hours'];
+            $lanes[$g]['cobot_saved_h'] = ($lanes[$g]['cobot_saved_h'] ?? 0.0) + $p['cobot_saved_h'];
             if ($p['hours'] <= 0) $noRouting++;
             $directH = $p['quantity'] > 0 ? $p['hours'] * $p['direct'] / $p['quantity'] : 0.0;
             $lanes[$g]['direct_h'] = ($lanes[$g]['direct_h'] ?? 0.0) + $directH;
@@ -675,6 +679,8 @@ final class WeekService
                 'direct_h' => round($directH, 2), 'stock_h' => round($p['hours'] - $directH, 2),
                 'direct_parts' => array_map(fn($d, $q) => ['due_date' => $d, 'quantity' => round($q, 3), 'cartons' => $cartons($q)], array_keys($p['direct_parts']), array_values($p['direct_parts'])),
                 'hours' => round($p['hours'], 2), 'due_date' => $p['due_date'], 'latest_day' => $p['latest_day'],
+                // Coboty : roboczogodziny oszczędzone wobec pracy ręcznej (etapy na cobotach) i nazwy cobotów.
+                'cobot_saved_h' => round($p['cobot_saved_h'], 2), 'cobots' => $this->cobotNames($data['routings'], $id),
                 'done_h' => round($p['done_h'], 2), 'done_pct' => $p['hours'] > 0 ? round($p['done_h'] / $p['hours'] * 100, 1) : null, 'state' => $p['state'],
                 'unassigned_qty' => $p['unassigned_qty'], 'unassigned_h' => round($unassignedH, 2), 'over_qty' => $p['over_qty'],
                 'slots' => $slots, 'movable' => $context->canInGroup('prod.gantt.move', $p['group_id']),
@@ -684,7 +690,7 @@ final class WeekService
         usort($products, fn($a, $b) => [$a['group_id'] ?? 999, $a['slots'][0]['day'] ?? '9', $a['latest_day'], $a['name']] <=> [$b['group_id'] ?? 999, $b['slots'][0]['day'] ?? '9', $b['latest_day'], $b['name']]);
 
         $outGroups = [];
-        $totals = ['hours' => 0.0, 'available_h' => 0.0, 'required_h' => 0.0, 'done_h' => 0.0, 'expected_h' => 0.0, 'unassigned_h' => 0.0, 'direct_h' => 0.0];
+        $totals = ['hours' => 0.0, 'available_h' => 0.0, 'required_h' => 0.0, 'done_h' => 0.0, 'expected_h' => 0.0, 'unassigned_h' => 0.0, 'direct_h' => 0.0, 'cobot_saved_h' => 0.0];
         $ids = array_keys($groups);
         if (isset($lanes[0])) $ids[] = 0;
         foreach ($ids as $gid) {
@@ -710,13 +716,14 @@ final class WeekService
                 'hours' => round($lane['hours'] ?? 0.0, 2), 'available_h' => round($available, 2), 'required_h' => round($required, 2),
                 'direct_h' => round($lane['direct_h'] ?? 0.0, 2), 'stock_h' => round(($lane['hours'] ?? 0.0) - ($lane['direct_h'] ?? 0.0), 2),
                 'load_pct' => $available > 0 ? round(($lane['hours'] ?? 0.0) / $available * 100, 1) : null,
-                'unassigned_h' => round($lane['unassigned_h'] ?? 0.0, 2), 'over_h' => round($over, 2),
+                'unassigned_h' => round($lane['unassigned_h'] ?? 0.0, 2), 'over_h' => round($over, 2), 'cobot_saved_h' => round($lane['cobot_saved_h'] ?? 0.0, 2),
                 'done_h' => round($lane['done_h'] ?? 0.0, 2), 'expected_h' => round($lane['expected'] ?? 0.0, 2),
                 'movable' => $context->canInGroup('prod.gantt.move', $gid ?: null), 'days' => $dayRows,
             ];
             if ($over > 0.05) $warnings[] = ['code' => 'GROUP_OVERLOAD', 'group' => $groups[$gid]['name'] ?? '—', 'hours' => round($over, 1)];
             foreach (['hours' => $lane['hours'] ?? 0.0, 'available_h' => $available, 'required_h' => $required, 'done_h' => $lane['done_h'] ?? 0.0,
-                         'expected_h' => $lane['expected'] ?? 0.0, 'unassigned_h' => $lane['unassigned_h'] ?? 0.0, 'direct_h' => $lane['direct_h'] ?? 0.0] as $k => $val) $totals[$k] += $val;
+                         'expected_h' => $lane['expected'] ?? 0.0, 'unassigned_h' => $lane['unassigned_h'] ?? 0.0, 'direct_h' => $lane['direct_h'] ?? 0.0,
+                         'cobot_saved_h' => $lane['cobot_saved_h'] ?? 0.0] as $k => $val) $totals[$k] += $val;
         }
         $unassigned = count(array_filter($products, fn($p) => $p['unassigned_qty'] > self::EPS));
         if ($unassigned) $warnings[] = ['code' => 'UNASSIGNED', 'count' => $unassigned, 'hours' => round($totals['unassigned_h'], 1)];
@@ -775,6 +782,20 @@ final class WeekService
         $min = (float) $this->params->get('load.green_min_pct', '90');
         $max = (float) $this->params->get('load.green_max_pct', '100');
         return $pct > $max ? 'over' : ($pct >= $min ? 'ok' : 'under');
+    }
+
+    /** Roboczogodziny oszczędzone przez coboty (marszruta z cobotami) ; 0 przy czasie partii z arkusza. */
+    private function cobotSaved(array $routings, int $itemId, float $qty): float
+    {
+        if ($qty <= self::EPS || isset($this->batchHours[$itemId])) return 0.0;
+        return CobotRouting::savedHours($routings[$itemId] ?? [], $qty);
+    }
+
+    /** @return list<string> coboty etapów karty */
+    private function cobotNames(array $routings, int $itemId): array
+    {
+        if (isset($this->batchHours[$itemId])) return [];
+        return array_values(array_unique(array_filter(array_map(fn($s) => $s['cobot']['name'] ?? null, $routings[$itemId] ?? []))));
     }
 
     /** Roboczogodziny : czas partii z arkusza (partie × osoby × czas), inaczej marszruta (StandardTime). */

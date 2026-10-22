@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Repositories\Workshop;
 
+use App\Services\Workshop\Product\CobotRouting;
+
 /**
  * Lectures du calcul des besoins (commandes, expéditions, stock de l'ERP, nomenclatures) et
  * écriture des plans (tfb_prod_plan, tfb_prod_plan_line) et des OF (tfb_prod_order).
@@ -115,11 +117,22 @@ final class PlanningRepository extends WorkshopRepository
     }
 
     /** @return array<int,list<array>> article => étapes de gamme */
+    /**
+     * Marszruty kart. Etap z alternatywą na aktywnym cobocie liczy się na cobocie (CobotRouting : kadencja cobota,
+     * godziny = czas × część osoby ; czasy ręczne w kluczu manual — oszczędzone godziny).
+     */
     public function routings(): array
     {
+        $cobots = [];
+        foreach ($this->all("SELECT a.id_step, a.id_workstation, a.fixed_time_s, a.variable_time_s, a.capacity_per_pass, w.operator_share, w.name_pl AS name
+                             FROM tfb_prod_routing_alternative a JOIN tfb_prod_workstation w ON w.id = a.id_workstation
+                             WHERE w.type = 'robot' AND w.robot_mode = 'collaboratif' AND w.active = 1 AND w.operator_share IS NOT NULL
+                             ORDER BY a.priority, a.id") as $c) {
+            $cobots[(int) $c['id_step']] ??= $c;
+        }
         $out = [];
         foreach ($this->all('SELECT * FROM tfb_prod_routing_step ORDER BY id_item, step_no') as $s) $out[(int) $s['id_item']][] = $s;
-        return $out;
+        return $cobots ? array_map(fn($steps) => CobotRouting::apply($steps, $cobots), $out) : $out;
     }
 
     public function plans(?string $status): array

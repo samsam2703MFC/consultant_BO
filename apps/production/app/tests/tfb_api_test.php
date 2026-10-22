@@ -198,6 +198,20 @@ check(str_contains($b['errors'][1]['message'], 'tryb robota'), 'Polish field lab
     'shift_availability' => [['shift_template_id' => 1, 'available' => false]]], $access);
 check($s === 201 && $b['data']['night_compatible'] === true && $b['data']['shift_availability'][0]['available'] === false, 'create autonomous robot');
 $wsId = $b['data']['id'];
+// Cobot : robot współpracujący, część osoby obowiązkowa (0 < udział ≤ 1), inne tryby bez udziału
+[$s, $b] = $call('POST', '/referentiels/workstations', ['code' => 'COBOT_T', 'group_id' => 1, 'name_pl' => 'Cobot test', 'name_fr' => 'Cobot test', 'type' => 'robot', 'robot_mode' => 'collaboratif'], $access);
+check($s === 422 && $codes($b) === ['operator_share:OPERATOR_SHARE_REQUIRED'], 'a cobot needs the share of a person');
+[$s, $b] = $call('POST', '/referentiels/workstations', ['code' => 'COBOT_T', 'group_id' => 1, 'name_pl' => 'Cobot test', 'name_fr' => 'Cobot test', 'type' => 'robot', 'robot_mode' => 'collaboratif', 'operator_share' => 1.5], $access);
+check($s === 422 && $codes($b) === ['operator_share:OUT_OF_RANGE'], 'share of a person at most 1');
+[$s, $b] = $call('POST', '/referentiels/workstations', ['code' => 'COBOT_T', 'group_id' => 1, 'name_pl' => 'Cobot test', 'name_fr' => 'Cobot test', 'type' => 'robot', 'robot_mode' => 'collaboratif', 'operator_share' => 0.25, 'capacity_per_pass' => 1], $access);
+check($s === 201 && $b['data']['collaborative'] === true && $b['data']['operator_share'] === 0.25 && $b['data']['night_compatible'] === false, 'cobot created (1 person for 4 cobots)');
+$cobotId = $b['data']['id'];
+[$s, $b] = $call('PATCH', "/referentiels/workstations/{$cobotId}", ['robot_mode' => 'avec_operateur'], $access);
+check($s === 200 && $b['data']['operator_share'] === null && !$b['data']['collaborative'], 'robot with its own operator: no share');
+[$s, $b] = $call('PATCH', "/referentiels/workstations/{$cobotId}", ['robot_mode' => 'collaboratif'], $access);
+check($s === 422 && $codes($b) === ['operator_share:OPERATOR_SHARE_REQUIRED'], 'back to cobot needs the share again');
+[$s, $b] = $call('PATCH', "/referentiels/workstations/{$cobotId}", ['robot_mode' => 'collaboratif', 'operator_share' => 0.5], $access);
+check($s === 200 && $b['data']['operator_share'] === 0.5 && $b['data']['collaborative'], 'cobot again (1 person for 2 cobots)');
 [$s, $b] = $call('PATCH', "/referentiels/workstations/{$wsId}", ['photo_url' => 'https://elsewhere.test/a.jpg'], $access);
 check($s === 422 && $codes($b) === ['photo_url:URL_NOT_R2'], 'photo must be a direct R2 link');
 [$s, $b] = $call('PATCH', "/referentiels/workstations/{$wsId}", ['type' => 'four'], $access);
@@ -1210,6 +1224,30 @@ check($s === 200 && $bp && $todayMarks === 0 && abs($bp['fixed_qty'] - $others) 
 $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (12, 'Ola', 'Wiśniewska', 5100, 1)");
 (new App\Repositories\Employee\ProductionEmployeeRepository($pdo))->syncWorkshopHeadcount();
 check((int) $pdo->query("SELECT planned_headcount FROM tfb_prod_team WHERE code = 'T1'")->fetchColumn() === 3, 'day team headcount follows the employees of the section');
+
+// Coboty w planie : etap z cobotem (stanowisko alternatywne, własna kadencja) liczy się na cobocie — godziny × część osoby ;
+// arkusz pokazuje godziny oszczędzone wobec pracy ręcznej.
+[, $sh] = $call('GET', "/planning/sheet?date={$today}", null, $access);
+$before = array_column($sh['data']['rows'] ?? [], null, 'item_id')[$itemId] ?? null;
+[, $it] = $call('GET', "/produits/items/{$itemId}", null, $access);
+$keep = ['id', 'name_pl', 'name_fr', 'workstation_id', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'operators_required', 'min_level_order',
+    'delay_after_s', 'delay_workstation_id', 'cleaning_required', 'cleaning_time_s', 'temperature_c'];
+$original = array_map(fn($st) => array_intersect_key($st, array_flip($keep)) + ['alternatives' => array_map(fn($a) => array_intersect_key($a, array_flip(['workstation_id', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'priority'])), $st['alternatives'])], $it['data']['routing']);
+$withCobot = $original;
+$withCobot[0]['alternatives'][] = ['workstation_id' => $cobotId, 'fixed_time_s' => $withCobot[0]['fixed_time_s'], 'variable_time_s' => $withCobot[0]['variable_time_s'], 'capacity_per_pass' => $withCobot[0]['capacity_per_pass']];
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/routing", ['steps' => $withCobot], $access);
+check($s === 200, 'routing step with a cobot alternative saved');
+[, $sh] = $call('GET', "/planning/sheet?date={$today}", null, $access);
+$after = array_column($sh['data']['rows'] ?? [], null, 'item_id')[$itemId] ?? null;
+$group = array_column($sh['data']['groups'] ?? [], null, 'id')[$after['group_id'] ?? 0] ?? null;
+$expectedSaved = $before['to_produce'] > 0 ? App\Services\Workshop\Product\StandardTime::step($original[0], $before['to_produce'])['labour_s'] * (1 - 0.5 / max(0.0001, (float) $original[0]['operators_required'])) / 3600 : 0.0;
+check($before && $after && $before['to_produce'] > 0 && $after['cobot_saved_h'] > 0 && abs(($before['hours'] - $after['hours']) - $after['cobot_saved_h']) < 0.02
+    && abs($after['cobot_saved_h'] - $expectedSaved) < 0.02 && in_array('Cobot test', $after['cobots'], true) && $group && $group['cobot_saved_h'] >= $after['cobot_saved_h'] - 0.01,
+    'week sheet: step on the cobot (share 0.5), hours saved vs manual shown per product and group');
+[$s] = $call('PUT', "/produits/items/{$itemId}/routing", ['steps' => $original], $access);
+[, $sh] = $call('GET', "/planning/sheet?date={$today}", null, $access);
+$restored = array_column($sh['data']['rows'] ?? [], null, 'item_id')[$itemId] ?? null;
+check($s === 200 && $restored && $restored['cobot_saved_h'] == 0 && abs($restored['hours'] - $before['hours']) < 0.01, 'routing restored without the cobot');
 
 // Czas partii w arkuszu : osoby × minuty = roboczogodziny na partię ; godziny tygodnia = partie × to (zamiast marszruty)
 [, $sh] = $call('GET', "/planning/sheet?date={$today}", null, $access);

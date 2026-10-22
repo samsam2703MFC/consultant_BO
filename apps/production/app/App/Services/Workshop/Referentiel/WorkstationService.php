@@ -20,8 +20,9 @@ use App\Repositories\Workshop\WorkstationRepository;
 final class WorkstationService
 {
     public const TYPES = ['machine', 'four', 'robot', 'manuel', 'fermentation', 'froid', 'surgelation'];
-    public const ROBOT_MODES = ['autonome', 'avec_operateur'];
-    private const FIELDS = ['code', 'group_id', 'name_pl', 'name_fr', 'type', 'robot_mode', 'capacity_per_pass', 'capacity_unit', 'hourly_cost', 'photo_url', 'notes', 'active', 'shift_availability'];
+    /** autonome : bez obsługi (także w nocy) ; avec_operateur : z własnym operatorem ; collaboratif : cobot, część czasu osoby. */
+    public const ROBOT_MODES = ['autonome', 'avec_operateur', 'collaboratif'];
+    private const FIELDS = ['code', 'group_id', 'name_pl', 'name_fr', 'type', 'robot_mode', 'operator_share', 'capacity_per_pass', 'capacity_unit', 'hourly_cost', 'photo_url', 'notes', 'active', 'shift_availability'];
 
     public function __construct(
         private WorkstationRepository $workstations,
@@ -84,6 +85,7 @@ final class WorkstationService
             ->string('name_fr', 100)
             ->choice('type', self::TYPES)
             ->choice('robot_mode', self::ROBOT_MODES, false, true)
+            ->decimal('operator_share', false, 0, 1, true, true)
             ->decimal('capacity_per_pass', false, 0, null, false, true)
             ->choice('capacity_unit', array_values(array_map('strval', $units)), false)
             ->decimal('hourly_cost', false, 0)
@@ -109,6 +111,12 @@ final class WorkstationService
                 $v->add('robot_mode', 'ROBOT_MODE_FORBIDDEN');
             }
         }
+        // Cobot (tryb współpracujący) : część czasu osoby obowiązkowa (0 < udział ≤ 1) ; inne tryby — bez udziału.
+        $mode = $type === 'robot' ? ($v->hasRaw('robot_mode') ? $v->value('robot_mode') : ($current['robot_mode'] ?? null)) : null;
+        if (!$v->hasError('robot_mode') && !$v->hasError('operator_share')) {
+            $share = $v->hasRaw('operator_share') ? $v->value('operator_share') : ($current['operator_share'] ?? null);
+            if ($mode === 'collaboratif' && $share === null) $v->add('operator_share', 'OPERATOR_SHARE_REQUIRED');
+        }
 
         $availability = null;
         if ($v->hasRaw('shift_availability')) {
@@ -123,6 +131,11 @@ final class WorkstationService
         }
         if ($type !== null && $type !== 'robot') {
             $data['robot_mode'] = null;
+        }
+        if ($mode !== 'collaboratif' && ($v->hasRaw('robot_mode') || $v->hasRaw('type') || $v->hasRaw('operator_share'))) {
+            $data['operator_share'] = null;
+        } elseif (array_key_exists('operator_share', $data) && $data['operator_share'] !== null) {
+            $data['operator_share'] = round((float) $data['operator_share'], 2);
         }
         return [$data, $availability];
     }
@@ -173,6 +186,8 @@ final class WorkstationService
             'name_fr' => $row['name_fr'],
             'type' => $row['type'],
             'robot_mode' => $row['robot_mode'],
+            'operator_share' => $row['operator_share'] !== null ? (float) $row['operator_share'] : null,
+            'collaborative' => $row['type'] === 'robot' && $row['robot_mode'] === 'collaboratif',
             'night_compatible' => $row['type'] === 'robot' && $row['robot_mode'] === 'autonome',
             'capacity_per_pass' => (float) $row['capacity_per_pass'],
             'capacity_unit' => $row['capacity_unit'],

@@ -175,6 +175,8 @@
   "week.batch_set": "Pas de lot — à définir dans la fiche produit (Étapes et temps)",
   "week.batch_partial_help": "La quantité de la semaine n'est pas un multiple du lot — dernier lot incomplet",
   "week.group_need": "{hours} h sur la semaine → {fte} ETP ({hours} h ÷ {base} h)",
+  "week.cobot_saved": "🤖 cobots : −{hours} h de travail manuel",
+  "week.cobot_saved_help": "Heures de travail économisées : étapes sur les cobots (part d’une personne) au lieu du travail manuel — déjà déduites des heures.",
   "week.group_has": "disponible {hours} h · {people} pers. ({fte} ETP)",
   "week.total_need": "Total de la semaine :",
   "week.pin_slot": "libre : {free}",

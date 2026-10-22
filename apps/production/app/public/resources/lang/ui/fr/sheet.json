@@ -10,6 +10,8 @@
   "calc_no_max": "pas de stock max. — renseignez-le pour calculer le réassort",
   "calc_batches": "{n} × lot",
   "group_need": "{hours} h sur la semaine → {fte} ETP ({hours} h ÷ {base} h)",
+  "cobot_saved": "🤖 −{hours} h grâce aux cobots",
+  "cobot_saved_help": "Heures économisées : étapes sur les cobots (part d’une personne) au lieu du travail manuel — déjà déduites.",
   "group_has": "disponible {hours} h · {people} pers. ({fte} ETP)",
   "no_group": "Sans groupe",
   "semi": "semi-fini",
