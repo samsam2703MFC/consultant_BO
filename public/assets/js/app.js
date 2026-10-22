@@ -1025,7 +1025,8 @@ class App {
       // montre ce qui demande un geste ; le travail se fait dans le Marketing (/marketing/, l'ancien
       // portail du cockpit est retiré le 22/10/2026) ou se regarde comme le franchisé le voit (social).
       marketing: ['Marketing', 'Campagnes, réseaux sociaux et newsletters au même endroit. La console montre ce qui demande un geste ; les posts se font dans le portail social, les campagnes et les newsletters dans le Marketing.',
-        [['marketing', 'Aujourd’hui'], ['mktCampagnes', 'Campagnes'], ['mktCalendrier', 'Calendrier'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
+        // Campagnes et Calendrier : un seul onglet (22/10/2026), la bascule Liste / Calendrier est dans la page.
+        [['marketing', 'Aujourd’hui'], ['mktCampagnes', 'Campagnes'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
         [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
       parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
@@ -1040,13 +1041,16 @@ class App {
       // comptoir reçoit l'assortiment obligatoire, qui se tient là où on place les produits.
       planogramme: ['Comptoir · planogramme', 'Le comptoir standard et ce que chaque boutique doit tenir.',
         [['planogramme', 'Comptoir', titles.planogramme[1]], ['assortiment', 'Assortiment obligatoire', titles.assortiment[1]]]] };
-    const grp = Object.keys(GROUPES).find(k => k === S.screen || (GROUPES[k][2] || []).some(o => o[0] === S.screen));
+    // Écrans sans onglet propre : ils allument l'onglet qui les porte (le calendrier est une vue des campagnes).
+    const ONGLET_DE = { mktCalendrier: 'mktCampagnes' };
+    const ecranOnglet = ONGLET_DE[S.screen] || S.screen;
+    const grp = Object.keys(GROUPES).find(k => k === ecranOnglet || (GROUPES[k][2] || []).some(o => o[0] === ecranOnglet));
     if (grp) {
-      const onglet = (GROUPES[grp][2] || []).find(o => o[0] === S.screen);
+      const onglet = (GROUPES[grp][2] || []).find(o => o[0] === ecranOnglet);
       common.screenTitle = GROUPES[grp][0]; common.screenSub = (onglet && onglet[2]) || GROUPES[grp][1];
       const cat0 = this.D.prodCatalogue || [];
       const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0 };
-      common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: S.screen === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
+      common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: ecranOnglet === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
       if (!common.ongletsEcran.length) { common.ongletsEcran = null; }
     }
     // Les lectures détaillées, ouvertes depuis la fiche d'une référence du Catalogue (18/10/2026) : un retour, pas d'onglets.
@@ -6259,6 +6263,10 @@ class App {
     if (mk.indispo) { return; }
     const camps = mk.campagnes || [];
     const recharge = () => { this.D.mkt = null; this.setState({}); };
+
+    // --- bascule Liste / Calendrier : les mêmes campagnes et leur statut, en tableau ou posées sur l'année.
+    common.mkVues = [['mktCampagnes', 'Liste'], ['mktCalendrier', 'Calendrier']].map(([ecran, nom]) => ({
+      nom, on: S.screen === ecran, choisir: () => this.setState({ screen: ecran, mkEdit: null }) }));
 
     // --- calendrier : une ligne par campagne, une barre sur ses mois.
     const annee = S.mkAnnee || new Date((camps[0] || {}).debut || this.M.TODAY).getFullYear();

@@ -3256,6 +3256,20 @@ function tplMktForm(c, x){
   </div>`;
 }
 
+/* La bascule Liste / Calendrier, en tête des deux vues des campagnes, avec la création à droite. */
+function tplMktVue(c, x, aide){
+  const { esc } = x;
+  return `
+    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+      <div role="tablist" style="display:inline-flex;background:var(--color-background-secondary);border-radius:9px;padding:3px;gap:2px">
+        ${(c.mkVues || []).map(v => `<button ${x.A(v.choisir)} role="tab" aria-selected="${v.on}" style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:${v.on ? '600' : '400'};padding:6px 14px;border-radius:7px;background:${v.on ? 'var(--color-surface)' : 'transparent'};color:${v.on ? 'var(--color-primary)' : 'var(--color-text-muted)'};box-shadow:${v.on ? '0 1px 2px rgba(0,0,0,0.06)' : 'none'}">${esc(v.nom)}</button>`).join('')}
+      </div>
+      <div style="flex:1"></div>
+      ${aide ? `<span style="font-size:11px;color:var(--color-text-muted);margin-right:2px;flex:1 1 320px;text-align:right">${esc(aide)}</span>` : ''}
+      <button ${x.A(c.mkAssistant)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:8px">+ Nouvelle campagne</button>
+    </div>`;
+}
+
 function tplMktCalendrier(c, x){
   const { esc } = x;
   const garde = tplMktGarde(c);
@@ -3263,6 +3277,7 @@ function tplMktCalendrier(c, x){
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
   return `
   <div data-screen="mktcal" style="display:flex;flex-direction:column;gap:14px">
+    ${tplMktVue(c, x, '')}
     ${c.mkEdit ? tplMktForm(c, x) : ''}
     <div style="${carte};overflow:hidden">
       <div style="padding:13px 17px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
@@ -3302,10 +3317,7 @@ function tplMktCampagnes(c, x){
   const td = 'padding:9px 10px;border-top:0.5px solid var(--color-border-tertiary);font-size:12.5px';
   return `
   <div data-screen="mktcamp" style="display:flex;flex-direction:column;gap:14px">
-    <div style="display:flex;justify-content:flex-end;gap:9px;align-items:center">
-      <span style="font-size:11px;color:var(--color-text-muted);margin-right:2px">Toute campagne se crée dans l’assistant complet (cadrage, offre, objectifs, prix, photos, budget, communication, planning, leads) : elle apparaît ici, où elle se corrige et se reprend.</span>
-      <button ${x.A(c.mkAssistant)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;padding:9px 18px;border-radius:8px">+ Nouvelle campagne</button>
-    </div>
+    ${tplMktVue(c, x, 'Toute campagne se crée dans l’assistant complet (cadrage, offre, objectifs, prix, photos, budget, communication, planning, leads) : elle apparaît ici, où elle se corrige et se reprend.')}
     ${c.mkEdit ? tplMktForm(c, x) : ''}
     ${c.mkAttente && c.mkAttente.length ? `
     <div>
