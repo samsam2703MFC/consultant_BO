@@ -944,3 +944,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-22T11:13:03Z module approvisionnement (besoins, stocks, commandes fournisseurs, réceptions)
 2026-10-22T11:23:43Z versionnage des scripts et libellés, recalcul des stocks sur la page Produits
 2026-10-22T12:06:20Z kontrola faktur zakupowych (Zaopatrzenie › Faktury)
+2026-10-22T12:40:42Z plan des équipes (PDF à imprimer, tablette de l'équipe)
