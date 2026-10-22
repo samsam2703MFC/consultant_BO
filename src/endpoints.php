@@ -105,8 +105,10 @@ function ep_meta(): array
         // « Aujourd'hui » pilote la logique de dates (défaut du planning d'un
         // nouveau projet, jalons/tâches en retard). Sans réglage explicite, on
         // prend la date réelle du serveur — jamais null (sinon les comparaisons
-        // de dates côté écran deviennent fausses) et jamais figée.
-        'aujourdhui'       => setting('aujourdhui', date('Y-m-d')),
+        // de dates côté écran deviennent fausses) et jamais figée. Un réglage
+        // passé ne fige plus le cockpit (22/10/2026) : la base de démonstration
+        // pose « 2026-07-31 », et l'écran des objectifs restait « à fin juillet ».
+        'aujourdhui'       => max(date('Y-m-d'), is_string($ajd = setting('aujourdhui', '')) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $ajd) ? $ajd : ''),
         'dateLabel'        => setting('dateLabel', ''),
         'periodeLabel'     => setting('periodeLabel', ''),
         'exercice'         => (int) setting('exercice', (int) date('Y')),

@@ -941,9 +941,10 @@ function tplObjectifs(c, x){
           <div style="font-size:32px;font-weight:500;margin-top:6px">${c.objCible}</div>
           ${c.objCibleSrc ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(c.objCibleSrc)}</div>` : ''}
           <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;font-size:13px">
-            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Réel à fin juillet</span><span style="font-weight:500">${c.objReel}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">${esc(c.objReelLib)}</span><span style="font-weight:500">${c.objReel}</span></div>
             <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Cible au prorata</span><span>${c.objProrata}</span></div>
             <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Taux d'atteinte</span><span style="${c.objAttSt}">${c.objAtt}</span></div>
+            ${c.objPartTxt ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:-4px">${esc(c.objPartTxt)}</div>` : ''}
             <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Projection fin ${c.objExo}</span><span style="font-weight:500">${c.objProj}</span></div>
           </div>
           <div style="border-top:0.5px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;font-size:12px;color:var(--color-text-muted)">${esc(c.objNote)}</div>
@@ -980,7 +981,7 @@ function tplObjectifs(c, x){
           <thead><tr>
             <th style="${TH}">Magasin</th>
             <th style="text-align:right;${TH2}">Cible ${c.objExo}</th>
-            <th style="text-align:right;${TH2}">Réel à fin juil.</th>
+            <th style="text-align:right;${TH2}">${esc(c.objReelLib)}</th>
             <th style="text-align:right;${TH2}">Cible prorata</th>
             <th style="text-align:center;${TH2}">Écart</th>
             <th style="text-align:center;${TH2}">Atteinte</th>

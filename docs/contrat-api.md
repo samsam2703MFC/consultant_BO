@@ -3712,3 +3712,5 @@ service, droits et jetons : `docs/publication-reseaux.md`.
 - Écritures existantes : `POST /marketing/social/posts` accepte `reseaux` et `campagneId` ; une **validation**
   (`PATCH …/{id}` à `valide`) programme le post si « Programmer à la validation » est coché ; « marqué publié » à la
   main annule ce qui était programmé.
+
+**22/10/2026 — Objectifs de CA et Suivi budget « à date ».** Le réel du mois en cours s'arrête à aujourd'hui (`/stores/perf`, API du panel) ; sa cible ne compte plus que les jours écoulés (`partMois` : jour / jours du mois, 1 pour un mois clos). Les colonnes disent « Réel au 22/10 » (ou « Réel à fin septembre » quand le dernier mois lu est clos) au lieu de « fin juil. » écrit en dur. Projection : le reste de l'année part des jours restants du mois en cours. Suivi budget : cumul, écart par magasin et écart du mois en cours sur la même règle ; plus de juillet figé (`slice(0, 7)`, `i <= 6`). `/meta.aujourdhui` ne recule plus sous la date du serveur : la base de démonstration posait `2026-07-31`.
