@@ -1,0 +1,117 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Core\Api\Workshop;
+
+use App\Services\Workshop\Supply\SupplyService;
+
+/** Documentation OpenAPI de l'approvisionnement : besoins en matières et emballages, stocks, commandes fournisseurs, réceptions. */
+final class OpenApiSupply
+{
+    public static function operations(): array
+    {
+        $t = 'supply';
+        return [
+            'GET /supply/needs' => ['tag' => $t, 'id' => 'getSupplyNeeds', 'summary' => 'Potrzeby surowców i opakowań / Besoins en matières et emballages', 'response' => 'SupplyNeeds', 'errors' => [422],
+                'query' => ['date' => ['type' => 'string', 'format' => 'date', 'description' => 'un jour de la première semaine de production (défaut : dans 7 jours)'], 'weeks' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 4]],
+                'description' => "Besoin = à produire de la feuille de la semaine ÷ pièces par carton × recette par carton (recette à plat). "
+                    . "Stock = dernier inventaire (fin de journée) + réceptions − consommation de production depuis (cartons produits × recette) ; sans inventaire : depuis la première réception. "
+                    . "À commander : matière « en stock » avec max — si dispo après production < min, réassort jusqu'au max ; sinon (« à la commande ») ce qui manque ; arrondi au colis fournisseur. "
+                    . "Quantités dans l'unité de base de la matière (g, ml, szt…) ; unit / factor = unité affichée (kg, l…)."],
+            'GET /supply/materials' => ['tag' => $t, 'id' => 'listSupplyMaterials', 'summary' => 'Surowce : tryb, stany, zużycie / Matières : mode, stocks, consommation', 'response' => 'SupplyMaterials',
+                'description' => 'Toutes les matières : mode (stock / order), min., max., stock théorique, commandé non reçu, consommation moyenne par semaine (4 dernières semaines).'],
+            'PATCH /supply/materials/{id:\d+}' => ['tag' => $t, 'id' => 'saveSupplyMaterial', 'summary' => 'Tryb i stany surowca / Mode et stocks d\'une matière', 'body' => 'SupplyMaterialInput', 'response' => 'SupplyMaterial', 'errors' => [400, 404, 422]],
+            'POST /supply/materials/{id:\d+}/count' => ['tag' => $t, 'id' => 'countSupplyMaterial', 'summary' => 'Inwentaryzacja surowca / Inventaire d\'une matière', 'body' => 'SupplyCountInput', 'response' => 'SupplyMaterial', 'ok' => 201, 'errors' => [400, 404, 422],
+                'description' => 'Stock compté en fin de journée (unité de base) ; la consommation et les réceptions comptent à partir du lendemain.'],
+            'GET /supply/orders' => ['tag' => $t, 'id' => 'listSupplierOrders', 'summary' => 'Zamówienia do dostawców / Commandes fournisseurs', 'response' => 'SupplierOrders', 'errors' => [422],
+                'query' => ['status' => ['type' => 'string', 'enum' => ['open', 'all', ...SupplyService::STATUSES], 'description' => 'défaut : open (brouillon, envoyée, reçue en partie)']]],
+            'POST /supply/orders' => ['tag' => $t, 'id' => 'createSupplierOrders', 'summary' => 'Zamówienia z potrzeb (jedno na dostawcę) / Commandes depuis les besoins (une par fournisseur)', 'body' => 'SupplierOrdersInput', 'response' => 'SupplierOrdersCreated', 'ok' => 201, 'errors' => [400, 422],
+                'description' => "Brouillons groupés par fournisseur courant de la matière ; livraison souhaitée la veille de la semaine (au plus tôt demain). SUPPLY_NO_SUPPLIER (422) : matière sans fournisseur."],
+            'GET /supply/orders/{id:\d+}' => ['tag' => $t, 'id' => 'getSupplierOrder', 'summary' => 'Zamówienie : linie, przyjęcia, ceny / Commande : lignes, réceptions, prix', 'response' => 'SupplierOrder', 'errors' => [404]],
+            'PATCH /supply/orders/{id:\d+}' => ['tag' => $t, 'id' => 'updateSupplierOrder', 'summary' => 'Zmień szkic zamówienia / Modifier une commande brouillon', 'body' => 'SupplierOrderInput', 'response' => 'SupplierOrder', 'errors' => [400, 404, 409, 422],
+                'description' => 'Brouillon seulement (PO_NOT_EDITABLE, 409). save_supplier_email = enregistrer aussi l\'adresse chez le fournisseur.'],
+            'PUT /supply/orders/{id:\d+}/lines' => ['tag' => $t, 'id' => 'saveSupplierOrderLines', 'summary' => 'Linie szkicu (całość) / Lignes du brouillon (remplacées)', 'body' => 'SupplierOrderLinesInput', 'response' => 'SupplierOrder', 'errors' => [400, 404, 409, 422]],
+            'GET /supply/orders/{id:\d+}/preview' => ['tag' => $t, 'id' => 'previewSupplierOrder', 'summary' => 'Podgląd maila / Aperçu de l\'e-mail', 'response' => 'SupplierOrderMail', 'errors' => [404, 422]],
+            'POST /supply/orders/{id:\d+}/send' => ['tag' => $t, 'id' => 'sendSupplierOrder', 'summary' => 'Wyślij mailem albo oznacz jako wysłane / Envoyer par e-mail ou marquer envoyée', 'body' => 'SupplierOrderSendInput', 'response' => 'SupplierOrder', 'errors' => [400, 404, 409, 422],
+                'description' => "E-mail mis en file (modèle supplier_order, PL ou FR, CSV joint) ; manual = commande passée autrement (téléphone, magasin). PO_NO_LINES, PO_NO_EMAIL (422)."],
+            'POST /supply/orders/{id:\d+}/receive' => ['tag' => $t, 'id' => 'receiveSupplierOrder', 'summary' => 'Przyjęcie dostawy / Réception', 'body' => 'SupplierOrderReceiveInput', 'response' => 'SupplierOrder', 'errors' => [400, 404, 409, 422],
+                'description' => 'Quantité et prix réels par ligne (prix par défaut : prix commandé) ; reçue en partie ou en totalité. PO_NOT_RECEIVABLE (409) : commande non envoyée, reçue ou annulée.'],
+            'POST /supply/orders/{id:\d+}/cancel' => ['tag' => $t, 'id' => 'cancelSupplierOrder', 'summary' => 'Anuluj zamówienie / Annuler la commande', 'response' => 'SupplierOrder', 'errors' => [404, 409]],
+            'DELETE /supply/orders/{id:\d+}' => ['tag' => $t, 'id' => 'deleteSupplierOrder', 'summary' => 'Usuń szkic / Supprimer le brouillon', 'response' => 'SupplierOrderDeleted', 'errors' => [404, 409]],
+        ];
+    }
+
+    public static function schemas(): array
+    {
+        $num = ['type' => 'number'];
+        $nNum = ['type' => 'number', 'nullable' => true];
+        $nStr = ['type' => 'string', 'nullable' => true];
+        $date = ['type' => 'string', 'format' => 'date'];
+        $nDate = ['type' => 'string', 'format' => 'date', 'nullable' => true];
+        $supplier = ['type' => 'object', 'nullable' => true, 'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'email' => $nStr]];
+        $material = [
+            'id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'category' => $nStr, 'packaging' => ['type' => 'boolean'],
+            'base_unit' => ['type' => 'string', 'example' => 'g'], 'unit' => ['type' => 'string', 'example' => 'kg'], 'factor' => ['type' => 'number', 'example' => 1000],
+            'supplier' => $supplier, 'mode' => ['type' => 'string', 'enum' => SupplyService::MODES], 'stock_min' => $nNum, 'stock_max' => $nNum,
+            'stock' => $nNum, 'stock_basis' => ['type' => 'string', 'enum' => ['count', 'receipts'], 'nullable' => true], 'count_date' => $nDate,
+            'price' => ['type' => 'number', 'nullable' => true, 'description' => 'prix catalogue par unité de base'], 'package_size' => $nNum, 'on_order' => $num,
+        ];
+        $summary = [
+            'id' => ['type' => 'integer'], 'code' => ['type' => 'string', 'example' => 'ZD-20261022-001'], 'status' => ['type' => 'string', 'enum' => SupplyService::STATUSES],
+            'supplier' => ['type' => 'object', 'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string']]],
+            'week_start' => $nDate, 'delivery_date' => $nDate, 'language' => ['type' => 'string', 'enum' => ['pl', 'fr']], 'email_to' => $nStr,
+            'sent_at' => $nStr, 'sent_by' => ['type' => 'string', 'enum' => ['email', 'manual'], 'nullable' => true], 'created_at' => ['type' => 'string'],
+            'lines_count' => ['type' => 'integer'], 'value_ordered' => $num, 'value_received' => $num, 'value_received_expected' => $num, 'received_pct' => $num,
+            'price_gaps' => ['type' => 'integer', 'description' => 'réceptions à un prix différent du prix commandé'],
+        ];
+        $lines = ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['raw_material_id', 'quantity'], 'properties' => [
+            'raw_material_id' => ['type' => 'integer'], 'quantity' => ['type' => 'number', 'description' => 'unité de base, > 0'], 'unit_price' => ['type' => 'number', 'nullable' => true, 'description' => 'défaut : prix catalogue'],
+        ]]];
+        return [
+            'SupplyNeeds' => ['type' => 'object', 'properties' => [
+                'date' => $date, 'weeks' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['week_start' => $date, 'week_end' => $date, 'iso_week' => ['type' => 'integer']]]],
+                'rows' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => $material + [
+                    'need' => $num, 'need_weeks' => ['type' => 'array', 'items' => $num], 'products' => ['type' => 'integer'], 'available_after' => $num,
+                    'to_order' => $num, 'packages' => ['type' => 'integer', 'nullable' => true], 'value' => $nNum,
+                ]]],
+                'totals' => ['type' => 'object', 'additionalProperties' => true], 'warnings' => ['type' => 'object', 'additionalProperties' => true], 'can_write' => ['type' => 'boolean'],
+            ]],
+            'SupplyMaterial' => ['type' => 'object', 'properties' => $material],
+            'SupplyMaterials' => ['type' => 'object', 'properties' => [
+                'rows' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => $material + ['weekly_use' => $num]]], 'use_weeks' => ['type' => 'integer'], 'can_write' => ['type' => 'boolean'],
+            ]],
+            'SupplyMaterialInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
+                'supply_mode' => ['type' => 'string', 'enum' => SupplyService::MODES], 'stock_min' => $nNum, 'stock_max' => $nNum,
+            ]],
+            'SupplyCountInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['quantity'], 'properties' => [
+                'quantity' => ['type' => 'number', 'minimum' => 0], 'count_date' => ['type' => 'string', 'format' => 'date', 'description' => 'défaut : aujourd\'hui'], 'note' => $nStr,
+            ]],
+            'SupplierOrders' => ['type' => 'object', 'properties' => ['orders' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => $summary]], 'can_write' => ['type' => 'boolean']]],
+            'SupplierOrdersCreated' => ['type' => 'object', 'properties' => ['orders' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/SupplierOrder']]]],
+            'SupplierOrdersInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['lines'], 'properties' => ['week_start' => $nDate, 'lines' => $lines]],
+            'SupplierOrder' => ['type' => 'object', 'properties' => $summary + [
+                'supplier_email' => $nStr, 'supplier_phone' => $nStr, 'note' => $nStr, 'can_edit' => ['type' => 'boolean'], 'can_receive' => ['type' => 'boolean'],
+                'lines' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'id' => ['type' => 'integer'], 'raw_material_id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'base_unit' => ['type' => 'string'], 'unit' => ['type' => 'string'], 'factor' => $num,
+                    'quantity' => $num, 'package_size' => $nNum, 'packages' => $nNum, 'unit_price' => $nNum, 'catalog_price' => $nNum, 'value' => $nNum,
+                    'received_qty' => $num, 'remaining' => $num, 'received_value' => $nNum, 'last_price' => $nNum, 'last_day' => $nDate,
+                    'price_gap_pct' => ['type' => 'number', 'nullable' => true, 'description' => 'dernier prix reçu vs prix commandé (%)'], 'qty_gap_pct' => $nNum,
+                ]]],
+                'receipts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['line_id' => ['type' => 'integer'], 'raw_material_id' => ['type' => 'integer'], 'received_on' => $date, 'quantity' => $num, 'unit_price' => $nNum]]],
+            ]],
+            'SupplierOrderInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
+                'delivery_date' => $nDate, 'language' => ['type' => 'string', 'enum' => ['pl', 'fr']], 'email_to' => $nStr, 'note' => $nStr, 'save_supplier_email' => ['type' => 'boolean'],
+            ]],
+            'SupplierOrderLinesInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['lines'], 'properties' => ['lines' => $lines]],
+            'SupplierOrderMail' => ['type' => 'object', 'properties' => ['recipient' => $nStr, 'language' => ['type' => 'string'], 'subject' => ['type' => 'string'], 'body' => ['type' => 'string'], 'template_id' => ['type' => 'integer', 'nullable' => true]]],
+            'SupplierOrderSendInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => ['manual' => ['type' => 'boolean', 'description' => 'commande passée hors e-mail']]],
+            'SupplierOrderReceiveInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['lines'], 'properties' => [
+                'received_on' => ['type' => 'string', 'format' => 'date', 'description' => 'défaut : aujourd\'hui'],
+                'lines' => ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['id', 'quantity'], 'properties' => [
+                    'id' => ['type' => 'integer', 'description' => 'ligne de la commande'], 'quantity' => ['type' => 'number', 'minimum' => 0], 'unit_price' => ['type' => 'number', 'nullable' => true],
+                ]]],
+            ]],
+            'SupplierOrderDeleted' => ['type' => 'object', 'properties' => ['deleted' => ['type' => 'boolean'], 'id' => ['type' => 'integer']]],
+        ];
+    }
+}

@@ -15,6 +15,7 @@ use App\Controllers\Api\Workshop\PlanningController;
 use App\Controllers\Api\Workshop\SchedulingController;
 use App\Controllers\Api\Workshop\ShiftTemplateController;
 use App\Controllers\Api\Workshop\TeamController;
+use App\Controllers\Api\Workshop\SupplyController;
 use App\Controllers\Api\Workshop\TimeStudyController;
 use App\Controllers\Api\Workshop\WeekController;
 use App\Controllers\Api\Workshop\WorkstationController;
@@ -122,6 +123,21 @@ final class WorkshopApiRoutes
             ['GET', '/manager/interview', ManagerController::class, 'interview', 'prod.manager.read'],
             ['GET', '/manager/audits', ManagerController::class, 'audits', 'prod.manager.read'],
             ['POST', '/manager/audits', ManagerController::class, 'addAudit', 'prod.manager.report'],
+            // Zaopatrzenie : potrzeby z produkcji, surowce (tryb, stany, inwentaryzacja), zamówienia do dostawców, przyjęcia.
+            ['GET', '/supply/needs', SupplyController::class, 'needs', 'prod.supply.read'],
+            ['GET', '/supply/materials', SupplyController::class, 'materials', 'prod.supply.read'],
+            ['PATCH', '/supply/materials/{id:\d+}', SupplyController::class, 'saveMaterial', 'prod.supply.write'],
+            ['POST', '/supply/materials/{id:\d+}/count', SupplyController::class, 'addCount', 'prod.supply.write'],
+            ['GET', '/supply/orders', SupplyController::class, 'orders', 'prod.supply.read'],
+            ['POST', '/supply/orders', SupplyController::class, 'createOrders', 'prod.supply.write'],
+            ['GET', '/supply/orders/{id:\d+}', SupplyController::class, 'order', 'prod.supply.read'],
+            ['PATCH', '/supply/orders/{id:\d+}', SupplyController::class, 'updateOrder', 'prod.supply.write'],
+            ['PUT', '/supply/orders/{id:\d+}/lines', SupplyController::class, 'saveLines', 'prod.supply.write'],
+            ['GET', '/supply/orders/{id:\d+}/preview', SupplyController::class, 'preview', 'prod.supply.read'],
+            ['POST', '/supply/orders/{id:\d+}/send', SupplyController::class, 'send', 'prod.supply.write'],
+            ['POST', '/supply/orders/{id:\d+}/receive', SupplyController::class, 'receive', 'prod.supply.write'],
+            ['POST', '/supply/orders/{id:\d+}/cancel', SupplyController::class, 'cancel', 'prod.supply.write'],
+            ['DELETE', '/supply/orders/{id:\d+}', SupplyController::class, 'delete', 'prod.supply.write'],
             ['POST', '/planning/week/move', WeekController::class, 'move', 'prod.gantt.move'],
             ['POST', '/planning/week/distribute', WeekController::class, 'distribute', 'prod.gantt.move'],
             ['POST', '/planning/week/pin', WeekController::class, 'pin', 'prod.gantt.move'],

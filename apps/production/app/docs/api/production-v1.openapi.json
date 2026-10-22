@@ -50,6 +50,10 @@
             "description": "Kierownik produkcji : karta stanowiska, cele, raport miesięczny, premia, rozmowa, audyt kompetencji / Responsable production : fiche de poste, objectifs, suivi mensuel, prime, entretien, audit des compétences"
         },
         {
+            "name": "supply",
+            "description": "Zaopatrzenie : potrzeby surowców i opakowań, stany, zamówienia do dostawców, przyjęcia / Approvisionnement : besoins matières et emballages, stocks, commandes fournisseurs, réceptions"
+        },
+        {
             "name": "docs",
             "description": "OpenAPI"
         }
@@ -6322,6 +6326,1130 @@
                     }
                 ],
                 "x-permission": "prod.manager.report"
+            }
+        },
+        "/supply/needs": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Potrzeby surowców i opakowań / Besoins en matières et emballages",
+                "operationId": "getSupplyNeeds",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplyNeeds"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Besoin = à produire de la feuille de la semaine ÷ pièces par carton × recette par carton (recette à plat). Stock = dernier inventaire (fin de journée) + réceptions − consommation de production depuis (cartons produits × recette) ; sans inventaire : depuis la première réception. À commander : matière « en stock » avec max — si dispo après production < min, réassort jusqu'au max ; sinon (« à la commande ») ce qui manque ; arrondi au colis fournisseur. Quantités dans l'unité de base de la matière (g, ml, szt…) ; unit / factor = unité affichée (kg, l…).",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "un jour de la première semaine de production (défaut : dans 7 jours)"
+                        }
+                    },
+                    {
+                        "name": "weeks",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 4
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/materials": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Surowce : tryb, stany, zużycie / Matières : mode, stocks, consommation",
+                "operationId": "listSupplyMaterials",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplyMaterials"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Toutes les matières : mode (stock / order), min., max., stock théorique, commandé non reçu, consommation moyenne par semaine (4 dernières semaines).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/materials/{id}": {
+            "patch": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Tryb i stany surowca / Mode et stocks d'une matière",
+                "operationId": "saveSupplyMaterial",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplyMaterial"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplyMaterialInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/materials/{id}/count": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Inwentaryzacja surowca / Inventaire d'une matière",
+                "operationId": "countSupplyMaterial",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplyMaterial"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Stock compté en fin de journée (unité de base) ; la consommation et les réceptions comptent à partir du lendemain.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplyCountInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/orders": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zamówienia do dostawców / Commandes fournisseurs",
+                "operationId": "listSupplierOrders",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrders"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "open",
+                                "all",
+                                "draft",
+                                "sent",
+                                "partial",
+                                "received",
+                                "cancelled"
+                            ],
+                            "description": "défaut : open (brouillon, envoyée, reçue en partie)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            },
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zamówienia z potrzeb (jedno na dostawcę) / Commandes depuis les besoins (une par fournisseur)",
+                "operationId": "createSupplierOrders",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrdersCreated"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Brouillons groupés par fournisseur courant de la matière ; livraison souhaitée la veille de la semaine (au plus tôt demain). SUPPLY_NO_SUPPLIER (422) : matière sans fournisseur.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplierOrdersInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/orders/{id}": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zamówienie : linie, przyjęcia, ceny / Commande : lignes, réceptions, prix",
+                "operationId": "getSupplierOrder",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrder"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            },
+            "patch": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zmień szkic zamówienia / Modifier une commande brouillon",
+                "operationId": "updateSupplierOrder",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrder"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Brouillon seulement (PO_NOT_EDITABLE, 409). save_supplier_email = enregistrer aussi l'adresse chez le fournisseur.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplierOrderInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            },
+            "delete": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Usuń szkic / Supprimer le brouillon",
+                "operationId": "deleteSupplierOrder",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrderDeleted"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/orders/{id}/lines": {
+            "put": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Linie szkicu (całość) / Lignes du brouillon (remplacées)",
+                "operationId": "saveSupplierOrderLines",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrder"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplierOrderLinesInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/orders/{id}/preview": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Podgląd maila / Aperçu de l'e-mail",
+                "operationId": "previewSupplierOrder",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrderMail"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/orders/{id}/send": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Wyślij mailem albo oznacz jako wysłane / Envoyer par e-mail ou marquer envoyée",
+                "operationId": "sendSupplierOrder",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrder"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "E-mail mis en file (modèle supplier_order, PL ou FR, CSV joint) ; manual = commande passée autrement (téléphone, magasin). PO_NO_LINES, PO_NO_EMAIL (422).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplierOrderSendInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/orders/{id}/receive": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Przyjęcie dostawy / Réception",
+                "operationId": "receiveSupplierOrder",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrder"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Quantité et prix réels par ligne (prix par défaut : prix commandé) ; reçue en partie ou en totalité. PO_NOT_RECEIVABLE (409) : commande non envoyée, reçue ou annulée.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplierOrderReceiveInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/orders/{id}/cancel": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Anuluj zamówienie / Annuler la commande",
+                "operationId": "cancelSupplierOrder",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrder"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
             }
         },
         "/planning/week/move": {
@@ -15894,6 +17022,903 @@
                     "comment": {
                         "type": "string",
                         "nullable": true
+                    }
+                }
+            },
+            "SupplyNeeds": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "weeks": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "week_start": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "week_end": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "iso_week": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "category": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "packaging": {
+                                    "type": "boolean"
+                                },
+                                "base_unit": {
+                                    "type": "string",
+                                    "example": "g"
+                                },
+                                "unit": {
+                                    "type": "string",
+                                    "example": "kg"
+                                },
+                                "factor": {
+                                    "type": "number",
+                                    "example": 1000
+                                },
+                                "supplier": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "email": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                },
+                                "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                        "order",
+                                        "stock"
+                                    ]
+                                },
+                                "stock_min": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "stock_max": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "stock": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "stock_basis": {
+                                    "type": "string",
+                                    "enum": [
+                                        "count",
+                                        "receipts"
+                                    ],
+                                    "nullable": true
+                                },
+                                "count_date": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "price": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "prix catalogue par unité de base"
+                                },
+                                "package_size": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "on_order": {
+                                    "type": "number"
+                                },
+                                "need": {
+                                    "type": "number"
+                                },
+                                "need_weeks": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "number"
+                                    }
+                                },
+                                "products": {
+                                    "type": "integer"
+                                },
+                                "available_after": {
+                                    "type": "number"
+                                },
+                                "to_order": {
+                                    "type": "number"
+                                },
+                                "packages": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "value": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "totals": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "warnings": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "SupplyMaterial": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "packaging": {
+                        "type": "boolean"
+                    },
+                    "base_unit": {
+                        "type": "string",
+                        "example": "g"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "example": "kg"
+                    },
+                    "factor": {
+                        "type": "number",
+                        "example": 1000
+                    },
+                    "supplier": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "email": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": [
+                            "order",
+                            "stock"
+                        ]
+                    },
+                    "stock_min": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "stock_max": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "stock": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "stock_basis": {
+                        "type": "string",
+                        "enum": [
+                            "count",
+                            "receipts"
+                        ],
+                        "nullable": true
+                    },
+                    "count_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "price": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "prix catalogue par unité de base"
+                    },
+                    "package_size": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "on_order": {
+                        "type": "number"
+                    }
+                }
+            },
+            "SupplyMaterials": {
+                "type": "object",
+                "properties": {
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "category": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "packaging": {
+                                    "type": "boolean"
+                                },
+                                "base_unit": {
+                                    "type": "string",
+                                    "example": "g"
+                                },
+                                "unit": {
+                                    "type": "string",
+                                    "example": "kg"
+                                },
+                                "factor": {
+                                    "type": "number",
+                                    "example": 1000
+                                },
+                                "supplier": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "email": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                },
+                                "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                        "order",
+                                        "stock"
+                                    ]
+                                },
+                                "stock_min": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "stock_max": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "stock": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "stock_basis": {
+                                    "type": "string",
+                                    "enum": [
+                                        "count",
+                                        "receipts"
+                                    ],
+                                    "nullable": true
+                                },
+                                "count_date": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "price": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "prix catalogue par unité de base"
+                                },
+                                "package_size": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "on_order": {
+                                    "type": "number"
+                                },
+                                "weekly_use": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "use_weeks": {
+                        "type": "integer"
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "SupplyMaterialInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "supply_mode": {
+                        "type": "string",
+                        "enum": [
+                            "order",
+                            "stock"
+                        ]
+                    },
+                    "stock_min": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "stock_max": {
+                        "type": "number",
+                        "nullable": true
+                    }
+                }
+            },
+            "SupplyCountInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "quantity"
+                ],
+                "properties": {
+                    "quantity": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "count_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "défaut : aujourd'hui"
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "SupplierOrders": {
+                "type": "object",
+                "properties": {
+                    "orders": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "ZD-20261022-001"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "draft",
+                                        "sent",
+                                        "partial",
+                                        "received",
+                                        "cancelled"
+                                    ]
+                                },
+                                "supplier": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "week_start": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "delivery_date": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "language": {
+                                    "type": "string",
+                                    "enum": [
+                                        "pl",
+                                        "fr"
+                                    ]
+                                },
+                                "email_to": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "sent_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "sent_by": {
+                                    "type": "string",
+                                    "enum": [
+                                        "email",
+                                        "manual"
+                                    ],
+                                    "nullable": true
+                                },
+                                "created_at": {
+                                    "type": "string"
+                                },
+                                "lines_count": {
+                                    "type": "integer"
+                                },
+                                "value_ordered": {
+                                    "type": "number"
+                                },
+                                "value_received": {
+                                    "type": "number"
+                                },
+                                "value_received_expected": {
+                                    "type": "number"
+                                },
+                                "received_pct": {
+                                    "type": "number"
+                                },
+                                "price_gaps": {
+                                    "type": "integer",
+                                    "description": "réceptions à un prix différent du prix commandé"
+                                }
+                            }
+                        }
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "SupplierOrdersCreated": {
+                "type": "object",
+                "properties": {
+                    "orders": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SupplierOrder"
+                        }
+                    }
+                }
+            },
+            "SupplierOrdersInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "lines"
+                ],
+                "properties": {
+                    "week_start": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "raw_material_id",
+                                "quantity"
+                            ],
+                            "properties": {
+                                "raw_material_id": {
+                                    "type": "integer"
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "description": "unité de base, > 0"
+                                },
+                                "unit_price": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "défaut : prix catalogue"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "SupplierOrder": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "ZD-20261022-001"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "sent",
+                            "partial",
+                            "received",
+                            "cancelled"
+                        ]
+                    },
+                    "supplier": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "week_start": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "delivery_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "language": {
+                        "type": "string",
+                        "enum": [
+                            "pl",
+                            "fr"
+                        ]
+                    },
+                    "email_to": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "sent_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "sent_by": {
+                        "type": "string",
+                        "enum": [
+                            "email",
+                            "manual"
+                        ],
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "lines_count": {
+                        "type": "integer"
+                    },
+                    "value_ordered": {
+                        "type": "number"
+                    },
+                    "value_received": {
+                        "type": "number"
+                    },
+                    "value_received_expected": {
+                        "type": "number"
+                    },
+                    "received_pct": {
+                        "type": "number"
+                    },
+                    "price_gaps": {
+                        "type": "integer",
+                        "description": "réceptions à un prix différent du prix commandé"
+                    },
+                    "supplier_email": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "supplier_phone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "can_edit": {
+                        "type": "boolean"
+                    },
+                    "can_receive": {
+                        "type": "boolean"
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "raw_material_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "base_unit": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "factor": {
+                                    "type": "number"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "package_size": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "packages": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "unit_price": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "catalog_price": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "value": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "received_qty": {
+                                    "type": "number"
+                                },
+                                "remaining": {
+                                    "type": "number"
+                                },
+                                "received_value": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "last_price": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "last_day": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "price_gap_pct": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "dernier prix reçu vs prix commandé (%)"
+                                },
+                                "qty_gap_pct": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "receipts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "line_id": {
+                                    "type": "integer"
+                                },
+                                "raw_material_id": {
+                                    "type": "integer"
+                                },
+                                "received_on": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "unit_price": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "SupplierOrderInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "delivery_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "language": {
+                        "type": "string",
+                        "enum": [
+                            "pl",
+                            "fr"
+                        ]
+                    },
+                    "email_to": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "save_supplier_email": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "SupplierOrderLinesInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "lines"
+                ],
+                "properties": {
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "raw_material_id",
+                                "quantity"
+                            ],
+                            "properties": {
+                                "raw_material_id": {
+                                    "type": "integer"
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "description": "unité de base, > 0"
+                                },
+                                "unit_price": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "défaut : prix catalogue"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "SupplierOrderMail": {
+                "type": "object",
+                "properties": {
+                    "recipient": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "subject": {
+                        "type": "string"
+                    },
+                    "body": {
+                        "type": "string"
+                    },
+                    "template_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                }
+            },
+            "SupplierOrderSendInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "manual": {
+                        "type": "boolean",
+                        "description": "commande passée hors e-mail"
+                    }
+                }
+            },
+            "SupplierOrderReceiveInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "lines"
+                ],
+                "properties": {
+                    "received_on": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "défaut : aujourd'hui"
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "id",
+                                "quantity"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "description": "ligne de la commande"
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "minimum": 0
+                                },
+                                "unit_price": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "SupplierOrderDeleted": {
+                "type": "object",
+                "properties": {
+                    "deleted": {
+                        "type": "boolean"
+                    },
+                    "id": {
+                        "type": "integer"
                     }
                 }
             },

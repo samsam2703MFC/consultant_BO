@@ -40,7 +40,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings', 'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month', 'cost_media_section_allocation', 'cost_media_type'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings', 'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month', 'cost_media_section_allocation', 'cost_media_type', 'communication_message', 'communication_message_attachment', 'communication_email_account', 'erp_company_data'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -98,6 +98,10 @@ $builder = new DI\ContainerBuilder();
 $builder->addDefinitions([
     PDO::class => $pdo,
     WorkshopConfig::class => new WorkshopConfig(['PRODUCTION_JWT_SECRET' => str_repeat('s', 48), 'API_BASE_URL' => 'https://erp.test', 'R2_PUBLIC_BASE_URL' => 'https://photos.r2.test']),
+    // Aucun e-mail ne part pendant les tests : la file est remplie, le transport refuse tout envoi.
+    App\Services\Communication\SmtpTransport::class => new class implements App\Services\Communication\SmtpTransport {
+        public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = []): string { throw new RuntimeException('no e-mail in tests'); }
+    },
 ]);
 $kernel = $builder->build()->get(WorkshopApiKernel::class);
 
@@ -1249,6 +1253,112 @@ check($s === 201 && $a && array_column($a['gaps'], 'question') === ['qual_haccp'
     'competency audit saved: gaps under the expected level (HACCP 1/2, native Polish 2/3), score by area');
 [$s, $b] = $call('GET', "/manager/interview?month={$month}", null, $dir);
 check($b['data']['competency']['id'] === $a['id'], 'interview shows the latest competency audit');
+
+// --- Zaopatrzenie : potrzeby z arkusza tygodnia, tryb i stany surowców, zamówienia do dostawców (mail), przyjęcia
+$pdo->exec("INSERT INTO supplier (id, name, email, is_active) VALUES (60, 'Młyn test', 'mlyn@supplier.test', 1), (61, 'Pakcer test', '', 1)");
+$pdo->exec("UPDATE raw_material SET id_current_supplier = 60, package_size_in_base_unit = 25000 WHERE id = 900");
+$pdo->exec("INSERT INTO unit (id, name) VALUES (5, 'szt') ON DUPLICATE KEY UPDATE name = name");
+$pdo->exec("UPDATE raw_material SET id_current_supplier = 61, package_size_in_base_unit = 100, id_unit = 5 WHERE id = 902");
+$pdo->exec("UPDATE raw_material SET id_current_supplier = NULL WHERE id = 901");
+[$s] = $call('GET', '/supply/needs', null, $lead);
+check($s === 403, 'supply needs its own permission (team lead has none)');
+[, $sh] = $call('GET', "/planning/sheet?date={$today}", null, $access);
+$cartons = (array_column($sh['data']['rows'], null, 'item_id')[$itemId]['to_produce'] ?? 0) / 60;
+[$s, $n] = $call('GET', "/supply/needs?date={$today}&weeks=1", null, $access);
+$flour = array_column($n['data']['rows'] ?? [], null, 'id')[900] ?? null;
+check($s === 200 && $cartons > 0 && $flour && abs($flour['need'] - $cartons * 1500) < 0.01 && $flour['unit'] === 'kg' && $flour['factor'] === 1000 && $flour['mode'] === 'order',
+    'need = to produce ÷ pieces per carton × recipe per carton (grams shown in kg)');
+check($flour['stock'] === null && $flour['to_order'] >= $flour['need'] && fmod($flour['to_order'], 25000) == 0 && $flour['packages'] === (int) ceil(round($flour['need'] / 25000, 6))
+    && in_array('Masło', $n['data']['warnings']['no_supplier'], true), 'on-demand material: the missing quantity rounded up to full supplier packages (25 kg); material without supplier flagged');
+[$s, $b] = $call('GET', "/supply/needs?date={$today}&weeks=9", null, $access);
+check($s === 422 && $codes($b) === ['weeks:OUT_OF_RANGE'], 'horizon of 1 to 4 weeks');
+// Na stanie : min. / maks., inwentaryzacja (stan na koniec dnia), zużycie z produkcji po niej
+[$s, $b] = $call('PATCH', '/supply/materials/900', ['supply_mode' => 'stock', 'stock_min' => 50000, 'stock_max' => 10000], $access);
+check($s === 422 && $codes($b) === ['stock_max:STOCK_MAX_BELOW_MIN'], 'stock max below min refused');
+[$s, $m] = $call('PATCH', '/supply/materials/900', ['supply_mode' => 'stock', 'stock_min' => 50000, 'stock_max' => 200000], $lead);
+check($s === 403, 'team lead cannot change supply settings');
+[$s, $m] = $call('PATCH', '/supply/materials/900', ['supply_mode' => 'stock', 'stock_min' => 50000, 'stock_max' => 200000], $access);
+check($s === 200 && $m['data']['mode'] === 'stock' && $m['data']['stock_max'] == 200000 && $m['data']['stock'] === null, 'material switched to stock with min / max');
+[$s, $b] = $call('POST', '/supply/materials/900/count', ['quantity' => 30000, 'count_date' => date('Y-m-d', strtotime('+1 day'))], $access);
+check($s === 422 && $codes($b) === ['count_date:IN_FUTURE'], 'no inventory in the future');
+// Kartony croissanta : 1 w dniu inwentaryzacji (już w stanie na koniec dnia), 2 dziś (zużycie po inwentaryzacji).
+$pdo->exec("INSERT INTO carton_stock (id_carton, batch_number, id_product, status, date_add) VALUES (9001, 9, 501, 1, CURDATE() - INTERVAL 1 DAY), (9002, 9, 501, 1, CURDATE()), (9003, 9, 501, 1, CURDATE())");
+[$s, $m] = $call('POST', '/supply/materials/900/count', ['quantity' => 30000, 'count_date' => date('Y-m-d', strtotime('-1 day'))], $access);
+$made = (int) $pdo->query("SELECT COUNT(*) FROM carton_stock WHERE id_product = 501 AND date_add > CURDATE() - INTERVAL 1 DAY")->fetchColumn();
+check($s === 201 && $made === 2 && abs($m['data']['stock'] - (30000 - $made * 1500)) < 0.01 && $m['data']['stock_basis'] === 'count', 'stock = count + receipts − production after the count day (cartons × recipe)');
+[$s, $n] = $call('GET', "/supply/needs?date={$today}&weeks=1", null, $access);
+$flour = array_column($n['data']['rows'], null, 'id')[900];
+$after = max(0, $flour['stock']) - $flour['need'];
+$expect = $after < 50000 ? ceil(round((200000 - $after) / 25000, 6)) * 25000 : 0;
+check(abs($flour['available_after'] - $after) < 0.01 && abs($flour['to_order'] - $expect) < 0.01 && abs($flour['value'] - $flour['to_order'] * 0.004) < 0.01,
+    'stocked material: under min after production → refill up to max, in full packages, valued at the catalogue price');
+// Zamówienia : jedno na dostawcę, mail, przyjęcia (ilości i ceny)
+[$s, $b] = $call('POST', '/supply/orders', ['lines' => [['raw_material_id' => 901, 'quantity' => 1000]]], $access);
+check($s === 422 && $b['description'] === 'SUPPLY_NO_SUPPLIER' && str_contains($b['message'], 'Masło'), 'a material without a supplier cannot be ordered');
+[$s, $b] = $call('POST', '/supply/orders', ['lines' => [['raw_material_id' => 900, 'quantity' => 0], ['raw_material_id' => 999999, 'quantity' => 5]]], $access);
+check($s === 422 && $codes($b) === ['lines.0.quantity:GREATER_THAN', 'lines.1.raw_material_id:REFERENCE_NOT_FOUND'], 'order lines validated');
+[$s, $c] = $call('POST', '/supply/orders', ['week_start' => $n['data']['date'], 'lines' => [['raw_material_id' => 900, 'quantity' => 50000], ['raw_material_id' => 902, 'quantity' => 300]]], $access);
+$bySupplier = array_column(array_map(fn($o) => $o + ['sid' => $o['supplier']['id']], $c['data']['orders'] ?? []), null, 'sid');
+$flourPo = $bySupplier[60] ?? null;
+$boxPo = $bySupplier[61] ?? null;
+$delivery = max(date('Y-m-d', strtotime('tomorrow')), date('Y-m-d', strtotime($n['data']['date'] . ' -1 day')));
+check($s === 201 && $flourPo && $boxPo && $flourPo['status'] === 'draft' && $flourPo['email_to'] === 'mlyn@supplier.test' && $boxPo['email_to'] === null
+    && $flourPo['lines'][0]['package_size'] == 25000 && $flourPo['lines'][0]['unit_price'] == 0.004 && $flourPo['delivery_date'] === $delivery && preg_match('/^ZD-\d{8}-\d{3}$/', $flourPo['code']),
+    'one draft order per supplier, catalogue price, delivery the day before the production week');
+[, $n2] = $call('GET', "/supply/needs?date={$today}&weeks=1", null, $access);
+check(abs(array_column($n2['data']['rows'], null, 'id')[900]['on_order'] - 50000) < 0.01, 'ordered quantities count as on order (no double proposal)');
+[$s, $p] = $call('GET', "/supply/orders/{$flourPo['id']}/preview", null, $access);
+check($s === 200 && str_contains($p['data']['body'], 'Mąka T65 — 50 kg (2 × 25 kg)') && str_contains($p['data']['subject'], $flourPo['code']) && $p['data']['recipient'] === 'mlyn@supplier.test',
+    'e-mail preview: lines in kg with supplier packages');
+[$s, $b] = $call('POST', "/supply/orders/{$boxPo['id']}/send", [], $access);
+check($s === 422 && $b['description'] === 'PO_NO_EMAIL', 'no supplier e-mail: cannot send by e-mail');
+[$s, $b] = $call('PATCH', "/supply/orders/{$boxPo['id']}", ['email_to' => 'not-an-email'], $access);
+check($s === 422 && $codes($b) === ['email_to:INVALID_EMAIL'], 'order e-mail address validated');
+[$s, $b] = $call('PATCH', "/supply/orders/{$boxPo['id']}", ['email_to' => 'biuro@pakcer.test', 'save_supplier_email' => true, 'language' => 'fr'], $access);
+check($s === 200 && $b['data']['email_to'] === 'biuro@pakcer.test' && $b['data']['language'] === 'fr'
+    && $pdo->query('SELECT email FROM supplier WHERE id = 61')->fetchColumn() === 'biuro@pakcer.test', 'address saved on the order and at the supplier');
+[$s, $p] = $call('GET', "/supply/orders/{$boxPo['id']}/preview", null, $access);
+check(str_starts_with($p['data']['body'], 'Bonjour') && str_contains($p['data']['body'], 'Karton 60 — 300 szt (3 × 100 szt)'), 'French e-mail for a French order');
+[$s, $b] = $call('POST', "/supply/orders/{$flourPo['id']}/receive", ['lines' => [['id' => $flourPo['lines'][0]['id'], 'quantity' => 10]]], $access);
+check($s === 409 && $b['description'] === 'PO_NOT_RECEIVABLE', 'a draft order cannot be received');
+[$s, $sent] = $call('POST', "/supply/orders/{$flourPo['id']}/send", [], $access);
+$msg = $pdo->query("SELECT m.recipient_email, m.status, m.message_type, COUNT(a.id) AS files FROM communication_message m LEFT JOIN communication_message_attachment a ON a.id_message = m.id WHERE m.id = " . (int) ($pdo->query("SELECT id_message FROM tfb_po WHERE id = {$flourPo['id']}")->fetchColumn() ?: 0) . ' GROUP BY m.id')->fetch();
+check($s === 200 && $sent['data']['status'] === 'sent' && $sent['data']['sent_by'] === 'email' && $msg && $msg['recipient_email'] === 'mlyn@supplier.test'
+    && $msg['status'] === 'queued' && $msg['message_type'] === 'supplier_order' && (int) $msg['files'] === 1, 'order sent: e-mail queued (CSV attached), nothing sent from the test');
+[$s, $b] = $call('PATCH', "/supply/orders/{$flourPo['id']}", ['note' => 'x'], $access);
+check($s === 409 && $b['description'] === 'PO_NOT_EDITABLE', 'a sent order is no longer editable');
+[$s, $b] = $call('POST', "/supply/orders/{$boxPo['id']}/send", ['manual' => true], $access);
+check($s === 200 && $b['data']['status'] === 'sent' && $b['data']['sent_by'] === 'manual', 'order placed by phone: marked as sent without e-mail');
+$lineId = $flourPo['lines'][0]['id'];
+[$s, $r] = $call('POST', "/supply/orders/{$flourPo['id']}/receive", ['lines' => [['id' => $lineId, 'quantity' => 25000, 'unit_price' => 0.0044]]], $access);
+$l = $r['data']['lines'][0] ?? null;
+check($s === 200 && $r['data']['status'] === 'partial' && $l && $l['received_qty'] == 25000 && $l['remaining'] == 25000 && abs($l['price_gap_pct'] - 10) < 0.01,
+    'partial delivery at a higher price: received, remaining and price gap (+10 %)');
+[, $mats] = $call('GET', '/supply/materials', null, $access);
+$fm = array_column($mats['data']['rows'], null, 'id')[900];
+check(abs($fm['stock'] - (30000 - $made * 1500 + 25000)) < 0.01 && abs($fm['on_order'] - 25000) < 0.01, 'the receipt adds to stock, the rest stays on order');
+[$s, $r] = $call('POST', "/supply/orders/{$flourPo['id']}/receive", ['received_on' => date('Y-m-d'), 'lines' => [['id' => $lineId, 'quantity' => 25000]]], $access);
+check($s === 200 && $r['data']['status'] === 'received' && $r['data']['lines'][0]['received_qty'] == 50000 && count($r['data']['receipts']) === 2, 'second delivery completes the order');
+[$s, $list] = $call('GET', '/supply/orders?status=all', null, $access);
+$sum = array_column($list['data']['orders'] ?? [], null, 'id')[$flourPo['id']] ?? null;
+check($s === 200 && $sum && $sum['received_pct'] == 100 && $sum['price_gaps'] === 1 && abs($sum['value_ordered'] - 200) < 0.01 && abs($sum['value_received'] - 210) < 0.01,
+    'order list: received %, price gaps, ordered 200 / received 210 PLN');
+[$s, $b] = $call('GET', '/supply/orders?status=bad', null, $access);
+check($s === 422, 'unknown status filter refused');
+[$s, $b] = $call('DELETE', "/supply/orders/{$flourPo['id']}", null, $access);
+check($s === 409, 'only a draft can be deleted');
+[$s, $c] = $call('POST', '/supply/orders', ['lines' => [['raw_material_id' => 902, 'quantity' => 100]]], $access);
+$draft = $c['data']['orders'][0]['id'];
+[$s, $b] = $call('PUT', "/supply/orders/{$draft}/lines", ['lines' => [['raw_material_id' => 902, 'quantity' => 200, 'unit_price' => 3.5], ['raw_material_id' => 902, 'quantity' => 1]]], $access);
+check($s === 422 && $codes($b) === ['lines.1.raw_material_id:DUPLICATE_IN_LIST'], 'a material appears once per order');
+[$s, $b] = $call('PUT', "/supply/orders/{$draft}/lines", ['lines' => [['raw_material_id' => 902, 'quantity' => 200, 'unit_price' => 3.5]]], $access);
+check($s === 200 && $b['data']['lines'][0]['quantity'] == 200 && $b['data']['lines'][0]['unit_price'] == 3.5 && $b['data']['value_ordered'] == 700, 'draft lines replaced');
+[$s, $b] = $call('DELETE', "/supply/orders/{$draft}", null, $access);
+check($s === 200 && $b['data']['deleted'] && (int) $pdo->query("SELECT COUNT(*) FROM tfb_po WHERE id = {$draft}")->fetchColumn() === 0, 'draft deleted');
+[$s, $b] = $call('POST', "/supply/orders/{$boxPo['id']}/cancel", null, $access);
+check($s === 200 && $b['data']['status'] === 'cancelled', 'sent order cancelled');
+[$s] = $call('GET', '/supply/orders/999999', null, $access);
+check($s === 404, 'unknown order → 404');
 
 // Journal, en-têtes, JSON invalide, OpenAPI public
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');

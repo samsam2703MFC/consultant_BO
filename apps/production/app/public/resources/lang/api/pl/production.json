@@ -63,7 +63,13 @@
     "OUTPUT_CANCELLED": "Ta partia jest anulowana.",
     "WEEK_WARNING_FIXED_NO_SHIFT": "Stała partia 📌 „{product}” ({day}) : grupa nie ma tego dnia zmiany — partia czeka w „Do zrobienia”.",
     "QC_ALREADY_NC": "Ta partia ma już zgłoszoną niezgodność — dalej w rejestrze niezgodności w ERP.",
-    "MANAGER_NO_DRAFTS": "Brak szkiców celów do zatwierdzenia."
+    "MANAGER_NO_DRAFTS": "Brak szkiców celów do zatwierdzenia.",
+    "SUPPLY_NO_SUPPLIER": "Surowiec bez dostawcy — ustaw dostawcę bieżącego w karcie surowca : {materials}.",
+    "PO_NOT_EDITABLE": "Tego zamówienia nie można już zmienić (status : {status}).",
+    "PO_NO_LINES": "Zamówienie nie ma żadnej linii.",
+    "PO_NO_EMAIL": "Brak adresu e-mail dostawcy — wpisz adres albo oznacz zamówienie jako wysłane ręcznie.",
+    "PO_NOT_RECEIVABLE": "Dostawę można przyjąć tylko dla zamówienia wysłanego (status : {status}).",
+    "PO_NO_TEMPLATE": "Brak szablonu e-mail zamówienia do dostawcy (supplier_order)."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -360,7 +366,19 @@
     "assessed_user_id": "konto osoby ocenianej",
     "answers": "odpowiedzi",
     "comment": "komentarz",
-    "period": "okres"
+    "period": "okres",
+    "lines": "linie",
+    "email_to": "adres e-mail",
+    "delivery_date": "data dostawy",
+    "supply_mode": "tryb zaopatrzenia",
+    "count_date": "data inwentaryzacji",
+    "received_on": "data przyjęcia",
+    "unit_price": "cena",
+    "raw_material_id": "surowiec",
+    "weeks": "liczba tygodni",
+    "manual": "wysłane ręcznie",
+    "save_supplier_email": "zapisz adres u dostawcy",
+    "week_start": "tydzień"
   },
   "entities": {
     "group": "grupa",
@@ -380,6 +398,8 @@
     "signature": "podpis",
     "output": "partia",
     "haccp_event": "zdarzenie HACCP",
-    "product": "produkt"
+    "product": "produkt",
+    "raw_material": "surowiec",
+    "supplier_order": "zamówienie do dostawcy"
   }
 }

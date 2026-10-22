@@ -1527,3 +1527,18 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-list-batch { width: 150px; margin-left: auto; }
 .tfb-list-labour { display: flex; align-items: center; gap: 4px; }
 .tfb-list-labour .input-group { width: 96px; flex-wrap: nowrap; }
+
+/* Zaopatrzenie : potrzeby wg dostawcy, zamówienia (statusy), przyjęcia, podgląd maila. */
+.tfb-supply-bar { margin-bottom: 12px; }
+.tfb-supply-supplier { margin-bottom: 14px; }
+.tfb-supply-supplier .card-header h5 { font-size: 16px; }
+.tfb-supply-table tr.is-idle td { opacity: .62; }
+.tfb-supply-qty { width: 150px; flex-wrap: nowrap; }
+.tfb-supply-click { cursor: pointer; }
+.tfb-supply-mail, .tfb-supply-receive { margin-top: 14px; }
+.tfb-supply-mail-body { white-space: pre-wrap; font-family: inherit; background: var(--bs-light, #f6f3ef); border-radius: 8px; padding: 10px 12px; margin-top: 8px; }
+.tfb-po-draft { background: #e9e3dc; color: #4a3f36; }
+.tfb-po-sent { background: #dbe8f5; color: #1f4f7a; }
+.tfb-po-partial { background: #fff1cc; color: #7a5a00; }
+.tfb-po-received { background: #d9efe0; color: #22663a; }
+.tfb-po-cancelled { background: #f1d9dc; color: #8d1d2c; }

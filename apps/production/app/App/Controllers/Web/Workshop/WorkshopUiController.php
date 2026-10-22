@@ -36,6 +36,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/manager', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
+    /** Zaopatrzenie : potrzeby surowców i opakowań z produkcji, stany, zamówienia do dostawców (mailem), przyjęcia. */
+    public function supply()
+    {
+        $this->view('workshop/supply', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
+    }
+
     public function gantt()
     {
         $this->view('workshop/gantt', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);

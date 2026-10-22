@@ -17,7 +17,7 @@ final class OpenApiSpec
     {
         $paths = [];
         foreach (WorkshopApiRoutes::routes() as [$method, $path, , , $permission]) {
-            $doc = (self::operations() + OpenApiProducts::operations() + OpenApiPlanning::operations() + OpenApiExecution::operations() + OpenApiManager::operations())[$method . ' ' . $path] ?? null;
+            $doc = (self::operations() + OpenApiProducts::operations() + OpenApiPlanning::operations() + OpenApiExecution::operations() + OpenApiManager::operations() + OpenApiSupply::operations())[$method . ' ' . $path] ?? null;
             if ($doc === null) {
                 throw new \LogicException("Undocumented route {$method} {$path}");
             }
@@ -83,6 +83,7 @@ final class OpenApiSpec
                 ['name' => 'kiosk', 'description' => 'Tablet na hali / Tablette de l\'atelier'],
                 ['name' => 'phone', 'description' => 'Wejście / wyjście telefonem (kod QR tabletu) / Pointage au téléphone (QR code de la tablette)'],
                 ['name' => 'manager', 'description' => 'Kierownik produkcji : karta stanowiska, cele, raport miesięczny, premia, rozmowa, audyt kompetencji / Responsable production : fiche de poste, objectifs, suivi mensuel, prime, entretien, audit des compétences'],
+                ['name' => 'supply', 'description' => 'Zaopatrzenie : potrzeby surowców i opakowań, stany, zamówienia do dostawców, przyjęcia / Approvisionnement : besoins matières et emballages, stocks, commandes fournisseurs, réceptions'],
                 ['name' => 'docs', 'description' => 'OpenAPI'],
             ],
             'paths' => $paths,
@@ -187,7 +188,7 @@ final class OpenApiSpec
                 'Lang' => ['name' => 'lang', 'in' => 'query', 'required' => false, 'description' => 'Język komunikatów / Langue des messages (sinon Accept-Language)', 'schema' => ['type' => 'string', 'enum' => ['pl', 'fr']]],
             ],
             'responses' => $errorResponses,
-            'schemas' => OpenApiProducts::schemas() + OpenApiPlanning::schemas() + OpenApiExecution::schemas() + OpenApiManager::schemas() + [
+            'schemas' => OpenApiProducts::schemas() + OpenApiPlanning::schemas() + OpenApiExecution::schemas() + OpenApiManager::schemas() + OpenApiSupply::schemas() + [
                 'Error' => ['type' => 'object', 'required' => ['status', 'description', 'message', 'request_id'], 'properties' => [
                     'status' => ['type' => 'string', 'enum' => ['error']],
                     'description' => ['type' => 'string', 'example' => 'VALIDATION_FAILED'],

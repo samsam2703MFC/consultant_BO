@@ -63,7 +63,13 @@
     "OUTPUT_CANCELLED": "Ce lot est annulé.",
     "WEEK_WARNING_FIXED_NO_SHIFT": "Lot fixe 📌 « {product} » ({day}) : le groupe n'a pas d'équipe ce jour-là — le lot attend dans « À produire ».",
     "QC_ALREADY_NC": "Ce lot a déjà une non-conformité — la suite dans le registre des non-conformités de l'ERP.",
-    "MANAGER_NO_DRAFTS": "Aucun brouillon d'objectif à valider."
+    "MANAGER_NO_DRAFTS": "Aucun brouillon d'objectif à valider.",
+    "SUPPLY_NO_SUPPLIER": "Matière sans fournisseur — définissez le fournisseur courant dans la fiche matière : {materials}.",
+    "PO_NOT_EDITABLE": "Cette commande ne peut plus être modifiée (statut : {status}).",
+    "PO_NO_LINES": "La commande n’a aucune ligne.",
+    "PO_NO_EMAIL": "Pas d’adresse e-mail du fournisseur — saisissez une adresse ou marquez la commande comme passée autrement.",
+    "PO_NOT_RECEIVABLE": "Une réception n’est possible que pour une commande envoyée (statut : {status}).",
+    "PO_NO_TEMPLATE": "Modèle d’e-mail de commande fournisseur absent (supplier_order)."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -360,7 +366,19 @@
     "assessed_user_id": "compte évalué",
     "answers": "réponses",
     "comment": "commentaire",
-    "period": "période"
+    "period": "période",
+    "lines": "lignes",
+    "email_to": "adresse e-mail",
+    "delivery_date": "date de livraison",
+    "supply_mode": "mode d’approvisionnement",
+    "count_date": "date d’inventaire",
+    "received_on": "date de réception",
+    "unit_price": "prix",
+    "raw_material_id": "matière",
+    "weeks": "nombre de semaines",
+    "manual": "passée autrement",
+    "save_supplier_email": "enregistrer l’adresse chez le fournisseur",
+    "week_start": "semaine"
   },
   "entities": {
     "group": "groupe",
@@ -380,6 +398,8 @@
     "signature": "signature",
     "output": "lot",
     "haccp_event": "événement HACCP",
-    "product": "produit"
+    "product": "produit",
+    "raw_material": "matière",
+    "supplier_order": "commande fournisseur"
   }
 }
