@@ -110,7 +110,8 @@ final class TeamSheetService
             $rows[] = ['item_id' => $p['item_id'], 'name' => $p['name'], 'item_type' => $p['item_type'], 'unit' => $unit['label'], 'factor' => $unit['factor'], 'ppc' => $p['ppc'],
                 'batch' => $p['batch'], 'quantity' => round($total, 3), 'need' => $p['quantity'], 'cartons' => $p['ppc'] ? round($total / $p['ppc'], 1) : null,
                 'batches' => $p['batch'] ? round($total / $p['batch'], 2) : null, 'hours' => round(array_sum(array_column($p['slots'], 'hours')) + (float) $p['unassigned_h'], 2),
-                'direct' => $p['direct'], 'stock' => $p['stock'], 'due_date' => $due ? min($due) : null, 'unassigned_qty' => round((float) $p['unassigned_qty'], 3), 'days' => $perDay];
+                // Nadwyżka ponad potrzebę tygodnia idzie na magazyn.
+                'direct' => $p['direct'], 'stock' => round(max(0.0, $total - (float) $p['direct']), 3), 'due_date' => $due ? min($due) : null, 'unassigned_qty' => round((float) $p['unassigned_qty'], 3), 'days' => $perDay];
             if ($p['ppc'] && $total > self::EPS && isset($recipes[$p['item_id']])) {
                 foreach ($recipes[$p['item_id']] as $ing) {
                     $need[$ing['material_id']] = ($need[$ing['material_id']] ?? 0.0) + $total / $p['ppc'] * $ing['quantity'];

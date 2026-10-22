@@ -1484,7 +1484,8 @@ $blocksSorted = $team && array_reduce($team['days'], fn($ok, $d) => $ok && array
 check($s === 200 && $ts['data']['days'] && $team && count($team['days']) === count($ts['data']['days']) && $blocksSorted
     && array_sum(array_map(fn($d) => count($d['blocks']), $team['days'])) === array_sum(array_map(fn($p) => count($p['days']), $team['products'])),
     'team sheet: teams producing this week, a calendar of the production days with the blocks of the week board, product table');
-check(!array_filter($team['products'], fn($r) => abs($r['quantity'] - array_sum(array_column($r['days'], 'quantity')) - $r['unassigned_qty']) > 0.01 || !array_key_exists('need', $r)),
+check(!array_filter($team['products'], fn($r) => abs($r['quantity'] - array_sum(array_column($r['days'], 'quantity')) - $r['unassigned_qty']) > 0.01 || !array_key_exists('need', $r)
+        || abs($r['direct'] + $r['stock'] - $r['quantity']) > 0.01),
     'team sheet total = what lies on the days + what waits (weekly need given apart)');
 // Dostawa mąki w tygodniu : zespół croissanta jej potrzebuje (receptura) — na liście i w kalendarzu dnia.
 $deliveryDay = $ts['data']['days'][1]['date'];
