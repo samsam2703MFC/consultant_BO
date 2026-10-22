@@ -40,7 +40,7 @@
   "job.working_time_default": "Pełny etat",
   "job.hours_month": "{h} h / mies.",
   "job.c_pay": "Wynagrodzenie",
-  "job.pay_value": "{fixed} brutto / mies. stałe + premia do {variable} brutto / mies. ({pct} % brutto, wypłacana według celów) : {total} brutto / mies., gdy wszystkie cele są osiągnięte (maks. {cap} przy 120 %).",
+  "job.pay_value": "{fixed} brutto / mies. stałe + premia {variable} brutto / mies. przy 100 % celów ({pct} % brutto), do {variable_cap} przy 120 % : {total} brutto / mies., gdy wszystkie cele są osiągnięte, maksymalnie {cap} brutto / mies.",
   "job.c_start": "Data rozpoczęcia pracy",
   "job.c_languages": "Języki",
   "job.languages_value": "Polski ojczysty, francuski zawodowy, angielski mile widziany",

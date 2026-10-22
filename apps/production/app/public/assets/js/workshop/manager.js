@@ -145,7 +145,7 @@
             ['job.c_contract', p.contract_type || missing],
             ['job.c_time', (p.working_time || T('job.working_time_default')) + (p.monthly_hours ? ' · ' + T('job.hours_month', {h: n(p.monthly_hours, 0, lang)}) : '')],
             ['job.c_pay', p.salary_monthly === null ? missing : T('job.pay_value', {fixed: money(lang, p.salary_monthly, p.currency),
-                variable: money(lang, p.salary_monthly * p.envelope_pct / 100, p.currency), pct: n(p.envelope_pct, 0, lang),
+                variable: money(lang, p.salary_monthly * p.envelope_pct / 100, p.currency), variable_cap: money(lang, p.monthly_at_cap - p.salary_monthly, p.currency), pct: n(p.envelope_pct, 0, lang),
                 total: money(lang, p.monthly_at_target, p.currency), cap: money(lang, p.monthly_at_cap, p.currency)})],
             ['job.c_start', p.holder_start || missing],
             ['job.c_languages', T('job.languages_value')],

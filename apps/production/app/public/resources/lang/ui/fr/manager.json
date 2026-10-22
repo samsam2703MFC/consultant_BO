@@ -40,7 +40,7 @@
   "job.working_time_default": "Temps plein",
   "job.hours_month": "{h} h / mois",
   "job.c_pay": "Rémunération",
-  "job.pay_value": "{fixed} brut / mois fixe + variable jusqu'à {variable} brut / mois ({pct} % du brut, versé selon les objectifs) : {total} brut / mois si tous les objectifs sont atteints (plafond {cap} à 120 %).",
+  "job.pay_value": "{fixed} brut / mois fixe + variable de {variable} brut / mois à 100 % des objectifs ({pct} % du brut), jusqu'à {variable_cap} à 120 % : {total} brut / mois si tous les objectifs sont atteints, maximum absolu {cap} brut / mois.",
   "job.c_start": "Date d'entrée",
   "job.c_languages": "Langues",
   "job.languages_value": "Polonais natif, français professionnel, anglais apprécié",
