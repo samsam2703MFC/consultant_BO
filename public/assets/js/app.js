@@ -886,6 +886,18 @@ class App {
   }
   moisPartiel(){ return this.moisIdxComplet() !== this.moisIdx(); }
   moisLabel(){ return (this.M && this.M.MOIS && this.M.MOIS[this.moisIdx()]) || ''; }
+  jourJ(){ const t = (this.M && this.M.TODAY) ? new Date(this.M.TODAY + 'T12:00:00') : new Date(); return isNaN(t) ? new Date() : t; }
+  /* La part du mois m de l'exercice qui est écoulée (22/10/2026) : 1 pour un
+     mois clos, jour / jours du mois pour le mois en cours. Le réel du mois en
+     cours s'arrête à aujourd'hui ; sa cible doit s'arrêter au même jour, sinon
+     octobre comptait 31 jours de cible face à 22 jours de ventes. */
+  partMois(m){ const y = this.exo(), t = this.jourJ();
+    if (t.getFullYear() !== y || t.getMonth() !== m) { return 1; }
+    return t.getDate() / new Date(y, m + 1, 0).getDate(); }
+  /* « au 22/10 » quand le dernier mois du réel est en cours, « à fin septembre » sinon. */
+  moisLong(m){ return ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][m] || ''; }
+  libADate(){ const mi = this.moisIdx(), t = this.jourJ();
+    return this.partMois(mi) < 1 ? 'au ' + String(t.getDate()).padStart(2, '0') + '/' + String(t.getMonth() + 1).padStart(2, '0') : 'à fin ' + this.moisLong(mi); }
   ownerOf(t){ const c = t.owner.t === 'c'; const p = (c ? this.D.consultants : this.D.suppliers).find(x => x.id === t.owner.id); return { nom: p.nom, email: p.email, type: c ? 'Consultant' : 'Fournisseur' }; }
   taskState(t){ if (t.done) return t.done <= t.due ? 'Livrée à temps' : 'Livrée en retard';
     return t.due < this.M.TODAY ? 'En retard' : 'En cours'; }
@@ -1710,9 +1722,15 @@ class App {
         // d'atteinte : deux mois de budget encodés contre huit mois de réel,
         // soit une performance contre presque rien.
         const cibleDe = c => (c && c.caT) ? c.caT : ((c && c.theo) ? c.theo : 0);
+        // Le réel court jusqu'à aujourd'hui : la cible du mois en cours n'en
+        // compte que les jours écoulés.
+        const fMI = this.partMois(MI), aDate = this.libADate();
+        common.objReelLib = 'Réel ' + aDate;
+        const jJ = this.jourJ().getDate(), mL = this.moisLong(MI);
+        common.objPartTxt = fMI < 1 ? 'Cible ' + (/^[aeiou]/.test(mL) ? 'd’' : 'de ') + mL + ' comptée pour ' + jJ + (jJ > 1 ? ' jours' : ' jour') + ' sur ' + Math.round(jJ / fMI) + ', comme le réel.' : '';
         let reelT = 0, prorataT = 0, cibleT = 0;
         const rows = this.open().map(s => { const cible = s.perf[E].reduce((a, r) => a + cibleDe(r), 0);
-          let reel = 0, pro = 0; for (let m = 0; m <= MI; m++){ reel += s.perf[E][m].ca; pro += cibleDe(s.perf[E][m]); }
+          let reel = 0, pro = 0; for (let m = 0; m <= MI; m++){ reel += s.perf[E][m].ca; pro += cibleDe(s.perf[E][m]) * (m === MI ? fMI : 1); }
           reelT += reel; prorataT += pro; cibleT += cible; const att = pro > 0 ? reel / pro : null;
           const t = att == null ? { txt: '', st: 'color:var(--color-text-muted)' } : this.trend(att, 1);
           // D'où vient la cible : validée, ou reprise de l'étude. Les deux ne
@@ -1734,7 +1752,8 @@ class App {
         common.objCibleSrc = cibleReseau > 0 ? '' : 'somme des magasins — aucune cible réseau encodée';
         common.objReel = this.fM(reelT); common.objProrata = this.fM(prorataT);
         const att = reelT / prorataT; common.objAtt = this.fP(att); common.objAttSt = 'font-weight:700;color:' + (att >= 1 ? '#2d7a3e' : att >= 0.92 ? '#8a5a13' : '#8D1D2C');
-        let resteCible = 0;
+        // Le reste de l'année : les jours à venir du mois en cours, puis les mois suivants.
+        let resteCible = this.open().reduce((a, s2) => a + cibleDe(s2.perf[E][MI]), 0) * (1 - fMI);
         for (let m = MI + 1; m < 12; m++) {
           resteCible += this.open().reduce((a, s2) => a + cibleDe(s2.perf[E][m]), 0);
         }
@@ -1749,21 +1768,23 @@ class App {
         // <polyline> reçoit des points NaN/Infinity. On trace quand même le réel.
         const mxv = Math.max(ac, cumR.length ? Math.max.apply(null, cumR) : 0, 1);
         const px = m => 20 + m * (620 / 11); const py = v => 195 - (isFinite(v) ? v : 0) / mxv * 175;
-        const pts = arr => arr.map((v, m) => px(m).toFixed(0) + ',' + py(v).toFixed(0)).filter(p => !/NaN|Infinity/.test(p)).join(' ');
-        common.trajCible = ac > 0 ? pts(cumC) : '';
-        common.trajReel = pts(cumR);
+        // Le dernier point du réel se pose au jour d'aujourd'hui, pas en fin de mois.
+        const xM = m => Math.max(0, m === MI ? px(MI - 1 + fMI) : px(m));
+        const pts = (arr, x) => arr.map((v, m) => x(m).toFixed(0) + ',' + py(v).toFixed(0)).filter(p => !/NaN|Infinity/.test(p)).join(' ');
+        common.trajCible = ac > 0 ? pts(cumC, px) : '';
+        common.trajReel = pts(cumR, xM);
         const budAn = this.open().reduce((a, s) => a + s.perf[E].reduce((b, r) => b + (r.caT || 0), 0), 0);
         common.cumBudget = this.fM(budAn); common.cumReel = this.fM(reelT);
         // Le nombre de mois de RÉEL, pas les mois de budget du premier magasin
         // venu : l'étiquette disait « 2 mois » sous un réel qui en couvrait huit.
         const moisReel = M.MOIS.filter((_, m) => this.open().some(s2 => s2.perf[E][m].ca != null)).length;
         common.cumLabel = 'Budget validé ' + this.meta.exercice + ' — ' + this.open().length + ' magasins';
-        common.cumReelLabel = 'Réel encodé' + (moisReel ? ' (' + moisReel + ' mois)' : '');
+        common.cumReelLabel = fMI < 1 ? 'Réel ' + aDate : 'Réel encodé' + (moisReel ? ' (' + moisReel + ' mois)' : '');
         common.objNote = (this.meta.notes || {}).objectifsOuverture || '';
         const ec = reelT - prorataT;
         common.cumEcart = (ec >= 0 ? '+' : '−') + this.fK(Math.abs(ec)) + ' (' + (ec >= 0 ? '+' : '−') + this.fP(Math.abs(reelT / prorataT - 1)) + ')';
         common.cumEcartSt = 'font-weight:500;color:' + (ec >= 0 ? '#2d7a3e' : '#8D1D2C');
-        const sous = this.open().filter(s => { let r = 0, p = 0; for (let m = 0; m <= MI; m++){ r += s.perf[E][m].ca; p += s.perf[E][m].caT; } return r < p; }).length;
+        const sous = this.open().filter(s => { let r = 0, p = 0; for (let m = 0; m <= MI; m++){ r += s.perf[E][m].ca; p += s.perf[E][m].caT * (m === MI ? fMI : 1); } return r < p; }).length;
         common.cumSous = sous + ' / ' + this.open().length;
       } else {
         // Sans cible réseau encodée, l'horizon reste 3 ou 5 ans — pas l'exercice.
@@ -1973,7 +1994,10 @@ class App {
     const bud = (D.budgets || []).find(b => b.storeId === st.id) || { charges: [] };
     const P = st.perf[this.meta.exercice];
     common.bExercice = this.meta.exercice;
-    common.bCumMois = this.moisLabel();
+    // Le cumul s'arrête au jour d'aujourd'hui quand le dernier mois est en cours :
+    // son budget n'en compte que les jours écoulés, comme le réel.
+    const MIb = this.moisIdx(), fMIb = this.partMois(MIb), pb = m => (m === MIb ? fMIb : 1);
+    common.bCumMois = (fMIb < 1 ? this.jourJ().getDate() + ' ' : '') + this.moisLabel().toLowerCase();
     common.bEncodes = (bud.moisEncodes || 0) + ' / ' + (bud.moisTotal || 12);
     common.bDernier = bud.dernierEncodage ? this.fD(bud.dernierEncodage) + '/' + bud.dernierEncodage.slice(0, 4) : '';
     common.bStore = st.id;
@@ -1981,7 +2005,7 @@ class App {
     common.bStoreOpts = this.open().map(x => ({ id: x.id, nom: x.nom }));
     common.bMeta = st.code + ' · ' + st.zone + ' · franchisé ' + st.fr;
     const budgetAn = P.reduce((a, r) => a + (r.caT || 0), 0);
-    let reel = 0, pro = 0; for (let m = 0; m <= this.moisIdx(); m++){ reel += P[m].ca; pro += P[m].caT; }
+    let reel = 0, pro = 0; for (let m = 0; m <= MIb; m++){ reel += P[m].ca; pro += P[m].caT * pb(m); }
     common.bBudgetAn = this.fE(budgetAn);
     const sg = v => (v >= 0 ? '+' : '−') + this.fE(Math.abs(v));
     const sgp = v => (v >= 0 ? '+' : '−') + this.fP(Math.abs(v));
@@ -2022,7 +2046,7 @@ class App {
         return vs.length ? vs.reduce((a, v) => a + v, 0) : null;
       }) : null;
       budgetAnC = Pc.reduce((a, r) => a + r.caT, 0);
-      reelC = 0; proC = 0; for (let m = 0; m <= this.moisIdx(); m++){ reelC += Pc[m].ca; proC += Pc[m].caT; }
+      reelC = 0; proC = 0; for (let m = 0; m <= MIb; m++){ reelC += Pc[m].ca; proC += Pc[m].caT * pb(m); }
     }
     const theoAnC = theoC2 ? theoC2.reduce((a, v) => a + (v || 0), 0) : null;
 
@@ -2035,7 +2059,7 @@ class App {
       budSt: r.caT ? 'width:16px;height:' + h(r.caT) + 'px;background:#D8CEC2;border-radius:3px 3px 0 0'
         : 'width:16px;height:2px;background:var(--color-border-secondary)',
       reelSt: r.ca == null ? 'width:16px;height:2px;background:var(--color-border-secondary)' : 'width:16px;height:' + h(r.ca) + 'px;background:var(--color-primary);border-radius:3px 3px 0 0' }));
-    common.bMoisCols = M.MOIS.map((nom, i) => ({ nom, st: i <= 6 ? 'color:var(--color-text);font-weight:500' : 'color:var(--color-text-muted)' }));
+    common.bMoisCols = M.MOIS.map((nom, i) => ({ nom, st: i <= MIb ? 'color:var(--color-text);font-weight:500' : 'color:var(--color-text-muted)' }));
     // Zéro n'est pas une valeur ici : un mois budgété à 0 € n'existe pas en
     // boutique, c'est un mois qu'on n'a pas encodé. On l'affiche comme tel.
     const fn = v => (v == null || v === 0) ? '' : Math.round(v).toLocaleString('fr-BE');
@@ -2049,17 +2073,18 @@ class App {
     // Un écart contre un mois NON ENCODÉ n'est pas un écart : « +167 353 € »
     // contre un budget absent laissait croire à une performance, alors qu'il
     // n'y avait rien à battre. Zéro compte donc comme une absence, ici aussi.
-    const ecPair = (a, b) => Pc.map((r, i) => { const av = a(r, i), bv = b(r, i);
+    // `aDate` : l'écart du RÉEL au mois en cours se mesure aux jours écoulés de sa cible.
+    const ecPair = (a, b, aDate) => Pc.map((r, i) => { const av = a(r, i), b0 = b(r, i), bv = (b0 != null && aDate) ? b0 * pb(i) : b0;
       const v = (av == null || bv == null || bv === 0) ? null : av - bv;
       return { txt: v == null ? '' : sg(v).replace(' €', ''), st: ecSt(v),
         pct: v == null ? '' : sgp(av / bv - 1), pctSt: pctSt(v) }; });
-    common.bLigneEc = ecPair(r => r.ca, r => r.caT);
-    common.bEcTheo = theoC2 ? ecPair(r => r.ca, (r, i) => theoC2[i]) : [];
+    common.bLigneEc = ecPair(r => r.ca, r => r.caT, true);
+    common.bEcTheo = theoC2 ? ecPair(r => r.ca, (r, i) => theoC2[i], true) : [];
     common.bEcBudTheo = theoC2 ? ecPair(r => r.caT, (r, i) => theoC2[i]) : [];
     const totPair = (av, bv) => { const v = av - bv;
       return { txt: sg(v).replace(' €', ''), st: 'padding:9px 6px 9px 14px;text-align:right;white-space:nowrap;font-weight:500;border-left:0.5px solid var(--color-border-tertiary);color:' + col(v),
         pct: sgp(av / bv - 1), pctSt: pctSt(v) }; };
-    const theoCumC = theoC2 ? theoC2.slice(0, 7).reduce((a, v) => a + v, 0) : 0;
+    const theoCumC = theoC2 ? theoC2.slice(0, MIb + 1).reduce((a, v, m) => a + (v || 0) * pb(m), 0) : 0;
     common.bTotEcPair = totPair(reelC, proC);
     common.bTotEcTheo = theoC2 ? totPair(reelC, theoCumC) : null;
     common.bTotEcBudTheo = theoC2 ? totPair(budgetAnC, theoAnC) : null;
@@ -2127,8 +2152,8 @@ class App {
     let mgTotRes = 0, ecTotRes = 0, resReel = 0, resBud = 0, resTheo = 0;
     const sgK = v => (v >= 0 ? '+' : '−') + this.fK(Math.abs(v));
     common.bParMag = perStore.map(x2 => {
-      let r7 = 0, b7 = 0; for (let m = 0; m <= this.moisIdx(); m++){ r7 += x2.P[m].ca; b7 += x2.P[m].caT; }
-      const t7 = x2.theoM ? x2.theoM.slice(0, this.nMois()).reduce((a, v) => a + v, 0) : null;
+      let r7 = 0, b7 = 0; for (let m = 0; m <= MIb; m++){ r7 += x2.P[m].ca; b7 += x2.P[m].caT * pb(m); }
+      const t7 = x2.theoM ? x2.theoM.slice(0, MIb + 1).reduce((a, v, m) => a + (v || 0) * pb(m), 0) : null;
       const ecB = r7 - b7, ecT = t7 == null ? null : r7 - t7, mq = ecT != null && ecT < 0 ? -ecT : 0;
       mgTotRes += mq; ecTotRes += ecB; resReel += r7; resBud += b7; resTheo += (t7 || 0);
       return { nom: x2.s.nom, zone: x2.s.zone,
