@@ -1,6 +1,6 @@
 {
   "title": "Plan zespołów",
-  "subtitle": "Kalendarz, produkcja i dostawy surowców na tydzień — PDF do druku (zespół na stronie) albo na tablecie zespołu.",
+  "subtitle": "Kalendarz, produkcja i dostawy surowców na tydzień — PDF do druku (zespół na stronie) albo na tablecie zespołu ; niżej listy dnia (PDF) według dni wysyłki.",
   "lang_switch": "Français",
   "loading": "Wczytywanie…",
   "error_generic": "Coś poszło nie tak. Spróbuj ponownie.",
@@ -61,5 +61,19 @@
   "weekday_6": "sob.",
   "weekday_7": "niedz.",
   "need": "potrzeba tygodnia : {qty}",
-  "need_help": "Na dniach leży więcej niż potrzeba tygodnia (stałe partie 📌, pełne partie) — zespół robi to, co zaplanowano na dni."
+  "need_help": "Na dniach leży więcej niż potrzeba tygodnia (stałe partie 📌, pełne partie) — zespół robi to, co zaplanowano na dni.",
+  "lists_title": "Listy dnia (PDF)",
+  "lists_summary": "lista produkcyjna na sekcje, zapotrzebowanie materiałowe, zwroty — według dni wysyłki zamówień",
+  "lists_help": "Dni wysyłki z oczekującymi zamówieniami (maks. {max}) — pierwszy wybrany dzień jest dniem produkcji, kolejne są pokazane do wglądu.",
+  "lists_none": "Brak oczekujących zamówień — lista produkcyjna i zapotrzebowanie nie mają czego pokazać.",
+  "lists_orders": "{n} zam. · {kg} kg",
+  "lists_stock_min": "Uwzględnij minimalne stany magazynowe",
+  "list_production": "Lista produkcyjna",
+  "list_requirement": "Zapotrzebowanie materiałowe",
+  "list_complaint": "Lista dla zwrotów",
+  "lists_complaints": "Zwroty czekające na wysyłkę : {n} prod. (niezależnie od dni).",
+  "lists_no_complaints": "Brak zwrotów czekających na wysyłkę.",
+  "lists_pick": "Wybierz co najmniej jeden dzień wysyłki.",
+  "lists_error": "Serwer odpowiedział kodem {code}.",
+  "lists_safe": "Nic nie jest zapisywane : listy są tylko liczone i pobierane jako PDF."
 }

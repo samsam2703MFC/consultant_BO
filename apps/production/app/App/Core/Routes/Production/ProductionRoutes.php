@@ -4,22 +4,18 @@ use FastRoute\RouteCollector;
 return function(RouteCollector $r) {
 
 
-    // Dawna « lista zamówień » : ten sam wybór zamówień i te same PDF-y są w kreatorze
-    $r->addRoute('GET', '/production/planning', ['redirect' => '/production/plan-wizard']);
+    // Dawna « lista zamówień » i kreator « Planuj produkcję » : jedna strona « Plan zespołów » (listy dnia PDF w środku).
+    $r->addRoute('GET', '/production/planning', ['redirect' => '/workshop/team-sheet']);
+    $r->addRoute('GET', '/production/plan-wizard', ['redirect' => '/workshop/team-sheet']);
 
-    // Kreator „Planuj produkcję” (tylko odczyt; PDF-y z tras /ajax/production-list/* poniżej)
-    $r->addRoute('GET', '/production/plan-wizard', [
-        'controller' => App\Controllers\Web\Production\ProductionPlanWizardController::class,
-        'method'     => 'index'
-    ]);
-
-    $r->addRoute('POST', '/ajax/production-plan/preview', [
-        'controller' => App\Controllers\Web\Production\ProductionPlanWizardController::class,
-        'method'     => 'ajaxPreview'
+    // Listy dnia (PDF) na stronie Plan zespołów : dni wysyłki z oczekującymi zamówieniami (PDF-y z /ajax/production-list/*).
+    $r->addRoute('GET', '/ajax/production-plan/days', [
+        'controller' => App\Controllers\Web\Production\ProductionDayListsController::class,
+        'method'     => 'ajaxDays'
     ]);
 
     $r->addRoute('GET', '/ajax/production-plan/complaints', [
-        'controller' => App\Controllers\Web\Production\ProductionPlanWizardController::class,
+        'controller' => App\Controllers\Web\Production\ProductionDayListsController::class,
         'method'     => 'ajaxComplaints'
     ]);
 

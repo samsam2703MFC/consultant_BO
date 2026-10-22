@@ -1572,3 +1572,12 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-team-time { font-weight: 700; font-variant-numeric: tabular-nums; }
 .tfb-team-delivery { background: #dbe8f5; color: #1f4f7a; border-radius: 6px; padding: 4px 6px; font-size: 12px; }
 .tfb-team-table th.is-today, .tfb-team-table td.is-today { background: #fff8e6; }
+.tfb-team-lists > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.tfb-team-lists > summary::-webkit-details-marker { display: none; }
+.tfb-team-lists > summary::before { content: '▸'; color: #8d1d2c; }
+.tfb-team-lists[open] > summary::before { content: '▾'; }
+.tfb-list-days { display: flex; flex-wrap: wrap; gap: 8px; }
+.tfb-list-day { display: flex; gap: 8px; align-items: flex-start; border: 1px solid rgba(0,0,0,.12); border-radius: 10px; padding: 8px 12px; cursor: pointer; background: #fff; }
+.tfb-list-day span { display: flex; flex-direction: column; }
+.tfb-list-day.is-on { border-color: #8d1d2c; background: #f8eef0; }
+.tfb-list-day.is-off { opacity: .5; cursor: default; }

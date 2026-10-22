@@ -1,6 +1,6 @@
 {
   "title": "Plan des équipes",
-  "subtitle": "Calendrier, production et arrivages de matières de la semaine — PDF à imprimer (une équipe par page) ou sur la tablette de l'équipe.",
+  "subtitle": "Calendrier, production et arrivages de matières de la semaine — PDF à imprimer (une équipe par page) ou sur la tablette de l'équipe ; plus bas, les listes du jour (PDF) d'après les jours d'expédition.",
   "lang_switch": "Polski",
   "loading": "Chargement…",
   "error_generic": "Une erreur est survenue. Réessayez.",
@@ -61,5 +61,19 @@
   "weekday_6": "sam.",
   "weekday_7": "dim.",
   "need": "besoin de la semaine : {qty}",
-  "need_help": "Les jours portent plus que le besoin de la semaine (lots fixes 📌, lots complets) — l'équipe fait ce qui est planifié sur les jours."
+  "need_help": "Les jours portent plus que le besoin de la semaine (lots fixes 📌, lots complets) — l'équipe fait ce qui est planifié sur les jours.",
+  "lists_title": "Listes du jour (PDF)",
+  "lists_summary": "liste de production par section, besoin en matières, retours — d'après les jours d'expédition des commandes",
+  "lists_help": "Jours d'expédition des commandes en attente ({max} max.) — le premier jour choisi est le jour de production, les suivants sont indiqués pour information.",
+  "lists_none": "Aucune commande en attente — la liste de production et le besoin en matières sont vides.",
+  "lists_orders": "{n} cde · {kg} kg",
+  "lists_stock_min": "Inclure les stocks minimums",
+  "list_production": "Liste de production",
+  "list_requirement": "Besoin en matières",
+  "list_complaint": "Liste des retours",
+  "lists_complaints": "Retours en attente d'expédition : {n} produit(s) (quels que soient les jours).",
+  "lists_no_complaints": "Aucun retour en attente d'expédition.",
+  "lists_pick": "Choisissez au moins un jour d'expédition.",
+  "lists_error": "Le serveur a répondu avec le code {code}.",
+  "lists_safe": "Rien n'est enregistré : les listes sont seulement calculées et téléchargées en PDF."
 }

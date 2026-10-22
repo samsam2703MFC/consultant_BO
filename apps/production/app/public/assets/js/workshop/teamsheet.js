@@ -3,6 +3,8 @@
  * semaine dans l'ordre des heures, effectif, heures), production (total, lots, heures, expédition / stock, jours,
  * reste non réparti) et arrivages de matières utiles à l'équipe (matières de ses recettes). PDF à imprimer, une
  * équipe par page A4 ; sur la tablette de l'équipe, le même plan (accueil › « Plan tygodnia » ou lien …/kiosk#week).
+ * En bas, les listes du jour (PDF) d'après les jours d'expédition des commandes en attente : liste de production par
+ * section, besoin en matières, liste des retours (ancienne page « Planuj produkcję », redirigée ici).
  */
 (async function () {
     'use strict';
@@ -31,15 +33,21 @@
     let state = readHash();
     let data = null;
     let tablet = false;
+    // Listy dnia (PDF) : dni wysyłki z oczekującymi zamówieniami, wczytywane przy pierwszym otwarciu.
+    const lists = {open: !!state.lists, days: null, max: 4, picked: new Set(), stockMin: false, complaints: null};
 
+    // Adresse : #date=…&group=…&lists=… ; ?date=… (anciens liens « Planuj produkcję ») = jour d'expédition des listes.
     function readHash() {
         const p = new URLSearchParams(location.hash.replace(/^#/, ''));
-        return {date: /^\d{4}-\d{2}-\d{2}$/.test(p.get('date') || '') ? p.get('date') : todayIso, group: Number(p.get('group')) || null};
+        const old = new URLSearchParams(location.search).get('date');
+        const date = p.get('date') || old || '';
+        return {date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : todayIso, group: Number(p.get('group')) || null, lists: p.get('lists') || old || null};
     }
     function writeHash() {
         const p = new URLSearchParams({date: state.date});
         if (state.group) p.set('group', state.group);
-        history.replaceState(null, '', '#' + p.toString());
+        if (lists.open) p.set('lists', '1');
+        history.replaceState(null, '', location.pathname + '#' + p.toString());
     }
 
     const head = () => `<div class="tfb-head"><div><h3>${esc(t('title'))}</h3><p class="text-muted mb-0">${esc(t('subtitle'))}</p></div>
@@ -59,11 +67,101 @@
     }
 
     function draw() {
+        const y = window.scrollY;
         writeHash();
         const teams = data.teams.filter(x => !state.group || x.id === state.group);
         el.innerHTML = head() + bar() + (tablet ? tabletCard() : '')
-            + (teams.length ? teams.map(teamCard).join('') : `<div class="card"><div class="card-body text-muted">${esc(t('empty_week'))}</div></div>`);
+            + (teams.length ? teams.map(teamCard).join('') : `<div class="card"><div class="card-body text-muted">${esc(t('empty_week'))}</div></div>`)
+            + listsCard();
         bind();
+        window.scrollTo(0, y);
+        if (lists.open && lists.days === null) loadLists();
+    }
+
+    // --- Listy dnia (PDF) -------------------------------------------------------------------------------------
+    function listsCard() {
+        return `<details class="card tfb-team-lists" data-lists ${lists.open ? 'open' : ''}><summary class="card-header"><i class="bi bi-file-earmark-pdf"></i>
+                <strong>${esc(t('lists_title'))}</strong> <span class="small text-muted">${esc(t('lists_summary'))}</span></summary>
+            <div class="card-body">${lists.days === null ? `<p class="text-muted mb-0">${esc(t('loading'))}</p>` : listsBody()}</div></details>`;
+    }
+
+    function listsBody() {
+        const weekday = (iso) => t('weekday_' + (new Date(iso + 'T12:00:00').getDay() || 7));
+        const full = lists.picked.size >= lists.max;
+        const days = lists.days.length ? `<p class="small mb-2">${esc(t('lists_help', {max: lists.max}))}</p>
+            <div class="tfb-list-days">${lists.days.map(d => {
+                const on = lists.picked.has(d.date);
+                return `<label class="tfb-list-day ${on ? 'is-on' : ''} ${!on && full ? 'is-off' : ''}"><input class="form-check-input" type="checkbox" data-list-day="${esc(d.date)}" ${on ? 'checked' : ''} ${!on && full ? 'disabled' : ''}>
+                    <span><strong>${esc(weekday(d.date))} ${esc(day(d.date))}</strong><small>${esc(t('lists_orders', {n: d.orders.length, kg: n(d.kg, 0)}))}</small></span></label>`;
+            }).join('')}</div>
+            <label class="form-check form-switch small mt-2"><input class="form-check-input" type="checkbox" data-list-stock ${lists.stockMin ? 'checked' : ''}> ${esc(t('lists_stock_min'))}</label>`
+            : `<p class="text-muted mb-2">${esc(t('lists_none'))}</p>`;
+        const none = !lists.picked.size;
+        return days + `<div class="d-flex flex-wrap gap-2 mt-2">
+                <button type="button" class="btn btn-sm btn-primary" data-list-pdf="production" ${none ? 'disabled' : ''}><i class="bi bi-list-check"></i> ${esc(t('list_production'))}</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-list-pdf="requirement" ${none ? 'disabled' : ''}><i class="bi bi-basket"></i> ${esc(t('list_requirement'))}</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-list-pdf="complaint"><i class="bi bi-arrow-counterclockwise"></i> ${esc(t('list_complaint'))}</button></div>
+            <p class="small text-muted mt-2 mb-0">${lists.complaints === null ? '' : esc(lists.complaints ? t('lists_complaints', {n: lists.complaints}) : t('lists_no_complaints'))} ${esc(t('lists_safe'))}</p>`;
+    }
+
+    async function loadLists() {
+        const root = (el.dataset.root || '').replace(/\/$/, '');
+        try {
+            const [d, c] = await Promise.all([
+                fetch(root + '/ajax/production-plan/days', {credentials: 'same-origin', headers: {'Accept': 'application/json'}}).then(r => r.ok ? r.json() : Promise.reject(new Error(t('lists_error', {code: r.status})))),
+                fetch(root + '/ajax/production-plan/complaints', {credentials: 'same-origin', headers: {'Accept': 'application/json'}}).then(r => r.ok ? r.json() : null).catch(() => null),
+            ]);
+            lists.days = d.days || [];
+            lists.max = d.max_dates || 4;
+            lists.complaints = c ? c.products : null;
+            const wanted = lists.days.find(x => x.date === state.lists);
+            if (!lists.picked.size && lists.days.length) lists.picked.add((wanted || lists.days[0]).date);
+        } catch (err) {
+            lists.days = [];
+            ui.notify(false, err.message);
+        }
+        draw();
+    }
+
+    function download(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    // PDF klasyczne (/ajax/production-list/*) : zamówienia wybranych dni wysyłki ; pierwszy dzień = dzień produkcji.
+    async function listPdf(kind, btn) {
+        const orders = lists.days.filter(d => lists.picked.has(d.date)).flatMap(d => d.orders);
+        if (kind !== 'complaint' && !orders.length) { ui.notify(false, t('lists_pick')); return; }
+        const stock = lists.stockMin ? 1 : 0;
+        const [path, payload] = {
+            production: ['/ajax/production-list/standard', {order_id: orders, stock_minimum: stock, production_list: 1}],
+            requirement: ['/ajax/production-list/requirement/pdf', {order_id: orders, stock_minimum: stock}],
+            complaint: ['/ajax/production-list/complaint', {}],
+        }[kind];
+        btn.disabled = true;
+        try {
+            const res = await fetch((el.dataset.root || '').replace(/\/$/, '') + path, {method: 'POST', credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json', 'Accept': 'application/pdf'}, body: JSON.stringify(payload)});
+            if (!res.ok || !(res.headers.get('Content-Type') || '').includes('pdf')) {
+                let msg = '';
+                try { msg = (await res.json()).message || ''; } catch (e) { /* treść nie-JSON */ }
+                throw new Error(msg || t('lists_error', {code: res.status}));
+            }
+            const m = /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') || '');
+            const name = m ? m[1] : kind + '.pdf';
+            download(await res.blob(), name);
+            ui.notify(true, t('pdf_ready', {name}));
+        } catch (err) {
+            ui.notify(false, err.message);
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     function bar() {
@@ -144,14 +242,7 @@
             const bin = atob(f.content_base64);
             const bytes = new Uint8Array(bin.length);
             for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
-            const url = URL.createObjectURL(new Blob([bytes], {type: 'application/pdf'}));
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = f.filename;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+            download(new Blob([bytes], {type: 'application/pdf'}), f.filename);
             ui.notify(true, t('pdf_ready', {name: f.filename}));
         } catch (err) {
             ui.notify(false, errText(err));
@@ -174,6 +265,18 @@
             try { await navigator.clipboard.writeText(input.value); } catch (e) { input.select(); document.execCommand('copy'); }
             ui.notify(true, t('copied'));
         });
+        el.querySelector('[data-lists]').addEventListener('toggle', (e) => {
+            if (lists.open === e.target.open) return;
+            lists.open = e.target.open;
+            writeHash();
+            if (lists.open && lists.days === null) loadLists();
+        });
+        el.querySelectorAll('[data-list-day]').forEach(c => c.addEventListener('change', () => {
+            if (c.checked) lists.picked.add(c.dataset.listDay); else lists.picked.delete(c.dataset.listDay);
+            draw();
+        }));
+        el.querySelector('[data-list-stock]')?.addEventListener('change', (e) => { lists.stockMin = e.target.checked; });
+        el.querySelectorAll('[data-list-pdf]').forEach(b => b.addEventListener('click', () => listPdf(b.dataset.listPdf, b)));
     }
 
     el.addEventListener('click', async (e) => {
