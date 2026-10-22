@@ -948,3 +948,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-22T12:47:26Z plan des équipes : total planifié (lots fixes inclus)
 2026-10-22T12:53:13Z plan des équipes : surplus des lots fixes compté pour le stock
 2026-10-22T13:29:51Z une seule page de planification : Plan des équipes (listes du jour PDF incluses)
+2026-10-22T13:54:57Z mots de passe des comptes ERP en bcrypt
