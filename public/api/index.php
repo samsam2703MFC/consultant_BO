@@ -482,6 +482,7 @@ function route(string $method, string $path): mixed
             $path === '/franchises'                    => ep_franchises(),
             $path === '/franchises/fiche'              => ep_franchises_fiche(),
             $path === '/franchises/documents'          => ep_franchises_documents(),
+            $path === '/franchises/documents/mail-materiel' => ep_franchises_mail_materiel(),
             $path === '/rapports/ca-net'               => ep_rapports_ca_net(),
             $path === '/consultants/checklists'        => ep_consultants_checklists(),
             $path === '/franchises/meteo'              => ep_franchises_meteo(),
@@ -636,6 +637,7 @@ function route(string $method, string $path): mixed
     // Le CA net d'un mois, tous les magasins, par e-mail (22/10/2026).
     if ($method === 'POST' && $path === '/rapports/ca-net/envoyer') { return wr_rapports_ca_net_envoyer(); }
     if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
+    if ($method === 'POST' && $path === '/franchises/documents/mail-materiel') { return wr_franchises_mail_materiel(); }
     if ($method === 'POST' && $path === '/marketing/avis/sync') { return wr_reputation_sync(); }
     if ($method === 'PUT' && preg_match('#^/marketing/avis/([\w-]+)/fiche$#', $path, $m)) { return wr_reputation_fiche($m[1]); }
     if ($method === 'PUT' && $path === '/parametres/google-cle') { return wr_google_compte(); }
