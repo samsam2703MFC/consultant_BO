@@ -83,6 +83,8 @@ require __DIR__ . '/../../src/mesure.php';
 require __DIR__ . '/../../src/taches_suivi.php';
 require __DIR__ . '/../../src/cq_mail.php';
 require __DIR__ . '/../../src/pointages_mail.php';
+require __DIR__ . '/../../src/documents.php';
+require __DIR__ . '/../../src/ca_net_mois.php';
 require __DIR__ . '/../../src/controles_qualite.php';
 require __DIR__ . '/../../src/kpi_table.php';
 require __DIR__ . '/../../src/tablette.php';
@@ -118,6 +120,11 @@ try {
         echo ep_ca_mail_apercu();
         exit;
     }                      // tables + seed + secret au premier appel
+    // Un document d'un franchisé (22/10/2026) sort tel quel (PDF, image, Word…), pas en JSON.
+    if ($method === 'GET' && $path === '/franchises/documents/fichier') {
+        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        ep_franchises_document_fichier();   // sort le fichier, puis exit
+    }
     // Le suivi des newsletters (pixel d'ouverture, clic, désinscription) est
     // ouvert au monde : c'est le client, depuis sa boîte mail, qui l'appelle.
     if ($method === 'GET' && preg_match('#^/marketing/newsletter/(o|c|u)/([a-f0-9]{32})$#', $path, $m)) {
@@ -474,6 +481,8 @@ function route(string $method, string $path): mixed
             $path === '/consultants/gestion'           => ep_consultants_gestion(),
             $path === '/franchises'                    => ep_franchises(),
             $path === '/franchises/fiche'              => ep_franchises_fiche(),
+            $path === '/franchises/documents'          => ep_franchises_documents(),
+            $path === '/rapports/ca-net'               => ep_rapports_ca_net(),
             $path === '/consultants/checklists'        => ep_consultants_checklists(),
             $path === '/franchises/meteo'              => ep_franchises_meteo(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
@@ -622,6 +631,11 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/rapports/(\d+)/envoyer$#', $path, $m)) { return wr_rapport_envoyer((int) $m[1]); }
     // --- dossiers déposés dans docs/dossiers/ : envoi en pièces jointes (SMTP du cockpit)
     if ($method === 'POST' && $path === '/dossiers/fichiers/envoyer') { return wr_dossiers_envoyer(); }
+    // Les documents d'un franchisé (22/10/2026) : dépôt en multipart, retrait.
+    if ($method === 'POST' && $path === '/franchises/documents') { return wr_franchises_documents(); }
+    // Le CA net d'un mois, tous les magasins, par e-mail (22/10/2026).
+    if ($method === 'POST' && $path === '/rapports/ca-net/envoyer') { return wr_rapports_ca_net_envoyer(); }
+    if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
     if ($method === 'POST' && $path === '/marketing/avis/sync') { return wr_reputation_sync(); }
     if ($method === 'PUT' && preg_match('#^/marketing/avis/([\w-]+)/fiche$#', $path, $m)) { return wr_reputation_fiche($m[1]); }
     if ($method === 'PUT' && $path === '/parametres/google-cle') { return wr_google_compte(); }

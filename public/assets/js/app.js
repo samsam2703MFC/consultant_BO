@@ -1437,6 +1437,9 @@ class App {
       ['Marque & marketing', [
         // Une seule entrée (16/10/2026) : le hub, ses deux portes vers le portail, et les onglets de campagne.
         ['marketing', 'Marketing', ((((this.state.mh || {}).d || {}).aFaire) || []).filter(a => a.niveau === 'urgent' && a.canal !== 'social').length, ['mktCampagnes', 'mktCalendrier', 'bxcampagnes', 'mesure']],
+        // Le Marketing lui-même (dépôt marketing, servi à /marketing/ à côté du cockpit) : campagnes et leur
+        // assistant, réseaux sociaux, publicités Meta. Il s'ouvre dans un onglet à part.
+        ['ext:../marketing/', 'Marketing ↗', 0],
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
@@ -14313,6 +14316,45 @@ class App {
         : s3 === 'vide' ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
         : s3 === 'erreur' ? 'background:rgba(141,29,44,0.12);color:#8D1D2C'
         : 'background:#FBEFE0;color:#8a5a13');
+    // L'envoi ponctuel du CA net d'un mois, tous les magasins (22/10/2026, Sam : « net pas brut ») : le mois se lit
+    // par lots au panel (TTC − TVA, ticket par ticket) ; l'écran relit tant que ça avance, puis l'envoi s'ouvre.
+    const cn = S.caNet || {};
+    const cnMois = cn.mois || (() => { const t = new Date(); t.setDate(1); t.setMonth(t.getMonth() - 1); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); })();
+    const cnCharge = (mois, force) => {
+      const c0 = this.state.caNet || {};
+      if (!force && c0.mois === mois && (c0.d || c0.chargement)) { return; }
+      this.setState({ caNet: Object.assign({}, c0, { mois, chargement: true, d: c0.mois === mois ? c0.d : null, msg: force ? c0.msg : null }) });
+      readOne('/rapports/ca-net?mois=' + mois).then(d => {
+        const c1 = this.state.caNet || {};
+        if (c1.mois !== mois) { return; }
+        const essais = (c1.essais || 0) + 1, avance = !c1.d || (d && d.aLire < c1.d.aLire);
+        this.setState({ caNet: Object.assign({}, c1, { chargement: false, d: d || { error: 'injoignable' }, essais }) });
+        if (d && !d.complet && !d.indispo && avance && essais < 12) { setTimeout(() => { const c2 = this.state.caNet || {}; if (c2.mois === mois && this.state.screen === 'reporting') { cnCharge(mois, true); } }, 800); }
+      });
+    };
+    cnCharge(cnMois, false);
+    const cd = cn.mois === cnMois && cn.d && !cn.d.error && !cn.d.indispo ? cn.d : null;
+    const eur = v => Number(v || 0).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const cnA = cn.a || (cd && cd.adresses && cd.adresses[0]) || '';
+    common.caNet = {
+      mois: cnMois, libelle: cd ? cd.libelle : '', chargement: !cd && !(cn.d && (cn.d.error || cn.d.indispo)),
+      erreur: cn.d && cn.d.error ? 'Le CA du mois ne se lit pas : ' + cn.d.error : (cn.d && cn.d.indispo ? cn.d.motif : ''),
+      moisOpts: ((cd && cd.moisDispo) || [{ v: cnMois, nom: cnMois }]).map(o => ({ v: o.v, nom: o.nom, on: o.v === cnMois })),
+      setMois: e => { this.setState({ caNet: { mois: e.target.value, a: cn.a } }); },
+      adresses: ((cd && cd.adresses) || []).map(a => ({ v: a, nom: a, on: a === cnA })), setA: e => this.setState({ caNet: Object.assign({}, cn, { a: e.target.value }) }),
+      lignes: cd ? cd.magasins.map(m => ({ nom: m.nom.split(' - ').pop(), net: eur(m.net), tva: eur(m.tva), brut: eur(m.brut), tickets: Number(m.tickets).toLocaleString('fr-BE'), lu: m.joursLus < m.jours ? m.joursLus + ' / ' + m.jours + ' j' : '' })) : [],
+      reseau: cd ? { net: eur(cd.reseau.net), tva: eur(cd.reseau.tva), brut: eur(cd.reseau.brut), tickets: Number(cd.reseau.tickets).toLocaleString('fr-BE') } : null,
+      etat: !cd ? '' : (!cd.complet ? 'Lecture des tickets au panel : ' + cd.aLire + ' journée(s) magasin restent à lire…' : (cd.sansTva ? cd.sansTva + ' ticket(s) sans TVA au panel : le net ne se calcule pas.' : 'Mois entièrement lu · du ' + this.fD(cd.du) + ' au ' + this.fD(cd.au))),
+      pret: !!cd && cd.complet && !cd.sansTva && !!cnA && !!cd.smtp && !cn.envoi, smtp: cd ? cd.smtp : true, envoi: !!cn.envoi, msg: cn.msg || null,
+      sansAdresse: !!cd && !(cd.adresses || []).length,
+      envoyer: () => {
+        if (!cd || cn.envoi) { return; }
+        this.setState({ caNet: Object.assign({}, cn, { envoi: true, msg: null, a: cnA }) });
+        write('api', 'POST', '/rapports/ca-net/envoyer', { mois: cnMois, a: cnA }).then(r => {
+          const c1 = this.state.caNet || {};
+          this.setState({ caNet: Object.assign({}, c1, { envoi: false, msg: r.ok ? { ok: true, txt: 'Envoyé à ' + r.a + ' : « ' + r.sujet + ' ».' } : { ok: false, txt: 'Pas envoyé : ' + (r.error || 'HTTP ' + r.status) } }) });
+        });
+      } };
     common.rapGen = {
       chargement: !rz || rz.chargement,
       cronUrl: (rd && rd.cronUrl) || '',
