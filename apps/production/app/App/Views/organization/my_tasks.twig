@@ -10,6 +10,8 @@
                 {% if member and member.position_name %}{{ member.position_name }} · {{ 'now'|day_pl }}{% else %}{{ 'now'|day_pl }}{% endif %}
             </p>
         </div>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+        <a class="btn btn-sm btn-outline-primary" href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły</a>
         {% if counts %}
         <div class="at-task-counts">
             <span class="badge bg-info">do zrobienia {{ counts.open }}</span>
@@ -17,6 +19,7 @@
             {% if counts.overdue %}<span class="badge bg-danger">zaległe {{ counts.overdue }}</span>{% endif %}
         </div>
         {% endif %}
+        </div>
     </div>
 {% endblock %}
 

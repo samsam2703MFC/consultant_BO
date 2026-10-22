@@ -12,6 +12,16 @@ return function (RouteCollector $r) {
     $r->addRoute('PATCH', '/ajax/organization/positions/{id:\d+}', ['controller' => $c, 'method' => 'savePosition']);
     $r->addRoute('POST', '/ajax/organization/positions/{id:\d+}/tasks', ['controller' => $c, 'method' => 'addTask']);
     $r->addRoute('PATCH', '/ajax/organization/tasks/{id:\d+}', ['controller' => $c, 'method' => 'updateTask']);
+    $r->addRoute('POST', '/ajax/organization/task-categories', ['controller' => $c, 'method' => 'saveCategory']);
+    $r->addRoute('PATCH', '/ajax/organization/task-categories/{id:\d+}', ['controller' => $c, 'method' => 'saveCategory']);
+
+    // Zadania z formularzem (protokół zebrania) i śledzenie produkcji.
+    $f = App\Controllers\Web\Organization\TaskFormController::class;
+    $r->addRoute('GET', '/my-tasks/{id:\d+}/form', ['controller' => $f, 'method' => 'form']);
+    $r->addRoute('PUT', '/ajax/my-tasks/{id:\d+}/form', ['controller' => $f, 'method' => 'save']);
+    $r->addRoute('GET', '/task-forms', ['controller' => $f, 'method' => 'list']);
+    $r->addRoute('GET', '/task-forms/{id:\d+}', ['controller' => $f, 'method' => 'show']);
+    $r->addRoute('GET', '/production/follow-up', ['controller' => $f, 'method' => 'followUp']);
     $r->addRoute('PUT', '/ajax/organization/users/{id:\d+}/position', ['controller' => $c, 'method' => 'assign']);
     $r->addRoute('PUT', '/ajax/organization/users/{id:\d+}/module-role', ['controller' => $c, 'method' => 'moduleRole']);
 };

@@ -1,0 +1,181 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ definition.label }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>{{ definition.label }}</h3>
+            <p class="text-subtitle text-muted">{{ task.title_pl }} · okres {{ occurrence.period_key }} · termin {{ occurrence.due_date|date('d.m.Y') }}
+                {% if final %} · <span class="text-success"><i class="bi bi-journal-check"></i> zakończony{{ form.updated_by_name ? ' (' ~ form.updated_by_name ~ ', ' ~ form.updated_at|date('d.m H:i') ~ ')' : '' }}</span>{% elseif form %} · <span class="text-warning">szkic</span>{% endif %}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if form and final %}<a class="btn btn-outline-primary" href="{{ root }}/task-forms/{{ form.id }}"><i class="bi bi-printer"></i> Podgląd i druk</a>{% endif %}
+            <a class="btn btn-outline-primary" href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły</a>
+            <a class="btn btn-outline-secondary" href="{{ root }}/my-tasks"><i class="bi bi-check2-square"></i> Moje zadania</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-tform" id="taskForm" data-occurrence="{{ occurrence.id }}" data-final="{{ final ? 1 : 0 }}">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-3 align-items-end">
+                <label class="at-purch-label">Data zebrania<input class="form-control" type="date" name="meeting_date" value="{{ meeting_date }}" required></label>
+                {% if follow_up %}
+                    <label class="at-purch-label">Śledzenie produkcji od<input class="form-control" type="date" name="period_from" value="{{ follow_up.from }}"></label>
+                    <label class="at-purch-label">do<input class="form-control" type="date" name="period_to" value="{{ follow_up.to }}"></label>
+                    {% if not final %}<button type="button" class="btn btn-outline-primary" data-period><i class="bi bi-arrow-repeat"></i> Zmień okres</button>{% endif %}
+                {% endif %}
+            </div>
+
+            <div class="at-tform-section">
+                <h5><i class="bi bi-people"></i> Uczestnicy</h5>
+                <div class="at-tform-people">
+                    {% for u in users %}
+                        <label class="form-check"><input class="form-check-input" type="checkbox" name="participants" value="{{ u.id }}" {{ u.id in participants ? 'checked' : '' }}>
+                            {{ u.name }}{% if u.position_name %} <span class="at-sub">{{ u.position_name }}</span>{% endif %}</label>
+                    {% endfor %}
+                </div>
+                <label class="at-purch-label mt-2 w-100">Goście / osoby spoza ERP<input class="form-control" name="guests" maxlength="500" value="{{ guests }}" placeholder="np. brygadziści zmian, dostawca pieca"></label>
+            </div>
+        </div>
+    </div>
+
+    {% if follow_up %}
+    <div class="card">
+        <div class="card-header"><h4 class="card-title"><i class="bi bi-graph-up-arrow"></i> Śledzenie produkcji {{ follow_up.from|date('d.m') }} – {{ follow_up.to|date('d.m.Y') }}
+            {% if final %}<span class="at-sub">(stan z dnia zakończenia protokołu)</span>{% else %}<span class="at-sub">(na żywo — zapisane w protokole przy zakończeniu)</span>{% endif %}</h4></div>
+        <div class="card-body pt-0">{% include 'production/_follow_up.twig' with {f: follow_up} %}</div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title"><i class="bi bi-list-check"></i> Działania z poprzednich zebrań</h4></div>
+        <div class="card-body pt-0">
+            {% if carried %}
+            <div class="table-responsive">
+                <table class="table table-sm at-tform-actions">
+                    <thead><tr><th>Działanie</th><th>Kto</th><th>Termin</th><th>Z zebrania</th><th class="text-end">Zrobione</th></tr></thead>
+                    <tbody>
+                    {% for a in carried %}
+                        <tr class="{{ a.status == 'done' ? 'is-done' : '' }}">
+                            <td>{{ a.title }}</td>
+                            <td>{{ a.user_name ?: '—' }}</td>
+                            <td class="{{ a.status == 'open' and a.due_date and a.due_date < meeting_date ? 'text-danger fw-semibold' : '' }}">{{ a.due_date ? a.due_date|date('d.m.Y') : '—' }}</td>
+                            <td class="at-sub">{{ a.meeting_date|date('d.m.Y') }}</td>
+                            <td class="text-end"><input class="form-check-input" type="checkbox" data-carried="{{ a.id }}" data-was="{{ a.status }}" {{ a.status == 'done' ? 'checked' : '' }} aria-label="Zrobione : {{ a.title }}"></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}<p class="at-empty mb-0">Brak otwartych działań z poprzednich zebrań.</p>{% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title"><i class="bi bi-chat-square-text"></i> Tematy i ustalenia</h4></div>
+        <div class="card-body pt-0">
+            <div class="at-tform-topics">
+                {% for k, label in definition.topics %}
+                    <label class="at-purch-label">{{ label }}<textarea class="form-control" name="topic_{{ k }}" data-topic="{{ k }}" maxlength="4000" rows="3">{{ topics[k] }}</textarea></label>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title"><i class="bi bi-flag"></i> Nowe działania</h4></div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table table-sm at-tform-actions" id="newActions">
+                    <thead><tr><th>Działanie</th><th style="width: 220px">Kto</th><th style="width: 160px">Termin</th><th style="width: 50px"></th></tr></thead>
+                    <tbody>
+                    {% for a in actions %}
+                        <tr data-action="{{ a.id }}" class="{{ a.status == 'done' ? 'is-done' : '' }}">
+                            <td>{{ a.title }}</td><td>{{ a.user_name ?: '—' }}</td><td>{{ a.due_date ? a.due_date|date('d.m.Y') : '—' }}</td>
+                            <td class="text-end">{% if a.status == 'open' %}<button type="button" class="btn btn-sm btn-outline-danger" data-remove-saved="{{ a.id }}" aria-label="Usuń działanie"><i class="bi bi-x"></i></button>{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <template id="actionRow">
+                <tr data-new>
+                    <td><input class="form-control form-control-sm" name="title" maxlength="300" placeholder="Co trzeba zrobić"></td>
+                    <td><select class="form-select form-select-sm" name="user_id"><option value="">—</option>{% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select></td>
+                    <td><input class="form-control form-control-sm" type="date" name="due_date"></td>
+                    <td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary" data-remove-new aria-label="Usuń wiersz"><i class="bi bi-x"></i></button></td>
+                </tr>
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-add-action><i class="bi bi-plus"></i> Działanie</button>
+        </div>
+    </div>
+
+    <div class="at-tform-bar">
+        <span class="at-sub me-auto align-self-center" data-state>{{ final ? 'Protokół zakończony — zmiany zapisują się w nim.' : 'Szkic można zapisać i dokończyć później.' }}</span>
+        {% if not final %}<button type="button" class="btn btn-outline-primary" data-save="draft"><i class="bi bi-save"></i> Zapisz szkic</button>{% endif %}
+        <button type="button" class="btn btn-primary" data-save="final"><i class="bi bi-journal-check"></i> {{ final ? 'Zapisz zmiany' : 'Zakończ protokół' }}</button>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const root = document.getElementById('taskForm');
+    const id = root.dataset.occurrence;
+    const removed = [];
+    const val = (name) => (root.querySelector(`[name="${name}"]`) || {}).value || null;
+    const addRow = () => {
+        const row = document.getElementById('actionRow').content.firstElementChild.cloneNode(true);
+        document.querySelector('#newActions tbody').appendChild(row);
+        row.querySelector('[name=title]').focus();
+    };
+    root.querySelector('[data-add-action]').addEventListener('click', addRow);
+    root.addEventListener('click', (e) => {
+        const n = e.target.closest('[data-remove-new]');
+        if (n) n.closest('tr').remove();
+        const s = e.target.closest('[data-remove-saved]');
+        if (s && window.confirm('Usunąć to działanie z protokołu?')) { removed.push(Number(s.dataset.removeSaved)); s.closest('tr').remove(); }
+    });
+    const body = (final) => {
+        const carried = [...root.querySelectorAll('[data-carried]')];
+        return {
+            final,
+            meeting_date: val('meeting_date'),
+            period_from: val('period_from'),
+            period_to: val('period_to'),
+            participants: [...root.querySelectorAll('[name=participants]:checked')].map(x => Number(x.value)),
+            guests: val('guests') || '',
+            topics: Object.fromEntries([...root.querySelectorAll('[data-topic]')].map(x => [x.dataset.topic, x.value])),
+            new_actions: [...root.querySelectorAll('tr[data-new]')].map(r => ({title: r.querySelector('[name=title]').value.trim(), user_id: r.querySelector('[name=user_id]').value || null, due_date: r.querySelector('[name=due_date]').value || null})).filter(a => a.title),
+            close_actions: carried.filter(x => x.checked && x.dataset.was !== 'done').map(x => Number(x.dataset.carried)),
+            reopen_actions: carried.filter(x => !x.checked && x.dataset.was === 'done').map(x => Number(x.dataset.carried)),
+            delete_actions: removed,
+        };
+    };
+    const save = (final, then) => {
+        root.querySelectorAll('[data-save], [data-period]').forEach(b => b.disabled = true);
+        return at.send(`/ajax/my-tasks/${id}/form`, 'PUT', body(final)).then(res => {
+            root.querySelectorAll('[data-save], [data-period]').forEach(b => b.disabled = false);
+            at.notify(res.ok, res.message);
+            if (res.ok) then(res);
+        });
+    };
+    root.querySelectorAll('[data-save]').forEach(b => b.addEventListener('click', () => {
+        const final = b.dataset.save === 'final';
+        if (final && root.dataset.final !== '1' && !window.confirm('Zakończyć protokół? Zadanie zebrania zostanie oznaczone jako zrobione.')) return;
+        save(final, (res) => window.setTimeout(() => { window.location.href = final ? `${at.root}/task-forms/${res.id}` : window.location.pathname; }, 500));
+    }));
+    // Okres śledzenia produkcji : zapis szkicu, potem przeładowanie z nowym okresem.
+    root.querySelector('[data-period]')?.addEventListener('click', () => save(false, () => {
+        window.location.href = `${window.location.pathname}?from=${encodeURIComponent(val('period_from') || '')}&to=${encodeURIComponent(val('period_to') || '')}`;
+    }));
+    if (!root.querySelector('#newActions tbody tr')) addRow();
+})();
+</script>
+{% endblock %}

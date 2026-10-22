@@ -10,14 +10,17 @@ use DateTimeImmutable;
 
 /**
  * Postes des utilisateurs de l'ERP et leurs tâches récurrentes (quotidiennes, hebdomadaires,
- * mensuelles, trimestrielles). Une tâche donne une occurrence par période, créée quand quelqu'un
- * ouvre sa liste ; une occurrence non faite reste visible (en retard) jusqu'à ce qu'on la traite.
+ * mensuelles, trimestrielles), rangées par catégorie (prix, marges, téléversements, production, réunions…).
+ * Une tâche donne une occurrence par période, créée quand quelqu'un ouvre sa liste ; une occurrence non
+ * faite reste visible (en retard) jusqu'à ce qu'on la traite. Une tâche avec formulaire (compte rendu de
+ * réunion) est faite quand son formulaire est terminé.
  */
 final class PositionTaskService
 {
     public const FREQUENCIES = ['daily', 'weekly', 'monthly', 'quarterly'];
     public const FREQUENCY_LABELS = ['daily' => 'Codziennie', 'weekly' => 'Co tydzień', 'monthly' => 'Co miesiąc', 'quarterly' => 'Co kwartał'];
     public const STATUSES = ['open', 'done', 'skipped'];
+    public const WEEKDAYS = [1 => 'poniedziałek', 2 => 'wtorek', 3 => 'środa', 4 => 'czwartek', 5 => 'piątek', 6 => 'sobota', 7 => 'niedziela'];
 
     public function __construct(private PositionRepository $positions, private ParamRepository $params)
     {
@@ -25,14 +28,15 @@ final class PositionTaskService
 
     /**
      * Période d'une fréquence à une date : clé et échéance. null pour une tâche quotidienne un
-     * jour non travaillé (param tasks.workdays, 1 = lundi).
+     * jour non travaillé (param tasks.workdays, 1 = lundi). Hebdomadaire : échéance le jour choisi (vendredi par défaut).
      * @return array{key:string,due:string}|null
      */
-    public function period(string $frequency, DateTimeImmutable $day): ?array
+    public function period(string $frequency, DateTimeImmutable $day, ?int $weekday = null): ?array
     {
+        $weekday = $weekday !== null && $weekday >= 1 && $weekday <= 7 ? $weekday : 5;
         return match ($frequency) {
             'daily' => in_array((int) $day->format('N'), $this->workdays(), true) ? ['key' => $day->format('Y-m-d'), 'due' => $day->format('Y-m-d')] : null,
-            'weekly' => ['key' => $day->format('o-\WW'), 'due' => $day->setISODate((int) $day->format('o'), (int) $day->format('W'), 5)->format('Y-m-d')],
+            'weekly' => ['key' => $day->format('o-\WW'), 'due' => $day->setISODate((int) $day->format('o'), (int) $day->format('W'), $weekday)->format('Y-m-d')],
             'monthly' => ['key' => $day->format('Y-m'), 'due' => $day->format('Y-m-t')],
             'quarterly' => (function () use ($day) {
                 $q = intdiv((int) $day->format('n') - 1, 3) + 1;
@@ -54,13 +58,13 @@ final class PositionTaskService
         return ['user' => $user] + $this->board($this->positions->tasks((int) $user['id_position'], true), $today);
     }
 
-    /** Tâches d'un poste rangées par fréquence, avec l'état de la période en cours et les retards. */
+    /** Tâches d'un poste rangées par catégorie (puis fréquence), avec l'état de la période en cours et les retards. */
     public function board(array $tasks, DateTimeImmutable $today): array
     {
         $byId = [];
         $keys = [];
         foreach ($tasks as $task) {
-            $period = $this->period($task['frequency'], $today);
+            $period = $this->period($task['frequency'], $today, isset($task['due_weekday']) ? (int) $task['due_weekday'] : null);
             $byId[(int) $task['id']] = $task + ['period' => $period];
             if ($period) {
                 $this->positions->ensureOccurrence((int) $task['id'], $period['key'], $period['due']);
@@ -82,10 +86,14 @@ final class PositionTaskService
         foreach ($byId as $id => $task) {
             $occurrence = $current[$id] ?? null;
             if ($occurrence) $counts[$occurrence['status'] === 'open' ? 'open' : 'done']++;
-            $groups[$task['frequency']]['label'] ??= self::FREQUENCY_LABELS[$task['frequency']];
-            $groups[$task['frequency']]['items'][] = ['task' => $task, 'occurrence' => $occurrence];
+            $key = $task['category_code'] ?? null ?: '_none';
+            $groups[$key]['label'] ??= $task['category_name'] ?? null ?: 'Bez kategorii';
+            $groups[$key]['icon'] ??= $task['category_icon'] ?? null ?: 'bi-check2-square';
+            $groups[$key]['sort'] ??= isset($task['category_sort']) ? (int) $task['category_sort'] : PHP_INT_MAX;
+            $groups[$key]['open'] = ($groups[$key]['open'] ?? 0) + ($occurrence && $occurrence['status'] === 'open' ? 1 : 0);
+            $groups[$key]['items'][] = ['task' => $task, 'occurrence' => $occurrence, 'frequency' => self::FREQUENCY_LABELS[$task['frequency']] ?? $task['frequency']];
         }
-        uksort($groups, fn($a, $b) => array_search($a, self::FREQUENCIES, true) <=> array_search($b, self::FREQUENCIES, true));
+        uasort($groups, fn($a, $b) => [$a['sort'], $a['label']] <=> [$b['sort'], $b['label']]);
         return ['groups' => $groups, 'overdue' => $overdue, 'counts' => $counts];
     }
 
@@ -97,8 +105,44 @@ final class PositionTaskService
         $note = trim((string) ($input['note'] ?? ''));
         if (mb_strlen($note) > 500) throw new CustomException('Notatka może mieć najwyżej 500 znaków.', 'errors', 422);
         if ($status === 'skipped' && $note === '') throw new CustomException('Podaj powód pominięcia zadania.', 'errors', 422);
+        $task = $this->positions->task((int) $occurrence['id_task']);
+        if ($status === 'done' && $task && $task['form_code'] && !$this->positions->formFinal($occurrenceId)) {
+            throw new CustomException('To zadanie kończy się protokołem — wypełnij i zakończ formularz.', 'errors', 422);
+        }
         $this->positions->setOccurrence($occurrenceId, $status, $userId, $note === '' ? null : $note);
         return $this->positions->occurrence($occurrenceId);
+    }
+
+    public function categories(): array
+    {
+        return $this->positions->categories();
+    }
+
+    /** Kategoria zadań : kod (nowa), nazwy, ikona Bootstrap Icons, kolejność, aktywna. */
+    public function saveCategory(array $input, ?int $id): int
+    {
+        $current = $id === null ? null : ($this->positions->category($id) ?? throw new CustomException('Nie znaleziono kategorii.', 'errors', 404));
+        $v = (new Validator($input, $current !== null))->only(['code', 'name_pl', 'name_fr', 'icon', 'sort_order', 'active'])
+            ->code('code', $current === null)
+            ->string('name_pl', 100, $current === null)
+            ->string('name_fr', 100, false, true)
+            ->string('icon', 40, false, true, '/^bi-[a-z0-9-]+$/', 'INVALID_CODE_FORMAT')
+            ->integer('sort_order', false, 0, 10000)
+            ->boolean('active');
+        $v->throwIfInvalid();
+        $data = $v->clean();
+        if ($v->provided('code') && $this->positions->categoryCodeTaken($v->value('code'), $id)) {
+            throw new ApiException('DUPLICATE_CODE', 409, [], ['code' => $v->value('code')]);
+        }
+        if (array_key_exists('name_fr', $data) && ($data['name_fr'] ?? '') === '') $data['name_fr'] = $data['name_pl'] ?? $current['name_pl'];
+        if ($current === null) {
+            $data['name_fr'] ??= $data['name_pl'];
+            $data['icon'] = ($data['icon'] ?? '') !== '' ? $data['icon'] : 'bi-check2-square';
+            $data['sort_order'] ??= 90;
+        } elseif (array_key_exists('icon', $data) && ($data['icon'] ?? '') === '') {
+            $data['icon'] = 'bi-check2-square';
+        }
+        return $this->positions->saveCategory($id, $data);
     }
 
     public function positions(): array
@@ -150,15 +194,24 @@ final class PositionTaskService
         if ($current === null && ($positionId === null || !$this->positions->exists($positionId))) {
             throw new CustomException('Nie znaleziono stanowiska.', 'errors', 404);
         }
-        $v = (new Validator($input, $current !== null))->only(['title_pl', 'title_fr', 'frequency', 'link_path', 'sort_order', 'active'])
+        $v = (new Validator($input, $current !== null))->only(['title_pl', 'title_fr', 'frequency', 'due_weekday', 'category_id', 'form_code', 'link_path', 'sort_order', 'active'])
             ->string('title_pl', 200, $current === null)
             ->string('title_fr', 200, false, true)
             ->choice('frequency', self::FREQUENCIES, $current === null)
-            ->string('link_path', 255, false, true, '/^\/[A-Za-z0-9\/_\-?=&.%]*$/', 'INVALID_URL')
+            ->integer('due_weekday', false, 1, 7, true)
+            ->integer('category_id', false, 1, null, true)
+            ->choice('form_code', array_keys(TaskFormService::FORMS), false, true)
+            ->string('link_path', 255, false, true, '/^\/[A-Za-z0-9\/_\-?=&.%#]*$/', 'INVALID_URL')
             ->integer('sort_order', false, 0, 10000)
             ->boolean('active');
         $v->throwIfInvalid();
         $data = $v->clean();
+        if (array_key_exists('category_id', $data)) {
+            if ($data['category_id'] !== null && !$this->positions->category((int) $data['category_id'])) throw new CustomException('Nie znaleziono kategorii.', 'errors', 404);
+            $data['id_category'] = $data['category_id'];
+            unset($data['category_id']);
+        }
+        foreach (['form_code', 'link_path'] as $k) if (array_key_exists($k, $data) && $data[$k] === '') $data[$k] = null;
         if ($current === null) {
             $data['id_position'] = $positionId;
             $data['title_fr'] = ($data['title_fr'] ?? '') !== '' ? $data['title_fr'] : $data['title_pl'];

@@ -143,14 +143,18 @@ try {
     $positionId = (int) $pdo->query("SELECT id FROM tfb_position WHERE code = 'ZAKUPY'")->fetchColumn();
     $tasks->assign($userId, ['position_id' => $positionId]);
     $tue = $tasks->myTasks($userId, new DateTimeImmutable('2026-10-20'));
-    expectPurch(array_keys($tue['groups']) === ['daily', 'weekly', 'monthly', 'quarterly'], 'tasks grouped by frequency');
-    $daily = $tue['groups']['daily']['items'][0]['occurrence'];
+    expectPurch($tasks->period('weekly', $wed, 1) === ['key' => '2026-W43', 'due' => '2026-10-19'], 'weekly with a due weekday (Monday)');
+    expectPurch(array_keys($tue['groups']) === ['CENY', 'MARZE', 'UPLOAD', 'JAKOSC'], 'tasks grouped by category (category order)');
+    $items = array_merge(...array_map(fn($g) => $g['items'], array_values($tue['groups'])));
+    $first = fn(array $items, string $frequency) => array_values(array_filter($items, fn($it) => $it['task']['frequency'] === $frequency))[0];
+    expectPurch($first($items, 'daily')['frequency'] === 'Codziennie' && $tue['groups']['CENY']['icon'] === 'bi-tag', 'item shows its frequency, group its icon');
+    $daily = $first($items, 'daily')['occurrence'];
     expectPurch($daily['period_key'] === '2026-10-20' && $daily['status'] === 'open', 'daily occurrence created on first view');
     $wedBoard = $tasks->myTasks($userId, $wed);
     expectPurch(count($wedBoard['overdue']) === 1 && $wedBoard['overdue'][0]['period_key'] === '2026-10-20', "yesterday's open task is overdue");
     $tasks->setStatus((int) $daily['id'], ['status' => 'done'], $userId);
     expectPurch($tasks->myTasks($userId, $wed)['overdue'] === [], 'done → no longer overdue');
-    $weekly = $wedBoard['groups']['weekly']['items'][0]['occurrence'];
+    $weekly = $first(array_merge(...array_map(fn($g) => $g['items'], array_values($wedBoard['groups']))), 'weekly')['occurrence'];
     $needsNote = false;
     try { $tasks->setStatus((int) $weekly['id'], ['status' => 'skipped'], $userId); } catch (CustomException) { $needsNote = true; }
     expectPurch($needsNote, 'skipping needs a reason');

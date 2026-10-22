@@ -4,6 +4,7 @@ namespace App\Controllers\Web\Organization;
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Services\Organization\PositionTaskService;
+use App\Services\Organization\TaskFormService;
 use Symfony\Component\HttpFoundation\Request;
 
 /** Stanowiska i zadania użytkowników ERP, karta użytkownika, „Moje zadania”. */
@@ -21,6 +22,9 @@ class PositionController extends BaseController
             'positions' => $this->service->positions(),
             'users' => $this->service->users(),
             'frequencies' => PositionTaskService::FREQUENCY_LABELS,
+            'weekdays' => PositionTaskService::WEEKDAYS,
+            'categories' => $this->service->categories(),
+            'forms' => TaskFormService::choices(),
         ]);
     }
 
@@ -74,6 +78,17 @@ class PositionController extends BaseController
         try {
             $this->service->saveTask($this->getJson(Request::createFromGlobals()), (int) $id, null);
             return $this->json(['message' => 'Zapisano zadanie.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** Kategoria zadań (nowa albo zmiana nazwy, ikony, kolejności, aktywności). */
+    public function saveCategory($id = null)
+    {
+        try {
+            $categoryId = $this->service->saveCategory($this->getJson(Request::createFromGlobals()), $id === null ? null : (int) $id);
+            return $this->json(['message' => 'Zapisano kategorię.', 'id' => $categoryId]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }

@@ -3,12 +3,12 @@ namespace App\Repositories\Organization;
 
 use App\Repositories\Workshop\WorkshopRepository;
 
-/** Postes, tâches récurrentes par poste, poste de chaque utilisateur de l'ERP, occurrences. */
+/** Postes, tâches récurrentes par poste (avec catégorie), poste de chaque utilisateur de l'ERP, occurrences. */
 final class PositionRepository extends WorkshopRepository
 {
     protected string $table = 'tfb_position';
     protected array $writable = ['code', 'name_pl', 'name_fr', 'description', 'sort_order', 'active'];
-    private const TASK_COLUMNS = ['id_position', 'title_pl', 'title_fr', 'frequency', 'link_path', 'sort_order', 'active'];
+    private const TASK_COLUMNS = ['id_position', 'id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'link_path', 'form_code', 'sort_order', 'active'];
 
     public function positions(): array
     {
@@ -26,7 +26,8 @@ final class PositionRepository extends WorkshopRepository
         if ($positionId !== null) { $where[] = 't.id_position = ?'; $params[] = $positionId; }
         if ($activeOnly) $where[] = 't.active = 1';
         return $this->all(
-            "SELECT t.* FROM tfb_position_task t" . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
+            "SELECT t.*, c.code AS category_code, c.name_pl AS category_name, c.name_fr AS category_name_fr, c.icon AS category_icon, c.sort_order AS category_sort
+             FROM tfb_position_task t LEFT JOIN tfb_task_category c ON c.id = t.id_category" . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
             . " ORDER BY t.id_position, FIELD(t.frequency, 'daily', 'weekly', 'monthly', 'quarterly'), t.sort_order, t.id",
             $params
         );
@@ -34,12 +35,45 @@ final class PositionRepository extends WorkshopRepository
 
     public function task(int $id): ?array
     {
-        return $this->all('SELECT * FROM tfb_position_task WHERE id = ?', [$id])[0] ?? null;
+        return $this->all('SELECT t.*, c.name_pl AS category_name FROM tfb_position_task t LEFT JOIN tfb_task_category c ON c.id = t.id_category WHERE t.id = ?', [$id])[0] ?? null;
+    }
+
+    /** Kategorie zadań (ceny, marże, upload, produkcja, zebrania…), z liczbą aktywnych zadań. */
+    public function categories(): array
+    {
+        return $this->all('SELECT c.*, (SELECT COUNT(*) FROM tfb_position_task t WHERE t.id_category = c.id AND t.active = 1) AS task_count
+                           FROM tfb_task_category c ORDER BY c.active DESC, c.sort_order, c.name_pl');
+    }
+
+    public function category(int $id): ?array
+    {
+        return $this->all('SELECT * FROM tfb_task_category WHERE id = ?', [$id])[0] ?? null;
+    }
+
+    public function categoryCodeTaken(string $code, ?int $exceptId): bool
+    {
+        return (bool) $this->all('SELECT 1 FROM tfb_task_category WHERE code = ? AND id <> ?', [$code, $exceptId ?? 0]);
+    }
+
+    public function saveCategory(?int $id, array $data): int
+    {
+        $data = self::ints(array_intersect_key($data, array_flip(['code', 'name_pl', 'name_fr', 'icon', 'sort_order', 'active'])));
+        if ($id === null) {
+            $columns = array_keys($data);
+            $this->db->prepare(sprintf('INSERT INTO tfb_task_category (%s) VALUES (%s)', implode(', ', $columns), implode(', ', array_fill(0, count($columns), '?'))))
+                ->execute(array_values($data));
+            return (int) $this->db->lastInsertId();
+        }
+        if ($data) {
+            $set = implode(', ', array_map(fn($c) => "{$c} = ?", array_keys($data)));
+            $this->db->prepare("UPDATE tfb_task_category SET {$set} WHERE id = ?")->execute([...array_values($data), $id]);
+        }
+        return $id;
     }
 
     public function insertTask(array $data): int
     {
-        $data = array_intersect_key($data, array_flip(self::TASK_COLUMNS));
+        $data = self::ints(array_intersect_key($data, array_flip(self::TASK_COLUMNS)));
         $columns = array_keys($data);
         $this->db->prepare(sprintf('INSERT INTO tfb_position_task (%s) VALUES (%s)', implode(', ', $columns), implode(', ', array_fill(0, count($columns), '?'))))
             ->execute(array_values($data));
@@ -48,10 +82,16 @@ final class PositionRepository extends WorkshopRepository
 
     public function updateTask(int $id, array $data): void
     {
-        $data = array_intersect_key($data, array_flip(self::TASK_COLUMNS));
+        $data = self::ints(array_intersect_key($data, array_flip(self::TASK_COLUMNS)));
         if (!$data) return;
         $set = implode(', ', array_map(fn($c) => "{$c} = ?", array_keys($data)));
         $this->db->prepare("UPDATE tfb_position_task SET {$set} WHERE id = ?")->execute([...array_values($data), $id]);
+    }
+
+    /** Booléens en 0 / 1 (PDO lie false comme chaîne vide, refusée par MySQL strict). */
+    private static function ints(array $data): array
+    {
+        return array_map(fn($v) => is_bool($v) ? (int) $v : $v, $data);
     }
 
     /** Utilisateurs de l'ERP avec leur poste. */
@@ -124,12 +164,18 @@ final class PositionRepository extends WorkshopRepository
         $keys = $currentKeys ?: [''];
         $inKeys = implode(', ', array_fill(0, count($keys), '?'));
         return $this->all(
-            "SELECT o.*, u.displayed_name AS done_by_name
-             FROM tfb_task_occurrence o LEFT JOIN user u ON u.id = o.done_by
+            "SELECT o.*, u.displayed_name AS done_by_name, f.id AS form_id, f.status AS form_status
+             FROM tfb_task_occurrence o LEFT JOIN user u ON u.id = o.done_by LEFT JOIN tfb_task_form f ON f.id_occurrence = o.id
              WHERE o.id_task IN ({$in}) AND (o.period_key IN ({$inKeys}) OR (o.status = 'open' AND o.due_date < ?))
              ORDER BY o.due_date, o.id",
             [...$taskIds, ...$keys, $today]
         );
+    }
+
+    /** Formularz okresu zakończony (zadanie z protokołem). */
+    public function formFinal(int $occurrenceId): bool
+    {
+        return (bool) $this->all("SELECT 1 FROM tfb_task_form WHERE id_occurrence = ? AND status = 'final'", [$occurrenceId]);
     }
 
     public function occurrence(int $id): ?array
@@ -147,8 +193,9 @@ final class PositionRepository extends WorkshopRepository
     public function history(int $positionId, int $limit = 30): array
     {
         return $this->all(
-            "SELECT o.*, t.title_pl, t.frequency, u.displayed_name AS done_by_name
+            "SELECT o.*, t.title_pl, t.frequency, u.displayed_name AS done_by_name, f.id AS form_id
              FROM tfb_task_occurrence o JOIN tfb_position_task t ON t.id = o.id_task LEFT JOIN user u ON u.id = o.done_by
+             LEFT JOIN tfb_task_form f ON f.id_occurrence = o.id AND f.status = 'final'
              WHERE t.id_position = ? AND o.status <> 'open'
              ORDER BY o.done_at DESC, o.id DESC LIMIT " . max(1, min(200, $limit)),
             [$positionId]

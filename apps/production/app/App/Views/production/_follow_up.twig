@@ -1,0 +1,98 @@
+{# Śledzenie produkcji okresu (f = ProductionFollowUpService::summary) : kafelki, grupy, dni, straty, poniżej planu, NC. #}
+{% set t = f.total %}
+<div class="at-tiles at-follow-tiles">
+    <div class="at-tile {{ t.plan_pct is null ? '' : (t.plan_pct >= 95 ? 'at-tile-ok' : (t.plan_pct >= 85 ? 'at-tile-warn' : 'at-tile-danger')) }}">
+        <span class="at-tile-label"><i class="bi bi-bullseye"></i> Wykonanie planu</span>
+        <strong class="at-tile-value">{{ t.plan_pct|pct }}</strong>
+        <span class="at-tile-meta">zrobione {{ t.produced|number_format(0, ',', ' ') }} / plan {{ t.planned|number_format(0, ',', ' ') }} szt.</span>
+    </div>
+    <div class="at-tile {{ t.waste_pct is null ? '' : (t.waste_pct <= 2 ? 'at-tile-ok' : (t.waste_pct <= 5 ? 'at-tile-warn' : 'at-tile-danger')) }}">
+        <span class="at-tile-label"><i class="bi bi-trash3"></i> Straty</span>
+        <strong class="at-tile-value">{{ t.waste_pct|pct }}</strong>
+        <span class="at-tile-meta">{{ t.waste|number_format(0, ',', ' ') }} szt. · dobre {{ t.good|number_format(0, ',', ' ') }} szt.</span>
+    </div>
+    <div class="at-tile {{ t.days == 0 ? '' : (t.unclosed == 0 ? 'at-tile-ok' : 'at-tile-warn') }}">
+        <span class="at-tile-label"><i class="bi bi-check2-square"></i> Dni zatwierdzone</span>
+        <strong class="at-tile-value">{{ t.closed }} / {{ t.days }}</strong>
+        <span class="at-tile-meta">{{ t.unclosed ? t.unclosed ~ ' dni zespołów bez zatwierdzenia' : 'wszystkie dni zatwierdzone' }}</span>
+    </div>
+    <div class="at-tile {{ t.nc ? 'at-tile-danger' : 'at-tile-ok' }}">
+        <span class="at-tile-label"><i class="bi bi-exclamation-octagon"></i> Niezgodności</span>
+        <strong class="at-tile-value">{{ t.nc }}</strong>
+        <span class="at-tile-meta">{{ t.batches|plural_pl('partia', 'partie', 'partii') }} z tabletów</span>
+    </div>
+</div>
+
+{% if f.groups %}
+<div class="table-responsive">
+    <table class="table table-sm at-follow-table">
+        <thead><tr><th>Grupa</th><th class="text-end">Plan</th><th class="text-end">Zrobione</th><th class="text-end">Wykonanie</th><th class="text-end">Straty</th><th class="text-end">Dobre</th><th class="text-end">Dni zatw.</th><th class="text-end">NC</th></tr></thead>
+        <tbody>
+        {% for g in f.groups %}
+            <tr>
+                <td><strong>{{ g.name }}</strong></td>
+                <td class="text-end">{{ g.planned|number_format(0, ',', ' ') }}</td>
+                <td class="text-end">{{ g.produced|number_format(0, ',', ' ') }}</td>
+                <td class="text-end {{ g.plan_pct is not null and g.plan_pct < 85 ? 'text-danger fw-semibold' : '' }}">{{ g.plan_pct|pct }}</td>
+                <td class="text-end">{{ g.waste|number_format(0, ',', ' ') }}{% if g.waste_pct is not null %} <span class="at-sub">({{ g.waste_pct|pct }})</span>{% endif %}</td>
+                <td class="text-end">{{ g.good|number_format(0, ',', ' ') }}</td>
+                <td class="text-end {{ g.unclosed ? 'text-warning fw-semibold' : '' }}">{{ g.closed }} / {{ g.days }}</td>
+                <td class="text-end {{ g.nc ? 'text-danger fw-semibold' : '' }}">{{ g.nc }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot><tr><th>Razem</th><th class="text-end">{{ t.planned|number_format(0, ',', ' ') }}</th><th class="text-end">{{ t.produced|number_format(0, ',', ' ') }}</th><th class="text-end">{{ t.plan_pct|pct }}</th>
+            <th class="text-end">{{ t.waste|number_format(0, ',', ' ') }}</th><th class="text-end">{{ t.good|number_format(0, ',', ' ') }}</th><th class="text-end">{{ t.closed }} / {{ t.days }}</th><th class="text-end">{{ t.nc }}</th></tr></tfoot>
+    </table>
+</div>
+<p class="at-sub mb-3">Produkty w sztukach. Wykonanie = zrobione do wysokości planu każdego produktu ÷ plan (nadwyżki nie liczą się). Dobre = zrobione − straty.</p>
+{% else %}
+    <p class="at-empty">Brak planu i produkcji z tabletów w tym okresie.</p>
+{% endif %}
+
+<div class="row g-3">
+    {% if f.days %}
+    <div class="col-12 col-xl-6">
+        <h5 class="at-follow-h">Dzień po dniu</h5>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead><tr><th>Dzień</th><th class="text-end">Plan</th><th class="text-end">Zrobione</th><th class="text-end">Straty</th><th>Zatwierdzone</th></tr></thead>
+                <tbody>
+                {% for d in f.days %}
+                    <tr>
+                        <td>{{ d.date|day_pl|split(',')|first }} {{ d.date|date('d.m') }}</td>
+                        <td class="text-end">{{ d.planned|number_format(0, ',', ' ') }}</td>
+                        <td class="text-end">{{ d.produced|number_format(0, ',', ' ') }}</td>
+                        <td class="text-end">{{ d.waste ? d.waste|number_format(0, ',', ' ') : '—' }}</td>
+                        <td>{% if d.groups == 0 %}<span class="at-sub">—</span>{% elseif d.closed >= d.groups %}<span class="text-success"><i class="bi bi-check2"></i> {{ d.closed }}/{{ d.groups }}</span>{% else %}<span class="text-warning"><i class="bi bi-hourglass-split"></i> {{ d.closed }}/{{ d.groups }}</span> <span class="at-sub">{{ d.open_groups|join(', ') }}</span>{% endif %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    <div class="col-12 col-xl-6">
+        {% if f.reasons %}
+            <h5 class="at-follow-h">Straty według powodu</h5>
+            <ul class="at-follow-bars">
+                {% set maxr = max(f.reasons) %}
+                {% for k, q in f.reasons %}
+                    <li><span>{{ waste_reasons[k] ?? k }}</span><span class="at-follow-bar"><span style="width: {{ (q / maxr * 100)|round }}%"></span></span><strong>{{ q|number_format(0, ',', ' ') }}</strong></li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% if f.top_waste %}
+            <h5 class="at-follow-h">Najwięcej strat</h5>
+            <ul class="at-follow-list">{% for i in f.top_waste %}<li><span>{{ i.name }}</span><strong>{{ i.waste|number_format(0, ',', ' ') }} szt.{% if i.waste_pct is not null %} <span class="at-sub">({{ i.waste_pct|pct }})</span>{% endif %}</strong></li>{% endfor %}</ul>
+        {% endif %}
+        {% if f.below_plan %}
+            <h5 class="at-follow-h">Poniżej planu</h5>
+            <ul class="at-follow-list">{% for i in f.below_plan %}<li><span>{{ i.name }}</span><strong>−{{ i.missing|number_format(0, ',', ' ') }} szt. <span class="at-sub">({{ i.pct|pct }} planu)</span></strong></li>{% endfor %}</ul>
+        {% endif %}
+        {% if f.nc %}
+            <h5 class="at-follow-h">Niezgodności produkcji</h5>
+            <ul class="at-follow-list">{% for c in f.nc %}<li><span><strong>{{ c.number }}</strong> · {{ c.day|date('d.m') }}{{ c.group ? ' · ' ~ c.group : '' }} — {{ c.description }}</span><span class="badge {{ c.severity == 'critical' ? 'bg-danger' : (c.severity == 'major' ? 'bg-warning text-dark' : 'bg-secondary') }}">{{ c.severity }}</span></li>{% endfor %}</ul>
+        {% endif %}
+    </div>
+</div>

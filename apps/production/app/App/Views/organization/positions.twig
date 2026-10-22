@@ -6,10 +6,11 @@
     <div class="page-heading at-profit-head">
         <div class="page-title">
             <h3>Stanowiska i zadania</h3>
-            <p class="text-subtitle text-muted">Kto za co odpowiada: stanowisko każdego użytkownika ERP i jego zadania codzienne, tygodniowe, miesięczne i kwartalne</p>
+            <p class="text-subtitle text-muted">Kto za co odpowiada: stanowisko każdego użytkownika ERP i jego zadania cykliczne w kategoriach (ceny, marże, upload, produkcja, zebrania…), także z formularzem (protokół zebrania)</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a class="btn btn-outline-primary" href="{{ root }}/my-tasks"><i class="bi bi-check2-square"></i> Moje zadania</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły</a>
             <a href="#positionNew" class="btn btn-primary" data-bs-toggle="collapse" role="button" aria-expanded="false"><i class="bi bi-plus"></i> Stanowisko</a>
         </div>
     </div>
@@ -58,6 +59,36 @@
         </div>
     </div>
 
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Kategorie zadań</h4><p class="at-sub mb-0">Zadania na « Moje zadania » są pogrupowane według kategorii. Ikona : nazwa z Bootstrap Icons (np. bi-tag).</p></div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-2" id="taskCategories">
+                    <thead><tr><th>Kategoria (PL)</th><th>FR</th><th>Ikona</th><th>Kolejność</th><th class="text-end">Zadania</th><th>Aktywna</th></tr></thead>
+                    <tbody>
+                    {% for c in categories %}
+                        <tr data-category="{{ c.id }}" class="{{ c.active ? '' : 'at-inactive' }}">
+                            <td><div class="input-group input-group-sm"><span class="input-group-text"><i class="bi {{ c.icon }}"></i></span><input class="form-control" data-field="name_pl" value="{{ c.name_pl }}" maxlength="100" aria-label="Nazwa PL"></div><div class="at-sub">{{ c.code }}</div></td>
+                            <td><input class="form-control form-control-sm" data-field="name_fr" value="{{ c.name_fr }}" maxlength="100" aria-label="Nazwa FR"></td>
+                            <td><input class="form-control form-control-sm" data-field="icon" value="{{ c.icon }}" maxlength="40" aria-label="Ikona"></td>
+                            <td><input class="form-control form-control-sm" data-field="sort_order" type="number" min="0" max="10000" value="{{ c.sort_order }}" style="width: 90px" aria-label="Kolejność"></td>
+                            <td class="text-end">{{ c.task_count }}</td>
+                            <td><input class="form-check-input" type="checkbox" data-field="active" {{ c.active ? 'checked' : '' }} aria-label="Aktywna"></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <form id="categoryForm" class="d-flex gap-2 flex-wrap align-items-end">
+                <input class="form-control form-control-sm" name="code" placeholder="Kod, np. HIGIENA" required maxlength="32" style="flex: 1 1 140px">
+                <input class="form-control form-control-sm" name="name_pl" placeholder="Nowa kategoria (PL)" required maxlength="100" style="flex: 2 1 200px">
+                <input class="form-control form-control-sm" name="name_fr" placeholder="FR (opcjonalnie)" maxlength="100" style="flex: 2 1 160px">
+                <input class="form-control form-control-sm" name="icon" placeholder="bi-tag" maxlength="40" style="flex: 1 1 110px">
+                <button class="btn btn-sm btn-primary" type="submit">Dodaj kategorię</button>
+            </form>
+        </div>
+    </div>
+
     {% for p in positions %}
     <div class="card {{ p.active ? '' : 'at-inactive' }}">
         <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
@@ -73,13 +104,16 @@
             {% if p.tasks %}
             <div class="table-responsive">
                 <table class="table table-sm mb-2 at-task-table">
-                    <thead><tr><th>Zadanie (PL)</th><th>FR</th><th>Częstotliwość</th><th>Strona w ERP</th><th>Aktywne</th></tr></thead>
+                    <thead><tr><th>Zadanie (PL)</th><th>FR</th><th>Kategoria</th><th>Częstotliwość</th><th>Dzień</th><th>Formularz</th><th>Strona w ERP</th><th>Aktywne</th></tr></thead>
                     <tbody>
                     {% for t in p.tasks %}
                         <tr data-task="{{ t.id }}" class="{{ t.active ? '' : 'at-inactive' }}">
                             <td><input class="form-control form-control-sm" data-field="title_pl" value="{{ t.title_pl }}" maxlength="200"></td>
                             <td><input class="form-control form-control-sm" data-field="title_fr" value="{{ t.title_fr }}" maxlength="200"></td>
+                            <td><select class="form-select form-select-sm" data-field="category_id" aria-label="Kategoria"><option value="">— bez —</option>{% for c in categories %}<option value="{{ c.id }}" {{ t.id_category == c.id ? 'selected' : '' }}>{{ c.name_pl }}</option>{% endfor %}</select></td>
                             <td><select class="form-select form-select-sm" data-field="frequency">{% for k, l in frequencies %}<option value="{{ k }}" {{ t.frequency == k ? 'selected' : '' }}>{{ l }}</option>{% endfor %}</select></td>
+                            <td><select class="form-select form-select-sm" data-field="due_weekday" aria-label="Dzień terminu (zadanie tygodniowe)" {{ t.frequency == 'weekly' ? '' : 'disabled' }}><option value="">pt. (dom.)</option>{% for k, l in weekdays %}<option value="{{ k }}" {{ t.due_weekday == k ? 'selected' : '' }}>{{ l }}</option>{% endfor %}</select></td>
+                            <td><select class="form-select form-select-sm" data-field="form_code" aria-label="Formularz"><option value="">— brak —</option>{% for k, l in forms %}<option value="{{ k }}" {{ t.form_code == k ? 'selected' : '' }}>{{ l }}</option>{% endfor %}</select></td>
                             <td><input class="form-control form-control-sm" data-field="link_path" value="{{ t.link_path }}" placeholder="/purchasing" maxlength="255"></td>
                             <td><input class="form-check-input" type="checkbox" data-field="active" {{ t.active ? 'checked' : '' }}></td>
                         </tr>
@@ -91,7 +125,9 @@
             <form class="at-task-new d-flex gap-2 flex-wrap align-items-end" data-position="{{ p.id }}">
                 <input class="form-control form-control-sm" name="title_pl" placeholder="Nowe zadanie (PL)" required maxlength="200" style="flex: 2 1 220px">
                 <input class="form-control form-control-sm" name="title_fr" placeholder="FR (opcjonalnie)" maxlength="200" style="flex: 2 1 180px">
+                <select class="form-select form-select-sm" name="category_id" style="flex: 1 1 150px" aria-label="Kategoria"><option value="">Kategoria…</option>{% for c in categories %}{% if c.active %}<option value="{{ c.id }}">{{ c.name_pl }}</option>{% endif %}{% endfor %}</select>
                 <select class="form-select form-select-sm" name="frequency" style="flex: 1 1 140px">{% for k, l in frequencies %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
+                <select class="form-select form-select-sm" name="form_code" style="flex: 1 1 150px" aria-label="Formularz"><option value="">Bez formularza</option>{% for k, l in forms %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
                 <input class="form-control form-control-sm" name="link_path" placeholder="/strona-w-erp" maxlength="255" style="flex: 1 1 140px">
                 <button class="btn btn-sm btn-primary" type="submit">Dodaj</button>
             </form>
@@ -114,13 +150,28 @@
     document.querySelectorAll('[data-position-active]').forEach(box => box.addEventListener('change', () => {
         at.send(`/ajax/organization/positions/${box.dataset.positionActive}`, 'PATCH', {active: box.checked}).then(res => at.notify(res.ok, res.message));
     }));
+    // Pola z pustą wartością = brak (kategoria, dzień, formularz, strona w ERP).
+    const nullable = ['link_path', 'category_id', 'due_weekday', 'form_code'];
     document.querySelectorAll('[data-task]').forEach(row => row.addEventListener('change', (e) => {
         const field = e.target.dataset.field;
         if (!field) return;
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value.trim();
-        at.send(`/ajax/organization/tasks/${row.dataset.task}`, 'PATCH', {[field]: value === '' && field === 'link_path' ? null : value}).then(res => {
+        at.send(`/ajax/organization/tasks/${row.dataset.task}`, 'PATCH', {[field]: value === '' && nullable.includes(field) ? null : value}).then(res => {
             at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
             if (field === 'active' && res.ok) row.classList.toggle('at-inactive', !value);
+            if (field === 'frequency' && res.ok) row.querySelector('[data-field=due_weekday]').disabled = value !== 'weekly';
+        });
+    }));
+    at.bindForm(document.getElementById('categoryForm'), '/ajax/organization/task-categories');
+    document.querySelectorAll('[data-category]').forEach(row => row.addEventListener('change', (e) => {
+        const field = e.target.dataset.field;
+        if (!field) return;
+        let value = e.target.type === 'checkbox' ? e.target.checked : e.target.value.trim();
+        if (field === 'sort_order') value = Number(value || 0);
+        at.send(`/ajax/organization/task-categories/${row.dataset.category}`, 'PATCH', {[field]: value}).then(res => {
+            at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+            if (field === 'active' && res.ok) row.classList.toggle('at-inactive', !value);
+            if (field === 'icon' && res.ok) row.querySelector('.input-group-text .bi').className = 'bi ' + (value || 'bi-check2-square');
         });
     }));
 })();

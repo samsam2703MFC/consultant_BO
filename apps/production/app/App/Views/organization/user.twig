@@ -56,7 +56,7 @@
                     <ul class="at-history">
                         {% for h in history %}
                             <li><span class="badge {{ h.status == 'done' ? 'bg-success' : 'bg-secondary' }}">{{ h.status == 'done' ? 'zrobione' : 'pominięte' }}</span>
-                                {{ h.title_pl }} <span class="at-sub">{{ h.period_key }} · {{ h.done_by_name ?: '—' }}{{ h.done_at ? ', ' ~ h.done_at|date('d.m H:i') : '' }}{{ h.note ? ' · „' ~ h.note ~ '”' : '' }}</span></li>
+                                {{ h.title_pl }} <span class="at-sub">{{ h.period_key }} · {{ h.done_by_name ?: '—' }}{{ h.done_at ? ', ' ~ h.done_at|date('d.m H:i') : '' }}{{ h.note ? ' · „' ~ h.note ~ '”' : '' }}</span>{% if h.form_id %} <a href="{{ root }}/task-forms/{{ h.form_id }}"><i class="bi bi-journal-check"></i> protokół</a>{% endif %}</li>
                         {% endfor %}
                     </ul>
                     {% else %}<p class="at-empty">Jeszcze nic.</p>{% endif %}

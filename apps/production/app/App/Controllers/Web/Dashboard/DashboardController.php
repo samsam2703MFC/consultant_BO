@@ -78,7 +78,7 @@ class DashboardController extends BaseController
         $current = [];
         foreach ($mine['groups'] as $group) {
             foreach ($group['items'] as $it) {
-                if ($it['occurrence'] && $it['occurrence']['status'] === 'open') $current[] = $it + ['overdue' => false, 'frequency' => $group['label']];
+                if ($it['occurrence'] && $it['occurrence']['status'] === 'open') $current[] = $it + ['overdue' => false];
             }
         }
         usort($current, fn($a, $b) => $a['occurrence']['due_date'] <=> $b['occurrence']['due_date']);

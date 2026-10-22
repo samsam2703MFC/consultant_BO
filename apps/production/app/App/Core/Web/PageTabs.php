@@ -13,13 +13,14 @@ final class PageTabs
     /** grupa => [rail : etykieta, sekcja, ikona ; tabs : [ścieżka, etykieta, ikona]] */
     public const GROUPS = [
         // Produkcja na jednej stronie : arkusz tygodnia (jedna linia na produkt), plan tygodnia (dni), plan zespołów
-        // (druk, tablet) z listami dnia (PDF), stany, partie i jakość, hala.
+        // (druk, tablet) z listami dnia (PDF), stany, partie, śledzenie produkcji (plan / zrobione / straty), jakość, hala.
         'production' => ['label' => 'Produkcja', 'section' => 'Produkcja', 'icon' => 'bi-gear-wide-connected', 'tabs' => [
             ['/workshop/sheet', 'Arkusz tygodnia', 'bi-table'],
             ['/workshop/gantt', 'Plan tygodnia', 'bi-calendar-week'],
             ['/workshop/team-sheet', 'Plan zespołów i listy dnia (PDF)', 'bi-printer'],
             ['/stock', 'Stany magazynowe', 'bi-building'],
             ['/workshop/traceability', 'Partie i identyfikowalność', 'bi-upc-scan'],
+            ['/production/follow-up', 'Śledzenie produkcji', 'bi-graph-up-arrow'],
             ['/purchasing/nc', 'Niezgodności', 'bi-exclamation-octagon'],
             ['/workshop/execution', 'Hala : tablety i czas pracy', 'bi-tablet'],
         ]],

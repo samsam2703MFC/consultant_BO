@@ -1581,3 +1581,29 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-list-day span { display: flex; flex-direction: column; }
 .tfb-list-day.is-on { border-color: #8d1d2c; background: #f8eef0; }
 .tfb-list-day.is-off { opacity: .5; cursor: default; }
+/* Śledzenie produkcji i protokoły zebrań */
+.at-follow-h { font-size: 14px; font-weight: 600; margin: 14px 0 8px; }
+.at-follow-table tfoot th { border-top: 2px solid var(--at-line-2); }
+.at-follow-bars, .at-follow-list { list-style: none; margin: 0 0 6px; padding: 0; }
+.at-follow-bars li { display: grid; grid-template-columns: 140px 1fr 70px; gap: 10px; align-items: center; padding: 4px 0; font-size: 13px; }
+.at-follow-bars strong { text-align: right; }
+.at-follow-bar { height: 8px; border-radius: 4px; background: var(--at-line); overflow: hidden; }
+.at-follow-bar > span { display: block; height: 100%; background: var(--at-danger); }
+.at-follow-list li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--at-line); font-size: 13px; }
+.at-follow-list li > strong { white-space: nowrap; }
+.at-tform-section { margin-top: 18px; }
+.at-tform-section > h5 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.at-tform-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px; }
+.at-tform-topics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 767px) { .at-tform-topics { grid-template-columns: 1fr; } .at-follow-bars li { grid-template-columns: 110px 1fr 60px; } }
+.at-tform-topics textarea { min-height: 88px; }
+.at-tform-actions td { vertical-align: middle; }
+.at-tform-actions tr.is-done td:first-child { text-decoration: line-through; color: var(--at-muted); }
+.at-tform-bar { position: sticky; bottom: 0; z-index: 5; background: var(--at-surface); border-top: 1px solid var(--at-line); padding: 12px 0; margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+@media print {
+  body.at-printing * { visibility: hidden; }
+  body.at-printing .at-print-area, body.at-printing .at-print-area * { visibility: visible; }
+  body.at-printing .at-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  body.at-printing .at-print-area .at-noprint { display: none !important; }
+  body.at-printing .at-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
