@@ -2747,83 +2747,36 @@ function wr_mkt_types_ordre(): array
     return ['ok' => true, 'n' => count($ids)];
 }
 
-/* --- nettoyage du module marketing : une action EXPLICITE --------------------
+/* --- nettoyage du module marketing : RETIRÉ (22/10/2026) -----------------------
  *
- * Le module autonome est supprimé ; seuls restent au cockpit le Calendrier,
- * les Campagnes, les Types (mar_campaign*), le Fonds & Royalties (mar_fund*,
- * mar_royalt*) et leurs référentiels (mar_brand, mar_shop, mar_lever).
+ * Cette action supprimait toutes les tables mar_* sauf les campagnes, le fonds,
+ * les redevances et trois référentiels : le module Marketing autonome était
+ * alors tenu pour abandonné. Exécutée le 27/08/2026, elle a emporté 19 de ses
+ * tables (promotions, bundles, bons, CRM, présence locale, kits, coûts ROI) —
+ * ses écrans répondaient 500 depuis.
  *
- * Des DROP en masse ne partent PAS tout seuls au déploiement : l'écran
- * Diagnostic montre d'abord la liste exacte de ce qui tomberait (GET), et
- * l'exécution exige une confirmation explicite (POST {confirmer:true}).
- * Chaque objet supprimé est journalisé — un DROP ne se rejoue pas, la liste
- * doit pouvoir se relire.
+ * Le module autonome (/marketing/, dépôt marketing) est de nouveau le module
+ * officiel ; il recrée ses tables (sa migration 037). Et la liste de ce qui
+ * « tomberait » comprenait désormais les tables du cockpit lui-même (mar_nl_*,
+ * mar_avis*, mar_social_*, mar_campagne_*). L'action ne s'exécute donc plus :
+ * la lecture dit qu'elle est retirée — l'écran Diagnostic n'en montre plus la
+ * carte —, et l'exécution est refusée. La trace du nettoyage d'août reste lisible.
  */
 
-/** Une table mar_* est-elle nécessaire à ce que le cockpit sert encore ? */
-function marTableGardee(string $t): bool
-{
-    foreach (['mar_brand', 'mar_shop', 'mar_lever'] as $exact) {
-        if ($t === $exact) { return true; }
-    }
-    foreach (['mar_campaign', 'mar_fund', 'mar_royalt'] as $pfx) {
-        if (str_starts_with($t, $pfx)) { return true; }
-    }
-    return false;
-}
-
-/** GET /admin/marketing-nettoyage — ce qui serait gardé, ce qui tomberait. */
+/** GET /admin/marketing-nettoyage — retiré : plus rien n'est proposé à la suppression. */
 function ep_mar_nettoyage(): array
 {
     $fait = setting('marNettoyage');
-    try {
-        $objets = Db::rows(
-            "SELECT TABLE_NAME nom, TABLE_TYPE type, TABLE_ROWS lignes FROM information_schema.TABLES
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'mar\\\\_%' ORDER BY TABLE_NAME");
-    } catch (PDOException $e) {
-        return ['indispo' => true, 'raison' => 'information_schema inaccessible'];
-    }
-    $garde = []; $tombe = [];
-    foreach ($objets as $o) {
-        $l = ['nom' => $o['nom'], 'vue' => $o['type'] === 'VIEW',
-            'lignes' => $o['type'] === 'VIEW' ? null : (int) $o['lignes']];
-        if (marTableGardee($o['nom'])) { $garde[] = $l; } else { $tombe[] = $l; }
-    }
-    return ['garde' => $garde, 'tombe' => $tombe, 'dejaFait' => is_array($fait) ? $fait : null];
+    return ['indispo' => true, 'retire' => true,
+        'raison' => 'nettoyage retiré : le module Marketing autonome est de nouveau en service, ses tables restent',
+        'dejaFait' => is_array($fait) ? $fait : null];
 }
 
-/** POST /admin/marketing-nettoyage — exécute, sur confirmation explicite. */
+/** POST /admin/marketing-nettoyage — retiré : refusé, quelle que soit la confirmation. */
 function wr_mar_nettoyage(): array
 {
-    $b = body();
-    if (($b['confirmer'] ?? false) !== true) {
-        http_response_code(422);
-        return ['error' => 'confirmation requise : ces suppressions sont définitives'];
-    }
-    $etat = ep_mar_nettoyage();
-    if (!empty($etat['indispo'])) { http_response_code(500); return ['error' => $etat['raison']]; }
-    $tombees = [];
-    Db::exec('SET FOREIGN_KEY_CHECKS = 0');
-    try {
-        // Les vues d'abord : elles dépendent des tables.
-        foreach ($etat['tombe'] as $o) {
-            if (!$o['vue']) { continue; }
-            Db::exec('DROP VIEW IF EXISTS `' . str_replace('`', '', $o['nom']) . '`');
-            $tombees[] = $o['nom'] . ' (vue)';
-        }
-        foreach ($etat['tombe'] as $o) {
-            if ($o['vue']) { continue; }
-            Db::exec('DROP TABLE IF EXISTS `' . str_replace('`', '', $o['nom']) . '`');
-            $tombees[] = $o['nom'];
-        }
-    } finally {
-        Db::exec('SET FOREIGN_KEY_CHECKS = 1');
-    }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['marNettoyage', json_encode(['fait' => date('c'), 'supprimees' => $tombees], JSON_UNESCAPED_UNICODE)]);
-    journalAdd('CEO', 'Maintenance', null, 'Nettoyage du module marketing : '
-        . count($tombees) . ' objet(s) supprimé(s) — ' . implode(', ', $tombees));
-    return ['ok' => true, 'supprimees' => $tombees];
+    http_response_code(410);
+    return ['error' => 'nettoyage retiré : le module Marketing autonome est de nouveau en service, ses tables ne se suppriment plus'];
 }
 
 /**
