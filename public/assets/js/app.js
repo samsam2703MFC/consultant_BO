@@ -399,8 +399,8 @@ class App {
     return { 'production-parametres': 'production/?page=params', 'production-plan': 'production/?page=plan', 'production-suivi': 'production/?page=suivi',
       'production-cloture': 'production/?page=cloture', 'production-fours': 'production/?page=fours',
       prospection: 'prospection/', 'prospection-mobile': 'prospection/', 'developpement-commercial': 'prospection/',
-      // Les posts : le portail social (/social, à côté du cockpit) ; les newsletters : le portail Marketing.
-      'controle-posts-facebook': '../social/', newsletter: 'marketing/', 'newsletter-magasin': 'marketing/' };
+      // Les posts : le portail social (/social, à côté du cockpit) ; les newsletters : le Marketing (/marketing/).
+      'controle-posts-facebook': '../social/', newsletter: '../marketing/', 'newsletter-magasin': '../marketing/' };
   }
   /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
   ecranDeAdresse(){
@@ -1022,9 +1022,9 @@ class App {
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
       // Le marketing réuni (C1, 16/10/2026) : campagnes, réseaux sociaux et newsletters. La console
-      // montre ce qui demande un geste ; le travail se fait dans l'espace marque (le portail
-      // marketing/) ou se regarde comme le franchisé le voit (marketing/?shop=).
-      marketing: ['Marketing', 'Campagnes, réseaux sociaux et newsletters au même endroit. La console montre ce qui demande un geste ; les posts se font dans le portail social, les campagnes et les newsletters dans le portail Marketing.',
+      // montre ce qui demande un geste ; le travail se fait dans le Marketing (/marketing/, l'ancien
+      // portail du cockpit est retiré le 22/10/2026) ou se regarde comme le franchisé le voit (social).
+      marketing: ['Marketing', 'Campagnes, réseaux sociaux et newsletters au même endroit. La console montre ce qui demande un geste ; les posts se font dans le portail social, les campagnes et les newsletters dans le Marketing.',
         [['marketing', 'Aujourd’hui'], ['mktCampagnes', 'Campagnes'], ['mktCalendrier', 'Calendrier'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
         [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
@@ -2623,8 +2623,8 @@ class App {
 
   /* --- Marketing : le hub ---------------------------------------------------
    * Une seule lecture, celle du tableau de bord du portail (/marketing/hub) : ses
-   * chiffres par canal et sa liste « à faire ». Chaque ligne ouvre l'élément dans
-   * le portail Marketing (campagnes, newsletters). Les posts, eux, vivent dans le
+   * chiffres par canal et sa liste « à faire ». Chaque ligne ouvre le Marketing
+   * (/marketing/ : une campagne sur sa fiche, le reste sur son tableau de bord). Les posts, eux, vivent dans le
    * portail social (/social, 17/10/2026) : « + Post » y mène, et la vue franchisé
    * est son espace boutique (franchisee/?shop=).
    */
@@ -2642,7 +2642,7 @@ class App {
     this.mhCharge(false);
     const b = S.mh || {}, d = b.d && !b.d.error ? b.d : null;
     const base = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
-    const portail = q => base + 'marketing/' + (q ? '?' + q : '');
+    const portail = new URL('/marketing/', base).href;
     const social = new URL('../social/', base).href;
     const mags = d && (d.magasins || []).length ? d.magasins : this.open().map(s => ({ id: String(s.id), nom: s.nom }));
     const shop = String(S.mhShop || (mags[0] || {}).id || '');
@@ -2660,21 +2660,21 @@ class App {
       chargement: !d && !(b.d && b.d.error),
       indispo: b.d && b.d.error ? 'La lecture de /marketing/hub a échoué — voir Diagnostic API.' : '',
       relire: () => this.mhCharge(true),
-      marque: { ouvrir: portail(''), social, campagne: base + 'assistant/', post: social + 'SA%20Post.dc.html', newsletter: portail('onglet=creer') },
+      marque: { ouvrir: portail, social, campagne: portail + '?nouvelle=1', post: social + 'SA%20Post.dc.html', newsletter: portail },
       magasins: mags.map(m => ({ id: String(m.id), nom: m.nom, on: String(m.id) === shop })),
       setShop: e => this.setState({ mhShop: e.target.value }),
       vueFranchise: vue,
       copier: () => { try { navigator.clipboard.writeText(vue); this.notify('Lien copié — l’espace franchisé du magasin.'); } catch (e) { this.notify('Copie impossible : ouvrez l’espace et copiez l’adresse.'); } },
       chiffres: [
         { k: 'Posts', v: 'Portail social', s: 'créer, valider, publier', lien: social },
-        { k: 'Newsletters programmées', v: n(em ? ce.programmees : null), s: em ? (em.test ? 'mode test' : (ce.envoyeesMois || 0) + ' envoyée(s) ce mois') : 'canal indisponible', lien: portail('onglet=creer') },
-        { k: 'Campagnes en cours', v: n(ca ? cc.enCours : null), s: ca ? (cc.aVenir || 0) + ' à venir · ' + (cc.brouillons || 0) + ' brouillon(s)' : 'canal indisponible', lien: portail('onglet=plan') },
-        { k: 'Budget engagé', v: ca && cc.budget ? this.fE(cc.depense || 0) : '—', s: ca && cc.budget ? 'sur ' + this.fE(cc.budget) + ' des campagnes vivantes' : 'aucun budget posé', lien: portail('onglet=plan') }],
+        { k: 'Newsletters programmées', v: n(em ? ce.programmees : null), s: em ? (em.test ? 'mode test' : (ce.envoyeesMois || 0) + ' envoyée(s) ce mois') : 'canal indisponible', lien: portail },
+        { k: 'Campagnes en cours', v: n(ca ? cc.enCours : null), s: ca ? (cc.aVenir || 0) + ' à venir · ' + (cc.brouillons || 0) + ' brouillon(s)' : 'canal indisponible', lien: portail },
+        { k: 'Budget engagé', v: ca && cc.budget ? this.fE(cc.depense || 0) : '—', s: ca && cc.budget ? 'sur ' + this.fE(cc.budget) + ' des campagnes vivantes' : 'aucun budget posé', lien: portail }],
       etats,
       aFaire: faire.slice(0, 12).map(a => {
         const c = a.cible || {};
         return { canal: NOMS[a.canal] || a.canal, titre: a.titre, detail: a.detail || '', urgent: a.niveau === 'urgent',
-          lien: portail('onglet=' + encodeURIComponent(c.onglet || 'vue') + (c.vue ? '&vue=' + encodeURIComponent(c.vue) : '')) };
+          lien: c.campagne ? portail + '?campagne=' + encodeURIComponent(c.campagne) : portail };
       }),
       plus: Math.max(0, faire.length - 12),
     };

@@ -5128,7 +5128,7 @@ const dsel = 'width:100%;font-size:11.5px;border:0.5px solid var(--color-border-
 
 /* --- Paramètres — Brand Guard : la charte et les pages Facebook -------------- */
 /* Marketing (C1) : les deux portes — l'espace marque et la vue franchisé —, les chiffres
-   par canal, et ce qui demande un geste. Tout lien ouvre le portail marketing/. */
+   par canal, et ce qui demande un geste. Tout lien ouvre le Marketing (/marketing/). */
 function tplMktHub(c, x){
   const { esc } = x, h = c.mh;
   const card = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
@@ -5144,13 +5144,13 @@ function tplMktHub(c, x){
     <section style="background:var(--color-primary);color:#fff;border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
       <div style="${cap};color:rgba(255,255,255,.75)">Espace marque · franchiseur</div>
       <div style="font-family:var(--font-display);font-size:28px;line-height:1.1">Créer, valider, publier</div>
-      <div style="font-size:12.5px;line-height:1.6;color:rgba(255,255,255,.9)">Les posts Facebook, Instagram et LinkedIn dans le portail social ; la campagne (assistant) et la newsletter dans le portail Marketing.</div>
+      <div style="font-size:12.5px;line-height:1.6;color:rgba(255,255,255,.9)">Les posts Facebook, Instagram et LinkedIn dans le portail social ; la campagne (assistant) et la newsletter dans le Marketing.</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <a href="${esc(h.marque.campagne)}" ${ext} style="${blanc}">+ Campagne</a>
         <a href="${esc(h.marque.post)}" ${ext} style="${blanc}">+ Post</a>
         <a href="${esc(h.marque.newsletter)}" ${ext} style="${blanc}">+ Newsletter</a>
         <a href="${esc(h.marque.social)}" ${ext} style="${ligne}">Portail social ↗</a>
-        <a href="${esc(h.marque.ouvrir)}" ${ext} style="${ligne}">Portail Marketing ↗</a>
+        <a href="${esc(h.marque.ouvrir)}" ${ext} style="${ligne}">Marketing ↗</a>
       </div>
     </section>
     <section style="${card};padding:20px 22px;display:flex;flex-direction:column;gap:10px">
@@ -5165,7 +5165,7 @@ function tplMktHub(c, x){
     </section>
   </div>`;
   if (h.indispo) { return `<div data-screen="marketing" style="display:flex;flex-direction:column;gap:14px">${portes}<div style="${card};padding:20px;font-size:12.5px;color:#8D1D2C">${esc(h.indispo)} <button ${x.A(h.relire)} style="${vide};min-height:30px;margin-left:8px">Relire</button></div></div>`; }
-  if (h.chargement) { return `<div data-screen="marketing" style="display:flex;flex-direction:column;gap:14px">${portes}<div style="${card};padding:20px;font-size:12.5px;color:var(--color-text-muted)">Lecture du portail marketing…</div></div>`; }
+  if (h.chargement) { return `<div data-screen="marketing" style="display:flex;flex-direction:column;gap:14px">${portes}<div style="${card};padding:20px;font-size:12.5px;color:var(--color-text-muted)">Lecture du Marketing…</div></div>`; }
   const chiffres = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">${h.chiffres.map(k => `
     <a href="${esc(k.lien)}" ${ext} style="${card};padding:14px 16px;text-decoration:none;color:var(--color-text);display:flex;flex-direction:column;gap:4px">
       <span style="${cap}">${esc(k.k)}</span>
@@ -5175,13 +5175,13 @@ function tplMktHub(c, x){
   const tag = a => a.urgent ? 'background:rgba(141,29,44,.10);color:#8D1D2C' : 'background:var(--color-background-secondary);color:#444';
   const faire = `<section style="${card};padding:14px 18px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px"><div style="font-size:14px;font-weight:500">Ce qui demande un geste</div>
-      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;color:var(--color-text-muted)">un clic ouvre l’élément dans le portail Marketing</span><button ${x.A(h.relire)} style="${vide};min-height:30px">↻ Relire</button></div></div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;color:var(--color-text-muted)">un clic ouvre le Marketing</span><button ${x.A(h.relire)} style="${vide};min-height:30px">↻ Relire</button></div></div>
     ${h.aFaire.length ? h.aFaire.map(a => `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12.5px">
       <span style="display:inline-block;min-width:78px;text-align:center;padding:3px 8px;border-radius:8px;font-size:10.5px;font-weight:500;${tag(a)}">${esc(a.canal)}</span>
       <span style="flex:1;min-width:0"><span style="font-weight:500">${esc(a.titre)}</span>${a.detail ? `<span style="display:block;font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(a.detail)}</span>` : ''}</span>
       <a href="${esc(a.lien)}" ${ext} style="font-size:12px;font-weight:500;white-space:nowrap">Ouvrir ›</a></div>`).join('')
       : '<div style="font-size:12.5px;color:var(--color-text-muted);padding:10px 0">Rien n’attend : aucune newsletter en souffrance, aucune campagne en brouillon qui approche.</div>'}
-    ${h.plus ? `<div style="font-size:11.5px;color:var(--color-text-muted);padding-top:8px">… et ${h.plus} autre(s) dans <a href="${esc(h.marque.ouvrir)}" ${ext}>le tableau de bord du portail ↗</a></div>` : ''}
+    ${h.plus ? `<div style="font-size:11.5px;color:var(--color-text-muted);padding-top:8px">… et ${h.plus} autre(s) dans <a href="${esc(h.marque.ouvrir)}" ${ext}>le Marketing ↗</a></div>` : ''}
   </section>`;
   return `<div data-screen="marketing" style="display:flex;flex-direction:column;gap:14px">${portes}${chiffres}${etats}${faire}</div>`;
 }
