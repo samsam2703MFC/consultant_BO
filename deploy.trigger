@@ -931,3 +931,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-22T07:45:17Z ancien portail marketing retire : renvoi vers /marketing/
 2026-10-22T07:54:51Z module kierownik produkcji
 2026-10-22T08:08:44Z karta stanowiska : maksimum absolutne
+2026-10-22T08:26:24Z rola modułu + moje wskaźniki
