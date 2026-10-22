@@ -312,8 +312,8 @@
         idleTimer = window.setTimeout(() => renderHome(), 30000);
     }
 
-    // --- Menu osoby : Czas pracy / Produkcja / Kontrola jakości ---------------------------------------
-    const TABS = [['clock', '⏱', 'tab_clock'], ['production', '📦', 'tab_production'], ['quality', '✅', 'tab_quality']];
+    // --- Menu osoby : Czas pracy / Produkcja / Kontrola jakości / Receptury ---------------------------
+    const TABS = [['clock', '⏱', 'tab_clock'], ['production', '📦', 'tab_production'], ['quality', '✅', 'tab_quality'], ['recipes', '📖', 'tab_recipes']];
     const personHeader = () => header(`<button type="button" class="kiosk-btn is-small" data-logout>${esc(t('logout'))}</button>`);
     function tabs(active) {
         if (session) session.tab = active;
@@ -325,6 +325,7 @@
         el.querySelector('[data-logout]')?.addEventListener('click', () => logout());
     }
     function openTab(k, message) {
+        if (k === 'recipes') return renderRecipes(message);
         return k === 'production' ? renderProduction(message) : (k === 'quality' ? renderQuality(message) : renderMe(message));
     }
 
@@ -434,6 +435,7 @@
     // Ilość surowca : gramy bez miejsc po przecinku, małe ilości dokładniej.
     const amount = (v) => Number(v).toLocaleString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {maximumFractionDigits: Math.abs(v) >= 100 ? 0 : (Math.abs(v) >= 10 ? 1 : 2)});
 
+    // Dzień zespołu : plan → zrobione (jednym dotknięciem albo partiami), straty z powodem, zatwierdzenie dnia.
     async function renderProduction(message) {
         longIdle = true;
         resetIdle();
@@ -441,23 +443,39 @@
         try {
             [day, me] = await Promise.all([api('GET', '/kiosk/production', undefined, true), api('GET', '/kiosk/me', undefined, true).catch(() => null)]);
         } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        drawProduction(day, me, message);
+    }
+
+    function drawProduction(day, me, message) {
         const others = day.catalog.filter(c => !day.items.some(i => i.item_id === c.item_id));
+        const tot = day.totals || {};
+        const closed = day.closed;
         el.innerHTML = personHeader() + tabs('production') + `
-            <section class="kiosk-card"><h2>${esc(t('prod_title', {group: day.group.name}))}</h2>
-                <p class="kiosk-muted">${esc(t('prod_help'))}</p></section>
+            <section class="kiosk-card kiosk-dayhead ${closed && !closed.changed ? 'is-closed' : ''}"><div><h2>${esc(t('prod_title', {group: day.group.name}))}</h2>
+                <p class="kiosk-muted">${esc(t('prod_help'))}</p>
+                <p class="kiosk-status">${tot.planned ? esc(t('day_plan_done', {done: tot.planned_done, total: tot.planned})) + ' · ' : ''}${esc(t('day_waste', {q: fmt(tot.waste || 0), pct: tot.waste_pct === null || tot.waste_pct === undefined ? '0' : fmt(tot.waste_pct)}))}</p>
+                ${closed ? `<p class="kiosk-dayhead-state">${closed.changed ? '⚠ ' + esc(t('day_changed')) : '✔ ' + esc(t('day_closed', {time: hhmm(closed.at), name: closed.employee || ''}))}${closed.note ? ' · ' + esc(closed.note) : ''}</p>` : ''}</div>
+                ${day.editable && day.items.length ? `<button type="button" class="kiosk-btn ${closed && !closed.changed ? '' : 'is-primary'}" data-close-day>✔ ${esc(t(closed ? 'day_close_again' : 'day_close'))}</button>` : ''}</section>
             <div class="kiosk-prod">${day.items.length ? day.items.map(i => {
-                const left = i.planned !== null ? Math.max(0, i.planned - i.produced) : null;
+                const left = i.planned !== null ? Math.max(0, Math.round((i.planned - i.produced) * 1000) / 1000) : null;
                 const pct = i.planned ? Math.min(100, Math.round(i.produced / i.planned * 100)) : null;
+                const live = i.wastes.filter(w => !w.cancelled);
                 return `<article class="kiosk-card kiosk-prod-item ${left === 0 ? 'is-done' : ''}" data-item="${i.item_id}">
                     <div class="kiosk-prod-head"><div><h3>${esc(i.name)}</h3>
-                        <div class="kiosk-muted">${i.planned !== null ? esc(t('prod_planned', {q: qty(i.planned, i)})) + ' · ' : ''}${esc(t('prod_done', {q: qty(i.produced, i)}))}</div></div>
-                        ${day.editable ? `<button type="button" class="kiosk-btn is-ok" data-new="${i.item_id}">＋ ${esc(t('prod_batch'))}</button>` : ''}</div>
+                        <div class="kiosk-muted">${i.planned !== null ? esc(t('prod_planned', {q: qty(i.planned, i)})) + ' · ' : ''}${esc(t('prod_done', {q: qty(i.produced, i)}))}${i.waste ? ' · ' + esc(t('prod_waste', {q: qty(i.waste, i)})) + ' · <strong>' + esc(t('prod_good', {q: qty(i.good, i)})) + '</strong>' : ''}</div></div>
+                        ${day.editable ? `<div class="kiosk-prod-actions">
+                            ${left ? `<button type="button" class="kiosk-btn is-ok" data-as-planned="${i.item_id}">✓ ${esc(t('prod_as_planned', {q: qty(left, i)}))}</button>` : ''}
+                            <button type="button" class="kiosk-btn ${left ? '' : 'is-ok'}" data-new="${i.item_id}">＋ ${esc(t('prod_batch'))}</button>
+                            ${i.good > 0 ? `<button type="button" class="kiosk-btn is-danger" data-waste="${i.item_id}">− ${esc(t('waste_add'))}</button>` : ''}</div>` : ''}</div>
                     ${pct !== null ? `<div class="kiosk-bar"><span style="width:${pct}%"></span></div>` : ''}
                     ${batchTiles(i)}
                     ${i.batches.length ? `<ul class="kiosk-batches">${i.batches.map(b => `<li class="${b.cancelled ? 'is-cancelled' : ''}">
                         <button type="button" class="kiosk-batch" data-batch="${b.id}"><strong>${esc(b.lot_code)}</strong>
                         <span>${esc(qty(b.quantity, i))}</span><span class="kiosk-muted">${esc(hhmm(b.created_at))}${b.employee ? ' · ' + esc(b.employee) : ''}</span>
                         <span class="kiosk-lots ${b.cancelled ? '' : (b.lots_total && b.lots_done >= b.lots_total ? 'is-ok' : 'is-todo')}">${b.cancelled ? esc(t('prod_cancelled')) : esc(t('prod_lots', {done: b.lots_done ?? 0, total: b.lots_total ?? 0}))}</span></button></li>`).join('')}</ul>` : ''}
+                    ${live.length ? `<ul class="kiosk-wastes">${live.map(w => `<li class="kiosk-waste"><span>🗑 <strong>${esc(qty(w.quantity, i))}</strong> · ${esc(t('waste_' + w.reason))}${w.note ? ' — ' + esc(w.note) : ''}</span>
+                        <span class="kiosk-muted">${w.lot_code ? esc(w.lot_code) + ' · ' : ''}${esc(hhmm(w.created_at))}${w.employee ? ' · ' + esc(w.employee) : ''}</span>
+                        ${w.editable ? `<button type="button" class="kiosk-btn is-small" data-waste-cancel="${w.id}" aria-label="${esc(t('waste_cancel'))}">✕</button>` : ''}</li>`).join('')}</ul>` : ''}
                 </article>`;
             }).join('') : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('prod_nothing'))}</p></section>`}</div>
             ${day.editable && others.length ? `<section class="kiosk-card"><h2>${esc(t('prod_other'))}</h2><div class="kiosk-row">
@@ -470,8 +488,203 @@
         bindOperations(me);
         el.querySelectorAll('[data-new]').forEach(b => b.addEventListener('click', () => renderNewBatch(find(Number(b.dataset.new)))));
         el.querySelectorAll('[data-batch]').forEach(b => b.addEventListener('click', () => renderBatch(Number(b.dataset.batch))));
+        el.querySelectorAll('[data-waste]').forEach(b => b.addEventListener('click', () => renderWaste(find(Number(b.dataset.waste)))));
+        // Zrobione według planu : jedna partia z resztą planu (numery partii surowców potem, jak przy każdej partii).
+        el.querySelectorAll('[data-as-planned]').forEach(b => b.addEventListener('click', async () => {
+            const i = find(Number(b.dataset.asPlanned));
+            const left = Math.max(0, Math.round((i.planned - i.produced) * 1000) / 1000);
+            if (!left || !window.confirm(t('prod_as_planned_confirm', {name: i.name, q: qty(left, i)}))) return;
+            b.disabled = true;
+            try {
+                const r = await api('POST', '/kiosk/production', {item_id: i.item_id, quantity: left, client_uuid: uuid()}, true);
+                renderProduction(t('prod_saved_plan', {lot: r.lot_code, q: qty(left, i)}));
+            } catch (err) { b.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
+        }));
+        el.querySelectorAll('[data-waste-cancel]').forEach(b => b.addEventListener('click', async () => {
+            if (!window.confirm(t('waste_cancel_confirm'))) return;
+            b.disabled = true;
+            try { drawProduction(await api('PATCH', `/kiosk/waste/${b.dataset.wasteCancel}`, {cancelled: true}, true), me, t('waste_cancelled')); }
+            catch (err) { b.disabled = false; toast(err.message, true); }
+        }));
+        el.querySelector('[data-close-day]')?.addEventListener('click', () => renderClose(day, me));
         const go = el.querySelector('[data-other-go]');
         if (go) go.addEventListener('click', () => { const v = Number(el.querySelector('[data-other]').value); if (v) renderNewBatch(find(v)); });
+    }
+
+    // Strata : ilość (kartony + sztuki), powód, opcjonalnie partia i notatka (« inne » : notatka wymagana).
+    function renderWaste(item) {
+        resetIdle();
+        let reason = null;
+        const icons = {quality: '🔍', burnt: '🔥', damaged: '💥', samples: '🧪', other: '✏️'};
+        const batches = (item.batches || []).filter(b => !b.cancelled);
+        el.innerHTML = header() + `<section class="kiosk-card"><h2>${esc(t('waste_title', {name: item.name}))}</h2>
+            <p class="kiosk-muted">${esc(t('waste_help', {q: qty(item.good, item)}))}</p>
+            <form class="kiosk-form" data-waste-form>
+                ${item.ppc ? `<label>${esc(t('prod_cartons', {ppc: item.ppc}))}<input name="cartons" inputmode="numeric"></label>
+                    <label>${esc(t('prod_loose', {unit: item.unit}))}<input name="loose" inputmode="decimal"></label>`
+                    : `<label>${esc(t('prod_quantity', {unit: item.unit}))}<input name="loose" inputmode="decimal"></label>`}
+                <p class="kiosk-status is-wide" data-total></p>
+                <div class="is-wide"><span class="kiosk-muted">${esc(t('waste_reason'))}</span><div class="kiosk-reasons" data-reasons>${['quality', 'burnt', 'damaged', 'samples', 'other'].map(k =>
+                    `<button type="button" class="kiosk-btn kiosk-reason" data-reason="${k}"><span aria-hidden="true">${icons[k]}</span> ${esc(t('waste_' + k))}</button>`).join('')}</div></div>
+                ${batches.length ? `<label>${esc(t('waste_batch'))}<select class="kiosk-select" name="output_id"><option value="">${esc(t('waste_no_batch'))}</option>
+                    ${batches.map(b => `<option value="${b.id}">${esc(b.lot_code)} · ${esc(qty(b.quantity, item))}</option>`).join('')}</select></label>` : ''}
+                <label class="is-wide">${esc(t('waste_note'))}<input name="note" maxlength="255"></label>
+            </form><p class="kiosk-error" data-error></p>
+            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-cancel>${esc(t('cancel'))}</button>
+                <button type="button" class="kiosk-btn is-danger" data-save>${esc(t('waste_save'))}</button></div></section>`;
+        const form = el.querySelector('[data-waste-form]');
+        const num = (v) => { const n = Number(String(v || '').replace(',', '.').replace(/\s/g, '')); return Number.isFinite(n) ? n : NaN; };
+        const total = () => (item.ppc ? num(form.cartons.value) * item.ppc : 0) + num(form.loose.value);
+        const show = () => { const q = total(); el.querySelector('[data-total]').textContent = Number.isFinite(q) && q > 0 ? t('prod_total', {q: qty(q, item)}) : ''; };
+        form.addEventListener('input', () => { resetIdle(); show(); });
+        el.querySelector('[data-reasons]').addEventListener('click', (e) => {
+            const b = e.target.closest('[data-reason]');
+            if (!b) return;
+            reason = b.dataset.reason;
+            el.querySelectorAll('[data-reason]').forEach(x => x.classList.toggle('is-primary', x === b));
+            if (reason === 'other') form.note.focus();
+        });
+        const id = uuid();
+        el.querySelector('[data-cancel]').addEventListener('click', () => renderProduction());
+        el.querySelector('[data-save]').addEventListener('click', async (e) => {
+            const q = total();
+            const error = el.querySelector('[data-error]');
+            if (!Number.isFinite(q) || q <= 0) { error.textContent = t('prod_qty_required'); return; }
+            if (!reason) { error.textContent = t('waste_reason_required'); return; }
+            if (reason === 'other' && !form.note.value.trim()) { error.textContent = t('waste_note_required'); form.note.focus(); return; }
+            e.target.disabled = true;
+            try {
+                const body = {item_id: item.item_id, quantity: Math.round(q * 1000) / 1000, reason, note: form.note.value.trim() || null, client_uuid: id};
+                if (form.output_id && form.output_id.value) body.output_id = Number(form.output_id.value);
+                await api('POST', '/kiosk/waste', body, true);
+                renderProduction(t('waste_saved', {q: qty(q, item)}));
+            } catch (err) { e.target.disabled = false; error.textContent = err.offline ? t('offline_retry') : err.message; }
+        });
+    }
+
+    // Zatwierdzenie dnia : podsumowanie na produkt (plan, zrobione, straty, dobre), braki wobec planu, notatka zespołu.
+    function renderClose(day, me) {
+        resetIdle();
+        const short = day.items.filter(i => i.planned !== null && i.produced + 1e-6 < i.planned);
+        el.innerHTML = header() + `<section class="kiosk-card"><h2>${esc(t('day_close_title', {group: day.group.name}))}</h2>
+            <p class="kiosk-muted">${esc(t('day_close_help'))}</p>
+            <table class="kiosk-table"><thead><tr><th>${esc(t('day_col_product'))}</th><th>${esc(t('day_col_planned'))}</th><th>${esc(t('day_col_done'))}</th><th>${esc(t('day_col_waste'))}</th><th>${esc(t('day_col_good'))}</th></tr></thead>
+            <tbody>${day.items.map(i => `<tr class="${i.planned !== null && i.produced + 1e-6 < i.planned ? 'is-short' : ''}"><td>${esc(i.name)}</td><td>${i.planned !== null ? esc(qty(i.planned, i)) : '—'}</td>
+                <td>${esc(qty(i.produced, i))}</td><td>${i.waste ? esc(qty(i.waste, i)) : '—'}</td><td><strong>${esc(qty(i.good, i))}</strong></td></tr>`).join('')}</tbody></table>
+            ${short.length ? `<p class="kiosk-error">⚠ ${esc(t('day_short', {n: short.length}))}</p>` : ''}
+            <form class="kiosk-form" data-close-form><label class="is-wide">${esc(t('day_note'))}<input name="note" maxlength="255" value="${esc(day.closed && day.closed.note || '')}"></label></form>
+            <p class="kiosk-error" data-error></p>
+            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-cancel>${esc(t('cancel'))}</button>
+                <button type="button" class="kiosk-btn is-primary" data-save>✔ ${esc(t('day_confirm'))}</button></div></section>`;
+        el.querySelector('[data-close-form]').addEventListener('input', resetIdle);
+        el.querySelector('[data-cancel]').addEventListener('click', () => drawProduction(day, me));
+        el.querySelector('[data-save]').addEventListener('click', async (e) => {
+            e.target.disabled = true;
+            try {
+                const r = await api('POST', '/kiosk/production/close', {date: day.date, note: el.querySelector('[name=note]').value.trim() || null}, true);
+                drawProduction(r, me, t('day_closed_done'));
+            } catch (err) { e.target.disabled = false; el.querySelector('[data-error]').textContent = err.offline ? t('offline_retry') : err.message; }
+        });
+    }
+
+    // --- Receptury : karty grupy, drzewo receptury przeliczone na wybraną ilość (karton, partia, plan dnia) --------
+    async function renderRecipes(message) {
+        longIdle = true;
+        resetIdle();
+        let r;
+        try { r = await api('GET', '/kiosk/recipes', undefined, true); } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        const today = r.items.filter(i => i.planned);
+        const rest = r.items.filter(i => !i.planned);
+        const tile = (i) => `<button type="button" class="kiosk-card kiosk-recipe-tile" data-recipe="${i.item_id}"><strong>${esc(i.name)}</strong>
+            <span class="kiosk-muted">${i.planned ? esc(t('prod_planned', {q: qty(i.planned, i)})) : esc(t(i.type === 'semi' ? 'rec_semi' : 'rec_product'))}</span></button>`;
+        el.innerHTML = personHeader() + tabs('recipes') + `
+            <section class="kiosk-card"><h2>${esc(t('rec_title'))}</h2><p class="kiosk-muted">${esc(t('rec_help'))}</p>
+                <input class="kiosk-search" type="search" data-rec-search placeholder="${esc(t('rec_search'))}" autocomplete="off"></section>
+            ${today.length ? `<h2 class="kiosk-section">${esc(t('rec_today'))}</h2><div class="kiosk-recipe-grid">${today.map(tile).join('')}</div>` : ''}
+            ${rest.length ? `<h2 class="kiosk-section">${esc(t('rec_all'))}</h2><div class="kiosk-recipe-grid">${rest.map(tile).join('')}</div>` : ''}
+            ${r.items.length ? '' : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('rec_none'))}</p></section>`}`;
+        if (message) toast(message);
+        bindTabs();
+        el.querySelectorAll('[data-recipe]').forEach(b => b.addEventListener('click', () => renderRecipe(Number(b.dataset.recipe))));
+        el.querySelector('[data-rec-search]').addEventListener('input', (e) => {
+            resetIdle();
+            const q = e.target.value.trim().toLowerCase();
+            el.querySelectorAll('[data-recipe]').forEach(b => { b.hidden = q !== '' && !b.textContent.toLowerCase().includes(q); });
+        });
+    }
+
+    // Ilość : gramy / mililitry od 1000 jako kg / l.
+    const measure = (q, unit) => {
+        if ((unit === 'g' || unit === 'ml') && Math.abs(q) >= 1000) return `${amount(q / 1000)} ${unit === 'g' ? 'kg' : 'l'}`;
+        return `${amount(q)} ${unit || ''}`.trim();
+    };
+
+    async function renderRecipe(itemId) {
+        longIdle = true;
+        resetIdle();
+        let r;
+        try { r = await api('GET', `/kiosk/recipes/${itemId}`, undefined, true); } catch (err) { toast(err.message, true); return; }
+        // Mnożnik drzewa : karton (produkt), kg (półprodukt) albo receptura.
+        const presets = [];
+        if (r.basis === 'carton') {
+            presets.push({k: 'carton', label: t('rec_one_carton', {ppc: r.ppc}), f: 1});
+            if (r.batch) presets.push({k: 'batch', label: t('rec_one_batch', {q: qty(r.batch, r)}), f: r.batch / r.ppc});
+            if (r.planned) presets.push({k: 'plan', label: t('rec_plan', {q: qty(r.planned, r)}), f: r.planned / r.ppc});
+        } else if (r.basis === 'kg') {
+            if (r.recipe_yield) presets.push({k: 'recipe', label: t('rec_one_recipe_kg', {q: fmt(r.recipe_yield)}), f: r.recipe_yield});
+            if (r.batch) presets.push({k: 'batch', label: t('rec_one_batch', {q: qty(r.batch, r)}), f: r.batch});
+            if (r.planned) presets.push({k: 'plan', label: t('rec_plan', {q: qty(r.planned, r)}), f: r.planned});
+        } else {
+            presets.push({k: 'recipe', label: t('rec_one_recipe'), f: 1});
+        }
+        let factor = (presets.find(p => p.k === 'plan') || presets[0]).f;
+        const customLabel = r.basis === 'carton' ? t('rec_custom_pieces', {unit: r.unit}) : (r.basis === 'kg' ? t('rec_custom_kg') : t('rec_custom_times'));
+        const node = (n, f, depth) => {
+            const items = n.lines.filter(l => l.kind === 'recipe' || !l.packaging);
+            const pack = depth === 0 ? n.lines.filter(l => l.kind === 'material' && l.packaging) : [];
+            return `<div class="kiosk-rec-node ${depth ? 'is-sub' : ''}">
+                ${n.steps.length ? `<ol class="kiosk-rec-steps">${n.steps.map(st => `<li>${esc(st)}</li>`).join('')}</ol>` : ''}
+                <ul class="kiosk-rec-lines">${items.map(l => l.kind === 'recipe'
+                    ? `<li class="kiosk-rec-sub"><details open><summary><strong>${esc(l.name)}</strong> <span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></summary>
+                        ${l.node ? node(l.node, f, depth + 1) : ''}</details></li>`
+                    : `<li><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`).join('')}</ul>
+                ${pack.length ? `<details class="kiosk-rec-pack"><summary>${esc(t('lot_packaging', {n: pack.length}))}</summary><ul class="kiosk-rec-lines">${pack.map(l =>
+                    `<li><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`).join('')}</ul></details>` : ''}</div>`;
+        };
+        const draw = () => {
+            el.querySelector('[data-rec-tree]').innerHTML = node(r.tree, factor, 0);
+            const pieces = r.basis === 'carton' ? factor * r.ppc : null;
+            el.querySelector('[data-rec-for]').textContent = r.basis === 'carton' ? t('rec_for_pieces', {q: qty(pieces, r)})
+                : (r.basis === 'kg' ? t('rec_for_kg', {q: fmt(factor)}) : t('rec_for_times', {q: fmt(factor)}));
+        };
+        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-back>${esc(t('back'))}</button>`) + `
+            <section class="kiosk-card"><h2>${esc(r.name)}</h2>
+                <div class="kiosk-row kiosk-rec-presets" data-presets>${presets.map(p => `<button type="button" class="kiosk-btn is-small" data-f="${p.f}">${esc(p.label)}</button>`).join('')}
+                    <label class="kiosk-rec-custom">${esc(customLabel)}<input data-custom inputmode="decimal"></label></div>
+                <p class="kiosk-status" data-rec-for></p></section>
+            <section class="kiosk-card" data-rec-tree></section>
+            ${r.routing.length ? `<section class="kiosk-card"><h2>${esc(t('rec_routing'))}</h2><ol class="kiosk-rec-steps">${r.routing.map(st =>
+                `<li><strong>${esc(st.name)}</strong>${st.workstation ? ' · ' + esc(st.workstation) : ''}${st.temperature_c !== null ? ' · ' + esc(fmt(st.temperature_c)) + ' °C' : ''}</li>`).join('')}</ol></section>` : ''}`;
+        const mark = () => el.querySelectorAll('[data-f]').forEach(b => b.classList.toggle('is-primary', Math.abs(Number(b.dataset.f) - factor) < 1e-9));
+        el.querySelector('[data-back]').addEventListener('click', () => renderRecipes());
+        el.querySelector('[data-presets]').addEventListener('click', (e) => {
+            const b = e.target.closest('[data-f]');
+            if (!b) return;
+            factor = Number(b.dataset.f);
+            el.querySelector('[data-custom]').value = '';
+            mark();
+            draw();
+        });
+        el.querySelector('[data-custom]').addEventListener('input', (e) => {
+            resetIdle();
+            const v = Number(String(e.target.value).replace(',', '.').replace(/\s/g, ''));
+            if (!Number.isFinite(v) || v <= 0) return;
+            factor = r.basis === 'carton' ? v / r.ppc : v;
+            mark();
+            draw();
+        });
+        mark();
+        draw();
     }
 
     // Partia produkcyjna : kafelka na każdą zaplanowaną partię (zrobione ✓ według ilości zapisanej na tablecie).

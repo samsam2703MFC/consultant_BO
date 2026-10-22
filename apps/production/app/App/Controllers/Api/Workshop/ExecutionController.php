@@ -8,6 +8,7 @@ use App\Core\Api\Workshop\ApiRequest;
 use App\Core\Api\Workshop\ApiResult;
 use App\Services\Workshop\Execution\ExecutionService;
 use App\Services\Workshop\Execution\KioskAuthService;
+use App\Services\Workshop\Execution\KioskRecipeService;
 use App\Services\Workshop\Execution\KpiService;
 use App\Services\Workshop\Execution\OutputService;
 use App\Services\Workshop\Execution\QualityService;
@@ -27,6 +28,7 @@ final class ExecutionController
         private OutputService $outputs,
         private QualityService $quality,
         private TeamSheetService $teams,
+        private KioskRecipeService $recipes,
     ) {
     }
 
@@ -94,6 +96,12 @@ final class ExecutionController
     public function output(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->batch($request->id(), $request->context)); }
     public function updateOutput(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->update($request->id(), $request->body(), $request->context)); }
     public function outputLot(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->setLot($request->id(), $request->id('material'), $request->body(), $request->context)); }
+    // Straty dnia i zatwierdzenie dnia przez zespół ; receptury grupy.
+    public function recordWaste(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->recordWaste($request->body(), $request->context), 201); }
+    public function updateWaste(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->updateWaste($request->id(), $request->body(), $request->context)); }
+    public function closeDay(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->closeDay($request->body(), $request->context)); }
+    public function recipes(ApiRequest $request): ApiResult { return new ApiResult($this->recipes->list($request->context, $request->query('date'))); }
+    public function recipe(ApiRequest $request): ApiResult { return new ApiResult($this->recipes->recipe($request->id(), $request->context, $request->query('date'))); }
     // Kontrola jakości (tablet grupy)
     public function quality(ApiRequest $request): ApiResult { return new ApiResult($this->quality->day($request->context)); }
     public function qualityCheck(ApiRequest $request): ApiResult { return new ApiResult($this->quality->check($request->id(), $request->body(), $request->context)); }

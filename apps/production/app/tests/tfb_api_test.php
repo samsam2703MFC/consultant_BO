@@ -40,7 +40,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings', 'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month', 'cost_media_section_allocation', 'cost_media_type', 'communication_message', 'communication_message_attachment', 'communication_email_account', 'erp_company_data', 'flattened_recipe_recipe', 'product_preparation_type', 'product_recipe_preparation_connection', 'product_recipe_type'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings', 'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month', 'cost_media_section_allocation', 'cost_media_type', 'communication_message', 'communication_message_attachment', 'communication_email_account', 'erp_company_data', 'flattened_recipe_recipe', 'product_preparation_type', 'product_recipe_preparation_connection', 'product_recipe_type', 'product_recipe_preparation_step', 'product_recipe_prepare_instruction_connection'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -827,6 +827,63 @@ $pdo->exec("INSERT INTO tfb_prod_output (work_date, id_group, id_item, quantity,
 $foreign = (int) $pdo->lastInsertId();
 [$s, $b] = $kiosk('GET', "/kiosk/production/{$foreign}", null, $device, $emp);
 check($s === 403 && $b['description'] === 'OUTPUT_NOT_IN_YOUR_GROUPS', 'batches of another group hidden');
+// --- Straty dnia (dobre = zrobione − straty) i zatwierdzenie dnia przez zespół
+$wasteOf = fn($pd) => array_values(array_filter($pd['data']['items'] ?? [], fn($i) => $i['item_id'] === $croissant))[0] ?? null;
+[$s, $b] = $kiosk('POST', '/kiosk/waste', ['item_id' => $croissant, 'quantity' => 5, 'reason' => 'other'], $device, $emp);
+check($s === 422 && $codes($b) === ['note:WASTE_NOTE_REQUIRED'], 'waste « other » needs a note');
+[$s, $b] = $kiosk('POST', '/kiosk/waste', ['item_id' => $croissant, 'quantity' => 5, 'reason' => 'lost'], $device, $emp);
+check($s === 422 && $codes($b) === ['reason:INVALID_CHOICE'], 'waste reason from the list');
+[$s, $b] = $kiosk('POST', '/kiosk/waste', ['item_id' => $croissant, 'quantity' => 500, 'reason' => 'quality'], $device, $emp);
+check($s === 409 && $b['description'] === 'WASTE_EXCEEDS_PRODUCED', 'waste never above the good quantity of the day');
+[$s, $b] = $kiosk('POST', '/kiosk/waste', ['item_id' => $croissant, 'quantity' => 5, 'reason' => 'quality', 'output_id' => $b2['data']['id']], $device, $emp);
+check($s === 422 && $codes($b) === ['output_id:WASTE_OUTPUT_MISMATCH'], 'waste only on a valid batch of the product and day');
+$wUuid = '6c2d3e4f-5061-4b7c-9d8e-0f1a2b3c4d5e';
+[$s, $pd] = $kiosk('POST', '/kiosk/waste', ['item_id' => $croissant, 'quantity' => 12, 'reason' => 'burnt', 'output_id' => $batchId, 'client_uuid' => $wUuid], $device, $emp);
+$row = $wasteOf($pd);
+check($s === 201 && $row['produced'] == 120.0 && $row['waste'] == 12.0 && $row['good'] == 108.0 && count($row['wastes']) === 1 && $row['wastes'][0]['reason'] === 'burnt'
+    && $row['wastes'][0]['lot_code'] === $prefix . '01' && $row['wastes'][0]['employee'] !== null && $pd['data']['totals']['waste_pct'] == 10.0
+    && $pd['data']['waste_reasons'] === ['quality', 'burnt', 'damaged', 'samples', 'other'], 'waste recorded on a batch: good = produced − waste');
+[$s, $pd] = $kiosk('POST', '/kiosk/waste', ['item_id' => $croissant, 'quantity' => 12, 'reason' => 'burnt', 'client_uuid' => $wUuid], $device, $emp);
+check($s === 201 && $pd['data']['replayed'] && count($wasteOf($pd)['wastes']) === 1, 'replayed waste (offline tablet) recorded once');
+[$s, $pd] = $kiosk('POST', '/kiosk/waste', ['item_id' => $croissant, 'quantity' => 3, 'reason' => 'samples'], $device, $emp);
+$extra = $wasteOf($pd)['wastes'][1]['id'] ?? 0;
+check($s === 201 && $wasteOf($pd)['good'] == 105.0, 'second waste without a batch');
+[$s, $pd] = $kiosk('PATCH', "/kiosk/waste/{$extra}", ['cancelled' => true], $device, $emp);
+check($s === 200 && $wasteOf($pd)['good'] == 108.0 && $wasteOf($pd)['wastes'][1]['cancelled'], 'waste cancelled, good quantity back');
+[$s, $b] = $kiosk('PATCH', "/kiosk/waste/{$extra}", ['cancelled' => true], $device, $emp);
+check($s === 409 && $b['description'] === 'WASTE_CANCELLED', 'a cancelled waste stays cancelled');
+check($pd['data']['closed'] === null, 'day not validated yet');
+[$s, $pd] = $kiosk('POST', '/kiosk/production/close', ['note' => 'Piec 2 za gorący'], $device, $emp);
+$close = $pdo->query('SELECT * FROM tfb_prod_day_close WHERE work_date = CURDATE() AND id_group = 1')->fetch();
+$sum = array_column(json_decode((string) ($close['summary'] ?? '[]'), true), null, 'item_id');
+check($s === 200 && $pd['data']['closed']['employee'] !== null && $pd['data']['closed']['note'] === 'Piec 2 za gorący' && !$pd['data']['closed']['changed']
+    && $close && (int) $close['id_employee'] > 0 && $sum[$croissant]['produced'] == 120 && $sum[$croissant]['waste'] == 12, 'team validates the day (who, when, summary per product)');
+[$s, $pd] = $kiosk('POST', '/kiosk/waste', ['item_id' => $croissant, 'quantity' => 2, 'reason' => 'damaged'], $device, $emp);
+check($s === 201 && $pd['data']['closed']['changed'], 'change after the validation shown');
+[$s, $pd] = $kiosk('POST', '/kiosk/production/close', [], $device, $emp);
+check($s === 200 && !$pd['data']['closed']['changed'] && $pd['data']['closed']['note'] === null
+    && (int) $pdo->query('SELECT COUNT(*) FROM tfb_prod_day_close WHERE work_date = CURDATE() AND id_group = 1')->fetchColumn() === 1, 'validated again: one record per day and group');
+[$s, $b] = $kiosk('POST', '/kiosk/production/close', ['date' => date('Y-m-d', strtotime('-5 days'))], $device, $emp);
+check($s === 409 && $b['description'] === 'OUTPUT_LOCKED', 'old days are not validated on the tablet');
+$weekGood = (new \App\Repositories\Workshop\WeekRepository($pdo))->produced(date('Y-m-d'), date('Y-m-d'));
+check(abs(($weekGood[$croissant] ?? 0) - (120 + 5 - 12 - 2)) < 0.001, 'week progress counts good quantity (produced − waste)');
+// --- Receptury na tablecie : drzewo receptury na karton (podreceptury, surowce, etapy) i etapy produkcji karty
+$pdo->exec("INSERT INTO product_recipe_connection (parent_recipe_id, child_recipe_id, child_ingredient_id, quantity) VALUES (701, NULL, 900, 750)");
+$pdo->exec("INSERT INTO product_recipe_preparation_step (recipe_id, step_number, step_description) VALUES (701, 2, 'Laminować 3 × 4'), (701, 1, 'Wymieszać 4 min')");
+$pdo->exec("INSERT INTO product_recipe_prepare_instruction_connection (id_recipe, prepare_step_num, prepare_step_desc, duration) VALUES (700, 1, 'Piec 18 min 180 °C', 60)");
+[$s, $rl] = $kiosk('GET', '/kiosk/recipes', null, $device, $emp);
+$rItem = array_values(array_filter($rl['data']['items'] ?? [], fn($i) => $i['item_id'] === $croissant))[0] ?? null;
+check($s === 200 && $rItem && $rItem['ppc'] === 60, 'recipes: cards of the tablet group with a recipe');
+[$s, $r] = $kiosk('GET', "/kiosk/recipes/{$croissant}", null, $device, $emp);
+$lines = array_column($r['data']['tree']['lines'] ?? [], null, 'kind');
+$dough = $lines['recipe'] ?? null;
+$flourLine = $dough['node']['lines'][0] ?? null;
+check($s === 200 && $r['data']['basis'] === 'carton' && $r['data']['tree']['recipe_id'] === 700 && $r['data']['tree']['steps'] === ['Piec 18 min 180 °C']
+    && $dough && $dough['recipe_id'] === 701 && $dough['quantity'] == 2000.0 && $dough['node']['batches'] == 2.0 && $dough['node']['steps'] === ['Wymieszać 4 min', 'Laminować 3 × 4']
+    && $flourLine && $flourLine['material_id'] === 900 && $flourLine['quantity'] == 1500.0 && $lines['material']['material_id'] === 901 && $lines['material']['quantity'] == 300.0,
+    'recipe tree per carton: sub-recipe × its yield, materials, preparation steps (legacy instructions as fallback)');
+[$s, $b] = $kiosk('GET', '/kiosk/recipes/999999', null, $device, $emp);
+check($s === 404, 'unknown card');
 // --- Kontrola jakości na tablecie : partia OK albo niezgodność (rejestr niezgodności ERP)
 [$s, $q] = $kiosk('GET', '/kiosk/quality', null, $device, $emp);
 $qb = array_column($q['data']['batches'] ?? [], null, 'id');

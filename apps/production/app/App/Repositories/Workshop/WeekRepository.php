@@ -143,12 +143,15 @@ final class WeekRepository extends WorkshopRepository
                            ORDER BY period_start, version DESC, id DESC", [$start, $end]);
     }
 
-    /** Ilość wyprodukowana w dniach (partie zapisane na tabletach, bez anulowanych). @return array<int, float> */
+    /** Dobra ilość wyprodukowana w dniach (partie zapisane na tabletach minus straty, bez anulowanych). @return array<int, float> */
     public function produced(string $from, string $to): array
     {
         $out = [];
         foreach ($this->all('SELECT id_item, SUM(quantity) AS q FROM tfb_prod_output WHERE work_date BETWEEN ? AND ? AND cancelled_at IS NULL GROUP BY id_item', [$from, $to]) as $r) {
             $out[(int) $r['id_item']] = (float) $r['q'];
+        }
+        foreach ($this->all('SELECT id_item, SUM(quantity) AS q FROM tfb_prod_waste WHERE work_date BETWEEN ? AND ? AND cancelled_at IS NULL GROUP BY id_item', [$from, $to]) as $r) {
+            $out[(int) $r['id_item']] = max(0.0, ($out[(int) $r['id_item']] ?? 0.0) - (float) $r['q']);
         }
         return $out;
     }

@@ -85,6 +85,97 @@ final class OutputRepository extends WorkshopRepository
                            WHERE fri.recipe_id = ? ORDER BY packaging, fri.quantity DESC, rm.name", [$recipeId]);
     }
 
+    // --- Straty dnia i zatwierdzenie dnia ------------------------------------------------------------
+
+    public function insertWaste(array $w): int
+    {
+        $this->db->prepare('INSERT INTO tfb_prod_waste (work_date, id_group, id_item, id_output, quantity, reason, note, id_employee, id_device, client_uuid)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$w['work_date'], $w['id_group'], $w['id_item'], $w['id_output'], $w['quantity'], $w['reason'], $w['note'], $w['id_employee'], $w['id_device'], $w['client_uuid']]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function waste(int $id): ?array
+    {
+        return $this->all('SELECT * FROM tfb_prod_waste WHERE id = ?', [$id])[0] ?? null;
+    }
+
+    public function wasteByUuid(string $uuid): ?array
+    {
+        return $this->all('SELECT * FROM tfb_prod_waste WHERE client_uuid = ?', [$uuid])[0] ?? null;
+    }
+
+    public function cancelWaste(int $id, ?int $employeeId): void
+    {
+        $this->db->prepare('UPDATE tfb_prod_waste SET cancelled_at = NOW(), cancelled_by = ? WHERE id = ? AND cancelled_at IS NULL')->execute([$employeeId, $id]);
+    }
+
+    /** Straty dnia grupy (z anulowanymi), z osobą i numerem partii wyrobu. */
+    public function dayWaste(string $day, int $groupId): array
+    {
+        return $this->all("SELECT w.*, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name, o.lot_code
+                           FROM tfb_prod_waste w
+                           LEFT JOIN tfb_prod_output o ON o.id = w.id_output
+                           LEFT JOIN tfb_prod_employee e ON e.id = w.id_employee
+                           LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
+                           WHERE w.work_date = ? AND w.id_group = ? ORDER BY w.created_at, w.id", [$day, $groupId]);
+    }
+
+    public function dayClose(string $day, int $groupId): ?array
+    {
+        return $this->all("SELECT c.*, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name
+                           FROM tfb_prod_day_close c
+                           LEFT JOIN tfb_prod_employee e ON e.id = c.id_employee
+                           LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
+                           WHERE c.work_date = ? AND c.id_group = ?", [$day, $groupId])[0] ?? null;
+    }
+
+    public function saveDayClose(string $day, int $groupId, ?int $employeeId, ?int $deviceId, ?string $note, string $summary): void
+    {
+        $this->db->prepare('INSERT INTO tfb_prod_day_close (work_date, id_group, id_employee, id_device, note, summary) VALUES (?, ?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE id_employee = VALUES(id_employee), id_device = VALUES(id_device), note = VALUES(note),
+                                summary = VALUES(summary), closed_at = NOW()')
+            ->execute([$day, $groupId, $employeeId, $deviceId, $note, $summary]);
+    }
+
+    // --- Receptury (zakładka tabletu) ----------------------------------------------------------------
+
+    public function recipeHead(int $recipeId): ?array
+    {
+        return $this->all('SELECT pr.id, pr.name, pr.yield_quantity, u.name AS unit, pr.description FROM product_recipe pr LEFT JOIN unit u ON u.id = pr.id_unit WHERE pr.id = ?', [$recipeId])[0] ?? null;
+    }
+
+    /** Składniki receptury jednego poziomu : surowce / opakowania i podreceptury (ilość na wydajność receptury). */
+    public function recipeLines(int $recipeId): array
+    {
+        return $this->all("SELECT c.child_recipe_id, c.child_ingredient_id, c.quantity,
+                                  rm.name AS material_name, rm.name_fr AS material_name_fr, um.name AS material_unit, COALESCE(cm.id_group, 0) = 1 AS packaging,
+                                  pr.name AS recipe_name, pr.yield_quantity, ur.name AS recipe_unit
+                           FROM product_recipe_connection c
+                           LEFT JOIN raw_material rm ON rm.id = c.child_ingredient_id
+                           LEFT JOIN unit um ON um.id = rm.id_unit
+                           LEFT JOIN category_material cm ON cm.id = rm.id_category
+                           LEFT JOIN product_recipe pr ON pr.id = c.child_recipe_id
+                           LEFT JOIN unit ur ON ur.id = pr.id_unit
+                           WHERE c.parent_recipe_id = ? ORDER BY c.child_recipe_id IS NULL, packaging, c.quantity DESC", [$recipeId]);
+    }
+
+    /** Etapy przygotowania receptury (formularz receptury ; starsze instrukcje, gdy brak etapów). @return list<string> */
+    public function recipeSteps(int $recipeId): array
+    {
+        $steps = array_column($this->all('SELECT step_description FROM product_recipe_preparation_step WHERE recipe_id = ? ORDER BY step_number, id', [$recipeId]), 'step_description');
+        if ($steps) return $steps;
+        return array_column($this->all('SELECT prepare_step_desc FROM product_recipe_prepare_instruction_connection WHERE id_recipe = ? ORDER BY prepare_step_num, id', [$recipeId]), 'prepare_step_desc');
+    }
+
+    /** Etapy produkcji karty (Etapy i czasy) : nazwa, stanowisko, temperatura. */
+    public function routing(int $itemId): array
+    {
+        return $this->all('SELECT rs.step_no, rs.name_pl, rs.name_fr, rs.temperature_c, w.name_pl AS ws_pl, w.name_fr AS ws_fr
+                           FROM tfb_prod_routing_step rs LEFT JOIN tfb_prod_workstation w ON w.id = rs.id_workstation
+                           WHERE rs.id_item = ? ORDER BY rs.step_no, rs.id', [$itemId]);
+    }
+
     /** @return array<int, array> surowiec => partia wpisana do tej partii wyrobu */
     public function lots(int $outputId): array
     {

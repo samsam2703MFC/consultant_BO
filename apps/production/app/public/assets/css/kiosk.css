@@ -155,3 +155,37 @@ details.kiosk-section summary { cursor: pointer; font-weight: 600; padding: 8px 
 .kiosk-table .is-today { background: #fff6dd; }
 .kiosk-late { color: var(--k-danger); }
 @media (max-width: 600px) { .kiosk-plan-block { grid-template-columns: 1fr; } }
+/* Dzień zespołu : zatwierdzenie, straty, « zrobione wg planu » */
+.kiosk-dayhead { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+.kiosk-dayhead > div { flex: 1; min-width: 260px; }
+.kiosk-dayhead h2 { margin: 0 0 6px; }
+.kiosk-dayhead.is-closed { box-shadow: inset 0 0 0 3px var(--k-ok); }
+.kiosk-dayhead-state { margin: 6px 0 0; font-weight: 700; color: var(--k-ok); }
+.kiosk-dayhead:not(.is-closed) .kiosk-dayhead-state { color: var(--k-warn); }
+.kiosk-form > .is-wide { grid-column: 1 / -1; }
+.kiosk-card > .kiosk-muted + .kiosk-form { margin-top: 14px; }
+.kiosk-prod-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.kiosk-wastes { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.kiosk-waste { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border-radius: 10px; background: #fbecee; }
+.kiosk-waste > span:first-child { flex: 1; min-width: 180px; }
+.kiosk-waste .kiosk-btn { min-height: 44px; padding: 6px 14px; }
+.kiosk-reasons { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 6px; }
+.kiosk-reason { font-size: 18px; min-height: 60px; }
+.kiosk-table tr.is-short td { background: #fff6dd; }
+/* Receptury */
+.kiosk-recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.kiosk-recipe-tile { display: flex; flex-direction: column; gap: 4px; text-align: left; border: 0; font-size: 18px; min-height: 84px; }
+.kiosk-recipe-tile[hidden] { display: none; }
+.kiosk-rec-presets { align-items: flex-end; }
+.kiosk-rec-custom { display: flex; flex-direction: column; gap: 4px; font-size: 15px; color: var(--k-muted); }
+.kiosk-rec-custom input { font-size: 20px; padding: 10px; border-radius: 10px; border: 2px solid var(--k-line); width: 160px; }
+.kiosk-rec-node.is-sub { margin: 8px 0 4px 6px; padding-left: 14px; border-left: 3px solid var(--k-line); }
+.kiosk-rec-lines { list-style: none; margin: 0; padding: 0; }
+.kiosk-rec-lines > li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--k-line); font-size: 19px; }
+.kiosk-rec-lines > li.kiosk-rec-sub { display: block; }
+.kiosk-rec-sub summary { cursor: pointer; display: flex; justify-content: space-between; gap: 12px; }
+.kiosk-rec-q { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kiosk-rec-steps { margin: 0 0 10px; padding-left: 26px; font-size: 18px; line-height: 1.5; }
+.kiosk-rec-pack { margin-top: 10px; }
+.kiosk-rec-pack summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+@media (max-width: 600px) { .kiosk-tab { font-size: 15px; padding: 8px 4px; } .kiosk-prod-actions { justify-content: flex-start; } }

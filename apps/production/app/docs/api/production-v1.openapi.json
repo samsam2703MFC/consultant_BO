@@ -11176,6 +11176,397 @@
                 ]
             }
         },
+        "/kiosk/production/close": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zatwierdzenie produkcji dnia przez zespół / Validation de la production du jour par l'équipe",
+                "operationId": "closeProductionDay",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProductionDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Enregistre qui valide et quand, avec le résumé (prévu, produit, pertes par produit). Revalider remplace le résumé ; closed.changed = lots ou pertes modifiés depuis. 409 DAY_NOTHING_TO_CLOSE, OUTPUT_LOCKED.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DayCloseInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/waste": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Strata produkcji / Perte de production",
+                "operationId": "recordWaste",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProductionDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Quantité perdue (unité de la fiche) et raison (quality, burnt, damaged, samples, other — other : note obligatoire, 422 WASTE_NOTE_REQUIRED). Retirée du produit : bon = produit − pertes ; jamais plus que le bon du jour (409 WASTE_EXCEEDS_PRODUCED). output_id : lot du même produit et du même jour. client_uuid rejouable.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WasteInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/waste/{id}": {
+            "patch": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Anuluj stratę / Annuler une perte",
+                "operationId": "updateWaste",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProductionDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "cancelled = true (jours modifiables : kiosk.output_edit_days). 409 WASTE_CANCELLED si déjà annulée.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WasteUpdateInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/recipes": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Receptury grupy tabletu / Recettes du groupe de la tablette",
+                "operationId": "kioskRecipes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskRecipeList"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "défaut : aujourd'hui (quantité prévue du jour)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/recipes/{id}": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Receptura karty / Recette d'une fiche",
+                "operationId": "kioskRecipe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskRecipe"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Arbre de la recette (sous-recettes, matières, emballages, étapes de préparation) pour une unité de base : produit = 1 carton, semi-fini = 1 kg (sinon 1 recette) ; la tablette multiplie par la quantité choisie. routing = étapes de production de la fiche. 409 ITEM_WITHOUT_RECIPE.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "défaut : aujourd'hui"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/quality": {
             "get": {
                 "tags": [
@@ -16514,10 +16905,22 @@
                                         "produced": {
                                             "type": "number"
                                         },
+                                        "waste": {
+                                            "type": "number"
+                                        },
+                                        "good": {
+                                            "type": "number"
+                                        },
                                         "batches": {
                                             "type": "array",
                                             "items": {
                                                 "$ref": "#/components/schemas/OutputRow"
+                                            }
+                                        },
+                                        "wastes": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/WasteRow"
                                             }
                                         }
                                     }
@@ -16525,10 +16928,328 @@
                             ]
                         }
                     },
+                    "totals": {
+                        "type": "object",
+                        "properties": {
+                            "products": {
+                                "type": "integer"
+                            },
+                            "planned": {
+                                "type": "integer"
+                            },
+                            "planned_done": {
+                                "type": "integer"
+                            },
+                            "produced": {
+                                "type": "number"
+                            },
+                            "waste": {
+                                "type": "number"
+                            },
+                            "waste_pct": {
+                                "type": "number",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "closed": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "at": {
+                                "type": "string",
+                                "example": "2026-10-20 06:02:00"
+                            },
+                            "employee": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "note": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "changed": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "waste_reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "quality",
+                                "burnt",
+                                "damaged",
+                                "samples",
+                                "other"
+                            ]
+                        }
+                    },
                     "catalog": {
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/OutputItem"
+                        }
+                    }
+                }
+            },
+            "WasteRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "quantity": {
+                        "type": "number"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "lot_code": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "employee": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "example": "2026-10-20 06:02:00"
+                    },
+                    "cancelled": {
+                        "type": "boolean"
+                    },
+                    "editable": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "WasteInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "item_id",
+                    "quantity",
+                    "reason"
+                ],
+                "properties": {
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                    },
+                    "reason": {
+                        "type": "string",
+                        "enum": [
+                            "quality",
+                            "burnt",
+                            "damaged",
+                            "samples",
+                            "other"
+                        ]
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    },
+                    "output_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "WasteUpdateInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "cancelled"
+                ],
+                "properties": {
+                    "cancelled": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "DayCloseInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    }
+                }
+            },
+            "KioskRecipeList": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/components/schemas/OutputItem"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "planned": {
+                                            "type": "number",
+                                            "nullable": true
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "KioskRecipe": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/OutputItem"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "planned": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "basis": {
+                                "type": "string",
+                                "enum": [
+                                    "carton",
+                                    "kg",
+                                    "recipe"
+                                ]
+                            },
+                            "recipe_yield": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "tree": {
+                                "$ref": "#/components/schemas/RecipeNode"
+                            },
+                            "routing": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "step_no": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "workstation": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "temperature_c": {
+                                            "type": "number",
+                                            "nullable": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "RecipeNode": {
+                "type": "object",
+                "properties": {
+                    "recipe_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "yield": {
+                        "type": "number"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "batches": {
+                        "type": "number"
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                        "recipe",
+                                        "material"
+                                    ]
+                                },
+                                "recipe_id": {
+                                    "type": "integer"
+                                },
+                                "material_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "packaging": {
+                                    "type": "boolean"
+                                },
+                                "node": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/RecipeNode"
+                                        }
+                                    ],
+                                    "nullable": true
+                                }
+                            }
                         }
                     }
                 }

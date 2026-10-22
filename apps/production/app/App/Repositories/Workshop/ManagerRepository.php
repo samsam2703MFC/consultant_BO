@@ -161,11 +161,14 @@ final class ManagerRepository extends WorkshopRepository
     // --- Dane ERP do wskaźników -------------------------------------------------------------------------------
 
     /** Straty pracowni : sztuki dobre i odrzucone zakończonych operacji (tablety) na [from, to]. */
+    /** Dobre i stracone : operacje zleceń zakończone na tabletach + partie dnia i straty zapisane przez zespoły. */
     public function scrap(string $from, string $to): array
     {
         $r = $this->all("SELECT COUNT(*) AS n, COALESCE(SUM(qty_good), 0) AS good, COALESCE(SUM(qty_scrap), 0) AS scrap FROM tfb_prod_operation
                          WHERE status = 'done' AND kind = 'work' AND actual_end BETWEEN ? AND ?", [$from . ' 00:00:00', $to . ' 23:59:59'])[0];
-        return ['operations' => (int) $r['n'], 'good' => (float) $r['good'], 'scrap' => (float) $r['scrap']];
+        $o = $this->all('SELECT COUNT(*) AS n, COALESCE(SUM(quantity), 0) AS q FROM tfb_prod_output WHERE cancelled_at IS NULL AND work_date BETWEEN ? AND ?', [$from, $to])[0];
+        $w = (float) $this->all('SELECT COALESCE(SUM(quantity), 0) AS q FROM tfb_prod_waste WHERE cancelled_at IS NULL AND work_date BETWEEN ? AND ?', [$from, $to])[0]['q'];
+        return ['operations' => (int) $r['n'] + (int) $o['n'], 'good' => (float) $r['good'] + max(0.0, (float) $o['q'] - $w), 'scrap' => (float) $r['scrap'] + $w];
     }
 
     /**
