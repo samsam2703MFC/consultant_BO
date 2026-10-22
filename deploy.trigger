@@ -938,3 +938,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-22T09:14:10Z rail : entree Marketing vers /marketing/
 2026-10-22T09:24:56Z documents + CA net du mois
 2026-10-22T09:25:15Z documents + CA net du mois
+2026-10-22T09:28:15Z produits par catégorie avec bascule MTO/MTS et lot
