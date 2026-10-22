@@ -6,6 +6,9 @@ return function (RouteCollector $r) {
 
     $r->addRoute('GET', '/organization/positions', ['controller' => $c, 'method' => 'positions']);
     $r->addRoute('GET', '/organization/users/{id:\d+}', ['controller' => $c, 'method' => 'userSheet']);
+    // Uprawnienia stanowisk : które strony widzi każde stanowisko (tylko administrator).
+    $r->addRoute('GET', '/organization/access', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'index']);
+    $r->addRoute('PUT', '/ajax/organization/access/{id:\d+}', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'save']);
     $r->addRoute('GET', '/my-tasks', ['controller' => $c, 'method' => 'myTasks']);
     $r->addRoute('PATCH', '/ajax/my-tasks/{id:\d+}', ['controller' => $c, 'method' => 'setStatus']);
     $r->addRoute('POST', '/ajax/organization/positions', ['controller' => $c, 'method' => 'savePosition']);

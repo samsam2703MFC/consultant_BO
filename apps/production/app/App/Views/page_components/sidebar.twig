@@ -64,6 +64,26 @@
                     </a>
                 </li>
 
+                {# Tablet produkcji pod Produkcją : sam tablet (ekran zespołu) i jego zarządzanie (tablety, PIN, czas pracy). #}
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-tablet"></i>
+                        <span>Tablet produkcji</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/kiosk" target="_blank" rel="noopener">
+                                <i class="bi bi-box-arrow-up-right"></i> Otwórz tablet
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/workshop/execution">
+                                <i class="bi bi-sliders"></i> Zarządzanie : tablety, PIN, czas pracy
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
                 {# Zaopatrzenie : po produkcji — surowce i opakowania, zamówienia do dostawców, przyjęcia #}
                 <li class="sidebar-item">
                     <a href="{{ root }}/workshop/supply" class="sidebar-link">
@@ -86,11 +106,6 @@
                         <li class="submenu-item">
                             <a href="{{ root }}/staff/budget">
                                 <i class="bi bi-wallet2"></i> Budżet personelu i premie
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/workshop/manager">
-                                <i class="bi bi-clipboard-check"></i> Kierownik produkcji : stanowisko i premia
                             </a>
                         </li>
                     </ul>
@@ -383,6 +398,21 @@
                     </a>
                 </li>
 
+                {# Tylko administrator : moduł kierownika produkcji i uprawnienia stanowisk (link ukryty dla innych). #}
+                <li class="sidebar-item">
+                    <a href="{{ root }}/workshop/manager" class="sidebar-link">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span>Kierownik produkcji : stanowisko i premia</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/organization/access" class="sidebar-link">
+                        <i class="bi bi-shield-lock"></i>
+                        <span>Uprawnienia stanowisk</span>
+                    </a>
+                </li>
+
                 <li class="sidebar-item">
                     <a href="{{ root }}/organization/positions" class="sidebar-link">
                         <i class="bi bi-diagram-3"></i>
@@ -464,6 +494,38 @@
 </div>
 
 <script>
+    // Uprawnienia stanowisk : linki do stron, których użytkownik nie widzi, znikają z railu i wyszukiwarki (serwer i tak
+    // odmawia dostępu) ; podmenu i sekcje bez linków znikają ; grupa z zakładkami prowadzi do pierwszej widocznej zakładki.
+    (function () {
+        var access = {{ rail_access()|json_encode|raw }};
+        var prefixes = Object.keys(access);
+        if (!prefixes.length) return;
+        var base = (document.querySelector('#sidebar .logo a') || {pathname: ''}).pathname.replace(/\/dashboard\/?$/, '');
+        // Jak serwer : decyduje najdłuższy pasujący prefiks ; ścieżka spoza katalogu jest widoczna.
+        var off = function (path) {
+            var p = path.replace(/\/+$/, '') || '/', best = null;
+            prefixes.forEach(function (h) { if ((p === h || p.indexOf(h + '/') === 0) && (best === null || h.length > best.length)) best = h; });
+            return best !== null && !access[best];
+        };
+        var rel = function (a) { return a.pathname.indexOf(base) === 0 ? a.pathname.slice(base.length) || '/' : a.pathname; };
+        document.querySelectorAll('#sidebar a[href]').forEach(function (a) {
+            if (a.getAttribute('href') === '#' || a.closest('.logo')) return;
+            if (!off(rel(a))) return;
+            var also = (a.dataset.also || '').split(' ').filter(function (u) { return u && !off(u); });
+            if (also.length) { a.setAttribute('href', base + also[0]); return; }
+            var li = a.closest('li');
+            if (li) li.remove();
+        });
+        document.querySelectorAll('#sidebar .sidebar-item.has-sub').forEach(function (li) {
+            if (!li.querySelector('.submenu a[href]')) li.remove();
+        });
+        document.querySelectorAll('#sidebar .sidebar-title').forEach(function (title) {
+            var n = title.nextElementSibling;
+            while (n && !n.classList.contains('sidebar-title') && !n.classList.contains('sidebar-item')) n = n.nextElementSibling;
+            if (!n || n.classList.contains('sidebar-title')) title.remove();
+        });
+    })();
+
     // Pozycja bieżącej strony: podświetlona i rozwinięta (mazer.js szuka .sidebar-item.active).
     (function () {
         var here = location.pathname.replace(/\/+$/, '');

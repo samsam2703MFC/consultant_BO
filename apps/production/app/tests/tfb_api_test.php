@@ -1322,6 +1322,12 @@ $call('PATCH', "/produits/items/{$itemId}/settings", ['batch_people' => null, 'b
 $year = (int) date('Y');
 [$s] = $call('GET', "/manager/plan?year={$year}", null, $lead);
 check($s === 403, 'a team lead does not see the production manager module');
+[$s] = $call('GET', "/manager/plan?year={$year}", null, $access);
+check($s === 403, 'migration 050: the module is admin only — the production manager role no longer sees it');
+// Parcours de la personne sur le poste (saisie non vérifiée) : droits de saisie rendus au rôle dans la base de test seulement.
+$pdo->exec("INSERT INTO tfb_prod_role_permission (role_code, permission) VALUES ('prod_manager', 'prod.manager.read'), ('prod_manager', 'prod.manager.report')");
+[, $tok] = $call('POST', '/auth/login', ['login' => 'manager', 'password' => 'Secret-123']);
+$access = $tok['data']['access_token'] ?? $access;
 [$s, $b] = $call('GET', "/manager/plan?year={$year}", null, $access);
 check($s === 200 && !$b['data']['plan']['exists'] && count($b['data']['indicators']) === 12 && $b['data']['plan']['mission_hours_total'] == 168
     && !$b['data']['can_write'] && $b['data']['can_report'], 'manager plan: 12 indicators, 168 h a month split by mission; the holder reports but does not set his objectives');

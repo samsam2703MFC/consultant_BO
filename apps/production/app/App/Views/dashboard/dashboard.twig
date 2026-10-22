@@ -138,9 +138,11 @@
                         {% endfor %}
                         </tbody>
                     </table></div>
+                    {% if can_see('/workshop/manager') %}
                     <a class="at-link" href="{{ root }}/workshop/manager#tab=report&month={{ manager_kpis.month }}">Raport miesięczny</a> ·
                     <a class="at-link" href="{{ root }}/workshop/manager#tab=job">Karta stanowiska</a> ·
                     <a class="at-link" href="{{ root }}/workshop/manager#tab=bonus">Premia</a>
+                    {% endif %}
                 </div>
             </div>
         </div>

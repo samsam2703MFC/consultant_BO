@@ -86,6 +86,36 @@ class App
                     return;
                 }
 
+                // Uprawnienia stanowisk : strona spoza uprawnień użytkownika → 403 (strona startowa Rentowność → Dzisiaj).
+                // Błąd bazy (np. migracja 050 jeszcze nie wykonana) : zapis w logu, strona bez sprawdzenia — zamiast błędu na każdej stronie.
+                $denied = false;
+                if (!empty($_SESSION['USER'])) {
+                    try {
+                        $access = $container->get(\App\Services\Organization\PageAccessService::class);
+                        $userId = (int) (user('id') ?? 0);
+                        \App\Core\Web\PageAccess::$rail = $access->railPrefixes($userId);
+                        \App\Core\Web\PageAccess::$checker = fn(string $path) => $access->canSee($userId, $path);
+                        $denied = !str_starts_with($uri, '/ajax/') && !$access->canSee($userId, $uri);
+                    } catch (\Throwable $e) {
+                        error_log('[page-access] ' . $e->getMessage());
+                        \App\Core\Web\PageAccess::$checker = null;
+                        \App\Core\Web\PageAccess::$rail = [];
+                    }
+                    if ($denied) {
+                        if ($uri === '/dashboard' && $method === 'GET') {
+                            header('Location: ' . ROOT . '/today', true, 302);
+                            return;
+                        }
+                        http_response_code(403);
+                        if ($method === 'GET') {
+                            $container->get(\App\Controllers\Web\Organization\PageAccessController::class)->forbidden($uri);
+                        } else {
+                            echo 'Brak dostępu do tej strony.';
+                        }
+                        return;
+                    }
+                }
+
                 $controllerFQCN = $handler['controller'];
                 $action         = $handler['method'];
 

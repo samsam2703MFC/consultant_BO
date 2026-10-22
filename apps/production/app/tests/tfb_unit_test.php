@@ -28,6 +28,7 @@ use App\Services\Workshop\Execution\TimesheetService;
 use App\Services\Workshop\Manager\ManagerIndicators;
 use App\Services\Workshop\Supply\InvoiceParser;
 use App\Services\Workshop\Referentiel\ShiftTemplateService;
+use App\Core\Web\PageAccess;
 
 function check(bool $condition, string $message): void
 {
@@ -362,5 +363,23 @@ check(InvoiceParser::nameKey('  MĄKA  pszenna, T-65 ') === 'mąka pszenna t 65'
 check(InvoiceParser::similarity('MĄKA PSZENNA T-65 WOREK 25KG', 'Mąka T65') > InvoiceParser::similarity('MĄKA PSZENNA T-65 WOREK 25KG', 'Masło'), 'name similarity ranks the right material first');
 check(InvoiceParser::similarity('Karton klapowy 590x390x210', 'Karton 590 x 390 x 210') === 1.0 && InvoiceParser::similarity('Karton klapowy 590x390x210', 'karton 590x290x340') === 0.5,
     'dimensions: « 590 x 390 x 210 » = « 590x390x210 », other sizes do not match');
+
+// --- Uprawnienia stanowisk : strona = najdłuższy pasujący prefiks katalogu, migracja przyznaje wszystkie strony poza administratorem
+check(PageAccess::keyFor('/settings/ksef/purchase-invoices') === 'ksef_purchases' && PageAccess::keyFor('/settings/ksef') === 'settings'
+    && PageAccess::keyFor('/communication/email-settings') === 'settings' && PageAccess::keyFor('/communication/templates') === 'communication', 'access: longest prefix wins (KSeF invoices, e-mail settings)');
+check(PageAccess::keyFor('/purchasing/nc') === 'production' && PageAccess::keyFor('/purchasing/offers?x=1') === 'purchasing' && PageAccess::keyFor('/finances/sales-analytics') === 'sales'
+    && PageAccess::keyFor('/finances/product-margin') === 'margins', 'access: nested prefixes and query strings');
+check(PageAccess::keyFor('/production-employees/3/edit') === 'employees' && PageAccess::keyFor('/production/follow-up') === 'production' && PageAccess::keyFor('/products/12/edit') === 'products'
+    && PageAccess::keyFor('/workshop/products') === 'product_cards', 'access: /production vs /production-employees, /products vs /workshop/products');
+check(PageAccess::keyFor('/today') === null && PageAccess::keyFor('/my-tasks/4/form') === null && PageAccess::keyFor('/kiosk') === null && PageAccess::keyFor('/') === null, 'access: shared pages outside the catalogue');
+check(PageAccess::keyFor('/workshop/manager') === 'manager' && PageAccess::adminOnly('manager') && PageAccess::keyFor('/organization/access') === 'access' && PageAccess::adminOnly('access')
+    && PageAccess::keyFor('/organization/positions') === 'positions' && !in_array('manager', PageAccess::grantable(), true), 'access: manager module and access page admin only');
+$sql = file_get_contents(__DIR__ . '/../migrations/tfb/050_page_access.sql');
+preg_match_all("/'([a-z_]+)'/", substr($sql, strpos($sql, 'CROSS JOIN ('), strpos($sql, ') k') - strpos($sql, 'CROSS JOIN (')), $m);
+$seeded = array_values(array_unique($m[1]));
+sort($seeded);
+$grantable = PageAccess::grantable();
+sort($grantable);
+check($seeded === $grantable, 'access: migration 050 seeds exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
 
 echo "tfb_unit_test: OK\n";

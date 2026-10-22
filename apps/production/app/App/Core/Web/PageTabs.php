@@ -13,7 +13,8 @@ final class PageTabs
     /** grupa => [rail : etykieta, sekcja, ikona ; tabs : [ścieżka, etykieta, ikona]] */
     public const GROUPS = [
         // Produkcja na jednej stronie : arkusz tygodnia (jedna linia na produkt), plan tygodnia (dni), plan zespołów
-        // (druk, tablet) z listami dnia (PDF), stany, partie, śledzenie produkcji (plan / zrobione / straty), jakość, stanowiska i coboty, hala.
+        // (druk, tablet) z listami dnia (PDF), stany, partie, śledzenie produkcji (plan / zrobione / straty), jakość, stanowiska i coboty.
+        // Tablet produkcji i jego zarządzanie : osobna pozycja w railu pod Produkcją.
         'production' => ['label' => 'Produkcja', 'section' => 'Produkcja', 'icon' => 'bi-gear-wide-connected', 'tabs' => [
             ['/workshop/sheet', 'Arkusz tygodnia', 'bi-table'],
             ['/workshop/gantt', 'Plan tygodnia', 'bi-calendar-week'],
@@ -23,7 +24,6 @@ final class PageTabs
             ['/production/follow-up', 'Śledzenie produkcji', 'bi-graph-up-arrow'],
             ['/purchasing/nc', 'Niezgodności', 'bi-exclamation-octagon'],
             ['/workshop/workstations', 'Stanowiska i coboty', 'bi-robot'],
-            ['/workshop/execution', 'Hala : tablety i czas pracy', 'bi-tablet'],
         ]],
         'bdo' => ['label' => 'Opakowania BDO', 'section' => 'Produkt', 'icon' => 'bi-box2', 'tabs' => [
             ['/audits/product-weights', 'Wagi produktów', 'bi-speedometer2'],
@@ -88,6 +88,7 @@ final class PageTabs
         $e = fn(string $v) => htmlspecialchars($v, ENT_QUOTES);
         $links = '';
         foreach ($group['tabs'] as $t) {
+            if (!$t['active'] && !PageAccess::visible($t['url'])) continue;
             $links .= '<a class="at-page-tab' . ($t['active'] ? ' active" aria-current="page' : '') . '" href="' . $e($root . $t['url']) . '">'
                 . '<i class="bi ' . $e($t['icon']) . '"></i> ' . $e($t['label']) . '</a>';
         }

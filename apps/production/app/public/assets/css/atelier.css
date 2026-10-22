@@ -1615,3 +1615,11 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-ws-form > label { display: flex; flex-direction: column; gap: 4px; margin: 0; }
 .tfb-ws-form > label.form-check { flex-direction: row; align-items: center; gap: 6px; align-self: end; }
 .tfb-ws-form .tfb-wide { grid-column: 1 / -1; }
+
+/* Uprawnienia stanowisk : macierz stron × stanowisk, pierwsza kolumna przyklejona przy przewijaniu w bok. */
+.at-access-table th, .at-access-table td { vertical-align: middle; }
+.at-access-table .at-access-page { position: sticky; left: 0; background: var(--bs-body-bg, #fff); min-width: 240px; max-width: 360px; z-index: 1; }
+.at-access-table thead th { min-width: 130px; white-space: normal; }
+.at-access-table thead .at-access-pos { font-weight: 700; }
+.at-access-section th { background: var(--bs-light, #f6f4f1); text-transform: uppercase; font-size: .78rem; letter-spacing: .04em; }
+.at-access-table .form-check-input { width: 1.25rem; height: 1.25rem; cursor: pointer; }
