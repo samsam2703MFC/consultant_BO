@@ -8,6 +8,7 @@ use App\Controllers\Api\Workshop\EmployeeController;
 use App\Controllers\Api\Workshop\ExecutionController;
 use App\Controllers\Api\Workshop\GroupController;
 use App\Controllers\Api\Workshop\ItemController;
+use App\Controllers\Api\Workshop\ManagerController;
 use App\Controllers\Api\Workshop\OpenApiController;
 use App\Controllers\Api\Workshop\ParamController;
 use App\Controllers\Api\Workshop\PlanningController;
@@ -105,6 +106,22 @@ final class WorkshopApiRoutes
             ['PUT', '/planning/staffing', SchedulingController::class, 'saveStaffing', 'prod.plan.validate'],
             ['GET', '/planning/week', WeekController::class, 'get', 'prod.plan.read'],
             ['GET', '/planning/sheet', WeekController::class, 'sheet', 'prod.plan.read'],
+            // Kierownik produkcji : karta stanowiska, cele, raport miesięczny, premia, rozmowa, audyt kompetencji.
+            ['GET', '/manager/plan', ManagerController::class, 'plan', 'prod.manager.read'],
+            ['PUT', '/manager/plan', ManagerController::class, 'savePlan', 'prod.manager.write'],
+            ['PUT', '/manager/objectives', ManagerController::class, 'saveObjectives', 'prod.manager.write'],
+            ['POST', '/manager/objectives/validate', ManagerController::class, 'validateObjectives', 'prod.manager.write'],
+            ['GET', '/manager/report', ManagerController::class, 'report', 'prod.manager.read'],
+            ['PUT', '/manager/values', ManagerController::class, 'saveValue', 'prod.manager.report'],
+            ['POST', '/manager/haccp', ManagerController::class, 'addHaccp', 'prod.manager.report'],
+            ['PATCH', '/manager/haccp/{id:\d+}', ManagerController::class, 'updateHaccp', 'prod.manager.report'],
+            ['DELETE', '/manager/haccp/{id:\d+}', ManagerController::class, 'deleteHaccp', 'prod.manager.write'],
+            ['PUT', '/manager/launches/{id:\d+}', ManagerController::class, 'saveLaunch', 'prod.manager.report'],
+            ['PUT', '/manager/actions', ManagerController::class, 'saveActions', 'prod.manager.report'],
+            ['GET', '/manager/bonus', ManagerController::class, 'bonus', 'prod.manager.read'],
+            ['GET', '/manager/interview', ManagerController::class, 'interview', 'prod.manager.read'],
+            ['GET', '/manager/audits', ManagerController::class, 'audits', 'prod.manager.read'],
+            ['POST', '/manager/audits', ManagerController::class, 'addAudit', 'prod.manager.report'],
             ['POST', '/planning/week/move', WeekController::class, 'move', 'prod.gantt.move'],
             ['POST', '/planning/week/distribute', WeekController::class, 'distribute', 'prod.gantt.move'],
             ['POST', '/planning/week/pin', WeekController::class, 'pin', 'prod.gantt.move'],

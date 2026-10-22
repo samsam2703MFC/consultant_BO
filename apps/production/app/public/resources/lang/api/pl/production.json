@@ -62,7 +62,8 @@
     "OUTPUT_LOCKED": "Partii z tego dnia nie można już zmieniać na tablecie (edycja przez {days} dni).",
     "OUTPUT_CANCELLED": "Ta partia jest anulowana.",
     "WEEK_WARNING_FIXED_NO_SHIFT": "Stała partia 📌 „{product}” ({day}) : grupa nie ma tego dnia zmiany — partia czeka w „Do zrobienia”.",
-    "QC_ALREADY_NC": "Ta partia ma już zgłoszoną niezgodność — dalej w rejestrze niezgodności w ERP."
+    "QC_ALREADY_NC": "Ta partia ma już zgłoszoną niezgodność — dalej w rejestrze niezgodności w ERP.",
+    "MANAGER_NO_DRAFTS": "Brak szkiców celów do zatwierdzenia."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -143,7 +144,8 @@
     "PHOTO_TOO_LARGE": "Zdjęcie jest za duże (maks. {max_kb} KB).",
     "MATERIAL_NOT_IN_RECIPE": "Tego surowca nie ma w recepturze produktu.",
     "NOTHING_ON_DAY": "Ten produkt nie ma ilości w tym dniu — przypnij blok, który jest na dniu.",
-    "NOT_PINNED": "Ten produkt nie ma stałej partii w ten dzień tygodnia."
+    "NOT_PINNED": "Ten produkt nie ma stałej partii w ten dzień tygodnia.",
+    "INCOMPLETE": "Brakuje odpowiedzi : {missing}."
   },
   "fields": {
     "code": "kod",
@@ -317,7 +319,48 @@
     "day": "dzień",
     "pinned": "co tydzień",
     "time": "godzina",
-    "result": "wynik"
+    "result": "wynik",
+    "year": "rok",
+    "holder_user_id": "konto osoby na stanowisku",
+    "holder_name": "osoba na stanowisku",
+    "holder_start": "data rozpoczęcia pracy",
+    "salary_monthly": "wynagrodzenie brutto miesięcznie",
+    "envelope_pct": "pula premii (% rocznego brutto)",
+    "currency": "waluta",
+    "team_organisation": "organizacja zespołu",
+    "auditor": "audytor niezależny",
+    "audit_threshold": "próg audytu",
+    "margin_threshold_pct": "próg marży",
+    "price_reference_date": "data cen referencyjnych",
+    "workplace": "miejsce pracy",
+    "contract_type": "rodzaj umowy",
+    "working_time": "czas pracy",
+    "monthly_hours": "godziny w miesiącu",
+    "mission_hours": "godziny na misję",
+    "objectives": "cele",
+    "indicator": "wskaźnik",
+    "event_date": "data",
+    "kind": "rodzaj",
+    "authority": "organ",
+    "score": "wynik audytu",
+    "treated": "obsłużone",
+    "treated_at": "data obsłużenia",
+    "launch_date": "data wprowadzenia",
+    "target_cost": "koszt docelowy",
+    "target_price": "cena docelowa",
+    "min_margin_pct": "marża min.",
+    "expected_week_shop": "wolumen na sklep / tydz.",
+    "decision": "decyzja",
+    "decision_note": "uzasadnienie decyzji",
+    "actions": "działania",
+    "text": "działanie",
+    "owner": "odpowiedzialny",
+    "audit_date": "data audytu",
+    "assessed_name": "osoba oceniana",
+    "assessed_user_id": "konto osoby ocenianej",
+    "answers": "odpowiedzi",
+    "comment": "komentarz",
+    "period": "okres"
   },
   "entities": {
     "group": "grupa",
@@ -335,6 +378,8 @@
     "device": "tablet",
     "clock": "wpis czasu pracy",
     "signature": "podpis",
-    "output": "partia"
+    "output": "partia",
+    "haccp_event": "zdarzenie HACCP",
+    "product": "produkt"
   }
 }

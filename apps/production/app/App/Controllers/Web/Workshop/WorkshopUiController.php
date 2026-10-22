@@ -30,6 +30,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/sheet', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
+    /** Kierownik produkcji : karta stanowiska, cele, raport miesięczny, premia, rozmowa, audyt kompetencji. */
+    public function manager()
+    {
+        $this->view('workshop/manager', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
+    }
+
     public function gantt()
     {
         $this->view('workshop/gantt', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);

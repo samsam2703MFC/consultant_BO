@@ -40,7 +40,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings', 'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month', 'cost_media_section_allocation', 'cost_media_type'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -1127,6 +1127,116 @@ check($s === 200 && $bp && $todayMarks === 0 && abs($bp['fixed_qty'] - $others) 
 $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (12, 'Ola', 'Wiśniewska', 5100, 1)");
 (new App\Repositories\Employee\ProductionEmployeeRepository($pdo))->syncWorkshopHeadcount();
 check((int) $pdo->query("SELECT planned_headcount FROM tfb_prod_team WHERE code = 'T1'")->fetchColumn() === 3, 'day team headcount follows the employees of the section');
+
+// --- Kierownik produkcji : plan, cele (zatwierdzone przed okresem), raport, HACCP, premia, rozmowa, audyt kompetencji
+$year = (int) date('Y');
+[$s] = $call('GET', "/manager/plan?year={$year}", null, $lead);
+check($s === 403, 'a team lead does not see the production manager module');
+[$s, $b] = $call('GET', "/manager/plan?year={$year}", null, $access);
+check($s === 200 && !$b['data']['plan']['exists'] && count($b['data']['indicators']) === 12 && $b['data']['plan']['mission_hours_total'] == 168
+    && !$b['data']['can_write'] && $b['data']['can_report'], 'manager plan: 12 indicators, 168 h a month split by mission; the holder reports but does not set his objectives');
+[$s] = $call('PUT', '/manager/plan', ['year' => $year, 'salary_monthly' => 10000], $access);
+check($s === 403, 'the holder cannot set his own pay');
+[$s, $b] = $call('PUT', '/manager/plan', ['year' => $year, 'mission_hours' => ['cooking' => 5]], $dir);
+check($s === 422 && $codes($b) === ['mission_hours:INVALID_JSON_VALUE'], 'hours only for the missions of the job');
+[$s, $b] = $call('PUT', '/manager/plan', ['year' => $year, 'holder_user_id' => 1, 'holder_name' => 'Jan K.', 'holder_start' => "{$year}-01-01", 'salary_monthly' => 10000,
+    'envelope_pct' => 20, 'margin_threshold_pct' => 30, 'audit_threshold' => 80, 'auditor' => 'Audit Sp. z o.o.', 'price_reference_date' => "{$year}-01-01",
+    'workplace' => 'Wrocław', 'mission_hours' => ['production' => 60, 'development' => 30, 'purchasing' => 20, 'staffing' => 15, 'logistics' => 23, 'haccp' => 20]], $dir);
+$mp = $b['data']['plan'] ?? [];
+check($s === 200 && $mp['envelope_annual'] == 24000 && $mp['monthly_at_target'] == 12000 && $mp['monthly_at_cap'] == 12400 && $mp['mission_hours']['production'] == 60
+    && $mp['mission_hours_total'] == 168, 'plan: 10 000 fixed + 20 % variable = 12 000 gross a month at 100 %, 12 400 at the 120 % cap; hours per mission');
+// Cele : szkic, zatwierdzenie ; cel zatwierdzony po początku kwartału nie liczy się do premii tego kwartału
+[$s, $b] = $call('PUT', '/manager/objectives', ['year' => $year, 'objectives' => ['otif_pct' => 95, 'nope' => 1]], $dir);
+check($s === 422 && $codes($b) === ['objectives.nope:UNKNOWN_FIELD'], 'objectives only for the indicators of the job');
+$targets = ['material_cost_pct' => 30, 'loss_pct' => 3, 'range_margin_pct' => 60, 'new_profitable_pct' => 70, 'below_threshold_pct' => 10, 'price_gap_pct' => 2,
+    'stockouts' => 0, 'stock_days' => 20, 'staff_cost_per_carton' => 5, 'overtime_hours' => 10, 'otif_pct' => 95, 'logistics_cost_pct' => 8];
+[$s, $b] = $call('PUT', '/manager/objectives', ['year' => $year, 'objectives' => $targets], $dir);
+check($s === 200 && $b['data']['drafts'] === 12 && array_column($b['data']['indicators'], 'validated') === array_fill(0, 12, null), 'twelve draft objectives, none validated yet');
+$quarter = $year . '-Q' . (intdiv((int) date('n') - 1, 3) + 1);
+[$s, $bn] = $call('GET', "/manager/bonus?period={$quarter}", null, $access);
+check($s === 200 && $bn['data']['sections'] && !array_filter($bn['data']['sections'], fn($x) => $x['status'] !== 'no_objective') && $bn['data']['total'] == 0,
+    'no validated objective: no bonus for any section');
+[$s, $b] = $call('POST', '/manager/objectives/validate', ['year' => $year], $dir);
+check($s === 200 && $b['data']['drafts'] === 0 && $b['data']['indicators'][0]['validated']['target'] == 30, 'objectives validated');
+[$s, $b] = $call('POST', '/manager/objectives/validate', ['year' => $year], $dir);
+check($s === 409 && $b['description'] === 'MANAGER_NO_DRAFTS', 'nothing left to validate');
+[$s, $bn] = $call('GET', "/manager/bonus?period={$quarter}", null, $access);
+check(!array_filter($bn['data']['sections'], fn($x) => $x['status'] !== 'no_objective'), 'objectives validated after the start of the quarter do not count for this quarter');
+// Cele zatwierdzone przed kwartałem : sekcje liczone z danych ERP (albo brak danych — wtedy brak premii, bez zgadywania)
+$pdo->exec("UPDATE tfb_mgr_objective SET validated_at = '{$year}-01-01 00:00:00'");
+[$s, $bn] = $call('GET', "/manager/bonus?period={$quarter}", null, $access);
+$statuses = array_column($bn['data']['sections'], 'status', 'code');
+check($s === 200 && !in_array('no_objective', $statuses, true) && $statuses['purchasing'] === 'missing_data' && $bn['data']['sections'][0]['provisional'],
+    'objectives validated before the quarter: sections computed; stock-outs not entered → no purchasing bonus; the quarter is not over (provisional)');
+// Wpis ręczny osoby na stanowisku = niezweryfikowany
+$month = date('Y-m');
+[$s, $b] = $call('PUT', '/manager/values', ['month' => $month, 'indicator' => 'material_cost_pct', 'value' => 10], $access);
+check($s === 422 && $codes($b) === ['indicator:INVALID_CHOICE'], 'no manual value for an indicator the ERP computes');
+[$s, $r] = $call('PUT', '/manager/values', ['month' => $month, 'indicator' => 'stockouts', 'value' => 1, 'note' => 'brak mąki'], $access);
+$so = array_column($r['data']['indicators'] ?? [], null, 'code')['stockouts'] ?? null;
+check($s === 200 && $so && $so['value'] == 1.0 && $so['origin'] === 'manual' && $so['unverified'] && $so['status'] === 'red'
+    && in_array(['code' => 'UNVERIFIED_VALUE', 'indicator' => 'stockouts'], $r['data']['missing'], true), 'stock-out entered by the holder: counted, flagged as not verified, red against 0');
+// HACCP : kontrola niekorzystna blokuje całą premię okresu ; alert HACCP pierwszy
+[$s, $b] = $call('POST', '/manager/haccp', ['event_date' => date('Y-m-d'), 'kind' => 'official_control', 'authority' => 'Sanepid'], $access);
+check($s === 422 && $codes($b) === ['result:REQUIRED'], 'an official control needs its result');
+[$s, $b] = $call('POST', '/manager/haccp', ['event_date' => date('Y-m-d'), 'kind' => 'official_control', 'authority' => 'Sanepid', 'result' => 'unfavorable', 'description' => 'Brak zapisów temperatury'], $access);
+$hid = $b['data']['id'] ?? 0;
+check($s === 201 && $b['data']['unverified'], 'HACCP event recorded (entered by the holder: not verified)');
+[$s, $r] = $call('GET', "/manager/report?month={$month}", null, $dir);
+check($s === 200 && $r['data']['alerts'][0]['level'] === 'haccp' && $r['data']['alerts'][0]['code'] === 'OFFICIAL_CONTROL_UNFAVORABLE' && count($r['data']['indicators']) === 12
+    && in_array('NO_AUDIT_QUARTER', array_column($r['data']['missing'], 'code'), true), 'monthly report: HACCP alert first, 12 indicators, missing independent audit reported');
+[$s, $bn] = $call('GET', "/manager/bonus?period={$quarter}", null, $dir);
+check($bn['data']['haccp']['blocked'] && !array_filter($bn['data']['sections'], fn($x) => $x['status'] !== 'haccp_blocked') && $bn['data']['total'] == 0,
+    'HACCP condition: an unfavorable official control blocks the whole bonus of the period');
+[$s] = $call('DELETE', "/manager/haccp/{$hid}", null, $access);
+check($s === 403, 'the holder cannot delete a HACCP event');
+[$s] = $call('POST', '/manager/haccp', ['event_date' => date('Y-m-d'), 'kind' => 'cold_chain_break', 'description' => 'Chłodnia 2 : −12 °C przez 3 h'], $dir);
+[$s, $b] = $call('DELETE', "/manager/haccp/{$hid}", null, $dir);
+[$s, $bn] = $call('GET', "/manager/bonus?period={$quarter}", null, $dir);
+check($bn['data']['haccp']['blocked'] && $bn['data']['haccp']['blocking'][0]['code'] === 'COLD_CHAIN_UNTREATED', 'an untreated cold-chain break blocks the bonus');
+$cid = $bn['data']['haccp']['blocking'][0]['event_id'];
+[$s, $b] = $call('PATCH', "/manager/haccp/{$cid}", ['treated' => true, 'treated_at' => date('Y-m-d')], $dir);
+[$s, $bn] = $call('GET', "/manager/bonus?period={$quarter}", null, $dir);
+check($s === 200 && !$bn['data']['haccp']['blocked'], 'treated cold-chain break: the bonus is no longer blocked');
+[$s, $b] = $call('POST', '/manager/haccp', ['event_date' => date('Y-m-d'), 'kind' => 'independent_audit', 'score' => 75], $dir);
+[$s, $bn] = $call('GET', "/manager/bonus?period={$quarter}", null, $dir);
+check($bn['data']['haccp']['blocked'] && $bn['data']['haccp']['blocking'][0]['code'] === 'AUDIT_BELOW_THRESHOLD', 'independent audit at 75 % under the 80 % threshold blocks the bonus');
+$pdo->exec('DELETE FROM tfb_mgr_haccp_event');
+// Nowy produkt : cele wprowadzenia i zalecana decyzja
+$pdo->exec("UPDATE final_product SET create_timestamp = NOW() - INTERVAL 1 YEAR");
+[$s, $b] = $call('PUT', '/manager/launches/501', ['launch_date' => date('Y-m-d', strtotime('-10 weeks')), 'min_margin_pct' => 99, 'expected_week_shop' => 1000, 'target_price' => 40], $access);
+[$s2, $r] = $call('GET', "/manager/report?month={$month}", null, $dir);
+$np = array_column($r['data']['products'] ?? [], null, 'product_id')[501] ?? null;
+check($s === 200 && $np && $np['weeks'] >= 9 && $np['recommendation'] === 'stop', 'new product 10 weeks after launch, under its minimum margin and volume: stop recommended');
+[$s] = $call('PUT', '/manager/launches/999999', ['launch_date' => date('Y-m-d')], $access);
+check($s === 404, 'launch targets only for an existing product');
+// Trzy działania
+[$s, $b] = $call('PUT', '/manager/actions', ['month' => $month, 'actions' => array_fill(0, 4, ['text' => 'x'])], $access);
+check($s === 422 && $codes($b) === ['actions:TOO_MANY'], 'three priority actions at most');
+[$s, $r] = $call('PUT', '/manager/actions', ['month' => $month, 'actions' => [['text' => 'Zapas bezpieczeństwa mąki T65 : 2 tygodnie', 'owner' => 'Jan K.', 'due_date' => date('Y-m-t', strtotime('+1 month'))]]], $access);
+check($s === 200 && !$r['data']['actions_suggested'] && $r['data']['actions'][0]['owner'] === 'Jan K.', 'actions of the month saved');
+// Rozmowa : 3 miesiące
+[$s, $b] = $call('GET', "/manager/interview?month={$month}", null, $dir);
+check($s === 200 && count($b['data']['months']) === 3 && $b['data']['months'][2] === $month && count($b['data']['indicators']) === 12
+    && in_array('stockouts', array_column($b['data']['indicators'], 'code'), true), 'interview: last 3 months, strengths, recurring gaps, proposed objectives');
+// Audyt kompetencji : wszystkie pytania, skala 0–3, odchylenia poniżej poziomu oczekiwanego
+[$s, $q] = $call('GET', '/manager/audits', null, $access);
+$questions = array_merge(...array_values($q['data']['areas']));
+check($s === 200 && count($q['data']['areas']) === 9 && count($questions) >= 20 && $q['data']['expected']['lang_pl'] === 3, 'competency questionnaire: 9 areas of the job');
+[$s, $b] = $call('POST', '/manager/audits', ['audit_date' => date('Y-m-d'), 'assessed_name' => 'Jan K.', 'answers' => ['qual_haccp' => ['score' => 2]]], $dir);
+check($s === 422 && $codes($b) === ['answers:INCOMPLETE'], 'every question must be answered');
+$answers = array_fill_keys($questions, ['score' => 2]);
+$answers['qual_haccp'] = ['score' => 1, 'comment' => 'Zapisy temperatur niekompletne'];
+$answers['qual_audit'] = ['score' => 4];
+[$s, $b] = $call('POST', '/manager/audits', ['audit_date' => date('Y-m-d'), 'assessed_name' => 'Jan K.', 'answers' => $answers], $dir);
+check($s === 422 && $codes($b) === ['answers.qual_audit:OUT_OF_RANGE'], 'scores from 0 to 3');
+$answers['qual_audit'] = ['score' => 3];
+[$s, $b] = $call('POST', '/manager/audits', ['audit_date' => date('Y-m-d'), 'assessed_name' => 'Jan K.', 'answers' => $answers, 'comment' => 'Pierwszy audyt'], $dir);
+$a = $b['data']['audits'][0] ?? null;
+check($s === 201 && $a && array_column($a['gaps'], 'question') === ['qual_haccp', 'lang_pl'] && abs($a['areas']['quality'] - 2.0) < 1e-9,
+    'competency audit saved: gaps under the expected level (HACCP 1/2, native Polish 2/3), score by area');
+[$s, $b] = $call('GET', "/manager/interview?month={$month}", null, $dir);
+check($b['data']['competency']['id'] === $a['id'], 'interview shows the latest competency audit');
 
 // Journal, en-têtes, JSON invalide, OpenAPI public
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');

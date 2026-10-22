@@ -62,7 +62,8 @@
     "OUTPUT_LOCKED": "Les lots de ce jour ne sont plus modifiables sur la tablette (modification pendant {days} jours).",
     "OUTPUT_CANCELLED": "Ce lot est annulé.",
     "WEEK_WARNING_FIXED_NO_SHIFT": "Lot fixe 📌 « {product} » ({day}) : le groupe n'a pas d'équipe ce jour-là — le lot attend dans « À produire ».",
-    "QC_ALREADY_NC": "Ce lot a déjà une non-conformité — la suite dans le registre des non-conformités de l'ERP."
+    "QC_ALREADY_NC": "Ce lot a déjà une non-conformité — la suite dans le registre des non-conformités de l'ERP.",
+    "MANAGER_NO_DRAFTS": "Aucun brouillon d'objectif à valider."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -143,7 +144,8 @@
     "PHOTO_TOO_LARGE": "La photo est trop lourde (max. {max_kb} Ko).",
     "MATERIAL_NOT_IN_RECIPE": "Cette matière n’est pas dans la recette du produit.",
     "NOTHING_ON_DAY": "Ce produit n'a pas de quantité ce jour-là — épinglez un bloc posé sur un jour.",
-    "NOT_PINNED": "Ce produit n'a pas de lot fixe ce jour de la semaine."
+    "NOT_PINNED": "Ce produit n'a pas de lot fixe ce jour de la semaine.",
+    "INCOMPLETE": "Réponses manquantes : {missing}."
   },
   "fields": {
     "code": "code",
@@ -317,7 +319,48 @@
     "day": "jour",
     "pinned": "chaque semaine",
     "time": "heure",
-    "result": "résultat"
+    "result": "résultat",
+    "year": "année",
+    "holder_user_id": "compte du titulaire",
+    "holder_name": "titulaire",
+    "holder_start": "date d'entrée",
+    "salary_monthly": "salaire brut mensuel",
+    "envelope_pct": "enveloppe de prime (% du brut annuel)",
+    "currency": "devise",
+    "team_organisation": "organisation de l'équipe",
+    "auditor": "auditeur indépendant",
+    "audit_threshold": "seuil d'audit",
+    "margin_threshold_pct": "seuil de marge",
+    "price_reference_date": "date des prix de référence",
+    "workplace": "lieu de travail",
+    "contract_type": "type de contrat",
+    "working_time": "temps de travail",
+    "monthly_hours": "heures par mois",
+    "mission_hours": "heures par mission",
+    "objectives": "objectifs",
+    "indicator": "indicateur",
+    "event_date": "date",
+    "kind": "type",
+    "authority": "autorité",
+    "score": "score de l'audit",
+    "treated": "traité",
+    "treated_at": "date de traitement",
+    "launch_date": "date de lancement",
+    "target_cost": "coût cible",
+    "target_price": "prix cible",
+    "min_margin_pct": "marge minimale",
+    "expected_week_shop": "volume par boutique / sem.",
+    "decision": "décision",
+    "decision_note": "justification",
+    "actions": "actions",
+    "text": "action",
+    "owner": "responsable",
+    "audit_date": "date de l'audit",
+    "assessed_name": "personne évaluée",
+    "assessed_user_id": "compte évalué",
+    "answers": "réponses",
+    "comment": "commentaire",
+    "period": "période"
   },
   "entities": {
     "group": "groupe",
@@ -335,6 +378,8 @@
     "device": "tablette",
     "clock": "pointage",
     "signature": "signature",
-    "output": "lot"
+    "output": "lot",
+    "haccp_event": "événement HACCP",
+    "product": "produit"
   }
 }

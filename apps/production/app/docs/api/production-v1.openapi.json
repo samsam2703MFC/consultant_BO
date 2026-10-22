@@ -46,6 +46,10 @@
             "description": "Wejście / wyjście telefonem (kod QR tabletu) / Pointage au téléphone (QR code de la tablette)"
         },
         {
+            "name": "manager",
+            "description": "Kierownik produkcji : karta stanowiska, cele, raport miesięczny, premia, rozmowa, audyt kompetencji / Responsable production : fiche de poste, objectifs, suivi mensuel, prime, entretien, audit des compétences"
+        },
+        {
             "name": "docs",
             "description": "OpenAPI"
         }
@@ -5196,6 +5200,1128 @@
                     }
                 ],
                 "x-permission": "prod.plan.read"
+            }
+        },
+        "/manager/plan": {
+            "get": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Plan roku i cele / Plan de l'année et objectifs",
+                "operationId": "getManagerPlan",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ManagerPlan"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Titulaire, salaire, enveloppe (défaut 20 % du brut annuel), heures par mission, objectifs (brouillon, validé, historique) et indication : réalisé des 3 derniers mois complets (ERP).",
+                "parameters": [
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2026
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.read"
+            },
+            "put": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Zapisz plan roku / Enregistrer le plan de l'année",
+                "operationId": "saveManagerPlan",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ManagerPlan"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManagerPlanInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.write"
+            }
+        },
+        "/manager/objectives": {
+            "put": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Szkice celów / Brouillons d'objectifs",
+                "operationId": "saveManagerObjectives",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ManagerPlan"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "null supprime le brouillon. Un objectif validé ne change pas : la nouvelle valeur est un brouillon jusqu'à validation.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManagerObjectivesInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.write"
+            }
+        },
+        "/manager/objectives/validate": {
+            "post": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Zatwierdź cele / Valider les objectifs",
+                "operationId": "validateManagerObjectives",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ManagerPlan"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Un objectif ne compte pour la prime d'une période que s'il a été validé avant son début (sinon pas de prime pour la section). MANAGER_NO_DRAFTS (409) : rien à valider.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManagerYearInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.write"
+            }
+        },
+        "/manager/report": {
+            "get": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Raport miesięczny / Suivi mensuel",
+                "operationId": "getManagerReport",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ManagerReport"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "1. Alertes (HACCP d'abord, puis indicateurs < 90 %). 2. Indicateurs : objectif, réalisé, écart, statut (vert ≥ 100 %, orange 90–100 %, rouge < 90 %). 3. Nouveaux produits (marge et volume réels vs objectifs, décision recommandée). 4. Données manquantes ou non vérifiées. 5. Trois actions (proposées si aucune n'est enregistrée).",
+                "parameters": [
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "2026-09",
+                            "description": "défaut : mois précédent"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.read"
+            }
+        },
+        "/manager/values": {
+            "put": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Wartość ręczna miesiąca / Valeur saisie du mois",
+                "operationId": "saveManagerValue",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ManagerReport"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Seulement pour les indicateurs que l'ERP ne calcule pas (ruptures bloquantes ; pertes sans tablettes ; heures sup sans pointage). Saisie par le titulaire = « non vérifiée ».",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManagerValueInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.report"
+            }
+        },
+        "/manager/haccp": {
+            "post": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Zdarzenie HACCP / Événement HACCP",
+                "operationId": "addHaccpEvent",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HaccpEvent"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Contrôle officiel (résultat obligatoire), rupture de la chaîne du froid, audit indépendant (score obligatoire), auto-contrôle. Bloquent toute la prime de la période : contrôle défavorable, rupture non traitée, audit sous le seuil du plan.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HaccpEventInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.report"
+            }
+        },
+        "/manager/haccp/{id}": {
+            "patch": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Zmień zdarzenie HACCP (np. obsłużone) / Modifier un événement HACCP",
+                "operationId": "updateHaccpEvent",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/HaccpEvent"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HaccpEventInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.report"
+            },
+            "delete": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Usuń zdarzenie HACCP / Supprimer un événement HACCP",
+                "operationId": "deleteHaccpEvent",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ManagerDeleted"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.write"
+            }
+        },
+        "/manager/launches/{id}": {
+            "put": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Cele wprowadzenia produktu / Objectifs de lancement d'un produit",
+                "operationId": "saveProductLaunch",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProductLaunch"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "id = produit ERP (final_product). Coût de revient et prix cibles (EUR / carton), marge brute minimale, volume attendu (cartons / semaine / boutique), décision.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductLaunchInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.report"
+            }
+        },
+        "/manager/actions": {
+            "put": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Trzy działania na następny miesiąc / Trois actions du mois suivant",
+                "operationId": "saveManagerActions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ManagerReport"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManagerActionsInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.report"
+            }
+        },
+        "/manager/bonus": {
+            "get": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Premia za kwartał / Prime du trimestre",
+                "operationId": "getManagerBonus",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ManagerBonus"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Prime d'une section = enveloppe × poids × prorata de la période × coefficient (< 90 % → 0 ; puis proportionnel, plafonné à 120 %). Sections trimestrielles sur le trimestre, développement produits sur le semestre (Q2, Q4). Objectif validé avant le début de la période, sinon pas de prime. Condition HACCP d'abord ; pas de compensation entre sections.",
+                "parameters": [
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "2026-Q3"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.read"
+            }
+        },
+        "/manager/interview": {
+            "get": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Przygotowanie rozmowy / Préparation d'entretien",
+                "operationId": "getManagerInterview",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ManagerInterview"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "3 derniers mois jusqu'au mois donné : points forts (vert ≥ 2 mois sur 3), écarts récurrents, objectifs proposés (meilleur mois s'il bat l'objectif), dernier audit des compétences.",
+                "parameters": [
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "2026-09",
+                            "description": "défaut : mois précédent"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.read"
+            }
+        },
+        "/manager/audits": {
+            "get": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Audyt kompetencji : kwestionariusz i historia / Audit des compétences",
+                "operationId": "listCompetencyAudits",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/CompetencyAudits"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.read"
+            },
+            "post": {
+                "tags": [
+                    "manager"
+                ],
+                "summary": "Nowy audyt kompetencji / Nouvel audit des compétences",
+                "operationId": "addCompetencyAudit",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/CompetencyAudits"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Une note 0–3 par question (0 absent, 1 à développer, 2 maîtrisé = attendu, 3 expert), commentaire optionnel ; toutes les questions sont obligatoires (INCOMPLETE).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompetencyAuditInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.manager.report"
             }
         },
         "/planning/week/move": {
@@ -13315,6 +14441,1420 @@
                                 }
                             }
                         }
+                    }
+                }
+            },
+            "ManagerPlan": {
+                "type": "object",
+                "properties": {
+                    "year": {
+                        "type": "integer"
+                    },
+                    "plan": {
+                        "type": "object",
+                        "properties": {
+                            "exists": {
+                                "type": "boolean"
+                            },
+                            "year": {
+                                "type": "integer"
+                            },
+                            "holder_user_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "holder_name": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "holder_start": {
+                                "type": "string",
+                                "format": "date",
+                                "nullable": true
+                            },
+                            "salary_monthly": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "envelope_pct": {
+                                "type": "number"
+                            },
+                            "currency": {
+                                "type": "string"
+                            },
+                            "team_organisation": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "auditor": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "audit_threshold": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "margin_threshold_pct": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "price_reference_date": {
+                                "type": "string",
+                                "format": "date",
+                                "nullable": true
+                            },
+                            "workplace": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "contract_type": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "working_time": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "monthly_hours": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "mission_hours": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "description": "heures par mois et par mission : production, development, purchasing, staffing, logistics, haccp"
+                            },
+                            "envelope_annual": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "monthly_at_target": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "brut mensuel, tous les objectifs à 100 %"
+                            },
+                            "monthly_at_cap": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "brut mensuel au plafond de 120 %"
+                            }
+                        }
+                    },
+                    "drafts": {
+                        "type": "integer"
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    },
+                    "can_report": {
+                        "type": "boolean"
+                    },
+                    "indicators": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string",
+                                    "enum": [
+                                        "material_cost_pct",
+                                        "loss_pct",
+                                        "range_margin_pct",
+                                        "new_profitable_pct",
+                                        "below_threshold_pct",
+                                        "price_gap_pct",
+                                        "stockouts",
+                                        "stock_days",
+                                        "staff_cost_per_carton",
+                                        "overtime_hours",
+                                        "otif_pct",
+                                        "logistics_cost_pct"
+                                    ]
+                                },
+                                "section": {
+                                    "type": "string"
+                                },
+                                "direction": {
+                                    "type": "string",
+                                    "enum": [
+                                        "higher",
+                                        "lower",
+                                        "index"
+                                    ]
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "source": {
+                                    "type": "string",
+                                    "enum": [
+                                        "erp",
+                                        "manual",
+                                        "erp+manual"
+                                    ]
+                                },
+                                "default": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "draft": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "validated": {
+                                    "type": "object",
+                                    "nullable": true
+                                },
+                                "history": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                },
+                                "hint": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "hint_missing": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "sections": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "missions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "hint_period": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "users": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "ManagerPlanInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "year"
+                ],
+                "properties": {
+                    "year": {
+                        "type": "integer"
+                    },
+                    "holder_user_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "holder_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "holder_start": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "salary_monthly": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "brut mensuel fixe"
+                    },
+                    "envelope_pct": {
+                        "type": "number",
+                        "description": "% du brut annuel (défaut 20)"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "PLN"
+                    },
+                    "team_organisation": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "auditor": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "audit_threshold": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "score minimal de l'audit indépendant (%)"
+                    },
+                    "margin_threshold_pct": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "seuil de marge brute (%)"
+                    },
+                    "price_reference_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "workplace": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "contract_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "working_time": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "monthly_hours": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "mission_hours": {
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": {
+                            "type": "number",
+                            "nullable": true
+                        }
+                    }
+                }
+            },
+            "ManagerObjectivesInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "year",
+                    "objectives"
+                ],
+                "properties": {
+                    "year": {
+                        "type": "integer"
+                    },
+                    "objectives": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "number",
+                            "nullable": true
+                        },
+                        "description": "indicateur → objectif (null supprime le brouillon)"
+                    }
+                }
+            },
+            "ManagerYearInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "year"
+                ],
+                "properties": {
+                    "year": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "ManagerReport": {
+                "type": "object",
+                "properties": {
+                    "month": {
+                        "type": "string"
+                    },
+                    "from": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "to": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "extracted_at": {
+                        "type": "string"
+                    },
+                    "partial": {
+                        "type": "boolean"
+                    },
+                    "plan": {
+                        "type": "object",
+                        "properties": {
+                            "exists": {
+                                "type": "boolean"
+                            },
+                            "year": {
+                                "type": "integer"
+                            },
+                            "holder_user_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "holder_name": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "holder_start": {
+                                "type": "string",
+                                "format": "date",
+                                "nullable": true
+                            },
+                            "salary_monthly": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "envelope_pct": {
+                                "type": "number"
+                            },
+                            "currency": {
+                                "type": "string"
+                            },
+                            "team_organisation": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "auditor": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "audit_threshold": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "margin_threshold_pct": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "price_reference_date": {
+                                "type": "string",
+                                "format": "date",
+                                "nullable": true
+                            },
+                            "workplace": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "contract_type": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "working_time": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "monthly_hours": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "mission_hours": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "description": "heures par mois et par mission : production, development, purchasing, staffing, logistics, haccp"
+                            },
+                            "envelope_annual": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "monthly_at_target": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "brut mensuel, tous les objectifs à 100 %"
+                            },
+                            "monthly_at_cap": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "brut mensuel au plafond de 120 %"
+                            }
+                        }
+                    },
+                    "haccp": {
+                        "type": "object",
+                        "properties": {
+                            "events": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/HaccpEvent"
+                                }
+                            },
+                            "blocking": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            },
+                            "unverified": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            },
+                            "audit_threshold": {
+                                "type": "number",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "alerts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "indicators": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string",
+                                    "enum": [
+                                        "material_cost_pct",
+                                        "loss_pct",
+                                        "range_margin_pct",
+                                        "new_profitable_pct",
+                                        "below_threshold_pct",
+                                        "price_gap_pct",
+                                        "stockouts",
+                                        "stock_days",
+                                        "staff_cost_per_carton",
+                                        "overtime_hours",
+                                        "otif_pct",
+                                        "logistics_cost_pct"
+                                    ]
+                                },
+                                "section": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "target": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "value": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "attainment": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "green",
+                                        "orange",
+                                        "red"
+                                    ],
+                                    "nullable": true
+                                },
+                                "origin": {
+                                    "type": "string",
+                                    "enum": [
+                                        "erp",
+                                        "manual"
+                                    ],
+                                    "nullable": true
+                                },
+                                "unverified": {
+                                    "type": "boolean"
+                                },
+                                "missing": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "raison : NO_SALES, NO_TABLET_DATA, NO_MARGIN_THRESHOLD, NO_NEW_PRODUCTS, NO_PRICES, MANUAL_ENTRY_MISSING, NO_EUR_RATE, NO_COST_MONTH, NO_PRODUCTION, NO_CLOCK_DATA, NO_ORDERS, NO_LOGISTICS_COST"
+                                },
+                                "detail": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            }
+                        }
+                    },
+                    "products": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "product_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "launch_date": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "weeks": {
+                                    "type": "integer"
+                                },
+                                "min_margin_pct": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "expected_week_shop": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "margin_pct": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "per_shop_week": {
+                                    "type": "number"
+                                },
+                                "shops": {
+                                    "type": "integer"
+                                },
+                                "recommendation": {
+                                    "type": "string",
+                                    "enum": [
+                                        "keep",
+                                        "fix",
+                                        "stop",
+                                        "too_early",
+                                        "targets_missing"
+                                    ]
+                                },
+                                "decision": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            },
+                            "additionalProperties": true
+                        }
+                    },
+                    "missing": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "actions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "text": {
+                                    "type": "string"
+                                },
+                                "owner": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "due_date": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "open",
+                                        "done"
+                                    ]
+                                },
+                                "indicator": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                        "gap",
+                                        "data"
+                                    ],
+                                    "nullable": true,
+                                    "description": "action proposée : écart à corriger ou donnée à rendre mesurable"
+                                }
+                            }
+                        }
+                    },
+                    "actions_suggested": {
+                        "type": "boolean"
+                    },
+                    "can_report": {
+                        "type": "boolean"
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ManagerValueInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "month",
+                    "indicator",
+                    "value"
+                ],
+                "properties": {
+                    "month": {
+                        "type": "string",
+                        "example": "2026-09"
+                    },
+                    "indicator": {
+                        "type": "string",
+                        "enum": [
+                            "loss_pct",
+                            "stockouts",
+                            "overtime_hours"
+                        ]
+                    },
+                    "value": {
+                        "type": "number",
+                        "nullable": true,
+                        "minimum": 0
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "HaccpEvent": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "event_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "official_control",
+                            "cold_chain_break",
+                            "independent_audit",
+                            "self_check"
+                        ]
+                    },
+                    "authority": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "result": {
+                        "type": "string",
+                        "enum": [
+                            "favorable",
+                            "unfavorable"
+                        ],
+                        "nullable": true
+                    },
+                    "score": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "treated": {
+                        "type": "boolean"
+                    },
+                    "treated_at": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "unverified": {
+                        "type": "boolean",
+                        "description": "saisi par le titulaire"
+                    }
+                }
+            },
+            "HaccpEventInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "event_date",
+                    "kind"
+                ],
+                "properties": {
+                    "event_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "official_control",
+                            "cold_chain_break",
+                            "independent_audit",
+                            "self_check"
+                        ]
+                    },
+                    "authority": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Sanepid"
+                    },
+                    "result": {
+                        "type": "string",
+                        "enum": [
+                            "favorable",
+                            "unfavorable"
+                        ],
+                        "nullable": true
+                    },
+                    "score": {
+                        "type": "number",
+                        "nullable": true,
+                        "minimum": 0,
+                        "maximum": 100
+                    },
+                    "treated": {
+                        "type": "boolean"
+                    },
+                    "treated_at": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "ManagerDeleted": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "deleted": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ProductLaunchInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "launch_date"
+                ],
+                "properties": {
+                    "launch_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "target_cost": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "target_price": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "min_margin_pct": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "expected_week_shop": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "decision": {
+                        "type": "string",
+                        "enum": [
+                            "keep",
+                            "fix",
+                            "stop"
+                        ],
+                        "nullable": true
+                    },
+                    "decision_note": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "ProductLaunch": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                    "product_id": {
+                        "type": "integer"
+                    },
+                    "launch_date": {
+                        "type": "string",
+                        "format": "date"
+                    }
+                }
+            },
+            "ManagerActionsInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "month",
+                    "actions"
+                ],
+                "properties": {
+                    "month": {
+                        "type": "string"
+                    },
+                    "actions": {
+                        "type": "array",
+                        "maxItems": 3,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "text"
+                            ],
+                            "properties": {
+                                "text": {
+                                    "type": "string",
+                                    "maxLength": 500
+                                },
+                                "owner": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "due_date": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "open",
+                                        "done"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "ManagerBonus": {
+                "type": "object",
+                "properties": {
+                    "period": {
+                        "type": "string"
+                    },
+                    "from": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "to": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "extracted_at": {
+                        "type": "string"
+                    },
+                    "plan": {
+                        "type": "object",
+                        "properties": {
+                            "exists": {
+                                "type": "boolean"
+                            },
+                            "year": {
+                                "type": "integer"
+                            },
+                            "holder_user_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "holder_name": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "holder_start": {
+                                "type": "string",
+                                "format": "date",
+                                "nullable": true
+                            },
+                            "salary_monthly": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "envelope_pct": {
+                                "type": "number"
+                            },
+                            "currency": {
+                                "type": "string"
+                            },
+                            "team_organisation": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "auditor": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "audit_threshold": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "margin_threshold_pct": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "price_reference_date": {
+                                "type": "string",
+                                "format": "date",
+                                "nullable": true
+                            },
+                            "workplace": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "contract_type": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "working_time": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "monthly_hours": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "mission_hours": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "description": "heures par mois et par mission : production, development, purchasing, staffing, logistics, haccp"
+                            },
+                            "envelope_annual": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "monthly_at_target": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "brut mensuel, tous les objectifs à 100 %"
+                            },
+                            "monthly_at_cap": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "brut mensuel au plafond de 120 %"
+                            }
+                        }
+                    },
+                    "total": {
+                        "type": "number"
+                    },
+                    "haccp": {
+                        "type": "object",
+                        "properties": {
+                            "blocked": {
+                                "type": "boolean"
+                            },
+                            "blocking": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            },
+                            "events": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/HaccpEvent"
+                                }
+                            }
+                        }
+                    },
+                    "sections": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                },
+                                "weight": {
+                                    "type": "number"
+                                },
+                                "period": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                },
+                                "indicators": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "code": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "material_cost_pct",
+                                                    "loss_pct",
+                                                    "range_margin_pct",
+                                                    "new_profitable_pct",
+                                                    "below_threshold_pct",
+                                                    "price_gap_pct",
+                                                    "stockouts",
+                                                    "stock_days",
+                                                    "staff_cost_per_carton",
+                                                    "overtime_hours",
+                                                    "otif_pct",
+                                                    "logistics_cost_pct"
+                                                ]
+                                            },
+                                            "section": {
+                                                "type": "string"
+                                            },
+                                            "unit": {
+                                                "type": "string"
+                                            },
+                                            "target": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "value": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "attainment": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "green",
+                                                    "orange",
+                                                    "red"
+                                                ],
+                                                "nullable": true
+                                            },
+                                            "origin": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "erp",
+                                                    "manual"
+                                                ],
+                                                "nullable": true
+                                            },
+                                            "unverified": {
+                                                "type": "boolean"
+                                            },
+                                            "missing": {
+                                                "type": "string",
+                                                "nullable": true,
+                                                "description": "raison : NO_SALES, NO_TABLET_DATA, NO_MARGIN_THRESHOLD, NO_NEW_PRODUCTS, NO_PRICES, MANUAL_ENTRY_MISSING, NO_EUR_RATE, NO_COST_MONTH, NO_PRODUCTION, NO_CLOCK_DATA, NO_ORDERS, NO_LOGISTICS_COST"
+                                            },
+                                            "detail": {
+                                                "type": "object",
+                                                "additionalProperties": true
+                                            }
+                                        }
+                                    }
+                                },
+                                "attainment": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "coefficient": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "presence": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "share": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "amount": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "ok",
+                                        "no_objective",
+                                        "missing_data",
+                                        "no_salary",
+                                        "haccp_blocked"
+                                    ]
+                                },
+                                "provisional": {
+                                    "type": "boolean",
+                                    "description": "période pas encore finie : montant provisoire"
+                                }
+                            }
+                        }
+                    },
+                    "missing": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "ManagerInterview": {
+                "type": "object",
+                "properties": {
+                    "month": {
+                        "type": "string"
+                    },
+                    "months": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "plan": {
+                        "type": "object",
+                        "properties": {
+                            "exists": {
+                                "type": "boolean"
+                            },
+                            "year": {
+                                "type": "integer"
+                            },
+                            "holder_user_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "holder_name": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "holder_start": {
+                                "type": "string",
+                                "format": "date",
+                                "nullable": true
+                            },
+                            "salary_monthly": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "envelope_pct": {
+                                "type": "number"
+                            },
+                            "currency": {
+                                "type": "string"
+                            },
+                            "team_organisation": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "auditor": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "audit_threshold": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "margin_threshold_pct": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "price_reference_date": {
+                                "type": "string",
+                                "format": "date",
+                                "nullable": true
+                            },
+                            "workplace": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "contract_type": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "working_time": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "monthly_hours": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "mission_hours": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "description": "heures par mois et par mission : production, development, purchasing, staffing, logistics, haccp"
+                            },
+                            "envelope_annual": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "monthly_at_target": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "brut mensuel, tous les objectifs à 100 %"
+                            },
+                            "monthly_at_cap": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "brut mensuel au plafond de 120 %"
+                            }
+                        }
+                    },
+                    "indicators": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "strengths": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "recurring_gaps": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "no_data": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "competency": {
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": true
+                    }
+                }
+            },
+            "CompetencyAudits": {
+                "type": "object",
+                "properties": {
+                    "areas": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "example": {
+                            "quality": [
+                                "qual_haccp",
+                                "qual_traceability",
+                                "qual_audit"
+                            ]
+                        }
+                    },
+                    "scale": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "expected": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "audits": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "can_report": {
+                        "type": "boolean"
+                    },
+                    "created_id": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "CompetencyAuditInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "audit_date",
+                    "assessed_name",
+                    "answers"
+                ],
+                "properties": {
+                    "audit_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "assessed_name": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "assessed_user_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "answers": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                            "required": [
+                                "score"
+                            ],
+                            "properties": {
+                                "score": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 3
+                                },
+                                "comment": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "comment": {
+                        "type": "string",
+                        "nullable": true
                     }
                 }
             },

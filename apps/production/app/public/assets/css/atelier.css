@@ -1465,3 +1465,42 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 /* 📌 Miejsce przypiętego dnia bez partii (partii tygodnia jest mniej niż miejsca). */
 .tfb-week-pinslot { margin-top: 3px; padding: 3px 6px; border: 1px dashed var(--at-line-2, var(--at-line)); border-radius: 4px; color: var(--at-muted, #6c757d); font-size: 11px; line-height: 1.3; overflow-wrap: anywhere; }
 .tfb-week-pinslot span { font-weight: 600; }
+/* Kierownik produkcji : karta stanowiska, raporty (FR + PL), audyt kompetencji ; druk = dokument zakładki po francusku, potem po polsku. */
+.tfb-mgr-tabs { margin: .5rem 0 1rem; flex-wrap: wrap; }
+.tfb-mgr-doc { max-width: 1100px; }
+.tfb-mgr-doc h2 { font-size: 1.5rem; margin: .25rem 0; }
+.tfb-mgr-doc h4 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; color: var(--at-primary, #8D1D2C); }
+.tfb-mgr-doc h5 { font-size: .95rem; margin: .75rem 0 .35rem; display: flex; justify-content: space-between; gap: 1rem; }
+.tfb-mgr-doc-head { border-bottom: 1px solid var(--at-line, #ddd); padding-bottom: .5rem; margin-bottom: .75rem; }
+.tfb-mgr-chars { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: 0; }
+.tfb-mgr-chars dt { font-weight: 600; }
+.tfb-mgr-chars dd { margin: 0; }
+.tfb-mgr-hours { font-weight: 600; white-space: nowrap; color: var(--at-primary, #8D1D2C); }
+.tfb-mgr-mission ul { margin-bottom: .5rem; }
+.tfb-mgr-sep { margin: 2rem 0; border-top: 3px double var(--at-line, #ccc); }
+.tfb-mgr-table td, .tfb-mgr-table th { vertical-align: top; }
+.tfb-mgr-num { width: 110px; }
+.tfb-mgr-dot { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; background: #ced4da; vertical-align: middle; }
+.tfb-mgr-dot.is-green { background: #2e7d32; }
+.tfb-mgr-dot.is-orange { background: #ef8f00; }
+.tfb-mgr-dot.is-red { background: #c62828; }
+.tfb-mgr-alerts li.is-haccp { color: #c62828; font-weight: 600; }
+.tfb-mgr-reco { font-weight: 600; }
+.tfb-mgr-reco.is-stop { color: #c62828; }
+.tfb-mgr-reco.is-fix { color: #ef8f00; }
+.tfb-mgr-reco.is-keep { color: #2e7d32; }
+.tfb-mgr-just td { font-size: .8rem; color: var(--at-muted, #6c757d); border-top: 0; padding-top: 0; }
+.tfb-mgr-area { border: 1px solid var(--at-line, #ddd); border-radius: 6px; padding: .5rem .75rem; margin-bottom: .75rem; }
+.tfb-mgr-area legend { font-size: .95rem; font-weight: 600; float: none; width: auto; padding: 0 .25rem; margin-bottom: 0; }
+.tfb-mgr-question { display: grid; grid-template-columns: 1fr auto; gap: .25rem 1rem; align-items: center; padding: .35rem 0; border-bottom: 1px dashed var(--at-line, #eee); }
+.tfb-mgr-question:last-child { border-bottom: 0; }
+.tfb-mgr-qcomment { grid-column: 1 / -1; }
+.tfb-mgr-score { white-space: nowrap; }
+.tfb-mgr-print { display: none; }
+@media (max-width: 768px) { .tfb-mgr-question { grid-template-columns: 1fr; } .tfb-mgr-chars { grid-template-columns: 1fr; } }
+@media print {
+    body.tfb-mgr-printing * { visibility: hidden; }
+    body.tfb-mgr-printing .tfb-mgr-print, body.tfb-mgr-printing .tfb-mgr-print * { visibility: visible; }
+    body.tfb-mgr-printing .tfb-mgr-print { display: block; position: absolute; left: 0; top: 0; width: 100%; }
+    .tfb-mgr-pagebreak { page-break-after: always; break-after: page; }
+}

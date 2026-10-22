@@ -262,6 +262,29 @@ final class ProfitabilityService
     }
 
     /**
+     * Écart des prix d'achat à une date de référence : matières et emballages des cartons vendus sur [from, to]
+     * (mois entiers), valorisés au prix de fin de chaque mois puis au prix de la date de référence (indice de
+     * Laspeyres, mêmes quantités). gap_pct = (courant ÷ référence − 1) × 100.
+     * @return array{current:float, reference:float, gap_pct:?float, materials:int}
+     */
+    public function priceIndex(string $from, string $to, string $referenceDate): array
+    {
+        $run = $this->materialRun($from, $to);
+        $current = 0.0;
+        $reference = 0.0;
+        $materials = [];
+        foreach ($run['materials'] as $lines) {
+            foreach ($lines as $id => $l) {
+                [$price] = $this->priceAt((int) $id, $referenceDate . ' 23:59:59');
+                $current += $l['pln'];
+                $reference += $l['qty'] * $price;
+                $materials[$id] = true;
+            }
+        }
+        return ['current' => $current, 'reference' => $reference, 'gap_pct' => $reference > 0 ? ($current / $reference - 1) * 100 : null, 'materials' => count($materials)];
+    }
+
+    /**
      * Ce que les groupes ont produit (cartons vendus WDT) sur [from, to] : par groupe, puis par catégorie de
      * produit, puis par produit — cartons, pièces, kg, ventes (EUR), matières des recettes (EUR) et marge
      * après matières. Groupes, catégories et produits classés par ventes.

@@ -23,6 +23,7 @@ use App\Services\Workshop\Product\StandardTime;
 use App\Services\Workshop\Scheduling\Scheduler;
 use App\Services\Workshop\Scheduling\ShiftOptimizer;
 use App\Services\Workshop\Execution\TimesheetService;
+use App\Services\Workshop\Manager\ManagerIndicators;
 use App\Services\Workshop\Referentiel\ShiftTemplateService;
 
 function check(bool $condition, string $message): void
@@ -272,5 +273,25 @@ $night = fn(string $a, string $b) => TimesheetService::nightSeconds(strtotime($a
 check($night('2026-10-20 21:00', '2026-10-21 07:00') == 8.0, 'night hours: 21:00 → 07:00 = 8 h');
 check($night('2026-10-20 23:00', '2026-10-21 01:00') == 2.0 && $night('2026-10-21 05:00', '2026-10-21 07:00') == 1.0, 'night hours across midnight and at dawn');
 check($night('2026-10-20 06:00', '2026-10-20 14:00') == 0.0 && $night('2026-10-20 14:00', '2026-10-20 22:30') == 0.5, 'day shift: no night hours; late shift: 30 min');
+
+// --- Kierownik produkcji : realizacja, współczynnik (próg 90 %, maks. 120 %), premia sekcji, okresy
+$att = fn(string $i, ?float $t, ?float $r) => ManagerIndicators::attainment($i, $t, $r);
+check(abs($att('otif_pct', 95, 90.25) - 0.95) < 1e-9 && $att('otif_pct', 95, 200) == 1.2, 'higher is better: realized ÷ target, capped at 120 %');
+check(abs($att('material_cost_pct', 30, 33.0) - 30 / 33) < 1e-9 && $att('material_cost_pct', 30, 20) == 1.2, 'lower is better: target ÷ realized, capped at 120 %');
+check($att('stockouts', 0, 0) == 1.0 && $att('stockouts', 0, 2) == 0.0 && $att('overtime_hours', 10, 0) == 1.2, 'lower is better with zeros: 0 for 0 = 100 %, any for 0 = 0, zero hours = 120 %');
+check(abs($att('price_gap_pct', 2, 3) - 102 / 103) < 1e-9 && abs($att('price_gap_pct', 2, -1) - 102 / 99) < 1e-9, 'price gap on the index 100 + gap (gap may be negative)');
+check($att('otif_pct', null, 90) === null && $att('otif_pct', 95, null) === null, 'no target or no data: not calculated');
+check(ManagerIndicators::coefficient(0.8999) == 0.0 && ManagerIndicators::coefficient(0.9) == 0.9 && ManagerIndicators::coefficient(1.0) == 1.0 && ManagerIndicators::coefficient(1.5) == 1.2,
+    'coefficient: under 90 % → 0 (no rounding up), then proportional, capped at 120 %');
+check(ManagerIndicators::status(0.8999) === 'red' && ManagerIndicators::status(0.95) === 'orange' && ManagerIndicators::status(1.0) === 'green', 'status: red < 90 %, orange 90–100 %, green ≥ 100 %');
+$b = ManagerIndicators::sectionBonus(24000, 'production', 1.0, 0.95);
+check(abs($b['share'] - 1200) < 1e-9 && abs($b['amount'] - 1140) < 1e-9, 'section bonus: 24 000 × 20 % × 3/12 × 1 × 0.95 = 1 140');
+$b = ManagerIndicators::sectionBonus(24000, 'development', 0.5, 1.2);
+check(abs($b['share'] - 1800) < 1e-9 && abs($b['amount'] - 2160) < 1e-9, 'semester section, half the period present: 24 000 × 30 % × 6/12 × 0.5 = 1 800, × 1.2');
+check(ManagerIndicators::sectionPeriod('development', '2026-Q3') === null && ManagerIndicators::sectionPeriod('development', '2026-Q4')['from'] === '2026-07-01'
+    && ManagerIndicators::sectionPeriod('logistics', '2026-Q1') === ['key' => '2026-Q1', 'from' => '2026-01-01', 'to' => '2026-03-31'], 'periods: quarter, semester only in Q2 and Q4');
+check(array_sum(ManagerIndicators::DEFAULT_MISSION_HOURS) == ManagerIndicators::DEFAULT_MONTHLY_HOURS && array_keys(ManagerIndicators::DEFAULT_MISSION_HOURS) === ManagerIndicators::MISSIONS,
+    'default hours: every mission, 168 h a month in total');
+check(array_sum(array_column(ManagerIndicators::SECTIONS, 'weight')) === 100, 'section weights add up to 100 %');
 
 echo "tfb_unit_test: OK\n";
