@@ -955,3 +955,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-22T15:01:58Z zadania : kategorie, protokół zebrania, śledzenie produkcji
 2026-10-22T15:53:14Z coboty : stanowisko współpracujące, etap na cobocie
 2026-10-22T16:33:01Z objectifs de CA à date (réel et cible prorata au jour)
+2026-10-22T16:41:30Z TRS na tablecie (stany maszyn, migracja 049)
