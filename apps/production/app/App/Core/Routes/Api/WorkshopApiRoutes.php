@@ -108,6 +108,8 @@ final class WorkshopApiRoutes
             ['PUT', '/planning/staffing', SchedulingController::class, 'saveStaffing', 'prod.plan.validate'],
             ['GET', '/planning/week', WeekController::class, 'get', 'prod.plan.read'],
             ['GET', '/planning/sheet', WeekController::class, 'sheet', 'prod.plan.read'],
+            ['GET', '/planning/team-sheet', WeekController::class, 'teamSheet', 'prod.plan.read'],
+            ['GET', '/planning/team-sheet/pdf', WeekController::class, 'teamSheetPdf', 'prod.plan.read'],
             // Kierownik produkcji : karta stanowiska, cele, raport miesięczny, premia, rozmowa, audyt kompetencji.
             ['GET', '/manager/plan', ManagerController::class, 'plan', 'prod.manager.read'],
             ['PUT', '/manager/plan', ManagerController::class, 'savePlan', 'prod.manager.write'],
@@ -180,6 +182,7 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/operations/{id:\d+}/pause', ExecutionController::class, 'pause', 'kiosk_employee'],
             ['POST', '/kiosk/operations/{id:\d+}/finish', ExecutionController::class, 'finish', 'kiosk_employee'],
             ['POST', '/kiosk/signatures', ExecutionController::class, 'sign', 'kiosk_employee'],
+            ['GET', '/kiosk/week', ExecutionController::class, 'week', 'kiosk'],
             ['GET', '/kiosk/production', ExecutionController::class, 'production', 'kiosk_employee'],
             ['POST', '/kiosk/production', ExecutionController::class, 'recordOutput', 'kiosk_employee'],
             ['GET', '/kiosk/production/{id:\d+}', ExecutionController::class, 'output', 'kiosk_employee'],

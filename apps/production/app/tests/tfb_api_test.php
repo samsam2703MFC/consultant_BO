@@ -1476,6 +1476,49 @@ check($s === 409, 'a closed invoice is not deleted');
 [$s, $b] = $call('DELETE', "/supply/invoices/{$x2['data']['id']}", null, $access);
 check($s === 200 && $b['data']['deleted'], 'open invoice deleted');
 
+// --- Plan zespołów (druk i tablet) : kalendarz, produkcja, dostawy surowców potrzebnych zespołowi
+[$s, $ts] = $call('GET', "/planning/team-sheet?date={$today}", null, $access);
+$withCroissant = array_values(array_filter($ts['data']['teams'] ?? [], fn($t) => in_array($croissant, array_column($t['products'], 'item_id'), true)));
+$team = $withCroissant[0] ?? null;
+$blocksSorted = $team && array_reduce($team['days'], fn($ok, $d) => $ok && array_map(fn($b) => $b['time'] ?? '99:99', $d['blocks']) === array_values(array_map(fn($b) => $b['time'] ?? '99:99', $d['blocks'])), true);
+check($s === 200 && $ts['data']['days'] && $team && count($team['days']) === count($ts['data']['days']) && $blocksSorted
+    && array_sum(array_map(fn($d) => count($d['blocks']), $team['days'])) === array_sum(array_map(fn($p) => count($p['days']), $team['products'])),
+    'team sheet: teams producing this week, a calendar of the production days with the blocks of the week board, product table');
+// Dostawa mąki w tygodniu : zespół croissanta jej potrzebuje (receptura) — na liście i w kalendarzu dnia.
+$deliveryDay = $ts['data']['days'][1]['date'];
+$pdo->exec("UPDATE tfb_po SET delivery_date = '{$deliveryDay}' WHERE id = {$flourPo['id']}");
+[$s, $ts] = $call('GET', "/planning/team-sheet?date={$today}&group_id={$team['id']}", null, $access);
+$t1 = $ts['data']['teams'][0] ?? null;
+$flourLine = null;
+foreach ($t1['deliveries'] ?? [] as $o) foreach ($o['lines'] as $l) if ($o['order_id'] === $flourPo['id'] && $l['material_id'] === 900) $flourLine = $l + ['supplier' => $o['supplier']];
+$dayDeliveries = array_column(array_column($t1['days'] ?? [], null, 'date')[$deliveryDay]['deliveries'] ?? [], 'supplier');
+check($s === 200 && count($ts['data']['teams']) === 1 && $t1['id'] === $team['id'] && $flourLine && $flourLine['need'] > 0 && $flourLine['unit'] === 'kg' && $flourLine['factor'] === 1000
+    && $flourLine['quantity'] == 50000 && in_array('Młyn test', $dayDeliveries, true),
+    'flour delivered this week: listed for the croissant team (need of the week, products) and on the delivery day of the calendar');
+$others = array_filter($ts['data']['groups'], fn($g) => $g['id'] !== $team['id']);
+if ($others) {
+    [$s, $o] = $call('GET', '/planning/team-sheet?date=' . $today . '&group_id=' . array_values($others)[0]['id'], null, $access);
+    check($s === 200 && count($o['data']['teams']) === 1 && !array_filter($o['data']['teams'][0]['deliveries'], fn($d) => $d['order_id'] === $flourPo['id'] && !array_filter($d['lines'], fn($l) => $l['need'] > 0)),
+        'a team only sees the deliveries it needs');
+}
+[$s] = $call('GET', "/planning/team-sheet?date={$today}&group_id=999999", null, $access);
+[$s2, $b] = $call('GET', "/planning/team-sheet?date={$today}&group_id=abc", null, $access);
+check($s === 404 && $s2 === 422 && $codes($b) === ['group_id:NOT_INTEGER'], 'unknown team → 404, invalid id → 422');
+[$s, $pdf] = $call('GET', "/planning/team-sheet/pdf?date={$today}", null, $access);
+$bin = base64_decode($pdf['data']['content_base64'] ?? '');
+check($s === 200 && str_starts_with($bin, '%PDF') && preg_match('/^plan_zespolow_\d{4}-\d{2}-\d{2}\.pdf$/', $pdf['data']['filename']) && substr_count($bin, '/Type /Page') - substr_count($bin, '/Type /Pages') >= count($ts['data']['teams']),
+    'team sheet PDF: A4 pages, one team per page');
+// Tablet : plan zespołu tabletu bez identyfikacji osoby (tablet sparowany na nowo — stary token odwołany wyżej).
+[, $pair2] = $call('POST', '/kiosk/pair', ['code' => $re['data']['pairing_code']]);
+$device = $pair2['data']['device_token'];
+[$s, $kw] = $kiosk('GET', "/kiosk/week?date={$today}", null, $device);
+check($s === 200 && count($kw['data']['teams']) === 1 && $kw['data']['teams'][0]['id'] === 1, 'tablet: week plan of its own team (device token only)');
+$pdo->exec("UPDATE tfb_prod_device SET id_group = NULL WHERE id = {$dev['data']['id']}");
+[$s, $b] = $kiosk('GET', '/kiosk/week', null, $device);
+$pdo->exec("UPDATE tfb_prod_device SET id_group = 1 WHERE id = {$dev['data']['id']}");
+[$s2] = $kiosk('GET', '/kiosk/week', null, 'bad-token');
+check($s === 409 && $b['description'] === 'DEVICE_WITHOUT_GROUP' && $s2 === 401, 'tablet without team → 409 ; unknown tablet → 401');
+
 // Journal, en-têtes, JSON invalide, OpenAPI public
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');
 [$s, $b] = $call('POST', '/referentiels/groups', null, $access);

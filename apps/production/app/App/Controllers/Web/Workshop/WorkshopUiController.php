@@ -42,6 +42,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/supply', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
+    /** Plan zespołów na tydzień : kalendarz, produkcja, dostawy — PDF do druku i link na tablet zespołu. */
+    public function teamSheet()
+    {
+        $this->view('workshop/team_sheet', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
+    }
+
     public function gantt()
     {
         $this->view('workshop/gantt', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);

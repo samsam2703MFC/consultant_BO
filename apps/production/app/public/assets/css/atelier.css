@@ -1554,3 +1554,21 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-inv-text pre { white-space: pre; font-size: 12px; max-height: 360px; overflow: auto; background: var(--bs-light, #f6f3ef); border-radius: 8px; padding: 10px 12px; margin: 6px 0 0; }
 .tfb-inv-viewer { margin-top: 12px; }
 .tfb-inv-viewer iframe { width: 100%; height: 75vh; border: 0; display: block; }
+
+/* Plan zespołów (druk, tablet) : kalendarz tygodnia zespołu, produkcja, dostawy */
+.tfb-team { margin-bottom: 16px; border-top: 4px solid var(--team, #8d1d2c); }
+.tfb-team-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--team, #8d1d2c); display: inline-block; }
+.tfb-team-title { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #6b5d52; margin-bottom: 8px; }
+.tfb-team-week { min-width: 210px; }
+.tfb-team-tablet { margin-bottom: 12px; }
+.tfb-team-link { max-width: 640px; }
+.tfb-team-cal { display: grid; grid-auto-flow: column; gap: 6px; overflow-x: auto; }
+.tfb-team-day { background: #f6f3ef; border-radius: 8px; padding: 6px; display: flex; flex-direction: column; gap: 5px; min-height: 90px; }
+.tfb-team-day.is-today { background: #fff4d6; box-shadow: inset 0 0 0 2px #e5c36a; }
+.tfb-team-day.is-past { opacity: .7; }
+.tfb-team-day-head { display: flex; flex-direction: column; border-bottom: 1px solid rgba(0,0,0,.08); padding-bottom: 4px; }
+.tfb-team-block { background: #fff; border-left: 4px solid var(--team, #8d1d2c); border-radius: 6px; padding: 4px 6px; font-size: 13px; line-height: 1.3; }
+.tfb-team-block.is-late { border-left-color: #c41e3a; }
+.tfb-team-time { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tfb-team-delivery { background: #dbe8f5; color: #1f4f7a; border-radius: 6px; padding: 4px 6px; font-size: 12px; }
+.tfb-team-table th.is-today, .tfb-team-table td.is-today { background: #fff8e6; }

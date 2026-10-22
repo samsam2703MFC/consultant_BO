@@ -58,6 +58,12 @@ final class Translator
         return $this->messages['entities'][$entity] ?? $entity;
     }
 
+    /** Texte des documents (PDF) : documents.<clé>. */
+    public function text(string $key, array $params = []): string
+    {
+        return $this->format($this->messages['documents'][$key] ?? $key, $params);
+    }
+
     private function format(string $message, array $params): string
     {
         foreach ($params as $key => $value) {

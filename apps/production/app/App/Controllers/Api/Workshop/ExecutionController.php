@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers\Api\Workshop;
 
+use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\ApiRequest;
 use App\Core\Api\Workshop\ApiResult;
 use App\Services\Workshop\Execution\ExecutionService;
@@ -11,6 +12,7 @@ use App\Services\Workshop\Execution\KpiService;
 use App\Services\Workshop\Execution\OutputService;
 use App\Services\Workshop\Execution\QualityService;
 use App\Services\Workshop\Execution\TimesheetService;
+use App\Services\Workshop\Planning\TeamSheetService;
 
 /** P7 : tablettes (appairage, identification, pointage, opérations, signatures), pointage au téléphone par QR code, heures, KPIs, cockpit. */
 final class ExecutionController
@@ -24,6 +26,7 @@ final class ExecutionController
         private KpiService $kpis,
         private OutputService $outputs,
         private QualityService $quality,
+        private TeamSheetService $teams,
     ) {
     }
 
@@ -77,6 +80,13 @@ final class ExecutionController
     public function pause(ApiRequest $request): ApiResult { return new ApiResult($this->execution->pause($request->id(), $request->context)); }
     public function finish(ApiRequest $request): ApiResult { return new ApiResult($this->execution->finish($request->id(), $request->body(), $request->context)); }
     public function sign(ApiRequest $request): ApiResult { return new ApiResult($this->execution->sign($request->body(), $request->context), 201); }
+
+    /** Plan tygodnia zespołu tabletu (bez identyfikacji osoby : tablet stoi przy zespole). */
+    public function week(ApiRequest $request): ApiResult
+    {
+        if ($request->context->deviceGroupId === null) throw new ApiException('DEVICE_WITHOUT_GROUP', 409);
+        return new ApiResult($this->teams->build((string) $request->query('date', date('Y-m-d')), $request->context->deviceGroupId, $request->context));
+    }
 
     // Tablet grupy : produkcja dnia i partie (identyfikowalność).
     public function production(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->day($request->context, $request->query('date'))); }

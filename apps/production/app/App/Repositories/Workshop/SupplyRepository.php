@@ -105,6 +105,28 @@ final class SupplyRepository extends WorkshopRepository
         return $out;
     }
 
+    /**
+     * Dostawy tygodnia (plan zespołów) : linie zamówień wysłanych / przyjętych z terminem dostawy w okresie, a bez
+     * terminu — zamówienia jeszcze w drodze na ten tydzień (week_start w okresie).
+     */
+    public function deliveries(string $from, string $to): array
+    {
+        return $this->all(
+            "SELECT p.id, p.code, p.status, p.delivery_date, s.name AS supplier_name, l.id_raw_material, l.quantity, rm.name, rm.name_fr, u.name AS unit,
+                    COALESCE(r.qty, 0) AS received_qty
+             FROM tfb_po p
+             JOIN supplier s ON s.id = p.id_supplier
+             JOIN tfb_po_line l ON l.id_po = p.id
+             JOIN raw_material rm ON rm.id = l.id_raw_material
+             LEFT JOIN unit u ON u.id = rm.id_unit
+             LEFT JOIN (SELECT id_po_line, SUM(quantity) AS qty FROM tfb_po_receipt GROUP BY id_po_line) r ON r.id_po_line = l.id
+             WHERE p.status IN ('sent', 'partial', 'received')
+               AND (p.delivery_date BETWEEN ? AND ? OR (p.delivery_date IS NULL AND p.status IN ('sent', 'partial') AND p.week_start BETWEEN ? AND ?))
+             ORDER BY COALESCE(p.delivery_date, p.week_start), s.name, p.id, rm.name",
+            [$from, $to, $from, $to]
+        );
+    }
+
     /** @return array<int, float> zamówione, jeszcze nie przyjęte (szkice, wysłane, częściowo przyjęte) */
     public function onOrder(): array
     {

@@ -86,6 +86,14 @@
                         </div>
                         <button type="button" class="btn btn-sm btn-primary">Pobierz PDF</button>
                     </div>
+                    <div class="at-pdf at-pdf-teams">
+                        <i class="bi bi-printer"></i>
+                        <div>
+                            <strong>Plan zespołów : druk i tablet</strong>
+                            <small>Dla każdego zespołu : kalendarz tygodnia, co produkuje i dostawy surowców — PDF (zespół na stronie) albo na tablecie zespołu.</small>
+                        </div>
+                        <a class="btn btn-sm btn-primary" id="pwTeams" href="{{ root }}/workshop/team-sheet" data-root="{{ root }}">Otwórz</a>
+                    </div>
                     <div class="at-pdf" data-pdf="complaint">
                         <i class="bi bi-arrow-counterclockwise"></i>
                         <div>
@@ -294,6 +302,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const sorted = [...state.preview.dates].sort();
         const link = document.getElementById('pwWeek');
         if (sorted.length) link.href = link.dataset.root + '/workshop/gantt#from=' + week(sorted[0]) + '&view=week';
+        const teams = document.getElementById('pwTeams');
+        if (sorted.length) teams.href = teams.dataset.root + '/workshop/team-sheet#date=' + sorted[0];
         show(3);
         api('/ajax/production-plan/complaints').then((r) => {
             const info = document.getElementById('pwComplaintInfo');

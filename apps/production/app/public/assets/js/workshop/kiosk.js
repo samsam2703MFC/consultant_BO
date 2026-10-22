@@ -30,6 +30,7 @@
     let idleSeconds = 45;
     let pending = null; // {uuid, direction} : dernier pointage à rejouer après une coupure réseau
     let qrTimer = null;
+    let week = null; // plan tygodnia zespołu : {date, display, day, timer, idle}
 
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const t = (k, p) => { let s = labels[k] ?? k; for (const [a, b] of Object.entries(p || {})) s = s.split('{' + a + '}').join(String(b)); return s; };
@@ -113,6 +114,7 @@
 
     // --- Parowanie --------------------------------------------------------------------------------
     function renderPairing(message) {
+        stopWeek();
         el.innerHTML = header() + `<section class="kiosk-card"><h2>${esc(t('pair_title'))}</h2><p class="kiosk-muted">${esc(t('pair_help'))}</p>
             <form class="kiosk-form" data-pair><label>${esc(t('pair_code'))}<input name="code" autocomplete="off" autocapitalize="characters" maxlength="12" required></label>
             <div class="kiosk-row"><button class="kiosk-btn is-primary">${esc(t('pair'))}</button></div></form>
@@ -124,7 +126,7 @@
                 device = r.device_token;
                 store.set(DEVICE_KEY, device);
                 toast(t('paired', {name: r.device.name}));
-                renderHome();
+                location.hash === '#week' ? renderWeek(null, true) : renderHome();
             } catch (err) { el.querySelector('[data-error]').textContent = err.message; }
         });
         el.querySelector('[name=code]').focus();
@@ -133,7 +135,10 @@
     // --- Accueil : badge ou nom -----------------------------------------------------------------------
     async function renderHome() {
         if (!device) return renderPairing();
-        el.innerHTML = header() + `<section class="kiosk-card"><div class="kiosk-badge-hint"><span aria-hidden="true">🪪</span><strong>${esc(t('badge_hint'))}</strong>
+        stopWeek();
+        el.innerHTML = header() + `<button type="button" class="kiosk-btn kiosk-week-open" data-week-open><span aria-hidden="true">📅</span>
+                <span><strong>${esc(t('week_open'))}</strong><small>${esc(t('week_open_help'))}</small></span></button>
+            <section class="kiosk-card"><div class="kiosk-badge-hint"><span aria-hidden="true">🪪</span><strong>${esc(t('badge_hint'))}</strong>
                 ${'NDEFReader' in window ? `<button type="button" class="kiosk-btn is-small" data-nfc>${esc(t('nfc'))}</button>` : ''}</div>
                 <input class="kiosk-badge-input" data-badge autocomplete="off" aria-label="${esc(t('badge'))}"></section>
             <section class="kiosk-card kiosk-qr" data-qr-card hidden><canvas data-qr width="220" height="220" role="img" aria-label="${esc(t('qr_title'))}"></canvas>
@@ -153,6 +158,7 @@
                 reader.addEventListener('reading', (ev) => { if (!session) renderPin({badge: ev.serialNumber}); }, {once: true});
             } catch (e) { toast(t('nfc_error'), true); }
         });
+        el.querySelector('[data-week-open]').addEventListener('click', () => renderWeek(null, false));
         drawQr();
         try {
             const people = await api('GET', '/kiosk/people');
@@ -185,6 +191,82 @@
             const card = el.querySelector('[data-qr-card]');
             if (card) card.hidden = true;
         }
+    }
+
+    // --- Plan tygodnia zespołu (bez identyfikacji : tablet stoi przy zespole) -----------------------------
+    // Z ekranu głównego : powrót po 3 min bez dotyku (kod QR do pointowania). Z linku …/kiosk#week : plan zostaje
+    // na ekranie (tryb wyświetlacza). Odświeżanie co 5 min.
+    const WEEK_REFRESH_MS = 300000;
+    const WEEK_IDLE_MS = 180000;
+    const dm = (s) => s ? `${s.slice(8, 10)}.${s.slice(5, 7)}` : '—';
+    const wq = (v, unit, factor) => `${fmt(v / (factor || 1))} ${unit}`;
+    const isoDay = (s, k) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + k); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+    function stopWeek() {
+        if (!week) return;
+        window.clearInterval(week.timer);
+        window.clearTimeout(week.idle);
+        week = null;
+    }
+    function weekIdle() {
+        if (!week || week.display) return;
+        window.clearTimeout(week.idle);
+        week.idle = window.setTimeout(() => renderHome(), WEEK_IDLE_MS);
+    }
+
+    async function renderWeek(date, display) {
+        const keep = week && week.date === date ? week.day : null;
+        stopWeek();
+        week = {date, display, day: keep, timer: null, idle: null};
+        window.clearInterval(qrTimer);
+        qrTimer = null;
+        let w;
+        try {
+            w = await api('GET', '/kiosk/week' + (date ? '?date=' + date : ''));
+        } catch (err) {
+            if (['DEVICE_UNAUTHENTICATED', 'DEVICE_DISABLED'].includes(err.code)) return;
+            toast(err.message, true);
+            if (!display) renderHome();
+            return;
+        }
+        if (!week) return;
+        const team = w.teams[0];
+        if (!week.day || !team.days.some(d => d.date === week.day)) week.day = (team.days.find(d => d.today) || team.days.find(d => d.blocks.length) || team.days[0]).date;
+        const d = team.days.find(x => x.date === week.day);
+        const color = /^#[0-9a-f]{6}$/i.test(team.color || '') ? team.color : '#8D1D2C';
+        const current = w.week_start <= w.today && w.today <= w.week_end;
+        const block = (b) => `<div class="kiosk-plan-block ${b.late ? 'is-late' : ''}"><span class="kiosk-plan-time">${esc(b.time || '—')}</span>
+            <div><h3>${esc(b.name)}</h3><p class="kiosk-muted">${esc(wq(b.quantity, b.unit, b.factor))}${b.cartons ? ' · ' + esc(fmt(b.cartons)) + ' ' + esc(t('week_cartons')) : ''}${b.batches ? ' · ' + esc(fmt(b.batches)) + ' ' + esc(t('week_batches')) : ''} · ${esc(fmt(b.hours))} h</p>
+            <div class="kiosk-row">${b.direct_qty > 0 ? `<span class="kiosk-tag is-ship">${esc(t('week_ship', {qty: wq(b.direct_qty, b.unit, b.factor)}))}</span>` : ''}${b.stock_qty > 0 ? `<span class="kiosk-tag">${esc(t('week_stock', {qty: wq(b.stock_qty, b.unit, b.factor)}))}</span>` : ''}
+                ${b.late ? `<span class="kiosk-tag is-late">${esc(t('week_late'))}</span>` : ''}</div></div></div>`;
+        const deliveryState = (l) => l.received >= l.quantity - 0.0005 ? 'received' : (l.received > 0 ? 'partial' : 'expected');
+        const delivery = (o) => `<div class="kiosk-plan-delivery"><span aria-hidden="true">🚚</span><div><h3>${esc(o.supplier)}${o.date ? '' : ' · ' + esc(t('week_undated'))}</h3>
+            ${o.lines.map(l => `<p>${esc(l.name)} — ${esc(wq(l.quantity, l.unit, l.factor))} <span class="kiosk-muted">(${esc(t('week_delivery_' + deliveryState(l)))} · ${esc(t('week_need', {qty: wq(l.need, l.unit, l.factor)}))})</span></p>`).join('')}</div></div>`;
+        const dayDeliveries = team.deliveries.filter(o => o.date === d.date);
+        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('week_back'))}</button>`) + `
+            <section class="kiosk-card kiosk-week" style="--team:${color}"><div class="kiosk-week-head"><div><h2>${esc(team.name || '—')}</h2>
+                <p class="kiosk-muted">${esc(t('week_label', {week: w.iso_week, from: dm(w.week_start), to: dm(w.week_end)}))}</p></div>
+                <div class="kiosk-row"><button type="button" class="kiosk-btn is-small" data-wk="-7" aria-label="${esc(t('week_prev'))}">‹</button>
+                    ${current ? '' : `<button type="button" class="kiosk-btn is-small" data-wk="0">${esc(t('week_this'))}</button>`}
+                    <button type="button" class="kiosk-btn is-small" data-wk="7" aria-label="${esc(t('week_next'))}">›</button></div></div>
+                <nav class="kiosk-days" style="grid-template-columns:repeat(${team.days.length}, minmax(92px, 1fr))" aria-label="${esc(t('week_days'))}">${team.days.map(x => `<button type="button" class="kiosk-day ${x.date === d.date ? 'is-active' : ''} ${x.today ? 'is-today' : ''}" data-day="${x.date}">
+                    <strong>${esc(t('weekday_' + x.weekday))} ${esc(dm(x.date))}</strong><small>${x.blocks.length ? esc(t('week_blocks', {n: x.blocks.length, hours: fmt(x.required_h)})) : '—'}${x.deliveries.length ? ' · 🚚' : ''}</small></button>`).join('')}</nav></section>
+            <section class="kiosk-card"><div class="kiosk-week-head"><h2>${esc(t('weekday_long_' + d.weekday))} ${esc(dm(d.date))}</h2>
+                <p class="kiosk-muted">${d.available_h > 0 || d.required_h > 0 ? esc(t('week_day_hours', {people: d.people, required: fmt(d.required_h), available: fmt(d.available_h)})) : esc(t('week_no_shift'))}</p></div>
+                <div class="kiosk-plan">${d.blocks.map(block).join('') || `<p class="kiosk-muted">${esc(t('week_day_empty'))}</p>`}</div>
+                ${dayDeliveries.length ? `<h3 class="kiosk-plan-sub">${esc(t('week_deliveries_day'))}</h3>${dayDeliveries.map(delivery).join('')}` : ''}</section>
+            <section class="kiosk-card"><h2>${esc(t('week_all'))}</h2>${team.products.length ? `<div class="kiosk-table-wrap"><table class="kiosk-table"><thead><tr><th>${esc(t('week_product'))}</th><th class="is-num">${esc(t('week_total'))}</th>
+                ${team.days.map(x => `<th class="is-num ${x.today ? 'is-today' : ''}">${esc(t('weekday_' + x.weekday))}<br>${esc(dm(x.date))}</th>`).join('')}</tr></thead>
+                <tbody>${team.products.map(r => `<tr><td>${esc(r.name)}${r.unassigned_qty > 0 ? `<br><small class="kiosk-late">${esc(t('week_waiting', {qty: wq(r.unassigned_qty, r.unit, r.factor)}))}</small>` : ''}</td>
+                    <td class="is-num">${esc(wq(r.quantity, r.unit, r.factor))}</td>
+                    ${team.days.map(x => { const v = r.days[x.date]; return `<td class="is-num ${x.today ? 'is-today' : ''}">${v ? (v.time ? `<small>${esc(v.time)}</small><br>` : '') + esc(fmt(v.quantity / (r.factor || 1))) : ''}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`
+                : `<p class="kiosk-muted">${esc(t('week_team_empty'))}</p>`}</section>
+            ${team.deliveries.length ? `<section class="kiosk-card"><h2>${esc(t('week_deliveries'))}</h2>${team.deliveries.map(o => `<p class="kiosk-plan-sub">${o.date ? esc(t('weekday_long_' + (new Date(o.date + 'T12:00:00').getDay() || 7))) + ' ' + esc(dm(o.date)) : esc(t('week_undated'))}</p>${delivery(o)}`).join('')}</section>` : ''}`;
+        el.querySelector('[data-home]').addEventListener('click', () => renderHome());
+        el.querySelectorAll('[data-wk]').forEach(b => b.addEventListener('click', () => { const k = Number(b.dataset.wk); renderWeek(k === 0 ? null : isoDay(w.week_start, k), display); }));
+        el.querySelectorAll('[data-day]').forEach(b => b.addEventListener('click', () => { week.day = b.dataset.day; renderWeek(date, display); }));
+        week.timer = window.setInterval(() => { if (!document.hidden) renderWeek(date, display); }, WEEK_REFRESH_MS);
+        weekIdle();
     }
 
     // --- PIN -------------------------------------------------------------------------------------------
@@ -710,10 +792,11 @@
             lang = lang === 'pl' ? 'fr' : 'pl';
             store.set(LANG_KEY, lang);
             await loadLabels();
-            session ? openTab(session.tab || 'clock') : renderHome();
+            session ? openTab(session.tab || 'clock') : (week ? renderWeek(week.date, week.display) : renderHome());
         }
     });
-    ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (session) resetIdle(); }, {passive: true}));
+    ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (session) resetIdle(); else weekIdle(); }, {passive: true}));
     window.setInterval(() => { const c = el.querySelector('[data-clock]'); if (c) c.textContent = new Date().toTimeString().slice(0, 5); }, 10000);
-    loadLabels().then(() => (device ? renderHome() : renderPairing()));
+    window.addEventListener('hashchange', () => { if (location.hash === '#week' && device && !session) renderWeek(null, true); });
+    loadLabels().then(() => (device ? (location.hash === '#week' ? renderWeek(null, true) : renderHome()) : renderPairing()));
 })();

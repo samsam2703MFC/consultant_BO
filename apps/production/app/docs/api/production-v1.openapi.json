@@ -5206,6 +5206,174 @@
                 "x-permission": "prod.plan.read"
             }
         },
+        "/planning/team-sheet": {
+            "get": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Plan zespołów na tydzień / Plan des équipes de la semaine",
+                "operationId": "getTeamSheet",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/TeamSheet"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Par équipe (groupe) : calendrier (blocs du tableau de la semaine par jour, dans l'ordre des heures, effectif et heures), production de la semaine (total, lots, heures, pour l'expédition avec échéance / pour le stock, jours, reste non réparti) et arrivages de matières de la semaine utiles à l'équipe (matières des recettes de ses produits ; commandes envoyées / reçues avec date de livraison dans la semaine). Lecture seule.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "un jour de la semaine (défaut : aujourd'hui)"
+                        }
+                    },
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "une équipe (défaut : toutes celles qui produisent)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.read"
+            }
+        },
+        "/planning/team-sheet/pdf": {
+            "get": {
+                "tags": [
+                    "planning"
+                ],
+                "summary": "Plan zespołów — PDF do druku / Plan des équipes — PDF à imprimer",
+                "operationId": "getTeamSheetPdf",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DocumentFile"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "A4 paysage, une équipe par page, dans la langue de la requête. PDF en base64.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.read"
+            }
+        },
         "/manager/plan": {
             "get": {
                 "tags": [
@@ -10451,6 +10619,78 @@
                 ]
             }
         },
+        "/kiosk/week": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Plan tygodnia zespołu tabletu / Plan de la semaine de l'équipe de la tablette",
+                "operationId": "kioskWeek",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/TeamSheet"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Jeton de tablette seul (sans identification) : plan de la semaine du groupe de la tablette (comme GET /planning/team-sheet). 409 DEVICE_WITHOUT_GROUP.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "défaut : aujourd'hui"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/production": {
             "get": {
                 "tags": [
@@ -14949,6 +15189,123 @@
                         "nullable": true,
                         "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
                         "description": "HH:MM ; null = sans heure"
+                    }
+                }
+            },
+            "TeamSheet": {
+                "type": "object",
+                "properties": {
+                    "week_start": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "week_end": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "iso_week": {
+                        "type": "integer"
+                    },
+                    "today": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "days": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "color": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "teams": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "color": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "people": {
+                                    "type": "integer"
+                                },
+                                "available_h": {
+                                    "type": "number"
+                                },
+                                "required_h": {
+                                    "type": "number"
+                                },
+                                "hours": {
+                                    "type": "number"
+                                },
+                                "unassigned": {
+                                    "type": "integer"
+                                },
+                                "days": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    },
+                                    "description": "blocks (heure, produit, quantité, cartons, lots, heures), deliveries"
+                                },
+                                "products": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                },
+                                "deliveries": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    },
+                                    "description": "commande, fournisseur, date, lignes utiles à l'équipe (besoin de la semaine, produits)"
+                                }
+                            }
+                        }
+                    },
+                    "generated_at": {
+                        "type": "string"
+                    }
+                }
+            },
+            "DocumentFile": {
+                "type": "object",
+                "properties": {
+                    "filename": {
+                        "type": "string"
+                    },
+                    "content_base64": {
+                        "type": "string"
                     }
                 }
             },
