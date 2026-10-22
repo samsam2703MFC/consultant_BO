@@ -21,7 +21,6 @@ use App\Services\Dashboard\GrowthActionService;
 use App\Repositories\Workshop\ParamRepository;
 use App\Services\Dashboard\ProfitabilityService;
 use App\Repositories\Staff\StaffRepository;
-use App\Services\Staff\CompetencyMatrixService;
 use App\Services\Staff\StaffBudgetService;
 
 function expectProfit(bool $condition, string $message): void
@@ -281,32 +280,6 @@ try {
     expectProfit($refused(fn() => $budgetService->saveDefaultPct('abc', 1)), '% ogólny nieliczbowy odrzucony');
     $budgetService->saveDefaultPct('6', 1);
     near($newBudget()->overview('2026-09')['sections'][1]['pool'], 300, 'nowy % ogólny');
-
-    // --- Kto co potrafi : poziomy osób, stan działu, receptury w zasięgu
-    $pdo->exec("UPDATE final_product SET id_recipe = 10 WHERE id = 1");
-    $pdo->exec("INSERT INTO recipe_competency (id, name, description) VALUES (1, 'Laminowanie', ''), (2, 'Wypiek', ''), (3, 'Dekoracja', '')");
-    $pdo->exec("INSERT INTO recipe_competency_connection (recipe_id, competency_id) VALUES (10, 1), (10, 2)");
-    $matrix = new CompetencyMatrixService($staffRepo);
-    $matrix->setLevel(1, 1, 2, 1);
-    $matrix->setLevel(2, 1, 3, 1);
-    $matrix->setLevel(1, 2, '1', 1);
-    $matrix->setLevel(4, 2, 3, 1);
-    expectProfit($refused(fn() => $matrix->setLevel(1, 1, 4, 1)), 'poziom 4 odrzucony');
-    expectProfit($refused(fn() => $matrix->setLevel(1, 99, 1, 1)), 'nieznana kompetencja odrzucona');
-    expectProfit($refused(fn() => $matrix->addCompetency(['name' => ' laminowanie '])), 'kompetencja o tej samej nazwie odrzucona');
-    $m = $matrix->matrix();
-    $bakery = array_column($m['sections'], null, 'id')[1];
-    expectProfit($bakery['cells'][1]['status'] === 'ok' && $bakery['cells'][1]['autonomous'] === 2, 'laminowanie : 2 osoby samodzielne');
-    expectProfit($bakery['cells'][2]['status'] === 'training' && $bakery['cells'][2]['recipes'] === 1, 'wypiek : tylko w szkoleniu (ekspertka nieobecna), receptura działu go wymaga');
-    expectProfit($bakery['cells'][3]['status'] === 'none', 'dekoracja : nikt, niepotrzebna');
-    expectProfit($bakery['recipes'] === 1 && $bakery['recipes_covered'] === 0 && $bakery['missing'] === 1, 'receptura chleba poza zasięgiem (brak samodzielnego wypieku)');
-    $matrix->setLevel(1, 2, 2, 1);
-    $matrix->setLevel(2, 1, 0, 1);
-    $bakery = array_column($matrix->matrix()['sections'], null, 'id')[1];
-    expectProfit($bakery['recipes_covered'] === 1 && $bakery['cells'][1]['status'] === 'risk' && $bakery['risks'] === 2, 'chleb w zasięgu ; każda kompetencja tylko u 1 osoby = ryzyko');
-    expectProfit(array_column($matrix->matrix()['competencies'], null, 'id')[1]['sections'] === ['Piekarnia'], 'kompetencja : działy, które ją mają');
-    $added = $matrix->addCompetency(['name' => 'Krojenie', 'description' => 'Krajalnica']);
-    expectProfit($added['id'] > 3, 'nowa kompetencja w tabeli ERP');
 
     // --- Zakupy miesiąca : receptura × kartony, ceny z końca miesiąca, kategorie i dostawcy
     // Sierpień : 10 kartonów Rogala (receptura : 1000 g mąki + 200 g masła) i 5 kartonów Tarty bez receptury (8 zł / karton).

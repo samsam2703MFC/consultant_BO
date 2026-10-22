@@ -104,7 +104,7 @@
                 </div>
                 <div id="competencyModalList" class="row g-2 d-none"></div>
                 <div id="competencyModalEmpty" class="text-center text-muted py-3 d-none">
-                    Brak zdefiniowanych kompetencji. <a href="<?=ROOT?>/staff/competencies">Dodaj kompetencje →</a>
+                    Brak zdefiniowanych kompetencji.
                 </div>
             </div>
             <div class="modal-footer">
