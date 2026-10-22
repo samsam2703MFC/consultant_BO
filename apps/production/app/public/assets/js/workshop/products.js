@@ -83,6 +83,9 @@
         if (type !== 'product') cats.push({key: 'semi', name: t('list.semi'),
             rows: listData.cards.filter(c => c.item_type === 'semi').map(c => ({semi: true, i: null, card: c})).filter(r => keep(r.card.name, r.card))});
         const shown = cats.filter(c => c.rows.length);
+        const params0 = listData.overview.params;
+        const overviewItems = listData.overview.categories.flatMap(c => c.items);
+        const mtsCount = overviewItems.filter(i => i.mode === 'MTS').length;
         const opened = openCats();
         const isOpen = (c) => search !== '' || opened.has(c.key);
         const batchOf = (r) => r.semi ? r.card.settings.batch_multiple : r.i.batch;
@@ -124,6 +127,12 @@
                 <select class="form-select form-select-sm" name="group_id"><option value="">${esc(t('col.group'))}: ${esc(t('all'))}</option>
                     ${state.groups.map(g => `<option value="${g.id}" ${listData.group === String(g.id) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
             </form>
+            <div class="tfb-stock-bar card"><div class="card-body d-flex flex-wrap gap-3 align-items-center justify-content-between">
+                <div>${esc(t('st.params', {min: n(params0.min_weeks), max: n(params0.max_weeks), weeks: params0.weeks}))}
+                    <a href="${esc(api.root || '')}/other-settings#stock-params" class="ms-1">${esc(t('st.params_edit'))}</a>
+                    <div class="small text-muted">${esc(t('list.recalc_help', {mts: mtsCount}))}</div></div>
+                <button type="button" class="btn btn-sm btn-primary" data-recalc-all title="${esc(t('st.recalc_help'))}"><i class="bi bi-arrow-repeat"></i> ${esc(t('st.recalc_all'))}</button>
+            </div></div>
             <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
                 <span class="small text-muted">${esc(t('list.help'))}</span>
                 <span class="ms-auto btn-group btn-group-sm"><button type="button" class="btn btn-outline-secondary" data-open-all>${esc(t('list.open_all'))}</button>
@@ -159,6 +168,13 @@
         }));
         const all = (open) => () => { keepOpen(open ? new Set(shown.map(c => c.key)) : new Set()); drawList(params); };
         el.querySelector('[data-open-all]').addEventListener('click', all(true));
+        el.querySelector('[data-recalc-all]').addEventListener('click', async (e) => {
+            const done = await recalcAll(overviewItems, e.currentTarget);
+            if (!done) return;
+            listData = null;
+            await renderList();
+            ui.notify(true, t('st.recalc_done', {n: done}));
+        });
         el.querySelector('[data-close-all]').addEventListener('click', all(false));
         // Zapis : karta tworzona przy pierwszej zmianie produktu bez karty ; lista poprawiana na miejscu.
         const save = async (r, body, ok) => {
@@ -256,8 +272,7 @@
                     <a href="${esc(api.root || '')}/other-settings#stock-params" class="ms-1">${esc(t('st.params_edit'))}</a></div>
                 <div class="d-flex gap-2 align-items-center flex-wrap">
                     <select class="form-select form-select-sm" data-group style="width:auto"><option value="">${esc(t('col.group'))}: ${esc(t('all'))}</option>
-                        ${state.groups.map(g => `<option value="${g.id}" ${group === String(g.id) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
-                    <button type="button" class="btn btn-sm btn-primary" data-recalc-all><i class="bi bi-arrow-repeat"></i> ${esc(t('st.recalc_all'))}</button></div>
+                        ${state.groups.map(g => `<option value="${g.id}" ${group === String(g.id) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select></div>
                 <div class="w-100 small text-muted">${esc(t('st.summary', {products: all.length, mts: tot.mts, cartons: n(tot.target_cartons, 0), pallets: n(tot.target_pallets, 1), value: eur(tot.target_value_eur)}))}
                     ${esc(t('st.stock_all', {cartons: n(tot.stock_all_cartons, 0), value: eur(tot.stock_all_value_eur)}))}</div>
             </div></div>
@@ -343,18 +358,21 @@
             a.click();
             setTimeout(() => URL.revokeObjectURL(a.href), 1000);
         });
-        el.querySelector('[data-recalc-all]').addEventListener('click', async (e) => {
-            const todo = all.filter(i => i.mode === 'MTS' && i.ppc && i.suggested_max_cartons > 0);
-            if (!todo.length) { ui.notify(false, t('st.recalc_none')); return; }
-            if (!window.confirm(t('st.recalc_confirm', {n: todo.length}))) return;
-            e.target.disabled = true;
-            let done = 0;
-            for (const i of todo) {
-                try { await api.patch(`/produits/items/${i.id}/settings`, suggested(i)); done++; } catch (err) { /* produit suivant */ }
-                e.target.textContent = `${done}/${todo.length}`;
-            }
-            await renderStock(t('st.recalc_done', {n: done}));
-        });
+    }
+
+    // Przelicz stany min. / maks. wszystkich produktów na magazynie ze sprzedaży ostatnich tygodni (parametry
+    // stock.suggest_*) ; produkty bez sprzedaży pomijane. Przycisk na liście « Produkty wg kategorii ».
+    async function recalcAll(items, btn) {
+        const todo = items.filter(i => i.mode === 'MTS' && i.ppc && i.suggested_max_cartons > 0);
+        if (!todo.length) { ui.notify(false, t('st.recalc_none')); return 0; }
+        if (!window.confirm(t('st.recalc_confirm', {n: todo.length}))) return 0;
+        btn.disabled = true;
+        let done = 0;
+        for (const i of todo) {
+            try { await api.patch(`/produits/items/${await ensureCard(i)}/settings`, suggested(i)); done++; } catch (err) { /* produit suivant */ }
+            btn.textContent = `${done}/${todo.length}`;
+        }
+        return done;
     }
 
     // Produkt ERP bez karty : karta tworzona przy pierwszej zmianie (grupa domyślna z działu ERP).

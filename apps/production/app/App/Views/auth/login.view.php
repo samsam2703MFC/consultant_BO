@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="<?=ROOT?>/assets/vendors/bootstrap-icons/bootstrap-icons.css?v=1.11.3">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/app.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/pages/auth.css">
-    <link rel="stylesheet" href="<?=ROOT?>/assets/css/atelier.css">
+    <link rel="stylesheet" href="<?=ROOT?>/assets/css/atelier.css?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>">
 </head>
 
 <body>

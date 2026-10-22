@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#8D1D2C">
 <title>Tablet produkcji · Tablette atelier</title>
-<link rel="stylesheet" href="{{ root }}/assets/css/kiosk.css">
+<link rel="stylesheet" href="{{ root }}/assets/css/kiosk.css?v={{ asset_v() }}">
 <link rel="manifest" href="{{ root }}/assets/kiosk/manifest.webmanifest" crossorigin="use-credentials">
 <link rel="icon" href="{{ root }}/assets/kiosk/icon-192.png">
 <link rel="apple-touch-icon" href="{{ root }}/assets/kiosk/apple-touch-icon.png">
@@ -18,7 +18,7 @@
 <main id="tfbKiosk" class="kiosk" data-root="{{ root }}" data-api-base="{{ api_base }}" aria-live="polite">
     <p class="kiosk-muted">Wczytywanie… / Chargement…</p>
 </main>
-<script src="{{ root }}/assets/js/workshop/kiosk.js"></script>
+<script src="{{ root }}/assets/js/workshop/kiosk.js?v={{ asset_v() }}"></script>
 <script>
     // PWA : tablet grupy instalowany jako aplikacja (ikona na ekranie, pełny ekran) ; powłoka w pamięci podręcznej.
     if ('serviceWorker' in navigator) {

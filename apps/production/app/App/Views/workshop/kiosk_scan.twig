@@ -7,12 +7,12 @@
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#8D1D2C">
 <title>Wejście / wyjście · Entrée / sortie</title>
-<link rel="stylesheet" href="{{ root }}/assets/css/kiosk.css">
+<link rel="stylesheet" href="{{ root }}/assets/css/kiosk.css?v={{ asset_v() }}">
 </head>
 <body>
 <main id="tfbScan" class="kiosk kiosk-phone" data-root="{{ root }}" data-api-base="{{ api_base }}" aria-live="polite">
     <p class="kiosk-muted">Wczytywanie… / Chargement…</p>
 </main>
-<script src="{{ root }}/assets/js/workshop/kiosk-scan.js"></script>
+<script src="{{ root }}/assets/js/workshop/kiosk-scan.js?v={{ asset_v() }}"></script>
 </body>
 </html>

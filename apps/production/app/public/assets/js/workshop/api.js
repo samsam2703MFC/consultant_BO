@@ -8,6 +8,9 @@
     'use strict';
 
     const LANG_KEY = 'tfb.lang';
+    // Wersja zasobów z adresu tego skryptu (?v=) : etykiety pobierane w tej samej wersji co skrypty strony.
+    const VERSION = (document.currentScript && new URL(document.currentScript.src, location.href).searchParams.get('v')) || '';
+    const versioned = (url) => VERSION ? `${url}?v=${encodeURIComponent(VERSION)}` : url;
     const TOKEN_KEY = 'tfb.token';
     const NETWORK_ERROR = {
         pl: 'Brak połączenia z serwerem — sprawdź sieć i spróbuj ponownie.',
@@ -50,7 +53,7 @@
         }
 
         async loadLabels() {
-            const res = await fetch(`${this.root}/resources/lang/ui/${this.lang}/${this.labelsFile}.json`, {credentials: 'same-origin'});
+            const res = await fetch(versioned(`${this.root}/resources/lang/ui/${this.lang}/${this.labelsFile}.json`), {credentials: 'same-origin'});
             this.labels = res.ok ? await res.json() : {};
             document.documentElement.lang = this.lang;
         }
@@ -201,5 +204,5 @@
         },
     };
 
-    window.TfbWorkshop = {WorkshopApi, ui};
+    window.TfbWorkshop = {WorkshopApi, ui, versioned};
 })();

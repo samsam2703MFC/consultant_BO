@@ -6,6 +6,8 @@
  */
 (function () {
     'use strict';
+    // Wersja zasobów z adresu skryptu (?v=) : etykiety w tej samej wersji co skrypt.
+    const VERSION = (document.currentScript && new URL(document.currentScript.src, location.href).searchParams.get('v')) || '';
     const el = document.getElementById('tfbScan');
     if (!el) return;
     const base = (el.dataset.apiBase || '').replace(/\/$/, '');
@@ -35,7 +37,7 @@
     const fmt = (n) => Number(n).toLocaleString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {maximumFractionDigits: 2});
 
     async function loadLabels() {
-        const res = await fetch(`${root}/resources/lang/ui/${lang}/kiosk.json`, {credentials: 'same-origin'});
+        const res = await fetch(`${root}/resources/lang/ui/${lang}/kiosk.json${VERSION ? '?v=' + encodeURIComponent(VERSION) : ''}`, {credentials: 'same-origin'});
         labels = res.ok ? await res.json() : {};
         document.documentElement.lang = lang;
     }

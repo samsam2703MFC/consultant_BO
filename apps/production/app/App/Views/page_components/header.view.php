@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/custom.css">
 
     <link rel="stylesheet" type="text/css" href="<?=ROOT?>/assets/css/tree_graph/ECOTree.css">
-    <link rel="stylesheet" href="<?=ROOT?>/assets/css/atelier.css">
+    <link rel="stylesheet" href="<?=ROOT?>/assets/css/atelier.css?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>">
     <script src="<?=ROOT?>/assets/js/atelier.js" defer></script>
     <script src="<?=ROOT?>/assets/js/atelier-table.js" defer></script>
 

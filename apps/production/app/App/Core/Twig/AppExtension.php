@@ -19,6 +19,9 @@ class AppExtension extends AbstractExtension
     {
         return [
             new TwigFunction('old', [ $this, 'getOld' ]),
+            // Wersja zasobów (?v=) : JS, CSS i etykiety mają długą pamięć w przeglądarce (stale-while-revalidate),
+            // nowy adres po każdym wdrożeniu — inaczej stary skrypt spotyka nowe etykiety (klucze zamiast tekstów).
+            new TwigFunction('asset_v', [ self::class, 'assetVersion' ]),
             // Zakładki grupy stron (BDO, PPWR, zwroty, archiwum) nad nagłówkiem ; lista grup dla railu i wyszukiwarki.
             new TwigFunction('page_tabs_html', fn() => \App\Core\Web\PageTabs::html(ROOT), ['is_safe' => ['html']]),
             new TwigFunction('page_tab_groups', fn() => \App\Core\Web\PageTabs::GROUPS),
@@ -31,6 +34,18 @@ class AppExtension extends AbstractExtension
                 return count(array_intersect($required, $perms)) > 0;
             }),
         ];
+    }
+
+    /** Najnowsza data zmiany skryptów modułu, arkuszy stylów i etykiet (raz na żądanie). */
+    public static function assetVersion(): string
+    {
+        static $version = null;
+        if ($version === null) {
+            $public = dirname(__DIR__, 3) . '/public';
+            $files = array_merge(glob($public . '/assets/js/workshop/*.js') ?: [], glob($public . '/assets/css/*.css') ?: [], glob($public . '/resources/lang/ui/*/*.json') ?: []);
+            $version = (string) max(array_map(fn($f) => (int) @filemtime($f), $files ?: [__FILE__]));
+        }
+        return $version;
     }
 
     public function getFilters(): array

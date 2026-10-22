@@ -11,6 +11,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ root }}/assets/js/workshop/api.js"></script>
-<script src="{{ root }}/assets/js/workshop/gantt.js"></script>
+<script src="{{ root }}/assets/js/workshop/api.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/workshop/gantt.js?v={{ asset_v() }}"></script>
 {% endblock %}

@@ -24,7 +24,7 @@
         for (const lang of ['pl', 'fr']) {
             if (L[lang]) continue;
             try {
-                const r = await fetch(`${api.root}/resources/lang/ui/${lang}/manager.json`, {credentials: 'same-origin'});
+                const r = await fetch(window.TfbWorkshop.versioned(`${api.root}/resources/lang/ui/${lang}/manager.json`), {credentials: 'same-origin'});
                 L[lang] = r.ok ? await r.json() : {};
             } catch (e) { L[lang] = {}; }
         }
