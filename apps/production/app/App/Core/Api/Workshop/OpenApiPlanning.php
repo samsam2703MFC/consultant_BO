@@ -280,6 +280,9 @@ final class OpenApiPlanning
                     'pins' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['day' => ['type' => 'string', 'format' => 'date'], 'room' => $num, 'filled' => $num,
                         'released' => ['type' => 'boolean'], 'past' => ['type' => 'boolean']]]],
                     'pinned' => ['type' => 'number', 'description' => 'quantité posée sur les jours 📌'], 'waiting' => ['type' => 'number', 'description' => 'quantité en attente dans « À produire »'],
+                    'batch_people' => ['type' => 'number', 'nullable' => true], 'batch_minutes' => ['type' => 'number', 'nullable' => true],
+                    'batch_hours' => ['type' => 'number', 'nullable' => true, 'description' => 'heures de travail par lot = personnes × minutes ÷ 60'],
+                    'hours_source' => ['type' => 'string', 'enum' => ['batch', 'routing'], 'description' => 'heures de la semaine : lots × temps du lot, sinon la gamme'],
                 ]]],
             ]],
             'WeekPinInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date', 'item_id', 'day', 'pinned'], 'properties' => [

@@ -1,7 +1,7 @@
 /*
  * Arkusz tygodnia / Feuille de production de la semaine : toute la production de la semaine sur une feuille,
  * une ligne par produit — stock, disponible, min., max., commandes, réassort, à produire, pièces par lot, lots,
- * heures, jours ; par groupe : heures → ETP. Règle : réassort si disponible < min. (jusqu'au max.), à produire
+ * temps du lot (personnes × minutes = heures par lot), heures, jours ; par groupe : heures → ETP. Règle : réassort si disponible < min. (jusqu'au max.), à produire
  * = commandes + réassort, arrondi aux lots entiers ; les lots vont d'abord sur les jours 📌, le reste attend dans
  * « À produire ». Lecture : GET /planning/sheet ; dans la
  * ligne : mode, stocks min./max. et lot → PATCH /produits/items/{id}/settings, puis la feuille est recalculée.
@@ -122,9 +122,9 @@
                 <td class="text-end">${r.refill > 0 ? q(r, r.refill) : '—'}</td>
                 <td class="text-end"><strong>${r.to_produce > 0 ? q(r, r.to_produce) : '—'}</strong>${r.to_produce > 0 && cartons(r) ? `<div class="small text-muted">${esc(pieces(r, r.to_produce))}</div>` : ''}</td>
                 <td><div class="input-group input-group-sm tfb-sheet-batch"><input class="form-control" inputmode="decimal" data-batch value="${r.batch ?? ''}" placeholder="—" ${editable ? '' : 'disabled'}
-                    aria-label="${esc(t('col_batch'))}"><span class="input-group-text">${esc(r.unit)}</span></div>${r.batch && cartons(r) ? `<div class="small text-muted">${esc(q(r, r.batch))}</div>` : ''}</td>
+                    aria-label="${esc(t('col_batch'))}"><span class="input-group-text">${esc(r.unit)}</span></div>${r.batch && cartons(r) ? `<div class="small text-muted">${esc(q(r, r.batch))}</div>` : ''}${labour(r, editable)}</td>
                 <td class="text-end"><strong class="tfb-sheet-batches">${r.batches ?? (r.to_produce > 0 ? q(r, r.to_produce) : '—')}</strong>${split(r)}</td>
-                <td class="text-end">${r.hours > 0 ? fmt(r.hours, 1) + ' h' : '—'}<div class="small text-muted">${days}</div></td>
+                <td class="text-end">${r.hours > 0 ? fmt(r.hours, 1) + ' h' : '—'}<div class="small text-muted" title="${esc(t('hours_' + r.hours_source + '_help'))}">${esc(t('hours_' + r.hours_source))}${days ? ' · ' + days : ''}</div></td>
             </tr>`;
         }).join('');
         const total = Object.values(hoursOf).reduce((a, b) => a + b, 0);
@@ -146,11 +146,23 @@
                 <thead><tr><th>${esc(t('col_product'))}</th><th class="text-center">${esc(t('col_mode'))}</th><th class="text-end">${esc(t('col_stock'))}</th>
                     <th class="text-end" title="${esc(t('col_available_help'))}">${esc(t('col_available'))}</th><th>${esc(t('col_min'))}</th><th>${esc(t('col_max'))}</th>
                     <th class="text-end">🚚 ${esc(t('col_orders'))}</th><th class="text-end">📦 ${esc(t('col_refill'))}</th><th class="text-end">${esc(t('col_to_produce'))}</th>
-                    <th>${esc(t('col_batch'))}</th><th class="text-end">${esc(t('col_batches'))}</th><th class="text-end">${esc(t('col_hours'))}</th></tr></thead>
+                    <th title="${esc(t('col_labour_help'))}">${esc(t('col_batch'))}<div class="tfb-sheet-subhead">${esc(t('col_labour'))}</div></th><th class="text-end">${esc(t('col_batches'))}</th>
+                    <th class="text-end">${esc(t('col_hours'))}</th></tr></thead>
                 <tbody>${body || `<tr><td colspan="12" class="text-muted">${esc(t('empty'))}</td></tr>`}</tbody>
                 <tfoot><tr class="tfb-week-table-total"><th colspan="12">${esc(t('total'))} <span class="tfb-week-fte">${esc(need(total))} · ${esc(t('total_batches', {n: totalBatches}))}</span></th></tr></tfoot>
             </table></div></div></div>`;
         bind();
+    }
+
+    // Czas partii : osoby × minuty = roboczogodziny na partię (godziny tygodnia = partie × to) ; bez partii — nieaktywne.
+    function labour(r, editable) {
+        const dis = editable && r.batch ? '' : 'disabled';
+        const result = r.batch_hours ? t('labour_value', {h: fmt(r.batch_hours, r.batch_hours % 1 ? 2 : 0)}) : (r.batch ? t('labour_empty') : t('labour_no_batch'));
+        return `<div class="tfb-sheet-labour"><div class="input-group input-group-sm"><input class="form-control" inputmode="decimal" data-people value="${r.batch_people ?? ''}" placeholder="—" ${dis}
+                aria-label="${esc(t('labour_people'))}" title="${esc(t('labour_people'))}"><span class="input-group-text">${esc(t('labour_people_unit'))}</span></div>
+            <span class="tfb-sheet-x">×</span><div class="input-group input-group-sm"><input class="form-control" inputmode="decimal" data-minutes value="${r.batch_minutes ?? ''}" placeholder="—" ${dis}
+                aria-label="${esc(t('labour_minutes'))}" title="${esc(t('labour_minutes'))}"><span class="input-group-text">min</span></div></div>
+            <div class="small ${r.batch_hours ? 'text-muted' : 'text-warning-emphasis'}">${esc(result)}</div>`;
     }
 
     // Partie tygodnia : 📌 na przypiętych dniach (z miejsca), ułożone ręcznie, ⏳ czekają w « Do zrobienia ».
@@ -202,6 +214,14 @@
                 if (v !== null && typeof v !== 'number') { ui.notify(false, t('invalid_number')); return; }
                 save(r, {[input.dataset.stock]: v === null ? null : (cartons(r) ? Math.round(v * r.ppc) : v)}, input);
             }));
+            for (const [attr, field, max] of [['data-people', 'batch_people', 100], ['data-minutes', 'batch_minutes', 10000]]) {
+                const input = tr.querySelector(`[${attr}]`);
+                input?.addEventListener('change', () => {
+                    const v = ui.num(input.value);
+                    if (v !== null && (typeof v !== 'number' || v <= 0 || v > max)) { ui.notify(false, t('invalid_number')); return; }
+                    save(r, {[field]: v}, input);
+                });
+            }
             const batch = tr.querySelector('[data-batch]');
             batch?.addEventListener('change', () => {
                 const v = ui.num(batch.value);

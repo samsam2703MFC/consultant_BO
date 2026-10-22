@@ -50,5 +50,17 @@
   "split_waiting": "⏳ {n} czeka",
   "split_pinned_title": "Na przypiętych dniach (📌) : {n} z miejsca na {room}",
   "split_placed_title": "Ułożone ręcznie na dniach : {n}",
-  "split_waiting_title": "Czeka w « Do zrobienia » : {n} (więcej partii niż miejsca na dniach 📌)"
+  "split_waiting_title": "Czeka w « Do zrobienia » : {n} (więcej partii niż miejsca na dniach 📌)",
+  "col_labour": "osoby × min na partię",
+  "col_labour_help": "Osoby × minuty na jedną partię = roboczogodziny na partię. Godziny tygodnia = partie × to (zamiast marszruty).",
+  "labour_people": "Liczba osób na partię",
+  "labour_people_unit": "os.",
+  "labour_minutes": "Czas jednej partii (minuty)",
+  "labour_value": "= {h} h na partię",
+  "labour_empty": "wpisz osoby i minuty",
+  "labour_no_batch": "najpierw sztuk w partii",
+  "hours_batch": "z czasu partii",
+  "hours_routing": "z marszruty",
+  "hours_batch_help": "Partie × osoby × czas partii.",
+  "hours_routing_help": "Etapy i czasy karty produkcyjnej (bez czasu partii)."
 }

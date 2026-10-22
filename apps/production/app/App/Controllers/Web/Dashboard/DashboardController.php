@@ -10,6 +10,7 @@ use App\Services\Organization\PositionTaskService;
 use App\Services\Staff\StaffBudgetService;
 use Symfony\Component\HttpFoundation\Request;
 use App\Services\Workshop\Manager\ManagerService;
+use App\Repositories\Workshop\AuthRepository;
 
 class DashboardController extends BaseController
 {
@@ -22,6 +23,7 @@ class DashboardController extends BaseController
         private StaffBudgetService $staffBudget,
         private PositionTaskService $tasks,
         private ManagerService $manager,
+        private AuthRepository $auth,
     ) {}
 
     /** Strona startowa: rentowność produkcji (sprzedaż a koszt personelu na dział, brakująca sprzedaż do celu). */
@@ -61,7 +63,8 @@ class DashboardController extends BaseController
         }
         // Moje wskaźniki : osoba na stanowisku kierownika produkcji (plan roku w module kierownika).
         try {
-            $data['manager_kpis'] = $userId ? $this->manager->dashboard($userId) : null;
+            $canRead = $userId && in_array('prod.manager.read', array_column($this->auth->rolePermissions($userId), 'permission'), true);
+            $data['manager_kpis'] = $userId ? $this->manager->dashboard($userId, $canRead) : null;
         } catch (\Throwable $e) {
             $data['manager_kpis'] = null;
         }

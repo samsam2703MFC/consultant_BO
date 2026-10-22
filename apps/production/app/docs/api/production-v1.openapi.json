@@ -9529,6 +9529,14 @@
                         "type": "number",
                         "nullable": true
                     },
+                    "batch_people": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "batch_minutes": {
+                        "type": "number",
+                        "nullable": true
+                    },
                     "stock_calc_at": {
                         "type": "string",
                         "nullable": true,
@@ -10070,6 +10078,16 @@
                         "type": "number",
                         "nullable": true,
                         "description": "partie de production (ex. 1300 pcs) : le plan arrondit au multiple supérieur"
+                    },
+                    "batch_people": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "personnes pour un lot (temps rapide du lot)"
+                    },
+                    "batch_minutes": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "durée d'un lot en minutes ; avec batch_people et batch_multiple : heures = lots × personnes × durée (au lieu de la gamme)"
                     },
                     "shelf_life_workshop_days": {
                         "type": "number",
@@ -12897,6 +12915,27 @@
                                 "waiting": {
                                     "type": "number",
                                     "description": "quantité en attente dans « À produire »"
+                                },
+                                "batch_people": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "batch_minutes": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "batch_hours": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "heures de travail par lot = personnes × minutes ÷ 60"
+                                },
+                                "hours_source": {
+                                    "type": "string",
+                                    "enum": [
+                                        "batch",
+                                        "routing"
+                                    ],
+                                    "description": "heures de la semaine : lots × temps du lot, sinon la gamme"
                                 }
                             }
                         }

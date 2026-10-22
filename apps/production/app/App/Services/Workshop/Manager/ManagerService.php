@@ -438,18 +438,24 @@ final class ManagerService
     // --- Pulpit « Dzisiaj » ------------------------------------------------------------------------------------
 
     /**
-     * « Moje wskaźniki » na stronie Dzisiaj osoby na stanowisku (plan roku wskazuje jej konto) : wskaźniki ostatniego
-     * pełnego miesiąca (wynik, cel, status), blokady HACCP bieżącego kwartału, liczba wskaźników bez celu i bez danych.
-     * Teksty po polsku z etykiet modułu (resources/lang/ui/pl/manager.json). null = użytkownik nie jest na stanowisku.
+     * Wskaźniki na stronie Dzisiaj : « Moje wskaźniki » osoby na stanowisku (plan roku wskazuje jej konto), a dla
+     * dyrekcji ($canRead — prod.manager.read) wskaźniki osoby na stanowisku. Wskaźniki ostatniego pełnego miesiąca
+     * (wynik, cel, status), blokady HACCP bieżącego kwartału, liczba wskaźników bez celu i bez danych. Teksty po
+     * polsku z etykiet modułu (resources/lang/ui/pl/manager.json). null = nic do pokazania.
      */
-    public function dashboard(int $userId): ?array
+    public function dashboard(int $userId, bool $canRead = false): ?array
     {
         $month = date('Y-m', strtotime('first day of last month'));
         $plan = null;
+        $other = null;
         foreach (array_unique([(int) date('Y'), (int) substr($month, 0, 4)]) as $year) {
             $p = $this->repo->plan($year);
-            if ($p && $p['holder_user_id'] !== null && (int) $p['holder_user_id'] === $userId) { $plan = $p; break; }
+            if (!$p || $p['holder_user_id'] === null) continue;
+            if ((int) $p['holder_user_id'] === $userId) { $plan = $p; break; }
+            $other ??= $p;
         }
+        $mine = $plan !== null;
+        if (!$mine && $canRead) $plan = $other;
         if ($plan === null) return null;
         $this->measured = [];
         $labels = $this->uiLabels('pl');
@@ -478,7 +484,7 @@ final class ManagerService
             return $text;
         }, $haccp['blocking']);
         return [
-            'month' => $month, 'holder' => $plan['holder_name'], 'indicators' => $rows, 'haccp_alerts' => $alerts,
+            'month' => $month, 'mine' => $mine, 'holder' => $plan['holder_name'], 'indicators' => $rows, 'haccp_alerts' => $alerts,
             'red' => count(array_filter($rows, fn($r) => $r['status'] === 'red')),
             'no_objective' => count(array_filter($rows, fn($r) => $r['target'] === null)),
             'no_data' => count(array_filter($rows, fn($r) => $r['value'] === null)),

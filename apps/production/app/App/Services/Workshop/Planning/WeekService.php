@@ -38,6 +38,9 @@ final class WeekService
 {
     private const EPS = 0.0005;
 
+    /** @var array<int, array{0:float, 1:float}> czas partii (wielkość, roboczogodziny na partię) z arkusza — zastępuje marszrutę */
+    private array $batchHours = [];
+
     public function __construct(
         private WeekRepository $repo,
         private PlanningRepository $planning,
@@ -209,6 +212,10 @@ final class WeekService
                 // 📌 przypięte dni tygodnia : miejsce i ile partii tygodnia dostały ; waiting = czeka w « Do zrobienia ».
                 'pins' => array_map(fn($x) => ['day' => $x['day'], 'room' => $x['room'], 'filled' => $x['filled'], 'released' => $x['released'], 'past' => $x['past']], $data['pins'][$id] ?? []),
                 'pinned' => round(array_sum(array_column($data['fixed_week'][$id] ?? [], 'placed')), 3), 'waiting' => (float) ($w['unassigned_qty'] ?? 0.0),
+                // Czas partii : osoby × minuty = roboczogodziny na partię (źródło godzin tygodnia, gdy ustawione).
+                'batch_people' => $num($it['batch_people']), 'batch_minutes' => $num($it['batch_minutes']),
+                'batch_hours' => isset($this->batchHours[$id]) ? round($this->batchHours[$id][1], 3) : null,
+                'hours_source' => isset($this->batchHours[$id]) ? 'batch' : 'routing',
             ];
         }
         usort($rows, fn($a, $b) => [$a['group_id'] ?? 999, $a['to_produce'] <= 0, $a['name']] <=> [$b['group_id'] ?? 999, $b['to_produce'] <= 0, $b['name']]);
@@ -379,7 +386,12 @@ final class WeekService
         $stockDays = array_values(array_filter($days, fn($d) => in_array((int) date('N', strtotime($d)), $stockWeekdays, true)));
 
         $items = [];
-        foreach ($this->planning->items() as $it) $items[(int) $it['id']] = $it;
+        $this->batchHours = [];
+        foreach ($this->planning->items() as $it) {
+            $items[(int) $it['id']] = $it;
+            $bh = PlanningService::batchHours($it);
+            if ($bh !== null) $this->batchHours[(int) $it['id']] = $bh;
+        }
         $routings = $this->planning->routings();
         $today = date('Y-m-d', $now);
 
@@ -764,9 +776,11 @@ final class WeekService
         return $pct > $max ? 'over' : ($pct >= $min ? 'ok' : 'under');
     }
 
+    /** Roboczogodziny : czas partii z arkusza (partie × osoby × czas), inaczej marszruta (StandardTime). */
     private function hours(array $routings, int $itemId, float $qty): float
     {
         if ($qty <= self::EPS) return 0.0;
+        if (isset($this->batchHours[$itemId])) return $qty / $this->batchHours[$itemId][0] * $this->batchHours[$itemId][1];
         return StandardTime::routing($routings[$itemId] ?? [], $qty)['totals']['labour_s'] / 3600;
     }
 

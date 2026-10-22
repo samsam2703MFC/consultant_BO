@@ -50,5 +50,17 @@
   "split_waiting": "⏳ {n} en attente",
   "split_pinned_title": "Sur les jours épinglés (📌) : {n} sur une place de {room}",
   "split_placed_title": "Placés à la main sur les jours : {n}",
-  "split_waiting_title": "En attente dans « À produire » : {n} (plus de lots que de place sur les jours 📌)"
+  "split_waiting_title": "En attente dans « À produire » : {n} (plus de lots que de place sur les jours 📌)",
+  "col_labour": "personnes × min par lot",
+  "col_labour_help": "Personnes × minutes pour un lot = heures de travail par lot. Heures de la semaine = lots × ce temps (au lieu de la gamme).",
+  "labour_people": "Personnes par lot",
+  "labour_people_unit": "pers.",
+  "labour_minutes": "Durée d'un lot (minutes)",
+  "labour_value": "= {h} h par lot",
+  "labour_empty": "saisir personnes et minutes",
+  "labour_no_batch": "d'abord les pièces par lot",
+  "hours_batch": "du temps du lot",
+  "hours_routing": "de la gamme",
+  "hours_batch_help": "Lots × personnes × durée du lot.",
+  "hours_routing_help": "Étapes et temps de la fiche de production (sans temps du lot)."
 }

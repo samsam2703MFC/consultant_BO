@@ -1128,6 +1128,18 @@ $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section
 (new App\Repositories\Employee\ProductionEmployeeRepository($pdo))->syncWorkshopHeadcount();
 check((int) $pdo->query("SELECT planned_headcount FROM tfb_prod_team WHERE code = 'T1'")->fetchColumn() === 3, 'day team headcount follows the employees of the section');
 
+// Czas partii w arkuszu : osoby × minuty = roboczogodziny na partię ; godziny tygodnia = partie × to (zamiast marszruty)
+[, $sh] = $call('GET', "/planning/sheet?date={$today}", null, $access);
+$row = array_column($sh['data']['rows'] ?? [], null, 'item_id')[$itemId] ?? null;
+[$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['batch_people' => 3, 'batch_minutes' => 0], $access);
+check($s === 422 && $codes($b) === ['batch_minutes:OUT_OF_RANGE'], 'batch time must be more than 0 minutes');
+[$s] = $call('PATCH', "/produits/items/{$itemId}/settings", ['batch_people' => 3, 'batch_minutes' => 90], $access);
+[, $sh2] = $call('GET', "/planning/sheet?date={$today}", null, $access);
+$row2 = array_column($sh2['data']['rows'] ?? [], null, 'item_id')[$itemId] ?? null;
+check($s === 200 && $row && $row['hours_source'] === 'routing' && $row2 && $row2['hours_source'] === 'batch' && $row2['batch_hours'] == 4.5 && $row2['to_produce'] > 0
+    && abs($row2['hours'] - $row2['to_produce'] / 160 * 4.5) < 0.01, 'batch time: 3 people × 90 min = 4.5 h per batch; week hours = batches × 4.5 h');
+$call('PATCH', "/produits/items/{$itemId}/settings", ['batch_people' => null, 'batch_minutes' => null], $access);
+
 // --- Kierownik produkcji : plan, cele (zatwierdzone przed okresem), raport, HACCP, premia, rozmowa, audyt kompetencji
 $year = (int) date('Y');
 [$s] = $call('GET', "/manager/plan?year={$year}", null, $lead);

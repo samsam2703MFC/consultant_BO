@@ -108,7 +108,7 @@
             <div class="card at-mykpis">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
-                        <h4 class="card-title mb-0">Moje wskaźniki</h4>
+                        <h4 class="card-title mb-0">{{ manager_kpis.mine ? 'Moje wskaźniki' : 'Wskaźniki kierownika produkcji' ~ (manager_kpis.holder ? ' : ' ~ manager_kpis.holder : '') }}</h4>
                         <span class="at-sub">Kierownik produkcji · {{ manager_kpis.month }} (ostatni pełny miesiąc) · dane z ERP</span>
                     </div>
                     <span class="d-flex gap-1 flex-wrap">

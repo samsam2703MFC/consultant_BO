@@ -39,7 +39,7 @@ final class ItemService
     /** Palettes : hauteur du support (mm) et poids à vide (kg) pour la hauteur et le poids brut. */
     private const PALLETS = ['eur' => ['length_mm' => 1200, 'width_mm' => 800, 'base_mm' => 144, 'tare_kg' => 25.0],
         'industrial' => ['length_mm' => 1200, 'width_mm' => 1000, 'base_mm' => 144, 'tare_kg' => 30.0]];
-    private const SETTINGS_FIELDS = ['mode', 'never_frozen', 'bake_state', 'stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple',
+    private const SETTINGS_FIELDS = ['mode', 'never_frozen', 'bake_state', 'stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple', 'batch_people', 'batch_minutes',
         'shelf_life_workshop_days', 'shelf_life_shop_days', 'primary_group_id', 'wizard_step', 'stock_calculated'];
     private const LOGISTICS_FIELDS = ['weight', 'ppc', 'ppb', 'bpc', 'cpl', 'lpp', 'cpp', 'carton_length_mm', 'carton_width_mm', 'carton_height_mm',
         'carton_tare_g', 'carton_type', 'carton_ean', 'pallet_type', 'storage'];
@@ -354,6 +354,8 @@ final class ItemService
             ->decimal('coverage_days', false, 0, 365, true)
             ->decimal('batch_min', false, 0, null, true, true)
             ->decimal('batch_multiple', false, 0, null, true, true)
+            ->decimal('batch_people', false, 0, 100, true, true)
+            ->decimal('batch_minutes', false, 0, 10000, true, true)
             ->decimal('shelf_life_workshop_days', false, 0, 3650, true)
             ->decimal('shelf_life_shop_days', false, 0, 3650, true)
             ->integer('primary_group_id', false, 1, null, true)
@@ -700,6 +702,8 @@ final class ItemService
                 'coverage_days' => $this->num($row['coverage_days']),
                 'batch_min' => $this->num($row['batch_min']),
                 'batch_multiple' => $this->num($row['batch_multiple']),
+                'batch_people' => $this->num($row['batch_people'] ?? null),
+                'batch_minutes' => $this->num($row['batch_minutes'] ?? null),
                 'stock_calc_at' => $row['stock_calc_at'] ?? null,
                 'shelf_life_workshop_days' => $this->num($row['shelf_life_workshop_days']),
                 'shelf_life_shop_days' => $this->num($row['shelf_life_shop_days']),

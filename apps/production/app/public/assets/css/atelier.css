@@ -1510,3 +1510,8 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .at-kpi-dot.is-green { background: #2e7d32; }
 .at-kpi-dot.is-orange { background: #ef8f00; }
 .at-kpi-dot.is-red { background: #c62828; }
+.tfb-sheet .tfb-sheet-labour { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.tfb-sheet .tfb-sheet-labour .input-group { width: 76px; flex-wrap: nowrap; }
+.tfb-sheet .tfb-sheet-labour .form-control { padding-left: 4px; padding-right: 4px; }
+.tfb-sheet .tfb-sheet-subhead { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 11px; }
+.tfb-sheet .tfb-sheet-x { color: var(--at-muted, #6c757d); }

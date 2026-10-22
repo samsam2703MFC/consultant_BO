@@ -175,6 +175,9 @@ final class PlanningService
             $steps = $routings[(int) $l['item']['id']] ?? [];
             $calc = StandardTime::routing($steps, $l['qty_proposed']);
             $l['standard_hours'] = round($calc['totals']['labour_s'] / 3600, 3);
+            // Czas partii (osoby × min) z arkusza tygodnia : zastępuje roboczogodziny z marszruty.
+            $batchHours = self::batchHours($l['item']);
+            if ($batchHours !== null) $l['standard_hours'] = round($l['qty_proposed'] / $batchHours[0] * $batchHours[1], 3);
             $l['elapsed_s'] = $calc['totals']['elapsed_s'];
             $multiple = $this->num($l['item']['batch_multiple']);
             $l['batches'] = $l['qty_proposed'] <= 0 ? 0 : ($multiple ? (int) ceil(round($l['qty_proposed'] / $multiple, 6)) : 1);
@@ -186,6 +189,19 @@ final class PlanningService
         unset($l);
         uasort($lines, fn($a, $b) => [$a['due_date'], $a['item']['id_primary_group'], $a['item']['name']] <=> [$b['due_date'], $b['item']['id_primary_group'], $b['item']['name']]);
         return ['from' => $from, 'to' => $to, 'lines' => array_values($lines), 'warnings' => $this->uniqueWarnings($warnings), 'stock' => $stockInfo];
+    }
+
+    /**
+     * Czas partii z arkusza tygodnia : [wielkość partii, roboczogodziny na partię = osoby × minuty ÷ 60] albo null,
+     * gdy brakuje partii, osób albo czasu (wtedy godziny z marszruty).
+     * @return array{0:float, 1:float}|null
+     */
+    public static function batchHours(array $item): ?array
+    {
+        $batch = (float) ($item['batch_multiple'] ?? 0);
+        $people = (float) ($item['batch_people'] ?? 0);
+        $minutes = (float) ($item['batch_minutes'] ?? 0);
+        return $batch > 0 && $people > 0 && $minutes > 0 ? [$batch, $people * $minutes / 60] : null;
     }
 
     public function createPlan(array $input, ApiContext $context): array

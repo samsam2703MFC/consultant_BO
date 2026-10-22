@@ -18,7 +18,7 @@ final class PlanningRepository extends WorkshopRepository
         return $this->all(
             "SELECT i.id, i.item_type, i.id_final_product, i.id_recipe, i.base_unit, COALESCE(fp.name, pr.name) AS name,
                     fp.ppc, COALESCE(fp.id_recipe, i.id_recipe) AS recipe_id, fp.active AS erp_active,
-                    s.mode, s.never_frozen, s.stock_min, s.stock_max, s.coverage_days, s.batch_min, s.batch_multiple,
+                    s.mode, s.never_frozen, s.stock_min, s.stock_max, s.coverage_days, s.batch_min, s.batch_multiple, s.batch_people, s.batch_minutes,
                     s.id_primary_group, s.status, g.code AS group_code
              FROM tfb_prod_item i
              JOIN tfb_prod_product_settings s ON s.id_item = i.id
