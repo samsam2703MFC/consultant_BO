@@ -927,3 +927,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-21T20:19:36Z promotions relues au panel
 2026-10-21T20:34:20Z promotions : structure API portions
 2026-10-21T21:11:57Z six leviers : Résultat Mois et dashboard Mois
+2026-10-22T06:00:32Z assistant de campagne : renvoi vers le Marketing
