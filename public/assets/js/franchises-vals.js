@@ -86,6 +86,40 @@ function valsFFDocs(app, f, shop){
       retirer: () => { if (!window.confirm('Retirer « ' + x.titre + ' » des documents de ' + f.shopNom + ' ? Le fichier est effacé.')) { return; }
         write('api', 'DELETE', '/franchises/documents?id=' + x.id).then(r => { if (!r.ok) { app.setState({ ffDocMsg: { ko: true, txt: 'Retrait impossible : ' + (r.error || 'HTTP ' + r.status) } }); } ffDocsCharge(app, shop, true); }); } })) }))
       .filter(g => g.docs.length) };
+  // Le mail « matériel mis à disposition » (22/10/2026, maquette validée par Sam) : la liste du matériel, le contrat
+  // joint (le plus récent par défaut), le destinataire ; l'aperçu se relit à chaque changement, puis l'envoi.
+  const contrats = docs.filter(x => x.sorte === 'contrat');
+  const MT = S.ffMat && S.ffMat.shop === shop ? S.ffMat : { shop, ouvert: false, materiel: '', contrat: null, a: '', autre: '' };
+  const cId = MT.contrat == null ? (contrats[0] ? contrats[0].id : 0) : MT.contrat;
+  const apercu = o => {
+    const p2 = Object.assign({}, MT, { contrat: cId }, o);
+    const cle = shop + '|' + p2.materiel + '|' + p2.contrat;
+    app.setState({ ffMat: Object.assign({}, p2, { apCle: cle, apChargement: true }) });
+    readOne('/franchises/documents/mail-materiel?shop=' + encodeURIComponent(shop) + '&materiel=' + encodeURIComponent(p2.materiel || '') + '&contrat=' + (p2.contrat || 0))
+      .then(r => { const m1 = app.state.ffMat || {}; if (m1.apCle !== cle) { return; } app.setState({ ffMat: Object.assign({}, m1, { apChargement: false, ap: r || { error: 'aperçu injoignable' } }) }); });
+  };
+  const AP = MT.ap && !MT.ap.error ? MT.ap : null;
+  const connues = AP ? AP.adresses : [];
+  const choix = MT.a || connues[0] || '__autre';
+  const dest = choix === '__autre' ? String(MT.autre || '').trim() : choix;
+  f.docs.mat = { ouvert: !!MT.ouvert, ouvrir: () => apercu({ ouvert: true, msg: null }), fermer: () => app.setState({ ffMat: Object.assign({}, MT, { ouvert: false }) }),
+    materiel: MT.materiel || '', setMateriel: e => apercu({ materiel: e.target.value }),
+    contrats: [{ v: 0, nom: 'Sans pièce jointe', on: !cId }].concat(contrats.map(x => ({ v: x.id, nom: x.titre + ' · ' + x.nom, on: x.id === cId }))),
+    setContrat: e => apercu({ contrat: +e.target.value }),
+    adresses: connues.map(a => ({ v: a, nom: a, on: a === choix })).concat([{ v: '__autre', nom: connues.length ? 'Autre adresse…' : 'Saisir l’adresse…', on: choix === '__autre' }]),
+    setA: e => app.setState({ ffMat: Object.assign({}, MT, { a: e.target.value }) }), autreVisible: choix === '__autre', autre: MT.autre || '',
+    setAutre: e => app.setState({ ffMat: Object.assign({}, MT, { autre: e.target.value }) }),
+    html: AP ? AP.html : '', sujet: AP ? AP.sujet : '', apChargement: !!MT.apChargement, apErreur: MT.ap && MT.ap.error ? MT.ap.error : '', smtp: AP ? AP.smtp : true,
+    envoi: !!MT.envoi, msg: MT.msg || null, pret: !!AP && AP.smtp && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dest) && !MT.envoi && !MT.apChargement,
+    envoyer: () => {
+      if (MT.envoi) { return; }
+      app.setState({ ffMat: Object.assign({}, MT, { envoi: true, msg: null }) });
+      write('api', 'POST', '/franchises/documents/mail-materiel', { shop, a: dest, materiel: MT.materiel || '', contrat: cId || 0 }).then(r => {
+        const m1 = app.state.ffMat || {};
+        app.setState({ ffMat: Object.assign({}, m1, { envoi: false, ouvert: !r.ok, msg: r.ok ? { ko: false, txt: 'Envoyé à ' + r.a + ' ; la copie est rangée dans « Courrier envoyé ».' } : { ko: true, txt: 'Pas envoyé : ' + (r.error || 'HTTP ' + r.status) } }) });
+        if (r.ok) { ffDocsCharge(app, shop, true); }
+      });
+    } };
 }
 export function valsFF(app, common){
   const S = app.state; const auj0 = auj();

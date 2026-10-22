@@ -11,7 +11,7 @@ declare(strict_types=1);
  * la date du document, le nom d'origine et la taille.
  */
 
-const DOC_SORTES = ['reunion' => 'Rapport de réunion', 'contrat' => 'Contrat de mise à disposition', 'autre' => 'Autre document'];
+const DOC_SORTES = ['reunion' => 'Rapport de réunion', 'contrat' => 'Contrat de mise à disposition', 'courrier' => 'Courrier envoyé', 'autre' => 'Autre document'];
 const DOC_EXT = ['pdf' => 'application/pdf', 'doc' => 'application/msword',
     'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'xls' => 'application/vnd.ms-excel', 'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -19,6 +19,8 @@ const DOC_EXT = ['pdf' => 'application/pdf', 'doc' => 'application/msword',
     'odt' => 'application/vnd.oasis.opendocument.text', 'ods' => 'application/vnd.oasis.opendocument.spreadsheet',
     'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'heic' => 'image/heic',
     'txt' => 'text/plain', 'csv' => 'text/csv', 'eml' => 'message/rfc822', 'msg' => 'application/vnd.ms-outlook'];
+/** Les copies que le cockpit range lui-même (le mail envoyé, quand le serveur ne fait pas de PDF) ; jamais un dépôt. */
+const DOC_EXT_INTERNE = ['html' => 'text/html'];
 const DOC_MAX_OCTETS = 25 * 1024 * 1024;
 
 function docTable(): void
@@ -111,7 +113,7 @@ function docGarder(int $shop, string $sorte, string $titre, ?string $date, ?stri
     if (!$ok) { return null; }
     @chmod($cible, 0640);
     Db::exec('INSERT INTO ceo_doc (shop, sorte, titre, fichier, nom_origine, mime, octets, date_doc, note, depose_le) VALUES (?,?,?,?,?,?,?,?,?,?)',
-        [$shop, $sorte, mb_substr($titre, 0, 190), $disque, mb_substr($nom, 0, 190), DOC_EXT[$ext] ?? 'application/octet-stream', $octets, $date, $note, date('Y-m-d H:i:s')]);
+        [$shop, $sorte, mb_substr($titre, 0, 190), $disque, mb_substr($nom, 0, 190), DOC_EXT[$ext] ?? DOC_EXT_INTERNE[$ext] ?? 'application/octet-stream', $octets, $date, $note, date('Y-m-d H:i:s')]);
     $id = (int) Db::pdo()->lastInsertId();
     $r = Db::row('SELECT * FROM ceo_doc WHERE id = ?', [$id]);
     return $r !== null ? docLigne($r) : null;
@@ -191,4 +193,138 @@ function wr_franchises_document_suppr(): array
     Db::exec('DELETE FROM ceo_doc WHERE id = ?', [$id]);
     if (function_exists('journalAdd')) { journalAdd('CEO', 'Franchisé', 'Documents', 'Document retiré du magasin ' . $r['shop'] . ' : ' . $r['titre']); }
     return ['ok' => true];
+}
+
+/* --- Le mail « matériel mis à disposition » (22/10/2026, maquette validée par Sam) ------------------------------- */
+
+/** Le nom du magasin (table `shops`), ou « Magasin n ». */
+function docMagasinNom(int $shop): string
+{
+    try { $r = Db::row('SELECT name FROM shops WHERE id = ?', [$shop]); } catch (Throwable $e) { $r = null; }
+    return $r !== null && trim((string) $r['name']) !== '' ? (string) $r['name'] : 'Magasin ' . $shop;
+}
+
+/** Les adresses que les carnets des rapports connaissent pour ce magasin (toutes lignes confondues). */
+function docAdressesMagasin(string $nom): array
+{
+    $a = [];
+    try {
+        foreach (Db::rows('SELECT dest_par_magasin FROM ceo_rapport') as $r) {
+            foreach ((array) ((json_decode((string) ($r['dest_par_magasin'] ?? ''), true) ?: [])[$nom] ?? []) as $d) { if (is_string($d)) { $a[] = strtolower(trim($d)); } }
+        }
+    } catch (Throwable $e) { /* sans carnets */ }
+    return array_values(array_unique(array_filter($a, static fn ($x) => filter_var($x, FILTER_VALIDATE_EMAIL) !== false)));
+}
+
+/** « de Florival », « d’Ottignies » : la ville du magasin, son nom entier s'il ne se découpe pas. */
+function docDeVille(string $nom): string
+{
+    $v = function_exists('cqMailVille') ? cqMailVille($nom) : $nom;
+    return (preg_match('/^[aeiouyhâàéèêëîïôöûüAEIOUYHÂÀÉÈÊËÎÏÔÖÛÜ]/u', $v) ? 'd’' : 'de ') . $v;
+}
+
+/** Le mail : [sujet, html]. `$materiel` : la liste facultative ; `$contrat` : la pièce jointe (ligne de document) ou null. */
+function docMailMateriel(string $nom, string $materiel, ?array $contrat): array
+{
+    $e = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+    $F = "font-family:'Segoe UI',Arial,sans-serif";
+    $res = setting('reseau', []);
+    $marque = is_array($res) ? ($res['nom'] ?? 'L’Atelier by') : 'L’Atelier by';
+    $logoUri = function_exists('rapLogoDataUri') ? rapLogoDataUri() : '';
+    $logo = $logoUri !== '' ? '<img src="' . $logoUri . '" height="30" style="display:block;height:30px" alt="' . $e($marque) . '">'
+        : '<span style="' . $F . ';color:#221E1A;font-size:16px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase">' . $e($marque) . '</span>';
+    $deVille = docDeVille($nom);
+    $c = '<tr><td class="pad" style="' . $F . ';padding:20px 26px 6px">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:#F4F1EC;border-left:4px solid #8D1D2C;border-radius:8px;padding:14px 16px">'
+        . '<div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8D1D2C;font-weight:700">Mise à disposition du matériel</div>'
+        . '<div class="titre" style="font-size:19px;font-weight:700;color:#221E1A;margin-top:4px">Magasin ' . $e($deVille) . '</div>'
+        . '<div style="font-size:13px;color:#5d554d;margin-top:3px">Conditions d’entretien et de réparation</div>'
+        . '</td></tr></table></td></tr>';
+    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#221E1A;padding:14px 26px 4px">'
+        . 'Bonjour,<br><br>Nous vous confirmons que le matériel de votre magasin vous est <b>mis à disposition à l’état neuf</b> par ' . $e($marque) . '.</td></tr>';
+    $bloc = static fn ($titre, $coul, $fond, $lignes) => '<tr><td class="pad" style="' . $F . ';padding:12px 26px 0">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:' . $fond . ';border-radius:8px;padding:12px 16px">'
+        . '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:' . $coul . ';font-weight:700;margin-bottom:6px">' . $titre . '</div>'
+        . implode('', array_map(static fn ($l) => '<div style="font-size:14px;line-height:1.55;color:#221E1A;padding:3px 0">' . $l . '</div>', $lignes))
+        . '</td></tr></table></td></tr>';
+    $c .= $bloc('Mis à disposition par ' . $e($marque), '#2E6DB4', '#EAF1F9', ['✓ Le matériel du magasin, <b>neuf</b>, prêt à l’emploi']);
+    $c .= $bloc('À votre charge', '#8A3F14', '#FBEFE7', [
+        '• <b>L’entretien</b> du matériel : nettoyage, entretien courant et entretien périodique',
+        '• <b>Toutes les pièces qui cassent</b>, leur remplacement et les réparations']);
+    $materiel = trim($materiel);
+    if ($materiel !== '') {
+        $c .= '<tr><td class="pad" style="' . $F . ';padding:14px 26px 0">'
+            . '<div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8b8177;font-weight:700;margin-bottom:4px">Matériel concerné</div>'
+            . '<div style="font-size:14px;line-height:1.6;color:#221E1A">' . nl2br($e($materiel)) . '</div></td></tr>';
+    }
+    $c .= '<tr><td class="pad" style="' . $F . ';font-size:14px;line-height:1.6;color:#221E1A;padding:14px 26px 4px">'
+        . 'Le détail figure dans votre contrat de mise à disposition' . ($contrat !== null ? ', joint à ce message' : '') . '.<br><br>Pour toute question, n’hésitez pas à nous contacter.<br><br>Bien cordialement,<br><b>' . $e($marque) . '</b></td></tr>';
+    if ($contrat !== null) {
+        $ko = max(1, (int) round(((int) $contrat['octets']) / 1024));
+        $c .= '<tr><td class="pad" style="' . $F . ';padding:12px 26px 4px">'
+            . '<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border:1px solid #EFE9DF;border-radius:8px;padding:8px 12px;font-size:13px;color:#221E1A">📎 ' . $e($contrat['nom']) . ' <span style="color:#8b8177">· ' . ($ko >= 1024 ? number_format($ko / 1024, 1, ',', ' ') . ' Mo' : $ko . ' Ko') . '</span></td></tr></table></td></tr>';
+    }
+    $html = caMailSquelette('Franchise', 'message envoyé depuis le cockpit ; une copie est rangée dans les documents du magasin.');
+    $html = str_replace(['{{logo}}', '{{marque}}', '{{contenu}}'], [$logo, $e($marque), $c], $html);
+    return ['Matériel mis à disposition — magasin ' . docDeVille($nom), $html];
+}
+
+/** Le contrat choisi comme pièce jointe : une ligne de ce magasin, de la sorte « contrat », ou null. */
+function docContrat(int $shop, int $id): ?array
+{
+    if ($id <= 0) { return null; }
+    docTable();
+    $r = Db::row('SELECT * FROM ceo_doc WHERE id = ? AND shop = ?', [$id, $shop]);
+    return $r !== null ? docLigne($r) + ['fichier' => (string) $r['fichier']] : null;
+}
+
+/** GET /franchises/documents/mail-materiel?shop=4[&materiel=…&contrat=12] — l'aperçu, les adresses connues, les contrats du magasin. */
+function ep_franchises_mail_materiel(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    if ($shop <= 0) { http_response_code(400); return ['error' => 'shop requis']; }
+    docTable();
+    $nom = docMagasinNom($shop);
+    $contrats = array_map('docLigne', Db::rows("SELECT * FROM ceo_doc WHERE shop = ? AND sorte = 'contrat' ORDER BY COALESCE(date_doc, DATE(depose_le)) DESC, id DESC", [$shop]));
+    $contrat = docContrat($shop, (int) ($_GET['contrat'] ?? 0));
+    [$sujet, $html] = docMailMateriel($nom, mb_substr((string) ($_GET['materiel'] ?? ''), 0, 2000), $contrat);
+    return ['shop' => (string) $shop, 'magasin' => $nom, 'sujet' => $sujet, 'html' => $html, 'adresses' => docAdressesMagasin($nom),
+        'contrats' => array_map(static fn ($l) => ['id' => $l['id'], 'titre' => $l['titre'], 'nom' => $l['nom']], $contrats), 'smtp' => Smtp::configured()];
+}
+
+/**
+ * POST /franchises/documents/mail-materiel {shop, a, materiel?, contrat?} — envoie le mail au franchisé (le contrat en
+ * pièce jointe s'il est choisi) et range une copie dans ses documents (« Courrier envoyé », en PDF quand le serveur sait
+ * en faire, sinon en HTML).
+ */
+function wr_franchises_mail_materiel(): array
+{
+    $b = body();
+    $shop = (int) ($b['shop'] ?? 0);
+    if ($shop <= 0) { http_response_code(400); return ['error' => 'shop requis']; }
+    $a = strtolower(trim((string) ($b['a'] ?? '')));
+    if (!filter_var($a, FILTER_VALIDATE_EMAIL)) { http_response_code(422); return ['error' => 'adresse du franchisé invalide']; }
+    if (!Smtp::configured()) { http_response_code(503); return ['error' => 'SMTP non configuré (Paramètres)']; }
+    docTable();
+    $nom = docMagasinNom($shop);
+    $contrat = docContrat($shop, (int) ($b['contrat'] ?? 0));
+    $pieces = [];
+    if ($contrat !== null) {
+        $chemin = docDossier($shop) . '/' . basename($contrat['fichier']);
+        if (!is_file($chemin)) { http_response_code(404); return ['error' => 'le contrat choisi n’est plus sur le serveur']; }
+        if (filesize($chemin) > 10 * 1024 * 1024) { http_response_code(413); return ['error' => 'le contrat dépasse 10 Mo : trop lourd pour un e-mail']; }
+        $pieces[] = ['nom' => $contrat['nom'], 'type' => $contrat['mime'], 'contenu' => (string) file_get_contents($chemin)];
+    }
+    $materiel = mb_substr(trim((string) ($b['materiel'] ?? '')), 0, 2000);
+    [$sujet, $html] = docMailMateriel($nom, $materiel, $contrat);
+    if (!Smtp::envoyer($a, $sujet, $html, $pieces)) { http_response_code(502); return ['error' => 'envoi refusé : ' . (Smtp::$lastError ?? 'SMTP')]; }
+    // La copie : le mail tel qu'envoyé, rangé dans les documents du magasin.
+    $pdf = function_exists('rapPdfRendu') ? rapPdfRendu($html, ['magasin' => $nom, 'rapport' => 'Mise à disposition du matériel', 'genere' => date('d/m/Y à H:i'), 'envoye' => date('d/m/Y')]) : null;
+    $tmp = tempnam(sys_get_temp_dir(), 'docm');
+    file_put_contents($tmp, $pdf ?? $html);
+    $copie = docGarder($shop, 'courrier', 'Mail « matériel mis à disposition »', date('Y-m-d'), 'envoyé à ' . $a . ($contrat !== null ? ', contrat joint : ' . $contrat['nom'] : ''),
+        'mail-materiel-' . date('Y-m-d') . ($pdf !== null ? '.pdf' : '.html'), $tmp, (int) filesize($tmp), false);
+    @unlink($tmp);
+    if (function_exists('journalAdd')) { journalAdd('CEO', 'Franchisé', 'Mail matériel', 'Envoyé à ' . $a . ' pour ' . $nom . ($contrat !== null ? ' (contrat joint)' : '')); }
+    return ['ok' => true, 'a' => $a, 'sujet' => $sujet, 'copie' => $copie];
 }

@@ -40,13 +40,29 @@ export function tplFF(c, x){
         <button ${x.A(D.deposer)} class="cx-btn prim ffd-ok" ${D.peutDeposer ? '' : 'disabled'}>${D.envoi ? 'Envoi…' : 'Déposer'}</button></div>
       ${D.msg ? `<div class="ffd-msg ${D.msg.ko ? 'ko' : 'ok'}">${esc(D.msg.txt)}</div>` : ''}
     </div></div>`;
+    // Le mail « matériel mis à disposition » : relu dans l'aperçu, envoyé au franchisé, la copie rangée ici.
+    const M = D.mat;
+    const msgM = M.msg ? `<div class="ffd-msg ${M.msg.ko ? 'ko' : 'ok'}">${esc(M.msg.txt)}</div>` : '';
+    const mail = `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-corps"><h2 class="ff-h2">Courriers au franchisé</h2>
+      ${!M.ouvert ? `<div class="ffd-bas" style="align-items:center"><button ${x.A(M.ouvrir)} class="cx-btn prim">Mail : matériel mis à disposition</button><span class="mko-mu" style="flex:1;min-width:220px">Matériel neuf ; l’entretien et les pièces qui cassent à la charge du franchisé. Vous relisez avant l’envoi ; une copie est rangée dans « Courrier envoyé ».</span></div>${msgM}`
+      : `<div class="ffd-mail"><div class="ffd-mail-f">
+          ${champ('Matériel concerné (facultatif)', `<textarea class="mko-inp ffd-ta" placeholder="ex. Four ventilé 10 niveaux · Vitrine réfrigérée 1,50 m" ${x.C(M.setMateriel)}>${esc(M.materiel)}</textarea>`)}
+          ${champ('Contrat joint', `<select class="mko-sel" ${x.C(M.setContrat)}>${M.contrats.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>`)}
+          ${champ('Destinataire', `<select class="mko-sel" ${x.C(M.setA)}>${M.adresses.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>`)}
+          ${M.autreVisible ? champ('Adresse du franchisé', `<input class="mko-inp" type="email" value="${esc(M.autre)}" placeholder="franchise@exemple.be" ${x.C(M.setAutre)}>`) : ''}
+          <div class="ffd-bas"><button ${x.A(M.envoyer)} class="cx-btn prim ffd-ok" ${M.pret ? '' : 'disabled'}>${M.envoi ? 'Envoi…' : 'Envoyer au franchisé'}</button><button ${x.A(M.fermer)} class="mko-pied-btn">Fermer</button></div>
+          ${M.smtp ? '' : '<div class="ffd-msg ko">SMTP non configuré (Paramètres) : rien ne peut partir.</div>'}${msgM}
+          ${M.sujet ? `<div class="mko-mu">Objet : ${esc(M.sujet)}</div>` : ''}
+        </div>
+        <div class="ffd-mail-v">${M.apErreur ? `<div class="ffd-msg ko">${esc(M.apErreur)}</div>` : (!M.html ? `<div class="mko-mu" style="padding:20px">Préparation de l’aperçu…</div>` : `<iframe class="ffd-ap${M.apChargement ? ' maj' : ''}" sandbox="" srcdoc="${esc(M.html)}" title="Aperçu du mail"></iframe>`)}</div></div>`}
+    </div></div>`;
     const liste = D.groupes.length ? D.groupes.map(g => `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">${esc(g.nom)}</span><span class="mko-mini">${g.docs.length}</span></div>
       <div style="overflow-x:auto"><table class="mko-tab ffd-tab"><thead><tr><th>Titre</th><th>Fichier</th><th>Date</th><th></th></tr></thead><tbody>
       ${g.docs.map(d => `<tr><td><b>${esc(d.titre)}</b>${d.note ? `<small>${esc(d.note)}</small>` : ''}</td><td>${esc(d.fichier)}<small>${esc(d.depose)}</small></td><td>${esc(d.date)}</td>
         <td class="ffd-act"><a class="mko-pied-btn" href="${esc(d.ouvrir)}" target="_blank" rel="noopener">Ouvrir ↗</a><a class="mko-pied-btn" href="${esc(d.telecharger)}">Télécharger</a><button ${x.A(d.retirer)} class="mko-pied-btn">Retirer</button></td></tr>`).join('')}
       </tbody></table></div></div>`).join('')
       : attente('Aucun document pour ' + f.shopNom + ' : déposez le premier rapport de réunion ou contrat ci-dessus.');
-    return page(tete + depot + liste);
+    return page(tete + depot + mail + liste);
   }
   if (f.onglet === 'reseau') {
     if (c.sqIndispo && !f.reseau) { return page(attente(c.sqIndispo)); }

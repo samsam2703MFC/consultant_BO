@@ -1136,5 +1136,8 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{
 .ffd-c{display:flex;flex-direction:column;gap:4px;min-width:0}.ffd-c .mko-sel{width:100%;box-sizing:border-box;height:34px}
 .ffd-bas{display:flex;gap:12px;align-items:stretch;margin-top:12px;flex-wrap:wrap}.ffd-drop{flex:1;min-width:240px}.ffd-ok{min-width:120px}
 .ffd-msg{margin-top:10px;font-size:12.5px;padding:8px 10px;border-radius:8px}.ffd-msg.ok{background:#EAF3EC;color:#2d6a3a}.ffd-msg.ko{background:#FBEFE7;color:#8A3F14}
+.ffd-mail{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:16px;margin-top:6px}@media (max-width:900px){.ffd-mail{grid-template-columns:1fr}}
+.ffd-mail-f{display:flex;flex-direction:column;gap:10px;min-width:0}.ffd-ta{height:84px;padding:8px 10px;resize:vertical;line-height:1.45}
+.ffd-ap{width:100%;height:760px;border:.5px solid var(--color-border-tertiary);border-radius:10px;background:#EFE9DF;display:block}.ffd-ap.maj{opacity:.55}
 .ffd-tab{table-layout:fixed;min-width:640px}.ffd-tab th:nth-child(1){width:36%}.ffd-tab th:nth-child(2){width:30%}.ffd-tab th:nth-child(3){width:12%}.ffd-tab td{overflow-wrap:anywhere}
 .ffd-tab td small{font-size:11.5px;margin-top:2px}.ffd-act{white-space:nowrap;text-align:right}.ffd-act .mko-pied-btn{margin-left:6px;text-decoration:none;display:inline-block}
