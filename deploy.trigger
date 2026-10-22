@@ -959,3 +959,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-22T16:52:00Z objectifs de CA : relecture de /stores/perf manqué au chargement
 2026-10-22T18:09:18Z uprawnienia stanowisk, kierownik tylko admin, tablet w railu, bez « Kto co potrafi » (migracja 050)
 2026-10-22T18:15:33Z tablet : skan numeru partii kamerą (OCR wideo)
+2026-10-22T18:24:42Z tablet : nowe produkty (receptura, film, zdjęcia, notatki ; migracja 051)
