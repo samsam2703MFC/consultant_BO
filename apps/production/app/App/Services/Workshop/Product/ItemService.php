@@ -69,6 +69,7 @@ final class ItemService
      */
     public function stockOverview(?int $groupId): array
     {
+        $this->items->createMissingCards();
         $weeks = max(1, (int) $this->params->get('stock.suggest_weeks', '6'));
         $minWeeks = max(0.0, (float) $this->params->get('stock.suggest_min_weeks', '1'));
         $maxWeeks = max($minWeeks, (float) $this->params->get('stock.suggest_max_weeks', '3'));

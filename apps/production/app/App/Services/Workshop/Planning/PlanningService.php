@@ -7,6 +7,7 @@ use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\Validator;
 use App\Core\TransactionManager;
+use App\Repositories\Workshop\ItemRepository;
 use App\Repositories\Workshop\ParamRepository;
 use App\Repositories\Workshop\PlanningRepository;
 use App\Services\Logistics\LogisticsService;
@@ -33,6 +34,7 @@ final class PlanningService
 
     public function __construct(
         private PlanningRepository $planning,
+        private ItemRepository $items,
         private ParamRepository $params,
         private TransactionManager $tx,
         private AuditTrail $audit,
@@ -49,6 +51,8 @@ final class PlanningService
 
     public function compute(string $from, string $to): array
     {
+        // Każdy aktywny produkt ERP ma kartę (tworzoną tu, jeśli jej brak) : jego zamówienia są w planie.
+        $this->items->createMissingCards();
         $items = $this->planning->items();
         $byProduct = [];
         $byId = [];

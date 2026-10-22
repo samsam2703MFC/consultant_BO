@@ -334,6 +334,15 @@
   "list.batch_invalid": "Lot : un nombre supérieur à 0 ou vide.",
   "list.open_all": "Tout déplier",
   "list.close_all": "Tout replier",
-  "list.help": "Cliquez une catégorie pour voir ses produits : la bascule MTO / MTS et le lot s’enregistrent tout de suite.",
-  "list.cat_counts": "{n} prod. · MTS {mts} · avec lot {batch}"
+  "list.help": "Cliquez une catégorie pour voir ses produits : MTO / MTS, lot, personnes et durée du lot s’enregistrent tout de suite.",
+  "list.cat_counts": "{n} prod. · MTS {mts} · avec lot {batch}",
+  "list.labour": "Personnes × durée du lot",
+  "list.hours": "h / lot",
+  "list.people": "Personnes sur le lot",
+  "list.people_unit": "pers.",
+  "list.minutes": "Durée d’un lot (minutes)",
+  "list.labour_help": "Personnes × minutes du lot = heures de travail par lot ; heures de la semaine en production = lots × ce temps. La feuille de la semaine ne garde que les minutes.",
+  "list.hours_empty": "personnes et minutes",
+  "list.hours_no_batch": "d’abord le lot",
+  "list.labour_invalid": "Personnes : de 0 à 100 ; minutes : de 0 à 10 000 (ou vide)."
 }

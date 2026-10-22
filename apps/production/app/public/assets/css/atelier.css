@@ -1525,3 +1525,5 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-list-chevron { transition: transform .15s ease; }
 .tfb-list-cat[open] .tfb-list-chevron { transform: rotate(90deg); }
 .tfb-list-batch { width: 150px; margin-left: auto; }
+.tfb-list-labour { display: flex; align-items: center; gap: 4px; }
+.tfb-list-labour .input-group { width: 96px; flex-wrap: nowrap; }

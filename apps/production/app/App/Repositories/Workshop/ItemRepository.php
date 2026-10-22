@@ -36,6 +36,24 @@ final class ItemRepository extends WorkshopRepository
         LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id
         LEFT JOIN tfb_prod_item_logistics lg ON lg.id_item = i.id";
 
+    /**
+     * Karta dla każdego aktywnego produktu ERP bez karty (na zamówienie, w przygotowaniu, grupa domyślna jego działu) :
+     * zamówienia wszystkich produktów trafiają do produkcji, nie tylko produktów z kartą. Zwraca liczbę nowych kart.
+     */
+    public function createMissingCards(): int
+    {
+        $created = (int) $this->db->exec("INSERT IGNORE INTO tfb_prod_item (item_type, id_final_product, base_unit)
+            SELECT 'product', fp.id, 'szt' FROM final_product fp
+            WHERE fp.active = 1 AND NOT EXISTS (SELECT 1 FROM tfb_prod_item i WHERE i.id_final_product = fp.id)");
+        if ($created > 0) {
+            $this->db->exec("INSERT IGNORE INTO tfb_prod_product_settings (id_item, mode, never_frozen, id_primary_group, status, wizard_step)
+                SELECT i.id, 'MTO', 0, (SELECT MIN(g.id) FROM tfb_prod_group g WHERE g.active = 1 AND g.id_section = fp.id_section), 'draft', 1
+                FROM tfb_prod_item i JOIN final_product fp ON fp.id = i.id_final_product
+                WHERE NOT EXISTS (SELECT 1 FROM tfb_prod_product_settings s WHERE s.id_item = i.id)");
+        }
+        return $created;
+    }
+
     public function list(?string $type, ?int $groupId, ?string $status, ?string $mode, ?string $search, ?int $finalProductId = null): array
     {
         $where = [];

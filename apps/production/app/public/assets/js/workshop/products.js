@@ -49,7 +49,8 @@
         </div>`;
     }
 
-    // --- Lista : kategorie ERP do rozwinięcia ; w każdej produkty z przełącznikiem MTO / MTS i partią -------------
+    // --- Lista : kategorie ERP do rozwinięcia ; w każdej produkty z przełącznikiem MTO / MTS, partią, osobami i czasem
+    // partii (roboczogodziny na partię = osoby × minuty ÷ 60 ; w arkuszu tygodnia zostają tylko minuty) ------------
     // Wszystkie produkty ERP (zestawienie zapasów) i karty (status, etapy) ; półprodukty w osobnej kategorii.
     // Zapis od razu, bez ponownego wczytania : dane listy trzymane do wyjścia z widoku.
     const OPEN_KEY = 'tfb.products.open';
@@ -91,6 +92,8 @@
             const groupId = r.semi ? r.card.settings.primary_group_id : r.i.group_id;
             const ppc = r.semi ? null : r.i.ppc;
             const batch = batchOf(r);
+            const st = r.card ? r.card.settings : {};
+            const hours = batch && st.batch_people && st.batch_minutes ? st.batch_people * st.batch_minutes / 60 : null;
             const inactive = r.semi ? r.card.erp.active === false : !r.i.erp_active;
             return `<tr data-row="${r.semi ? 's' + r.card.id : 'p' + r.i.final_product_id}">
                 <td><a href="${link(r)}"><strong>${esc(name)}</strong></a>${inactive ? ` <span class="badge bg-secondary">${esc(t('erp.inactive'))}</span>` : ''}
@@ -101,6 +104,11 @@
                 <td><div class="input-group input-group-sm tfb-list-batch"><input class="form-control text-end" inputmode="decimal" data-batch value="${batch ?? ''}" placeholder="—" aria-label="${esc(t('f.batch_multiple'))}">
                     <span class="input-group-text">${esc(r.semi ? r.card.base_unit : t('st.pcs'))}</span></div>
                     ${batch && ppc ? `<div class="small text-muted text-end">${esc(t('list.batch_cart', {c: n(batch / ppc)}))}</div>` : ''}</td>
+                <td><div class="tfb-list-labour"><div class="input-group input-group-sm"><input class="form-control text-end" inputmode="decimal" data-labour="batch_people" data-max="100" value="${st.batch_people ?? ''}" placeholder="—"
+                        aria-label="${esc(t('list.people'))}" title="${esc(t('list.people'))}"><span class="input-group-text">${esc(t('list.people_unit'))}</span></div><span class="text-muted">×</span>
+                    <div class="input-group input-group-sm"><input class="form-control text-end" inputmode="decimal" data-labour="batch_minutes" data-max="10000" value="${st.batch_minutes ?? ''}" placeholder="—"
+                        aria-label="${esc(t('list.minutes'))}" title="${esc(t('list.minutes'))}"><span class="input-group-text">min</span></div></div></td>
+                <td class="text-end">${hours !== null ? `<strong>${esc(n(hours, hours % 1 ? 2 : 0))} h</strong>` : `<span class="small text-muted">${esc(t(batch ? 'list.hours_empty' : 'list.hours_no_batch'))}</span>`}</td>
                 <td class="text-end">${r.card ? r.card.step_count : '<span class="text-muted">—</span>'}</td>
                 <td>${r.card ? `<span class="badge ${r.card.settings.status === 'validated' ? 'bg-success' : 'bg-warning'}">${esc(t('status.' + r.card.settings.status))}</span>`
                     : `<span class="badge bg-light text-muted" title="${esc(t('st.no_card_help'))}">${esc(t('st.no_card'))}</span>`}</td></tr>`;
@@ -124,7 +132,8 @@
                 <summary class="card-header d-flex flex-wrap align-items-center gap-2"><i class="bi bi-chevron-right tfb-list-chevron"></i><h5 class="mb-0">${esc(c.name)}</h5>
                     <span class="small text-muted ms-auto">${esc(t('list.cat_counts', {n: c.rows.length, mts: c.rows.filter(r => !r.semi && r.i.mode === 'MTS').length, batch: c.rows.filter(r => batchOf(r)).length}))}</span></summary>
                 <div class="card-body pt-0"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
-                    <thead><tr><th>${esc(t('col.name'))}</th><th class="text-center">${esc(t('col.mode'))}</th><th style="width:170px" title="${esc(t('list.batch_help'))}">${esc(t('f.batch_multiple'))}</th>
+                    <thead><tr><th>${esc(t('col.name'))}</th><th class="text-center">${esc(t('col.mode'))}</th><th style="width:150px" title="${esc(t('list.batch_help'))}">${esc(t('f.batch_multiple'))}</th>
+                        <th title="${esc(t('list.labour_help'))}">${esc(t('list.labour'))}</th><th class="text-end" title="${esc(t('list.labour_help'))}">${esc(t('list.hours'))}</th>
                         <th class="text-end">${esc(t('col.steps'))}</th><th>${esc(t('col.status'))}</th></tr></thead>
                     <tbody>${c.rows.map(row).join('')}</tbody></table></div></div></details>`).join('') || `<p class="text-muted">${esc(t('empty_list'))}</p>`}`;
         window.scrollTo(0, y);
@@ -179,6 +188,13 @@
                 input.disabled = true;
                 save(r, {batch_multiple: v}, t('saved')).then(ok => { if (!ok) { input.disabled = false; input.value = batchOf(r) ?? ''; } });
             });
+            tr.querySelectorAll('[data-labour]').forEach(field => field.addEventListener('change', () => {
+                const v = ui.num(field.value);
+                const before = r.card ? r.card.settings[field.dataset.labour] ?? '' : '';
+                if (v !== null && (typeof v !== 'number' || v <= 0 || v > Number(field.dataset.max))) { ui.notify(false, t('list.labour_invalid')); field.value = before; return; }
+                field.disabled = true;
+                save(r, {[field.dataset.labour]: v}, t('saved')).then(ok => { if (!ok) { field.disabled = false; field.value = before; } });
+            }));
         });
     }
 

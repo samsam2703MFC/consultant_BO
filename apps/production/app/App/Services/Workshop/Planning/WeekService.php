@@ -189,8 +189,9 @@ final class WeekService
         foreach ($this->planning->items() as $it) {
             $id = (int) $it['id'];
             if ($it['erp_active'] !== null && !(int) $it['erp_active']) continue;
+            // Wszystkie aktywne produkty (także MTO bez zamówień w tygodniu) : widok domyślny pokazuje to, co do zrobienia,
+            // « pokaż wszystkie » — każdy produkt.
             $w = $products[$id] ?? null;
-            if ($w === null && $it['mode'] !== 'MTS') continue;
             $ppc = $it['item_type'] === 'product' && (int) $it['ppc'] > 0 ? (int) $it['ppc'] : null;
             $batch = (float) $it['batch_multiple'] > 0 ? (float) $it['batch_multiple'] : null;
             $qty = (float) ($w['quantity'] ?? 0.0);

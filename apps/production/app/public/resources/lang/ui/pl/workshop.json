@@ -334,6 +334,15 @@
   "list.batch_invalid": "Partia : liczba większa od 0 albo puste pole.",
   "list.open_all": "Rozwiń wszystkie",
   "list.close_all": "Zwiń wszystkie",
-  "list.help": "Kliknij kategorię, aby zobaczyć jej produkty : przełącznik MTO / MTS i partia zapisują się od razu.",
-  "list.cat_counts": "{n} prod. · MTS {mts} · z partią {batch}"
+  "list.help": "Kliknij kategorię, aby zobaczyć jej produkty : MTO / MTS, partia, osoby i czas partii zapisują się od razu.",
+  "list.cat_counts": "{n} prod. · MTS {mts} · z partią {batch}",
+  "list.labour": "Osoby × czas partii",
+  "list.hours": "h / partia",
+  "list.people": "Osoby przy partii",
+  "list.people_unit": "os.",
+  "list.minutes": "Czas jednej partii (minuty)",
+  "list.labour_help": "Osoby × minuty partii = roboczogodziny na partię ; godziny tygodnia w produkcji = partie × to. W arkuszu tygodnia zostają tylko minuty.",
+  "list.hours_empty": "osoby i minuty",
+  "list.hours_no_batch": "najpierw partia",
+  "list.labour_invalid": "Osoby : liczba od 0 do 100 ; minuty : od 0 do 10 000 (albo puste)."
 }
