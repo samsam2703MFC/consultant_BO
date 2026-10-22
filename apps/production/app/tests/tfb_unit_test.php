@@ -29,6 +29,7 @@ use App\Services\Workshop\Manager\ManagerIndicators;
 use App\Services\Workshop\Supply\InvoiceParser;
 use App\Services\Workshop\Referentiel\ShiftTemplateService;
 use App\Core\Web\PageAccess;
+use App\Services\Organization\ActivityService;
 
 function check(bool $condition, string $message): void
 {
@@ -381,5 +382,14 @@ sort($seeded);
 $grantable = PageAccess::grantable();
 sort($grantable);
 check($seeded === $grantable, 'access: migration 050 seeds exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
+
+// --- Aktywność w ERP : trasa (identyfikatory → {id}), ścieżka bez zapytania, okres uporządkowany i ograniczony
+check(ActivityService::route('/products/12/edit') === '/products/{id}/edit' && ActivityService::route('/workshop/gantt') === '/workshop/gantt'
+    && ActivityService::route('/archive/2026-10-01') === '/archive/{id}', 'activity: ids and dates in the path become {id}');
+check(ActivityService::path('/today?x=1#y') === '/today' && ActivityService::path('https://x.test/clients/5/') === '/clients/5' && ActivityService::path('javascript:alert(1)') === null
+    && ActivityService::path('') === null, 'activity: path without query, hash or trailing slash; not a path → null');
+check(ActivityService::period('2026-10-31', '2026-10-01') === ['2026-10-01', '2026-10-31'] && ActivityService::period('2020-01-01', '2026-10-22')[0] === '2025-10-22',
+    'activity: period ordered and limited to 365 days');
+check(PageAccess::keyFor('/organization/activity') === 'activity' && PageAccess::adminOnly('activity'), 'activity report is admin only');
 
 echo "tfb_unit_test: OK\n";

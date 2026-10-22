@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/atelier.css?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>">
     <script src="<?=ROOT?>/assets/js/atelier.js" defer></script>
     <script src="<?=ROOT?>/assets/js/atelier-table.js" defer></script>
+    <script src="<?=ROOT?>/assets/js/activity.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>" data-root="<?=ROOT?>" defer></script>
 
     <script src="<?=ROOT?>/assets/js/functions.js" type="text/javascript"></script>
     <script src="<?=ROOT?>/assets/js/tree_graph/ECOTree.js" type="text/javascript" ></script>

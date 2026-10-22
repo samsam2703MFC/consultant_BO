@@ -9,6 +9,11 @@ return function (RouteCollector $r) {
     // Uprawnienia stanowisk : które strony widzi każde stanowisko (tylko administrator).
     $r->addRoute('GET', '/organization/access', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'index']);
     $r->addRoute('PUT', '/ajax/organization/access/{id:\d+}', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'save']);
+    // Aktywność w ERP : zapis z każdej strony (wyświetlenie, puls) i raport administratora z kosztem godziny.
+    $r->addRoute('GET', '/organization/activity', ['controller' => App\Controllers\Web\Organization\ActivityController::class, 'method' => 'index']);
+    $r->addRoute('POST', '/ajax/activity/view', ['controller' => App\Controllers\Web\Organization\ActivityController::class, 'method' => 'start']);
+    $r->addRoute('POST', '/ajax/activity/beat', ['controller' => App\Controllers\Web\Organization\ActivityController::class, 'method' => 'beat']);
+    $r->addRoute('PUT', '/ajax/organization/activity/users/{id:\d+}/cost', ['controller' => App\Controllers\Web\Organization\ActivityController::class, 'method' => 'cost']);
     $r->addRoute('GET', '/my-tasks', ['controller' => $c, 'method' => 'myTasks']);
     $r->addRoute('PATCH', '/ajax/my-tasks/{id:\d+}', ['controller' => $c, 'method' => 'setStatus']);
     $r->addRoute('POST', '/ajax/organization/positions', ['controller' => $c, 'method' => 'savePosition']);

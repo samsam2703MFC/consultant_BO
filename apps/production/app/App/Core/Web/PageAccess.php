@@ -48,6 +48,7 @@ final class PageAccess
         'devices' => ['Urządzenia', 'Administracja', ['/devices'], false],
         'manager' => ['Kierownik produkcji : stanowisko, cele, raport, premia, rozmowa, audyt', 'Administracja', ['/workshop/manager'], true],
         'access' => ['Uprawnienia stanowisk', 'Administracja', ['/organization/access'], true],
+        'activity' => ['Aktywność w ERP (sesje, strony, kliknięcia, koszt czasu)', 'Administracja', ['/organization/activity'], true],
     ];
 
     /** @var (callable(string): bool)|null sprawdzenie ścieżki dla zalogowanego użytkownika (null = wszystko widoczne) */

@@ -59,9 +59,9 @@ class App
             return;
         }
 
-        // Wywołania w tle, które sesję tylko czytają (dzwonek, liczniki, wyszukiwarka, token pracowni) :
+        // Wywołania w tle, które sesję tylko czytają (dzwonek, liczniki, wyszukiwarka, token pracowni, aktywność) :
         // blokada pliku sesji zwalniana od razu — inaczej równoległe wywołania strony czekają jedno na drugie.
-        if (in_array($uri, ['/ajax/app-notifications', '/ajax/rail-counters', '/ajax/search', '/ajax/workshop/token'], true)
+        if (in_array($uri, ['/ajax/app-notifications', '/ajax/rail-counters', '/ajax/search', '/ajax/workshop/token', '/ajax/activity/view', '/ajax/activity/beat'], true)
             && session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
