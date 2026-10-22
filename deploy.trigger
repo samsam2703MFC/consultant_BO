@@ -952,3 +952,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-22T14:08:13Z factures : import des derniers prix et des quantités
 2026-10-22T14:18:47Z correctif : migration 045 compatible MySQL
 2026-10-22T14:47:06Z tablet : walidacja dnia, straty, receptury
+2026-10-22T15:01:58Z zadania : kategorie, protokół zebrania, śledzenie produkcji
