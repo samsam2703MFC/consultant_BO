@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\User;
 
+use App\Core\Security\Passwords;
 use App\Repositories\User\UserRepository;
 
 class UserService
@@ -71,7 +72,7 @@ class UserService
 
     public function insert($data)
     {
-        return $this->userRepository->insert($data);
+        return $this->userRepository->insert($this->hashPassword($data));
     }
 
     public function update($id, $data)
@@ -80,7 +81,16 @@ class UserService
         if (empty($data['password'])) {
             unset($data['password']);
         }
-        return $this->userRepository->update($id, $data);
+        return $this->userRepository->update($id, $this->hashPassword($data));
+    }
+
+    /** Mot de passe saisi → bcrypt (une valeur déjà chiffrée n'est jamais chiffrée deux fois). */
+    private function hashPassword(array $data): array
+    {
+        if (isset($data['password']) && $data['password'] !== '' && !Passwords::isHash((string) $data['password'])) {
+            $data['password'] = Passwords::hash((string) $data['password']);
+        }
+        return $data;
     }
 
     public function delete($id)

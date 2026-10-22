@@ -2,6 +2,7 @@
 namespace App\Services\Auth;
 
 
+use App\Core\Security\Passwords;
 use App\Repositories\User\UserRepository;
 
 class LoginService
@@ -21,7 +22,11 @@ class LoginService
         $row = $this->userRepository->first(['login' => $login]);
 
         if ($row) {
-            if (hash_equals((string) $row['password'], (string) $password)) {
+            if (Passwords::matches((string) $row['password'], (string) $password)) {
+                // Compte historique en clair (ou ancien coût) : rechiffré dès la connexion réussie.
+                if (Passwords::needsRehash((string) $row['password'])) {
+                    $this->userRepository->update($row['id'], ['password' => Passwords::hash((string) $password)]);
+                }
                 $this->userRepository->authenticate($row);
                 return true;
             }

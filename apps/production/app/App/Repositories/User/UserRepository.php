@@ -48,6 +48,7 @@ class UserRepository extends BaseRepository
     {
         // nowy identyfikator sesji po zalogowaniu (ochrona przed session fixation)
         session_regenerate_id(true);
+        unset($row['password']);   // jamais de mot de passe (même chiffré) dans la session
         $_SESSION['USER'] = $row;
     }
 }

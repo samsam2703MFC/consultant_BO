@@ -14,6 +14,11 @@ final class AuthRepository extends WorkshopRepository
         return count($rows) === 1 ? $rows[0] : null;
     }
 
+    public function setPassword(int $userId, string $hash): void
+    {
+        $this->db->prepare('UPDATE user SET password = ? WHERE id = ?')->execute([$hash, $userId]);
+    }
+
     public function userById(int $id): ?array
     {
         $rows = $this->all('SELECT id, login, displayed_name FROM user WHERE id = ?', [$id]);

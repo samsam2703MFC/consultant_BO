@@ -141,6 +141,10 @@ check($s === 401 && $b['message'] === 'Identifiant ou mot de passe incorrect.', 
 check($s === 403 && $b['description'] === 'NO_PRODUCTION_ROLE', 'account without production role → 403');
 [$s, $b] = $call('POST', '/auth/login', ['login' => 'legacy', 'password' => 'plain-pass']);
 check($s === 200, 'legacy plain-text ERP password still works');
+$stored = (string) $pdo->query("SELECT password FROM user WHERE login = 'legacy'")->fetchColumn();
+[$s2] = $call('POST', '/auth/login', ['login' => 'legacy', 'password' => 'plain-pass']);
+[$s3] = $call('POST', '/auth/login', ['login' => 'legacy', 'password' => 'plain-pas']);
+check(str_starts_with($stored, '$2y$') && password_verify('plain-pass', $stored) && $s2 === 200 && $s3 === 401, 'plain-text password re-hashed (bcrypt) at the first login, same password still works');
 [$s, $login] = $call('POST', '/auth/login', ['login' => 'manager', 'password' => 'Secret-123']);
 check($s === 200 && $login['data']['token_type'] === 'Bearer' && !isset($login['data']['_refresh_id']), 'login → tokens');
 $access = $login['data']['access_token'];

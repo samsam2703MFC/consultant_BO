@@ -315,6 +315,9 @@ if [[ -f "$IMPORT_OK" ]]; then
   [[ -n "$(envget API_BASE_URL)" ]] || set_env API_BASE_URL "$ERP_URL"
   ( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/tfb_migrate.php apply ) \
     || fail "Migrations du module atelier (migrations/tfb) en échec : voir le message ci-dessus."
+  # Mots de passe des comptes : bcrypt (ceux encore en clair, idempotent ; même mot de passe pour se connecter).
+  ( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/hash_passwords.php ) \
+    || fail "Chiffrement des mots de passe des comptes en échec : voir le message ci-dessus."
   # E-mails : la copie contient de vraies adresses de clients, rien n'en part (log_only),
   # sauf choix explicite ERP_MAIL_MODE=redirect avec ERP_MAIL_REDIRECT_TO (recette).
   mail_mode="${ERP_MAIL_MODE:-log_only}"

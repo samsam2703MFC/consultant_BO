@@ -62,6 +62,22 @@ check(AuthService::passwordMatches(password_hash('s3cret', PASSWORD_BCRYPT), 's3
 check(!AuthService::passwordMatches(password_hash('s3cret', PASSWORD_BCRYPT), 'nope'), 'wrong bcrypt password fails');
 check(AuthService::passwordMatches('legacy', 'legacy') && !AuthService::passwordMatches('legacy', 'Legacy'), 'legacy plain password');
 check(!AuthService::passwordMatches('', '') && !AuthService::passwordMatches('x', ''), 'empty passwords never match');
+check(\App\Core\Security\Passwords::needsRehash('legacy') && !\App\Core\Security\Passwords::needsRehash(\App\Core\Security\Passwords::hash('x'))
+    && \App\Core\Security\Passwords::isHash(\App\Core\Security\Passwords::hash('x')) && !\App\Core\Security\Passwords::isHash('x'), 'plain-text passwords flagged for rehash, bcrypt hashes kept');
+// Zapis konta : hasło → bcrypt, puste = bez zmiany, już zaszyfrowane nie szyfrowane drugi raz.
+$users = new class extends \App\Repositories\User\UserRepository {
+    public array $saved = [];
+    public function __construct() {}
+    public function insert(array $data): int|bool { $this->saved[] = $data; return 1; }
+    public function update(mixed $id, array $data, $id_column = 'id'): bool { $this->saved[] = $data; return true; }
+};
+$svc = new \App\Services\User\UserService($users);
+$svc->insert(['login' => 'a', 'password' => 'Sekret-1']);
+$svc->update(1, ['login' => 'a', 'password' => '']);
+$hashed = \App\Core\Security\Passwords::hash('x');
+$svc->update(1, ['password' => $hashed]);
+check(password_verify('Sekret-1', $users->saved[0]['password']) && !array_key_exists('password', $users->saved[1]) && $users->saved[2]['password'] === $hashed,
+    'account save: password stored as bcrypt, empty = unchanged, never hashed twice');
 
 // --- Validation
 $errors = function (array $input, bool $partial, callable $rules): array {

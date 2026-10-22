@@ -9,6 +9,7 @@ use App\Core\Api\Workshop\Jwt;
 use App\Core\Api\Workshop\JwtException;
 use App\Core\Api\Workshop\Translator;
 use App\Core\Api\Workshop\WorkshopConfig;
+use App\Core\Security\Passwords;
 use App\Repositories\Workshop\AuthRepository;
 use App\Repositories\Workshop\ParamRepository;
 
@@ -49,6 +50,9 @@ final class AuthService
             throw new ApiException('INVALID_CREDENTIALS', 401);
         }
         $this->auth->recordAttempt($login, $ip, true);
+        if (Passwords::needsRehash((string) $user['password'])) {
+            $this->auth->setPassword((int) $user['id'], Passwords::hash($password));
+        }
 
         if (!$this->auth->rolePermissions((int) $user['id'])) {
             throw new ApiException('NO_PRODUCTION_ROLE', 403);
@@ -200,12 +204,6 @@ final class AuthService
     /** Mot de passe haché (bcrypt/argon) ou, pour les comptes historiques de l'ERP, en clair. */
     public static function passwordMatches(string $stored, string $given): bool
     {
-        if ($stored === '' || $given === '') {
-            return false;
-        }
-        if (password_get_info($stored)['algoName'] !== 'unknown') {
-            return password_verify($given, $stored);
-        }
-        return hash_equals($stored, $given);
+        return Passwords::matches($stored, $given);
     }
 }
