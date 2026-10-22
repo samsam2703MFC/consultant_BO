@@ -75,6 +75,25 @@ final class PositionRepository extends WorkshopRepository
         )[0] ?? null;
     }
 
+    /** Role modułu produkcji (dostęp do API pracowni : planowanie, tablety, kierownik produkcji). */
+    public function moduleRoles(): array
+    {
+        return $this->all("SELECT code, name_pl FROM tfb_prod_role ORDER BY FIELD(code, 'prod_admin', 'direction', 'prod_manager', 'team_lead', 'operator'), code");
+    }
+
+    /** @return list<string> role modułu użytkownika bez grupy */
+    public function userModuleRoles(int $userId): array
+    {
+        return array_column($this->all('SELECT role_code FROM tfb_prod_user_role WHERE id_user = ? AND id_group IS NULL ORDER BY role_code', [$userId]), 'role_code');
+    }
+
+    /** Jedna rola modułu bez grupy (null = bez dostępu do modułu) ; role w grupach zostają. */
+    public function setModuleRole(int $userId, ?string $role): void
+    {
+        $this->db->prepare('DELETE FROM tfb_prod_user_role WHERE id_user = ? AND id_group IS NULL')->execute([$userId]);
+        if ($role !== null) $this->db->prepare('INSERT INTO tfb_prod_user_role (id_user, role_code) VALUES (?, ?)')->execute([$userId, $role]);
+    }
+
     public function assign(int $userId, ?int $positionId, ?string $since): void
     {
         if ($positionId === null) {

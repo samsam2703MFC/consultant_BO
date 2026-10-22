@@ -13,4 +13,5 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/organization/positions/{id:\d+}/tasks', ['controller' => $c, 'method' => 'addTask']);
     $r->addRoute('PATCH', '/ajax/organization/tasks/{id:\d+}', ['controller' => $c, 'method' => 'updateTask']);
     $r->addRoute('PUT', '/ajax/organization/users/{id:\d+}/position', ['controller' => $c, 'method' => 'assign']);
+    $r->addRoute('PUT', '/ajax/organization/users/{id:\d+}/module-role', ['controller' => $c, 'method' => 'moduleRole']);
 };

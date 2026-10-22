@@ -9,6 +9,7 @@ use App\Services\Dashboard\TodayService;
 use App\Services\Organization\PositionTaskService;
 use App\Services\Staff\StaffBudgetService;
 use Symfony\Component\HttpFoundation\Request;
+use App\Services\Workshop\Manager\ManagerService;
 
 class DashboardController extends BaseController
 {
@@ -20,6 +21,7 @@ class DashboardController extends BaseController
         private GrowthActionService $growth,
         private StaffBudgetService $staffBudget,
         private PositionTaskService $tasks,
+        private ManagerService $manager,
     ) {}
 
     /** Strona startowa: rentowność produkcji (sprzedaż a koszt personelu na dział, brakująca sprzedaż do celu). */
@@ -56,6 +58,12 @@ class DashboardController extends BaseController
             $data['profit'] = $this->profitability->snapshot();
         } catch (\Throwable $e) {
             $data['profit'] = null;
+        }
+        // Moje wskaźniki : osoba na stanowisku kierownika produkcji (plan roku w module kierownika).
+        try {
+            $data['manager_kpis'] = $userId ? $this->manager->dashboard($userId) : null;
+        } catch (\Throwable $e) {
+            $data['manager_kpis'] = null;
         }
         $this->view('dashboard/dashboard', $data);
     }

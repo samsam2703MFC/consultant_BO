@@ -179,6 +179,31 @@ final class PositionTaskService
         $this->positions->assign($userId, $positionId, $since === '' ? date('Y-m-d') : $since);
     }
 
+    /** Role modułu produkcji do wyboru i rola użytkownika (bez grupy). */
+    public function moduleRoles(int $userId): array
+    {
+        return ['roles' => $this->positions->moduleRoles(), 'current' => $this->positions->userModuleRoles($userId)[0] ?? null];
+    }
+
+    public function canSetModuleRoles(?int $actorId): bool
+    {
+        return $actorId !== null && in_array('prod_admin', $this->positions->userModuleRoles($actorId), true);
+    }
+
+    /**
+     * Rola w module produkcji (np. « Kierownik produkcji » = prod_manager) — tylko administrator produkcji ; nie
+     * można odebrać sobie roli administratora (bez blokady dostępu).
+     */
+    public function setModuleRole(int $userId, array $input, ?int $actorId): void
+    {
+        if (!$this->canSetModuleRoles($actorId)) throw new CustomException('Rolę w module produkcji nadaje administrator produkcji.', 'errors', 403);
+        if (!$this->positions->userExists($userId)) throw new CustomException('Nie znaleziono użytkownika.', 'errors', 404);
+        $role = ($input['role_code'] ?? '') === '' ? null : (string) $input['role_code'];
+        if ($role !== null && !in_array($role, array_column($this->positions->moduleRoles(), 'code'), true)) throw new CustomException('Nieznana rola.', 'errors', 422);
+        if ($userId === $actorId && $role !== 'prod_admin') throw new CustomException('Nie możesz odebrać sobie roli administratora produkcji.', 'errors', 422);
+        $this->positions->setModuleRole($userId, $role);
+    }
+
     /** @return list<int> */
     private function workdays(): array
     {

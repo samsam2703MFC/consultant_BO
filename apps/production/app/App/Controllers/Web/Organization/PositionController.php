@@ -28,6 +28,7 @@ class PositionController extends BaseController
     {
         $this->view('organization/user', $this->asMember($this->service->userSheet((int) $id)) + [
             'positions' => $this->service->positions(),
+            'module' => $this->service->moduleRoles((int) $id) + ['can_set' => $this->service->canSetModuleRoles($this->userId())],
             'frequencies' => PositionTaskService::FREQUENCY_LABELS,
         ]);
     }
@@ -83,6 +84,17 @@ class PositionController extends BaseController
         try {
             $this->service->assign((int) $id, $this->getJson(Request::createFromGlobals()));
             return $this->json(['message' => 'Zapisano stanowisko użytkownika.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** Rola użytkownika w module produkcji (dostęp do planowania, tabletów, modułu kierownika produkcji). */
+    public function moduleRole($id)
+    {
+        try {
+            $this->service->setModuleRole((int) $id, $this->getJson(Request::createFromGlobals()), $this->userId());
+            return $this->json(['message' => 'Zapisano rolę w module produkcji.']);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }

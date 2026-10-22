@@ -35,6 +35,16 @@
                         <button class="btn btn-primary mt-2" type="submit">Zapisz stanowisko</button>
                     </form>
                     {% if member.position_description %}<p class="at-sub mt-3">{{ member.position_description }}</p>{% endif %}
+                    <form id="moduleRoleForm" class="mt-3">
+                        <label class="at-purch-label">Rola w module produkcji
+                            <select class="form-select" name="role_code" data-nullable {{ module.can_set ? '' : 'disabled' }}>
+                                <option value="">— brak dostępu —</option>
+                                {% for r in module.roles %}<option value="{{ r.code }}" {{ module.current == r.code ? 'selected' : '' }}>{{ r.name_pl }}</option>{% endfor %}
+                            </select>
+                        </label>
+                        <p class="at-sub mt-1 mb-0">Planowanie, tablety i moduł kierownika produkcji. Kierownik produkcji = wgląd i wpisy miesięczne, bez ustalania celów i wynagrodzenia.</p>
+                        {% if module.can_set %}<button class="btn btn-outline-primary mt-2" type="submit">Zapisz rolę</button>{% else %}<p class="at-sub mt-1">Rolę nadaje administrator produkcji.</p>{% endif %}
+                    </form>
                     <p class="at-sub mt-3">Konto (login, hasło, uprawnienia): <a href="{{ root }}/users">Użytkownicy systemu</a>.</p>
                 </div>
             </div>
@@ -69,6 +79,7 @@
 <script>
 (() => {
     at.bindForm(document.getElementById('assignForm'), '/ajax/organization/users/{{ member.id }}/position', 'PUT');
+    {% if module.can_set %}at.bindForm(document.getElementById('moduleRoleForm'), '/ajax/organization/users/{{ member.id }}/module-role', 'PUT');{% endif %}
 })();
 </script>
 {% endblock %}

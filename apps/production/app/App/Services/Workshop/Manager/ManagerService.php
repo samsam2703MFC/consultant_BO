@@ -435,6 +435,69 @@ final class ManagerService
         ];
     }
 
+    // --- Pulpit « Dzisiaj » ------------------------------------------------------------------------------------
+
+    /**
+     * « Moje wskaźniki » na stronie Dzisiaj osoby na stanowisku (plan roku wskazuje jej konto) : wskaźniki ostatniego
+     * pełnego miesiąca (wynik, cel, status), blokady HACCP bieżącego kwartału, liczba wskaźników bez celu i bez danych.
+     * Teksty po polsku z etykiet modułu (resources/lang/ui/pl/manager.json). null = użytkownik nie jest na stanowisku.
+     */
+    public function dashboard(int $userId): ?array
+    {
+        $month = date('Y-m', strtotime('first day of last month'));
+        $plan = null;
+        foreach (array_unique([(int) date('Y'), (int) substr($month, 0, 4)]) as $year) {
+            $p = $this->repo->plan($year);
+            if ($p && $p['holder_user_id'] !== null && (int) $p['holder_user_id'] === $userId) { $plan = $p; break; }
+        }
+        if ($plan === null) return null;
+        $this->measured = [];
+        $labels = $this->uiLabels('pl');
+        $from = $month . '-01';
+        $to = date('Y-m-t', strtotime($from));
+        $versions = $this->repo->objectives((int) $plan['id']);
+        $values = $this->measure($from, $to, $plan);
+        $rows = [];
+        foreach (ManagerIndicators::INDICATORS as $code => $def) {
+            $objective = $this->objectiveAt($versions, $code, $to . ' 23:59:59');
+            $m = $values[$code];
+            $att = ManagerIndicators::attainment($code, $objective['target'] ?? null, $m['value']);
+            $sign = $def['direction'] === 'higher' ? '≥ ' : '≤ ';
+            $rows[] = ['code' => $code, 'section' => $labels['section.' . $def['section']] ?? $def['section'], 'name' => $labels['ind.' . $code] ?? $code,
+                'value' => $m['value'] === null ? null : $this->valueText($labels, $def['unit'], $m['value']),
+                'missing' => $m['missing'] === null ? null : ($labels['missing.' . $m['missing']] ?? $m['missing']),
+                'target' => $objective === null ? null : $sign . $this->valueText($labels, $def['unit'], $objective['target']),
+                'attainment' => $att, 'status' => ManagerIndicators::status($att), 'unverified' => $m['unverified']];
+        }
+        $quarterFrom = sprintf('%s-%02d-01', date('Y'), intdiv((int) date('n') - 1, 3) * 3 + 1);
+        $haccp = $this->haccp($quarterFrom, date('Y-m-d'), $plan);
+        $alerts = array_map(function ($b) use ($labels) {
+            $text = $labels['alert.' . $b['code']] ?? $b['code'];
+            foreach (['date' => $b['date'] ?? '', 'authority' => $b['authority'] ?? '—', 'score' => isset($b['score']) ? number_format($b['score'], 0, ',', ' ') : '',
+                         'threshold' => isset($b['threshold']) ? number_format($b['threshold'], 0, ',', ' ') : ''] as $k => $v) $text = str_replace('{' . $k . '}', (string) $v, $text);
+            return $text;
+        }, $haccp['blocking']);
+        return [
+            'month' => $month, 'holder' => $plan['holder_name'], 'indicators' => $rows, 'haccp_alerts' => $alerts,
+            'red' => count(array_filter($rows, fn($r) => $r['status'] === 'red')),
+            'no_objective' => count(array_filter($rows, fn($r) => $r['target'] === null)),
+            'no_data' => count(array_filter($rows, fn($r) => $r['value'] === null)),
+        ];
+    }
+
+    private function valueText(array $labels, string $unit, float $v): string
+    {
+        $n = number_format($v, $unit === 'eur_carton' ? 2 : 1, ',', ' ');
+        return $unit === '%' ? $n . ' %' : str_replace('{n}', $n, $labels['unit.' . $unit] ?? '{n}');
+    }
+
+    /** Etykiety widoku modułu (te same teksty co na stronie modułu). */
+    private function uiLabels(string $lang): array
+    {
+        $file = dirname(__DIR__, 4) . "/public/resources/lang/ui/{$lang}/manager.json";
+        return is_file($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
+    }
+
     // --- Audyt kompetencji ------------------------------------------------------------------------------------
 
     /** Kwestionariusz kompetencji stanowiska : obszary i pytania (teksty w etykietach widoku), historia audytów. */

@@ -102,6 +102,46 @@
             </div>
         </div>
 
+        {# --- Moje wskaźniki : osoba na stanowisku kierownika produkcji (cele i wyniki z modułu) --- #}
+        {% if manager_kpis %}
+        <div class="col-12">
+            <div class="card at-mykpis">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h4 class="card-title mb-0">Moje wskaźniki</h4>
+                        <span class="at-sub">Kierownik produkcji · {{ manager_kpis.month }} (ostatni pełny miesiąc) · dane z ERP</span>
+                    </div>
+                    <span class="d-flex gap-1 flex-wrap">
+                        {% if manager_kpis.red %}<span class="badge bg-danger">poniżej 90 % : {{ manager_kpis.red }}</span>{% endif %}
+                        {% if manager_kpis.no_objective %}<span class="badge bg-warning text-dark">bez celu : {{ manager_kpis.no_objective }}</span>{% endif %}
+                        {% if manager_kpis.no_data %}<span class="badge bg-secondary">bez danych : {{ manager_kpis.no_data }}</span>{% endif %}
+                    </span>
+                </div>
+                <div class="card-body pt-0">
+                    {% for a in manager_kpis.haccp_alerts %}<div class="alert alert-danger py-2 mb-2">{{ a }}</div>{% endfor %}
+                    <div class="table-responsive"><table class="table table-sm align-middle mb-2 at-kpi-table">
+                        <thead><tr><th>Wskaźnik</th><th class="text-end">Wynik</th><th class="text-end">Cel</th><th class="text-end">Realizacja</th></tr></thead>
+                        <tbody>
+                        {% set last_section = '' %}
+                        {% for k in manager_kpis.indicators %}
+                            {% if k.section != last_section %}<tr class="at-kpi-section"><th colspan="4">{{ k.section }}</th></tr>{% set last_section = k.section %}{% endif %}
+                            <tr>
+                                <td>{{ k.name }}{% if k.unverified %} <span class="badge bg-light text-dark">niezweryfikowane</span>{% endif %}</td>
+                                <td class="text-end">{% if k.value is not null %}<strong>{{ k.value }}</strong>{% else %}<span class="at-sub">{{ k.missing }}</span>{% endif %}</td>
+                                <td class="text-end">{{ k.target ?: '—' }}</td>
+                                <td class="text-end">{% if k.attainment is not null %}<span class="at-kpi-dot is-{{ k.status }}"></span> {{ (k.attainment * 100)|number_format(0, ',', ' ') }} %{% else %}—{% endif %}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table></div>
+                    <a class="at-link" href="{{ root }}/workshop/manager#tab=report&month={{ manager_kpis.month }}">Raport miesięczny</a> ·
+                    <a class="at-link" href="{{ root }}/workshop/manager#tab=job">Karta stanowiska</a> ·
+                    <a class="at-link" href="{{ root }}/workshop/manager#tab=bonus">Premia</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         {# --- Rentowność grup : personel / sprzedaż wobec celu, brakująca sprzedaż --- #}
         <div class="col-12">
             <div class="card at-today-profit">

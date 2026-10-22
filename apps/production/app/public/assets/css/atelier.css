@@ -1504,3 +1504,9 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
     body.tfb-mgr-printing .tfb-mgr-print { display: block; position: absolute; left: 0; top: 0; width: 100%; }
     .tfb-mgr-pagebreak { page-break-after: always; break-after: page; }
 }
+/* Dzisiaj : « Moje wskaźniki » kierownika produkcji. */
+.at-kpi-table .at-kpi-section th { font-size: .75rem; text-transform: uppercase; letter-spacing: .03em; color: var(--at-muted, #6c757d); background: var(--at-surface-2, #f6f3ef); }
+.at-kpi-dot { display: inline-block; width: .65rem; height: .65rem; border-radius: 50%; background: #ced4da; vertical-align: middle; }
+.at-kpi-dot.is-green { background: #2e7d32; }
+.at-kpi-dot.is-orange { background: #ef8f00; }
+.at-kpi-dot.is-red { background: #c62828; }
