@@ -941,3 +941,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-22T09:28:15Z produits par catégorie avec bascule MTO/MTS et lot
 2026-10-22T09:57:25Z tous les produits en production, lot/personnes/durée sur la page Produits, minutes seules dans la feuille
 2026-10-22T10:55:48Z mail matériel
+2026-10-22T11:13:03Z module approvisionnement (besoins, stocks, commandes fournisseurs, réceptions)
