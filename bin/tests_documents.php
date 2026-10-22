@@ -29,6 +29,13 @@ final class Db {
   static function row(string $q, array $a = []): ?array { $r = self::rows($q, $a); return $r[0] ?? null; }
 }
 function journalAdd(...$a) {}
+function setting(string $k, $d = null) { return $d; }
+function body(): array { return $GLOBALS['corps'] ?? []; }
+final class Smtp { static $lastError = null; static $env = [];
+  static function configured(): bool { return true; }
+  static function envoyer(string $a, string $s, string $h, array $p = []): bool { self::$env[] = [$a, $s, $h, $p]; return true; } }
+require __DIR__ . '/../src/ca_mail.php';
+require __DIR__ . '/../src/cq_mail.php';
 require __DIR__ . '/../src/documents.php';
 
 $shop = 990001;   // un magasin qui n'existe pas : le dossier du banc s'efface à la fin
@@ -44,7 +51,7 @@ verifie('rangé sous un nom tiré au hasard, l’extension gardée', $r !== null
 verifie('le dossier des documents est fermé à l’accès direct', str_contains((string) @file_get_contents(dirname(docDossier($shop)) . '/.htaccess'), 'Require all denied'));
 verifie('la sorte et le type du fichier', ($a['sorteLib'] ?? '') === 'Contrat de mise à disposition' && ($a['mime'] ?? '') === 'application/pdf' && ($b['mime'] ?? '') === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 $_GET = ['shop' => (string) $shop]; $l = ep_franchises_documents();
-verifie('la liste du magasin, la plus récente d’abord', array_column($l['documents'], 'titre') === ['Réunion du 21/10', 'Contrat de mise à disposition'] && count($l['sortes']) === 3 && in_array('pdf', $l['extensions'], true), json_encode(array_column($l['documents'], 'titre'), JSON_UNESCAPED_UNICODE));
+verifie('la liste du magasin, la plus récente d’abord', array_column($l['documents'], 'titre') === ['Réunion du 21/10', 'Contrat de mise à disposition'] && count($l['sortes']) === 4 && in_array('pdf', $l['extensions'], true), json_encode(array_column($l['documents'], 'titre'), JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '990002']; $l2 = ep_franchises_documents();
 verifie('un autre magasin ne les voit pas', $l2['documents'] === []);
 verifie('la limite d’un envoi : la nôtre ou celle de PHP, la plus petite', docMaxOctets() > 0 && docMaxOctets() <= DOC_MAX_OCTETS);
@@ -55,6 +62,29 @@ $_GET = ['id' => '999999']; $d = @wr_franchises_document_suppr();
 verifie('un document inconnu : 404', ($d['error'] ?? '') === 'document introuvable');
 $_GET = ['shop' => '0']; $l3 = @ep_franchises_documents();
 verifie('sans magasin : refusé', ($l3['error'] ?? '') === 'shop requis');
+// Le mail « matériel mis à disposition » (22/10/2026).
+Db::pdo()->exec('CREATE TABLE shops (id INT, name TEXT, active INT)');
+Db::pdo()->exec('CREATE TABLE ceo_rapport (id INTEGER PRIMARY KEY, dest_par_magasin TEXT)');
+Db::exec('INSERT INTO shops VALUES (?, ?, 1)', [$shop, 'Atelier by - Ottignies']);
+Db::exec('INSERT INTO ceo_rapport (dest_par_magasin) VALUES (?)', [json_encode(['Atelier by - Ottignies' => ['Franchise@exemple.be', 'pas-une-adresse']])]);
+file_put_contents($tmp . '/contrat2.pdf', '%PDF-1.4 contrat signé');
+$k = docGarder($shop, 'contrat', 'Contrat matériel', '2026-09-01', null, 'contrat-ottignies.pdf', $tmp . '/contrat2.pdf', 22, false);
+$_GET = ['shop' => (string) $shop, 'materiel' => 'Four ventilé', 'contrat' => (string) $k['id']]; $ap = ep_franchises_mail_materiel();
+verifie('l’aperçu : le magasin, le texte validé, le contrat joint, les adresses des carnets', str_contains($ap['html'], 'Magasin d’Ottignies') && str_contains($ap['html'], 'mis à disposition à l’état neuf')
+    && str_contains($ap['html'], 'Toutes les pièces qui cassent') && str_contains($ap['html'], 'Four ventilé') && str_contains($ap['html'], 'joint à ce message') && str_contains($ap['html'], 'contrat-ottignies.pdf')
+    && $ap['adresses'] === ['franchise@exemple.be'] && count($ap['contrats']) === 1 && $ap['sujet'] === 'Matériel mis à disposition — magasin d’Ottignies', json_encode([$ap['adresses'], $ap['sujet']], JSON_UNESCAPED_UNICODE));
+$_GET = ['shop' => (string) $shop]; $ap2 = ep_franchises_mail_materiel();
+verifie('sans matériel ni contrat : ni liste, ni pièce annoncée', !str_contains($ap2['html'], 'Matériel concerné') && !str_contains($ap2['html'], 'joint à ce message'));
+$GLOBALS['corps'] = ['shop' => $shop, 'a' => 'pas une adresse']; $r = @wr_franchises_mail_materiel();
+verifie('une adresse invalide : refusée', ($r['error'] ?? '') === 'adresse du franchisé invalide' && Smtp::$env === []);
+$GLOBALS['corps'] = ['shop' => $shop, 'a' => 'Franchise@exemple.be', 'materiel' => 'Four ventilé', 'contrat' => $k['id']]; $r = wr_franchises_mail_materiel();
+$m = Smtp::$env[0] ?? null;
+verifie('envoyé au franchisé, le contrat en pièce jointe', ($r['ok'] ?? false) && $m[0] === 'franchise@exemple.be' && ($m[3][0]['nom'] ?? '') === 'contrat-ottignies.pdf' && ($m[3][0]['contenu'] ?? '') === '%PDF-1.4 contrat signé' && ($m[3][0]['type'] ?? '') === 'application/pdf', json_encode($r, JSON_UNESCAPED_UNICODE));
+$_GET = ['shop' => (string) $shop]; $l = ep_franchises_documents();
+$cop = array_values(array_filter($l['documents'], static fn ($x) => $x['sorte'] === 'courrier'));
+verifie('la copie rangée dans « Courrier envoyé » (HTML sans moteur PDF), avec le destinataire', count($cop) === 1 && $cop[0]['mime'] === 'text/html' && str_contains((string) $cop[0]['note'], 'franchise@exemple.be') && str_contains((string) $cop[0]['note'], 'contrat-ottignies.pdf'), json_encode($cop, JSON_UNESCAPED_UNICODE));
+$GLOBALS['corps'] = ['shop' => $shop, 'a' => 'franchise@exemple.be', 'contrat' => 999999]; $n = count(Smtp::$env); $r = wr_franchises_mail_materiel();
+verifie('un contrat d’un autre magasin ou inconnu : le mail part sans pièce jointe', ($r['ok'] ?? false) && (Smtp::$env[$n][3] ?? null) === []);
 // Le ménage du banc.
 foreach (glob(docDossier($shop) . '/*') ?: [] as $f) { @unlink($f); }
 @rmdir(docDossier($shop));
