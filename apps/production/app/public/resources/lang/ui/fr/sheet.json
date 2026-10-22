@@ -62,5 +62,13 @@
   "hours_batch": "du temps du lot",
   "hours_routing": "de la gamme",
   "hours_batch_help": "Lots × personnes × durée du lot.",
-  "hours_routing_help": "Étapes et temps de la fiche de production (sans temps du lot)."
+  "hours_routing_help": "Étapes et temps de la fiche de production (sans temps du lot).",
+  "params_button": "Paramètres des produits",
+  "params_title": "Paramètres de tous les produits",
+  "params_help": "Mode sur stock (MTS) / à la commande (MTO), pièces par lot et temps du lot (personnes × minutes). Chaque changement est enregistré dans la fiche produit ; en fermant, la feuille est recalculée.",
+  "search_placeholder": "Chercher un produit…",
+  "params_count": "{n} produits",
+  "col_batch_hours": "Heures par lot",
+  "saved": "Enregistré.",
+  "col_product_only": "Produit"
 }

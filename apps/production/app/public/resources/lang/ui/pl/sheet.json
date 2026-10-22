@@ -62,5 +62,13 @@
   "hours_batch": "z czasu partii",
   "hours_routing": "z marszruty",
   "hours_batch_help": "Partie × osoby × czas partii.",
-  "hours_routing_help": "Etapy i czasy karty produkcyjnej (bez czasu partii)."
+  "hours_routing_help": "Etapy i czasy karty produkcyjnej (bez czasu partii).",
+  "params_button": "Parametry produktów",
+  "params_title": "Parametry wszystkich produktów",
+  "params_help": "Tryb na magazyn (MTS) / na zamówienie (MTO), sztuk w partii i czas partii (osoby × minuty). Zmiana zapisuje się od razu w karcie produktu ; po zamknięciu arkusz liczy się od nowa.",
+  "search_placeholder": "Szukaj produktu…",
+  "params_count": "{n} produktów",
+  "col_batch_hours": "Godz. na partię",
+  "saved": "Zapisano.",
+  "col_product_only": "Produkt"
 }
