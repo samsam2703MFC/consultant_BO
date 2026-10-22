@@ -99,6 +99,9 @@ details.kiosk-section summary { cursor: pointer; font-weight: 600; padding: 8px 
 .kiosk-lot-fields input:not([type=file]) { font-size: 22px; padding: 10px; border-radius: 10px; border: 2px solid var(--k-line); width: 100%; }
 .kiosk-photo { cursor: pointer; }
 .kiosk-ocr { margin-top: 10px; display: grid; gap: 8px; }
+.kiosk-scan { position: relative; max-width: 560px; border-radius: 12px; overflow: hidden; background: #000; }
+.kiosk-scan video { display: block; width: 100%; height: auto; }
+.kiosk-scan-frame { position: absolute; left: 10%; top: 20%; width: 80%; height: 60%; border: 3px solid rgba(255, 255, 255, .9); border-radius: 10px; box-shadow: 0 0 0 999px rgba(0, 0, 0, .35); pointer-events: none; }
 .kiosk-ocr-img { max-width: 260px; max-height: 160px; border-radius: 10px; border: 1px solid var(--k-line); object-fit: contain; background: #fff; }
 /* Partia produkcyjna : kafelka na zaplanowaną partię */
 .kiosk-batch-tiles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }

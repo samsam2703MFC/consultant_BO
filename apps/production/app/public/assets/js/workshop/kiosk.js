@@ -104,6 +104,7 @@
     }
 
     function logout(message) {
+        stopScan();
         session = null;
         longIdle = false;
         busy = false;
@@ -898,6 +899,7 @@
 
     // Partia : surowce i opakowania z receptury, numer partii (wpisany, « jak ostatnio » albo OCR ze zdjęcia etykiety).
     async function renderBatch(id, message, preloaded) {
+        stopScan();
         longIdle = true;
         resetIdle();
         let b = preloaded;
@@ -910,6 +912,7 @@
             ${b.editable ? `<div class="kiosk-lot-fields">
                 <label>${esc(t('lot_number'))}<input name="lot" autocomplete="off" autocapitalize="characters" maxlength="64" value="${esc(g.lot_number || '')}"></label>
                 <label>${esc(t('lot_best_before'))}<input name="bb" type="date" value="${esc(g.best_before || '')}"></label>
+                ${canScan() ? `<button type="button" class="kiosk-btn is-small is-primary" data-scan>🎥 ${esc(t('lot_scan'))}</button>` : ''}
                 <label class="kiosk-btn is-small kiosk-photo">📷 ${esc(t('lot_photo'))}<input type="file" accept="image/*" capture="environment" data-photo hidden></label>
                 ${g.last && g.last.lot_number !== g.lot_number ? `<button type="button" class="kiosk-btn is-small" data-same>${esc(t('lot_same', {lot: g.last.lot_number}))}</button>` : ''}
                 <button type="button" class="kiosk-btn is-primary is-small" data-save-lot>${esc(t('lot_save'))}</button></div>
@@ -925,7 +928,7 @@
             ${ingredients.length ? `<h2 class="kiosk-section">${esc(t('lot_ingredients'))}</h2>${ingredients.map(row).join('')}` : ''}
             ${packaging.length ? `<details class="kiosk-section" ${packaging.some(g => g.lot_number) ? 'open' : ''}><summary>${esc(t('lot_packaging', {n: packaging.length}))}</summary>${packaging.map(row).join('')}</details>` : ''}`;
         if (message) toast(message);
-        el.querySelector('[data-back]').addEventListener('click', () => renderProduction());
+        el.querySelector('[data-back]').addEventListener('click', () => { stopScan(); renderProduction(); });
         el.querySelector('[data-cancel-batch]')?.addEventListener('click', async (e) => {
             if (!window.confirm(t('prod_cancel_confirm', {lot: b.lot_code}))) return;
             e.target.disabled = true;
@@ -947,7 +950,8 @@
                 if (!file) return;
                 await photo(card, file, pending[m] = {});
             });
-            card.querySelector('.kiosk-photo')?.addEventListener('click', () => { busy = true; resetIdle(); });
+            card.querySelector('.kiosk-photo')?.addEventListener('click', () => { stopScan(); busy = true; resetIdle(); });
+            card.querySelector('[data-scan]')?.addEventListener('click', () => scan(card, pending[m] = {}));
             card.querySelector('[data-save-lot]')?.addEventListener('click', async (e) => {
                 const lot = card.querySelector('[name=lot]').value.trim();
                 const bb = card.querySelector('[name=bb]').value || null;
@@ -1005,13 +1009,118 @@
         } finally { busy = false; resetIdle(); }
     }
 
+    // Skanowanie kamerą (wideo) : klatka co ~1 s do OCR, aż numer partii pojawi się w dwóch odczytach (albo dotknięcie
+    // kandydata) ; klatka z odczytem zostaje jako zdjęcie etykiety. Kamera wymaga HTTPS — bez niej zostaje zdjęcie.
+    const canScan = () => !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    let scanning = null; // {stream, timer, card}
+
+    function stopScan() {
+        if (!scanning) return;
+        const s = scanning;
+        scanning = null;
+        window.clearTimeout(s.timer);
+        s.stream.getTracks().forEach(tr => tr.stop());
+        const v = s.card.querySelector('[data-video]');
+        if (v) v.srcObject = null;
+        s.card.querySelector('[data-scan-view]')?.remove();
+        busy = false;
+        resetIdle();
+    }
+
+    async function scan(card, slot) {
+        stopScan();
+        const box = card.querySelector('[data-ocr]');
+        box.hidden = false;
+        box.innerHTML = `<div class="kiosk-scan" data-scan-view><video data-video autoplay playsinline muted></video><div class="kiosk-scan-frame" aria-hidden="true"></div></div>
+            <p class="kiosk-muted" data-scan-msg>${esc(t('scan_starting'))}</p><div class="kiosk-row" data-scan-chips></div>
+            <div class="kiosk-row"><button type="button" class="kiosk-btn is-small" data-scan-stop>⏹ ${esc(t('scan_stop'))}</button></div>`;
+        const msg = box.querySelector('[data-scan-msg]');
+        const chips = box.querySelector('[data-scan-chips]');
+        box.querySelector('[data-scan-stop]').addEventListener('click', () => { stopScan(); msg.textContent = t('scan_stopped'); });
+        busy = true;
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}, width: {ideal: 1280}, height: {ideal: 720}}, audio: false});
+        } catch (e) {
+            busy = false;
+            box.querySelector('[data-scan-view]')?.remove();
+            msg.textContent = t('scan_denied');
+            return;
+        }
+        const video = box.querySelector('[data-video]');
+        video.srcObject = stream;
+        const state = scanning = {stream, timer: null, card};
+        const seen = {}; // numer => liczba odczytów
+        const dates = {};
+        const started = Date.now();
+        const lotInput = card.querySelector('[name=lot]');
+        const bbInput = card.querySelector('[name=bb]');
+        const showChips = () => {
+            const lots = Object.keys(seen).sort((a, b) => seen[b] - seen[a]).slice(0, 4);
+            const ds = Object.keys(dates).sort((a, b) => dates[b] - dates[a]).slice(0, 2);
+            chips.innerHTML = lots.map(l => `<button type="button" class="kiosk-btn is-small" data-lot="${esc(l)}">${esc(t('ocr_lot'))} ${esc(l)}</button>`).join('')
+                + ds.map(d => `<button type="button" class="kiosk-btn is-small" data-date="${esc(d)}">${esc(t('ocr_date'))} ${esc(d.split('-').reverse().join('.'))}</button>`).join('');
+        };
+        chips.addEventListener('click', (e) => {
+            const l = e.target.closest('[data-lot]');
+            const d = e.target.closest('[data-date]');
+            if (l) { lotInput.value = l.dataset.lot; stopScan(); msg.textContent = t('scan_found', {lot: l.dataset.lot}); }
+            if (d) bbInput.value = d.dataset.date;
+        });
+        const frame = () => {
+            const w = video.videoWidth, h = video.videoHeight;
+            if (!w || !h) return null;
+            // Środek obrazu (ramka celownika) : mniej tła, szybszy OCR.
+            const cw = Math.round(w * 0.8), ch = Math.round(h * 0.6);
+            const canvas = document.createElement('canvas');
+            const scale = Math.min(1, 1400 / cw);
+            canvas.width = Math.round(cw * scale);
+            canvas.height = Math.round(ch * scale);
+            canvas.getContext('2d').drawImage(video, (w - cw) / 2, (h - ch) / 2, cw, ch, 0, 0, canvas.width, canvas.height);
+            return canvas;
+        };
+        const tick = async () => {
+            if (scanning !== state) return;
+            resetIdle();
+            if (Date.now() - started > 60000) { stopScan(); msg.textContent = t('scan_timeout'); return; }
+            const canvas = frame();
+            if (canvas) {
+                msg.textContent = t('scan_looking');
+                let text = '';
+                try { text = await ocr(canvas, () => {}); } catch (e) { stopScan(); msg.textContent = t('ocr_unavailable'); return; }
+                if (scanning !== state) return;
+                const found = lotCandidates(text);
+                found.dates.forEach(d => { dates[d] = (dates[d] || 0) + 1; });
+                let best = null;
+                found.lots.forEach(l => { seen[l] = (seen[l] || 0) + 1; if (seen[l] >= 2 && (!best || seen[l] > seen[best])) best = l; });
+                if (found.lots.length || found.dates.length) {
+                    slot.photo = canvas.toDataURL('image/jpeg', 0.75);
+                    slot.ocr = text.trim() || null;
+                    showChips();
+                }
+                if (best) {
+                    lotInput.value = best;
+                    const d = Object.keys(dates).sort((a, b) => dates[b] - dates[a])[0];
+                    if (d && !bbInput.value) bbInput.value = d;
+                    stopScan();
+                    msg.textContent = t('scan_found', {lot: best});
+                    return;
+                }
+            }
+            state.timer = window.setTimeout(tick, 700);
+        };
+        video.addEventListener('loadeddata', () => { state.timer = window.setTimeout(tick, 400); }, {once: true});
+    }
+
     function loadImage(file) {
         if (window.createImageBitmap) return createImageBitmap(file, {imageOrientation: 'from-image'}).catch(() => createImageBitmap(file));
         return new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = URL.createObjectURL(file); });
     }
 
     let ocrWorker = null;
+    let ocrProgress = () => {}; // postęp bieżącego odczytu (zdjęcie albo klatka kamery)
     async function ocr(canvas, progress) {
+        ocrProgress = progress;
         if (!window.Tesseract) {
             await new Promise((resolve, reject) => {
                 const s = document.createElement('script');
@@ -1020,7 +1129,7 @@
                 document.head.appendChild(s);
             });
         }
-        if (!ocrWorker) ocrWorker = await window.Tesseract.createWorker('eng', 1, {logger: (m) => { if (m.status === 'recognizing text') progress(Math.round(m.progress * 100)); }});
+        if (!ocrWorker) ocrWorker = await window.Tesseract.createWorker('eng', 1, {logger: (m) => { if (m.status === 'recognizing text') ocrProgress(Math.round(m.progress * 100)); }});
         const r = await ocrWorker.recognize(canvas);
         return (r && r.data && r.data.text) || '';
     }
