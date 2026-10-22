@@ -117,4 +117,11 @@ return function(RouteCollector $r) {
         'method'     => 'ajaxUpdatePriority'
     ]);
 
+    // Produkt testowy na tablecie produkcji (zakładka « Nowe produkty ») : pokaż, film, notatki, zdjęcia.
+    $d = App\Controllers\Web\Product\DevProductController::class;
+    $r->addRoute('GET', '/test-products/{id:\d+}/tablet', ['controller' => $d, 'method' => 'tablet']);
+    $r->addRoute('GET', '/test-products/photos/{photoId:\d+}', ['controller' => $d, 'method' => 'photo']);
+    $r->addRoute('PUT', '/ajax/test-products/{id:\d+}/tablet', ['controller' => $d, 'method' => 'save']);
+    $r->addRoute('POST', '/ajax/test-products/{id:\d+}/photos', ['controller' => $d, 'method' => 'addPhoto']);
+    $r->addRoute('DELETE', '/ajax/test-products/{id:\d+}/photos/{photoId:\d+}', ['controller' => $d, 'method' => 'deletePhoto']);
 };

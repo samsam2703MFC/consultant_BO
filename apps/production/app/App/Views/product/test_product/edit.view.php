@@ -4,6 +4,7 @@
             <div class="row">
                 <div class="col-12 col-md-6 order-md-1 order-last">
                     <h3>Produkt testowy</h3>
+                    <?php if (!empty($row['id'])): ?><a class="btn btn-sm btn-outline-primary mb-2" href="<?= ROOT ?>/test-products/<?= (int) $row['id'] ?>/tablet"><i class="bi bi-tablet"></i> Tablet produkcji : film, zdjęcia, notatki</a><?php endif; ?>
                 </div>
                 <div class="col-12 col-md-6 order-md-2 order-first">
                     <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">

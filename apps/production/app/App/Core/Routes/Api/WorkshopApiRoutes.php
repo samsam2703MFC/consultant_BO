@@ -196,6 +196,9 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/recipes/{id:\d+}', ExecutionController::class, 'recipe', 'kiosk_employee'],
             ['GET', '/kiosk/machines', ExecutionController::class, 'machines', 'kiosk_employee'],
             ['POST', '/kiosk/machines/{id:\d+}/state', ExecutionController::class, 'machineState', 'kiosk_employee'],
+            // Nowe produkty (produkty testowe pokazane grupie) : receptura, film, zdjęcia, notatki.
+            ['GET', '/kiosk/development', ExecutionController::class, 'development', 'kiosk_employee'],
+            ['GET', '/kiosk/development/{id:\d+}', ExecutionController::class, 'developmentProduct', 'kiosk_employee'],
             ['GET', '/kiosk/quality', ExecutionController::class, 'quality', 'kiosk_employee'],
             ['POST', '/kiosk/quality/batches/{id:\d+}', ExecutionController::class, 'qualityCheck', 'kiosk_employee'],
             ['POST', '/kiosk/quality/reports', ExecutionController::class, 'qualityReport', 'kiosk_employee'],

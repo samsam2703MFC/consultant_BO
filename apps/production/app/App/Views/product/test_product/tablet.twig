@@ -1,0 +1,107 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ product.name }} · tablet{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3><i class="bi bi-tablet"></i> {{ product.name }}</h3>
+            <p class="text-subtitle text-muted">Nowy produkt na tablecie produkcji (zakładka « Nowe produkty ») : zespół widzi recepturę, etap rozwoju, film, zdjęcia i notatki.
+                {{ product.section ? 'Dział : ' ~ product.section ~ ' — widzi go tablet tej grupy.' : 'Bez działu — widzą go wszystkie tablety.' }}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/test-products/{{ product.id }}/edit"><i class="bi bi-pencil"></i> Produkt testowy</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/test-products/{{ product.id }}/changelogs"><i class="bi bi-clock-history"></i> Etapy</a>
+            <a class="btn btn-outline-secondary" href="{{ root }}/test-products"><i class="bi bi-list"></i> Lista</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-dev">
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Na tablecie</h4>
+            <p class="at-sub mb-0">{{ product.status ?: '—' }} · {{ product.type ?: '—' }} · receptura : {{ product.recipe_name ?: 'brak (wybierz w « Produkt testowy »)' }}{% if stages %} · etap : {{ stages[0].stage }}{% endif %}</p></div>
+        <div class="card-body pt-0">
+            <form id="devForm" class="at-purch-form">
+                <label class="form-check form-switch at-purch-wide"><input class="form-check-input" type="checkbox" name="on_tablet" {{ product.on_tablet ? 'checked' : '' }}> Pokaż na tablecie produkcji</label>
+                <label class="at-purch-label at-purch-wide">Film (YouTube, Vimeo, plik mp4 albo link)<input class="form-control" name="video_url" type="url" maxlength="500" value="{{ product.video_url }}" placeholder="https://www.youtube.com/watch?v=…"></label>
+                {% if product.video %}<p class="at-sub at-purch-wide mb-0"><i class="bi bi-play-btn"></i> {{ {youtube: 'YouTube — odtwarzacz na tablecie', vimeo: 'Vimeo — odtwarzacz na tablecie', file: 'plik wideo — odtwarzacz na tablecie', link: 'link — otwierany w nowej karcie'}[product.video.kind] }}</p>{% endif %}
+                <label class="at-purch-label at-purch-wide">Notatki dla zespołu (wykonanie, na co uważać, co ocenić)<textarea class="form-control" name="notes" rows="5" maxlength="5000">{{ product.notes }}</textarea></label>
+                <div class="at-purch-actions"><span></span><button class="btn btn-primary" type="submit">Zapisz</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Zdjęcia <span class="at-sub">({{ photos|length }} / {{ max_photos }})</span></h4>
+            <p class="at-sub mb-0">Zdjęcia zmniejszane w przeglądarce (JPEG, najdłuższy bok 1600 px) ; podpis opcjonalny.</p></div>
+        <div class="card-body pt-0">
+            <div class="at-dev-photos">
+                {% for ph in photos %}
+                <figure class="at-dev-photo">
+                    <img src="{{ root }}/test-products/photos/{{ ph.id }}" alt="{{ ph.caption ?: product.name }}" loading="lazy">
+                    <figcaption>{{ ph.caption ?: '—' }} <button type="button" class="btn btn-sm btn-outline-danger" data-del-photo="{{ ph.id }}" aria-label="Usuń zdjęcie"><i class="bi bi-trash"></i></button></figcaption>
+                </figure>
+                {% else %}<p class="at-sub">Brak zdjęć.</p>{% endfor %}
+            </div>
+            {% if photos|length < max_photos %}
+            <form id="photoForm" class="d-flex gap-2 flex-wrap align-items-end mt-2">
+                <input class="form-control" type="file" name="file" accept="image/*" multiple required style="flex: 2 1 240px">
+                <input class="form-control" name="caption" maxlength="200" placeholder="Podpis (opcjonalnie)" style="flex: 2 1 200px">
+                <button class="btn btn-primary" type="submit"><i class="bi bi-upload"></i> Dodaj</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include "page_components/ajax_helpers.twig" %}
+<script>
+(function () {
+    const id = {{ product.id }};
+    const form = document.getElementById('devForm');
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        at.send(`/ajax/test-products/${id}/tablet`, 'PUT', {on_tablet: form.on_tablet.checked, video_url: form.video_url.value, notes: form.notes.value})
+            .then(res => { at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd')); if (res.ok) setTimeout(() => location.reload(), 500); });
+    });
+    // Zdjęcie zmniejszone w przeglądarce do JPEG (najdłuższy bok 1600 px).
+    const shrink = (file) => new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+            const c = document.createElement('canvas');
+            c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            URL.revokeObjectURL(img.src);
+            resolve(c.toDataURL('image/jpeg', 0.8));
+        };
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+    });
+    const photoForm = document.getElementById('photoForm');
+    if (photoForm) photoForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = photoForm.querySelector('button');
+        btn.disabled = true;
+        let ok = true;
+        for (const file of photoForm.file.files) {
+            let image;
+            try { image = await shrink(file); } catch (err) { at.notify(false, 'Nie udało się wczytać zdjęcia : ' + file.name); ok = false; continue; }
+            const res = await at.send(`/ajax/test-products/${id}/photos`, 'POST', {image, caption: photoForm.caption.value});
+            if (!res.ok) { at.notify(false, res.message || 'Błąd'); ok = false; break; }
+        }
+        btn.disabled = false;
+        if (ok) at.notify(true, 'Dodano zdjęcia.');
+        setTimeout(() => location.reload(), 500);
+    });
+    document.querySelectorAll('[data-del-photo]').forEach(b => b.addEventListener('click', () => {
+        if (!confirm('Usunąć zdjęcie ?')) return;
+        at.send(`/ajax/test-products/${id}/photos/${b.dataset.delPhoto}`, 'DELETE').then(res => { at.notify(res.ok, res.message); if (res.ok) b.closest('figure').remove(); });
+    }));
+})();
+</script>
+{% endblock %}

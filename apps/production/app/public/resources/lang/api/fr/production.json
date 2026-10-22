@@ -412,6 +412,7 @@
     "vat_rate": "taux de TVA"
   },
   "entities": {
+    "test_product": "produit test",
     "group": "groupe",
     "workstation": "poste",
     "shift_template": "shift",

@@ -314,12 +314,13 @@
     }
 
     // --- Menu osoby : Czas pracy / Produkcja / Kontrola jakości / Receptury ---------------------------
-    const TABS = [['clock', '⏱', 'tab_clock'], ['production', '📦', 'tab_production'], ['quality', '✅', 'tab_quality'], ['recipes', '📖', 'tab_recipes'], ['machines', '🤖', 'tab_machines']];
+    const TABS = [['clock', '⏱', 'tab_clock'], ['production', '📦', 'tab_production'], ['quality', '✅', 'tab_quality'], ['recipes', '📖', 'tab_recipes'], ['machines', '🤖', 'tab_machines'], ['dev', '🧪', 'tab_dev']];
     const personHeader = () => header(`<button type="button" class="kiosk-btn is-small" data-logout>${esc(t('logout'))}</button>`);
     function tabs(active) {
         if (session) session.tab = active;
-        // Zakładka Maszyny (TRS) tylko, gdy grupa tabletu ma maszyny z TRS.
-        return `<nav class="kiosk-tabs" role="tablist" aria-label="${esc(t('tabs'))}">${TABS.filter(([k]) => k !== 'machines' || (session && session.machines > 0)).map(([k, icon, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
+        // Zakładki Maszyny (TRS) i Nowe produkty tylko, gdy grupa tabletu ma maszyny z TRS / produkty pokazane na tablecie.
+        const shown = ([k]) => (k !== 'machines' || (session && session.machines > 0)) && (k !== 'dev' || (session && session.dev > 0));
+        return `<nav class="kiosk-tabs" role="tablist" aria-label="${esc(t('tabs'))}">${TABS.filter(shown).map(([k, icon, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
             role="tab" aria-selected="${k === active}" data-tab="${k}"><span aria-hidden="true">${icon}</span> ${esc(t(label))}</button>`).join('')}</nav>`;
     }
     function bindTabs() {
@@ -329,6 +330,7 @@
     function openTab(k, message) {
         if (k === 'recipes') return renderRecipes(message);
         if (k === 'machines') return renderMachines(message);
+        if (k === 'dev') return renderDev(message);
         return k === 'production' ? renderProduction(message) : (k === 'quality' ? renderQuality(message) : renderMe(message));
     }
 
@@ -337,9 +339,10 @@
         longIdle = false;
         let me;
         try {
-            let machines;
-            [me, machines] = await Promise.all([api('GET', '/kiosk/me', undefined, true), api('GET', '/kiosk/machines', undefined, true).catch(() => null)]);
-            if (session) session.machines = machines ? machines.machines.length : 0;
+            let machines, dev;
+            [me, machines, dev] = await Promise.all([api('GET', '/kiosk/me', undefined, true), api('GET', '/kiosk/machines', undefined, true).catch(() => null),
+                api('GET', '/kiosk/development', undefined, true).catch(() => null)]);
+            if (session) { session.machines = machines ? machines.machines.length : 0; session.dev = dev ? dev.products.length : 0; }
         } catch (err) { if (!err.code) toast(err.message, true); return; }
         idleSeconds = me.idle_logout_s || 45;
         resetIdle();
@@ -626,6 +629,20 @@
         return `${amount(q)} ${unit || ''}`.trim();
     };
 
+    // Drzewo receptury (podreceptury, surowce, opakowania, etapy przygotowania) × mnożnik.
+    function recNode(n, f, depth) {
+        const items = n.lines.filter(l => l.kind === 'recipe' || !l.packaging);
+        const pack = depth === 0 ? n.lines.filter(l => l.kind === 'material' && l.packaging) : [];
+        return `<div class="kiosk-rec-node ${depth ? 'is-sub' : ''}">
+            ${n.steps.length ? `<ol class="kiosk-rec-steps">${n.steps.map(st => `<li>${esc(st)}</li>`).join('')}</ol>` : ''}
+            <ul class="kiosk-rec-lines">${items.map(l => l.kind === 'recipe'
+                ? `<li class="kiosk-rec-sub"><details open><summary><strong>${esc(l.name)}</strong> <span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></summary>
+                    ${l.node ? recNode(l.node, f, depth + 1) : ''}</details></li>`
+                : `<li><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`).join('')}</ul>
+            ${pack.length ? `<details class="kiosk-rec-pack"><summary>${esc(t('lot_packaging', {n: pack.length}))}</summary><ul class="kiosk-rec-lines">${pack.map(l =>
+                `<li><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`).join('')}</ul></details>` : ''}</div>`;
+    }
+
     async function renderRecipe(itemId) {
         longIdle = true;
         resetIdle();
@@ -646,20 +663,8 @@
         }
         let factor = (presets.find(p => p.k === 'plan') || presets[0]).f;
         const customLabel = r.basis === 'carton' ? t('rec_custom_pieces', {unit: r.unit}) : (r.basis === 'kg' ? t('rec_custom_kg') : t('rec_custom_times'));
-        const node = (n, f, depth) => {
-            const items = n.lines.filter(l => l.kind === 'recipe' || !l.packaging);
-            const pack = depth === 0 ? n.lines.filter(l => l.kind === 'material' && l.packaging) : [];
-            return `<div class="kiosk-rec-node ${depth ? 'is-sub' : ''}">
-                ${n.steps.length ? `<ol class="kiosk-rec-steps">${n.steps.map(st => `<li>${esc(st)}</li>`).join('')}</ol>` : ''}
-                <ul class="kiosk-rec-lines">${items.map(l => l.kind === 'recipe'
-                    ? `<li class="kiosk-rec-sub"><details open><summary><strong>${esc(l.name)}</strong> <span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></summary>
-                        ${l.node ? node(l.node, f, depth + 1) : ''}</details></li>`
-                    : `<li><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`).join('')}</ul>
-                ${pack.length ? `<details class="kiosk-rec-pack"><summary>${esc(t('lot_packaging', {n: pack.length}))}</summary><ul class="kiosk-rec-lines">${pack.map(l =>
-                    `<li><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`).join('')}</ul></details>` : ''}</div>`;
-        };
         const draw = () => {
-            el.querySelector('[data-rec-tree]').innerHTML = node(r.tree, factor, 0);
+            el.querySelector('[data-rec-tree]').innerHTML = recNode(r.tree, factor, 0);
             const pieces = r.basis === 'carton' ? factor * r.ppc : null;
             el.querySelector('[data-rec-for]').textContent = r.basis === 'carton' ? t('rec_for_pieces', {q: qty(pieces, r)})
                 : (r.basis === 'kg' ? t('rec_for_kg', {q: fmt(factor)}) : t('rec_for_times', {q: fmt(factor)}));
@@ -691,6 +696,77 @@
             draw();
         });
         mark();
+        draw();
+    }
+
+    // --- Nowe produkty : produkty testowe pokazane grupie — etap, receptura, film, zdjęcia, notatki --------------------
+    const dateFmt = (d) => d ? d.split('-').reverse().join('.') : '';
+
+    async function renderDev(message) {
+        longIdle = true;
+        resetIdle();
+        let d;
+        try { d = await api('GET', '/kiosk/development', undefined, true); } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        if (session) session.dev = d.products.length;
+        el.innerHTML = personHeader() + tabs('dev') + `
+            <section class="kiosk-card"><h2>${esc(t('dev_title'))}</h2><p class="kiosk-muted">${esc(t('dev_help'))}</p></section>
+            ${d.products.length ? `<div class="kiosk-recipe-grid">${d.products.map(p => `<button type="button" class="kiosk-card kiosk-recipe-tile kiosk-dev-tile" data-dev="${p.id}">
+                <strong>${esc(p.name)}</strong>
+                <span class="kiosk-muted">${esc([p.status, p.stage && p.stage.name].filter(Boolean).join(' · '))}</span>
+                <span class="kiosk-dev-badges">${p.recipe_id ? '📖 ' : ''}${p.has_video ? '🎬 ' : ''}${p.photo_count ? '📷 ' + p.photo_count + ' ' : ''}${p.has_notes ? '📝' : ''}</span>
+                ${p.stage && p.stage.deadline ? `<span class="kiosk-muted">${esc(t('dev_deadline', {date: dateFmt(p.stage.deadline)}))}</span>` : ''}</button>`).join('')}</div>`
+                : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('dev_none'))}</p></section>`}`;
+        if (message) toast(message);
+        bindTabs();
+        el.querySelectorAll('[data-dev]').forEach(b => b.addEventListener('click', () => renderDevProduct(Number(b.dataset.dev))));
+    }
+
+    async function renderDevProduct(id) {
+        longIdle = true;
+        resetIdle();
+        let p;
+        try { p = await api('GET', `/kiosk/development/${id}`, undefined, true); } catch (err) { toast(err.message, true); return; }
+        let factor = 1;
+        const v = p.video;
+        const video = !v ? '' : (v.embed
+            ? `<div class="kiosk-dev-video"><iframe src="${esc(v.embed)}" title="${esc(p.name)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe></div>`
+            : (v.kind === 'file' ? `<video class="kiosk-dev-file" src="${esc(v.url)}" controls playsinline preload="metadata"></video>` : ''))
+            + `<p><a class="kiosk-btn is-small" href="${esc(v.url)}" target="_blank" rel="noopener">▶ ${esc(t('dev_open_video'))}</a></p>`;
+        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-back>${esc(t('back'))}</button>`) + `
+            <section class="kiosk-card"><h2>${esc(p.name)}</h2>
+                <p class="kiosk-status">${esc([p.status, p.type, p.section].filter(Boolean).join(' · '))}</p>
+                ${p.stages.length ? `<p><strong>${esc(t('dev_stage'))}</strong> ${esc(p.stages[0].name || '')}${p.stages[0].deadline ? ' · ' + esc(t('dev_deadline', {date: dateFmt(p.stages[0].deadline)})) : ''}</p>
+                    ${p.stages[0].description ? `<p class="kiosk-dev-text">${esc(p.stages[0].description)}</p>` : ''}` : ''}</section>
+            ${p.notes ? `<section class="kiosk-card"><h2>📝 ${esc(t('dev_notes'))}</h2><p class="kiosk-dev-text">${esc(p.notes)}</p></section>` : ''}
+            ${v ? `<section class="kiosk-card"><h2>🎬 ${esc(t('dev_video'))}</h2>${video}</section>` : ''}
+            ${p.photos.length ? `<section class="kiosk-card"><h2>📷 ${esc(t('dev_photos', {n: p.photos.length}))}</h2><div class="kiosk-dev-photos">${p.photos.map(ph =>
+                `<button type="button" class="kiosk-dev-photo" data-photo-open="${ph.id}"><img src="${ph.src}" alt="${esc(ph.caption || p.name)}">${ph.caption ? `<span>${esc(ph.caption)}</span>` : ''}</button>`).join('')}</div></section>` : ''}
+            ${p.recipe ? `<section class="kiosk-card"><h2>📖 ${esc(t('dev_recipe', {name: p.recipe.name}))}</h2>
+                <div class="kiosk-row kiosk-rec-presets"><label class="kiosk-rec-custom">${esc(t('rec_custom_times'))}<input data-times inputmode="decimal" value="1"></label></div>
+                <p class="kiosk-status" data-dev-for></p><div data-dev-tree></div></section>`
+                : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('dev_no_recipe'))}</p></section>`}
+            ${p.stages.length > 1 ? `<section class="kiosk-card"><details><summary>${esc(t('dev_history', {n: p.stages.length}))}</summary><ul class="kiosk-dev-stages">${p.stages.map(s =>
+                `<li><strong>${esc(s.name || '')}</strong>${s.deadline ? ' · ' + esc(dateFmt(s.deadline)) : ''}${s.description ? `<div class="kiosk-muted">${esc(s.description)}</div>` : ''}</li>`).join('')}</ul></details></section>` : ''}`;
+        el.querySelector('[data-back]').addEventListener('click', () => renderDev());
+        const draw = () => {
+            if (!p.recipe) return;
+            el.querySelector('[data-dev-tree]').innerHTML = recNode(p.recipe, factor, 0);
+            el.querySelector('[data-dev-for]').textContent = t('dev_for', {q: fmt(factor), yield: measure(p.recipe.yield * factor, p.recipe.unit)});
+        };
+        el.querySelector('[data-times]')?.addEventListener('input', (e) => {
+            resetIdle();
+            const n = Number(String(e.target.value).replace(',', '.').replace(/\s/g, ''));
+            if (Number.isFinite(n) && n > 0) { factor = n; draw(); }
+        });
+        el.querySelectorAll('[data-photo-open]').forEach(b => b.addEventListener('click', () => {
+            const ph = p.photos.find(x => x.id === Number(b.dataset.photoOpen));
+            const box = document.createElement('div');
+            box.className = 'kiosk-lightbox';
+            box.innerHTML = `<img src="${ph.src}" alt=""><button type="button" class="kiosk-btn">✕ ${esc(t('dev_close'))}</button>`;
+            box.addEventListener('click', () => box.remove());
+            document.body.appendChild(box);
+            resetIdle();
+        }));
         draw();
     }
 

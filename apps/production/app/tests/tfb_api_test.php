@@ -40,7 +40,7 @@ try {
 // --- Base jetable avec la structure des tables ERP dont dépend le module
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings', 'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month', 'cost_media_section_allocation', 'cost_media_type', 'communication_message', 'communication_message_attachment', 'communication_email_account', 'erp_company_data', 'flattened_recipe_recipe', 'product_preparation_type', 'product_recipe_preparation_connection', 'product_recipe_type', 'product_recipe_preparation_step', 'product_recipe_prepare_instruction_connection'] as $table) {
+foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit', 'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency', 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings', 'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month', 'cost_media_section_allocation', 'cost_media_type', 'communication_message', 'communication_message_attachment', 'communication_email_account', 'erp_company_data', 'flattened_recipe_recipe', 'product_preparation_type', 'product_recipe_preparation_connection', 'product_recipe_type', 'product_recipe_preparation_step', 'product_recipe_prepare_instruction_connection', 'test_product', 'test_product_status', 'test_product_type', 'test_product_stage', 'test_product_changelog'] as $table) {
     $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
 }
 $pdo->exec("USE {$testDb}");
@@ -883,6 +883,38 @@ check($s === 200 && !$pd['data']['closed']['changed'] && $pd['data']['closed']['
 check($s === 409 && $b['description'] === 'OUTPUT_LOCKED', 'old days are not validated on the tablet');
 $weekGood = (new \App\Repositories\Workshop\WeekRepository($pdo))->produced(date('Y-m-d'), date('Y-m-d'));
 check(abs(($weekGood[$croissant] ?? 0) - (120 + 5 - 12 - 2)) < 0.001, 'week progress counts good quantity (produced − waste)');
+// --- Nowe produkty na tablecie : produkty testowe pokazane grupie (bez działu = wszystkie grupy), karta z filmem, zdjęciami, etapami
+$pdo->exec("INSERT INTO test_product_status (id, name) VALUES (1, 'Propozycja') ON DUPLICATE KEY UPDATE name = name");
+$pdo->exec("INSERT INTO test_product_type (id, name) VALUES (1, 'Produkt') ON DUPLICATE KEY UPDATE name = name");
+$pdo->exec("INSERT INTO test_product_stage (id, priority, name) VALUES (4, 2, 'Prototypage') ON DUPLICATE KEY UPDATE name = name");
+$sect = (int) $pdo->query('SELECT id_section FROM tfb_prod_group WHERE id = 1')->fetchColumn();
+$pdo->exec("INSERT INTO production_sections (id, name, depreciation, water_cost, power_supply_cost, fuel_cost, other_cost) VALUES (77, 'Inny dział', 0, 0, 0, 0, 0)");
+$pdo->exec("INSERT INTO test_product (id, name, id_section, id_status, id_type) VALUES (901, 'Bagietka 10 zbóż', " . ($sect ?: 'NULL') . ", 1, 1), (902, 'Dla wszystkich', NULL, 1, 1),
+    (903, 'Inny dział', 77, 1, 1), (904, 'Ukryty', NULL, 1, 1)");
+$pdo->exec("INSERT INTO tfb_dev_product (id_test_product, on_tablet, video_url, notes) VALUES (901, 1, 'https://youtu.be/dQw4w9WgXcQ', 'Woda 22 °C'), (902, 1, 'https://example.test/film.mp4', NULL),
+    (903, 1, NULL, NULL), (904, 0, NULL, NULL)");
+$pdo->exec("INSERT INTO test_product_changelog (id_test_product, id_stage, description, deadline) VALUES (901, 4, 'Pierwszy wypiek', '2026-11-05 00:00:00')");
+$devPng = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+$pdo->prepare('INSERT INTO tfb_dev_product_photo (id_test_product, mime, bytes, image, caption) VALUES (901, ?, ?, ?, ?)')->execute(['image/png', strlen($devPng), $devPng, 'Przekrój']);
+[$s, $dv] = $kiosk('GET', '/kiosk/development', null, $device, $emp);
+$names = array_column($dv['data']['products'] ?? [], 'name');
+sort($names);
+$p901 = array_column($dv['data']['products'] ?? [], null, 'id')[901] ?? null;
+check($s === 200 && $names === ['Bagietka 10 zbóż', 'Dla wszystkich'] && $p901 && $p901['stage']['name'] === 'Prototypage' && $p901['stage']['deadline'] === '2026-11-05'
+    && $p901['photo_count'] === 1 && $p901['has_video'] && $p901['has_notes'], 'new products: own section and no section shown, other section and hidden ones not');
+[$s, $dp] = $kiosk('GET', '/kiosk/development/901', null, $device, $emp);
+check($s === 200 && $dp['data']['video']['kind'] === 'youtube' && $dp['data']['video']['embed'] === 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'
+    && str_starts_with($dp['data']['photos'][0]['src'], 'data:image/png;base64,') && $dp['data']['photos'][0]['caption'] === 'Przekrój'
+    && $dp['data']['notes'] === 'Woda 22 °C' && $dp['data']['recipe'] === null && count($dp['data']['stages']) === 1, 'new product card: YouTube player, photo, notes, stage, no recipe yet');
+[$s, $dp] = $kiosk('GET', '/kiosk/development/902', null, $device, $emp);
+check($s === 200 && $dp['data']['video']['kind'] === 'file', 'video file played on the tablet');
+[$s] = $kiosk('GET', '/kiosk/development/903', null, $device, $emp);
+[$s2] = $kiosk('GET', '/kiosk/development/904', null, $device, $emp);
+check($s === 404 && $s2 === 404, 'product of another section or not shown: 404');
+check(\App\Services\Workshop\Execution\DevProductService::video('https://vimeo.com/123456')['embed'] === 'https://player.vimeo.com/video/123456'
+    && \App\Services\Workshop\Execution\DevProductService::video('https://www.youtube.com/shorts/dQw4w9WgXcQ')['kind'] === 'youtube'
+    && \App\Services\Workshop\Execution\DevProductService::video('https://drive.example/x')['kind'] === 'link', 'video links: Vimeo, YouTube shorts, other link');
+
 // --- TRS na tablecie : stany maszyny (praca, postój z powodem, koniec), TRS dnia = dostępność × wydajność × jakość
 [$s, $b] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'stop'], $device, $emp);
 check($s === 422 && $codes($b) === ['reason:STOP_REASON_REQUIRED'], 'a stop needs a reason');

@@ -40,6 +40,8 @@ $userPosition = $pdo->query("SELECT * FROM tfb_user_position WHERE id_user = {$u
 $meetingTask = $pdo->query("SELECT * FROM tfb_position_task WHERE form_code = 'production_meeting' ORDER BY id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 $slotBackup = [];
 $slotKeys = null;
+// Occurrences déjà présentes (ouvertes par « Moje zadania ») : état rétabli après le test.
+$occBackup = $pdo->query('SELECT id, status, done_by, done_at, note FROM tfb_task_occurrence')->fetchAll(PDO::FETCH_ASSOC);
 
 try {
     $tasks = $container->get(PositionTaskService::class);
@@ -146,6 +148,8 @@ try {
     $pdo->exec("DELETE FROM tfb_task_action WHERE id > {$max['tfb_task_action']}");
     $pdo->exec("DELETE FROM tfb_task_form WHERE id > {$max['tfb_task_form']}");
     $pdo->exec("DELETE FROM tfb_task_occurrence WHERE id > {$max['tfb_task_occurrence']}");
+    $restoreOcc = $pdo->prepare('UPDATE tfb_task_occurrence SET status = ?, done_by = ?, done_at = ?, note = ? WHERE id = ?');
+    foreach ($occBackup as $o) $restoreOcc->execute([$o['status'], $o['done_by'], $o['done_at'], $o['note'], $o['id']]);
     $pdo->exec("DELETE FROM tfb_position_task WHERE id > {$max['tfb_position_task']}");
     $pdo->exec("DELETE FROM tfb_task_category WHERE id > {$max['tfb_task_category']}");
     $pdo->exec("DELETE FROM tfb_prod_waste WHERE id > {$max['tfb_prod_waste']}");

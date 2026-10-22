@@ -59,6 +59,13 @@ final class KioskRecipeService
         ];
     }
 
+    /** Drzewo receptury ERP na jedną recepturę (nowe produkty : receptura produktu testowego) ; null = brak receptury. */
+    public function tree(int $recipeId, bool $fr): ?array
+    {
+        $head = $this->repo->recipeHead($recipeId);
+        return $head === null ? null : $this->node($head, 1.0, $fr, [], 0);
+    }
+
     // ---------------------------------------------------------------------------------------------
 
     /**

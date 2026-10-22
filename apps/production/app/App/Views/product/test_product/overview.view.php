@@ -66,6 +66,7 @@
                                                     <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button>
                                                     <div class="at-more-menu" role="menu" hidden>
                                                         <a role="menuitem" href="<?=ROOT?>/test-products/<?=$row['id']?>/changelogs"><i class="bi bi-clock-history"></i>Dziennik zmian</a>
+                                                        <a role="menuitem" href="<?=ROOT?>/test-products/<?=$row['id']?>/tablet"><i class="bi bi-tablet"></i>Tablet : film, zdjęcia, notatki</a>
                                                         <?php if($row['closest_deadline'] != null): ?>
                                                             <a role="menuitem" href="<?=ROOT?>/TestProductChangelog/getPDF/<?=$row['id']?>" target="_blank"><i class="bi bi-file-earmark-arrow-down"></i>PDF</a>
                                                         <?php endif; ?>

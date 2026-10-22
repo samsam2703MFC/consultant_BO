@@ -412,6 +412,7 @@
     "vat_rate": "stawka VAT"
   },
   "entities": {
+    "test_product": "produkt testowy",
     "group": "grupa",
     "workstation": "stanowisko",
     "shift_template": "zmiana",

@@ -11725,6 +11725,138 @@
                 ]
             }
         },
+        "/kiosk/development": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Nowe produkty grupy tabletu / Produits à développer du groupe de la tablette",
+                "operationId": "kioskDevelopment",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DevProductList"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Produits test (test_product) affichés sur la tablette (on_tablet) : sans section = tous les groupes, avec section = le groupe de cette section. Étape de développement la plus récente.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/development/{id}": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Nowy produkt : receptura, film, zdjęcia / Produit à développer : recette, film, photos",
+                "operationId": "kioskDevelopmentProduct",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DevProduct"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Notes, film (youtube / vimeo : lecteur intégré ; file : vidéo ; link : lien), photos (data URL), étapes de développement (plus récentes d'abord), arbre de la recette ERP pour une recette (null sans recette). 404 si le produit n'est pas affiché pour ce groupe.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/quality": {
             "get": {
                 "tags": [
@@ -17492,6 +17624,157 @@
                         "nullable": true
                     }
                 }
+            },
+            "DevProductRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "section": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "recipe_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "recipe_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "on_tablet": {
+                        "type": "boolean"
+                    },
+                    "has_video": {
+                        "type": "boolean"
+                    },
+                    "photo_count": {
+                        "type": "integer"
+                    },
+                    "has_notes": {
+                        "type": "boolean"
+                    },
+                    "stage": {
+                        "$ref": "#/components/schemas/DevStage"
+                    }
+                }
+            },
+            "DevStage": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "deadline": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    }
+                }
+            },
+            "DevProductList": {
+                "type": "object",
+                "properties": {
+                    "products": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DevProductRow"
+                        }
+                    }
+                }
+            },
+            "DevProduct": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/DevProductRow"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "notes": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "video": {
+                                "type": "object",
+                                "nullable": true,
+                                "properties": {
+                                    "url": {
+                                        "type": "string"
+                                    },
+                                    "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                            "youtube",
+                                            "vimeo",
+                                            "file",
+                                            "link"
+                                        ]
+                                    },
+                                    "embed": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                }
+                            },
+                            "stages": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/DevStage"
+                                }
+                            },
+                            "photos": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "caption": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "src": {
+                                            "type": "string",
+                                            "description": "data:image/…;base64,…"
+                                        }
+                                    }
+                                }
+                            },
+                            "recipe": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/RecipeNode"
+                                    }
+                                ],
+                                "nullable": true
+                            }
+                        }
+                    }
+                ]
             },
             "KioskRecipeList": {
                 "type": "object",
