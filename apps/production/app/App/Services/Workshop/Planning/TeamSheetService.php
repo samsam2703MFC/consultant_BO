@@ -105,12 +105,15 @@ final class TeamSheetService
                 $perDay[$s['day']] = ['quantity' => $s['quantity'], 'cartons' => $s['cartons'], 'time' => $s['time']];
             }
             $due = array_values(array_filter(array_column($p['direct_parts'], 'due_date')));
+            // Do zrobienia = to, co leży na dniach (także 📌 ponad potrzebę tygodnia), plus nierozplanowana reszta.
+            $total = array_sum(array_column($p['slots'], 'quantity')) + (float) $p['unassigned_qty'];
             $rows[] = ['item_id' => $p['item_id'], 'name' => $p['name'], 'item_type' => $p['item_type'], 'unit' => $unit['label'], 'factor' => $unit['factor'], 'ppc' => $p['ppc'],
-                'batch' => $p['batch'], 'quantity' => $p['quantity'], 'cartons' => $p['cartons'], 'batches' => $p['batches'], 'hours' => $p['hours'],
+                'batch' => $p['batch'], 'quantity' => round($total, 3), 'need' => $p['quantity'], 'cartons' => $p['ppc'] ? round($total / $p['ppc'], 1) : null,
+                'batches' => $p['batch'] ? round($total / $p['batch'], 2) : null, 'hours' => round(array_sum(array_column($p['slots'], 'hours')) + (float) $p['unassigned_h'], 2),
                 'direct' => $p['direct'], 'stock' => $p['stock'], 'due_date' => $due ? min($due) : null, 'unassigned_qty' => round((float) $p['unassigned_qty'], 3), 'days' => $perDay];
-            if ($p['ppc'] && $p['quantity'] > self::EPS && isset($recipes[$p['item_id']])) {
+            if ($p['ppc'] && $total > self::EPS && isset($recipes[$p['item_id']])) {
                 foreach ($recipes[$p['item_id']] as $ing) {
-                    $need[$ing['material_id']] = ($need[$ing['material_id']] ?? 0.0) + $p['quantity'] / $p['ppc'] * $ing['quantity'];
+                    $need[$ing['material_id']] = ($need[$ing['material_id']] ?? 0.0) + $total / $p['ppc'] * $ing['quantity'];
                     $usedBy[$ing['material_id']][$p['item_id']] = $p['name'];
                 }
             }
@@ -213,7 +216,8 @@ final class TeamSheetService
                         . $this->e($this->qty($x['quantity'], $r['unit'], $r['factor'], false)) : '') . '</td>';
                 }
                 $html .= '<tr nobr="true"><td width="' . $productWidth . '%" style="border:0.3px solid #ccc"><b>' . $this->e($r['name']) . '</b>'
-                    . ($r['unassigned_qty'] > self::EPS ? '<br><span style="font-size:6pt;color:#b00020">' . $this->e($tr->text('team_sheet_waiting', ['qty' => $this->qty($r['unassigned_qty'], $r['unit'], $r['factor'])])) . '</span>' : '') . '</td>'
+                    . ($r['unassigned_qty'] > self::EPS ? '<br><span style="font-size:6pt;color:#b00020">' . $this->e($tr->text('team_sheet_waiting', ['qty' => $this->qty($r['unassigned_qty'], $r['unit'], $r['factor'])])) . '</span>' : '')
+                    . (abs($r['need'] - $r['quantity']) > 0.5 ? '<br><span style="font-size:6pt;color:#555">' . $this->e($tr->text('team_sheet_need', ['qty' => $this->qty($r['need'], $r['unit'], $r['factor'])])) . '</span>' : '') . '</td>'
                     . '<td width="9%" align="right" style="border:0.3px solid #ccc">' . $this->e($this->qty($r['quantity'], $r['unit'], $r['factor']))
                     . ($r['cartons'] ? '<br><span style="font-size:6pt;color:#555">' . $this->n($r['cartons'], 1) . ' ' . $this->e($tr->text('team_sheet_cartons')) . '</span>' : '') . '</td>'
                     . '<td width="5%" align="right" style="border:0.3px solid #ccc">' . ($r['batches'] ? $this->n($r['batches'], 2) : '—') . '</td>'

@@ -59,5 +59,7 @@
   "weekday_4": "jeu.",
   "weekday_5": "ven.",
   "weekday_6": "sam.",
-  "weekday_7": "dim."
+  "weekday_7": "dim.",
+  "need": "besoin de la semaine : {qty}",
+  "need_help": "Les jours portent plus que le besoin de la semaine (lots fixes 📌, lots complets) — l'équipe fait ce qui est planifié sur les jours."
 }

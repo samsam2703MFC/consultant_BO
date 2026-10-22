@@ -466,6 +466,7 @@
     "weekday_4": "jeu.",
     "weekday_5": "ven.",
     "weekday_6": "sam.",
-    "weekday_7": "dim."
+    "weekday_7": "dim.",
+    "team_sheet_need": "besoin de la semaine : {qty}"
   }
 }

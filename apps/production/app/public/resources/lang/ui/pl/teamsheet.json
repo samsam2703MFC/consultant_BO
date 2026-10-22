@@ -59,5 +59,7 @@
   "weekday_4": "czw.",
   "weekday_5": "pt.",
   "weekday_6": "sob.",
-  "weekday_7": "niedz."
+  "weekday_7": "niedz.",
+  "need": "potrzeba tygodnia : {qty}",
+  "need_help": "Na dniach leży więcej niż potrzeba tygodnia (stałe partie 📌, pełne partie) — zespół robi to, co zaplanowano na dni."
 }

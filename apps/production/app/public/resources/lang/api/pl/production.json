@@ -466,6 +466,7 @@
     "weekday_4": "czw.",
     "weekday_5": "pt.",
     "weekday_6": "sob.",
-    "weekday_7": "niedz."
+    "weekday_7": "niedz.",
+    "team_sheet_need": "potrzeba tygodnia : {qty}"
   }
 }

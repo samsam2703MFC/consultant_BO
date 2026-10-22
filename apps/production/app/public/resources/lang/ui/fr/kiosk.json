@@ -194,5 +194,6 @@
   "weekday_long_4": "Jeudi",
   "weekday_long_5": "Vendredi",
   "weekday_long_6": "Samedi",
-  "weekday_long_7": "Dimanche"
+  "weekday_long_7": "Dimanche",
+  "week_need_total": "besoin de la semaine : {qty}"
 }

@@ -257,7 +257,7 @@
                 ${dayDeliveries.length ? `<h3 class="kiosk-plan-sub">${esc(t('week_deliveries_day'))}</h3>${dayDeliveries.map(delivery).join('')}` : ''}</section>
             <section class="kiosk-card"><h2>${esc(t('week_all'))}</h2>${team.products.length ? `<div class="kiosk-table-wrap"><table class="kiosk-table"><thead><tr><th>${esc(t('week_product'))}</th><th class="is-num">${esc(t('week_total'))}</th>
                 ${team.days.map(x => `<th class="is-num ${x.today ? 'is-today' : ''}">${esc(t('weekday_' + x.weekday))}<br>${esc(dm(x.date))}</th>`).join('')}</tr></thead>
-                <tbody>${team.products.map(r => `<tr><td>${esc(r.name)}${r.unassigned_qty > 0 ? `<br><small class="kiosk-late">${esc(t('week_waiting', {qty: wq(r.unassigned_qty, r.unit, r.factor)}))}</small>` : ''}</td>
+                <tbody>${team.products.map(r => `<tr><td>${esc(r.name)}${r.unassigned_qty > 0 ? `<br><small class="kiosk-late">${esc(t('week_waiting', {qty: wq(r.unassigned_qty, r.unit, r.factor)}))}</small>` : ''}${Math.abs(r.need - r.quantity) > 0.5 ? `<br><small class="kiosk-muted">${esc(t('week_need_total', {qty: wq(r.need, r.unit, r.factor)}))}</small>` : ''}</td>
                     <td class="is-num">${esc(wq(r.quantity, r.unit, r.factor))}</td>
                     ${team.days.map(x => { const v = r.days[x.date]; return `<td class="is-num ${x.today ? 'is-today' : ''}">${v ? (v.time ? `<small>${esc(v.time)}</small><br>` : '') + esc(fmt(v.quantity / (r.factor || 1))) : ''}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`
                 : `<p class="kiosk-muted">${esc(t('week_team_empty'))}</p>`}</section>

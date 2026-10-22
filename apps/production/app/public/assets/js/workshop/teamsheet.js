@@ -109,7 +109,8 @@
                 <thead><tr><th>${esc(t('col_product'))}</th><th class="text-end">${esc(t('col_total'))}</th><th class="text-end">${esc(t('batches'))}</th><th class="text-end">h</th>
                     <th class="text-end">${esc(t('col_ship'))}</th><th class="text-end">${esc(t('col_stock'))}</th>
                     ${tm.days.map(d => `<th class="text-center ${d.today ? 'is-today' : ''}">${esc(t('weekday_' + d.weekday))}<div class="small">${esc(day(d.date))}</div></th>`).join('')}</tr></thead>
-                <tbody>${tm.products.map(r => `<tr><td><strong>${esc(r.name)}</strong>${r.unassigned_qty > 0 ? `<div class="small text-danger">${esc(t('waiting', {qty: qty(r.unassigned_qty, r.unit, r.factor)}))}</div>` : ''}</td>
+                <tbody>${tm.products.map(r => `<tr><td><strong>${esc(r.name)}</strong>${r.unassigned_qty > 0 ? `<div class="small text-danger">${esc(t('waiting', {qty: qty(r.unassigned_qty, r.unit, r.factor)}))}</div>` : ''}
+                    ${Math.abs(r.need - r.quantity) > 0.5 ? `<div class="small text-muted" title="${esc(t('need_help'))}">${esc(t('need', {qty: qty(r.need, r.unit, r.factor)}))}</div>` : ''}</td>
                     <td class="text-end text-nowrap">${esc(qty(r.quantity, r.unit, r.factor))}${r.cartons ? `<div class="small text-muted">${esc(n(r.cartons, 1))} ${esc(t('cartons'))}</div>` : ''}</td>
                     <td class="text-end">${r.batches ? esc(n(r.batches, 2)) : '—'}</td><td class="text-end">${esc(n(r.hours, 1))}</td>
                     <td class="text-end text-nowrap">${r.direct > 0 ? esc(qty(r.direct, r.unit, r.factor)) + (r.due_date ? `<div class="small text-muted">${esc(t('due', {day: day(r.due_date)}))}</div>` : '') : '—'}</td>
