@@ -1528,6 +1528,7 @@ class App {
     // Quitter un écran arme sa prochaine relecture : y revenir doit relire la
     // base, pas réafficher ce qui avait été lu la première fois.
     if (this._perfEcran && this._perfEcran !== S.screen) { this._perfEcran = null; }
+    if (common.isObjectifs || common.isMarge || common.isMagasins) { common.perfEtat = this.perfAssure(); }
 
     // --- magasins
     if (common.isMagasins){
@@ -1707,6 +1708,13 @@ class App {
     // --- objectifs
     if (common.isObjectifs){
       const hz = S.horizon;
+      const pe = common.perfEtat;
+      common.perfMsg = pe === 'lecture' ? 'Lecture des chiffres de l’année au panel… (jusqu’à une minute ; l’écran se remplit seul)'
+        : pe === 'echec' ? 'Les chiffres de l’année n’ont pas pu être lus au panel : les montants ci-dessous ne sont pas les vrais.'
+        : pe === 'vide' ? 'Le panel n’a renvoyé aucun chiffre pour ' + (this.exo() - 1) + ' et ' + this.exo() + ' : les montants ci-dessous ne sont pas les vrais.' : '';
+      common.perfMsgSt = 'border-radius:10px;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:14px;'
+        + (pe === 'lecture' ? 'background:#F4EFE8;color:#5d554d' : 'background:#FBEFE7;color:#8A3F14;font-weight:500');
+      common.perfRelire = pe === 'echec' || pe === 'vide' ? () => this.perfRelire() : null;
       const E = this.exo(), MI = this.moisIdx(), NM = this.nMois();
       common.hz1 = () => this.setState({ horizon: 'h1' }); common.hz3 = () => this.setState({ horizon: 'h3' }); common.hz5 = () => this.setState({ horizon: 'h5' });
       common.hz1St = this.tabBtn(hz === 'h1'); common.hz3St = this.tabBtn(hz === 'h3'); common.hz5St = this.tabBtn(hz === 'h5');
@@ -3884,6 +3892,25 @@ class App {
     this._perfEcran = ecran;
     this.rafraichirBudget();
   }
+
+  /**
+   * `/stores/perf` manqué au chargement (22/10/2026) : la lecture a dépassé les
+   * 20 s du chargement, ou a échoué. Les écrans de l'année montraient alors
+   * des zéros partout, budgets compris, sans rien dire. On relit sans délai
+   * imposé, une fois ; l'écran dit qu'il lit, ou que la lecture a échoué.
+   * Rend 'ok', 'lecture', 'echec' (pas de réponse) ou 'vide' (réponse sans ligne).
+   */
+  perfAssure(){
+    if ((this.D.perfRaw || []).length) { return 'ok'; }
+    if (this._perfLu) { return this._perfLu; }
+    this._perfLu = 'lecture';
+    readOne('/stores/perf?granularite=mois&annees=' + (this.exo() - 1) + ',' + this.exo()).then(p => {
+      if (p && p.length) { this.poserPerf(p); this._perfLu = null; } else { this._perfLu = p ? 'vide' : 'echec'; }
+      this.setState({});
+    });
+    return 'lecture';
+  }
+  perfRelire(){ this._perfLu = null; this.setState({}); }
 
   rafraichirBudget(){
     clearTimeout(this._majBudT);
@@ -9675,7 +9702,8 @@ class App {
       semaine: !!(D.rper || {})[this.rpCle('semaine')], mois: !!(D.rper || {})[this.rpCle('mois')] };
     pret.reseau = !!((D.rres || {})[this.rrCle()]);
     if (on === 'reseau') { this.rrCharge(false); common.rr = this.rrVals(); }
-    pret.annee = pret.horizons = pret.marge = true;   // lus au chargement (/stores/perf, budgets, cibles)
+    // Lus au chargement (/stores/perf, budgets, cibles) — ou relus quand le chargement les a manqués.
+    pret.annee = pret.horizons = pret.marge = this.perfAssure() !== 'lecture';
     common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['horizons', '3 et 5 ans'], ['marge', 'Marge & coûts'], ['reseau', 'Trafic clients']].map(o => ({
       cle: o[0], nom: o[1], on: on === o[0], etat: pret[o[0]] ? 'pret' : 'lecture',
       go: () => this.setState({ rjOnglet: o[0], rpSel: null }) }));
