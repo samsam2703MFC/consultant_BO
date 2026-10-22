@@ -65,7 +65,8 @@ final class ExecutionController
     public function revokePhones(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->revokePhones($request->id(), $request->context)); }
 
     // Tablette
-    public function pair(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->pair($request->body())); }
+    public function pair(ApiRequest $request): ApiResult { $r = $this->kiosk->pair($request->body()); return new ApiResult($r, 200, null, $r['device_token']); }
+    public function device(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->device($request->context)); }
     public function people(ApiRequest $request): ApiResult { return ApiResult::list($this->kiosk->people($request->context)); }
     public function identify(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->identify($request->body(), $request->context)); }
     public function refresh(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->refresh($request->context)); }

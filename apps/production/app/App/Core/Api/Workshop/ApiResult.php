@@ -10,6 +10,8 @@ final class ApiResult
         public readonly mixed $data,
         public readonly int $status = 200,
         public readonly ?array $meta = null,
+        /** Jeton de tablette à poser en cookie (appairage). */
+        public readonly ?string $deviceToken = null,
     ) {
     }
 

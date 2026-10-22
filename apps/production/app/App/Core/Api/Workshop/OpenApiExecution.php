@@ -32,6 +32,8 @@ final class OpenApiExecution
             'GET /execution/cockpit' => ['tag' => $t, 'id' => 'getCockpit', 'summary' => 'Kokpit dnia / Cockpit du jour', 'response' => 'Cockpit',
                 'description' => 'Présents par groupe, opérations du jour par statut et en retard, MTO à risque (échéance < 3 h), KPIs de la semaine, alertes.'],
 
+            'GET /kiosk/device' => ['tag' => 'kiosk', 'id' => 'kioskDevice', 'summary' => 'Tablet sparowany ? / Tablette appairée ?', 'response' => 'KioskDevice', 'errors' => [401, 403],
+                'description' => "Jeton de la tablette en X-Device-Token ou, à défaut, cookie tfb_kiosk_device posé à l'appairage (HttpOnly, renouvelé à chaque appel) : la tablette reste appairée si le navigateur vide son stockage."],
             'POST /kiosk/pair' => ['tag' => 'kiosk', 'id' => 'pairDevice', 'summary' => 'Sparuj tablet / Appairer la tablette', 'body' => 'PairInput', 'response' => 'DeviceToken', 'errors' => [400, 422],
                 'description' => "Échange le code d'appairage contre le jeton de l'appareil (à envoyer ensuite dans X-Device-Token)."],
             'GET /kiosk/people' => ['tag' => 'kiosk', 'id' => 'kioskPeople', 'summary' => 'Osoby przy tablecie / Personnes de la tablette', 'response' => 'KioskPerson', 'list' => true, 'errors' => [401, 403]],
@@ -207,6 +209,7 @@ final class OpenApiExecution
                 'stages' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/DevStage']],
                 'photos' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => $int, 'caption' => $nStr, 'src' => ['type' => 'string', 'description' => 'data:image/…;base64,…']]]],
                 'recipe' => ['allOf' => [['$ref' => '#/components/schemas/RecipeNode']], 'nullable' => true]]]]],
+            'KioskDevice' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => $nStr, 'group_id' => ['type' => 'integer', 'nullable' => true]]],
             'KioskRecipeList' => ['type' => 'object', 'properties' => ['date' => $str, 'items' => ['type' => 'array', 'items' => ['allOf' => [['$ref' => '#/components/schemas/OutputItem'],
                 ['type' => 'object', 'properties' => ['planned' => $nNum]]]]]]],
             'KioskRecipe' => ['allOf' => [['$ref' => '#/components/schemas/OutputItem'], ['type' => 'object', 'properties' => [

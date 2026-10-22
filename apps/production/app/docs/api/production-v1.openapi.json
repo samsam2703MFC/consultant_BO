@@ -10063,6 +10063,62 @@
                 "security": []
             }
         },
+        "/kiosk/device": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Tablet sparowany ? / Tablette appairée ?",
+                "operationId": "kioskDevice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskDevice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Jeton de la tablette en X-Device-Token ou, à défaut, cookie tfb_kiosk_device posé à l'appairage (HttpOnly, renouvelé à chaque appel) : la tablette reste appairée si le navigateur vide son stockage.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/people": {
             "get": {
                 "tags": [
@@ -17775,6 +17831,22 @@
                         }
                     }
                 ]
+            },
+            "KioskDevice": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                }
             },
             "KioskRecipeList": {
                 "type": "object",

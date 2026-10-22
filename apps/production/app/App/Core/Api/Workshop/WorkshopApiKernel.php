@@ -11,6 +11,7 @@ use FastRoute\Dispatcher;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -21,6 +22,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class WorkshopApiKernel
 {
+    /** Cookie du jeton de tablette (HttpOnly, SameSite=Strict) : l'appairage survit au vidage du stockage du navigateur. */
+    public const DEVICE_COOKIE = 'tfb_kiosk_device';
+
     public function __construct(
         private ContainerInterface $container,
         private AuthService $auth,
@@ -74,13 +78,21 @@ final class WorkshopApiKernel
         [, $handler, $vars] = $info;
 
         $permission = $handler['permission'];
+        $deviceToken = null;
         if ($permission === 'kiosk' || $permission === 'kiosk_employee') {
-            // Tablette (P7) : jeton de l'appareil, et pour les actions d'une personne son jeton court (badge + PIN).
-            $context = $this->kiosk->context(
-                trim((string) $request->headers->get('X-Device-Token', '')),
-                $permission === 'kiosk_employee' ? trim((string) $request->headers->get('X-Employee-Token', '')) : null,
-                $context->requestId, $context->translator
-            );
+            // Tablette (P7) : jeton de l'appareil (en-tête X-Device-Token, sinon cookie posé à l'appairage — la tablette
+            // reste appairée si le navigateur vide son stockage), et pour les actions d'une personne son jeton court.
+            $header = trim((string) $request->headers->get('X-Device-Token', ''));
+            $cookie = trim((string) $request->cookies->get(self::DEVICE_COOKIE, ''));
+            $employee = $permission === 'kiosk_employee' ? trim((string) $request->headers->get('X-Employee-Token', '')) : null;
+            $deviceToken = $header !== '' ? $header : $cookie;
+            try {
+                $context = $this->kiosk->context($deviceToken, $employee, $context->requestId, $context->translator);
+            } catch (ApiException $e) {
+                if ($e->errorCode() !== 'DEVICE_UNAUTHENTICATED' || $cookie === '' || $cookie === $deviceToken) throw $e;
+                $deviceToken = $cookie;
+                $context = $this->kiosk->context($deviceToken, $employee, $context->requestId, $context->translator);
+            }
         } elseif ($permission === 'qr' || $permission === 'phone') {
             // Téléphone personnel (pointage par QR code) : QR frais de la tablette, et pour pointer le jeton du téléphone.
             $qr = trim((string) $request->headers->get('X-Qr-Token', ''));
@@ -101,7 +113,13 @@ final class WorkshopApiKernel
         }
         $body = ['status' => 'ok', 'data' => $result->data];
         if ($result->meta !== null) $body['meta'] = $result->meta;
-        return $this->json($body, $result->status);
+        $response = $this->json($body, $result->status);
+        // Jeton de la tablette en cookie (appairage, puis renouvelé à chaque appel : les navigateurs limitent la durée à ~400 jours).
+        $deviceToken = $result->deviceToken ?? $deviceToken;
+        if ($deviceToken !== null && $deviceToken !== '') {
+            $response->headers->setCookie(Cookie::create(self::DEVICE_COOKIE, $deviceToken, time() + 400 * 86400, $request->getBasePath() ?: '/', null, $request->isSecure(), true, false, Cookie::SAMESITE_STRICT));
+        }
+        return $response;
     }
 
     /** Jeton d'accès : « Authorization: Bearer … », ou X-Access-Token quand Authorization est

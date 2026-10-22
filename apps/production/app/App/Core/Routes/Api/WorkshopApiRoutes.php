@@ -174,6 +174,7 @@ final class WorkshopApiRoutes
             ['GET', '/execution/kpis', ExecutionController::class, 'kpis', 'prod.kpis.read'],
             ['GET', '/execution/cockpit', ExecutionController::class, 'cockpit', 'prod.kpis.read'],
             ['POST', '/kiosk/pair', ExecutionController::class, 'pair', null],
+            ['GET', '/kiosk/device', ExecutionController::class, 'device', 'kiosk'],
             ['GET', '/kiosk/people', ExecutionController::class, 'people', 'kiosk'],
             ['POST', '/kiosk/identify', ExecutionController::class, 'identify', 'kiosk'],
             ['GET', '/kiosk/me', ExecutionController::class, 'me', 'kiosk_employee'],

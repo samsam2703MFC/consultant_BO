@@ -19,6 +19,8 @@ use App\Core\Api\Workshop\WorkshopConfig;
 use App\Services\Workshop\Execution\KioskAuthService;
 use App\Services\Workshop\Migration\MigrationRunner;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Cookie;
 
 function check(bool $condition, string $message): void
 {
@@ -690,9 +692,32 @@ check($s === 201 && preg_match('/^[A-Z2-9]{8}$/', $dev['data']['pairing_code']) 
 check($pdo->query("SELECT pairing_code_hash FROM tfb_prod_device WHERE id = {$dev['data']['id']}")->fetchColumn() === hash('sha256', $dev['data']['pairing_code']), 'only the hash of the code is stored');
 [$s, $b] = $call('POST', '/kiosk/pair', ['code' => 'WRONGCOD']);
 check($s === 422 && $codes($b) === ['code:PAIRING_CODE_INVALID'], 'wrong pairing code');
-[$s, $pair] = $call('POST', '/kiosk/pair', ['code' => strtolower(substr($dev['data']['pairing_code'], 0, 4)) . '-' . substr($dev['data']['pairing_code'], 4)]);
+// Appel brut (cookies, en-têtes de réponse) : l'appairage est aussi gardé dans un cookie HttpOnly du serveur.
+$raw = function (string $method, string $path, ?array $body, array $cookies = [], string $device = '') use ($kernel): Response {
+    $server = ['HTTP_ACCEPT_LANGUAGE' => 'pl', 'CONTENT_TYPE' => 'application/json', 'REMOTE_ADDR' => '10.0.0.7'];
+    if ($device !== '') $server['HTTP_X_DEVICE_TOKEN'] = $device;
+    $request = Request::create('/api/v1/production' . $path, $method, [], $cookies, [], $server, $body === null ? null : json_encode($body));
+    return $kernel->handle($request, parse_url('/api/v1/production' . $path, PHP_URL_PATH));
+};
+$deviceCookie = function (Response $r): ?Cookie {
+    foreach ($r->headers->getCookies() as $c) if ($c->getName() === WorkshopApiKernel::DEVICE_COOKIE) return $c;
+    return null;
+};
+$res = $raw('POST', '/kiosk/pair', ['code' => strtolower(substr($dev['data']['pairing_code'], 0, 4)) . '-' . substr($dev['data']['pairing_code'], 4)]);
+[$s, $pair] = [$res->getStatusCode(), json_decode((string) $res->getContent(), true)];
 check($s === 200 && strlen($pair['data']['device_token']) === 64 && $pair['data']['device']['group_id'] === 1, 'tablet paired (code case and dash tolerated)');
 $device = $pair['data']['device_token'];
+$c = $deviceCookie($res);
+check($c !== null && $c->getValue() === $device && $c->isHttpOnly() && $c->getSameSite() === Cookie::SAMESITE_STRICT && $c->getExpiresTime() > time() + 300 * 86400,
+    'pairing kept in an HttpOnly SameSite=Strict cookie (~400 days)');
+$res = $raw('GET', '/kiosk/device', null, [WorkshopApiKernel::DEVICE_COOKIE => $device]);
+$b = json_decode((string) $res->getContent(), true);
+check($res->getStatusCode() === 200 && $b['data']['id'] === $dev['data']['id'] && $b['data']['name'] === 'Tablet Piekarnia' && $deviceCookie($res)?->getValue() === $device,
+    'tablet still paired with the cookie only (local storage cleared), cookie renewed');
+$res = $raw('GET', '/kiosk/people', null, [WorkshopApiKernel::DEVICE_COOKIE => $device], 'stale-token');
+check($res->getStatusCode() === 200, 'stale local token : the pairing cookie is used');
+$res = $raw('GET', '/kiosk/device', null);
+check($res->getStatusCode() === 401 && $deviceCookie($res) === null, 'no token, no cookie : not paired');
 [$s] = $call('POST', '/kiosk/pair', ['code' => $dev['data']['pairing_code']]);
 check($s === 422, 'pairing code used once');
 [$s, $b] = $kiosk('GET', '/kiosk/people', null, 'bad-token');

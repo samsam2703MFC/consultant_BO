@@ -169,6 +169,13 @@ final class KioskAuthService
         return ['device_token' => $token, 'device' => ['id' => (int) $device['id'], 'name' => $device['name'], 'group_id' => $device['id_group'] !== null ? (int) $device['id_group'] : null]];
     }
 
+    /** Tablette appairée (jeton en en-tête ou en cookie) : nom et groupe — la tablette vérifie au démarrage qu'elle est appairée. */
+    public function device(ApiContext $context): array
+    {
+        $d = $this->repo->find((int) $context->deviceId);
+        return ['id' => (int) $context->deviceId, 'name' => $d['name'] ?? null, 'group_id' => $context->deviceGroupId];
+    }
+
     /** Personnes proposées sur la tablette (groupe de la tablette), pour s'identifier en touchant son nom. */
     public function people(ApiContext $context): array
     {
