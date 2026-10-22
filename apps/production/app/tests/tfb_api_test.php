@@ -98,6 +98,24 @@ $builder = new DI\ContainerBuilder();
 $builder->addDefinitions([
     PDO::class => $pdo,
     WorkshopConfig::class => new WorkshopConfig(['PRODUCTION_JWT_SECRET' => str_repeat('s', 48), 'API_BASE_URL' => 'https://erp.test', 'R2_PUBLIC_BASE_URL' => 'https://photos.r2.test']),
+    // KSeF jamais appelé pendant les tests : source de factures d'achat simulée (une facture, XML FA).
+    App\Services\Workshop\Supply\KsefInvoiceSource::class => new class implements App\Services\Workshop\Supply\KsefInvoiceSource {
+        public function search(string $from, string $to): array
+        {
+            if ($from === '2000-01-01') throw new RuntimeException('Brak tokenu KSeF');
+            return [['ksef_number' => '5260250274-20261020-0A1B2C3D4E5F-01', 'number' => 'FV/1024/10/2026', 'issue_date' => '2026-10-20', 'seller_nip' => '5260250274',
+                'seller_name' => 'Młyn test Sp. z o.o.', 'net' => 220.0, 'gross' => 231.0, 'currency' => 'PLN']];
+        }
+        public function xml(string $ksefNumber): string
+        {
+            return '<?xml version="1.0" encoding="UTF-8"?><Faktura xmlns="http://crd.gov.pl/wzor/2025/06/25/13775/">'
+                . '<Podmiot1><DaneIdentyfikacyjne><NIP>5260250274</NIP><Nazwa>Młyn test Sp. z o.o.</Nazwa></DaneIdentyfikacyjne></Podmiot1>'
+                . '<Podmiot2><DaneIdentyfikacyjne><NIP>8971902620</NIP><Nazwa>ATELIER</Nazwa></DaneIdentyfikacyjne></Podmiot2>'
+                . '<Fa><KodWaluty>PLN</KodWaluty><P_1>2026-10-20</P_1><P_2>FV/1024/10/2026</P_2><P_13_3>220.00</P_13_3><P_15>231.00</P_15>'
+                . '<FaWiersz><NrWierszaFa>1</NrWierszaFa><P_7>MĄKA PSZENNA T-65 WOREK 25KG</P_7><P_8A>szt</P_8A><P_8B>2</P_8B><P_9A>110.00</P_9A><P_11>220.00</P_11><P_12>5</P_12></FaWiersz>'
+                . '</Fa></Faktura>';
+        }
+    },
     // Aucun e-mail ne part pendant les tests : la file est remplie, le transport refuse tout envoi.
     App\Services\Communication\SmtpTransport::class => new class implements App\Services\Communication\SmtpTransport {
         public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = []): string { throw new RuntimeException('no e-mail in tests'); }
@@ -1359,6 +1377,104 @@ check($s === 200 && $b['data']['deleted'] && (int) $pdo->query("SELECT COUNT(*) 
 check($s === 200 && $b['data']['status'] === 'cancelled', 'sent order cancelled');
 [$s] = $call('GET', '/supply/orders/999999', null, $access);
 check($s === 404, 'unknown order → 404');
+
+// --- Kontrola faktur : KSeF (symulowany), XML, PDF, przypisania nazw dostawcy, porównanie z zamówieniem
+[$s] = $call('GET', '/supply/invoices', null, $lead);
+check($s === 403, 'invoice control needs the supply permission');
+[$s, $b] = $call('POST', '/supply/invoices/ksef/search', ['from' => '2000-01-01', 'to' => '2000-01-31'], $access);
+check($s === 422 && $b['description'] === 'KSEF_UNAVAILABLE' && str_contains($b['message'], 'Brak tokenu'), 'KSeF not configured: clear message');
+[$s, $k] = $call('POST', '/supply/invoices/ksef/search', ['from' => '2026-10-01', 'to' => '2026-10-31'], $access);
+check($s === 200 && count($k['data']['invoices']) === 1 && $k['data']['invoices'][0]['imported'] === false, 'KSeF purchase invoices of the period (nothing stored)');
+$ksefNo = $k['data']['invoices'][0]['ksef_number'];
+[$s, $imp] = $call('POST', '/supply/invoices/ksef/import', ['ksef_numbers' => [$ksefNo]], $access);
+$invId = $imp['data']['imported'][0] ?? 0;
+[$s2, $again] = $call('POST', '/supply/invoices/ksef/import', ['ksef_numbers' => [$ksefNo]], $access);
+check($s === 201 && $invId > 0 && $s2 === 201 && $again['data']['imported'] === [] && $again['data']['skipped'] === 1, 'KSeF invoice imported once (re-import skipped)');
+[$s, $inv] = $call('GET', "/supply/invoices/{$invId}", null, $access);
+$line = $inv['data']['lines'][0] ?? null;
+check($s === 200 && $inv['data']['supplier']['id'] === 60 && $inv['data']['number'] === 'FV/1024/10/2026' && $inv['data']['total_net'] == 220
+    && $line && $line['material'] === null && $inv['data']['control']['state'] === 'unmapped' && ($line['suggestions'][0]['raw_material_id'] ?? 0) === 900,
+    'imported invoice: supplier found by name, line not yet mapped, « Mąka T65 » suggested');
+check($inv['data']['lines'][0]['suggestions'][0]['factor'] == 25000, 'suggested factor: one invoice piece (bag) = supplier package of 25 kg');
+[$s, $b] = $call('PUT', "/supply/invoices/{$invId}/lines/{$line['id']}/map", ['raw_material_id' => 900, 'factor' => 0], $access);
+check($s === 422 && $codes($b) === ['factor:OUT_OF_RANGE'], 'factor must be more than 0');
+[$s, $inv] = $call('PUT', "/supply/invoices/{$invId}/lines/{$line['id']}/map", ['raw_material_id' => 900, 'factor' => 25000], $access);
+$c = $inv['data']['lines'][0]['control'] ?? [];
+check($s === 200 && $inv['data']['order']['id'] === $flourPo['id'] && $c['quantity_base'] == 50000 && abs($c['price_gap_pct'] - 10) < 0.01
+    && $c['flags'] === ['price_over'] && $inv['data']['control']['state'] === 'gaps' && abs($inv['data']['control']['value_gap'] - 20) < 0.01,
+    'mapped (2 bags × 25 kg): linked to the flour order, quantity = received, price +10 % over the order → 20 PLN gap');
+check((int) $pdo->query("SELECT COUNT(*) FROM tfb_inv_mapping WHERE supplier_key = 'nip:5260250274' AND id_raw_material = 900 AND factor = 25000")->fetchColumn() === 1
+    && (int) $pdo->query("SELECT id_supplier FROM tfb_inv_supplier WHERE seller_nip = '5260250274'")->fetchColumn() === 60, 'supplier name mapping and seller NIP remembered');
+[$s, $b] = $call('POST', "/supply/invoices/{$invId}/receive", null, $access);
+check($s === 409 && $b['description'] === 'PO_NOT_RECEIVABLE', 'an order already received is not received again from the invoice');
+[$s, $b] = $call('PUT', "/supply/invoices/{$invId}/lines", ['lines' => [['name' => 'x', 'quantity' => 1]]], $access);
+check($s === 409 && $b['description'] === 'INVOICE_LINES_READ_ONLY', 'KSeF invoice lines are not edited');
+[$s, $b] = $call('POST', "/supply/invoices/{$invId}/decision", ['status' => 'disputed', 'note' => 'Cena 4,40 zł/kg zamiast 4,00'], $access);
+check($s === 200 && $b['data']['status'] === 'disputed' && $b['data']['note'] === 'Cena 4,40 zł/kg zamiast 4,00', 'invoice disputed with a note');
+[$s, $b] = $call('PATCH', "/supply/invoices/{$invId}", ['note' => 'x'], $access);
+check($s === 409 && $b['description'] === 'INVOICE_CLOSED', 'a closed invoice is not edited');
+// Ten sam XML z pliku : duplikat ; inna faktura tego dostawcy : przypisanie zapamiętane stosowane od razu
+$fa = fn(string $number, int $bags) => '<?xml version="1.0" encoding="UTF-8"?><Faktura xmlns="http://crd.gov.pl/wzor/2025/06/25/13775/"><Podmiot1><DaneIdentyfikacyjne><NIP>5260250274</NIP><Nazwa>Młyn test Sp. z o.o.</Nazwa></DaneIdentyfikacyjne></Podmiot1>'
+    . "<Fa><KodWaluty>PLN</KodWaluty><P_1>2026-10-21</P_1><P_2>{$number}</P_2><P_13_3>" . ($bags * 100) . '.00</P_13_3><P_15>' . ($bags * 105) . '.00</P_15>'
+    . "<FaWiersz><NrWierszaFa>1</NrWierszaFa><P_7>MĄKA PSZENNA T-65 WOREK 25KG</P_7><P_8A>szt</P_8A><P_8B>{$bags}</P_8B><P_9A>100.00</P_9A><P_11>" . ($bags * 100) . '.00</P_11><P_12>5</P_12></FaWiersz></Fa></Faktura>';
+[$s, $b] = $call('POST', '/supply/invoices/upload', ['filename' => 'dup.xml', 'content_base64' => base64_encode($fa('FV/1024/10/2026', 2))], $access);
+check($s === 409 && $b['description'] === 'INVOICE_EXISTS', 'same supplier and number already in the system → refused');
+[$s, $b] = $call('POST', '/supply/invoices/upload', ['filename' => 'x.txt', 'content_base64' => base64_encode('hello')], $access);
+check($s === 422 && $codes($b) === ['content_base64:INVALID_FILE'], 'only PDF or KSeF XML files');
+[$s, $x2] = $call('POST', '/supply/invoices/upload', ['filename' => 'FV-1100.xml', 'content_base64' => base64_encode($fa('FV/1100/10/2026', 1))], $access);
+check($s === 201 && $x2['data']['source'] === 'xml' && $x2['data']['lines'][0]['material']['id'] === 900 && $x2['data']['lines'][0]['factor'] == 25000,
+    'next invoice of the supplier: remembered mapping applied on import');
+[$s, $fl] = $call('GET', "/supply/invoices/{$x2['data']['id']}/file", null, $access);
+[$s2, $kf] = $call('GET', "/supply/invoices/{$invId}/file", null, $access);
+[$s3] = $call('GET', '/supply/invoices/999999/file', null, $access);
+check($s === 200 && $fl['data']['mime'] === 'application/xml' && base64_decode($fl['data']['content_base64']) === $fa('FV/1100/10/2026', 1)
+    && $s2 === 200 && str_contains(base64_decode($kf['data']['content_base64']), 'FV/1024/10/2026') && $s3 === 404, 'invoice file kept as received (uploaded file, XML from KSeF)');
+// PDF : tekst (pdftotext), linie gdy ilość × cena = wartość ; dostawca z nazwy ; przyjęcie dostawy wg faktury
+[$s, $c] = $call('POST', '/supply/orders', ['lines' => [['raw_material_id' => 902, 'quantity' => 300]]], $access);
+$boxOrder = $c['data']['orders'][0]['id'];
+$call('POST', "/supply/orders/{$boxOrder}/send", ['manual' => true], $access);
+if (trim((string) shell_exec('command -v pdftotext'))) {
+    $tc = new TCPDF();
+    $tc->setPrintHeader(false);
+    $tc->setPrintFooter(false);
+    $tc->AddPage();
+    $tc->SetFont('dejavusansmono', '', 9);
+    foreach (["FAKTURA VAT nr FV/77/10/2026", "Sprzedawca:   Pakcer test Sp. j.", "NIP: 123-456-32-18", "Nabywca: ATELIER", "NIP: 897-190-26-20", "Data wystawienia: 21.10.2026", "",
+              "Lp  Nazwa                     Ilość  J.m.  Cena netto  Wartość netto  VAT", "1   Karton 60 klapowy           300  szt         3,50       1 050,00  23%",
+              "                                          Razem:       1 050,00", "Do zapłaty: 1 291,50 zł"] as $l) $tc->Cell(0, 5, $l, 0, 1);
+    [$s, $pi] = $call('POST', '/supply/invoices/upload', ['filename' => 'FV-77.pdf', 'content_base64' => base64_encode($tc->Output('', 'S'))], $access);
+    $pl = $pi['data']['lines'][0] ?? null;
+    check($s === 201 && $pi['data']['source'] === 'pdf' && $pi['data']['supplier']['id'] === 61 && $pi['data']['number'] === 'FV/77/10/2026' && $pl && $pl['quantity'] == 300
+        && $pl['net_value'] == 1050 && ($pl['suggestions'][0]['raw_material_id'] ?? 0) === 902 && str_contains((string) $pi['data']['text'], 'Karton 60'),
+        'PDF invoice: text read, line found (300 × 3,50 = 1 050), supplier by name, « Karton 60 » suggested');
+    $pid = $pi['data']['id'];
+    [$s, $pi] = $call('PUT', "/supply/invoices/{$pid}/lines/{$pl['id']}/map", ['raw_material_id' => 902], $access);
+    check($s === 200 && $pi['data']['order']['id'] === $boxOrder && $pi['data']['control']['state'] === 'clean' && $pi['data']['lines'][0]['control']['flags'] === ['price_under']
+        && $pi['data']['can_receive'] && $pi['data']['lines'][0]['factor'] == 1, 'PDF line mapped (factor from units: szt = szt): linked to the open box order, quantity as ordered, cheaper than ordered (no issue)');
+    [$s, $b] = $call('PUT', "/supply/invoices/{$pid}/lines", ['lines' => [['name' => 'Karton 60 klapowy', 'quantity' => 300, 'unit' => 'szt', 'unit_price' => 3.5], ['name' => 'Transport', 'quantity' => 1, 'net_value' => 40]]], $access);
+    check($s === 200 && count($b['data']['lines']) === 2 && $b['data']['lines'][0]['material']['id'] === 902 && $b['data']['lines'][1]['material'] === null
+        && $b['data']['control']['state'] === 'unmapped', 'PDF lines edited by hand: mapping kept, new line to map');
+    [$s, $b] = $call('PUT', "/supply/invoices/{$pid}/lines", ['lines' => [['name' => 'Karton 60 klapowy', 'quantity' => 300, 'unit' => 'szt', 'unit_price' => 3.5]]], $access);
+    [$s, $r] = $call('POST', "/supply/invoices/{$pid}/receive", null, $access);
+    [, $po] = $call('GET', "/supply/orders/{$boxOrder}", null, $access);
+    check($s === 200 && $po['data']['status'] === 'received' && $po['data']['lines'][0]['received_qty'] == 300 && abs($po['data']['lines'][0]['last_price'] - 3.5) < 1e-6,
+        'delivery received from the invoice: quantities and prices into the order');
+    [$s, $b] = $call('POST', "/supply/invoices/{$pid}/decision", ['status' => 'accepted'], $access);
+    check($s === 200 && $b['data']['status'] === 'accepted', 'invoice accepted');
+}
+[$s, $list] = $call('GET', '/supply/invoices?status=all', null, $access);
+$states = array_column(array_map(fn($i) => ['id' => $i['id'], 'state' => $i['control']['state']], $list['data']['invoices'] ?? []), 'state', 'id');
+check($s === 200 && ($states[$invId] ?? null) === 'gaps', 'invoice list with the control state of each invoice');
+[$s, $maps] = $call('GET', '/supply/mappings', null, $access);
+$m = array_column($maps['data']['mappings'] ?? [], null, 'raw_material_id')[900] ?? null;
+check($s === 200 && $m && $m['supplier_name'] === 'MĄKA PSZENNA T-65 WOREK 25KG' && $m['factor'] == 25000 && $m['supplier'] === 'Młyn test', 'mappings listed: supplier name → our material');
+[$s] = $call('DELETE', "/supply/mappings/{$m['id']}", null, $access);
+[$s2] = $call('DELETE', "/supply/mappings/{$m['id']}", null, $access);
+check($s === 200 && $s2 === 404, 'mapping deleted');
+[$s] = $call('DELETE', "/supply/invoices/{$invId}", null, $access);
+check($s === 409, 'a closed invoice is not deleted');
+[$s, $b] = $call('DELETE', "/supply/invoices/{$x2['data']['id']}", null, $access);
+check($s === 200 && $b['data']['deleted'], 'open invoice deleted');
 
 // Journal, en-têtes, JSON invalide, OpenAPI public
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');

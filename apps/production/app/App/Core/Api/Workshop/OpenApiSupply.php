@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Core\Api\Workshop;
 
+use App\Services\Workshop\Supply\InvoiceService;
 use App\Services\Workshop\Supply\SupplyService;
 
 /** Documentation OpenAPI de l'approvisionnement : besoins en matières et emballages, stocks, commandes fournisseurs, réceptions. */
@@ -38,6 +39,31 @@ final class OpenApiSupply
                 'description' => 'Quantité et prix réels par ligne (prix par défaut : prix commandé) ; reçue en partie ou en totalité. PO_NOT_RECEIVABLE (409) : commande non envoyée, reçue ou annulée.'],
             'POST /supply/orders/{id:\d+}/cancel' => ['tag' => $t, 'id' => 'cancelSupplierOrder', 'summary' => 'Anuluj zamówienie / Annuler la commande', 'response' => 'SupplierOrder', 'errors' => [404, 409]],
             'DELETE /supply/orders/{id:\d+}' => ['tag' => $t, 'id' => 'deleteSupplierOrder', 'summary' => 'Usuń szkic / Supprimer le brouillon', 'response' => 'SupplierOrderDeleted', 'errors' => [404, 409]],
+            'GET /supply/invoices' => ['tag' => $t, 'id' => 'listPurchaseInvoices', 'summary' => 'Faktury zakupowe do kontroli / Factures d\'achat à contrôler', 'response' => 'PurchaseInvoices', 'errors' => [422],
+                'query' => ['status' => ['type' => 'string', 'enum' => ['all', ...InvoiceService::STATUSES], 'description' => 'défaut : open']],
+                'description' => "Contrôle par facture : state = no_lines, unmapped (lignes non reliées à une matière), no_order (pas de commande liée), gaps (écarts), clean."],
+            'POST /supply/invoices/ksef/search' => ['tag' => $t, 'id' => 'searchKsefPurchaseInvoices', 'summary' => 'Faktury w KSeF za okres / Factures KSeF de la période', 'body' => 'KsefSearchInput', 'response' => 'KsefSearchResult', 'errors' => [400, 422],
+                'description' => "Lecture seule dans KSeF (acheteur, date d'émission, < 3 mois) ; rien n'est enregistré. KSEF_UNAVAILABLE (422) : KSeF non configuré ou indisponible."],
+            'POST /supply/invoices/ksef/import' => ['tag' => $t, 'id' => 'importKsefPurchaseInvoices', 'summary' => 'Import faktur z KSeF / Import de factures KSeF', 'body' => 'KsefImportInput', 'response' => 'KsefImportResult', 'ok' => 201, 'errors' => [400, 422],
+                'description' => 'XML de chaque facture (FA) lu dans KSeF, lignes et fournisseur ; correspondances mémorisées appliquées ; factures déjà importées ignorées.'],
+            'POST /supply/invoices/upload' => ['tag' => $t, 'id' => 'uploadPurchaseInvoice', 'summary' => 'Faktura z pliku (XML KSeF albo PDF) / Facture depuis un fichier', 'body' => 'InvoiceUploadInput', 'response' => 'PurchaseInvoice', 'ok' => 201, 'errors' => [400, 409, 422],
+                'description' => "XML FA : lecture complète. PDF : texte (pdftotext), lignes reconnues quand quantité × prix = valeur ; le reste se complète à la main. INVOICE_EXISTS (409) : même fournisseur et numéro. Max 5 Mo."],
+            'GET /supply/invoices/{id:\d+}' => ['tag' => $t, 'id' => 'getPurchaseInvoice', 'summary' => 'Faktura : linie, przypisania, kontrola / Facture : lignes, correspondances, contrôle', 'response' => 'PurchaseInvoice', 'errors' => [404],
+                'description' => "Par ligne : quantité en unité de base (quantité × facteur), prix net par unité de base, comparés à la ligne de commande (reçu, sinon commandé ; prix commandé) et au catalogue. "
+                    . "Drapeaux : unmapped, not_in_order, qty_over_received, qty_over_ordered, qty_under_received, price_over, price_under (tolérances 1 % / 0,5 %). Suggestions de matières pour les lignes non reliées."],
+            'GET /supply/invoices/{id:\d+}/file' => ['tag' => $t, 'id' => 'getPurchaseInvoiceFile', 'summary' => 'Plik faktury (PDF / XML) w base64 / Fichier de la facture (base64)', 'response' => 'InvoiceFile', 'errors' => [404]],
+            'PATCH /supply/invoices/{id:\d+}' => ['tag' => $t, 'id' => 'updatePurchaseInvoice', 'summary' => 'Dostawca, zamówienie, numer, data / Fournisseur, commande, numéro, date', 'body' => 'PurchaseInvoiceInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 409, 422],
+                'description' => 'Le fournisseur choisi est mémorisé pour le NIP du vendeur. INVOICE_CLOSED (409) : facture acceptée ou contestée.'],
+            'PUT /supply/invoices/{id:\d+}/lines' => ['tag' => $t, 'id' => 'savePurchaseInvoiceLines', 'summary' => 'Linie faktury PDF (całość) / Lignes de la facture PDF', 'body' => 'PurchaseInvoiceLinesInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 409, 422],
+                'description' => 'Factures PDF ou saisies seulement (INVOICE_LINES_READ_ONLY pour KSeF / XML).'],
+            'PUT /supply/invoices/{id:\d+}/lines/{lineId:\d+}/map' => ['tag' => $t, 'id' => 'mapPurchaseInvoiceLine', 'summary' => 'Przypisz nazwę dostawcy do surowca / Relier le nom du fournisseur à une matière', 'body' => 'InvoiceLineMapInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 409, 422],
+                'description' => 'factor = unités de base de la matière par unité de facture (ex. sac de 25 kg, matière en g : 25000). remember (défaut true) : mémorisé pour ce fournisseur et appliqué aux lignes identiques.'],
+            'POST /supply/invoices/{id:\d+}/decision' => ['tag' => $t, 'id' => 'decidePurchaseInvoice', 'summary' => 'Zaakceptuj / reklamacja / Accepter / contester', 'body' => 'InvoiceDecisionInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 422]],
+            'POST /supply/invoices/{id:\d+}/receive' => ['tag' => $t, 'id' => 'receiveFromPurchaseInvoice', 'summary' => 'Przyjęcie dostawy wg faktury / Réception d\'après la facture', 'response' => 'PurchaseInvoice', 'errors' => [404, 409, 422],
+                'description' => 'Quantités et prix nets de la facture enregistrés comme réception de la commande liée (lignes reliées à ses matières). INVOICE_NO_ORDER, INVOICE_NOTHING_TO_RECEIVE (422).'],
+            'DELETE /supply/invoices/{id:\d+}' => ['tag' => $t, 'id' => 'deletePurchaseInvoice', 'summary' => 'Usuń fakturę (otwartą) / Supprimer la facture (ouverte)', 'response' => 'SupplierOrderDeleted', 'errors' => [404, 409]],
+            'GET /supply/mappings' => ['tag' => $t, 'id' => 'listInvoiceMappings', 'summary' => 'Przypisania nazw dostawców / Correspondances des noms fournisseurs', 'response' => 'InvoiceMappings'],
+            'DELETE /supply/mappings/{id:\d+}' => ['tag' => $t, 'id' => 'deleteInvoiceMapping', 'summary' => 'Usuń przypisanie / Supprimer la correspondance', 'response' => 'SupplierOrderDeleted', 'errors' => [404]],
         ];
     }
 
@@ -64,6 +90,18 @@ final class OpenApiSupply
             'lines_count' => ['type' => 'integer'], 'value_ordered' => $num, 'value_received' => $num, 'value_received_expected' => $num, 'received_pct' => $num,
             'price_gaps' => ['type' => 'integer', 'description' => 'réceptions à un prix différent du prix commandé'],
         ];
+        $invoice = [
+            'id' => ['type' => 'integer'], 'source' => ['type' => 'string', 'enum' => ['ksef', 'xml', 'pdf', 'manual']], 'ksef_number' => $nStr, 'number' => $nStr, 'issue_date' => $nDate,
+            'seller_nip' => $nStr, 'seller_name' => $nStr, 'supplier' => ['type' => 'object', 'nullable' => true, 'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string']]],
+            'currency' => ['type' => 'string'], 'total_net' => $nNum, 'total_gross' => $nNum,
+            'order' => ['type' => 'object', 'nullable' => true, 'properties' => ['id' => ['type' => 'integer'], 'code' => ['type' => 'string'], 'status' => ['type' => 'string']]],
+            'status' => ['type' => 'string', 'enum' => InvoiceService::STATUSES], 'file' => ['type' => 'object', 'nullable' => true, 'properties' => ['filename' => ['type' => 'string'], 'mime' => ['type' => 'string']]],
+            'created_at' => ['type' => 'string'],
+        ];
+        $control = ['type' => 'object', 'properties' => [
+            'state' => ['type' => 'string', 'enum' => ['no_lines', 'unmapped', 'no_order', 'gaps', 'clean']], 'lines' => ['type' => 'integer'], 'mapped' => ['type' => 'integer'],
+            'issues' => ['type' => 'integer'], 'value_gap' => $num, 'lines_net' => $num, 'total_mismatch' => ['type' => 'boolean'],
+        ]];
         $lines = ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['raw_material_id', 'quantity'], 'properties' => [
             'raw_material_id' => ['type' => 'integer'], 'quantity' => ['type' => 'number', 'description' => 'unité de base, > 0'], 'unit_price' => ['type' => 'number', 'nullable' => true, 'description' => 'défaut : prix catalogue'],
         ]]];
@@ -112,6 +150,44 @@ final class OpenApiSupply
                 ]]],
             ]],
             'SupplierOrderDeleted' => ['type' => 'object', 'properties' => ['deleted' => ['type' => 'boolean'], 'id' => ['type' => 'integer']]],
+            'InvoiceFile' => ['type' => 'object', 'properties' => ['filename' => ['type' => 'string'], 'mime' => ['type' => 'string'], 'size' => ['type' => 'integer'], 'content_base64' => ['type' => 'string']]],
+            'PurchaseInvoices' => ['type' => 'object', 'properties' => ['invoices' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => $invoice + ['control' => $control]]], 'can_write' => ['type' => 'boolean']]],
+            'PurchaseInvoice' => ['type' => 'object', 'properties' => $invoice + [
+                'note' => $nStr, 'decided_at' => $nStr, 'control' => $control, 'text' => ['type' => 'string', 'nullable' => true, 'description' => 'texte lu dans le PDF'],
+                'lines' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'id' => ['type' => 'integer'], 'line_no' => ['type' => 'integer'], 'name' => ['type' => 'string', 'description' => 'nom chez le fournisseur'], 'code' => $nStr,
+                    'quantity' => $num, 'unit' => $nStr, 'unit_price' => $nNum, 'net_value' => $nNum, 'vat_rate' => $nStr, 'factor' => $nNum,
+                    'material' => ['type' => 'object', 'nullable' => true, 'additionalProperties' => true], 'control' => ['type' => 'object', 'additionalProperties' => true],
+                    'suggestions' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['raw_material_id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'score' => $num, 'base_unit' => ['type' => 'string'], 'factor' => $num]]],
+                ]]],
+                'orders' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]], 'suppliers' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]],
+                'can_write' => ['type' => 'boolean'], 'editable' => ['type' => 'boolean'], 'lines_editable' => ['type' => 'boolean'], 'can_receive' => ['type' => 'boolean'],
+            ]],
+            'KsefSearchInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['from', 'to'], 'properties' => ['from' => $date, 'to' => $date]],
+            'KsefSearchResult' => ['type' => 'object', 'properties' => ['invoices' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                'ksef_number' => ['type' => 'string'], 'number' => $nStr, 'issue_date' => $nDate, 'seller_nip' => $nStr, 'seller_name' => $nStr, 'net' => $nNum, 'gross' => $nNum, 'currency' => $nStr, 'imported' => ['type' => 'boolean'],
+            ]]]]],
+            'KsefImportInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['ksef_numbers'], 'properties' => ['ksef_numbers' => ['type' => 'array', 'maxItems' => 50, 'items' => ['type' => 'string']]]],
+            'KsefImportResult' => ['type' => 'object', 'properties' => ['imported' => ['type' => 'array', 'items' => ['type' => 'integer']], 'skipped' => ['type' => 'integer'],
+                'errors' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ksef_number' => ['type' => 'string'], 'message' => ['type' => 'string']]]]]],
+            'InvoiceUploadInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['filename', 'content_base64'], 'properties' => [
+                'filename' => ['type' => 'string'], 'content_base64' => ['type' => 'string', 'format' => 'byte', 'description' => 'PDF ou XML FA, 5 Mo max'],
+            ]],
+            'PurchaseInvoiceInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
+                'supplier_id' => ['type' => 'integer', 'nullable' => true], 'po_id' => ['type' => 'integer', 'nullable' => true], 'number' => $nStr, 'issue_date' => $nDate, 'note' => $nStr,
+            ]],
+            'PurchaseInvoiceLinesInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['lines'], 'properties' => ['lines' => ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['name', 'quantity'], 'properties' => [
+                'name' => ['type' => 'string'], 'code' => $nStr, 'quantity' => $num, 'unit' => $nStr, 'unit_price' => $nNum, 'net_value' => $nNum, 'vat_rate' => $nStr,
+            ]]]]],
+            'InvoiceLineMapInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['raw_material_id'], 'properties' => [
+                'raw_material_id' => ['type' => 'integer', 'nullable' => true, 'description' => 'null = délier'], 'factor' => ['type' => 'number', 'nullable' => true, 'description' => 'unités de base par unité de facture ; absent : déduit des unités (kg → g = 1000, sac / carton = conditionnement fournisseur)'],
+                'remember' => ['type' => 'boolean', 'description' => 'défaut true'],
+            ]],
+            'InvoiceDecisionInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['status'], 'properties' => ['status' => ['type' => 'string', 'enum' => InvoiceService::STATUSES], 'note' => $nStr]],
+            'InvoiceMappings' => ['type' => 'object', 'properties' => ['mappings' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                'id' => ['type' => 'integer'], 'supplier_key' => ['type' => 'string'], 'supplier' => $nStr, 'supplier_name' => ['type' => 'string'], 'supplier_unit' => $nStr,
+                'raw_material_id' => ['type' => 'integer'], 'material' => $nStr, 'base_unit' => ['type' => 'string'], 'factor' => $num, 'updated_at' => ['type' => 'string'],
+            ]]], 'can_write' => ['type' => 'boolean']]],
         ];
     }
 }

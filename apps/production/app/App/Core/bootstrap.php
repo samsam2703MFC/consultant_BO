@@ -18,6 +18,8 @@ $builder->addDefinitions([
     App\Services\Communication\SmtpTransport::class => get(App\Services\Communication\GuardedSmtpTransport::class),
     App\Services\Communication\GuardedSmtpTransport::class => autowire()
         ->constructorParameter('smtp', get(App\Services\Communication\GmailSmtpTransport::class)),
+    // Kontrola faktur : faktury zakupowe z KSeF (odczyt) ; w testach zastępowane.
+    App\Services\Workshop\Supply\KsefInvoiceSource::class => get(App\Services\Workshop\Supply\KsefPurchaseSource::class),
 
 ]);
 

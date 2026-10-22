@@ -69,7 +69,14 @@
     "PO_NO_LINES": "La commande n’a aucune ligne.",
     "PO_NO_EMAIL": "Pas d’adresse e-mail du fournisseur — saisissez une adresse ou marquez la commande comme passée autrement.",
     "PO_NOT_RECEIVABLE": "Une réception n’est possible que pour une commande envoyée (statut : {status}).",
-    "PO_NO_TEMPLATE": "Modèle d’e-mail de commande fournisseur absent (supplier_order)."
+    "PO_NO_TEMPLATE": "Modèle d’e-mail de commande fournisseur absent (supplier_order).",
+    "KSEF_UNAVAILABLE": "KSeF indisponible ou non configuré : {reason}",
+    "INVOICE_EXISTS": "Cette facture est déjà enregistrée (id {id}).",
+    "INVOICE_CLOSED": "La facture est déjà clôturée (statut : {status}) — remettez-la en contrôle pour la modifier.",
+    "INVOICE_LINES_READ_ONLY": "Les lignes d’une facture KSeF / XML ne se modifient pas.",
+    "INVOICE_NO_ORDER": "La facture n’est liée à aucune commande.",
+    "INVOICE_NOTHING_TO_RECEIVE": "Aucune ligne de la facture n’est reliée à une matière de la commande.",
+    "PDF_TEXT_UNAVAILABLE": "Lecture du texte PDF impossible sur le serveur (pdftotext) — saisissez les lignes ou importez le XML KSeF."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -151,7 +158,9 @@
     "MATERIAL_NOT_IN_RECIPE": "Cette matière n’est pas dans la recette du produit.",
     "NOTHING_ON_DAY": "Ce produit n'a pas de quantité ce jour-là — épinglez un bloc posé sur un jour.",
     "NOT_PINNED": "Ce produit n'a pas de lot fixe ce jour de la semaine.",
-    "INCOMPLETE": "Réponses manquantes : {missing}."
+    "INCOMPLETE": "Réponses manquantes : {missing}.",
+    "INVALID_FILE": "Le fichier doit être une facture PDF ou XML KSeF (FA).",
+    "FILE_TOO_LARGE": "Fichier trop volumineux (max. {max_kb} Ko)."
   },
   "fields": {
     "code": "code",
@@ -378,7 +387,17 @@
     "weeks": "nombre de semaines",
     "manual": "passée autrement",
     "save_supplier_email": "enregistrer l’adresse chez le fournisseur",
-    "week_start": "semaine"
+    "week_start": "semaine",
+    "ksef_numbers": "numéros KSeF",
+    "content_base64": "fichier",
+    "filename": "nom du fichier",
+    "po_id": "commande",
+    "issue_date": "date d’émission",
+    "number": "numéro de facture",
+    "factor": "facteur",
+    "remember": "mémoriser",
+    "net_value": "valeur nette",
+    "vat_rate": "taux de TVA"
   },
   "entities": {
     "group": "groupe",
@@ -400,6 +419,10 @@
     "haccp_event": "événement HACCP",
     "product": "produit",
     "raw_material": "matière",
-    "supplier_order": "commande fournisseur"
+    "supplier_order": "commande fournisseur",
+    "purchase_invoice": "facture d’achat",
+    "purchase_invoice_line": "ligne de facture",
+    "purchase_invoice_mapping": "correspondance de nom",
+    "invoice_file": "fichier de la facture"
   }
 }

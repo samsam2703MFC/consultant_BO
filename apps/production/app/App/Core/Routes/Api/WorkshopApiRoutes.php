@@ -15,6 +15,7 @@ use App\Controllers\Api\Workshop\PlanningController;
 use App\Controllers\Api\Workshop\SchedulingController;
 use App\Controllers\Api\Workshop\ShiftTemplateController;
 use App\Controllers\Api\Workshop\TeamController;
+use App\Controllers\Api\Workshop\InvoiceController;
 use App\Controllers\Api\Workshop\SupplyController;
 use App\Controllers\Api\Workshop\TimeStudyController;
 use App\Controllers\Api\Workshop\WeekController;
@@ -138,6 +139,21 @@ final class WorkshopApiRoutes
             ['POST', '/supply/orders/{id:\d+}/receive', SupplyController::class, 'receive', 'prod.supply.write'],
             ['POST', '/supply/orders/{id:\d+}/cancel', SupplyController::class, 'cancel', 'prod.supply.write'],
             ['DELETE', '/supply/orders/{id:\d+}', SupplyController::class, 'delete', 'prod.supply.write'],
+            // Kontrola faktur zakupowych : KSeF / XML / PDF, przypisania nazw dostawcy, porównanie z zamówieniem.
+            ['GET', '/supply/invoices', InvoiceController::class, 'list', 'prod.supply.read'],
+            ['POST', '/supply/invoices/ksef/search', InvoiceController::class, 'ksefSearch', 'prod.supply.read'],
+            ['POST', '/supply/invoices/ksef/import', InvoiceController::class, 'ksefImport', 'prod.supply.write'],
+            ['POST', '/supply/invoices/upload', InvoiceController::class, 'upload', 'prod.supply.write'],
+            ['GET', '/supply/invoices/{id:\d+}', InvoiceController::class, 'detail', 'prod.supply.read'],
+            ['GET', '/supply/invoices/{id:\d+}/file', InvoiceController::class, 'file', 'prod.supply.read'],
+            ['PATCH', '/supply/invoices/{id:\d+}', InvoiceController::class, 'update', 'prod.supply.write'],
+            ['PUT', '/supply/invoices/{id:\d+}/lines', InvoiceController::class, 'saveLines', 'prod.supply.write'],
+            ['PUT', '/supply/invoices/{id:\d+}/lines/{lineId:\d+}/map', InvoiceController::class, 'mapLine', 'prod.supply.write'],
+            ['POST', '/supply/invoices/{id:\d+}/decision', InvoiceController::class, 'decide', 'prod.supply.write'],
+            ['POST', '/supply/invoices/{id:\d+}/receive', InvoiceController::class, 'receive', 'prod.supply.write'],
+            ['DELETE', '/supply/invoices/{id:\d+}', InvoiceController::class, 'delete', 'prod.supply.write'],
+            ['GET', '/supply/mappings', InvoiceController::class, 'mappings', 'prod.supply.read'],
+            ['DELETE', '/supply/mappings/{id:\d+}', InvoiceController::class, 'deleteMapping', 'prod.supply.write'],
             ['POST', '/planning/week/move', WeekController::class, 'move', 'prod.gantt.move'],
             ['POST', '/planning/week/distribute', WeekController::class, 'distribute', 'prod.gantt.move'],
             ['POST', '/planning/week/pin', WeekController::class, 'pin', 'prod.gantt.move'],

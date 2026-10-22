@@ -69,7 +69,14 @@
     "PO_NO_LINES": "Zamówienie nie ma żadnej linii.",
     "PO_NO_EMAIL": "Brak adresu e-mail dostawcy — wpisz adres albo oznacz zamówienie jako wysłane ręcznie.",
     "PO_NOT_RECEIVABLE": "Dostawę można przyjąć tylko dla zamówienia wysłanego (status : {status}).",
-    "PO_NO_TEMPLATE": "Brak szablonu e-mail zamówienia do dostawcy (supplier_order)."
+    "PO_NO_TEMPLATE": "Brak szablonu e-mail zamówienia do dostawcy (supplier_order).",
+    "KSEF_UNAVAILABLE": "KSeF niedostępny lub nieskonfigurowany : {reason}",
+    "INVOICE_EXISTS": "Ta faktura jest już w systemie (id {id}).",
+    "INVOICE_CLOSED": "Faktura jest już zamknięta (status : {status}) — przywróć ją do kontroli, aby zmienić.",
+    "INVOICE_LINES_READ_ONLY": "Linie faktury z KSeF / XML nie są edytowalne.",
+    "INVOICE_NO_ORDER": "Faktura nie jest powiązana z zamówieniem.",
+    "INVOICE_NOTHING_TO_RECEIVE": "Żadna linia faktury nie jest przypisana do surowca z zamówienia.",
+    "PDF_TEXT_UNAVAILABLE": "Nie można odczytać tekstu PDF na serwerze (pdftotext) — wpisz linie ręcznie lub zaimportuj XML KSeF."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -151,7 +158,9 @@
     "MATERIAL_NOT_IN_RECIPE": "Tego surowca nie ma w recepturze produktu.",
     "NOTHING_ON_DAY": "Ten produkt nie ma ilości w tym dniu — przypnij blok, który jest na dniu.",
     "NOT_PINNED": "Ten produkt nie ma stałej partii w ten dzień tygodnia.",
-    "INCOMPLETE": "Brakuje odpowiedzi : {missing}."
+    "INCOMPLETE": "Brakuje odpowiedzi : {missing}.",
+    "INVALID_FILE": "Plik musi być fakturą PDF albo XML KSeF (FA).",
+    "FILE_TOO_LARGE": "Plik jest za duży (maks. {max_kb} KB)."
   },
   "fields": {
     "code": "kod",
@@ -378,7 +387,17 @@
     "weeks": "liczba tygodni",
     "manual": "wysłane ręcznie",
     "save_supplier_email": "zapisz adres u dostawcy",
-    "week_start": "tydzień"
+    "week_start": "tydzień",
+    "ksef_numbers": "numery KSeF",
+    "content_base64": "plik",
+    "filename": "nazwa pliku",
+    "po_id": "zamówienie",
+    "issue_date": "data wystawienia",
+    "number": "numer faktury",
+    "factor": "przelicznik",
+    "remember": "zapamiętaj",
+    "net_value": "wartość netto",
+    "vat_rate": "stawka VAT"
   },
   "entities": {
     "group": "grupa",
@@ -400,6 +419,10 @@
     "haccp_event": "zdarzenie HACCP",
     "product": "produkt",
     "raw_material": "surowiec",
-    "supplier_order": "zamówienie do dostawcy"
+    "supplier_order": "zamówienie do dostawcy",
+    "purchase_invoice": "faktura zakupowa",
+    "purchase_invoice_line": "linia faktury",
+    "purchase_invoice_mapping": "przypisanie nazwy",
+    "invoice_file": "plik faktury"
   }
 }

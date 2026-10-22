@@ -3,7 +3,8 @@
  * semaines (feuille de production × recettes par carton), stock (inventaire + réceptions − production), mode
  * « en stock » (min. / max.) ou « à la commande », commandes fournisseurs par e-mail (ou passées autrement),
  * réceptions avec quantités et prix réels. Tout passe par l'API /supply/… ; les quantités de l'API sont en unité
- * de base (g, ml, szt), affichées en unité lisible (kg, l) avec factor.
+ * de base (g, ml, szt), affichées en unité lisible (kg, l) avec factor. Onglet Factures : contrôle des factures
+ * d'achat (KSeF, XML, PDF) contre les commandes et réceptions, noms du fournisseur reliés à nos matières.
  */
 (async function () {
     'use strict';
@@ -20,7 +21,7 @@
     }
     const t = (k, p) => api.t(k, p);
     const n = (v, d) => v === null || v === undefined ? '—' : ui.fmt(v, d ?? 1, api.lang);
-    const TABS = ['needs', 'orders', 'stock'];
+    const TABS = ['needs', 'orders', 'invoices', 'stock'];
     const STATUSES = ['open', 'draft', 'sent', 'partial', 'received', 'cancelled', 'all'];
     const iso = (d) => d.toISOString().slice(0, 10);
     const todayIso = iso(new Date());
@@ -35,7 +36,7 @@
     const badge = (status) => `<span class="badge tfb-po-${status}">${esc(t('status.' + status))}</span>`;
 
     let state = readHash();
-    const data = {needs: null, orders: null, materials: null, order: null, preview: null};
+    const data = {needs: null, orders: null, materials: null, order: null, preview: null, invoices: null, invoice: null, mappings: null};
     let receiving = false;
 
     function readHash() {
@@ -48,12 +49,15 @@
             order: Number(p.get('order')) || null,
             kind: ['all', 'raw', 'pack'].includes(p.get('kind')) ? p.get('kind') : 'all',
             only: p.get('only') !== '0',
+            inv: p.get('inv') === 'map' ? 'map' : Number(p.get('inv')) || null,
+            istatus: ['open', 'accepted', 'disputed', 'all'].includes(p.get('ist')) ? p.get('ist') : 'open',
             search: '', stockMode: 'all', used: true,
         };
     }
     function writeHash() {
         const p = new URLSearchParams({tab: state.tab, date: state.date, weeks: state.weeks, status: state.status, kind: state.kind, only: state.only ? '1' : '0'});
         if (state.order) p.set('order', state.order);
+        if (state.tab === 'invoices') { p.set('ist', state.istatus); if (state.inv) p.set('inv', state.inv); }
         history.replaceState(null, '', '#' + p.toString());
     }
 
@@ -75,8 +79,15 @@
             if (state.tab === 'orders' || !data.orders) data.orders = await api.get(`/supply/orders?status=${state.status}`);
             if (state.tab === 'orders' && state.order) data.order = await api.get(`/supply/orders/${state.order}`);
             if (state.tab === 'stock') data.materials = await api.get('/supply/materials');
+            if (state.tab === 'invoices') {
+                if (state.inv === 'map') data.mappings = await api.get('/supply/mappings');
+                else if (state.inv) {
+                    data.invoice = await api.get(`/supply/invoices/${state.inv}`);
+                    if (data.invoice.editable && data.invoice.lines.some(l => !l.material)) await ensureMaterials();
+                } else data.invoices = await api.get(`/supply/invoices?status=${state.istatus}`);
+            }
         } catch (err) {
-            if (err.status === 404 && state.order) { state.order = null; return load(); }
+            if (err.status === 404 && (state.order || state.inv)) { state.order = null; state.inv = null; return load(); }
             el.innerHTML = shell(`<div class="alert alert-danger">${esc(errText(err))}</div>`);
             bindShell();
             return;
@@ -86,11 +97,14 @@
 
     function draw() {
         const y = window.scrollY;
-        const body = state.tab === 'needs' ? drawNeeds() : state.tab === 'stock' ? drawStock() : (state.order && data.order ? drawOrder() : drawOrders());
+        const invoices = () => state.inv === 'map' ? drawMappings() : state.inv && data.invoice ? drawInvoice() : drawInvoices();
+        const body = state.tab === 'needs' ? drawNeeds() : state.tab === 'stock' ? drawStock() : state.tab === 'invoices' ? invoices()
+            : (state.order && data.order ? drawOrder() : drawOrders());
         el.innerHTML = shell(body);
         bindShell();
         if (state.tab === 'needs') bindNeeds();
         else if (state.tab === 'stock') bindStock();
+        else if (state.tab === 'invoices') (state.inv === 'map' ? bindMappings : state.inv && data.invoice ? bindInvoice : bindInvoices)();
         else if (state.order && data.order) bindOrder();
         else bindOrders();
         window.scrollTo(0, y);
@@ -101,8 +115,10 @@
             e.preventDefault();
             state.tab = a.dataset.tab;
             state.order = null;
+            state.inv = null;
             receiving = false;
             data.preview = null;
+            resetInvoice();
             load();
         }));
     }
@@ -514,6 +530,473 @@
                 } catch (err) { ui.notify(false, errText(err)); countBtn.disabled = false; }
             });
         });
+    }
+
+    // --- Kontrola faktur ----------------------------------------------------------------------------------------------
+    // Faktura z KSeF albo z pliku (XML KSeF, PDF) ; nazwy dostawcy przypisane do naszych surowców (z przelicznikiem
+    // jednostki faktury na jednostkę surowca), porównanie z zamówieniem i przyjęciami, decyzja. Przypisania są
+    // zapamiętane na dostawcę : następne faktury przychodzą już przypisane.
+    const ISTATUSES = ['open', 'accepted', 'disputed', 'all'];
+    const STATE_CLS = {clean: 'bg-success', gaps: 'bg-danger', unmapped: 'bg-warning text-dark', no_order: 'bg-secondary', no_lines: 'bg-light text-dark'};
+    const ALERT_CLS = {clean: 'alert-success', gaps: 'alert-danger', unmapped: 'alert-warning', no_order: 'alert-secondary', no_lines: 'alert-warning'};
+    const FLAG_CLS = {unmapped: 'bg-warning text-dark', not_in_order: 'bg-danger', qty_over_received: 'bg-danger', qty_over_ordered: 'bg-danger',
+        qty_under_received: 'bg-warning text-dark', price_over: 'bg-danger', price_under: 'bg-success'};
+    const BAD_FLAGS = ['not_in_order', 'qty_over_received', 'qty_over_ordered', 'price_over'];
+    const disp = (base) => base === 'g' ? {unit: 'kg', factor: 1000} : base === 'ml' ? {unit: 'l', factor: 1000} : {unit: base || 'szt', factor: 1};
+    const fullDay = (s) => s ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : '—';
+    const cur = (v, c) => v === null || v === undefined ? '—' : `${n(v, 2)} ${!c || c === 'PLN' ? 'zł' : c}`;
+    const signed = (v, f) => `${v > 0 ? '+' : ''}${f(v)}`;
+    const pct = (v) => signed(v, x => `${n(x, 1)} %`);
+    const ctrlBadge = (c) => `<span class="badge ${STATE_CLS[c.state] || 'bg-secondary'}" title="${esc(t('inv.state_help.' + c.state))}">${esc(t('inv.state.' + c.state))}</span>`
+        + (c.state === 'gaps' && Math.abs(c.value_gap) >= 0.01 ? ` <span class="small ${c.value_gap > 0 ? 'text-danger' : 'text-success'}">${esc(signed(c.value_gap, money))}</span>` : '');
+    const invBadge = (s) => `<span class="badge tfb-inv-${s}">${esc(t('inv.status.' + s))}</span>`;
+    const iv = {ksefOpen: false, ksef: null, from: null, to: null, editLines: false, editLine: null, file: null, showFile: false};
+
+    function resetInvoice() {
+        iv.editLines = false;
+        iv.editLine = null;
+        iv.showFile = false;
+        if (iv.file) URL.revokeObjectURL(iv.file.url);
+        iv.file = null;
+    }
+    function openInvoice(id, loaded) {
+        state.inv = id;
+        if (id === 'map') state.search = '';
+        resetInvoice();
+        if (!loaded) return load();
+        writeHash();
+        return showInvoice(loaded);
+    }
+    // Faktura do pokazania ; z liniami do przypisania — najpierw lista wszystkich surowców (wybór spoza podpowiedzi).
+    async function showInvoice(invoice) {
+        data.invoice = invoice;
+        if (invoice.editable && invoice.lines.some(l => !l.material || l.id === iv.editLine)) await ensureMaterials();
+        draw();
+    }
+
+    function drawInvoices() {
+        const d = data.invoices;
+        const w = d.can_write;
+        if (!iv.from) { iv.from = addDays(todayIso.slice(0, 8) + '01', -1).slice(0, 8) + '01'; iv.to = todayIso; }
+        const ksef = iv.ksefOpen ? `<div class="card tfb-inv-ksef"><div class="card-body">
+                <form class="d-flex flex-wrap gap-2 align-items-end" data-ksef-form>
+                    <div><label class="form-label small mb-0">${esc(t('inv.from'))}</label><input class="form-control form-control-sm" type="date" name="from" value="${esc(iv.from)}" max="${todayIso}" required></div>
+                    <div><label class="form-label small mb-0">${esc(t('inv.to'))}</label><input class="form-control form-control-sm" type="date" name="to" value="${esc(iv.to)}" max="${todayIso}" required></div>
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> ${esc(t('inv.ksef_search'))}</button>
+                    <span class="small text-muted">${esc(t('inv.ksef_help'))}</span></form>
+                ${iv.ksef ? ksefTable() : ''}</div></div>` : '';
+        return `<div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">
+                <div class="btn-group btn-group-sm" role="group">${ISTATUSES.map(s => `<button type="button" class="btn ${state.istatus === s ? 'btn-primary' : 'btn-outline-primary'}" data-istatus="${s}">${esc(t('inv.filter.' + s))}</button>`).join('')}</div>
+                ${w ? `<button type="button" class="btn btn-sm ${iv.ksefOpen ? 'btn-secondary' : 'btn-outline-primary'}" data-ksef-toggle><i class="bi bi-cloud-download"></i> ${esc(t('inv.from_ksef'))}</button>
+                <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-upload"></i> ${esc(t('inv.upload'))}<input type="file" class="d-none" accept=".pdf,.xml,application/pdf,application/xml,text/xml" data-upload></label>` : ''}
+                <a href="#tab=invoices&inv=map" class="btn btn-sm btn-link ms-auto" data-mappings><i class="bi bi-arrow-left-right"></i> ${esc(t('inv.mappings'))}</a></div></div>
+            ${ksef}
+            <p class="small text-muted mb-2">${esc(t('inv.help'))}</p>
+            <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
+                <thead><tr><th>${esc(t('inv.col.number'))}</th><th>${esc(t('col.supplier'))}</th><th>${esc(t('inv.col.date'))}</th><th class="text-end">${esc(t('inv.col.net'))}</th>
+                    <th>${esc(t('inv.col.order'))}</th><th>${esc(t('inv.col.control'))}</th><th>${esc(t('col.status'))}</th></tr></thead>
+                <tbody>${d.invoices.map(i => `<tr data-open-inv="${i.id}" class="tfb-supply-click">
+                    <td><a href="#tab=invoices&inv=${i.id}"><strong>${esc(i.number || t('inv.no_number'))}</strong></a><div class="small text-muted">${esc(t('inv.source.' + i.source))}</div></td>
+                    <td>${i.supplier ? esc(i.supplier.name) : `${esc(i.seller_name || '—')}<div class="small text-warning">${esc(t('inv.no_supplier'))}</div>`}</td>
+                    <td>${esc(fullDay(i.issue_date))}</td><td class="text-end">${esc(cur(i.total_net, i.currency))}</td>
+                    <td>${i.order ? esc(i.order.code) : '—'}</td>
+                    <td>${ctrlBadge(i.control)}${i.control.lines ? `<div class="small text-muted">${esc(t('inv.mapped_n', {mapped: i.control.mapped, lines: i.control.lines}))}</div>` : ''}</td>
+                    <td>${invBadge(i.status)}</td></tr>`).join('')
+                    || `<tr><td colspan="7" class="text-muted">${esc(t('inv.empty'))}</td></tr>`}</tbody></table></div></div></div>`;
+    }
+
+    function ksefTable() {
+        const rows = iv.ksef.invoices;
+        if (!rows.length) return `<p class="text-muted small mt-2 mb-0">${esc(t('inv.ksef_empty'))}</p>`;
+        const fresh = rows.filter(r => !r.imported).length;
+        return `<div class="table-responsive mt-2"><table class="table table-sm align-middle mb-2"><thead><tr>
+                <th class="text-center"><input class="form-check-input" type="checkbox" data-ksef-all ${fresh ? 'checked' : 'disabled'} aria-label="${esc(t('inv.pick_all'))}"></th>
+                <th>${esc(t('inv.col.number'))}</th><th>${esc(t('inv.col.seller'))}</th><th>${esc(t('inv.col.date'))}</th><th class="text-end">${esc(t('inv.col.net'))}</th><th class="text-end">${esc(t('inv.col.gross'))}</th><th></th></tr></thead>
+            <tbody>${rows.map(r => `<tr><td class="text-center"><input class="form-check-input" type="checkbox" data-ksef-pick="${esc(r.ksef_number)}" ${r.imported ? 'disabled' : 'checked'} aria-label="${esc(t('pick'))}"></td>
+                <td><strong>${esc(r.number || '—')}</strong><div class="small text-muted">${esc(r.ksef_number)}</div></td>
+                <td>${esc(r.seller_name || '—')}<div class="small text-muted">NIP ${esc(r.seller_nip || '—')}</div></td>
+                <td>${esc(fullDay(r.issue_date))}</td><td class="text-end">${esc(cur(r.net, r.currency))}</td><td class="text-end">${esc(cur(r.gross, r.currency))}</td>
+                <td>${r.imported ? `<span class="badge bg-light text-dark">${esc(t('inv.imported'))}</span>` : ''}</td></tr>`).join('')}</tbody></table></div>
+            <button type="button" class="btn btn-sm btn-primary" data-ksef-import ${fresh ? '' : 'disabled'}><i class="bi bi-cloud-download"></i> ${esc(t('inv.ksef_import'))}</button>`;
+    }
+
+    function bindInvoices() {
+        el.querySelectorAll('[data-istatus]').forEach(b => b.addEventListener('click', () => { state.istatus = b.dataset.istatus; load(); }));
+        el.querySelector('[data-mappings]').addEventListener('click', (e) => { e.preventDefault(); openInvoice('map'); });
+        el.querySelectorAll('tr[data-open-inv]').forEach(tr => tr.addEventListener('click', (e) => { e.preventDefault(); openInvoice(Number(tr.dataset.openInv)); }));
+        el.querySelector('[data-ksef-toggle]')?.addEventListener('click', () => { iv.ksefOpen = !iv.ksefOpen; draw(); });
+        const form = el.querySelector('[data-ksef-form]');
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const f = new FormData(form);
+            iv.from = f.get('from');
+            iv.to = f.get('to');
+            const btn = form.querySelector('button');
+            btn.disabled = true;
+            try {
+                iv.ksef = await api.post('/supply/invoices/ksef/search', {from: iv.from, to: iv.to});
+                draw();
+            } catch (err) { ui.notify(false, errText(err)); btn.disabled = false; }
+        });
+        el.querySelector('[data-ksef-all]')?.addEventListener('change', (e) => el.querySelectorAll('[data-ksef-pick]:not(:disabled)').forEach(c => { c.checked = e.target.checked; }));
+        const importBtn = el.querySelector('[data-ksef-import]');
+        importBtn?.addEventListener('click', async () => {
+            const numbers = [...el.querySelectorAll('[data-ksef-pick]:checked')].map(c => c.dataset.ksefPick);
+            if (!numbers.length) { ui.notify(false, t('inv.nothing_picked')); return; }
+            importBtn.disabled = true;
+            try {
+                const res = await api.post('/supply/invoices/ksef/import', {ksef_numbers: numbers.slice(0, 50)});
+                ui.notify(!res.errors.length, t('inv.ksef_done', {n: res.imported.length, skipped: res.skipped})
+                    + (res.errors.length ? ' ' + t('inv.ksef_errors', {list: res.errors.map(x => x.ksef_number).join(', ')}) : ''));
+                iv.ksef = null;
+                iv.ksefOpen = false;
+                if (res.imported.length === 1) return openInvoice(res.imported[0]);
+                load();
+            } catch (err) { ui.notify(false, errText(err)); importBtn.disabled = false; }
+        });
+        el.querySelector('[data-upload]')?.addEventListener('change', (e) => upload(e.target));
+    }
+
+    async function upload(input) {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { ui.notify(false, t('inv.too_big')); input.value = ''; return; }
+        input.disabled = true;
+        try {
+            const content = await new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onload = () => resolve(String(r.result).split(',')[1] || '');
+                r.onerror = () => reject(r.error);
+                r.readAsDataURL(file);
+            });
+            const res = await api.post('/supply/invoices/upload', {filename: file.name, content_base64: content});
+            ui.notify(true, t('inv.uploaded', {number: res.number || file.name}));
+            openInvoice(res.id, res);
+        } catch (err) {
+            ui.notify(false, errText(err));
+            input.disabled = false;
+            input.value = '';
+        }
+    }
+
+    function drawInvoice() {
+        const i = data.invoice;
+        const c = i.control;
+        const edit = i.editable;
+        const isCurrent = (o) => i.order && i.order.id === o.id;
+        const seen = new Set();
+        const twins = new Set(i.suppliers.map(s => s.name.toLowerCase()).filter(x => seen.has(x) || !seen.add(x)));
+        const supplierField = edit ? `<select class="form-select form-select-sm" data-inv-supplier data-field="supplier_id"><option value="">${esc(t('inv.pick_supplier'))}</option>
+                ${i.suppliers.map(s => `<option value="${s.id}" ${i.supplier && i.supplier.id === s.id ? 'selected' : ''}>${esc(s.name)}${twins.has(s.name.toLowerCase()) ? ` (#${s.id})` : ''}</option>`).join('')}</select>`
+            : `<div>${esc(i.supplier ? i.supplier.name : '—')}</div>`;
+        const orderLink = i.order ? `<a href="#tab=orders&order=${i.order.id}" data-goto-order="${i.order.id}">${esc(i.order.code)}</a> ${badge(i.order.status)}` : '';
+        const orderField = edit && i.supplier ? `<select class="form-select form-select-sm" data-inv-order data-field="po_id"><option value="">${esc(t('inv.without_order'))}</option>
+                ${i.orders.map(o => `<option value="${o.id}" ${isCurrent(o) ? 'selected' : ''}>${esc(o.code)} · ${esc(t('status.' + o.status))}${o.delivery_date ? ' · ' + esc(day(o.delivery_date)) : ''}
+                    · ${esc(t('inv.overlap', {n: o.overlap, lines: o.lines}))}${o.invoices && !isCurrent(o) ? ' · ' + esc(t('inv.already_invoiced')) : ''}</option>`).join('')}</select>
+                ${orderLink ? `<div class="small mt-1">${orderLink}</div>` : ''}`
+            : `<div>${orderLink || (i.supplier ? '—' : `<span class="small text-muted">${esc(t('inv.pick_supplier_first'))}</span>`)}</div>`;
+        const idFields = edit && ['pdf', 'manual'].includes(i.source)
+            ? `<div class="col-md-2"><label class="form-label small mb-0">${esc(t('inv.f.number'))}</label><input class="form-control form-control-sm" data-inv-field="number" data-field="number" value="${esc(i.number || '')}" maxlength="80"></div>
+               <div class="col-md-2"><label class="form-label small mb-0">${esc(t('inv.f.issue_date'))}</label><input class="form-control form-control-sm" type="date" data-inv-field="issue_date" data-field="issue_date" value="${esc(i.issue_date || '')}"></div>` : '';
+        const summary = {
+            no_lines: t('inv.sum.no_lines'),
+            unmapped: t('inv.sum.unmapped', {n: c.lines - c.mapped, lines: c.lines}),
+            no_order: t('inv.sum.no_order'),
+            gaps: t('inv.sum.gaps', {n: c.issues}) + (Math.abs(c.value_gap) >= 0.01 ? ' ' + t('inv.sum.value_gap', {gap: signed(c.value_gap, money)}) : ''),
+            clean: t('inv.sum.clean'),
+        }[c.state];
+        const lines = iv.editLines ? editLinesTable(i) : `<div class="table-responsive"><table class="table table-sm align-middle mb-2 tfb-supply-table tfb-inv-lines"><thead><tr>
+                <th>${esc(t('inv.col.line'))}</th><th class="text-end">${esc(t('col.quantity'))}</th><th class="text-end">${esc(t('inv.col.unit_price'))}</th><th class="text-end">${esc(t('inv.col.net'))}</th>
+                <th>${esc(t('inv.col.material'))}</th><th class="text-end">${esc(t('inv.col.our_qty'))}</th><th class="text-end">${esc(t('inv.col.our_price'))}</th><th>${esc(t('inv.col.control'))}</th></tr></thead>
+            <tbody>${i.lines.map(l => invoiceLine(l, edit)).join('') || `<tr><td colspan="8" class="text-muted">${esc(t(i.lines_editable ? 'inv.no_lines_pdf' : 'inv.no_lines'))}</td></tr>`}</tbody>
+            <tfoot><tr><th colspan="3" class="text-end">${esc(t('total'))}</th><th class="text-end">${esc(cur(c.lines_net, i.currency))}</th><th colspan="4"></th></tr></tfoot></table></div>`;
+        const actions = [];
+        if (i.lines_editable && !iv.editLines) actions.push(`<button type="button" class="btn btn-sm btn-outline-secondary" data-iact="edit-lines"><i class="bi bi-pencil"></i> ${esc(t('inv.act.edit_lines'))}</button>`);
+        if (i.can_receive) actions.push(`<button type="button" class="btn btn-sm btn-outline-primary" data-iact="receive" title="${esc(t('inv.act.receive_help'))}"><i class="bi bi-box-arrow-in-down"></i> ${esc(t('inv.act.receive'))}</button>`);
+        if (edit) {
+            actions.push(`<button type="button" class="btn btn-sm btn-success" data-iact="accept"><i class="bi bi-check2-circle"></i> ${esc(t('inv.act.accept'))}</button>`);
+            actions.push(`<button type="button" class="btn btn-sm btn-outline-danger" data-iact="dispute"><i class="bi bi-exclamation-octagon"></i> ${esc(t('inv.act.dispute'))}</button>`);
+            actions.push(`<button type="button" class="btn btn-sm btn-outline-danger ms-auto" data-iact="delete"><i class="bi bi-trash"></i> ${esc(t('inv.act.delete'))}</button>`);
+        } else if (i.can_write && i.status !== 'open') {
+            actions.push(`<button type="button" class="btn btn-sm btn-outline-secondary" data-iact="reopen"><i class="bi bi-arrow-counterclockwise"></i> ${esc(t('inv.act.reopen'))}</button>`);
+        }
+        const file = i.file ? `<button type="button" class="btn btn-sm btn-outline-secondary" data-iact="file"><i class="bi bi-file-earmark-text"></i> ${esc(t(iv.showFile ? 'inv.act.hide_file' : 'inv.act.show_file'))}</button>` : '';
+        const viewer = iv.showFile && iv.file ? `<div class="card tfb-inv-viewer"><div class="card-header d-flex align-items-center gap-2"><strong class="small">${esc(iv.file.name)}</strong>
+                <a class="btn btn-sm btn-link ms-auto" href="${iv.file.url}" download="${esc(iv.file.name)}"><i class="bi bi-download"></i> ${esc(t('inv.download'))}</a></div>
+                <iframe src="${iv.file.url}" title="${esc(iv.file.name)}"></iframe></div>` : '';
+        return `<p><a href="#tab=invoices" data-back-inv>‹ ${esc(t('inv.back'))}</a></p>
+            <div class="card"><div class="card-header d-flex flex-wrap align-items-center gap-2">
+                <h5 class="mb-0">${esc(i.number || t('inv.no_number'))} · ${esc(i.supplier ? i.supplier.name : (i.seller_name || '—'))}</h5>${invBadge(i.status)} ${ctrlBadge(c)}
+                <span class="small text-muted ms-auto">${esc(t('inv.source.' + i.source))} · ${esc(fullDay(i.issue_date))}${i.seller_nip ? ' · NIP ' + esc(i.seller_nip) : ''}</span>${file}</div>
+              <div class="card-body">
+                <div class="row g-2 mb-2" data-inv-head>
+                    <div class="col-md-3"><label class="form-label small mb-0">${esc(t('col.supplier'))}</label>${supplierField}
+                        ${i.seller_name ? `<div class="small text-muted">${esc(t('inv.on_invoice', {name: i.seller_name}))}</div>` : ''}</div>
+                    <div class="col-md-3"><label class="form-label small mb-0">${esc(t('inv.col.order'))}</label>${orderField}</div>
+                    ${idFields}
+                    <div class="col-md-2"><label class="form-label small mb-0">${esc(t('inv.totals'))}</label><div>${esc(cur(i.total_net, i.currency))}
+                        <span class="small text-muted">· ${esc(t('inv.gross', {v: cur(i.total_gross, i.currency)}))}</span></div></div></div>
+                <div class="alert ${ALERT_CLS[c.state] || 'alert-secondary'} py-2 small mb-2">${esc(summary)}
+                    ${c.total_mismatch ? `<div>${esc(t('inv.sum.total_mismatch', {lines: cur(c.lines_net, i.currency), total: cur(i.total_net, i.currency)}))}</div>` : ''}</div>
+                ${lines}
+                ${i.note ? `<div class="small mb-2"><strong>${esc(t('f.note'))} :</strong> ${esc(i.note)}</div>` : ''}
+                ${i.text ? `<details class="tfb-inv-text mb-2"><summary class="small">${esc(t('inv.pdf_text'))}</summary><pre>${esc(i.text)}</pre></details>` : ''}
+                <div class="d-flex flex-wrap gap-2 mt-2">${actions.join('')}</div></div></div>
+            ${viewer}`;
+    }
+
+    function invoiceLine(l, edit) {
+        const k = l.control;
+        const m = l.material;
+        const u = m ? {unit: m.unit, factor: m.factor_display} : null;
+        const mapping = edit && (!m || iv.editLine === l.id) ? mapForm(l)
+            : m ? `<strong>${esc(m.name)}</strong><div class="small text-muted">${esc(t('inv.factor_text', {unit: l.unit || 'szt', n: n(l.factor / u.factor, 4), our: u.unit}))}</div>
+                ${edit ? `<button type="button" class="btn btn-link btn-sm p-0" data-edit-map="${l.id}">${esc(t('inv.change'))}</button>` : ''}`
+            : `<span class="text-muted">—</span>`;
+        const flags = k.flags.map(f => `<span class="badge ${FLAG_CLS[f] || 'bg-secondary'}">${esc(t('inv.flag.' + f))}</span>`).join(' ');
+        const ours = !m ? '<td></td><td></td>' : `<td class="text-end text-nowrap">${esc(q(u, k.quantity_base))}
+                ${k.ordered !== null ? `<div class="small text-muted">${esc(t('inv.ordered_received', {ordered: q(u, k.ordered), received: k.received > 0 ? q(u, k.received) : '—'}))}</div>` : ''}
+                ${k.qty_gap_pct ? `<div class="small ${k.flags.some(f => f.startsWith('qty_')) ? 'text-danger' : 'text-muted'}">${esc(pct(k.qty_gap_pct))}</div>` : ''}</td>
+            <td class="text-end text-nowrap">${esc(unitPrice(u, k.price_base))}
+                ${k.order_price !== null ? `<div class="small text-muted">${esc(t('inv.order_price', {price: unitPrice(u, k.order_price)}))}</div>`
+                    : k.catalog_price !== null ? `<div class="small text-muted">${esc(t('catalog', {price: unitPrice(u, k.catalog_price)}))}${k.catalog_gap_pct ? ' · ' + esc(pct(k.catalog_gap_pct)) : ''}</div>` : ''}
+                ${k.price_gap_pct ? `<div class="small ${k.flags.includes('price_over') ? 'text-danger' : k.flags.includes('price_under') ? 'text-success' : 'text-muted'}">${esc(pct(k.price_gap_pct))}${k.value_gap ? ' · ' + esc(signed(k.value_gap, money)) : ''}</div>` : ''}</td>`;
+        return `<tr data-iline="${l.id}" class="${k.flags.some(f => BAD_FLAGS.includes(f)) ? 'table-danger' : ''}">
+            <td><strong>${esc(l.name)}</strong>${l.code ? `<div class="small text-muted">${esc(l.code)}</div>` : ''}</td>
+            <td class="text-end text-nowrap">${esc(n(l.quantity, 3))} ${esc(l.unit || '')}</td>
+            <td class="text-end text-nowrap">${l.unit_price !== null ? esc(n(l.unit_price, 4)) : '—'}</td>
+            <td class="text-end text-nowrap">${esc(money(l.net_value))}${l.vat_rate ? `<div class="small text-muted">VAT ${esc(l.vat_rate)}${/^\d+$/.test(l.vat_rate) ? ' %' : ''}</div>` : ''}</td>
+            <td class="tfb-inv-map">${mapping}</td>${ours}<td>${flags}</td></tr>`;
+    }
+
+    // Wybór surowca : podpowiedzi (nazwa, zamówienie, dostawca), potem wszystkie surowce ; przelicznik w jednostce wyświetlanej (kg, l).
+    function mapForm(l) {
+        const sug = l.suggestions || [];
+        const chosen = l.material ? l.material.id : (sug[0] ? sug[0].raw_material_id : null);
+        const sugIds = new Set(sug.map(s => s.raw_material_id));
+        const all = (data.materials ? data.materials.rows : []).filter(m => !sugIds.has(m.id));
+        const opts = `<option value="">${esc(t('inv.pick_material'))}</option>`
+            + (sug.length ? `<optgroup label="${esc(t('inv.suggested'))}">${sug.map(s => `<option value="${s.raw_material_id}" ${s.raw_material_id === chosen ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</optgroup>` : '')
+            + (all.length ? `<optgroup label="${esc(t('inv.all_materials'))}">${all.map(m => `<option value="${m.id}" ${m.id === chosen ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</optgroup>` : '');
+        return `<div class="tfb-inv-mapform" data-mapform="${l.id}"><select class="form-select form-select-sm mb-1" data-map-mat aria-label="${esc(t('inv.col.material'))}">${opts}</select>
+            <div class="input-group input-group-sm mb-1"><span class="input-group-text">1 ${esc(l.unit || 'szt')} =</span>
+                <input class="form-control text-end" inputmode="decimal" data-map-factor placeholder="${esc(t('inv.factor_auto'))}" aria-label="${esc(t('inv.factor'))}"><span class="input-group-text" data-map-unit>—</span></div>
+            <label class="form-check small mb-1"><input class="form-check-input" type="checkbox" data-map-remember checked> ${esc(t('inv.remember'))}</label>
+            <div class="d-flex flex-wrap gap-1"><button type="button" class="btn btn-sm btn-primary" data-map-save>${esc(t('inv.map'))}</button>
+                ${l.material ? `<button type="button" class="btn btn-sm btn-outline-danger" data-map-clear>${esc(t('inv.unmap'))}</button><button type="button" class="btn btn-sm btn-link" data-map-cancel>${esc(t('act.close'))}</button>` : ''}</div></div>`;
+    }
+
+    // Linie PDF : tekst odczytany automatycznie, do poprawienia ręcznie (nazwa, ilość, jednostka, cena, wartość, VAT).
+    function editLinesTable(i) {
+        const row = (l) => `<tr data-eline>
+            <td><input class="form-control form-control-sm" data-e="name" value="${esc(l.name || '')}" maxlength="500" aria-label="${esc(t('inv.col.line'))}"></td>
+            <td><input class="form-control form-control-sm text-end" data-e="quantity" inputmode="decimal" value="${l.quantity !== undefined && l.quantity !== null ? esc(String(l.quantity).replace('.', ',')) : ''}" aria-label="${esc(t('col.quantity'))}"></td>
+            <td><input class="form-control form-control-sm" data-e="unit" value="${esc(l.unit || '')}" maxlength="20" aria-label="${esc(t('inv.col.unit'))}"></td>
+            <td><input class="form-control form-control-sm text-end" data-e="unit_price" inputmode="decimal" value="${l.unit_price !== undefined && l.unit_price !== null ? esc(String(Math.round(l.unit_price * 10000) / 10000).replace('.', ',')) : ''}" aria-label="${esc(t('inv.col.unit_price'))}"></td>
+            <td><input class="form-control form-control-sm text-end" data-e="net_value" inputmode="decimal" value="${l.net_value !== undefined && l.net_value !== null ? esc(String(l.net_value).replace('.', ',')) : ''}" aria-label="${esc(t('inv.col.net'))}"></td>
+            <td><input class="form-control form-control-sm" data-e="vat_rate" value="${esc(l.vat_rate || '')}" maxlength="8" aria-label="VAT"></td>
+            <td><button type="button" class="btn btn-sm btn-outline-danger" data-e-remove title="${esc(t('remove_line'))}"><i class="bi bi-x-lg"></i></button></td></tr>`;
+        return `<p class="small text-muted mb-1">${esc(t('inv.edit_help'))}</p>
+            <div class="table-responsive"><table class="table table-sm align-middle mb-2 tfb-inv-edit"><thead><tr><th>${esc(t('inv.col.line'))}</th><th>${esc(t('col.quantity'))}</th><th>${esc(t('inv.col.unit'))}</th>
+                <th>${esc(t('inv.col.unit_price'))}</th><th>${esc(t('inv.col.net'))}</th><th>VAT</th><th></th></tr></thead>
+            <tbody data-elines>${(i.lines.length ? i.lines : [{}]).map(row).join('')}</tbody></table></div>
+            <template data-eline-template>${row({})}</template>
+            <div class="d-flex flex-wrap gap-2 mb-2"><button type="button" class="btn btn-sm btn-outline-secondary" data-iact="add-line"><i class="bi bi-plus-lg"></i> ${esc(t('inv.act.add_line'))}</button>
+                <button type="button" class="btn btn-sm btn-primary" data-iact="save-lines">${esc(t('save_lines'))}</button>
+                <button type="button" class="btn btn-sm btn-link" data-iact="cancel-lines">${esc(t('act.close'))}</button></div>`;
+    }
+
+    function bindInvoice() {
+        const i = data.invoice;
+        el.querySelector('[data-back-inv]').addEventListener('click', (e) => { e.preventDefault(); state.inv = null; resetInvoice(); load(); });
+        el.querySelector('[data-goto-order]')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            state.tab = 'orders';
+            state.order = Number(e.currentTarget.dataset.gotoOrder);
+            state.inv = null;
+            resetInvoice();
+            load();
+        });
+        const run = async (ctrl, fn, ok) => {
+            if (ctrl) ctrl.disabled = true;
+            try {
+                const res = await fn();
+                if (ok) ui.notify(true, ok);
+                await showInvoice(res && res.id ? res : i);
+                return true;
+            } catch (err) {
+                const orphans = ui.fieldErrors(el.querySelector('[data-inv-head]') || el, err);
+                ui.notify(false, orphans.join(' ') || errText(err));
+                if (ctrl) ctrl.disabled = false;
+                return false;
+            }
+        };
+        const supplier = el.querySelector('[data-inv-supplier]');
+        supplier?.addEventListener('change', () => run(supplier, () => api.patch(`/supply/invoices/${i.id}`, {supplier_id: supplier.value ? Number(supplier.value) : null}), t('saved')));
+        const order = el.querySelector('[data-inv-order]');
+        order?.addEventListener('change', () => run(order, () => api.patch(`/supply/invoices/${i.id}`, {po_id: order.value ? Number(order.value) : null}), t('saved')));
+        el.querySelectorAll('[data-inv-field]').forEach(input => input.addEventListener('change', () => {
+            const v = input.value.trim();
+            run(input, () => api.patch(`/supply/invoices/${i.id}`, {[input.dataset.invField]: v || null}), t('saved'));
+        }));
+        // Formularze przypisania : jednostka wyświetlana i domyślny przelicznik wybranego surowca.
+        el.querySelectorAll('[data-mapform]').forEach(form => {
+            const l = i.lines.find(x => x.id === Number(form.dataset.mapform));
+            const select = form.querySelector('[data-map-mat]');
+            const factor = form.querySelector('[data-map-factor]');
+            const fill = () => {
+                const id = Number(select.value) || null;
+                const s = (l.suggestions || []).find(x => x.raw_material_id === id);
+                const m = data.materials ? data.materials.rows.find(x => x.id === id) : null;
+                const base = l.material && l.material.id === id ? l.material.base_unit : s ? s.base_unit : m ? m.base_unit : null;
+                const u = disp(base);
+                const f = l.material && l.material.id === id ? l.factor : s ? s.factor : null;
+                form.querySelector('[data-map-unit]').textContent = base ? u.unit : '—';
+                factor.value = f !== null && f !== undefined ? String(Math.round(f / u.factor * 10000) / 10000).replace('.', ',') : '';
+                factor.dataset.scale = u.factor;
+            };
+            fill();
+            select.addEventListener('change', fill);
+            const save = form.querySelector('[data-map-save]');
+            save.addEventListener('click', () => {
+                const id = Number(select.value) || null;
+                if (!id) { ui.notify(false, t('inv.pick_material')); return; }
+                const f = ui.num(factor.value);
+                if (f !== null && (typeof f !== 'number' || f <= 0)) { ui.notify(false, t('inv.factor_invalid')); return; }
+                const body = {raw_material_id: id, remember: form.querySelector('[data-map-remember]').checked};
+                if (f !== null) body.factor = Math.round(f * Number(factor.dataset.scale || 1) * 10000) / 10000;
+                iv.editLine = null;
+                run(save, () => api.put(`/supply/invoices/${i.id}/lines/${l.id}/map`, body), t('inv.mapped_ok', {name: select.selectedOptions[0].textContent}));
+            });
+            form.querySelector('[data-map-clear]')?.addEventListener('click', (e) => {
+                iv.editLine = null;
+                run(e.currentTarget, () => api.put(`/supply/invoices/${i.id}/lines/${l.id}/map`, {raw_material_id: null, remember: false}), t('saved'));
+            });
+            form.querySelector('[data-map-cancel]')?.addEventListener('click', () => { iv.editLine = null; draw(); });
+        });
+        el.querySelectorAll('[data-edit-map]').forEach(b => b.addEventListener('click', () => { iv.editLine = Number(b.dataset.editMap); showInvoice(i); }));
+        el.querySelectorAll('[data-e-remove]').forEach(b => b.addEventListener('click', () => b.closest('tr').remove()));
+        el.querySelectorAll('[data-iact]').forEach(b => b.addEventListener('click', async () => {
+            const act = b.dataset.iact;
+            if (act === 'file') return toggleFile(b);
+            if (act === 'edit-lines') { iv.editLines = true; draw(); return; }
+            if (act === 'cancel-lines') { iv.editLines = false; draw(); return; }
+            if (act === 'add-line') {
+                const tpl = el.querySelector('[data-eline-template]');
+                const tr = tpl.content.firstElementChild.cloneNode(true);
+                tr.querySelector('[data-e-remove]').addEventListener('click', () => tr.remove());
+                el.querySelector('[data-elines]').appendChild(tr);
+                tr.querySelector('[data-e="name"]').focus();
+                return;
+            }
+            if (act === 'save-lines') {
+                const lines = [];
+                for (const tr of el.querySelectorAll('[data-elines] tr[data-eline]')) {
+                    const v = (k) => tr.querySelector(`[data-e="${k}"]`).value.trim();
+                    if (!v('name') && !v('quantity') && !v('net_value')) continue;
+                    const qty = ui.num(v('quantity'));
+                    const price = ui.num(v('unit_price'));
+                    const net = ui.num(v('net_value'));
+                    if (!v('name') || typeof qty !== 'number' || qty <= 0 || (price !== null && typeof price !== 'number') || (net !== null && typeof net !== 'number')) {
+                        ui.notify(false, t('inv.line_invalid', {name: v('name') || '?'}));
+                        return;
+                    }
+                    lines.push({name: v('name'), quantity: qty, unit: v('unit') || null, unit_price: price, net_value: net, vat_rate: v('vat_rate') || null});
+                }
+                iv.editLines = false;
+                if (!await run(b, () => api.put(`/supply/invoices/${i.id}/lines`, {lines}), t('saved'))) iv.editLines = true;
+                return;
+            }
+            if (act === 'receive') {
+                if (!window.confirm(t('inv.confirm_receive', {code: i.order.code}))) return;
+                return run(b, () => api.post(`/supply/invoices/${i.id}/receive`, {}), t('received_ok'));
+            }
+            if (act === 'accept') {
+                if (i.control.state !== 'clean' && !window.confirm(t('inv.confirm_accept_gaps'))) return;
+                return run(b, () => api.post(`/supply/invoices/${i.id}/decision`, {status: 'accepted'}), t('inv.accepted_ok'));
+            }
+            if (act === 'dispute') {
+                const note = window.prompt(t('inv.dispute_prompt'), i.note || disputeNote(i));
+                if (note === null) return;
+                return run(b, () => api.post(`/supply/invoices/${i.id}/decision`, {status: 'disputed', note: note.trim().slice(0, 1000) || null}), t('inv.disputed_ok'));
+            }
+            if (act === 'reopen') return run(b, () => api.post(`/supply/invoices/${i.id}/decision`, {status: 'open'}), t('inv.reopened_ok'));
+            if (act === 'delete') {
+                if (!window.confirm(t('inv.confirm_delete', {number: i.number || t('inv.no_number')}))) return;
+                b.disabled = true;
+                try { await api.del(`/supply/invoices/${i.id}`); ui.notify(true, t('deleted')); state.inv = null; resetInvoice(); load(); } catch (err) { ui.notify(false, errText(err)); b.disabled = false; }
+            }
+        }));
+    }
+
+    // Treść reklamacji : linie z rozbieżnościami (ilość, cena) — do poprawienia przed zapisem.
+    function disputeNote(i) {
+        return i.lines.filter(l => l.control.flags.some(f => BAD_FLAGS.includes(f))).map(l => {
+            const k = l.control;
+            const u = l.material ? {unit: l.material.unit, factor: l.material.factor_display} : null;
+            const parts = [];
+            if (k.flags.includes('not_in_order')) parts.push(t('inv.flag.not_in_order'));
+            if (u && k.qty_gap_pct && k.flags.some(f => f.startsWith('qty_over'))) parts.push(t('inv.note_qty', {invoiced: q(u, k.quantity_base), ref: q(u, k.received > 0 ? k.received : k.ordered)}));
+            if (u && k.flags.includes('price_over')) parts.push(t('inv.note_price', {price: unitPrice(u, k.price_base), order: unitPrice(u, k.order_price)}));
+            return `${l.name} : ${parts.join(', ')}`;
+        }).join(' ; ');
+    }
+
+    async function toggleFile(btn) {
+        if (iv.file) { iv.showFile = !iv.showFile; draw(); return; }
+        btn.disabled = true;
+        try {
+            const f = await api.get(`/supply/invoices/${data.invoice.id}/file`);
+            const bin = atob(f.content_base64);
+            const bytes = new Uint8Array(bin.length);
+            for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
+            iv.file = {url: URL.createObjectURL(new Blob([bytes], {type: f.mime})), name: f.filename};
+            iv.showFile = true;
+            draw();
+            el.querySelector('.tfb-inv-viewer')?.scrollIntoView({block: 'start', behavior: 'smooth'});
+        } catch (err) { ui.notify(false, errText(err)); btn.disabled = false; }
+    }
+
+    // Lista surowców (do wyboru spoza podpowiedzi) — raz, przy pierwszym formularzu przypisania.
+    async function ensureMaterials() {
+        if (data.materials) return;
+        try { data.materials = await api.get('/supply/materials'); } catch (err) { ui.notify(false, errText(err)); }
+    }
+
+    function drawMappings() {
+        const d = data.mappings;
+        const s = state.search.toLowerCase();
+        const rows = d.mappings.filter(m => !s || [m.supplier, m.supplier_name, m.material].some(x => (x || '').toLowerCase().includes(s)));
+        return `<p><a href="#tab=invoices" data-back-inv>‹ ${esc(t('inv.back'))}</a></p>
+            <div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">
+                <span class="small text-muted">${esc(t('inv.mappings_help'))}</span>
+                <input class="form-control form-control-sm ms-auto" style="max-width:220px" data-search value="${esc(state.search)}" placeholder="${esc(t('search'))}"></div></div>
+            <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
+                <thead><tr><th>${esc(t('col.supplier'))}</th><th>${esc(t('inv.col.supplier_name'))}</th><th>${esc(t('inv.col.material'))}</th><th>${esc(t('inv.factor'))}</th><th>${esc(t('inv.col.updated'))}</th><th></th></tr></thead>
+                <tbody>${rows.map(m => {
+                    const u = disp(m.base_unit);
+                    return `<tr data-mapping="${m.id}"><td>${esc(m.supplier || (m.supplier_key.startsWith('nip:') ? 'NIP ' + m.supplier_key.slice(4) : '—'))}</td>
+                        <td>${esc(m.supplier_name)}${m.supplier_unit ? ` <span class="small text-muted">(${esc(m.supplier_unit)})</span>` : ''}</td><td><strong>${esc(m.material || '—')}</strong></td>
+                        <td class="text-nowrap">${esc(t('inv.factor_text', {unit: m.supplier_unit || 'szt', n: n(m.factor / u.factor, 4), our: u.unit}))}</td>
+                        <td class="small text-muted">${esc(fullDay((m.updated_at || '').slice(0, 10)))}</td>
+                        <td class="text-end">${d.can_write ? `<button type="button" class="btn btn-sm btn-outline-danger" data-del-mapping="${m.id}" title="${esc(t('inv.unmap'))}"><i class="bi bi-trash"></i></button>` : ''}</td></tr>`;
+                }).join('') || `<tr><td colspan="6" class="text-muted">${esc(t('inv.mappings_empty'))}</td></tr>`}</tbody></table></div></div></div>`;
+    }
+
+    function bindMappings() {
+        el.querySelector('[data-back-inv]').addEventListener('click', (e) => { e.preventDefault(); state.inv = null; load(); });
+        bindSearch();
+        el.querySelectorAll('[data-del-mapping]').forEach(b => b.addEventListener('click', async () => {
+            const m = data.mappings.mappings.find(x => x.id === Number(b.dataset.delMapping));
+            if (!window.confirm(t('inv.confirm_unmap', {name: m.supplier_name, material: m.material || ''}))) return;
+            b.disabled = true;
+            try {
+                await api.del(`/supply/mappings/${m.id}`);
+                data.mappings.mappings = data.mappings.mappings.filter(x => x.id !== m.id);
+                ui.notify(true, t('deleted'));
+                draw();
+            } catch (err) { ui.notify(false, errText(err)); b.disabled = false; }
+        }));
     }
 
     el.addEventListener('click', async (e) => {

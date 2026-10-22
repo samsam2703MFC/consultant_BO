@@ -7452,6 +7452,1105 @@
                 "x-permission": "prod.supply.write"
             }
         },
+        "/supply/invoices": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Faktury zakupowe do kontroli / Factures d'achat à contrôler",
+                "operationId": "listPurchaseInvoices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoices"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Contrôle par facture : state = no_lines, unmapped (lignes non reliées à une matière), no_order (pas de commande liée), gaps (écarts), clean.",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "all",
+                                "open",
+                                "accepted",
+                                "disputed"
+                            ],
+                            "description": "défaut : open"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/invoices/ksef/search": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Faktury w KSeF za okres / Factures KSeF de la période",
+                "operationId": "searchKsefPurchaseInvoices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KsefSearchResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Lecture seule dans KSeF (acheteur, date d'émission, < 3 mois) ; rien n'est enregistré. KSEF_UNAVAILABLE (422) : KSeF non configuré ou indisponible.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KsefSearchInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/invoices/ksef/import": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Import faktur z KSeF / Import de factures KSeF",
+                "operationId": "importKsefPurchaseInvoices",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KsefImportResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "XML de chaque facture (FA) lu dans KSeF, lignes et fournisseur ; correspondances mémorisées appliquées ; factures déjà importées ignorées.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KsefImportInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/invoices/upload": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Faktura z pliku (XML KSeF albo PDF) / Facture depuis un fichier",
+                "operationId": "uploadPurchaseInvoice",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "XML FA : lecture complète. PDF : texte (pdftotext), lignes reconnues quand quantité × prix = valeur ; le reste se complète à la main. INVOICE_EXISTS (409) : même fournisseur et numéro. Max 5 Mo.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvoiceUploadInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/invoices/{id}": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Faktura : linie, przypisania, kontrola / Facture : lignes, correspondances, contrôle",
+                "operationId": "getPurchaseInvoice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Par ligne : quantité en unité de base (quantité × facteur), prix net par unité de base, comparés à la ligne de commande (reçu, sinon commandé ; prix commandé) et au catalogue. Drapeaux : unmapped, not_in_order, qty_over_received, qty_over_ordered, qty_under_received, price_over, price_under (tolérances 1 % / 0,5 %). Suggestions de matières pour les lignes non reliées.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            },
+            "patch": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Dostawca, zamówienie, numer, data / Fournisseur, commande, numéro, date",
+                "operationId": "updatePurchaseInvoice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Le fournisseur choisi est mémorisé pour le NIP du vendeur. INVOICE_CLOSED (409) : facture acceptée ou contestée.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PurchaseInvoiceInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            },
+            "delete": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Usuń fakturę (otwartą) / Supprimer la facture (ouverte)",
+                "operationId": "deletePurchaseInvoice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrderDeleted"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/invoices/{id}/file": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Plik faktury (PDF / XML) w base64 / Fichier de la facture (base64)",
+                "operationId": "getPurchaseInvoiceFile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceFile"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/invoices/{id}/lines": {
+            "put": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Linie faktury PDF (całość) / Lignes de la facture PDF",
+                "operationId": "savePurchaseInvoiceLines",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Factures PDF ou saisies seulement (INVOICE_LINES_READ_ONLY pour KSeF / XML).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PurchaseInvoiceLinesInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/invoices/{id}/lines/{lineId}/map": {
+            "put": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Przypisz nazwę dostawcy do surowca / Relier le nom du fournisseur à une matière",
+                "operationId": "mapPurchaseInvoiceLine",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "factor = unités de base de la matière par unité de facture (ex. sac de 25 kg, matière en g : 25000). remember (défaut true) : mémorisé pour ce fournisseur et appliqué aux lignes identiques.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "lineId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvoiceLineMapInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/invoices/{id}/decision": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zaakceptuj / reklamacja / Accepter / contester",
+                "operationId": "decidePurchaseInvoice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvoiceDecisionInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/invoices/{id}/receive": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Przyjęcie dostawy wg faktury / Réception d'après la facture",
+                "operationId": "receiveFromPurchaseInvoice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Quantités et prix nets de la facture enregistrés comme réception de la commande liée (lignes reliées à ses matières). INVOICE_NO_ORDER, INVOICE_NOTHING_TO_RECEIVE (422).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/mappings": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Przypisania nazw dostawców / Correspondances des noms fournisseurs",
+                "operationId": "listInvoiceMappings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceMappings"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/mappings/{id}": {
+            "delete": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Usuń przypisanie / Supprimer la correspondance",
+                "operationId": "deleteInvoiceMapping",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrderDeleted"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
         "/planning/week/move": {
             "post": {
                 "tags": [
@@ -17919,6 +19018,709 @@
                     },
                     "id": {
                         "type": "integer"
+                    }
+                }
+            },
+            "InvoiceFile": {
+                "type": "object",
+                "properties": {
+                    "filename": {
+                        "type": "string"
+                    },
+                    "mime": {
+                        "type": "string"
+                    },
+                    "size": {
+                        "type": "integer"
+                    },
+                    "content_base64": {
+                        "type": "string"
+                    }
+                }
+            },
+            "PurchaseInvoices": {
+                "type": "object",
+                "properties": {
+                    "invoices": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "source": {
+                                    "type": "string",
+                                    "enum": [
+                                        "ksef",
+                                        "xml",
+                                        "pdf",
+                                        "manual"
+                                    ]
+                                },
+                                "ksef_number": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "number": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "issue_date": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "seller_nip": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "seller_name": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "supplier": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "currency": {
+                                    "type": "string"
+                                },
+                                "total_net": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "total_gross": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "order": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "code": {
+                                            "type": "string"
+                                        },
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "open",
+                                        "accepted",
+                                        "disputed"
+                                    ]
+                                },
+                                "file": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "filename": {
+                                            "type": "string"
+                                        },
+                                        "mime": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "created_at": {
+                                    "type": "string"
+                                },
+                                "control": {
+                                    "type": "object",
+                                    "properties": {
+                                        "state": {
+                                            "type": "string",
+                                            "enum": [
+                                                "no_lines",
+                                                "unmapped",
+                                                "no_order",
+                                                "gaps",
+                                                "clean"
+                                            ]
+                                        },
+                                        "lines": {
+                                            "type": "integer"
+                                        },
+                                        "mapped": {
+                                            "type": "integer"
+                                        },
+                                        "issues": {
+                                            "type": "integer"
+                                        },
+                                        "value_gap": {
+                                            "type": "number"
+                                        },
+                                        "lines_net": {
+                                            "type": "number"
+                                        },
+                                        "total_mismatch": {
+                                            "type": "boolean"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "PurchaseInvoice": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "source": {
+                        "type": "string",
+                        "enum": [
+                            "ksef",
+                            "xml",
+                            "pdf",
+                            "manual"
+                        ]
+                    },
+                    "ksef_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "issue_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "seller_nip": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "seller_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "supplier": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "total_net": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "total_gross": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "order": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "code": {
+                                "type": "string"
+                            },
+                            "status": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "open",
+                            "accepted",
+                            "disputed"
+                        ]
+                    },
+                    "file": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "filename": {
+                                "type": "string"
+                            },
+                            "mime": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "decided_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "control": {
+                        "type": "object",
+                        "properties": {
+                            "state": {
+                                "type": "string",
+                                "enum": [
+                                    "no_lines",
+                                    "unmapped",
+                                    "no_order",
+                                    "gaps",
+                                    "clean"
+                                ]
+                            },
+                            "lines": {
+                                "type": "integer"
+                            },
+                            "mapped": {
+                                "type": "integer"
+                            },
+                            "issues": {
+                                "type": "integer"
+                            },
+                            "value_gap": {
+                                "type": "number"
+                            },
+                            "lines_net": {
+                                "type": "number"
+                            },
+                            "total_mismatch": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "text": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "texte lu dans le PDF"
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "line_no": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "description": "nom chez le fournisseur"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "unit": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "unit_price": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "net_value": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "vat_rate": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "factor": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "material": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "additionalProperties": true
+                                },
+                                "control": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                },
+                                "suggestions": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "raw_material_id": {
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "score": {
+                                                "type": "number"
+                                            },
+                                            "base_unit": {
+                                                "type": "string"
+                                            },
+                                            "factor": {
+                                                "type": "number"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "orders": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "suppliers": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    },
+                    "editable": {
+                        "type": "boolean"
+                    },
+                    "lines_editable": {
+                        "type": "boolean"
+                    },
+                    "can_receive": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "KsefSearchInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "from",
+                    "to"
+                ],
+                "properties": {
+                    "from": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "to": {
+                        "type": "string",
+                        "format": "date"
+                    }
+                }
+            },
+            "KsefSearchResult": {
+                "type": "object",
+                "properties": {
+                    "invoices": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "ksef_number": {
+                                    "type": "string"
+                                },
+                                "number": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "issue_date": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "seller_nip": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "seller_name": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "net": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "gross": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "currency": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "imported": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "KsefImportInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "ksef_numbers"
+                ],
+                "properties": {
+                    "ksef_numbers": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "KsefImportResult": {
+                "type": "object",
+                "properties": {
+                    "imported": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "skipped": {
+                        "type": "integer"
+                    },
+                    "errors": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "ksef_number": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "InvoiceUploadInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "filename",
+                    "content_base64"
+                ],
+                "properties": {
+                    "filename": {
+                        "type": "string"
+                    },
+                    "content_base64": {
+                        "type": "string",
+                        "format": "byte",
+                        "description": "PDF ou XML FA, 5 Mo max"
+                    }
+                }
+            },
+            "PurchaseInvoiceInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "supplier_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "po_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "issue_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "PurchaseInvoiceLinesInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "lines"
+                ],
+                "properties": {
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "name",
+                                "quantity"
+                            ],
+                            "properties": {
+                                "name": {
+                                    "type": "string"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "unit": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "unit_price": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "net_value": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "vat_rate": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "InvoiceLineMapInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "raw_material_id"
+                ],
+                "properties": {
+                    "raw_material_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "null = délier"
+                    },
+                    "factor": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "unités de base par unité de facture ; absent : déduit des unités (kg → g = 1000, sac / carton = conditionnement fournisseur)"
+                    },
+                    "remember": {
+                        "type": "boolean",
+                        "description": "défaut true"
+                    }
+                }
+            },
+            "InvoiceDecisionInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "status"
+                ],
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "open",
+                            "accepted",
+                            "disputed"
+                        ]
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "InvoiceMappings": {
+                "type": "object",
+                "properties": {
+                    "mappings": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "supplier_key": {
+                                    "type": "string"
+                                },
+                                "supplier": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "supplier_name": {
+                                    "type": "string"
+                                },
+                                "supplier_unit": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "raw_material_id": {
+                                    "type": "integer"
+                                },
+                                "material": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "base_unit": {
+                                    "type": "string"
+                                },
+                                "factor": {
+                                    "type": "number"
+                                },
+                                "updated_at": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "can_write": {
+                        "type": "boolean"
                     }
                 }
             },

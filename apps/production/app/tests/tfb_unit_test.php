@@ -24,6 +24,7 @@ use App\Services\Workshop\Scheduling\Scheduler;
 use App\Services\Workshop\Scheduling\ShiftOptimizer;
 use App\Services\Workshop\Execution\TimesheetService;
 use App\Services\Workshop\Manager\ManagerIndicators;
+use App\Services\Workshop\Supply\InvoiceParser;
 use App\Services\Workshop\Referentiel\ShiftTemplateService;
 
 function check(bool $condition, string $message): void
@@ -293,5 +294,33 @@ check(ManagerIndicators::sectionPeriod('development', '2026-Q3') === null && Man
 check(array_sum(ManagerIndicators::DEFAULT_MISSION_HOURS) == ManagerIndicators::DEFAULT_MONTHLY_HOURS && array_keys(ManagerIndicators::DEFAULT_MISSION_HOURS) === ManagerIndicators::MISSIONS,
     'default hours: every mission, 168 h a month in total');
 check(array_sum(array_column(ManagerIndicators::SECTIONS, 'weight')) === 100, 'section weights add up to 100 %');
+
+// --- Faktury zakupowe : XML KSeF (FA), tekst PDF, liczby, jednostki, przeliczniki, podobieństwo nazw
+$fa = '<?xml version="1.0" encoding="UTF-8"?><Faktura xmlns="http://crd.gov.pl/wzor/2025/06/25/13775/"><Podmiot1><DaneIdentyfikacyjne><NIP>5260250274</NIP><Nazwa>Młyn</Nazwa></DaneIdentyfikacyjne></Podmiot1>'
+    . '<Fa><KodWaluty>PLN</KodWaluty><P_1>2026-10-20</P_1><P_2>FV/1</P_2><P_13_3>220.00</P_13_3><P_15>231.00</P_15>'
+    . '<FaWiersz><NrWierszaFa>1</NrWierszaFa><P_7>MĄKA T-65 25KG</P_7><P_8A>szt</P_8A><P_8B>2</P_8B><P_9A>110</P_9A><P_11>220</P_11><P_12>5</P_12></FaWiersz>'
+    . '<FaWiersz><NrWierszaFa>2</NrWierszaFa><P_7>Drożdże</P_7><P_8A>kg</P_8A><P_8B>1.5</P_8B><P_9B>12.6</P_9B><P_11A>18.9</P_11A><P_12>5</P_12></FaWiersz></Fa></Faktura>';
+$x = InvoiceParser::ksefXml($fa);
+check($x['number'] === 'FV/1' && $x['issue_date'] === '2026-10-20' && $x['seller_nip'] === '5260250274' && $x['total_net'] == 220 && $x['total_gross'] == 231
+    && count($x['lines']) === 2 && $x['lines'][0]['quantity'] == 2 && $x['lines'][0]['unit_price'] == 110, 'KSeF FA XML: header, totals and lines');
+check(abs($x['lines'][1]['net_value'] - 18.0) < 0.01 && abs($x['lines'][1]['unit_price'] - 12.0) < 0.01, 'KSeF line with gross prices only: net derived from the VAT rate');
+$bad = false;
+try { InvoiceParser::ksefXml('<html/>'); } catch (InvalidArgumentException) { $bad = true; }
+check($bad, 'not a KSeF invoice → refused');
+$txt = "FAKTURA VAT nr FV/77/10/2026\nSprzedawca:   Pakcer Sp. j.\nNIP: 123-456-32-18\nNIP: 897-190-26-20\nData wystawienia: 21.10.2026\n"
+    . "1    Karton 600x400        300    szt     3,50     1 050,00    23%\n2    Taśma klejąca           12    rol     4,10        49,20    23%\n3    Opis bez liczb\n"
+    . "                         Razem:       1 099,20\nDo zapłaty: 1 352,02 zł\n";
+$t = InvoiceParser::pdfText($txt, 'PL 897-190-26-20');
+check($t['number'] === 'FV/77/10/2026' && $t['issue_date'] === '2026-10-21' && $t['seller_nip'] === '1234563218' && $t['seller_name'] === 'Pakcer Sp. j.' && $t['total_gross'] == 1352.02
+    && count($t['lines']) === 2 && $t['lines'][0]['name'] === 'Karton 600x400' && $t['lines'][0]['net_value'] == 1050 && $t['lines'][1]['unit'] === 'rolka' && $t['lines'][1]['vat_rate'] === '23',
+    'PDF text: number, date, seller (not our NIP), lines where quantity × price = value, totals line skipped');
+check(InvoiceParser::number('1 234,56') === 1234.56 && InvoiceParser::number('1.234,56') === 1234.56 && InvoiceParser::number('12.5') === 12.5 && InvoiceParser::number('10 45,00') === null,
+    'Polish and dotted number formats; ambiguous groups refused');
+check(InvoiceParser::defaultFactor('kg', 'g', null) == 1000 && InvoiceParser::defaultFactor('worek', 'g', 25000) == 25000 && InvoiceParser::defaultFactor('szt', 'szt', 100) == 1
+    && InvoiceParser::defaultFactor('l', 'ml', null) == 1000, 'default factor: kg → g, bag → package size, same unit → 1');
+check(InvoiceParser::nameKey('  MĄKA  pszenna, T-65 ') === 'mąka pszenna t 65' && InvoiceParser::unitKey('Szt.') === 'szt' && InvoiceParser::unitKey('opak.') === 'op', 'name and unit keys for supplier mappings');
+check(InvoiceParser::similarity('MĄKA PSZENNA T-65 WOREK 25KG', 'Mąka T65') > InvoiceParser::similarity('MĄKA PSZENNA T-65 WOREK 25KG', 'Masło'), 'name similarity ranks the right material first');
+check(InvoiceParser::similarity('Karton klapowy 590x390x210', 'Karton 590 x 390 x 210') === 1.0 && InvoiceParser::similarity('Karton klapowy 590x390x210', 'karton 590x290x340') === 0.5,
+    'dimensions: « 590 x 390 x 210 » = « 590x390x210 », other sizes do not match');
 
 echo "tfb_unit_test: OK\n";

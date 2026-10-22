@@ -66,6 +66,7 @@ else
   done
 fi
 command -v unzip >/dev/null || need+=(unzip)
+command -v pdftotext >/dev/null || need+=(poppler-utils)   # texte des factures PDF (Zaopatrzenie › Faktury)
 if [[ ${#need[@]} -gt 0 ]]; then
   mapfile -t need < <(printf '%s\n' "${need[@]}" | sort -u)
   log "Paquets manquants : ${need[*]}"
