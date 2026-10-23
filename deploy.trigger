@@ -982,3 +982,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T15:00:22Z faktury OCR (skany, zdjęcia)
 2026-10-23T15:07:05Z console : onglets de campagne retirés
 2026-10-23T15:07:14Z rentowność : pulpit minimalistyczny + wynik i produkcja grup
+2026-10-23T15:25:38Z récurrence : taux de retour des clients PWA
