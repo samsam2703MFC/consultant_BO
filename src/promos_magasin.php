@@ -19,9 +19,10 @@ declare(strict_types=1);
  * `shops` vaut toujours [shop] (la forme du périmètre « magasins sélectionnés » du panel). Les règles se lisent encore
  * magasin par magasin sur `shops`, pour d'anciennes demandes à plusieurs magasins.
  *
- * Deux règles du magasin, vérifiées ici (le navigateur les montre, le serveur les impose) : une date de fin, un an au
- * plus (14 jours jusqu'au 18/10/2026 : une promotion se fait aussi à la semaine, au mois, à l'année) ; deux promotions du magasin en même temps au plus, magasin par magasin. Le COEFFICIENT DU LOT (prix payé
- * HT ÷ coût matière, le cas le plus serré des produits visés, dans chaque magasin couvert — prix et coûts de recette du
+ * La règle du magasin, vérifiée ici (le navigateur la montre, le serveur l'impose) : une date de fin. Plus de durée
+ * maximale (23/10/2026, Sam : « Tout le temps », d'aujourd'hui au 31/12/2037 — le panel refuse 1927 → 2125 ; un an au plus avant, 14 jours jusqu'au
+ * 18/10/2026), plus de limite au nombre de promotions du magasin en même temps (23/10/2026 ; deux au plus avant).
+ * Le COEFFICIENT DU LOT (prix payé HT ÷ coût matière, le cas le plus serré des produits visés, dans chaque magasin couvert — prix et coûts de recette du
  * magasin, sinon du réseau, pmProduits) se calcule et s'affiche, ×2 en repère ; il ne bloque plus l'envoi (18/10/2026).
  *
  * LE PANEL SEUL (18/10/2026, demande de Sam : « API seule, plus de copie ») : une promotion du magasin n'existe qu'au
@@ -33,8 +34,6 @@ declare(strict_types=1);
  */
 
 const PM_COEF_MIN = 2.0;
-const PM_JOURS_MAX = 366;   // un an au plus, une année bissextile comprise (18/10/2026 ; 14 jours avant)
-const PM_EN_MEME_TEMPS = 2;
 const PM_TYPES = ['FREE', 'FIXED_PRICE', 'FIXED_AMOUNT_DISCOUNT', 'PERCENTAGE_DISCOUNT'];
 /**
  * Les variantes qu'un côté peut viser (17/10/2026) : la portion du panel (`portion_scope` de ses cibles, relu sur « 4
@@ -42,7 +41,6 @@ const PM_TYPES = ['FREE', 'FIXED_PRICE', 'FIXED_AMOUNT_DISCOUNT', 'PERCENTAGE_DI
  * Sans portion : toutes les variantes.
  */
 const PM_PORTIONS = ['ONE_HALF' => 0.5, 'ONE_QUARTER' => 0.25];
-const PM_VIVANTES = ['a_valider', 'validee', 'en_caisse'];
 
 /** Les magasins qu'une demande couvre (les anciennes n'ont que `shop`). */
 function pmShops(array $d): array
@@ -126,6 +124,9 @@ function pmPropre(array $b, int $shop): array
         'creneaux' => pmCreneaux($b['creneaux'] ?? []),
         'repetable' => !empty($b['repetable']),
         'maxParTicket' => is_numeric($max) && (int) $max > 0 ? min(50, (int) $max) : null,
+        // Les conditions du ticket (23/10/2026) : où la promotion vaut, et le montant minimal du ticket (TTC, avant remise).
+        'canal' => in_array($b['canal'] ?? '', ['comptoir', 'webshop'], true) ? (string) $b['canal'] : 'tous',
+        'seuil' => is_numeric($b['seuil'] ?? null) && (float) $b['seuil'] > 0 ? round(min(1000.0, (float) $b['seuil']), 2) : null,
     ];
 }
 
@@ -400,7 +401,7 @@ function pmCoefMagasins(array $d): array
  * Ce qui manque ou dépasse pour envoyer une promotion : une liste de phrases (vide = prête). Un coefficient qui ne se
  * calcule pas n'y est pas : la promotion part alors à la marque (pmDOffice).
  */
-function pmErreurs(array $d, array $autres, ?array $coef, string $maintenant): array
+function pmErreurs(array $d, ?array $coef, string $maintenant): array
 {
     $e = [];
     if ($d['nom'] === '') { $e[] = 'Donnez un nom à la promotion.'; }
@@ -415,14 +416,7 @@ function pmErreurs(array $d, array $autres, ?array $coef, string $maintenant): a
     if ($d['au'] === null) { $e[] = 'Donnez la date de fin : au magasin, une promotion a toujours une fin.'; }
     if ($d['du'] !== null && $d['au'] !== null) {
         if ($d['au'] <= $d['du']) { $e[] = 'La fin vient après le début.'; }
-        elseif (($nj = (int) round((strtotime(substr($d['au'], 0, 10)) - strtotime(substr($d['du'], 0, 10))) / 86400) + 1) > PM_JOURS_MAX) { $e[] = 'Période de ' . $nj . ' jours : ' . (PM_JOURS_MAX >= 365 ? 'un an' : PM_JOURS_MAX . ' jours') . ' au plus, raccourcissez-la.'; }
         if ($d['au'] <= $maintenant) { $e[] = 'La période est déjà passée.'; }
-        foreach (pmShops($d) as $s) {
-            $chev = array_filter($autres, static fn ($o) => in_array($s, pmShops($o), true) && in_array($o['statut'] ?? '', PM_VIVANTES, true) && ($o['du'] ?? '') < $d['au'] && ($o['au'] ?? '') > $d['du']);
-            if (count($chev) >= PM_EN_MEME_TEMPS) {
-                $e[] = PM_EN_MEME_TEMPS . ' promotions du magasin en même temps au plus' . (count(pmShops($d)) > 1 ? ' (' . pmNomShop($s) . ')' : '') . ' : « ' . implode(' », « ', array_map(static fn ($o) => (string) $o['nom'], $chev)) . ' » couvrent déjà ces dates.';
-            }
-        }
     }
     // Le coefficient du lot ne bloque plus (18/10/2026) : il se calcule, s'affiche (en rouge sous ×2), et la promotion part.
     return $e;
@@ -656,7 +650,59 @@ function pmPanelCorps(array $d, string $statut, bool $secondes = true): array
         'schedule' => pmPanelHoraire($d['creneaux'] ?? [], $secondes),
         'trigger' => $cote($d['x']),
         'reward' => $cote($y) + ['type' => $y['type'], 'value' => $y['type'] === 'FREE' ? null : $y['valeur'], 'selection_strategy' => 'CHEAPEST'],
-    ];
+    ] + pmConditionsCorps($d);
+}
+
+/**
+ * Les conditions du ticket au panel (23/10/2026). Leurs noms ne sont pas dans la documentation publique : le cockpit
+ * écrit sous ceux qu'il a relus sur une promotion du panel (pmChampsAppris) ; tant qu'aucune n'en porte, sous les noms
+ * plausibles ci-dessous. La relecture dit si le panel les a pris (pmConditionsEcarts) : sinon, rien ne passe en caisse.
+ */
+const PM_CLES_SEUIL = ['min_order_amount', 'minimum_order_value', 'min_ticket_amount'];
+const PM_CLES_CANAL = ['sales_channels', 'channels'];
+const PM_JETONS = ['comptoir' => 'POS', 'webshop' => 'WEBSHOP'];
+
+/** Les noms (et les jetons des canaux) que portent les promotions relues au panel : {seuil, canal, jetons}. */
+function pmChampsAppris(): array
+{
+    $A = ['seuil' => null, 'canal' => null, 'jetons' => []];
+    foreach ((function_exists('pvRegles') ? pvRegles()['regles'] : []) as $r) {
+        $c = (array) ($r['cles'] ?? []);
+        $A['seuil'] ??= $c['seuil'] ?? null;
+        if ($A['canal'] === null && ($c['canal'] ?? null) !== null) { $A['canal'] = $c['canal']; }
+        if (($c['canal'] ?? null) === $A['canal']) { $A['jetons'] += array_filter((array) ($c['jetons'] ?? [])); }
+    }
+    return $A;
+}
+
+/**
+ * Les champs des conditions dans le corps envoyé au panel. Rien quand la promotion n'en a pas (comptoir et webshop, sans
+ * seuil) — sauf pour effacer celles qu'elle avait (`avant`), sous le nom appris.
+ */
+function pmConditionsCorps(array $d): array
+{
+    $A = pmChampsAppris(); $avant = (array) ($d['avant'] ?? []);
+    $out = [];
+    $seuil = $d['seuil'] ?? null;
+    if ($A['seuil'] !== null) { if ($seuil !== null || ($avant['seuil'] ?? null) !== null) { $out[$A['seuil']] = $seuil; } }
+    elseif ($seuil !== null) { foreach (PM_CLES_SEUIL as $k) { $out[$k] = $seuil; } }
+    $canal = $d['canal'] ?? 'tous';
+    $jet = $A['jetons'] + PM_JETONS;
+    $liste = $canal === 'tous' ? [$jet['comptoir'], $jet['webshop']] : [$jet[$canal]];
+    if ($A['canal'] !== null) { if ($canal !== 'tous' || ($avant['canaux'] ?? null) !== null) { $out[$A['canal']] = $liste; } }
+    elseif ($canal !== 'tous') { foreach (PM_CLES_CANAL as $k) { $out[$k] = $liste; } }
+    return $out;
+}
+
+/** Ce que la fiche relue ne reprend pas des conditions demandées : « le seuil du ticket », « le canal ». */
+function pmConditionsEcarts(array $d, array $relu): array
+{
+    $c = pvConditions($relu); $e = [];
+    $s = $d['seuil'] ?? null;
+    if (($s === null) !== ($c['seuil'] === null) || ($s !== null && abs($s - (float) $c['seuil']) > 0.005)) { $e[] = 'le seuil du ticket'; }
+    $voulu = ($d['canal'] ?? 'tous') === 'tous' ? null : [$d['canal']];
+    if ($voulu !== $c['canaux']) { $e[] = 'le canal (' . ($voulu === null ? 'comptoir et webshop' : $voulu[0]) . ')'; }
+    return $e;
 }
 
 /** Le produit d'une cible du panel : un entier, ou {id_product | product_id | id, id_product_portion…}. */
@@ -740,7 +786,7 @@ function pmPanelEnvoyer(array $d, ?int $panelId, bool $activer = true): array
     };
     $relu = $lire();
     if ($relu === null) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . '), relecture impossible : ' . (ErpApi::$lastError ?? '')]; }
-    $ecarts = pmPanelEcarts($corps, $relu);
+    $ecarts = array_merge(pmPanelEcarts($corps, $relu), pmConditionsEcarts($d, $relu));
     if ($ecarts !== []) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . ') : le panel ne reprend pas ' . implode(', ', $ecarts)]; }
     // Un brouillon : écrit et relu, il reste inactif.
     if (!$activer) { return ['ok' => true, 'id' => $id, 'erreur' => null]; }
@@ -792,6 +838,7 @@ function pmDemande(array $r): array
         'du' => $r['duH'] ?? (($r['du'] ?? null) !== null ? $r['du'] . ' 00:00' : null),
         'au' => $r['auH'] ?? (($r['au'] ?? null) !== null ? $r['au'] . ' 23:59' : null),
         'creneaux' => (array) ($r['creneaux'] ?? []), 'repetable' => !empty($r['repetable']), 'maxParTicket' => $r['maxParTicket'] ?? null,
+        'canaux' => $r['canaux'] ?? null, 'seuil' => $r['seuil'] ?? null,
         'statut' => strtoupper((string) ($r['statut'] ?? '')) === 'ACTIVE' ? 'en_caisse' : 'brouillon'];
 }
 
@@ -988,6 +1035,110 @@ function ep_promos_sonde_commandes(): array
     return $out;
 }
 
+/* --- les champs d'une promotion au panel : la sonde (23/10/2026) ------------------------------------------------ */
+
+/**
+ * Les champs qu'une promotion porte déjà au cockpit : ceux de la documentation publique du panel (api.php, inchangée du
+ * 21 au 23/10/2026) et ceux que pvNormaliser relit dans une fiche. Tout autre champ d'une fiche relue est NOUVEAU.
+ */
+const PM_CHAMPS_CONNUS = ['activation_mode', 'bundle_price', 'bundle_promotion', 'calculation_shop_id', 'category_ids', 'code', 'code_type',
+    'count', 'data', 'day_of_week', 'description', 'discount_type', 'discount_value', 'eligible_category_ids', 'eligible_product_ids',
+    'excluded_product_ids', 'id', 'id_product', 'id_product_portion', 'id_promotion', 'is_exclusive', 'is_repeatable', 'items',
+    'max_applications_per_transaction', 'name', 'planned_promotion_type', 'priority', 'product_id', 'product_ids', 'product_portion_id',
+    'promotion_type', 'quantity', 'quantity_promotion', 'requires_customer', 'reward', 'reward_category_ids', 'reward_product_ids', 'schedule',
+    'selection_strategy', 'shop_ids', 'shop_scope_type', 'sort_order', 'status', 'time_from', 'time_to', 'trigger', 'type', 'usage_limit',
+    'usage_limit_per_code', 'usage_limit_per_customer', 'usage_limit_total', 'valid_from', 'valid_to', 'value', 'voucher_campaign_id',
+    'products', 'categories', 'category_targets', 'product_targets', 'portion_scope', 'id_category', 'product_name',
+    'calculation_sale_price', 'calculation_discounted_sale_price', 'start_time', 'end_time', 'created_at', 'updated_at', 'deleted_at'];
+
+/** Ce qui ressemble à une condition de ticket ou de canal : un seuil, un montant, la caisse, le webshop. */
+const PM_MOTIF_CONDITION = '/min|max|seuil|threshold|amount|montant|total|basket|panier|ticket|receipt|order|channel|canal|source|webshop|web|online|pos|counter|comptoir|kiosk|deliver|pickup|takeaway|sale|condition|rule/i';
+
+/**
+ * Une fiche aplatie : [chemin => [type, exemple]] (« trigger.product_ids[].id_product »). Une liste se lit sur ses trois
+ * premiers éléments ; une liste vide garde son chemin (« [] »), un champ nul aussi (« null ») : le panel peut rendre un
+ * champ nouveau à null tant qu'aucune promotion ne s'en sert.
+ */
+function pmSondeAplatir($x, string $base = '', array &$out = [], int $prof = 0): array
+{
+    if (!is_array($x) || $prof > 6) { return $out; }
+    $liste = array_is_list($x);
+    $i = 0;
+    foreach ($x as $k => $v) {
+        if ($liste && $i++ >= 3) { break; }
+        $ch = $liste ? $base . '[]' : ($base === '' ? (string) $k : $base . '.' . $k);
+        if (is_array($v) && $v !== []) { pmSondeAplatir($v, $ch, $out, $prof + 1); continue; }
+        $type = is_array($v) ? '[]' : ($v === null ? 'null' : gettype($v));
+        if (!isset($out[$ch]) || ($out[$ch][0] === 'null' && $type !== 'null')) {
+            $out[$ch] = [$type, is_scalar($v) ? mb_substr((string) (is_bool($v) ? ($v ? 'true' : 'false') : $v), 0, 60) : null];
+        }
+    }
+    return $out;
+}
+
+/** Le dernier nom d'un chemin, sans ses crochets : « trigger.product_ids[].id_product » → « id_product ». */
+function pmSondeFeuille(string $ch): string
+{
+    $p = explode('.', str_replace('[]', '', $ch));
+    return (string) end($p);
+}
+
+/**
+ * GET /ventes/promos/sonde-champs[?shop=4] — lecture seule (23/10/2026, demande de Sam : « le seuil de ticket
+ * déclencheur, webshop ou comptoir… les nouveaux paramètres de l'API des promotions ») : TOUS les champs que le panel
+ * rend sur une promotion, type par type (les six plus récentes de chacun, et celles du magasin), avec un exemple de
+ * valeur. `nouveaux` : les champs que ni la documentation publique ni le cockpit ne connaissent ; `conditions` : ceux qui
+ * ressemblent à un seuil de ticket ou à un canal (connus ou non). Rien de nominatif (pmSondePropre).
+ */
+function ep_promos_sonde_champs(): array
+{
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { http_response_code(503); return ['error' => 'compte admin du panel indisponible']; }
+    $shop = (int) ($_GET['shop'] ?? 0);
+    $out = ['shop' => $shop ?: null, 'lu' => date('Y-m-d H:i:s'), 'nouveaux' => [], 'conditions' => [], 'sortes' => []];
+    foreach (['buy-x-get-y', 'scheduled-product-discount', 'quantity', 'bundles'] as $sorte) {
+        $l = ErpApi::sondeGet('/admin/promotions/' . $sorte . '?limit=100');
+        $items = pvItems($l['corps']);
+        $ids = [];
+        foreach ($items as $it) { if ((int) ($it['id'] ?? 0) > 0) { $ids[] = (int) $it['id']; } }
+        rsort($ids);
+        $choisis = array_slice($ids, 0, 6);
+        if ($shop > 0) {
+            foreach ($items as $it) { if (in_array($shop, array_map('intval', (array) ($it['shop_ids'] ?? [])), true)) { $choisis[] = (int) $it['id']; } }
+        }
+        $choisis = array_slice(array_values(array_unique($choisis)), 0, 10);
+        $chemins = [];
+        foreach ($choisis as $id) { $chemins[$id] = '/admin/promotions/' . $sorte . '/' . $id; }
+        $fiches = $chemins !== [] ? ErpApi::getParallele($chemins, 4) : [];
+        $plat = [];
+        // La ligne de liste compte aussi : un champ peut n'y être que là.
+        foreach (array_slice($items, 0, 6) as $it) { pmSondeAplatir(pmSondePropre($it, true), '', $plat); }
+        $lues = 0;
+        foreach ($fiches as $f) {
+            if (!is_array($f)) { continue; }
+            $f = is_array($f['data'] ?? null) && isset($f['data']['id']) ? $f['data'] : $f;
+            pmSondeAplatir(pmSondePropre($f, true), '', $plat);
+            $lues++;
+        }
+        ksort($plat);
+        $s = ['code' => $l['code'], 'erreur' => $l['erreur'], 'promotions' => count($items), 'fichesLues' => $lues,
+            'champs' => array_map(static fn ($t) => $t[0] . ($t[1] !== null && $t[1] !== '' ? ' = ' . $t[1] : ''), $plat)];
+        foreach ($plat as $ch => $t) {
+            $f = pmSondeFeuille($ch);
+            $nouveau = !in_array($f, PM_CHAMPS_CONNUS, true) && preg_match(PM_SONDE_PERSO, $f) !== 1;
+            if ($nouveau) { $out['nouveaux'][$sorte . ' · ' . $ch] = $s['champs'][$ch]; }
+            if (preg_match(PM_MOTIF_CONDITION, $f) === 1) { $out['conditions'][$sorte . ' · ' . $ch] = $s['champs'][$ch]; }
+        }
+        $out['sortes'][$sorte] = $s;
+    }
+    // Une liste de toutes les promotions, si le panel en a une (non documentée) : ses types et ses champs.
+    $g = ErpApi::sondeGet('/admin/promotions?limit=20');
+    $gi = pvItems($g['corps']);
+    $out['listeGenerale'] = ['code' => $g['code'], 'n' => count($gi),
+        'types' => array_values(array_unique(array_map(static fn ($x) => (string) ($x['promotion_type'] ?? ''), $gi))),
+        'champs' => $gi !== [] ? array_keys(pmSondeAplatir(pmSondePropre($gi[0], true))) : []];
+    return $out;
+}
+
 /* --- les routes --------------------------------------------------------------------------------- */
 
 /**
@@ -1011,13 +1162,18 @@ function ep_promos_magasin_demandes(): array
             $panel[] = ['id' => $r['id'], 'nom' => $r['nom'], 'type' => $r['type'], 'texte' => function_exists('pvTexte') ? pvTexte($r) : '', 'statut' => $r['statut'],
                 'etat' => pmEtatPanel($r, $auj), 'du' => $r['du'], 'au' => $r['au'], 'reseau' => ($r['shops'] ?? null) === null, 'magasins' => $r['shops'] === null ? null : count($r['shops']),
                 // De quoi la dupliquer en promotion du magasin : ce qu'on achète, ce qu'on reçoit, la récompense.
-                'x' => $r['declenche'], 'y' => $r['recoit'], 'recompense' => $r['recompense']];
+                'x' => $r['declenche'], 'y' => $r['recoit'], 'recompense' => $r['recompense'],
+                // Une information par colonne dans la liste (23/10/2026) : le lot d'un bundle, les créneaux, la règle du
+                // ticket, le canal et le seuil quand le panel les donne.
+                'bundle' => ($r['bundle'] ?? null) !== null ? ['prix' => $r['bundle']['prix'], 'items' => array_values(array_filter(array_map(static fn ($i) => (string) ($i['nom'] ?? ''), (array) ($r['bundle']['items'] ?? []))))] : null,
+                'creneaux' => (array) ($r['creneaux'] ?? []), 'repetable' => !empty($r['repetable']), 'maxParTicket' => $r['maxParTicket'] ?? null,
+                'canaux' => $r['canaux'] ?? null, 'seuil' => $r['seuil'] ?? null];
         }
     }
     $ts = (int) ($R0['ts'] ?? 0);
     return ['shop' => (string) $shop, 'demandes' => $demandes, 'panel' => $panel, 'erreurPanel' => $err, 'source' => 'panel',
         'lu' => $ts > 0 ? date('H:i', $ts) : null, 'luTs' => $ts, 'luJour' => $ts > 0 ? date('Y-m-d', $ts) : null,
-        'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS]];
+        'regles' => ['coefMin' => PM_COEF_MIN]];
 }
 
 /**
@@ -1045,14 +1201,13 @@ function wr_promos_magasin(): array
         // En caisse, elle se modifie (les changements partent au panel sur la même promotion), elle ne repasse pas en brouillon.
         if ($actuelle['statut'] === 'en_caisse' && !$envoi) { http_response_code(409); return ['error' => 'déjà en caisse : enregistrez les changements, ils partent au panel (pas de brouillon)']; }
     }
-    [$miennes] = pmMiennes($shop);
-    $autres = array_values(array_filter($miennes, static fn ($o) => $o['panelId'] !== $panelId));
+    $d['avant'] = isset($actuelle) ? ['canaux' => $actuelle['canaux'] ?? null, 'seuil' => $actuelle['seuil'] ?? null] : null;
     // À l'enregistrement, ce qui ne se chiffre pas sort de la promotion (pmExclureNonChiffres).
     $exclusAuto = []; $saisie = $d;
     if ($envoi && ($produits = pmProduits($shop)) !== null) { [$d, $exclusAuto] = pmExclureNonChiffres($d, $produits); }
     [$coef, $illisibles] = pmCoefMagasins($d);
     if ($envoi) {
-        $err = pmErreurs($saisie, $autres, $coef, date('Y-m-d H:i'));
+        $err = pmErreurs($saisie, $coef, date('Y-m-d H:i'));
         foreach ($illisibles as $s) { $err[] = 'Les prix et coûts de ' . pmNomShop($s) . ' ne se lisent pas au panel : réessayez dans un instant.'; }
         if ($err === [] && $coef !== null && $coef['lot'] === null) {
             $sortis = $exclusAuto !== [] ? ' (sortis, sans coût de recette ou sans prix : ' . implode(', ', array_slice($exclusAuto, 0, 6)) . (count($exclusAuto) > 6 ? '…' : '') . ')' : '';
@@ -1061,7 +1216,7 @@ function wr_promos_magasin(): array
     } else {
         // Un brouillon est déjà une promotion du panel (inactive) : ce que le panel exige y est (nom, X, Y, dates) ; il
         // ne compte pas dans les deux à la fois, et une période passée se corrige plus tard.
-        $err = pmErreurs($saisie, [], null, '0000-00-00 00:00');
+        $err = pmErreurs($saisie, null, '0000-00-00 00:00');
     }
     if ($err !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $err, 'coef' => $coef]; }
     // Une portion visée : la portion de chaque produit, lue au panel (21/10/2026).
@@ -1128,5 +1283,5 @@ function ep_promos_magasin_marque(): array
     $noms = [];
     foreach ($l as $d) { $noms[(string) $d['shop']] ??= pmNomShop($d['shop']); }
     return ['demandes' => $l, 'noms' => $noms, 'erreurPanel' => $R['erreur'], 'source' => 'panel',
-        'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS]];
+        'regles' => ['coefMin' => PM_COEF_MIN]];
 }
