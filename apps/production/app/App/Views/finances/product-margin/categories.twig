@@ -132,6 +132,23 @@
             {% endif %}
         </div>
 
+        {# ── WIDOK : marża fabryki / sprzedawalność w Belgii (franczyza) ───── #}
+        <div class="mt-3">
+            <div class="at-seg">
+                <a href="{{ root }}/finances/category-margin?months={{ selected_months }}" class="{{ view != 'be' ? 'is-on' : '' }}">Marża fabryki</a>
+                <a href="{{ root }}/finances/category-margin?months={{ selected_months }}&amp;view=be" class="{{ view == 'be' ? 'is-on' : '' }}">Sprzedawalność w Belgii (franczyza)</a>
+            </div>
+        </div>
+        {% if view == 'be' %}
+            {% include 'finances/product-margin/_be_toolbar.twig' %}
+            <div class="d-flex flex-wrap gap-3 mt-2 mb-2 small align-items-center">
+                <span class="fw-semibold text-muted">Werdykt Belgia :</span>
+                <span><span class="at-be-chips me-1"><span class="at-be-ok">n</span></span>sprzedawalny (≥ × {{ be.params.multiplier|number_format(2, ',', '') }})</span>
+                <span><span class="at-be-chips me-1"><span class="at-be-warn">n</span></span>na granicy (× {{ be.params.limit|number_format(2, ',', '') }} – {{ be.params.multiplier|number_format(2, ',', '') }})</span>
+                <span><span class="at-be-chips me-1"><span class="at-be-bad">n</span></span>za drogi (&lt; × {{ be.params.limit|number_format(2, ',', '') }})</span>
+                <span><span class="at-be-chips me-1"><span class="at-be-none">n</span></span>brak ceny w sklepie</span>
+            </div>
+        {% else %}
         {# ── LEGENDA KOLORÓW ──────────────────────────────────────────────── #}
         <div class="d-flex flex-wrap gap-3 mt-3 mb-2 small align-items-center">
             <span class="fw-semibold text-muted">{{ translations.category_margin_legend|default('Ocena marży') }}:</span>
@@ -140,6 +157,7 @@
             <span><span class="badge bg-danger me-1">&nbsp;</span>{{ translations.category_margin_bad|default('> 5pp poniżej celu') }}</span>
             <span><span class="badge bg-secondary me-1">&nbsp;</span>{{ translations.category_margin_nodata|default('Brak danych ceny') }}</span>
         </div>
+        {% endif %}
 
         {# ── TABELA KATEGORII ──────────────────────────────────────────────── #}
         <div class="card mt-1">
@@ -162,6 +180,7 @@
                                 <th class="text-center" style="width:110px;">
                                     {{ translations.category_margin_products|default('Produkty') }}
                                 </th>
+                                {% if view == 'be' %}<th class="text-center" style="width:150px;">Belgia × {{ be.params.multiplier|number_format(2, ',', '') }}</th>{% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -224,13 +243,23 @@
                                         {{ cat.products_with_data }}/{{ cat.products_count }}
                                     </span>
                                 </td>
+                                {% if view == 'be' %}
+                                    {% set bc = be.categories[cat.category_id] ?? null %}
+                                    <td class="text-center">
+                                        {% if bc and (bc.ok + bc.warn + bc.bad + bc.none) > 0 %}
+                                            <span class="at-be-chips" title="sprzedawalne · na granicy · za drogie · bez ceny w sklepie">{% if bc.ok %}<span class="at-be-ok">{{ bc.ok }}</span>{% endif %}{% if bc.warn %}<span class="at-be-warn">{{ bc.warn }}</span>{% endif %}{% if bc.bad %}<span class="at-be-bad">{{ bc.bad }}</span>{% endif %}{% if bc.none %}<span class="at-be-none">{{ bc.none }}</span>{% endif %}</span>
+                                        {% else %}<span class="text-muted small">—</span>{% endif %}
+                                    </td>
+                                {% endif %}
                             </tr>
 
                             {# ── ROZWIJANY PANEL PRODUKTÓW ── #}
                             <tr id="products_{{ cat.category_id }}" class="d-none products-panel">
-                                <td colspan="7" class="p-0">
+                                <td colspan="{{ view == 'be' ? 8 : 7 }}" class="p-0">
                                     <div class="bg-light border-bottom">
-                                        {% if cat.products is not empty %}
+                                        {% if view == 'be' and cat.products is not empty %}
+                                            {% include 'finances/product-margin/_be_products.twig' %}
+                                        {% elseif cat.products is not empty %}
                                         <table class="table table-sm table-borderless mb-0 align-middle">
                                             <thead>
                                                 <tr class="small text-muted border-bottom">
@@ -587,6 +616,7 @@
 {% endblock %}
 
 {% block scripts %}
+{% if view == 'be' %}{% include 'page_components/ajax_helpers.twig' %}{% include 'finances/product-margin/_be_link_modal.twig' %}{% endif %}
 <script>
     function toggleCategory(categoryId) {
         const panel = document.getElementById('products_' + categoryId);

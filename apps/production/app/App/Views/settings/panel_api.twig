@@ -1,0 +1,102 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Konto API panelu{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Konto API panelu</h3>
+            <p class="text-subtitle text-muted">Ceny w sklepach franczyzy (Belgia) dla testu « Sprzedawalność w Belgii » w marżach : konto konsultanta panelu, tylko odczyt. Hasło zaszyfrowane w bazie, nigdy nie wraca do przeglądarki.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="row g-3">
+        <div class="col-12 col-xl-7">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title mb-0">Konto konsultanta</h4></div>
+                <div class="card-body">
+                    {% if source == 'cockpit' %}
+                        <div class="alert alert-success py-2 small"><i class="bi bi-link-45deg me-1"></i> To samo konto co w cockpicie konsultanta — skopiowane przy wdrożeniu (i odświeżane, gdy zmieni się w cockpicie). Zapis tutaj ustawia inne konto tylko dla ERP.</div>
+                    {% elseif not password_set %}
+                        <div class="alert alert-info py-2 small"><i class="bi bi-info-circle me-1"></i> Konto z cockpitu konsultanta jest kopiowane automatycznie przy wdrożeniu ; możesz też wpisać je tutaj.</div>
+                    {% endif %}
+                    <form id="panelApiForm" autocomplete="off">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="paBase">Adres API</label>
+                            <input class="form-control" id="paBase" name="base_url" value="{{ base_url }}" required>
+                            <div class="form-text">Np. https://atelierby.tfbuddy.com/api/v1</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="paPhone">Telefon konta</label>
+                            <input class="form-control" id="paPhone" name="phone" value="{{ phone }}" inputmode="tel" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="paPassword">Hasło</label>
+                            <input class="form-control" id="paPassword" name="password" type="password" autocomplete="new-password"
+                                   placeholder="{{ password_set ? '•••••••• (ustawione — puste pole = bez zmiany)' : 'hasło konta konsultanta' }}">
+                            {% if password_set and not password_readable %}
+                                <div class="form-text text-danger">Zapisanego hasła nie można odczytać (zmieniony sekret serwera) — wpisz je ponownie.</div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Zapisz</button>
+                            <button class="btn btn-outline-secondary" type="button" id="paTest" {{ password_set ? '' : 'disabled' }}><i class="bi bi-plug me-1"></i> Testuj połączenie</button>
+                        </div>
+                        <p class="small mt-3 mb-0" id="paResult"></p>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-5">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title mb-0">Synchronizacja cen</h4></div>
+                <div class="card-body">
+                    <p class="small text-muted">Ceny pratiquées (brutto i netto) produktów dostępnych w każdym sklepie w Belgii ; mediana według produktu. Uruchom z Marży kategorii → « Sprzedawalność w Belgii » albo tutaj.</p>
+                    {% if sync %}
+                        <p class="small mb-2">Ostatnia : <strong>{{ sync.started_at|date('d.m.Y H:i') }}</strong>{{ sync.run_by_name ? ' · ' ~ sync.run_by_name : '' }} ·
+                            <span class="badge {{ sync.status == 'ok' ? 'bg-success' : (sync.status == 'partial' ? 'bg-warning text-dark' : (sync.status == 'failed' ? 'bg-danger' : 'bg-secondary')) }}">{{ {'ok': 'OK', 'partial': 'częściowa', 'failed': 'błąd', 'running': 'w toku'}[sync.status] ?? sync.status }}</span>
+                            {% if sync.status != 'failed' %} · {{ sync.products }} produktów, {{ sync.shops - sync.shops_failed }} sklepów{% endif %}</p>
+                        {% if sync.message %}<p class="small text-muted mb-2">{{ sync.message }}</p>{% endif %}
+                    {% else %}
+                        <p class="small mb-2">Jeszcze nie synchronizowano.</p>
+                    {% endif %}
+                    <button class="btn btn-outline-primary" type="button" id="paSync" {{ password_set ? '' : 'disabled' }}><i class="bi bi-arrow-repeat me-1"></i> Synchronizuj ceny</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include "page_components/ajax_helpers.twig" %}
+<script>
+(() => {
+    const form = document.getElementById('panelApiForm');
+    const result = document.getElementById('paResult');
+    const show = (res) => { result.className = 'small mt-3 mb-0 ' + (res.ok ? 'text-success' : 'text-danger'); result.textContent = res.message || (res.ok ? 'OK' : 'Błąd'); };
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('[type=submit]'); btn.disabled = true;
+        at.send('/ajax/settings/panel-api', 'PUT', {base_url: form.base_url.value, phone: form.phone.value, password: form.password.value}).then(res => {
+            btn.disabled = false; show(res); at.notify(res.ok, res.message);
+            if (res.ok) { form.password.value = ''; document.getElementById('paTest').disabled = false; document.getElementById('paSync').disabled = false; }
+        });
+    });
+    document.getElementById('paTest').addEventListener('click', (e) => {
+        e.target.disabled = true; result.className = 'small mt-3 mb-0 text-muted'; result.textContent = 'Łączenie…';
+        at.send('/ajax/settings/panel-api/test', 'POST', {}).then(res => {
+            e.target.disabled = false; show(res);
+            if (res.ok && res.data && res.data.names.length) result.textContent += ' ' + res.data.names.join(' · ');
+        });
+    });
+    document.getElementById('paSync').addEventListener('click', (e) => {
+        e.target.disabled = true; result.className = 'small mt-3 mb-0 text-muted'; result.textContent = 'Synchronizacja… (do minuty)';
+        at.send('/ajax/store-prices/sync', 'POST', {}).then(res => { show(res); at.notify(res.ok, res.message); if (res.ok) setTimeout(() => location.reload(), 900); else e.target.disabled = false; });
+    });
+})();
+</script>
+{% endblock %}

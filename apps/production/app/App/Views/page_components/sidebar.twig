@@ -458,6 +458,13 @@
                                 <i class="bi bi-file-earmark-check"></i> KSeF
                             </a>
                         </li>
+                        {% if can_see('/settings/panel-api') %}
+                        <li class="submenu-item">
+                            <a href="{{ root }}/settings/panel-api">
+                                <i class="bi bi-shop"></i> Konto API panelu (ceny w sklepach)
+                            </a>
+                        </li>
+                        {% endif %}
                         <li class="submenu-item">
                             <a href="{{ root }}/settings/page-usage">
                                 <i class="bi bi-bar-chart"></i> Licznik stron

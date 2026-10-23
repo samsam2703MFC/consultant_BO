@@ -5,6 +5,7 @@ use App\Core\Route;
 use App\Core\Web\BaseController;
 use App\Repositories\Product\Recipe\RecipeRepository;
 use App\Services\Finances\ProductMarginService;
+use App\Services\Finances\StorePrice\StoreSellabilityService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -13,6 +14,7 @@ class ProductMarginController extends BaseController
     public function __construct(
         private ProductMarginService $productMarginService,
         private RecipeRepository     $recipeRepository,
+        private StoreSellabilityService $sellability,
     ) {
     }
 
@@ -32,10 +34,12 @@ class ProductMarginController extends BaseController
             'selected_months'        => $months,
             'available_months_count' => $availableCount,
             'analysis'               => null,
+            'be'                     => null,
         ];
 
         if ($productId > 0) {
             $data['analysis'] = $this->productMarginService->calculate($productId, $months);
+            $data['be'] = $this->sellability->productCard($productId, $data['analysis'], user('id') ? (int) user('id') : null);
         }
 
         $this->view('finances/product-margin/overview', $data);

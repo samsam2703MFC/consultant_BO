@@ -6,6 +6,7 @@ use App\Repositories\Analysis\MarginRecalcRepository;
 use App\Repositories\Product\FinalProductRepository;
 use App\Repositories\Product\Price\FinalProductCustomerPriceRepository;
 use App\Services\Finances\ProductMarginService;
+use App\Services\Finances\StorePrice\StoreSellabilityService;
 use App\Services\Recipe\RecipeCostRecalculationService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,6 +19,7 @@ class CategoryMarginController extends BaseController
         private FinalProductCustomerPriceRepository  $customerPriceRepository,
         private RecipeCostRecalculationService       $recipeCosts,
         private MarginRecalcRepository               $recalc,
+        private StoreSellabilityService              $sellability,
     ) {
     }
 
@@ -29,8 +31,13 @@ class CategoryMarginController extends BaseController
 
         $available = $this->productMarginService->getAvailableMonthsCount();
         $result    = $this->productMarginService->calculateCategoryOverview($months);
+        // Widok « Sprzedawalność w Belgii » : cena fabryczna za sztukę × mnożnik franczyzy vs cena w sklepie (API panelu)
+        $view      = $request->query->get('view') === 'be' ? 'be' : 'margin';
+        $userId    = user('id') ? (int) user('id') : null;
 
         $this->view('finances/product-margin/categories', [
+            'view'                   => $view,
+            'be'                     => $view === 'be' ? $this->sellability->forCategories($result ?: [], $userId) : null,
             'selected_months'        => $months,
             'available_months_count' => $available,
             'result'                 => $result,

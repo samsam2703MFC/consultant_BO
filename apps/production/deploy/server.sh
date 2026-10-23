@@ -318,6 +318,10 @@ if [[ -f "$IMPORT_OK" ]]; then
   # Mots de passe des comptes : bcrypt (ceux encore en clair, idempotent ; même mot de passe pour se connecter).
   ( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/hash_passwords.php ) \
     || fail "Chiffrement des mots de passe des comptes en échec : voir le message ci-dessus."
+  # Prix magasin (marges, Belgique) : compte API du panel = le même que dans le cockpit consultant, recopié chiffré
+  # dans la base de l'ERP (le mot de passe n'apparaît jamais dans les logs ; un compte saisi dans l'ERP est gardé).
+  ( cd "$ERP_TARGET/app" && COCKPIT_CFG="$COCKPIT_CFG" "$PHPBIN" Bin/store_price_cockpit_account.php ) \
+    || warn "Compte API du panel (prix magasin) : copie depuis le cockpit en échec — à saisir dans l'ERP (Ustawienia → Konto API panelu)."
   # E-mails : la copie contient de vraies adresses de clients, rien n'en part (log_only),
   # sauf choix explicite ERP_MAIL_MODE=redirect avec ERP_MAIL_REDIRECT_TO (recette).
   mail_mode="${ERP_MAIL_MODE:-log_only}"

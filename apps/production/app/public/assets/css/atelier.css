@@ -1640,3 +1640,40 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .at-activity-session { border-bottom: 1px solid var(--bs-border-color, #eee); padding: 6px 0; }
 .at-activity-session summary { cursor: pointer; }
 .at-activity-pages { margin: 6px 0 4px; font-size: .9rem; }
+
+/* Marże : sprzedawalność w Belgii (cena fabryczna za sztukę × mnożnik franczyzy vs cena w sklepie) */
+.at-seg { display: inline-flex; background: var(--at-bg-2); border-radius: 10px; padding: 3px; gap: 2px; }
+.at-seg a { padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: .85rem; color: var(--at-muted); text-decoration: none; }
+.at-seg a.is-on { background: var(--at-surface); color: var(--at-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.at-be-params { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: center; font-size: .86rem; }
+.at-be-params label { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+.at-be-params input { width: 64px; text-align: center; font-weight: 700; }
+.at-be-params .at-be-val { display: inline-block; border: 1px solid var(--at-line-2); border-radius: 8px; padding: 3px 10px; background: var(--at-surface); font-weight: 700; }
+.at-be-src { font-size: .8rem; color: var(--at-muted); }
+.at-be-chips { display: inline-flex; gap: 4px; flex-wrap: nowrap; }
+.at-be-chips span { min-width: 26px; text-align: center; border-radius: 99px; font-size: .74rem; font-weight: 700; padding: 3px 7px; }
+.at-be-ok { background: #d9efe0; color: #1d6b3a; }
+.at-be-warn { background: #fdefc8; color: #8a5a00; }
+.at-be-bad { background: #f8d7da; color: #9b1c2b; }
+.at-be-none { background: #ece6e1; color: #7a6e67; }
+.at-be-sub { color: #8a7d75; font-size: .72rem; }
+.at-be-coef { display: flex; align-items: center; gap: 8px; justify-content: flex-end; white-space: nowrap; }
+.at-be-bar { position: relative; width: 60px; height: 8px; border-radius: 99px; background: #ece6e1; }
+.at-be-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; }
+.at-be-bar b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #1f1a17; opacity: .55; }
+.at-be-table td.text-end, .at-be-table th.text-end { white-space: nowrap; }
+.at-be-ladder { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 6px 0 4px; }
+.at-be-step { position: relative; padding: 14px 16px; background: #faf7f5; border: 1px solid #eee5df; margin-right: 22px; border-radius: 12px; }
+.at-be-step:last-child { margin-right: 0; }
+.at-be-step:not(:last-child)::after { content: '→'; position: absolute; right: -19px; top: 50%; transform: translateY(-50%); color: #b4a69d; font-weight: 700; }
+.at-be-step span { display: block; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: #7a6e67; font-weight: 700; }
+.at-be-step strong { display: block; font-size: 1.45rem; margin-top: 4px; }
+.at-be-step small { display: block; color: #7a6e67; font-size: .76rem; margin-top: 2px; }
+.at-be-step.is-target { background: #fff; border: 2px dashed var(--at-primary); }
+.at-be-step.is-ok { background: #eef7f1; border-color: #bfe0cb; }
+.at-be-step.is-warn { background: #fff7e0; border-color: #f3d27a; }
+.at-be-step.is-bad { background: #fbe9eb; border-color: #f1b8bf; }
+.at-be-hint { border-left: 4px solid var(--at-primary); background: #fbf6f3; border-radius: 8px; padding: 10px 14px; font-size: .88rem; }
+.at-be-hint.is-warn { border-left-color: #e0a100; background: #fffaf0; }
+.at-be-link { font-size: .72rem; }
+@media (max-width: 1100px) { .at-be-ladder { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .at-be-step { margin-right: 0; } .at-be-step::after { display: none; } }

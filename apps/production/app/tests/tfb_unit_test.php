@@ -391,5 +391,7 @@ check(ActivityService::path('/today?x=1#y') === '/today' && ActivityService::pat
 check(ActivityService::period('2026-10-31', '2026-10-01') === ['2026-10-01', '2026-10-31'] && ActivityService::period('2020-01-01', '2026-10-22')[0] === '2025-10-22',
     'activity: period ordered and limited to 365 days');
 check(PageAccess::keyFor('/organization/activity') === 'activity' && PageAccess::adminOnly('activity'), 'activity report is admin only');
+check(PageAccess::keyFor('/settings/panel-api') === 'panel_api' && PageAccess::adminOnly('panel_api') && PageAccess::keyFor('/settings/ksef') === 'settings'
+    && PageAccess::keyFor('/finances/category-margin') === 'margins', 'panel API account (store prices) is admin only, margins stay grantable');
 
 echo "tfb_unit_test: OK\n";
