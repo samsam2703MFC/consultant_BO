@@ -7249,18 +7249,18 @@ function tplPrimesApp(c, x){
     ['promo', 'Promos', t => t === 'promo'], ['b2b', 'Clients pro · B2B', t => t === 'b2b']];
   const groupes = (ls, ligne, moyLib) => SORTES.map(([cle, titre, de]) => { const g = ls.filter(l => de(l.type));
     return g.length ? `<div data-pr-groupe="${cle}"><div style="${titreG}">${esc(titre)}<span style="font-weight:400;letter-spacing:0;text-transform:none;margin-left:6px">${g.length}</span></div><div style="${groupeSt}">${enteteP(moyLib, ligne === ligneLire)}${g.map(ligne || ligneP).join('')}</div></div>` : ''; }).join('');
-  const tete = (titre, sous, droite) => `<div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:4px 4px 2px">
-      <div style="flex:1;min-width:280px"><div style="font:700 26px/1.15 ${sf};letter-spacing:-.02em;color:var(--color-text)">${titre}</div><div style="font:400 13.5px/1.45 ${sf};color:${muet};margin-top:5px;max-width:760px">${sous}</div></div>${droite || ''}</div>`;
-  const vide = t => `<div style="${groupeSt};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">${t}</div>`;
+  const tete = (titre, sous, droite) => `<div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:0 4px">
+      <div style="flex:1;min-width:280px"><div style="font:700 22px/1.2 ${sf};letter-spacing:-.018em;color:var(--color-text)">${titre}</div>${sous ? `<div style="font:400 13px/1.45 ${sf};color:${muet};margin-top:3px;max-width:760px">${sous}</div>` : ''}</div>${droite || ''}</div>`;
+  const vide = t => `<div style="${groupeSt};margin-top:12px;padding:16px 18px;font:400 14px ${sf};color:${muet}">${t}</div>`;
   // La page franchisé (23/10/2026, Sam : « le panneau de contrôle des primes pour son magasin ») : UN magasin, celui de
   // l'adresse (#/primes-app-worker?shop=3), dans la même forme sobre. Les primes de la marque et des sponsors qui y
   // tournent, à lire ; les siennes, à poser avec les données du magasin ; ses chiffres ; les promotions du panel.
   const FR = c.prFr;
   const frPage = () => {
     const shopId = `<span data-pr-shop="${esc(FR.id)}" style="font:600 12.5px ${sf};padding:6px 13px;border-radius:999px;background:var(--color-surface);color:var(--color-text);font-variant-numeric:tabular-nums">shop ${esc(FR.id)}</span>`;
-    const entete = `<section data-pr="fr-tete">${tete(esc(FR.nom || 'Magasin ' + FR.id),
-      'Le panneau des primes du magasin : celles de la marque et des sponsors qui y tournent, les siennes — payées par lui, en plus —, ses chiffres et les promotions du panel. Le magasin se lit dans l’adresse.',
-      `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">${FR.note ? `<span style="font:400 13px ${sf};color:${muet}">note Google ${esc(FR.note)}</span>` : ''}${shopId}</div>`)}</section>`;
+    // Le magasin, sa note et son shop id sont dans le titre de la page (23/10/2026, « compresser ») ; un magasin inconnu
+    // garde son en-tête, avec les magasins du panel.
+    const entete = `<section data-pr="fr-tete">${tete(esc(FR.nom || 'Magasin ' + FR.id), '', shopId)}</section>`;
     if (!FR.connu) {
       return entete + `<section data-pr="fr-inconnu"><div style="${groupeSt};padding:18px">
         <div style="font:600 14px ${sf};color:var(--color-primary)">Aucun magasin « ${esc(FR.id)} » dans le panel.</div>
@@ -7294,21 +7294,22 @@ function tplPrimesApp(c, x){
           ${v.cases.map(caseEq).join('')}
           <td style="padding:11px 16px;border-top:${filet};text-align:right;vertical-align:top;font:600 14px/1.3 ${sf};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(v.total)}</td></tr>`).join('')}</tbody>
       </table></div></div>
-      <div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">✓ gagnée · ✓ 2 / 5 sous une prime : deux vendeuses sur cinq l’ont gagnée · <span style="color:var(--color-primary)">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin fait vers l’objectif · toucher un en-tête trie, un 2e toucher inverse${EQ.enCours ? ' · l’objectif du magasin se lit sur la projection du mois' : ''}${EQ.quand ? ' · lu à ' + esc(EQ.quand) : ''}.</div>`;
+      <div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">✓ gagnée · <span style="color:var(--color-primary)">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin vers l’objectif · un clic sur un en-tête trie${EQ.quand ? ' · lu à ' + esc(EQ.quand) : ''}</div>`;
     const equipe = `<section data-pr="fr-equipe">
-      ${tete('Où en sont tes vendeuses', 'Chaque prime de Mes primes, et pour chacune ce que ta vendeuse y voit : gagnée, en tête, sa place, ou sa valeur face à l’objectif.',
+      ${tete('Où en sont tes vendeuses', 'Ce que chacune voit dans Mes primes, prime par prime.',
         `<div style="display:flex;gap:8px;flex-wrap:wrap">${segm(EQ.filtres)}${segm(EQ.mois)}</div>`)}
       ${EQ.chargement ? vide('Lecture des fiches de l’équipe…') : EQ.motif ? vide(esc(EQ.motif)) : !EQ.vendeuses.length ? vide('Personne au planning ni en caisse dans ce magasin ce mois-là.')
-        : !EQ.primes.length ? vide('Aucune prime du magasin ce mois-là : posez-en une ci-dessous.') : tableEq()}
+        : !EQ.primes.length ? vide(`<span style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="flex:1">Aucune prime du magasin ce mois-là.</span>${FR.nouvelle ? `<button ${x.A(FR.nouvelle)} style="${btP}" data-eq-nouvelle>+ Nouvelle prime du magasin</button>` : ''}</span>`) : tableEq()}
     </section>`;
     const marque = `<section data-pr="fr-marque" class="prl-mag">
-      ${tete('Primes de la marque et des sponsors', 'Celles qui tournent dans ce magasin, à lire : la marque les règle. Ses vendeuses les retrouvent dans Mes primes.')}
-      ${FR.marque.length ? groupes(FR.marque, ligneLire, 'Ce magasin') : vide('Aucune prime de la marque ni des sponsors ne tourne dans ce magasin pour l’instant.')}
+      ${tete('Primes de la marque et des sponsors', FR.marque.length + ' qui tournent ici, réglées par la marque' + (FR.marqueOuvert ? '.' : ' — déjà en colonnes dans le tableau.'),
+        FR.marque.length ? `<button ${x.A(FR.basculerMarque)} data-pr-marque-bascule aria-expanded="${FR.marqueOuvert}" style="${btS}">${FR.marqueOuvert ? 'Masquer' : 'Voir le détail'}</button>` : '')}
+      ${!FR.marque.length ? vide('Aucune prime de la marque ni des sponsors ne tourne dans ce magasin pour l’instant.') : FR.marqueOuvert ? groupes(FR.marque, ligneLire, 'Ce magasin') : ''}
     </section>`;
     const siennes = `<section data-pr="fr-magasin" class="prl-mag">
-      ${tete('Les primes du magasin', 'Posées par le magasin pour ses vendeuses seules, payées par lui. Tout se règle : le déclencheur — promotion, catégorie, ventes croisées, objectif CA, note Google, clients pro —, la condition, la récompense ou un cadeau, la période. Six de chaque sorte au plus.',
+      ${tete('Les primes du magasin', 'Payées par le magasin, pour ses vendeuses seules : promotion, catégorie, ventes croisées, objectif CA, note Google, clients pro. Six de chaque sorte au plus.',
         FR.nouvelle ? `<button ${x.A(FR.nouvelle)} style="${btP}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin</button>` : '')}
-      ${FR.siennes.length ? groupes(FR.siennes, null, 'Ce magasin') : vide('Aucune prime du magasin pour l’instant : posez la première, avec ses chiffres ci-dessous.')}
+      ${FR.siennes.length ? groupes(FR.siennes, null, 'Ce magasin') : vide('Aucune prime du magasin pour l’instant : posez la première, ses chiffres sont juste en dessous.')}
     </section>`;
     // Les chiffres : des tuiles sur une liste blanche, le magasin en grand, le réseau en gris.
     const grille = ls => `<div style="${groupeSt};display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));padding:4px 0">${ls.map(s => `<div style="padding:12px 18px;min-width:0">
@@ -7334,13 +7335,13 @@ function tplPrimesApp(c, x){
         <span style="flex:none">${p.statutMag ? `<span style="font:600 13px ${sf};color:${p.statutMag === 'prime du magasin' ? 'var(--color-primary)' : muet}">${p.statutMag === 'prime du magasin' ? '✓ ' : ''}${esc(p.statutMag)}</span>` : p.ajouter ? `<button ${x.A(p.ajouter)} style="${btS};background:var(--color-background-secondary)" data-pr-promo-mag>+ Prime du magasin</button>` : ''}</span>
       </div>`;
     const promosIci = `<section data-pr="fr-promos">
-      ${tete('Promotions du panel dans ce magasin', 'Celles du réseau et les siennes : une prime du magasin en un geste.', `<button ${x.A(PF.relire)} style="${btS}">Relire</button>`)}
+      ${tete('Promotions du panel dans ce magasin', 'Une prime du magasin en un geste.', `<button ${x.A(PF.relire)} style="${btS}">Relire</button>`)}
       ${PF.chargement ? vide('Lecture des promotions…') : PF.motif ? vide(esc(PF.motif)) : !PF.liste.length ? vide('Aucune promotion du panel ne tourne dans ce magasin.') : `<div style="${groupeSt};margin-top:14px">${PF.liste.map(ligneProm).join('')}</div>`}
     </section>`;
-    return entete + equipe + marque + siennes + donnees + promosIci;
+    return equipe + marque + siennes + donnees + promosIci;
   };
   return `
-<div data-screen="primesApp" style="display:flex;flex-direction:column;gap:26px;max-width:1560px;font-family:${sf}">
+<div data-screen="primesApp" style="display:flex;flex-direction:column;gap:34px;max-width:1560px;font-family:${sf}">
   ${c.prOnglets && !c.prChargement && !c.prMotif ? `<div data-pr-onglets style="display:inline-flex;align-self:flex-start;gap:2px;background:var(--color-border-tertiary);border-radius:12px;padding:3px">${c.prOnglets.map(o => `<button ${x.A(o.choisir)} data-pr-onglet="${o.nouveau ? 'gp' : 'mois'}" style="border:0;border-radius:9px;padding:8px 15px;font:${o.on ? 600 : 500} 13.5px ${sf};background:${o.on ? 'var(--color-surface)' : 'transparent'};color:var(--color-text);cursor:pointer;${o.on ? 'box-shadow:0 1px 3px rgba(0,0,0,.12)' : ''}">${esc(o.nom)}</button>`).join('')}</div>` : ''}
   ${c.prChargement ? `<div style="${groupeSt};padding:18px;color:${muet}">Lecture des paramètres…</div>` : c.prMotif ? `<div style="${groupeSt};padding:18px;color:var(--color-primary)">${esc(c.prMotif)}</div>` : c.prGp ? tplPrGrandsPrix(c.prGp, x) : FR ? frPage() : `
   <section data-pr="app"${voir('app')}>
@@ -7356,13 +7357,14 @@ function tplPrimesApp(c, x){
   </section>
 
   <section data-pr="magasins"${voir('magasins')}>
-    ${tete('Primes des franchisés', 'La prime qu’un franchisé pose pour son magasin, et pour lui seul — ses produits, ses dates, ses clients pro —, payée par le magasin. Seules ses vendeuses la voient. La page d’un magasin : Page franchisé, ou #/primes-app-worker?shop=….',
+    ${tete('Primes des franchisés', 'Posées par un franchisé pour son seul magasin, payées par lui ; seules ses vendeuses les voient.',
       `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button ${x.A(P.nouvelleMag)} style="${btP}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin${P.magFiltreNom ? ' · ' + esc(P.magFiltreNom) : ''}</button>
         <button ${x.A(P.nouvelleB2bMag)} style="${btB2b}" data-pr-nouvelle-b2b-mag>+ Prime B2B${P.magFiltreNom ? ' · ' + esc(P.magFiltreNom) : ''}</button>
       </div>`)}
     ${`<div style="display:inline-flex;flex-wrap:wrap;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px;margin:14px 0 0 4px">${P.magsFiltre.map(m => `<button ${x.A(m.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:${m.on ? 600 : 500} 12.5px ${sf};background:${m.on ? 'var(--color-surface)' : 'transparent'};color:var(--color-text);cursor:pointer;${m.on ? 'box-shadow:0 1px 3px rgba(0,0,0,.12)' : ''}">${esc(m.nom)}${m.n ? ` <span style="color:${muet};font-weight:400">${m.n}</span>` : ''}</button>`).join('')}</div>`}
-    ${P.lignesMag.length ? groupes(P.lignesMag) : vide(P.magFiltreNom ? 'Aucune prime pour ' + esc(P.magFiltreNom) + ' pour l’instant.' : 'Aucune prime de franchisé pour l’instant.')}
+    ${P.lignesMag.length ? groupes(P.lignesMag) : vide(P.magFiltreNom ? 'Aucune prime pour ' + esc(P.magFiltreNom) + ' pour l’instant : il la pose depuis sa page (Page franchisé), ou posez-la ici avec « + Nouvelle prime du magasin ».'
+      : 'Aucun franchisé n’a encore posé de prime. Chacun la pose depuis la page de son magasin (Page franchisé, #/primes-app-worker?shop=…) ; vous pouvez aussi la poser ici pour lui.')}
   </section>
 
   <div style="${carte2};overflow:hidden" data-pr="promos"${voir('promos')}>
