@@ -16,6 +16,26 @@ que la sonde du cockpit relit en direct.*
 - **Ce que le panel rend vraiment** se lit sur la page de la sonde du cockpit (ci-dessous) : chaque champ relu sur les
   fiches, documenté ou non, et un essai d'écriture qui dit si le panel GARDE un seuil et une destination envoyés.
 
+## Ce que le panel rend vraiment (sonde du 23/10/2026, 19:18)
+
+Relu sur 12 promotions « X + Y » (18 au panel), 1 bundle, 8 campagnes de bons ; aucune promotion par quantité ni remise
+programmée. 136 champs ne sont pas dans la documentation publique. Les deux qui comptent pour l'assistant :
+
+| Champ | Où | Valeurs relues | Sens | Ce qu'en fait le cockpit |
+|---|---|---|---|---|
+| `minimum_receipt_gross` | buy-x-get-y, bundles (toutes les fiches) | `null` partout | le minimum du ticket, TTC (`gross` = TTC chez le panel : 20,50 € gross pour 19,34 € net à 6 %) | **le seuil du ticket** : l'assistant l'écrit (« À partir d'un montant ») et le relit |
+| `sales_channel_scope` | buy-x-get-y | `"BOTH"` ou `null` | la destination : comptoir, webshop ou les deux | **le canal** : « BOTH » seule relue ; « Comptoir seulement » et « Webshop seulement » restent grisés tant que leurs valeurs exactes ne sont pas relues (une promotion du panel ainsi réglée, ou l'essai d'écriture) |
+
+Autres champs non documentés, utiles plus tard : `trigger.quantity_unit` (`ITEM`) ; `trigger|reward.product_targets[]`,
+`category_targets[] {id_category, portion_scope: "ANY"}`, `products[] {id_product, name, category_name, id_category,
+is_active, suggested_sale_price, target_key "1300018:0", product_portion_*}` (la cible développée) ; `shops[] {name,
+representative_name, country_code, currency}` ; `voucher_campaign` ; côté bundles, le calcul figé à l'enregistrement
+(`calculation_items[]`, `calculation_snapshot {regular_total, discounted_total, discount_value, margin_*}`,
+`calculation_shop_name`), `is_exclusive`, `is_repeatable`, `max_applications_per_transaction`, `valid_from`, `valid_to` ;
+côté campagnes de bons, `code_stats {active, disabled, total}`, `codes[]`, `configuration_complete`,
+`missing_requirements[]` (« PROMOTION_NOT_FOUND »), `redemptions_total`. La liste générale `/admin/promotions` n'existe pas
+(HTTP 404). Les montants reviennent en texte (« 2.60 »).
+
 ## La sonde du cockpit (en direct)
 
 | Adresse | Ce qu'elle fait |
@@ -25,11 +45,14 @@ que la sonde du cockpit relit en direct.*
 | `…&essai=1` | en plus, l'essai d'écriture : une promotion « X + Y » de test (brouillon `DRAFT`, `VOUCHER_ONLY`, datée du 01/01/2020, nommée « SONDE COCKPIT — à supprimer ») est créée avec les noms de seuil et de destination plausibles, relue, puis supprimée. Chaque nom de seuil porte sa valeur (11,01 €, 11,02 €…) : la relecture dit lequel le panel garde. Quatre créations au plus (tout ensemble ; si refus : seuil seul, canal seul, témoin) |
 | `GET /api/cockpit/ventes/promos/sonde-champs?shop=4` | l'ancienne sonde (lecture seule) : les champs nouveaux et ceux qui ressemblent à une condition |
 
-Noms essayés pour le seuil : `minimum_basket_value`, `min_basket_value`, `min_order_amount`, `minimum_order_value`,
+Noms essayés pour le seuil : `minimum_receipt_gross` (11,13 €), `minimum_basket_value`, `min_basket_value`, `min_order_amount`, `minimum_order_value`,
 `min_ticket_amount`, `min_transaction_amount`, `trigger_amount`, `threshold_amount`, `min_amount`, `minimum_amount`,
-`min_spend`, `threshold`. Pour la destination : `destination`, `destinations`, `sales_channels`, `channels`,
+`min_spend`, `threshold`. Pour la destination : `sales_channel_scope`, `destination`, `destinations`, `sales_channels`, `channels`,
 `sales_channel`, `channel`, `order_source`, `sale_destination`, `is_webshop`, `webshop_only`, `is_pos`,
-`available_on_pos`, `available_on_webshop`.
+`available_on_pos`, `available_on_webshop`. Une valeur n'est « gardée » que si elle revient identique (un champ qui revient
+vide existe mais n'a pas pris la valeur). Si `sales_channel_scope` existe, l'essai cherche ses valeurs : pour le webshop
+`WEBSHOP`, `ONLINE`, `WEB` ; pour le comptoir `POS`, `SHOP`, `STORE`, `IN_STORE` — la première gardée de chaque côté. Le
+produit de l'essai est pris dans `product_ids`, `product_targets` ou `products[]` des fiches « X + Y » (douze au plus).
 
 ## Comment le cockpit s'en sert
 
