@@ -19,7 +19,7 @@
   const EMBED = q.get('embed') === '1';
   const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion', 'bundle'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), bunOuv: false, jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
@@ -1053,9 +1053,9 @@
     if (ext.length) { h += `<div class="mb-mur ma-ext">${ext.join('')}</div>`; }
     if (S.objOuvert) { h += `<div class="mb-tir">${objectifsCarte(true)}</div>`; }
     if (S.promoOuvert) { h += `<div class="mb-tir">${promosCarte(true)}</div>`; }
-    // Le P&L court, les ventes par catégorie (liste, treemap, promotions, portions) et les bundles,
-    // venus d'Opérationnel (10/10/2026) : les chiffres de la journée au même endroit.
-    h += `<div class="ma-large">${PJ.categories}</div><div class="ma-large">${bundlesCarte()}</div>`;
+    // Les ventes par catégorie (liste, treemap, promotions, portions), venues d'Opérationnel (10/10/2026) : les chiffres
+    // de la journée au même endroit. Les bundles vendus sont retirés (23/10/2026) : double emploi avec les promotions.
+    h += `<div class="ma-large">${PJ.categories}</div>`;
     return h;
   }
 
@@ -2257,66 +2257,6 @@
   const opFaire = p => p.verdict === 'rupture' || p.verdict === 'manque' ? (p.conseil && p.conseil.pieces ? 'recuire ' + fN(p.conseil.pieces) : 'à recuire') : (p.verdict === 'trop' ? 'ne pas recuire' : '');
   const OP_RANG = { rupture: 0, manque: 1, trop: 2, ok: 3 };
   const opSk = () => '<div class="db-sk" style="width:70%;margin:6px 0"></div><div class="db-sk" style="width:50%"></div>';
-  /* Les bundles vendus sur la journée (10/10/2026), à côté des ventes par catégorie : quantité, nom, prix moyen
-   * encaissé, CA, marge, première et dernière vente, lus dans les mêmes tickets (catégorie « Bundle »). */
-  const BUNDLE_RE = /bundle|promotion/i;
-  function bundlesDe(st) {
-    if (st.bundles && Array.isArray(st.bundles.lignes)) { return st.bundles; }
-    // Une réponse d'avant le 10/10/2026 : les bundles se retrouvent dans les catégories.
-    const L = [];
-    (st.categories || []).filter(c => BUNDLE_RE.test((c.nom || '') + ' ' + (c.groupe || ''))).forEach(c => (c.produits || []).forEach(p => L.push(Object.assign({}, p, { cat: c.nom, prix: p.q ? p.v / p.q : null, heures: null }))));
-    L.sort((a, b) => (b.q - a.q) || (b.v - a.v));
-    const ca = L.reduce((a, x) => a + (x.v || 0), 0), avec = L.filter(x => x.m != null), mV = avec.reduce((a, x) => a + x.v, 0), tot = st.totaux && st.totaux.ca;
-    return { lignes: L, n: L.length, pieces: L.reduce((a, x) => a + (x.q || 0), 0), ca, taux: mV > 0 ? 100 * avec.reduce((a, x) => a + x.m, 0) / mV : null, part: tot ? 100 * ca / tot : null };
-  }
-  /** Les lignes des bundles : quantité, nom, composition (la recette au panel, lue une fois), heures, prix, CA, marge. */
-  function bundlesRangs(B) {
-    const quand = x => x.premiere == null ? '' : (x.premiere === x.derniere ? 'à ' + x.premiere + ' h' : 'de ' + x.premiere + ' h à ' + x.derniere + ' h');
-    const mc = v => v == null ? 'mu' : (v >= 60 ? 'ok' : (v >= 50 ? 'att' : 'ko'));
-    const cleR = x => 'recette|' + x.id + '|' + S.shop;
-    B.lignes.forEach(x => { const k = cleR(x); if (/^\d+$/.test(String(x.id)) && !S.aux[k] && !S.enCours[k] && !S.err[k]) { setTimeout(() => lireAux(k, '/analyse/produits/recette?pid=' + encodeURIComponent(x.id) + '&shop=' + encodeURIComponent(S.shop)), 0); } });
-    const compo = x => { const R = S.aux[cleR(x)], L = R && Array.isArray(R.lignes) ? R.lignes.filter(l => l && l.nom) : []; if (!L.length) { return ''; }
-      const t = L.slice(0, 4).map(l => (l.qte == null ? '' : (!l.unite || /^pc/i.test(l.unite) ? nf(l.qte, l.qte % 1 ? 1 : 0) + ' × ' : nf(l.qte, l.qte % 1 ? 2 : 0) + ' ' + l.unite + ' ')) + l.nom).join(' + ') + (L.length > 4 ? ' + ' + (L.length - 4) + ' autre' + (L.length > 5 ? 's' : '') : '');
-      return `<small class="op-bun-co">${esc(t)}</small>`; };
-    return B.lignes.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q != null ? x.q : ''}" data-fv="${x.v != null ? x.v : ''}" data-ft="${x.taux != null ? x.taux : ''}" data-fc="${x.c != null ? x.c : ''}" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0" title="les ventes sur 12 semaines, la recette et la marge">
-      <td class="n op-bun-q">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td><b>${esc(x.nom)}</b>${compo(x)}${quand(x) ? `<small>${quand(x)}</small>` : ''}</td><td class="n">${fU(x.prix)}</td><td class="n">${fE(x.v)}</td><td class="n ${mc(x.taux)}">${x.taux != null ? fP0(x.taux) : '—'}</td></tr>`).join('');
-  }
-  const bundlesTete = '<thead><tr><th class="n">Qté</th><th>Bundle</th><th class="n" title="prix moyen encaissé">Prix</th><th class="n">CA</th><th class="n">Marge</th></tr></thead>';
-  /** En une ligne : les pièces, le CA, sa part et la marge des bundles de la journée. */
-  const bundlesResume = B => [nf(B.pieces, B.pieces % 1 ? 1 : 0) + ' vendu' + (B.pieces > 1 ? 's' : ''), fE(B.ca), B.part != null ? fP(B.part) + ' du CA' : '', B.taux != null ? 'marge ' + fP0(B.taux) : ''].filter(Boolean).join(' · ');
-  function bundlesCarte() {
-    const ks = cleSt(), st = S.st[ks], err = S.err[ks], jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
-    const tete = mini => `<div class="ct"><span class="db-lab">Bundles vendus</span>${mini ? `<span class="db-mini">${mini}</span>` : ''}</div>`;
-    if (!st) { return `<div class="db-card op-bun">${tete(err ? esc(err) : 'lecture des tickets en cours…')}<div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`; }
-    const B = bundlesDe(st);
-    if (!B.lignes.length) { return `<div class="db-card op-bun">${tete('')}<div class="op-bun-vide">Aucun bundle vendu ${jour}.</div>${promoBundles(st)}</div>`; }
-    const mc = v => v == null ? 'mu' : (v >= 60 ? 'ok' : (v >= 50 ? 'att' : 'ko'));
-    return `<div class="db-card op-bun">${tete('la journée · ' + B.n + ' bundle' + (B.n > 1 ? 's' : '') + ' · clic : la fiche')}
-      <div class="op-bun-k"><div><div class="k">Vendus</div><div class="v">${nf(B.pieces, B.pieces % 1 ? 1 : 0)}</div></div><div><div class="k">CA bundles</div><div class="v">${fE(B.ca)}</div></div><div><div class="k">Part du CA</div><div class="v">${B.part != null ? fP(B.part) : '—'}</div></div><div><div class="k">Marge brute</div><div class="v ${mc(B.taux)}">${B.taux != null ? fP0(B.taux) : '—'}</div></div></div>
-      <div class="op-large"><table class="db-pro-tab op-bun-tab">${bundlesTete}<tbody>${bundlesRangs(B)}</tbody></table></div>${promoBundles(st)}</div>`;
-  }
-  /* Les bundles dans Ventes par catégorie (23/10/2026, demande de Sam : « le plus minimaliste possible ») — maquettes :
-   * A un onglet « Bundles », B une ligne « dont bundles » au pied de la liste, C une pastille dans le titre. */
-  const BUN_MAQ = (() => { try { const v = (new URLSearchParams(location.search).get('bun') || 'A').toUpperCase(); return ['A', 'B', 'C'].includes(v) ? v : 'A'; } catch (e) { return 'A'; } })();
-  /** A : l'onglet Bundles — une ligne de résumé, puis le tableau. */
-  function bundlesOnglet(st) {
-    const B = bundlesDe(st), jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
-    if (!B.lignes.length) { return `<div class="op-bun-vide" style="padding:14px 16px">Aucun bundle vendu ${jour}.</div>`; }
-    return `<div class="bu-res">${bundlesResume(B)}</div><div class="op-large bu-tab"><table class="db-pro-tab op-bun-tab">${bundlesTete}<tbody>${bundlesRangs(B)}</tbody></table></div>`;
-  }
-  /** C : la pastille du titre et, ouverte, le volet d'une ligne par bundle. */
-  function bundlesPastille(st) {
-    const B = st ? bundlesDe(st) : null;
-    if (!B || !B.lignes.length) { return ''; }
-    return `<button type="button" class="bu-chip${S.bunOuv ? ' on' : ''}" data-bunchip title="les bundles vendus ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'}">${fN(B.pieces)} bundle${B.pieces > 1 ? 's' : ''} · ${fE(B.ca)} <span>${S.bunOuv ? '▴' : '▾'}</span></button>`;
-  }
-  function bundlesVolet(st) {
-    const B = st ? bundlesDe(st) : null;
-    if (!S.bunOuv || !B || !B.lignes.length) { return ''; }
-    const mc = v => v == null ? 'mu' : (v >= 60 ? 'ok' : (v >= 50 ? 'att' : 'ko'));
-    return `<div class="bu-vol">${B.lignes.map(x => `<button type="button" class="bu-l" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q != null ? x.q : ''}" data-fv="${x.v != null ? x.v : ''}" data-ft="${x.taux != null ? x.taux : ''}" data-fc="${x.c != null ? x.c : ''}" data-fcat="${esc(x.cat || '')}" title="la fiche du bundle"><span class="nm"><b>${nf(x.q, x.q % 1 ? 1 : 0)} ×</b> ${esc(x.nom)}</span><span>${fE(x.v)}</span><span class="${mc(x.taux)}">${x.taux != null ? fP0(x.taux) : '—'}</span></button>`).join('')}<div class="bu-l tot">${bundlesResume(B)}</div></div>`;
-  }
-
   /* La vitrine selon la durée de vie (demande du 06/10/2026) : les trois onglets du suivi de
    * production — short life (vendu le jour même), medium life (se garde 2 à 3 jours), long life
    * (une semaine et plus) — chacun avec le niveau actuel de marchandises. La durée de vie vient du
@@ -3155,8 +3095,8 @@
     // Le P&L court sous le duel chiffre par chiffre (23/10/2026, Sam).
     h += PJ ? PJ.pnl : attente('Le P&amp;L court de la journée');
 
-    /* 2. Les ventes par catégorie (liste, treemap, promotions, portions), les bundles dedans (23/10/2026) :
-     * la carte de la vue Jour, telle quelle. */
+    /* 2. Les ventes par catégorie (liste, treemap, promotions, portions) : la carte de la vue Jour, telle quelle.
+     * La carte Bundles vendus est retirée (23/10/2026, Sam) : double emploi avec l'onglet Promotions. */
     h += PJ ? PJ.categories : attente('Ventes par catégorie');
 
     /* La journée : la frise de 04:00 à 20:00 et les ventes de chaque heure face à la moyenne */
@@ -4411,8 +4351,8 @@
     const catsAttend = !st && !S.err[cleSt()];
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
-      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion', 'bundle'].includes(S.cVue) && !parMarge) || (S.cVue === 'bundle' && BUN_MAQ !== 'A') ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>${BUN_MAQ === 'A' ? `<button data-cvue="bundle" class="${S.cVue === 'bundle' ? 'on' : ''}">Bundles</button>` : ''}` : ''}</span>${BUN_MAQ === 'C' ? bundlesPastille(st) : ''}</div>
-      ${BUN_MAQ === 'C' ? bundlesVolet(st) : ''}${S.cVue === 'bundle' && BUN_MAQ === 'A' && parMarge ? bundlesOnglet(st) : S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute, A: st && st.aCompleter, bun: BUN_MAQ === 'B' && st ? bundlesDe(st) : null } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span></div>
+      ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute, A: st && st.aCompleter } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
@@ -5283,22 +5223,11 @@
         : [Math.abs(cL) >= 0.5 ? 'lignes sans produit, remises' : '', ecCa - cL >= 0.5 ? 'tickets pas encore lus' + (A.luA ? ' (lecture de ' + A.luA + ')' : '') : ''].filter(Boolean).join(', ');
       return [nS ? 'la marge des ' + nS + ' produit' + (nS > 1 ? 's' : '') + ' sans coût (' + fU(vS) + ' de ventes), estimée par le P&L' : '', quoi].filter(Boolean).join(' · ') || 'arrondis'; })()}</span></span><span></span><span class="n">${fE(ecCa)}</span><span class="n mu">${tot > 0 ? fP0(100 * ecCa / tot) : ''}</span><span class="n mg">${fE(ecM)}</span><span class="n"></span><span class="n coef"></span></div>` : '';
     const pied = ecart + `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${fams.length} groupe${fams.length > 1 ? 's' : ''} · ${cats.length} catégorie${cats.length > 1 ? 's' : ''}</span></span><span></span><span class="n">${fE(tot)}</span><span class="n mu">100 %</span><span class="n mg">${parMarge ? fE(totM) : ''}</span><span class="n">${parMarge && tot > 0 ? (R ? fP(100 * totM / tot) : fP0(100 * totM / tot)) : ''}</span><span class="n coef">${parMarge && tot > 0 ? coefTxt(coef(tot, totM)) : ''}</span></div>`;
-    // B (maquette du 23/10/2026) : « dont bundles » sous le total — déjà compté dans les catégories, il ne s'y ajoute pas.
-    const BU = ref && ref.bun && ref.bun.lignes.length ? ref.bun : null;
-    let bun = '';
-    if (BU) {
-      const mB = BU.lignes.reduce((a, x) => a + (x.m != null ? x.m : (x.taux != null ? x.taux * (x.v || 0) / 100 : 0)), 0);
-      bun = ligne('g bunr', 'bun', { nom: 'dont bundles', ca: BU.ca, part: tot > 0 ? 100 * BU.ca / tot : null, m: BU.taux != null ? mB : null, taux: BU.taux }, max, BU.n + ' bundle' + (BU.n > 1 ? 's' : '') + ' · ' + nf(BU.pieces, BU.pieces % 1 ? 1 : 0) + ' vendu' + (BU.pieces > 1 ? 's' : '') + ' · déjà compté dans les catégories');
-      if (S.cOuv.bun) {
-        const quand = x => x.premiere == null ? '' : (x.premiere === x.derniere ? ' · à ' + x.premiere + ' h' : ' · de ' + x.premiere + ' h à ' + x.derniere + ' h');
-        bun += BU.lignes.map(x => ligne('p', null, { nom: x.nom, ca: x.v, part: tot > 0 ? 100 * x.v / tot : null, m: x.m != null ? x.m : (x.taux != null ? x.taux * x.v / 100 : null), taux: x.taux }, BU.ca, nf(x.q, x.q % 1 ? 1 : 0) + ' vendu' + (x.q > 1 ? 's' : '') + (x.prix != null ? ' à ' + fU(x.prix) : '') + quand(x), /^\d+$/.test(String(x.id || '')) ? x : null, x.cat)).join('');
-      }
-    }
-    return `<div class="db-acc">${entete}${rows}${pied}${bun}</div>`;
+    return `<div class="db-acc">${entete}${rows}${pied}</div>`;
   }
 
   /* Les promotions du panel reconnues dans les tickets (10/10/2026, maquette B3 · 3) : l'onglet Promotions des ventes
-   * par catégorie, et la liste des promotions dans Bundles vendus. Une couleur par promotion, dans l'ordre de leurs
+   * par catégorie. Une couleur par promotion, dans l'ordre de leurs
    * ventes ; la remise qu'aucune promotion n'explique en gris. Le poids d'une promotion : ses ventes ÷ le CA complet,
    * et dans chaque catégorie qu'elle touche, ses ventes ÷ le CA de la catégorie. */
   const PROMO_COUL = ['#2a78d6', '#eb6834', '#2d7a3e', '#8e44ad', '#c2185b', '#00838f', '#b8860b'];
@@ -5462,24 +5391,6 @@
     }
     const ent = `<div class="db-ent" style="${grille}"><span></span><span>Catégorie › produit</span><span class="pt-bh">En pièces entières, par taille</span>${tailles.map(k => `<span class="n ts">${portLib(F[k].f, F[k].lib)}</span>`).join('')}<span class="n eq">En entières</span><span class="n rs" title="ce qui reste en parts dans la dernière pièce coupée, si rien ne restait d’hier et que rien n’a été recoupé">Reste</span><span class="n ca">CA</span><span class="n pe">€ par entière</span></div>`;
     return bande + `<div class="db-acc pot">${ent}${rows}</div>`;
-  }
-  /** Bundles vendus : les promotions de la journée, leur poids dans le CA complet et dans chaque catégorie qu'elles touchent. */
-  function promoBundles(st) {
-    const D = promosDe(st);
-    if (!D) { return ''; }
-    const { P, coul, parCat, caCat } = D, tot = D.ca;
-    const L = P.regles.filter(r => r.v > 0 || r.r > 0);
-    const jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
-    const titre = `<div class="op-bun-h"><span>Les promotions</span><span class="db-mini">${L.length ? fU(P.v) + ' · ' + promoPct(tot > 0 ? 100 * P.v / tot : 0) + ' du CA complet' : 'aucune déclenchée ' + jour}</span></div>`;
-    // La ligne « Pas déclenchées : … » est retirée (11/10/2026, demande de Sam).
-    if (!L.length) { return `<div class="op-bun-pr">${titre}</div>`; }
-    const lignes = L.map(r => {
-      const cats = Object.entries(parCat[r.id] || {}).sort((a, b) => b[1] - a[1]);
-      return `<tr><td><b><i class="pr-pd" style="background:${coul[r.id]}"></i>${esc(r.nom)}</b><small>${esc(r.texte || '')}</small></td><td class="n">${fN(r.fois)}<span class="u">×</span></td><td class="n">${fU(r.v)}</td>
-        <td class="n"><b>${promoPct(tot > 0 ? 100 * r.v / tot : 0)}</b><span class="u"> du CA</span></td><td class="op-bun-cats">${cats.map(([c, v]) => `<span>${esc(c)} <b>${promoPct(caCat[c] > 0 ? 100 * v / caCat[c] : 0)}</b></span>`).join('')}</td></tr>`;
-    }).join('');
-    return `<div class="op-bun-pr">${titre}<div class="op-large"><table class="db-pro-tab op-bun-tab op-bun-ptab"><thead><tr><th>Promotion</th><th class="n">Fois</th><th class="n">Ventes</th><th class="n" title="ventes de la promotion ÷ CA complet de la journée">Poids CA</th><th title="ventes de la promotion dans la catégorie ÷ CA de la catégorie">Poids par catégorie</th></tr></thead><tbody>${lignes}</tbody>
-      <tfoot><tr><td><b>Toutes les promotions</b><small>${fN(P.tickets || 0)} ticket${P.tickets > 1 ? 's' : ''} · remises −${fU(P.r)}</small></td><td class="n">${fN(L.reduce((a, r) => a + r.fois, 0))}<span class="u">×</span></td><td class="n">${fU(P.v)}</td><td class="n"><b>${promoPct(tot > 0 ? 100 * P.v / tot : 0)}</b><span class="u"> du CA</span></td><td class="op-bun-cats"></td></tr></tfoot></table></div></div>`;
   }
   /** Le planning déplié, groupé par secteur : le premier poste de travail de la personne dans le panel ; « sans secteur » sinon. */
   function planningSecteurs(plan, hMin, hMax) {
@@ -7311,8 +7222,7 @@
     $.querySelectorAll('[data-opcrb]').forEach(b => b.addEventListener('click', () => { S.opCrb = b.dataset.opcrb; rendre(); }));
     $.querySelectorAll('[data-oppro]').forEach(b => b.addEventListener('click', () => { S.opPro = b.dataset.oppro; try { localStorage.setItem('db.opPro', S.opPro); } catch (e) { /* stockage indisponible */ } rendre(); }));
     $.querySelectorAll('[data-opouv]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.opouv; if (S.opOuv[k]) { delete S.opOuv[k]; } else { S.opOuv[k] = true; } rendre(); }));
-    $.querySelectorAll('[data-bunchip]').forEach(b => b.addEventListener('click', () => { S.bunOuv = !S.bunOuv; rendre(); }));
-    $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = ['treemap', 'promo', 'portion', 'bundle'].includes(b.dataset.cvue) ? b.dataset.cvue : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
+    $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = ['treemap', 'promo', 'portion'].includes(b.dataset.cvue) ? b.dataset.cvue : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-cacc]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.cacc; S.cOuv[k] = !S.cOuv[k]; rendre(); }));
     $.querySelectorAll('details[data-acpo]').forEach(d => d.addEventListener('toggle', () => { S.cOuv['acp:' + d.dataset.acpo] = d.open; }));
     $.querySelectorAll('[data-pdrop]').forEach(b => b.addEventListener('click', () => { S.pOuvert = !S.pOuvert; rendre(); }));

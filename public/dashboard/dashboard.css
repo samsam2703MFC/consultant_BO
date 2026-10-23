@@ -1292,8 +1292,6 @@ body.pp-emb{background:var(--color-bg)}
 .cqbd.ok,.cqbd.nc,.cqbd.ctl,.cqbd.ko,.cqbd.mu{color:#fff}
 
 /* Onglet Opérationnel (06/10/2026) : la journée en cours, centrée sur le terrain. */
-.op-deux{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px;align-items:start}
-.op-deux>div>.db-card{margin-bottom:12px}
 .op-bloc>.ct{gap:10px}
 .op-h2{font-family:var(--font-display);font-size:17px}
 .op-jr{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:18px;padding:10px 16px 12px}
@@ -1349,7 +1347,7 @@ body.pp-emb{background:var(--color-bg)}
 .op-mini .k .vd.ok{background:#2d7a3e}.op-mini .k .vd.att{background:#D97706}.op-mini .k .vd.ko{background:#C0182B}
 .op-mini .v{font-family:var(--font-display);font-size:22px;margin:4px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .op-mini .s{font-size:10.5px;color:var(--color-text-muted);line-height:1.4}
-@media (max-width:1150px){.op-deux,.op-jr{grid-template-columns:1fr}.op-mini4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:1150px){.op-jr{grid-template-columns:1fr}.op-mini4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .op-tb th:nth-child(2),.op-tb td:nth-child(2),.op-tb th:nth-child(7),.op-tb td:nth-child(7){text-align:left}
 .op-tb td:nth-child(2){font-weight:500;color:var(--color-text-muted)}
 .db-stdef{max-height:460px;overflow-y:auto}
@@ -1844,20 +1842,6 @@ html.db-fiche-ouverte{overflow:hidden}
   .im-badge{white-space:normal}
   .im-acth{flex-wrap:wrap}
 }
-/* Les bundles vendus sur la journée (10/10/2026), à côté des ventes par catégorie. */
-.op-bun-k{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:2px 16px 4px}
-.op-bun-k>div{background:var(--color-background-secondary);border-radius:10px;padding:8px 10px;min-width:0}
-.op-bun-k .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.op-bun-k .v{font-family:var(--font-display);font-size:20px;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums}
-.op-bun .op-large{padding:0 8px 10px}
-.op-bun-tab td b{display:block;font-size:12.5px}.op-bun-tab td small{display:block;color:var(--color-text-muted);font-size:11px;margin-top:1px}
-.op-bun-tab tr.clic{cursor:pointer}.op-bun-tab tr.clic:hover td{background:var(--color-background-secondary)}
-.op-bun-tab td.op-bun-q{font-family:var(--font-display);font-size:18px;color:var(--color-primary);width:1%}
-.op-bun-tab .ok,.op-bun-k .ok{color:#2d7a3e}.op-bun-tab .att,.op-bun-k .att{color:#B26A00}.op-bun-tab .ko,.op-bun-k .ko{color:#C0182B}.op-bun-tab .mu{color:var(--color-text-muted)}
-.op-bun-vide{padding:4px 16px 16px;color:var(--color-text-muted);font-size:13px}
-.op-bun-tab td small{white-space:nowrap}
-.op-bun-tab td small.op-bun-co{white-space:normal;color:var(--color-text);font-weight:600}
-@media (max-width:560px){.op-bun-k{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* Le calendrier de la semaine et du mois (maquette A du 10/10/2026) : le bouton choisit le chiffre,
    la couleur, la jauge, le titre et la légende. */
 .cal-hd{display:flex;align-items:flex-start;gap:18px;padding:14px 16px 10px;border-bottom:.5px solid var(--color-border-tertiary)}
@@ -1993,21 +1977,6 @@ html.db-fiche-ouverte{overflow:hidden}
 .pr-pd{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
 .db-al.eteint{color:var(--color-text-muted);font-weight:500;cursor:default}.db-al.eteint .nom{font-weight:500}
 @media (max-width:900px){.db-acc.pro .db-ent,.db-acc.pro .db-al{grid-template-columns:20px minmax(110px,1fr) 1.4fr 70px 68px 58px 62px 62px;gap:6px}.db-al.u3{padding-left:40px}.pr-chips{margin-left:0}}
-.op-bun-pr{border-top:.5px solid var(--color-border-tertiary);margin-top:4px}
-.op-bun-h{display:flex;align-items:baseline;gap:10px;padding:10px 16px 2px;font:700 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}.op-bun-h .db-mini{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:600}
-.op-bun-ptab td b .pr-pd{vertical-align:1px}.op-bun-ptab tfoot td{border-top:1px solid var(--color-border-secondary);font-weight:600}
-.op-bun-cats span{display:inline-block;margin:1px 8px 1px 0;font-size:11.5px;white-space:nowrap}.op-bun-cats b{color:#1f4e8c}
-.op-bun-tab .op-bun-cats b{display:inline}
-.op-bun-ptab .u{display:none}
-@media (max-width:600px){
-  .op-bun-ptab thead{display:none}
-  .op-bun-ptab tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;column-gap:10px;padding:7px 0;border-top:.5px solid var(--color-border-tertiary)}
-  .op-bun-ptab td{border:none!important;padding:1px 0!important}
-  .op-bun-ptab td.op-bun-cats{grid-column:1/-1}.op-bun-ptab td.op-bun-cats:empty{display:none}
-  .op-bun-ptab .u{display:inline;font-size:10.5px;color:var(--color-text-muted)}.op-bun-ptab td b .u{font-weight:500}
-  .op-bun-ptab td.n b{display:inline}
-}
-
 /* Portions (10/10/2026, maquette A + la colonne reste de B) : l'onglet Portions des ventes par catégorie. La grille suit le nombre de tailles. */
 .pt-leg{margin-left:auto;display:flex;flex-wrap:wrap;gap:12px;font:600 11.5px var(--font-ui)}.pt-leg i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}.pt-leg i.rs{background:#fff;border:1.2px dashed #C0182B;box-sizing:border-box}
 .pr-bd .k b.ko{color:#C0182B}
@@ -2251,15 +2220,3 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .pm-pft tfoot td{font-weight:700;border-bottom:none;border-top:1px solid var(--color-border-secondary)}
 .pm-calc{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;border:1px dashed var(--color-border-secondary);border-radius:10px}
 .pm-calc .pm-eur .pm-in{width:100px}.pm-calc .ko{color:#A61E1E}
-/* Les bundles dans Ventes par catégorie (23/10/2026, maquettes A, B, C). */
-.bu-res{padding:10px 22px 2px;font:600 12.5px var(--font-ui);color:var(--color-text-muted)}
-.bu-tab{padding:0 8px 10px}
-.db-al.g.bunr{border-top:none;color:var(--color-text-muted);font-weight:600}.db-al.g.bunr .nom{font-style:italic;font-weight:600}
-.db-al.g.bunr .barre i{background:#1d1d1b!important;opacity:.55}
-.bu-chip{margin-left:auto;border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:4px 11px;font:600 11.5px var(--font-ui);color:var(--color-text);cursor:pointer;white-space:nowrap}
-.bu-chip span{font-size:9px;color:var(--color-text-muted);margin-left:3px}.bu-chip.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}.bu-chip.on span{color:#fff}
-.bu-vol{margin:2px 16px 6px auto;max-width:480px;border-radius:10px;background:#fff7e6;padding:4px 10px}
-.bu-l{all:unset;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) 84px 44px;gap:10px;align-items:baseline;width:100%;padding:5px 0;border-top:.5px solid rgba(0,0,0,.06);font-size:12px;cursor:pointer}
-.bu-l:first-child{border-top:none}.bu-l:hover{color:var(--color-primary)}.bu-l b{color:var(--color-primary);margin-right:2px}
-.bu-l .nm{text-align:left;font-weight:500}.bu-l span{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}.bu-l .ok{color:#2d7a3e}.bu-l .att{color:#B26A00}.bu-l .ko{color:#C0182B}.bu-l .mu{color:var(--color-text-muted)}
-.bu-l.tot{display:block;cursor:default;color:var(--color-text-muted);font-size:11px;font-weight:600}
