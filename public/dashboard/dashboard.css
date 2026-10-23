@@ -1340,14 +1340,7 @@ body.pp-emb{background:var(--color-bg)}
 .op-plie .vd{display:inline-block;width:9px;height:9px;border-radius:50%;background:#2d7a3e}
 .op-plie .fl{margin-left:auto;transition:transform .2s}.op-plie .fl.on{transform:rotate(180deg)}
 #op-cq>.db-card{margin-top:0}
-.op-mini4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
-.op-mini{padding:10px 14px;margin:0}
-.op-mini .k{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);display:flex;align-items:center;gap:6px}
-.op-mini .k .vd{display:inline-block;width:9px;height:9px;border-radius:50%;background:#9a948c}
-.op-mini .k .vd.ok{background:#2d7a3e}.op-mini .k .vd.att{background:#D97706}.op-mini .k .vd.ko{background:#C0182B}
-.op-mini .v{font-family:var(--font-display);font-size:22px;margin:4px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.op-mini .s{font-size:10.5px;color:var(--color-text-muted);line-height:1.4}
-@media (max-width:1150px){.op-jr{grid-template-columns:1fr}.op-mini4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:1150px){.op-jr{grid-template-columns:1fr}}
 .op-tb th:nth-child(2),.op-tb td:nth-child(2),.op-tb th:nth-child(7),.op-tb td:nth-child(7){text-align:left}
 .op-tb td:nth-child(2){font-weight:500;color:var(--color-text-muted)}
 .db-stdef{max-height:460px;overflow-y:auto}
@@ -1380,8 +1373,6 @@ body.pp-emb{background:var(--color-bg)}
 .op-jl.fini{opacity:.55}
 .op-jl.av .c{color:#B26A00;font-weight:700}
 .op-large{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.op-mob .op-mini4{grid-template-columns:1fr 1fr;gap:8px;margin-top:0}
-.op-mob .op-mini .v{font-size:18px;white-space:normal}
 
 /* La vitrine selon la durée de vie (demande du 06/10/2026) : trois onglets, le niveau de chacun. */
 /* La vitrine, maquette E (10/10/2026) : badges de filtre, une liste par durée de vie, la journée en cases */
