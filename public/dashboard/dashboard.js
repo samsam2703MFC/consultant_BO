@@ -4305,7 +4305,7 @@
         const l2 = esc('réseau ' + (r.v != null ? nf(r.v, 0) + ' %' : '—') + (seuil('recurrence', a => nf(a, 0) + ' %') ? ' · ' + seuil('recurrence', a => nf(a, 0) + ' %') : ''));
         if (!x) { return tuile(l, '—', null, 'pas encore relevé', l2, sp, q); }
         if (!x.complet) { return tuile(l, '—', null, neutre('relevé en cours'), esc('tickets lus : ' + x.joursLus + ' / ' + x.jours + ' jours'), sp, q); }
-        if (!x.pwa) { return tuile(l, '—', null, 'aucun client PWA identifié', l2, sp, q); }
+        if (!x.pwa) { const rp = x.repartition || {}; return tuile(l, '—', null, 'aucun client PWA identifié', esc(x.identifies ? x.identifies + ' identifié' + (x.identifies > 1 ? 's' : '') + ' en caisse' + (rp.sansApp ? ', ' + rp.sansApp + ' sans app' : '') : 'aucun client identifié en caisse') + '<br>' + l2, sp, q); }
         const l1 = (x.n1 != null ? puce(x.delta, 1, ' pt', true) + ' N-1 ' + nf(x.n1, 0) + ' %' : neutre('pas de N-1')) + ' ' + esc(x.revenus + ' sur ' + x.pwa + ' client' + (x.pwa > 1 ? 's' : ''));
         return tuile(l, nf(x.v, 0) + ' %', x.niveau, l1, (x.partTickets != null ? esc(nf(x.partTickets, 1) + ' % des tickets') + '<br>' : '') + l2, sp, q);
       }

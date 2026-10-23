@@ -3883,3 +3883,7 @@ différents — la définition « taux de fidélisation » du panel consultant, 
 - Seuils : ceux d'un KPI dérivé de la Table KPI « `pwaRevenus` ÷ `pwaClients` » (deux mesures ajoutées au formulaire,
   le mois en cours) ; sans lui, pas de pastille.
 - N-1 : le relevé commençant au 1er janvier 2026, le premier N-1 viendra en 2027.
+- Répartition (23/10/2026) : chaque cellule porte `repartition {sansApp, statutInconnu, fidelite, connectes, webshop,
+  canaux {source_channel: n}}` des clients identifiés en caisse dont la fiche est lue (le réseau compte un client une
+  fois). De la fiche : `source_channel`, `last_login_at` renseigné ou non (jamais la date), `webshop_user`. Les fiches
+  lues avant ces colonnes se relisent.

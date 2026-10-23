@@ -337,7 +337,7 @@ function levRecurrence(array &$out, array $sids): void
         return ['v' => $x['v'], 'n1' => $n1, 'delta' => $x['v'] !== null && $n1 !== null ? round($x['v'] - $n1, 1) : null,
             'niveau' => levNiveau($seuil, $x['v']), 'pwa' => $x['pwa'], 'revenus' => $x['revenus'], 'identifies' => $x['identifies'],
             'inconnus' => $x['inconnus'], 'partTickets' => $x['tickets'] > 0 ? round(100 * $x['ticketsPwa'] / $x['tickets'], 1) : null,
-            'joursLus' => $x['joursLus'], 'jours' => $x['jours'], 'complet' => $x['complet']];
+            'joursLus' => $x['joursLus'], 'jours' => $x['jours'], 'complet' => $x['complet'], 'repartition' => $x['repartition']];
     };
     foreach ($out['magasins'] as &$g) {
         $sid = (int) $g['id'];

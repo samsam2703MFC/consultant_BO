@@ -8937,7 +8937,11 @@ class App {
     const casRec = x => {
       if (!x) { return { v: '—', mu: true, n1: 'pas encore relevé' }; }
       if (!x.complet) { return { v: '—', mu: true, n1: 'relevé en cours', tags: x.jours ? ['tickets lus : ' + x.joursLus + ' / ' + x.jours + ' jours'] : [] }; }
-      if (!x.pwa) { return { v: '—', mu: true, n1: 'aucun client PWA identifié', tags: x.inconnus ? [pl(x.inconnus, 'fiche') + ' à lire'] : [] }; }
+      if (!x.pwa) {
+        const rp = x.repartition || {};
+        return { v: '—', mu: true, n1: 'aucun client PWA identifié', tags: [x.identifies ? pl(x.identifies, 'client') + ' identifié' + (x.identifies > 1 ? 's' : '') + (rp.sansApp ? ' · ' + rp.sansApp + ' sans app' : '') : 'aucun client identifié en caisse',
+          ...(x.inconnus ? [pl(x.inconnus, 'fiche') + ' à lire'] : [])] };
+      }
       const tags = [];
       if (x.n1 != null) { tags.push('N-1 ' + dc(x.n1, 0) + ' %'); }
       if (x.partTickets != null) { tags.push(dc(x.partTickets, 1) + ' % des tickets'); }
@@ -9047,6 +9051,14 @@ class App {
       const rr = R.recurrence;
       notes.push({ lead: 'Récurrence', txt: '= le taux de retour des clients PWA : parmi les clients de l’app (compte PWA sur leur fiche du panel) identifiés à la caisse sur la période, la part venus au moins deux jours différents ; les tickets pro ne comptent pas.'
         + (rr && rr.complet && rr.pwa ? ' Au réseau : ' + rr.revenus + ' sur ' + pl(rr.pwa, 'client') + ' PWA' + (rr.partTickets != null ? ', ' + dc(rr.partTickets, 1) + ' % des tickets' : '') + '.' : '') });
+      // Qui sont les clients identifiés en caisse : la répartition dit pourquoi le taux porte sur peu de clients, ou sur aucun.
+      const rp = rr && rr.repartition;
+      if (rp && rr.identifies) {
+        const can = Object.entries(rp.canaux || {}).slice(0, 4).map(([k, n]) => k + ' ' + n).join(', ');
+        notes.push({ lead: 'Clients identifiés en caisse' + (cumul ? '' : ' ce mois') + ' (hors pro) :', txt: rr.identifies + ' au réseau — ' + rr.pwa + ' avec un compte PWA, ' + rp.sansApp + ' sans app'
+          + (rp.statutInconnu ? ', ' + rp.statutInconnu + ' sans statut sur la fiche' : '') + (rr.inconnus ? ', ' + pl(rr.inconnus, 'fiche') + ' encore à lire' : '')
+          + ' ; ' + rp.fidelite + ' en fidélité active, ' + rp.connectes + ' déjà connectés à un compte en ligne, ' + rp.webshop + ' clients du webshop' + (can ? ' ; origine des fiches : ' + can : '') + '.' });
+      }
       const enCours = L.magasins.filter(g => { const x = ((cumul ? g.cumul : g.mois) || {}).recurrence; return x && !x.complet; });
       if (enCours.length) { notes.push({ lead: 'Relevé en cours :', txt: 'les tickets se relisent au cron, du plus récent au ' + (L.recurrence && L.recurrence.debut ? (+L.recurrence.debut.slice(8) === 1 ? '1er' : +L.recurrence.debut.slice(8)) + ' ' + nomMois(+L.recurrence.debut.slice(5, 7), true) + ' ' + L.recurrence.debut.slice(0, 4) : '1er janvier') + ' — ' + enCours.map(g => { const x = (cumul ? g.cumul : g.mois).recurrence; return nomG(g) + ' ' + x.joursLus + ' / ' + x.jours + ' jours'; }).join(', ') + '. Le taux s’affiche quand la période est entière.' }); }
       if (!(L.recurrence && L.recurrence.kpi)) { notes.push({ lead: 'Pas de pastille pour la Récurrence :', txt: 'créez dans la Table KPI un KPI « Clients PWA venus au moins deux jours ÷ Clients PWA identifiés en caisse », échelle %, avec ses seuils.' }); }
