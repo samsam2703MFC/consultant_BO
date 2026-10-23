@@ -142,10 +142,11 @@
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="stock_minimum">
-                                        Minimalny stan magazynowy
+                                        Minimalny stan magazynowy (kartony, opcjonalnie)
                                     </label>
-                                    <input value="<?= old_value('stock_minimum') ?>" type="number" class="form-control"
-                                           id="stock_minimum" name="stock_minimum" placeholder="0" required>
+                                    <input value="<?= old_value('stock_minimum') ?>" type="number" min="0" step="1" class="form-control"
+                                           id="stock_minimum" name="stock_minimum" placeholder="puste = na zamówienie (MTO)">
+                                    <small class="text-muted px-0">Tylko dla produktów na zapas (MTS) ; resztę karty uzupełnisz w Karcie produktu.</small>
                                 </div>
                             </div>
 

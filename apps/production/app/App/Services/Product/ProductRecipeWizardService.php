@@ -17,7 +17,7 @@ use App\Services\Recipe\RecipeService;
 class ProductRecipeWizardService
 {
     private const PRODUCT_FIELDS = ['name', 'id_category', 'id_section', 'label_type', 'weight', 'ppc', 'ppb', 'bpc', 'cpl', 'lpp', 'cpp', 'shelf_life', 'stock_minimum'];
-    private const POSITIVE_INT_FIELDS = ['weight', 'ppc', 'ppb', 'bpc', 'cpl', 'lpp', 'cpp', 'shelf_life', 'stock_minimum'];
+
 
     public function __construct(
         private ProductService     $productService,
@@ -40,17 +40,11 @@ class ProductRecipeWizardService
     }
 
     /**
-     * Błędy produktu: reguły ProductService::validate oraz liczby całkowite > 0
-     * (kolumny final_product są typu INT).
+     * Błędy produktu: reguły ProductService::validate (logistyka = walidacja Karty produktu, minimum opcjonalne).
      */
     public function productErrors(array $product): array
     {
         $errors = $this->productService->validationErrors($product);
-        foreach (self::POSITIVE_INT_FIELDS as $field) {
-            if (!isset($errors[$field]) && $product[$field] !== '' && !preg_match('/^[1-9]\d{0,8}$/', $product[$field])) {
-                $errors[$field] = 'Podaj liczbę całkowitą większą od zera';
-            }
-        }
         foreach (['id_category', 'id_section'] as $field) {
             if (!isset($errors[$field]) && !preg_match('/^[1-9]\d*$/', $product[$field])) {
                 $errors[$field] = 'Wybierz z listy';

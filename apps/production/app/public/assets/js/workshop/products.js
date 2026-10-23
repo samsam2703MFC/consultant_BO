@@ -513,14 +513,17 @@
     async function openProduct(productId, step) {
         const found = await api.list(`/produits/items?final_product_id=${productId}`);
         let item = found.data[0];
+        // Karta założona przy tworzeniu produktu : kreator wraca do logistyki (step), jak przy nowej karcie
+        if (item && step > 1 && (item.settings?.wizard_step ?? 1) < step) {
+            try { await api.patch(`/produits/items/${item.id}/settings`, {wizard_step: Math.min(STEPS, step)}); } catch (err) { /* sam postęp kreatora */ }
+        }
         if (!item) {
             try {
                 item = await api.post('/produits/items', {item_type: 'product', final_product_id: productId});
                 // Après « Nowy produkt z recepturą » : produit déjà saisi, l'assistant reprend à la logistique.
                 if (step > 1) await api.patch(`/produits/items/${item.id}/settings`, {wizard_step: Math.min(STEPS, step)});
             } catch (err) {
-                el.innerHTML = header() + `<div class="alert alert-warning">${esc(err.message)}</div>
-                    <a class="btn btn-outline-secondary" href="${esc(api.root)}/products/${productId}/edit?classic=1">${esc(t('p.classic_form'))}</a>`;
+                el.innerHTML = header() + `<div class="alert alert-warning">${esc(err.message)}</div>`;
                 return;
             }
         }

@@ -317,12 +317,17 @@ class FinalProductRepository extends BaseRepository
     }
 
 
-    /** Stan min. z karty produktu (MTS, sztuki) : gdy jest, minimum ERP jest z niego liczone i nie edytuje się go tutaj. */
-    public function cardStockMinimum(int $id): ?array
+    /**
+     * Karta produkcyjna nowego produktu (tfb_prod_item + ustawienia) : minimum > 0 kartonów = MTS ze stanem
+     * min. karty w sztukach, inaczej MTO ; grupa = pierwsza aktywna grupa działu (jak karty tworzone automatycznie).
+     */
+    public function createCard(int $productId, int $minCartons): void
     {
-        $rows = $this->query("SELECT i.id AS id_item, s.stock_min FROM tfb_prod_item i
-                              JOIN tfb_prod_product_settings s ON s.id_item = i.id
-                              WHERE i.id_final_product = :id AND s.mode = 'MTS' AND s.stock_min IS NOT NULL LIMIT 1", ['id' => $id]);
-        return $rows ? $rows[0] : null;
+        $this->db->prepare("INSERT IGNORE INTO tfb_prod_item (item_type, id_final_product, base_unit) VALUES ('product', ?, 'szt')")->execute([$productId]);
+        $this->db->prepare("INSERT IGNORE INTO tfb_prod_product_settings (id_item, mode, never_frozen, id_primary_group, status, wizard_step, stock_min)
+            SELECT i.id, IF(? > 0, 'MTS', 'MTO'), 0, (SELECT MIN(g.id) FROM tfb_prod_group g WHERE g.active = 1 AND g.id_section = fp.id_section),
+                   'draft', 1, IF(? > 0 AND fp.ppc > 0, ? * fp.ppc, NULL)
+            FROM tfb_prod_item i JOIN final_product fp ON fp.id = i.id_final_product WHERE i.id_final_product = ?")
+            ->execute([$minCartons, $minCartons, $minCartons, $productId]);
     }
 }

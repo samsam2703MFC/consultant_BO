@@ -288,6 +288,7 @@ final class OpenApiSpec
                     'is_lead' => ['type' => 'boolean'], 'valid_from' => ['type' => 'string', 'format' => 'date', 'nullable' => true],
                     'valid_to' => ['type' => 'string', 'format' => 'date', 'nullable' => true],
                     'level_order' => $nullableInt, 'level_name' => ['type' => 'string', 'nullable' => true],
+                    'active' => ['type' => 'boolean', 'description' => 'jeden wskaźnik z Budżetem personelu ; nieaktywni nie liczą się do member_count'],
                 ]],
                 'TeamMembersInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['members'], 'properties' => [
                     'members' => ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['production_employee_id'], 'properties' => [

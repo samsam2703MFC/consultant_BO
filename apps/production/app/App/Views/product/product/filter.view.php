@@ -74,7 +74,7 @@
                                 <td><?= $row['stock_minimum'] ?></td>
                                 <td class="text-end">
                                     <div class="at-actions">
-                                        <a href="<?= ROOT ?>/products/<?= $row['id'] ?>/edit" class="btn btn-sm btn-primary">Edytuj</a>
+                                        <a href="<?= ROOT ?>/workshop/products#/product/<?= (int) $row['id'] ?>" class="btn btn-sm btn-primary">Edytuj</a>
                                         <div class="at-more">
                                             <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button>
                                             <div class="at-more-menu" role="menu" hidden>

@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Product;
 
+use App\Domain\Product\ProductLogistics;
 use App\Repositories\Product\FinalProductRepository;
 
 class ProductService {
@@ -16,8 +17,10 @@ class ProductService {
     }
 
     /**
-     * Błędy danych produktu: [pole => komunikat]; pusta tablica = dane poprawne.
-     * Te same reguły co validate() (używa ich też kreator „Nowy produkt z recepturą”).
+     * Błędy danych nowego produktu: [pole => komunikat]; pusta tablica = dane poprawne.
+     * Te same reguły co validate() (formularz « Tylko produkt » i kreator „Nowy produkt z recepturą”) ;
+     * logistyka = walidacja Karty produktu (ProductLogistics), nowy produkt : wszystkie pola większe od zera.
+     * Stan minimalny opcjonalny : puste = brak minimum (produkt na zamówienie).
      */
     public function validationErrors($data): array
     {
@@ -27,33 +30,18 @@ class ProductService {
             $errors['name'] = "Wprowadź nazwę";
         }
 
-        if (empty($data['weight'])) {
-            $errors['weight'] = "Wprowadź wagę";
-        }
+        $logistics = array_intersect_key((array) $data, ProductLogistics::RANGES);
+        $errors += ProductLogistics::messages(ProductLogistics::errors($logistics, [], array_keys(ProductLogistics::RANGES)));
 
-        if (empty($data['ppc'])) {
-            $errors['ppc'] = "Podaj ilość sztuk w kartonie";
-        }
-        if (empty($data['ppb'])) {
-            $errors['ppb'] = "Podaj ilość sztuk w opakowaniu";
-        }
-        if (empty($data['bpc'])) {
-            $errors['bpc'] = "Podaj ilość opakowań w kartonie";
-        }
-        if (empty($data['cpl'])) {
-            $errors['cpl'] = "Podaj ilość kartonów w jednej warstwie";
-        }
-        if (empty($data['lpp'])) {
-            $errors['lpp'] = "Podaj ilość warstw na palecie";
-        }
-        if (empty($data['cpp'])) {
-            $errors['cpp'] = "Podaj ilość kartonów na palecie";
-        }
-        if (empty($data['shelf_life'])) {
+        $shelfLife = trim((string) ($data['shelf_life'] ?? ''));
+        if ($shelfLife === '') {
             $errors['shelf_life'] = "Podaj czas trwałości produktu";
+        } elseif (!preg_match('/^\d+$/', $shelfLife) || (int) $shelfLife < 1 || (int) $shelfLife > 3650) {
+            $errors['shelf_life'] = "Przydatność: liczba dni od 1 do 3650";
         }
-        if (empty($data['stock_minimum'])) {
-            $errors['stock_minimum'] = "Podaj minimalną ilość produktu w magazynie";
+        $minimum = trim((string) ($data['stock_minimum'] ?? ''));
+        if ($minimum !== '' && (!preg_match('/^\d+$/', $minimum) || (int) $minimum > 1000000)) {
+            $errors['stock_minimum'] = "Stan minimalny: liczba kartonów (0 lub więcej) albo puste pole";
         }
         if (empty($data['id_category']) || $data['id_category'] === "-1") {
             $errors['id_category'] = "Wybierz kategorię";
@@ -66,19 +54,22 @@ class ProductService {
         return $errors;
     }
 
+    /**
+     * Nowy produkt i od razu jego karta produkcyjna : bez minimum = na zamówienie (MTO), z minimum
+     * (kartony) = na zapas (MTS) ze stanem min. karty w sztukach — ta sama reguła minimum co Karta produktu.
+     */
     public function insert($data)
     {
-        return $this->finalProductRepository->insert($data);
+        $minimum = trim((string) ($data['stock_minimum'] ?? ''));
+        $data['stock_minimum'] = $minimum === '' ? 0 : (int) $minimum;
+        $id = $this->finalProductRepository->insert($data);
+        if ($id && $id !== true) $this->finalProductRepository->createCard((int) $id, (int) $data['stock_minimum']);
+        return $id;
     }
 
     public function first($id)
     {
         return $this->finalProductRepository->first(['id' => $id]);
-    }
-
-    public function cardStockMinimum(int $id): ?array
-    {
-        return $this->finalProductRepository->cardStockMinimum($id);
     }
 
     public function getById($id)

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services\Workshop\Product;
 
+use App\Domain\Product\ProductLogistics;
 use App\Domain\Stock\ToProduce;
 use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
@@ -423,16 +424,11 @@ final class ItemService
         $row = $this->load($id);
         $this->requireWrite($row, $context);
         if ($row['item_type'] !== 'product') throw new ApiException('NOT_ALLOWED_FOR_TYPE', 409, [], ['item_type' => $row['item_type']]);
-        $v = (new Validator($input, true))->only(self::LOGISTICS_FIELDS)
-            // Colonnes NOT NULL de l'ERP (entiers, 0 = non renseigné) : jamais vidées depuis la fiche.
-            ->integer('weight', false, 1, 100000)
-            ->integer('ppc', false, 1, 100000)
-            ->integer('ppb', false, 0, 100000)
-            ->integer('bpc', false, 0, 100000)
-            ->integer('cpl', false, 0, 1000)
-            ->integer('lpp', false, 0, 100)
-            ->integer('cpp', false, 0, 10000)
-            ->integer('carton_length_mm', false, 1, 3000, true)
+        $v = (new Validator($input, true))->only(self::LOGISTICS_FIELDS);
+        // Colonnes NOT NULL de l'ERP (entiers, 0 = non renseigné) : jamais vidées depuis la fiche. Même règle
+        // que Załadunek, Wagi produktów BDO et les créations de produit (App\Domain\Product\ProductLogistics).
+        foreach (ProductLogistics::RANGES as $field => [$min, $max]) $v->integer($field, false, $min, $max);
+        $v->integer('carton_length_mm', false, 1, 3000, true)
             ->integer('carton_width_mm', false, 1, 3000, true)
             ->integer('carton_height_mm', false, 1, 3000, true)
             ->integer('carton_tare_g', false, 0, 100000, true)
@@ -445,9 +441,8 @@ final class ItemService
         $cpl = $final('cpl');
         $lpp = $final('lpp');
         $cpp = $final('cpp');
-        if ((int) $cpl > 0 && (int) $lpp > 0 && (int) $cpp > (int) $cpl * (int) $lpp && !$v->hasError('cpp')) {
-            $v->add('cpp', 'PALLET_OVER_LAYERS', ['max' => (int) $cpl * (int) $lpp]);
-        }
+        $over = ProductLogistics::palletMax((int) $cpl, (int) $lpp, (int) $cpp);
+        if ($over !== null && !$v->hasError('cpp')) $v->add('cpp', 'PALLET_OVER_LAYERS', ['max' => $over]);
         $v->throwIfInvalid();
         $data = $v->clean();
         $erp = array_intersect_key($data, array_flip(['weight', 'ppc', 'ppb', 'bpc', 'cpl', 'lpp', 'cpp']));

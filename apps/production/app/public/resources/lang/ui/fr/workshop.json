@@ -192,7 +192,6 @@
   "p.stock_minimum_help": "Liste de production de l'ERP.",
   "p.help": "Ce sont les données du produit dans l'ERP (les mêmes que l'ancien formulaire d'édition) : les modifier ici modifie le produit dans tout l'ERP.",
   "p.semi_help": "Semi-fini : données de la recette ERP — passez à la suite.",
-  "p.classic_form": "Formulaire classique du produit",
   "bom.calculation": "Calcul de la recette",
   "bom.calculation_help": "Composition, préparations et coût de la recette.",
   "bom.no_recipe": "Le produit n'a pas de recette dans l'ERP — créez-la dans Recettes puis revenez ici (pertes des composants).",

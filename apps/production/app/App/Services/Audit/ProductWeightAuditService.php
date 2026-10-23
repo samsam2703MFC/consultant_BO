@@ -2,6 +2,7 @@
 
 namespace App\Services\Audit;
 
+use App\Domain\Product\ProductLogistics;
 use App\Exceptions\CustomException;
 use App\Repositories\Product\FinalProductRepository;
 use App\Services\Product\ProductService;
@@ -61,6 +62,10 @@ class ProductWeightAuditService
         } catch (\InvalidArgumentException $exception) {
             throw new CustomException($exception->getMessage(), 'errors', 422);
         }
+        // Ta sama reguła co Karta produktu : waga w pełnych gramach, 1–100000 (kolumna INT)
+        $errors = ProductLogistics::errors(['weight' => fmod($normalizedWeight, 1.0) == 0.0 ? (int) $normalizedWeight : (string) $normalizedWeight]);
+        if ($errors) throw new CustomException(ProductLogistics::messages($errors)['weight'], 'errors', 422);
+        $normalizedWeight = (int) $normalizedWeight;
         if (!$this->productService->update($productId, ['weight' => $normalizedWeight])) {
             throw new CustomException('PRODUCT_WEIGHT_UPDATE_FAILED', 'errors', 500);
         }

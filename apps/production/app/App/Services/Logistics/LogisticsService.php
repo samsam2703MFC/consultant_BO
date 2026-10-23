@@ -1,6 +1,7 @@
 <?php
 namespace App\Services\Logistics;
 
+use App\Domain\Product\ProductLogistics;
 use App\Exceptions\CustomException;
 use App\Repositories\Logistics\LogisticsRepository;
 use App\Repositories\Workshop\ParamRepository;
@@ -568,17 +569,16 @@ final class LogisticsService
         return $id;
     }
 
-    /** Karta produktu : kartony na warstwę, warstwy, kartony na paletę. */
+    /** Karta produktu : kartony na warstwę, warstwy, kartony na paletę — ta sama walidacja co Karta produktu. */
     public function savePalletData(int $productId, array $input): array
     {
         $product = $this->repo->product($productId) ?? throw new CustomException('Nie znaleziono produktu.', 'errors', 404);
+        $given = array_intersect_key($input, array_flip(['cpl', 'lpp', 'cpp']));
+        // Formularz uzupełnia paletę : trzy wartości większe od zera
+        $errors = ProductLogistics::errors($given, $product, ['cpl', 'lpp', 'cpp']);
+        if ($errors) throw new CustomException(implode(' ', ProductLogistics::messages($errors)), 'errors', 422);
         $values = [];
-        foreach (['cpl' => 'Kartony na warstwę', 'lpp' => 'Warstwy na palecie', 'cpp' => 'Kartony na paletę'] as $field => $label) {
-            $raw = $input[$field] ?? $product[$field];
-            $value = filter_var($raw, FILTER_VALIDATE_INT);
-            if ($value === false || $value < 1 || $value > 1000) throw new CustomException("{$label}: liczba całkowita od 1 do 1000.", 'errors', 422);
-            $values[$field] = $value;
-        }
+        foreach (['cpl', 'lpp', 'cpp'] as $field) $values[$field] = (int) ($given[$field] ?? $product[$field]);
         $this->repo->savePalletData($productId, $values['cpl'], $values['lpp'], $values['cpp']);
         return $values + ['consistent' => $values['cpl'] * $values['lpp'] === $values['cpp']];
     }

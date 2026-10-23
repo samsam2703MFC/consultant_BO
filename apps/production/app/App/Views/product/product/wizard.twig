@@ -18,6 +18,7 @@
 <section class="section at-wizard" id="prodWizard"
          data-materials="{{ materials|json_encode }}"
          data-semi="{{ semiProducts|json_encode }}"
+         data-ranges="{{ logisticsRanges|json_encode }}"
          data-preparations="{{ preparations|json_encode }}">
 
     <ol class="at-steps at-steps-compact" aria-label="Kroki kreatora">
@@ -86,12 +87,12 @@
             {# --- 2. Opakowanie i waga ------------------------------------------------- #}
             <div class="at-step" data-step="2" hidden>
                 <h4 class="at-step-title">Opakowanie, paleta i waga</h4>
-                <p class="at-step-lead">Wszystkie pola są wymagane i muszą być liczbami całkowitymi większymi od zera.</p>
+                <p class="at-step-lead">Liczby całkowite większe od zera — ta sama walidacja co Karta produktu. Stan minimalny jest opcjonalny.</p>
                 <div class="row g-3">
                     {% set fields = [
                         ['weight', 'Waga produktu (g)', 'Waga jednej sztuki'],
                         ['shelf_life', 'Przydatność do spożycia (dni)', ''],
-                        ['stock_minimum', 'Minimalny stan magazynowy (kartony)', 'Używany na liście produkcyjnej'],
+                        ['stock_minimum', 'Minimalny stan magazynowy (kartony, opcjonalnie)', 'Puste = na zamówienie (MTO) ; podany = na zapas (MTS)'],
                         ['ppb', 'Sztuk w opakowaniu', ''],
                         ['bpc', 'Opakowań w kartonie', ''],
                         ['ppc', 'Sztuk w kartonie', ''],
@@ -102,7 +103,7 @@
                     {% for f in fields %}
                         <div class="col-12 col-sm-6 col-lg-4">
                             <label class="form-label" for="pw_{{ f[0] }}">{{ f[1] }}</label>
-                            <input class="form-control" type="number" min="1" step="1" inputmode="numeric" id="pw_{{ f[0] }}" data-field="{{ f[0] }}" required>
+                            <input class="form-control" type="number" min="{{ f[0] == 'stock_minimum' ? 0 : 1 }}" step="1" inputmode="numeric" id="pw_{{ f[0] }}" data-field="{{ f[0] }}"{{ f[0] == 'stock_minimum' ? '' : ' required' }}>
                             <div class="invalid-feedback"></div>
                             <small class="at-run-msg" data-hint="{{ f[0] }}">{{ f[2] }}</small>
                         </div>
@@ -194,6 +195,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const MATERIALS = JSON.parse(box.dataset.materials || '[]');
     const SEMI = JSON.parse(box.dataset.semi || '[]');
     const PREPS = JSON.parse(box.dataset.preparations || '[]');
+    // pole => [min, max] Karty produktu ; nowy produkt : wszystkie > 0 ; przydatność 1–3650 dni ; minimum opcjonalne
+    const RANGES = Object.assign(JSON.parse(box.dataset.ranges || '{}'), { shelf_life: [1, 3650], stock_minimum: [0, 1000000] });
     const backBtn = box.querySelector('[data-wizard-back]');
     const nextBtn = box.querySelector('[data-wizard-next]');
     const hint = document.getElementById('prodHint');
@@ -267,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (fb) fb.textContent = message || '';
     }
 
-    // Te same reguły co ProductService::validate (+ liczby całkowite > 0, kolumny INT).
+    // Te same reguły co ProductService::validate (logistyka = Karta produktu, minimum opcjonalne).
     function checkStep(step) {
         const errors = {};
         if (step === 1) {
@@ -279,10 +282,17 @@ document.addEventListener('DOMContentLoaded', function () {
         if (step === 2) {
             NUMERIC.forEach((f) => {
                 const v = val(f);
-                if (!v || v === '0') errors[f] = 'Pole wymagane';
-                else if (!/^[1-9]\d{0,8}$/.test(v)) errors[f] = 'Podaj liczbę całkowitą większą od zera';
+                const [min, max] = RANGES[f] || [1, 999999999];
+                const lo = f === 'stock_minimum' ? 0 : Math.max(1, min);
+                if (!v) { if (f !== 'stock_minimum') errors[f] = 'Pole wymagane'; }
+                else if (!/^\d+$/.test(v) || +v < lo || +v > max) errors[f] = 'Liczba całkowita od ' + lo + ' do ' + max;
                 markError(f, errors[f]);
             });
+            const n = (f) => parseInt(val(f), 10) || 0;
+            if (!errors.cpp && n('cpl') && n('lpp') && n('cpp') > n('cpl') * n('lpp')) {
+                errors.cpp = 'Najwyżej ' + n('cpl') * n('lpp') + ' (warstwy × kartony na warstwę)';
+                markError('cpp', errors.cpp);
+            }
         }
         if (step === 3 && !state.lines.length) errors.lines = 'Dodaj co najmniej jeden surowiec lub półprodukt.';
         if (step === 3 && state.lines.some((l) => !/^[1-9]\d*$/.test(String(l.quantity)))) errors.lines = 'Ilości muszą być liczbami całkowitymi większymi od zera.';
@@ -479,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 row('Etykieta', val('label_type') === '1' ? 'Duża' : 'Mała') +
                 row('Waga', esc(val('weight')) + ' g') +
                 row('Przydatność', esc(val('shelf_life')) + ' dni') +
-                row('Minimalny stan', esc(val('stock_minimum')) + ' kart.') +
+                row('Minimalny stan', val('stock_minimum') !== '' ? esc(val('stock_minimum')) + ' kart. (MTS)' : 'brak — na zamówienie (MTO)') +
                 row('Opakowanie', esc(val('ppb')) + ' szt. × ' + esc(val('bpc')) + ' opak. · ' + esc(val('ppc')) + ' szt./karton') +
                 row('Paleta', esc(val('cpl')) + ' kart./warstwa × ' + esc(val('lpp')) + ' warstw · ' + esc(val('cpp')) + ' kart./paleta') +
             '</tbody></table></div>' +

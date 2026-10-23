@@ -73,6 +73,7 @@ final class TeamService
             'valid_to' => $m['valid_to'],
             'level_order' => $m['level_order'] === null ? null : (int) $m['level_order'],
             'level_name' => $m['level_name'],
+            'active' => (bool) $m['active'],
         ], $this->teams->members($id));
     }
 

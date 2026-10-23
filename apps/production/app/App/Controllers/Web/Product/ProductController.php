@@ -43,10 +43,12 @@ class ProductController extends BaseController
         }
 
         if ($_SERVER['REQUEST_METHOD'] == "POST") {
-            if ($this->productService->validate($_POST)) {
+            $data['errors'] = $this->productService->validationErrors($_POST);
+            if (!$data['errors']) {
                 $this->handleAction(function () {
-                    $this->productService->insert($_POST);
-                    header('Location: ' . ROOT . '/product-categories/' . $_POST['id_category'] . '/products');
+                    $id = $this->productService->insert($_POST);
+                    // Dalej w Karcie produktu (tryb, grupa, etapy i czasy) — jedyne miejsce edycji produktu
+                    header('Location: ' . ROOT . ($id && $id !== true ? '/workshop/products#/product/' . (int) $id : '/product-categories/' . (int) $_POST['id_category'] . '/products'));
                     exit;
                 }, default: false);
             }
@@ -55,36 +57,14 @@ class ProductController extends BaseController
         $this->view("product/product/new", $data);
     }
 
+    /**
+     * Jedna karta produktu : edycja zawsze w Karcie produktu (produkt, logistyka, receptura, tryb, grupa,
+     * etapy i czasy, zatwierdzenie — z historią i zmianą grupy) ; dawny formularz klasyczny usunięty.
+     */
     public function editProduct($id)
     {
-        $data['row'] = $this->productService->first($id);
-        $data['card_min'] = $data['row'] ? $this->productService->cardStockMinimum((int) $id) : null;
-        $data['production_sections'] = $this->productionSectionService->getAll();
-        $data['category_product'] = $this->productCategoryService->findAll();
-        // Jeden kreator produktu : edycja otwiera kartę produktu (produkt, logistyka, receptura, tryb,
-        // grupa, etapy i czasy, zatwierdzenie) ; karta powstaje sama, jeśli jej jeszcze nie ma.
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $data['row'] && empty($_GET['classic'])) {
-            header('Location: ' . ROOT . '/workshop/products#/product/' . (int) $id);
-            exit;
-        }
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Minimum ERP liczone z karty produktu : wartość z formularza nie nadpisuje synchronizacji.
-            if ($data['card_min'] && $data['row']) $_POST['stock_minimum'] = $data['row']['stock_minimum'];
-            if ($this->productService->validate($_POST)) {
-                $success = $this->handleAction(function () use ($id) {
-                    $this->productService->update($id, $_POST);
-                    return true;
-                }, default: false);
-
-                if ($success) {
-                    header('Location: ' . ROOT . '/product-categories/' . $_POST['id_category'] . '/products');
-                    exit;
-                }
-            }
-        }
-
-        $this->view("product/product/edit", $data);
+        header('Location: ' . ROOT . ($this->productService->first($id) ? '/workshop/products#/product/' . (int) $id : '/product-categories'));
+        exit;
     }
 
     public function ajaxUpdateProduct($id)

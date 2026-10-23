@@ -190,9 +190,9 @@ final class StaffBudgetService
                 $data['base_monthly'] = round((float) $raw, 2);
             }
         }
-        foreach (['bonus_eligible', 'active'] as $flag) {
-            if (array_key_exists($flag, $input)) $data[$flag] = filter_var($input[$flag], FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
-        }
+        if (array_key_exists('bonus_eligible', $input)) $data['bonus_eligible'] = filter_var($input['bonus_eligible'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+        // Aktywny / nieobecny : jeden wskaźnik z modułem produkcji (tablet, pointage, zespoły)
+        if (array_key_exists('active', $input)) $this->staff->setActive($employeeId, filter_var($input['active'], FILTER_VALIDATE_BOOLEAN));
         if (array_key_exists('notes', $input)) {
             $notes = trim((string) $input['notes']);
             $data['notes'] = $notes === '' ? null : mb_substr($notes, 0, 255);

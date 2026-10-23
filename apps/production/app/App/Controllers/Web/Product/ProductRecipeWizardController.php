@@ -44,6 +44,8 @@ class ProductRecipeWizardController extends BaseController
             'semiProducts' => $pick($this->semiProductService->getAll(), ['id', 'name', 'unit_name']),
             'preparations' => $pick($this->preparationService->getPreparationTypes(), ['id', 'name']),
             'preset_category' => (int) ($_GET['category'] ?? 0),
+            // Zakresy logistyki — ta sama walidacja co Karta produktu (App\Domain\Product\ProductLogistics)
+            'logisticsRanges' => \App\Domain\Product\ProductLogistics::RANGES,
         ]);
     }
 

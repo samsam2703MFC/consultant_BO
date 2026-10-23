@@ -192,7 +192,6 @@
   "p.stock_minimum_help": "Lista produkcyjna ERP.",
   "p.help": "To są dane produktu w ERP (te same co w dawnym formularzu edycji): zmiana tutaj zmienia produkt w całym ERP.",
   "p.semi_help": "Półprodukt: dane z receptury ERP — przejdź dalej.",
-  "p.classic_form": "Formularz klasyczny produktu",
   "bom.calculation": "Kalkulacja receptury",
   "bom.calculation_help": "Skład, czynności przygotowania i koszt receptury.",
   "bom.no_recipe": "Produkt nie ma receptury w ERP — utwórz ją w Recepturach, potem wróć tutaj (straty składników).",

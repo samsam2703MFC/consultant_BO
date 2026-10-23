@@ -54,7 +54,7 @@ try {
     foreach (['production_sections', 'tfb_section_target', 'tfb_prod_param', 'cost_month', 'cost_month_employee', 'cost_media_type',
                  'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_month_section', 'erp_company_other_settings', 'document_wdt',
                  'document_wdt_product', 'final_product', 'customer_order', 'customer_order_product', 'tfb_growth_action', 'user', 'category_product',
-                 'production_employee', 'tfb_staff_pay', 'recipe_competency', 'recipe_competency_connection', 'tfb_employee_competency',
+                 'production_employee', 'tfb_staff_pay', 'tfb_prod_employee', 'recipe_competency', 'recipe_competency_connection', 'tfb_employee_competency',
                  'flattened_recipe_ingredient', 'raw_material', 'category_material', 'supplier', 'raw_material_price_changelog', 'unit', 'tfb_wdt_superseded',
                  'tfb_store_price_config', 'tfb_store_product', 'tfb_store_product_shop', 'tfb_store_product_link', 'tfb_store_price_sync'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
