@@ -3887,3 +3887,9 @@ différents — la définition « taux de fidélisation » du panel consultant, 
   canaux {source_channel: n}}` des clients identifiés en caisse dont la fiche est lue (le réseau compte un client une
   fois). De la fiche : `source_channel`, `last_login_at` renseigné ou non (jamais la date), `webshop_user`. Les fiches
   lues avant ces colonnes se relisent.
+- Tous les clients identifiés (23/10/2026, demande de Sam après le premier relevé : aucun client PWA identifié en
+  caisse) : la valeur de la colonne devient le taux de retour de TOUS les clients identifiés en caisse, hors pro. La
+  cellule : `{v, n1, delta, niveau, clients, revenus, partTickets, pwa {v, n1, delta, niveau, clients, revenus,
+  partTickets}, inconnus, joursLus, jours, complet, repartition}` ; `serie.recurrence` suit le taux de tous les
+  clients identifiés. Seuils : KPI dérivé `clientsRevenus ÷ clientsIdentifies` (et `pwaRevenus ÷ pwaClients` pour le
+  taux PWA, `seuils.recurrencePwa`) ; `recurrence {debut, kpi, kpiPwa}`.

@@ -4298,16 +4298,19 @@
     const tuiles = (L.leviers || []).map(l => {
       if (l.vide) { return `<div class="lv-tu vide"><div class="bar" style="background:${esc(l.couleur)}"></div><div class="k" style="color:${esc(l.couleur)}">${esc(l.nom)}</div><div class="q">à définir</div><div class="v mu">—</div><div class="l">laissée vide pour l’instant</div></div>`; }
       if (l.cle === 'recurrence') {
-        // Le taux de retour des clients PWA (23/10/2026) : la part des clients de l'app identifiés en caisse venus au moins deux jours.
+        // Le taux de retour des clients identifiés en caisse, hors pro (23/10/2026) — la part venus au moins deux jours ;
+        // en dessous, celui des seuls clients PWA.
         const x = ((cumul ? g.cumul : g.mois) || {}).recurrence, r = R.recurrence || {};
-        const q = 'taux de retour des clients PWA' + (cumul ? ' · janvier → ' + nomMois(L.cumulAu, true) : '');
+        const q = 'taux de retour des clients identifiés' + (cumul ? ' · janvier → ' + nomMois(L.cumulAu, true) : '');
         const sp = courbe(g.serie.recurrence, l.couleur, v => nf(v, 0) + ' %');
         const l2 = esc('réseau ' + (r.v != null ? nf(r.v, 0) + ' %' : '—') + (seuil('recurrence', a => nf(a, 0) + ' %') ? ' · ' + seuil('recurrence', a => nf(a, 0) + ' %') : ''));
         if (!x) { return tuile(l, '—', null, 'pas encore relevé', l2, sp, q); }
         if (!x.complet) { return tuile(l, '—', null, neutre('relevé en cours'), esc('tickets lus : ' + x.joursLus + ' / ' + x.jours + ' jours'), sp, q); }
-        if (!x.pwa) { const rp = x.repartition || {}; return tuile(l, '—', null, 'aucun client PWA identifié', esc(x.identifies ? x.identifies + ' identifié' + (x.identifies > 1 ? 's' : '') + ' en caisse' + (rp.sansApp ? ', ' + rp.sansApp + ' sans app' : '') : 'aucun client identifié en caisse') + '<br>' + l2, sp, q); }
-        const l1 = (x.n1 != null ? puce(x.delta, 1, ' pt', true) + ' N-1 ' + nf(x.n1, 0) + ' %' : neutre('pas de N-1')) + ' ' + esc(x.revenus + ' sur ' + x.pwa + ' client' + (x.pwa > 1 ? 's' : ''));
-        return tuile(l, nf(x.v, 0) + ' %', x.niveau, l1, (x.partTickets != null ? esc(nf(x.partTickets, 1) + ' % des tickets') + '<br>' : '') + l2, sp, q);
+        if (!x.clients) { return tuile(l, '—', null, 'aucun client identifié en caisse', l2, sp, q); }
+        const p = x.pwa || {};
+        const l1 = (x.n1 != null ? puce(x.delta, 1, ' pt', true) + ' N-1 ' + nf(x.n1, 0) + ' %' : neutre('pas de N-1')) + ' ' + esc(x.revenus + ' sur ' + x.clients + ' client' + (x.clients > 1 ? 's' : ''));
+        const lp = esc('PWA : ' + (p.clients ? nf(p.v, 0) + ' % (' + p.revenus + ' sur ' + p.clients + ')' : 'aucun client identifié'));
+        return tuile(l, nf(x.v, 0) + ' %', x.niveau, l1, (x.partTickets != null ? esc(nf(x.partTickets, 1) + ' % des tickets') + ' · ' : '') + lp + '<br>' + l2, sp, q);
       }
       if (l.cle === 'trafic') {
         const fT = x => nf(x, 0) + (cumul ? '' : ' /j');

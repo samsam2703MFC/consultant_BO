@@ -268,19 +268,23 @@ function rpCompleter(array $sids, string $du, string $au): void
 }
 
 /**
- * Le taux de retour des clients PWA sur [du, au], par magasin et pour le réseau, mois par mois si `$parMois`.
+ * Le taux de retour sur [du, au], par magasin et pour le réseau — de tous les clients identifiés en caisse (hors pro,
+ * 23/10/2026 : « ajoute tous les clients identifiés », la caisse ne relie encore aucun ticket à un compte PWA) et des
+ * seuls clients PWA.
  *
- * Rend, par magasin (et `reseau`) : `v` le taux (%) — null tant que la période n'est pas entièrement relevée ou sans
- * client PWA —, `pwa` les clients PWA identifiés, `revenus` ceux venus au moins deux jours, `identifies` tous les
- * clients identifiés (non pro), `inconnus` ceux dont la fiche n'est pas encore lue, `ticketsPwa` et `tickets` (la
- * part des tickets faite par les clients PWA), `joursLus` / `jours` (la couverture ; le jour en cours compte s'il est lu).
+ * Rend, par magasin (et `reseau`) : `vIdent` le taux des clients identifiés (%) — null tant que la période n'est pas
+ * entièrement relevée ou sans client —, `identifies` ces clients, `revIdent` ceux venus au moins deux jours,
+ * `tkIdent` leurs tickets ; `v`, `pwa`, `revenus`, `ticketsPwa` la même chose pour les seuls clients PWA ; `inconnus`
+ * les fiches pas encore lues ; `tickets` tous les tickets ; `joursLus` / `jours` la couverture (le jour en cours compte
+ * s'il est lu) ; `repartition` qui sont les clients identifiés.
  */
 function rpTaux(array $sids, string $du, string $au): array
 {
     rpSchema();
     $auj = date('Y-m-d');
     if ($au > $auj) { $au = $auj; }
-    $vide = static fn (): array => ['v' => null, 'pwa' => 0, 'revenus' => 0, 'identifies' => 0, 'inconnus' => 0, 'ticketsPwa' => 0, 'tickets' => 0, 'joursLus' => 0, 'jours' => 0, 'complet' => false,
+    $vide = static fn (): array => ['vIdent' => null, 'identifies' => 0, 'revIdent' => 0, 'tkIdent' => 0,
+        'v' => null, 'pwa' => 0, 'revenus' => 0, 'inconnus' => 0, 'ticketsPwa' => 0, 'tickets' => 0, 'joursLus' => 0, 'jours' => 0, 'complet' => false,
         'repartition' => ['sansApp' => 0, 'statutInconnu' => 0, 'fidelite' => 0, 'connectes' => 0, 'webshop' => 0, 'canaux' => []]];
     // la répartition d'un client identifié (fiche lue) : sans app, statut absent de la fiche, fidélité, compte en ligne, webshop, canal
     $range = static function (array &$rp, array $r): void {
@@ -310,35 +314,37 @@ function rpTaux(array $sids, string $du, string $au): array
     }
     foreach ($out['magasins'] as $sid => $x) { if ($x['jours'] === 0) { $out['magasins'][$sid]['jours'] = $clos; } }
     // les passages : un jour avec au moins un ticket, par client et par magasin
-    $parClient = []; $tous = [];
+    $tous = [];
     foreach (Db::rows('SELECT v.shop_id, v.client_id, COUNT(*) passages, SUM(v.tickets) tk, c.pwa, c.client_id lu, c.fidelite, c.canal, c.connecte, c.webshop
                          FROM ceo_pwa_visite v LEFT JOIN ceo_pwa_client c ON c.client_id = v.client_id
                         WHERE v.jour BETWEEN ? AND ? GROUP BY v.shop_id, v.client_id', [$du, $au]) as $r) {
         $sid = (int) $r['shop_id'];
         if (!isset($out['magasins'][$sid])) { continue; }
         $x = &$out['magasins'][$sid];
-        $x['identifies']++;
+        $x['identifies']++; $x['tkIdent'] += (int) $r['tk'];
+        if ((int) $r['passages'] >= 2) { $x['revIdent']++; }
         if ($r['lu'] === null) { $x['inconnus']++; }
         $range($x['repartition'], $r);
         $tous[(int) $r['client_id']] = $r;
         if ((int) $r['pwa'] === 1 && $r['pwa'] !== null) {
             $x['pwa']++; $x['ticketsPwa'] += (int) $r['tk'];
             if ((int) $r['passages'] >= 2) { $x['revenus']++; }
-            $parClient[(int) $r['client_id']] = true;
         }
         unset($x);
     }
-    // le réseau : un client PWA compte une fois, ses jours de passage dans tous les magasins
+    // le réseau : un client compte une fois, ses jours de passage dans tous les magasins
     $res = $vide();
-    if ($parClient !== []) {
-        $jours = [];
+    if ($tous !== []) {
+        $jours = []; $estPwa = [];
         $in = implode(',', array_map('intval', array_keys($out['magasins'])));
-        foreach (Db::rows('SELECT DISTINCT v.client_id, v.jour FROM ceo_pwa_visite v JOIN ceo_pwa_client c ON c.client_id = v.client_id AND c.pwa = 1
+        foreach (Db::rows('SELECT DISTINCT v.client_id, v.jour, c.pwa FROM ceo_pwa_visite v LEFT JOIN ceo_pwa_client c ON c.client_id = v.client_id
                             WHERE v.jour BETWEEN ? AND ? AND v.shop_id IN (' . $in . ')', [$du, $au]) as $r) {
             $jours[(int) $r['client_id']] = ($jours[(int) $r['client_id']] ?? 0) + 1;
+            if ($r['pwa'] !== null && (int) $r['pwa'] === 1) { $estPwa[(int) $r['client_id']] = true; }
         }
-        $res['pwa'] = count($jours);
-        $res['revenus'] = count(array_filter($jours, static fn ($n) => $n >= 2));
+        $res['revIdent'] = count(array_filter($jours, static fn ($n) => $n >= 2));
+        $res['pwa'] = count($estPwa);
+        $res['revenus'] = count(array_filter(array_intersect_key($jours, $estPwa), static fn ($n) => $n >= 2));
     }
     $complet = true;
     // le réseau compte chaque client identifié une fois
@@ -347,37 +353,42 @@ function rpTaux(array $sids, string $du, string $au): array
     foreach ($out['magasins'] as $sid => $x) {
         arsort($out['magasins'][$sid]['repartition']['canaux']);
         $out['magasins'][$sid]['v'] = $x['complet'] && $x['pwa'] > 0 ? round(100 * $x['revenus'] / $x['pwa'], 1) : null;
-        $res['ticketsPwa'] += $x['ticketsPwa'];
+        $out['magasins'][$sid]['vIdent'] = $x['complet'] && $x['identifies'] > 0 ? round(100 * $x['revIdent'] / $x['identifies'], 1) : null;
+        $res['ticketsPwa'] += $x['ticketsPwa']; $res['tkIdent'] += $x['tkIdent'];
         $res['tickets'] += $x['tickets']; $res['joursLus'] += $x['joursLus']; $res['jours'] += $x['jours'];
         $complet = $complet && $x['complet'];
     }
     arsort($res['repartition']['canaux']);
     $res['complet'] = $complet;
     $res['v'] = $complet && $res['pwa'] > 0 ? round(100 * $res['revenus'] / $res['pwa'], 1) : null;
+    $res['vIdent'] = $complet && $res['identifies'] > 0 ? round(100 * $res['revIdent'] / $res['identifies'], 1) : null;
     $out['reseau'] = $res;
     return $out;
 }
 
-/** Le taux mois par mois sur des mois donnés ('AAAA-MM') : [shop => [v|null, …]] dans l'ordre des mois. */
-function rpSerie(array $sids, array $mois): array
+/** Un taux mois par mois sur des mois donnés ('AAAA-MM') : [shop => [taux|null, …]] dans l'ordre des mois ; `vIdent` ou `v` (PWA). */
+function rpSerie(array $sids, array $mois, string $cle = 'vIdent'): array
 {
     $out = [];
     foreach ($sids as $sid) { $out[(int) $sid] = []; }
     foreach ($mois as $ym) {
         $fin = date('Y-m-t', strtotime($ym . '-01'));
         $t = $ym . '-01' > date('Y-m-d') ? null : rpTaux($sids, $ym . '-01', $fin);
-        foreach ($sids as $sid) { $out[(int) $sid][] = $t['magasins'][(int) $sid]['v'] ?? null; }
+        foreach ($sids as $sid) { $out[(int) $sid][] = $t['magasins'][(int) $sid][$cle] ?? null; }
     }
     return $out;
 }
 
-/** Le KPI de la Table KPI qui porte les seuils de la Récurrence : le KPI dérivé clients PWA revenus ÷ clients PWA, s'il existe. */
-function rpSeuilKpi(): ?array
+/**
+ * Le KPI de la Table KPI qui porte les seuils d'un taux de retour : le KPI dérivé $num ÷ $den, s'il existe —
+ * clientsRevenus ÷ clientsIdentifies (tous les clients identifiés) ou pwaRevenus ÷ pwaClients (les clients PWA).
+ */
+function rpSeuilKpi(string $num = 'clientsRevenus', string $den = 'clientsIdentifies'): ?array
 {
     try {
         foreach (Db::rows('SELECT code, calcul, seuil_alerte, seuil_critique, sens FROM ceo_kpi_def WHERE actif = 1 ORDER BY ordre, id') as $r) {
             $c = json_decode((string) $r['calcul'], true);
-            if (!is_array($c) || ($c['num'] ?? '') !== 'pwaRevenus' || ($c['den'] ?? '') !== 'pwaClients') { continue; }
+            if (!is_array($c) || ($c['num'] ?? '') !== $num || ($c['den'] ?? '') !== $den) { continue; }
             $pct = ($c['echelle'] ?? '') === 'pct';
             // un KPI à l'échelle « unité » garde des seuils en fraction (0,30) : ramenés en % comme le taux
             $f = static fn ($v) => $v === null ? null : (float) $v * ($pct ? 1 : 100);
