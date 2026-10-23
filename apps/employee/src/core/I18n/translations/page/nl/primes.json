@@ -13,7 +13,7 @@
   "before_coef": "vóór coëfficiënt",
   "below": "Onder",
   "below_target": "onder het doel",
-  "best_how": "Je omzet per uur, gecorrigeerd voor het tijdslot, tegenover de andere verkoopsters.",
+  "best_how": "Je omzet per uur, gewogen naar je uren (iedereen krijgt er 20 u bij) en gecorrigeerd voor het tijdslot, tegenover de andere verkoopsters van de winkel.",
   "best_seller": "Beste verkoopster",
   "cashed": "gekasseerd",
   "cashed_on": "gekasseerd op",
@@ -299,5 +299,7 @@
   "you_won_in": "In {m} won je",
   "hours_left_short": "nog {h} u dienst deze maand",
   "how_to_get_there": "Hoe kom je er",
-  "where_you_are": "Waar je staat"
+  "where_you_are": "Waar je staat",
+  "d_weighted_hour": "Je gewogen omzet per uur",
+  "d_revenue_hour_real": "Je echte omzet per uur"
 }

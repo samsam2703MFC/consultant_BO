@@ -13,7 +13,7 @@
   "before_coef": "przed współczynnikiem",
   "below": "Poniżej",
   "below_target": "poniżej celu",
-  "best_how": "Twój utarg na godzinę, skorygowany o porę dnia, wobec innych sprzedawczyń.",
+  "best_how": "Twój obrót na godzinę, ważony godzinami (każdej dodaje się 20 h) i skorygowany o zmianę, wobec innych sprzedawczyń sklepu.",
   "best_seller": "Najlepsza sprzedawczyni",
   "cashed": "utargowano",
   "cashed_on": "utargowano z",
@@ -299,5 +299,7 @@
   "you_won_in": "W miesiącu {m} zdobyłaś",
   "hours_left_short": "zostało {h} h zmian w tym miesiącu",
   "how_to_get_there": "Jak to osiągnąć",
-  "where_you_are": "Gdzie jesteś"
+  "where_you_are": "Gdzie jesteś",
+  "d_weighted_hour": "Twój ważony obrót na godzinę",
+  "d_revenue_hour_real": "Twój rzeczywisty obrót na godzinę"
 }

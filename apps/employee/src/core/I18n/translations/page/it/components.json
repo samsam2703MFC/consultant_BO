@@ -1,7 +1,7 @@
 {
   "bonuses": "Premi",
   "home": "Home",
-  "plan_best_shop": "La 1ª del negozio è a {a}, tu a {de}: {e} punti per superarla, vendendo di più per ora lavorata.",
+  "plan_best_shop": "La 1ª del negozio fa {a}, tu {de}: {e} € in più all’ora per superarla.",
   "plan_cross_aim": "Sui tuoi prossimi ~{n} scontrini, punta al {p} %: {d} scontrini su 10 con un 2° articolo.",
   "plan_cross_hard": "Servirebbe più del 100 % sui prossimi scontrini: questo premio si gioca il mese prossimo.",
   "plan_cross_min": "Servono anche {n} scontrini nel mese.",

@@ -139,8 +139,9 @@
 {# Le drapeau (16/10/2026, maquette B) : la valeur en haut à droite ; une barre, le trait noir de l'objectif (toujours
    au même endroit) et la récompense posée dessus ; la passer active la prime (vert). En couleur d'office. #}
 {% set ok = c.actif ?? false %}
-{% set uc = u == 'pct' ? '%' : (u == 'note' ? '★' : (u == 'score' ? (T.pts ?? 'pts') : (u == 'pcs' ? pcs : ''))) %}
-{% set ue = u == 'pct' or u == 'score' ? ' ' ~ (T.pts ?? 'pts') : (u == 'note' ? ' ★' : '') %}
+{# La meilleure vendeuse se mesure en euros par heure (23/10/2026) : son score est le CA par heure pondéré (src/ventes.php). #}
+{% set uc = u == 'pct' ? '%' : (u == 'note' ? '★' : (u == 'score' ? eur ~ '/h' : (u == 'pcs' ? pcs : ''))) %}
+{% set ue = u == 'pct' ? ' ' ~ (T.pts ?? 'pts') : (u == 'score' ? ' ' ~ eur ~ '/h' : (u == 'note' ? ' ★' : '')) %}
 <div class="pl{{ ok ? ' ok' }}" data-carte="{{ c.cle }}" id="prime-{{ c.cle }}">
   <div class="pl-b" role="button" tabindex="0" aria-expanded="false" aria-controls="pd-{{ c.cle }}" data-pl>
     <div class="pl-h">
@@ -176,9 +177,9 @@
       {%- endif -%}
       </span>
       {% if c.type == 'categorie' %}<span>{% if c.premier and not c.premier.moi %}{{ T.first_abbr ?? '1re' }} {{ c.premier.nom }} {{ c.premier.q|number_format(0, ',', ' ') }}{% elseif c.second %}{{ rangPre }}2{{ rangSuf }} {{ c.second.nom }} {{ c.second.q|number_format(0, ',', ' ') }}{% endif %}</span>
-      {% elseif mvPremier %}<span>{% if not mvPremier.moi %}{{ T.first_abbr ?? '1re' }} {{ mvPremier.nom }} {{ mvPremier.q|number_format(0, ',', ' ') }} {{ T.pts ?? 'pts' }}{% elseif c.second ?? null %}{{ rangPre }}2{{ rangSuf }} {{ c.second.nom }} {{ c.second.q|number_format(0, ',', ' ') }} {{ T.pts ?? 'pts' }}{% endif %}</span>
+      {% elseif mvPremier %}<span>{% if not mvPremier.moi %}{{ T.first_abbr ?? '1re' }} {{ mvPremier.nom }} {{ mvPremier.q|number_format(0, ',', ' ') }}&nbsp;{{ eur }}/h{% elseif c.second ?? null %}{{ rangPre }}2{{ rangSuf }} {{ c.second.nom }} {{ c.second.q|number_format(0, ',', ' ') }}&nbsp;{{ eur }}/h{% endif %}</span>
       {% elseif (c.regle ?? '') == 'magasin' and (c.moiPcs ?? null) is not null %}<span>{{ T.of_which_you ?? 'dont toi' }} {{ c.moiPcs|number_format(0, ',', ' ') }} {{ pcs }}</span>
-      {% elseif c.repereVal is not null %}<span>{{ c.repereType == 'garder' ? (T.keep_first_short ?? 'garder la 1re') : (T.goal_lower ?? 'objectif') }} {{ c.repereVal|number_format(dec, ',', ' ') }}{{ u == 'score' ? ' ' ~ (T.pts ?? 'pts') : suf }}</span>{% endif %}
+      {% elseif c.repereVal is not null %}<span>{{ c.repereType == 'garder' ? (T.keep_first_short ?? 'garder la 1re') : (T.goal_lower ?? 'objectif') }} {{ c.repereVal|number_format(dec, ',', ' ') }}{{ u == 'score' ? ' ' ~ eur ~ '/h' : suf }}</span>{% endif %}
     </div>
   </div>
   <div class="pl-d" id="pd-{{ c.cle }}" hidden>
@@ -214,10 +215,10 @@
       <div><dt>{{ T.d_reward ?? 'Récompense' }}</dt><dd>{{ go.recompense|number_format(0, ',', ' ') }}&nbsp;{{ eur }}<small>{{ T.d_per_person ?? 'par personne' }}</small></dd></div>
     </dl>
     {% elseif c.cle == 'meilleure' %}{% set mv = b.meilleure %}
-      <div><dt>{{ T.d_my_score ?? 'Ton score' }}</dt><dd>{{ mv.score is not null ? mv.score|number_format(0, ',', ' ') : '—' }}{% if mv.rangMag %}<small>{{ mv.rangMag == 1 ? (T.first_abbr ?? '1re') : rangPre ~ mv.rangMag ~ rangSuf }} / {{ mv.surMag }} · {{ T.my_shop_short ?? 'magasin' }}</small>{% endif %}</dd></div>
-      {% if mv.premierNom and mv.rangMag != 1 %}<div><dt>{{ T.first_shop ?? '1re du magasin' }}</dt><dd>{{ mv.premierNom }}<small>{{ mv.scorePremier|number_format(0, ',', ' ') }}</small></dd></div>{% endif %}
+      <div><dt>{{ T.d_weighted_hour ?? 'Ton CA par heure pondéré' }}</dt><dd>{{ mv.score is not null ? mv.score|number_format(0, ',', ' ') ~ ' ' ~ eur ~ '/h' : '—' }}{% if mv.rangMag %}<small>{{ mv.rangMag == 1 ? (T.first_abbr ?? '1re') : rangPre ~ mv.rangMag ~ rangSuf }} / {{ mv.surMag }} · {{ T.my_shop_short ?? 'magasin' }}</small>{% endif %}</dd></div>
+      {% if mv.premierNom and mv.rangMag != 1 %}<div><dt>{{ T.first_shop ?? '1re du magasin' }}</dt><dd>{{ mv.premierNom }}<small>{{ mv.scorePremier|number_format(0, ',', ' ') }}&nbsp;{{ eur }}/h</small></dd></div>{% endif %}
       {% if mv.rangRes %}<div><dt>{{ T.network ?? 'Réseau' }}</dt><dd>{{ rangPre }}{{ mv.rangRes }}{{ rangSuf }} / {{ mv.surRes }}</dd></div>{% endif %}
-      {% if mv.caHeure is not null %}<div><dt>{{ T.d_revenue_hour ?? 'CA par heure' }}</dt><dd>{{ mv.caHeure|number_format(0, ',', ' ') }}&nbsp;{{ eur }}/h<small>{{ (mv.heures ?? 0)|number_format(1, ',', ' ') }}&nbsp;h</small></dd></div>{% endif %}
+      {% if mv.caHeure is not null %}<div><dt>{{ T.d_revenue_hour_real ?? 'Ton CA par heure réel' }}</dt><dd>{{ mv.caHeure|number_format(0, ',', ' ') }}&nbsp;{{ eur }}/h<small>{{ (mv.heures ?? 0)|number_format(1, ',', ' ') }}&nbsp;h</small></dd></div>{% endif %}
       {% if mv.panier is not null %}<div><dt>{{ T.d_avg_ticket ?? 'Ticket moyen' }}</dt><dd>{{ mv.panier|number_format(2, ',', ' ') }}&nbsp;{{ eur }}</dd></div>{% endif %}
     </dl><p class="pl-n">{{ T.best_how ?? 'Ton CA par heure, corrigé du créneau, face aux autres vendeuses.' }}</p>
     {% elseif c.type == 'categorie' %}</dl>

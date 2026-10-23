@@ -1,7 +1,7 @@
 {
   "bonuses": "Bonuses",
   "home": "Home",
-  "plan_best_shop": "The shop’s no. 1 is at {a}, you at {de}: {e} points to overtake her by selling more per hour worked.",
+  "plan_best_shop": "The shop’s no. 1 makes {a}, you {de}: {e} € more per hour to overtake her.",
   "plan_cross_aim": "On your next ~{n} tickets, aim for {p} %: {d} tickets out of 10 with a 2nd item.",
   "plan_cross_hard": "It would take more than 100 % on your next tickets: this bonus is for next month.",
   "plan_cross_min": "You also need {n} tickets in the month.",
