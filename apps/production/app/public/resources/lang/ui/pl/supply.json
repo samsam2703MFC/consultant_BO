@@ -181,7 +181,7 @@
   "inv.flag.price_over": "drożej niż w zamówieniu",
   "inv.flag.price_under": "taniej niż w zamówieniu",
   "inv.from_ksef": "Pobierz z KSeF",
-  "inv.upload": "Dodaj plik (PDF / XML)",
+  "inv.upload": "Dodaj plik (PDF / XML / skan)",
   "inv.mappings": "Przypisania nazw dostawców",
   "inv.help": "Faktura zakupowa jest porównywana z zamówieniem : nazwy dostawcy przypisane do naszych surowców (raz na dostawcę — potem automatycznie), ilości wobec przyjęć, ceny wobec zamówienia.",
   "inv.from": "Od",
@@ -288,5 +288,16 @@
   "inv.prices_ok": "Zaktualizowano ceny {n} surowców (koszty receptur przeliczone).",
   "inv.prices_skipped": "Pominięte (brak jednostki, dostawcy albo opakowania) : {list}.",
   "inv.prices_done": "Ceny zaimportowane {at}",
-  "inv.stock_ok": "Ilości przyjęte na stan."
+  "inv.stock_ok": "Ilości przyjęte na stan.",
+  "inv.photo": "Zdjęcie faktury",
+  "inv.source.ocr": "skan / zdjęcie (OCR)",
+  "inv.uploaded_ocr": "Faktura {number} odczytana OCR : {n} linii — sprawdź z oryginałem.",
+  "inv.ocr.prepare": "Przygotowanie zdjęcia…",
+  "inv.ocr.scan": "PDF bez tekstu (skan) — odczyt OCR…",
+  "inv.ocr.loading": "Ładowanie OCR (pierwszy raz kilka sekund)…",
+  "inv.ocr.reading": "OCR : strona {page}/{pages} · {pct} %",
+  "inv.ocr.failed": "Odczyt OCR nie powiódł się (zdjęcie nieczytelne albo brak połączenia) — zrób wyraźniejsze zdjęcie albo dodaj PDF / XML.",
+  "inv.ocr.check": "Odczytane OCR ze skanu / zdjęcia : sprawdź numer, datę, dostawcę i linie z oryginałem (« Pokaż fakturę ») przed aktualizacją cen.",
+  "inv.ocr_text": "Tekst odczytany OCR",
+  "inv.no_lines_ocr": "OCR nie rozpoznał pozycji — kliknij « Popraw linie » i wpisz je z oryginału."
 }

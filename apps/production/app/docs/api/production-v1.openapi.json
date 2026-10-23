@@ -7855,7 +7855,7 @@
                 "tags": [
                     "supply"
                 ],
-                "summary": "Faktura z pliku (XML KSeF albo PDF) / Facture depuis un fichier",
+                "summary": "Faktura z pliku (XML KSeF, PDF, skan, zdjęcie) / Facture depuis un fichier",
                 "operationId": "uploadPurchaseInvoice",
                 "responses": {
                     "201": {
@@ -7902,7 +7902,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "XML FA : lecture complète. PDF : texte (pdftotext), lignes reconnues quand quantité × prix = valeur ; le reste se complète à la main. INVOICE_EXISTS (409) : même fournisseur et numéro. Max 5 Mo.",
+                "description": "XML FA : lecture complète. PDF : texte (pdftotext), lignes reconnues quand quantité × prix = valeur ; le reste se complète à la main. Scan ou photo (JPEG, PNG, WebP, ou PDF sans texte) : texte OCR lu par le client dans ocr_text, mêmes règles, source « ocr » ; PDF_SCANNED (422) : PDF sans texte envoyé sans ocr_text. INVOICE_EXISTS (409) : même fournisseur et numéro. Max 5 Mo.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -20967,7 +20967,8 @@
                                         "ksef",
                                         "xml",
                                         "pdf",
-                                        "manual"
+                                        "manual",
+                                        "ocr"
                                     ]
                                 },
                                 "ksef_number": {
@@ -21105,7 +21106,8 @@
                             "ksef",
                             "xml",
                             "pdf",
-                            "manual"
+                            "manual",
+                            "ocr"
                         ]
                     },
                     "ksef_number": {
@@ -21465,7 +21467,13 @@
                     "content_base64": {
                         "type": "string",
                         "format": "byte",
-                        "description": "PDF ou XML FA, 5 Mo max"
+                        "description": "PDF, XML FA ou image (JPEG, PNG, WebP), 5 Mo max"
+                    },
+                    "ocr_text": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 200000,
+                        "description": "texte lu par OCR (scan, photo) ; vide = image enregistrée, lignes à saisir"
                     }
                 }
             },

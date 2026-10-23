@@ -83,7 +83,8 @@
     "INVOICE_NOTHING_TO_RECEIVE": "Aucune ligne de la facture n’est reliée à une matière de la commande.",
     "PDF_TEXT_UNAVAILABLE": "Lecture du texte PDF impossible sur le serveur (pdftotext) — saisissez les lignes ou importez le XML KSeF.",
     "INVOICE_NO_SUPPLIER": "La facture n'a pas de fournisseur — choisissez-le pour réceptionner les quantités.",
-    "INVOICE_NO_PRICES": "Aucune ligne reliée avec un prix — aucun prix à mettre à jour."
+    "INVOICE_NO_PRICES": "Aucune ligne reliée avec un prix — aucun prix à mettre à jour.",
+    "PDF_SCANNED": "PDF sans texte (scan) — lisez les pages par OCR (champ ocr_text) ou saisissez les lignes."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",

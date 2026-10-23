@@ -14,10 +14,10 @@ use App\Services\Purchasing\CostOptimizationService;
 use App\Services\Workshop\Referentiel\AuditTrail;
 
 /**
- * Kontrola faktur zakupowych : faktura z KSeF (pobrana jako nabywca), z pliku XML KSeF albo z PDF (tekst
- * pdftotext, linie rozpoznane gdy ilość × cena = wartość ; reszta wpisywana ręcznie). Nazwy dostawcy
- * przypisywane do naszych surowców z przelicznikiem (jednostki bazowe surowca na jednostkę faktury) —
- * zapamiętane na dostawcę (NIP albo dostawca ERP), stosowane do kolejnych faktur. Porównanie z zamówieniem :
+ * Kontrola faktur zakupowych : faktura z KSeF (pobrana jako nabywca), z pliku XML KSeF, z PDF (tekst
+ * pdftotext) albo ze skanu / zdjęcia (tekst OCR z przeglądarki) — linie rozpoznane gdy ilość × cena = wartość ;
+ * reszta wpisywana ręcznie. Nazwy dostawcy przypisywane do naszych surowców z przelicznikiem (jednostki bazowe
+ * surowca na jednostkę faktury) — zapamiętane na dostawcę (NIP albo dostawca ERP), stosowane do kolejnych faktur. Porównanie z zamówieniem :
  * ilość fakturowana vs przyjęta (albo zamówiona), cena vs cena zamówienia (tolerancje 1 % ilości, 0,5 % ceny),
  * pozycje spoza zamówienia, suma linii vs suma faktury. Decyzja : zaakceptowana albo reklamacja.
  */
@@ -25,6 +25,8 @@ final class InvoiceService
 {
     public const STATUSES = ['open', 'accepted', 'disputed'];
     public const MAX_FILE = 5 * 1024 * 1024;
+    /** Linie odczytane z tekstu (PDF, OCR) albo wpisane : edytowalne ; z KSeF / XML nie. */
+    private const EDITABLE_SOURCES = ['pdf', 'ocr', 'manual'];
     private const QTY_TOL = 0.01;
     private const PRICE_TOL = 0.005;
 
@@ -71,9 +73,9 @@ final class InvoiceService
             'lines' => $out, 'control' => $control['summary'],
             'orders' => $i['id_supplier'] ? $this->candidates((int) $i['id_supplier'], $lines) : [],
             'suppliers' => $i['status'] === 'open' ? $this->supplierChoices($i) : [],
-            'text' => $i['source'] === 'pdf' ? $this->repo->fileText($id) : null,
+            'text' => in_array($i['source'], ['pdf', 'ocr'], true) ? $this->repo->fileText($id) : null,
             'can_write' => $context->can('prod.supply.write'), 'editable' => $i['status'] === 'open' && $context->can('prod.supply.write'),
-            'lines_editable' => in_array($i['source'], ['pdf', 'manual'], true) && $i['status'] === 'open' && $context->can('prod.supply.write'),
+            'lines_editable' => in_array($i['source'], self::EDITABLE_SOURCES, true) && $i['status'] === 'open' && $context->can('prod.supply.write'),
             // Ilości : do zamówienia (wysłane / częściowo przyjęte) albo — bez zamówienia — przez zamówienie utworzone z faktury.
             'can_receive' => $i['status'] === 'open' && $context->can('prod.supply.write') && $control['summary']['mapped'] > 0
                 && ($i['id_po'] !== null ? in_array($i['po_status'], ['sent', 'partial'], true) : $i['id_supplier'] !== null),
@@ -194,20 +196,43 @@ final class InvoiceService
         return ['imported' => $imported, 'skipped' => $skipped, 'errors' => $errors];
     }
 
-    /** Plik faktury : XML KSeF (pobrany ręcznie) albo PDF (tekst pdftotext ; linie do sprawdzenia). */
+    /**
+     * Plik faktury : XML KSeF (pobrany ręcznie), PDF (tekst pdftotext), skan albo zdjęcie (tekst OCR z przeglądarki,
+     * pole ocr_text). PDF bez tekstu (skan) bez ocr_text : PDF_SCANNED — przeglądarka odczytuje strony OCR i wysyła ponownie.
+     */
     public function upload(array $body, ApiContext $context): array
     {
-        $v = (new Validator($body))->only(['filename', 'content_base64'])->string('filename', 255)->string('content_base64', (int) (self::MAX_FILE * 1.4));
+        $v = (new Validator($body))->only(['filename', 'content_base64', 'ocr_text'])->string('filename', 255)->string('content_base64', (int) (self::MAX_FILE * 1.4))
+            ->string('ocr_text', 200000, false, true);
         $v->throwIfInvalid();
         $content = base64_decode((string) $v->value('content_base64'), true);
         if ($content === false || $content === '') throw ApiException::validation([['field' => 'content_base64', 'code' => 'INVALID_FILE', 'params' => []]]);
         if (strlen($content) > self::MAX_FILE) throw ApiException::validation([['field' => 'content_base64', 'code' => 'FILE_TOO_LARGE', 'params' => ['max_kb' => self::MAX_FILE / 1024]]]);
         $filename = basename((string) $v->value('filename'));
+        $hasOcr = $v->hasRaw('ocr_text');
+        $ocr = InvoiceParser::ocrText((string) $v->value('ocr_text', ''));
+        $image = self::imageMime($content);
         if (str_starts_with($content, '%PDF')) {
-            $text = $this->pdfText($content);
-            $parsed = InvoiceParser::pdfText($text, $this->repo->companyNip());
-            $source = 'pdf';
+            try {
+                $text = $this->pdfText($content);
+            } catch (ApiException $e) {
+                if (!$hasOcr) throw $e;
+                $text = '';
+            }
+            if (InvoiceParser::hasText($text)) {
+                $source = 'pdf';
+            } elseif ($hasOcr) {
+                [$text, $source] = [$ocr, 'ocr'];
+            } else {
+                throw new ApiException('PDF_SCANNED', 422);
+            }
             $file = ['filename' => $filename, 'mime' => 'application/pdf', 'content' => $content, 'text' => $text];
+            $parsed = InvoiceParser::pdfText($text, $this->repo->companyNip());
+        } elseif ($image !== null) {
+            // Zdjęcie bez tekstu OCR : zapisane, linie wpisywane ręcznie.
+            $source = 'ocr';
+            $file = ['filename' => $filename, 'mime' => $image, 'content' => $content, 'text' => $ocr !== '' ? $ocr : null];
+            $parsed = InvoiceParser::pdfText($ocr, $this->repo->companyNip());
         } else {
             try {
                 $parsed = InvoiceParser::ksefXml($content);
@@ -221,6 +246,15 @@ final class InvoiceService
         if ($dup !== null) throw new ApiException('INVOICE_EXISTS', 409, [], ['id' => $dup]);
         $id = $this->create($parsed, $source, null, $file, $context);
         return $this->detail($id, $context);
+    }
+
+    /** Zdjęcie (JPEG, PNG, WebP) po sygnaturze pliku ; inaczej null. */
+    private static function imageMime(string $content): ?string
+    {
+        if (str_starts_with($content, "\xFF\xD8\xFF")) return 'image/jpeg';
+        if (str_starts_with($content, "\x89PNG\r\n\x1A\n")) return 'image/png';
+        if (str_starts_with($content, 'RIFF') && substr($content, 8, 4) === 'WEBP') return 'image/webp';
+        return null;
     }
 
     private function pdfText(string $pdf): string
@@ -371,7 +405,7 @@ final class InvoiceService
     public function saveLines(int $id, array $body, ApiContext $context): array
     {
         $inv = $this->open($id);
-        if (!in_array($inv['source'], ['pdf', 'manual'], true)) throw new ApiException('INVOICE_LINES_READ_ONLY', 409);
+        if (!in_array($inv['source'], self::EDITABLE_SOURCES, true)) throw new ApiException('INVOICE_LINES_READ_ONLY', 409);
         $v = (new Validator($body))->only(['lines']);
         $rows = $body['lines'] ?? null;
         $clean = [];

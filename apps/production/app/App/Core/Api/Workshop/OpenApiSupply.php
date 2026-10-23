@@ -46,8 +46,10 @@ final class OpenApiSupply
                 'description' => "Lecture seule dans KSeF (acheteur, date d'émission, < 3 mois) ; rien n'est enregistré. KSEF_UNAVAILABLE (422) : KSeF non configuré ou indisponible."],
             'POST /supply/invoices/ksef/import' => ['tag' => $t, 'id' => 'importKsefPurchaseInvoices', 'summary' => 'Import faktur z KSeF / Import de factures KSeF', 'body' => 'KsefImportInput', 'response' => 'KsefImportResult', 'ok' => 201, 'errors' => [400, 422],
                 'description' => 'XML de chaque facture (FA) lu dans KSeF, lignes et fournisseur ; correspondances mémorisées appliquées ; factures déjà importées ignorées.'],
-            'POST /supply/invoices/upload' => ['tag' => $t, 'id' => 'uploadPurchaseInvoice', 'summary' => 'Faktura z pliku (XML KSeF albo PDF) / Facture depuis un fichier', 'body' => 'InvoiceUploadInput', 'response' => 'PurchaseInvoice', 'ok' => 201, 'errors' => [400, 409, 422],
-                'description' => "XML FA : lecture complète. PDF : texte (pdftotext), lignes reconnues quand quantité × prix = valeur ; le reste se complète à la main. INVOICE_EXISTS (409) : même fournisseur et numéro. Max 5 Mo."],
+            'POST /supply/invoices/upload' => ['tag' => $t, 'id' => 'uploadPurchaseInvoice', 'summary' => 'Faktura z pliku (XML KSeF, PDF, skan, zdjęcie) / Facture depuis un fichier', 'body' => 'InvoiceUploadInput', 'response' => 'PurchaseInvoice', 'ok' => 201, 'errors' => [400, 409, 422],
+                'description' => "XML FA : lecture complète. PDF : texte (pdftotext), lignes reconnues quand quantité × prix = valeur ; le reste se complète à la main. "
+                    . "Scan ou photo (JPEG, PNG, WebP, ou PDF sans texte) : texte OCR lu par le client dans ocr_text, mêmes règles, source « ocr » ; "
+                    . "PDF_SCANNED (422) : PDF sans texte envoyé sans ocr_text. INVOICE_EXISTS (409) : même fournisseur et numéro. Max 5 Mo."],
             'GET /supply/invoices/{id:\d+}' => ['tag' => $t, 'id' => 'getPurchaseInvoice', 'summary' => 'Faktura : linie, przypisania, kontrola / Facture : lignes, correspondances, contrôle', 'response' => 'PurchaseInvoice', 'errors' => [404],
                 'description' => "Par ligne : quantité en unité de base (quantité × facteur), prix net par unité de base, comparés à la ligne de commande (reçu, sinon commandé ; prix commandé) et au catalogue. "
                     . "Drapeaux : unmapped, not_in_order, qty_over_received, qty_over_ordered, qty_under_received, price_over, price_under (tolérances 1 % / 0,5 %). Suggestions de matières pour les lignes non reliées."],
@@ -93,7 +95,7 @@ final class OpenApiSupply
             'price_gaps' => ['type' => 'integer', 'description' => 'réceptions à un prix différent du prix commandé'],
         ];
         $invoice = [
-            'id' => ['type' => 'integer'], 'source' => ['type' => 'string', 'enum' => ['ksef', 'xml', 'pdf', 'manual']], 'ksef_number' => $nStr, 'number' => $nStr, 'issue_date' => $nDate,
+            'id' => ['type' => 'integer'], 'source' => ['type' => 'string', 'enum' => ['ksef', 'xml', 'pdf', 'manual', 'ocr']], 'ksef_number' => $nStr, 'number' => $nStr, 'issue_date' => $nDate,
             'seller_nip' => $nStr, 'seller_name' => $nStr, 'supplier' => ['type' => 'object', 'nullable' => true, 'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string']]],
             'currency' => ['type' => 'string'], 'total_net' => $nNum, 'total_gross' => $nNum,
             'order' => ['type' => 'object', 'nullable' => true, 'properties' => ['id' => ['type' => 'integer'], 'code' => ['type' => 'string'], 'status' => ['type' => 'string']]],
@@ -173,7 +175,8 @@ final class OpenApiSupply
             'KsefImportResult' => ['type' => 'object', 'properties' => ['imported' => ['type' => 'array', 'items' => ['type' => 'integer']], 'skipped' => ['type' => 'integer'],
                 'errors' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ksef_number' => ['type' => 'string'], 'message' => ['type' => 'string']]]]]],
             'InvoiceUploadInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['filename', 'content_base64'], 'properties' => [
-                'filename' => ['type' => 'string'], 'content_base64' => ['type' => 'string', 'format' => 'byte', 'description' => 'PDF ou XML FA, 5 Mo max'],
+                'filename' => ['type' => 'string'], 'content_base64' => ['type' => 'string', 'format' => 'byte', 'description' => 'PDF, XML FA ou image (JPEG, PNG, WebP), 5 Mo max'],
+                'ocr_text' => ['type' => 'string', 'nullable' => true, 'maxLength' => 200000, 'description' => 'texte lu par OCR (scan, photo) ; vide = image enregistrée, lignes à saisir'],
             ]],
             'PurchaseInvoiceInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
                 'supplier_id' => ['type' => 'integer', 'nullable' => true], 'po_id' => ['type' => 'integer', 'nullable' => true], 'number' => $nStr, 'issue_date' => $nDate, 'note' => $nStr,

@@ -21,6 +21,7 @@ final class InvoiceParser
     ];
     /** Jednostki opakowania dostawcy : przelicznik domyślny = opakowanie surowca. */
     private const PACKAGE_UNITS = ['op', 'kpl', 'karton', 'worek', 'but', 'rolka', 'pal', 'wiadro', 'kanister'];
+    private const CURRENCY = '/^(z[łl]|PLN|EUR|€)$/iu';
     private const SKIP = '/\b(razem|suma|do zap[łl]aty|w tym|stawka|podsumowanie|og[óo][łl]em|warto[śs][ćc] brutto|zap[łl]acono|pozosta[łl]o)\b/iu';
 
     // --- XML KSeF -------------------------------------------------------------------------------------------------
@@ -110,7 +111,34 @@ final class InvoiceParser
             'total_net' => $lines ? round(array_sum(array_column($lines, 'net_value')), 2) : null, 'total_gross' => $gross, 'lines' => $lines];
     }
 
-    /** Linia pozycji : kolumny (2+ spacje) ; ilość × cena = wartość (tolerancja 0,5 %), nazwa przed liczbami. */
+    /** Czy PDF ma tekst (inaczej skan : obraz bez warstwy tekstu). */
+    public static function hasText(string $text): bool
+    {
+        return preg_match_all('/[\p{L}\p{N}]/u', $text) >= 40;
+    }
+
+    /**
+     * Tekst OCR (skan, zdjęcie) → jak tekst pdftotext -layout : kreski tabeli = odstęp kolumn, Lp pominięte, pomyłki
+     * w liczbach (O → 0, l / I → 1 w liczbie zaczętej cyfrą, « 12. », « 3 ,50 »), « SZ » → szt. Potem pdfText.
+     */
+    public static function ocrText(string $text): string
+    {
+        $out = [];
+        foreach (preg_split('/\R/u', str_replace(["\u{00A0}", "\t"], [' ', '   '], $text)) as $line) {
+            $line = preg_replace('/\s*[|¦]\s*/u', '   ', $line);
+            // Resztki kresek tabeli i kropki (« ! », « I », « [ », « , ») osobno, Lp na początku wiersza (« 1 », « [4 », « b ») przed kolumną.
+            $line = preg_replace('/(?<=\s)[!Il\[\],.;:\'’_—-]{1,2}(?=\s|$)/u', ' ', ' ' . $line);
+            $line = preg_replace('/^\s*(?:\S{1,2}\s{2,}){1,2}(?=\p{L}{4})/u', '', $line);
+            $line = preg_replace('/(?<=\d)\.(?=\s)/u', '', $line);
+            $line = preg_replace('/(?<=\s)s[z2][tl1i]?\.?(?=\s|$)/iu', 'szt', $line);
+            $line = preg_replace_callback('/(?<![\p{L}\d\/-])\d[\dOolI.,]*[\dOo](?![\p{L}])/u', fn($m) => strtr($m[0], ['O' => '0', 'o' => '0', 'l' => '1', 'I' => '1']), $line);
+            $line = preg_replace('/(?<=\d) ?, ?(?=\d{2}(?!\d))/u', ',', $line);
+            $out[] = rtrim($line);
+        }
+        return mb_substr(trim(implode("\n", $out), "\n"), 0, 200000);
+    }
+
+    /** Linia pozycji : kolumny (2+ spacje) ; ilość × cena = wartość (tolerancja 0,5 %), nazwa przed liczbami ; waluta przy kwocie pomijana. */
     private static function pdfLine(string $line): ?array
     {
         $cols = preg_split('/\s{2,}/u', $line);
@@ -122,6 +150,8 @@ final class InvoiceParser
             if (preg_match('/^(\d{1,2}(?:[.,]\d+)?)\s?%$/u', $c, $m)) { $tokens[] = ['vat', str_replace(',', '.', $m[1])]; continue; }
             if (preg_match('/^(zw|np|oo)\.?$/iu', $c)) { $tokens[] = ['vat', strtolower(rtrim($c, '.'))]; continue; }
             if (($n = self::number($c)) !== null) { $tokens[] = ['n', $n]; continue; }
+            if (preg_match(self::CURRENCY, $c)) { $tokens[] = ['c', $c]; continue; }
+            if (preg_match('/^(-?[\d \.,]+?)\s*(?:z[łl]|PLN|EUR|€)$/iu', $c, $m) && ($n = self::number(trim($m[1]))) !== null) { $tokens[] = ['n', $n]; continue; }
             if (preg_match('/^(-?[\d \.,]+?)\s*([a-ząęółśżźćń]+\.?)$/iu', $c, $m) && ($n = self::number(trim($m[1]))) !== null && self::unit($m[2]) !== null) {
                 $tokens[] = ['n', $n]; $tokens[] = ['u', self::unit($m[2])]; continue;
             }
@@ -132,8 +162,8 @@ final class InvoiceParser
         foreach ($tokens as $i => $tk) if ($tk[0] === 'n') $nums[] = $i;
         for ($k = 0; $k + 2 < count($nums); $k++) {
             [$a, $b, $c] = [$nums[$k], $nums[$k + 1], $nums[$k + 2]];
-            // Między ilością, ceną i wartością tylko jednostka (albo nic).
-            foreach ([[$a, $b], [$b, $c]] as [$x, $y]) for ($j = $x + 1; $j < $y; $j++) if ($tokens[$j][0] !== 'u') continue 3;
+            // Między ilością, ceną i wartością tylko jednostka albo waluta (albo nic).
+            foreach ([[$a, $b], [$b, $c]] as [$x, $y]) for ($j = $x + 1; $j < $y; $j++) if (!in_array($tokens[$j][0], ['u', 'c'], true)) continue 3;
             [$qty, $price, $value] = [$tokens[$a][1], $tokens[$b][1], $tokens[$c][1]];
             if ($qty <= 0 || $price <= 0 || $value <= 0 || abs($qty * $price - $value) > max(0.02, $value * 0.005)) continue;
             $nameParts = [];
@@ -145,7 +175,7 @@ final class InvoiceParser
             for ($j = max(0, $a - 1); $j < $b; $j++) if ($tokens[$j][0] === 'u') $unit = $tokens[$j][1];
             $vat = null;
             for ($j = $c + 1; $j < count($tokens); $j++) if ($tokens[$j][0] === 'vat') { $vat = $tokens[$j][1]; break; }
-            $name = trim(preg_replace('/^\d{1,3}[.)]?\s+/u', '', implode(' ', $nameParts)));
+            $name = trim(preg_replace(['/^\d{1,3}[.)]?\s+/u', '/^[^\p{L}\p{N}]+/u'], '', implode(' ', $nameParts)));
             return ['name' => mb_substr($name, 0, 500), 'code' => null, 'quantity' => $qty, 'unit' => $unit, 'unit_price' => $price, 'net_value' => round($value, 2), 'vat_rate' => $vat];
         }
         return null;

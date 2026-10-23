@@ -356,6 +356,16 @@ $t = InvoiceParser::pdfText($txt, 'PL 897-190-26-20');
 check($t['number'] === 'FV/77/10/2026' && $t['issue_date'] === '2026-10-21' && $t['seller_nip'] === '1234563218' && $t['seller_name'] === 'Pakcer Sp. j.' && $t['total_gross'] == 1352.02
     && count($t['lines']) === 2 && $t['lines'][0]['name'] === 'Karton 600x400' && $t['lines'][0]['net_value'] == 1050 && $t['lines'][1]['unit'] === 'rolka' && $t['lines'][1]['vat_rate'] === '23',
     'PDF text: number, date, seller (not our NIP), lines where quantity × price = value, totals line skipped');
+// OCR (skan, zdjęcie) : kreski tabeli, Lp, « 12. », « SZ », O/l w liczbach, waluta przy kwocie.
+$ocr = InvoiceParser::ocrText("FAKTURA VAT nr FV/2210/10/2026\nSprzedawca:   Nabywca:\nHurtownia Odra Sp. z o.o.   ATELIER Sp. z o.o.\nNIP: 894-301-22-17   NIP: 897-190-26-20\nData wystawienia: 22.1O.2026\n"
+    . "Lp   |   Nazwa towaru   |   Ilość   |   J.m.   |   Cena netto\nI   Mąka pszenna typ 650 worek 25 kg   |   12. szt   62,40   748,80   5%\nb   Cukier biały 50 kg   |   4 | SZ   189,00   |   756,00   5%\n"
+    . "[4   | Drożdże świeże 1 kg   |   10 | kg   |   8,9O zł |   89,00 zł | 5%   I!\nDo zapłaty: 1 676,58 zł");
+$o = InvoiceParser::pdfText($ocr, '8971902620');
+check($o['number'] === 'FV/2210/10/2026' && $o['issue_date'] === '2026-10-22' && $o['seller_nip'] === '8943012217' && count($o['lines']) === 3
+    && $o['lines'][0]['name'] === 'Mąka pszenna typ 650 worek 25 kg' && $o['lines'][0]['quantity'] == 12 && $o['lines'][1]['unit'] === 'szt' && $o['lines'][1]['net_value'] == 756
+    && $o['lines'][2]['name'] === 'Drożdże świeże 1 kg' && $o['lines'][2]['unit_price'] == 8.9 && $o['total_gross'] == 1676.58,
+    'OCR text: table bars, row numbers misread (I, b, [4), « 12. », « SZ », 8,9O zł → 3 lines like a PDF');
+check(!InvoiceParser::hasText("Powered by TCPDF (www.tcpdf.org)\n\f") && InvoiceParser::hasText($ocr), 'PDF without text layer (scan) recognised');
 check(InvoiceParser::number('1 234,56') === 1234.56 && InvoiceParser::number('1.234,56') === 1234.56 && InvoiceParser::number('12.5') === 12.5 && InvoiceParser::number('10 45,00') === null,
     'Polish and dotted number formats; ambiguous groups refused');
 check(InvoiceParser::defaultFactor('kg', 'g', null) == 1000 && InvoiceParser::defaultFactor('worek', 'g', 25000) == 25000 && InvoiceParser::defaultFactor('szt', 'szt', 100) == 1

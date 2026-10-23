@@ -181,7 +181,7 @@
   "inv.flag.price_over": "plus cher que la commande",
   "inv.flag.price_under": "moins cher que la commande",
   "inv.from_ksef": "Importer depuis KSeF",
-  "inv.upload": "Ajouter un fichier (PDF / XML)",
+  "inv.upload": "Ajouter un fichier (PDF / XML / scan)",
   "inv.mappings": "Correspondances fournisseurs",
   "inv.help": "La facture d'achat est comparée à la commande : libellés du fournisseur reliés à nos matières (une fois par fournisseur — ensuite automatique), quantités face aux réceptions, prix face à la commande.",
   "inv.from": "Du",
@@ -288,5 +288,16 @@
   "inv.prices_ok": "Prix mis à jour pour {n} matière(s) (coûts des recettes recalculés).",
   "inv.prices_skipped": "Ignorées (unité, fournisseur ou conditionnement manquant) : {list}.",
   "inv.prices_done": "Prix importés le {at}",
-  "inv.stock_ok": "Quantités entrées en stock."
+  "inv.stock_ok": "Quantités entrées en stock.",
+  "inv.photo": "Photo de la facture",
+  "inv.source.ocr": "scan / photo (OCR)",
+  "inv.uploaded_ocr": "Facture {number} lue par OCR : {n} lignes — à vérifier avec l'original.",
+  "inv.ocr.prepare": "Préparation de la photo…",
+  "inv.ocr.scan": "PDF sans texte (scan) — lecture OCR…",
+  "inv.ocr.loading": "Chargement de l'OCR (quelques secondes la première fois)…",
+  "inv.ocr.reading": "OCR : page {page}/{pages} · {pct} %",
+  "inv.ocr.failed": "Lecture OCR impossible (photo illisible ou pas de connexion) — reprenez une photo plus nette ou ajoutez le PDF / XML.",
+  "inv.ocr.check": "Lu par OCR depuis un scan / une photo : vérifiez numéro, date, fournisseur et lignes avec l'original (« Voir la facture ») avant de mettre à jour les prix.",
+  "inv.ocr_text": "Texte lu par OCR",
+  "inv.no_lines_ocr": "L'OCR n'a reconnu aucune ligne — cliquez « Corriger les lignes » et saisissez-les depuis l'original."
 }

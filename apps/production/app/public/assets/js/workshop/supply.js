@@ -4,7 +4,8 @@
  * « en stock » (min. / max.) ou « à la commande », commandes fournisseurs par e-mail (ou passées autrement),
  * réceptions avec quantités et prix réels. Tout passe par l'API /supply/… ; les quantités de l'API sont en unité
  * de base (g, ml, szt), affichées en unité lisible (kg, l) avec factor. Onglet Factures : contrôle des factures
- * d'achat (KSeF, XML, PDF) contre les commandes et réceptions, noms du fournisseur reliés à nos matières.
+ * d'achat (KSeF, XML, PDF, scan ou photo lus par OCR dans le navigateur) contre les commandes et réceptions, noms du
+ * fournisseur reliés à nos matières.
  */
 (async function () {
     'use strict';
@@ -588,7 +589,9 @@
         return `<div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">
                 <div class="btn-group btn-group-sm" role="group">${ISTATUSES.map(s => `<button type="button" class="btn ${state.istatus === s ? 'btn-primary' : 'btn-outline-primary'}" data-istatus="${s}">${esc(t('inv.filter.' + s))}</button>`).join('')}</div>
                 ${w ? `<button type="button" class="btn btn-sm ${iv.ksefOpen ? 'btn-secondary' : 'btn-outline-primary'}" data-ksef-toggle><i class="bi bi-cloud-download"></i> ${esc(t('inv.from_ksef'))}</button>
-                <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-upload"></i> ${esc(t('inv.upload'))}<input type="file" class="d-none" accept=".pdf,.xml,application/pdf,application/xml,text/xml" data-upload></label>` : ''}
+                <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-upload"></i> ${esc(t('inv.upload'))}<input type="file" class="d-none" accept=".pdf,.xml,application/pdf,application/xml,text/xml,image/*" data-upload></label>
+                <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-camera"></i> ${esc(t('inv.photo'))}<input type="file" class="d-none" accept="image/*" capture="environment" data-upload></label>
+                <span class="small text-muted" data-ocr-status></span>` : ''}
                 <a href="#tab=invoices&inv=map" class="btn btn-sm btn-link ms-auto" data-mappings><i class="bi bi-arrow-left-right"></i> ${esc(t('inv.mappings'))}</a></div></div>
             ${ksef}
             <p class="small text-muted mb-2">${esc(t('inv.help'))}</p>
@@ -654,29 +657,202 @@
                 load();
             } catch (err) { ui.notify(false, errText(err)); importBtn.disabled = false; }
         });
-        el.querySelector('[data-upload]')?.addEventListener('change', (e) => upload(e.target));
+        el.querySelectorAll('[data-upload]').forEach(i => i.addEventListener('change', (e) => upload(e.target)));
     }
 
+    // Plik faktury : PDF / XML wysłane jak są ; zdjęcie (albo skan PDF bez tekstu : PDF_SCANNED) odczytane OCR w przeglądarce,
+    // tekst wysłany z plikiem (ocr_text) — linie rozpoznane na serwerze jak w PDF, do sprawdzenia z oryginałem.
     async function upload(input) {
         const file = input.files && input.files[0];
         if (!file) return;
-        if (file.size > 5 * 1024 * 1024) { ui.notify(false, t('inv.too_big')); input.value = ''; return; }
-        input.disabled = true;
+        const image = /^image\//.test(file.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
+        if (file.size > (image ? 30 : 5) * 1024 * 1024) { ui.notify(false, t('inv.too_big')); input.value = ''; return; }
+        const inputs = [...el.querySelectorAll('[data-upload]')];
+        inputs.forEach(x => { x.disabled = true; });
         try {
-            const content = await new Promise((resolve, reject) => {
-                const r = new FileReader();
-                r.onload = () => resolve(String(r.result).split(',')[1] || '');
-                r.onerror = () => reject(r.error);
-                r.readAsDataURL(file);
-            });
-            const res = await api.post('/supply/invoices/upload', {filename: file.name, content_base64: content});
-            ui.notify(true, t('inv.uploaded', {number: res.number || file.name}));
+            let body;
+            if (image) {
+                ocrStatus(t('inv.ocr.prepare'));
+                const img = await prepareImage(file);
+                body = {filename: file.name.replace(/\.[^.]*$/, '') + '.jpg', content_base64: img.stored, ocr_text: await ocrRead([img.ocr])};
+            } else {
+                body = {filename: file.name, content_base64: await fileBase64(file)};
+            }
+            let res;
+            try {
+                res = await api.post('/supply/invoices/upload', body);
+            } catch (err) {
+                if (image || !err.body || !['PDF_SCANNED', 'PDF_TEXT_UNAVAILABLE'].includes(err.body.description)) throw err;
+                ocrStatus(t('inv.ocr.scan'));
+                body.ocr_text = await ocrRead(await pdfPages(file));
+                res = await api.post('/supply/invoices/upload', body);
+            }
+            ui.notify(true, t(res.source === 'ocr' ? 'inv.uploaded_ocr' : 'inv.uploaded', {number: res.number || file.name, n: res.lines.length}));
             openInvoice(res.id, res);
         } catch (err) {
-            ui.notify(false, errText(err));
-            input.disabled = false;
-            input.value = '';
+            ui.notify(false, err.ocr ? t('inv.ocr.failed') : errText(err));
+            inputs.forEach(x => { x.disabled = false; x.value = ''; });
+        } finally {
+            ocrStatus('');
         }
+    }
+
+    const fileBase64 = (file) => new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result).split(',')[1] || '');
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(file);
+    });
+    const ocrStatus = (text) => { const s = el.querySelector('[data-ocr-status]'); if (s) s.innerHTML = text ? `<span class="spinner-border spinner-border-sm me-1"></span>${esc(text)}` : ''; };
+    const loadScript = (src, global) => window[global] ? Promise.resolve() : new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve; s.onerror = () => reject(new Error(src));
+        document.head.appendChild(s);
+    });
+    const ocrError = (e) => Object.assign(new Error((e && e.message) || String(e)), {ocr: true});
+
+    // Zdjęcie : orientacja z EXIF, do zapisu JPEG ≤ 2200 px ; do OCR szare z rozciągniętym kontrastem, długi bok 2000–3200 px.
+    async function prepareImage(file) {
+        let img;
+        try {
+            img = window.createImageBitmap ? await createImageBitmap(file, {imageOrientation: 'from-image'}).catch(() => createImageBitmap(file))
+                : await new Promise((resolve, reject) => { const x = new Image(); x.onload = () => resolve(x); x.onerror = reject; x.src = URL.createObjectURL(file); });
+        } catch (e) { throw ocrError(e); }
+        const long = Math.max(img.width, img.height);
+        const keep = scaled(img, Math.min(1, 2200 / long));
+        const ocr = grayStretch(scaled(img, long < 2000 ? Math.min(2.5, 2000 / long) : Math.min(1, 3200 / long)));
+        return {stored: keep.toDataURL('image/jpeg', 0.85).split(',')[1], ocr};
+    }
+    function scaled(src, k) {
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(src.width * k));
+        c.height = Math.max(1, Math.round(src.height * k));
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(src, 0, 0, c.width, c.height);
+        return c;
+    }
+    // Do OCR : skala szarości, tło wyrównane (każdy piksel ÷ jasność papieru wokół — cienie i szary papier → białe),
+    // kontrast rozciągnięty, bez kresek tabeli.
+    function grayStretch(c) {
+        const ctx = c.getContext('2d');
+        const w = c.width, h = c.height;
+        const im = ctx.getImageData(0, 0, w, h);
+        const d = im.data;
+        const g = new Float32Array(w * h);
+        for (let i = 0; i < w * h; i++) g[i] = (d[i * 4] * 299 + d[i * 4 + 1] * 587 + d[i * 4 + 2] * 114) / 1000;
+        // Jasność tła : maksimum w blokach (większych niż litery), wygładzone, interpolowane.
+        const B = Math.max(24, Math.round(Math.max(w, h) / 70));
+        const gw = Math.ceil(w / B), gh = Math.ceil(h / B);
+        const grid = new Float32Array(gw * gh);
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const k = ((y / B) | 0) * gw + ((x / B) | 0); if (g[y * w + x] > grid[k]) grid[k] = g[y * w + x]; }
+        const bg = new Float32Array(gw * gh);
+        for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++) {
+            let m = 0;
+            for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = gy + dy, xx = gx + dx; if (yy >= 0 && yy < gh && xx >= 0 && xx < gw) m = Math.max(m, grid[yy * gw + xx]); }
+            bg[gy * gw + gx] = Math.max(m, 40);
+        }
+        const at = (gx, gy) => bg[Math.min(gh - 1, Math.max(0, gy)) * gw + Math.min(gw - 1, Math.max(0, gx))];
+        for (let y = 0; y < h; y++) {
+            const fy = y / B - 0.5, y0 = Math.floor(fy), ty = fy - y0;
+            for (let x = 0; x < w; x++) {
+                const fx = x / B - 0.5, x0 = Math.floor(fx), tx = fx - x0;
+                const back = (at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx) * (1 - ty) + (at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx) * ty;
+                const v = Math.max(0, Math.min(255, (g[y * w + x] / back * 255 - 60) * 255 / 165));
+                const k = (y * w + x) * 4;
+                d[k] = d[k + 1] = d[k + 2] = v;
+            }
+        }
+        removeRules(d, w, h);
+        ctx.putImageData(im, 0, 0);
+        return c;
+    }
+    // Kreski tabeli (ciemne odcinki dłuższe niż ~1/60 dłuższego boku, poziome i pionowe) wybielone : OCR czyta wtedy wiersze tabeli jak tekst.
+    function removeRules(d, w, h) {
+        const dark = new Uint8Array(w * h);
+        for (let i = 0; i < w * h; i++) dark[i] = d[i * 4] < 140 ? 1 : 0;
+        const run = Math.max(40, Math.round(Math.max(w, h) / 60));
+        const kill = new Uint8Array(w * h);
+        const scan = (count, len, at) => {
+            for (let a = 0; a < count; a++) {
+                let start = -1;
+                for (let b = 0; b <= len; b++) {
+                    const on = b < len && dark[at(a, b)];
+                    if (on && start < 0) start = b;
+                    else if (!on && start >= 0) { if (b - start >= run) for (let k = start; k < b; k++) kill[at(a, k)] = 1; start = -1; }
+                }
+            }
+        };
+        scan(h, w, (y, x) => y * w + x);
+        scan(w, h, (x, y) => y * w + x);
+        for (let i = 0; i < w * h; i++) if (kill[i]) d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = 255;
+    }
+
+    // Skan PDF : strony (maks. 4) narysowane przez pdf.js w ~2400 px szerokości.
+    async function pdfPages(file) {
+        try {
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib');
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            const pdf = await window.pdfjsLib.getDocument({data: new Uint8Array(await file.arrayBuffer())}).promise;
+            const out = [];
+            for (let p = 1; p <= Math.min(pdf.numPages, 4); p++) {
+                const page = await pdf.getPage(p);
+                const viewport = page.getViewport({scale: Math.min(4, 2400 / page.getViewport({scale: 1}).width)});
+                const c = document.createElement('canvas');
+                c.width = Math.round(viewport.width);
+                c.height = Math.round(viewport.height);
+                const ctx = c.getContext('2d');
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(0, 0, c.width, c.height);
+                await page.render({canvasContext: ctx, viewport}).promise;
+                out.push(grayStretch(c));
+            }
+            return out;
+        } catch (e) { throw ocrError(e); }
+    }
+
+    // OCR (Tesseract.js, polski, blok tekstu z liniami tabeli) ; worker ładowany przy pierwszym odczycie i zachowany.
+    let ocrWorker = null;
+    let ocrLog = () => {}; // postęp bieżącego odczytu
+    async function ocrRead(canvases) {
+        try {
+            await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js', 'Tesseract');
+            let page = 1;
+            ocrLog = (m) => {
+                if (m.status === 'recognizing text') ocrStatus(t('inv.ocr.reading', {page, pages: canvases.length, pct: Math.round(m.progress * 100)}));
+                else if (/loading|initializ/.test(m.status || '')) ocrStatus(t('inv.ocr.loading'));
+            };
+            if (!ocrWorker) {
+                ocrWorker = window.Tesseract.createWorker('pol', 1, {logger: (m) => ocrLog(m)}).then(async (w) => {
+                    await w.setParameters({tessedit_pageseg_mode: '6', preserve_interword_spaces: '1'});
+                    return w;
+                });
+                ocrWorker.catch(() => { ocrWorker = null; });
+            }
+            const worker = await ocrWorker;
+            const pages = [];
+            for (const c of canvases) {
+                const r = await worker.recognize(c);
+                pages.push(layoutText(r.data));
+                page++;
+            }
+            return pages.join('\n\n').slice(0, 200000);
+        } catch (e) { throw ocrError(e); }
+    }
+
+    // Linie OCR → tekst kolumnowy jak pdftotext -layout : przerwa między słowami większa niż ~1,6 znaku = kolumna (3 spacje).
+    function layoutText(d) {
+        const lines = d.lines && d.lines.length ? d.lines : (d.blocks || []).flatMap(b => (b.paragraphs || []).flatMap(p => p.lines || []));
+        if (!lines.length) return d.text || '';
+        return lines.map(l => {
+            const words = (l.words || []).filter(w => w.text && w.text.trim());
+            if (!words.length) return (l.text || '').trim();
+            const chars = words.reduce((sum, w) => sum + w.text.length, 0);
+            const cw = words.reduce((sum, w) => sum + (w.bbox.x1 - w.bbox.x0), 0) / Math.max(1, chars);
+            return words.map((w, k) => (k === 0 ? '' : (w.bbox.x0 - words[k - 1].bbox.x1 > cw * 1.6 ? '   ' : ' ')) + w.text.trim()).join('');
+        }).join('\n');
     }
 
     function drawInvoice() {
@@ -695,7 +871,7 @@
                     · ${esc(t('inv.overlap', {n: o.overlap, lines: o.lines}))}${o.invoices && !isCurrent(o) ? ' · ' + esc(t('inv.already_invoiced')) : ''}</option>`).join('')}</select>
                 ${orderLink ? `<div class="small mt-1">${orderLink}</div>` : ''}`
             : `<div>${orderLink || (i.supplier ? '—' : `<span class="small text-muted">${esc(t('inv.pick_supplier_first'))}</span>`)}</div>`;
-        const idFields = edit && ['pdf', 'manual'].includes(i.source)
+        const idFields = edit && ['pdf', 'ocr', 'manual'].includes(i.source)
             ? `<div class="col-md-2"><label class="form-label small mb-0">${esc(t('inv.f.number'))}</label><input class="form-control form-control-sm" data-inv-field="number" data-field="number" value="${esc(i.number || '')}" maxlength="80"></div>
                <div class="col-md-2"><label class="form-label small mb-0">${esc(t('inv.f.issue_date'))}</label><input class="form-control form-control-sm" type="date" data-inv-field="issue_date" data-field="issue_date" value="${esc(i.issue_date || '')}"></div>` : '';
         const summary = {
@@ -708,7 +884,7 @@
         const lines = iv.editLines ? editLinesTable(i) : `<div class="table-responsive"><table class="table table-sm align-middle mb-2 tfb-supply-table tfb-inv-lines"><thead><tr>
                 <th>${esc(t('inv.col.line'))}</th><th class="text-end">${esc(t('col.quantity'))}</th><th class="text-end">${esc(t('inv.col.unit_price'))}</th><th class="text-end">${esc(t('inv.col.net'))}</th>
                 <th>${esc(t('inv.col.material'))}</th><th class="text-end">${esc(t('inv.col.our_qty'))}</th><th class="text-end">${esc(t('inv.col.our_price'))}</th><th>${esc(t('inv.col.control'))}</th></tr></thead>
-            <tbody>${i.lines.map(l => invoiceLine(l, edit)).join('') || `<tr><td colspan="8" class="text-muted">${esc(t(i.lines_editable ? 'inv.no_lines_pdf' : 'inv.no_lines'))}</td></tr>`}</tbody>
+            <tbody>${i.lines.map(l => invoiceLine(l, edit)).join('') || `<tr><td colspan="8" class="text-muted">${esc(t(i.lines_editable ? (i.source === 'ocr' ? 'inv.no_lines_ocr' : 'inv.no_lines_pdf') : 'inv.no_lines'))}</td></tr>`}</tbody>
             <tfoot><tr><th colspan="3" class="text-end">${esc(t('total'))}</th><th class="text-end">${esc(cur(c.lines_net, i.currency))}</th><th colspan="4"></th></tr></tfoot></table></div>`;
         const actions = [];
         if (i.lines_editable && !iv.editLines) actions.push(`<button type="button" class="btn btn-sm btn-outline-secondary" data-iact="edit-lines"><i class="bi bi-pencil"></i> ${esc(t('inv.act.edit_lines'))}</button>`);
@@ -735,12 +911,13 @@
                     ${idFields}
                     <div class="col-md-2"><label class="form-label small mb-0">${esc(t('inv.totals'))}</label><div>${esc(cur(i.total_net, i.currency))}
                         <span class="small text-muted">· ${esc(t('inv.gross', {v: cur(i.total_gross, i.currency)}))}</span></div></div></div>
+                ${i.source === 'ocr' && edit ? `<div class="alert alert-warning py-2 small mb-2"><i class="bi bi-eye"></i> ${esc(t('inv.ocr.check'))}</div>` : ''}
                 <div class="alert ${ALERT_CLS[c.state] || 'alert-secondary'} py-2 small mb-2">${esc(summary)}
                     ${c.total_mismatch ? `<div>${esc(t('inv.sum.total_mismatch', {lines: cur(c.lines_net, i.currency), total: cur(i.total_net, i.currency)}))}</div>` : ''}</div>
                 ${lines}
                 ${iv.editLines ? '' : importBox(i)}
                 ${i.note ? `<div class="small mb-2"><strong>${esc(t('f.note'))} :</strong> ${esc(i.note)}</div>` : ''}
-                ${i.text ? `<details class="tfb-inv-text mb-2"><summary class="small">${esc(t('inv.pdf_text'))}</summary><pre>${esc(i.text)}</pre></details>` : ''}
+                ${i.text ? `<details class="tfb-inv-text mb-2"><summary class="small">${esc(t(i.source === 'ocr' ? 'inv.ocr_text' : 'inv.pdf_text'))}</summary><pre>${esc(i.text)}</pre></details>` : ''}
                 <div class="d-flex flex-wrap gap-2 mt-2">${actions.join('')}</div></div></div>
             ${viewer}`;
     }

@@ -1693,6 +1693,38 @@ if (trim((string) shell_exec('command -v pdftotext'))) {
     [$s, $b] = $call('POST', "/supply/invoices/{$pid}/decision", ['status' => 'accepted'], $access);
     check($s === 200 && $b['data']['status'] === 'accepted', 'invoice accepted');
 }
+// Skan i zdjęcie : tekst OCR z przeglądarki (ocr_text), linie jak w PDF ; PDF bez tekstu bez ocr_text → PDF_SCANNED.
+$ocrText = "FAKTURA VAT nr FS/301/10/2026\nSprzedawca:   Mleczarnia test Sp. z o.o.\nNIP: 111-222-33-44\nData wystawienia: 22.1O.2026\n"
+    . "| Lp | Nazwa | Ilość | J.m. | Cena netto | Wartość netto | VAT |\n| 1 | Masło extra 10 kg | 2 | szt | 3OO, 00 zł | 6OO,00 zł | 5% |\nDo zapłaty: 630,00 zł";
+if (trim((string) shell_exec('command -v pdftotext'))) {
+    $scan = new TCPDF();
+    $scan->setPrintHeader(false);
+    $scan->setPrintFooter(false);
+    $scan->AddPage();
+    $scanPdf = $scan->Output('', 'S');
+    [$s, $b] = $call('POST', '/supply/invoices/upload', ['filename' => 'skan.pdf', 'content_base64' => base64_encode($scanPdf)], $access);
+    check($s === 422 && $b['description'] === 'PDF_SCANNED', 'PDF without text (scan) and no OCR text → PDF_SCANNED (the browser reads it by OCR)');
+    [$s, $os] = $call('POST', '/supply/invoices/upload', ['filename' => 'skan.pdf', 'content_base64' => base64_encode($scanPdf), 'ocr_text' => $ocrText], $access);
+    $ol = $os['data']['lines'][0] ?? null;
+    check($s === 201 && $os['data']['source'] === 'ocr' && $os['data']['number'] === 'FS/301/10/2026' && $os['data']['issue_date'] === '2026-10-22'
+        && $os['data']['seller_nip'] === '1112223344' && $os['data']['file']['mime'] === 'application/pdf' && $ol && $ol['name'] === 'Masło extra 10 kg'
+        && $ol['quantity'] == 2 && $ol['unit_price'] == 300 && $ol['net_value'] == 600 && $os['data']['lines_editable'] && str_contains((string) $os['data']['text'], '300,00'),
+        'scanned PDF + OCR text: number, date (1O → 10), supplier NIP, line read through table bars and OCR slips (3OO, 00 zł → 300,00), text kept');
+    $call('DELETE', "/supply/invoices/{$os['data']['id']}", null, $access);
+}
+$jpg = (function () { $im = imagecreatetruecolor(40, 20); imagefill($im, 0, 0, imagecolorallocate($im, 255, 255, 255)); ob_start(); imagejpeg($im); return (string) ob_get_clean(); })();
+[$s, $oj] = $call('POST', '/supply/invoices/upload', ['filename' => 'zdjecie.jpg', 'content_base64' => base64_encode($jpg), 'ocr_text' => $ocrText], $access);
+[$s2, $ojf] = $call('GET', "/supply/invoices/{$oj['data']['id']}/file", null, $access);
+check($s === 201 && $oj['data']['source'] === 'ocr' && count($oj['data']['lines']) === 1 && $oj['data']['file']['mime'] === 'image/jpeg'
+    && $s2 === 200 && base64_decode($ojf['data']['content_base64']) === $jpg, 'photo + OCR text: invoice with its line, photo kept as received');
+[$s] = $call('POST', '/supply/invoices/upload', ['filename' => 'zdjecie.jpg', 'content_base64' => base64_encode($jpg), 'ocr_text' => $ocrText], $access);
+check($s === 409, 'same OCR invoice (supplier + number) again → already in the system');
+[$s, $oe] = $call('POST', '/supply/invoices/upload', ['filename' => 'nieczytelne.jpg', 'content_base64' => base64_encode($jpg), 'ocr_text' => ''], $access);
+[$s2, $oel] = $call('PUT', "/supply/invoices/{$oe['data']['id']}/lines", ['lines' => [['name' => 'Masło extra 10 kg', 'quantity' => 1, 'unit' => 'szt', 'unit_price' => 300]]], $access);
+check($s === 201 && $oe['data']['source'] === 'ocr' && $oe['data']['lines'] === [] && $oe['data']['text'] === null && $oe['data']['lines_editable']
+    && $s2 === 200 && count($oel['data']['lines']) === 1, 'unreadable photo: kept without lines, lines typed by hand');
+$call('DELETE', "/supply/invoices/{$oj['data']['id']}", null, $access);
+$call('DELETE', "/supply/invoices/{$oe['data']['id']}", null, $access);
 // Bez zamówienia : ilości na stan przez zamówienie « przyjęte » utworzone z faktury.
 [, $x2d] = $call('GET', "/supply/invoices/{$x2['data']['id']}", null, $access);
 [$s, $xr] = $call('POST', "/supply/invoices/{$x2['data']['id']}/receive", null, $access);
