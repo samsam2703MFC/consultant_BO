@@ -50,10 +50,49 @@ function gpLigne(array $r): array
 function gpListe(?string $shop = null): array
 {
     motTables();
+    gpMaquette();
     $rows = $shop === null
         ? Db::rows('SELECT * FROM mot_grand_prix ORDER BY portee DESC, shop, du DESC, valeur DESC, id')
         : Db::rows("SELECT * FROM mot_grand_prix WHERE portee = 'reseau' OR (portee = 'magasin' AND shop = ?) ORDER BY portee DESC, du DESC, valeur DESC, id", [$shop]);
     return array_map('gpLigne', $rows);
+}
+
+/**
+ * Les six grands prix de la maquette retenue (B, 23/10/2026), posés une fois à la demande de Sam : la saison 2026,
+ * pour tout le réseau. Ils naissent ÉTEINTS — les sponsors de la maquette sont fictifs, et un grand prix allumé se voit
+ * aussitôt dans l'app des vendeuses : on vérifie lot, valeur et sponsor, puis on l'allume. Un intitulé déjà là n'est pas
+ * reposé ; la marque dans mot_reglage empêche de les recréer une fois retirés.
+ */
+const GP_MAQUETTE = [
+    ['vendeuse', 'Refaire ta terrasse', 5000, 'sponsor', 'Jardins & Terrasses Lemaire', 600],
+    ['b2b', 'Week-end à Rome pour deux', 1500, 'sponsor', 'Voyages Horizon', null],
+    ['ticket', 'Trottinette électrique', 600, 'marque', null, null],
+    ['croisees', 'Machine espresso + 1 an de café', 900, 'sponsor', 'Café Arabica Royal', 2000],
+    ['progression', 'Journée spa pour deux', 400, 'marque', null, 300],
+    ['magasin', 'Soirée d’équipe + 2 000 €', 3500, 'marque', null, null],
+];
+const GP_MAQUETTE_MARQUE = '_grands_prix_maquette_2026';
+
+function gpMaquette(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    try {
+        if (Db::row('SELECT valeur FROM mot_reglage WHERE cle = ?', [GP_MAQUETTE_MARQUE]) !== null) { return; }
+        $deja = array_map(static fn ($r) => (string) $r['titre'], Db::rows("SELECT titre FROM mot_grand_prix WHERE portee = 'reseau'"));
+        $n = 0;
+        foreach (GP_MAQUETTE as [$defi, $titre, $valeur, $payeur, $sponsor, $seuil]) {
+            if (in_array($titre, $deja, true)) { continue; }
+            Db::exec('INSERT INTO mot_grand_prix (portee, shop, defi, titre, valeur, payeur, sponsor, seuil, du, au, actif, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?, NOW())',
+                ['reseau', null, $defi, $titre, $valeur, $payeur, $sponsor, $seuil, '2026-01-01', '2026-12-31', 0]);
+            $n++;
+        }
+        Db::exec('INSERT INTO mot_reglage (cle, valeur) VALUES (?,?) ON DUPLICATE KEY UPDATE valeur = VALUES(valeur)', [GP_MAQUETTE_MARQUE, json_encode(['le' => date('c'), 'crees' => $n])]);
+        if ($n > 0 && function_exists('journalAdd')) { journalAdd('CEO', 'Paramètre', 'Grands prix', $n . ' grands prix de la maquette posés pour 2026, éteints : à vérifier puis allumer'); }
+    } catch (Throwable $e) {
+        error_log('gpMaquette : ' . $e->getMessage());
+    }
 }
 
 /** Les mois entiers d'une saison, bornés à aujourd'hui : ['2026-01', …]. */
