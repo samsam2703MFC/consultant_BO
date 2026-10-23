@@ -7001,14 +7001,39 @@ class App {
       const filtreEq = S.prEqFiltre === 'magasin' ? 'magasin' : 'toutes';
       const colsEq = eq ? (eq.primes || []).filter(p => filtreEq === 'toutes' || p.payeur === 'magasin') : [];
       const nomMois = mm => new Date(+mm.slice(0, 4), +mm.slice(5, 7) - 1, 1).toLocaleString('fr-BE', { month: 'long' });
+      // Le tri au clic sur un en-tête (23/10/2026) : la vendeuse de A à Z, l'acquis, ou une prime — gagnée d'abord (le
+      // gain), puis en tête, puis le chemin fait vers l'objectif et la place ; un 2e clic inverse. Par défaut : l'acquis.
+      // Une prime que le filtre cache : l'acquis reprend la main.
+      const tri0 = S.prEqTri || { col: 'acquis', sens: -1 };
+      const triEq = tri0.col === 'nom' || tri0.col === 'acquis' || colsEq.some(p => p.cle === tri0.col) ? tri0 : { col: 'acquis', sens: -1 };
+      const forceEq = (p, k) => {
+        if (!k) { return -1; }
+        if (k.etat === 'gagne' || (p.type === 'b2b' && k.gain > 0)) { return 4e6 + k.gain * 100 + Math.min(99, +k.val || 0); }
+        if (k.etat === 'tete') { return 3e6 + Math.min(999, +k.val || 0); }
+        if (k.etat === 'vide' || k.etat === 'sans_vente' || k.val == null) { return 0; }
+        return 1e6 + (k.niveau || 0) * 1e3 + (k.rang ? 100 - k.rang : 0) + Math.min(99, +k.val || 0) / 100;
+      };
+      const pTri = colsEq.find(p => p.cle === triEq.col);
+      const valTri = v => (triEq.col === 'nom' ? v.nom : pTri ? forceEq(pTri, (v.cases || {})[pTri.cle]) : v.acquis);
+      const rangsEq = eq ? (eq.vendeuses || []).slice().sort((a, b) => {
+        const xa = valTri(a); const xb = valTri(b);
+        const c = typeof xa === 'string' ? xa.localeCompare(xb, 'fr') : xa - xb;
+        return c * triEq.sens || b.acquis - a.acquis || a.nom.localeCompare(b.nom, 'fr');
+      }) : [];
+      const colTri = col => {
+        const on = triEq.col === col;
+        return { fleche: on ? (triEq.sens < 0 ? '↓' : '↑') : '', aria: on ? (triEq.sens < 0 ? 'descending' : 'ascending') : 'none',
+          trier: () => this.setState({ prEqTri: { col, sens: on ? -triEq.sens : (col === 'nom' ? 1 : -1) } }) };
+      };
       const equipe = {
+        triNom: colTri('nom'), triAcquis: colTri('acquis'),
         chargement: eq === undefined, motif: eq === null && connu ? 'Les fiches de l’équipe n’ont pas pu être lues.' : '',
         enCours: !!(eq && eq.enCours), lib: eq ? eq.lib : '', quand: eq && eq.quand ? new Date(eq.quand * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '',
         mois: [[mC, nomMois(mC) + ' · en cours'], [mP, nomMois(mP)]].map(([k, nom]) => ({ nom, on: k === mEq, choisir: () => this.setState({ prEqMois: k }) })),
         filtres: [['toutes', 'Toutes les primes'], ['magasin', 'Celles du magasin']].map(([k, nom]) => ({ nom, on: k === filtreEq, choisir: () => this.setState({ prEqFiltre: k }) })),
-        primes: colsEq.map(p => ({ cle: p.cle, lib: p.lib, recompense: recompense(p), payeur: p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : p.payeur === 'magasin' ? 'le magasin' : 'la marque',
+        primes: colsEq.map(p => ({ cle: p.cle, lib: p.lib, tri: colTri(p.cle), recompense: recompense(p), payeur: p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : p.payeur === 'magasin' ? 'le magasin' : 'la marque',
           duMagasin: p.payeur === 'magasin', compte: p.gagnees + ' / ' + p.vendeuses, compteLong: p.gagnees + ' vendeuse' + (p.gagnees > 1 ? 's' : '') + ' sur ' + p.vendeuses + ' l’' + (p.gagnees > 1 ? 'ont' : 'a') + ' gagnée' })),
-        vendeuses: eq ? (eq.vendeuses || []).map(v => ({ nom: v.nom, sous: [v.heures != null ? fx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).join(' · '),
+        vendeuses: eq ? rangsEq.map(v => ({ nom: v.nom, sous: [v.heures != null ? fx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).join(' · '),
           total: v.acquis > 0 ? eurEq(v.acquis) : '—', cases: colsEq.map(p => caseEq(p, (v.cases || {})[p.cle], !eq.enCours)) })) : [],
       };
       const ent = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
