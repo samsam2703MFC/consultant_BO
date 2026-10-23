@@ -972,3 +972,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T08:20:46Z marże : sprzedawalność w Belgii (ceny w sklepach z API panelu, konto z cockpitu ; migracja 053)
 2026-10-23T08:25:12Z dashboard : jauge comptoir seul, jauge B2B dessous, heure par heure séparé ou combiné
 2026-10-23T08:31:21Z rozwój sprzedaży grupy : sprzedawalność w Belgii przy działaniach (+ marże, migracja 053)
+2026-10-23T13:03:55Z serveur de test : bac à sable ouvert (sans mot de passe navigateur)
