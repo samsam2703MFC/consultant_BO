@@ -787,6 +787,34 @@ $cB = array_values(array_filter($cB, static fn ($c) => $c['type'] === 'b2b'));
 verifie('la carte B2B : son gain, sa règle, à aller chercher (att) en cours de mois', count($cB) === 1 && $cB[0]['gain'] === 40.0 && $cB[0]['etat'] === 'att' && $cB[0]['taux'] === 5.0 && $cB[0]['actif'] === true && $cB[0]['barre'] === null, json_encode($cB));
 verifie('les montants comptent la prime B2B', primesMontants(['croisees' => ['montant' => 0], 'record' => ['montant' => 0], 'meilleure' => ['montant' => 0], 'concours' => ['montant' => 0], 'b2b' => ['montant' => 40.0]], ['vous' => 0])['b2b'] === 40.0);
 
+// --- 18. l'équipe d'un magasin face à ses primes (23/10/2026) : qui a quelle prime, à quel niveau ----------------
+echo "\nL'équipe d'un magasin\n";
+$kC = primesEquipeCase(['cle' => 'croisees', 'type' => 'target', 'etat' => 'att', 'gain' => 0, 'val' => 24.0, 'cible' => 30.0, 'barre' => 60.0, 'ecart' => 6.0, 'motif' => null]);
+verifie('ventes croisées à 24 % pour 30 % : niveau 80, en route', $kC['etat'] === 'att' && $kC['niveau'] === 80 && $kC['cible'] === 30.0 && $kC['val'] === 24.0, json_encode($kC));
+$kO = primesEquipeCase(['cle' => 'objectif', 'type' => 'target', 'etat' => 'att', 'gain' => 0, 'val' => 96.0, 'cible' => 100.0, 'barre' => 50.0, 'aDate' => 70.0]);
+verifie('l’objectif du magasin : le niveau sur la projection du mois (96), pas sur le CA à date', $kO['niveau'] === 96, json_encode($kO));
+$kG = primesEquipeCase(['cle' => 'croisees', 'type' => 'target', 'etat' => 'gagne', 'gain' => 50, 'val' => 41.0, 'cible' => 30.0, 'barre' => 100.0]);
+verifie('gagnée : 50 €, le niveau plafonne à 100', $kG['etat'] === 'gagne' && $kG['gain'] === 50.0 && $kG['niveau'] === 100);
+$kP = primesEquipeCase(['cle' => 'promo:x', 'type' => 'promo', 'etat' => 'att', 'gain' => 0, 'val' => 6.0, 'regle' => 'seuil', 'minPieces' => 10, 'barre' => 45.0, 'rang' => 2, 'sur' => 5]);
+verifie('une promo au seuil : 6 pièces pour 10, sa place', $kP['cible'] === 10.0 && $kP['niveau'] === 60 && $kP['rang'] === 2 && $kP['sur'] === 5, json_encode($kP));
+$kB = primesEquipeCase(['cle' => 'b2b0123abcd', 'type' => 'b2b', 'etat' => 'att', 'gain' => 40, 'val' => 40.0, 'barre' => null, 'clients' => [['cle' => 'k1'], ['cle' => 'k2']], 'nouveaux' => 1]);
+verifie('B2B : deux clients, aucun nom, pas de niveau', $kB['clients'] === 2 && $kB['nouveaux'] === 1 && $kB['niveau'] === null && !str_contains(json_encode($kB), 'k1'));
+$col = primesEquipeColonne(['cle' => 'x', 'lib' => 'Quiches', 'type' => 'categorie', 'montant' => 30, 'payeur' => 'sponsor', 'sponsor' => ['nom' => 'Fromagerie'], 'cadeau' => null]);
+$colM = primesEquipeColonne(['cle' => 'y', 'lib' => 'Ventes croisées', 'type' => 'target', 'montant' => 25, 'payeur' => 'magasin', 'sponsor' => null, 'cadeau' => ['nom' => 'Bon d’achat']]);
+verifie('la colonne dit qui paie : un sponsor, le magasin ; un cadeau par son nom', $col['payeur'] === 'sponsor' && $col['sponsor'] === 'Fromagerie' && $colM['payeur'] === 'magasin' && $colM['cadeau'] === 'Bon d’achat' && $col['vendeuses'] === 0);
+verifie('le cache de l’équipe vit dans mot_cache', motCle('primesEq4:2026-10') === 'cache');
+// De bout en bout, sur la base simulée : Léa (4) et Sofia (5) au planning, Inès au magasin 5 ; le magasin 4 n'a qu'elle.
+$empAvant = $GLOBALS['TABLES']['employes']; $plAvant = $GLOBALS['TABLES']['planning'];
+$GLOBALS['TABLES']['employes'] = [['id' => 2, 'id_shop' => 4, 'display_name' => 'Léa', 'name' => '', 'surname' => ''], ['id' => 3, 'id_shop' => 5, 'display_name' => 'Inès', 'name' => '', 'surname' => '']];
+$GLOBALS['TABLES']['planning'] = [['id_employee' => 2, 'h' => 80, 'hf' => 60, 'fin' => date('Y-m-t')], ['id_employee' => 3, 'h' => 50, 'hf' => 40, 'fin' => date('Y-m-t')]];
+$eqT = primesEquipe('4', date('Y-m'), true);
+verifie('l’équipe du magasin 4 : Léa seule, ses cases par prime, chaque prime comptée', count($eqT['vendeuses'] ?? []) === 1 && $eqT['vendeuses'][0]['nom'] === 'Léa'
+    && $eqT['primes'] !== [] && array_sum(array_column($eqT['primes'], 'vendeuses')) === count($eqT['vendeuses'][0]['cases']) && !isset($eqT['vendeuses'][0]['cases']['']), json_encode($eqT, JSON_UNESCAPED_UNICODE));
+verifie('gravée sous primesEq4, sans la fiche légère de Léa', isset($GLOBALS['REGLAGES']['primesEq4:' . date('Y-m')]) && !isset($GLOBALS['REGLAGES']['primesMoi2:' . date('Y-m')]));
+$_GET = ['shop' => '99']; $eq404 = ep_primes_equipe(); $_GET = [];
+verifie('un magasin inconnu : 404', ($eq404['error'] ?? '') === 'magasin inconnu');
+$GLOBALS['TABLES']['employes'] = $empAvant; $GLOBALS['TABLES']['planning'] = $plAvant;
+
 // --- Les tables du module : toutes sous mot_ (23/10/2026) ---------------------------------------------
 echo "\nLes tables mot_\n";
 verifie('les réglages et l’historique vont dans mot_reglage, les caches dans mot_cache, le reste ailleurs',
