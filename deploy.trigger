@@ -979,3 +979,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T14:41:57Z production : page Validation et suivi retirée, Production ↗ hors du rail
 2026-10-23T14:43:35Z dashboard : vignettes du bas retirées
 2026-10-23T14:48:34Z console : page Marketing (#/marketing) et son entrée du rail retirées
+2026-10-23T15:00:22Z faktury OCR (skany, zdjęcia)
