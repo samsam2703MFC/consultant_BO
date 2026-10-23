@@ -84,6 +84,7 @@ require __DIR__ . '/../src/ventes.php';
 require __DIR__ . '/../src/panel_ventes.php';
 require __DIR__ . '/../src/primes.php';
 require __DIR__ . '/../src/primes_app.php';
+require __DIR__ . '/../src/primes_b2b.php';
 require __DIR__ . '/../src/sms.php';
 
 $ok = 0; $ko = 0;
@@ -716,6 +717,59 @@ verifie('Google à 20 h : rien sans planning ni à 3 h, payée à 20 h', googleP
 $GLOBALS['CORPS'] = ['liste' => array_map(static fn ($e) => in_array($e['cle'], ['objectif', 'google'], true) ? array_merge($e, ['heuresMin' => 0]) : $e, relire()['liste'])];
 wr_primes_app();
 verifie('la condition coupée est gardée à 0 (objectif, Google)', primeMagasinReglages()['heuresMin'] === 0 && googleReglages()['heuresMin'] === 0, json_encode([primeMagasinReglages(), googleReglages()]));
+
+// --- 17. la prime B2B (23/10/2026) : un nouveau client pro, la vendeuse de sa 1re commande ------------------------
+echo "Prime B2B\n";
+$tk = static fn (string $c, int $e, string $j, float $ht) => ['c' => $c, 'e' => $e, 'j' => $j . ' 10:00:00', 'ht' => $ht];
+$r3 = b2bRegle(['mode' => 'pct', 'taux' => 5, 'duree' => 3]) + ['montant' => 30, 'du' => '2026-09-01', 'au' => null];
+// L'école : 1re commande le 12/09 chez Léa (1), puis chaque mois ; Sofia (2) encaisse la 2e — la prime reste à Léa.
+$T = [$tk('ecole', 1, '2026-09-12', 400), $tk('ecole', 2, '2026-10-10', 380), $tk('ecole', 1, '2026-11-14', 420), $tk('ecole', 1, '2026-12-15', 410)];
+$o10 = b2bCalcul($T, $r3, '2026-10');
+verifie('5 % pendant 3 mois : en octobre, 5 % de 380 € à Léa, qui a encaissé la 1re', ($o10[1]['montant'] ?? null) === 19.0 && !isset($o10[2]), json_encode($o10));
+verifie('le client compte : 1 commande ce mois, ramené le 12/09, encore ouvert', ($o10[1]['clients'][0]['commandes'] ?? 0) === 1 && $o10[1]['clients'][0]['debut'] === '2026-09-12' && $o10[1]['clients'][0]['ouvert'] === true && $o10[1]['nouveaux'] === 0);
+$o12 = b2bCalcul($T, $r3, '2026-12');
+verifie('après 3 mois (12/12), la commande du 15/12 ne paie plus', ($o12[1]['montant'] ?? 0.0) === 0.0 && ($o12[1]['clients'][0]['ouvert'] ?? true) === false, json_encode($o12));
+$o9 = b2bCalcul($T, $r3, '2026-09');
+verifie('septembre : un nouveau client, 20 € (5 % de 400 €)', ($o9[1]['montant'] ?? null) === 20.0 && $o9[1]['nouveaux'] === 1);
+// Déjà client : une commande pro il y a moins de 12 mois → pas nouveau ; après 12 mois sans, il le redevient.
+$Tv = [$tk('vieux', 1, '2025-11-02', 300), $tk('vieux', 1, '2026-10-05', 300)];
+verifie('une commande pro il y a 11 mois : pas un nouveau client', b2bCalcul($Tv, $r3, '2026-10') === []);
+$Tr = [$tk('revenu', 1, '2025-09-01', 300), $tk('revenu', 2, '2026-10-05', 300)];
+verifie('13 mois sans commande : il redevient nouveau, à la vendeuse qui l’encaisse', (b2bCalcul($Tr, $r3, '2026-10')[2]['montant'] ?? null) === 15.0);
+verifie('avant le début de la prime (du) : pas compté', b2bCalcul([$tk('avant', 1, '2026-08-20', 500)], $r3, '2026-08') === []);
+// La 1re commande seulement, le minimum, le plafond, le montant fixe.
+$rP = b2bRegle(['taux' => 8, 'duree' => 'premiere', 'min' => 100]) + ['montant' => 0, 'du' => null, 'au' => null];
+$Tp = [$tk('a', 1, '2026-10-01', 250), $tk('a', 1, '2026-10-20', 900), $tk('b', 2, '2026-10-03', 60)];
+$oP = b2bCalcul($Tp, $rP, '2026-10');
+verifie('la 1re seulement : 8 % de 250 € = 20 € ; la 2e commande ne compte pas', ($oP[1]['montant'] ?? null) === 20.0, json_encode($oP));
+verifie('sous la commande minimum (60 € < 100 €) : rien, mais le client est bien à elle', ($oP[2]['montant'] ?? null) === 0.0 && count($oP[2]['clients']) === 1);
+$rC = b2bRegle(['taux' => 10, 'duree' => 12, 'plafond' => 50]) + ['montant' => 0, 'du' => null, 'au' => null];
+$oC = b2bCalcul([$tk('c', 1, '2026-09-01', 400), $tk('c', 1, '2026-10-01', 400)], $rC, '2026-10');
+verifie('le plafond par client : 40 € en septembre, 10 € en octobre (50 € au plus)', ($oC[1]['montant'] ?? null) === 10.0 && $oC[1]['clients'][0]['plafond'] === true, json_encode($oC));
+$rF = b2bRegle(['mode' => 'fixe', 'duree' => 12]) + ['montant' => 30, 'du' => null, 'au' => null];
+verifie('un montant fixe : 30 € à la 1re commande, une fois (la durée ne compte pas)', $rF['duree'] === 'premiere' && (b2bCalcul([$tk('f', 1, '2026-10-02', 120), $tk('f', 1, '2026-10-22', 500)], $rF, '2026-10')[1]['montant'] ?? null) === 30.0);
+$rS = b2bRegle(['taux' => 3, 'duree' => 'sans']) + ['montant' => 0, 'du' => null, 'au' => null];
+verifie('sans limite : un client de 2025 paie encore en 2026', (b2bCalcul([$tk('s', 1, '2025-06-02', 100), $tk('s', 1, '2026-10-02', 200)], $rS, '2026-10')[1]['montant'] ?? null) === 6.0);
+verifie('aucun nom de client ne sort : une clé', preg_match('/^k[0-9a-f]{8}$/', $o10[1]['clients'][0]['cle']) === 1);
+verifie('la règle nettoyée : taux borné, durée connue', b2bRegle(['taux' => 90, 'duree' => 7])['taux'] === 50.0 && b2bRegle(['duree' => 7])['duree'] === 3 && b2bRegle(['duree' => '12'])['duree'] === 12);
+verifie('la phrase : « 5 % HT de chaque commande pendant 3 mois »', b2bPhrase(['taux' => 5, 'duree' => 3]) === '5 % HT de chaque commande pendant 3 mois' && b2bPhrase(['mode' => 'fixe', 'montant' => 30]) === '30 € à sa 1re commande');
+// La liste des primes : une prime B2B de franchisé (un magasin), une de la marque.
+$GLOBALS['CORPS'] = ['liste' => array_merge(relire()['liste'], [
+    ['type' => 'b2b', 'cle' => 'b2b0123abcd', 'famille' => 'magasin', 'shop' => '4', 'lib' => 'Ramène un client pro', 'mode' => 'pct', 'taux' => 5, 'duree' => 3, 'plafond' => 150, 'min' => 100],
+    ['type' => 'b2b', 'famille' => 'magasin', 'lib' => 'Sans magasin']])];
+$rep = wr_primes_app();
+verifie('une prime B2B de franchisé sans magasin est refusée', isset($rep['error']), json_encode($rep));
+$GLOBALS['CORPS']['liste'] = array_slice($GLOBALS['CORPS']['liste'], 0, -1);
+$rep = wr_primes_app();
+$eB = primesAppEntree('b2b0123abcd');
+verifie('la prime B2B gardée : son magasin, payée par lui, du = aujourd’hui', $eB !== null && $eB['shop'] === '4' && $eB['payeur'] === 'magasin' && $eB['du'] === date('Y-m-d') && $eB['taux'] === 5.0 && $eB['plafond'] === 150, json_encode($eB));
+verifie('elle est du magasin 4, pas du 5', count(b2bEntrees('4')) === 1 && b2bEntrees('5') === []);
+$cB = primesCartes(['croisees' => ['taux' => null, 'cible' => 55, 'montant' => 0, 'tickets' => 0, 'minTickets' => 30, 'jours' => 0], 'record' => ['eurDixieme' => 0], 'meilleure' => [], 'concours' => [], 'promos' => [],
+    'b2b' => ['montant' => 40.0, 'liste' => [['cle' => 'b2b0123abcd', 'lib' => 'Ramène un client pro', 'montant' => 40.0, 'nouveaux' => 1, 'clients' => [['cle' => 'k1']], 'lu' => true, 'fixe' => 30, 'du' => '2026-10-01', 'au' => null] + b2bRegle(['taux' => 5, 'duree' => 3])]]],
+    ['vous' => 0, 'clos' => false, 'objectif' => null, 'sousMin' => false, 'atteinte' => null], [], true);
+$cB = array_values(array_filter($cB, static fn ($c) => $c['type'] === 'b2b'));
+verifie('la carte B2B : son gain, sa règle, à aller chercher (att) en cours de mois', count($cB) === 1 && $cB[0]['gain'] === 40.0 && $cB[0]['etat'] === 'att' && $cB[0]['taux'] === 5.0 && $cB[0]['actif'] === true && $cB[0]['barre'] === null, json_encode($cB));
+verifie('les montants comptent la prime B2B', primesMontants(['croisees' => ['montant' => 0], 'record' => ['montant' => 0], 'meilleure' => ['montant' => 0], 'concours' => ['montant' => 0], 'b2b' => ['montant' => 40.0]], ['vous' => 0])['b2b'] === 40.0);
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

@@ -44,7 +44,7 @@
 <div class="pl-vide av"><i class="bi bi-calendar-event"></i><div><b>{{ T.upcoming_title ?? 'Les primes prévues ce mois-là' }}</b>
   <span>{{ T.upcoming_text ?? 'Ce que tu pourras gagner. Le compteur démarre le premier jour du mois.' }}</span></div></div>
 {% for g in [
-  { cle: 'targets', titre: T.section_targets ?? 'Targets', liste: p.cartes|filter(c => c.type == 'target' or c.type == 'classement') },
+  { cle: 'targets', titre: T.section_targets ?? 'Targets', liste: p.cartes|filter(c => c.type == 'target' or c.type == 'classement' or c.type == 'b2b') },
   { cle: 'promos', titre: T.section_promos ?? 'Promos', liste: p.cartes|filter(c => c.type == 'promo') }]|filter(g => g.liste|length) %}
 {% set max = 0 %}{% for c in g.liste %}{% set max = max + c.montant %}{% endfor %}
 <div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{% if max == 0 and g.liste|filter(c => c.cadeau ?? null)|length %}<i class="bi bi-gift"></i>{% else %}{{ T.up_to ?? 'jusqu’à' }} {{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</small></div>
@@ -58,18 +58,19 @@
     <div class="pl-h">
       <span class="emo">{{ m.ic(c, ib) }}</span>
       <b class="pl-t">{{ nomFixe[c.cle] ?? c.lib }}</b>
-      <span class="pl-v">{% if c.cadeau ?? null %}<i class="bi bi-gift"></i><small>{{ c.cadeau.nom }}</small>{% else %}{{ c.montant|number_format(0, ',', ' ') }}<small>{{ eur }}{{ c.max ? ' max' }}</small>{% endif %}</span>
+      <span class="pl-v">{% if c.type == 'b2b' %}{{ c.mode == 'fixe' ? c.fixe : c.taux|number_format(c.taux == c.taux|round ? 0 : 1, ',', ' ') }}<small>{{ c.mode == 'fixe' ? eur : '%' }}</small>{% elseif c.cadeau ?? null %}<i class="bi bi-gift"></i><small>{{ c.cadeau.nom }}</small>{% else %}{{ c.montant|number_format(0, ',', ' ') }}<small>{{ eur }}{{ c.max ? ' max' }}</small>{% endif %}</span>
     </div>
     <div class="pl-s">
       <span class="mu">
-      {%- if c.regle == 'magasin' %}{{ (T.rule_shop ?? 'le magasin : objectif {n} {u}')|replace({'{n}': n, '{u}': pcs}) }}
+      {%- if c.type == 'b2b' %}{{ m.b2b(c, T) }}
+      {%- elseif c.regle == 'magasin' %}{{ (T.rule_shop ?? 'le magasin : objectif {n} {u}')|replace({'{n}': n, '{u}': pcs}) }}
       {%- elseif c.regle == 'vendeuse' %}{{ (T.rule_mine ?? 'ton objectif : {n} {u}')|replace({'{n}': n, '{u}': pcs}) }}
       {%- elseif c.regle == 'seuil' %}{{ (T.rule_threshold ?? 'chacune dès {n} {u}')|replace({'{n}': n, '{u}': pcs}) }}
       {%- elseif c.regle == 'premiere' %}{{ T.rule_first ?? 'la 1re du magasin gagne' }}
       {%- elseif c.objectif is not null %}{{ T.goal_lower ?? 'objectif' }} {{ n }}{{ suf }}
       {%- endif -%}
       </span>
-      {% if c.du or c.au %}<span>{{ (T.dates_from_to ?? 'du {du} au {au}')|replace({'{du}': c.du ? c.du|date('d/m') : '…', '{au}': c.au ? c.au|date('d/m') : '…'}) }}</span>{% endif %}
+      {% if (c.du or c.au) and c.type != 'b2b' %}<span>{{ (T.dates_from_to ?? 'du {du} au {au}')|replace({'{du}': c.du ? c.du|date('d/m') : '…', '{au}': c.au ? c.au|date('d/m') : '…'}) }}</span>{% endif %}
     </div>
   </div>
 </div>
@@ -108,7 +109,7 @@
 {% set aCl = (p.classements ?? [])|map(x => x.cle) %}
 {% set aPortee = (plan ?? [])|filter(e => not e.horsPortee) %}
 {% set planPar = {} %}{% for e in plan ?? [] %}{% set planPar = planPar|merge({ (e.cle): e }) %}{% endfor %}
-{% set toutes = p.cartes|filter(c => c.type in ['target', 'classement', 'promo', 'categorie']) %}
+{% set toutes = p.cartes|filter(c => c.type in ['target', 'classement', 'promo', 'categorie', 'b2b']) %}
 {% set chercher = aPortee|map(e => e.carte) %}
 {% set cles1 = chercher|map(c => c.cle) %}
 {% set gagnees = toutes|filter(c => c.cle not in cles1 and (c.etat in ['gagne', 'tete'] or (c.actif ?? false))) %}
