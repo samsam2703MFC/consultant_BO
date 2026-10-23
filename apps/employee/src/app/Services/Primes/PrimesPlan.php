@@ -18,7 +18,7 @@ class PrimesPlan
     private const TICKETS_MIN_FUTURS = 10;
 
     /** Les motifs qui ne se rattrapent pas en vendant : pas de ligne dans le plan. */
-    private const SANS_PLAN = ['pas_compte', 'sans_vente', 'pas_objectif', 'pas_note', 'heures', 'pas_record', 'pas_classee'];
+    private const SANS_PLAN = ['pas_compte', 'sans_vente', 'pas_objectif', 'pas_note', 'heures', 'pas_classee'];
 
     /**
      * Les primes du mois en cours encore à aller chercher, la plus proche d'abord (vide pour un mois clos ou à
@@ -68,6 +68,16 @@ class PrimesPlan
                 } elseif ($e['affilee'] === null && ($val ?? 0) < $seuil) {
                     $e['horsPortee'] = true;
                 }
+            } elseif ($c['cle'] === 'record' && ($b['record']['record'] ?? null) === null) {
+                // Pas encore de record (23/10/2026) : un mois d'au moins 30 tickets le pose, il se bat le mois suivant.
+                // Rien à gagner ce mois-ci : l'étape se dit, sans être promise.
+                if ($val === null) { continue; }
+                $minT = (int) ($b['record']['minTickets'] ?? 30);
+                $tk = (int) ($b['record']['tickets'] ?? $tickets);
+                $e += ['pose' => true, 'tickets' => $tk, 'minTickets' => $minT, 'manqueTickets' => max(0, $minT - $tk),
+                    'moisSuivant' => date('Y-m', strtotime(($f['m'] ?? date('Y-m')) . '-01 +1 month'))];
+                $e['de'] = (float) $tk; $e['a'] = (float) $minT; $e['unite'] = 'tickets';
+                $e['horsPortee'] = true;
             } elseif ($c['cle'] === 'record') {
                 // Le record paie dès le 2e dixième au-dessus (la cible de la carte : record + 0,2), un dixième à la fois.
                 $cible = isset($c['cible']) && $c['cible'] !== null ? (float) $c['cible'] : null;

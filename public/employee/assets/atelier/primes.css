@@ -733,3 +733,21 @@ a.sb-ligne:active{background:var(--s-doux)}
 /* Ce qu'il faut faire, dans la ligne d'une prime (23/10/2026). */
 .pl-how{margin:8px 0 0 44px;font:400 13.5px/1.4 var(--s-police);color:var(--s-texte)}
 .pl-how.dur{color:var(--s-second)}
+
+/* Bats ton record, en trois étapes (23/10/2026) : poser son record, le battre, gagner. */
+.pl-s .et{font-weight:600;color:var(--s-texte)}
+.pl.ok .pl-s .et{color:var(--s-vert)}
+.pl-et{list-style:none;margin:2px 0 10px;padding:0}
+.pl-et li{display:flex;gap:10px;align-items:flex-start;padding:9px 0}
+.pl-et li + li{border-top:.5px solid var(--s-trait)}
+.pl-et .n{flex:0 0 22px;height:22px;border-radius:50%;display:grid;place-items:center;font:600 12px/1 var(--s-police);background:var(--s-remplir);color:var(--s-second)}
+.pl-et li.ici .n{background:var(--s-accent);color:#fff}
+.pl-et li.fait .n{background:var(--s-vert);color:#fff}
+.pl-et div{flex:1 1 auto;min-width:0}
+.pl-et b{display:block;font:600 14px/1.3 var(--s-police);color:var(--s-second)}
+.pl-et li.ici b,.pl-et li.fait b{color:var(--s-texte)}
+.pl-et div span{display:block;font:400 12.5px/1.4 var(--s-police);color:var(--s-second);margin-top:2px}
+.pl-et em{flex:0 0 auto;font:600 13px/1.3 var(--s-police);font-style:normal;color:var(--s-texte);white-space:nowrap;padding-top:1px}
+.pl-et li:not(.ici) em{color:var(--s-second);font-weight:400}
+.pl-et em.ok,.pl-et li.ici em.ok{color:var(--s-vert);font-weight:600}
+.pl-j.plein i,.pl-j.plein .fl{background:var(--s-vert)}

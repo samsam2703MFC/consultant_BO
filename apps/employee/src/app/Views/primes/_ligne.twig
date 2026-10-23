@@ -13,6 +13,12 @@
 {# La meilleure vendeuse se mesure en euros par heure (23/10/2026) : son score est le CA par heure pondéré (src/ventes.php). #}
 {% set uc = u == 'pct' ? '%' : (u == 'note' ? '★' : (u == 'score' ? eur ~ '/h' : (u == 'pcs' ? pcs : ''))) %}
 {% set ue = u == 'pct' ? ' ' ~ (T.pts ?? 'pts') : (u == 'score' ? ' ' ~ eur ~ '/h' : (u == 'note' ? ' ★' : '')) %}
+{# Bats ton record, en trois étapes (23/10/2026) : 1 poser son record (un mois d'au moins 30 tickets), 2 le battre de 0,2,
+   3 gagner, un dixième à la fois. Sans record, la jauge compte les tickets du mois jusqu'aux 30 qui le posent. #}
+{% set rc = c.cle == 'record' ? b.record : null %}
+{% set rcT = rc ? (rc.tickets ?? b.croisees.tickets ?? 0) : 0 %}{% set rcMin = rc ? (rc.minTickets ?? 30) : 0 %}
+{% set rcSt = rc ? (rc.record is null ? 1 : ((rc.tranches ?? 0) > 0 ? 3 : 2)) : null %}
+{% set rcEt = rc and (c.motif is null or c.motif == 'pas_record') ? rcSt : null %}
 <div class="pl{{ ok ? ' ok' }}" data-carte="{{ c.cle }}" id="prime-{{ c.cle }}">
   <div class="pl-b" role="button" tabindex="0" aria-expanded="false" aria-controls="pd-{{ c.cle }}" data-pl>
     <div class="pl-h">
@@ -30,13 +36,18 @@
       {% if not mvPremier.moi %}<span class="bout">{{ mvPremier.nom|first|upper }}</span>{% endif %}
       <span class="pt" style="left:{{ mvPos|round(1) }}%"></span>
       <span class="fl">{{ ok ? '✓ ' }}{{ (ok and c.gain > 0 ? c.gain : c.montant)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span></div>
+    {% elseif rcEt == 1 %}
+    <div class="pl-j{{ rcT >= rcMin ? ' plein' }}" aria-hidden="true"><i style="width:{{ min(100, 75 * rcT / rcMin)|round(1) }}%"></i><span class="ob"></span>
+      <span class="fl">{{ rcT >= rcMin ? '✓ ' }}{{ T.record_flag ?? 'ton record' }}</span></div>
     {% elseif c.barre is not null %}
     <div class="pl-j" aria-hidden="true"><i style="width:{{ c.barre }}%"></i>{% if c.barreJour is not null %}<span class="jr" style="left:{{ c.barreJour }}%"></span>{% endif %}<span class="ob"></span>
       <span class="fl">{{ ok ? '✓ ' }}{{ (ok and c.gain > 0 ? c.gain : c.montant)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% if c.max and not ok %} max{% endif %}</span></div>
     {% endif %}
     <div class="pl-s">
       <span class="{{ ok ? 'ok' : (c.motif ? 'mu') }}">
-      {%- if c.motif in ['pas_compte', 'sans_vente', 'pas_objectif', 'pas_note', 'pas_classee', 'pas_record'] %}
+      {%- if rcEt %}<b class="et">{{ (T.step_of ?? 'Étape {n}/3')|replace({'{n}': rcEt}) }}</b> · {% endif %}
+      {%- if rcEt == 1 %}{% if rcT >= rcMin %}✓ {{ rcMin }} {{ T.tickets ?? 'tickets' }}{% else %}{{ p.enCours ? (T.still ?? 'encore') : (T.was_missing ?? 'il manquait') }} {{ rcMin - rcT }} {{ T.tickets ?? 'tickets' }}{% endif %}
+      {%- elseif c.motif in ['pas_compte', 'sans_vente', 'pas_objectif', 'pas_note', 'pas_classee', 'pas_record'] %}
         {%- if c.motif == 'pas_compte' %}{{ T.not_counted ?? 'pas encore compté' }}{% elseif c.motif == 'sans_vente' %}{{ T.no_sale_short ?? 'aucune vente à ton nom' }}{% elseif c.motif == 'pas_objectif' %}{{ T.no_target_short ?? 'pas d’objectif' }}{% elseif c.motif == 'pas_note' %}{{ T.no_rating ?? 'pas de note Google' }}{% elseif c.motif == 'pas_classee' %}{{ T.not_ranked ?? 'pas classée' }}{% else %}{{ T.no_record_short ?? 'pas encore de record' }}{% endif %}
       {%- elseif c.type == 'categorie' %}<b class="rg">{{ c.rang == 1 ? (T.first_abbr ?? '1re') : (c.rang ? rangPre ~ c.rang ~ rangSuf : (T.not_ranked ?? 'pas classée')) }}{% if c.rang and c.sur %} / {{ c.sur }}{% endif %}</b> ·
         {% if c.pour1 is not null %}{{ p.enCours ? (T.still ?? 'encore') ~ ' ' ~ c.pour1 ~ ' ' ~ pcs ~ ' ' ~ (T.to_be_first ?? 'pour être 1re') : (T.short_of_first ?? 'à {n} {u} de la 1re')|replace({'{n}': c.pour1, '{u}': pcs}) }}{% elseif c.avance1 is not null %}+{{ c.avance1 }} {{ pcs }} {{ T.lead_short ?? 'd’avance' }}{% else %}{{ T.first_alone ?? '1re, seule en lice' }}{% endif %}
@@ -47,7 +58,8 @@
       {%- elseif v is not null and c.repereVal is not null and c.repereVal > v %}{{ p.enCours ? (T.still ?? 'encore') : (T.was_missing ?? 'il manquait') }} {{ (c.repereVal - v)|number_format(dec, ',', ' ') }}{{ ue }}
       {%- endif -%}
       </span>
-      {% if c.type == 'categorie' %}<span>{% if c.premier and not c.premier.moi %}{{ T.first_abbr ?? '1re' }} {{ c.premier.nom }} {{ c.premier.q|number_format(0, ',', ' ') }}{% elseif c.second %}{{ rangPre }}2{{ rangSuf }} {{ c.second.nom }} {{ c.second.q|number_format(0, ',', ' ') }}{% endif %}</span>
+      {% if rcEt == 1 %}<span>{{ T.goal_lower ?? 'objectif' }} {{ rcMin }} {{ T.tickets ?? 'tickets' }}</span>
+      {% elseif c.type == 'categorie' %}<span>{% if c.premier and not c.premier.moi %}{{ T.first_abbr ?? '1re' }} {{ c.premier.nom }} {{ c.premier.q|number_format(0, ',', ' ') }}{% elseif c.second %}{{ rangPre }}2{{ rangSuf }} {{ c.second.nom }} {{ c.second.q|number_format(0, ',', ' ') }}{% endif %}</span>
       {% elseif mvPremier %}<span>{% if not mvPremier.moi %}{{ T.first_abbr ?? '1re' }} {{ mvPremier.nom }} {{ mvPremier.q|number_format(0, ',', ' ') }}&nbsp;{{ eur }}/h{% elseif c.second ?? null %}{{ rangPre }}2{{ rangSuf }} {{ c.second.nom }} {{ c.second.q|number_format(0, ',', ' ') }}&nbsp;{{ eur }}/h{% endif %}</span>
       {% elseif (c.regle ?? '') == 'magasin' and (c.moiPcs ?? null) is not null %}<span>{{ T.of_which_you ?? 'dont toi' }} {{ c.moiPcs|number_format(0, ',', ' ') }} {{ pcs }}</span>
       {% elseif c.repereVal is not null %}<span>{{ c.repereType == 'garder' ? (T.keep_first_short ?? 'garder la 1re') : (T.goal_lower ?? 'objectif') }} {{ c.repereVal|number_format(dec, ',', ' ') }}{{ u == 'score' ? ' ' ~ eur ~ '/h' : suf }}</span>{% endif %}
@@ -68,12 +80,34 @@
       {% else %}<div><dt>{{ T.d_reward ?? 'Récompense' }}</dt><dd>{{ c.montant|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</dd></div>{% endif %}
       {% if cr.minTickets %}<div><dt>{{ T.d_condition ?? 'Condition' }}</dt><dd>{{ cr.minTickets }} {{ T.d_min_tickets ?? 'tickets min. dans le mois' }}</dd></div>{% endif %}
     </dl><p class="pl-n">{{ T.cross_how ?? 'Un ticket avec 2 articles ou plus. Dépasse la cible du magasin : chaque palier rapporte.' }}</p>
-    {% elseif c.cle == 'record' %}{% set rc = b.record %}
+    {% elseif c.cle == 'record' %}</dl>
+      {% set eurD = rc.eurDixieme ?? 0 %}{% set maxD = rc.maxDixiemes ?? 0 %}{% set st = rcSt %}
+      <p class="pl-st">{{ T.d_steps ?? 'Les étapes' }}</p>
+      <ol class="pl-et">
+        <li class="{{ st > 1 ? 'fait' : 'ici' }}"><span class="n">{% if st > 1 %}<i class="bi bi-check-lg"></i>{% else %}1{% endif %}</span>
+          <div><b>{{ T.step_set_record ?? 'Poser ton record' }}</b>
+          <span>{% if rc.record is not null %}{{ (T.step_set_record_done ?? 'Ton record : {r}{m}. C’est ta meilleure moyenne des 12 derniers mois.')|replace({'{r}': rc.record|number_format(2, ',', ' '), '{m}': rc.recordMois ? ' (' ~ rc.recordMois ~ ')' : ''}) }}
+          {% elseif rcT >= rcMin and p.enCours %}{{ T.step_set_record_on ?? 'C’est en route : tes tickets du mois suffisent, ta moyenne de fin de mois sera ton record.' }}
+          {% else %}{{ (T.step_set_record_how ?? 'Un mois d’au moins {n} tickets : ta moyenne de lignes par ticket devient ton record.')|replace({'{n}': rcMin}) }}{% endif %}</span></div>
+          {% if st == 1 %}<em class="{{ rcT >= rcMin ? 'ok' }}">{{ rcT }}/{{ rcMin }} {{ T.tickets ?? 'tickets' }}</em>{% endif %}</li>
+        <li class="{{ st > 2 ? 'fait' : (st == 2 ? 'ici') }}"><span class="n">{% if st > 2 %}<i class="bi bi-check-lg"></i>{% else %}2{% endif %}</span>
+          <div><b>{{ T.step_beat ?? 'Le battre' }}</b>
+          <span>{% if rc.record is not null and c.cible is not null %}{{ (T.step_beat_how ?? 'Vise {c}, ton record + 0,2 : le 1er dixième pose le nouveau record, le 2e paie.')|replace({'{c}': c.cible|number_format(2, ',', ' ')}) }}
+          {% else %}{{ T.step_beat_later ?? 'Dès le mois suivant : fais mieux de 0,2 ligne par ticket. Le 1er dixième pose le nouveau record, le 2e paie.' }}{% endif %}</span>
+          {% if st >= 2 and rcT < rcMin and p.enCours %}<span>{{ (T.step_beat_tickets ?? 'Il faut aussi {n} tickets dans le mois : encore {r}.')|replace({'{n}': rcMin, '{r}': rcMin - rcT}) }}</span>{% endif %}</div>
+          {% if st == 2 and (c.ecart ?? 0) > 0 %}<em>{{ p.enCours ? (T.still ?? 'encore') : (T.was_missing ?? 'il manquait') }} {{ c.ecart|number_format(2, ',', ' ') }}</em>{% endif %}</li>
+        <li class="{{ st == 3 ? 'ici' }}"><span class="n">3</span>
+          <div><b>{{ T.step_win ?? 'Gagner' }}</b>
+          <span>{% if rc.record is not null and maxD > 0 %}{% for k in 1..maxD %}{{ (T.step_win_at ?? 'à {v} : {e} €')|replace({'{v}': (rc.record + 0.1 * (k + 1))|number_format(2, ',', ' '), '{e}': (k * eurD)|number_format(0, ',', ' ')}) }}{{ not loop.last ? ' · ' }}{% endfor %}
+          {% else %}{{ (T.step_win_how ?? '{e} € par dixième au-dessus de ton record, jusqu’à {m} €.')|replace({'{e}': eurD, '{m}': c.montant|number_format(0, ',', ' ')}) }}{% endif %}</span>
+          {% set suiv = rc.record is not null and rc.lt is not null and (maxD == 0 or rc.tranches < maxD) ? rc.record + 0.1 * ((rc.tranches ?? 0) + 2) - rc.lt : null %}
+          {% if st == 3 and p.enCours and suiv is not null and suiv > 0 %}<span>{{ (T.step_win_next ?? 'Encore {d} pour {e} €.')|replace({'{d}': suiv|number_format(2, ',', ' '), '{e}': ((rc.tranches + 1) * eurD)|number_format(0, ',', ' ')}) }}</span>{% endif %}</div>
+          <em class="{{ st == 3 ? 'ok' }}">{% if st == 3 %}✓ {{ c.gain|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% else %}{{ c.montant|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{{ c.max ? ' max' }}{% endif %}</em></li>
+      </ol>
+      <dl class="pl-l">
       <div><dt>{{ T.d_lpt_month ?? 'Tes lignes par ticket ce mois' }}</dt><dd>{{ rc.lt is not null ? rc.lt|number_format(2, ',', ' ') : '—' }}</dd></div>
-      <div><dt>{{ T.d_my_record ?? 'Ton record' }}</dt><dd>{{ rc.record is not null ? rc.record|number_format(2, ',', ' ') : '—' }}{% if rc.recordMois ?? '' %}<small>{{ rc.recordMois }}</small>{% endif %}</dd></div>
-      {% if c.cible is not null %}<div><dt>{{ T.goal ?? 'Objectif' }}</dt><dd>{{ c.cible|number_format(2, ',', ' ') }}</dd></div>{% endif %}
-      <div><dt>{{ T.d_reward ?? 'Récompense' }}</dt><dd>{{ rc.eurDixieme ?? 0 }}&nbsp;{{ eur }} {{ T.per_tenth ?? 'par dixième' }}<small>{{ T.d_up_to ?? 'jusqu’à' }} {{ c.montant|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</small></dd></div>
-      {% if rc.minTickets ?? 0 %}<div><dt>{{ T.d_condition ?? 'Condition' }}</dt><dd>{{ rc.minTickets }} {{ T.d_min_tickets ?? 'tickets min. dans le mois' }}</dd></div>{% endif %}
+      <div><dt>{{ T.d_tickets_month ?? 'Tes tickets ce mois' }}</dt><dd class="{{ rcT >= rcMin ? 'ok' }}">{{ rcT }}<small>{{ rcMin }} {{ T.d_min ?? 'min.' }}</small></dd></div>
+      <div><dt>{{ T.d_reward ?? 'Récompense' }}</dt><dd>{{ eurD }}&nbsp;{{ eur }} {{ T.per_tenth ?? 'par dixième' }}<small>{{ T.d_up_to ?? 'jusqu’à' }} {{ c.montant|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</small></dd></div>
     </dl>
     {% elseif c.cle == 'objectif' %}
       {% if pm.objectif ?? null %}<div><dt>{{ T.d_shop_revenue ?? 'CA du magasin' }}</dt><dd>{{ pm.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }}<small>{{ T.out_of ?? 'sur' }} {{ pm.objectif|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</small></dd></div>{% endif %}

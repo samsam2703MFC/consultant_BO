@@ -15,7 +15,11 @@
   {% else %}{% set comment = (T.plan_cross_row ?? '{n} ventes croisées d’affilée pour passer {p} %.')|replace({'{n}': e.affilee, '{p}': a}) %}{% endif %}
   {% if not e.horsPortee and e.minTickets and e.tickets < e.minTickets %}{% set comment = comment ~ ' ' ~ (T.plan_cross_min ?? 'Il faut aussi {n} tickets dans le mois.')|replace({'{n}': e.minTickets}) %}{% endif %}
 {% elseif e.cle == 'record' %}
-  {% if e.horsPortee %}{% set comment = (T.plan_record_hard ?? 'Il faudrait {v} articles par ticket d’ici la fin du mois : ton record se bat plutôt le mois prochain.')|replace({'{v}': e.vise|number_format(1, ',', ' ')}) %}
+  {% if e.pose ?? false %}{% set mS = mois(e.moisSuivant)|split(' ')|first %}
+    {% set comment = e.manqueTickets > 0
+      ? (T.plan_record_first ?? 'Ton premier record se pose ce mois-ci : encore {n} tickets, et ta moyenne de fin de mois devient le record à battre dès {m}.')|replace({'{n}': e.manqueTickets, '{m}': mS})
+      : (T.plan_record_first_ok ?? 'Ton premier record se pose ce mois-ci : ta moyenne de fin de mois ({v} aujourd’hui) sera à battre dès {m}.')|replace({'{v}': c.val|number_format(2, ',', ' '), '{m}': mS}) %}
+  {% elseif e.horsPortee %}{% set comment = (T.plan_record_hard ?? 'Il faudrait {v} articles par ticket d’ici la fin du mois : ton record se bat plutôt le mois prochain.')|replace({'{v}': e.vise|number_format(1, ',', ' ')}) %}
   {% elseif e.futurs %}{% set comment = (T.plan_record_aim ?? 'Sur tes ~{n} prochains tickets, vise {v} articles en moyenne pour passer {a} lignes par ticket.')|replace({'{n}': e.futurs|number_format(0, ',', ' '), '{v}': e.vise|number_format(1, ',', ' '), '{a}': a}) %}
   {% else %}{% set comment = (T.plan_record_gap ?? '+{e} ligne par ticket pour passer {a}.')|replace({'{e}': e.ecart|number_format(2, ',', ' '), '{a}': a}) %}{% endif %}
 {% elseif e.cle == 'objectif' %}
