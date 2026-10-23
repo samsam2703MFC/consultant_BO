@@ -974,3 +974,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T08:31:21Z rozwój sprzedaży grupy : sprzedawalność w Belgii przy działaniach (+ marże, migracja 053)
 2026-10-23T13:03:55Z serveur de test : bac à sable ouvert (sans mot de passe navigateur)
 2026-10-23T13:13:17Z dashboard : vignettes du moment retirées
+2026-10-23T14:10:37Z promotions : seuil et canal sous les noms relus seulement
