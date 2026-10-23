@@ -149,20 +149,26 @@ function pvCreneaux($schedule): array
 function pvConditions(array $d): array
 {
     $seuil = null; $cpt = null; $web = null;
-    $cles = ['seuil' => null, 'canal' => null, 'jetons' => []];
-    $motCpt = '/pos|counter|store|caisse|comptoir|offline|shop_sale/';
+    $cles = ['seuil' => null, 'canal' => null, 'jetons' => [], 'scalaire' => false];
+    // « SHOP » seul est le comptoir ; « WEBSHOP » est le webshop (23/10/2026 : la « destination » de Sam).
+    $motCpt = '/pos|counter|store|caisse|comptoir|offline|shop_sale|magasin|\\bshop\\b/';
     $motWeb = '/web|online|ecom|e-com|delivery|click|internet/';
     foreach ($d as $k => $v) {
         $k0 = (string) $k; $k = strtolower($k0);
         if ($seuil === null && is_numeric($v) && (float) $v > 0
-            && preg_match('/^(min(imum)?_(ticket|basket|order|cart|receipt|transaction|purchase|spend)(_(amount|total|value))?|(ticket|basket|order|cart|receipt|transaction)_(min|minimum|threshold)(_(amount|value))?|(trigger_)?threshold(_amount)?|min(imum)?_(amount|spend|total))$/', $k) === 1) {
+            && preg_match('/^(min(imum)?_(ticket|basket|order|cart|receipt|transaction|purchase|spend)(_(amount|total|value))?|(ticket|basket|order|cart|receipt|transaction)_(min|minimum|threshold)(_(amount|value))?|(trigger_)?threshold(_amount)?|min(imum)?_(amount|spend|total)|(min(imum)?_)?trigger_(min(imum)?_)?(amount|value|threshold|total|spend))$/', $k) === 1) {
             $seuil = round((float) $v, 2); $cles['seuil'] = $k0;
         }
-        if (preg_match('/^(available_)?(sales_)?(channels?|order_sources?|sources)$/', $k) === 1) {
+        // Le canal : une liste (« POS », « WEBSHOP »), ou une seule valeur — la « destination » (SHOP, WEBSHOP, BOTH).
+        if (preg_match('/^(available_)?(sales_)?(channels?|order_sources?|sources|destinations?|(sale|sales|order)_destinations?)$/', $k) === 1) {
             $l = is_array($v) ? $v : (is_string($v) && $v !== '' ? [$v] : []);
             $mots = array_map(static fn ($x) => is_scalar($x) ? (string) $x : (string) ($x['code'] ?? $x['name'] ?? $x['type'] ?? ''), $l);
             $t = strtolower(implode(' ', $mots));
-            if ($t !== '' && preg_match('/^(all|both|any|tous|les deux)$/', trim($t)) !== 1) {
+            // « Les deux » en une valeur : rien ne restreint, mais le nom du champ et son jeton s'apprennent.
+            if ($t !== '' && preg_match('/^(all|both|any|tous|les deux|shop_and_webshop|pos_and_webshop)$/', trim($t)) === 1) {
+                $cles['canal'] = $k0; $cles['scalaire'] = !is_array($v); $cles['jetons']['tous'] = $mots[0];
+            } elseif ($t !== '') {
+                $cles['scalaire'] = !is_array($v);
                 $cpt = preg_match($motCpt, $t) === 1; $web = preg_match($motWeb, $t) === 1;
                 // Les jetons du panel pour chaque canal (« POS », « WEBSHOP »…) : le cockpit écrit avec les mêmes.
                 $cles['canal'] = $k0;
