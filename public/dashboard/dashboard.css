@@ -2251,3 +2251,15 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .pm-pft tfoot td{font-weight:700;border-bottom:none;border-top:1px solid var(--color-border-secondary)}
 .pm-calc{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;border:1px dashed var(--color-border-secondary);border-radius:10px}
 .pm-calc .pm-eur .pm-in{width:100px}.pm-calc .ko{color:#A61E1E}
+/* Les bundles dans Ventes par catégorie (23/10/2026, maquettes A, B, C). */
+.bu-res{padding:10px 22px 2px;font:600 12.5px var(--font-ui);color:var(--color-text-muted)}
+.bu-tab{padding:0 8px 10px}
+.db-al.g.bunr{border-top:none;color:var(--color-text-muted);font-weight:600}.db-al.g.bunr .nom{font-style:italic;font-weight:600}
+.db-al.g.bunr .barre i{background:#1d1d1b!important;opacity:.55}
+.bu-chip{margin-left:auto;border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:4px 11px;font:600 11.5px var(--font-ui);color:var(--color-text);cursor:pointer;white-space:nowrap}
+.bu-chip span{font-size:9px;color:var(--color-text-muted);margin-left:3px}.bu-chip.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}.bu-chip.on span{color:#fff}
+.bu-vol{margin:2px 16px 6px auto;max-width:480px;border-radius:10px;background:#fff7e6;padding:4px 10px}
+.bu-l{all:unset;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) 84px 44px;gap:10px;align-items:baseline;width:100%;padding:5px 0;border-top:.5px solid rgba(0,0,0,.06);font-size:12px;cursor:pointer}
+.bu-l:first-child{border-top:none}.bu-l:hover{color:var(--color-primary)}.bu-l b{color:var(--color-primary);margin-right:2px}
+.bu-l .nm{text-align:left;font-weight:500}.bu-l span{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}.bu-l .ok{color:#2d7a3e}.bu-l .att{color:#B26A00}.bu-l .ko{color:#C0182B}.bu-l .mu{color:var(--color-text-muted)}
+.bu-l.tot{display:block;cursor:default;color:var(--color-text-muted);font-size:11px;font-weight:600}
