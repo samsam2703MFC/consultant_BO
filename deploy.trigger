@@ -1002,3 +1002,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 Mise en ligne : lot 2 audytu — jeden sposób liczenia (koszt działu, sprzedaż WDT, zamówienia otwarte, do produkcji) 2026-10-23T17:52:32Z
 2026-10-23 primes app worker : page d'un magasin avec la marque, tous les déclencheurs, id shop dans l'adresse
 2026-10-23T18:16Z primes : tables mot_ (réglages, caches) ; promotions du magasin sans paragraphe d'explication
+Mise en ligne : lot 3 audytu — jedna karta produktu (walidacja logistyki, minimum opcjonalne, pracownik aktywny) 2026-10-23T18:25:08Z
