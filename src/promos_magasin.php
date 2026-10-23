@@ -20,7 +20,7 @@ declare(strict_types=1);
  * magasin par magasin sur `shops`, pour d'anciennes demandes à plusieurs magasins.
  *
  * Deux règles du magasin, vérifiées ici (le navigateur les montre, le serveur les impose) : une date de fin, un an au
- * plus (14 jours jusqu'au 18/10/2026 : une promotion se fait aussi à la semaine, au mois, à l'année) ; deux promotions du magasin en même temps au plus, magasin par magasin. Le COEFFICIENT DU LOT (prix payé
+ * plus (14 jours jusqu'au 18/10/2026 : une promotion se fait aussi à la semaine, au mois, à l'année). Plus de limite au nombre de promotions du magasin en même temps (23/10/2026, Sam ; deux au plus avant). Le COEFFICIENT DU LOT (prix payé
  * HT ÷ coût matière, le cas le plus serré des produits visés, dans chaque magasin couvert — prix et coûts de recette du
  * magasin, sinon du réseau, pmProduits) se calcule et s'affiche, ×2 en repère ; il ne bloque plus l'envoi (18/10/2026).
  *
@@ -34,7 +34,6 @@ declare(strict_types=1);
 
 const PM_COEF_MIN = 2.0;
 const PM_JOURS_MAX = 366;   // un an au plus, une année bissextile comprise (18/10/2026 ; 14 jours avant)
-const PM_EN_MEME_TEMPS = 2;
 const PM_TYPES = ['FREE', 'FIXED_PRICE', 'FIXED_AMOUNT_DISCOUNT', 'PERCENTAGE_DISCOUNT'];
 /**
  * Les variantes qu'un côté peut viser (17/10/2026) : la portion du panel (`portion_scope` de ses cibles, relu sur « 4
@@ -42,7 +41,6 @@ const PM_TYPES = ['FREE', 'FIXED_PRICE', 'FIXED_AMOUNT_DISCOUNT', 'PERCENTAGE_DI
  * Sans portion : toutes les variantes.
  */
 const PM_PORTIONS = ['ONE_HALF' => 0.5, 'ONE_QUARTER' => 0.25];
-const PM_VIVANTES = ['a_valider', 'validee', 'en_caisse'];
 
 /** Les magasins qu'une demande couvre (les anciennes n'ont que `shop`). */
 function pmShops(array $d): array
@@ -403,7 +401,7 @@ function pmCoefMagasins(array $d): array
  * Ce qui manque ou dépasse pour envoyer une promotion : une liste de phrases (vide = prête). Un coefficient qui ne se
  * calcule pas n'y est pas : la promotion part alors à la marque (pmDOffice).
  */
-function pmErreurs(array $d, array $autres, ?array $coef, string $maintenant): array
+function pmErreurs(array $d, ?array $coef, string $maintenant): array
 {
     $e = [];
     if ($d['nom'] === '') { $e[] = 'Donnez un nom à la promotion.'; }
@@ -420,12 +418,6 @@ function pmErreurs(array $d, array $autres, ?array $coef, string $maintenant): a
         if ($d['au'] <= $d['du']) { $e[] = 'La fin vient après le début.'; }
         elseif (($nj = (int) round((strtotime(substr($d['au'], 0, 10)) - strtotime(substr($d['du'], 0, 10))) / 86400) + 1) > PM_JOURS_MAX) { $e[] = 'Période de ' . $nj . ' jours : ' . (PM_JOURS_MAX >= 365 ? 'un an' : PM_JOURS_MAX . ' jours') . ' au plus, raccourcissez-la.'; }
         if ($d['au'] <= $maintenant) { $e[] = 'La période est déjà passée.'; }
-        foreach (pmShops($d) as $s) {
-            $chev = array_filter($autres, static fn ($o) => in_array($s, pmShops($o), true) && in_array($o['statut'] ?? '', PM_VIVANTES, true) && ($o['du'] ?? '') < $d['au'] && ($o['au'] ?? '') > $d['du']);
-            if (count($chev) >= PM_EN_MEME_TEMPS) {
-                $e[] = PM_EN_MEME_TEMPS . ' promotions du magasin en même temps au plus' . (count(pmShops($d)) > 1 ? ' (' . pmNomShop($s) . ')' : '') . ' : « ' . implode(' », « ', array_map(static fn ($o) => (string) $o['nom'], $chev)) . ' » couvrent déjà ces dates.';
-            }
-        }
     }
     // Le coefficient du lot ne bloque plus (18/10/2026) : il se calcule, s'affiche (en rouge sous ×2), et la promotion part.
     return $e;
@@ -1182,7 +1174,7 @@ function ep_promos_magasin_demandes(): array
     $ts = (int) ($R0['ts'] ?? 0);
     return ['shop' => (string) $shop, 'demandes' => $demandes, 'panel' => $panel, 'erreurPanel' => $err, 'source' => 'panel',
         'lu' => $ts > 0 ? date('H:i', $ts) : null, 'luTs' => $ts, 'luJour' => $ts > 0 ? date('Y-m-d', $ts) : null,
-        'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS]];
+        'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX]];
 }
 
 /**
@@ -1211,14 +1203,12 @@ function wr_promos_magasin(): array
         if ($actuelle['statut'] === 'en_caisse' && !$envoi) { http_response_code(409); return ['error' => 'déjà en caisse : enregistrez les changements, ils partent au panel (pas de brouillon)']; }
     }
     $d['avant'] = isset($actuelle) ? ['canaux' => $actuelle['canaux'] ?? null, 'seuil' => $actuelle['seuil'] ?? null] : null;
-    [$miennes] = pmMiennes($shop);
-    $autres = array_values(array_filter($miennes, static fn ($o) => $o['panelId'] !== $panelId));
     // À l'enregistrement, ce qui ne se chiffre pas sort de la promotion (pmExclureNonChiffres).
     $exclusAuto = []; $saisie = $d;
     if ($envoi && ($produits = pmProduits($shop)) !== null) { [$d, $exclusAuto] = pmExclureNonChiffres($d, $produits); }
     [$coef, $illisibles] = pmCoefMagasins($d);
     if ($envoi) {
-        $err = pmErreurs($saisie, $autres, $coef, date('Y-m-d H:i'));
+        $err = pmErreurs($saisie, $coef, date('Y-m-d H:i'));
         foreach ($illisibles as $s) { $err[] = 'Les prix et coûts de ' . pmNomShop($s) . ' ne se lisent pas au panel : réessayez dans un instant.'; }
         if ($err === [] && $coef !== null && $coef['lot'] === null) {
             $sortis = $exclusAuto !== [] ? ' (sortis, sans coût de recette ou sans prix : ' . implode(', ', array_slice($exclusAuto, 0, 6)) . (count($exclusAuto) > 6 ? '…' : '') . ')' : '';
@@ -1227,7 +1217,7 @@ function wr_promos_magasin(): array
     } else {
         // Un brouillon est déjà une promotion du panel (inactive) : ce que le panel exige y est (nom, X, Y, dates) ; il
         // ne compte pas dans les deux à la fois, et une période passée se corrige plus tard.
-        $err = pmErreurs($saisie, [], null, '0000-00-00 00:00');
+        $err = pmErreurs($saisie, null, '0000-00-00 00:00');
     }
     if ($err !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $err, 'coef' => $coef]; }
     // Une portion visée : la portion de chaque produit, lue au panel (21/10/2026).
@@ -1294,5 +1284,5 @@ function ep_promos_magasin_marque(): array
     $noms = [];
     foreach ($l as $d) { $noms[(string) $d['shop']] ??= pmNomShop($d['shop']); }
     return ['demandes' => $l, 'noms' => $noms, 'erreurPanel' => $R['erreur'], 'source' => 'panel',
-        'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX, 'enMemeTemps' => PM_EN_MEME_TEMPS]];
+        'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX]];
 }

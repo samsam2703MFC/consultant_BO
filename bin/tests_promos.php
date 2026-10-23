@@ -193,26 +193,17 @@ $now = date('Y-m-d H:i');
 $j = static fn (int $n, string $h = '00:00') => date('Y-m-d', strtotime("+$n day")) . ' ' . $h;
 $base = pmPropre(['nom' => 'Viennoiseries 2+1', 'x' => ['q' => 2, 'cats' => [['id' => 10]]], 'y' => ['q' => 1, 'type' => 'FREE', 'cats' => [['id' => 10]]], 'du' => $j(1), 'au' => $j(7, '23:59')], 4);
 $coefOk = ['lot' => 2.4, 'x' => 'a', 'y' => 'b', 'paires' => 1, 'nX' => 1, 'nY' => 1];
-verifie('une demande complète passe', pmErreurs($base, [], $coefOk, $now) === [], json_encode(pmErreurs($base, [], $coefOk, $now), JSON_UNESCAPED_UNICODE));
-verifie('sans fin : refusée', count(pmErreurs(['au' => null] + $base, [], $coefOk, $now)) === 1);
-verifie('15 jours : acceptée (plus de limite à 14 jours, 18/10/2026)', pmErreurs(['au' => $j(15)] + $base, [], $coefOk, $now) === []);
-verifie('un an (366 jours) : acceptée', pmErreurs(['au' => $j(366, '23:59')] + $base, [], $coefOk, $now) === []);
-$e = pmErreurs(['au' => $j(367)] + $base, [], $coefOk, $now);
+verifie('une demande complète passe', pmErreurs($base, $coefOk, $now) === [], json_encode(pmErreurs($base, $coefOk, $now), JSON_UNESCAPED_UNICODE));
+verifie('sans fin : refusée', count(pmErreurs(['au' => null] + $base, $coefOk, $now)) === 1);
+verifie('15 jours : acceptée (plus de limite à 14 jours, 18/10/2026)', pmErreurs(['au' => $j(15)] + $base, $coefOk, $now) === []);
+verifie('un an (366 jours) : acceptée', pmErreurs(['au' => $j(366, '23:59')] + $base, $coefOk, $now) === []);
+$e = pmErreurs(['au' => $j(367)] + $base, $coefOk, $now);
 verifie('367 jours : refusée, la durée dite', count($e) === 1 && str_contains($e[0], '367 jours') && str_contains($e[0], 'un an'), json_encode($e, JSON_UNESCAPED_UNICODE));
-$autres = [['shop' => 4, 'nom' => 'A', 'statut' => 'validee', 'du' => $j(0), 'au' => $j(3)], ['shop' => 4, 'nom' => 'B', 'statut' => 'a_valider', 'du' => $j(2), 'au' => $j(9)], ['shop' => 4, 'nom' => 'C', 'statut' => 'brouillon', 'du' => $j(1), 'au' => $j(5)],
-    ['shop' => 7, 'nom' => 'D', 'statut' => 'validee', 'du' => $j(1), 'au' => $j(5)]];
-$e = pmErreurs($base, $autres, $coefOk, $now);
-verifie('deux autres en même temps : refusée, les deux nommées (pas le brouillon)', count($e) === 1 && str_contains($e[0], '« A », « B »'), json_encode($e, JSON_UNESCAPED_UNICODE));
-verifie('une seule autre en même temps : acceptée (celle d’un autre magasin ne compte pas)', pmErreurs($base, array_slice($autres, 1), $coefOk, $now) === []);
-$autres[] = ['shop' => 9, 'shops' => [9, 4], 'nom' => 'E', 'statut' => 'validee', 'du' => $j(1), 'au' => $j(2)];
-verifie('une promotion d’un autre magasin qui couvre aussi celui-ci compte', count(pmErreurs($base, array_slice($autres, 1), $coefOk, $now)) === 1);
-$e = pmErreurs(['shops' => [4, 7]] + $base, [$autres[1], $autres[3], ['shop' => 7, 'nom' => 'F', 'statut' => 'a_valider', 'du' => $j(1), 'au' => $j(3)]], $coefOk, $now);
-verifie('deux magasins : la règle des deux à la fois tenue magasin par magasin', count($e) === 1 && str_contains($e[0], '« D », « F »'), json_encode($e, JSON_UNESCAPED_UNICODE));
 $d = pmPropre(['shops' => [5, 4, 6, 7, 8, 9]], 4);
 verifie('le magasin qui écrit, lui seul : les autres magasins envoyés sont ignorés', $d['shops'] === [4]);
-$e = pmErreurs($base, [], ['lot' => 1.67, 'x' => 'Pain au chocolat', 'y' => 'Pain au chocolat'] + $coefOk, $now);
+$e = pmErreurs($base, ['lot' => 1.67, 'x' => 'Pain au chocolat', 'y' => 'Pain au chocolat'] + $coefOk, $now);
 verifie('coefficient sous ×2 : plus de refus, il ne bloque plus (18/10/2026)', $e === [], json_encode($e, JSON_UNESCAPED_UNICODE));
-$e = pmErreurs(pmPropre(['y' => ['type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 120]], 4), [], null, $now);
+$e = pmErreurs(pmPropre(['y' => ['type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 120]], 4), null, $now);
 verifie('vide : nom, X, Y, valeur, dates demandés', count($e) === 6, json_encode($e, JSON_UNESCAPED_UNICODE));
 $d = pmPropre(['creneaux' => [['jours' => [5, 1, 9], 'de' => '07:00', 'a' => '10:00'], ['jours' => [2], 'de' => '12:00', 'a' => '11:00']], 'maxParTicket' => '3', 'du' => '2026-10-20T08:30'], 4);
 verifie('créneaux nettoyés (jours triés, 9 et le créneau à l’envers écartés)', $d['creneaux'] === [['jours' => [1, 5], 'de' => '07:00', 'a' => '10:00']], json_encode($d['creneaux']));
@@ -274,20 +265,17 @@ $GLOBALS['corps'] = ['shop' => 4, 'action' => 'envoyer', 'nom' => 'Tarte 1+1', '
     'x' => ['q' => 1, 'prods' => [['id' => 3]]], 'y' => ['q' => 1, 'type' => 'FREE', 'prods' => [['id' => 3]]]];
 $r = @wr_promos_magasin();
 verifie('rien ne se chiffre (la tarte seule, sans coût) : refusée, la tarte nommée', ($r['error'] ?? '') === 'à compléter' && count($r['erreurs']) === 1 && str_contains($r['erreurs'][0], 'ne se chiffre') && str_contains($r['erreurs'][0], 'Tarte sans fiche'), json_encode($r, JSON_UNESCAPED_UNICODE));
-// La règle des deux à la fois, sur les promotions du magasin au panel.
+// Plus de limite au nombre de promotions du magasin en même temps (23/10/2026, Sam ; deux au plus avant).
 $pc = static fn (string $nom, int $de, int $a, array $plus = []) => $plus + ['shop' => 4, 'action' => 'envoyer', 'nom' => $nom, 'du' => $j($de, '07:00'), 'au' => $j($a, '19:00'),
     'x' => ['q' => 3, 'prods' => [['id' => 2]]], 'y' => ['q' => 1, 'type' => 'PERCENTAGE_DISCOUNT', 'valeur' => 30, 'prods' => [['id' => 2]]]];
 $GLOBALS['corps'] = $pc('Deuxième', 3, 8);
 $r = wr_promos_magasin();
 $GLOBALS['corps'] = $pc('Troisième', 4, 6);
-$r2 = @wr_promos_magasin();
-verifie('deux en caisse sur ces dates : la troisième refusée, les deux nommées', ($r['demande']['statut'] ?? '') === 'en_caisse' && ($r2['error'] ?? '') === 'à compléter' && str_contains($r2['erreurs'][0], '« Deuxième », « Pains au chocolat 3+1 »'), json_encode($r2, JSON_UNESCAPED_UNICODE));
-$GLOBALS['corps'] = $pc('Troisième', 4, 6, ['action' => 'brouillon']);
 $r2 = wr_promos_magasin();
-verifie('en brouillon (inactive au panel), elle ne compte pas : gardée', ($r2['demande']['statut'] ?? '') === 'brouillon');
-$GLOBALS['corps'] = $pc('Troisième', 4, 6, ['id' => $r2['demande']['id']]);
-$r3 = @wr_promos_magasin();
-verifie('et ne passe en caisse que si la règle tient', ($r3['error'] ?? '') === 'à compléter' && ErpApi::$promos[$r2['demande']['panelId']]['status'] === 'INACTIVE');
+verifie('trois en caisse sur les mêmes dates : plus de limite, la troisième passe aussi', ($r['demande']['statut'] ?? '') === 'en_caisse' && ($r2['demande']['statut'] ?? '') === 'en_caisse', json_encode($r2, JSON_UNESCAPED_UNICODE));
+$GLOBALS['corps'] = $pc('Quatrième', 4, 6, ['action' => 'brouillon']);
+$r3 = wr_promos_magasin();
+verifie('en brouillon : gardée inactive au panel', ($r3['demande']['statut'] ?? '') === 'brouillon' && ErpApi::$promos[$r3['demande']['panelId']]['status'] === 'INACTIVE');
 
 echo "L'écriture au panel\n";
 ErpApi::$appels = [];

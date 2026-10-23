@@ -3399,7 +3399,7 @@
       }).join('')}</tbody></table></div>`;
     }
     h += `<div class="pm-pied db-mini">Tout se lit au panel, rien n’est gardé ailleurs${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''} : les promotions du magasin sont celles du panel réservées à ce seul magasin, les autres sont celles de la marque (elles se dupliquent pour en faire une du magasin). « Actives » : en caisse aujourd’hui.
-      Règles du magasin : une date de fin, ${pmMaxTxt(Rg.joursMax)} au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Enregistrer l’écrit au panel (créée inactive, relue, puis activée) : elle passe en caisse pour ses dates. Un brouillon est une promotion inactive au panel.
+      Règles du magasin : une date de fin, ${pmMaxTxt(Rg.joursMax)} au plus · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Enregistrer l’écrit au panel (créée inactive, relue, puis activée) : elle passe en caisse pour ses dates. Un brouillon est une promotion inactive au panel.
       Un clic sur un coefficient en montre le détail, aux prix et coûts de recette d’aujourd’hui.
       Comptoir et Webshop : là où la promotion vaut — sans restriction au panel, les deux. Seuil : le montant minimal du ticket, quand le panel en donne un. « Colonnes » ajoute ou retire des colonnes, le choix est gardé ; les actions sont dans « ⋯ ».</div></div>`;
     return h;
@@ -3751,7 +3751,8 @@
         ${PM_TYPES.map(t => `<button class="pm-opt${d.y.type === t[0] ? ' on' : ''}" data-pmtype="${t[0]}"><b>${t[1]}</b><small>${t[2]}</small></button>`).join('')}</div>
         ${d.y.type === 'FREE' ? '' : `<div class="pm-row" style="grid-template-columns:200px 1fr;margin-top:10px"><div class="pm-f"><label>${d.y.type === 'PERCENTAGE_DISCOUNT' ? 'Remise, en %' : (d.y.type === 'FIXED_PRICE' ? 'Prix de la pièce, TTC' : 'Remise, en € TTC')}</label><input class="pm-in c" type="number" min="0" step="${d.y.type === 'PERCENTAGE_DISCOUNT' ? '1' : '0.05'}" value="${esc(d.y.valeur)}" data-pmf="y.valeur"></div><div></div></div>`}
         <div style="margin-top:12px">${pmCible(W, 'y')}</div>
-        <div class="pm-f" style="margin-top:10px"><label>Stratégie de sélection</label><div class="pm-in ro">Produit le moins cher</div><span class="db-mini">la caisse remise la moins chère des pièces éligibles</span></div>`;
+        <div class="pm-f" style="margin-top:10px"><label>Stratégie de sélection</label><div class="pm-in ro">Produit le moins cher</div><span class="db-mini">la caisse remise la moins chère des pièces éligibles</span></div>
+        <div class="pm-pf" id="pm-pf">${pmPrixFinal(W)}</div>`;
     }
     if (e === 4) {
       return tete('où et à partir de quand le ticket y a droit', 'Conditions du ticket') + `<div class="pm-f"><label>Où la promotion s’applique</label></div>
@@ -3769,7 +3770,7 @@
         <div class="pm-f"><label>Jusqu’au <small class="db-mini">obligatoire, ${pmMaxTxt(R.joursMax)} au plus</small></label><input class="pm-in" type="datetime-local" value="${dl(d.au)}" data-pmf="au"></div></div>
         <div class="pm-durees"><span class="db-lab">Durée rapide</span><span class="pm-seg">${PM_DUREES.map(([k, lib]) => { const r = pmDuree(d, k); return `<button type="button" class="${r.du === d.du && r.au === d.au ? 'on' : ''}" data-pmduree="${k}" title="du ${esc(pmQuand(r.du))} au ${esc(pmQuand(r.au))}">${lib}</button>`; }).join('')}</span><span class="db-mini">à partir du début choisi, demain sinon</span></div>
         <div class="db-mini" id="pm-duree" style="margin-top:6px">${pmDureeTxt(d)}</div>
-        ${autres.length ? `<div class="pm-warn">Déjà sur ces dates dans ce magasin : ${autres.map(o => '« ' + esc(o.nom) + ' »').join(', ')}${autres.length >= (R.enMemeTemps || 2) ? ' — ' + (R.enMemeTemps || 2) + ' à la fois au plus : l’envoi sera refusé.' : '.'}</div>` : ''}
+        ${autres.length ? `<div class="pm-info">Aussi en caisse sur ces dates dans ce magasin : ${autres.map(o => '« ' + esc(o.nom) + ' »').join(', ')}.</div>` : ''}
         <div class="pm-f" style="margin-top:14px"><label>Créneaux hebdomadaires <small class="db-mini">aucun = toute la journée, tous les jours</small></label>
         ${d.creneaux.map((c, i) => `<div class="pm-cr"><span class="pm-jours">${PM_JOURS.map((j, k) => `<button class="${c.jours.includes(k + 1) ? 'on' : ''}" data-pmj="${i}|${k + 1}" title="${j}">${j.slice(0, 1).toUpperCase()}</button>`).join('')}</span>
           <label>de <input class="pm-in" type="time" value="${esc(c.de)}" data-pmcr="${i}|de"></label><label>à <input class="pm-in" type="time" value="${esc(c.a)}" data-pmcr="${i}|a"></label><button class="db-btn" data-pmcrdel="${i}">Retirer</button></div>`).join('')}
@@ -3798,6 +3799,34 @@
     return `<div class="pm-row" style="grid-template-columns:auto 220px;margin-top:${marge}px;align-items:center"><label class="pm-case"><input type="checkbox" ${d.repetable ? 'checked' : ''} data-pmrep="1"> Promotion répétable dans un ticket <small class="db-mini">(2 lots dans le même ticket = 2 fois l’avantage)</small></label>
         ${d.repetable ? `<div class="pm-f"><label>Nombre max par ticket</label><input class="pm-in c" type="number" min="1" max="50" placeholder="sans limite" value="${esc(d.maxParTicket)}" data-pmf="maxParTicket"></div>` : '<div></div>'}</div>`;
   }
+  /**
+   * Le prix final, à l'étape Y (23/10/2026, Sam) : ce que paie le client pour chaque produit qu'il reçoit, au prix normal
+   * et avec l'avantage (TTC, aux prix du magasin), puis le lot du cas le plus serré — le même que « Sur le ticket ». Il se
+   * recalcule à chaque frappe ; « Recalculer » relit en plus les prix du magasin au panel.
+   */
+  function pmPrixFinal(W) {
+    const d = W.d, k = clePMP(), prods = pmProduits(), lu = S.auxLu[k];
+    const tete = `<div class="pm-ligne"><div class="db-lab">Prix final pour le client</div><span class="pm-pfr">${S.enCours[k] ? 'relecture des prix…' : (lu ? 'prix du magasin lus à ' + new Date(lu).toTimeString().slice(0, 5) : '')}<button class="db-btn" data-pmrecalc="1"${S.enCours[k] ? ' disabled' : ''}>↻ Recalculer</button></span></div>`;
+    if (!prods) { return tete + `<div class="db-mini">${S.err[k] ? 'Prix du magasin illisibles : ' + esc(S.err[k]) : 'Lecture des prix du magasin…'}</div>`; }
+    const y = pmEffectif(d.y), fy = pmFrac(y), Py = PM_PORTIONS[y.portion];
+    if (!y.cats.length && !y.prods.length) { return tete + '<div class="db-mini">Choisissez ce que le client reçoit : le prix final s’affiche ici.</div>'; }
+    if (d.y.type !== 'FREE' && !(+d.y.valeur > 0)) { return tete + '<div class="db-mini">Donnez la valeur de l’avantage : le prix final se calcule aussitôt.</div>'; }
+    const L = [...pmEligibles(prods, y).values()].filter(p => pmTtc(p) != null && +p.prixHt > 0)
+      .map(p => ({ nom: p.nom + (Py ? ' ' + Py.lib : ''), avant: fy * pmTtc(p), apres: pmRecompense(p, d.y.type, d.y.valeur, fy) * (1 + (+p.tva || 0) / 100) }))
+      .sort((a, b) => a.avant - b.avant || a.nom.localeCompare(b.nom, 'fr'));
+    if (!L.length) { return tete + '<div class="db-mini">Aucun produit reçu n’a de prix au magasin.</div>'; }
+    const lg = o => `<tr><td>${esc(o.nom)}</td><td class="r mu">${fU(o.avant)}</td><td class="r"><b>${fU(o.apres)}</b></td><td class="r ok">−${fU(o.avant - o.apres)}</td></tr>`;
+    let h = tete + `<table class="pm-pft"><thead><tr><th>Ce que le client reçoit</th><th class="r">Prix normal</th><th class="r">Prix final</th><th class="r">Remise</th></tr></thead><tbody>${L.slice(0, 8).map(lg).join('')}</tbody></table>`;
+    if (L.length > 8) { h += `<div class="db-mini">… et ${L.length - 8} autre${L.length - 8 > 1 ? 's' : ''} produit${L.length - 8 > 1 ? 's' : ''}.</div>`; }
+    const C = pmCoefCourant(d);
+    if (C && C.lot != null) {
+      const x = pmEffectif(d.x), Px = PM_PORTIONS[x.portion], tx = pmFrac(x) * pmTtc(C.px), ty = fy * pmTtc(C.py), ry = pmRecompense(C.py, d.y.type, d.y.valeur, fy) * (1 + (+C.py.tva || 0) / 100);
+      h += `<div class="pm-pflot">Le lot, ${x.q} × ${esc(C.px.nom)}${Px ? ' ' + Px.lib : ''} + ${y.q} × ${esc(C.py.nom)}${Py ? ' ' + Py.lib : ''} : <s>${fU(x.q * tx + y.q * ty)}</s> <b>${fU(x.q * tx + y.q * ry)}</b> TTC au lieu du prix normal.</div>`;
+    }
+    return h;
+  }
+  /** Recalculer : les prix du magasin relus au panel, le prix final et le coefficient refaits. */
+  function pmRecalculer() { lireAux(clePMP(), cheminPMP(), true); rendre(); }
   function pmDureeTxt(d) {
     const n = pmJours(d), R = (S.aux[clePM()] || {}).regles || {};
     if (!d.du || !d.au) { return 'Donnez le début et la fin.'; }
@@ -3825,7 +3854,8 @@
     const W = S.pmW; if (!W) { return; }
     const set = (id, h) => { const el = document.getElementById(id); if (el) { el.innerHTML = h; } };
     set('pm-wz', pmStepper(W)); set('pm-droite', pmDroite(W)); set('pm-fixe', pmFixe(W));
-    if (W.etape === 4) { set('pm-duree', pmDureeTxt(W.d)); }
+    if (W.etape === 5) { set('pm-duree', pmDureeTxt(W.d)); }
+    if (W.etape === 3) { set('pm-pf', pmPrixFinal(W)); const rb = document.querySelector('#pm-pf [data-pmrecalc]'); if (rb) { rb.addEventListener('click', pmRecalculer); } }
     const wz = document.getElementById('pm-wz'); if (wz) { pmBrancherEtapes(wz); }
   }
   /** Les boutons qui changent d'étape (le fil des étapes se redessine à chaque frappe : on les rebranche). */
@@ -3953,6 +3983,7 @@
     on('[data-pmduree]', 'click', el => { const r = pmDuree(d, el.dataset.pmduree); d.du = r.du; d.au = r.au; rendre(); });
     on('[data-pmcr]', 'change', el => { const [i, k] = el.dataset.pmcr.split('|'); d.creneaux[+i][k] = el.value; pmMajDroite(); });
     on('[data-pmrep]', 'change', el => { d.repetable = el.checked; rendre(); });
+    on('[data-pmrecalc]', 'click', () => pmRecalculer());
     on('[data-pmcanal]', 'click', el => { d.canal = el.dataset.pmcanal; rendre(); });
     on('[data-pmseuil]', 'click', el => { d.seuilOn = el.dataset.pmseuil === 'avec'; if (!d.seuilOn) { d.seuil = ''; } rendre(); if (d.seuilOn) { const i = $.querySelector('[data-pmf="seuil"]'); if (i) { i.focus(); } } });
   }
