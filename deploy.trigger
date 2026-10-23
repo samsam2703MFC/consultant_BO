@@ -1006,3 +1006,4 @@ Mise en ligne : lot 3 audytu — jedna karta produktu (walidacja logistyki, mini
 2026-10-23T18:32Z primes : grands prix de l'année (vitrine, création), réseau et magasin
 2026-10-23T18:38Z primes : page franchisé, où en sont tes vendeuses (qui a quelle prime, à quel niveau)
 2026-10-23T18:52Z app des vendeuses : grands prix de l'année dans Mes primes
+2026-10-23T18:56Z primes : page franchisé, tri au clic sur chaque colonne du tableau des vendeuses

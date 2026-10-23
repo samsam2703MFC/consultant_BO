@@ -7276,22 +7276,25 @@ function tplPrimesApp(c, x){
         ${k.niveau != null && k.ton !== 'gagne' && k.ton !== 'tete' ? `<div style="height:4px;border-radius:2px;background:var(--color-border-tertiary);margin:6px 0 4px;max-width:110px;overflow:hidden"><div style="height:100%;width:${Math.max(3, Math.min(100, k.niveau))}%;border-radius:2px;background:${k.ton === 'perdu' ? 'var(--color-border-secondary)' : k.niveau >= 80 ? '#2d7a3e' : 'var(--color-primary)'}"></div></div>` : ''}
         ${k.bas ? `<div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(k.bas)}</div>` : ''}</td>`;
     const colGauche = 'position:sticky;left:0;z-index:1;background:var(--color-surface)';
+    // Un en-tête qui trie : tout l'en-tête se touche, la flèche dit le sens.
+    const btTri = 'border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;cursor:pointer;display:block;width:100%';
+    const fleche = t => (t.fleche ? `<span data-eq-fleche style="color:var(--color-primary);font-weight:600;margin-left:4px">${t.fleche}</span>` : '');
     const tableEq = () => `<div style="${groupeSt};margin-top:14px"><div style="overflow-x:auto">
       <table data-eq style="border-collapse:separate;border-spacing:0;min-width:100%;font-family:${sf}">
         <thead><tr>
-          <th style="${colGauche};text-align:left;padding:14px 16px 10px;font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};min-width:150px">Vendeuse</th>
-          ${EQ.primes.map(p => `<th data-eq-prime="${esc(p.cle)}" style="text-align:left;padding:14px 12px 10px;vertical-align:bottom;min-width:104px">
-            <div style="font:600 13px/1.25 ${sf};color:var(--color-text);max-width:150px">${esc(p.lib)}</div>
+          <th aria-sort="${EQ.triNom.aria}" style="${colGauche};text-align:left;padding:14px 16px 10px;font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};min-width:150px;vertical-align:bottom"><button ${x.A(EQ.triNom.trier)} data-eq-tri="nom" title="Trier par nom" style="${btTri}">Vendeuse${fleche(EQ.triNom)}</button></th>
+          ${EQ.primes.map(p => `<th data-eq-prime="${esc(p.cle)}" aria-sort="${p.tri.aria}" style="text-align:left;padding:14px 12px 10px;vertical-align:bottom;min-width:104px"><button ${x.A(p.tri.trier)} data-eq-tri="${esc(p.cle)}" title="Trier sur cette prime" style="${btTri}">
+            <div style="font:600 13px/1.25 ${sf};color:var(--color-text);max-width:150px">${esc(p.lib)}${fleche(p.tri)}</div>
             <div style="font:400 11.5px/1.35 ${sf};color:${muet};margin-top:3px;white-space:nowrap">${esc(p.recompense)} · ${p.duMagasin ? `<span style="color:var(--color-on-abricot)">${esc(p.payeur)}</span>` : esc(p.payeur)}</div>
-            <div title="${esc(p.compteLong)}" style="font:600 11.5px/1.35 ${sf};color:#2d7a3e;margin-top:2px;white-space:nowrap">✓ ${esc(p.compte)}</div></th>`).join('')}
-          <th style="text-align:right;padding:14px 16px 10px;vertical-align:bottom;font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};white-space:nowrap">${EQ.enCours ? 'Acquis' : 'Gagné'}</th>
+            <div title="${esc(p.compteLong)}" style="font:600 11.5px/1.35 ${sf};color:#2d7a3e;margin-top:2px;white-space:nowrap">✓ ${esc(p.compte)}</div></button></th>`).join('')}
+          <th aria-sort="${EQ.triAcquis.aria}" style="text-align:right;padding:14px 16px 10px;vertical-align:bottom;font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};white-space:nowrap"><button ${x.A(EQ.triAcquis.trier)} data-eq-tri="acquis" title="Trier par montant" style="${btTri}">${EQ.enCours ? 'Acquis' : 'Gagné'}${fleche(EQ.triAcquis)}</button></th>
         </tr></thead>
         <tbody>${EQ.vendeuses.map(v => `<tr data-eq-vendeuse>
           <td style="${colGauche};padding:11px 16px;border-top:${filet};vertical-align:top"><div style="font:600 14px/1.3 ${sf};white-space:nowrap">${esc(v.nom)}</div>${v.sous ? `<div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(v.sous)}</div>` : ''}</td>
           ${v.cases.map(caseEq).join('')}
           <td style="padding:11px 16px;border-top:${filet};text-align:right;vertical-align:top;font:600 14px/1.3 ${sf};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(v.total)}</td></tr>`).join('')}</tbody>
       </table></div></div>
-      <div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">✓ gagnée · ✓ 2 / 5 sous une prime : deux vendeuses sur cinq l’ont gagnée · <span style="color:var(--color-primary)">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin fait vers l’objectif${EQ.enCours ? ' · l’objectif du magasin se lit sur la projection du mois' : ''}${EQ.quand ? ' · lu à ' + esc(EQ.quand) : ''}.</div>`;
+      <div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">✓ gagnée · ✓ 2 / 5 sous une prime : deux vendeuses sur cinq l’ont gagnée · <span style="color:var(--color-primary)">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin fait vers l’objectif · toucher un en-tête trie, un 2e toucher inverse${EQ.enCours ? ' · l’objectif du magasin se lit sur la projection du mois' : ''}${EQ.quand ? ' · lu à ' + esc(EQ.quand) : ''}.</div>`;
     const equipe = `<section data-pr="fr-equipe">
       ${tete('Où en sont tes vendeuses', 'Chaque prime de Mes primes, et pour chacune ce que ta vendeuse y voit : gagnée, en tête, sa place, ou sa valeur face à l’objectif.',
         `<div style="display:flex;gap:8px;flex-wrap:wrap">${segm(EQ.filtres)}${segm(EQ.mois)}</div>`)}
