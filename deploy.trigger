@@ -968,3 +968,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T07:19:45Z promotions : plus de limite à deux, prix final à l'étape Y
 2026-10-23T07:29:21Z promotions : valeur Y depuis le prix final, moyennes d'une catégorie
 2026-10-23T07:59:56Z promotions : Tout le temps, plus de durée maximale
+2026-10-23T08:07:15Z promotions : Tout le temps jusqu'au 31/12/2037
