@@ -62,7 +62,7 @@ class FinalProductStockService
             $ordered = (float)($row['ordered_quantity'] ?? 0);
             // Ta sama formuła co « Stan magazynu » w kartach produktów.
             $min = $row['stock_min_cartons'] !== null ? (float)$row['stock_min_cartons'] : null;
-            $split = ToProduce::split($ordered, (float)$row['in_stock'], $min, (float)$row['in_production']);
+            $split = ToProduce::split($ordered, (float)$row['total_available'], $min, (float)$row['in_production']);
             $row['stock_min_cartons'] = $min !== null ? round($min, 1) : null;
             $row['remaining_orders'] = $split['orders'];
             $row['to_min'] = $split['to_min'];

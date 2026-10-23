@@ -2,18 +2,16 @@
 namespace App\Services\Finances;
 
 use App\Repositories\Analysis\CostAnalysisRepository;
-use App\Repositories\Production\Cost\CostMediaSectionAllocationRepository;
-use App\Repositories\Production\Cost\CostMonthRepository;
+use App\Repositories\Analysis\WdtSalesRepository;
+use App\Services\Production\Cost\SectionUnitCostService;
 use DateTime;
 
 class CostAnalysisSectionService
 {
-    private int $defaultWorkloadPoints = 3;
-
     public function __construct(
         private CostAnalysisRepository $costAnalysisRepository,
-        private CostMediaSectionAllocationRepository $mediaAllocationRepo,
-        private CostMonthRepository $costMonthRepo
+        private SectionUnitCostService $unitCosts,
+        private WdtSalesRepository $wdtSales
     ) {
     }
 
@@ -50,103 +48,58 @@ class CostAnalysisSectionService
             $warnings[] = 'Brak danych kosztów działu.';
         }
 
-        $employeeCost = ($month && $sectionId > 0)
-            ? $this->costAnalysisRepository->getSectionEmployeeCost((int)$month['id'], $sectionId)
-            : 0.0;
-
-        // Koszty zmienne (media) - nowa struktura z fallbackiem
-        $mediaCosts = 0.0;
-        $monthId = (int)($month['id'] ?? 0);
-
-        if ($monthId > 0) {
-            // Najpierw spróbuj pobrać z nowej struktury cost_media_section_allocation
-            $mediaCosts = $this->mediaAllocationRepo->getTotalAllocatedCostForSection($monthId, $sectionId);
+        // Wspólna reguła kosztu działu (te same liczby co Marże, Kalkulator, Koszty produktu i Rentowność)
+        $basis = !empty($month) ? $this->unitCosts->month((int)$month['id']) : $this->unitCosts->months([]);
+        foreach ($basis['warnings'] as $w) $warnings[] = $w;
+        $section = $basis['sections'][$sectionId] ?? null;
+        if ($section !== null && ($section['shared'] || $section['cartons'] <= 0) && $section['redistributed'] > 0) {
+            $warnings[] = 'Dział wspólny albo bez kartonów — jego koszty (' . number_format($section['redistributed'], 2, ',', ' ') . ' zł) są w kosztach ogólnych wszystkich kartonów firmy.';
         }
 
-        // Fallback do starych kolumn jeśli brak danych w nowej strukturze
-        if ($mediaCosts == 0.0) {
-            $mediaCosts = (float)($sectionCosts['water_cost'] ?? 0)
-                        + (float)($sectionCosts['power_supply_cost'] ?? 0)
-                        + (float)($sectionCosts['fuel_cost'] ?? 0)
-                        + (float)($sectionCosts['other_cost'] ?? 0);
-        }
-
-        // Koszty stałe (amortyzacja)
-        $fixedCosts = (float)($sectionCosts['depreciation'] ?? 0);
-
-        $sectionCostPool = $employeeCost + $fixedCosts + $mediaCosts;
-
-        $sectionTotals = $this->costAnalysisRepository->getSectionWeightedUnitsInRange(
-            $sectionId,
-            $startDate,
-            $endDate,
-            $this->defaultWorkloadPoints
-        );
-
-        $totalWeightedUnits = (float)($sectionTotals['weighted_units'] ?? 0);
-        $totalSectionUnits = (float)($sectionTotals['units_qty'] ?? 0);
-
-        if ($totalWeightedUnits <= 0) {
-            $warnings[] = 'Brak wolumenu działu w WDT — koszty działu (' . number_format($sectionCostPool, 2) . ' zł) zostają doliczone do kosztów wspólnych firmy.';
-        }
-
-        $sectionCostPerPoint = $totalWeightedUnits > 0
-            ? $sectionCostPool / $totalWeightedUnits
-            : 0.0;
-
-        // Jeśli dział nie ma wolumenu, jego koszty redystrybuujemy do puli wspólnej
-        $extraSharedPool = $totalWeightedUnits <= 0 ? $sectionCostPool : 0.0;
-
-        $sharedCostUnit = $this->calculateSharedCostPerCarton((int)$month['id'], $startDate, $endDate, $warnings, $extraSharedPool);
-
-        $products = $this->costAnalysisRepository->getSectionSalesProductsInRange($sectionId, $startDate, $endDate);
-
-        if (empty($products)) {
+        $sold = $this->wdtSales->sales($startDate, $endDate, ['section_id' => $sectionId], ['product']);
+        if (empty($sold)) {
             $warnings[] = 'Brak sprzedaży w wybranym okresie.';
         }
+        $cards = $this->costAnalysisRepository->getProductsByIds(array_map(fn($r) => (int)$r['product_id'], $sold));
 
         $rows = [];
         $revenuePlnTotal = 0.0;
         $costPlnTotal = 0.0;
         $cartonsTotal = 0;
 
-        foreach ($products as $product) {
-            $cartonsQty = (int)($product['cartons_qty'] ?? 0);
+        foreach ($sold as $r) {
+            $card = $cards[(int)$r['product_id']] ?? ['product_name' => $r['product_name'], 'category_name' => null, 'standard_price' => 0, 'pre_calculated_raw_price_per_carton' => 0];
+            $cartonsQty = (int)$r['cartons'];
+            $rawCostCarton = $this->calculateRawCostPerCarton($card + ['product_name' => $r['product_name']], $warnings);
+            $unit = SectionUnitCostService::unitCost($basis, $sectionId, $rawCostCarton);
 
-            $workloadPoints = (int)($product['workload_points'] ?? $this->defaultWorkloadPoints);
-            if ($workloadPoints <= 0) {
-                $workloadPoints = $this->defaultWorkloadPoints;
+            // Cena sprzedaży : średnia ważona z WDT (wartość ÷ kartony), inaczej cena standardowa
+            $salePriceCarton = $cartonsQty > 0 ? (float)$r['value_eur'] / $cartonsQty : 0.0;
+            if ($salePriceCarton <= 0) {
+                $salePriceCarton = (float)($card['standard_price'] ?? 0);
+                $warnings[] = $salePriceCarton > 0
+                    ? 'Brak ceny z dokumentów WDT – użyto ceny standardowej (produkt: ' . $r['product_name'] . ').'
+                    : 'Brak ceny sprzedaży dla produktu: ' . $r['product_name'];
             }
+            $salePriceCartonPln = $exchangeRateEuro > 0 ? $salePriceCarton * $exchangeRateEuro : 0.0;
 
-            $rawCostCarton = $this->calculateRawCostPerCarton($product, $warnings);
-
-            $salePriceCarton = $this->resolveSalePricePerCarton($product, $warnings);
-            $saleCurrency = $product['currency'] ?? 'EUR';
-            $currencyCount = (int)($product['currency_count'] ?? 0);
-            if ($currencyCount > 1) {
-                $warnings[] = 'W okresie występuje więcej niż jedna waluta w WDT (produkt: ' . ($product['product_name'] ?? '') . ').';
-            }
-            $salePriceCartonPln = $this->convertSalePriceToPln($salePriceCarton, $saleCurrency, $exchangeRateEuro, $warnings);
-
-            $sectionCostCarton = $sectionCostPerPoint * $workloadPoints;
-            $unitFullCost = $rawCostCarton + $sectionCostCarton + $sharedCostUnit;
+            $sectionCostCarton = $unit['labor'] + $unit['media'] + $unit['depreciation'];
+            $sharedCostUnit = $unit['overhead'] + $unit['logistics'];
+            $unitFullCost = $unit['total'];
             $marginAmount = $salePriceCartonPln - $unitFullCost;
             $marginPercent = $salePriceCartonPln > 0 ? ($marginAmount / $salePriceCartonPln) * 100 : 0;
 
-            $revenuePln = $salePriceCartonPln * $cartonsQty;
-            $costPln = $unitFullCost * $cartonsQty;
-
-            $revenuePlnTotal += $revenuePln;
-            $costPlnTotal += $costPln;
+            $revenuePlnTotal += $salePriceCartonPln * $cartonsQty;
+            $costPlnTotal += $unitFullCost * $cartonsQty;
             $cartonsTotal += $cartonsQty;
 
             $rows[] = [
-                'product_id' => $product['product_id'],
-                'product_name' => $product['product_name'],
-                'category_name' => $product['category_name'] ?? '-',
+                'product_id' => (int)$r['product_id'],
+                'product_name' => $r['product_name'],
+                'category_name' => $card['category_name'] ?? '-',
                 'cartons_qty' => $cartonsQty,
                 'sale_price_unit' => $salePriceCarton,
-                'sale_currency' => $saleCurrency,
+                'sale_currency' => 'EUR',
                 'sale_price_unit_pln' => $salePriceCartonPln,
                 'raw_cost_unit' => $rawCostCarton,
                 'section_cost_unit' => $sectionCostCarton,
@@ -156,6 +109,7 @@ class CostAnalysisSectionService
                 'margin_percent' => $marginPercent
             ];
         }
+        usort($rows, fn($a, $b) => strcmp((string)$a['product_name'], (string)$b['product_name']));
 
         $marginTotal = $revenuePlnTotal - $costPlnTotal;
         $marginPercentTotal = $revenuePlnTotal > 0 ? ($marginTotal / $revenuePlnTotal) * 100 : 0;
@@ -164,7 +118,7 @@ class CostAnalysisSectionService
             'section' => $sectionCosts,
             'month' => $month,
             'date_range' => $dateRange,
-            'warnings' => $warnings,
+            'warnings' => array_values(array_unique($warnings)),
             'summary' => [
                 'revenue_pln' => $revenuePlnTotal,
                 'cost_pln' => $costPlnTotal,
@@ -173,14 +127,16 @@ class CostAnalysisSectionService
                 'units_total' => $cartonsTotal
             ],
             'explanation' => [
-                'section_cost_pool' => $sectionCostPool,
-                'employee_cost' => $employeeCost,
-                'fixed_costs' => $fixedCosts,
-                'media_costs' => $mediaCosts,
-                'total_weighted_units' => $totalWeightedUnits,
-                'total_section_units' => $totalSectionUnits,
-                'section_cost_per_point' => $sectionCostPerPoint,
-                'shared_cost_unit' => $sharedCostUnit,
+                'section_cost_pool' => (float)($section['own'] ?? 0),
+                'employee_cost' => (float)($section['labor'] ?? 0),
+                'fixed_costs' => (float)($section['depreciation'] ?? 0),
+                'media_costs' => (float)($section['media'] ?? 0),
+                'section_cartons' => (int)($section['cartons'] ?? 0),
+                'section_cartons_source' => $section['cartons_source'] ?? 'none',
+                'section_cost_per_carton' => (float)($section['own_per_carton'] ?? 0),
+                'overhead_per_carton' => $basis['overhead_per_carton'],
+                'logistics_per_carton' => $basis['logistics_per_carton'],
+                'shared_cost_unit' => $basis['overhead_per_carton'] + $basis['logistics_per_carton'],
                 'exchange_rate_euro' => $exchangeRateEuro
             ],
             'rows' => $rows
@@ -225,68 +181,14 @@ class CostAnalysisSectionService
 
     private function calculateRawCostPerCarton(array $product, array &$warnings): float
     {
-        $recipeCost = (float)($product['precalculated_material_cost'] ?? 0);
+        // Jedno źródło : koszt surowców karty produktu (= koszt receptury)
+        $recipeCost = (float)($product['pre_calculated_raw_price_per_carton'] ?? 0);
         if ($recipeCost > 0) {
             return $recipeCost;
         }
 
-
-        $warnings[] = 'Brak kosztu surowcowego (product_recipe.precalculated_material_cost) dla produktu: ' . ($product['product_name'] ?? '');
+        $warnings[] = 'Brak kosztu surowców produktu: ' . ($product['product_name'] ?? '');
         return 0.0;
     }
 
-    private function resolveSalePricePerCarton(array $product, array &$warnings): float
-    {
-        $avgPriceCarton = $product['avg_price_carton'] ?? null;
-
-        if (!empty($avgPriceCarton)) {
-            return (float)$avgPriceCarton;
-        }
-
-        $standardPrice = (float)($product['standard_price'] ?? 0);
-        if ($standardPrice > 0) {
-            $warnings[] = 'Brak ceny z dokumentów WDT – użyto ceny standardowej (produkt: ' . ($product['product_name'] ?? '') . ').';
-            return $standardPrice;
-        }
-
-        $warnings[] = 'Brak ceny sprzedaży dla produktu: ' . ($product['product_name'] ?? '');
-        return 0.0;
-    }
-
-    private function calculateSharedCostPerCarton(int $monthId, string $startDate, string $endDate, array &$warnings, float $extraPool = 0.0): float
-    {
-        $sharedPool = $this->costAnalysisRepository->getSharedCostPool($monthId);
-        $sharedPool += $extraPool;
-
-        if ($sharedPool <= 0) {
-            $warnings[] = 'Brak kosztów wspólnych do alokacji.';
-            return 0.0;
-        }
-
-        $totalCartons = $this->costAnalysisRepository->getTotalUnitsInRange($startDate, $endDate);
-        if ($totalCartons <= 0) {
-            $warnings[] = 'Brak wolumenu do alokacji kosztów wspólnych.';
-            return 0.0;
-        }
-
-        return $sharedPool / $totalCartons;
-    }
-
-    private function convertSalePriceToPln(float $salePrice, string $currency, float $exchangeRateEuro, array &$warnings): float
-    {
-        $currency = strtoupper(trim($currency));
-        if ($currency === '' || $currency === 'EUR') {
-            if ($exchangeRateEuro <= 0) {
-                return 0.0;
-            }
-            return $salePrice * $exchangeRateEuro;
-        }
-
-        if ($currency === 'PLN') {
-            return $salePrice;
-        }
-
-        $warnings[] = 'Nieobslugiwana waluta w WDT: ' . $currency;
-        return $salePrice;
-    }
 }

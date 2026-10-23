@@ -2,24 +2,24 @@
 namespace App\Services\Finances;
 
 use App\Repositories\Analysis\ProductMarginRepository;
+use App\Services\Production\Cost\SectionUnitCostService;
 
 /**
  * ProductMarginService
  *
  * Calculates the "current" margin for a product based on:
- *  1. Foodcost       – precalculated_material_cost from product_recipe
- *  2. Media cost     – average allocated media cost for the product's section / average sales volume
- *  3. Labor cost     – average employee cost for the section / average sales volume
- *  4. Other+Depr     – section depreciation (static) / average sales volume
- *  5. Logistics cost – total logistics costs from cost_month_logistics / total company sales volume
+ *  1. Foodcost       – koszt surowców karty produktu (= koszt receptury, jedno źródło)
+ *  2–5. Media, wynagrodzenia, inne (amortyzacja działu + koszty ogólne) i logistyka na karton –
+ *       wspólna reguła kosztu działu (SectionUnitCostService), ta sama co Kalkulator, Koszty i Rentowność.
  *
- * All averages are computed from the last $months cost_month records.
+ * All averages are computed from the last $months cost_month records (sums of costs ÷ sums of cartons).
  * Supports simulation multipliers (sliders) applied client-side via JSON payload.
  */
 class ProductMarginService
 {
     public function __construct(
-        private ProductMarginRepository $repo
+        private ProductMarginRepository $repo,
+        private SectionUnitCostService $unitCosts
     ) {
     }
 
@@ -65,15 +65,8 @@ class ProductMarginService
         $dataBasis    = $this->repo->getDataBasisLabel($monthIds);
         $exchangeRate = $this->repo->getExchangeRateEuro();
 
-        // --- Pre-compute shared costs that don't depend on section ---
-        $avgLogisticsPerCarton = 0.0;
-        $avgOtherPerCarton     = 0.0;
-
-        if (!empty($monthIds)) {
-            $warnShared = [];
-            [$avgLogisticsPerCarton] = $this->calcAvgLogisticsPerCarton($monthIds, $warnShared);
-            [$avgOtherPerCarton]     = $this->calcAvgOtherPerCarton($monthIds, $warnShared);
-        }
+        // --- Koszt działów i firmy na karton (wspólna reguła) ---
+        $basis = $this->unitCosts->months($monthIds);
 
         // --- Load all categories + products ---
         $rows = $this->repo->getCategoriesWithProducts();
@@ -117,28 +110,6 @@ class ProductMarginService
         // Build ordered month labels from monthIds (newest first → reverse for display)
         $monthLabels = $this->repo->getMonthLabelsForIds($monthIds);
 
-        // --- Per-section cost cache (avoid re-querying same section) ---
-        $sectionMediaCache = [];
-        $sectionLaborCache = [];
-
-        $getMediaAvg = function (int $sid) use ($monthIds, &$sectionMediaCache): float {
-            if (!isset($sectionMediaCache[$sid])) {
-                $w = [];
-                [$avg] = $this->calcAvgMediaPerCarton($sid, $monthIds, $w);
-                $sectionMediaCache[$sid] = $avg;
-            }
-            return $sectionMediaCache[$sid];
-        };
-
-        $getLaborAvg = function (int $sid) use ($monthIds, &$sectionLaborCache): float {
-            if (!isset($sectionLaborCache[$sid])) {
-                $w = [];
-                [$labor] = $this->calcAvgLaborPerCarton($sid, $monthIds, $w);
-                $sectionLaborCache[$sid] = $labor;
-            }
-            return $sectionLaborCache[$sid];
-        };
-
         // --- Calculate margin per product, aggregate per category ---
         $categories = [];
 
@@ -151,10 +122,8 @@ class ProductMarginService
                 $sid      = $p['section_id'];
                 $foodcost = $p['foodcost'];
 
-                $mediaAvg = $sid > 0 ? $getMediaAvg($sid) : 0.0;
-                $laborAvg = $sid > 0 ? $getLaborAvg($sid) : 0.0;
-
-                $totalCost = $foodcost + $mediaAvg + $laborAvg + $avgOtherPerCarton + $avgLogisticsPerCarton;
+                $unit      = SectionUnitCostService::unitCost($basis, $sid > 0 ? $sid : null, $foodcost);
+                $totalCost = $unit['total'];
 
                 // Cena sprzedaży: standard_price z final_product (EUR)
                 $standardPriceEur = (float)($p['standard_price'] ?? 0);
@@ -285,28 +254,14 @@ class ProductMarginService
                         . 'Dane mogą być niekompletne. Zamknij miesiące w kalkulatorze kosztów.';
         }
 
-        // --- 4. Media costs avg per carton ------------------------------------
-        [$avgMediaPerCarton, $mediaBreakdown, $mediaCostPerMonth] = $this->calcAvgMediaPerCarton(
-            $sectionId, $monthIds, $warnings
-        );
-
-        // --- 5. Labor costs avg per carton ------------------------------------
-        [$avgLaborPerCarton, $laborCostPerMonth, $salesVolumePerMonth] = $this->calcAvgLaborPerCarton(
-            $sectionId, $monthIds, $warnings
-        );
-
-        // --- 6. Other (fixed) costs avg per carton ----------------------------
-        // Fixed costs are company-wide (cost_month_fixed_cost), spread over total volume.
-        [$avgOtherPerCarton, $fixedCostPerMonth] = $this->calcAvgOtherPerCarton(
-            $monthIds, $warnings
-        );
-
-        // --- 6.5 Logistics cost avg per carton --------------------------------
-        // Dzielimy łączne koszty logistyczne przez ŁĄCZNY wolumen firmy (wszystkie działy),
-        // bo logistyka jest kosztem zakładowym, nie przypisanym do jednego działu.
-        [$avgLogisticsPerCarton, $logisticsCostPerMonth, $logisticsBreakdown] = $this->calcAvgLogisticsPerCarton(
-            $monthIds, $warnings
-        );
+        // --- 4–6. Koszt działu, koszty ogólne i logistyka na karton (wspólna reguła) ---
+        $basis = $this->unitCosts->months($monthIds);
+        foreach ($basis['warnings'] as $w) $warnings[] = $w;
+        $unit = SectionUnitCostService::unitCost($basis, $sectionId > 0 ? $sectionId : null, $foodcost);
+        $avgMediaPerCarton     = $unit['media'];
+        $avgLaborPerCarton     = $unit['labor'];
+        $avgOtherPerCarton     = $unit['depreciation'] + $unit['overhead'];
+        $avgLogisticsPerCarton = $unit['logistics'];
 
         // --- 7. Exchange rate -------------------------------------------------
         $exchangeRate = $this->repo->getExchangeRateEuro();
@@ -346,23 +301,6 @@ class ProductMarginService
             $marginAmount
         );
 
-        // --- 11. Section allocation (media shares across sections) -----------
-        $sectionAllocations = [];
-        if ($sectionId > 0 && !empty($monthIds)) {
-            $sectionAllocations = $this->buildSectionAllocations($monthIds);
-        }
-
-        // --- 12. Per-month details table -------------------------------------
-        $monthlyDetails = $this->buildMonthlyDetails(
-            $monthIds,
-            $monthsMeta,
-            $mediaCostPerMonth,
-            $laborCostPerMonth,
-            $salesVolumePerMonth,
-            $fixedCostPerMonth,
-            $logisticsCostPerMonth
-        );
-
         return [
             'product'             => $product,
             'months_requested'    => $requestedMonths,
@@ -384,10 +322,10 @@ class ProductMarginService
                 'exchange_rate'              => $exchangeRate,
             ],
             'breakdown'           => $breakdown,
-            'section_allocations' => $sectionAllocations,
-            'monthly_details'     => $monthlyDetails,
-            'media_breakdown'     => $mediaBreakdown,
-            'logistics_breakdown' => $logisticsBreakdown,
+            'section_allocations' => [],
+            'monthly_details'     => [],
+            'media_breakdown'     => [],
+            'logistics_breakdown' => [],
             // Simulation base data – exposed as JSON for JS sliders
             'simulation_base' => [
                 'foodcost'              => $foodcost,
@@ -408,297 +346,6 @@ class ProductMarginService
     // -------------------------------------------------------------------------
     // Private calculation helpers
     // -------------------------------------------------------------------------
-
-    /**
-     * Calculates average allocated media cost per carton for a section.
-     * Returns [float $avgPerCarton, array $mediaBreakdown, array $perMonthRaw]
-     */
-    private function calcAvgMediaPerCarton(int $sectionId, array $monthIds, array &$warnings): array
-    {
-        if ($sectionId <= 0 || empty($monthIds)) {
-            return [0.0, [], []];
-        }
-
-        $mediaPerMonth  = $this->repo->getMediaCostsPerMonth($sectionId, $monthIds);
-        $volumePerMonth = $this->getSalesVolumePerMonth($sectionId, $monthIds);
-
-        $totalMedia   = 0.0;
-        $totalCartons = 0.0;
-        $mediaDetails = [];
-
-        foreach ($monthIds as $mid) {
-            $mediaCost = (float)($mediaPerMonth[$mid]['total_media'] ?? 0.0);
-            $cartons   = (float)($volumePerMonth[$mid] ?? 0.0);
-
-            // collect detailed media breakdown per month
-            foreach ($mediaPerMonth[$mid]['details'] ?? [] as $detail) {
-                $code = $detail['media_code'];
-                if (!isset($mediaDetails[$code])) {
-                    $mediaDetails[$code] = ['name' => $detail['media_name'], 'total_allocated' => 0.0, 'months_count' => 0];
-                }
-                $mediaDetails[$code]['total_allocated'] += (float)$detail['allocated_cost'];
-                $mediaDetails[$code]['months_count']++;
-            }
-
-            $totalMedia   += $mediaCost;
-            $totalCartons += $cartons;
-        }
-
-        // Fallback to static if no data
-        if ($totalMedia <= 0) {
-            $staticMedia = $this->repo->getStaticMediaCosts($sectionId);
-            if ($staticMedia > 0) {
-                $warnings[] = 'Brak danych mediów w nowej strukturze – użyto statycznych kosztów mediów działu.';
-                $totalMedia = $staticMedia * count($monthIds);
-            } else {
-                $warnings[] = 'Brak danych kosztów mediów dla działu.';
-            }
-        }
-
-        $avgPerCarton = $totalCartons > 0 ? ($totalMedia / $totalCartons) : 0.0;
-
-        // Build breakdown percentages
-        $breakdown = [];
-        foreach ($mediaDetails as $code => $detail) {
-            $breakdown[] = [
-                'code'               => $code,
-                'name'               => $detail['name'],
-                'total_allocated'    => $detail['total_allocated'],
-                'avg_per_month'      => $detail['months_count'] > 0 ? $detail['total_allocated'] / $detail['months_count'] : 0,
-                'pct_of_total_media' => $totalMedia > 0 ? ($detail['total_allocated'] / $totalMedia) * 100 : 0,
-            ];
-        }
-
-        return [$avgPerCarton, $breakdown, $mediaPerMonth];
-    }
-
-    /**
-     * Calculates average labor cost per carton for a section.
-     * Returns [float $avgPerCarton, array $laborPerMonth, array $salesVolumePerMonth]
-     */
-    private function calcAvgLaborPerCarton(int $sectionId, array $monthIds, array &$warnings): array
-    {
-        if ($sectionId <= 0 || empty($monthIds)) {
-            return [0.0, [], []];
-        }
-
-        $laborPerMonth  = $this->repo->getEmployeeCostsPerMonth($sectionId, $monthIds);
-        $volumePerMonth = $this->getSalesVolumePerMonth($sectionId, $monthIds);
-
-        $totalLabor   = 0.0;
-        $totalCartons = 0.0;
-
-        foreach ($monthIds as $mid) {
-            $totalLabor   += (float)($laborPerMonth[$mid] ?? 0.0);
-            $totalCartons += (float)($volumePerMonth[$mid] ?? 0.0);
-        }
-
-        if (array_sum($laborPerMonth) <= 0) {
-            $warnings[] = 'Brak danych wynagrodzeń pracowników dla działu w wybranym okresie.';
-        }
-
-        $avgPerCarton = $totalCartons > 0 ? ($totalLabor / $totalCartons) : 0.0;
-
-        return [$avgPerCarton, $laborPerMonth, $volumePerMonth];
-    }
-
-    /**
-     * Calculates average fixed cost per carton (company-wide) from cost_month_fixed_cost.
-     * Fixed costs are not per-section – they are spread across total company sales volume,
-     * analogically to logistics costs.
-     * Returns [float $avgPerCarton, array $fixedCostPerMonth]
-     */
-    private function calcAvgOtherPerCarton(array $monthIds, array &$warnings): array
-    {
-        if (empty($monthIds)) {
-            return [0.0, []];
-        }
-
-        $fixedPerMonth       = $this->repo->getFixedCostsPerMonth($monthIds);
-        $totalVolumePerMonth = $this->repo->getTotalSalesVolumePerMonth($monthIds);
-
-        $totalFixed   = 0.0;
-        $totalCartons = 0.0;
-
-        foreach ($monthIds as $mid) {
-            $totalFixed   += (float)($fixedPerMonth[$mid]['total'] ?? 0.0);
-            $totalCartons += (float)($totalVolumePerMonth[$mid] ?? 0.0);
-        }
-
-        if ($totalFixed <= 0) {
-            $warnings[] = 'Brak kosztów stałych w wybranym okresie (cost_month_fixed_cost).';
-        }
-
-        if ($totalCartons <= 0) {
-            $warnings[] = 'Brak łącznego wolumenu sprzedaży do przeliczenia kosztów stałych.';
-        }
-
-        $avgPerCarton = $totalCartons > 0 ? ($totalFixed / $totalCartons) : 0.0;
-
-        // Upraszczamy do [month_id => float] dla buildMonthlyDetails
-        $perMonthSimple = [];
-        foreach ($monthIds as $mid) {
-            $perMonthSimple[$mid] = (float)($fixedPerMonth[$mid]['total'] ?? 0.0);
-        }
-
-        return [$avgPerCarton, $perMonthSimple];
-    }
-
-    /**
-     * Calculates average logistics cost per carton (company-wide).
-     *
-     * Logika: suma wszystkich wpisów z cost_month_logistics dla danych miesięcy
-     * dzielona przez ŁĄCZNY wolumen sprzedaży całej firmy w tych miesiącach.
-     * Logistyka jest kosztem zakładowym — nie przypisujemy jej do działu.
-     *
-     * Returns [float $avgPerCarton, array $logisticsCostPerMonth, array $logisticsBreakdown]
-     */
-    private function calcAvgLogisticsPerCarton(array $monthIds, array &$warnings): array
-    {
-        if (empty($monthIds)) {
-            return [0.0, [], []];
-        }
-
-        $logisticsPerMonth  = $this->repo->getLogisticsCostsPerMonth($monthIds);
-        $totalVolumePerMonth = $this->repo->getTotalSalesVolumePerMonth($monthIds);
-
-        $totalLogistics = 0.0;
-        $totalCartons   = 0.0;
-        $typeDetails    = []; // kod => ['name', 'total']
-
-        foreach ($monthIds as $mid) {
-            $logCost = (float)($logisticsPerMonth[$mid]['total'] ?? 0.0);
-            $cartons = (float)($totalVolumePerMonth[$mid] ?? 0.0);
-
-            // zbieramy rozbicie na typy
-            foreach ($logisticsPerMonth[$mid]['details'] ?? [] as $detail) {
-                $code = $detail['type_code'];
-                if (!isset($typeDetails[$code])) {
-                    $typeDetails[$code] = ['name' => $detail['type_name'], 'total' => 0.0, 'months_count' => 0];
-                }
-                $typeDetails[$code]['total'] += (float)$detail['amount'];
-                $typeDetails[$code]['months_count']++;
-            }
-
-            $totalLogistics += $logCost;
-            $totalCartons   += $cartons;
-        }
-
-        if ($totalLogistics <= 0) {
-            $warnings[] = 'Brak kosztów logistycznych w wybranym okresie (cost_month_logistics).';
-        }
-
-        if ($totalCartons <= 0) {
-            $warnings[] = 'Brak łącznego wolumenu sprzedaży do przeliczenia kosztów logistycznych.';
-        }
-
-        $avgPerCarton = $totalCartons > 0 ? ($totalLogistics / $totalCartons) : 0.0;
-
-        // Buduj breakdown per typ
-        $breakdown = [];
-        foreach ($typeDetails as $code => $detail) {
-            $breakdown[] = [
-                'code'            => $code,
-                'name'            => $detail['name'],
-                'total'           => $detail['total'],
-                'avg_per_month'   => $detail['months_count'] > 0 ? $detail['total'] / $detail['months_count'] : 0.0,
-                'pct_of_total'    => $totalLogistics > 0 ? ($detail['total'] / $totalLogistics) * 100 : 0.0,
-            ];
-        }
-
-        // Upraszczamy logisticsCostPerMonth do [month_id => float] dla buildMonthlyDetails
-        $perMonthSimple = [];
-        foreach ($monthIds as $mid) {
-            $perMonthSimple[$mid] = (float)($logisticsPerMonth[$mid]['total'] ?? 0.0);
-        }
-
-        return [$avgPerCarton, $perMonthSimple, $breakdown];
-    }
-
-    /**
-     * Cached sales volume per month for a section (shared between media & labor).
-     */
-    private array $volumeCache = [];
-
-    private function getSalesVolumePerMonth(int $sectionId, array $monthIds): array
-    {
-        $key = $sectionId . '_' . implode(',', $monthIds);
-        if (!isset($this->volumeCache[$key])) {
-            $manualVolume = $this->repo->getSectionMonthVolume($sectionId, $monthIds);
-            $wdtVolume    = $this->repo->getSectionSalesVolumePerMonth($sectionId, $monthIds);
-
-            $merged = [];
-            foreach ($monthIds as $mid) {
-                $manual = $manualVolume[$mid] ?? 0;
-                $wdt    = $wdtVolume[$mid] ?? 0;
-                $merged[$mid] = $manual > 0 ? (float)$manual : (float)$wdt;
-            }
-            $this->volumeCache[$key] = $merged;
-        }
-        return $this->volumeCache[$key];
-    }
-
-    private function calcAvgSalePrice(array $salePriceData, array &$warnings, array $product): float
-    {
-        if (empty($salePriceData)) {
-            $std = (float)($product['standard_price'] ?? 0);
-            if ($std > 0) {
-                $warnings[] = 'Brak cen sprzedaży z WDT – użyto ceny standardowej produktu.';
-                return $std;
-            }
-            $warnings[] = 'Brak ceny sprzedaży produktu.';
-            return 0.0;
-        }
-
-        $totalRevenue = 0.0;
-        $totalCartons = 0.0;
-        foreach ($salePriceData as $row) {
-            $cartons = (float)($row['cartons_qty'] ?? 0);
-            $avg     = (float)($row['avg_price'] ?? 0);
-            if ($cartons > 0 && $avg > 0) {
-                $totalRevenue += $avg * $cartons;
-                $totalCartons += $cartons;
-            }
-        }
-
-        if ($totalCartons <= 0) {
-            $std = (float)($product['standard_price'] ?? 0);
-            if ($std > 0) {
-                $warnings[] = 'Brak wolumenu sprzedaży w WDT – użyto ceny standardowej produktu.';
-                return $std;
-            }
-            $warnings[] = 'Brak ceny sprzedaży z WDT i brak ceny standardowej.';
-            return 0.0;
-        }
-
-        return $totalRevenue / $totalCartons;
-    }
-
-    private function detectCurrency(array $salePriceData, array $product): string
-    {
-        foreach ($salePriceData as $row) {
-            if (!empty($row['currency'])) {
-                return strtoupper($row['currency']);
-            }
-        }
-        return 'EUR';
-    }
-
-    private function convertToPln(float $price, string $currency, float $rate, array &$warnings): float
-    {
-        $currency = strtoupper(trim($currency));
-        if ($currency === 'PLN') {
-            return $price;
-        }
-        if ($currency === 'EUR' || $currency === '') {
-            if ($rate <= 0) {
-                return 0.0;
-            }
-            return $price * $rate;
-        }
-        $warnings[] = 'Nieobsługiwana waluta: ' . $currency;
-        return $price;
-    }
 
     private function buildBreakdown(
         float $salePrice,
@@ -732,92 +379,6 @@ class ProductMarginService
             'logistics' => max(0, ($logistics / $salePrice) * 100),
             'margin'    => max(0, ($margin    / $salePrice) * 100),
         ];
-    }
-
-    private function buildSectionAllocations(array $monthIds): array
-    {
-        $raw = $this->repo->getMediaAllocationBySection($monthIds);
-        if (empty($raw)) {
-            return [];
-        }
-
-        // Group by section_id
-        $sections = [];
-        $totalMap = []; // media_code => total_allocated (all sections)
-
-        foreach ($raw as $row) {
-            $sid = (int)$row['section_id'];
-            if (!isset($sections[$sid])) {
-                $sections[$sid] = [
-                    'section_id'   => $sid,
-                    'section_name' => $row['section_name'],
-                    'total'        => 0.0,
-                    'media'        => [],
-                ];
-            }
-            $allocated = (float)$row['total_allocated'];
-            $sections[$sid]['total'] += $allocated;
-            $sections[$sid]['media'][] = [
-                'media_name'    => $row['media_name'],
-                'media_code'    => $row['media_code'],
-                'avg_alloc_pct' => (float)$row['avg_alloc_pct'],
-                'total'         => $allocated,
-            ];
-
-            $code = $row['media_code'];
-            $totalMap[$code] = ($totalMap[$code] ?? 0.0) + $allocated;
-        }
-
-        $grandTotal = array_sum(array_column($sections, 'total'));
-
-        foreach ($sections as &$sec) {
-            $sec['pct_of_total'] = $grandTotal > 0 ? ($sec['total'] / $grandTotal) * 100 : 0;
-        }
-        unset($sec);
-
-        return array_values($sections);
-    }
-
-    /**
-     * Builds per-month details table including fixed and logistics costs.
-     */
-    private function buildMonthlyDetails(
-        array $monthIds,
-        array $monthsMeta,
-        array $mediaCostPerMonth,
-        array $laborCostPerMonth,
-        array $salesVolumePerMonth,
-        array $fixedCostPerMonth,
-        array $logisticsCostPerMonth = []
-    ): array {
-        $metaMap = [];
-        foreach ($monthsMeta as $m) {
-            $metaMap[(int)$m['id']] = $m;
-        }
-
-        $rows = [];
-        foreach ($monthIds as $mid) {
-            $meta      = $metaMap[$mid] ?? [];
-            $media     = (float)(isset($mediaCostPerMonth[$mid]) ? $mediaCostPerMonth[$mid]['total_media'] : 0.0);
-            $labor     = (float)($laborCostPerMonth[$mid] ?? 0.0);
-            $volume    = (float)($salesVolumePerMonth[$mid] ?? 0.0);
-            $fixed     = (float)($fixedCostPerMonth[$mid] ?? 0.0);
-            $logistics = (float)($logisticsCostPerMonth[$mid] ?? 0.0);
-
-            $rows[] = [
-                'month_id'        => $mid,
-                'year'            => $meta['year'] ?? '-',
-                'month'           => isset($meta['month']) ? str_pad((string)$meta['month'], 2, '0', STR_PAD_LEFT) : '-',
-                'media_cost'      => $media,
-                'labor_cost'      => $labor,
-                'fixed_cost'      => $fixed,
-                'logistics_cost'  => $logistics,
-                'total_cost'      => $media + $labor + $fixed + $logistics,
-                'cartons_qty'     => $volume,
-                'cost_per_carton' => $volume > 0 ? ($media + $labor + $fixed + $logistics) / $volume : 0.0,
-            ];
-        }
-        return $rows;
     }
 
     private function emptyResult(string $message): array

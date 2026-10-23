@@ -177,7 +177,7 @@ class TCPDFService extends TCPDF
             $this->Cell(array_sum($w), 5, "* Produkt bez receptury: koszt surowców kartonu z karty produktu ({$from_card}).", 0, 1, 'L');
         }
         if ($without_cost) {
-            $this->Cell(array_sum($w), 5, "** Brak receptury i kosztu w karcie produktu: produkt poza sumą ({$without_cost}).", 0, 1, 'L');
+            $this->Cell(array_sum($w), 5, "** Brak kosztu surowców (receptura bez składników albo produkt bez receptury): produkt poza sumą ({$without_cost}).", 0, 1, 'L');
         }
     }
 
@@ -538,12 +538,8 @@ class TCPDFService extends TCPDF
             $this->Cell($w[3], $rowH, $day_1_carton, "LR", 0, 'C', $fillCellFlag);
             $this->Cell($w[4], $rowH, $day_1_pcs, "LR", 0, 'C', $fillCellFlag);
 
-            if ($stock_minimum_flag) {
-                $to_produce = ($productItem['in_stock_pcs'] - $productItem['day_1_pcs'] - $productItem['stock_minimum_pcs']);
-            } else {
-                $to_produce = ($productItem['in_stock_pcs'] - $productItem['day_1_pcs']);
-            }
-            $to_produce = ($to_produce >= 0) ? "-" : abs($to_produce);
+            // Do produkcji : plan dnia z planu tygodnia (ProductionListService::withPlan) — jedna formuła z Arkuszem tygodnia
+            $to_produce = $productItem['to_produce_text'] ?? '-';
 
 
             $this->Cell($w[5], $rowH, $to_produce, "LR", 0, 'C', $fillCellFlag);

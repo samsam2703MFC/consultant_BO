@@ -236,11 +236,6 @@ class WDTService implements IDocument
         return $this->wdtProductRepository->getProductsByIdWdt($id);
     }
 
-    public function getSoldDataInLast30Days($idProduct)
-    {
-        return $this->wdtProductRepository->getSoldDataInLast30Days($idProduct);
-    }
-
     /** @param array<string,mixed> $wdt @param array<string,mixed> $submission */
     private function renderKsefQr(TCPDFService $pdf, array $wdt, array $submission): void
     {

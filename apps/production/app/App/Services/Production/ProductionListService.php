@@ -12,6 +12,7 @@ use App\Repositories\Production\ProductionListRepository;
 use App\Repositories\Production\ProductionRepository;
 use App\Services\Employee\Section\ProductionSectionService;
 use App\Services\Utils\TCPDFService;
+use App\Services\Workshop\Planning\WeekService;
 
 class ProductionListService
 {
@@ -28,7 +29,8 @@ class ProductionListService
         ProductionListRepository          $productionListRepository,
         ComplaintProductionListRepository $complaintProductionListRepository,
         TransactionManager                $transactionManager,
-        ProductionSectionRepository       $productionSectionRepository
+        ProductionSectionRepository       $productionSectionRepository,
+        private WeekService               $week
     )
     {
         $this->productionRepository = $productionRepository;
@@ -41,7 +43,9 @@ class ProductionListService
 
     public function getProductionListData($data)
     {
-        return $this->transactionManager->execute(function () use ($data) {
+        // Tylko liczby całkowite (identyfikatory zamówień trafiają do SQL listy).
+        $data['order_id'] = array_values(array_unique(array_filter(array_map('intval', (array)($data['order_id'] ?? [])), fn($id) => $id > 0)));
+        $productionData = $this->transactionManager->execute(function () use ($data) {
 
             $dates = $this->orderRepository->getDatesOfSelectedOrders($data);
             $respArray = [];
@@ -122,7 +126,59 @@ class ProductionListService
             return $respArray;
         });
 
+        return $this->withPlan($productionData);
+    }
 
+    /**
+     * « Do produkcji » = plan dnia produkcji (pierwszy wybrany dzień, inaczej dziś) z planu tygodnia — ta sama
+     * formuła co Arkusz tygodnia, Plan zespołów i tablet. Tydzień rozłożony na dni : ilość dnia (+ nierozłożona
+     * reszta tygodnia) ; tydzień nierozłożony : ilość tygodnia. Produkty z planem bez zamówień też trafiają na listę.
+     */
+    private function withPlan(array $productionData): array
+    {
+        $first = $productionData['dates'][0]['expected_shipping_date'] ?? '-';
+        $day = $first !== '-' ? $first : date('Y-m-d');
+        $plan = [];
+        foreach ($this->week->quantities($day)['items'] as $p) {
+            if ($p['id_final_product'] !== null) $plan[$p['id_final_product']] = $p;
+        }
+        $productionData['plan_day'] = $day;
+        $sections = array_column($this->productionSectionRepository->findAll() ?: [], 'name', 'id');
+        $bySection = [];
+        foreach ($productionData['section_data'] as $sd) $bySection[$sd['section_name']] = $sd;
+        $missing = array_diff_key($plan, array_flip(array_merge(...array_map(fn($sd) => array_map(fn($r) => (int)$r['id_product'], $sd['section_products']), array_values($bySection)) ?: [[]])));
+        foreach ($this->productionListRepository->productsForPlan(array_keys($missing)) as $row) {
+            $name = $sections[(int)$row['id_section']] ?? null;
+            if ($name === null) continue;
+            $bySection[$name] ??= ['section_name' => $name, 'section_products' => []];
+            $bySection[$name]['section_products'][] = $row;
+        }
+        foreach ($bySection as &$sd) {
+            foreach ($sd['section_products'] as &$row) {
+                $p = $plan[(int)$row['id_product']] ?? null;
+                $qty = 0.0;
+                $text = '-';
+                if ($p !== null) {
+                    $fmt = fn(float $v) => rtrim(rtrim(number_format($v, 1, ',', ' '), '0'), ',');
+                    if ($p['slots']) {
+                        $qty = (float)($p['slots'][$day] ?? 0.0);
+                        $text = ($qty > 0 ? $fmt($qty) : '-') . ($p['unassigned'] > 0 ? ' (+' . $fmt($p['unassigned']) . ')' : '');
+                    } else {
+                        $qty = (float)$p['quantity'];
+                        $text = $qty > 0 ? $fmt($qty) . ' tydz.' : '-';
+                    }
+                }
+                $row['to_produce_pcs'] = $qty;
+                $row['to_produce_text'] = $text;
+                $row['plan_week_pcs'] = $p['quantity'] ?? 0.0;
+                $row['plan_unassigned_pcs'] = $p['unassigned'] ?? 0.0;
+            }
+            unset($row);
+            usort($sd['section_products'], fn($a, $b) => strcmp((string)$a['name'], (string)$b['name']));
+        }
+        unset($sd);
+        $productionData['section_data'] = array_values($bySection);
+        return $productionData;
     }
 
     public function getProductionListPDF($data)
@@ -149,7 +205,10 @@ class ProductionListService
 
             $pdf->Ln(10);
             $pdf->fillProductionListForSection($header, $secHeader, $section_data['section_products'], $productionData['stock_minimum_flag'], $hide_stock_flag);
-            $pdf->Ln(7);
+            $pdf->Ln(3);
+            $pdf->SetFont('dejavusans', '', 7);
+            $pdf->MultiCell(0, 4, 'Do produkcji = plan na ' . date('d.m.Y', strtotime($productionData['plan_day'])) . ' z Planu zespołów (te same ilości co Arkusz tygodnia i tablet) ; (+N) = ilość tygodnia jeszcze nierozłożona na dni ; « tydz. » = tydzień bez podziału na dni.', 0, 'L');
+            $pdf->Ln(4);
         }
 
         $base = $pdf->Output('PRODUCTION_LIST.pdf', 'S');

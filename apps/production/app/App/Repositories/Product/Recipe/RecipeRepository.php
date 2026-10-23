@@ -460,5 +460,10 @@ class RecipeRepository extends BaseRepository
         }
         unset($element);
     }
-}
 
+    /** Koszt surowców receptury → karta produktów tej receptury (jedno źródło kosztu, patrz RecipeCostRecalculationService). */
+    public function mirrorMaterialCostToProducts(int $recipeId, float $cost): void
+    {
+        $this->query('UPDATE final_product SET pre_calculated_raw_price_per_carton = :cost WHERE id_recipe = :id', ['cost' => round($cost, 2), 'id' => $recipeId]);
+    }
+}

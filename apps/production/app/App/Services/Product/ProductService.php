@@ -88,7 +88,10 @@ class ProductService {
 
     public function update($id, $data)
     {
-        return $this->finalProductRepository->update($id, $data);
+        $result = $this->finalProductRepository->update($id, $data);
+        // Nowa receptura produktu : koszt surowców karty = koszt tej receptury (jedno źródło kosztu)
+        if ($result !== false && !empty($data['id_recipe'])) $this->finalProductRepository->syncMaterialCostFromRecipe((int) $id);
+        return $result;
     }
 
     public function delete($id)

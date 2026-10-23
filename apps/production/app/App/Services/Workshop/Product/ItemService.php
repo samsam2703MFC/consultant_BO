@@ -147,23 +147,23 @@ final class ItemService
     }
 
     /**
-     * Stan magazynu produktu (kartony) : wolny stan (carton_stock status 1), zamówienia otwarte jeszcze
-     * nie paletyzowane (Nowe, W realizacji — paletyzowane kartony już zeszły ze stanu wolnego), zlecenia MTS
-     * w toku ; dostępne = stan − zamówienia + w produkcji ; do produkcji poza zamówieniami = stan min.
+     * Stan magazynu produktu (kartony) : stan (wolne + na paletach, OpenOrders::STOCK_STATUSES), zamówienia
+     * otwarte (OpenOrders, także paletyzowane do WDT), zlecenia MTS w toku ; dostępne = stan − zamówienia + w produkcji ; do produkcji poza zamówieniami = stan min.
      * (i maks.) − dostępne nieujemne ; zamówienia ponad stan (dostępne < 0) osobno.
      */
     private function stockLevel(array $r, ?int $ppc, callable $whole): array
     {
         $free = (float) $r['free_cartons'];
+        $palletised = (float) ($r['palletised_cartons'] ?? 0);
         $ordered = (float) $r['ordered_cartons'];
         $inProduction = $ppc ? round((float) $r['in_production'] / $ppc, 1) : 0.0;
         $min = $r['stock_min'] !== null && $ppc ? (float) $r['stock_min'] / $ppc : null;
         $max = $r['stock_max'] !== null && $ppc ? (float) $r['stock_max'] / $ppc : null;
         // Ta sama formuła co /stock (App\Domain\Stock\ToProduce).
-        $split = ToProduce::split($ordered, $free, $min, $inProduction);
+        $split = ToProduce::split($ordered, $free + $palletised, $min, $inProduction);
         $available = $split['available'];
         return [
-            'free_cartons' => $free, 'ordered_cartons' => $ordered, 'in_production_cartons' => $inProduction, 'available_cartons' => $available,
+            'free_cartons' => $free, 'palletised_cartons' => $palletised, 'ordered_cartons' => $ordered, 'in_production_cartons' => $inProduction, 'available_cartons' => $available,
             // Poza zamówieniami : brak na zamówienia (dostępne < 0) produkuje się jako zamówienia, osobno.
             'to_min_cartons' => $split['to_min'] !== null ? $whole($split['to_min']) : null,
             'to_max_cartons' => $max !== null ? $whole(max(0.0, $max - max(0.0, $available))) : null,

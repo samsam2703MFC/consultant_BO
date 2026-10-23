@@ -1,6 +1,8 @@
 <?php
 namespace App\Repositories\Production\Cost;
 
+use App\Repositories\Analysis\WdtSalesRepository;
+
 use App\Core\Helpers\BaseRepository;
 
 class CostMonthSectionRepository extends BaseRepository
@@ -60,17 +62,17 @@ class CostMonthSectionRepository extends BaseRepository
      */
     public function getWdtCartonsBySection(string $dateFrom, string $dateTo): array
     {
+        // Jedna definicja sprzedaży WDT (bez dokumentów zastąpionych korektą)
         $sql = "
             SELECT
                 fp.id_section                    AS section_id,
                 ps.name                          AS section_name,
-                COALESCE(SUM(wdp.quantity), 0)   AS cartons_qty
-            FROM document_wdt wdt
-            INNER JOIN document_wdt_product wdp  ON wdp.id_document_wdt = wdt.id
-            INNER JOIN final_product fp           ON fp.id = wdp.id_product
+                COALESCE(SUM(s.cartons), 0)      AS cartons_qty
+            FROM (" . WdtSalesRepository::linesSql() . ") s
+            INNER JOIN final_product fp           ON fp.id = s.id_product
             INNER JOIN production_sections ps     ON ps.id = fp.id_section
-            WHERE wdt.established_date >= :date_from
-              AND wdt.established_date <= :date_to
+            WHERE s.sale_date >= :date_from
+              AND s.sale_date <= :date_to
             GROUP BY fp.id_section, ps.name
             ORDER BY ps.name ASC
         ";

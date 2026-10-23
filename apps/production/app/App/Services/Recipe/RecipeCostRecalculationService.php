@@ -75,10 +75,7 @@ class RecipeCostRecalculationService
     private function doRecalcForRecipe(int $recipeId)
     {
         $rawCost = $this->flattenedRecipeIngredientRepository->getIngredientsCostSumByRecipeId($recipeId);
-        $this->recipeRepository->update(
-            $recipeId, [
-            'precalculated_material_cost' => $rawCost
-        ]);
+        $this->saveCost((int) $recipeId, (float) $rawCost);
         return true;
     }
 
@@ -94,7 +91,7 @@ class RecipeCostRecalculationService
     {
             // 1) Przelicz i zapisz koszt SAMEJ podreceptury/kompozycji
             $ownCost = $this->flattenedRecipeIngredientRepository->getIngredientsCostSumByRecipeId($subrecipeId);
-            $this->recipeRepository->update($subrecipeId, ['precalculated_material_cost' => $ownCost]);
+            $this->saveCost((int) $subrecipeId, (float) $ownCost);
 
             // 2) Przelicz receptury finalne, które zawierają tę podrecepturę
             $connectedRecipes = $this->flattenedRecipeRecipeRepository->getRecipesBySubrecipeId($subrecipeId);
@@ -110,10 +107,7 @@ class RecipeCostRecalculationService
 
             foreach (array_keys($uniqueRecipes) as $recipeId) {   // identyfikatory są kluczami
                 $rawCost = $this->flattenedRecipeIngredientRepository->getIngredientsCostSumByRecipeId($recipeId);
-                $this->recipeRepository->update(
-                    $recipeId, [
-                    'precalculated_material_cost' => $rawCost
-                ]);
+                $this->saveCost((int) $recipeId, (float) $rawCost);
             }
 
             return true;
@@ -127,10 +121,7 @@ class RecipeCostRecalculationService
 
             foreach ($recipes as $recipe) {
                 $rawCost = $this->flattenedRecipeIngredientRepository->getIngredientsCostSumByRecipeId($recipe['id']);
-                $this->recipeRepository->update(
-                    $recipe['id'], [
-                    'precalculated_material_cost' => $rawCost
-                ]);
+                $this->saveCost((int) $recipe['id'], (float) $rawCost);
             }
 
             return [
@@ -139,5 +130,15 @@ class RecipeCostRecalculationService
             ];
         });
     }
-}
 
+    /**
+     * Jedno źródło kosztu surowców produktu : koszt receptury (precalculated_material_cost) kopiowany do karty
+     * produktu (final_product.pre_calculated_raw_price_per_carton), z której czytają marże, koszty, kalkulator,
+     * Rentowność i magazyn. Produkt bez receptury zachowuje koszt wpisany ręcznie.
+     */
+    private function saveCost(int $recipeId, float $rawCost): void
+    {
+        $this->recipeRepository->update($recipeId, ['precalculated_material_cost' => $rawCost]);
+        $this->recipeRepository->mirrorMaterialCostToProducts($recipeId, $rawCost);
+    }
+}

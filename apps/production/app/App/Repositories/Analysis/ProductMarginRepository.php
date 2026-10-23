@@ -28,14 +28,12 @@ class ProductMarginRepository extends BaseRepository
                     fp.ppc,
                     fp.standard_price,
                     fp.pre_calculated_raw_price_per_carton,
-                    pr.precalculated_material_cost,
+                    fp.pre_calculated_raw_price_per_carton AS precalculated_material_cost,
                     fp.workload_points,
                     fp.id_recipe
                 FROM final_product fp
                 LEFT JOIN category_product cp ON fp.id_category = cp.id
                 LEFT JOIN production_sections ps ON fp.id_section = ps.id
-                LEFT JOIN product_recipe pr
-                    ON pr.id = fp.id_recipe
                 WHERE fp.id = :id
                 LIMIT 1";
         $rows = $this->query($sql, ['id' => $productId]);
@@ -68,14 +66,12 @@ class ProductMarginRepository extends BaseRepository
                     fp.id_section,
                     fp.standard_price,
                     ps.name                         AS section_name,
-                    COALESCE(pr.precalculated_material_cost, 0) AS foodcost
+                    COALESCE(fp.pre_calculated_raw_price_per_carton, 0) AS foodcost
                 FROM category_product cp
                 LEFT JOIN final_product fp
                     ON fp.id_category = cp.id AND fp.active = 1
                 LEFT JOIN production_sections ps
                     ON ps.id = fp.id_section
-                LEFT JOIN product_recipe pr
-                    ON pr.id = fp.id_recipe
                 ORDER BY cp.name ASC, fp.name ASC";
         return $this->query($sql) ?: [];
     }
@@ -221,225 +217,13 @@ class ProductMarginRepository extends BaseRepository
     // Per-month data for a section
     // -------------------------------------------------------------------------
 
-    /**
-     * Returns media costs allocated to a section per month.
-     * Structure: [month_id => ['total_media' => float, 'details' => [...]]]
-     */
-    public function getMediaCostsPerMonth(int $sectionId, array $monthIds): array
-    {
-        if (empty($monthIds)) {
-            return [];
-        }
-        $placeholders = implode(',', array_fill(0, count($monthIds), '?'));
-
-        // New structure (cost_media_section_allocation + cost_media_month)
-        $sql = "SELECT
-                    csa.cost_month_id,
-                    cmt.code          AS media_code,
-                    cmt.name          AS media_name,
-                    cmm.amount        AS total_cost,
-                    csa.allocation_percent,
-                    ROUND(cmm.amount * (csa.allocation_percent / 100), 4) AS allocated_cost
-                FROM cost_media_section_allocation csa
-                INNER JOIN cost_media_month cmm
-                    ON csa.cost_month_id = cmm.cost_month_id
-                    AND csa.media_type_id = cmm.media_type_id
-                INNER JOIN cost_media_type cmt ON csa.media_type_id = cmt.id
-                WHERE csa.cost_month_id IN ({$placeholders})
-                    AND csa.section_id = ?
-                    AND cmt.is_active = 1
-                ORDER BY csa.cost_month_id DESC, cmt.name";
-
-        $params = array_merge($monthIds, [$sectionId]);
-        $rows = $this->queryPositional($sql, $params) ?: [];
-
-        $result = [];
-        foreach ($rows as $row) {
-            $mid = (int)$row['cost_month_id'];
-            if (!isset($result[$mid])) {
-                $result[$mid] = ['total_media' => 0.0, 'details' => []];
-            }
-            $allocated = (float)$row['allocated_cost'];
-            $result[$mid]['total_media'] += $allocated;
-            $result[$mid]['details'][] = [
-                'media_code' => $row['media_code'],
-                'media_name' => $row['media_name'],
-                'total_cost' => (float)$row['total_cost'],
-                'allocation_percent' => (float)$row['allocation_percent'],
-                'allocated_cost' => $allocated,
-            ];
-        }
-
-        return $result;
-    }
-
-    /**
-     * Fallback: media costs from production_sections static fields (water+power+fuel+other).
-     */
-    public function getStaticMediaCosts(int $sectionId): float
-    {
-        $sql = "SELECT COALESCE(water_cost,0) + COALESCE(power_supply_cost,0)
-                     + COALESCE(fuel_cost,0) + COALESCE(other_cost,0) AS total
-                FROM production_sections WHERE id = :sid LIMIT 1";
-        $rows = $this->query($sql, ['sid' => $sectionId]);
-        return (float)($rows[0]['total'] ?? 0.0);
-    }
-
-    /**
-     * Employee costs per month for section.
-     * Returns [month_id => float]
-     */
-    public function getEmployeeCostsPerMonth(int $sectionId, array $monthIds): array
-    {
-        if (empty($monthIds)) {
-            return [];
-        }
-        $placeholders = implode(',', array_fill(0, count($monthIds), '?'));
-        $sql = "SELECT month_id, COALESCE(SUM(monthly_cost), 0) AS total
-                FROM cost_month_employee
-                WHERE month_id IN ({$placeholders})
-                    AND section_id = ?
-                    AND is_included = 1
-                GROUP BY month_id";
-        $params = array_merge($monthIds, [$sectionId]);
-        $rows = $this->queryPositional($sql, $params) ?: [];
-        $result = [];
-        foreach ($rows as $row) {
-            $result[(int)$row['month_id']] = (float)$row['total'];
-        }
-        return $result;
-    }
-
-    /**
-     * Fixed costs (company-wide) per month from cost_month_fixed_cost.
-     * These are not per-section – they are spread across total company volume (like logistics).
-     * Returns [month_id => ['total' => float, 'details' => [['name', 'amount', 'category'], ...]]]
-     */
-    public function getFixedCostsPerMonth(array $monthIds): array
-    {
-        if (empty($monthIds)) {
-            return [];
-        }
-        $placeholders = implode(',', array_fill(0, count($monthIds), '?'));
-        $sql = "SELECT month_id, name, COALESCE(amount, 0) AS amount, category
-                FROM cost_month_fixed_cost
-                WHERE month_id IN ({$placeholders})
-                ORDER BY month_id DESC, id ASC";
-        $rows = $this->queryPositional($sql, $monthIds) ?: [];
-
-        $result = [];
-        foreach ($rows as $row) {
-            $mid = (int)$row['month_id'];
-            if (!isset($result[$mid])) {
-                $result[$mid] = ['total' => 0.0, 'details' => []];
-            }
-            $amount = (float)$row['amount'];
-            $result[$mid]['total'] += $amount;
-            $result[$mid]['details'][] = [
-                'name'     => $row['name'],
-                'amount'   => $amount,
-                'category' => $row['category'],
-            ];
-        }
-        return $result;
-    }
-
     // -------------------------------------------------------------------------
     // Sales volume per month for a section
     // -------------------------------------------------------------------------
 
-    /**
-     * Returns actual sales carton volume from document_wdt per month (cost_month periods).
-     * Returns [month_id => float]
-     */
-    public function getSectionSalesVolumePerMonth(int $sectionId, array $monthIds): array
-    {
-        if (empty($monthIds)) {
-            return [];
-        }
-        // Build date ranges for the requested months using subquery approach
-        $placeholders = implode(',', array_fill(0, count($monthIds), '?'));
-        $sql = "SELECT
-                    cm.id AS month_id,
-                    COALESCE(SUM(CASE WHEN fp.id IS NOT NULL THEN wdp.quantity END), 0) AS cartons_qty
-                FROM cost_month cm
-                LEFT JOIN document_wdt wdt
-                    ON wdt.established_date >= CONCAT(cm.year, '-', LPAD(cm.month, 2, '0'), '-01')
-                    AND wdt.established_date <= CONCAT(
-                          cm.year, '-',
-                          LPAD(cm.month, 2, '0'), '-',
-                          LPAD(DAY(LAST_DAY(STR_TO_DATE(CONCAT(cm.year, '-', LPAD(cm.month,2,'0'), '-01'), '%Y-%m-%d'))), 2, '0')
-                       )
-                    AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
-                LEFT JOIN document_wdt_product wdp ON wdp.id_document_wdt = wdt.id
-                LEFT JOIN final_product fp ON fp.id = wdp.id_product AND fp.id_section = ?
-                WHERE cm.id IN ({$placeholders})
-                GROUP BY cm.id";
-        // section_id must come first (it's the ? before the IN list placeholders)
-        $params = array_merge([$sectionId], $monthIds);
-        $rows = $this->queryPositional($sql, $params) ?: [];
-        $result = [];
-        foreach ($rows as $row) {
-            $result[(int)$row['month_id']] = (float)$row['cartons_qty'];
-        }
-        return $result;
-    }
-
-    /**
-     * Returns cartons_qty from cost_month_section (manual/auto entry) per month.
-     * Returns [month_id => int]
-     */
-    public function getSectionMonthVolume(int $sectionId, array $monthIds): array
-    {
-        if (empty($monthIds)) {
-            return [];
-        }
-        $placeholders = implode(',', array_fill(0, count($monthIds), '?'));
-        $sql = "SELECT month_id, cartons_qty
-                FROM cost_month_section
-                WHERE month_id IN ({$placeholders}) AND section_id = ?";
-        $params = array_merge($monthIds, [$sectionId]);
-        $rows = $this->queryPositional($sql, $params) ?: [];
-        $result = [];
-        foreach ($rows as $row) {
-            $result[(int)$row['month_id']] = (int)$row['cartons_qty'];
-        }
-        return $result;
-    }
-
     // -------------------------------------------------------------------------
     // Media allocation details for all sections in a month (for percentage view)
     // -------------------------------------------------------------------------
-
-    /**
-     * Returns media allocation summary per section for a set of months (averaged).
-     * Used for "section share in media costs" display.
-     */
-    public function getMediaAllocationBySection(array $monthIds): array
-    {
-        if (empty($monthIds)) {
-            return [];
-        }
-        $placeholders = implode(',', array_fill(0, count($monthIds), '?'));
-        $sql = "SELECT
-                    csa.section_id,
-                    ps.name AS section_name,
-                    cmt.name AS media_name,
-                    cmt.code AS media_code,
-                    AVG(csa.allocation_percent) AS avg_alloc_pct,
-                    SUM(cmm.amount * (csa.allocation_percent / 100)) AS total_allocated
-                FROM cost_media_section_allocation csa
-                INNER JOIN cost_media_month cmm
-                    ON csa.cost_month_id = cmm.cost_month_id
-                    AND csa.media_type_id = cmm.media_type_id
-                INNER JOIN cost_media_type cmt ON csa.media_type_id = cmt.id
-                INNER JOIN production_sections ps ON csa.section_id = ps.id
-                WHERE csa.cost_month_id IN ({$placeholders})
-                    AND cmt.is_active = 1
-                GROUP BY csa.section_id, ps.name, cmt.name, cmt.code
-                ORDER BY ps.name, cmt.name";
-        return $this->queryPositional($sql, $monthIds) ?: [];
-    }
 
     // -------------------------------------------------------------------------
     // Sales quantity per product across months (from WDT)
@@ -462,18 +246,11 @@ class ProductMarginRepository extends BaseRepository
                     cm.id AS month_id,
                     CONCAT(cm.year, '-', LPAD(cm.month, 2, '0')) AS month_label,
                     wdp.id_product,
-                    COALESCE(SUM(wdp.quantity), 0) AS qty
+                    COALESCE(SUM(wdp.cartons), 0) AS qty
                 FROM cost_month cm
-                INNER JOIN document_wdt wdt
-                    ON wdt.established_date >= CONCAT(cm.year, '-', LPAD(cm.month, 2, '0'), '-01')
-                    AND wdt.established_date <= CONCAT(
-                          cm.year, '-',
-                          LPAD(cm.month, 2, '0'), '-',
-                          LPAD(DAY(LAST_DAY(STR_TO_DATE(CONCAT(cm.year, '-', LPAD(cm.month,2,'0'), '-01'), '%Y-%m-%d'))), 2, '0')
-                       )
-                INNER JOIN document_wdt_product wdp ON wdp.id_document_wdt = wdt.id
+                INNER JOIN (" . WdtSalesRepository::linesSql() . ") wdp
+                    ON wdp.ym = CONCAT(cm.year, '-', LPAD(cm.month, 2, '0'))
                 WHERE cm.id IN ({$phMonths})
-                    AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
                     AND wdp.id_product IN ({$phProducts})
                 GROUP BY cm.id, cm.year, cm.month, wdp.id_product
                 ORDER BY cm.year DESC, cm.month DESC";
@@ -520,35 +297,6 @@ class ProductMarginRepository extends BaseRepository
     // Average sale price for a product across months
     // -------------------------------------------------------------------------
 
-    public function getProductAvgSalePriceInMonths(int $productId, array $monthIds): array
-    {
-        if (empty($monthIds)) {
-            return [];
-        }
-        $placeholders = implode(',', array_fill(0, count($monthIds), '?'));
-        $sql = "SELECT
-                    cm.id AS month_id,
-                    AVG(wdp.price_carton) AS avg_price,
-                    MIN(wdt.currency)     AS currency,
-                    COALESCE(SUM(CASE WHEN fp.id IS NOT NULL THEN wdp.quantity END), 0) AS cartons_qty
-                FROM cost_month cm
-                INNER JOIN document_wdt wdt
-                    ON wdt.established_date >= CONCAT(cm.year, '-', LPAD(cm.month, 2, '0'), '-01')
-                    AND wdt.established_date <= CONCAT(
-                          cm.year, '-',
-                          LPAD(cm.month, 2, '0'), '-',
-                          LPAD(DAY(LAST_DAY(STR_TO_DATE(CONCAT(cm.year, '-', LPAD(cm.month,2,'0'), '-01'), '%Y-%m-%d'))), 2, '0')
-                       )
-                INNER JOIN document_wdt_product wdp ON wdp.id_document_wdt = wdt.id
-                WHERE cm.id IN ({$placeholders})
-                    AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
-                    AND wdp.id_product = ?
-                    AND wdp.price_carton > 0
-                GROUP BY cm.id";
-        $params = array_merge($monthIds, [$productId]);
-        return $this->queryPositional($sql, $params) ?: [];
-    }
-
     public function getExchangeRateEuro(): float
     {
         $sql = "SELECT exchange_rate_euro FROM erp_company_other_settings LIMIT 1";
@@ -559,102 +307,6 @@ class ProductMarginRepository extends BaseRepository
     // -------------------------------------------------------------------------
     // Logistics costs per month
     // -------------------------------------------------------------------------
-
-    /**
-     * Returns total logistics costs (sum of all types) per month.
-     * Returns [month_id => ['total' => float, 'details' => [['type_code', 'type_name', 'amount'], ...]]]
-     */
-    public function getLogisticsCostsPerMonth(array $monthIds): array
-    {
-        if (empty($monthIds)) {
-            return [];
-        }
-        $placeholders = implode(',', array_fill(0, count($monthIds), '?'));
-        $sql = "SELECT
-                    cml.month_id,
-                    clt.code  AS type_code,
-                    clt.name  AS type_name,
-                    SUM(cml.amount) AS amount
-                FROM cost_month_logistics cml
-                INNER JOIN cost_logistics_type clt ON clt.id = cml.logistics_type_id
-                WHERE cml.month_id IN ({$placeholders})
-                GROUP BY cml.month_id, cml.logistics_type_id, clt.code, clt.name
-                ORDER BY cml.month_id DESC, clt.sort_order ASC";
-
-        $rows = $this->queryPositional($sql, $monthIds) ?: [];
-
-        $result = [];
-        foreach ($rows as $row) {
-            $mid = (int)$row['month_id'];
-            if (!isset($result[$mid])) {
-                $result[$mid] = ['total' => 0.0, 'details' => []];
-            }
-            $amount = (float)$row['amount'];
-            $result[$mid]['total'] += $amount;
-            $result[$mid]['details'][] = [
-                'type_code' => $row['type_code'],
-                'type_name' => $row['type_name'],
-                'amount'    => $amount,
-            ];
-        }
-
-        return $result;
-    }
-
-    /**
-     * Returns total sales volume across ALL sections per month (for logistics cost / carton).
-     * Uses cost_month_section first (manual/auto), falls back to WDT aggregation.
-     * Returns [month_id => float]
-     */
-    public function getTotalSalesVolumePerMonth(array $monthIds): array
-    {
-        if (empty($monthIds)) {
-            return [];
-        }
-
-        // Primary: sum of all sections from cost_month_section
-        $placeholders = implode(',', array_fill(0, count($monthIds), '?'));
-        $sql = "SELECT month_id, SUM(cartons_qty) AS total_cartons
-                FROM cost_month_section
-                WHERE month_id IN ({$placeholders})
-                GROUP BY month_id";
-        $rows = $this->queryPositional($sql, $monthIds) ?: [];
-
-        $result = [];
-        foreach ($rows as $row) {
-            $result[(int)$row['month_id']] = (float)$row['total_cartons'];
-        }
-
-        // For months without cost_month_section data, fall back to WDT
-        $missingIds = array_filter($monthIds, fn($mid) => !isset($result[$mid]) || $result[$mid] <= 0);
-        if (!empty($missingIds)) {
-            $ph2 = implode(',', array_fill(0, count($missingIds), '?'));
-            $sqlWdt = "SELECT
-                        cm.id AS month_id,
-                        COALESCE(SUM(wdp.quantity), 0) AS cartons_qty
-                    FROM cost_month cm
-                    LEFT JOIN document_wdt wdt
-                        ON wdt.established_date >= CONCAT(cm.year, '-', LPAD(cm.month, 2, '0'), '-01')
-                        AND wdt.established_date <= CONCAT(
-                              cm.year, '-',
-                              LPAD(cm.month, 2, '0'), '-',
-                              LPAD(DAY(LAST_DAY(STR_TO_DATE(CONCAT(cm.year, '-', LPAD(cm.month,2,'0'), '-01'), '%Y-%m-%d'))), 2, '0')
-                           )
-                        AND wdt.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
-                    LEFT JOIN document_wdt_product wdp ON wdp.id_document_wdt = wdt.id
-                    WHERE cm.id IN ({$ph2})
-                    GROUP BY cm.id";
-            $wdtRows = $this->queryPositional($sqlWdt, array_values($missingIds)) ?: [];
-            foreach ($wdtRows as $row) {
-                $mid = (int)$row['month_id'];
-                if (($result[$mid] ?? 0) <= 0) {
-                    $result[$mid] = (float)$row['cartons_qty'];
-                }
-            }
-        }
-
-        return $result;
-    }
 
     // -------------------------------------------------------------------------
     // Helpers

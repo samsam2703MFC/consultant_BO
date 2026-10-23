@@ -2,6 +2,7 @@
 namespace App\Repositories\Production;
 
 use App\Core\Helpers\BaseRepository;
+use App\Domain\Client\Order\OpenOrders;
 
 /**
  * User class
@@ -21,6 +22,8 @@ class ProductionListRepository extends BaseRepository
 
     public function createTemporaryTable()
     {
+        // Lista liczona drugi raz na tym samym połączeniu (podgląd + PDF) : nowa tabela tymczasowa
+        $this->executeStatement('DROP TEMPORARY TABLE IF EXISTS production_list_tmp');
         $sql = "CREATE TEMPORARY TABLE production_list_tmp (
                 id_product INT PRIMARY KEY,
                 name VARCHAR(255),
@@ -129,7 +132,7 @@ class ProductionListRepository extends BaseRepository
                         IFNULL(cp.carton_qty, 0),
                         IFNULL(fp.id_recipe, 0)
                     FROM final_product fp
-                    LEFT JOIN (SELECT id_product, COUNT(id_product) as in_stock_qty FROM carton_stock cs WHERE cs.status = 1 GROUP BY id_product) cs
+                    LEFT JOIN (SELECT id_product, COUNT(id_product) as in_stock_qty FROM carton_stock cs WHERE cs.status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) cs
                         ON fp.id = cs.id_product
                     LEFT JOIN (
                                 SELECT cop.id_product, SUM(cop.quantity_carton) as qty_carton 
@@ -168,5 +171,17 @@ class ProductionListRepository extends BaseRepository
         return $this->customInsert($sql, []);
     }
 
-
+    /** Wiersze listy (z tabeli tymczasowej) produktów z planem tygodnia, których nie ma na liście zamówień. */
+    public function productsForPlan(array $productIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $productIds))));
+        if (!$ids) return [];
+        return $this->query("SELECT id_product, name, ppc, id_section,
+                        stock_minimum as stock_minimum_carton, (stock_minimum*ppc) as stock_minimum_pcs,
+                        (in_stock*ppc) as in_stock_pcs, in_stock as in_stock_carton,
+                        date_1 as day_1_carton, (date_1*ppc) as day_1_pcs, date_2 as day_2_carton, (date_2*ppc) as day_2_pcs,
+                        date_3 as day_3_carton, (date_3*ppc) as day_3_pcs, date_4 as day_4_carton, (date_4*ppc) as day_4_pcs,
+                        complaint as complaint_carton, (complaint*ppc) as complaint_pcs, id_recipe
+                    FROM production_list_tmp WHERE id_product IN (" . implode(',', $ids) . ") ORDER BY name") ?: [];
+    }
 }

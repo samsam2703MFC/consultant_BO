@@ -1,6 +1,7 @@
 <?php
 namespace App\Repositories\Dashboard;
 
+use App\Repositories\Analysis\WdtSalesRepository;
 use App\Repositories\Workshop\WorkshopRepository;
 
 /** Actions de développement du CA par groupe (tfb_growth_action) et données ERP pour les proposer. */
@@ -47,7 +48,7 @@ final class GrowthActionRepository extends WorkshopRepository
     /** Magasins ayant reçu une livraison (WDT) sur les 90 derniers jours. */
     public function activeShops(): int
     {
-        return (int) $this->db->query('SELECT COUNT(DISTINCT id_customer) FROM document_wdt WHERE established_date >= CURDATE() - INTERVAL 90 DAY')->fetchColumn();
+        return (int) $this->db->query('SELECT COUNT(DISTINCT s.id_customer) FROM (' . WdtSalesRepository::linesSql() . ') s WHERE s.sale_date >= CURDATE() - INTERVAL 90 DAY')->fetchColumn();
     }
 
     public function userExists(int $id): bool

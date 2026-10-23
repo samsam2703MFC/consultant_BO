@@ -1,6 +1,8 @@
 <?php
 namespace App\Services\Communication;
 
+use App\Domain\Client\Order\OpenOrders;
+
 use App\Exceptions\CustomException;
 use PDO;
 
@@ -47,7 +49,7 @@ final class MailEventSource
         if ($rule['event'] === 'delivery_planned') {
             $sql = "SELECT co.id_customer, co.expected_shipping_date AS day
                     FROM customer_order co
-                    WHERE co.status = 1
+                    WHERE " . OpenOrders::sql('co') . "
                       AND co.expected_shipping_date BETWEEN CURDATE() AND CURDATE() + INTERVAL :days DAY
                       AND " . sprintf($notDone, "co.id_customer, ':', co.expected_shipping_date") . "
                     GROUP BY co.id_customer, co.expected_shipping_date
@@ -73,7 +75,7 @@ final class MailEventSource
         [$table, $prefix] = self::SOURCES[$event];
         if ($event === 'delivery_planned') {
             $row = $this->db->query("SELECT id_customer, expected_shipping_date AS day FROM customer_order
-                                     WHERE status = 1 ORDER BY expected_shipping_date >= CURDATE() DESC, expected_shipping_date, id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+                                     WHERE " . OpenOrders::sql('customer_order') . " ORDER BY expected_shipping_date >= CURDATE() DESC, expected_shipping_date, id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
             return $row ? ['key' => "delivery:{$row['id_customer']}:{$row['day']}", 'ref' => $row] : null;
         }
         $id = $this->db->query("SELECT MAX(id) FROM {$table}" . ($event === 'proforma_issued' ? " WHERE status <> 'cancelled'" : ''))->fetchColumn();
@@ -126,7 +128,7 @@ final class MailEventSource
     private function deliveryContext(int $customerId, string $day): array
     {
         $stmt = $this->db->prepare('SELECT co.id, (SELECT COALESCE(SUM(quantity_carton), 0) FROM customer_order_product WHERE id_order = co.id) AS cartons
-                                    FROM customer_order co WHERE co.id_customer = ? AND co.expected_shipping_date = ? AND co.status = 1 ORDER BY co.id');
+                                    FROM customer_order co WHERE co.id_customer = ? AND co.expected_shipping_date = ? AND ' . OpenOrders::sql('co') . ' ORDER BY co.id');
         $stmt->execute([$customerId, $day]);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
         if (!$orders) throw new CustomException('Brak zamówień na ten dzień.', 'errors', 404);

@@ -28,6 +28,7 @@ class CostCalculatorService
         private CostMediaSectionAllocationRepository $mediaAllocationRepo,
         private CostLogisticsTypeRepository $logisticsTypeRepo,
         private CostMonthLogisticsRepository $logisticsRepo,
+        private SectionUnitCostService $unitCosts,
     ) {}
 
     public function getMonthBundle(int $monthId): array
@@ -197,169 +198,34 @@ class CostCalculatorService
     }
 
     /**
-     * Wyniki “w locie” — etap 1.
+     * Wyniki “w locie” : koszt kartonu każdego produktu wg wspólnej reguły kosztu działu (SectionUnitCostService) —
+     * te same liczby co Marże, Koszty produktu i działów oraz Rentowność.
      */
     public function calculateResults(int $monthId): array
     {
-        $bundle = $this->getMonthBundle($monthId);
-        $m = $bundle['month'];
-
-        // map cartons per section
-        $cartonsBySection = [];
-        foreach (($bundle['month_sections'] ?? []) as $ms) {
-            $cartonsBySection[(int)$ms['section_id']] = (int)$ms['cartons_qty'];
-        }
-
-        // labor totals per section
-        $laborTotalBySection = [];
-        $laborTotalAll = 0.0;
-        foreach (($bundle['employees'] ?? []) as $e) {
-            $sid = (int)$e['section_id'];
-            $val = (float)$e['monthly_cost'];
-            $laborTotalBySection[$sid] = ($laborTotalBySection[$sid] ?? 0.0) + $val;
-            $laborTotalAll += $val;
-        }
-
-        // fixed total
-        $fixedTotal = 0.0;
-        foreach (($bundle['fixed_costs'] ?? []) as $fc) {
-            $fixedTotal += (float)$fc['amount'];
-        }
-
-        // logistics total
-        $logisticsTotal = 0.0;
-        foreach (($bundle['logistics_costs'] ?? []) as $lc) {
-            $logisticsTotal += (float)$lc['amount'];
-        }
-
-        // media costs allocation with normalization
-        $mediaCostBySection = [];
-        $mediaCosts = $bundle['media_costs'] ?? [];
-        $mediaAllocations = $bundle['media_allocations'] ?? [];
-
-        // Grupuj alokacje per medium
-        $allocationsByMediaType = [];
-        foreach ($mediaAllocations as $alloc) {
-            $mtId = (int)$alloc['media_type_id'];
-            if (!isset($allocationsByMediaType[$mtId])) {
-                $allocationsByMediaType[$mtId] = [];
-            }
-            $allocationsByMediaType[$mtId][] = $alloc;
-        }
-
-        // Rozdziel koszty mediów na działy z normalizacją
-        foreach ($mediaCosts as $mc) {
-            $mtId = (int)$mc['media_type_id'];
-            $amount = (float)$mc['amount'];
-            $allocations = $allocationsByMediaType[$mtId] ?? [];
-
-            if (empty($allocations)) {
-                // Brak alokacji - można to zignorować lub dodać warning
-                continue;
-            }
-
-            // Oblicz sumę wag
-            $totalWeight = 0.0;
-            foreach ($allocations as $alloc) {
-                $totalWeight += (float)$alloc['allocation_percent'];
-            }
-
-            // Rozdziel proporcjonalnie (z normalizacją)
-            if ($totalWeight > 0) {
-                foreach ($allocations as $alloc) {
-                    $sid = (int)$alloc['section_id'];
-                    $weight = (float)$alloc['allocation_percent'];
-                    $normalizedPercent = ($weight / $totalWeight); // 0.0 - 1.0
-                    $allocatedAmount = $amount * $normalizedPercent;
-                    $mediaCostBySection[$sid] = ($mediaCostBySection[$sid] ?? 0.0) + $allocatedAmount;
-                }
-            }
-        }
-
-        // cartons total
-        $cartonsTotal = 0;
-        foreach ($cartonsBySection as $qty) $cartonsTotal += (int)$qty;
-
-        $fixedPerCartonGlobal = ($cartonsTotal > 0) ? ($fixedTotal / $cartonsTotal) : 0.0;
-
-        // media costs per carton per section
-        // Działy z 0 kartonami: ich koszt mediów trafia do puli redystrybucji globalnej
-        $mediaPerCartonBySection = [];
-        $mediaRedistributed = 0.0;
-        foreach (($bundle['sections'] ?? []) as $s) {
-            $sid    = (int)$s['id'];
-            $cart   = (int)($cartonsBySection[$sid] ?? 0);
-            $mediaCost = (float)($mediaCostBySection[$sid] ?? 0.0);
-            if ($cart > 0) {
-                $mediaPerCartonBySection[$sid] = $mediaCost / $cart;
-            } else {
-                // Brak kartonów w tym dziale — media nie mogą być podzielone per karton działu,
-                // redystrybuujemy globalnie
-                $mediaPerCartonBySection[$sid] = 0.0;
-                if ($mediaCost > 0.0) {
-                    $mediaRedistributed += $mediaCost;
-                }
-            }
-        }
-        // Dodaj zredystrybuowane koszty mediów do kosztu stałego per karton
-        if ($mediaRedistributed > 0.0 && $cartonsTotal > 0) {
-            $fixedPerCartonGlobal += $mediaRedistributed / $cartonsTotal;
-        }
-
-        // labor per carton per section
-        // Działy z 0 kartonami: ich wynagrodzenia trafiają do puli redystrybucji globalnej
-        $laborPerCartonBySection = [];
-        $laborRedistributed = 0.0;
-        $warnings = [];
-
-        foreach (($bundle['sections'] ?? []) as $s) {
-            $sid  = (int)$s['id'];
-            $cart = (int)($cartonsBySection[$sid] ?? 0);
-            $lab  = (float)($laborTotalBySection[$sid] ?? 0.0);
-
-            if ($cart > 0) {
-                $laborPerCartonBySection[$sid] = $lab / $cart;
-            } else {
-                $laborPerCartonBySection[$sid] = 0.0;
-                if ($lab > 0.0) {
-                    $warnings[] = "Dział \"{$s['name']}\" ma 0 kartonów, ale " . number_format($lab, 2) . " zł wynagrodzeń — koszty redystrybuowane globalnie.";
-                    $laborRedistributed += $lab;
-                }
-            }
-        }
-        // Dodaj zredystrybuowane wynagrodzenia do kosztu stałego per karton
-        if ($laborRedistributed > 0.0 && $cartonsTotal > 0) {
-            $fixedPerCartonGlobal += $laborRedistributed / $cartonsTotal;
-        }
-
-        // products
-        $products = $this->productRepo->getActiveForCosting();
+        $m = $this->monthRepo->getById($monthId);
+        if (!$m) throw new CustomException("MONTH_NOT_FOUND", "error", 404);
+        $basis = $this->unitCosts->month($monthId);
 
         $rows = [];
-        foreach ($products as $p) {
+        foreach ($this->productRepo->getActiveForCosting() as $p) {
             $ppc = max(1, (int)$p['ppc']);
-            $sid = (int)$p['id_section'];
-
-            $rawPerCarton = (float)($p['pre_calculated_raw_price_per_carton'] ?? 0.0);
-            $laborPerCarton = (float)($laborPerCartonBySection[$sid] ?? 0.0);
-            $mediaPerCarton = (float)($mediaPerCartonBySection[$sid] ?? 0.0);
-            $fixedPerCarton = (float)$fixedPerCartonGlobal;
-
-            $totalPerCarton = $rawPerCarton + $laborPerCarton + $mediaPerCarton + $fixedPerCarton;
-            $perPiece = $totalPerCarton / $ppc;
-
+            $sid = $p['id_section'] !== null ? (int)$p['id_section'] : null;
+            $cost = SectionUnitCostService::unitCost($basis, $sid, (float)($p['pre_calculated_raw_price_per_carton'] ?? 0.0));
             $rows[] = [
                 'product_id' => (int)$p['id'],
                 'product_name' => (string)$p['name'],
                 'section_id' => $sid,
                 'section_name' => $p['section_name'],
                 'ppc' => $ppc,
-                'raw_per_carton' => $rawPerCarton,
-                'labor_per_carton' => $laborPerCarton,
-                'media_per_carton' => $mediaPerCarton,
-                'fixed_per_carton' => $fixedPerCarton,
-                'total_per_carton' => $totalPerCarton,
-                'total_per_piece' => $perPiece,
+                'raw_per_carton' => $cost['raw'],
+                'labor_per_carton' => $cost['labor'],
+                'media_per_carton' => $cost['media'],
+                'depreciation_per_carton' => $cost['depreciation'],
+                'fixed_per_carton' => $cost['overhead'],
+                'logistics_per_carton' => $cost['logistics'],
+                'total_per_carton' => $cost['total'],
+                'total_per_piece' => $cost['total'] / $ppc,
                 'standard_price' => (float)($p['standard_price'] ?? 0.0),
             ];
         }
@@ -367,14 +233,17 @@ class CostCalculatorService
         return [
             'month' => $m,
             'summary' => [
-                'cartons_total' => $cartonsTotal,
-                'labor_total' => $laborTotalAll,
-                'media_total' => array_sum($mediaCostBySection),
-                'fixed_total' => $fixedTotal,
-                'logistics_total' => $logisticsTotal,
-                'fixed_per_carton_global' => $fixedPerCartonGlobal,
+                'cartons_total' => $basis['cartons'],
+                'labor_total' => $basis['labor_total'],
+                'media_total' => $basis['media_total'],
+                'depreciation_total' => $basis['depreciation_total'],
+                'shared_total' => $basis['shared_pool'],
+                'fixed_total' => $basis['fixed'],
+                'logistics_total' => $basis['logistics'],
+                'fixed_per_carton_global' => $basis['overhead_per_carton'],
+                'logistics_per_carton' => $basis['logistics_per_carton'],
             ],
-            'warnings' => $warnings,
+            'warnings' => $basis['warnings'],
             'rows' => $rows
         ];
     }

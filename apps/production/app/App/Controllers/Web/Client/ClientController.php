@@ -9,7 +9,6 @@ use App\Services\Client\FranchiseNetwork\IntegrationOnboardingTokenService;
 use App\Services\Client\Integration\ClientIntegrationService;
 use App\Services\Finances\ProfitabilityService;
 use App\Services\Utils\CountryService;
-use DateInterval;
 use DateTime;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -151,13 +150,17 @@ class ClientController extends BaseController
 
     public function profitability($id)
     {
-        $currentDate = new DateTime();
-        $lastMonth = $currentDate->sub(new DateInterval('P1M'));
-        $data['last_month_year'] = $lastMonth->format('m-Y');
+        // Miesiąc do wyboru (domyślnie ostatni zamknięty) ; sprzedaż i koszt jak w Analizie sprzedaży
+        $month = (string)($_GET['month'] ?? '');
+        if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
+            $month = (new DateTime('first day of last month'))->format('Y-m');
+        }
+        $data['month'] = $month;
+        $data['last_month_year'] = (new DateTime($month . '-01'))->format('m-Y');
 
         $data['customer'] = $this->clientService->getById($id);
 
-        $products = $this->profitabilityService->getSoldProductListByCustomerInLastMonth($id);
+        $products = $this->profitabilityService->getSoldProductListByCustomerInMonth((int)$id, $month);
         $data['products_grouped_by_category'] = [];
 
         foreach ($products as $product) {

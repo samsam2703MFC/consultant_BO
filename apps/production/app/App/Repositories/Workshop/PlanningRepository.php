@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace App\Repositories\Workshop;
 
+use App\Domain\Client\Order\OpenOrders;
+use App\Domain\Stock\ToProduce;
+
+use App\Repositories\Analysis\WdtSalesRepository;
 use App\Services\Workshop\Product\CobotRouting;
 
 /**
@@ -45,7 +49,7 @@ final class PlanningRepository extends WorkshopRepository
                     cop.id_product, SUM(cop.quantity_carton) AS cartons
              FROM customer_order co
              JOIN customer_order_product cop ON cop.id_order = co.id
-             WHERE co.id_wdt IS NULL AND co.status < 4 AND COALESCE(co.is_freebie, 0) = 0
+             WHERE ' . OpenOrders::quantitySql('co') . '
                AND co.expected_shipping_date BETWEEN ? AND ?
              GROUP BY co.id, co.expected_shipping_date, co.create_order_date, co.id_customer, cop.id_product
              HAVING cartons > 0',
@@ -57,19 +61,22 @@ final class PlanningRepository extends WorkshopRepository
     public function shippedCartons(int $days): array
     {
         $rows = $this->all(
-            'SELECT p.id_product, SUM(p.quantity) AS cartons FROM document_wdt w JOIN document_wdt_product p ON p.id_document_wdt = w.id
-             WHERE w.established_date >= CURDATE() - INTERVAL ? DAY AND w.established_date < CURDATE()
-               AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
-             GROUP BY p.id_product',
+            'SELECT s.id_product, SUM(s.cartons) AS cartons FROM (' . WdtSalesRepository::linesSql() . ') s
+             WHERE s.sale_date >= CURDATE() - INTERVAL ? DAY AND s.sale_date < CURDATE()
+             GROUP BY s.id_product',
             [$days]
         );
         return array_map('floatval', array_column($rows, 'cartons', 'id_product'));
     }
 
-    /** @return array<int,int> produit => cartons en stock libre (status 1) */
-    public function freeStockCartons(): array
+    /**
+     * @return array<int,int> produit => cartons en stock : libres et palettisés pas encore expédiés
+     * (OpenOrders::STOCK_STATUSES). Une commande palettisée reste ouverte jusqu'au WDT : ses cartons sur palette
+     * couvrent sa propre demande, sinon ils seraient soustraits deux fois (même règle que /stock, App\Domain\Stock\ToProduce).
+     */
+    public function stockCartons(): array
     {
-        return array_map('intval', array_column($this->all('SELECT id_product, COUNT(*) AS n FROM carton_stock WHERE status = 1 GROUP BY id_product'), 'n', 'id_product'));
+        return array_map('intval', array_column($this->all('SELECT id_product, COUNT(*) AS n FROM carton_stock WHERE status IN (' . OpenOrders::STOCK_STATUSES . ') GROUP BY id_product'), 'n', 'id_product'));
     }
 
     /**
@@ -90,7 +97,7 @@ final class PlanningRepository extends WorkshopRepository
     /** @return array<int,float> article => quantité des OF MTS pas encore terminés (planifiés après échéance : plus comptés, sauf en cours) */
     public function openMtsOrders(): array
     {
-        $rows = $this->all("SELECT id_item, SUM(quantity) AS q FROM tfb_prod_order WHERE origin = 'MTS' AND (status = 'in_progress' OR (status IN ('planned', 'released') AND due_at >= CURDATE())) GROUP BY id_item");
+        $rows = $this->all("SELECT id_item, SUM(quantity) AS q FROM tfb_prod_order WHERE " . ToProduce::IN_PRODUCTION_WHERE . " GROUP BY id_item");
         return array_map('floatval', array_column($rows, 'q', 'id_item'));
     }
 

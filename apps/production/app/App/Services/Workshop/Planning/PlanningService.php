@@ -101,7 +101,7 @@ final class PlanningService
         // dostępne = stan wolny + zlecenia MTS w toku − zamówienia obsłużone z magazynu. Kartony, które weszły na
         // magazyn od początku okresu (partie tego tygodnia), nie zmniejszają potrzeby okresu : zrobione partie
         // zostają w tygodniu jako zrobione, a potrzeba nie znika, gdy stan przekroczy min. w trakcie tygodnia.
-        $stock = $this->planning->freeStockCartons();
+        $stock = $this->planning->stockCartons();
         $today = date('Y-m-d');
         $added = $from <= $today ? $this->planning->cartonsAdded($from, min($to, $today)) : [];
         $openMts = $this->planning->openMtsOrders();
@@ -431,7 +431,7 @@ final class PlanningService
             $available = $demand['stock'][$itemId]['available'] ?? null;
             if ($available === null) {
                 $ppc = max(1, (int) $it['ppc']);
-                $available = ($this->planning->freeStockCartons()[(int) $it['id_final_product']] ?? 0) * $ppc + ($this->planning->openMtsOrders()[$itemId] ?? 0.0);
+                $available = ($this->planning->stockCartons()[(int) $it['id_final_product']] ?? 0) * $ppc + ($this->planning->openMtsOrders()[$itemId] ?? 0.0);
             }
             $room = max(0.0, (float) $it['stock_max'] - $available);
             return DemandCalculator::roundBatch($room, null, $this->num($it['batch_multiple']));

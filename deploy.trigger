@@ -999,3 +999,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T17:31:35Z primes : prime B2B en une phrase, tableau des primes façon Apple
 2026-10-23T17:39:20Z primes : page franchisé sur le magasin de l'adresse (?shop=3)
 2026-10-23T17:42:49Z primes de l'app worker : mise en page bureau
+Mise en ligne : lot 2 audytu — jeden sposób liczenia (koszt działu, sprzedaż WDT, zamówienia otwarte, do produkcji) 2026-10-23T17:52:32Z

@@ -21,7 +21,11 @@
                         <h4 class="text-center"><?= $customer['company'] ?></h4>
                     </div>
                     <div class="col-12">
-                        <p class="text-center"><?=$last_month_year?></p>
+                        <form method="get" class="d-flex justify-content-center align-items-center gap-2">
+                            <label class="form-label mb-0" for="month">Miesiąc</label>
+                            <input type="month" class="form-control form-control-sm" style="max-width:11rem" id="month" name="month" value="<?= htmlspecialchars($month) ?>" onchange="this.form.submit()">
+                        </form>
+                        <p class="text-center text-muted small mt-2 mb-0">Sprzedaż z dokumentów WDT (bez dokumentów zastąpionych korektą), koszt surowców z karty produktu — jak w Analizie sprzedaży i Rentowności.</p>
                     </div>
                 </div>
                 <div class="row mt-4">

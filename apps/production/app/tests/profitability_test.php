@@ -20,6 +20,9 @@ use App\Repositories\Dashboard\ProfitabilityRepository;
 use App\Services\Dashboard\GrowthActionService;
 use App\Repositories\Workshop\ParamRepository;
 use App\Services\Dashboard\ProfitabilityService;
+use App\Repositories\Analysis\WdtSalesRepository;
+use App\Repositories\Production\Cost\SectionUnitCostRepository;
+use App\Services\Production\Cost\SectionUnitCostService;
 use App\Repositories\Staff\StaffRepository;
 use App\Services\Staff\StaffBudgetService;
 
@@ -49,7 +52,7 @@ $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
     foreach (['production_sections', 'tfb_section_target', 'tfb_prod_param', 'cost_month', 'cost_month_employee', 'cost_media_type',
-                 'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'erp_company_other_settings', 'document_wdt',
+                 'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_month_section', 'erp_company_other_settings', 'document_wdt',
                  'document_wdt_product', 'final_product', 'customer_order', 'customer_order_product', 'tfb_growth_action', 'user', 'category_product',
                  'production_employee', 'tfb_staff_pay', 'recipe_competency', 'recipe_competency_connection', 'tfb_employee_competency',
                  'flattened_recipe_ingredient', 'raw_material', 'category_material', 'supplier', 'raw_material_price_changelog', 'unit', 'tfb_wdt_superseded',
@@ -82,7 +85,7 @@ try {
     $pdo->exec("INSERT INTO customer_order (id, id_customer, status, expected_shipping_date, id_wdt) VALUES (1, 1, 1, '2026-10-25', NULL), (2, 1, 5, '2026-10-26', NULL), (3, 1, 3, '2026-10-05', 2)");
     $pdo->exec("INSERT INTO customer_order_product (id_order, id_product, quantity_carton, purchase_price) VALUES (1, 1, 30, 50), (2, 1, 99, 50), (3, 1, 20, 50)");
 
-    $service = new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo));
+    $service = new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo))));
     $today = new DateTimeImmutable('2026-10-19');
 
     // --- Miesiąc zamknięty
@@ -177,7 +180,7 @@ try {
     $service->saveTarget(3, ['staff_pct_target' => '30'], 1);
     expectProfit((float) $pdo->query('SELECT staff_pct_target FROM tfb_section_target WHERE id_section = 3')->fetchColumn() === 30.0, 'cel działu bez wiersza tworzy wiersz');
     $service->saveGeneralTargets(['profit.staff_target_pct' => '30'], 1);
-    $after = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)))->overview('2026-09', $today);
+    $after = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo)))))->overview('2026-09', $today);
     near($after['groups'][0]['staff_target'], 30, 'grupa bez własnego celu bierze nowy cel ogólny');
     near($after['groups'][0]['missing'], 2000 / 0.3 - 5000, 'brakująca sprzedaż przeliczona z nowym celem');
 
@@ -195,7 +198,7 @@ try {
 
     $pdo->exec("INSERT INTO user (id, name, surname, displayed_name, email, phone, permission, login, password) VALUES (1, 'A', 'B', 'Anna B.', 'a@x.test', '1', 0, 'anna', 'x')");
     $pdo->exec("INSERT INTO final_product (id, name, id_section, ppc, standard_price, pre_calculated_raw_price_per_carton, active) VALUES (2, 'Bagietka', 1, 20, 16, 16, 1), (3, 'Pudełko', 2, 10, 5, 4, 1)");
-    $growth = new GrowthActionService(new GrowthActionRepository($pdo), new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)), new ProfitabilityRepository($pdo), new ParamRepository($pdo),
+    $growth = new GrowthActionService(new GrowthActionRepository($pdo), new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo)))), new ProfitabilityRepository($pdo), new ParamRepository($pdo),
         new \App\Services\Finances\StorePrice\StoreSellabilityService(new \App\Repositories\Finances\StorePriceRepository($pdo), new \App\Services\Organization\PageAccessService(new \App\Repositories\Organization\PageAccessRepository($pdo))));
     $fields = function (callable $fn): array {
         try { $fn(); } catch (App\Core\Api\Workshop\ApiException $e) { return array_column($e->fieldErrors(), 'code', 'field'); }
@@ -238,7 +241,7 @@ try {
         (1, 'Ala', 'A', 5000, 1), (2, 'Bartek', 'B', 3000, 1), (3, 'Cezary', 'C', 4000, 2), (4, 'Dorota', 'D', 2000, 1)");
     $staffRepo = new StaffRepository($pdo);
     // Une requête = un service : ProfitabilityService garde les sections lues pendant la requête.
-    $newBudget = fn() => new StaffBudgetService(new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)), $staffRepo, new ParamRepository($pdo));
+    $newBudget = fn() => new StaffBudgetService(new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo)))), $staffRepo, new ParamRepository($pdo));
     $budgetService = $newBudget();
     $budgetService->savePay(1, ['base_monthly' => '3 600,00'], 1);
     $budgetService->savePay(3, ['base_monthly' => '3000'], 1);
@@ -299,7 +302,7 @@ try {
     // Rogal : kategoria Viennoiserie, 64 szt. × 75 g w kartonie ; Tarta bez kategorii.
     $pdo->exec("INSERT INTO category_product (id, name, target_margin_percentage) VALUES (77, 'Viennoiserie', 0)");
     $pdo->exec("UPDATE final_product SET id_category = 77, ppc = 64, weight = 75 WHERE id = 902");
-    $aug = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)))->overview('2026-08', $today);
+    $aug = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo)))))->overview('2026-08', $today);
     $buy = $aug['purchases'];
     // Co wyprodukowały grupy : Piekarnia → Viennoiserie (Rogal) i Bez kategorii (Tarta).
     $made = $aug['production'];
@@ -335,13 +338,13 @@ try {
     near($buy['card_total'], (10 * 99 + 5 * 8) / 4, 'koszt według kart produktów (porównanie)');
     expectProfit(abs($cats['Mąka']['items'][0]['qty'] - 10000) < 0.001 && $cats['Mąka']['items'][0]['unit'] === 'g', 'ilość surowca : 10 kartonów × 1000 g');
     near(array_sum(array_column($buy['categories'], 'pct')), 100, 'udziały kategorii = 100 %');
-    $oct2 = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)))->overview('month', $today);
+    $oct2 = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo)))))->overview('month', $today);
     near($oct2['totals']['materials'], 200, 'październik : Chleb bez receptury, koszt z karty (20 × 40 zł / 4)');
 
     // Duplikat WDT oznaczony w tfb_wdt_superseded : sprzedaż liczona raz.
     $pdo->exec("INSERT INTO document_wdt (id, doc_num, established_date, currency) VALUES (950, 'W/1', '2026-09-10', 'eur')");
     $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, name, quantity, price_carton) VALUES (950, 1, 'Chleb', 100, 50)");
-    $fresh = fn() => new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo));
+    $fresh = fn() => new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo))));
     near($fresh()->overview('2026-09', $today)['totals']['revenue'], 10000, 'duplikat bez oznaczenia : liczony dwa razy');
     $pdo->exec("INSERT INTO tfb_wdt_superseded (id_document_wdt, superseded_by, reason) VALUES (950, 1, 'test')");
     $dedup = $fresh()->overview('2026-09', $today);

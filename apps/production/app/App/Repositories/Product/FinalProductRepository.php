@@ -201,6 +201,13 @@ class FinalProductRepository extends BaseRepository
         return $res;
     }
 
+    /** Koszt surowców karty = koszt receptury produktu (patrz RecipeCostRecalculationService::saveCost). */
+    public function syncMaterialCostFromRecipe(int $productId): void
+    {
+        $this->query('UPDATE final_product fp JOIN product_recipe pr ON pr.id = fp.id_recipe
+                      SET fp.pre_calculated_raw_price_per_carton = pr.precalculated_material_cost WHERE fp.id = :id', ['id' => $productId]);
+    }
+
     public function deactivate(int $productId): int|bool
     {
         $sql = "UPDATE final_product SET active = 0 WHERE id = :id";
