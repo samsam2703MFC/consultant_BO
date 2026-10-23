@@ -65,6 +65,35 @@ personne (`langue`, un global Twig). Les lignes de détail des mois payés sont 
 par le cockpit : en français l'app les montre telles quelles, dans les autres langues elle recompose
 la ligne depuis les montants.
 
+## La prime B2B (23/10/2026) : ramène un client pro
+
+Demande : « dans le système franchisé ou marque, la possibilité de créer une prime pour le B2B, pour donner envie
+d'aller chercher les écoles… ; la rémunération en % de la commande, une fois ou chaque mois pendant 1 mois, un
+trimestre, un an ». Sept maquettes (`docs/maquettes/primes-b2b/`), l'option D retenue : une phrase. Règles décidées :
+le % sur le **HT**, un nouveau client = **aucune commande pro depuis 12 mois**, la prime va à **la vendeuse de la 1re
+commande**.
+
+- **Le cockpit** (Application employé › Page admin ou Page franchisé, « + Prime B2B ») : « Pour chaque nouveau
+  client pro, la vendeuse touche *5 %* de *chaque commande pendant 3 mois*. » — les mots en couleur se touchent
+  (le % ou un montant fixe, la 1re commande, 1, 3, 12 mois ou sans limite), un exemple chiffré dessous ; plafond par
+  client, commande minimum, nom et dates dans « plus de réglages ». Une prime de franchisé est pour un magasin, payée
+  par lui ; une de la marque, pour tous, payée par la marque ou un sponsor. Trois au plus de chaque côté.
+- **Le calcul** (`src/primes_b2b.php`, `b2bCalcul` sans base, testé) : les tickets pro de la base partagée
+  (`transaction` ⨝ `client.is_b2b`), le client avec une TVA valide (la règle des clients pro du cockpit), le HT =
+  TTC − TVA du ticket. Un client compte dès sa 1re commande dans la période de la prime (dès sa création par défaut) ;
+  sa fenêtre court la durée choisie ; le plafond vaut pour toute la durée. Gardé quinze minutes (un jour, un mois
+  clos). La prime s'ajoute à la fiche (`briques.b2b`, une carte `type: b2b`), au total du mois, à l'enregistrement
+  des primes (payée par le magasin ou la marque) et au tableau « Primes du mois » (colonne Clients pro).
+- **L'app** (`primes/_ligne_b2b.twig`) : la ligne dit ce qu'elle a gagné et combien de clients pro elle a ramenés, la
+  règle en court (« 5 % · 3 mois ») ; dans « À aller chercher », la phrase du plan (« Un nouveau client pro — une
+  école, une entreprise, une association : 5 % de chaque commande pendant 3 mois pour toi. Déjà +52 € ce mois-ci. ») ;
+  le détail liste ses clients sans leur nom (« Client du 12/10 · 1 commande ce mois · 420 € HT · jusqu'au 12/01 »).
+  Un mois à venir montre la règle. Textes dans les cinq langues.
+
+Le tableau du cockpit (`#/primes-app-worker`, demande : « un beau tableau, simple, minimaliste type Apple ») : des
+listes groupées façon Réglages d'iPhone — Targets, Catégories, Promos, Clients pro · B2B —, une ligne par prime
+(l'interrupteur, le nom, ce qui compte en gris, la récompense et qui paie à droite) ; toucher la ligne la modifie.
+
 ## L'onglet Primes (23/10/2026) : combien, comment y arriver, où tu en es — en forme sobre, puis en une seule liste
 
 Deux demandes : « tourner l'application vers la motivation de ce que tu peux gagner, comment y arriver, où tu en

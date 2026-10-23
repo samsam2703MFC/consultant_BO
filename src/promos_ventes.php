@@ -155,12 +155,16 @@ function pvConditions(array $d): array
     $motWeb = '/web|online|ecom|e-com|delivery|click|internet/';
     foreach ($d as $k => $v) {
         $k0 = (string) $k; $k = strtolower($k0);
-        if ($seuil === null && is_numeric($v) && (float) $v > 0
-            && preg_match('/^(min(imum)?_(ticket|basket|order|cart|receipt|transaction|purchase|spend)(_(amount|total|value))?|(ticket|basket|order|cart|receipt|transaction)_(min|minimum|threshold)(_(amount|value))?|(trigger_)?threshold(_amount)?|min(imum)?_(amount|spend|total)|(min(imum)?_)?trigger_(min(imum)?_)?(amount|value|threshold|total|spend))$/', $k) === 1) {
+        // Le seuil : `minimum_receipt_gross` au panel (relu le 23/10/2026, le minimum du ticket TTC), ou un nom plausible.
+        $estSeuil = preg_match('/^(min(imum)?_(ticket|basket|order|cart|receipt|transaction|purchase|spend)(_(amount|total|value|gross|net))?|(ticket|basket|order|cart|receipt|transaction)_(min|minimum|threshold)(_(amount|value))?|(trigger_)?threshold(_amount)?|min(imum)?_(amount|spend|total)|(min(imum)?_)?trigger_(min(imum)?_)?(amount|value|threshold|total|spend))$/', $k) === 1;
+        if ($seuil === null && $estSeuil && is_numeric($v) && (float) $v > 0) {
             $seuil = round((float) $v, 2); $cles['seuil'] = $k0;
         }
+        // Un champ de seuil vide dit quand même son nom : il existe au panel, le cockpit peut y écrire.
+        if ($estSeuil && $v === null && $cles['seuil'] === null) { $cles['seuil'] = $k0; }
         // Le canal : une liste (« POS », « WEBSHOP »), ou une seule valeur — la « destination » (SHOP, WEBSHOP, BOTH).
-        if (preg_match('/^(available_)?(sales_)?(channels?|order_sources?|sources|destinations?|(sale|sales|order)_destinations?)$/', $k) === 1) {
+        // `sales_channel_scope` au panel (relu le 23/10/2026 : « BOTH »).
+        if (preg_match('/^(available_)?(sales_)?(channels?|channels?_scope|order_sources?|sources|destinations?|(sale|sales|order)_destinations?)$/', $k) === 1) {
             $l = is_array($v) ? $v : (is_string($v) && $v !== '' ? [$v] : []);
             $mots = array_map(static fn ($x) => is_scalar($x) ? (string) $x : (string) ($x['code'] ?? $x['name'] ?? $x['type'] ?? ''), $l);
             $t = strtolower(implode(' ', $mots));

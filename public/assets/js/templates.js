@@ -6985,16 +6985,64 @@ function tplPromosMag(c, x){
 </div>`;
 }
 
+/* La prime B2B en une phrase (23/10/2026, l'option D des maquettes docs/maquettes/primes-b2b) : « Pour chaque nouveau client
+   pro, la vendeuse touche 5 % de chaque commande pendant 3 mois. » Les mots en couleur se touchent pour changer ; un
+   exemple chiffré dessous ; le plafond, la commande minimum, le nom et les dates dans « plus de réglages ». */
+function tplPrB2b(B, x){
+  const esc = x.esc;
+  const sf = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Segoe UI',system-ui,sans-serif";
+  const ac = 'var(--color-collection-border)';
+  const muet = 'var(--color-text-muted)';
+  const tok = 'color:' + ac + ';border-bottom:2px dotted ' + ac + ';padding:0 1px';
+  // Un mot qui se touche : le texte, et un choix invisible posé dessus.
+  const choix = (texte, options, val, fn) => `<span style="position:relative;display:inline-block;${tok};cursor:pointer">${esc(texte)}<select ${x.C(fn)} style="position:absolute;inset:0;opacity:0;cursor:pointer;font:inherit;width:100%">${options.map(([v, t]) => `<option value="${esc(v)}"${String(v) === String(val) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></span>`;
+  const chp = `width:100%;box-sizing:border-box;border:0;border-radius:10px;padding:10px 12px;font:500 14px ${sf};background:var(--color-background-secondary);color:var(--color-text)`;
+  const lab = `display:block;font:500 12px ${sf};color:${muet};margin-bottom:6px`;
+  const champ = (lib, id, val, fn, type, indice) => `<label><span style="${lab}">${esc(lib)}</span><input id="${id}" type="${type}" value="${esc(val)}" placeholder="${esc(indice || '')}" ${x.I(fn)} style="${chp}"></label>`;
+  return `
+  <div ${x.A(B.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.32);z-index:80"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:flex-start;justify-content:center;padding:70px 16px;overflow-y:auto;pointer-events:none">
+    <div role="dialog" aria-modal="true" aria-label="${esc(B.titre)}" data-pr-b2b style="pointer-events:auto;width:100%;max-width:820px;background:var(--color-surface);border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,.22);padding:36px 48px 30px;font-family:${sf};color:var(--color-text)">
+      <div style="display:flex;align-items:center;gap:8px;font:500 13px ${sf};color:${muet}">
+        <span>${esc(B.titre)}</span>${B.magasins ? ` · ${choix(B.magasinNom || 'choisir le magasin', [['', 'choisir le magasin']].concat(B.magasins), B.shop, B.poserShop)}` : B.magasinNom ? ' · ' + esc(B.magasinNom) : ''}
+        <span style="flex:1"></span><button ${x.A(B.fermer)} aria-label="Fermer" style="border:0;background:none;font-size:18px;color:${muet};cursor:pointer">✕</button>
+      </div>
+      <div data-b2b-phrase style="font:500 34px/1.5 ${sf};letter-spacing:-.015em;margin:18px 0 28px">
+        Pour chaque nouveau client pro, la vendeuse touche
+        <input id="b2b-valeur" type="text" inputmode="decimal" value="${esc(B.valeur)}" ${x.I(B.poserValeur)} aria-label="${B.mode === 'fixe' ? 'Montant' : 'Pourcentage'}" style="width:${Math.max(1, String(B.valeur).length) + 0.4}ch;border:0;${tok};background:transparent;font:inherit;text-align:right;outline:none">&nbsp;${choix(B.mode === 'fixe' ? '€' : '%', [['pct', '% de la commande'], ['fixe', '€ — un montant fixe']], B.mode, B.poserMode)}
+        ${B.mode === 'fixe' ? 'à sa 1re commande' : choix(B.dureeTxt, B.durees, B.duree, B.poserDuree)}.
+      </div>
+      <div style="height:1px;background:var(--color-border-tertiary)"></div>
+      <p data-b2b-exemple style="font:400 16px/1.5 ${sf};color:${muet};margin:20px 0 6px">${B.exemple}</p>
+      <p style="font:400 13px/1.5 ${sf};color:${muet};margin:0">Un nouveau client pro : marqué pro au panel, avec une TVA valide, sans commande pro depuis 12 mois. La prime va à la vendeuse qui encaisse sa 1re commande. Montants HT.</p>
+      ${B.plus ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px;margin-top:22px">
+        ${champ('Nom dans l’app', 'b2b-lib', B.lib, B.poserLib, 'text', 'Ramène un client pro')}
+        ${champ('Plafond par client (€, vide : aucun)', 'b2b-plafond', B.plafond, B.poserPlafond, 'number', 'aucun')}
+        ${champ('Commande minimum (€ HT)', 'b2b-min', B.min, B.poserMin, 'number', 'aucune')}
+        ${champ('Pour les clients ramenés dès le', 'b2b-du', B.du, B.poserDu, 'date')}
+        ${champ('Jusqu’au (vide : sans fin)', 'b2b-au', B.au, B.poserAu, 'date')}
+      </div>` : ''}
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:28px">
+        <button ${x.A(B.basculerPlus)} style="border:0;background:none;padding:0;font:500 14px ${sf};color:${ac};cursor:pointer">${B.plus ? 'Moins de réglages' : 'Plafond, commande minimum, nom, dates…'}</button>
+        <span style="flex:1"></span>
+        ${B.supprimer ? `<button ${x.A(B.supprimer)} style="border:0;background:none;font:500 14px ${sf};color:var(--color-primary);cursor:pointer">Supprimer</button>` : ''}
+        <button ${x.A(B.fermer)} style="border:0;border-radius:999px;padding:11px 20px;font:600 14.5px ${sf};background:var(--color-background-secondary);color:var(--color-text);cursor:pointer">Annuler</button>
+        <button ${x.A(B.enregistrer)} data-b2b-enregistrer style="border:0;border-radius:999px;padding:11px 22px;font:600 14.5px ${sf};background:${ac};color:var(--color-surface);cursor:pointer;${B.ok && !B.envoi ? '' : 'opacity:.45;pointer-events:none'}">${B.envoi ? 'Enregistrement…' : B.edit ? 'Enregistrer' : 'Créer la prime'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function tplPrimesApp(c, x){
   const { esc } = x;
-  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
-  const carte2 = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
+  const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:inherit;font-size:11.5px;cursor:pointer`;
+  const carte2 = 'background:var(--color-surface);border-radius:14px';
   const lbl2 = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)';
-  const inp = w => `width:${w}px;font-family:var(--font-ui);font-size:12.5px;padding:5px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right`;
+  const inp = w => `width:${w}px;font-family:inherit;font-size:12.5px;padding:5px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);background:var(--color-surface);text-align:right`;
   const th2 = 'font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:8px 9px;border-bottom:0.5px solid var(--color-border-secondary);text-align:right;vertical-align:bottom';
   const td2 = 'padding:8px 9px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;vertical-align:middle';
   const sm = 'display:block;font-weight:500;letter-spacing:0;text-transform:none;font-size:10px';
-  const bt = f => `border:0;background:${f ? 'var(--color-primary)' : 'var(--color-background-secondary)'};color:${f ? 'var(--color-surface)' : 'var(--color-text)'};border-radius:var(--radius-md);padding:var(--spacing-sm) 14px;font-family:var(--font-ui);font-size:12.5px;font-weight:600;cursor:pointer`;
+  const bt = f => `border:0;background:${f ? 'var(--color-primary)' : 'var(--color-background-secondary)'};color:${f ? 'var(--color-surface)' : 'var(--color-text)'};border-radius:var(--radius-md);padding:var(--spacing-sm) 14px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer`;
   // Les couleurs viennent toutes du design system (assets/ds/global.css) : pas de valeur en dur.
   const typC = { target: 'background:var(--color-background-secondary);color:var(--color-text)', categorie: 'background:var(--color-collection-fill);color:var(--color-collection-icon)',
     promo: 'background:var(--color-secondary);color:var(--color-on-abricot)', classement: 'background:var(--color-popup);color:var(--color-surface)' };
@@ -7022,126 +7070,133 @@ function tplPrimesApp(c, x){
     ? `vendus pendant la promo · <select ${x.C(l.poserRegle)} style="${inp(150)};text-align:left">${l.regles.map(([v, t]) => `<option value="${v}"${l.regle === v ? ' selected' : ''}>${t}</option>`).join('')}</select>${l.surObjectif ? `<span style="${sm};margin-top:3px;color:var(--color-text)">objectifs : ${esc(l.objectifsTxt)}</span>` : ` · <input type="number" min="0" step="1" value="${esc(l.minPieces)}" ${x.C(l.poser('minPieces', true))} style="${inp(48)}"> ${l.regle === 'seuil' ? 'pcs (seuil)' : 'min.'}`}<span style="${sm};color:var(--color-text-muted)">${esc(l.promoNom)} · ${esc(l.promoSorte)} · ${esc(l.promoDates)} · ${esc(l.promoMags)} · ${esc(l.promoSource)}${l.promoVide ? ' · <b style="color:var(--color-primary)">produit introuvable</b>' : ''}</span>`
     : esc(l.texte || '');
   // Le tableau ne s'édite plus (16/10/2026) : l'interrupteur actif / éteint, et « Modifier » qui rouvre l'assistant.
-  const inter = l => `<label title="${l.actif ? 'Active — cliquer pour l’éteindre' : 'Éteinte — cliquer pour l’activer'}" data-pr-actif style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;vertical-align:middle"><input type="checkbox" ${l.actif ? 'checked' : ''} ${x.C(l.basculer)} style="position:absolute;opacity:0;width:0;height:0"><span style="position:absolute;inset:0;border-radius:8px;background:${l.actif ? 'var(--color-primary)' : 'var(--color-border-secondary)'}"></span><span style="position:absolute;top:2px;left:${l.actif ? 18 : 2}px;width:16px;height:16px;border-radius:50%;background:var(--color-surface);box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></label>`;
   const tuileFixe = l => `<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:var(--radius-md);background:var(--color-background-secondary);overflow:hidden">${l.icone ? `<img src="${esc(l.icone)}" alt="" style="width:24px;height:24px;object-fit:contain">` : `<span style="font-size:16px;line-height:1">${l.emo}</span>`}</span>`;
-  const modif = l => `<button ${x.A(l.modifier)} data-pr-modifier style="border:0.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:var(--radius-pill);padding:5px 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:600;cursor:pointer">Modifier</button>`;
-  const tr = l => `<tr data-pr-prime="${esc(l.type)}" style="${l.externe || l.actif ? '' : 'opacity:.55'}">
-        <td style="${td2};text-align:center">${l.externe ? '<span style="color:var(--color-text-muted)">—</span>' : inter(l)}</td>
-        <td style="${td2};text-align:left"><span style="display:inline-flex;align-items:center;gap:var(--spacing-sm)">${tuileFixe(l)}<b>${esc(l.lib)}</b>${l.etatPeriode ? `<span data-pr-periode style="font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:var(--radius-pill);background:var(--color-background-secondary);color:var(--color-text-muted)">${esc(l.etatPeriode)}</span>` : ''}</span></td>
-        <td style="${td2};text-align:left">${typ(l.type, l.typLib)}</td>
-        <td style="${td2};text-align:left;white-space:normal;min-width:250px">${esc(l.texte || '')}${l.periodeTxt ? `<span style="${sm};margin-top:3px;color:var(--color-text)">période : ${esc(l.periodeTxt)}</span>` : ''}${l.surObjectif ? `<span style="${sm};margin-top:3px;color:var(--color-text)">objectifs : ${esc(l.objectifsTxt)}</span>` : ''}${l.promoVide ? ` <b style="color:var(--color-primary)">produit introuvable</b>` : ''}<span style="${sm};margin-top:3px;color:var(--color-text-muted)">gagne : ${esc(l.qui)}</span></td>
-        <td style="${td2};text-align:left;color:var(--color-popup);font-weight:600;white-space:normal">${esc(l.moyenne)}</td>
-        <td style="${td2};text-align:center;color:var(--color-text-muted)">${l.externe ? '' : l.peutClasser ? (l.classement ? '✓' : '—') : ''}</td>
-        <td style="${td2};text-align:left;white-space:normal">${esc(l.payeurTxt || '')}</td>
-        <td style="${td2};white-space:normal">${l.externe ? `${esc(l.montant)}<span style="${sm}">réglé dans Targets &amp; primes</span>` : esc(l.montantTxt || '')}</td>
-        <td style="${td2}">${modif(l)}</td></tr>`;
-  const entete = (colPayeur, moyLib) => `<thead><tr><th style="${th2};text-align:center">Active</th><th style="${th2};text-align:left">Prime</th><th style="${th2};text-align:left">Type</th><th style="${th2};text-align:left">Ce qui compte</th>
-        <th style="${th2};text-align:left">${esc(moyLib || 'Moyenne réseau')}<span style="${sm}">${esc(MY.nMois || '')}, par mois</span></th><th style="${th2};text-align:center">Classement</th><th style="${th2};text-align:left">${colPayeur}</th><th style="${th2}">Récompense</th><th style="${th2}"></th></tr></thead>`;
-  // La page franchisé (23/10/2026) : le panneau des primes d'UN magasin.
+  // La forme sobre, façon Réglages d'iPhone (23/10/2026, demande : « un beau tableau, simple, design, minimaliste type
+  // Apple ») : la police du système, des listes groupées blanches sur le fond, une ligne par prime — l'interrupteur, le nom,
+  // ce qui compte en gris, la récompense à droite ; toucher la ligne la modifie. Les primes se rangent par sorte.
+  const sf = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Segoe UI',system-ui,sans-serif";
+  const filet = '0.5px solid var(--color-border-tertiary)';
+  const muet = 'var(--color-text-muted)';
+  const groupeSt = 'background:var(--color-surface);border-radius:14px;overflow:hidden';
+  const titreG = `font:600 11.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};padding:20px 18px 8px`;
+  const btP = `border:0;border-radius:999px;padding:9px 17px;font:600 13.5px ${sf};background:var(--color-primary);color:var(--color-surface);cursor:pointer`;
+  const btS = `border:0;border-radius:999px;padding:9px 17px;font:600 13.5px ${sf};background:var(--color-surface);color:var(--color-text);cursor:pointer`;
+  const btB2b = `border:0;border-radius:999px;padding:9px 17px;font:600 13.5px ${sf};background:var(--color-secondary);color:var(--color-on-abricot);cursor:pointer`;
+  const interIos = (on, fn, titre, attr) => `<label title="${esc(titre)}" ${attr || ''} style="position:relative;display:inline-block;width:42px;height:25px;cursor:pointer;flex:none"><input type="checkbox" ${on ? 'checked' : ''} ${x.C(fn)} style="position:absolute;opacity:0;width:0;height:0"><span style="position:absolute;inset:0;border-radius:13px;background:${on ? 'var(--color-primary)' : 'var(--color-border-secondary)'}"></span><span style="position:absolute;top:2px;left:${on ? 19 : 2}px;width:21px;height:21px;border-radius:50%;background:var(--color-surface);box-shadow:0 2px 4px rgba(0,0,0,.18)"></span></label>`;
+  // Le corps d'une ligne : l'icône, le nom, ce qui compte en gris, la récompense à droite.
+  const corpsP = l => `
+        ${tuileFixe(l)}
+        <span style="flex:1;min-width:0">
+          <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="font:600 15px/1.3 ${sf}">${esc(l.lib)}</b>${l.etatPeriode ? `<span data-pr-periode style="font:600 10px ${sf};letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:var(--color-background-secondary);color:${muet}">${esc(l.etatPeriode)}</span>` : ''}</span>
+          <span style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:2px">${esc(l.texte || '')}${l.periodeTxt ? ' · ' + esc(l.periodeTxt) : ''}${l.surObjectif ? ' · objectifs : ' + esc(l.objectifsTxt) : ''}${l.objectifTxt ? ' · ' + esc(l.objectifTxt) : ''}${l.promoVide ? ` · <b style="color:var(--color-primary)">produit introuvable</b>` : ''}</span>
+          <span style="display:block;font:400 12px/1.4 ${sf};color:${muet};opacity:.8;margin-top:1px">gagne : ${esc(l.qui || '')}${l.moyenne ? ' · ' + esc(l.moyLib || 'réseau') + ' : ' + esc(l.moyenne) : ''}${l.peutClasser && l.classement ? ' · classement dans l’app' : ''}</span>
+        </span>
+        <span style="text-align:right;flex:none;max-width:210px">
+          <b style="display:block;font:600 15px/1.3 ${sf};font-variant-numeric:tabular-nums">${esc(l.externe ? l.montant : (l.montantTxt || ''))}</b>
+          <span style="display:block;font:400 12px/1.35 ${sf};color:${muet};margin-top:2px">${esc(l.externe ? 'réglé dans Targets & primes' : (l.payeurTxt || ''))}</span>
+        </span>`;
+  const ligneP = (l, i) => `<div data-pr-prime="${esc(l.type)}" style="display:flex;align-items:center;gap:14px;padding-left:18px;${i ? `border-top:${filet};` : ''}${l.externe || l.actif ? '' : 'opacity:.5'}">
+      ${l.externe ? `<span style="width:42px;text-align:center;color:var(--color-border-secondary);flex:none">—</span>` : interIos(l.actif, l.basculer, l.actif ? 'Active — toucher pour l’éteindre' : 'Éteinte — toucher pour l’activer', 'data-pr-actif')}
+      <button ${x.A(l.modifier)} data-pr-modifier style="flex:1;min-width:0;display:flex;align-items:center;gap:13px;border:0;background:none;padding:13px 18px 13px 0;text-align:left;cursor:pointer;font-family:${sf};color:var(--color-text)">
+        ${corpsP(l)}
+        <span aria-hidden="true" style="color:var(--color-border-secondary);font:400 22px/1 ${sf};flex:none">›</span>
+      </button></div>`;
+  // La même ligne, à lire seulement (23/10/2026) : une prime de la marque sur la page d'un magasin.
+  const ligneLire = (l, i) => `<div data-pr-prime="${esc(l.type)}" data-pr-lire style="display:flex;align-items:center;gap:13px;padding:13px 18px;${i ? `border-top:${filet};` : ''}font-family:${sf};color:var(--color-text)">${corpsP(l)}</div>`;
+  // Les sortes, dans l'ordre : les targets (Bats ton record et la meilleure vendeuse avec eux), les catégories, les promos,
+  // les clients pro (la prime B2B, 23/10/2026).
+  const SORTES = [['target', 'Targets', t => t === 'target' || t === 'classement'], ['categorie', 'Catégories', t => t === 'categorie'],
+    ['promo', 'Promos', t => t === 'promo'], ['b2b', 'Clients pro · B2B', t => t === 'b2b']];
+  const groupes = (ls, ligne) => SORTES.map(([cle, titre, de]) => { const g = ls.filter(l => de(l.type));
+    return g.length ? `<div data-pr-groupe="${cle}"><div style="${titreG}">${esc(titre)}<span style="font-weight:400;letter-spacing:0;text-transform:none;margin-left:6px">${g.length}</span></div><div style="${groupeSt}">${g.map(ligne || ligneP).join('')}</div></div>` : ''; }).join('');
+  const tete = (titre, sous, droite) => `<div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:4px 4px 2px">
+      <div style="flex:1;min-width:280px"><div style="font:700 26px/1.15 ${sf};letter-spacing:-.02em;color:var(--color-text)">${titre}</div><div style="font:400 13.5px/1.45 ${sf};color:${muet};margin-top:5px;max-width:760px">${sous}</div></div>${droite || ''}</div>`;
+  const vide = t => `<div style="${groupeSt};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">${t}</div>`;
+  // La page franchisé (23/10/2026, Sam : « le panneau de contrôle des primes pour son magasin ») : UN magasin, celui de
+  // l'adresse (#/primes-app-worker?shop=3), dans la même forme sobre. Les primes de la marque et des sponsors qui y
+  // tournent, à lire ; les siennes, à poser avec les données du magasin ; ses chiffres ; les promotions du panel.
   const FR = c.prFr;
   const frPage = () => {
-    const tete = `<div style="${carte2};padding:16px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap" data-pr="fr-tete">
-      <div><div style="${lbl2}">Panneau des primes du magasin</div><div style="font-family:var(--font-display);font-size:26px;margin-top:2px">${esc(FR.nom || 'Magasin ' + FR.id)}</div></div>
-      <span data-pr-shop="${esc(FR.id)}" style="font-size:11.5px;font-weight:700;color:var(--color-text);padding:4px 11px;border-radius:var(--radius-pill);background:var(--color-background-secondary);font-variant-numeric:tabular-nums">shop ${esc(FR.id)}</span>
-      ${FR.note ? `<span style="font-size:11.5px;color:var(--color-text-muted)">note Google ${esc(FR.note)}</span>` : ''}
-      <span style="flex:1"></span>
-      <span style="font-size:11.5px;color:var(--color-text-muted);max-width:430px;line-height:1.45">Les primes de la marque et des sponsors qui tournent dans ce magasin, les siennes, ses chiffres et les promotions du panel qui y tournent. Le magasin se lit dans l’adresse : <b style="color:var(--color-text)">…/#/primes-app-worker?shop=${esc(FR.id)}</b></span>
-    </div>`;
+    const shopId = `<span data-pr-shop="${esc(FR.id)}" style="font:600 12.5px ${sf};padding:6px 13px;border-radius:999px;background:var(--color-surface);color:var(--color-text);font-variant-numeric:tabular-nums">shop ${esc(FR.id)}</span>`;
+    const entete = `<section data-pr="fr-tete">${tete(esc(FR.nom || 'Magasin ' + FR.id),
+      'Le panneau des primes du magasin : celles de la marque et des sponsors qui y tournent, les siennes — payées par lui, en plus —, ses chiffres et les promotions du panel. Le magasin se lit dans l’adresse.',
+      `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">${FR.note ? `<span style="font:400 13px ${sf};color:${muet}">note Google ${esc(FR.note)}</span>` : ''}${shopId}</div>`)}</section>`;
     if (!FR.connu) {
-      return tete + `<div style="${carte2};padding:16px 18px" data-pr="fr-inconnu"><div style="font-size:13px;color:var(--color-primary);font-weight:600">Aucun magasin « ${esc(FR.id)} » dans le panel.</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${FR.magasins.map(m => `<button ${x.A(m.aller)} style="${pill(false)}">${esc(m.nom)} · shop ${esc(m.id)}</button>`).join('')}</div></div>`;
+      return entete + `<section data-pr="fr-inconnu"><div style="${groupeSt};padding:18px">
+        <div style="font:600 14px ${sf};color:var(--color-primary)">Aucun magasin « ${esc(FR.id)} » dans le panel.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${FR.magasins.map(m => `<button ${x.A(m.aller)} style="${btS};background:var(--color-background-secondary);font-weight:500">${esc(m.nom)} · shop ${esc(m.id)}</button>`).join('')}</div></div></section>`;
     }
-    const trLire = l => `<tr data-pr-prime="${esc(l.type)}">
-        <td style="${td2};text-align:left"><span style="display:inline-flex;align-items:center;gap:var(--spacing-sm)">${tuileFixe(l)}<b>${esc(l.lib)}</b>${l.etatPeriode ? `<span data-pr-periode style="font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:var(--radius-pill);background:var(--color-background-secondary);color:var(--color-text-muted)">${esc(l.etatPeriode)}</span>` : ''}</span></td>
-        <td style="${td2};text-align:left">${typ(l.type, l.typLib)}</td>
-        <td style="${td2};text-align:left;white-space:normal;min-width:260px">${esc(l.texte || '')}${l.periodeTxt ? `<span style="${sm};margin-top:3px;color:var(--color-text)">période : ${esc(l.periodeTxt)}</span>` : ''}${l.objectifTxt ? `<span style="${sm};margin-top:3px;color:var(--color-text)">${esc(l.objectifTxt)}</span>` : ''}<span style="${sm};margin-top:3px;color:var(--color-text-muted)">gagne : ${esc(l.qui)}</span></td>
-        <td style="${td2};text-align:left;color:var(--color-popup);font-weight:600;white-space:normal">${esc(l.moyenne || '—')}</td>
-        <td style="${td2};text-align:left;white-space:normal">${esc(l.payeurTxt || '')}</td>
-        <td style="${td2};white-space:normal">${l.externe ? esc(l.montant) : esc(l.montantTxt || '')}</td></tr>`;
-    const marque = `<div style="${carte2};overflow:hidden" data-pr="fr-marque">
-      <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:14px 16px 6px"><div style="font-family:var(--font-display);font-size:22px">Primes de la marque et des sponsors</div><span style="font-size:11.5px;color:var(--color-text-muted)">${FR.marque.length} qui tournent dans ce magasin · posées par la marque, à lire</span></div>
-      ${FR.marque.length ? `<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12.5px">
-        <thead><tr><th style="${th2};text-align:left">Prime</th><th style="${th2};text-align:left">Type</th><th style="${th2};text-align:left">Ce qui compte</th><th style="${th2};text-align:left">Moyenne du magasin<span style="${sm}">${esc(MY.nMois || '')}, par mois</span></th><th style="${th2};text-align:left">Payée par</th><th style="${th2}">Récompense</th></tr></thead>
-        <tbody>${FR.marque.map(trLire).join('')}</tbody></table></div>` : `<div style="padding:6px 16px 16px;font-size:12.5px;color:var(--color-text-muted)">Aucune prime de la marque ni des sponsors ne tourne dans ce magasin pour l’instant.</div>`}
-    </div>`;
-    const siennes = `<div style="${carte2};overflow:hidden" data-pr="fr-magasin">
-      <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:14px 16px 6px"><div style="font-family:var(--font-display);font-size:22px">Les primes du magasin</div><span style="font-size:11.5px;color:var(--color-text-muted)">${FR.siennes.length} · promotions, catégories et targets posés et payés par le magasin, vus de ses seules vendeuses</span></div>
-      ${FR.siennes.length ? `<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12.5px">
-        ${entete('Payée par', 'Moyenne du magasin')}
-        <tbody>${FR.siennes.map(tr).join('')}</tbody></table></div>` : `<div style="padding:6px 16px 16px;font-size:12.5px;color:var(--color-text-muted)">Aucune prime du magasin pour l’instant : posez la première sur ses produits, avec ses chiffres de l’an dernier.</div>`}
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:var(--color-background-secondary)">
-        ${FR.nouvelle ? `<button ${x.A(FR.nouvelle)} style="${bt(true)}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin</button>` : ''}
-        <span style="font-size:11.5px;color:var(--color-text-muted)">Promotion, catégorie, ventes croisées, objectif CA ou note Google · six de chaque au plus · tout se règle : le déclencheur, la condition, la récompense ou un cadeau, la période.</span>
+    const marque = `<section data-pr="fr-marque">
+      ${tete('Primes de la marque et des sponsors', 'Celles qui tournent dans ce magasin, à lire : la marque les règle. Ses vendeuses les retrouvent dans Mes primes.')}
+      ${FR.marque.length ? groupes(FR.marque, ligneLire) : vide('Aucune prime de la marque ni des sponsors ne tourne dans ce magasin pour l’instant.')}
+    </section>`;
+    const siennes = `<section data-pr="fr-magasin">
+      ${tete('Les primes du magasin', 'Posées par le magasin pour ses vendeuses seules, payées par lui. Tout se règle : le déclencheur — promotion, catégorie, ventes croisées, objectif CA, note Google, clients pro —, la condition, la récompense ou un cadeau, la période. Six de chaque sorte au plus.')}
+      ${FR.siennes.length ? groupes(FR.siennes) : vide('Aucune prime du magasin pour l’instant : posez la première, avec ses chiffres ci-dessous.')}
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px 4px 0">
+        ${FR.nouvelle ? `<button ${x.A(FR.nouvelle)} style="${btP}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin</button>` : ''}
       </div>
-    </div>`;
-    const tuileStat = s => `<div style="background:var(--color-background-secondary);border-radius:var(--radius-md);padding:10px 12px;min-width:0"><div style="${lbl2}">${esc(s.lib)}</div><div style="font-size:19px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums">${esc(s.v)}</div>${s.sous ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(s.sous)}</div>` : ''}${s.reseau ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(s.reseau)}</div>` : ''}</div>`;
-    const donnees = `<div style="${carte2};overflow:hidden" data-pr="fr-donnees">
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px"><div style="font-family:var(--font-display);font-size:22px">Les chiffres du magasin</div>${FR.periode ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(FR.periode)} · par mois, face au réseau</span>` : ''}<span style="flex:1"></span>${FR.ns.map(k => `<button ${x.A(k.choisir)} style="${pill(k.on)}">${esc(k.nom)}</button>`).join('')}</div>
-      ${FR.moyChargement ? `<div style="padding:10px 16px 16px;color:var(--color-text-muted);font-size:12.5px">Calcul des moyennes…</div>` : FR.moyMotif ? `<div style="padding:10px 16px 16px;color:var(--color-primary);font-size:12.5px">${esc(FR.moyMotif)}</div>` : `
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:8px 16px 4px">${FR.donnees.map(tuileStat).join('')}</div>
-      ${FR.pieces.length ? `<div style="padding:10px 16px 0;${lbl2}">Pièces par vendeuse et par mois</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:6px 16px 4px">${FR.pieces.map(p => tuileStat({ lib: p.lib, v: p.v, reseau: p.reseau ? 'réseau ' + p.reseau : '' })).join('')}</div>` : ''}
-      ${FR.promosVend.length ? `<div style="padding:10px 16px 0;${lbl2}">Promotions en cours · pièces par vendeuse</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:6px 16px 4px">${FR.promosVend.map(p => tuileStat({ lib: p.lib, v: p.v, sous: p.du ? 'dès le ' + p.du : '', reseau: p.reseau ? 'réseau ' + p.reseau : '' })).join('')}</div>` : ''}
-      <div style="height:12px"></div>`}
-    </div>`;
+    </section>`;
+    // Les chiffres : des tuiles sur une liste blanche, le magasin en grand, le réseau en gris.
+    const grille = ls => `<div style="${groupeSt};display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));padding:4px 0">${ls.map(s => `<div style="padding:12px 18px;min-width:0">
+        <div style="font:400 12.5px/1.3 ${sf};color:${muet}">${esc(s.lib)}</div>
+        <div style="font:600 21px/1.25 ${sf};font-variant-numeric:tabular-nums;margin-top:4px;color:var(--color-text)">${esc(s.v)}</div>
+        ${s.sous || s.reseau ? `<div style="font:400 11.5px/1.4 ${sf};color:${muet};margin-top:3px">${esc([s.sous, s.reseau].filter(Boolean).join(' · '))}</div>` : ''}</div>`).join('')}</div>`;
+    const sousTitre = t => `<div style="${titreG}">${esc(t)}</div>`;
+    const donnees = `<section data-pr="fr-donnees">
+      ${tete('Les chiffres du magasin', FR.periode ? esc(FR.periode) + ' · par mois, face au réseau' : 'Par mois, face au réseau',
+        `<div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${FR.ns.map(k => `<button ${x.A(k.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:500 12.5px ${sf};cursor:pointer;background:${k.on ? 'var(--color-surface)' : 'transparent'};color:${k.on ? 'var(--color-text)' : muet}">${esc(k.nom)}</button>`).join('')}</div>`)}
+      ${FR.moyChargement ? vide('Calcul des moyennes…') : FR.moyMotif ? vide(esc(FR.moyMotif)) : `
+      <div style="margin-top:14px">${grille(FR.donnees)}</div>
+      ${FR.pieces.length ? sousTitre('Pièces par vendeuse et par mois') + grille(FR.pieces.map(p => ({ lib: p.lib, v: p.v, reseau: p.reseau ? 'réseau ' + p.reseau : '' }))) : ''}
+      ${FR.promosVend.length ? sousTitre('Promotions en cours · pièces par vendeuse') + grille(FR.promosVend.map(p => ({ lib: p.lib, v: p.v, sous: p.du ? 'dès le ' + p.du : '', reseau: p.reseau ? 'réseau ' + p.reseau : '' }))) : ''}`}
+    </section>`;
+    // Les promotions du panel qui tournent ici : une prime du magasin en un geste.
     const PF = FR.promos;
-    const promosIci = `<div style="${carte2};overflow:hidden" data-pr="fr-promos">
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px"><div style="font-family:var(--font-display);font-size:22px">Promotions du panel dans ce magasin</div><span style="font-size:11.5px;color:var(--color-text-muted)">une prime du magasin en un geste</span><span style="flex:1"></span><button ${x.A(PF.relire)} style="${bt(false)}">Relire</button></div>
-      ${PF.chargement ? `<div style="padding:10px 16px 16px;color:var(--color-text-muted);font-size:12.5px">Lecture des promotions…</div>` : PF.motif ? `<div style="padding:10px 16px 16px;color:var(--color-primary);font-size:12.5px">${esc(PF.motif)}</div>` : !PF.liste.length ? `<div style="padding:10px 16px 16px;color:var(--color-text-muted);font-size:12.5px">Aucune promotion du panel ne tourne dans ce magasin.</div>` : `
-      <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12.5px">
-        <thead><tr><th style="${th2};text-align:left">Promotion</th><th style="${th2};text-align:left">Sorte</th><th style="${th2}">Prix</th><th style="${th2};text-align:left">Dates</th><th style="${th2};text-align:left">Tourne dans</th><th style="${th2};text-align:left">Ce qui se compte</th><th style="${th2};text-align:center">Prime de la marque</th><th style="${th2};text-align:center">Prime du magasin</th></tr></thead>
-        <tbody>${PF.liste.map(p => `<tr>
-          <td style="${td2};text-align:left"><b>${esc(p.nom)}</b></td><td style="${td2};text-align:left">${typ('promo', p.sorte)}</td><td style="${td2}">${esc(p.prix)}</td>
-          <td style="${td2};text-align:left">${esc(p.dates)}</td><td style="${td2};text-align:left;color:var(--color-text-muted)">${esc(p.portee)}</td>
-          <td style="${td2};text-align:left;color:${p.comptable ? 'var(--color-text-muted)' : 'var(--color-primary)'}">${esc(p.produits)}</td>
-          <td style="${td2};text-align:center;color:var(--color-text-muted)">${esc(p.marque || '—')}</td>
-          <td style="${td2};text-align:center">${p.statutMag ? `<span style="color:${p.statutMag === 'prime du magasin' ? 'var(--color-primary)' : 'var(--color-text-muted)'};font-weight:600">${p.statutMag === 'prime du magasin' ? '✓ ' : ''}${esc(p.statutMag)}</span>` : p.ajouter ? `<button ${x.A(p.ajouter)} style="${bt(false)};padding:5px 11px" data-pr-promo-mag>+ prime du magasin</button>` : ''}</td></tr>`).join('')}</tbody>
-      </table></div>`}
-    </div>`;
-    return tete + marque + siennes + donnees + promosIci;
+    const ligneProm = (p, i) => `<div style="display:flex;align-items:center;gap:14px;padding:13px 18px;${i ? `border-top:${filet};` : ''}">
+        <span style="flex:1;min-width:0">
+          <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="font:600 15px/1.3 ${sf}">${esc(p.nom)}</b><span style="font:400 13px ${sf};color:${muet}">${esc(p.sorte)}${p.prix ? ' · ' + esc(p.prix) : ''}</span></span>
+          <span style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:2px">${esc(p.dates)} · ${esc(p.portee)} · <span style="color:${p.comptable ? muet : 'var(--color-primary)'}">${esc(p.produits)}</span>${p.marque ? ' · ' + esc(p.marque) : ''}</span>
+        </span>
+        <span style="flex:none">${p.statutMag ? `<span style="font:600 13px ${sf};color:${p.statutMag === 'prime du magasin' ? 'var(--color-primary)' : muet}">${p.statutMag === 'prime du magasin' ? '✓ ' : ''}${esc(p.statutMag)}</span>` : p.ajouter ? `<button ${x.A(p.ajouter)} style="${btS};background:var(--color-background-secondary)" data-pr-promo-mag>+ Prime du magasin</button>` : ''}</span>
+      </div>`;
+    const promosIci = `<section data-pr="fr-promos">
+      ${tete('Promotions du panel dans ce magasin', 'Celles du réseau et les siennes : une prime du magasin en un geste.', `<button ${x.A(PF.relire)} style="${btS}">Relire</button>`)}
+      ${PF.chargement ? vide('Lecture des promotions…') : PF.motif ? vide(esc(PF.motif)) : !PF.liste.length ? vide('Aucune promotion du panel ne tourne dans ce magasin.') : `<div style="${groupeSt};margin-top:14px">${PF.liste.map(ligneProm).join('')}</div>`}
+    </section>`;
+    return entete + marque + siennes + donnees + promosIci;
   };
   return `
-<div data-screen="primesApp" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
-  ${c.prChargement ? `<div style="${carte2};padding:16px 18px;color:var(--color-text-muted)">Lecture des paramètres…</div>` : c.prMotif ? `<div style="${carte2};padding:16px 18px;color:var(--color-primary)">${esc(c.prMotif)}</div>` : FR ? frPage() : `
-  <div style="${carte2};overflow:hidden" data-pr="app"${voir('app')}>
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
-      <div style="font-family:var(--font-display);font-size:22px">Primes de la marque et des sponsors</div>
+<div data-screen="primesApp" style="display:flex;flex-direction:column;gap:26px;max-width:1180px;font-family:${sf}">
+  ${c.prChargement ? `<div style="${groupeSt};padding:18px;color:${muet}">Lecture des paramètres…</div>` : c.prMotif ? `<div style="${groupeSt};padding:18px;color:var(--color-primary)">${esc(c.prMotif)}</div>` : FR ? frPage() : `
+  <section data-pr="app"${voir('app')}>
+    ${tete('Primes de la marque', 'Posées par la marque, payées par elle ou par un sponsor. Chaque franchisé les voit ; ses vendeuses les retrouvent dans Mes primes.',
+      `<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font:500 13px ${sf};color:var(--color-text)">
+        <span style="display:inline-flex;align-items:center;gap:9px" title="Un SMS à la vendeuse quand ses primes du mois sont enregistrées">${interIos(P.sms, P.poserSms, 'SMS à la réussite')} SMS à la réussite${P.sms && !P.smsConfigure ? ` <span style="font-size:11px;${alerte};padding:2px 7px">fournisseur à régler : config.php › sms</span>` : ''}</span>
+        <label style="display:inline-flex;align-items:center;gap:8px">Récompense par défaut <input type="number" min="0" max="5000" step="5" value="${esc(P.recompense)}" ${x.C(P.poserRecompense)} style="width:64px;font:600 13px ${sf};padding:6px 8px;border-radius:9px;border:0;background:var(--color-surface);text-align:right"> €</label>
+      </div>`)}
+    ${groupes(P.lignes)}
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px 4px 0">
+      <button ${x.A(P.nouvelle)} style="${btP}" data-pr-nouvelle>+ Nouvelle prime</button>
+      <button ${x.A(P.nouvelleB2b)} style="${btB2b}" data-pr-nouvelle-b2b>+ Prime B2B</button>
       <span style="flex:1"></span>
-      <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600" title="Un SMS à la vendeuse quand ses primes du mois sont enregistrées"><input type="checkbox" ${P.sms ? 'checked' : ''} ${x.C(P.poserSms)}> 📱 SMS à la réussite${P.sms && !P.smsConfigure ? ` <span style="font-weight:500;font-size:11px;${alerte};padding:2px 7px">fournisseur à régler : config.php › sms</span>` : ''}</label>
-      <span style="width:10px"></span>
-      <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600">Récompense par défaut <input type="number" min="0" max="5000" step="5" value="${esc(P.recompense)}" ${x.C(P.poserRecompense)} style="${inp(64)}"> €</label>
+      ${P.modifie ? `<span style="font:400 12.5px ${sf};color:${muet}">SMS ou récompense par défaut changés</span><button ${x.A(P.enregistrer)} style="${btP}" data-pr-enregistrer="app">Enregistrer</button>` : ''}
     </div>
-    <div style="padding:0 16px 10px;font-size:12px;color:var(--color-text-muted);line-height:1.5">Posées par la marque, payées par elle ou par un sponsor. Chaque franchisé les voit ; ses vendeuses les retrouvent dans Mes primes.</div>
-    <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12.5px">
-      ${entete('Payée par')}
-      <tbody>${P.lignes.map(tr).join('')}</tbody>
-    </table></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:var(--color-background-secondary)">
-      <button ${x.A(P.nouvelle)} style="${bt(true)}" data-pr-nouvelle>+ Nouvelle prime</button>
-      <span style="flex:1"></span>
-      ${P.modifie ? `<span style="font-size:11.5px;color:var(--color-text-muted)">SMS ou récompense par défaut changés</span><button ${x.A(P.enregistrer)} style="${bt(true)}" data-pr-enregistrer="app">Enregistrer</button>` : ''}
-    </div>
-  </div>
+  </section>
 
-  <div style="${carte2};overflow:hidden" data-pr="magasins"${voir('magasins')}>
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
-      <div style="font-family:var(--font-display);font-size:22px">Primes des franchisés</div>
-      <span style="font-size:11.5px;color:var(--color-text-muted)">tous les magasins · la page d’un magasin : Page franchisé, ou #/primes-app-worker?shop=…</span>
-      <span style="flex:1"></span>
-      ${P.magsFiltre.map(m => `<button ${x.A(m.choisir)} style="${pill(m.on)}">${esc(m.nom)}${m.n ? ' · ' + m.n : ''}</button>`).join('')}
+  <section data-pr="magasins"${voir('magasins')}>
+    ${tete('Primes des franchisés', 'La prime qu’un franchisé pose pour son magasin, et pour lui seul — ses produits, ses dates, ses clients pro —, payée par le magasin. Seules ses vendeuses la voient. La page d’un magasin : Page franchisé, ou #/primes-app-worker?shop=….')}
+    ${`<div style="display:inline-flex;flex-wrap:wrap;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px;margin:14px 0 0 4px">${P.magsFiltre.map(m => `<button ${x.A(m.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:${m.on ? 600 : 500} 12.5px ${sf};background:${m.on ? 'var(--color-surface)' : 'transparent'};color:var(--color-text);cursor:pointer;${m.on ? 'box-shadow:0 1px 3px rgba(0,0,0,.12)' : ''}">${esc(m.nom)}${m.n ? ` <span style="color:${muet};font-weight:400">${m.n}</span>` : ''}</button>`).join('')}</div>`}
+    ${P.lignesMag.length ? groupes(P.lignesMag) : vide(P.magFiltreNom ? 'Aucune prime pour ' + esc(P.magFiltreNom) + ' pour l’instant.' : 'Aucune prime de franchisé pour l’instant.')}
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px 4px 0">
+      <button ${x.A(P.nouvelleMag)} style="${btP}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin${P.magFiltreNom ? ' · ' + esc(P.magFiltreNom) : ''}</button>
+      <button ${x.A(P.nouvelleB2bMag)} style="${btB2b}" data-pr-nouvelle-b2b-mag>+ Prime B2B${P.magFiltreNom ? ' · ' + esc(P.magFiltreNom) : ''}</button>
     </div>
-    <div style="padding:0 16px 10px;font-size:12px;color:var(--color-text-muted);line-height:1.5">La prime qu’un franchisé pose pour son magasin, et pour lui seul : ses produits, ses dates, sa récompense, payée par le magasin. Seules ses vendeuses la voient.</div>
-    ${P.lignesMag.length ? `<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12.5px">
-      ${entete('Magasin')}
-      <tbody>${P.lignesMag.map(tr).join('')}</tbody>
-    </table></div>` : `<div style="padding:6px 16px 16px;font-size:12.5px;color:var(--color-text-muted)">${P.magFiltreNom ? 'Aucune prime pour ' + esc(P.magFiltreNom) + ' pour l’instant.' : 'Aucune prime de franchisé pour l’instant.'}</div>`}
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:var(--color-background-secondary)">
-      <button ${x.A(P.nouvelleMag)} style="${bt(true)}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin${P.magFiltreNom ? ' · ' + esc(P.magFiltreNom) : ''}</button>
-    </div>
-  </div>
+  </section>
 
   <div style="${carte2};overflow:hidden" data-pr="promos"${voir('promos')}>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
-      <div style="font-family:var(--font-display);font-size:22px">Promotions du panel</div>
+      <div style="font:700 22px/1.2 ${sf};letter-spacing:-.015em">Promotions du panel</div>
       <span style="font-size:11.5px;color:var(--color-text-muted)">celles du réseau, et celles d’un seul magasin (un franchisé)</span>
       <span style="flex:1"></span>
       ${PR.erreur ? `<span style="font-size:11.5px;${alerte};padding:5px 10px">${esc(PR.erreur)}</span>` : ''}
@@ -7164,7 +7219,7 @@ function tplPrimesApp(c, x){
 
   <div style="${carte2};overflow:hidden" data-pr="moyennes"${voir('moyennes')}>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
-      <div style="font-family:var(--font-display);font-size:22px">Moyennes par magasin</div>
+      <div style="font:700 22px/1.2 ${sf};letter-spacing:-.015em">Moyennes par magasin</div>
       ${MY.periode ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(MY.periode)} · par mois</span>` : ''}
       <span style="flex:1"></span>
       ${MY.ns.map(k => `<button ${x.A(k.choisir)} style="${pill(k.on)}">${esc(k.nom)}</button>`).join('')}
@@ -7199,10 +7254,11 @@ function tplPrimesApp(c, x){
   ${c.prWiz ? tplPrWiz(c.prWiz, x) : ''}
   ${c.prEdit ? tplPrEdit(c.prEdit, x) : ''}
   ${c.prChoix ? tplPrChoix(c.prChoix, x) : ''}
+  ${c.prB2b ? tplPrB2b(c.prB2b, x) : ''}
 </div>`;
 }
 
-/** Le choix de la sorte d'une prime du magasin (23/10/2026) : promotion, catégorie, ventes croisées, objectif CA, note Google. */
+/** Le choix de la sorte d'une prime du magasin (23/10/2026) : promotion, catégorie, ventes croisées, objectif CA, note Google, clients pro. */
 function tplPrChoix(C, x){
   const esc = x.esc;
   const mu = 'color:var(--color-text-muted)';
@@ -7418,20 +7474,20 @@ function tplVentes(c, x){
         <thead><tr>
           <th style="${th};text-align:left">Vendeur·se</th><th style="${th};text-align:left">Magasin</th><th style="${th}">Heures</th>
           <th style="${th}">Ventes croisées</th><th style="${th}">€</th><th style="${th}" title="lignes par ticket / record 12 mois">Record</th><th style="${th}">€</th>
-          <th style="${th}">Meilleure</th>${c.tvPrimesMois.concoursActif ? `<th style="${th}" title="pièces vendues · rang dans le magasin">${esc(c.tvPrimesMois.concoursLib)}</th><th style="${th}">€</th>` : ''}${c.tvPrimesMois.promosActif ? `<th style="${th}" title="pièces vendues sur les dates de la promo · 1re du magasin">${esc(c.tvPrimesMois.promosLib)}</th><th style="${th}">€</th>` : ''}<th style="${th}">Objectif magasin</th><th style="${th}" title="la note Google du magasin à son seuil ou mieux : la récompense pour chacune au planning">Note Google</th>${c.tvPrimesMois.ciblesActif ? `<th style="${th}" title="les targets posés par le magasin, payés par lui">Targets du magasin</th><th style="${th}">€</th>` : ''}<th style="${th}">Total</th>
+          <th style="${th}">Meilleure</th>${c.tvPrimesMois.concoursActif ? `<th style="${th}" title="pièces vendues · rang dans le magasin">${esc(c.tvPrimesMois.concoursLib)}</th><th style="${th}">€</th>` : ''}${c.tvPrimesMois.promosActif ? `<th style="${th}" title="pièces vendues sur les dates de la promo · 1re du magasin">${esc(c.tvPrimesMois.promosLib)}</th><th style="${th}">€</th>` : ''}<th style="${th}">Objectif magasin</th><th style="${th}" title="la note Google du magasin à son seuil ou mieux : la récompense pour chacune au planning">Note Google</th>${c.tvPrimesMois.ciblesActif ? `<th style="${th}" title="les targets posés par le magasin, payés par lui">Targets du magasin</th><th style="${th}">€</th>` : ''}${c.tvPrimesMois.b2bActif ? `<th style="${th}" title="les nouveaux clients pro qu’elle a ramenés : ce qu’ils rapportent ce mois-là">Clients pro</th><th style="${th}">€</th>` : ''}<th style="${th}">Total</th>
         </tr></thead>
         <tbody>
           ${c.tvPrimesMois.personnes.map(l => `
           <tr style="${l.prime ? '' : 'color:#9a9186'}">
             <td style="${td};text-align:left;font-weight:500">${esc(l.nom)}</td><td style="${td};text-align:left">${esc(l.magasin)}</td><td style="${td}">${esc(l.heures)}</td>
             <td style="${td}">${esc(l.croisees)}</td><td style="${td};font-weight:600">${esc(l.croiseesM)}</td><td style="${td}">${esc(l.record)}</td><td style="${td};font-weight:600">${esc(l.recordM)}</td>
-            <td style="${td};font-weight:600">${esc(l.meilleure)}</td>${c.tvPrimesMois.concoursActif ? `<td style="${td}">${esc(l.concours)}</td><td style="${td};font-weight:600">${esc(l.concoursM)}</td>` : ''}${c.tvPrimesMois.promosActif ? `<td style="${td}">${esc(l.promo)}</td><td style="${td};font-weight:600">${esc(l.promoM)}</td>` : ''}<td style="${td};font-weight:600">${esc(l.magasinM)}</td><td style="${td};font-weight:600">${esc(l.googleM)}</td>${c.tvPrimesMois.ciblesActif ? `<td style="${td}">${esc(l.cibles)}</td><td style="${td};font-weight:600">${esc(l.ciblesM)}</td>` : ''}<td style="${td};font-weight:700;color:var(--color-primary)">${esc(l.total)}</td>
+            <td style="${td};font-weight:600">${esc(l.meilleure)}</td>${c.tvPrimesMois.concoursActif ? `<td style="${td}">${esc(l.concours)}</td><td style="${td};font-weight:600">${esc(l.concoursM)}</td>` : ''}${c.tvPrimesMois.promosActif ? `<td style="${td}">${esc(l.promo)}</td><td style="${td};font-weight:600">${esc(l.promoM)}</td>` : ''}<td style="${td};font-weight:600">${esc(l.magasinM)}</td><td style="${td};font-weight:600">${esc(l.googleM)}</td>${c.tvPrimesMois.ciblesActif ? `<td style="${td}">${esc(l.cibles)}</td><td style="${td};font-weight:600">${esc(l.ciblesM)}</td>` : ''}${c.tvPrimesMois.b2bActif ? `<td style="${td}">${esc(l.b2b)}</td><td style="${td};font-weight:600">${esc(l.b2bM)}</td>` : ''}<td style="${td};font-weight:700;color:var(--color-primary)">${esc(l.total)}</td>
           </tr>`).join('')}
           ${!c.tvPrimesMois.totaux ? '' : `
           <tr style="background:var(--color-background-secondary)">
             <td style="${td};text-align:left;font-weight:700">Total · ${c.tvPrimesMois.totaux.personnes} personne(s) primée(s)</td><td style="${td}"></td><td style="${td}"></td>
             <td style="${td}"></td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.croisees)}</td><td style="${td}"></td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.record)}</td>
-            <td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.meilleure)}</td>${c.tvPrimesMois.concoursActif ? `<td style="${td}"></td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.concours)}</td>` : ''}${c.tvPrimesMois.promosActif ? `<td style="${td}"></td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.promo)}</td>` : ''}<td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.magasin)}</td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.google)}</td>${c.tvPrimesMois.ciblesActif ? `<td style="${td}"></td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.cibles)}</td>` : ''}<td style="${td};font-weight:700;color:var(--color-primary)">${esc(c.tvPrimesMois.totaux.total)}</td>
+            <td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.meilleure)}</td>${c.tvPrimesMois.concoursActif ? `<td style="${td}"></td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.concours)}</td>` : ''}${c.tvPrimesMois.promosActif ? `<td style="${td}"></td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.promo)}</td>` : ''}<td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.magasin)}</td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.google)}</td>${c.tvPrimesMois.ciblesActif ? `<td style="${td}"></td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.cibles)}</td>` : ''}${c.tvPrimesMois.b2bActif ? `<td style="${td}"></td><td style="${td};font-weight:700">${esc(c.tvPrimesMois.totaux.b2b)}</td>` : ''}<td style="${td};font-weight:700;color:var(--color-primary)">${esc(c.tvPrimesMois.totaux.total)}</td>
           </tr>`}
         </tbody>
       </table></div>`}

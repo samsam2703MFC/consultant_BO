@@ -53,6 +53,17 @@ class PrimesPlan
                 // equipe : elle se joue avec tout le magasin (objectif, note Google) ; magasin : la prime va au magasin.
                 'equipe' => false, 'magasin' => false, 'de' => $val, 'a' => null, 'unite' => (string) ($c['unite'] ?? ''), 'horsPortee' => false];
 
+            if (($c['type'] ?? '') === 'b2b') {
+                // La prime B2B (23/10/2026) : un nouveau client pro à aller chercher ; rien à mesurer, la règle se dit.
+                if (($c['motif'] ?? null) !== null) { continue; }
+                $e['gain'] = $e['total'] = ($c['mode'] ?? 'pct') === 'fixe' ? (int) ($c['fixe'] ?? 0) : 0;
+                $e += ['b2b' => true, 'mode' => (string) ($c['mode'] ?? 'pct'), 'taux' => (float) ($c['taux'] ?? 0), 'fixe' => (int) ($c['fixe'] ?? 0),
+                    'duree' => $c['duree'] ?? 3, 'gagne' => (float) ($c['gain'] ?? 0), 'clients' => count((array) ($c['clients'] ?? []))];
+                $e['de'] = null; $e['progres'] = null;
+                $out[] = $e;
+                continue;
+            }
+
             if ($k === 'croisees') {
                 // Le taux du mois face à la cible ; sur ses prochains tickets, ce qu'il faut viser.
                 $seuil = (float) ($c['cible'] ?? 0);
