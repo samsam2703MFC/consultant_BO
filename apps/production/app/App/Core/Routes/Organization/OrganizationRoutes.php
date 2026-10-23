@@ -9,6 +9,8 @@ return function (RouteCollector $r) {
     // Uprawnienia stanowisk : które strony widzi każde stanowisko (tylko administrator).
     $r->addRoute('GET', '/organization/access', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'index']);
     $r->addRoute('PUT', '/ajax/organization/access/{id:\d+}', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'save']);
+    $r->addRoute('PUT', '/ajax/organization/access/{id:\d+}/home', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'saveHome']);
+    $r->addRoute('GET', '/home', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'home']);
     // Aktywność w ERP : zapis z każdej strony (wyświetlenie, puls) i raport administratora z kosztem godziny.
     $r->addRoute('GET', '/organization/activity', ['controller' => App\Controllers\Web\Organization\ActivityController::class, 'method' => 'index']);
     $r->addRoute('POST', '/ajax/activity/view', ['controller' => App\Controllers\Web\Organization\ActivityController::class, 'method' => 'start']);

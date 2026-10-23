@@ -3,7 +3,7 @@
         <div class="sidebar-header">
             <div class="d-flex justify-content-between">
                 <div class="logo">
-                    <a href="{{ root }}/dashboard">
+                    <a href="{{ root }}/home" title="Strona startowa stanowiska">
                         <img src="{{ root }}/assets/images/atelier-logo.png" alt="L'Atelier">
                     </a>
                 </div>
@@ -20,6 +20,13 @@
                     <a href="{{ root }}/today" class="sidebar-link">
                         <i class="bi bi-grid-1x2-fill"></i>
                         <span>Dzisiaj</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/my-tasks" class="sidebar-link">
+                        <i class="bi bi-check2-square"></i>
+                        <span>Moje zadania</span>
                     </a>
                 </li>
 
@@ -91,14 +98,6 @@
                     </ul>
                 </li>
 
-                {# Zaopatrzenie : po produkcji — surowce i opakowania, zamówienia do dostawców, przyjęcia #}
-                <li class="sidebar-item">
-                    <a href="{{ root }}/workshop/supply" class="sidebar-link">
-                        <i class="bi bi-cart-check"></i>
-                        <span>Zaopatrzenie</span>
-                    </a>
-                </li>
-
 <li class="sidebar-item has-sub">
                     <a href="#" class="sidebar-link">
                         <i class="bi bi-person-badge"></i>
@@ -118,6 +117,49 @@
                     </ul>
                 </li>
 
+
+                {# Zakupy : jedna sekcja (dawniej Produkcja › Zaopatrzenie, Produkt › Surowce › ceny i dostawcy, Finanse › Zakupy i jakość,
+                   Finanse › Faktury zakupowe KSeF). Faktury zakupowe : zakładka « Faktury » Zaopatrzenia. #}
+                <li class="sidebar-title">Zakupy</li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/workshop/supply" class="sidebar-link" data-also="/settings/ksef/purchase-invoices /purchases">
+                        <i class="bi bi-cart-check"></i>
+                        <span>Zaopatrzenie</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/purchasing" class="sidebar-link">
+                        <i class="bi bi-wallet2"></i>
+                        <span>Koszty surowców</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/materials/prices" class="sidebar-link">
+                        <i class="bi bi-cash-stack"></i>
+                        <span>Ceny surowców</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/material-suppliers" class="sidebar-link">
+                        <i class="bi bi-truck"></i>
+                        <span>Dostawcy</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-tags"></i>
+                        <span>Oferty i zapytania</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item"><a href="{{ root }}/purchasing/offers"><i class="bi bi-tags"></i> Oferty cenowe</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/purchasing/tenders"><i class="bi bi-envelope"></i> Zapytania ofertowe</a></li>
+                    </ul>
+                </li>
 
                 <li class="sidebar-title">Produkt</li>
 
@@ -168,16 +210,6 @@
                                 <i class="bi bi-clipboard-data"></i> Wartości odżywcze
                             </a>
                         </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/materials/prices">
-                                <i class="bi bi-cash-stack"></i> Ceny surowców
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/material-suppliers">
-                                <i class="bi bi-truck"></i> Dostawcy surowców
-                            </a>
-                        </li>
                     </ul>
                 </li>
 
@@ -210,6 +242,13 @@
                     <a href="{{ root }}/clients?type=active" class="sidebar-link">
                         <i class="bi bi-people"></i>
                         <span>Klienci</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/price-lists/general" class="sidebar-link">
+                        <i class="bi bi-tags-fill"></i>
+                        <span>Cennik ogólny</span>
                     </a>
                 </li>
 
@@ -295,14 +334,6 @@
                     </ul>
                 </li>
 
-                {% set g = page_tab_groups().archive %}
-                <li class="sidebar-item">
-                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
-                        <i class="bi {{ g.icon }}"></i>
-                        <span>{{ g.label }}</span>
-                    </a>
-                </li>
-
                 <li class="sidebar-title">Logistyka</li>
 
                 <li class="sidebar-item">
@@ -349,14 +380,10 @@
                                 <i class="bi bi-calendar-check"></i> Wyślij dzień
                             </a>
                         </li>
+                        {% set g = page_tab_groups().shipments %}
                         <li class="submenu-item">
-                            <a href="{{ root }}/shipments">
-                                <i class="bi bi-check2-square"></i> Wysyłki (wygenerowane)
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/shipping-transport-documents">
-                                <i class="bi bi-truck"></i> Dokumenty transportowe
+                            <a href="{{ root }}{{ g.tabs[0][0] }}" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                                <i class="bi bi-check2-square"></i> {{ g.label }}
                             </a>
                         </li>
                         <li class="submenu-item">
@@ -367,43 +394,7 @@
                     </ul>
                 </li>
 
-                <li class="sidebar-title">Finanse</li>
-
-                <li class="sidebar-item">
-                    <a href="{{ root }}/price-lists/general" class="sidebar-link">
-                        <i class="bi bi-tags-fill"></i>
-                        <span>Cennik ogólny</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
-                        <i class="bi bi-basket"></i>
-                        <span>Zakupy i jakość</span>
-                    </a>
-                    <ul class="submenu">
-                        <li class="submenu-item"><a href="{{ root }}/purchasing"><i class="bi bi-wallet2"></i> Koszty surowców</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/purchasing/offers"><i class="bi bi-tags"></i> Oferty cenowe</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/purchasing/tenders"><i class="bi bi-envelope"></i> Zapytania ofertowe</a></li>
-                        <li class="submenu-item"><a href="{{ root }}/purchasing/nc"><i class="bi bi-exclamation-octagon"></i> Niezgodności</a></li>
-                    </ul>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{{ root }}/settings/ksef/purchase-invoices" class="sidebar-link">
-                        <i class="bi bi-cloud-download"></i>
-                        <span>Faktury zakupowe KSeF</span>
-                    </a>
-                </li>
-
                 <li class="sidebar-title">Administracja</li>
-
-                <li class="sidebar-item">
-                    <a href="{{ root }}/my-tasks" class="sidebar-link">
-                        <i class="bi bi-check2-square"></i>
-                        <span>Moje zadania</span>
-                    </a>
-                </li>
 
                 {# Tylko administrator : moduł kierownika produkcji i uprawnienia stanowisk (link ukryty dla innych). #}
                 <li class="sidebar-item">
@@ -478,18 +469,16 @@
                             </a>
                         </li>
                         <li class="submenu-item">
+                            <a href="{{ root }}/devices">
+                                <i class="bi bi-display"></i> Dostęp API (urządzenia)
+                            </a>
+                        </li>
+                        <li class="submenu-item">
                             <a href="{{ root }}/other-settings">
                                 <i class="bi bi-sliders"></i> Pozostałe
                             </a>
                         </li>
                     </ul>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{{ root }}/devices" class="sidebar-link">
-                        <i class="bi bi-display"></i>
-                        <span>Urządzenia</span>
-                    </a>
                 </li>
 
             </ul>
@@ -504,9 +493,10 @@
                 <li><a href="{{ root }}/workshop/gantt#view=day" data-where="Produkcja › Tydzień produkcji"><i class="bi bi-bar-chart-steps"></i> Dzień : godziny</a></li>
                 <li><a href="{{ root }}/workshop/team-sheet#lists=1" data-where="Produkcja › Plan zespołów"><i class="bi bi-file-earmark-pdf"></i> Listy dnia (PDF) : lista produkcyjna, zapotrzebowanie, zwroty</a></li>
                 <li><a href="{{ root }}/client-orders/archive" data-where="Zamówienia › Zamówienia klientów"><i class="bi bi-archive"></i> Archiwum zamówień</a></li>
-                <li><a href="{{ root }}/devices/logs" data-where="Administracja › Urządzenia"><i class="bi bi-journal-text"></i> Logi urządzeń</a></li>
-                <li><a href="{{ root }}/devices/new" data-where="Administracja › Urządzenia"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
-                <li><a href="{{ root }}/purchases" data-where="Finanse › Faktury zakupowe KSeF"><i class="bi bi-archive"></i> Archiwum dostaw (ręczne)</a></li>
+                <li><a href="{{ root }}/devices/logs" data-where="Administracja › Ustawienia › Dostęp API"><i class="bi bi-journal-text"></i> Logi urządzeń</a></li>
+                <li><a href="{{ root }}/devices/new" data-where="Administracja › Ustawienia › Dostęp API"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
+                <li><a href="{{ root }}/settings/ksef/purchase-invoices" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-cloud-download"></i> Faktury zakupowe KSeF (pobieranie)</a></li>
+                <li><a href="{{ root }}/purchases" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-archive"></i> Archiwum dostaw (ręczne)</a></li>
             </ul>
         </div>
 
@@ -521,7 +511,7 @@
         var access = {{ rail_access()|json_encode|raw }};
         var prefixes = Object.keys(access);
         if (!prefixes.length) return;
-        var base = (document.querySelector('#sidebar .logo a') || {pathname: ''}).pathname.replace(/\/dashboard\/?$/, '');
+        var base = (document.querySelector('#sidebar .logo a') || {pathname: ''}).pathname.replace(/\/home\/?$/, '');
         // Jak serwer : decyduje najdłuższy pasujący prefiks ; ścieżka spoza katalogu jest widoczna.
         var off = function (path) {
             var p = path.replace(/\/+$/, '') || '/', best = null;
@@ -552,7 +542,7 @@
         var here = location.pathname.replace(/\/+$/, '');
         var best = null, bestLen = -1;
         // Prefiks aplikacji (np. /production) : z linku logo /dashboard.
-        var base = (document.querySelector('#sidebar .logo a') || {pathname: ''}).pathname.replace(/\/dashboard\/?$/, '');
+        var base = (document.querySelector('#sidebar .logo a') || {pathname: ''}).pathname.replace(/\/home\/?$/, '');
         document.querySelectorAll('#sidebar .menu a[href]').forEach(function (a) {
             if (a.getAttribute('href') === '#') return;
             // Grupa z zakładkami (data-also) : pozycja aktywna na każdej stronie grupy.

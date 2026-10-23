@@ -162,8 +162,8 @@ class App
             }
 
 
-            // Nieznany adres (użytkownik jest zalogowany) — wracamy na dashboard
-            header('Location: ' . ROOT . '/dashboard');
+            // Nieznany adres (użytkownik jest zalogowany) — strona startowa stanowiska
+            header('Location: ' . ROOT . '/home');
             return;
 
 //            http_response_code(404);

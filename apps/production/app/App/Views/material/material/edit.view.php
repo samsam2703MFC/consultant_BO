@@ -70,13 +70,6 @@
                                 <div class="col-1"></div>
                                 <div class="col-3">
                                     <div class="row">
-                                        <label class="form-label" for="waste_perc">
-                                            Wykorzystanie materiału [%]
-                                        </label>
-                                        <input value="<?= old_value('waste_perc', $row['waste_perc']) ?>" type="number"
-                                               class="form-control" id="waste_perc" name="waste_perc" placeholder="0">
-                                    </div>
-                                    <div class="row mt-5">
                                         <div class="form-check form-switch">
                                             <input class="form-check-input" type="checkbox"
                                                    name="is_part_of_package" id="is_part_of_package" <?= old_checkbox('is_part_of_package', 1, $row['is_part_of_package']) ?>

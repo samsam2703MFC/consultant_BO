@@ -31,6 +31,23 @@ class PageAccessController extends BaseController
         }
     }
 
+    /** GET /home : strona startowa stanowiska (logo, po zalogowaniu). */
+    public function home()
+    {
+        header('Location: ' . ROOT . $this->access->homePath($this->userId()));
+        exit;
+    }
+
+    public function saveHome($id)
+    {
+        try {
+            $page = $this->access->saveHome((int) $id, $this->getJson(Request::createFromGlobals())['home'] ?? null, $this->userId());
+            return $this->json(['message' => 'Zapisano stronę startową : ' . PageAccess::HOME_PAGES[$page] . '.', 'data' => ['home' => $page]]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     /** Strona spoza uprawnień użytkownika (kod 403 ustawia App). */
     public function forbidden(string $uri)
     {

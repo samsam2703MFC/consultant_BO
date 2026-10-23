@@ -32,7 +32,7 @@ class LoginController extends BaseController
         $libre = $this->entreeLibre();
         if ($libre !== '') {
             if ($this->loginService->loginWithoutPassword($libre)) {
-                header('Location: ' . ROOT . '/dashboard');
+                header('Location: ' . ROOT . '/home');
                 return;
             }
             $this->errors[] = "Konto " . htmlspecialchars($libre) . " nie istnieje.";
@@ -47,7 +47,7 @@ class LoginController extends BaseController
             $this->errors[] = "Nieprawidłowy login lub hasło.";
             $this->view('auth/login', []);
         } else {
-            header('Location: ' . ROOT . '/dashboard');
+            header('Location: ' . ROOT . '/home');
         }
     }
 
