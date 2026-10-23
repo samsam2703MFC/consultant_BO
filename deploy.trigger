@@ -991,3 +991,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T15:51:44Z primes : meilleure vendeuse en €/h
 2026-10-23T16:13:53Z primes : une seule liste par état (à aller chercher, déjà gagnées, pas ce mois-ci)
 2026-10-23T16:38:22Z primes : bats ton record en trois étapes (poser, battre, gagner)
+2026-10-23T16:43:41Z rail : menu Application employé
