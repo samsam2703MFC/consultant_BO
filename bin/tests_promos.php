@@ -465,5 +465,18 @@ verifie('la sonde : seuil et canal parmi les conditions, avec leur valeur', ($r[
 verifie('la sonde : rien de nominatif (l’auteur retiré)', !str_contains(json_encode($r, JSON_UNESCAPED_UNICODE), 'Prénom Nom') && $r['sortes']['buy-x-get-y']['fichesLues'] === 1
     && $r['sortes']['quantity']['code'] === 404, json_encode($r['sortes']['buy-x-get-y'], JSON_UNESCAPED_UNICODE));
 
+echo "Le canal et le seuil d'une promotion (23/10/2026)\n";
+verifie('sans rien : aucune restriction, aucun seuil', pvConditions(['id' => 1, 'is_exclusive' => false, 'is_repeatable' => true, 'priority' => 100]) === ['canaux' => null, 'seuil' => null]);
+verifie('un seuil sous un nom plausible', pvConditions(['minimum_basket_value' => '15.00'])['seuil'] === 15.0 && pvConditions(['min_order_amount' => 12])['seuil'] === 12.0
+    && pvConditions(['threshold_amount' => 9.5])['seuil'] === 9.5 && pvConditions(['minimum_order_value' => 0])['seuil'] === null);
+verifie('les canaux en liste : comptoir seul, webshop seul, les deux', pvConditions(['sales_channels' => ['POS']])['canaux'] === ['comptoir']
+    && pvConditions(['channels' => [['code' => 'WEBSHOP']]])['canaux'] === ['webshop'] && pvConditions(['sales_channels' => ['POS', 'WEBSHOP']])['canaux'] === null
+    && pvConditions(['channel' => 'ALL'])['canaux'] === null);
+verifie('les canaux en booléens', pvConditions(['is_webshop' => false, 'is_pos' => true])['canaux'] === ['comptoir'] && pvConditions(['webshop_only' => true])['canaux'] === ['webshop']
+    && pvConditions(['available_on_pos' => 1, 'available_on_webshop' => 1])['canaux'] === null);
+$n = pvNormaliser(['id' => 50, 'name' => 'Seuil', 'status' => 'ACTIVE', 'shop_scope_type' => 'SELECTED_SHOPS', 'shop_ids' => [4], 'min_ticket_amount' => 15, 'sales_channels' => ['POS'],
+    'trigger' => ['quantity' => 1, 'product_ids' => [12]], 'reward' => ['quantity' => 1, 'type' => 'FREE']]);
+verifie('pvNormaliser les garde, pmDemande les rend', $n['seuil'] === 15.0 && $n['canaux'] === ['comptoir'] && pmDemande($n)['seuil'] === 15.0 && pmDemande($n)['canaux'] === ['comptoir'], json_encode([$n['seuil'], $n['canaux']]));
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

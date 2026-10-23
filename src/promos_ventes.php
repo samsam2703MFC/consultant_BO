@@ -140,6 +140,42 @@ function pvCreneaux($schedule): array
     return $out;
 }
 
+/**
+ * Le canal et le seuil du ticket d'une promotion du panel (23/10/2026, demande de Sam). La documentation publique ne les
+ * décrit pas encore : ils se lisent sous leurs noms plausibles, à confirmer par GET /ventes/promos/sonde-champs.
+ * `canaux` : null quand rien ne restreint la promotion (comptoir et webshop), sinon ['comptoir'] ou ['webshop'].
+ * `seuil` : le montant minimal du ticket, null sans seuil.
+ */
+function pvConditions(array $d): array
+{
+    $seuil = null; $cpt = null; $web = null;
+    $motCpt = '/pos|counter|store|caisse|comptoir|offline|shop_sale/';
+    $motWeb = '/web|online|ecom|e-com|delivery|click|internet/';
+    foreach ($d as $k => $v) {
+        $k = strtolower((string) $k);
+        if ($seuil === null && is_numeric($v) && (float) $v > 0
+            && preg_match('/^(min(imum)?_(ticket|basket|order|cart|receipt|transaction|purchase|spend)(_(amount|total|value))?|(ticket|basket|order|cart|receipt|transaction)_(min|minimum|threshold)(_(amount|value))?|(trigger_)?threshold(_amount)?|min(imum)?_(amount|spend|total))$/', $k) === 1) {
+            $seuil = round((float) $v, 2);
+        }
+        if (preg_match('/^(available_)?(sales_)?(channels?|order_sources?|sources)$/', $k) === 1) {
+            $l = is_array($v) ? $v : (is_string($v) && $v !== '' ? [$v] : []);
+            $t = strtolower(implode(' ', array_map(static fn ($x) => is_scalar($x) ? (string) $x : (string) ($x['code'] ?? $x['name'] ?? $x['type'] ?? ''), $l)));
+            if ($t !== '' && preg_match('/^(all|both|any|tous|les deux)$/', trim($t)) !== 1) { $cpt = preg_match($motCpt, $t) === 1; $web = preg_match($motWeb, $t) === 1; }
+        }
+        if (is_bool($v) || $v === 0 || $v === 1) {
+            $seul = str_ends_with($k, '_only');
+            if (preg_match('/^(is_)?(available_)?((on|in|for)_)?(pos|counter|store|in_store|comptoir)(_(only|enabled|available))?$/', $k) === 1) { $cpt = (bool) $v; if ($seul && $v) { $web = false; } }
+            if (preg_match('/^(is_)?(available_)?((on|in|for)_)?(webshop|web|online|ecommerce)(_(only|enabled|available))?$/', $k) === 1) { $web = (bool) $v; if ($seul && $v) { $cpt = false; } }
+        }
+    }
+    $canaux = null;
+    if ($cpt !== null || $web !== null) {
+        $l = array_values(array_filter([$cpt !== false ? 'comptoir' : null, $web !== false ? 'webshop' : null]));
+        $canaux = count($l) === 1 ? $l : null;
+    }
+    return ['canaux' => $canaux, 'seuil' => $seuil];
+}
+
 /** Une règle du panel ramenée à ce que la reconnaissance utilise. */
 function pvNormaliser(array $d): array
 {
@@ -202,7 +238,7 @@ function pvNormaliser(array $d): array
         'creneaux' => pvCreneaux($d['schedule'] ?? []),
         'repetable' => !empty($d['is_repeatable']),
         'maxParTicket' => isset($d['max_applications_per_transaction']) && (int) $d['max_applications_per_transaction'] > 0 ? (int) $d['max_applications_per_transaction'] : null,
-    ];
+    ] + pvConditions($d);
 }
 
 /** La règle en mots : « 2 achetés, le 3e −1,40 € », « Pain Doré à 1,50 € avec Tartes – Ø 28 cm », « bundle à 19,90 € ». */

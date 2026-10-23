@@ -3270,6 +3270,79 @@
       prods: (c.prods || []).map(o => ({ id: o.id, nom: o.nom || np.get(+o.id) || '' })), exclus: (c.exclus || []).map(o => ({ id: o.id, nom: o.nom || np.get(+o.id) || '' })) });
     return Object.assign({}, d, { x: cote(d.x), y: cote(d.y) });
   }
+  /*
+   * Le tableau de la liste (23/10/2026, Sam : la proposition B, avec les deux colonnes Comptoir et Webshop de C) : une
+   * information par colonne. Dix colonnes par défaut ; « Colonnes » ajoute ou retire les autres, le choix est gardé
+   * dans ce navigateur. Les actions passent dans le menu « ⋯ » de la ligne.
+   * [clé, en-tête, classe, par défaut, bulle]
+   */
+  const PM_COLS = [['nom', 'Promotion', 'nm', true], ['origine', 'Origine', '', true], ['achete', 'Le client achète', '', true], ['recoit', 'Il reçoit', '', true],
+    ['comptoir', 'Comptoir', 'c', true, 'la promotion vaut en caisse au magasin'], ['webshop', 'Webshop', 'c', true, 'la promotion vaut sur les commandes en ligne (click & collect, livraison)'],
+    ['seuil', 'Seuil', 'r', true, 'montant minimal du ticket pour que la promotion se déclenche'], ['debut', 'Début', '', true], ['fin', 'Fin', '', true],
+    ['statut', 'Statut', '', true], ['coef', 'Coef.', 'n', true, 'prix payé HT ÷ coût matière, le cas le plus serré'],
+    ['sorte', 'Sorte', '', false], ['creneaux', 'Créneaux', '', false], ['ticket', 'Par ticket', '', false], ['numero', 'N° au panel', 'r', false]];
+  const PM_ICO_DOTS = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+  function pmColsVues() {
+    if (!S.pmCols) {
+      let v = null; try { v = JSON.parse(localStorage.getItem('db.pmCols') || 'null'); } catch (e) { v = null; }
+      S.pmCols = Array.isArray(v) ? v.filter(k => PM_COLS.some(c => c[0] === k)) : PM_COLS.filter(c => c[3]).map(c => c[0]);
+      if (!S.pmCols.includes('nom')) { S.pmCols.unshift('nom'); }
+    }
+    return S.pmCols;
+  }
+  function pmColsGarder() { try { localStorage.setItem('db.pmCols', JSON.stringify(S.pmCols)); } catch (e) { /* stockage indisponible */ } }
+  /** « 2 × Cookies », « 1 × ½ Tartes » : ce que le client achète. */
+  const pmAchete = x => Math.max(1, +x.q || 1) + ' × ' + (PM_PORTIONS[x.portion] ? PM_PORTIONS[x.portion].lib + ' ' : '') + esc(pmLib(x));
+  /** Ce qu'il reçoit : « le 3<sup>e</sup> à −50 % », « les 2 suivants offerts », « Café offert ». */
+  function pmRecoit(x, y) {
+    const xq = Math.max(1, +x.q || 1), yq = Math.max(1, +y.q || 1);
+    const gain = { FREE: yq > 1 ? 'offerts' : 'offert', FIXED_PRICE: 'à ' + fU(+y.valeur || 0), FIXED_AMOUNT_DISCOUNT: '−' + fU(+y.valeur || 0), PERCENTAGE_DISCOUNT: 'à −' + nf(+y.valeur || 0, 0) + ' %' }[y.type] || 'remisé';
+    if (pmMeme(x, y) && x.portion === y.portion) { return (yq > 1 ? 'les ' + yq + ' suivants ' : 'le ' + (xq + 1) + '<sup>e</sup> ') + gain; }
+    return (yq > 1 ? yq + ' × ' : '') + (PM_PORTIONS[y.portion] ? PM_PORTIONS[y.portion].lib + ' ' : '') + esc(pmLib(y)) + ' ' + gain;
+  }
+  /** Les valeurs d'une ligne, colonne par colonne (HTML), et ses actions. */
+  function pmValeurs(l) {
+    const P = S.aux[clePM()] || {}, min = (P.regles || {}).coefMin || 2, r = l.r || {}, d = l.d || null, mu = t => `<span class="mu">${t}</span>`;
+    let x = null, y = null;
+    if (l.sorte === 'xy') {
+      const D = d ? pmDepuis(d) : pmDuPanel(r);
+      x = pmEffectif(D.x); y = Object.assign(pmEffectif(D.y), { type: D.y.type, valeur: D.y.valeur });
+    }
+    const b = r.bundle || null;
+    // Sans restriction de canal au panel, la promotion vaut au comptoir comme au webshop.
+    const can = (d ? d.canaux : r.canaux) || null, ok = k => !can || can.includes(k);
+    const seuil = d ? d.seuil : r.seuil, rep = d ? d.repetable : r.repetable, max = d ? d.maxParTicket : r.maxParTicket;
+    const e = PM_ETAT[l.etat] || [l.etat, 'b'], num = d ? d.panelId : (l.src === 'panel' ? l.id : null);
+    const fin = l.au ? esc(pmQuand(l.au)) : mu('sans fin');
+    const reste = l.au && (l.etat === 'active' || l.etat === 'en_caisse') ? Math.round((new Date(l.au.slice(0, 10) + 'T12:00:00') - new Date(AUJ + 'T12:00:00')) / 86400000) : null;
+    // Les actions : celles qui existaient sur la ligne, dans le menu.
+    const it = (attr, v, lib, cl) => `<button class="${cl || ''}" ${attr}="${esc(v)}">${lib}</button>`;
+    let actions = '';
+    if (l.src === 'mag') {
+      const dup = it('data-pmdup', 'mag:' + l.id, 'Dupliquer');
+      if (l.etat === 'brouillon') { actions = it('data-pmedit', l.id, 'Reprendre') + dup + it('data-pmdel', l.id, 'Supprimer le brouillon', 'ko'); }
+      else if (l.etat === 'en_caisse') { actions = it('data-pmedit', l.id, 'Modifier') + dup; }
+      else { actions = dup; }
+    } else if (l.sorte === 'xy') { actions = it('data-pmdup', 'panel:' + l.id, 'Dupliquer en promotion du magasin'); }
+    return {
+      nom: `<b>${esc(l.nom)}</b>`,
+      origine: `<span class="pm-or ${l.src === 'mag' ? 'm' : 'r'}" title="${esc(l.qui)}">${l.src === 'mag' ? 'Magasin' : 'Marque'}</span>`,
+      achete: x ? pmAchete(x) : (b && b.items.length ? esc(b.items.join(' + ')) : mu('—')),
+      recoit: x ? pmRecoit(x, y) : (b && b.prix != null ? 'le lot à ' + fU(+b.prix) : mu('—')),
+      comptoir: ok('comptoir') ? '<span class="pm-oui">✓</span>' : mu('—'),
+      webshop: ok('webshop') ? '<span class="pm-oui">✓</span>' : mu('—'),
+      seuil: +seuil > 0 ? fU(+seuil) : mu('—'),
+      debut: l.du ? esc(pmQuand(l.du)) : mu('—'),
+      fin: reste != null && reste >= 0 && reste <= 7 ? `<span title="${reste === 0 ? 'dernier jour' : 'encore ' + reste + ' jour' + (reste > 1 ? 's' : '')}">${fin}</span>` : fin,
+      statut: `<span class="pm-chip ${e[1]}">${esc(e[0])}</span>`,
+      coef: pmCoefCellule(l, min),
+      sorte: l.sorte === 'bundle' ? 'Bundle' : 'X + Y',
+      creneaux: esc(d ? pmCreneauxTxt(d.creneaux) : (l.sorte === 'xy' || (r.creneaux || []).length ? pmCreneauxTxt(r.creneaux || []) : '—')),
+      ticket: rep ? (max ? esc(max) + ' fois max' : 'répétable') : '1 fois',
+      numero: num ? esc(num) : mu('—'),
+      actions,
+    };
+  }
   /* La liste : les promotions de la marque et celles du magasin, toutes lues au panel, rangées par état. */
   function pmLignes() {
     const P = S.aux[clePM()];
@@ -3319,33 +3392,21 @@
     h += `<div class="db-card pm-liste"><div class="pm-filtres">
       <div class="db-ong">${PM_FILTRES.map(x => { const n = parSorte.filter(l => x[2](l.etat)).length; return `<button data-pmf-st="${x[0]}" class="${x[0] === f[0] ? 'on' : ''}">${x[1]} <small>${n}</small></button>`; }).join('')}</div>
       <select class="pm-in" data-pmsorte="1">${[['tout', 'Toutes les sortes'], ['xy', 'X achetés + Y'], ['bundle', 'Bundles']].map(o => `<option value="${o[0]}"${S.pmSorte === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>
-      <input class="pm-in pm-cherche" type="search" placeholder="Chercher une promotion…" value="${esc(S.pmQ || '')}" data-pmq="1"></div>`;
+      <input class="pm-in pm-cherche" type="search" placeholder="Chercher une promotion…" value="${esc(S.pmQ || '')}" data-pmq="1">
+      <span class="pm-colsw"><button class="db-btn" data-pmcols="1" aria-expanded="${!!S.pmColsOuv}">Colonnes ▾</button>${S.pmColsOuv ? `<div class="pm-menu pm-cols"><div class="db-lab">Colonnes affichées</div>${PM_COLS.map(c => `<label><input type="checkbox" data-pmcol="${c[0]}"${pmColsVues().includes(c[0]) ? ' checked' : ''}${c[0] === 'nom' ? ' disabled' : ''}> ${c[1]}</label>`).join('')}<button class="pm-lien" data-pmcolsraz="1">Revenir aux colonnes par défaut</button></div>` : ''}</span></div>`;
     if (!vues.length) {
       h += `<div class="pm-vide">${f[0] === 'actives' ? 'Aucune promotion en caisse aujourd’hui dans ce magasin.' : 'Rien ici.'} <button class="db-btn" data-pmnew="1">+ Nouvelle promotion</button></div>`;
     } else {
-      h += `<div class="pm-large"><table class="pm-tab"><thead><tr><th>Promotion</th><th>Sorte</th><th>Période</th><th>Créneaux</th><th>Statut</th><th class="n" title="prix payé HT ÷ coût matière, le cas le plus serré">Coef. du lot</th><th></th></tr></thead><tbody>${vues.map(l => {
-        const e = PM_ETAT[l.etat] || [l.etat, 'b'];
-        const per = l.du || l.au ? (l.du ? pmQuand(l.du) : '…') + ' → ' + (l.au ? pmQuand(l.au) : 'sans fin') : 'sans fin';
-        const reste = l.au && (l.etat === 'active' || l.etat === 'en_caisse') ? Math.round((new Date(l.au.slice(0, 10) + 'T12:00:00') - new Date(AUJ + 'T12:00:00')) / 86400000) : null;
-        let act = '';
-        if (l.src === 'mag') {
-          // Modifier et dupliquer partout où c'est possible (18/10/2026) : en caisse, les changements partent au panel.
-          const dup = `<button class="db-btn" data-pmdup="mag:${esc(l.id)}">Dupliquer</button>`;
-          if (l.etat === 'brouillon') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}">Reprendre</button>${dup}<button class="db-btn" data-pmdel="${esc(l.id)}">Supprimer</button>`; }
-          else if (l.etat === 'en_caisse') { act = `<button class="db-btn" data-pmedit="${esc(l.id)}" title="les changements partent au panel, sur la même promotion">Modifier</button>${dup}`; }
-          else { act = dup; }
-        } else if (l.sorte === 'xy') { act = `<button class="db-btn" data-pmdup="panel:${esc(l.id)}" title="en faire une promotion du magasin">Dupliquer</button>`; }
-        const msg = l.d && l.d.panelId ? `<div class="db-mini" style="margin-top:3px">au panel : promotion n° ${esc(l.d.panelId)}${l.etat === 'brouillon' ? ', inactive' : ''}</div>` : '';
-        const bdg = !PM_COND ? '' : l.d ? pmBadges(l.d.canal || 'tous', l.d.seuil, true) : (l.r && (l.r.canal || l.r.seuil) ? pmBadges(l.r.canal || 'tous', l.r.seuil, true) : '');
-        return `<tr><td><b>${esc(l.nom)}</b><div class="db-mini">${esc(l.qui)} · ${l.texte}</div>${bdg ? `<div class="pm-badges">${bdg}</div>` : ''}${msg}</td><td>${l.sorte === 'bundle' ? 'Bundle' : 'X + Y'}</td>
-          <td>${esc(per)}${reste != null && reste >= 0 && reste <= 7 ? `<div class="db-mini">${reste === 0 ? 'dernier jour' : 'encore ' + reste + ' jour' + (reste > 1 ? 's' : '')}</div>` : ''}</td>
-          <td>${esc(l.cren)}</td><td><span class="pm-chip ${e[1]}">${esc(e[0])}</span></td>
-          <td class="n">${pmCoefCellule(l, Rg.coefMin || 2)}</td><td class="pm-act">${act}</td></tr>`;
+      const cols = PM_COLS.filter(c => pmColsVues().includes(c[0]));
+      h += `<div class="pm-large"><table class="pm-tab pm-tab2"><thead><tr>${cols.map(c => `<th class="${c[2]}"${c[4] ? ` title="${esc(c[4])}"` : ''}>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody>${vues.map(l => {
+        const v = pmValeurs(l), cle = l.src + ':' + l.id, ouvert = S.pmMenu === cle;
+        return `<tr>${cols.map(c => `<td class="${c[2]}">${v[c[0]]}</td>`).join('')}<td class="pm-act">${v.actions ? `<button class="pm-dots${ouvert ? ' on' : ''}" data-pmmenu="${esc(cle)}" aria-label="actions" aria-expanded="${ouvert}">${PM_ICO_DOTS}</button>${ouvert ? `<div class="pm-menu">${v.actions}</div>` : ''}` : ''}</td></tr>`;
       }).join('')}</tbody></table></div>`;
     }
     h += `<div class="pm-pied db-mini">Tout se lit au panel, rien n’est gardé ailleurs${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''} : les promotions du magasin sont celles du panel réservées à ce seul magasin, les autres sont celles de la marque (elles se dupliquent pour en faire une du magasin). « Actives » : en caisse aujourd’hui.
       Règles du magasin : une date de fin, ${pmMaxTxt(Rg.joursMax)} au plus · ${Rg.enMemeTemps || 2} promotions à la fois au plus · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Enregistrer l’écrit au panel (créée inactive, relue, puis activée) : elle passe en caisse pour ses dates. Un brouillon est une promotion inactive au panel.
-      Un clic sur un coefficient en montre le détail, aux prix et coûts de recette d’aujourd’hui.</div></div>`;
+      Un clic sur un coefficient en montre le détail, aux prix et coûts de recette d’aujourd’hui.
+      Comptoir et Webshop : là où la promotion vaut — sans restriction au panel, les deux. Seuil : le montant minimal du ticket, quand le panel en donne un. « Colonnes » ajoute ou retire des colonnes, le choix est gardé ; les actions sont dans « ⋯ ».</div></div>`;
     return h;
   }
 
@@ -3524,7 +3585,7 @@
     return { id: d.id || null, nom: d.nom || '', description: d.description || '', shops: (d.shops && d.shops.length ? d.shops : [+S.shop]).map(Number),
       x: pmCote(d.x, false), y: pmCote(d.y, true), du: d.du || '', au: d.au || '', creneaux: (d.creneaux || []).map(c => ({ jours: c.jours.slice(), de: c.de, a: c.a })),
       repetable: !!d.repetable, maxParTicket: d.maxParTicket || '',
-      canal: PM_CANAUX.some(o => o[0] === d.canal) ? d.canal : 'tous', seuil: +d.seuil > 0 ? String(d.seuil) : '', seuilOn: +d.seuil > 0 };
+      canal: PM_CANAUX.some(o => o[0] === d.canal) ? d.canal : (Array.isArray(d.canaux) && d.canaux.length === 1 && PM_CANAUX.some(o => o[0] === d.canaux[0]) ? d.canaux[0] : 'tous'), seuil: +d.seuil > 0 ? String(d.seuil) : '', seuilOn: +d.seuil > 0 };
   }
   function pmNouvelle() {
     const t = new Date(); t.setDate(t.getDate() + 1); const du = iso(t); t.setDate(t.getDate() + 6);
@@ -3567,7 +3628,7 @@
     const r = pmDuree(d, k); d.du = r.du; d.au = r.au;
     return d;
   }
-  function pmOuvrir(d, etape) { S.pmW = { etape: etape || 1, d, erreurs: null, envoi: false }; S.pmMsg = null; rendre(); window.scrollTo(0, 0); }
+  function pmOuvrir(d, etape) { S.pmW = { etape: etape || 1, d, erreurs: null, envoi: false }; S.pmMsg = null; S.pmMenu = null; S.pmColsOuv = false; rendre(); window.scrollTo(0, 0); }
   /** Ce que chaque étape demande encore (vide = faite). */
   function pmManque(d, i) {
     const x = pmEffectif(d.x), y = pmEffectif(d.y);
@@ -3844,7 +3905,30 @@
     on('[data-pmcanm]', 'click', el => { S.pmCanM = el.dataset.pmcanm; rendre(); });
     on('[data-pmcanj]', 'click', el => { S.pmCanJ = +el.dataset.pmcanj; lireAux(clePMC(), cheminPMC(), false); rendre(); });
     if (S.pmC) { pmCoefRendre(); }
-    on('[data-pmdel]', 'click', el => pmSupprimer(el.dataset.pmdel));
+    on('[data-pmdel]', 'click', el => { S.pmMenu = null; pmSupprimer(el.dataset.pmdel); });
+    on('[data-pmmenu]', 'click', (el, e) => { e.stopPropagation(); S.pmMenu = S.pmMenu === el.dataset.pmmenu ? null : el.dataset.pmmenu; S.pmColsOuv = false; rendre(); });
+    on('[data-pmcols]', 'click', (el, e) => { e.stopPropagation(); S.pmColsOuv = !S.pmColsOuv; S.pmMenu = null; rendre(); });
+    on('.pm-menu', 'click', (el, e) => e.stopPropagation());
+    on('[data-pmcol]', 'change', el => { const k = el.dataset.pmcol, v = pmColsVues();
+      S.pmCols = el.checked ? PM_COLS.map(c => c[0]).filter(c => c === k || v.includes(c)) : v.filter(c => c !== k); pmColsGarder(); rendre(); });
+    on('[data-pmcolsraz]', 'click', () => { S.pmCols = PM_COLS.filter(c => c[3]).map(c => c[0]); pmColsGarder(); rendre(); });
+    // Le menu « ⋯ » se cale sur son bouton, hors du cadre défilant du tableau (qui le couperait) ; au-dessus quand la
+    // place manque en bas.
+    const mn = $.querySelector('.pm-act .pm-menu');
+    if (mn) {
+      const rb = mn.previousElementSibling.getBoundingClientRect(), h = mn.offsetHeight;
+      mn.style.position = 'fixed'; mn.style.right = 'auto';
+      mn.style.left = Math.max(8, rb.right - mn.offsetWidth) + 'px';
+      mn.style.top = (rb.bottom + 4 + h > window.innerHeight - 8 ? Math.max(8, rb.top - 4 - h) : rb.bottom + 4) + 'px';
+    }
+    if ((S.pmMenu || S.pmColsOuv) && !S.pmMenuEcoute) {
+      // Un clic ailleurs, ou Échap, ferme le menu ouvert.
+      S.pmMenuEcoute = true;
+      const fermer = ev => { if (ev.type === 'keydown' && ev.key !== 'Escape') { return; }
+        document.removeEventListener('click', fermer); document.removeEventListener('keydown', fermer); window.removeEventListener('scroll', fermer, true); S.pmMenuEcoute = false;
+        if (S.pmMenu || S.pmColsOuv) { S.pmMenu = null; S.pmColsOuv = false; rendre(); } };
+      setTimeout(() => { document.addEventListener('click', fermer); document.addEventListener('keydown', fermer); window.addEventListener('scroll', fermer, true); }, 0);
+    }
     if (!S.pmW) { return; }
     const W = S.pmW, d = W.d;
     on('[data-pmfermer]', 'click', () => { if (window.confirm('Quitter sans enregistrer ?')) { S.pmW = null; rendre(); } });
