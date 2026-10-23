@@ -1443,7 +1443,7 @@ class App {
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
-      // en attendant — la prospection autour du magasin, sa tablette, l'app worker.
+      // en attendant — la prospection autour du magasin, sa tablette.
       // Sa lettre est partie avec le marketing (Marque & marketing → Canaux).
       ['ERP franchisé', [
         // La liste de démarchage vit dans son application (prospection/, 16/10/2026) :
@@ -1451,38 +1451,32 @@ class App {
         ['ext:prospection/', 'Prospection ↗', 0],
         // Le book des vendeuses : une application à part (tablette/) — l'écran
         // donne ses liens, un aperçu et l'état des données que le BO lui sert.
-        ['tablette', 'Tablette vendeuses', 0],
-        // L'app des employés (demande du 06/10/2026) : horaire, tâches, profil — une application à
-        // part (employee/), aux couleurs de la marque ; l'entrée mène à sa connexion.
-        ['ext:employee/auth', 'App worker ↗', 0],
-        // Le module Primes (23/10/2026, Sam) : le rail est le bac à sable du dev, qui prend le module d'ici pour
-        // l'intégrer — les paramètres de la marque (et des sponsors, avec les promotions et les moyennes), ceux
-        // que chaque franchisé pose pour son magasin, et l'écran « Mes primes » de l'app worker. Il remplace
-        // « Marketing franchisé », qui ne tenait que l'écran des primes.
-        { sub: 'Primes · module app worker', children: [
-          ['primesApp', 'Paramètres primes', 0, [], { prSection: 'marque' }],
-          ['primesApp', 'Paramètres primes franchisé', 0, [], { prSection: 'franchise' }],
-          ['ext:employee/primes', 'Mes primes dans l’app ↗', 0]] }]],
+        ['tablette', 'Tablette vendeuses', 0]]],
+      // L'application employé (23/10/2026, Sam) : le rail est le bac à sable du dev, qui prend d'ici les trois
+      // pièces pour les intégrer à l'ERP — la page admin (les primes de la marque et des sponsors, les promotions,
+      // les moyennes), la page du franchisé (les primes qu'il pose pour son magasin) et l'application elle-même
+      // (employee/ : horaire, tâches, primes, profil ; l'entrée mène à sa connexion). Remplace « App worker ↗ »
+      // et le sous-menu « Primes · module app worker » d'ERP franchisé.
+      ['Application employé', [
+        ['primesApp', 'Page admin', 0, [], { prSection: 'marque' }],
+        ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise' }],
+        ['ext:employee/auth', 'Application ↗', 0]]],
         // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
+    // Une entrée peut mener hors du cockpit (« ext: », dans un onglet à part — la page tablette n'est pas un
+    // écran de la console, elle vit à côté), couvrir des écrans alias (c[3]) ou poser un état en plus de
+    // l'écran (c[4], ex. l'onglet Client mystère, la page admin ou franchisé de l'application employé).
+    const cExt = c => c[0].indexOf('ext:') === 0;
+    const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).every(k => (S[k] || ({ sqVue: 'tableau', prSection: 'marque' }[k] || '')) === c[4][k]));
+    const cGo = c => cExt(c) ? () => window.open(c[0].slice(4), '_blank', 'noopener') : (c[4] ? () => this.setState(Object.assign({ screen: c[0], railOuvert: false }, c[4])) : goTo(c[0]));
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
       if (Array.isArray(it)) {
-        // « ext: » mène hors du cockpit, dans un onglet à part — la page
-        // tablette n'est pas un écran de la console, elle vit à côté.
-        const ext = it[0].indexOf('ext:') === 0;
-        return { type: 'leaf', label: it[1], badge: it[2] || false,
-          go: ext ? () => window.open(it[0].slice(4), '_blank', 'noopener') : goTo(it[0]),
-          st: navSt(!ext && (S.screen === it[0] || (it[3] || []).indexOf(S.screen) >= 0), false) };
+        return { type: 'leaf', label: it[1], badge: it[2] || false, go: cGo(it), st: navSt(cActif(it), false) };
       }
-      // Un enfant peut mener hors du cockpit (« ext: »), couvrir des écrans alias
-      // (c[3]) ou poser un état en plus de l'écran (c[4], ex. l'onglet Client mystère).
-      const cExt = c => c[0].indexOf('ext:') === 0;
-      const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).every(k => (S[k] || ({ sqVue: 'tableau', prSection: 'marque' }[k] || '')) === c[4][k]));
-      const cGo = c => cExt(c) ? () => window.open(c[0].slice(4), '_blank', 'noopener') : (c[4] ? () => this.setState(Object.assign({ screen: c[0], railOuvert: false }, c[4])) : goTo(c[0]));
       const childActive = it.children.some(cActif);
       const open = (S.navOpen && S.navOpen[it.sub] != null) ? S.navOpen[it.sub] : childActive;
       return { type: 'sub', label: it.sub, open, chevron: open ? '▾' : '▸',
