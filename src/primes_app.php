@@ -43,6 +43,7 @@ const PRIMES_GOOGLE_MONTANT = 25;         // la récompense Google, par personne
 const PRIMES_ICONE_MAX = 1048576;         // une icône : 1 Mo au plus
 const PRIMES_BARRE_OBJ = 75.0;   // la barre des targets : l'objectif à 75 % de sa longueur, sur chaque ligne
 const PRIMES_TARGETS = ['croisees', 'objectif', 'google'];  // les targets, toujours là, dans cet ordre
+const PRIMES_MAG_MAX = 6;            // par magasin et par sorte (promos, catégories, targets) : les primes d'un franchisé
 
 /* ======================================================================
    Le réglage : la liste des primes
@@ -171,11 +172,30 @@ function primesAppEntreeValide(array $x, int $i, int $recompense): ?array
     if ($e === null) { return null; }
     $icone = ['icone' => primesAppIcone($x['icone'] ?? null)];
     if (($x['famille'] ?? '') === 'magasin') {
-        if ($e['type'] !== 'promo' || count($e['promo']['shops']) !== 1) { return null; }
-        $shop = $e['promo']['shops'][0];
-        $e['cle'] = primesAppClePromo($e['promo'], $shop);
-        return $e + ['famille' => 'magasin', 'shop' => $shop, 'payeur' => 'magasin', 'sponsor' => ''] + $icone + primesAppInfosPropres($x);
+        $mag = ['famille' => 'magasin', 'payeur' => 'magasin', 'sponsor' => ''];
+        if ($e['type'] === 'promo') {
+            if (count($e['promo']['shops']) !== 1) { return null; }
+            $shop = $e['promo']['shops'][0];
+            $e['cle'] = primesAppClePromo($e['promo'], $shop);
+            return $e + ['shop' => $shop] + $mag + $icone + primesAppInfosPropres($x);
+        }
+        // Une catégorie ou un target du magasin (23/10/2026) : la clé porte le magasin (« k3z… », « t3z… ») et la garde ;
+        // sa période, comme celles de la marque.
+        $shop = is_scalar($x['shop'] ?? null) && preg_match('/^\d+$/', (string) $x['shop']) ? (string) $x['shop'] : '';
+        if ($shop === '') { return null; }
+        $pre = ($e['type'] === 'cible' ? 't' : 'k') . $shop . 'z';
+        $cle = (string) ($x['cle'] ?? '');
+        if (!str_starts_with($cle, $pre) || !preg_match('/^[a-z0-9]{3,24}$/', $cle)) {
+            $nom = preg_replace('/[^a-z0-9]+/', '', strtolower((string) (iconv('UTF-8', 'ASCII//TRANSLIT', $e['lib']) ?: ''))) ?? '';
+            $cle = $pre . mb_substr(($e['type'] === 'cible' ? $e['base'] : '') . $nom, 0, 12) . bin2hex(random_bytes(2));
+        }
+        $e['cle'] = mb_substr($cle, 0, 24);
+        [$du, $au] = [primesAppDate($x['du'] ?? null), primesAppDate($x['au'] ?? null)];
+        if ($du !== null && $au !== null && $au < $du) { [$du, $au] = [$au, $du]; }
+        return $e + ['du' => $du, 'au' => $au, 'shop' => $shop] + $mag + $icone + primesAppInfosPropres($x);
     }
+    // Un target du magasin n'existe que pour un magasin.
+    if ($e['type'] === 'cible') { return null; }
     // La période (16/10/2026) : une catégorie ou un target peut tourner du … au … (vide : sans début, sans fin) ; une promo
     // a les dates de sa promotion.
     if ($e['type'] !== 'promo') {
@@ -271,6 +291,20 @@ function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?ar
         }
         return null;
     }
+    if ($type === 'cible') {
+        // Un target du magasin (23/10/2026, Sam : « tout doit être paramétrable, déclencheur et autre ») : ventes croisées,
+        // objectif CA ou note Google, posé par un franchisé pour SON magasin — son déclencheur, son minimum, sa récompense
+        // (ou un cadeau), sa période. Il ne vit que dans la famille « magasin » (la clé et le magasin sont posés plus haut).
+        $base = (string) ($x['base'] ?? '');
+        if (!in_array($base, PRIMES_TARGETS, true)) { return null; }
+        $nombre = static fn ($v, float $min, float $max, float $defaut, int $dec = 0) => is_numeric($v) ? max($min, min($max, round((float) $v, $dec))) : $defaut;
+        $lib = mb_substr(trim((string) ($x['lib'] ?? '')), 0, 40) ?: ['croisees' => 'Ventes croisées', 'objectif' => 'Objectif magasin', 'google' => 'Note Google'][$base];
+        $e = ['cle' => (string) ($x['cle'] ?? ''), 'type' => 'cible', 'base' => $base, 'lib' => $lib, 'actif' => $actif, 'montant' => $montant, 'classement' => false];
+        if ($base === 'croisees') { return $e + ['cible' => $nombre($x['cible'] ?? null, 1, 100, 50.0, 1), 'minTickets' => (int) $nombre($x['minTickets'] ?? null, 0, 5000, 30)]; }
+        $hMin = (int) $nombre($x['heuresMin'] ?? null, 0, 200, 20);
+        if ($base === 'objectif') { return $e + ['pct' => (int) $nombre($x['pct'] ?? null, 50, 200, 100), 'heuresMin' => $hMin]; }
+        return $e + ['seuil' => $nombre($x['seuil'] ?? null, 1, 5, PRIMES_GOOGLE_SEUIL, 1), 'heuresMin' => $hMin];
+    }
     if ($type === 'categorie') {
         $e = concoursEntree($x, $i);
         if ($e === null || in_array($e['cle'], PRIMES_TARGETS, true) || str_starts_with($e['cle'], 'p')) {
@@ -279,8 +313,10 @@ function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?ar
             $e['cle'] = 'k' . $e['cle'];
         }
         $min = (isset($x['minPieces']) && is_numeric($x['minPieces'])) ? max(0, min(5000, (int) $x['minPieces'])) : 10;
+        // Qui gagne (23/10/2026) : la 1re du magasin, ou chaque vendeuse au-dessus du seuil de pièces.
         return ['cle' => mb_substr($e['cle'], 0, 20), 'type' => 'categorie', 'lib' => $e['lib'], 'actif' => $actif, 'montant' => $montant,
-            'classement' => !array_key_exists('classement', $x) || (bool) $x['classement'], 'motif' => $e['motif'], 'minPieces' => $min];
+            'classement' => !array_key_exists('classement', $x) || (bool) $x['classement'], 'motif' => $e['motif'], 'minPieces' => $min,
+            'regle' => ($x['regle'] ?? '') === 'seuil' ? 'seuil' : 'premiere'];
     }
     if ($type === 'promo') {
         $promo = primesAppPromoPropre($x['promo'] ?? null);
@@ -338,11 +374,13 @@ function primesAppListePropre(array $liste, int $recompense): array
     foreach (array_values($liste) as $i => $x) {
         $e = is_array($x) ? primesAppEntreeValide($x, $i, $recompense) : null;
         if ($e === null || isset($vus[$e['cle']])) { continue; }
-        if ($e['type'] === 'categorie' && ++$nCat > PRIMES_APP_MAX_CATEGORIES) { continue; }
         if ($e['famille'] === 'magasin') {
-            $nMag[$e['shop']] = ($nMag[$e['shop']] ?? 0) + 1;
-            if ($nMag[$e['shop']] > PRIMES_APP_MAX_PROMOS) { continue; }
-        } elseif ($e['type'] === 'promo' && ++$nPro > PRIMES_APP_MAX_PROMOS) { continue; }
+            // Un franchisé : six de chaque sorte (promos, catégories, targets) pour son magasin.
+            $k = $e['shop'] . ':' . $e['type'];
+            $nMag[$k] = ($nMag[$k] ?? 0) + 1;
+            if ($nMag[$k] > PRIMES_MAG_MAX) { continue; }
+        } elseif ($e['type'] === 'categorie' && ++$nCat > PRIMES_APP_MAX_CATEGORIES) { continue; }
+        elseif ($e['type'] === 'promo' && ++$nPro > PRIMES_APP_MAX_PROMOS) { continue; }
         $vus[$e['cle']] = true;
         $out[] = $e;
     }
@@ -997,7 +1035,8 @@ function pvFamillesRequises(): array
 {
     $out = [];
     $debut = date('Y-m-01', strtotime('first day of last month'));
-    foreach (primesAppDuType('categorie', false) as $e) { $out[$e['cle']] = ['du' => $debut, 'au' => null, 'shops' => null, 'promo' => false]; }
+    // Une catégorie d'un franchisé (23/10/2026) ne se compte que dans son magasin.
+    foreach (primesAppDuType('categorie', false) as $e) { $out[$e['cle']] = ['du' => $debut, 'au' => null, 'shops' => ($e['famille'] ?? '') === 'magasin' ? [(string) $e['shop'] => true] : null, 'promo' => false]; }
     // Des ventes croisées par catégorie : les jours depuis le mois d'avant doivent porter le compte par catégorie (« k »).
     if (function_exists('pvCroiseesCategorie') && pvCroiseesCategorie() !== null) { $out['#k'] = ['du' => $debut, 'au' => null, 'shops' => null, 'promo' => true]; }
     $familles = promoFamilles();
@@ -1281,6 +1320,31 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             // Les avis 5★ qu'il manque pour atteindre le seuil (17/10/2026).
             'avis5' => primesAvis5Manquants($note, (int) $g['avis'], $seuil)];
     }
+    // Les targets du magasin (23/10/2026) : la carte d'un target de la marque, sa clé à lui, « base » dit lequel ; payés par
+    // le magasin (primesAppInfosDe).
+    foreach ((array) ($b['cibles']['liste'] ?? []) as $t) {
+        $val = $t['val']; $cible = (float) $t['cible']; $base = (string) $t['base'];
+        $carte = ['cle' => $t['cle'], 'base' => $base, 'type' => 'target', 'emo' => ['croisees' => '🛍️', 'objectif' => '🏪', 'google' => '⭐'][$base] ?? '🎯',
+            'icone' => primesIconeDe($t['cle']), 'lib' => $t['lib'], 'montant' => !empty($t['cadeau']) ? 0 : (int) $t['recompense'], 'max' => false,
+            'gain' => (float) $t['montant'], 'etat' => !empty($t['atteint']) ? 'gagne' : (($val === null || !empty($t['sousMin'])) ? 'vide' : 'att'),
+            'val' => $val, 'unite' => $base === 'google' ? 'note' : 'pct', 'cible' => $cible, 'ecart' => $val !== null ? round(max(0, $cible - $val), 1) : null,
+            'classement' => false, 'du' => $t['du'], 'au' => $t['au'], 'duMagasin' => true];
+        if ($base === 'croisees') {
+            $carte += ['minTickets' => (int) $t['minTickets'], 'motif' => $val === null ? $vide('pas_compte') : ($t['tickets'] < $t['minTickets'] ? 'min_tickets' : null),
+                'manque' => primesManqueCroisees((int) $t['croisees'], (int) $t['tickets'], $cible)];
+        } elseif ($base === 'objectif') {
+            $j = $enCours ? (int) date('j') : null;
+            $cibleJour = $j !== null ? round($cible * $j / (int) date('t'), 1) : null;
+            $carte += ['projete' => empty($t['clos']), 'aDate' => $t['aDate'], 'jour' => $j, 'cibleJour' => $cibleJour,
+                'avance' => ($t['aDate'] !== null && $cibleJour !== null) ? round($t['aDate'] - $cibleJour, 1) : null, 'heuresMin' => (int) $t['heuresMin'],
+                'motif' => $t['objectif'] === null ? 'pas_objectif' : (!empty($t['sousMin']) ? 'heures' : ($val === null ? 'pas_compte' : null)),
+                'manqueCa' => $t['objectif'] !== null && empty($t['clos']) ? max(0, (int) ceil((float) $t['objectif'] * $cible / 100 - (float) ($t['ca'] ?? 0))) : null];
+        } else {
+            $carte += ['avis' => (int) $t['avis'], 'heuresMin' => (int) $t['heuresMin'], 'motif' => $val === null ? 'pas_note' : (!empty($t['sousMin']) ? 'heures' : null),
+                'avis5' => primesAvis5Manquants($val, (int) $t['avis'], $cible)];
+        }
+        $cartes[] = $carte;
+    }
     $v = $b['meilleure'];
     if (($v['montantMag'] ?? 0) > 0) {
         $cartes[] = ['cle' => 'meilleure', 'type' => 'classement', 'emo' => '🏆', 'icone' => primesIconeDe('meilleure'), 'lib' => 'Meilleure vendeuse', 'montant' => (int) $v['montantMag'], 'max' => false,
@@ -1353,6 +1417,14 @@ function primesAVenir(int $emp, string $m): array
         $cartes[] = $carte(['cle' => 'google', 'type' => 'target', 'emo' => '⭐', 'icone' => $eG['icone'], 'lib' => $eG['lib'], 'montant' => (int) $eG['montant'],
             'objectif' => (float) $eG['seuil'], 'unite' => 'note', 'heuresMin' => (int) $eG['heuresMin']]);
     }
+    // Les targets de son magasin (23/10/2026), prévus.
+    foreach (primesAppDuType('cible') as $e) {
+        if ((string) ($e['shop'] ?? '') !== $shop) { continue; }
+        $base = (string) $e['base'];
+        $cartes[] = $carte(['cle' => $e['cle'], 'base' => $base, 'type' => 'target', 'emo' => ['croisees' => '🛍️', 'objectif' => '🏪', 'google' => '⭐'][$base] ?? '🎯', 'icone' => (string) ($e['icone'] ?? ''),
+            'lib' => $e['lib'], 'montant' => !empty($e['cadeau']) ? 0 : (int) $e['montant'], 'objectif' => (float) ($base === 'croisees' ? $e['cible'] : ($base === 'objectif' ? $e['pct'] : $e['seuil'])),
+            'unite' => $base === 'google' ? 'note' : 'pct', 'heuresMin' => (int) ($e['heuresMin'] ?? 0), 'minTickets' => (int) ($e['minTickets'] ?? 0), 'duMagasin' => true]);
+    }
     $mv = ventePrimesConfig();
     if (($mv['magasin'] ?? 0) > 0) {
         $cartes[] = $carte(['cle' => 'meilleure', 'type' => 'classement', 'emo' => '🏆', 'icone' => primesIconeDe('meilleure'), 'lib' => 'Meilleure vendeuse', 'montant' => (int) $mv['magasin'], 'regle' => 'premiere']);
@@ -1410,17 +1482,19 @@ function primesCarteJauge(array $c): array
 {
     $v = $c['val'] ?? null;
     [$bas, $haut, $rType, $rVal, $jour] = [0.0, null, null, null, null];
-    if ($c['cle'] === 'croisees') {
+    // Un target d'un magasin (23/10/2026) a sa clé à lui ; « base » dit lequel il est.
+    $k = (string) ($c['base'] ?? $c['cle']);
+    if ($k === 'croisees') {
         [$rType, $rVal] = ['cible', (float) $c['cible']];
         $haut = min(100.0, max($rVal + 15, (float) ($v ?? 0) + 5));
-    } elseif ($c['cle'] === 'record') {
+    } elseif ($k === 'record') {
         if ($c['cible'] !== null) { [$rType, $rVal] = ['cible', (float) $c['cible']]; $haut = max($rVal * 1.15, (float) ($v ?? 0) * 1.05); }
-    } elseif ($c['cle'] === 'objectif') {
+    } elseif ($k === 'objectif') {
         $v = ($c['jour'] ?? null) !== null ? $c['aDate'] : $v;
         [$rType, $rVal] = ['cible', (float) $c['cible']];
         $jour = ($c['jour'] ?? null) !== null ? (float) $c['cibleJour'] : null;
         $haut = max($rVal + 10, (float) ($v ?? 0) + 5);
-    } elseif ($c['cle'] === 'google') {
+    } elseif ($k === 'google') {
         [$rType, $rVal] = ['seuil', (float) $c['cible']];
         [$bas, $haut] = [$rVal - 1, 5.0];
     } else {
@@ -1461,7 +1535,7 @@ function primesCarteJauge(array $c): array
         $objCat = ($objCat !== null && $objCat > 0) ? $objCat : max(1.0, (float) ($c['minPieces'] ?? 0));
         $barre = round(max(0.0, min(100.0, PRIMES_BARRE_OBJ * (float) $v / $objCat)), 1);
     }
-    $actif = ($c['cle'] === 'objectif' && ($c['jour'] ?? null) !== null)
+    $actif = ($k === 'objectif' && ($c['jour'] ?? null) !== null)
         ? ($v !== null && (float) $v >= (float) $c['cible'] && ($c['motif'] ?? null) === null)
         : in_array($c['etat'] ?? '', ['gagne', 'tete'], true);
     return $c + ['barre' => $barre, 'barreJour' => $barreJour, 'actif' => $actif, 'pour1' => $pour1, 'avance1' => $avance1, 'jauge' => $ok ? primesJauge((float) $v, $bas, $haut) : null,
@@ -1496,6 +1570,7 @@ function primesGagnees(array $p): array
     if (($p['google'] ?? 0) > 0) { $out[] = $nom('google', 'Note Google'); }
     foreach ((array) ($p['concours']['titres'] ?? []) as $t) { $out[] = $t['lib']; }
     foreach ((array) ($p['promo']['titres'] ?? []) as $t) { $out[] = $t['lib']; }
+    foreach ((array) ($p['cibles']['liste'] ?? []) as $c) { $out[] = $c['lib']; }
     if (($p['record']['montant'] ?? 0) > 0) { $out[] = 'Bats ton record'; }
     if (($p['meilleure'] ?? 0) > 0) { $out[] = 'Meilleure vendeuse'; }
     return $out;

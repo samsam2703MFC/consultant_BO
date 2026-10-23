@@ -47,11 +47,13 @@ class PrimesPlan
             $etat = (string) ($c['etat'] ?? '');
             if (in_array($etat, ['gagne', 'tete'], true) || in_array($c['motif'] ?? null, self::SANS_PLAN, true)) { continue; }
             $val = isset($c['val']) && $c['val'] !== null ? (float) $c['val'] : null;
+            // Un target du magasin (23/10/2026) a sa clé à lui : « base » dit lequel il est.
+            $k = (string) ($c['base'] ?? $c['cle']);
             $e = ['cle' => (string) $c['cle'], 'carte' => $c, 'gain' => (int) ($c['montant'] ?? 0), 'total' => (int) ($c['montant'] ?? 0),
                 // equipe : elle se joue avec tout le magasin (objectif, note Google) ; magasin : la prime va au magasin.
                 'equipe' => false, 'magasin' => false, 'de' => $val, 'a' => null, 'unite' => (string) ($c['unite'] ?? ''), 'horsPortee' => false];
 
-            if ($c['cle'] === 'croisees') {
+            if ($k === 'croisees') {
                 // Le taux du mois face à la cible ; sur ses prochains tickets, ce qu'il faut viser.
                 $seuil = (float) ($c['cible'] ?? 0);
                 $cr = (int) ($b['croisees']['croisees'] ?? 0);
@@ -68,7 +70,7 @@ class PrimesPlan
                 } elseif ($e['affilee'] === null && ($val ?? 0) < $seuil) {
                     $e['horsPortee'] = true;
                 }
-            } elseif ($c['cle'] === 'record' && ($b['record']['record'] ?? null) === null) {
+            } elseif ($k === 'record' && ($b['record']['record'] ?? null) === null) {
                 // Pas encore de record (23/10/2026) : un mois d'au moins 30 tickets le pose, il se bat le mois suivant.
                 // Rien à gagner ce mois-ci : l'étape se dit, sans être promise.
                 if ($val === null) { continue; }
@@ -78,7 +80,7 @@ class PrimesPlan
                     'moisSuivant' => date('Y-m', strtotime(($f['m'] ?? date('Y-m')) . '-01 +1 month'))];
                 $e['de'] = (float) $tk; $e['a'] = (float) $minT; $e['unite'] = 'tickets';
                 $e['horsPortee'] = true;
-            } elseif ($c['cle'] === 'record') {
+            } elseif ($k === 'record') {
                 // Le record paie dès le 2e dixième au-dessus (la cible de la carte : record + 0,2), un dixième à la fois.
                 $cible = isset($c['cible']) && $c['cible'] !== null ? (float) $c['cible'] : null;
                 if ($cible === null || $val === null) { continue; }
@@ -91,14 +93,14 @@ class PrimesPlan
                     // Plus d'un article de plus par ticket que sa moyenne : hors de portée ce mois-ci.
                     $e['horsPortee'] = $vise > $val + 1;
                 }
-            } elseif ($c['cle'] === 'objectif') {
+            } elseif ($k === 'objectif') {
                 // L'objectif du magasin : à jouer en équipe ; le CA qu'il manque, par jour qui reste.
                 $e['equipe'] = true;
                 $e['a'] = (float) ($c['cible'] ?? 100);
                 $manque = isset($c['manqueCa']) && $c['manqueCa'] !== null ? (int) $c['manqueCa'] : null;
                 $jours = (int) ($pm['joursRestants'] ?? 0);
                 $e += ['manqueCa' => $manque, 'joursRestants' => $jours, 'parJour' => ($manque !== null && $manque > 0 && $jours > 0) ? (int) ceil($manque / $jours) : null];
-            } elseif ($c['cle'] === 'google') {
+            } elseif ($k === 'google') {
                 // La note du magasin : les avis 5★ qu'il manque.
                 $e['equipe'] = true;
                 $e['a'] = (float) ($c['cible'] ?? 0);

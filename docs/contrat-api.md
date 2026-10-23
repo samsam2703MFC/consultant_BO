@@ -3897,3 +3897,33 @@ différents — la définition « taux de fidélisation » du panel consultant, 
 **23/10/2026 — Rail de la console : le menu « Application employé ».** Demande de Sam : le rail est le bac à sable du dev, qui exportera d'ici les trois pièces de l'application employé vers l'intégrateur de l'ERP. Le menu « Application employé » réunit la **page admin** (`primesApp`, section marque : les primes de la marque et des sponsors, les promotions, les moyennes), la **page franchisé (magasin)** (`primesApp`, section franchisé : les primes que chaque franchisé pose pour son magasin) et **Application ↗** (`employee/auth`, la connexion de l'app : horaire, tâches, primes, profil). Il remplace « App worker ↗ » et le sous-menu « Primes · module app worker » d'ERP franchisé (qui garde Prospection ↗ et Tablette vendeuses) ; le lien direct « Mes primes dans l'app ↗ » se fond dans « Application ↗ » (les primes sont un onglet de l'app). Une entrée de premier niveau du rail peut désormais poser un état en plus de l'écran (`c[4]`), comme un enfant de sous-menu.
 
 **23/10/2026 — Promotions : la « destination » (SHOP, WEBSHOP, BOTH) et le seuil de déclenchement.** Demande de Sam : vérifier si l'API des promotions reçoit la destination et le seuil. La documentation publique (`api.php`, relue le 23/10/2026 à 16:46) est identique à celle du matin (même empreinte `5b57f425…`) : aucun champ de seuil ni de canal sur les promotions ; le seul « minimum_order_value » est l'exemple d'un paramètre global (`/admin/global-params/{key}`, le minimum de commande du webshop), pas une condition de promotion. `pvConditions` reconnaît désormais aussi un canal en **une seule valeur** sous `destination`, `destinations`, `sale(s)_destination`, `order_destination` (« SHOP » = comptoir, « WEBSHOP » = webshop, « BOTH »/« ALL » = les deux — qui apprend le nom du champ et son jeton sans rien restreindre), et le seuil sous `trigger_amount`, `min_trigger_amount`, `trigger_threshold`… ; `pmConditionsCorps` écrit alors une valeur (`destination: "WEBSHOP"`) et non une liste. La sonde `GET /ventes/promos/sonde-champs` range aussi `destination`, `declench…` et `trigger_…` parmi les conditions. Rien ne s'écrit tant qu'aucune promotion du panel ne porte ces champs (pas de nom deviné) ; la relecture vérifie toujours ce que le panel a gardé.
+
+### Primes app worker — la page d'un magasin, tous les déclencheurs pour ses primes (23/10/2026, demande de Sam)
+
+**Adresse** : `#/primes-app-worker?shop=3` ouvre le panneau des primes du magasin 3 ; l'id se change à la main dans la
+barre d'adresse (un id inconnu liste les magasins). Sans `?shop`, la page admin (marque, primes de tous les franchisés,
+promotions, moyennes). « Page franchisé » du rail rouvre le dernier magasin valide.
+
+**Page du magasin** : les primes de la marque et des sponsors qui y tournent (à lire, avec la moyenne et l'objectif du
+magasin) ; les siennes (posées et payées par le magasin) ; ses chiffres face au réseau ; les promotions du panel qui y
+tournent (une prime du magasin en un geste).
+
+**Les primes d'un magasin** (`famille: magasin`, `payeur: magasin`, six de chaque sorte au plus) — `POST
+/ventes/primes-app` les reçoit dans la liste, comme les autres :
+
+| Sorte | `type` | Réglages |
+|---|---|---|
+| Promotion | `promo` | produits (panel ou cockpit), période, qui gagne (1re, seuil, objectif magasin, objectif vendeuse), montant ou cadeau |
+| Catégorie | `categorie` + `shop` | mot du nom des produits, période, qui gagne (`regle` : `premiere` ou `seuil`), minimum de pièces, montant ou cadeau |
+| Ventes croisées | `cible` + `base: croisees` + `shop` | `cible` (%), `minTickets`, montant ou cadeau, période |
+| Objectif CA | `cible` + `base: objectif` + `shop` | `pct` de l'objectif du mois, `heuresMin`, montant ou cadeau, période |
+| Note Google | `cible` + `base: google` + `shop` | `seuil` (★), `heuresMin`, montant ou cadeau, période |
+
+Clés : `k{shop}z…` (catégorie), `t{shop}z…` (target), `pm{shop}z…` (promo) — gardées à chaque réenregistrement.
+
+**Calcul** (`primesCiblesMagasin`, `concoursReglages($shop)`) : un target du magasin se gagne par chaque vendeuse de ce
+magasin — ventes croisées : son taux du mois (la même vente croisée que la marque) ≥ cible et assez de tickets ; objectif
+CA : l'atteinte du magasin (projetée tant que le mois court) ≥ % et ses heures ; note Google : la note de la fiche ≥ seuil
+et ses heures. Un cadeau se gagne sans euros. Une catégorie du magasin ne classe que ses vendeuses. Les montants entrent
+dans « Mes primes » (cartes `type: target`, `base`, `duMagasin: true`), le mois clos, les primes du mois de tous (colonne
+« Targets du magasin », `totaux.cibles`), l'enregistrement (`cibles`, payé par le magasin) et le SMS.

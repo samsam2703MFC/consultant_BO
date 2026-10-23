@@ -6211,11 +6211,13 @@ class App {
     const notes = Object.values((d.google || {}).notes || {}).filter(v => v != null);
     const moyGoogle = e => (!notes.length ? '' : fr(notes.reduce((a, b) => a + b, 0) / notes.length, 1) + ' ★ · '
       + notes.filter(v => v + 1e-9 >= (+e.seuil || 4.5)).length + ' / ' + notes.length + ' magasins au seuil');
+    // Un target du magasin (23/10/2026) se lit comme celui de la marque dont il prend la mesure (« base »).
+    const kDe = e => (e.type === 'cible' ? e.base : e.cle);
     const moyDe = e => {
-      if (e.cle === 'google') { return moyGoogle(e); }
+      if (kDe(e) === 'google') { return moyGoogle(e); }
       if (!R) { return ''; }
-      if (e.cle === 'croisees') { return [R.croisees != null ? pc(R.croisees) : '', R.ticketsVendeuse != null ? R.ticketsVendeuse.toLocaleString('fr-BE') + ' tickets / vend.' : ''].filter(Boolean).join(' · '); }
-      if (e.cle === 'objectif') { return R.atteinte != null ? pc(R.atteinte) + ' de l’objectif' : ''; }
+      if (kDe(e) === 'croisees') { return [R.croisees != null ? pc(R.croisees) : '', R.ticketsVendeuse != null ? R.ticketsVendeuse.toLocaleString('fr-BE') + ' tickets / vend.' : ''].filter(Boolean).join(' · '); }
+      if (kDe(e) === 'objectif') { return R.atteinte != null ? pc(R.atteinte) + ' de l’objectif' : ''; }
       if (e.type === 'categorie') { const v = (R.pieces || {})[e.cle]; return v != null ? fr(v, 0) + ' pcs / vend.' : ''; }
       if (e.type === 'promo') { const p = (moy.promos || []).find(x => x.cle === e.cle); return p && p.reseau != null ? fr(p.reseau, 0) + ' / vend. depuis le début' : ''; }
       return '';
@@ -6223,16 +6225,16 @@ class App {
     // La même moyenne, pour UN magasin (la page franchisé, 23/10/2026) : ses chiffres à lui.
     const moyMagDe = sid => (moy ? (moy.magasins || []).find(m => String(m.id) === String(sid)) || null : null);
     const moyDeMag = (e, sid) => {
-      if (e.cle === 'google') { const v = ((d.google || {}).notes || {})[sid]; return v != null ? fr(v, 1) + ' ★ aujourd’hui' : ''; }
+      if (kDe(e) === 'google') { const v = ((d.google || {}).notes || {})[sid]; return v != null ? fr(v, 1) + ' ★ aujourd’hui' : ''; }
       const M = moyMagDe(sid);
       if (!M) { return ''; }
-      if (e.cle === 'croisees') { const ci = cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut; return [M.croisees != null ? pc(M.croisees) : '', 'cible du magasin ' + fr(+ci, 1) + ' %'].filter(Boolean).join(' · '); }
-      if (e.cle === 'objectif') { return M.atteinte != null ? pc(M.atteinte) + ' de l’objectif' : ''; }
+      if (kDe(e) === 'croisees') { const ci = cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut; return [M.croisees != null ? pc(M.croisees) : '', 'cible du magasin ' + fr(+ci, 1) + ' %'].filter(Boolean).join(' · '); }
+      if (kDe(e) === 'objectif') { return M.atteinte != null ? pc(M.atteinte) + ' de l’objectif' : ''; }
       if (e.type === 'categorie') { const v = (M.pieces || {})[e.cle]; return v != null ? fr(v, 0) + ' pcs / vend.' : ''; }
       if (e.type === 'promo') { const p = (moy.promos || []).find(x => x.cle === e.cle); const v = p ? (p.magasins || {})[sid] : null; return v != null ? fr(v, 0) + ' / vend. depuis le début' : ''; }
       return '';
     };
-    const emo = e => (e.cle === 'croisees' ? '🛍️' : e.cle === 'objectif' ? '🏪' : e.cle === 'google' ? '⭐' : e.type === 'promo' ? '🏷️' : '👑');
+    const emo = e => (kDe(e) === 'croisees' ? '🛍️' : kDe(e) === 'objectif' ? '🏪' : kDe(e) === 'google' ? '⭐' : e.type === 'promo' ? '🏷️' : '👑');
     // Les icônes déposées (public/uploads/primes) : servies à côté du cockpit, à la place de l'emoji dans l'app.
     const racine = API_BASE.replace(/api\/cockpit\/?$/, '');
     const icone = x => ({
@@ -6251,7 +6253,7 @@ class App {
       },
       retirerIcone: () => { x.icone = ''; re(); },
     });
-    const typLib = { target: 'Target', categorie: 'Catégorie', promo: 'Promo', classement: 'Classement' };
+    const typLib = { target: 'Target', cible: 'Target', categorie: 'Catégorie', promo: 'Promo', classement: 'Classement' };
     // Le tableau ne s'édite plus (16/10/2026) : l'interrupteur actif / éteint s'enregistre tout de suite, le reste se
     // modifie dans l'assistant (une promo) ou dans la fenêtre de réglage (targets, catégories, record, meilleure).
     const sauver = quoi => this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste, externes: app.externes, sms: app.sms })
@@ -6267,9 +6269,9 @@ class App {
     const payeurTxt = x => (x.famille === 'magasin' ? (nomMag[x.shop] || x.shop || 'Magasin') + ' — le magasin' : x.payeur === 'sponsor' && x.sponsor ? 'Sponsor · ' + x.sponsor : 'Marque');
     const lignes = [];
     app.liste.forEach((e, i) => {
-      const L = Object.assign(icone(e), { type: e.type, typLib: typLib[e.type], emo: emo(e), lib: e.lib || '', actif: !!e.actif, classement: !!e.classement, montant: String(e.montant ?? app.recompense),
-        externe: false, peutRetirer: e.type !== 'target', peutClasser: e.type !== 'target' || e.cle === 'croisees', moyenne: moyDe(e), libLibre: e.type !== 'target',
-        qui: e.cle === 'croisees' ? 'chacune à la cible' : (e.cle === 'objectif' || e.cle === 'google') ? 'chacune au planning' : e.regle === 'seuil' ? 'chacune au seuil'
+      const L = Object.assign(icone(e), { type: e.type === 'cible' ? 'target' : e.type, typLib: typLib[e.type], emo: emo(e), lib: e.lib || '', actif: !!e.actif, classement: !!e.classement, montant: String(e.montant ?? app.recompense),
+        externe: false, peutRetirer: e.type !== 'target', peutClasser: e.type !== 'target' && e.type !== 'cible' || e.cle === 'croisees', moyenne: moyDe(e), libLibre: e.type !== 'target',
+        qui: kDe(e) === 'croisees' ? 'chacune à la cible' : (kDe(e) === 'objectif' || kDe(e) === 'google') ? 'chacune au planning' : e.regle === 'seuil' ? 'chacune au seuil'
           : e.regle === 'magasin' ? 'le magasin, partagée entre ses vendeuses' : e.regle === 'vendeuse' ? 'chacune à son objectif' : '1re du magasin',
         poserActif: ev => { e.actif = !!ev.target.checked; re(); },
         poserClassement: ev => { e.classement = !!ev.target.checked; re(); },
@@ -6284,18 +6286,22 @@ class App {
         periodeTxt: e.type === 'promo' ? '' : periodeDe(e).txt, etatPeriode: periodeDe(e).etat,
         payeurTxt: payeurTxt(e), montantTxt: e.cadeau ? '🎁 ' + e.cadeau.nom + (e.cadeau.valeur ? ' (valeur ' + e.cadeau.valeur + ' €)' : '') : (e.montant ?? app.recompense) + ' €' + (e.type === 'promo' && e.regle === 'magasin' ? ' par magasin' : ''),
         basculer: ev => { e.actif = !!ev.target.checked; sauver('« ' + (e.lib || e.cle) + ' » ' + (e.actif ? 'activée' : 'éteinte')); },
-        modifier: () => this.setState(e.type === 'promo' || e.type === 'categorie' ? { prWiz: wizDe(e) } : { prEdit: editDe(e) }),
+        modifier: () => this.setState(e.type === 'promo' || e.type === 'categorie' ? { prWiz: wizDe(e) } : { prEdit: e.type === 'cible' ? editCible(e) : editDe(e) }),
         // Pour la page d'un magasin : où la prime tourne, sa moyenne et son objectif dans ce magasin.
-        shops: e.type === 'promo' ? ((e.promo || {}).shops || []).map(String) : [], moyMag: sid => moyDeMag(e, sid),
+        typeE: e.type, shops: e.type === 'promo' ? ((e.promo || {}).shops || []).map(String) : [], moyMag: sid => moyDeMag(e, sid),
         objectifMag: sid => (e.objectifs && e.objectifs[sid] != null ? 'objectif du magasin : ' + e.objectifs[sid] + ' pcs' + (e.regle === 'vendeuse' && e.objVend && e.objVend[sid] ? ' · ' + e.objVend[sid] + ' par vendeuse' : '') : '') });
       // Ce qui compte, en clair (le tableau ne s'édite plus).
       const regleTxt = { seuil: (e.minPieces || 0) + ' pcs (seuil)', premiere: e.minPieces ? e.minPieces + ' pcs min.' : '' };
+      const hMinC = k => (k.heuresMin || 0) > 0 ? ' · ' + k.heuresMin + ' h min.' : '';
       const hMin = k => (k.heuresMin ?? 20) > 0 ? ' · ' + (k.heuresMin ?? 20) + ' h min.' : '';
       L.texte = e.cle === 'croisees' ? 'tickets à 2 articles ou plus' + (e.categorie ? ' avec ' + e.categorie : '') + ' · taux ≥ cible du magasin (défaut ' + fr(cr.cibleDefaut, 1) + ' %)' + (cr.minTickets > 0 ? ' · ' + cr.minTickets + ' tickets min.' : '')
           + (Object.keys(cr.cibles).length ? ' · ' + Object.keys(cr.cibles).length + ' magasin(s) avec sa cible' : '')
         : e.cle === 'objectif' ? 'CA ≥ ' + (e.pct ?? 100) + ' % de l’objectif' + hMin(e)
         : e.cle === 'google' ? 'note Google du magasin ≥ ' + fr(e.seuil ?? 4.5, 1) + ' ★' + hMin(e)
-        : e.type === 'categorie' ? 'produits « ' + (e.motif || '') + ' »' + ((e.minPieces ?? 10) > 0 ? ' · ' + (e.minPieces ?? 10) + ' pcs min.' : '')
+        // Un target du magasin (23/10/2026) : son déclencheur à lui.
+        : e.type === 'cible' ? (e.base === 'croisees' ? 'ventes croisées ≥ ' + fr(+e.cible, 1) + ' % (cible du magasin)' + ((e.minTickets || 0) > 0 ? ' · ' + e.minTickets + ' tickets min.' : '')
+          : e.base === 'objectif' ? 'CA du magasin ≥ ' + e.pct + ' % de l’objectif du mois' + hMinC(e) : 'note Google du magasin ≥ ' + fr(+e.seuil, 1) + ' ★' + hMinC(e))
+        : e.type === 'categorie' ? 'produits « ' + (e.motif || '') + ' »' + (e.regle === 'seuil' ? ' · chacune à ' + (e.minPieces || 0) + ' pcs' : (e.minPieces ?? 10) > 0 ? ' · ' + (e.minPieces ?? 10) + ' pcs min.' : '')
         : e.type === 'promo' ? [(e.promo || {}).nom, sorte(e.promo || {}), dates(e.promo || {}), mags(e.promo || {}), { api: 'panel', cockpit: 'créée dans le cockpit' }[(e.promo || {}).source]].filter(Boolean).join(' · ')
           + (e.regle === 'magasin' || e.regle === 'vendeuse' ? '' : regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] ? ' · ' + regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] : '')
         : '';
@@ -6368,9 +6374,9 @@ class App {
     const wizDe = e => Object.assign(wizDe0(e), infosDe(e));
     const wizDe0 = e => {
       if (e.type === 'categorie') {
-        return Object.assign(wizNeuf('marque', ''), { edit: e.cle, sorte: 'categorie', motif: e.motif || '', regle: 'premiere', minPieces: String(e.minPieces ?? 10),
+        return Object.assign(wizNeuf(e.famille === 'magasin' ? 'magasin' : 'marque', e.shop || ''), { edit: e.cle, sorte: 'categorie', motif: e.motif || '', regle: e.regle === 'seuil' ? 'seuil' : 'premiere', minPieces: String(e.minPieces ?? 10),
           cPer: e.du || e.au ? 'dates' : 'toujours', cdu: e.du || '', cau: e.au || '',
-          montant: String(e.montant ?? app.recompense), payeur: e.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: e.sponsor || '', nom: e.lib || '', nomTouche: true, iconeExist: e.icone || '' });
+          montant: String(e.montant ?? app.recompense), payeur: e.famille === 'magasin' ? 'magasin' : (e.payeur === 'sponsor' ? 'sponsor' : 'marque'), sponsor: e.sponsor || '', nom: e.lib || '', nomTouche: true, iconeExist: e.icone || '' });
       }
       const p = e.promo || {};
       const W0 = wizNeuf(e.famille === 'magasin' ? 'magasin' : 'marque', e.shop || '', p.source === 'api' ? p : null);
@@ -6458,9 +6464,9 @@ class App {
       const resume = estCat ? [
         ['Produits', 'dont le nom contient « ' + W.motif.trim() + ' » · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
         ['Période', W.cPer === 'dates' ? 'chaque mois' + (W.cdu ? ' dès le ' + jjmm(W.cdu) : '') + (W.cau ? ' jusqu’au ' + jjmm(W.cau) : '') : 'chaque mois, sans fin'],
-        ['Magasins', 'tous (' + (d.magasins || []).length + ')'],
-        ['Gagne', 'la 1re de chaque magasin' + (minP ? ', ' + minP + ' pcs min.' : '')],
-        ['Récompense', gainTxt() + ' · offerte par ' + (W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]] : [
+        fam ? ['Magasin', (nomMag[W.shop] || W.shop || '…') + ' — prime du franchisé'] : ['Magasins', 'tous (' + (d.magasins || []).length + ')'],
+        ['Gagne', W.regle === 'seuil' ? 'chaque vendeuse à ' + (minP || 0) + ' pcs ou plus' : (fam ? 'la 1re du magasin' : 'la 1re de chaque magasin') + (minP ? ', ' + minP + ' pcs min.' : '')],
+        ['Récompense', gainTxt() + ' · offerte par ' + (fam ? 'le magasin' : W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]] : [
         ['Produits', W.api ? 'la promotion « ' + W.api.nom + ' » du panel' : W.sel.map(z => z.lib + (z.t === 'produit' ? '' : ' (' + (z.n || 0) + ')')).join(' + ') + ' · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
         ['Période', !du && !au ? 'sans dates — tant que la promotion tourne' : jjmm(du) + ' → ' + jjmm(au)],
         fam ? ['Magasin', (nomMag[W.shop] || W.shop || '…') + ' — prime du franchisé'] : ['Magasins', shops.length ? shops.map(sid => nomMag[sid] || sid).join(', ') : 'tous (' + (d.magasins || []).length + ')'],
@@ -6479,10 +6485,12 @@ class App {
         if (W.envoi) { return; }
         if (estCat) {
           const ancienneC = W.edit ? app.liste.find(x => x.cle === W.edit) : null;
-          const eC = { type: 'categorie', cle: W.edit || '', lib: W.nom.trim(), motif: W.motif.trim(), minPieces: Math.max(0, Math.round(minP || 0)), montant: Math.round(montant),
+          const eC = { type: 'categorie', cle: W.edit || '', lib: W.nom.trim(), motif: W.motif.trim(), minPieces: Math.max(0, Math.round(minP || 0)), montant: Math.round(montant || 0),
+            regle: W.regle === 'seuil' ? 'seuil' : 'premiere',
             du: W.cPer === 'dates' && W.cdu ? W.cdu : null, au: W.cPer === 'dates' && W.cau ? W.cau : null,
             actif: ancienneC ? !!ancienneC.actif : true, classement: ancienneC ? ancienneC.classement !== false : true,
-            payeur: W.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: W.payeur === 'sponsor' ? W.sponsor.trim() : '', icone: W.iconeExist || '' };
+            payeur: fam ? 'magasin' : (W.payeur === 'sponsor' ? 'sponsor' : 'marque'), sponsor: !fam && W.payeur === 'sponsor' ? W.sponsor.trim() : '', icone: W.iconeExist || '',
+            famille: fam ? 'magasin' : 'marque', shop: fam ? W.shop : '' };
           Object.assign(eC, details());
           W.envoi = true; reW();
           deposer().then(([ri, rl]) => {
@@ -6532,7 +6540,8 @@ class App {
         sel: W.sel.map(z => ({ type: { groupe: 'Catégorie', categorie: 'Sous-catégorie', produit: 'Produit' }[z.t], lib: z.lib, n: z.t === 'produit' ? '' : String(z.n || ''), retirer: basculer(z) })),
         titre: W.edit ? 'Modifier « ' + (W.nom || 'la prime') + ' »' : fam ? 'Nouvelle prime du magasin' : 'Nouvelle prime', fam, edit: !!W.edit,
         // La sorte de prime, à l'étape 1 d'une prime neuve de la marque.
-        categorie: estCat, sortes: fam || W.edit ? null : [['promo', '🏷️', 'Promotion', 'Des produits choisis, sur une période : une promo du panel ou la vôtre.'],
+        // Un franchisé pose aussi des catégories pour son magasin (23/10/2026).
+        categorie: estCat, sortes: W.edit ? null : [['promo', '🏷️', 'Promotion', 'Des produits choisis, sur une période : une promo du panel ou la vôtre.'],
           ['categorie', '👑', 'Catégorie', 'Chaque mois, les produits dont le nom contient un mot : « tarte », « quiche »…']].map(([v, e, nom, txt]) => ({ e, nom, txt, on: W.sorte === v,
           choisir: () => { W.sorte = v; if (v === 'categorie') { W.regle = 'premiere'; } else { W.regle = 'magasin'; } W.nomTouche = false; reW(); } })),
         cPer: W.cPer, cdu: W.cdu, cau: W.cau, catDatesOk,
@@ -6569,7 +6578,7 @@ class App {
         regles: [['magasin', '🏪', 'Objectif du magasin', 'Le magasin atteint son objectif : une prime pour le magasin, partagée entre ses vendeuses du mois.'],
           ['vendeuse', '👤', 'Objectif par vendeuse', 'Chaque vendeuse a son objectif (celui du magasin ÷ ses vendeuses) : celles qui l’atteignent gagnent.'],
           ['premiere', '👑', 'La 1re de chaque magasin', 'La vendeuse qui a vendu le plus de pièces dans son magasin sur la période.'],
-          ['seuil', '🎯', 'Chaque vendeuse au-dessus d’un seuil', 'Toutes celles qui atteignent le nombre de pièces fixé.']].filter(([v]) => !estCat || v === 'premiere').map(([v, e, nom, txt]) => ({ e, nom, txt, on: W.regle === v,
+          ['seuil', '🎯', 'Chaque vendeuse au-dessus d’un seuil', 'Toutes celles qui atteignent le nombre de pièces fixé.']].filter(([v]) => !estCat || v === 'premiere' || v === 'seuil').map(([v, e, nom, txt]) => ({ e, nom, txt, on: W.regle === v,
           choisir: () => { W.regle = v; if (v === 'seuil' && (num(W.minPieces) || 0) < 1) { W.minPieces = '20'; } reW(); } })),
         poserMin: ev => { W.minPieces = ev.target.value; reW(); }, poserMontant: ev => { W.montant = ev.target.value; reW(); },
         // Une prime de la marque : la marque ou un sponsor. Celle d'un franchisé : son magasin, sans choix.
@@ -6619,6 +6628,19 @@ class App {
             cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets || 30), condT: cr.minTickets > 0, du: x.du || '', au: x.au || '' },
         payeur: x.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: x.sponsor || '', icone: null, iconeExist: x.icone || '', envoi: false };
     };
+    // Un target du magasin (23/10/2026, Sam : « tout doit être paramétrable, déclencheur et autre ») : ventes croisées,
+    // objectif CA ou note Google, posé par le franchisé pour SON magasin — son nom, son déclencheur, sa condition, sa
+    // récompense ou un cadeau, sa période, sa description, son icône. Payé par le magasin.
+    const CIBLE_NOM = { croisees: 'Ventes croisées', objectif: 'Objectif magasin', google: 'Note Google' };
+    const editCible = (e, base, shop) => {
+      const x = e || {}; const b0 = e ? e.base : base; const sid = e ? e.shop : shop;
+      return { cle: x.cle || '', ext: '', type: 'cible', base: b0, shop: String(sid || ''), nouveau: !e,
+        champs: { lib: x.lib || CIBLE_NOM[b0] || '', cible: String(x.cible ?? (cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut)), minTickets: String(x.minTickets ?? 30), condT: (x.minTickets ?? 30) > 0,
+          pct: String(x.pct ?? 100), seuil: String(x.seuil ?? 4.5), heuresMin: String(x.heuresMin || 20), condH: (x.heuresMin ?? 20) > 0,
+          montant: String(x.montant ?? app.recompense), cadeauOn: !!x.cadeau, cadeauNom: x.cadeau ? x.cadeau.nom : '', cadeauValeur: x.cadeau && x.cadeau.valeur != null ? String(x.cadeau.valeur) : '',
+          du: x.du || '', au: x.au || '', description: x.description || '' },
+        payeur: 'magasin', sponsor: '', icone: null, iconeExist: x.icone || '', envoi: false };
+    };
     const PE = S.prEdit;
     common.prEdit = null;
     if (PE) {
@@ -6633,8 +6655,15 @@ class App {
       const DESC_INDICE = { croisees: 'Toujours proposer un produit en plus', objectif: 'Chaque vente compte : le magasin gagne ensemble',
         google: 'Demande un avis 5★ aux clients contents', categorie: 'Mets-les en avant au comptoir',
         record: 'Un article de plus par ticket, et ton record tombe', meilleure: 'La vendeuse qui vend le plus du mois' };
-      const descCh = ch('description', 'Description dans l’app', 'texte', { indice: DESC_INDICE[PE.ext || PE.type] || '', large: true, max: 160 });
-      const champs = { croisees: [ch('categorie', 'Une vente croisée : 2 articles ou plus, dont un de', 'choix', { options: [['', 'toutes catégories']].concat((d.categories || []).map(k => [k, k])).concat(f.categorie && !(d.categories || []).includes(f.categorie) ? [[f.categorie, f.categorie]] : []) }),
+      const descCh = ch('description', 'Description dans l’app', 'texte', { indice: DESC_INDICE[PE.ext || (PE.type === 'cible' ? PE.base : PE.type)] || '', large: true, max: 160 });
+      // Le gain d'un target du magasin : de l'argent, ou un cadeau.
+      const gainCh = PE.type !== 'cible' ? [] : (f.cadeauOn ? [ch('cadeauOn', 'Un cadeau à la place de l’argent', 'case'), ch('cadeauNom', 'Le cadeau', 'texte', { indice: 'un bon resto' }), ch('cadeauValeur', 'Sa valeur', 'nombre', { unite: '€', pas: 5 })]
+        : [montantCh, ch('cadeauOn', 'Un cadeau à la place de l’argent', 'case')]);
+      const cibleCh = PE.type !== 'cible' ? [] : [ch('lib', 'Nom dans l’app', 'texte', { indice: CIBLE_NOM[PE.base] })].concat(
+        PE.base === 'croisees' ? [ch('cible', 'Cible du magasin : taux de ventes croisées', 'nombre', { unite: '%', pas: 0.5 })]
+          : PE.base === 'objectif' ? [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif du mois', pas: 1 })]
+          : [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 })], gainCh, periodeCh, [descCh]);
+      const champs = { cible: cibleCh, croisees: [ch('categorie', 'Une vente croisée : 2 articles ou plus, dont un de', 'choix', { options: [['', 'toutes catégories']].concat((d.categories || []).map(k => [k, k])).concat(f.categorie && !(d.categories || []).includes(f.categorie) ? [[f.categorie, f.categorie]] : []) }),
           ch('cibleDefaut', 'Cible par défaut (taux)', 'nombre', { unite: '%', pas: 0.5 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh].concat(periodeCh, descCh),
         objectif: [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif', pas: 1 }), montantCh].concat(periodeCh, descCh),
         google: [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 }), montantCh].concat(periodeCh, descCh),
@@ -6642,14 +6671,16 @@ class App {
           ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh, descCh],
         ext: [descCh] }[PE.type] || [];
       const condH = { cle: 'condH', champ: 'heuresMin', lib: 'Un minimum d’heures au planning dans le mois', unite: 'h', pas: 1 };
-      const conditions = ({ objectif: [condH], google: [condH],
-        croisees: [{ cle: 'condT', champ: 'minTickets', lib: 'Un minimum de tickets dans le mois', unite: 'tickets', pas: 5 }],
+      const condT = { cle: 'condT', champ: 'minTickets', lib: 'Un minimum de tickets dans le mois', unite: 'tickets', pas: 5 };
+      const conditions = ({ objectif: [condH], google: [condH], cible: PE.base === 'croisees' ? [condT] : [condH],
+        croisees: [condT],
         categorie: [{ cle: 'condP', champ: 'minPieces', lib: 'Un minimum de pièces pour être classée', unite: 'pcs', pas: 1 }] }[PE.type] || [])
         .map(k => ({ lib: k.lib, unite: k.unite, pas: k.pas, cle: k.champ, on: !!f[k.cle], valeur: String(f[k.champ] ?? ''),
           basculer: ev => { f[k.cle] = !!ev.target.checked; reE(); }, poser: ev => { f[k.champ] = ev.target.value; reE(); } }));
       // Une condition allumée garde au moins 1 ; éteinte, 0.
       const cond = (on, v, defaut) => on ? Math.max(1, Math.round(num(v) ?? defaut)) : 0;
-      const ok = (PE.type !== 'categorie' || (String(f.lib).trim() !== '' && String(f.motif).trim() !== '')) && (!f.du || !f.au || f.au >= f.du);
+      const ok = (PE.type !== 'categorie' || (String(f.lib).trim() !== '' && String(f.motif).trim() !== '')) && (!f.du || !f.au || f.au >= f.du)
+        && (PE.type !== 'cible' || (String(f.lib).trim() !== '' && (f.cadeauOn ? String(f.cadeauNom).trim() !== '' : (num(f.montant) || 0) > 0)));
       const entier = v => { const n = num(v); return n == null ? null : n; };
       const enregistrer = () => {
         if (PE.envoi || !ok) { return; }
@@ -6660,7 +6691,18 @@ class App {
           const icone = ri && ri.icone ? ri.icone : PE.iconeExist;
           const qui = { payeur: PE.payeur, sponsor: PE.payeur === 'sponsor' ? PE.sponsor.trim() : '', description: String(f.description || '').trim().slice(0, 160) };
           let suite = Promise.resolve({ ok: true });
-          if (PE.ext) {
+          if (PE.type === 'cible') {
+            // Un target du magasin : neuf, il rejoint la liste ; rouvert, il garde sa clé (le magasin y est).
+            const ancienne = PE.nouveau ? null : app.liste.find(x => x.cle === PE.cle);
+            const e = { type: 'cible', base: PE.base, cle: PE.nouveau ? '' : PE.cle, famille: 'magasin', shop: PE.shop, payeur: 'magasin', sponsor: '',
+              lib: String(f.lib).trim(), actif: ancienne ? !!ancienne.actif : true, icone, montant: Math.max(0, Math.round(entier(f.montant) ?? app.recompense)),
+              cadeau: f.cadeauOn ? { nom: String(f.cadeauNom).trim(), valeur: entier(f.cadeauValeur) } : null,
+              du: f.du || null, au: f.au || null, description: String(f.description || '').trim().slice(0, 160) };
+            if (PE.base === 'croisees') { Object.assign(e, { cible: entier(f.cible) ?? 50, minTickets: cond(f.condT, f.minTickets, 30) }); }
+            if (PE.base === 'objectif') { Object.assign(e, { pct: Math.round(entier(f.pct) ?? 100), heuresMin: cond(f.condH, f.heuresMin, 20) }); }
+            if (PE.base === 'google') { Object.assign(e, { seuil: entier(f.seuil) ?? 4.5, heuresMin: cond(f.condH, f.heuresMin, 20) }); }
+            app.liste = ancienne ? app.liste.map(x => (x.cle === PE.cle ? e : x)) : app.liste.concat([e]);
+          } else if (PE.ext) {
             app.externes = app.externes || {};
             app.externes[PE.ext] = Object.assign({}, app.externes[PE.ext] || {}, qui, { icone });
           } else {
@@ -6690,9 +6732,15 @@ class App {
       };
       const nomE = PE.ext === 'record' ? 'Bats ton record' : PE.ext === 'meilleure' ? 'Meilleure vendeuse' : (f.lib || (app.liste.find(x => x.cle === PE.cle) || {}).lib || '');
       common.prEdit = {
-        titre: PE.nouveau ? 'Nouvelle prime catégorie' : 'Modifier « ' + nomE + ' »', champs, conditions, ok, envoi: PE.envoi,
-        note: PE.ext ? 'Son montant se règle dans Analyse magasin → Équipe & ventes → Targets & primes.' : PE.type === 'croisees' ? 'La cible de chaque magasin se règle plus bas, dans les moyennes par magasin.' : '',
-        payeurs: [['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, nom]) => ({ nom, on: PE.payeur === v, choisir: () => { PE.payeur = v; reE(); } })),
+        titre: PE.type === 'cible' ? (PE.nouveau ? 'Nouvelle prime du magasin · ' + (CIBLE_NOM[PE.base] || '') : 'Modifier « ' + nomE + ' »') + ' — ' + (nomMag[PE.shop] || 'shop ' + PE.shop)
+          : PE.nouveau ? 'Nouvelle prime catégorie' : 'Modifier « ' + nomE + ' »', champs, conditions, ok, envoi: PE.envoi,
+        payeurFixe: PE.type === 'cible' ? 'Le magasin — ' + (nomMag[PE.shop] || 'shop ' + PE.shop) : '',
+        note: PE.ext ? 'Son montant se règle dans Analyse magasin → Équipe & ventes → Targets & primes.' : PE.type === 'croisees' ? 'La cible de chaque magasin se règle plus bas, dans les moyennes par magasin.'
+          : PE.type === 'cible' ? ({ croisees: 'Une vente croisée se compte comme pour la marque : un ticket à 2 articles ou plus. Chaque vendeuse au-dessus de la cible gagne.',
+            objectif: 'L’objectif du mois du magasin (son budget). Tant que le mois court, l’atteinte se lit au rythme actuel. Chaque vendeuse au planning gagne.',
+            google: 'La note de la fiche Google du magasin. Chaque vendeuse au planning gagne quand le magasin tient la note.' }[PE.base] || '') : '',
+        // Une prime du magasin est payée par le magasin, sans choix.
+        payeurs: PE.type === 'cible' ? [] : [['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, nom]) => ({ nom, on: PE.payeur === v, choisir: () => { PE.payeur = v; reE(); } })),
         payeur: PE.payeur, sponsor: PE.sponsor, poserSponsor: ev => { PE.sponsor = ev.target.value; reE(); },
         icone: PE.icone ? PE.icone.data : (PE.iconeExist ? racine + PE.iconeExist : ''),
         emojis: PR_EMOJIS.map(em => ({ em, on: !!(PE.icone && PE.icone.sorte === 'emoji' && PE.icone.em === em), choisir: () => { const data = prIconeEmoji(em); if (data) { PE.icone = { sorte: 'emoji', em, data }; reE(); } } })),
@@ -6700,7 +6748,7 @@ class App {
           if (!/^image\//.test(fi.type)) { this.notify('Une image, s’il te plaît (photo JPEG, PNG, WebP)'); return; }
           prIconePhoto(fi).then(data => { PE.icone = { sorte: 'photo', data }; reE(); }).catch(() => this.notify('Cette photo n’a pas pu être lue')); },
         retirerIcone: () => { PE.icone = null; PE.iconeExist = ''; reE(); },
-        supprimer: PE.type === 'categorie' && !PE.nouveau ? () => { if (!window.confirm('Supprimer la prime « ' + nomE + ' » ?')) { return; } app.liste = app.liste.filter(x => x.cle !== PE.cle); this.setState({ prEdit: undefined }); sauver('Prime supprimée'); } : null,
+        supprimer: (PE.type === 'categorie' || PE.type === 'cible') && !PE.nouveau ? () => { if (!window.confirm('Supprimer la prime « ' + nomE + ' » ?')) { return; } app.liste = app.liste.filter(x => x.cle !== PE.cle); this.setState({ prEdit: undefined }); sauver('Prime supprimée'); } : null,
         enregistrer, fermer: () => this.setState({ prEdit: undefined }),
       };
     }
@@ -6840,7 +6888,8 @@ class App {
         id: sid, nom: nomMag[sid] || '', connu,
         magasins: (d.magasins || []).map(m => ({ id: String(m.id), nom: court(m.nom), aller: () => this.setState({ prShop: String(m.id) }) })),
         marque, siennes, nSiennesMax: 6,
-        nouvelle: connu ? () => this.setState({ prWiz: wizNeuf('magasin', sid) }) : null,
+        // « + Nouvelle prime du magasin » : la sorte d'abord (23/10/2026) — promotion, catégorie, ventes croisées, objectif CA, note Google.
+        nouvelle: connu ? () => this.setState({ prChoix: sid }) : null,
         note: d.google && d.google.notes && d.google.notes[sid] != null ? fr(d.google.notes[sid], 1) + ' ★' : '',
         moyChargement: moy === undefined, moyMotif: moy === null ? 'Les moyennes n’ont pas pu être calculées.' : (moy && !M ? 'Pas de moyennes pour ce magasin sur ' + n + ' mois.' : ''),
         ns: [1, 3, 6].map(k => ({ nom: k + ' mois', on: k === n, choisir: () => this.setState({ prMoyN: k }) })), periode: moy ? moy.mois.map(x => x.lib).join(', ') : '',
@@ -6857,6 +6906,21 @@ class App {
         promosVend: !M ? [] : prs.map(p => ({ lib: p.lib, du: p.du ? jj(p.du) : '', v: fr((p.magasins || {})[sid], 0) || '—', reseau: fr(p.reseau, 0) })),
         promos: { chargement: promos === undefined, motif: promos === null ? 'Les promotions n’ont pas pu être lues.' : (promos && !promos.api ? PR_MOTIF() : ''), liste: promosIci, relire: () => { delete this._prL.promos; this.setState({ prPromosFrais: true }); } },
       };
+      // Le choix de la sorte : six de chaque au plus par magasin (le serveur tient la même borne).
+      common.prChoix = null;
+      if (S.prChoix && connu) {
+        const n = t => siennes.filter(l => (t === 'cible' ? l.typeE === 'cible' : l.typeE === t)).length;
+        const plein = t => n(t) >= 6;
+        const aller = patch => () => this.setState(Object.assign({ prChoix: null }, patch));
+        common.prChoix = { titre: 'Nouvelle prime du magasin — ' + (nomMag[sid] || 'shop ' + sid), fermer: () => this.setState({ prChoix: null }),
+          options: [
+            ['promo', '🏷️', 'Promotion', 'Des produits sur une période : une promotion du panel ou vos produits. Gagne : la 1re, chacune au seuil, l’objectif du magasin ou de chaque vendeuse.', { prWiz: wizNeuf('magasin', sid) }],
+            ['categorie', '👑', 'Catégorie', 'Chaque mois, les produits dont le nom contient un mot (« tarte », « quiche »…) : la 1re du magasin ou chacune au seuil.', { prWiz: Object.assign(wizNeuf('magasin', sid), { sorte: 'categorie', regle: 'premiere' }) }],
+            ['cible', '🛍️', 'Ventes croisées', 'Les tickets à 2 articles ou plus : chaque vendeuse au-dessus de la cible du magasin.', { prEdit: editCible(null, 'croisees', sid) }],
+            ['cible', '🏪', 'Objectif CA', 'Le CA du magasin face à son objectif du mois : chaque vendeuse au planning.', { prEdit: editCible(null, 'objectif', sid) }],
+            ['cible', '⭐', 'Note Google', 'La note de la fiche Google du magasin : chaque vendeuse au planning.', { prEdit: editCible(null, 'google', sid) }],
+          ].map(([t, e, nom, txt, patch]) => ({ e, nom, txt, plein: plein(t), choisir: plein(t) ? null : aller(patch) })) };
+      }
     }
   }
 
@@ -6929,13 +6993,16 @@ class App {
         croisees: l.croisees.taux != null ? nb1(l.croisees.taux) + ' %' : '', croiseesM: l.croisees.montant > 0 ? eur(l.croisees.montant) : '',
         record: l.record.lt != null ? nb1(l.record.lt) + (l.record.record != null ? ' / ' + nb1(l.record.record) : '') : '', recordM: l.record.montant > 0 ? eur(l.record.montant) : '',
         meilleure: l.meilleure > 0 ? eur(l.meilleure) : '', magasinM: l.magasin > 0 ? eur(l.magasin) : '', googleM: l.google > 0 ? eur(l.google) : '',
+        // Les targets posés par son magasin (23/10/2026), payés par lui.
+        cibles: l.cibles && (l.cibles.liste || []).length ? l.cibles.liste.map(t => t.lib + (t.cadeau ? ' 🎁' : '')).join(', ') : '', ciblesM: l.cibles && l.cibles.montant > 0 ? eur(l.cibles.montant) : '',
         concours: l.concours && l.concours.pieces ? Object.keys(l.concours.pieces).map(k => Math.round(l.concours.pieces[k]).toLocaleString('fr-BE') + ' ' + k).join(' · ') + ((l.concours.titres || []).length ? ' · ' + l.concours.titres.map(t => '👑 ' + t.lib).join(', ') : '') : '',
         concoursM: l.concours && l.concours.montant > 0 ? eur(l.concours.montant) : '',
         promo: l.promo && l.promo.pieces ? Object.keys(l.promo.pieces).map(k => Math.round(l.promo.pieces[k]).toLocaleString('fr-BE') + ' ' + ((((pm.promos || {}).liste || []).find(q => q.cle === k) || {}).lib || k)).join(' · ') + ((l.promo.titres || []).length ? ' · 👑' : '') : '',
         promoM: l.promo && l.promo.montant > 0 ? eur(l.promo.montant) : '',
         total: l.total > 0 ? n2(l.total) + ' €' : '—', prime: l.total > 0,
       })),
-      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), promo: eur(pm.totaux.promo || 0), magasin: eur(pm.totaux.magasin), google: eur(pm.totaux.google || 0), total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
+      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), promo: eur(pm.totaux.promo || 0), magasin: eur(pm.totaux.magasin), google: eur(pm.totaux.google || 0), cibles: eur(pm.totaux.cibles || 0), total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
+      ciblesActif: !!(pm && (pm.personnes || []).some(l => l.cibles && (l.cibles.liste || []).length)),
       concoursLib: pm && pm.concours && pm.concours.liste ? pm.concours.liste.map(k => k.lib).join(' · ') : 'Catégories', concoursActif: !!(pm && pm.concours && pm.concours.actif),
       promosLib: pm && pm.promos && pm.promos.liste ? pm.promos.liste.map(k => k.lib).join(' · ') : 'Promos', promosActif: !!(pm && pm.promos && pm.promos.actif),
       note: !pm ? '' : (pm.croiseesComplet ? 'Ventes croisées comptées sur tout le mois.' : 'Ventes croisées comptées sur ' + pm.croiseesJours + ' jour(s) : la moisson horaire complète le reste.'),
