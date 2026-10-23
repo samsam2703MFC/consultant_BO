@@ -1010,3 +1010,4 @@ Mise en ligne : lot 3 audytu — jedna karta produktu (walidacja logistyki, mini
 Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, strona startowa stanowiska) i martwy kod 2026-10-23T19:03:24Z
 2026-10-23T19:07Z primes : pages plus compactes (sections, en-tête du magasin, primes de la marque repliées)
 2026-10-23T19:08Z grands prix : les six de la maquette, éteints
+2026-10-23T19:16Z relance : pages des primes compactes et grands prix (le run précédent s'est arrêté sur des marques de conflit, corrigées)
