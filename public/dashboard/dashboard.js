@@ -3808,6 +3808,10 @@
       return tete('ce que le client reçoit', 'Avantage (Y)') + `<div class="pm-row" style="grid-template-columns:110px repeat(4,1fr)"><div class="pm-f"><label>Quantité Y</label><input class="pm-in c" type="number" min="1" max="20" value="${esc(d.y.q)}" data-pmf="y.q"></div>
         ${PM_TYPES.map(t => `<button class="pm-opt${d.y.type === t[0] ? ' on' : ''}" data-pmtype="${t[0]}"><b>${t[1]}</b><small>${t[2]}</small></button>`).join('')}</div>
         ${d.y.type === 'FREE' ? '' : `<div class="pm-row" style="grid-template-columns:200px 1fr;margin-top:10px"><div class="pm-f"><label>${d.y.type === 'PERCENTAGE_DISCOUNT' ? 'Remise, en %' : (d.y.type === 'FIXED_PRICE' ? 'Prix de la pièce, TTC' : 'Remise, en € TTC')}</label><input class="pm-in c" type="number" min="0" step="${d.y.type === 'PERCENTAGE_DISCOUNT' ? '1' : '0.05'}" value="${esc(d.y.valeur)}" data-pmf="y.valeur"></div><div></div></div>`}
+        <div class="pm-calc"><span class="db-lab">Ou depuis le prix final</span>
+          <span class="pm-seg">${[['lot', 'du lot'], ['piece', 'de la pièce Y']].map(([k, lib]) => `<button type="button" class="${pmPf(W).mode === k ? 'on' : ''}" data-pmpfmode="${k}">${lib}</button>`).join('')}</span>
+          <span class="pm-eur"><input class="pm-in c" type="text" inputmode="decimal" autocomplete="off" placeholder="${pmPf(W).mode === 'lot' ? 'ex. 6,00' : 'ex. 1,20'}" value="${esc(pmPf(W).prix)}" data-pmpfprix="1"><i>€ TTC</i></span>
+          <span class="db-mini" id="pm-pfmsg">${pmPf(W).msg ? (pmPf(W).msg.startsWith('→') ? esc(pmPf(W).msg) : `<span class="ko">${esc(pmPf(W).msg)}</span>`) : (pmPf(W).mode === 'lot' ? 'le prix payé pour tout le lot (X + Y) : la valeur Y se calcule' : 'le prix payé pour une pièce Y : la valeur Y se calcule')}</span></div>
         <div style="margin-top:12px">${pmCible(W, 'y')}</div>
         <div class="pm-f" style="margin-top:10px"><label>Stratégie de sélection</label><div class="pm-in ro">Produit le moins cher</div><span class="db-mini">la caisse remise la moins chère des pièces éligibles</span></div>
         <div class="pm-pf" id="pm-pf">${pmPrixFinal(W)}</div>`;
@@ -3874,14 +3878,59 @@
       .sort((a, b) => a.avant - b.avant || a.nom.localeCompare(b.nom, 'fr'));
     if (!L.length) { return tete + '<div class="db-mini">Aucun produit reçu n’a de prix au magasin.</div>'; }
     const lg = o => `<tr><td>${esc(o.nom)}</td><td class="r mu">${fU(o.avant)}</td><td class="r"><b>${fU(o.apres)}</b></td><td class="r ok">−${fU(o.avant - o.apres)}</td></tr>`;
-    let h = tete + `<table class="pm-pft"><thead><tr><th>Ce que le client reçoit</th><th class="r">Prix normal</th><th class="r">Prix final</th><th class="r">Remise</th></tr></thead><tbody>${L.slice(0, 8).map(lg).join('')}</tbody></table>`;
-    if (L.length > 8) { h += `<div class="db-mini">… et ${L.length - 8} autre${L.length - 8 > 1 ? 's' : ''} produit${L.length - 8 > 1 ? 's' : ''}.</div>`; }
+    const m = a => a.reduce((t, v) => t + v, 0) / a.length;
+    const moyL = L.length > 1 ? `<tfoot><tr><td>Moyenne (${L.length} produits)</td><td class="r mu">${fU(m(L.map(o => o.avant)))}</td><td class="r"><b>${fU(m(L.map(o => o.apres)))}</b></td><td class="r ok">−${fU(m(L.map(o => o.avant - o.apres)))}</td></tr></tfoot>` : '';
+    let h = tete + `<table class="pm-pft"><thead><tr><th>Ce que le client reçoit</th><th class="r">Prix normal</th><th class="r">Prix final</th><th class="r">Remise</th></tr></thead><tbody>${L.slice(0, 8).map(lg).join('')}</tbody>${moyL}</table>`;
+    if (L.length > 8) { h += `<div class="db-mini">… et ${L.length - 8} autre${L.length - 8 > 1 ? 's' : ''} produit${L.length - 8 > 1 ? 's' : ''} (dans la moyenne).</div>`; }
+    // Le lot sur la moyenne : prix de vente moyen et coût d'achat moyen de chaque côté (catégories, plusieurs produits).
+    const xE = pmEffectif(d.x), mx = pmMoyenne(prods, xE), my = pmMoyenne(prods, y);
+    if (mx && my && (mx.n > 1 || my.n > 1)) {
+      const yHt = pmRecompense({ prixHt: my.ht, tva: my.tva }, d.y.type, d.y.valeur, fy), avant = xE.q * mx.ttc + y.q * my.ttc, apres = xE.q * mx.ttc + y.q * yHt * (1 + my.tva / 100);
+      const cout = mx.cout != null && my.cout != null ? xE.q * mx.cout + y.q * my.cout : null, coef = cout ? (xE.q * mx.ht * mx.f + y.q * yHt) / cout : null;
+      const min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
+      h += `<div class="pm-pflot">Le lot moyen, ${xE.q} + ${y.q} pièces aux prix moyens : <s>${fU(avant)}</s> <b>${fU(apres)}</b> TTC${coef != null ? ` · coefficient sur la moyenne <b class="${coef >= min ? 'ok' : 'ko'}">${fX(Math.round(coef * 100) / 100)}</b> <span class="mu">(prix payé HT moyen ÷ coût d’achat moyen)</span>` : ''}.</div>`;
+    }
     const C = pmCoefCourant(d);
     if (C && C.lot != null) {
       const x = pmEffectif(d.x), Px = PM_PORTIONS[x.portion], tx = pmFrac(x) * pmTtc(C.px), ty = fy * pmTtc(C.py), ry = pmRecompense(C.py, d.y.type, d.y.valeur, fy) * (1 + (+C.py.tva || 0) / 100);
-      h += `<div class="pm-pflot">Le lot, ${x.q} × ${esc(C.px.nom)}${Px ? ' ' + Px.lib : ''} + ${y.q} × ${esc(C.py.nom)}${Py ? ' ' + Py.lib : ''} : <s>${fU(x.q * tx + y.q * ty)}</s> <b>${fU(x.q * tx + y.q * ry)}</b> TTC au lieu du prix normal.</div>`;
+      h += `<div class="pm-pflot">${L.length > 1 || pmEligibles(prods, x).size > 1 ? 'Le cas le plus serré' : 'Le lot'}, ${x.q} × ${esc(C.px.nom)}${Px ? ' ' + Px.lib : ''} + ${y.q} × ${esc(C.py.nom)}${Py ? ' ' + Py.lib : ''} : <s>${fU(x.q * tx + y.q * ty)}</s> <b>${fU(x.q * tx + y.q * ry)}</b> TTC au lieu du prix normal.</div>`;
     }
     return h;
+  }
+  /**
+   * La moyenne d'un côté (23/10/2026, Sam : « si ce sont des catégories, prendre la moyenne d'achat et la moyenne de prix
+   * de vente ») : prix de vente TTC et HT, TVA et coût matière moyens des produits visés qui ont un prix (le coût, sur
+   * ceux qui en ont un), à la fraction de la portion visée. Null sans aucun prix.
+   */
+  function pmMoyenne(prods, c) {
+    const L = [...pmEligibles(prods, c).values()].filter(p => pmTtc(p) != null && +p.prixHt > 0), f = pmFrac(c);
+    if (!L.length) { return null; }
+    const m = a => a.reduce((t, v) => t + v, 0) / a.length, K = L.filter(p => +p.cout > 0);
+    return { n: L.length, ttc: f * m(L.map(pmTtc)), ht: m(L.map(p => +p.prixHt)), tva: m(L.map(p => +p.tva || 0)), f, cout: K.length ? f * m(K.map(p => +p.cout)) : null };
+  }
+  const pmPf = W => (W.pf = W.pf || { mode: 'lot', prix: '', msg: '' });
+  /**
+   * La valeur Y depuis un prix final (23/10/2026, Sam) : le prix du lot (X + Y) ou d'une pièce Y, TTC. Le prix de la
+   * pièce Y qui en découle, au prix moyen des produits visés, donne la valeur du type choisi : prix fixe = ce prix,
+   * remise € = prix normal − ce prix, remise % = ce qu'il retire du prix normal (arrondie au %). « Offert » passe en prix
+   * fixe, sauf pour un prix final nul. Rend {type, valeur, txt} ou {erreur}.
+   */
+  function pmDepuisPrixFinal(d, mode, T) {
+    const prods = pmProduits(), x = pmEffectif(d.x), y = pmEffectif(d.y);
+    if (!prods) { return { erreur: 'prix du magasin pas encore lus' }; }
+    const my = pmMoyenne(prods, y), mx = pmMoyenne(prods, x);
+    if (!my) { return { erreur: 'choisissez d’abord ce que le client reçoit (avec un prix au magasin)' }; }
+    if (mode === 'lot' && !mx) { return { erreur: 'choisissez d’abord ce que le client achète (étape 2)' }; }
+    const pX = mode === 'lot' ? x.q * mx.ttc : 0, piece = mode === 'lot' ? (T - pX) / y.q : T;
+    if (piece < -0.004) { return { erreur: 'le lot à ' + fU(T) + ' coûte moins que les ' + x.q + ' pièces achetées seules (' + fU(pX) + ')' }; }
+    if (piece > my.ttc + 0.004) { return { erreur: 'au-dessus du prix normal de la pièce Y (' + fU(my.ttc) + ') : il n’y a rien à remiser' }; }
+    let type = d.y.type;
+    if (piece < 0.005) { type = 'FREE'; } else if (type === 'FREE') { type = 'FIXED_PRICE'; }
+    const r2 = v => Math.round(v * 100) / 100;
+    const valeur = type === 'FREE' ? '' : (type === 'FIXED_PRICE' ? r2(piece) : (type === 'FIXED_AMOUNT_DISCOUNT' ? r2(my.ttc - piece) : Math.round((1 - piece / my.ttc) * 100)));
+    const moy = (my.n > 1 || (mode === 'lot' && mx.n > 1)) ? ', sur les prix moyens' : '';
+    const lib = { FREE: 'offerte', FIXED_PRICE: 'prix fixe ' + fU(+valeur || 0), FIXED_AMOUNT_DISCOUNT: 'remise de ' + fU(+valeur || 0), PERCENTAGE_DISCOUNT: 'remise de ' + valeur + ' %' }[type];
+    return { type, valeur, txt: '→ pièce Y ' + lib + ' (' + fU(piece) + ' au lieu de ' + fU(my.ttc) + moy + ')' };
   }
   /** Recalculer : les prix du magasin relus au panel, le prix final et le coefficient refaits. */
   function pmRecalculer() { lireAux(clePMP(), cheminPMP(), true); rendre(); }
@@ -4019,7 +4068,7 @@
     on('[data-pmf]', 'input', el => {
       const k = el.dataset.pmf, v = el.value;
       if (k === 'x.q' || k === 'y.q') { d[k[0]].q = Math.max(1, Math.min(20, parseInt(v, 10) || 1)); }
-      else if (k === 'y.valeur') { d.y.valeur = v; }
+      else if (k === 'y.valeur') { d.y.valeur = v; if (W.pf && W.pf.prix !== '') { W.pf.prix = ''; W.pf.msg = ''; const i = $.querySelector('[data-pmpfprix]'); if (i) { i.value = ''; } const mz = document.getElementById('pm-pfmsg'); if (mz) { mz.textContent = ''; } } }
       else if (k === 'du' || k === 'au') { d[k] = v ? v.replace('T', ' ').slice(0, 16) : ''; }
       else { d[k] = v; }
       pmMajDroite();
@@ -4030,7 +4079,14 @@
     on('[data-pmprod]', 'change', el => { const c = el.dataset.pmprod, p = pmProduitDe(el.value); if (p && !d[c].prods.some(o => +o.id === +p.id)) { d[c].prods.push({ id: +p.id, nom: p.nom }); } el.value = ''; rendre(); });
     on('[data-pmexc]', 'change', el => { const c = el.dataset.pmexc, p = pmProduitDe(el.value); if (p && !d[c].exclus.some(o => +o.id === +p.id)) { d[c].exclus.push({ id: +p.id, nom: p.nom }); } el.value = ''; rendre(); });
     on('[data-pmrm]', 'click', el => { const [c, ch, id] = el.dataset.pmrm.split('|'); d[c][ch] = d[c][ch].filter(o => String(o.id) !== id); rendre(); });
-    on('[data-pmtype]', 'click', el => { d.y.type = el.dataset.pmtype; if (d.y.type === 'FREE') { d.y.valeur = ''; } rendre(); });
+    on('[data-pmtype]', 'click', el => {
+      d.y.type = el.dataset.pmtype;
+      // Un prix final saisi se garde d'un type à l'autre : la valeur se recalcule pour le même prix ; « Offert » l'efface.
+      const P = pmPf(W), T = parseFloat(String(P.prix).replace(',', '.'));
+      if (d.y.type === 'FREE') { d.y.valeur = ''; P.prix = ''; P.msg = ''; }
+      else if (P.prix !== '' && T >= 0) { const r = pmDepuisPrixFinal(d, P.mode, T); if (r.erreur) { P.msg = r.erreur; } else { d.y.type = r.type; d.y.valeur = r.valeur; P.msg = r.txt; } }
+      rendre();
+    });
     on('[data-pmcradd]', 'click', () => { d.creneaux.push({ jours: [6, 7], de: '15:00', a: '18:00' }); rendre(); });
     on('[data-pmcrdel]', 'click', el => { d.creneaux.splice(+el.dataset.pmcrdel, 1); rendre(); });
     on('[data-pmj]', 'click', el => { const [i, j] = el.dataset.pmj.split('|').map(Number), c = d.creneaux[i]; c.jours = c.jours.includes(j) ? c.jours.filter(v => v !== j) : c.jours.concat(j).sort((a, b) => a - b); rendre(); });
@@ -4042,6 +4098,25 @@
     on('[data-pmcr]', 'change', el => { const [i, k] = el.dataset.pmcr.split('|'); d.creneaux[+i][k] = el.value; pmMajDroite(); });
     on('[data-pmrep]', 'change', el => { d.repetable = el.checked; rendre(); });
     on('[data-pmrecalc]', 'click', () => pmRecalculer());
+    on('[data-pmpfmode]', 'click', el => { const P = pmPf(W); P.mode = el.dataset.pmpfmode; P.prix = ''; P.msg = ''; rendre(); });
+    on('[data-pmpfprix]', 'input', el => {
+      const P = pmPf(W); P.prix = el.value;
+      const T = parseFloat(String(el.value).replace(',', '.'));
+      if (!(T >= 0) || el.value.trim() === '') { P.msg = ''; const mz = document.getElementById('pm-pfmsg'); if (mz) { mz.textContent = ''; } return; }
+      const r = pmDepuisPrixFinal(d, P.mode, T);
+      if (r.erreur) { P.msg = r.erreur; const mz = document.getElementById('pm-pfmsg'); if (mz) { mz.innerHTML = '<span class="ko">' + esc(r.erreur) + '</span>'; } return; }
+      P.msg = r.txt;
+      const change = r.type !== d.y.type;
+      d.y.type = r.type; d.y.valeur = r.valeur;
+      if (change) {
+        // Le type change (offert → prix fixe…) : l'étape se redessine, le prix final garde la main.
+        rendre(); const i = $.querySelector('[data-pmpfprix]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+        return;
+      }
+      const v = $.querySelector('[data-pmf="y.valeur"]'); if (v) { v.value = r.valeur; }
+      const mz = document.getElementById('pm-pfmsg'); if (mz) { mz.textContent = r.txt; }
+      pmMajDroite();
+    });
     on('[data-pmcanal]', 'click', el => { d.canal = el.dataset.pmcanal; rendre(); });
     on('[data-pmseuil]', 'click', el => { d.seuilOn = el.dataset.pmseuil === 'avec'; if (!d.seuilOn) { d.seuil = ''; } rendre(); if (d.seuilOn) { const i = $.querySelector('[data-pmf="seuil"]'); if (i) { i.focus(); } } });
   }
