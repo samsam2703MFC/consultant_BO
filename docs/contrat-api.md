@@ -3980,3 +3980,14 @@ règles :
 `{id, actif}` seul ne touche que l'interrupteur.
 
 **`POST /ventes/grands-prix/retirer {id}`** retire un grand prix.
+
+**Dans l'app des vendeuses (23/10/2026).** Sur le mois en cours, `GET /ventes/moi` (et sa voie par jeton) porte
+`grandsPrix[]` : `{id, defi, portee, titre, lot, valeur, payeur, sponsor, sponsorSite, photo, du, au, etat, part,
+joursRestants, seuil, seuilSorte, seuilCourant, unite, moi: {rang, valeur} | null, manque: {n, sorte} | null,
+enCourse, top: [{rang, nom, lieu, valeur, moi}], magasin}`.
+
+- On y trouve ceux de la marque et ceux du magasin de la vendeuse : en cours, à venir, ou finis depuis moins de 45
+  jours.
+- `unite` vaut `eur_h`, `pct`, `pct_signe`, `eur_ht` ou `eur`.
+- Une erreur de calcul n'empêche pas la fiche d'être servie ; elle part au journal PHP.
+- Le classement se garde quinze minutes (`grandsPrixCl…` dans `mot_cache`).

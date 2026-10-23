@@ -133,6 +133,52 @@
 {% endfor %}
 {% endif %}
 
+{# ── Les grands prix de l'année (23/10/2026) : les gros lots de la marque, des sponsors et du magasin, joués sur toute
+   l'année ; des cartes qui défilent : le lot et sa valeur, qui l'offre, le défi, ma place (ou ce qu'il me manque pour
+   être classée), le top 3, la saison. Seulement sur le mois en cours (src/grands_prix.php, gpPourVendeuse). ── #}
+{% set gps = p.enCours ? (p.grandsPrix ?? []) : [] %}
+{% if gps|length %}
+<h2 class="sb-titre" id="grands-prix">{{ T.gp_title ?? 'Grands prix de l’année' }}</h2>
+<div class="gp-rail" data-grands-prix>
+{% for g in gps %}
+{% set rang = g.moi ? (g.moi.rang == 1 ? (T.first_abbr ?? '1re') : rangPre ~ g.moi.rang ~ rangSuf) : null %}
+<article class="gp-c {{ g.etat }}" data-gp="{{ g.id }}">
+  <div class="gp-img d-{{ g.defi }}">
+    {% if g.photo %}<img src="{{ ib }}/{{ g.photo }}" alt="">{% else %}<i class="bi {{ { vendeuse: 'bi-trophy', b2b: 'bi-briefcase', ticket: 'bi-receipt', croisees: 'bi-bag', progression: 'bi-graph-up-arrow', magasin: 'bi-shop' }[g.defi] ?? 'bi-award' }}"></i>{% endif %}
+    <span class="gp-val">{{ g.valeur|number_format(0, ',', ' ') }}&nbsp;€</span>
+  </div>
+  <div class="gp-b">
+    <small class="gp-off">{{ g.payeur == 'sponsor' and g.sponsor ? (T.gp_offered_by ?? 'Offert par') ~ ' ' ~ g.sponsor : (g.payeur == 'magasin' ? (T.gp_by_shop ?? 'Offert par ton magasin') : (T.gp_by_brand ?? 'Offert par la marque')) }}</small>
+    <b class="gp-t">{{ g.titre }}</b>
+    {% if g.lot %}<span class="gp-lot">{{ g.lot }}</span>{% endif %}
+    <span class="gp-d"><b>{{ attribute(T, 'gp_defi_' ~ g.defi) ?? g.defi }}</b> · {{ attribute(T, 'gp_rule_' ~ g.defi) ?? '' }}{% if g.portee == 'magasin' %} · {{ T.gp_in_shop ?? 'entre les vendeuses du magasin' }}{% endif %}</span>
+    {% if g.etat == 'a_venir' %}
+    <div class="gp-moi mu">{{ (T.gp_starts ?? 'Le classement s’ouvre le {d}.')|replace({'{d}': g.du|date('d/m/Y')}) }}</div>
+    {% elseif g.moi %}
+    <div class="gp-moi"><span>{{ g.defi == 'magasin' ? (T.gp_your_shop ?? 'Ton magasin') : (T.you_short ?? 'Toi') }}</span><b>{{ rang }}<small> / {{ g.enCourse }}</small></b><em>{{ m.gpVal(g.moi.valeur, g.unite) }}</em></div>
+    {% elseif g.manque %}
+    <div class="gp-moi mu">{{ (g.manque.sorte == 'tickets' ? (T.gp_need_tickets ?? 'Encore {n} tickets pour entrer au classement.') : (T.gp_need_hours ?? 'Encore {n} h de service pour entrer au classement.'))|replace({'{n}': g.manque.n|number_format(0, ',', ' ')}) }}</div>
+    {% else %}
+    <div class="gp-moi mu">{{ T.gp_not_ranked ?? 'Pas encore classée : chaque vente compte.' }}</div>
+    {% endif %}
+    {% if g.top|length %}
+    <ol class="gp-top">{% for r in g.top %}
+      <li class="{{ r.moi ? 'moi' }}"><span class="r">{{ r.rang }}</span><span class="n">{{ r.moi ? (g.defi == 'magasin' ? (T.gp_your_shop ?? 'Ton magasin') : (T.you_short ?? 'Toi')) : r.nom }}{% if r.lieu and not r.moi %}<small> · {{ r.lieu }}</small>{% endif %}</span><span class="v">{{ m.gpVal(r.valeur, g.unite) }}</span></li>
+    {% endfor %}</ol>
+    {% endif %}
+    <div class="gp-fin">
+      {% if g.etat == 'en_cours' %}<span class="sb-barre"><i style="width:{{ (100 * g.part)|round }}%"></i></span><small>{{ (T.gp_days_left ?? 'J − {n}')|replace({'{n}': g.joursRestants}) }}</small>
+      {% elseif g.etat == 'finie' %}<small>{{ (T.gp_ended ?? 'Terminé le {d}')|replace({'{d}': g.au|date('d/m/Y')}) }}{% if g.top|length %} · {{ (T.gp_won_by ?? 'gagné par {n}')|replace({'{n}': (g.top|first).moi ? (T.you_short ?? 'Toi') : (g.top|first).nom}) }}{% endif %}</small>
+      {% else %}<small>{{ (T.gp_season ?? 'du {du} au {au}')|replace({'{du}': g.du|date('d/m'), '{au}': g.au|date('d/m/Y')}) }}</small>{% endif %}
+      {% if g.payeur == 'sponsor' and g.sponsorSite %}<a href="{{ g.sponsorSite }}" target="_blank" rel="noopener noreferrer">{{ T.gp_sponsor_site ?? 'Le sponsor' }} ↗</a>{% endif %}
+    </div>
+  </div>
+</article>
+{% endfor %}
+</div>
+<p class="sb-pied gp-pied">{{ T.gp_note ?? 'Joués sur toute la saison ; le minimum d’heures ou de tickets monte avec elle. Le classement se met à jour toutes les quinze minutes.' }}</p>
+{% endif %}
+
 {# ── Le classement, à la Strava : un menu qui monte du bas (le nom, mon rang, la 1re), mon magasin ou le réseau ── #}
 {% set cls = p.classements ?? [] %}
 {% if cls|length %}

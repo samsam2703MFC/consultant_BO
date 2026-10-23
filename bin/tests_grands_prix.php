@@ -20,9 +20,14 @@ $GLOBALS['SQL'] = [];
 final class Db
 {
     public static array $tickets = [];
+    /** Les lignes de mot_grand_prix. */
+    public static array $gps = [];
     public static function rows(string $sql, array $a = []): array
     {
         $GLOBALS['SQL'][] = $sql;
+        if (str_contains($sql, 'FROM mot_grand_prix')) {
+            return array_values(array_filter(self::$gps, static fn ($r) => $a === [] || $r['portee'] === 'reseau' || $r['shop'] === $a[0]));
+        }
         if (str_contains($sql, 'MAX(t.total_gross_amount_after_discount)')) { return self::$tickets; }
         return [];
     }
@@ -138,6 +143,28 @@ verifie('magasin de l’année : Namur 110 %, Halle 90 % ; Wavre sans objectif h
 $c = gpClassement($gp(['du' => '2027-01-01', 'au' => '2027-12-31']), '2026-10-23');
 verifie('une saison à venir : personne de classé', $c['liste'] === [] && $c['saison']['etat'] === 'a_venir');
 verifie('les caches des grands prix vont dans mot_cache', motCle('grandsPrixMois2025-01') === 'cache' && motCle('gpDayparts') === null);
+
+// --- 4. dans l'app des vendeuses (GET /ventes/moi) ------------------------------------------
+echo "\nDans l’app des vendeuses\n";
+$ligne = static fn (array $x) => $x + ['id' => 1, 'portee' => 'reseau', 'shop' => null, 'defi' => 'vendeuse', 'titre' => 'Refaire ta terrasse', 'lot' => null, 'valeur' => 5000,
+    'payeur' => 'marque', 'sponsor' => null, 'sponsor_site' => null, 'photo' => null, 'seuil' => 600, 'du' => '2025-01-01', 'au' => '2025-12-31', 'actif' => 1, 'resultat' => null];
+Db::$gps = [$ligne(['id' => 1]), $ligne(['id' => 2, 'portee' => 'magasin', 'shop' => '4', 'defi' => 'ticket', 'titre' => 'Un dîner', 'valeur' => 150, 'seuil' => null]),
+    $ligne(['id' => 3, 'portee' => 'magasin', 'shop' => '5', 'defi' => 'ticket', 'titre' => 'Un resto', 'valeur' => 100, 'seuil' => null]),
+    $ligne(['id' => 4, 'defi' => 'magasin', 'titre' => 'Soirée d’équipe', 'valeur' => 3500, 'seuil' => null]),
+    $ligne(['id' => 5, 'titre' => 'Éteint', 'actif' => 0])];
+$GLOBALS['CACHE'] = [];
+$v = gpPourVendeuse(11, '2026-01-20');
+verifie('Léa (Halle) : les grands prix de la marque et ceux de son magasin, pas ceux de Namur ni les éteints ; le plus gros lot en tête', array_column($v, 'id') === [1, 4, 2], json_encode(array_column($v, 'id')));
+$vV = array_values(array_filter($v, static fn ($x) => $x['id'] === 1))[0];
+verifie('son rang à la meilleure vendeuse : 2e (à égalité avec Inès, le nom tranche), sa valeur, le top 3 avec « moi »', ($vV['moi']['rang'] ?? null) === 2 && $vV['top'][1]['moi'] === true && $vV['top'][0]['nom'] === 'Inès D.' && $vV['unite'] === 'eur_h', json_encode($vV['moi']));
+$vM = array_values(array_filter($v, static fn ($x) => $x['id'] === 4))[0];
+verifie('le magasin de l’année : le rang de son magasin (Halle 2e), les noms des magasins sans préfixe', ($vM['moi']['rang'] ?? null) === 2 && $vM['top'][0]['nom'] === 'Namur', json_encode([$vM['moi'], $vM['top']]));
+verifie('fini depuis moins de 45 jours : encore là, état « finie »', $vV['etat'] === 'finie');
+verifie('fini depuis plus de 45 jours : plus montré', gpPourVendeuse(11, '2026-03-01') === []);
+$GLOBALS['CACHE'] = [];
+$c = gpPourVendeuse(13, '2026-01-20');
+$cV = array_values(array_filter($c, static fn ($x) => $x['id'] === 1))[0];
+verifie('Chloé sous le minimum : pas de rang, il lui manque 360 h', $cV['moi'] === null && $cV['manque'] === ['n' => 360, 'sorte' => 'heures'], json_encode([$cV['moi'], $cV['manque']]));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
