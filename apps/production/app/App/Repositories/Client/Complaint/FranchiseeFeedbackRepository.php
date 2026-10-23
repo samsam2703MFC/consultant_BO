@@ -4,8 +4,6 @@ namespace App\Repositories\Client\Complaint;
 
 use App\Models\ApiCURL;
 use App\Core\Helpers\BaseRepository;
-use MYPDFModel;
-
 
 /**
  * User class
@@ -60,7 +58,6 @@ class FranchiseeFeedbackRepository extends BaseRepository
 
         $json_data = file_get_contents($fixedEncodedUrl, false, $context);
         $convertedToArrObj = json_decode(json_encode(json_decode($json_data)), true);
-
 
         $this->insertOrderNote($convertedToArrObj);
     }
@@ -253,7 +250,6 @@ class FranchiseeFeedbackRepository extends BaseRepository
         return $this->query($sql, $data);
     }
 
-
     public function updateFranchisee($data)
     {
         $data_for_update = $this->getIdNoteWithStatusById($data)[0];
@@ -261,7 +257,6 @@ class FranchiseeFeedbackRepository extends BaseRepository
         $url = APIPREFIXE . "/OrderFeedback/update/{$data_for_update->id}";
 
         unset($data_for_update->id);
-
 
         $res = $apiCurl->update(json_encode($data_for_update), $url);
         return $res['success'];
@@ -279,64 +274,4 @@ class FranchiseeFeedbackRepository extends BaseRepository
         return $this->query($sql, $data)[0];
     }
 
-    public function getPDF($data)
-    {
-        $feedbackData = $this->getById($data);
-
-        $pdf = new MYPDFModel('P', 'mm', 'a4', true, 'UTF-8', false);
-
-        $pdf->setMargins(5, 5, 5);
-        $pdf->setPrintFooter(false);
-        $pdf->setPrintHeader(false);
-        $pdf->AddPage();
-
-        $pdf->SetFont('dejavusans', 'B', 16);
-        $pdf->MultiCell(200, 5, "Reklamacja klienta", 0, 'C', 0, 0, 5, 10, true);
-
-
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(45, 5, "Klient:", 0, 'L', 0, 0, 10, 35, true);
-        $pdf->SetFont('dejavusans', '', 11);
-        $pdf->MultiCell(100, 5, $feedbackData->company, 0, 'L', 0, 0, 55, 35, true);
-
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(45, 5, "Data zdarzenia:", 0, 'L', 0, 0, 10, 45, true);
-        $pdf->SetFont('dejavusans', '', 11);
-        $pdf->MultiCell(100, 5, $feedbackData->incident_date, 0, 'L', 0, 0, 55, 45, true);
-
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(45, 5, "Produkt:", 0, 'L', 0, 0, 10, 55, true);
-        $pdf->SetFont('dejavusans', '', 11);
-        $pdf->MultiCell(100, 5, $feedbackData->product_name, 0, 'L', 0, 0, 55, 55, true);
-
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(45, 5, "Ilość:", 0, 'L', 0, 0, 10, 65, true);
-        $pdf->SetFont('dejavusans', '', 11);
-        $pdf->MultiCell(100, 5, $feedbackData->product_quantity, 0, 'L', 0, 0, 55, 65, true);
-
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(45, 5, "Opis (BE):", 0, 'L', 0, 0, 10, 75, true);
-        $pdf->SetFont('dejavusans', '', 11);
-        $pdf->MultiCell(150, 40, $feedbackData->content, 1, 'L', 0, 0, 55, 75, true);
-
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(45, 5, "Opis (PL):", 0, 'L', 0, 0, 10, 120, true);
-        $pdf->SetFont('dejavusans', '', 11);
-        $pdf->MultiCell(150, 40, $feedbackData->content_pl, 1, 'L', 0, 0, 55, 120, true);
-
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(45, 5, "Inne uwagi:", 0, 'L', 0, 0, 10, 165, true);
-        $pdf->SetFont('dejavusans', '', 11);
-        $pdf->MultiCell(150, 25, "", 1, 'L', 0, 0, 55, 165, true);
-
-        //$pdf->Image(ATELIER_RESOURCES_PREFIXE.$feedbackData->file_path, 15, 140, 75, 113, '', '', true, 150, '', false, false, 1, false, false, false);
-        $pdf->SetXY(110, 200);
-        $pdf->Image(ATELIER_RESOURCES_PREFIXE . $feedbackData->file_path, 10, 200, 90, 70, '', '', 'T', false, 300, '', false, false, 1, false, false, false);
-        $pdf->Image(ATELIER_RESOURCES_PREFIXE . $feedbackData->file_path_2, 110, 200, 90, 70, '', '', 'T', false, 300, '', false, false, 1, false, false, false);
-
-        $pdf->Output('REKLAMACJA.pdf', 'D');
-        //$pdf->Output('INVOICE.pdf', 'I');
-        //$pdf->Output();
-
-    }
 }

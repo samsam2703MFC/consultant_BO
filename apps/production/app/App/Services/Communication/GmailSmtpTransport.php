@@ -24,7 +24,8 @@ final class GmailSmtpTransport implements SmtpTransport
         $mail->Subject = $subject;
         $mail->MessageID = $messageId;
         $mail->isHTML(true);
-        $mail->Body = nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+        $mail->Body = MailLayout::html($body);
+        MailLayout::embed($mail);
         $mail->AltBody = $body;
         foreach ($attachments as $attachment) $mail->addStringAttachment($attachment['content'], $attachment['filename'], PHPMailer::ENCODING_BASE64, $attachment['mime_type']);
         if (!$mail->send()) throw new RuntimeException('SMTP nie przyjął wiadomości.');

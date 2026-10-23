@@ -187,28 +187,20 @@ class ProductionListService
         $hide_stock_flag = $productionData['pdf']['hide_stock_flag'];
         $header = $productionData['pdf']['header'];
         $secHeader = $productionData['pdf']['section_header'];
-
+        $planDay = date('d.m.Y', strtotime($productionData['plan_day']));
 
         $pdf = new TCPDFService('L', 'mm', 'a4', true, 'UTF-8', false);
-        $pdf->setMargins(5, 5, 5);
 
+        // jeden dokument na dział : własna numeracja stron, kartka do zespołu
         foreach ($productionData['section_data'] as $section_data) {
-            $header_data = ["header_title" => $section_data['section_name'], "header_subtitle" => date("d-m-Y")];
+            $pdf->brandPage('Lista produkcyjna · ' . $section_data['section_name'], ['orientation' => 'L', 'ref' => $planDay]);
+            $pdf->brandHeader($section_data['section_name'], [
+                ['Plan na', $planDay],
+                ['Wydruk', date('d.m.Y H:i')],
+            ], 'Lista produkcyjna');
 
-            $pdf->AddPage();
-            $pdf->customHeader($header_data, false, "l");
-            $pdf->Footer();
-            $pdf->customFooter(["info_1" => ""]);
-
-            $pdf->SetTextColor(0, 0, 0);
-            $pdf->SetFont('helvetica', '', 12);
-
-            $pdf->Ln(10);
-            $pdf->fillProductionListForSection($header, $secHeader, $section_data['section_products'], $productionData['stock_minimum_flag'], $hide_stock_flag);
-            $pdf->Ln(3);
-            $pdf->SetFont('dejavusans', '', 7);
-            $pdf->MultiCell(0, 4, 'Do produkcji = plan na ' . date('d.m.Y', strtotime($productionData['plan_day'])) . ' z Planu zespołów (te same ilości co Arkusz tygodnia i tablet) ; (+N) = ilość tygodnia jeszcze nierozłożona na dni ; « tydz. » = tydzień bez podziału na dni.', 0, 'L');
-            $pdf->Ln(4);
+            $pdf->brandTable($this->productionListColumns($header, $secHeader), $this->productionListRows($section_data['section_products'], $hide_stock_flag), ['font' => 9, 'head_font' => 7, 'min_h' => 7]);
+            $pdf->brandNote('Do produkcji = plan na ' . $planDay . ' z Planu zespołów (te same ilości co Arkusz tygodnia i tablet) ; (+N) = ilość tygodnia jeszcze nierozłożona na dni ; « tydz. » = tydzień bez podziału na dni.');
         }
 
         $base = $pdf->Output('PRODUCTION_LIST.pdf', 'S');
@@ -218,6 +210,47 @@ class ProductionListService
             'filename' => $filename . '.pdf',
             'file_string' => $base
         ];
+    }
+
+    /**
+     * Kolumny listy produkcyjnej : produkt, potem pary kartony / sztuki (nagłówek grupy nad jednostką) ;
+     * « Do produkcji » tylko w sztukach. $header i $secHeader jak w getProductionListDocumentData().
+     */
+    private function productionListColumns(array $header, array $secHeader): array
+    {
+        // kolumna danych => grupa z $header (0 = produkt) ; daty wysyłki skrócone do « dd.mm »
+        $groups = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6];
+        $label = fn($h) => preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $h) ? date('d.m', strtotime((string) $h)) : (string) $h;
+        $columns = [];
+        foreach ($secHeader as $i => $unit) {
+            if ($i === 0) {
+                $columns[] = ['label' => $unit, 'w' => 64];
+                continue;
+            }
+            $columns[] = ['label' => $label($header[$groups[$i]]), 'sub' => $unit, 'w' => $groups[$i] === 3 ? 22 : 18.7, 'align' => 'C'];
+        }
+        return $columns;
+    }
+
+    /** Wiersze listy produkcyjnej ; zero = « - », stany ukryte przy liście bez zamówień (stan minimalny). */
+    private function productionListRows(array $products, bool $hideStock): array
+    {
+        $dash = fn($v) => ($v == 0) ? '-' : $v;
+        $rows = [];
+        foreach ($products as $p) {
+            $rows[] = [
+                $p['name'],
+                $hideStock ? '-' : $p['in_stock_carton'],
+                $hideStock ? '-' : $p['in_stock_pcs'],
+                $dash($p['day_1_carton']), $dash($p['day_1_pcs']),
+                // Do produkcji : plan dnia z planu tygodnia (withPlan) — jedna formuła z Arkuszem tygodnia
+                $p['to_produce_text'] ?? '-',
+                $dash($p['day_2_carton']), $dash($p['day_2_pcs']),
+                $dash($p['day_3_carton']), $dash($p['day_3_pcs']),
+                $dash($p['day_4_carton']), $dash($p['day_4_pcs']),
+            ];
+        }
+        return $rows;
     }
 
     /**
@@ -267,28 +300,21 @@ class ProductionListService
         $header = $productionData['pdf']['header'];
         $secHeader = $productionData['pdf']['section_header'];
 
-
         $pdf = new TCPDFService('P', 'mm', 'a4', true, 'UTF-8', false);
-        $pdf->setMargins(5, 5, 5);
 
         foreach ($productionData['section_data'] as $section_data) {
-            $header_data = ["header_title" => $section_data['section_name'], "header_subtitle" => date("d-m-Y")];
+            $pdf->brandPage('Lista produkcyjna (reklamacje) · ' . $section_data['section_name'], ['ref' => date('d.m.Y')]);
+            $pdf->brandHeader($section_data['section_name'], [
+                ['Wydruk', date('d.m.Y H:i')],
+            ], 'Lista produkcyjna — reklamacje');
 
-            $pdf->AddPage();
-            $pdf->customHeader($header_data, false, "p");
-            $pdf->Footer();
-            $pdf->customFooter(["info_1" => ""]);
-
-            $pdf->SetFont('helvetica', '', 12);
-            $pdf->writeHTMLCell(180, 11, 15, '', "(REKLAMACJE)", 0, 1, 0, true, 'C');
-
-
-            $pdf->SetTextColor(0, 0, 0);
-            $pdf->SetFont('helvetica', '', 12);
-
-            $pdf->Ln(10);
-            $pdf->fillComplaintProductionListForSection($header, $secHeader, $section_data['section_products']);
-            $pdf->Ln(7);
+            $columns = [
+                ['label' => $secHeader[0], 'w' => 120],
+                ['label' => $header[1], 'sub' => $secHeader[1], 'w' => 30, 'align' => 'C'],
+                ['label' => $header[1], 'sub' => $secHeader[2], 'w' => 30, 'align' => 'C'],
+            ];
+            $rows = array_map(fn($p) => [$p['name'], $p['complaint_carton'], $p['complaint_pcs']], $section_data['section_products']);
+            $pdf->brandTable($columns, $rows, ['font' => 9, 'head_font' => 7.5, 'min_h' => 7]);
         }
 
         $base = $pdf->Output('PRODUCTION_LIST_COMPLAINT.pdf', 'S');

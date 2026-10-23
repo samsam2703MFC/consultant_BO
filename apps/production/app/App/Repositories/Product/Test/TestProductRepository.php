@@ -102,55 +102,6 @@ class TestProductRepository extends BaseRepository
         return $this->query($sql, $data);
     }
 
-
-
-    public function getTestProductDataSheet($data)
-    {
-
-        $pdf = new MYPDFModel('P', 'mm', 'a4', true, 'UTF-8', false);
-        $pdf->setMargins(5, 5, 5);
-
-        $pdf->setPrintHeader(false);
-        $pdf->setPrintFooter(false);
-
-        $pdf->AddPage();
-
-        $last_category = "";
-        $iterator = 0;
-        foreach ($data['data'] as $item){
-            $pdf->setCellPaddings( $left = '', $top = 2, $right = '', $bottom = '');
-            $pdf->MultiCell(40, 0, $item->name, "0", "L", 0, 1, '', '', true, false, false, true, 1);
-
-            if($item->id_category != $last_category){
-
-                $pdf->SetFont('helvetica', 'B', 15);
-                $pdf->MultiCell(200, 8, $item->category_name, 0, "L", 0, 1, '', '', true, false, false, true, 10, 'M');
-                $pdf->Ln(5);
-            }
-
-            $pdf->SetFont('helvetica', '', 9);
-            $cellH = $pdf->getStringHeight(120, $item->stage_description);
-
-            if ($cellH < 8) $cellH = 8;
-
-            $pdf->MultiCell(40, $cellH, $item->name, "T", "L", 0, 0, '', '', true, false, false, true, 10);
-            $pdf->MultiCell(120, $cellH, $item->stage_description, "T", "L", 0, 0, '', '', true, false, false);
-            $pdf->MultiCell(40, $cellH, $item->stage_deadline, "T", "L", 0, 0, '', '', true, false, false, true, 10);
-
-            $last_category = $item->id_category;
-
-            $iterator++;
-            $pdf->Ln($cellH+5);
-        }
-
-
-        $base = $pdf->Output('CHANGELOG.pdf', 'D');
-        $filename = "CHANGELOG_".date("d_m_Y");
-
-        $documentModel = new DocumentModel();
-        $documentModel->saveDocument($filename, $base);
-    }
-
     public function getDataBySection($data)
     {
         $resp_array = [];
@@ -183,7 +134,6 @@ class TestProductRepository extends BaseRepository
                 WHERE tp.id_section = :id_section
                 ORDER BY tp.id_category, tp.name";
         $resp = $this->query($sql, $data);
-
 
         return $resp;
     }

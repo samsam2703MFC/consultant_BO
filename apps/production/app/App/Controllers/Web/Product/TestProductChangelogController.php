@@ -108,25 +108,4 @@ class TestProductChangelogController extends BaseController
 
         $this->view("product/test_product_changelog/delete", $data);
     }
-
-//    public function getPDF($id = null)
-//    {
-//        $userModel = new UserModel();
-//        if(!$userModel->logged_in() || $id == null)
-//            redirect('login');
-//
-//        $testProductChangelogModel = new TestProductChangelogModel();
-//        $testProductChangelogModel->getFullChangelogForProductPDF(['id_test_product' => $id]);
-//    }
-//
-//    public function getChangelogPDF($id = null)
-//    {
-//        $userModel = new UserModel();
-//        if(!$userModel->logged_in() || $id == null)
-//            redirect('login');
-//
-//        $testProductChangelogModel = new TestProductChangelogModel();
-//        $testProductChangelogModel->getSelectedChangelogPDF(['id' => $id]);
-//
-//    }
 }

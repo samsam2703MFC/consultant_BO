@@ -57,9 +57,9 @@
                     <input type="email" class="form-control" id="accountingAddress" value="{{ accounting_address }}" placeholder="faktury@biuro-rachunkowe.pl">
                 </div>
                 <div class="col-6 col-md-3">
-                    <label class="form-label" for="clientLanguage">Język e-maili do klientów</label>
+                    <label class="form-label" for="clientLanguage" title="Każdy klient dostaje e-maile w języku z karty klienta ; ten język tylko gdy brak klienta.">Język zapasowy (bez klienta)</label>
                     <select class="form-select" id="clientLanguage">
-                        {% for code, label in {'fr': 'Francuski', 'nl': 'Niderlandzki', 'pl': 'Polski'} %}
+                        {% for code, label in {'fr': 'Francuski', 'nl': 'Niderlandzki', 'pl': 'Polski', 'en': 'Angielski'} %}
                             <option value="{{ code }}" {{ client_language == code ? 'selected' }}>{{ label }}</option>
                         {% endfor %}
                     </select>
@@ -109,7 +109,7 @@
                             </td>
                             <td>
                                 <select class="form-select form-select-sm" data-field="language">
-                                    {% for code, label in {'client': 'Klienta', 'fr': 'FR', 'nl': 'NL', 'pl': 'PL'} %}
+                                    {% for code, label in {'client': 'Klienta (karta)', 'fr': 'FR', 'nl': 'NL', 'pl': 'PL', 'en': 'EN'} %}
                                         <option value="{{ code }}" {{ r.language == code ? 'selected' }}>{{ label }}</option>
                                     {% endfor %}
                                 </select>

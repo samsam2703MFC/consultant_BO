@@ -35,7 +35,6 @@ class RequirementListService
         $requirementData = $this->getRequirementListData($data);
 
         $pdf = new TCPDFService('P', 'mm', 'a4', true, 'UTF-8', false);
-        $pdf->setMargins(8, 8, 8);
 
         $this->pdfBuilder->build($pdf, $requirementData);
 

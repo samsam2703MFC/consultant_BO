@@ -18,6 +18,7 @@ class CommunicationService
         'fr' => 'Francuski',
         'nl' => 'Niderlandzki',
         'pl' => 'Polski',
+        'en' => 'Angielski',
     ];
 
     private const TEMPLATE_TYPES = [

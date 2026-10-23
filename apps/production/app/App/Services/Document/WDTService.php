@@ -9,10 +9,15 @@ use App\Repositories\Document\Wdt\WDTRepository;
 use App\Repositories\Document\Wz\WZRepository;
 use App\Repositories\Ksef\KsefSubmissionRepository;
 use App\Services\Ksef\KsefQrCodeService;
+use App\Repositories\Client\ClientRepository;
+use App\Services\Utils\DocumentLabels;
 use App\Services\Utils\TCPDFService;
 
 class WDTService implements IDocument
 {
+    /** Numer rejestrowy BDO wydającego (wymagany na dokumentach dostawy opakowań). */
+    public const BDO = '000507840';
+
     private WDTRepository $wdtRepository;
     private WDTProductRepository $wdtProductRepository;
     private KsefSubmissionRepository $ksefSubmissions;
@@ -22,7 +27,8 @@ class WDTService implements IDocument
         WDTRepository        $wdtRepository,
         WDTProductRepository $wdtProductRepository,
         KsefSubmissionRepository $ksefSubmissions,
-        KsefQrCodeService $ksefQrCodes
+        KsefQrCodeService $ksefQrCodes,
+        private ClientRepository $clientRepository
     )
     {
         $this->wdtRepository = $wdtRepository;
@@ -38,149 +44,81 @@ class WDTService implements IDocument
 
     public function renderDocument(TCPDFService $pdf, array $data): TCPDFService
     {
+        $wdt = $data['wdtData'];
+        $lang = $data['lang'] ?? 'fr';
+        $L = fn(string $key) => DocumentLabels::get($key);
+        $S = fn(string $key) => DocumentLabels::sub($key, $lang);
+        $P = fn(string $key) => DocumentLabels::pair($key, $lang);
+        $cur = strtoupper((string) ($wdt['currency'] ?? 'EUR')) === 'EUR' || empty($wdt['currency']) ? '€' : strtoupper((string) $wdt['currency']);
+        $money = fn($v) => DocumentLabels::money($v, $cur);
 
-        $pdf->setMargins(5, 5, 5);
-        $pdf->setPrintFooter(false);
-        $pdf->setPrintHeader(false);
-        $pdf->AddPage();
+        $pdf->brandPage($L('doc_wdt'), ['ref' => $wdt['doc_num'], 'lang' => $lang, 'company' => DocumentLabels::companyLine($wdt, 'consignor', ['BDO ' . self::BDO])]);
+        $pdf->brandHeader($L('doc_wdt'), [
+            [$P('number'), $wdt['doc_num']],
+            [$P('issue_date'), $wdt['established_date']],
+            [$P('shipping_date'), $wdt['shipping_date']],
+        ], $S('doc_wdt'));
 
-        #region left_data
-// left top side
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(85, 5, $data['wdtData']['consignor_name'], 0, 'L', 0, 0, 10, 25, true);
+        $pdf->brandParties([
+            'label' => $P('seller'),
+            'name' => $wdt['consignor_name'],
+            'lines' => [$wdt['consignor_address_1'], $wdt['consignor_address_2'], 'NIP: ' . DocumentLabels::taxId($wdt['consignor_nip']), 'BDO: ' . self::BDO],
+        ], [
+            'label' => $P('buyer'),
+            'name' => $wdt['consignee_name'],
+            'lines' => [$wdt['consignee_address_1'], $wdt['consignee_address_2'], 'NIP/TVA: ' . $wdt['consignee_nip']],
+        ]);
 
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->MultiCell(55, 5, $data['wdtData']['consignor_address_1'] . "\n" . $data['wdtData']['consignor_address_2'], 0, 'L', 0, 0, 10, 30, true);
-
-        $pdf->MultiCell(15, 5, "<b>NIP:</b>", 0, 'L', 0, 0, 10, 40, true, 0, true);
-        $pdf->MultiCell(45, 5, $data['wdtData']['consignor_nip'], 0, 'L', 0, 0, '', '', true, 0, true);
-
-        $pdf->MultiCell(15, 5, "<b>BDO:</b>", 0, 'L', 0, 0, 10, 45, true, 0, true);
-        $pdf->MultiCell(45, 5, "000507840", 0, 'L', 0, 0, '', '', true, 0, true);
-//end left top side
-#endregion
-
-        #region right_data
-// right top side
-        $pdf->SetFont('dejavusans', '', 11);
-        $pdf->MultiCell(15, 5, "Num:", 'B', 'L', 0, 0, 110, 25, true, 0, false, true, 5, 'M');
-        $pdf->MultiCell(60, 5, $data['wdtData']['doc_num'], 'B', 'L', 0, 0, '', '', true, 0, false, true, 5, 'M');
-
-        $pdf->MultiCell(15, 5, "Data:", 'B', 'L', 0, 0, 110, 33, true, 0, false, true, 5, 'M');
-        $pdf->MultiCell(60, 5, $data['wdtData']['established_date'], 'B', 'L', 0, 0, '', '', true, 0, false, true, 5, 'M');
-
-        $pdf->SetFont('dejavusans', '', 8);
-
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(85, 5, $data['wdtData']['consignee_name'], 0, 'L', 0, 0, 110, 45, true, 0, true);
-
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->MultiCell(85, 5, $data['wdtData']['consignee_address_1'], 0, 'L', 0, 0, 110, 50, true, 0, true);
-        $pdf->MultiCell(85, 5, $data['wdtData']['consignee_address_2'], 0, 'L', 0, 0, 110, 55, true, 0, true);
-        $pdf->SetFont('dejavusans', '', 9);
-        $pdf->MultiCell(85, 5, "NIP/TVA: " . $data['wdtData']['consignee_nip'], 0, 'L', 0, 0, 110, 61, true, 0, true);
-// end right top side
-
-        #endregion
-
-        $pdf->ln(10);
-        $pdf->SetTextColor(0, 0, 0);
-        $pdf->SetFont('helvetica', '', 12);
-
-
-        $headerPL = array(
-            "Palet",
-            "Kod Towaru",
-            "Opis towaru",
-            "PKWiU",
-            "Ilość",
-            "Cena/kart netto",
-            "Wartość netto",
-            "VAT",
-            "Wart./brutto",
-            "Stawka VAT",
-            "Waga op.",
-            "Waga",
-            "Il/Krt",
-            "Cena/szt"
-        );
-        $headerBE = array(
-            "Palet",
-            "Ref. Article",
-            "Description",
-            "Code Stat.",
-            "Quant.",
-            "Prix carton net",
-            "Total Net",
-            "TVA",
-            "Prix brut",
-            "Taux TVA",
-            "Poid cart",
-            "Poid Brut",
-            "Qt/Crt",
-            "Prix/unit"
-        );
-
-        $pdf->fillWdtData($headerPL, $headerBE, $data['wdtProductData']);
-
-        $pdf->Ln(10);
-//pomocnicza komórka bo grupuje wszystkie poniższe dane w jednej linii
-        $pdf->MultiCell(60, 5, "", 0, 'L', 0, 1, '', '', true);
-
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->MultiCell(60, 5, "Data fakturowania:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(70, 5, $data['wdtData']['invoiced_date'], 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-        $pdf->MultiCell(60, 5, "Data wysyłki:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(70, 5, $data['wdtData']['shipping_date'], 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-        $pdf->MultiCell(60, 5, "Waga łącznie:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(70, 5, $data['wdtData']['total_weight'] . " kg", 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-        $pdf->MultiCell(60, 5, "Numer palety:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(70, 5, $data['wdtData']['palette_nums'], 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-
-        $pdf->MultiCell(60, 5, "Paiement Pro Forma", 0, 'L', 0, 1, '', '', true);
-        $pdf->MultiCell(60, 5, "Compte en Banque:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(100, 5, $data['wdtData']['consignor_bank'], 0, 'L', 0, 1, '', '', true);
-        $pdf->MultiCell(60, 5, "Code BIC Swift:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(80, 5, $data['wdtData']['consignor_swift'], 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-        $pdf->SetFont('helvetica', 'I', 6);
-
-        $total_net = 0;
-        foreach ($data['wdtProductData'] as $wdt_item) {
-            $total_net += $wdt_item['total_net'];
+        $columns = [
+            ['label' => $L('code'), 'sub' => $S('code'), 'w' => 10],
+            ['label' => $L('description'), 'sub' => $S('description'), 'w' => 30],
+            ['label' => $L('stat_code'), 'sub' => $S('stat_code'), 'w' => 11],
+            ['label' => $L('cartons'), 'sub' => $S('cartons'), 'w' => 9, 'align' => 'R'],
+            ['label' => $L('price_carton'), 'sub' => $S('price_carton'), 'w' => 12, 'align' => 'R'],
+            ['label' => $L('net_value'), 'sub' => $S('net_value'), 'w' => 13, 'align' => 'R'],
+            ['label' => $L('vat_rate'), 'sub' => $S('vat_rate'), 'w' => 8, 'align' => 'R'],
+            ['label' => $L('weight_carton'), 'sub' => $S('weight_carton'), 'w' => 10, 'align' => 'R'],
+            ['label' => $L('weight'), 'sub' => $S('weight'), 'w' => 12, 'align' => 'R'],
+            ['label' => $L('ppc'), 'sub' => $S('ppc'), 'w' => 9, 'align' => 'R'],
+            ['label' => $L('price_piece'), 'sub' => $S('price_piece'), 'w' => 10, 'align' => 'R'],
+        ];
+        $rows = [];
+        $palette = null;
+        $net = 0.0;
+        $vat = 0.0;
+        $cartons = 0;
+        $weight = 0.0;
+        foreach ((array) $data['wdtProductData'] as $item) {
+            if ($palette !== $item['id_palette']) {
+                $rows[] = ['_group' => $P('pallet') . ' ' . $item['id_palette']];
+                $palette = $item['id_palette'];
+            }
+            $rows[] = [$item['id_product'], $item['name'], $item['code'], DocumentLabels::number($item['quantity']), $money($item['price_carton']),
+                $money($item['total_net']), DocumentLabels::number($item['tva_perc'] ?? 0) . ' %', DocumentLabels::number($item['weight_carton'], 2) . ' kg',
+                DocumentLabels::number($item['weight_carton_total'], 2) . ' kg', DocumentLabels::number($item['ppc']), $money($item['price_per_piece'])];
+            $net += (float) $item['total_net'];
+            $vat += (float) ($item['total_tva'] ?? 0);
+            $cartons += (int) $item['quantity'];
+            $weight += (float) $item['weight_carton_total'];
         }
-        $total_net = number_format($total_net, 2);
+        $rows[] = ['_total' => ['', $P('total'), '', DocumentLabels::number($cartons), '', $money($net), '', '', DocumentLabels::number($weight, 2) . ' kg', '', '']];
+        $pdf->brandTable($columns, $rows, ['font' => 7, 'head_font' => 6.5]);
 
-        $yPos = $pdf->getY();
-        if ($yPos + 42 > 297) {
-            $pdf->AddPage();
-        }
+        $pdf->brandSummary([
+            [$P('invoice_date'), $wdt['invoiced_date']],
+            [$P('shipping_date'), $wdt['shipping_date']],
+            [$P('total_weight'), DocumentLabels::number($wdt['total_weight'], 2) . ' kg'],
+            [$P('pallets'), $wdt['palette_nums']],
+            [$P('payment'), $P('payment_proforma')],
+            [$P('bank'), $wdt['consignor_bank']],
+            [$P('swift'), $wdt['consignor_swift']],
+        ], [
+            [$P('net'), $money($net)],
+            [$P('vat'), $money($vat)],
+            [$P('total'), $money($net + $vat)],
+        ]);
 
-
-        $pdf->MultiCell(24, 3, "Wartosc netto", '', 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(15, 3, $total_net, 1, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(15, 3, "  EUR", 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-        $pdf->MultiCell(24, 3, "Wartosc vat", '', 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(15, 3, " -", 1, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(15, 3, "  EUR", 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-        $pdf->MultiCell(24, 3, "Ogolem", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(15, 3, $total_net, 1, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(15, 3, "  EUR", 0, 'L', 0, 1, '', '', true);
-
-        $this->renderKsefQr($pdf, $data['wdtData'], $data['ksefSubmission'] ?? []);
+        $this->renderKsefQr($pdf, $wdt, $data['ksefSubmission'] ?? []);
         return $pdf;
     }
 
@@ -199,7 +137,8 @@ class WDTService implements IDocument
         $this->renderDocument($pdf, [
             'wdtData' => $wdtData,
             'wdtProductData' => $wdtProductData,
-            'ksefSubmission' => $this->ksefSubmissions->findByWdtId((int)$wdtData['id'])]);
+            'ksefSubmission' => $this->ksefSubmissions->findByWdtId((int)$wdtData['id']),
+            'lang' => $this->clientRepository->communicationLang((int) $wdtData['id_customer'])]);
 
         return ['file_string' => $pdf, "filename" => 'WDT_' . $wdtData['doc_num'] . '.pdf'];
     }
@@ -241,11 +180,12 @@ class WDTService implements IDocument
     {
         if (($submission['status'] ?? null) !== 'accepted' || empty($submission['ksef_number']) || empty($submission['invoice_xml'])) return;
         $url = $this->ksefQrCodes->invoiceVerificationUrl((string)($submission['environment'] ?? 'test'), (string)$wdt['consignor_nip'], (string)$wdt['invoiced_date'], (string)$submission['invoice_xml']);
-        if ($pdf->GetY() > 245) $pdf->AddPage();
-        $y = $pdf->GetY() + 5;
+        if ($pdf->GetY() > 235) $pdf->AddPage();
+        $y = $pdf->GetY() + 2;
+        $x = $pdf->getPageWidth() - 12 - 32;
         $style = ['border' => false, 'padding' => 0, 'fgcolor' => [0, 0, 0], 'bgcolor' => false];
-        $pdf->write2DBarcode($url, 'QRCODE,M', 155, $y, 32, 32, $style, 'N');
+        $pdf->write2DBarcode($url, 'QRCODE,M', $x, $y, 32, 32, $style, 'N');
         $pdf->SetFont('dejavusans', '', 6);
-        $pdf->MultiCell(42, 8, 'KSeF: ' . $submission['ksef_number'], 0, 'C', 0, 0, 150, $y + 33, true);
+        $pdf->MultiCell(42, 8, 'KSeF: ' . $submission['ksef_number'], 0, 'C', 0, 0, $x - 5, $y + 33, true);
     }
 }

@@ -4,682 +4,506 @@ namespace App\Services\Utils;
 
 use TCPDF;
 
+/**
+ * Wszystkie wydruki ERP w jednym stylu : logo SL Food z dopiskiem « producent zatwierdzony przez L'Atelier By »
+ * (logo L'Atelier), tytuł w kolorze marki, bloki stron, tabele z nagłówkiem w kolorze marki, stopka z danymi firmy
+ * i numerem strony na każdej stronie.
+ *
+ * Dokument zaczyna brandPage() ; kilka dokumentów w jednym pliku (WZ, CMR, WDT, różnice) ma osobną numerację stron
+ * (grupy stron). Strony bez brandPage() (formularz CMR) nie dostają nagłówka ani stopki.
+ */
 class TCPDFService extends TCPDF
 {
-    protected $last_page_flag = false;
-    public $footer_info_1 = "";
-    public $footer_info_2 = "";
-    public $footer_string = "";
+    public const BRAND = [141, 29, 44];        // Ruby Red L'Atelier (--at-primary)
+    public const BRAND_SOFT = [248, 236, 238];
+    public const INK = [33, 37, 41];
+    public const MUTED = [108, 117, 125];
+    public const LINE = [222, 226, 230];
+    public const ZEBRA = [248, 249, 250];
+    public const PRODUCER_LOGO = __DIR__ . '/../../../public/resources/images/logo.jpg';             // SL Food
+    public const NETWORK_LOGO = __DIR__ . '/../../../public/assets/images/atelier-logo-print.jpg';   // L'Atelier
+    public const NETWORK_NAME = "L'Atelier By";
+    /** Tabele : krój zwężony (więcej kolumn bez łamania liczb). */
+    public const TABLE_FONT = 'dejavusanscondensed';
+    public const DEFAULT_COMPANY = "SL Food · producent zatwierdzony przez L'Atelier By";
 
-    public function Close()
+    /** Dokument w toku : title, ref, company, lang (null = strony bez stylu, np. CMR). */
+    private ?array $brandActive = null;
+    /** numer strony => dokument ; stopka strony jest rysowana dopiero przy otwarciu następnej. */
+    private array $pageBrand = [];
+
+    // Nagłówek i stopka są rysowane według strony (pageBrand). Wyłączenie ich przez kolejny dokument w tym samym
+    // pliku nie może zabrać stopki ostatniej stronie poprzedniego dokumentu.
+    public function setPrintHeader($val = true)
     {
-        $this->last_page_flag = true;
-        parent::Close();
+        if (!$val) {
+            $this->brandActive = null;
+            $this->startPageGroup();
+        }
+        $this->print_header = true;
     }
 
-    public function customHeader($data = [], $display_logo = true, $page_orientation = "p")
+    public function setPrintFooter($val = true)
     {
-        $this->SetFont('dejavusans', '', 10);
-        if ($display_logo) {
-            $this->Image(ROOT . "/resources/images/logo.jpg", 187, 3, 20, 28, 'JPG', '', '', false, 300, '', false, false, 0);
-            $this->writeHTMLCell(60, 1, 3, 48, "", 0, 1, 0, true, 'L', true);
+        $this->print_footer = true;
+    }
+
+    /**
+     * Nowy dokument : marginesy, grupa stron, pierwsza strona.
+     * $opts : orientation (P|L), ref (numer dokumentu), company (linia stopki), lang (drugi język etykiet).
+     */
+    public function brandPage(string $title, array $opts = []): void
+    {
+        $this->brandActive = null;
+        $this->SetMargins(12, 18, 12);
+        $this->SetAutoPageBreak(true, 16);
+        $this->setCellPaddings(0, 0, 0, 0);
+        $this->startPageGroup();
+        $this->AddPage($opts['orientation'] ?? 'P');
+        $this->brandActive = [
+            'title' => $title,
+            'ref' => (string) ($opts['ref'] ?? ''),
+            'company' => (string) (($opts['company'] ?? '') !== '' ? $opts['company'] : self::DEFAULT_COMPANY),
+            'lang' => DocumentLabels::lang($opts['lang'] ?? 'pl'),
+        ];
+        $this->pageBrand[$this->getPage()] = $this->brandActive;
+        $this->SetTextColorArray(self::INK);
+        $this->SetY(9);
+    }
+
+    public function brandLang(): string
+    {
+        return $this->brandActive['lang'] ?? 'pl';
+    }
+
+    public function contentWidth(): float
+    {
+        return $this->getPageWidth() - $this->lMargin - $this->rMargin;
+    }
+
+    /**
+     * Nagłówek pierwszej strony : logo SL Food + « producent zatwierdzony przez » + logo L'Atelier po lewej,
+     * tytuł, podtytuł i pary [etykieta, wartość] (numer, data…) po prawej, linia w kolorze marki.
+     */
+    public function brandHeader(string $title, array $meta = [], string $subtitle = ''): void
+    {
+        $lm = $this->lMargin;
+        $w = $this->contentWidth();
+        $top = 9;
+        $bottom = $this->drawLockup($lm, $top, 17);
+
+        $rightW = $w - 82;
+        $x = $lm + 82;
+        $this->SetTextColorArray(self::BRAND);
+        $this->SetFont('dejavusans', 'B', 15);
+        $this->SetXY($x, $top);
+        $this->MultiCell($rightW, 7, $title, 0, 'R', false, 1, $x, $top, true, 0, false, true, 0, 'T', true);
+        $y = $this->GetY();
+        if ($subtitle !== '') {
+            $this->SetFont('dejavusans', '', 9);
+            $this->SetTextColorArray(self::MUTED);
+            $this->MultiCell($rightW, 4.5, $subtitle, 0, 'R', false, 1, $x, $y);
+            $y = $this->GetY();
         }
-
-        if (isset($data['header_subtitle']) && $data['header_title'] != "") {
-            $this->SetFont('dejavusans', 'B', 18);
-
-            switch (strtolower($page_orientation)) {
-                case "p":
-                    $this->writeHTMLCell(180, 11, 15, '', $data['header_title'], 0, 1, 0, true, 'C');
-                    break;
-                case "l":
-                    $this->writeHTMLCell(180, 11, 58, '', $data['header_title'], 0, 1, 0, true, 'C');
-                    break;
-            }
+        $y += 0.8;
+        foreach ($meta as $pair) {
+            [$label, $value] = $pair;
+            $this->SetFont('dejavusans', '', 7.5);
+            $this->SetTextColorArray(self::MUTED);
+            $this->SetXY($lm + $w - 92, $y);
+            $this->Cell(44, 4.6, (string) $label, 0, 0, 'R');
+            $this->SetFont('dejavusans', 'B', 9);
+            $this->SetTextColorArray(self::INK);
+            $this->Cell(48, 4.6, (string) $value, 0, 1, 'R', false, '', 1);
+            $y = $this->GetY();
         }
-        if (isset($data['header_subtitle']) && $data['header_subtitle'] != "") {
-            $this->SetFont('dejavusans', '', 15);
+        $y = max($y, $bottom) + 2.5;
+        $this->SetDrawColorArray(self::BRAND);
+        $this->SetLineWidth(0.6);
+        $this->Line($lm, $y, $lm + $w, $y);
+        $this->SetLineWidth(0.2);
+        $this->SetTextColorArray(self::INK);
+        $this->SetY($y + 4);
+    }
 
-            switch (strtolower($page_orientation)) {
-                case "p":
-                    $this->writeHTMLCell(180, 10, 15, '', $data['header_subtitle'], 0, 1, 0, true, 'C');
-                    break;
-                case "l":
-                    $this->writeHTMLCell(180, 10, 58, '', $data['header_subtitle'], 0, 1, 0, true, 'C');
-                    break;
-            }
+    /** Logo producenta, kreska, « producent zatwierdzony przez » i logo sieci ; zwraca dolną krawędź. */
+    private function drawLockup(float $x, float $y, float $height): float
+    {
+        $logoW = 0;
+        if (is_file(self::PRODUCER_LOGO)) {
+            $this->Image(self::PRODUCER_LOGO, $x, $y, 0, $height, 'JPG');
+            $logoW = $this->getImageRBX() - $x;
+        }
+        $dx = $x + $logoW + 3;
+        $this->SetDrawColorArray(self::LINE);
+        $this->SetLineWidth(0.3);
+        $this->Line($dx, $y + 1.5, $dx, $y + $height - 1.5);
+        $this->SetFont('dejavusans', '', 6.5);
+        $this->SetTextColorArray(self::MUTED);
+        $this->SetXY($dx + 3, $y + $height / 2 - 6);
+        $this->Cell(60, 3.5, DocumentLabels::get('producer', $this->brandLang()), 0, 1, 'L');
+        if (is_file(self::NETWORK_LOGO)) {
+            $this->Image(self::NETWORK_LOGO, $dx + 3, $y + $height / 2 - 1.8, 46, 0, 'JPG');
+        }
+        $this->SetTextColorArray(self::INK);
+        return $y + $height;
+    }
+
+    /**
+     * Dwa bloki stron (sprzedawca / nabywca, wydający / odbiorca) tej samej wysokości.
+     * Blok : ['label' => …, 'name' => …, 'lines' => [linia, …]] ; drugi blok opcjonalny.
+     */
+    public function brandParties(array $left, ?array $right = null): void
+    {
+        $lm = $this->lMargin;
+        $w = $this->contentWidth();
+        $gap = 6;
+        $bw = $right === null ? $w : ($w - $gap) / 2;
+        $y = $this->GetY();
+        $h = $this->partyHeight($left, $bw);
+        if ($right !== null) $h = max($h, $this->partyHeight($right, $bw));
+        if ($y + $h > $this->getPageHeight() - $this->getBreakMargin()) {
+            $this->AddPage();
+            $y = $this->GetY();
+        }
+        $this->drawParty($left, $lm, $y, $bw, $h);
+        if ($right !== null) $this->drawParty($right, $lm + $bw + $gap, $y, $bw, $h);
+        $this->SetY($y + $h + 5);
+    }
+
+    private function partyHeight(array $p, float $w): float
+    {
+        $inner = $w - 8;
+        $this->SetFont('dejavusans', 'B', 9.5);
+        $h = 9 + $this->getStringHeight($inner, (string) ($p['name'] ?? ''), false, true, ['T' => 0, 'R' => 0, 'B' => 0, 'L' => 0]);
+        $this->SetFont('dejavusans', '', 8);
+        foreach (array_filter($p['lines'] ?? [], fn($l) => trim((string) $l) !== '') as $line) {
+            $h += $this->getStringHeight($inner, (string) $line, false, true, ['T' => 0, 'R' => 0, 'B' => 0, 'L' => 0]);
+        }
+        return $h + 3;
+    }
+
+    private function drawParty(array $p, float $x, float $y, float $w, float $h): void
+    {
+        $this->SetDrawColorArray(self::LINE);
+        $this->SetLineWidth(0.25);
+        $this->RoundedRect($x, $y, $w, $h, 1.5, '1111', 'D');
+        $this->SetFillColorArray(self::BRAND);
+        $this->Rect($x, $y + 1.5, 0.9, $h - 3, 'F');
+        $this->SetFont('dejavusans', 'B', 6.5);
+        $this->SetTextColorArray(self::BRAND);
+        $this->SetXY($x + 4, $y + 2.5);
+        $this->Cell($w - 8, 3.5, mb_strtoupper((string) ($p['label'] ?? '')), 0, 1, 'L', false, '', 1);
+        $this->SetFont('dejavusans', 'B', 9.5);
+        $this->SetTextColorArray(self::INK);
+        $this->MultiCell($w - 8, 0, (string) ($p['name'] ?? ''), 0, 'L', false, 1, $x + 4, $y + 7);
+        $this->SetFont('dejavusans', '', 8);
+        foreach (array_filter($p['lines'] ?? [], fn($l) => trim((string) $l) !== '') as $line) {
+            $this->MultiCell($w - 8, 0, (string) $line, 0, 'L', false, 1, $x + 4);
         }
     }
 
-    public function customFooter($data = [])
+    /**
+     * Tabela : nagłówek w kolorze marki (pod etykietą drugi język), wiersze na przemian jasne, nagłówek powtarzany
+     * na kolejnych stronach, wysokość wiersza według najdłuższego tekstu.
+     * $columns : [['label' => 'Ilość', 'sub' => 'Quantité', 'w' => 10 (waga szerokości), 'align' => 'R'], …]
+     * $rows : wartości w kolejności kolumn ; ['_group' => tekst] = wiersz grupy (np. paleta, kategoria),
+     *         ['_total' => [wartości]] = wiersz sumy.
+     * $opts : font (8), head_font (7), min_h (5.5).
+     */
+    public function brandTable(array $columns, array $rows, array $opts = []): void
     {
-        $this->footer_info_1 = $data['info_1'];
-        $this->SetFont('dejavusans', '', 9);
+        $lm = $this->lMargin;
+        $avail = $this->contentWidth();
+        $weights = array_map(fn($c) => (float) ($c['w'] ?? 1), $columns);
+        $sum = array_sum($weights) ?: 1;
+        $ws = array_map(fn($wk) => $avail * $wk / $sum, $weights);
+        $font = $opts['font'] ?? 8;
+        $headFont = $opts['head_font'] ?? 7;
+        $minH = $opts['min_h'] ?? 5.5;
+        $pad = ['L' => 1.3, 'T' => 0.9, 'R' => 1.3, 'B' => 0.9];
+
+        $autoBreak = $this->getAutoPageBreak();
+        $breakMargin = $this->getBreakMargin();
+        $this->SetAutoPageBreak(false, $breakMargin);
+        $prevPadding = $this->getCellPaddings();
+        $this->setCellPaddings($pad['L'], $pad['T'], $pad['R'], $pad['B']);
+        $limit = fn() => $this->getPageHeight() - $breakMargin;
+
+        $head = function () use ($columns, $ws, $headFont, $lm, $avail, $pad) {
+            $hasSub = (bool) array_filter($columns, fn($c) => ($c['sub'] ?? '') !== '');
+            $this->SetFont(self::TABLE_FONT, 'B', $headFont);
+            $h1 = 0;
+            foreach ($columns as $k => $c) $h1 = max($h1, $this->getStringHeight($ws[$k], (string) $c['label'], false, true, $pad));
+            $h2 = 0;
+            if ($hasSub) {
+                $this->SetFont(self::TABLE_FONT, '', $headFont - 0.8);
+                foreach ($columns as $k => $c) $h2 = max($h2, $this->getStringHeight($ws[$k], (string) ($c['sub'] ?? ''), false, true, ['L' => $pad['L'], 'T' => 0, 'R' => $pad['R'], 'B' => $pad['B']]));
+            }
+            $y = $this->GetY();
+            $this->SetFillColorArray(self::BRAND);
+            $this->Rect($lm, $y, $avail, $h1 + $h2, 'F');
+            $x = $lm;
+            foreach ($columns as $k => $c) {
+                $align = $c['head_align'] ?? ($c['align'] ?? 'L');
+                $this->SetFont(self::TABLE_FONT, 'B', $headFont);
+                $this->SetTextColor(255, 255, 255);
+                $this->setCellPaddings($pad['L'], $pad['T'], $pad['R'], $hasSub ? 0 : $pad['B']);
+                $this->MultiCell($ws[$k], $h1, (string) $c['label'], 0, $align, false, 0, $x, $y, true, 0, false, true, $h1, $hasSub ? 'B' : 'M');
+                if ($hasSub) {
+                    $this->SetFont(self::TABLE_FONT, '', $headFont - 0.8);
+                    $this->SetTextColor(244, 205, 211);
+                    $this->setCellPaddings($pad['L'], 0, $pad['R'], $pad['B']);
+                    $this->MultiCell($ws[$k], $h2, (string) ($c['sub'] ?? ''), 0, $align, false, 0, $x, $y + $h1, true, 0, false, true, $h2, 'T');
+                }
+                $x += $ws[$k];
+            }
+            $this->setCellPaddings($pad['L'], $pad['T'], $pad['R'], $pad['B']);
+            $this->SetTextColorArray(self::INK);
+            $this->SetY($y + $h1 + $h2);
+        };
+
+        $head();
+        $i = 0;
+        foreach ($rows as $row) {
+            if (is_array($row) && array_key_exists('_group', $row)) {
+                $this->SetFont(self::TABLE_FONT, 'B', $font);
+                $h = max($minH, $this->getStringHeight($avail, (string) $row['_group'], false, true, $pad));
+                if ($this->GetY() + $h + $minH > $limit()) { $this->AddPage(); $head(); $this->SetFont(self::TABLE_FONT, 'B', $font); }
+                $y = $this->GetY();
+                $this->SetFillColorArray(self::BRAND_SOFT);
+                $this->SetTextColorArray(self::BRAND);
+                $this->MultiCell($avail, $h, (string) $row['_group'], 0, 'L', true, 1, $lm, $y, true, 0, false, true, $h, 'M');
+                $this->SetTextColorArray(self::INK);
+                $this->SetY($y + $h);
+                $i = 0;
+                continue;
+            }
+            $total = is_array($row) && array_key_exists('_total', $row);
+            $cells = array_values($total ? $row['_total'] : $row);
+            $this->SetFont(self::TABLE_FONT, $total ? 'B' : '', $font);
+            $h = $minH;
+            foreach ($ws as $k => $wk) $h = max($h, $this->getStringHeight($wk, (string) ($cells[$k] ?? ''), false, true, $pad));
+            if ($this->GetY() + $h > $limit()) { $this->AddPage(); $head(); $this->SetFont(self::TABLE_FONT, $total ? 'B' : '', $font); }
+            $y = $this->GetY();
+            $fill = $total || $i % 2 === 1;
+            $this->SetFillColorArray($total ? self::BRAND_SOFT : self::ZEBRA);
+            $x = $lm;
+            foreach ($ws as $k => $wk) {
+                $this->MultiCell($wk, $h, (string) ($cells[$k] ?? ''), 0, $columns[$k]['align'] ?? 'L', $fill, 0, $x, $y, true, 0, false, true, $h, 'M');
+                $x += $wk;
+            }
+            if ($total) {
+                $this->SetDrawColorArray(self::BRAND);
+                $this->SetLineWidth(0.4);
+                $this->Line($lm, $y, $lm + $avail, $y);
+            }
+            $this->SetDrawColorArray(self::LINE);
+            $this->SetLineWidth(0.2);
+            $this->Line($lm, $y + $h, $lm + $avail, $y + $h);
+            $this->SetY($y + $h);
+            if (!$total) $i++;
+        }
+
+        $this->setCellPaddings($prevPadding['L'], $prevPadding['T'], $prevPadding['R'], $prevPadding['B']);
+        $this->SetAutoPageBreak($autoBreak, $breakMargin);
+        $this->SetY($this->GetY() + 3);
+    }
+
+    /**
+     * Pod tabelą : informacje [etykieta, wartość] po lewej (daty, waga, płatność) i sumy po prawej
+     * (ostatnia suma wyróżniona). Każda strona opcjonalna.
+     */
+    public function brandSummary(array $info, array $totals = []): void
+    {
+        $lm = $this->lMargin;
+        $w = $this->contentWidth();
+        $totW = $totals ? 78 : 0;
+        $infoW = $w - $totW - ($totals ? 10 : 0);
+        $need = max(count($info) * 5, count($totals) * 6.5) + 4;
+        if ($this->GetY() + $need > $this->getPageHeight() - $this->getBreakMargin()) $this->AddPage();
+        $y0 = $this->GetY();
+
+        $y = $y0;
+        $lw = min(52, $infoW * 0.42);
+        foreach ($info as [$label, $value]) {
+            $this->SetFont('dejavusans', '', 7.5);
+            $hl = $this->getStringHeight($lw - 2, (string) $label);
+            $this->SetTextColorArray(self::MUTED);
+            $this->MultiCell($lw - 2, $hl, (string) $label, 0, 'L', false, 0, $lm, $y);
+            $this->SetFont('dejavusans', '', 8.5);
+            $hv = $this->getStringHeight($infoW - $lw, (string) $value);
+            $this->SetTextColorArray(self::INK);
+            $this->MultiCell($infoW - $lw, $hv, (string) $value, 0, 'L', false, 0, $lm + $lw, $y);
+            $y += max($hl, $hv, 4.2) + 0.9;
+        }
+
+        $ty = $y0;
+        $tx = $lm + $w - $totW;
+        $last = count($totals) - 1;
+        foreach (array_values($totals) as $k => [$label, $value]) {
+            $strong = $k === $last;
+            $h = $strong ? 7.5 : 6;
+            if ($strong) {
+                $this->SetFillColorArray(self::BRAND);
+                $this->RoundedRect($tx, $ty + 0.8, $totW, $h, 1.2, '1111', 'F');
+                $this->SetTextColor(255, 255, 255);
+                $ty += 0.8;
+            } else {
+                $this->SetTextColorArray(self::INK);
+                $this->SetDrawColorArray(self::LINE);
+                $this->Line($tx, $ty + $h, $tx + $totW, $ty + $h);
+            }
+            $this->SetFont('dejavusans', $strong ? 'B' : '', $strong ? 9.5 : 8.5);
+            $this->SetXY($tx + 2.5, $ty);
+            $this->Cell($totW * 0.55 - 2.5, $h, (string) $label, 0, 0, 'L', false, '', 1);
+            $this->Cell($totW * 0.45 - 2.5, $h, (string) $value, 0, 0, 'R', false, '', 1);
+            $ty += $h;
+        }
+        $this->SetTextColorArray(self::INK);
+        $this->SetY(max($y, $ty) + 4);
+    }
+
+    /** Pola podpisów (np. Wydał / Odebrał) obok siebie. */
+    public function brandSignatures(array $labels): void
+    {
+        $lm = $this->lMargin;
+        $w = $this->contentWidth();
+        $gap = 10;
+        $n = max(1, count($labels));
+        $bw = ($w - $gap * ($n - 1)) / $n;
+        $h = 22;
+        if ($this->GetY() + $h + 4 > $this->getPageHeight() - $this->getBreakMargin()) $this->AddPage();
+        $y = $this->GetY() + 4;
+        foreach (array_values($labels) as $k => $label) {
+            $x = $lm + $k * ($bw + $gap);
+            $this->SetFont('dejavusans', 'B', 7);
+            $this->SetTextColorArray(self::MUTED);
+            $this->SetXY($x, $y);
+            $this->Cell($bw, 4, mb_strtoupper((string) $label), 0, 0, 'L', false, '', 1);
+            $this->SetDrawColorArray(self::MUTED);
+            $this->SetLineWidth(0.2);
+            $this->Line($x, $y + $h - 5, $x + $bw, $y + $h - 5, ['dash' => '1,1']);
+            $this->SetFont('dejavusans', '', 6.5);
+            $this->SetXY($x, $y + $h - 4.5);
+            $this->Cell($bw, 3.5, DocumentLabels::pair('signature', $this->brandLang()), 0, 0, 'L', false, '', 1);
+        }
+        $this->SetLineStyle(['dash' => 0]);
+        $this->SetTextColorArray(self::INK);
+        $this->SetY($y + $h + 2);
+    }
+
+    /** Tytuł sekcji w kolorze marki z cienką linią. */
+    public function brandSection(string $title, string $sub = ''): void
+    {
+        if ($this->GetY() + 16 > $this->getPageHeight() - $this->getBreakMargin()) $this->AddPage();
+        $lm = $this->lMargin;
+        $this->SetFont('dejavusans', 'B', 10.5);
+        $this->SetTextColorArray(self::BRAND);
+        $this->MultiCell($this->contentWidth(), 0, $title, 0, 'L', false, 1, $lm);
+        if ($sub !== '') {
+            $this->SetFont('dejavusans', '', 8);
+            $this->SetTextColorArray(self::MUTED);
+            $this->MultiCell($this->contentWidth(), 0, $sub, 0, 'L', false, 1, $lm);
+        }
+        $y = $this->GetY() + 1;
+        $this->SetDrawColorArray(self::LINE);
+        $this->SetLineWidth(0.2);
+        $this->Line($lm, $y, $lm + $this->contentWidth(), $y);
+        $this->SetTextColorArray(self::INK);
+        $this->SetY($y + 2.5);
+    }
+
+    /** Akapit (list, uwagi) ; $html = true dla pogrubień. */
+    public function brandText(string $text, array $opts = []): void
+    {
+        $this->SetFont('dejavusans', $opts['style'] ?? '', $opts['size'] ?? 9.5);
+        $this->SetTextColorArray($opts['color'] ?? self::INK);
+        $this->setCellHeightRatio($opts['ratio'] ?? 1.35);
+        if (!empty($opts['html'])) {
+            $this->writeHTMLCell($this->contentWidth(), 0, $this->lMargin, $this->GetY(), $text, 0, 1, false, true, $opts['align'] ?? 'L', true);
+        } else {
+            $this->MultiCell($this->contentWidth(), 0, $text, 0, $opts['align'] ?? 'L', false, 1, $this->lMargin);
+        }
+        $this->setCellHeightRatio(1.25);
+        $this->SetTextColorArray(self::INK);
+        $this->SetY($this->GetY() + ($opts['after'] ?? 2.5));
+    }
+
+    /** Mała uwaga (przypis, podstawa prawna). */
+    public function brandNote(string $text, string $align = 'L'): void
+    {
+        $this->brandText($text, ['size' => 7.5, 'style' => 'I', 'color' => self::MUTED, 'align' => $align, 'after' => 1.5]);
+    }
+
+    /** Ramka wyróżniona (np. kwota do zapłaty w liście) w kolorze marki. */
+    public function brandCallout(string $text): void
+    {
+        $lm = $this->lMargin;
+        $w = $this->contentWidth();
+        $this->SetFont('dejavusans', 'B', 9.5);
+        $h = $this->getStringHeight($w - 10, $text) + 6;
+        if ($this->GetY() + $h > $this->getPageHeight() - $this->getBreakMargin()) $this->AddPage();
+        $y = $this->GetY();
+        $this->SetFillColorArray(self::BRAND_SOFT);
+        $this->RoundedRect($lm, $y, $w, $h, 1.5, '1111', 'F');
+        $this->SetFillColorArray(self::BRAND);
+        $this->Rect($lm, $y, 1.2, $h, 'F');
+        $this->SetTextColorArray(self::INK);
+        $this->MultiCell($w - 10, 0, $text, 0, 'L', false, 1, $lm + 5, $y + 3);
+        $this->SetY($y + $h + 4);
     }
 
     public function Header()
     {
+        $doc = $this->brandActive;
+        if ($doc === null || isset($this->pageBrand[$this->getPage()])) return;
+        // kolejna strona dokumentu : mały nagłówek
+        $this->pageBrand[$this->getPage()] = $doc;
+        $lm = $this->original_lMargin;
+        $w = $this->getPageWidth() - $lm - $this->original_rMargin;
+        if (is_file(self::PRODUCER_LOGO)) $this->Image(self::PRODUCER_LOGO, $lm, 5, 0, 8, 'JPG');
+        if (is_file(self::NETWORK_LOGO)) $this->Image(self::NETWORK_LOGO, $lm + 10, 7, 26, 0, 'JPG');
+        $this->SetFont('dejavusans', '', 7.5);
+        $this->SetTextColorArray(self::MUTED);
+        $this->SetXY($lm + 40, 7);
+        $this->Cell($w - 40, 4, $doc['title'] . ($doc['ref'] !== '' ? ' · ' . $doc['ref'] : ''), 0, 0, 'R', false, '', 1);
+        $this->SetDrawColorArray(self::LINE);
+        $this->SetLineWidth(0.2);
+        $this->Line($lm, 14, $lm + $w, 14);
     }
 
     public function Footer()
     {
-        if ($this->last_page_flag) {
-            // Position at 40 mm from bottom
-            $this->SetY(-35);
-            // Set font
-            $this->SetFont('dejavusans', 'I', 10);
-            // Page number
-
-            $this->setCellPaddings($left = '1', $top = '', $right = '', $bottom = '');
-
-            $this->MultiCell(80, 15, $this->footer_info_1, 0, 'L', 0, 0, 5, '', true, 0, false, true, 7);
-            $this->Ln();
-//            $this->MultiCell(80, 7, $this->footer_info_2, '', 'L', 0, 0, 5, '', true, 0, false, true, 7);
-//            $this->Ln();
-            $this->SetY(-10);
-            $this->MultiCell(150, 12, "Data wydruku: <b>" . date("Y/m/d") . "</b>", '0', 'L', 0, 0, 4, '', true, 0, true, true, 12);
-
-        }
+        $doc = $this->pageBrand[$this->getPage()] ?? null;
+        if ($doc === null) return;
+        $lm = $this->original_lMargin;
+        $w = $this->getPageWidth() - $lm - $this->original_rMargin;
+        $y = $this->getPageHeight() - 11.5;
+        $this->SetDrawColorArray(self::BRAND);
+        $this->SetLineWidth(0.4);
+        $this->Line($lm, $y, $lm + 18, $y);
+        $this->SetDrawColorArray(self::LINE);
+        $this->SetLineWidth(0.2);
+        $this->Line($lm + 18, $y, $lm + $w, $y);
+        $this->SetFont('dejavusans', '', 6.5);
+        $this->SetTextColorArray(self::MUTED);
+        $this->SetXY($lm, $y + 1.3);
+        // numer strony wyrównany do lewej : aliasy liczby stron mają inną szerokość niż wynik
+        $this->Cell($w - 76, 4, $doc['company'], 0, 0, 'L', false, '', 1);
+        $this->SetX($lm + $w - 72);
+        $this->Cell(44, 4, DocumentLabels::pair('page', $doc['lang']) . ' ' . $this->getPageNumGroupAlias() . ' / ' . $this->getPageGroupAlias(), 0, 0, 'L');
+        $this->SetX($lm + $w - 26);
+        $this->Cell(26, 4, date('Y-m-d H:i'), 0, 0, 'R');
     }
 
+    /** Komórka nagłówka pola formularza CMR (numer pola + opis). */
     public function createHederToCell($number, $text)
     {
-
         $this->SetFont('dejavusans', '', 6);
 
         $this->MultiCell(6, 6, "<b>$number</b>", 'TL', "C", 0, '', '', '', true, false, true, 'M');
         $this->MultiCell(89, 6, "$text", 'TR', 'L', 0, 0, '', '', true);
         $this->SetFont('dejavusans', '', 10);
     }
-
-    public function fillPriceList($header, $productData)
-    {
-        $w = array(70, 110, 28);
-
-        $this->SetFont('dejavusans', 'B', 12);
-        $num_headers = count($header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 7, $header[$i], 1, 0, 'C');
-        }
-        $this->Ln();
-        $rowH = 6;
-
-
-        $this->SetFont('dejavusans', '', 10);
-        $last_inserted_id_category = 0;
-        for ($i = 0; $i < count($productData); $i++) {
-
-            if ($productData[$i]['price'] < 10) continue;
-
-
-            if ($productData[$i]['id_category'] != $last_inserted_id_category) {
-
-                $this->Cell($w[0], $rowH, $productData[$i]['category_name'], 'LR', 0, 'L');
-                $this->Cell($w[1], $rowH, "", 'LR', 0, 'L');
-                $this->Cell($w[2], $rowH, "", 'LR', 0, 'L');
-                $this->Ln();
-            }
-
-            $this->Cell($w[0], $rowH, "", 'LR', 0, 'L');
-            $this->Cell($w[1], $rowH, $productData[$i]['final_product_name'], 'LR', 0, 'L');
-            $this->Cell($w[2], $rowH, $productData[$i]['price'] . " €", 'LR', 0, 'C');
-            $this->Ln();
-            $last_inserted_id_category = $productData[$i]['id_category'];
-        }
-
-        $this->Cell(array_sum($w), 0, '', 'T');
-    }
-
-    public function fillStockList($header, $productData)
-    {
-        $w = array(120, 40, 48);
-
-        $this->SetFont('dejavusans', 'B', 12);
-        $num_headers = count($header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 7, $header[$i], 1, 0, 'C');
-        }
-        $this->Ln();
-        $rowH = 6;
-
-
-        $this->SetFont('dejavusans', '', 10);
-        $total_value_of_stock = 0.00;
-
-        $from_card = 0;
-        $without_cost = 0;
-        foreach ($productData as $productItem) {
-            // * koszt z karty produktu (brak receptury) ; ** brak kosztu — poza sumą
-            $source = $productItem['cost_source'] ?? 'recipe';
-            $mark = $source === 'card' ? " *" : ($source === 'none' ? " **" : "");
-            if ($source === 'card') $from_card++;
-            if ($source === 'none') $without_cost++;
-
-            $this->Cell($w[0], $rowH, $productItem['name'] . $mark, 'LR', 0, 'L');
-            $this->Cell($w[1], $rowH, $productItem['count_in_stock'], 'LR', 0, 'C');
-            $this->Cell($w[2], $rowH, $productItem['total_material_cost'] === null ? "brak kosztu" : number_format((float) $productItem['total_material_cost'], 2, ',', ' ') . " zł", 'LR', 0, 'C');
-            $this->Ln();
-            $total_value_of_stock += (float) ($productItem['total_material_cost'] ?? 0);
-        }
-
-        $this->Cell(array_sum($w), 0, '', 'T');
-        $this->Ln(0);
-
-
-        $this->Cell($w[0], $rowH, "", 'T', 0, 'L');
-        $this->Cell($w[1], $rowH, "Suma:", 'TLB', 0, 'C');
-        $this->Cell($w[2], $rowH, number_format($total_value_of_stock, 2, ',', ' ') . " zł", 1, 0, 'C');
-        $this->Ln();
-
-        $this->SetFont('dejavusans', '', 8);
-        if ($from_card) {
-            $this->Ln(2);
-            $this->Cell(array_sum($w), 5, "* Produkt bez receptury: koszt surowców kartonu z karty produktu ({$from_card}).", 0, 1, 'L');
-        }
-        if ($without_cost) {
-            $this->Cell(array_sum($w), 5, "** Brak kosztu surowców (receptura bez składników albo produkt bez receptury): produkt poza sumą ({$without_cost}).", 0, 1, 'L');
-        }
-    }
-
-    public function fillWzData($header, $secHeader, $data)
-    {
-        $w = array(30, 70, 20, 20, 20, 20, 20);
-
-        $this->SetFont('dejavusans', '', 8);
-        $num_headers = count($header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 6, $header[$i], 'TLR', 0, 'C');
-        }
-        $this->Ln();
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 6, $secHeader[$i], 'BLR', 0, 'C');
-        }
-        $this->Ln();
-        $rowH = 4;
-
-        $this->setCellPaddings(1, 0.5);
-        $this->SetFont('dejavusans', '', 7);
-        foreach ($data as $productItem) {
-            // Oblicz wysokość wiersza na podstawie nazwy produktu
-            $nameLines = $this->getNumLines($productItem['name'], $w[1]);
-            $rowH = max(4, $nameLines * 3.5);
-
-            $x = $this->GetX();
-            $y = $this->GetY();
-
-            $this->Cell($w[0], $rowH, $productItem['id_product'], 'LR', 0, 'L');
-            $this->MultiCell($w[1], $rowH, $productItem['name'], 'LR', 'L', false, 0);
-            $this->Cell($w[2], $rowH, $productItem['code'], 'LR', 0, 'L');
-            $this->Cell($w[3], $rowH, $productItem['quantity'], 'LR', 0, 'R');
-            $this->Cell($w[4], $rowH, $productItem['weight_unit'], 'LR', 0, 'R');
-            $this->Cell($w[5], $rowH, $productItem['weight_total'], 'LR', 0, 'R');
-            $this->Cell($w[6], $rowH, $productItem['ppc'], 'LR', 0, 'R');
-            $this->Ln();
-        }
-
-        $this->Cell(array_sum($w), 0, '', 'T');
-        $this->Ln();
-        $this->Ln();
-    }
-
-    public function fillTableToProforma($header_pl, $header_be, $product_data)
-    {
-
-        $this->SetFont('dejavusans', 'B', 12);
-        $w = array(15, 50, 13, 10, 20, 20, 10, 14, 13, 12, 12, 8, 11);
-
-        $this->SetFont('dejavusans', '', 6);
-        $num_headers = count($header_pl);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 4, $header_pl[$i], 'TLR', 0, 'C');
-        }
-        $this->Ln();
-        $num_headers = count($header_be);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 4, $header_be[$i], 'LRB', 0, 'C');
-        }
-        $this->Ln();
-        $rowH = 3;
-
-
-        $this->SetFont('dejavusans', '', 6);
-
-        foreach ($product_data as $item) {
-            $this->Cell($w[0], $rowH, $item['id_product'], 'LR', 0, 'L');
-            $this->Cell($w[1], $rowH, $item['product_name'], 'LR', 0, 'L');
-            $this->Cell($w[2], $rowH, $item['code_stat'], 'LR', 0, 'L');
-            $this->Cell($w[3], $rowH, $item['quantity'], 'LR', 0, 'R');
-            $this->Cell($w[4], $rowH, "{$item['price_per_carton']} €", 'LR', 0, 'R');
-            $this->Cell($w[5], $rowH, "{$item['total_price_net']} €", 'LR', 0, 'R');
-            $this->Cell($w[6], $rowH, $item['tva'], 'LR', 0, 'R');
-            $this->Cell($w[7], $rowH, "{$item['price_brut']} €", 'LR', 0, 'R');
-            $this->Cell($w[8], $rowH, "{$item['tva_perc']}%", 'LR', 0, 'R');
-            $this->Cell($w[9], $rowH, "{$item['single_carton_weight_kg']} kg", 'LR', 0, 'R');
-            $this->Cell($w[10], $rowH, "{$item['total_weight_kg']} kg", 'LR', 0, 'R');
-            $this->Cell($w[11], $rowH, $item['ppc'], 'LR', 0, 'R');
-            $this->Cell($w[12], $rowH, "{$item['price_per_piece']} €", 'LR', 0, 'R');
-            $this->Ln();
-        }
-        $this->Cell(array_sum($w), 0, '', 'T');
-    }
-
-    public function FillTableToMissingProductsInOrder($header_first, $header_sec, $product_data)
-    {
-        $this->SetFont('dejavusans', 'B', 12);
-        $w = array(20, 58, 34, 34, 34);
-
-        $this->SetFont('dejavusans', '', 8);
-        $this->Cell(20, 5, $header_first[0], 'TLR', 0, 'C');
-        $this->Cell(58, 5, $header_first[1], 'TLR', 0, 'C');
-        $this->Cell(34, 5, $header_first[2], 'TLR', 0, 'C');
-        $this->Cell(34, 5, $header_first[3], 'TLR', 0, 'C');
-        $this->Cell(34, 5, $header_first[4], 'TLR', 0, 'C');
-        $this->Ln();
-        $this->Cell(20, 5, $header_sec[0], 'TLRB', 0, 'C');
-        $this->Cell(58, 5, $header_sec[1], 'TLRB', 0, 'C');
-        $this->Cell(17, 5, $header_sec[2], 'TLRB', 0, 'C');
-        $this->Cell(17, 5, $header_sec[3], 'TLRB', 0, 'C');
-        $this->Cell(17, 5, $header_sec[4], 'TLRB', 0, 'C');
-        $this->Cell(17, 5, $header_sec[5], 'TLRB', 0, 'C');
-        $this->Cell(34, 5, $header_sec[6], 'TLRB', 0, 'C');
-        $this->Ln();
-
-        $rowH = 4;
-
-
-        $this->SetFont('dejavusans', '', 8);
-
-        $totalValCents = 0;
-        $totalOrderedCents = 0;
-        $totalInvoicedCents = 0;
-
-        foreach ($product_data as $item) {
-            $orderCents = array_key_exists('ordered_total_amount', $item) && $item['ordered_total_amount'] !== null
-                ? \App\Services\Document\DifferenceAmountCalculator::toCents($item['ordered_total_amount'])
-                : \App\Services\Document\DifferenceAmountCalculator::toCents($item['price_during_ordering']) * (int) $item['quantity_ordered'];
-            $invoiceCents = array_key_exists('invoiced_total_amount', $item) && $item['invoiced_total_amount'] !== null
-                ? \App\Services\Document\DifferenceAmountCalculator::toCents($item['invoiced_total_amount'])
-                : \App\Services\Document\DifferenceAmountCalculator::toCents($item['price_during_invoicing']) * (int) $item['invoiced_quantity'];
-            $differenceCents = $invoiceCents - $orderCents;
-
-            $totalValCents += $differenceCents;
-            if ($differenceCents === 0) continue;
-
-            $totalOrderedCents += $orderCents;
-            $totalInvoicedCents += $invoiceCents;
-            $total_diff = \App\Services\Document\DifferenceAmountCalculator::formatCents($differenceCents);
-
-            // Dynamiczna wysokość wiersza na podstawie nazwy produktu
-            $nameLines = $this->getNumLines($item['product_name'], 58);
-            $rowH = max(4, $nameLines * 3.5);
-
-            $this->Cell(20, $rowH, $item['id_product'], 'LR', 0, 'L');
-            $this->MultiCell(58, $rowH, $item['product_name'], 'LR', 'L', false, 0);
-            $this->Cell(17, $rowH, $item['quantity_ordered'], 'LR', 0, 'C');
-            $this->Cell(17, $rowH, $item['price_during_ordering'], 'LR', 0, 'C');
-            $this->Cell(17, $rowH, $item['invoiced_quantity'], 'LR', 0, 'C');
-            $this->Cell(17, $rowH, $item['price_during_invoicing'], 'LR', 0, 'C');
-            $this->Cell(34, $rowH, $total_diff, 'LR', 0, 'C');
-            $this->Ln();
-        }
-        $this->Cell(20, $rowH, "", 1, 0, 'L');
-        $this->Cell(58, $rowH, "", 1, 0, 'L');
-        $this->Cell(17, $rowH, "Total:", 1, 0, 'C');
-        $this->Cell(17, $rowH, \App\Services\Document\DifferenceAmountCalculator::formatCents($totalOrderedCents), 1, 0, 'C');
-        $this->Cell(17, $rowH, "Total:", 1, 0, 'C');
-        $this->Cell(17, $rowH, \App\Services\Document\DifferenceAmountCalculator::formatCents($totalInvoicedCents), 1, 0, 'C');
-        $this->Cell(34, $rowH, \App\Services\Document\DifferenceAmountCalculator::formatCents($totalValCents), 1, 0, 'C');
-        $this->Ln();
-
-
-        return $totalValCents;
-    }
-
-    public function fillWdtData($header, $secHeader, $data)
-    {
-        $this->SetFont('dejavusans', 'B', 12);
-        $w = array(6, 12, 50, 12, 8, 17, 16, 7, 13, 13, 12, 15, 8, 11);
-
-        $this->SetFont('dejavusans', '', 5);
-        $num_headers = count($header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 4, $header[$i], 'TLR', 0, 'C');
-        }
-        $this->Ln();
-        $num_headers = count($secHeader);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 4, $secHeader[$i], 'LRB', 0, 'C');
-        }
-        $this->Ln();
-
-        $this->SetFont('dejavusans', '', 6);
-        // Data
-        $curPaletteNum = 0;
-        foreach ((array)$data as $item) {
-            // Oblicz wysokość wiersza na podstawie nazwy produktu
-            $nameLines = $this->getNumLines($item['name'], $w[2]);
-            $rowH = max(3, $nameLines * 2.8);
-
-            if ($curPaletteNum != $item['id_palette']) {
-                $this->SetFillColor(236, 236, 236); // Grey
-                $this->Cell($w[0], $rowH, $item['id_palette'], 'LR', 0, 'L', 1);
-                $this->Cell($w[1], $rowH, "", 'LR', 0, 'L', 1);
-                $this->Cell($w[2], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Cell($w[3], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Cell($w[4], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Cell($w[5], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Cell($w[6], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Cell($w[7], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Cell($w[8], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Cell($w[9], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Cell($w[10], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Cell($w[11], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Cell($w[12], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Cell($w[13], $rowH, "", 'LR', 0, 'C', 1);
-                $this->Ln();
-            }
-
-            $this->Cell($w[0], $rowH, "", 'LR', 0, 'L');
-            $this->Cell($w[1], $rowH, $item['id_product'], 'LR', 0, 'L');
-            $this->MultiCell($w[2], $rowH, $item['name'], 'LR', 'L', false, 0);
-            $this->Cell($w[3], $rowH, $item['code'], 'LR', 0, 'L');
-            $this->Cell($w[4], $rowH, $item['quantity'], 'LR', 0, 'R');
-            $this->Cell($w[5], $rowH, $item['price_carton'] . " €", 'LR', 0, 'R');
-            $this->Cell($w[6], $rowH, $item['total_net'] . " €", 'LR', 0, 'R');
-            $this->Cell($w[7], $rowH, "0", 'LR', 0, 'R');
-            $this->Cell($w[8], $rowH, "- €", 'LR', 0, 'R');
-            $this->Cell($w[9], $rowH, "0%", 'LR', 0, 'R');
-            $this->Cell($w[10], $rowH, $item['weight_carton'] . " kg", 'LR', 0, 'R');
-            $this->Cell($w[11], $rowH, $item['weight_carton_total'] . " kg", 'LR', 0, 'R');
-            $this->Cell($w[12], $rowH, $item['ppc'], 'LR', 0, 'R');
-            $this->Cell($w[13], $rowH, $item['price_per_piece'] . " €", 'LR', 0, 'R');
-            $this->Ln();
-            $curPaletteNum = $item['id_palette'];
-        }
-        $this->Cell(array_sum($w), 0, '', 'T');
-    }
-
-    public function fillInvoiceData($header, $secHeader, $data)
-    {
-        $this->SetFont('dejavusans', 'B', 12);
-        $w = array(15, 50, 10, 15, 15, 10, 15, 15, 15, 15, 10, 15);
-
-        $this->SetFont('dejavusans', '', 5);
-        $num_headers = count($header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 4, $header[$i], 'TLR', 0, 'C');
-        }
-        $this->Ln();
-        $num_headers = count($secHeader);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 4, $secHeader[$i], 'LRB', 0, 'C');
-        }
-        $this->Ln();
-
-        $this->SetFont('dejavusans', '', 6);
-        // Data
-        $rowH = 3;
-        foreach ((array)$data as $item) {
-            if ($item['ppc'] == 0) {
-                $price_per_piece = 0;
-            } else {
-                $price_per_piece = number_format(($item['single_price'] / $item['ppc']), 2, '.', '');
-            }
-            $tax_val = number_format(($item['single_price'] * $item['quantity']) * ($item['tva_perc'] / 100), 2, '.', '');
-            $total_net = number_format(($item['single_price'] * $item['quantity']), 2, '.', '');
-            if ($tax_val == 0) {
-                $total_brut = "-";
-            } else {
-                $total_brut = ($item['single_price'] * $item['quantity']) + ($item['single_price'] * $item['quantity']) * ($item['tva_perc'] / 100);
-            }
-            $this->Cell($w[0], $rowH, $item['id_product'], 'LR', 0, 'L');
-            $this->Cell($w[1], $rowH, $item['product_name'], 'LR', 0, 'L');
-            $this->Cell($w[2], $rowH, $item['quantity'], 'LR', 0, 'R');
-            $this->Cell($w[3], $rowH, $item['single_price'] . " €", 'LR', 0, 'R');
-            $this->Cell($w[4], $rowH, $total_net . " €", 'LR', 0, 'R');
-            $this->Cell($w[5], $rowH, $tax_val, 'LR', 0, 'R');
-            $this->Cell($w[6], $rowH, $total_brut . " €", 'LR', 0, 'R');
-            $this->Cell($w[7], $rowH, $item['tva_perc'] . "%", 'LR', 0, 'R');
-            $this->Cell($w[8], $rowH, $item['single_weight'] . " kg", 'LR', 0, 'R');
-            $this->Cell($w[9], $rowH, ($item['quantity'] * $item['single_weight']) . " kg", 'LR', 0, 'R');
-            $this->Cell($w[10], $rowH, $item['ppc'], 'LR', 0, 'R');
-            $this->Cell($w[11], $rowH, $price_per_piece . " €", 'LR', 0, 'R');
-            $this->Ln();
-        }
-        $this->Cell(array_sum($w), 0, '', 'T');
-    }
-
-    public function fillMissingRecipe($header, $productData)
-    {
-        $w = array(76, 114, 10);
-
-        $this->SetFont('dejavusans', 'B', 12);
-        $num_headers = count($header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 7, $header[$i], 1, 0, 'C');
-        }
-        $this->Ln();
-        $rowH = 8;
-
-        $this->SetFont('dejavusans', '', 10);
-        $this->SetFillColor(220, 220, 220);
-        $iterator = 0;
-        foreach ($productData as $productItem) {
-            $fillCellFlag = 0;
-            if ($iterator % 2 == 0) {
-                $fillCellFlag = 1;
-            }
-
-            $this->Cell($w[0], $rowH, $productItem['category_name'], 1, 0, 'L', $fillCellFlag);
-            $this->Cell($w[1], $rowH, $productItem['product_name'], 1, 0, 'L', $fillCellFlag);
-            $this->Cell($w[2], $rowH, "", 1, 0, 'C', $fillCellFlag);
-            $this->Ln();
-            $iterator++;
-        }
-
-        $this->Cell(array_sum($w), 0, '', 'T');
-        $this->Ln();
-    }
-
-    public function fillProductionListForSection($header, $sec_header, $product_data, $stock_minimum_flag, $hide_stock_flag)
-    {
-        $wHead = array(82, 34, 34, 35, 35, 35, 35);
-        $this->SetFont('dejavusans', '', 9);
-        $num_headers = count($header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($wHead[$i], 7, $header[$i], 1, 0, 'C');
-        }
-        $this->Ln();
-
-        $w = array(
-            $wHead[0],
-            ($wHead[1] / 2), ($wHead[1] / 2),
-            ($wHead[2] / 2), ($wHead[2] / 2),
-            $wHead[3],
-            ($wHead[4] / 2), ($wHead[4] / 2),
-            ($wHead[5] / 2), ($wHead[5] / 2),
-            ($wHead[6] / 2), ($wHead[6] / 2));
-
-        $num_headers = count($sec_header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 7, $sec_header[$i], 1, 0, 'C');
-        }
-        $this->Ln();
-
-        $rowH = 8;
-        $this->SetFont('dejavusans', '', 8);
-        $this->SetFillColor(220, 220, 220);
-        $iterator = 0;
-
-        foreach ($product_data as $productItem) {
-            $fillCellFlag = 0;
-            if ($iterator % 2 == 1) {
-                $fillCellFlag = 1;
-            }
-
-            $this->Cell($w[0], $rowH, $productItem['name'], "LR", 0, 'L', $fillCellFlag);
-
-            //$this->Cell($w[1], $rowH, $productItem->stock_minimum_carton, "LR", 0, 'C', $fillCellFlag);
-            //$this->Cell($w[1], $rowH, $productItem->stock_minimum_pcs, "LR", 0, 'C', $fillCellFlag);
-
-            $in_stock_carton = $productItem['in_stock_carton'];
-            $in_stock_pcs = $productItem['in_stock_pcs'];
-
-            if ($hide_stock_flag) {
-                $in_stock_carton = "-";
-                $in_stock_pcs = "-";
-            }
-
-            $this->Cell($w[1], $rowH, $in_stock_carton, "LR", 0, 'C', $fillCellFlag);
-            $this->Cell($w[2], $rowH, $in_stock_pcs, "LR", 0, 'C', $fillCellFlag);
-
-            $day_1_carton = ($productItem['day_1_carton'] == 0) ? "-" : $productItem['day_1_carton'];
-            $day_1_pcs = ($productItem['day_1_pcs'] == 0) ? "-" : $productItem['day_1_pcs'];
-            $this->Cell($w[3], $rowH, $day_1_carton, "LR", 0, 'C', $fillCellFlag);
-            $this->Cell($w[4], $rowH, $day_1_pcs, "LR", 0, 'C', $fillCellFlag);
-
-            // Do produkcji : plan dnia z planu tygodnia (ProductionListService::withPlan) — jedna formuła z Arkuszem tygodnia
-            $to_produce = $productItem['to_produce_text'] ?? '-';
-
-
-            $this->Cell($w[5], $rowH, $to_produce, "LR", 0, 'C', $fillCellFlag);
-
-            $day_2_carton = ($productItem['day_2_carton'] == 0) ? "-" : $productItem['day_2_carton'];
-            $day_2_pcs = ($productItem['day_2_pcs'] == 0) ? "-" : $productItem['day_2_pcs'];
-            $this->Cell($w[6], $rowH, $day_2_carton, "LR", 0, 'C', $fillCellFlag);
-            $this->Cell($w[7], $rowH, $day_2_pcs, "LR", 0, 'C', $fillCellFlag);
-
-            $day_3_carton = ($productItem['day_3_carton'] == 0) ? "-" : $productItem['day_3_carton'];
-            $day_3_pcs = ($productItem['day_3_pcs'] == 0) ? "-" : $productItem['day_3_pcs'];
-            $this->Cell($w[8], $rowH, $day_3_carton, "LR", 0, 'C', $fillCellFlag);
-            $this->Cell($w[9], $rowH, $day_3_pcs, "LR", 0, 'C', $fillCellFlag);
-
-            $day_4_carton = ($productItem['day_4_carton'] == 0) ? "-" : $productItem['day_4_carton'];
-            $day_4_pcs = ($productItem['day_4_pcs'] == 0) ? "-" : $productItem['day_4_pcs'];
-            $this->Cell($w[10], $rowH, $day_4_carton, "LR", 0, 'C', $fillCellFlag);
-            $this->Cell($w[11], $rowH, $day_4_pcs, "LR", 0, 'C', $fillCellFlag);
-
-
-            $this->Ln();
-            $iterator++;
-        }
-
-        $this->Cell(array_sum($w), 0, '', 'T');
-        $this->Ln();
-    }
-
-    public function fillComplaintProductionListForSection($header, $sec_header, $product_data)
-    {
-        $wHead = array(100, 100);
-        $this->SetFont('dejavusans', '', 9);
-        $num_headers = count($header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($wHead[$i], 7, $header[$i], 1, 0, 'C');
-        }
-        $this->Ln();
-
-        $w = array(
-            $wHead[0],
-            ($wHead[1] / 2), ($wHead[1] / 2));
-
-        $num_headers = count($sec_header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 7, $sec_header[$i], 1, 0, 'C');
-        }
-        $this->Ln();
-
-        $rowH = 8;
-        $this->SetFont('dejavusans', '', 8);
-        $this->SetFillColor(220, 220, 220);
-        $iterator = 0;
-
-        foreach ($product_data as $productItem) {
-            $fillCellFlag = 0;
-            if ($iterator % 2 == 1) {
-                $fillCellFlag = 1;
-            }
-
-            $this->Cell($w[0], $rowH, $productItem['name'], "LR", 0, 'L', $fillCellFlag);
-
-            //$this->Cell($w[1], $rowH, $productItem->stock_minimum_carton, "LR", 0, 'C', $fillCellFlag);
-            //$this->Cell($w[1], $rowH, $productItem->stock_minimum_pcs, "LR", 0, 'C', $fillCellFlag);
-
-
-            $this->Cell($w[1], $rowH, $productItem['complaint_carton'], "LR", 0, 'C', $fillCellFlag);
-            $this->Cell($w[2], $rowH, $productItem['complaint_pcs'], "LR", 0, 'C', $fillCellFlag);
-
-            $this->Ln();
-            $iterator++;
-        }
-
-        $this->Cell(array_sum($w), 0, '', 'T');
-        $this->Ln();
-    }
-
-    public function fillMaterialRequirementList($header, $elements)
-    {
-        $w = array(80, 60, 50);
-        $this->SetFont('dejavusans', '', 9);
-        $num_headers = count($header);
-        for ($i = 0; $i < $num_headers; ++$i) {
-            $this->Cell($w[$i], 7, $header[$i], 1, 0, 'C');
-        }
-        $this->Ln();
-
-        $rowH = 8;
-        $this->SetFont('dejavusans', '', 8);
-        $this->SetFillColor(220, 220, 220);
-        $iterator = 0;
-
-        $total_expected_price = 0;
-
-        foreach ($elements as $product) {
-
-            $unit_name = $product['unit_name'];
-
-
-            $expected_total_price = round($product['required_quantity'] * $product['unit_price'], 2);
-
-            $this->Cell($w[0], $rowH, $product['name'], "LR", 0, 'L');
-
-            if ($product['id_unit'] == 3) {
-
-                $required_quantity_large = round($product['required_quantity'] / 1000, 2);
-                $unit_name_large = "kg";
-
-                $this->Cell($w[1], $rowH, "{$required_quantity_large}{$unit_name_large} ({$product['required_quantity']} {$product['unit_name']})", "LR", 0, 'L');
-
-
-            } else if ($product['id_unit'] == 4) {
-                $required_quantity_large = round($product['required_quantity'] / 1000, 2);
-                $unit_name_large = "L";
-
-                $this->Cell($w[1], $rowH, "{$required_quantity_large}{$unit_name_large} ({$product['required_quantity']} {$product['unit_name']})", "LR", 0, 'L');
-
-            } else if ($product['id_unit'] == 5) {
-
-                $this->Cell($w[1], $rowH, "{$product['required_quantity']} {$product['unit_name']}", "LR", 0, 'L');
-            }
-
-
-            $this->Cell($w[2], $rowH, $expected_total_price . "zł", "LR", 0, 'L');
-
-            $total_expected_price += $expected_total_price;
-
-            $this->Ln();
-            $iterator++;
-        }
-        $this->Cell(array_sum($w), 0, '', 'T');
-        $this->Ln(0);
-
-        $this->Cell($w[0], $rowH, "", "LR", 0, 'L');
-        $this->Cell($w[1], $rowH, "", "LR", 0, 'L');
-        $this->Cell($w[2], $rowH, $total_expected_price . "zł", "LR", 0, 'L');
-        $this->Ln();
-
-        $this->Cell(array_sum($w), 0, '', 'T');
-
-        $this->Ln();
-    }
-
 }

@@ -9,6 +9,7 @@ use App\Repositories\Client\ClientRepository;
 use App\Repositories\Company\ErpCompanyDataRepository;
 use App\Repositories\Document\Invoice\InvoiceProductRepository;
 use App\Repositories\Document\Invoice\InvoiceRepository;
+use App\Services\Utils\DocumentLabels;
 use App\Services\Utils\TCPDFService;
 
 class InvoiceService implements IDocument
@@ -90,166 +91,73 @@ class InvoiceService implements IDocument
         });
     }
 
+    /** Korekty kwoty wpisane ręcznie dla pojedynczych faktur (numer => kwota). */
+    private const MANUAL_CORRECTIONS = ['FAC-00006/2026' => -115.0];
+
     public function renderDocument(TCPDFService $pdf, array $data): TCPDFService
     {
+        $invoice = $data['invoiceData'];
+        $lang = $data['lang'] ?? 'fr';
+        $L = fn(string $key) => DocumentLabels::get($key);
+        $S = fn(string $key) => DocumentLabels::sub($key, $lang);
+        $P = fn(string $key) => DocumentLabels::pair($key, $lang);
+        $money = fn($v) => DocumentLabels::money($v);
 
-        $pdf->setMargins(5, 5, 5);
-        $pdf->setPrintFooter(false);
-        $pdf->setPrintHeader(false);
-        $pdf->AddPage();
+        $pdf->brandPage($L('doc_invoice'), ['ref' => $invoice['doc_num'], 'lang' => $lang, 'company' => DocumentLabels::companyLine($invoice)]);
+        $pdf->brandHeader($L('doc_invoice'), [
+            [$P('number'), $invoice['doc_num']],
+            [$P('invoice_date'), $invoice['invoiced_date']],
+        ], $S('doc_invoice'));
 
-        #region left_data
-// left top side
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(85, 5, $data['invoiceData']['consignor_name'], 0, 'L', 0, 0, 10, 25, true);
+        $pdf->brandParties([
+            'label' => $P('seller'),
+            'name' => $invoice['consignor_name'],
+            'lines' => [$invoice['consignor_address_1'], $invoice['consignor_address_2'], 'NIP: ' . DocumentLabels::taxId($invoice['consignor_nip'])],
+        ], [
+            'label' => $P('buyer'),
+            'name' => $invoice['consignee_name'],
+            'lines' => [$invoice['consignee_address_1'], $invoice['consignee_address_2'], 'NIP/TVA: ' . $invoice['consignee_nip']],
+        ]);
 
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->MultiCell(55, 5, $data['invoiceData']['consignor_address_1'] . "\n" . $data['invoiceData']['consignor_address_2'], 0, 'L', 0, 0, 10, 30, true);
-
-        $pdf->MultiCell(15, 5, "<b>NIP:</b>", 0, 'L', 0, 0, 10, 40, true, 0, true);
-        $pdf->MultiCell(45, 5, $data['invoiceData']['consignor_nip'], 0, 'L', 0, 0, '', '', true, 0, true);
-
-//end left top side
-#endregion
-
-        #region right_data
-// right top side
-        $pdf->SetFont('dejavusans', '', 11);
-        $pdf->MultiCell(15, 5, "Num:", 'B', 'L', 0, 0, 110, 25, true, 0, false, true, 5, 'M');
-        $pdf->MultiCell(60, 5, $data['invoiceData']['doc_num'], 'B', 'L', 0, 0, '', '', true, 0, false, true, 5, 'M');
-
-        $pdf->MultiCell(15, 5, "Data:", 'B', 'L', 0, 0, 110, 33, true, 0, false, true, 5, 'M');
-        $pdf->MultiCell(60, 5, $data['invoiceData']['invoiced_date'], 'B', 'L', 0, 0, '', '', true, 0, false, true, 5, 'M');
-
-        $pdf->SetFont('dejavusans', '', 8);
-
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(85, 5, $data['invoiceData']['consignee_name'], 0, 'L', 0, 0, 110, 45, true, 0, true);
-
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->MultiCell(85, 5, $data['invoiceData']['consignee_address_1'], 0, 'L', 0, 0, 110, 50, true, 0, true);
-        $pdf->MultiCell(85, 5, $data['invoiceData']['consignee_address_2'], 0, 'L', 0, 0, 110, 55, true, 0, true);
-        $pdf->SetFont('dejavusans', '', 9);
-        $pdf->MultiCell(85, 5, "NIP/TVA: " . $data['invoiceData']['consignee_nip'], 0, 'L', 0, 0, 110, 61, true, 0, true);
-// end right top side
-
-        #endregion
-
-        $pdf->ln(10);
-        $pdf->SetTextColor(0, 0, 0);
-        $pdf->SetFont('helvetica', '', 12);
-
-
-        $headerPL = array(
-            "Kod Towaru",
-            "Opis towaru",
-            "Ilość",
-            "Cena/kart netto",
-            "Wartość netto",
-            "VAT",
-            "Wart./brutto",
-            "Stawka VAT",
-            "Waga op.",
-            "Waga",
-            "Il/Krt",
-            "Cena/szt"
-        );
-        $headerBE = array(
-            "Ref. Article",
-            "Description",
-            "Quant.",
-            "Prix carton net",
-            "Total Net",
-            "TVA",
-            "Prix brut",
-            "Taux TVA",
-            "Poid cart",
-            "Poid Brut",
-            "Qt/Crt",
-            "Prix/unit"
-        );
-
-
-        $pdf->fillInvoiceData($headerPL, $headerBE, $data['invoiceProductData']);
-
-
-        $pdf->Ln(10);
-//pomocnicza komórka bo grupuje wszystkie poniższe dane w jednej linii
-        $pdf->MultiCell(60, 5, "", 0, 'L', 0, 1, '', '', true);
-
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->MultiCell(60, 5, "Data fakturowania:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(70, 5, $data['invoiceData']['invoiced_date'], 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-
-        $pdf->MultiCell(60, 5, "Paiement Pro Forma", 0, 'L', 0, 1, '', '', true);
-        $pdf->MultiCell(60, 5, "Compte en Banque:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(100, 5, $data['invoiceData']['consignor_bank'], 0, 'L', 0, 1, '', '', true);
-        $pdf->MultiCell(60, 5, "Code BIC Swift:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(80, 5, $data['invoiceData']['consignor_swift'], 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-        $pdf->SetFont('helvetica', 'I', 6);
-
-        $total_net = 0;
-        $tax_val = 0;
-        foreach ($data['invoiceProductData'] as $productItem) {
-            $total_net += ($productItem['quantity'] * $productItem['single_price']);
-            if ($productItem['tva_perc'] != 0) {
-                $tax_val += (($productItem['single_price'] * $productItem['quantity']) * ($productItem['tva_perc'] / 100));
-            }
+        $columns = [
+            ['label' => $L('code'), 'sub' => $S('code'), 'w' => 10],
+            ['label' => $L('description'), 'sub' => $S('description'), 'w' => 31],
+            ['label' => $L('quantity'), 'sub' => $S('quantity'), 'w' => 9, 'align' => 'R'],
+            ['label' => $L('price_carton'), 'sub' => $S('price_carton'), 'w' => 12, 'align' => 'R'],
+            ['label' => $L('net_value'), 'sub' => $S('net_value'), 'w' => 12, 'align' => 'R'],
+            ['label' => $L('vat_rate'), 'sub' => $S('vat_rate'), 'w' => 8, 'align' => 'R'],
+            ['label' => $L('vat_value'), 'sub' => $S('vat_value'), 'w' => 10, 'align' => 'R'],
+            ['label' => $L('gross_value'), 'sub' => $S('gross_value'), 'w' => 12, 'align' => 'R'],
+            ['label' => $L('weight'), 'sub' => $S('weight'), 'w' => 10, 'align' => 'R'],
+            ['label' => $L('ppc'), 'sub' => $S('ppc'), 'w' => 9, 'align' => 'R'],
+            ['label' => $L('price_piece'), 'sub' => $S('price_piece'), 'w' => 10, 'align' => 'R'],
+        ];
+        $rows = [];
+        $net = 0.0;
+        $vat = 0.0;
+        foreach ((array) $data['invoiceProductData'] as $item) {
+            $lineNet = (float) $item['single_price'] * (float) $item['quantity'];
+            $lineVat = (float) $item['tva_perc'] != 0 ? $lineNet * ((float) $item['tva_perc'] / 100) : 0.0;
+            $pricePiece = (float) $item['ppc'] == 0 ? 0 : (float) $item['single_price'] / (float) $item['ppc'];
+            $rows[] = [$item['id_product'], $item['product_name'], DocumentLabels::number($item['quantity']), $money($item['single_price']), $money($lineNet),
+                DocumentLabels::number($item['tva_perc']) . ' %', $lineVat == 0 ? '—' : $money($lineVat), $money($lineNet + $lineVat),
+                DocumentLabels::number((float) $item['quantity'] * (float) $item['single_weight'], 2) . ' kg', DocumentLabels::number($item['ppc']), $money($pricePiece)];
+            $net += $lineNet;
+            $vat += $lineVat;
         }
+        $rows[] = ['_total' => ['', $P('total'), '', '', $money($net), '', $vat == 0 ? '—' : $money($vat), $money($net + $vat), '', '', '']];
+        $pdf->brandTable($columns, $rows, ['font' => 7, 'head_font' => 6.5]);
 
-
-
-
-        if($data['invoiceData']['doc_num'] == "FAC-00006/2026"){
-            $total_net = number_format(($total_net + $tax_val), 2);
-
-            if ($tax_val == 0) {
-                $tax_val = "-";
-            }
-            $pdf->MultiCell(24, 3, "Wartosc netto", '', 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, $total_net, 1, 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, "  EUR", 0, 'L', 0, 0, '', '', true);
-            $pdf->Ln();
-
-            $pdf->MultiCell(24, 3, "Wartosc vat", '', 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, $tax_val, 1, 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, "  EUR", 0, 'L', 0, 0, '', '', true);
-            $pdf->Ln();
-
-            $cor = $total_net - 115;
-            $pdf->MultiCell(24, 3, "Korekta wartosci", '', 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, "-115", 1, 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, "  EUR", 0, 'L', 0, 0, '', '', true);
-            $pdf->Ln();
-
-            $pdf->MultiCell(24, 3, "Ogolem", 0, 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, $cor, 1, 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, "  EUR", 0, 'L', 0, 0, '', '', true);
-        } else {
-            $total_net = number_format(($total_net + $tax_val), 2);
-
-            if ($tax_val == 0) {
-                $tax_val = "-";
-            }
-            $pdf->MultiCell(24, 3, "Wartosc netto", '', 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, $total_net, 1, 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, "  EUR", 0, 'L', 0, 0, '', '', true);
-            $pdf->Ln();
-
-            $pdf->MultiCell(24, 3, "Wartosc vat", '', 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, $tax_val, 1, 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, "  EUR", 0, 'L', 0, 0, '', '', true);
-            $pdf->Ln();
-
-            $pdf->MultiCell(24, 3, "Ogolem", 0, 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, $total_net, 1, 'L', 0, 0, '', '', true);
-            $pdf->MultiCell(15, 3, "  EUR", 0, 'L', 0, 0, '', '', true);
-        }
-
+        $totals = [[$P('net'), $money($net)], [$P('vat'), $vat == 0 ? '—' : $money($vat)]];
+        $correction = self::MANUAL_CORRECTIONS[$invoice['doc_num']] ?? 0.0;
+        if ($correction != 0) $totals[] = [$P('correction'), $money($correction)];
+        $totals[] = [$P('total'), $money($net + $vat + $correction)];
+        $pdf->brandSummary([
+            [$P('invoice_date'), $invoice['invoiced_date']],
+            [$P('payment'), $P('payment_proforma')],
+            [$P('bank'), $invoice['consignor_bank']],
+            [$P('swift'), $invoice['consignor_swift']],
+        ], $totals);
 
         return $pdf;
     }
@@ -268,7 +176,8 @@ class InvoiceService implements IDocument
 
         $this->renderDocument($pdf, [
             'invoiceData' => $invoiceData,
-            'invoiceProductData' => $invoiceProductData
+            'invoiceProductData' => $invoiceProductData,
+            'lang' => $this->clientRepository->communicationLang((int) $invoiceData['id_customer'])
         ]);
 
         return ['file_string' => $pdf, "filename" => 'FAKTURA_' . $invoiceData['doc_num'] . '.pdf'];

@@ -2,6 +2,7 @@
 
 namespace App\Services\Shipping;
 
+use App\Services\Utils\DocumentLabels;
 use App\Services\Utils\TCPDFService;
 
 class ShipmentPpwrPdfService
@@ -13,10 +14,6 @@ class ShipmentPpwrPdfService
     public function generateDocumentPDF(int $shipmentId): array
     {
         $pdf = new TCPDFService('P', 'mm', 'A4', true, 'UTF-8', false);
-        $pdf->SetMargins(12, 12, 12);
-        $pdf->SetAutoPageBreak(true, 14);
-        $pdf->setPrintHeader(false);
-        $pdf->setPrintFooter(false);
 
         $document = $this->buildDocumentFromShipment($pdf, $shipmentId);
 
@@ -29,37 +26,36 @@ class ShipmentPpwrPdfService
     public function buildDocumentFromShipment(TCPDFService $pdf, int $shipmentId): array
     {
         $data = $this->packagingService->getSnapshotForShipment($shipmentId);
-        $pdf->AddPage();
-
-        $pdf->SetFont('dejavusans', 'B', 15);
-        $pdf->Cell(0, 8, 'Raport opakowań PPWR — wysyłka', 0, 1, 'C');
-        $pdf->SetFont('dejavusans', '', 9);
-        $pdf->Cell(0, 6, 'WZ: ' . ($data['wz']['doc_num'] ?? '-') . ' | Data wysyłki: ' . $data['shipment']['shipment_date'], 0, 1);
-        $pdf->Cell(0, 6, 'Odbiorca: ' . ($data['wz']['consignee_name'] ?? '-'), 0, 1);
+        $wz = $data['wz'] ?? [];
+        // Osobny dokument (własna numeracja stron) także w zbiorczym pliku dokumentów dostawy
+        $pdf->brandPage('Raport opakowań PPWR — wysyłka', ['ref' => (string) ($wz['doc_num'] ?? $shipmentId), 'company' => DocumentLabels::companyLine($wz)]);
+        $pdf->brandHeader('Raport opakowań PPWR', [
+            ['WZ', $wz['doc_num'] ?? '-'],
+            ['Data wysyłki', $data['shipment']['shipment_date']],
+        ], 'Wysyłka');
+        $pdf->brandParties([
+            'label' => 'Odbiorca',
+            'name' => $wz['consignee_name'] ?? '-',
+            'lines' => [$wz['consignee_address_1'] ?? '', $wz['consignee_address_2'] ?? ''],
+        ]);
         if (($data['record']['ppwr_evidence_basis'] ?? null) === 'CURRENT_DATA_RECONSTRUCTION') {
-            $pdf->SetTextColor(160, 90, 0);
-            $pdf->MultiCell(0, 6, 'Uwaga: raport PPWR odtworzono po wysyłce z bieżącej receptury i bieżących profili PPWR. Nie jest to historyczny stan danych z dnia wysyłki.', 0, 'L');
-            $pdf->SetTextColor(0, 0, 0);
+            $pdf->brandCallout('Uwaga: raport PPWR odtworzono po wysyłce z bieżącej receptury i bieżących profili PPWR. Nie jest to historyczny stan danych z dnia wysyłki.');
         }
-        $pdf->Ln(4);
-        $pdf->SetFont('dejavusans', 'B', 10);
-        $pdf->Cell(0, 6, 'Łączna masa wysłanych opakowań według materiału dominującego PPWR', 0, 1);
-        $widths = [110, 38, 38];
-        $pdf->SetFont('dejavusans', 'B', 8);
-        foreach (['Materiał dominujący PPWR', 'Masa [g]', 'Masa [kg]'] as $index => $header) {
-            $pdf->Cell($widths[$index], 7, $header, 1, 0, 'C');
-        }
-        $pdf->Ln();
-        $pdf->SetFont('dejavusans', '', 8);
+
+        $pdf->brandSection('Łączna masa wysłanych opakowań według materiału dominującego PPWR');
+        $rows = [];
         foreach ($data['ppwr_summary'] as $row) {
             $grams = (float)$row['total_weight_g'];
-            $pdf->Cell($widths[0], 7, $this->materialLabel($row['material']), 1);
-            $pdf->Cell($widths[1], 7, $this->formatNumber($grams) . ' g', 1, 0, 'R');
-            $pdf->Cell($widths[2], 7, $this->formatNumber($grams / 1000) . ' kg', 1, 1, 'R');
+            $rows[] = [$this->materialLabel($row['material']), $this->formatNumber($grams) . ' g', $this->formatNumber($grams / 1000) . ' kg'];
         }
         if (empty($data['ppwr_summary'])) {
-            $pdf->Cell(array_sum($widths), 7, 'Brak kompletnych pozycji opakowaniowych w tej wysyłce.', 1, 1, 'C');
+            $rows[] = ['Brak kompletnych pozycji opakowaniowych w tej wysyłce.', '', ''];
         }
+        $pdf->brandTable([
+            ['label' => 'Materiał dominujący PPWR', 'w' => 110],
+            ['label' => 'Masa [g]', 'w' => 38, 'align' => 'R'],
+            ['label' => 'Masa [kg]', 'w' => 38, 'align' => 'R'],
+        ], $rows, ['font' => 8.5]);
 
         return [
             'filename' => 'RAPORT_PPWR_WYSYLKA_' . ($data['wz']['doc_num'] ?? $shipmentId) . '.pdf',

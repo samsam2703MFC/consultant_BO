@@ -5,6 +5,7 @@ use App\Exceptions\CustomException;
 use App\Interfaces\IDocument;
 use App\Repositories\Client\ClientRepository;
 use App\Repositories\Product\Price\PriceListRepository;
+use App\Services\Utils\DocumentLabels;
 use App\Services\Utils\TCPDFService;
 
 class ClientPriceListService implements IDocument
@@ -23,17 +24,30 @@ class ClientPriceListService implements IDocument
 
     public function renderDocument(TCPDFService $pdf, array $data): TCPDFService
     {
-        $pdf->AddPage();
-        $pdf->customHeader($data['headerData']);
-        $pdf->customFooter(["info_1" => ""]);
-        $pdf->setMargins(1, 1, 1);
+        $client = $data['clientData'];
+        $lang = $data['lang'] ?? 'fr';
+        $L = fn(string $key) => DocumentLabels::get($key);
+        $S = fn(string $key) => DocumentLabels::sub($key, $lang);
 
-        $pdf->SetTextColor(0, 0, 0);
-        $pdf->SetFont('helvetica', '', 12);
+        $pdf->brandPage($L('doc_price_list'), ['ref' => (string) $client['company'], 'lang' => $lang]);
+        $pdf->brandHeader($L('doc_price_list') . ($S('doc_price_list') !== '' ? ' / ' . $S('doc_price_list') : ''), [
+            [DocumentLabels::pair('date', $lang), date('Y-m-d')],
+        ], (string) $client['company']);
 
-        $pdf->Ln(10);
-        $pdf->fillPriceList($data['header'], $data['productPriceData']);
-        $pdf->Ln(7);
+        $rows = [];
+        $lastCategory = null;
+        foreach ($data['productPriceData'] as $item) {
+            if ($item['price'] < 10) continue;
+            if ($item['id_category'] !== $lastCategory) {
+                $rows[] = ['_group' => $item['category_name']];
+                $lastCategory = $item['id_category'];
+            }
+            $rows[] = [$item['final_product_name'], DocumentLabels::money($item['price'])];
+        }
+        $pdf->brandTable([
+            ['label' => $L('product'), 'sub' => $S('product'), 'w' => 80],
+            ['label' => $L('price'), 'sub' => $S('price'), 'w' => 20, 'align' => 'R'],
+        ], $rows, ['font' => 8.5, 'head_font' => 7.5]);
 
         return $pdf;
     }
@@ -50,33 +64,14 @@ class ClientPriceListService implements IDocument
             throw new CustomException("CLIENT_NOT_FOUND", 'errors', 404);
         }
 
-
-        if ($clientData['default_document_lang'] == 1) {
-            $headerData = ["header_title" => "Lista cenowa", "header_subtitle" => $clientData['company']];
-            $header = array(
-                "Kategoria",
-                "Produkt",
-                "Cena");
-        } else if ($clientData['default_document_lang'] == 2) {
-            $headerData = ["header_title" => "Liste de prix", "header_subtitle" => ""];
-            $header = array(
-                "Catégorie",
-                "Produit",
-                "Prix");
-        } else {
-            $headerData = ["header_title" => "Lista cenowa", "header_subtitle" => $clientData['company']];
-            $header = array(
-                "Kategoria",
-                "Produkt",
-                "Cena");
-        }
-
+        // Kategoria → produkty z ceną ; język = język komunikacji klienta (polski + drugi język)
         $this->renderDocument($pdf, [
-            'headerData' => $headerData,
-            'header' => $header,
+            'clientData' => $clientData,
+            'lang' => $this->clientRepository->communicationLang($id),
             'productPriceData' => $productPriceData]);
 
-        return ['file_string' => $pdf, "filename" => 'PRICE_LIST_' . $clientData['company'] . '.pdf'];    }
+        return ['file_string' => $pdf, "filename" => 'PRICE_LIST_' . $clientData['company'] . '.pdf'];
+    }
 
     public function generateDocumentPDF(int $id): array
     {

@@ -5,104 +5,74 @@ use App\Exceptions\CustomException;
 use App\Interfaces\IDocument;
 use App\Repositories\Document\Wz\WZProductRepository;
 use App\Repositories\Document\Wz\WZRepository;
+use App\Repositories\Client\ClientRepository;
+use App\Services\Utils\DocumentLabels;
 use App\Services\Utils\TCPDFService;
 
 class WZService implements IDocument
 {
     private WZRepository $wzRepository;
     private WZProductRepository $wzProductRepository;
+    private ClientRepository $clientRepository;
 
     public function __construct(
         WZRepository $wzRepository,
-        WZProductRepository $wzProductRepository
+        WZProductRepository $wzProductRepository,
+        ClientRepository $clientRepository
     )
     {
         $this->wzRepository = $wzRepository;
         $this->wzProductRepository = $wzProductRepository;
+        $this->clientRepository = $clientRepository;
     }
 
 
     public function renderDocument(TCPDFService $pdf, array $data): TCPDFService
     {
-        #region wz
-        $pdf->setMargins(5, 5, 5);
-        $pdf->setPrintFooter(false);
-        $pdf->setPrintHeader(false);
-        $pdf->AddPage();
+        $wz = $data['wzData'];
+        $lang = $data['lang'] ?? 'fr';
+        $L = fn(string $key) => DocumentLabels::get($key);
+        $S = fn(string $key) => DocumentLabels::sub($key, $lang);
 
-        #region left_data
-// left top side
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(85, 5, $data['wzData']['consignor_name'], 0, 'L', 0, 0, 10, 25, true);
+        $pdf->brandPage($L('doc_wz'), ['ref' => $wz['doc_num'], 'lang' => $lang, 'company' => DocumentLabels::companyLine($wz)]);
+        $pdf->brandHeader($L('doc_wz'), [
+            [DocumentLabels::pair('number', $lang), $wz['doc_num']],
+            [DocumentLabels::pair('issue_date', $lang), $wz['established_date']],
+        ], $S('doc_wz'));
 
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->MultiCell(55, 5, $data['wzData']['consignor_address_1']."\n".$data['wzData']['consignor_address_2'], 0, 'L', 0, 0, 10, 30, true);
+        $pdf->brandParties([
+            'label' => DocumentLabels::pair('consignor', $lang),
+            'name' => $wz['consignor_name'],
+            'lines' => [$wz['consignor_address_1'], $wz['consignor_address_2'], 'NIP: ' . DocumentLabels::taxId($wz['consignor_nip']),
+                trim(DocumentLabels::get('bank') . ': ' . trim($wz['consignor_bank_1'] . ' ' . $wz['consignor_bank_2'])), 'SWIFT: ' . $wz['consignor_swift']],
+        ], [
+            'label' => DocumentLabels::pair('consignee', $lang),
+            'name' => $wz['consignee_name'],
+            'lines' => [$wz['consignee_address_1'], $wz['consignee_address_2'], 'NIP/TVA: ' . $wz['consignee_nip']],
+        ]);
 
-        $pdf->MultiCell(15, 5, "<b>NIP:</b>", 0, 'L', 0, 0, 10, 40, true, 0, true);
-        $pdf->MultiCell(45, 5, $data['wzData']['consignor_nip'], 0, 'L', 0, 0, '', '', true, 0, true);
-
-        $pdf->MultiCell(15, 5, "<b>Bank:</b>", 0, 'L', 0, 0, 10, 45, true, 0, true);
-        $pdf->MultiCell(65, 5, $data['wzData']['consignor_bank_1'], 0, 'L', 0, 0, '', '', true);
-
-        $pdf->MultiCell(15, 5, "", 0, 'L', 0, 0, 10, 50, true, 0, true);
-        $pdf->MultiCell(65, 5, $data['wzData']['consignor_bank_2'], 0, 'L', 0, 0, '', '', true);
-
-        $pdf->MultiCell(15, 5, "<b>SWIFT:</b>", 0, 'L', 0, 0, 10, 55, true, 0, true);
-        $pdf->MultiCell(65, 5, $data['wzData']['consignor_swift'], 0, 'L', 0, 0, '', '', true);
-//end left top side
-#endregion
-
-        #region right_data
-// right top side
-        $pdf->SetFont('dejavusans', '', 11);
-        $pdf->MultiCell(15, 5, "Num:", 'B', 'L', 0, 0, 110, 25, true, 0, false, true, 5, 'M');
-        $pdf->MultiCell(60, 5, $data['wzData']['doc_num'], 'B', 'L', 0, 0, '', '', true, 0, false, true, 5, 'M');
-
-        $pdf->MultiCell(15, 5, "Data:", 'B', 'L', 0, 0, 110, 33, true, 0, false, true, 5, 'M');
-        $pdf->MultiCell(60, 5, $data['wzData']['established_date'], 'B', 'L', 0, 0, '', '', true, 0, false, true, 5, 'M');
-
-        $pdf->SetFont('dejavusans', '', 8);
-
-        $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->MultiCell(85, 5, $data['wzData']['consignee_name'], 0, 'L', 0, 0, 110, 45, true, 0, true);
-
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->MultiCell(85, 5, $data['wzData']['consignee_address_1'], 0, 'L', 0, 0, 110, 50, true, 0, true);
-        $pdf->MultiCell(85, 5, $data['wzData']['consignee_address_2'], 0, 'L', 0, 0, 110, 55, true, 0, true);
-        $pdf->SetFont('dejavusans', '', 9);
-        $pdf->MultiCell(85, 5, "NIP/TVA: ".$data['wzData']['consignee_nip'], 0, 'L', 0, 0, 110, 61, true, 0, true);
-// end right top side
-
-        #endregion
-
-        $pdf->ln();
-        $pdf->SetTextColor(0,0,0);
-        $pdf->SetFont('helvetica', '', 12);
-
-        $header = [
-            'Ref. Article',
-            'Description',
-            'Code Stat.',
-            'Quantite',
-            'Poid Net',
-            'Poid Brut',
-            'Qt/Crt',
-
+        $columns = [
+            ['label' => $L('code'), 'sub' => $S('code'), 'w' => 12],
+            ['label' => $L('description'), 'sub' => $S('description'), 'w' => 48],
+            ['label' => $L('stat_code'), 'sub' => $S('stat_code'), 'w' => 12],
+            ['label' => $L('cartons'), 'sub' => $S('cartons'), 'w' => 10, 'align' => 'R'],
+            ['label' => $L('weight_unit'), 'sub' => $S('weight_unit'), 'w' => 12, 'align' => 'R'],
+            ['label' => $L('weight'), 'sub' => $S('weight'), 'w' => 13, 'align' => 'R'],
+            ['label' => $L('ppc'), 'sub' => $S('ppc'), 'w' => 13, 'align' => 'R'],
         ];
-        $secHeader = [
-            'Kod towaru',
-            'Opis towaru',
-            'PKWiU',
-            'Ilość',
-            'Waga jed.',
-            'Waga',
-            'Ilość/karton',
-        ];
+        $rows = [];
+        $cartons = 0;
+        $weight = 0.0;
+        foreach ($data['wzProductData'] as $item) {
+            $rows[] = [$item['id_product'], $item['name'], $item['code'], DocumentLabels::number($item['quantity']),
+                DocumentLabels::number($item['weight_unit'], 2) . ' kg', DocumentLabels::number($item['weight_total'], 2) . ' kg', DocumentLabels::number($item['ppc'])];
+            $cartons += (float) $item['quantity'];
+            $weight += (float) $item['weight_total'];
+        }
+        $rows[] = ['_total' => ['', DocumentLabels::pair('total', $lang), '', DocumentLabels::number($cartons), '', DocumentLabels::number($weight, 2) . ' kg', '']];
+        $pdf->brandTable($columns, $rows);
 
-
-        $pdf->Ln(10);
-        $pdf->fillWzData($header, $secHeader, $data['wzProductData']);
-        $pdf->Ln(7);
+        $pdf->brandSignatures([DocumentLabels::pair('issued_by', $lang), DocumentLabels::pair('received_by', $lang)]);
 
         return $pdf;
     }
@@ -121,7 +91,8 @@ class WZService implements IDocument
         }
 
 
-        $this->renderDocument($pdf, ['wzData' => $wzData, 'wzProductData' => $wzProductData]);
+        $this->renderDocument($pdf, ['wzData' => $wzData, 'wzProductData' => $wzProductData,
+            'lang' => $this->clientRepository->communicationLang((int) $wzData['id_customer'])]);
 
         return ['file_string' => $pdf, "filename" => 'WZ_' . $wzData['doc_num'] . '.pdf'];
     }

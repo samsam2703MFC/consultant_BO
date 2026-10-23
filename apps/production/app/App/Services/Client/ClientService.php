@@ -64,6 +64,9 @@ class ClientService
         if (empty($data['id_country'])) {
             $errors['id_country'] = "Wybierz kraj";
         }
+        if (isset($data['communication_lang']) && !in_array($data['communication_lang'], \App\Services\Utils\DocumentLabels::LANGUAGES, true)) {
+            $errors['communication_lang'] = "Wybierz język komunikacji";
+        }
 
         return $errors;
     }

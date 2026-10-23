@@ -150,6 +150,16 @@
                                     </label>
                                     <input value="<?=old_value('phone_alt')?>" type="text" class="form-control" id="phone_alt" name="phone_alt" placeholder="+48 123456789">
                                 </div>
+                                <div class="col-4">
+                                        <label class="form-label" for="communication_lang">
+                                            Język komunikacji (dokumenty, e-maile, SMS)
+                                        </label>
+                                        <select class="form-select" id="communication_lang" name="communication_lang">
+                                            <?php foreach (['fr' => 'Francuski', 'nl' => 'Niderlandzki', 'pl' => 'Polski', 'en' => 'Angielski'] as $code => $label): ?>
+                                                <option value="<?= $code ?>" <?= old_select('communication_lang', $code, 'fr') ?>><?= $label ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
                             </div>
                         </div>
 

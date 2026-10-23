@@ -3,7 +3,6 @@
 namespace App\Repositories\Document\Invoice;
 
 use App\Core\Helpers\BaseRepository;
-use MYPDFModel;
 use Tests\Fixtures\Model;
 
 

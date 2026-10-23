@@ -35,6 +35,11 @@ final class PageTabs
             ['/ppwr/sales-packaging', 'Kartony sprzedażowe PPWR', 'bi-box-seam'],
             ['/ppwr/reports', 'Raporty PPWR', 'bi-file-earmark-text'],
         ]],
+        // Wzory wydruków PDF (przykłady w językach klientów) i szablony e-maili
+        'templates' => ['label' => 'Wzory dokumentów i e-maili', 'section' => 'Zamówienia', 'icon' => 'bi-file-earmark-richtext', 'tabs' => [
+            ['/communication/document-templates', 'Dokumenty PDF', 'bi-file-earmark-pdf'],
+            ['/communication/templates', 'Szablony e-mail', 'bi-envelope-paper'],
+        ]],
         'returns' => ['label' => 'Zwroty', 'section' => 'Zamówienia', 'icon' => 'bi-arrow-counterclockwise', 'tabs' => [
             ['/client-complaints/pending-products', 'Oczekujące produkty', 'bi-hourglass-split'],
             ['/client-complaints/pending-shipment', 'Oczekujące zwroty (wysyłka)', 'bi-truck'],

@@ -3,6 +3,7 @@ namespace App\Services\Communication;
 
 use App\Core\TransactionManager;
 use App\Exceptions\CustomException;
+use App\Repositories\Client\ClientRepository;
 use App\Repositories\Communication\CommunicationTemplateRepository;
 use App\Repositories\Communication\MailRuleRepository;
 use App\Repositories\Workshop\ParamRepository;
@@ -21,7 +22,7 @@ final class MailAutomationService
 {
     public const EVENTS = ['order_received', 'delivery_planned', 'shipment_sent', 'wdt_issued', 'invoice_issued', 'proforma_issued'];
     public const RECIPIENTS = ['client_head', 'client_accountant', 'client_salesman', 'fixed'];
-    public const LANGUAGES = ['client', 'fr', 'nl', 'pl'];
+    public const LANGUAGES = ['client', 'fr', 'nl', 'pl', 'en'];
 
     public function __construct(
         private MailRuleRepository $rules,
@@ -37,6 +38,7 @@ final class MailAutomationService
         private InvoiceService $invoices,
         private WDTService $wdts,
         private WZService $wzs,
+        private ClientRepository $clients,
     ) {
     }
 
@@ -156,7 +158,10 @@ final class MailAutomationService
     {
         $context = $this->events->context($rule['event'], $candidate['ref']);
         $recipient = $this->recipient($rule, $context['emails']);
-        $language = $rule['language'] === 'client' ? $this->params->get('mail.client_default_language', 'fr') : $rule['language'];
+        // język klienta z jego karty ; parametr = język zapasowy (wysyłka bez klienta)
+        $language = $rule['language'] === 'client'
+            ? (!empty($context['id_customer']) ? $this->clients->communicationLang((int) $context['id_customer']) : $this->params->get('mail.client_default_language', 'fr'))
+            : $rule['language'];
         $template = $this->templates->getDefault($rule['template_type'], $language) ?: $this->templates->getDefault($rule['template_type'], 'fr');
         $prepared = [
             'context' => $context,

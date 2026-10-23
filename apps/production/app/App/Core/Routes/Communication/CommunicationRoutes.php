@@ -9,6 +9,9 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/communication/automations/settings', ['controller' => $automation, 'method' => 'saveSettings']);
     $r->addRoute('POST', '/ajax/communication/automations/run', ['controller' => $automation, 'method' => 'runNow']);
     $r->addRoute('POST', '/ajax/communication/automations/dispatches/{id:\\d+}/retry', ['controller' => $automation, 'method' => 'retry']);
+    $documents = App\Controllers\Web\Communication\DocumentTemplateController::class;
+    $r->addRoute('GET', '/communication/document-templates', ['controller' => $documents, 'method' => 'index']);
+    $r->addRoute('GET', '/communication/document-templates/{key:[a-z_]+}.pdf', ['controller' => $documents, 'method' => 'preview']);
     $r->addRoute('GET', '/communication/templates', ['controller' => $controller, 'method' => 'templates']);
     $r->addRoute('GET', '/communication/email-settings', ['controller' => $controller, 'method' => 'emailSettings']);
     $r->addRoute('POST', '/communication/email-settings', ['controller' => $controller, 'method' => 'saveEmailSettings']);

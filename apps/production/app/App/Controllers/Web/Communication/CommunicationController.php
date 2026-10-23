@@ -10,7 +10,8 @@ use Symfony\Component\HttpFoundation\Request;
 
 class CommunicationController extends BaseController
 {
-    public function __construct(private CommunicationService $service, private EmailAccountService $emailAccounts, private CommunicationEmailDeliveryWorker $deliveryWorker) {}
+    public function __construct(private CommunicationService $service, private EmailAccountService $emailAccounts, private CommunicationEmailDeliveryWorker $deliveryWorker,
+                                private \App\Repositories\Client\ClientRepository $clients) {}
     private function author(): ?string { $user = GlobalRegistry::get('user'); return $user ? $user->getDisplayName() : null; }
     public function templates() { $this->view('communication/templates', ['templates' => $this->service->templates(), 'languages' => $this->service->languages(), 'templateTypes' => $this->service->templateTypes()]); }
     public function emailSettings() { $this->view('communication/email-settings', ['account' => $this->emailAccounts->active()]); }
@@ -56,7 +57,8 @@ class CommunicationController extends BaseController
             };
             $this->view('communication/compose', array_merge($prepared, [
                 'languages' => $this->service->languages(),
-                'selected_language' => $_GET['language'] ?? 'fr',
+                // język z karty klienta (można zmienić w formularzu)
+                'selected_language' => $_GET['language'] ?? $this->clients->communicationLang((int) ($prepared['id_customer'] ?? 0)),
                 'back_url' => $backUrl,
                 'queue_success_redirect' => match ($source) {
                     'proforma' => ROOT . '/proforma-documents',

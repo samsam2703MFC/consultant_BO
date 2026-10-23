@@ -4,7 +4,6 @@
 namespace App\Repositories\Document\Product;
 use App\Core\Helpers\BaseRepository;
 use Model;
-use MYPDFModel;
 
 /**
  * User class

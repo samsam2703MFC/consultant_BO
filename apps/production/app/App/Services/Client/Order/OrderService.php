@@ -614,70 +614,38 @@ class OrderService
     {
         $orderDataArr = $this->getSelectedOrdersData($orderIds);
         $pdf = new TCPDFService('P', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
-        $pdf->SetMargins(5, '5', 5);
-        $pdf->SetPrintHeader(false);
-        $pdf->SetPrintFooter(false);
-        $pdf->SetAutoPageBreak(TRUE, 10);
-        $pdf->SetFont('helvetica', '', 12);
 
         $printedAt = (new DateTimeImmutable('now', new DateTimeZone('Europe/Warsaw')))
             ->format('d-m-Y H:i:s');
 
+        // Jedno zamówienie = jeden dokument (własna numeracja stron) ; kategorie jako wiersze grup, kolumna do odhaczenia
         foreach ($orderDataArr as $item) {
-            $pdf->AddPage();
-
-            $pdf->SetFont('helvetica', '', 10);
-            $pdf->writeHTMLCell(75, 5, 5, 5, "Data wydruku:   " . $printedAt, 0, 1, 0, true, 'L', true);
-            $pdf->writeHTMLCell(75, 5, 5, 10, "Data wysylki:   {$item['shipping_date']}", 0, 1, 0, true, 'L', true);
-
-            $pdf->SetFont('helvetica', 'B', 17);
-            $pdf->writeHTMLCell(160, 5, 25, 20, "Zamowienie", 0, 1, 0, true, 'C', true);
-
-            $pdf->SetFont('helvetica', '', 14);
-            $pdf->writeHTMLCell(160, 5, 25, 30, "{$item['customer_data']}", 0, 1, 0, true, 'C', true);
-
-            $pdf->Ln();
+            $pdf->brandPage('Zamówienie — lista kompletacyjna', ['ref' => (string) $item['customer_data']]);
+            $pdf->brandHeader('Zamówienie', [
+                ['Data wysyłki', (string) $item['shipping_date']],
+                ['Data wydruku', $printedAt],
+            ], (string) $item['customer_data']);
 
             if (!empty($item['order_data']['is_freebie'])) {
-                $pdf->SetFont('freeserif', 'B', 13);
-                $pdf->SetFillColor(255, 243, 205);
-                $pdf->SetTextColor(133, 77, 14);
-                $pdf->Cell(200, 10, '*** GRATIS — tego zamówienia NIE należy skanować ***', 1, 1, 'C', true);
-                $pdf->SetTextColor(0, 0, 0);
-                $pdf->SetFillColor(255, 255, 255);
-                $pdf->Ln(2);
+                $pdf->brandCallout('*** GRATIS — tego zamówienia NIE należy skanować ***');
             }
 
-            $pdf->SetFont('', 'B', 12);
-            $pdf->Cell(85, 7, 'Kategoria', 1, 0, 'C');
-            $pdf->Cell(85, 7, 'Produkt', 1, 0, 'C');
-            $pdf->Cell(30, 7, 'Ilosc (karton)', 1, 0, 'C');
-
-
-            $pdf->Ln();
-
-            $pdf->SetFont('helvetica', '', 9);
-
-            $lastCategory = "";
+            $rows = [];
+            $lastCategory = null;
             foreach ($item['product_data'] as $row) {
-                if ($row['sum'] <= 0) {
+                if ($row['sum'] <= 0) continue;
+                if ($row['category_name'] !== $lastCategory) {
+                    $rows[] = ['_group' => $row['category_name']];
                     $lastCategory = $row['category_name'];
-                    continue;
                 }
-
-                $currCategory = $row['category_name'];
-                if (strcmp($lastCategory, $currCategory) == 0) $currCategory = "";
-
-                $pdf->Cell(85, 6, $currCategory, 'LR', 0, 'L');
-                $pdf->Cell(85, 6, $row['product_name'], 'LR', 0, 'L');
-                $pdf->Cell(30, 6, $row['sum'], 'LR', 0, 'C');
-                $pdf->Ln();
-                $lastCategory = $row['category_name'];
+                $rows[] = [$row['product_name'], $row['sum'], ''];
             }
-
-            $pdf->Cell(200, 0, '', 'T');
+            $pdf->brandTable([
+                ['label' => 'Produkt', 'w' => 76],
+                ['label' => 'Ilość (karton)', 'w' => 16, 'align' => 'R'],
+                ['label' => '✓', 'w' => 8, 'align' => 'C'],
+            ], $rows, ['font' => 9, 'head_font' => 8, 'min_h' => 6.5]);
         }
-
 
         $base = $pdf->Output('ORDER_LIST_.pdf', 'S');
         $filename = "PICKING_LIST_" . date("d_m_Y");

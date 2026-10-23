@@ -35,7 +35,16 @@ class ClientRepository extends BaseRepository
         'franchise_network_id',
         'credentials',
         'default_currency',
+        'communication_lang',
     ];
+
+    /** Język komunikacji klienta (dokumenty, maile, SMS) ; brak klienta → fr. */
+    public function communicationLang(?int $id): string
+    {
+        if (!$id) return 'fr';
+        $row = $this->query("SELECT communication_lang FROM `customer` WHERE id = :id", ['id' => $id]);
+        return \App\Services\Utils\DocumentLabels::lang($row[0]['communication_lang'] ?? null, 'fr');
+    }
 
     public function getStandard()
     {

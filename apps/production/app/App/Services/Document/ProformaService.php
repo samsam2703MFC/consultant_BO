@@ -10,6 +10,7 @@ use App\Repositories\Client\Order\OrderRepository;
 use App\Repositories\Company\ErpCompanyDataRepository;
 use App\Repositories\Document\Proforma\ProformaProductRepository;
 use App\Repositories\Document\Proforma\ProformaRepository;
+use App\Services\Utils\DocumentLabels;
 use App\Services\Utils\TCPDFService;
 
 class ProformaService implements IDocument
@@ -114,158 +115,74 @@ class ProformaService implements IDocument
         });
     }
 
+    /** Podstawa zwolnienia z VAT drukowana na proformie (tekst bez zmian, wymagany przez klientów belgijskich). */
+    public const VAT_EXEMPTION = "Exonération de TVA, article 262 ter, I du Code Général des Impôts, et autoliquidation.";
+
     public function renderDocument(TCPDFService $pdf, array $data): TCPDFService
     {
-        $pdf->setPrintFooter(false);
-        $pdf->setPrintHeader(false);
+        $proforma = $data['proformaData'];
+        $lang = $data['lang'] ?? 'fr';
+        $L = fn(string $key) => DocumentLabels::get($key);
+        $S = fn(string $key) => DocumentLabels::sub($key, $lang);
+        $P = fn(string $key) => DocumentLabels::pair($key, $lang);
+        $money = fn($v) => DocumentLabels::money($v);
 
-        $pdf->AddPage();
-        $pdf->setMargins(1, 1, 1);
+        $pdf->brandPage($L('doc_proforma'), ['ref' => $proforma['doc_num'], 'lang' => $lang, 'company' => DocumentLabels::companyLine($proforma)]);
+        $pdf->brandHeader($L('doc_proforma'), [
+            [$P('number'), $proforma['doc_num']],
+            [$P('date'), $proforma['established_date']],
+        ], $S('doc_proforma'));
 
-        $pdf->Image(__DIR__ . "/../../../public/resources/images/logo.jpg", 180, 5, 19, 26, 'JPG', '', '', false, 300, '', false, false, 0);
+        $pdf->brandParties([
+            'label' => $P('seller'),
+            'name' => $proforma['consignor_name'],
+            'lines' => [$proforma['consignor_address_1'], $proforma['consignor_address_2'], 'NIP: ' . DocumentLabels::taxId($proforma['consignor_nip'])],
+        ], [
+            'label' => $P('buyer'),
+            'name' => $proforma['consignee_name'],
+            'lines' => [$proforma['consignee_address_1'], $proforma['consignee_address_2'], 'NIP/TVA: ' . DocumentLabels::taxId($proforma['consignee_nip'])],
+        ]);
 
-
-#region right data
-        $pdf->SetFont('dejavusans', '', 11);
-// right side over table
-
-
-        $pdf->writeHTMLCell(91, 6, 5, 19, "Date: <b>{$data['proformaData']['established_date']}</b>", 0, 'L', 0, true, 'L', true, true, 15, 'M');
-
-        $pdf->writeHTMLCell(91, 6, 5, 25, "PROFORMA NUM: <b>{$data['proformaData']['doc_num']}</b>", 0, 'L', 0, true, 'L', true);
-
-
-#region left PL data
-// left side over table
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->writeHTMLCell(90, 5, 5, 45, "Sprzedawca", "B", 'L', 0, true, 'L', true);
-
-        $pdf->SetFont('dejavusans', '', 10);
-        $pdf->writeHTMLCell(90, 5, 5, 51, "{$data['proformaData']['consignor_name']}", 0, 'L', 0, true, 'L', true);
-
-        $pdf->SetFont('dejavusans', '', 9);
-        $pdf->writeHTMLCell(90, 7, 5, 63, "{$data['proformaData']['consignor_address_1']}<br>{$data['proformaData']['consignor_address_2']}", 0, 'L', 0, true, 'L', true);
-
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->writeHTMLCell(90, 2, 5, 73, "{$data['proformaData']['consignor_nip']}", 0, 'L', 0, true, 'L', true);
-// end left side over table
-#endregion
-
-
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->writeHTMLCell(90, 5, 110, 45, "Nabywca", "B", 'L', 0, true, 'L', true);
-
-        $pdf->SetFont('dejavusans', '', 10);
-        $pdf->writeHTMLCell(90, 5, 110, 51, "{$data['proformaData']['consignee_name']}", 0, 'L', 0, true, 'L', true);
-
-        $pdf->SetFont('dejavusans', '', 9);
-        $pdf->writeHTMLCell(90, 7, 110, 63, "{$data['proformaData']['consignee_address_1']} <br>{$data['proformaData']['consignee_address_2']}", 0, 'L', 0, true, 'L', true);
-
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->writeHTMLCell(90, 2, 110, 73, "{$data['proformaData']['consignee_nip']}", 0, 'L', 0, true, 'L', true);
-
-//$pdf->SetFont('dejavusans', '', 5);
-//$pdf->writeHTMLCell(30, 2,118,72, $customerData['vat'], 0,'L',0, true,0,true);
-// end right side over table
-#endregion
-
-        $pdf->Ln(10);
-
-
-#region table
-
-        $headerPL = array(
-            "Kod Towaru",
-            "Opis towaru",
-            "PKWiU",
-            "Ilość",
-            "Cena/kart netto",
-            "Wartość netto",
-            "VAT",
-            "Wart./brutto",
-            "Stawka VAT",
-            "Waga op.",
-            "Waga",
-            "Il/Krt",
-            "Cena/szt"
-        );
-        $headerBE = array(
-            "Ref. Article",
-            "Description",
-            "Code Stat.",
-            "Quant.",
-            "Prix carton net",
-            "Total Net",
-            "TVA",
-            "Prix brut",
-            "Taux TVA",
-            "Poid cart",
-            "Poid Brut",
-            "Qt/Crt",
-            "Prix/unit"
-        );
-
-#endregion
-
-
-        $pdf->FillTableToProforma($headerPL, $headerBE, $data['proformaProductData']);
-
-        $sum_price_net = 0;
-        $sum_price_brut = 0;
-        $sum_weight = 0;
-        foreach ($data['proformaProductData'] as $product_item) {
-            $sum_price_net = $sum_price_net + $product_item['total_price_net'];
-
-            if (!is_null($product_item['price_brut'])) {
-                $sum_price_brut = $sum_price_brut + $product_item['price_brut'];
-            }
-
-            $sum_weight = $sum_weight + $product_item['total_weight_kg'];
+        $columns = [
+            ['label' => $L('code'), 'sub' => $S('code'), 'w' => 10],
+            ['label' => $L('description'), 'sub' => $S('description'), 'w' => 30],
+            ['label' => $L('stat_code'), 'sub' => $S('stat_code'), 'w' => 11],
+            ['label' => $L('cartons'), 'sub' => $S('cartons'), 'w' => 9, 'align' => 'R'],
+            ['label' => $L('price_carton'), 'sub' => $S('price_carton'), 'w' => 12, 'align' => 'R'],
+            ['label' => $L('net_value'), 'sub' => $S('net_value'), 'w' => 13, 'align' => 'R'],
+            ['label' => $L('vat_rate'), 'sub' => $S('vat_rate'), 'w' => 8, 'align' => 'R'],
+            ['label' => $L('weight_carton'), 'sub' => $S('weight_carton'), 'w' => 10, 'align' => 'R'],
+            ['label' => $L('weight'), 'sub' => $S('weight'), 'w' => 12, 'align' => 'R'],
+            ['label' => $L('ppc'), 'sub' => $S('ppc'), 'w' => 9, 'align' => 'R'],
+            ['label' => $L('price_piece'), 'sub' => $S('price_piece'), 'w' => 10, 'align' => 'R'],
+        ];
+        $rows = [];
+        $net = 0.0;
+        $weight = 0.0;
+        $cartons = 0;
+        foreach ($data['proformaProductData'] as $item) {
+            $rows[] = [$item['id_product'], $item['product_name'], $item['code_stat'], DocumentLabels::number($item['quantity']), $money($item['price_per_carton']),
+                $money($item['total_price_net']), DocumentLabels::number($item['tva_perc']) . ' %', DocumentLabels::number($item['single_carton_weight_kg'], 2) . ' kg',
+                DocumentLabels::number($item['total_weight_kg'], 2) . ' kg', DocumentLabels::number($item['ppc']), $money($item['price_per_piece'])];
+            $net += (float) $item['total_price_net'];
+            $weight += (float) $item['total_weight_kg'];
+            $cartons += (int) $item['quantity'];
         }
+        $rows[] = ['_total' => ['', $P('total'), '', DocumentLabels::number($cartons), '', $money($net), '', '', DocumentLabels::number($weight, 2) . ' kg', '', '']];
+        $pdf->brandTable($columns, $rows, ['font' => 7, 'head_font' => 6.5]);
 
-        $tva_sum = $sum_price_brut - $sum_price_net;
-
-        $pdf->setMargins(5, 5, 5);
-
-        $pdf->Ln(10);
-//pomocnicza komórka bo grupuje wszystkie poniższe dane w jednej linii
-        $pdf->MultiCell(60, 5, "", 0, 'L', 0, 1, '', '', true);
-        $pdf->SetFont('helvetica', 'I', 8);
-
-        $pdf->MultiCell(60, 5, "Waga lacznie:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(70, 5, $sum_weight . " kg", 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-
-        $pdf->MultiCell(60, 5, "Paiement Pro Forma", 0, 'L', 0, 1, '', '', true);
-        $pdf->MultiCell(60, 5, "Compte en Banque:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(100, 5, $data['proformaData']['consignor_bank'], 0, 'L', 0, 1, '', '', true);
-        $pdf->MultiCell(60, 5, "Code BIC Swift:", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(80, 5, $data['proformaData']['consignor_swift'], 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-
-        $formatted_net = number_format($sum_price_net, "2");
-        $formatted_vat = number_format($tva_sum, "2");
-        $formatted_brut = number_format($sum_price_net, "2");
-
-        $pdf->SetFont('helvetica', 'I', 9);
-
-        $pdf->MultiCell(24, 4, "Net", '', 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(55, 4, " {$formatted_net} €", 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln();
-
-//        $pdf->MultiCell(24, 4, "TVA", '', 'L', 0, 0, '', '', true);
-//        $pdf->MultiCell(55, 4, " {$formatted_vat} €", 0, 'L', 0, 1, '', '', true);
-//        $pdf->Ln();
-
-        $pdf->MultiCell(24, 4, "Total", 0, 'L', 0, 0, '', '', true);
-        $pdf->MultiCell(55, 4, " {$formatted_brut} €", 0, 'L', 0, 1, '', '', true);
-        $pdf->Ln(15);
-
-
-        $pdf->SetFont('helvetica', 'I', 10);
-        $pdf->MultiCell(200, 6, "Exonération de TVA, article 262 ter, I du Code Général des Impôts, et autoliquidation.", 0, 'C', 0, 0, '', '', true);
+        // Proforma = przedpłata bez VAT (zwolnienie poniżej) : razem = netto
+        $pdf->brandSummary([
+            [$P('total_weight'), DocumentLabels::number($weight, 2) . ' kg'],
+            [$P('payment'), $P('payment_proforma')],
+            [$P('bank'), $proforma['consignor_bank']],
+            [$P('swift'), $proforma['consignor_swift']],
+            [$P('payment_reference'), $proforma['doc_num']],
+        ], [
+            [$P('net'), $money($net)],
+            [$P('total'), $money($net)],
+        ]);
+        $pdf->brandNote(self::VAT_EXEMPTION, 'C');
 
         return $pdf;
     }
@@ -284,7 +201,8 @@ class ProformaService implements IDocument
 
         $this->renderDocument($pdf, [
             'proformaData' => $proformaData,
-            'proformaProductData' => $proformaProductData]);
+            'proformaProductData' => $proformaProductData,
+            'lang' => $this->clientRepository->communicationLang((int) $proformaData['id_customer'])]);
 
         $clientName = htmlspecialchars($proformaData['consignee_name']);
 
@@ -374,7 +292,8 @@ class ProformaService implements IDocument
 
         $this->renderDocument($pdf, [
             'proformaData' => $proformaData,
-            'proformaProductData' => $proformaProductData]);
+            'proformaProductData' => $proformaProductData,
+            'lang' => $this->clientRepository->communicationLang((int) $proformaData['id_customer'])]);
 
         return ['file_string' => $pdf, "filename" => 'PROFORMA_' . $proformaData['doc_num'] . '.pdf'];
     }

@@ -9,7 +9,7 @@ use App\Core\Api\Workshop\Translator;
 use App\Repositories\Workshop\SchedulingRepository;
 use App\Repositories\Workshop\SupplyRepository;
 use App\Services\Purchasing\CostOptimizationService;
-use TCPDF;
+use App\Services\Utils\TCPDFService;
 
 /**
  * Plan zespołu na tydzień produkcji (druk i tablet) : z tablicy tygodnia — kalendarz (bloki dnia w kolejności
@@ -55,26 +55,36 @@ final class TeamSheetService
         ];
     }
 
-    /** PDF do druku : A4 poziomo, każdy zespół od nowej strony. */
+    /** PDF do druku : A4 poziomo, każdy zespół od nowej strony (styl dokumentów L'Atelier, własna numeracja stron). */
     public function pdf(string $date, ?int $groupId, ApiContext $context): array
     {
         $data = $this->build($date, $groupId, $context);
         $tr = $context->translator;
-        $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+        $lang = $tr->lang();
+        $title = $tr->text('team_sheet_title');
+        $week = $tr->text('team_sheet_week', ['week' => $data['iso_week'], 'from' => $this->day($data['week_start']), 'to' => $this->day($data['week_end'])]);
+        $printed = $this->day(substr($data['generated_at'], 0, 10)) . '.' . substr($data['generated_at'], 0, 4) . ' ' . substr($data['generated_at'], 11);
+        $pdf = new TCPDFService('L', 'mm', 'A4', true, 'UTF-8', false);
         $pdf->SetCreator('TFB');
-        $pdf->SetTitle($tr->text('team_sheet_title'));
-        $pdf->setPrintHeader(false);
-        $pdf->setPrintFooter(false);
-        $pdf->SetMargins(8, 8, 8);
-        $pdf->SetAutoPageBreak(true, 8);
-        $pdf->SetFont('dejavusans', '', 8);
+        $pdf->SetTitle($title);
         if (!$data['teams']) {
-            $pdf->AddPage();
-            $pdf->writeHTML('<h2>' . $this->e($tr->text('team_sheet_title')) . '</h2><p>' . $this->e($tr->text('team_sheet_empty_week')) . '</p>');
+            $pdf->brandPage($title, ['orientation' => 'L', 'ref' => $week, 'lang' => $lang]);
+            $pdf->brandHeader($title, [], $week);
+            $pdf->brandText($tr->text('team_sheet_empty_week'));
         }
         foreach ($data['teams'] as $team) {
-            $pdf->AddPage();
-            $pdf->writeHTML($this->teamHtml($team, $data, $tr), true, false, true, false, '');
+            $name = $team['name'] ?? $tr->text('team_sheet_no_group');
+            $pdf->brandPage($title . ' · ' . $name, ['orientation' => 'L', 'ref' => $week, 'lang' => $lang]);
+            $pdf->brandHeader($title . ' : ' . $name, [[trim($tr->text('team_sheet_printed', ['at' => ''])), $printed]],
+                $week . "\n" . $tr->text('team_sheet_hours', ['people' => $team['people'], 'hours' => $this->n($team['hours'], 1), 'available' => $this->n($team['available_h'], 1)]));
+            foreach ($this->teamSections($team, $tr) as [$heading, $html]) {
+                $pdf->brandSection($heading);
+                $pdf->SetFont(TCPDFService::TABLE_FONT, '', 8);
+                $pdf->SetTextColorArray(TCPDFService::INK);
+                $pdf->writeHTML($html, true, false, true, false, '');
+                $pdf->SetY($pdf->GetY() + 3);
+            }
+            $pdf->brandSignatures([$tr->text('team_sheet_signature')]);
         }
         $slug = $groupId !== null && $data['teams'] ? '_' . preg_replace('/[^a-z0-9]+/', '-', strtolower($this->ascii((string) ($data['teams'][0]['name'] ?? '')))) : '';
         return ['filename' => $tr->text('team_sheet_file') . '_' . $data['week_start'] . $slug . '.pdf', 'content_base64' => base64_encode($pdf->Output('', 'S'))];
@@ -160,28 +170,29 @@ final class TeamSheetService
 
     // --- PDF -------------------------------------------------------------------------------------------------
 
-    private function teamHtml(array $team, array $data, Translator $tr): string
+    /** Kolory tabel HTML w stylu dokumentów (TCPDFService). */
+    private const HEAD = 'background-color:#8D1D2C;color:#ffffff;border:0.3px solid #8D1D2C';
+    private const HEAD_TODAY = 'background-color:#F8ECEE;color:#8D1D2C;border:0.3px solid #8D1D2C';
+    private const CELL = 'border:0.3px solid #DEE2E6';
+    private const MUTED = '#6C757D';
+
+    /** Sekcje planu zespołu : [tytuł, html] — kalendarz, produkcja tygodnia, dostawy (gdy są). */
+    private function teamSections(array $team, Translator $tr): array
     {
-        $color = preg_match('/^#[0-9a-fA-F]{6}$/', (string) $team['color']) ? $team['color'] : '#8a1c2b';
-        $name = $team['name'] ?? $tr->text('team_sheet_no_group');
-        $html = '<table cellpadding="2"><tr><td width="70%"><span style="font-size:15pt;font-weight:bold;color:' . $color . '">' . $this->e($tr->text('team_sheet_title')) . ' : ' . $this->e($name) . '</span><br>'
-            . '<span style="font-size:10pt">' . $this->e($tr->text('team_sheet_week', ['week' => $data['iso_week'], 'from' => $this->day($data['week_start']), 'to' => $this->day($data['week_end'])])) . '</span></td>'
-            . '<td width="30%" align="right" style="font-size:8pt;color:#555">' . $this->e($tr->text('team_sheet_hours', ['people' => $team['people'], 'hours' => $this->n($team['hours'], 1), 'available' => $this->n($team['available_h'], 1)]))
-            . '<br>' . $this->e($tr->text('team_sheet_printed', ['at' => $this->day(substr($data['generated_at'], 0, 10)) . '.' . substr($data['generated_at'], 0, 4) . ' ' . substr($data['generated_at'], 11)])) . '</td></tr></table>';
+        $sections = [];
 
         // Kalendarz : dni w kolumnach, bloki w kolejności godzin, dostawy dnia.
         $width = round(100 / max(1, count($team['days'])), 2);
         $head = '';
         $cells = '';
         foreach ($team['days'] as $d) {
-            $bg = $d['today'] ? '#fff4d6' : '#f2ede8';
-            $head .= '<td width="' . $width . '%" style="background-color:' . $bg . ';border:0.3px solid #999"><b>' . $this->e($tr->text('weekday_' . $d['weekday'])) . ' ' . $this->day($d['date']) . '</b><br>'
-                . '<span style="font-size:6.5pt;color:#555">' . ($d['available_h'] > 0 || $d['required_h'] > 0
+            $head .= '<td width="' . $width . '%" style="' . ($d['today'] ? self::HEAD_TODAY : self::HEAD) . '"><b>' . $this->e($tr->text('weekday_' . $d['weekday'])) . ' ' . $this->day($d['date']) . '</b><br>'
+                . '<span style="font-size:6.5pt">' . ($d['available_h'] > 0 || $d['required_h'] > 0
                     ? $this->e($tr->text('team_sheet_day_hours', ['people' => $d['people'], 'required' => $this->n($d['required_h'], 1), 'available' => $this->n($d['available_h'], 1)]))
                     : $this->e($tr->text('team_sheet_no_shift'))) . '</span></td>';
             $body = '';
             foreach ($d['blocks'] as $b) {
-                $body .= '<b>' . ($b['time'] ? $this->e($b['time']) . ' ' : '') . $this->e($b['name']) . '</b><br><span style="font-size:6.5pt">'
+                $body .= '<b>' . ($b['time'] ? '<span style="color:#8D1D2C">' . $this->e($b['time']) . '</span> ' : '') . $this->e($b['name']) . '</b><br><span style="font-size:6.5pt;color:' . self::MUTED . '">'
                     . $this->e($this->qty($b['quantity'], $b['unit'], $b['factor']) . ($b['cartons'] ? ' · ' . $this->n($b['cartons'], 1) . ' ' . $tr->text('team_sheet_cartons') : '')
                         . ($b['batches'] ? ' · ' . $this->n($b['batches'], 2) . ' ' . $tr->text('team_sheet_batches') : '') . ' · ' . $this->n($b['hours'], 1) . ' h')
                     . ($b['late'] ? ' <span style="color:#b00020">' . $this->e($tr->text('team_sheet_late')) . '</span>' : '') . '</span><br>';
@@ -189,75 +200,75 @@ final class TeamSheetService
             foreach ($d['deliveries'] as $x) {
                 $body .= '<span style="font-size:6.5pt;color:#1f4f7a"><b>' . $this->e($tr->text('team_sheet_delivery', ['supplier' => $x['supplier']])) . '</b> ' . $this->e(implode(', ', $x['materials'])) . '</span><br>';
             }
-            $cells .= '<td width="' . $width . '%" style="border:0.3px solid #999">' . ($body ?: '<span style="color:#999">—</span>') . '</td>';
+            $cells .= '<td width="' . $width . '%" style="' . self::CELL . '">' . ($body ?: '<span style="color:#999">—</span>') . '</td>';
         }
-        $html .= '<h4 style="color:' . $color . '">' . $this->e($tr->text('team_sheet_calendar')) . '</h4><table cellpadding="3" style="font-size:7.5pt"><tr>' . $head . '</tr><tr>' . $cells . '</tr></table>';
+        $sections[] = [$tr->text('team_sheet_calendar'), '<table cellpadding="3" style="font-size:7.5pt"><tr>' . $head . '</tr><tr>' . $cells . '</tr></table>'];
 
         // Produkcja tygodnia.
         $dayCols = '';
-        foreach ($team['days'] as $d) $dayCols .= '<th width="6%" align="center" style="border:0.3px solid #999;background-color:#f2ede8">' . $this->e($tr->text('weekday_' . $d['weekday'])) . '<br>' . $this->day($d['date']) . '</th>';
-        $html .= '<h4 style="color:' . $color . '">' . $this->e($tr->text('team_sheet_production')) . '</h4>';
+        foreach ($team['days'] as $d) $dayCols .= '<th width="6%" align="center" style="' . ($d['today'] ? self::HEAD_TODAY : self::HEAD) . '">' . $this->e($tr->text('weekday_' . $d['weekday'])) . '<br>' . $this->day($d['date']) . '</th>';
         if (!$team['products']) {
-            $html .= '<p>' . $this->e($tr->text('team_sheet_empty')) . '</p>';
+            $html = '<p>' . $this->e($tr->text('team_sheet_empty')) . '</p>';
         } else {
             $productWidth = 100 - 6 * count($team['days']) - 34;
-            $html .= '<table cellpadding="2" style="font-size:7pt"><thead><tr style="background-color:#f2ede8">'
-                . '<th width="' . $productWidth . '%" style="border:0.3px solid #999">' . $this->e($tr->text('team_sheet_col_product')) . '</th>'
-                . '<th width="9%" align="right" style="border:0.3px solid #999">' . $this->e($tr->text('team_sheet_col_total')) . '</th>'
-                . '<th width="5%" align="right" style="border:0.3px solid #999">' . $this->e($tr->text('team_sheet_batches')) . '</th>'
-                . '<th width="4%" align="right" style="border:0.3px solid #999">h</th>'
-                . '<th width="9%" align="right" style="border:0.3px solid #999">' . $this->e($tr->text('team_sheet_col_ship')) . '</th>'
-                . '<th width="7%" align="right" style="border:0.3px solid #999">' . $this->e($tr->text('team_sheet_col_stock')) . '</th>'
+            $html = '<table cellpadding="2" style="font-size:7.5pt"><thead><tr>'
+                . '<th width="' . $productWidth . '%" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_product')) . '</th>'
+                . '<th width="9%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_total')) . '</th>'
+                . '<th width="5%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_batches')) . '</th>'
+                . '<th width="4%" align="right" style="' . self::HEAD . '">h</th>'
+                . '<th width="9%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_ship')) . '</th>'
+                . '<th width="7%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_stock')) . '</th>'
                 . $dayCols . '</tr></thead><tbody>';
-            foreach ($team['products'] as $r) {
+            foreach ($team['products'] as $i => $r) {
+                $bg = $i % 2 === 1 ? 'background-color:#F8F9FA;' : '';
                 $cols = '';
                 foreach ($team['days'] as $d) {
                     $x = $r['days'][$d['date']] ?? null;
-                    $cols .= '<td width="6%" align="center" style="border:0.3px solid #ccc">' . ($x ? ($x['time'] ? '<span style="font-size:6pt;color:#555">' . $this->e($x['time']) . '</span><br>' : '')
+                    $cols .= '<td width="6%" align="center" style="' . $bg . self::CELL . '">' . ($x ? ($x['time'] ? '<span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($x['time']) . '</span><br>' : '')
                         . $this->e($this->qty($x['quantity'], $r['unit'], $r['factor'], false)) : '') . '</td>';
                 }
-                $html .= '<tr nobr="true"><td width="' . $productWidth . '%" style="border:0.3px solid #ccc"><b>' . $this->e($r['name']) . '</b>'
+                $html .= '<tr nobr="true"><td width="' . $productWidth . '%" style="' . $bg . self::CELL . '"><b>' . $this->e($r['name']) . '</b>'
                     . ($r['unassigned_qty'] > self::EPS ? '<br><span style="font-size:6pt;color:#b00020">' . $this->e($tr->text('team_sheet_waiting', ['qty' => $this->qty($r['unassigned_qty'], $r['unit'], $r['factor'])])) . '</span>' : '')
-                    . (abs($r['need'] - $r['quantity']) > 0.5 ? '<br><span style="font-size:6pt;color:#555">' . $this->e($tr->text('team_sheet_need', ['qty' => $this->qty($r['need'], $r['unit'], $r['factor'])])) . '</span>' : '') . '</td>'
-                    . '<td width="9%" align="right" style="border:0.3px solid #ccc">' . $this->e($this->qty($r['quantity'], $r['unit'], $r['factor']))
-                    . ($r['cartons'] ? '<br><span style="font-size:6pt;color:#555">' . $this->n($r['cartons'], 1) . ' ' . $this->e($tr->text('team_sheet_cartons')) . '</span>' : '') . '</td>'
-                    . '<td width="5%" align="right" style="border:0.3px solid #ccc">' . ($r['batches'] ? $this->n($r['batches'], 2) : '—') . '</td>'
-                    . '<td width="4%" align="right" style="border:0.3px solid #ccc">' . $this->n($r['hours'], 1) . '</td>'
-                    . '<td width="9%" align="right" style="border:0.3px solid #ccc">' . ($r['direct'] > self::EPS ? $this->e($this->qty($r['direct'], $r['unit'], $r['factor']))
-                        . ($r['due_date'] ? '<br><span style="font-size:6pt;color:#555">' . $this->e($tr->text('team_sheet_due', ['day' => $this->day($r['due_date'])])) . '</span>' : '') : '—') . '</td>'
-                    . '<td width="7%" align="right" style="border:0.3px solid #ccc">' . ($r['stock'] > self::EPS ? $this->e($this->qty($r['stock'], $r['unit'], $r['factor'])) : '—') . '</td>'
+                    . (abs($r['need'] - $r['quantity']) > 0.5 ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_need', ['qty' => $this->qty($r['need'], $r['unit'], $r['factor'])])) . '</span>' : '') . '</td>'
+                    . '<td width="9%" align="right" style="' . $bg . self::CELL . '">' . $this->e($this->qty($r['quantity'], $r['unit'], $r['factor']))
+                    . ($r['cartons'] ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->n($r['cartons'], 1) . ' ' . $this->e($tr->text('team_sheet_cartons')) . '</span>' : '') . '</td>'
+                    . '<td width="5%" align="right" style="' . $bg . self::CELL . '">' . ($r['batches'] ? $this->n($r['batches'], 2) : '—') . '</td>'
+                    . '<td width="4%" align="right" style="' . $bg . self::CELL . '">' . $this->n($r['hours'], 1) . '</td>'
+                    . '<td width="9%" align="right" style="' . $bg . self::CELL . '">' . ($r['direct'] > self::EPS ? $this->e($this->qty($r['direct'], $r['unit'], $r['factor']))
+                        . ($r['due_date'] ? '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($tr->text('team_sheet_due', ['day' => $this->day($r['due_date'])])) . '</span>' : '') : '—') . '</td>'
+                    . '<td width="7%" align="right" style="' . $bg . self::CELL . '">' . ($r['stock'] > self::EPS ? $this->e($this->qty($r['stock'], $r['unit'], $r['factor'])) : '—') . '</td>'
                     . $cols . '</tr>';
             }
             $html .= '</tbody></table>';
         }
+        $sections[] = [$tr->text('team_sheet_production'), $html];
 
         // Dostawy surowców potrzebnych zespołowi.
         if ($team['deliveries']) {
-            $html .= '<h4 style="color:' . $color . '">' . $this->e($tr->text('team_sheet_deliveries')) . '</h4>'
-                . '<table cellpadding="2" style="font-size:7pt"><thead><tr style="background-color:#f2ede8">'
-                . '<th width="10%" style="border:0.3px solid #999">' . $this->e($tr->text('team_sheet_col_date')) . '</th>'
-                . '<th width="18%" style="border:0.3px solid #999">' . $this->e($tr->text('team_sheet_col_supplier')) . '</th>'
-                . '<th width="26%" style="border:0.3px solid #999">' . $this->e($tr->text('team_sheet_col_material')) . '</th>'
-                . '<th width="11%" align="right" style="border:0.3px solid #999">' . $this->e($tr->text('team_sheet_col_quantity')) . '</th>'
-                . '<th width="11%" align="right" style="border:0.3px solid #999">' . $this->e($tr->text('team_sheet_col_need')) . '</th>'
-                . '<th width="24%" style="border:0.3px solid #999">' . $this->e($tr->text('team_sheet_col_for')) . '</th></tr></thead><tbody>';
+            $html = '<table cellpadding="2" style="font-size:7.5pt"><thead><tr>'
+                . '<th width="10%" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_date')) . '</th>'
+                . '<th width="18%" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_supplier')) . '</th>'
+                . '<th width="26%" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_material')) . '</th>'
+                . '<th width="11%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_quantity')) . '</th>'
+                . '<th width="11%" align="right" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_need')) . '</th>'
+                . '<th width="24%" style="' . self::HEAD . '">' . $this->e($tr->text('team_sheet_col_for')) . '</th></tr></thead><tbody>';
             foreach ($team['deliveries'] as $o) {
                 foreach ($o['lines'] as $k => $l) {
                     $done = $l['received'] >= $l['quantity'] - self::EPS;
-                    $html .= '<tr nobr="true"><td width="10%" style="border:0.3px solid #ccc">' . ($k === 0 ? ($o['date'] ? $this->e($tr->text('weekday_' . date('N', strtotime($o['date'])))) . ' ' . $this->day($o['date'])
+                    $html .= '<tr nobr="true"><td width="10%" style="' . self::CELL . '">' . ($k === 0 ? ($o['date'] ? $this->e($tr->text('weekday_' . date('N', strtotime($o['date'])))) . ' ' . $this->day($o['date'])
                             : $this->e($tr->text('team_sheet_undated'))) : '') . '</td>'
-                        . '<td width="18%" style="border:0.3px solid #ccc">' . ($k === 0 ? $this->e($o['supplier']) . '<br><span style="font-size:6pt;color:#555">' . $this->e($o['code']) . '</span>' : '') . '</td>'
-                        . '<td width="26%" style="border:0.3px solid #ccc">' . $this->e($l['name']) . '</td>'
-                        . '<td width="11%" align="right" style="border:0.3px solid #ccc">' . $this->e($this->qty($l['quantity'], $l['unit'], $l['factor']))
-                        . '<br><span style="font-size:6pt;color:' . ($done ? '#22663a' : '#555') . '">' . $this->e($tr->text($done ? 'team_sheet_received' : ($l['received'] > 0 ? 'team_sheet_partial' : 'team_sheet_expected'))) . '</span></td>'
-                        . '<td width="11%" align="right" style="border:0.3px solid #ccc">' . $this->e($this->qty($l['need'], $l['unit'], $l['factor'])) . '</td>'
-                        . '<td width="24%" style="border:0.3px solid #ccc;font-size:6.5pt">' . $this->e(implode(', ', array_slice($l['products'], 0, 4)) . (count($l['products']) > 4 ? ' …' : '')) . '</td></tr>';
+                        . '<td width="18%" style="' . self::CELL . '">' . ($k === 0 ? $this->e($o['supplier']) . '<br><span style="font-size:6pt;color:' . self::MUTED . '">' . $this->e($o['code']) . '</span>' : '') . '</td>'
+                        . '<td width="26%" style="' . self::CELL . '">' . $this->e($l['name']) . '</td>'
+                        . '<td width="11%" align="right" style="' . self::CELL . '">' . $this->e($this->qty($l['quantity'], $l['unit'], $l['factor']))
+                        . '<br><span style="font-size:6pt;color:' . ($done ? '#22663a' : self::MUTED) . '">' . $this->e($tr->text($done ? 'team_sheet_received' : ($l['received'] > 0 ? 'team_sheet_partial' : 'team_sheet_expected'))) . '</span></td>'
+                        . '<td width="11%" align="right" style="' . self::CELL . '">' . $this->e($this->qty($l['need'], $l['unit'], $l['factor'])) . '</td>'
+                        . '<td width="24%" style="' . self::CELL . ';font-size:6.5pt">' . $this->e(implode(', ', array_slice($l['products'], 0, 4)) . (count($l['products']) > 4 ? ' …' : '')) . '</td></tr>';
                 }
             }
             $html .= '</tbody></table>';
+            $sections[] = [$tr->text('team_sheet_deliveries'), $html];
         }
-        $html .= '<p style="font-size:7pt;color:#555">' . $this->e($tr->text('team_sheet_signature')) . ' : ______________________</p>';
-        return $html;
+        return $sections;
     }
 
     private function qty(float $v, string $unit, float|int $factor, bool $withUnit = true): string

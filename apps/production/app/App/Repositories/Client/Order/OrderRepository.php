@@ -6,7 +6,6 @@ use App\Domain\Client\Order\CustomerOrderStatus;
 
 use App\Core\Helpers\BaseRepository;
 use App\Repositories\Document\DocumentRepository;
-use MYPDFModel;
 
 /**
  * Order model class

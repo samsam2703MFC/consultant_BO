@@ -5,7 +5,6 @@ namespace App\Repositories\Complaint\Product;
 use App\Core\Helpers\BaseRepository;
 use App\Repositories\Client\ClientRepository;
 use App\Repositories\Document\DocumentRepository;
-use MYPDFModel;
 
 /**
  * ComplaintProductPendingModel class

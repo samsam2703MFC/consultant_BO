@@ -3,7 +3,6 @@ namespace App\Repositories\Product\Price;
 
 use App\Core\Helpers\BaseRepository;
 use Model;
-use MYPDFModel;
 
 /**
  * Categort model class

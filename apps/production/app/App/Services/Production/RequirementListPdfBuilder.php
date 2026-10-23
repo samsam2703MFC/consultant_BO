@@ -29,27 +29,14 @@ class RequirementListPdfBuilder
         $stockMinimum = !empty($data['stock_minimum']);
         $rows = is_array($data['rows'] ?? null) ? $data['rows'] : [];
 
-        $pdf->AddPage();
-
-        $headerData = [
-            'header_title' => 'Lista zapotrzebowania materiałowego',
-            'header_subtitle' => date('d-m-Y'),
-        ];
-
-        $pdf->customHeader($headerData, false, 'p');
-        $pdf->Footer();
-        $pdf->customFooter([
-            'info_1' => $stockMinimum ? 'Uwzględniono stany magazynowe' : 'Nie uwzględniono stanów magazynowych',
-        ]);
-
-        $pdf->Ln(14);
-
-        $pdf->SetTextColor(0, 0, 0);
-        $pdf->SetFont('dejavusans', '', 10);
+        $pdf->brandPage('Lista zapotrzebowania materiałowego', ['ref' => date('d.m.Y')]);
+        $pdf->brandHeader('Lista zapotrzebowania materiałowego', [
+            ['Zamówienia', (string) count($data['order_id'] ?? [])],
+            ['Wydruk', date('d.m.Y H:i')],
+        ], $stockMinimum ? 'Uwzględniono stany magazynowe' : 'Nie uwzględniono stanów magazynowych');
 
         if (count($rows) === 0) {
-            $pdf->SetFont('dejavusans', '', 11);
-            $pdf->MultiCell(0, 6, 'Brak danych do wyświetlenia.', 0, 'L', false, 1);
+            $pdf->brandText('Brak danych do wyświetlenia.');
             return $pdf;
         }
 
@@ -59,58 +46,22 @@ class RequirementListPdfBuilder
     }
 
     /**
-     * Renderuje tabelę w oparciu o Cell/MultiCell (bez HTML).
+     * Tabela materiałów : ilości w jednostce wyświetlanej (g/ml → kg/l powyżej 1000), wartość przybliżona w PLN,
+     * suma kosztu w ostatnim wierszu.
      */
     private function renderTable(TCPDFService $pdf, array $rows): void
     {
-        // Szerokości kolumn pod A4 portrait z marginesami (~194mm przy margin 8/8)
-        $w = [
-            'material' => 78,
-            'required' => 24,
-            'in_stock' => 24,
-            'to_order' => 24,
-            'unit' => 14,
-            'value' => 30,
+        $columns = [
+            ['label' => 'Materiał', 'w' => 78],
+            ['label' => 'Wymagane', 'w' => 24, 'align' => 'R'],
+            ['label' => 'Na stanie', 'w' => 24, 'align' => 'R'],
+            ['label' => 'Do zamówienia', 'w' => 24, 'align' => 'R'],
+            ['label' => 'Jm', 'w' => 14, 'align' => 'C'],
+            ['label' => 'Wartość (PLN)', 'w' => 30, 'align' => 'R'],
         ];
 
-        $header = [
-            'material' => 'Materiał',
-            'required' => 'Wymagane',
-            'in_stock' => 'Na stanie',
-            'to_order' => 'Do zamówienia',
-            'unit' => 'Jm',
-            'value' => 'Wartość (PLN)',
-        ];
-
-        // Header (mniejsza czcionka + MultiCell, żeby nagłówki się mieściły)
-        $pdf->SetFont('dejavusans', 'B', 8);
-        $pdf->SetFillColor(239, 239, 239);
-
-        $headerH = 8;
-        $x0 = $pdf->GetX();
-        $y0 = $pdf->GetY();
-
-        $pdf->MultiCell($w['material'], $headerH, $header['material'], 1, 'C', true, 0, $x0, $y0, true, 0, false, true, $headerH, 'M');
-        $x0 += $w['material'];
-        $pdf->MultiCell($w['required'], $headerH, $header['required'], 1, 'C', true, 0, $x0, $y0, true, 0, false, true, $headerH, 'M');
-        $x0 += $w['required'];
-        $pdf->MultiCell($w['in_stock'], $headerH, $header['in_stock'], 1, 'C', true, 0, $x0, $y0, true, 0, false, true, $headerH, 'M');
-        $x0 += $w['in_stock'];
-        $pdf->MultiCell($w['to_order'], $headerH, $header['to_order'], 1, 'C', true, 0, $x0, $y0, true, 0, false, true, $headerH, 'M');
-        $x0 += $w['to_order'];
-        $pdf->MultiCell($w['unit'], $headerH, $header['unit'], 1, 'C', true, 0, $x0, $y0, true, 0, false, true, $headerH, 'M');
-        $x0 += $w['unit'];
-        $pdf->MultiCell($w['value'], $headerH, $header['value'], 1, 'C', true, 1, $x0, $y0, true, 0, false, true, $headerH, 'M');
-
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->SetFillColor(245, 245, 245);
-
-        $rowH = 6;
-        $fill = false;
-
-        $sumToOrder = 0.0;
-        $sumRequired = 0.0;
         $sumApproxValue = 0.0;
+        $tableRows = [];
 
         foreach ($rows as $r) {
             $material = (string)($r['material_name'] ?? '');
@@ -149,92 +100,11 @@ class RequirementListPdfBuilder
                 $sumApproxValue += (float)$approxValueRaw;
             }
 
-            // sumy ilości (w tej samej logice warunkowej co formatowanie)
-            $reqF = UnitMapper::conditionalToDisplayQuantity($unitId, $requiredRaw);
-            $toOrderF = UnitMapper::conditionalToDisplayQuantity($unitId, $toOrderRaw);
-            if ($reqF !== null) $sumRequired += $reqF;
-            if ($toOrderF !== null) $sumToOrder += $toOrderF;
-
-            // wysokość wiersza wg MultiCell (materiał)
-            $lines = $this->estimateLines($pdf, $material, $w['material']);
-            $h = max($rowH, $lines * 5);
-
-            // łamanie strony
-            if ($pdf->GetY() + $h > ($pdf->getPageHeight() - 15)) {
-                $pdf->AddPage();
-
-                // powtórka headera tabeli
-                $pdf->SetFont('dejavusans', 'B', 8);
-                $pdf->SetFillColor(239, 239, 239);
-
-                $headerH = 8;
-                $x0 = $pdf->GetX();
-                $y0 = $pdf->GetY();
-
-                $pdf->MultiCell($w['material'], $headerH, $header['material'], 1, 'C', true, 0, $x0, $y0, true, 0, false, true, $headerH, 'M');
-                $x0 += $w['material'];
-                $pdf->MultiCell($w['required'], $headerH, $header['required'], 1, 'C', true, 0, $x0, $y0, true, 0, false, true, $headerH, 'M');
-                $x0 += $w['required'];
-                $pdf->MultiCell($w['in_stock'], $headerH, $header['in_stock'], 1, 'C', true, 0, $x0, $y0, true, 0, false, true, $headerH, 'M');
-                $x0 += $w['in_stock'];
-                $pdf->MultiCell($w['to_order'], $headerH, $header['to_order'], 1, 'C', true, 0, $x0, $y0, true, 0, false, true, $headerH, 'M');
-                $x0 += $w['to_order'];
-                $pdf->MultiCell($w['unit'], $headerH, $header['unit'], 1, 'C', true, 0, $x0, $y0, true, 0, false, true, $headerH, 'M');
-                $x0 += $w['unit'];
-                $pdf->MultiCell($w['value'], $headerH, $header['value'], 1, 'C', true, 1, $x0, $y0, true, 0, false, true, $headerH, 'M');
-
-                $pdf->SetFont('dejavusans', '', 8);
-                $pdf->SetFillColor(245, 245, 245);
-            }
-
-            $x = $pdf->GetX();
-            $y = $pdf->GetY();
-
-            $pdf->MultiCell($w['material'], $h, $material, 1, 'L', $fill, 0, $x, $y, true, 0, false, true, $h, 'M');
-
-            $x += $w['material'];
-            $pdf->MultiCell($w['required'], $h, (string)$required, 1, 'R', $fill, 0, $x, $y, true, 0, false, true, $h, 'M');
-
-            $x += $w['required'];
-            $pdf->MultiCell($w['in_stock'], $h, (string)$inStock, 1, 'R', $fill, 0, $x, $y, true, 0, false, true, $h, 'M');
-
-            $x += $w['in_stock'];
-            $pdf->MultiCell($w['to_order'], $h, (string)$toOrder, 1, 'R', $fill, 0, $x, $y, true, 0, false, true, $h, 'M');
-
-            $x += $w['to_order'];
-            $pdf->MultiCell($w['unit'], $h, $displayUnit, 1, 'C', $fill, 0, $x, $y, true, 0, false, true, $h, 'M');
-
-            $x += $w['unit'];
-            $pdf->MultiCell($w['value'], $h, (string)$approxValue, 1, 'R', $fill, 1, $x, $y, true, 0, false, true, $h, 'M');
-
-            $fill = !$fill;
+            $tableRows[] = [$material, (string)$required, (string)$inStock, (string)$toOrder, $displayUnit, (string)$approxValue];
         }
 
-        // Podsumowanie
-        $pdf->Ln(2);
-        $pdf->SetFont('dejavusans', 'B', 9);
-        $pdf->SetFillColor(239, 239, 239);
-
-        $totalW = $w['material'] + $w['required'] + $w['in_stock'] + $w['to_order'] + $w['unit'];
-        $pdf->Cell($totalW, 7, 'Przybliżony koszt:', 1, 0, 'R', true);
-        $pdf->Cell($w['value'], 7, UnitMapper::formatNumber($sumApproxValue, 2), 1, 1, 'R', true);
-
-        $pdf->SetFont('dejavusans', '', 8);
+        $tableRows[] = ['_total' => ['Przybliżony koszt', '', '', '', '', UnitMapper::formatNumber($sumApproxValue, 2)]];
+        $pdf->brandTable($columns, $tableRows, ['font' => 8.5, 'min_h' => 6]);
     }
 
-    private function estimateLines(TCPDFService $pdf, string $text, float $width): int
-    {
-        $text = trim($text);
-        if ($text === '') return 1;
-
-        // getNumLines bazuje na aktualnym foncie
-        $lines = (int)$pdf->getNumLines($text, $width);
-        return max(1, $lines);
-    }
-
-    private function formatNumber(float $n): string
-    {
-        // bez narzucania jednostki/formatu biznesowego
-        return rtrim(rtrim(number_format($n, 3, '.', ''), '0'), '.');
-    }
 }

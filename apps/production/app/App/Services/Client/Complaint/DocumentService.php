@@ -27,50 +27,29 @@ class DocumentService
         $productListData = $this->complaintService->getGroupedProductReadyToPack($shippingDate);
 
         $pdf = new TCPDFService('P', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
-        $pdf->SetMargins(5, '5', 5);
-        $pdf->SetPrintHeader(false);
-        $pdf->SetPrintFooter(false);
-        $pdf->SetAutoPageBreak(TRUE, 10);
-        $pdf->SetFont('helvetica', '', 12);
 
+        // Jeden klient = jeden dokument (własna numeracja stron) ; kategorie jako wiersze grup, kolumna do odhaczenia
         foreach ($productListData as $item) {
-            $pdf->AddPage();
+            $pdf->brandPage('Reklamacje — lista kompletacyjna', ['ref' => (string) $item['customer_data']]);
+            $pdf->brandHeader('Reklamacje', [
+                ['Data wysyłki', (string) $item['shipping_date']],
+                ['Data wydruku', date("d-m-Y")],
+            ], (string) $item['customer_data']);
 
-            $pdf->SetFont('helvetica', '', 10);
-            $pdf->writeHTMLCell(75, 5, 5, 5, "Data wydruku:   " . date("d-m-Y"), 0, 1, 0, true, 'L', true);
-            $pdf->writeHTMLCell(75, 5, 5, 10, "Data wysylki:   {$item['shipping_date']}", 0, 1, 0, true, 'L', true);
-
-            $pdf->SetFont('helvetica', 'B', 17);
-            $pdf->writeHTMLCell(160, 5, 25, 20, "REKLAMACJE", 0, 1, 0, true, 'C', true);
-
-            $pdf->SetFont('helvetica', '', 14);
-            $pdf->writeHTMLCell(160, 5, 25, 30, "{$item['customer_data']}", 0, 1, 0, true, 'C', true);
-
-            $pdf->Ln();
-
-            $pdf->SetFont('', 'B', 12);
-            $pdf->Cell(85, 7, 'Kategoria', 1, 0, 'C');
-            $pdf->Cell(85, 7, 'Produkt', 1, 0, 'C');
-            $pdf->Cell(30, 7, 'Ilosc (karton)', 1, 0, 'C');
-
-
-            $pdf->Ln();
-
-            $pdf->SetFont('helvetica', '', 9);
-
-            $lastCategory = "";
+            $rows = [];
+            $lastCategory = null;
             foreach ($item['product_data'] as $row) {
-                $currCategory = $row['category_name'];
-                if (strcmp($lastCategory, $currCategory) == 0) $currCategory = "";
-
-                $pdf->Cell(85, 6, $currCategory, 'LR', 0, 'L');
-                $pdf->Cell(85, 6, $row['product_name'], 'LR', 0, 'L');
-                $pdf->Cell(30, 6, $row['sum'], 'LR', 0, 'C');
-                $pdf->Ln();
-                $lastCategory = $row['category_name'];
+                if ($row['category_name'] !== $lastCategory) {
+                    $rows[] = ['_group' => $row['category_name']];
+                    $lastCategory = $row['category_name'];
+                }
+                $rows[] = [$row['product_name'], $row['sum'], ''];
             }
-
-            $pdf->Cell(200, 0, '', 'T');
+            $pdf->brandTable([
+                ['label' => 'Produkt', 'w' => 76],
+                ['label' => 'Ilość (karton)', 'w' => 16, 'align' => 'R'],
+                ['label' => '✓', 'w' => 8, 'align' => 'C'],
+            ], $rows, ['font' => 9, 'head_font' => 8, 'min_h' => 6.5]);
         }
 
         $base = $pdf->Output('WYSYLKA_ZWROTY.pdf', 'D');

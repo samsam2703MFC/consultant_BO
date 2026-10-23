@@ -19,26 +19,41 @@ class FinalProductStockStateService implements IDocument
 
     public function renderDocument(TCPDFService $pdf, array $data): TCPDFService
     {
+        $pdf->brandPage('Stan magazynowy', ['ref' => date('d.m.Y')]);
+        // data stanu wpisywana ręcznie przy liczeniu (wydruk przed inwentaryzacją)
+        $pdf->brandHeader('Stan magazynowy', [
+            ['Data stanu', '......................'],
+            ['Wydruk', date('d.m.Y H:i')],
+        ], 'Produkty gotowe w magazynie i wartość surowców');
 
-//        $headerData = ["header_title" => "Stan magazynowy", "header_subtitle" => date('d-m-Y')];
-        $headerData = ["header_title" => "Stan magazynowy", "header_subtitle" => "........................"];
-        $header = array(
-            "Produkt",
-            "Ilość kartonów",
-            "Wartość");
+        $zl = fn($v) => number_format((float) $v, 2, ',', ' ') . ' zł';
+        $rows = [];
+        $total = 0.0;
+        $fromCard = 0;
+        $withoutCost = 0;
+        foreach ($data['productData'] as $item) {
+            // * koszt z karty produktu (brak receptury) ; ** brak kosztu — poza sumą
+            $source = $item['cost_source'] ?? 'recipe';
+            $mark = $source === 'card' ? ' *' : ($source === 'none' ? ' **' : '');
+            if ($source === 'card') $fromCard++;
+            if ($source === 'none') $withoutCost++;
+            $rows[] = [$item['name'] . $mark, $item['count_in_stock'], $item['total_material_cost'] === null ? 'brak kosztu' : $zl($item['total_material_cost'])];
+            $total += (float) ($item['total_material_cost'] ?? 0);
+        }
+        $rows[] = ['_total' => ['Suma', '', $zl($total)]];
 
-        $pdf->AddPage();
-        $pdf->customHeader($headerData);
-        $pdf->setPrintFooter(false);
-//        $pdf->customFooter(["info_1" => ""]);
-        $pdf->setMargins(1, 1, 1);
+        $pdf->brandTable([
+            ['label' => 'Produkt', 'w' => 120],
+            ['label' => 'Ilość kartonów', 'w' => 30, 'align' => 'R'],
+            ['label' => 'Wartość', 'w' => 36, 'align' => 'R'],
+        ], $rows, ['font' => 8.5]);
 
-        $pdf->SetTextColor(0,0,0);
-        $pdf->SetFont('helvetica', '', 12);
-
-        $pdf->Ln(10);
-        $pdf->fillStockList($header, $data['productData']);
-        $pdf->Ln(7);
+        if ($fromCard) {
+            $pdf->brandNote("* Produkt bez receptury: koszt surowców kartonu z karty produktu ({$fromCard}).");
+        }
+        if ($withoutCost) {
+            $pdf->brandNote("** Brak kosztu surowców (receptura bez składników albo produkt bez receptury): produkt poza sumą ({$withoutCost}).");
+        }
 
         return $pdf;
     }

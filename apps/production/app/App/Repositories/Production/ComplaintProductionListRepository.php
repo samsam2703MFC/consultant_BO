@@ -21,6 +21,8 @@ class ComplaintProductionListRepository extends BaseRepository
 
     public function createTemporaryTable()
     {
+        // ta sama nazwa co lista produkcyjna : obie listy w jednym połączeniu
+        $this->executeStatement('DROP TEMPORARY TABLE IF EXISTS production_list_tmp');
         $sql = "CREATE TEMPORARY TABLE production_list_tmp (
                     id_product INT PRIMARY KEY,
                     name VARCHAR(255),

@@ -62,7 +62,7 @@ class MailAutomationController extends BaseController
         if ($address !== '' && !filter_var($address, FILTER_VALIDATE_EMAIL)) {
             return $this->json(['message' => 'Nieprawidłowy adres biura rachunkowego.'], 422);
         }
-        if (!in_array($language, ['fr', 'nl', 'pl'], true)) {
+        if (!in_array($language, ['fr', 'nl', 'pl', 'en'], true)) {
             return $this->json(['message' => 'Nieprawidłowy język.'], 422);
         }
         $user = GlobalRegistry::get('user');

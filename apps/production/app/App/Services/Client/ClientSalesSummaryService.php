@@ -4,6 +4,7 @@ namespace App\Services\Client;
 
 use App\Repositories\Analysis\WdtSalesRepository;
 use App\Repositories\Client\ClientRepository;
+use App\Services\Utils\DocumentLabels;
 use App\Services\Utils\TCPDFService;
 
 class ClientSalesSummaryService
@@ -13,6 +14,14 @@ class ClientSalesSummaryService
     public const SORT_QTY_DESC  = 'qty_desc';
     public const SORT_AVG_ASC   = 'avg_asc';
     public const SORT_AVG_DESC  = 'avg_desc';
+
+    /** Etykiety PDF w języku klienta (polski zawsze, drugi język pod spodem). */
+    private const PDF_LABELS = [
+        'period' => ['pl' => 'Okres', 'fr' => 'Période', 'nl' => 'Periode', 'en' => 'Period'],
+        'months' => ['pl' => 'Liczba miesięcy', 'fr' => 'Nombre de mois', 'nl' => 'Aantal maanden', 'en' => 'Number of months'],
+        'avg_month' => ['pl' => 'Śr./mies.', 'fr' => 'Moy./mois', 'nl' => 'Gem./maand', 'en' => 'Avg./month'],
+        'total' => ['pl' => 'Łącznie', 'fr' => 'Total', 'nl' => 'Totaal', 'en' => 'Total'],
+    ];
 
     private const ALLOWED_SORTS = [
         self::SORT_NAME_ASC,
@@ -126,58 +135,40 @@ class ClientSalesSummaryService
     {
         $summary = $this->getSummary($idCustomer, $dateFrom, $dateTo, $sort);
 
+        $lang = $this->clientRepository->communicationLang($idCustomer);
+        $sub = fn(string $key) => $lang === 'pl' ? '' : (self::PDF_LABELS[$key][$lang] ?? '');
+        $pair = fn(string $key) => self::PDF_LABELS[$key]['pl'] . ($sub($key) !== '' ? ' / ' . $sub($key) : '');
+
         $pdf = new TCPDFService('P', 'mm', 'A4', true, 'UTF-8', false);
         $pdf->SetCreator('Asima ERP');
         $pdf->SetAuthor('Asima ERP');
         $pdf->SetTitle('Podsumowanie sprzedaży');
-        $pdf->setPrintHeader(false);
-        $pdf->setPrintFooter(false);
-        $pdf->SetMargins(15, 15, 15);
-        $pdf->SetAutoPageBreak(true, 15);
-        $pdf->AddPage();
 
         // ── Nagłówek ───────────────────────────────────────────────────
-        $pdf->SetFont('dejavusans', 'B', 14);
-        $pdf->Cell(0, 8, 'Podsumowanie sprzedaży WDT', 0, 1, 'C');
-
-        $pdf->SetFont('dejavusans', '', 10);
-        $pdf->Cell(0, 6, $summary['customer']['company'], 0, 1, 'C');
-        $pdf->Cell(0, 6, 'Okres: ' . $dateFrom . ' – ' . $dateTo . '  (' . $summary['period']['months_in_period'] . ' mies.)', 0, 1, 'C');
-        $pdf->Ln(4);
+        $pdf->brandPage('Podsumowanie sprzedaży WDT', ['ref' => (string) $summary['customer']['company'], 'lang' => $lang]);
+        $pdf->brandHeader('Podsumowanie sprzedaży WDT', [
+            [$pair('period'), $dateFrom . ' – ' . $dateTo],
+            [$pair('months'), (string) $summary['period']['months_in_period']],
+        ], implode(' · ', array_filter([DocumentLabels::sub('doc_sales_summary', $lang), (string) $summary['customer']['company']])));
 
         // ── Tabela ─────────────────────────────────────────────────────
-        $colWidths = [10, 18, 97, 35, 30];
-
-        $pdf->SetFont('dejavusans', 'B', 9);
-        $pdf->SetFillColor(230, 230, 230);
-        $pdf->Cell($colWidths[0], 7, '#',              'B', 0, 'C', true);
-        $pdf->Cell($colWidths[1], 7, 'ID',             'B', 0, 'C', true);
-        $pdf->Cell($colWidths[2], 7, 'Nazwa produktu', 'B', 0, 'L', true);
-        $pdf->Cell($colWidths[3], 7, 'Kartony',        'B', 0, 'R', true);
-        $pdf->Cell($colWidths[4], 7, 'Śr./mies.',      'B', 1, 'R', true);
-
-        $pdf->SetFont('dejavusans', '', 9);
-        $fill = false;
+        $rows = [];
         foreach ($summary['products'] as $i => $p) {
-            $pdf->SetFillColor(245, 245, 245);
-            $pdf->Cell($colWidths[0], 6, $i + 1,                             'B', 0, 'C', $fill);
-            $pdf->Cell($colWidths[1], 6, (int)$p['id_product'],              'B', 0, 'C', $fill);
-            $pdf->Cell($colWidths[2], 6, $p['name'],                         'B', 0, 'L', $fill);
-            $pdf->Cell($colWidths[3], 6, (int)$p['total_cartons'],           'B', 0, 'R', $fill);
-            $pdf->Cell($colWidths[4], 6, number_format((float)$p['avg_cartons_per_month'], 2, ',', ' '), 'B', 1, 'R', $fill);
-            $fill = !$fill;
+            $rows[] = [$i + 1, (int)$p['id_product'], $p['name'], DocumentLabels::number((int)$p['total_cartons']),
+                number_format((float)$p['avg_cartons_per_month'], 2, ',', ' ')];
         }
-
         // ── Wiersz sumy i średniej ──────────────────────────────────────
-        $pdf->SetFont('dejavusans', 'B', 9);
-        $pdf->SetFillColor(210, 210, 210);
-        $pdf->Cell($colWidths[0] + $colWidths[1] + $colWidths[2], 7, 'Łącznie',                                                            'T', 0, 'R', true);
-        $pdf->Cell($colWidths[3],                                  7, (int)$summary['total_cartons'],                                       'T', 0, 'R', true);
-        $pdf->Cell($colWidths[4],                                  7, number_format((float)$summary['avg_cartons_per_month'], 2, ',', ' '), 'T', 1, 'R', true);
+        $rows[] = ['_total' => ['', '', $pair('total'), DocumentLabels::number((int)$summary['total_cartons']),
+            number_format((float)$summary['avg_cartons_per_month'], 2, ',', ' ')]];
+        $pdf->brandTable([
+            ['label' => '#', 'w' => 6, 'align' => 'C'],
+            ['label' => 'ID', 'w' => 11, 'align' => 'C'],
+            ['label' => DocumentLabels::get('product'), 'sub' => DocumentLabels::sub('product', $lang), 'w' => 55],
+            ['label' => DocumentLabels::get('cartons'), 'sub' => DocumentLabels::sub('cartons', $lang), 'w' => 14, 'align' => 'R'],
+            ['label' => self::PDF_LABELS['avg_month']['pl'], 'sub' => $sub('avg_month'), 'w' => 14, 'align' => 'R'],
+        ], $rows, ['font' => 8.5, 'head_font' => 7.5]);
 
-        $pdf->Ln(3);
-        $pdf->SetFont('dejavusans', '', 8);
-        $pdf->MultiCell(0, 4, 'Śr./mies. = kartony ÷ liczba miesięcy, w których produkt był kupowany (jak w Analizie sprzedaży). Dokumenty WDT zastąpione korektą nie są liczone.', 0, 'L');
+        $pdf->brandNote('Śr./mies. = kartony ÷ liczba miesięcy, w których produkt był kupowany (jak w Analizie sprzedaży). Dokumenty WDT zastąpione korektą nie są liczone.');
 
         $filename = 'sprzedaz_wdt_' . $summary['customer']['id'] . '_' . $dateFrom . '_' . $dateTo . '.pdf';
 
