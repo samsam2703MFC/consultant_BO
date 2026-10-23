@@ -263,7 +263,7 @@ class App {
       // Tableau des magasins, Objectifs de CA et Marge & coûts sont devenus
       // des onglets de Résultat (16/10/2026) : leur adresse ouvre l'onglet.
       if (App.PERF_ONGLETS[depart]) { this.state.rjOnglet = App.PERF_ONGLETS[depart]; this.state.screen = 'resultatJour'; }
-      else { this.state.screen = depart; }
+      else { this.state.screen = depart; Object.assign(this.state, this.etatDeAdresse(depart)); }
       // Arrivé par une adresse retirée, l'URL se remet d'aplomb : on ne laisse
       // pas « #/stock » dans la barre d'un écran qui n'est plus le stock.
       const juste = this.adresseDe(this.state.screen);
@@ -281,7 +281,10 @@ class App {
         if (location.hash !== juste) { this._hashInterne = juste; location.hash = juste; }
         return;
       }
-      if (id !== this.state.screen) { this.setState({ screen: id, hmHover: null }); return; }
+      if (id !== this.state.screen) { this.setState(Object.assign({ screen: id, hmHover: null }, this.etatDeAdresse(id))); return; }
+      // Même écran, autre magasin dans l'adresse (« ?shop=3 » changé à la main) : la page suit.
+      const etat = this.etatDeAdresse(id);
+      if (Object.keys(etat).some(k => String(this.state[k] ?? '') !== String(etat[k] ?? ''))) { this.setState(etat); return; }
       // Même écran, mais adresse retirée (« #/stock » alors qu'on est déjà sur
       // les commandes) : la barre d'adresse se remet d'aplomb, sans quoi elle
       // afficherait un écran qui n'existe plus.
@@ -414,18 +417,38 @@ class App {
     // de fonctionner.
     return Object.prototype.hasOwnProperty.call(t, brut) ? brut : '';
   }
-  /** L'adresse d'un écran, pour un lien à copier. */
+  /**
+   * L'adresse d'un écran, pour un lien à copier. La page franchisé des primes porte son magasin (23/10/2026, Sam :
+   * « dans la barre il doit y avoir l'id shop, je le changerai à la main pour vérifier ») : #/primes-app-worker?shop=3 ;
+   * sans magasin, c'est la page admin.
+   */
   adresseDe(id){
-    return '#/' + (App.ADRESSES[id] || id);
+    const base = '#/' + (App.ADRESSES[id] || id);
+    if (id === 'primesApp' && this.state.prSection === 'franchise' && this.state.prShop) { return base + '?shop=' + encodeURIComponent(this.state.prShop); }
+    return base;
+  }
+  /** Ce que l'adresse dit en plus de l'écran : le magasin de la page franchisé des primes. */
+  etatDeAdresse(id){
+    if (id !== 'primesApp') { return {}; }
+    const q = new URLSearchParams(String(location.hash || '').split('?')[1] || '');
+    const shop = (q.get('shop') || '').trim();
+    return shop ? { prSection: 'franchise', prShop: shop } : { prSection: 'marque' };
+  }
+  /** Remet l'adresse d'aplomb sans ajouter de pas à l'historique (un magasin choisi par défaut). */
+  adresseSansHistorique(){
+    const cible = this.adresseDe(this.state.screen);
+    if (location.hash !== cible) { try { history.replaceState(null, '', cible); } catch (e) { /* adresse inchangée */ } }
   }
   setState(patch){
     const avant = this.state.screen;
+    const avantAdr = location.hash;
     Object.assign(this.state, typeof patch === 'function' ? patch(this.state) : patch);
     // L'ancre suit l'écran — et l'historique avec elle : le bouton « retour »
     // du navigateur ramène à l'écran précédent, ce qu'on attend d'une adresse.
-    if (this.state.screen !== avant) {
+    // Les primes suivent aussi leur page (admin ou franchisé) et leur magasin.
+    if (this.state.screen !== avant || this.state.screen === 'primesApp') {
       const cible = this.adresseDe(this.state.screen);
-      if (location.hash !== cible) { this._hashInterne = cible; location.hash = cible; }
+      if (avantAdr !== cible && location.hash !== cible) { this._hashInterne = cible; location.hash = cible; }
     }
     this.render();
   }
@@ -1459,7 +1482,7 @@ class App {
       // et le sous-menu « Primes · module app worker » d'ERP franchisé.
       ['Application employé', [
         ['primesApp', 'Page admin', 0, [], { prSection: 'marque' }],
-        ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise' }],
+        ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise', prShop: '' }],
         ['ext:employee/auth', 'Application ↗', 0]]],
         // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
       ['Administration', [
@@ -1471,7 +1494,8 @@ class App {
     // écran de la console, elle vit à côté), couvrir des écrans alias (c[3]) ou poser un état en plus de
     // l'écran (c[4], ex. l'onglet Client mystère, la page admin ou franchisé de l'application employé).
     const cExt = c => c[0].indexOf('ext:') === 0;
-    const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).every(k => (S[k] || ({ sqVue: 'tableau', prSection: 'marque' }[k] || '')) === c[4][k]));
+    // Le magasin de la page franchisé (prShop) ne compte pas : l'entrée reste allumée quel que soit le magasin.
+    const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).filter(k => k !== 'prShop').every(k => (S[k] || ({ sqVue: 'tableau', prSection: 'marque' }[k] || '')) === c[4][k]));
     const cGo = c => cExt(c) ? () => window.open(c[0].slice(4), '_blank', 'noopener') : (c[4] ? () => this.setState(Object.assign({ screen: c[0], railOuvert: false }, c[4])) : goTo(c[0]));
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
       if (Array.isArray(it)) {
@@ -6196,6 +6220,18 @@ class App {
       if (e.type === 'promo') { const p = (moy.promos || []).find(x => x.cle === e.cle); return p && p.reseau != null ? fr(p.reseau, 0) + ' / vend. depuis le début' : ''; }
       return '';
     };
+    // La même moyenne, pour UN magasin (la page franchisé, 23/10/2026) : ses chiffres à lui.
+    const moyMagDe = sid => (moy ? (moy.magasins || []).find(m => String(m.id) === String(sid)) || null : null);
+    const moyDeMag = (e, sid) => {
+      if (e.cle === 'google') { const v = ((d.google || {}).notes || {})[sid]; return v != null ? fr(v, 1) + ' ★ aujourd’hui' : ''; }
+      const M = moyMagDe(sid);
+      if (!M) { return ''; }
+      if (e.cle === 'croisees') { const ci = cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut; return [M.croisees != null ? pc(M.croisees) : '', 'cible du magasin ' + fr(+ci, 1) + ' %'].filter(Boolean).join(' · '); }
+      if (e.cle === 'objectif') { return M.atteinte != null ? pc(M.atteinte) + ' de l’objectif' : ''; }
+      if (e.type === 'categorie') { const v = (M.pieces || {})[e.cle]; return v != null ? fr(v, 0) + ' pcs / vend.' : ''; }
+      if (e.type === 'promo') { const p = (moy.promos || []).find(x => x.cle === e.cle); const v = p ? (p.magasins || {})[sid] : null; return v != null ? fr(v, 0) + ' / vend. depuis le début' : ''; }
+      return '';
+    };
     const emo = e => (e.cle === 'croisees' ? '🛍️' : e.cle === 'objectif' ? '🏪' : e.cle === 'google' ? '⭐' : e.type === 'promo' ? '🏷️' : '👑');
     // Les icônes déposées (public/uploads/primes) : servies à côté du cockpit, à la place de l'emoji dans l'app.
     const racine = API_BASE.replace(/api\/cockpit\/?$/, '');
@@ -6248,7 +6284,10 @@ class App {
         periodeTxt: e.type === 'promo' ? '' : periodeDe(e).txt, etatPeriode: periodeDe(e).etat,
         payeurTxt: payeurTxt(e), montantTxt: e.cadeau ? '🎁 ' + e.cadeau.nom + (e.cadeau.valeur ? ' (valeur ' + e.cadeau.valeur + ' €)' : '') : (e.montant ?? app.recompense) + ' €' + (e.type === 'promo' && e.regle === 'magasin' ? ' par magasin' : ''),
         basculer: ev => { e.actif = !!ev.target.checked; sauver('« ' + (e.lib || e.cle) + ' » ' + (e.actif ? 'activée' : 'éteinte')); },
-        modifier: () => this.setState(e.type === 'promo' || e.type === 'categorie' ? { prWiz: wizDe(e) } : { prEdit: editDe(e) }) });
+        modifier: () => this.setState(e.type === 'promo' || e.type === 'categorie' ? { prWiz: wizDe(e) } : { prEdit: editDe(e) }),
+        // Pour la page d'un magasin : où la prime tourne, sa moyenne et son objectif dans ce magasin.
+        shops: e.type === 'promo' ? ((e.promo || {}).shops || []).map(String) : [], moyMag: sid => moyDeMag(e, sid),
+        objectifMag: sid => (e.objectifs && e.objectifs[sid] != null ? 'objectif du magasin : ' + e.objectifs[sid] + ' pcs' + (e.regle === 'vendeuse' && e.objVend && e.objVend[sid] ? ' · ' + e.objVend[sid] + ' par vendeuse' : '') : '') });
       // Ce qui compte, en clair (le tableau ne s'édite plus).
       const regleTxt = { seuil: (e.minPieces || 0) + ' pcs (seuil)', premiere: e.minPieces ? e.minPieces + ' pcs min.' : '' };
       const hMin = k => (k.heuresMin ?? 20) > 0 ? ' · ' + (k.heuresMin ?? 20) + ' h min.' : '';
@@ -6294,11 +6333,13 @@ class App {
       if (e.cle === 'croisees' && (d.record || {}).eurDixieme > 0) {
         lignes.push(Object.assign(ext('record'), { externe: true, type: 'target', typLib: 'Target', emo: '🚀', lib: 'Bats ton record', texte: 'lignes par ticket au-dessus du record 12 mois, dès + 0,2',
           montant: d.record.eurDixieme + ' € par dixième' + (d.record.maxDixiemes > 1 ? ', ' + d.record.maxDixiemes + ' au plus' : ''),
-          qui: 'chacune', moyenne: R && R.lignesTicket != null ? fr(R.lignesTicket, 2) + ' lignes / ticket' : '' }));
+          qui: 'chacune', moyenne: R && R.lignesTicket != null ? fr(R.lignesTicket, 2) + ' lignes / ticket' : '',
+          shops: [], moyMag: sid => { const M = moyMagDe(sid); return M && M.lignesTicket != null ? fr(M.lignesTicket, 2) + ' lignes / ticket' : ''; }, objectifMag: () => '' }));
       }
       if (e.cle === 'objectif' && (d.meilleure || {}).magasin > 0) {
         lignes.push(Object.assign(ext('meilleure'), { externe: true, type: 'classement', typLib: 'Classement', emo: '🏆', lib: 'Meilleure vendeuse', texte: 'CA par heure prestée, pondéré par les heures',
-          montant: d.meilleure.magasin + ' € magasin · ' + d.meilleure.reseau + ' € réseau', qui: '1re du magasin, du réseau', moyenne: '' }));
+          montant: d.meilleure.magasin + ' € magasin · ' + d.meilleure.reseau + ' € réseau', qui: '1re du magasin, du réseau', moyenne: '',
+          shops: [], moyMag: () => '', objectifMag: () => '' }));
       }
     });
     // L'assistant « Nouvelle prime promotion » (16/10/2026) : quatre étapes — les produits (une barre de recherche sur
@@ -6510,7 +6551,8 @@ class App {
           : surObj ? (nVendTot ? '≈ ' + fr(nVendTot, 0) + ' vendeuses × ' + (montant || 0) + ' € = ' + Math.round(nVendTot * (montant || 0)) + ' € au plus' : (montant || 0) + ' € par vendeuse')
           : W.regle === 'seuil' ? (montant || 0) + ' € par vendeuse au seuil' : fam ? (montant || 0) + ' € au plus, payés par le magasin' : nbMags + ' magasin' + (nbMags > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + (nbMags * (montant || 0)) + ' € au plus',
         // Rouverte, la prime d'un franchisé reste à son magasin (sa clé le porte).
-        magsUn: magsPermis.filter(m => !W.edit || !fam || m.id === W.shop).map(m => ({ nom: court(m.nom), on: W.shop === m.id, choisir: () => { W.shop = m.id; reW(); } })),
+        // Sur la page d'un magasin (23/10/2026), la prime est la sienne : le magasin est fixé.
+        magsUn: magsPermis.filter(m => (!W.edit || !fam || m.id === W.shop) && (common.prSection !== 'franchise' || String(m.id) === String(S.prShop))).map(m => ({ nom: court(m.nom), on: W.shop === m.id, choisir: () => { W.shop = m.id; reW(); } })),
         ok: ok[W.etape], envoi: W.envoi,
         pas: ['Produits', estCat ? 'Chaque mois' : 'Période & magasins', 'Qui gagne', 'Nom & aperçu'].map((nom, i) => ({ n: i + 1, nom, on: W.etape === i + 1, fait: W.etape > i + 1, aller: W.etape > i + 1 ? () => { W.etape = i + 1; reW(); } : null })),
         poserQ: ev => { W.q = ev.target.value; reW(); },
@@ -6758,6 +6800,64 @@ class App {
         document.body.appendChild(a); a.click(); a.remove();
       },
     };
+
+    // La page franchisé (23/10/2026, Sam : « le panneau de contrôle des primes pour son magasin ») : UN magasin, celui de
+    // l'adresse (#/primes-app-worker?shop=3). Les primes de la marque et des sponsors qui y tournent, à lire ; les siennes,
+    // à poser avec les données du magasin ; ses moyennes face au réseau ; les promotions du panel qui y tournent.
+    common.prFr = null;
+    if (common.prSection === 'franchise') {
+      const ids = (d.magasins || []).map(m => String(m.id));
+      let sid = S.prShop != null ? String(S.prShop) : '';
+      if (!sid) {
+        // Arrivé par le rail sans magasin : le dernier ouvert, sinon le premier ; l'adresse le dit aussitôt.
+        let memo = ''; try { memo = localStorage.getItem('cockpit.prShop') || ''; } catch (e) { /* navigation privée */ }
+        sid = ids.includes(memo) ? memo : (ids[0] || '');
+        this.state.prShop = sid; this.adresseSansHistorique();
+      }
+      const connu = ids.includes(sid);
+      if (connu) { try { localStorage.setItem('cockpit.prShop', sid); } catch (e) { /* navigation privée */ } }
+      const M = moyMagDe(sid);
+      const tourneIci = l => !(l.shops || []).length || l.shops.includes(sid);
+      const marque = lignes.filter(l => l.famille !== 'magasin' && (l.externe || l.actif) && l.etatPeriode !== 'terminée' && tourneIci(l))
+        .map(l => Object.assign({}, l, { moyenne: l.moyMag ? l.moyMag(sid) : '', objectifTxt: l.objectifMag ? l.objectifMag(sid) : '' }));
+      const siennes = lignes.filter(l => l.famille === 'magasin' && String(l.shop) === sid)
+        .map(l => Object.assign({}, l, { moyenne: l.moyMag ? l.moyMag(sid) : '', objectifTxt: l.objectifMag ? l.objectifMag(sid) : '' }));
+      const promosIci = (promos ? promos.liste : []).filter(p => !(p.shops || []).length || p.shops.map(String).includes(sid)).map(p => {
+        const eMag = prisesMag[p.source + ':' + p.id + ':' + sid]; const eMarque = prises[p.source + ':' + p.id];
+        return { nom: p.nom, sorte: sorte(p), prix: p.prix != null ? fr(p.prix, 2) + ' €' : '', dates: dates(p), portee: (p.shops || []).length ? 'ce magasin' : 'tout le réseau',
+          produits: (p.ids || []).length ? (p.ids.length + ' produit' + (p.ids.length > 1 ? 's' : '')) : 'produit introuvable', comptable: (p.ids || []).length > 0,
+          marque: eMarque ? (eMarque.actif ? 'prime de la marque' : 'prime de la marque éteinte') : '',
+          statutMag: eMag ? (eMag.actif ? 'prime du magasin' : 'prime du magasin éteinte') : '',
+          ajouter: eMag || !(p.ids || []).length ? null : () => this.setState({ prWiz: Object.assign(wizNeuf('magasin', sid, p), { etape: 2 }) }) };
+      });
+      const ent = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
+      const cible = cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut;
+      const stat = (lib, v, vr, sous) => ({ lib, v: v || '—', reseau: vr ? 'réseau ' + vr : '', sous: sous || '' });
+      // Vendeuses et tickets : le réseau en fait la somme ; face à un magasin, la moyenne par magasin.
+      const nMagMoy = moy ? (moy.magasins || []).length : 0;
+      const parMag = v => (v != null && nMagMoy ? v / nMagMoy : null);
+      common.prFr = {
+        id: sid, nom: nomMag[sid] || '', connu,
+        magasins: (d.magasins || []).map(m => ({ id: String(m.id), nom: court(m.nom), aller: () => this.setState({ prShop: String(m.id) }) })),
+        marque, siennes, nSiennesMax: 6,
+        nouvelle: connu ? () => this.setState({ prWiz: wizNeuf('magasin', sid) }) : null,
+        note: d.google && d.google.notes && d.google.notes[sid] != null ? fr(d.google.notes[sid], 1) + ' ★' : '',
+        moyChargement: moy === undefined, moyMotif: moy === null ? 'Les moyennes n’ont pas pu être calculées.' : (moy && !M ? 'Pas de moyennes pour ce magasin sur ' + n + ' mois.' : ''),
+        ns: [1, 3, 6].map(k => ({ nom: k + ' mois', on: k === n, choisir: () => this.setState({ prMoyN: k }) })), periode: moy ? moy.mois.map(x => x.lib).join(', ') : '',
+        donnees: !M ? [] : [
+          stat('Vendeuses', fr(M.vendeuses, 1), R && parMag(R.vendeuses) != null ? fr(parMag(R.vendeuses), 1) + ' par magasin' : '', 'par mois'),
+          stat('Tickets', ent(M.tickets), R && parMag(R.tickets) != null ? ent(parMag(R.tickets)) + ' par magasin' : '', 'par mois'),
+          stat('Tickets par vendeuse', ent(M.ticketsVendeuse), R ? ent(R.ticketsVendeuse) : '', 'par mois'),
+          stat('Ticket moyen', M.ticketMoyen != null ? fr(M.ticketMoyen, 2) + ' €' : '', R && R.ticketMoyen != null ? fr(R.ticketMoyen, 2) + ' €' : ''),
+          stat('Lignes par ticket', fr(M.lignesTicket, 2), R ? fr(R.lignesTicket, 2) : ''),
+          stat('Ventes croisées', pc(M.croisees), R ? pc(R.croisees) : '', 'cible du magasin ' + fr(+cible, 1) + ' %'),
+          stat('Objectif atteint', pc(M.atteinte), R ? pc(R.atteinte) : '', 'CA du mois'),
+        ],
+        pieces: !M ? [] : cats.map(c => ({ lib: c.lib, v: fr((M.pieces || {})[c.cle], 0) || '—', reseau: R ? fr((R.pieces || {})[c.cle], 0) : '' })),
+        promosVend: !M ? [] : prs.map(p => ({ lib: p.lib, du: p.du ? jj(p.du) : '', v: fr((p.magasins || {})[sid], 0) || '—', reseau: fr(p.reseau, 0) })),
+        promos: { chargement: promos === undefined, motif: promos === null ? 'Les promotions n’ont pas pu être lues.' : (promos && !promos.api ? PR_MOTIF() : ''), liste: promosIci, relire: () => { delete this._prL.promos; this.setState({ prPromosFrais: true }); } },
+      };
+    }
   }
 
   valsVentes(common){

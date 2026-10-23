@@ -7004,9 +7004,9 @@ function tplPrimesApp(c, x){
   const tuile = l => `<label title="Déposer une icône — PNG, SVG, WebP ou JPEG, 1 Mo au plus" data-pr-icone style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:var(--radius-md);background:var(--color-background-secondary);border:0.5px ${l.icone ? 'solid' : 'dashed'} var(--color-border-secondary);overflow:hidden;cursor:pointer;vertical-align:middle">${l.icone ? `<img src="${esc(l.icone)}" alt="" style="width:24px;height:24px;object-fit:contain">` : `<span style="font-size:16px;line-height:1">${l.emo}</span>`}<input type="file" accept="image/png,image/svg+xml,image/webp,image/jpeg" ${x.C(l.poserIcone)} style="display:none"></label>${l.icone ? `<button ${x.A(l.retirerIcone)} title="Retirer l’icône (l’emoji revient)" style="border:0;background:transparent;color:var(--color-text-muted);cursor:pointer;font-size:10px;padding:0 var(--spacing-xs);vertical-align:top">✕</button>` : ''}`;
   const nomPrime = (l, nom) => `<span style="display:inline-flex;align-items:center;gap:var(--spacing-sm)">${tuile(l)}${nom}</span>`;
   const P = c.prApp, PR = c.prPromos, MY = c.prMoy;
-  // Deux entrées du rail (23/10/2026) : « Paramètres primes » montre la marque, les promotions et les moyennes ;
-  // « Paramètres primes franchisé », les primes des franchisés seules.
-  const voir = k => (c.prSection === 'franchise') === (k === 'magasins') ? '' : ' hidden';
+  // Deux entrées du rail (23/10/2026) : la page admin (la marque, les primes de tous les franchisés, les promotions, les
+  // moyennes) ; la page franchisé, celle d'UN magasin (#/primes-app-worker?shop=3), plus bas (tplPrimesMagasin).
+  const voir = () => '';
   // Qui paie la prime : la marque, le magasin ou un sponsor (son nom).
   // Une prime de la marque est payée par la marque ou un sponsor ; celle d'un franchisé, par son magasin (16/10/2026).
   const payeur = l => l.famille === 'magasin' ? `<b>${esc(l.shopNom)}</b><span style="${sm};color:var(--color-text-muted)">payée par le magasin</span>` : `<select ${x.C(l.poserPayeur)} style="${inp(96)};text-align:left">${[['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, t]) => `<option value="${v}"${l.payeur === v ? ' selected' : ''}>${t}</option>`).join('')}</select>${l.payeur === 'sponsor' ? `<br><input value="${esc(l.sponsor)}" placeholder="nom du sponsor" ${x.C(l.poserSponsor)} style="${inp(110)};text-align:left;margin-top:4px">` : ''}`;
@@ -7035,11 +7035,73 @@ function tplPrimesApp(c, x){
         <td style="${td2};text-align:left;white-space:normal">${esc(l.payeurTxt || '')}</td>
         <td style="${td2};white-space:normal">${l.externe ? `${esc(l.montant)}<span style="${sm}">réglé dans Targets &amp; primes</span>` : esc(l.montantTxt || '')}</td>
         <td style="${td2}">${modif(l)}</td></tr>`;
-  const entete = colPayeur => `<thead><tr><th style="${th2};text-align:center">Active</th><th style="${th2};text-align:left">Prime</th><th style="${th2};text-align:left">Type</th><th style="${th2};text-align:left">Ce qui compte</th>
-        <th style="${th2};text-align:left">Moyenne réseau<span style="${sm}">${esc(MY.nMois || '')}, par mois</span></th><th style="${th2};text-align:center">Classement</th><th style="${th2};text-align:left">${colPayeur}</th><th style="${th2}">Récompense</th><th style="${th2}"></th></tr></thead>`;
+  const entete = (colPayeur, moyLib) => `<thead><tr><th style="${th2};text-align:center">Active</th><th style="${th2};text-align:left">Prime</th><th style="${th2};text-align:left">Type</th><th style="${th2};text-align:left">Ce qui compte</th>
+        <th style="${th2};text-align:left">${esc(moyLib || 'Moyenne réseau')}<span style="${sm}">${esc(MY.nMois || '')}, par mois</span></th><th style="${th2};text-align:center">Classement</th><th style="${th2};text-align:left">${colPayeur}</th><th style="${th2}">Récompense</th><th style="${th2}"></th></tr></thead>`;
+  // La page franchisé (23/10/2026) : le panneau des primes d'UN magasin.
+  const FR = c.prFr;
+  const frPage = () => {
+    const tete = `<div style="${carte2};padding:16px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap" data-pr="fr-tete">
+      <div><div style="${lbl2}">Panneau des primes du magasin</div><div style="font-family:var(--font-display);font-size:26px;margin-top:2px">${esc(FR.nom || 'Magasin ' + FR.id)}</div></div>
+      <span data-pr-shop="${esc(FR.id)}" style="font-size:11.5px;font-weight:700;color:var(--color-text);padding:4px 11px;border-radius:var(--radius-pill);background:var(--color-background-secondary);font-variant-numeric:tabular-nums">shop ${esc(FR.id)}</span>
+      ${FR.note ? `<span style="font-size:11.5px;color:var(--color-text-muted)">note Google ${esc(FR.note)}</span>` : ''}
+      <span style="flex:1"></span>
+      <span style="font-size:11.5px;color:var(--color-text-muted);max-width:430px;line-height:1.45">Les primes de la marque et des sponsors qui tournent dans ce magasin, les siennes, ses chiffres et les promotions du panel qui y tournent. Le magasin se lit dans l’adresse : <b style="color:var(--color-text)">…/#/primes-app-worker?shop=${esc(FR.id)}</b></span>
+    </div>`;
+    if (!FR.connu) {
+      return tete + `<div style="${carte2};padding:16px 18px" data-pr="fr-inconnu"><div style="font-size:13px;color:var(--color-primary);font-weight:600">Aucun magasin « ${esc(FR.id)} » dans le panel.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${FR.magasins.map(m => `<button ${x.A(m.aller)} style="${pill(false)}">${esc(m.nom)} · shop ${esc(m.id)}</button>`).join('')}</div></div>`;
+    }
+    const trLire = l => `<tr data-pr-prime="${esc(l.type)}">
+        <td style="${td2};text-align:left"><span style="display:inline-flex;align-items:center;gap:var(--spacing-sm)">${tuileFixe(l)}<b>${esc(l.lib)}</b>${l.etatPeriode ? `<span data-pr-periode style="font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:var(--radius-pill);background:var(--color-background-secondary);color:var(--color-text-muted)">${esc(l.etatPeriode)}</span>` : ''}</span></td>
+        <td style="${td2};text-align:left">${typ(l.type, l.typLib)}</td>
+        <td style="${td2};text-align:left;white-space:normal;min-width:260px">${esc(l.texte || '')}${l.periodeTxt ? `<span style="${sm};margin-top:3px;color:var(--color-text)">période : ${esc(l.periodeTxt)}</span>` : ''}${l.objectifTxt ? `<span style="${sm};margin-top:3px;color:var(--color-text)">${esc(l.objectifTxt)}</span>` : ''}<span style="${sm};margin-top:3px;color:var(--color-text-muted)">gagne : ${esc(l.qui)}</span></td>
+        <td style="${td2};text-align:left;color:var(--color-popup);font-weight:600;white-space:normal">${esc(l.moyenne || '—')}</td>
+        <td style="${td2};text-align:left;white-space:normal">${esc(l.payeurTxt || '')}</td>
+        <td style="${td2};white-space:normal">${l.externe ? esc(l.montant) : esc(l.montantTxt || '')}</td></tr>`;
+    const marque = `<div style="${carte2};overflow:hidden" data-pr="fr-marque">
+      <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:14px 16px 6px"><div style="font-family:var(--font-display);font-size:22px">Primes de la marque et des sponsors</div><span style="font-size:11.5px;color:var(--color-text-muted)">${FR.marque.length} qui tournent dans ce magasin · posées par la marque, à lire</span></div>
+      ${FR.marque.length ? `<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12.5px">
+        <thead><tr><th style="${th2};text-align:left">Prime</th><th style="${th2};text-align:left">Type</th><th style="${th2};text-align:left">Ce qui compte</th><th style="${th2};text-align:left">Moyenne du magasin<span style="${sm}">${esc(MY.nMois || '')}, par mois</span></th><th style="${th2};text-align:left">Payée par</th><th style="${th2}">Récompense</th></tr></thead>
+        <tbody>${FR.marque.map(trLire).join('')}</tbody></table></div>` : `<div style="padding:6px 16px 16px;font-size:12.5px;color:var(--color-text-muted)">Aucune prime de la marque ni des sponsors ne tourne dans ce magasin pour l’instant.</div>`}
+    </div>`;
+    const siennes = `<div style="${carte2};overflow:hidden" data-pr="fr-magasin">
+      <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:14px 16px 6px"><div style="font-family:var(--font-display);font-size:22px">Les primes du magasin</div><span style="font-size:11.5px;color:var(--color-text-muted)">${FR.siennes.length} / ${FR.nSiennesMax} · posées et payées par le magasin, vues de ses seules vendeuses</span></div>
+      ${FR.siennes.length ? `<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12.5px">
+        ${entete('Payée par', 'Moyenne du magasin')}
+        <tbody>${FR.siennes.map(tr).join('')}</tbody></table></div>` : `<div style="padding:6px 16px 16px;font-size:12.5px;color:var(--color-text-muted)">Aucune prime du magasin pour l’instant : posez la première sur ses produits, avec ses chiffres de l’an dernier.</div>`}
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:var(--color-background-secondary)">
+        ${FR.nouvelle && FR.siennes.length < FR.nSiennesMax ? `<button ${x.A(FR.nouvelle)} style="${bt(true)}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin</button>` : `<span style="font-size:12px;color:var(--color-text-muted)">${FR.nSiennesMax} primes au plus par magasin</span>`}
+        <span style="font-size:11.5px;color:var(--color-text-muted)">L’objectif se calcule sur les ventes du magasin : les mêmes dates l’an dernier, à défaut le rythme des 4 dernières semaines.</span>
+      </div>
+    </div>`;
+    const tuileStat = s => `<div style="background:var(--color-background-secondary);border-radius:var(--radius-md);padding:10px 12px;min-width:0"><div style="${lbl2}">${esc(s.lib)}</div><div style="font-size:19px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums">${esc(s.v)}</div>${s.sous ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(s.sous)}</div>` : ''}${s.reseau ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(s.reseau)}</div>` : ''}</div>`;
+    const donnees = `<div style="${carte2};overflow:hidden" data-pr="fr-donnees">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px"><div style="font-family:var(--font-display);font-size:22px">Les chiffres du magasin</div>${FR.periode ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(FR.periode)} · par mois, face au réseau</span>` : ''}<span style="flex:1"></span>${FR.ns.map(k => `<button ${x.A(k.choisir)} style="${pill(k.on)}">${esc(k.nom)}</button>`).join('')}</div>
+      ${FR.moyChargement ? `<div style="padding:10px 16px 16px;color:var(--color-text-muted);font-size:12.5px">Calcul des moyennes…</div>` : FR.moyMotif ? `<div style="padding:10px 16px 16px;color:var(--color-primary);font-size:12.5px">${esc(FR.moyMotif)}</div>` : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:8px 16px 4px">${FR.donnees.map(tuileStat).join('')}</div>
+      ${FR.pieces.length ? `<div style="padding:10px 16px 0;${lbl2}">Pièces par vendeuse et par mois</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:6px 16px 4px">${FR.pieces.map(p => tuileStat({ lib: p.lib, v: p.v, reseau: p.reseau ? 'réseau ' + p.reseau : '' })).join('')}</div>` : ''}
+      ${FR.promosVend.length ? `<div style="padding:10px 16px 0;${lbl2}">Promotions en cours · pièces par vendeuse</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:6px 16px 4px">${FR.promosVend.map(p => tuileStat({ lib: p.lib, v: p.v, sous: p.du ? 'dès le ' + p.du : '', reseau: p.reseau ? 'réseau ' + p.reseau : '' })).join('')}</div>` : ''}
+      <div style="height:12px"></div>`}
+    </div>`;
+    const PF = FR.promos;
+    const promosIci = `<div style="${carte2};overflow:hidden" data-pr="fr-promos">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px"><div style="font-family:var(--font-display);font-size:22px">Promotions du panel dans ce magasin</div><span style="font-size:11.5px;color:var(--color-text-muted)">une prime du magasin en un geste</span><span style="flex:1"></span><button ${x.A(PF.relire)} style="${bt(false)}">Relire</button></div>
+      ${PF.chargement ? `<div style="padding:10px 16px 16px;color:var(--color-text-muted);font-size:12.5px">Lecture des promotions…</div>` : PF.motif ? `<div style="padding:10px 16px 16px;color:var(--color-primary);font-size:12.5px">${esc(PF.motif)}</div>` : !PF.liste.length ? `<div style="padding:10px 16px 16px;color:var(--color-text-muted);font-size:12.5px">Aucune promotion du panel ne tourne dans ce magasin.</div>` : `
+      <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12.5px">
+        <thead><tr><th style="${th2};text-align:left">Promotion</th><th style="${th2};text-align:left">Sorte</th><th style="${th2}">Prix</th><th style="${th2};text-align:left">Dates</th><th style="${th2};text-align:left">Tourne dans</th><th style="${th2};text-align:left">Ce qui se compte</th><th style="${th2};text-align:center">Prime de la marque</th><th style="${th2};text-align:center">Prime du magasin</th></tr></thead>
+        <tbody>${PF.liste.map(p => `<tr>
+          <td style="${td2};text-align:left"><b>${esc(p.nom)}</b></td><td style="${td2};text-align:left">${typ('promo', p.sorte)}</td><td style="${td2}">${esc(p.prix)}</td>
+          <td style="${td2};text-align:left">${esc(p.dates)}</td><td style="${td2};text-align:left;color:var(--color-text-muted)">${esc(p.portee)}</td>
+          <td style="${td2};text-align:left;color:${p.comptable ? 'var(--color-text-muted)' : 'var(--color-primary)'}">${esc(p.produits)}</td>
+          <td style="${td2};text-align:center;color:var(--color-text-muted)">${esc(p.marque || '—')}</td>
+          <td style="${td2};text-align:center">${p.statutMag ? `<span style="color:${p.statutMag === 'prime du magasin' ? 'var(--color-primary)' : 'var(--color-text-muted)'};font-weight:600">${p.statutMag === 'prime du magasin' ? '✓ ' : ''}${esc(p.statutMag)}</span>` : p.ajouter ? `<button ${x.A(p.ajouter)} style="${bt(false)};padding:5px 11px" data-pr-promo-mag>+ prime du magasin</button>` : ''}</td></tr>`).join('')}</tbody>
+      </table></div>`}
+    </div>`;
+    return tete + marque + siennes + donnees + promosIci;
+  };
   return `
 <div data-screen="primesApp" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
-  ${c.prChargement ? `<div style="${carte2};padding:16px 18px;color:var(--color-text-muted)">Lecture des paramètres…</div>` : c.prMotif ? `<div style="${carte2};padding:16px 18px;color:var(--color-primary)">${esc(c.prMotif)}</div>` : `
+  ${c.prChargement ? `<div style="${carte2};padding:16px 18px;color:var(--color-text-muted)">Lecture des paramètres…</div>` : c.prMotif ? `<div style="${carte2};padding:16px 18px;color:var(--color-primary)">${esc(c.prMotif)}</div>` : FR ? frPage() : `
   <div style="${carte2};overflow:hidden" data-pr="app"${voir('app')}>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
       <div style="font-family:var(--font-display);font-size:22px">Primes de la marque et des sponsors</div>
@@ -7063,6 +7125,7 @@ function tplPrimesApp(c, x){
   <div style="${carte2};overflow:hidden" data-pr="magasins"${voir('magasins')}>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
       <div style="font-family:var(--font-display);font-size:22px">Primes des franchisés</div>
+      <span style="font-size:11.5px;color:var(--color-text-muted)">tous les magasins · la page d’un magasin : Page franchisé, ou #/primes-app-worker?shop=…</span>
       <span style="flex:1"></span>
       ${P.magsFiltre.map(m => `<button ${x.A(m.choisir)} style="${pill(m.on)}">${esc(m.nom)}${m.n ? ' · ' + m.n : ''}</button>`).join('')}
     </div>
