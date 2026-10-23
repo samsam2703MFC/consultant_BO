@@ -7135,6 +7135,38 @@ function tplPrimesApp(c, x){
         <div style="font:600 14px ${sf};color:var(--color-primary)">Aucun magasin « ${esc(FR.id)} » dans le panel.</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${FR.magasins.map(m => `<button ${x.A(m.aller)} style="${btS};background:var(--color-background-secondary);font-weight:500">${esc(m.nom)} · shop ${esc(m.id)}</button>`).join('')}</div></div></section>`;
     }
+    // L'équipe face à ses primes (23/10/2026) : une ligne par vendeuse, une colonne par prime — gagnée en vert, en tête,
+    // sa place, ou sa valeur face à l'objectif avec une barre fine. Le nom reste en place quand le tableau défile.
+    const EQ = FR.equipe;
+    const segm = ls => `<div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${ls.map(k => `<button ${x.A(k.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:500 12.5px ${sf};cursor:pointer;background:${k.on ? 'var(--color-surface)' : 'transparent'};color:${k.on ? 'var(--color-text)' : muet};box-shadow:${k.on ? '0 1px 2px rgba(0,0,0,.08)' : 'none'}">${esc(k.nom)}</button>`).join('')}</div>`;
+    const tonCouleur = { gagne: '#2d7a3e', tete: 'var(--color-primary)', route: 'var(--color-text)', perdu: muet, vide: muet, hors: muet };
+    const caseEq = k => k.ton === 'hors' ? `<td data-eq-case="hors" style="padding:11px 12px;border-top:${filet};color:var(--color-border-secondary);text-align:left">·</td>` : `<td data-eq-case="${esc(k.ton)}" style="padding:11px 12px;border-top:${filet};vertical-align:top;min-width:104px">
+        <div style="font:${k.ton === 'vide' ? 400 : 600} 13.5px/1.3 ${sf};color:${tonCouleur[k.ton] || 'var(--color-text)'};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(k.haut)}</div>
+        ${k.niveau != null && k.ton !== 'gagne' && k.ton !== 'tete' ? `<div style="height:4px;border-radius:2px;background:var(--color-border-tertiary);margin:6px 0 4px;max-width:110px;overflow:hidden"><div style="height:100%;width:${Math.max(3, Math.min(100, k.niveau))}%;border-radius:2px;background:${k.ton === 'perdu' ? 'var(--color-border-secondary)' : k.niveau >= 80 ? '#2d7a3e' : 'var(--color-primary)'}"></div></div>` : ''}
+        ${k.bas ? `<div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(k.bas)}</div>` : ''}</td>`;
+    const colGauche = 'position:sticky;left:0;z-index:1;background:var(--color-surface)';
+    const tableEq = () => `<div style="${groupeSt};margin-top:14px"><div style="overflow-x:auto">
+      <table data-eq style="border-collapse:separate;border-spacing:0;min-width:100%;font-family:${sf}">
+        <thead><tr>
+          <th style="${colGauche};text-align:left;padding:14px 16px 10px;font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};min-width:150px">Vendeuse</th>
+          ${EQ.primes.map(p => `<th data-eq-prime="${esc(p.cle)}" style="text-align:left;padding:14px 12px 10px;vertical-align:bottom;min-width:104px">
+            <div style="font:600 13px/1.25 ${sf};color:var(--color-text);max-width:150px">${esc(p.lib)}</div>
+            <div style="font:400 11.5px/1.35 ${sf};color:${muet};margin-top:3px;white-space:nowrap">${esc(p.recompense)} · ${p.duMagasin ? `<span style="color:var(--color-on-abricot)">${esc(p.payeur)}</span>` : esc(p.payeur)}</div>
+            <div title="${esc(p.compteLong)}" style="font:600 11.5px/1.35 ${sf};color:#2d7a3e;margin-top:2px;white-space:nowrap">✓ ${esc(p.compte)}</div></th>`).join('')}
+          <th style="text-align:right;padding:14px 16px 10px;vertical-align:bottom;font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};white-space:nowrap">${EQ.enCours ? 'Acquis' : 'Gagné'}</th>
+        </tr></thead>
+        <tbody>${EQ.vendeuses.map(v => `<tr data-eq-vendeuse>
+          <td style="${colGauche};padding:11px 16px;border-top:${filet};vertical-align:top"><div style="font:600 14px/1.3 ${sf};white-space:nowrap">${esc(v.nom)}</div>${v.sous ? `<div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(v.sous)}</div>` : ''}</td>
+          ${v.cases.map(caseEq).join('')}
+          <td style="padding:11px 16px;border-top:${filet};text-align:right;vertical-align:top;font:600 14px/1.3 ${sf};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(v.total)}</td></tr>`).join('')}</tbody>
+      </table></div></div>
+      <div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">✓ gagnée · ✓ 2 / 5 sous une prime : deux vendeuses sur cinq l’ont gagnée · <span style="color:var(--color-primary)">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin fait vers l’objectif${EQ.enCours ? ' · l’objectif du magasin se lit sur la projection du mois' : ''}${EQ.quand ? ' · lu à ' + esc(EQ.quand) : ''}.</div>`;
+    const equipe = `<section data-pr="fr-equipe">
+      ${tete('Où en sont tes vendeuses', 'Chaque prime de Mes primes, et pour chacune ce que ta vendeuse y voit : gagnée, en tête, sa place, ou sa valeur face à l’objectif.',
+        `<div style="display:flex;gap:8px;flex-wrap:wrap">${segm(EQ.filtres)}${segm(EQ.mois)}</div>`)}
+      ${EQ.chargement ? vide('Lecture des fiches de l’équipe…') : EQ.motif ? vide(esc(EQ.motif)) : !EQ.vendeuses.length ? vide('Personne au planning ni en caisse dans ce magasin ce mois-là.')
+        : !EQ.primes.length ? vide('Aucune prime du magasin ce mois-là : posez-en une ci-dessous.') : tableEq()}
+    </section>`;
     const marque = `<section data-pr="fr-marque" class="prl-mag">
       ${tete('Primes de la marque et des sponsors', 'Celles qui tournent dans ce magasin, à lire : la marque les règle. Ses vendeuses les retrouvent dans Mes primes.')}
       ${FR.marque.length ? groupes(FR.marque, ligneLire, 'Ce magasin') : vide('Aucune prime de la marque ni des sponsors ne tourne dans ce magasin pour l’instant.')}
@@ -7171,7 +7203,7 @@ function tplPrimesApp(c, x){
       ${tete('Promotions du panel dans ce magasin', 'Celles du réseau et les siennes : une prime du magasin en un geste.', `<button ${x.A(PF.relire)} style="${btS}">Relire</button>`)}
       ${PF.chargement ? vide('Lecture des promotions…') : PF.motif ? vide(esc(PF.motif)) : !PF.liste.length ? vide('Aucune promotion du panel ne tourne dans ce magasin.') : `<div style="${groupeSt};margin-top:14px">${PF.liste.map(ligneProm).join('')}</div>`}
     </section>`;
-    return entete + marque + siennes + donnees + promosIci;
+    return entete + equipe + marque + siennes + donnees + promosIci;
   };
   return `
 <div data-screen="primesApp" style="display:flex;flex-direction:column;gap:26px;max-width:1560px;font-family:${sf}">

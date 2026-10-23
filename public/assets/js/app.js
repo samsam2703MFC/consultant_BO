@@ -6967,6 +6967,50 @@ class App {
           statutMag: eMag ? (eMag.actif ? 'prime du magasin' : 'prime du magasin éteinte') : '',
           ajouter: eMag || !(p.ids || []).length ? null : () => this.setState({ prWiz: Object.assign(wizNeuf('magasin', sid, p), { etape: 2 }) }) };
       });
+      // L'équipe face à ses primes (23/10/2026, Sam : « la liste des primes, qui les a et à quel niveau ») : une ligne par
+      // vendeuse, une colonne par prime de Mes primes, ce que chacune y voit ; ce mois-ci ou le mois dernier.
+      const ici = new Date(); const moisDe = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+      const mC = moisDe(ici); const mP = moisDe(new Date(ici.getFullYear(), ici.getMonth() - 1, 1));
+      const mEq = S.prEqMois === mP ? mP : mC;
+      const eq = connu ? lire('eq:' + sid + ':' + mEq, '/ventes/primes-equipe?shop=' + encodeURIComponent(sid) + '&m=' + mEq) : null;
+      const fx = (v, k) => fr(+v, Number.isInteger(+v) ? 0 : k);
+      const valTxt = (u, v) => (v == null ? '' : u === 'pct' ? fx(v, 1) + ' %' : u === 'lpt' ? fr(+v, 2) + ' art./ticket' : u === 'note' ? fr(+v, 1) + ' ★'
+        : u === 'pcs' ? fx(v, 1) + ' pcs' : u === 'eur' ? Math.round(v).toLocaleString('fr-BE') + ' €' : u === 'score' ? 'score ' + fx(v, 1) : fx(v, 1));
+      const eurEq = v => (+v).toLocaleString('fr-BE', { minimumFractionDigits: (+v) % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €';
+      const motifEq = { pas_compte: 'pas encore compté', sans_vente: 'aucune vente', min_tickets: 'pas assez de tickets', heures: 'sous le min. d’heures',
+        pas_record: 'pose son 1er record', pas_objectif: 'pas d’objectif', pas_note: 'pas de note', pas_classee: 'pas encore classée' };
+      const recompense = p => (p.type === 'b2b' ? (p.mode === 'fixe' ? (p.fixe || 0) + ' € · 1re commande' : tauxTxt(p.taux) + ' % · ' + (p.duree === 'premiere' ? '1re commande' : p.duree === 'sans' ? 'sans limite' : p.duree + ' mois'))
+        : p.cadeau ? 'cadeau · ' + p.cadeau : (p.max ? 'jusqu’à ' : '') + p.montant + ' €');
+      const caseEq = (p, k, clos) => {
+        if (!k) { return { ton: 'hors', haut: '', bas: '' }; }
+        const u = p.unite; const v = valTxt(u, k.val);
+        const place = k.rang ? k.rang + (k.rang === 1 ? 're' : 'e') + (k.sur ? ' / ' + k.sur : '') : '';
+        if (p.type === 'b2b') {
+          const cl = k.clients ? k.clients + ' client' + (k.clients > 1 ? 's' : '') + ' pro' : 'aucun client pro';
+          return k.gain > 0 ? { ton: 'gagne', haut: '✓ ' + eurEq(k.gain), bas: cl } : { ton: 'vide', haut: '—', bas: cl };
+        }
+        if (k.etat === 'gagne') { return { ton: 'gagne', haut: '✓ ' + (k.gain > 0 ? eurEq(k.gain) : p.cadeau ? 'cadeau' : 'gagnée'), bas: [v, place].filter(Boolean).join(' · '), niveau: 100 }; }
+        if (k.etat === 'tete') { return { ton: 'tete', haut: 'en tête', bas: [v, k.avance1 != null ? '+' + k.avance1 + ' sur la 2e' : place].filter(Boolean).join(' · '), niveau: 100 }; }
+        if (k.etat === 'vide' || k.etat === 'sans_vente' || k.val == null) { return { ton: 'vide', haut: '—', bas: motifEq[k.motif] || (clos ? 'pas gagnée' : '') }; }
+        if (k.etat === 'rang' || (k.rang && k.cible == null)) {
+          return { ton: clos ? 'perdu' : 'route', haut: place || v, bas: [place ? v : '', k.pour1 ? k.pour1 + ' pcs pour la 1re' : ''].filter(Boolean).join(' · '), niveau: k.niveau };
+        }
+        const obj = k.cible != null ? (p.base === 'objectif' ? 'objectif ' : 'cible ') + valTxt(u, k.cible) : '';
+        return { ton: clos ? 'perdu' : 'route', haut: (p.base === 'objectif' && !clos ? 'proj. ' : '') + v, bas: k.motif === 'min_tickets' ? motifEq.min_tickets : obj, niveau: k.niveau };
+      };
+      const filtreEq = S.prEqFiltre === 'magasin' ? 'magasin' : 'toutes';
+      const colsEq = eq ? (eq.primes || []).filter(p => filtreEq === 'toutes' || p.payeur === 'magasin') : [];
+      const nomMois = mm => new Date(+mm.slice(0, 4), +mm.slice(5, 7) - 1, 1).toLocaleString('fr-BE', { month: 'long' });
+      const equipe = {
+        chargement: eq === undefined, motif: eq === null && connu ? 'Les fiches de l’équipe n’ont pas pu être lues.' : '',
+        enCours: !!(eq && eq.enCours), lib: eq ? eq.lib : '', quand: eq && eq.quand ? new Date(eq.quand * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '',
+        mois: [[mC, nomMois(mC) + ' · en cours'], [mP, nomMois(mP)]].map(([k, nom]) => ({ nom, on: k === mEq, choisir: () => this.setState({ prEqMois: k }) })),
+        filtres: [['toutes', 'Toutes les primes'], ['magasin', 'Celles du magasin']].map(([k, nom]) => ({ nom, on: k === filtreEq, choisir: () => this.setState({ prEqFiltre: k }) })),
+        primes: colsEq.map(p => ({ cle: p.cle, lib: p.lib, recompense: recompense(p), payeur: p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : p.payeur === 'magasin' ? 'le magasin' : 'la marque',
+          duMagasin: p.payeur === 'magasin', compte: p.gagnees + ' / ' + p.vendeuses, compteLong: p.gagnees + ' vendeuse' + (p.gagnees > 1 ? 's' : '') + ' sur ' + p.vendeuses + ' l’' + (p.gagnees > 1 ? 'ont' : 'a') + ' gagnée' })),
+        vendeuses: eq ? (eq.vendeuses || []).map(v => ({ nom: v.nom, sous: [v.heures != null ? fx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).join(' · '),
+          total: v.acquis > 0 ? eurEq(v.acquis) : '—', cases: colsEq.map(p => caseEq(p, (v.cases || {})[p.cle], !eq.enCours)) })) : [],
+      };
       const ent = v => (v == null ? '' : Math.round(v).toLocaleString('fr-BE'));
       const cible = cr.cibles[sid] != null ? cr.cibles[sid] : cr.cibleDefaut;
       const stat = (lib, v, vr, sous) => ({ lib, v: v || '—', reseau: vr ? 'réseau ' + vr : '', sous: sous || '' });
@@ -6976,7 +7020,7 @@ class App {
       common.prFr = {
         id: sid, nom: nomMag[sid] || '', connu,
         magasins: (d.magasins || []).map(m => ({ id: String(m.id), nom: court(m.nom), aller: () => this.setState({ prShop: String(m.id) }) })),
-        marque, siennes, nSiennesMax: 6,
+        marque, siennes, nSiennesMax: 6, equipe,
         // « + Nouvelle prime du magasin » : la sorte d'abord (23/10/2026) — promotion, catégorie, ventes croisées, objectif CA, note Google, clients pro.
         nouvelle: connu ? () => this.setState({ prChoix: sid }) : null,
         note: d.google && d.google.notes && d.google.notes[sid] != null ? fr(d.google.notes[sid], 1) + ' ★' : '',
