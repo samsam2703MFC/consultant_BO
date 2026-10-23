@@ -655,11 +655,11 @@ function pmPanelCorps(array $d, string $statut, bool $secondes = true): array
 
 /**
  * Les conditions du ticket au panel (23/10/2026). Leurs noms ne sont pas dans la documentation publique : le cockpit
- * écrit sous ceux qu'il a relus sur une promotion du panel (pmChampsAppris) ; tant qu'aucune n'en porte, sous les noms
- * plausibles ci-dessous. La relecture dit si le panel les a pris (pmConditionsEcarts) : sinon, rien ne passe en caisse.
+ * écrit seulement sous ceux qu'il a relus sur une promotion du panel qui en porte (pmChampsAppris). Les noms devinés
+ * (`min_order_amount`, `sales_channels`…), le panel les ignorait : la promotion restait en brouillon, et reprise, elle
+ * passait en caisse sans seuil ni canal (Sam, 23/10/2026). Sans nom appris, un seuil ou un canal se refuse avant tout
+ * envoi (pmConditionsInconnues), et l'assistant les grise. La relecture dit si le panel les a pris (pmConditionsEcarts).
  */
-const PM_CLES_SEUIL = ['min_order_amount', 'minimum_order_value', 'min_ticket_amount'];
-const PM_CLES_CANAL = ['sales_channels', 'channels'];
 const PM_JETONS = ['comptoir' => 'POS', 'webshop' => 'WEBSHOP'];
 
 /** Les noms (et les jetons des canaux) que portent les promotions relues au panel : {seuil, canal, jetons}. */
@@ -684,14 +684,21 @@ function pmConditionsCorps(array $d): array
     $A = pmChampsAppris(); $avant = (array) ($d['avant'] ?? []);
     $out = [];
     $seuil = $d['seuil'] ?? null;
-    if ($A['seuil'] !== null) { if ($seuil !== null || ($avant['seuil'] ?? null) !== null) { $out[$A['seuil']] = $seuil; } }
-    elseif ($seuil !== null) { foreach (PM_CLES_SEUIL as $k) { $out[$k] = $seuil; } }
+    if ($A['seuil'] !== null && ($seuil !== null || ($avant['seuil'] ?? null) !== null)) { $out[$A['seuil']] = $seuil; }
     $canal = $d['canal'] ?? 'tous';
     $jet = $A['jetons'] + PM_JETONS;
     $liste = $canal === 'tous' ? [$jet['comptoir'], $jet['webshop']] : [$jet[$canal]];
-    if ($A['canal'] !== null) { if ($canal !== 'tous' || ($avant['canaux'] ?? null) !== null) { $out[$A['canal']] = $liste; } }
-    elseif ($canal !== 'tous') { foreach (PM_CLES_CANAL as $k) { $out[$k] = $liste; } }
+    if ($A['canal'] !== null && ($canal !== 'tous' || ($avant['canaux'] ?? null) !== null)) { $out[$A['canal']] = $liste; }
     return $out;
+}
+
+/** Les conditions demandées dont le panel n'a pas encore de nom connu : une phrase par condition (vide = tout s'écrit). */
+function pmConditionsInconnues(array $d): array
+{
+    $A = pmChampsAppris(); $e = [];
+    if (($d['seuil'] ?? null) !== null && $A['seuil'] === null) { $e[] = 'Le seuil du ticket ne s’écrit pas encore au panel (son nom de champ n’est pas connu) : enregistrez sans seuil, ou créez d’abord au panel une promotion avec un seuil.'; }
+    if (($d['canal'] ?? 'tous') !== 'tous' && $A['canal'] === null) { $e[] = 'Le canal (comptoir ou webshop seulement) ne s’écrit pas encore au panel (son nom de champ n’est pas connu) : choisissez « Comptoir et webshop », ou créez d’abord au panel une promotion réservée à un canal.'; }
+    return $e;
 }
 
 /** Ce que la fiche relue ne reprend pas des conditions demandées : « le seuil du ticket », « le canal ». */
@@ -1173,7 +1180,8 @@ function ep_promos_magasin_demandes(): array
     $ts = (int) ($R0['ts'] ?? 0);
     return ['shop' => (string) $shop, 'demandes' => $demandes, 'panel' => $panel, 'erreurPanel' => $err, 'source' => 'panel',
         'lu' => $ts > 0 ? date('H:i', $ts) : null, 'luTs' => $ts, 'luJour' => $ts > 0 ? date('Y-m-d', $ts) : null,
-        'regles' => ['coefMin' => PM_COEF_MIN]];
+        // Ce que le panel sait écrire des conditions du ticket : le nom de champ relu sur une de ses promotions.
+        'regles' => ['coefMin' => PM_COEF_MIN, 'conditions' => (static fn ($A) => ['seuil' => $A['seuil'] !== null, 'canal' => $A['canal'] !== null])(pmChampsAppris())]];
 }
 
 /**
@@ -1218,6 +1226,7 @@ function wr_promos_magasin(): array
         // ne compte pas dans les deux à la fois, et une période passée se corrige plus tard.
         $err = pmErreurs($saisie, null, '0000-00-00 00:00');
     }
+    $err = array_merge($err, pmConditionsInconnues($d));
     if ($err !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $err, 'coef' => $coef]; }
     // Une portion visée : la portion de chaque produit, lue au panel (21/10/2026).
     [$d, $errP] = pmCiblesPortions($d, $shop);

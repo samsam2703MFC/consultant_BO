@@ -487,16 +487,24 @@ $r2 = wr_promos_magasin();
 $F = ErpApi::$promos[$r['demande']['panelId']] ?? [];
 verifie('effacés sous les mêmes noms : plus de seuil, les deux canaux', array_key_exists('minimum_basket_value', $F) && $F['minimum_basket_value'] === null && $F['sales_channels'] === ['POS', 'WEBSHOP']
     && ($r2['demande']['statut'] ?? '') === 'en_caisse' && $r2['demande']['canaux'] === null && $r2['demande']['seuil'] === null, json_encode([$F, $r2['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
-// Aucune promotion du panel n'en porte : les noms plausibles.
-ErpApi::$promos = []; $oublie();
-$GLOBALS['corps'] = $pc('Seuil plausible', 64, 66, ['canal' => 'comptoir', 'seuil' => 15]);
+// Aucune promotion du panel n'en porte : le nom du champ n'est pas connu, rien ne part (plus de noms devinés, 23/10/2026).
+ErpApi::$promos = []; $oublie(); $n0 = ErpApi::$suivant;
+$GLOBALS['corps'] = $pc('Seuil inconnu', 64, 66, ['canal' => 'comptoir', 'seuil' => 15]);
+$r = @wr_promos_magasin();
+verifie('sans nom appris : refusée avant tout envoi, le seuil et le canal dits, rien créé au panel', ($r['error'] ?? '') === 'à compléter' && count($r['erreurs'] ?? []) === 2
+    && str_contains($r['erreurs'][0], 'seuil') && str_contains($r['erreurs'][1], 'canal') && ErpApi::$promos === [] && ErpApi::$suivant === $n0, json_encode($r, JSON_UNESCAPED_UNICODE));
+$_GET = ['shop' => '4']; $l = ep_promos_magasin_demandes(); $_GET = [];
+verifie('l’assistant sait ce qui s’écrit : ni seuil ni canal', ($l['regles']['conditions'] ?? null) === ['seuil' => false, 'canal' => false], json_encode($l['regles'] ?? null));
+verifie('une promotion sans conditions : rien de plus dans le corps', !array_intersect_key(pmPanelCorps(pmPropre($pc('Sans', 1, 2), 4), 'INACTIVE'), array_flip(['min_order_amount', 'minimum_order_value', 'min_ticket_amount', 'sales_channels', 'channels', 'minimum_basket_value'])));
+$GLOBALS['corps'] = $pc('Sans conditions', 64, 66);
 $r = wr_promos_magasin();
-$F = ErpApi::$promos[$r['demande']['panelId'] ?? 0] ?? [];
-verifie('sans nom appris : les noms plausibles, relus, en caisse', ($F['min_order_amount'] ?? null) === 15.0 && ($F['sales_channels'] ?? null) === ['POS'] && ($r['demande']['statut'] ?? '') === 'en_caisse'
-    && $r['demande']['canaux'] === ['comptoir'] && $r['demande']['seuil'] === 15.0, json_encode([$F, $r['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
-verifie('une promotion sans conditions : rien de plus dans le corps', !array_intersect_key(pmPanelCorps(pmPropre($pc('Sans', 1, 2), 4), 'INACTIVE'), array_flip(array_merge(PM_CLES_SEUIL, PM_CLES_CANAL))));
-// Le panel ne reprend pas les conditions : rien en caisse, l'écart dit.
-ErpApi::$perdConditions = true; ErpApi::$promos = []; $oublie();
+verifie('sans conditions : en caisse comme avant', ($r['demande']['statut'] ?? '') === 'en_caisse', json_encode($r, JSON_UNESCAPED_UNICODE));
+// Le nom est appris (une promotion du panel porte un seuil), mais le panel ne garde pas celui envoyé : rien en caisse, l'écart dit.
+ErpApi::$promos = [40 => ['id' => 40, 'name' => 'Seuil 15 €', 'status' => 'ACTIVE', 'promotion_type' => 'BUY_X_GET_Y', 'shop_ids' => [4], 'minimum_basket_value' => 15,
+    'trigger' => ['quantity' => 1, 'product_ids' => [12]], 'reward' => ['quantity' => 1, 'type' => 'FREE', 'value' => null]]];
+ErpApi::$perdConditions = true; $oublie();
+$_GET = ['shop' => '4']; $l = ep_promos_magasin_demandes(); $_GET = [];
+verifie('un seuil relu au panel : l’assistant peut l’écrire, pas le canal', ($l['regles']['conditions'] ?? null) === ['seuil' => true, 'canal' => false], json_encode($l['regles'] ?? null));
 $GLOBALS['corps'] = $pc('Seuil perdu', 68, 70, ['seuil' => 15]);
 $r = wr_promos_magasin();
 verifie('le panel ne reprend pas le seuil : laissée inactive, l’écart dit', ($r['demande']['statut'] ?? '') === 'brouillon' && str_contains((string) $r['panelErreur'], 'le seuil du ticket')

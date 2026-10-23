@@ -3766,7 +3766,12 @@
       if (d.y.type === 'PERCENTAGE_DISCOUNT' && +d.y.valeur > 100) { return 'une remise de 100 % au plus'; }
       return '';
     }
-    if (i === 4) { return d.seuilOn && !(+d.seuil > 0) ? 'le montant du seuil' : ''; }
+    if (i === 4) {
+      const CO = ((S.aux[clePM()] || {}).regles || {}).conditions || { seuil: true, canal: true };
+      if (d.seuilOn && !CO.seuil) { return 'le seuil ne s’écrit pas encore au panel'; }
+      if (d.canal !== 'tous' && !CO.canal) { return 'le canal ne s’écrit pas encore au panel'; }
+      return d.seuilOn && !(+d.seuil > 0) ? 'le montant du seuil' : '';
+    }
     if (i === 5) {
       const R = (S.aux[clePM()] || {}).regles || {}, n = pmJours(d);
       if (!d.du || !d.au) { return 'les dates'; }
@@ -3889,10 +3894,17 @@
         <div class="pm-pf" id="pm-pf">${pmPrixFinal(W)}</div>`;
     }
     if (e === 4) {
-      return tete('où et à partir de quand le ticket y a droit', 'Conditions du ticket') + `<div class="pm-f"><label>Où la promotion s’applique</label></div>
-        <div class="pm-row pm-canaux">${PM_CANAUX.map(([k, lib, sous, ico]) => `<button class="pm-opt${d.canal === k ? ' on' : ''}" data-pmcanal="${k}"><span class="pm-ico">${ico}</span><b>${lib}</b><small>${sous}</small></button>`).join('')}</div>
+      // Le seuil et le canal ne s'écrivent au panel que sous un nom de champ relu sur une de ses promotions (23/10/2026) :
+      // sans lui, le panel les ignorait et la promotion passait en caisse sans eux. Grisés, et dit, tant qu'il manque.
+      const CO = R.conditions || { seuil: true, canal: true };
+      const manque = [!CO.seuil ? 'le seuil du ticket' : '', !CO.canal ? 'le canal (comptoir ou webshop seulement)' : ''].filter(Boolean);
+      const bloque = k => k !== 'tous' && !CO.canal && d.canal !== k;
+      return tete('où et à partir de quand le ticket y a droit', 'Conditions du ticket')
+        + (manque.length ? `<div class="pm-warn" style="margin:0 0 12px">Pas encore disponible : ${manque.join(' et ')}. Le panel ne les reprend pas encore par l’API (leurs noms de champ ne sont pas connus) — envoyés, ils étaient ignorés et la promotion passait en caisse sans eux. Ils s’activeront d’eux-mêmes dès qu’une promotion du panel en portera : créez-en une au panel avec un seuil et un canal.</div>` : '')
+        + `<div class="pm-f"><label>Où la promotion s’applique</label></div>
+        <div class="pm-row pm-canaux">${PM_CANAUX.map(([k, lib, sous, ico]) => `<button class="pm-opt${d.canal === k ? ' on' : ''}" data-pmcanal="${k}"${bloque(k) ? ' disabled title="pas encore disponible au panel"' : ''}><span class="pm-ico">${ico}</span><b>${lib}</b><small>${sous}</small></button>`).join('')}</div>
         <div class="pm-f" style="margin-top:16px"><label>Seuil du ticket</label>
-          <div class="pm-seuil"><span class="pm-seg"><button type="button" class="${d.seuilOn ? '' : 'on'}" data-pmseuil="sans">Sans seuil</button><button type="button" class="${d.seuilOn ? 'on' : ''}" data-pmseuil="avec">À partir d’un montant</button></span>
+          <div class="pm-seuil"><span class="pm-seg"><button type="button" class="${d.seuilOn ? '' : 'on'}" data-pmseuil="sans">Sans seuil</button><button type="button" class="${d.seuilOn ? 'on' : ''}" data-pmseuil="avec"${!CO.seuil && !d.seuilOn ? ' disabled title="pas encore disponible au panel"' : ''}>À partir d’un montant</button></span>
           ${d.seuilOn ? `<span class="pm-eur"><input class="pm-in c" type="number" min="0.5" step="0.5" placeholder="15,00" value="${esc(d.seuil)}" data-pmf="seuil"><i>€ TTC</i></span>` : ''}</div>
           <span class="db-mini">${d.seuilOn ? 'Le ticket doit atteindre ce montant, avant la remise, pour que l’avantage se déclenche ; en dessous, la caisse ne remise rien.' : 'L’avantage tombe dès que le client prend le lot, quel que soit le montant du ticket.'}</span></div>
         ${pmRegleTicket(d, 16)}`;
