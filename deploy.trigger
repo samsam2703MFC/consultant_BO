@@ -997,3 +997,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T17:05:41Z promotions : sonde complète et documentation
 2026-10-23T17:24:56Z promotions : seuil minimum_receipt_gross, canal sales_channel_scope
 2026-10-23T17:31:35Z primes : prime B2B en une phrase, tableau des primes façon Apple
+2026-10-23T17:39:20Z primes : page franchisé sur le magasin de l'adresse (?shop=3)
