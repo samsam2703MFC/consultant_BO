@@ -194,9 +194,9 @@
                             <ul class="list-unstyled mb-0">
                                 <li><strong>{{ translations.cost_analysis_section }}:</strong> {{ analysis.explanation.section_name }}</li>
                                 <li><strong>{{ translations.cost_analysis_period }}:</strong> {{ analysis.date_range.start }} – {{ analysis.date_range.end }}</li>
-                                <li><strong>{{ translations.cost_analysis_workload_points }}:</strong> {{ analysis.explanation.workload_points }}</li>
-                                <li><strong>{{ translations.cost_analysis_sold_units }}:</strong> {{ analysis.explanation.sold_units }}</li>
                                 <li><strong>{{ translations.cost_analysis_sold_cartons }}:</strong> {{ analysis.explanation.sold_cartons }}</li>
+                                <li><strong>Kartony działu:</strong> {{ analysis.explanation.section_cartons }} <span class="text-muted small">({{ analysis.explanation.section_cartons_source == 'entered' ? 'z kalkulatora kosztów' : (analysis.explanation.section_cartons_source == 'sold' ? 'sprzedane wg WDT' : 'brak') }})</span></li>
+                                <li><strong>Kartony firmy:</strong> {{ analysis.explanation.company_cartons }}</li>
                                 <li><strong>{{ translations.cost_analysis_exchange_rate }}:</strong> {{ analysis.explanation.exchange_rate_euro|number_format(4, ',', ' ') }} PLN/EUR</li>
                             </ul>
                         </div>
@@ -204,9 +204,11 @@
                             <ul class="list-unstyled mb-0">
                                 <li><strong>{{ translations.cost_analysis_section_pool }}:</strong> {{ analysis.explanation.section_cost_pool|number_format(2, ',', ' ') }} PLN</li>
                                 <li><strong>{{ translations.cost_analysis_employee_cost }}:</strong> {{ analysis.explanation.employee_cost|number_format(2, ',', ' ') }} PLN</li>
-                                <li><strong>{{ translations.cost_analysis_section_fixed_cost }}:</strong> {{ analysis.explanation.section_fixed_cost|number_format(2, ',', ' ') }} PLN</li>
-                                <li><strong>{{ translations.cost_analysis_weighted_units }}:</strong> {{ analysis.explanation.total_weighted_units|number_format(2, ',', ' ') }}</li>
-                                <li><strong>{{ translations.cost_analysis_cost_per_point }}:</strong> {{ analysis.explanation.section_cost_per_point|number_format(4, ',', ' ') }} PLN</li>
+                                <li><strong>Media działu:</strong> {{ analysis.explanation.media_cost|number_format(2, ',', ' ') }} PLN</li>
+                                <li><strong>Amortyzacja działu:</strong> {{ analysis.explanation.depreciation|number_format(2, ',', ' ') }} PLN</li>
+                                <li><strong>Koszt działu / karton:</strong> {{ analysis.explanation.section_cost_per_carton|number_format(2, ',', ' ') }} PLN</li>
+                                <li><strong>Koszty ogólne / karton:</strong> {{ analysis.explanation.overhead_per_carton|number_format(2, ',', ' ') }} PLN <span class="text-muted small">(koszty stałe + działy wspólne)</span></li>
+                                <li><strong>Logistyka / karton:</strong> {{ analysis.explanation.logistics_per_carton|number_format(2, ',', ' ') }} PLN</li>
                             </ul>
                         </div>
                     </div>

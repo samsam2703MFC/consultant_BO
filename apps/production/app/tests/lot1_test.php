@@ -14,14 +14,13 @@ declare(strict_types=1);
 require_once __DIR__ . '/../public/vendor/autoload.php';
 
 use App\Exceptions\CustomException;
-use App\Repositories\Analysis\ProductMarginRepository;
+use App\Repositories\Analysis\WdtSalesRepository;
 use App\Repositories\Material\MaterialRepository;
 use App\Repositories\Material\NutritionRepository;
 use App\Repositories\Product\Price\ProductPriceChangeRepository;
 use App\Repositories\Stock\FinalProduct\FinalProductStockRepository;
 use App\Services\Finances\StandardPriceService;
 use App\Services\Material\MaterialService;
-use App\Services\Recipe\RecipeService;
 use App\Services\Stock\FinalProductStockStateService;
 
 function expectLot(bool $condition, string $message): void
@@ -45,7 +44,8 @@ $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
     foreach (['final_product', 'final_product_customer_price', 'tfb_product_price_change', 'cost_month', 'document_wdt', 'document_wdt_product',
-                 'tfb_wdt_superseded', 'carton_stock', 'raw_material', 'unit', 'supplier', 'tfb_material_nutrition_source'] as $table) {
+                 'tfb_wdt_superseded', 'carton_stock', 'raw_material', 'unit', 'supplier', 'tfb_material_nutrition_source', 'production_sections',
+                 'category_product', 'erp_company_other_settings'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -82,22 +82,19 @@ try {
     $pdo->exec("INSERT INTO document_wdt (id, doc_num, id_customer, established_date) VALUES (1, 'W1', 1, '2026-09-10'), (2, 'W2', 1, '2026-09-20'), (3, 'W3', 1, '2026-10-02')");
     $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, quantity) VALUES (1, 10, 100), (1, 11, 40), (2, 12, 25), (2, 11, 5), (3, 11, 7)");
     $pdo->exec("INSERT INTO tfb_wdt_superseded (id_document_wdt) VALUES (2)");
-    $margins = new ProductMarginRepository($pdo);
-    expectLot($margins->getSectionSalesVolumePerMonth(1, [1, 2]) == [1 => 100.0, 2 => 0.0], 'dział 1 : 100 kartonów we wrześniu (WDT zastąpiony pominięty), 0 w październiku');
-    expectLot($margins->getSectionSalesVolumePerMonth(2, [1, 2]) == [1 => 40.0, 2 => 7.0], 'dział 2 : tylko jego produkty');
+    $wdt = new WdtSalesRepository($pdo);
+    $bySection = fn(string $from, string $to) => array_map('intval', array_column($wdt->sales($from, $to, [], ['section']), 'cartons', 'section_id'));
+    expectLot($bySection('2026-09-01', '2026-09-30') == [1 => 100, 2 => 40], 'wrzesień : dział 1 = 100, dział 2 = 40 kartonów (WDT zastąpiony pominięty)');
+    expectLot($bySection('2026-10-01', '2026-10-31') == [2 => 7], 'październik : tylko dział 2 (7)');
 
     // --- Wartość magazynu : receptura, koszt z karty produktu albo brak kosztu (nigdy losowy)
     $pdo->exec("INSERT INTO carton_stock (id_carton, batch_number, id_product, status) VALUES (1, 1, 10, 1), (2, 1, 10, 2), (3, 1, 11, 1), (4, 1, 11, 1), (5, 1, 11, 1), (6, 1, 12, 1), (7, 1, 12, 3)");
-    $recipes = new class extends RecipeService {
-        public function __construct() {}
-        public function getRecipeSummary($id_recipe) { return ['total_ingredient_cost' => $id_recipe === 501 ? 11.25 : 0, 'yield_quantity' => 1, 'recipe_unit' => 'szt', 'ppc' => 1]; }
-    };
-    $stock = new FinalProductStockStateService(new FinalProductStockRepository($pdo), $recipes);
+    $stock = new FinalProductStockStateService(new FinalProductStockRepository($pdo));
     $first = array_column($stock->getCurrentStockWithValue(), null, 'id_product');
     $second = array_column($stock->getCurrentStockWithValue(), null, 'id_product');
-    expectLot($first[10]['cost_source'] === 'recipe' && (float) $first[10]['total_material_cost'] === 22.5, 'z recepturą : 2 kartony × 11,25');
+    expectLot($first[10]['cost_source'] === 'recipe' && (float) $first[10]['total_material_cost'] === 25.0, 'z recepturą : 2 kartony × 12,50 (koszt karty = koszt receptury)');
     expectLot($first[11]['cost_source'] === 'card' && (float) $first[11]['total_material_cost'] === 55.2, 'bez receptury : 3 kartony × 18,40 z karty produktu');
-    expectLot($first[12]['cost_source'] === 'none' && $first[12]['total_material_cost'] === null && (int) $first[12]['count_in_stock'] === 1, 'bez receptury i kosztu : brak kosztu (karton wysłany pominięty)');
+    expectLot($first[12]['cost_source'] === 'none' && $first[12]['total_material_cost'] === null && (int) $first[12]['count_in_stock'] === 1, 'bez kosztu : brak kosztu (karton wysłany pominięty)');
     expectLot($first == $second, 'ta sama wartość przy każdym wydruku');
 
     // --- Karta surowca

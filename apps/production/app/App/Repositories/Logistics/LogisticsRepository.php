@@ -1,6 +1,8 @@
 <?php
 namespace App\Repositories\Logistics;
 
+use App\Domain\Client\Order\OpenOrders;
+
 use App\Repositories\Workshop\WorkshopRepository;
 
 /**
@@ -66,7 +68,7 @@ final class LogisticsRepository extends WorkshopRepository
     {
         return $this->all(
             "SELECT DATE(co.expected_shipping_date) AS ship_date, COUNT(*) AS orders, COUNT(DISTINCT co.id_customer) AS customers
-             FROM customer_order co WHERE co.status < 5 AND co.expected_shipping_date >= ? AND COALESCE(co.is_freebie, 0) = 0
+             FROM customer_order co WHERE " . OpenOrders::loadingSql('co') . " AND co.expected_shipping_date >= ?
              GROUP BY ship_date ORDER BY ship_date LIMIT " . max(1, $limit),
             [$from]
         );
@@ -92,7 +94,7 @@ final class LogisticsRepository extends WorkshopRepository
              LEFT JOIN carton_dimension cd ON cd.id = sp.id_outer_raw_material
              LEFT JOIN raw_material rm ON rm.id = sp.id_outer_raw_material
              LEFT JOIN category_product cat ON cat.id = fp.id_category
-             WHERE DATE(co.expected_shipping_date) = ? AND co.status < 5 AND COALESCE(co.is_freebie, 0) = 0 AND cop.quantity_carton > 0
+             WHERE DATE(co.expected_shipping_date) = ? AND " . OpenOrders::loadingSql('co') . " AND cop.quantity_carton > 0
              ORDER BY customer, co.id, fp.name",
             [$date]
         );

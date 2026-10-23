@@ -181,7 +181,7 @@ final class OptimizerService
     /** Artykuły MTS z miejscem pod stanem maks., godziny na sztukę w każdej grupie gamy. */
     private function mtsCandidates(): array
     {
-        $stock = $this->planning->freeStockCartons();
+        $stock = $this->planning->stockCartons();
         $open = $this->planning->openMtsOrders();
         $routings = $this->planning->routings();
         $groupOf = [];

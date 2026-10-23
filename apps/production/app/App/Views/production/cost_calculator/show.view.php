@@ -94,8 +94,10 @@ $logisticsCosts = $logistics_costs ?? [];
                 <div><strong>Wynagrodzenia:</strong> <span id="summary_labor_total"><?= number_format((float)($summary['labor_total'] ?? 0), 2, ',', ' ') ?></span> zł</div>
                 <div><strong>Media zakładu:</strong> <?= number_format((float)($summary['media_total'] ?? 0), 2, ',', ' ') ?> zł</div>
                 <div><strong>Koszty stałe:</strong> <?= number_format((float)($summary['fixed_total'] ?? 0), 2, ',', ' ') ?> zł</div>
+                <div><strong>Amortyzacja:</strong> <?= number_format((float)($summary['depreciation_total'] ?? 0), 2, ',', ' ') ?> zł</div>
                 <div><strong>Logistyka:</strong> <?= number_format((float)($summary['logistics_total'] ?? 0), 2, ',', ' ') ?> zł</div>
-                <div><strong>KS/karton (global):</strong> <?= number_format((float)($summary['fixed_per_carton_global'] ?? 0), 4, ',', ' ') ?> zł</div>
+                <div><strong>Koszty ogólne/karton:</strong> <?= number_format((float)($summary['fixed_per_carton_global'] ?? 0), 2, ',', ' ') ?> zł <span class="text-muted small">(koszty stałe + działy wspólne <?= number_format((float)($summary['shared_total'] ?? 0), 0, ',', ' ') ?> zł)</span></div>
+                <div><strong>Logistyka/karton:</strong> <?= number_format((float)($summary['logistics_per_carton'] ?? 0), 2, ',', ' ') ?> zł</div>
             </div>
         </div>
 
@@ -721,7 +723,9 @@ $logisticsCosts = $logistics_costs ?? [];
                                             <th class="text-end">Surowce/karton</th>
                                             <th class="text-end">Wynag/karton</th>
                                             <th class="text-end">Media/karton</th>
-                                            <th class="text-end">KS/karton</th>
+                                            <th class="text-end">Amort./karton</th>
+                                            <th class="text-end">Ogólne/karton</th>
+                                            <th class="text-end">Logistyka/karton</th>
                                             <th class="text-end">RAZEM/karton</th>
                                             <th class="text-end">RAZEM/szt</th>
                                         </tr>
@@ -736,7 +740,9 @@ $logisticsCosts = $logistics_costs ?? [];
                                                 <td class="text-end"><?= number_format((float)$r['raw_per_carton'], 2, ',', ' ') ?></td>
                                                 <td class="text-end"><?= number_format((float)$r['labor_per_carton'], 2, ',', ' ') ?></td>
                                                 <td class="text-end"><?= number_format((float)($r['media_per_carton'] ?? 0), 2, ',', ' ') ?></td>
+                                                <td class="text-end"><?= number_format((float)($r['depreciation_per_carton'] ?? 0), 2, ',', ' ') ?></td>
                                                 <td class="text-end"><?= number_format((float)$r['fixed_per_carton'], 2, ',', ' ') ?></td>
+                                                <td class="text-end"><?= number_format((float)($r['logistics_per_carton'] ?? 0), 2, ',', ' ') ?></td>
                                                 <td class="text-end"><strong><?= number_format((float)$r['total_per_carton'], 2, ',', ' ') ?></strong></td>
                                                 <td class="text-end"><strong><?= number_format((float)$r['total_per_piece'], 4, ',', ' ') ?></strong></td>
                                             </tr>
@@ -745,7 +751,7 @@ $logisticsCosts = $logistics_costs ?? [];
                                     </table>
                                 </div>
 
-                                <small class="text-muted">Etap 1: bez zapisu wyników do tabeli — liczone w locie.</small>
+                                <small class="text-muted">Koszt pełny, ta sama reguła co Marże, Koszty i Rentowność : dział (wynagrodzenia, media wg rozdziału sprowadzonego do 100 %, amortyzacja) ÷ kartony działu ; koszty stałe, działy wspólne i logistyka ÷ wszystkie kartony firmy.</small>
                             </div>
                         </div>
 
@@ -2043,7 +2049,9 @@ console.log(payload); return;
                       <td class="text-end">${fmt2(r.raw_per_carton)}</td>
                       <td class="text-end">${fmt2(r.labor_per_carton)}</td>
                       <td class="text-end">${fmt2(r.media_per_carton || 0)}</td>
+                      <td class="text-end">${fmt2(r.depreciation_per_carton || 0)}</td>
                       <td class="text-end">${fmt2(r.fixed_per_carton)}</td>
+                      <td class="text-end">${fmt2(r.logistics_per_carton || 0)}</td>
                       <td class="text-end"><strong>${fmt2(r.total_per_carton)}</strong></td>
                       <td class="text-end"><strong>${fmt4(r.total_per_piece)}</strong></td>
                     `;

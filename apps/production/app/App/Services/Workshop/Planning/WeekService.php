@@ -184,7 +184,7 @@ final class WeekService
             $p['batch_extra'] += $l['qty_batch'] ?? 0.0;
             unset($p);
         }
-        $free = $this->planning->freeStockCartons();
+        $free = $this->planning->stockCartons();
         $num = fn($v) => $v === null ? null : (float) $v;
         $rows = [];
         foreach ($this->planning->items() as $it) {
@@ -416,30 +416,7 @@ final class WeekService
         // Stałe partie (📌 co tydzień) : dni, na które partie tygodnia wchodzą najpierw (fillPins).
         $rules = array_values(array_filter($this->planning->fixedRules(), fn($r) => isset($items[(int) $r['id_item']])));
 
-        // Źródło : plan zaczynający się w tym tygodniu produkcji (zatwierdzony, zamrożony, inaczej zamknięty),
-        // inaczej propozycja na żywo (zamówienia + uzupełnienie stanów, w pełnych partiach).
-        $plans = $this->repo->plans($start, $end);
-        $active = array_values(array_filter($plans, fn($p) => $p['status'] !== 'closed'));
-        $plans = $active ?: $plans;
-        $lines = [];
-        $warnings = [];
-        $demand = null;
-        if ($plans) {
-            foreach ($plans as $plan) {
-                foreach ($this->planning->lines((int) $plan['id']) as $l) {
-                    if ($l['due_date'] < $start || $l['due_date'] > $end) continue;
-                    $lines[] = ['item_id' => (int) $l['id_item'], 'qty' => (float) $l['qty_final'], 'due_date' => $l['due_date'],
-                        'direct' => min((float) $l['qty_final'], (float) $l['qty_mto'] + (float) $l['qty_semi'])];
-                }
-            }
-        } else {
-            $demand = $this->plans->compute($start, $end);
-            foreach ($demand['lines'] as $l) {
-                $lines[] = ['item_id' => (int) $l['item']['id'], 'qty' => (float) $l['qty_proposed'], 'due_date' => $l['due_date'],
-                    'direct' => min((float) $l['qty_proposed'], (float) $l['qty_mto'] + (float) $l['qty_semi'])];
-            }
-            foreach ($demand['warnings'] as $w) if ($w['code'] === 'UNPLANNED_PRODUCTS') $warnings[] = $w;
-        }
+        [$plans, $lines, $demand, $warnings] = $this->sourceLines($start, $end);
 
         $products = [];
         foreach ($lines as $l) {
@@ -529,6 +506,70 @@ final class WeekService
         return ['start' => $start, 'end' => $end, 'days' => array_values($days), 'stock_days' => $stockDays, 'today' => $today,
             'plans' => $plans, 'products' => $products, 'capacity' => $capacity, 'routings' => $routings, 'warnings' => $warnings,
             'pins' => $pins, 'fixed_week' => $fixedWeek, 'demand' => $demand];
+    }
+
+    /**
+     * Źródło ilości tygodnia : plan zaczynający się w tym tygodniu produkcji (zatwierdzony, zamrożony, inaczej
+     * zamknięty), inaczej propozycja na żywo (zamówienia + uzupełnienie stanów, w pełnych partiach).
+     * @return array{0: list<array>, 1: list<array{item_id:int, qty:float, due_date:string, direct:float}>, 2: ?array, 3: list<array>}
+     */
+    private function sourceLines(string $start, string $end): array
+    {
+        $plans = $this->repo->plans($start, $end);
+        $active = array_values(array_filter($plans, fn($p) => $p['status'] !== 'closed'));
+        $plans = $active ?: $plans;
+        $lines = [];
+        $warnings = [];
+        $demand = null;
+        if ($plans) {
+            foreach ($plans as $plan) {
+                foreach ($this->planning->lines((int) $plan['id']) as $l) {
+                    if ($l['due_date'] < $start || $l['due_date'] > $end) continue;
+                    $lines[] = ['item_id' => (int) $l['id_item'], 'qty' => (float) $l['qty_final'], 'due_date' => $l['due_date'],
+                        'direct' => min((float) $l['qty_final'], (float) $l['qty_mto'] + (float) $l['qty_semi'])];
+                }
+            }
+        } else {
+            $demand = $this->plans->compute($start, $end);
+            foreach ($demand['lines'] as $l) {
+                $lines[] = ['item_id' => (int) $l['item']['id'], 'qty' => (float) $l['qty_proposed'], 'due_date' => $l['due_date'],
+                    'direct' => min((float) $l['qty_proposed'], (float) $l['qty_mto'] + (float) $l['qty_semi'])];
+            }
+            foreach ($demand['warnings'] as $w) if ($w['code'] === 'UNPLANNED_PRODUCTS') $warnings[] = $w;
+        }
+        return [$plans, $lines, $demand, $warnings];
+    }
+
+    /**
+     * Ilości planu tygodnia zawierającego $date — ta sama formuła co Arkusz tygodnia, Plan zespołów i tablet,
+     * bez kontekstu API i bez zapisu (listy produkcji PDF) : produkt (karta) → do produkcji w tygodniu (szt.),
+     * przydział na dni (sloty Planu zespołów) i ilość jeszcze nierozłożona na dni.
+     * @return array{start: string, end: string, items: array<int, array{item_id:int, id_final_product:?int, quantity:float, slots:array<string,float>, unassigned:float}>}
+     */
+    public function quantities(string $date): array
+    {
+        $start = $this->weekStart($date);
+        $end = date('Y-m-d', strtotime($start . ' +6 days'));
+        [, $lines] = $this->sourceLines($start, $end);
+        $items = [];
+        foreach ($this->planning->items() as $it) $items[(int) $it['id']] = $it;
+        $out = [];
+        foreach ($lines as $l) {
+            if (!isset($items[$l['item_id']]) || $l['qty'] <= 0) continue;
+            $out[$l['item_id']] ??= ['item_id' => $l['item_id'], 'id_final_product' => $items[$l['item_id']]['id_final_product'] !== null ? (int) $items[$l['item_id']]['id_final_product'] : null,
+                'quantity' => 0.0, 'slots' => [], 'unassigned' => 0.0];
+            $out[$l['item_id']]['quantity'] += $l['qty'];
+        }
+        foreach ($this->repo->slots($start) as $slot) {
+            $id = (int) $slot['id_item'];
+            if (isset($out[$id])) $out[$id]['slots'][$slot['work_date']] = (float) $slot['quantity'];
+        }
+        foreach ($out as &$p) {
+            $p['quantity'] = round($p['quantity'], 3);
+            $p['unassigned'] = round(max(0.0, $p['quantity'] - array_sum($p['slots'])), 3);
+        }
+        unset($p);
+        return ['start' => $start, 'end' => $end, 'items' => $out];
     }
 
     /** Nowy produkt tygodnia (z karty produkcyjnej). */

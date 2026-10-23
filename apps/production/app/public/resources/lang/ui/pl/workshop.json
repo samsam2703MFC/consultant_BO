@@ -325,7 +325,7 @@
   "m.batch_change": "zmień w « Etapy i czasy »",
   "m.batch_none": "Brak partii produkcyjnej (ile robi się naraz) — bez niej nie policzę partii do stanów.",
   "m.batch_set": "Ustaw w kroku « Etapy i czasy »",
-  "m.batch_available": "Dostępne teraz : {available} kart. (stan {free} − zamówienia {ordered} + w produkcji {production})",
+  "m.batch_available": "Dostępne teraz : {available} kart. (stan z paletami {free} − zamówienia {ordered} + w produkcji {production})",
   "m.batch_orders": "Zamówienia ponad stan : {cartons} kart. → {batches} × partia",
   "m.batch_to_min": "Do stanu min. ({min} kart.) brakuje {missing} kart. → {batches} × partia (w górę)",
   "m.batch_min_ok": "Stan min. ({min} kart.) pokryty — partia nie jest potrzebna",

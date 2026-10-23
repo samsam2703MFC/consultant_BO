@@ -57,7 +57,7 @@
         <div class="card" id="dzialy">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h4 class="card-title mb-0">Koszty stałe działów (zł / miesiąc)</h4>
-                <span class="text-muted small">Amortyzacja zawsze w kosztach ogólnych ; media stałe, gdy miesiąc nie ma mediów rozdzielonych na działy.</span>
+                <span class="text-muted small">Amortyzacja w koszcie działu (dział wspólny : w kosztach ogólnych) ; media stałe, gdy miesiąc nie ma kosztów mediów.</span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">

@@ -4,6 +4,7 @@ namespace App\Services\Dashboard;
 use App\Exceptions\CustomException;
 use App\Repositories\Dashboard\ProfitabilityRepository;
 use App\Repositories\Workshop\ParamRepository;
+use App\Services\Production\Cost\SectionUnitCostService;
 use DateTimeImmutable;
 
 /**
@@ -35,7 +36,7 @@ final class ProfitabilityService
     /** @var array<string,array> valorisation matières par mois 'YYYY-MM' */
     private array $materialRuns = [];
 
-    public function __construct(private ProfitabilityRepository $repo, private ParamRepository $params)
+    public function __construct(private ProfitabilityRepository $repo, private ParamRepository $params, private SectionUnitCostService $unitCosts)
     {
     }
 
@@ -63,7 +64,7 @@ final class ProfitabilityService
         $start = $today->modify('first day of this month')->modify('-' . (self::MONTHLY_SERIES - 1) . ' months')->format('Y-m-d');
         $all = $this->sales(min($start, $this->windowStart($today), $spec['from']), $today->format('Y-m-d'), $rate);
         $sales = array_values(array_filter($all, fn($r) => isset($spec['months'][$r['ym']])));
-        $open = $spec['current'] ? $this->repo->openOrders($today->format('Y-m-d'), $spec['end']) : [];
+        $open = $spec['current'] ? $this->repo->openOrders(self::openFrom($today), $spec['end']) : [];
 
         $data = $this->compute($spec, $sales, $open, $rate);
         $data['purchases'] = $this->purchases($spec['from'], $spec['to'], $rate);
@@ -84,7 +85,16 @@ final class ProfitabilityService
         $spec = $this->period('month', $today);
         $rate = $this->repo->eurRate();
         $sales = $this->sales($spec['from'], $today->format('Y-m-d'), $rate);
-        return $this->compute($spec, $sales, $this->repo->openOrders($today->format('Y-m-d'), $spec['end']), $rate);
+        return $this->compute($spec, $sales, $this->repo->openOrders(self::openFrom($today), $spec['end']), $rate);
+    }
+
+    /**
+     * Zamówienia otwarte doliczane do bieżącego okresu : od 1. dnia bieżącego miesiąca — zamówienie spóźnione
+     * (data wysyłki minęła, bez WDT) nadal zostanie sprzedane, więc liczy się w prognozie.
+     */
+    private static function openFrom(DateTimeImmutable $today): string
+    {
+        return $today->modify('first day of this month')->format('Y-m-d');
     }
 
     /** Ratio personnel / ventes et résultat des 6 derniers mois (mois en cours compris). */
@@ -520,8 +530,8 @@ final class ProfitabilityService
             $warnings[] = 'Brak kursu EUR w ustawieniach firmy — koszty w PLN nie są przeliczone.';
             $rate = 1.0;
         }
-        $this->costs ??= [$this->repo->costMonths(), $this->repo->staff(), $this->repo->media(), $this->repo->fixedCosts(), $this->repo->sections(), $this->repo->headcount()];
-        [$costMonths, $staff, $media, $fixed, $sectionRows, $headcount] = $this->costs;
+        $this->costs ??= [$this->repo->costMonths(), $this->repo->sections(), $this->repo->headcount()];
+        [$costMonths, $sectionRows, $headcount] = $this->costs;
         $targets = $this->generalTargets();
 
         // Coûts du personnel et du groupe, au prorata (pace) et sur les mois entiers (full).
@@ -532,6 +542,8 @@ final class ProfitabilityService
         }
         $fixedPace = 0.0;
         $fixedFull = 0.0;
+        $logisticsPace = 0.0;
+        $logisticsFull = 0.0;
         $estimated = [];
         $monthsCounted = array_sum($spec['months']);
         foreach ($spec['months'] as $ym => $fraction) {
@@ -541,13 +553,12 @@ final class ProfitabilityService
                 continue;
             }
             if ($source !== $ym) $estimated[$ym] = $source;
+            // Koszty miesiąca wg wspólnej reguły kosztu działu (media sprowadzone do 100 %, media stałe tylko gdy miesiąc nie ma mediów)
+            $basis = $this->unitCosts->month((int) $monthId);
             foreach ($sections as $id => &$s) {
-                $staffCost = ($staff[$monthId][$id] ?? 0.0) / $rate;
-                $mediaCost = $media[$monthId][$id] ?? 0.0;
-                if ($mediaCost == 0.0) {
-                    $mediaCost = (float) $s['water_cost'] + (float) $s['power_supply_cost'] + (float) $s['fuel_cost'] + (float) $s['other_cost'];
-                }
-                $overhead = ((float) $s['depreciation'] + $mediaCost) / $rate;
+                $cost = $basis['sections'][$id] ?? ['labor_actual' => 0.0, 'media_actual' => 0.0, 'depreciation_actual' => 0.0];
+                $staffCost = $cost['labor_actual'] / $rate;
+                $overhead = ($cost['depreciation_actual'] + $cost['media_actual']) / $rate;
                 $s['staff_full'] += $staffCost;
                 $s['staff'] += $staffCost * $fraction;
                 // Osobomiesiące : osoby opłacone w miesiącu × część miesiąca (bieżący : dni, które minęły).
@@ -556,8 +567,12 @@ final class ProfitabilityService
                 $s['overhead'] += $overhead * $fraction;
             }
             unset($s);
-            $fixedFull += ($fixed[$monthId] ?? 0.0) / $rate;
-            $fixedPace += ($fixed[$monthId] ?? 0.0) / $rate * $fraction;
+            // Koszty stałe firmy (+ media bez rozdziału na działy) i logistyka
+            $fixedMonth = ($basis['fixed'] + $basis['unallocated_media']) / $rate;
+            $fixedFull += $fixedMonth;
+            $fixedPace += $fixedMonth * $fraction;
+            $logisticsFull += $basis['logistics'] / $rate;
+            $logisticsPace += $basis['logistics'] / $rate * $fraction;
         }
         if ($estimated) {
             $bySource = [];
@@ -625,12 +640,12 @@ final class ProfitabilityService
         $staffTarget = $targets['profit.total_staff_target_pct'];
         $staffNeeded = $staffFull / ($staffTarget / 100);
         $staffMissing = max(0.0, $staffNeeded - $revenue);
-        $result = $revenue - $materials - $staffPace - $overheadPace - $fixedPace;
+        $result = $revenue - $materials - $staffPace - $overheadPace - $fixedPace - $logisticsPace;
 
         // CA pour l'objectif de résultat : R × (1 − matières/CA − objectif) = coûts fixes du mois.
         $marginTarget = $targets['profit.margin_target_pct'];
         $variableRatio = $revenue > 0 ? $materials / $revenue : null;
-        $fixedCosts = $staffFull + $overheadFull + $fixedFull;
+        $fixedCosts = $staffFull + $overheadFull + $fixedFull + $logisticsFull;
         $denominator = $variableRatio === null ? null : 1 - $variableRatio - $marginTarget / 100;
         $marginNeeded = $denominator !== null && $denominator > 0 ? $fixedCosts / $denominator : null;
 
@@ -650,6 +665,7 @@ final class ProfitabilityService
             'staff_ok' => $revenue > 0 && $staffMissing <= 0.005,
             'overhead' => $overheadPace,
             'fixed' => $fixedPace,
+            'logistics' => $logisticsPace,
             'result' => $result,
             'margin_pct' => $revenue > 0 ? $result / $revenue * 100 : null,
             'margin_target' => $marginTarget,

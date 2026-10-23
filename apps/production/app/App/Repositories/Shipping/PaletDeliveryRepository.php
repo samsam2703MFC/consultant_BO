@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Repositories\Shipping;
+
+use App\Domain\Client\Order\OpenOrders;
 use App\Core\Helpers\BaseRepository;
 use Model;
 
@@ -117,8 +119,7 @@ class PaletDeliveryRepository extends BaseRepository
                     COUNT(co.id)                    AS order_count
                 FROM customer_order co
                 WHERE co.id_customer = :id_customer
-                  AND (co.status = 1 OR co.status = 2)
-                  AND co.id_wdt IS NULL
+                  AND " . OpenOrders::sql('co') . "
                   AND DATE(co.expected_shipping_date) != :shipping_date
                 GROUP BY DATE(co.expected_shipping_date)
                 ORDER BY co.expected_shipping_date ASC";

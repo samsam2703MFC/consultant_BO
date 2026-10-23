@@ -1,6 +1,9 @@
 <?php
 namespace App\Repositories\Dashboard;
 
+use App\Domain\Client\Order\OpenOrders;
+
+use App\Repositories\Analysis\WdtSalesRepository;
 use App\Repositories\Workshop\WorkshopRepository;
 
 /**
@@ -24,21 +27,19 @@ final class ProfitabilityRepository extends WorkshopRepository
         );
     }
 
-    /** Ventes (EUR), coût matières (PLN) et cartons par groupe et par mois, sur [from, to]. */
+    /** Ventes (EUR), coût matières (PLN) et cartons par groupe et par mois, sur [from, to] (définition commune des ventes WDT). */
     public function sales(string $from, string $to, float $eurRate): array
     {
         return $this->all(
-            "SELECT DATE_FORMAT(w.established_date, '%Y-%m') AS ym, fp.id_section,
-                    SUM(CASE WHEN UPPER(w.currency) = 'PLN' THEN p.quantity * p.price_carton / :rate1 ELSE p.quantity * p.price_carton END) AS revenue_eur,
-                    SUM(p.quantity * COALESCE(fp.pre_calculated_raw_price_per_carton, 0)) AS materials_pln,
-                    SUM(p.quantity) AS cartons
-             FROM document_wdt w
-             JOIN document_wdt_product p ON p.id_document_wdt = w.id
-             JOIN final_product fp ON fp.id = p.id_product
-             WHERE w.established_date BETWEEN :from AND :to
-               AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
-             GROUP BY ym, fp.id_section",
-            ['rate1' => $eurRate > 0 ? $eurRate : 1, 'from' => $from, 'to' => $to]
+            "SELECT s.ym, fp.id_section,
+                    SUM(s.value_eur) AS revenue_eur,
+                    SUM(s.cartons * COALESCE(fp.pre_calculated_raw_price_per_carton, 0)) AS materials_pln,
+                    SUM(s.cartons) AS cartons
+             FROM (" . WdtSalesRepository::linesSql() . ") s
+             LEFT JOIN final_product fp ON fp.id = s.id_product
+             WHERE s.sale_date BETWEEN :from AND :to
+             GROUP BY s.ym, fp.id_section",
+            ['from' => $from, 'to' => $to]
         );
     }
 
@@ -46,14 +47,12 @@ final class ProfitabilityRepository extends WorkshopRepository
     public function soldProducts(string $from, string $to): array
     {
         return $this->all(
-            "SELECT DATE_FORMAT(w.established_date, '%Y-%m') AS ym, fp.id_section, fp.id AS product_id, fp.name AS product, fp.id_recipe,
-                    SUM(p.quantity) AS cartons, COALESCE(fp.pre_calculated_raw_price_per_carton, 0) AS card_cost
-             FROM document_wdt w
-             JOIN document_wdt_product p ON p.id_document_wdt = w.id
-             JOIN final_product fp ON fp.id = p.id_product
-             WHERE w.established_date BETWEEN :from AND :to
-               AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
-             GROUP BY ym, fp.id_section, fp.id, fp.name, fp.id_recipe, fp.pre_calculated_raw_price_per_carton",
+            "SELECT s.ym, fp.id_section, s.id_product AS product_id, COALESCE(fp.name, MAX(s.line_name)) AS product, fp.id_recipe,
+                    SUM(s.cartons) AS cartons, COALESCE(fp.pre_calculated_raw_price_per_carton, 0) AS card_cost
+             FROM (" . WdtSalesRepository::linesSql() . ") s
+             LEFT JOIN final_product fp ON fp.id = s.id_product
+             WHERE s.sale_date BETWEEN :from AND :to
+             GROUP BY s.ym, fp.id_section, s.id_product, fp.name, fp.id_recipe, fp.pre_calculated_raw_price_per_carton",
             ['from' => $from, 'to' => $to]
         );
     }
@@ -62,17 +61,14 @@ final class ProfitabilityRepository extends WorkshopRepository
     public function producedProducts(string $from, string $to, float $eurRate): array
     {
         return $this->all(
-            "SELECT fp.id_section, fp.id AS product_id, fp.name AS product, fp.id_category, cp.name AS category,
-                    COALESCE(fp.ppc, 0) AS ppc, COALESCE(fp.weight, 0) AS weight, SUM(p.quantity) AS cartons,
-                    SUM(CASE WHEN UPPER(w.currency) = 'PLN' THEN p.quantity * p.price_carton / :rate1 ELSE p.quantity * p.price_carton END) AS revenue_eur
-             FROM document_wdt w
-             JOIN document_wdt_product p ON p.id_document_wdt = w.id
-             JOIN final_product fp ON fp.id = p.id_product
+            "SELECT fp.id_section, s.id_product AS product_id, COALESCE(fp.name, MAX(s.line_name), 'Nieznany produkt') AS product, fp.id_category, cp.name AS category,
+                    COALESCE(fp.ppc, 0) AS ppc, COALESCE(fp.weight, 0) AS weight, SUM(s.cartons) AS cartons, SUM(s.value_eur) AS revenue_eur
+             FROM (" . WdtSalesRepository::linesSql() . ") s
+             LEFT JOIN final_product fp ON fp.id = s.id_product
              LEFT JOIN category_product cp ON cp.id = fp.id_category
-             WHERE w.established_date BETWEEN :from AND :to
-               AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
-             GROUP BY fp.id_section, fp.id, fp.name, fp.id_category, cp.name, fp.ppc, fp.weight",
-            ['rate1' => $eurRate > 0 ? $eurRate : 1, 'from' => $from, 'to' => $to]
+             WHERE s.sale_date BETWEEN :from AND :to
+             GROUP BY fp.id_section, s.id_product, fp.name, fp.id_category, cp.name, fp.ppc, fp.weight",
+            ['from' => $from, 'to' => $to]
         );
     }
 
@@ -109,7 +105,7 @@ final class ProfitabilityRepository extends WorkshopRepository
         );
     }
 
-    /** Commandes pas encore expédiées (sans WDT) prévues entre deux dates, par groupe (EUR). */
+    /** Commandes ouvertes (OpenOrders, sans gratuits) prévues entre deux dates, par groupe (EUR) — retards du mois compris. */
     public function openOrders(string $from, string $to): array
     {
         return $this->all(
@@ -117,7 +113,7 @@ final class ProfitabilityRepository extends WorkshopRepository
              FROM customer_order co
              JOIN customer_order_product cop ON cop.id_order = co.id
              JOIN final_product fp ON fp.id = cop.id_product
-             WHERE co.id_wdt IS NULL AND co.status < 5 AND COALESCE(co.is_freebie, 0) = 0
+             WHERE ' . OpenOrders::quantitySql('co') . '
                AND co.expected_shipping_date BETWEEN :from AND :to
              GROUP BY fp.id_section',
             ['from' => $from, 'to' => $to]

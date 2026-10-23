@@ -746,7 +746,7 @@
             const max = form.mts.checked ? ui.num(form.stock_max.value) : null;
             const stocks = typeof min === 'number' || typeof max === 'number';
             if (st) {
-                lines.push(esc(t('m.batch_available', {available: f(st.available_cartons, 1), free: f(st.free_cartons), ordered: f(st.ordered_cartons), production: f(st.in_production_cartons, 1)})));
+                lines.push(esc(t('m.batch_available', {available: f(st.available_cartons, 1), free: f(st.free_cartons + (st.palletised_cartons || 0)), ordered: f(st.ordered_cartons), production: f(st.in_production_cartons, 1)})));
                 // Zamówienia ponad stan osobno tylko bez stanów MTS (inaczej są w brakach do stanów poniżej).
                 if (st.orders_over_stock_cartons > 0 && !stocks) lines.push(esc(t('m.batch_orders', {cartons: f(st.orders_over_stock_cartons), batches: f(Math.ceil(st.orders_over_stock_cartons / bc - 1e-6))})));
             }

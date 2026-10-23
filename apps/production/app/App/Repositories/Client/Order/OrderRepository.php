@@ -310,11 +310,9 @@ class OrderRepository extends BaseRepository
 
     public function getDatesOfSelectedOrders($data)
     {
-        if (!isset($data['order_id']) || empty($data['order_id'])) {
-            $orderIdStr = '0';
-        } else {
-            $orderIdStr = implode(',', $data['order_id']);
-        }
+        // Tylko liczby całkowite w SQL
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array)($data['order_id'] ?? [])), fn($id) => $id > 0)));
+        $orderIdStr = $ids ? implode(',', $ids) : '0';
 
         $sql = "SELECT DISTINCT DATE(co.expected_shipping_date) as expected_shipping_date FROM customer_order co WHERE co.id IN ({$orderIdStr}) ORDER BY co.expected_shipping_date LIMIT 4";
         $res = $this->query($sql);

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Repositories\Workshop;
 
+use App\Repositories\Analysis\WdtSalesRepository;
+
 /**
  * Kierownik produkcji : plan roku, cele (wersje), wartości ręczne, zdarzenia HACCP, nowe produkty, działania,
  * audyty kompetencji ; odczyty danych ERP do wskaźników (straty, dostawy, kartony, nadgodziny, koszty logistyki).
@@ -206,8 +208,8 @@ final class ManagerRepository extends WorkshopRepository
     /** Kartony sprzedane (WDT) na [from, to]. */
     public function cartonsSold(string $from, string $to): float
     {
-        return (float) ($this->all('SELECT COALESCE(SUM(p.quantity), 0) AS n FROM document_wdt w JOIN document_wdt_product p ON p.id_document_wdt = w.id
-                                    WHERE w.established_date BETWEEN ? AND ? AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)', [$from, $to])[0]['n'] ?? 0);
+        return (float) ($this->all('SELECT COALESCE(SUM(s.cartons), 0) AS n FROM (' . WdtSalesRepository::linesSql() . ') s
+                                    WHERE s.sale_date BETWEEN ? AND ?', [$from, $to])[0]['n'] ?? 0);
     }
 
     /** Wejścia i wyjścia (zamknięte) z [from, to]. */
@@ -232,10 +234,9 @@ final class ManagerRepository extends WorkshopRepository
     public function productShops(string $from, string $to): array
     {
         $out = [];
-        foreach ($this->all('SELECT p.id_product, SUM(p.quantity) AS cartons, COUNT(DISTINCT w.id_customer) AS shops FROM document_wdt w
-                             JOIN document_wdt_product p ON p.id_document_wdt = w.id
-                             WHERE w.established_date BETWEEN ? AND ? AND w.id NOT IN (SELECT id_document_wdt FROM tfb_wdt_superseded)
-                             GROUP BY p.id_product', [$from, $to]) as $r) {
+        foreach ($this->all('SELECT s.id_product, SUM(s.cartons) AS cartons, COUNT(DISTINCT s.id_customer) AS shops FROM (' . WdtSalesRepository::linesSql() . ') s
+                             WHERE s.sale_date BETWEEN ? AND ?
+                             GROUP BY s.id_product', [$from, $to]) as $r) {
             $out[(int) $r['id_product']] = ['cartons' => (float) $r['cartons'], 'shops' => (int) $r['shops']];
         }
         return $out;

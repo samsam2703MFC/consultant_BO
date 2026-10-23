@@ -326,6 +326,7 @@
                             <tr><td>− Personel</td><td class="text-end">{{ t.staff|eur }}</td><td class="text-end at-sub">{{ t.staff_pct|pct(0) }}</td></tr>
                             <tr><td>− Koszty działów (media, amortyzacja)</td><td class="text-end">{{ t.overhead|eur }}</td><td class="text-end at-sub">{{ t.revenue > 0 ? (t.overhead / t.revenue * 100)|pct(0) : '—' }}</td></tr>
                             <tr><td>− Koszty stałe firmy</td><td class="text-end">{{ t.fixed|eur }}</td><td class="text-end at-sub">{{ t.revenue > 0 ? (t.fixed / t.revenue * 100)|pct(0) : '—' }}</td></tr>
+                            <tr><td>− Logistyka</td><td class="text-end">{{ (t.logistics ?? 0)|eur }}</td><td class="text-end at-sub">{{ t.revenue > 0 ? ((t.logistics ?? 0) / t.revenue * 100)|pct(0) : '—' }}</td></tr>
                             <tr class="at-profit-total"><td><strong>= Wynik produkcji</strong></td><td class="text-end"><strong class="{{ t.result >= 0 ? 'text-success' : 'text-danger' }}">{{ t.result|eur }}</strong></td><td class="text-end"><strong>{{ t.margin_pct|pct(0) }}</strong></td></tr>
                         </tbody>
                     </table>
