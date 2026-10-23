@@ -20,7 +20,7 @@ declare(strict_types=1);
  * magasin par magasin sur `shops`, pour d'anciennes demandes à plusieurs magasins.
  *
  * La règle du magasin, vérifiée ici (le navigateur la montre, le serveur l'impose) : une date de fin. Plus de durée
- * maximale (23/10/2026, Sam : « Tout le temps », depuis 99 ans pour 99 ans ; un an au plus avant, 14 jours jusqu'au
+ * maximale (23/10/2026, Sam : « Tout le temps », d'aujourd'hui au 31/12/2037 — le panel refuse 1927 → 2125 ; un an au plus avant, 14 jours jusqu'au
  * 18/10/2026), plus de limite au nombre de promotions du magasin en même temps (23/10/2026 ; deux au plus avant).
  * Le COEFFICIENT DU LOT (prix payé HT ÷ coût matière, le cas le plus serré des produits visés, dans chaque magasin couvert — prix et coûts de recette du
  * magasin, sinon du réseau, pmProduits) se calcule et s'affiche, ×2 en repère ; il ne bloque plus l'envoi (18/10/2026).

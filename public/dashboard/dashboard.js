@@ -3293,12 +3293,15 @@
   /**
    * Les durées rapides de l'étape Période (18/10/2026) : une semaine, un mois, un an, à partir du début choisi s'il n'est
    * pas passé, demain sinon ; la fin la veille du même jour, à 23:59 (le 31 janvier + un mois : le dernier jour de février).
-   * « Tout le temps » (23/10/2026, Sam) : depuis 99 ans, pour 99 ans — une promotion qui ne s'arrête pas.
+   * « Tout le temps » (23/10/2026, Sam) : une promotion qui ne s'arrête pas — d'aujourd'hui 00:00 au 31/12/2037 23:59.
+   * Le panel refuse « depuis 99 ans, pour 99 ans » (1927 → 2125) : ses dates s'arrêtent au début de 2038 (comme un
+   * TIMESTAMP), la fin la plus lointaine sûre est donc le 31/12/2037.
    */
   const PM_DUREES = [['7j', '1 semaine'], ['1m', '1 mois'], ['1a', '1 an'], ['tt', 'Tout le temps']];
+  const PM_TOUJOURS_AU = '2037-12-31 23:59';
   function pmDuree(d, k) {
     const p = n => String(n).padStart(2, '0'), loc = t => t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
-    if (k === 'tt') { const a = new Date(), b = new Date(); a.setFullYear(a.getFullYear() - 99); b.setFullYear(b.getFullYear() + 99); return { du: loc(a) + ' 00:00', au: loc(b) + ' 23:59' }; }
+    if (k === 'tt') { return { du: loc(new Date()) + ' 00:00', au: PM_TOUJOURS_AU }; }
     const dem = new Date(); dem.setDate(dem.getDate() + 1);
     const du = d.du && d.du.slice(0, 10) >= loc(new Date()) ? d.du : loc(dem) + ' 00:00';
     const t = new Date(du.slice(0, 10) + 'T12:00:00'), y = t.getFullYear(), m = t.getMonth(), j = t.getDate();
@@ -3313,12 +3316,11 @@
     return { du, au: loc(fin) + ' 23:59' };
   }
   const pmJours = d => d.du && d.au ? Math.round((new Date(d.au.slice(0, 10) + 'T12:00:00') - new Date(d.du.slice(0, 10) + 'T12:00:00')) / 86400000) + 1 : null;
-  /** Une date de « Tout le temps » : un début à plus de 90 ans en arrière, une fin à plus de 90 ans devant. */
-  const pmTjDu = v => !!v && +v.slice(0, 4) <= new Date().getFullYear() - 90;
-  const pmTjAu = v => !!v && +v.slice(0, 4) >= new Date().getFullYear() + 90;
-  const pmToujours = d => pmTjDu(d.du) && pmTjAu(d.au);
-  /** La période en mots : « du 24/10 au 23/11 23:59 », ou « tout le temps ». */
-  const pmPeriodeTxt = d => pmToujours(d) ? 'tout le temps' : 'du ' + (pmTjDu(d.du) ? 'toujours' : pmQuand(d.du)) + ' au ' + (pmTjAu(d.au) ? 'sans fin' : pmQuand(d.au));
+  /** Une fin « Tout le temps » : le 31/12/2037 ou plus tard. */
+  const pmTjAu = v => !!v && v.slice(0, 10) >= PM_TOUJOURS_AU.slice(0, 10);
+  const pmToujours = d => pmTjAu(d.au);
+  /** La période en mots : « du 24/10 au 23/11 23:59 », ou « du 23/10, sans fin ». */
+  const pmPeriodeTxt = d => 'du ' + pmQuand(d.du) + (pmTjAu(d.au) ? ', sans fin' : ' au ' + pmQuand(d.au));
 
   /**
    * Une promotion du magasin relue au panel porte les numéros de ses produits et catégories, pas toujours leurs noms :
@@ -3392,7 +3394,7 @@
       comptoir: ok('comptoir') ? '<span class="pm-oui">✓</span>' : mu('—'),
       webshop: ok('webshop') ? '<span class="pm-oui">✓</span>' : mu('—'),
       seuil: +seuil > 0 ? fU(+seuil) : mu('—'),
-      debut: l.du ? (pmTjDu(l.du) ? mu('toujours') : esc(pmQuand(l.du))) : mu('—'),
+      debut: l.du ? esc(pmQuand(l.du)) : mu('—'),
       fin: reste != null && reste >= 0 && reste <= 7 ? `<span title="${reste === 0 ? 'dernier jour' : 'encore ' + reste + ' jour' + (reste > 1 ? 's' : '')}">${fin}</span>` : fin,
       statut: `<span class="pm-chip ${e[1]}">${esc(e[0])}</span>`,
       coef: pmCoefCellule(l, min),
@@ -3464,7 +3466,7 @@
       }).join('')}</tbody></table></div>`;
     }
     h += `<div class="pm-pied db-mini">Tout se lit au panel, rien n’est gardé ailleurs${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''} : les promotions du magasin sont celles du panel réservées à ce seul magasin, les autres sont celles de la marque (elles se dupliquent pour en faire une du magasin). « Actives » : en caisse aujourd’hui.
-      Règles du magasin : une date de fin (« Tout le temps » : depuis 99 ans, pour 99 ans) · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Enregistrer l’écrit au panel (créée inactive, relue, puis activée) : elle passe en caisse pour ses dates. Un brouillon est une promotion inactive au panel.
+      Règles du magasin : une date de fin (« Tout le temps » : sans fin, jusqu’au 31/12/2037) · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Enregistrer l’écrit au panel (créée inactive, relue, puis activée) : elle passe en caisse pour ses dates. Un brouillon est une promotion inactive au panel.
       Un clic sur un coefficient en montre le détail, aux prix et coûts de recette d’aujourd’hui.
       Comptoir et Webshop : là où la promotion vaut — sans restriction au panel, les deux. Seuil : le montant minimal du ticket, quand le panel en donne un. « Colonnes » ajoute ou retire des colonnes, le choix est gardé ; les actions sont dans « ⋯ ».</div></div>`;
     return h;
@@ -3742,7 +3744,7 @@
       ${ck(!pmManque(d, 2), 'Déclencheur : ' + (x.cats.length || x.prods.length ? x.q + ' × ' + (PM_PORTIONS[x.portion] ? PM_PORTIONS[x.portion].lib + ' ' : '') + esc(pmLib(x)) : 'à l’étape 2'))}
       ${ck(!pmManque(d, 3), 'Avantage : ' + (y.cats.length || y.prods.length ? y.q + ' pièce' + (y.q > 1 ? 's' : '') + ' ' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + ', la moins chère' : 'à l’étape 3'))}
       ${ck(!pmManque(d, 4), 'Conditions : ' + esc(pmCanalLib(d.canal).toLowerCase()) + ' · ' + esc(pmSeuilTxt(d.seuil)) + ' · ' + (d.repetable ? 'répétable' + (d.maxParTicket ? ', ' + esc(d.maxParTicket) + ' fois au plus' : '') : 'une fois par ticket'))}
-      ${ck(!pmManque(d, 5), 'Période : ' + (pmManque(d, 5) ? esc(pmManque(d, 5)) : (pmToujours(d) ? 'tout le temps' : n + ' jour' + (n > 1 ? 's' : '')) + (d.creneaux.length ? ', ' + d.creneaux.length + ' créneau' + (d.creneaux.length > 1 ? 'x' : '') : '')))}
+      ${ck(!pmManque(d, 5), 'Période : ' + (pmManque(d, 5) ? esc(pmManque(d, 5)) : (pmToujours(d) ? 'sans fin' : n + ' jour' + (n > 1 ? 's' : '')) + (d.creneaux.length ? ', ' + d.creneaux.length + ' créneau' + (d.creneaux.length > 1 ? 'x' : '') : '')))}
       ${C && C.lot != null ? `<div class="pm-ck${C.lot >= min ? '' : ' wa'}">${C.lot >= min ? '✓' : '!'} Coefficient du lot ${fX(C.lot)}${C.lot >= min ? '' : ' : sous ' + fXm(min) + ', n’empêche pas l’enregistrement'}</div>` : ck(false, 'Coefficient du lot : se calcule avec X et Y')}</div>`;
     h += `<div class="db-card pm-c"><div class="pm-ligne"><div class="db-lab">Calculateur de coefficient</div>${C && C.lot != null ? `<span class="pm-chip ${C.lot >= min ? 'ok' : 'r'}">repère ${fXm(min)} ${C.lot >= min ? '✓' : '✕'}</span>` : ''}</div>`;
     if (!C) { h += `<div class="db-mini" style="margin-top:8px">${S.err[clePMP()] ? 'Prix et coûts illisibles : ' + esc(S.err[clePMP()]) : 'Lecture des prix et coûts de recette du magasin…'}</div></div>`; }
@@ -3855,7 +3857,7 @@
         ${lgn('Où', '<b>' + esc(pmCanalLib(d.canal)) + '</b> · ' + esc((PM_CANAUX.find(o => o[0] === d.canal) || PM_CANAUX[0])[2]), 4)}
         ${lgn('Seuil du ticket', +d.seuil > 0 ? 'le ticket atteint <b>' + fU(+d.seuil) + '</b> TTC avant remise' : 'sans seuil', 4)}
         ${lgn('Dans un ticket', d.repetable ? 'répétable' + (d.maxParTicket ? ' · <b>' + esc(d.maxParTicket) + '</b> fois au plus' : ' · sans limite') : 'une fois par ticket', 4)}
-        ${lgn('Période', d.du && d.au ? (pmToujours(d) ? '<b>tout le temps</b> (depuis 99 ans, pour 99 ans)' : 'du <b>' + esc(pmQuand(d.du)) + '</b> au <b>' + esc(pmQuand(d.au)) + '</b>') + ' · ' + esc(pmCreneauxTxt(d.creneaux)) : '<span class="ko">à régler</span>', 5)}
+        ${lgn('Période', d.du && d.au ? (pmToujours(d) ? 'du <b>' + esc(pmQuand(d.du)) + '</b>, <b>sans fin</b> (jusqu’au 31/12/2037, la date la plus lointaine que le panel accepte)' : 'du <b>' + esc(pmQuand(d.du)) + '</b> au <b>' + esc(pmQuand(d.au)) + '</b>') + ' · ' + esc(pmCreneauxTxt(d.creneaux)) : '<span class="ko">à régler</span>', 5)}
         ${lgn('Fixé par la marque', 'priorité normale · non exclusive · activation automatique', 0)}</table>
       <div id="pm-fixe">${pmFixe(W)}</div>
       ${manque.length ? `<div class="pm-warn">À compléter avant l’enregistrement : ${esc(manque.join(' · '))}</div>` : ''}
@@ -3944,7 +3946,7 @@
     const n = pmJours(d), R = (S.aux[clePM()] || {}).regles || {};
     if (!d.du || !d.au) { return 'Donnez le début et la fin.'; }
     if (d.au <= d.du) { return '<span class="ko">La fin vient après le début.</span>'; }
-    return pmToujours(d) ? 'Tout le temps : depuis 99 ans, pour 99 ans — la promotion ne s’arrête pas.' : `${n} jour${n > 1 ? 's' : ''}.`;
+    return pmToujours(d) ? 'Tout le temps : sans fin — jusqu’au 31/12/2037, la date la plus lointaine que le panel accepte.' : `${n} jour${n > 1 ? 's' : ''}.`;
   }
   function rendPmAssistant() {
     const W = S.pmW, e = W.etape;
