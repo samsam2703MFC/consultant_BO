@@ -290,5 +290,14 @@
   "hint_google": "Mancano {n} recensioni 5★ per arrivare a {s} ★",
   "hint_google_ok": "Il negozio tiene {s} ★: ogni recensione 5★ lo mantiene",
   "hint_cross": "Ancora {n} vendite incrociate per arrivare al {s} %: un articolo in più su ogni scontrino",
-  "hint_target": "Il negozio deve ancora fare {n} € di fatturato questo mese"
+  "hint_target": "Il negozio deve ancora fare {n} € di fatturato questo mese",
+  "still_in_play": "Ancora in gioco questo mese",
+  "won_so_far": "già vinti",
+  "in_play_in": "In gioco a {m}",
+  "all_won": "Tutto ciò che è in gioco è vinto: mantieni il ritmo fino a fine mese.",
+  "counters_start": "I tuoi contatori partono con i primi scontrini del mese: ogni vendita conta.",
+  "you_won_in": "A {m} hai vinto",
+  "hours_left_short": "{h} h di turno rimaste questo mese",
+  "how_to_get_there": "Come arrivarci",
+  "where_you_are": "A che punto sei"
 }

@@ -1,4 +1,6 @@
-{# primes/primes.twig — « Mes primes » (16/10/2026) : les targets et les catégories une par ligne, en drapeau (la barre, le trait de l'objectif, la récompense dessus), qui se déroulent sur leur détail ; les promos en carrés deux par ligne ; chaque carré a sa récompense, une demi-jauge (où elle en est aujourd'hui, l'objectif à atteindre) et son état, en gris tant qu'elle n'est pas gagnée ; l'icône déposée par l'admin, sinon l'emoji ; le classement à la Strava dans un menu qui monte du bas. #}
+{# primes/primes.twig — « Mes primes » (23/10/2026) : tournée vers la motivation — combien est encore en jeu, comment y arriver (le plan,
+   PrimesPlan), où tu en es (chaque prime) — dans une forme sobre, façon iOS : la police du système, des listes groupées, une seule
+   couleur, des icônes au trait à la place des émojis (une icône déposée par l'admin reste). Avant, le 16/10/2026 : les targets et les catégories une par ligne, en drapeau (la barre, le trait de l'objectif, la récompense dessus), qui se déroulent sur leur détail ; les promos en carrés deux par ligne ; chaque carré a sa récompense, une demi-jauge (où elle en est aujourd'hui, l'objectif à atteindre) et son état, en gris tant qu'elle n'est pas gagnée ; l'icône déposée par l'admin, sinon l'emoji ; le classement à la Strava dans un menu qui monte du bas. #}
 {% extends "layouts/mobile_base.twig" %}
 {% set active_nav = 'primes' %}
 {% set T = translations %}
@@ -37,14 +39,14 @@
 {# ── Un mois à venir (16/10/2026) : les primes prévues, leur récompense, leur règle, leur objectif ; rien de compté. ── #}
 {% set eur = '€' %}{% set pcs = T.pcs ?? 'pcs' %}
 {% set nomFixe = { croisees: T.cross_sales ?? null, record: T.beat_your_record ?? null, objectif: T.shop_target_title ?? null, google: T.google_rating ?? null, meilleure: T.best_seller ?? null } %}
-<div class="hx"><div class="l"><div><b>{{ p.enJeu|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b><small>{{ T.in_play ?? 'en jeu' }}</small></div></div></div>
+<section class="sb-heros"><p class="sb-sur">{{ (T.in_play_in ?? 'En jeu en {m}')|replace({'{m}': mois(p.m)|split(' ')|first}) }}</p><p class="sb-chiffre">{{ p.enJeu|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</p></section>
 <div class="pl-vide av"><i class="bi bi-calendar-event"></i><div><b>{{ T.upcoming_title ?? 'Les primes prévues ce mois-là' }}</b>
   <span>{{ T.upcoming_text ?? 'Ce que tu pourras gagner. Le compteur démarre le premier jour du mois.' }}</span></div></div>
 {% for g in [
   { cle: 'targets', titre: T.section_targets ?? 'Targets', liste: p.cartes|filter(c => c.type == 'target' or c.type == 'classement') },
   { cle: 'promos', titre: T.section_promos ?? 'Promos', liste: p.cartes|filter(c => c.type == 'promo') }]|filter(g => g.liste|length) %}
 {% set max = 0 %}{% for c in g.liste %}{% set max = max + c.montant %}{% endfor %}
-<div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{% if max == 0 and g.liste|filter(c => c.cadeau ?? null)|length %}🎁{% else %}{{ T.up_to ?? 'jusqu’à' }} {{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</small></div>
+<div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{% if max == 0 and g.liste|filter(c => c.cadeau ?? null)|length %}<i class="bi bi-gift"></i>{% else %}{{ T.up_to ?? 'jusqu’à' }} {{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</small></div>
 <div class="pl-liste">
 {% for c in g.liste %}
 {% set u = c.unite %}{% set dec = u == 'note' ? 1 : 0 %}
@@ -53,9 +55,9 @@
 <div class="pl av" data-carte="{{ c.cle }}">
   <div class="pl-b">
     <div class="pl-h">
-      <span class="emo">{% if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">{% else %}{{ c.emo }}{% endif %}</span>
+      <span class="emo">{{ _self.ic(c, ib) }}</span>
       <b class="pl-t">{{ nomFixe[c.cle] ?? c.lib }}</b>
-      <span class="pl-v">{% if c.cadeau ?? null %}🎁<small>{{ c.cadeau.nom }}</small>{% else %}{{ c.montant|number_format(0, ',', ' ') }}<small>{{ eur }}{{ c.max ? ' max' }}</small>{% endif %}</span>
+      <span class="pl-v">{% if c.cadeau ?? null %}<i class="bi bi-gift"></i><small>{{ c.cadeau.nom }}</small>{% else %}{{ c.montant|number_format(0, ',', ' ') }}<small>{{ eur }}{{ c.max ? ' max' }}</small>{% endif %}</span>
     </div>
     <div class="pl-s">
       <span class="mu">
@@ -74,22 +76,42 @@
 </div>
 {% endfor %}
 {% else %}
-{# ── Acquis, en jeu ── #}
+{# ── Combien : ce qui est encore en jeu ce mois-ci, ce qui est déjà gagné, le temps qu'il reste (23/10/2026). ── #}
 {% set part = p.enJeu > 0 ? min(1, p.acquis / p.enJeu) : 0 %}
-<div class="hx">
-  <div class="l">
-    <div><b>{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b><small>{{ T.earned ?? 'acquis' }}</small></div>
-    {% if p.enCours %}<div class="r"><b>{{ p.enJeu|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b><small>{{ T.in_play ?? 'en jeu' }}</small></div>{% endif %}
-  </div>
-  {% if p.enCours %}<div class="bar"><i style="width:{{ (100 * part)|round(1) }}%"></i></div>{% endif %}
-</div>
+{% set encore = max(0, p.enJeu - p.acquis) %}
+<section class="sb-heros">
+  {% if p.enCours and encore > 0 %}
+  <p class="sb-sur">{{ T.still_in_play ?? 'Encore en jeu ce mois-ci' }}</p>
+  <p class="sb-chiffre">+{{ encore|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</p>
+  <div class="sb-barre grande"><i style="width:{{ (100 * part)|round(1) }}%"></i></div>
+  <p class="sb-sous"><b>{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b> {{ T.won_so_far ?? 'déjà gagnés' }} · {{ p.enJeu|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.in_play ?? 'en jeu' }}</p>
+  {% elseif p.enCours %}
+  <p class="sb-sur">{{ T.my_month ?? 'Mon mois' }}</p>
+  <p class="sb-chiffre">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</p>
+  <p class="sb-sous">{{ p.acquis > 0 ? (T.all_won ?? 'Tout ce qui est en jeu est gagné : garde le rythme jusqu’à la fin du mois.') : (T.counters_start ?? 'Tes compteurs démarrent avec tes premiers tickets du mois : chaque vente compte.') }}</p>
+  {% else %}
+  <p class="sb-sur">{{ (T.you_won_in ?? 'En {m}, tu as gagné')|replace({'{m}': mois(p.m)|split(' ')|first}) }}</p>
+  <p class="sb-chiffre">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</p>
+  {% endif %}
+  {% if p.enCours and heuresRestantes %}<p class="sb-pied">{{ (T.hours_left_short ?? '{h} h de service restantes ce mois-ci')|replace({'{h}': heuresRestantes|number_format(1, ',', ' ')|replace({',0': ''})}) }}</p>{% endif %}
+</section>
 
 {% if p.cartes|filter(c => c.motif == 'sans_vente')|length %}
 <div class="pl-vide"><i class="bi bi-receipt"></i><div><b>{{ T.no_sale_title ?? 'Aucune vente à ton nom ce mois-ci' }}</b>
   <span>{{ T.no_sale_text ?? 'Tes primes à toi (ventes croisées, record, classements) s’affichent dès ton premier ticket encaissé à ton nom. Le magasin et la note Google, eux, comptent déjà.' }}</span></div></div>
 {% endif %}
 
-{# ── Les primes, en carrés deux par ligne : les targets d'un côté, les catégories et les promos de l'autre (16/10/2026). ── #}
+{# ── Comment y arriver (23/10/2026) : les primes encore à aller chercher, la plus proche d'abord ; une ligne mène à sa prime. ── #}
+{% set aPortee = (plan ?? [])|filter(e => not e.horsPortee) %}
+{% if aPortee|length %}
+<h2 class="sb-titre">{{ T.how_to_get_there ?? 'Comment y arriver' }}</h2>
+<div class="sb-groupe">
+  {% for e in aPortee %}{% include "components/primes_etape.twig" with { e: e, T: T, ib: ib, lien: '#prime-' ~ e.cle } only %}{% endfor %}
+</div>
+{% endif %}
+
+{# ── Où tu en es : les primes, une par ligne (23/10/2026 : les promos aussi, plus de carrés), qui se déroulent sur leur détail. ── #}
+<h2 class="sb-titre">{{ T.where_you_are ?? 'Où tu en es' }}</h2>
 {# Les primes fixes portent leur nom dans la langue de l'app ; les catégories et les promos, celui que l'admin leur donne. #}
 {% set nomFixe = { croisees: T.cross_sales ?? null, record: T.beat_your_record ?? null, objectif: T.shop_target_title ?? null, google: T.google_rating ?? null, meilleure: T.best_seller ?? null } %}
 {# Catégories : la section est retirée de la page (16/10/2026, à la demande) ; leurs classements restent dans le
@@ -103,9 +125,9 @@
 {% set b = p.briques %}{% set pm = p.prime %}{% set a = p.aujourdhui ?? null %}
 {% set aCl = (p.classements ?? [])|map(x => x.cle) %}
 {% for g in groupes|filter(g => g.liste|length) %}
-{% set ligne = g.cle in ['targets', 'categories'] %}
+{% set ligne = true %}
 {% set max = 0 %}{% for c in g.liste %}{% set max = max + max(c.montant, c.gain) %}{% endfor %}
-<div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{% if max == 0 and g.liste|filter(c => c.cadeau ?? null)|length %}🎁{% else %}{% if p.enCours %}{{ T.up_to ?? 'jusqu’à' }} {% endif %}{{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</small></div>
+<div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{% if max == 0 and g.liste|filter(c => c.cadeau ?? null)|length %}<i class="bi bi-gift"></i>{% else %}{% if p.enCours %}{{ T.up_to ?? 'jusqu’à' }} {% endif %}{{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</small></div>
 <div class="{{ ligne ? 'pl-liste' : 'pq-grille' }}">
 {% for c in g.liste %}
 {% set enJour = c.cle == 'objectif' and (c.jour ?? null) %}
@@ -119,10 +141,10 @@
 {% set ok = c.actif ?? false %}
 {% set uc = u == 'pct' ? '%' : (u == 'note' ? '★' : (u == 'score' ? (T.pts ?? 'pts') : (u == 'pcs' ? pcs : ''))) %}
 {% set ue = u == 'pct' or u == 'score' ? ' ' ~ (T.pts ?? 'pts') : (u == 'note' ? ' ★' : '') %}
-<div class="pl{{ ok ? ' ok' }}" data-carte="{{ c.cle }}">
+<div class="pl{{ ok ? ' ok' }}" data-carte="{{ c.cle }}" id="prime-{{ c.cle }}">
   <div class="pl-b" role="button" tabindex="0" aria-expanded="false" aria-controls="pd-{{ c.cle }}" data-pl>
     <div class="pl-h">
-      <span class="emo">{% if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">{% else %}{{ c.emo }}{% endif %}</span>
+      <span class="emo">{{ _self.ic(c, ib) }}</span>
       <b class="pl-t">{{ nomFixe[c.cle] ?? c.lib }}</b>
       <span class="pl-v">{% if v is null %}—{% else %}{{ v|number_format(dec, ',', ' ') }}{% if uc %}<small>{{ uc }}</small>{% endif %}{% endif %}</span>
       <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
@@ -135,7 +157,7 @@
       <span class="{{ ok ? 'ok' : (c.motif ? 'mu') }}">
       {%- if c.motif in ['pas_compte', 'sans_vente', 'pas_objectif', 'pas_note', 'pas_classee', 'pas_record'] %}
         {%- if c.motif == 'pas_compte' %}{{ T.not_counted ?? 'pas encore compté' }}{% elseif c.motif == 'sans_vente' %}{{ T.no_sale_short ?? 'aucune vente à ton nom' }}{% elseif c.motif == 'pas_objectif' %}{{ T.no_target_short ?? 'pas d’objectif' }}{% elseif c.motif == 'pas_note' %}{{ T.no_rating ?? 'pas de note Google' }}{% elseif c.motif == 'pas_classee' %}{{ T.not_ranked ?? 'pas classée' }}{% else %}{{ T.no_record_short ?? 'pas encore de record' }}{% endif %}
-      {%- elseif c.type == 'categorie' %}<b class="rg">{{ c.rang == 1 ? '👑 ' ~ (T.first_abbr ?? '1re') : (c.rang ? rangPre ~ c.rang ~ rangSuf : (T.not_ranked ?? 'pas classée')) }}{% if c.rang and c.sur %} / {{ c.sur }}{% endif %}</b> ·
+      {%- elseif c.type == 'categorie' %}<b class="rg">{{ c.rang == 1 ? (T.first_abbr ?? '1re') : (c.rang ? rangPre ~ c.rang ~ rangSuf : (T.not_ranked ?? 'pas classée')) }}{% if c.rang and c.sur %} / {{ c.sur }}{% endif %}</b> ·
         {% if c.pour1 is not null %}{{ p.enCours ? (T.still ?? 'encore') ~ ' ' ~ c.pour1 ~ ' ' ~ pcs ~ ' ' ~ (T.to_be_first ?? 'pour être 1re') : (T.short_of_first ?? 'à {n} {u} de la 1re')|replace({'{n}': c.pour1, '{u}': pcs}) }}{% elseif c.avance1 is not null %}+{{ c.avance1 }} {{ pcs }} {{ T.lead_short ?? 'd’avance' }}{% else %}{{ T.first_alone ?? '1re, seule en lice' }}{% endif %}
       {%- elseif ok %}✓ {{ T.activated ?? 'Prime activée' }}
       {%- elseif c.motif == 'heures' %}{{ T.below ?? 'sous' }} {{ c.heuresMin }}&nbsp;h
@@ -144,7 +166,8 @@
       {%- elseif v is not null and c.repereVal is not null and c.repereVal > v %}{{ p.enCours ? (T.still ?? 'encore') : (T.was_missing ?? 'il manquait') }} {{ (c.repereVal - v)|number_format(dec, ',', ' ') }}{{ ue }}
       {%- endif -%}
       </span>
-      {% if c.type == 'categorie' %}<span>{% if c.premier and not c.premier.moi %}👑 {{ c.premier.nom }} {{ c.premier.q|number_format(0, ',', ' ') }}{% elseif c.second %}{{ rangPre }}2{{ rangSuf }} {{ c.second.nom }} {{ c.second.q|number_format(0, ',', ' ') }}{% endif %}</span>
+      {% if c.type == 'categorie' %}<span>{% if c.premier and not c.premier.moi %}{{ T.first_abbr ?? '1re' }} {{ c.premier.nom }} {{ c.premier.q|number_format(0, ',', ' ') }}{% elseif c.second %}{{ rangPre }}2{{ rangSuf }} {{ c.second.nom }} {{ c.second.q|number_format(0, ',', ' ') }}{% endif %}</span>
+      {% elseif (c.regle ?? '') == 'magasin' and (c.moiPcs ?? null) is not null %}<span>{{ T.of_which_you ?? 'dont toi' }} {{ c.moiPcs|number_format(0, ',', ' ') }} {{ pcs }}</span>
       {% elseif c.repereVal is not null %}<span>{{ c.repereType == 'garder' ? (T.keep_first_short ?? 'garder la 1re') : (T.goal_lower ?? 'objectif') }} {{ c.repereVal|number_format(dec, ',', ' ') }}{{ u == 'score' ? ' ' ~ (T.pts ?? 'pts') : suf }}</span>{% endif %}
     </div>
   </div>
@@ -181,7 +204,7 @@
       <div><dt>{{ T.d_reward ?? 'Récompense' }}</dt><dd>{{ go.recompense|number_format(0, ',', ' ') }}&nbsp;{{ eur }}<small>{{ T.d_per_person ?? 'par personne' }}</small></dd></div>
     </dl>
     {% elseif c.cle == 'meilleure' %}{% set mv = b.meilleure %}
-      <div><dt>{{ T.d_my_score ?? 'Ton score' }}</dt><dd>{{ mv.score is not null ? mv.score|number_format(0, ',', ' ') : '—' }}{% if mv.rangMag %}<small>{{ mv.rangMag == 1 ? '👑 ' ~ (T.first_abbr ?? '1re') : rangPre ~ mv.rangMag ~ rangSuf }} / {{ mv.surMag }} · {{ T.my_shop_short ?? 'magasin' }}</small>{% endif %}</dd></div>
+      <div><dt>{{ T.d_my_score ?? 'Ton score' }}</dt><dd>{{ mv.score is not null ? mv.score|number_format(0, ',', ' ') : '—' }}{% if mv.rangMag %}<small>{{ mv.rangMag == 1 ? (T.first_abbr ?? '1re') : rangPre ~ mv.rangMag ~ rangSuf }} / {{ mv.surMag }} · {{ T.my_shop_short ?? 'magasin' }}</small>{% endif %}</dd></div>
       {% if mv.premierNom and mv.rangMag != 1 %}<div><dt>{{ T.first_shop ?? '1re du magasin' }}</dt><dd>{{ mv.premierNom }}<small>{{ mv.scorePremier|number_format(0, ',', ' ') }}</small></dd></div>{% endif %}
       {% if mv.rangRes %}<div><dt>{{ T.network ?? 'Réseau' }}</dt><dd>{{ rangPre }}{{ mv.rangRes }}{{ rangSuf }} / {{ mv.surRes }}</dd></div>{% endif %}
       {% if mv.caHeure is not null %}<div><dt>{{ T.d_revenue_hour ?? 'CA par heure' }}</dt><dd>{{ mv.caHeure|number_format(0, ',', ' ') }}&nbsp;{{ eur }}/h<small>{{ (mv.heures ?? 0)|number_format(1, ',', ' ') }}&nbsp;h</small></dd></div>{% endif %}
@@ -189,60 +212,10 @@
     </dl><p class="pl-n">{{ T.best_how ?? 'Ton CA par heure, corrigé du créneau, face aux autres vendeuses.' }}</p>
     {% elseif c.type == 'categorie' %}</dl>
       {% if c.podium|length %}<p class="pl-st">{{ T.d_shop_podium ?? 'Le podium du magasin' }}</p>
-      <ol class="pd">{% for x in c.podium %}<li class="{{ x.moi ? 'moi' }}{{ x.moi and x.rang == 1 ? ' un' }}"><span class="r">{{ x.rang == 1 ? '👑' : x.rang }}</span><span class="n">{{ x.moi ? (T.you_short ?? 'Toi') : x.nom }}</span><span class="q">{{ x.q|number_format(0, ',', ' ') }} {{ pcs }}</span></li>{% endfor %}</ol>{% endif %}
+      <ol class="pd">{% for x in c.podium %}<li class="{{ x.moi ? 'moi' }}{{ x.moi and x.rang == 1 ? ' un' }}"><span class="r">{{ x.rang }}</span><span class="n">{{ x.moi ? (T.you_short ?? 'Toi') : x.nom }}</span><span class="q">{{ x.q|number_format(0, ',', ' ') }} {{ pcs }}</span></li>{% endfor %}</ol>{% endif %}
       {% if c.minPieces %}<dl class="pl-l"><div><dt>{{ T.d_condition ?? 'Condition' }}</dt><dd>{{ c.minPieces }} {{ pcs }} {{ T.d_min_pieces ?? 'min. pour être classée' }}</dd></div></dl>{% endif %}
     {% else %}</dl>{% endif %}
     {% if c.cle in aCl %}<button type="button" class="pl-cl" data-voir-cl="{{ c.cle }}">{{ T.d_see_leaderboard ?? 'Voir le classement' }} <i class="bi bi-arrow-down"></i></button>{% endif %}
-  </div>
-</div>
-{% else %}
-<div class="pq {{ c.etat == 'gagne' ? 'gagne' : (c.etat == 'tete' ? 'tete' : 'non') }}" data-carte="{{ c.cle }}">
-  <div class="pq-h">
-    <span class="emo">{% if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">{% else %}{{ c.emo }}{% endif %}</span>
-    {#- Une prime du magasin (16/10/2026) : sa somme, « magasin » ; gagnée, sa part (au centime). #}
-    <span class="pq-m">{% if c.cadeau ?? null %}🎁{% if c.etat == 'gagne' %} ✓{% endif %}{% else %}{% if c.gain > 0 and c.etat == 'gagne' %}+{{ c.gain|number_format(c.gain == c.gain|round ? 0 : 2, ',', ' ') }}{% else %}{{ c.montant|number_format(0, ',', ' ') }}{% endif %}&nbsp;{{ eur }}{% endif %}{% if c.max and c.gain <= 0 %}<i>max</i>{% endif %}{% if (c.regle ?? '') == 'magasin' and not (c.gain > 0 and c.etat == 'gagne') %}<i>{{ T.shop_word ?? 'magasin' }}</i>{% endif %}{% if c.type == 'classement' %}<small class="typ {{ c.type }}">{{ T.type_classement ?? 'Classement' }}</small>{% endif %}</span>
-  </div>
-  <b class="pq-n">{{ nomFixe[c.cle] ?? c.lib }}{% if c.cadeau ?? null %}<small>{{ c.cadeau.nom }}</small>{% elseif c.categorie ?? '' %}<small>{{ c.categorie }}</small>{% endif %}</b>
-  <div class="pq-g">
-    {# La demi-jauge : le point rubis, c'est elle aujourd'hui ; le repère sombre, l'objectif à atteindre ; le pointillé, où en être au jour J. #}
-    <svg class="dj" viewBox="0 12 120 62" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
-      <path class="fond" d="M12 68 A48 48 0 0 1 108 68" pathLength="100"/>
-      {% if c.jauge is not null and c.jauge > 0 %}<path class="val" d="M12 68 A48 48 0 0 1 108 68" pathLength="100" stroke-dasharray="{{ c.jauge }} 100"/>{% endif %}
-      {% if (c.repereJour ?? null) is not null %}<line class="jr" x1="60" y1="12" x2="60" y2="28" transform="rotate({{ ((c.repereJour - 50) * 1.8)|round(1) }} 60 68)"/>{% endif %}
-      {% if c.repere is not null %}<g transform="rotate({{ ((c.repere - 50) * 1.8)|round(1) }} 60 68)"><line class="rep" x1="60" y1="9" x2="60" y2="30"/><circle class="rep-p" cx="60" cy="6" r="4"/></g>{% endif %}
-      {% if c.jauge is not null %}<circle class="moi" cx="60" cy="20" r="6.5" transform="rotate({{ ((c.jauge - 50) * 1.8)|round(1) }} 60 68)"/>{% endif %}
-    </svg>
-    <span class="pq-v">{% if v is null %}—{% else %}{{ v|number_format(dec, ',', ' ') }}<small>{{ u == 'pct' ? '%' : (u == 'pcs' ? pcs : (u == 'note' ? '★' : (u == 'score' ? (T.score ?? 'score') : ''))) }}</small>{% endif %}
-      <i>{{ enJour ? (T.day_prefix ?? 'J') ~ c.jour : ((c.cle in ['objectif', 'google'] or (c.regle ?? '') == 'magasin') ? (T.shop_word ?? 'magasin') : (T.you_short ?? 'Toi')) }}</i></span>
-  </div>
-  {# L'objectif à atteindre, en clair, avec le même repère que sur la jauge. #}
-  <div class="pq-o">
-    {%- if c.motif in ['pas_compte', 'sans_vente', 'pas_objectif', 'pas_note', 'pas_classee', 'pas_record'] %}<span class="mu">
-      {%- if c.motif == 'pas_compte' %}{{ T.not_counted ?? 'pas encore compté' }}{% elseif c.motif == 'sans_vente' %}{{ T.no_sale_short ?? 'aucune vente à ton nom' }}{% elseif c.motif == 'pas_objectif' %}{{ T.no_target_short ?? 'pas d’objectif' }}{% elseif c.motif == 'pas_note' %}{{ T.no_rating ?? 'pas de note Google' }}{% elseif c.motif == 'pas_classee' %}{{ T.not_ranked ?? 'pas classée' }}{% else %}{{ T.no_record_short ?? 'pas encore de record' }}{% endif %}</span>
-    {%- elseif c.repereType == 'garder' %}<span class="lg"></span>{{ T.keep_first ?? 'Garder la 1re place' }}
-    {%- elseif c.repereType %}<span class="lg"></span>{{ T.goal ?? 'Objectif' }} <b>{{ c.repereVal|number_format(c.repereType == 'seuil' ? 1 : dec, ',', ' ') }}{{ c.repereType == 'seuil' ? ' ★' : suf }}</b>{% if c.repereType == 'min' %} min.{% endif %}
-    {%- endif -%}
-  </div>
-  <div class="pq-f">
-    {% if enJour and c.val is not null %}<span class="etat {{ c.val >= c.cible ? 'ok' : 'att' }}">{{ c.val >= c.cible ? '✓ ' }}{{ T.proj_short ?? 'proj.' }} {{ c.val|number_format(0, ',', ' ') }}&nbsp;%</span>
-    {% elseif c.etat == 'gagne' %}<span class="etat ok">✓ {{ T.won ?? 'gagné' }}</span>
-    {% elseif c.etat == 'tete' %}<span class="etat or">👑 {{ T.first_abbr ?? '1re' }}</span>
-    {% elseif c.etat == 'rang' %}<span class="etat mu">{{ rangPre }}{{ c.rang }}{{ rangSuf }} / {{ c.sur }}</span>
-    {% elseif enJour and c.avance is not null %}<span class="etat {{ c.avance >= 0 ? 'ok' : 'att' }}">{{ c.avance >= 0 ? '+' : '−' }}{{ c.avance|abs|number_format(0, ',', ' ') }} {{ T.pts ?? 'pts' }}</span>
-    {% elseif c.etat == 'att' and c.ecart is not null %}<span class="etat att">−{{ c.ecart|number_format(dec, ',', ' ') }}{{ u == 'pct' ? ' pt' : suf }}</span>
-    {% else %}<span class="etat mu">—</span>{% endif %}
-    <span class="pq-c">
-    {%- if enJour %}<span class="jr-l"></span>{{ T.day_prefix ?? 'J' }}{{ c.jour }} : {{ c.cibleJour|number_format(0, ',', ' ') }}&nbsp;%
-    {%- elseif c.motif == 'heures' %}{{ T.below ?? 'sous' }} {{ c.heuresMin }}&nbsp;h
-    {%- elseif c.motif == 'min_tickets' %}{{ c.minTickets }} {{ T.tickets ?? 'tickets' }} min.
-    {#- Sur objectif du magasin (16/10/2026) : la jauge est le total du magasin, sa part à elle en dessous. #}
-    {%- elseif (c.regle ?? '') == 'magasin' and (c.moiPcs ?? null) is not null %}{{ T.of_which_you ?? 'dont toi' }} {{ c.moiPcs|number_format(0, ',', ' ') }} {{ pcs }}
-    {%- elseif c.repereType == 'passer' %}👑 <b>{{ c.premier.nom }}</b> {{ c.premier.q|number_format(0, ',', ' ') }}
-    {%- elseif c.repereType == 'garder' %}{{ rangPre }}2{{ rangSuf }} <b>{{ c.second.nom }}</b> {{ c.second.q|number_format(0, ',', ' ') }}
-    {%- elseif c.cle == 'record' and c.record is not null %}{{ T.record ?? 'record' }} {{ c.record|number_format(2, ',', ' ') }}
-    {%- elseif c.cle == 'objectif' and c.projete and c.val is not null %}{{ T.proj_short ?? 'proj.' }} {{ c.val|number_format(0, ',', ' ') }}&nbsp;%
-    {%- endif -%}
-    </span>
   </div>
 </div>
 {% endif %}
@@ -254,7 +227,7 @@
 {% set cls = p.classements ?? [] %}
 {% if cls|length %}
 {% set c0 = cls|first %}
-<div class="titre-section" id="classement"><h2>{{ T.leaderboard ?? 'Classement' }}</h2><small>{{ mois(p.m) }}</small></div>
+<h2 class="sb-titre" id="classement">{{ T.leaderboard ?? 'Classement' }}</h2>
 {# Une ligne du menu : l'icône, le nom, le type, mon rang dans le magasin, la 1re. #}
 {% set ligneCl = [] %}
 {% for x in cls %}
@@ -265,9 +238,9 @@
 {% endfor %}
 {% set l0 = ligneCl|first %}
 <button type="button" class="dd" data-cl-ouvrir aria-haspopup="listbox" aria-expanded="false" aria-controls="cl-feuille">
-  <span class="emo" data-cl-emo>{% if c0.icone ?? '' %}<img src="{{ ib }}/{{ c0.icone }}" alt="">{% else %}{{ c0.emo ?? '👑' }}{% endif %}</span>
+  <span class="emo" data-cl-emo>{{ _self.ic(c0, ib) }}</span>
   <span class="t"><b data-cl-lib>{{ nomFixe[c0.cle] ?? c0.lib }}{% if c0.categorie ?? '' %} · {{ c0.categorie }}{% endif %}</b><span class="typ {{ c0.type }}" data-cl-typ>{{ attribute(T, 'type_' ~ c0.type) ?? c0.type }}</span></span>
-  <span class="dd-r" data-cl-rang>{% if l0.rang %}{{ l0.rang == 1 ? '👑 ' ~ (T.first_abbr ?? '1re') : rangPre ~ l0.rang ~ rangSuf }}<small>/ {{ l0.sur }}</small>{% else %}—{% endif %}</span>
+  <span class="dd-r" data-cl-rang>{% if l0.rang %}{{ l0.rang == 1 ? (T.first_abbr ?? '1re') : rangPre ~ l0.rang ~ rangSuf }}<small>/ {{ l0.sur }}</small>{% else %}—{% endif %}</span>
   <i class="bi bi-chevron-down"></i>
 </button>
 <div class="feuille" id="cl-feuille" data-feuille hidden>
@@ -278,10 +251,10 @@
     <ul role="listbox" aria-label="{{ T.leaderboard ?? 'Classement' }}">
       {% for l in ligneCl %}{% set x = l.x %}
       <li role="option" tabindex="0" aria-selected="{{ loop.first ? 'true' : 'false' }}" data-choix="{{ x.cle }}" data-type="{{ x.type }}">
-        <span class="emo">{% if x.icone ?? '' %}<img src="{{ ib }}/{{ x.icone }}" alt="">{% else %}{{ x.emo ?? '👑' }}{% endif %}</span>
+        <span class="emo">{{ _self.ic(x, ib) }}</span>
         <span class="t"><b>{{ nomFixe[x.cle] ?? x.lib }}{% if x.categorie ?? '' %} · {{ x.categorie }}{% endif %}</b><span class="typ {{ x.type }}">{{ attribute(T, 'type_' ~ x.type) ?? x.type }}</span>
-          <small>{% if l.un %}👑 {{ l.un.moi ? (T.you_short ?? 'Toi') : l.un.nom }} {{ l.q|number_format(l.champ == 'taux' ? 1 : 0, ',', ' ') }}{{ l.champ == 'taux' ? ' %' : ' ' ~ pcs }}{% else %}{{ T.lb_empty_short ?? 'personne encore' }}{% endif %}</small></span>
-        <span class="dd-r">{% if l.rang %}{{ l.rang == 1 ? '👑 ' ~ (T.first_abbr ?? '1re') : rangPre ~ l.rang ~ rangSuf }}<small>/ {{ l.sur }}</small>{% else %}—{% endif %}</span>
+          <small>{% if l.un %}{{ T.first_abbr ?? '1re' }} : {{ l.un.moi ? (T.you_short ?? 'Toi') : l.un.nom }} {{ l.q|number_format(l.champ == 'taux' ? 1 : 0, ',', ' ') }}{{ l.champ == 'taux' ? ' %' : ' ' ~ pcs }}{% else %}{{ T.lb_empty_short ?? 'personne encore' }}{% endif %}</small></span>
+        <span class="dd-r">{% if l.rang %}{{ l.rang == 1 ? (T.first_abbr ?? '1re') : rangPre ~ l.rang ~ rangSuf }}<small>/ {{ l.sur }}</small>{% else %}—{% endif %}</span>
         <i class="bi bi-check-lg coche"></i>
       </li>{% endfor %}
     </ul>
@@ -300,7 +273,6 @@
       {% for place in [2, 1, 3] %}{% set r = (podium|filter(z => z.rang == place))|first %}
       {% if r %}
       <div class="pod p{{ place }}{{ r.moi ? ' moi' }}">
-        {% if place == 1 %}<span class="cr">👑</span>{% endif %}
         <span class="av {{ r.moi ? 'moi' : 't' ~ (r.nom|length % 8) }}">{% if r.moi %}<i class="bi bi-person-fill"></i>{% else %}{{ r.nom|first|upper }}{% endif %}</span>
         <b>{{ r.moi ? (T.you_short ?? 'Toi') : r.nom }}</b>{% if niv == 'reseau' %}<small>{{ r.lieu }}</small>{% endif %}
         <div class="q">{% if champ == 'pieces' %}{{ r.pieces|number_format(0, ',', ' ') }}<small> {{ pcs }}</small>{% else %}{{ r.taux|number_format(0, ',', ' ') }}<small> %</small>{% endif %}</div>
@@ -335,7 +307,7 @@
     {% set objD = c.objPcs ?? (c.objectif ?? ((c.minPieces ?? 0) > 0 ? c.minPieces : null)) %}
     {% set nD = objD is not null ? objD|number_format(0, ',', ' ') : '' %}
     <section class="pdm" data-pdm="{{ c.cle }}" hidden>
-      <div class="pdm-h"><span class="emo">{% if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">{% else %}{{ c.emo }}{% endif %}</span><b>{{ nomFixe[c.cle] ?? c.lib }}</b><button type="button" class="feuille-x" data-detail-fermer aria-label="{{ T.close ?? 'Fermer' }}"><i class="bi bi-x-lg"></i></button></div>
+      <div class="pdm-h"><span class="emo">{{ _self.ic(c, ib) }}</span><b>{{ nomFixe[c.cle] ?? c.lib }}</b><button type="button" class="feuille-x" data-detail-fermer aria-label="{{ T.close ?? 'Fermer' }}"><i class="bi bi-x-lg"></i></button></div>
       {{ _self.infos(c, T, ib) }}
       <dl class="pl-l">
         {% if c.type == 'promo' or c.type == 'categorie' %}<div><dt>{{ T.d_rule ?? 'Qui gagne' }}</dt><dd>
@@ -445,12 +417,18 @@
 
 {# Ce qu'on gagne, la ligne de description, qui offre la prime (16/10/2026) : la fiche et le détail d'une ligne. #}
 {% macro infos(c, T, ib) %}
-<div class="pdm-g"><small>{{ T.to_win ?? 'À gagner' }}</small><b>{% if c.cadeau ?? null %}🎁 {{ c.cadeau.nom }}{% if c.cadeau.valeur %} <i>· {{ T.value ?? 'valeur' }} {{ c.cadeau.valeur|number_format(0, ',', ' ') }}&nbsp;€</i>{% endif %}{% else %}{{ c.montant|number_format(0, ',', ' ') }}&nbsp;€{% if c.max ?? false %} max{% endif %}{% endif %}</b></div>
+<div class="pdm-g"><small>{{ T.to_win ?? 'À gagner' }}</small><b>{% if c.cadeau ?? null %}<i class="bi bi-gift"></i> {{ c.cadeau.nom }}{% if c.cadeau.valeur %} <i>· {{ T.value ?? 'valeur' }} {{ c.cadeau.valeur|number_format(0, ',', ' ') }}&nbsp;€</i>{% endif %}{% else %}{{ c.montant|number_format(0, ',', ' ') }}&nbsp;€{% if c.max ?? false %} max{% endif %}{% endif %}</b></div>
 {% if c.description ?? '' %}<p class="pdm-d">{{ c.description }}</p>{% endif %}
 {#- L'indication (17/10/2026) : ce qu'il manque, calculé — avis 5★, ventes croisées, CA du magasin. #}
-{% if c.cle == 'google' and (c.avis5 ?? null) is not null %}<p class="pdm-a">💡 {% if c.avis5 > 0 %}{{ (T.hint_google ?? 'Il manque {n} avis 5★ pour atteindre {s} ★')|replace({'{n}': c.avis5|number_format(0, ',', ' '), '{s}': c.cible|number_format(1, ',', ' ')}) }}{% else %}{{ (T.hint_google_ok ?? 'Le magasin tient {s} ★ : chaque avis 5★ le garde au-dessus')|replace({'{s}': c.cible|number_format(1, ',', ' ')}) }}{% endif %}</p>
-{% elseif c.cle == 'croisees' and (c.manque ?? 0) > 0 %}<p class="pdm-a">💡 {{ (T.hint_cross ?? 'Encore {n} ventes croisées pour atteindre {s} % : un article de plus sur chaque ticket')|replace({'{n}': c.manque, '{s}': c.cible|number_format(0, ',', ' ')}) }}</p>
-{% elseif c.cle == 'objectif' and (c.manqueCa ?? 0) > 0 %}<p class="pdm-a">💡 {{ (T.hint_target ?? 'Le magasin doit encore faire {n} € de chiffre ce mois')|replace({'{n}': c.manqueCa|number_format(0, ',', ' ')}) }}</p>{% endif %}
+{% if c.cle == 'google' and (c.avis5 ?? null) is not null %}<p class="pdm-a"><i class="bi bi-lightbulb"></i> {% if c.avis5 > 0 %}{{ (T.hint_google ?? 'Il manque {n} avis 5★ pour atteindre {s} ★')|replace({'{n}': c.avis5|number_format(0, ',', ' '), '{s}': c.cible|number_format(1, ',', ' ')}) }}{% else %}{{ (T.hint_google_ok ?? 'Le magasin tient {s} ★ : chaque avis 5★ le garde au-dessus')|replace({'{s}': c.cible|number_format(1, ',', ' ')}) }}{% endif %}</p>
+{% elseif c.cle == 'croisees' and (c.manque ?? 0) > 0 %}<p class="pdm-a"><i class="bi bi-lightbulb"></i> {{ (T.hint_cross ?? 'Encore {n} ventes croisées pour atteindre {s} % : un article de plus sur chaque ticket')|replace({'{n}': c.manque, '{s}': c.cible|number_format(0, ',', ' ')}) }}</p>
+{% elseif c.cle == 'objectif' and (c.manqueCa ?? 0) > 0 %}<p class="pdm-a"><i class="bi bi-lightbulb"></i> {{ (T.hint_target ?? 'Le magasin doit encore faire {n} € de chiffre ce mois')|replace({'{n}': c.manqueCa|number_format(0, ',', ' ')}) }}</p>{% endif %}
 {% set sp = c.sponsor ?? null %}
 <div class="pdm-s">{% if sp and sp.logo %}<img src="{{ ib }}/{{ sp.logo }}" alt="">{% endif %}<div><small>{{ T.offered_by ?? 'Offerte par' }}</small><b>{{ sp ? sp.nom : ((c.payeur ?? '') == 'magasin' ? (T.your_shop ?? 'ton magasin') : (T.the_brand ?? 'la marque')) }}</b>{% if sp and sp.texte %}<span>{{ sp.texte }}</span>{% endif %}{% if sp and sp.site %}<a href="{{ sp.site }}" target="_blank" rel="noopener noreferrer">{{ sp.site|replace({'https://': '', 'http://': ''})|trim('/') }} ↗</a>{% endif %}</div></div>
+{% endmacro %}
+
+{# L'icône d'une prime (23/10/2026) : celle que l'admin a déposée, sinon une icône au trait selon la prime (plus d'émoji). #}
+{% macro ic(c, ib) %}
+{%- if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">
+{%- else %}<i class="bi {{ { croisees: 'bi-bag', record: 'bi-graph-up-arrow', objectif: 'bi-shop', google: 'bi-star', meilleure: 'bi-trophy' }[c.cle] ?? ((c.type ?? '') == 'promo' ? 'bi-tag' : 'bi-award') }}"></i>{% endif -%}
 {% endmacro %}
