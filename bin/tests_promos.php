@@ -449,5 +449,21 @@ verifie('dans les lignes, le nom du produit reste, la note du client part', $p['
 $ch = pmSondeChemins($p, '/discount|promo/i');
 verifie('les chemins des remises', $ch === ['products.0.discount_value' => 1.4], json_encode($ch));
 
+echo "La sonde des champs d'une promotion (23/10/2026)\n";
+$plat = pmSondeAplatir(['id' => 5, 'trigger' => ['quantity' => 2, 'product_ids' => [['id_product' => 12, 'id_product_portion' => null], ['id_product' => 13, 'id_product_portion' => 77]]], 'shop_ids' => [], 'is_exclusive' => false]);
+verifie('aplatie : chemins des listes en [], valeur non nulle préférée, liste vide gardée', ($plat['trigger.product_ids[].id_product_portion'] ?? null) === ['integer', '77']
+    && ($plat['shop_ids'] ?? null) === ['[]', null] && ($plat['is_exclusive'] ?? null) === ['boolean', 'false'] && ($plat['trigger.quantity'] ?? null) === ['integer', '2'], json_encode($plat));
+ErpApi::$promos = [40 => ['id' => 40, 'name' => 'Seuil 15 €', 'status' => 'ACTIVE', 'promotion_type' => 'BUY_X_GET_Y', 'shop_ids' => [4], 'priority' => 100,
+    'minimum_basket_value' => 15, 'sales_channels' => ['POS'], 'created_by_user' => 'Prénom Nom',
+    'trigger' => ['quantity' => 1, 'product_ids' => [12]], 'reward' => ['quantity' => 1, 'type' => 'FREE', 'value' => null]]];
+ErpApi::$listeMax = null; ErpApi::$parPage = null;
+$_GET = ['shop' => '4']; $r = ep_promos_sonde_champs(); $_GET = [];
+verifie('la sonde : les champs nouveaux (seuil, canaux) ressortent, les connus non', isset($r['nouveaux']['buy-x-get-y · minimum_basket_value'], $r['nouveaux']['buy-x-get-y · sales_channels[]'])
+    && !isset($r['nouveaux']['buy-x-get-y · priority']) && !isset($r['nouveaux']['buy-x-get-y · trigger.quantity']), json_encode($r['nouveaux'], JSON_UNESCAPED_UNICODE));
+verifie('la sonde : seuil et canal parmi les conditions, avec leur valeur', ($r['conditions']['buy-x-get-y · minimum_basket_value'] ?? '') === 'integer = 15'
+    && ($r['conditions']['buy-x-get-y · sales_channels[]'] ?? '') === 'string = POS', json_encode($r['conditions'], JSON_UNESCAPED_UNICODE));
+verifie('la sonde : rien de nominatif (l’auteur retiré)', !str_contains(json_encode($r, JSON_UNESCAPED_UNICODE), 'Prénom Nom') && $r['sortes']['buy-x-get-y']['fichesLues'] === 1
+    && $r['sortes']['quantity']['code'] === 404, json_encode($r['sortes']['buy-x-get-y'], JSON_UNESCAPED_UNICODE));
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
