@@ -203,7 +203,7 @@ function tobVenteAdd(string $date, string $auj, array $bornes): array
             }
         }
     }
-    $cfg = setting('venteCrossTargets');
+    $cfg = motReglage('venteCrossTargets');
     $cibles = [];
     foreach ($shops as $sid) {
         $c = (is_array($cfg) && function_exists('venteCrossTarget')) ? venteCrossTarget($cfg, $sid, substr($date, 0, 7)) : null;

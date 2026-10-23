@@ -90,6 +90,7 @@ require __DIR__ . '/../../src/kpi_table.php';
 require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
+require __DIR__ . '/../../src/motivation.php';
 require __DIR__ . '/../../src/primes.php';
 require __DIR__ . '/../../src/primes_app.php';
 require __DIR__ . '/../../src/primes_b2b.php';

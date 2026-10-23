@@ -29,7 +29,7 @@ declare(strict_types=1);
  * retrouver le produit d'un bundle par son nom.) Une promo devient une famille de la moisson par ses
  * identifiants de produits (pvLignesJour) ; ses pièces se comptent sur ses seules dates et ses seuls magasins.
  *
- * Le réglage vit dans ceo_app_setting.ventePrimesApp ; au premier appel il se déduit des réglages
+ * Le réglage vit dans mot_reglage.ventePrimesApp (src/motivation.php) ; au premier appel il se déduit des réglages
  * d'avant (concours, minimum d'heures de la prime magasin).
  */
 
@@ -53,7 +53,7 @@ const PRIMES_MAG_MAX = 6;            // par magasin et par sorte (promos, catég
 function primesAppDefauts(): array
 {
     $r = PRIMES_APP_RECOMPENSE;
-    $mag = setting('ventePrimeMagasin');
+    $mag = motReglage('ventePrimeMagasin');
     $heuresMin = (is_array($mag) && isset($mag['heuresMin']) && is_numeric($mag['heuresMin'])) ? max(0, min(200, (int) $mag['heuresMin'])) : 20;
     $liste = [
         ['cle' => 'croisees', 'type' => 'target', 'lib' => 'Ventes croisées', 'actif' => true, 'montant' => $r, 'classement' => true],
@@ -61,7 +61,7 @@ function primesAppDefauts(): array
         primesAppGoogleDefaut($heuresMin),
     ];
     // Les concours d'avant deviennent des catégories, au montant de leur couronne du magasin.
-    $k = setting('venteConcoursTQ');
+    $k = motReglage('venteConcoursTQ');
     $anciens = (is_array($k) && is_array($k['liste'] ?? null)) ? array_values($k['liste']) : concoursDefauts();
     $actif = !is_array($k) || !array_key_exists('actif', $k) || (bool) $k['actif'];
     foreach ($anciens as $i => $x) {
@@ -76,7 +76,7 @@ function primesAppDefauts(): array
 /** La note Google par défaut : 25 € par personne à 4,5 ou mieux ; éteinte si l'ancien coefficient l'était. */
 function primesAppGoogleDefaut(int $heuresMin = 20): array
 {
-    $g = setting('ventePrimeGoogle');
+    $g = motReglage('ventePrimeGoogle');
     $actif = !is_array($g) || !array_key_exists('actif', $g) || (bool) $g['actif'];
     return ['cle' => 'google', 'type' => 'target', 'lib' => 'Note Google', 'actif' => $actif, 'montant' => PRIMES_GOOGLE_MONTANT,
         'classement' => false, 'seuil' => PRIMES_GOOGLE_SEUIL, 'heuresMin' => $heuresMin];
@@ -426,7 +426,7 @@ function primesAppReglages(bool $relire = false): array
 {
     static $memo = null;
     if ($memo !== null && !$relire) { return $memo; }
-    $c = setting('ventePrimesApp');
+    $c = motReglage('ventePrimesApp');
     if (!is_array($c) || !is_array($c['liste'] ?? null)) { $c = primesAppDefauts(); }
     $r = primesAppMontant($c['recompense'] ?? null, PRIMES_APP_RECOMPENSE);
     return $memo = ['recompense' => $r, 'liste' => primesAppListePropre($c['liste'], $r),
@@ -477,7 +477,7 @@ function primesCachesVider(): void
 {
     $m = date('Y-m');
     try {
-        Db::exec('DELETE FROM ceo_app_setting WHERE `key` LIKE ? OR `key` = ?', ['primesMoi%:' . $m, 'primesTous' . $m]);
+        motCacheVider('primesMoi%:' . $m, 'primesTous' . $m);
     } catch (Throwable $e) { /* le cache expire de lui-même */ }
 }
 
@@ -556,7 +556,7 @@ function wr_primes_app(): array
     $ext = array_key_exists('externes', $b) ? primesAppExternes($b['externes']) : $cur['externes'];
     $sms = array_key_exists('sms', $b) ? ['actif' => (bool) (is_array($b['sms']) ? ($b['sms']['actif'] ?? false) : $b['sms'])] : $cur['sms'];
     $out = ['recompense' => $r, 'liste' => $liste, 'externes' => $ext, 'sms' => $sms];
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['ventePrimesApp', json_encode($out, JSON_UNESCAPED_UNICODE)]);
+    motReglageEcrire('ventePrimesApp', $out);
     primesAppReglages(true);
     primesCachesVider();
     $payeLib = static fn (array $e) => $e['payeur'] === 'sponsor' ? 'sponsor ' . $e['sponsor'] : ($e['payeur'] === 'magasin' ? 'magasin ' . ($e['shop'] ?? '') : $e['payeur']);
@@ -744,7 +744,7 @@ function primesPromosCatalogue(): array
  */
 function primesPromosPanel(bool $frais = false): array
 {
-    $c = setting('primesPromos3');
+    $c = motCache('primesPromos3');
     if (!$frais && is_array($c) && isset($c['liste']) && (int) ($c['quand'] ?? 0) > time() - PRIMES_PROMOS_CACHE) { return $c; }
     $catalogue = primesPromosCatalogue();
     $liste = []; $erreurs = []; $api = false;
@@ -779,7 +779,7 @@ function primesPromosPanel(bool $frais = false): array
     }
     $out = ['quand' => time(), 'api' => $api, 'compte' => $compte, 'erreurs' => $erreurs, 'liste' => $liste];
     if ($liste !== [] || $erreurs !== []) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['primesPromos3', json_encode($out, JSON_UNESCAPED_UNICODE)]);
+        motCacheEcrire('primesPromos3', $out);
     }
     return $out;
 }
@@ -901,7 +901,7 @@ function primesCatalogue(bool $frais = false): array
 {
     static $memo = null;
     if ($memo !== null && !$frais) { return $memo; }
-    $c = setting('primesCatalogue');
+    $c = motCache('primesCatalogue');
     if (!$frais && is_array($c) && isset($c['p']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return $memo = (array) $c['p']; }
     $out = [];
     if (function_exists('ep_prod_catalogue')) {
@@ -923,7 +923,7 @@ function primesCatalogue(bool $frais = false): array
     $out = array_values($out);
     usort($out, static fn ($a, $b) => strcasecmp($a['nom'], $b['nom']));
     if ($out !== []) {
-        try { Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['primesCatalogue', json_encode(['quand' => time(), 'p' => $out], JSON_UNESCAPED_UNICODE)]); }
+        try { motCacheEcrire('primesCatalogue', ['quand' => time(), 'p' => $out]); }
         catch (Throwable $e) { /* sans gravure */ }
     }
     return $memo = $out;
@@ -1108,7 +1108,7 @@ function primesMoyennesMois(string $m): array
     $clos = date('Y-m-t', strtotime($m . '-01')) < date('Y-m-d');
     $cat = function_exists('pvCroiseesCategorie') ? pvCroiseesCategorie() : null;
     $cle = 'prMoy' . $m . ($cat !== null ? ':' . substr(md5($cat), 0, 8) : '');
-    $c = setting($cle);
+    $c = motCache($cle);
     if ($clos && is_array($c) && isset($c['s']) && (int) ($c['quand'] ?? 0) > time() - PRIMES_MOY_CACHE) { return (array) $c['s']; }
     try { $shops = array_map(fn ($s) => (int) $s['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
     catch (PDOException $e) { return []; }
@@ -1133,7 +1133,7 @@ function primesMoyennesMois(string $m): array
         $out[(string) $sid] = $x;
     }
     if ($clos) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['quand' => time(), 's' => $out])]);
+        motCacheEcrire($cle, ['quand' => time(), 's' => $out]);
     }
     return $out;
 }
@@ -1634,7 +1634,7 @@ function primesSmsReussite(string $m, array $personnes): array
     $reg = primesAppReglages()['sms'];
     if (!$reg['actif']) { return ['actif' => false]; }
     $configure = function_exists('smsConfigure') && smsConfigure();
-    $deja = setting('primesSms' . $m);
+    $deja = motReglage('primesSms' . $m);
     $deja = is_array($deja) ? $deja : [];
     $tels = primesTelephones();
     $n = ['envoyes' => 0, 'echecs' => 0, 'sansNumero' => 0];
@@ -1646,7 +1646,7 @@ function primesSmsReussite(string $m, array $personnes): array
         $deja[(string) $p['id']] = ['quand' => date('Y-m-d H:i'), 'ok' => $r['ok'], 'erreur' => $r['erreur']];
         $n[$r['ok'] ? 'envoyes' : 'echecs']++;
     }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['primesSms' . $m, json_encode($deja, JSON_UNESCAPED_UNICODE)]);
+    motReglageEcrire('primesSms' . $m, $deja);
     journalAdd('CEO', 'Vente', null, 'SMS à la réussite ' . $m . ' — ' . $n['envoyes'] . ' envoyé(s), ' . $n['echecs'] . ' en échec, ' . $n['sansNumero'] . ' sans numéro'
         . ($configure ? '' : ' (aucun fournisseur SMS réglé : config.php › sms)'));
     return ['actif' => true, 'configure' => $configure] + $n;
