@@ -119,4 +119,17 @@ et ceux de son magasin). Ce sont ceux en cours, à venir, ou finis depuis moins 
 L'app les montre dans « Mes primes », en cartes qui défilent (`apps/employee`, `primes.twig`). Le classement se garde
 quinze minutes.
 
+Les six grands prix de la maquette retenue, pour la saison 2026, ont été posés une fois (le 23/10/2026, `gpMaquette`) :
+
+- Refaire ta terrasse ;
+- Week-end à Rome pour deux ;
+- Trottinette électrique ;
+- Machine espresso + 1 an de café ;
+- Journée spa pour deux ;
+- Soirée d'équipe + 2 000 €.
+
+Ils naissent éteints : les sponsors de la maquette sont fictifs, et un grand prix allumé se voit tout de suite dans
+l'app. Il faut les vérifier, puis les allumer un par un. La marque `_grands_prix_maquette_2026` dans `mot_reglage`
+empêche de les recréer.
+
 Tests : `php bin/tests_grands_prix.php`.
