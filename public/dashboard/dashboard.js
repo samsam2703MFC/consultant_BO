@@ -2783,8 +2783,10 @@
     const B = opDuelBase(D), j7 = B.j7;
     if (B.caPro == null) { return opDuel(D); }
     const caC = Math.max(0, ca - B.caPro);
-    const j7Lu = !!(j7 && j7.caPro != null);
-    const j7C = j7 && j7Lu ? Object.assign({}, j7, { ca: Math.max(0, j7.ca - j7.caPro), caJour: Math.max(0, j7.caJour - (j7.caProJour || 0)) }) : j7;
+    // Le comptoir de J−7 : celui du serveur quand il le donne (le même que le panier comptoir), sinon CA − CA pro.
+    const j7Lu = !!(j7 && (j7.caComptoir != null || j7.caPro != null));
+    const j7C = j7 && j7Lu ? Object.assign({}, j7, { ca: j7.caComptoir != null ? +j7.caComptoir : Math.max(0, j7.ca - j7.caPro),
+      caJour: j7.caComptoirJour != null ? +j7.caComptoirJour : Math.max(0, j7.caJour - (j7.caProJour || 0)) }) : j7;
     const mC = Object.assign({}, m, { objectifJour: B.objC, j7: j7C, caPro: null, partProHabituelle: null,
       projection: m.projection != null && ca > 0 ? m.projection * caC / ca : m.projection });
     return opDuel(Object.assign({}, D, { ca: caC, m: mC }), { comptoir: true, j7Total: !!j7 && !j7Lu }) + opDuelPro(D, B);
