@@ -538,3 +538,227 @@ a.acc-etape{text-decoration:none;color:inherit}
 .pdm-s a{display:inline-block;font:600 13px var(--font-ui);color:var(--la-rubis);margin-top:4px;text-decoration:none}
 .pl-d .pdm-g{margin-top:4px}
 .pdm-a{font:600 13.5px/1.45 var(--font-ui);color:var(--la-encre);background:var(--la-beige-doux);border-radius:var(--radius-md);padding:9px 12px;margin:0 0 12px}
+
+/* ══ Forme sobre, façon iOS (23/10/2026, demande : « l'UX doit être plus minimaliste, type Apple ») ══
+   Par-dessus ce qui précède, pour l'écran Primes et l'Accueil (et Statistiques, qui charge la même feuille) : la police
+   du système, un fond clair, des listes groupées blanches sans bordure ni ombre, une seule couleur d'accent (le rubis),
+   le vert pour ce qui est gagné, des icônes au trait. Les pièces gardent leurs classes et leur fonctionnement. */
+:root{
+  --s-police:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',system-ui,sans-serif;
+  --s-fond:#F2F1EE;--s-carte:#fff;--s-texte:#1C1C1E;--s-second:#6E6E73;--s-tertiaire:#C7C7CC;
+  --s-trait:rgba(60,60,67,.14);--s-remplir:rgba(118,118,128,.12);--s-doux:#F4F3F1;
+  --s-accent:var(--la-rubis,#8D1D2C);--s-accent-doux:rgba(141,29,44,.09);--s-vert:#248A3D;--s-vert-doux:rgba(36,138,61,.11);
+}
+body{background:var(--s-fond)}
+.emp-content,.emp-topbar{--font-ui:var(--s-police);--font-display:var(--s-police);font-family:var(--s-police);color:var(--s-texte)}
+.emp-topbar{background:rgba(242,241,238,.86);border-bottom-color:var(--s-trait)}
+html .emp-title{font:700 1.3rem/1.15 var(--s-police);letter-spacing:-.02em}
+.emp-subtitle{font:400 .85rem var(--s-police);color:var(--s-second)}
+
+/* Les pièces communes. */
+.sb-titre{display:flex;align-items:baseline;gap:8px;margin:26px 4px 8px;font:700 20px/1.2 var(--s-police);letter-spacing:-.01em;color:var(--s-texte)}
+.sb-titre a{margin-left:auto;font:400 15px var(--s-police);color:var(--s-accent);text-decoration:none;letter-spacing:0}
+.sb-pied{margin:6px 0 0;font:400 13px/1.4 var(--s-police);color:var(--s-second)}
+.sb-barre{display:block;flex:1;height:6px;border-radius:3px;background:var(--s-remplir);overflow:hidden}
+.sb-barre i{display:block;height:100%;border-radius:3px;background:var(--s-accent)}
+.sb-barre.grande{height:8px;border-radius:4px}
+/* Combien : un grand chiffre. */
+.sb-heros{padding:6px 4px 4px}
+.sb-sur{margin:0;font:400 15px var(--s-police);color:var(--s-second)}
+.sb-chiffre{margin:2px 0 12px;font:700 48px/1.05 var(--s-police);letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--s-texte)}
+.sb-sous{margin:8px 0 0;font:400 15px/1.35 var(--s-police);color:var(--s-second)}
+.sb-sous b{font-weight:600;color:var(--s-texte)}
+/* Les listes groupées et leurs lignes (le plan). */
+.sb-groupe{background:var(--s-carte);border-radius:16px;overflow:hidden;margin-bottom:12px}
+.sb-groupe>*{position:relative}
+.sb-groupe>*+*::before{content:'';position:absolute;left:60px;right:0;top:0;border-top:.5px solid var(--s-trait)}
+.sb-ligne{position:relative;display:flex;align-items:flex-start;gap:12px;padding:12px 16px;color:inherit;text-decoration:none}
+a.sb-ligne{padding-right:34px}
+a.sb-ligne::after{content:'';position:absolute;right:17px;top:50%;width:7px;height:7px;margin-top:-5px;border-right:2px solid var(--s-tertiaire);border-bottom:2px solid var(--s-tertiaire);transform:rotate(-45deg)}
+a.sb-ligne:active{background:var(--s-doux)}
+.sb-ic{flex:0 0 auto;width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--s-accent-doux);color:var(--s-accent);font-size:16px;overflow:hidden}
+.sb-ic img{width:22px;height:22px;object-fit:contain}
+.sb-corps{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sb-l1{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.sb-l1 b{font:600 16px/1.3 var(--s-police);color:var(--s-texte)}
+.sb-gain{flex:0 0 auto;font:600 16px var(--s-police);font-variant-numeric:tabular-nums;color:var(--s-vert);white-space:nowrap}
+.sb-l2{display:block;font:400 13.5px/1.4 var(--s-police);color:var(--s-second)}
+.sb-tag{display:inline-block;font:500 11px var(--s-police);color:var(--s-accent);background:var(--s-accent-doux);border-radius:6px;padding:1px 6px;margin-left:2px;white-space:nowrap}
+.sb-prog{display:flex;align-items:center;gap:10px;margin-top:7px}
+.sb-bornes{flex:0 0 auto;font:400 12px var(--s-police);font-variant-numeric:tabular-nums;color:var(--s-second)}
+.sb-etape.dur .sb-gain{color:var(--s-second)}
+[id^="prime-"],#classement{scroll-margin-top:calc(70px + env(safe-area-inset-top,0px))}
+
+/* Le mois : une ligne, deux chevrons. */
+.mois-sel{justify-content:space-between;gap:8px;margin:0 0 6px}
+.ms-f{width:36px;height:36px;border:0;background:var(--s-carte);box-shadow:none;color:var(--s-accent);font-size:14px}
+.ms-f.off{opacity:.3}
+.ms-l b{font:600 17px/1.2 var(--s-police);color:var(--s-texte)}
+.ms-l small{font:400 12px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second);margin-top:1px}
+
+/* Les en-têtes de groupe (Targets, Promos), comme ceux des réglages d'iOS. */
+.titre-section{margin:14px 16px 6px}
+.titre-section h2{font:500 13px var(--s-police);letter-spacing:.02em;text-transform:uppercase;color:var(--s-second)}
+.titre-section small{font:400 13px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second)}
+
+/* Où tu en es : une liste groupée, une ligne par prime. */
+.pl-liste{gap:0;background:var(--s-carte);border-radius:16px;overflow:hidden;margin-bottom:6px}
+.pl{border:0;border-radius:0;box-shadow:none;background:transparent;position:relative}
+.pl+.pl::before{content:'';position:absolute;left:58px;right:0;top:0;border-top:.5px solid var(--s-trait)}
+.pl-b{padding:12px 16px 11px;border-radius:0}
+.pl-b:active{background:var(--s-doux)}
+.pl-h{gap:12px}
+.pl-h .emo{width:32px;height:32px;border-radius:9px;background:var(--s-accent-doux);color:var(--s-accent);font-size:16px}
+.pl-h .emo img{width:22px;height:22px}
+.pl.ok .pl-h .emo{background:var(--s-vert-doux);color:var(--s-vert)}
+.pl-t{font:600 16px/1.3 var(--s-police);color:var(--s-texte)}
+.pl-v{font:600 17px/1 var(--s-police);font-variant-numeric:tabular-nums;color:var(--s-texte)}
+.pl.ok .pl-v{color:var(--s-vert)}
+.pl-v small{font:400 12px var(--s-police);color:var(--s-second)}
+.pl-b .chev{color:var(--s-tertiaire)}
+.pl-j{height:6px;margin:28px 0 0 44px;background:var(--s-remplir)}
+.pl-j > i{background:var(--s-accent)}
+.pl.ok .pl-j > i{background:var(--s-vert)}
+.pl-j .ob{top:-5px;bottom:-5px;width:2px;margin-left:-1px;background:var(--s-texte)}
+.pl-j .jr{border-left-color:var(--s-second)}
+.pl-j .fl{font:600 11px var(--s-police);padding:2px 7px;background:var(--s-texte)}
+.pl.ok .pl-j .fl{background:var(--s-vert)}
+.pl-s{font:400 12.5px var(--s-police);color:var(--s-second);margin:7px 0 0 44px}
+.pl-s .ok,.pl-s .okp,.pl.ok .pl-s .rg{color:var(--s-vert);font-weight:600}
+.pl-s .rg{color:var(--s-texte)}
+.pl-d{border-top:.5px solid var(--s-trait);margin:0 16px 0 60px;padding:6px 0 14px}
+.pl-l > div{border-bottom:.5px solid var(--s-trait)}
+.pl-l dt{font:400 13.5px/1.3 var(--s-police);color:var(--s-second)}
+.pl-l dd{font:600 14px/1.3 var(--s-police);color:var(--s-texte)}
+.pl-l dd small{font:400 12px var(--s-police);color:var(--s-second)}
+.pl-l dd.ok{color:var(--s-vert)}
+.pl-n,.pl-st{font:400 12.5px/1.4 var(--s-police);color:var(--s-second);letter-spacing:0;text-transform:none}
+.pl-cl{background:var(--s-remplir);color:var(--s-accent);border-radius:999px;font:500 13px var(--s-police)}
+.pd li{font:400 14px/1.25 var(--s-police)}
+.pd li.moi,.pd li.moi.un{background:var(--s-accent-doux);color:var(--s-accent)}
+.pd li.moi .r,.pd li.moi.un .r{color:var(--s-accent)}
+.pl-vide{border:0;box-shadow:none;border-radius:16px;background:var(--s-carte);padding:14px 16px}
+.pl-vide .bi{color:var(--s-accent)}
+.pl-vide b{font:600 15px/1.3 var(--s-police)}
+.pl-vide span{font:400 13.5px/1.4 var(--s-police);color:var(--s-second)}
+.typ{font:500 10.5px var(--s-police);letter-spacing:0;text-transform:none;padding:1px 7px;border-radius:6px}
+.typ.target,.typ.categorie,.typ.promo,.typ.classement{background:var(--s-remplir);color:var(--s-second)}
+
+/* La fiche d'une prime et son indication. */
+.pdm-g{background:var(--s-doux);border-radius:12px}
+.pdm-g small{font:400 13px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second)}
+.pdm-g b{font:600 16px/1.3 var(--s-police);color:var(--s-texte)}
+.pdm-d{font:400 14.5px/1.45 var(--s-police)}
+.pdm-a{font:400 14px/1.45 var(--s-police);background:var(--s-accent-doux);color:var(--s-texte);border-radius:12px}
+.pdm-a .bi{color:var(--s-accent);margin-right:4px}
+.pdm-s{border:0;background:var(--s-doux);border-radius:12px}
+.pdm-s small{font:400 12px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second)}
+.pdm-s a{color:var(--s-accent);font-weight:500}
+.pdm-h b{font:600 18px/1.25 var(--s-police)}
+.pdm-h .emo{border-radius:9px;background:var(--s-accent-doux);color:var(--s-accent)}
+
+/* Le classement : le menu, la feuille, le sélecteur, le podium, les lignes. */
+.dd{border:0;border-radius:16px;padding:12px 16px;background:var(--s-carte)}
+.dd .emo,.feuille li .emo{width:32px;height:32px;border-radius:9px;background:var(--s-accent-doux);color:var(--s-accent);font-size:16px}
+.dd b,.feuille li b{font:600 16px/1.25 var(--s-police)}
+.dd-r{font:600 17px/1 var(--s-police);color:var(--s-texte)}
+.dd-r small{font:400 12px var(--s-police);color:var(--s-second)}
+.dd .bi-chevron-down{font-size:14px;color:var(--s-tertiaire)}
+.feuille-c{border-radius:14px 14px 0 0;padding:6px 16px calc(16px + env(safe-area-inset-bottom))}
+.feuille-t b{font:600 17px var(--s-police)}
+.feuille-x{background:var(--s-remplir);color:var(--s-second)}
+.feuille li{border-radius:10px}
+.feuille li + li{border-top-color:var(--s-trait)}
+.feuille li[aria-selected="true"]{background:var(--s-doux)}
+.feuille li .coche{color:var(--s-accent)}
+.cl-carte{border:0;box-shadow:none;border-radius:16px;padding:12px;margin:10px 0 12px}
+.seg{border-radius:9px;padding:2px;background:var(--s-remplir)}
+.seg button{border-radius:7px;padding:6px 10px;font:500 13px var(--s-police);color:var(--s-texte)}
+.seg button.on{background:var(--s-carte);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12),0 1px 1px rgba(0,0,0,.04)}
+.pod .av,.cl-row .av{background:var(--s-remplir);color:var(--s-second)}
+.av.t0,.av.t1,.av.t2,.av.t3,.av.t4,.av.t5,.av.t6,.av.t7{background:#E5E5EA;color:var(--s-second)}
+.av.moi{background:var(--s-accent);color:#fff}
+.pod.p1 .av{box-shadow:none}
+.pod.moi .av{box-shadow:none}
+.pod b{font:600 13px var(--s-police)}
+.pod.moi b{color:var(--s-accent)}
+.pod .q{font:700 20px/1 var(--s-police);font-variant-numeric:tabular-nums}
+.pod .socle{font:600 15px var(--s-police);background:var(--s-doux);color:var(--s-second);border-radius:10px 10px 0 0}
+.pod.p1 .socle{background:var(--s-accent-doux);color:var(--s-accent)}
+.cl-row{font:400 15px var(--s-police);border-top-color:var(--s-trait)}
+.cl-row .r{font:600 15px var(--s-police);color:var(--s-second)}
+.cl-row.moi{background:var(--s-accent-doux);border-radius:10px}
+.cl-row.moi .nom{color:var(--s-accent);font-weight:600}
+.cl-row .val{font:600 15px var(--s-police);font-variant-numeric:tabular-nums}
+
+/* L'Accueil : ce qui reste en jeu en carte, et ses cartes (Aujourd'hui, Ma semaine, le bilan, la collection). */
+.sb-heros-carte{display:block;padding:16px 40px 16px 16px;color:inherit;text-decoration:none}
+.sb-heros-carte>span{display:block}
+.sb-heros-carte>*::before{display:none}
+.sb-heros-carte .sb-chiffre{font-size:40px;margin:2px 0 10px}
+.sb-fleche{position:absolute;right:16px;top:50%;margin-top:-8px;color:var(--s-tertiaire);font-size:16px}
+.pr-card{background:var(--s-carte);border:none;border-radius:16px;padding:14px 16px}
+.pr-h h2{font:600 17px/1.2 var(--s-police)}
+.pr-h small,.note,.mu{color:var(--s-second)}
+.k{font:500 12px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second)}
+.auj .cercle{width:76px;height:76px;background:conic-gradient(var(--s-accent) var(--p),var(--s-remplir) 0)}
+.auj .cercle::before{inset:6px;background:var(--s-carte)}
+.auj .cercle b{font:700 22px/1 var(--s-police)}
+.auj .tx{font-size:13.5px;color:var(--s-second)}
+.auj .tx .q{font:600 16px/1.25 var(--s-police);color:var(--s-texte)}
+.acc-tuile{background:var(--s-doux)}
+.acc-tuile i{color:var(--s-accent)}
+.acc-tuile b{font:600 15px/1.2 var(--s-police)}
+.acc-tuile small{font:400 12px var(--s-police);color:var(--s-second)}
+.acc-kpis b{font:700 20px/1.1 var(--s-police);font-variant-numeric:tabular-nums}
+.acc-kpis small{font:400 11px var(--s-police);color:var(--s-second)}
+.acc-bilan.ok>i{color:var(--s-vert)}
+.acc-bilan.att>i{color:var(--s-accent)}
+
+/* La meilleure vendeuse (23/10/2026) : une jauge dont le bout est la 1re du magasin (son initiale, posée juste après,
+   pour que le point reste lisible tout près d'elle) et le point la vendeuse ; dans la ligne de la prime, la récompense
+   au-dessus du bout. Elle en tête : le point au bout, en vert. */
+.pl-mv,.sb-jv{position:relative;display:block;height:6px;border-radius:3px;background:var(--s-remplir)}
+.pl-mv{margin:30px 34px 0 44px}
+.sb-jv{flex:1;margin-right:28px}
+.pl-mv>i,.sb-jv>i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--s-accent)}
+.pl-mv .pt,.sb-jv .pt{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--s-carte);border:3px solid var(--s-accent);box-shadow:0 1px 3px rgba(0,0,0,.18);box-sizing:border-box;z-index:2}
+.pl-mv .bout,.sb-jv .bout{position:absolute;left:calc(100% + 6px);top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;background:#E5E5EA;color:var(--s-second);font:600 11px/24px var(--s-police);text-align:center;z-index:1}
+.sb-jv .bout{width:20px;height:20px;margin-top:-10px;left:calc(100% + 5px);font-size:10px;line-height:20px}
+.pl-mv .fl{position:absolute;right:-30px;bottom:calc(100% + 14px);font:600 11px var(--s-police);padding:2px 7px;border-radius:999px;background:var(--s-texte);color:#fff;white-space:nowrap}
+.pl.ok .pl-mv>i,.pl-mv.un>i{background:var(--s-vert)}
+.pl.ok .pl-mv .pt,.pl-mv.un .pt{border-color:var(--s-vert)}
+.pl.ok .pl-mv .fl{background:var(--s-vert)}
+
+/* Ce qu'il faut faire, dans la ligne d'une prime (23/10/2026). */
+.pl-how{margin:8px 0 0 44px;font:400 13.5px/1.4 var(--s-police);color:var(--s-texte)}
+.pl-how.dur{color:var(--s-second)}
+
+/* Bats ton record, en trois étapes (23/10/2026) : poser son record, le battre, gagner. */
+.pl-s .et{font-weight:600;color:var(--s-texte)}
+.pl.ok .pl-s .et{color:var(--s-vert)}
+.pl-et{list-style:none;margin:6px 0 4px;padding:0;display:grid;grid-template-columns:repeat(3,1fr)}
+.pl-et li{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;min-width:0}
+.pl-et li + li::before{content:"";position:absolute;top:10px;left:calc(-50% + 14px);right:calc(50% + 14px);height:2px;border-radius:1px;background:var(--s-remplir)}
+.pl-et li.fait + li::before{background:var(--s-vert)}
+.pl-et .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:600 12px/1 var(--s-police);background:var(--s-remplir);color:var(--s-second)}
+.pl-et li.ici .n{background:var(--s-accent);color:#fff}
+.pl-et li.fait .n{background:var(--s-vert);color:#fff}
+.pl-et b{font:600 13px/1.25 var(--s-police);color:var(--s-second);margin-top:3px}
+.pl-et li.ici b,.pl-et li.fait b{color:var(--s-texte)}
+.pl-et em{font:400 12px/1.25 var(--s-police);font-style:normal;color:var(--s-second);white-space:nowrap}
+.pl-et li.ici em{color:var(--s-texte);font-weight:600}
+.pl-et em.ok,.pl-et li.ici em.ok{color:var(--s-vert);font-weight:600}
+.pl-j.plein i,.pl-j.plein .fl{background:var(--s-vert)}
+.pl-et + .pl-n{margin-top:8px}
+/* Le détail d'une ligne, plus compact (23/10/2026) : « à gagner » et « offerte par » dans une seule carte, sur deux lignes. */
+.pl-d .pdm-g{padding:8px 12px;margin-bottom:8px}
+.pl-d .pdm-g b{font-size:15px}
+.pl-d .pdm-g + .pdm-s{margin-top:-8px;border-top:.5px solid var(--s-trait);border-radius:0 0 12px 12px}
+.pl-d .pdm-g:has(+ .pdm-s){border-radius:12px 12px 0 0}
+.pl-d .pdm-s{padding:7px 12px;gap:8px;margin-bottom:8px}
+.pl-d .pdm-s img{width:28px;height:28px}
+.pl-d .pdm-s div{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 4px}
+.pl-d .pdm-s small{display:inline;font:400 13px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second)}
+.pl-d .pdm-s b{display:inline;font:600 13px var(--s-police)}
+.pl-d .pdm-s span,.pl-d .pdm-s a{flex-basis:100%}

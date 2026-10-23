@@ -984,3 +984,11 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T15:07:14Z rentowność : pulpit minimalistyczny + wynik i produkcja grup
 2026-10-23T15:25:38Z récurrence : taux de retour des clients PWA
 2026-10-23T15:30:05Z wartości odżywcze z internetu + pełna szerokość
+2026-10-23T15:31:20Z récurrence : répartition des clients identifiés
+2026-10-23T15:38:50Z primes : combien, comment y arriver, où tu en es ; module Primes dans le rail
+2026-10-23T15:42:00Z récurrence : tous les clients identifiés
+2026-10-23T15:48:04Z primes : jauge de la meilleure vendeuse (le bout, la 1re du magasin)
+2026-10-23T15:51:44Z primes : meilleure vendeuse en €/h
+2026-10-23T16:13:53Z primes : une seule liste par état (à aller chercher, déjà gagnées, pas ce mois-ci)
+2026-10-23T16:38:22Z primes : bats ton record en trois étapes (poser, battre, gagner)
+2026-10-23T16:43:41Z rail : menu Application employé

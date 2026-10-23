@@ -3883,3 +3883,15 @@ différents — la définition « taux de fidélisation » du panel consultant, 
 - Seuils : ceux d'un KPI dérivé de la Table KPI « `pwaRevenus` ÷ `pwaClients` » (deux mesures ajoutées au formulaire,
   le mois en cours) ; sans lui, pas de pastille.
 - N-1 : le relevé commençant au 1er janvier 2026, le premier N-1 viendra en 2027.
+- Répartition (23/10/2026) : chaque cellule porte `repartition {sansApp, statutInconnu, fidelite, connectes, webshop,
+  canaux {source_channel: n}}` des clients identifiés en caisse dont la fiche est lue (le réseau compte un client une
+  fois). De la fiche : `source_channel`, `last_login_at` renseigné ou non (jamais la date), `webshop_user`. Les fiches
+  lues avant ces colonnes se relisent.
+- Tous les clients identifiés (23/10/2026, demande de Sam après le premier relevé : aucun client PWA identifié en
+  caisse) : la valeur de la colonne devient le taux de retour de TOUS les clients identifiés en caisse, hors pro. La
+  cellule : `{v, n1, delta, niveau, clients, revenus, partTickets, pwa {v, n1, delta, niveau, clients, revenus,
+  partTickets}, inconnus, joursLus, jours, complet, repartition}` ; `serie.recurrence` suit le taux de tous les
+  clients identifiés. Seuils : KPI dérivé `clientsRevenus ÷ clientsIdentifies` (et `pwaRevenus ÷ pwaClients` pour le
+  taux PWA, `seuils.recurrencePwa`) ; `recurrence {debut, kpi, kpiPwa}`.
+
+**23/10/2026 — Rail de la console : le menu « Application employé ».** Demande de Sam : le rail est le bac à sable du dev, qui exportera d'ici les trois pièces de l'application employé vers l'intégrateur de l'ERP. Le menu « Application employé » réunit la **page admin** (`primesApp`, section marque : les primes de la marque et des sponsors, les promotions, les moyennes), la **page franchisé (magasin)** (`primesApp`, section franchisé : les primes que chaque franchisé pose pour son magasin) et **Application ↗** (`employee/auth`, la connexion de l'app : horaire, tâches, primes, profil). Il remplace « App worker ↗ » et le sous-menu « Primes · module app worker » d'ERP franchisé (qui garde Prospection ↗ et Tablette vendeuses) ; le lien direct « Mes primes dans l'app ↗ » se fond dans « Application ↗ » (les primes sont un onglet de l'app). Une entrée de premier niveau du rail peut désormais poser un état en plus de l'écran (`c[4]`), comme un enfant de sous-menu.

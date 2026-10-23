@@ -15,8 +15,8 @@ declare(strict_types=1);
  *
  * Les sources, aucune nouvelle :
  *   Trafic            les clients (tickets) du P&L mensuel (ep_perf) — par jour au mois ;
- *   Récurrence        le taux de retour des clients PWA (23/10/2026, demande de Sam) : parmi les clients de l'app
- *                     identifiés à la caisse, la part venus au moins deux jours — recurrence_pwa.php ;
+ *   Récurrence        le taux de retour des clients identifiés en caisse, hors pro (23/10/2026, demande de Sam) :
+ *                     la part venus au moins deux jours ; à part, celui des seuls clients PWA — recurrence_pwa.php ;
  *   Expérience client la note Google de la fiche (mar_avis_fiche, Réputation digitale),
  *                     son relevé mensuel (mac_google_rating_snapshot, tenu par le panel
  *                     consultant depuis octobre 2026) pour un mois passé et le N-1 ;
@@ -39,7 +39,7 @@ const LEV_KPI = ['trafic' => 'trafic-clients', 'xp' => 'note-google', 'food' => 
 function levDefs(): array
 {
     $cles = ['trafic' => 'trafic', 'recurrence' => 'recurrence', 'xp' => 'xp', 'food-cost' => 'food', 'labour-cost' => 'labour', 'overhead-cost' => 'overhead'];
-    $mesures = ['trafic' => ['clients par jour', 'clients'], 'recurrence' => ['taux de retour PWA', 'taux de retour PWA'], 'xp' => ['note Google', 'note Google'],
+    $mesures = ['trafic' => ['clients par jour', 'clients'], 'recurrence' => ['taux de retour des clients identifiés', 'taux de retour des clients identifiés'], 'xp' => ['note Google', 'note Google'],
         'food' => ['% du CA', '% du CA'], 'labour' => ['% du CA', '% du CA'], 'overhead' => ['% du CA', '% du CA']];
     $out = [];
     foreach (ep_leviers() as $l) {
@@ -329,15 +329,20 @@ function levRecurrence(array &$out, array $sids): void
         $tc = rpTaux($sids, $y . '-01-01', $fin);
         $tc1 = rpTaux($sids, ($y - 1) . '-01-01', date('Y-m-t', strtotime(sprintf('%04d-%02d-01', $y - 1, (int) $out['cumulAu']))));
     }
-    $seuil = rpSeuilKpi();
+    // Le taux de la colonne : tous les clients identifiés en caisse (23/10/2026) ; celui des clients PWA, à part.
+    $seuil = rpSeuilKpi('clientsRevenus', 'clientsIdentifies');
+    $seuilPwa = rpSeuilKpi('pwaRevenus', 'pwaClients');
     if ($seuil !== null) { $out['seuils']['recurrence'] = $seuil; }
-    $serie = rpSerie($sids, $out['serieMois']);
-    $cellule = static function (array $x, ?array $x1) use ($seuil): array {
-        $n1 = $x1 !== null ? $x1['v'] : null;
-        return ['v' => $x['v'], 'n1' => $n1, 'delta' => $x['v'] !== null && $n1 !== null ? round($x['v'] - $n1, 1) : null,
-            'niveau' => levNiveau($seuil, $x['v']), 'pwa' => $x['pwa'], 'revenus' => $x['revenus'], 'identifies' => $x['identifies'],
-            'inconnus' => $x['inconnus'], 'partTickets' => $x['tickets'] > 0 ? round(100 * $x['ticketsPwa'] / $x['tickets'], 1) : null,
-            'joursLus' => $x['joursLus'], 'jours' => $x['jours'], 'complet' => $x['complet']];
+    if ($seuilPwa !== null) { $out['seuils']['recurrencePwa'] = $seuilPwa; }
+    $serie = rpSerie($sids, $out['serieMois'], 'vIdent');
+    $part = static fn (int $tk, int $tous): ?float => $tous > 0 ? round(100 * $tk / $tous, 1) : null;
+    $cellule = static function (array $x, ?array $x1) use ($seuil, $seuilPwa, $part): array {
+        $n1 = $x1 !== null ? $x1['vIdent'] : null; $n1p = $x1 !== null ? $x1['v'] : null;
+        return ['v' => $x['vIdent'], 'n1' => $n1, 'delta' => $x['vIdent'] !== null && $n1 !== null ? round($x['vIdent'] - $n1, 1) : null,
+            'niveau' => levNiveau($seuil, $x['vIdent']), 'clients' => $x['identifies'], 'revenus' => $x['revIdent'], 'partTickets' => $part($x['tkIdent'], $x['tickets']),
+            'pwa' => ['v' => $x['v'], 'n1' => $n1p, 'delta' => $x['v'] !== null && $n1p !== null ? round($x['v'] - $n1p, 1) : null, 'niveau' => levNiveau($seuilPwa, $x['v']),
+                'clients' => $x['pwa'], 'revenus' => $x['revenus'], 'partTickets' => $part($x['ticketsPwa'], $x['tickets'])],
+            'inconnus' => $x['inconnus'], 'joursLus' => $x['joursLus'], 'jours' => $x['jours'], 'complet' => $x['complet'], 'repartition' => $x['repartition']];
     };
     foreach ($out['magasins'] as &$g) {
         $sid = (int) $g['id'];
@@ -348,5 +353,5 @@ function levRecurrence(array &$out, array $sids): void
     unset($g);
     $out['reseau']['mois']['recurrence'] = $cellule($tm['reseau'], $t1['reseau']);
     if ($out['reseau']['cumul'] !== null && $tc !== null) { $out['reseau']['cumul']['recurrence'] = $cellule($tc['reseau'], $tc1['reseau']); }
-    $out['recurrence'] = ['debut' => RP_DEBUT, 'kpi' => $seuil !== null ? $seuil['code'] : null];
+    $out['recurrence'] = ['debut' => RP_DEBUT, 'kpi' => $seuil !== null ? $seuil['code'] : null, 'kpiPwa' => $seuilPwa !== null ? $seuilPwa['code'] : null];
 }
