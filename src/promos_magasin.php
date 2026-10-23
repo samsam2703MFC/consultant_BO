@@ -676,6 +676,17 @@ function pmChampsAppris(): array
 }
 
 /**
+ * Le canal s'écrit-il pour ce côté (« comptoir », « webshop ») ? Il faut le nom du champ ; et pour un champ à une seule
+ * valeur (`sales_channel_scope`), la valeur exacte du panel pour ce côté, relue sur une de ses promotions — le panel en
+ * attend une parmi les siennes (« BOTH » est la seule relue le 23/10/2026). Une liste garde les jetons par défaut.
+ */
+function pmCanalEcrivable(array $A, string $cote): bool
+{
+    if ($A['canal'] === null) { return false; }
+    return !$A['scalaire'] || isset($A['jetons'][$cote]);
+}
+
+/**
  * Les champs des conditions dans le corps envoyé au panel. Rien quand la promotion n'en a pas (comptoir et webshop, sans
  * seuil) — sauf pour effacer celles qu'elle avait (`avant`), sous le nom appris.
  */
@@ -699,7 +710,9 @@ function pmConditionsInconnues(array $d): array
 {
     $A = pmChampsAppris(); $e = [];
     if (($d['seuil'] ?? null) !== null && $A['seuil'] === null) { $e[] = 'Le seuil du ticket ne s’écrit pas encore au panel (son nom de champ n’est pas connu) : enregistrez sans seuil, ou créez d’abord au panel une promotion avec un seuil.'; }
-    if (($d['canal'] ?? 'tous') !== 'tous' && $A['canal'] === null) { $e[] = 'Le canal (comptoir ou webshop seulement) ne s’écrit pas encore au panel (son nom de champ n’est pas connu) : choisissez « Comptoir et webshop », ou créez d’abord au panel une promotion réservée à un canal.'; }
+    $cote = $d['canal'] ?? 'tous';
+    if ($cote !== 'tous' && $A['canal'] === null) { $e[] = 'Le canal (comptoir ou webshop seulement) ne s’écrit pas encore au panel (son nom de champ n’est pas connu) : choisissez « Comptoir et webshop », ou créez d’abord au panel une promotion réservée à un canal.'; }
+    elseif ($cote !== 'tous' && !pmCanalEcrivable($A, $cote)) { $e[] = 'Le canal « ' . $cote . ' seulement » ne s’écrit pas encore au panel : le champ ' . $A['canal'] . ' existe, mais sa valeur pour le ' . $cote . ' n’est pas connue. Choisissez « Comptoir et webshop », ou créez d’abord au panel une promotion « ' . $cote . ' seulement ».'; }
     return $e;
 }
 
@@ -1183,7 +1196,10 @@ function ep_promos_magasin_demandes(): array
     return ['shop' => (string) $shop, 'demandes' => $demandes, 'panel' => $panel, 'erreurPanel' => $err, 'source' => 'panel',
         'lu' => $ts > 0 ? date('H:i', $ts) : null, 'luTs' => $ts, 'luJour' => $ts > 0 ? date('Y-m-d', $ts) : null,
         // Ce que le panel sait écrire des conditions du ticket : le nom de champ relu sur une de ses promotions.
-        'regles' => ['coefMin' => PM_COEF_MIN, 'conditions' => (static fn ($A) => ['seuil' => $A['seuil'] !== null, 'canal' => $A['canal'] !== null])(pmChampsAppris())]];
+        'regles' => ['coefMin' => PM_COEF_MIN, 'conditions' => (static fn ($A) => ['seuil' => $A['seuil'] !== null,
+            'canal' => pmCanalEcrivable($A, 'comptoir') || pmCanalEcrivable($A, 'webshop'), 'comptoir' => pmCanalEcrivable($A, 'comptoir'), 'webshop' => pmCanalEcrivable($A, 'webshop'),
+            // Les noms relus au panel : l'assistant dit lequel manque et pourquoi.
+            'noms' => ['seuil' => $A['seuil'], 'canal' => $A['canal']]])(pmChampsAppris())]];
 }
 
 /**

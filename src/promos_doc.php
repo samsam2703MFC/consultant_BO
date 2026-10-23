@@ -27,11 +27,11 @@ const PD_DOCUMENTES = [
 /** Les champs techniques de toute fiche : ni documentés ni nouveaux. */
 const PD_TECHNIQUES = ['id', 'created_at', 'updated_at', 'deleted_at', 'id_promotion', 'promotion_id'];
 /** L'essai d'écriture : les noms de seuil plausibles, chacun avec sa valeur pour savoir lequel le panel garde. */
-const PD_ESSAI_SEUIL = ['minimum_basket_value' => 11.01, 'min_basket_value' => 11.02, 'min_order_amount' => 11.03, 'minimum_order_value' => 11.04,
+const PD_ESSAI_SEUIL = ['minimum_receipt_gross' => 11.13, 'minimum_basket_value' => 11.01, 'min_basket_value' => 11.02, 'min_order_amount' => 11.03, 'minimum_order_value' => 11.04,
     'min_ticket_amount' => 11.05, 'min_transaction_amount' => 11.06, 'trigger_amount' => 11.07, 'threshold_amount' => 11.08, 'min_amount' => 11.09,
     'minimum_amount' => 11.10, 'min_spend' => 11.11, 'threshold' => 11.12];
 /** … et les noms de canal plausibles, chacun pour « webshop seulement », dans la forme qu'il a d'habitude. */
-const PD_ESSAI_CANAL = ['destination' => 'WEBSHOP', 'destinations' => ['WEBSHOP'], 'sales_channels' => ['WEBSHOP'], 'channels' => ['WEBSHOP'],
+const PD_ESSAI_CANAL = ['sales_channel_scope' => 'WEBSHOP', 'destination' => 'WEBSHOP', 'destinations' => ['WEBSHOP'], 'sales_channels' => ['WEBSHOP'], 'channels' => ['WEBSHOP'],
     'sales_channel' => 'WEBSHOP', 'channel' => 'WEBSHOP', 'order_source' => 'WEBSHOP', 'sale_destination' => 'WEBSHOP',
     'is_webshop' => true, 'webshop_only' => true, 'is_pos' => false, 'available_on_pos' => false, 'available_on_webshop' => true];
 
@@ -95,34 +95,49 @@ function pdSorte(string $sorte, int $shop): array
         'nonDocumentes' => count(array_filter($out, static fn ($x) => $x['statut'] === 'non documenté'))];
 }
 
-/** Un produit pour l'essai : le premier relu dans une promotion « X + Y » du panel. */
+/**
+ * Un produit pour l'essai : le premier relu dans une promotion « X + Y » du panel — dans `product_ids`, `product_targets`
+ * ou `products[]`, côté déclencheur ou avantage. Le 23/10/2026, les trois premières fiches n'étaient que des catégories :
+ * on en lit jusqu'à douze.
+ */
 function pdProduitModele(): ?int
 {
-    $items = pvItems(ErpApi::sondeGet('/admin/promotions/buy-x-get-y?limit=20')['corps']);
+    $items = pvItems(ErpApi::sondeGet('/admin/promotions/buy-x-get-y?limit=50')['corps']);
     $premier = static function (array $fiches): ?int {
         foreach ($fiches as $it) {
             if (!is_array($it)) { continue; }
             foreach (['trigger', 'reward'] as $cote) {
-                foreach ((array) ($it[$cote]['product_ids'] ?? []) as $x) {
-                    $id = is_array($x) ? (int) ($x['id_product'] ?? $x['product_id'] ?? $x['id'] ?? 0) : (int) $x;
-                    if ($id > 0) { return $id; }
+                foreach (['product_ids', 'product_targets', 'products'] as $champ) {
+                    foreach ((array) ($it[$cote][$champ] ?? []) as $x) {
+                        $id = is_array($x) ? (int) ($x['id_product'] ?? $x['product_id'] ?? $x['id'] ?? 0) : (int) $x;
+                        if ($id > 0) { return $id; }
+                    }
                 }
             }
         }
         return null;
     };
-    // La ligne de liste ne porte pas toujours le déclencheur : sinon, les trois premières fiches.
+    // La ligne de liste ne porte pas toujours le déclencheur : sinon, les fiches.
     if (($id = $premier($items)) !== null) { return $id; }
     $chemins = [];
-    foreach (array_slice($items, 0, 3) as $it) { if ((int) ($it['id'] ?? 0) > 0) { $chemins[] = '/admin/promotions/buy-x-get-y/' . (int) $it['id']; } }
-    return $chemins ? $premier(array_map('pdFiche', ErpApi::getParallele($chemins, 3))) : null;
+    foreach (array_slice($items, 0, 12) as $it) { if ((int) ($it['id'] ?? 0) > 0) { $chemins[] = '/admin/promotions/buy-x-get-y/' . (int) $it['id']; } }
+    return $chemins ? $premier(array_map('pdFiche', ErpApi::getParallele($chemins, 4))) : null;
+}
+
+/** La valeur relue est-elle celle envoyée ? Les montants reviennent en texte (« 11.13 »), les listes dans le même ordre. */
+function pdMeme($envoye, $relu): bool
+{
+    if (is_bool($envoye)) { return $relu === $envoye || $relu === (int) $envoye; }
+    if (is_float($envoye) || is_int($envoye)) { return is_numeric($relu) && abs((float) $relu - (float) $envoye) < 0.005; }
+    if (is_array($envoye)) { return is_array($relu) && array_map('strval', array_values($relu)) === array_map('strval', array_values($envoye)); }
+    return is_scalar($relu) && (string) $relu === (string) $envoye;
 }
 
 /** Une tentative : créer, relire, supprimer. Rend ce que le panel a répondu et gardé. */
 function pdTentative(string $nom, array $corps, array $candidats): array
 {
     $r = ErpApi::ecrire('POST', '/admin/promotions/buy-x-get-y', $corps);
-    $t = ['tentative' => $nom, 'code' => $r['code'], 'erreur' => $r['erreur'], 'cree' => null, 'garde' => [], 'ignore' => [], 'supprimee' => null, 'nouveaux' => []];
+    $t = ['tentative' => $nom, 'code' => $r['code'], 'erreur' => $r['erreur'], 'cree' => null, 'garde' => [], 'ignore' => [], 'autre' => [], 'supprimee' => null, 'nouveaux' => []];
     if ($r['code'] < 200 || $r['code'] >= 300) {
         // Le détail du refus (les champs nommés) dit souvent ce que le panel connaît.
         $t['reponse'] = is_array($r['corps']) ? pmSondePropre($r['corps'], true) : null;
@@ -133,8 +148,12 @@ function pdTentative(string $nom, array $corps, array $candidats): array
     $t['cree'] = $id ?: null;
     if ($id <= 0) { return $t; }
     $relu = pdFiche(ErpApi::get('/admin/promotions/buy-x-get-y/' . $id)) ?? $c ?? [];
+    // Gardé : la valeur envoyée revient telle quelle. Un champ qui revient avec une autre valeur (le
+    // `minimum_receipt_gross` vide de toute fiche) existe, mais n'a pas pris celle-ci.
     foreach ($candidats as $k => $v) {
-        if (array_key_exists($k, $relu)) { $t['garde'][$k] = $relu[$k]; } else { $t['ignore'][] = $k; }
+        if (!array_key_exists($k, $relu)) { $t['ignore'][] = $k; }
+        elseif (pdMeme($v, $relu[$k])) { $t['garde'][$k] = $relu[$k]; }
+        else { $t['autre'][$k] = $relu[$k]; }
     }
     foreach (array_keys($relu) as $k) {
         if (!in_array($k, PD_DOCUMENTES['buy-x-get-y'], true) && !in_array($k, PD_TECHNIQUES, true) && !array_key_exists($k, $candidats)) {
@@ -168,11 +187,23 @@ function pdEssai(int $shop): array
         $T[] = pdTentative('le canal seul', $base + PD_ESSAI_CANAL, PD_ESSAI_CANAL);
         $T[] = pdTentative('sans rien de plus (témoin)', $base, []);
     }
+    // Les valeurs du canal à une seule valeur (`sales_channel_scope`) : chaque côté essayé jusqu'à la première gardée.
+    $jetons = null;
+    if (array_key_exists('sales_channel_scope', array_merge(...array_map(static fn ($t) => $t['garde'] + $t['autre'], $T)))) {
+        $jetons = [];
+        foreach (['webshop' => ['WEBSHOP', 'ONLINE', 'WEB'], 'comptoir' => ['POS', 'SHOP', 'STORE', 'IN_STORE']] as $cote => $L) {
+            foreach ($L as $jeton) {
+                $t = pdTentative('sales_channel_scope = ' . $jeton, $base + ['sales_channel_scope' => $jeton], ['sales_channel_scope' => $jeton]);
+                $T[] = $t;
+                if (isset($t['garde']['sales_channel_scope'])) { $jetons[$cote] = $jeton; break; }
+            }
+        }
+    }
     $garde = [];
     foreach ($T as $t) { $garde += $t['garde']; }
     $seuil = array_values(array_intersect(array_keys($garde), array_keys(PD_ESSAI_SEUIL)));
     $canal = array_values(array_intersect(array_keys($garde), array_keys(PD_ESSAI_CANAL)));
-    return ['fait' => true, 'produit' => $pid, 'tentatives' => $T, 'seuilGarde' => $seuil, 'canalGarde' => $canal,
+    return ['fait' => true, 'produit' => $pid, 'tentatives' => $T, 'seuilGarde' => $seuil, 'canalGarde' => $canal, 'jetons' => $jetons,
         'restees' => array_values(array_filter(array_map(static fn ($t) => $t['cree'] !== null && !$t['supprimee'] ? $t['cree'] : null, $T)))];
 }
 
@@ -222,8 +253,8 @@ ul{margin:6px 0;padding-left:20px}</style></head><body><main>';
     $h .= '<h1>API des promotions — la documentation du cockpit</h1><div class="mu">Lue au panel le ' . $e($D['lu']) . ($D['shop'] ? ' · magasin ' . $e($D['shop']) : '') . ' · rien de nominatif · <a href="' . $e($q(['format' => 'json'])) . '">en JSON</a></div>';
     // Le résumé
     $h .= '<div class="carte"><b>En bref</b><ul>'
-        . '<li>Seuil du ticket : ' . ($A['seuil'] !== null ? $oui(true, 'le panel le rend, sous <code>' . $e($A['seuil']) . '</code>') : $oui(false, 'aucune promotion du panel n’en porte')) . '</li>'
-        . '<li>Destination / canal : ' . ($A['canal'] !== null ? $oui(true, 'le panel la rend, sous <code>' . $e($A['canal']) . '</code>' . ($A['jetons'] ? ' (valeurs : ' . $e(implode(', ', array_map(static fn ($k, $v) => $k . ' = ' . $v, array_keys($A['jetons']), $A['jetons']))) . ')' : '')) : $oui(false, 'aucune promotion du panel n’en porte')) . '</li>'
+        . '<li>Seuil du ticket : ' . ($A['seuil'] !== null ? $oui(true, 'le champ existe au panel : <code>' . $e($A['seuil']) . '</code>') : $oui(false, 'aucune promotion du panel n’en porte')) . '</li>'
+        . '<li>Destination / canal : ' . ($A['canal'] !== null ? $oui(true, 'le champ existe au panel : <code>' . $e($A['canal']) . '</code>' . ($A['jetons'] ? ' (valeurs : ' . $e(implode(', ', array_map(static fn ($k, $v) => $k . ' = ' . $v, array_keys($A['jetons']), $A['jetons']))) . ')' : '')) : $oui(false, 'aucune promotion du panel n’en porte')) . '</li>'
         . '<li>Champs non documentés relus : ' . (count($nonDoc) ? '<span class="att">' . count($nonDoc) . '</span> — ' . $e(implode(' · ', array_slice($nonDoc, 0, 12))) . (count($nonDoc) > 12 ? '…' : '') : '<span class="mu">aucun</span>') . '</li>'
         . '<li>Champs qui ressemblent à un seuil ou un canal (hors documentation) : ' . (count($conds) ? '<span class="att">' . $e(implode(' · ', $conds)) . '</span>' : '<span class="mu">aucun</span>') . '</li>'
         . '<li>Liste générale <code>/admin/promotions</code> : ' . ($D['listeGenerale']['code'] >= 200 && $D['listeGenerale']['code'] < 300 ? $D['listeGenerale']['n'] . ' promotion(s)' : 'HTTP ' . $e($D['listeGenerale']['code'])) . '</li></ul>'
@@ -238,11 +269,12 @@ ul{margin:6px 0;padding-left:20px}</style></head><body><main>';
         else {
             $h .= '<ul><li>Seuil gardé par le panel : ' . ($X['seuilGarde'] ? $oui(true, $e(implode(', ', $X['seuilGarde']))) : $oui(false, 'aucun des noms essayés')) . '</li>'
                 . '<li>Destination gardée par le panel : ' . ($X['canalGarde'] ? $oui(true, $e(implode(', ', $X['canalGarde']))) : $oui(false, 'aucun des noms essayés')) . '</li>'
+                . (isset($X['jetons']) ? '<li>Valeurs de <code>sales_channel_scope</code> gardées : webshop ' . (isset($X['jetons']['webshop']) ? '<span class="ok">' . $e($X['jetons']['webshop']) . '</span>' : '<span class="ko">aucune des essayées</span>') . ' · comptoir ' . (isset($X['jetons']['comptoir']) ? '<span class="ok">' . $e($X['jetons']['comptoir']) . '</span>' : '<span class="ko">aucune des essayées</span>') . '</li>' : '')
                 . ($X['restees'] ? '<li><span class="ko">Promotion(s) de test non supprimée(s) : n° ' . $e(implode(', ', $X['restees'])) . ' — à supprimer au panel.</span></li>' : '<li class="ok">Toutes les promotions de test ont été supprimées.</li>') . '</ul>';
-            $h .= '<table><tr><th>Tentative</th><th>Réponse</th><th>Gardé</th><th>Ignoré</th><th>Autres champs relus</th></tr>';
+            $h .= '<table><tr><th>Tentative</th><th>Réponse</th><th>Gardé</th><th>Revenu autrement</th><th>Ignoré</th><th>Autres champs relus</th></tr>';
             foreach ($X['tentatives'] as $t) {
                 $h .= '<tr><td>' . $e($t['tentative']) . '</td><td>' . ($t['cree'] !== null ? '<span class="ok">créée (n° ' . $e($t['cree']) . ')' . ($t['supprimee'] ? ', supprimée' : '') . '</span>' : '<span class="ko">' . $e($t['erreur'] ?? ('HTTP ' . $t['code'])) . '</span>') . '</td>'
-                    . '<td>' . $e($t['garde'] ? json_encode($t['garde'], JSON_UNESCAPED_UNICODE) : '—') . '</td><td class="mu">' . $e(implode(', ', $t['ignore'])) . '</td><td>' . $e($t['nouveaux'] ? json_encode($t['nouveaux'], JSON_UNESCAPED_UNICODE) : '—') . '</td></tr>';
+                    . '<td>' . $e($t['garde'] ? json_encode($t['garde'], JSON_UNESCAPED_UNICODE) : '—') . '</td><td>' . $e(($t['autre'] ?? []) ? json_encode($t['autre'], JSON_UNESCAPED_UNICODE) : '—') . '</td><td class="mu">' . $e(implode(', ', $t['ignore'])) . '</td><td>' . $e($t['nouveaux'] ? json_encode($t['nouveaux'], JSON_UNESCAPED_UNICODE) : '—') . '</td></tr>';
             }
             $h .= '</table>';
         }

@@ -3667,7 +3667,7 @@
     if (i === 4) {
       const CO = ((S.aux[clePM()] || {}).regles || {}).conditions || { seuil: true, canal: true };
       if (d.seuilOn && !CO.seuil) { return 'le seuil ne s’écrit pas encore au panel'; }
-      if (d.canal !== 'tous' && !CO.canal) { return 'le canal ne s’écrit pas encore au panel'; }
+      if (d.canal !== 'tous' && !(CO[d.canal] ?? CO.canal)) { return 'le canal ne s’écrit pas encore au panel'; }
       return d.seuilOn && !(+d.seuil > 0) ? 'le montant du seuil' : '';
     }
     if (i === 5) {
@@ -3733,8 +3733,8 @@
       const lg = (a, b, c) => `<div class="l${c ? ' ' + c : ''}"><span>${a}</span><span>${b}</span></div>`;
       // Le seuil du ticket (23/10/2026) : le lot seul l'atteint-il ? Sinon, ce qu'il faut acheter en plus.
       const lotTtc = x.q * tx + y.q * ty, seuil = +d.seuil > 0 ? +d.seuil : 0, manqueS = seuil - lotTtc;
-      const seuilL = !seuil ? '' : (manqueS <= 0 ? `<div class="pm-tks ok">✓ Seuil de ${fU(seuil)} atteint par le lot seul (${fU(lotTtc)} avant remise).</div>`
-        : `<div class="pm-tks">Seuil de ${fU(seuil)} : le lot fait ${fU(lotTtc)} avant remise — <b>${fU(manqueS)} d’achats en plus</b> pour que l’avantage tombe.</div>`);
+      const seuilL = !seuil ? '' : (manqueS <= 0 ? `<div class="pm-tks ok">✓ Seuil de ${fU(seuil)} atteint par le lot seul (${fU(lotTtc)} TTC aux prix normaux).</div>`
+        : `<div class="pm-tks">Seuil de ${fU(seuil)} : le lot fait ${fU(lotTtc)} TTC aux prix normaux — <b>${fU(manqueS)} d’achats en plus</b> pour que l’avantage tombe.</div>`);
       h += `<div class="db-card pm-c"><div class="pm-ligne"><div class="db-lab" style="margin-bottom:8px">Sur le ticket</div><span class="db-mini">${esc(pmCanalLib(d.canal).toLowerCase())}</span></div><div class="pm-tk">
         ${Array.from({ length: x.q }, () => lg(esc(C.px.nom), nf(tx, 2))).join('')}${Array.from({ length: y.q }, () => lg(esc(C.py.nom), nf(ty, 2))).join('')}
         ${manqueS > 0 ? lg('  autres articles', nf(manqueS, 2), 'aut') : ''}
@@ -3793,18 +3793,29 @@
     }
     if (e === 4) {
       // Le seuil et le canal ne s'écrivent au panel que sous un nom de champ relu sur une de ses promotions (23/10/2026) :
-      // sans lui, le panel les ignorait et la promotion passait en caisse sans eux. Grisés, et dit, tant qu'il manque.
+      // sans lui, le panel les ignorait et la promotion passait en caisse sans eux. Le seuil est `minimum_receipt_gross` ;
+      // le canal `sales_channel_scope`, dont il faut aussi la valeur exacte de chaque côté (« BOTH » seule relue).
       const CO = R.conditions || { seuil: true, canal: true };
-      const manque = [!CO.seuil ? 'le seuil du ticket' : '', !CO.canal ? 'le canal (comptoir ou webshop seulement)' : ''].filter(Boolean);
-      const bloque = k => k !== 'tous' && !CO.canal && d.canal !== k;
+      const N = CO.noms || {};
+      const cote = k => CO[k] ?? CO.canal;
+      const bloque = k => k !== 'tous' && !cote(k) && d.canal !== k;
+      const manque = [];
+      if (!CO.seuil) { manque.push('le seuil du ticket (aucun champ de seuil relu au panel)'); }
+      const sans = ['comptoir', 'webshop'].filter(k => !cote(k));
+      if (sans.length) {
+        manque.push(N.canal ? `${sans.map(k => '« ' + k + ' seulement »').join(' et ')} : le panel a le champ ${esc(N.canal)}, mais sa valeur pour ${sans.length > 1 ? 'ces deux cas n’est' : 'ce cas n’est'} pas encore connue`
+          : 'le canal (comptoir ou webshop seulement) : aucun champ de canal relu au panel');
+      }
+      const conseil = N.canal && sans.length ? `Créez au panel une promotion ${sans.map(k => '« ' + k + ' seulement »').join(' et une ')} : le cockpit relira la valeur et le choix s’activera de lui-même.`
+        : 'Ils s’activeront d’eux-mêmes dès qu’une promotion du panel en portera.';
       return tete('où et à partir de quand le ticket y a droit', 'Conditions du ticket')
-        + (manque.length ? `<div class="pm-warn" style="margin:0 0 12px">Pas encore disponible : ${manque.join(' et ')}. Le panel ne les reprend pas encore par l’API (leurs noms de champ ne sont pas connus) — envoyés, ils étaient ignorés et la promotion passait en caisse sans eux. Ils s’activeront d’eux-mêmes dès qu’une promotion du panel en portera : créez-en une au panel avec un seuil et un canal.</div>` : '')
+        + (manque.length ? `<div class="pm-warn" style="margin:0 0 12px">Pas encore disponible : ${manque.join(' ; ')}. ${conseil}</div>` : '')
         + `<div class="pm-f"><label>Où la promotion s’applique</label></div>
         <div class="pm-row pm-canaux">${PM_CANAUX.map(([k, lib, sous, ico]) => `<button class="pm-opt${d.canal === k ? ' on' : ''}" data-pmcanal="${k}"${bloque(k) ? ' disabled title="pas encore disponible au panel"' : ''}><span class="pm-ico">${ico}</span><b>${lib}</b><small>${sous}</small></button>`).join('')}</div>
         <div class="pm-f" style="margin-top:16px"><label>Seuil du ticket</label>
           <div class="pm-seuil"><span class="pm-seg"><button type="button" class="${d.seuilOn ? '' : 'on'}" data-pmseuil="sans">Sans seuil</button><button type="button" class="${d.seuilOn ? 'on' : ''}" data-pmseuil="avec"${!CO.seuil && !d.seuilOn ? ' disabled title="pas encore disponible au panel"' : ''}>À partir d’un montant</button></span>
           ${d.seuilOn ? `<span class="pm-eur"><input class="pm-in c" type="number" min="0.5" step="0.5" placeholder="15,00" value="${esc(d.seuil)}" data-pmf="seuil"><i>€ TTC</i></span>` : ''}</div>
-          <span class="db-mini">${d.seuilOn ? 'Le ticket doit atteindre ce montant, avant la remise, pour que l’avantage se déclenche ; en dessous, la caisse ne remise rien.' : 'L’avantage tombe dès que le client prend le lot, quel que soit le montant du ticket.'}</span></div>
+          <span class="db-mini">${d.seuilOn ? 'Le ticket doit atteindre ce montant TTC (minimum_receipt_gross au panel) pour que l’avantage se déclenche ; en dessous, la caisse ne remise rien.' : 'L’avantage tombe dès que le client prend le lot, quel que soit le montant du ticket.'}</span></div>
         ${pmRegleTicket(d, 16)}`;
     }
     if (e === 5) {
@@ -3829,7 +3840,7 @@
       <table class="pm-recap">${lgn('Magasin', '<b>' + esc(nomShop()) + '</b>', 0)}${lgn('Ce qu’on achète (X)', '<b>' + x.q + '</b> pièce' + (x.q > 1 ? 's' : '') + ' · ' + desc(x), 2)}
         ${lgn('Ce qu’on reçoit (Y)', '<b>' + y.q + '</b> pièce' + (y.q > 1 ? 's' : '') + ' <b>' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + '</b> · ' + desc(y) + ' · la moins chère', 3)}
         ${lgn('Où', '<b>' + esc(pmCanalLib(d.canal)) + '</b> · ' + esc((PM_CANAUX.find(o => o[0] === d.canal) || PM_CANAUX[0])[2]), 4)}
-        ${lgn('Seuil du ticket', +d.seuil > 0 ? 'le ticket atteint <b>' + fU(+d.seuil) + '</b> TTC avant remise' : 'sans seuil', 4)}
+        ${lgn('Seuil du ticket', +d.seuil > 0 ? 'le ticket atteint <b>' + fU(+d.seuil) + '</b> TTC' : 'sans seuil', 4)}
         ${lgn('Dans un ticket', d.repetable ? 'répétable' + (d.maxParTicket ? ' · <b>' + esc(d.maxParTicket) + '</b> fois au plus' : ' · sans limite') : 'une fois par ticket', 4)}
         ${lgn('Période', d.du && d.au ? (pmToujours(d) ? 'du <b>' + esc(pmQuand(d.du)) + '</b>, <b>sans fin</b> (jusqu’au 31/12/2037, la date la plus lointaine que le panel accepte)' : 'du <b>' + esc(pmQuand(d.du)) + '</b> au <b>' + esc(pmQuand(d.au)) + '</b>') + ' · ' + esc(pmCreneauxTxt(d.creneaux)) : '<span class="ko">à régler</span>', 5)}
         ${lgn('Fixé par la marque', 'priorité normale · non exclusive · activation automatique', 0)}</table>
