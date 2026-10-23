@@ -969,3 +969,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T07:29:21Z promotions : valeur Y depuis le prix final, moyennes d'une catégorie
 2026-10-23T07:59:56Z promotions : Tout le temps, plus de durée maximale
 2026-10-23T08:07:15Z promotions : Tout le temps jusqu'au 31/12/2037
+2026-10-23T08:20:46Z marże : sprzedawalność w Belgii (ceny w sklepach z API panelu, konto z cockpitu ; migracja 053)
