@@ -1677,3 +1677,5 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .at-be-hint.is-warn { border-left-color: #e0a100; background: #fffaf0; }
 .at-be-link { font-size: .72rem; }
 @media (max-width: 1100px) { .at-be-ladder { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .at-be-step { margin-right: 0; } .at-be-step::after { display: none; } }
+.at-growth-be { border-top: 1px solid var(--at-line); padding-top: 8px; }
+.at-growth-be .badge { font-size: .78rem; }

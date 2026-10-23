@@ -219,6 +219,19 @@ try {
     expectStore($card['cost_piece'] === 1.0 && $card['factory_margin'] === 20.7 && count($card['shops']) === 2 && $card['shops'][0]['name'] === 'Bruxelles'
         && $card['shops'][0]['coef'] === 2.19 && $card['shops'][0]['verdict'] === 'bad' && count($card['below']) === 2 && $card['is_admin'], 'product card: cost per piece, shops sorted by coefficient');
 
+    // --- Rozwój produktów grupy : ocena ceny działań (istniejący produkt, nowy produkt po nazwie, bez ceny w sklepie)
+    $g = (new StoreSellabilityService($repo, $access))->forGrowth([101, 105], [
+        ['id' => 1, 'final_product_id' => 101, 'product' => 'Cake Citron - 350 g.', 'selling_price_eur' => 3.2],
+        ['id' => 2, 'final_product_id' => null, 'product' => 'Cookie chocolat noir', 'selling_price_eur' => 1.0],
+        ['id' => 3, 'final_product_id' => null, 'product' => 'Tarte tatin', 'selling_price_eur' => 2.0],
+        ['id' => 4, 'final_product_id' => null, 'product' => 'Coś', 'selling_price_eur' => 0]]);
+    expectStore($g['products'][101]['key'] === 'cake citron' && $g['products'][105]['key'] === 'brioche' && $g['synced_at'] !== null, 'growth: store prices of the group products (auto and manual link)');
+    expectStore($g['actions'][1]['coef'] === 2.5 && $g['actions'][1]['verdict'] === 'ok' && $g['actions'][1]['target'] === 8.0 && $g['actions'][1]['target_gross'] === 8.48
+        && $g['actions'][1]['max_factory'] === 3.2 && $g['actions'][1]['link'] === 'auto', 'growth: existing product at 3,20 €/pc → ×2.50 sellable');
+    expectStore($g['actions'][2]['store']['key'] === 'chocolat cookie noir' && $g['actions'][2]['coef'] === 2.64 && $g['actions'][2]['verdict'] === 'ok', 'growth: new product matched by name');
+    expectStore($g['actions'][3]['store'] === null && $g['actions'][3]['verdict'] === 'none' && $g['actions'][3]['target'] === 5.0 && $g['actions'][3]['target_gross'] === null, 'growth: new product not in shops, target only');
+    expectStore($g['actions'][4]['verdict'] === 'noprice' && $g['actions'][4]['target'] === null, 'growth: no price yet');
+
     // --- Progi : administrator, kolejność
     failsWith(fn() => $be->saveParams(['multiplier' => '2,6', 'limit' => '2,3', 'reserve' => '3'], 2), 403, 'params: admin only');
     failsWith(fn() => $be->saveParams(['multiplier' => '2,6', 'limit' => '2,8', 'reserve' => '3'], 1), 422, 'params: order limit ≤ multiplier ≤ reserve');

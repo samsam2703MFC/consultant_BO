@@ -19,6 +19,27 @@
     let data = null;
     let excluded = new Set();
 
+    // Belgia (franczyza) : cena fabryczna za sztukę × mnożnik wobec ceny w sklepie netto (API panelu) — jak StoreSellabilityService::priceCheck.
+    const BE = {ok: ['bg-success', 'sprzedawalny'], warn: ['bg-warning text-dark', 'na granicy'], bad: ['bg-danger', 'za drogi'], none: ['bg-secondary', 'brak ceny w sklepie']};
+    const x = (n) => '× ' + Number(n).toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    function beCheck(piece, store) {
+        const p = data.belgium.params;
+        const net = store ? store.net : null;
+        const vat = store ? store.vat : null;
+        const coef = piece > 0 && net ? Math.round(net / piece * 100) / 100 : null;
+        return {target: piece > 0 ? piece * p.multiplier : null, target_gross: piece > 0 && vat !== null && vat !== undefined ? piece * p.multiplier * (1 + vat / 100) : null,
+            coef, verdict: piece > 0 ? (coef === null ? 'none' : (coef >= p.multiplier ? 'ok' : (coef >= p.limit ? 'warn' : 'bad'))) : 'noprice',
+            max_factory: net ? net / p.multiplier : null, store};
+    }
+    function beBadge(b) {
+        if (!b || b.verdict === 'noprice') return '';
+        const [cls, label] = BE[b.verdict];
+        const tip = `Belgia : cel w sklepie ${eur(b.target, 2)} netto (cena × ${String(data.belgium.params.multiplier).replace('.', ',')})`
+            + (b.store ? ` ; sklep ${eur(b.store.net, 2)} netto (${b.store.shops} skl., ${b.store.name})` : ' ; brak ceny w sklepach')
+            + (b.max_factory ? ` ; maks. cena fabryczna ${eur(b.max_factory, 2)}` : '');
+        return ` <span class="badge ${cls}" title="${esc(tip)}">BE ${b.coef !== null ? x(b.coef) : ''} ${label}</span>`;
+    }
+
     function metrics(a) {
         const pieces = num(a.pieces_per_shop_month) * num(a.shops);
         const revenue = pieces * num(a.selling_price_eur);
@@ -82,7 +103,7 @@
                     <th class="text-end">Marża / mies.</th><th class="text-end">Inwestycja</th><th class="text-end">Zwrot</th><th class="text-end">ROI 12 / ${data.defaults.horizon_months} mies.</th><th></th></tr></thead>
                 <tbody>${data.actions.map(a => `<tr data-action="${a.id}" class="${a.status === 'dropped' ? 'at-inactive' : ''}">
                     <td><input type="checkbox" class="form-check-input" data-include ${a.status === 'dropped' ? 'disabled' : (excluded.has(a.id) ? '' : 'checked')} aria-label="Uwzględnij ${esc(a.title)}"></td>
-                    <td><strong>${esc(a.title)}</strong><div class="at-sub">${esc(a.product || '')}${a.is_new_product ? ' · nowy produkt' : ''} · ${a.shops} skl. × ${a.pieces_per_shop_month.toLocaleString('pl-PL')} szt. · ${eur(a.selling_price_eur, 2)}/szt.${a.start_month ? ' · od ' + esc(a.start_month) : ''}${a.owner ? ' · ' + esc(a.owner) : ''}</div></td>
+                    <td><strong>${esc(a.title)}</strong><div class="at-sub">${esc(a.product || '')}${a.is_new_product ? ' · nowy produkt' : ''} · ${a.shops} skl. × ${a.pieces_per_shop_month.toLocaleString('pl-PL')} szt. · ${eur(a.selling_price_eur, 2)}/szt.${a.start_month ? ' · od ' + esc(a.start_month) : ''}${a.owner ? ' · ' + esc(a.owner) : ''}${beBadge(a.belgium)}</div></td>
                     <td><select class="form-select form-select-sm" data-status aria-label="Status">${Object.entries(STATUS).map(([k, l]) => `<option value="${k}" ${a.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select></td>
                     <td class="text-end">${a.metrics.pieces_month.toLocaleString('pl-PL', {maximumFractionDigits: 0})}</td>
                     <td class="text-end"><strong>${eur(a.metrics.revenue_month)}</strong></td>
@@ -123,6 +144,19 @@
         if (existing && existing.is_new_product) mode = 'new';
         let step = 1;
         const product = () => data.products.find(p => p.id === Number(a.final_product_id));
+        // Produkt w sklepach : istniejący produkt grupy ; nowy produkt — dopasowanie nazwy z zapisanego działania (serwer).
+        const storeOf = () => mode === 'existing' ? (product() ? product().store : null)
+            : (existing && existing.is_new_product && (a.product_name || '') === (existing.product || '') && existing.belgium ? existing.belgium.store : null);
+        const beHtml = () => {
+            const b = beCheck(num(a.selling_price_eur), storeOf());
+            if (b.verdict === 'noprice') return '';
+            const [cls, label] = BE[b.verdict];
+            return `<div class="at-growth-be"><span class="at-sub">Belgia (franczyza ${x(data.belgium.params.multiplier)})</span>
+                <strong>cel w sklepie ${eur(b.target, 2)}</strong><span class="at-sub">netto${b.target_gross !== null ? ' · ' + eur(b.target_gross, 2) + ' brutto' : ''}</span>
+                ${b.store ? `<span class="at-sub">w sklepach dziś ${eur(b.store.net, 2)} netto${b.store.gross !== null ? ' (' + eur(b.store.gross, 2) + ' brutto)' : ''} · ${b.store.shops} skl.</span>` : `<span class="at-sub">${data.belgium.synced_at ? 'produkt jeszcze nie sprzedawany w sklepach' : 'ceny w sklepach nie pobrane (Marża kategorii → Sprzedawalność w Belgii)'}</span>`}
+                <span><span class="badge ${cls}">${b.coef !== null ? x(b.coef) + ' ' : ''}${label}</span></span>
+                ${b.max_factory ? `<span class="at-sub">maks. cena fabryczna ${eur(b.max_factory, 2)}/szt.${step === 2 && Math.abs(b.max_factory - num(a.selling_price_eur)) >= 0.005 ? ` <a href="#" data-be-use="${b.max_factory.toFixed(2)}">użyj</a>` : ''}</span>` : ''}</div>`;
+        };
 
         const liveHtml = () => {
             const m = metrics(a);
@@ -134,7 +168,8 @@
                     ${m.roi12 !== null ? `<span class="at-sub">ROI 12 mies. ${pct(m.roi12, 0)} · ${data.defaults.horizon_months} mies. ${pct(m.roiH, 0)}</span>` : ''}</div>
                 ${c ? `<div><span class="at-sub">Brakująca sprzedaż grupy</span><strong>${c.gap_month > 0 ? eur(c.gap_month) + ' / mies.' : 'w normie'}</strong>
                     ${c.gap_month > 0 ? `<span class="at-sub">to działanie pokrywa ${pct(Math.min(100, m.revenue / c.gap_month * 100), 0)}</span>` : ''}
-                    <span class="at-sub">personel / sprzedaż po wdrożeniu: ${pct(c.staff_month / (c.revenue_month + c.actions_revenue_month - (existing && existing.status !== 'dropped' ? existing.metrics.revenue_month : 0) + m.revenue) * 100)}</span></div>` : ''}`;
+                    <span class="at-sub">personel / sprzedaż po wdrożeniu: ${pct(c.staff_month / (c.revenue_month + c.actions_revenue_month - (existing && existing.status !== 'dropped' ? existing.metrics.revenue_month : 0) + m.revenue) * 100)}</span></div>` : ''}
+                ${beHtml()}`;
         };
 
         const draw = () => {
@@ -169,6 +204,15 @@
             if (next) next.addEventListener('click', () => { collect(form); step++; draw(); });
             const save = body.querySelector('[data-save]');
             if (save) save.addEventListener('click', () => submit(form, save));
+            // « użyj » : cena fabryczna = maks. cena, przy której franczyzobiorca ma pełny mnożnik.
+            body.querySelector('.at-growth-live').addEventListener('click', (e) => {
+                const use = e.target.closest('[data-be-use]');
+                if (!use) return;
+                e.preventDefault();
+                collect(form);
+                a.selling_price_eur = use.dataset.beUse.replace('.', ',');
+                draw();
+            });
         };
 
         const drawLive = () => {
@@ -205,6 +249,8 @@
                 <tr><td>Marża</td><td>${eur(m.margin)} / mies. · ${eur(m.margin * 12)} / rok (${pct(num(a.target_margin_pct), 0)})</td></tr>
                 <tr><td>Inwestycja</td><td>${eur(num(a.investment_eur))} · zwrot ${m.payback === null ? 'nigdy (marża ≤ 0)' : (m.payback === 0 ? '—' : String(m.payback.toFixed(1)).replace('.', ',') + ' mies.')}${m.roi12 !== null ? ` · ROI 12 mies. ${pct(m.roi12, 0)}, ${data.defaults.horizon_months} mies. ${pct(m.roiH, 0)}` : ''}</td></tr>
                 <tr><td>Status</td><td>${STATUS[a.status]}</td></tr>
+                ${(() => { const b = beCheck(num(a.selling_price_eur), storeOf()); if (b.verdict === 'noprice') return '';
+                    return `<tr><td>Belgia</td><td>cel w sklepie ${eur(b.target, 2)} netto${b.target_gross !== null ? ' (' + eur(b.target_gross, 2) + ' brutto)' : ''}${b.store ? ' · sklep ' + eur(b.store.net, 2) + ' netto · ' + x(b.coef) : ''} — <span class="badge ${BE[b.verdict][0]}">${BE[b.verdict][1]}</span>${b.max_factory ? ' · maks. cena fabryczna ' + eur(b.max_factory, 2) : ''}</td></tr>`; })()}
             </table></div>`;
         };
 

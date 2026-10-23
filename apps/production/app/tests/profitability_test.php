@@ -52,7 +52,8 @@ try {
                  'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'erp_company_other_settings', 'document_wdt',
                  'document_wdt_product', 'final_product', 'customer_order', 'customer_order_product', 'tfb_growth_action', 'user', 'category_product',
                  'production_employee', 'tfb_staff_pay', 'recipe_competency', 'recipe_competency_connection', 'tfb_employee_competency',
-                 'flattened_recipe_ingredient', 'raw_material', 'category_material', 'supplier', 'raw_material_price_changelog', 'unit', 'tfb_wdt_superseded'] as $table) {
+                 'flattened_recipe_ingredient', 'raw_material', 'category_material', 'supplier', 'raw_material_price_changelog', 'unit', 'tfb_wdt_superseded',
+                 'tfb_store_price_config', 'tfb_store_product', 'tfb_store_product_shop', 'tfb_store_product_link', 'tfb_store_price_sync'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -194,7 +195,8 @@ try {
 
     $pdo->exec("INSERT INTO user (id, name, surname, displayed_name, email, phone, permission, login, password) VALUES (1, 'A', 'B', 'Anna B.', 'a@x.test', '1', 0, 'anna', 'x')");
     $pdo->exec("INSERT INTO final_product (id, name, id_section, ppc, standard_price, pre_calculated_raw_price_per_carton, active) VALUES (2, 'Bagietka', 1, 20, 16, 16, 1), (3, 'Pudełko', 2, 10, 5, 4, 1)");
-    $growth = new GrowthActionService(new GrowthActionRepository($pdo), new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)), new ProfitabilityRepository($pdo), new ParamRepository($pdo));
+    $growth = new GrowthActionService(new GrowthActionRepository($pdo), new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo)), new ProfitabilityRepository($pdo), new ParamRepository($pdo),
+        new \App\Services\Finances\StorePrice\StoreSellabilityService(new \App\Repositories\Finances\StorePriceRepository($pdo), new \App\Services\Organization\PageAccessService(new \App\Repositories\Organization\PageAccessRepository($pdo))));
     $fields = function (callable $fn): array {
         try { $fn(); } catch (App\Core\Api\Workshop\ApiException $e) { return array_column($e->fieldErrors(), 'code', 'field'); }
         return [];

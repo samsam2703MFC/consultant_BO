@@ -6,6 +6,7 @@ use App\Exceptions\CustomException;
 use App\Repositories\Dashboard\GrowthActionRepository;
 use App\Repositories\Dashboard\ProfitabilityRepository;
 use App\Repositories\Workshop\ParamRepository;
+use App\Services\Finances\StorePrice\StoreSellabilityService;
 
 /**
  * Actions de développement du chiffre d'affaires d'un groupe de produits.
@@ -26,6 +27,7 @@ final class GrowthActionService
         private ProfitabilityService $profitability,
         private ProfitabilityRepository $profitRepo,
         private ParamRepository $params,
+        private StoreSellabilityService $sellability,
     ) {
     }
 
@@ -92,10 +94,16 @@ final class GrowthActionService
         }
 
         $rate = $this->profitRepo->eurRate() ?: 1.0;
+        $productRows = $this->actions->products($sectionId);
+        // Belgia (franczyza) : cena fabryczna za sztukę × mnożnik wobec ceny w sklepie — dla produktów grupy i każdego działania.
+        $belgium = $this->sellability->forGrowth(array_map(fn($p) => (int) $p['id'], $productRows), $actions);
+        foreach ($actions as &$a) $a['belgium'] = $belgium['actions'][$a['id']] ?? null;
+        unset($a);
         return [
             'section' => ['id' => (int) $section['id'], 'name' => $section['name']],
             'context' => $context,
             'actions' => $actions,
+            'belgium' => ['params' => $belgium['params'], 'synced_at' => $belgium['synced_at']],
             'products' => array_map(fn($p) => [
                 'id' => (int) $p['id'],
                 'name' => $p['name'],
@@ -103,7 +111,8 @@ final class GrowthActionService
                 'price_piece_eur' => (int) $p['ppc'] > 0 && $p['standard_price'] !== null ? round((float) $p['standard_price'] / (int) $p['ppc'], 4) : null,
                 'material_piece_eur' => (int) $p['ppc'] > 0 && $p['pre_calculated_raw_price_per_carton'] !== null ? round((float) $p['pre_calculated_raw_price_per_carton'] / (int) $p['ppc'] / $rate, 4) : null,
                 'target_margin_pct' => $p['target_margin_percentage'] !== null ? (float) $p['target_margin_percentage'] : null,
-            ], $this->actions->products($sectionId)),
+                'store' => $belgium['products'][(int) $p['id']] ?? null,
+            ], $productRows),
             'defaults' => ['shops' => $this->defaultShops(), 'start_month' => date('Y-m', strtotime('first day of next month')), 'horizon_months' => $horizon],
             'users' => $this->actions->users(),
         ];

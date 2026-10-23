@@ -97,10 +97,7 @@ final class StoreSellabilityService
                 'target' => $target !== null ? round($target, 2) : null,
                 'target_gross' => $target !== null && $vat !== null ? round($target * (1 + $vat / 100), 2) : null,
                 'link' => $link,
-                'store' => $store === null ? null : ['key' => $store['name_key'], 'name' => $store['name'], 'category' => $store['category'], 'shops' => (int) $store['shops'],
-                    'net' => $net, 'gross' => $store['price_gross'] !== null ? (float) $store['price_gross'] : null,
-                    'min' => $store['price_gross_min'] !== null ? (float) $store['price_gross_min'] : null, 'max' => $store['price_gross_max'] !== null ? (float) $store['price_gross_max'] : null,
-                    'vat' => $vat, 'id' => (int) $store['id']],
+                'store' => $store === null ? null : self::storeShape($store),
                 'coef' => $coef !== null ? round($coef, 2) : null,
                 'verdict' => $piece === null ? 'noprice' : self::verdict($coef, $p),
                 'reserve' => $coef !== null && $coef >= $p['reserve'],
@@ -110,6 +107,59 @@ final class StoreSellabilityService
             ];
         }
         return $out;
+    }
+
+    /** Produkt sklepu w odpowiedziach (cena netto i brutto za sztukę, sklepy, min./maks., VAT). */
+    private static function storeShape(array $s): array
+    {
+        return ['key' => $s['name_key'], 'name' => $s['name'], 'category' => $s['category'], 'shops' => (int) $s['shops'],
+            'net' => $s['price_net'] !== null ? (float) $s['price_net'] : null, 'gross' => $s['price_gross'] !== null ? (float) $s['price_gross'] : null,
+            'min' => $s['price_gross_min'] !== null ? (float) $s['price_gross_min'] : null, 'max' => $s['price_gross_max'] !== null ? (float) $s['price_gross_max'] : null,
+            'vat' => $s['vat'] !== null ? (float) $s['vat'] : null, 'id' => (int) $s['id']];
+    }
+
+    /**
+     * Ocena ceny fabrycznej za sztukę wobec ceny w sklepie (działanie rozwoju, kreator) : cel × mnożnik (netto, brutto),
+     * współczynnik, werdykt, maks. cena fabryczna.
+     */
+    public static function priceCheck(float $piece, ?array $store, array $p): array
+    {
+        $net = $store['net'] ?? null;
+        $vat = $store['vat'] ?? null;
+        $coef = $piece > 0 && $net ? round($net / $piece, 2) : null;
+        return ['target' => $piece > 0 ? round($piece * $p['multiplier'], 2) : null,
+            'target_gross' => $piece > 0 && $vat !== null ? round($piece * $p['multiplier'] * (1 + $vat / 100), 2) : null,
+            'coef' => $coef, 'verdict' => $piece > 0 ? self::verdict($coef, $p) : 'noprice', 'reserve' => $coef !== null && $coef >= $p['reserve'],
+            'max_factory' => $net ? round($net / $p['multiplier'], 2) : null];
+    }
+
+    /**
+     * Rozwój produktów grupy (działania) : ceny w sklepach produktów grupy i ocena ceny każdego działania — produkt
+     * istniejący : jego produkt sklepu (powiązanie albo nazwa) ; nowy produkt : dopasowanie nazwy do produktów sklepów.
+     *
+     * @param list<int> $productIds
+     * @param list<array{id: int, final_product_id: ?int, product: ?string, selling_price_eur: float}> $actions
+     */
+    public function forGrowth(array $productIds, array $actions): array
+    {
+        $p = $this->params();
+        $ids = array_merge($productIds, array_values(array_filter(array_map(fn($a) => $a['final_product_id'] ?? null, $actions))));
+        $rows = $ids ? $this->evaluate(array_values(array_unique($ids))) : [];
+        $products = [];
+        foreach ($productIds as $id) $products[$id] = $rows[$id]['store'] ?? null;
+        $out = [];
+        foreach ($actions as $a) {
+            if (!empty($a['final_product_id'])) {
+                $store = $rows[$a['final_product_id']]['store'] ?? null;
+                $link = $rows[$a['final_product_id']]['link'] ?? null;
+            } else {
+                [$raw, $link] = $this->storeFor(0, (string) ($a['product'] ?? ''), []);
+                $store = $raw !== null ? self::storeShape($raw) : null;
+            }
+            $out[$a['id']] = self::priceCheck((float) $a['selling_price_eur'], $store, $p) + ['store' => $store, 'link' => $link];
+        }
+        $synced = $this->repo->lastSuccessfulSync();
+        return ['params' => $p, 'synced_at' => $synced['started_at'] ?? null, 'products' => $products, 'actions' => $out];
     }
 
     /**
