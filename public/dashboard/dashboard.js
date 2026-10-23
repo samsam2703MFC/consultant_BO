@@ -3232,14 +3232,15 @@
     }).join(' · ');
   }
   /** La durée maximale en mots : « un an » (366 jours, depuis le 18/10/2026), sinon « N jours ». */
-  const pmMaxTxt = m => (m || 366) >= 365 ? 'un an' : m + ' jours';
   /**
    * Les durées rapides de l'étape Période (18/10/2026) : une semaine, un mois, un an, à partir du début choisi s'il n'est
    * pas passé, demain sinon ; la fin la veille du même jour, à 23:59 (le 31 janvier + un mois : le dernier jour de février).
+   * « Tout le temps » (23/10/2026, Sam) : depuis 99 ans, pour 99 ans — une promotion qui ne s'arrête pas.
    */
-  const PM_DUREES = [['7j', '1 semaine'], ['1m', '1 mois'], ['1a', '1 an']];
+  const PM_DUREES = [['7j', '1 semaine'], ['1m', '1 mois'], ['1a', '1 an'], ['tt', 'Tout le temps']];
   function pmDuree(d, k) {
     const p = n => String(n).padStart(2, '0'), loc = t => t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+    if (k === 'tt') { const a = new Date(), b = new Date(); a.setFullYear(a.getFullYear() - 99); b.setFullYear(b.getFullYear() + 99); return { du: loc(a) + ' 00:00', au: loc(b) + ' 23:59' }; }
     const dem = new Date(); dem.setDate(dem.getDate() + 1);
     const du = d.du && d.du.slice(0, 10) >= loc(new Date()) ? d.du : loc(dem) + ' 00:00';
     const t = new Date(du.slice(0, 10) + 'T12:00:00'), y = t.getFullYear(), m = t.getMonth(), j = t.getDate();
@@ -3254,6 +3255,12 @@
     return { du, au: loc(fin) + ' 23:59' };
   }
   const pmJours = d => d.du && d.au ? Math.round((new Date(d.au.slice(0, 10) + 'T12:00:00') - new Date(d.du.slice(0, 10) + 'T12:00:00')) / 86400000) + 1 : null;
+  /** Une date de « Tout le temps » : un début à plus de 90 ans en arrière, une fin à plus de 90 ans devant. */
+  const pmTjDu = v => !!v && +v.slice(0, 4) <= new Date().getFullYear() - 90;
+  const pmTjAu = v => !!v && +v.slice(0, 4) >= new Date().getFullYear() + 90;
+  const pmToujours = d => pmTjDu(d.du) && pmTjAu(d.au);
+  /** La période en mots : « du 24/10 au 23/11 23:59 », ou « tout le temps ». */
+  const pmPeriodeTxt = d => pmToujours(d) ? 'tout le temps' : 'du ' + (pmTjDu(d.du) ? 'toujours' : pmQuand(d.du)) + ' au ' + (pmTjAu(d.au) ? 'sans fin' : pmQuand(d.au));
 
   /**
    * Une promotion du magasin relue au panel porte les numéros de ses produits et catégories, pas toujours leurs noms :
@@ -3308,7 +3315,7 @@
     const can = (d ? d.canaux : r.canaux) || null, ok = k => !can || can.includes(k);
     const seuil = d ? d.seuil : r.seuil, rep = d ? d.repetable : r.repetable, max = d ? d.maxParTicket : r.maxParTicket;
     const e = PM_ETAT[l.etat] || [l.etat, 'b'], num = d ? d.panelId : (l.src === 'panel' ? l.id : null);
-    const fin = l.au ? esc(pmQuand(l.au)) : mu('sans fin');
+    const fin = l.au && !pmTjAu(l.au) ? esc(pmQuand(l.au)) : mu('sans fin');
     const reste = l.au && (l.etat === 'active' || l.etat === 'en_caisse') ? Math.round((new Date(l.au.slice(0, 10) + 'T12:00:00') - new Date(AUJ + 'T12:00:00')) / 86400000) : null;
     // Les actions : celles qui existaient sur la ligne, dans le menu.
     const it = (attr, v, lib, cl) => `<button class="${cl || ''}" ${attr}="${esc(v)}">${lib}</button>`;
@@ -3327,7 +3334,7 @@
       comptoir: ok('comptoir') ? '<span class="pm-oui">✓</span>' : mu('—'),
       webshop: ok('webshop') ? '<span class="pm-oui">✓</span>' : mu('—'),
       seuil: +seuil > 0 ? fU(+seuil) : mu('—'),
-      debut: l.du ? esc(pmQuand(l.du)) : mu('—'),
+      debut: l.du ? (pmTjDu(l.du) ? mu('toujours') : esc(pmQuand(l.du))) : mu('—'),
       fin: reste != null && reste >= 0 && reste <= 7 ? `<span title="${reste === 0 ? 'dernier jour' : 'encore ' + reste + ' jour' + (reste > 1 ? 's' : '')}">${fin}</span>` : fin,
       statut: `<span class="pm-chip ${e[1]}">${esc(e[0])}</span>`,
       coef: pmCoefCellule(l, min),
@@ -3399,7 +3406,7 @@
       }).join('')}</tbody></table></div>`;
     }
     h += `<div class="pm-pied db-mini">Tout se lit au panel, rien n’est gardé ailleurs${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''} : les promotions du magasin sont celles du panel réservées à ce seul magasin, les autres sont celles de la marque (elles se dupliquent pour en faire une du magasin). « Actives » : en caisse aujourd’hui.
-      Règles du magasin : une date de fin, ${pmMaxTxt(Rg.joursMax)} au plus · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Enregistrer l’écrit au panel (créée inactive, relue, puis activée) : elle passe en caisse pour ses dates. Un brouillon est une promotion inactive au panel.
+      Règles du magasin : une date de fin (« Tout le temps » : depuis 99 ans, pour 99 ans) · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Enregistrer l’écrit au panel (créée inactive, relue, puis activée) : elle passe en caisse pour ses dates. Un brouillon est une promotion inactive au panel.
       Un clic sur un coefficient en montre le détail, aux prix et coûts de recette d’aujourd’hui.
       Comptoir et Webshop : là où la promotion vaut — sans restriction au panel, les deux. Seuil : le montant minimal du ticket, quand le panel en donne un. « Colonnes » ajoute ou retire des colonnes, le choix est gardé ; les actions sont dans « ⋯ ».</div></div>`;
     return h;
@@ -3495,7 +3502,7 @@
     const num = l.src === 'mag' ? (l.d.panelId ? 'promotion n° ' + l.d.panelId : 'promotion du magasin') : 'promotion de la marque n° ' + l.id;
     const regle = l.src === 'mag' ? (l.d.repetable ? ' · répétable' + (l.d.maxParTicket ? ', ' + l.d.maxParTicket + ' fois au plus par ticket' : '') : ' · une fois par ticket') : '';
     const nProd = K ? new Set([...K.P.X.keys(), ...K.P.Y.keys()]).size : 0;
-    const chips = [`<span class="fi-chip"><b>${esc(e[0])}</b>${l.au ? ' jusqu’au ' + esc(pmQuand(l.au)) : ''}</span>`, `<span class="fi-chip">${esc(nomShop())}</span>`,
+    const chips = [`<span class="fi-chip"><b>${esc(e[0])}</b>${l.au && !pmTjAu(l.au) ? ' jusqu’au ' + esc(pmQuand(l.au)) : ''}</span>`, `<span class="fi-chip">${esc(nomShop())}</span>`,
       l.src === 'panel' ? `<span class="fi-chip">${esc(l.qui)}</span>` : '', K ? `<span class="fi-chip">${esc(pmLib(K.x))} · ${nProd} produit${nProd > 1 ? 's' : ''}</span>` : '',
       `<span class="fi-chip">repère <b>${fXm(min)}</b></span>`].join('');
     const ok = v => v >= min ? 'ok' : 'ko';
@@ -3640,7 +3647,6 @@
       const R = (S.aux[clePM()] || {}).regles || {}, n = pmJours(d);
       if (!d.du || !d.au) { return 'les dates'; }
       if (d.au <= d.du) { return 'une fin après le début'; }
-      if (n > (R.joursMax || 366)) { return n + ' jours, ' + pmMaxTxt(R.joursMax) + ' au plus'; }
       return '';
     }
     return '';
@@ -3673,12 +3679,12 @@
     let h = `<div class="db-card pm-c"><div class="db-lab">Récapitulatif</div>
       <div class="pm-phrase">${pmPhrase(x, Object.assign(y, { type: d.y.type, valeur: d.y.valeur }))}</div>
       <div class="pm-badges">${pmBadges(d.canal, d.seuil)}</div>
-      <div class="db-mini" style="margin-top:4px">${esc(mags.join(', '))} · ${d.du && d.au ? 'du ' + esc(pmQuand(d.du)) + ' au ' + esc(pmQuand(d.au)) : 'période à régler'}${d.creneaux.length ? ' · ' + esc(pmCreneauxTxt(d.creneaux)) : ''}${d.repetable ? ' · répétable' + (d.maxParTicket ? ', ' + d.maxParTicket + ' fois par ticket au plus' : '') : ''}</div>
+      <div class="db-mini" style="margin-top:4px">${esc(mags.join(', '))} · ${d.du && d.au ? esc(pmPeriodeTxt(d)) : 'période à régler'}${d.creneaux.length ? ' · ' + esc(pmCreneauxTxt(d.creneaux)) : ''}${d.repetable ? ' · répétable' + (d.maxParTicket ? ', ' + d.maxParTicket + ' fois par ticket au plus' : '') : ''}</div>
       ${ck(!pmManque(d, 1), 'Nom')}
       ${ck(!pmManque(d, 2), 'Déclencheur : ' + (x.cats.length || x.prods.length ? x.q + ' × ' + (PM_PORTIONS[x.portion] ? PM_PORTIONS[x.portion].lib + ' ' : '') + esc(pmLib(x)) : 'à l’étape 2'))}
       ${ck(!pmManque(d, 3), 'Avantage : ' + (y.cats.length || y.prods.length ? y.q + ' pièce' + (y.q > 1 ? 's' : '') + ' ' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + ', la moins chère' : 'à l’étape 3'))}
       ${ck(!pmManque(d, 4), 'Conditions : ' + esc(pmCanalLib(d.canal).toLowerCase()) + ' · ' + esc(pmSeuilTxt(d.seuil)) + ' · ' + (d.repetable ? 'répétable' + (d.maxParTicket ? ', ' + esc(d.maxParTicket) + ' fois au plus' : '') : 'une fois par ticket'))}
-      ${ck(!pmManque(d, 5), 'Période : ' + (pmManque(d, 5) ? esc(pmManque(d, 5)) : n + ' jour' + (n > 1 ? 's' : '') + (d.creneaux.length ? ', ' + d.creneaux.length + ' créneau' + (d.creneaux.length > 1 ? 'x' : '') : '')))}
+      ${ck(!pmManque(d, 5), 'Période : ' + (pmManque(d, 5) ? esc(pmManque(d, 5)) : (pmToujours(d) ? 'tout le temps' : n + ' jour' + (n > 1 ? 's' : '')) + (d.creneaux.length ? ', ' + d.creneaux.length + ' créneau' + (d.creneaux.length > 1 ? 'x' : '') : '')))}
       ${C && C.lot != null ? `<div class="pm-ck${C.lot >= min ? '' : ' wa'}">${C.lot >= min ? '✓' : '!'} Coefficient du lot ${fX(C.lot)}${C.lot >= min ? '' : ' : sous ' + fXm(min) + ', n’empêche pas l’enregistrement'}</div>` : ck(false, 'Coefficient du lot : se calcule avec X et Y')}</div>`;
     h += `<div class="db-card pm-c"><div class="pm-ligne"><div class="db-lab">Calculateur de coefficient</div>${C && C.lot != null ? `<span class="pm-chip ${C.lot >= min ? 'ok' : 'r'}">repère ${fXm(min)} ${C.lot >= min ? '✓' : '✕'}</span>` : ''}</div>`;
     if (!C) { h += `<div class="db-mini" style="margin-top:8px">${S.err[clePMP()] ? 'Prix et coûts illisibles : ' + esc(S.err[clePMP()]) : 'Lecture des prix et coûts de recette du magasin…'}</div></div>`; }
@@ -3771,7 +3777,7 @@
       const n = pmJours(d), dl = v => v ? v.replace(' ', 'T') : '';
       const autres = ((S.aux[clePM()] || {}).demandes || []).filter(o => o.id !== d.id && o.statut === 'en_caisse' && d.du && d.au && o.du < d.au && o.au > d.du);
       return tete('règles d’application et période de validité', 'Période') + `<div class="pm-row" style="grid-template-columns:1fr 1fr"><div class="pm-f"><label>Active à partir du</label><input class="pm-in" type="datetime-local" value="${dl(d.du)}" data-pmf="du"></div>
-        <div class="pm-f"><label>Jusqu’au <small class="db-mini">obligatoire, ${pmMaxTxt(R.joursMax)} au plus</small></label><input class="pm-in" type="datetime-local" value="${dl(d.au)}" data-pmf="au"></div></div>
+        <div class="pm-f"><label>Jusqu’au <small class="db-mini">obligatoire — « Tout le temps » pour ne pas l’arrêter</small></label><input class="pm-in" type="datetime-local" value="${dl(d.au)}" data-pmf="au"></div></div>
         <div class="pm-durees"><span class="db-lab">Durée rapide</span><span class="pm-seg">${PM_DUREES.map(([k, lib]) => { const r = pmDuree(d, k); return `<button type="button" class="${r.du === d.du && r.au === d.au ? 'on' : ''}" data-pmduree="${k}" title="du ${esc(pmQuand(r.du))} au ${esc(pmQuand(r.au))}">${lib}</button>`; }).join('')}</span><span class="db-mini">à partir du début choisi, demain sinon</span></div>
         <div class="db-mini" id="pm-duree" style="margin-top:6px">${pmDureeTxt(d)}</div>
         ${autres.length ? `<div class="pm-info">Aussi en caisse sur ces dates dans ce magasin : ${autres.map(o => '« ' + esc(o.nom) + ' »').join(', ')}.</div>` : ''}
@@ -3791,7 +3797,7 @@
         ${lgn('Où', '<b>' + esc(pmCanalLib(d.canal)) + '</b> · ' + esc((PM_CANAUX.find(o => o[0] === d.canal) || PM_CANAUX[0])[2]), 4)}
         ${lgn('Seuil du ticket', +d.seuil > 0 ? 'le ticket atteint <b>' + fU(+d.seuil) + '</b> TTC avant remise' : 'sans seuil', 4)}
         ${lgn('Dans un ticket', d.repetable ? 'répétable' + (d.maxParTicket ? ' · <b>' + esc(d.maxParTicket) + '</b> fois au plus' : ' · sans limite') : 'une fois par ticket', 4)}
-        ${lgn('Période', d.du && d.au ? 'du <b>' + esc(pmQuand(d.du)) + '</b> au <b>' + esc(pmQuand(d.au)) + '</b> · ' + esc(pmCreneauxTxt(d.creneaux)) : '<span class="ko">à régler</span>', 5)}
+        ${lgn('Période', d.du && d.au ? (pmToujours(d) ? '<b>tout le temps</b> (depuis 99 ans, pour 99 ans)' : 'du <b>' + esc(pmQuand(d.du)) + '</b> au <b>' + esc(pmQuand(d.au)) + '</b>') + ' · ' + esc(pmCreneauxTxt(d.creneaux)) : '<span class="ko">à régler</span>', 5)}
         ${lgn('Fixé par la marque', 'priorité normale · non exclusive · activation automatique', 0)}</table>
       <div id="pm-fixe">${pmFixe(W)}</div>
       ${manque.length ? `<div class="pm-warn">À compléter avant l’enregistrement : ${esc(manque.join(' · '))}</div>` : ''}
@@ -3880,7 +3886,7 @@
     const n = pmJours(d), R = (S.aux[clePM()] || {}).regles || {};
     if (!d.du || !d.au) { return 'Donnez le début et la fin.'; }
     if (d.au <= d.du) { return '<span class="ko">La fin vient après le début.</span>'; }
-    return n > (R.joursMax || 366) ? `<span class="ko">${n} jours : ${pmMaxTxt(R.joursMax)} au plus.</span>` : `${n} jour${n > 1 ? 's' : ''}.`;
+    return pmToujours(d) ? 'Tout le temps : depuis 99 ans, pour 99 ans — la promotion ne s’arrête pas.' : `${n} jour${n > 1 ? 's' : ''}.`;
   }
   function rendPmAssistant() {
     const W = S.pmW, e = W.etape;
@@ -3937,7 +3943,7 @@
         if (!ok) { W.erreurs = j.erreurs || [j.error || ('HTTP ' + code)]; if (action === 'envoyer' || W.etape === PM_FIN) { W.etape = PM_FIN; } return; }
         const dm = j.demande || {}, sortis = j.exclusAuto || [];
         S.pmMsg = action !== 'envoyer' ? `Brouillon gardé au panel, inactif : « ${esc(dm.nom || 'sans nom')} » (promotion n° ${esc(dm.panelId)}).`
-          : (!j.panelErreur && dm.statut === 'en_caisse' ? `En caisse : « ${esc(dm.nom)} » — ${W.enCaisse ? 'mise à jour' : 'créée'} au panel (promotion n° ${esc(dm.panelId)}), active du ${esc(pmQuand(dm.du))} au ${esc(pmQuand(dm.au))}.${sortis.length ? ' Sortis d’office : ' + esc(sortis.slice(0, 5).join(', ')) + (sortis.length > 5 ? '…' : '') + '.' : ''}`
+          : (!j.panelErreur && dm.statut === 'en_caisse' ? `En caisse : « ${esc(dm.nom)} » — ${W.enCaisse ? 'mise à jour' : 'créée'} au panel (promotion n° ${esc(dm.panelId)}), active ${esc(pmPeriodeTxt(dm))}.${sortis.length ? ' Sortis d’office : ' + esc(sortis.slice(0, 5).join(', ')) + (sortis.length > 5 ? '…' : '') + '.' : ''}`
             : `Pas en caisse : « ${esc(dm.nom)} » est au panel (promotion n° ${esc(dm.panelId)}), inactive — ${esc(j.panelErreur || 'le panel ne l’a pas activée')}. Reprenez-la dans les brouillons.`);
         S.pmF = action === 'envoyer' && !j.panelErreur && dm.statut === 'en_caisse' ? 'actives' : 'brouillons';
         S.pmW = null; lireAux(clePM(), cheminPM(), true);

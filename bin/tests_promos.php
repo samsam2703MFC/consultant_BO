@@ -197,8 +197,10 @@ verifie('une demande complète passe', pmErreurs($base, $coefOk, $now) === [], j
 verifie('sans fin : refusée', count(pmErreurs(['au' => null] + $base, $coefOk, $now)) === 1);
 verifie('15 jours : acceptée (plus de limite à 14 jours, 18/10/2026)', pmErreurs(['au' => $j(15)] + $base, $coefOk, $now) === []);
 verifie('un an (366 jours) : acceptée', pmErreurs(['au' => $j(366, '23:59')] + $base, $coefOk, $now) === []);
-$e = pmErreurs(['au' => $j(367)] + $base, $coefOk, $now);
-verifie('367 jours : refusée, la durée dite', count($e) === 1 && str_contains($e[0], '367 jours') && str_contains($e[0], 'un an'), json_encode($e, JSON_UNESCAPED_UNICODE));
+verifie('plus de durée maximale : 367 jours acceptée', pmErreurs(['au' => $j(367)] + $base, $coefOk, $now) === []);
+$tt = static fn (int $ans, string $h) => date('Y-m-d', strtotime(($ans >= 0 ? '+' : '') . $ans . ' years')) . ' ' . $h;
+verifie('« Tout le temps » : depuis 99 ans, pour 99 ans, acceptée', pmErreurs(['du' => $tt(-99, '00:00'), 'au' => $tt(99, '23:59')] + $base, $coefOk, $now) === [],
+    json_encode(pmErreurs(['du' => $tt(-99, '00:00'), 'au' => $tt(99, '23:59')] + $base, $coefOk, $now), JSON_UNESCAPED_UNICODE));
 $d = pmPropre(['shops' => [5, 4, 6, 7, 8, 9]], 4);
 verifie('le magasin qui écrit, lui seul : les autres magasins envoyés sont ignorés', $d['shops'] === [4]);
 $e = pmErreurs($base, ['lot' => 1.67, 'x' => 'Pain au chocolat', 'y' => 'Pain au chocolat'] + $coefOk, $now);
