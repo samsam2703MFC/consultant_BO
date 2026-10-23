@@ -986,3 +986,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T15:30:05Z wartości odżywcze z internetu + pełna szerokość
 2026-10-23T15:31:20Z récurrence : répartition des clients identifiés
 2026-10-23T15:38:50Z primes : combien, comment y arriver, où tu en es ; module Primes dans le rail
+2026-10-23T15:42:00Z récurrence : tous les clients identifiés
