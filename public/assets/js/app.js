@@ -375,7 +375,7 @@ class App {
    * l'ancien lien ouvre l'application, à la bonne page.
    */
   static get ADRESSES_SORTIES(){
-    return { 'production-parametres': 'production/?page=params', 'production-plan': 'production/?page=plan', 'production-suivi': 'production/?page=suivi',
+    return { 'production-parametres': 'production/?page=params', 'production-plan': 'production/?page=plan', 'production-suivi': 'production/?page=plan',
       'production-cloture': 'production/?page=cloture', 'production-fours': 'production/?page=fours',
       prospection: 'prospection/', 'prospection-mobile': 'prospection/', 'developpement-commercial': 'prospection/',
       // Les posts : le portail social (/social, à côté du cockpit) ; les newsletters : le portail Marketing.
@@ -1427,7 +1427,7 @@ class App {
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
-      // en attendant — la prospection autour du magasin, sa tablette, sa production.
+      // en attendant — la prospection autour du magasin, sa tablette, l'app worker.
       // Sa lettre est partie avec le marketing (Marque & marketing → Canaux).
       ['ERP franchisé', [
         // La liste de démarchage vit dans son application (prospection/, 16/10/2026) :
@@ -1441,10 +1441,8 @@ class App {
         ['ext:employee/auth', 'App worker ↗', 0],
         // Le marketing du franchisé (16/10/2026) : les primes de l'app worker — celles de la marque et des sponsors,
         // qu'il voit, et celles de son magasin.
-        { sub: 'Marketing franchisé', children: [['primesApp', 'Primes de l’app worker', 0]] },
-        // La gestion de production du franchisé (demande du 03/10/2026) vit dans son
-        // application (production/, 16/10/2026) : ses cinq étapes y sont en onglets.
-        ['ext:production/', 'Production ↗', 0]]],
+        { sub: 'Marketing franchisé', children: [['primesApp', 'Primes de l’app worker', 0]] }]],
+        // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];

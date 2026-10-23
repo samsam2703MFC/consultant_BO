@@ -2597,7 +2597,7 @@
   /** La carte « La vitrine » : trois onglets de durée de vie, le niveau de chacun, puis ses références en dépliant. */
   function opVitrine(D, mob) {
     if (!mob) { return opVitrineE(D); }
-    const { now, U, prods, lienProd } = D;
+    const { now, U, prods } = D;
     const k = S.opVie;
     const N = {}; OP_VIES.forEach(x => { N[x] = opNiveau(prods.filter(p => opVieDe(p) === x)); });
     const onglet = x => { const n = N[x];
@@ -2613,8 +2613,8 @@
         ${jauge != null ? `<span class="jg"><i style="width:${jauge.toFixed(0)}%"></i></span>` : ''}<span class="lib">${lib}</span>${al ? `<span class="al">${al}</span>` : ''}</button>`; };
     const L = prods.filter(p => opVieDe(p) === k);
     const corps = L.length ? opArbre(D, L, mob, k) : `<div class="op-vvide">Aucune référence en ${OP_VIE_NOM[k].toLowerCase()} ce jour.</div>`;
-    const tete = mob ? `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi ›</a></span>`
-      : `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.sorti)} sorties · ${fN(U.totaux && U.totaux.vendu)} vendues · ${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi de production ›</a></span>`;
+    const tete = mob ? `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.stock)} en vitrine</span>`
+      : `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.sorti)} sorties · ${fN(U.totaux && U.totaux.vendu)} vendues · ${fN(U.totaux && U.totaux.stock)} en vitrine</span>`;
     return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div><div class="op-v3s">${OP_VIES.map(onglet).join('')}</div>${corps}</div>`;
   }
 
@@ -2638,12 +2638,11 @@
     const retardN = cmd ? (cmd.retard != null ? cmd.retard : retard.length) : 0;
     // Les tickets du jour d'abord ; tant qu'ils se lisent, le chiffre du Résultat du jour.
     const ca = ST && ST.totaux ? ST.totaux.ca : (m ? m.ca : null), tk = ST && ST.totaux ? ST.totaux.tickets : (m ? m.tickets : null);
-    const lienProd = page => `../production/?shop=${encodeURIComponent(S.shop)}&date=${S.date}&page=${page}`;
     const ncL = NC && Array.isArray(NC.nc) ? NC.nc : [];
     const sk = SK && !SK.indispo ? SK : null;
 
     const listeC = CA && Array.isArray(CA.liste) ? CA.liste : [];
-    return { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC };
+    return { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC };
   }
   /* ── Le duel avec J−7 (maquette B du 08/10/2026) ──────────────────────────────
    * Chaque chiffre du jour se compare d'abord à J−7 à la même heure (le serveur arrête la
@@ -2884,7 +2883,7 @@
   }
   /** En un coup d'œil : commandes clients, non-conformités d'hier, poubelle, promotions. */
   function opMinis(D) {
-    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
+    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC } = D;
     const mini = (vd, k, v, s) => `<div class="db-card op-mini"><div class="k"><span class="vd ${vd}"></span>${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
     return `
       ${cmd ? mini(retardN ? 'att' : 'ok', 'Commandes clients', retardN ? fN(retardN) + ' en retard' : 'À jour', `${fN(cmd.aVenir || 0)} à venir · aujourd’hui : ${fN(listeC.length)}${CA && CA.demain ? ' · demain : ' + fN(CA.demain.n) + (CA.demain.n ? ', ' + fU(CA.demain.ca) : '') : ''}`) : mini('', 'Commandes clients', '—', opSk())}
@@ -2898,7 +2897,7 @@
    * le P&L et les catégories, puis commandes, hier, poubelle, promotions et le stock. */
   function rendOpsMobile() {
     const D = opDonnees();
-    const { now, U, ST, JD, m, prods, cuissons, planning, lienProd } = D;
+    const { now, U, ST, JD, m, prods, cuissons, planning } = D;
     // Une donnée, un seul endroit (11/10/2026) : la jauge porte le CA face à l'objectif et à J−7 ; le duel, les clients
     // et le panier ; la courbe, l'heure par heure. Les quatre tuiles (heure, vitrine, équipe, cuissons) redisaient les
     // cartes du dessous : retirées au téléphone.
@@ -3077,7 +3076,7 @@
   }
   function rendOps() {
     const D = opDonnees();
-    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
+    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC } = D;
     let h = '';
 
     /* 0. Ta place dans le réseau, la journée (10/10/2026) : juste au-dessus des objectifs, anonyme. */
