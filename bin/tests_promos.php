@@ -459,7 +459,7 @@ verifie('la sonde : rien de nominatif (l’auteur retiré)', !str_contains(json_
 
 echo "Le canal et le seuil d'une promotion (23/10/2026)\n";
 $c0 = pvConditions(['id' => 1, 'is_exclusive' => false, 'is_repeatable' => true, 'priority' => 100]);
-verifie('sans rien : aucune restriction, aucun seuil', $c0['canaux'] === null && $c0['seuil'] === null && $c0['cles'] === ['seuil' => null, 'canal' => null, 'jetons' => []]);
+verifie('sans rien : aucune restriction, aucun seuil', $c0['canaux'] === null && $c0['seuil'] === null && $c0['cles'] === ['seuil' => null, 'canal' => null, 'jetons' => [], 'scalaire' => false]);
 verifie('un seuil sous un nom plausible', pvConditions(['minimum_basket_value' => '15.00'])['seuil'] === 15.0 && pvConditions(['min_order_amount' => 12])['seuil'] === 12.0
     && pvConditions(['threshold_amount' => 9.5])['seuil'] === 9.5 && pvConditions(['minimum_order_value' => 0])['seuil'] === null);
 verifie('les canaux en liste : comptoir seul, webshop seul, les deux', pvConditions(['sales_channels' => ['POS']])['canaux'] === ['comptoir']
@@ -510,6 +510,43 @@ $r = wr_promos_magasin();
 verifie('le panel ne reprend pas le seuil : laissée inactive, l’écart dit', ($r['demande']['statut'] ?? '') === 'brouillon' && str_contains((string) $r['panelErreur'], 'le seuil du ticket')
     && (ErpApi::$promos[$r['demande']['panelId']]['status'] ?? '') === 'INACTIVE', json_encode($r, JSON_UNESCAPED_UNICODE));
 ErpApi::$perdConditions = false;
+
+echo "La destination (SHOP, WEBSHOP, BOTH) et le seuil de déclenchement (23/10/2026)\n";
+verifie('la destination en une valeur : comptoir, webshop, les deux', pvConditions(['destination' => 'SHOP'])['canaux'] === ['comptoir']
+    && pvConditions(['destination' => 'WEBSHOP'])['canaux'] === ['webshop'] && pvConditions(['destination' => 'BOTH'])['canaux'] === null
+    && pvConditions(['destinations' => ['SHOP', 'WEBSHOP']])['canaux'] === null);
+$cb = pvConditions(['destination' => 'BOTH']);
+verifie('« BOTH » apprend le nom du champ et son jeton', ($cb['cles']['canal'] ?? null) === 'destination' && ($cb['cles']['scalaire'] ?? null) === true
+    && ($cb['cles']['jetons']['tous'] ?? '') === 'BOTH', json_encode($cb));
+verifie('le seuil de déclenchement', pvConditions(['trigger_amount' => '15.00'])['seuil'] === 15.0 && pvConditions(['min_trigger_amount' => 12])['seuil'] === 12.0
+    && pvConditions(['trigger_threshold' => 9])['seuil'] === 9.0 && pvConditions(['trigger' => ['quantity' => 2]])['seuil'] === null);
+// Le panel porte deux promotions — « destination BOTH, seuil 10 € » et « destination SHOP » : le cockpit écrit sous ces noms et
+// avec ces jetons, une valeur et non une liste.
+ErpApi::$promos = [41 => ['id' => 41, 'name' => 'Seuil 10 €', 'status' => 'ACTIVE', 'promotion_type' => 'BUY_X_GET_Y', 'shop_ids' => [4], 'destination' => 'BOTH',
+    'trigger_amount' => 10, 'trigger' => ['quantity' => 1, 'product_ids' => [12]], 'reward' => ['quantity' => 1, 'type' => 'FREE', 'value' => null]],
+    42 => ['id' => 42, 'name' => 'Au comptoir', 'status' => 'ACTIVE', 'promotion_type' => 'BUY_X_GET_Y', 'shop_ids' => [4], 'destination' => 'SHOP',
+    'trigger' => ['quantity' => 2, 'product_ids' => [12]], 'reward' => ['quantity' => 1, 'type' => 'FREE', 'value' => null]]];
+$oublie();
+$_GET = ['shop' => '4']; $l = ep_promos_magasin_demandes(); $_GET = [];
+verifie('relus au panel : l’assistant peut écrire le seuil et le canal', ($l['regles']['conditions'] ?? null) === ['seuil' => true, 'canal' => true], json_encode($l['regles'] ?? null));
+$GLOBALS['corps'] = $pc('Destination', 72, 74, ['canal' => 'webshop', 'seuil' => 25]);
+$r = wr_promos_magasin();
+$F = ErpApi::$promos[$r['demande']['panelId'] ?? 0] ?? [];
+verifie('écrite : destination WEBSHOP, trigger_amount 25, en caisse', ($F['destination'] ?? null) === 'WEBSHOP' && ($F['trigger_amount'] ?? null) === 25.0
+    && ($r['demande']['statut'] ?? '') === 'en_caisse' && ($r['demande']['canaux'] ?? null) === ['webshop'] && ($r['demande']['seuil'] ?? null) === 25.0,
+    json_encode([$F, $r['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
+$oublie();
+$GLOBALS['corps'] = $pc('Destination', 72, 74, ['id' => $r['demande']['id'], 'canal' => 'comptoir']);
+$r2 = wr_promos_magasin();
+$F = ErpApi::$promos[$r['demande']['panelId']] ?? [];
+verifie('le comptoir seul : destination SHOP, le seuil effacé', ($F['destination'] ?? null) === 'SHOP' && array_key_exists('trigger_amount', $F) && $F['trigger_amount'] === null
+    && ($r2['demande']['statut'] ?? '') === 'en_caisse', json_encode([$F, $r2['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
+$oublie();
+$GLOBALS['corps'] = $pc('Destination', 72, 74, ['id' => $r['demande']['id']]);
+$r3 = wr_promos_magasin();
+$F = ErpApi::$promos[$r['demande']['panelId']] ?? [];
+verifie('les deux : destination BOTH', ($F['destination'] ?? null) === 'BOTH' && ($r3['demande']['statut'] ?? '') === 'en_caisse' && $r3['demande']['canaux'] === null,
+    json_encode([$F, $r3['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

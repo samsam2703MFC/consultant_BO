@@ -665,11 +665,11 @@ const PM_JETONS = ['comptoir' => 'POS', 'webshop' => 'WEBSHOP'];
 /** Les noms (et les jetons des canaux) que portent les promotions relues au panel : {seuil, canal, jetons}. */
 function pmChampsAppris(): array
 {
-    $A = ['seuil' => null, 'canal' => null, 'jetons' => []];
+    $A = ['seuil' => null, 'canal' => null, 'jetons' => [], 'scalaire' => false];
     foreach ((function_exists('pvRegles') ? pvRegles()['regles'] : []) as $r) {
         $c = (array) ($r['cles'] ?? []);
         $A['seuil'] ??= $c['seuil'] ?? null;
-        if ($A['canal'] === null && ($c['canal'] ?? null) !== null) { $A['canal'] = $c['canal']; }
+        if ($A['canal'] === null && ($c['canal'] ?? null) !== null) { $A['canal'] = $c['canal']; $A['scalaire'] = (bool) ($c['scalaire'] ?? false); }
         if (($c['canal'] ?? null) === $A['canal']) { $A['jetons'] += array_filter((array) ($c['jetons'] ?? [])); }
     }
     return $A;
@@ -688,7 +688,9 @@ function pmConditionsCorps(array $d): array
     $canal = $d['canal'] ?? 'tous';
     $jet = $A['jetons'] + PM_JETONS;
     $liste = $canal === 'tous' ? [$jet['comptoir'], $jet['webshop']] : [$jet[$canal]];
-    if ($A['canal'] !== null && ($canal !== 'tous' || ($avant['canaux'] ?? null) !== null)) { $out[$A['canal']] = $liste; }
+    // Une seule valeur (la « destination ») : le jeton du canal, ou celui des deux s'il a été relu.
+    $valeur = $A['scalaire'] ? ($canal === 'tous' ? ($A['jetons']['tous'] ?? null) : $jet[$canal]) : $liste;
+    if ($A['canal'] !== null && ($canal !== 'tous' || ($avant['canaux'] ?? null) !== null)) { $out[$A['canal']] = $valeur; }
     return $out;
 }
 
@@ -1059,7 +1061,7 @@ const PM_CHAMPS_CONNUS = ['activation_mode', 'bundle_price', 'bundle_promotion',
     'calculation_sale_price', 'calculation_discounted_sale_price', 'start_time', 'end_time', 'created_at', 'updated_at', 'deleted_at'];
 
 /** Ce qui ressemble à une condition de ticket ou de canal : un seuil, un montant, la caisse, le webshop. */
-const PM_MOTIF_CONDITION = '/min|max|seuil|threshold|amount|montant|total|basket|panier|ticket|receipt|order|channel|canal|source|webshop|web|online|pos|counter|comptoir|kiosk|deliver|pickup|takeaway|sale|condition|rule/i';
+const PM_MOTIF_CONDITION = '/min|max|seuil|threshold|amount|montant|total|basket|panier|ticket|receipt|order|channel|canal|source|destination|declench|trigger_|webshop|web|online|pos|counter|comptoir|kiosk|deliver|pickup|takeaway|sale|condition|rule/i';
 
 /**
  * Une fiche aplatie : [chemin => [type, exemple]] (« trigger.product_ids[].id_product »). Une liste se lit sur ses trois
