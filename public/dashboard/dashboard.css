@@ -1292,16 +1292,6 @@ body.pp-emb{background:var(--color-bg)}
 .cqbd.ok,.cqbd.nc,.cqbd.ctl,.cqbd.ko,.cqbd.mu{color:#fff}
 
 /* Onglet Opérationnel (06/10/2026) : la journée en cours, centrée sur le terrain. */
-.op-mnt{display:grid;grid-template-columns:150px repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px}
-.op-tl{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 13px;min-height:96px;display:flex;flex-direction:column;min-width:0}
-.op-tl.ko{border-left:4px solid #C0182B}.op-tl.att{border-left:4px solid #D97706}.op-tl.ok{border-left:4px solid #2d7a3e}
-.op-tl .k{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.op-tl .v{font-family:var(--font-display);font-size:27px;line-height:1.05;margin:3px 0 2px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.op-tl .v small{font-size:14px;color:var(--color-text-muted);margin-left:5px}
-.op-tl .s{font-size:10.5px;line-height:1.35;color:var(--color-text-muted);margin-top:auto}
-.op-tl.heure{background:#222;border-color:#222;color:#fff}.op-tl.heure .k{color:#bbb}.op-tl.heure .v{font-size:38px}.op-tl.heure .s{color:#ccc}
-.op-deux{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px;align-items:start}
-.op-deux>div>.db-card{margin-bottom:12px}
 .op-bloc>.ct{gap:10px}
 .op-h2{font-family:var(--font-display);font-size:17px}
 .op-jr{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:18px;padding:10px 16px 12px}
@@ -1350,14 +1340,7 @@ body.pp-emb{background:var(--color-bg)}
 .op-plie .vd{display:inline-block;width:9px;height:9px;border-radius:50%;background:#2d7a3e}
 .op-plie .fl{margin-left:auto;transition:transform .2s}.op-plie .fl.on{transform:rotate(180deg)}
 #op-cq>.db-card{margin-top:0}
-.op-mini4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
-.op-mini{padding:10px 14px;margin:0}
-.op-mini .k{font:600 9.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);display:flex;align-items:center;gap:6px}
-.op-mini .k .vd{display:inline-block;width:9px;height:9px;border-radius:50%;background:#9a948c}
-.op-mini .k .vd.ok{background:#2d7a3e}.op-mini .k .vd.att{background:#D97706}.op-mini .k .vd.ko{background:#C0182B}
-.op-mini .v{font-family:var(--font-display);font-size:22px;margin:4px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.op-mini .s{font-size:10.5px;color:var(--color-text-muted);line-height:1.4}
-@media (max-width:1150px){.op-mnt{grid-template-columns:repeat(3,minmax(0,1fr))}.op-deux,.op-jr{grid-template-columns:1fr}.op-mini4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:1150px){.op-jr{grid-template-columns:1fr}}
 .op-tb th:nth-child(2),.op-tb td:nth-child(2),.op-tb th:nth-child(7),.op-tb td:nth-child(7){text-align:left}
 .op-tb td:nth-child(2){font-weight:500;color:var(--color-text-muted)}
 .db-stdef{max-height:460px;overflow-y:auto}
@@ -1370,10 +1353,6 @@ body.pp-emb{background:var(--color-bg)}
 /* Onglet Opérationnel au téléphone (06/10/2026) : une colonne, quatre onglets en bas. */
 .mb-tabs.mb-tabs4{grid-template-columns:repeat(4,1fr)}
 .mb-tabs.mb-tabs4 button{font-size:10.5px;letter-spacing:0}
-.op-mob .op-mnt{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-.op-mob .op-tl{min-height:0;padding:9px 11px}
-.op-mob .op-tl .v{font-size:22px}.op-mob .op-tl.heure .v{font-size:30px}
-.op-mob .op-tl .v small{font-size:12px}
 .op-mob .db-card{margin-bottom:10px}
 .op-mob .op-bloc>.ct{padding:9px 12px}
 .op-vl .r{display:flex;align-items:center;gap:8px;padding:7px 12px;border-top:.5px solid var(--color-border-tertiary)}
@@ -1394,8 +1373,6 @@ body.pp-emb{background:var(--color-bg)}
 .op-jl.fini{opacity:.55}
 .op-jl.av .c{color:#B26A00;font-weight:700}
 .op-large{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.op-mob .op-mini4{grid-template-columns:1fr 1fr;gap:8px;margin-top:0}
-.op-mob .op-mini .v{font-size:18px;white-space:normal}
 
 /* La vitrine selon la durée de vie (demande du 06/10/2026) : trois onglets, le niveau de chacun. */
 /* La vitrine, maquette E (10/10/2026) : badges de filtre, une liste par durée de vie, la journée en cases */
@@ -1580,7 +1557,6 @@ html.db-fiche-ouverte{overflow:hidden}
 .fi-leg i.zn{width:14px;height:10px;border-radius:3px;background:rgba(235,104,52,.14);vertical-align:-1px}
 
 /* ── Opérationnel : le duel avec J−7 (maquette B du 08/10/2026) : deux pistes, heure par heure, chiffre par chiffre ── */
-.op-mnt.quatre{grid-template-columns:150px repeat(3,minmax(0,1fr))}
 .op-duel{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:14px;padding:14px 18px 12px;margin-bottom:12px}
 .op-duel .dh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .op-duel .dh .lab{font:600 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
@@ -1650,7 +1626,6 @@ html.db-fiche-ouverte{overflow:hidden}
 .op-dl .d .ok{color:#2d7a3e}.op-dl .d .ko{color:#C0182B}.op-dl .d .eq{color:#999}
 .op-dt.sans-j .op-dl{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr)}
 .op-dt.sans-j .op-dl .j{display:none}
-@media (max-width:1150px){.op-mnt.quatre{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:700px){
   .op-duel{padding:12px 14px}
   .op-piste{grid-template-columns:1fr;gap:4px;margin-top:10px}
@@ -1668,7 +1643,6 @@ html.db-fiche-ouverte{overflow:hidden}
   .op-dl .d{text-align:left}
 }
 .op-mob .op-duel{margin-bottom:10px}
-.op-mob .op-mnt.quatre{grid-template-columns:1fr 1fr}
 
 /* ── Modale produit, onglet « Recette & marge » (08/10/2026) ── */
 .fi-rchip.ko{background:#f8e0e3;border-color:#e4b2b8}.fi-rchip.ko b{color:#8c1020}
@@ -1859,20 +1833,6 @@ html.db-fiche-ouverte{overflow:hidden}
   .im-badge{white-space:normal}
   .im-acth{flex-wrap:wrap}
 }
-/* Les bundles vendus sur la journée (10/10/2026), à côté des ventes par catégorie. */
-.op-bun-k{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:2px 16px 4px}
-.op-bun-k>div{background:var(--color-background-secondary);border-radius:10px;padding:8px 10px;min-width:0}
-.op-bun-k .k{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.op-bun-k .v{font-family:var(--font-display);font-size:20px;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums}
-.op-bun .op-large{padding:0 8px 10px}
-.op-bun-tab td b{display:block;font-size:12.5px}.op-bun-tab td small{display:block;color:var(--color-text-muted);font-size:11px;margin-top:1px}
-.op-bun-tab tr.clic{cursor:pointer}.op-bun-tab tr.clic:hover td{background:var(--color-background-secondary)}
-.op-bun-tab td.op-bun-q{font-family:var(--font-display);font-size:18px;color:var(--color-primary);width:1%}
-.op-bun-tab .ok,.op-bun-k .ok{color:#2d7a3e}.op-bun-tab .att,.op-bun-k .att{color:#B26A00}.op-bun-tab .ko,.op-bun-k .ko{color:#C0182B}.op-bun-tab .mu{color:var(--color-text-muted)}
-.op-bun-vide{padding:4px 16px 16px;color:var(--color-text-muted);font-size:13px}
-.op-bun-tab td small{white-space:nowrap}
-.op-bun-tab td small.op-bun-co{white-space:normal;color:var(--color-text);font-weight:600}
-@media (max-width:560px){.op-bun-k{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* Le calendrier de la semaine et du mois (maquette A du 10/10/2026) : le bouton choisit le chiffre,
    la couleur, la jauge, le titre et la légende. */
 .cal-hd{display:flex;align-items:flex-start;gap:18px;padding:14px 16px 10px;border-bottom:.5px solid var(--color-border-tertiary)}
@@ -2008,21 +1968,6 @@ html.db-fiche-ouverte{overflow:hidden}
 .pr-pd{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
 .db-al.eteint{color:var(--color-text-muted);font-weight:500;cursor:default}.db-al.eteint .nom{font-weight:500}
 @media (max-width:900px){.db-acc.pro .db-ent,.db-acc.pro .db-al{grid-template-columns:20px minmax(110px,1fr) 1.4fr 70px 68px 58px 62px 62px;gap:6px}.db-al.u3{padding-left:40px}.pr-chips{margin-left:0}}
-.op-bun-pr{border-top:.5px solid var(--color-border-tertiary);margin-top:4px}
-.op-bun-h{display:flex;align-items:baseline;gap:10px;padding:10px 16px 2px;font:700 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}.op-bun-h .db-mini{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:600}
-.op-bun-ptab td b .pr-pd{vertical-align:1px}.op-bun-ptab tfoot td{border-top:1px solid var(--color-border-secondary);font-weight:600}
-.op-bun-cats span{display:inline-block;margin:1px 8px 1px 0;font-size:11.5px;white-space:nowrap}.op-bun-cats b{color:#1f4e8c}
-.op-bun-tab .op-bun-cats b{display:inline}
-.op-bun-ptab .u{display:none}
-@media (max-width:600px){
-  .op-bun-ptab thead{display:none}
-  .op-bun-ptab tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;column-gap:10px;padding:7px 0;border-top:.5px solid var(--color-border-tertiary)}
-  .op-bun-ptab td{border:none!important;padding:1px 0!important}
-  .op-bun-ptab td.op-bun-cats{grid-column:1/-1}.op-bun-ptab td.op-bun-cats:empty{display:none}
-  .op-bun-ptab .u{display:inline;font-size:10.5px;color:var(--color-text-muted)}.op-bun-ptab td b .u{font-weight:500}
-  .op-bun-ptab td.n b{display:inline}
-}
-
 /* Portions (10/10/2026, maquette A + la colonne reste de B) : l'onglet Portions des ventes par catégorie. La grille suit le nombre de tailles. */
 .pt-leg{margin-left:auto;display:flex;flex-wrap:wrap;gap:12px;font:600 11.5px var(--font-ui)}.pt-leg i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}.pt-leg i.rs{background:#fff;border:1.2px dashed #C0182B;box-sizing:border-box}
 .pr-bd .k b.ko{color:#C0182B}
@@ -2271,6 +2216,7 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .lv-vide{padding:16px;font-size:12px;color:var(--color-text-muted)}
 /* Les conditions du ticket (23/10/2026) : le canal, le seuil ; leurs étiquettes dans la liste et le récapitulatif. */
 .pm-canaux{grid-template-columns:repeat(3,1fr);margin-top:6px}
+.pm-canaux .pm-opt:disabled,.pm-seuil .pm-seg button:disabled{opacity:.42;cursor:not-allowed}
 .pm-canaux .pm-opt{padding:12px 14px}.pm-canaux .pm-opt b{margin-top:6px}
 .pm-ico{display:inline-flex;gap:4px;color:var(--color-text-muted)}.pm-opt.on .pm-ico{color:var(--color-primary)}
 .pm-seuil{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 4px}

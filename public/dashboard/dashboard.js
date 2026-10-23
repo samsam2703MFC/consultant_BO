@@ -1100,9 +1100,9 @@
     if (ext.length) { h += `<div class="mb-mur ma-ext">${ext.join('')}</div>`; }
     if (S.objOuvert) { h += `<div class="mb-tir">${objectifsCarte(true)}</div>`; }
     if (S.promoOuvert) { h += `<div class="mb-tir">${promosCarte(true)}</div>`; }
-    // Le P&L court, les ventes par catégorie (liste, treemap, promotions, portions) et les bundles,
-    // venus d'Opérationnel (10/10/2026) : les chiffres de la journée au même endroit.
-    h += `<div class="ma-large">${PJ.categories}</div><div class="ma-large">${bundlesCarte()}</div>`;
+    // Les ventes par catégorie (liste, treemap, promotions, portions), venues d'Opérationnel (10/10/2026) : les chiffres
+    // de la journée au même endroit. Les bundles vendus sont retirés (23/10/2026) : double emploi avec les promotions.
+    h += `<div class="ma-large">${PJ.categories}</div>`;
     return h;
   }
 
@@ -2306,41 +2306,7 @@
   }
   const opFaire = p => p.verdict === 'rupture' || p.verdict === 'manque' ? (p.conseil && p.conseil.pieces ? 'recuire ' + fN(p.conseil.pieces) : 'à recuire') : (p.verdict === 'trop' ? 'ne pas recuire' : '');
   const OP_RANG = { rupture: 0, manque: 1, trop: 2, ok: 3 };
-  function opTuile(cls, k, v, s) { return `<div class="op-tl ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`; }
   const opSk = () => '<div class="db-sk" style="width:70%;margin:6px 0"></div><div class="db-sk" style="width:50%"></div>';
-  /* Les bundles vendus sur la journée (10/10/2026), à côté des ventes par catégorie : quantité, nom, prix moyen
-   * encaissé, CA, marge, première et dernière vente, lus dans les mêmes tickets (catégorie « Bundle »). */
-  const BUNDLE_RE = /bundle|promotion/i;
-  function bundlesDe(st) {
-    if (st.bundles && Array.isArray(st.bundles.lignes)) { return st.bundles; }
-    // Une réponse d'avant le 10/10/2026 : les bundles se retrouvent dans les catégories.
-    const L = [];
-    (st.categories || []).filter(c => BUNDLE_RE.test((c.nom || '') + ' ' + (c.groupe || ''))).forEach(c => (c.produits || []).forEach(p => L.push(Object.assign({}, p, { cat: c.nom, prix: p.q ? p.v / p.q : null, heures: null }))));
-    L.sort((a, b) => (b.q - a.q) || (b.v - a.v));
-    const ca = L.reduce((a, x) => a + (x.v || 0), 0), avec = L.filter(x => x.m != null), mV = avec.reduce((a, x) => a + x.v, 0), tot = st.totaux && st.totaux.ca;
-    return { lignes: L, n: L.length, pieces: L.reduce((a, x) => a + (x.q || 0), 0), ca, taux: mV > 0 ? 100 * avec.reduce((a, x) => a + x.m, 0) / mV : null, part: tot ? 100 * ca / tot : null };
-  }
-  function bundlesCarte() {
-    const ks = cleSt(), st = S.st[ks], err = S.err[ks], jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
-    const tete = mini => `<div class="ct"><span class="db-lab">Bundles vendus</span>${mini ? `<span class="db-mini">${mini}</span>` : ''}</div>`;
-    if (!st) { return `<div class="db-card op-bun">${tete(err ? esc(err) : 'lecture des tickets en cours…')}<div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`; }
-    const B = bundlesDe(st);
-    if (!B.lignes.length) { return `<div class="db-card op-bun">${tete('')}<div class="op-bun-vide">Aucun bundle vendu ${jour}.</div>${promoBundles(st)}</div>`; }
-    const quand = x => x.premiere == null ? '' : (x.premiere === x.derniere ? 'à ' + x.premiere + ' h' : 'de ' + x.premiere + ' h à ' + x.derniere + ' h');
-    const mc = v => v == null ? 'mu' : (v >= 60 ? 'ok' : (v >= 50 ? 'att' : 'ko'));
-    // La composition : la recette du bundle au panel (la même lecture que la fiche produit), lue une fois.
-    const cleR = x => 'recette|' + x.id + '|' + S.shop;
-    B.lignes.forEach(x => { const k = cleR(x); if (/^\d+$/.test(String(x.id)) && !S.aux[k] && !S.enCours[k] && !S.err[k]) { setTimeout(() => lireAux(k, '/analyse/produits/recette?pid=' + encodeURIComponent(x.id) + '&shop=' + encodeURIComponent(S.shop)), 0); } });
-    const compo = x => { const R = S.aux[cleR(x)], L = R && Array.isArray(R.lignes) ? R.lignes.filter(l => l && l.nom) : []; if (!L.length) { return ''; }
-      const t = L.slice(0, 4).map(l => (l.qte == null ? '' : (!l.unite || /^pc/i.test(l.unite) ? nf(l.qte, l.qte % 1 ? 1 : 0) + ' × ' : nf(l.qte, l.qte % 1 ? 2 : 0) + ' ' + l.unite + ' ')) + l.nom).join(' + ') + (L.length > 4 ? ' + ' + (L.length - 4) + ' autre' + (L.length > 5 ? 's' : '') : '');
-      return `<small class="op-bun-co">${esc(t)}</small>`; };
-    const lignes = B.lignes.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q != null ? x.q : ''}" data-fv="${x.v != null ? x.v : ''}" data-ft="${x.taux != null ? x.taux : ''}" data-fc="${x.c != null ? x.c : ''}" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0" title="les ventes sur 12 semaines, la recette et la marge">
-      <td class="n op-bun-q">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td><b>${esc(x.nom)}</b>${compo(x)}${quand(x) ? `<small>${quand(x)}</small>` : ''}</td><td class="n">${fU(x.prix)}</td><td class="n">${fE(x.v)}</td><td class="n ${mc(x.taux)}">${x.taux != null ? fP0(x.taux) : '—'}</td></tr>`).join('');
-    return `<div class="db-card op-bun">${tete('la journée · ' + B.n + ' bundle' + (B.n > 1 ? 's' : '') + ' · clic : la fiche')}
-      <div class="op-bun-k"><div><div class="k">Vendus</div><div class="v">${nf(B.pieces, B.pieces % 1 ? 1 : 0)}</div></div><div><div class="k">CA bundles</div><div class="v">${fE(B.ca)}</div></div><div><div class="k">Part du CA</div><div class="v">${B.part != null ? fP(B.part) : '—'}</div></div><div><div class="k">Marge brute</div><div class="v ${mc(B.taux)}">${B.taux != null ? fP0(B.taux) : '—'}</div></div></div>
-      <div class="op-large"><table class="db-pro-tab op-bun-tab"><thead><tr><th class="n">Qté</th><th>Bundle</th><th class="n" title="prix moyen encaissé">Prix</th><th class="n">CA</th><th class="n">Marge</th></tr></thead><tbody>${lignes}</tbody></table></div>${promoBundles(st)}</div>`;
-  }
-
   /* La vitrine selon la durée de vie (demande du 06/10/2026) : les trois onglets du suivi de
    * production — short life (vendu le jour même), medium life (se garde 2 à 3 jours), long life
    * (une semaine et plus) — chacun avec le niveau actuel de marchandises. La durée de vie vient du
@@ -2681,7 +2647,7 @@
   /** La carte « La vitrine » : trois onglets de durée de vie, le niveau de chacun, puis ses références en dépliant. */
   function opVitrine(D, mob) {
     if (!mob) { return opVitrineE(D); }
-    const { now, U, prods, lienProd } = D;
+    const { now, U, prods } = D;
     const k = S.opVie;
     const N = {}; OP_VIES.forEach(x => { N[x] = opNiveau(prods.filter(p => opVieDe(p) === x)); });
     const onglet = x => { const n = N[x];
@@ -2697,8 +2663,8 @@
         ${jauge != null ? `<span class="jg"><i style="width:${jauge.toFixed(0)}%"></i></span>` : ''}<span class="lib">${lib}</span>${al ? `<span class="al">${al}</span>` : ''}</button>`; };
     const L = prods.filter(p => opVieDe(p) === k);
     const corps = L.length ? opArbre(D, L, mob, k) : `<div class="op-vvide">Aucune référence en ${OP_VIE_NOM[k].toLowerCase()} ce jour.</div>`;
-    const tete = mob ? `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi ›</a></span>`
-      : `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.sorti)} sorties · ${fN(U.totaux && U.totaux.vendu)} vendues · ${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi de production ›</a></span>`;
+    const tete = mob ? `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.stock)} en vitrine</span>`
+      : `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.sorti)} sorties · ${fN(U.totaux && U.totaux.vendu)} vendues · ${fN(U.totaux && U.totaux.stock)} en vitrine</span>`;
     return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div><div class="op-v3s">${OP_VIES.map(onglet).join('')}</div>${corps}</div>`;
   }
 
@@ -2722,23 +2688,11 @@
     const retardN = cmd ? (cmd.retard != null ? cmd.retard : retard.length) : 0;
     // Les tickets du jour d'abord ; tant qu'ils se lisent, le chiffre du Résultat du jour.
     const ca = ST && ST.totaux ? ST.totaux.ca : (m ? m.ca : null), tk = ST && ST.totaux ? ST.totaux.tickets : (m ? m.tickets : null);
-    const lienProd = page => `../production/?shop=${encodeURIComponent(S.shop)}&date=${S.date}&page=${page}`;
     const ncL = NC && Array.isArray(NC.nc) ? NC.nc : [];
     const sk = SK && !SK.indispo ? SK : null;
 
     const listeC = CA && Array.isArray(CA.liste) ? CA.liste : [];
-    return { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC };
-  }
-  /** Les six tuiles « maintenant » : l'heure, les ventes, l'objectif, la vitrine, l'équipe, la cuisson. */
-  function opTuiles(D) {
-    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
-    const sansPlanning = m && !planning.length;
-    return `
-      ${opTuile('heure', esc(fDL(S.date).replace(/ \d{4}$/, '')), fin ? 'Journée' : opHM(now), '')}
-      ${U ? opTuile(vides.length ? 'ko' : (manques.length ? 'att' : 'ok'), 'Vitrine', fN(U.totaux && U.totaux.stock) + '<small>pièces</small>', `${vides.length} vide${vides.length > 1 ? 's' : ''} · ${manques.length} ${manques.length > 1 ? 'vont' : 'va'} manquer · ${trop.length} en trop`) : opTuile('', 'Vitrine', '—', S.err[cleOpSuivi()] ? esc(S.err[cleOpSuivi()]) : 'lecture du suivi de production…')}
-      ${m ? opTuile(sansPlanning ? 'att' : '', 'Équipe en poste', fin ? fN(planning.length) + '<small>au planning</small>' : fN(enPoste.length) + `<small>personne${enPoste.length > 1 ? 's' : ''}</small>`, sansPlanning ? 'pas de planning lu pour ce jour' : (fin ? '' : (enPoste.length ? enPoste.map(p => 'jusqu’à ' + esc(p.fin)).join(' et ') + ' · ' : '') + (releve ? 'relève à ' + esc(releve.debut) + ' · ' : '')) + nf(m.planningHeures || 0, 1) + ' h au planning') : opTuile('', 'Équipe en poste', '—', opSk())}
-      ${U ? (prochaine ? opTuile('', 'Prochaine cuisson', esc(prochaine.nom) + `<small>four à ${esc(prochaine.four)}</small>`, `${fN(prochaine.pieces)} pièces pour ${esc(prochaine.de)} à ${esc(prochaine.a)} · ${opDans(opMin(prochaine.four), now)}`) : opTuile('', 'Cuissons', fN(cuissons.length), fin ? cuissons.map(c => esc(c.nom) + ' ' + esc(c.four)).join(' · ') : 'plus de cuisson prévue aujourd’hui')) : opTuile('', 'Prochaine cuisson', '—', opSk())}
-`;
+    return { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC };
   }
   /* ── Le duel avec J−7 (maquette B du 08/10/2026) ──────────────────────────────
    * Chaque chiffre du jour se compare d'abord à J−7 à la même heure (le serveur arrête la
@@ -2985,23 +2939,12 @@
     } else { heures = U ? '' : `<div style="padding:8px 0">${opSk()}</div>`; }
     return heures;
   }
-  /** En un coup d'œil : commandes clients, non-conformités d'hier, poubelle, promotions. */
-  function opMinis(D) {
-    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
-    const mini = (vd, k, v, s) => `<div class="db-card op-mini"><div class="k"><span class="vd ${vd}"></span>${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
-    return `
-      ${cmd ? mini(retardN ? 'att' : 'ok', 'Commandes clients', retardN ? fN(retardN) + ' en retard' : 'À jour', `${fN(cmd.aVenir || 0)} à venir · aujourd’hui : ${fN(listeC.length)}${CA && CA.demain ? ' · demain : ' + fN(CA.demain.n) + (CA.demain.n ? ', ' + fU(CA.demain.ca) : '') : ''}`) : mini('', 'Commandes clients', '—', opSk())}
-      ${NC && !NC.indispo ? mini(ncL.length ? 'ko' : 'ok', 'Hier', ncL.length ? fN(ncL.length) + ' non-conformité' + (ncL.length > 1 ? 's' : '') : 'Aucune non-conformité', `${fN(NC.notees || 0)} photo${(NC.notees || 0) > 1 ? 's' : ''} notée${(NC.notees || 0) > 1 ? 's' : ''} le ${esc(fDL(veille()).replace(/ \d{4}$/, ''))}`) : mini('', 'Hier', '—', NC ? 'panel muet' : opSk())}
-      ${INV ? mini(INV.declare ? (INV.cout > 0 ? 'att' : 'ok') : '', 'Poubelle', INV.declare ? fE(INV.cout) : 'Pas encore déclarée', INV.declare ? fN(INV.pieces) + ' pièces · ' + fU(INV.caPerdu) + ' de vente perdue' : '') : mini('', 'Poubelle', '—', opSk())}
-      ${PR ? mini('', 'Promotions', (PR.promos || []).length ? fN(PR.promos.length) + ' en cours' : 'Aucune', (PR.promos || []).length ? PR.promos.map(p => esc(p.nom || p.titre || '')).filter(Boolean).slice(0, 2).join(' · ') : '') : mini('', 'Promotions', '—', opSk())}
-`;
-  }
   /** L'onglet Opérationnel au téléphone (06/10/2026) : les mêmes chiffres que le bureau, en une
    * colonne. La vitrine en liste courte, l'équipe et les cuissons en lignes, les photos du jour,
    * le P&L et les catégories, puis commandes, hier, poubelle, promotions et le stock. */
   function rendOpsMobile() {
     const D = opDonnees();
-    const { now, U, ST, JD, m, prods, cuissons, planning, lienProd } = D;
+    const { now, U, ST, JD, m, prods, cuissons, planning } = D;
     // Une donnée, un seul endroit (11/10/2026) : la jauge porte le CA face à l'objectif et à J−7 ; le duel, les clients
     // et le panier ; la courbe, l'heure par heure. Les quatre tuiles (heure, vitrine, équipe, cuissons) redisaient les
     // cartes du dessous : retirées au téléphone.
@@ -3180,7 +3123,7 @@
   }
   function rendOps() {
     const D = opDonnees();
-    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
+    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC } = D;
     let h = '';
 
     /* 0. Ta place dans le réseau, la journée (10/10/2026) : juste au-dessus des objectifs, anonyme. */
@@ -3188,16 +3131,19 @@
 
     /* 1. Le duel avec J−7 (maquette B du 08/10/2026) : la jauge à deux pistes, les quatre tuiles
      * du moment, le cumul heure par heure, le tableau chiffre par chiffre. */
+    // Les vignettes du moment (l'heure, vitrine, équipe en poste, cuissons) sont retirées au bureau aussi (23/10/2026, Sam ;
+    // au téléphone depuis le 11/10/2026) : les cartes du dessous les disent.
     h += opDuelSplit(D);
-    h += `<div class="op-mnt quatre">${opTuiles(D)}</div>`;
     h += opDuelHeures(D);
-    h += opDuelTable(D);
-
-    /* 2. Les ventes par catégorie (liste ou treemap) et le P&L court de la journée, coût du
-     * personnel compris : les cartes de la vue Jour, telles quelles. */
     const PJ = m ? jourPieces(m, JD, ST) : null;
     const attente = t => `<div class="db-card"><div class="ct"><span class="db-lab">${t}</span><span class="db-mini">${S.err['jourM|' + S.date] ? esc(S.err['jourM|' + S.date]) : 'lecture du Résultat du jour…'}</span></div><div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`;
-    h += `<div class="op-deux"><div>${PJ ? PJ.categories : attente('Ventes par catégorie')}</div><div>${bundlesCarte()}${PJ ? PJ.pnl : attente('Le P&amp;L court de la journée')}</div></div>`;
+    h += opDuelTable(D);
+    // Le P&L court sous le duel chiffre par chiffre (23/10/2026, Sam).
+    h += PJ ? PJ.pnl : attente('Le P&amp;L court de la journée');
+
+    /* 2. Les ventes par catégorie (liste, treemap, promotions, portions) : la carte de la vue Jour, telle quelle.
+     * La carte Bundles vendus est retirée (23/10/2026, Sam) : double emploi avec l'onglet Promotions. */
+    h += PJ ? PJ.categories : attente('Ventes par catégorie');
 
     /* La journée : la frise de 04:00 à 20:00 et les ventes de chaque heure face à la moyenne */
     const H0 = 4 * 60, H1 = 20 * 60, x = mm => (100 * (Math.max(H0, Math.min(H1, mm)) - H0) / (H1 - H0)).toFixed(2) + '%', w = (a, b) => (100 * (Math.min(H1, b) - Math.max(H0, a)) / (H1 - H0)).toFixed(2) + '%';
@@ -3222,8 +3168,7 @@
     /* 4. Les contrôles en photo : le carrousel de la vue Jour */
     h += `<div id="op-cq">${rendCQ(false)}</div>`;
 
-    /* 5. En un coup d'œil */
-    h += `<div class="op-mini4">${opMinis(D)}</div>`;
+    // Les vignettes Commandes clients, Hier, Poubelle et Promotions sont retirées (23/10/2026, Sam).
     // Le stock du magasin : la barre de la vue Semaine, sa liste en liste déroulante.
     h += `<div class="op-stock">${S.aux['stock|' + S.shop] ? rendStock() : `<div class="db-stbar mu"><span class="t">Stock<small>lecture de l’inventaire…</small></span></div>`}</div>`;
     return h;
@@ -3777,7 +3722,12 @@
       if (d.y.type === 'PERCENTAGE_DISCOUNT' && +d.y.valeur > 100) { return 'une remise de 100 % au plus'; }
       return '';
     }
-    if (i === 4) { return d.seuilOn && !(+d.seuil > 0) ? 'le montant du seuil' : ''; }
+    if (i === 4) {
+      const CO = ((S.aux[clePM()] || {}).regles || {}).conditions || { seuil: true, canal: true };
+      if (d.seuilOn && !CO.seuil) { return 'le seuil ne s’écrit pas encore au panel'; }
+      if (d.canal !== 'tous' && !CO.canal) { return 'le canal ne s’écrit pas encore au panel'; }
+      return d.seuilOn && !(+d.seuil > 0) ? 'le montant du seuil' : '';
+    }
     if (i === 5) {
       const R = (S.aux[clePM()] || {}).regles || {}, n = pmJours(d);
       if (!d.du || !d.au) { return 'les dates'; }
@@ -3900,10 +3850,17 @@
         <div class="pm-pf" id="pm-pf">${pmPrixFinal(W)}</div>`;
     }
     if (e === 4) {
-      return tete('où et à partir de quand le ticket y a droit', 'Conditions du ticket') + `<div class="pm-f"><label>Où la promotion s’applique</label></div>
-        <div class="pm-row pm-canaux">${PM_CANAUX.map(([k, lib, sous, ico]) => `<button class="pm-opt${d.canal === k ? ' on' : ''}" data-pmcanal="${k}"><span class="pm-ico">${ico}</span><b>${lib}</b><small>${sous}</small></button>`).join('')}</div>
+      // Le seuil et le canal ne s'écrivent au panel que sous un nom de champ relu sur une de ses promotions (23/10/2026) :
+      // sans lui, le panel les ignorait et la promotion passait en caisse sans eux. Grisés, et dit, tant qu'il manque.
+      const CO = R.conditions || { seuil: true, canal: true };
+      const manque = [!CO.seuil ? 'le seuil du ticket' : '', !CO.canal ? 'le canal (comptoir ou webshop seulement)' : ''].filter(Boolean);
+      const bloque = k => k !== 'tous' && !CO.canal && d.canal !== k;
+      return tete('où et à partir de quand le ticket y a droit', 'Conditions du ticket')
+        + (manque.length ? `<div class="pm-warn" style="margin:0 0 12px">Pas encore disponible : ${manque.join(' et ')}. Le panel ne les reprend pas encore par l’API (leurs noms de champ ne sont pas connus) — envoyés, ils étaient ignorés et la promotion passait en caisse sans eux. Ils s’activeront d’eux-mêmes dès qu’une promotion du panel en portera : créez-en une au panel avec un seuil et un canal.</div>` : '')
+        + `<div class="pm-f"><label>Où la promotion s’applique</label></div>
+        <div class="pm-row pm-canaux">${PM_CANAUX.map(([k, lib, sous, ico]) => `<button class="pm-opt${d.canal === k ? ' on' : ''}" data-pmcanal="${k}"${bloque(k) ? ' disabled title="pas encore disponible au panel"' : ''}><span class="pm-ico">${ico}</span><b>${lib}</b><small>${sous}</small></button>`).join('')}</div>
         <div class="pm-f" style="margin-top:16px"><label>Seuil du ticket</label>
-          <div class="pm-seuil"><span class="pm-seg"><button type="button" class="${d.seuilOn ? '' : 'on'}" data-pmseuil="sans">Sans seuil</button><button type="button" class="${d.seuilOn ? 'on' : ''}" data-pmseuil="avec">À partir d’un montant</button></span>
+          <div class="pm-seuil"><span class="pm-seg"><button type="button" class="${d.seuilOn ? '' : 'on'}" data-pmseuil="sans">Sans seuil</button><button type="button" class="${d.seuilOn ? 'on' : ''}" data-pmseuil="avec"${!CO.seuil && !d.seuilOn ? ' disabled title="pas encore disponible au panel"' : ''}>À partir d’un montant</button></span>
           ${d.seuilOn ? `<span class="pm-eur"><input class="pm-in c" type="number" min="0.5" step="0.5" placeholder="15,00" value="${esc(d.seuil)}" data-pmf="seuil"><i>€ TTC</i></span>` : ''}</div>
           <span class="db-mini">${d.seuilOn ? 'Le ticket doit atteindre ce montant, avant la remise, pour que l’avantage se déclenche ; en dessous, la caisse ne remise rien.' : 'L’avantage tombe dès que le client prend le lot, quel que soit le montant du ticket.'}</span></div>
         ${pmRegleTicket(d, 16)}`;
@@ -5418,7 +5375,7 @@
   }
 
   /* Les promotions du panel reconnues dans les tickets (10/10/2026, maquette B3 · 3) : l'onglet Promotions des ventes
-   * par catégorie, et la liste des promotions dans Bundles vendus. Une couleur par promotion, dans l'ordre de leurs
+   * par catégorie. Une couleur par promotion, dans l'ordre de leurs
    * ventes ; la remise qu'aucune promotion n'explique en gris. Le poids d'une promotion : ses ventes ÷ le CA complet,
    * et dans chaque catégorie qu'elle touche, ses ventes ÷ le CA de la catégorie. */
   const PROMO_COUL = ['#2a78d6', '#eb6834', '#2d7a3e', '#8e44ad', '#c2185b', '#00838f', '#b8860b'];
@@ -5582,24 +5539,6 @@
     }
     const ent = `<div class="db-ent" style="${grille}"><span></span><span>Catégorie › produit</span><span class="pt-bh">En pièces entières, par taille</span>${tailles.map(k => `<span class="n ts">${portLib(F[k].f, F[k].lib)}</span>`).join('')}<span class="n eq">En entières</span><span class="n rs" title="ce qui reste en parts dans la dernière pièce coupée, si rien ne restait d’hier et que rien n’a été recoupé">Reste</span><span class="n ca">CA</span><span class="n pe">€ par entière</span></div>`;
     return bande + `<div class="db-acc pot">${ent}${rows}</div>`;
-  }
-  /** Bundles vendus : les promotions de la journée, leur poids dans le CA complet et dans chaque catégorie qu'elles touchent. */
-  function promoBundles(st) {
-    const D = promosDe(st);
-    if (!D) { return ''; }
-    const { P, coul, parCat, caCat } = D, tot = D.ca;
-    const L = P.regles.filter(r => r.v > 0 || r.r > 0);
-    const jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
-    const titre = `<div class="op-bun-h"><span>Les promotions</span><span class="db-mini">${L.length ? fU(P.v) + ' · ' + promoPct(tot > 0 ? 100 * P.v / tot : 0) + ' du CA complet' : 'aucune déclenchée ' + jour}</span></div>`;
-    // La ligne « Pas déclenchées : … » est retirée (11/10/2026, demande de Sam).
-    if (!L.length) { return `<div class="op-bun-pr">${titre}</div>`; }
-    const lignes = L.map(r => {
-      const cats = Object.entries(parCat[r.id] || {}).sort((a, b) => b[1] - a[1]);
-      return `<tr><td><b><i class="pr-pd" style="background:${coul[r.id]}"></i>${esc(r.nom)}</b><small>${esc(r.texte || '')}</small></td><td class="n">${fN(r.fois)}<span class="u">×</span></td><td class="n">${fU(r.v)}</td>
-        <td class="n"><b>${promoPct(tot > 0 ? 100 * r.v / tot : 0)}</b><span class="u"> du CA</span></td><td class="op-bun-cats">${cats.map(([c, v]) => `<span>${esc(c)} <b>${promoPct(caCat[c] > 0 ? 100 * v / caCat[c] : 0)}</b></span>`).join('')}</td></tr>`;
-    }).join('');
-    return `<div class="op-bun-pr">${titre}<div class="op-large"><table class="db-pro-tab op-bun-tab op-bun-ptab"><thead><tr><th>Promotion</th><th class="n">Fois</th><th class="n">Ventes</th><th class="n" title="ventes de la promotion ÷ CA complet de la journée">Poids CA</th><th title="ventes de la promotion dans la catégorie ÷ CA de la catégorie">Poids par catégorie</th></tr></thead><tbody>${lignes}</tbody>
-      <tfoot><tr><td><b>Toutes les promotions</b><small>${fN(P.tickets || 0)} ticket${P.tickets > 1 ? 's' : ''} · remises −${fU(P.r)}</small></td><td class="n">${fN(L.reduce((a, r) => a + r.fois, 0))}<span class="u">×</span></td><td class="n">${fU(P.v)}</td><td class="n"><b>${promoPct(tot > 0 ? 100 * P.v / tot : 0)}</b><span class="u"> du CA</span></td><td class="op-bun-cats"></td></tr></tfoot></table></div></div>`;
   }
   /** Le planning déplié, groupé par secteur : le premier poste de travail de la personne dans le panel ; « sans secteur » sinon. */
   function planningSecteurs(plan, hMin, hMax) {

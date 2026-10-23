@@ -973,3 +973,9 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T08:25:12Z dashboard : jauge comptoir seul, jauge B2B dessous, heure par heure séparé ou combiné
 2026-10-23T08:31:21Z rozwój sprzedaży grupy : sprzedawalność w Belgii przy działaniach (+ marże, migracja 053)
 2026-10-23T13:03:55Z serveur de test : bac à sable ouvert (sans mot de passe navigateur)
+2026-10-23T13:13:17Z dashboard : vignettes du moment retirées
+2026-10-23T14:10:37Z promotions : seuil et canal sous les noms relus seulement
+2026-10-23T14:36:46Z dashboard : P&L sous le duel, bundles retirés
+2026-10-23T14:41:57Z production : page Validation et suivi retirée, Production ↗ hors du rail
+2026-10-23T14:43:35Z dashboard : vignettes du bas retirées
+2026-10-23T14:48:34Z console : page Marketing (#/marketing) et son entrée du rail retirées
