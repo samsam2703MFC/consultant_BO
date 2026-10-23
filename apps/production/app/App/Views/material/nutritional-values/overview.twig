@@ -39,7 +39,10 @@
                             </small>
                         </div>
                     </div>
-                    <div class="col-12 col-md-4 text-end mt-2 mt-md-0">
+                    <div class="col-12 col-md-4 text-end mt-2 mt-md-0 d-flex flex-wrap gap-2 justify-content-md-end">
+                        <button type="button" class="btn btn-primary btn-sm" data-nutri-bulk title="Open Food Facts : propozycje dla surowców bez wartości, do zatwierdzenia">
+                            <i class="bi bi-globe2"></i> Uzupełnij z internetu
+                        </button>
                         <a href="{{ root }}/materials/export" class="btn btn-info btn-sm">
                             <i class="bi bi-download"></i> {{ translations.export_materials|default('Eksportuj surowce') }}
                         </a>
@@ -80,8 +83,15 @@
                         <tbody>
                             {% if materials is not empty %}
                                 {% for mat in materials %}
-                                    <tr data-material-name="{{ mat.name|lower }}">
-                                        <td class="sticky-col fw-semibold">{{ mat.name }}</td>
+                                    {% set src = sources[mat.id] ?? null %}
+                                    <tr data-material-name="{{ mat.name|lower }}" data-material-id="{{ mat.id }}">
+                                        <td class="sticky-col">
+                                            <div class="d-flex align-items-start justify-content-between gap-2">
+                                                <span class="fw-semibold" data-nutri-name>{{ mat.name }}</span>
+                                                <button type="button" class="btn btn-link btn-sm p-0 at-nutri-web" data-nutri-lookup="{{ mat.id }}" title="Szukaj w internecie (Open Food Facts)" aria-label="Szukaj w internecie : {{ mat.name }}"><i class="bi bi-globe2"></i></button>
+                                            </div>
+                                            <div class="at-nutri-src" data-nutri-src="{{ mat.id }}">{% if src %}<i class="bi bi-globe2"></i> Open Food Facts : {{ src.label }}{% endif %}</div>
+                                        </td>
                                         {% for field in ['energy_100g', 'fat_100g', 'saturated_fat_100g', 'carbohydrates_100g', 'sugars_100g', 'fiber_100g', 'proteins_100g', 'salt_100g'] %}
                                             <td class="p-1 text-center">
                                                 <input
@@ -109,9 +119,23 @@
             </div>
         </div>
     </section>
+
+    <div class="modal fade" id="nutriModal" tabindex="-1" aria-labelledby="nutriModalTitle" aria-hidden="true" data-root="{{ root }}">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="nutriModalTitle" data-nutri-title>Wartości odżywcze z internetu</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+                </div>
+                <div class="modal-body" data-nutri-body></div>
+                <div class="modal-footer" data-nutri-foot></div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
+    <script src="{{ root }}/assets/js/nutrition.js?v={{ asset_v() }}" defer></script>
     <style>
         .sticky-col {
             position: sticky;
@@ -134,6 +158,10 @@
         .nutritional-input.is-error {
             border-color: #dc3545;
         }
+        .at-nutri-web { color: var(--at-muted, #666); line-height: 1; }
+        .at-nutri-web:hover { color: var(--at-primary, #8D1D2C); }
+        .at-nutri-src { font-size: 11px; color: var(--at-muted, #666); }
+        .at-nutri-src:empty { display: none; }
     </style>
 
     <script>

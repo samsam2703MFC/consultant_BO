@@ -3862,3 +3862,28 @@ réseau. Les pastilles : vert sous l'alerte, orange entre alerte et critique, ro
 **23/10/2026 — Console : la page Marketing (« Aujourd'hui », `#/marketing`) et son entrée du rail retirées.** Demande de Sam. Partent le hub (ses portes, ses chiffres par canal, sa liste « à faire »), sa lecture de `GET /marketing/hub` côté console (`mhCharge`, `valsMktHub`, `tplMktHub`) et l'adresse `#/marketing` (elle ouvre l'accueil). « Marketing ↗ », l'application /marketing/, reste dans le rail quand elle y est. Les onglets de campagne de la console (Campagnes, Budget × Campagnes, Objectifs produits, Mesure) restent à leur adresse (`#/campagnes`…), sous le titre « Campagnes », sans entrée dans le rail. L'API `/marketing/hub` reste.
 
 **23/10/2026 — Console : les onglets de campagne retirés.** Demande de Sam (« garde Marketing ↗, retire les onglets de campagne »). Partent de la console : Campagnes (liste et calendrier, la note de campagne, le formulaire, `#/campagnes`, `#/calendrier`), Budget × Campagnes (`#/budget-campagnes`) et Mesure (`#/mesure-campagnes`) — leurs écrans, leurs lectures côté console et leurs gabarits ; ces adresses ouvrent l'accueil. Restent : « Marketing ↗ » (l'application /marketing/) dans le rail ; Objectifs produits (`#/objectifs-produits`), qui garde son entrée « Objectifs » du rail (Franchisés › Suivi journalier et opérations) et le lien de la fiche franchisé ; Types de campagne dans Paramètres. Les API `/marketing…` côté serveur restent, comme l'assistant de campagne (/assistant/).
+
+#### Récurrence — le taux de retour des clients PWA (23/10/2026, demande de Sam)
+
+`/leviers/magasins` porte désormais la Récurrence (`src/recurrence_pwa.php`) : parmi les clients de l'app identifiés à
+la caisse d'un magasin sur la période (fiche client du panel : `pwa_user`), la part venus au moins deux jours
+différents — la définition « taux de fidélisation » du panel consultant, restreinte aux clients PWA. Tickets pro exclus.
+
+- Champs : `magasins[].mois.recurrence`, `magasins[].cumul.recurrence`, `reseau.mois|cumul.recurrence` =
+  `{v (%), n1, delta (pt), niveau, pwa, revenus, identifies, inconnus (fiches pas encore lues), partTickets (% des
+  tickets faits par les clients PWA), joursLus, jours, complet}` ; `serie.recurrence[12]` ; `recurrence {debut, kpi}`.
+- `v` reste `null` tant que la période n'est pas entièrement relevée (`complet: false`) : jamais un taux sur une partie
+  des jours. Le réseau compte un client une fois, ses jours de passage dans tous les magasins.
+- Relevé : `ceo_pwa_jour` (jours-magasins lus), `ceo_pwa_visite` (client × jour × magasin, l'identifiant seul, jamais
+  le nom), `ceo_pwa_client` (statut de la fiche, relu tous les 30 jours pour un client PWA, 7 sinon). Les listes de
+  tickets (`/shops/{id}/transactions?date=`) se relisent au cron horaire (`rpCron`, 80 listes et 120 fiches au plus
+  par battement, du plus récent au 1er janvier) ; une liste lue pour le pro du dashboard (`vpGraveListe`) se relève au
+  passage ; la requête relit le jour en cours et quelques jours manquants. La copie de la base du panel (arrêtée au
+  14/07) n'est pas lue.
+- Seuils : ceux d'un KPI dérivé de la Table KPI « `pwaRevenus` ÷ `pwaClients` » (deux mesures ajoutées au formulaire,
+  le mois en cours) ; sans lui, pas de pastille.
+- N-1 : le relevé commençant au 1er janvier 2026, le premier N-1 viendra en 2027.
+- Répartition (23/10/2026) : chaque cellule porte `repartition {sansApp, statutInconnu, fidelite, connectes, webshop,
+  canaux {source_channel: n}}` des clients identifiés en caisse dont la fiche est lue (le réseau compte un client une
+  fois). De la fiche : `source_channel`, `last_login_at` renseigné ou non (jamais la date), `webshop_user`. Les fiches
+  lues avant ces colonnes se relisent.

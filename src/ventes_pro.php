@@ -167,6 +167,8 @@ function vpGraveListe(int $sid, string $j, array $liste): array
     $c = is_array($c) ? $c : ['quand' => time()];
     $c['b'] = $b;
     svGrave($cle, $c);
+    // La même liste relève les clients PWA du jour (Récurrence) : pas d'appel de plus.
+    if (function_exists('rpGraveListe')) { try { rpGraveListe($sid, $j, $liste); } catch (Throwable $e) { /* le cron la relira */ } }
     return vpFiltreTva($sid, $b);
 }
 

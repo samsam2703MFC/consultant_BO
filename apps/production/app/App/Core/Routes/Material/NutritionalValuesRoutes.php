@@ -13,4 +13,14 @@ return function (RouteCollector $r) {
         'controller' => App\Controllers\Web\Material\NutritionalValuesController::class,
         'method'     => 'ajaxUpdate',
     ]);
+
+    $r->addRoute('GET', '/ajax/materials/{id:\d+}/nutritional-values/lookup', [
+        'controller' => App\Controllers\Web\Material\NutritionalValuesController::class,
+        'method'     => 'lookup',
+    ]);
+
+    $r->addRoute('POST', '/ajax/materials/{id:\d+}/nutritional-values/apply', [
+        'controller' => App\Controllers\Web\Material\NutritionalValuesController::class,
+        'method'     => 'apply',
+    ]);
 };

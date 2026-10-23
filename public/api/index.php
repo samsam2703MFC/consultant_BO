@@ -94,6 +94,7 @@ require __DIR__ . '/../../src/primes.php';
 require __DIR__ . '/../../src/primes_app.php';
 require __DIR__ . '/../../src/promos_magasin.php';
 require __DIR__ . '/../../src/sms.php';
+require __DIR__ . '/../../src/recurrence_pwa.php';
 require __DIR__ . '/../../src/leviers.php';
 $tCharge = microtime(true);
 
