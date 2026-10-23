@@ -132,10 +132,10 @@ function b2bCalcul(array $tickets, array $r, string $m): array
 function b2bTickets(int $sid, string $du, string $au): ?array
 {
     static $avecTva = null;
-    $sql = static fn (bool $tva) => 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ t.id_client c, t.id_employee e, t.insert_timestamp j, t.total_gross_amount_after_discount ttc'
+    $sql = static fn (bool $tva) => 'SELECT /*+ MAX_EXECUTION_TIME(8000) */ t.id_client cli, t.id_employee emp, t.insert_timestamp ts, t.total_gross_amount_after_discount ttc'
         . ($tva ? ', t.tax_amount_after_discount tva' : '') . '
-          FROM `transaction` t JOIN client c ON c.id = t.id_client
-         WHERE t.id_shop = ? AND c.is_b2b = 1 AND t.insert_timestamp >= ? AND t.insert_timestamp < ?
+          FROM `transaction` t JOIN client k ON k.id = t.id_client
+         WHERE t.id_shop = ? AND k.is_b2b = 1 AND t.insert_timestamp >= ? AND t.insert_timestamp < ?
          ORDER BY t.insert_timestamp';
     try {
         $rows = Db::rows($sql($avecTva !== false), [$sid, $du, $au]);
@@ -145,15 +145,15 @@ function b2bTickets(int $sid, string $du, string $au): ?array
         $avecTva = false;
         try { $rows = Db::rows($sql(false), [$sid, $du, $au]); } catch (Throwable $e2) { return null; }
     }
-    $cles = array_values(array_unique(array_map(static fn ($x) => 'c' . (int) ($x['c'] ?? 0), $rows)));
+    $cles = array_values(array_unique(array_map(static fn ($x) => 'c' . (int) ($x['cli'] ?? 0), $rows)));
     $tva = ($cles !== [] && function_exists('vpTvaValides')) ? vpTvaValides($sid, $cles) : [];
     $out = [];
     foreach ($rows as $x) {
-        $k = 'c' . (int) ($x['c'] ?? 0);
+        $k = 'c' . (int) ($x['cli'] ?? 0);
         if ($k === 'c0' || ($tva[$k] ?? null) === false) { continue; }
         $ttc = (float) ($x['ttc'] ?? 0);
         $ht = isset($x['tva']) && is_numeric($x['tva']) ? $ttc - (float) $x['tva'] : $ttc / (1 + B2B_TVA_ESTIMEE);
-        $out[] = ['c' => $k, 'e' => (int) ($x['e'] ?? 0), 'j' => (string) ($x['j'] ?? ''), 'ht' => round($ht, 2)];
+        $out[] = ['c' => $k, 'e' => (int) ($x['emp'] ?? 0), 'j' => (string) ($x['ts'] ?? ''), 'ht' => round($ht, 2)];
     }
     return $out;
 }

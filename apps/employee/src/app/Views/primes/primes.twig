@@ -70,7 +70,7 @@
       {%- elseif c.objectif is not null %}{{ T.goal_lower ?? 'objectif' }} {{ n }}{{ suf }}
       {%- endif -%}
       </span>
-      {% if c.du or c.au %}<span>{{ (T.dates_from_to ?? 'du {du} au {au}')|replace({'{du}': c.du ? c.du|date('d/m') : '…', '{au}': c.au ? c.au|date('d/m') : '…'}) }}</span>{% endif %}
+      {% if (c.du or c.au) and c.type != 'b2b' %}<span>{{ (T.dates_from_to ?? 'du {du} au {au}')|replace({'{du}': c.du ? c.du|date('d/m') : '…', '{au}': c.au ? c.au|date('d/m') : '…'}) }}</span>{% endif %}
     </div>
   </div>
 </div>
