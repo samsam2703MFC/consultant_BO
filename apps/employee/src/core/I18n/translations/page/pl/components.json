@@ -1,7 +1,7 @@
 {
   "bonuses": "Premie",
   "home": "Strona główna",
-  "plan_best_shop": "Pierwsza w sklepie ma {a}, ty {de}: {e} pkt do odrobienia, sprzedając więcej na przepracowaną godzinę.",
+  "plan_best_shop": "Pierwsza w sklepie ma {a}, ty {de}: {e} pkt, by ją wyprzedzić, sprzedając więcej na przepracowaną godzinę.",
   "plan_cross_aim": "Na kolejnych ~{n} paragonach celuj w {p} %: {d} paragonów na 10 z drugim artykułem.",
   "plan_cross_hard": "Trzeba by ponad 100 % na kolejnych paragonach: ta premia to cel na przyszły miesiąc.",
   "plan_cross_min": "Potrzeba też {n} paragonów w miesiącu.",
