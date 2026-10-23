@@ -332,8 +332,8 @@ class App {
       // Les promotions demandées par les magasins (17/10/2026) : un onglet d'Analyse magasin.
       promosMag: 'promotions',
       croisements: 'croisements',
-      projets: 'projets', fonds: 'fonds', mktCalendrier: 'calendrier', mktCampagnes: 'campagnes',
-      bxcampagnes: 'budget-campagnes', mesure: 'mesure-campagnes', mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits', scoringTri: 'scoring-trimestre', clientMystere: 'client-mystere',
+      projets: 'projets', fonds: 'fonds',
+      mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits', scoringTri: 'scoring-trimestre', clientMystere: 'client-mystere',
       suivi: 'suivi-taches', controle: 'controle-taches', suiviMensuel: 'suivi-mensuel', kpiTable: 'table-kpi', reporting: 'reporting',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
@@ -1009,22 +1009,19 @@ class App {
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue', 'Quatre questions, une liste, une fiche : ce qu’il faut retirer de la gamme, où l’on vend moins que le réseau, si les prix sont tenus, ce qui décroche. Un clic sur une référence ouvre sa fiche.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
-      mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
-      mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
       promosMag: ['Promotions des magasins', 'Les promotions « X achetés + Y » que les franchisés enregistrent dans leur dashboard, sans validation : elles partent au panel aussitôt. Ici, celles que le panel n’a pas prises, et l’historique.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
-      mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
       clientMystere: ['Client mystère', 'Le rapport client mystère reçu, magasin par magasin et par trimestre : « obtenu / maximum », ramené sur 5 pour le poste Client mystère du scoring, avec son PDF.'],
       scoringTri: ['Scoring du trimestre', 'Quatre postes de cinq points, magasin par magasin : la note Google, les tâches du panel, le client mystère, le budget — sur 20, lu en étoiles. Le rapport A4 part à chaque magasin le premier jour du trimestre suivant.'],
       ficheFranchise: ['Fiche & scoring', 'Par franchisé : le scoring du trimestre en tête, puis ce que les données disent chaque jour et ce que le consultant constate sur place. Le réseau : le classement et le benchmark dans une seule table.'],
       controlesQualite: ['Contrôles qualité du mois', ''],
       inventaires: ['Entre deux inventaires', 'Par magasin, entre deux inventaires : ce qui est sorti du stock (compté au début + livré − compté à la fin) face à ce que la caisse et la poubelle expliquent, ramené aux matières par les recettes. La justesse des ventes en %, matière par matière, jour par jour et inventaire par inventaire.'],
       invendus: ['Invendus et poubelle', 'Ce que les magasins jettent, déclaré en caisse : les pièces, leur coût de production (retranché du résultat), la valeur de vente perdue, les motifs, et les produits les plus jetés du réseau. Les reports au lendemain n\u2019ont pas de route de lecture dans le panel.'],
+      mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
-      bxcampagnes: ['Budget × Campagnes', 'Ce que la campagne devrait rapporter, magasin par magasin : le panier moyen récent multiplié par les clients en plus visés, ajouté au chiffre de l’an dernier — et le budget en regard.'], mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
       magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets de développement', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
@@ -1032,11 +1029,6 @@ class App {
     common.ecran = S.screen; common.railOuvert = !!S.railOuvert; common.railBascule = () => this.setState({ railOuvert: !this.state.railOuvert });
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
-      // Les campagnes du réseau (16/10/2026). La page « Aujourd'hui » du marketing (#/marketing) et son entrée
-      // Marketing du rail sont retirées (23/10/2026, Sam) ; le Marketing lui-même s'ouvre par « Marketing ↗ ».
-      marketing: ['Campagnes', 'Les campagnes du réseau : budget, objectifs produits et mesure. Les posts se font dans le portail social, les campagnes et les newsletters dans le Marketing.',
-        // Campagnes et Calendrier : un seul onglet (22/10/2026), la bascule Liste / Calendrier est dans la page.
-        [['mktCampagnes', 'Campagnes'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
         [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
       parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
@@ -1052,8 +1044,7 @@ class App {
       planogramme: ['Comptoir · planogramme', 'Le comptoir standard et ce que chaque boutique doit tenir.',
         [['planogramme', 'Comptoir', titles.planogramme[1]], ['assortiment', 'Assortiment obligatoire', titles.assortiment[1]]]] };
     // Écrans sans onglet propre : ils allument l'onglet qui les porte (le calendrier est une vue des campagnes).
-    const ONGLET_DE = { mktCalendrier: 'mktCampagnes' };
-    const ecranOnglet = ONGLET_DE[S.screen] || S.screen;
+    const ecranOnglet = S.screen;
     const grp = Object.keys(GROUPES).find(k => k === ecranOnglet || (GROUPES[k][2] || []).some(o => o[0] === ecranOnglet));
     if (grp) {
       const onglet = (GROUPES[grp][2] || []).find(o => o[0] === ecranOnglet);
@@ -1502,10 +1493,10 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isCQM', 'isPrimesApp'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isCQM', 'isPrimesApp'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', ficheFranchise: 'isFF', controlesQualite: 'isCQM', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
-      mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
+      mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', primesApp: 'isPrimesApp', promosMag: 'isPromosMag' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1876,7 +1867,7 @@ class App {
     // n'aurait aucun emplacement à proposer.
     if (common.isPlano) { this.valsPlanoStd(common); this._psCommon = common; }
     if (common.isFonds) this.valsFonds(common);
-    if (common.isMktCal || common.isMktCamp || common.isMktTypes) this.valsMkt(common);
+    if (common.isMktTypes) this.valsMkt(common);
     if (common.isAnalyse) { this.anOptions(); this.valsAnalyse(common); }
     if (common.isAnaprod) { this.apCharge(false); this.valsAnaprod(common); }
     if (common.isPxv) { this.pxvCharge(false); this.valsPxv(common); }
@@ -1908,7 +1899,6 @@ class App {
     if (common.isEncodage || common.isBudgetParam) this.valsEncodage(common);
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
     if (common.isTablette) { this.tbCharge(false); this.tbSonde(false); this.valsTablette(common); }
-    if (common.isBxc) this.valsBxc(common);
     if (common.isMktObj) this.valsMktObj(common);
     if (common.isScoringTri) this.valsScoring(common);
     // Le client mystère s'encode ici, dans Paramètres (16/10/2026) : le formulaire de l'ancien écran Scoring.
@@ -1918,12 +1908,6 @@ class App {
     if (common.isPrimesApp) { this.valsPrimesParams(common); }
     if (common.isPromosMag) { this.valsPromosMag(common); }
     if (common.isCrois) { this.croisCharge(); this.valsCrois(common); }
-    if (common.isMesure) {
-      // L'écran s'ouvre sur la LECTURE ; le paramétrage complet reste à un clic.
-      common.mesSimple = this.state.mesSimple !== false;
-      if (common.mesSimple) { this.valsMesureComp(common); }
-      else { this.valsMesure(common); common.mesRetour = () => this.setState({ mesSimple: true }); }
-    }
     // --- scoring produits
     // --- marge
     if (common.isMarge) this.valsMarge(common);
@@ -2370,138 +2354,6 @@ class App {
      Le calendrier des campagnes posé sur la courbe du budget, puis le détail
      magasin par magasin de la campagne regardée : ce qu'elle vise, ce qu'elle
      a donné. Les objectifs s'écrivent à la saisie, comme le budget. */
-  valsBxc(common){
-    const S = this.state, M = this.M;
-    this.bxcCharge(false);
-    const b = S.bxc || {};
-    const d = b.d || {};
-    common.bxcChargement = !!b.chargement && !b.d;
-    common.bxcIndispo = d.indispo ? (d.raison || 'Module marketing absent') : '';
-    common.bxcExo = String(S.bxcExo || this.exo());
-    common.bxcExoOpts = [-1, 0, 1].map(k => ({ v: String(this.exo() + k), nom: String(this.exo() + k) + (k === 0 ? ' · en cours' : '') }));
-    common.setBxcExo = e => this.setState({ bxcExo: e.target.value, bxcCamp: 0 });
-
-    // La courbe des douze mois et les bandes de campagne ont été RETIRÉES :
-    // douze barres de budget ne disaient rien de la campagne qu'on regarde, et
-    // la bande servait de sélecteur là où la liste déroulante suffit. L'écran
-    // répond maintenant à une seule question — cette campagne suffit-elle à
-    // tenir le budget de chaque magasin.
-    common.bxcCampOpts = (d.campagnes || []).map(c2 => ({ v: String(c2.id),
-      nom: c2.nom + ' · ' + (c2.debut || '').slice(5) + ' → ' + (c2.fin || '').slice(5) }));
-    common.bxcCampSel = String((d.campagne || {}).id || '');
-    common.setBxcCamp = e => this.setState({ bxcCamp: parseInt(e.target.value, 10) || 0 });
-    common.bxcCampNom = (d.campagne || {}).nom || '';
-    common.bxcCampPeriode = d.campagne ? 'du ' + d.campagne.debut.split('-').reverse().join('/') + ' au ' + d.campagne.fin.split('-').reverse().join('/') : '';
-    common.bxcRealiseNote = d.campagne
-      ? (d.realiseDispo
-        ? 'Réalisé lu jusqu’au ' + String(d.realiseJusquau || '').split('-').reverse().join('/') + ' (panel).'
-        : 'Aucun réalisé : la campagne n’a pas commencé, ou le compte du panel n’est pas configuré.')
-      : '';
-
-    // Le tableau : une ligne par magasin du périmètre.
-    const dr = S.bxcDraft || {};
-    const cle = sid => (d.campagne || {}).id + ':' + sid;
-    const num = v => { const n2 = parseFloat(String(v).replace(',', '.')); return isNaN(n2) ? 0 : n2; };
-    let tB = 0, tO = 0, tR = 0, aucunR = true;
-    common.bxcLignes = (d.lignes || []).map(l => {
-      const saisi = dr[cle(l.shopId)];
-      const o = saisi != null ? (String(saisi).trim() === '' ? null : num(saisi)) : l.objectif;
-      const pct = o != null && l.budgetPeriode ? Math.round(1000 * (o / l.budgetPeriode - 1)) / 10 : null;
-      const ec = o != null && l.realise != null ? l.realise - o : null;
-      const att = o != null && l.realise != null && o > 0 ? Math.round(100 * l.realise / o) : null;
-      tB += l.budgetPeriode || 0; tO += o || 0; tR += l.realise || 0;
-      if (l.realise != null) { aucunR = false; }
-      // La cible de la jauge : l'objectif saisi s'il existe, le budget de la
-      // période sinon. Le trait doit répondre à « la campagne suffit-elle à
-      // tenir ce qu'on attend du magasin », et c'est cela qu'on attend.
-      const cible = o != null ? o : (l.budgetPeriode || null);
-      const attendu = l.attendu != null ? l.attendu : null;
-      const attAtt = (attendu != null && cible) ? Math.round(100 * attendu / cible) : null;
-      return {
-        nom: l.nom,
-        budget: l.budgetPeriode != null ? this.fE(l.budgetPeriode) : '',
-        // L'effet attendu, terme par terme — un total sans ses termes ne se
-        // discute pas.
-        panier: l.panier != null ? this.fEd(l.panier) : '',
-        panierRepli: l.baseSource === 'repli',
-        plus: l.clientsJourPlus != null
-          ? (l.clientsJourPlus >= 0 ? '+' : '−') + Math.abs(l.clientsJourPlus).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '',
-        // Le nombre de CLIENTS sur la période : c'est ce qu'on annonce en
-        // boutique. « 145 par jour » ne se retient pas, « 4 350 en septembre »
-        // si — et l'écart entre les deux colonnes est ce que la campagne doit
-        // aller chercher.
-        clientsA1: l.clientsA1 != null ? l.clientsA1.toLocaleString('fr-BE') : '',
-        clientsA1Note: l.clientsA1Source === 'repli' ? '3 derniers mois' : '',
-        clientsPrevus: l.clientsPrevus != null ? l.clientsPrevus.toLocaleString('fr-BE') : '',
-        base: l.base != null ? this.fE(l.base) : '',
-        baseNote: l.baseSource === 'repli' ? '3 derniers mois' : '',
-        gain: l.gain != null ? '+' + this.fE(l.gain) : '',
-        attendu: attendu != null ? this.fE(attendu) : '',
-        attAtt: attAtt == null ? '' : attAtt + ' %',
-        attAttSt: attAtt == null ? 'color:var(--color-text-muted)'
-          : (attAtt >= 100 ? 'background:rgba(45,122,62,.12);color:#2d7a3e' : 'background:rgba(141,29,44,.12);color:#8D1D2C')
-            + ';font-weight:600;padding:2px 9px;border-radius:8px;font-size:10.5px',
-        source: l.source === 'theorique' ? 'théorique' : (l.source === 'budget' ? '' : 'non encodé'),
-        objectif: saisi != null ? saisi : (l.objectif != null ? Math.round(l.objectif) : ''),
-        setObjectif: e => { const v = e.target.value;
-          this.setState(s2 => ({ bxcDraft: Object.assign({}, s2.bxcDraft, { [cle(l.shopId)]: v }) }));
-          this.autoEnreg('bxc' + (d.campagne || {}).id, () => this.bxcEcrire(d.campagne.id)); },
-        pct: pct == null ? '' : (pct >= 0 ? '+' : '−') + String(Math.abs(pct)).replace('.', ',') + ' %',
-        realise: l.realise != null ? this.fE(l.realise) : '',
-        ecart: ec == null ? '' : (ec >= 0 ? '+' : '−') + this.fE(Math.abs(ec)),
-        ecartCol: ec == null ? 'var(--color-text-muted)' : (ec >= 0 ? '#2d7a3e' : '#8D1D2C'),
-        atteinte: att == null ? '' : att + ' %',
-        barre: att == null ? 0 : Math.max(2, Math.min(100, att)),
-        barreCol: att == null ? '#DED6C9' : (att >= 100 ? '#2d7a3e' : (att >= 95 ? '#C17A2A' : '#8D1D2C')),
-      };
-    });
-    // Les jauges : une échelle COMMUNE à tous les magasins. Cadrer chacun sur
-    // son propre objectif comparerait des atteintes, pas des volumes — et le
-    // réseau ne saurait plus lequel pèse.
-    const ef = d.effet || {};
-    const maxi = Math.max.apply(null, (d.lignes || []).map(l =>
-      Math.max(l.attendu || 0, l.budgetPeriode || 0, dr[cle(l.shopId)] != null ? num(dr[cle(l.shopId)]) : (l.objectif || 0))).concat([1])) * 1.04;
-    common.bxcJauges = (d.lignes || []).map(l => {
-      const saisi = dr[cle(l.shopId)];
-      const o = saisi != null ? (String(saisi).trim() === '' ? null : num(saisi)) : l.objectif;
-      const cible = o != null ? o : (l.budgetPeriode || null);
-      const pc = v => Math.max(0, Math.min(100, 100 * (v || 0) / maxi));
-      return {
-        nom: l.nom,
-        vide: l.attendu == null,
-        base: pc(l.base), gain: pc(l.gain), gaugeGauche: pc(l.base),
-        obj: cible ? pc(cible) : null,
-        objTxt: cible ? 'objectif ' + this.fE(cible) : '',
-        detail: l.base != null && l.gain != null
-          ? this.fE(l.base) + ' + ' + this.fE(l.gain) + ' = ' + this.fE(l.attendu)
-          : 'effet non calculable — relevé manquant',
-      };
-    });
-    common.bxcEffet = {
-      base: ef.base != null ? this.fE(ef.base) : '',
-      gain: ef.gain != null ? '+' + this.fE(ef.gain) : '',
-      attendu: ef.attendu != null ? this.fE(ef.attendu) : '',
-      objectif: tB ? this.fE(tB) : '',
-      clientsA1: ef.clientsA1 != null ? ef.clientsA1.toLocaleString('fr-BE') : '',
-      clientsPrevus: ef.clientsPrevus != null ? ef.clientsPrevus.toLocaleString('fr-BE') : '',
-      pct: ef.pct != null ? (ef.pct >= 0 ? '+' : '−') + Math.abs(ef.pct) + ' %' : '',
-      jours: ef.jours || 0,
-      note: 'Panier moyen des 3 derniers mois clos'
-        + (ef.panierDu ? ' (' + this.fD(ef.panierDu) + ' → ' + this.fD(ef.panierAu) + ')' : '')
-        + ', lu sur la caisse au jour le jour. Le gain attendu est ce panier multiplié par les clients par jour visés en plus, sur les '
-        + (ef.jours || 0) + ' jours de la campagne — pas une prévision de saison.',
-      sansBase: ef.sansBase || 0,
-    };
-    common.bxcTotBudget = tB ? this.fE(tB) : '';
-    common.bxcTotObjectif = tO ? this.fE(tO) : '';
-    common.bxcTotRealise = aucunR ? '' : this.fE(tR);
-    common.bxcTotEcart = (!aucunR && tO) ? ((tR - tO >= 0 ? '+' : '−') + this.fE(Math.abs(tR - tO))) : '';
-    common.bxcTotEcartCol = (tR - tO) >= 0 ? '#2d7a3e' : '#8D1D2C';
-    common.bxcTotPct = tO && tB ? ((tO / tB - 1) >= 0 ? '+' : '−') + this.fP(Math.abs(tO / tB - 1), 1) : '';
-    common.bxcEtat = this.autoTxt('bxc' + ((d.campagne || {}).id || 0));
-    common.bxcAucune = !d.campagne && !common.bxcChargement && !common.bxcIndispo;
-  }
-
   /** Les objectifs saisis, écrits en base sans ligne de journal. */
   /* --- objectifs produits d'une campagne : le multiselect, l'objectif en pièces par magasin, la jauge --- */
   valsMktObj(common){
@@ -3024,18 +2876,6 @@ class App {
         histChargement: !!hb.chargement, hist: (hd.msp || []).map(h => ({ tri: 'T' + h.trimestre.slice(6) + ' ' + h.trimestre.slice(0, 4), recu: nf(h.obtenu, 0) + ' / ' + nf(h.maximum, 0), sur5: nf(h.v), pct: h.v == null ? 0 : h.v / 5 * 100, fichier: this.sqFichierUrl(h.fichier) })),
       };
     }
-  }
-
-  bxcEcrire(campagneId){
-    const dr = this.state.bxcDraft || {};
-    const objectifs = {};
-    Object.keys(dr).forEach(k => {
-      const [cid, sid] = k.split(':');
-      if (String(cid) === String(campagneId)) { objectifs[sid] = dr[k]; }
-    });
-    if (!Object.keys(objectifs).length) { return true; }
-    return this.api('PUT', '/marketing/campagnes/' + campagneId + '/objectifs?journal=0', { objectifs })
-      .then(r => !(!r || r.ok === false));
   }
 
   /* --- encodage du budget ----------------------------------------------------- */
@@ -3942,478 +3782,6 @@ class App {
      Trois vues sur un même écran : le PARAMÉTRAGE (ce qu'on mesure et contre
      quoi), les RÉSULTATS (avant / après, net du témoin) et les PRODUITS promus.
      Tout ce qui se saisit s'écrit à la frappe, comme le reste du cockpit. */
-  mesCharge(force){
-    const cle = String(this.state.mesCamp || 0);
-    if (this._mesEnCours === cle) { return; }
-    if (!force && this.state.mes && this.state.mes.cle === cle) { return; }
-    this._mesEnCours = cle;
-    this.setState({ mes: { cle, chargement: true, d: (this.state.mes || {}).d || null } });
-    readOne('/marketing/mesure' + (this.state.mesCamp ? '?campagne=' + this.state.mesCamp : ''))
-      .then(d => { this._mesEnCours = null; this.setState({ mes: { cle, chargement: false, d: d || null } }); })
-      .catch(() => { this._mesEnCours = null; this.setState({ mes: { cle, chargement: false, d: null } }); });
-  }
-  /**
-   * La LECTURE SIMPLE d'une campagne : une requête, un indicateur.
-   *
-   * Elle vit à côté de l'ancienne : le paramétrage (témoin, placebo, relevés
-   * Facebook) reste joignable, mais l'écran s'ouvre sur la question qu'on se
-   * pose vraiment — ce que la campagne a changé, magasin par magasin.
-   */
-  mesCompCharge(force){
-    const cle = String(this.state.mesCamp || 0) + '|' + (this.state.mesMesure || 'trafic')
-      + '|' + (this.state.mesDu || '') + '|' + (this.state.mesAu || '');
-    if (this._mesCompEnCours === cle) { return; }
-    if (!force && this.state.mesComp && this.state.mesComp.cle === cle) { return; }
-    this._mesCompEnCours = cle;
-    this.setState({ mesComp: { cle, chargement: true, d: (this.state.mesComp || {}).d || null } });
-    const q = [];
-    if (this.state.mesCamp) { q.push('campagne=' + this.state.mesCamp); }
-    if (this.state.mesMesure) { q.push('mesure=' + this.state.mesMesure); }
-    if (this.state.mesDu && this.state.mesAu) {
-      q.push('du=' + this.state.mesDu); q.push('au=' + this.state.mesAu);
-    }
-    readOne('/marketing/mesure/comparaison' + (q.length ? '?' + q.join('&') : ''))
-      .then(d => { this._mesCompEnCours = null;
-        this.setState({ mesComp: { cle, chargement: false, d: d || null } }); })
-      .catch(() => { this._mesCompEnCours = null;
-        this.setState({ mesComp: { cle, chargement: false, d: null } }); });
-  }
-  /**
-   * Une courbe hebdomadaire en SVG : cette année pleine, le N-1 en pointillé,
-   * la campagne en bande. Les deux séries partagent la MÊME échelle — deux
-   * échelles feraient croire à un écart qui n'existe pas.
-   */
-  mesCourbe(courbe, courbeN1, iDeb, iFin){
-    const L = 236, H = 46;
-    const vals = courbe.concat(courbeN1).map(p => p.v).filter(v => v != null);
-    if (vals.length < 2) { return ''; }
-    const max = Math.max(...vals) * 1.06, min = Math.min(...vals) * 0.94;
-    const n = Math.max(courbe.length, courbeN1.length, 2);
-    const X = i => 2 + i * (L - 4) / (n - 1);
-    const Y = v => 3 + (H - 6) * (1 - (v - min) / (max - min || 1));
-    const trace = serie => serie.map((p, i) => (p.v == null ? '' : (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.v).toFixed(1)))
-      .filter(Boolean).join(' ').replace(/^L/, 'M');
-    const bande = (iDeb >= 0 && iFin >= iDeb)
-      ? `<rect x="${X(iDeb).toFixed(1)}" y="1" width="${(X(iFin) - X(iDeb)).toFixed(1)}" height="${H - 2}" fill="rgba(141,29,44,0.10)" stroke="rgba(141,29,44,0.30)"/>` : '';
-    return `<svg viewBox="0 0 ${L} ${H}" style="width:${L}px;height:${H}px;display:block">${bande}
-      <path d="${trace(courbeN1)}" fill="none" stroke="#c9b8a8" stroke-width="1.6" stroke-dasharray="3 2"/>
-      <path d="${trace(courbe)}" fill="none" stroke="var(--color-primary)" stroke-width="2"/></svg>`;
-  }
-  /** Le paramétrage part champ par champ : ce qui n'est pas envoyé n'est pas touché. */
-  mesEcrire(id, champ, valeur){
-    return this.api('PUT', '/marketing/mesure/' + id + '?journal=0', { [champ]: valeur })
-      .then(r => !(!r || r.ok === false));
-  }
-  mesReleve(id, shopId, phase, valeur){
-    return this.api('PUT', '/marketing/mesure/' + id + '/releve?journal=0',
-      { shopId: String(shopId), phase, abonnes: valeur })
-      .then(r => !(!r || r.ok === false));
-  }
-
-  /**
-   * L'écran simple : une rangée par magasin, deux périodes contre leur N-1.
-   *
-   * Rien n'est recalculé ici — les écarts et l'effet net viennent du serveur,
-   * qui les tient sur les jours OUVERTS. Refaire le calcul à l'écran finirait
-   * par donner deux chiffres pour la même campagne.
-   */
-  valsMesureComp(common){
-    const S = this.state;
-    this.mesCompCharge(false);
-    const b = S.mesComp || {};
-    const d = b.d || {};
-    common.mcChargement = !!b.chargement && !b.d;
-    common.mcRecalcul = !!b.chargement && !!b.d;
-    common.mcIndispo = d.indispo ? (d.raison || 'Module marketing absent') : (d.vide || '');
-    const camp = d.campagne || null;
-    common.mcCampOpts = (d.campagnes || []).map(c => ({ v: String(c.id),
-      nom: c.nom + ' · ' + this.fD(c.debut) + ' → ' + this.fD(c.fin) }));
-    common.mcCampSel = String((camp || {}).id || '');
-    common.mcCampSet = e => this.setState({ mesCamp: parseInt(e.target.value, 10) || 0 });
-    common.mcAvance = () => this.setState({ mesSimple: false });
-    if (!camp) { common.mcVide = true; return; }
-    common.mcVide = false;
-    common.mcNom = camp.nom;
-    common.mcType = camp.type || '';
-
-    // L'indicateur. Les volumes promus sont proposés — et l'écran dit
-    // pourquoi ils retombent sur le trafic plutôt que de les cacher.
-    const mesure = d.mesure || S.mesMesure || 'trafic';
-    common.mcMesures = [['trafic', 'Trafic — clients'], ['panier', 'Panier moyen'],
-      ['ca', 'Chiffre d’affaires'], ['produits', 'Produits promus']]
-      .map(([v, nom]) => ({ v, nom, on: v === (S.mesMesure || 'trafic'),
-        go: () => this.setState({ mesMesure: v }) }));
-    const unite = S.mesUnite === 'periode' ? 'periode' : 'jour';
-    common.mcUnites = [['jour', 'Par jour'], ['periode', 'Sur la période']]
-      .map(([v, nom]) => ({ v, nom, on: v === unite, go: () => this.setState({ mesUnite: v }) }));
-    common.mcParJour = unite === 'jour';
-
-    const f = d.fenetres || {};
-    common.mcFen = {
-      avant: this.fD(f.avantDu) + ' → ' + this.fD(f.avantAu),
-      pendant: this.fD(f.pendantDu) + ' → ' + this.fD(f.pendantAu),
-      avantN1: this.fD(f.avantN1Du) + ' → ' + this.fD(f.avantN1Au),
-      pendantN1: this.fD(f.pendantN1Du) + ' → ' + this.fD(f.pendantN1Au),
-      jours: f.jours || 0,
-      aVenir: (f.aVenir || 0) > 0 ? (f.aVenir + ' jour(s) de campagne encore à venir — non comptés') : '',
-    };
-    // La période mesurée se choisit : celle de la campagne, ou la sienne. Une
-    // date incomplète n'est pas envoyée — la moitié d'une borne ne veut rien
-    // dire, et relancer la lecture à chaque frappe coûterait une lecture du
-    // panel par caractère.
-    common.mcPasCommencee = !!d.pasCommencee;
-    common.mcLibre = !!d.libre;
-    common.mcDu = S.mesDu || (f.pendantDu || '');
-    common.mcAu = S.mesAu || (f.pendantAu || '');
-    common.mcDuSet = e => this.setState({ mesDu: e.target.value });
-    common.mcAuSet = e => this.setState({ mesAu: e.target.value });
-    common.mcLibreRaz = (S.mesDu || S.mesAu) ? () => this.setState({ mesDu: '', mesAu: '' }) : null;
-    common.mcSource = d.source || '';
-    common.mcMotifs = d.motifs || [];
-    common.mcPerimetre = (d.perimetre || []).join(' · ');
-    // Réseau ou local : c'est ce qui décide s'il y a un témoin. Le dire évite
-    // de chercher une ligne « hors campagne » qui n'a pas lieu d'être.
-    common.mcScope = d.scope === 'reseau' ? 'Campagne réseau — tous les magasins'
-      : (d.scope === 'locale' ? 'Campagne locale' : '');
-
-    // Le format d'une valeur : un panier et un chiffre d'affaires sont des
-    // euros, le trafic des clients — et « par jour » ne veut pas dire la même
-    // chose qu'« au total ».
-    const fmt = (v, total) => {
-      if (v == null) { return ''; }
-      if (mesure === 'panier') { return this.fU(v); }
-      if (mesure === 'ca') { return total ? this.fE(v) : this.fU(v); }
-      return total ? Math.round(v).toLocaleString('fr-BE') : (Math.round(v * 10) / 10).toString().replace('.', ',');
-    };
-    common.mcUniteTxt = mesure === 'panier' ? '' : (mesure === 'ca' ? '' : (unite === 'jour' ? 'cl./j' : 'clients'));
-    // Le panier ne se cumule pas : c'est déjà une moyenne. La bascule
-    // « sur la période » n'a donc pas de sens pour lui, et on le dit.
-    common.mcUniteInutile = mesure === 'panier';
-
-    // Où commence la campagne sur la courbe : par la DATE de chaque semaine.
-    // À défaut (dates absentes), par le compte des semaines de la fenêtre
-    // « avant » — la bande doit tomber juste, sinon elle désigne la mauvaise
-    // période et se lit comme un effet qui n'a pas eu lieu.
-    const prem = (d.magasins || [])[0] || d.temoin || null;
-    let iDeb = prem ? (prem.courbe || []).findIndex(p2 => p2.du && p2.du >= f.pendantDu) : -1;
-    if (iDeb < 0 && f.avantDu && f.pendantDu) {
-      const j = Math.round((new Date(f.pendantDu) - new Date(f.avantDu)) / 86400000);
-      iDeb = j > 0 ? Math.round(j / 7) : -1;
-    }
-    const iFin = prem ? (prem.courbe || []).length - 1 : -1;
-    const pc = v => v == null ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
-    const col = v => v == null ? 'var(--color-text-muted)' : (v >= 0 ? '#2d7a3e' : 'var(--color-primary)');
-    const tem = d.temoin || null;
-    const bruit = tem && tem.net != null ? Math.abs(tem.net) : null;
-
-    const ligne = m => {
-      const val = (bloc) => common.mcParJour && !common.mcUniteInutile ? bloc.n : (bloc.totalN != null ? bloc.totalN : bloc.n);
-      const valN1 = (bloc) => common.mcParJour && !common.mcUniteInutile ? bloc.n1 : (bloc.totalN1 != null ? bloc.totalN1 : bloc.n1);
-      const total = !common.mcParJour && !common.mcUniteInutile;
-      return {
-        id: m.id, nom: m.nom, netN: m.net,
-        courbe: this.mesCourbe(m.courbe || [], m.courbeN1 || [], iDeb, iFin),
-        avant: { v: fmt(val(m.avant), total), n1: fmt(valN1(m.avant), total),
-          ecart: pc(m.avant.ecart), col: col(m.avant.ecart) },
-        pendant: { v: fmt(val(m.pendant), total), n1: fmt(valN1(m.pendant), total),
-          ecart: pc(m.pendant.ecart), col: col(m.pendant.ecart) },
-        periode: { v: fmt(m.pendant.totalN, true), n1: fmt(m.pendant.totalN1, true) },
-        net: pc(m.net), netCol: col(m.net),
-        // Un effet plus petit que le bruit du réseau n'est pas une preuve :
-        // l'écran le marque au lieu de laisser lire une victoire.
-        faible: m.net != null && bruit != null && Math.abs(m.net) < bruit * 3 && m.role !== 'hors',
-        hors: m.role === 'hors',
-        manque: m.pendant.n == null ? 'pas encore de ventes sur la période'
-          : (m.avant.ecart == null || m.pendant.ecart == null ? 'N-1 absent : l’écart ne peut pas se calculer' : ''),
-      };
-    };
-    const tousMag = (d.magasins || []).map(ligne);
-    common.mcMagasins = tousMag.filter(m => !m.hors);
-    // Les magasins hors campagne gardent leur rangée, sous un intertitre : ils
-    // ne sont pas la campagne, mais ils sont le réseau.
-    common.mcHors = tousMag.filter(m => m.hors);
-    common.mcTemoin = tem ? Object.assign(ligne(tem), { magasins: tem.magasins }) : null;
-    common.mcBruitTxt = tem && tem.net != null
-      ? 'Effet net du témoin : ' + pc(tem.net) + ' — tout ce qui reste dans cette marge n’est pas un effet de campagne.'
-      : 'Aucun magasin hors campagne : sans témoin, la saison et la météo restent dans la mesure.';
-  }
-  valsMesure(common){
-    const S = this.state;
-    this.mesCharge(false);
-    const b = S.mes || {};
-    const d = b.d || {};
-    common.mesChargement = !!b.chargement && !b.d;
-    // Un recalcul prend plusieurs secondes (une lecture du panel par magasin et
-    // par mois). Sans ce mot, changer de témoin donne l'impression que le clic
-    // n'a rien fait — et on reclique.
-    common.mesRecalcul = !!b.chargement && !!b.d;
-    common.mesIndispo = d.indispo ? (d.raison || 'Module marketing absent') : (d.vide || '');
-    const camp = d.campagne || null;
-    common.mesCampOpts = (d.campagnes || []).map(c => ({ v: String(c.id),
-      nom: c.nom + ' · ' + (c.debut || '').split('-').reverse().join('/') + ' → ' + (c.fin || '').split('-').reverse().join('/') }));
-    common.mesCampSel = String((camp || {}).id || '');
-    common.setMesCamp = e => this.setState({ mesCamp: parseInt(e.target.value, 10) || 0 });
-    if (!camp) { common.mesVide = true; return; }
-    common.mesVide = false;
-    common.mesNom = camp.nom;
-    common.mesType = camp.type;
-    common.mesStatut = camp.statut;
-    const jf = s => (s || '').split('-').reverse().join('/');
-    common.mesPeriode = 'du ' + jf(camp.debut) + ' au ' + jf(camp.fin);
-    common.mesSource = d.source || '';
-    common.mesMotifs = d.motifs || [];
-
-    // Une campagne pas encore commencée s'ouvre sur son paramétrage ; une
-    // campagne en cours ou finie, sur ses résultats.
-    common.mesVue = S.mesVue || (((d.fenetres || {}).camp || {}).commencee ? 'resultats' : 'param');
-    common.mesVues = [['param', 'Paramétrage'], ['resultats', 'Résultats'], ['produits', 'Produits promus']]
-      .map(([v, nom]) => ({ v, nom, on: common.mesVue === v, choisir: () => this.setState({ mesVue: v }) }));
-
-    const P = d.param || {}, R = d.reseau || {};
-    // Les fenêtres manquent quand la lecture n'a pas abouti : l'écran de
-    // paramétrage doit rester ouvrable, sinon un panel muet emporte tout
-    // l'écran au lieu de dire ce qu'il ne sait pas.
-    const vide = { du: '', au: '', jours: 0 };
-    const F = Object.assign({ ref: vide, camp: vide, rem: vide, temoin: vide, pre: vide }, d.fenetres || {});
-    ['ref', 'camp', 'rem', 'temoin', 'pre'].forEach(k => { F[k] = Object.assign({}, vide, F[k] || {}); });
-    if (!d.fenetres) { common.mesFenetresVides = true; }
-    // ── vue A : paramétrage
-    // `relire` : les champs qui changent les FENÊTRES rechargent l'écran une
-    // fois écrits — les autres non, pour ne pas déplacer le curseur en cours
-    // de frappe.
-    const champ = (cle, val, relire) => ({ val: val == null ? '' : String(val),
-      set: e => { const v = e.target.value;
-        this.autoEnreg('mes' + cle + camp.id, () => this.mesEcrire(camp.id, cle, v)
-          .then(ok => { if (ok && relire) { this.mesCharge(true); } return ok; })); } });
-    common.mesRef = { du: F.ref.du, au: F.ref.au, jours: F.ref.jours,
-      duCh: champ('refDebut', F.ref.du, true), auCh: champ('refFin', F.ref.au, true) };
-    common.mesCamp2 = { du: F.camp.du, au: F.camp.au, jours: F.camp.jours,
-      ecoulee: F.camp.ecoulee, encours: !!F.camp.encours, commencee: !!F.camp.commencee };
-    common.mesRem = { jours: F.rem.jours, du: F.rem.du, au: F.rem.au, dispo: !!F.rem.dispo,
-      ch: champ('remanenceJours', F.rem.jours, true) };
-    common.mesPre = { du: F.pre.du, au: F.pre.au };
-    common.mesN1 = { on: !!P.n1, bascule: () => this.mesEcrire(camp.id, 'n1', !P.n1).then(() => this.mesCharge(true)) };
-
-    const enCamp = (d.magasins || []).filter(m => m.role === 'campagne');
-    const temSel = P.temoins || [];
-    const mode = P.temoinMode || 'auto';
-    common.mesTemoinAuto = mode === 'auto';
-    common.mesTemoinMode = mode;
-    // Trois régimes de témoin, dont le réseau complet — utile quand presque
-    // tout le réseau est en campagne : la référence devient « ce qu'a fait le
-    // réseau », au prix d'une dilution qu'on annonce.
-    const poser = v => this.mesEcrire(camp.id, 'temoins', v).then(() => this.mesCharge(true));
-    common.mesTemoinModes = [
-      { v: 'auto', nom: 'Magasins hors campagne', on: mode === 'auto', choisir: () => poser([]) },
-      { v: 'reseau', nom: 'Réseau complet', on: mode === 'reseau', choisir: () => poser('reseau') },
-      { v: 'choix', nom: 'Sélection', on: mode === 'choix', choisir: () => poser(
-          (d.magasins || []).filter(m => m.role !== 'campagne').map(m => m.id)) }
-    ];
-    common.mesTemoinDilue = P.temoinDilue || 0;
-    common.mesTemoinNote = mode === 'reseau'
-      ? (P.temoinDilue
-        ? 'Témoin dilué : il contient ' + P.temoinDilue + ' magasin' + (P.temoinDilue > 1 ? 's' : '') + ' en campagne. L’écart net est MINORÉ — l’effet réel est au moins celui affiché.'
-        : 'Le réseau complet sert de référence.')
-      : (mode === 'auto' ? 'Choix automatique : tous les magasins hors campagne.' : 'Sélection manuelle.');
-    common.mesMagasins = (d.magasins || []).map(m => ({ id: m.id, nom: m.nom, role: m.role,
-      enCampagne: m.role === 'campagne', temoin: !!m.dansTemoin,
-      fige: mode === 'reseau',
-      bascule: (mode === 'reseau' || m.role === 'campagne') ? null : () => {
-        const cur = temSel.filter(i => i !== m.id);
-        if (cur.length === temSel.length) { cur.push(m.id); }
-        poser(cur);
-      } }));
-    // Le bandeau des résultats dit lequel des trois témoins a servi : lire un
-    // écart net sans savoir contre quoi il est mesuré n'apprend rien.
-    common.mesTemoinNoms = mode === 'reseau'
-      ? ('réseau complet' + (P.temoinDilue ? ' (dilué par ' + P.temoinDilue + ' magasin' + (P.temoinDilue > 1 ? 's' : '') + ' en campagne — écart minoré)' : ''))
-      : ((d.temoinLignes || []).map(l => l.nom).join(', ') || 'aucun');
-    common.mesPerimNoms = enCamp.map(m => m.nom).join(', ');
-
-    const pct = v => v == null ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' %';
-    const pt = v => v == null ? '' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1).replace('.', ',') + ' pt';
-    const col = v => v == null ? 'var(--color-text-muted)' : (v > 0.05 ? '#2d7a3e' : (v < -0.05 ? 'var(--color-primary)' : 'var(--color-text)'));
-    const gC = (R.campagne || {}), gT = (R.temoin || {});
-    const base = (gC.ref || {});
-    common.mesIndics = [
-      { nom: 'Trafic', detail: 'tickets / jour', src: 'caisse — par magasin, par jour',
-        base: base.ticketsJour == null ? '' : base.ticketsJour.toLocaleString('fr-BE'),
-        gran: 'par magasin', cible: champ('cibleTrafic', P.cibleTrafic), unite: '%' },
-      { nom: 'Panier moyen', detail: 'CA / ticket', src: 'caisse — par magasin, par jour',
-        base: base.panier == null ? '' : this.fEd(base.panier),
-        gran: 'par magasin', cible: champ('ciblePanier', P.ciblePanier), unite: '%' },
-      { nom: 'CA / jour', detail: 'trafic × panier', src: 'caisse — par magasin, par jour',
-        base: this.fE(base.caJour), gran: 'par magasin', cible: champ('cibleCa', P.cibleCa), unite: '%' },
-      { nom: 'Produits promus', detail: 'volume vendu', src: 'panel — références',
-        base: (d.produits || []).length ? (d.produits.reduce((a, p) => a + (p.ref || 0), 0)).toLocaleString('fr-BE') + ' u' : '',
-        gran: 'réseau seulement', alerte: true, cible: champ('ciblePromo', P.ciblePromo), unite: '%' },
-      { nom: 'Abonnés Facebook', detail: 'relevé manuel', src: 'saisie — 2 champs',
-        base: (d.fb || {}).avant == null ? '' : d.fb.avant.toLocaleString('fr-BE'),
-        gran: 'par page', cible: champ('cibleFb', P.cibleFb), unite: 'abonnés' }
-    ];
-    common.mesCout = champ('cout', P.cout, true);
-    common.mesMarge = champ('margePct', P.margePct == null ? 63 : P.margePct, true);
-    common.mesProduitsTxt = champ('produits', P.produits, true);
-    common.mesGele = P.geleLe ? ('gelée le ' + String(P.geleLe).slice(0, 16).replace('T', ' ')) : '';
-    common.mesGeler = () => this.api('POST', '/marketing/mesure/' + camp.id + '/gel', {})
-      .then(() => this.mesCharge(true));
-    common.mesDegeler = () => this.api('POST', '/marketing/mesure/' + camp.id + '/gel', { annuler: 1 })
-      .then(() => this.mesCharge(true));
-
-    // Relevé Facebook — deux nombres par page, saisis à la main.
-    common.mesFbLignes = ((d.fb || {}).lignes || []).map(l => ({
-      nom: l.nom, shopId: l.shopId,
-      avant: { val: l.avant == null ? '' : String(l.avant),
-        set: e => { const v = e.target.value;
-          this.autoEnreg('fbA' + camp.id + l.shopId, () => this.mesReleve(camp.id, l.shopId, 'avant', v).then(ok => { if (ok) this.mesCharge(true); return ok; })); } },
-      apres: { val: l.apres == null ? '' : String(l.apres),
-        set: e => { const v = e.target.value;
-          this.autoEnreg('fbP' + camp.id + l.shopId, () => this.mesReleve(camp.id, l.shopId, 'apres', v).then(ok => { if (ok) this.mesCharge(true); return ok; })); } },
-      delta: l.delta == null ? '' : (l.delta >= 0 ? '+' : '−') + Math.abs(l.delta).toLocaleString('fr-BE'),
-      deltaCol: col(l.delta)
-    }));
-
-    // ── vue B : résultats
-    const V = R.verdict || {};
-    common.mesVerdict = { niveau: V.niveau || 'insuffisant', txt: V.txt || '',
-      libelle: { probant: 'Effet probant', indicatif: 'Indicatif', negatif: 'Effet négatif', insuffisant: 'Pas encore mesurable' }[V.niveau || 'insuffisant'],
-      valeur: R.netCa == null ? '' : pt(R.netCa),
-      st: V.niveau === 'probant' ? 'background:#E6F2E9;color:#2d7a3e'
-        : V.niveau === 'negatif' ? 'background:#F7E4E6;color:var(--color-primary)'
-        : V.niveau === 'indicatif' ? 'background:#FBEFE0;color:#C17A2A' : 'background:#EDEAE5;color:var(--color-text-muted)' };
-    const tuile = (nom, val, avant, dv, tv, nv, note) => ({ nom, val,
-      avant: avant, d: pct(dv), dCol: col(dv),
-      temoin: tv == null ? '' : 'témoin ' + pct(tv), net: nv == null ? '' : 'net ' + pt(nv),
-      netCol: col(nv), note: note || '' });
-    const camp2 = gC.camp || {}, ref2 = gC.ref || {};
-    common.mesTuiles = [
-      tuile('Trafic — tickets / jour', camp2.ticketsJour == null ? '' : camp2.ticketsJour.toLocaleString('fr-BE'),
-        ref2.ticketsJour == null ? '' : 'avant ' + ref2.ticketsJour.toLocaleString('fr-BE'),
-        R.dTrafic, R.tTrafic, R.netTrafic),
-      tuile('Panier moyen', this.fEd(camp2.panier), 'avant ' + this.fEd(ref2.panier), R.dPanier, R.tPanier, R.netPanier,
-        (R.netTrafic > 0 && R.netPanier < 0) ? 'la promo attire, mais dilue le ticket' : ''),
-      tuile('CA / jour', this.fE(camp2.caJour), 'avant ' + this.fE(ref2.caJour), R.dCa, R.tCa, R.netCa,
-        R.euros == null ? '' : 'soit ' + (R.euros >= 0 ? '+' : '−') + this.fE(Math.abs(R.euros)) + ' sur la période'),
-      tuile('Produits promus — volume',
-        (d.produits || []).length ? (d.produits.reduce((a, p) => a + (p.camp || 0), 0)).toLocaleString('fr-BE') + ' u' : '',
-        (d.produits || []).length ? 'avant ' + (d.produits.reduce((a, p) => a + (p.ref || 0), 0)).toLocaleString('fr-BE') + ' u' : '',
-        null, null, null, 'réseau — pas de détail magasin'),
-      tuile('Abonnés Facebook', (d.fb || {}).apres == null ? '' : d.fb.apres.toLocaleString('fr-BE'),
-        (d.fb || {}).avant == null ? 'relevé « avant » manquant' : 'avant ' + d.fb.avant.toLocaleString('fr-BE'),
-        null, null, null,
-        (d.fb || {}).delta == null ? '' : ((d.fb.delta >= 0 ? '+' : '−') + Math.abs(d.fb.delta) + ' abonnés'))
-    ];
-
-    // La courbe : indice 100 = moyenne de la fenêtre de référence, pour que
-    // deux groupes de tailles différentes se lisent sur la même échelle.
-    const S2 = d.serie || [];
-    const W = 1120, H = 190, PB = 26, PT = 8;
-    const vals = S2.map(p => p.campIdx).concat(S2.map(p => p.temoinIdx)).filter(v => v != null);
-    const hi = vals.length ? Math.max.apply(null, vals) : 0;
-    const lo = vals.length ? Math.min.apply(null, vals) : 0;
-    const max = hi * 1.06, min = Math.max(0, lo * 0.94);
-    const px = i => (S2.length < 2 ? 0 : (i * (W - 12) / (S2.length - 1)) + 6).toFixed(1);
-    const py = v => (PT + (H - PB - PT) * (1 - (v - min) / ((max - min) || 1))).toFixed(1);
-    const trace = cle => {
-      let dd = '', ouvert = false;
-      S2.forEach((p, i) => {
-        if (p[cle] == null) { ouvert = false; return; }
-        dd += (ouvert ? ' L' : ' M') + px(i) + ' ' + py(p[cle]); ouvert = true;
-      });
-      return dd.trim();
-    };
-    const bande = phase => {
-      const idx = S2.map((p, i) => p.phase === phase ? i : -1).filter(i => i >= 0);
-      if (!idx.length) return null;
-      const a = +px(idx[0]), b2 = +px(idx[idx.length - 1]);
-      return { x: a.toFixed(1), w: Math.max(1, b2 - a).toFixed(1), milieu: ((a + b2) / 2).toFixed(0) };
-    };
-    common.mesCourbe = { W, H, base: (H - PB).toFixed(1),
-      vide: !vals.length,
-      camp: trace('campIdx'), temoin: trace('temoinIdx'),
-      hautBande: (H - PB - PT).toFixed(1), yBande: PT,
-      bandes: [
-        Object.assign({ nom: 'AVANT-RÉFÉRENCE', fill: 'rgba(34,34,34,0.03)', col: 'var(--color-text-muted)' }, bande('pre') || {}),
-        Object.assign({ nom: 'RÉFÉRENCE', fill: 'rgba(34,34,34,0.06)', col: 'var(--color-text-muted)' }, bande('ref') || {}),
-        Object.assign({ nom: 'CAMPAGNE', fill: 'rgba(141,29,44,0.07)', col: 'var(--color-primary)' }, bande('camp') || {}),
-        Object.assign({ nom: 'RÉMANENCE', fill: 'rgba(201,162,39,0.13)', col: '#8a6d12' }, bande('rem') || {})
-      ].filter(b3 => b3.x != null),
-      cent: py(100) };
-
-    common.mesLignes = (d.lignes || []).map(l => ({
-      nom: l.nom,
-      trafAv: l.ref.ticketsJour == null ? '' : l.ref.ticketsJour.toLocaleString('fr-BE') + ' /j',
-      trafPd: l.camp.ticketsJour == null ? '' : l.camp.ticketsJour.toLocaleString('fr-BE') + ' /j',
-      dTraf: pct(l.dTrafic), dTrafCol: col(l.dTrafic),
-      dPan: pct(l.dPanier), dPanCol: col(l.dPanier),
-      net: pct(l.netCa == null ? l.dCa : l.netCa), netCol: col(l.netCa == null ? l.dCa : l.netCa),
-      euros: l.euros == null ? '' : (l.euros >= 0 ? '+' : '−') + this.fE(Math.abs(l.euros)),
-      eurosCol: col(l.euros)
-    }));
-    common.mesTemLignes = (d.temoinLignes || []).map(l => ({
-      nom: l.nom,
-      trafAv: l.ref.ticketsJour == null ? '' : l.ref.ticketsJour.toLocaleString('fr-BE') + ' /j',
-      trafPd: l.camp.ticketsJour == null ? '' : l.camp.ticketsJour.toLocaleString('fr-BE') + ' /j',
-      dTraf: pct(l.dTrafic), dPan: pct(l.dPanier), dCa: pct(l.dCa)
-    }));
-    common.mesRenta = {
-      euros: R.euros == null ? '' : (R.euros >= 0 ? '+' : '−') + this.fE(Math.abs(R.euros)),
-      marge: R.marge == null ? '' : this.fE(R.marge),
-      margePct: (P.margePct == null ? 63 : P.margePct).toString().replace('.', ',') + ' %',
-      cout: R.cout == null ? '' : this.fE(R.cout),
-      gain: R.gain == null ? '' : (R.gain >= 0 ? '+' : '−') + this.fE(Math.abs(R.gain)),
-      gainCol: col(R.gain),
-      retour: R.retour == null ? '' : R.retour.toFixed(2).replace('.', ',') + ' ×',
-      manque: R.cout == null ? 'coût de la campagne à saisir dans le paramétrage' : ''
-    };
-    common.mesRemanence = { pct: pct(R.remanence), col: col(R.remanence),
-      dispo: !!F.rem.dispo,
-      txt: !F.rem.dispo ? ('à lire à partir du ' + jf(F.rem.du))
-        : (R.remanence == null ? 'pas encore de données'
-          : (R.remanence < -0.5 ? 'le trafic est retombé sous la base : une partie des achats a été avancée, pas créée'
-            : 'le niveau tient après la campagne')) };
-    common.mesBruit = R.bruit == null ? '' : ('variation habituelle mesurée sur la période précédente : '
-      + Math.abs(R.bruit).toFixed(1).replace('.', ',') + ' pt');
-
-    // ── vue C : produits promus
-    common.mesProduitsNote = d.produitsNote || '';
-    const pj = v => v == null ? '' : v.toLocaleString('fr-BE');
-    const maxQ = Math.max.apply(null, [1].concat((d.produits || []).map(p => Math.max(p.refJour || 0, p.campJour || 0))));
-    common.mesProduits = (d.produits || []).map(p => {
-      const rep = p.reponse;
-      const score = rep == null ? { t: '', st: 'background:#EDEAE5;color:var(--color-text-muted)' }
-        : rep >= 25 ? { t: 'A — répond fort', st: 'background:#E6F2E9;color:#2d7a3e' }
-        : rep >= 10 ? { t: 'B — répond', st: 'background:#E6F2E9;color:#2d7a3e' }
-        : rep >= 2 ? { t: 'C — peu sensible', st: 'background:#FBEFE0;color:#C17A2A' }
-        : { t: 'D — insensible', st: 'background:#F7E4E6;color:var(--color-primary)' };
-      if (rep != null && p.remanence != null && p.remanence < -8 && rep > 0) {
-        score.t = 'C — vend d’avance'; score.st = 'background:#FBEFE0;color:#C17A2A';
-      }
-      return { sku: p.sku, nom: p.nom, categorie: p.categorie, source: p.source,
-        ref: pj(p.ref), camp: pj(p.camp), rem: pj(p.rem), n1: pj(p.n1),
-        refJour: p.refJour == null ? '' : p.refJour.toLocaleString('fr-BE'),
-        campJour: p.campJour == null ? '' : p.campJour.toLocaleString('fr-BE'),
-        reponse: pct(rep), reponseCol: col(rep),
-        n1Var: pct(p.n1Var), remanence: pct(p.remanence), remanenceCol: col(p.remanence),
-        score,
-        hRef: Math.round(100 * (p.refJour || 0) / maxQ),
-        hCamp: Math.round(100 * (p.campJour || 0) / maxQ),
-        connu: !!p.connu };
-    });
-  }
-
-  bxcCharge(force){
-    const cle = (this.state.bxcExo || this.exo()) + ':' + (this.state.bxcCamp || 0);
-    if (this._bxcEnCours === cle) { return; }
-    if (!force && this.state.bxc && this.state.bxc.cle === cle) { return; }
-    this._bxcEnCours = cle;
-    this.setState({ bxc: { cle, chargement: true, d: (this.state.bxc || {}).d || null } });
-    readOne('/marketing/budget-campagnes?exercice=' + (this.state.bxcExo || this.exo())
-      + (this.state.bxcCamp ? '&campagne=' + this.state.bxcCamp : ''))
-      .then(d => { this._bxcEnCours = null; this.setState({ bxc: { cle, chargement: false, d: d || null } }); })
-      .catch(() => { this._bxcEnCours = null; this.setState({ bxc: { cle, chargement: false, d: null } }); });
-  }
-
   rapCharge(force){
     if (this._rapEnCours) return;
     if (!force && this.state.rapGen) return;
@@ -6255,349 +5623,6 @@ class App {
     const camps = mk.campagnes || [];
     const recharge = () => { this.D.mkt = null; this.setState({}); };
 
-    // --- bascule Liste / Calendrier : les mêmes campagnes et leur statut, en tableau ou posées sur l'année.
-    common.mkVues = [['mktCampagnes', 'Liste'], ['mktCalendrier', 'Calendrier']].map(([ecran, nom]) => ({
-      nom, on: S.screen === ecran, choisir: () => this.setState({ screen: ecran, mkEdit: null }) }));
-
-    // --- calendrier : une ligne par campagne, une barre sur ses mois.
-    const annee = S.mkAnnee || new Date((camps[0] || {}).debut || this.M.TODAY).getFullYear();
-    common.mkAnnee = String(annee);
-    common.mkAnneePrec = () => this.setState({ mkAnnee: annee - 1 });
-    common.mkAnneeSuiv = () => this.setState({ mkAnnee: annee + 1 });
-    common.mkMois = (this.M.MOIS || []);
-    common.mkCalLignes = camps
-      .filter(c2 => c2.debut && c2.fin)
-      .filter(c2 => +String(c2.debut).slice(0, 4) <= annee && +String(c2.fin).slice(0, 4) >= annee)
-      .map(c2 => {
-        const d0 = new Date(c2.debut + 'T00:00:00'), f0 = new Date(c2.fin + 'T00:00:00');
-        const m1 = d0.getFullYear() < annee ? 0 : d0.getMonth();
-        const m2 = f0.getFullYear() > annee ? 11 : f0.getMonth();
-        return { id: c2.id, nom: c2.nom, type: c2.type || '',
-          couleur: c2.typeCouleur || '#8D1D2C',
-          statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
-          debut: this.fD(c2.debut), fin: this.fD(c2.fin),
-          col1: m1 + 1, col2: m2 + 2,
-          ouvrir: () => this.setState({ mkEdit: this.mkVersForm(c2) }) };
-      });
-    common.mkCalVide = !common.mkCalLignes.length;
-
-    // --- liste des campagnes.
-    common.mkCampagnes = camps.map(c2 => ({
-      id: c2.id, nom: c2.nom, type: c2.type || '', typeCouleur: c2.typeCouleur || '#666',
-      scope: c2.scope === 'LOCALE' ? 'Locale' : 'Réseau',
-      statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
-      periode: (c2.debut ? this.fD(c2.debut) : '') + ' → ' + (c2.fin ? this.fD(c2.fin) : ''),
-      budget: this.fE(c2.budget), depense: c2.depense ? this.fE(c2.depense) : '',
-      nBoutiques: c2.nBoutiques,
-      editer: () => this.setState({ mkEdit: this.mkVersForm(c2) }),
-      note: () => this.mkNoteOuvrir(c2.id),
-      // L'assistant s'ouvre pour TOUTE campagne, pas seulement les brouillons.
-      // Il était réservé aux brouillons — « une planifiée se corrige dans la
-      // carte » —, mais la carte ne porte ni l'offre, ni les canaux, ni les
-      // documents joints : une campagne lancée n'avait plus aucun moyen d'être
-      // modifiée. L'assistant réécrit désormais le statut qu'elle a.
-      reprendre: () => {
-        window.location.assign(new URL('assistant/?id=' + c2.id, window.location.href).href);
-      },
-      reprendreNom: c2.statut === 'draft' ? 'Reprendre' : 'Assistant',
-      supprimer: () => {
-        if (!window.confirm('Supprimer définitivement la campagne « ' + c2.nom + ' » ?')) { return; }
-        this.api('DELETE', '/marketing/campagne/' + c2.id).then(r => {
-          if (r && r.ok === false) { return; }
-          this.notify('Campagne supprimée'); recharge();
-        });
-      },
-    }));
-    common.mkVide = !camps.length;
-    // La création rapide est retirée : toute campagne naît COMPLÈTE, dans
-    // l'assistant. La carte d'édition ne sert plus qu'à corriger l'existant.
-
-    // --- vignettes « en attente » : brouillons et planifiées, à finir ou à
-    // lancer. Illustration, nom complet, levier du type — trois par rangée.
-    const parTypeId = {};
-    (mk.types || []).forEach(t => { parTypeId[String(t.id)] = t; });
-    const imageSrc = im => !im ? null
-      : (im.startsWith('http') || im.startsWith('/')) ? im : 'assistant/' + im;
-    common.mkAttente = camps
-      .filter(c2 => c2.statut === 'draft' || c2.statut === 'planned')
-      .map(c2 => {
-        const t = parTypeId[String(c2.typeId)] || {};
-        return { id: c2.id, nom: c2.nom, image: imageSrc(c2.image),
-          couleur: c2.typeCouleur || '#8D1D2C', type: c2.type || '',
-          levier: t.levier || '',
-          statutNom: c2.statutNom, statutTexte: c2.statutTexte, statutFond: c2.statutFond,
-          periode: (c2.debut ? this.fD(c2.debut) : '') + ' → ' + (c2.fin ? this.fD(c2.fin) : ''),
-          // La vignette ouvre l'assistant : c'est là que tout se règle, y
-          // compris pour une campagne déjà planifiée.
-          ouvrir: () => { window.location.assign(new URL('assistant/?id=' + c2.id, window.location.href).href); },
-          corriger: () => this.setState({ mkEdit: this.mkVersForm(c2) }),
-          // La note pour les franchisés : une page A4, imprimable, et le
-          // courrier qui la porte. Bouton à part sur la vignette — ouvrir la
-          // campagne et l'expliquer au réseau ne sont pas le même geste.
-          note: () => this.mkNoteOuvrir(c2.id) };
-      });
-    // --- la note de campagne : une page A4 pour le réseau, et le courrier
-    // qui la porte. Chargée à l'ouverture, jamais avant : elle interroge le
-    // panel pour la référence de l'an dernier.
-    const nt = S.mkNote;
-    const ntPatch = pl => this.setState(s2 => ({ mkNote: Object.assign({}, s2.mkNote, pl) }));
-    common.mkNote = !nt ? null : {
-      chargement: !!nt.chargement,
-      err: nt.err || '',
-      fermer: () => this.setState({ mkNote: null }),
-      titre: (nt.d && nt.d.campagne ? nt.d.campagne.nom : 'Note de campagne'),
-      onglet: nt.onglet || 'note',
-      versNote: () => ntPatch({ onglet: 'note' }),
-      versMail: () => ntPatch({ onglet: 'mail' }),
-      versJournal: () => ntPatch({ onglet: 'journal' }),
-      stNote: this.tabBtn((nt.onglet || 'note') === 'note'),
-      stMail: this.tabBtn(nt.onglet === 'mail'),
-      stJournal: this.tabBtn(nt.onglet === 'journal'),
-    };
-    if (nt && nt.d && !nt.chargement) {
-      const D2 = nt.d, camp = D2.campagne || {};
-      const dest = nt.dest || (D2.destinataires || []).map(x2 => Object.assign({}, x2, { on: !!x2.adresse }));
-      const cfg = nt.cfg || Object.assign({}, D2.config || {});
-      const setDest = (i, pl) => ntPatch({ dest: dest.map((x2, j) => j === i ? Object.assign({}, x2, pl) : x2) });
-      const setCfg = k => e => ntPatch({ cfg: Object.assign({}, cfg, { [k]: e.target.value }) });
-      const prets = dest.filter(x2 => x2.on && x2.adresse);
-
-      Object.assign(common.mkNote, {
-        // L'aperçu EST le fichier : la page imprimée et le PDF joint sortent du
-        // même HTML, produit par le serveur. Deux rendus auraient fini par
-        // montrer deux choses.
-        apercu: D2.apercuPdf || '',
-        // Le mot du responsable : la seule partie de la page écrite par
-        // quelqu'un. Signé du consultant connecté — nom et fonction —, et la
-        // signature reste modifiable : le mot peut être celui du franchiseur.
-        mot: (nt.mot != null ? nt.mot : ((D2.mot || {}).texte || '')),
-        setMot: e => ntPatch({ mot: e.target.value }),
-        motNom: (nt.motNom != null ? nt.motNom : ((D2.mot || {}).nom || '')),
-        setMotNom: e => ntPatch({ motNom: e.target.value }),
-        motFonction: (nt.motFonction != null ? nt.motFonction : ((D2.mot || {}).fonction || '')),
-        setMotFonction: e => ntPatch({ motFonction: e.target.value }),
-        motEtat: nt.motEtat || '',
-        enregistrerMot: () => {
-          ntPatch({ motEtat: 'en-cours' });
-          this.api('PUT', '/marketing/campagne/' + camp.id + '/note-mot', {
-            texte: (nt.mot != null ? nt.mot : ((D2.mot || {}).texte || '')),
-            nom: (nt.motNom != null ? nt.motNom : ((D2.mot || {}).nom || '')),
-            fonction: (nt.motFonction != null ? nt.motFonction : ((D2.mot || {}).fonction || '')),
-          }).then(r => {
-            if (!r || r.error) { ntPatch({ motEtat: '', err: (r && r.error) || 'Mot non enregistré.' }); return; }
-            // La page se recharge : l'aperçu EST le fichier, il doit porter le
-            // mot qu'on vient d'écrire.
-            this.mkNoteOuvrir(camp.id, 'note');
-          });
-        },
-        apercuMail: D2.apercuMail || '',
-        sousTitre: (camp.type || '') + ' · ' + (camp.portee || '') + ' · '
-          + (camp.du ? this.fD(camp.du) : '') + ' → ' + (camp.fin || camp.au ? this.fD(camp.au) : ''),
-        moteurPdf: !!D2.moteurPdf,
-        // Sans moteur sur le serveur, on le DIT : le navigateur imprime le même
-        // document, et personne n'attend un fichier qui ne viendra pas.
-        moteurNote: D2.moteurPdf ? ''
-          : 'Aucun moteur PDF sur ce serveur : « Imprimer » produit le même document depuis le navigateur (choisissez « Enregistrer en PDF »). Le courrier partira sans pièce jointe, et le dira.',
-        imprimer: () => {
-          const f = document.getElementById('note-apercu');
-          if (f && f.contentWindow) { f.contentWindow.focus(); f.contentWindow.print(); }
-        },
-        telecharger: !D2.moteurPdf ? null : () => {
-          try { window.open(API_BASE + '/marketing/campagne/' + camp.id + '/note.pdf', '_blank'); } catch (e2) {}
-        },
-        fichier: D2.fichier || '',
-        // Ce qui partira EN PLUS de la note : les documents cochés dans
-        // l'assistant. En lecture seule ici — ils se gèrent là où on les
-        // dépose, sinon la même case se règlerait à deux endroits.
-        annexes: (camp.annexes || []).filter(a => a.enMail).map(a => ({
-          nom: a.nom, type: a.type || '', taille: a.tailleTxt,
-          perdu: !a.existe,
-        })),
-        annexesNon: (camp.annexes || []).filter(a => !a.enMail).length,
-        dest: dest.map((x2, i) => ({
-          magasin: x2.magasin, franchise: x2.franchise || '',
-          adresse: x2.adresse, on: !!x2.on,
-          manque: !x2.adresse,
-          setAdresse: e => setDest(i, { adresse: e.target.value, on: !!e.target.value }),
-          basculer: () => setDest(i, { on: !x2.on }),
-        })),
-        // Les copies : l'agence de la campagne et les consultants. Une liste à
-        // cocher, pas un champ libre — une adresse retapée à chaque envoi finit
-        // par partir chez quelqu'un d'autre.
-        // L'agence d'abord, les consultants ensuite : ce ne sont pas les mêmes
-        // destinataires — l'une produit la campagne, les autres la suivent.
-        copiesAgence: (nt.copies || (D2.copies || [])).map((x2, i) => Object.assign({}, x2, { i }))
-          .filter(x2 => x2.groupe === 'agence').map(x2 => ({
-            nom: x2.nom, adresse: x2.adresse, role: x2.role, on: !!x2.on,
-            sansAdresse: !!x2.sansAdresse,
-            basculer: x2.sansAdresse ? null : () => ntPatch({ copies: (nt.copies || (D2.copies || []))
-              .map((y, j) => j === x2.i ? Object.assign({}, y, { on: !y.on }) : y) }),
-          })),
-        copiesConsultants: (nt.copies || (D2.copies || [])).map((x2, i) => Object.assign({}, x2, { i }))
-          .filter(x2 => x2.groupe !== 'agence').map(x2 => ({
-            nom: x2.nom, adresse: x2.adresse, role: x2.role, on: !!x2.on, sansAdresse: false,
-            basculer: () => ntPatch({ copies: (nt.copies || (D2.copies || []))
-              .map((y, j) => j === x2.i ? Object.assign({}, y, { on: !y.on }) : y) }),
-          })),
-        copiesVide: !(D2.copies || []).length,
-        nPrets: prets.length,
-        sansAdresse: dest.filter(x2 => !x2.adresse).map(x2 => x2.magasin),
-        // L'agence : nom, site et logo. Le logo est LU dans le navigateur et
-        // envoyé en data-URI — le serveur ne reçoit pas de fichier à ranger,
-        // et l'image part avec la lettre au lieu d'être un lien vers un
-        // cockpit auquel le destinataire n'a pas accès.
-        agenceNom: (cfg.agence || {}).nom || '',
-        setAgenceNom: e => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { nom: e.target.value }) }) }),
-        agenceSite: (cfg.agence || {}).site || '',
-        setAgenceSite: e => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { site: e.target.value }) }) }),
-        agenceEmail: (cfg.agence || {}).email || '',
-        setAgenceEmail: e => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { email: e.target.value }) }) }),
-        agenceLogo: (cfg.agence || {}).logo || '',
-        agenceLogoErr: nt.logoErr || '',
-        setAgenceLogo: e => {
-          const f = e.target.files && e.target.files[0];
-          if (!f) { return; }
-          if (f.size > 500000) { ntPatch({ logoErr: 'Logo trop lourd (' + Math.round(f.size / 1024) + ' Ko) : 500 Ko au plus.' }); return; }
-          const r = new FileReader();
-          r.onload = () => ntPatch({ logoErr: '', cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { logo: String(r.result) }) }) });
-          r.onerror = () => ntPatch({ logoErr: 'Fichier illisible.' });
-          r.readAsDataURL(f);
-        },
-        retirerLogo: !((cfg.agence || {}).logo) ? null
-          : () => ntPatch({ cfg: Object.assign({}, cfg, { agence: Object.assign({}, cfg.agence, { logo: '' }) }) }),
-        visuelNote: (D2.visuel && D2.visuel.present)
-          ? 'Le visuel de la campagne est repris en tête de note et en annexe, page 2 du PDF.'
-          : ((D2.visuel && D2.visuel.motif)
-            ? 'Pas d’annexe : ' + D2.visuel.motif + '.'
-            : 'Cette campagne n’a pas de visuel : la note sort sans annexe. Ajoutez-en un dans l’assistant, étape « Photos produits ».'),
-        expediteur: cfg.expediteur || '', setExpediteur: setCfg('expediteur'),
-        sujet: cfg.sujet || '', setSujet: setCfg('sujet'),
-        intro: cfg.intro || '', setIntro: setCfg('intro'),
-        pied: cfg.pied || '', setPied: setCfg('pied'),
-        html: cfg.html || '', setHtml: setCfg('html'),
-        gabaritOuvert: !!nt.gabarit,
-        basculerGabarit: () => ntPatch({ gabarit: !nt.gabarit }),
-        variables: '{{campagne}} {{type}} {{du}} {{au}} {{magasin}} {{franchise}} {{objectif}} {{cible}} {{budget}}',
-        enregistrerGabarit: () => {
-          this.api('PUT', '/marketing/note-config', {
-            expediteur: cfg.expediteur, sujet: cfg.sujet, intro: cfg.intro,
-            pied: cfg.pied, html: cfg.html, agence: cfg.agence || {},
-            copies: (nt.copies || (D2.copies || [])).filter(x2 => x2.on).map(x2 => x2.adresse),
-          }).then(r => {
-            if (r && r.error) { ntPatch({ err: r.error }); return; }
-            this.notify('Gabarit du courrier enregistré');
-            this.mkNoteOuvrir(camp.id, nt.onglet);
-          });
-        },
-        envoi: nt.envoi || '',
-        // Le bouton n'envoie plus à l'aveugle : il ouvre le FORMULAIRE de
-        // validation — chaque magasin avec sa case et son adresse, les copies,
-        // et c'est la confirmation qui poste. Un window.confirm ne montrait
-        // ni qui, ni où.
-        envoyer: prets.length === 0 || nt.envoi === 'en-cours' ? null : () => ntPatch({ valider: true, err: '' }),
-        validation: !nt.valider ? null : (() => {
-          const extras = nt.extras || [];
-          const copiesT = nt.copies || (D2.copies || []);
-          const nTot = prets.length + extras.length;
-          return {
-            titre: 'Valider l’envoi — ' + camp.nom,
-            expediteur: cfg.expediteur || 'l’adresse marketing',
-            lignes: dest.map((x2, i) => ({
-              magasin: x2.magasin, franchise: x2.franchise || '',
-              adresse: x2.adresse || '', manque: !x2.adresse,
-              on: !!x2.on && !!x2.adresse,
-              basculer: x2.adresse ? () => setDest(i, { on: !x2.on }) : null,
-            })),
-            // Les POSITIONS AJOUTÉES à la main : une adresse de plus (un
-            // consultant, un intérim, la marque…) reçoit la note réseau,
-            // sans entrer au carnet des magasins.
-            extras: extras.map((a2, i) => ({ adresse: a2,
-              retirer: () => ntPatch({ extras: extras.filter((y, j) => j !== i) }) })),
-            saisie: nt.extraSaisie || '',
-            poserSaisie: e => ntPatch({ extraSaisie: e.target.value }),
-            ajouter: () => {
-              const a2 = (nt.extraSaisie || '').trim();
-              if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a2)) { this.notify('Adresse illisible — rien d’ajouté'); return; }
-              if (!extras.includes(a2)) { ntPatch({ extras: extras.concat([a2]), extraSaisie: '' }); }
-            },
-            // Les copies (agence, consultants) se cochent ICI aussi : la
-            // validation montre tout ce qui partira, rien d'implicite.
-            copies: copiesT.map((x2, i) => ({ nom: x2.nom, role: x2.role || '',
-              adresse: x2.adresse || '', on: !!x2.on, sansAdresse: !!x2.sansAdresse,
-              basculer: x2.sansAdresse ? null : () => ntPatch({ copies: copiesT.map((y, j) => j === i ? Object.assign({}, y, { on: !y.on }) : y) }) })),
-            n: nTot,
-            annuler: () => ntPatch({ valider: false }),
-            confirmer: nTot === 0 ? null : () => {
-              ntPatch({ envoi: 'en-cours', err: '', valider: false });
-              this.api('POST', '/marketing/campagne/' + camp.id + '/note',
-                { destinataires: prets.map(x2 => ({ id: x2.id, adresse: x2.adresse, magasin: x2.magasin, franchise: x2.franchise }))
-                    .concat(extras.map(a2 => ({ id: '', adresse: a2, magasin: 'Destinataire ajouté', franchise: '' }))),
-                  copies: copiesT.filter(x2 => x2.on).map(x2 => x2.adresse) })
-                .then(r => {
-                  if (!r || r.error) { ntPatch({ envoi: '', err: (r && r.error) || 'Envoi refusé.' }); return; }
-                  this.notify(r.message || 'Note envoyée');
-                  this.mkNoteOuvrir(camp.id, 'journal');
-                });
-            },
-          };
-        })(),
-        journal: (D2.journal || []).map(e2 => ({
-          quand: e2.quand, type: e2.type,
-          etat: e2.type === 'envoye' ? 'Envoyée' : 'Échec',
-          etatSt: 'font-size:10.5px;font-weight:600;padding:2px 9px;border-radius:8px;'
-            + (e2.type === 'envoye' ? 'background:rgba(45,122,62,.12);color:#2d7a3e' : 'background:rgba(141,29,44,.12);color:#8D1D2C'),
-          destinataire: e2.destinataire || '', detail: e2.detail || '', sujet: e2.sujet || '',
-        })),
-        journalVide: !(D2.journal || []).length,
-      });
-    }
-
-    // L'assistant COMPLET (cadrage, offre, objectifs, prix, photos, budget,
-    // communication, planning, récap, leads) est désormais HÉBERGÉ PAR LE
-    // COCKPIT (page /assistant/, API /api/marketing/) : il travaille sur les
-    // mêmes tables, et survivra à la suppression du module marketing.
-    // Navigation directe, PAS de nouvel onglet : l'assistant ramène ici par
-    // « ← Retour au cockpit », par « Annuler » et à la publication.
-    common.mkAssistant = () => {
-      window.location.assign(new URL('assistant/', window.location.href).href);
-    };
-
-    // --- formulaire (création et correction, même carte).
-    const ed = S.mkEdit;
-    const patch = pl => this.setState(s2 => ({ mkEdit: Object.assign({}, s2.mkEdit, pl) }));
-    common.mkEdit = !ed ? null : {
-      id: ed.id, titre: ed.id ? 'Corriger la campagne' : 'Nouvelle campagne',
-      nom: ed.nom, setNom: e => patch({ nom: e.target.value }),
-      types: (mk.types || []).filter(t => t.actif || String(t.id) === String(ed.typeId))
-        .map(t => ({ id: String(t.id), nom: t.nom, on: String(t.id) === String(ed.typeId) })),
-      setType: e => patch({ typeId: e.target.value }),
-      statuts: (mk.statuts || []).map(st => ({ code: st.code, nom: st.nom, on: st.code === ed.statut,
-        pick: () => patch({ statut: st.code }) })),
-      scopes: [['RESEAU', 'Réseau'], ['LOCALE', 'Locale']].map(([v, nom]) => ({ v, nom, on: ed.scope === v,
-        pick: () => patch({ scope: v }) })),
-      debut: ed.debut || '', setDebut: e => patch({ debut: e.target.value }),
-      fin: ed.fin || '', setFin: e => patch({ fin: e.target.value }),
-      budget: ed.budget, setBudget: e => patch({ budget: e.target.value }),
-      busy: !!ed.busy, err: ed.err || '',
-      fermer: () => this.setState({ mkEdit: null }),
-      envoyer: () => {
-        const f2 = this.state.mkEdit || {};
-        if (!String(f2.nom || '').trim()) { patch({ err: 'Le nom de la campagne est requis.' }); return; }
-        patch({ busy: true, err: '' });
-        const corps = { nom: String(f2.nom).trim(), typeId: f2.typeId || null, scope: f2.scope,
-          statut: f2.statut, debut: f2.debut || '', fin: f2.fin || '',
-          budget: parseFloat(String(f2.budget || '0').replace(',', '.')) || 0 };
-        this.api(f2.id ? 'PATCH' : 'POST', '/marketing/campagne' + (f2.id ? '/' + f2.id : ''), corps)
-          .then(r => {
-            if (!r || r.ok === false) { patch({ busy: false, err: (r && r.error) || 'refusé' }); return; }
-            this.setState({ mkEdit: null });
-            this.notify(f2.id ? 'Campagne corrigée' : 'Campagne créée');
-            this.log('Campagne', corps.nom, f2.id ? 'Corrigée depuis le pilotage' : 'Créée depuis le pilotage');
-            recharge();
-          });
-      },
-    };
-
     // --- référentiel des types.
     //
     // Le formulaire porte les mêmes champs et les mêmes règles que celui du
@@ -8011,32 +7036,6 @@ class App {
     common.mqGammes = !d.horsGamme ? '' : (nb(d.horsGamme)
       + ' référence(s) de gammes saisonnières fermées sur la période sont écartées : '
       + Object.keys(d.gammesEcartees || {}).slice(0, 4).join(', ') + '.');
-  }
-
-  /**
-   * Ouvre la note d'une campagne — la page A4 et le courrier qui la porte.
-   *
-   * Chargée À L'OUVERTURE et pas avant : la note lit la référence de l'an
-   * dernier sur le panel, et la calculer pour toutes les campagnes de l'écran
-   * coûterait quarante appels pour une seule qu'on ouvrira.
-   */
-  mkNoteOuvrir(id, onglet){
-    this.setState({ mkNote: { id, chargement: true, onglet: onglet || 'note' } });
-    readOne('/marketing/campagne/' + id + '/note').then(d => {
-      this.setState(s2 => (s2.mkNote && s2.mkNote.id === id)
-        ? { mkNote: { id, chargement: false, onglet: onglet || 'note',
-            d: (d && !d.error) ? d : null,
-            err: (d && d.error) ? d.error : (d ? '' : 'Note indisponible.') } }
-        : {});
-    }).catch(() => this.setState(s2 => (s2.mkNote && s2.mkNote.id === id)
-      ? { mkNote: { id, chargement: false, onglet: onglet || 'note', d: null, err: 'Note indisponible.' } } : {}));
-  }
-
-  /** La campagne telle que le formulaire la mange. */
-  mkVersForm(c2){
-    return { id: c2.id, nom: c2.nom, typeId: c2.typeId ? String(c2.typeId) : '',
-      scope: c2.scope, statut: c2.statut, debut: c2.debut || '', fin: c2.fin || '',
-      budget: c2.budget ? String(c2.budget) : '' };
   }
 
   /* --- fonds : écrire depuis le pilotage réseau ------------------------------ */
