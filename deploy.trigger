@@ -988,3 +988,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T15:38:50Z primes : combien, comment y arriver, où tu en es ; module Primes dans le rail
 2026-10-23T15:42:00Z récurrence : tous les clients identifiés
 2026-10-23T15:48:04Z primes : jauge de la meilleure vendeuse (le bout, la 1re du magasin)
+2026-10-23T15:51:44Z primes : meilleure vendeuse en €/h

@@ -13,7 +13,7 @@
   "before_coef": "before coefficient",
   "below": "Below",
   "below_target": "below target",
-  "best_how": "Your sales per hour, slot-adjusted, against the other sellers.",
+  "best_how": "Your revenue per hour, weighted by your hours (20 h are added for everyone) and corrected for the time slot, against the other sellers of the shop.",
   "best_seller": "Best seller",
   "cashed": "cashed",
   "cashed_on": "cashed out of",
@@ -299,5 +299,7 @@
   "you_won_in": "In {m}, you won",
   "hours_left_short": "{h} h of shifts left this month",
   "how_to_get_there": "How to get there",
-  "where_you_are": "Where you stand"
+  "where_you_are": "Where you stand",
+  "d_weighted_hour": "Your weighted revenue per hour",
+  "d_revenue_hour_real": "Your actual revenue per hour"
 }

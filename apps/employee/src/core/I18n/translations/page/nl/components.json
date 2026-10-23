@@ -1,7 +1,7 @@
 {
   "bonuses": "Premies",
   "home": "Home",
-  "plan_best_shop": "De nr. 1 van de winkel staat op {a}, jij op {de}: {e} punten om haar in te halen, door meer te verkopen per gewerkt uur.",
+  "plan_best_shop": "De nr. 1 van de winkel doet {a}, jij {de}: {e} € meer per uur om haar in te halen.",
   "plan_cross_aim": "Op je volgende ~{n} tickets, mik op {p} %: {d} tickets op 10 met een 2e artikel.",
   "plan_cross_hard": "Je zou meer dan 100 % moeten halen op je volgende tickets: deze premie is voor volgende maand.",
   "plan_cross_min": "Je hebt ook {n} tickets in de maand nodig.",

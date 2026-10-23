@@ -7,6 +7,7 @@
 {% if e.unite == 'pct' %}{% set de = e.de is not null ? e.de|number_format(e.cle == 'objectif' ? 1 : 0, ',', ' ') ~ ' %' : '—' %}{% set a = e.a|number_format(0, ',', ' ') ~ ' %' %}
 {% elseif e.unite == 'lpt' %}{% set de = e.de|number_format(2, ',', ' ') %}{% set a = e.a|number_format(1, ',', ' ') %}
 {% elseif e.unite == 'note' %}{% set de = e.de is not null ? e.de|number_format(1, ',', ' ') ~ ' ★' : '—' %}{% set a = e.a|number_format(1, ',', ' ') ~ ' ★' %}
+{% elseif e.unite == 'score' %}{% set de = e.de is not null ? e.de|number_format(0, ',', ' ') ~ ' €/h' : '—' %}{% set a = e.a|number_format(0, ',', ' ') ~ ' €/h' %}
 {% else %}{% set de = e.de is not null ? e.de|number_format(0, ',', ' ') : '—' %}{% set a = e.a|number_format(0, ',', ' ') %}{% endif %}
 {% if e.cle == 'croisees' %}
   {% if e.horsPortee %}{% set comment = T.plan_cross_hard ?? 'Il faudrait plus de 100 % sur tes prochains tickets : cette prime se joue le mois prochain.' %}
@@ -27,7 +28,7 @@
     : (T.plan_google_short ?? 'La note du magasin doit passer {s} : chaque avis 5★ compte.')|replace({'{s}': a}) %}
 {% elseif (c.type ?? '') == 'classement' %}
   {# Le score de la 1re elle-même (celui de la jauge) ; « e » : les points pour la passer. #}
-  {% set aMv = (c.premier ?? null) and not c.premier.moi ? c.premier.q|number_format(0, ',', ' ') : a %}
+  {% set aMv = (c.premier ?? null) and not c.premier.moi ? c.premier.q|number_format(0, ',', ' ') ~ ' €/h' : a %}
   {% set comment = (T.plan_best_shop ?? 'La 1re du magasin est à {a}, toi {de} : {e} points pour la passer, en vendant plus par heure prestée.')|replace({'{a}': aMv, '{de}': de, '{e}': e.ecart}) %}
 {% else %}
   {% if e.regle == 'magasin' %}{% set comment = (T.plan_pieces_shop ?? 'Avec l’équipe : {n} pièces de plus pour l’objectif du magasin.')|replace({'{n}': e.manque}) %}
@@ -43,7 +44,7 @@
     {#- La meilleure vendeuse (23/10/2026) : le bout de la jauge est la 1re du magasin, le point la vendeuse. #}
     {% set un = e.cle == 'meilleure' and e.de is not null ? (c.premier ?? null) : null %}
     {% if un and not un.moi and un.q > 0 %}{% set pos = min(100, 100 * e.de / un.q) %}
-    <span class="sb-prog"><span class="sb-jv"><i style="width:{{ pos|round(1) }}%"></i><b class="bout">{{ un.nom|first|upper }}</b><b class="pt" style="left:{{ pos|round(1) }}%"></b></span><span class="sb-bornes">{{ un.nom }} · {{ un.q|number_format(0, ',', ' ') }}</span></span>
+    <span class="sb-prog"><span class="sb-jv"><i style="width:{{ pos|round(1) }}%"></i><b class="bout">{{ un.nom|first|upper }}</b><b class="pt" style="left:{{ pos|round(1) }}%"></b></span><span class="sb-bornes">{{ un.nom }} · {{ un.q|number_format(0, ',', ' ') }}&nbsp;€/h</span></span>
     {% elseif e.progres is not null %}<span class="sb-prog"><span class="sb-barre"><i style="width:{{ (100 * e.progres)|round(1) }}%"></i></span><span class="sb-bornes">{{ de }} → {{ a }}</span></span>{% endif %}
   </span>
 {% endset %}

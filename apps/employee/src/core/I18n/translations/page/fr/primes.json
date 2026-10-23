@@ -13,7 +13,7 @@
   "before_coef": "avant coefficient",
   "below": "sous",
   "below_target": "sous la cible",
-  "best_how": "Ton CA par heure, corrigé du créneau, face aux autres vendeuses.",
+  "best_how": "Ton CA par heure, pondéré par tes heures (on ajoute 20 h à chacune) et corrigé du créneau, face aux autres vendeuses du magasin.",
   "best_seller": "Meilleure vendeuse",
   "cashed": "encaissé",
   "cashed_on": "encaissés sur",
@@ -299,5 +299,7 @@
   "you_won_in": "En {m}, tu as gagné",
   "hours_left_short": "{h} h de service restantes ce mois-ci",
   "how_to_get_there": "Comment y arriver",
-  "where_you_are": "Où tu en es"
+  "where_you_are": "Où tu en es",
+  "d_weighted_hour": "Ton CA par heure pondéré",
+  "d_revenue_hour_real": "Ton CA par heure réel"
 }

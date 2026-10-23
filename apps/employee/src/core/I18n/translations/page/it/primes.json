@@ -13,7 +13,7 @@
   "before_coef": "prima del coefficiente",
   "below": "Sotto",
   "below_target": "sotto l’obiettivo",
-  "best_how": "Il tuo incasso orario, corretto per la fascia, contro le altre venditrici.",
+  "best_how": "Il tuo incasso orario, ponderato sulle tue ore (si aggiungono 20 h a ciascuna) e corretto per la fascia oraria, contro le altre venditrici del negozio.",
   "best_seller": "Miglior venditrice",
   "cashed": "incassato",
   "cashed_on": "incassati su",
@@ -299,5 +299,7 @@
   "you_won_in": "A {m} hai vinto",
   "hours_left_short": "{h} h di turno rimaste questo mese",
   "how_to_get_there": "Come arrivarci",
-  "where_you_are": "A che punto sei"
+  "where_you_are": "A che punto sei",
+  "d_weighted_hour": "Il tuo incasso orario ponderato",
+  "d_revenue_hour_real": "Il tuo incasso orario reale"
 }
