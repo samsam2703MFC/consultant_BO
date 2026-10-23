@@ -305,5 +305,17 @@
   "won_title": "Déjà gagnées",
   "won_title_past": "Gagnées",
   "not_this_month_title": "Pas ce mois-ci",
-  "not_won_title": "Pas gagnées"
+  "not_won_title": "Pas gagnées",
+  "step_of": "Étape {n}/3",
+  "record_flag": "ton record",
+  "d_steps": "Les étapes",
+  "step_set": "Poser",
+  "step_beat": "Battre",
+  "step_win": "Gagner",
+  "aim_short": "vise",
+  "tenth": "dixième",
+  "step1_line": "Un mois d’au moins {n} tickets pose ton record ; il se bat dès le mois suivant.",
+  "step2_line": "Le 1er dixième au-dessus pose le nouveau record, le 2e paie",
+  "step2_tickets": "Encore {n} tickets pour que le mois compte.",
+  "step3_next": "Encore {d} pour {e} €."
 }

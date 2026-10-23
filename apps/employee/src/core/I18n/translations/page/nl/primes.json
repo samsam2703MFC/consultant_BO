@@ -305,5 +305,17 @@
   "won_title": "Al gewonnen",
   "won_title_past": "Gewonnen",
   "not_this_month_title": "Niet deze maand",
-  "not_won_title": "Niet gewonnen"
+  "not_won_title": "Niet gewonnen",
+  "step_of": "Stap {n}/3",
+  "record_flag": "je record",
+  "d_steps": "De stappen",
+  "step_set": "Neerzetten",
+  "step_beat": "Verbeteren",
+  "step_win": "Winnen",
+  "aim_short": "mik op",
+  "tenth": "tiende",
+  "step1_line": "Een maand met minstens {n} tickets zet je record neer; je verbetert het vanaf de maand erna.",
+  "step2_line": "De 1e tiende erboven zet het nieuwe record neer, de 2e betaalt",
+  "step2_tickets": "Nog {n} tickets om de maand te laten tellen.",
+  "step3_next": "Nog {d} voor {e} €."
 }

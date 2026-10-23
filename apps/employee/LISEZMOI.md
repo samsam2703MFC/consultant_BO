@@ -95,6 +95,16 @@ mois clos : « Gagnées », « Pas gagnées ». La ligne d'une prime vit dans `p
 `primes/_macros.twig`) ; la phrase vient de `components/primes_etape.twig` en mode `texte`. L'Accueil garde son
 « Comment y arriver » (trois lignes), qui mène à la ligne de la prime (`/primes#prime-<clé>`).
 
+**Bats ton record, en trois étapes (23/10/2026)** : à la demande (« montrer le nombre de tickets manquants et à
+quelle étape elle se trouve »), maquette validée en version courte. Poser son record (un mois d'au moins 30
+tickets : sa moyenne de lignes par ticket devient le record), le battre (record + 0,2 : le 1er dixième pose le
+nouveau record, le 2e paie), gagner (un montant par dixième, jusqu'au plafond). Sans record, la ligne compte les
+tickets du mois jusqu'au repère « ton record » (« Étape 1/3 · encore 12 tickets ») et le plan dit « ta moyenne du
+mois deviendra ton record, à battre dès novembre » (`PrimesPlan` : `pose`, hors de portée ce mois-ci). Le détail
+montre les trois étapes en une rangée (où elle en est, une valeur sous chacune) et une phrase : les seuils de
+chaque dixième, ou ce qu'il manque pour le suivant. Le cockpit donne ses tickets du mois dans la brique du record
+(`tickets`, `src/primes.php`). Le haut du détail d'une ligne tient en une carte : « à gagner » et « offerte par ».
+
 La forme (`public/employee/assets/atelier/primes.css`, la dernière couche) : la police du système (SF sur
 iPhone) à la place de Gotham et Vank sur ces écrans, un fond clair, des listes groupées blanches sans bordure ni
 ombre, le rubis seul en accent et le vert pour ce qui est gagné, des icônes au trait (Bootstrap Icons) à la place

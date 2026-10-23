@@ -15,6 +15,7 @@
   "plan_pieces_goal": "{n} stuks meer voor je doel.",
   "plan_pieces_shop": "Met het team: {n} stuks meer voor het winkeldoel.",
   "plan_record_aim": "Op je volgende ~{n} tickets, mik op gemiddeld {v} artikelen om {a} lijnen per ticket te halen.",
+  "plan_record_first": "Je gemiddelde van deze maand wordt je record, te verbeteren vanaf {m}.",
   "plan_record_gap": "+{e} lijn per ticket om {a} te halen.",
   "plan_record_hard": "Je zou {v} artikelen per ticket nodig hebben tot het einde van de maand: je record verbeter je eerder volgende maand.",
   "plan_t_croisees": "Kruisverkoop",

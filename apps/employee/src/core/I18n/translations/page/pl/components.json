@@ -15,6 +15,7 @@
   "plan_pieces_goal": "{n} szt. więcej do twojego celu.",
   "plan_pieces_shop": "Z zespołem: {n} szt. więcej do celu sklepu.",
   "plan_record_aim": "Na kolejnych ~{n} paragonach celuj średnio w {v} artykułu, by przekroczyć {a} pozycji na paragon.",
+  "plan_record_first": "Twoja średnia z tego miesiąca stanie się rekordem do pobicia od miesiąca {m}.",
   "plan_record_gap": "+{e} pozycji na paragon, by przekroczyć {a}.",
   "plan_record_hard": "Trzeba by {v} artykułu na paragon do końca miesiąca: rekord lepiej pobić w przyszłym miesiącu.",
   "plan_t_croisees": "Sprzedaż łączona",

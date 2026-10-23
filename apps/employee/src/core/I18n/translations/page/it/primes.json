@@ -305,5 +305,17 @@
   "won_title": "Già vinti",
   "won_title_past": "Vinti",
   "not_this_month_title": "Non questo mese",
-  "not_won_title": "Non vinti"
+  "not_won_title": "Non vinti",
+  "step_of": "Fase {n}/3",
+  "record_flag": "il tuo record",
+  "d_steps": "Le fasi",
+  "step_set": "Fissare",
+  "step_beat": "Battere",
+  "step_win": "Vincere",
+  "aim_short": "punta a",
+  "tenth": "decimo",
+  "step1_line": "Un mese con almeno {n} scontrini fissa il tuo record; si batte dal mese successivo.",
+  "step2_line": "Il 1° decimo in più fissa il nuovo record, il 2° paga",
+  "step2_tickets": "Ancora {n} scontrini perché il mese conti.",
+  "step3_next": "Ancora {d} per {e} €."
 }
