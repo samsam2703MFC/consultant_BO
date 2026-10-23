@@ -792,6 +792,7 @@ function pmDemande(array $r): array
         'du' => $r['duH'] ?? (($r['du'] ?? null) !== null ? $r['du'] . ' 00:00' : null),
         'au' => $r['auH'] ?? (($r['au'] ?? null) !== null ? $r['au'] . ' 23:59' : null),
         'creneaux' => (array) ($r['creneaux'] ?? []), 'repetable' => !empty($r['repetable']), 'maxParTicket' => $r['maxParTicket'] ?? null,
+        'canaux' => $r['canaux'] ?? null, 'seuil' => $r['seuil'] ?? null,
         'statut' => strtoupper((string) ($r['statut'] ?? '')) === 'ACTIVE' ? 'en_caisse' : 'brouillon'];
 }
 
@@ -1115,7 +1116,12 @@ function ep_promos_magasin_demandes(): array
             $panel[] = ['id' => $r['id'], 'nom' => $r['nom'], 'type' => $r['type'], 'texte' => function_exists('pvTexte') ? pvTexte($r) : '', 'statut' => $r['statut'],
                 'etat' => pmEtatPanel($r, $auj), 'du' => $r['du'], 'au' => $r['au'], 'reseau' => ($r['shops'] ?? null) === null, 'magasins' => $r['shops'] === null ? null : count($r['shops']),
                 // De quoi la dupliquer en promotion du magasin : ce qu'on achète, ce qu'on reçoit, la récompense.
-                'x' => $r['declenche'], 'y' => $r['recoit'], 'recompense' => $r['recompense']];
+                'x' => $r['declenche'], 'y' => $r['recoit'], 'recompense' => $r['recompense'],
+                // Une information par colonne dans la liste (23/10/2026) : le lot d'un bundle, les créneaux, la règle du
+                // ticket, le canal et le seuil quand le panel les donne.
+                'bundle' => ($r['bundle'] ?? null) !== null ? ['prix' => $r['bundle']['prix'], 'items' => array_values(array_filter(array_map(static fn ($i) => (string) ($i['nom'] ?? ''), (array) ($r['bundle']['items'] ?? []))))] : null,
+                'creneaux' => (array) ($r['creneaux'] ?? []), 'repetable' => !empty($r['repetable']), 'maxParTicket' => $r['maxParTicket'] ?? null,
+                'canaux' => $r['canaux'] ?? null, 'seuil' => $r['seuil'] ?? null];
         }
     }
     $ts = (int) ($R0['ts'] ?? 0);

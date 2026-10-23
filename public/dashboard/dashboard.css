@@ -2097,7 +2097,7 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .pm-lien{border:none;background:none;padding:0;font:inherit;color:var(--color-text-muted);text-decoration:underline;cursor:pointer}
 .pm-ok{display:flex;align-items:center;gap:10px;background:rgba(45,122,62,.08);border:1px solid rgba(45,122,62,.25);color:#2d6a3a;border-radius:9px;padding:9px 12px;font-size:12.5px;margin-bottom:12px}
 .pm-x{margin-left:auto;border:none;background:none;cursor:pointer;color:inherit;opacity:.6}
-.pm-liste{overflow:hidden}
+.pm-liste{overflow:visible}
 .pm-filtres{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:.5px solid var(--color-border-tertiary)}
 .pm-filtres .db-ong button small{opacity:.7;font-weight:500;margin-left:2px}
 .pm-cherche{flex:1;min-width:180px}
@@ -2108,6 +2108,24 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .pm-tab td:first-child{min-width:240px}.pm-tab .n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
 .pm-tab .ok,.pm-c .ok,.pm-step .ok{color:#2d7a3e}.pm-tab .ko,.pm-c .ko,.pm-step .ko{color:#A61E1E}.pm-tab .mu{color:var(--color-text-muted);font-weight:500}
 .pm-act{white-space:nowrap;text-align:right}.pm-act .db-btn+.db-btn{margin-left:6px}
+/* Le tableau de la liste (23/10/2026) : une information par colonne, les actions dans « ⋯ », les colonnes à la carte. */
+.pm-tab2 td{vertical-align:middle;white-space:nowrap}.pm-tab2 td:first-child{min-width:180px;white-space:normal}
+.pm-tab2 th.c,.pm-tab2 td.c{text-align:center}.pm-tab2 th.r,.pm-tab2 td.r{text-align:right;font-variant-numeric:tabular-nums}
+.pm-tab2 td.nm b{font-weight:700}
+.pm-or{display:inline-block;padding:2px 7px;border-radius:6px;font:600 10.5px var(--font-ui)}.pm-or.m{background:#f6e9eb;color:#8D1D2C}.pm-or.r{background:#efe9df;color:#5d554d}
+.pm-oui{color:#2d7a3e;font-weight:700;font-size:13px}
+.pm-act{position:relative}
+.pm-dots{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:7px;width:30px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:#5d554d;cursor:pointer}
+.pm-dots.on,.pm-dots:hover{background:#f6f3ee;color:#222}
+.pm-menu{position:absolute;right:10px;top:calc(100% - 6px);z-index:20;background:#fff;border:.5px solid var(--color-border-secondary);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;min-width:200px;text-align:left;display:flex;flex-direction:column}
+.pm-menu button{border:none;background:none;text-align:left;padding:8px 10px;border-radius:7px;font:500 12.5px var(--font-ui);color:var(--color-text);cursor:pointer;white-space:nowrap}
+.pm-menu button:hover{background:#f6f3ee}.pm-menu button.ko{color:#A61E1E}
+.pm-colsw{position:relative;margin-left:auto}
+.pm-cols{right:0;top:calc(100% + 6px);display:grid;grid-template-columns:1fr 1fr;gap:0 8px;min-width:340px}
+.pm-cols .db-lab{grid-column:1/-1;padding:6px 8px 4px}
+.pm-cols label{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;font:500 12.5px var(--font-ui);cursor:pointer;white-space:nowrap}
+.pm-cols label:hover{background:#f6f3ee}.pm-cols input{accent-color:#8D1D2C}
+.pm-cols .pm-lien{grid-column:1/-1;margin:6px 8px 4px;text-align:left}
 .pm-msg{margin-top:4px;font-size:11.5px;color:#8D1D2C}
 .pm-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:8px;font:600 10.5px var(--font-ui);white-space:nowrap}
 .pm-chip.b{background:var(--color-background-secondary);color:#555}.pm-chip.a{background:#FBF3DC;color:#8a5a13}.pm-chip.ok{background:rgba(45,122,62,.12);color:#2d7a3e}.pm-chip.r{background:rgba(141,29,44,.10);color:#8D1D2C}
@@ -2243,3 +2261,16 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .lv-al{display:block;width:100%;font-size:10px;color:#B45309;font-weight:600}
 .lv-leg .lv-p{margin:0 2px 0 4px;vertical-align:-1px;border-radius:50%;width:9px;height:9px}
 .lv-vide{padding:16px;font-size:12px;color:var(--color-text-muted)}
+/* Les conditions du ticket (23/10/2026) : le canal, le seuil ; leurs étiquettes dans la liste et le récapitulatif. */
+.pm-canaux{grid-template-columns:repeat(3,1fr);margin-top:6px}
+.pm-canaux .pm-opt{padding:12px 14px}.pm-canaux .pm-opt b{margin-top:6px}
+.pm-ico{display:inline-flex;gap:4px;color:var(--color-text-muted)}.pm-opt.on .pm-ico{color:var(--color-primary)}
+.pm-seuil{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 4px}
+.pm-eur{display:inline-flex;align-items:center;gap:6px}.pm-eur .pm-in{width:110px}.pm-eur i{font:600 11.5px var(--font-ui);font-style:normal;color:var(--color-text-muted)}
+.pm-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.pm-bdg{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:7px;font:600 10.5px var(--font-ui);white-space:nowrap}
+.pm-bdg svg{width:12px;height:12px}
+.pm-bdg.c{background:#efe9df;color:#5d554d}.pm-bdg.w{background:rgba(31,95,139,.10);color:#1f5f8b}.pm-bdg.s{background:#FBF3DC;color:#8a5a13}
+.pm-tk .aut{color:var(--color-text-muted)}
+.pm-tks{margin-top:8px;font-size:11.5px;line-height:1.45;color:#8a5a13;background:#FBF3DC;border-radius:7px;padding:7px 10px}.pm-tks.ok{color:#2d7a3e;background:rgba(45,122,62,.10)}
+@media (max-width:700px){.pm-canaux{grid-template-columns:1fr !important}}
