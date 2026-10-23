@@ -966,3 +966,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T06:53:19Z promotions : liste en tableau, une information par colonne
 2026-10-23T07:04:21Z promotions : étape Conditions du ticket (canal, seuil)
 2026-10-23T07:19:45Z promotions : plus de limite à deux, prix final à l'étape Y
+2026-10-23T07:29:21Z promotions : valeur Y depuis le prix final, moyennes d'une catégorie
