@@ -3903,3 +3903,36 @@ différents — la définition « taux de fidélisation » du panel consultant, 
 **23/10/2026 — Promotions : le seuil et la destination trouvés au panel (`minimum_receipt_gross`, `sales_channel_scope`).** La sonde du soir (19:18, magasin 4) a relu deux champs absents de la documentation : `minimum_receipt_gross` (sur toutes les fiches « X + Y » et le bundle, vide partout — le minimum du ticket TTC) et `sales_channel_scope` (« BOTH » ou vide). `pvConditions` les reconnaît : un champ de seuil vide donne quand même son nom ; `sales_channel_scope` est un canal à une seule valeur. **Le seuil s'écrit** désormais (« À partir d'un montant » actif, envoyé sous `minimum_receipt_gross`, relu). **Le canal** ne s'écrit que du côté dont la valeur exacte a été relue sur une promotion du panel (`pmCanalEcrivable` : nom connu, et pour un champ à une valeur, le jeton de ce côté) — « BOTH » seule est connue : « Comptoir seulement » et « Webshop seulement » restent grisés, le serveur refuse (422) en nommant le champ. `regles.conditions` rend `seuil`, `canal`, `comptoir`, `webshop` et `noms {seuil, canal}` ; l'avertissement de l'étape 4 dit ce qui manque et comment le débloquer (une promotion du panel « comptoir seulement » ou « webshop seulement »). « Avant remise » disparaît des textes du seuil (rien ne le confirme pour `minimum_receipt_gross`). L'essai d'écriture de `GET /ventes/promos/documentation` : le produit se cherche dans `product_ids`, `product_targets` ou `products[]` de douze fiches ; une valeur n'est gardée que si elle revient identique (colonne « Revenu autrement ») ; il essaie `minimum_receipt_gross` et `sales_channel_scope`, puis les valeurs du canal (WEBSHOP, ONLINE, WEB ; POS, SHOP, STORE, IN_STORE). `docs/api-promotions.md` tient ce qui a été relu.
 
 **23/10/2026 — Primes de l'app worker (`#/primes-app-worker`) : optimisé pour le bureau.** Demande de Sam. Sur un écran large (≥ 1 200 px), chaque prime tient sur une ligne en colonnes alignées sous un en-tête par groupe — Prime, Ce qui compte, Qui gagne, Réseau, Récompense, Payée par (`.prl-*` dans `assets/css/app.css`, grille CSS ; la liste en trois lignes reste en dessous de 1 200 px) ; l'écran va jusqu'à 1 560 px au lieu de 1 180 ; « + Nouvelle prime » et « + Prime B2B » montent dans l'en-tête de leur section (marque et franchisés), « Enregistrer » ne paraît que s'il y a un changement. `app.js`, `templates.js` et `app.css` sont repris de la version en ligne avant le changement (le module Primes d'une autre session, #32).
+
+### Primes app worker — la page d'un magasin, tous les déclencheurs pour ses primes (23/10/2026, demande de Sam)
+
+**Adresse** : `#/primes-app-worker?shop=3` ouvre le panneau des primes du magasin 3 ; l'id se change à la main dans la
+barre d'adresse (un id inconnu liste les magasins). Sans `?shop`, la page admin (marque, primes de tous les franchisés,
+promotions, moyennes). « Page franchisé » du rail rouvre le dernier magasin valide. Un lien « ?shop=3 » avant l'ancre
+(PR #33) passe dans l'ancre au chargement. Sur un écran large, les primes du magasin se lisent en colonnes comme sur
+la page admin, la colonne des moyennes titrée « Ce magasin ».
+
+**Page du magasin** : les primes de la marque et des sponsors qui y tournent (à lire, avec la moyenne et l'objectif du
+magasin) ; les siennes (posées et payées par le magasin) ; ses chiffres face au réseau ; les promotions du panel qui y
+tournent (une prime du magasin en un geste).
+
+**Les primes d'un magasin** (`famille: magasin`, `payeur: magasin`, six de chaque sorte au plus) — `POST
+/ventes/primes-app` les reçoit dans la liste, comme les autres :
+
+| Sorte | `type` | Réglages |
+|---|---|---|
+| Promotion | `promo` | produits (panel ou cockpit), période, qui gagne (1re, seuil, objectif magasin, objectif vendeuse), montant ou cadeau |
+| Catégorie | `categorie` + `shop` | mot du nom des produits, période, qui gagne (`regle` : `premiere` ou `seuil`), minimum de pièces, montant ou cadeau |
+| Ventes croisées | `cible` + `base: croisees` + `shop` | `cible` (%), `minTickets`, montant ou cadeau, période |
+| Objectif CA | `cible` + `base: objectif` + `shop` | `pct` de l'objectif du mois, `heuresMin`, montant ou cadeau, période |
+| Note Google | `cible` + `base: google` + `shop` | `seuil` (★), `heuresMin`, montant ou cadeau, période |
+| Clients pro · B2B | `b2b` + `shop` | `mode` (fixe ou %), `taux` ou `montant`, `duree`, `plafond`, `min`, période (voir Prime B2B) |
+
+Clés : `k{shop}z…` (catégorie), `t{shop}z…` (target), `pm{shop}z…` (promo) — gardées à chaque réenregistrement.
+
+**Calcul** (`primesCiblesMagasin`, `concoursReglages($shop)`) : un target du magasin se gagne par chaque vendeuse de ce
+magasin — ventes croisées : son taux du mois (la même vente croisée que la marque) ≥ cible et assez de tickets ; objectif
+CA : l'atteinte du magasin (projetée tant que le mois court) ≥ % et ses heures ; note Google : la note de la fiche ≥ seuil
+et ses heures. Un cadeau se gagne sans euros. Une catégorie du magasin ne classe que ses vendeuses. Les montants entrent
+dans « Mes primes » (cartes `type: target`, `base`, `duMagasin: true`), le mois clos, les primes du mois de tous (colonne
+« Targets du magasin », `totaux.cibles`), l'enregistrement (`cibles`, payé par le magasin) et le SMS.
