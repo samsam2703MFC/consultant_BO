@@ -25,6 +25,7 @@
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
     calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
     levVue: (function () { try { return localStorage.getItem('db.levVue') === 'cumul' ? 'cumul' : 'mois'; } catch (e) { return 'mois'; } })(),
+    opPro: (function () { try { return localStorage.getItem('db.opPro') === 'combi' ? 'combi' : 'sep'; } catch (e) { return 'sep'; } })(),
     stockOuvert: false, stockVues: null, cmdOuvert: false, invOuvert: false, cmdListeOuvert: false,
     ppOnglet: ['plan', 'suivi', 'params'].includes(q.get('onglet')) ? q.get('onglet') : 'plan', ppEdit: null, ppOuvert: {}, ppMsg: null, ppEnvoi: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false, coCanal: null,
@@ -2767,12 +2768,18 @@
     const dMb = mbPct != null && mb7Pct != null ? mbPct - mb7Pct : null;
     const jourNom = JOURS_L ? JOURS_L[new Date(S.date + 'T12:00:00').getDay()] : 'J−7';
     const lblB = j7 ? (j7.moment ? jourNom + ' dernier à ' + j7.moment : jourNom + ' dernier') : 'J−7';
-    return { j7, obj, proj, dCa, dTk, dPan, dProj, panA, pan7, pan7J, panBase, mb7, mb7Pct, mbPct, dMb, jourNom, lblB, moment: j7 && j7.moment ? j7.moment : null };
+    // Le comptoir et le B2B (23/10/2026, Sam : « le B2B fausse la vue ») : l'objectif du jour se partage selon la part B2B
+    // habituelle (les quatre derniers mêmes jours lus) ; sans elle, tout l'objectif reste au comptoir.
+    const caPro = m && m.caPro != null ? +m.caPro : null, part = m && m.partProHabituelle != null ? +m.partProHabituelle : null;
+    const objB = obj && part != null ? obj * part / 100 : null, objC = obj ? obj - (objB || 0) : null;
+    return { j7, obj, proj, dCa, dTk, dPan, dProj, panA, pan7, pan7J, panBase, mb7, mb7Pct, mbPct, dMb, jourNom, lblB, moment: j7 && j7.moment ? j7.moment : null, caPro, part, objB, objC };
   }
   const JOURS_L = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
   /** La carte du duel : deux pistes sur la même échelle (l'objectif), le curseur du temps, le verdict. */
-  function opDuel(D) {
+  function opDuel(D, o) {
     const { now, fin, JD, m, ca, tk } = D;
+    // o.comptoir : la jauge du comptoir seul (opDuelSplit) ; o.j7Total : J−7 sans son B2B lu, comptoir et pro ensemble.
+    const cpt = !!(o && o.comptoir), sous7 = cpt ? (o.j7Total ? 'comptoir + pro · ' : 'comptoir · ') : '';
     const estAuj = !!(JD && JD.estAujourdhui);
     if (!m) { return `<div class="op-duel"><div class="dh"><span class="lab">Objectif du jour</span><span class="dr">${S.err['jourM|' + S.date] ? esc(S.err['jourM|' + S.date]) : 'lecture du Résultat du jour…'}</span></div>${opSk()}</div>`; }
     const B = opDuelBase(D), j7 = B.j7, obj = B.obj;
@@ -2801,25 +2808,67 @@
       return pill(a, aDed) + pill(b, bDed);
     };
     const piste = (lb, sous, segs, L) => `<div class="op-piste"><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${depasse ? `<i class="objm" style="left:${pO.toFixed(1)}%" title="objectif ${fE(obj)}"></i>` : ''}${part != null && !fin ? `<i class="temps" style="left:${(obj ? pct(obj * part / 100) : part).toFixed(1)}%" title="${fP0(part)} de la journée écoulée"></i>` : ''}${etiquettes(L)}</div></div>`;
-    let h = `<div class="op-duel"><div class="dh"><span class="lab">Objectif du ${esc(B.jourNom)}${obj ? `<b>${fE(obj)}</b>` : ''}</span>${atteint ? '<span class="chip" style="background:#f7edc8;color:#7d6310">🏆 objectif atteint</span>' : ''}<span class="dr">${fin ? 'journée terminée' : opHM(now) + (part != null ? ' · ' + fP0(part) + ' de la journée écoulée' : '')}</span></div>`;
+    let h = `<div class="op-duel"><div class="dh"><span class="lab">Objectif ${cpt ? 'comptoir ' : ''}du ${esc(B.jourNom)}${obj ? `<b>${fE(obj)}</b>` : ''}</span>${atteint ? '<span class="chip" style="background:#f7edc8;color:#7d6310">🏆 objectif atteint</span>' : ''}<span class="dr">${fin ? 'journée terminée' : opHM(now) + (part != null ? ' · ' + fP0(part) + ' de la journée écoulée' : '')}</span></div>`;
     const pA = pct(ca), pP = B.proj != null ? pct(B.proj) : null;
     const LA = [];
     if (ca != null) { LA.push({ p: pA, txt: fE(ca) + (obj ? ' · ' + fP0(100 * ca / obj) : ''), cls: '' }); }
     if (pP != null && pP > pA) { LA.push({ p: pP, txt: 'projection ' + fE(B.proj), cls: 'proj', titre: 'au rythme de la journée, ' + fE(B.proj) + ' ce soir' }); }
-    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', fin ? (estAuj ? 'journée terminée' : fD(S.date)) : 'à ' + opHM(now),
+    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', (cpt ? 'comptoir · ' : '') + (fin ? (estAuj ? 'journée terminée' : fD(S.date)) : 'à ' + opHM(now)),
       `<div class="seg ${atteint ? 'or' : 'fait'}" style="width:${pA.toFixed(1)}%"></div>${pP != null && pP > pA ? `<div class="seg proj" style="left:${pA.toFixed(1)}%;width:${(pP - pA).toFixed(1)}%" title="projection au rythme de la journée : ${fE(B.proj)}"></div>` : ''}`, LA);
     if (j7) {
       const p7 = pct(j7.ca), p7j = j7.moment ? pct(j7.caJour) : p7;
       const L7 = [{ p: p7, txt: fE(j7.ca) + (j7.moment ? ' à ' + esc(j7.moment) : (obj ? ' · ' + fP0(100 * j7.ca / obj) : '')), cls: '' }];
       if (j7.moment) { L7.push({ p: p7j, txt: 'journée ' + fE(j7.caJour) + (obj ? ' · ' + fP0(100 * j7.caJour / obj) : ''), cls: 'fin' }); }
-      h += piste(B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1) + ' dernier', fD(j7.date),
+      h += piste(B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1) + ' dernier', sous7 + fD(j7.date),
         `<div class="seg j7" style="width:${p7.toFixed(1)}%"></div>${j7.moment && p7j > p7 ? `<div class="seg j7j" style="left:${p7.toFixed(1)}%;width:${(p7j - p7).toFixed(1)}%"></div>` : ''}`, L7);
     } else {
       h += `<div class="op-piste"><div class="pl"><b>${esc(B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1))} dernier</b><small>pas de ventes gravées</small></div><div class="pb"></div></div>`;
     }
-    h += depasse ? `<div class="op-dax ab"><span>0 €</span><span class="o${pO > 80 ? ' d' : ''}" style="left:${pO.toFixed(1)}%">objectif ${fE(obj)}</span></div>`
-      : `<div class="op-dax"><span>0 €</span><span>${fE(echelle / 2)}</span><span>${obj ? 'objectif ' + fE(obj) : fE(echelle)}</span></div>`;
+    h += depasse ? `<div class="op-dax ab"><span>0 €</span><span class="o${pO > 80 ? ' d' : ''}" style="left:${pO.toFixed(1)}%">objectif ${cpt ? 'comptoir ' : ''}${fE(obj)}</span></div>`
+      : `<div class="op-dax"><span>0 €</span><span>${fE(echelle / 2)}</span><span>${obj ? 'objectif ' + (cpt ? 'comptoir ' : '') + fE(obj) : fE(echelle)}</span></div>`;
     // La ligne « face à samedi dernier · clients · panier · au rythme de la journée » est retirée (10/10/2026).
+    return h + '</div>';
+  }
+  /**
+   * Les jauges du comptoir et du B2B (23/10/2026, Sam, maquette A) : la jauge du haut ne compte que le comptoir, face à
+   * l'objectif du jour moins la part B2B habituelle ; la seconde, le B2B seul, face à cette part. Le B2B pas encore lu :
+   * une seule jauge, comptoir et pro ensemble, comme avant.
+   */
+  function opDuelSplit(D) {
+    const { m, ca } = D;
+    if (!m || ca == null) { return opDuel(D); }
+    const B = opDuelBase(D), j7 = B.j7;
+    if (B.caPro == null) { return opDuel(D); }
+    const caC = Math.max(0, ca - B.caPro);
+    // Le comptoir de J−7 : celui du serveur quand il le donne (le même que le panier comptoir), sinon CA − CA pro.
+    const j7Lu = !!(j7 && (j7.caComptoir != null || j7.caPro != null));
+    const j7C = j7 && j7Lu ? Object.assign({}, j7, { ca: j7.caComptoir != null ? +j7.caComptoir : Math.max(0, j7.ca - j7.caPro),
+      caJour: j7.caComptoirJour != null ? +j7.caComptoirJour : Math.max(0, j7.caJour - (j7.caProJour || 0)) }) : j7;
+    const mC = Object.assign({}, m, { objectifJour: B.objC, j7: j7C, caPro: null, partProHabituelle: null,
+      projection: m.projection != null && ca > 0 ? m.projection * caC / ca : m.projection });
+    return opDuel(Object.assign({}, D, { ca: caC, m: mC }), { comptoir: true, j7Total: !!j7 && !j7Lu }) + opDuelPro(D, B);
+  }
+  /** La jauge du B2B : aujourd'hui et J−7 au même moment, à sa propre échelle, face à sa part de l'objectif du jour. */
+  function opDuelPro(D, B) {
+    const { JD, m } = D, j7 = B.j7, estAuj = !!(JD && JD.estAujourdhui);
+    const ca = B.caPro || 0, n = +m.ticketsPro || 0, objB = B.objB;
+    const p7 = j7 && j7.caPro != null ? +j7.caPro : null, p7j = j7 && j7.caProJour != null ? +j7.caProJour : null;
+    // Un magasin sans B2B (rien aujourd'hui, ni à J−7, ni d'habitude) : pas de seconde jauge.
+    if (!ca && !p7j && !objB) { return ''; }
+    const echelle = Math.max(objB || 0, ca, p7j || 0, 1) * 1.08, pct = v => Math.max(0, Math.min(100, 100 * (v || 0) / echelle)), pO = objB ? pct(objB) : null;
+    const marque = pO != null ? `<i class="objm" style="left:${pO.toFixed(1)}%" title="part B2B habituelle ${fE(objB)}"></i>` : '';
+    const val = (p, t, cls) => `<span class="val${cls ? ' ' + cls : ''}${p > 72 ? ' dedans' : ''}" style="left:${p.toFixed(1)}%">${t}</span>`;
+    const piste = (lb, sous, segs) => `<div class="op-piste"><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${marque}</div></div>`;
+    const tks = k => fN(k) + ' ticket' + (k > 1 ? 's' : '') + ' pro', jn = B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1);
+    let h = `<div class="op-duel b2b"><div class="dh"><span class="lab">${objB ? 'Objectif B2B du ' + esc(B.jourNom) + `<b>${fE(objB)}</b>` : 'B2B du ' + esc(B.jourNom)}</span><span class="dr">${tks(n)}${B.part != null ? ' · part habituelle ' + nf(B.part, 0) + ' %' : ' · part habituelle pas encore lue'}</span></div>`;
+    const pA = pct(ca);
+    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', 'B2B · ' + tks(n), `<div class="seg fait" style="width:${pA.toFixed(1)}%"></div>${val(pA, fE(ca) + (objB ? ' · ' + fP0(100 * ca / objB) : ''))}`);
+    if (p7 != null) {
+      const q7 = pct(p7), q7j = pct(p7j);
+      h += piste(jn + ' dernier', 'B2B · ' + fD(j7.date), `<div class="seg j7" style="width:${q7.toFixed(1)}%"></div>${p7j > p7 ? `<div class="seg j7j" style="left:${q7.toFixed(1)}%;width:${(q7j - q7).toFixed(1)}%"></div>` : ''}`
+        + val(q7, fE(p7) + (j7.moment ? ' à ' + esc(j7.moment) : '')) + (p7j > p7 ? val(q7j, 'journée ' + fE(p7j), 'fin') : ''));
+    } else { h += `<div class="op-piste"><div class="pl"><b>${esc(jn)} dernier</b><small>B2B pas encore lu</small></div><div class="pb"></div></div>`; }
+    h += `<div class="op-dax ab"><span>0 €</span>${pO != null ? `<span class="o${pO > 80 ? ' d' : ''}" style="left:${pO.toFixed(1)}%">part B2B habituelle ${fE(objB)}</span>` : ''}</div>`;
     return h + '</div>';
   }
   /** Le cumul heure par heure d'aujourd'hui face à celui de J−7 : le CA jusqu'à l'objectif, ou les clients
@@ -2833,39 +2882,65 @@
     // Les clients ne se dessinent que si les deux journées ont leurs tickets heure par heure.
     const aTk = hA.some(x => x.tickets != null) && h7.some(x => x.tickets != null);
     const mode = aTk && S.opCrb === 'tk' ? 'tk' : 'ca', champ = mode === 'tk' ? 'tickets' : 'ca';
+    // Comptoir et pro séparés, ou combinés (23/10/2026, Sam) : les tickets pro d'aujourd'hui et de J−7 heure par heure
+    // (heuresPro, j7.heures[].pro) ; sans eux, une ligne par journée comme avant, sans bascule.
+    const proOk = !!(m && Array.isArray(m.heuresPro) && h7.some(x => x.pro != null))
+      && (m.heuresPro.length > 0 || h7.some(x => +x.pro > 0) || +m.partProHabituelle > 0);   // un magasin sans B2B : pas de bascule
+    const sep = proOk && S.opPro !== 'combi';
+    const proA = new Map(((m && m.heuresPro) || []).map(x => [+x.h, x]));
+    const vPro = (x, a) => a ? (mode === 'tk' ? (proA.get(+x.h) || {}).n || 0 : (proA.get(+x.h) || {}).ca || 0) : (mode === 'tk' ? +x.proN || 0 : +x.pro || 0);
     const fmtV = v => mode === 'tk' ? fN(Math.round(v)) + ' clients' : fE(v);
-    const cible = mode === 'tk' ? (m && m.refTickets ? m.refTickets : null) : B.obj;
-    const cibleLib = cible == null ? '' : (mode === 'tk' ? 'référence ' + fN(Math.round(cible)) + ' clients' : 'objectif ' + fE(cible));
+    const cible = mode === 'tk' ? (m && m.refTickets ? m.refTickets : null) : (sep ? B.objC : B.obj);
+    const cibleLib = cible == null ? '' : (mode === 'tk' ? 'référence ' + fN(Math.round(cible)) + ' clients' : (sep ? 'objectif comptoir ' : 'objectif ') + fE(cible));
+    const cibleB = sep && mode === 'ca' && B.objB ? B.objB : null;
     const hNow = now == null ? 24 : Math.floor(now / 60), frac = now == null ? 0 : (now % 60) / 60;
-    const cumul = (hs, limite) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += +x[champ] || 0; out.push({ h: x.h, v: c }); }); return out; };
-    const cA = cumul(hA, fin ? null : hNow), c7 = cumul(h7, null);
-    if (!cA.length || !c7.length) { return ''; }
-    const h0 = Math.min(6, ...cA.map(x => x.h), ...c7.map(x => x.h)), h1 = Math.max(19, ...cA.map(x => x.h + 1), ...c7.map(x => x.h + 1));
-    const mx = Math.max(cible || 0, cA[cA.length - 1].v, c7[c7.length - 1].v, 1) * (cible && cible >= Math.max(cA[cA.length - 1].v, c7[c7.length - 1].v) ? 1 : 1.08);
+    const cumul = (hs, limite, val) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += Math.max(0, val(x)); out.push({ h: x.h, v: c }); }); return out; };
+    const lim = fin ? null : hNow, jn = esc(B.jourNom) + ' dernier', auj = fin ? 'cette journée' : 'aujourd’hui';
+    // Les courbes : [points, classe de la ligne, classe du point, étiquette de fin (ou ''), classe de l'étiquette, en paliers].
+    const L = sep
+      ? [[cumul(h7, null, x => (+x[champ] || 0) - vPro(x, false)), 'l7', 'p7', jn, 't7', false],
+         [cumul(h7, null, x => vPro(x, false)), 'l7p', 'p7p', '', '', true],
+         [cumul(hA, lim, x => (+x[champ] || 0) - vPro(x, true)), 'la', 'pa', auj, 'ta', false],
+         [cumul(hA, lim, x => vPro(x, true)), 'lap', 'pap', '', '', true]]
+      : [[cumul(h7, null, x => +x[champ] || 0), 'l7', 'p7', jn, 't7', false], [cumul(hA, lim, x => +x[champ] || 0), 'la', 'pa', auj, 'ta', false]];
+    if (L.some(c => !c[0].length)) { return ''; }
+    const fins = L.map(c => c[0][c[0].length - 1].v);
+    const h0 = Math.min(6, ...L.map(c => c[0][0].h)), h1 = Math.max(19, ...L.map(c => c[0][c[0].length - 1].h + 1));
+    const mx = Math.max(cible || 0, cibleB || 0, ...fins, 1) * (cible && cible >= Math.max(...fins) ? 1 : 1.08);
     const axe = v => mode === 'tk' ? fN(Math.round(v)) : fN(Math.round(v / 10) * 10);
     const dessine = (W, Hh, pas, cls) => {
       const tel = cls === 'tel';
       const X0 = 44, X1 = W - 16, Y0 = 14, Y1 = Hh - 26;
       const x = hh => X0 + (X1 - X0) * (hh - h0) / (h1 - h0), y = v => Y1 - (Y1 - Y0) * v / mx;
-      const chemin = c => 'M' + x(h0).toFixed(1) + ' ' + y(0).toFixed(1) + ' ' + c.map(p => 'L' + x(p.h + 1).toFixed(1) + ' ' + y(p.v).toFixed(1)).join(' ');
-      const lastA = cA[cA.length - 1], last7 = c7[c7.length - 1];
+      // Le pro tombe par tickets : en paliers, la marche au milieu de l'heure ; le comptoir monte heure par heure.
+      const chemin = (c, palier) => 'M' + x(h0).toFixed(1) + ' ' + y(0).toFixed(1) + ' ' + c.map((p, k) => palier
+        ? 'L' + x(p.h + 0.5).toFixed(1) + ' ' + y(k ? c[k - 1].v : 0).toFixed(1) + ' L' + x(p.h + 0.5).toFixed(1) + ' ' + y(p.v).toFixed(1) + ' L' + x(p.h + 1).toFixed(1) + ' ' + y(p.v).toFixed(1)
+        : 'L' + x(p.h + 1).toFixed(1) + ' ' + y(p.v).toFixed(1)).join(' ');
       let g = `<svg class="op-crb ${cls}" viewBox="0 0 ${W} ${Hh}">`;
       [0.25, 0.5, 0.75, 1].forEach(f => { g += `<line x1="${X0}" x2="${X1}" y1="${y(mx * f).toFixed(1)}" y2="${y(mx * f).toFixed(1)}" class="gr"/><text x="${X0 - 6}" y="${(y(mx * f) + 3).toFixed(1)}" text-anchor="end" class="ax">${axe(mx * f)}</text>`; });
       if (cible) { g += `<line x1="${X0}" x2="${X1}" y1="${y(cible).toFixed(1)}" y2="${y(cible).toFixed(1)}" class="cib"/><text x="${X0 + 4}" y="${(y(cible) - 4).toFixed(1)}" class="obj">${cibleLib}</text>`; }
+      if (cibleB) { g += `<line x1="${X0}" x2="${X1}" y1="${y(cibleB).toFixed(1)}" y2="${y(cibleB).toFixed(1)}" class="cibp"/><text x="${X0 + 4}" y="${(y(cibleB) - 4).toFixed(1)}" class="objp">part B2B habituelle ${fE(cibleB)}</text>`; }
       for (let hh = h0; hh <= h1; hh += pas) { g += `<text x="${x(hh).toFixed(1)}" y="${Hh - 8}" text-anchor="middle" class="ax">${hh} h</text>`; }
-      g += `<path d="${chemin(c7)}" class="l7"/><path d="${chemin(cA)}" class="la"/>`;
+      L.forEach(c => { g += `<path d="${chemin(c[0], c[5])}" class="${c[1]}"/>`; });
+      const cA = L[sep ? 2 : 1][0], c7 = L[0][0], lastA = cA[cA.length - 1], last7 = c7[c7.length - 1];
       // L'heure qu'il est : en haut de son trait, sauf quand l'étiquette de fin de J−7 est à côté (fin de journée),
       // alors en bas ; au téléphone, toujours en bas et les valeurs de fin passent dans la légende.
       if (!fin && now != null) { const v7now = (c7.find(q => q.h === hNow) || last7).v; const bas = tel || hNow + frac > h1 - 2.5 || lastA.v / mx > 0.8 || v7now / mx > 0.8; g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${bas ? Y1 - 6 : Y0 + 12}" class="nowt">${opHM(now)}</text>`; }
-      g += `<circle cx="${x(lastA.h + 1).toFixed(1)}" cy="${y(lastA.v).toFixed(1)}" r="4" class="pa"/>${tel ? '' : `<text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.v) + 18).toFixed(1)}" text-anchor="end" class="ta">${fin ? 'cette journée' : 'aujourd’hui'} ${fmtV(lastA.v)}</text>`}`;
-      g += `<circle cx="${x(last7.h + 1).toFixed(1)}" cy="${y(last7.v).toFixed(1)}" r="4" class="p7"/>${tel ? '' : `<text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.v) - 10).toFixed(1)}" text-anchor="end" class="t7">${esc(B.jourNom)} dernier ${fmtV(last7.v)}</text>`}`;
+      L.forEach(c => { const p = c[0][c[0].length - 1]; g += `<circle cx="${x(p.h + 1).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4" class="${c[2]}"/>`; });
+      if (!tel) {
+        g += `<text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.v) + 18).toFixed(1)}" text-anchor="end" class="ta">${L[sep ? 2 : 1][3]} ${fmtV(lastA.v)}</text>`;
+        g += `<text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.v) - 10).toFixed(1)}" text-anchor="end" class="t7">${L[0][3]} ${fmtV(last7.v)}</text>`;
+      }
       return g + '</svg>';
     };
-    const valA = fmtV(cA[cA.length - 1].v), val7 = fmtV(c7[c7.length - 1].v);
     const bascule = aTk ? `<span class="op-crbtog" role="tablist"><button type="button" class="${mode === 'ca' ? 'on' : ''}" data-opcrb="ca">CA</button><button type="button" class="${mode === 'tk' ? 'on' : ''}" data-opcrb="tk">Clients</button></span>` : '';
-    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${bascule}</div>
+    const basculePro = proOk ? `<span class="op-crbtog" role="tablist"><button type="button" class="${sep ? 'on' : ''}" data-oppro="sep">Comptoir et pro séparés</button><button type="button" class="${sep ? '' : 'on'}" data-oppro="combi">Combinés</button></span>` : '';
+    const leg = sep
+      ? [['la', auj + ' · comptoir', fins[2]], ['lap', auj + ' · pro', fins[3]], ['l7', jn + ' · comptoir (' + fD(j7.date) + ')', fins[0]], ['l7p', jn + ' · pro', fins[1]]]
+      : [['la', auj, fins[1]], ['l7', jn + ' (' + fD(j7.date) + ')', fins[0]]];
+    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${basculePro}${bascule}</div>
       <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
-      <div class="op-dleg"><span><i class="la"></i>${fin ? 'cette journée' : 'aujourd’hui'}<b class="tv"> ${valA}</b></span><span><i class="l7"></i>${esc(B.jourNom)} dernier (${fD(j7.date)})<b class="tv"> ${val7}</b></span>${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
+      <div class="op-dleg">${leg.map(([c, t, v]) => `<span><i class="${c}"></i>${t}<b class="tv"> ${fmtV(v)}</b></span>`).join('')}${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
   }
   /** Le duel, chiffre par chiffre : aujourd'hui, J−7 à la même heure, l'écart, la journée de J−7, la référence. */
   function opDuelTable(D, opt) {
@@ -2930,7 +3005,7 @@
     // Une donnée, un seul endroit (11/10/2026) : la jauge porte le CA face à l'objectif et à J−7 ; le duel, les clients
     // et le panier ; la courbe, l'heure par heure. Les quatre tuiles (heure, vitrine, équipe, cuissons) redisaient les
     // cartes du dessous : retirées au téléphone.
-    let h = opDuel(D) + opDuelTable(D, { sansCa: true }) + opDuelHeures(D);
+    let h = opDuelSplit(D) + opDuelTable(D, { sansCa: true }) + opDuelHeures(D);
     // La vitrine : ce qui demande un geste, puis le reste replié.
     if (U) {
       h += opVitrine(D, true);
@@ -3113,7 +3188,7 @@
 
     /* 1. Le duel avec J−7 (maquette B du 08/10/2026) : la jauge à deux pistes, les quatre tuiles
      * du moment, le cumul heure par heure, le tableau chiffre par chiffre. */
-    h += opDuel(D);
+    h += opDuelSplit(D);
     h += `<div class="op-mnt quatre">${opTuiles(D)}</div>`;
     h += opDuelHeures(D);
     h += opDuelTable(D);
@@ -7367,6 +7442,7 @@
     $.querySelectorAll('[data-vitall]').forEach(b => b.addEventListener('click', () => { const T = S.vitTout || (S.vitTout = {}); T[b.dataset.vitall] = !T[b.dataset.vitall]; rendre(); }));
     $.querySelectorAll('[data-vitb]').forEach(b => b.addEventListener('click', () => { const O = S.vitOuv || (S.vitOuv = {}); O[b.dataset.vitb] = !O[b.dataset.vitb]; rendre(); }));
     $.querySelectorAll('[data-opcrb]').forEach(b => b.addEventListener('click', () => { S.opCrb = b.dataset.opcrb; rendre(); }));
+    $.querySelectorAll('[data-oppro]').forEach(b => b.addEventListener('click', () => { S.opPro = b.dataset.oppro; try { localStorage.setItem('db.opPro', S.opPro); } catch (e) { /* stockage indisponible */ } rendre(); }));
     $.querySelectorAll('[data-opouv]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.opouv; if (S.opOuv[k]) { delete S.opOuv[k]; } else { S.opOuv[k] = true; } rendre(); }));
     $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = ['treemap', 'promo', 'portion'].includes(b.dataset.cvue) ? b.dataset.cvue : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-cacc]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.cacc; S.cOuv[k] = !S.cOuv[k]; rendre(); }));

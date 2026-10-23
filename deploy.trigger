@@ -970,3 +970,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T07:59:56Z promotions : Tout le temps, plus de durée maximale
 2026-10-23T08:07:15Z promotions : Tout le temps jusqu'au 31/12/2037
 2026-10-23T08:20:46Z marże : sprzedawalność w Belgii (ceny w sklepach z API panelu, konto z cockpitu ; migracja 053)
+2026-10-23T08:25:12Z dashboard : jauge comptoir seul, jauge B2B dessous, heure par heure séparé ou combiné
