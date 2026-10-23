@@ -41,12 +41,11 @@ final class PageTabs
             ['/client-complaints/picking-list', 'Listy kompletacyjne', 'bi-list-check'],
             ['/client-complaints/shipping-documents', 'Dokumenty zwrotów', 'bi-file-earmark-text'],
         ]],
-        'archive' => ['label' => 'Archiwum dokumentów', 'section' => 'Zamówienia', 'icon' => 'bi-archive', 'tabs' => [
-            ['/archive/documents/shipping/wz', 'WZ', 'bi-file-earmark'],
-            ['/archive/documents/shipping/cmr', 'CMR', 'bi-truck'],
-            ['/archive/documents/shipping/wdt', 'WDT', 'bi-receipt'],
-            ['/archive/documents/shipping/difference', 'Dokumenty różnic', 'bi-plus-slash-minus'],
-            ['/archive/documents/picking-lists', 'Listy kompletacyjne', 'bi-list-check'],
+        // Jedna lista wysyłek z filtrem rodzaju dokumentu (dawniej Wysyłki, Dokumenty transportowe i Archiwum WZ / CMR / WDT / różnic)
+        // oraz archiwum list kompletacyjnych ; pozycja « Wysyłka › Wysyłki i dokumenty » w railu.
+        'shipments' => ['label' => 'Wysyłki i dokumenty', 'section' => 'Logistyka', 'icon' => 'bi-truck', 'tabs' => [
+            ['/shipments', 'Wysyłki i dokumenty', 'bi-truck'],
+            ['/archive/documents/picking-lists', 'Archiwum list kompletacyjnych', 'bi-list-check'],
         ]],
     ];
 

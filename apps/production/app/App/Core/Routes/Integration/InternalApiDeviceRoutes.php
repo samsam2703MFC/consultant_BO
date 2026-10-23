@@ -45,8 +45,6 @@ return function (RouteCollector $r): void {
         'controller' => App\Controllers\Web\Integration\PickingListGenerationController::class,
         'method' => 'overview',
     ]);
-    $r->addRoute('GET', '/archive/documents/future/{type:production-lists|requirement-lists|complaint-production-lists|complaint-picking-lists}', [
-        'controller' => App\Controllers\Web\Integration\DocumentArchiveController::class,
-        'method' => 'future',
-    ]);
+    // Dawne puste strony « archiwum przyszłe » (listy produkcyjne, zapotrzebowania, zwrotów) : usunięte
+    $r->addRoute('GET', '/archive/documents/future/{type}', ['redirect' => '/archive/documents/picking-lists']);
 };

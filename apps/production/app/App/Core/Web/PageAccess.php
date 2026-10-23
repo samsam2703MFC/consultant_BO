@@ -12,7 +12,7 @@ namespace App\Core\Web;
  */
 final class PageAccess
 {
-    public const SECTIONS = ['Analiza', 'Produkcja', 'Produkt', 'Zamówienia', 'Logistyka', 'Finanse', 'Administracja'];
+    public const SECTIONS = ['Analiza', 'Produkcja', 'Zakupy', 'Produkt', 'Zamówienia', 'Logistyka', 'Administracja'];
 
     /** klucz => [etykieta, sekcja, prefiksy ścieżek, tylko administrator] */
     public const PAGES = [
@@ -22,35 +22,39 @@ final class PageAccess
         'production' => ['Produkcja (arkusz, plan tygodnia, plan zespołów, stany, partie, śledzenie, niezgodności, stanowiska)', 'Produkcja',
             ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/traceability', '/production', '/purchasing/nc', '/workshop/workstations'], false],
         'tablet' => ['Tablet produkcji : zarządzanie (tablety, PIN, czas pracy)', 'Produkcja', ['/workshop/execution', '/workshop/timesheet'], false],
-        'supply' => ['Zaopatrzenie', 'Produkcja', ['/workshop/supply'], false],
+        'supply' => ['Zaopatrzenie (zapotrzebowanie, zamówienia, faktury, stan)', 'Zakupy', ['/workshop/supply'], false],
+        'purchasing' => ['Koszty surowców, oferty i zapytania', 'Zakupy', ['/purchasing'], false],
+        'supplier_prices' => ['Ceny surowców i dostawcy', 'Zakupy', ['/materials/prices', '/material-suppliers'], false],
+        'ksef_purchases' => ['Faktury zakupowe KSeF (pobieranie) i archiwum dostaw', 'Zakupy', ['/settings/ksef/purchase-invoices', '/purchases'], false],
         'employees' => ['Zespół : pracownicy produkcji', 'Produkcja', ['/production-employees'], false],
         'budget' => ['Zespół : budżet personelu i premie', 'Produkcja', ['/staff'], false],
         'product_cards' => ['Karty produktów', 'Produkt', ['/workshop/products'], false],
         'products' => ['Produkty, receptury, półprodukty, kompozycje', 'Produkt', ['/product-categories', '/recipes', '/test-products', '/products', '/semi-products', '/compositions'], false],
-        'materials' => ['Surowce (kategorie, wartości odżywcze, ceny, dostawcy)', 'Produkt', ['/material-categories', '/materials', '/material-suppliers'], false],
+        'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
         'orders' => ['Zamówienia klientów', 'Zamówienia', ['/client-orders'], false],
         'clients' => ['Klienci', 'Zamówienia', ['/clients'], false],
+        'price_lists' => ['Cennik ogólny', 'Zamówienia', ['/price-lists'], false],
         'franchise' => ['Franczyza', 'Zamówienia', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints'], false],
         'invoices' => ['Proformy i faktury', 'Zamówienia', ['/proforma-documents', '/invoice-documents'], false],
         'returns' => ['Zwroty', 'Zamówienia', ['/client-complaints'], false],
         'communication' => ['Komunikacja (automatyzacje, przypomnienia, szablony, wiadomości)', 'Zamówienia', ['/communication'], false],
-        'archive' => ['Archiwum dokumentów', 'Zamówienia', ['/archive'], false],
         'logistics' => ['Logistyka (tydzień, załadunek dnia, trasy i pojazdy)', 'Logistyka', ['/logistics'], false],
-        'shipping' => ['Wysyłka', 'Logistyka', ['/shipping', '/shipments', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
-        'price_lists' => ['Cennik ogólny', 'Finanse', ['/price-lists'], false],
-        'purchasing' => ['Zakupy i jakość (koszty surowców, oferty, zapytania)', 'Finanse', ['/purchasing'], false],
-        'ksef_purchases' => ['Faktury zakupowe KSeF', 'Finanse', ['/settings/ksef/purchase-invoices', '/purchases'], false],
+        'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka', ['/shipping', '/shipments', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
+        'archive' => ['Archiwum list kompletacyjnych', 'Logistyka', ['/archive'], false],
         'positions' => ['Stanowiska i zadania, protokoły', 'Administracja', ['/organization', '/task-forms'], false],
         'settings' => ['Ustawienia (użytkownicy, aliasy, języki, e-mail, KSeF, licznik stron, inne)', 'Administracja',
             ['/users', '/aliases', '/settings', '/communication/email-settings', '/other-settings'], false],
-        'devices' => ['Urządzenia', 'Administracja', ['/devices'], false],
+        'devices' => ['Dostęp API (urządzenia)', 'Administracja', ['/devices'], false],
         'manager' => ['Kierownik produkcji : stanowisko, cele, raport, premia, rozmowa, audyt', 'Administracja', ['/workshop/manager'], true],
         'access' => ['Uprawnienia stanowisk', 'Administracja', ['/organization/access'], true],
         'activity' => ['Aktywność w ERP (sesje, strony, kliknięcia, koszt czasu)', 'Administracja', ['/organization/activity'], true],
         'panel_api' => ['Konto API panelu (ceny w sklepach franczyzy)', 'Administracja', ['/settings/panel-api'], true],
     ];
+
+    /** Strony startowe do wyboru dla stanowiska (logo, logowanie) : Dzisiaj dla produkcji, Rentowność dla kierownictwa. */
+    public const HOME_PAGES = ['/today' => 'Dzisiaj', '/dashboard' => 'Rentowność'];
 
     /** @var (callable(string): bool)|null sprawdzenie ścieżki dla zalogowanego użytkownika (null = wszystko widoczne) */
     public static $checker = null;

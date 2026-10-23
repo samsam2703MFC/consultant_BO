@@ -18,39 +18,26 @@ class ShippingLogController extends BaseController
         $this->shippingLogService = $shippingLogService;
     }
 
+    /** Jedna lista wysyłek i ich dokumentów ; ?type= = filtr rodzaju dokumentu (wz, cmr, wdt, difference, bdo-missing…). */
     public function overview()
     {
-        $data['generated_docs'] = $this->shippingLogService->getAllShippings();
-
-        $this->view('document/shipping/overview', $data);
+        $this->view('document/shipping/overview', [
+            'generated_docs' => $this->shippingLogService->getAllShippings(),
+            'docType' => (string) ($_GET['type'] ?? ''),
+        ]);
     }
 
+    /** Dawna lista « Dokumenty transportowe » (CMR, BDO, PPWR) : te same wysyłki w jednej liście. */
     public function transportDocuments(): void
     {
-        $this->view('document/shipping/transport_overview', [
-            'generated_docs' => $this->shippingLogService->getAllShippings(),
-        ]);
+        header('Location: ' . ROOT . '/shipments');
+        exit;
     }
 
+    /** Dawne archiwum WZ / CMR / WDT / różnic : jedna lista z filtrem rodzaju dokumentu. */
     public function archiveByType(string $type): void
     {
-        $labels = [
-            'wz' => 'WZ',
-            'cmr' => 'CMR',
-            'wdt' => 'WDT',
-            'difference' => 'dokumentów różnic',
-        ];
-        if (!isset($labels[$type])) {
-            http_response_code(404);
-            $this->errors[] = 'Nieznany typ archiwum dokumentów.';
-            $this->overview();
-            return;
-        }
-
-        $this->view('document/shipping/overview', [
-            'generated_docs' => $this->shippingLogService->getAllByDocumentType($type),
-            'archiveDocumentType' => $type,
-            'archiveDocumentLabel' => $labels[$type],
-        ]);
+        header('Location: ' . ROOT . '/shipments?type=' . rawurlencode($type));
+        exit;
     }
 }

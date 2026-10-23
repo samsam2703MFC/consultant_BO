@@ -19,9 +19,8 @@
     </div>
     <section class="section">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header">
                 <h4 class="card-title mb-0">Dokument PDF</h4>
-                <a class="btn btn-outline-secondary btn-sm" href="<?= ROOT ?>/archive/documents/future/complaint-picking-lists"><i class="bi bi-archive me-1"></i>Archiwum list</a>
             </div>
             <div class="card-body">
                 <?php if (!empty($unique_shipping_date)): ?>

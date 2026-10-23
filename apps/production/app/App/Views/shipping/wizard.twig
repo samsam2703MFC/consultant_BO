@@ -89,7 +89,7 @@
                 <div class="at-note at-note-safe">
                     <i class="bi bi-shield-check"></i><strong>Kreator niczego nie wysyła na zewnątrz.</strong>
                     Nie wysyła faktur do KSeF i nie powiadamia franczyzy o wysyłce. Fakturę WDT do KSeF wysyłasz osobno,
-                    po sprawdzeniu dokumentów, na stronie <a href="{{ root }}/shipments">Wysyłki (wygenerowane)</a>.
+                    po sprawdzeniu dokumentów, na stronie <a href="{{ root }}/shipments">Wysyłki i dokumenty</a>.
                     <ul>
                         <li>Dla klientów franczyzowych ceny na WDT są odczytywane z cennika franczyzy — tak samo jak w trybie klasycznym; to tylko odczyt cennika.</li>
                         <li>Dokumenty powstają kolejno, osobno dla każdego klienta: błąd u jednego klienta nie cofa dokumentów pozostałych.</li>
@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function () {
             stateHtml = '<span class="at-run-state at-run-ok"><i class="bi bi-check-circle-fill"></i> Utworzono · wysyłka #' + r.id + '</span>';
             action = '<button type="button" class="btn btn-sm btn-primary" data-pdf="' + r.id + '"><i class="bi bi-file-earmark-arrow-down"></i> Dokumenty (PDF)</button>';
         } else if (r.status === 'unknown') {
-            stateHtml = '<span class="at-run-state text-warning"><i class="bi bi-question-circle-fill"></i> Odpowiedź nieczytelna</span><span class="at-run-msg">Sprawdź na liście „Wysyłki (wygenerowane)”, czy dokumenty powstały, zanim spróbujesz ponownie.</span>';
+            stateHtml = '<span class="at-run-state text-warning"><i class="bi bi-question-circle-fill"></i> Odpowiedź nieczytelna</span><span class="at-run-msg">Sprawdź na liście „Wysyłki i dokumenty”, czy dokumenty powstały, zanim spróbujesz ponownie.</span>';
         } else {
             stateHtml = '<span class="at-run-state at-run-fail"><i class="bi bi-x-circle-fill"></i> Błąd — dokumenty nie powstały</span><span class="at-run-msg">' + esc(r.message) + '</span>';
         }
@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div class="d-flex flex-wrap gap-2">' +
             (ok.length ? '<button type="button" class="btn btn-primary" id="swAllPdf"><i class="bi bi-file-earmark-arrow-down"></i> Pobierz wszystkie dokumenty (' + ok.length + ' PDF)</button>' : '') +
             (fail.length ? '<button type="button" class="btn btn-outline-dark" id="swRetry"><i class="bi bi-arrow-repeat"></i> Ponów nieudane (' + fail.length + ')</button>' : '') +
-            '<a class="btn btn-outline-dark" href="' + window.API_BASE_URL + '/shipments">Wysyłki (wygenerowane)</a>' +
+            '<a class="btn btn-outline-dark" href="' + window.API_BASE_URL + '/shipments">Wysyłki i dokumenty</a>' +
             '<a class="btn btn-outline-dark" href="' + window.API_BASE_URL + '/shipping/wizard">Następny dzień</a>' +
             '</div>';
     }

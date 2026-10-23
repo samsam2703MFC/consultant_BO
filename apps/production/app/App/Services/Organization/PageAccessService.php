@@ -53,6 +53,29 @@ final class PageAccessService
         return $out;
     }
 
+    /**
+     * Strona startowa użytkownika (logo, logowanie, nieznany adres) : administrator — Rentowność ; inni — strona startowa
+     * stanowiska (domyślnie Dzisiaj), o ile ją widzi.
+     */
+    public function homePath(?int $userId): string
+    {
+        if (!$userId) return '/today';
+        if ($this->profile($userId)['admin']) return '/dashboard';
+        $home = $this->repo->homes()[$this->repo->userPosition($userId)] ?? '/today';
+        return isset(PageAccess::HOME_PAGES[$home]) && $this->canSee($userId, $home) ? $home : '/today';
+    }
+
+    /** Strona startowa stanowiska — tylko administrator. */
+    public function saveHome(int $positionId, mixed $page, ?int $actorId): string
+    {
+        if (!$this->isAdmin($actorId)) throw new CustomException('Strony startowe ustawia administrator.', 'errors', 403);
+        if ($positionId !== 0 && !$this->repo->positionExists($positionId)) throw new CustomException('Nie znaleziono stanowiska.', 'errors', 404);
+        $page = (string) $page;
+        if (!isset(PageAccess::HOME_PAGES[$page])) throw new CustomException('Nieznana strona startowa.', 'errors', 422);
+        $this->repo->setHome($positionId, $page, $actorId);
+        return $page;
+    }
+
     /** Strona administratora : stanowiska (z « bez stanowiska »), sekcje ze stronami, przyznane strony, użytkownicy. */
     public function matrix(): array
     {
@@ -60,18 +83,19 @@ final class PageAccessService
         $byPosition = [];
         foreach ($users as $u) $byPosition[(int) $u['id_position']][] = ['id' => (int) $u['id'], 'name' => $u['name'], 'admin' => (bool) $u['is_admin']];
         $grants = $this->repo->grants();
+        $homes = $this->repo->homes();
         $columns = [];
         foreach ($this->repo->positions() as $p) {
             $columns[] = ['id' => (int) $p['id'], 'name' => $p['name_pl'], 'active' => (int) $p['active'] === 1,
-                'users' => $byPosition[(int) $p['id']] ?? [], 'keys' => $grants[(int) $p['id']] ?? []];
+                'users' => $byPosition[(int) $p['id']] ?? [], 'keys' => $grants[(int) $p['id']] ?? [], 'home' => $homes[(int) $p['id']] ?? '/today'];
         }
-        $columns[] = ['id' => 0, 'name' => 'Bez stanowiska', 'active' => true, 'users' => $byPosition[0] ?? [], 'keys' => $grants[0] ?? []];
+        $columns[] = ['id' => 0, 'name' => 'Bez stanowiska', 'active' => true, 'users' => $byPosition[0] ?? [], 'keys' => $grants[0] ?? [], 'home' => $homes[0] ?? '/today'];
         $sections = [];
         foreach (PageAccess::SECTIONS as $s) $sections[$s] = ['name' => $s, 'pages' => []];
         foreach (PageAccess::PAGES as $key => [$label, $section, $prefixes, $admin]) {
             $sections[$section]['pages'][] = ['key' => $key, 'label' => $label, 'path' => $prefixes[0], 'admin' => $admin];
         }
-        return ['columns' => $columns, 'sections' => array_values(array_filter($sections, fn($s) => $s['pages'])),
+        return ['columns' => $columns, 'home_pages' => PageAccess::HOME_PAGES, 'sections' => array_values(array_filter($sections, fn($s) => $s['pages'])),
             'admins' => array_values(array_filter($users, fn($u) => (bool) $u['is_admin']))];
     }
 

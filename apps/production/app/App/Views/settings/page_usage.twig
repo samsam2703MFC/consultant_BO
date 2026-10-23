@@ -123,9 +123,26 @@
         });
     });
 
+    // Strony bez własnej pozycji w railu (zakładki grup : Produkcja, BDO, PPWR, Zwroty, Wysyłki… ; strony z przycisków) :
+    // z ukrytej listy wyszukiwarki, z miejscem « sekcja › pozycja » — liczone przy swojej pozycji menu, nie « Poza menu ».
+    var extras = [];
+    document.querySelectorAll('#sidebar [data-search-extra] a[href]').forEach(function (a) {
+        var path = a.pathname.replace(/\/+$/, '');
+        if (path.indexOf(base) === 0) path = path.slice(base.length);
+        extras.push({label: a.textContent.replace(/\s+/g, ' ').trim(), where: a.getAttribute('data-where') || '', path: path || '/', hash: a.hash});
+    });
+
     // Strona = pozycja menu z tym adresem ; kilka widoków po # tej samej strony = nazwa grupy menu albo nazwy widoków.
     rows.forEach(function (r) {
         var hits = entries.filter(function (e) { return r.re.test(e.path); });
+        if (!hits.length) {
+            var extra = extras.filter(function (e) { return r.re.test(e.path) && !e.hash; })[0] || extras.filter(function (e) { return r.re.test(e.path); })[0];
+            if (extra) {
+                r.tr.querySelector('.pu-label').textContent = extra.label;
+                r.tr.querySelector('.pu-section').textContent = extra.where;
+                return;
+            }
+        }
         var plain = hits.filter(function (e) { return !e.hash; })[0];
         var label = 'Poza menu', where = '';
         if (plain) { label = plain.label; where = plain.where; }

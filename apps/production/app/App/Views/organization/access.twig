@@ -44,6 +44,15 @@
                         </tr>
                     </thead>
                     <tbody>
+                        <tr class="at-access-section"><th colspan="{{ columns|length + 1 }}">Strona startowa (logo, po zalogowaniu)</th></tr>
+                        <tr data-home-row>
+                            <td class="at-access-page">Dzisiaj dla produkcji, Rentowność dla kierownictwa ; administrator zawsze na Rentowności</td>
+                            {% for c in columns %}
+                            <td class="text-center"><select class="form-select form-select-sm" data-home="{{ c.id }}" aria-label="Strona startowa : {{ c.name }}">
+                                {% for path, label in home_pages %}<option value="{{ path }}" {{ c.home == path ? 'selected' : '' }}>{{ label }}</option>{% endfor %}
+                            </select></td>
+                            {% endfor %}
+                        </tr>
                     {% for s in sections %}
                         <tr class="at-access-section"><th colspan="{{ columns|length + 1 }}">{{ s.name }}</th></tr>
                         {% for p in s.pages %}
@@ -82,7 +91,17 @@
             if (res.ok && res.data && res.data.pages) boxes(col).forEach(b => b.checked = res.data.pages.includes(b.value));
         });
     };
-    table.addEventListener('change', (e) => { if (e.target.matches('input[data-col]')) save(e.target.dataset.col); });
+    table.addEventListener('change', (e) => {
+        if (e.target.matches('input[data-col]')) save(e.target.dataset.col);
+        if (e.target.matches('select[data-home]')) {
+            const sel = e.target;
+            sel.disabled = true;
+            at.send(`/ajax/organization/access/${sel.dataset.home}/home`, 'PUT', {home: sel.value}).then(res => {
+                sel.disabled = false;
+                at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+            });
+        }
+    });
     table.addEventListener('click', (e) => {
         const all = e.target.closest('[data-all]'), none = e.target.closest('[data-none]');
         if (!all && !none) return;

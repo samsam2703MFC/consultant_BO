@@ -114,29 +114,6 @@ class ShippingLogRepository extends BaseRepository
         return $this->query($sql);
     }
 
-    /** @return list<array<string, mixed>> */
-    public function getAllByDocumentType(string $documentType): array
-    {
-        $columns = [
-            'wz' => 'id_wz',
-            'cmr' => 'id_cmr',
-            'wdt' => 'id_wdt',
-            'difference' => 'id_diff',
-        ];
-        if (!isset($columns[$documentType])) {
-            throw new \InvalidArgumentException('Nieobsługiwany typ dokumentu wysyłkowego.');
-        }
-
-        $column = $columns[$documentType];
-        $sql = "SELECT sl.id, sl.shipment_date, sl.id_customer, sl.id_wz, sl.id_cmr, sl.id_wdt, sl.id_diff, cs.company
-                FROM shipment_log sl
-                INNER JOIN customer cs ON sl.id_customer = cs.id
-                WHERE sl.`{$column}` IS NOT NULL AND sl.`{$column}` <> 0
-                ORDER BY sl.shipment_date DESC, cs.company ASC";
-        return $this->query($sql) ?: [];
-    }
-
-
     public function getWdtPDF($data)
     {
         $wdtModel = new WdtModel();

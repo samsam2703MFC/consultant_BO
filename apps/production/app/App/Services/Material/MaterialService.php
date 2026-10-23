@@ -48,10 +48,6 @@ class MaterialService
             $errors['name'] = "Wprowadź nazwę";
         }
 
-        if(empty($data['waste_perc']))
-        {
-            $errors['waste_perc'] = "Wprowadź procent użycia materiału";
-        }
 
         if(empty($data['id_unit']))
         {
@@ -101,10 +97,6 @@ class MaterialService
             $errors['name'] = "Wprowadź nazwę";
         }
 
-        if(empty($data['waste_perc']))
-        {
-            $errors['waste_perc'] = "Wprowadź procent użycia materiału";
-        }
 
         if(empty($data['id_category']) || $data['id_category'] === "-1")
         {
@@ -154,6 +146,8 @@ class MaterialService
 
     public function insert($data)
     {
+        // « Wykorzystanie materiału [%] » nie wchodzi do żadnego kosztu (tylko eksport) : pole usunięte z formularzy, kolumna = 100
+        if (!isset($data['waste_perc']) || $data['waste_perc'] === '') $data['waste_perc'] = 100;
         $data['price_per_unit'] = $data['pack_price'] / $data['package_size_in_base_unit'];
         $data = $this->adjustData($data);
 

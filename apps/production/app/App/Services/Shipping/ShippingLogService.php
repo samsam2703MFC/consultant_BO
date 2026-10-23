@@ -20,9 +20,4 @@ class ShippingLogService
         return $this->shippingLogRepository->getAll();
     }
 
-    /** @return list<array<string, mixed>> */
-    public function getAllByDocumentType(string $documentType): array
-    {
-        return $this->shippingLogRepository->getAllByDocumentType($documentType);
-    }
 }

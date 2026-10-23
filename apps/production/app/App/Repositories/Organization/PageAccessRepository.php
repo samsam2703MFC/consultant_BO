@@ -77,4 +77,16 @@ final class PageAccessRepository extends WorkshopRepository
              ORDER BY name"
         );
     }
+
+    /** @return array<int, string> stanowisko (0 = bez stanowiska) => strona startowa */
+    public function homes(): array
+    {
+        return array_column($this->all('SELECT id_position, home_page FROM tfb_position_home'), 'home_page', 'id_position');
+    }
+
+    public function setHome(int $positionId, string $page, ?int $userId): void
+    {
+        $this->db->prepare('INSERT INTO tfb_position_home (id_position, home_page, updated_by) VALUES (?, ?, ?)
+                            ON DUPLICATE KEY UPDATE home_page = VALUES(home_page), updated_by = VALUES(updated_by)')->execute([$positionId, $page, $userId]);
+    }
 }
