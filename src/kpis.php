@@ -30,6 +30,9 @@ const KPI_MESURES = [
     'heures'    => 'Heures planifiées (mois en cours)',
     'etp'       => 'ETP planifiés (mois en cours)',
     'jours'     => 'Jours écoulés du mois',
+    // La Récurrence (23/10/2026) : un KPI « clients PWA revenus ÷ clients PWA », échelle %, porte ses seuils aux six leviers.
+    'pwaClients' => 'Clients PWA identifiés en caisse (mois en cours)',
+    'pwaRevenus' => 'Clients PWA venus au moins deux jours (mois en cours)',
 ];
 
 const KPI_PONT_TABLE = [
@@ -198,7 +201,17 @@ function kpiMesures(): array
             $sid = (string) $m['shopId'];
             $out[$sid] = ['nom' => $m['magasin'], 'ca' => $m['n'], 'tickets' => $m['tickets'],
                 'produits' => $m['produits'] ?? null, 'margeBrute' => null, 'coutMatiere' => null,
-                'heures' => null, 'etp' => null, 'jours' => (int) date('j')];
+                'heures' => null, 'etp' => null, 'jours' => (int) date('j'), 'pwaClients' => null, 'pwaRevenus' => null];
+        }
+        // Les clients PWA du mois, quand tous ses jours sont relevés (recurrence_pwa.php).
+        if (function_exists('rpTaux') && $out !== []) {
+            try {
+                $t = rpTaux(array_map('intval', array_keys($out)), date('Y-m-01'), date('Y-m-d'));
+                foreach ($t['magasins'] as $sid => $x) {
+                    if (!isset($out[(string) $sid]) || !$x['complet'] || $x['pwa'] === 0) { continue; }
+                    $out[(string) $sid]['pwaClients'] = $x['pwa']; $out[(string) $sid]['pwaRevenus'] = $x['revenus'];
+                }
+            } catch (Throwable $e) { /* pas de relevé : la mesure reste vide */ }
         }
         foreach ((array) rapEtp() as $e) {
             if ((int) $e['annee'] === (int) date('Y') && (int) $e['mois'] === (int) date('n')

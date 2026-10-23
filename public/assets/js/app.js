@@ -8931,13 +8931,27 @@ class App {
     const pct = v => dc(v, 1) + ' %';
     const etendue = l => l.length ? nomMois(l[0]) + ' → ' + nomMois(l[l.length - 1]) : '';
     const xpN1 = L.googleN1Des ? neutre('N-1 : ' + moisAn(L.googleN1Des)) : neutre('pas de N-1');
+    // La Récurrence (23/10/2026) : le taux de retour des clients PWA — tant que la période n'est pas entièrement
+    // relevée, la case dit où en est la lecture plutôt qu'un taux sur une partie des jours.
+    const pl = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
+    const casRec = x => {
+      if (!x) { return { v: '—', mu: true, n1: 'pas encore relevé' }; }
+      if (!x.complet) { return { v: '—', mu: true, n1: 'relevé en cours', tags: x.jours ? ['tickets lus : ' + x.joursLus + ' / ' + x.jours + ' jours'] : [] }; }
+      if (!x.pwa) { return { v: '—', mu: true, n1: 'aucun client PWA identifié', tags: x.inconnus ? [pl(x.inconnus, 'fiche') + ' à lire'] : [] }; }
+      const tags = [];
+      if (x.n1 != null) { tags.push('N-1 ' + dc(x.n1, 0) + ' %'); }
+      if (x.partTickets != null) { tags.push(dc(x.partTickets, 1) + ' % des tickets'); }
+      if (x.inconnus) { tags.push(pl(x.inconnus, 'fiche') + ' à lire'); }
+      return { v: dc(x.v, 0) + ' %', pas: x.niveau, n1: x.revenus + ' / ' + pl(x.pwa, 'client') + ' PWA', puce: x.n1 != null ? puce(x.delta, 1, ' pt', true) : neutre('pas de N-1'), tags };
+    };
 
     const colonnes = (L.leviers || []).map(l => ({ cle: l.cle, nom: l.nom, couleur: l.couleur, vide: l.vide,
-      mesure: l.vide ? 'à définir' : (l.cle === 'trafic' ? (cumul ? 'clients' : 'clients par jour') : (l.cle === 'xp' ? 'note Google · avis' : l.mesureMois)) }));
+      mesure: l.vide ? 'à définir' : (l.cle === 'trafic' ? (cumul ? 'clients' : 'clients par jour') : (l.cle === 'xp' ? 'note Google · avis' : (l.cle === 'recurrence' ? 'clients PWA revenus' : l.mesureMois))) }));
     const COUTS = ['food', 'labour', 'overhead'];
     const NOM_COUT = { food: 'coût matière', labour: 'main-d’œuvre', overhead: 'frais généraux' };
 
     const celluleMag = (g, cle) => {
+      if (cle === 'recurrence') { return casRec(((cumul ? g.cumul : g.mois) || {}).recurrence); }
       const ouvLib = g.ouverture ? 'ouvert en ' + moisAn(g.ouverture, true) : 'pas de N-1';
       if (cle === 'xp') {
         const x = (cumul ? g.cumul : g.mois).xp || {};
@@ -8980,6 +8994,7 @@ class App {
     const R = cumul ? L.reseau.cumul : L.reseau.mois;
     const nMag = L.magasins.length;
     const celluleRes = cle => {
+      if (cle === 'recurrence') { return casRec(R.recurrence); }
       const x = R[cle] || {};
       if (cle === 'xp') { return x.v == null ? { v: '—', mu: true, n1: 'pas de relevé ce mois-là' } : { v: dc(x.v, 2) + ' ★', pas: x.niveau, n1: nf(x.avis || 0) + ' avis', puce: xpN1 }; }
       if (x.v == null) { return { v: '—', mu: true }; }
@@ -9028,6 +9043,15 @@ class App {
     if (hors.length) { notes.push({ lead: 'Food cost :', txt: (hors.length > 1 ? hors.length + ' mois hors norme' : 'un mois hors norme') + ' dans le P&L du panel, à vérifier : ' + hors.join(', ') + '.' }); }
     notes.push({ lead: 'Expérience client', txt: '= la note Google de la fiche' + (L.googleN1Des ? ' ; elle se relève chaque mois, le premier N-1 viendra en ' + moisAn(L.googleN1Des, true) + '.' : ' ; pas encore de relevé mensuel, donc pas de N-1.') });
     if (colonnes.some(c => c.vide)) { notes.push({ lead: 'Récurrence :', txt: 'laissée vide pour l’instant — la colonne attend sa mesure.' }); }
+    else if (colonnes.some(c => c.cle === 'recurrence')) {
+      const rr = R.recurrence;
+      notes.push({ lead: 'Récurrence', txt: '= le taux de retour des clients PWA : parmi les clients de l’app (compte PWA sur leur fiche du panel) identifiés à la caisse sur la période, la part venus au moins deux jours différents ; les tickets pro ne comptent pas.'
+        + (rr && rr.complet && rr.pwa ? ' Au réseau : ' + rr.revenus + ' sur ' + pl(rr.pwa, 'client') + ' PWA' + (rr.partTickets != null ? ', ' + dc(rr.partTickets, 1) + ' % des tickets' : '') + '.' : '') });
+      const enCours = L.magasins.filter(g => { const x = ((cumul ? g.cumul : g.mois) || {}).recurrence; return x && !x.complet; });
+      if (enCours.length) { notes.push({ lead: 'Relevé en cours :', txt: 'les tickets se relisent au cron, du plus récent au ' + (L.recurrence && L.recurrence.debut ? (+L.recurrence.debut.slice(8) === 1 ? '1er' : +L.recurrence.debut.slice(8)) + ' ' + nomMois(+L.recurrence.debut.slice(5, 7), true) + ' ' + L.recurrence.debut.slice(0, 4) : '1er janvier') + ' — ' + enCours.map(g => { const x = (cumul ? g.cumul : g.mois).recurrence; return nomG(g) + ' ' + x.joursLus + ' / ' + x.jours + ' jours'; }).join(', ') + '. Le taux s’affiche quand la période est entière.' }); }
+      if (!(L.recurrence && L.recurrence.kpi)) { notes.push({ lead: 'Pas de pastille pour la Récurrence :', txt: 'créez dans la Table KPI un KPI « Clients PWA venus au moins deux jours ÷ Clients PWA identifiés en caisse », échelle %, avec ses seuils.' }); }
+      if (L.magasins.every(g => { const x = ((cumul ? g.cumul : g.mois) || {}).recurrence; return !x || x.n1 == null; })) { notes.push({ lead: 'Récurrence sans N-1 :', txt: 'le relevé commence au ' + (L.recurrence && L.recurrence.debut ? (+L.recurrence.debut.slice(8) === 1 ? '1er' : +L.recurrence.debut.slice(8)) + ' ' + nomMois(+L.recurrence.debut.slice(5, 7), true) + ' ' + L.recurrence.debut.slice(0, 4) : '1er janvier') + ' ; le premier N-1 viendra un an plus tard.' }); }
+    }
     out.notes = notes;
     out.seuilsKpi = () => this.setState({ screen: 'kpiTable' });
     return out;
