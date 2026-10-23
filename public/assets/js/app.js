@@ -6953,6 +6953,11 @@ class App {
       }
       const connu = ids.includes(sid);
       if (connu) { try { localStorage.setItem('cockpit.prShop', sid); } catch (e) { /* navigation privée */ } }
+      // Le titre de la page, c'est le magasin (23/10/2026, « compresser ») : son nom, puis shop id et note Google.
+      if (connu) {
+        common.screenTitle = nomMag[sid] || 'Magasin ' + sid;
+        common.screenSub = 'Primes du magasin · shop ' + sid + (d.google && d.google.notes && d.google.notes[sid] != null ? ' · note Google ' + fr(d.google.notes[sid], 1) + ' ★' : '');
+      }
       const M = moyMagDe(sid);
       const tourneIci = l => !(l.shops || []).length || l.shops.includes(sid);
       const marque = lignes.filter(l => l.famille !== 'magasin' && (l.externe || l.actif) && l.etatPeriode !== 'terminée' && tourneIci(l))
@@ -7046,6 +7051,8 @@ class App {
         id: sid, nom: nomMag[sid] || '', connu,
         magasins: (d.magasins || []).map(m => ({ id: String(m.id), nom: court(m.nom), aller: () => this.setState({ prShop: String(m.id) }) })),
         marque, siennes, nSiennesMax: 6, equipe,
+        // Les primes de la marque, repliées par défaut : le tableau de l'équipe les montre déjà en colonnes.
+        marqueOuvert: !!S.prFrMarque, basculerMarque: () => this.setState({ prFrMarque: !this.state.prFrMarque }),
         // « + Nouvelle prime du magasin » : la sorte d'abord (23/10/2026) — promotion, catégorie, ventes croisées, objectif CA, note Google, clients pro.
         nouvelle: connu ? () => this.setState({ prChoix: sid }) : null,
         note: d.google && d.google.notes && d.google.notes[sid] != null ? fr(d.google.notes[sid], 1) + ' ★' : '',
