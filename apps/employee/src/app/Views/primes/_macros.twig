@@ -5,9 +5,9 @@
 <div class="pdm-g{{ (c.type ?? '') == 'b2b' ? ' long' }}"><small>{{ T.to_win ?? 'À gagner' }}</small><b>{% if (c.type ?? '') == 'b2b' %}{{ moi.b2b(c, T) }}{% elseif c.cadeau ?? null %}<i class="bi bi-gift"></i> {{ c.cadeau.nom }}{% if c.cadeau.valeur %} <i>· {{ T.value ?? 'valeur' }} {{ c.cadeau.valeur|number_format(0, ',', ' ') }}&nbsp;€</i>{% endif %}{% else %}{{ c.montant|number_format(0, ',', ' ') }}&nbsp;€{% if c.max ?? false %} max{% endif %}{% endif %}</b></div>
 {% if c.description ?? '' %}<p class="pdm-d">{{ c.description }}</p>{% endif %}
 {#- L'indication (17/10/2026) : ce qu'il manque, calculé — avis 5★, ventes croisées, CA du magasin. #}
-{% if c.cle == 'google' and (c.avis5 ?? null) is not null %}<p class="pdm-a"><i class="bi bi-lightbulb"></i> {% if c.avis5 > 0 %}{{ (T.hint_google ?? 'Il manque {n} avis 5★ pour atteindre {s} ★')|replace({'{n}': c.avis5|number_format(0, ',', ' '), '{s}': c.cible|number_format(1, ',', ' ')}) }}{% else %}{{ (T.hint_google_ok ?? 'Le magasin tient {s} ★ : chaque avis 5★ le garde au-dessus')|replace({'{s}': c.cible|number_format(1, ',', ' ')}) }}{% endif %}</p>
-{% elseif c.cle == 'croisees' and (c.manque ?? 0) > 0 %}<p class="pdm-a"><i class="bi bi-lightbulb"></i> {{ (T.hint_cross ?? 'Encore {n} ventes croisées pour atteindre {s} % : un article de plus sur chaque ticket')|replace({'{n}': c.manque, '{s}': c.cible|number_format(0, ',', ' ')}) }}</p>
-{% elseif c.cle == 'objectif' and (c.manqueCa ?? 0) > 0 %}<p class="pdm-a"><i class="bi bi-lightbulb"></i> {{ (T.hint_target ?? 'Le magasin doit encore faire {n} € de chiffre ce mois')|replace({'{n}': c.manqueCa|number_format(0, ',', ' ')}) }}</p>{% endif %}
+{% if (c.base ?? c.cle) == 'google' and (c.avis5 ?? null) is not null %}<p class="pdm-a"><i class="bi bi-lightbulb"></i> {% if c.avis5 > 0 %}{{ (T.hint_google ?? 'Il manque {n} avis 5★ pour atteindre {s} ★')|replace({'{n}': c.avis5|number_format(0, ',', ' '), '{s}': c.cible|number_format(1, ',', ' ')}) }}{% else %}{{ (T.hint_google_ok ?? 'Le magasin tient {s} ★ : chaque avis 5★ le garde au-dessus')|replace({'{s}': c.cible|number_format(1, ',', ' ')}) }}{% endif %}</p>
+{% elseif (c.base ?? c.cle) == 'croisees' and (c.manque ?? 0) > 0 %}<p class="pdm-a"><i class="bi bi-lightbulb"></i> {{ (T.hint_cross ?? 'Encore {n} ventes croisées pour atteindre {s} % : un article de plus sur chaque ticket')|replace({'{n}': c.manque, '{s}': c.cible|number_format(0, ',', ' ')}) }}</p>
+{% elseif (c.base ?? c.cle) == 'objectif' and (c.manqueCa ?? 0) > 0 %}<p class="pdm-a"><i class="bi bi-lightbulb"></i> {{ (T.hint_target ?? 'Le magasin doit encore faire {n} € de chiffre ce mois')|replace({'{n}': c.manqueCa|number_format(0, ',', ' ')}) }}</p>{% endif %}
 {% set sp = c.sponsor ?? null %}
 <div class="pdm-s">{% if sp and sp.logo %}<img src="{{ ib }}/{{ sp.logo }}" alt="">{% endif %}<div><small>{{ T.offered_by ?? 'Offerte par' }}</small><b>{{ sp ? sp.nom : ((c.payeur ?? '') == 'magasin' ? (T.your_shop ?? 'ton magasin') : (T.the_brand ?? 'la marque')) }}</b>{% if sp and sp.texte %}<span>{{ sp.texte }}</span>{% endif %}{% if sp and sp.site %}<a href="{{ sp.site }}" target="_blank" rel="noopener noreferrer">{{ sp.site|replace({'https://': '', 'http://': ''})|trim('/') }} ↗</a>{% endif %}</div></div>
 {% endmacro %}
@@ -15,7 +15,7 @@
 {# L'icône d'une prime (23/10/2026) : celle que l'admin a déposée, sinon une icône au trait selon la prime (plus d'émoji). #}
 {% macro ic(c, ib) %}
 {%- if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">
-{%- else %}<i class="bi {{ { croisees: 'bi-bag', record: 'bi-graph-up-arrow', objectif: 'bi-shop', google: 'bi-star', meilleure: 'bi-trophy' }[c.cle] ?? ({ promo: 'bi-tag', b2b: 'bi-briefcase' }[c.type ?? ''] ?? 'bi-award') }}"></i>{% endif -%}
+{%- else %}<i class="bi {{ { croisees: 'bi-bag', record: 'bi-graph-up-arrow', objectif: 'bi-shop', google: 'bi-star', meilleure: 'bi-trophy' }[c.base ?? c.cle] ?? ({ promo: 'bi-tag', b2b: 'bi-briefcase' }[c.type ?? ''] ?? 'bi-award') }}"></i>{% endif -%}
 {% endmacro %}
 
 {# La règle d'une prime B2B en clair (23/10/2026) : « 5 % de chaque commande pendant 3 mois », « 30 € à sa 1re commande ». #}
