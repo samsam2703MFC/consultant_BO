@@ -1003,3 +1003,4 @@ Mise en ligne : lot 2 audytu — jeden sposób liczenia (koszt działu, sprzeda�
 2026-10-23 primes app worker : page d'un magasin avec la marque, tous les déclencheurs, id shop dans l'adresse
 2026-10-23T18:16Z primes : tables mot_ (réglages, caches) ; promotions du magasin sans paragraphe d'explication
 Mise en ligne : lot 3 audytu — jedna karta produktu (walidacja logistyki, minimum opcjonalne, pracownik aktywny) 2026-10-23T18:25:08Z
+2026-10-23T18:32Z primes : grands prix de l'année (vitrine, création), réseau et magasin

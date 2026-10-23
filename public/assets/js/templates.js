@@ -7033,6 +7033,137 @@ function tplPrB2b(B, x){
   </div>`;
 }
 
+/**
+ * Les grands prix de l'année (23/10/2026) : la vitrine de la maquette B — une carte par grand prix : la photo du lot ou
+ * son emoji sur un fond teinté, qui l'offre, la valeur, le défi, le top 3, la saison — et les chiffres de la saison.
+ * Page admin : ceux de la marque, puis ceux des franchisés ; page franchisé : ceux de la marque à lire, puis les siens.
+ */
+function tplPrGrandsPrix(G, x){
+  const esc = x.esc;
+  const sf = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Segoe UI',system-ui,sans-serif";
+  const muet = 'var(--color-text-muted)';
+  const filet = '0.5px solid var(--color-border-tertiary)';
+  const btP = `border:0;border-radius:999px;padding:9px 17px;font:600 13.5px ${sf};background:var(--color-primary);color:var(--color-surface);cursor:pointer`;
+  // Le fond de chaque défi : les couleurs du design system, adoucies.
+  const mix = (v, p) => `color-mix(in srgb, var(${v}) ${p}%, var(--color-surface))`;
+  const fond = { vendeuse: [mix('--color-secondary', 30), mix('--color-secondary', 60)], b2b: [mix('--color-collection-fill', 70), mix('--color-collection-border', 45)],
+    ticket: [mix('--color-popup', 12), mix('--color-popup', 28)], croisees: [mix('--color-secondary', 18), mix('--color-collection-fill', 80)],
+    progression: [mix('--color-primary', 10), mix('--color-primary', 24)], magasin: [mix('--color-primary', 16), mix('--color-secondary', 45)] };
+  const rangC = ['', 'var(--color-secondary)', muet, 'var(--color-collection-icon)'];
+  const chip = t => `<span style="font:700 10px ${sf};letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:var(--color-surface);color:var(--color-text);max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t)}</span>`;
+  const carte = k => {
+    const [a, b] = fond[k.defi] || fond.vendeuse;
+    return `<article data-gp="${esc(k.id)}" style="background:var(--color-surface);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;min-width:0${k.actif ? '' : ';opacity:.6'}">
+      <div style="position:relative;height:150px;background:linear-gradient(135deg,${a},${b});display:flex;align-items:center;justify-content:center">
+        ${k.photo ? `<img src="${esc(k.photo)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">` : `<span style="font-size:64px;line-height:1">${k.emo}</span>`}
+        <div style="position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          ${chip(k.offert)}<b style="font:700 14px ${sf};padding:5px 11px;border-radius:999px;background:var(--color-surface);color:var(--color-text);font-variant-numeric:tabular-nums;white-space:nowrap">${esc(k.valeurTxt)}</b>
+        </div>
+        ${k.shopNom && !k.lecture ? `<span style="position:absolute;left:12px;bottom:12px">${chip(k.shopNom)}</span>` : ''}
+      </div>
+      <div style="padding:16px 18px 6px;flex:1;display:flex;flex-direction:column">
+        <div style="font:700 18px/1.25 ${sf};letter-spacing:-.01em;color:var(--color-text)">${esc(k.titre)}</div>
+        ${k.lot ? `<div style="font:400 13px/1.4 ${sf};color:${muet};margin-top:3px">${esc(k.lot)}</div>` : ''}
+        <div style="font:400 13px/1.45 ${sf};color:${muet};margin-top:6px"><b style="color:var(--color-text);font-weight:600">${esc(k.defiLib)}</b> · ${esc(k.regle)}${k.seuil ? ' · ' + esc(k.seuil) : ''}${k.site ? ` · <a href="${esc(k.site)}" target="_blank" rel="noopener" style="color:${muet}">site du sponsor ↗</a>` : ''}</div>
+        <div style="border-top:${filet};margin-top:12px;padding-top:6px;flex:1">
+          ${k.gagnant ? `<div style="font:600 12px ${sf};color:var(--color-primary);margin:6px 0 2px">🏆 Gagné par ${esc(k.gagnant.nom)}${k.gagnant.sous ? ' · ' + esc(k.gagnant.sous) : ''}</div>` : ''}
+          ${k.top.length ? k.top.map(t => `<div data-gp-rang="${t.rang}" style="display:flex;align-items:center;gap:10px;padding:7px 0">
+            <b style="width:12px;font:700 15px ${sf};color:${rangC[t.rang] || muet}">${t.rang}</b>
+            <span style="width:26px;height:26px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;font:700 10px ${sf};background:var(--color-background-secondary);color:var(--color-text)">${esc(t.ini)}</span>
+            <span style="flex:1;min-width:0;font:400 13.5px ${sf};color:${muet};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(t.detail || '')}"><b style="font-weight:600;color:var(--color-text)">${esc(t.nom)}</b>${t.sous ? ' · ' + esc(t.sous) : ''}</span>
+            <b style="font:600 14px ${sf};font-variant-numeric:tabular-nums;color:${t.rang === 1 ? 'var(--color-primary)' : 'var(--color-text)'};white-space:nowrap">${esc(t.txt)}</b></div>`).join('')
+          : `<div style="font:400 13px/1.45 ${sf};color:${muet};padding:10px 0">${esc(k.vide)}</div>`}
+          ${k.ici ? `<div data-gp-ici style="font:500 12.5px/1.4 ${sf};color:var(--color-text);background:var(--color-background-secondary);border-radius:10px;padding:8px 10px;margin:6px 0 4px">Dans ce magasin : <b>${esc(k.ici.nom)}</b>, ${esc(String(k.ici.rang))}${k.ici.rang === 1 ? 're' : 'e'} du réseau · ${esc(k.ici.txt)}</div>`
+            : k.iciVide ? `<div data-gp-ici style="font:400 12.5px/1.4 ${sf};color:${muet};background:var(--color-background-secondary);border-radius:10px;padding:8px 10px;margin:6px 0 4px">Personne de ce magasin n’est encore classé.</div>` : ''}
+        </div>
+        ${k.etat === 'en_cours' ? `<div style="height:4px;border-radius:2px;background:var(--color-background-secondary);margin-top:8px;overflow:hidden"><div style="height:100%;width:${Math.round(100 * k.part)}%;background:var(--color-primary)"></div></div>` : ''}
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0 12px;font:400 12px ${sf};color:${muet}">
+          <span style="flex:1;min-width:0">${esc(k.etatTxt)}${k.pied ? ' · ' + esc(k.pied) : ''}</span>
+          ${k.basculer ? `<label title="${k.actif ? 'Actif — décocher pour l’éteindre' : 'Éteint — cocher pour l’activer'}" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" ${k.actif ? 'checked' : ''} ${x.C(k.basculer)} data-gp-actif> actif</label>` : ''}
+          ${k.modifier ? `<button ${x.A(k.modifier)} data-gp-modifier style="border:0;background:none;padding:0;font:600 12.5px ${sf};color:var(--color-text);cursor:pointer">Modifier ›</button>` : ''}
+        </div>
+      </div>
+    </article>`;
+  };
+  const grille = ls => `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:14px">${ls.map(carte).join('')}</div>`;
+  const vide = t => `<div style="background:var(--color-surface);border-radius:14px;margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">${t}</div>`;
+  const tete = (titre, sous, droite) => `<div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:4px 4px 2px">
+      <div style="flex:1;min-width:280px"><div style="font:700 26px/1.15 ${sf};letter-spacing:-.02em;color:var(--color-text)">${titre}</div><div style="font:400 13.5px/1.45 ${sf};color:${muet};margin-top:5px;max-width:760px">${sous}</div></div>${droite || ''}</div>`;
+  if (G.chargement) { return vide('Lecture des grands prix…'); }
+  if (G.motif) { return vide(esc(G.motif)); }
+  const bouton = `<button ${x.A(G.nouveau)} style="${btP}" data-gp-nouveau>+ Nouveau grand prix</button>`;
+  const kpis = `<div data-gp-kpis style="background:var(--color-surface);border-radius:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:14px">${G.kpis.map((k, i) => `<div style="padding:13px 18px;${i ? `border-left:${filet};` : ''}min-width:0">
+      <div style="font:400 12.5px ${sf};color:${muet}">${esc(k.lib)}</div><div style="font:600 21px/1.25 ${sf};font-variant-numeric:tabular-nums;margin-top:4px;color:var(--color-text)">${esc(k.v)}</div>
+      ${k.sous ? `<div style="font:400 11.5px/1.4 ${sf};color:${muet};margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(k.sous)}</div>` : ''}</div>`).join('')}</div>`;
+  const marque = G.franchise
+    ? `<section data-gp-section="reseau">${tete('Grands prix de la marque', 'Offerts par la marque et ses sponsors à tout le réseau, à lire : la marque les règle. La ligne grise dit la mieux classée du magasin.')}
+        ${G.reseau.length ? grille(G.reseau.map(k => Object.assign({ lecture: true }, k))) : vide('Aucun grand prix de la marque pour l’instant.')}</section>`
+    : `<section data-gp-section="reseau">${tete('Grands prix de l’année · ' + esc(String(G.annee)), 'De gros lots offerts par la marque ou un sponsor — « Refaire ta terrasse » —, joués sur toute l’année entre les vendeuses du réseau. Le classement se calcule avec les chiffres des primes du mois.', bouton)}
+        ${kpis}
+        ${G.reseau.length ? grille(G.reseau) : vide('Aucun grand prix pour l’instant : posez le premier — la meilleure vendeuse, le plus gros apport B2B, le plus gros ticket…')}</section>`;
+  const siens = G.franchise
+    ? `<section data-gp-section="magasin">${tete(esc(G.magasinTitre) + (G.shopNom ? ' · ' + esc(G.shopNom) : ''), 'Posés par le magasin pour ses seules vendeuses, offerts par lui ou par un sponsor du quartier.', bouton)}
+        ${kpis}
+        ${G.magasin.length ? grille(G.magasin) : vide('Aucun grand prix du magasin pour l’instant.')}</section>`
+    : (G.magasin.length ? `<section data-gp-section="magasin">${tete(esc(G.magasinTitre), 'Ceux qu’un franchisé pose pour ses vendeuses. Ils se créent sur la page du magasin (Page franchisé).')}${grille(G.magasin)}</section>` : '');
+  return `<div data-gp-vitrine style="display:flex;flex-direction:column;gap:26px">${G.franchise ? siens + marque : marque + siens}</div>`;
+}
+
+/** La création d'un grand prix (23/10/2026, maquette D) : 1 · le défi, 2 · le prix, 3 · qui l'offre, qui peut gagner, la saison. */
+function tplPrGpForm(F, x){
+  const esc = x.esc;
+  const sf = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Segoe UI',system-ui,sans-serif";
+  const muet = 'var(--color-text-muted)';
+  const chp = `width:100%;box-sizing:border-box;border:0;border-radius:10px;padding:10px 12px;font:500 14px ${sf};background:var(--color-background-secondary);color:var(--color-text)`;
+  const lab = `display:block;font:500 12px ${sf};color:${muet};margin:12px 0 6px`;
+  const etape = t => `<div style="font:700 11px ${sf};letter-spacing:.08em;text-transform:uppercase;color:${muet};margin-bottom:10px">${t}</div>`;
+  const seg = ls => `<div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${ls.map(o => `<button ${x.A(o.choisir)} style="border:0;border-radius:8px;padding:7px 13px;font:${o.on ? 600 : 500} 13px ${sf};background:${o.on ? 'var(--color-surface)' : 'transparent'};color:var(--color-text);cursor:pointer;${o.on ? 'box-shadow:0 1px 3px rgba(0,0,0,.12)' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  const champ = (lib, id, val, fn, type, indice, attr) => `<label><span style="${lab}">${lib}</span><input id="${id}" type="${type || 'text'}" value="${esc(val)}" placeholder="${esc(indice || '')}" ${x.I(fn)} ${attr || ''} style="${chp}"></label>`;
+  return `
+  <div ${x.A(F.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.32);z-index:80"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:flex-start;justify-content:center;padding:50px 16px;overflow-y:auto;pointer-events:none">
+    <div role="dialog" aria-modal="true" aria-label="${esc(F.titre)}" data-gp-form style="pointer-events:auto;width:100%;max-width:1120px;background:var(--color-surface);border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,.22);padding:28px 32px 24px;font-family:${sf};color:var(--color-text)">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <div style="font:700 24px/1.2 ${sf};letter-spacing:-.015em">${esc(F.titre)}</div>
+        <span style="font:400 13.5px ${sf};color:${muet}">trois questions, comme pour une prime du mois</span>
+        <span style="flex:1"></span><button ${x.A(F.fermer)} aria-label="Fermer" style="border:0;background:none;font-size:18px;color:${muet};cursor:pointer">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px;margin-top:20px">
+        <div data-gp-etape="defi">${etape('1 · Le défi')}
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">${F.defis.map(d => `<button ${x.A(d.choisir)} data-gp-defi style="text-align:left;border-radius:14px;padding:12px 13px;cursor:pointer;font-family:${sf};color:var(--color-text);background:${d.on ? 'color-mix(in srgb, var(--color-primary) 6%, var(--color-surface))' : 'var(--color-surface)'};border:${d.on ? '2px solid var(--color-primary)' : '0.5px solid var(--color-border-secondary)'}">
+            <span style="display:block;font-size:20px;line-height:1">${d.emo}</span><b style="display:block;font:600 14px/1.3 ${sf};margin-top:6px">${esc(d.lib)}</b><span style="display:block;font:400 12px/1.35 ${sf};color:${muet};margin-top:2px">${esc(d.regle)}</span></button>`).join('')}</div>
+        </div>
+        <div data-gp-etape="prix">${etape('2 · Le prix')}
+          <label data-gp-photo style="display:flex;align-items:center;justify-content:center;height:150px;border-radius:14px;border:1px dashed var(--color-border-secondary);background:var(--color-background-secondary);overflow:hidden;cursor:pointer;position:relative">
+            ${F.photo ? `<img src="${esc(F.photo)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">` : `<span style="font:400 13.5px ${sf};color:${muet}">${F.envoiPhoto ? 'Envoi de la photo…' : 'Déposer une photo du prix (facultatif)'}</span>`}
+            <input type="file" accept="image/png,image/jpeg,image/webp" ${x.C(F.poserPhoto)} style="display:none"></label>
+          ${F.photo ? `<button ${x.A(F.retirerPhoto)} style="border:0;background:none;padding:6px 0 0;font:500 12.5px ${sf};color:${muet};cursor:pointer">Retirer la photo</button>` : ''}
+          ${champ('Intitulé', 'gp-titre', F.intitule, F.poserTitre, 'text', 'Refaire ta terrasse', 'maxlength="120"')}
+          ${champ('Ce qu’on gagne (une ligne)', 'gp-lot', F.lot, F.poserLot, 'text', 'Le bois, la pose et un salon de jardin', 'maxlength="255"')}
+          ${champ('Valeur (€)', 'gp-valeur', F.valeur, F.poserValeur, 'number', '5000', 'min="0" step="50"')}
+        </div>
+        <div data-gp-etape="offert">${etape('3 · Offert par')}
+          ${seg(F.payeurs)}
+          ${F.sponsor ? champ('Sponsor', 'gp-sponsor', F.nomSponsor, F.poserSponsor, 'text', 'Jardins & Terrasses Lemaire', 'maxlength="120"') + champ('Son site (facultatif)', 'gp-site', F.site, F.poserSite, 'text', 'www.…', 'maxlength="190"') : ''}
+          <span style="${lab}">Qui peut gagner</span><div style="${chp};background:transparent;padding:0;font-weight:400;color:${muet}">${esc(F.qui)}</div>
+          ${F.seuilSorte ? champ(esc(F.seuilLib), 'gp-seuil', F.seuil, F.poserSeuil, 'number', F.seuilDefaut, 'min="0" step="10"') : ''}
+          <span style="${lab}">Saison</span>${seg(F.saisons)}
+          ${F.saisonAnnee ? `<select id="gp-annee" ${x.C(F.poserAnnee)} style="${chp};margin-top:8px">${F.annees.map(a => `<option value="${esc(a.v)}"${a.on ? ' selected' : ''}>${esc(a.v)} — du 1er janvier au 31 décembre</option>`).join('')}</select>`
+            : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${champ('Du mois', 'gp-du', F.du, F.poserDu, 'month')}${champ('Au mois', 'gp-au', F.au, F.poserAu, 'month')}</div>`}
+          <div style="font:400 12.5px/1.4 ${sf};color:${muet};margin-top:8px">${esc(F.resume)}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:24px;padding-top:18px;border-top:0.5px solid var(--color-border-tertiary)">
+        <span style="font:400 13px ${sf};color:${muet}">${F.manque ? 'Il manque ' + esc(F.manque) + '.' : ''}</span>
+        <span style="flex:1"></span>
+        ${F.supprimer ? `<button ${x.A(F.supprimer)} style="border:0;background:none;font:500 14px ${sf};color:var(--color-primary);cursor:pointer">Retirer</button>` : ''}
+        <button ${x.A(F.fermer)} style="border:0;border-radius:999px;padding:11px 20px;font:600 14.5px ${sf};background:var(--color-background-secondary);color:var(--color-text);cursor:pointer">Annuler</button>
+        <button ${x.A(F.enregistrer)} data-gp-enregistrer style="border:0;border-radius:999px;padding:11px 22px;font:600 14.5px ${sf};background:var(--color-primary);color:var(--color-surface);cursor:pointer;${F.manque || F.envoi ? 'opacity:.45;pointer-events:none' : ''}">${F.envoi ? 'Enregistrement…' : F.edit ? 'Enregistrer' : 'Publier le grand prix'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function tplPrimesApp(c, x){
   const { esc } = x;
   const pill = f => `border:0.5px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:inherit;font-size:11.5px;cursor:pointer`;
@@ -7207,7 +7338,8 @@ function tplPrimesApp(c, x){
   };
   return `
 <div data-screen="primesApp" style="display:flex;flex-direction:column;gap:26px;max-width:1560px;font-family:${sf}">
-  ${c.prChargement ? `<div style="${groupeSt};padding:18px;color:${muet}">Lecture des paramètres…</div>` : c.prMotif ? `<div style="${groupeSt};padding:18px;color:var(--color-primary)">${esc(c.prMotif)}</div>` : FR ? frPage() : `
+  ${c.prOnglets && !c.prChargement && !c.prMotif ? `<div data-pr-onglets style="display:inline-flex;align-self:flex-start;gap:2px;background:var(--color-border-tertiary);border-radius:12px;padding:3px">${c.prOnglets.map(o => `<button ${x.A(o.choisir)} data-pr-onglet="${o.nouveau ? 'gp' : 'mois'}" style="border:0;border-radius:9px;padding:8px 15px;font:${o.on ? 600 : 500} 13.5px ${sf};background:${o.on ? 'var(--color-surface)' : 'transparent'};color:var(--color-text);cursor:pointer;${o.on ? 'box-shadow:0 1px 3px rgba(0,0,0,.12)' : ''}">${esc(o.nom)}</button>`).join('')}</div>` : ''}
+  ${c.prChargement ? `<div style="${groupeSt};padding:18px;color:${muet}">Lecture des paramètres…</div>` : c.prMotif ? `<div style="${groupeSt};padding:18px;color:var(--color-primary)">${esc(c.prMotif)}</div>` : c.prGp ? tplPrGrandsPrix(c.prGp, x) : FR ? frPage() : `
   <section data-pr="app"${voir('app')}>
     ${tete('Primes de la marque', 'Posées par la marque, payées par elle ou par un sponsor. Chaque franchisé les voit ; ses vendeuses les retrouvent dans Mes primes.',
       `<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font:500 13px ${sf};color:var(--color-text)">
@@ -7291,6 +7423,7 @@ function tplPrimesApp(c, x){
   ${c.prEdit ? tplPrEdit(c.prEdit, x) : ''}
   ${c.prChoix ? tplPrChoix(c.prChoix, x) : ''}
   ${c.prB2b ? tplPrB2b(c.prB2b, x) : ''}
+  ${c.prGp && c.prGp.form ? tplPrGpForm(c.prGp.form, x) : ''}
 </div>`;
 }
 

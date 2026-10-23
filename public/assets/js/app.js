@@ -7057,6 +7057,158 @@ class App {
           ].map(([t, e, nom, txt, patch]) => ({ e, nom, txt, plein: plein(t), choisir: plein(t) ? null : aller(patch) })) };
       }
     }
+    this.valsGrandsPrix(common);
+  }
+
+  /*
+   * Les grands prix de l'année (23/10/2026, src/grands_prix.php) : un onglet de l'écran des primes. La vitrine (maquette
+   * B) — une carte par grand prix, le lot, qui l'offre, le top 3 — et la création de la maquette D : le défi, le prix,
+   * qui l'offre, qui peut gagner et la saison. Page admin : ceux de la marque pour tout le réseau, ceux des franchisés à
+   * lire ; page franchisé : ceux de la marque à lire (avec la mieux classée du magasin), les siens à poser.
+   */
+  valsGrandsPrix(common){
+    const S = this.state;
+    const tab = S.prOnglet === 'gp' ? 'gp' : 'mois';
+    common.prOnglets = [['mois', 'Primes du mois'], ['gp', 'Grands prix de l’année']].map(([k, nom]) => ({ nom, on: k === tab, nouveau: k === 'gp',
+      choisir: () => this.setState({ prOnglet: k, prGpForm: undefined }) }));
+    common.prGp = null;
+    if (tab !== 'gp') { return; }
+    const FRd = common.prFr;
+    const shop = FRd ? String(FRd.id) : '';
+    if (!this._gpL) { this._gpL = {}; }
+    const cle = 'gp:' + shop;
+    if (this._gpL[cle] === undefined && !this._gpL['~' + cle]) {
+      this._gpL['~' + cle] = true;
+      readOne('/ventes/grands-prix' + (shop ? '?shop=' + encodeURIComponent(shop) : '')).then(x => { this._gpL['~' + cle] = false; this._gpL[cle] = (x && !x.error) ? x : null; this.setState({}); })
+        .catch(() => { this._gpL['~' + cle] = false; this._gpL[cle] = null; this.setState({}); });
+    }
+    const G = this._gpL[cle];
+    const recharger = () => { this._gpL = {}; this.setState({}); };
+    const G0 = { chargement: G === undefined, motif: G === null ? 'Les grands prix n’ont pas pu être lus.' : '', franchise: !!FRd };
+    if (!G) { common.prGp = G0; return; }
+    const fr = (v, k) => (v == null ? '' : Number(v).toLocaleString('fr-BE', { minimumFractionDigits: k || 0, maximumFractionDigits: k || 0 }));
+    const jj = v => (v ? v.slice(8, 10) + '/' + v.slice(5, 7) : '');
+    const jjA = v => (v ? jj(v) + '/' + v.slice(0, 4) : '');
+    const racine = API_BASE.replace(/api\/cockpit\/?$/, '');
+    const court = nom => String(nom || '').split(' - ').pop();
+    const initiales = nom => String(nom || '').split(/[\s.]+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+    const offertTxt = g => (g.payeur === 'sponsor' ? 'Sponsor · ' + g.sponsor : g.payeur === 'magasin' ? 'Offert par le magasin' : 'Offert par la marque');
+    const seuilTxt = g => (g.seuil == null ? '' : fr(g.seuil) + (g.seuilSorte === 'tickets' ? ' tickets' : ' h') + ' min.'
+      + (g.saison.etat === 'en_cours' && g.seuilCourant != null ? ' (' + fr(g.seuilCourant) + ' à ce jour)' : ''));
+    const etatTxt = g => (g.saison.etat === 'a_venir' ? 'commence le ' + jjA(g.du) : g.saison.etat === 'finie' ? 'terminé le ' + jjA(g.au) : 'fin le ' + jj(g.au) + ' · J − ' + g.saison.joursRestants);
+    const carte = (g, lecture) => {
+      const pro = g.defi === 'magasin';
+      const top = (g.classement || []).slice(0, 3).map(l => ({ rang: l.rang, nom: pro ? court(l.nom) : l.nom, ini: initiales(pro ? court(l.nom) : l.nom),
+        sous: pro ? '' : court(l.magasin), txt: l.txt, detail: l.detail }));
+      return { id: g.id, defi: g.defi, emo: g.emo, titre: g.titre, lot: g.lot, valeurTxt: fr(g.valeur) + ' €', photo: g.photo ? racine + g.photo : '',
+        offert: offertTxt(g), site: g.payeur === 'sponsor' && g.sponsorSite ? g.sponsorSite : '', defiLib: g.defiLib, regle: g.regle, seuil: seuilTxt(g),
+        etat: g.saison.etat, etatTxt: etatTxt(g), part: g.saison.part, actif: g.actif, top,
+        vide: g.saison.etat === 'a_venir' ? 'Le classement s’ouvre le ' + jjA(g.du) + '.' : !g.actif ? 'Éteint : personne ne le voit.' : g.motif ? 'Données incomplètes : ' + g.motif + '.' : 'Personne de classé pour l’instant' + (g.horsSeuil ? ' (' + g.horsSeuil + ' sous le minimum)' : '') + '.',
+        pied: [g.enCourse ? g.enCourse + (pro ? ' magasins classés' : ' en course') : '', g.horsSeuil && g.enCourse ? g.horsSeuil + ' sous le minimum' : '', g.jusqua ? 'tickets lus jusqu’au ' + jj(g.jusqua) : ''].filter(Boolean).join(' · '),
+        gagnant: g.saison.etat === 'finie' && top.length ? top[0] : null,
+        ici: g.ici ? { rang: g.ici.rang, nom: g.ici.nom, txt: g.ici.txt } : null, iciVide: lecture && FRd && !g.ici && g.saison.etat !== 'a_venir' && g.defi !== 'magasin',
+        portee: g.portee, shopNom: g.shopNom && !FRd ? court(g.shopNom) : '',
+        modifier: lecture ? null : () => this.setState({ prGpForm: formDe(g) }),
+        basculer: lecture ? null : ev => this.api('POST', '/ventes/grands-prix', { id: g.id, actif: !!ev.target.checked }).then(r => { if (r && r.ok !== false) { this.notify('« ' + g.titre + ' » ' + (ev.target.checked ? 'activé' : 'éteint')); recharger(); } }) };
+    };
+    const reseau = G.liste.filter(g => g.portee === 'reseau');
+    const mag = G.liste.filter(g => g.portee === 'magasin');
+    const enJeu = l => l.filter(g => g.actif && g.saison.etat === 'en_cours');
+    const annee = G.annee;
+    const deLAnnee = enJeu(FRd ? G.liste : reseau);
+    const sponsors = new Set(deLAnnee.filter(g => g.payeur === 'sponsor').map(g => g.sponsor));
+    const fin = deLAnnee.map(g => g.saison.joursRestants).filter(v => v > 0);
+    // Le formulaire (maquette D) : le défi, le prix, qui l'offre, qui peut gagner et la saison.
+    const nouveauForm = () => ({ id: 0, portee: FRd ? 'magasin' : 'reseau', shop: shop || null, defi: 'vendeuse', titre: '', lot: '', valeur: '', payeur: FRd ? 'magasin' : 'marque',
+      sponsor: '', sponsorSite: '', photo: '', seuil: '', saison: 'annee', annee: String(annee), du: annee + '-01', au: annee + '-12', actif: true, envoi: false, envoiPhoto: false });
+    const formDe = g => ({ id: g.id, portee: g.portee, shop: g.shop, defi: g.defi, titre: g.titre, lot: g.lot, valeur: String(g.valeur), payeur: g.payeur, sponsor: g.sponsor,
+      sponsorSite: g.sponsorSite, photo: g.photo, seuil: g.seuil != null ? String(g.seuil) : '', saison: g.du.slice(5) === '01-01' && g.au.slice(5) === '12-31' && g.du.slice(0, 4) === g.au.slice(0, 4) ? 'annee' : 'mois',
+      annee: g.du.slice(0, 4), du: g.du.slice(0, 7), au: g.au.slice(0, 7), actif: g.actif, envoi: false, envoiPhoto: false });
+    let F = null;
+    if (S.prGpForm) {
+      const W = S.prGpForm;
+      const reF = () => this.setState({ prGpForm: W });
+      const D = G.defis.find(x => x.cle === W.defi) || G.defis[0];
+      const nomMagF = W.shop ? court(((G.magasins || []).find(m => m.id === String(W.shop)) || {}).nom || 'shop ' + W.shop) : '';
+      const poser = k => ev => { W[k] = ev.target.value; reF(); };
+      const du = W.saison === 'annee' ? W.annee + '-01-01' : W.du + '-01';
+      const auM = W.saison === 'annee' ? W.annee + '-12' : W.au;
+      const au = auM + '-' + String(new Date(+auM.slice(0, 4), +auM.slice(5, 7), 0).getDate()).padStart(2, '0');
+      const val = parseFloat(String(W.valeur).replace(',', '.'));
+      const manque = W.titre.trim().length < 3 ? 'l’intitulé du prix' : !(val >= 0) ? 'sa valeur' : W.payeur === 'sponsor' && !W.sponsor.trim() ? 'le nom du sponsor'
+        : W.saison === 'mois' && !(W.du && W.au && W.au >= W.du) ? 'la saison' : '';
+      const corps = () => ({ id: W.id || undefined, portee: W.portee, shop: W.shop, defi: W.defi, titre: W.titre, lot: W.lot, valeur: val, payeur: W.payeur, sponsor: W.sponsor,
+        sponsorSite: W.sponsorSite, photo: W.photo, seuil: D.seuil ? (W.seuil === '' ? D.defaut : +W.seuil) : null, du, au, actif: W.actif });
+      F = {
+        titre: (W.id ? 'Modifier le grand prix' : 'Nouveau grand prix') + ' — ' + (W.portee === 'magasin' ? nomMagF : 'tout le réseau'),
+        defis: G.defis.filter(x => W.portee !== 'magasin' || !x.reseauSeul).map(x => ({ emo: x.emo, lib: x.lib, regle: x.regle, on: x.cle === W.defi,
+          choisir: () => { W.defi = x.cle; if (!x.seuil) { W.seuil = ''; } reF(); } })),
+        photo: W.photo ? racine + W.photo : '', envoiPhoto: W.envoiPhoto,
+        poserPhoto: ev => {
+          const f = ev.target.files && ev.target.files[0];
+          ev.target.value = '';
+          if (!f) { return; }
+          if (!/^image\/(png|jpeg|webp)$/.test(f.type)) { this.notify('Photo : PNG, JPEG ou WebP'); return; }
+          // Ramenée à 1 400 px au plus, en JPEG : sous le méga-octet qu'accepte le serveur.
+          const img = new Image(); const url = URL.createObjectURL(f);
+          img.onload = () => {
+            const k = Math.min(1, 1400 / Math.max(img.width, img.height));
+            const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+            cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+            W.envoiPhoto = true; reF();
+            this.api('POST', '/ventes/primes-icone', { data: cv.toDataURL('image/jpeg', 0.84) }).then(r => {
+              W.envoiPhoto = false;
+              if (r && r.ok !== false && r.icone) { W.photo = r.icone; }
+              reF();
+            });
+          };
+          img.onerror = () => { URL.revokeObjectURL(url); this.notify('Photo illisible'); };
+          img.src = url;
+        },
+        retirerPhoto: () => { W.photo = ''; reF(); },
+        intitule: W.titre, lot: W.lot, valeur: W.valeur, poserTitre: poser('titre'), poserLot: poser('lot'), poserValeur: poser('valeur'),
+        payeurs: (W.portee === 'magasin' ? [['magasin', 'Le magasin'], ['sponsor', 'Un sponsor']] : [['marque', 'La marque'], ['sponsor', 'Un sponsor']])
+          .map(([v, nom]) => ({ nom, on: W.payeur === v, choisir: () => { W.payeur = v; reF(); } })),
+        sponsor: W.payeur === 'sponsor', nomSponsor: W.sponsor, site: W.sponsorSite, poserSponsor: poser('sponsor'), poserSite: poser('sponsorSite'),
+        qui: W.portee === 'magasin' ? 'les vendeuses de ' + nomMagF : W.defi === 'magasin' ? 'les magasins du réseau — l’équipe gagnante fête' : 'les vendeuses de tout le réseau',
+        seuilSorte: D.seuil, seuil: W.seuil, seuilDefaut: D.defaut != null ? String(D.defaut) : '', poserSeuil: poser('seuil'),
+        seuilLib: D.seuil === 'tickets' ? 'Tickets au minimum sur la saison' : 'Heures prestées au minimum sur la saison',
+        saisons: [['annee', 'Toute l’année'], ['mois', 'Des mois choisis']].map(([v, nom]) => ({ nom, on: W.saison === v, choisir: () => { W.saison = v; reF(); } })),
+        saisonAnnee: W.saison === 'annee', annees: [annee, annee + 1].map(a => ({ v: String(a), on: W.annee === String(a) })), poserAnnee: poser('annee'),
+        du: W.du, au: W.au, poserDu: poser('du'), poserAu: poser('au'),
+        resume: 'du ' + jjA(du) + ' au ' + jjA(au) + (D.seuil ? ' · le minimum monte avec la saison' : ''),
+        manque, envoi: W.envoi, edit: !!W.id,
+        fermer: () => this.setState({ prGpForm: undefined }),
+        enregistrer: () => {
+          if (manque || W.envoi) { return; }
+          W.envoi = true; reF();
+          this.api('POST', '/ventes/grands-prix', corps()).then(r => {
+            W.envoi = false;
+            if (!r || r.ok === false) { reF(); return; }
+            this.notify((W.id ? 'Grand prix modifié' : 'Grand prix publié') + ' — « ' + W.titre.trim() + ' »');
+            this._gpL = {}; this.setState({ prGpForm: undefined });
+          });
+        },
+        supprimer: W.id ? () => {
+          if (!window.confirm('Retirer « ' + W.titre + ' » ? Son classement disparaît avec lui.')) { return; }
+          this.api('POST', '/ventes/grands-prix/retirer', { id: W.id }).then(r => { if (r && r.ok !== false) { this.notify('Grand prix retiré'); this._gpL = {}; this.setState({ prGpForm: undefined }); } });
+        } : null,
+      };
+    }
+    const vitrine = (l, lecture) => l.map(g => carte(g, lecture));
+    common.prGp = Object.assign(G0, {
+      annee, franchise: !!FRd, shopNom: FRd ? FRd.nom : '',
+      kpis: [
+        { lib: 'En jeu', v: fr(deLAnnee.reduce((a, g) => a + g.valeur, 0)) + ' €', sous: deLAnnee.length + ' grand' + (deLAnnee.length > 1 ? 's' : '') + ' prix en cours' },
+        { lib: 'Jours restants', v: fin.length ? 'J − ' + Math.min(...fin) : '—', sous: fin.length ? 'avant la fin de la première saison' : '' },
+        { lib: 'En course', v: fr(deLAnnee.reduce((a, g) => Math.max(a, g.defi === 'magasin' ? 0 : g.enCourse), 0)), sous: 'vendeuses classées au plus' },
+        { lib: 'Sponsors', v: String(sponsors.size), sous: [...sponsors].slice(0, 3).join(', ') },
+      ],
+      nouveau: () => this.setState({ prGpForm: nouveauForm() }),
+      reseau: vitrine(reseau, !!FRd), magasin: vitrine(mag, false),
+      magasinTitre: FRd ? 'Les grands prix du magasin' : 'Grands prix des franchisés',
+      form: F,
+    });
   }
 
   valsVentes(common){

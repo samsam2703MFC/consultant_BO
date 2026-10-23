@@ -5,6 +5,10 @@ le cockpit à l'adresse `/consulant_bo/employee/`, et liée depuis le rail du co
 employé** (avec la page admin et la page franchisé des primes) › **Application ↗**, vers sa page de connexion. Horaire, primes, profil ; les tâches à faire (avec
 photo) s'ouvrent depuis l'Accueil.
 
+Le module des primes (cockpit, page admin, page franchisé et cette app) range ses données dans ses propres tables,
+préfixe `mot_` : voir `docs/module-motivation.md`. Les grands prix de l'année s'y trouvent aussi (onglet « Grands prix
+de l'année » de l'écran des primes).
+
 ## Où vit quoi
 
 | Dossier | Contenu |
