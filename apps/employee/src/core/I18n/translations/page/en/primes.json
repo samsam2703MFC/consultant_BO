@@ -298,8 +298,12 @@
   "counters_start": "Your counters start with your first tickets of the month: every sale counts.",
   "you_won_in": "In {m}, you won",
   "hours_left_short": "{h} h of shifts left this month",
-  "how_to_get_there": "How to get there",
-  "where_you_are": "Where you stand",
   "d_weighted_hour": "Your weighted revenue per hour",
-  "d_revenue_hour_real": "Your actual revenue per hour"
+  "d_revenue_hour_real": "Your actual revenue per hour",
+  "your_bonuses": "Your bonuses",
+  "to_chase": "Up for grabs",
+  "won_title": "Already won",
+  "won_title_past": "Won",
+  "not_this_month_title": "Not this month",
+  "not_won_title": "Not won"
 }

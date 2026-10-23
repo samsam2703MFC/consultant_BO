@@ -25,7 +25,6 @@ class PrimesController extends Controller
         // Comment y arriver (23/10/2026) : les primes encore à aller chercher, et le temps qu'il lui reste.
         $data['plan'] = $data['primes'] ? PrimesPlan::pour($data['primes']) : [];
         $data['heuresRestantes'] = $data['primes'] ? PrimesPlan::heuresRestantes($data['primes']) : null;
-        $data['vue'] = $_GET['vue'] ?? null; // MAQUETTE — à retirer
         $data['jour'] = (int) date('j');
         $data['heure'] = date('H:i');
 

@@ -298,8 +298,12 @@
   "counters_start": "Tes compteurs démarrent avec tes premiers tickets du mois : chaque vente compte.",
   "you_won_in": "En {m}, tu as gagné",
   "hours_left_short": "{h} h de service restantes ce mois-ci",
-  "how_to_get_there": "Comment y arriver",
-  "where_you_are": "Où tu en es",
   "d_weighted_hour": "Ton CA par heure pondéré",
-  "d_revenue_hour_real": "Ton CA par heure réel"
+  "d_revenue_hour_real": "Ton CA par heure réel",
+  "your_bonuses": "Tes primes",
+  "to_chase": "À aller chercher",
+  "won_title": "Déjà gagnées",
+  "won_title_past": "Gagnées",
+  "not_this_month_title": "Pas ce mois-ci",
+  "not_won_title": "Pas gagnées"
 }

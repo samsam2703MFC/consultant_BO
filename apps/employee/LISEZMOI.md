@@ -65,7 +65,7 @@ personne (`langue`, un global Twig). Les lignes de détail des mois payés sont 
 par le cockpit : en français l'app les montre telles quelles, dans les autres langues elle recompose
 la ligne depuis les montants.
 
-## L'onglet Primes (23/10/2026) : combien, comment y arriver, où tu en es — en forme sobre
+## L'onglet Primes (23/10/2026) : combien, comment y arriver, où tu en es — en forme sobre, puis en une seule liste
 
 Deux demandes : « tourner l'application vers la motivation de ce que tu peux gagner, comment y arriver, où tu en
 es », puis « l'UX doit être plus minimaliste (type Apple) ». De haut en bas, sur `/primes` :
@@ -84,6 +84,16 @@ es », puis « l'UX doit être plus minimaliste (type Apple) ». De haut en bas,
   « prime du magasin ».
 - **Où tu en es** : les targets et les promos, une ligne par prime (les promos ne sont plus en carrés), qui se
   déroule sur son détail ; puis le classement.
+
+**Tes primes, une seule liste (23/10/2026)** : à la demande (« fusionner Comment y arriver et Où tu en es, ou un
+toggle »), trois options montrées en capture — une liste par état, une bascule entre les deux vues, une liste
+compacte ; la première est retenue. Sous « Tes primes », trois blocs : **À aller chercher** (le plan, la plus
+proche d'abord, son total), chaque ligne avec sa jauge et, dessous, la phrase de ce qu'il faut faire ; **Déjà
+gagnées** (leur total) ; **Pas ce mois-ci** (hors de portée, avec la raison, ou rien de compté ; « jusqu'à »). Les
+trois totaux font l'« encore en jeu » du haut. Les catégories y reviennent (leur classement reste plus bas). Un
+mois clos : « Gagnées », « Pas gagnées ». La ligne d'une prime vit dans `primes/_ligne.twig` (ses macros dans
+`primes/_macros.twig`) ; la phrase vient de `components/primes_etape.twig` en mode `texte`. L'Accueil garde son
+« Comment y arriver » (trois lignes), qui mène à la ligne de la prime (`/primes#prime-<clé>`).
 
 La forme (`public/employee/assets/atelier/primes.css`, la dernière couche) : la police du système (SF sur
 iPhone) à la place de Gotham et Vank sur ces écrans, un fond clair, des listes groupées blanches sans bordure ni

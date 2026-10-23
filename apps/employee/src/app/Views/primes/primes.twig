@@ -1,5 +1,5 @@
-{# primes/primes.twig — « Mes primes » (23/10/2026) : tournée vers la motivation — combien est encore en jeu, comment y arriver (le plan,
-   PrimesPlan), où tu en es (chaque prime) — dans une forme sobre, façon iOS : la police du système, des listes groupées, une seule
+{# primes/primes.twig — « Mes primes » (23/10/2026) : tournée vers la motivation — combien est encore en jeu, puis tes primes en une
+   seule liste par état : à aller chercher (le plan, PrimesPlan, avec ce qu'il faut faire), déjà gagnées, pas ce mois-ci — dans une forme sobre, façon iOS : la police du système, des listes groupées, une seule
    couleur, des icônes au trait à la place des émojis (une icône déposée par l'admin reste). Avant, le 16/10/2026 : les targets et les catégories une par ligne, en drapeau (la barre, le trait de l'objectif, la récompense dessus), qui se déroulent sur leur détail ; les promos en carrés deux par ligne ; chaque carré a sa récompense, une demi-jauge (où elle en est aujourd'hui, l'objectif à atteindre) et son état, en gris tant qu'elle n'est pas gagnée ; l'icône déposée par l'admin, sinon l'emoji ; le classement à la Strava dans un menu qui monte du bas. #}
 {% extends "layouts/mobile_base.twig" %}
 {% set active_nav = 'primes' %}
@@ -117,51 +117,16 @@
 {% set totC = 0 %}{% for e in aPortee %}{% set totC = totC + e.gain %}{% endfor %}
 {% set totG = 0 %}{% for c in gagnees %}{% set totG = totG + c.gain %}{% endfor %}
 {% set totR = 0 %}{% for c in reste %}{% set totR = totR + c.montant %}{% endfor %}
-{% set vue = vue ?? 'etat' %}
-
-{% if vue == 'bascule' %}
-{# ── Option 2 : une bascule entre « Comment y arriver » et « Où tu en es ». ── #}
-<div class="seg sb-bascule" role="tablist" data-bascule>
-  <button type="button" role="tab" class="on" aria-selected="true" data-vue-btn="plan">{{ T.how_to_get_there ?? 'Comment y arriver' }}</button>
-  <button type="button" role="tab" aria-selected="false" data-vue-btn="ou">{{ T.where_you_are ?? 'Où tu en es' }}</button>
-</div>
-<div data-vue-pan="plan">
-  {% if aPortee|length %}<div class="sb-groupe">{% for e in aPortee %}{% include "components/primes_etape.twig" with { e: e, T: T, ib: ib, lien: '#prime-' ~ e.cle } only %}{% endfor %}</div>{% endif %}
-</div>
-<div data-vue-pan="ou" hidden>
-{% for g in [
-  { cle: 'targets', titre: T.section_targets ?? 'Targets', liste: p.cartes|filter(c => c.type == 'target' or c.type == 'classement') },
-  { cle: 'promos', titre: T.section_promos ?? 'Promos', liste: p.cartes|filter(c => c.type == 'promo') }]|filter(g => g.liste|length) %}
-{% set max = 0 %}{% for c in g.liste %}{% set max = max + max(c.montant, c.gain) %}{% endfor %}
-<div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{{ T.up_to ?? 'jusqu’à' }} {{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</small></div>
-<div class="pl-liste">{% for c in g.liste %}{% set etape = null %}{% include 'primes/_ligne.twig' %}{% endfor %}</div>
-{% endfor %}
-</div>
-
-{% elseif vue == 'compact' %}
-{# ── Option 3 : une liste compacte, une ligne par prime ; le détail s'ouvre au toucher. ── #}
-<h2 class="sb-titre">{{ T.your_bonuses ?? 'Tes primes' }}</h2>
-<div class="sb-groupe">
-  {% for e in aPortee %}{% include "components/primes_etape.twig" with { e: e, T: T, ib: ib, lien: null } only %}{% endfor %}
-  {% for c in gagnees %}{% set u = c.unite %}{% set dec = u == 'lpt' ? 2 : (u == 'note' ? 1 : 0) %}
-  <div class="sb-ligne sb-etape" data-fiche="{{ c.cle }}"><span class="sb-ic ok">{{ m.ic(c, ib) }}</span>
-    <span class="sb-corps"><span class="sb-l1"><b>{{ nomFixe[c.cle] ?? c.lib }}</b><span class="sb-gain">{% if c.cadeau ?? null %}<i class="bi bi-gift"></i>{% else %}+{{ c.gain|number_format(0, ',', ' ') }}&nbsp;€{% endif %}</span></span>
-    <span class="sb-l2 ok">✓ {{ c.etat == 'tete' ? (T.first_of_shop ?? '1re du magasin') : (T.activated ?? 'Prime activée') }}{% if c.val is not null %} · {{ c.cle == 'objectif' and (c.jour ?? null) ? (T.proj_short ?? 'proj.') ~ ' ' }}{{ c.val|number_format(dec, ',', ' ') }}{{ u == 'pct' ? ' %' : (u == 'note' ? ' ★' : (u == 'score' ? ' €/h' : (u == 'pcs' ? ' ' ~ pcs : ''))) }}{% endif %}</span></span></div>
-  {% endfor %}
-  {% for c in reste %}{% set e = planPar[c.cle] ?? null %}
-  <div class="sb-ligne sb-etape dur" data-fiche="{{ c.cle }}"><span class="sb-ic">{{ m.ic(c, ib) }}</span>
-    <span class="sb-corps"><span class="sb-l1"><b>{{ nomFixe[c.cle] ?? c.lib }}</b><span class="sb-gain">{{ c.montant|number_format(0, ',', ' ') }}&nbsp;€{% if c.max %} max{% endif %}</span></span>
-    <span class="sb-l2">{% if e %}{% include "components/primes_etape.twig" with { e: e, T: T, ib: ib, lien: null, texte: true } only %}{% else %}{{ T.not_counted ?? 'pas encore compté' }}{% endif %}</span></span></div>
-  {% endfor %}
-</div>
-
-{% else %}
-{# ── Option 1 : une seule liste, par état — à aller chercher (avec ce qu'il faut faire), déjà gagnées, pas ce mois-ci. ── #}
+{# ── Tes primes (23/10/2026, option retenue) : « Comment y arriver » et « Où tu en es » ne font plus qu'une liste, par
+   état — à aller chercher (le plan, la plus proche d'abord ; sous chaque ligne, ce qu'il faut faire), déjà gagnées,
+   pas ce mois-ci (hors de portée, ou rien de compté). Les catégories y reviennent ; leur classement reste plus bas.
+   Un mois clos : gagnées, pas gagnées. Toucher une ligne déroule son détail ; l'Accueil y mène par #prime-<clé>. ── #}
+{% if toutes|length %}
 <h2 class="sb-titre">{{ T.your_bonuses ?? 'Tes primes' }}</h2>
 {% for sec in [
-  { cle: 'chercher', titre: T.to_chase ?? 'À aller chercher', note: '+' ~ totC|number_format(0, ',', ' ') ~ ' €', liste: chercher },
-  { cle: 'gagnees', titre: T.won_title ?? 'Déjà gagnées', note: totG|number_format(0, ',', ' ') ~ ' €', liste: gagnees },
-  { cle: 'reste', titre: T.not_this_month_title ?? 'Pas ce mois-ci', note: totR ? (T.up_to ?? 'jusqu’à') ~ ' ' ~ totR|number_format(0, ',', ' ') ~ ' €' : '', liste: reste }]|filter(x => x.liste|length) %}
+  { cle: 'chercher', titre: T.to_chase ?? 'À aller chercher', note: totC ? '+' ~ totC|number_format(0, ',', ' ') ~ ' ' ~ eur : '', liste: chercher },
+  { cle: 'gagnees', titre: p.enCours ? (T.won_title ?? 'Déjà gagnées') : (T.won_title_past ?? 'Gagnées'), note: totG ? totG|number_format(0, ',', ' ') ~ ' ' ~ eur : '', liste: gagnees },
+  { cle: 'reste', titre: p.enCours ? (T.not_this_month_title ?? 'Pas ce mois-ci') : (T.not_won_title ?? 'Pas gagnées'), note: p.enCours and totR ? (T.up_to ?? 'jusqu’à') ~ ' ' ~ totR|number_format(0, ',', ' ') ~ ' ' ~ eur : '', liste: reste }]|filter(x => x.liste|length) %}
 <div class="titre-section" data-section="{{ sec.cle }}"><h2>{{ sec.titre }}</h2><small>{{ sec.note }}</small></div>
 <div class="pl-liste">{% for c in sec.liste %}{% set etape = planPar[c.cle] ?? null %}{% include 'primes/_ligne.twig' %}{% endfor %}</div>
 {% endfor %}
@@ -272,20 +237,6 @@
 {% block scripts %}
 <script>
 (function () {
-  // La bascule « Comment y arriver | Où tu en es ».
-  var bs = document.querySelector('[data-bascule]'); if (!bs) { return; }
-  bs.querySelectorAll('[data-vue-btn]').forEach(function (bt) { bt.addEventListener('click', function () {
-    bs.querySelectorAll('[data-vue-btn]').forEach(function (x) { var on = x === bt; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); });
-    document.querySelectorAll('[data-vue-pan]').forEach(function (pn) { pn.hidden = pn.dataset.vuePan !== bt.dataset.vueBtn; });
-  }); });
-  // Une étape du plan mène à sa prime, dans « Où tu en es ».
-  document.querySelectorAll('[data-vue-pan="plan"] a[href^="#prime-"]').forEach(function (a) { a.addEventListener('click', function (ev) {
-    var cible = document.querySelector(a.getAttribute('href')); if (!cible) { return; }
-    ev.preventDefault(); bs.querySelector('[data-vue-btn="ou"]').click();
-    cible.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }); });
-})();
-(function () {
   var m = document.querySelector('[data-mois]');
   if (m) { m.querySelectorAll('a.ms-f').forEach(function (a) { a.addEventListener('click', function () { m.classList.add('charge'); }); }); }
 })();
@@ -362,8 +313,7 @@
     requestAnimationFrame(function () { f.classList.add('ouverte'); });
   }
   function ferme() { f.classList.remove('ouverte'); setTimeout(function () { f.hidden = true; }, 200); if (der) { der.focus(); } }
-  document.querySelectorAll('.pq[data-carte], .pl.av[data-carte], [data-fiche]').forEach(function (k) {
-    if (k.dataset.fiche) { k.dataset.carte = k.dataset.fiche; }
+  document.querySelectorAll('.pq[data-carte], .pl.av[data-carte]').forEach(function (k) {
     k.classList.add('cliquable'); k.setAttribute('role', 'button'); k.tabIndex = 0;
     k.addEventListener('click', function () { ouvre(k.dataset.carte, k); });
     k.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvre(k.dataset.carte, k); } });

@@ -298,8 +298,12 @@
   "counters_start": "Twoje liczniki ruszają z pierwszymi paragonami miesiąca: każda sprzedaż się liczy.",
   "you_won_in": "W miesiącu {m} zdobyłaś",
   "hours_left_short": "zostało {h} h zmian w tym miesiącu",
-  "how_to_get_there": "Jak to osiągnąć",
-  "where_you_are": "Gdzie jesteś",
   "d_weighted_hour": "Twój ważony obrót na godzinę",
-  "d_revenue_hour_real": "Twój rzeczywisty obrót na godzinę"
+  "d_revenue_hour_real": "Twój rzeczywisty obrót na godzinę",
+  "your_bonuses": "Twoje premie",
+  "to_chase": "Do zdobycia",
+  "won_title": "Już zdobyte",
+  "won_title_past": "Zdobyte",
+  "not_this_month_title": "Nie w tym miesiącu",
+  "not_won_title": "Niezdobyte"
 }
