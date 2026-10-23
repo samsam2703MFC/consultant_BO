@@ -1180,3 +1180,30 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{
 .ffd-ap{width:100%;height:760px;border:.5px solid var(--color-border-tertiary);border-radius:10px;background:#EFE9DF;display:block}.ffd-ap.maj{opacity:.55}
 .ffd-tab{table-layout:fixed;min-width:640px}.ffd-tab th:nth-child(1){width:36%}.ffd-tab th:nth-child(2){width:30%}.ffd-tab th:nth-child(3){width:12%}.ffd-tab td{overflow-wrap:anywhere}
 .ffd-tab td small{font-size:11.5px;margin-top:2px}.ffd-act{white-space:nowrap;text-align:right}.ffd-act .mko-pied-btn{margin-left:6px;text-decoration:none;display:inline-block}
+/* Primes de l'app worker (23/10/2026, « optimiser pour desktop ») : la ligne d'une prime. Plus étroit, la liste en trois
+   lignes (nom, ce qui compte, qui gagne · réseau) ; sur un écran large, une ligne en colonnes alignées sous un en-tête. */
+.prl{display:flex;align-items:center;gap:14px;padding-left:18px}
+.prl-b{flex:1;min-width:0;display:flex;align-items:center;gap:13px;border:0;background:none;padding:13px 18px 13px 0;text-align:left;cursor:pointer}
+.prl-txt{flex:1;min-width:0}
+.prl-nom{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.prl-regle{display:block;margin-top:2px}
+.prl-meta{display:block;margin-top:1px;opacity:.8}
+.prl-qui::before{content:'gagne : '}
+.prl-res:not(:empty)::before{content:' · réseau : '}
+.prl-droite{text-align:right;flex:none;max-width:210px}
+.prl-mt,.prl-pay{display:block}.prl-pay{margin-top:2px}
+.prl-chev{flex:none}
+.prl-ent{display:none}
+/* La page d'un magasin (23/10/2026) : la moyenne est la sienne ; une prime de la marque s'y lit sans se toucher. */
+.prl-mag .prl-res:not(:empty)::before{content:' · ce magasin : '}
+.prl-lire .prl-b{cursor:default}
+@media (min-width:1200px){
+  .prl-b{display:grid;grid-template-columns:32px minmax(150px,1fr) minmax(240px,2.2fr) minmax(130px,1fr) minmax(110px,.9fr) minmax(150px,1fr) minmax(100px,.8fr) 14px;column-gap:16px;padding:10px 18px 10px 0}
+  .prl-txt,.prl-meta,.prl-droite{display:contents}
+  .prl-regle{margin:0}
+  .prl-meta>span{opacity:.85}
+  .prl-qui::before,.prl-res:not(:empty)::before,.prl-mag .prl-res:not(:empty)::before{content:none}
+  .prl-mt{text-align:right}.prl-pay{margin:0;text-align:left}
+  .prl-ent{display:flex;border-bottom:0.5px solid var(--color-border-tertiary)}
+  .prl-ent .prl-b{cursor:default;padding-top:11px;padding-bottom:9px}
+}

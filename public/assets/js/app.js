@@ -253,6 +253,16 @@ class App {
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
       pwaType: 'gestion:month', pwaScope: 'all', gate: null,
       repCible: null, repRech: null, repBusy: false, pdCat: 'Toutes les catégories', pdSort: 'score' };
+    // La page du franchisé (23/10/2026) : « #/primes-app-worker?shop=3 » ouvre les primes de ce magasin. « ?shop=3 » avant
+    // l'ancre (lien de la PR #33) passe dans l'ancre, seule à dire le magasin ensuite : sans quoi il collerait à l'adresse
+    // et la page admin ne se rouvrirait plus.
+    const shopAvant = (new URLSearchParams(location.search).get('shop') || '').trim();
+    if (shopAvant) {
+      const reste = new URLSearchParams(location.search); reste.delete('shop');
+      const h = String(location.hash || '');
+      const ancre = (!h || /^#\/?(primes-app-worker)?(\?|$)/.test(h)) && !App.shopDeAdresse() ? '#/' + App.ADRESSES.primesApp + '?shop=' + encodeURIComponent(shopAvant) : h;
+      try { history.replaceState(null, '', location.pathname + (reste.toString() ? '?' + reste : '') + ancre); } catch (e) { /* adresse inchangée */ }
+    }
     this._h = [];
     this._tt = null;
     this._lastEn = null;
@@ -284,7 +294,7 @@ class App {
       if (id !== this.state.screen) { this.setState(Object.assign({ screen: id, hmHover: null }, this.etatDeAdresse(id))); return; }
       // Même écran, autre magasin dans l'adresse (« ?shop=3 » changé à la main) : la page suit.
       const etat = this.etatDeAdresse(id);
-      if (Object.keys(etat).some(k => String(this.state[k] ?? '') !== String(etat[k] ?? ''))) { this.setState(etat); return; }
+      if (Object.keys(etat).some(k => String(this.state[k] ?? '') !== String(etat[k] ?? ''))) { this.setState(Object.assign({ prB2b: undefined, prWiz: undefined, prEdit: undefined, prChoix: null }, etat)); return; }
       // Même écran, mais adresse retirée (« #/stock » alors qu'on est déjà sur
       // les commandes) : la barre d'adresse se remet d'aplomb, sans quoi elle
       // afficherait un écran qui n'existe plus.
@@ -427,11 +437,14 @@ class App {
     if (id === 'primesApp' && this.state.prSection === 'franchise' && this.state.prShop) { return base + '?shop=' + encodeURIComponent(this.state.prShop); }
     return base;
   }
+  /** Le magasin écrit dans l'ancre : « #/primes-app-worker?shop=3 » ; '' sans lui. */
+  static shopDeAdresse(){
+    return (new URLSearchParams(String(location.hash || '').split('?')[1] || '').get('shop') || '').trim();
+  }
   /** Ce que l'adresse dit en plus de l'écran : le magasin de la page franchisé des primes. */
   etatDeAdresse(id){
     if (id !== 'primesApp') { return {}; }
-    const q = new URLSearchParams(String(location.hash || '').split('?')[1] || '');
-    const shop = (q.get('shop') || '').trim();
+    const shop = App.shopDeAdresse();
     return shop ? { prSection: 'franchise', prShop: shop } : { prSection: 'marque' };
   }
   /** Remet l'adresse d'aplomb sans ajouter de pas à l'historique (un magasin choisi par défaut). */
@@ -1049,6 +1062,8 @@ class App {
       planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
       magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets de développement', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
+    // La page du franchisé (?shop=) : rien de la marque ni des sponsors, pas même dans l'en-tête.
+    if (S.screen === 'primesApp' && S.prSection === 'franchise') { common.screenTitle = 'Primes du magasin'; common.screenSub = 'Ce que tes vendeuses gagnent dans l’app : les primes de la marque et des sponsors qui tournent chez toi, et celles que tu poses pour ton magasin.'; }
     common.ecran = S.screen; common.railOuvert = !!S.railOuvert; common.railBascule = () => this.setState({ railOuvert: !this.state.railOuvert });
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
@@ -1481,7 +1496,7 @@ class App {
       // (employee/ : horaire, tâches, primes, profil ; l'entrée mène à sa connexion). Remplace « App worker ↗ »
       // et le sous-menu « Primes · module app worker » d'ERP franchisé.
       ['Application employé', [
-        ['primesApp', 'Page admin', 0, [], { prSection: 'marque' }],
+        ['primesApp', 'Page admin', 0, [], { prSection: 'marque', prShop: '' }],
         ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise', prShop: '' }],
         ['ext:employee/auth', 'Application ↗', 0]]],
         // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
@@ -6813,7 +6828,7 @@ class App {
         dureeTxt: (DUREES.find(([k]) => k === String(BB.duree)) || DUREES[2])[1], durees: DUREES, exemple, ok, envoi: BB.envoi,
         plus: BB.plus, lib: BB.lib, plafond: BB.plafond, min: BB.min, du: BB.du, au: BB.au,
         magasins: BB.famille === 'magasin' && !BB.edit && !BB.shopFixe ? (d.magasins || []).map(m => [m.id, nomMag[m.id] || m.nom]) : null, shop: BB.shop,
-        magasinNom: BB.famille === 'magasin' ? (nomMag[BB.shop] || '') : 'toute la marque',
+        magasinNom: BB.famille === 'magasin' ? (nomMag[BB.shop] || (BB.shop ? 'Magasin ' + BB.shop : '')) : 'toute la marque',
         poserValeur: ev => { BB.valeur = String(ev.target.value).replace(/[^\d.,]/g, '').slice(0, 5); const w = num(BB.valeur);
           if (w != null && w > 0) { if (BB.mode === 'fixe') { BB.montant = Math.round(w); } else { BB.taux = Math.round(w * 2) / 2; } } reB(); },
         poserMode: ev => { BB.mode = ev.target.value === 'fixe' ? 'fixe' : 'pct'; BB.valeur = BB.mode === 'fixe' ? String(BB.montant || 30) : String(BB.taux || 5).replace('.', ','); reB(); },
@@ -6833,7 +6848,7 @@ class App {
       lignesMag: lignesMag.filter(l => !filtreMag || l.shop === filtreMag),
       magsFiltre: [{ nom: 'Tous les magasins', n: lignesMag.length, on: !filtreMag, choisir: () => this.setState({ prMag: '' }) }]
         .concat((d.magasins || []).map(m => ({ nom: court(m.nom), n: lignesMag.filter(l => l.shop === m.id).length, on: filtreMag === m.id, choisir: () => this.setState({ prMag: m.id }) }))),
-      magFiltreNom: filtreMag ? (nomMag[filtreMag] || filtreMag) : '',
+      magFiltreNom: filtreMag ? (nomMag[filtreMag] || 'Magasin ' + filtreMag) : '',
       nouvelleMag: () => this.setState({ prWiz: wizNeuf('magasin', filtreMag) }),
       nouvelleB2b: () => this.setState({ prB2b: b2bNeuf('marque', '') }),
       nouvelleB2bMag: () => this.setState({ prB2b: b2bNeuf('magasin', filtreMag) }),
