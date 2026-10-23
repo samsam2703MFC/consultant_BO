@@ -73,6 +73,12 @@ class ProformaRepository extends BaseRepository
     public $errors = [];
 
     /** @return array<int, array<string, mixed>> */
+    /** Proforma wysłana klientowi (pierwsza wysyłka zostaje zapisana). */
+    public function markSentToClient(int $id, string $method): void
+    {
+        $this->query("UPDATE document_proforma SET is_sent_to_client = 1, sent_to_client_at = COALESCE(sent_to_client_at, NOW()), send_method = :m WHERE id = :id", ['m' => $method, 'id' => $id]);
+    }
+
     public function getUnpaidForReminder(): array
     {
         return $this->query(

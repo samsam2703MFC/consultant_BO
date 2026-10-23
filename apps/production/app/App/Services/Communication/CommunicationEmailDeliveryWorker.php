@@ -4,6 +4,7 @@ namespace App\Services\Communication;
 use App\Repositories\Communication\CommunicationMessageAttachmentRepository;
 use App\Repositories\Communication\CommunicationMessageRepository;
 use App\Repositories\Communication\EmailAccountRepository;
+use App\Repositories\Document\Proforma\ProformaRepository;
 
 final class CommunicationEmailDeliveryWorker
 {
@@ -14,7 +15,8 @@ final class CommunicationEmailDeliveryWorker
         private CommunicationMessageAttachmentRepository $attachments,
         private EmailAccountRepository $accounts,
         private SmtpTransport $transport,
-        private MailDeliveryPolicy $policy
+        private MailDeliveryPolicy $policy,
+        private ProformaRepository $proformas
     ) {}
 
     /** Processes up to $limit queued messages and returns counters. */
@@ -61,6 +63,10 @@ final class CommunicationEmailDeliveryWorker
                 $this->attachments->forMessage((int)$message['id'])
             );
             $this->messages->markSent((int)$message['id'], $providerId);
+            // Proforma naprawdę wysłana klientowi (nie tryb zapisu) : status « wysłana » na liście proform i w Dzisiaj.
+            if (($message['message_type'] ?? '') === 'proforma' && !empty($message['id_proforma']) && !MailDeliveryPolicy::isLogOnly($providerId)) {
+                $this->proformas->markSentToClient((int)$message['id_proforma'], 'email');
+            }
             $this->messages->recordAttempt((int)$message['id'], (int)$message['attempts'], 'sent', $providerId, null, $started);
             return ['status' => 'sent', 'message' => 'Wiadomość została wysłana.'];
         } catch (\Throwable $e) {

@@ -13,6 +13,31 @@ class CommunicationMessageRepository extends BaseRepository
         return $this->query('SELECT m.*, c.company FROM communication_message m LEFT JOIN customer c ON c.id = m.id_customer ORDER BY m.created_at DESC LIMIT 100');
     }
 
+    /**
+     * Przypomnienia proform już wysłane (lub w kolejce) : id proformy => [level, last_at].
+     * proforma_reminder_N = poziom N ; dawne proforma_payment_reminder = 1, proforma_payment_reminder_final = 5.
+     */
+    public function proformaReminderLevels(array $proformaIds): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $proformaIds)));
+        if (!$ids) return [];
+        $rows = $this->query("SELECT id_proforma, message_type, MAX(created_at) AS last_at FROM communication_message
+                              WHERE id_proforma IN (" . implode(',', $ids) . ") AND (message_type LIKE 'proforma\\_reminder\\_%' OR message_type LIKE 'proforma\\_payment\\_reminder%')
+                                AND status NOT IN ('failed', 'cancelled', 'draft')
+                              GROUP BY id_proforma, message_type") ?: [];
+        $out = [];
+        foreach ($rows as $r) {
+            $level = match (true) {
+                (bool) preg_match('/^proforma_reminder_([1-5])$/', $r['message_type'], $m) => (int) $m[1],
+                $r['message_type'] === 'proforma_payment_reminder_final' => 5,
+                default => 1,
+            };
+            $id = (int) $r['id_proforma'];
+            if (!isset($out[$id]) || $level > $out[$id]['level']) $out[$id] = ['level' => $level, 'last_at' => $r['last_at']];
+        }
+        return $out;
+    }
+
     public function find(int $id): array
     {
         $rows = $this->query('SELECT m.*, c.company FROM communication_message m LEFT JOIN customer c ON c.id = m.id_customer WHERE m.id = :id LIMIT 1', ['id' => $id]);

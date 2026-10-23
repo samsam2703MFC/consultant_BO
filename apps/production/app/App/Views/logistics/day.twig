@@ -22,6 +22,7 @@
                 {% endfor %}
                 {% if not found %}<option value="{{ date }}" selected>{{ date|date('d.m') }} · brak zamówień</option>{% endif %}
             </select>
+            <a class="btn btn-primary" href="{{ root }}/logistics/notices?date={{ date }}"><i class="bi bi-chat-dots"></i> Powiadom klientów</a>
             <a class="btn btn-outline-primary" href="{{ root }}/logistics/tours"><i class="bi bi-signpost-split"></i> Trasy</a>
             <a class="btn btn-outline-primary" href="{{ root }}/logistics/vehicles"><i class="bi bi-truck"></i> Pojazdy</a>
         </form>

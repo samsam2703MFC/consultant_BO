@@ -83,8 +83,15 @@
                                                         Oznacz jako opłaconą
                                                     </button>
                                                 <?php endif; ?>
+                                                <?php if (!in_array(strtolower(trim((string) ($row['proforma_status'] ?? ''))), ['paid', 'cancelled'], true)): ?>
+                                                    <a class="btn btn-outline-secondary" href="<?= ROOT ?>/communication/payment-reminders" title="Przypomnienia o potwierdzeniu płatności 1–5">
+                                                        <i class="bi bi-bell"></i>
+                                                    </a>
+                                                <?php endif; ?>
                                             <?php else: ?>
-                                                <span class="text-muted small">Brak dokumentu proformy</span>
+                                                <button class="btn btn-outline-primary" type="button" onclick="issueProforma(<?= (int) ($row['id_order'] ?? 0) ?>, this)">
+                                                    <i class="bi bi-file-earmark-plus"></i> Wystaw proformę
+                                                </button>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
@@ -175,6 +182,16 @@
 
     function getProformaDocument(id){
         downloadPDF(`/ajax/proforma-documents/${id}/document`)
+    }
+
+    // Wystawienie proformy z zamówienia (ta sama akcja co w Zamówieniach klientów).
+    async function issueProforma(orderId, button) {
+        if (!orderId) return;
+        button.disabled = true;
+        const response = await fetch(`<?= ROOT ?>/ajax/client-orders/${orderId}/proforma`, { method: 'POST', headers: { 'Accept': 'application/json' } });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) { window.alert(body.message || 'Nie udało się wystawić proformy.'); button.disabled = false; return; }
+        window.location.reload();
     }
 
     async function markProformaPaid(id) {

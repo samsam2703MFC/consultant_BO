@@ -51,7 +51,7 @@ class CommunicationController extends BaseController
                 'difference' => ROOT . '/ajax/difference-documents/' . $id . '/document',
             };
             $savePath = match (true) {
-                $source === 'proforma' && in_array($messageType, ['proforma_payment_reminder', 'proforma_payment_reminder_final'], true) => 'reminder/proforma',
+                $source === 'proforma' && (in_array($messageType, ['proforma_payment_reminder', 'proforma_payment_reminder_final'], true) || str_starts_with($messageType, 'proforma_reminder_')) => 'reminder/proforma',
                 $source === 'difference' && in_array($messageType, ['payment_reminder', 'payment_reminder_final'], true) => 'reminder/difference',
                 default => $source,
             };
@@ -134,6 +134,7 @@ class CommunicationController extends BaseController
 
     private function proformaReminderType(string $type): string
     {
+        if (preg_match('/^proforma_reminder_[1-5]$/', $type)) return $type;
         return $type === 'payment_reminder_final' || $type === 'proforma_payment_reminder_final'
             ? 'proforma_payment_reminder_final'
             : 'proforma_payment_reminder';

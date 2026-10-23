@@ -44,6 +44,7 @@ class OrderShippingDifferenceRepository extends BaseRepository
         $sql = "SELECT
                     diff.id,
                     diff.established_date AS difference_date,
+                    diff.id_customer,
                     customer.company AS client_name,
                     wdt.doc_num AS invoice_number,
                     COALESCE(wdt.invoiced_date, wdt.established_date) AS invoice_date,

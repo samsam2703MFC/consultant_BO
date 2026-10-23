@@ -6,6 +6,7 @@ return function (RouteCollector $r) {
 
     $r->addRoute('GET', '/products/price-structure', ['redirect' => '/products/all']);
 
+    $r->addRoute('GET', '/finances/clients', ['controller' => App\Controllers\Web\Finances\ClientVolumeController::class, 'method' => 'index']);
     $r->addRoute('GET', '/finances/cost-analysis', [
         'controller' => App\Controllers\Web\Finances\Product\CostAnalysisController::class,
         'method' => 'overview'

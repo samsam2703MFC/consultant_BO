@@ -30,9 +30,16 @@ class CommunicationService
         'payment_reminder_final' => 'Stanowcze przypomnienie',
         'proforma_payment_reminder' => 'Przypomnienie o płatności — proforma',
         'proforma_payment_reminder_final' => 'Stanowcze przypomnienie o płatności — proforma',
+        'proforma_reminder_1' => 'Proforma : przypomnienie 1/5 — prośba o potwierdzenie płatności',
+        'proforma_reminder_2' => 'Proforma : przypomnienie 2/5',
+        'proforma_reminder_3' => 'Proforma : przypomnienie 3/5 — stanowcze',
+        'proforma_reminder_4' => 'Proforma : przypomnienie 4/5 — pilne',
+        'proforma_reminder_5' => 'Proforma : przypomnienie 5/5 — ostatnie',
         'order_confirmation' => 'Potwierdzenie zamówienia (automatyczne)',
         'delivery_planned' => 'Planowana dostawa (automatyczne)',
         'shipment_sent' => 'Wysyłka w drodze (automatyczne)',
+        'delivery_details' => 'Informacja o dostawie : kierowca, pojazd, palety (Logistyka)',
+        'delivery_details_sms' => 'SMS : informacja o dostawie (Logistyka)',
         'accounting_document' => 'Kopia dokumentu dla księgowości (automatyczne)',
     ];
 
@@ -58,7 +65,25 @@ class CommunicationService
     {
         return array_values(array_filter($this->contexts->selectableDifferences(), static fn(array $row): bool => (float) ($row['difference_amount'] ?? 0) > 0));
     }
-    public function selectableUnpaidProformas(): array { return $this->proformaRepository->getUnpaidForReminder(); }
+    /** Poziom przypomnienia proformy => dni od daty proformy, od których jest zalecany. */
+    public const PROFORMA_REMINDER_DAYS = [1 => 3, 2 => 7, 3 => 14, 4 => 21, 5 => 30];
+
+    /** Nieopłacone proformy z poziomem wysłanych przypomnień i następnym zalecanym (1–5). */
+    public function selectableUnpaidProformas(?string $today = null): array
+    {
+        $today ??= date('Y-m-d');
+        $rows = $this->proformaRepository->getUnpaidForReminder();
+        $sent = $this->messages->proformaReminderLevels(array_column($rows, 'id'));
+        foreach ($rows as &$row) {
+            $days = (int) floor((strtotime($today) - strtotime((string) $row['established_date'])) / 86400);
+            $level = $sent[(int) $row['id']]['level'] ?? 0;
+            $next = $level < 5 ? $level + 1 : null;
+            $row += ['days' => $days, 'level' => $level, 'last_reminder_at' => $sent[(int) $row['id']]['last_at'] ?? null,
+                'next_level' => $next, 'due' => $next !== null && $days >= self::PROFORMA_REMINDER_DAYS[$next]];
+        }
+        unset($row);
+        return $rows;
+    }
     public function languages(): array { return self::LANGUAGES; }
     public function templateTypes(): array { return self::TEMPLATE_TYPES; }
 
@@ -124,6 +149,8 @@ class CommunicationService
             'payment_reminder_final' => 'Stanowcze przypomnienie',
             'proforma_payment_reminder' => 'Przypomnienie o płatności za proformę',
             'proforma_payment_reminder_final' => 'Stanowcze przypomnienie za proformę',
+            'proforma_reminder_1' => 'Przypomnienie proformy 1/5', 'proforma_reminder_2' => 'Przypomnienie proformy 2/5', 'proforma_reminder_3' => 'Przypomnienie proformy 3/5',
+            'proforma_reminder_4' => 'Przypomnienie proformy 4/5', 'proforma_reminder_5' => 'Przypomnienie proformy 5/5',
         ];
         return array_merge($context, ['templates' => $templates, 'message_type' => $messageType, 'message_type_label' => $labels[$messageType] ?? 'Wiadomość']);
     }
@@ -252,7 +279,7 @@ class CommunicationService
     private function assertReminderEligibility(string $source, string $messageType, array $context): void
     {
         $differenceReminderTypes = ['payment_reminder', 'payment_reminder_final'];
-        $proformaReminderTypes = ['proforma_payment_reminder', 'proforma_payment_reminder_final'];
+        $proformaReminderTypes = ['proforma_payment_reminder', 'proforma_payment_reminder_final', 'proforma_reminder_1', 'proforma_reminder_2', 'proforma_reminder_3', 'proforma_reminder_4', 'proforma_reminder_5'];
         if (!in_array($messageType, array_merge($differenceReminderTypes, $proformaReminderTypes), true)) return;
         if (in_array($messageType, $differenceReminderTypes, true) && $source !== 'difference') {
             throw new CustomException('Szablon przypomnienia dokumentu różnic nie może zostać użyty dla proformy.', 'errors', 422);

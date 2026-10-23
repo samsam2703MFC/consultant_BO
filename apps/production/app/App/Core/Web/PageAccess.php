@@ -12,7 +12,7 @@ namespace App\Core\Web;
  */
 final class PageAccess
 {
-    public const SECTIONS = ['Analiza', 'Produkcja', 'Zakupy', 'Produkt', 'Zamówienia', 'Logistyka', 'Administracja'];
+    public const SECTIONS = ['Analiza', 'Produkcja', 'Zakupy', 'Produkt', 'Zamówienia', 'Finanse', 'Logistyka', 'Administracja'];
 
     /** klucz => [etykieta, sekcja, prefiksy ścieżek, tylko administrator] */
     public const PAGES = [
@@ -37,9 +37,11 @@ final class PageAccess
         'clients' => ['Klienci', 'Zamówienia', ['/clients'], false],
         'price_lists' => ['Cennik ogólny', 'Zamówienia', ['/price-lists'], false],
         'franchise' => ['Franczyza', 'Zamówienia', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints'], false],
-        'invoices' => ['Proformy i faktury', 'Zamówienia', ['/proforma-documents', '/invoice-documents'], false],
+        'invoices' => ['Proformy i faktury', 'Finanse', ['/proforma-documents', '/invoice-documents'], false],
+        'reminders' => ['Przypomnienia płatności (proformy 1–5, dopłaty różnic)', 'Finanse', ['/communication/payment-reminders', '/communication/compose/reminder'], false],
+        'client_volume' => ['Klienci : wolumen i marża (N / N-1, marża, należności)', 'Finanse', ['/finances/clients'], false],
         'returns' => ['Zwroty', 'Zamówienia', ['/client-complaints'], false],
-        'communication' => ['Komunikacja (automatyzacje, przypomnienia, szablony, wiadomości)', 'Zamówienia', ['/communication'], false],
+        'communication' => ['Komunikacja (automatyzacje, wzory dokumentów i e-maili, wiadomości)', 'Zamówienia', ['/communication'], false],
         'logistics' => ['Logistyka (tydzień, załadunek dnia, trasy i pojazdy)', 'Logistyka', ['/logistics'], false],
         'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka', ['/shipping', '/shipments', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
         'archive' => ['Archiwum list kompletacyjnych', 'Logistyka', ['/archive'], false],

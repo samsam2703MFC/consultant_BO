@@ -117,7 +117,6 @@
                     </ul>
                 </li>
 
-
                 {# Zakupy : jedna sekcja (dawniej Produkcja › Zaopatrzenie, Produkt › Surowce › ceny i dostawcy, Finanse › Zakupy i jakość,
                    Finanse › Faktury zakupowe KSeF). Faktury zakupowe : zakładka « Faktury » Zaopatrzenia. #}
                 <li class="sidebar-title">Zakupy</li>
@@ -278,25 +277,7 @@
                     </ul>
                 </li>
 
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
-                        <i class="bi bi-file-earmark-text"></i>
-                        <span>Proformy i faktury</span>
-                    </a>
-                    <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/proforma-documents">
-                                <i class="bi bi-receipt"></i> Proforma
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/invoice-documents">
-                                <i class="bi bi-receipt-cutoff"></i> Faktury inne
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
+                
                 {% set g = page_tab_groups().returns %}
                 <li class="sidebar-item">
                     <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
@@ -317,11 +298,6 @@
                             </a>
                         </li>
                         <li class="submenu-item">
-                            <a href="{{ root }}/communication/payment-reminders">
-                                <i class="bi bi-bell"></i> Przypomnienia płatności
-                            </a>
-                        </li>
-                        <li class="submenu-item">
                             <a href="{{ root }}/communication/document-templates" data-also="/communication/templates">
                                 <i class="bi bi-file-earmark-richtext"></i> Wzory dokumentów i e-maili
                             </a>
@@ -332,6 +308,41 @@
                             </a>
                         </li>
                     </ul>
+                </li>
+
+                <li class="sidebar-title">Finanse</li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Proformy i faktury</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/proforma-documents">
+                                <i class="bi bi-receipt"></i> Proforma
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/invoice-documents">
+                                <i class="bi bi-receipt-cutoff"></i> Faktury inne
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/communication/payment-reminders" class="sidebar-link" data-also="/communication/compose/reminder">
+                        <i class="bi bi-bell"></i>
+                        <span>Przypomnienia płatności</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/finances/clients" class="sidebar-link">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Klienci : wolumen i marża</span>
+                    </a>
                 </li>
 
                 <li class="sidebar-title">Logistyka</li>
@@ -347,6 +358,13 @@
                     <a href="{{ root }}/logistics" class="sidebar-link">
                         <i class="bi bi-stack"></i>
                         <span>Załadunek dnia</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/logistics/notices" class="sidebar-link">
+                        <i class="bi bi-chat-dots"></i>
+                        <span>Powiadomienia klientów</span>
                     </a>
                 </li>
 

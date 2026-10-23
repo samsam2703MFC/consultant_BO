@@ -387,13 +387,15 @@ check(PageAccess::keyFor('/workshop/manager') === 'manager' && PageAccess::admin
     && PageAccess::keyFor('/organization/positions') === 'positions' && !in_array('manager', PageAccess::grantable(), true), 'access: manager module and access page admin only');
 $sql = file_get_contents(__DIR__ . '/../migrations/tfb/050_page_access.sql');
 preg_match_all("/'([a-z_]+)'/", substr($sql, strpos($sql, 'CROSS JOIN ('), strpos($sql, ') k') - strpos($sql, 'CROSS JOIN (')), $m);
-// Pages ajoutées plus tard : la migration recopie les droits d'une page existante (059 : supplier_prices depuis materials).
-preg_match_all("/SELECT id_position, '([a-z_]+)'/", file_get_contents(__DIR__ . '/../migrations/tfb/059_navigation.sql'), $later);
+// Pages ajoutées plus tard : la migration recopie les droits d'une page existante (059 : supplier_prices depuis materials,
+// 063 : reminders et client_volume pour la section Finanse).
+$laterSql = file_get_contents(__DIR__ . '/../migrations/tfb/059_navigation.sql') . file_get_contents(__DIR__ . '/../migrations/tfb/063_finance.sql');
+preg_match_all("/SELECT id_position, '([a-z_]+)'/", $laterSql, $later);
 $seeded = array_values(array_unique(array_merge($m[1], $later[1])));
 sort($seeded);
 $grantable = PageAccess::grantable();
 sort($grantable);
-check($seeded === $grantable, 'access: migrations 050 + 059 seed exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
+check($seeded === $grantable, 'access: migrations 050 + 059 + 063 seed exactly the grantable pages (' . implode(',', array_diff($grantable, $seeded)) . ' | ' . implode(',', array_diff($seeded, $grantable)) . ')');
 
 // --- Aktywność w ERP : trasa (identyfikatory → {id}), ścieżka bez zapytania, okres uporządkowany i ograniczony
 check(ActivityService::route('/products/12/edit') === '/products/{id}/edit' && ActivityService::route('/workshop/gantt') === '/workshop/gantt'
