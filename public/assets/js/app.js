@@ -253,6 +253,11 @@ class App {
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
       pwaType: 'gestion:month', pwaScope: 'all', gate: null,
       repCible: null, repRech: null, repBusy: false, pdCat: 'Toutes les catégories', pdSort: 'score' };
+    // La page du franchisé (23/10/2026, Sam : « pas de vue des primes de la marque ni des sponsors, pas de choix du
+    // magasin, le shop id dans la barre d'adresse pour le test ») : « #/primes-app-worker?shop=3 » (ou « ?shop=3 » avant
+    // l'ancre) ouvre les primes de ce magasin-là, et d'aucun autre.
+    this.state.prShop = App.shopDeAdresse();
+    if (this.state.prShop) { this.state.prSection = 'franchise'; }
     this._h = [];
     this._tt = null;
     this._lastEn = null;
@@ -275,6 +280,10 @@ class App {
       if (this._hashInterne === location.hash) { this._hashInterne = null; return; }
       const id = this.ecranDeAdresse();
       if (!id) { return; }
+      if (id === 'primesApp' && App.shopDeAdresse() !== (this.state.prShop || '')) {
+        const sh = App.shopDeAdresse();
+        this.setState(Object.assign({ prShop: sh, prB2b: undefined, prWiz: undefined, prEdit: undefined }, sh ? { prSection: 'franchise' } : {}));
+      }
       if (App.PERF_ONGLETS[id]) {
         this.setState({ screen: 'resultatJour', rjOnglet: App.PERF_ONGLETS[id], rpSel: null, hmHover: null });
         const juste = this.adresseDe('resultatJour');
@@ -414,16 +423,22 @@ class App {
     // de fonctionner.
     return Object.prototype.hasOwnProperty.call(t, brut) ? brut : '';
   }
-  /** L'adresse d'un écran, pour un lien à copier. */
+  /** L'adresse d'un écran, pour un lien à copier. La page du franchisé garde son magasin (?shop=). */
   adresseDe(id){
-    return '#/' + (App.ADRESSES[id] || id);
+    return '#/' + (App.ADRESSES[id] || id) + (id === 'primesApp' && this.state && this.state.prShop ? '?shop=' + this.state.prShop : '');
+  }
+  /** Le magasin écrit dans l'adresse : « #/…?shop=3 », sinon « ?shop=3 » avant l'ancre ; '' sans lui. */
+  static shopDeAdresse(){
+    const lire = q => { const m = /(?:^|[?&])shop=(\d+)/.exec(q || ''); return m ? m[1] : ''; };
+    const h = String(location.hash || '');
+    return lire(h.indexOf('?') >= 0 ? h.slice(h.indexOf('?')) : '') || lire(location.search);
   }
   setState(patch){
     const avant = this.state.screen;
     Object.assign(this.state, typeof patch === 'function' ? patch(this.state) : patch);
     // L'ancre suit l'écran — et l'historique avec elle : le bouton « retour »
     // du navigateur ramène à l'écran précédent, ce qu'on attend d'une adresse.
-    if (this.state.screen !== avant) {
+    if (this.state.screen !== avant || (this.state.screen === 'primesApp' && location.hash !== this.adresseDe('primesApp'))) {
       const cible = this.adresseDe(this.state.screen);
       if (location.hash !== cible) { this._hashInterne = cible; location.hash = cible; }
     }
@@ -1026,6 +1041,8 @@ class App {
       planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
       magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], projets: ['Projets de développement', 'Suivi des projets de développement : statuts, rétroplanning, coûts, leviers et ROI.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
+    // La page du franchisé (?shop=) : rien de la marque ni des sponsors, pas même dans l'en-tête.
+    if (S.screen === 'primesApp' && S.prShop) { common.screenTitle = 'Primes du magasin'; common.screenSub = 'Ce que tes vendeuses gagnent dans l’app avec les primes que tu poses pour ton magasin.'; }
     common.ecran = S.screen; common.railOuvert = !!S.railOuvert; common.railBascule = () => this.setState({ railOuvert: !this.state.railOuvert });
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
@@ -1458,8 +1475,8 @@ class App {
       // (employee/ : horaire, tâches, primes, profil ; l'entrée mène à sa connexion). Remplace « App worker ↗ »
       // et le sous-menu « Primes · module app worker » d'ERP franchisé.
       ['Application employé', [
-        ['primesApp', 'Page admin', 0, [], { prSection: 'marque' }],
-        ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise' }],
+        ['primesApp', 'Page admin', 0, [], { prSection: 'marque', prShop: '' }],
+        ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise', prShop: '3' }],
         ['ext:employee/auth', 'Application ↗', 0]]],
         // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
       ['Administration', [
@@ -6143,7 +6160,8 @@ class App {
     const d = lire('reglages', '/ventes/primes-reglages');
     // Deux entrées du rail (23/10/2026) : les primes de la marque (avec les promotions et les moyennes), ou
     // celles des franchisés seules.
-    common.prSection = S.prSection === 'franchise' ? 'franchise' : 'marque';
+    const shopFixe = S.prShop || '';
+    common.prSection = shopFixe || S.prSection === 'franchise' ? 'franchise' : 'marque';
     const n = S.prMoyN || 3;
     const moy = lire('moy' + n, '/ventes/primes-moyennes?n=' + n);
     const promos = lire('promos', '/ventes/primes-promos' + (S.prPromosFrais ? '?frais=1' : ''));
@@ -6196,7 +6214,11 @@ class App {
       if (e.type === 'promo') { const p = (moy.promos || []).find(x => x.cle === e.cle); return p && p.reseau != null ? fr(p.reseau, 0) + ' / vend. depuis le début' : ''; }
       return '';
     };
-    const emo = e => (e.cle === 'croisees' ? '🛍️' : e.cle === 'objectif' ? '🏪' : e.cle === 'google' ? '⭐' : e.type === 'promo' ? '🏷️' : '👑');
+    const emo = e => (e.cle === 'croisees' ? '🛍️' : e.cle === 'objectif' ? '🏪' : e.cle === 'google' ? '⭐' : e.type === 'promo' ? '🏷️' : e.type === 'b2b' ? '🤝' : '👑');
+    // La prime B2B en clair (23/10/2026, src/primes_b2b.php) : « 5 % HT de chaque commande pendant 3 mois ».
+    const tauxTxt = t => fr(+t, (+t) % 1 ? 1 : 0);
+    const b2bPhrase = e => (e.mode === 'fixe' ? (e.montant ?? 30) + ' € à sa 1re commande'
+      : tauxTxt(e.taux ?? 5) + ' % HT ' + (e.duree === 'premiere' ? 'de sa 1re commande' : e.duree === 'sans' ? 'de chaque commande, sans limite' : 'de chaque commande pendant ' + (e.duree ?? 3) + ' mois'));
     // Les icônes déposées (public/uploads/primes) : servies à côté du cockpit, à la place de l'emoji dans l'app.
     const racine = API_BASE.replace(/api\/cockpit\/?$/, '');
     const icone = x => ({
@@ -6215,7 +6237,7 @@ class App {
       },
       retirerIcone: () => { x.icone = ''; re(); },
     });
-    const typLib = { target: 'Target', categorie: 'Catégorie', promo: 'Promo', classement: 'Classement' };
+    const typLib = { target: 'Target', categorie: 'Catégorie', promo: 'Promo', classement: 'Classement', b2b: 'B2B' };
     // Le tableau ne s'édite plus (16/10/2026) : l'interrupteur actif / éteint s'enregistre tout de suite, le reste se
     // modifie dans l'assistant (une promo) ou dans la fenêtre de réglage (targets, catégories, record, meilleure).
     const sauver = quoi => this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste, externes: app.externes, sms: app.sms })
@@ -6260,6 +6282,13 @@ class App {
         : e.type === 'promo' ? [(e.promo || {}).nom, sorte(e.promo || {}), dates(e.promo || {}), mags(e.promo || {}), { api: 'panel', cockpit: 'créée dans le cockpit' }[(e.promo || {}).source]].filter(Boolean).join(' · ')
           + (e.regle === 'magasin' || e.regle === 'vendeuse' ? '' : regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] ? ' · ' + regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] : '')
         : '';
+      if (e.type === 'b2b') {
+        // La prime B2B : un nouveau client pro, la vendeuse de sa 1re commande ; elle se modifie dans sa fenêtre à elle.
+        Object.assign(L, { qui: 'la vendeuse de sa 1re commande', peutClasser: false, moyenne: '',
+          texte: 'nouveau client pro · ' + b2bPhrase(e) + (e.min ? ' · dès ' + e.min + ' € HT' : '') + (e.plafond ? ' · plafond ' + e.plafond + ' € par client' : ''),
+          montantTxt: e.mode === 'fixe' ? (e.montant ?? 30) + ' € par client' : tauxTxt(e.taux ?? 5) + ' % HT',
+          modifier: () => this.setState({ prB2b: b2bDe(e) }) });
+      }
       if (e.cle === 'croisees') {
         Object.assign(L, { champs: 'croisees', cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets), nCibles: Object.keys(cr.cibles).length,
           categorie: e.categorie || '', categories: [''].concat(d.categories || []).concat(e.categorie && !(d.categories || []).includes(e.categorie) ? [e.categorie] : []),
@@ -6663,16 +6692,80 @@ class App {
       };
     }
 
+    // La prime B2B en une phrase (23/10/2026, l'option D) : pour la marque, ou pour un magasin ; le serveur relit tout.
+    const b2bNeuf = (famille, shop) => ({ edit: null, famille, shop: shop || '', mode: 'pct', valeur: '5', taux: 5, montant: 30, duree: 3, plafond: '', min: '',
+      lib: 'Ramène un client pro', du: ymd(new Date()), au: '', plus: false, envoi: false, actif: true, icone: '', payeur: 'marque', sponsor: '' });
+    const b2bDe = e => ({ edit: e.cle, famille: e.famille === 'magasin' ? 'magasin' : 'marque', shop: e.shop || '', mode: e.mode === 'fixe' ? 'fixe' : 'pct',
+      valeur: e.mode === 'fixe' ? String(e.montant ?? 30) : String(e.taux ?? 5).replace('.', ','), taux: e.taux ?? 5, montant: e.montant ?? 30, duree: e.duree ?? 3,
+      plafond: e.plafond ? String(e.plafond) : '', min: e.min ? String(e.min) : '', lib: e.lib || 'Ramène un client pro', du: e.du || '', au: e.au || '',
+      plus: false, envoi: false, actif: e.actif !== false, icone: e.icone || '', payeur: e.payeur || 'marque', sponsor: e.sponsor || '' });
+    const BB = S.prB2b;
+    common.prB2b = null;
+    if (BB) {
+      const reB = () => this.setState({ prB2b: BB });
+      const v = num(BB.valeur);
+      const valOk = v != null && v > 0 && v <= (BB.mode === 'fixe' ? 5000 : 50);
+      const tx = BB.mode === 'pct' && valOk ? Math.round(v * 2) / 2 : (+BB.taux || 5);
+      const mt = BB.mode === 'fixe' && valOk ? Math.round(v) : (+BB.montant || 30);
+      const DUREES = [['premiere', 'de sa 1re commande'], ['1', 'de chaque commande pendant 1 mois'], ['3', 'de chaque commande pendant 3 mois'],
+        ['12', 'de chaque commande pendant 12 mois'], ['sans', 'de chaque commande, sans limite']];
+      // L'exemple chiffré : une école qui commande 400 € HT par mois.
+      const ex = 400; const par = BB.mode === 'fixe' ? mt : tx / 100 * ex;
+      const nMois = BB.mode === 'fixe' || BB.duree === 'premiere' ? 1 : BB.duree === 'sans' ? 12 : +BB.duree;
+      const plaf = num(BB.plafond);
+      const tot = plaf && plaf > 0 ? Math.min(par * nMois, plaf) : par * nMois;
+      const eu = y => fr(y, y % 1 ? 2 : 0) + ' €';
+      const exemple = BB.mode === 'fixe' ? 'Chaque nouveau client pro : <b>' + eu(mt) + '</b> pour la vendeuse qui encaisse sa 1re commande.'
+        : 'Une école qui commande <b>' + eu(ex) + ' HT</b> par mois : <b>' + eu(par) + '</b> par commande, <b>' + eu(tot) + '</b> pour la vendeuse'
+          + (BB.duree === 'sans' ? ' sur un an' : BB.duree === 'premiere' ? '' : ' en ' + BB.duree + ' mois') + (plaf && plaf > 0 && par * nMois > plaf ? ' (plafond)' : '') + '.';
+      const ok = valOk && (BB.famille !== 'magasin' || !!BB.shop) && (!BB.du || !BB.au || BB.au >= BB.du);
+      const enregistrer = () => {
+        if (!ok || BB.envoi) { return; }
+        BB.envoi = true; reB();
+        const pl = num(BB.plafond); const mi = num(BB.min);
+        const cle = BB.edit || ('b2b' + Array.from(crypto.getRandomValues(new Uint8Array(4))).map(o => o.toString(16).padStart(2, '0')).join(''));
+        const e = { type: 'b2b', cle, famille: BB.famille, shop: BB.famille === 'magasin' ? BB.shop : '', payeur: BB.famille === 'magasin' ? 'magasin' : BB.payeur, sponsor: BB.sponsor,
+          lib: String(BB.lib || '').trim() || 'Ramène un client pro', actif: BB.actif, mode: BB.mode, taux: tx, montant: mt, duree: BB.mode === 'fixe' ? 'premiere' : BB.duree,
+          plafond: pl && pl > 0 ? Math.round(pl) : 0, min: mi && mi > 0 ? Math.round(mi) : 0, du: BB.du || null, au: BB.au || null, icone: BB.icone || '' };
+        const i = app.liste.findIndex(y => y.cle === BB.edit);
+        if (BB.edit && i >= 0) { app.liste[i] = Object.assign({}, app.liste[i], e); } else { app.liste.push(e); }
+        this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste: app.liste, externes: app.externes, sms: app.sms }).then(r => {
+          if (r && r.ok === false) { BB.envoi = false; reB(); return; }
+          this.setState({ prB2b: undefined });
+          finir(BB.edit ? 'Prime B2B modifiée' : 'Prime B2B créée');
+        });
+      };
+      const champB = cle => ev => { BB[cle] = ev.target.value; reB(); };
+      common.prB2b = {
+        titre: BB.edit ? 'Modifier la prime B2B' : 'Nouvelle prime B2B', edit: !!BB.edit, mode: BB.mode, valeur: BB.valeur, duree: String(BB.duree),
+        dureeTxt: (DUREES.find(([k]) => k === String(BB.duree)) || DUREES[2])[1], durees: DUREES, exemple, ok, envoi: BB.envoi,
+        plus: BB.plus, lib: BB.lib, plafond: BB.plafond, min: BB.min, du: BB.du, au: BB.au,
+        magasins: BB.famille === 'magasin' && !BB.edit && !shopFixe ? (d.magasins || []).map(m => [m.id, nomMag[m.id] || m.nom]) : null, shop: BB.shop,
+        magasinNom: BB.famille === 'magasin' ? (nomMag[BB.shop] || (BB.shop ? 'Magasin ' + BB.shop : '')) : 'toute la marque',
+        poserValeur: ev => { BB.valeur = String(ev.target.value).replace(/[^\d.,]/g, '').slice(0, 5); const w = num(BB.valeur);
+          if (w != null && w > 0) { if (BB.mode === 'fixe') { BB.montant = Math.round(w); } else { BB.taux = Math.round(w * 2) / 2; } } reB(); },
+        poserMode: ev => { BB.mode = ev.target.value === 'fixe' ? 'fixe' : 'pct'; BB.valeur = BB.mode === 'fixe' ? String(BB.montant || 30) : String(BB.taux || 5).replace('.', ','); reB(); },
+        poserDuree: ev => { const k = ev.target.value; BB.duree = k === 'premiere' || k === 'sans' ? k : (parseInt(k, 10) || 3); reB(); },
+        poserShop: champB('shop'), poserLib: champB('lib'), poserPlafond: champB('plafond'), poserMin: champB('min'), poserDu: champB('du'), poserAu: champB('au'),
+        basculerPlus: () => { BB.plus = !BB.plus; reB(); },
+        supprimer: BB.edit ? () => { if (!window.confirm('Supprimer la prime « ' + BB.lib + ' » ?')) { return; } app.liste = app.liste.filter(y => y.cle !== BB.edit); this.setState({ prB2b: undefined }); sauver('Prime B2B supprimée'); } : null,
+        enregistrer, fermer: () => this.setState({ prB2b: undefined }),
+      };
+    }
+
     // Les deux familles (16/10/2026) : la marque et ses sponsors d'un côté, les franchisés — magasin par magasin — de l'autre.
-    const filtreMag = S.prMag || '';
+    const filtreMag = shopFixe || S.prMag || '';
     const lignesMag = lignes.filter(l => l.famille === 'magasin');
     common.prApp = {
       lignes: lignes.filter(l => l.famille !== 'magasin'),
       lignesMag: lignesMag.filter(l => !filtreMag || l.shop === filtreMag),
-      magsFiltre: [{ nom: 'Tous les magasins', n: lignesMag.length, on: !filtreMag, choisir: () => this.setState({ prMag: '' }) }]
+      shopFixe, shopFixeNom: shopFixe ? (nomMag[shopFixe] || 'Magasin ' + shopFixe) : '',
+      magsFiltre: shopFixe ? [] : [{ nom: 'Tous les magasins', n: lignesMag.length, on: !filtreMag, choisir: () => this.setState({ prMag: '' }) }]
         .concat((d.magasins || []).map(m => ({ nom: court(m.nom), n: lignesMag.filter(l => l.shop === m.id).length, on: filtreMag === m.id, choisir: () => this.setState({ prMag: m.id }) }))),
-      magFiltreNom: filtreMag ? (nomMag[filtreMag] || filtreMag) : '',
+      magFiltreNom: filtreMag ? (nomMag[filtreMag] || 'Magasin ' + filtreMag) : '',
       nouvelleMag: () => this.setState({ prWiz: wizNeuf('magasin', filtreMag) }),
+      nouvelleB2b: () => this.setState({ prB2b: b2bNeuf('marque', '') }),
+      nouvelleB2bMag: () => this.setState({ prB2b: b2bNeuf('magasin', filtreMag) }),
       recompense: String(app.recompense),
       sms: !!(app.sms && app.sms.actif), smsConfigure: !!d.smsConfigure,
       poserSms: ev => { app.sms = { actif: !!ev.target.checked }; re(); },
@@ -6833,11 +6926,14 @@ class App {
         concoursM: l.concours && l.concours.montant > 0 ? eur(l.concours.montant) : '',
         promo: l.promo && l.promo.pieces ? Object.keys(l.promo.pieces).map(k => Math.round(l.promo.pieces[k]).toLocaleString('fr-BE') + ' ' + ((((pm.promos || {}).liste || []).find(q => q.cle === k) || {}).lib || k)).join(' · ') + ((l.promo.titres || []).length ? ' · 👑' : '') : '',
         promoM: l.promo && l.promo.montant > 0 ? eur(l.promo.montant) : '',
+        // Les clients pro (la prime B2B, 23/10/2026) : combien elle en a ramené, ce qu'ils rapportent ce mois-là.
+        b2b: l.b2b && l.b2b.clients ? l.b2b.clients + ' client' + (l.b2b.clients > 1 ? 's' : '') : '', b2bM: l.b2b && l.b2b.montant > 0 ? eur(l.b2b.montant) : '',
         total: l.total > 0 ? n2(l.total) + ' €' : '—', prime: l.total > 0,
       })),
-      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), promo: eur(pm.totaux.promo || 0), magasin: eur(pm.totaux.magasin), google: eur(pm.totaux.google || 0), total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
+      totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), promo: eur(pm.totaux.promo || 0), magasin: eur(pm.totaux.magasin), google: eur(pm.totaux.google || 0), b2b: eur(pm.totaux.b2b || 0), total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
       concoursLib: pm && pm.concours && pm.concours.liste ? pm.concours.liste.map(k => k.lib).join(' · ') : 'Catégories', concoursActif: !!(pm && pm.concours && pm.concours.actif),
       promosLib: pm && pm.promos && pm.promos.liste ? pm.promos.liste.map(k => k.lib).join(' · ') : 'Promos', promosActif: !!(pm && pm.promos && pm.promos.actif),
+      b2bActif: !!(pm && pm.b2b && pm.b2b.actif),
       note: !pm ? '' : (pm.croiseesComplet ? 'Ventes croisées comptées sur tout le mois.' : 'Ventes croisées comptées sur ' + pm.croiseesJours + ' jour(s) : la moisson horaire complète le reste.'),
       parPayeur: !pm || !pm.totaux || !pm.totaux.parPayeur ? '' : Object.keys(pm.totaux.parPayeur).map(k => (k.startsWith('sponsor:') ? 'sponsor ' + k.slice(8) : k) + ' ' + eur(pm.totaux.parPayeur[k])).join(' · '),
       enregistre: pm && pm.enregistre ? ('Enregistrées le ' + (pm.enregistre.quand || '') + (pm.enregistre.appWorker && pm.enregistre.appWorker.total != null ? ' · primes de l’app : ' + n2(pm.enregistre.appWorker.total) + ' € pour ' + (pm.enregistre.appWorker.personnes || []).length + ' personne(s)' : '')) : '',

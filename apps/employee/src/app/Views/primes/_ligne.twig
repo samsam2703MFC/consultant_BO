@@ -2,6 +2,7 @@
    toucher la ligne déroule son détail. Incluse avec le contexte de la page (c, b, pm, a, aCl, nomFixe, pcs, eur, ib, T…) ;
    « etape », quand la prime est dans le plan, ajoute ce qu'il faut faire. #}
 {% import 'primes/_macros.twig' as m %}
+{% if (c.type ?? '') == 'b2b' %}{% include 'primes/_ligne_b2b.twig' %}{% else %}
 {% set enJour = c.cle == 'objectif' and (c.jour ?? null) %}
 {% set v = enJour ? c.aDate : c.val %}
 {% set u = c.unite %}
@@ -123,3 +124,4 @@
     {% if c.cle in aCl %}<button type="button" class="pl-cl" data-voir-cl="{{ c.cle }}">{{ T.d_see_leaderboard ?? 'Voir le classement' }} <i class="bi bi-arrow-down"></i></button>{% endif %}
   </div>
 </div>
+{% endif %}
