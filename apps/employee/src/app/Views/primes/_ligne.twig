@@ -3,7 +3,9 @@
    « etape », quand la prime est dans le plan, ajoute ce qu'il faut faire. #}
 {% import 'primes/_macros.twig' as m %}
 {% if (c.type ?? '') == 'b2b' %}{% include 'primes/_ligne_b2b.twig' %}{% else %}
-{% set enJour = c.cle == 'objectif' and (c.jour ?? null) %}
+{# Un target du magasin (23/10/2026) a sa clé à lui : « base » dit lequel il est (croisees, objectif, google). #}
+{% set kb = c.base ?? c.cle %}
+{% set enJour = kb == 'objectif' and (c.jour ?? null) %}
 {% set v = enJour ? c.aDate : c.val %}
 {% set u = c.unite %}
 {% set dec = u == 'lpt' ? 2 : (u == 'note' ? 1 : 0) %}
@@ -42,7 +44,8 @@
       <span class="fl">{{ rcT >= rcMin ? '✓ ' }}{{ T.record_flag ?? 'ton record' }}</span></div>
     {% elseif c.barre is not null %}
     <div class="pl-j" aria-hidden="true"><i style="width:{{ c.barre }}%"></i>{% if c.barreJour is not null %}<span class="jr" style="left:{{ c.barreJour }}%"></span>{% endif %}<span class="ob"></span>
-      <span class="fl">{{ ok ? '✓ ' }}{{ (ok and c.gain > 0 ? c.gain : c.montant)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% if c.max and not ok %} max{% endif %}</span></div>
+      {# Un cadeau (23/10/2026) : le drapeau le montre, pas « 0 € ». #}
+      <span class="fl">{{ ok ? '✓ ' }}{% if c.cadeau ?? null %}🎁{% else %}{{ (ok and c.gain > 0 ? c.gain : c.montant)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% if c.max and not ok %} max{% endif %}{% endif %}</span></div>
     {% endif %}
     <div class="pl-s">
       <span class="{{ ok ? 'ok' : (c.motif ? 'mu') }}">
@@ -70,7 +73,24 @@
   <div class="pl-d" id="pd-{{ c.cle }}" hidden>
     {{ m.infos(c, T, ib) }}
     <dl class="pl-l">
-    {% if c.cle == 'croisees' %}{% set cr = b.croisees %}
+    {% if c.duMagasin ?? false %}
+      {# Un target posé par le magasin : ses réglages à lui, sur la carte. #}
+      {% if kb == 'croisees' %}{% set cr = b.croisees %}
+      <div><dt>{{ T.d_my_rate ?? 'Ton taux ce mois' }}</dt><dd>{% if c.val is not null %}{{ c.val|number_format(1, ',', ' ') }}&nbsp;%{% else %}—{% endif %}<small>{{ cr.croisees ?? 0 }} / {{ cr.tickets ?? 0 }} {{ T.tickets ?? 'tickets' }}</small></dd></div>
+      <div><dt>{{ T.d_target ?? 'Cible' }}</dt><dd>{{ c.cible|number_format(0, ',', ' ') }}&nbsp;%</dd></div>
+      {% if c.minTickets ?? 0 %}<div><dt>{{ T.d_condition ?? 'Condition' }}</dt><dd>{{ c.minTickets }} {{ T.d_min_tickets ?? 'tickets min. dans le mois' }}</dd></div>{% endif %}
+      {% elseif kb == 'objectif' %}
+      {% if pm.objectif ?? null %}<div><dt>{{ T.d_shop_revenue ?? 'CA du magasin' }}</dt><dd>{{ pm.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }}<small>{{ T.out_of ?? 'sur' }} {{ pm.objectif|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</small></dd></div>{% endif %}
+      {% if c.jour ?? null %}<div><dt>{{ T.day_prefix ?? 'J' }}{{ c.jour }}</dt><dd class="{{ c.avance >= 0 ? 'ok' : 'att' }}">{{ c.aDate|number_format(1, ',', ' ') }}&nbsp;%<small>{{ T.d_should_be ?? 'il faudrait' }} {{ c.cibleJour|number_format(1, ',', ' ') }}&nbsp;%</small></dd></div>{% endif %}
+      <div><dt>{{ T.d_target ?? 'Cible' }}</dt><dd>{{ c.cible|number_format(0, ',', ' ') }}&nbsp;%<small>{{ T.d_of_target ?? 'de l’objectif du mois' }}</small></dd></div>
+      {% else %}
+      <div><dt>{{ T.d_shop_rating ?? 'Note du magasin' }}</dt><dd>{{ c.val is not null ? c.val|number_format(1, ',', ' ') ~ ' ★' : '—' }}{% if c.avis ?? 0 %}<small>{{ c.avis }} {{ T.d_reviews ?? 'avis' }}</small>{% endif %}</dd></div>
+      <div><dt>{{ T.d_threshold ?? 'Seuil' }}</dt><dd>{{ c.cible|number_format(1, ',', ' ') }} ★</dd></div>
+      {% endif %}
+      {% if c.heuresMin ?? 0 %}<div><dt>{{ T.d_condition ?? 'Condition' }}</dt><dd>{{ c.heuresMin }} {{ T.d_min_hours ?? 'h au planning dans le mois' }}</dd></div>{% endif %}
+      <div><dt>{{ T.d_reward ?? 'Récompense' }}</dt><dd>{% if c.cadeau ?? null %}🎁 {{ c.cadeau.nom }}{% else %}{{ c.montant|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}<small>{{ T.d_paid_by_shop ?? 'offerte par le magasin' }}</small></dd></div>
+    </dl>
+    {% elseif c.cle == 'croisees' %}{% set cr = b.croisees %}
       <div><dt>{{ T.d_my_rate ?? 'Ton taux ce mois' }}</dt><dd>{% if cr.taux is not null %}{{ cr.taux|number_format(1, ',', ' ') }}&nbsp;%{% else %}—{% endif %}<small>{{ cr.croisees ?? 0 }} / {{ cr.tickets ?? 0 }} {{ T.tickets ?? 'tickets' }}</small></dd></div>
       <div><dt>{{ T.d_target ?? 'Cible' }}</dt><dd>{{ cr.cible|number_format(0, ',', ' ') }}&nbsp;%</dd></div>
       {% if p.enCours and a and a.tickets > 0 %}<div><dt>{{ T.today ?? 'Aujourd’hui' }}</dt><dd>{% if a.taux is not null %}{{ a.taux|number_format(1, ',', ' ') }}&nbsp;%{% else %}—{% endif %}<small>{{ a.croisees }} / {{ a.tickets }} {{ T.tickets ?? 'tickets' }}</small></dd></div>{% endif %}

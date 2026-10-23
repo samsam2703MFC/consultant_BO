@@ -3465,7 +3465,7 @@
     if (S.pmMsg) { h += `<div class="pm-ok">${S.pmMsg}<button class="pm-x" data-pmmsg="1" aria-label="fermer">✕</button></div>`; }
     if (S.err[k]) { return h + `<div class="db-err">Promotions : ${esc(S.err[k])}</div>`; }
     if (!P) { return h + squelette(3); }
-    const L = pmLignes(), Rg = P.regles || {};
+    const L = pmLignes();
     const parSorte = L.filter(l => S.pmSorte === 'tout' || l.sorte === S.pmSorte);
     const q = (S.pmQ || '').trim().toLowerCase();
     const f = PM_FILTRES.find(x => x[0] === S.pmF) || PM_FILTRES[0];
@@ -3485,10 +3485,8 @@
         return `<tr>${cols.map(c => `<td class="${c[2]}">${v[c[0]]}</td>`).join('')}<td class="pm-act">${v.actions ? `<button class="pm-dots${ouvert ? ' on' : ''}" data-pmmenu="${esc(cle)}" aria-label="actions" aria-expanded="${ouvert}">${PM_ICO_DOTS}</button>${ouvert ? `<div class="pm-menu">${v.actions}</div>` : ''}` : ''}</td></tr>`;
       }).join('')}</tbody></table></div>`;
     }
-    h += `<div class="pm-pied db-mini">Tout se lit au panel, rien n’est gardé ailleurs${P.erreurPanel ? ' — <b>' + esc(P.erreurPanel) + '</b>' : ''} : les promotions du magasin sont celles du panel réservées à ce seul magasin, les autres sont celles de la marque (elles se dupliquent pour en faire une du magasin). « Actives » : en caisse aujourd’hui.
-      Règles du magasin : une date de fin (« Tout le temps » : sans fin, jusqu’au 31/12/2037) · coefficient du lot affiché, repère ${fXm(Rg.coefMin || 2)} (il ne bloque pas). Enregistrer l’écrit au panel (créée inactive, relue, puis activée) : elle passe en caisse pour ses dates. Un brouillon est une promotion inactive au panel.
-      Un clic sur un coefficient en montre le détail, aux prix et coûts de recette d’aujourd’hui.
-      Comptoir et Webshop : là où la promotion vaut — sans restriction au panel, les deux. Seuil : le montant minimal du ticket, quand le panel en donne un. « Colonnes » ajoute ou retire des colonnes, le choix est gardé ; les actions sont dans « ⋯ ».</div></div>`;
+    // Le paragraphe d'explication sous la liste est retiré (23/10/2026, Sam) ; reste l'erreur du panel, s'il y en a une.
+    h += `${P.erreurPanel ? `<div class="pm-pied db-mini"><b>${esc(P.erreurPanel)}</b></div>` : ''}</div>`;
     return h;
   }
 

@@ -26,6 +26,8 @@ function levierSlugByTag(): array
 
 function setting(string $key, mixed $default = null): mixed
 {
+    // Une clé du module Motivation (les primes) vit dans ses tables mot_ (src/motivation.php, 23/10/2026).
+    if (function_exists('motCle') && ($t = motCle($key)) !== null) { return $t === 'cache' ? motCache($key, $default) : motReglage($key, $default); }
     $r = Db::row('SELECT value FROM ceo_app_setting WHERE `key` = ?', [$key]);
     return $r === null ? $default : json_decode($r['value'], true);
 }

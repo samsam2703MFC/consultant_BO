@@ -35,10 +35,25 @@ final class Db
         if (str_contains($sql, 'ceo_shop_month_perf')) { return $T['budgets'][(int) $a[0] . '-' . str_pad((string) $a[1], 2, '0', STR_PAD_LEFT)] ?? []; }
         return [];
     }
-    public static function row(string $sql, array $a = []): ?array { return null; }
-    public static function exec(string $sql, array $a = []): void
+    // Les tables du module (mot_reglage, mot_cache, src/motivation.php) : le même magasin de réglages en mémoire.
+    public static function row(string $sql, array $a = []): ?array
     {
-        if (str_starts_with($sql, 'INSERT INTO ceo_app_setting')) { $GLOBALS['REGLAGES'][$a[0]] = json_decode($a[1], true); }
+        if (preg_match('/FROM mot_(reglage|cache) WHERE cle = \?/', $sql) && array_key_exists($a[0], $GLOBALS['REGLAGES'])) { return ['valeur' => json_encode($GLOBALS['REGLAGES'][$a[0]])]; }
+        return null;
+    }
+    public static function exec(string $sql, array $a = []): int
+    {
+        $GLOBALS['SQL'][] = $sql;
+        if (preg_match('/^INSERT INTO mot_(reglage|cache) \(cle, valeur\) VALUES/', $sql)) { $GLOBALS['REGLAGES'][$a[0]] = json_decode($a[1], true); return 1; }
+        if (str_starts_with($sql, 'DELETE FROM mot_cache WHERE ')) {
+            $n = 0;
+            foreach ($a as $motif) {
+                $re = '/^' . str_replace(['%', '_'], ['.*', '.'], preg_quote($motif, '/')) . '$/';
+                foreach (array_keys($GLOBALS['REGLAGES']) as $k) { if (preg_match($re, (string) $k)) { unset($GLOBALS['REGLAGES'][$k]); $n++; } }
+            }
+            return $n;
+        }
+        return 0;
     }
 }
 function setting(string $k, mixed $d = null): mixed { return $GLOBALS['REGLAGES'][$k] ?? $d; }
@@ -82,6 +97,7 @@ function svNomProduit(int|string $cle, string $nomLu): string { return [900 => '
 
 require __DIR__ . '/../src/ventes.php';
 require __DIR__ . '/../src/panel_ventes.php';
+require __DIR__ . '/../src/motivation.php';
 require __DIR__ . '/../src/primes.php';
 require __DIR__ . '/../src/primes_app.php';
 require __DIR__ . '/../src/primes_b2b.php';
@@ -770,6 +786,25 @@ $cB = primesCartes(['croisees' => ['taux' => null, 'cible' => 55, 'montant' => 0
 $cB = array_values(array_filter($cB, static fn ($c) => $c['type'] === 'b2b'));
 verifie('la carte B2B : son gain, sa règle, à aller chercher (att) en cours de mois', count($cB) === 1 && $cB[0]['gain'] === 40.0 && $cB[0]['etat'] === 'att' && $cB[0]['taux'] === 5.0 && $cB[0]['actif'] === true && $cB[0]['barre'] === null, json_encode($cB));
 verifie('les montants comptent la prime B2B', primesMontants(['croisees' => ['montant' => 0], 'record' => ['montant' => 0], 'meilleure' => ['montant' => 0], 'concours' => ['montant' => 0], 'b2b' => ['montant' => 40.0]], ['vous' => 0])['b2b'] === 40.0);
+
+// --- Les tables du module : toutes sous mot_ (23/10/2026) ---------------------------------------------
+echo "\nLes tables mot_\n";
+verifie('les réglages et l’historique vont dans mot_reglage, les caches dans mot_cache, le reste ailleurs',
+    motCle('ventePrimesApp') === 'reglage' && motCle('ventePrimesHist') === 'reglage' && motCle('venteCrossTargets') === 'reglage' && motCle('primesSms2026-10') === 'reglage'
+    && motCle('primesMoi12:2026-10') === 'cache' && motCle('pvJ4:2026-10-01') === 'cache' && motCle('b2bM4:x') === 'cache'
+    && motCle('pvL4:2026-10-01') === null && motCle('pvE4:2026-10-01') === null && motCle('venteSimMarge') === null);
+verifie('la reprise depuis ceo_app_setting est passée (marque posée)', isset($GLOBALS['REGLAGES'][MOT_REPRISE])
+    && count(array_filter($GLOBALS['SQL'] ?? [], static fn ($q) => str_starts_with($q, 'INSERT IGNORE INTO mot_'))) === 2);
+// Le code du module ne touche plus ceo_app_setting ; aucun fichier n'y écrit une clé du module.
+$fautifs = [];
+foreach (glob(__DIR__ . '/../src/*.php') as $f) {
+    $t = (string) file_get_contents($f);
+    if (preg_match('/^primes/', basename($f)) && str_contains($t, 'ceo_app_setting')) { $fautifs[] = basename($f); }
+    if (preg_match_all('/INSERT INTO ceo_app_setting[^;]*?\[\s*\'([A-Za-z0-9_]+)/s', $t, $mm)) {
+        foreach ($mm[1] as $k) { if (motCle($k) !== null) { $fautifs[] = basename($f) . ' : ' . $k; } }
+    }
+}
+verifie('plus rien du module dans ceo_app_setting (motReglage, motCache)', $fautifs === [], implode(', ', $fautifs));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

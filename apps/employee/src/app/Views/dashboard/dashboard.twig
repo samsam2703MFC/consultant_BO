@@ -82,7 +82,7 @@
 {% if collection %}
 <a class="pr-card acc-lien acc-mag" href="{{ ROOT }}/primes#collection">
   <div><div class="k">{{ T.my_collection ?? 'Ma collection' }}</div>
-    <div class="s"><b>{{ collection.n }} {{ T.titles_won ?? 'titres gagnés' }}</b>{% if collection.enCours %} · {{ collection.enCours }} {{ T.live ?? 'en cours' }}{% endif %}{% if collection.derniers|length %}{% set dt = collection.derniers[0] %} · {{ T.last ?? 'dernier' }} : {{ (dt.cle starts with 'concours:' or dt.cle starts with 'promo:') ? dt.lib : (dt.cle == 'croisees' ? (T.cross_sales_title ?? 'Ventes croisées') : (dt.cle == 'record' ? (T.record_beaten ?? 'Record battu') : (dt.cle == 'meilleure' ? (T.best_seller ?? 'Meilleure vendeuse') : (dt.cle == 'google' ? (T.google_rating ?? 'Note Google') : (T.shop_bonus_title ?? 'Prime magasin'))))) }}{% endif %}</div></div>
+    <div class="s"><b>{{ collection.n }} {{ T.titles_won ?? 'titres gagnés' }}</b>{% if collection.enCours %} · {{ collection.enCours }} {{ T.live ?? 'en cours' }}{% endif %}{% if collection.derniers|length %}{% set dt = collection.derniers[0] %} · {{ T.last ?? 'dernier' }} : {{ (dt.cle starts with 'concours:' or dt.cle starts with 'promo:' or dt.cle starts with 'cible:') ? dt.lib : (dt.cle == 'croisees' ? (T.cross_sales_title ?? 'Ventes croisées') : (dt.cle == 'record' ? (T.record_beaten ?? 'Record battu') : (dt.cle == 'meilleure' ? (T.best_seller ?? 'Meilleure vendeuse') : (dt.cle == 'google' ? (T.google_rating ?? 'Note Google') : (T.shop_bonus_title ?? 'Prime magasin'))))) }}{% endif %}</div></div>
   <i class="bi bi-chevron-right mu"></i>
 </a>
 {% endif %}
