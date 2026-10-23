@@ -23,8 +23,8 @@ const MOT_REGLAGES = ['ventePrimesApp', 'venteCroisees', 'ventePrimes', 'ventePr
 /** Les réglages du module, par début de clé (un mois, un magasin). */
 const MOT_REGLAGES_DEBUT = ['primesSms'];
 /** Les caches du module, par début de clé. */
-const MOT_CACHES_DEBUT = ['primesColl', 'primesClos', 'primesMoi', 'primesS12', 'primesTous', 'primesJeton',
-    'primesPromos3', 'primesCatalogue', 'prMoy', 'b2bM', 'pvJ', 'vmMois'];
+const MOT_CACHES_DEBUT = ['primesColl', 'primesClos', 'primesMoi', 'primesS12', 'primesTous', 'primesEq', 'primesJeton',
+    'primesPromos3', 'primesCatalogue', 'prMoy', 'b2bM', 'pvJ', 'vmMois', 'grandsPrix'];
 /** La ligne de mot_reglage qui dit que la reprise depuis ceo_app_setting est faite. */
 const MOT_REPRISE = '_repris_de_ceo_app_setting';
 
@@ -49,6 +49,29 @@ function motTables(): void
             . 'maj TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
             . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin');
     }
+    // Les grands prix de l'année (src/grands_prix.php) : une ligne par grand prix ; « resultat », le classement gravé
+    // une fois la saison finie.
+    Db::exec('CREATE TABLE IF NOT EXISTS mot_grand_prix ('
+        . 'id INT AUTO_INCREMENT PRIMARY KEY,'
+        . 'portee VARCHAR(10) NOT NULL,'              // reseau (la marque) ou magasin (un franchisé)
+        . 'shop VARCHAR(20) NULL,'
+        . 'defi VARCHAR(20) NOT NULL,'
+        . 'titre VARCHAR(120) NOT NULL,'
+        . 'lot VARCHAR(255) NULL,'
+        . 'valeur INT NOT NULL DEFAULT 0,'
+        . 'payeur VARCHAR(10) NOT NULL,'              // marque, magasin ou sponsor
+        . 'sponsor VARCHAR(120) NULL,'
+        . 'sponsor_site VARCHAR(190) NULL,'
+        . 'photo VARCHAR(190) NULL,'
+        . 'seuil INT NULL,'                           // heures (vendeuse, progression) ou tickets (ventes croisées) au minimum
+        . 'du DATE NOT NULL,'
+        . 'au DATE NOT NULL,'
+        . 'actif TINYINT(1) NOT NULL DEFAULT 1,'
+        . 'resultat MEDIUMTEXT NULL,'
+        . 'cree_le DATETIME NOT NULL,'
+        . 'maj TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,'
+        . 'KEY idx_gp_shop (portee, shop)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     if (Db::row('SELECT valeur FROM mot_reglage WHERE cle = ?', [MOT_REPRISE]) === null) { motReprendre(); }
 }
 

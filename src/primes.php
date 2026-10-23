@@ -950,9 +950,10 @@ function primesMoisClos(int $emp, string $m, string $shop, array $nomDe): array
  * La fiche « Mes primes » d'une personne pour un mois : une carte par prime (src/primes_app.php), ce
  * qui est acquis et ce qui est en jeu, les classements du menu déroulant ; et pour l'Accueil, le
  * compteur du jour, les briques, la collection, les douze dernières semaines. Les noms des autres sont
- * ceux des classements, rien de plus.
+ * ceux des classements, rien de plus. « $leger » (23/10/2026, l'équipe d'un magasin) : les cartes seules — sans le
+ * compteur du jour, la collection ni les douze semaines —, jamais gravée : seule la fiche complète l'est, et elle sert.
  */
-function primesMoi(int $emp, string $m, bool $frais = false): array
+function primesMoi(int $emp, string $m, bool $frais = false, bool $leger = false): array
 {
     // Un mois à venir (16/10/2026) : rien à compter encore — les primes prévues, leur récompense, leur objectif.
     if ($m > date('Y-m') && function_exists('primesAVenir')) { return primesAVenir($emp, $m); }
@@ -991,7 +992,7 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
 
     // Aujourd'hui : ses tickets et ses ventes croisées, lus au panel toutes les dix minutes (l'Accueil).
     $auj = null;
-    if ($enCours && function_exists('pvLignesJourPersonne')) {
+    if ($enCours && !$leger && function_exists('pvLignesJourPersonne')) {
         $j = pvLignesJourPersonne((int) $shop, $emp);
         if ($j !== null) {
             $auj = ['tickets' => $j['t'], 'croisees' => $j['c'], 'lignes' => $j['l'],
@@ -1000,7 +1001,7 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
     }
 
     // Les douze dernières semaines, avec sa place dans le réseau chaque semaine (l'Accueil, « Ma semaine »).
-    $semaines12 = $enCours ? primesSemaines12($emp, (int) $shop) : [];
+    $semaines12 = $enCours && !$leger ? primesSemaines12($emp, (int) $shop) : [];
 
     $classements = primesClassements($emp, $shop, $cr, $emps, concoursReglages($shop), croiseesReglages(), $nomDe, promosConfig($m, $shop));
     $cartes = primesCartes($b, $pm, $classements, $enCours);
@@ -1012,14 +1013,14 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
     foreach ($cartes as $c) { $max += max((float) $c['montant'], (float) $c['gain']); }
     $enJeu = $enCours ? max($acquis, round($max, 2)) : $acquis;
 
-    $collection = primesCollection($emp, $shop, $nomDe, $b, $pm);
+    $collection = $leger ? [] : primesCollection($emp, $shop, $nomDe, $b, $pm);
 
     $out = ['v' => PRIMES_FICHE_V, 'emp' => $emp, 'm' => $m, 'lib' => primesLibMois($m), 'enCours' => $enCours, 'quand' => time(),
         'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)], 'cartes' => $cartes, 'classements' => $classements, 'collection' => $collection,
         'heures' => ['mois' => round($hVous, 1), 'faites' => round($hFaites, 1), 'equipe' => round($hEq, 1), 'personnes' => $nEq, 'planningJusquau' => $finPlan],
         'aujourdhui' => $auj, 'acquis' => $acquis, 'enJeu' => $enJeu, 'aPortee' => $enJeu, 'google' => $b['google'], 'montants' => $montants,
         'briques' => $b, 'prime' => $pm, 'semaines12' => $semaines12, 'motif' => $r['motif']];
-    motCacheEcrire($cle, $out);
+    if (!$leger) { motCacheEcrire($cle, $out); }
     return $out;
 }
 
@@ -1339,6 +1340,89 @@ function ep_primes_mois(): array
 }
 
 /**
+ * L'équipe d'un magasin face à ses primes (23/10/2026, Sam : « la liste des primes, qui les a et à quel niveau ») : les
+ * primes que ses vendeuses voient dans Mes primes — de la marque, des sponsors et du magasin — et, pour chacune, où
+ * elle en est : gagnée (et combien), en tête, sa place, sa valeur face à l'objectif. La fiche de chacune, en léger ;
+ * gravée dix minutes (un mois clos : un jour). Des noms de vendeuses, jamais de clients.
+ */
+function primesEquipe(string $shop, string $m, bool $frais = false): array
+{
+    $cle = 'primesEq' . $shop . ':' . $m;
+    $enCours = $m === date('Y-m');
+    if (!$frais) {
+        $c = motCache($cle);
+        if (is_array($c) && isset($c['vendeuses']) && ($c['v'] ?? 0) === PRIMES_FICHE_V && (int) ($c['quand'] ?? 0) > time() - ($enCours ? PRIMES_CACHE_JOUR : PRIMES_CACHE_CLOS)) { return $c; }
+    }
+    $nomDe = primesMagasins();
+    $emps = venteEmployes();
+    // Ses vendeuses du mois : au planning de ce magasin, ou avec des tickets à leur nom.
+    $ids = [];
+    foreach (primesHeuresMois($m) as $id => $x) { if ((string) $x['shop'] === $shop) { $ids[(int) $id] = true; } }
+    foreach (venteMoisCache($m, $nomDe)['lignes'] as $l) { if ((string) ($emps[(int) $l['id']]['shop'] ?? '') === $shop) { $ids[(int) $l['id']] = true; } }
+    $primes = []; $vendeuses = [];
+    foreach (array_keys($ids) as $id) {
+        if (!isset($emps[$id])) { continue; }
+        $f = primesMoi($id, $m, $frais, true);
+        if (isset($f['error'])) { continue; }
+        $cases = [];
+        foreach ((array) $f['cartes'] as $c) {
+            $k = (string) $c['cle'];
+            if (!isset($primes[$k])) { $primes[$k] = primesEquipeColonne($c); }
+            $cases[$k] = primesEquipeCase($c);
+            $primes[$k]['vendeuses']++;
+            if ($cases[$k]['etat'] === 'gagne' || ($cases[$k]['etat'] === 'att' && $c['type'] === 'b2b' && $cases[$k]['gain'] > 0)) { $primes[$k]['gagnees']++; }
+        }
+        $vendeuses[] = ['id' => $id, 'nom' => $emps[$id]['nom'], 'heures' => $f['heures']['mois'] ?? null,
+            'tickets' => (int) ($f['briques']['meilleure']['tickets'] ?? ($f['briques']['croisees']['tickets'] ?? 0)),
+            'acquis' => (float) $f['acquis'], 'enJeu' => (float) $f['enJeu'], 'cases' => $cases];
+    }
+    usort($vendeuses, static fn ($a, $b) => [-$a['acquis'], -$a['tickets'], $a['nom']] <=> [-$b['acquis'], -$b['tickets'], $b['nom']]);
+    $out = ['v' => PRIMES_FICHE_V, 'm' => $m, 'lib' => primesLibMois($m), 'enCours' => $enCours, 'quand' => time(),
+        'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)], 'primes' => array_values($primes), 'vendeuses' => $vendeuses];
+    motCacheEcrire($cle, $out);
+    return $out;
+}
+
+/** Une prime dans le tableau de l'équipe : son nom, sa récompense, qui la paie, sa règle. */
+function primesEquipeColonne(array $c): array
+{
+    $sp = $c['sponsor'] ?? null;
+    return ['cle' => (string) $c['cle'], 'lib' => (string) $c['lib'], 'type' => (string) $c['type'], 'base' => (string) ($c['base'] ?? $c['cle']), 'emo' => (string) ($c['emo'] ?? ''),
+        'montant' => (int) $c['montant'], 'max' => (bool) ($c['max'] ?? false), 'cadeau' => $c['cadeau']['nom'] ?? null, 'unite' => $c['unite'] ?? null, 'regle' => $c['regle'] ?? null,
+        'payeur' => $sp ? 'sponsor' : (($c['payeur'] ?? '') === 'magasin' ? 'magasin' : 'marque'), 'sponsor' => $sp['nom'] ?? null,
+        'mode' => $c['mode'] ?? null, 'taux' => $c['taux'] ?? null, 'fixe' => $c['fixe'] ?? null, 'duree' => $c['duree'] ?? null,
+        'vendeuses' => 0, 'gagnees' => 0];
+}
+
+/**
+ * Où une vendeuse en est sur une prime : l'état de sa carte, ce qu'elle a gagné, sa valeur et l'objectif, sa place, et
+ * « niveau » : le chemin fait vers l'objectif, de 0 à 100 (l'objectif du magasin sur sa projection du mois).
+ */
+function primesEquipeCase(array $c): array
+{
+    $val = isset($c['val']) && is_numeric($c['val']) ? (float) $c['val'] : null;
+    $obj = $c['cible'] ?? null;
+    if (in_array($c['type'], ['categorie', 'promo'], true)) { $obj = $c['objPcs'] ?? (($c['regle'] ?? '') === 'seuil' ? (float) max(1, (int) ($c['minPieces'] ?? 1)) : null); }
+    $niveau = null;
+    if (($c['base'] ?? $c['cle']) === 'objectif' && $val !== null && (float) $obj > 0) { $niveau = (int) round(min(100.0, 100 * $val / (float) $obj)); }
+    elseif (($c['barre'] ?? null) !== null) { $niveau = (int) round(min(100.0, 100 * (float) $c['barre'] / PRIMES_BARRE_OBJ)); }
+    return ['etat' => (string) $c['etat'], 'gain' => round((float) ($c['gain'] ?? 0), 2), 'val' => $val, 'cible' => $obj !== null ? (float) $obj : null,
+        'record' => $c['record'] ?? null, 'rang' => $c['rang'] ?? null, 'sur' => $c['sur'] ?? null, 'ecart' => $c['ecart'] ?? null,
+        'pour1' => $c['pour1'] ?? null, 'avance1' => $c['avance1'] ?? null, 'motif' => $c['motif'] ?? null, 'niveau' => $niveau,
+        'clients' => is_array($c['clients'] ?? null) ? count($c['clients']) : null, 'nouveaux' => $c['nouveaux'] ?? null];
+}
+
+/** GET /ventes/primes-equipe?shop=&m= — l'équipe d'un magasin face à ses primes (la page franchisé du cockpit). */
+function ep_primes_equipe(): array
+{
+    $shop = trim((string) ($_GET['shop'] ?? ''));
+    if ($shop === '' || !isset(primesMagasins()[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    $m = trim((string) ($_GET['m'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}$/', $m) || $m > date('Y-m')) { $m = date('Y-m'); }
+    return primesEquipe($shop, $m, isset($_GET['frais']));
+}
+
+/**
  * Ce que « Enregistrer les primes » grave pour l'app worker, en plus des gagnantes : les primes de
  * l'app de chacune — ventes croisées, catégories, promos, objectif magasin, note Google — (identifiants et
  * montants, jamais de nom), et une ligne au journal par personne primée. Le record et la meilleure
@@ -1432,6 +1516,14 @@ function ep_ventes_moi(): array
     if ($emp === null) { http_response_code(404); return ['error' => 'personne inconnue']; }
     $r = primesMoi($emp, primesMoisDemande(), isset($_GET['frais']));
     if (isset($r['error'])) { http_response_code((int) ($r['code'] ?? 500)); return ['error' => $r['error']]; }
+    return primesAvecGrandsPrix($r, $emp);
+}
+
+/** La fiche du mois en cours porte aussi les grands prix de l'année (23/10/2026, src/grands_prix.php) ; une erreur ne la casse pas. */
+function primesAvecGrandsPrix(array $r, int $emp): array
+{
+    if (!($r['enCours'] ?? false) || !function_exists('gpPourVendeuse')) { return $r; }
+    try { $r['grandsPrix'] = gpPourVendeuse($emp); } catch (Throwable $e) { error_log('grands prix de ' . $emp . ' : ' . $e->getMessage()); }
     return $r;
 }
 
@@ -1527,7 +1619,7 @@ function ep_ventes_moi_jeton(): array
     }
     $r = primesMoi($emp, primesMoisDemande(), isset($_GET['frais']));
     if (isset($r['error'])) { http_response_code((int) ($r['code'] ?? 500)); return ['error' => $r['error']]; }
-    return $r;
+    return primesAvecGrandsPrix($r, $emp);
 }
 
 /**

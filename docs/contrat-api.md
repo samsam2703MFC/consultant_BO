@@ -743,6 +743,17 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   format +32. Le fournisseur : Twilio, réglé dans `config/config.php › sms` (`sid`, `token`, `expediteur`) ou
   `TWILIO_SID`, `TWILIO_TOKEN`, `SMS_EXPEDITEUR` (`src/sms.php`) ; sans lui, rien ne part, l'écran et le journal
   le disent.
+- `GET /ventes/primes-equipe?shop=&m=` (23/10/2026) : l'équipe d'un magasin face à ses primes, pour la page
+  franchisé (`#/primes-app-worker?shop=4`, « Où en sont tes vendeuses ») : `primes[] {cle, lib, type, base,
+  montant, max, cadeau, unite, regle, payeur (marque | magasin | sponsor), sponsor, mode, taux, fixe, duree,
+  vendeuses, gagnees}` — celles de Mes primes, dans leur ordre — et `vendeuses[] {id, nom, heures, tickets,
+  acquis, enJeu, cases: {cle: {etat, gain, val, cible, record, rang, sur, ecart, pour1, avance1, motif, niveau,
+  clients, nouveaux}}}`, triées par acquis. `niveau` : le chemin fait vers l'objectif, de 0 à 100 (l'objectif du
+  magasin sur sa projection du mois). Les vendeuses : au planning du magasin ou avec des tickets à leur nom ; la
+  fiche de chacune en léger (`primesMoi(…, leger)` : sans compteur du jour, collection ni douze semaines, jamais
+  gravée). Mois en cours ou clos (`m` à venir → le mois en cours) ; cache `primesEq{shop}:{m}`, dix minutes (un
+  jour, mois clos), vidé avec les fiches quand un réglage change ; `&frais=1` recalcule. 404 si le magasin est
+  inconnu. Des noms de vendeuses, jamais de clients (B2B : un nombre de clients).
 - La moisson des lignes par ticket (`pvL{shop}:{jour}`, version 3) compte `c` (les tickets à deux lignes ou
   plus), `cc` ces mêmes tickets par catégorie de produits qu'ils contiennent (`k` : le jour les compte), `q`
   les pièces par famille — les catégories (motif) et les **promos** (leurs identifiants de produits,
@@ -3936,3 +3947,47 @@ CA : l'atteinte du magasin (projetée tant que le mois court) ≥ % et ses heure
 et ses heures. Un cadeau se gagne sans euros. Une catégorie du magasin ne classe que ses vendeuses. Les montants entrent
 dans « Mes primes » (cartes `type: target`, `base`, `duMagasin: true`), le mois clos, les primes du mois de tous (colonne
 « Targets du magasin », `totaux.cibles`), l'enregistrement (`cibles`, payé par le magasin) et le SMS.
+
+### Module Motivation : les tables sous `mot_`, et les grands prix de l'année (23/10/2026, demande de Sam)
+
+**Les tables.** Les données des primes passent de `ceo_app_setting` à des tables du module :
+
+- `mot_reglage` reçoit les réglages, les primes enregistrées et les SMS envoyés ;
+- `mot_cache` reçoit les caches ;
+- `mot_grand_prix` reçoit les grands prix.
+
+La reprise se fait une fois, à la première lecture. Aucune route ne change. Le détail est dans
+`docs/module-motivation.md`.
+
+**`GET /ventes/grands-prix[?shop=3]`** rend :
+
+- `{annee, aujourdhui, shop, shopNom, defis, max, magasins}` ;
+- `liste` : chaque grand prix, `{id, portee, shop, shopNom, defi, defiLib, emo, regle, titre, lot, valeur, payeur,
+  sponsor, sponsorSite, photo, seuil, seuilSorte, du, au, actif}`, plus son classement. Le classement porte `saison`
+  `{etat, part, joursRestants}`, `classement` (les dix premiers : `{rang, id, nom, shop, magasin, valeur, txt,
+  detail}`), `enCourse`, `horsSeuil`, `seuilCourant`, `motif`, `jusqua` et `grave`. Avec `shop`, il porte aussi
+  `ici`, la mieux classée du magasin dans un grand prix de la marque.
+
+**`POST /ventes/grands-prix`** prend `{id?, portee, shop, defi, titre, lot, valeur, payeur, sponsor, sponsorSite,
+photo, seuil, du, au, actif}` et répond `{ok, id}`. Il répond 422 avec `error` si le grand prix ne tient pas. Les
+règles :
+
+- le magasin de l'année est réservé au réseau ;
+- un sponsor doit avoir un nom ;
+- la saison se compte en mois entiers, deux ans au plus ;
+- douze grands prix en cours au plus par étage.
+
+`{id, actif}` seul ne touche que l'interrupteur.
+
+**`POST /ventes/grands-prix/retirer {id}`** retire un grand prix.
+
+**Dans l'app des vendeuses (23/10/2026).** Sur le mois en cours, `GET /ventes/moi` (et sa voie par jeton) porte
+`grandsPrix[]` : `{id, defi, portee, titre, lot, valeur, payeur, sponsor, sponsorSite, photo, du, au, etat, part,
+joursRestants, seuil, seuilSorte, seuilCourant, unite, moi: {rang, valeur} | null, manque: {n, sorte} | null,
+enCourse, top: [{rang, nom, lieu, valeur, moi}], magasin}`.
+
+- On y trouve ceux de la marque et ceux du magasin de la vendeuse : en cours, à venir, ou finis depuis moins de 45
+  jours.
+- `unite` vaut `eur_h`, `pct`, `pct_signe`, `eur_ht` ou `eur`.
+- Une erreur de calcul n'empêche pas la fiche d'être servie ; elle part au journal PHP.
+- Le classement se garde quinze minutes (`grandsPrixCl…` dans `mot_cache`).

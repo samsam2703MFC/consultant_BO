@@ -32,3 +32,12 @@
 {%- set t = c.taux|number_format(c.taux == c.taux|round ? 0 : 1, ',', ' ') -%}
 {{- c.mode == 'fixe' ? c.fixe ~ ' €' : t ~ ' %' }} · {{ c.mode == 'fixe' or c.duree == 'premiere' ? (T.b2b_s_first ?? '1re commande') : (c.duree == 'sans' ? (T.b2b_s_always ?? 'sans limite') : (T.b2b_s_months ?? '{d} mois')|replace({'{d}': c.duree})) -}}
 {% endmacro %}
+
+{# La valeur d'un grand prix de l'année selon son unité (23/10/2026) : « 48,8 €/h », « +12,0 % », « 9 310 € HT », « 186,40 € ». #}
+{% macro gpVal(v, u) -%}
+{%- if u == 'eur_h' %}{{ v|number_format(1, ',', ' ') }}&nbsp;€/h
+{%- elseif u == 'pct_signe' %}{{ v >= 0 ? '+' : '−' }}{{ v|abs|number_format(1, ',', ' ') }}&nbsp;%
+{%- elseif u == 'pct' %}{{ v|number_format(1, ',', ' ') }}&nbsp;%
+{%- elseif u == 'eur_ht' %}{{ v|number_format(0, ',', ' ') }}&nbsp;€ HT
+{%- else %}{{ v|number_format(2, ',', ' ') }}&nbsp;€{% endif -%}
+{%- endmacro %}
