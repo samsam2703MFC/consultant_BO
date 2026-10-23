@@ -32,12 +32,12 @@ avec `deploy/server.sh`, sur le même serveur que le cockpit :
 - la copie est **coupée de l'extérieur** juste après l'import : compte SMTP désactivé, KSeF en
   `test` sans jeton, accès aux boutiques des franchisés effacés, API des franchisés, S3 et
   Discord vides dans le `.env` ;
-- **accès (serveur de test)** : le navigateur demande d'abord un mot de passe commun (Basic
-  Auth Apache, utilisateur `erp`) ; seule son empreinte bcrypt est dans le dépôt
-  (`deploy/acces_test.htpasswd`). Ensuite l'ERP n'affiche qu'un bouton « Entrer », qui ouvre le
-  compte `ERP_ENTREE_LIBRE` du workflow (`admin`). Vider `ERP_ENTREE_LIBRE` remet les mots de
-  passe de l'ERP ; supprimer `acces_test.htpasswd` retire le mot de passe navigateur (et le
-  bouton, qui n'est jamais servi sans lui) ;
+- **accès (serveur de test)** : bac à sable ouvert depuis le 23/10/2026 (`ERP_SANDBOX_OUVERT: "1"`
+  dans le workflow) — pas de mot de passe navigateur, l'ERP n'affiche qu'un bouton « Entrer », qui
+  ouvre le compte `ERP_ENTREE_LIBRE` du workflow (`admin`), pour quiconque a l'adresse. Pour
+  refermer : remettre un `deploy/acces_test.htpasswd` (Basic Auth Apache, utilisateur `erp`,
+  empreinte bcrypt seulement) ; sans lui et sans `ERP_SANDBOX_OUVERT=1`, le bouton n'est jamais
+  servi ; vider `ERP_ENTREE_LIBRE` remet les mots de passe de l'ERP ;
 - les comptes de la copie reçoivent des mots de passe aléatoires, écrits dans
   `/root/erp_import/MOTS_DE_PASSE_ERP.txt` (lisible par root seulement, jamais dans les logs) ;
 - PHP 8.1 suffit : `composer.lock` est figé sur `config.platform.php = 8.1.2` ;

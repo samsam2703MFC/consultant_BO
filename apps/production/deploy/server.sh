@@ -24,8 +24,10 @@ ERP_DB_NAME="${ERP_DB_NAME:-erp_production}"
 ERP_DB_USER="${ERP_DB_USER:-erp_production}"
 ERP_IMPORT_DIR="${ERP_IMPORT_DIR:-/root/erp_import}"
 # Serveur de test : compte ouvert par un bouton « Entrer », sans mot de passe ERP.
-# Accepté seulement derrière le mot de passe navigateur (deploy/acces_test.htpasswd).
+# Accepté seulement derrière le mot de passe navigateur (deploy/acces_test.htpasswd), ou en bac à sable
+# ouvert déclaré explicitement (ERP_SANDBOX_OUVERT=1 : sans mot de passe navigateur).
 ERP_ENTREE_LIBRE="${ERP_ENTREE_LIBRE:-}"
+ERP_SANDBOX_OUVERT="${ERP_SANDBOX_OUVERT:-}"
 HTPASSWD_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/acces_test.htpasswd"
 HTPASSWD="/etc/apache2/production-erp.htpasswd"
 APACHE_CONF="/etc/apache2/conf-available/production-erp.conf"
@@ -167,12 +169,14 @@ set_env() {
     file_put_contents($f, $s);' "$ENV_FILE" "$1" "$2"
 }
 
-if [[ -n "$ERP_ENTREE_LIBRE" && ! -f "$HTPASSWD_SRC" ]]; then
+if [[ -n "$ERP_ENTREE_LIBRE" && ! -f "$HTPASSWD_SRC" && "$ERP_SANDBOX_OUVERT" != "1" ]]; then
   warn "ERP_ENTREE_LIBRE ignoré : pas de mot de passe navigateur (deploy/acces_test.htpasswd), l'ERP garde ses mots de passe."
   ERP_ENTREE_LIBRE=""
 fi
 [[ "$(envget ENTREE_LIBRE)" == "$ERP_ENTREE_LIBRE" ]] || set_env ENTREE_LIBRE "$ERP_ENTREE_LIBRE"
-if [[ -n "$ERP_ENTREE_LIBRE" ]]; then
+if [[ -n "$ERP_ENTREE_LIBRE" && ! -f "$HTPASSWD_SRC" ]]; then
+  warn "Bac à sable ouvert : pas de mot de passe navigateur, le bouton « Entrer » ouvre l'ERP (compte ${ERP_ENTREE_LIBRE}) à quiconque a l'adresse."
+elif [[ -n "$ERP_ENTREE_LIBRE" ]]; then
   log "Entrée : mot de passe navigateur, puis bouton « Entrer » (compte ${ERP_ENTREE_LIBRE})."
 else
   log "Entrée : login et mot de passe de l'ERP."
