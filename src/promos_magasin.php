@@ -126,6 +126,9 @@ function pmPropre(array $b, int $shop): array
         'creneaux' => pmCreneaux($b['creneaux'] ?? []),
         'repetable' => !empty($b['repetable']),
         'maxParTicket' => is_numeric($max) && (int) $max > 0 ? min(50, (int) $max) : null,
+        // Les conditions du ticket (23/10/2026) : où la promotion vaut, et le montant minimal du ticket (TTC, avant remise).
+        'canal' => in_array($b['canal'] ?? '', ['comptoir', 'webshop'], true) ? (string) $b['canal'] : 'tous',
+        'seuil' => is_numeric($b['seuil'] ?? null) && (float) $b['seuil'] > 0 ? round(min(1000.0, (float) $b['seuil']), 2) : null,
     ];
 }
 
@@ -656,7 +659,59 @@ function pmPanelCorps(array $d, string $statut, bool $secondes = true): array
         'schedule' => pmPanelHoraire($d['creneaux'] ?? [], $secondes),
         'trigger' => $cote($d['x']),
         'reward' => $cote($y) + ['type' => $y['type'], 'value' => $y['type'] === 'FREE' ? null : $y['valeur'], 'selection_strategy' => 'CHEAPEST'],
-    ];
+    ] + pmConditionsCorps($d);
+}
+
+/**
+ * Les conditions du ticket au panel (23/10/2026). Leurs noms ne sont pas dans la documentation publique : le cockpit
+ * écrit sous ceux qu'il a relus sur une promotion du panel (pmChampsAppris) ; tant qu'aucune n'en porte, sous les noms
+ * plausibles ci-dessous. La relecture dit si le panel les a pris (pmConditionsEcarts) : sinon, rien ne passe en caisse.
+ */
+const PM_CLES_SEUIL = ['min_order_amount', 'minimum_order_value', 'min_ticket_amount'];
+const PM_CLES_CANAL = ['sales_channels', 'channels'];
+const PM_JETONS = ['comptoir' => 'POS', 'webshop' => 'WEBSHOP'];
+
+/** Les noms (et les jetons des canaux) que portent les promotions relues au panel : {seuil, canal, jetons}. */
+function pmChampsAppris(): array
+{
+    $A = ['seuil' => null, 'canal' => null, 'jetons' => []];
+    foreach ((function_exists('pvRegles') ? pvRegles()['regles'] : []) as $r) {
+        $c = (array) ($r['cles'] ?? []);
+        $A['seuil'] ??= $c['seuil'] ?? null;
+        if ($A['canal'] === null && ($c['canal'] ?? null) !== null) { $A['canal'] = $c['canal']; }
+        if (($c['canal'] ?? null) === $A['canal']) { $A['jetons'] += array_filter((array) ($c['jetons'] ?? [])); }
+    }
+    return $A;
+}
+
+/**
+ * Les champs des conditions dans le corps envoyé au panel. Rien quand la promotion n'en a pas (comptoir et webshop, sans
+ * seuil) — sauf pour effacer celles qu'elle avait (`avant`), sous le nom appris.
+ */
+function pmConditionsCorps(array $d): array
+{
+    $A = pmChampsAppris(); $avant = (array) ($d['avant'] ?? []);
+    $out = [];
+    $seuil = $d['seuil'] ?? null;
+    if ($A['seuil'] !== null) { if ($seuil !== null || ($avant['seuil'] ?? null) !== null) { $out[$A['seuil']] = $seuil; } }
+    elseif ($seuil !== null) { foreach (PM_CLES_SEUIL as $k) { $out[$k] = $seuil; } }
+    $canal = $d['canal'] ?? 'tous';
+    $jet = $A['jetons'] + PM_JETONS;
+    $liste = $canal === 'tous' ? [$jet['comptoir'], $jet['webshop']] : [$jet[$canal]];
+    if ($A['canal'] !== null) { if ($canal !== 'tous' || ($avant['canaux'] ?? null) !== null) { $out[$A['canal']] = $liste; } }
+    elseif ($canal !== 'tous') { foreach (PM_CLES_CANAL as $k) { $out[$k] = $liste; } }
+    return $out;
+}
+
+/** Ce que la fiche relue ne reprend pas des conditions demandées : « le seuil du ticket », « le canal ». */
+function pmConditionsEcarts(array $d, array $relu): array
+{
+    $c = pvConditions($relu); $e = [];
+    $s = $d['seuil'] ?? null;
+    if (($s === null) !== ($c['seuil'] === null) || ($s !== null && abs($s - (float) $c['seuil']) > 0.005)) { $e[] = 'le seuil du ticket'; }
+    $voulu = ($d['canal'] ?? 'tous') === 'tous' ? null : [$d['canal']];
+    if ($voulu !== $c['canaux']) { $e[] = 'le canal (' . ($voulu === null ? 'comptoir et webshop' : $voulu[0]) . ')'; }
+    return $e;
 }
 
 /** Le produit d'une cible du panel : un entier, ou {id_product | product_id | id, id_product_portion…}. */
@@ -740,7 +795,7 @@ function pmPanelEnvoyer(array $d, ?int $panelId, bool $activer = true): array
     };
     $relu = $lire();
     if ($relu === null) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . '), relecture impossible : ' . (ErpApi::$lastError ?? '')]; }
-    $ecarts = pmPanelEcarts($corps, $relu);
+    $ecarts = array_merge(pmPanelEcarts($corps, $relu), pmConditionsEcarts($d, $relu));
     if ($ecarts !== []) { return ['ok' => false, 'id' => $id, 'erreur' => 'créée inactive au panel (n° ' . $id . ') : le panel ne reprend pas ' . implode(', ', $ecarts)]; }
     // Un brouillon : écrit et relu, il reste inactif.
     if (!$activer) { return ['ok' => true, 'id' => $id, 'erreur' => null]; }
@@ -1155,6 +1210,7 @@ function wr_promos_magasin(): array
         // En caisse, elle se modifie (les changements partent au panel sur la même promotion), elle ne repasse pas en brouillon.
         if ($actuelle['statut'] === 'en_caisse' && !$envoi) { http_response_code(409); return ['error' => 'déjà en caisse : enregistrez les changements, ils partent au panel (pas de brouillon)']; }
     }
+    $d['avant'] = isset($actuelle) ? ['canaux' => $actuelle['canaux'] ?? null, 'seuil' => $actuelle['seuil'] ?? null] : null;
     [$miennes] = pmMiennes($shop);
     $autres = array_values(array_filter($miennes, static fn ($o) => $o['panelId'] !== $panelId));
     // À l'enregistrement, ce qui ne se chiffre pas sort de la promotion (pmExclureNonChiffres).

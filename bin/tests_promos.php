@@ -60,6 +60,7 @@ final class ErpApi
     public static array $portions = [4 => ['data' => [['id' => 77, 'type' => 'ONE_QUARTER', 'label' => '1/4'], ['id' => 76, 'type' => 'ONE_HALF', 'label' => '1/2'], ['id' => 79, 'type' => 'ONE_EIGHTH']]],
         1 => [['id' => 88, 'portion_fraction' => 0.5, 'is_active' => true], ['id' => 89, 'portion_fraction' => 0.25, 'is_active' => false]], 2 => []];
     public static bool $perdPortion = false;
+    public static bool $perdConditions = false;  // un panel qui ignore les champs du canal et du seuil
     public static int $suivant = 30;
     public static ?string $formatHeure = null;   // 'H:i' : le panel refuse l'heure des créneaux avec secondes
     public static bool $sansDelete = false;
@@ -133,6 +134,7 @@ final class ErpApi
     {
         $f = ['id' => $id] + $b;
         if (self::$perdCreneaux) { $f['schedule'] = []; }
+        if (self::$perdConditions) { $f = array_diff_key($f, array_flip(['min_order_amount', 'minimum_order_value', 'min_ticket_amount', 'sales_channels', 'channels', 'minimum_basket_value'])); }
         if (self::$perdPortion) { foreach (['trigger', 'reward'] as $k) { if (isset($f[$k]['product_ids'])) { $f[$k]['product_ids'] = array_map(static fn ($t) => is_array($t) ? (int) $t['id_product'] : $t, $f[$k]['product_ids']); } } }
         return $f;
     }
@@ -466,7 +468,8 @@ verifie('la sonde : rien de nominatif (l’auteur retiré)', !str_contains(json_
     && $r['sortes']['quantity']['code'] === 404, json_encode($r['sortes']['buy-x-get-y'], JSON_UNESCAPED_UNICODE));
 
 echo "Le canal et le seuil d'une promotion (23/10/2026)\n";
-verifie('sans rien : aucune restriction, aucun seuil', pvConditions(['id' => 1, 'is_exclusive' => false, 'is_repeatable' => true, 'priority' => 100]) === ['canaux' => null, 'seuil' => null]);
+$c0 = pvConditions(['id' => 1, 'is_exclusive' => false, 'is_repeatable' => true, 'priority' => 100]);
+verifie('sans rien : aucune restriction, aucun seuil', $c0['canaux'] === null && $c0['seuil'] === null && $c0['cles'] === ['seuil' => null, 'canal' => null, 'jetons' => []]);
 verifie('un seuil sous un nom plausible', pvConditions(['minimum_basket_value' => '15.00'])['seuil'] === 15.0 && pvConditions(['min_order_amount' => 12])['seuil'] === 12.0
     && pvConditions(['threshold_amount' => 9.5])['seuil'] === 9.5 && pvConditions(['minimum_order_value' => 0])['seuil'] === null);
 verifie('les canaux en liste : comptoir seul, webshop seul, les deux', pvConditions(['sales_channels' => ['POS']])['canaux'] === ['comptoir']
@@ -477,6 +480,38 @@ verifie('les canaux en booléens', pvConditions(['is_webshop' => false, 'is_pos'
 $n = pvNormaliser(['id' => 50, 'name' => 'Seuil', 'status' => 'ACTIVE', 'shop_scope_type' => 'SELECTED_SHOPS', 'shop_ids' => [4], 'min_ticket_amount' => 15, 'sales_channels' => ['POS'],
     'trigger' => ['quantity' => 1, 'product_ids' => [12]], 'reward' => ['quantity' => 1, 'type' => 'FREE']]);
 verifie('pvNormaliser les garde, pmDemande les rend', $n['seuil'] === 15.0 && $n['canaux'] === ['comptoir'] && pmDemande($n)['seuil'] === 15.0 && pmDemande($n)['canaux'] === ['comptoir'], json_encode([$n['seuil'], $n['canaux']]));
+
+echo "Les conditions du ticket écrites au panel (23/10/2026)\n";
+// Le panel porte déjà une promotion avec un seuil et un canal (n° 40, la sonde) : le cockpit écrit sous ses noms, avec ses jetons.
+$oublie();
+$GLOBALS['corps'] = $pc('Seuil appris', 60, 62, ['canal' => 'webshop', 'seuil' => '20']);
+$r = wr_promos_magasin();
+$F = ErpApi::$promos[$r['demande']['panelId'] ?? 0] ?? [];
+verifie('sous les noms relus au panel (minimum_basket_value, sales_channels), sans les noms plausibles', ($F['minimum_basket_value'] ?? null) === 20.0 && ($F['sales_channels'] ?? null) === ['WEBSHOP']
+    && !isset($F['min_order_amount']) && !isset($F['channels']) && ($r['demande']['statut'] ?? '') === 'en_caisse', json_encode([$F, $r['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
+verifie('relue : canal et seuil dans la promotion du magasin', ($r['demande']['canaux'] ?? null) === ['webshop'] && ($r['demande']['seuil'] ?? null) === 20.0, json_encode($r['demande'] ?? null, JSON_UNESCAPED_UNICODE));
+// Les effacer : comptoir et webshop, sans seuil.
+$oublie();
+$GLOBALS['corps'] = $pc('Seuil appris', 60, 62, ['id' => $r['demande']['id']]);
+$r2 = wr_promos_magasin();
+$F = ErpApi::$promos[$r['demande']['panelId']] ?? [];
+verifie('effacés sous les mêmes noms : plus de seuil, les deux canaux', array_key_exists('minimum_basket_value', $F) && $F['minimum_basket_value'] === null && $F['sales_channels'] === ['POS', 'WEBSHOP']
+    && ($r2['demande']['statut'] ?? '') === 'en_caisse' && $r2['demande']['canaux'] === null && $r2['demande']['seuil'] === null, json_encode([$F, $r2['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
+// Aucune promotion du panel n'en porte : les noms plausibles.
+ErpApi::$promos = []; $oublie();
+$GLOBALS['corps'] = $pc('Seuil plausible', 64, 66, ['canal' => 'comptoir', 'seuil' => 15]);
+$r = wr_promos_magasin();
+$F = ErpApi::$promos[$r['demande']['panelId'] ?? 0] ?? [];
+verifie('sans nom appris : les noms plausibles, relus, en caisse', ($F['min_order_amount'] ?? null) === 15.0 && ($F['sales_channels'] ?? null) === ['POS'] && ($r['demande']['statut'] ?? '') === 'en_caisse'
+    && $r['demande']['canaux'] === ['comptoir'] && $r['demande']['seuil'] === 15.0, json_encode([$F, $r['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
+verifie('une promotion sans conditions : rien de plus dans le corps', !array_intersect_key(pmPanelCorps(pmPropre($pc('Sans', 1, 2), 4), 'INACTIVE'), array_flip(array_merge(PM_CLES_SEUIL, PM_CLES_CANAL))));
+// Le panel ne reprend pas les conditions : rien en caisse, l'écart dit.
+ErpApi::$perdConditions = true; ErpApi::$promos = []; $oublie();
+$GLOBALS['corps'] = $pc('Seuil perdu', 68, 70, ['seuil' => 15]);
+$r = wr_promos_magasin();
+verifie('le panel ne reprend pas le seuil : laissée inactive, l’écart dit', ($r['demande']['statut'] ?? '') === 'brouillon' && str_contains((string) $r['panelErreur'], 'le seuil du ticket')
+    && (ErpApi::$promos[$r['demande']['panelId']]['status'] ?? '') === 'INACTIVE', json_encode($r, JSON_UNESCAPED_UNICODE));
+ErpApi::$perdConditions = false;
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

@@ -149,18 +149,28 @@ function pvCreneaux($schedule): array
 function pvConditions(array $d): array
 {
     $seuil = null; $cpt = null; $web = null;
+    $cles = ['seuil' => null, 'canal' => null, 'jetons' => []];
     $motCpt = '/pos|counter|store|caisse|comptoir|offline|shop_sale/';
     $motWeb = '/web|online|ecom|e-com|delivery|click|internet/';
     foreach ($d as $k => $v) {
-        $k = strtolower((string) $k);
+        $k0 = (string) $k; $k = strtolower($k0);
         if ($seuil === null && is_numeric($v) && (float) $v > 0
             && preg_match('/^(min(imum)?_(ticket|basket|order|cart|receipt|transaction|purchase|spend)(_(amount|total|value))?|(ticket|basket|order|cart|receipt|transaction)_(min|minimum|threshold)(_(amount|value))?|(trigger_)?threshold(_amount)?|min(imum)?_(amount|spend|total))$/', $k) === 1) {
-            $seuil = round((float) $v, 2);
+            $seuil = round((float) $v, 2); $cles['seuil'] = $k0;
         }
         if (preg_match('/^(available_)?(sales_)?(channels?|order_sources?|sources)$/', $k) === 1) {
             $l = is_array($v) ? $v : (is_string($v) && $v !== '' ? [$v] : []);
-            $t = strtolower(implode(' ', array_map(static fn ($x) => is_scalar($x) ? (string) $x : (string) ($x['code'] ?? $x['name'] ?? $x['type'] ?? ''), $l)));
-            if ($t !== '' && preg_match('/^(all|both|any|tous|les deux)$/', trim($t)) !== 1) { $cpt = preg_match($motCpt, $t) === 1; $web = preg_match($motWeb, $t) === 1; }
+            $mots = array_map(static fn ($x) => is_scalar($x) ? (string) $x : (string) ($x['code'] ?? $x['name'] ?? $x['type'] ?? ''), $l);
+            $t = strtolower(implode(' ', $mots));
+            if ($t !== '' && preg_match('/^(all|both|any|tous|les deux)$/', trim($t)) !== 1) {
+                $cpt = preg_match($motCpt, $t) === 1; $web = preg_match($motWeb, $t) === 1;
+                // Les jetons du panel pour chaque canal (« POS », « WEBSHOP »…) : le cockpit écrit avec les mêmes.
+                $cles['canal'] = $k0;
+                foreach ($mots as $m) {
+                    if (preg_match($motCpt, strtolower($m)) === 1) { $cles['jetons']['comptoir'] = $m; }
+                    if (preg_match($motWeb, strtolower($m)) === 1) { $cles['jetons']['webshop'] = $m; }
+                }
+            }
         }
         if (is_bool($v) || $v === 0 || $v === 1) {
             $seul = str_ends_with($k, '_only');
@@ -173,7 +183,7 @@ function pvConditions(array $d): array
         $l = array_values(array_filter([$cpt !== false ? 'comptoir' : null, $web !== false ? 'webshop' : null]));
         $canaux = count($l) === 1 ? $l : null;
     }
-    return ['canaux' => $canaux, 'seuil' => $seuil];
+    return ['canaux' => $canaux, 'seuil' => $seuil, 'cles' => $cles];
 }
 
 /** Une règle du panel ramenée à ce que la reconnaissance utilise. */
