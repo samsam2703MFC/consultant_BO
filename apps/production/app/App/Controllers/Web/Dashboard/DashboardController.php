@@ -27,14 +27,26 @@ class DashboardController extends BaseController
     ) {}
 
     /** Strona startowa: rentowność produkcji (sprzedaż a koszt personelu na dział, brakująca sprzedaż do celu). */
+    /** Pulpit rentowności : trzy liczby i grupy (personel / sprzedaż wobec celu, brakująca sprzedaż). */
     public function index()
+    {
+        $this->profitView('dashboard/profitability');
+    }
+
+    /** Wynik i produkcja grup : szczegóły grup, co wyprodukowały, od sprzedaży do wyniku, zakupy, 6 miesięcy, na osobę. */
+    public function results()
+    {
+        $this->profitView('dashboard/results');
+    }
+
+    private function profitView(string $view): void
     {
         $period = (string) ($_GET['period'] ?? 'month');
         $data = $this->profitability->overview($period);
         // view() nadpisuje „warnings” (komunikaty kontrolera) : ostrzeżenia o danych idą jako „notices”.
         $data['notices'] = $data['warnings'];
         unset($data['warnings']);
-        $this->view('dashboard/profitability', $data + [
+        $this->view($view, $data + [
             'selected' => $data['period']['key'],
             'growth' => $this->growth->summaryBySection(),
             'staff_budget' => $this->staffBudget->fromOverview($data)['sections'],

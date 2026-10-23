@@ -1,0 +1,32 @@
+{# Wybór okresu : tabela z wskaźnikiem personel / sprzedaż każdego okresu ; period_base = strona docelowa. #}
+        <div class="dropdown at-profit-period">
+            <button type="button" class="form-select at-period-toggle" data-bs-toggle="dropdown" data-bs-display="static" data-bs-auto-close="outside" aria-expanded="false" aria-haspopup="true">
+                {{ options[selected] ?? period.label }}
+            </button>
+            <div class="dropdown-menu dropdown-menu-end at-period-menu">
+                <table class="table table-sm mb-0 at-period-table">
+                    <thead>
+                        <tr><th scope="col">Okres</th><th scope="col" class="text-end">Sprzedaż</th><th scope="col">Personel / sprzedaż</th><th scope="col" class="text-end">Wynik</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for p in period_table %}
+                        <tr class="{{ p.key == selected ? 'is-selected' : '' }} {{ p.key in ['3m', '12m', 'ytd'] ? 'is-range' : '' }}" data-href="{{ root }}{{ period_base }}?period={{ p.key }}">
+                            <td><a href="{{ root }}{{ period_base }}?period={{ p.key }}">{{ p.label }}</a>{% if p.estimated %} <span class="at-sub" title="Koszty miesiąca nie są jeszcze wprowadzone">szac.</span>{% endif %}</td>
+                            <td class="text-end">{{ p.revenue|eur }}</td>
+                            <td>
+                                {% if p.staff_pct is not null %}
+                                <div class="at-ratio at-ratio-sm" title="cel ≤ {{ p.staff_target|pct(0) }}">
+                                    <span class="at-ratio-bar {{ p.staff_ok ? 'ok' : '' }}" style="width: {{ min(100, p.staff_pct / max(p.staff_target, 1) * 50)|round(1) }}%"></span>
+                                    <span class="at-ratio-target" style="left: 50%"></span>
+                                </div>
+                                {% endif %}
+                                <strong class="{{ p.staff_pct is null ? '' : (p.staff_ok ? 'text-success' : 'text-danger') }}">{{ p.staff_pct|pct }}</strong>
+                            </td>
+                            <td class="text-end"><span class="{{ p.margin_pct is null ? '' : (p.margin_ok ? 'text-success' : 'text-danger') }}">{{ p.margin_pct|pct }}</span></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <p class="at-period-note">Personel / sprzedaż: cel ≤ {{ targets['profit.total_staff_target_pct']|pct(0) }} (cała firma) · bieżący miesiąc proporcjonalnie do dni.</p>
+            </div>
+        </div>

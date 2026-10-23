@@ -16,7 +16,7 @@ final class PageAccess
 
     /** klucz => [etykieta, sekcja, prefiksy ścieżek, tylko administrator] */
     public const PAGES = [
-        'dashboard' => ['Rentowność', 'Analiza', ['/dashboard'], false],
+        'dashboard' => ['Rentowność (pulpit, wynik i produkcja grup)', 'Analiza', ['/dashboard'], false],
         'sales' => ['Analiza sprzedaży', 'Analiza', ['/finances/sales-analytics'], false],
         'margins' => ['Marże i koszty (marże, koszty produktu i działów, kalkulator)', 'Analiza', ['/finances', '/cost-calculator'], false],
         'production' => ['Produkcja (arkusz, plan tygodnia, plan zespołów, stany, partie, śledzenie, niezgodności, stanowiska)', 'Produkcja',

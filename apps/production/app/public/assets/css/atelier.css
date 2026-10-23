@@ -1679,3 +1679,60 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 @media (max-width: 1100px) { .at-be-ladder { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .at-be-step { margin-right: 0; } .at-be-step::after { display: none; } }
 .at-growth-be { border-top: 1px solid var(--at-line); padding-top: 8px; }
 .at-growth-be .badge { font-size: .78rem; }
+
+/* --- Pulpit rentowności : minimalistyczny (trzy liczby, grupy, link do szczegółów) ----------------------------- */
+.at-dash { display: grid; gap: 20px; max-width: 1180px; }
+.at-dash-head .page-title h3 { letter-spacing: -0.01em; }
+.at-dash-notice { margin: 0; font-size: 14px; color: var(--at-warning); }
+.at-dash-notice a { margin-left: 4px; font-weight: 600; }
+.at-dash-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.at-dash-kpi, .at-dash-card, .at-dash-more { background: var(--at-surface); border-radius: 18px; box-shadow: 0 1px 2px rgba(34, 34, 34, .04), 0 8px 24px rgba(34, 34, 34, .04); }
+.at-dash-kpi { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 24px 26px 22px; }
+.at-dash-label { font-size: 13px; color: var(--at-muted); }
+.at-dash-value { margin-top: 4px; font-size: clamp(30px, 3vw, 42px); line-height: 1.05; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--at-text); }
+.at-dash .is-bad { color: var(--at-danger); }
+.at-dash .is-ok { color: var(--at-success); }
+.at-dash-meta { font-size: 14px; color: var(--at-muted); }
+.at-dash-foot { margin-top: auto; padding-top: 12px; font-size: 14px; color: var(--at-text); }
+.at-dash-foot strong { font-weight: 600; }
+.at-dash-bar, .at-dash-track { position: relative; height: 6px; border-radius: 3px; background: var(--at-bg-2); }
+.at-dash-bar { margin-top: 12px; }
+.at-dash-bar > span, .at-dash-track > span { display: block; height: 100%; max-width: 100%; border-radius: 3px; background: var(--at-danger); }
+.at-dash-bar > span.is-ok, .at-dash-track > span.is-ok { background: var(--at-success); }
+.at-dash-bar > i, .at-dash-track > i { position: absolute; top: -3px; width: 2px; height: 12px; border-radius: 1px; background: var(--at-text); opacity: .45; }
+.at-dash-track > i { left: 50%; }
+.at-dash-card { padding: 6px 26px 14px; }
+.at-dash-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0 6px; }
+.at-dash-card-head h4 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.at-dash-actions { display: flex; gap: 2px; }
+.at-dash-btn { padding: 6px 12px; border-radius: 999px; font-size: 14px; color: var(--at-muted); text-decoration: none; }
+.at-dash-btn:hover, .at-dash-btn:focus-visible { background: var(--at-bg-2); color: var(--at-text); }
+.at-dash-row { display: grid; grid-template-columns: minmax(130px, 1.2fr) minmax(90px, .7fr) minmax(170px, 1.6fr) minmax(100px, .8fr); grid-template-areas: "name sales ratio miss";
+    align-items: center; gap: 20px; padding: 15px 0; border-top: 1px solid var(--at-line); font-size: 15px; font-variant-numeric: tabular-nums; }
+.at-dash-row > :nth-child(1) { grid-area: name; min-width: 0; }
+.at-dash-row > :nth-child(2) { grid-area: sales; }
+.at-dash-row > :nth-child(3) { grid-area: ratio; }
+.at-dash-row > :nth-child(4) { grid-area: miss; }
+.at-dash-row .num { text-align: right; }
+.at-dash-row-head { padding: 8px 0; border-top: 0; font-size: 12px; color: var(--at-muted); }
+.at-dash-row-total { font-weight: 600; }
+.at-dash-name { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--at-text); text-align: left; cursor: pointer; }
+.at-dash-name i { font-size: 11px; color: var(--at-muted); }
+.at-dash-name:hover { color: var(--at-primary); }
+.at-dash-name:focus-visible { outline: 2px solid var(--at-primary); outline-offset: 3px; border-radius: 4px; }
+.at-dash-ratio { display: flex; align-items: center; gap: 14px; }
+.at-dash-ratio .at-dash-track { flex: 1; }
+.at-dash-ratio b { min-width: 58px; margin-left: auto; text-align: right; font-weight: 600; }
+.at-dash-sub { display: block; font-size: 12px; font-weight: 400; color: var(--at-muted); }
+.at-dash-more { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 26px; color: var(--at-text); text-decoration: none; }
+.at-dash-more strong { font-weight: 600; }
+.at-dash-more:hover, .at-dash-more:focus-visible { color: var(--at-primary); }
+.at-dash-more > i { color: var(--at-muted); }
+.at-dash > .collapse .card { margin: 0; }
+@media (max-width: 991.98px) { .at-dash-kpis { grid-template-columns: 1fr; } }
+@media (max-width: 575.98px) {
+    .at-dash-kpi, .at-dash-card, .at-dash-more { padding-left: 18px; padding-right: 18px; }
+    .at-dash-row { grid-template-columns: 1fr auto; grid-template-areas: "name sales" "ratio miss"; row-gap: 8px; column-gap: 16px; }
+    .at-dash-row-head { display: none; }
+    .at-dash-row-total .at-dash-ratio { justify-content: flex-start; }
+}
