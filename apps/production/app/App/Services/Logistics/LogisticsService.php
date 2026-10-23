@@ -457,7 +457,7 @@ final class LogisticsService
     /** Klienci trasy z kolejnością rozładunku (puste = na końcu). */
     public function setTourCustomers(int $id, array $input): array
     {
-        $this->repo->tour($id) ?? throw new CustomException('Nie znaleziono trasy.', 'errors', 404);
+        $tour = $this->repo->tour($id) ?? throw new CustomException('Nie znaleziono trasy.', 'errors', 404);
         $rows = [];
         foreach ((array) ($input['customers'] ?? []) as $c) {
             $cid = filter_var(is_array($c) ? ($c['id'] ?? null) : $c, FILTER_VALIDATE_INT);
@@ -468,8 +468,8 @@ final class LogisticsService
             $rows[$cid] = ['id' => $cid, 'stop' => $stop];
         }
         if (count($rows) > 300) throw new CustomException('Najwyżej 300 klientów na trasie.', 'errors', 422);
-        $this->repo->setTourCustomers($id, array_values($rows));
-        return array_values($rows);
+        $moved = $this->repo->setTourCustomers($id, array_values($rows), (int) $tour['weekdays']);
+        return ['customers' => array_values($rows), 'moved' => $moved];
     }
 
     /** [trasy, klient => trasa w ten dzień tygodnia, trasa => [klient => kolejność]] */

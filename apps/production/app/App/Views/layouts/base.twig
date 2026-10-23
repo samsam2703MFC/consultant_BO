@@ -99,12 +99,12 @@
 <script type="module" src="{{ root }}/assets/js/modules.js"></script>
 
 <script>
-    function showSnack(resp, error_message = "Coś poszło nie tak") {
+    function showSnack(resp, error_message = "Coś poszło nie tak", success_message = "") {
 
         var x = document.getElementById("snackbar");
 
         if(resp){
-            x.innerText = "Sukces";
+            x.innerText = success_message || "Sukces";
             x.style.backgroundColor = '#4cd038';
         } else {
             x.innerText = error_message;

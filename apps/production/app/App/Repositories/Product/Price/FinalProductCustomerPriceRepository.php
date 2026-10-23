@@ -157,19 +157,6 @@ class FinalProductCustomerPriceRepository extends BaseRepository
         ]);
     }
 
-    /**
-     * Aktualizuje ceny dla wszystkich klientów mających dany produkt w cenniku.
-     * Jeśli klient nie ma rekordu – tworzy go (upsert).
-     */
-    public function updateAllPricesForProduct(int $productId, float $price): int|bool
-    {
-        // Zaktualizuj wszystkich klientów którzy mają ten produkt
-        $sql = "UPDATE final_product_customer_price SET price = :price WHERE id_final_product = :product_id";
-        $updated = $this->query($sql, ['price' => $price, 'product_id' => $productId]);
-
-        return $updated;
-    }
-
     public function getByClientAndProduct($idClient, $idProduct)
     {
         $sql = "SELECT

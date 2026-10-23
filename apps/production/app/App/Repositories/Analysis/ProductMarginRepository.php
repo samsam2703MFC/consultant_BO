@@ -361,7 +361,7 @@ class ProductMarginRepository extends BaseRepository
         $placeholders = implode(',', array_fill(0, count($monthIds), '?'));
         $sql = "SELECT
                     cm.id AS month_id,
-                    COALESCE(SUM(wdp.quantity), 0) AS cartons_qty
+                    COALESCE(SUM(CASE WHEN fp.id IS NOT NULL THEN wdp.quantity END), 0) AS cartons_qty
                 FROM cost_month cm
                 LEFT JOIN document_wdt wdt
                     ON wdt.established_date >= CONCAT(cm.year, '-', LPAD(cm.month, 2, '0'), '-01')
@@ -530,7 +530,7 @@ class ProductMarginRepository extends BaseRepository
                     cm.id AS month_id,
                     AVG(wdp.price_carton) AS avg_price,
                     MIN(wdt.currency)     AS currency,
-                    COALESCE(SUM(wdp.quantity), 0) AS cartons_qty
+                    COALESCE(SUM(CASE WHEN fp.id IS NOT NULL THEN wdp.quantity END), 0) AS cartons_qty
                 FROM cost_month cm
                 INNER JOIN document_wdt wdt
                     ON wdt.established_date >= CONCAT(cm.year, '-', LPAD(cm.month, 2, '0'), '-01')

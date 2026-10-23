@@ -2,10 +2,11 @@
 namespace App\Controllers\Web\Finances\Product;
 
 use App\Core\Web\BaseController;
+use App\Exceptions\CustomException;
 use App\Repositories\Analysis\MarginRecalcRepository;
 use App\Repositories\Product\FinalProductRepository;
-use App\Repositories\Product\Price\FinalProductCustomerPriceRepository;
 use App\Services\Finances\ProductMarginService;
+use App\Services\Finances\StandardPriceService;
 use App\Services\Finances\StorePrice\StoreSellabilityService;
 use App\Services\Recipe\RecipeCostRecalculationService;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -16,7 +17,7 @@ class CategoryMarginController extends BaseController
     public function __construct(
         private ProductMarginService                 $productMarginService,
         private FinalProductRepository               $finalProductRepository,
-        private FinalProductCustomerPriceRepository  $customerPriceRepository,
+        private StandardPriceService                 $standardPriceService,
         private RecipeCostRecalculationService       $recipeCosts,
         private MarginRecalcRepository               $recalc,
         private StoreSellabilityService              $sellability,
@@ -146,7 +147,7 @@ class CategoryMarginController extends BaseController
     /**
      * POST /ajax/category-margin/product-action
      * Obsługuje:
-     *   action = 'set_price'      → zmiana ceny standard_price + customer_prices
+     *   action = 'set_price'      → zmiana ceny standard_price + ceny klientów równe standardowej (StandardPriceService)
      *   action = 'deactivate'     → ustawienie active = 0
      */
     public function productAction(): JsonResponse
@@ -163,21 +164,18 @@ class CategoryMarginController extends BaseController
 
         switch ($action) {
             case 'set_price':
-                $price = (float)($body['price'] ?? 0);
-                if ($price <= 0) {
-                    return $this->json(['ok' => false, 'error' => 'Nieprawidłowa cena.'], 400);
+                // Ta sama reguła co cennik ogólny : klienci z ceną standardową idą za nią, ceny wynegocjowane zostają
+                try {
+                    $userId = user('id');
+                    $result = $this->standardPriceService->change($productId, $body['price'] ?? null, 'category_margin', $userId ? (int) $userId : null);
+                } catch (CustomException $e) {
+                    return $this->json(['ok' => false, 'error' => $e->getMessage()], (int) $e->getCode() ?: 400);
                 }
-
-                // Aktualizuj cenę standardową
-                $this->finalProductRepository->updateStandardPrice($productId, $price);
-
-                // Aktualizuj ceny dla wszystkich klientów
-                $this->customerPriceRepository->updateAllPricesForProduct($productId, $price);
 
                 return $this->json([
                     'ok'      => true,
-                    'message' => 'Cena produktu została zaktualizowana dla wszystkich cenników.',
-                    'price'   => $price,
+                    'message' => $result['message'],
+                    'price'   => $result['price'],
                 ]);
 
             case 'deactivate':

@@ -29,6 +29,16 @@ return function(RouteCollector $r) {
         'method'     => 'editProduct'
     ]);
 
+    $r->addRoute('GET', '/test-products/{id:\d+}/delete', [
+        'controller' => App\Controllers\Web\Product\TestProductController::class,
+        'method'     => 'deleteProduct'
+    ]);
+
+    $r->addRoute('POST', '/test-products/{id:\d+}/delete', [
+        'controller' => App\Controllers\Web\Product\TestProductController::class,
+        'method'     => 'deleteProduct'
+    ]);
+
     $r->addRoute('PATCH', '/ajax/test-products/{id:\d+}', [
         'controller' => App\Controllers\Web\Product\TestProductController::class,
         'method'     => 'ajaxEditProduct'

@@ -11,10 +11,6 @@ return function(RouteCollector $r) {
 
     $r->addRoute('GET', '/invoice-documents/new', ['redirect' => '/invoice-documents']);
 
-    $r->addRoute('POST', '/invoice-documents/new', [
-        'controller' => App\Controllers\Web\Document\InvoiceController::class,
-        'method'     => 'newInvoice'
-    ]);
 
     $r->addRoute('GET', '/ajax/invoice-documents/{id:\d+}/document', [
         'controller' => App\Controllers\Web\Document\InvoiceController::class,

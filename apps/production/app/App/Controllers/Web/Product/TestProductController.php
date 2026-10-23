@@ -3,15 +3,19 @@
 namespace App\Controllers\Web\Product;
 
 use App\Core\Web\BaseController;
+use App\Core\Web\JsonErrors;
 use App\Services\Employee\Section\ProductionSectionService;
 use App\Services\Product\Category\ProductCategoryService;
 use App\Services\Product\ProductService;
 use App\Services\Product\Test\TestProductService;
 use App\Services\Product\Test\TestProductStatusService;
 use App\Services\Product\Test\TestProductTypeService;
+use Symfony\Component\HttpFoundation\Request;
 
 class TestProductController extends BaseController
 {
+    use JsonErrors;
+
     private TestProductService $testProductService;
     private ProductCategoryService $productCategoryService;
     private ProductionSectionService $productionSectionService;
@@ -110,6 +114,25 @@ class TestProductController extends BaseController
         }
 
         $this->view("product/test_product/delete", $data);
+    }
+
+    /** PATCH /ajax/test-products/{id} : zmiana statusu z listy produktów testowych. */
+    public function ajaxEditProduct($id)
+    {
+        try {
+            $data = $this->getJson(Request::createFromGlobals()) ?: [];
+            if (!$this->testProductService->getById((int) $id)) {
+                return $this->json(['message' => 'Nie znaleziono produktu testowego.'], 404);
+            }
+            $statusId = filter_var($data['id_status'] ?? null, FILTER_VALIDATE_INT);
+            if ($statusId === false || !in_array($statusId, array_map('intval', array_column($this->testProductStatusService->findAll() ?: [], 'id')), true)) {
+                return $this->json(['message' => 'Nieznany status.'], 422);
+            }
+            $this->testProductService->update((int) $id, ['id_status' => $statusId]);
+            return $this->json(['message' => 'Zapisano status.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
     }
 
     public function overview()

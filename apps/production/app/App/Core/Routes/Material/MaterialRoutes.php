@@ -27,10 +27,6 @@ return function(RouteCollector $r) {
         'method'     => 'newMaterial'
     ]);
 
-    $r->addRoute('PATCH', '/ajax/materials/{id:\d+}', [
-        'controller' => App\Controllers\Web\Material\MaterialController::class,
-        'method'     => 'ajaxEditMaterial'
-    ]);
 
     $r->addRoute('PATCH', '/ajax/materials/{id:\d+}/toggle-package', [
         'controller' => App\Controllers\Web\Material\MaterialController::class,

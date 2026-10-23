@@ -146,49 +146,49 @@
                                     <label class="form-label" for="energy_100g">
                                         Wartość energetyczna (kcal) w 100g
                                     </label>
-                                    <input value="<?=old_value('energy_100g', 1)?>" type="number" class="form-control" id="energy_100g" name="energy_100g" placeholder="Wartość energ.">
+                                    <input value="<?=old_value('energy_100g', 1)?>" type="number" step="any" min="0" inputmode="decimal" class="form-control" id="energy_100g" name="energy_100g" placeholder="Wartość energ.">
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="fat_100g">
                                         Tłuszcz [g] w 100g
                                     </label>
-                                    <input value="<?=old_value('fat_100g', 1)?>" type="number" class="form-control" id="fat_100g" name="fat_100g" placeholder="Tłuszcz [g]">
+                                    <input value="<?=old_value('fat_100g', 1)?>" type="number" step="any" min="0" inputmode="decimal" class="form-control" id="fat_100g" name="fat_100g" placeholder="Tłuszcz [g]">
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="saturated_fat_100g">
                                         w tym kwasy tłuszczowe nasycone [g] w 100g
                                     </label>
-                                    <input value="<?=old_value('saturated_fat_100g', 1)?>" type="number" class="form-control" id="saturated_fat_100g" name="saturated_fat_100g" placeholder="Nasycone [g]">
+                                    <input value="<?=old_value('saturated_fat_100g', 1)?>" type="number" step="any" min="0" inputmode="decimal" class="form-control" id="saturated_fat_100g" name="saturated_fat_100g" placeholder="Nasycone [g]">
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="carbohydrates_100g">
                                         Węglowodany [g] w 100g
                                     </label>
-                                    <input value="<?=old_value('carbohydrates_100g', 1)?>" type="number" class="form-control" id="carbohydrates_100g" name="carbohydrates_100g" placeholder="Węglowodany [g]">
+                                    <input value="<?=old_value('carbohydrates_100g', 1)?>" type="number" step="any" min="0" inputmode="decimal" class="form-control" id="carbohydrates_100g" name="carbohydrates_100g" placeholder="Węglowodany [g]">
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="sugars_100g">
                                         w tym cukry [g] w 100g
                                     </label>
-                                    <input value="<?=old_value('sugars_100g', 1)?>" type="number" class="form-control" id="sugars_100g" name="sugars_100g" placeholder="Cukry [g]">
+                                    <input value="<?=old_value('sugars_100g', 1)?>" type="number" step="any" min="0" inputmode="decimal" class="form-control" id="sugars_100g" name="sugars_100g" placeholder="Cukry [g]">
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="salt_100g">
                                         Sól [g] w 100g
                                     </label>
-                                    <input value="<?=old_value('salt_100g', 1)?>" type="number" class="form-control" id="salt_100g" name="salt_100g" placeholder="Sól [g]">
+                                    <input value="<?=old_value('salt_100g', 1)?>" type="number" step="any" min="0" inputmode="decimal" class="form-control" id="salt_100g" name="salt_100g" placeholder="Sól [g]">
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="fiber_100g">
                                         Błonnik [g] w 100g
                                     </label>
-                                    <input value="<?=old_value('fiber_100g', 1)?>" type="number" class="form-control" id="fiber_100g" name="fiber_100g" placeholder="Błonnik [g]">
+                                    <input value="<?=old_value('fiber_100g', 1)?>" type="number" step="any" min="0" inputmode="decimal" class="form-control" id="fiber_100g" name="fiber_100g" placeholder="Błonnik [g]">
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="proteins_100g">
                                         Białko [g] w 100g
                                     </label>
-                                    <input value="<?=old_value('proteins_100g', 1)?>" type="number" class="form-control" id="proteins_100g" name="proteins_100g" placeholder="Białko [g]">
+                                    <input value="<?=old_value('proteins_100g', 1)?>" type="number" step="any" min="0" inputmode="decimal" class="form-control" id="proteins_100g" name="proteins_100g" placeholder="Białko [g]">
                                 </div>
                             </div>
                         </div>

@@ -38,10 +38,6 @@ return function(RouteCollector $r) {
         'method'     => 'realisation'
     ]);
 
-    $r->addRoute('PATCH', '/ajax/client-complaints/{id:\d+}', [
-        'controller' => \App\Controllers\Web\Client\Complaint\ComplaintController::class,
-        'method'     => 'ajaxUpdateComplaint'
-    ]);
 
     $r->addRoute('PATCH', '/ajax/client-complaints/pending-shipment/{id:\d+}', [
         'controller' => \App\Controllers\Web\Client\Complaint\ComplaintController::class,

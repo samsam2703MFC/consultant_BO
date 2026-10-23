@@ -207,7 +207,8 @@ class FinalProductStockRepository extends BaseRepository
                     cs.id_product,
                     COUNT(cs.id_product) as count_in_stock,
                     fp.name,
-                    fp.id_recipe
+                    fp.id_recipe,
+                    fp.pre_calculated_raw_price_per_carton AS card_cost
                 FROM carton_stock cs
                 INNER JOIN final_product fp
                     ON cs.id_product = fp.id

@@ -117,7 +117,7 @@
                                         <label class="form-label" for="energy_100g">
                                             Wartość energetyczna (kcal) w 100g
                                         </label>
-                                        <input value="<?= old_value('energy_100g', $row['energy_100g']) ?>" type="number"
+                                        <input value="<?= old_value('energy_100g', $row['energy_100g']) ?>" type="number" step="any" min="0" inputmode="decimal"
                                                class="form-control" id="energy_100g" name="energy_100g"
                                                placeholder="Wartość energ.">
                                     </div>
@@ -125,7 +125,7 @@
                                         <label class="form-label" for="fat_100g">
                                             Tłuszcz [g] w 100g
                                         </label>
-                                        <input value="<?= old_value('fat_100g', $row['fat_100g']) ?>" type="number"
+                                        <input value="<?= old_value('fat_100g', $row['fat_100g']) ?>" type="number" step="any" min="0" inputmode="decimal"
                                                class="form-control" id="fat_100g" name="fat_100g"
                                                placeholder="Tłuszcz [g]">
                                     </div>
@@ -134,7 +134,7 @@
                                             w tym kwasy tłuszczowe nasycone [g] w 100g
                                         </label>
                                         <input value="<?= old_value('saturated_fat_100g', $row['saturated_fat_100g']) ?>"
-                                               type="number" class="form-control" id="saturated_fat_100g"
+                                               type="number" step="any" min="0" inputmode="decimal" class="form-control" id="saturated_fat_100g"
                                                name="saturated_fat_100g" placeholder="Nasycone [g]">
                                     </div>
                                     <div class="row mt-3">
@@ -142,14 +142,14 @@
                                             Węglowodany [g] w 100g
                                         </label>
                                         <input value="<?= old_value('carbohydrates_100g', $row['carbohydrates_100g']) ?>"
-                                               type="number" class="form-control" id="carbohydrates_100g"
+                                               type="number" step="any" min="0" inputmode="decimal" class="form-control" id="carbohydrates_100g"
                                                name="carbohydrates_100g" placeholder="Węglowodany [g]">
                                     </div>
                                     <div class="row mt-3">
                                         <label class="form-label" for="sugars_100g">
                                             w tym cukry [g] w 100g
                                         </label>
-                                        <input value="<?= old_value('sugars_100g', $row['sugars_100g']) ?>" type="number"
+                                        <input value="<?= old_value('sugars_100g', $row['sugars_100g']) ?>" type="number" step="any" min="0" inputmode="decimal"
                                                class="form-control" id="sugars_100g" name="sugars_100g"
                                                placeholder="Cukry [g]">
                                     </div>
@@ -157,7 +157,7 @@
                                         <label class="form-label" for="salt_100g">
                                             Sól [g] w 100g
                                         </label>
-                                        <input value="<?= old_value('salt_100g', $row['salt_100g']) ?>" type="number"
+                                        <input value="<?= old_value('salt_100g', $row['salt_100g']) ?>" type="number" step="any" min="0" inputmode="decimal"
                                                class="form-control" id="salt_100g" name="salt_100g"
                                                placeholder="Sól [g]">
                                     </div>
@@ -165,7 +165,7 @@
                                         <label class="form-label" for="fiber_100g">
                                             Błonnik [g] w 100g
                                         </label>
-                                        <input value="<?= old_value('fiber_100g', $row['fiber_100g']) ?>" type="number"
+                                        <input value="<?= old_value('fiber_100g', $row['fiber_100g']) ?>" type="number" step="any" min="0" inputmode="decimal"
                                                class="form-control" id="fiber_100g" name="fiber_100g"
                                                placeholder="Błonnik [g]">
                                     </div>
@@ -174,7 +174,7 @@
                                             Białko [g] w 100g
                                         </label>
                                         <input value="<?= old_value('proteins_100g', $row['proteins_100g']) ?>"
-                                               type="number" class="form-control" id="proteins_100g"
+                                               type="number" step="any" min="0" inputmode="decimal" class="form-control" id="proteins_100g"
                                                name="proteins_100g" placeholder="Białko [g]">
                                     </div>
                                 </div>

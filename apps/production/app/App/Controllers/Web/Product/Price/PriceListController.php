@@ -3,8 +3,10 @@
 namespace App\Controllers\Web\Product\Price;
 
 use App\Core\Web\BaseController;
+use App\Core\Web\JsonErrors;
 use App\Services\Client\ClientService;
 use App\Services\Finances\ClientProductPriceService;
+use App\Services\Finances\StandardPriceService;
 use App\Services\Product\Price\ClientPriceListService;
 use App\Services\Product\Price\GeneralPriceListPdfService;
 use App\Services\Product\ProductService;
@@ -13,6 +15,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class PriceListController extends BaseController
 {
+    use JsonErrors;
+
     private ClientPriceListService $clientPriceListService;
     private ClientProductPriceService $clientProductPriceService;
     private CLientService $clientService;
@@ -24,7 +28,8 @@ class PriceListController extends BaseController
         ClientService              $clientService,
         ClientProductPriceService  $clientProductPriceService,
         ProductService             $productService,
-        GeneralPriceListPdfService $generalPriceListPdfService
+        GeneralPriceListPdfService $generalPriceListPdfService,
+        private StandardPriceService $standardPriceService
     )
     {
         $this->clientPriceListService     = $clientPriceListService;
@@ -112,6 +117,19 @@ class PriceListController extends BaseController
         }, default: false);
 
         return $this->handleAjaxResponse($success, 'Aktualizacja powiodła się', 'Nie udało się zaktualizować');
+    }
+
+    /** PATCH /ajax/products/{id}/standard-price : cennik ogólny, ceny klientów idących za standardową razem z nią. */
+    public function ajaxUpdateStandardPrice($id)
+    {
+        try {
+            $data = $this->getJson(Request::createFromGlobals()) ?: [];
+            $userId = user('id');
+            $result = $this->standardPriceService->change((int) $id, $data['standard_price'] ?? null, 'general_price_list', $userId ? (int) $userId : null);
+            return $this->json(['message' => $result['message'], 'data' => $result]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
     }
 
     public function ajaxGetProductPriceByClientId($idClient, $idProduct)

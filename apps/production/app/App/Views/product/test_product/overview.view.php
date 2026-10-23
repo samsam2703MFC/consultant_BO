@@ -49,7 +49,7 @@
                                         <td><?= $row['name'] ?></td>
                                         <td><?= $row['type_name'] ?></td>
                                         <td>
-                                            <select class="form-select" name="id_status" onchange="updateTestProductStatus(<?=$row['id']?>, this)">
+                                            <select class="form-select" name="id_status" data-saved="<?= (int) $row['id_status'] ?>" aria-label="Status: <?= htmlspecialchars($row['name'] ?? '', ENT_QUOTES) ?>" onchange="updateTestProductStatus(<?=$row['id']?>, this)">
                                                 <?php if(!empty($product_status)):?>
                                                     <?php foreach ($product_status as $product_status_item): ?>
                                                         <?php ($row['id_status'] == $product_status_item['id']) ? $selected = "selected" : $selected = ""; ?>
@@ -67,9 +67,6 @@
                                                     <div class="at-more-menu" role="menu" hidden>
                                                         <a role="menuitem" href="<?=ROOT?>/test-products/<?=$row['id']?>/changelogs"><i class="bi bi-clock-history"></i>Dziennik zmian</a>
                                                         <a role="menuitem" href="<?=ROOT?>/test-products/<?=$row['id']?>/tablet"><i class="bi bi-tablet"></i>Tablet : film, zdjęcia, notatki</a>
-                                                        <?php if($row['closest_deadline'] != null): ?>
-                                                            <a role="menuitem" href="<?=ROOT?>/TestProductChangelog/getPDF/<?=$row['id']?>" target="_blank"><i class="bi bi-file-earmark-arrow-down"></i>PDF</a>
-                                                        <?php endif; ?>
                                                         <hr>
                                                         <a role="menuitem" class="at-more-danger" href="<?=ROOT?>/test-products/<?=$row['id']?>/delete"><i class="bi bi-trash"></i>Usuń…</a>
                                                     </div>
@@ -92,26 +89,19 @@
 <?php $this->view("page_components/footer"); ?>
 
 <script>
-    function updateTestProduct(id_test_product, control){
-        let data = {};
-        data[control.name] = control.value;
-        data['id'] = id_test_product;
-
-        const promise = getJSON(validAjaxUrl()+`ajax/test_product/update`, "data="+JSON.stringify(data));
-        promise.then(function (res){
-
-        })
-    }
-
-    function checkType(type){
-        if(type != 1){
-            document.getElementById('id_category').disabled = true;
-            document.getElementById('id_section').disabled = true;
-            document.getElementById('label_type').disabled = true;
-        }else{
-            document.getElementById('id_category').disabled = false;
-            document.getElementById('id_section').disabled = false;
-            document.getElementById('label_type').disabled = false;
-        }
+    function updateTestProductStatus(id_test_product, control){
+        const previous = control.dataset.saved;
+        control.disabled = true;
+        fetch(`<?=ROOT?>/ajax/test-products/${id_test_product}`, {
+            method: 'PATCH', credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: JSON.stringify({id_status: control.value}),
+        }).then(r => r.json().catch(() => ({})).then(body => ({ok: r.ok, ...body})), () => ({ok: false, message: 'Brak połączenia z serwerem.'}))
+            .then(res => {
+                control.disabled = false;
+                showSnack(res.ok, res.message || 'Nie udało się zapisać statusu.', res.message);
+                if (res.ok) control.dataset.saved = control.value;
+                else [...control.options].forEach(o => o.selected = o.value === String(previous));
+            });
     }
 </script>

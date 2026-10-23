@@ -553,7 +553,7 @@
                         <div class="card-body">
                             <p class="text-muted small mb-2">
                                 Nowa cena zostanie ustawiona jako cena standardowa produktu
-                                oraz zaktualizowana u <strong>wszystkich klientów</strong> posiadających ten produkt w cenniku.
+                                i u klientów, którzy mają cenę standardową. <strong>Ceny wynegocjowane z klientem zostają bez zmian.</strong>
                             </p>
                             <div class="input-group">
                                 <span class="input-group-text">Nowa cena</span>
@@ -1070,8 +1070,8 @@
         var name = document.getElementById('paModalProductName').textContent;
         Swal.fire({
             title:              'Zmienić cenę?',
-            html:               'Nowa cena <strong>' + price.toFixed(2) + ' EUR</strong> zostanie ustawiona dla produktu <strong>' + name + '</strong>'
-                                + '<br><span class="text-muted small">Zmiana obejmie cennik standardowy oraz WSZYSTKICH klientów.</span>',
+            html:               'Nowa cena <strong>' + price.toFixed(2) + ' EUR</strong> zostanie ustawiona dla produktu <strong>' + name.replace(/[&<>"']/g, function(c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }) + '</strong>'
+                                + '<br><span class="text-muted small">Zmiana obejmie cennik standardowy i klientów z ceną standardową; ceny wynegocjowane zostają.</span>',
             icon:               'question',
             showCancelButton:   true,
             confirmButtonText:  'Tak, zmień cenę',

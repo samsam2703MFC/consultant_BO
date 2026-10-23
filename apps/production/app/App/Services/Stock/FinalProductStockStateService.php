@@ -76,20 +76,21 @@ class FinalProductStockStateService implements IDocument
         if(empty($products_in_stock)) return [];
 
         foreach ($products_in_stock as &$item){
+            // Bez receptury : koszt surowców kartonu z karty produktu ; bez niego produkt poza sumą (nigdy wartość zgadywana)
             if(is_null($item['id_recipe'])){
-
-                $random_produce_cost = round((20 + lcg_value()*(abs(40 - 20))),2);
-
-                $item['single_produce_cost'] = $random_produce_cost;
-                $item['total_material_cost'] = ($random_produce_cost * $item['count_in_stock']);
-                $item['random'] = true;
+                $card_cost = (float) ($item['card_cost'] ?? 0);
+                $item['cost_source'] = $card_cost > 0 ? 'card' : 'none';
+                $item['single_material_cost'] = $card_cost > 0 ? $card_cost : null;
+                $item['total_material_cost'] = $card_cost > 0 ? round($card_cost * $item['count_in_stock'], 2) : null;
                 continue;
             }
 
             $calculation_data = $this->recipeService->getRecipeSummary($item['id_recipe']);
+            $item['cost_source'] = 'recipe';
             $item['single_material_cost'] = $calculation_data['total_ingredient_cost'];
-            $item['total_material_cost'] = ($calculation_data['total_ingredient_cost'] * $item['count_in_stock']);
+            $item['total_material_cost'] = round($calculation_data['total_ingredient_cost'] * $item['count_in_stock'], 2);
         }
+        unset($item);
 
         return $products_in_stock;
     }

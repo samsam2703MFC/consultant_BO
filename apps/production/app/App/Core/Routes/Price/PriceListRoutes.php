@@ -63,6 +63,11 @@ return function (RouteCollector $r) {
     ]);
 
     // Cennik ogólny produktów – eksport CSV
+    $r->addRoute('PATCH', '/ajax/products/{id:\d+}/standard-price', [
+        'controller' => App\Controllers\Web\Product\Price\PriceListController::class,
+        'method' => 'ajaxUpdateStandardPrice'
+    ]);
+
     $r->addRoute('GET', '/ajax/products/price-list/csv', [
         'controller' => App\Controllers\Web\Product\Price\PriceListController::class,
         'method' => 'ajaxExportGeneralPriceListCSV'

@@ -175,8 +175,15 @@ try {
     expectLogi((int) $pdo->query('SELECT COUNT(*) FROM tfb_tour_customer WHERE id_customer = 3')->fetchColumn() === 0
         && $new()->day($d)['by_id'][3]['tour_source'] === 'day', 'odznaczone : usunięty z trasy, trasa zostaje na ten dzień');
     $service->setTourCustomers($t2, ['customers' => [['id' => 3, 'stop' => 1]]]);
-    $service->setTourCustomers($t1, ['customers' => [['id' => 2, 'stop' => 1], ['id' => 3, 'stop' => 2]]]);
-    expectLogi(count(array_filter($service->tours()['warnings'], fn($w) => str_contains($w, 'Jan Kowalski') && str_contains($w, 'wt.'))) === 1, 'klient w dwóch trasach w te same dni : ostrzeżenie');
+    $moved = $service->setTourCustomers($t1, ['customers' => [['id' => 2, 'stop' => 1], ['id' => 3, 'stop' => 2]]])['moved'];
+    expectLogi($moved === [['customer' => 'Jan Kowalski', 'tour' => 'Opole']]
+        && $pdo->query('SELECT GROUP_CONCAT(id_tour) FROM tfb_tour_customer WHERE id_customer = 3')->fetchColumn() === (string) $t1,
+        'klient dodany do trasy : usunięty z trasy jeżdżącej w te same dni (wt.)');
+    $service->updateTour($t2, ['days' => [6]], 1);
+    expectLogi($service->setTourCustomers($t2, ['customers' => [['id' => 3, 'stop' => 1]]])['moved'] === []
+        && (int) $pdo->query('SELECT COUNT(*) FROM tfb_tour_customer WHERE id_customer = 3')->fetchColumn() === 2, 'inne dni tygodnia : klient w obu trasach');
+    $service->updateTour($t2, ['days' => [2, 6]], 1);
+    expectLogi(count(array_filter($service->tours()['warnings'], fn($w) => str_contains($w, 'Jan Kowalski') && str_contains($w, 'wt.'))) === 1, 'dni trasy zmienione później : ostrzeżenie');
     expectLogi($refused(fn() => $service->createTour(['name' => 'Opole'], 1)), 'nazwa trasy zajęta');
     expectLogi($refused(fn() => $service->createTour(['name' => ' '], 1)), 'nazwa trasy wymagana');
     expectLogi($refused(fn() => $service->createTour(['name' => 'X', 'days' => []], 1)), 'co najmniej jeden dzień');

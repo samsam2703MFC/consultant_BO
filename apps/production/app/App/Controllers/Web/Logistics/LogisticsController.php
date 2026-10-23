@@ -85,7 +85,11 @@ class LogisticsController extends BaseController
 
     public function setTourCustomers($id)
     {
-        return $this->respond(fn() => ['message' => 'Zapisano klientów trasy.', 'data' => $this->logistics->setTourCustomers((int) $id, $this->input())]);
+        return $this->respond(function () use ($id) {
+            $data = $this->logistics->setTourCustomers((int) $id, $this->input());
+            $moved = array_map(fn($m) => "{$m['customer']} (z trasy {$m['tour']})", $data['moved']);
+            return ['message' => 'Zapisano klientów trasy.' . ($moved ? ' Przeniesiono z tras w te same dni: ' . implode(', ', $moved) . '.' : ''), 'data' => $data];
+        });
     }
 
     public function assign()

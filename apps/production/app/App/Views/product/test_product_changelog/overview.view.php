@@ -41,7 +41,6 @@
                                     <td><?= $row['description'] ?></td>
                                     <td><?= $row['deadline'] ?></td>
                                     <td><?= $row['create_timestamp'] ?></td>
-                                    <td><a href="<?=ROOT?>/TestProductChangelog/getChangelogPDF/<?=$row['id']?>" class="btn btn-info" target="_blank">PDF</a></td>
                                     <td><a href="<?=ROOT?>/test-products/<?=$id_product?>/changelogs/<?=$row['id']?>/edit" class="btn btn-warning">Edytuj</a></td>
                                     <td><a href="<?=ROOT?>/test-products/<?=$id_product?>/changelogs/<?=$row['id']?>/delete" class="btn btn-danger">Usuń</a></td>
                                 </tr>

@@ -2,7 +2,8 @@
 #snackbar {
     visibility: hidden; /* Hidden by default. Visible on click */
     min-width: 250px; /* Set a default minimum width */
-    margin-left: -125px; /* Divide value of min-width by 2 */
+    max-width: min(560px, calc(100vw - 32px));
+    transform: translateX(-50%); /* centered whatever the message length */
     color: #333; /* White text color */
     text-align: center; /* Centered text */
     border-radius: 2px; /* Rounded borders */

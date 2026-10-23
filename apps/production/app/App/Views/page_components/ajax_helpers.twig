@@ -17,7 +17,7 @@ at.send = (url, method, data, retried) => fetch(at.root + url, {
         ? new Promise(resolve => setTimeout(resolve, 800)).then(() => at.send(url, method, data, true))
         : {ok: false, network: true, message: 'Brak połączenia z serwerem — sprawdź sieć i spróbuj ponownie.'});
 at.esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-at.notify = (ok, message) => { if (!ok && at.leaving) return; (typeof showSnack === 'function' ? showSnack(ok, message) : window.alert(message)); };
+at.notify = (ok, message) => { if (!ok && at.leaving) return; (typeof showSnack === 'function' ? showSnack(ok, message, message) : window.alert(message)); };
 /* Champs du formulaire → objet. Vide : omis (ou null si data-nullable) ; inputmode=decimal : virgule → point ;
    case à cocher sans [] : booléen ; name[] : liste des valeurs cochées. */
 at.formData = (form) => {

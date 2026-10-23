@@ -201,15 +201,6 @@ class FinalProductRepository extends BaseRepository
         return $res;
     }
 
-    /**
-     * Aktualizuje standard_price i deaktywuje/aktywuje produkt.
-     */
-    public function updateStandardPrice(int $productId, float $price): int|bool
-    {
-        $sql = "UPDATE final_product SET standard_price = :price WHERE id = :id";
-        return $this->query($sql, ['price' => $price, 'id' => $productId]);
-    }
-
     public function deactivate(int $productId): int|bool
     {
         $sql = "UPDATE final_product SET active = 0 WHERE id = :id";

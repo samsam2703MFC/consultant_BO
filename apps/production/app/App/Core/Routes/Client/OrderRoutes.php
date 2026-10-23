@@ -20,15 +20,7 @@ return function(RouteCollector $r) {
 
     $r->addRoute('GET', '/client-orders/new', ['redirect' => '/client-orders']);
 
-    $r->addRoute('POST', '/client-orders/new', [
-        'controller' => \App\Controllers\Web\Client\Order\OrderController::class,
-        'method'     => 'newOrder'
-    ]);
 
-    $r->addRoute('POST', '/product-categories/{idCategory:\d+}/client-orders/new', [
-        'controller' => \App\Controllers\Web\Client\Order\OrderController::class,
-        'method'     => 'newOrder'
-    ]);
 
     $r->addRoute('GET', '/client-orders/{id:\d+}/edit', [
         'controller' => \App\Controllers\Web\Client\Order\OrderController::class,

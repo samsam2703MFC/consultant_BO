@@ -182,13 +182,31 @@ final class LogisticsRepository extends WorkshopRepository
         });
     }
 
-    /** @param list<array{id:int, stop:?int}> $customers */
-    public function setTourCustomers(int $tourId, array $customers): void
+    /**
+     * Klienci trasy ; każdy znika z innych tras jeżdżących w te same dni tygodnia (jak w załadunku dnia).
+     * @param list<array{id:int, stop:?int}> $customers
+     * @return list<array{customer:string, tour:string}> przeniesieni z innych tras
+     */
+    public function setTourCustomers(int $tourId, array $customers, int $weekdays): array
     {
-        $this->transaction(function () use ($tourId, $customers) {
+        return $this->transaction(function () use ($tourId, $customers, $weekdays) {
+            $moved = [];
+            $ids = array_map(fn($c) => (int) $c['id'], $customers);
+            if ($ids && $weekdays) {
+                $in = implode(',', array_fill(0, count($ids), '?'));
+                $moved = $this->all(
+                    "SELECT COALESCE(NULLIF(TRIM(cu.company), ''), TRIM(CONCAT(cu.name, ' ', cu.surname))) AS customer, t.name AS tour
+                     FROM tfb_tour_customer tc JOIN tfb_tour t ON t.id = tc.id_tour JOIN customer cu ON cu.id = tc.id_customer
+                     WHERE tc.id_tour <> ? AND (t.weekdays & ?) <> 0 AND tc.id_customer IN ($in) ORDER BY customer, t.name",
+                    array_merge([$tourId, $weekdays], $ids)
+                );
+                $this->db->prepare("DELETE tc FROM tfb_tour_customer tc JOIN tfb_tour t ON t.id = tc.id_tour WHERE tc.id_tour <> ? AND (t.weekdays & ?) <> 0 AND tc.id_customer IN ($in)")
+                    ->execute(array_merge([$tourId, $weekdays], $ids));
+            }
             $this->db->prepare('DELETE FROM tfb_tour_customer WHERE id_tour = ?')->execute([$tourId]);
             $insert = $this->db->prepare('INSERT INTO tfb_tour_customer (id_tour, id_customer, stop_order) VALUES (?, ?, ?)');
             foreach ($customers as $c) $insert->execute([$tourId, $c['id'], $c['stop']]);
+            return $moved;
         });
     }
 
@@ -264,13 +282,14 @@ final class LogisticsRepository extends WorkshopRepository
         $this->db->prepare('UPDATE final_product SET cpl = ?, lpp = ?, cpp = ? WHERE id = ?')->execute([$cpl, $lpp, $cpp, $productId]);
     }
 
-    private function transaction(callable $fn): void
+    private function transaction(callable $fn): mixed
     {
         $own = !$this->db->inTransaction();
         if ($own) $this->db->beginTransaction();
         try {
-            $fn();
+            $result = $fn();
             if ($own) $this->db->commit();
+            return $result;
         } catch (\Throwable $e) {
             if ($own) $this->db->rollBack();
             throw $e;

@@ -146,17 +146,20 @@ class TCPDFService extends TCPDF
         $this->SetFont('dejavusans', '', 10);
         $total_value_of_stock = 0.00;
 
+        $from_card = 0;
+        $without_cost = 0;
         foreach ($productData as $productItem) {
-            $mark_random = "";
-            if (isset($productItem['random'])) {
-                $mark_random = "*";
-            }
+            // * koszt z karty produktu (brak receptury) ; ** brak kosztu — poza sumą
+            $source = $productItem['cost_source'] ?? 'recipe';
+            $mark = $source === 'card' ? " *" : ($source === 'none' ? " **" : "");
+            if ($source === 'card') $from_card++;
+            if ($source === 'none') $without_cost++;
 
-            $this->Cell($w[0], $rowH, $productItem['name'] . " " . $mark_random, 'LR', 0, 'L');
+            $this->Cell($w[0], $rowH, $productItem['name'] . $mark, 'LR', 0, 'L');
             $this->Cell($w[1], $rowH, $productItem['count_in_stock'], 'LR', 0, 'C');
-            $this->Cell($w[2], $rowH, $productItem['total_material_cost'] . " zl", 'LR', 0, 'C');
+            $this->Cell($w[2], $rowH, $productItem['total_material_cost'] === null ? "brak kosztu" : number_format((float) $productItem['total_material_cost'], 2, ',', ' ') . " zł", 'LR', 0, 'C');
             $this->Ln();
-            $total_value_of_stock += $productItem['total_material_cost'];
+            $total_value_of_stock += (float) ($productItem['total_material_cost'] ?? 0);
         }
 
         $this->Cell(array_sum($w), 0, '', 'T');
@@ -165,8 +168,17 @@ class TCPDFService extends TCPDF
 
         $this->Cell($w[0], $rowH, "", 'T', 0, 'L');
         $this->Cell($w[1], $rowH, "Suma:", 'TLB', 0, 'C');
-        $this->Cell($w[2], $rowH, number_format($total_value_of_stock, 2) . " zl", 1, 0, 'C');
+        $this->Cell($w[2], $rowH, number_format($total_value_of_stock, 2, ',', ' ') . " zł", 1, 0, 'C');
         $this->Ln();
+
+        $this->SetFont('dejavusans', '', 8);
+        if ($from_card) {
+            $this->Ln(2);
+            $this->Cell(array_sum($w), 5, "* Produkt bez receptury: koszt surowców kartonu z karty produktu ({$from_card}).", 0, 1, 'L');
+        }
+        if ($without_cost) {
+            $this->Cell(array_sum($w), 5, "** Brak receptury i kosztu w karcie produktu: produkt poza sumą ({$without_cost}).", 0, 1, 'L');
+        }
     }
 
     public function fillWzData($header, $secHeader, $data)

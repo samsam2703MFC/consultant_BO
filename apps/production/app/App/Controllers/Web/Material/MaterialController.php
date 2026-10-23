@@ -36,11 +36,14 @@ class MaterialController extends BaseController
         }
         if ($_SERVER['REQUEST_METHOD'] == "POST") {
             if ($this->materialService->validate($_POST)) {
-                $this->handleAction(function () {
+                $result = $this->handleAction(function () {
                     $this->materialService->insert($_POST);
                     header('Location: ' . ROOT . '/material-categories/' . $_POST['id_category'] . '/materials');
                     exit;
                 }, default: false);
+                $this->errors[] = 'Nie udało się zapisać surowca — sprawdź pola i spróbuj ponownie.';
+            } else {
+                $this->errors = array_values($this->materialService->lastErrors);
             }
         }
 
@@ -57,15 +60,18 @@ class MaterialController extends BaseController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($this->materialService->validateUpdate($_POST)) {
-                $success = $this->handleAction(function () use ($id) {
-                    $this->materialService->update($id, $_POST);
-                    return true;
+                // handleAction zwraca tablicę także przy błędzie : sprawdzamy « ok », nie samą wartość
+                $result = $this->handleAction(function () use ($id) {
+                    return $this->materialService->update($id, $_POST) !== false;
                 }, default: false);
 
-                if ($success) {
+                if (!empty($result['ok'])) {
                     header('Location: ' . ROOT . '/material-categories/' . $_POST['id_category'] . '/materials');
                     exit;
                 }
+                $this->errors[] = 'Nie udało się zapisać surowca — sprawdź pola i spróbuj ponownie.';
+            } else {
+                $this->errors = array_values($this->materialService->lastErrors);
             }
         }
 
@@ -136,9 +142,7 @@ class MaterialController extends BaseController
             }
 
             // Aktualizacja w bazie
-            $success = $this->materialService->update($id, [
-                'is_part_of_package' => $isPartOfPackage
-            ]);
+            $success = $this->materialService->setPackagePart((int) $id, $isPartOfPackage);
 
             if ($success !== false) {
                 echo json_encode([

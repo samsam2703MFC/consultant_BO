@@ -145,6 +145,7 @@
                             </select>
                             <button type="button" class="btn btn-sm btn-outline-primary" data-customer-add><i class="bi bi-plus"></i> Dodaj klienta</button>
                         </div>
+                        <p class="at-sub">Klient jeździ jedną trasą w danym dniu: dodany tutaj, znika z innych tras w te same dni.</p>
                     {% endif %}
                 </section>
             </div>
@@ -162,7 +163,7 @@
 (() => {
     const done = (res) => {
         at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
-        if (res.ok) window.setTimeout(() => window.location.reload(), 400);
+        if (res.ok) window.setTimeout(() => window.location.reload(), res.data?.moved?.length ? 3000 : 400);
     };
     at.bindForm(document.getElementById('addTour'), '/ajax/logistics/tours');
     document.querySelectorAll('[data-tour]').forEach(card => {

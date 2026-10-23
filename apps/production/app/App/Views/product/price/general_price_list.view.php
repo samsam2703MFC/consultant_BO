@@ -83,7 +83,7 @@
         <div class="row">
             <div class="col-12 col-md-6 order-md-1 order-last">
                 <h3>Cennik ogólny produktów</h3>
-                <p class="text-subtitle text-muted">Zarządzaj cenami standardowymi produktów gotowych.</p>
+                <p class="text-subtitle text-muted">Zarządzaj cenami standardowymi produktów gotowych. Nowa cena standardowa obejmuje też klientów, którzy mają cenę standardową; ceny wynegocjowane zostają.</p>
             </div>
             <div class="col-12 col-md-6 order-md-2 order-first">
                 <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
@@ -553,6 +553,10 @@
         const row        = btn.closest('tr');
         const priceInput = row.querySelector('input[type="number"]');
         const newPrice   = parseFloat(priceInput.value);
+        if (!(newPrice > 0)) {
+            showSnack(false, 'Podaj cenę większą od zera.');
+            return;
+        }
 
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Zapisywanie...';
@@ -561,8 +565,8 @@
             method: 'PATCH',
             data: { standard_price: newPrice }
         }).then(function (res) {
-            showSnack(res);
-            if (res) {
+            showSnack(res.ok, res.message || 'Nie udało się zapisać ceny.', res.message);
+            if (res.ok) {
                 row.dataset.price = newPrice;
 
                 if (newPrice === 0) {
