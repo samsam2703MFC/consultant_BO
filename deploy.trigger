@@ -1014,3 +1014,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-23T19:46Z production : lot A i B (styl wydruków PDF, wzory dokumentów, e-maile w językach klientów)
 2026-10-23T19:51Z production : relance lot A i B (migracja 060 zgodna z MySQL 8)
 2026-10-23T20:05Z production : lot C i D (powiadomienia o dostawie, Finanse, przypomnienia 1–5, wolumen i marża)
+2026-10-23T20:34:56Z faktury OCR, PDF bez kolizji, karta produktu → półprodukt → receptura
