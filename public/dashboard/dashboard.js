@@ -1100,9 +1100,9 @@
     if (ext.length) { h += `<div class="mb-mur ma-ext">${ext.join('')}</div>`; }
     if (S.objOuvert) { h += `<div class="mb-tir">${objectifsCarte(true)}</div>`; }
     if (S.promoOuvert) { h += `<div class="mb-tir">${promosCarte(true)}</div>`; }
-    // Le P&L court, les ventes par catégorie (liste, treemap, promotions, portions) et les bundles,
-    // venus d'Opérationnel (10/10/2026) : les chiffres de la journée au même endroit.
-    h += `<div class="ma-large">${PJ.categories}</div><div class="ma-large">${bundlesCarte()}</div>`;
+    // Les ventes par catégorie (liste, treemap, promotions, portions), venues d'Opérationnel (10/10/2026) : les chiffres
+    // de la journée au même endroit. Les bundles vendus sont retirés (23/10/2026) : double emploi avec les promotions.
+    h += `<div class="ma-large">${PJ.categories}</div>`;
     return h;
   }
 
@@ -2307,39 +2307,6 @@
   const opFaire = p => p.verdict === 'rupture' || p.verdict === 'manque' ? (p.conseil && p.conseil.pieces ? 'recuire ' + fN(p.conseil.pieces) : 'à recuire') : (p.verdict === 'trop' ? 'ne pas recuire' : '');
   const OP_RANG = { rupture: 0, manque: 1, trop: 2, ok: 3 };
   const opSk = () => '<div class="db-sk" style="width:70%;margin:6px 0"></div><div class="db-sk" style="width:50%"></div>';
-  /* Les bundles vendus sur la journée (10/10/2026), à côté des ventes par catégorie : quantité, nom, prix moyen
-   * encaissé, CA, marge, première et dernière vente, lus dans les mêmes tickets (catégorie « Bundle »). */
-  const BUNDLE_RE = /bundle|promotion/i;
-  function bundlesDe(st) {
-    if (st.bundles && Array.isArray(st.bundles.lignes)) { return st.bundles; }
-    // Une réponse d'avant le 10/10/2026 : les bundles se retrouvent dans les catégories.
-    const L = [];
-    (st.categories || []).filter(c => BUNDLE_RE.test((c.nom || '') + ' ' + (c.groupe || ''))).forEach(c => (c.produits || []).forEach(p => L.push(Object.assign({}, p, { cat: c.nom, prix: p.q ? p.v / p.q : null, heures: null }))));
-    L.sort((a, b) => (b.q - a.q) || (b.v - a.v));
-    const ca = L.reduce((a, x) => a + (x.v || 0), 0), avec = L.filter(x => x.m != null), mV = avec.reduce((a, x) => a + x.v, 0), tot = st.totaux && st.totaux.ca;
-    return { lignes: L, n: L.length, pieces: L.reduce((a, x) => a + (x.q || 0), 0), ca, taux: mV > 0 ? 100 * avec.reduce((a, x) => a + x.m, 0) / mV : null, part: tot ? 100 * ca / tot : null };
-  }
-  function bundlesCarte() {
-    const ks = cleSt(), st = S.st[ks], err = S.err[ks], jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
-    const tete = mini => `<div class="ct"><span class="db-lab">Bundles vendus</span>${mini ? `<span class="db-mini">${mini}</span>` : ''}</div>`;
-    if (!st) { return `<div class="db-card op-bun">${tete(err ? esc(err) : 'lecture des tickets en cours…')}<div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`; }
-    const B = bundlesDe(st);
-    if (!B.lignes.length) { return `<div class="db-card op-bun">${tete('')}<div class="op-bun-vide">Aucun bundle vendu ${jour}.</div>${promoBundles(st)}</div>`; }
-    const quand = x => x.premiere == null ? '' : (x.premiere === x.derniere ? 'à ' + x.premiere + ' h' : 'de ' + x.premiere + ' h à ' + x.derniere + ' h');
-    const mc = v => v == null ? 'mu' : (v >= 60 ? 'ok' : (v >= 50 ? 'att' : 'ko'));
-    // La composition : la recette du bundle au panel (la même lecture que la fiche produit), lue une fois.
-    const cleR = x => 'recette|' + x.id + '|' + S.shop;
-    B.lignes.forEach(x => { const k = cleR(x); if (/^\d+$/.test(String(x.id)) && !S.aux[k] && !S.enCours[k] && !S.err[k]) { setTimeout(() => lireAux(k, '/analyse/produits/recette?pid=' + encodeURIComponent(x.id) + '&shop=' + encodeURIComponent(S.shop)), 0); } });
-    const compo = x => { const R = S.aux[cleR(x)], L = R && Array.isArray(R.lignes) ? R.lignes.filter(l => l && l.nom) : []; if (!L.length) { return ''; }
-      const t = L.slice(0, 4).map(l => (l.qte == null ? '' : (!l.unite || /^pc/i.test(l.unite) ? nf(l.qte, l.qte % 1 ? 1 : 0) + ' × ' : nf(l.qte, l.qte % 1 ? 2 : 0) + ' ' + l.unite + ' ')) + l.nom).join(' + ') + (L.length > 4 ? ' + ' + (L.length - 4) + ' autre' + (L.length > 5 ? 's' : '') : '');
-      return `<small class="op-bun-co">${esc(t)}</small>`; };
-    const lignes = B.lignes.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q != null ? x.q : ''}" data-fv="${x.v != null ? x.v : ''}" data-ft="${x.taux != null ? x.taux : ''}" data-fc="${x.c != null ? x.c : ''}" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0" title="les ventes sur 12 semaines, la recette et la marge">
-      <td class="n op-bun-q">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td><b>${esc(x.nom)}</b>${compo(x)}${quand(x) ? `<small>${quand(x)}</small>` : ''}</td><td class="n">${fU(x.prix)}</td><td class="n">${fE(x.v)}</td><td class="n ${mc(x.taux)}">${x.taux != null ? fP0(x.taux) : '—'}</td></tr>`).join('');
-    return `<div class="db-card op-bun">${tete('la journée · ' + B.n + ' bundle' + (B.n > 1 ? 's' : '') + ' · clic : la fiche')}
-      <div class="op-bun-k"><div><div class="k">Vendus</div><div class="v">${nf(B.pieces, B.pieces % 1 ? 1 : 0)}</div></div><div><div class="k">CA bundles</div><div class="v">${fE(B.ca)}</div></div><div><div class="k">Part du CA</div><div class="v">${B.part != null ? fP(B.part) : '—'}</div></div><div><div class="k">Marge brute</div><div class="v ${mc(B.taux)}">${B.taux != null ? fP0(B.taux) : '—'}</div></div></div>
-      <div class="op-large"><table class="db-pro-tab op-bun-tab"><thead><tr><th class="n">Qté</th><th>Bundle</th><th class="n" title="prix moyen encaissé">Prix</th><th class="n">CA</th><th class="n">Marge</th></tr></thead><tbody>${lignes}</tbody></table></div>${promoBundles(st)}</div>`;
-  }
-
   /* La vitrine selon la durée de vie (demande du 06/10/2026) : les trois onglets du suivi de
    * production — short life (vendu le jour même), medium life (se garde 2 à 3 jours), long life
    * (une semaine et plus) — chacun avec le niveau actuel de marchandises. La durée de vie vient du
@@ -3180,13 +3147,15 @@
     // au téléphone depuis le 11/10/2026) : les cartes du dessous les disent.
     h += opDuelSplit(D);
     h += opDuelHeures(D);
-    h += opDuelTable(D);
-
-    /* 2. Les ventes par catégorie (liste ou treemap) et le P&L court de la journée, coût du
-     * personnel compris : les cartes de la vue Jour, telles quelles. */
     const PJ = m ? jourPieces(m, JD, ST) : null;
     const attente = t => `<div class="db-card"><div class="ct"><span class="db-lab">${t}</span><span class="db-mini">${S.err['jourM|' + S.date] ? esc(S.err['jourM|' + S.date]) : 'lecture du Résultat du jour…'}</span></div><div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`;
-    h += `<div class="op-deux"><div>${PJ ? PJ.categories : attente('Ventes par catégorie')}</div><div>${bundlesCarte()}${PJ ? PJ.pnl : attente('Le P&amp;L court de la journée')}</div></div>`;
+    h += opDuelTable(D);
+    // Le P&L court sous le duel chiffre par chiffre (23/10/2026, Sam).
+    h += PJ ? PJ.pnl : attente('Le P&amp;L court de la journée');
+
+    /* 2. Les ventes par catégorie (liste, treemap, promotions, portions) : la carte de la vue Jour, telle quelle.
+     * La carte Bundles vendus est retirée (23/10/2026, Sam) : double emploi avec l'onglet Promotions. */
+    h += PJ ? PJ.categories : attente('Ventes par catégorie');
 
     /* La journée : la frise de 04:00 à 20:00 et les ventes de chaque heure face à la moyenne */
     const H0 = 4 * 60, H1 = 20 * 60, x = mm => (100 * (Math.max(H0, Math.min(H1, mm)) - H0) / (H1 - H0)).toFixed(2) + '%', w = (a, b) => (100 * (Math.min(H1, b) - Math.max(H0, a)) / (H1 - H0)).toFixed(2) + '%';
@@ -5419,7 +5388,7 @@
   }
 
   /* Les promotions du panel reconnues dans les tickets (10/10/2026, maquette B3 · 3) : l'onglet Promotions des ventes
-   * par catégorie, et la liste des promotions dans Bundles vendus. Une couleur par promotion, dans l'ordre de leurs
+   * par catégorie. Une couleur par promotion, dans l'ordre de leurs
    * ventes ; la remise qu'aucune promotion n'explique en gris. Le poids d'une promotion : ses ventes ÷ le CA complet,
    * et dans chaque catégorie qu'elle touche, ses ventes ÷ le CA de la catégorie. */
   const PROMO_COUL = ['#2a78d6', '#eb6834', '#2d7a3e', '#8e44ad', '#c2185b', '#00838f', '#b8860b'];
@@ -5583,24 +5552,6 @@
     }
     const ent = `<div class="db-ent" style="${grille}"><span></span><span>Catégorie › produit</span><span class="pt-bh">En pièces entières, par taille</span>${tailles.map(k => `<span class="n ts">${portLib(F[k].f, F[k].lib)}</span>`).join('')}<span class="n eq">En entières</span><span class="n rs" title="ce qui reste en parts dans la dernière pièce coupée, si rien ne restait d’hier et que rien n’a été recoupé">Reste</span><span class="n ca">CA</span><span class="n pe">€ par entière</span></div>`;
     return bande + `<div class="db-acc pot">${ent}${rows}</div>`;
-  }
-  /** Bundles vendus : les promotions de la journée, leur poids dans le CA complet et dans chaque catégorie qu'elles touchent. */
-  function promoBundles(st) {
-    const D = promosDe(st);
-    if (!D) { return ''; }
-    const { P, coul, parCat, caCat } = D, tot = D.ca;
-    const L = P.regles.filter(r => r.v > 0 || r.r > 0);
-    const jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
-    const titre = `<div class="op-bun-h"><span>Les promotions</span><span class="db-mini">${L.length ? fU(P.v) + ' · ' + promoPct(tot > 0 ? 100 * P.v / tot : 0) + ' du CA complet' : 'aucune déclenchée ' + jour}</span></div>`;
-    // La ligne « Pas déclenchées : … » est retirée (11/10/2026, demande de Sam).
-    if (!L.length) { return `<div class="op-bun-pr">${titre}</div>`; }
-    const lignes = L.map(r => {
-      const cats = Object.entries(parCat[r.id] || {}).sort((a, b) => b[1] - a[1]);
-      return `<tr><td><b><i class="pr-pd" style="background:${coul[r.id]}"></i>${esc(r.nom)}</b><small>${esc(r.texte || '')}</small></td><td class="n">${fN(r.fois)}<span class="u">×</span></td><td class="n">${fU(r.v)}</td>
-        <td class="n"><b>${promoPct(tot > 0 ? 100 * r.v / tot : 0)}</b><span class="u"> du CA</span></td><td class="op-bun-cats">${cats.map(([c, v]) => `<span>${esc(c)} <b>${promoPct(caCat[c] > 0 ? 100 * v / caCat[c] : 0)}</b></span>`).join('')}</td></tr>`;
-    }).join('');
-    return `<div class="op-bun-pr">${titre}<div class="op-large"><table class="db-pro-tab op-bun-tab op-bun-ptab"><thead><tr><th>Promotion</th><th class="n">Fois</th><th class="n">Ventes</th><th class="n" title="ventes de la promotion ÷ CA complet de la journée">Poids CA</th><th title="ventes de la promotion dans la catégorie ÷ CA de la catégorie">Poids par catégorie</th></tr></thead><tbody>${lignes}</tbody>
-      <tfoot><tr><td><b>Toutes les promotions</b><small>${fN(P.tickets || 0)} ticket${P.tickets > 1 ? 's' : ''} · remises −${fU(P.r)}</small></td><td class="n">${fN(L.reduce((a, r) => a + r.fois, 0))}<span class="u">×</span></td><td class="n">${fU(P.v)}</td><td class="n"><b>${promoPct(tot > 0 ? 100 * P.v / tot : 0)}</b><span class="u"> du CA</span></td><td class="op-bun-cats"></td></tr></tfoot></table></div></div>`;
   }
   /** Le planning déplié, groupé par secteur : le premier poste de travail de la personne dans le panel ; « sans secteur » sinon. */
   function planningSecteurs(plan, hMin, hMax) {
