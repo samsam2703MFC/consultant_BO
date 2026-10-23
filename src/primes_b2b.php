@@ -170,14 +170,14 @@ function b2bMois(int $sid, string $m, array $e): ?array
     $r = b2bRegleDe($e);
     $cle = 'b2bM' . $sid . ':' . $m . ':' . substr(md5((string) json_encode($r)), 0, 10);
     $enCours = $m === date('Y-m');
-    $c = setting($cle);
+    $c = motCache($cle);
     if (is_array($c) && isset($c['p']) && (int) ($c['q'] ?? 0) > time() - ($enCours ? B2B_CACHE_COURS : B2B_CACHE_CLOS)) { return (array) $c['p']; }
     $du = date('Y-m-d', strtotime(b2bDepart($r, $m) . ' -' . B2B_NOUVEAU_MOIS . ' months'));
     $au = date('Y-m-d', strtotime(date('Y-m-t', strtotime($m . '-01')) . ' +1 day'));
     $t = b2bTickets($sid, $du, $au);
     if ($t === null) { return null; }
     $p = b2bCalcul($t, $r, $m);
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['q' => time(), 'p' => (object) $p], JSON_UNESCAPED_UNICODE)]);
+    motCacheEcrire($cle, ['q' => time(), 'p' => (object) $p]);
     return $p;
 }
 

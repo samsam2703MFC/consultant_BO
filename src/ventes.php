@@ -687,7 +687,7 @@ function venteMois(string $m, array $nomDe): array
 /** Les montants de prime, réglables. */
 function ventePrimesConfig(): array
 {
-    $c = setting('ventePrimes');
+    $c = motReglage('ventePrimes');
     return ['reseau' => (int) ($c['reseau'] ?? 150), 'magasin' => (int) ($c['magasin'] ?? 75)];
 }
 
@@ -742,7 +742,7 @@ function ep_ventes_classement(): array
         $caTot = array_sum(array_column($r['lignes'], 'ca')) + $r['sansVendeur']['ca'];
         $out['partSansVendeur'] = $caTot > 0 ? round(100 * $r['sansVendeur']['ca'] / $caTot, 1) : null;
         // La prime déjà enregistrée pour ce mois, si elle l'est.
-        $hist = setting('ventePrimesHist');
+        $hist = motReglage('ventePrimesHist');
         $out['primeEnregistree'] = is_array($hist) && isset($hist[$m]) ? $hist[$m] : null;
     }
     return $out;
@@ -762,7 +762,7 @@ function ep_ventes_fiche(): array
     $emp = venteEmployes();
     if (!isset($emp[$id])) { http_response_code(404); return ['error' => 'personne inconnue']; }
 
-    $hist = setting('ventePrimesHist');
+    $hist = motReglage('ventePrimesHist');
     $out = ['id' => $id, 'nom' => $emp[$id]['nom'],
         'magasin' => $nomDe[$emp[$id]['shop']] ?? '', 'mois' => []];
     for ($i = $n - 1; $i >= 0; $i--) {
@@ -807,14 +807,13 @@ function wr_ventes_primes(): array
     if (!preg_match('/^\d{4}-\d{2}$/', $m)) { http_response_code(422); return ['error' => 'mois attendu : AAAA-MM']; }
     if ($m >= date('Y-m')) { http_response_code(422); return ['error' => 'le mois en cours ne se prime pas : il n’est pas fini']; }
 
-    $hist = setting('ventePrimesHist');
+    $hist = motReglage('ventePrimesHist');
     if (!is_array($hist)) { $hist = []; }
     if (isset($hist[$m])) { http_response_code(409); return ['error' => 'les primes de ' . $m . ' sont déjà enregistrées', 'primes' => $hist[$m]]; }
 
     if (isset($b['montants']) && is_array($b['montants'])) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            ['ventePrimes', json_encode(['reseau' => (int) ($b['montants']['reseau'] ?? 150),
-                'magasin' => (int) ($b['montants']['magasin'] ?? 75)])]);
+        motReglageEcrire('ventePrimes', ['reseau' => (int) ($b['montants']['reseau'] ?? 150),
+                'magasin' => (int) ($b['montants']['magasin'] ?? 75)]);
     }
     $montants = ventePrimesConfig();
 
@@ -845,8 +844,7 @@ function wr_ventes_primes(): array
         try { $enr['appWorker'] = primesEnregistrer($m); } catch (Throwable $e) { $enr['appWorker'] = ['erreur' => $e->getMessage()]; }
     }
     $hist[$m] = $enr;
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['ventePrimesHist', json_encode($hist, JSON_UNESCAPED_UNICODE)]);
+    motReglageEcrire('ventePrimesHist', $hist);
     return ['ok' => true, 'primes' => $enr];
 }
 
@@ -1147,7 +1145,7 @@ function venteClotureDoc(string $mois = '', string $shop = ''): array
         $rF = venteMois($mF, $nomDeC2);
         $parMoisR[$mF] = $rF['motif'] === null ? $rF['lignes'] : null;
     }
-    $histCross = setting('ventePrimesCrossHist');
+    $histCross = motReglage('ventePrimesCrossHist');
     $histCrossM = is_array($histCross) && isset($histCross[$d['m']]) ? $histCross[$d['m']] : null;
     $g2 = $d['gagnantes'];
     $totalPrimes = 0;
@@ -1365,7 +1363,7 @@ const VENTE_APPLI_QR = 'iVBORw0KGgoAAAANSUhEUgAAAPgAAAD4CAIAAABOs7xcAAAE2klEQVR4
  */
 function venteCrossPaliers(): array
 {
-    $p = setting('venteCrossPaliers');
+    $p = motReglage('venteCrossPaliers');
     if (!is_array($p)) { return []; }
     $out = [];
     foreach ($p as $x) {
@@ -1425,11 +1423,11 @@ function venteCrossTarget(array $cfg, string $shop, string $m): ?float
 function venteRecordReglages(): array
 {
     return [
-        'eurDixieme' => is_numeric(setting('venteRecordEurDixieme')) ? (int) setting('venteRecordEurDixieme') : 100,
+        'eurDixieme' => is_numeric(motReglage('venteRecordEurDixieme')) ? (int) motReglage('venteRecordEurDixieme') : 100,
         // Le garde-fou : on paie au plus N dixièmes par mois — un record
         // fantôme (mois faible) ne fait pas sauter la banque ; le nouveau
         // record se pose quand même, le compteur repart le mois suivant.
-        'maxDixiemes' => is_numeric(setting('venteRecordMaxDixiemes')) ? (int) setting('venteRecordMaxDixiemes') : 3,
+        'maxDixiemes' => is_numeric(motReglage('venteRecordMaxDixiemes')) ? (int) motReglage('venteRecordMaxDixiemes') : 3,
     ];
 }
 
@@ -1439,8 +1437,7 @@ function wr_ventes_record(): array
     $b = body();
     foreach ([['eurDixieme', 'venteRecordEurDixieme'], ['maxDixiemes', 'venteRecordMaxDixiemes']] as [$cle, $reg]) {
         if (isset($b[$cle]) && is_numeric($b[$cle])) {
-            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-                [$reg, json_encode(max(0, (int) $b[$cle]))]);
+            motReglageEcrire($reg, max(0, (int) $b[$cle]));
         }
     }
     journalAdd('CEO', 'Paramètre', 'Bats ton record', 'Réglages mis à jour');
@@ -1518,7 +1515,7 @@ function ep_ventes_cross(): array
 {
     $n = max(2, min(12, (int) ($_GET['n'] ?? 6)));
     $reglages = venteRecordReglages();
-    $hist = setting('ventePrimesCrossHist');
+    $hist = motReglage('ventePrimesCrossHist');
     if (!is_array($hist)) { $hist = []; }
 
     $nomDe = [];
@@ -1796,7 +1793,7 @@ function wr_ventes_cross_target(): array
     $shop = trim((string) ($b['shop'] ?? ''));
     $m = trim((string) ($b['m'] ?? date('Y-m')));
     if (!preg_match('/^\d{4}-\d{2}$/', $m)) { $m = date('Y-m'); }
-    $cfg = setting('venteCrossTargets');
+    $cfg = motReglage('venteCrossTargets');
     if (!is_array($cfg)) { $cfg = []; }
     $t = $b['target'] ?? '';
     if ($t === '' || $t === null || !is_numeric(str_replace(',', '.', (string) $t))) {
@@ -1810,11 +1807,9 @@ function wr_ventes_cross_target(): array
         $msg = 'Target cross-selling posée à ' . number_format($v, 1, ',', ' ') . ' lignes/ticket dès ' . $m;
     }
     if (isset($b['montant']) && is_numeric($b['montant'])) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            ['venteCrossMontant', json_encode(max(1, (int) $b['montant']))]);
+        motReglageEcrire('venteCrossMontant', max(1, (int) $b['montant']));
     }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['venteCrossTargets', json_encode($cfg, JSON_UNESCAPED_UNICODE)]);
+    motReglageEcrire('venteCrossTargets', $cfg);
     $nomDe = [];
     foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) { $nomDe[(string) $s['id']] = (string) $s['name']; }
     journalAdd('CEO', 'Vente', $nomDe[$shop] ?? ('Magasin ' . $shop), $msg);
@@ -1834,15 +1829,12 @@ function wr_ventes_cross_paliers(): array
     }
     usort($liste, static fn ($p, $q) => $p['plus'] <=> $q['plus']);
     if (isset($b['montantBase']) && is_numeric($b['montantBase'])) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            ['venteCrossMontant', json_encode(max(1, (int) $b['montantBase']))]);
+        motReglageEcrire('venteCrossMontant', max(1, (int) $b['montantBase']));
     }
     if (isset($b['montantShop']) && is_numeric($b['montantShop'])) {
-        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            ['venteCrossMontantShop', json_encode(max(1, (int) $b['montantShop']))]);
+        motReglageEcrire('venteCrossMontantShop', max(1, (int) $b['montantShop']));
     }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['venteCrossPaliers', json_encode($liste)]);
+    motReglageEcrire('venteCrossPaliers', $liste);
     journalAdd('CEO', 'Vente', null, 'Paliers cross-selling : '
         . ($liste === [] ? 'retirés' : implode(' · ', array_map(
             static fn ($p) => 'cible +' . number_format($p['plus'], 1, ',', ' ') . ' → ' . $p['montant'] . ' €', $liste))));
@@ -1856,8 +1848,7 @@ function wr_ventes_primes_montants(): array
     $c = ventePrimesConfig();
     if (isset($b['reseau']) && is_numeric($b['reseau'])) { $c['reseau'] = max(1, (int) $b['reseau']); }
     if (isset($b['magasin']) && is_numeric($b['magasin'])) { $c['magasin'] = max(1, (int) $b['magasin']); }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['ventePrimes', json_encode($c)]);
+    motReglageEcrire('ventePrimes', $c);
     journalAdd('CEO', 'Vente', null, 'Montants des primes au score : réseau ' . $c['reseau'] . ' € · magasin ' . $c['magasin'] . ' €');
     return ['ok' => true, 'primes' => $c];
 }
@@ -1869,7 +1860,7 @@ function wr_ventes_cross_primes(): array
     $m = trim((string) ($b['m'] ?? ''));
     if (!preg_match('/^\d{4}-\d{2}$/', $m)) { http_response_code(422); return ['error' => 'mois attendu : AAAA-MM']; }
     if ($m >= date('Y-m')) { http_response_code(422); return ['error' => 'le mois en cours ne se prime pas : il n’est pas fini']; }
-    $hist = setting('ventePrimesCrossHist');
+    $hist = motReglage('ventePrimesCrossHist');
     if (!is_array($hist)) { $hist = []; }
     if (isset($hist[$m])) { http_response_code(409); return ['error' => 'les primes de ' . $m . ' sont déjà enregistrées']; }
 
@@ -1904,8 +1895,7 @@ function wr_ventes_cross_primes(): array
         http_response_code(422); return ['error' => 'aucun record battu sur ' . $m . ' — rien à primer'];
     }
     $hist[$m] = $enr;
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['ventePrimesCrossHist', json_encode($hist, JSON_UNESCAPED_UNICODE)]);
+    motReglageEcrire('ventePrimesCrossHist', $hist);
     return ['ok' => true, 'primes' => $enr];
 }
 
@@ -2016,9 +2006,9 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
         }
     }
 
-    $histSco = setting('ventePrimesHist');
+    $histSco = motReglage('ventePrimesHist');
     $dernSco = is_array($histSco) && $histSco !== [] ? $histSco[max(array_keys($histSco))] : null;
-    $histRec = setting('ventePrimesCrossHist');
+    $histRec = motReglage('ventePrimesCrossHist');
     $dernRec = is_array($histRec) && $histRec !== [] ? $histRec[max(array_keys($histRec))] : null;
 
     if ($seulShop !== '') {

@@ -55,7 +55,7 @@ function primeMagasinReglages(): array
 function croiseesReglages(): array
 {
     $out = ['cibleDefaut' => 50.0, 'cibles' => [], 'minTickets' => 30];
-    $c = setting('venteCroisees');
+    $c = motReglage('venteCroisees');
     if (is_array($c)) {
         if (isset($c['cibleDefaut']) && is_numeric($c['cibleDefaut'])) { $out['cibleDefaut'] = max(0.0, min(100.0, round((float) $c['cibleDefaut'], 1))); }
         foreach ((array) ($c['cibles'] ?? []) as $sid => $v) {
@@ -86,8 +86,7 @@ function wr_croisees(): array
     }
     if (isset($b['minTickets']) && is_numeric($b['minTickets'])) { $cur['minTickets'] = max(0, min(1000, (int) $b['minTickets'])); }
     $garde = ['cibleDefaut' => $cur['cibleDefaut'], 'cibles' => $cur['cibles'], 'minTickets' => $cur['minTickets']];
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-        ['venteCroisees', json_encode($garde, JSON_UNESCAPED_UNICODE)]);
+    motReglageEcrire('venteCroisees', $garde);
     primesCachesVider();
     journalAdd('CEO', 'Paramètre', 'Ventes croisées', 'Cible réseau ' . $cur['cibleDefaut'] . ' %, ' . count($cur['cibles']) . ' cible(s) de magasin'
         . ($cur['cibles'] !== [] ? ' (' . implode(', ', array_map(static fn ($s, $v) => $s . ' : ' . $v . ' %', array_keys($cur['cibles']), $cur['cibles'])) . ')' : '')
@@ -391,7 +390,7 @@ function primesCaJours(int $sid, array $jours): array
     $out = []; $aLire = [];
     $auj = date('Y-m-d');
     foreach ($jours as $j) {
-        $c = setting('pvJ' . $sid . ':' . $j);
+        $c = motCache('pvJ' . $sid . ':' . $j);
         if (is_array($c) && isset($c['ca']) && ($j < $auj || (int) ($c['quand'] ?? 0) > time() - PRIMES_CACHE_JOUR)) { $out[$j] = (float) $c['ca']; }
         else { $out[$j] = null; $aLire[$j] = '/shops/' . $sid . '/statistics/sales/kpis?date_from=' . $j . '&date_to=' . $j; }
     }
@@ -401,8 +400,7 @@ function primesCaJours(int $sid, array $jours): array
             $k = $res[$j] ?? null;
             if (!is_array($k) || !isset($k['ca'])) { continue; }
             $out[$j] = (float) $k['ca'];
-            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-                ['pvJ' . $sid . ':' . $j, json_encode(['quand' => time(), 'ca' => (float) $k['ca'], 'tickets' => (int) ($k['tickets'] ?? 0)])]);
+            motCacheEcrire('pvJ' . $sid . ':' . $j, ['quand' => time(), 'ca' => (float) $k['ca'], 'tickets' => (int) ($k['tickets'] ?? 0)]);
         }
     }
     return $out;
@@ -538,12 +536,11 @@ function venteMoisCache(string $m, array $nomDe): array
     $clos = date('Y-m-t', strtotime($m . '-01')) < date('Y-m-d');
     $local = $m < (function_exists('pvLignesDebut') ? pvLignesDebut() : '2026-08');
     if ($clos && $local) {
-        $c = setting('vmMois' . $m);
+        $c = motCache('vmMois' . $m);
         if (is_array($c) && isset($c['lignes'])) { return $c; }
         $r = venteMois($m, $nomDe);
         if ($r['motif'] === null) {
-            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-                ['vmMois' . $m, json_encode($r, JSON_UNESCAPED_UNICODE)]);
+            motCacheEcrire('vmMois' . $m, $r);
         }
         return $r;
     }
@@ -796,7 +793,7 @@ function primesTitres(array $b, ?array $pm = null): array
 function primesCollection(int $emp, string $shop, array $nomDe, array $briquesEnCours, ?array $pmEnCours): array
 {
     $cle = 'primesColl' . $emp;
-    $c = setting($cle);
+    $c = motCache($cle);
     $enCours = primesTitres($briquesEnCours, $pmEnCours);
     if (is_array($c) && isset($c['titres']) && (int) ($c['quand'] ?? 0) > time() - 86400) { $c['enCours'] = $enCours; unset($c['quand']); return $c; }
     $mois = [];
@@ -816,7 +813,7 @@ function primesCollection(int $emp, string $shop, array $nomDe, array $briquesEn
         }
     }
     $out = ['depuis' => $mois !== [] ? end($mois) : date('Y-m'), 'mois' => array_reverse($mois), 'titres' => array_values($parTitre), 'quand' => time()];
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($out, JSON_UNESCAPED_UNICODE)]);
+    motCacheEcrire($cle, $out);
     unset($out['quand']);
     $out['enCours'] = $enCours;
     return $out;
@@ -829,8 +826,8 @@ function primesCollection(int $emp, string $shop, array $nomDe, array $briquesEn
 function primesMoisClos(int $emp, string $m, string $shop, array $nomDe): array
 {
     $cle = 'primesClos' . $emp . ':' . $m;
-    $c = setting($cle);
-    $hist = setting('ventePrimesHist');
+    $c = motCache($cle);
+    $hist = motReglage('ventePrimesHist');
     $paye = is_array($hist) && isset($hist[$m]);
     if (is_array($c) && isset($c['total'], $c['titres']) && array_key_exists('b2b', $c) && (int) ($c['quand'] ?? 0) > time() - PRIMES_CACHE_CLOS && (bool) ($c['paye'] ?? false) === $paye) { return $c; }
 
@@ -885,7 +882,7 @@ function primesMoisClos(int $emp, string $m, string $shop, array $nomDe): array
         'croisees' => $b['croisees']['montant'], 'record' => $b['record']['montant'], 'meilleure' => $b['meilleure']['montant'], 'concours' => $b['concours']['montant'],
         'promo' => $b['promos']['montant'], 'magasin' => $pm['vous'], 'google' => $g['montant'], 'note' => $g['note'],
         'titres' => primesTitres($b, $pm), 'quand' => time()];
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($out, JSON_UNESCAPED_UNICODE)]);
+    motCacheEcrire($cle, $out);
     return $out;
 }
 
@@ -904,7 +901,7 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
     $cle = 'primesMoi' . $emp . ':' . $m;
     $enCours = $m === date('Y-m');
     if (!$frais) {
-        $c = setting($cle);
+        $c = motCache($cle);
         if (is_array($c) && isset($c['emp'], $c['cartes']) && ($c['v'] ?? 0) === PRIMES_FICHE_V && (int) ($c['quand'] ?? 0) > time() - ($enCours ? PRIMES_CACHE_MOI : PRIMES_CACHE_CLOS)) { return $c; }
     }
     $emps = venteEmployes();
@@ -961,7 +958,7 @@ function primesMoi(int $emp, string $m, bool $frais = false): array
         'heures' => ['mois' => round($hVous, 1), 'faites' => round($hFaites, 1), 'equipe' => round($hEq, 1), 'personnes' => $nEq, 'planningJusquau' => $finPlan],
         'aujourdhui' => $auj, 'acquis' => $acquis, 'enJeu' => $enJeu, 'aPortee' => $enJeu, 'google' => $b['google'], 'montants' => $montants,
         'briques' => $b, 'prime' => $pm, 'semaines12' => $semaines12, 'motif' => $r['motif']];
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($out, JSON_UNESCAPED_UNICODE)]);
+    motCacheEcrire($cle, $out);
     return $out;
 }
 
@@ -995,7 +992,7 @@ function primesHeuresSemaines(int $emp, string $du, string $au): array
 function primesSemainesMoyennes(): array
 {
     $cle = 'primesS12moy';
-    $c = setting($cle);
+    $c = motCache($cle);
     if (is_array($c) && isset($c['s']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return (array) $c['s']; }
     $reseau = function_exists('pvSemainesReseau') ? pvSemainesReseau(12) : [];
     if ($reseau === []) { return []; }
@@ -1057,7 +1054,7 @@ function primesSemainesMoyennes(): array
         }
         $out[$sem['du']] = ['mag' => array_map($moyenne, $mag), 'res' => $moyenne($res)];
     }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['quand' => time(), 's' => $out], JSON_UNESCAPED_UNICODE)]);
+    motCacheEcrire($cle, ['quand' => time(), 's' => $out]);
     return $out;
 }
 
@@ -1071,7 +1068,7 @@ function primesSemaines12(int $emp, int $sid): array
     // v4 (16/10/2026) : chaque semaine porte son ticket moyen, ses lignes par ticket, et les moyennes de son
     // magasin (« mag ») et du réseau (« res ») pour les mêmes indicateurs.
     $cle = 'primesS12v4:' . $emp;
-    $c = setting($cle);
+    $c = motCache($cle);
     if (is_array($c) && isset($c['s']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return (array) $c['s']; }
     $reseau = function_exists('pvSemainesReseau') ? pvSemainesReseau(12) : [];
     if ($reseau === []) { return []; }
@@ -1122,7 +1119,7 @@ function primesSemaines12(int $emp, int $sid): array
             'lignesTicket' => ($moi !== null && (int) $moi['t'] > 0 && (int) ($moi['l'] ?? 0) > 0) ? round((int) $moi['l'] / (int) $moi['t'], 2) : null,
             'mag' => $moy[$sem['du']]['mag'][(string) $sid] ?? null, 'res' => $moy[$sem['du']]['res'] ?? null];
     }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['quand' => time(), 's' => $out], JSON_UNESCAPED_UNICODE)]);
+    motCacheEcrire($cle, ['quand' => time(), 's' => $out]);
     return $out;
 }
 
@@ -1141,7 +1138,7 @@ function primesMoisTous(string $m, bool $frais = false): array
     $cle = 'primesTous' . $m;
     $enCours = $m === date('Y-m');
     if (!$frais) {
-        $c = setting($cle);
+        $c = motCache($cle);
         if (is_array($c) && isset($c['personnes'], $c['totaux']['google']) && (int) ($c['quand'] ?? 0) > time() - ($enCours ? 3600 : PRIMES_CACHE_CLOS)) { return $c; }
     }
     $nomDe = primesMagasins();
@@ -1260,7 +1257,7 @@ function primesMoisTous(string $m, bool $frais = false): array
         'google' => googleReglages(),
         'b2b' => ['actif' => function_exists('primesAppDuType') && primesAppDuType('b2b') !== []],
         'magasins' => array_values($magasins), 'personnes' => $personnes, 'totaux' => $totaux];
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode($out, JSON_UNESCAPED_UNICODE)]);
+    motCacheEcrire($cle, $out);
     return $out;
 }
 
@@ -1270,7 +1267,7 @@ function ep_primes_mois(): array
     $m = trim((string) ($_GET['m'] ?? ''));
     if (!preg_match('/^\d{4}-\d{2}$/', $m) || $m > date('Y-m')) { $m = date('Y-m', strtotime('first day of last month')); }
     $out = primesMoisTous($m, isset($_GET['frais']));
-    $hist = setting('ventePrimesHist');
+    $hist = motReglage('ventePrimesHist');
     $out['enregistre'] = is_array($hist) && isset($hist[$m]) ? ['quand' => $hist[$m]['quand'] ?? null, 'appWorker' => $hist[$m]['appWorker'] ?? null] : null;
     return $out;
 }
@@ -1398,7 +1395,7 @@ function primesEmployeDuJeton(string $jeton): ?int
     if ($id <= 0) { return null; }
     if (isset($p['exp']) && is_numeric($p['exp']) && (int) $p['exp'] < time()) { return null; }
     $cle = 'primesJeton' . substr(hash('sha256', $jeton), 0, 40);
-    $c = setting($cle);
+    $c = motCache($cle);
     if (is_array($c) && (int) ($c['emp'] ?? 0) === $id && (int) ($c['quand'] ?? 0) > time() - PRIMES_CACHE_JETON) { return $id; }
     if (!PanelApi::configured()) { return null; }
     $ch = curl_init(rtrim(PanelApi::config()['base'], '/') . '/employees/' . $id);
@@ -1411,7 +1408,7 @@ function primesEmployeDuJeton(string $jeton): ?int
     $d = json_decode((string) $raw, true);
     $d = is_array($d) ? ($d['data'] ?? $d) : null;
     if (!is_array($d) || (int) ($d['id'] ?? 0) !== $id) { return null; }
-    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['emp' => $id, 'quand' => time()])]);
+    motCacheEcrire($cle, ['emp' => $id, 'quand' => time()]);
     return $id;
 }
 
