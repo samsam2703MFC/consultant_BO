@@ -94,6 +94,7 @@ require __DIR__ . '/../../src/motivation.php';
 require __DIR__ . '/../../src/primes.php';
 require __DIR__ . '/../../src/primes_app.php';
 require __DIR__ . '/../../src/primes_b2b.php';
+require __DIR__ . '/../../src/grands_prix.php';
 require __DIR__ . '/../../src/promos_magasin.php';
 require __DIR__ . '/../../src/promos_doc.php';
 require __DIR__ . '/../../src/sms.php';
@@ -424,6 +425,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/promos/documentation' => ep_promos_documentation(),
             $path === '/ventes/primes-reference'      => ep_primes_reference(),
             $path === '/ventes/primes-moyennes'       => ep_primes_moyennes(),
+            $path === '/ventes/grands-prix'           => ep_grands_prix(),
             $path === '/ventes/cross'                 => ep_ventes_cross(),
             $path === '/ventes/affiche.pdf'           => ep_ventes_affiche(),
             $path === '/ventes/explication.pdf'        => ep_ventes_explication_pdf(),
@@ -601,6 +603,8 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ventes/croisees') { return wr_croisees(); }
     if ($method === 'POST' && $path === '/ventes/primes-app') { return wr_primes_app(); }
     if ($method === 'POST' && $path === '/ventes/primes-icone') { return wr_primes_icone(); }
+    if ($method === 'POST' && $path === '/ventes/grands-prix') { return wr_grands_prix(); }
+    if ($method === 'POST' && $path === '/ventes/grands-prix/retirer') { return wr_grands_prix_retirer(); }
     if ($method === 'POST' && $path === '/croisements/combo') { return wr_croisement_combo(); }
     if ($method === 'PATCH' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_patch((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_suppr((int) $m[1]); }

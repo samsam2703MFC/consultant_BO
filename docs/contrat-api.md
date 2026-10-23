@@ -3936,3 +3936,36 @@ CA : l'atteinte du magasin (projetée tant que le mois court) ≥ % et ses heure
 et ses heures. Un cadeau se gagne sans euros. Une catégorie du magasin ne classe que ses vendeuses. Les montants entrent
 dans « Mes primes » (cartes `type: target`, `base`, `duMagasin: true`), le mois clos, les primes du mois de tous (colonne
 « Targets du magasin », `totaux.cibles`), l'enregistrement (`cibles`, payé par le magasin) et le SMS.
+
+### Module Motivation : les tables sous `mot_`, et les grands prix de l'année (23/10/2026, demande de Sam)
+
+**Les tables.** Les données des primes passent de `ceo_app_setting` à des tables du module :
+
+- `mot_reglage` reçoit les réglages, les primes enregistrées et les SMS envoyés ;
+- `mot_cache` reçoit les caches ;
+- `mot_grand_prix` reçoit les grands prix.
+
+La reprise se fait une fois, à la première lecture. Aucune route ne change. Le détail est dans
+`docs/module-motivation.md`.
+
+**`GET /ventes/grands-prix[?shop=3]`** rend :
+
+- `{annee, aujourdhui, shop, shopNom, defis, max, magasins}` ;
+- `liste` : chaque grand prix, `{id, portee, shop, shopNom, defi, defiLib, emo, regle, titre, lot, valeur, payeur,
+  sponsor, sponsorSite, photo, seuil, seuilSorte, du, au, actif}`, plus son classement. Le classement porte `saison`
+  `{etat, part, joursRestants}`, `classement` (les dix premiers : `{rang, id, nom, shop, magasin, valeur, txt,
+  detail}`), `enCourse`, `horsSeuil`, `seuilCourant`, `motif`, `jusqua` et `grave`. Avec `shop`, il porte aussi
+  `ici`, la mieux classée du magasin dans un grand prix de la marque.
+
+**`POST /ventes/grands-prix`** prend `{id?, portee, shop, defi, titre, lot, valeur, payeur, sponsor, sponsorSite,
+photo, seuil, du, au, actif}` et répond `{ok, id}`. Il répond 422 avec `error` si le grand prix ne tient pas. Les
+règles :
+
+- le magasin de l'année est réservé au réseau ;
+- un sponsor doit avoir un nom ;
+- la saison se compte en mois entiers, deux ans au plus ;
+- douze grands prix en cours au plus par étage.
+
+`{id, actif}` seul ne touche que l'interrupteur.
+
+**`POST /ventes/grands-prix/retirer {id}`** retire un grand prix.
