@@ -733,3 +733,32 @@ a.sb-ligne:active{background:var(--s-doux)}
 /* Ce qu'il faut faire, dans la ligne d'une prime (23/10/2026). */
 .pl-how{margin:8px 0 0 44px;font:400 13.5px/1.4 var(--s-police);color:var(--s-texte)}
 .pl-how.dur{color:var(--s-second)}
+
+/* Bats ton record, en trois étapes (23/10/2026) : poser son record, le battre, gagner. */
+.pl-s .et{font-weight:600;color:var(--s-texte)}
+.pl.ok .pl-s .et{color:var(--s-vert)}
+.pl-et{list-style:none;margin:6px 0 4px;padding:0;display:grid;grid-template-columns:repeat(3,1fr)}
+.pl-et li{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;min-width:0}
+.pl-et li + li::before{content:"";position:absolute;top:10px;left:calc(-50% + 14px);right:calc(50% + 14px);height:2px;border-radius:1px;background:var(--s-remplir)}
+.pl-et li.fait + li::before{background:var(--s-vert)}
+.pl-et .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:600 12px/1 var(--s-police);background:var(--s-remplir);color:var(--s-second)}
+.pl-et li.ici .n{background:var(--s-accent);color:#fff}
+.pl-et li.fait .n{background:var(--s-vert);color:#fff}
+.pl-et b{font:600 13px/1.25 var(--s-police);color:var(--s-second);margin-top:3px}
+.pl-et li.ici b,.pl-et li.fait b{color:var(--s-texte)}
+.pl-et em{font:400 12px/1.25 var(--s-police);font-style:normal;color:var(--s-second);white-space:nowrap}
+.pl-et li.ici em{color:var(--s-texte);font-weight:600}
+.pl-et em.ok,.pl-et li.ici em.ok{color:var(--s-vert);font-weight:600}
+.pl-j.plein i,.pl-j.plein .fl{background:var(--s-vert)}
+.pl-et + .pl-n{margin-top:8px}
+/* Le détail d'une ligne, plus compact (23/10/2026) : « à gagner » et « offerte par » dans une seule carte, sur deux lignes. */
+.pl-d .pdm-g{padding:8px 12px;margin-bottom:8px}
+.pl-d .pdm-g b{font-size:15px}
+.pl-d .pdm-g + .pdm-s{margin-top:-8px;border-top:.5px solid var(--s-trait);border-radius:0 0 12px 12px}
+.pl-d .pdm-g:has(+ .pdm-s){border-radius:12px 12px 0 0}
+.pl-d .pdm-s{padding:7px 12px;gap:8px;margin-bottom:8px}
+.pl-d .pdm-s img{width:28px;height:28px}
+.pl-d .pdm-s div{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 4px}
+.pl-d .pdm-s small{display:inline;font:400 13px var(--s-police);letter-spacing:0;text-transform:none;color:var(--s-second)}
+.pl-d .pdm-s b{display:inline;font:600 13px var(--s-police)}
+.pl-d .pdm-s span,.pl-d .pdm-s a{flex-basis:100%}

@@ -616,7 +616,8 @@ function primesBriques(int $emp, string $m, ?array $moi, array $lignes, ?array $
         'ecart' => ($lt !== null && $rec !== null) ? round($lt - $rec, 2) : null,
         'tranches' => $prR['tranches'], 'montant' => $prR['prime'],
         'eurDixieme' => $regR['eurDixieme'], 'maxDixiemes' => $regR['maxDixiemes'], 'minTickets' => VENTE_CROSS_MIN_TICKETS,
-        'assez' => $assezR];
+        // Ses tickets du mois (23/10/2026) : l'app montre ce qu'il en manque pour poser, ou pour faire compter, le record.
+        'tickets' => max($tickets, $tC), 'assez' => $assezR];
 
     // La meilleure vendeuse : le score, le rang dans le magasin et dans le réseau.
     $classables = array_values(array_filter($lignes, static fn ($l) => !empty($l['classable'])));

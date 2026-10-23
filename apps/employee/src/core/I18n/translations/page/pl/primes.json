@@ -305,5 +305,17 @@
   "won_title": "Już zdobyte",
   "won_title_past": "Zdobyte",
   "not_this_month_title": "Nie w tym miesiącu",
-  "not_won_title": "Niezdobyte"
+  "not_won_title": "Niezdobyte",
+  "step_of": "Etap {n}/3",
+  "record_flag": "twój rekord",
+  "d_steps": "Etapy",
+  "step_set": "Ustanów",
+  "step_beat": "Pobij",
+  "step_win": "Wygraj",
+  "aim_short": "celuj",
+  "tenth": "dziesiątka",
+  "step1_line": "Miesiąc z co najmniej {n} paragonami ustanawia twój rekord; pobijesz go od następnego miesiąca.",
+  "step2_line": "Pierwsza dziesiątka wyżej ustanawia nowy rekord, druga płaci",
+  "step2_tickets": "Jeszcze {n} paragonów, by miesiąc się liczył.",
+  "step3_next": "Jeszcze {d} do {e} €."
 }

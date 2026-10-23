@@ -15,6 +15,7 @@
   "plan_pieces_goal": "{n} pièces de plus pour ton objectif.",
   "plan_pieces_shop": "Avec l’équipe : {n} pièces de plus pour l’objectif du magasin.",
   "plan_record_aim": "Sur tes ~{n} prochains tickets, vise {v} articles en moyenne pour passer {a} lignes par ticket.",
+  "plan_record_first": "Ta moyenne du mois deviendra ton record, à battre dès {m}.",
   "plan_record_gap": "+{e} ligne par ticket pour passer {a}.",
   "plan_record_hard": "Il faudrait {v} articles par ticket d’ici la fin du mois : ton record se bat plutôt le mois prochain.",
   "plan_t_croisees": "Ventes croisées",

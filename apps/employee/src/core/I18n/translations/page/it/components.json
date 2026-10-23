@@ -15,6 +15,7 @@
   "plan_pieces_goal": "{n} pezzi in più per il tuo obiettivo.",
   "plan_pieces_shop": "Con la squadra: {n} pezzi in più per l’obiettivo del negozio.",
   "plan_record_aim": "Sui tuoi prossimi ~{n} scontrini, punta a {v} articoli in media per superare {a} righe per scontrino.",
+  "plan_record_first": "La tua media del mese diventerà il tuo record, da battere da {m}.",
   "plan_record_gap": "+{e} righe per scontrino per superare {a}.",
   "plan_record_hard": "Servirebbero {v} articoli per scontrino fino a fine mese: il record si batte piuttosto il mese prossimo.",
   "plan_t_croisees": "Vendite abbinate",

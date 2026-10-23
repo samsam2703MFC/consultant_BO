@@ -305,5 +305,17 @@
   "won_title": "Already won",
   "won_title_past": "Won",
   "not_this_month_title": "Not this month",
-  "not_won_title": "Not won"
+  "not_won_title": "Not won",
+  "step_of": "Step {n}/3",
+  "record_flag": "your record",
+  "d_steps": "The steps",
+  "step_set": "Set",
+  "step_beat": "Beat",
+  "step_win": "Win",
+  "aim_short": "aim",
+  "tenth": "tenth",
+  "step1_line": "A month with at least {n} tickets sets your record; you can beat it from the next month.",
+  "step2_line": "The 1st tenth above sets the new record, the 2nd pays",
+  "step2_tickets": "{n} more tickets for the month to count.",
+  "step3_next": "{d} more for {e} €."
 }
