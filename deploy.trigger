@@ -977,3 +977,4 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T14:10:37Z promotions : seuil et canal sous les noms relus seulement
 2026-10-23T14:36:46Z dashboard : P&L sous le duel, bundles retirés
 2026-10-23T14:41:57Z production : page Validation et suivi retirée, Production ↗ hors du rail
+2026-10-23T14:43:35Z dashboard : vignettes du bas retirées
