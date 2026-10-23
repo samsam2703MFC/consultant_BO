@@ -290,5 +290,14 @@
   "hint_google": "Il manque {n} avis 5★ pour atteindre {s} ★",
   "hint_google_ok": "Le magasin tient {s} ★ : chaque avis 5★ le garde au-dessus",
   "hint_cross": "Encore {n} ventes croisées pour atteindre {s} % : un article de plus sur chaque ticket",
-  "hint_target": "Le magasin doit encore faire {n} € de chiffre ce mois"
+  "hint_target": "Le magasin doit encore faire {n} € de chiffre ce mois",
+  "still_in_play": "Encore en jeu ce mois-ci",
+  "won_so_far": "déjà gagnés",
+  "in_play_in": "En jeu en {m}",
+  "all_won": "Tout ce qui est en jeu est gagné : garde le rythme jusqu’à la fin du mois.",
+  "counters_start": "Tes compteurs démarrent avec tes premiers tickets du mois : chaque vente compte.",
+  "you_won_in": "En {m}, tu as gagné",
+  "hours_left_short": "{h} h de service restantes ce mois-ci",
+  "how_to_get_there": "Comment y arriver",
+  "where_you_are": "Où tu en es"
 }

@@ -290,5 +290,14 @@
   "hint_google": "{n} more 5★ reviews to reach {s} ★",
   "hint_google_ok": "The shop holds {s} ★: every 5★ review keeps it there",
   "hint_cross": "{n} more cross-sales to reach {s} %: one more item on every ticket",
-  "hint_target": "The shop still needs {n} € of sales this month"
+  "hint_target": "The shop still needs {n} € of sales this month",
+  "still_in_play": "Still in play this month",
+  "won_so_far": "already won",
+  "in_play_in": "In play in {m}",
+  "all_won": "Everything in play is won: keep the pace until the end of the month.",
+  "counters_start": "Your counters start with your first tickets of the month: every sale counts.",
+  "you_won_in": "In {m}, you won",
+  "hours_left_short": "{h} h of shifts left this month",
+  "how_to_get_there": "How to get there",
+  "where_you_are": "Where you stand"
 }

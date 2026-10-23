@@ -7004,6 +7004,9 @@ function tplPrimesApp(c, x){
   const tuile = l => `<label title="Déposer une icône — PNG, SVG, WebP ou JPEG, 1 Mo au plus" data-pr-icone style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:var(--radius-md);background:var(--color-background-secondary);border:0.5px ${l.icone ? 'solid' : 'dashed'} var(--color-border-secondary);overflow:hidden;cursor:pointer;vertical-align:middle">${l.icone ? `<img src="${esc(l.icone)}" alt="" style="width:24px;height:24px;object-fit:contain">` : `<span style="font-size:16px;line-height:1">${l.emo}</span>`}<input type="file" accept="image/png,image/svg+xml,image/webp,image/jpeg" ${x.C(l.poserIcone)} style="display:none"></label>${l.icone ? `<button ${x.A(l.retirerIcone)} title="Retirer l’icône (l’emoji revient)" style="border:0;background:transparent;color:var(--color-text-muted);cursor:pointer;font-size:10px;padding:0 var(--spacing-xs);vertical-align:top">✕</button>` : ''}`;
   const nomPrime = (l, nom) => `<span style="display:inline-flex;align-items:center;gap:var(--spacing-sm)">${tuile(l)}${nom}</span>`;
   const P = c.prApp, PR = c.prPromos, MY = c.prMoy;
+  // Deux entrées du rail (23/10/2026) : « Paramètres primes » montre la marque, les promotions et les moyennes ;
+  // « Paramètres primes franchisé », les primes des franchisés seules.
+  const voir = k => (c.prSection === 'franchise') === (k === 'magasins') ? '' : ' hidden';
   // Qui paie la prime : la marque, le magasin ou un sponsor (son nom).
   // Une prime de la marque est payée par la marque ou un sponsor ; celle d'un franchisé, par son magasin (16/10/2026).
   const payeur = l => l.famille === 'magasin' ? `<b>${esc(l.shopNom)}</b><span style="${sm};color:var(--color-text-muted)">payée par le magasin</span>` : `<select ${x.C(l.poserPayeur)} style="${inp(96)};text-align:left">${[['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, t]) => `<option value="${v}"${l.payeur === v ? ' selected' : ''}>${t}</option>`).join('')}</select>${l.payeur === 'sponsor' ? `<br><input value="${esc(l.sponsor)}" placeholder="nom du sponsor" ${x.C(l.poserSponsor)} style="${inp(110)};text-align:left;margin-top:4px">` : ''}`;
@@ -7037,7 +7040,7 @@ function tplPrimesApp(c, x){
   return `
 <div data-screen="primesApp" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
   ${c.prChargement ? `<div style="${carte2};padding:16px 18px;color:var(--color-text-muted)">Lecture des paramètres…</div>` : c.prMotif ? `<div style="${carte2};padding:16px 18px;color:var(--color-primary)">${esc(c.prMotif)}</div>` : `
-  <div style="${carte2};overflow:hidden" data-pr="app">
+  <div style="${carte2};overflow:hidden" data-pr="app"${voir('app')}>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
       <div style="font-family:var(--font-display);font-size:22px">Primes de la marque et des sponsors</div>
       <span style="flex:1"></span>
@@ -7057,7 +7060,7 @@ function tplPrimesApp(c, x){
     </div>
   </div>
 
-  <div style="${carte2};overflow:hidden" data-pr="magasins">
+  <div style="${carte2};overflow:hidden" data-pr="magasins"${voir('magasins')}>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
       <div style="font-family:var(--font-display);font-size:22px">Primes des franchisés</div>
       <span style="flex:1"></span>
@@ -7073,7 +7076,7 @@ function tplPrimesApp(c, x){
     </div>
   </div>
 
-  <div style="${carte2};overflow:hidden" data-pr="promos">
+  <div style="${carte2};overflow:hidden" data-pr="promos"${voir('promos')}>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
       <div style="font-family:var(--font-display);font-size:22px">Promotions du panel</div>
       <span style="font-size:11.5px;color:var(--color-text-muted)">celles du réseau, et celles d’un seul magasin (un franchisé)</span>
@@ -7096,7 +7099,7 @@ function tplPrimesApp(c, x){
     </table></div>`}
   </div>
 
-  <div style="${carte2};overflow:hidden" data-pr="moyennes">
+  <div style="${carte2};overflow:hidden" data-pr="moyennes"${voir('moyennes')}>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
       <div style="font-family:var(--font-display);font-size:22px">Moyennes par magasin</div>
       ${MY.periode ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(MY.periode)} · par mois</span>` : ''}

@@ -290,5 +290,14 @@
   "hint_google": "Brakuje {n} opinii 5★, by osiągnąć {s} ★",
   "hint_google_ok": "Sklep utrzymuje {s} ★: każda opinia 5★ go podtrzymuje",
   "hint_cross": "Jeszcze {n} sprzedaży krzyżowych do {s} %: jeden produkt więcej na każdym paragonie",
-  "hint_target": "Sklep musi jeszcze zrobić {n} € obrotu w tym miesiącu"
+  "hint_target": "Sklep musi jeszcze zrobić {n} € obrotu w tym miesiącu",
+  "still_in_play": "Wciąż do zdobycia w tym miesiącu",
+  "won_so_far": "już zdobyte",
+  "in_play_in": "Do zdobycia: {m}",
+  "all_won": "Wszystko zdobyte: utrzymaj tempo do końca miesiąca.",
+  "counters_start": "Twoje liczniki ruszają z pierwszymi paragonami miesiąca: każda sprzedaż się liczy.",
+  "you_won_in": "W miesiącu {m} zdobyłaś",
+  "hours_left_short": "zostało {h} h zmian w tym miesiącu",
+  "how_to_get_there": "Jak to osiągnąć",
+  "where_you_are": "Gdzie jesteś"
 }

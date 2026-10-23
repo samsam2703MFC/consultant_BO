@@ -1455,9 +1455,14 @@ class App {
         // L'app des employés (demande du 06/10/2026) : horaire, tâches, profil — une application à
         // part (employee/), aux couleurs de la marque ; l'entrée mène à sa connexion.
         ['ext:employee/auth', 'App worker ↗', 0],
-        // Le marketing du franchisé (16/10/2026) : les primes de l'app worker — celles de la marque et des sponsors,
-        // qu'il voit, et celles de son magasin.
-        { sub: 'Marketing franchisé', children: [['primesApp', 'Primes de l’app worker', 0]] }]],
+        // Le module Primes (23/10/2026, Sam) : le rail est le bac à sable du dev, qui prend le module d'ici pour
+        // l'intégrer — les paramètres de la marque (et des sponsors, avec les promotions et les moyennes), ceux
+        // que chaque franchisé pose pour son magasin, et l'écran « Mes primes » de l'app worker. Il remplace
+        // « Marketing franchisé », qui ne tenait que l'écran des primes.
+        { sub: 'Primes · module app worker', children: [
+          ['primesApp', 'Paramètres primes', 0, [], { prSection: 'marque' }],
+          ['primesApp', 'Paramètres primes franchisé', 0, [], { prSection: 'franchise' }],
+          ['ext:employee/primes', 'Mes primes dans l’app ↗', 0]] }]],
         // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
@@ -1476,7 +1481,7 @@ class App {
       // Un enfant peut mener hors du cockpit (« ext: »), couvrir des écrans alias
       // (c[3]) ou poser un état en plus de l'écran (c[4], ex. l'onglet Client mystère).
       const cExt = c => c[0].indexOf('ext:') === 0;
-      const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).every(k => (S[k] || (k === 'sqVue' ? 'tableau' : '')) === c[4][k]));
+      const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).every(k => (S[k] || ({ sqVue: 'tableau', prSection: 'marque' }[k] || '')) === c[4][k]));
       const cGo = c => cExt(c) ? () => window.open(c[0].slice(4), '_blank', 'noopener') : (c[4] ? () => this.setState(Object.assign({ screen: c[0], railOuvert: false }, c[4])) : goTo(c[0]));
       const childActive = it.children.some(cActif);
       const open = (S.navOpen && S.navOpen[it.sub] != null) ? S.navOpen[it.sub] : childActive;
@@ -6142,6 +6147,9 @@ class App {
       return this._prL[cle];
     };
     const d = lire('reglages', '/ventes/primes-reglages');
+    // Deux entrées du rail (23/10/2026) : les primes de la marque (avec les promotions et les moyennes), ou
+    // celles des franchisés seules.
+    common.prSection = S.prSection === 'franchise' ? 'franchise' : 'marque';
     const n = S.prMoyN || 3;
     const moy = lire('moy' + n, '/ventes/primes-moyennes?n=' + n);
     const promos = lire('promos', '/ventes/primes-promos' + (S.prPromosFrais ? '?frais=1' : ''));
@@ -7276,18 +7284,20 @@ class App {
     // 1. Les écrans eux-mêmes, avec leur description.
     const ecrans = [];
     navDef.forEach(g => (g[1] || []).forEach(it => {
-      const push = (id, label, section) => {
+      const push = (id, label, section, etat) => {
         const aide = ((titles || {})[id] || [])[1] || '';
         if (trouve(colle(label, section, aide))) {
           // Une entrée « ext: » vit hors du cockpit : elle s'ouvre dans un
           // onglet, comme depuis le rail. goTo() en faisait un écran inconnu —
           // chercher « Dashboard » ouvrait une page blanche.
+          // Une entrée qui pose un état (Paramètres primes franchisé) le pose aussi d'ici.
           ecrans.push({ titre: label, detail: section,
-            aller: id.indexOf('ext:') === 0 ? () => window.open(id.slice(4), '_blank', 'noopener') : goTo(id) });
+            aller: id.indexOf('ext:') === 0 ? () => window.open(id.slice(4), '_blank', 'noopener')
+              : etat ? () => this.setState(Object.assign({ screen: id, hmHover: null, railOuvert: false }, etat)) : goTo(id) });
         }
       };
       if (Array.isArray(it)) { push(it[0], it[1], g[0]); }
-      else { (it.children || []).forEach(c => push(c[0], c[1], g[0] + ' · ' + it.sub)); }
+      else { (it.children || []).forEach(c => push(c[0], c[1], g[0] + ' · ' + it.sub, c[4])); }
     }));
     // Les écrans tenus en onglets d'une entrée (Scoring, Prix × volume, Dans le temps dans le Catalogue, 18/10/2026) :
     // trouvables par leur nom, sous l'entrée qui les tient — une fois chacun.

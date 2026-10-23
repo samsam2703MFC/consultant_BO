@@ -290,5 +290,14 @@
   "hint_google": "Nog {n} reviews van 5★ om {s} ★ te halen",
   "hint_google_ok": "De winkel houdt {s} ★: elke 5★-review houdt hem erboven",
   "hint_cross": "Nog {n} kruisverkopen om {s} % te halen: één artikel meer op elk ticket",
-  "hint_target": "De winkel moet deze maand nog {n} € omzet maken"
+  "hint_target": "De winkel moet deze maand nog {n} € omzet maken",
+  "still_in_play": "Nog in het spel deze maand",
+  "won_so_far": "al gewonnen",
+  "in_play_in": "In het spel in {m}",
+  "all_won": "Alles in het spel is gewonnen: hou het tempo vast tot het einde van de maand.",
+  "counters_start": "Je tellers starten met je eerste tickets van de maand: elke verkoop telt.",
+  "you_won_in": "In {m} won je",
+  "hours_left_short": "nog {h} u dienst deze maand",
+  "how_to_get_there": "Hoe kom je er",
+  "where_you_are": "Waar je staat"
 }
