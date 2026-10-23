@@ -1011,3 +1011,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-23T19:07Z primes : pages plus compactes (sections, en-tête du magasin, primes de la marque repliées)
 2026-10-23T19:08Z grands prix : les six de la maquette, éteints
 2026-10-23T19:16Z relance : pages des primes compactes et grands prix (le run précédent s'est arrêté sur des marques de conflit, corrigées)
+2026-10-23T19:46Z production : lot A i B (styl wydruków PDF, wzory dokumentów, e-maile w językach klientów)
