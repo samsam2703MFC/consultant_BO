@@ -61,6 +61,9 @@ final class ErpApi
         1 => [['id' => 88, 'portion_fraction' => 0.5, 'is_active' => true], ['id' => 89, 'portion_fraction' => 0.25, 'is_active' => false]], 2 => []];
     public static bool $perdPortion = false;
     public static bool $perdConditions = false;  // un panel qui ignore les champs du canal et du seuil
+    public static ?array $dernierPost = null;
+    public static ?array $champsEnPlus = null;
+    public static ?array $enumCanal = null;      // les valeurs de sales_channel_scope que le panel accepte   // l'essai de la documentation : seuls ces champs non documentés sont gardés
     public static int $suivant = 30;
     public static ?string $formatHeure = null;   // 'H:i' : le panel refuse l'heure des créneaux avec secondes
     public static bool $sansDelete = false;
@@ -79,6 +82,10 @@ final class ErpApi
             }
         }
         if ($m === 'POST' && $path === '/admin/promotions/buy-x-get-y') {
+            self::$dernierPost = $b;
+            if (self::$enumCanal !== null && array_key_exists('sales_channel_scope', $b) && $b['sales_channel_scope'] !== null && !in_array($b['sales_channel_scope'], self::$enumCanal, true)) {
+                return ['code' => 422, 'corps' => null, 'erreur' => 'HTTP 422 : INVALID_PROMOTION_DATA — sales_channel_scope : The selected sales channel scope is invalid.'];
+            }
             if (self::$refus !== null) { return ['code' => 422, 'corps' => null, 'erreur' => self::$refus]; }
             $id = self::$suivant++;
             self::$promos[$id] = self::fiche($id, $b);
@@ -134,6 +141,7 @@ final class ErpApi
     {
         $f = ['id' => $id] + $b;
         if (self::$perdCreneaux) { $f['schedule'] = []; }
+        if (self::$champsEnPlus !== null) { $f = array_filter($f, static fn ($k) => in_array($k, PD_DOCUMENTES['buy-x-get-y'], true) || in_array($k, self::$champsEnPlus, true), ARRAY_FILTER_USE_KEY); }
         if (self::$perdConditions) { $f = array_diff_key($f, array_flip(['min_order_amount', 'minimum_order_value', 'min_ticket_amount', 'sales_channels', 'channels', 'minimum_basket_value'])); }
         if (self::$perdPortion) { foreach (['trigger', 'reward'] as $k) { if (isset($f[$k]['product_ids'])) { $f[$k]['product_ids'] = array_map(static fn ($t) => is_array($t) ? (int) $t['id_product'] : $t, $f[$k]['product_ids']); } } }
         return $f;
@@ -144,6 +152,7 @@ final class ErpApi
 function catalogueCouts(): array { return [6 => ['mat' => 0.50, 'source' => 'panel (products/available)'], 4 => ['mat' => 9.99]]; }
 
 require __DIR__ . '/../src/promos_magasin.php';
+require __DIR__ . '/../src/promos_doc.php';
 require __DIR__ . '/../src/promos_ventes.php';
 
 $ok = 0; $ko = 0;
@@ -459,7 +468,7 @@ verifie('la sonde : rien de nominatif (l’auteur retiré)', !str_contains(json_
 
 echo "Le canal et le seuil d'une promotion (23/10/2026)\n";
 $c0 = pvConditions(['id' => 1, 'is_exclusive' => false, 'is_repeatable' => true, 'priority' => 100]);
-verifie('sans rien : aucune restriction, aucun seuil', $c0['canaux'] === null && $c0['seuil'] === null && $c0['cles'] === ['seuil' => null, 'canal' => null, 'jetons' => []]);
+verifie('sans rien : aucune restriction, aucun seuil', $c0['canaux'] === null && $c0['seuil'] === null && $c0['cles'] === ['seuil' => null, 'canal' => null, 'jetons' => [], 'scalaire' => false]);
 verifie('un seuil sous un nom plausible', pvConditions(['minimum_basket_value' => '15.00'])['seuil'] === 15.0 && pvConditions(['min_order_amount' => 12])['seuil'] === 12.0
     && pvConditions(['threshold_amount' => 9.5])['seuil'] === 9.5 && pvConditions(['minimum_order_value' => 0])['seuil'] === null);
 verifie('les canaux en liste : comptoir seul, webshop seul, les deux', pvConditions(['sales_channels' => ['POS']])['canaux'] === ['comptoir']
@@ -494,7 +503,8 @@ $r = @wr_promos_magasin();
 verifie('sans nom appris : refusée avant tout envoi, le seuil et le canal dits, rien créé au panel', ($r['error'] ?? '') === 'à compléter' && count($r['erreurs'] ?? []) === 2
     && str_contains($r['erreurs'][0], 'seuil') && str_contains($r['erreurs'][1], 'canal') && ErpApi::$promos === [] && ErpApi::$suivant === $n0, json_encode($r, JSON_UNESCAPED_UNICODE));
 $_GET = ['shop' => '4']; $l = ep_promos_magasin_demandes(); $_GET = [];
-verifie('l’assistant sait ce qui s’écrit : ni seuil ni canal', ($l['regles']['conditions'] ?? null) === ['seuil' => false, 'canal' => false], json_encode($l['regles'] ?? null));
+verifie('l’assistant sait ce qui s’écrit : ni seuil ni canal', ($l['regles']['conditions']['seuil'] ?? null) === false && ($l['regles']['conditions']['canal'] ?? null) === false
+    && ($l['regles']['conditions']['noms'] ?? null) === ['seuil' => null, 'canal' => null], json_encode($l['regles'] ?? null));
 verifie('une promotion sans conditions : rien de plus dans le corps', !array_intersect_key(pmPanelCorps(pmPropre($pc('Sans', 1, 2), 4), 'INACTIVE'), array_flip(['min_order_amount', 'minimum_order_value', 'min_ticket_amount', 'sales_channels', 'channels', 'minimum_basket_value'])));
 $GLOBALS['corps'] = $pc('Sans conditions', 64, 66);
 $r = wr_promos_magasin();
@@ -504,12 +514,121 @@ ErpApi::$promos = [40 => ['id' => 40, 'name' => 'Seuil 15 €', 'status' => 'ACT
     'trigger' => ['quantity' => 1, 'product_ids' => [12]], 'reward' => ['quantity' => 1, 'type' => 'FREE', 'value' => null]]];
 ErpApi::$perdConditions = true; $oublie();
 $_GET = ['shop' => '4']; $l = ep_promos_magasin_demandes(); $_GET = [];
-verifie('un seuil relu au panel : l’assistant peut l’écrire, pas le canal', ($l['regles']['conditions'] ?? null) === ['seuil' => true, 'canal' => false], json_encode($l['regles'] ?? null));
+verifie('un seuil relu au panel : l’assistant peut l’écrire, pas le canal', ($l['regles']['conditions']['seuil'] ?? null) === true && ($l['regles']['conditions']['canal'] ?? null) === false, json_encode($l['regles'] ?? null));
 $GLOBALS['corps'] = $pc('Seuil perdu', 68, 70, ['seuil' => 15]);
 $r = wr_promos_magasin();
 verifie('le panel ne reprend pas le seuil : laissée inactive, l’écart dit', ($r['demande']['statut'] ?? '') === 'brouillon' && str_contains((string) $r['panelErreur'], 'le seuil du ticket')
     && (ErpApi::$promos[$r['demande']['panelId']]['status'] ?? '') === 'INACTIVE', json_encode($r, JSON_UNESCAPED_UNICODE));
 ErpApi::$perdConditions = false;
+
+echo "La destination (SHOP, WEBSHOP, BOTH) et le seuil de déclenchement (23/10/2026)\n";
+verifie('la destination en une valeur : comptoir, webshop, les deux', pvConditions(['destination' => 'SHOP'])['canaux'] === ['comptoir']
+    && pvConditions(['destination' => 'WEBSHOP'])['canaux'] === ['webshop'] && pvConditions(['destination' => 'BOTH'])['canaux'] === null
+    && pvConditions(['destinations' => ['SHOP', 'WEBSHOP']])['canaux'] === null);
+$cb = pvConditions(['destination' => 'BOTH']);
+verifie('« BOTH » apprend le nom du champ et son jeton', ($cb['cles']['canal'] ?? null) === 'destination' && ($cb['cles']['scalaire'] ?? null) === true
+    && ($cb['cles']['jetons']['tous'] ?? '') === 'BOTH', json_encode($cb));
+verifie('le seuil de déclenchement', pvConditions(['trigger_amount' => '15.00'])['seuil'] === 15.0 && pvConditions(['min_trigger_amount' => 12])['seuil'] === 12.0
+    && pvConditions(['trigger_threshold' => 9])['seuil'] === 9.0 && pvConditions(['trigger' => ['quantity' => 2]])['seuil'] === null);
+// Le panel porte deux promotions — « destination BOTH, seuil 10 € » et « destination SHOP » : le cockpit écrit sous ces noms et
+// avec ces jetons, une valeur et non une liste.
+ErpApi::$promos = [41 => ['id' => 41, 'name' => 'Seuil 10 €', 'status' => 'ACTIVE', 'promotion_type' => 'BUY_X_GET_Y', 'shop_ids' => [4], 'destination' => 'BOTH',
+    'trigger_amount' => 10, 'trigger' => ['quantity' => 1, 'product_ids' => [12]], 'reward' => ['quantity' => 1, 'type' => 'FREE', 'value' => null]],
+    42 => ['id' => 42, 'name' => 'Au comptoir', 'status' => 'ACTIVE', 'promotion_type' => 'BUY_X_GET_Y', 'shop_ids' => [4], 'destination' => 'SHOP',
+    'trigger' => ['quantity' => 2, 'product_ids' => [12]], 'reward' => ['quantity' => 1, 'type' => 'FREE', 'value' => null]],
+    43 => ['id' => 43, 'name' => 'En ligne', 'status' => 'ACTIVE', 'promotion_type' => 'BUY_X_GET_Y', 'shop_ids' => [4], 'destination' => 'WEBSHOP',
+    'trigger' => ['quantity' => 2, 'product_ids' => [12]], 'reward' => ['quantity' => 1, 'type' => 'FREE', 'value' => null]]];
+$oublie();
+$_GET = ['shop' => '4']; $l = ep_promos_magasin_demandes(); $_GET = [];
+verifie('relus au panel : l’assistant peut écrire le seuil et le canal', ($l['regles']['conditions']['seuil'] ?? null) === true && ($l['regles']['conditions']['comptoir'] ?? null) === true
+    && ($l['regles']['conditions']['webshop'] ?? null) === true, json_encode($l['regles'] ?? null));
+$GLOBALS['corps'] = $pc('Destination', 72, 74, ['canal' => 'webshop', 'seuil' => 25]);
+$r = wr_promos_magasin();
+$F = ErpApi::$promos[$r['demande']['panelId'] ?? 0] ?? [];
+verifie('écrite : destination WEBSHOP, trigger_amount 25, en caisse', ($F['destination'] ?? null) === 'WEBSHOP' && ($F['trigger_amount'] ?? null) === 25.0
+    && ($r['demande']['statut'] ?? '') === 'en_caisse' && ($r['demande']['canaux'] ?? null) === ['webshop'] && ($r['demande']['seuil'] ?? null) === 25.0,
+    json_encode([$F, $r['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
+$oublie();
+$GLOBALS['corps'] = $pc('Destination', 72, 74, ['id' => $r['demande']['id'], 'canal' => 'comptoir']);
+$r2 = wr_promos_magasin();
+$F = ErpApi::$promos[$r['demande']['panelId']] ?? [];
+verifie('le comptoir seul : destination SHOP, le seuil effacé', ($F['destination'] ?? null) === 'SHOP' && array_key_exists('trigger_amount', $F) && $F['trigger_amount'] === null
+    && ($r2['demande']['statut'] ?? '') === 'en_caisse', json_encode([$F, $r2['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
+$oublie();
+$GLOBALS['corps'] = $pc('Destination', 72, 74, ['id' => $r['demande']['id']]);
+$r3 = wr_promos_magasin();
+$F = ErpApi::$promos[$r['demande']['panelId']] ?? [];
+verifie('les deux : destination BOTH', ($F['destination'] ?? null) === 'BOTH' && ($r3['demande']['statut'] ?? '') === 'en_caisse' && $r3['demande']['canaux'] === null,
+    json_encode([$F, $r3['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
+
+echo "La documentation du cockpit et son essai d'écriture (23/10/2026)\n";
+// Le panel garde « destination » et « trigger_amount », rien d'autre hors de sa documentation.
+ErpApi::$champsEnPlus = ['destination', 'trigger_amount']; $oublie(); $avant = array_keys(ErpApi::$promos);
+$X = pdEssai(4);
+verifie('l’essai : une seule création, le seuil et la destination gardés nommés', $X['fait'] && count($X['tentatives']) === 1 && $X['seuilGarde'] === ['trigger_amount']
+    && $X['canalGarde'] === ['destination'] && ($X['tentatives'][0]['garde']['trigger_amount'] ?? null) === 11.07, json_encode($X, JSON_UNESCAPED_UNICODE));
+verifie('l’essai : la promotion de test est supprimée, rien ne reste', $X['restees'] === [] && array_keys(ErpApi::$promos) === $avant
+    && in_array('DELETE /admin/promotions/buy-x-get-y/' . $X['tentatives'][0]['cree'], ErpApi::$appels, true));
+$P = ErpApi::$dernierPost ?? [];
+verifie('l’essai : brouillon, sur bon seulement, daté de 2020, nommé à supprimer, le magasin seul', ($P['status'] ?? '') === 'DRAFT' && ($P['activation_mode'] ?? '') === 'VOUCHER_ONLY'
+    && str_starts_with((string) ($P['valid_to'] ?? ''), '2020-01-01') && str_contains((string) ($P['name'] ?? ''), 'à supprimer') && ($P['shop_ids'] ?? null) === [4]
+    && ($P['shop_scope_type'] ?? '') === 'SELECTED_SHOPS', json_encode($P, JSON_UNESCAPED_UNICODE));
+// Un panel qui refuse : quatre tentatives, aucune création.
+ErpApi::$refus = 'HTTP 422 : INVALID_PROMOTION_DATA — destination : unknown field'; $avant = array_keys(ErpApi::$promos);
+$X = pdEssai(4);
+verifie('refusé : seuil seul, canal seul, témoin, rien de créé', $X['fait'] && count($X['tentatives']) === 4 && $X['seuilGarde'] === [] && $X['canalGarde'] === []
+    && array_keys(ErpApi::$promos) === $avant && str_contains((string) $X['tentatives'][0]['erreur'], 'unknown field'), json_encode($X, JSON_UNESCAPED_UNICODE));
+ErpApi::$refus = null; ErpApi::$champsEnPlus = null;
+$_GET = ['shop' => '4', 'format' => 'json']; $D = ep_promos_documentation(); $_GET = [];
+verifie('la page en JSON : cinq sortes, les champs de buy-x-get-y avec leur statut', count($D['sortes']) === 5 && $D['sortes']['buy-x-get-y']['champs'] !== []
+    && in_array('documenté', array_column($D['sortes']['buy-x-get-y']['champs'], 'statut'), true), json_encode(array_map(static fn ($s) => [$s['code'], count($s['champs'])], $D['sortes'])));
+$html = pdHtml($D + ['essai' => $X]);
+if (getenv('PD_HTML')) { file_put_contents(getenv('PD_HTML'), $html); }   // pour regarder la page
+verifie('la page en HTML : résumé, essai, tableaux', str_contains($html, 'En bref') && str_contains($html, 'Essai d’écriture') && str_contains($html, '<table>') && !str_contains($html, 'Warning'));
+
+echo "Les champs relus au panel le 23/10/2026 : minimum_receipt_gross, sales_channel_scope\n";
+$c = pvConditions(['minimum_receipt_gross' => null, 'sales_channel_scope' => 'BOTH']);
+verifie('vides ou « BOTH », leurs noms s’apprennent', $c['seuil'] === null && $c['canaux'] === null && $c['cles']['seuil'] === 'minimum_receipt_gross'
+    && $c['cles']['canal'] === 'sales_channel_scope' && $c['cles']['scalaire'] === true && ($c['cles']['jetons']['tous'] ?? '') === 'BOTH', json_encode($c));
+verifie('un seuil rempli se lit', pvConditions(['minimum_receipt_gross' => '15.00'])['seuil'] === 15.0);
+$fx0 = static fn (int $id) => ['id' => $id, 'name' => 'Promo ' . $id, 'status' => 'ACTIVE', 'promotion_type' => 'BUY_X_GET_Y', 'shop_ids' => [4],
+    'minimum_receipt_gross' => null, 'sales_channel_scope' => 'BOTH', 'trigger' => ['quantity' => 2, 'product_ids' => [12]], 'reward' => ['quantity' => 1, 'type' => 'FREE', 'value' => null]];
+$fx = static fn (int $id, array $plus = []) => array_replace($fx0($id), $plus);
+ErpApi::$promos = [51 => $fx(51), 52 => $fx(52)]; $oublie();
+$_GET = ['shop' => '4']; $l = ep_promos_magasin_demandes(); $_GET = [];
+$C = $l['regles']['conditions'] ?? [];
+verifie('l’assistant : le seuil s’écrit, le canal attend ses valeurs', ($C['seuil'] ?? null) === true && ($C['canal'] ?? null) === false && ($C['comptoir'] ?? null) === false
+    && ($C['webshop'] ?? null) === false && ($C['noms'] ?? null) === ['seuil' => 'minimum_receipt_gross', 'canal' => 'sales_channel_scope'], json_encode($C));
+$GLOBALS['corps'] = $pc('Seuil reçu', 76, 78, ['seuil' => 20]);
+$r = wr_promos_magasin();
+$F = ErpApi::$promos[$r['demande']['panelId'] ?? 0] ?? [];
+verifie('un seuil s’écrit sous minimum_receipt_gross, relu, en caisse', ($F['minimum_receipt_gross'] ?? null) === 20.0 && !isset($F['trigger_amount'])
+    && ($r['demande']['statut'] ?? '') === 'en_caisse' && ($r['demande']['seuil'] ?? null) === 20.0, json_encode([$F, $r['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
+$oublie(); $n0 = ErpApi::$suivant;
+$GLOBALS['corps'] = $pc('Webshop inconnu', 76, 78, ['canal' => 'webshop']);
+$r = @wr_promos_magasin();
+verifie('« webshop seulement » sans sa valeur : refusé, le champ nommé, rien créé', ($r['error'] ?? '') === 'à compléter' && str_contains(implode(' ', $r['erreurs'] ?? []), 'sales_channel_scope')
+    && ErpApi::$suivant === $n0, json_encode($r, JSON_UNESCAPED_UNICODE));
+// Une promotion « WEBSHOP » au panel : sa valeur se relit, le webshop s'écrit ; le comptoir attend toujours.
+ErpApi::$promos[53] = $fx(53, ['sales_channel_scope' => 'WEBSHOP']); $oublie();
+$_GET = ['shop' => '4']; $l = ep_promos_magasin_demandes(); $_GET = [];
+verifie('« WEBSHOP » relu : le webshop s’écrit, pas encore le comptoir', ($l['regles']['conditions']['webshop'] ?? null) === true && ($l['regles']['conditions']['comptoir'] ?? null) === false, json_encode($l['regles']['conditions'] ?? null));
+$GLOBALS['corps'] = $pc('Webshop connu', 76, 78, ['canal' => 'webshop']);
+$r = wr_promos_magasin();
+$F = ErpApi::$promos[$r['demande']['panelId'] ?? 0] ?? [];
+verifie('écrite : sales_channel_scope = WEBSHOP, en caisse', ($F['sales_channel_scope'] ?? null) === 'WEBSHOP' && ($r['demande']['statut'] ?? '') === 'en_caisse'
+    && ($r['demande']['canaux'] ?? null) === ['webshop'], json_encode([$F, $r['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
+// L'essai : le panel garde minimum_receipt_gross et sales_channel_scope, n'accepte que BOTH, POS, WEBSHOP.
+// (Le panel numérote ses promotions : le double repart au-delà des numéros posés à la main.)
+ErpApi::$suivant = max(array_keys(ErpApi::$promos)) + 1;
+ErpApi::$champsEnPlus = ['minimum_receipt_gross', 'sales_channel_scope']; ErpApi::$enumCanal = ['BOTH', 'POS', 'WEBSHOP']; $avant = array_keys(ErpApi::$promos);
+$X = pdEssai(4);
+verifie('l’essai : le seuil et le canal gardés, et leurs valeurs (WEBSHOP, POS)', $X['seuilGarde'] === ['minimum_receipt_gross'] && $X['canalGarde'] === ['sales_channel_scope']
+    && ($X['jetons'] ?? null) === ['webshop' => 'WEBSHOP', 'comptoir' => 'POS'] && $X['restees'] === [] && array_keys(ErpApi::$promos) === $avant,
+    json_encode(array_map(static fn ($t) => [$t['tentative'], $t['erreur'], $t['garde']], $X['tentatives']), JSON_UNESCAPED_UNICODE));
+ErpApi::$champsEnPlus = null; ErpApi::$enumCanal = null;
+$html = pdHtml(['lu' => 'x', 'shop' => 4, 'sortes' => [], 'listeGenerale' => ['code' => 404, 'n' => 0], 'appris' => pmChampsAppris(), 'essai' => $X]);
+verifie('la page dit les valeurs du canal gardées', str_contains($html, 'Valeurs de <code>sales_channel_scope</code> gardées') && str_contains($html, 'Revenu autrement'));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

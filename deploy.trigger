@@ -993,3 +993,6 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-23T16:38:22Z primes : bats ton record en trois étapes (poser, battre, gagner)
 2026-10-23T16:43:41Z rail : menu Application employé
 2026-10-23T16:46:20Z production : audit lot 1 (ceny, magazyn, marże, trasy, karta surowca)
+2026-10-23T16:49:30Z promotions : destination et seuil de déclenchement reconnus
+2026-10-23T17:05:41Z promotions : sonde complète et documentation
+2026-10-23T17:24:56Z promotions : seuil minimum_receipt_gross, canal sales_channel_scope
