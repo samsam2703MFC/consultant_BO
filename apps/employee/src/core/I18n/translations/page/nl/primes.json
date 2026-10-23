@@ -298,8 +298,12 @@
   "counters_start": "Je tellers starten met je eerste tickets van de maand: elke verkoop telt.",
   "you_won_in": "In {m} won je",
   "hours_left_short": "nog {h} u dienst deze maand",
-  "how_to_get_there": "Hoe kom je er",
-  "where_you_are": "Waar je staat",
   "d_weighted_hour": "Je gewogen omzet per uur",
-  "d_revenue_hour_real": "Je echte omzet per uur"
+  "d_revenue_hour_real": "Je echte omzet per uur",
+  "your_bonuses": "Je premies",
+  "to_chase": "Nog te halen",
+  "won_title": "Al gewonnen",
+  "won_title_past": "Gewonnen",
+  "not_this_month_title": "Niet deze maand",
+  "not_won_title": "Niet gewonnen"
 }

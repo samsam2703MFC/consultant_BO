@@ -298,8 +298,12 @@
   "counters_start": "I tuoi contatori partono con i primi scontrini del mese: ogni vendita conta.",
   "you_won_in": "A {m} hai vinto",
   "hours_left_short": "{h} h di turno rimaste questo mese",
-  "how_to_get_there": "Come arrivarci",
-  "where_you_are": "A che punto sei",
   "d_weighted_hour": "Il tuo incasso orario ponderato",
-  "d_revenue_hour_real": "Il tuo incasso orario reale"
+  "d_revenue_hour_real": "Il tuo incasso orario reale",
+  "your_bonuses": "I tuoi premi",
+  "to_chase": "Da conquistare",
+  "won_title": "Già vinti",
+  "won_title_past": "Vinti",
+  "not_this_month_title": "Non questo mese",
+  "not_won_title": "Non vinti"
 }
