@@ -7294,11 +7294,7 @@ function tplPrimesApp(c, x){
           ${v.cases.map(caseEq).join('')}
           <td style="padding:11px 16px;border-top:${filet};text-align:right;vertical-align:top;font:600 14px/1.3 ${sf};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(v.total)}</td></tr>`).join('')}</tbody>
       </table></div></div>
-<<<<<<< HEAD
       <div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">✓ gagnée · <span style="color:var(--color-primary)">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin vers l’objectif · un clic sur un en-tête trie${EQ.quand ? ' · lu à ' + esc(EQ.quand) : ''}</div>`;
-=======
-      <div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">✓ gagnée · ✓ 2 / 5 sous une prime : deux vendeuses sur cinq l’ont gagnée · <span style="color:var(--color-primary)">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin fait vers l’objectif · toucher un en-tête trie, un 2e toucher inverse${EQ.enCours ? ' · l’objectif du magasin se lit sur la projection du mois' : ''}${EQ.quand ? ' · lu à ' + esc(EQ.quand) : ''}.</div>`;
->>>>>>> origin/claude/affectionate-pasteur-9cghlf
     const equipe = `<section data-pr="fr-equipe">
       ${tete('Où en sont tes vendeuses', 'Ce que chacune voit dans Mes primes, prime par prime.',
         `<div style="display:flex;gap:8px;flex-wrap:wrap">${segm(EQ.filtres)}${segm(EQ.mois)}</div>`)}
