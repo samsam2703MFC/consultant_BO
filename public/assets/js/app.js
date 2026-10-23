@@ -7154,7 +7154,7 @@ class App {
     common.pmFiltres = FILTRES.map(([k, n]) => ({ nom: n, n: toutes.filter(d => !k || d.statut === k).length, on: f === k, choisir: () => this.setState({ pmFiltre: k }) }));
     common.pmMsg = L.msg || '';
     common.pmFermerMsg = () => { L.msg = ''; this.setState({}); };
-    common.pmRegles = 'Lues au panel, rien n’est gardé au cockpit' + (L.d.erreurPanel ? ' (' + L.d.erreurPanel + ')' : '') + ' : les promotions du panel réservées à un seul magasin. Règles imposées au magasin : une date de fin, ' + ((R.joursMax || 366) >= 365 ? 'un an' : R.joursMax + ' jours') + ' au plus · coefficient du lot aux prix et coûts d’aujourd’hui, repère ×' + (R.coefMin || 2) + ' (en rouge en dessous, il ne bloque pas). Le magasin les écrit dans son dashboard : créées inactives, relues, puis activées.';
+    common.pmRegles = 'Lues au panel, rien n’est gardé au cockpit' + (L.d.erreurPanel ? ' (' + L.d.erreurPanel + ')' : '') + ' : les promotions du panel réservées à un seul magasin. Règles imposées au magasin : une date de fin (« Tout le temps » : depuis 99 ans, pour 99 ans) · coefficient du lot aux prix et coûts d’aujourd’hui, repère ×' + (R.coefMin || 2) + ' (en rouge en dessous, il ne bloque pas). Le magasin les écrit dans son dashboard : créées inactives, relues, puis activées.';
     common.pmLignes = toutes.filter(d => !f || d.statut === f).map(d => {
       const e = ETAT[d.statut] || [d.statut, 'b'], c = d.coef || {};
       return { nom: d.nom || 'Sans nom', regle: regle(d), magasins: (d.shops && d.shops.length ? d.shops : [d.shop]).map(nomMag).join(', '),

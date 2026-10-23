@@ -19,9 +19,10 @@ declare(strict_types=1);
  * `shops` vaut toujours [shop] (la forme du périmètre « magasins sélectionnés » du panel). Les règles se lisent encore
  * magasin par magasin sur `shops`, pour d'anciennes demandes à plusieurs magasins.
  *
- * Deux règles du magasin, vérifiées ici (le navigateur les montre, le serveur les impose) : une date de fin, un an au
- * plus (14 jours jusqu'au 18/10/2026 : une promotion se fait aussi à la semaine, au mois, à l'année). Plus de limite au nombre de promotions du magasin en même temps (23/10/2026, Sam ; deux au plus avant). Le COEFFICIENT DU LOT (prix payé
- * HT ÷ coût matière, le cas le plus serré des produits visés, dans chaque magasin couvert — prix et coûts de recette du
+ * La règle du magasin, vérifiée ici (le navigateur la montre, le serveur l'impose) : une date de fin. Plus de durée
+ * maximale (23/10/2026, Sam : « Tout le temps », depuis 99 ans pour 99 ans ; un an au plus avant, 14 jours jusqu'au
+ * 18/10/2026), plus de limite au nombre de promotions du magasin en même temps (23/10/2026 ; deux au plus avant).
+ * Le COEFFICIENT DU LOT (prix payé HT ÷ coût matière, le cas le plus serré des produits visés, dans chaque magasin couvert — prix et coûts de recette du
  * magasin, sinon du réseau, pmProduits) se calcule et s'affiche, ×2 en repère ; il ne bloque plus l'envoi (18/10/2026).
  *
  * LE PANEL SEUL (18/10/2026, demande de Sam : « API seule, plus de copie ») : une promotion du magasin n'existe qu'au
@@ -33,7 +34,6 @@ declare(strict_types=1);
  */
 
 const PM_COEF_MIN = 2.0;
-const PM_JOURS_MAX = 366;   // un an au plus, une année bissextile comprise (18/10/2026 ; 14 jours avant)
 const PM_TYPES = ['FREE', 'FIXED_PRICE', 'FIXED_AMOUNT_DISCOUNT', 'PERCENTAGE_DISCOUNT'];
 /**
  * Les variantes qu'un côté peut viser (17/10/2026) : la portion du panel (`portion_scope` de ses cibles, relu sur « 4
@@ -416,7 +416,6 @@ function pmErreurs(array $d, ?array $coef, string $maintenant): array
     if ($d['au'] === null) { $e[] = 'Donnez la date de fin : au magasin, une promotion a toujours une fin.'; }
     if ($d['du'] !== null && $d['au'] !== null) {
         if ($d['au'] <= $d['du']) { $e[] = 'La fin vient après le début.'; }
-        elseif (($nj = (int) round((strtotime(substr($d['au'], 0, 10)) - strtotime(substr($d['du'], 0, 10))) / 86400) + 1) > PM_JOURS_MAX) { $e[] = 'Période de ' . $nj . ' jours : ' . (PM_JOURS_MAX >= 365 ? 'un an' : PM_JOURS_MAX . ' jours') . ' au plus, raccourcissez-la.'; }
         if ($d['au'] <= $maintenant) { $e[] = 'La période est déjà passée.'; }
     }
     // Le coefficient du lot ne bloque plus (18/10/2026) : il se calcule, s'affiche (en rouge sous ×2), et la promotion part.
@@ -1174,7 +1173,7 @@ function ep_promos_magasin_demandes(): array
     $ts = (int) ($R0['ts'] ?? 0);
     return ['shop' => (string) $shop, 'demandes' => $demandes, 'panel' => $panel, 'erreurPanel' => $err, 'source' => 'panel',
         'lu' => $ts > 0 ? date('H:i', $ts) : null, 'luTs' => $ts, 'luJour' => $ts > 0 ? date('Y-m-d', $ts) : null,
-        'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX]];
+        'regles' => ['coefMin' => PM_COEF_MIN]];
 }
 
 /**
@@ -1284,5 +1283,5 @@ function ep_promos_magasin_marque(): array
     $noms = [];
     foreach ($l as $d) { $noms[(string) $d['shop']] ??= pmNomShop($d['shop']); }
     return ['demandes' => $l, 'noms' => $noms, 'erreurPanel' => $R['erreur'], 'source' => 'panel',
-        'regles' => ['coefMin' => PM_COEF_MIN, 'joursMax' => PM_JOURS_MAX]];
+        'regles' => ['coefMin' => PM_COEF_MIN]];
 }
