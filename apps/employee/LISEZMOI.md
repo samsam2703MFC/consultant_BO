@@ -1,8 +1,8 @@
 # L'app employés (« App worker »)
 
 L'application mobile des employés du réseau (TFB-Employee, livrée en zip le 06/10/2026), servie par
-le cockpit à l'adresse `/consulant_bo/employee/`, et liée depuis le rail du cockpit, ERP franchisé ›
-**App worker ↗**, vers sa page de connexion. Horaire, primes, profil ; les tâches à faire (avec
+le cockpit à l'adresse `/consulant_bo/employee/`, et liée depuis le rail du cockpit, menu **Application
+employé** (avec la page admin et la page franchisé des primes) › **Application ↗**, vers sa page de connexion. Horaire, primes, profil ; les tâches à faire (avec
 photo) s'ouvrent depuis l'Accueil.
 
 ## Où vit quoi

@@ -1443,7 +1443,7 @@ class App {
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
-      // en attendant — la prospection autour du magasin, sa tablette, l'app worker.
+      // en attendant — la prospection autour du magasin, sa tablette.
       // Sa lettre est partie avec le marketing (Marque & marketing → Canaux).
       ['ERP franchisé', [
         // La liste de démarchage vit dans son application (prospection/, 16/10/2026) :
@@ -1451,33 +1451,32 @@ class App {
         ['ext:prospection/', 'Prospection ↗', 0],
         // Le book des vendeuses : une application à part (tablette/) — l'écran
         // donne ses liens, un aperçu et l'état des données que le BO lui sert.
-        ['tablette', 'Tablette vendeuses', 0],
-        // L'app des employés (demande du 06/10/2026) : horaire, tâches, profil — une application à
-        // part (employee/), aux couleurs de la marque ; l'entrée mène à sa connexion.
-        ['ext:employee/auth', 'App worker ↗', 0],
-        // Le marketing du franchisé (16/10/2026) : les primes de l'app worker — celles de la marque et des sponsors,
-        // qu'il voit, et celles de son magasin.
-        { sub: 'Marketing franchisé', children: [['primesApp', 'Primes de l’app worker', 0]] }]],
+        ['tablette', 'Tablette vendeuses', 0]]],
+      // L'application employé (23/10/2026, Sam) : le rail est le bac à sable du dev, qui prend d'ici les trois
+      // pièces pour les intégrer à l'ERP — la page admin (les primes de la marque et des sponsors, les promotions,
+      // les moyennes), la page du franchisé (les primes qu'il pose pour son magasin) et l'application elle-même
+      // (employee/ : horaire, tâches, primes, profil ; l'entrée mène à sa connexion). Remplace « App worker ↗ »
+      // et le sous-menu « Primes · module app worker » d'ERP franchisé.
+      ['Application employé', [
+        ['primesApp', 'Page admin', 0, [], { prSection: 'marque' }],
+        ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise' }],
+        ['ext:employee/auth', 'Application ↗', 0]]],
         // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
         ['journal', 'Journal & diagnostic', 0, ['usageConsole', 'diagnostic']]]]];
     const navSt = (active, indent) => 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:none;cursor:pointer;font-family:var(--font-ui);font-size:' + (indent ? '12.5px' : '13px') + ';padding:' + (indent ? '7px 10px 7px 24px' : '8px 10px') + ';border-radius:8px;font-weight:300;' + (active ? 'background:rgba(141,29,44,0.08);color:var(--color-primary);font-weight:500' : 'background:transparent;color:var(--color-text' + (indent ? '-muted' : '') + ')');
     const sumBadge = arr => arr.reduce((a, c) => a + (c[2] || 0), 0);
+    // Une entrée peut mener hors du cockpit (« ext: », dans un onglet à part — la page tablette n'est pas un
+    // écran de la console, elle vit à côté), couvrir des écrans alias (c[3]) ou poser un état en plus de
+    // l'écran (c[4], ex. l'onglet Client mystère, la page admin ou franchisé de l'application employé).
+    const cExt = c => c[0].indexOf('ext:') === 0;
+    const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).every(k => (S[k] || ({ sqVue: 'tableau', prSection: 'marque' }[k] || '')) === c[4][k]));
+    const cGo = c => cExt(c) ? () => window.open(c[0].slice(4), '_blank', 'noopener') : (c[4] ? () => this.setState(Object.assign({ screen: c[0], railOuvert: false }, c[4])) : goTo(c[0]));
     common.nav = navDef.map(g => ({ titre: g[0], items: g[1].map(it => {
       if (Array.isArray(it)) {
-        // « ext: » mène hors du cockpit, dans un onglet à part — la page
-        // tablette n'est pas un écran de la console, elle vit à côté.
-        const ext = it[0].indexOf('ext:') === 0;
-        return { type: 'leaf', label: it[1], badge: it[2] || false,
-          go: ext ? () => window.open(it[0].slice(4), '_blank', 'noopener') : goTo(it[0]),
-          st: navSt(!ext && (S.screen === it[0] || (it[3] || []).indexOf(S.screen) >= 0), false) };
+        return { type: 'leaf', label: it[1], badge: it[2] || false, go: cGo(it), st: navSt(cActif(it), false) };
       }
-      // Un enfant peut mener hors du cockpit (« ext: »), couvrir des écrans alias
-      // (c[3]) ou poser un état en plus de l'écran (c[4], ex. l'onglet Client mystère).
-      const cExt = c => c[0].indexOf('ext:') === 0;
-      const cActif = c => !cExt(c) && (S.screen === c[0] || (c[3] || []).indexOf(S.screen) >= 0) && (!c[4] || Object.keys(c[4]).every(k => (S[k] || (k === 'sqVue' ? 'tableau' : '')) === c[4][k]));
-      const cGo = c => cExt(c) ? () => window.open(c[0].slice(4), '_blank', 'noopener') : (c[4] ? () => this.setState(Object.assign({ screen: c[0], railOuvert: false }, c[4])) : goTo(c[0]));
       const childActive = it.children.some(cActif);
       const open = (S.navOpen && S.navOpen[it.sub] != null) ? S.navOpen[it.sub] : childActive;
       return { type: 'sub', label: it.sub, open, chevron: open ? '▾' : '▸',
@@ -6142,6 +6141,9 @@ class App {
       return this._prL[cle];
     };
     const d = lire('reglages', '/ventes/primes-reglages');
+    // Deux entrées du rail (23/10/2026) : les primes de la marque (avec les promotions et les moyennes), ou
+    // celles des franchisés seules.
+    common.prSection = S.prSection === 'franchise' ? 'franchise' : 'marque';
     const n = S.prMoyN || 3;
     const moy = lire('moy' + n, '/ventes/primes-moyennes?n=' + n);
     const promos = lire('promos', '/ventes/primes-promos' + (S.prPromosFrais ? '?frais=1' : ''));
@@ -7276,18 +7278,20 @@ class App {
     // 1. Les écrans eux-mêmes, avec leur description.
     const ecrans = [];
     navDef.forEach(g => (g[1] || []).forEach(it => {
-      const push = (id, label, section) => {
+      const push = (id, label, section, etat) => {
         const aide = ((titles || {})[id] || [])[1] || '';
         if (trouve(colle(label, section, aide))) {
           // Une entrée « ext: » vit hors du cockpit : elle s'ouvre dans un
           // onglet, comme depuis le rail. goTo() en faisait un écran inconnu —
           // chercher « Dashboard » ouvrait une page blanche.
+          // Une entrée qui pose un état (Paramètres primes franchisé) le pose aussi d'ici.
           ecrans.push({ titre: label, detail: section,
-            aller: id.indexOf('ext:') === 0 ? () => window.open(id.slice(4), '_blank', 'noopener') : goTo(id) });
+            aller: id.indexOf('ext:') === 0 ? () => window.open(id.slice(4), '_blank', 'noopener')
+              : etat ? () => this.setState(Object.assign({ screen: id, hmHover: null, railOuvert: false }, etat)) : goTo(id) });
         }
       };
       if (Array.isArray(it)) { push(it[0], it[1], g[0]); }
-      else { (it.children || []).forEach(c => push(c[0], c[1], g[0] + ' · ' + it.sub)); }
+      else { (it.children || []).forEach(c => push(c[0], c[1], g[0] + ' · ' + it.sub, c[4])); }
     }));
     // Les écrans tenus en onglets d'une entrée (Scoring, Prix × volume, Dans le temps dans le Catalogue, 18/10/2026) :
     // trouvables par leur nom, sous l'entrée qui les tient — une fois chacun.
@@ -8931,13 +8935,31 @@ class App {
     const pct = v => dc(v, 1) + ' %';
     const etendue = l => l.length ? nomMois(l[0]) + ' → ' + nomMois(l[l.length - 1]) : '';
     const xpN1 = L.googleN1Des ? neutre('N-1 : ' + moisAn(L.googleN1Des)) : neutre('pas de N-1');
+    // La Récurrence (23/10/2026) : le taux de retour des clients PWA — tant que la période n'est pas entièrement
+    // relevée, la case dit où en est la lecture plutôt qu'un taux sur une partie des jours.
+    const pl = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
+    const casRec = x => {
+      if (!x) { return { v: '—', mu: true, n1: 'pas encore relevé' }; }
+      if (!x.complet) { return { v: '—', mu: true, n1: 'relevé en cours', tags: x.jours ? ['tickets lus : ' + x.joursLus + ' / ' + x.jours + ' jours'] : [] }; }
+      // Le taux de tous les clients identifiés en caisse (hors pro), puis celui des seuls clients PWA (23/10/2026).
+      const p = x.pwa || {};
+      const lignePwa = 'PWA : ' + (p.clients ? dc(p.v, 0) + ' % (' + p.revenus + ' / ' + p.clients + ')' : (x.inconnus ? 'aucun client parmi les fiches lues' : 'aucun client'));
+      if (!x.clients) { return { v: '—', mu: true, n1: 'aucun client identifié en caisse' }; }
+      const tags = [];
+      if (x.n1 != null) { tags.push('N-1 ' + dc(x.n1, 0) + ' %'); }
+      if (x.partTickets != null) { tags.push(dc(x.partTickets, 1) + ' % des tickets'); }
+      tags.push(lignePwa);
+      if (x.inconnus) { tags.push(pl(x.inconnus, 'fiche') + ' à lire'); }
+      return { v: dc(x.v, 0) + ' %', pas: x.niveau, n1: x.revenus + ' / ' + pl(x.clients, 'client') + ' identifié' + (x.clients > 1 ? 's' : ''), puce: x.n1 != null ? puce(x.delta, 1, ' pt', true) : neutre('pas de N-1'), tags };
+    };
 
     const colonnes = (L.leviers || []).map(l => ({ cle: l.cle, nom: l.nom, couleur: l.couleur, vide: l.vide,
-      mesure: l.vide ? 'à définir' : (l.cle === 'trafic' ? (cumul ? 'clients' : 'clients par jour') : (l.cle === 'xp' ? 'note Google · avis' : l.mesureMois)) }));
+      mesure: l.vide ? 'à définir' : (l.cle === 'trafic' ? (cumul ? 'clients' : 'clients par jour') : (l.cle === 'xp' ? 'note Google · avis' : (l.cle === 'recurrence' ? 'clients identifiés revenus' : l.mesureMois))) }));
     const COUTS = ['food', 'labour', 'overhead'];
     const NOM_COUT = { food: 'coût matière', labour: 'main-d’œuvre', overhead: 'frais généraux' };
 
     const celluleMag = (g, cle) => {
+      if (cle === 'recurrence') { return casRec(((cumul ? g.cumul : g.mois) || {}).recurrence); }
       const ouvLib = g.ouverture ? 'ouvert en ' + moisAn(g.ouverture, true) : 'pas de N-1';
       if (cle === 'xp') {
         const x = (cumul ? g.cumul : g.mois).xp || {};
@@ -8980,6 +9002,7 @@ class App {
     const R = cumul ? L.reseau.cumul : L.reseau.mois;
     const nMag = L.magasins.length;
     const celluleRes = cle => {
+      if (cle === 'recurrence') { return casRec(R.recurrence); }
       const x = R[cle] || {};
       if (cle === 'xp') { return x.v == null ? { v: '—', mu: true, n1: 'pas de relevé ce mois-là' } : { v: dc(x.v, 2) + ' ★', pas: x.niveau, n1: nf(x.avis || 0) + ' avis', puce: xpN1 }; }
       if (x.v == null) { return { v: '—', mu: true }; }
@@ -9028,6 +9051,24 @@ class App {
     if (hors.length) { notes.push({ lead: 'Food cost :', txt: (hors.length > 1 ? hors.length + ' mois hors norme' : 'un mois hors norme') + ' dans le P&L du panel, à vérifier : ' + hors.join(', ') + '.' }); }
     notes.push({ lead: 'Expérience client', txt: '= la note Google de la fiche' + (L.googleN1Des ? ' ; elle se relève chaque mois, le premier N-1 viendra en ' + moisAn(L.googleN1Des, true) + '.' : ' ; pas encore de relevé mensuel, donc pas de N-1.') });
     if (colonnes.some(c => c.vide)) { notes.push({ lead: 'Récurrence :', txt: 'laissée vide pour l’instant — la colonne attend sa mesure.' }); }
+    else if (colonnes.some(c => c.cle === 'recurrence')) {
+      const rr = R.recurrence;
+      const rpw = (rr && rr.pwa) || {};
+      notes.push({ lead: 'Récurrence', txt: '= le taux de retour des clients identifiés en caisse : parmi les clients rattachés à leurs tickets (hors pro) sur la période, la part venus au moins deux jours différents. En dessous, le même taux pour les seuls clients de l’app (compte PWA sur leur fiche du panel).'
+        + (rr && rr.complet && rr.clients ? ' Au réseau : ' + rr.revenus + ' sur ' + pl(rr.clients, 'client') + (rr.partTickets != null ? ', ' + dc(rr.partTickets, 1) + ' % des tickets' : '') + ' ; clients PWA : ' + (rpw.clients ? rpw.revenus + ' sur ' + rpw.clients : 'aucun identifié en caisse') + '.' : '') });
+      // Qui sont les clients identifiés en caisse : la répartition dit pourquoi le taux porte sur peu de clients, ou sur aucun.
+      const rp = rr && rr.repartition;
+      if (rp && rr.clients) {
+        const can = Object.entries(rp.canaux || {}).slice(0, 4).map(([k, n]) => k + ' ' + n).join(', ');
+        notes.push({ lead: 'Clients identifiés en caisse' + (cumul ? '' : ' ce mois') + ' (hors pro) :', txt: rr.clients + ' au réseau — ' + (rpw.clients || 0) + ' avec un compte PWA, ' + rp.sansApp + ' sans app'
+          + (rp.statutInconnu ? ', ' + rp.statutInconnu + ' sans statut sur la fiche' : '') + (rr.inconnus ? ', ' + pl(rr.inconnus, 'fiche') + ' encore à lire' : '')
+          + ' ; ' + rp.fidelite + ' en fidélité active, ' + rp.connectes + ' déjà connectés à un compte en ligne, ' + rp.webshop + ' clients du webshop' + (can ? ' ; origine des fiches : ' + can : '') + '.' });
+      }
+      const enCours = L.magasins.filter(g => { const x = ((cumul ? g.cumul : g.mois) || {}).recurrence; return x && !x.complet; });
+      if (enCours.length) { notes.push({ lead: 'Relevé en cours :', txt: 'les tickets se relisent au cron, du plus récent au ' + (L.recurrence && L.recurrence.debut ? (+L.recurrence.debut.slice(8) === 1 ? '1er' : +L.recurrence.debut.slice(8)) + ' ' + nomMois(+L.recurrence.debut.slice(5, 7), true) + ' ' + L.recurrence.debut.slice(0, 4) : '1er janvier') + ' — ' + enCours.map(g => { const x = (cumul ? g.cumul : g.mois).recurrence; return nomG(g) + ' ' + x.joursLus + ' / ' + x.jours + ' jours'; }).join(', ') + '. Le taux s’affiche quand la période est entière.' }); }
+      if (!(L.recurrence && L.recurrence.kpi)) { notes.push({ lead: 'Pas de pastille pour la Récurrence :', txt: 'créez dans la Table KPI un KPI « Clients identifiés venus au moins deux jours ÷ Clients identifiés en caisse, hors pro », échelle %, avec ses seuils (et « Clients PWA venus au moins deux jours ÷ Clients PWA identifiés en caisse » pour le taux PWA).' }); }
+      if (L.magasins.every(g => { const x = ((cumul ? g.cumul : g.mois) || {}).recurrence; return !x || x.n1 == null; })) { notes.push({ lead: 'Récurrence sans N-1 :', txt: 'le relevé commence au ' + (L.recurrence && L.recurrence.debut ? (+L.recurrence.debut.slice(8) === 1 ? '1er' : +L.recurrence.debut.slice(8)) + ' ' + nomMois(+L.recurrence.debut.slice(5, 7), true) + ' ' + L.recurrence.debut.slice(0, 4) : '1er janvier') + ' ; le premier N-1 viendra un an plus tard.' }); }
+    }
     out.notes = notes;
     out.seuilsKpi = () => this.setState({ screen: 'kpiTable' });
     return out;
