@@ -2274,3 +2274,11 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .pm-tk .aut{color:var(--color-text-muted)}
 .pm-tks{margin-top:8px;font-size:11.5px;line-height:1.45;color:#8a5a13;background:#FBF3DC;border-radius:7px;padding:7px 10px}.pm-tks.ok{color:#2d7a3e;background:rgba(45,122,62,.10)}
 @media (max-width:700px){.pm-canaux{grid-template-columns:1fr !important}}
+/* Le prix final, à l'étape Y (23/10/2026). */
+.pm-pf{margin-top:14px;border:.5px solid var(--color-border-secondary);border-radius:10px;padding:12px 14px;background:#fbfaf7}
+.pm-pfr{display:inline-flex;align-items:center;gap:10px;font-size:11px;color:var(--color-text-muted)}
+.pm-pft{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+.pm-pft th{font:600 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);text-align:left;padding:5px 6px;border-bottom:.5px solid var(--color-border-tertiary)}
+.pm-pft td{padding:6px;border-bottom:.5px solid var(--color-border-tertiary)}.pm-pft .r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pm-pft .mu{color:var(--color-text-muted)}.pm-pft .ok{color:#2d7a3e}
+.pm-pflot{margin-top:10px;font-size:12.5px}.pm-pflot s{color:var(--color-text-muted)}
