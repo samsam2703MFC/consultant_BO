@@ -93,6 +93,7 @@ require __DIR__ . '/../../src/tablette_remarques.php';
 require __DIR__ . '/../../src/primes.php';
 require __DIR__ . '/../../src/primes_app.php';
 require __DIR__ . '/../../src/promos_magasin.php';
+require __DIR__ . '/../../src/promos_doc.php';
 require __DIR__ . '/../../src/sms.php';
 $tCharge = microtime(true);
 
@@ -415,6 +416,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/promos/sonde-portions' => ep_promos_sonde_portions(),
             $path === '/ventes/promos/sonde-commandes' => ep_promos_sonde_commandes(),
             $path === '/ventes/promos/sonde-champs'   => ep_promos_sonde_champs(),
+            $path === '/ventes/promos/documentation' => ep_promos_documentation(),
             $path === '/ventes/primes-reference'      => ep_primes_reference(),
             $path === '/ventes/primes-moyennes'       => ep_primes_moyennes(),
             $path === '/ventes/cross'                 => ep_ventes_cross(),

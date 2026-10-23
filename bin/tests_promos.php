@@ -61,6 +61,8 @@ final class ErpApi
         1 => [['id' => 88, 'portion_fraction' => 0.5, 'is_active' => true], ['id' => 89, 'portion_fraction' => 0.25, 'is_active' => false]], 2 => []];
     public static bool $perdPortion = false;
     public static bool $perdConditions = false;  // un panel qui ignore les champs du canal et du seuil
+    public static ?array $dernierPost = null;
+    public static ?array $champsEnPlus = null;   // l'essai de la documentation : seuls ces champs non documentés sont gardés
     public static int $suivant = 30;
     public static ?string $formatHeure = null;   // 'H:i' : le panel refuse l'heure des créneaux avec secondes
     public static bool $sansDelete = false;
@@ -79,6 +81,7 @@ final class ErpApi
             }
         }
         if ($m === 'POST' && $path === '/admin/promotions/buy-x-get-y') {
+            self::$dernierPost = $b;
             if (self::$refus !== null) { return ['code' => 422, 'corps' => null, 'erreur' => self::$refus]; }
             $id = self::$suivant++;
             self::$promos[$id] = self::fiche($id, $b);
@@ -134,6 +137,7 @@ final class ErpApi
     {
         $f = ['id' => $id] + $b;
         if (self::$perdCreneaux) { $f['schedule'] = []; }
+        if (self::$champsEnPlus !== null) { $f = array_filter($f, static fn ($k) => in_array($k, PD_DOCUMENTES['buy-x-get-y'], true) || in_array($k, self::$champsEnPlus, true), ARRAY_FILTER_USE_KEY); }
         if (self::$perdConditions) { $f = array_diff_key($f, array_flip(['min_order_amount', 'minimum_order_value', 'min_ticket_amount', 'sales_channels', 'channels', 'minimum_basket_value'])); }
         if (self::$perdPortion) { foreach (['trigger', 'reward'] as $k) { if (isset($f[$k]['product_ids'])) { $f[$k]['product_ids'] = array_map(static fn ($t) => is_array($t) ? (int) $t['id_product'] : $t, $f[$k]['product_ids']); } } }
         return $f;
@@ -144,6 +148,7 @@ final class ErpApi
 function catalogueCouts(): array { return [6 => ['mat' => 0.50, 'source' => 'panel (products/available)'], 4 => ['mat' => 9.99]]; }
 
 require __DIR__ . '/../src/promos_magasin.php';
+require __DIR__ . '/../src/promos_doc.php';
 require __DIR__ . '/../src/promos_ventes.php';
 
 $ok = 0; $ko = 0;
@@ -547,6 +552,31 @@ $r3 = wr_promos_magasin();
 $F = ErpApi::$promos[$r['demande']['panelId']] ?? [];
 verifie('les deux : destination BOTH', ($F['destination'] ?? null) === 'BOTH' && ($r3['demande']['statut'] ?? '') === 'en_caisse' && $r3['demande']['canaux'] === null,
     json_encode([$F, $r3['panelErreur'] ?? null], JSON_UNESCAPED_UNICODE));
+
+echo "La documentation du cockpit et son essai d'écriture (23/10/2026)\n";
+// Le panel garde « destination » et « trigger_amount », rien d'autre hors de sa documentation.
+ErpApi::$champsEnPlus = ['destination', 'trigger_amount']; $oublie(); $avant = array_keys(ErpApi::$promos);
+$X = pdEssai(4);
+verifie('l’essai : une seule création, le seuil et la destination gardés nommés', $X['fait'] && count($X['tentatives']) === 1 && $X['seuilGarde'] === ['trigger_amount']
+    && $X['canalGarde'] === ['destination'] && ($X['tentatives'][0]['garde']['trigger_amount'] ?? null) === 11.07, json_encode($X, JSON_UNESCAPED_UNICODE));
+verifie('l’essai : la promotion de test est supprimée, rien ne reste', $X['restees'] === [] && array_keys(ErpApi::$promos) === $avant
+    && in_array('DELETE /admin/promotions/buy-x-get-y/' . $X['tentatives'][0]['cree'], ErpApi::$appels, true));
+$P = ErpApi::$dernierPost ?? [];
+verifie('l’essai : brouillon, sur bon seulement, daté de 2020, nommé à supprimer, le magasin seul', ($P['status'] ?? '') === 'DRAFT' && ($P['activation_mode'] ?? '') === 'VOUCHER_ONLY'
+    && str_starts_with((string) ($P['valid_to'] ?? ''), '2020-01-01') && str_contains((string) ($P['name'] ?? ''), 'à supprimer') && ($P['shop_ids'] ?? null) === [4]
+    && ($P['shop_scope_type'] ?? '') === 'SELECTED_SHOPS', json_encode($P, JSON_UNESCAPED_UNICODE));
+// Un panel qui refuse : quatre tentatives, aucune création.
+ErpApi::$refus = 'HTTP 422 : INVALID_PROMOTION_DATA — destination : unknown field'; $avant = array_keys(ErpApi::$promos);
+$X = pdEssai(4);
+verifie('refusé : seuil seul, canal seul, témoin, rien de créé', $X['fait'] && count($X['tentatives']) === 4 && $X['seuilGarde'] === [] && $X['canalGarde'] === []
+    && array_keys(ErpApi::$promos) === $avant && str_contains((string) $X['tentatives'][0]['erreur'], 'unknown field'), json_encode($X, JSON_UNESCAPED_UNICODE));
+ErpApi::$refus = null; ErpApi::$champsEnPlus = null;
+$_GET = ['shop' => '4', 'format' => 'json']; $D = ep_promos_documentation(); $_GET = [];
+verifie('la page en JSON : cinq sortes, les champs de buy-x-get-y avec leur statut', count($D['sortes']) === 5 && $D['sortes']['buy-x-get-y']['champs'] !== []
+    && in_array('documenté', array_column($D['sortes']['buy-x-get-y']['champs'], 'statut'), true), json_encode(array_map(static fn ($s) => [$s['code'], count($s['champs'])], $D['sortes'])));
+$html = pdHtml($D + ['essai' => $X]);
+if (getenv('PD_HTML')) { file_put_contents(getenv('PD_HTML'), $html); }   // pour regarder la page
+verifie('la page en HTML : résumé, essai, tableaux', str_contains($html, 'En bref') && str_contains($html, 'Essai d’écriture') && str_contains($html, '<table>') && !str_contains($html, 'Warning'));
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
