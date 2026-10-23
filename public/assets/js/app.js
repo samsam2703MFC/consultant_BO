@@ -185,6 +185,27 @@ function prIconeEmoji(em){
   x.fillText(em, 64, 72);
   return c.toDataURL('image/png');
 }
+/* Le logo d'un sponsor (16/10/2026) : réduit pour tenir dans 256 px, sans le recadrer, fond transparent gardé. */
+function prLogo(fichier){
+  return new Promise((ok, ko) => {
+    const lu = new FileReader();
+    lu.onerror = ko;
+    lu.onload = () => {
+      const img = new Image();
+      img.onerror = ko;
+      img.onload = () => {
+        const w = img.naturalWidth || 256, h = img.naturalHeight || 256;
+        const k = Math.min(1, 256 / Math.max(w, h));
+        const c = document.createElement('canvas'); c.width = Math.max(16, Math.round(w * k)); c.height = Math.max(16, Math.round(h * k));
+        const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
+        x.drawImage(img, 0, 0, c.width, c.height);
+        ok(c.toDataURL('image/png'));
+      };
+      img.src = lu.result;
+    };
+    lu.readAsDataURL(fichier);
+  });
+}
 function prIconePhoto(fichier){
   return new Promise((ok, ko) => {
     const lu = new FileReader();
@@ -378,8 +399,8 @@ class App {
     return { 'production-parametres': 'production/?page=params', 'production-plan': 'production/?page=plan', 'production-suivi': 'production/?page=plan',
       'production-cloture': 'production/?page=cloture', 'production-fours': 'production/?page=fours',
       prospection: 'prospection/', 'prospection-mobile': 'prospection/', 'developpement-commercial': 'prospection/',
-      // Les posts : le portail social (/social, à côté du cockpit) ; les newsletters : le portail Marketing.
-      'controle-posts-facebook': '../social/', newsletter: 'marketing/', 'newsletter-magasin': 'marketing/' };
+      // Les posts : le portail social (/social, à côté du cockpit) ; les newsletters : le Marketing (/marketing/).
+      'controle-posts-facebook': '../social/', newsletter: '../marketing/', 'newsletter-magasin': '../marketing/' };
   }
   /** L'écran désigné par l'adresse — ou rien si elle ne désigne personne. */
   ecranDeAdresse(){
@@ -1011,11 +1032,11 @@ class App {
     common.ecran = S.screen; common.railOuvert = !!S.railOuvert; common.railBascule = () => this.setState({ railOuvert: !this.state.railOuvert });
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
-      // Les campagnes du réseau (16/10/2026). La page « Aujourd'hui » du marketing (#/marketing) et l'entrée
-      // Marketing du rail sont retirées (23/10/2026, Sam) : ces onglets s'ouvrent depuis le portail Marketing
-      // (« Budget, mesure, note ↗ »).
-      marketing: ['Campagnes', 'Les campagnes du réseau : calendrier, budget, objectifs produits et mesure. Les posts se font dans le portail social, les campagnes et les newsletters dans le portail Marketing.',
-        [['mktCampagnes', 'Campagnes'], ['mktCalendrier', 'Calendrier'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
+      // Les campagnes du réseau (16/10/2026). La page « Aujourd'hui » du marketing (#/marketing) et son entrée
+      // Marketing du rail sont retirées (23/10/2026, Sam) ; le Marketing lui-même s'ouvre par « Marketing ↗ ».
+      marketing: ['Campagnes', 'Les campagnes du réseau : budget, objectifs produits et mesure. Les posts se font dans le portail social, les campagnes et les newsletters dans le Marketing.',
+        // Campagnes et Calendrier : un seul onglet (22/10/2026), la bascule Liste / Calendrier est dans la page.
+        [['mktCampagnes', 'Campagnes'], ['bxcampagnes', 'Budget × Campagnes'], ['mktObjectifs', 'Objectifs produits'], ['mesure', 'Mesure']]],
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
         [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
       parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
@@ -1030,13 +1051,16 @@ class App {
       // comptoir reçoit l'assortiment obligatoire, qui se tient là où on place les produits.
       planogramme: ['Comptoir · planogramme', 'Le comptoir standard et ce que chaque boutique doit tenir.',
         [['planogramme', 'Comptoir', titles.planogramme[1]], ['assortiment', 'Assortiment obligatoire', titles.assortiment[1]]]] };
-    const grp = Object.keys(GROUPES).find(k => k === S.screen || (GROUPES[k][2] || []).some(o => o[0] === S.screen));
+    // Écrans sans onglet propre : ils allument l'onglet qui les porte (le calendrier est une vue des campagnes).
+    const ONGLET_DE = { mktCalendrier: 'mktCampagnes' };
+    const ecranOnglet = ONGLET_DE[S.screen] || S.screen;
+    const grp = Object.keys(GROUPES).find(k => k === ecranOnglet || (GROUPES[k][2] || []).some(o => o[0] === ecranOnglet));
     if (grp) {
-      const onglet = (GROUPES[grp][2] || []).find(o => o[0] === S.screen);
+      const onglet = (GROUPES[grp][2] || []).find(o => o[0] === ecranOnglet);
       common.screenTitle = GROUPES[grp][0]; common.screenSub = (onglet && onglet[2]) || GROUPES[grp][1];
       const cat0 = this.D.prodCatalogue || [];
       const badges = { assortiment: cat0.filter(p => (p.exigible !== undefined ? p.exigible : p.must)).length || 0, planogramme: cat0.filter(p => p.zone).length || 0, seuil: (this._pdDcs || {}).effacer || 0 };
-      common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: S.screen === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
+      common.ongletsEcran = (GROUPES[grp][2] || []).map(o => ({ nom: o[1], on: ecranOnglet === o[0], go: goTo(o[0]), badge: badges[o[0]] || 0 }));
       if (!common.ongletsEcran.length) { common.ongletsEcran = null; }
     }
     // Les lectures détaillées, ouvertes depuis la fiche d'une référence du Catalogue (18/10/2026) : un retour, pas d'onglets.
@@ -1420,8 +1444,11 @@ class App {
       // calendrier commun, ce qui demande un geste, la vue d'un magasin. Depuis le
       // 16/10/2026, posts et newsletters ne vivent plus que là ; Offres et canaux
       // est retiré, comme la Centrale d'achat.
-      // L'entrée Marketing (le hub et ses onglets de campagne) a quitté le rail (23/10/2026, Sam).
-      ['Marque', [
+      ['Marque & marketing', [
+        // L'entrée Marketing (#/marketing, la page « Aujourd'hui ») a quitté le rail (23/10/2026, Sam).
+        // Le Marketing lui-même (dépôt marketing, servi à /marketing/ à côté du cockpit) : campagnes et leur
+        // assistant, réseaux sociaux, publicités Meta. Il s'ouvre dans un onglet à part.
+        ['ext:../marketing/', 'Marketing ↗', 0],
         ['projets', 'Projets de développement', nLate],
         ['fonds', 'Fonds & Royalties', 0]]],
       // Ce qui passe dans l'ERP du franchisé : ses outils à lui, tenus ici
@@ -6228,6 +6255,10 @@ class App {
     const camps = mk.campagnes || [];
     const recharge = () => { this.D.mkt = null; this.setState({}); };
 
+    // --- bascule Liste / Calendrier : les mêmes campagnes et leur statut, en tableau ou posées sur l'année.
+    common.mkVues = [['mktCampagnes', 'Liste'], ['mktCalendrier', 'Calendrier']].map(([ecran, nom]) => ({
+      nom, on: S.screen === ecran, choisir: () => this.setState({ screen: ecran, mkEdit: null }) }));
+
     // --- calendrier : une ligne par campagne, une barre sur ses mois.
     const annee = S.mkAnnee || new Date((camps[0] || {}).debut || this.M.TODAY).getFullYear();
     common.mkAnnee = String(annee);
@@ -7188,16 +7219,17 @@ class App {
         famille: e.famille === 'magasin' ? 'magasin' : 'marque', shop: e.shop || '', shopNom: nomMag[e.shop] || e.shop || '',
         poserPayeur: ev => { e.payeur = ev.target.value; re(); }, poserSponsor: ev => { e.sponsor = ev.target.value; re(); },
         periodeTxt: e.type === 'promo' ? '' : periodeDe(e).txt, etatPeriode: periodeDe(e).etat,
-        payeurTxt: payeurTxt(e), montantTxt: (e.montant ?? app.recompense) + ' €' + (e.type === 'promo' && e.regle === 'magasin' ? ' par magasin' : ''),
+        payeurTxt: payeurTxt(e), montantTxt: e.cadeau ? '🎁 ' + e.cadeau.nom + (e.cadeau.valeur ? ' (valeur ' + e.cadeau.valeur + ' €)' : '') : (e.montant ?? app.recompense) + ' €' + (e.type === 'promo' && e.regle === 'magasin' ? ' par magasin' : ''),
         basculer: ev => { e.actif = !!ev.target.checked; sauver('« ' + (e.lib || e.cle) + ' » ' + (e.actif ? 'activée' : 'éteinte')); },
         modifier: () => this.setState(e.type === 'promo' || e.type === 'categorie' ? { prWiz: wizDe(e) } : { prEdit: editDe(e) }) });
       // Ce qui compte, en clair (le tableau ne s'édite plus).
       const regleTxt = { seuil: (e.minPieces || 0) + ' pcs (seuil)', premiere: e.minPieces ? e.minPieces + ' pcs min.' : '' };
-      L.texte = e.cle === 'croisees' ? 'tickets à 2 articles ou plus' + (e.categorie ? ' avec ' + e.categorie : '') + ' · taux ≥ cible du magasin (défaut ' + fr(cr.cibleDefaut, 1) + ' %) · ' + cr.minTickets + ' tickets min.'
+      const hMin = k => (k.heuresMin ?? 20) > 0 ? ' · ' + (k.heuresMin ?? 20) + ' h min.' : '';
+      L.texte = e.cle === 'croisees' ? 'tickets à 2 articles ou plus' + (e.categorie ? ' avec ' + e.categorie : '') + ' · taux ≥ cible du magasin (défaut ' + fr(cr.cibleDefaut, 1) + ' %)' + (cr.minTickets > 0 ? ' · ' + cr.minTickets + ' tickets min.' : '')
           + (Object.keys(cr.cibles).length ? ' · ' + Object.keys(cr.cibles).length + ' magasin(s) avec sa cible' : '')
-        : e.cle === 'objectif' ? 'CA ≥ ' + (e.pct ?? 100) + ' % de l’objectif · ' + (e.heuresMin ?? 20) + ' h min.'
-        : e.cle === 'google' ? 'note Google du magasin ≥ ' + fr(e.seuil ?? 4.5, 1) + ' ★ · ' + (e.heuresMin ?? 20) + ' h min.'
-        : e.type === 'categorie' ? 'produits « ' + (e.motif || '') + ' » · ' + (e.minPieces ?? 10) + ' pcs min.'
+        : e.cle === 'objectif' ? 'CA ≥ ' + (e.pct ?? 100) + ' % de l’objectif' + hMin(e)
+        : e.cle === 'google' ? 'note Google du magasin ≥ ' + fr(e.seuil ?? 4.5, 1) + ' ★' + hMin(e)
+        : e.type === 'categorie' ? 'produits « ' + (e.motif || '') + ' »' + ((e.minPieces ?? 10) > 0 ? ' · ' + (e.minPieces ?? 10) + ' pcs min.' : '')
         : e.type === 'promo' ? [(e.promo || {}).nom, sorte(e.promo || {}), dates(e.promo || {}), mags(e.promo || {}), { api: 'panel', cockpit: 'créée dans le cockpit' }[(e.promo || {}).source]].filter(Boolean).join(' · ')
           + (e.regle === 'magasin' || e.regle === 'vendeuse' ? '' : regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] ? ' · ' + regleTxt[e.regle === 'seuil' ? 'seuil' : 'premiere'] : '')
         : '';
@@ -7258,9 +7290,15 @@ class App {
       famille: famille === 'magasin' ? 'magasin' : 'marque', shop: shop || '', icone: null,
       // Un seul assistant (16/10/2026) : une promotion (des produits sur une période) ou une catégorie (chaque mois, les
       // produits dont le nom contient un mot) ; un franchisé ne pose que des promotions.
-      sorte: 'promo', motif: '', cPer: 'toujours', cdu: '', cau: '' });
+      sorte: 'promo', motif: '', cPer: 'toujours', cdu: '', cau: '',
+      // Ce qu'on gagne (16/10/2026) : de l'argent ou un cadeau ; une ligne de description ; le sponsor (logo, site, une ligne).
+      gain: 'argent', cadeauNom: '', cadeauValeur: '', description: '', sponsorLogo: null, sponsorLogoExist: '', sponsorSite: '', sponsorTexte: '' });
     // Rouvrir une promo dans l'assistant (16/10/2026) : tout prérempli ; « edit » garde sa clé, le serveur refait ses produits.
-    const wizDe = e => {
+    // Les détails déjà posés d'une prime rouverte : cadeau, description, sponsor.
+    const infosDe = e => ({ gain: e.cadeau ? 'cadeau' : 'argent', cadeauNom: e.cadeau ? e.cadeau.nom : '', cadeauValeur: e.cadeau && e.cadeau.valeur != null ? String(e.cadeau.valeur) : '',
+      description: e.description || '', sponsorLogoExist: e.sponsorLogo || '', sponsorSite: e.sponsorSite || '', sponsorTexte: e.sponsorTexte || '' });
+    const wizDe = e => Object.assign(wizDe0(e), infosDe(e));
+    const wizDe0 = e => {
       if (e.type === 'categorie') {
         return Object.assign(wizNeuf('marque', ''), { edit: e.cle, sorte: 'categorie', motif: e.motif || '', regle: 'premiere', minPieces: String(e.minPieces ?? 10),
           cPer: e.du || e.au ? 'dates' : 'toujours', cdu: e.du || '', cau: e.au || '',
@@ -7345,21 +7383,30 @@ class App {
       const datesOk = W.api ? (!du || !au || au >= du) : (!!du && !!au && au >= du);
       const magsOk = fam ? magsPermis.some(m => m.id === W.shop) : (W.api || W.magsMode === 'tous' || W.mags.length > 0);
       const catDatesOk = W.cPer === 'toujours' || ((!!W.cdu || !!W.cau) && (!W.cdu || !W.cau || W.cau >= W.cdu));
-      const ok = [null, estCat ? prodsMotif.length > 0 : (W.sel.length > 0 || !!W.api), estCat ? catDatesOk : (datesOk && magsOk), montant != null && montant > 0 && (surObj ? objOk : (minP != null && minP >= (W.regle === 'seuil' ? 1 : 0))) && (fam || W.payeur !== 'sponsor' || W.sponsor.trim() !== ''), W.nom.trim() !== ''];
+      const estCadeau = W.gain === 'cadeau';
+      const ok = [null, estCat ? prodsMotif.length > 0 : (W.sel.length > 0 || !!W.api), estCat ? catDatesOk : (datesOk && magsOk), (estCadeau ? W.cadeauNom.trim() !== '' : (montant != null && montant > 0)) && (surObj ? objOk : (minP != null && minP >= (W.regle === 'seuil' ? 1 : 0))) && (fam || W.payeur !== 'sponsor' || W.sponsor.trim() !== ''), W.nom.trim() !== ''];
       const jjmm = v => (v ? v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) : '…');
+      const gainTxt = () => (estCadeau ? '🎁 ' + (W.cadeauNom.trim() || 'un cadeau') + (num(W.cadeauValeur) ? ' (valeur ' + num(W.cadeauValeur) + ' €)' : '') : (montant || 0) + ' €');
       const resume = estCat ? [
         ['Produits', 'dont le nom contient « ' + W.motif.trim() + ' » · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
         ['Période', W.cPer === 'dates' ? 'chaque mois' + (W.cdu ? ' dès le ' + jjmm(W.cdu) : '') + (W.cau ? ' jusqu’au ' + jjmm(W.cau) : '') : 'chaque mois, sans fin'],
         ['Magasins', 'tous (' + (d.magasins || []).length + ')'],
         ['Gagne', 'la 1re de chaque magasin' + (minP ? ', ' + minP + ' pcs min.' : '')],
-        ['Récompense', (montant || 0) + ' € · payée par ' + (W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]] : [
+        ['Récompense', gainTxt() + ' · offerte par ' + (W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]] : [
         ['Produits', W.api ? 'la promotion « ' + W.api.nom + ' » du panel' : W.sel.map(z => z.lib + (z.t === 'produit' ? '' : ' (' + (z.n || 0) + ')')).join(' + ') + ' · ' + compte + ' produit' + (compte > 1 ? 's' : '')],
         ['Période', !du && !au ? 'sans dates — tant que la promotion tourne' : jjmm(du) + ' → ' + jjmm(au)],
         fam ? ['Magasin', (nomMag[W.shop] || W.shop || '…') + ' — prime du franchisé'] : ['Magasins', shops.length ? shops.map(sid => nomMag[sid] || sid).join(', ') : 'tous (' + (d.magasins || []).length + ')'],
         ['Gagne', W.regle === 'magasin' ? 'le magasin, s’il atteint son objectif' + (pct != null ? ' (' + (pct >= 0 ? '+' : '') + pct + ' % sur l’an dernier)' : '') + ' — partagée entre ses vendeuses'
           : W.regle === 'vendeuse' ? 'chaque vendeuse qui atteint son objectif' + (pct != null ? ' (' + (pct >= 0 ? '+' : '') + pct + ' % sur l’an dernier)' : '')
           : W.regle === 'seuil' ? 'chaque vendeuse à ' + (minP || 0) + ' pcs ou plus' : (fam ? 'la 1re du magasin' : 'la 1re de chaque magasin') + (minP ? ', ' + minP + ' pcs min.' : '')],
-        ['Récompense', (montant || 0) + ' €' + (W.regle === 'magasin' ? ' par magasin' : '') + ' · payée par ' + (fam ? 'le magasin' : W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]];
+        ['Récompense', gainTxt() + (W.regle === 'magasin' && !estCadeau ? ' par magasin' : '') + ' · offerte par ' + (fam ? 'le magasin' : W.payeur === 'sponsor' ? (W.sponsor || 'un sponsor') : 'la marque')]];
+      // Le cadeau, la description, le sponsor ; l'icône et le logo se déposent ensemble avant l'enregistrement.
+      const details = () => ({ cadeau: estCadeau ? { nom: W.cadeauNom.trim(), valeur: num(W.cadeauValeur) } : null, description: W.description.trim(),
+        sponsorSite: W.payeur === 'sponsor' ? W.sponsorSite.trim() : '', sponsorTexte: W.payeur === 'sponsor' ? W.sponsorTexte.trim() : '',
+        sponsorLogo: W.payeur === 'sponsor' ? W.sponsorLogoExist : '' });
+      const logoNeuf = () => W.payeur === 'sponsor' && !!W.sponsorLogo;
+      const deposer = () => Promise.all([W.icone ? this.api('POST', '/ventes/primes-icone', { data: W.icone.data }) : Promise.resolve(null),
+        logoNeuf() ? this.api('POST', '/ventes/primes-icone', { data: W.sponsorLogo.data }) : Promise.resolve(null)]);
       const creer = () => {
         if (W.envoi) { return; }
         if (estCat) {
@@ -7368,11 +7415,12 @@ class App {
             du: W.cPer === 'dates' && W.cdu ? W.cdu : null, au: W.cPer === 'dates' && W.cau ? W.cau : null,
             actif: ancienneC ? !!ancienneC.actif : true, classement: ancienneC ? ancienneC.classement !== false : true,
             payeur: W.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: W.payeur === 'sponsor' ? W.sponsor.trim() : '', icone: W.iconeExist || '' };
+          Object.assign(eC, details());
           W.envoi = true; reW();
-          const icC = W.icone ? this.api('POST', '/ventes/primes-icone', { data: W.icone.data }) : Promise.resolve(null);
-          icC.then(ri => {
-            if (W.icone && (!ri || ri.ok === false || !ri.icone)) { W.envoi = false; reW(); return; }
+          deposer().then(([ri, rl]) => {
+            if ((W.icone && (!ri || ri.ok === false || !ri.icone)) || (logoNeuf() && (!rl || rl.ok === false || !rl.icone))) { W.envoi = false; reW(); return; }
             if (ri && ri.icone) { eC.icone = ri.icone; }
+            if (rl && rl.icone) { eC.sponsorLogo = rl.icone; }
             const liste = ancienneC ? app.liste.map(x => (x.cle === W.edit ? eC : x)) : app.liste.concat([eC]);
             this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste, externes: app.externes, sms: app.sms }).then(r => {
               if (r && r.ok === false) { W.envoi = false; reW(); return; }
@@ -7395,12 +7443,13 @@ class App {
           : Object.assign(base, { ref: { source: 'cockpit' }, promo: { source: 'cockpit', sel: W.sel.map(z => ({ t: z.t, v: z.v, lib: z.lib })), du, au, shops, nom: W.nom.trim() } });
         // Rouverte : la promo d'avant reste celle du serveur ; la nouvelle sélection part à côté (« promo_neuve »).
         if (ancienne && !W.api) { e.promo_neuve = e.promo; e.promo = ancienne.promo; }
+        Object.assign(e, details());
         W.envoi = true; reW();
-        // L'icône choisie (un emoji ou une photo, déjà en PNG) se dépose d'abord : la prime garde son chemin.
-        const icone = W.icone ? this.api('POST', '/ventes/primes-icone', { data: W.icone.data }) : Promise.resolve(null);
-        icone.then(ri => {
-          if (W.icone && (!ri || ri.ok === false || !ri.icone)) { W.envoi = false; reW(); return; }
+        // L'icône choisie (un emoji ou une photo, déjà en PNG) et le logo du sponsor se déposent d'abord : la prime garde leurs chemins.
+        deposer().then(([ri, rl]) => {
+          if ((W.icone && (!ri || ri.ok === false || !ri.icone)) || (logoNeuf() && (!rl || rl.ok === false || !rl.icone))) { W.envoi = false; reW(); return; }
           if (ri && ri.icone) { e.icone = ri.icone; }
+          if (rl && rl.icone) { e.sponsorLogo = rl.icone; }
           const liste = ancienne ? app.liste.map(x => (x.cle === W.edit ? e : x)) : app.liste.concat([e]);
           this.api('POST', '/ventes/primes-app', { recompense: app.recompense, liste, externes: app.externes, sms: app.sms }).then(r => {
             if (r && r.ok === false) { W.envoi = false; reW(); return; }
@@ -7430,7 +7479,7 @@ class App {
           basculer: () => { W.magsMode = 'choix'; const i = W.mags.indexOf(m.id); if (i >= 0) { W.mags.splice(i, 1); } else { W.mags.push(m.id); } reW(); } })),
         regle: W.regle, minPieces: W.minPieces, montant: W.montant, payeur: W.payeur, sponsor: W.sponsor, nom: W.nom, resume, nbMags,
         // Objectif du magasin : une prime par magasin (16/10/2026) ; par vendeuse : une par vendeuse.
-        plafond: W.regle === 'magasin' ? shopsRef.length + ' magasin' + (shopsRef.length > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + shopsRef.length * (montant || 0) + ' € au plus'
+        plafond: estCadeau ? gainTxt() + (W.regle === 'seuil' || surObj ? ' pour chaque gagnante' : ' pour la 1re de chaque magasin') : W.regle === 'magasin' ? shopsRef.length + ' magasin' + (shopsRef.length > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + shopsRef.length * (montant || 0) + ' € au plus'
           : surObj ? (nVendTot ? '≈ ' + fr(nVendTot, 0) + ' vendeuses × ' + (montant || 0) + ' € = ' + Math.round(nVendTot * (montant || 0)) + ' € au plus' : (montant || 0) + ' € par vendeuse')
           : W.regle === 'seuil' ? (montant || 0) + ' € par vendeuse au seuil' : fam ? (montant || 0) + ' € au plus, payés par le magasin' : nbMags + ' magasin' + (nbMags > 1 ? 's' : '') + ' × ' + (montant || 0) + ' € = ' + (nbMags * (montant || 0)) + ' € au plus',
         // Rouverte, la prime d'un franchisé reste à son magasin (sa clé le porte).
@@ -7470,6 +7519,16 @@ class App {
           prIconePhoto(f).then(data => { W.icone = { sorte: 'photo', data }; reW(); }).catch(() => this.notify('Cette photo n’a pas pu être lue'));
         },
         retirerIcone: () => { W.icone = null; W.iconeExist = ''; reW(); },
+        gain: W.gain, estCadeau, cadeauNom: W.cadeauNom, cadeauValeur: W.cadeauValeur,
+        gains: [['argent', '💶', 'Argent'], ['cadeau', '🎁', 'Cadeau']].map(([v, e, nom]) => ({ e, nom, on: W.gain === v, choisir: () => { W.gain = v; reW(); } })),
+        poserCadeauNom: ev => { W.cadeauNom = ev.target.value; reW(); }, poserCadeauValeur: ev => { W.cadeauValeur = ev.target.value; reW(); },
+        description: W.description, poserDescription: ev => { W.description = ev.target.value; reW(); },
+        sponsorSite: W.sponsorSite, sponsorTexte: W.sponsorTexte, poserSponsorSite: ev => { W.sponsorSite = ev.target.value; reW(); }, poserSponsorTexte: ev => { W.sponsorTexte = ev.target.value; reW(); },
+        logo: W.sponsorLogo ? W.sponsorLogo.data : (W.sponsorLogoExist ? racine + W.sponsorLogoExist : ''),
+        poserLogo: ev => { const fi = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!fi) { return; }
+          if (!/^image\//.test(fi.type)) { this.notify('Une image, s’il te plaît (PNG, JPEG, WebP, SVG)'); return; }
+          prLogo(fi).then(data => { W.sponsorLogo = { data }; reW(); }).catch(() => this.notify('Ce logo n’a pas pu être lu')); },
+        retirerLogo: () => { W.sponsorLogo = null; W.sponsorLogoExist = ''; reW(); },
         fermer: () => this.setState({ prWiz: undefined }),
         precedent: () => { W.etape = Math.max(1, W.etape - 1); reW(); },
         suivant: () => { if (ok[W.etape]) { W.etape = Math.min(4, W.etape + 1); reW(); } },
@@ -7483,10 +7542,12 @@ class App {
       const x = ext ? ((app.externes || {})[ext] || {}) : (e || {});
       const nouveau = !e && !ext;
       return { cle: e ? e.cle : '', ext: ext || '', type: ext ? 'ext' : (nouveau ? 'categorie' : (e.type === 'target' ? e.cle : e.type)), nouveau,
-        champs: nouveau ? { lib: '', motif: '', minPieces: '10', montant: String(app.recompense), classement: true }
-          : { lib: x.lib || '', motif: x.motif || '', minPieces: String(x.minPieces ?? 10), montant: String(x.montant ?? app.recompense), classement: x.classement !== false,
-            categorie: x.categorie || '', pct: String(x.pct ?? 100), heuresMin: String(x.heuresMin ?? 20), seuil: String(x.seuil ?? 4.5),
-            cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets), du: x.du || '', au: x.au || '' },
+        // Les conditions (17/10/2026) : un interrupteur chacune ; coupée, elle vaut 0 et ne compte plus.
+        champs: nouveau ? { lib: '', motif: '', minPieces: '10', condP: true, montant: String(app.recompense), classement: true, description: '' }
+          : { lib: x.lib || '', motif: x.motif || '', description: x.description || '', minPieces: String(x.minPieces || 10), condP: (x.minPieces ?? 10) > 0,
+            montant: String(x.montant ?? app.recompense), classement: x.classement !== false,
+            categorie: x.categorie || '', pct: String(x.pct ?? 100), heuresMin: String(x.heuresMin || 20), condH: (x.heuresMin ?? 20) > 0, seuil: String(x.seuil ?? 4.5),
+            cibleDefaut: String(cr.cibleDefaut), minTickets: String(cr.minTickets || 30), condT: cr.minTickets > 0, du: x.du || '', au: x.au || '' },
         payeur: x.payeur === 'sponsor' ? 'sponsor' : 'marque', sponsor: x.sponsor || '', icone: null, iconeExist: x.icone || '', envoi: false };
     };
     const PE = S.prEdit;
@@ -7499,13 +7560,26 @@ class App {
       const montantCh = ch('montant', 'Récompense', 'nombre', { unite: '€', pas: 5 });
       // La période (16/10/2026) : vide, sans début ni fin — la prime tourne tous les mois.
       const periodeCh = [ch('du', 'Du (vide : sans début)', 'date'), ch('au', 'Au (vide : sans fin)', 'date')];
+      // La ligne de description (17/10/2026) : le conseil que la vendeuse lit dans la fiche de la prime, dans l'app.
+      const DESC_INDICE = { croisees: 'Toujours proposer un produit en plus', objectif: 'Chaque vente compte : le magasin gagne ensemble',
+        google: 'Demande un avis 5★ aux clients contents', categorie: 'Mets-les en avant au comptoir',
+        record: 'Un article de plus par ticket, et ton record tombe', meilleure: 'La vendeuse qui vend le plus du mois' };
+      const descCh = ch('description', 'Description dans l’app', 'texte', { indice: DESC_INDICE[PE.ext || PE.type] || '', large: true, max: 160 });
       const champs = { croisees: [ch('categorie', 'Une vente croisée : 2 articles ou plus, dont un de', 'choix', { options: [['', 'toutes catégories']].concat((d.categories || []).map(k => [k, k])).concat(f.categorie && !(d.categories || []).includes(f.categorie) ? [[f.categorie, f.categorie]] : []) }),
-          ch('cibleDefaut', 'Cible par défaut (taux)', 'nombre', { unite: '%', pas: 0.5 }), ch('minTickets', 'Tickets minimum', 'nombre', { pas: 5 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh].concat(periodeCh),
-        objectif: [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif', pas: 1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh].concat(periodeCh),
-        google: [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 }), ch('heuresMin', 'Minimum d’heures au planning', 'nombre', { unite: 'h', pas: 1 }), montantCh].concat(periodeCh),
+          ch('cibleDefaut', 'Cible par défaut (taux)', 'nombre', { unite: '%', pas: 0.5 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh].concat(periodeCh, descCh),
+        objectif: [ch('pct', 'CA à atteindre', 'nombre', { unite: '% de l’objectif', pas: 1 }), montantCh].concat(periodeCh, descCh),
+        google: [ch('seuil', 'Note Google à tenir', 'nombre', { unite: '★', pas: 0.1 }), montantCh].concat(periodeCh, descCh),
         categorie: [ch('lib', 'Nom dans l’app', 'texte', { indice: 'Queen of …' }), ch('motif', 'Les produits dont le nom contient', 'texte', { indice: 'tarte' }),
-          ch('minPieces', 'Minimum de pièces pour être classée', 'nombre', { unite: 'pcs', pas: 1 }), ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh],
-        ext: [] }[PE.type] || [];
+          ch('classement', 'Montrer le classement dans l’app', 'case'), montantCh, descCh],
+        ext: [descCh] }[PE.type] || [];
+      const condH = { cle: 'condH', champ: 'heuresMin', lib: 'Un minimum d’heures au planning dans le mois', unite: 'h', pas: 1 };
+      const conditions = ({ objectif: [condH], google: [condH],
+        croisees: [{ cle: 'condT', champ: 'minTickets', lib: 'Un minimum de tickets dans le mois', unite: 'tickets', pas: 5 }],
+        categorie: [{ cle: 'condP', champ: 'minPieces', lib: 'Un minimum de pièces pour être classée', unite: 'pcs', pas: 1 }] }[PE.type] || [])
+        .map(k => ({ lib: k.lib, unite: k.unite, pas: k.pas, cle: k.champ, on: !!f[k.cle], valeur: String(f[k.champ] ?? ''),
+          basculer: ev => { f[k.cle] = !!ev.target.checked; reE(); }, poser: ev => { f[k.champ] = ev.target.value; reE(); } }));
+      // Une condition allumée garde au moins 1 ; éteinte, 0.
+      const cond = (on, v, defaut) => on ? Math.max(1, Math.round(num(v) ?? defaut)) : 0;
       const ok = (PE.type !== 'categorie' || (String(f.lib).trim() !== '' && String(f.motif).trim() !== '')) && (!f.du || !f.au || f.au >= f.du);
       const entier = v => { const n = num(v); return n == null ? null : n; };
       const enregistrer = () => {
@@ -7515,7 +7589,7 @@ class App {
         ic.then(ri => {
           if (PE.icone && (!ri || ri.ok === false || !ri.icone)) { PE.envoi = false; reE(); return; }
           const icone = ri && ri.icone ? ri.icone : PE.iconeExist;
-          const qui = { payeur: PE.payeur, sponsor: PE.payeur === 'sponsor' ? PE.sponsor.trim() : '' };
+          const qui = { payeur: PE.payeur, sponsor: PE.payeur === 'sponsor' ? PE.sponsor.trim() : '', description: String(f.description || '').trim().slice(0, 160) };
           let suite = Promise.resolve({ ok: true });
           if (PE.ext) {
             app.externes = app.externes || {};
@@ -7525,12 +7599,12 @@ class App {
             if (!e) { PE.envoi = false; reE(); return; }
             Object.assign(e, qui, { icone, montant: Math.max(0, Math.round(entier(f.montant) ?? e.montant ?? app.recompense)) });
             if (['croisees', 'objectif', 'google'].includes(PE.type)) { Object.assign(e, { du: f.du || null, au: f.au || null }); }
-            if (PE.type === 'categorie') { Object.assign(e, { lib: String(f.lib).trim(), motif: String(f.motif).trim(), minPieces: Math.max(0, Math.round(entier(f.minPieces) ?? 10)), classement: !!f.classement }); }
-            if (PE.type === 'objectif') { Object.assign(e, { pct: Math.round(entier(f.pct) ?? 100), heuresMin: Math.round(entier(f.heuresMin) ?? 20) }); }
-            if (PE.type === 'google') { Object.assign(e, { seuil: entier(f.seuil) ?? 4.5, heuresMin: Math.round(entier(f.heuresMin) ?? 20) }); }
+            if (PE.type === 'categorie') { Object.assign(e, { lib: String(f.lib).trim(), motif: String(f.motif).trim(), minPieces: cond(f.condP, f.minPieces, 10), classement: !!f.classement }); }
+            if (PE.type === 'objectif') { Object.assign(e, { pct: Math.round(entier(f.pct) ?? 100), heuresMin: cond(f.condH, f.heuresMin, 20) }); }
+            if (PE.type === 'google') { Object.assign(e, { seuil: entier(f.seuil) ?? 4.5, heuresMin: cond(f.condH, f.heuresMin, 20) }); }
             if (PE.type === 'croisees') {
               Object.assign(e, { categorie: f.categorie || '', classement: !!f.classement });
-              cr.cibleDefaut = entier(f.cibleDefaut) ?? cr.cibleDefaut; cr.minTickets = Math.max(0, Math.round(entier(f.minTickets) ?? cr.minTickets));
+              cr.cibleDefaut = entier(f.cibleDefaut) ?? cr.cibleDefaut; cr.minTickets = cond(f.condT, f.minTickets, 30);
               suite = enregistrerCr();
             }
             if (PE.nouveau) { app.liste.push(e); }
@@ -7547,7 +7621,7 @@ class App {
       };
       const nomE = PE.ext === 'record' ? 'Bats ton record' : PE.ext === 'meilleure' ? 'Meilleure vendeuse' : (f.lib || (app.liste.find(x => x.cle === PE.cle) || {}).lib || '');
       common.prEdit = {
-        titre: PE.nouveau ? 'Nouvelle prime catégorie' : 'Modifier « ' + nomE + ' »', champs, ok, envoi: PE.envoi,
+        titre: PE.nouveau ? 'Nouvelle prime catégorie' : 'Modifier « ' + nomE + ' »', champs, conditions, ok, envoi: PE.envoi,
         note: PE.ext ? 'Son montant se règle dans Analyse magasin → Équipe & ventes → Targets & primes.' : PE.type === 'croisees' ? 'La cible de chaque magasin se règle plus bas, dans les moyennes par magasin.' : '',
         payeurs: [['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, nom]) => ({ nom, on: PE.payeur === v, choisir: () => { PE.payeur = v; reE(); } })),
         payeur: PE.payeur, sponsor: PE.sponsor, poserSponsor: ev => { PE.sponsor = ev.target.value; reE(); },
@@ -9812,6 +9886,154 @@ class App {
     });
   }
   /**
+   * Les six leviers, magasin par magasin, sous le tableau de Résultat › Mois (21/10/2026, Sam).
+   * Une lecture par mois affiché — GET /leviers/magasins, la même réponse que le dashboard
+   * magasin — gardée ensuite ; le serveur la garde un quart d'heure.
+   */
+  levCharge(annee, mois, force){
+    const cle = annee + '-' + mois;
+    if (!this._lev) { this._lev = {}; }
+    if (this._levEnCours === cle || (this._lev[cle] && !force)) { return; }
+    this._levEnCours = cle;
+    readOne('/leviers/magasins?annee=' + annee + '&mois=' + mois + '&_cache=900' + (force ? '&rafraichir=1' : '')).then(d => {
+      this._levEnCours = null;
+      this._lev[cle] = d && d.magasins ? d : { erreur: (d && d.error) || 'La lecture de /leviers/magasins a échoué — voir Diagnostic API.' };
+      this.setState({});
+    });
+  }
+  /**
+   * La carte des six leviers : « Le mois » (le mois choisi, à date s'il est en cours, face au
+   * même mois de l'année d'avant et au réseau) ou « Cumul de l'année » (janvier → le dernier
+   * mois clos, face aux mêmes mois). Chaque cellule dit sa valeur, sa pastille (seuils de la
+   * Table KPI), ce qu'elle compare et l'écart ; quand l'écart porte sur moins de mois que la
+   * valeur (ouverture, frais non saisis, périmètre du réseau), elle dit les deux chiffres
+   * comparés. La Récurrence reste vide : elle attend sa mesure.
+   */
+  valsLeviers(du){
+    const S = this.state;
+    const annee = +du.slice(0, 4), mois = +du.slice(5, 7);
+    this.levCharge(annee, mois);
+    const L = (this._lev || {})[annee + '-' + mois];
+    const out = { chargement: !L, erreur: L && L.erreur ? L.erreur : '' };
+    if (!L || L.erreur) { return out; }
+    if (!L.magasins.length) { out.erreur = 'Aucun magasin n’a de P&L pour ce mois : les six leviers se liront quand il sera saisi.'; return out; }
+    const vue = S.levVue === 'mois' || !L.cumulAu ? 'mois' : 'cumul', cumul = vue === 'cumul';
+    out.onglets = [['mois', 'Le mois'], ['cumul', 'Cumul de l’année']].map(o => ({ nom: o[1], on: vue === o[0],
+      off: o[0] === 'cumul' && !L.cumulAu, go: () => this.setState({ levVue: o[0] }) }));
+
+    const nf = n => Math.round(n).toLocaleString('fr-BE');
+    const dc = (n, d) => n.toFixed(d).replace('.', ',');
+    const sg = (n, d, u) => (n > 0 ? '+' : (n < 0 ? '−' : '±')) + dc(Math.abs(n), d) + u;
+    const nomMois = (m, long) => new Date(2000, m - 1, 15).toLocaleDateString('fr-BE', { month: long ? 'long' : 'short' });
+    const moisAn = (ym, long) => nomMois(+ym.slice(5, 7), long) + ' ' + ym.slice(0, 4);
+    // L'écart est bon quand il y a plus de clients, une meilleure note, un coût plus bas.
+    const puce = (d, dec, u, hausseBonne) => d == null ? null : { txt: sg(d, dec, u), ton: d === 0 ? 'z' : ((d > 0) === hausseBonne ? 'b' : 'm') };
+    const neutre = txt => ({ txt, ton: 'z' });
+    const pct = v => dc(v, 1) + ' %';
+    const etendue = l => l.length ? nomMois(l[0]) + ' → ' + nomMois(l[l.length - 1]) : '';
+    const xpN1 = L.googleN1Des ? neutre('N-1 : ' + moisAn(L.googleN1Des)) : neutre('pas de N-1');
+
+    const colonnes = (L.leviers || []).map(l => ({ cle: l.cle, nom: l.nom, couleur: l.couleur, vide: l.vide,
+      mesure: l.vide ? 'à définir' : (l.cle === 'trafic' ? (cumul ? 'clients' : 'clients par jour') : (l.cle === 'xp' ? 'note Google · avis' : l.mesureMois)) }));
+    const COUTS = ['food', 'labour', 'overhead'];
+    const NOM_COUT = { food: 'coût matière', labour: 'main-d’œuvre', overhead: 'frais généraux' };
+
+    const celluleMag = (g, cle) => {
+      const ouvLib = g.ouverture ? 'ouvert en ' + moisAn(g.ouverture, true) : 'pas de N-1';
+      if (cle === 'xp') {
+        const x = (cumul ? g.cumul : g.mois).xp || {};
+        if (x.v == null) { return { v: '—', mu: true, n1: cumul ? 'pas de fiche Google' : 'pas de relevé ce mois-là' }; }
+        return { v: dc(x.v, 1) + ' ★', pas: x.niveau, n1: nf(x.avis || 0) + ' avis', puce: x.n1 != null ? puce(x.delta, 2, '', true) : xpN1 };
+      }
+      if (!cumul) {
+        const x = g.mois[cle] || {};
+        if (cle === 'trafic') {
+          if (x.v == null) { return { v: '—', mu: true, n1: 'pas de P&L ce mois' }; }
+          if (g.mois.ouverture) { return { v: nf(x.v), n1: 'mois d’ouverture', puce: neutre('pas comparable') }; }
+          const tags = x.ecartReseau != null ? ['réseau ' + sg(x.ecartReseau, 0, ' %')] : [];
+          if (x.n1 == null) { return { v: nf(x.v), pas: x.niveau, n1: ouvLib, puce: neutre('pas de N-1'), tags }; }
+          return { v: nf(x.v), pas: x.niveau, n1: 'N-1 ' + nf(x.n1), puce: puce(x.delta, 1, ' %', true), tags };
+        }
+        const ym = L.annee + '-' + String(L.mois).padStart(2, '0'), ym1 = (L.annee - 1) + '-' + String(L.mois).padStart(2, '0');
+        const alertes = cle === 'food' ? (g.horsNorme || []).filter(h => h.mois === ym || h.mois === ym1).map(h => '⚠ ' + moisAn(h.mois) + ' : ' + pct(h.v) + ' — à vérifier') : [];
+        if (x.nonSaisi) { return { v: '—', mu: true, n1: 'pas saisi', puce: neutre('hors du réseau') }; }
+        if (x.v == null) { return { v: '—', mu: true, n1: 'pas de P&L ce mois' }; }
+        if (x.n1 == null) { return { v: pct(x.v), pas: x.niveau, n1: g.mois.ouverture ? 'mois d’ouverture' : ouvLib, puce: neutre(g.mois.ouverture ? 'pas comparable' : 'pas de N-1'), alertes }; }
+        return { v: pct(x.v), pas: x.niveau, n1: 'N-1 ' + pct(x.n1), puce: puce(x.delta, 1, ' pt', false), alertes };
+      }
+      const c = g.cumul, mc = c.moisComparables || [];
+      const memesMois = mc.length && mc.length < L.cumulAu ? 'mêmes mois : ' + etendue(mc) : '';
+      if (cle === 'trafic') {
+        const x = c.trafic;
+        if (x.comp == null) { return { v: nf(x.v), n1: ouvLib, puce: neutre('pas de N-1') }; }
+        if (memesMois) { return { v: nf(x.v), n1: nf(x.comp) + ' vs ' + nf(x.n1), puce: puce(x.delta, 1, ' %', true), tags: [memesMois] }; }
+        return { v: nf(x.v), n1: 'N-1 ' + nf(x.n1), puce: puce(x.delta, 1, ' %', true) };
+      }
+      const x = c[cle] || {};
+      const alertes = cle === 'food' ? (g.horsNorme || []).filter(h => +h.mois.slice(5, 7) <= L.cumulAu).map(h => '⚠ ' + moisAn(h.mois) + ' : ' + pct(h.v)) : [];
+      if (x.v == null) { return { v: '—', mu: true, n1: 'pas saisi' }; }
+      if (x.comp == null || x.n1 == null) { return { v: pct(x.v), pas: x.niveau, n1: mc.length ? 'pas saisi l’an dernier' : ouvLib, puce: neutre('pas de N-1'), alertes }; }
+      const tag = x.moisCompares < mc.length ? 'sur ' + x.moisCompares + ' mois saisis les deux années' : memesMois;
+      if (tag) { return { v: pct(x.v), pas: x.niveau, n1: pct(x.comp) + ' vs ' + pct(x.n1), puce: puce(x.delta, 1, ' pt', false), tags: [tag], alertes }; }
+      return { v: pct(x.v), pas: x.niveau, n1: 'N-1 ' + pct(x.n1), puce: puce(x.delta, 1, ' pt', false), alertes };
+    };
+
+    const R = cumul ? L.reseau.cumul : L.reseau.mois;
+    const nMag = L.magasins.length;
+    const celluleRes = cle => {
+      const x = R[cle] || {};
+      if (cle === 'xp') { return x.v == null ? { v: '—', mu: true, n1: 'pas de relevé ce mois-là' } : { v: dc(x.v, 2) + ' ★', pas: x.niveau, n1: nf(x.avis || 0) + ' avis', puce: xpN1 }; }
+      if (x.v == null) { return { v: '—', mu: true }; }
+      const v = cle === 'trafic' ? nf(x.v) : pct(x.v);
+      const f = n => cle === 'trafic' ? nf(n) : pct(n);
+      const p = cle === 'trafic' ? puce(x.delta, 1, ' %', true) : puce(x.delta, 1, ' pt', false);
+      if (x.comp == null || x.n1 == null) { return { v, pas: x.niveau, n1: 'pas de N-1' }; }
+      return { v, pas: x.niveau, n1: f(x.comp) + ' vs ' + f(x.n1), puce: p, tags: ['à périmètre constant'] };
+    };
+    const cases = cel => colonnes.map(c => c.vide ? { v: '—', mu: true, tags: ['à définir'] } : cel(c.cle));
+    out.colonnes = colonnes;
+    out.lignes = L.magasins.filter(g => cumul ? g.cumul : true).map(g => ({ nom: g.ville || g.nom, sous: g.nom + (g.franchise ? ' · ' + g.franchise : ''), cases: cases(cle => celluleMag(g, cle)) }));
+    out.reseau = { nom: 'Réseau', sous: nMag + ' magasins · ' + (cumul ? 'total clients' : 'moyenne par magasin') + ' · coûts pondérés au CA', cases: cases(celluleRes) };
+
+    const moisLib = moisAn(L.annee + '-' + String(L.mois).padStart(2, '0'), true);
+    if (cumul) {
+      out.titre = 'Les six leviers — cumul ' + L.annee;
+      out.sousTitre = 'janvier → ' + nomMois(L.cumulAu, true) + ', face aux mêmes mois de ' + (L.annee - 1) + (L.moisEnCours ? ' · le mois en cours n’entre pas' : '');
+    } else {
+      out.titre = 'Les six leviers — ' + moisLib;
+      out.sousTitre = (L.moisEnCours ? 'à date (' + L.jours + ' jours), ' : '') + 'face à ' + moisAn((L.annee - 1) + '-' + String(L.mois).padStart(2, '0'), true) + ' et au réseau';
+    }
+    out.anneeN1 = L.annee - 1;
+
+    // Les notes : ce qui rend une comparaison partielle, nommé magasin par magasin.
+    const notes = [];
+    const nomG = g => g.ville || g.nom;
+    if (cumul) {
+      const part = L.magasins.filter(g => g.cumul && (g.cumul.moisComparables || []).length > 0 && g.cumul.moisComparables.length < L.cumulAu);
+      const sans = L.magasins.filter(g => g.cumul && !(g.cumul.moisComparables || []).length);
+      if (part.length || sans.length) {
+        notes.push({ lead: 'Comparaison à mois égaux.', txt: [...part.map(g => nomG(g) + (g.ouverture ? ' (ouvert en ' + moisAn(g.ouverture, true) + ')' : '') + ' se compare sur ' + etendue(g.cumul.moisComparables)),
+          ...sans.map(g => nomG(g) + (g.ouverture ? ' (ouvert en ' + moisAn(g.ouverture, true) + ')' : '') + ' n’a pas encore de N-1')].join(' ; ') + '. Le réseau compare les magasins sur leurs mois communs.' });
+      }
+      const oh = L.magasins.filter(g => g.cumul && g.cumul.overhead && g.cumul.overhead.comp != null && g.cumul.overhead.moisCompares < (g.cumul.moisComparables || []).length);
+      if (oh.length) { notes.push({ lead: 'Frais généraux :', txt: 'à 0 % certains mois du P&L, ils n’étaient pas saisis — l’écart ne porte que sur les mois saisis les deux années (' + oh.map(g => nomG(g) + ' ' + g.cumul.overhead.moisCompares + ' mois').join(', ') + ').' }); }
+    } else {
+      const sans = L.magasins.filter(g => !g.mois.ouverture && g.mois.trafic.v != null && g.mois.trafic.n1 == null);
+      const ouv = L.magasins.filter(g => g.mois.ouverture);
+      if (sans.length || ouv.length) { notes.push({ lead: 'Comparaison au même mois.', txt: [...ouv.map(g => nomG(g) + ' ouvre ce mois-là : mois partiel, il ne se compare pas'), ...sans.map(g => nomG(g) + (g.ouverture ? ' (ouvert en ' + moisAn(g.ouverture, true) + ')' : '') + ' n’a pas encore de N-1')].join(' ; ') + '. Le réseau face au N-1 ne compte que les magasins comparables.' }); }
+      const ns = L.magasins.filter(g => COUTS.some(k => g.mois[k] && g.mois[k].nonSaisi));
+      if (ns.length) { notes.push({ lead: 'Pas encore saisi :', txt: ns.map(g => nomG(g) + ' — ' + COUTS.filter(k => g.mois[k] && g.mois[k].nonSaisi).map(k => NOM_COUT[k]).join(', ')).join(' ; ') + ' (à 0 % au P&L du mois). ' + (ns.length > 1 ? 'Ces magasins sortent' : 'Il sort') + ' de la moyenne du réseau pour ce coût.' }); }
+      if (L.moisEnCours) { notes.push({ lead: moisLib.charAt(0).toUpperCase() + moisLib.slice(1) + ' est en cours :', txt: 'chiffres à date (' + L.jours + ' jours) ; le trafic se lit en clients par jour, pour comparer à un mois plein. La pastille du trafic suit l’écart au réseau.' }); }
+    }
+    const hors = L.magasins.flatMap(g => (g.horsNorme || []).map(h => nomG(g) + ' ' + moisAn(h.mois, true) + ' (' + pct(h.v) + ')'));
+    if (hors.length) { notes.push({ lead: 'Food cost :', txt: (hors.length > 1 ? hors.length + ' mois hors norme' : 'un mois hors norme') + ' dans le P&L du panel, à vérifier : ' + hors.join(', ') + '.' }); }
+    notes.push({ lead: 'Expérience client', txt: '= la note Google de la fiche' + (L.googleN1Des ? ' ; elle se relève chaque mois, le premier N-1 viendra en ' + moisAn(L.googleN1Des, true) + '.' : ' ; pas encore de relevé mensuel, donc pas de N-1.') });
+    if (colonnes.some(c => c.vide)) { notes.push({ lead: 'Récurrence :', txt: 'laissée vide pour l’instant — la colonne attend sa mesure.' }); }
+    out.notes = notes;
+    out.seuilsKpi = () => this.setState({ screen: 'kpiTable' });
+    return out;
+  }
+  /**
    * Les périodes de la semaine d'un magasin — matin 6 – 10 h, midi 11 – 14 h,
    * après-midi 15 – 19 h — dans le drop de Résultat › Semaine.
    *
@@ -10021,10 +10243,12 @@ class App {
     common.rpMois = vue === 'mois'; common.rpSemaine = vue === 'semaine';
     common.rpLignes = []; common.rpDetail = null; common.rpTuiles = []; common.rpJours = []; common.rpReseau = null;
     common.rpMaj = S.rpMaj === 'en-cours' ? 'lecture…' : (S.rpMaj ? 'lu à ' + S.rpMaj : '');
-    common.rpRefresh = () => this.rpCharge(true, undefined, true);
+    common.rpRefresh = () => { this.rpCharge(true, undefined, true); if (vue === 'mois' && r && r.du) { this.levCharge(+r.du.slice(0, 4), +r.du.slice(5, 7), true); } };
     common.rpRegler = () => this.setState({ screen: 'budgetparam' });
+    common.lev = null;
     common.rpChargementTxt = vue === 'semaine' ? 'Lecture de la semaine…' : 'Lecture du mois…';
     if (!r || common.rpErreur) { return; }
+    if (vue === 'mois' && r.du) { common.lev = this.valsLeviers(r.du); }
 
     const seuils = r.seuils || { food: 32, labour: 33, overhead: 13.5 };
     const fE = n => this.fE(n);
