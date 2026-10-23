@@ -189,7 +189,7 @@ function gpClassement(array $gp, ?string $auj = null): array
 {
     $nomDe = primesMagasins();
     $sa = gpSaison($gp['du'], $gp['au'], $auj);
-    $res = ['saison' => $sa, 'liste' => [], 'enCourse' => 0, 'horsSeuil' => 0, 'seuilCourant' => null, 'motif' => null, 'jusqua' => null];
+    $res = ['saison' => $sa, 'liste' => [], 'enCourse' => 0, 'horsSeuil' => 0, 'sous' => [], 'seuilCourant' => null, 'motif' => null, 'jusqua' => null];
     if ($sa['etat'] === 'a_venir') { return $res; }
     $mois = gpMois($gp['du'], $gp['au'], $auj);
     $dansScope = static fn (string $sid) => $gp['portee'] !== 'magasin' || $sid === (string) $gp['shop'];
@@ -230,18 +230,23 @@ function gpClassement(array $gp, ?string $auj = null): array
             if (!$dansScope($x['s'])) { continue; }
             if ($gp['defi'] === 'vendeuse') {
                 if ($x['h'] <= 0 || $x['ca'] <= 0) { continue; }
-                if ($x['h'] < $seuil) { $res['horsSeuil']++; continue; }
+                if ($x['h'] < $seuil) { $res['horsSeuil']++; $res['sous'][$id] = ['a' => round($x['h']), 'seuil' => $seuil]; continue; }
                 $v = $x['ca'] / $x['h'];
                 $L[] = ['valeur' => round($v, 2), 'txt' => $fr($v, 1) . ' € / h', 'detail' => $fr($x['ca']) . ' € en ' . $fr($x['h']) . ' h'] + ['x' => $x, 'id' => $id];
             } elseif ($gp['defi'] === 'croisees') {
                 if ($x['tc'] <= 0) { continue; }
-                if ($x['tc'] < $seuil) { $res['horsSeuil']++; continue; }
+                if ($x['tc'] < $seuil) { $res['horsSeuil']++; $res['sous'][$id] = ['a' => $x['tc'], 'seuil' => $seuil]; continue; }
                 $v = 100 * $x['c'] / $x['tc'];
                 $L[] = ['valeur' => round($v, 2), 'txt' => $fr($v, 1) . ' %', 'detail' => $fr($x['c']) . ' tickets sur ' . $fr($x['tc'])] + ['x' => $x, 'id' => $id];
             } else {
                 $a = $avant[$id] ?? null;
                 if ($x['h'] <= 0 || $x['ca'] <= 0) { continue; }
-                if ($a === null || $a['h'] <= 0 || $a['ca'] <= 0 || $x['h'] < $seuil || $a['h'] < $seuil) { $res['horsSeuil']++; continue; }
+                if ($a === null || $a['h'] <= 0 || $a['ca'] <= 0 || $x['h'] < $seuil || $a['h'] < $seuil) {
+                    $res['horsSeuil']++;
+                    // Sans heures l'an dernier, rien à comparer : pas de minimum à lui donner.
+                    if ($a !== null && $a['h'] > 0) { $res['sous'][$id] = ['a' => round(min($x['h'], $a['h'])), 'seuil' => $seuil]; }
+                    continue;
+                }
                 $v1 = $x['ca'] / $x['h']; $v0 = $a['ca'] / $a['h'];
                 $p = 100 * ($v1 - $v0) / $v0;
                 $L[] = ['valeur' => round($p, 2), 'txt' => ($p >= 0 ? '+' : '−') . $fr(abs($p), 1) . ' %', 'detail' => $fr($v0, 1) . ' → ' . $fr($v1, 1) . ' € / h'] + ['x' => $x, 'id' => $id];
@@ -259,10 +264,18 @@ function gpClassement(array $gp, ?string $auj = null): array
 }
 
 /** Le classement d'un grand prix pour l'écran, gravé une fois la saison finie (trois jours de marge pour les données). */
-function gpResultat(array $gp): array
+function gpResultat(array $gp, ?string $auj = null): array
 {
-    if (is_array($gp['resultat'])) { return $gp['resultat'] + ['grave' => true]; }
-    $c = gpClassement($gp);
+    if (is_array($gp['resultat'])) { return $gp['resultat'] + ['grave' => true, 'sous' => []]; }
+    // Le classement se garde quinze minutes : l'écran des primes et l'app des vendeuses le relisent souvent.
+    $cle = 'grandsPrixCl' . $gp['id'] . ':' . substr(md5((string) json_encode([$gp['defi'], $gp['portee'], $gp['shop'], $gp['seuil'], $gp['du'], $gp['au']])), 0, 10);
+    $c = $gp['id'] > 0 && $auj === null ? motCache($cle) : null;
+    if (is_array($c) && isset($c['liste']) && (int) ($c['quand'] ?? 0) > time() - 900 && ($c['saison']['etat'] ?? '') === gpSaison($gp['du'], $gp['au'])['etat']) {
+        $c['saison'] = gpSaison($gp['du'], $gp['au']);
+        return $c;
+    }
+    $c = gpClassement($gp, $auj);
+    if ($gp['id'] > 0 && $auj === null && $c['motif'] === null) { motCacheEcrire($cle, $c + ['quand' => time()]); }
     if ($gp['id'] > 0 && $c['saison']['etat'] === 'finie' && $c['motif'] === null && date('Y-m-d') > date('Y-m-d', strtotime($gp['au'] . ' +3 days'))) {
         $g = $c; $g['liste'] = array_slice($c['liste'], 0, GP_TOP); $g['grave_le'] = date('c');
         try { Db::exec('UPDATE mot_grand_prix SET resultat = ? WHERE id = ? AND resultat IS NULL', [json_encode($g, JSON_UNESCAPED_UNICODE), $gp['id']]); } catch (Throwable $e) { /* regravé à la prochaine lecture */ }
@@ -382,4 +395,44 @@ function wr_grands_prix_retirer(): array
     Db::exec('DELETE FROM mot_grand_prix WHERE id = ?', [$id]);
     journalAdd('CEO', 'Paramètre', 'Grands prix', 'Grand prix retiré : « ' . $cur['titre'] . ' »');
     return ['ok' => true];
+}
+
+/**
+ * Les grands prix d'une vendeuse, pour « Mes primes » dans l'app (GET /ventes/moi) : ceux de la marque et ceux de son
+ * magasin, en cours, à venir, ou finis depuis moins de 45 jours (le gagnant reste affiché). Pour chacun : son rang (ou
+ * celui de son magasin pour le magasin de l'année), ce qu'il lui manque pour entrer au classement, le top 3.
+ */
+function gpPourVendeuse(int $emp, ?string $auj = null): array
+{
+    $auj ??= date('Y-m-d');
+    $emps = venteEmployes();
+    $shop = isset($emps[$emp]) ? (string) $emps[$emp]['shop'] : null;
+    $nomDe = primesMagasins();
+    $court = static fn (string $n) => (string) preg_replace('/^.* - /', '', $n);
+    $out = [];
+    foreach (gpListe($shop) as $gp) {
+        if (!$gp['actif'] || ($gp['portee'] === 'magasin' && $gp['shop'] !== $shop)) { continue; }
+        $sa = gpSaison($gp['du'], $gp['au'], $auj);
+        if ($sa['etat'] === 'finie' && $auj > date('Y-m-d', strtotime($gp['au'] . ' +45 days'))) { continue; }
+        $c = gpResultat($gp, $auj);
+        $parMagasin = $gp['defi'] === 'magasin';
+        $qui = $parMagasin ? (string) $shop : (string) $emp;
+        $moi = null;
+        foreach ($c['liste'] as $l) { if ((string) $l['id'] === $qui) { $moi = $l; break; } }
+        $sous = $c['sous'][$qui] ?? null;
+        $unite = ['vendeuse' => 'eur_h', 'progression' => 'pct_signe', 'croisees' => 'pct', 'b2b' => 'eur_ht', 'ticket' => 'eur', 'magasin' => 'pct'][$gp['defi']] ?? '';
+        $top = array_map(static fn ($l) => ['rang' => $l['rang'], 'nom' => $parMagasin ? $court((string) $l['nom']) : (string) $l['nom'],
+            'lieu' => $parMagasin ? '' : $court((string) $l['magasin']), 'valeur' => $l['valeur'], 'moi' => (string) $l['id'] === $qui], array_slice($c['liste'], 0, 3));
+        $out[] = ['id' => $gp['id'], 'defi' => $gp['defi'], 'portee' => $gp['portee'], 'titre' => $gp['titre'], 'lot' => $gp['lot'], 'valeur' => $gp['valeur'],
+            'payeur' => $gp['payeur'], 'sponsor' => $gp['sponsor'], 'sponsorSite' => $gp['sponsorSite'], 'photo' => $gp['photo'],
+            'du' => $gp['du'], 'au' => $gp['au'], 'etat' => $sa['etat'], 'part' => $sa['part'], 'joursRestants' => $sa['joursRestants'],
+            'seuil' => $gp['seuil'], 'seuilSorte' => $gp['seuilSorte'], 'seuilCourant' => $c['seuilCourant'], 'unite' => $unite,
+            'moi' => $moi !== null ? ['rang' => $moi['rang'], 'valeur' => $moi['valeur']] : null,
+            'manque' => $moi === null && $sous !== null ? ['n' => max(1, (int) ceil($sous['seuil'] - $sous['a'])), 'sorte' => $gp['seuilSorte']] : null,
+            'enCourse' => $c['enCourse'], 'top' => $top, 'magasin' => $shop !== null ? $court((string) ($nomDe[$shop] ?? '')) : ''];
+    }
+    // La saison en cours d'abord, la plus grosse valeur en tête ; puis ce qui vient, puis ce qui est fini.
+    $ordre = ['en_cours' => 0, 'a_venir' => 1, 'finie' => 2];
+    usort($out, static fn ($a, $b) => [$ordre[$a['etat']], -$a['valeur'], $a['id']] <=> [$ordre[$b['etat']], -$b['valeur'], $b['id']]);
+    return $out;
 }

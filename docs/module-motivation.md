@@ -108,4 +108,15 @@ classés et combien sont sous le minimum. Avec `shop`, il rend aussi `ici`, la m
 
 `POST /ventes/grands-prix/retirer {id}` retire un grand prix.
 
+`GET /ventes/moi`, sur le mois en cours, porte aussi `grandsPrix` : les grands prix de la vendeuse (ceux de la marque
+et ceux de son magasin). Ce sont ceux en cours, à venir, ou finis depuis moins de 45 jours. Chacun porte :
+
+- sa place `moi {rang, valeur}` (pour le magasin de l'année, celle de son magasin) ;
+- ou ce qu'il lui manque, `manque {n, sorte}` (des heures ou des tickets) ;
+- le `top` 3 ;
+- la saison et l'`unite` de la valeur.
+
+L'app les montre dans « Mes primes », en cartes qui défilent (`apps/employee`, `primes.twig`). Le classement se garde
+quinze minutes.
+
 Tests : `php bin/tests_grands_prix.php`.

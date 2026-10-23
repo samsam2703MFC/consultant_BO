@@ -1516,6 +1516,14 @@ function ep_ventes_moi(): array
     if ($emp === null) { http_response_code(404); return ['error' => 'personne inconnue']; }
     $r = primesMoi($emp, primesMoisDemande(), isset($_GET['frais']));
     if (isset($r['error'])) { http_response_code((int) ($r['code'] ?? 500)); return ['error' => $r['error']]; }
+    return primesAvecGrandsPrix($r, $emp);
+}
+
+/** La fiche du mois en cours porte aussi les grands prix de l'année (23/10/2026, src/grands_prix.php) ; une erreur ne la casse pas. */
+function primesAvecGrandsPrix(array $r, int $emp): array
+{
+    if (!($r['enCours'] ?? false) || !function_exists('gpPourVendeuse')) { return $r; }
+    try { $r['grandsPrix'] = gpPourVendeuse($emp); } catch (Throwable $e) { error_log('grands prix de ' . $emp . ' : ' . $e->getMessage()); }
     return $r;
 }
 
@@ -1611,7 +1619,7 @@ function ep_ventes_moi_jeton(): array
     }
     $r = primesMoi($emp, primesMoisDemande(), isset($_GET['frais']));
     if (isset($r['error'])) { http_response_code((int) ($r['code'] ?? 500)); return ['error' => $r['error']]; }
-    return $r;
+    return primesAvecGrandsPrix($r, $emp);
 }
 
 /**
