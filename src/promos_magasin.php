@@ -988,6 +988,110 @@ function ep_promos_sonde_commandes(): array
     return $out;
 }
 
+/* --- les champs d'une promotion au panel : la sonde (23/10/2026) ------------------------------------------------ */
+
+/**
+ * Les champs qu'une promotion porte déjà au cockpit : ceux de la documentation publique du panel (api.php, inchangée du
+ * 21 au 23/10/2026) et ceux que pvNormaliser relit dans une fiche. Tout autre champ d'une fiche relue est NOUVEAU.
+ */
+const PM_CHAMPS_CONNUS = ['activation_mode', 'bundle_price', 'bundle_promotion', 'calculation_shop_id', 'category_ids', 'code', 'code_type',
+    'count', 'data', 'day_of_week', 'description', 'discount_type', 'discount_value', 'eligible_category_ids', 'eligible_product_ids',
+    'excluded_product_ids', 'id', 'id_product', 'id_product_portion', 'id_promotion', 'is_exclusive', 'is_repeatable', 'items',
+    'max_applications_per_transaction', 'name', 'planned_promotion_type', 'priority', 'product_id', 'product_ids', 'product_portion_id',
+    'promotion_type', 'quantity', 'quantity_promotion', 'requires_customer', 'reward', 'reward_category_ids', 'reward_product_ids', 'schedule',
+    'selection_strategy', 'shop_ids', 'shop_scope_type', 'sort_order', 'status', 'time_from', 'time_to', 'trigger', 'type', 'usage_limit',
+    'usage_limit_per_code', 'usage_limit_per_customer', 'usage_limit_total', 'valid_from', 'valid_to', 'value', 'voucher_campaign_id',
+    'products', 'categories', 'category_targets', 'product_targets', 'portion_scope', 'id_category', 'product_name',
+    'calculation_sale_price', 'calculation_discounted_sale_price', 'start_time', 'end_time', 'created_at', 'updated_at', 'deleted_at'];
+
+/** Ce qui ressemble à une condition de ticket ou de canal : un seuil, un montant, la caisse, le webshop. */
+const PM_MOTIF_CONDITION = '/min|max|seuil|threshold|amount|montant|total|basket|panier|ticket|receipt|order|channel|canal|source|webshop|web|online|pos|counter|comptoir|kiosk|deliver|pickup|takeaway|sale|condition|rule/i';
+
+/**
+ * Une fiche aplatie : [chemin => [type, exemple]] (« trigger.product_ids[].id_product »). Une liste se lit sur ses trois
+ * premiers éléments ; une liste vide garde son chemin (« [] »), un champ nul aussi (« null ») : le panel peut rendre un
+ * champ nouveau à null tant qu'aucune promotion ne s'en sert.
+ */
+function pmSondeAplatir($x, string $base = '', array &$out = [], int $prof = 0): array
+{
+    if (!is_array($x) || $prof > 6) { return $out; }
+    $liste = array_is_list($x);
+    $i = 0;
+    foreach ($x as $k => $v) {
+        if ($liste && $i++ >= 3) { break; }
+        $ch = $liste ? $base . '[]' : ($base === '' ? (string) $k : $base . '.' . $k);
+        if (is_array($v) && $v !== []) { pmSondeAplatir($v, $ch, $out, $prof + 1); continue; }
+        $type = is_array($v) ? '[]' : ($v === null ? 'null' : gettype($v));
+        if (!isset($out[$ch]) || ($out[$ch][0] === 'null' && $type !== 'null')) {
+            $out[$ch] = [$type, is_scalar($v) ? mb_substr((string) (is_bool($v) ? ($v ? 'true' : 'false') : $v), 0, 60) : null];
+        }
+    }
+    return $out;
+}
+
+/** Le dernier nom d'un chemin, sans ses crochets : « trigger.product_ids[].id_product » → « id_product ». */
+function pmSondeFeuille(string $ch): string
+{
+    $p = explode('.', str_replace('[]', '', $ch));
+    return (string) end($p);
+}
+
+/**
+ * GET /ventes/promos/sonde-champs[?shop=4] — lecture seule (23/10/2026, demande de Sam : « le seuil de ticket
+ * déclencheur, webshop ou comptoir… les nouveaux paramètres de l'API des promotions ») : TOUS les champs que le panel
+ * rend sur une promotion, type par type (les six plus récentes de chacun, et celles du magasin), avec un exemple de
+ * valeur. `nouveaux` : les champs que ni la documentation publique ni le cockpit ne connaissent ; `conditions` : ceux qui
+ * ressemblent à un seuil de ticket ou à un canal (connus ou non). Rien de nominatif (pmSondePropre).
+ */
+function ep_promos_sonde_champs(): array
+{
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { http_response_code(503); return ['error' => 'compte admin du panel indisponible']; }
+    $shop = (int) ($_GET['shop'] ?? 0);
+    $out = ['shop' => $shop ?: null, 'lu' => date('Y-m-d H:i:s'), 'nouveaux' => [], 'conditions' => [], 'sortes' => []];
+    foreach (['buy-x-get-y', 'scheduled-product-discount', 'quantity', 'bundles'] as $sorte) {
+        $l = ErpApi::sondeGet('/admin/promotions/' . $sorte . '?limit=100');
+        $items = pvItems($l['corps']);
+        $ids = [];
+        foreach ($items as $it) { if ((int) ($it['id'] ?? 0) > 0) { $ids[] = (int) $it['id']; } }
+        rsort($ids);
+        $choisis = array_slice($ids, 0, 6);
+        if ($shop > 0) {
+            foreach ($items as $it) { if (in_array($shop, array_map('intval', (array) ($it['shop_ids'] ?? [])), true)) { $choisis[] = (int) $it['id']; } }
+        }
+        $choisis = array_slice(array_values(array_unique($choisis)), 0, 10);
+        $chemins = [];
+        foreach ($choisis as $id) { $chemins[$id] = '/admin/promotions/' . $sorte . '/' . $id; }
+        $fiches = $chemins !== [] ? ErpApi::getParallele($chemins, 4) : [];
+        $plat = [];
+        // La ligne de liste compte aussi : un champ peut n'y être que là.
+        foreach (array_slice($items, 0, 6) as $it) { pmSondeAplatir(pmSondePropre($it, true), '', $plat); }
+        $lues = 0;
+        foreach ($fiches as $f) {
+            if (!is_array($f)) { continue; }
+            $f = is_array($f['data'] ?? null) && isset($f['data']['id']) ? $f['data'] : $f;
+            pmSondeAplatir(pmSondePropre($f, true), '', $plat);
+            $lues++;
+        }
+        ksort($plat);
+        $s = ['code' => $l['code'], 'erreur' => $l['erreur'], 'promotions' => count($items), 'fichesLues' => $lues,
+            'champs' => array_map(static fn ($t) => $t[0] . ($t[1] !== null && $t[1] !== '' ? ' = ' . $t[1] : ''), $plat)];
+        foreach ($plat as $ch => $t) {
+            $f = pmSondeFeuille($ch);
+            $nouveau = !in_array($f, PM_CHAMPS_CONNUS, true) && preg_match(PM_SONDE_PERSO, $f) !== 1;
+            if ($nouveau) { $out['nouveaux'][$sorte . ' · ' . $ch] = $s['champs'][$ch]; }
+            if (preg_match(PM_MOTIF_CONDITION, $f) === 1) { $out['conditions'][$sorte . ' · ' . $ch] = $s['champs'][$ch]; }
+        }
+        $out['sortes'][$sorte] = $s;
+    }
+    // Une liste de toutes les promotions, si le panel en a une (non documentée) : ses types et ses champs.
+    $g = ErpApi::sondeGet('/admin/promotions?limit=20');
+    $gi = pvItems($g['corps']);
+    $out['listeGenerale'] = ['code' => $g['code'], 'n' => count($gi),
+        'types' => array_values(array_unique(array_map(static fn ($x) => (string) ($x['promotion_type'] ?? ''), $gi))),
+        'champs' => $gi !== [] ? array_keys(pmSondeAplatir(pmSondePropre($gi[0], true))) : []];
+    return $out;
+}
+
 /* --- les routes --------------------------------------------------------------------------------- */
 
 /**
