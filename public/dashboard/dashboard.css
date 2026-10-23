@@ -2253,3 +2253,7 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .pm-pft td{padding:6px;border-bottom:.5px solid var(--color-border-tertiary)}.pm-pft .r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pm-pft .mu{color:var(--color-text-muted)}.pm-pft .ok{color:#2d7a3e}
 .pm-pflot{margin-top:10px;font-size:12.5px}.pm-pflot s{color:var(--color-text-muted)}
+.pm-pflot .ok{color:#2d7a3e}.pm-pflot .ko{color:#A61E1E}.pm-pflot .mu{color:var(--color-text-muted);font-weight:500}
+.pm-pft tfoot td{font-weight:700;border-bottom:none;border-top:1px solid var(--color-border-secondary)}
+.pm-calc{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;border:1px dashed var(--color-border-secondary);border-radius:10px}
+.pm-calc .pm-eur .pm-in{width:100px}.pm-calc .ko{color:#A61E1E}
