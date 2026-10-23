@@ -57,6 +57,12 @@ function rpSchema(): void
         . 'pwa TINYINT NULL,'                         // pwa_user de la fiche ; NULL : fiche lue sans le champ
         . 'fidelite TINYINT NULL, membre_depuis DATE NULL,'
         . 'lu_le DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // La répartition des clients identifiés (23/10/2026) : canal d'origine de la fiche, compte en ligne déjà utilisé,
+    // client du webshop. Les fiches lues avant ces colonnes se relisent toutes.
+    if (Db::rows("SHOW COLUMNS FROM ceo_pwa_client LIKE 'canal'") === []) {
+        Db::exec('ALTER TABLE ceo_pwa_client ADD COLUMN canal VARCHAR(40) NULL, ADD COLUMN connecte TINYINT NULL, ADD COLUMN webshop TINYINT NULL');
+        Db::exec("UPDATE ceo_pwa_client SET lu_le = '2000-01-01'");
+    }
     $fait = true;
 }
 
@@ -144,7 +150,11 @@ function rpAManquer(array $sids, string $du, string $au, int $n): array
     return $out;
 }
 
-/** Le statut d'une fiche client du panel : pwa_user, fidelity_active, member_since — rien d'autre n'est lu. */
+/**
+ * Le statut d'une fiche client du panel : pwa_user, fidelity_active, member_since, et pour la répartition le canal
+ * d'origine (source_channel), un compte en ligne déjà utilisé (last_login_at renseigné : oui ou non, pas la date) et
+ * webshop_user. Rien d'autre n'est lu.
+ */
 function rpLitFiche(mixed $r): ?array
 {
     if (!is_array($r)) { return null; }
@@ -157,8 +167,11 @@ function rpLitFiche(mixed $r): ?array
     if ($f === []) { return null; }
     $drapeau = static fn ($v): ?int => $v === null || $v === '' ? null : ((int) filter_var($v, FILTER_VALIDATE_BOOLEAN) === 1 || (string) $v === '1' ? 1 : 0);
     $membre = isset($f['member_since']) && preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $f['member_since']) ? substr((string) $f['member_since'], 0, 10) : null;
+    $canal = isset($f['source_channel']) && is_scalar($f['source_channel']) && trim((string) $f['source_channel']) !== '' ? mb_substr(mb_strtolower(trim((string) $f['source_channel'])), 0, 40) : null;
     return ['pwa' => array_key_exists('pwa_user', $f) ? $drapeau($f['pwa_user']) : null,
-        'fidelite' => array_key_exists('fidelity_active', $f) ? $drapeau($f['fidelity_active']) : null, 'membre' => $membre];
+        'fidelite' => array_key_exists('fidelity_active', $f) ? $drapeau($f['fidelity_active']) : null, 'membre' => $membre,
+        'canal' => $canal, 'connecte' => array_key_exists('last_login_at', $f) ? (trim((string) $f['last_login_at']) !== '' ? 1 : 0) : null,
+        'webshop' => array_key_exists('webshop_user', $f) ? $drapeau($f['webshop_user']) : null];
 }
 
 /** Lit les fiches des clients sans statut frais ([client => magasin où il est passé]), quatre de front ; rend le nombre lu. */
@@ -172,9 +185,10 @@ function rpLireFiches(array $clients): int
     foreach ($clients as $cid => $sid) {
         $f = rpLitFiche($res[$cid] ?? null);
         if ($f === null) { continue; }
-        Db::exec('INSERT INTO ceo_pwa_client (client_id, pwa, fidelite, membre_depuis, lu_le) VALUES (?,?,?,?,NOW())
-                  ON DUPLICATE KEY UPDATE pwa = VALUES(pwa), fidelite = VALUES(fidelite), membre_depuis = VALUES(membre_depuis), lu_le = VALUES(lu_le)',
-            [(int) $cid, $f['pwa'], $f['fidelite'], $f['membre']]);
+        Db::exec('INSERT INTO ceo_pwa_client (client_id, pwa, fidelite, membre_depuis, canal, connecte, webshop, lu_le) VALUES (?,?,?,?,?,?,?,NOW())
+                  ON DUPLICATE KEY UPDATE pwa = VALUES(pwa), fidelite = VALUES(fidelite), membre_depuis = VALUES(membre_depuis),
+                      canal = VALUES(canal), connecte = VALUES(connecte), webshop = VALUES(webshop), lu_le = VALUES(lu_le)',
+            [(int) $cid, $f['pwa'], $f['fidelite'], $f['membre'], $f['canal'], $f['connecte'], $f['webshop']]);
         $ok++;
     }
     return $ok;
@@ -266,7 +280,18 @@ function rpTaux(array $sids, string $du, string $au): array
     rpSchema();
     $auj = date('Y-m-d');
     if ($au > $auj) { $au = $auj; }
-    $vide = static fn (): array => ['v' => null, 'pwa' => 0, 'revenus' => 0, 'identifies' => 0, 'inconnus' => 0, 'ticketsPwa' => 0, 'tickets' => 0, 'joursLus' => 0, 'jours' => 0, 'complet' => false];
+    $vide = static fn (): array => ['v' => null, 'pwa' => 0, 'revenus' => 0, 'identifies' => 0, 'inconnus' => 0, 'ticketsPwa' => 0, 'tickets' => 0, 'joursLus' => 0, 'jours' => 0, 'complet' => false,
+        'repartition' => ['sansApp' => 0, 'statutInconnu' => 0, 'fidelite' => 0, 'connectes' => 0, 'webshop' => 0, 'canaux' => []]];
+    // la répartition d'un client identifié (fiche lue) : sans app, statut absent de la fiche, fidélité, compte en ligne, webshop, canal
+    $range = static function (array &$rp, array $r): void {
+        if ($r['lu'] === null) { return; }
+        if ($r['pwa'] === null) { $rp['statutInconnu']++; } elseif ((int) $r['pwa'] === 0) { $rp['sansApp']++; }
+        if ((int) $r['fidelite'] === 1) { $rp['fidelite']++; }
+        if ((int) $r['connecte'] === 1) { $rp['connectes']++; }
+        if ((int) $r['webshop'] === 1) { $rp['webshop']++; }
+        $c = $r['canal'] !== null && $r['canal'] !== '' ? (string) $r['canal'] : 'non renseigné';
+        $rp['canaux'][$c] = ($rp['canaux'][$c] ?? 0) + 1;
+    };
     $out = ['du' => $du, 'au' => $au, 'magasins' => [], 'reseau' => $vide()];
     foreach ($sids as $sid) { $out['magasins'][(int) $sid] = $vide(); }
     if ($du > $au) { return $out; }
@@ -285,8 +310,8 @@ function rpTaux(array $sids, string $du, string $au): array
     }
     foreach ($out['magasins'] as $sid => $x) { if ($x['jours'] === 0) { $out['magasins'][$sid]['jours'] = $clos; } }
     // les passages : un jour avec au moins un ticket, par client et par magasin
-    $parClient = [];
-    foreach (Db::rows('SELECT v.shop_id, v.client_id, COUNT(*) passages, SUM(v.tickets) tk, c.pwa, c.client_id lu
+    $parClient = []; $tous = [];
+    foreach (Db::rows('SELECT v.shop_id, v.client_id, COUNT(*) passages, SUM(v.tickets) tk, c.pwa, c.client_id lu, c.fidelite, c.canal, c.connecte, c.webshop
                          FROM ceo_pwa_visite v LEFT JOIN ceo_pwa_client c ON c.client_id = v.client_id
                         WHERE v.jour BETWEEN ? AND ? GROUP BY v.shop_id, v.client_id', [$du, $au]) as $r) {
         $sid = (int) $r['shop_id'];
@@ -294,6 +319,8 @@ function rpTaux(array $sids, string $du, string $au): array
         $x = &$out['magasins'][$sid];
         $x['identifies']++;
         if ($r['lu'] === null) { $x['inconnus']++; }
+        $range($x['repartition'], $r);
+        $tous[(int) $r['client_id']] = $r;
         if ((int) $r['pwa'] === 1 && $r['pwa'] !== null) {
             $x['pwa']++; $x['ticketsPwa'] += (int) $r['tk'];
             if ((int) $r['passages'] >= 2) { $x['revenus']++; }
@@ -314,12 +341,17 @@ function rpTaux(array $sids, string $du, string $au): array
         $res['revenus'] = count(array_filter($jours, static fn ($n) => $n >= 2));
     }
     $complet = true;
+    // le réseau compte chaque client identifié une fois
+    $res['identifies'] = count($tous);
+    foreach ($tous as $r) { if ($r['lu'] === null) { $res['inconnus']++; } $range($res['repartition'], $r); }
     foreach ($out['magasins'] as $sid => $x) {
+        arsort($out['magasins'][$sid]['repartition']['canaux']);
         $out['magasins'][$sid]['v'] = $x['complet'] && $x['pwa'] > 0 ? round(100 * $x['revenus'] / $x['pwa'], 1) : null;
-        $res['identifies'] += $x['identifies']; $res['inconnus'] += $x['inconnus']; $res['ticketsPwa'] += $x['ticketsPwa'];
+        $res['ticketsPwa'] += $x['ticketsPwa'];
         $res['tickets'] += $x['tickets']; $res['joursLus'] += $x['joursLus']; $res['jours'] += $x['jours'];
         $complet = $complet && $x['complet'];
     }
+    arsort($res['repartition']['canaux']);
     $res['complet'] = $complet;
     $res['v'] = $complet && $res['pwa'] > 0 ? round(100 * $res['revenus'] / $res['pwa'], 1) : null;
     $out['reseau'] = $res;
