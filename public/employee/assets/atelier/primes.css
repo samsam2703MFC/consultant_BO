@@ -714,3 +714,18 @@ a.sb-ligne:active{background:var(--s-doux)}
 .acc-kpis small{font:400 11px var(--s-police);color:var(--s-second)}
 .acc-bilan.ok>i{color:var(--s-vert)}
 .acc-bilan.att>i{color:var(--s-accent)}
+
+/* La meilleure vendeuse (23/10/2026) : une jauge dont le bout est la 1re du magasin (son initiale, posée juste après,
+   pour que le point reste lisible tout près d'elle) et le point la vendeuse ; dans la ligne de la prime, la récompense
+   au-dessus du bout. Elle en tête : le point au bout, en vert. */
+.pl-mv,.sb-jv{position:relative;display:block;height:6px;border-radius:3px;background:var(--s-remplir)}
+.pl-mv{margin:30px 34px 0 44px}
+.sb-jv{flex:1;margin-right:28px}
+.pl-mv>i,.sb-jv>i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--s-accent)}
+.pl-mv .pt,.sb-jv .pt{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--s-carte);border:3px solid var(--s-accent);box-shadow:0 1px 3px rgba(0,0,0,.18);box-sizing:border-box;z-index:2}
+.pl-mv .bout,.sb-jv .bout{position:absolute;left:calc(100% + 6px);top:50%;width:24px;height:24px;margin-top:-12px;border-radius:50%;background:#E5E5EA;color:var(--s-second);font:600 11px/24px var(--s-police);text-align:center;z-index:1}
+.sb-jv .bout{width:20px;height:20px;margin-top:-10px;left:calc(100% + 5px);font-size:10px;line-height:20px}
+.pl-mv .fl{position:absolute;right:-30px;bottom:calc(100% + 14px);font:600 11px var(--s-police);padding:2px 7px;border-radius:999px;background:var(--s-texte);color:#fff;white-space:nowrap}
+.pl.ok .pl-mv>i,.pl-mv.un>i{background:var(--s-vert)}
+.pl.ok .pl-mv .pt,.pl-mv.un .pt{border-color:var(--s-vert)}
+.pl.ok .pl-mv .fl{background:var(--s-vert)}

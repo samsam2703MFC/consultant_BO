@@ -149,7 +149,16 @@
       <span class="pl-v">{% if v is null %}—{% else %}{{ v|number_format(dec, ',', ' ') }}{% if uc %}<small>{{ uc }}</small>{% endif %}{% endif %}</span>
       <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
     </div>
-    {% if c.barre is not null %}
+    {# La meilleure vendeuse (23/10/2026) : une jauge dont le bout est la 1re du magasin (son initiale) et le point la
+       vendeuse, la récompense posée au bout. Elle en tête : le point arrive au bout, en vert. #}
+    {% set mvPremier = c.cle == 'meilleure' and v is not null ? (c.premier ?? null) : null %}
+    {% if mvPremier %}
+    {% set mvFin = max(mvPremier.q, v) %}{% set mvPos = mvFin > 0 ? min(100, 100 * v / mvFin) : 0 %}
+    <div class="pl-mv{{ mvPremier.moi ? ' un' }}" aria-hidden="true"><i style="width:{{ mvPos|round(1) }}%"></i>
+      {% if not mvPremier.moi %}<span class="bout">{{ mvPremier.nom|first|upper }}</span>{% endif %}
+      <span class="pt" style="left:{{ mvPos|round(1) }}%"></span>
+      <span class="fl">{{ ok ? '✓ ' }}{{ (ok and c.gain > 0 ? c.gain : c.montant)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span></div>
+    {% elseif c.barre is not null %}
     <div class="pl-j" aria-hidden="true"><i style="width:{{ c.barre }}%"></i>{% if c.barreJour is not null %}<span class="jr" style="left:{{ c.barreJour }}%"></span>{% endif %}<span class="ob"></span>
       <span class="fl">{{ ok ? '✓ ' }}{{ (ok and c.gain > 0 ? c.gain : c.montant)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% if c.max and not ok %} max{% endif %}</span></div>
     {% endif %}
@@ -167,6 +176,7 @@
       {%- endif -%}
       </span>
       {% if c.type == 'categorie' %}<span>{% if c.premier and not c.premier.moi %}{{ T.first_abbr ?? '1re' }} {{ c.premier.nom }} {{ c.premier.q|number_format(0, ',', ' ') }}{% elseif c.second %}{{ rangPre }}2{{ rangSuf }} {{ c.second.nom }} {{ c.second.q|number_format(0, ',', ' ') }}{% endif %}</span>
+      {% elseif mvPremier %}<span>{% if not mvPremier.moi %}{{ T.first_abbr ?? '1re' }} {{ mvPremier.nom }} {{ mvPremier.q|number_format(0, ',', ' ') }} {{ T.pts ?? 'pts' }}{% elseif c.second ?? null %}{{ rangPre }}2{{ rangSuf }} {{ c.second.nom }} {{ c.second.q|number_format(0, ',', ' ') }} {{ T.pts ?? 'pts' }}{% endif %}</span>
       {% elseif (c.regle ?? '') == 'magasin' and (c.moiPcs ?? null) is not null %}<span>{{ T.of_which_you ?? 'dont toi' }} {{ c.moiPcs|number_format(0, ',', ' ') }} {{ pcs }}</span>
       {% elseif c.repereVal is not null %}<span>{{ c.repereType == 'garder' ? (T.keep_first_short ?? 'garder la 1re') : (T.goal_lower ?? 'objectif') }} {{ c.repereVal|number_format(dec, ',', ' ') }}{{ u == 'score' ? ' ' ~ (T.pts ?? 'pts') : suf }}</span>{% endif %}
     </div>

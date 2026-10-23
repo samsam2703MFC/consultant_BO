@@ -1,7 +1,7 @@
 {
   "bonuses": "Primes",
   "home": "Accueil",
-  "plan_best_shop": "La 1re du magasin est à {a}, toi {de} : {e} points à reprendre en vendant plus par heure prestée.",
+  "plan_best_shop": "La 1re du magasin est à {a}, toi {de} : {e} points pour la passer, en vendant plus par heure prestée.",
   "plan_cross_aim": "Sur tes ~{n} prochains tickets, vise {p} % : {d} tickets sur 10 avec un 2e article.",
   "plan_cross_hard": "Il faudrait plus de 100 % sur tes prochains tickets : cette prime se joue le mois prochain.",
   "plan_cross_min": "Il faut aussi {n} tickets dans le mois.",
