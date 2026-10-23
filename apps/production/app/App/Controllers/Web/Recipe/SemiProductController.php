@@ -3,6 +3,7 @@ namespace App\Controllers\Web\Recipe;
 
 use App\Core\Web\BaseController;
 use App\Services\Material\MaterialService;
+use App\Services\Product\ProductService;
 use App\Services\Recipe\CompositionService;
 use App\Services\Recipe\PreparationService;
 use App\Services\Recipe\RecipeCompetencyService;
@@ -28,7 +29,8 @@ class SemiProductController extends BaseController
         RecipeService      $recipeService,
         SemiProductService $semiProductService,
         private RecipeCostRecalculationService $recipeCostRecalculationService,
-        private RecipeCompetencyService $recipeCompetencyService
+        private RecipeCompetencyService $recipeCompetencyService,
+        private ProductService $productService
     )
     {
         $this->compositionService = $compositionService;
@@ -47,6 +49,10 @@ class SemiProductController extends BaseController
         $this->view("recipe/semi_product/overview", $data);
     }
 
+    /**
+     * Nowy półprodukt. Z Karty produktu (?for_product=) po zapisie przechodzimy do receptury tego produktu
+     * z nowym półproduktem na liście (RecipeController::newRecipe, edycja, jeśli receptura już jest).
+     */
     public function newSemiProduct()
     {
         $data['units'] = $this->unitService->getSmallUnit();
@@ -54,6 +60,13 @@ class SemiProductController extends BaseController
         $data['preparation_types'] = $this->preparationService->getPreparationTypes();
         $data['compositions'] = $this->compositionService->getAll();
         $data['subrecipes'] = $this->semiProductService->getAll();
+
+        $productId = (int) ($_GET['for_product'] ?? 0);
+        $forProduct = $productId > 0 ? ($this->productService->getById($productId) ?: null) : null;
+        if ($forProduct) {
+            $data['for_product'] = $forProduct;
+            $data['card_url'] = $this->productService->cardUrl($productId, 3);
+        }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($this->semiProductService->validate($_POST)) {
@@ -63,11 +76,14 @@ class SemiProductController extends BaseController
 
                 if ($newId) {
 
-                    header('Location: ' . ROOT . '/semi-products/' . $newId . '/calculation');
+                    header('Location: ' . ROOT . ($forProduct
+                        ? '/recipes/new?' . http_build_query(['product' => $productId, 'add_sfp' => (int) $newId])
+                        : '/semi-products/' . $newId . '/calculation'));
                     exit;
                 }
             } else {
                 $data['old_data'] = $_POST;
+                $this->errors = $this->semiProductService->errors();
             }
         }
 

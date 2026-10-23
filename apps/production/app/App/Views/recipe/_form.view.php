@@ -9,6 +9,8 @@
  *
  * Wejście : $form = ['kind' => ..., 'mode' => 'new'|'edit'] oraz dane kontrolera (materials, sfp / compositions,
  * preparation_types, old_data, row / product_data / products_without_recipe, errors).
+ * Ścieżka z Karty produktu (krok 3) : for_product (produkt), card_url (powrót do karty), selected_product
+ * (produkt wybrany na liście) ; wiersz z kluczem 'added' = półprodukt utworzony przed chwilą, czeka na ilość.
  */
 $kind = $form['kind'];
 $isNew = $form['mode'] === 'new';
@@ -27,6 +29,8 @@ $old = $old_data ?? [];
 $name = $kind === 'product'
     ? ($product_data['name'] ?? '')
     : old_value('name', $row['name'] ?? '');
+$card = $for_product ?? null;
+$added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) => !empty($item['added'])));
 ?>
 <?php $this->view("page_components/header"); ?>
 
@@ -54,6 +58,25 @@ $name = $kind === 'product'
                 <?php if (!empty($errors)): ?>
                     <div class="alert alert-danger"><?= implode('<br>', array_map($e, (array) $errors)) ?></div>
                 <?php endif; ?>
+                <?php if ($card): ?>
+                    <div class="alert alert-light-primary d-flex gap-2 align-items-start" data-card-path>
+                        <i class="bi bi-signpost-split"></i>
+                        <div>
+                            <?php if ($kind === 'semi'): ?>
+                                <strong>Półprodukt dla produktu « <?= $e($card['name']) ?> »</strong> — krok 1 z 2.
+                                Po zapisie przejdziesz do receptury produktu (krok 2), z tym półproduktem już na liście.
+                            <?php elseif ($isNew): ?>
+                                <strong>Receptura produktu « <?= $e($card['name']) ?> »</strong> — krok 2 z 2.
+                                Surowce i półprodukty na 1 szt. ; po zapisie wrócisz do Karty produktu (krok « Receptura »).
+                            <?php else: ?>
+                                <strong>Receptura produktu « <?= $e($card['name']) ?> »</strong> — po zapisie wrócisz do Karty produktu (krok « Receptura »).
+                            <?php endif; ?>
+                            <?php foreach ($added as $item): ?>
+                                <div class="mt-1">Nowy półprodukt « <?= $e($item['name']) ?> » jest na liście półproduktów — podaj jego ilość.</div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
                 <form method="POST" id="recipeForm" data-kind="<?= $kind ?>">
                     <div class="row g-3">
                         <div class="col-12 col-md-6">
@@ -61,7 +84,7 @@ $name = $kind === 'product'
                                 <label for="final_product" class="form-label">Produkt (bez receptury)</label>
                                 <select class="form-select choices" name="final_product" id="final_product">
                                     <?php foreach (($products_without_recipe ?? []) as $product): ?>
-                                        <option value="<?= (int) $product['id'] ?>" <?= old_select('final_product', $product['id']) ?>><?= $e($product['name']) ?></option>
+                                        <option value="<?= (int) $product['id'] ?>" <?= old_select('final_product', $product['id'], $selected_product ?? '') ?>><?= $e($product['name']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             <?php elseif ($kind === 'product'): ?>
@@ -119,11 +142,11 @@ $name = $kind === 'product'
                         <thead><tr><th>Nazwa</th><th style="width:180px">Ilość</th><th style="width:60px"></th></tr></thead>
                         <tbody>
                         <?php foreach (($old[$sub['key']] ?? []) as $item): ?>
-                            <tr>
+                            <tr<?= !empty($item['added']) ? ' class="table-success" data-added' : '' ?>>
                                 <td><?= $e($item['name']) ?>
                                     <input type="hidden" name="<?= $sub['key'] ?>[<?= (int) $item['id'] ?>][id]" value="<?= (int) $item['id'] ?>">
                                     <input type="hidden" name="<?= $sub['key'] ?>[<?= (int) $item['id'] ?>][name]" value="<?= $e($item['name']) ?>"></td>
-                                <td><input type="number" step="any" class="form-control form-control-sm" name="<?= $sub['key'] ?>[<?= (int) $item['id'] ?>][quantity]" value="<?= $e($item['quantity']) ?>"></td>
+                                <td><input type="number" step="any" class="form-control form-control-sm" name="<?= $sub['key'] ?>[<?= (int) $item['id'] ?>][quantity]" value="<?= $e($item['quantity']) ?>"<?= !empty($item['added']) ? ' min="1" required autofocus aria-label="Ilość nowego półproduktu"' : '' ?>></td>
                                 <td><button class="btn btn-sm btn-outline-danger" type="button" data-remove aria-label="Usuń">×</button></td>
                             </tr>
                         <?php endforeach; ?>
@@ -171,7 +194,11 @@ $name = $kind === 'product'
                     </table>
 
                     <div class="d-flex justify-content-between mt-4">
-                        <a href="<?= ROOT . $labels['list'] ?>" class="btn btn-outline-secondary">Powrót</a>
+                        <?php if ($card): ?>
+                            <a href="<?= $e($card_url) ?>" class="btn btn-outline-secondary">Powrót do karty produktu</a>
+                        <?php else: ?>
+                            <a href="<?= ROOT . $labels['list'] ?>" class="btn btn-outline-secondary">Powrót</a>
+                        <?php endif; ?>
                         <button class="btn btn-success"><?= $isNew ? 'Utwórz' : 'Zapisz' ?></button>
                     </div>
                 </form>

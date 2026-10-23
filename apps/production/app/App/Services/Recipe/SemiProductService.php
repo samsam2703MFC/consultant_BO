@@ -11,7 +11,8 @@ use App\Repositories\Product\Recipe\RecipeRepository;
 
 class SemiProductService
 {
-
+    /** Komunikaty ostatniej walidacji (pokazywane nad formularzem półproduktu). */
+    private array $errors = [];
 
     public function __construct(
         private RecipeRepository $recipeRepository,
@@ -142,13 +143,20 @@ class SemiProductService
         if(empty($data['material_data']) && empty($data['composition_data'])){
             $errors['empty_ingredients'] = "Brak danych dotyczących składników";
         }
+        $errors += $this->recipeService->ingredientErrors($data, ['material_data', 'composition_data']);
 
+        $this->errors = $errors;
         if(empty($errors))
         {
             return true;
         }
 
         return false;
+    }
+
+    public function errors(): array
+    {
+        return array_values($this->errors);
     }
 
     public function validateEdit($data)

@@ -12,6 +12,9 @@ use App\Services\Product\ProductService;
 
 class RecipeService
 {
+    /** Komunikaty ostatniej walidacji (pokazywane nad formularzem receptury). */
+    private array $errors = [];
+
     public function __construct(
         private RecipeRepository                   $recipeRepository,
         private ProductRecipeConnectionRepository  $productRecipeConnectionRepository,
@@ -237,12 +240,37 @@ class RecipeService
         if (empty($data['material_data']) && empty($data['sfp_data'])) {
             $errors['empty_ingredients'] = "Brak danych dotyczących składników";
         }
+        $errors += $this->ingredientErrors($data, ['material_data', 'sfp_data']);
 
+        $this->errors = $errors;
         if (empty($errors)) {
             return true;
         }
 
         return false;
+    }
+
+    public function errors(): array
+    {
+        return array_values($this->errors);
+    }
+
+    /**
+     * Składnik bez ilości : kolumna quantity jest liczbą całkowitą NOT NULL, więc pusty wiersz kończył się błędem zapisu.
+     * Wspólne dla receptury produktu (sfp_data) i półproduktu (composition_data).
+     */
+    public function ingredientErrors(array $data, array $keys): array
+    {
+        $errors = [];
+        foreach ($keys as $key) {
+            foreach ((array) ($data[$key] ?? []) as $item) {
+                $quantity = trim((string) ($item['quantity'] ?? ''));
+                if (!is_numeric($quantity) || (float) $quantity <= 0) {
+                    $errors['quantity_' . $key . '_' . (int) ($item['id'] ?? 0)] = 'Podaj ilość większą od zera : ' . ($item['name'] ?? '#' . (int) ($item['id'] ?? 0));
+                }
+            }
+        }
+        return $errors;
     }
 
     public function insert($data)
@@ -384,7 +412,9 @@ class RecipeService
         if (empty($data['id_recipe'])) {
             $errors['empty_id'] = "Brak id receptury";
         }
+        $errors += $this->ingredientErrors($data, ['material_data', 'sfp_data']);
 
+        $this->errors = $errors;
         if (empty($errors)) {
             return true;
         }

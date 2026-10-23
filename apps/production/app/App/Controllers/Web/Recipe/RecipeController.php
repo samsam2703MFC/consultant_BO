@@ -55,13 +55,35 @@ class RecipeController extends BaseController
         $this->view("recipe/recipe/overview", $data);
     }
 
+    /**
+     * Nowa receptura produktu. Z Karty produktu (krok 3) : ?product= wybiera produkt, ?add_sfp= dopisuje półprodukt
+     * utworzony przed chwilą (SemiProductController), a po zapisie wracamy do karty. Bez parametrów jak dotąd.
+     */
     public function newRecipe()
     {
+        $forProduct = $this->cardProduct();
+        if ($forProduct && !empty($forProduct['id_recipe'])) {
+            // Produkt ma już recepturę : półprodukt dopisujemy w jej edycji, nie w drugiej recepturze.
+            header('Location: ' . ROOT . '/recipes/' . (int) $forProduct['id_recipe'] . '/edit?' . http_build_query(array_filter(['product' => (int) $forProduct['id'], 'add_sfp' => (int) ($_GET['add_sfp'] ?? 0)])));
+            exit;
+        }
+
         $data['units'] = $this->unitService->getSmallUnit();
         $data['materials'] = $this->materialService->getAll();
         $data['preparation_types'] = $this->preparationService->getPreparationTypes();
         $data['sfp'] = $this->semiProductService->getAll();
         $data['products_without_recipe'] = $this->productService->getWithoutRecipe();
+
+        if ($forProduct) {
+            // Produkt nieaktywny nie jest na liście « bez receptury » : bez niego lista wybrałaby inny produkt.
+            if (!in_array((int) $forProduct['id'], array_map('intval', array_column($data['products_without_recipe'], 'id')), true)) {
+                array_unshift($data['products_without_recipe'], ['id' => $forProduct['id'], 'name' => $forProduct['name']]);
+            }
+            $data['for_product'] = $forProduct;
+            $data['selected_product'] = (int) $forProduct['id'];
+            $data['card_url'] = $this->productService->cardUrl((int) $forProduct['id'], 3);
+            $data['old_data']['sfp_data'] = $this->addedSemiProduct([]);
+        }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($this->recipeService->validate($_POST)) {
@@ -71,16 +93,39 @@ class RecipeController extends BaseController
 
                 if ($newRecipeId) {
 
-                    header('Location: ' . ROOT . '/recipes/' . $newRecipeId . '/calculation');
+                    header('Location: ' . ($forProduct ? $this->productService->cardUrl((int) $dataToInsert['final_product'], 3) : ROOT . '/recipes/' . $newRecipeId . '/calculation'));
                     exit;
                 }
 
             } else {
                 $data['old_data'] = $_POST;
+                $this->errors = $this->recipeService->errors();
             }
         }
 
         $this->view("recipe/recipe/new", $data);
+    }
+
+    /** Produkt z Karty produktu (?product=), dla którego powstaje receptura ; null poza tą ścieżką. */
+    private function cardProduct(): ?array
+    {
+        $id = (int) ($_GET['product'] ?? 0);
+        $product = $id > 0 ? $this->productService->getById($id) : null;
+        return $product ?: null;
+    }
+
+    /** Półprodukt właśnie utworzony dla produktu (?add_sfp=) : wiersz do uzupełnienia ilością, jeśli go jeszcze nie ma. */
+    private function addedSemiProduct(array $rows): array
+    {
+        $id = (int) ($_GET['add_sfp'] ?? 0);
+        if ($id <= 0 || in_array($id, array_map('intval', array_column($rows, 'id')), true)) return $rows;
+        foreach ($this->semiProductService->getAll() as $semi) {
+            if ((int) $semi['id'] === $id) {
+                $rows[] = ['id' => $id, 'name' => $semi['name'], 'quantity' => '', 'added' => true];
+                break;
+            }
+        }
+        return $rows;
     }
 
 
@@ -94,8 +139,15 @@ class RecipeController extends BaseController
         $data['product_data'] = $this->productService->getDataByRecipeId($id);
 
         $data['old_data']['material_data'] = $this->recipeService->getRecipeMaterials($id);
-        $data['old_data']['sfp_data'] = $this->recipeService->getRecipeSFP($id);
+        $data['old_data']['sfp_data'] = $this->addedSemiProduct($this->recipeService->getRecipeSFP($id));
         $data['old_data']['preparation_type'] = $this->recipeService->getRecipePreparationType($id);
+
+        // Z Karty produktu (?product=) : po zapisie powrót do kroku « Receptura » karty produktu tej receptury.
+        $fromCard = !empty($_GET['product']) && !empty($data['product_data']['id']);
+        if ($fromCard) {
+            $data['for_product'] = $data['product_data'];
+            $data['card_url'] = $this->productService->cardUrl((int) $data['product_data']['id'], 3);
+        }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['id_recipe'] = $id;
@@ -111,9 +163,11 @@ class RecipeController extends BaseController
 
                 if ($success) {
 
-                    header('Location: ' . ROOT . '/recipes/' . $id . '/calculation');
+                    header('Location: ' . ($fromCard ? $data['card_url'] : ROOT . '/recipes/' . $id . '/calculation'));
                     exit;
                 }
+            } else {
+                $this->errors = $this->recipeService->errors();
             }
         }
 

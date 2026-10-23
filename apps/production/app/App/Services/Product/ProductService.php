@@ -77,6 +77,12 @@ class ProductService {
         return $this->finalProductRepository->getById($id);
     }
 
+    /** Karta produktu (kreator /workshop/products) otwarta na danym kroku ; krok 3 = Receptura i straty. */
+    public function cardUrl(int $id, int $step = 1): string
+    {
+        return ROOT . '/workshop/products#/product/' . $id . ($step > 1 ? '?step=' . $step : '');
+    }
+
     public function update($id, $data)
     {
         $result = $this->finalProductRepository->update($id, $data);

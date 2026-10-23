@@ -600,11 +600,26 @@
     }
 
     // Recette : liens vers la kalkulacja (composition, préparation, coût) ou vers la création.
+    // Recette ERP du produit. Sans recette : parcours en deux étapes (semi-finis, puis recette du produit) ;
+    // les formulaires ERP reviennent sur cette étape après l'enregistrement (?for_product= / ?product=).
     function recipeLinks(item) {
-        return item.recipe_id
-            ? `<p class="tfb-recipe-links"><a class="btn btn-sm btn-outline-primary" href="${esc(api.root)}/recipes/${item.recipe_id}/calculation"><i class="bi bi-calculator"></i> ${esc(t('bom.calculation'))}</a>
-                <span class="form-text">${esc(t('bom.calculation_help'))}</span></p>`
-            : `<p class="alert alert-warning">${esc(t('bom.no_recipe'))}</p>`;
+        const root = esc(api.root);
+        const fp = item.item_type === 'product' ? item.final_product_id : null;
+        if (!item.recipe_id && fp) {
+            return `<div class="tfb-recipe-path" data-recipe-path><p class="alert alert-warning">${esc(t('bom.no_recipe'))}</p>
+                <ol class="tfb-recipe-steps">
+                    <li><strong>${esc(t('bom.path.semi'))}</strong><span class="form-text">${esc(t('bom.path.semi_help'))}</span>
+                        <span class="tfb-recipe-links"><a class="btn btn-sm btn-outline-primary" href="${root}/semi-products/new?for_product=${fp}"><i class="bi bi-plus-lg"></i> ${esc(t('bom.path.semi_new'))}</a>
+                        <a class="btn btn-sm btn-link" href="${root}/semi-products" target="_blank" rel="noopener">${esc(t('bom.path.semi_list'))}</a></span></li>
+                    <li><strong>${esc(t('bom.path.recipe'))}</strong><span class="form-text">${esc(t('bom.path.recipe_help'))}</span>
+                        <span class="tfb-recipe-links"><a class="btn btn-sm btn-primary" href="${root}/recipes/new?product=${fp}"><i class="bi bi-journal-plus"></i> ${esc(t('bom.path.recipe_new'))}</a></span></li>
+                </ol></div>`;
+        }
+        if (!item.recipe_id) return `<p class="alert alert-warning">${esc(t('bom.no_recipe'))}</p>`;
+        return `<p class="tfb-recipe-links"><a class="btn btn-sm btn-outline-primary" href="${root}/recipes/${item.recipe_id}/calculation"><i class="bi bi-calculator"></i> ${esc(t('bom.calculation'))}</a>
+            ${fp ? `<a class="btn btn-sm btn-outline-primary" href="${root}/recipes/${item.recipe_id}/edit?product=${fp}"><i class="bi bi-pencil"></i> ${esc(t('bom.edit_recipe'))}</a>
+                <a class="btn btn-sm btn-outline-secondary" href="${root}/semi-products/new?for_product=${fp}"><i class="bi bi-plus-lg"></i> ${esc(t('bom.add_semi'))}</a>` : ''}
+            <span class="form-text">${esc(t('bom.calculation_help'))}</span></p>`;
     }
 
     // Résumé de production (pièces/heure, étapes et délais D+1, plan de la semaine) : /production-summary.
@@ -833,7 +848,7 @@
 
     function stepBom(body, item) {
         if (!item.bom.length) {
-            body.innerHTML = `${recipeLinks(item)}<p class="text-muted">${esc(t('bom.empty'))}</p>${nav(3, false)}`;
+            body.innerHTML = `${recipeLinks(item)}${item.recipe_id ? `<p class="text-muted">${esc(t('bom.empty'))}</p>` : ''}${nav(3, false)}`;
             return;
         }
         body.innerHTML = `${recipeLinks(item)}<form data-form><div class="table-responsive"><table class="table">
