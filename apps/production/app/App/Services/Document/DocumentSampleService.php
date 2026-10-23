@@ -20,9 +20,9 @@ class DocumentSampleService
      * Dokumenty klienta : przykład na danych fikcyjnych w każdym języku. Wydruki wewnętrzne (po polsku) : z bieżących danych.
      */
     public const DOCUMENTS = [
-        'proforma' => ['Faktura proforma', 'Sprzedaż i finanse', DocumentLabels::LANGUAGES, 'Przedpłata zamówienia : wysyłana klientowi z potwierdzeniem zamówienia.', '/proforma-documents', null],
-        'invoice' => ['Faktura', 'Sprzedaż i finanse', DocumentLabels::LANGUAGES, 'Faktura krajowa.', '/invoice-documents', null],
-        'wdt' => ['Faktura WDT', 'Sprzedaż i finanse', DocumentLabels::LANGUAGES, 'Wewnątrzwspólnotowa dostawa towarów : palety, wagi, KSeF (kod QR po przyjęciu).', '/shipments', null],
+        'proforma' => ['Faktura proforma', 'Sprzedaż i finanse', DocumentLabels::LANGUAGES, 'Przedpłata zamówienia : wysyłana klientowi z potwierdzeniem zamówienia. Układ faktury (OCR).', '/proforma-documents', null],
+        'invoice' => ['Faktura', 'Sprzedaż i finanse', DocumentLabels::LANGUAGES, 'Faktura krajowa. Jeden układ z WDT i proformą : numer i daty w tym samym miejscu, Lp. jak w KSeF, sumy zawsze na dole ostatniej strony (OCR biura rachunkowego).', '/invoice-documents', null],
+        'wdt' => ['Faktura WDT', 'Sprzedaż i finanse', DocumentLabels::LANGUAGES, 'Wewnątrzwspólnotowa dostawa towarów : Lp. = numer wiersza KSeF, palety i wagi, kod QR KSeF nad sumami. Układ faktury (OCR).', '/shipments', null],
         'difference' => ['Różnice zamówienie / faktura', 'Sprzedaż i finanse', DocumentLabels::LANGUAGES, 'List do klienta : dopłata albo zwrot różnicy między proformą a fakturą.', '/shipments?type=difference', null],
         'price_list' => ['Cennik klienta', 'Sprzedaż i finanse', DocumentLabels::LANGUAGES, 'Ceny klienta według kategorii (karta klienta).', '/clients', null],
         'general_price_list' => ['Cennik ogólny produktów', 'Sprzedaż i finanse', [], 'Ceny standardowe wszystkich produktów.', '/price-lists/general', '/ajax/products/price-list/pdf'],

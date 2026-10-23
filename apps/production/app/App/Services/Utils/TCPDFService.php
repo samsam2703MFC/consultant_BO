@@ -211,6 +211,46 @@ class TCPDFService extends TCPDF
      *         ['_total' => [wartości]] = wiersz sumy.
      * $opts : font (8), head_font (7), min_h (5.5).
      */
+    /**
+     * Szerokości kolumn bez łamania słów : każda kolumna ma co najmniej szerokość najdłuższego słowa nagłówka
+     * i (dla kolumn liczbowych, wyrównanych do prawej) całej wartości ; brak bierze się z kolumn z zapasem
+     * (najczęściej opis). Gdy minimum wszystkich kolumn przekracza stronę — zostają proporcje (zawijanie).
+     *
+     * @param array<int,float> $ws
+     * @return array<int,float>
+     */
+    private function fitColumnWidths(array $columns, array $rows, array $ws, float $avail, float $font, float $headFont, float $padX): array
+    {
+        $min = [];
+        foreach ($columns as $k => $c) {
+            $m = 0.0;
+            foreach (preg_split('/\s+/u', trim((string) $c['label'])) ?: [] as $word) $m = max($m, $this->GetStringWidth($word, self::TABLE_FONT, 'B', $headFont));
+            foreach (preg_split('/\s+/u', trim((string) ($c['sub'] ?? ''))) ?: [] as $word) $m = max($m, $this->GetStringWidth($word, self::TABLE_FONT, '', $headFont - 0.8));
+            $numeric = ($c['align'] ?? 'L') === 'R';
+            foreach ($rows as $row) {
+                if (!is_array($row) || array_key_exists('_group', $row)) continue;
+                $total = array_key_exists('_total', $row);
+                $cell = (string) (array_values($total ? $row['_total'] : $row)[$k] ?? '');
+                if ($cell === '') continue;
+                $parts = $numeric ? [$cell] : (preg_split('/\s+/u', $cell) ?: []);
+                foreach ($parts as $part) $m = max($m, $this->GetStringWidth($part, self::TABLE_FONT, $total ? 'B' : '', $font));
+            }
+            $min[$k] = $m + $padX + 0.4;
+        }
+        if (array_sum($min) > $avail) return $ws;
+        for ($pass = 0; $pass < 5; $pass++) {
+            $deficit = 0.0;
+            foreach ($ws as $k => $w) if ($w < $min[$k]) { $deficit += $min[$k] - $w; $ws[$k] = $min[$k]; }
+            if ($deficit <= 0.001) break;
+            $slack = [];
+            foreach ($ws as $k => $w) if ($w > $min[$k]) $slack[$k] = $w - $min[$k];
+            $total = array_sum($slack);
+            if ($total <= 0) break;
+            foreach ($slack as $k => $sl) $ws[$k] -= $deficit * $sl / $total;
+        }
+        return $ws;
+    }
+
     public function brandTable(array $columns, array $rows, array $opts = []): void
     {
         $lm = $this->lMargin;
@@ -222,6 +262,7 @@ class TCPDFService extends TCPDF
         $headFont = $opts['head_font'] ?? 7;
         $minH = $opts['min_h'] ?? 5.5;
         $pad = ['L' => 1.3, 'T' => 0.9, 'R' => 1.3, 'B' => 0.9];
+        $ws = $this->fitColumnWidths($columns, $rows, $ws, $avail, $font, $headFont, $pad['L'] + $pad['R']);
 
         $autoBreak = $this->getAutoPageBreak();
         $breakMargin = $this->getBreakMargin();
@@ -320,26 +361,89 @@ class TCPDFService extends TCPDF
         $w = $this->contentWidth();
         $totW = $totals ? 78 : 0;
         $infoW = $w - $totW - ($totals ? 10 : 0);
-        $need = max(count($info) * 5, count($totals) * 6.5) + 4;
+        $need = max($this->infoHeight($info, $infoW), $this->totalsHeight($totals)) + 2;
         if ($this->GetY() + $need > $this->getPageHeight() - $this->getBreakMargin()) $this->AddPage();
         $y0 = $this->GetY();
+        $y = $this->drawInfo($info, $lm, $y0, $infoW);
+        $ty = $totals ? $this->drawTotals($totals, $lm + $w - $totW, $y0, $totW) : $y0;
+        $this->SetTextColorArray(self::INK);
+        $this->SetY(max($y, $ty) + 4);
+    }
 
-        $y = $y0;
+    /**
+     * Zamknięcie faktury : płatność po lewej i sumy po prawej zawsze na dole ostatniej strony (dolna krawędź sum
+     * w tym samym miejscu na każdej fakturze — dla OCR), uwaga prawna pod spodem, nad blokiem opcjonalnie $above
+     * (np. kod QR KSeF : callable($pdf, $y) w strefie o wysokości $aboveHeight). Nowa strona, gdy tabela zajmuje to miejsce.
+     */
+    public function brandClosing(array $info, array $totals, string $note = '', ?callable $above = null, float $aboveHeight = 0.0): void
+    {
+        $lm = $this->lMargin;
+        $w = $this->contentWidth();
+        $totW = 78;
+        $infoW = $w - $totW - 10;
+        $noteH = 9.0;
+        $infoH = $this->infoHeight($info, $infoW);
+        $totH = $this->totalsHeight($totals);
+        $blockH = max($infoH, $totH);
+        $bottom = $this->getPageHeight() - $this->getBreakMargin() - $noteH;
+        $top = $bottom - $blockH - ($above ? $aboveHeight : 0.0) - 3;
+        if ($this->GetY() > $top) {
+            $this->AddPage();
+        }
+        if ($above) $above($this, $top);
+        $blockTop = $bottom - $blockH;
+        $this->SetDrawColorArray(self::LINE);
+        $this->SetLineWidth(0.2);
+        $this->Line($lm, $blockTop - 2, $lm + $w, $blockTop - 2);
+        $this->drawInfo($info, $lm, $blockTop, $infoW);
+        $this->drawTotals($totals, $lm + $w - $totW, $bottom - $totH, $totW);
+        if ($note !== '') {
+            $this->SetFont('dejavusans', 'I', 7);
+            $this->SetTextColorArray(self::MUTED);
+            $this->MultiCell($w, $noteH - 2, $note, 0, 'C', false, 1, $lm, $bottom + 1.5, true, 0, false, true, $noteH - 2, 'T', true);
+        }
+        $this->SetTextColorArray(self::INK);
+    }
+
+    private function infoHeight(array $info, float $infoW): float
+    {
+        $lw = min(52, $infoW * 0.42);
+        $h = 0.0;
+        foreach ($info as [$label, $value]) {
+            $this->SetFont('dejavusans', '', 7.5);
+            $hl = $this->getStringHeight($lw - 2, (string) $label);
+            $this->SetFont('dejavusans', '', 8.5);
+            $hv = $this->getStringHeight($infoW - $lw, (string) $value);
+            $h += max($hl, $hv, 4.2) + 0.9;
+        }
+        return $h;
+    }
+
+    private function drawInfo(array $info, float $x, float $y, float $infoW): float
+    {
         $lw = min(52, $infoW * 0.42);
         foreach ($info as [$label, $value]) {
             $this->SetFont('dejavusans', '', 7.5);
             $hl = $this->getStringHeight($lw - 2, (string) $label);
             $this->SetTextColorArray(self::MUTED);
-            $this->MultiCell($lw - 2, $hl, (string) $label, 0, 'L', false, 0, $lm, $y);
+            $this->MultiCell($lw - 2, $hl, (string) $label, 0, 'L', false, 0, $x, $y);
             $this->SetFont('dejavusans', '', 8.5);
             $hv = $this->getStringHeight($infoW - $lw, (string) $value);
             $this->SetTextColorArray(self::INK);
-            $this->MultiCell($infoW - $lw, $hv, (string) $value, 0, 'L', false, 0, $lm + $lw, $y);
+            $this->MultiCell($infoW - $lw, $hv, (string) $value, 0, 'L', false, 0, $x + $lw, $y);
             $y += max($hl, $hv, 4.2) + 0.9;
         }
+        return $y;
+    }
 
-        $ty = $y0;
-        $tx = $lm + $w - $totW;
+    private function totalsHeight(array $totals): float
+    {
+        return $totals ? (count($totals) - 1) * 6 + 8.3 : 0.0;
+    }
+
+    /** Sumy : wiersze z linią, ostatni (razem) wyróżniony w kolorze marki ; zwraca dolną krawędź. */
+    private function drawTotals(array $totals, float $tx, float $ty, float $totW): float
+    {
         $last = count($totals) - 1;
         foreach (array_values($totals) as $k => [$label, $value]) {
             $strong = $k === $last;
@@ -361,7 +465,7 @@ class TCPDFService extends TCPDF
             $ty += $h;
         }
         $this->SetTextColorArray(self::INK);
-        $this->SetY(max($y, $ty) + 4);
+        return $ty;
     }
 
     /** Pola podpisów (np. Wydał / Odebrał) obok siebie. */

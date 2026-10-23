@@ -208,4 +208,11 @@ class ProformaRepository extends BaseRepository
     {
         return $this->update($uuid, ["notified_at" => date("Y-m-d H:i:s"), "status" => "notified"]);
     }
+
+    /** Planowana data wysyłki zamówienia proformy (data dostawy na wydruku) ; null, gdy brak zamówienia. */
+    public function expectedShippingDate(int $id): ?string
+    {
+        $rows = $this->query("SELECT DATE(expected_shipping_date) AS d FROM customer_order WHERE id_proforma = :id AND expected_shipping_date IS NOT NULL LIMIT 1", ['id' => $id]);
+        return !empty($rows[0]['d']) ? (string) $rows[0]['d'] : null;
+    }
 }

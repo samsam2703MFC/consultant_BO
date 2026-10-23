@@ -39,6 +39,10 @@ final class DocumentLabels
         'issued_by' => ['pl' => 'Wydał', 'fr' => 'Expédié par', 'nl' => 'Afgegeven door', 'en' => 'Issued by'],
         'received_by' => ['pl' => 'Odebrał', 'fr' => 'Reçu par', 'nl' => 'Ontvangen door', 'en' => 'Received by'],
         'signature' => ['pl' => 'data i podpis', 'fr' => 'date et signature', 'nl' => 'datum en handtekening', 'en' => 'date and signature'],
+        'gross_total' => ['pl' => 'Razem brutto', 'fr' => 'Total TTC', 'nl' => 'Totaal incl. btw', 'en' => 'Total incl. VAT'],
+        'total_quantity' => ['pl' => 'Ilość i waga łącznie', 'fr' => 'Quantité et poids total', 'nl' => 'Totaal aantal en gewicht', 'en' => 'Total quantity and weight'],
+        'delivery_date' => ['pl' => 'Data dostawy', 'fr' => 'Date de livraison', 'nl' => 'Leveringsdatum', 'en' => 'Delivery date'],
+        'line_no' => ['pl' => 'Lp.', 'fr' => 'N°', 'nl' => 'Nr.', 'en' => 'No.'],
         'total' => ['pl' => 'Razem', 'fr' => 'Total', 'nl' => 'Totaal', 'en' => 'Total'],
         // kolumny tabel
         'code' => ['pl' => 'Kod towaru', 'fr' => 'Réf. article', 'nl' => 'Artikelcode', 'en' => 'Item code'],

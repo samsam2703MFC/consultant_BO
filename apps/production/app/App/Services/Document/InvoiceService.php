@@ -98,68 +98,37 @@ class InvoiceService implements IDocument
     {
         $invoice = $data['invoiceData'];
         $lang = $data['lang'] ?? 'fr';
-        $L = fn(string $key) => DocumentLabels::get($key);
-        $S = fn(string $key) => DocumentLabels::sub($key, $lang);
         $P = fn(string $key) => DocumentLabels::pair($key, $lang);
-        $money = fn($v) => DocumentLabels::money($v);
 
-        $pdf->brandPage($L('doc_invoice'), ['ref' => $invoice['doc_num'], 'lang' => $lang, 'company' => DocumentLabels::companyLine($invoice)]);
-        $pdf->brandHeader($L('doc_invoice'), [
-            [$P('number'), $invoice['doc_num']],
-            [$P('invoice_date'), $invoice['invoiced_date']],
-        ], $S('doc_invoice'));
-
-        $pdf->brandParties([
-            'label' => $P('seller'),
-            'name' => $invoice['consignor_name'],
-            'lines' => [$invoice['consignor_address_1'], $invoice['consignor_address_2'], 'NIP: ' . DocumentLabels::taxId($invoice['consignor_nip'])],
-        ], [
-            'label' => $P('buyer'),
-            'name' => $invoice['consignee_name'],
-            'lines' => [$invoice['consignee_address_1'], $invoice['consignee_address_2'], 'NIP/TVA: ' . $invoice['consignee_nip']],
-        ]);
-
-        $columns = [
-            ['label' => $L('code'), 'sub' => $S('code'), 'w' => 10],
-            ['label' => $L('description'), 'sub' => $S('description'), 'w' => 31],
-            ['label' => $L('quantity'), 'sub' => $S('quantity'), 'w' => 9, 'align' => 'R'],
-            ['label' => $L('price_carton'), 'sub' => $S('price_carton'), 'w' => 12, 'align' => 'R'],
-            ['label' => $L('net_value'), 'sub' => $S('net_value'), 'w' => 12, 'align' => 'R'],
-            ['label' => $L('vat_rate'), 'sub' => $S('vat_rate'), 'w' => 8, 'align' => 'R'],
-            ['label' => $L('vat_value'), 'sub' => $S('vat_value'), 'w' => 10, 'align' => 'R'],
-            ['label' => $L('gross_value'), 'sub' => $S('gross_value'), 'w' => 12, 'align' => 'R'],
-            ['label' => $L('weight'), 'sub' => $S('weight'), 'w' => 10, 'align' => 'R'],
-            ['label' => $L('ppc'), 'sub' => $S('ppc'), 'w' => 9, 'align' => 'R'],
-            ['label' => $L('price_piece'), 'sub' => $S('price_piece'), 'w' => 10, 'align' => 'R'],
-        ];
-        $rows = [];
-        $net = 0.0;
-        $vat = 0.0;
+        $lines = [];
         foreach ((array) $data['invoiceProductData'] as $item) {
-            $lineNet = (float) $item['single_price'] * (float) $item['quantity'];
-            $lineVat = (float) $item['tva_perc'] != 0 ? $lineNet * ((float) $item['tva_perc'] / 100) : 0.0;
-            $pricePiece = (float) $item['ppc'] == 0 ? 0 : (float) $item['single_price'] / (float) $item['ppc'];
-            $rows[] = [$item['id_product'], $item['product_name'], DocumentLabels::number($item['quantity']), $money($item['single_price']), $money($lineNet),
-                DocumentLabels::number($item['tva_perc']) . ' %', $lineVat == 0 ? '—' : $money($lineVat), $money($lineNet + $lineVat),
-                DocumentLabels::number((float) $item['quantity'] * (float) $item['single_weight'], 2) . ' kg', DocumentLabels::number($item['ppc']), $money($pricePiece)];
-            $net += $lineNet;
-            $vat += $lineVat;
+            $net = (float) $item['single_price'] * (float) $item['quantity'];
+            $vat = (float) $item['tva_perc'] != 0 ? $net * ((float) $item['tva_perc'] / 100) : 0.0;
+            $lines[] = ['code' => $item['id_product'], 'name' => $item['product_name'], 'stat' => '', 'quantity' => $item['quantity'],
+                'price' => $item['single_price'], 'net' => $net, 'vat_rate' => $item['tva_perc'], 'vat' => $vat, 'gross' => $net + $vat,
+                'weight' => (float) $item['quantity'] * (float) $item['single_weight'], 'ppc' => $item['ppc'],
+                'price_piece' => (float) $item['ppc'] == 0 ? 0 : (float) $item['single_price'] / (float) $item['ppc']];
         }
-        $rows[] = ['_total' => ['', $P('total'), '', '', $money($net), '', $vat == 0 ? '—' : $money($vat), $money($net + $vat), '', '', '']];
-        $pdf->brandTable($columns, $rows, ['font' => 7, 'head_font' => 6.5]);
 
-        $totals = [[$P('net'), $money($net)], [$P('vat'), $vat == 0 ? '—' : $money($vat)]];
-        $correction = self::MANUAL_CORRECTIONS[$invoice['doc_num']] ?? 0.0;
-        if ($correction != 0) $totals[] = [$P('correction'), $money($correction)];
-        $totals[] = [$P('total'), $money($net + $vat + $correction)];
-        $pdf->brandSummary([
-            [$P('invoice_date'), $invoice['invoiced_date']],
-            [$P('payment'), $P('payment_proforma')],
-            [$P('bank'), $invoice['consignor_bank']],
-            [$P('swift'), $invoice['consignor_swift']],
-        ], $totals);
-
-        return $pdf;
+        return InvoiceLayout::render($pdf, [
+            'title_key' => 'doc_invoice',
+            'number' => $invoice['doc_num'],
+            'issue_date' => $invoice['invoiced_date'],
+            'delivery_date' => $invoice['invoiced_date'],
+            'lang' => $lang,
+            'company_line' => DocumentLabels::companyLine($invoice),
+            'seller' => ['name' => $invoice['consignor_name'],
+                'lines' => [$invoice['consignor_address_1'], $invoice['consignor_address_2'], 'NIP: ' . DocumentLabels::taxId($invoice['consignor_nip'])]],
+            'buyer' => ['name' => $invoice['consignee_name'],
+                'lines' => [$invoice['consignee_address_1'], $invoice['consignee_address_2'], 'NIP/TVA: ' . $invoice['consignee_nip']]],
+            'payment' => [
+                [$P('payment'), $P('payment_proforma')],
+                [$P('bank'), (string) $invoice['consignor_bank']],
+                [$P('swift'), (string) $invoice['consignor_swift']],
+                [$P('payment_reference'), (string) $invoice['doc_num']],
+            ],
+            'correction' => self::MANUAL_CORRECTIONS[$invoice['doc_num']] ?? 0.0,
+        ], $lines);
     }
 
     public function buildDocumentFromId(TCPDFService $pdf, int $id): array

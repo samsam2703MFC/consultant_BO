@@ -122,69 +122,35 @@ class ProformaService implements IDocument
     {
         $proforma = $data['proformaData'];
         $lang = $data['lang'] ?? 'fr';
-        $L = fn(string $key) => DocumentLabels::get($key);
-        $S = fn(string $key) => DocumentLabels::sub($key, $lang);
         $P = fn(string $key) => DocumentLabels::pair($key, $lang);
-        $money = fn($v) => DocumentLabels::money($v);
 
-        $pdf->brandPage($L('doc_proforma'), ['ref' => $proforma['doc_num'], 'lang' => $lang, 'company' => DocumentLabels::companyLine($proforma)]);
-        $pdf->brandHeader($L('doc_proforma'), [
-            [$P('number'), $proforma['doc_num']],
-            [$P('date'), $proforma['established_date']],
-        ], $S('doc_proforma'));
-
-        $pdf->brandParties([
-            'label' => $P('seller'),
-            'name' => $proforma['consignor_name'],
-            'lines' => [$proforma['consignor_address_1'], $proforma['consignor_address_2'], 'NIP: ' . DocumentLabels::taxId($proforma['consignor_nip'])],
-        ], [
-            'label' => $P('buyer'),
-            'name' => $proforma['consignee_name'],
-            'lines' => [$proforma['consignee_address_1'], $proforma['consignee_address_2'], 'NIP/TVA: ' . DocumentLabels::taxId($proforma['consignee_nip'])],
-        ]);
-
-        $columns = [
-            ['label' => $L('code'), 'sub' => $S('code'), 'w' => 10],
-            ['label' => $L('description'), 'sub' => $S('description'), 'w' => 30],
-            ['label' => $L('stat_code'), 'sub' => $S('stat_code'), 'w' => 11],
-            ['label' => $L('cartons'), 'sub' => $S('cartons'), 'w' => 9, 'align' => 'R'],
-            ['label' => $L('price_carton'), 'sub' => $S('price_carton'), 'w' => 12, 'align' => 'R'],
-            ['label' => $L('net_value'), 'sub' => $S('net_value'), 'w' => 13, 'align' => 'R'],
-            ['label' => $L('vat_rate'), 'sub' => $S('vat_rate'), 'w' => 8, 'align' => 'R'],
-            ['label' => $L('weight_carton'), 'sub' => $S('weight_carton'), 'w' => 10, 'align' => 'R'],
-            ['label' => $L('weight'), 'sub' => $S('weight'), 'w' => 12, 'align' => 'R'],
-            ['label' => $L('ppc'), 'sub' => $S('ppc'), 'w' => 9, 'align' => 'R'],
-            ['label' => $L('price_piece'), 'sub' => $S('price_piece'), 'w' => 10, 'align' => 'R'],
-        ];
-        $rows = [];
-        $net = 0.0;
-        $weight = 0.0;
-        $cartons = 0;
-        foreach ($data['proformaProductData'] as $item) {
-            $rows[] = [$item['id_product'], $item['product_name'], $item['code_stat'], DocumentLabels::number($item['quantity']), $money($item['price_per_carton']),
-                $money($item['total_price_net']), DocumentLabels::number($item['tva_perc']) . ' %', DocumentLabels::number($item['single_carton_weight_kg'], 2) . ' kg',
-                DocumentLabels::number($item['total_weight_kg'], 2) . ' kg', DocumentLabels::number($item['ppc']), $money($item['price_per_piece'])];
-            $net += (float) $item['total_price_net'];
-            $weight += (float) $item['total_weight_kg'];
-            $cartons += (int) $item['quantity'];
+        // Proforma = przedpłata bez VAT (zwolnienie w uwadze pod sumami) : VAT 0, razem = netto
+        $lines = [];
+        foreach ((array) $data['proformaProductData'] as $item) {
+            $lines[] = ['code' => $item['id_product'], 'name' => $item['product_name'], 'stat' => $item['code_stat'], 'quantity' => $item['quantity'],
+                'price' => $item['price_per_carton'], 'net' => $item['total_price_net'], 'vat_rate' => 0, 'vat' => 0.0, 'gross' => $item['total_price_net'],
+                'weight' => $item['total_weight_kg'], 'ppc' => $item['ppc'], 'price_piece' => $item['price_per_piece']];
         }
-        $rows[] = ['_total' => ['', $P('total'), '', DocumentLabels::number($cartons), '', $money($net), '', '', DocumentLabels::number($weight, 2) . ' kg', '', '']];
-        $pdf->brandTable($columns, $rows, ['font' => 7, 'head_font' => 6.5]);
 
-        // Proforma = przedpłata bez VAT (zwolnienie poniżej) : razem = netto
-        $pdf->brandSummary([
-            [$P('total_weight'), DocumentLabels::number($weight, 2) . ' kg'],
-            [$P('payment'), $P('payment_proforma')],
-            [$P('bank'), $proforma['consignor_bank']],
-            [$P('swift'), $proforma['consignor_swift']],
-            [$P('payment_reference'), $proforma['doc_num']],
-        ], [
-            [$P('net'), $money($net)],
-            [$P('total'), $money($net)],
-        ]);
-        $pdf->brandNote(self::VAT_EXEMPTION, 'C');
-
-        return $pdf;
+        return InvoiceLayout::render($pdf, [
+            'title_key' => 'doc_proforma',
+            'number' => $proforma['doc_num'],
+            'issue_date' => $proforma['established_date'],
+            'delivery_date' => $data['deliveryDate'] ?? $proforma['established_date'],
+            'lang' => $lang,
+            'company_line' => DocumentLabels::companyLine($proforma),
+            'seller' => ['name' => $proforma['consignor_name'],
+                'lines' => [$proforma['consignor_address_1'], $proforma['consignor_address_2'], 'NIP: ' . DocumentLabels::taxId($proforma['consignor_nip'])]],
+            'buyer' => ['name' => $proforma['consignee_name'],
+                'lines' => [$proforma['consignee_address_1'], $proforma['consignee_address_2'], 'NIP/TVA: ' . DocumentLabels::taxId($proforma['consignee_nip'])]],
+            'payment' => [
+                [$P('payment'), $P('payment_proforma')],
+                [$P('bank'), (string) $proforma['consignor_bank']],
+                [$P('swift'), (string) $proforma['consignor_swift']],
+                [$P('payment_reference'), (string) $proforma['doc_num']],
+            ],
+            'note' => self::VAT_EXEMPTION,
+        ], $lines);
     }
 
     public function buildDocumentFromId(TCPDFService $pdf, int $id): array
@@ -202,6 +168,7 @@ class ProformaService implements IDocument
         $this->renderDocument($pdf, [
             'proformaData' => $proformaData,
             'proformaProductData' => $proformaProductData,
+            'deliveryDate' => $this->proformaRepository->expectedShippingDate($id),
             'lang' => $this->clientRepository->communicationLang((int) $proformaData['id_customer'])]);
 
         $clientName = htmlspecialchars($proformaData['consignee_name']);
@@ -293,6 +260,7 @@ class ProformaService implements IDocument
         $this->renderDocument($pdf, [
             'proformaData' => $proformaData,
             'proformaProductData' => $proformaProductData,
+            'deliveryDate' => $this->proformaRepository->expectedShippingDate($id),
             'lang' => $this->clientRepository->communicationLang((int) $proformaData['id_customer'])]);
 
         return ['file_string' => $pdf, "filename" => 'PROFORMA_' . $proformaData['doc_num'] . '.pdf'];
