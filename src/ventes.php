@@ -1748,7 +1748,7 @@ function ep_ventes_explication_pdf(): array
         . ($regM === null ? '' :
             $blocTitre('4', 'L\'objectif du magasin — ' . (int) $regM['paliers'][0]['montant'] . ' € pour chacune')
             . '<div>Chaque magasin a son objectif de chiffre du mois. S\'il est atteint à <b>' . (int) $regM['paliers'][0]['pct'] . ' %</b>, chaque personne du magasin au planning '
-            . 'reçoit <b>' . (int) $regM['paliers'][0]['montant'] . ' €</b>. Sous ' . (int) $regM['heuresMin'] . ' h dans le mois, pas de part. L\'app montre où en est le magasin.</div>')
+            . 'reçoit <b>' . (int) $regM['paliers'][0]['montant'] . ' €</b>. ' . ((int) $regM['heuresMin'] > 0 ? 'Sous ' . (int) $regM['heuresMin'] . ' h dans le mois, pas de part. ' : '') . 'L\'app montre où en est le magasin.</div>')
 
         . (($cfgK === null || !$cfgK['actif']) ? '' :
             $blocTitre('5', 'Les catégories — ' . implode(', ', array_map(static fn ($k) => $e($k['lib']), $cfgK['liste'])))
@@ -1767,8 +1767,8 @@ function ep_ventes_explication_pdf(): array
 
         . (($regG === null || !$regG['actif'] || $regG['montant'] <= 0) ? '' :
             '<div class="encart" style="margin-top:6mm"><span class="k">La note Google du magasin</span>'
-            . '<div style="font-size:9.5pt;margin-top:1mm">Quand la note Google du magasin est à <b>' . number_format($regG['seuil'], 1, ',', ' ') . ' ou plus</b>, chacune au planning du mois ('
-            . (int) $regG['heuresMin'] . ' h au moins) gagne <b>' . (int) $regG['montant'] . ' €</b>. En dessous, rien. '
+            . '<div style="font-size:9.5pt;margin-top:1mm">Quand la note Google du magasin est à <b>' . number_format($regG['seuil'], 1, ',', ' ') . ' ou plus</b>, chacune au planning du mois'
+            . ((int) $regG['heuresMin'] > 0 ? ' (' . (int) $regG['heuresMin'] . ' h au moins)' : '') . ' gagne <b>' . (int) $regG['montant'] . ' €</b>. En dessous, rien. '
             . 'Un client content qui laisse un avis, c\'est aussi votre prime.</div></div>')
 
         . '<div class="encart" style="margin-top:6mm">'
@@ -2062,7 +2062,7 @@ function venteAffichePdf(string $m = '', string $seulShop = ''): ?array
                 . '<td width="50%" class="carte"><div style="font-size:9pt;letter-spacing:.09em;text-transform:uppercase" class="or">🏪 Objectif magasin</div>'
                 . '<div class="gros">' . (int) $regMag['paliers'][0]['montant'] . ' €</div>'
                 . '<div class="regle">' . (isset($budgetsAff[(string) $sid]) ? number_format((float) $budgetsAff[(string) $sid]['montant'], 0, ',', ' ') . ' € en ' : 'L’objectif de ') . $e($libMois) . ', atteint à ' . (int) $regMag['paliers'][0]['pct'] . ' % : '
-                . (int) $regMag['paliers'][0]['montant'] . ' € pour chacune au planning (' . (int) $regMag['heuresMin'] . ' h min.).</div></td>'
+                . (int) $regMag['paliers'][0]['montant'] . ' € pour chacune au planning' . ((int) $regMag['heuresMin'] > 0 ? ' (' . (int) $regMag['heuresMin'] . ' h min.)' : '') . '.</div></td>'
                 . '</tr></table>')
             . (($cfgKf === null || !$cfgKf['actif']) ? '' :
                 '<div class="regle" style="margin:-2mm 0 6mm;text-align:center"><b>👑 ' . implode(' · ', array_map(static fn ($k) => $e($k['lib']), $cfgKf['liste'])) . '</b> — le nombre de pièces vendues dans le mois : la première du magasin <b class="acc">'

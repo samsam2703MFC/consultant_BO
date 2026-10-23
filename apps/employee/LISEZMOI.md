@@ -65,6 +65,86 @@ personne (`langue`, un global Twig). Les lignes de détail des mois payés sont 
 par le cockpit : en français l'app les montre telles quelles, dans les autres langues elle recompose
 la ligne depuis les montants.
 
+## La prime B2B (23/10/2026) : ramène un client pro
+
+Demande : « dans le système franchisé ou marque, la possibilité de créer une prime pour le B2B, pour donner envie
+d'aller chercher les écoles… ; la rémunération en % de la commande, une fois ou chaque mois pendant 1 mois, un
+trimestre, un an ». Sept maquettes (`docs/maquettes/primes-b2b/`), l'option D retenue : une phrase. Règles décidées :
+le % sur le **HT**, un nouveau client = **aucune commande pro depuis 12 mois**, la prime va à **la vendeuse de la 1re
+commande**.
+
+- **Le cockpit** (Application employé › Page admin ou Page franchisé, « + Prime B2B ») : « Pour chaque nouveau
+  client pro, la vendeuse touche *5 %* de *chaque commande pendant 3 mois*. » — les mots en couleur se touchent
+  (le % ou un montant fixe, la 1re commande, 1, 3, 12 mois ou sans limite), un exemple chiffré dessous ; plafond par
+  client, commande minimum, nom et dates dans « plus de réglages ». Une prime de franchisé est pour un magasin, payée
+  par lui ; une de la marque, pour tous, payée par la marque ou un sponsor. Trois au plus de chaque côté.
+- **Le calcul** (`src/primes_b2b.php`, `b2bCalcul` sans base, testé) : les tickets pro de la base partagée
+  (`transaction` ⨝ `client.is_b2b`), le client avec une TVA valide (la règle des clients pro du cockpit), le HT =
+  TTC − TVA du ticket. Un client compte dès sa 1re commande dans la période de la prime (dès sa création par défaut) ;
+  sa fenêtre court la durée choisie ; le plafond vaut pour toute la durée. Gardé quinze minutes (un jour, un mois
+  clos). La prime s'ajoute à la fiche (`briques.b2b`, une carte `type: b2b`), au total du mois, à l'enregistrement
+  des primes (payée par le magasin ou la marque) et au tableau « Primes du mois » (colonne Clients pro).
+- **L'app** (`primes/_ligne_b2b.twig`) : la ligne dit ce qu'elle a gagné et combien de clients pro elle a ramenés, la
+  règle en court (« 5 % · 3 mois ») ; dans « À aller chercher », la phrase du plan (« Un nouveau client pro — une
+  école, une entreprise, une association : 5 % de chaque commande pendant 3 mois pour toi. Déjà +52 € ce mois-ci. ») ;
+  le détail liste ses clients sans leur nom (« Client du 12/10 · 1 commande ce mois · 420 € HT · jusqu'au 12/01 »).
+  Un mois à venir montre la règle. Textes dans les cinq langues.
+
+Le tableau du cockpit (`#/primes-app-worker`, demande : « un beau tableau, simple, minimaliste type Apple ») : des
+listes groupées façon Réglages d'iPhone — Targets, Catégories, Promos, Clients pro · B2B —, une ligne par prime
+(l'interrupteur, le nom, ce qui compte en gris, la récompense et qui paie à droite) ; toucher la ligne la modifie.
+
+## L'onglet Primes (23/10/2026) : combien, comment y arriver, où tu en es — en forme sobre, puis en une seule liste
+
+Deux demandes : « tourner l'application vers la motivation de ce que tu peux gagner, comment y arriver, où tu en
+es », puis « l'UX doit être plus minimaliste (type Apple) ». De haut en bas, sur `/primes` :
+
+- **Combien** : un grand chiffre, ce qui est encore en jeu ce mois-ci (`enJeu − acquis`), la barre de ce qui est
+  déjà gagné, les heures de service qui restent. Un mois clos : « En septembre, tu as gagné » ; à venir : « En jeu
+  en novembre ».
+- **Comment y arriver** : les primes encore à aller chercher, la plus proche d'abord ; chaque ligne dit ce qu'elle
+  rapporte, ce qu'il faut faire, et une barre « où tu en es » ; elle mène à la ligne de sa prime. Le plan vient de
+  `app/Services/Primes/PrimesPlan.php`, lu dans la fiche du cockpit (les cartes, les briques, la prime du magasin,
+  les heures), rien d'inventé : ventes croisées et record sont des moyennes du mois, donc ce qu'il faut viser se
+  calcule sur ses tickets à venir, estimés à son rythme (tickets par heure prestée × heures qui restent au
+  planning) — « sur tes ~210 prochains tickets, vise 70 % : 7 sur 10 avec un 2e article ». Un cran hors de portée
+  (plus de 100 % de ventes croisées, plus d'un article de plus par ticket que sa moyenne) n'est pas promis.
+  L'objectif du magasin et la note Google se disent « avec l'équipe » ; une promo sur objectif du magasin porte
+  « prime du magasin ».
+- **Où tu en es** : les targets et les promos, une ligne par prime (les promos ne sont plus en carrés), qui se
+  déroule sur son détail ; puis le classement.
+
+**Tes primes, une seule liste (23/10/2026)** : à la demande (« fusionner Comment y arriver et Où tu en es, ou un
+toggle »), trois options montrées en capture — une liste par état, une bascule entre les deux vues, une liste
+compacte ; la première est retenue. Sous « Tes primes », trois blocs : **À aller chercher** (le plan, la plus
+proche d'abord, son total), chaque ligne avec sa jauge et, dessous, la phrase de ce qu'il faut faire ; **Déjà
+gagnées** (leur total) ; **Pas ce mois-ci** (hors de portée, avec la raison, ou rien de compté ; « jusqu'à »). Les
+trois totaux font l'« encore en jeu » du haut. Les catégories y reviennent (leur classement reste plus bas). Un
+mois clos : « Gagnées », « Pas gagnées ». La ligne d'une prime vit dans `primes/_ligne.twig` (ses macros dans
+`primes/_macros.twig`) ; la phrase vient de `components/primes_etape.twig` en mode `texte`. L'Accueil garde son
+« Comment y arriver » (trois lignes), qui mène à la ligne de la prime (`/primes#prime-<clé>`).
+
+**Bats ton record, en trois étapes (23/10/2026)** : à la demande (« montrer le nombre de tickets manquants et à
+quelle étape elle se trouve »), maquette validée en version courte. Poser son record (un mois d'au moins 30
+tickets : sa moyenne de lignes par ticket devient le record), le battre (record + 0,2 : le 1er dixième pose le
+nouveau record, le 2e paie), gagner (un montant par dixième, jusqu'au plafond). Sans record, la ligne compte les
+tickets du mois jusqu'au repère « ton record » (« Étape 1/3 · encore 12 tickets ») et le plan dit « ta moyenne du
+mois deviendra ton record, à battre dès novembre » (`PrimesPlan` : `pose`, hors de portée ce mois-ci). Le détail
+montre les trois étapes en une rangée (où elle en est, une valeur sous chacune) et une phrase : les seuils de
+chaque dixième, ou ce qu'il manque pour le suivant. Le cockpit donne ses tickets du mois dans la brique du record
+(`tickets`, `src/primes.php`). Le haut du détail d'une ligne tient en une carte : « à gagner » et « offerte par ».
+
+La forme (`public/employee/assets/atelier/primes.css`, la dernière couche) : la police du système (SF sur
+iPhone) à la place de Gotham et Vank sur ces écrans, un fond clair, des listes groupées blanches sans bordure ni
+ombre, le rubis seul en accent et le vert pour ce qui est gagné, des icônes au trait (Bootstrap Icons) à la place
+des émojis — une icône déposée par l'admin reste. L'Accueil reprend le même « encore en jeu » et les trois
+premières lignes du plan (`components/primes_etape.twig`, ses textes dans `components.json`). Les textes sont dans
+les cinq langues.
+
+Dans le cockpit, le rail range le module sous ERP franchisé › **Primes · module app worker** : Paramètres primes
+(la marque, les sponsors, les promotions, les moyennes), Paramètres primes franchisé (les primes que chaque
+franchisé pose pour son magasin), et Mes primes dans l'app ↗.
+
 ## L'onglet Primes (16/10/2026) : des carrés deux par ligne, une demi-jauge, le classement dans un menu qui monte du bas
 
 En tête de page, **le sélecteur de mois** (16/10/2026, à la place de « Halle · octobre 2026, au 16 ») : centré, une
@@ -73,7 +153,15 @@ mois en cours), une flèche à droite (jusqu'à trois mois à venir). Les flèch
 `/primes?m=AAAA-MM` ; un mois clos dit « il manquait » au lieu de « encore ». **Un mois à venir** (16/10/2026)
 montre les primes prévues — « à venir » sous le mois, le total en jeu, puis chaque target et chaque promo de ce
 mois dans son magasin avec sa récompense, sa règle (la 1re du magasin, dès N pcs, objectif du magasin, ton
-objectif), son objectif et ses dates ; rien de compté, pas de détail ni de classement.
+objectif), son objectif et ses dates ; rien de compté, pas de détail ni de classement. **La fiche d'une prime** (16/10/2026) : toucher
+un carré de promo (ou une ligne d'un mois à venir) ouvre une feuille — ce qu'on gagne (de l'argent, ou un cadeau 🎁 avec
+sa valeur), la ligne de description, qui l'offre (la marque, le magasin, ou le sponsor avec son logo, une ligne et son
+site), qui gagne, la période et « Voir le classement ». Le détail d'une ligne de target montre aussi « À gagner » et
+« Offerte par ». Sous la description réglée au cockpit, une indication calculée (17/10/2026) : « Il manque N avis 5★
+pour atteindre 4,5 ★ » (Note Google), « Encore N ventes croisées pour atteindre 55 % » (ventes croisées), « Le
+magasin doit encore faire N € de chiffre ce mois » (objectif magasin). La ligne « Tes heures » n'est plus dans le
+détail de l'objectif ni de Google (17/10/2026) : le minimum d'heures est une condition qu'on allume ou coupe au cockpit ;
+quand elle joue et qu'on est en dessous, la ligne dit seulement « sous 20 h ».
 
 Refait le 16/10/2026 sur la base du 14/10 (ci-dessous) :
 

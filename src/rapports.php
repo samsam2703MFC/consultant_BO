@@ -2380,11 +2380,15 @@ function ep_rapports_cron(): array
     $moissonH = 'module absent';
     try { if (function_exists('svCron')) { $moissonH = svCron(); } }
     catch (Throwable $eH) { $moissonH = 'échec — ' . $eH->getMessage(); }
+    // Les clients PWA des tickets (Récurrence des six leviers, 23/10/2026) : jours relevés jusqu'au 1er janvier, fiches lues.
+    $recurrence = 'module absent';
+    try { if (function_exists('rpCron')) { $recurrence = rpCron(); } }
+    catch (Throwable $eRp) { $recurrence = 'échec — ' . $eRp->getMessage(); }
     // Le Résultat d'aujourd'hui se recalcule au même battement : le premier écran du matin le trouve prêt.
     $resultat = 'module absent';
     try { if (function_exists('exPrechauffer')) { $resultat = exPrechauffer(); } }
     catch (Throwable $eR) { $resultat = 'échec — ' . $eR->getMessage(); }
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'resultat' => $resultat];
+    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'recurrence' => $recurrence, 'resultat' => $resultat];
 }
 
 /**
@@ -2580,7 +2584,8 @@ function rapPdfPiedHtml(array $meta): string
     $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
     $F = "font-family:Helvetica,Arial,sans-serif";
     $logo = rapLogoDataUri();
-    $dates = 'Généré le ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
+    // `genereLib` : le libellé dans la langue du document (le plan d'expansion sort aussi en néerlandais).
+    $dates = $e($meta['genereLib'] ?? 'Généré le') . ' ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
         . (($meta['envoye'] ?? '') !== '' ? ' · envoyé le ' . $e($meta['envoye']) : '');
     // Un rapport composé porte souvent le magasin DANS son nom (« … —
     // Gosselies ») : le pied l'écrivait alors deux fois. Le magasin reste à

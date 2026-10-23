@@ -423,6 +423,18 @@ plus `proJours` (jours ouverts de l'étendue), `proJoursLus` et `proComplet` : l
 gravés, complétés par au plus 30 listes lues en parallèle, les plus récentes d'abord) ; le comptoir et la part ne sont
 rendus que si tous les jours ouverts sont lus. Les champs valent `null` quand rien n'est lu.
 
+**Le panier moyen hors clients pro (21/10/2026).** Le dashboard magasin montre, classe et compare un panier sans les
+tickets pro (TVA valide) : `panierRetenu` = CA comptoir ÷ tickets comptoir, et `panierBase` = `comptoir` ; tant que le
+pro de la journée ou de l'étendue n'est pas lu en entier, `panierRetenu` = le panier total et `panierBase` = `total`.
+`panier` reste le total (clients manquants sur le CA total, PDF, cockpit). Portés par chaque magasin et le réseau de
+`/exploitation/jour` (réseau : comptoir seulement si tous les magasins ouverts sont lus) et de `/exploitation/periode` ;
+par `j7` (`caComptoir`, `ticketsComptoir` au même moment, `caComptoirJour`, `ticketsComptoirJour`, `panierRetenu`,
+`panierRetenuJour`, `panierBase`) ; par chaque jour de `/ventes/tendance` (`panierComptoir`, `panierBase`) ; par chaque
+heure et `totaux` de `/ventes/stats` ; par chaque période et son `n1` de `/ventes/semaines?…&pro=1` (`caComptoir`,
+`ticketsComptoir`) ; par les mois d'un magasin de `/stores/perf?…&pro={shop}` (`caComptoir`, `ticketsComptoir`,
+`panierRetenu`, `panierBase`) et les trimestres de `/plan`. Le dashboard ne range jamais un panier `comptoir` à côté
+d'un panier `total` : deux côtés lus, hors pro ; sinon les deux pro compris.
+
 
 ### `/production/plan` — la gestion de production (module franchisé)
 
@@ -581,6 +593,31 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
 - `GET /ventes/primes-catalogue[?frais=1]` (16/10/2026) : pour la barre de recherche de l'assistant « Nouvelle prime
   promotion » : `{groupes: [{nom, n}], categories: [{nom, groupe, n}], produits: [{id, nom, cat, grp}]}` (le catalogue
   de la production, `pwaId` = l'identifiant des lignes de tickets ; gardé une heure, `primesCatalogue`).
+- **Argent ou cadeau, sponsor, description** (16/10/2026). Chaque prime peut porter `cadeau: {nom, valeur?}` (un voucher,
+  un voyage… ; il ne compte pas en euros : `magasin` à 0 dans les configs, le titre gagné porte `cadeau` et 0 €),
+  `description` (une ligne), et pour un sponsor `sponsorLogo` (un dépôt comme une icône), `sponsorSite` (http·s, complété
+  en https), `sponsorTexte` (une ligne). `primesAppInfosDe(cle)` les donne à chaque carte de l'app : `cadeau`,
+  `description`, `payeur`, `sponsor: {nom, logo, site, texte} | null`. Une carte au seuil ou sur objectif est gagnée au
+  titre (pas au montant). Fiche v9. Assistant, étape « Qui gagne » : 💶 Argent / 🎁 Cadeau (nom, valeur facultative),
+  « Offerte par » (marque ou sponsor : nom, logo réduit à 256 px sans recadrage, site, une ligne) ; étape 4 : la ligne
+  de description. App : toucher un carré (ou une ligne d'un mois à venir) ouvre la fiche de la prime — à gagner, la
+  description, qui l'offre (logo, site), qui gagne, la période, « Voir le classement » ; le détail d'une ligne de target
+  montre aussi « à gagner » et « offerte par ».
+- **La ligne de description de chaque prime et les indications** (17/10/2026). Les targets (ventes croisées, objectif,
+  Google) gardent leur `description` comme toute prime ; `externes.record` et `externes.meilleure` aussi (une ligne,
+  160 caractères). Le cockpit la règle dans la fenêtre « Modifier » (« Description dans l'app », avec un exemple par prime :
+  « Toujours proposer un produit en plus », « Demande un avis 5★ aux clients contents »…). Fiche v10, sur les cartes :
+  `google.avis5` — les avis 5★ qu'il manque pour que la moyenne atteigne le seuil, k ≥ n(s − a)/(5 − s), 0 si tenu, null
+  sans note ou pour un seuil de 5 (`primesAvis5Manquants`) ; `croisees.manque` — les ventes croisées qu'il lui manque si
+  chaque ticket qui vient en est une, k ≥ (r·t − c)/(1 − r) (`primesManqueCroisees`) ; `objectif.manqueCa` — le CA qu'il
+  manque au magasin pour son objectif du mois (null mois clos ou sans objectif). L'app les montre sous la description,
+  dans le détail d'une ligne et dans la fiche : « 💡 Il manque 57 avis 5★ pour atteindre 4,5 ★ ».
+- **Les conditions, un interrupteur chacune** (17/10/2026). La fenêtre « Modifier » range les conditions dans un bloc
+  « Conditions pour toucher la prime » : le minimum d'heures au planning (objectif, Google), le minimum de tickets (ventes
+  croisées, `venteCroisees.minTickets`), le minimum de pièces (catégorie). Coupée, la condition vaut 0 : pour les heures,
+  `heuresMin: 0` paie sans regarder le planning (`googlePrime`, `primesMagasinMois` : plus de « sous le minimum », la
+  part même sans heures au planning). Le tableau et le règlement PDF ne la citent plus. L'app ne montre plus la ligne
+  « Tes heures » dans le détail de l'objectif et de Google ; le motif « sous 20 h » reste quand la condition joue.
 - **La période d'une prime** (16/10/2026) : une catégorie ou un target (ventes croisées, objectif, note Google) porte
   `du` / `au` (AAAA-MM-JJ, l'un ou l'autre ou aucun ; à l'envers, remis dans l'ordre) ; une promo a les dates de sa
   promotion. Une prime compte et s'affiche dans **chaque mois que sa période touche**, nulle part ailleurs : le mois
@@ -3713,6 +3750,85 @@ service, droits et jetons : `docs/publication-reseaux.md`.
   (`PATCH …/{id}` à `valide`) programme le post si « Programmer à la validation » est coché ; « marqué publié » à la
   main annule ce qui était programmé.
 
+### Scouting — le plan d'expansion par province, en français ou en néerlandais (21/10/2026, demande de Sam)
+
+L'écran du plan (Scouting › « Plan d'expansion ») :
+
+- **Provinces** : une liste à cocher (Bruxelles, Flandre, Wallonie ; raccourcis Toutes, Aucune, par région), avec le nom
+  néerlandais et le compte de communes et de commerces. Ce sont les provinces de la carte (`prov`) : une seule sélection
+  fait foi. Un arrondissement choisi hors des provinces restantes revient à « tous ».
+- **Paramètres** : une modale. Ouvertures par province (1 à 10), score minimum, CA annuel estimé minimum, écart entre deux
+  ouvertures, magasins ouverts compris, temps de route réels, les hypothèses du modèle (rayon, « pas un concurrent sous »,
+  « concurrent fort dès », dépense par ménage, passage, surface, emprise maximale — celles de toute la carte) et la langue
+  du document. Rien ne bouge avant « Appliquer » : le calcul par la route ne repart qu'une fois.
+- **FR | NL** : la langue du document — l'écran du plan, l'impression, le PDF et le CSV. L'outil reste en français. Textes,
+  noms des provinces et des arrondissements, forme des nombres (« 1 234 € » / « € 1.234 ») : `scouting-plan-i18n.js`.
+  Les communes prennent le nom local des secteurs OpenStreetMap (`nl` : Anvers → Antwerpen, Lierre → Lier). La langue est
+  une préférence de ce navigateur (`ceo_scouting_vue.planLang`).
+- **Une page par province** (onglets Synthèse | provinces) : ménages, population et marché ; concurrents (forts, chaînes,
+  note moyenne) ; ménages par point de vente ; le réseau (magasins ouverts et leur CA réel des douze derniers mois clos) ;
+  une carte de la province (zones retenues, magasins, concurrents — en bordeaux les forts) ; les ouvertures ; la
+  concurrence (notes Google coupées par les deux seuils, enseignes de chaîne, les dix plus forts) ; les arrondissements ;
+  les magasins du réseau. Les mêmes commerces que le plan (sans les dormants, aux filtres de la carte). La synthèse gagne
+  un tableau « Par province ».
+
+`POST /scouting/plan.pdf` reçoit en plus :
+
+| Champ | Contenu |
+| --- | --- |
+| `lang` | `fr` (défaut) ou `nl` — les intitulés du serveur (`scoutingPlanLib`), le pied de page, le nom du fichier |
+| `synthese` | `false` : le PDF d'une seule province (sa page, puis méthode, hypothèses et sources) |
+| `parProvince`, `parProvinceTot` | lignes de 8 textes (province, ouvertures, ménages, concurrents, forts, ménages / point, magasins du réseau, CA) |
+| `provinces[].type`, `.sousTitre` | « Province · Wallonie », « 5 ouvertures retenues » |
+| `provinces[].tuiles` | 4 × [libellé, valeur, précision] |
+| `provinces[].carte` | data URI JPEG/PNG de la carte de la province (1,5 Mo au plus) ; `carteNote` |
+| `provinces[].notes` | 4 × [libellé, nombre, part] ; `noteMoy` |
+| `provinces[].marques` | ≤ 10 × [enseigne, points de vente] |
+| `provinces[].forts` | ≤ 10 × [rang, nom, commune, note, avis, force, « chaîne »] |
+| `provinces[].arrs`, `.arrTot` | ≤ 12 × 9 textes (arrondissement … CA estimé) |
+| `provinces[].reseau` | ≤ 20 × [magasin, ville, CA réel, période] |
+| `provinces[].lignes` | ≤ 10 ouvertures (au lieu de 5) |
+
+Tous les textes arrivent formés dans la langue du plan ; le serveur n'y ajoute que ses intitulés. Le plan entier : la
+synthèse, puis une page par province (saut de page), puis la méthode. `rapPdfRendu()` accepte `genereLib` (« Gegenereerd
+op ») pour le pied de page.
+
+### `GET /leviers/magasins?annee=AAAA&mois=M` — les six leviers, magasin par magasin (21/10/2026, demande de Sam)
+
+Une réponse, deux écrans : la carte « Les six leviers » de Résultat › Mois (Tableau des magasins) et les six tuiles du
+dashboard magasin en vue Mois. Un chiffre ne peut donc pas différer de l'un à l'autre. `_cache=900` accepté (les deux
+écrans le demandent). Mois futur → le mois en cours ; mois invalide → 400.
+
+Sources, aucune nouvelle :
+
+| Levier | Mesure | Source |
+|---|---|---|
+| Trafic | clients (tickets) — **par jour** au mois, total au cumul | P&L mensuel (`ep_perf`, `/stores/perf`) |
+| Récurrence | — (`vide: true`, laissée vide pour l'instant) | — |
+| Expérience client | note Google · avis | `mar_avis_fiche` (aujourd'hui) ; `mac_google_rating_snapshot` (relevé mensuel du panel, pour un mois passé et le N-1) |
+| Food / Labour / Overhead cost | % du CA | P&L mensuel (`ep_perf`) |
+
+Réponse :
+
+- `leviers[]` — `{cle, nom, type, couleur, mesureMois, mesureCumul, vide}` dans l'ordre du référentiel (`ep_leviers`).
+- `annee`, `mois`, `moisEnCours`, `jours` (jours comptés : à date si le mois est en cours), `cumulAu` (dernier mois clos
+  du cumul, `null` en janvier en cours), `seuils` (les seuils actifs de la Table KPI : `trafic-clients`, `note-google`,
+  `food-cost-pct`, `labour-pct`, `overhead-pct`), `serieMois` (les douze mois des courbes), `googleN1Des` (le premier
+  mois qui aura un N-1 de la note Google).
+- `magasins[]` — `{id, nom, ville, franchise, ouverture, mois, cumul, horsNorme, serie}` :
+  - `mois.trafic {v, n1, delta (%), ecartReseau (%), niveau}` — la pastille du trafic suit l'écart au réseau ;
+  - `mois.food|labour|overhead {v, n1, delta (pt), niveau, nonSaisi?}` — `nonSaisi` : le mois a un P&L mais ce coût à 0 % ;
+  - `mois.xp {v, avis, n1, delta, niveau}` ; `mois.ouverture` : le mois d'ouverture, partiel, ne se compare pas ;
+  - `cumul.moisComparables[]`, `cumul.trafic {v, comp, n1, delta}`, `cumul.food|labour|overhead {v, comp, n1, delta,
+    moisCompares, niveau}` — `v` sur tous les mois, `comp` vs `n1` sur les seuls mois comparables les deux années ;
+  - `horsNorme[] {mois, v}` — food cost à plus de 15 points de la médiane du magasin, à vérifier au P&L ;
+  - `serie.{trafic, food, labour, overhead}[12]` — `null` au mois d'ouverture ou sans P&L.
+- `reseau.mois` / `reseau.cumul` — trafic (moyenne par magasin au mois, total au cumul), coûts pondérés au CA,
+  `comp` vs `n1` à périmètre constant ; note Google pondérée par le nombre d'avis.
+
+Règles : comparer à mois égaux, toujours. L'ouverture vient de Scouting › Magasins du réseau (au mois près), sinon de
+l'année du panel. Des frais généraux à 0 % ne sont pas saisis : ils ne se comparent pas et sortent de la moyenne du
+réseau. Les pastilles : vert sous l'alerte, orange entre alerte et critique, rouge au-delà, dans le sens du KPI.
 **22/10/2026 — Objectifs de CA et Suivi budget « à date ».** Le réel du mois en cours s'arrête à aujourd'hui (`/stores/perf`, API du panel) ; sa cible ne compte plus que les jours écoulés (`partMois` : jour / jours du mois, 1 pour un mois clos). Les colonnes disent « Réel au 22/10 » (ou « Réel à fin septembre » quand le dernier mois lu est clos) au lieu de « fin juil. » écrit en dur. Projection : le reste de l'année part des jours restants du mois en cours. Suivi budget : cumul, écart par magasin et écart du mois en cours sur la même règle ; plus de juillet figé (`slice(0, 7)`, `i <= 6`). `/meta.aujourdhui` ne recule plus sous la date du serveur : la base de démonstration posait `2026-07-31`.
 
 **22/10/2026 — `/stores/perf` manqué au chargement.** Chaque lecture du chargement a 20 s ; au-delà (ou sur une erreur), `perf` valait `null` et les écrans de l'année (Objectifs, Marge, Mois) affichaient des zéros partout, budgets compris, sans le dire. `perfAssure()` relit alors `/stores/perf` sans délai imposé, une fois ; l'onglet Année tourne pendant la lecture, et l'écran Objectifs affiche « lecture en cours », ou « pas pu être lus » / « aucun chiffre » avec un bouton Relire.
@@ -3746,6 +3862,37 @@ service, droits et jetons : `docs/publication-reseaux.md`.
 **23/10/2026 — Console : la page Marketing (« Aujourd'hui », `#/marketing`) et son entrée du rail retirées.** Demande de Sam. Partent le hub (ses portes, ses chiffres par canal, sa liste « à faire »), sa lecture de `GET /marketing/hub` côté console (`mhCharge`, `valsMktHub`, `tplMktHub`) et l'adresse `#/marketing` (elle ouvre l'accueil). « Marketing ↗ », l'application /marketing/, reste dans le rail quand elle y est. Les onglets de campagne de la console (Campagnes, Budget × Campagnes, Objectifs produits, Mesure) restent à leur adresse (`#/campagnes`…), sous le titre « Campagnes », sans entrée dans le rail. L'API `/marketing/hub` reste.
 
 **23/10/2026 — Console : les onglets de campagne retirés.** Demande de Sam (« garde Marketing ↗, retire les onglets de campagne »). Partent de la console : Campagnes (liste et calendrier, la note de campagne, le formulaire, `#/campagnes`, `#/calendrier`), Budget × Campagnes (`#/budget-campagnes`) et Mesure (`#/mesure-campagnes`) — leurs écrans, leurs lectures côté console et leurs gabarits ; ces adresses ouvrent l'accueil. Restent : « Marketing ↗ » (l'application /marketing/) dans le rail ; Objectifs produits (`#/objectifs-produits`), qui garde son entrée « Objectifs » du rail (Franchisés › Suivi journalier et opérations) et le lien de la fiche franchisé ; Types de campagne dans Paramètres. Les API `/marketing…` côté serveur restent, comme l'assistant de campagne (/assistant/).
+
+#### Récurrence — le taux de retour des clients PWA (23/10/2026, demande de Sam)
+
+`/leviers/magasins` porte désormais la Récurrence (`src/recurrence_pwa.php`) : parmi les clients de l'app identifiés à
+la caisse d'un magasin sur la période (fiche client du panel : `pwa_user`), la part venus au moins deux jours
+différents — la définition « taux de fidélisation » du panel consultant, restreinte aux clients PWA. Tickets pro exclus.
+
+- Champs : `magasins[].mois.recurrence`, `magasins[].cumul.recurrence`, `reseau.mois|cumul.recurrence` =
+  `{v (%), n1, delta (pt), niveau, pwa, revenus, identifies, inconnus (fiches pas encore lues), partTickets (% des
+  tickets faits par les clients PWA), joursLus, jours, complet}` ; `serie.recurrence[12]` ; `recurrence {debut, kpi}`.
+- `v` reste `null` tant que la période n'est pas entièrement relevée (`complet: false`) : jamais un taux sur une partie
+  des jours. Le réseau compte un client une fois, ses jours de passage dans tous les magasins.
+- Relevé : `ceo_pwa_jour` (jours-magasins lus), `ceo_pwa_visite` (client × jour × magasin, l'identifiant seul, jamais
+  le nom), `ceo_pwa_client` (statut de la fiche, relu tous les 30 jours pour un client PWA, 7 sinon). Les listes de
+  tickets (`/shops/{id}/transactions?date=`) se relisent au cron horaire (`rpCron`, 80 listes et 120 fiches au plus
+  par battement, du plus récent au 1er janvier) ; une liste lue pour le pro du dashboard (`vpGraveListe`) se relève au
+  passage ; la requête relit le jour en cours et quelques jours manquants. La copie de la base du panel (arrêtée au
+  14/07) n'est pas lue.
+- Seuils : ceux d'un KPI dérivé de la Table KPI « `pwaRevenus` ÷ `pwaClients` » (deux mesures ajoutées au formulaire,
+  le mois en cours) ; sans lui, pas de pastille.
+- N-1 : le relevé commençant au 1er janvier 2026, le premier N-1 viendra en 2027.
+- Répartition (23/10/2026) : chaque cellule porte `repartition {sansApp, statutInconnu, fidelite, connectes, webshop,
+  canaux {source_channel: n}}` des clients identifiés en caisse dont la fiche est lue (le réseau compte un client une
+  fois). De la fiche : `source_channel`, `last_login_at` renseigné ou non (jamais la date), `webshop_user`. Les fiches
+  lues avant ces colonnes se relisent.
+- Tous les clients identifiés (23/10/2026, demande de Sam après le premier relevé : aucun client PWA identifié en
+  caisse) : la valeur de la colonne devient le taux de retour de TOUS les clients identifiés en caisse, hors pro. La
+  cellule : `{v, n1, delta, niveau, clients, revenus, partTickets, pwa {v, n1, delta, niveau, clients, revenus,
+  partTickets}, inconnus, joursLus, jours, complet, repartition}` ; `serie.recurrence` suit le taux de tous les
+  clients identifiés. Seuils : KPI dérivé `clientsRevenus ÷ clientsIdentifies` (et `pwaRevenus ÷ pwaClients` pour le
+  taux PWA, `seuils.recurrencePwa`) ; `recurrence {debut, kpi, kpiPwa}`.
 
 **23/10/2026 — Rail de la console : le menu « Application employé ».** Demande de Sam : le rail est le bac à sable du dev, qui exportera d'ici les trois pièces de l'application employé vers l'intégrateur de l'ERP. Le menu « Application employé » réunit la **page admin** (`primesApp`, section marque : les primes de la marque et des sponsors, les promotions, les moyennes), la **page franchisé (magasin)** (`primesApp`, section franchisé : les primes que chaque franchisé pose pour son magasin) et **Application ↗** (`employee/auth`, la connexion de l'app : horaire, tâches, primes, profil). Il remplace « App worker ↗ » et le sous-menu « Primes · module app worker » d'ERP franchisé (qui garde Prospection ↗ et Tablette vendeuses) ; le lien direct « Mes primes dans l'app ↗ » se fond dans « Application ↗ » (les primes sont un onglet de l'app). Une entrée de premier niveau du rail peut désormais poser un état en plus de l'écran (`c[4]`), comme un enfant de sous-menu.
 

@@ -1695,10 +1695,30 @@ function exJ7(int $sid, string $date, bool $estAuj): ?array
         $pro = ['caPro' => round($cp, 2), 'ticketsPro' => $np, 'caProJour' => round($cpJ, 2), 'ticketsProJour' => $npJ];
         foreach ($heures as $i => $l) { $heures[$i]['pro'] = round($parH[$l['h']][0] ?? 0.0, 2); $heures[$i]['proN'] = $parH[$l['h']][1] ?? 0; }
     }
-    return ['date' => $j7, 'moment' => $moment,
+    // J−7 hors clients pro (21/10/2026) : ses tickets pro gravés (vpLu, TVA valide) se retirent du CA et des clients, au
+    // même moment heure par heure (le `h` du relevé pro, l'heure en cours au prorata comme le reste), et sur la journée.
+    // Sans relevé pro lu, rien : le dashboard compare alors les deux paniers pro compris, jamais l'un sans l'autre.
+    $cmp = [];
+    $bP = function_exists('vpLu') ? vpLu($sid, $j7) : null;
+    if ($bP !== null) {
+        $caP = 0.0; $tkP = 0.0; $caPJ = 0.0; $tkPJ = 0;
+        foreach ((array) ($bP['h'] ?? []) as $hh => $v) {
+            $h = (int) $hh; $k = (!$estAuj || $h < $hNow) ? 1.0 : ($h === $hNow ? $frac : 0.0);
+            $caPJ += (float) $v[0]; $tkPJ += (int) $v[1]; $caP += (float) $v[0] * $k; $tkP += (int) $v[1] * $k;
+        }
+        $cmp = ['caComptoir' => round(max(0.0, $ca - $caP), 2), 'ticketsComptoir' => (int) max(0, round($tk - $tkP)),
+            'caComptoirJour' => round(max(0.0, $caJour - $caPJ), 2), 'ticketsComptoirJour' => max(0, $tkJour - $tkPJ)];
+    }
+    $out = ['date' => $j7, 'moment' => $moment,
         'tickets' => (int) round($tk), 'ca' => round($ca, 2), 'ticketsJour' => $tkJour, 'caJour' => round($caJour, 2),
         'mb' => $matOk && $ca > 0 ? round($ca - $mat, 2) : null, 'mbJour' => $matJourOk && $caJour > 0 ? round($caJour - $matJour, 2) : null,
-        'heures' => $heures] + $pro;
+        'heures' => $heures] + $cmp + $pro;
+    if (function_exists('vpPanier')) {
+        $pM = vpPanier($cmp['caComptoir'] ?? null, $cmp['ticketsComptoir'] ?? null, $tk > 0 ? $ca / $tk : null);
+        $pJ = vpPanier($cmp['caComptoirJour'] ?? null, $cmp['ticketsComptoirJour'] ?? null, $tkJour > 0 ? $caJour / $tkJour : null);
+        $out += $pM + ['panierRetenuJour' => $pJ['panierRetenu']];
+    }
+    return $out;
 }
 
 /**
@@ -2695,6 +2715,11 @@ function exJourCalcul(): array
             $iL = count($lignes) - 1;
             $lignes[$iL] = array_merge($lignes[$iL], vpClientsComptoir($lignes[$iL], $objJour !== null ? (float) $objJour : null));
         }
+        // Le panier moyen du dashboard, hors clients pro quand leurs tickets sont lus (21/10/2026) ; `panier` reste le total.
+        if (function_exists('vpPanier')) {
+            $iL = count($lignes) - 1;
+            $lignes[$iL] += vpPanier($lignes[$iL]['caComptoir'] ?? null, $lignes[$iL]['ticketsComptoir'] ?? null, $panier);
+        }
     }
     usort($lignes, fn ($a, $b) => ($b['ca'] ?? -1) <=> ($a['ca'] ?? -1));
     $out['magasins'] = $lignes;
@@ -2772,6 +2797,13 @@ function exJourCalcul(): array
         'clientsManquants' => (function () use ($lignes) { $n = 0; $vu = false; foreach ($lignes as $l) { if (!empty($l['ouvert']) && isset($l['clientsManquants'])) { $n += $l['clientsManquants']; $vu = true; } } return $vu ? $n : null; })(),
         'clientsBase' => (function () use ($lignes) { $b = []; foreach ($lignes as $l) { if (!empty($l['ouvert']) && ($l['objectifJour'] ?? null) !== null) { $b[$l['clientsBase'] ?? 'total'] = true; } } return count($b) === 1 ? array_key_first($b) : ($b ? 'mixte' : null); })(),
         'categories' => $catsR];
+    // Le panier moyen du réseau hors clients pro (21/10/2026) : seulement quand chaque magasin ouvert a ses tickets pro
+    // lus — sinon le total, dit (`panierBase`). `panierComptoir` garde, lui, le comptoir des seuls magasins lus.
+    if (function_exists('vpPanier')) {
+        $tous = $pro['n'] > 0 && $pro['n'] === $ouverts;
+        $out['reseau'] += vpPanier($tous ? max(0.0, $pro['caMag'] - $pro['ca']) : null, $tous ? max(0, $pro['ticketsMag'] - $pro['tickets']) : null,
+            $t['tickets'] > 0 ? $ca / $t['tickets'] : null);
+    }
     return $out;
 }
 
@@ -5497,6 +5529,31 @@ function ep_perf(): array
                 if ($caF !== null) { $cells[$k]['ca'] = round($caF, 2); }
                 if ($tkF !== null) { $cells[$k]['tickets'] = (int) $tkF; }
                 if ($paF !== null) { $cells[$k]['panierMoyen'] = round($paF, 2); }
+            }
+        }
+
+        // 2quinquies) Le panier hors clients pro d'UN magasin (21/10/2026, `pro=4` : le dashboard magasin et son plan) :
+        //       le CA et les tickets du mois moins les tickets pro gravés de chacun de ses jours vendus (les jours de la
+        //       heatmap, vsPanelJours, gravés une fois le mois clos) — seulement si tous sont lus, sinon le mois garde le
+        //       panier total et le dit (`panierBase` = total). Le réseau entier ne se calcule pas : trente relevés par
+        //       magasin et par mois, pour un tableau qui n'en montre qu'un.
+        $proS = (int) ($_GET['pro'] ?? 0);
+        if ($proS > 0 && function_exists('vpPanier') && function_exists('vpProJours') && function_exists('vpJoursLus') && function_exists('vsPanelJours')) {
+            $debP = defined('SV_DEBUT') ? SV_DEBUT : date('Y-m-01');
+            $fenP = [];
+            foreach ($cells as $cP) {
+                $duP = sprintf('%04d-%02d-01', (int) $cP['annee'], (int) $cP['mois']);
+                if ((int) $cP['storeId'] === $proS && ($cP['ca'] ?? 0) > 0 && date('Y-m-t', strtotime($duP)) >= $debP) { $fenP[] = [$duP, min(date('Y-m-t', strtotime($duP)), date('Y-m-d'))]; }
+            }
+            $vendusP = $fenP === [] ? [] : array_keys(vsPanelJours($proS, $fenP));
+            sort($vendusP);
+            $lusP = $vendusP === [] ? [] : (vpJoursLus([$proS], array_values(array_filter($vendusP, static fn ($j) => $j >= $debP)), 3)[$proS] ?? []);
+            foreach ($cells as $kP => $cP) {
+                if ((int) $cP['storeId'] !== $proS || !(($cP['ca'] ?? 0) > 0) || $cP['tickets'] === null) { continue; }
+                $ymP = sprintf('%04d-%02d', (int) $cP['annee'], (int) $cP['mois']);
+                $jP = array_values(array_filter($vendusP, static fn ($j) => str_starts_with($j, $ymP)));
+                $sP = vpComptoirDe(vpProJours($proS, $jP, true, $lusP), (float) $cP['ca'], (int) $cP['tickets']);
+                $cells[$kP] += $sP + vpPanier($sP['caComptoir'], $sP['ticketsComptoir'], $cP['panierMoyen'] !== null ? (float) $cP['panierMoyen'] : null);
             }
         }
 
@@ -8880,6 +8937,9 @@ function ep_scouting_demarchage(): array
     return $d;
 }
 
+/** Le CA réel des mois clos du réseau, gardé ce temps-là (secondes). */
+const SCOUTING_RESEAU_CA_TTL = 21600;
+
 function ep_scouting_reseau(): array
 {
     try {
@@ -8904,17 +8964,32 @@ function ep_scouting_reseau(): array
     // mensuel du panel, complété par les ventes caisse pour les mois qu'il ne
     // porte pas encore (ep_perf). Lire la seule table P&L ne donnait que deux
     // mois d'été, annualisés — un CA moitié trop bas.
-    $cellules = [];
-    $_GET['annees'] = ((int) date('Y') - 1) . ',' . date('Y');
-    try {
-        foreach (ep_perf() as $cell) {
-            if (!is_array($cell) || ($cell['ca'] ?? null) === null || (float) $cell['ca'] <= 0) { continue; }
-            if ((int) $cell['annee'] * 12 + (int) $cell['mois'] - 1 >= $courant) { continue; }
-            $cellules[(string) $cell['storeId']][] = [(int) $cell['annee'], (int) $cell['mois'], (float) $cell['ca']];
-        }
-        foreach ($cellules as &$l) { usort($l, static fn ($a, $b) => ($b[0] * 12 + $b[1]) <=> ($a[0] * 12 + $a[1])); }
-        unset($l);
-    } catch (Throwable $e) { /* P&L indisponible : CA réel inconnu */ }
+    // Ces mois sont clos : leur CA ne bouge plus qu'à la marge (un P&L corrigé).
+    // Le relire à chaque ouverture du scouting coûtait 18 à 33 s (ep_perf sur deux
+    // ans, au panel) — au-delà des 30 s de l'écran, qui abandonnait : plus de
+    // magasins, plus de CA réel dans le plan d'expansion (21/10/2026). Gardé six
+    // heures, et refait dès qu'un mois se clôt.
+    $memo = setting('scoutingReseauCa');
+    $cellules = is_array($memo) && ($memo['mois'] ?? '') === date('Y-m') && (int) ($memo['le'] ?? 0) > time() - SCOUTING_RESEAU_CA_TTL
+        && is_array($memo['cellules'] ?? null) ? $memo['cellules'] : null;
+    if ($cellules === null) {
+        $cellules = [];
+        $_GET['annees'] = ((int) date('Y') - 1) . ',' . date('Y');
+        try {
+            foreach (ep_perf() as $cell) {
+                if (!is_array($cell) || ($cell['ca'] ?? null) === null || (float) $cell['ca'] <= 0) { continue; }
+                if ((int) $cell['annee'] * 12 + (int) $cell['mois'] - 1 >= $courant) { continue; }
+                $cellules[(string) $cell['storeId']][] = [(int) $cell['annee'], (int) $cell['mois'], (float) $cell['ca']];
+            }
+            foreach ($cellules as &$l) { usort($l, static fn ($a, $b) => ($b[0] * 12 + $b[1]) <=> ($a[0] * 12 + $a[1])); }
+            unset($l);
+            // Rien lu (panel muet) : on ne garde pas un vide, la prochaine ouverture relit.
+            if ($cellules !== []) {
+                Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                    ['scoutingReseauCa', json_encode(['mois' => date('Y-m'), 'le' => time(), 'cellules' => $cellules], JSON_UNESCAPED_UNICODE)]);
+            }
+        } catch (Throwable $e) { /* P&L indisponible : CA réel inconnu */ }
+    }
     $out = [];
     $saisies = setting('scoutingMagasins');
     if (!is_array($saisies)) { $saisies = []; }

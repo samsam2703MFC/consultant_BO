@@ -170,11 +170,16 @@ function primesAppEntreeValide(array $x, int $i, int $recompense): ?array
     $e = primesAppEntreeValideSansPayeur($x, $i, $recompense);
     if ($e === null) { return null; }
     $icone = ['icone' => primesAppIcone($x['icone'] ?? null)];
+    if (($x['famille'] ?? '') === 'magasin' && $e['type'] === 'b2b') {
+        $shop = is_scalar($x['shop'] ?? null) && preg_match('/^\d+$/', (string) $x['shop']) ? (string) $x['shop'] : '';
+        if ($shop === '') { return null; }
+        return $e + ['famille' => 'magasin', 'shop' => $shop, 'payeur' => 'magasin', 'sponsor' => ''] + $icone + primesAppInfosPropres($x);
+    }
     if (($x['famille'] ?? '') === 'magasin') {
         if ($e['type'] !== 'promo' || count($e['promo']['shops']) !== 1) { return null; }
         $shop = $e['promo']['shops'][0];
         $e['cle'] = primesAppClePromo($e['promo'], $shop);
-        return $e + ['famille' => 'magasin', 'shop' => $shop, 'payeur' => 'magasin', 'sponsor' => ''] + $icone;
+        return $e + ['famille' => 'magasin', 'shop' => $shop, 'payeur' => 'magasin', 'sponsor' => ''] + $icone + primesAppInfosPropres($x);
     }
     // La période (16/10/2026) : une catégorie ou un target peut tourner du … au … (vide : sans début, sans fin) ; une promo
     // a les dates de sa promotion.
@@ -183,7 +188,35 @@ function primesAppEntreeValide(array $x, int $i, int $recompense): ?array
         if ($du !== null && $au !== null && $au < $du) { [$du, $au] = [$au, $du]; }
         $e += ['du' => $du, 'au' => $au];
     }
-    return $e + ['famille' => 'marque'] + primesAppPayeur($x) + $icone;
+    return $e + ['famille' => 'marque'] + primesAppPayeur($x) + $icone + primesAppInfosPropres($x);
+}
+
+/**
+ * Ce que la vendeuse voit en touchant une prime (16/10/2026) : ce qu'elle gagne — de l'argent (le montant) ou un
+ * cadeau (`cadeau` : son nom, sa valeur indicative ; il ne compte pas en euros dans les primes à verser) —, une ligne
+ * de description, et pour un sponsor son logo (déposé comme une icône), son site (http·s) et une ligne sur lui.
+ */
+function primesAppInfosPropres(array $x): array
+{
+    $nom = mb_substr(trim((string) ($x['cadeau']['nom'] ?? '')), 0, 80);
+    $val = $x['cadeau']['valeur'] ?? null;
+    $site = trim((string) ($x['sponsorSite'] ?? ''));
+    if ($site !== '' && !preg_match('#^https?://#i', $site)) { $site = 'https://' . $site; }
+    $site = ($site !== '' && filter_var($site, FILTER_VALIDATE_URL) && preg_match('#^https?://[^\s"<>]+$#i', $site)) ? mb_substr($site, 0, 200) : '';
+    return ['cadeau' => $nom !== '' ? ['nom' => $nom, 'valeur' => is_numeric($val) && (float) $val > 0 ? round(min(100000.0, (float) $val), 2) : null] : null,
+        'description' => mb_substr(trim((string) ($x['description'] ?? '')), 0, 160),
+        'sponsorLogo' => primesAppIcone($x['sponsorLogo'] ?? null), 'sponsorSite' => $site,
+        'sponsorTexte' => mb_substr(trim((string) ($x['sponsorTexte'] ?? '')), 0, 160)];
+}
+
+/** Les détails d'une prime pour l'app, par sa clé : {cadeau, description, payeur, sponsor: {nom, logo, site, texte} | null}. */
+function primesAppInfosDe(string $cle): array
+{
+    $e = isset(primesAppReglages()['externes'][$cle]) ? primesAppReglages()['externes'][$cle] : (primesAppEntree($cle) ?? []);
+    $payeur = (string) ($e['payeur'] ?? 'marque');
+    return ['cadeau' => $e['cadeau'] ?? null, 'description' => (string) ($e['description'] ?? ''), 'payeur' => $payeur,
+        'sponsor' => $payeur === 'sponsor' ? ['nom' => (string) ($e['sponsor'] ?? ''), 'logo' => (string) ($e['sponsorLogo'] ?? ''),
+            'site' => (string) ($e['sponsorSite'] ?? ''), 'texte' => (string) ($e['sponsorTexte'] ?? '')] : null];
 }
 
 /**
@@ -210,7 +243,7 @@ function primesAppEnVigueur(array $e, string $m): bool
 function primesAppAuMois(array $e): array
 {
     $m = primesAppMois();
-    if ($m !== null && $e['type'] !== 'promo' && $e['actif'] && !primesAppEnVigueur($e, $m)) { $e['actif'] = false; }
+    if ($m !== null && !in_array($e['type'], ['promo', 'b2b'], true) && $e['actif'] && !primesAppEnVigueur($e, $m)) { $e['actif'] = false; }
     return $e;
 }
 
@@ -253,6 +286,15 @@ function primesAppEntreeValideSansPayeur(array $x, int $i, int $recompense): ?ar
         $min = (isset($x['minPieces']) && is_numeric($x['minPieces'])) ? max(0, min(5000, (int) $x['minPieces'])) : 10;
         return ['cle' => mb_substr($e['cle'], 0, 20), 'type' => 'categorie', 'lib' => $e['lib'], 'actif' => $actif, 'montant' => $montant,
             'classement' => !array_key_exists('classement', $x) || (bool) $x['classement'], 'motif' => $e['motif'], 'minPieces' => $min];
+    }
+    if ($type === 'b2b') {
+        // La prime B2B (23/10/2026, src/primes_b2b.php) : sa règle, son montant fixe, sa période — du : le jour de sa création.
+        $cle = (string) ($x['cle'] ?? '');
+        if (!preg_match('/^b2b[0-9a-f]{8}$/', $cle)) { $cle = 'b2b' . substr(md5((string) json_encode(['b2b', $x['shop'] ?? '', $x['lib'] ?? '', $x['du'] ?? '', $i])), 0, 8); }
+        [$du, $au] = [primesAppDate($x['du'] ?? null), primesAppDate($x['au'] ?? null)];
+        if ($du !== null && $au !== null && $au < $du) { [$du, $au] = [$au, $du]; }
+        return ['cle' => $cle, 'type' => 'b2b', 'lib' => mb_substr(trim((string) ($x['lib'] ?? '')), 0, 40) ?: 'Ramène un client pro', 'actif' => $actif,
+            'montant' => primesAppMontant($x['montant'] ?? null, B2B_MONTANT), 'classement' => false, 'du' => $du ?? date('Y-m-d'), 'au' => $au] + b2bRegle($x);
     }
     if ($type === 'promo') {
         $promo = primesAppPromoPropre($x['promo'] ?? null);
@@ -306,12 +348,17 @@ function primesAppObjectifs(array $x, array $shops): ?array
  */
 function primesAppListePropre(array $liste, int $recompense): array
 {
-    $out = []; $vus = []; $nCat = 0; $nPro = 0; $nMag = [];
+    $out = []; $vus = []; $nCat = 0; $nPro = 0; $nMag = []; $nB2b = [];
     foreach (array_values($liste) as $i => $x) {
         $e = is_array($x) ? primesAppEntreeValide($x, $i, $recompense) : null;
         if ($e === null || isset($vus[$e['cle']])) { continue; }
         if ($e['type'] === 'categorie' && ++$nCat > PRIMES_APP_MAX_CATEGORIES) { continue; }
-        if ($e['famille'] === 'magasin') {
+        if ($e['type'] === 'b2b') {
+            // Trois primes B2B au plus par magasin, trois pour la marque.
+            $k = $e['famille'] === 'magasin' ? $e['shop'] : '';
+            $nB2b[$k] = ($nB2b[$k] ?? 0) + 1;
+            if ($nB2b[$k] > B2B_MAX) { continue; }
+        } elseif ($e['famille'] === 'magasin') {
             $nMag[$e['shop']] = ($nMag[$e['shop']] ?? 0) + 1;
             if ($nMag[$e['shop']] > PRIMES_APP_MAX_PROMOS) { continue; }
         } elseif ($e['type'] === 'promo' && ++$nPro > PRIMES_APP_MAX_PROMOS) { continue; }
@@ -351,7 +398,8 @@ function primesAppReglages(bool $relire = false): array
 function primesAppExternes($x): array
 {
     $x = is_array($x) ? $x : [];
-    $un = static fn ($e) => primesAppPayeur((array) $e) + ['icone' => primesAppIcone(((array) $e)['icone'] ?? null)];
+    $un = static fn ($e) => primesAppPayeur((array) $e) + ['icone' => primesAppIcone(((array) $e)['icone'] ?? null),
+        'description' => mb_substr(trim((string) (((array) $e)['description'] ?? '')), 0, 160)];
     return ['record' => $un($x['record'] ?? []), 'meilleure' => $un($x['meilleure'] ?? [])];
 }
 
@@ -474,7 +522,7 @@ function wr_primes_app(): array
     primesCachesVider();
     $payeLib = static fn (array $e) => $e['payeur'] === 'sponsor' ? 'sponsor ' . $e['sponsor'] : ($e['payeur'] === 'magasin' ? 'magasin ' . ($e['shop'] ?? '') : $e['payeur']);
     journalAdd('CEO', 'Paramètre', 'Primes de l’app', 'Récompense par défaut ' . $r . ' € · ' . implode(' · ', array_map(
-        static fn ($e) => $e['lib'] . ' ' . $e['montant'] . ' € (' . $payeLib($e) . ')' . ($e['actif'] ? '' : ' (éteinte)'), $liste))
+        static fn ($e) => $e['lib'] . ' ' . ($e['type'] === 'b2b' ? b2bPhrase($e) : $e['montant'] . ' €') . ' (' . $payeLib($e) . ')' . ($e['actif'] ? '' : ' (éteinte)'), $liste))
         . ' · SMS à la réussite ' . ($sms['actif'] ? 'activés' : 'éteints'));
     return ['ok' => true, 'reglages' => $out];
 }
@@ -1206,6 +1254,8 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'gain' => (float) $c['montant'], 'etat' => $c['montant'] > 0 ? 'gagne' : ($val === null ? 'vide' : 'att'),
             'val' => $val, 'unite' => 'pct', 'cible' => $cible, 'ecart' => $val !== null ? round(max(0, $cible - $val), 1) : null,
             'motif' => $val === null ? $vide('pas_compte') : (($c['tickets'] < $c['minTickets']) ? 'min_tickets' : null), 'minTickets' => (int) $c['minTickets'],
+            // L'indication de la fiche (17/10/2026) : les ventes croisées qu'il lui manque, si les tickets qui viennent l'étaient tous.
+            'manque' => primesManqueCroisees((int) ($c['croisees'] ?? 0), (int) ($c['tickets'] ?? 0), $cible),
             'classement' => isset($clDe['croisees'])];
     }
     $r = $b['record'];
@@ -1233,7 +1283,9 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'ecart' => $att !== null ? round(max(0, $pct - $att), 1) : null,
             'aDate' => $aDate, 'jour' => $j, 'cibleJour' => $cibleJour, 'avance' => ($aDate !== null && $cibleJour !== null) ? round($aDate - $cibleJour, 1) : null,
             'motif' => $pm['objectif'] === null ? 'pas_objectif' : ($pm['sousMin'] ? 'heures' : ($att === null ? 'pas_compte' : null)),
-            'heuresMin' => (int) $eO['heuresMin'], 'classement' => false];
+            'heuresMin' => (int) $eO['heuresMin'], 'classement' => false,
+            // Le CA qu'il manque au magasin pour son objectif du mois (17/10/2026).
+            'manqueCa' => ($pm['objectif'] ?? null) !== null && !$pm['clos'] ? max(0, (int) ceil((float) $pm['objectif'] * $pct / 100 - (float) ($pm['ca'] ?? 0))) : null];
     }
     // La note Google : la note du magasin face au seuil ; la récompense pour chacune au planning, au-dessus du minimum d'heures.
     $g = $b['google'] ?? null;
@@ -1244,7 +1296,9 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'gain' => (float) $g['montant'], 'etat' => $g['montant'] > 0 ? 'gagne' : (($note === null || $g['sousMin']) ? 'vide' : 'att'),
             'val' => $note, 'unite' => 'note', 'cible' => $seuil, 'avis' => (int) $g['avis'],
             'ecart' => $note !== null ? round(max(0, $seuil - $note), 1) : null,
-            'motif' => $note === null ? 'pas_note' : ($g['sousMin'] ? 'heures' : null), 'heuresMin' => (int) $g['heuresMin'], 'classement' => false];
+            'motif' => $note === null ? 'pas_note' : ($g['sousMin'] ? 'heures' : null), 'heuresMin' => (int) $g['heuresMin'], 'classement' => false,
+            // Les avis 5★ qu'il manque pour atteindre le seuil (17/10/2026).
+            'avis5' => primesAvis5Manquants($note, (int) $g['avis'], $seuil)];
     }
     $v = $b['meilleure'];
     if (($v['montantMag'] ?? 0) > 0) {
@@ -1268,7 +1322,7 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
         $obj = in_array($regle, ['magasin', 'vendeuse'], true) ? ($q['objectif'] ?? null) : null;
         $seuil = $regle === 'seuil' || $obj !== null;
         if ($regle === 'magasin' && $p !== null) { $p = (float) ($q['totalMag'] ?? $p); }
-        $etat = $p === null ? 'vide' : ($seuil ? ((int) ($q['montant'] ?? 0) > 0 ? 'gagne' : 'att')
+        $etat = $p === null ? 'vide' : ($seuil ? (($q['titre'] ?? null) !== null ? 'gagne' : 'att')
             : ($q['rangMag'] === 1 ? ($enCours ? 'tete' : 'gagne') : ($q['rangMag'] === null ? 'att' : 'rang')));
         $cible = $obj ?? (float) $q['minPieces'];
         $cartes[] = ['cle' => $q['cle'], 'type' => $q['type'], 'emo' => $q['emo'], 'icone' => primesIconeDe($q['cle']), 'lib' => $q['lib'], 'montant' => (int) $q['montantMag'], 'max' => false,
@@ -1279,7 +1333,17 @@ function primesCartes(array $b, array $pm, array $classements, bool $enCours): a
             'du' => $q['du'] ?? null, 'au' => $q['au'] ?? null,
             'motif' => $p === null ? $vide('pas_compte') : null, 'classement' => isset($clDe[$q['cle']])];
     }
-    return array_map('primesCarteJauge', $cartes);
+    // Les primes B2B (23/10/2026, src/primes_b2b.php) : ce qu'elle a gagné avec les clients pro qu'elle a ramenés, la règle.
+    foreach ((array) ($b['b2b']['liste'] ?? []) as $q) {
+        $cartes[] = ['cle' => $q['cle'], 'type' => 'b2b', 'emo' => '🤝', 'icone' => primesIconeDe($q['cle']), 'lib' => $q['lib'],
+            'montant' => $q['mode'] === 'fixe' ? (int) $q['fixe'] : 0, 'max' => false, 'gain' => (float) $q['montant'],
+            'etat' => $q['montant'] > 0 && !$enCours ? 'gagne' : ($enCours ? 'att' : 'vide'), 'val' => (float) $q['montant'], 'unite' => 'eur',
+            'mode' => $q['mode'], 'taux' => $q['taux'], 'fixe' => (int) $q['fixe'], 'duree' => $q['duree'], 'plafond' => $q['plafond'], 'min' => $q['min'],
+            'clients' => $q['clients'], 'nouveaux' => $q['nouveaux'], 'du' => $q['du'], 'au' => $q['au'],
+            'motif' => $q['lu'] ? null : 'pas_compte', 'classement' => false];
+    }
+    // Les détails de chaque prime (16/10/2026) : cadeau, description, sponsor — la fiche qui s'ouvre au toucher.
+    return array_map(static fn ($c) => primesCarteJauge($c + primesAppInfosDe($c['cle'])), $cartes);
 }
 
 /**
@@ -1327,11 +1391,43 @@ function primesAVenir(int $emp, string $m): array
         $cartes[] = $carte(['cle' => $k['cle'], 'type' => 'promo', 'emo' => '🏷️', 'icone' => primesIconeDe($k['cle']), 'lib' => $k['lib'], 'montant' => (int) $k['magasin'],
             'objectif' => $obj, 'unite' => 'pcs', 'regle' => $regle, 'du' => $k['du'], 'au' => $k['au']]);
     }
+    foreach (b2bEntrees($shop) as $e) {
+        if ($e['au'] !== null && $e['au'] < $m . '-01') { continue; }
+        $r = b2bRegle($e);
+        $cartes[] = $carte(['cle' => $e['cle'], 'type' => 'b2b', 'emo' => '🤝', 'icone' => primesIconeDe($e['cle']), 'lib' => $e['lib'],
+            'montant' => $r['mode'] === 'fixe' ? (int) $e['montant'] : 0, 'fixe' => (int) $e['montant'], 'clients' => [], 'nouveaux' => 0] + $r);
+    }
+    $cartes = array_map(static fn ($c) => $c + primesAppInfosDe($c['cle']), $cartes);
     $enJeu = (float) array_sum(array_map(static fn ($c) => $c['montant'], $cartes));
     return ['v' => PRIMES_FICHE_V, 'emp' => $emp, 'm' => $m, 'lib' => primesLibMois($m), 'enCours' => false, 'aVenir' => true, 'quand' => time(),
         'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)], 'cartes' => $cartes, 'classements' => [], 'collection' => [],
         'heures' => null, 'aujourdhui' => null, 'acquis' => 0.0, 'enJeu' => $enJeu, 'aPortee' => $enJeu, 'google' => null, 'montants' => [],
         'briques' => [], 'prime' => [], 'semaines12' => [], 'motif' => null];
+}
+
+/**
+ * Les avis 5★ qu'il faut encore pour que la moyenne atteigne le seuil (17/10/2026) : k tel que (a·n + 5k)/(n + k) ≥ s,
+ * soit k ≥ n(s − a)/(5 − s). 0 si le seuil est tenu ; null sans note, ou pour un seuil de 5 (inatteignable sans 5 partout).
+ */
+function primesAvis5Manquants(?float $note, int $avis, float $seuil): ?int
+{
+    if ($note === null || $avis <= 0) { return null; }
+    if ($note + 1e-9 >= $seuil) { return 0; }
+    if ($seuil >= 5.0) { return null; }
+    return (int) ceil($avis * ($seuil - $note) / (5.0 - $seuil) - 1e-9);
+}
+
+/**
+ * Les ventes croisées qu'il manque pour atteindre la cible (17/10/2026), si chaque ticket qui vient en est une :
+ * (c + k)/(t + k) ≥ r, soit k ≥ (r·t − c)/(1 − r). 0 si la cible est tenue ; null sans ticket.
+ */
+function primesManqueCroisees(int $croisees, int $tickets, float $ciblePct): ?int
+{
+    if ($tickets <= 0) { return null; }
+    $r = $ciblePct / 100;
+    if ($croisees >= $r * $tickets - 1e-9) { return 0; }
+    if ($r >= 1.0) { return null; }
+    return (int) ceil(($r * $tickets - $croisees) / (1 - $r) - 1e-9);
 }
 
 /**
@@ -1346,6 +1442,10 @@ function primesAVenir(int $emp, string $m): array
  */
 function primesCarteJauge(array $c): array
 {
+    if (($c['type'] ?? '') === 'b2b') {
+        return $c + ['barre' => null, 'barreJour' => null, 'actif' => (float) ($c['gain'] ?? 0) > 0, 'pour1' => null, 'avance1' => null, 'jauge' => null,
+            'repere' => null, 'repereType' => null, 'repereVal' => null, 'repereJour' => null];
+    }
     $v = $c['val'] ?? null;
     [$bas, $haut, $rType, $rVal, $jour] = [0.0, null, null, null, null];
     if ($c['cle'] === 'croisees') {
