@@ -729,3 +729,9 @@ a.sb-ligne:active{background:var(--s-doux)}
 .pl.ok .pl-mv>i,.pl-mv.un>i{background:var(--s-vert)}
 .pl.ok .pl-mv .pt,.pl-mv.un .pt{border-color:var(--s-vert)}
 .pl.ok .pl-mv .fl{background:var(--s-vert)}
+
+/* Ce qu'il faut faire, dans la ligne d'une prime (23/10/2026). */
+.pl-how{margin:8px 0 0 44px;font:400 13.5px/1.4 var(--s-police);color:var(--s-texte)}
+.pl-how.dur{color:var(--s-second)}
+.sb-bascule{margin:18px 0 12px}
+[data-fiche]{cursor:pointer}

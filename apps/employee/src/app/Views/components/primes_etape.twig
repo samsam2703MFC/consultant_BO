@@ -48,4 +48,5 @@
     {% elseif e.progres is not null %}<span class="sb-prog"><span class="sb-barre"><i style="width:{{ (100 * e.progres)|round(1) }}%"></i></span><span class="sb-bornes">{{ de }} → {{ a }}</span></span>{% endif %}
   </span>
 {% endset %}
-{% if lien %}<a class="sb-ligne sb-etape {{ e.horsPortee ? 'dur' }}" href="{{ lien }}">{{ inner }}</a>{% else %}<div class="sb-ligne sb-etape {{ e.horsPortee ? 'dur' }}">{{ inner }}</div>{% endif %}
+{% if texte ?? false %}{{ comment }}
+{% elseif lien %}<a class="sb-ligne sb-etape {{ e.horsPortee ? 'dur' }}" href="{{ lien }}">{{ inner }}</a>{% else %}<div class="sb-ligne sb-etape {{ e.horsPortee ? 'dur' }}">{{ inner }}</div>{% endif %}
