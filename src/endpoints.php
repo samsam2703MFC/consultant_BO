@@ -1680,6 +1680,21 @@ function exJ7(int $sid, string $date, bool $estAuj): ?array
         if ($mt === null) { if ($c > 0) { $matOk = false; } } else { $mat += (float) $mt * $k; }
     }
     usort($heures, static fn ($a, $b) => $a['h'] <=> $b['h']);
+    // Le pro (B2B) de J−7 (23/10/2026, jauges comptoir et B2B) : les tickets pro gravés du jour, au même moment et sur la
+    // journée, et heure par heure. Null quand le jour n'est pas lu : la jauge comptoir le dit.
+    $moment = $estAuj ? sprintf('%02d:%02d', $hNow, (int) date('i')) : null;
+    $pro = ['caPro' => null, 'ticketsPro' => null, 'caProJour' => null, 'ticketsProJour' => null];
+    $b7 = function_exists('vpLu') ? vpLu($sid, $j7) : null;
+    if ($b7 !== null) {
+        $cp = 0.0; $np = 0; $cpJ = 0.0; $npJ = 0; $parH = [];
+        foreach ((array) $b7['t'] as $t) {
+            $m = (float) $t[2]; $cpJ += $m; $npJ++;
+            $hh = (int) substr((string) $t[0], 0, 2); $parH[$hh] = ($parH[$hh] ?? [0.0, 0]); $parH[$hh][0] += $m; $parH[$hh][1]++;
+            if ($moment === null || (string) $t[0] <= $moment) { $cp += $m; $np++; }
+        }
+        $pro = ['caPro' => round($cp, 2), 'ticketsPro' => $np, 'caProJour' => round($cpJ, 2), 'ticketsProJour' => $npJ];
+        foreach ($heures as $i => $l) { $heures[$i]['pro'] = round($parH[$l['h']][0] ?? 0.0, 2); $heures[$i]['proN'] = $parH[$l['h']][1] ?? 0; }
+    }
     // J−7 hors clients pro (21/10/2026) : ses tickets pro gravés (vpLu, TVA valide) se retirent du CA et des clients, au
     // même moment heure par heure (le `h` du relevé pro, l'heure en cours au prorata comme le reste), et sur la journée.
     // Sans relevé pro lu, rien : le dashboard compare alors les deux paniers pro compris, jamais l'un sans l'autre.
@@ -1694,16 +1709,46 @@ function exJ7(int $sid, string $date, bool $estAuj): ?array
         $cmp = ['caComptoir' => round(max(0.0, $ca - $caP), 2), 'ticketsComptoir' => (int) max(0, round($tk - $tkP)),
             'caComptoirJour' => round(max(0.0, $caJour - $caPJ), 2), 'ticketsComptoirJour' => max(0, $tkJour - $tkPJ)];
     }
-    $out = ['date' => $j7, 'moment' => $estAuj ? sprintf('%02d:%02d', $hNow, (int) date('i')) : null,
+    $out = ['date' => $j7, 'moment' => $moment,
         'tickets' => (int) round($tk), 'ca' => round($ca, 2), 'ticketsJour' => $tkJour, 'caJour' => round($caJour, 2),
         'mb' => $matOk && $ca > 0 ? round($ca - $mat, 2) : null, 'mbJour' => $matJourOk && $caJour > 0 ? round($caJour - $matJour, 2) : null,
-        'heures' => $heures] + $cmp;
+        'heures' => $heures] + $cmp + $pro;
     if (function_exists('vpPanier')) {
         $pM = vpPanier($cmp['caComptoir'] ?? null, $cmp['ticketsComptoir'] ?? null, $tk > 0 ? $ca / $tk : null);
         $pJ = vpPanier($cmp['caComptoirJour'] ?? null, $cmp['ticketsComptoirJour'] ?? null, $tkJour > 0 ? $caJour / $tkJour : null);
         $out += $pM + ['panierRetenuJour' => $pJ['panierRetenu']];
     }
     return $out;
+}
+
+/**
+ * Le pro (B2B) d'une journée heure par heure : [{h, ca, n}] depuis le relevé des tickets pro (vpDuListe, `h`). Null sans
+ * relevé.
+ */
+function exHeuresPro(?array $b): ?array
+{
+    if ($b === null) { return null; }
+    $out = [];
+    foreach ((array) ($b['h'] ?? []) as $h => $v) { $out[] = ['h' => (int) $h, 'ca' => round((float) ($v[0] ?? 0), 2), 'n' => (int) ($v[1] ?? 0)]; }
+    usort($out, static fn ($a, $b) => $a['h'] <=> $b['h']);
+    return $out;
+}
+
+/**
+ * La part B2B habituelle d'un jour de la semaine (23/10/2026) : le CA pro sur le CA des tickets, sur les quatre derniers
+ * mêmes jours dont le relevé est gravé (sans appel au panel). Elle partage l'objectif du jour entre le comptoir et le
+ * B2B. {part (en %), jours} ; part null quand aucun de ces jours n'est lu.
+ */
+function exPartProHabituelle(int $sid, string $date): array
+{
+    $ca = 0.0; $pro = 0.0; $n = 0;
+    for ($k = 1; $k <= 4; $k++) {
+        $b = function_exists('vpLu') ? vpLu($sid, date('Y-m-d', strtotime($date . ' -' . (7 * $k) . ' day'))) : null;
+        if ($b === null || (float) ($b['ca'] ?? 0) <= 0) { continue; }
+        $ca += (float) $b['ca']; $n++;
+        foreach ((array) $b['t'] as $t) { $pro += (float) $t[2]; }
+    }
+    return ['part' => $ca > 0 ? round(100 * $pro / $ca, 1) : null, 'jours' => $n];
 }
 
 /* --- Le Résultat gardé quelques minutes (04/10/2026 : « extrêmement lent ») ------------------
@@ -2596,6 +2641,7 @@ function exJourCalcul(): array
         foreach ($planM as $i9 => $p9) { unset($planM[$i9]['hD'], $planM[$i9]['hF'], $planM[$i9]['idEmp']); }
         usort($planM, static fn ($a9, $b9) => [$a9['debut'], $a9['nom']] <=> [$b9['debut'], $b9['nom']]);
 
+        $pph = exPartProHabituelle($id, $date);
         $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => true,
             'heures' => array_map(static fn ($h9) => ['h' => $h9, 'ca' => $heuresCa[$h9]], array_keys($heuresCa)),
             'planning' => $planM,
@@ -2622,6 +2668,9 @@ function exJourCalcul(): array
             // Les clients du même jour de la semaine passée, AU MÊME MOMENT : la journée en cours
             // se compare à J−7 arrêté à la même heure, une journée close à J−7 entière.
             'j7' => exJ7($id, $date, $estAuj),
+            // Le B2B à part (23/10/2026) : ses tickets heure par heure, et sa part habituelle qui partage l'objectif.
+            'heuresPro' => exHeuresPro($proLu[$id] ?? null),
+            'partProHabituelle' => $pph['part'], 'partProJours' => $pph['jours'],
             'panier' => $panier !== null ? round($panier, 2) : null,
             'produits' => $produits !== null ? (int) $produits : null,
             'produitsParClient' => $ppc !== null ? round($ppc, 2) : null,
