@@ -7083,57 +7083,63 @@ function tplPrimesApp(c, x){
   const btS = `border:0;border-radius:999px;padding:9px 17px;font:600 13.5px ${sf};background:var(--color-surface);color:var(--color-text);cursor:pointer`;
   const btB2b = `border:0;border-radius:999px;padding:9px 17px;font:600 13.5px ${sf};background:var(--color-secondary);color:var(--color-on-abricot);cursor:pointer`;
   const interIos = (on, fn, titre, attr) => `<label title="${esc(titre)}" ${attr || ''} style="position:relative;display:inline-block;width:42px;height:25px;cursor:pointer;flex:none"><input type="checkbox" ${on ? 'checked' : ''} ${x.C(fn)} style="position:absolute;opacity:0;width:0;height:0"><span style="position:absolute;inset:0;border-radius:13px;background:${on ? 'var(--color-primary)' : 'var(--color-border-secondary)'}"></span><span style="position:absolute;top:2px;left:${on ? 19 : 2}px;width:21px;height:21px;border-radius:50%;background:var(--color-surface);box-shadow:0 2px 4px rgba(0,0,0,.18)"></span></label>`;
-  const ligneP = (l, i) => `<div data-pr-prime="${esc(l.type)}" style="display:flex;align-items:center;gap:14px;padding-left:18px;${i ? `border-top:${filet};` : ''}${l.externe || l.actif ? '' : 'opacity:.5'}">
+  // Sur un écran large (23/10/2026, « optimiser pour desktop ») : une ligne par prime en colonnes alignées — la prime, ce
+  // qui compte, qui gagne, le réseau, la récompense, qui paie (`.prl-*`, assets/css/app.css) ; plus étroit, la liste en
+  // trois lignes. Les colonnes se lisent sous un en-tête par groupe (`.prl-ent`, écran large seulement).
+  const ligneP = (l, i) => `<div data-pr-prime="${esc(l.type)}" class="prl" style="${i ? `border-top:${filet};` : ''}${l.externe || l.actif ? '' : 'opacity:.5'}">
       ${l.externe ? `<span style="width:42px;text-align:center;color:var(--color-border-secondary);flex:none">—</span>` : interIos(l.actif, l.basculer, l.actif ? 'Active — toucher pour l’éteindre' : 'Éteinte — toucher pour l’activer', 'data-pr-actif')}
-      <button ${x.A(l.modifier)} data-pr-modifier style="flex:1;min-width:0;display:flex;align-items:center;gap:13px;border:0;background:none;padding:13px 18px 13px 0;text-align:left;cursor:pointer;font-family:${sf};color:var(--color-text)">
+      <button ${x.A(l.modifier)} data-pr-modifier class="prl-b" style="font-family:${sf};color:var(--color-text)">
         ${tuileFixe(l)}
-        <span style="flex:1;min-width:0">
-          <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="font:600 15px/1.3 ${sf}">${esc(l.lib)}</b>${l.etatPeriode ? `<span data-pr-periode style="font:600 10px ${sf};letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:var(--color-background-secondary);color:${muet}">${esc(l.etatPeriode)}</span>` : ''}</span>
-          <span style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:2px">${esc(l.texte || '')}${l.periodeTxt ? ' · ' + esc(l.periodeTxt) : ''}${l.surObjectif ? ' · objectifs : ' + esc(l.objectifsTxt) : ''}${l.promoVide ? ` · <b style="color:var(--color-primary)">produit introuvable</b>` : ''}</span>
-          <span style="display:block;font:400 12px/1.4 ${sf};color:${muet};opacity:.8;margin-top:1px">gagne : ${esc(l.qui || '')}${l.moyenne ? ' · réseau : ' + esc(l.moyenne) : ''}${l.peutClasser && l.classement ? ' · classement dans l’app' : ''}</span>
+        <span class="prl-txt">
+          <span class="prl-nom"><b style="font:600 15px/1.3 ${sf}">${esc(l.lib)}</b>${l.etatPeriode ? `<span data-pr-periode style="font:600 10px ${sf};letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:var(--color-background-secondary);color:${muet}">${esc(l.etatPeriode)}</span>` : ''}</span>
+          <span class="prl-regle" style="font:400 13px/1.4 ${sf};color:${muet}">${esc(l.texte || '')}${l.periodeTxt ? ' · ' + esc(l.periodeTxt) : ''}${l.surObjectif ? ' · objectifs : ' + esc(l.objectifsTxt) : ''}${l.promoVide ? ` · <b style="color:var(--color-primary)">produit introuvable</b>` : ''}</span>
+          <span class="prl-meta" style="font:400 12px/1.4 ${sf};color:${muet}"><span class="prl-qui">${esc(l.qui || '')}${l.peutClasser && l.classement ? ' · classement dans l’app' : ''}</span><span class="prl-res">${esc(l.moyenne || '')}</span></span>
         </span>
-        <span style="text-align:right;flex:none;max-width:210px">
-          <b style="display:block;font:600 15px/1.3 ${sf};font-variant-numeric:tabular-nums">${esc(l.externe ? l.montant : (l.montantTxt || ''))}</b>
-          <span style="display:block;font:400 12px/1.35 ${sf};color:${muet};margin-top:2px">${esc(l.externe ? 'réglé dans Targets & primes' : (l.payeurTxt || ''))}</span>
+        <span class="prl-droite">
+          <b class="prl-mt" style="font:600 15px/1.3 ${sf};font-variant-numeric:tabular-nums">${esc(l.externe ? l.montant : (l.montantTxt || ''))}</b>
+          <span class="prl-pay" style="font:400 12px/1.35 ${sf};color:${muet}">${esc(l.externe ? 'réglé dans Targets & primes' : (l.payeurTxt || ''))}</span>
         </span>
-        <span aria-hidden="true" style="color:var(--color-border-secondary);font:400 22px/1 ${sf};flex:none">›</span>
+        <span aria-hidden="true" class="prl-chev" style="color:var(--color-border-secondary);font:400 22px/1 ${sf}">›</span>
       </button></div>`;
+  const enteteP = `<div class="prl prl-ent" aria-hidden="true"><span style="width:42px;flex:none"></span><div class="prl-b" style="font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet}">
+      <span></span><span>Prime</span><span>Ce qui compte</span><span>Qui gagne</span><span>Réseau</span><span class="prl-mt">Récompense</span><span>Payée par</span><span></span></div></div>`;
   // Les sortes, dans l'ordre : les targets (Bats ton record et la meilleure vendeuse avec eux), les catégories, les promos,
   // les clients pro (la prime B2B, 23/10/2026).
   const SORTES = [['target', 'Targets', t => t === 'target' || t === 'classement'], ['categorie', 'Catégories', t => t === 'categorie'],
     ['promo', 'Promos', t => t === 'promo'], ['b2b', 'Clients pro · B2B', t => t === 'b2b']];
   const groupes = ls => SORTES.map(([cle, titre, de]) => { const g = ls.filter(l => de(l.type));
-    return g.length ? `<div data-pr-groupe="${cle}"><div style="${titreG}">${esc(titre)}<span style="font-weight:400;letter-spacing:0;text-transform:none;margin-left:6px">${g.length}</span></div><div style="${groupeSt}">${g.map(ligneP).join('')}</div></div>` : ''; }).join('');
+    return g.length ? `<div data-pr-groupe="${cle}"><div style="${titreG}">${esc(titre)}<span style="font-weight:400;letter-spacing:0;text-transform:none;margin-left:6px">${g.length}</span></div><div style="${groupeSt}">${enteteP}${g.map(ligneP).join('')}</div></div>` : ''; }).join('');
   const tete = (titre, sous, droite) => `<div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:4px 4px 2px">
       <div style="flex:1;min-width:280px"><div style="font:700 26px/1.15 ${sf};letter-spacing:-.02em;color:var(--color-text)">${titre}</div><div style="font:400 13.5px/1.45 ${sf};color:${muet};margin-top:5px;max-width:760px">${sous}</div></div>${droite || ''}</div>`;
   const vide = t => `<div style="${groupeSt};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">${t}</div>`;
   return `
-<div data-screen="primesApp" style="display:flex;flex-direction:column;gap:26px;max-width:1180px;font-family:${sf}">
+<div data-screen="primesApp" style="display:flex;flex-direction:column;gap:26px;max-width:1560px;font-family:${sf}">
   ${c.prChargement ? `<div style="${groupeSt};padding:18px;color:${muet}">Lecture des paramètres…</div>` : c.prMotif ? `<div style="${groupeSt};padding:18px;color:var(--color-primary)">${esc(c.prMotif)}</div>` : `
   <section data-pr="app"${voir('app')}>
     ${tete('Primes de la marque', 'Posées par la marque, payées par elle ou par un sponsor. Chaque franchisé les voit ; ses vendeuses les retrouvent dans Mes primes.',
       `<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font:500 13px ${sf};color:var(--color-text)">
         <span style="display:inline-flex;align-items:center;gap:9px" title="Un SMS à la vendeuse quand ses primes du mois sont enregistrées">${interIos(P.sms, P.poserSms, 'SMS à la réussite')} SMS à la réussite${P.sms && !P.smsConfigure ? ` <span style="font-size:11px;${alerte};padding:2px 7px">fournisseur à régler : config.php › sms</span>` : ''}</span>
+        <button ${x.A(P.nouvelle)} style="${btP}" data-pr-nouvelle>+ Nouvelle prime</button>
+        <button ${x.A(P.nouvelleB2b)} style="${btB2b}" data-pr-nouvelle-b2b>+ Prime B2B</button>
         <label style="display:inline-flex;align-items:center;gap:8px">Récompense par défaut <input type="number" min="0" max="5000" step="5" value="${esc(P.recompense)}" ${x.C(P.poserRecompense)} style="width:64px;font:600 13px ${sf};padding:6px 8px;border-radius:9px;border:0;background:var(--color-surface);text-align:right"> €</label>
       </div>`)}
     ${groupes(P.lignes)}
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px 4px 0">
-      <button ${x.A(P.nouvelle)} style="${btP}" data-pr-nouvelle>+ Nouvelle prime</button>
-      <button ${x.A(P.nouvelleB2b)} style="${btB2b}" data-pr-nouvelle-b2b>+ Prime B2B</button>
-      <span style="flex:1"></span>
-      ${P.modifie ? `<span style="font:400 12.5px ${sf};color:${muet}">SMS ou récompense par défaut changés</span><button ${x.A(P.enregistrer)} style="${btP}" data-pr-enregistrer="app">Enregistrer</button>` : ''}
-    </div>
+    ${P.modifie ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px 4px 0"><span style="flex:1"></span><span style="font:400 12.5px ${sf};color:${muet}">SMS ou récompense par défaut changés</span><button ${x.A(P.enregistrer)} style="${btP}" data-pr-enregistrer="app">Enregistrer</button></div>` : ''}
   </section>
 
   <section data-pr="magasins"${voir('magasins')}>
-    ${P.shopFixe ? tete('Primes du magasin · ' + esc(P.shopFixeNom), 'Les primes que tu poses pour ton magasin — tes produits, tes dates, tes clients pro —, payées par lui. Seules tes vendeuses les voient, dans Mes primes.')
-      : tete('Primes des franchisés', 'La prime qu’un franchisé pose pour son magasin, et pour lui seul — ses produits, ses dates, ses clients pro —, payée par le magasin. Seules ses vendeuses la voient.')}
+    ${P.shopFixe ? tete('Primes du magasin · ' + esc(P.shopFixeNom), 'Les primes que tu poses pour ton magasin — tes produits, tes dates, tes clients pro —, payées par lui. Seules tes vendeuses les voient, dans Mes primes.',
+      `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button ${x.A(P.nouvelleMag)} style="${btP}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin${P.magFiltreNom && !P.shopFixe ? ' · ' + esc(P.magFiltreNom) : ''}</button>
+        <button ${x.A(P.nouvelleB2bMag)} style="${btB2b}" data-pr-nouvelle-b2b-mag>+ Prime B2B${P.magFiltreNom && !P.shopFixe ? ' · ' + esc(P.magFiltreNom) : ''}</button>
+      </div>`)
+      : tete('Primes des franchisés', 'La prime qu’un franchisé pose pour son magasin, et pour lui seul — ses produits, ses dates, ses clients pro —, payée par le magasin. Seules ses vendeuses la voient.',
+      `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button ${x.A(P.nouvelleMag)} style="${btP}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin${P.magFiltreNom && !P.shopFixe ? ' · ' + esc(P.magFiltreNom) : ''}</button>
+        <button ${x.A(P.nouvelleB2bMag)} style="${btB2b}" data-pr-nouvelle-b2b-mag>+ Prime B2B${P.magFiltreNom && !P.shopFixe ? ' · ' + esc(P.magFiltreNom) : ''}</button>
+      </div>`)}
     ${P.shopFixe ? '' : `<div style="display:inline-flex;flex-wrap:wrap;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px;margin:14px 0 0 4px">${P.magsFiltre.map(m => `<button ${x.A(m.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:${m.on ? 600 : 500} 12.5px ${sf};background:${m.on ? 'var(--color-surface)' : 'transparent'};color:var(--color-text);cursor:pointer;${m.on ? 'box-shadow:0 1px 3px rgba(0,0,0,.12)' : ''}">${esc(m.nom)}${m.n ? ` <span style="color:${muet};font-weight:400">${m.n}</span>` : ''}</button>`).join('')}</div>`}
     ${P.lignesMag.length ? groupes(P.lignesMag) : vide(P.shopFixe ? 'Aucune prime pour ton magasin pour l’instant : pose la première.' : P.magFiltreNom ? 'Aucune prime pour ' + esc(P.magFiltreNom) + ' pour l’instant.' : 'Aucune prime de franchisé pour l’instant.')}
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px 4px 0">
-      <button ${x.A(P.nouvelleMag)} style="${btP}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin${P.magFiltreNom && !P.shopFixe ? ' · ' + esc(P.magFiltreNom) : ''}</button>
-      <button ${x.A(P.nouvelleB2bMag)} style="${btB2b}" data-pr-nouvelle-b2b-mag>+ Prime B2B${P.magFiltreNom && !P.shopFixe ? ' · ' + esc(P.magFiltreNom) : ''}</button>
-    </div>
   </section>
 
   <div style="${carte2};overflow:hidden" data-pr="promos"${voir('promos')}>
