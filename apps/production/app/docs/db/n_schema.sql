@@ -1,0 +1,1727 @@
+-- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
+-- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
+-- 001 → 070, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 070 ; compatible MySQL 8.
+-- Modifications des tables d'origine : voir docs/db/README.md (customer.communication_lang, 2 index WDT).
+SET FOREIGN_KEY_CHECKS = 0;
+/*M!999999\- enable the sandbox mode */ 
+CREATE TABLE `n_activity_click` (
+  `day` date NOT NULL,
+  `route` varchar(190) NOT NULL,
+  `target` varchar(120) NOT NULL,
+  `clicks` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`day`,`route`,`target`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_activity_session` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_user` int(11) NOT NULL,
+  `started_at` datetime NOT NULL,
+  `last_seen_at` datetime NOT NULL,
+  `user_agent` varchar(160) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_act_session_user` (`id_user`,`last_seen_at`),
+  KEY `ix_tfb_act_session_start` (`started_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_activity_view` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_session` bigint(20) NOT NULL,
+  `id_user` int(11) NOT NULL,
+  `route` varchar(190) NOT NULL COMMENT 'ścieżka z identyfikatorami zastąpionymi {id}',
+  `path` varchar(255) NOT NULL,
+  `page_key` varchar(40) DEFAULT NULL COMMENT 'pozycja katalogu stron (PageAccess) ; NULL = strona wspólna',
+  `title` varchar(160) DEFAULT NULL,
+  `started_at` datetime NOT NULL,
+  `last_seen_at` datetime NOT NULL,
+  `active_s` int(11) NOT NULL DEFAULT 0 COMMENT 'sekundy z aktywnością (karta widoczna, ruch w ostatniej minucie)',
+  `clicks` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_act_view_session` (`id_session`),
+  KEY `ix_tfb_act_view_user` (`id_user`,`started_at`),
+  KEY `ix_tfb_act_view_start` (`started_at`),
+  CONSTRAINT `fk_tfb_act_view_session` FOREIGN KEY (`id_session`) REFERENCES `n_activity_session` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_category_sales_coefficient` (
+  `id_category` int(11) NOT NULL,
+  `coefficient` decimal(5,2) DEFAULT NULL,
+  `excluded` tinyint(1) NOT NULL DEFAULT 0,
+  `updated_by` varchar(100) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_category`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_clock_answer` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_clock` bigint(20) NOT NULL,
+  `direction` enum('in','out') NOT NULL,
+  `id_question` int(11) NOT NULL,
+  `question` varchar(200) NOT NULL,
+  `answer` tinyint(1) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_clock_answer` (`id_clock`,`direction`,`id_question`),
+  KEY `idx_n_clock_answer_question` (`id_question`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_clock_question` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `text_pl` varchar(200) NOT NULL,
+  `text_fr` varchar(200) DEFAULT NULL,
+  `direction` enum('in','out','both') NOT NULL DEFAULT 'in',
+  `required` tinyint(1) NOT NULL DEFAULT 1,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_customer_route` (
+  `id_customer` int(11) NOT NULL,
+  `id_carrier_vehicle` int(11) DEFAULT NULL COMMENT 'Stały pojazd (trasa) klienta',
+  `stop_order` int(11) DEFAULT NULL COMMENT 'Kolejność rozładunku na trasie',
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_customer`),
+  KEY `idx_tfb_customer_route_vehicle` (`id_carrier_vehicle`),
+  CONSTRAINT `fk_tfb_customer_route_customer` FOREIGN KEY (`id_customer`) REFERENCES `customer` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_customer_route_vehicle` FOREIGN KEY (`id_carrier_vehicle`) REFERENCES `carrier_vehicle` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_customer_space` (
+  `id_customer` int(11) NOT NULL,
+  `docs_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `goal_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `coefficient` decimal(5,2) DEFAULT NULL,
+  `open_days` tinyint(3) unsigned DEFAULT NULL,
+  `updated_by` varchar(100) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_customer`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_delivery_notice` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ship_date` date NOT NULL,
+  `id_customer` int(11) NOT NULL,
+  `channel` varchar(8) NOT NULL COMMENT 'mail, sms',
+  `language` char(2) NOT NULL,
+  `recipient` varchar(190) NOT NULL,
+  `subject` varchar(255) DEFAULT NULL,
+  `body` text NOT NULL,
+  `status` varchar(16) NOT NULL COMMENT 'queued (e-mail w kolejce), logged (SMS zapisany, bez dostawcy), sent, failed',
+  `id_message` int(11) DEFAULT NULL COMMENT 'communication_message (e-mail)',
+  `provider` varchar(40) DEFAULT NULL,
+  `error` varchar(255) DEFAULT NULL,
+  `created_by` varchar(160) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_delivery_notice_day` (`ship_date`,`id_customer`),
+  KEY `idx_n_delivery_notice_customer` (`id_customer`),
+  KEY `idx_n_delivery_notice_message` (`id_message`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_dev_product` (
+  `id_test_product` int(11) NOT NULL,
+  `on_tablet` tinyint(1) NOT NULL DEFAULT 0,
+  `video_url` varchar(500) DEFAULT NULL COMMENT 'YouTube, Vimeo, plik mp4 albo dowolny link https',
+  `notes` text DEFAULT NULL COMMENT 'wskazówki dla zespołu (wykonanie, uwagi do testu)',
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_test_product`),
+  CONSTRAINT `fk_tfb_dev_product_tp` FOREIGN KEY (`id_test_product`) REFERENCES `test_product` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_dev_product_photo` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_test_product` int(11) NOT NULL,
+  `mime` varchar(32) NOT NULL,
+  `bytes` int(11) NOT NULL,
+  `image` mediumblob NOT NULL,
+  `caption` varchar(200) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_dev_photo_tp` (`id_test_product`,`id`),
+  CONSTRAINT `fk_tfb_dev_photo_tp` FOREIGN KEY (`id_test_product`) REFERENCES `test_product` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_doc_distribution` (
+  `id_customer` int(11) NOT NULL,
+  `doc_key` varchar(20) NOT NULL,
+  `mail_to` varchar(10) NOT NULL DEFAULT '',
+  `mail_address` varchar(190) DEFAULT NULL,
+  `paper_copies` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `sms` tinyint(1) NOT NULL DEFAULT 0,
+  `updated_by` varchar(100) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_customer`,`doc_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_doc_distribution_moment` (
+  `doc_key` varchar(20) NOT NULL,
+  `moment` varchar(30) NOT NULL,
+  `updated_by` varchar(100) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`doc_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_employee_competency` (
+  `id_production_employee` int(11) NOT NULL,
+  `id_competency` int(11) NOT NULL,
+  `level` tinyint(4) NOT NULL COMMENT '1 w szkoleniu, 2 samodzielny, 3 ekspert',
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_production_employee`,`id_competency`),
+  KEY `idx_tfb_employee_competency_competency` (`id_competency`),
+  CONSTRAINT `fk_tfb_employee_competency_competency` FOREIGN KEY (`id_competency`) REFERENCES `recipe_competency` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_employee_competency_employee` FOREIGN KEY (`id_production_employee`) REFERENCES `production_employee` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_employee_competency_level` CHECK (`level` between 1 and 3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_growth_action` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_section` int(11) NOT NULL,
+  `title` varchar(150) NOT NULL,
+  `id_final_product` int(11) DEFAULT NULL COMMENT 'Produit existant de l''ERP',
+  `product_name` varchar(200) DEFAULT NULL COMMENT 'Nouveau produit, pas encore dans l''ERP',
+  `pieces_per_shop_month` decimal(12,2) NOT NULL,
+  `shops` int(11) NOT NULL,
+  `selling_price_eur` decimal(10,4) NOT NULL COMMENT 'Prix de vente prévu par pièce (EUR)',
+  `target_margin_pct` decimal(5,2) NOT NULL,
+  `investment_eur` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `start_month` char(7) DEFAULT NULL COMMENT 'YYYY-MM',
+  `status` enum('idea','planned','in_progress','developed','dropped') NOT NULL DEFAULT 'idea',
+  `owner_user` int(11) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_growth_action_section` (`id_section`,`status`),
+  KEY `idx_n_growth_action_product` (`id_final_product`),
+  CONSTRAINT `fk_tfb_growth_action_section` FOREIGN KEY (`id_section`) REFERENCES `production_sections` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_growth_action_values` CHECK (`pieces_per_shop_month` >= 0 and `shops` >= 1 and `selling_price_eur` >= 0 and `target_margin_pct` > -100 and `target_margin_pct` < 100 and `investment_eur` >= 0),
+  CONSTRAINT `ck_tfb_growth_action_product` CHECK (`id_final_product` is not null or `product_name` is not null),
+  CONSTRAINT `ck_tfb_growth_action_month` CHECK (`start_month` is null or `start_month` regexp '^[0-9]{4}-(0[1-9]|1[0-2])$')
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_inv` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `source` enum('ksef','xml','pdf','manual','ocr') NOT NULL,
+  `ksef_number` varchar(64) DEFAULT NULL,
+  `id_supplier` int(11) DEFAULT NULL,
+  `seller_nip` varchar(20) DEFAULT NULL,
+  `seller_name` varchar(255) DEFAULT NULL,
+  `number` varchar(80) DEFAULT NULL,
+  `issue_date` date DEFAULT NULL,
+  `currency` char(3) NOT NULL DEFAULT 'PLN',
+  `total_net` decimal(14,2) DEFAULT NULL,
+  `total_gross` decimal(14,2) DEFAULT NULL,
+  `id_po` int(11) DEFAULT NULL,
+  `status` enum('open','accepted','disputed') NOT NULL DEFAULT 'open',
+  `note` varchar(1000) DEFAULT NULL,
+  `decided_by` int(11) DEFAULT NULL,
+  `decided_at` datetime DEFAULT NULL,
+  `prices_imported_at` datetime DEFAULT NULL,
+  `prices_imported_by` int(11) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_inv_ksef` (`ksef_number`),
+  KEY `idx_tfb_inv_status` (`status`,`issue_date`),
+  KEY `idx_tfb_inv_supplier` (`id_supplier`),
+  KEY `idx_tfb_inv_po` (`id_po`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_inv_file` (
+  `id_inv` int(11) NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `mime` varchar(80) NOT NULL,
+  `content` longblob NOT NULL,
+  `text` mediumtext DEFAULT NULL,
+  PRIMARY KEY (`id_inv`),
+  CONSTRAINT `fk_tfb_inv_file` FOREIGN KEY (`id_inv`) REFERENCES `n_inv` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_inv_line` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_inv` int(11) NOT NULL,
+  `line_no` smallint(6) NOT NULL,
+  `name` varchar(500) NOT NULL,
+  `code` varchar(80) DEFAULT NULL,
+  `quantity` decimal(14,4) NOT NULL,
+  `unit` varchar(20) DEFAULT NULL,
+  `unit_price` decimal(14,6) DEFAULT NULL,
+  `net_value` decimal(14,2) DEFAULT NULL,
+  `vat_rate` varchar(8) DEFAULT NULL,
+  `id_raw_material` int(11) DEFAULT NULL,
+  `factor` decimal(14,4) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_tfb_inv_line` (`id_inv`,`line_no`),
+  KEY `idx_tfb_inv_line_material` (`id_raw_material`),
+  CONSTRAINT `fk_tfb_inv_line` FOREIGN KEY (`id_inv`) REFERENCES `n_inv` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_inv_mapping` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `supplier_key` varchar(40) NOT NULL,
+  `id_supplier` int(11) DEFAULT NULL,
+  `name_norm` varchar(300) NOT NULL,
+  `unit_norm` varchar(20) NOT NULL DEFAULT '',
+  `supplier_name` varchar(500) NOT NULL,
+  `supplier_unit` varchar(20) DEFAULT NULL,
+  `id_raw_material` int(11) NOT NULL,
+  `factor` decimal(14,4) NOT NULL DEFAULT 1.0000,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_inv_mapping` (`supplier_key`,`name_norm`,`unit_norm`),
+  KEY `idx_tfb_inv_mapping_material` (`id_raw_material`),
+  KEY `idx_n_inv_mapping_supplier` (`id_supplier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_inv_supplier` (
+  `seller_nip` varchar(20) NOT NULL,
+  `id_supplier` int(11) NOT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`seller_nip`),
+  KEY `idx_n_inv_supplier_supplier` (`id_supplier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mail_dispatch` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_rule` int(11) NOT NULL,
+  `ref_key` varchar(64) NOT NULL,
+  `id_message` bigint(20) unsigned DEFAULT NULL,
+  `status` enum('queued','skipped','failed') NOT NULL,
+  `reason` varchar(500) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_mail_dispatch` (`id_rule`,`ref_key`),
+  KEY `ix_tfb_mail_dispatch_created` (`created_at`),
+  KEY `idx_n_mail_dispatch_message` (`id_message`),
+  CONSTRAINT `fk_tfb_mail_dispatch_rule` FOREIGN KEY (`id_rule`) REFERENCES `n_mail_rule` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mail_rule` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(32) NOT NULL,
+  `event` enum('order_received','delivery_planned','shipment_sent','wdt_issued','invoice_issued','proforma_issued','wdt_ksef_accepted','difference_issued','price_list_changed','month_start') NOT NULL,
+  `template_type` varchar(64) NOT NULL,
+  `recipient_kind` enum('client_head','client_accountant','client_salesman','fixed','distribution') NOT NULL,
+  `fixed_address` varchar(255) DEFAULT NULL,
+  `language` enum('client','fr','nl','pl') NOT NULL DEFAULT 'client',
+  `attach_document` tinyint(1) NOT NULL DEFAULT 1,
+  `days_before` tinyint(4) NOT NULL DEFAULT 1,
+  `enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `start_ref_id` bigint(20) DEFAULT NULL,
+  `enabled_at` datetime DEFAULT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `updated_by` varchar(160) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_mail_rule_code` (`code`),
+  CONSTRAINT `ck_tfb_mail_rule_days` CHECK (`days_before` between 0 and 14),
+  CONSTRAINT `ck_tfb_mail_rule_fixed` CHECK (`recipient_kind` <> 'fixed' or `fixed_address` is null or `fixed_address` <> '')
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_margin_recalc` (
+  `id_product` int(11) NOT NULL,
+  `old_cost_carton` decimal(12,4) NOT NULL,
+  `new_cost_carton` decimal(12,4) NOT NULL,
+  `ppc` int(11) DEFAULT NULL,
+  `recalculated_at` datetime NOT NULL,
+  `recalculated_by` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id_product`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_margin_recalc_run` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `run_at` datetime NOT NULL,
+  `run_by` int(11) DEFAULT NULL,
+  `recipes` int(11) NOT NULL DEFAULT 0,
+  `products` int(11) NOT NULL DEFAULT 0,
+  `changed` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_margin_recalc_run_at` (`run_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_material_nutrition_source` (
+  `id_raw_material` int(11) NOT NULL,
+  `source` varchar(20) NOT NULL DEFAULT 'off',
+  `ref` varchar(191) NOT NULL COMMENT 'kategoria OFF',
+  `label` varchar(255) NOT NULL,
+  `sample` int(11) NOT NULL DEFAULT 0,
+  `applied_by` int(11) DEFAULT NULL,
+  `applied_at` datetime NOT NULL,
+  PRIMARY KEY (`id_raw_material`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mgr_action` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `month` char(7) NOT NULL,
+  `position` tinyint(4) NOT NULL,
+  `text` varchar(500) NOT NULL,
+  `owner` varchar(120) DEFAULT NULL,
+  `due_date` date DEFAULT NULL,
+  `status` enum('open','done') NOT NULL DEFAULT 'open',
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_mgr_action` (`month`,`position`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mgr_competency_audit` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `audit_date` date NOT NULL,
+  `assessed_name` varchar(120) NOT NULL,
+  `assessed_user_id` int(11) DEFAULT NULL,
+  `answers` longtext NOT NULL,
+  `comment` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_tfb_mgr_competency_audit` (`audit_date`),
+  KEY `idx_n_mgr_competency_audit_user` (`assessed_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mgr_haccp_event` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `event_date` date NOT NULL,
+  `kind` enum('official_control','cold_chain_break','independent_audit','self_check') NOT NULL,
+  `authority` varchar(80) DEFAULT NULL,
+  `result` enum('favorable','unfavorable') DEFAULT NULL,
+  `score` decimal(5,2) DEFAULT NULL,
+  `treated` tinyint(1) NOT NULL DEFAULT 0,
+  `treated_at` date DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_tfb_mgr_haccp_date` (`event_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mgr_launch` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_product` int(11) NOT NULL,
+  `launch_date` date NOT NULL,
+  `target_cost` decimal(12,2) DEFAULT NULL,
+  `target_price` decimal(12,2) DEFAULT NULL,
+  `min_margin_pct` decimal(5,2) DEFAULT NULL,
+  `expected_week_shop` decimal(10,2) DEFAULT NULL,
+  `decision` enum('keep','fix','stop') DEFAULT NULL,
+  `decision_note` varchar(255) DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_mgr_launch_product` (`id_product`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mgr_objective` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_plan` int(11) NOT NULL,
+  `indicator` varchar(40) NOT NULL,
+  `target` decimal(14,4) NOT NULL,
+  `validated_at` datetime DEFAULT NULL,
+  `validated_by` int(11) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_tfb_mgr_objective` (`id_plan`,`indicator`,`validated_at`),
+  CONSTRAINT `fk_tfb_mgr_objective_plan` FOREIGN KEY (`id_plan`) REFERENCES `n_mgr_plan` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mgr_plan` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `year` smallint(6) NOT NULL,
+  `holder_user_id` int(11) DEFAULT NULL,
+  `holder_name` varchar(120) DEFAULT NULL,
+  `holder_start` date DEFAULT NULL,
+  `salary_monthly` decimal(12,2) DEFAULT NULL,
+  `envelope_pct` decimal(5,2) NOT NULL DEFAULT 20.00,
+  `currency` char(3) NOT NULL DEFAULT 'PLN',
+  `team_organisation` text DEFAULT NULL,
+  `auditor` varchar(160) DEFAULT NULL,
+  `audit_threshold` decimal(5,2) DEFAULT NULL,
+  `margin_threshold_pct` decimal(5,2) DEFAULT NULL,
+  `price_reference_date` date DEFAULT NULL,
+  `workplace` varchar(160) DEFAULT NULL,
+  `contract_type` varchar(160) DEFAULT NULL,
+  `working_time` varchar(160) DEFAULT NULL,
+  `monthly_hours` decimal(6,1) DEFAULT NULL,
+  `mission_hours` text DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_mgr_plan_year` (`year`),
+  KEY `idx_n_mgr_plan_holder` (`holder_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mgr_value` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `month` char(7) NOT NULL,
+  `indicator` varchar(40) NOT NULL,
+  `value` decimal(14,4) NOT NULL,
+  `note` varchar(255) DEFAULT NULL,
+  `entered_by` int(11) DEFAULT NULL,
+  `entered_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_mgr_value` (`month`,`indicator`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mp_count` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_raw_material` int(11) NOT NULL,
+  `count_date` date NOT NULL,
+  `quantity` decimal(14,3) NOT NULL,
+  `note` varchar(255) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_tfb_mp_count` (`id_raw_material`,`count_date`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mp_offer` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_supplier` int(11) NOT NULL,
+  `id_raw_material` int(11) NOT NULL,
+  `pack_price` decimal(12,4) NOT NULL,
+  `pack_size_base` decimal(12,3) NOT NULL,
+  `price_per_base` decimal(14,6) NOT NULL,
+  `currency` char(3) NOT NULL DEFAULT 'PLN',
+  `valid_from` date NOT NULL,
+  `valid_to` date DEFAULT NULL,
+  `min_order_qty` decimal(12,3) DEFAULT NULL,
+  `lead_time_days` int(11) DEFAULT NULL,
+  `source` enum('manual','tender','email','price_list') NOT NULL DEFAULT 'manual',
+  `id_tender` int(11) DEFAULT NULL,
+  `status` enum('received','accepted','rejected') NOT NULL DEFAULT 'received',
+  `notes` varchar(500) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_mp_offer_material` (`id_raw_material`,`status`),
+  KEY `ix_tfb_mp_offer_tender` (`id_tender`),
+  KEY `idx_n_mp_offer_supplier` (`id_supplier`),
+  CONSTRAINT `fk_tfb_mp_offer_tender` FOREIGN KEY (`id_tender`) REFERENCES `n_tender` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `ck_tfb_mp_offer_price` CHECK (`pack_price` > 0 and `pack_size_base` > 0 and `price_per_base` > 0),
+  CONSTRAINT `ck_tfb_mp_offer_validity` CHECK (`valid_to` is null or `valid_to` >= `valid_from`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_mp_supply` (
+  `id_raw_material` int(11) NOT NULL,
+  `supply_mode` enum('order','stock') NOT NULL DEFAULT 'order',
+  `stock_min` decimal(14,3) DEFAULT NULL,
+  `stock_max` decimal(14,3) DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_raw_material`),
+  CONSTRAINT `ck_tfb_mp_supply_stock` CHECK (`stock_min` is null or `stock_max` is null or `stock_max` >= `stock_min`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_nc` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `number` varchar(20) NOT NULL,
+  `reported_at` date NOT NULL,
+  `source` enum('supplier_delivery','production','customer','internal') NOT NULL,
+  `id_supplier` int(11) DEFAULT NULL,
+  `id_raw_material` int(11) DEFAULT NULL,
+  `id_final_product` int(11) DEFAULT NULL,
+  `id_prod_group` int(11) DEFAULT NULL,
+  `description` text NOT NULL,
+  `severity` enum('minor','major','critical') NOT NULL DEFAULT 'minor',
+  `quantity` decimal(12,3) DEFAULT NULL,
+  `unit` varchar(16) DEFAULT NULL,
+  `immediate_action` text DEFAULT NULL,
+  `root_cause` text DEFAULT NULL,
+  `corrective_action` text DEFAULT NULL,
+  `cost_impact` decimal(12,2) DEFAULT NULL,
+  `status` enum('open','in_progress','closed') NOT NULL DEFAULT 'open',
+  `owner_user` int(11) DEFAULT NULL,
+  `due_date` date DEFAULT NULL,
+  `closed_at` datetime DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_nc_number` (`number`),
+  KEY `ix_tfb_nc_supplier` (`id_supplier`),
+  KEY `ix_tfb_nc_material` (`id_raw_material`),
+  KEY `ix_tfb_nc_prod_group` (`id_prod_group`),
+  KEY `idx_n_nc_product` (`id_final_product`),
+  CONSTRAINT `ck_tfb_nc_cost` CHECK (`cost_impact` is null or `cost_impact` >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_nutrition_category` (
+  `tag` varchar(191) NOT NULL COMMENT 'kategoria OFF, np. en:butters',
+  `lang` char(2) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `loaded_at` datetime NOT NULL,
+  PRIMARY KEY (`tag`,`lang`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_nutrition_off_cache` (
+  `tag` varchar(191) NOT NULL,
+  `products` int(11) NOT NULL DEFAULT 0 COMMENT 'produktów w kategorii (OFF)',
+  `sample` int(11) NOT NULL DEFAULT 0 COMMENT 'produktów z wartością energii w medianie',
+  `values_json` text DEFAULT NULL COMMENT 'mediany na 100 g (kolumny raw_material)',
+  `fetched_at` datetime NOT NULL,
+  PRIMARY KEY (`tag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_page_access` (
+  `id_position` int(11) NOT NULL COMMENT '0 = bez stanowiska',
+  `page_key` varchar(40) NOT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id_position`,`page_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_page_view` (
+  `day` date NOT NULL,
+  `route` varchar(190) NOT NULL,
+  `id_user` int(11) NOT NULL DEFAULT 0,
+  `views` int(10) unsigned NOT NULL DEFAULT 0,
+  `last_path` varchar(255) DEFAULT NULL,
+  `last_at` datetime NOT NULL,
+  PRIMARY KEY (`day`,`route`,`id_user`),
+  KEY `idx_tfb_page_view_route` (`route`),
+  KEY `idx_n_page_view_user` (`id_user`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_po` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(20) NOT NULL,
+  `id_supplier` int(11) NOT NULL,
+  `status` enum('draft','sent','partial','received','cancelled') NOT NULL DEFAULT 'draft',
+  `week_start` date DEFAULT NULL,
+  `delivery_date` date DEFAULT NULL,
+  `language` enum('pl','fr') NOT NULL DEFAULT 'pl',
+  `email_to` varchar(255) DEFAULT NULL,
+  `note` varchar(1000) DEFAULT NULL,
+  `id_message` bigint(20) DEFAULT NULL,
+  `sent_at` datetime DEFAULT NULL,
+  `sent_by` enum('email','manual') DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_po_code` (`code`),
+  KEY `idx_tfb_po_status` (`status`,`delivery_date`),
+  KEY `idx_tfb_po_supplier` (`id_supplier`),
+  KEY `idx_n_po_message` (`id_message`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_position` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(32) NOT NULL,
+  `name_pl` varchar(100) NOT NULL,
+  `name_fr` varchar(100) NOT NULL,
+  `description` varchar(500) DEFAULT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_position_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_position_home` (
+  `id_position` int(11) NOT NULL COMMENT '0 = bez stanowiska',
+  `home_page` varchar(40) NOT NULL COMMENT '/today albo /dashboard',
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_position`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_position_task` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_position` int(11) NOT NULL,
+  `id_category` int(11) DEFAULT NULL,
+  `title_pl` varchar(200) NOT NULL,
+  `title_fr` varchar(200) NOT NULL,
+  `frequency` enum('daily','weekly','monthly','quarterly') NOT NULL,
+  `due_weekday` tinyint(4) DEFAULT NULL COMMENT 'Zadanie tygodniowe : dzień terminu 1 = pon. … 7 = niedz. (domyślnie piątek)',
+  `link_path` varchar(255) DEFAULT NULL,
+  `form_code` varchar(32) DEFAULT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_position_task` (`id_position`),
+  KEY `idx_n_position_task_category` (`id_category`),
+  CONSTRAINT `fk_tfb_position_task_position` FOREIGN KEY (`id_position`) REFERENCES `n_position` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_po_line` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_po` int(11) NOT NULL,
+  `id_raw_material` int(11) NOT NULL,
+  `quantity` decimal(14,3) NOT NULL,
+  `package_size` decimal(14,3) DEFAULT NULL,
+  `unit_price` decimal(14,6) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_tfb_po_line_material` (`id_raw_material`),
+  KEY `fk_tfb_po_line_po` (`id_po`),
+  CONSTRAINT `fk_tfb_po_line_po` FOREIGN KEY (`id_po`) REFERENCES `n_po` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_po_receipt` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_po_line` int(11) NOT NULL,
+  `received_on` date NOT NULL,
+  `quantity` decimal(14,3) NOT NULL,
+  `unit_price` decimal(14,6) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_tfb_po_receipt_day` (`received_on`),
+  KEY `fk_tfb_po_receipt_line` (`id_po_line`),
+  CONSTRAINT `fk_tfb_po_receipt_line` FOREIGN KEY (`id_po_line`) REFERENCES `n_po_line` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_price_list_state` (
+  `id_customer` int(11) NOT NULL,
+  `hash` char(32) NOT NULL,
+  `checked_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_customer`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_product_media` (
+  `id_final_product` int(11) NOT NULL,
+  `slot` tinyint(3) unsigned NOT NULL,
+  `mime` varchar(32) DEFAULT NULL,
+  `bytes` int(11) DEFAULT NULL,
+  `image` mediumblob DEFAULT NULL,
+  `caption` varchar(300) DEFAULT NULL,
+  `caption_fr` varchar(300) DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_final_product`,`slot`),
+  CONSTRAINT `chk_tfb_product_media_slot` CHECK (`slot` between 0 and 4)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_product_price_change` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_final_product` int(11) NOT NULL,
+  `id_customer` int(11) DEFAULT NULL COMMENT 'NULL = cena standardowa',
+  `old_price` decimal(10,2) DEFAULT NULL,
+  `new_price` decimal(10,2) NOT NULL,
+  `source` varchar(30) NOT NULL COMMENT 'general_price_list, category_margin',
+  `changed_by` int(11) DEFAULT NULL,
+  `changed_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_product` (`id_final_product`,`changed_at`),
+  KEY `idx_n_product_price_change_customer` (`id_customer`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_audit_log` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `id_user` int(11) DEFAULT NULL,
+  `action` varchar(32) NOT NULL,
+  `entity` varchar(64) NOT NULL,
+  `entity_id` varchar(64) DEFAULT NULL,
+  `before_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`before_json`)),
+  `after_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`after_json`)),
+  `request_id` char(32) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_audit_entity` (`entity`,`entity_id`),
+  KEY `ix_tfb_audit_created` (`created_at`),
+  KEY `idx_n_prod_audit_log_entity` (`entity`,`entity_id`),
+  KEY `idx_n_prod_audit_log_user` (`id_user`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_bom_loss` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `parent_recipe_id` int(11) NOT NULL,
+  `child_kind` enum('material','recipe') NOT NULL,
+  `child_id` int(11) NOT NULL,
+  `loss_pct` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `updated_by` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_bom_loss` (`parent_recipe_id`,`child_kind`,`child_id`),
+  KEY `idx_n_prod_bom_loss_child` (`child_id`),
+  CONSTRAINT `fk_tfb_bom_loss_recipe` FOREIGN KEY (`parent_recipe_id`) REFERENCES `product_recipe` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_bom_loss_pct` CHECK (`loss_pct` >= 0 and `loss_pct` < 100)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_clock` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_employee` int(11) NOT NULL,
+  `clock_in` datetime NOT NULL,
+  `clock_out` datetime DEFAULT NULL,
+  `id_device` int(11) DEFAULT NULL,
+  `source` enum('kiosk','manual') NOT NULL DEFAULT 'kiosk',
+  `note` varchar(255) DEFAULT NULL,
+  `in_client_uuid` char(36) DEFAULT NULL,
+  `out_client_uuid` char(36) DEFAULT NULL,
+  `corrected_by` int(11) DEFAULT NULL,
+  `corrected_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_clock_in_uuid` (`in_client_uuid`),
+  UNIQUE KEY `uq_tfb_clock_out_uuid` (`out_client_uuid`),
+  KEY `ix_tfb_clock_employee` (`id_employee`,`clock_in`),
+  KEY `fk_tfb_clock_device` (`id_device`),
+  CONSTRAINT `fk_tfb_clock_device` FOREIGN KEY (`id_device`) REFERENCES `n_prod_device` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_clock_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`),
+  CONSTRAINT `ck_tfb_clock_order` CHECK (`clock_out` is null or `clock_out` >= `clock_in`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_day_close` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `work_date` date NOT NULL,
+  `id_group` int(11) NOT NULL,
+  `id_employee` int(11) DEFAULT NULL,
+  `id_device` int(11) DEFAULT NULL,
+  `note` varchar(255) DEFAULT NULL,
+  `summary` text DEFAULT NULL COMMENT 'JSON : zaplanowane, zrobione, straty, dobre na produkt',
+  `closed_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_day_close` (`work_date`,`id_group`),
+  KEY `fk_tfb_day_close_group` (`id_group`),
+  KEY `fk_tfb_day_close_employee` (`id_employee`),
+  KEY `fk_tfb_day_close_device` (`id_device`),
+  CONSTRAINT `fk_tfb_day_close_device` FOREIGN KEY (`id_device`) REFERENCES `n_prod_device` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_day_close_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_day_close_group` FOREIGN KEY (`id_group`) REFERENCES `n_prod_group` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_device` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `id_group` int(11) DEFAULT NULL COMMENT 'Grupa, przy której stoi tablet (lista osób i operacji)',
+  `token_hash` char(64) DEFAULT NULL,
+  `pairing_code_hash` char(64) DEFAULT NULL,
+  `pairing_expires_at` datetime DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `last_seen_at` datetime DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_device_token` (`token_hash`),
+  UNIQUE KEY `uq_tfb_device_pairing` (`pairing_code_hash`),
+  KEY `fk_tfb_device_group` (`id_group`),
+  CONSTRAINT `fk_tfb_device_group` FOREIGN KEY (`id_group`) REFERENCES `n_prod_group` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_employee` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_production_employee` int(11) NOT NULL,
+  `panel_employee_id` int(11) DEFAULT NULL,
+  `id_primary_group` int(11) DEFAULT NULL,
+  `level_order` int(11) DEFAULT NULL,
+  `level_name` varchar(100) DEFAULT NULL,
+  `level_synced_at` datetime DEFAULT NULL,
+  `night_supervisor` tinyint(1) NOT NULL DEFAULT 0,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_employee_erp` (`id_production_employee`),
+  UNIQUE KEY `uq_tfb_employee_panel` (`panel_employee_id`),
+  KEY `fk_tfb_employee_group` (`id_primary_group`),
+  CONSTRAINT `fk_tfb_employee_erp` FOREIGN KEY (`id_production_employee`) REFERENCES `production_employee` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_employee_group` FOREIGN KEY (`id_primary_group`) REFERENCES `n_prod_group` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_employee_credential` (
+  `id_employee` int(11) NOT NULL,
+  `badge_hash` char(64) DEFAULT NULL COMMENT 'SHA-256 (HMAC) numeru identyfikatora NFC / QR',
+  `pin_hash` varchar(255) DEFAULT NULL,
+  `failed_attempts` int(11) NOT NULL DEFAULT 0,
+  `locked_until` datetime DEFAULT NULL,
+  `biometric_consent` tinyint(1) NOT NULL DEFAULT 0,
+  `biometric_consent_at` datetime DEFAULT NULL,
+  `biometric_consent_by` int(11) DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_employee`),
+  UNIQUE KEY `uq_tfb_credential_badge` (`badge_hash`),
+  CONSTRAINT `fk_tfb_credential_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_fixed_batch` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_item` int(11) NOT NULL,
+  `weekday` tinyint(4) NOT NULL,
+  `quantity` decimal(12,3) NOT NULL,
+  `start_time` time DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_fixed_batch` (`id_item`,`weekday`),
+  CONSTRAINT `fk_tfb_fixed_batch_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_fixed_batch` CHECK (`weekday` between 1 and 7 and `quantity` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_fixed_batch_week` (
+  `week_start` date NOT NULL,
+  `id_item` int(11) NOT NULL,
+  `work_date` date NOT NULL,
+  `quantity` decimal(12,3) NOT NULL,
+  `placed` decimal(12,3) NOT NULL DEFAULT 0.000,
+  `released` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`week_start`,`id_item`,`work_date`),
+  KEY `idx_tfb_fixed_week_item` (`id_item`,`work_date`),
+  CONSTRAINT `fk_tfb_fixed_week_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_forecast` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_item` int(11) NOT NULL,
+  `iso_year` smallint(6) NOT NULL,
+  `iso_week` tinyint(4) NOT NULL,
+  `base_qty` decimal(12,3) NOT NULL DEFAULT 0.000,
+  `seasonal_coef` decimal(6,3) NOT NULL DEFAULT 1.000,
+  `result_qty` decimal(12,3) NOT NULL DEFAULT 0.000,
+  `computed_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_forecast` (`id_item`,`iso_year`,`iso_week`),
+  CONSTRAINT `fk_tfb_forecast_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_forecast` CHECK (`iso_week` between 1 and 53 and `seasonal_coef` >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_group` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(32) NOT NULL,
+  `name_pl` varchar(100) NOT NULL,
+  `name_fr` varchar(100) NOT NULL,
+  `color` char(7) NOT NULL DEFAULT '#8D1D2C',
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `id_section` int(11) DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_group_code` (`code`),
+  KEY `fk_tfb_group_section` (`id_section`),
+  CONSTRAINT `fk_tfb_group_section` FOREIGN KEY (`id_section`) REFERENCES `production_sections` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_item` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `item_type` enum('product','semi') NOT NULL,
+  `id_final_product` int(11) DEFAULT NULL,
+  `id_recipe` int(11) DEFAULT NULL,
+  `base_unit` varchar(8) NOT NULL DEFAULT 'szt',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_item_product` (`id_final_product`),
+  UNIQUE KEY `uq_tfb_item_recipe` (`id_recipe`),
+  CONSTRAINT `fk_tfb_item_product` FOREIGN KEY (`id_final_product`) REFERENCES `final_product` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_item_recipe` FOREIGN KEY (`id_recipe`) REFERENCES `product_recipe` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_item_ref` CHECK (`item_type` = 'product' and `id_final_product` is not null and `id_recipe` is null or `item_type` = 'semi' and `id_recipe` is not null and `id_final_product` is null)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_item_logistics` (
+  `id_item` int(11) NOT NULL,
+  `carton_length_mm` smallint(5) unsigned DEFAULT NULL,
+  `carton_width_mm` smallint(5) unsigned DEFAULT NULL,
+  `carton_height_mm` smallint(5) unsigned DEFAULT NULL,
+  `carton_tare_g` int(10) unsigned DEFAULT NULL,
+  `carton_type` enum('klapowy','fasonowy','inny') DEFAULT NULL,
+  `carton_ean` varchar(14) DEFAULT NULL,
+  `pallet_type` enum('eur','industrial','other') DEFAULT NULL,
+  `storage` enum('frozen','chilled','ambient') DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `updated_by` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id_item`),
+  CONSTRAINT `fk_tfb_logistics_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_login_attempt` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `login` varchar(255) NOT NULL,
+  `ip` varchar(45) NOT NULL,
+  `success` tinyint(1) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_login_attempt` (`ip`,`login`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_lot_photo` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `mime` varchar(32) NOT NULL,
+  `bytes` int(11) NOT NULL,
+  `sha256` char(64) NOT NULL,
+  `image` mediumblob NOT NULL,
+  `id_device` int(11) DEFAULT NULL,
+  `id_employee` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_lot_photo_sha` (`sha256`),
+  KEY `idx_n_prod_lot_photo_device` (`id_device`),
+  KEY `idx_n_prod_lot_photo_employee` (`id_employee`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_operation` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_order` int(11) NOT NULL,
+  `id_routing_step` int(11) DEFAULT NULL,
+  `kind` enum('work','cleaning','delay') NOT NULL DEFAULT 'work',
+  `id_workstation` int(11) NOT NULL,
+  `id_team` int(11) DEFAULT NULL,
+  `planned_start` datetime NOT NULL,
+  `planned_end` datetime NOT NULL,
+  `status` enum('planned','in_progress','paused','done','cancelled') NOT NULL DEFAULT 'planned',
+  `actual_start` datetime DEFAULT NULL,
+  `actual_end` datetime DEFAULT NULL,
+  `qty_good` decimal(12,3) DEFAULT NULL,
+  `qty_scrap` decimal(12,3) DEFAULT NULL,
+  `scrap_reason` varchar(255) DEFAULT NULL,
+  `locked` tinyint(1) NOT NULL DEFAULT 0,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `updated_by` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_operation_ws_time` (`id_workstation`,`planned_start`),
+  KEY `ix_tfb_operation_order` (`id_order`),
+  KEY `fk_tfb_operation_step` (`id_routing_step`),
+  KEY `fk_tfb_operation_team` (`id_team`),
+  CONSTRAINT `fk_tfb_operation_order` FOREIGN KEY (`id_order`) REFERENCES `n_prod_order` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_operation_step` FOREIGN KEY (`id_routing_step`) REFERENCES `n_prod_routing_step` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_operation_team` FOREIGN KEY (`id_team`) REFERENCES `n_prod_team` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_operation_ws` FOREIGN KEY (`id_workstation`) REFERENCES `n_prod_workstation` (`id`),
+  CONSTRAINT `ck_tfb_operation_time` CHECK (`planned_end` > `planned_start`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_order` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(32) NOT NULL,
+  `id_plan` int(11) DEFAULT NULL,
+  `id_item` int(11) NOT NULL,
+  `quantity` decimal(12,3) NOT NULL,
+  `origin` enum('MTO','MTS','SEMI') NOT NULL,
+  `id_parent_order` int(11) DEFAULT NULL,
+  `due_at` datetime NOT NULL,
+  `priority` int(11) NOT NULL DEFAULT 100,
+  `status` enum('planned','released','in_progress','done','cancelled') NOT NULL DEFAULT 'planned',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_order_code` (`code`),
+  KEY `ix_tfb_order_due` (`due_at`),
+  KEY `fk_tfb_order_plan` (`id_plan`),
+  KEY `fk_tfb_order_item` (`id_item`),
+  KEY `fk_tfb_order_parent` (`id_parent_order`),
+  CONSTRAINT `fk_tfb_order_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`),
+  CONSTRAINT `fk_tfb_order_parent` FOREIGN KEY (`id_parent_order`) REFERENCES `n_prod_order` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_order_plan` FOREIGN KEY (`id_plan`) REFERENCES `n_prod_plan` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `ck_tfb_order_qty` CHECK (`quantity` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_order_demand` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_order` int(11) NOT NULL,
+  `id_customer_order` int(11) NOT NULL,
+  `id_final_product` int(11) NOT NULL,
+  `quantity` decimal(12,3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_order_demand` (`id_order`,`id_customer_order`,`id_final_product`),
+  KEY `ix_tfb_order_demand_co` (`id_customer_order`),
+  KEY `idx_n_prod_order_demand_product` (`id_final_product`),
+  CONSTRAINT `fk_tfb_order_demand_co` FOREIGN KEY (`id_customer_order`) REFERENCES `customer_order` (`id`),
+  CONSTRAINT `fk_tfb_order_demand_order` FOREIGN KEY (`id_order`) REFERENCES `n_prod_order` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_output` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `work_date` date NOT NULL,
+  `id_group` int(11) NOT NULL,
+  `id_item` int(11) NOT NULL,
+  `quantity` decimal(12,3) NOT NULL,
+  `lot_code` varchar(32) NOT NULL,
+  `id_employee` int(11) DEFAULT NULL,
+  `id_device` int(11) DEFAULT NULL,
+  `client_uuid` char(36) DEFAULT NULL,
+  `note` varchar(255) DEFAULT NULL,
+  `qc_status` enum('ok','nc') DEFAULT NULL,
+  `qc_at` datetime DEFAULT NULL,
+  `qc_employee` int(11) DEFAULT NULL,
+  `qc_note` varchar(255) DEFAULT NULL,
+  `id_nc` int(11) DEFAULT NULL,
+  `cancelled_at` datetime DEFAULT NULL,
+  `cancelled_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_output_lot` (`lot_code`),
+  UNIQUE KEY `uq_tfb_output_uuid` (`client_uuid`),
+  KEY `ix_tfb_output_day` (`work_date`,`id_group`),
+  KEY `ix_tfb_output_item` (`id_item`,`work_date`),
+  KEY `fk_tfb_output_group` (`id_group`),
+  KEY `fk_tfb_output_employee` (`id_employee`),
+  KEY `fk_tfb_output_device` (`id_device`),
+  KEY `idx_n_prod_output_nc` (`id_nc`),
+  CONSTRAINT `fk_tfb_output_device` FOREIGN KEY (`id_device`) REFERENCES `n_prod_device` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_output_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_output_group` FOREIGN KEY (`id_group`) REFERENCES `n_prod_group` (`id`),
+  CONSTRAINT `fk_tfb_output_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`),
+  CONSTRAINT `ck_tfb_output_qty` CHECK (`quantity` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_output_lot` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_output` bigint(20) NOT NULL,
+  `id_material` int(11) NOT NULL COMMENT 'raw_material.id (surowiec lub opakowanie z receptury)',
+  `quantity` decimal(14,3) DEFAULT NULL COMMENT 'Potrzebna ilość w jednostce surowca',
+  `lot_number` varchar(64) DEFAULT NULL,
+  `best_before` date DEFAULT NULL,
+  `id_photo` bigint(20) DEFAULT NULL,
+  `ocr_text` text DEFAULT NULL,
+  `id_employee` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_output_lot_material` (`id_output`,`id_material`),
+  KEY `ix_tfb_output_lot_number` (`lot_number`),
+  KEY `ix_tfb_output_lot_material` (`id_material`,`updated_at`),
+  KEY `fk_tfb_output_lot_photo` (`id_photo`),
+  KEY `idx_n_prod_output_lot_employee` (`id_employee`),
+  CONSTRAINT `fk_tfb_output_lot_output` FOREIGN KEY (`id_output`) REFERENCES `n_prod_output` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_output_lot_photo` FOREIGN KEY (`id_photo`) REFERENCES `n_prod_lot_photo` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_param` (
+  `code` varchar(64) NOT NULL,
+  `value` text NOT NULL,
+  `default_value` text NOT NULL,
+  `value_type` enum('int','decimal','string','bool','time','json') NOT NULL,
+  `unit` varchar(16) DEFAULT NULL,
+  `description_pl` varchar(255) NOT NULL,
+  `description_fr` varchar(255) NOT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `updated_by` int(11) DEFAULT NULL,
+  PRIMARY KEY (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_phone` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_employee` int(11) NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `label` varchar(120) DEFAULT NULL COMMENT 'Opis urządzenia (przeglądarka) dla kierownika',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `last_used_at` datetime DEFAULT NULL,
+  `revoked_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_phone_token` (`token_hash`),
+  KEY `ix_tfb_phone_employee` (`id_employee`),
+  CONSTRAINT `fk_tfb_phone_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_plan` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `period_start` date NOT NULL,
+  `period_end` date NOT NULL,
+  `status` enum('proposed','validated','frozen','closed') NOT NULL DEFAULT 'proposed',
+  `version` int(11) NOT NULL DEFAULT 1,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `validated_by` int(11) DEFAULT NULL,
+  `validated_at` datetime DEFAULT NULL,
+  `frozen_at` datetime DEFAULT NULL,
+  `closed_at` datetime DEFAULT NULL,
+  `notes` varchar(1000) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_plan_period` (`period_start`,`period_end`),
+  CONSTRAINT `ck_tfb_plan_period` CHECK (`period_end` >= `period_start`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_plan_line` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_plan` int(11) NOT NULL,
+  `id_item` int(11) NOT NULL,
+  `due_date` date NOT NULL,
+  `qty_mto` decimal(12,3) NOT NULL DEFAULT 0.000,
+  `qty_mts` decimal(12,3) NOT NULL DEFAULT 0.000,
+  `qty_semi` decimal(12,3) NOT NULL DEFAULT 0.000,
+  `qty_fixed` decimal(12,3) NOT NULL DEFAULT 0.000,
+  `qty_proposed` decimal(12,3) NOT NULL DEFAULT 0.000,
+  `qty_final` decimal(12,3) NOT NULL DEFAULT 0.000,
+  `batches` int(11) NOT NULL DEFAULT 0,
+  `standard_hours` decimal(10,3) NOT NULL DEFAULT 0.000,
+  `adjusted_by` int(11) DEFAULT NULL,
+  `adjusted_at` datetime DEFAULT NULL,
+  `adjust_reason` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_plan_line` (`id_plan`,`id_item`,`due_date`),
+  KEY `fk_tfb_plan_line_item` (`id_item`),
+  CONSTRAINT `fk_tfb_plan_line_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`),
+  CONSTRAINT `fk_tfb_plan_line_plan` FOREIGN KEY (`id_plan`) REFERENCES `n_prod_plan` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_plan_line_qty` CHECK (`qty_mto` >= 0 and `qty_mts` >= 0 and `qty_semi` >= 0 and `qty_final` >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_product_settings` (
+  `id_item` int(11) NOT NULL,
+  `mode` enum('MTO','MTS') NOT NULL DEFAULT 'MTO',
+  `never_frozen` tinyint(1) NOT NULL DEFAULT 0,
+  `bake_state` enum('none','par_baked','baked') DEFAULT NULL,
+  `stock_min` decimal(12,3) DEFAULT NULL,
+  `stock_max` decimal(12,3) DEFAULT NULL,
+  `coverage_days` decimal(6,2) DEFAULT NULL,
+  `batch_min` decimal(12,3) DEFAULT NULL,
+  `batch_multiple` decimal(12,3) DEFAULT NULL,
+  `batch_people` decimal(5,1) DEFAULT NULL,
+  `batch_minutes` decimal(8,1) DEFAULT NULL,
+  `stock_calc_at` datetime DEFAULT NULL COMMENT 'Ostatnie obliczenie stanów min./maks. ze sprzedaży',
+  `shelf_life_workshop_days` decimal(6,2) DEFAULT NULL,
+  `shelf_life_shop_days` decimal(6,2) DEFAULT NULL,
+  `id_primary_group` int(11) DEFAULT NULL,
+  `status` enum('draft','validated') NOT NULL DEFAULT 'draft',
+  `wizard_step` tinyint(4) NOT NULL DEFAULT 1,
+  `validated_at` datetime DEFAULT NULL,
+  `validated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `updated_by` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id_item`),
+  KEY `fk_tfb_settings_group` (`id_primary_group`),
+  CONSTRAINT `fk_tfb_settings_group` FOREIGN KEY (`id_primary_group`) REFERENCES `n_prod_group` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_settings_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_settings_never_frozen` CHECK (`never_frozen` <> 1 or `mode` <> 'MTS'),
+  CONSTRAINT `ck_tfb_settings_stock` CHECK (`stock_min` is null or `stock_max` is null or `stock_max` >= `stock_min`),
+  CONSTRAINT `ck_tfb_settings_batch` CHECK ((`batch_min` is null or `batch_min` > 0) and (`batch_multiple` is null or `batch_multiple` > 0)),
+  CONSTRAINT `ck_tfb_settings_step` CHECK (`wizard_step` between 1 and 8)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_refresh_token` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_user` int(11) NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `family_id` char(32) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `revoked_at` datetime DEFAULT NULL,
+  `replaced_by` bigint(20) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `user_agent` varchar(255) DEFAULT NULL,
+  `ip` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_refresh_hash` (`token_hash`),
+  KEY `ix_tfb_refresh_family` (`family_id`),
+  KEY `fk_tfb_refresh_user` (`id_user`),
+  CONSTRAINT `fk_tfb_refresh_user` FOREIGN KEY (`id_user`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_role` (
+  `code` varchar(32) NOT NULL,
+  `name_pl` varchar(100) NOT NULL,
+  `name_fr` varchar(100) NOT NULL,
+  PRIMARY KEY (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_role_permission` (
+  `role_code` varchar(32) NOT NULL,
+  `permission` varchar(64) NOT NULL,
+  PRIMARY KEY (`role_code`,`permission`),
+  CONSTRAINT `fk_tfb_role_perm_role` FOREIGN KEY (`role_code`) REFERENCES `n_prod_role` (`code`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_routing_alternative` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_step` int(11) NOT NULL,
+  `id_workstation` int(11) NOT NULL,
+  `fixed_time_s` int(11) NOT NULL DEFAULT 0,
+  `variable_time_s` decimal(10,3) NOT NULL DEFAULT 0.000,
+  `capacity_per_pass` decimal(10,2) NOT NULL DEFAULT 1.00,
+  `priority` int(11) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_routing_alt` (`id_step`,`id_workstation`),
+  KEY `fk_tfb_routing_alt_ws` (`id_workstation`),
+  CONSTRAINT `fk_tfb_routing_alt_step` FOREIGN KEY (`id_step`) REFERENCES `n_prod_routing_step` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_routing_alt_ws` FOREIGN KEY (`id_workstation`) REFERENCES `n_prod_workstation` (`id`),
+  CONSTRAINT `ck_tfb_routing_alt` CHECK (`fixed_time_s` >= 0 and `variable_time_s` >= 0 and `capacity_per_pass` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_routing_step` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_item` int(11) NOT NULL,
+  `step_no` int(11) NOT NULL,
+  `name_pl` varchar(100) NOT NULL,
+  `name_fr` varchar(100) NOT NULL,
+  `id_workstation` int(11) NOT NULL,
+  `fixed_time_s` int(11) NOT NULL DEFAULT 0,
+  `variable_time_s` decimal(10,3) NOT NULL DEFAULT 0.000,
+  `capacity_per_pass` decimal(10,2) NOT NULL DEFAULT 1.00,
+  `operators_required` decimal(4,2) NOT NULL DEFAULT 1.00,
+  `min_level_order` int(11) DEFAULT NULL,
+  `delay_after_s` int(11) NOT NULL DEFAULT 0,
+  `delay_id_workstation` int(11) DEFAULT NULL,
+  `cleaning_required` tinyint(1) NOT NULL DEFAULT 0,
+  `cleaning_time_s` int(11) NOT NULL DEFAULT 0,
+  `temperature_c` decimal(5,1) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_routing_step` (`id_item`,`step_no`),
+  KEY `fk_tfb_routing_ws` (`id_workstation`),
+  KEY `fk_tfb_routing_delay_ws` (`delay_id_workstation`),
+  CONSTRAINT `fk_tfb_routing_delay_ws` FOREIGN KEY (`delay_id_workstation`) REFERENCES `n_prod_workstation` (`id`),
+  CONSTRAINT `fk_tfb_routing_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_routing_ws` FOREIGN KEY (`id_workstation`) REFERENCES `n_prod_workstation` (`id`),
+  CONSTRAINT `ck_tfb_routing_times` CHECK (`fixed_time_s` >= 0 and `variable_time_s` >= 0 and `delay_after_s` >= 0 and `cleaning_time_s` >= 0),
+  CONSTRAINT `ck_tfb_routing_capacity` CHECK (`capacity_per_pass` > 0 and `operators_required` >= 0),
+  CONSTRAINT `ck_tfb_routing_cleaning` CHECK (`cleaning_required` = 1 or `cleaning_time_s` = 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_shift_template` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(32) NOT NULL,
+  `name_pl` varchar(100) NOT NULL,
+  `name_fr` varchar(100) NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `active_days` varchar(13) NOT NULL DEFAULT '1,2,3,4,5,6',
+  `premium_pct` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `is_night` tinyint(1) NOT NULL DEFAULT 0,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_shift_code` (`code`),
+  CONSTRAINT `ck_tfb_shift_premium` CHECK (`premium_pct` >= 0 and `premium_pct` <= 200),
+  CONSTRAINT `ck_tfb_shift_times` CHECK (`start_time` <> `end_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_signature` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_employee` int(11) NOT NULL,
+  `purpose` enum('clock_out','timesheet_month','operation') NOT NULL,
+  `ref` varchar(64) NOT NULL COMMENT 'clock_out : id pointage ; timesheet_month : AAAA-MM ; operation : id opération',
+  `storage` enum('db','s3') NOT NULL DEFAULT 'db',
+  `image_png` mediumblob DEFAULT NULL,
+  `s3_key` varchar(255) DEFAULT NULL,
+  `sha256` char(64) NOT NULL COMMENT 'Empreinte de l''image : intégrité du document signé',
+  `id_device` int(11) DEFAULT NULL,
+  `signed_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_signature_ref` (`id_employee`,`purpose`,`ref`),
+  KEY `fk_tfb_signature_device` (`id_device`),
+  CONSTRAINT `fk_tfb_signature_device` FOREIGN KEY (`id_device`) REFERENCES `n_prod_device` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_signature_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_staffing` (
+  `work_date` date NOT NULL,
+  `id_group` int(11) NOT NULL,
+  `id_shift_template` int(11) NOT NULL,
+  `headcount` int(11) NOT NULL,
+  `overtime_h` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `source` enum('optimizer','manual') NOT NULL DEFAULT 'manual',
+  `note` varchar(255) DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`work_date`,`id_group`,`id_shift_template`),
+  KEY `fk_tfb_staffing_group` (`id_group`),
+  KEY `fk_tfb_staffing_shift` (`id_shift_template`),
+  CONSTRAINT `fk_tfb_staffing_group` FOREIGN KEY (`id_group`) REFERENCES `n_prod_group` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_staffing_shift` FOREIGN KEY (`id_shift_template`) REFERENCES `n_prod_shift_template` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_staffing_headcount` CHECK (`headcount` >= 0 and `headcount` <= 50),
+  CONSTRAINT `ck_tfb_staffing_overtime` CHECK (`overtime_h` >= 0 and `overtime_h` <= 200)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_team` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(32) NOT NULL,
+  `id_group` int(11) NOT NULL,
+  `id_shift_template` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `planned_headcount` int(11) NOT NULL DEFAULT 0,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_team_code` (`code`),
+  KEY `ix_tfb_team_group_shift` (`id_group`,`id_shift_template`),
+  KEY `fk_tfb_team_shift` (`id_shift_template`),
+  CONSTRAINT `fk_tfb_team_group` FOREIGN KEY (`id_group`) REFERENCES `n_prod_group` (`id`),
+  CONSTRAINT `fk_tfb_team_shift` FOREIGN KEY (`id_shift_template`) REFERENCES `n_prod_shift_template` (`id`),
+  CONSTRAINT `ck_tfb_team_headcount` CHECK (`planned_headcount` >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_team_member` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_team` int(11) NOT NULL,
+  `id_employee` int(11) NOT NULL,
+  `is_lead` tinyint(1) NOT NULL DEFAULT 0,
+  `valid_from` date DEFAULT NULL,
+  `valid_to` date DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_team_member` (`id_team`,`id_employee`),
+  KEY `fk_tfb_team_member_employee` (`id_employee`),
+  CONSTRAINT `fk_tfb_team_member_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_team_member_team` FOREIGN KEY (`id_team`) REFERENCES `n_prod_team` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_team_member_dates` CHECK (`valid_to` is null or `valid_from` is null or `valid_to` >= `valid_from`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_time_log` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_operation` int(11) NOT NULL,
+  `id_employee` int(11) NOT NULL,
+  `started_at` datetime NOT NULL,
+  `ended_at` datetime DEFAULT NULL,
+  `pause_s` int(11) NOT NULL DEFAULT 0,
+  `source` enum('tablet','manual') NOT NULL DEFAULT 'tablet',
+  `client_uuid` char(36) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_time_log_client` (`client_uuid`),
+  KEY `ix_tfb_time_log_operation` (`id_operation`),
+  KEY `fk_tfb_time_log_employee` (`id_employee`),
+  CONSTRAINT `fk_tfb_time_log_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`),
+  CONSTRAINT `fk_tfb_time_log_operation` FOREIGN KEY (`id_operation`) REFERENCES `n_prod_operation` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_time_log` CHECK (`ended_at` is null or `ended_at` >= `started_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_time_study` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_routing_step` int(11) NOT NULL,
+  `id_workstation` int(11) DEFAULT NULL COMMENT 'Poste mesuré (alternative éventuelle) ; NULL = poste de l''étape',
+  `component` enum('variable','fixed') NOT NULL COMMENT 'variable = temps par pièce, fixed = temps par passage',
+  `quantity` decimal(12,3) NOT NULL,
+  `passes` int(11) NOT NULL,
+  `duration_s` int(11) NOT NULL,
+  `unit_time_s` decimal(12,4) NOT NULL COMMENT 'Temps unitaire déduit (par pièce ou par passage)',
+  `measured_at` datetime NOT NULL,
+  `id_employee` int(11) DEFAULT NULL COMMENT 'Opérateur mesuré (tfb_prod_employee)',
+  `measured_by` int(11) DEFAULT NULL COMMENT 'Utilisateur qui saisit (user)',
+  `note` varchar(500) DEFAULT NULL,
+  `excluded` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Mesure écartée (incident, valeur aberrante)',
+  `applied_at` datetime DEFAULT NULL COMMENT 'Date à laquelle la mesure a servi à une nouvelle norme',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_time_study_step` (`id_routing_step`,`measured_at`),
+  KEY `fk_tfb_time_study_ws` (`id_workstation`),
+  KEY `fk_tfb_time_study_employee` (`id_employee`),
+  CONSTRAINT `fk_tfb_time_study_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_time_study_step` FOREIGN KEY (`id_routing_step`) REFERENCES `n_prod_routing_step` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_time_study_ws` FOREIGN KEY (`id_workstation`) REFERENCES `n_prod_workstation` (`id`),
+  CONSTRAINT `ck_tfb_time_study_values` CHECK (`quantity` > 0 and `passes` >= 1 and `duration_s` > 0 and `unit_time_s` >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_user_role` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_user` int(11) NOT NULL,
+  `role_code` varchar(32) NOT NULL,
+  `id_group` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_user_role` (`id_user`,`role_code`,`id_group`),
+  KEY `fk_tfb_user_role_role` (`role_code`),
+  KEY `fk_tfb_user_role_group` (`id_group`),
+  CONSTRAINT `fk_tfb_user_role_group` FOREIGN KEY (`id_group`) REFERENCES `n_prod_group` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_user_role_role` FOREIGN KEY (`role_code`) REFERENCES `n_prod_role` (`code`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_user_role_user` FOREIGN KEY (`id_user`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_waste` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `work_date` date NOT NULL,
+  `id_group` int(11) NOT NULL,
+  `id_item` int(11) NOT NULL,
+  `id_output` bigint(20) DEFAULT NULL,
+  `quantity` decimal(12,3) NOT NULL,
+  `reason` varchar(16) NOT NULL,
+  `note` varchar(255) DEFAULT NULL,
+  `id_employee` int(11) DEFAULT NULL,
+  `id_device` int(11) DEFAULT NULL,
+  `client_uuid` char(36) DEFAULT NULL,
+  `cancelled_at` datetime DEFAULT NULL,
+  `cancelled_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_waste_uuid` (`client_uuid`),
+  KEY `ix_tfb_waste_day` (`work_date`,`id_group`),
+  KEY `ix_tfb_waste_item` (`id_item`,`work_date`),
+  KEY `fk_tfb_waste_group` (`id_group`),
+  KEY `fk_tfb_waste_output` (`id_output`),
+  KEY `fk_tfb_waste_employee` (`id_employee`),
+  KEY `fk_tfb_waste_device` (`id_device`),
+  CONSTRAINT `fk_tfb_waste_device` FOREIGN KEY (`id_device`) REFERENCES `n_prod_device` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_waste_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_waste_group` FOREIGN KEY (`id_group`) REFERENCES `n_prod_group` (`id`),
+  CONSTRAINT `fk_tfb_waste_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`),
+  CONSTRAINT `fk_tfb_waste_output` FOREIGN KEY (`id_output`) REFERENCES `n_prod_output` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `ck_tfb_waste_qty` CHECK (`quantity` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_week_slot` (
+  `week_start` date NOT NULL,
+  `id_item` int(11) NOT NULL,
+  `work_date` date NOT NULL,
+  `quantity` decimal(12,3) NOT NULL,
+  `start_time` time DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`week_start`,`id_item`,`work_date`),
+  KEY `idx_tfb_week_slot_item` (`id_item`,`work_date`),
+  CONSTRAINT `fk_tfb_week_slot_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_week_slot_qty` CHECK (`quantity` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_workstation` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(32) NOT NULL,
+  `id_group` int(11) NOT NULL,
+  `name_pl` varchar(100) NOT NULL,
+  `name_fr` varchar(100) NOT NULL,
+  `type` enum('machine','four','robot','manuel','fermentation','froid','surgelation') NOT NULL,
+  `robot_mode` enum('autonome','avec_operateur','collaboratif') DEFAULT NULL,
+  `operator_share` decimal(4,2) DEFAULT NULL COMMENT 'Cobot : część czasu jednej osoby (0,25 = 1 osoba na 4 coboty)',
+  `oee_tracked` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'TRS na tablecie grupy',
+  `capacity_per_pass` decimal(10,2) NOT NULL DEFAULT 1.00,
+  `capacity_unit` varchar(16) NOT NULL DEFAULT 'piece',
+  `hourly_cost` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `photo_url` varchar(1024) DEFAULT NULL,
+  `notes` varchar(500) DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_workstation_code` (`code`),
+  KEY `ix_tfb_workstation_group` (`id_group`),
+  CONSTRAINT `fk_tfb_workstation_group` FOREIGN KEY (`id_group`) REFERENCES `n_prod_group` (`id`),
+  CONSTRAINT `ck_tfb_workstation_capacity` CHECK (`capacity_per_pass` > 0),
+  CONSTRAINT `ck_tfb_workstation_cost` CHECK (`hourly_cost` >= 0),
+  CONSTRAINT `ck_tfb_workstation_robot` CHECK (`type` = 'robot' = (`robot_mode` is not null) and `robot_mode` = 'collaboratif' = (`operator_share` is not null) and (`operator_share` is null or `operator_share` > 0 and `operator_share` <= 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_workstation_shift` (
+  `id_workstation` int(11) NOT NULL,
+  `id_shift_template` int(11) NOT NULL,
+  `available` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id_workstation`,`id_shift_template`),
+  KEY `fk_tfb_ws_shift_shift` (`id_shift_template`),
+  CONSTRAINT `fk_tfb_ws_shift_shift` FOREIGN KEY (`id_shift_template`) REFERENCES `n_prod_shift_template` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_ws_shift_ws` FOREIGN KEY (`id_workstation`) REFERENCES `n_prod_workstation` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_prod_ws_state` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_workstation` int(11) NOT NULL,
+  `state` varchar(8) NOT NULL COMMENT 'run / stop',
+  `reason` varchar(16) DEFAULT NULL COMMENT 'postój : breakdown, setup, waiting, cleaning, break, other',
+  `note` varchar(255) DEFAULT NULL,
+  `started_at` datetime NOT NULL,
+  `ended_at` datetime DEFAULT NULL,
+  `id_employee` int(11) DEFAULT NULL,
+  `id_device` int(11) DEFAULT NULL,
+  `client_uuid` char(36) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_ws_state_uuid` (`client_uuid`),
+  KEY `ix_tfb_ws_state_ws` (`id_workstation`,`started_at`),
+  KEY `ix_tfb_ws_state_open` (`id_workstation`,`ended_at`),
+  KEY `fk_tfb_ws_state_employee` (`id_employee`),
+  KEY `fk_tfb_ws_state_device` (`id_device`),
+  CONSTRAINT `fk_tfb_ws_state_device` FOREIGN KEY (`id_device`) REFERENCES `n_prod_device` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_ws_state_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_ws_state_ws` FOREIGN KEY (`id_workstation`) REFERENCES `n_prod_workstation` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_recipe_producer` (
+  `id_recipe` int(11) NOT NULL,
+  `id_group` int(11) NOT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_recipe`),
+  KEY `idx_tfb_recipe_producer_group` (`id_group`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_schema_migration` (
+  `version` char(3) NOT NULL,
+  `name` varchar(128) NOT NULL,
+  `checksum` char(64) NOT NULL,
+  `applied_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `duration_ms` int(11) NOT NULL DEFAULT 0,
+  `runner_version` varchar(8) NOT NULL,
+  PRIMARY KEY (`version`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_section_target` (
+  `id_section` int(11) NOT NULL,
+  `staff_pct_target` decimal(5,2) DEFAULT NULL COMMENT 'Maks. koszt personelu / sprzedaż działu; NULL = profit.staff_target_pct',
+  `margin_pct_target` decimal(5,2) DEFAULT NULL COMMENT 'Min. marża działu po surowcach, personelu i kosztach działu; NULL = profit.section_margin_target_pct',
+  `bonus_pct` decimal(5,2) DEFAULT NULL COMMENT 'Pula premii = % sprzedaży działu; NULL = pay.bonus_pool_pct',
+  `is_shared` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Dział wspólny (bez własnej sprzedaży): pakowanie, administracja',
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_section`),
+  CONSTRAINT `fk_tfb_section_target_section` FOREIGN KEY (`id_section`) REFERENCES `production_sections` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_section_target_staff` CHECK (`staff_pct_target` is null or `staff_pct_target` > 0 and `staff_pct_target` < 100),
+  CONSTRAINT `ck_tfb_section_target_margin` CHECK (`margin_pct_target` is null or `margin_pct_target` > -100 and `margin_pct_target` < 100)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_shipping_assignment` (
+  `ship_date` date NOT NULL,
+  `id_customer` int(11) NOT NULL,
+  `id_tour` int(11) DEFAULT NULL COMMENT 'Trasa na ten dzień',
+  `tour_set` tinyint(1) NOT NULL DEFAULT 0 COMMENT '1 = trasa dnia zamiast trasy klienta',
+  `id_carrier_vehicle` int(11) DEFAULT NULL COMMENT 'NULL = jeszcze bez pojazdu',
+  `vehicle_set` tinyint(1) NOT NULL DEFAULT 1 COMMENT '0 = pojazd automatycznie z trasy',
+  `stop_order` int(11) DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`ship_date`,`id_customer`),
+  KEY `idx_tfb_shipping_assignment_vehicle` (`id_carrier_vehicle`,`ship_date`),
+  KEY `fk_tfb_shipping_assignment_customer` (`id_customer`),
+  KEY `idx_tfb_shipping_assignment_tour` (`id_tour`),
+  CONSTRAINT `fk_tfb_shipping_assignment_customer` FOREIGN KEY (`id_customer`) REFERENCES `customer` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_shipping_assignment_tour` FOREIGN KEY (`id_tour`) REFERENCES `n_tour` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_shipping_assignment_vehicle` FOREIGN KEY (`id_carrier_vehicle`) REFERENCES `carrier_vehicle` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_staff_pay` (
+  `id_production_employee` int(11) NOT NULL,
+  `base_monthly` decimal(10,2) DEFAULT NULL COMMENT 'Wynagrodzenie minimalne, koszt pracodawcy (PLN/mies.); NULL = nie podano',
+  `bonus_eligible` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Uczestniczy w puli premii działu',
+  `notes` varchar(255) DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_production_employee`),
+  CONSTRAINT `fk_tfb_staff_pay_employee` FOREIGN KEY (`id_production_employee`) REFERENCES `production_employee` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_staff_pay_base` CHECK (`base_monthly` is null or `base_monthly` >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_store_price_config` (
+  `id` tinyint(4) NOT NULL DEFAULT 1,
+  `base_url` varchar(255) NOT NULL DEFAULT 'https://atelierby.tfbuddy.com/api/v1',
+  `phone` varchar(64) DEFAULT NULL,
+  `password_enc` text DEFAULT NULL COMMENT 'hasło konta konsultanta, zaszyfrowane',
+  `token_enc` text DEFAULT NULL COMMENT 'JWT panelu (krótki), zaszyfrowany',
+  `token_exp` datetime DEFAULT NULL,
+  `multiplier` decimal(5,2) NOT NULL DEFAULT 2.50 COMMENT 'mnożnik franczyzy : cena w sklepie netto ≥ cena fabryczna za sztukę × mnożnik',
+  `limit_coef` decimal(5,2) NOT NULL DEFAULT 2.20 COMMENT 'poniżej : za drogi ; od limitu do mnożnika : na granicy',
+  `reserve_coef` decimal(5,2) NOT NULL DEFAULT 3.20 COMMENT 'od : rezerwa ceny fabrycznej',
+  `source` varchar(10) DEFAULT NULL COMMENT 'cockpit = konto skopiowane z cockpitu konsultanta przy wdrożeniu ; manual = wpisane w ERP',
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_store_price_sync` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `started_at` datetime NOT NULL,
+  `finished_at` datetime DEFAULT NULL,
+  `status` varchar(10) NOT NULL DEFAULT 'running' COMMENT 'running / ok / partial / failed',
+  `shops` int(11) NOT NULL DEFAULT 0,
+  `shops_failed` int(11) NOT NULL DEFAULT 0,
+  `products` int(11) NOT NULL DEFAULT 0,
+  `message` varchar(500) DEFAULT NULL,
+  `run_by` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_store_price_sync_started` (`started_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_store_product` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name_key` varchar(191) NOT NULL COMMENT 'nazwa znormalizowana (klucz dopasowania)',
+  `name` varchar(255) NOT NULL,
+  `category` varchar(255) DEFAULT NULL,
+  `shops` int(11) NOT NULL DEFAULT 0,
+  `price_net` decimal(10,4) DEFAULT NULL COMMENT 'mediana ceny netto za sztukę (EUR)',
+  `price_gross` decimal(10,2) DEFAULT NULL COMMENT 'mediana ceny brutto za sztukę (EUR)',
+  `price_gross_min` decimal(10,2) DEFAULT NULL,
+  `price_gross_max` decimal(10,2) DEFAULT NULL,
+  `vat` decimal(5,2) DEFAULT NULL,
+  `synced_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ux_tfb_store_product_key` (`name_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_store_product_link` (
+  `id_final_product` int(11) NOT NULL,
+  `store_key` varchar(191) DEFAULT NULL,
+  `linked_by` int(11) DEFAULT NULL,
+  `linked_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_final_product`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_store_product_shop` (
+  `id_store_product` int(11) NOT NULL,
+  `shop_id` int(11) NOT NULL,
+  `shop_name` varchar(191) DEFAULT NULL,
+  `price_gross` decimal(10,2) DEFAULT NULL,
+  `price_net` decimal(10,4) DEFAULT NULL,
+  PRIMARY KEY (`id_store_product`,`shop_id`),
+  KEY `idx_n_store_product_shop_shop` (`shop_id`),
+  CONSTRAINT `fk_tfb_store_product_shop` FOREIGN KEY (`id_store_product`) REFERENCES `n_store_product` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_task_action` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_form` bigint(20) NOT NULL,
+  `title` varchar(300) NOT NULL,
+  `id_user` int(11) DEFAULT NULL,
+  `due_date` date DEFAULT NULL,
+  `status` varchar(8) NOT NULL DEFAULT 'open',
+  `done_at` datetime DEFAULT NULL,
+  `done_by` int(11) DEFAULT NULL,
+  `done_in_form` bigint(20) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ix_tfb_task_action_status` (`status`,`due_date`),
+  KEY `fk_tfb_task_action_form` (`id_form`),
+  KEY `idx_n_task_action_user` (`id_user`),
+  CONSTRAINT `fk_tfb_task_action_form` FOREIGN KEY (`id_form`) REFERENCES `n_task_form` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_task_category` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(32) NOT NULL,
+  `name_pl` varchar(100) NOT NULL,
+  `name_fr` varchar(100) NOT NULL,
+  `icon` varchar(40) NOT NULL DEFAULT 'bi-check2-square',
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_task_category_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_task_form` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_occurrence` bigint(20) NOT NULL,
+  `form_code` varchar(32) NOT NULL,
+  `meeting_date` date NOT NULL,
+  `period_from` date DEFAULT NULL,
+  `period_to` date DEFAULT NULL,
+  `data` longtext NOT NULL COMMENT 'JSON : uczestnicy, tematy, migawka śledzenia produkcji',
+  `status` varchar(8) NOT NULL DEFAULT 'draft',
+  `created_by` int(11) DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_task_form_occurrence` (`id_occurrence`),
+  KEY `ix_tfb_task_form_code` (`form_code`,`meeting_date`),
+  CONSTRAINT `fk_tfb_task_form_occurrence` FOREIGN KEY (`id_occurrence`) REFERENCES `n_task_occurrence` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_task_occurrence` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_task` int(11) NOT NULL,
+  `period_key` varchar(16) NOT NULL,
+  `due_date` date NOT NULL,
+  `status` enum('open','done','skipped') NOT NULL DEFAULT 'open',
+  `done_by` int(11) DEFAULT NULL,
+  `done_at` datetime DEFAULT NULL,
+  `note` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_task_occurrence` (`id_task`,`period_key`),
+  KEY `ix_tfb_task_occurrence_due` (`due_date`),
+  CONSTRAINT `fk_tfb_task_occurrence_task` FOREIGN KEY (`id_task`) REFERENCES `n_position_task` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_tender` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(20) NOT NULL,
+  `title` varchar(200) NOT NULL,
+  `status` enum('draft','sent','closed','awarded') NOT NULL DEFAULT 'draft',
+  `reply_deadline` date DEFAULT NULL,
+  `language` enum('pl','fr','nl') NOT NULL DEFAULT 'pl',
+  `intro` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `sent_at` datetime DEFAULT NULL,
+  `closed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_tender_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_tender_item` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_tender` int(11) NOT NULL,
+  `id_raw_material` int(11) NOT NULL,
+  `annual_qty_base` decimal(14,3) DEFAULT NULL,
+  `notes` varchar(255) DEFAULT NULL,
+  `id_awarded_offer` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_tender_item` (`id_tender`,`id_raw_material`),
+  KEY `fk_tfb_tender_item_offer` (`id_awarded_offer`),
+  KEY `idx_n_tender_item_material` (`id_raw_material`),
+  CONSTRAINT `fk_tfb_tender_item_offer` FOREIGN KEY (`id_awarded_offer`) REFERENCES `n_mp_offer` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tfb_tender_item_tender` FOREIGN KEY (`id_tender`) REFERENCES `n_tender` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_tender_supplier` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_tender` int(11) NOT NULL,
+  `id_supplier` int(11) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `id_message` bigint(20) unsigned DEFAULT NULL,
+  `invited_at` datetime DEFAULT NULL,
+  `responded_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_tender_supplier` (`id_tender`,`id_supplier`),
+  KEY `idx_n_tender_supplier_supplier` (`id_supplier`),
+  KEY `idx_n_tender_supplier_message` (`id_message`),
+  CONSTRAINT `fk_tfb_tender_supplier_tender` FOREIGN KEY (`id_tender`) REFERENCES `n_tender` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_tour` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(80) NOT NULL,
+  `weekdays` tinyint(3) unsigned NOT NULL DEFAULT 127 COMMENT 'Dni tygodnia : 1 = pon., 2 = wt., 4 = śr., 8 = czw., 16 = pt., 32 = sob., 64 = niedz.',
+  `departure_time` time DEFAULT NULL COMMENT 'Wyjazd trasy ; NULL = godzina pojazdu lub planning.default_departure_time',
+  `color` char(7) DEFAULT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `notes` varchar(255) DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tfb_tour_name` (`name`),
+  CONSTRAINT `ck_tfb_tour_weekdays` CHECK (`weekdays` between 1 and 127)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_tour_customer` (
+  `id_tour` int(11) NOT NULL,
+  `id_customer` int(11) NOT NULL,
+  `stop_order` int(11) DEFAULT NULL COMMENT 'Kolejność rozładunku na trasie',
+  PRIMARY KEY (`id_tour`,`id_customer`),
+  KEY `idx_tfb_tour_customer_customer` (`id_customer`),
+  CONSTRAINT `fk_tfb_tour_customer_customer` FOREIGN KEY (`id_customer`) REFERENCES `customer` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_tour_customer_tour` FOREIGN KEY (`id_tour`) REFERENCES `n_tour` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_tour_vehicle` (
+  `id_tour` int(11) NOT NULL,
+  `id_carrier_vehicle` int(11) NOT NULL,
+  `position` int(11) NOT NULL DEFAULT 1 COMMENT 'Kolejność wypełniania pojazdów trasy',
+  PRIMARY KEY (`id_tour`,`id_carrier_vehicle`),
+  KEY `idx_tfb_tour_vehicle_vehicle` (`id_carrier_vehicle`),
+  CONSTRAINT `fk_tfb_tour_vehicle_tour` FOREIGN KEY (`id_tour`) REFERENCES `n_tour` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tfb_tour_vehicle_vehicle` FOREIGN KEY (`id_carrier_vehicle`) REFERENCES `carrier_vehicle` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_user_cost` (
+  `id_user` int(11) NOT NULL,
+  `hourly_cost` decimal(10,2) NOT NULL COMMENT 'koszt godziny pracy (zł brutto pracodawcy)',
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_user`),
+  CONSTRAINT `fk_tfb_user_cost_user` FOREIGN KEY (`id_user`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_user_position` (
+  `id_user` int(11) NOT NULL,
+  `id_position` int(11) NOT NULL,
+  `since` date DEFAULT NULL,
+  PRIMARY KEY (`id_user`),
+  KEY `fk_tfb_user_position_position` (`id_position`),
+  CONSTRAINT `fk_tfb_user_position_position` FOREIGN KEY (`id_position`) REFERENCES `n_position` (`id`),
+  CONSTRAINT `fk_tfb_user_position_user` FOREIGN KEY (`id_user`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_vehicle` (
+  `id_carrier_vehicle` int(11) NOT NULL,
+  `pallet_places` int(11) NOT NULL COMMENT 'Miejsca paletowe (EUR 120×80)',
+  `max_load_kg` int(11) DEFAULT NULL COMMENT 'Ładowność (kg); NULL = nie sprawdzać',
+  `departure_time` time DEFAULT NULL COMMENT 'Godzina wyjazdu; NULL = planning.default_departure_time',
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `notes` varchar(255) DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_carrier_vehicle`),
+  CONSTRAINT `fk_tfb_vehicle_vehicle` FOREIGN KEY (`id_carrier_vehicle`) REFERENCES `carrier_vehicle` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ck_tfb_vehicle_places` CHECK (`pallet_places` > 0 and `pallet_places` <= 100),
+  CONSTRAINT `ck_tfb_vehicle_load` CHECK (`max_load_kg` is null or `max_load_kg` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_wdt_superseded` (
+  `id_document_wdt` int(11) NOT NULL,
+  `superseded_by` int(11) NOT NULL,
+  `reason` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id_document_wdt`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+SET FOREIGN_KEY_CHECKS = 1;

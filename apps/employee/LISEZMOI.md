@@ -238,6 +238,10 @@ ouvre toujours l'Accueil. Pour remettre un onglet : sa ligne dans `components/bo
 (`{ key: 'stats', label: translations.statistics, icon: 'bi-bar-chart-line', href: ROOT ~ '/statistiques' }`,
 `dashboard` → `bi-house` `/dashboard`, `schedule` → `bi-calendar3` `/schedule`).
 
+**L'Accueil est revenu dans la barre le 24/10/2026** (Sam : « il manque l'icône dans le menu, la page est déjà
+présente ») : la barre a **Accueil** (`bi-house`, `/dashboard`), **Primes** et **Profil** ; les tâches allument
+Accueil. Le Planning et les Statistiques restent hors de la barre.
+
 `/statistiques` (`StatsController`, `Views/stats/statistiques.twig`, styles `assets/atelier/stats.css`, textes
 `translations/page/{fr,en,it,nl,pl}/stats.json`) : **ses chiffres à elle, rien que les siens**, depuis la même
 fiche que Primes (`GET /ventes/moi` du cockpit, rien n'est calculé dans l'app).
