@@ -7,7 +7,8 @@ elle-même sur la tablette ; une page admin qui décide qui fait quoi, comme les
 franchisé avec ses rapports de visite et les points qu'il doit travailler ; tout le client mystère dans le sous-menu ;
 un sous-menu Budget où le budget est transféré.
 
-Rien n'est construit : la maquette sert à trancher avant d'écrire le code.
+**Construit le 24/10/2026** (« ok pour tout, construis-le dans le cockpit ») : voir `docs/suivi-franchises.md`. La
+maquette reste ici comme référence ; les réponses retenues aux questions sont sous « À trancher ».
 
 Une seule page cliquable, `index.html` (format Artifact, sans `<!doctype>`) : le rail fonctionne, les onglets aussi,
 les étapes de la tablette se parcourent, chaque bouton dit ce qu'il ferait. Écran direct : `#tableau`, `#tablette`,
@@ -69,6 +70,12 @@ Magasins perd l'entrée Budget ; le reste du rail ne bouge pas.
    par passage, rangé dans son trimestre ?
 4. **Suivi de terrain** : on retire le sous-menu une fois la maquette validée (ses entrées sont reprises) ?
 5. **Budget** : trois entrées dans le sous-menu, ou une seule entrée qui garde l'écran à trois onglets ?
+
+Retenu à la construction : 1. une seule application tablette, la checklist du consultant devient une étape ;
+2. délai de 48 h, l'envoi se règle par magasin dans Qui fait quoi (qui adapte, qui envoie) ; 3. un seul encodage, par
+passage, rangé dans son trimestre ; 4. Suivi de terrain retiré ; 5. trois entrées dans le sous-menu Budget. Ajouté
+ensuite : chaque type de visite est annoncé ou inopiné, et une visite annoncée envoie ses courriels au franchisé dans
+sa langue (fr, nl, en, de).
 
 ## Régénérer les captures
 

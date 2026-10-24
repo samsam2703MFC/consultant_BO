@@ -106,10 +106,11 @@ function tplGCCadre(g, x){
     <div class="mko-corps" style="padding-top:4px">${k.types.map(t => `<div class="gc-typ${t.on ? ' on' : ''}" ${x.A(t.choisir)}><div><b>${esc(t.nom)}</b><small>${esc(t.sous)}</small></div><span class="n">${esc(t.n)}</span></div>`).join('')}</div></div>`;
   const t = k.typeSel;
   const def = t ? `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">${esc(t.nom)} — définition du type</span><span class="mko-mini">${esc(t.code)}</span></div><div class="mko-corps">
-      <div class="gc-form" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+      <div class="gc-form" style="grid-template-columns:repeat(4,minmax(0,1fr))">
         <div class="f"><label>Nom</label><input class="mko-inp" value="${esc(t.nom)}" ${x.I(t.setNom)}></div>
         <div class="f"><label>Durée (min)</label><input type="number" class="mko-inp" value="${esc(t.duree)}" ${x.I(t.setDuree)}></div>
-        <div class="f"><label>Profil demandé</label>${sel(x, esc, t.setProfil, t.profils)}</div></div>
+        <div class="f"><label>Profil demandé</label>${sel(x, esc, t.setProfil, t.profils)}</div>
+        <div class="f"><label>Le franchisé</label>${sel(x, esc, t.setAnnoncee, t.annonces)}</div></div>
       <div class="gc-mod"><b>Tâches à faire</b><span>une par ligne : avant | 2 | libellé — pendant | 0 | libellé — apres | 1 | libellé</span></div>
       <textarea class="mko-inp" style="height:${Math.max(90, 22 * (t.tachesTxt.split('\n').length + 1))}px;padding:8px 10px" ${x.I(t.setTaches)}>${esc(t.tachesTxt)}</textarea>
       <div class="gc-mod"><b>Checklist</b><span>${esc(t.checklistSous)}</span></div>

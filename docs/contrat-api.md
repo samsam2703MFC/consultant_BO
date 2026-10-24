@@ -2985,3 +2985,48 @@ coefMedian, coefMin, coefMax, zones}], groupes: [{nom, n, nChiffres, coefMedian,
 triés par groupe, catégorie, nom ; les produits inactifs sont écartés sauf `inactifs=1`. `prixCible` et `prixObjectif` : le prix
 TTC de la pièce qui atteindrait la cible de sa catégorie, ou l'objectif du réseau, aux 5 centimes supérieurs. Relu à chaque
 appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. `sonde=1` rend les premières lignes brutes.
+
+### Le suivi des franchisés (24/10/2026)
+
+Module `src/suivi.php` : le circuit d'une visite, de l'ordinateur à la tablette et retour, et ce que le franchisé en
+reçoit. Réglages `suiviRegles` (qui fait quoi, droits, délais, ce que voit le franchisé) et `suiviModeles` (les
+courriels, par code et par langue fr, nl, en, de). Les types de visite (`visitesTypes`) portent `annoncee`.
+
+| Route | Ce qu'elle rend ou fait |
+|---|---|
+| `GET /suivi/tableau?consultant=&semaine=` | `kpis` {visitesSemaine, aPreparer, surTablette, aAdapter, urgent, urgentTxt, envoyesMois, lusMois, points, p0, retard, corrections} ; `cartes` {preparer, tablette, adapter, envoye} — une carte par visite {id, shop, court, feu, type, typeNom, annoncee, le, h, consultant, consultantNom, statut, dossier {points, blocs}, prepDu, prepRetard, prepEnvoyeeLe, odjEnvoyeLe, nonFaite, proposes, ouverts, termineLe, delai {limite, resteH, depasse}, envoyeLe, luLe, relanceLe} ; `franchises[]` (feu, responsable, derniere, rapport, points, prochaine, cadre du mois, scoring) ; `points[]` les plans ouverts ; `corrections[]` les photos à valider (avant, apres, commentaire, recuLe, attenteH, horsDelai, valide) ; `delais`, `consultants`, `semaine` {du, au, decalage}. |
+| `GET /suivi/preparation?visite=` | `visite`, `magasin`, `type`, `types` (avec `annoncee`), `dossier[]` {cle, titre, lignes[], motif, alerte, interne, inclus} assemblé tout seul (santé, points ouverts, tâches et contrôles photo, scoring, client mystère et comptoir, météo interne), `prep` {blocs, points[] {ref, libelle, odj, source}, note, figeLe}, `annoncee`, `roles`, `prepDu`, `tablette` {envoyeeLe}, `odj` {auto, prevuLe, envoyeLe, adresse, source, langue, langueNom, sujet, texte}. |
+| `PUT /suivi/preparation/{id}` | `{ blocs: {cle: bool}, points: [{libelle, odj}], annoncee, type, note, envoyer, odj }`. `envoyer: true` fige le dossier et le pousse sur la tablette (notification) ; `odj: true` envoie l'ordre du jour maintenant (visite annoncée seulement) → `odjEnvoi` {envoye, a, motif}. 409 si la visite est terminée ou annulée. |
+| `GET /suivi/rapport?visite=` | le brouillon de la tablette, relu au bureau : `contenu` {phrase, positif, sentiment, execution, clients, causes[], diagnostic, reco}, `checklist` {ok, total, na, ecarts[]}, `plans[]` {id, titre, detail, priorite, echeance, statut, inclus, modifiable}, `photos[]` {id, chemin, genre, inclus}, `delai`, `roles`, `envoi` {a, source, langue, copies[], envoyeLe, envoyePar, luLe, smtp, dernier}, `apercu` {sujet, texte}. |
+| `PUT /suivi/rapport/{id}` | `{ phrase, positif, sentiment, execution, clients, causes, diagnostic, reco, plans: [{id, inclus, titre, detail, priorite, echeance}], photos: {id: bool} }` : le bureau adapte. |
+| `POST /suivi/rapport/{id}/envoyer` | `{ renvoyer? }` : les plans cochés passent `propose → ouvert`, les autres `interne` ; le PDF (si le moteur répond), le courriel dans la langue du magasin avec les copies, la notification au magasin, le journal → `{ ok, ouverts, internes, envoi {envoye, a, copies, pdf, motif} }` + la vue du rapport. 409 si déjà envoyé (sauf `renvoyer`). |
+| `GET /suivi/rapport/apercu?visite=` | `{ html, langue }` : le rapport tel que le franchisé le reçoit (signature comprise). |
+| `GET /suivi/msp` | les passages du client mystère (`ceo_scoring_msp`, un par passage, rangé dans son trimestre) : `magasins[]` {dernier, precedent, historique, plans, suiteVisite, prochaine}, `rubriques`, `seuil`, `kpis` {moyenne, sur, sur5, moyennePrec, alertes[], points, p0, releves, corriges}. |
+| `POST /suivi/msp` | `{ shop, passage_le, obtenu, maximum, rubriques: {nom: note}, commentaire, fichier (data:application/pdf…), montrer, suites: { points: [{titre, priorite}], controle, tache } }` : un seul encodage ; ses suites ouvrent des points chez le franchisé (échéance selon P0 / P1 / P2), ajoutent le contrôle à la visite suivante, donnent une tâche au responsable → `{ ok, msp, suites }`. Les notes se lisent « 17 / 20 », « 8,5/10 » ou 17. |
+| `GET /suivi/regles` | `regles`, `magasins[]` {regle {prepare, adapte, envoie, corrections, copie[], email, langue, responsable}, adresse, langueDefaut, cadre}, `personnes[]` {droits {preparer, visiter, adapter, envoyer, valider, regler}}, `types[]` {code, nom, annoncee}, `modeles` {code: {nom, quand, vars, textes {langue: {sujet, corps}}, modifie {langue: bool}}}, `langues`, `smtp`, `kpis`. |
+| `PUT /suivi/regles` | `{ magasins, droits, admins, delais, voit, types: {code: annoncee}, modeles: {code: {langue: {sujet, corps} ou {reset: true}}} }` : chaque clé est facultative. |
+| `POST /suivi/modeles/apercu` | `{ code, langue, sujet, corps }` → `{ sujet, html, texte }` avec des valeurs d'exemple. |
+| `POST /suivi/modeles/essai` | `{ code, langue, a }` : le modèle enregistré part à l'adresse d'essai. |
+| `GET /suivi/lien?shop=` | le lien de la page du franchisé (`url`, `chemin`), son adresse, sa langue, le courriel qui l'envoie, ce qu'il voit. |
+| `POST /suivi/lien/envoyer` | `{ shop }` : le lien part au franchisé, dans sa langue. |
+
+**Routes publiques** (sans session du cockpit ; la clé est le jeton du magasin, `HMAC('suivi:'+shop, visitesJeton)` sur
+24 caractères — changer `visitesJeton` invalide tous les liens) :
+
+| Route | Ce qu'elle rend ou fait |
+|---|---|
+| `GET /suivi/franchise?shop=&jeton=` | ce que voit le franchisé selon `voit` : `points[]` (sans les proposés ni les internes, avec `retour` quand le bureau a renvoyé), `valides[]` du mois, `rapports[]` (envoyés seulement ; les visites d'avant le suivi en version courte), `prochaine` (annoncée seulement, avec ses sujets), `msp[]` (montrés seulement), `scoring`. 403 si le jeton ne correspond pas. |
+| `POST /suivi/franchise/correction` | `{ shop, jeton, plan, data (photo), commentaire }` : le point passe `attente`, l'admin est notifié. 409 si le point n'attend pas de correction. |
+| `POST /suivi/franchise/lu` | `{ shop, jeton, visite }` : la date de lecture du rapport. |
+
+**Courriels** : `annonce` (à J−n, `delais.odjJours`, visites annoncées), `deplacee` et `annulee` (si l'ordre du jour
+était parti), `rapport` (à l'envoi), `relance` (rapport pas lu après `delais.relanceLuJours`), `lien`. L'horloge des
+visites (`viHorloge`, `bin/visites_cron.sh`) envoie les ordres du jour, rappelle ou envoie tel quel les rapports en
+retard (`delais.rapportTard`) et relance les rapports pas lus.
+
+**Le cockpit** : dans « Franchisés · évaluation et suivi », le sous-menu **Suivi des franchisés** remplace « Suivi de
+terrain » : `#/suivi-tableau` (vue d'ensemble, préparer, adapter et envoyer, points et corrections ; Gestion consultant
+y est rattachée), `#/suivi-tablette` (l'app Visites du consultant, `visites/?role=consultant`), `#/suivi-client-mystere`,
+`#/suivi-page-franchise` (aperçu de `suivi/?shop=&jeton=&apercu=1`), `#/suivi-qui-fait-quoi`. Le sous-menu **Budget**
+(Suivi budget, Encodage du budget, Paramètres du budget) quitte Magasins. `?app=consultant` mène à
+`visites/?role=consultant`.

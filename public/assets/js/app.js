@@ -7,6 +7,7 @@
 import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, apiTraces, apiTracesRaz, joinPerf } from './api.js';
 import { render as tplRender, tplPsImpression } from './templates.js';
 import { valsGC, valsFF, valsRO } from './franchises-vals.js';
+import { valsSvTableau, valsSvTablette, valsSvMsp, valsSvFranchise, valsSvAdmin } from './suivi-vals.js';
 import { Scouting } from './scouting.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
@@ -300,6 +301,8 @@ class App {
       productionPlan: 'production-plan', productionSuivi: 'production-suivi', productionParams: 'production-parametres', productionCloture: 'production-cloture', productionFours: 'production-fours',
       // Franchisés · évaluation et suivi (09/10/2026)
       gestionConsultant: 'gestion-consultant', ficheFranchise: 'fiche-franchise', remarquesOperateurs: 'remarques-operateurs',
+      // Suivi des franchisés (24/10/2026)
+      suiviTableau: 'suivi-tableau', suiviTablette: 'suivi-tablette', suiviMsp: 'suivi-client-mystere', suiviFranchise: 'suivi-page-franchise', suiviAdmin: 'suivi-qui-fait-quoi',
     };
   }
   /**
@@ -963,6 +966,11 @@ class App {
       mesure: ['Mesure des campagnes', 'Ce qu’une campagne a changé, magasin par magasin : la période de campagne et celle d’avant, chacune comparée aux mêmes semaines de l’an dernier. L’effet net retire ce qui montait déjà ; la ligne « réseau hors campagne » donne le bruit de fond.'],
       scoringTri: ['Scoring du trimestre', 'Quatre postes de cinq points, magasin par magasin : la note Google, les tâches du panel, le client mystère, le budget — sur 20, lu en étoiles. Le rapport A4 part à chaque magasin le premier jour du trimestre suivant.'],
       gestionConsultant: ['Gestion consultant', 'Le planning du consultant tous magasins, ses tâches de toutes sources (visites, plans d’action, panel, helpdesk, perso), le réseau consultants × magasins, et le cadre de visite : par magasin, combien de visites, de quel type, par quel profil, avec quelle checklist. Chaque type de visite porte sa checklist et ses tâches à faire ; l’agenda Google suit par flux ICS et invitations.'],
+      suiviTableau: ['Suivi des franchisés · tableau de bord', 'Sur l’ordinateur, ce qui se fait avant et après la visite : préparer le dossier et l’ordre du jour, relire le brouillon de la tablette, envoyer le rapport au franchisé, valider ses photos de correction. Les visites passent de colonne en colonne, du dossier au rapport lu.'],
+      suiviTablette: ['Visite sur tablette', 'L’application du consultant en visite, la même hors ligne : photo du jour, dossier du bureau, checklist du type, contrôles photo, points à travailler, météo du franchisé, signature. À la fin, le brouillon part au bureau.'],
+      suiviMsp: ['Client mystère', 'Les passages du client mystère, magasin par magasin : la note, les rubriques sur 20, le passage précédent et ce qui a suivi. Un seul encodage par passage, rangé dans son trimestre : il nourrit le feu, le scoring, la visite suivante et la page du franchisé.'],
+      suiviFranchise: ['Page du franchisé', 'La page que le franchisé ouvre avec son lien, sans mot de passe : ses points à travailler et l’envoi de sa photo de correction, ses rapports de visite, sa prochaine visite annoncée. L’aperçu ne marque rien comme lu.'],
+      suiviAdmin: ['Qui fait quoi', 'Par magasin, qui prépare, qui adapte le rapport, qui l’envoie, qui valide les corrections, qui est en copie, à quelle adresse et dans quelle langue ; les personnes et leurs droits ; les délais ; les visites annoncées ou inopinées ; les courriels aux franchisés dans les quatre langues.'],
       ficheFranchise: ['Franchisés · évaluation et suivi', 'Par franchisé : ce que les données disent chaque jour, ce que le consultant constate sur place. Une tuile se déplie sur son détail, « Tout voir » ouvre la liste complète.'],
       remarquesOperateurs: ['Remarques aux opérateurs', 'Les remarques faites depuis la modale des invendus sur une pièce jetée pour un problème de qualité : l’opérateur qui a produit, la pièce, l’heure, le motif. Par magasin et par opérateur, pour l’entretien d’évaluation.'],
       offres: ['Offres et canaux', 'Ce que les promotions et les bundles rapportent, magasin par magasin, et par où passent les commandes : comptoir, click & collect, livraison. Les bundles sont les produits de la catégorie « Bundle & Promotion » du panel, lus dans les tickets ; les promotions sont celles posées sur les jours creux, face aux quatre semaines d’avant.'],
@@ -995,8 +1003,7 @@ class App {
         [['journal', 'Journal'], ['usageConsole', 'Usage de la console'], ['diagnostic', 'Diagnostic API']]],
       analysemag: ['Analyse magasin', 'Un magasin, quatre lectures : les leviers chiffrés, qui vend et combien par heure prestée, ce que les clients achètent ensemble, et ce que Google en dit.',
         [['analysemag', 'Leviers'], ['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
-      budget: ['Budget', 'Le budget du réseau : ce qui est tenu mois par mois, ce qui s’encode, et les règles qui le calculent.',
-        [['budget', 'Suivi'], ['encodage', 'Encodage'], ['budgetparam', 'Paramètres']]],
+      // Budget : trois entrées du sous-menu Budget (24/10/2026), chacune son titre — plus d'onglets.
       catalogue: ['Catalogue', 'Une seule liste, trois lectures : la fiche et ses deux marges, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
         [['catalogue', 'Fiches'], ['assortiment', 'Assortiment obligatoire'], ['planogramme', 'Comptoir']]],
       produits: ['Gamme · scoring', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.',
@@ -1348,24 +1355,33 @@ class App {
       ['Franchisés · évaluation et suivi', [
         ['ficheFranchise', 'Fiche franchisé', 0],
         ['scoringTri', 'Scoring du trimestre', 0],
+        // Suivi des franchisés (24/10/2026) : le contrôle sur le terrain par tablette, réuni — le tableau
+        // de bord du bureau, l'application en visite, le client mystère, la page que voit le franchisé,
+        // et qui fait quoi. Il remplace le sous-menu « Suivi de terrain » : Gestion consultant y reste
+        // atteignable (planifier une visite, le cadre de visite), l'app Visites devient la tablette.
+        { sub: 'Suivi des franchisés', children: [
+          ['suiviTableau', 'Tableau de bord', (S.svT && S.svT.d && S.svT.d.kpis) ? (S.svT.d.kpis.aAdapter || 0) + (S.svT.d.kpis.corrections || 0) : 0, ['gestionConsultant']],
+          ['suiviTablette', 'Visite sur tablette', 0],
+          ['suiviMsp', 'Client mystère', 0],
+          ['suiviFranchise', 'Page du franchisé', 0],
+          ['suiviAdmin', 'Qui fait quoi', 0]] },
+        // Le budget, sorti de Magasins (24/10/2026) : trois entrées au lieu d'un écran à trois onglets.
+        { sub: 'Budget', children: [
+          ['budget', 'Suivi budget', 0],
+          ['encodage', 'Encodage du budget', 0],
+          ['budgetparam', 'Paramètres du budget', 0]] },
         { sub: 'Suivi journalier et opérations', children: [
           ['suivi', 'Tâches et contrôles photo', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
           ['mktObjectifs', 'Objectifs', 0],
           ['remarquesOperateurs', 'Remarques opérateurs', 0],
           ['reputation', 'Note Google et avis', 0],
-          ['reporting', 'Reporting automatisé', 0]] },
-        { sub: 'Suivi de terrain', children: [
-          ['gestionConsultant', 'Gestion consultant', 0],
-          ['ext:visites/?role=admin', 'Visites ↗', 0],
-          ['scoringTri', 'Client mystère', 0, null, { sqVue: 'msp' }],
-          ['assortiment', 'Conformité du comptoir', 0]] }]],
+          ['reporting', 'Reporting automatisé', 0]] }]],
       // LE cœur du métier : d'abord constater (performance), puis agir
       // magasin par magasin (analyse & leviers), puis cadrer (budget).
       // Trois questions : comment va ce magasin (leviers, équipe, panier,
       // réputation), quel budget il tient, où il va sur trois ans.
       ['Magasins', [
         ['analysemag', 'Analyse magasin', ((this.D.reput || {}).reseau || {}).sousCible || 0, ['ventes', 'croisements']],
-        ['budget', 'Budget', 0, ['encodage', 'budgetparam']],
         ['creux', 'Jours creux', 0],
         // Le suivi du franchisé ne garde que la part des invendus dans le CA (09/10/2026) :
         // le détail — pièces, motifs, produits — reste ici, sous Magasins.
@@ -1448,8 +1464,8 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO'].forEach(k => common[k] = false);
-    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin'].forEach(k => common[k] = false);
+    const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
@@ -1877,6 +1893,11 @@ class App {
     if (common.isGC) valsGC(this, common);
     if (common.isFF) valsFF(this, common);
     if (common.isRO) valsRO(this, common);
+    if (common.isSvTableau) valsSvTableau(this, common);
+    if (common.isSvTablette) valsSvTablette(this, common);
+    if (common.isSvMsp) valsSvMsp(this, common);
+    if (common.isSvFranchise) valsSvFranchise(this, common);
+    if (common.isSvAdmin) valsSvAdmin(this, common);
     if (common.isGP) this.valsGP(common);
     // --- reporting
     if (common.isReporting) this.valsReporting(common, navDef, titles);

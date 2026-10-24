@@ -70,7 +70,7 @@ function tachesDeTexte(txt){
 }
 function gcCadreSauver(app, F, quoi){
   const corps = quoi === 'cadre' ? { cadre: F.lignes.map(l => ({ id: l.id, shop: l.shop, type: l.type, nb: l.nb, par: l.par, profil: l.profil || '', consultant: l.consultant || '' })) }
-    : { types: F.types.map(t => Object.assign({ code: t.code, nom: t.nom, duree: t.duree, profil: t.profil || '', actif: t.actif !== false, dynamique: t.dynamique || null, taches: tachesDeTexte(t.tachesTxt) }, t.code === 'reguliere' ? {} : { checklist: t.checklist || [] })), consultantProfil: F.consultantProfil };
+    : { types: F.types.map(t => Object.assign({ code: t.code, nom: t.nom, duree: t.duree, profil: t.profil || '', actif: t.actif !== false, annoncee: t.annoncee !== false, dynamique: t.dynamique || null, taches: tachesDeTexte(t.tachesTxt) }, t.code === 'reguliere' ? {} : { checklist: t.checklist || [] })), consultantProfil: F.consultantProfil };
   app.setState({ gcBusy: true });
   app.api('PUT', '/visites/cadre', corps).then(r => {
     const ok = r && r.ok !== false && !r.error;
@@ -245,9 +245,10 @@ export function valsGC(app, common){
     ajouter: () => { F.lignes.push({ id: '', shop: (mags[0] || {}).id, type: 'reguliere', nb: 1, par: 'mois', profil: '', consultant: '' }); majF(); },
     sauver: () => gcCadreSauver(app, F, 'cadre'), sauverTypes: () => gcCadreSauver(app, F, 'types'),
     plansMini: pl(F.lignes.length, 'ligne') + ' · le suivi de plan d’action et la revisite naissent d’un P0 ou d’un point non conforme',
-    types: F.types.map(x => ({ nom: x.nom, sous: x.duree + ' min · profil : ' + (profilNom(x.profil) || 'celui du cadre') + ' · ' + (x.dynamique === 'plans' ? 'les plans d’action ouverts' : x.dynamique === 'ko' ? 'les points non conformes' : pl(x.points, 'point')), n: pl(tachesDeTexte(x.tachesTxt).length, 'tâche'), on: x.code === typeSelCode, choisir: () => app.setState({ gcTypeSel: x.code }) })),
+    types: F.types.map(x => ({ nom: x.nom, sous: x.duree + ' min · profil : ' + (profilNom(x.profil) || 'celui du cadre') + ' · ' + (x.dynamique === 'plans' ? 'les plans d’action ouverts' : x.dynamique === 'ko' ? 'les points non conformes' : pl(x.points, 'point')) + (x.annoncee === false ? ' · inopinée' : ''), n: pl(tachesDeTexte(x.tachesTxt).length, 'tâche'), on: x.code === typeSelCode, choisir: () => app.setState({ gcTypeSel: x.code }) })),
     typeSel: t ? { code: t.code, nom: t.nom, setNom: e => { t.nom = e.target.value; garde(); }, duree: t.duree, setDuree: e => { t.duree = parseInt(e.target.value, 10) || t.duree; garde(); },
       profils: [{ v: '', nom: 'celui du cadre', on: !t.profil }].concat(profils.map(p => ({ v: p.code, nom: p.nom, on: p.code === t.profil }))), setProfil: e => { t.profil = e.target.value; majF(); },
+      annonces: [{ v: '1', nom: 'Annoncée — l’ordre du jour lui part', on: t.annoncee !== false }, { v: '0', nom: 'Inopinée — il n’est pas prévenu', on: t.annoncee === false }], setAnnoncee: e => { t.annoncee = e.target.value === '1'; majF(); },
       tachesTxt: t.tachesTxt, setTaches: e => { t.tachesTxt = e.target.value; garde(); },
       checklistSous: t.code === 'reguliere' ? 'la liste standard, réglée dans l’app Visites › Réglages' : (t.dynamique ? 'dynamique' : pl((t.checklist || []).length, 'module') + ' · ' + pl(t.points, 'point')),
       modules: t.checklist || [], dynamique: t.dynamique === 'plans' ? 'Checklist dynamique : les plans d’action ouverts de la boutique, un point par plan.' : t.dynamique === 'ko' ? 'Checklist dynamique : les points non conformes de la dernière visite terminée.' : '',

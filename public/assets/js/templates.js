@@ -5,6 +5,7 @@
  */
 
 import { tplGC, tplFF, tplRO } from './franchises-tpl.js';
+import { tplSvTableau, tplSvTablette, tplSvMsp, tplSvFranchise, tplSvAdmin } from './suivi-tpl.js';
 
 /* Entrée du rail : feuille (bouton simple) ou sous-menu (parent repliable +
    enfants indentés). Le badge s'affiche à droite. */
@@ -171,6 +172,7 @@ export function render(c, x){
       ${c.isOffres ? tplOffres(c, x) : ''}
       ${c.isInvendus ? tplInvendus(c, x) : ''}
       ${c.isGC ? tplGC(c, x) : ''}${c.isFF ? tplFF(c, x) : ''}${c.isRO ? tplRO(c, x) : ''}
+      ${c.isSvTableau ? tplSvTableau(c, x) : ''}${c.isSvTablette ? tplSvTablette(c, x) : ''}${c.isSvMsp ? tplSvMsp(c, x) : ''}${c.isSvFranchise ? tplSvFranchise(c, x) : ''}${c.isSvAdmin ? tplSvAdmin(c, x) : ''}
       ${c.isGP ? tplGP(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
       ${c.isSuivi ? tplSuivi(c, x) : ''}
