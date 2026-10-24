@@ -44,37 +44,15 @@ fi
 
 # --- 0. Disque -------------------------------------------------------------
 # Un disque plein casse tout (apt, MySQL, sessions PHP : l'API répond 503). Relevé à chaque livraison ;
-# à 90 % ou plus : relevé détaillé, puis ménage sans toucher aux données des applications (cache apt,
-# journaux systemd au-delà de 200 Mo, journaux tournés de plus de 3 jours, caches pip / composer / npm de
-# root, binlogs MySQL de plus de 3 jours — aucun réplica sur ce serveur de test).
-disk_pct() { df -P / | awk 'NR==2 { gsub("%", "", $5); print $5 }'; }
-log "Disque / : $(df -hP / | awk 'NR==2 { print $3 " utilisés sur " $2 " (" $5 "), " $4 " libres" }')"
-if [[ "$(disk_pct)" -ge 90 ]]; then
-  warn "Disque presque plein : relevé détaillé puis ménage."
-  du -xh --max-depth=3 /var /srv /root /home /opt 2>/dev/null | sort -rh | head -40 || true
-  log "Fichiers de plus de 200 Mo :"
-  find / -xdev -type f -size +200M -printf '%s\t%p\n' 2>/dev/null | sort -rn | head -15 \
-    | awk -F'\t' '{ printf "  %d Mo\t%s\n", $1 / 1048576, $2 }' || true
-  command -v docker >/dev/null 2>&1 && { docker system df 2>/dev/null || true; }
-  MYSQLA=(mysql)
-  "${MYSQLA[@]}" -e 'SELECT 1' >/dev/null 2>&1 || MYSQLA=(mysql --defaults-file=/etc/mysql/debian.cnf)
-  if "${MYSQLA[@]}" -e 'SELECT 1' >/dev/null 2>&1; then
-    log "MySQL : $("${MYSQLA[@]}" -N -e "SELECT CONCAT('log_bin=', @@log_bin, ', datadir=', @@datadir)" 2>/dev/null) ; binlogs : $("${MYSQLA[@]}" -N -e 'SHOW BINARY LOGS' 2>/dev/null | awk '{ s += $2; n++ } END { printf "%d fichiers, %d Mo", n, s / 1048576 }')"
-    "${MYSQLA[@]}" -N -e "SELECT table_schema, ROUND(SUM(data_length + index_length) / 1048576) FROM information_schema.tables GROUP BY table_schema ORDER BY 2 DESC LIMIT 8" 2>/dev/null \
-      | awk '{ printf "  base %s : %s Mo\n", $1, $2 }' || true
-    if [[ -z "$("${MYSQLA[@]}" -N -e 'SHOW REPLICAS' 2>/dev/null || "${MYSQLA[@]}" -N -e 'SHOW SLAVE HOSTS' 2>/dev/null || true)" ]]; then
-      "${MYSQLA[@]}" -e "PURGE BINARY LOGS BEFORE NOW() - INTERVAL 3 DAY" >/dev/null 2>&1 || true
-    fi
-  else
-    warn "MySQL : pas d'accès administrateur (root, debian.cnf) — binlogs non purgés."
-  fi
-  before_pct="$(disk_pct)"
-  apt-get clean >/dev/null 2>&1 || true
-  journalctl --vacuum-size=200M >/dev/null 2>&1 || true
-  find /var/log -xdev -type f \( -name '*.gz' -o -name '*.[0-9]' -o -name '*.old' \) -mtime +3 -delete 2>/dev/null || true
-  rm -rf /root/.cache/pip /root/.cache/composer 2>/dev/null || true
-  command -v npm >/dev/null 2>&1 && { npm cache clean --force >/dev/null 2>&1 || true; }
-  log "Après ménage : $(df -hP / | awk 'NR==2 { print $5 " utilisés, " $4 " libres" }') (avant : ${before_pct} %)."
+# à 90 % ou plus, ménage sans toucher aux données (bin/menage_disque.sh : caches, journaux tournés,
+# images Docker inutilisées, binlogs MySQL de plus de 3 jours…), puis relance de MySQL s'il refusait
+# les connexions. Sous 300 Mo libres après le ménage, la livraison s'arrête AVANT de copier quoi que ce
+# soit : le site garde sa version précédente, au lieu d'une copie à moitié écrite.
+libre_disque="$(bash "$REPO_SRC/bin/menage_disque.sh" --seuil 90 --mysql | tee /dev/stderr | sed -n 's/^LIBRE_MO=//p' | tail -1)"
+if [[ -n "$libre_disque" && "$libre_disque" -lt 300 ]]; then
+  warn "Déploiement interrompu : ${libre_disque} Mo libres sur / après le ménage — il en faut 300."
+  warn "Libérer de la place sur le serveur (docs/DEPLOIEMENT.md › « Disque plein »), puis relancer la livraison."
+  exit 1
 fi
 
 # --- 1. Prérequis (sans perturber le panel déjà en place) ----------------
@@ -661,6 +639,31 @@ php "$TARGET_DIR/bin/carte_sources.php" >>/var/log/cockpit-carte.log 2>&1 || tru
 log "Carte des sources : /etc/cron.d/cockpit-carte — chaque nuit à 3 h 40 (journal : /var/log/cockpit-carte.log)."
 
 log "Notifications de stock : /etc/cron.d/cockpit-push — toutes les 15 min de 5 h à 20 h (journal : /var/log/cockpit-push.log)."
+
+# Le disque, surveillé entre deux livraisons (24/10/2026) : toutes les 6 heures, ménage sûr dès 85 %,
+# alerte à l'admin du cockpit (notification) s'il reste à 90 % ou plus — avant que MySQL ne tombe.
+{
+  echo "# Cockpit CEO — le disque du serveur (bin/deploy.sh)"
+  echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  echo "23 */6 * * * root bash ${TARGET_DIR}/bin/menage_disque.sh --seuil 85 --alerte --mysql >>/var/log/cockpit-disque.log 2>&1"
+} > /etc/cron.d/cockpit-disque
+chown root:root /etc/cron.d/cockpit-disque
+chmod 600 /etc/cron.d/cockpit-disque
+# Les journaux des tâches du cockpit tournent chaque semaine (4 semaines gardées, compressées, 50 Mo au
+# plus) : sans cela, ils grossissaient sans fin.
+cat > /etc/logrotate.d/cockpit <<'LOGROTATE'
+/var/log/cockpit-*.log {
+  weekly
+  rotate 4
+  maxsize 50M
+  compress
+  delaycompress
+  missingok
+  notifempty
+  copytruncate
+}
+LOGROTATE
+log "Disque : /etc/cron.d/cockpit-disque — relevé et ménage toutes les 6 h, alerte à 90 % (journal : /var/log/cockpit-disque.log) ; journaux du cockpit tournés chaque semaine (/etc/logrotate.d/cockpit)."
 
 systemctl reload cron 2>/dev/null || systemctl restart cron 2>/dev/null || service cron reload 2>/dev/null || true
 # Les secteurs absents ou trop vieux se relisent tout de suite, en arrière-plan :
