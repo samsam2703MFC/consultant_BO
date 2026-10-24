@@ -19,6 +19,7 @@ use App\Repositories\Product\FinalProductRepository;
 use App\Repositories\Shipping\Complaint\ComplaintShipmentLogRepository;
 use App\Repositories\Utils\OutboxRepository;
 use App\Services\Client\ClientService;
+use App\Services\Notification\AppNotificationService;
 use App\Services\S3UrlService;
 use App\Services\Utils\TCPDFService;
 
@@ -39,8 +40,8 @@ class ComplaintService
         private WDTProductRepository                $wdtProductRepository,
         private OutboxRepository                    $outboxRepository,
         private ComplaintAttachmentRepository       $complaintAttachmentRepository,
-        private S3UrlService                        $s3UrlService
-
+        private S3UrlService                        $s3UrlService,
+        private AppNotificationService              $appNotificationService
     )
     {
     }
@@ -294,6 +295,7 @@ class ComplaintService
             ]);
 
             $this->syncCollectorAttachments((int) $idComplaint, $attachments);
+            $this->notifyNewComplaint((int) $idComplaint, $data, $client, $wdt['doc_num']);
 
 //            $webhookBaseUrl = $clientCredentials['webhooks_base_url'] ?? "";
 //            $dedup = $data['complaint_key'] . "|" . $data['complaint_uuid'];
@@ -341,8 +343,24 @@ class ComplaintService
         }
 
         $this->syncCollectorAttachments((int) $idComplaint, $attachments);
+        $this->notifyNewComplaint((int) $idComplaint, $data, $client, null);
 
         return (int) $idComplaint;
+    }
+
+    /** Nowa reklamacja od franczyzobiorcy : powiadomienie w dzwonku (raz na reklamację). */
+    private function notifyNewComplaint(int $idComplaint, array $data, array $client, ?string $invoiceNum): void
+    {
+        $who = $client['company'] ?? ('klienta #' . $client['id']);
+        $this->appNotificationService->publish(
+            'new_complaint',
+            'warning',
+            'Wpłynęła nowa reklamacja',
+            'Reklamacja od ' . $who . ($invoiceNum ? ' (faktura ' . $invoiceNum . ')' : '') . '.',
+            '/franchise-complaints',
+            ['id_complaint' => $idComplaint, 'complaint_key' => $data['complaint_key'] ?? null],
+            'new_complaint:' . ($data['complaint_uuid'] ?? $data['complaint_key'] ?? $idComplaint)
+        );
     }
 
     private function syncCollectorAttachments(int $complaintId, array $attachments): void
