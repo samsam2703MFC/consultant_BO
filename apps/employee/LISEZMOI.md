@@ -94,7 +94,7 @@ commande**.
   le détail liste ses clients sans leur nom (« Client du 12/10 · 1 commande ce mois · 420 € HT · jusqu'au 12/01 »).
   Un mois à venir montre la règle. Textes dans les cinq langues.
 
-Le tableau du cockpit (`#/primes-app-worker`, demande : « un beau tableau, simple, minimaliste type Apple ») : des
+Le tableau du cockpit (`#/primes`, demande : « un beau tableau, simple, minimaliste type Apple ») : des
 listes groupées façon Réglages d'iPhone — Targets, Catégories, Promos, Clients pro · B2B —, une ligne par prime
 (l'interrupteur, le nom, ce qui compte en gris, la récompense et qui paie à droite) ; toucher la ligne la modifie.
 

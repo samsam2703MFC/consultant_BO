@@ -3,8 +3,8 @@
 Le module comprend les primes de l'app worker, les ventes croisées, la meilleure vendeuse, le record, la prime B2B et
 les grands prix de l'année. Il a trois portes :
 
-- la page admin (`#/primes-app-worker`) ;
-- la page franchisé (`#/primes-app-worker?shop=3`) ;
+- la page admin (`#/primes`) ;
+- la page franchisé (`#/primes?shop=3`) ;
 - l'application employé (`apps/employee`).
 
 Le module doit pouvoir être remis tel quel à l'intégrateur de l'ERP. Ses données vivent donc dans ses propres

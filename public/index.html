@@ -23,7 +23,7 @@
     if (new URLSearchParams(location.search).get('app') !== 'consultant') { return; }
     document.documentElement.setAttribute('data-app', 'consultant');
     var l = document.createElement('link'); l.rel = 'manifest'; l.href = 'consultant.webmanifest'; document.head.appendChild(l);
-    if (!location.hash || location.hash === '#' || location.hash === '#/') { location.hash = '#/fiche-franchise'; }
+    if (!location.hash || location.hash === '#' || location.hash === '#/') { location.hash = '#/fiche'; }
   } catch (e) { /* sans app : le cockpit */ }
 })();
 </script>

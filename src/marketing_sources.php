@@ -283,7 +283,7 @@ function ep_marketing_sources(): array
             ['nom' => 'Assistant de campagne', 'adresse' => 'assistant/', 'api' => '/api/v1/marketing',
                 'quoi' => 'Copie de l’API du module marketing autonome (public/api/marketing), tables mar_* ; reprend le catalogue des gammes depuis l’ERP TFBuddy.',
                 'tfbuddy' => true, 'configure' => !empty($apis['erp']['configure'])],
-            ['nom' => 'Écrans du cockpit', 'adresse' => '#/campagnes, #/budget-campagnes, #/brand-guard…', 'api' => '/api/cockpit',
+            ['nom' => 'Écrans du cockpit', 'adresse' => '#/campagnes, #/budget-campagnes, #/brandguard…', 'api' => '/api/cockpit',
                 'quoi' => 'Calendrier, budget, mesure et note de campagne ; mêmes données que le module.', 'tfbuddy' => false, 'configure' => true],
         ],
         'limites' => 'Lu dans le code, par motifs : un nom de table fabriqué à l’exécution échappe à l’analyse, et une fonction suivie compte toutes ses branches — même celles que la route n’emprunte pas.',
