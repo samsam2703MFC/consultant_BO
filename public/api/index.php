@@ -98,6 +98,7 @@ require __DIR__ . '/../../src/primes_b2b.php';
 require __DIR__ . '/../../src/api_module.php';
 require __DIR__ . '/../../src/grands_prix.php';
 require __DIR__ . '/../../src/promos_magasin.php';
+require __DIR__ . '/../../src/promos_bons.php';
 require __DIR__ . '/../../src/promos_doc.php';
 require __DIR__ . '/../../src/sms.php';
 require __DIR__ . '/../../src/recurrence_pwa.php';
@@ -262,6 +263,8 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/promos-magasin'   => ep_promos_magasin_demandes(),
             $path === '/exploitation/promos-magasin/produits' => ep_promos_magasin_produits(),
             $path === '/exploitation/promos-magasin/canaux' => ep_promos_magasin_canaux(),
+            $path === '/exploitation/promos-magasin/clients' => ep_promos_magasin_clients(),
+            $path === '/exploitation/promos-magasin/bon' => ep_promos_magasin_bon(),
             $path === '/promos-magasin'                => ep_promos_magasin_marque(),
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
             $path === '/exploitation/bundles/sonde'    => ep_bundles_sonde(),
@@ -543,6 +546,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/exploitation/ponderation-jours') { return wr_ponderation_jours(); }
     if ($method === 'POST' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin(); }
     if ($method === 'DELETE' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin_retirer(); }
+    if ($method === 'POST' && $path === '/exploitation/promos-magasin/bon') { return wr_promos_magasin_bon(); }
     if ($method === 'POST' && $path === '/plan/engagement') { return wr_plan_engagement(); }
     if ($method === 'POST' && $path === '/plan/action') { return wr_plan_action(); }
     if ($method === 'POST' && $path === '/plan/trimestre') { return wr_plan_trimestre(); }

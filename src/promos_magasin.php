@@ -127,6 +127,8 @@ function pmPropre(array $b, int $shop): array
         // Les conditions du ticket (23/10/2026) : où la promotion vaut, et le montant minimal du ticket (TTC, avant remise).
         'canal' => in_array($b['canal'] ?? '', ['comptoir', 'webshop'], true) ? (string) $b['canal'] : 'tous',
         'seuil' => is_numeric($b['seuil'] ?? null) && (float) $b['seuil'] > 0 ? round(min(1000.0, (float) $b['seuil']), 2) : null,
+        // Le bon (24/10/2026) : la promotion ne s'applique qu'avec un de ses codes (promos_bons.php). Null : automatique.
+        'bon' => function_exists('pbBon') ? pbBon($b['bon'] ?? null) : null,
     ];
 }
 
@@ -624,7 +626,7 @@ function pmPanelHoraire(array $creneaux, bool $secondes = true): array
 /**
  * Le corps d'une promotion « Buy X Get Y » du panel, au format de sa fiche (GET /admin/promotions/buy-x-get-y/{id},
  * relue le 17/10/2026 sur « 10 + 2 ») : le magasin seul (SELECTED_SHOPS), priorité 100, non exclusive, activation
- * automatique, la pièce la moins chère récompensée (CHEAPEST). Les valeurs de l'avantage sont celles de la caisse (TTC).
+ * automatique — par code avec un bon (VOUCHER_ONLY, 24/10/2026) —, la pièce la moins chère récompensée (CHEAPEST). Les valeurs de l'avantage sont celles de la caisse (TTC).
  */
 function pmPanelCorps(array $d, string $statut, bool $secondes = true): array
 {
@@ -646,7 +648,8 @@ function pmPanelCorps(array $d, string $statut, bool $secondes = true): array
         'promotion_type' => 'BUY_X_GET_Y', 'status' => $statut, 'priority' => 100, 'is_exclusive' => false,
         'valid_from' => $d['du'] !== null ? $d['du'] . ':00' : null, 'valid_to' => $d['au'] !== null ? $d['au'] . ':00' : null,
         'is_repeatable' => (bool) $d['repetable'], 'max_applications_per_transaction' => $d['repetable'] ? $d['maxParTicket'] : null,
-        'shop_scope_type' => 'SELECTED_SHOPS', 'activation_mode' => 'AUTOMATIC', 'shop_ids' => [(int) $d['shop']],
+        // Avec un bon (24/10/2026) : VOUCHER_ONLY, la caisse ne l'applique qu'avec un code de sa campagne.
+        'shop_scope_type' => 'SELECTED_SHOPS', 'activation_mode' => !empty($d['bon']) ? 'VOUCHER_ONLY' : 'AUTOMATIC', 'shop_ids' => [(int) $d['shop']],
         'schedule' => pmPanelHoraire($d['creneaux'] ?? [], $secondes),
         'trigger' => $cote($d['x']),
         'reward' => $cote($y) + ['type' => $y['type'], 'value' => $y['type'] === 'FREE' ? null : $y['valeur'], 'selection_strategy' => 'CHEAPEST'],
@@ -769,6 +772,8 @@ function pmPanelEcarts(array $envoye, array $relu): array
     if (strtoupper((string) ($r['type'] ?? '')) !== $envoye['reward']['type']) { $e[] = 'type d’avantage'; }
     if ($envoye['reward']['value'] !== null && abs((float) ($r['value'] ?? 0) - (float) $envoye['reward']['value']) > 0.005) { $e[] = 'valeur de l’avantage'; }
     if (count((array) ($relu['schedule'] ?? [])) !== count($envoye['schedule'])) { $e[] = 'créneaux'; }
+    // Le mode d'activation (24/10/2026, le bon) : relu automatique, une promotion « par code » passerait en caisse pour tous.
+    if (isset($relu['activation_mode']) && strtoupper((string) $relu['activation_mode']) !== $envoye['activation_mode']) { $e[] = 'le déclenchement (automatique ou par bon)'; }
     return $e;
 }
 
@@ -861,6 +866,8 @@ function pmDemande(array $r): array
         'au' => $r['auH'] ?? (($r['au'] ?? null) !== null ? $r['au'] . ' 23:59' : null),
         'creneaux' => (array) ($r['creneaux'] ?? []), 'repetable' => !empty($r['repetable']), 'maxParTicket' => $r['maxParTicket'] ?? null,
         'canaux' => $r['canaux'] ?? null, 'seuil' => $r['seuil'] ?? null,
+        // Déclenchée par un bon (24/10/2026) : la campagne du panel, quand la fiche la nomme (sinon pbCampagneDe la cherche).
+        'bon' => strtoupper((string) ($r['activation'] ?? '')) === 'VOUCHER_ONLY' ? ['campagne' => $r['campagne'] ?? null] : null,
         'statut' => strtoupper((string) ($r['statut'] ?? '')) === 'ACTIVE' ? 'en_caisse' : 'brouillon'];
 }
 
@@ -1204,7 +1211,9 @@ function ep_promos_magasin_demandes(): array
 
 /**
  * POST /exploitation/promos-magasin {shop, id? (« p21 » : la promotion n° 21 du panel), action: brouillon|envoyer, nom,
- * description, x, y, du, au, creneaux, repetable, maxParTicket} — écrit au panel, et rien ailleurs (18/10/2026).
+ * description, x, y, du, au, creneaux, repetable, maxParTicket, bon?} — écrit au panel, et rien ailleurs (18/10/2026).
+ * `bon` (24/10/2026) : {on, cible: code|uniques|clients, code, limite, nombre, prefixe, clients: [{id, nom}]} — la
+ * promotion passe « par code » et sa campagne s'écrit avec elle (promos_bons.php, pbEnvoyer).
  * « envoyer » : les règles du magasin (422 sinon), ce qui ne se chiffre pas sort d'office, puis créée (POST) ou modifiée
  * (PUT) INACTIVE, relue, activée : en caisse. « brouillon » : la même écriture laissée INACTIVE (une promotion en caisse
  * ne repasse pas en brouillon : 409). Le panel refuse : 502, rien n'est créé. Créée mais pas activée : 200 avec
@@ -1244,7 +1253,7 @@ function wr_promos_magasin(): array
         // ne compte pas dans les deux à la fois, et une période passée se corrige plus tard.
         $err = pmErreurs($saisie, null, '0000-00-00 00:00');
     }
-    $err = array_merge($err, pmConditionsInconnues($d));
+    $err = array_merge($err, pmConditionsInconnues($d), function_exists('pbErreurs') ? pbErreurs($d['bon'] ?? null) : []);
     if ($err !== []) { http_response_code(422); return ['error' => 'à compléter', 'erreurs' => $err, 'coef' => $coef]; }
     // Une portion visée : la portion de chaque produit, lue au panel (21/10/2026).
     [$d, $errP] = pmCiblesPortions($d, $shop);
@@ -1257,14 +1266,19 @@ function wr_promos_magasin(): array
         return ['error' => 'un envoi au panel est déjà en cours pour ce magasin : relisez dans un instant'];
     }
     try {
-        $r = pmPanelEnvoyer($d, $panelId, $envoi);
+        // Avec un bon, ou une promotion qui en avait un (24/10/2026) : la promotion et sa campagne, dans l'ordre du panel.
+        $campAvant = isset($actuelle) && ($actuelle['bon'] ?? null) !== null && function_exists('pbCampagneDe')
+            ? (($actuelle['bon']['campagne'] ?? null) ?: pbCampagneDe((int) $panelId)) : null;
+        $r = function_exists('pbEnvoyer') && (($d['bon'] ?? null) !== null || $campAvant !== null)
+            ? pbEnvoyer($d, $panelId, $envoi, $campAvant) : pmPanelEnvoyer($d, $panelId, $envoi);
         $dem = $r['id'] !== null ? pmRelue((int) $r['id']) : null;
     } finally {
         if ($verrou !== false) { flock($verrou, LOCK_UN); fclose($verrou); }
     }
     if ($r['id'] === null) { http_response_code(502); return ['error' => $r['erreur'] ?? 'le panel refuse la promotion', 'coef' => $coef]; }
     $dem = $dem ?? ($d + ['id' => 'p' . $r['id'], 'panelId' => (int) $r['id'], 'statut' => $r['ok'] && $envoi ? 'en_caisse' : 'brouillon']);
-    return ['ok' => true, 'demande' => $dem, 'coef' => $coef, 'exclusAuto' => $exclusAuto, 'panelErreur' => $r['ok'] ? null : $r['erreur']];
+    return ['ok' => true, 'demande' => $dem, 'coef' => $coef, 'exclusAuto' => $exclusAuto, 'panelErreur' => $r['ok'] ? null : $r['erreur'],
+        'bon' => ($r['campagne'] ?? null) !== null && function_exists('pbLire') ? pbLire((int) $r['campagne']) : null];
 }
 
 /**
