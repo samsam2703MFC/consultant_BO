@@ -1,11 +1,8 @@
 <?php
 namespace App\Repositories\Stock\FinalProduct;
 
-use App\Domain\Client\Order\OpenOrders;
-use App\Domain\Stock\ToProduce;
 
 use App\Core\Helpers\BaseRepository;
-use App\Repositories\Analysis\WdtSalesRepository;
 
 /**
  * User class
@@ -86,121 +83,6 @@ class FinalProductStockRepository extends BaseRepository
         return $this->query($sql, ['category' => $idCategory]);
     }
 
-    public function getPendingOrderOptions(): array
-    {
-        $sql = "SELECT
-                    co.id,
-                    co.reference,
-                    co.expected_shipping_date,
-                    co.create_order_date,
-                    COALESCE(NULLIF(c.company, ''), CONCAT(c.name, ' ', c.surname)) as customer_name,
-                    IFNULL(SUM(cop.quantity_carton), 0) as total_cartons
-                FROM customer_order co
-                INNER JOIN customer c
-                    ON co.id_customer = c.id
-                LEFT JOIN customer_order_product cop
-                    ON cop.id_order = co.id
-                WHERE " . OpenOrders::sql('co') . "
-                GROUP BY co.id
-                ORDER BY co.expected_shipping_date, customer_name, co.id";
-
-        return $this->query($sql) ?: [];
-    }
-
-    public function getSupplyMonitorRows(array $orderIds = []): array
-    {
-        $orderIds = $this->sanitizeIds($orderIds);
-        $orderFilter = '';
-
-        if (!empty($orderIds)) {
-            $orderFilter = ' AND co.id IN (' . implode(',', $orderIds) . ')';
-        } else {
-            $orderFilter = ' AND 1 = 0';
-        }
-
-        $sql = "SELECT
-                    fp.id as id_product,
-                    fp.name,
-                    COALESCE(sec.name, 'Bez działu') as section_name,
-                    COALESCE(cp.name, 'Bez kategorii') as category_name,
-                    IFNULL(fp.cpp, 0) as cartons_per_pallet,
-                    IFNULL(ord.ordered_quantity, 0) as ordered_quantity,
-                    IFNULL(stock.in_stock, 0) as in_stock,
-                    IFNULL(stock.palletised, 0) as palletised,
-                    IFNULL(stock.in_stock, 0) + IFNULL(stock.palletised, 0) as total_available,
-                    " . ToProduce::minCartonsSql('ts', 'fp') . " as stock_min_cartons,
-                    IF(fp.ppc > 0, IFNULL(mo.pieces, 0) / fp.ppc, 0) as in_production,
-                    ROUND(IFNULL(wdt4.sold_quantity, 0) / 4, 2) as avg_sold_last_4_weeks,
-                    IFNULL(yoy.ordered_quantity_yoy, 0) as ordered_quantity_yoy
-                FROM final_product fp
-                LEFT JOIN category_product cp
-                    ON fp.id_category = cp.id
-                LEFT JOIN production_sections sec
-                    ON fp.id_section = sec.id
-                LEFT JOIN n_prod_item ti
-                    ON ti.id_final_product = fp.id
-                LEFT JOIN n_prod_product_settings ts
-                    ON ts.id_item = ti.id
-                LEFT JOIN (SELECT id_item, SUM(quantity) as pieces FROM n_prod_order
-                           WHERE " . ToProduce::IN_PRODUCTION_WHERE . " GROUP BY id_item) mo
-                    ON mo.id_item = ti.id
-                LEFT JOIN (
-                    SELECT
-                        cop.id_product,
-                        SUM(cop.quantity_carton) as ordered_quantity
-                    FROM customer_order_product cop
-                    INNER JOIN customer_order co
-                        ON cop.id_order = co.id
-                    WHERE " . OpenOrders::quantitySql('co') . " {$orderFilter}
-                    GROUP BY cop.id_product
-                ) ord
-                    ON fp.id = ord.id_product
-                LEFT JOIN (
-                    SELECT
-                        cs.id_product,
-                        SUM(CASE WHEN cs.status = 1 THEN 1 ELSE 0 END) as in_stock,
-                        SUM(CASE WHEN cs.status = 2 THEN 1 ELSE 0 END) as palletised
-                    FROM carton_stock cs
-                    WHERE cs.status IN (1, 2)
-                    GROUP BY cs.id_product
-                ) stock
-                    ON fp.id = stock.id_product
-                LEFT JOIN (
-                    SELECT
-                        wdtp.id_product,
-                        SUM(wdtp.cartons) as sold_quantity
-                    FROM (" . WdtSalesRepository::linesSql() . ") wdtp
-                    WHERE wdtp.sale_date >= DATE_SUB(CURDATE(), INTERVAL 28 DAY)
-                      AND wdtp.sale_date < CURDATE()
-                    GROUP BY wdtp.id_product
-                ) wdt4
-                    ON fp.id = wdt4.id_product
-                LEFT JOIN (
-                    SELECT
-                        cop_prev.id_product,
-                        SUM(cop_prev.quantity_carton) as ordered_quantity_yoy
-                    FROM customer_order_product cop_prev
-                    INNER JOIN customer_order co_prev
-                        ON cop_prev.id_order = co_prev.id
-                    INNER JOIN (
-                        SELECT
-                            DATE_SUB(MIN(DATE(co.expected_shipping_date)), INTERVAL 1 YEAR) as date_from,
-                            DATE_SUB(MAX(DATE(co.expected_shipping_date)), INTERVAL 1 YEAR) as date_to
-                        FROM customer_order co
-                        WHERE " . OpenOrders::sql('co') . " {$orderFilter}
-                    ) period
-                    WHERE DATE(co_prev.expected_shipping_date) BETWEEN period.date_from AND period.date_to
-                    GROUP BY cop_prev.id_product
-                ) yoy
-                    ON fp.id = yoy.id_product
-                WHERE IFNULL(ord.ordered_quantity, 0) > 0
-                   OR IFNULL(stock.in_stock, 0) > 0
-                   OR IFNULL(stock.palletised, 0) > 0
-                ORDER BY sec.name, cp.name, ordered_quantity DESC, fp.name";
-
-        return $this->query($sql) ?: [];
-    }
-
     public function getProductsInStock()
     {
         $sql = "SELECT 
@@ -216,13 +98,5 @@ class FinalProductStockRepository extends BaseRepository
                 GROUP BY cs.id_product
                 ORDER BY fp.name";
         return $this->query($sql, [],'assoc');
-    }
-
-    private function sanitizeIds(array $ids): array
-    {
-        $ids = array_map('intval', $ids);
-        $ids = array_filter($ids, fn($id) => $id > 0);
-
-        return array_values(array_unique($ids));
     }
 }

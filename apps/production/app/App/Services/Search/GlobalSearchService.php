@@ -16,7 +16,7 @@ class GlobalSearchService
     public const PER_TYPE = 5;
     private const MAX_LENGTH = 100;
 
-    private const PROFORMA_STATUS = ['issued' => 'nieopłacona', 'paid' => 'opłacona', 'cancelled' => 'anulowana'];
+    private const PROFORMA_STATUS = ['issued' => 'nieopłacona', 'paid' => 'opłacona', 'cancelled' => 'anulowana', 'archived' => 'zarchiwizowana'];
     /** product_recipe.id_type → rodzaj i strona kalkulacji. */
     private const RECIPE_KIND = [1 => ['Kompozycja', '/compositions'], 2 => ['Półprodukt', '/semi-products'], 3 => ['Receptura produktu', '/recipes']];
 

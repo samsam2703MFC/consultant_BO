@@ -64,6 +64,8 @@
                                                 <span class="badge bg-success">Opłacona</span>
                                             <?php elseif (strtolower(trim((string) ($row['proforma_status'] ?? ''))) === 'cancelled'): ?>
                                                 <span class="badge bg-danger">Anulowana</span>
+                                            <?php elseif (strtolower(trim((string) ($row['proforma_status'] ?? ''))) === 'archived'): ?>
+                                                <span class="badge bg-light text-dark border" title="Stara proforma bez płatności (ponad 90 dni) : poza przypomnieniami i należnościami">Zarchiwizowana</span>
                                             <?php else: ?>
                                                 <span class="badge bg-secondary">Nieopłacona</span>
                                             <?php endif; ?>
@@ -83,7 +85,7 @@
                                                         Oznacz jako opłaconą
                                                     </button>
                                                 <?php endif; ?>
-                                                <?php if (!in_array(strtolower(trim((string) ($row['proforma_status'] ?? ''))), ['paid', 'cancelled'], true)): ?>
+                                                <?php if (!in_array(strtolower(trim((string) ($row['proforma_status'] ?? ''))), ['paid', 'cancelled', 'archived'], true)): ?>
                                                     <a class="btn btn-outline-secondary" href="<?= ROOT ?>/communication/payment-reminders" title="Przypomnienia o potwierdzeniu płatności 1–5">
                                                         <i class="bi bi-bell"></i>
                                                     </a>

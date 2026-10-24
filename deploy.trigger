@@ -1033,3 +1033,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T09:38:01Z #132 dostawy surowców
 2026-10-24T09:53:29Z #134 rentowność grup tydzień
 2026-10-24T10:23:40Z tablette dostawy + lien rentowność tydzień
+2026-10-24T10:48:55Z #138 décisions : proformas archivées, WDT 0 %, Stan magazynu seul

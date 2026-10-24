@@ -104,6 +104,13 @@ final class ItemService
             if ($item['price_eur'] === null) $t['no_price']++;
             if ($item['target_cartons'] > 0 && $item['cpp'] === null) $t['no_cpp']++;
         };
+        // Dawne /stock : zamówienia otwarte klient po kliencie i zamówione rok temu w tym samym okresie wysyłek.
+        $orderLines = [];
+        foreach ($this->items->openOrderLines() as $o) {
+            $orderLines[(int) $o['id_product']][] = ['order_id' => (int) $o['order_id'], 'customer' => $o['customer'], 'reference' => $o['reference'],
+                'shipping_date' => $o['shipping_date'], 'cartons' => (float) $o['cartons']];
+        }
+        $yearAgo = $this->items->orderedYearAgo();
         foreach ($this->items->stockOverview($weeks * 7, $groupId, null, in_array($erp, ['inactive', 'all'], true) ? $erp : 'active') as $r) {
             $ppc = (int) $r['ppc'] > 0 ? (int) $r['ppc'] : null;
             $cpp = (int) $r['cpp'] > 0 ? (int) $r['cpp'] : null;
@@ -137,6 +144,10 @@ final class ItemService
             $item['target_value_eur'] = $item['price_eur'] !== null ? round($target * $item['price_eur'], 2) : null;
             $item['target_cost_eur'] = $item['cost_eur'] !== null ? round($target * $item['cost_eur'], 2) : null;
             $item['current_value_eur'] = $item['price_eur'] !== null ? round($item['free_cartons'] * $item['price_eur'], 2) : null;
+            // Pokrycie : stan (wolne + na paletach) ÷ średnia sprzedaż tygodnia ; zamówienia otwarte i rok temu.
+            $item['coverage_weeks'] = $weekly > 0 ? round(($item['free_cartons'] + $item['palletised_cartons']) / $weekly, 1) : null;
+            $item['orders'] = $orderLines[(int) $r['id_final_product']] ?? [];
+            $item['ordered_year_ago_cartons'] = $yearAgo[(int) $r['id_final_product']] ?? 0.0;
             $categories[$key]['items'][] = $item;
             $add($categories[$key]['totals'], $item, $weekly, $optimal);
             $g = $item['group_id'] ?? 0;

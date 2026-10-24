@@ -25,7 +25,9 @@ class ProformaService implements IDocument
     private array $proformaStatuses = [
         "issued",
         "paid",
-        "cancelled"
+        "cancelled",
+        // Stara proforma bez płatności (ponad 90 dni) : poza przypomnieniami i należnościami.
+        "archived"
     ];
 
     public function __construct(

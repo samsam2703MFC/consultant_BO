@@ -87,7 +87,7 @@ class ProformaRepository extends BaseRepository
              FROM document_proforma dp
              INNER JOIN customer c ON c.id = dp.id_customer
              LEFT JOIN document_proforma_product dpp ON dpp.id_proforma = dp.id
-             WHERE LOWER(COALESCE(dp.status, 'issued')) NOT IN ('paid', 'cancelled')
+             WHERE LOWER(COALESCE(dp.status, 'issued')) NOT IN ('paid', 'cancelled', 'archived')
              GROUP BY dp.id, dp.doc_num, dp.established_date, dp.id_customer, c.company
              ORDER BY dp.established_date DESC, dp.id DESC"
         ) ?: [];
