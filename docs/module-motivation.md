@@ -7,6 +7,9 @@ les grands prix de l'année. Il a trois portes :
 - la page franchisé (`#/primes?shop=3`) ;
 - l'application employé (`apps/employee`).
 
+Ce que ces trois portes appellent, source par source, et ce que chaque route répond à l'instant : l'écran « API du
+module » (`#/api`, rail › Application employé › API du module ; `src/api_module.php`, `GET /ventes/primes-api`).
+
 Le module doit pouvoir être remis tel quel à l'intégrateur de l'ERP. Ses données vivent donc dans ses propres
 tables, toutes sous le préfixe `mot_` (décision du 23/10/2026, Sam).
 

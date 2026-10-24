@@ -24,7 +24,7 @@ const MOT_REGLAGES = ['ventePrimesApp', 'venteCroisees', 'ventePrimes', 'ventePr
 const MOT_REGLAGES_DEBUT = ['primesSms'];
 /** Les caches du module, par début de clé. */
 const MOT_CACHES_DEBUT = ['primesColl', 'primesClos', 'primesMoi', 'primesS12', 'primesTous', 'primesEq', 'primesAn', 'primesJeton',
-    'primesPromos3', 'primesCatalogue', 'prMoy', 'b2bM', 'pvJ', 'vmMois', 'grandsPrix'];
+    'primesPromos3', 'primesCatalogue', 'prMoy', 'b2bM', 'pvJ', 'vmMois', 'grandsPrix', 'apiModule'];
 /** La ligne de mot_reglage qui dit que la reprise depuis ceo_app_setting est faite. */
 const MOT_REPRISE = '_repris_de_ceo_app_setting';
 

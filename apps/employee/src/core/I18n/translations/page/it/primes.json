@@ -365,5 +365,6 @@
   "gp_won_by": "vinto da {n}",
   "gp_season": "dal {du} al {au}",
   "gp_sponsor_site": "Lo sponsor",
-  "gp_note": "Si gioca su tutta la stagione; il minimo di ore o di scontrini cresce con essa. La classifica si aggiorna ogni quindici minuti."
+  "gp_note": "Si gioca su tutta la stagione; il minimo di ore o di scontrini cresce con essa. La classifica si aggiorna ogni quindici minuti.",
+  "step1_line_set": "La tua media del mese, {v} articoli per scontrino, diventa il tuo record: il mese prossimo, {o} vale {e} €, poi {e} € per ogni decimo in più."
 }

@@ -130,7 +130,7 @@ function vcTa(string $quand, int $delai, string $libelle): array
 function vcTypesDefaut(): array
 {
     $t = [];
-    $t['reguliere'] = ['code' => 'reguliere', 'nom' => 'Régulière', 'duree' => 90, 'profil' => '', 'actif' => true, 'dynamique' => null,
+    $t['reguliere'] = ['code' => 'reguliere', 'annoncee' => true, 'nom' => 'Régulière', 'duree' => 90, 'profil' => '', 'actif' => true, 'dynamique' => null,
         'checklist' => null, 'taches' => [
             vcTa('avant', 2, 'Relire la dernière review et les plans d’action ouverts'),
             vcTa('avant', 2, 'Lire les tâches sautées de la semaine dans le panel'),
@@ -138,7 +138,7 @@ function vcTypesDefaut(): array
             vcTa('pendant', 0, 'La checklist, les photos, la review avec le franchisé'),
             vcTa('apres', 1, 'Envoyer la review et ouvrir les plans d’action'),
             vcTa('apres', 1, 'Noter la visite dans le panel (note de type VISIT)')]];
-    $t['production'] = ['code' => 'production', 'nom' => 'Production', 'duree' => 180, 'profil' => 'production', 'actif' => true, 'dynamique' => null,
+    $t['production'] = ['code' => 'production', 'annoncee' => true, 'nom' => 'Production', 'duree' => 180, 'profil' => 'production', 'actif' => true, 'dynamique' => null,
         'checklist' => [
             ['id' => 'mise_place', 'nom' => 'Mise en place', 'points' => [vcPt('plan_jour', 'Plan de production du jour affiché et suivi'), vcPt('pesees', 'Pesées et recettes respectées', true), vcPt('levee', 'Levée et façonnage : temps et température'), vcPt('stock_mat', 'Stock matières : rotation, DLC', true)]],
             ['id' => 'cuisson', 'nom' => 'Cuisson', 'points' => [vcPt('pain_cuit', 'Pain : couleur, croûte, cuisson à cœur', true), vcPt('vien_cuit', 'Viennoiserie : feuilletage, dorure', true), vcPt('fours', 'Fours : températures et programmes'), vcPt('sortie', 'Sortie de four : refroidissement, grilles')]],
@@ -150,7 +150,7 @@ function vcTypesDefaut(): array
             vcTa('pendant', 0, 'Les 14 points, les photos, 30 min avec le responsable de production'),
             vcTa('apres', 1, 'Review et plan d’action production'),
             vcTa('apres', 7, 'Vérifier l’écart production / ventes de la semaine suivante')]];
-    $t['hygiene'] = ['code' => 'hygiene', 'nom' => 'Hygiène et qualité', 'duree' => 60, 'profil' => 'operations', 'actif' => true, 'dynamique' => null,
+    $t['hygiene'] = ['code' => 'hygiene', 'annoncee' => false, 'nom' => 'Hygiène et qualité', 'duree' => 60, 'profil' => 'operations', 'actif' => true, 'dynamique' => null,
         'checklist' => [
             ['id' => 'hygiene', 'nom' => 'Hygiène', 'points' => [vcPt('sol', 'Sol zone production propre'), vcPt('frigo', 'Frigo vitrine ≤ 4 °C (photo du thermomètre)', true), vcPt('arriere', 'Zone arrière et réserve', true), vcPt('sanitaires', 'Sanitaires, lave-mains, savon'), vcPt('tenues', 'Tenues, cheveux, gants')]],
             ['id' => 'qualite', 'nom' => 'Qualité', 'points' => [vcPt('recette', 'Produits du jour conformes à la recette et au visuel', true), vcPt('dlc', 'DLC et étiquetage des préparations'), vcPt('froid', 'Chaîne du froid : relevés du jour tenus'), vcPt('allergenes', 'Allergènes affichés et à jour')]],
@@ -160,13 +160,13 @@ function vcTypesDefaut(): array
             vcTa('pendant', 0, 'Les 12 points, le thermomètre en photo'),
             vcTa('apres', 1, 'Review hygiène et plan d’action (P0 si température ou propreté)'),
             vcTa('apres', 7, 'Revérifier les corrections P0 sur photo')]];
-    $t['msp'] = ['code' => 'msp', 'nom' => 'Client mystère', 'duree' => 45, 'profil' => 'operations', 'actif' => true, 'dynamique' => null,
+    $t['msp'] = ['code' => 'msp', 'annoncee' => false, 'nom' => 'Client mystère', 'duree' => 45, 'profil' => 'operations', 'actif' => true, 'dynamique' => null,
         'checklist' => [['id' => 'msp', 'nom' => 'Client mystère', 'points' => [vcPt('accueil', 'Accueil : bonjour, sourire, disponibilité'), vcPt('attente', 'Temps d’attente et gestion de la file'), vcPt('conseil', 'Conseil et connaissance des produits'), vcPt('additionnelle', 'Vente additionnelle proposée'), vcPt('proprete', 'Propreté visible depuis la file', true), vcPt('presentation', 'Produits présentés et étiquetés', true), vcPt('encaissement', 'Encaissement : ticket, monnaie, carte'), vcPt('aurevoir', 'Au revoir et invitation à revenir')]]],
         'taches' => [
             vcTa('avant', 1, 'Choisir l’heure et le panier du passage, prévenir personne'),
             vcTa('pendant', 0, 'Le passage, les 8 points notés aussitôt'),
             vcTa('apres', 2, 'Encoder le rapport (obtenu / maximum) dans le scoring du trimestre')]];
-    $t['bilan'] = ['code' => 'bilan', 'nom' => 'Bilan trimestriel', 'duree' => 120, 'profil' => 'strategie', 'actif' => true, 'dynamique' => null,
+    $t['bilan'] = ['code' => 'bilan', 'annoncee' => true, 'nom' => 'Bilan trimestriel', 'duree' => 120, 'profil' => 'strategie', 'actif' => true, 'dynamique' => null,
         'checklist' => [['id' => 'bilan', 'nom' => 'Bilan', 'points' => [vcPt('scoring', 'Scoring du trimestre présenté et commenté'), vcPt('google', 'Note Google : avis, réponses, cible'), vcPt('taches', 'Tâches du panel : obligatoires manquées, photos'), vcPt('msp_bilan', 'Client mystère : points relevés, corrigés'), vcPt('budget', 'Budget : CA face au budget, mois par mois'), vcPt('pnl', 'P&L : food cost, main-d’œuvre, résultat'), vcPt('invendus', 'Invendus : taux et causes'), vcPt('plan_dev', 'Plan de développement : jalons du trimestre'), vcPt('objectifs', 'Objectifs du trimestre suivant posés'), vcPt('engagement', 'Engagement du franchisé noté')]]],
         'taches' => [
             vcTa('avant', 5, 'Calculer le scoring du trimestre et préparer le rapport A4'),
@@ -174,7 +174,7 @@ function vcTypesDefaut(): array
             vcTa('pendant', 0, 'Le bilan avec le franchisé, les objectifs du trimestre suivant'),
             vcTa('apres', 1, 'Envoyer le rapport et le compte rendu'),
             vcTa('apres', 7, 'Poser les objectifs dans le cockpit (budget, objectifs produits)')]];
-    $t['ouverture'] = ['code' => 'ouverture', 'nom' => 'Ouverture / lancement', 'duree' => 240, 'profil' => 'strategie', 'actif' => true, 'dynamique' => null,
+    $t['ouverture'] = ['code' => 'ouverture', 'annoncee' => true, 'nom' => 'Ouverture / lancement', 'duree' => 240, 'profil' => 'strategie', 'actif' => true, 'dynamique' => null,
         'checklist' => [
             ['id' => 'prepa', 'nom' => 'Préparation', 'points' => [vcPt('travaux', 'Travaux et agencement conformes au plan', true), vcPt('materiel', 'Matériel livré, installé, testé'), vcPt('caisse', 'Caisse, panel et dashboard reliés'), vcPt('stock', 'Stock de départ et matières livrés'), vcPt('plano_init', 'Planogramme monté', true), vcPt('enseigne', 'Enseigne, façade, vitrine', true)]],
             ['id' => 'equipe', 'nom' => 'Équipe', 'points' => [vcPt('effectif', 'Effectif recruté et planning posé'), vcPt('formation', 'Formation production et vente faite'), vcPt('tenues', 'Tenues et hygiène expliquées'), vcPt('app', 'App worker et tâches du panel en main')]],
@@ -190,11 +190,11 @@ function vcTypesDefaut(): array
             vcTa('apres', 7, 'Point à J+7'),
             vcTa('apres', 30, 'Point à J+30'),
             vcTa('apres', 30, 'Passer le magasin au cadre régulier')]];
-    $t['suivi'] = ['code' => 'suivi', 'nom' => 'Suivi plan d’action', 'duree' => 45, 'profil' => '', 'actif' => true, 'dynamique' => 'plans',
+    $t['suivi'] = ['code' => 'suivi', 'annoncee' => true, 'nom' => 'Suivi plan d’action', 'duree' => 45, 'profil' => '', 'actif' => true, 'dynamique' => 'plans',
         'checklist' => [], 'taches' => [
             vcTa('avant', 1, 'Relire les plans ouverts et les corrections envoyées'),
             vcTa('apres', 1, 'Valider ou renvoyer chaque correction')]];
-    $t['revisite'] = ['code' => 'revisite', 'nom' => 'Revisite', 'duree' => 60, 'profil' => '', 'actif' => true, 'dynamique' => 'ko',
+    $t['revisite'] = ['code' => 'revisite', 'annoncee' => false, 'nom' => 'Revisite', 'duree' => 60, 'profil' => '', 'actif' => true, 'dynamique' => 'ko',
         'checklist' => [], 'taches' => [
             vcTa('avant', 1, 'Relire les points non conformes de la dernière visite'),
             vcTa('apres', 1, 'Fermer les plans corrigés, renvoyer les autres')]];
@@ -218,7 +218,7 @@ function vcTypes(): array
         if (!is_array($t) || !preg_match('/^[a-z0-9_]{1,20}$/', (string) ($t['code'] ?? ''))) { continue; }
         $code = (string) $t['code'];
         $base = $defaut[$code] ?? ['code' => $code, 'nom' => $code, 'duree' => 90, 'profil' => '', 'actif' => true, 'dynamique' => null, 'checklist' => [], 'taches' => []];
-        $out[] = array_merge($base, array_intersect_key($t, array_flip(['nom', 'duree', 'profil', 'checklist', 'taches', 'actif', 'dynamique'])));
+        $out[] = array_merge($base, array_intersect_key($t, array_flip(['nom', 'duree', 'profil', 'checklist', 'taches', 'actif', 'dynamique', 'annoncee'])));
         $vus[$code] = true;
     }
     foreach ($defaut as $code => $t) { if (!isset($vus[$code])) { $out[] = $t; } }
@@ -228,6 +228,8 @@ function vcTypes(): array
         $t['profil'] = (string) $t['profil'];
         $t['profilNom'] = vcProfilNom($t['profil']);
         $t['actif'] = !isset($t['actif']) || (bool) $t['actif'];
+        // Annoncée : le franchisé reçoit l'ordre du jour, et sait si elle bouge ; inopinée : personne n'est prévenu.
+        $t['annoncee'] = !array_key_exists('annoncee', $t) || (bool) $t['annoncee'];
         $t['taches'] = array_values(is_array($t['taches']) ? $t['taches'] : []);
         $t['points'] = vcNbPoints($t['checklist']);
         $t['nbTaches'] = count($t['taches']);
@@ -253,7 +255,7 @@ function vcTypeCode(mixed $code): string
 function vcTypesCourts(): array
 {
     return array_map(fn ($t) => ['code' => $t['code'], 'nom' => $t['nom'], 'duree' => $t['duree'], 'profil' => $t['profil'], 'profilNom' => $t['profilNom'],
-        'actif' => $t['actif'], 'dynamique' => $t['dynamique'], 'points' => $t['points'], 'nbTaches' => $t['nbTaches']], vcTypes());
+        'actif' => $t['actif'], 'dynamique' => $t['dynamique'], 'annoncee' => $t['annoncee'], 'points' => $t['points'], 'nbTaches' => $t['nbTaches']], vcTypes());
 }
 
 /** Une checklist telle qu'on l'écrit : modules et points nettoyés. Les modules de la liste standard sont ceux du module Visites. */
@@ -427,6 +429,7 @@ function wr_visites_cadre_put(): array
             $x = ['code' => $code, 'nom' => mb_substr(trim((string) ($t['nom'] ?? $code)), 0, 60) ?: $code,
                 'duree' => max(15, min(480, (int) ($t['duree'] ?? 90))), 'profil' => in_array((string) ($t['profil'] ?? ''), $codes, true) ? (string) $t['profil'] : '',
                 'actif' => !isset($t['actif']) || (bool) $t['actif'], 'dynamique' => in_array($t['dynamique'] ?? null, ['plans', 'ko'], true) ? $t['dynamique'] : null,
+                'annoncee' => !array_key_exists('annoncee', $t) || (bool) $t['annoncee'],
                 'taches' => vcTachesNormalise($t['taches'] ?? [])];
             $cl = vcChecklistNormalise($t['checklist'] ?? [], $code === 'reguliere');
             if ($code === 'reguliere') {
@@ -602,6 +605,8 @@ function vcApresChangement(array $avant, array $apres): array
         Db::exec('UPDATE ceo_consultant_tache SET statut = \'fait\', fait_le = ?, maj_le = ? WHERE visite_id = ? AND quand = \'pendant\' AND statut IN (\'a_faire\', \'en_cours\')', [date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), (int) $apres['id']]);
         $out['note'] = vcNotePanel($apres);
     }
+    // Une visite annoncée déplacée ou annulée après l'ordre du jour : le franchisé est prévenu, dans sa langue.
+    if (($bouge || $annulee) && function_exists('suApresChangement')) { $out['franchise'] = suApresChangement($avant, $apres); }
     return $out;
 }
 

@@ -193,6 +193,12 @@ final class PanelApi
         return $rang;
     }
 
+    /** Le jeton du compte consultant, pour des sondes menées de front ailleurs (src/api_module.php). Null sans connexion. */
+    public static function jetonSonde(bool $force = false): ?string
+    {
+        return self::token($force);
+    }
+
     /** Jeton en cache, sinon connexion. `$force` ignore le cache (retry sur 401). */
     private static function token(bool $force = false): ?string
     {

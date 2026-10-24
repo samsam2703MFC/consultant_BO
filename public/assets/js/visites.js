@@ -18,7 +18,9 @@
 
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const FEU = { vert: '🟢', orange: '🟡', rouge: '🔴' };
-  const ST_PLAN = { ouvert: ['Ouvert', 'st-ouv'], attente: ['En attente de validation', 'st-att'], valide: ['Validé', 'st-val'], reprendre: ['À reprendre', 'st-rep'], ferme: ['Fermé', 'st-fer'], escalade: ['Escaladé', 'st-esc'] };
+  const ST_PLAN = { ouvert: ['Ouvert', 'st-ouv'], attente: ['En attente de validation', 'st-att'], valide: ['Validé', 'st-val'], reprendre: ['À reprendre', 'st-rep'], ferme: ['Fermé', 'st-fer'], escalade: ['Escaladé', 'st-esc'],
+    // Le suivi des franchisés : un point écrit en visite attend l'envoi du rapport par le bureau ; gardé par lui, il reste interne.
+    propose: ['Proposé · rapport au bureau', 'st-att'], interne: ['Interne', 'st-fer'] };
   const ST_VISITE = { planifiee: 'planifiée', confirmee: 'confirmée', en_cours: 'en cours', terminee: 'terminée', annulee: 'annulée' };
   const ASSIGNES = { franchise: 'Franchisé', equipe: 'Équipe', consultant: 'Consultant', admin: 'Admin' };
   const MOTIFS = { reguliere: 'régulière', asap: 'ASAP', due: 'due', revisite: 'revisite' };
@@ -26,7 +28,9 @@
   const JOURS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
   const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   const GENRES_JOUR = [['jour_facade', 'Façade'], ['jour_interieur', 'Intérieur'], ['jour_arriere', 'Arrière']];
-  const RUBRIQUES_MSP = ['accueil', 'produits', 'hygiene', 'ambiance'];
+  const RUBRIQUES_MSP = ['Accueil', 'Produits', 'Hygiène', 'Ambiance'];
+  const METEO_ECH = [['moral', 'Moral'], ['envie', 'Envie, motivation'], ['equipe', 'Climat de l’équipe'], ['relation', 'Relation avec le réseau']];
+  const METEO_I = { 1: '⛈️', 2: '🌧️', 3: '☁️', 4: '🌤️', 5: '☀️' };
   const EXECUTION = { standards: 'Standards appliqués', raccourcis: 'Quelques raccourcis', ecarts: 'Écarts fréquents' };
   const CLIENTS = { satisfaits: 'Satisfaits', mitiges: 'Mitigés', insatisfaits: 'Insatisfaits' };
 
@@ -106,6 +110,10 @@
 .vi.mob .grid2{grid-template-columns:1fr}
 .vi .plan{border-left:3px solid var(--color-border-secondary);padding-left:10px;margin:8px 0}
 .vi .plan.P0b{border-color:#C0182B}.vi .plan.P1b{border-color:#E0A526}.vi .plan.P2b{border-color:#9a8c6a}
+.vi .sig{width:100%;height:170px;background:#fff;border:1.5px dashed var(--color-border-secondary);border-radius:12px;touch-action:none;display:block;cursor:crosshair}
+.vi .pill.bur{background:#F7E4E6;color:#8D1D2C}.vi .pill.int{background:#EEE6FA;color:#5b3d9e}
+.vi .ckb{display:flex;gap:4px;flex-wrap:wrap}.vi .ckb button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;padding:6px 10px;font:600 11.5px var(--font-ui);cursor:pointer;color:var(--color-text)}
+.vi .ckb button.fait{background:#2d7a3e;color:#fff;border-color:#2d7a3e}.vi .ckb button.pas_fait{background:#C0182B;color:#fff;border-color:#C0182B}.vi .ckb button.na{background:var(--color-text-muted);color:#fff}
 .vi .stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .vi .stat>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px;text-align:center}
 .vi input[type=text],.vi input[type=date],.vi input[type=time],.vi input[type=number],.vi input[type=email],.vi select,.vi textarea{font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:9px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);width:100%}
@@ -376,6 +384,11 @@
     plan: '<path d="M5 21V4h12l-2.5 4L17 12H5"/>',
     suivi: '<path d="M5 21V4h12l-2.5 4L17 12H5"/>',
     liste: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+    // Suivi des franchisés (24/10/2026) : le dossier et les points du bureau, la météo, la fin de visite signée.
+    dossier: '<path d="M3 7h6l2 2h10v10H3z"/><path d="M3 7V5h6l2 2"/>',
+    bureau: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12l2 2 4-4"/>',
+    meteo: '<circle cx="9" cy="9" r="3.5"/><path d="M9 2v2M2 9h2M4 4l1.4 1.4M14 4l-1.4 1.4"/><path d="M8 19h10a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.5A2.8 2.8 0 0 0 8 19z"/>',
+    fin: '<path d="M3 17c3-1 4-6 6-6s1 5 3 5 2-3 4-3 2 2 5 2"/><path d="M3 21h18"/>',
   };
   // La météo du franchisé, notée en fin de contrôle (12/10/2026).
   const METEO = [[5, '☀️', 'Grand soleil', 'motivé, moteur'], [4, '🌤️', 'Éclaircies', 'plutôt confiant'], [3, '⛅', 'Nuageux', 'mitigé'], [2, '🌧️', 'Pluie', 'découragé'], [1, '⛈️', 'Orage', 'tendu, en conflit']];
@@ -421,12 +434,13 @@
       this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
-      this.toast = null; this.voir = null; this.ouvert = {};
+      this.toast = null; this.voir = null; this.ouvert = {}; this.CK = null; this.ckF = {};
       if (!document.getElementById('vi-css')) { const st = document.createElement('style'); st.id = 'vi-css'; st.textContent = CSS; document.head.appendChild(st); }
       host.innerHTML = '<div class="vi ' + (o.tablette ? 'tab' : o.mobile ? 'mob' : 'desk') + '"><div class="sc"><div class="mu sm" style="padding:20px 0">Lecture…</div></div></div>';
       host.addEventListener('click', e => this.clic(e));
       host.addEventListener('input', e => this.saisie(e));
       host.addEventListener('change', e => this.change(e));
+      this.ecouterSignature(host);
       window.addEventListener('online', () => { this.enLigne = true; this.rejouer(); this.rendre(); });
       window.addEventListener('offline', () => { this.enLigne = false; this.rendre(); });
       if (o.mobile || o.tablette) { window.addEventListener('hashchange', () => this.deHash()); this.deHash(true); }
@@ -544,7 +558,14 @@
      * revisite reprend les points non conformes de la dernière visite terminée.
      * Sans type (visites d'avant le cadre), la liste standard.
      */
+    /** La checklist d'une visite : les points demandés par le bureau en tête, puis celle de son type. */
     checklistDe(v) {
+      const cl = this.checklistType(v);
+      const pts = (v.prep && v.prep.points) || [];
+      if (!pts.length) { return cl; }
+      return [{ id: 'bureau', nom: 'Demandé par le bureau', bureau: true, points: pts.map(p => ({ ref: p.ref, libelle: p.libelle, photo: true, pct: false })) }].concat(cl);
+    }
+    checklistType(v) {
       const t = this.typeDe(v.type); const s = this.D.seuils || {};
       if (t && t.dynamique === 'plans') {
         const pl = this.plansDe(v.shop, true);
@@ -843,6 +864,7 @@
         + (this.voir ? `<div class="voir" data-a="fermer-voir"><img src="${esc(this.voir.src)}" alt=""><div class="txt">${esc(this.voir.txt)}</div></div>` : '')
         + (this.cqV ? this.cqLoupe() : '');
       vi.querySelectorAll('.db-cqpiste').forEach((e, i) => { if (pistes[i]) { e.scrollLeft = pistes[i]; } });
+      const sc = vi.querySelector('#vi-sig'); if (sc && this.form.sig) { const im = new Image(); im.onload = () => sc.getContext('2d').drawImage(im, 0, 0); im.src = this.form.sig; }
       if (focus) { const el = this.host.querySelector(`[data-f="${focus.f.replace(/"/g, '\\"')}"]`); if (el) { el.focus(); try { if (focus.pos != null && el.setSelectionRange) { el.setSelectionRange(focus.pos, focus.pos); } } catch (e) { /* select */ } } }
     }
     onglets() {
@@ -1031,7 +1053,7 @@
       const causes = this.D.causes || {};
 
         const msp = m.id === 'msp' ? b.msp : null;
-        return `<div class="mod">${sansTitre ? '' : `<div class="th"><b>${esc(m.nom)}</b>${this.src(m.id === 'planogramme' || m.id === 'assortiment' ? 'mix' : 'local')}<span class="sp"></span><span class="xs mu">${m.points.length} points</span></div>`}
+        return `<div class="mod">${sansTitre ? (m.bureau ? '<div class="xs mu" style="margin:0 2px 6px">Les points que le bureau a ajoutés en préparant la visite.</div>' : '') : `<div class="th"><b>${esc(m.nom)}</b>${m.bureau ? '<span class="pill bur">bureau</span>' : this.src(m.id === 'planogramme' || m.id === 'assortiment' ? 'mix' : 'local')}<span class="sp"></span><span class="xs mu">${m.points.length} points</span></div>`}
           ${msp ? `<div class="card" style="margin-bottom:6px"><div class="row"><b>${note1(msp.total)} / 20</b><span class="sp"></span><span class="xs mu">MSP ${esc(msp.mois)} · ${esc(msp.par)}</span></div><div class="sm" style="margin-top:4px">${Object.keys(msp.rubriques || {}).map(k => (msp.rubriques[k] < (this.D.seuils.mspAlerte || 12) ? '🔴 ' : msp.rubriques[k] < 16 ? '🟡 ' : '🟢 ') + esc(k) + ' ' + msp.rubriques[k]).join(' · ')}</div>${msp.commentaires ? `<div class="xs mu" style="margin-top:4px">« ${esc(msp.commentaires)} »</div>` : ''}${msp.fichier ? `<div class="act"><a class="chip" target="_blank" rel="noopener" href="${esc((this.o.racine || '') + msp.fichier)}">📄 Rapport PDF</a></div>` : ''}</div>` : m.id === 'msp' ? '<div class="sm mu" style="margin:0 2px 6px">Pas de rapport mystery shopper pour cette boutique (à saisir dans MSP et équipe).</div>' : ''}
           ${m.points.map(pt => {
             cnt.total++; const p = pts[pt.ref] || {}; if (p.etat || p.note != null || p.valeur != null) { cnt.faits++; }
@@ -1072,7 +1094,7 @@
       return this.hd('Review — ' + b.court, 'visite du ' + fmtDJ(v.prevu_le) + (v.commence_a ? ' · ' + fmtH(v.commence_a) + (v.termine_a ? ' – ' + fmtH(v.termine_a) : '') : ''), 'checklist/' + v.id)
         + `<div class="cap">Écarts relevés</div><div class="card">${ecarts.length ? ecarts.map(e => `<div class="plan ${e.grave ? 'P0b' : 'P1b'}"><div class="row"><span class="feu ${e.grave ? 'rouge' : 'orange'}"></span><b>${esc(e.titre)}</b></div><div class="sm mu">${esc(e.detail)}</div></div>`).join('') : '<div class="sm mu">Aucun écart dans la checklist.</div>'}</div>`
         + (finie ? `${this.vuSurPlace(v)}<div class="cap">Plan d’action de cette visite</div>${dejaPlans.length ? dejaPlans.map(p => this.planLigne(p)).join('') : '<div class="card sm mu">Aucune action.</div>'}`
-          : `${this.planFormHtml(v, f)}${this.reviewFormHtml(v, b, f)}            <div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>`)
+          : `${this.planFormHtml(v, f)}${this.reviewFormHtml(v, b, f)}            <div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · le brouillon part au bureau</button></div>`)
         + (attente ? `<div class="btns"><button class="btn w" data-a="sync">📤 Synchroniser (${attente} photo${attente > 1 ? 's' : ''} en attente)</button></div>` : '');
     }
     /** Le brouillon de la review : actions proposées d'après les écarts, champs relus depuis la visite. */
@@ -1137,20 +1159,30 @@
       const B = this.B[v.shop];
       const etapes = [];
       etapes.push({ ic: 'photo', court: 'Photo du jour', titre: 'Photo du jour', etat: pj ? pj + ' / 3' : 'à prendre', fait: pj >= 3, html: () => this.photosJourHtml(v.shop, v) });
+      // Le dossier que le bureau a préparé et envoyé sur la tablette (suivi des franchisés).
+      const P = v.prep;
+      etapes.push({ ic: 'dossier', court: 'Dossier', titre: 'Dossier du bureau', etat: P ? (P.points.length ? P.points.length + ' point' + (P.points.length > 1 ? 's' : '') + ' demandé' + (P.points.length > 1 ? 's' : '') : 'lu') : 'pas encore préparé', fait: !P || !!this.ouvert['dos:' + v.id], lu: 'dos:' + v.id, html: () => this.dossierHtml(v) });
       // Ce que l'équipe a rendu aujourd'hui : la bande du dashboard, la note
       // rapide sous chaque photo. Faite quand plus rien n'attend une note.
       const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
       etapes.push({ ic: 'controles', court: 'Contrôles photo', titre: 'Les contrôles en photo', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
         fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) });
-      etapes.push({ ic: 'chiffres', court: 'Chiffres', chiffres: true, titre: 'Les chiffres et les alertes', etat: 'à lire', fait: !!this.ouvert['lu:' + v.id], html: () => this.kpis(b) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
+      etapes.push({ ic: 'chiffres', court: 'Chiffres', chiffres: true, titre: 'Les chiffres et les alertes', etat: 'à lire', fait: !!this.ouvert['lu:' + v.id], lu: 'lu:' + v.id, html: () => this.kpis(b) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
       this.checklistDe(v).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ ic: m.id, court: m.nom, module: true, ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
+      // La checklist du consultant, lue dans le panel (l'ancienne fiche franchisé en mode tablette) : un module de plus.
+      if (this.role === 'consultant') { this.chargerCk(v.shop); const ck = this.ckEtat(); etapes.push({ ic: 'liste', court: 'Checklist', titre: 'Checklist du consultant', etat: ck.etat, fait: ck.fait, html: () => this.ckHtml(v) }); }
       const revueFaite = !!(f.reco && (f.execution || f.clients || (f.causes || []).length));
       etapes.push({ ic: 'constat', court: 'Constat', titre: 'Vu sur place et recommandation', etat: revueFaite ? 'rédigée' : f.reco || f.execution ? 'en cours' : 'à écrire', fait: revueFaite, revue: true, html: () => this.reviewFormHtml(v, b, f) });
-      etapes.push({ ic: 'plan', court: 'Plan d’action', titre: 'Plan d’action et fin de visite', etat: (f.pa || []).length + ' action' + ((f.pa || []).length > 1 ? 's' : '') + (meteoDe(f.meteo) ? ' · ' + meteoDe(f.meteo)[1] : ''), fait: false, html: () => this.planFormHtml(v, f) + this.meteoHtml(f) + `<div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>` });
+      const npa = (f.pa || []).filter(a => a.titre && a.titre.trim()).length;
+      etapes.push({ ic: 'plan', court: 'Points', titre: 'Points à travailler', etat: npa + ' proposé' + (npa > 1 ? 's' : ''), fait: !!this.ouvert['pa:' + v.id], lu: 'pa:' + v.id, html: () => '<div class="card sm mu">Proposés d’après les non-conformes. Ils partent chez le franchisé avec le rapport, si le bureau les garde.</div>' + this.planFormHtml(v, f) });
+      // La météo du franchisé : le temps en un toucher (gardé sur la visite), puis le détail facultatif (moral, envie, demandes).
+      const mt = meteoDe(f.meteo);
+      etapes.push({ ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne'), fait: !!(mt || f.mt_ok), html: () => this.meteoHtml(f) + this.meteoDetailHtml(v) });
+      etapes.push({ ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig ? 'signée' : 'signature, envoi au bureau', fait: false, html: () => this.finHtml(v) });
       const cle = 'et:' + v.id;
       let cur = this.ouvert[cle]; if (cur == null) { cur = etapes.findIndex(e => !e.fait); if (cur < 0) { cur = etapes.length - 1; } }
       cur = Math.max(0, Math.min(etapes.length - 1, cur));
-      this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), chiffres: etapes.findIndex(e => e.chiffres), visite: v.id, cur };
+      this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), chiffres: etapes.findIndex(e => e.chiffres), visite: v.id, cur, lus: etapes.map(e => e.lu || null) };
       const faits = etapes.filter(e => e.fait).length;
       if (this.o.tablette) { return this.tabControle(v, b, etapes, cur, faits); }
       return this.hd('Contrôle — ' + b.court, fmtDJ(v.prevu_le) + (v.commence_a ? ' · depuis ' + fmtH(v.commence_a) : '') + ' · ' + esc(v.consultantNom || ''), 'fiche/' + v.id, `<span class="pill">${cur + 1} / ${etapes.length}</span>`)
@@ -1300,7 +1332,7 @@
           + this.vuSurPlace(this.derniereVisiteDe(this.shop), 'Ce que le consultant a vu')
           + (this.o.sansOnglets ? `<div class="btns"><button class="btn w" data-a="go" data-v="historique/${esc(this.shop)}">Historique des visites</button></div>` : '');
       }
-      const ouverts = (D.plans || []).filter(p => p.statut !== 'ferme');
+      const ouverts = (D.plans || []).filter(p => p.statut !== 'ferme' && p.statut !== 'interne');
       const parShop = {}; ouverts.forEach(p => { (parShop[p.shop] = parShop[p.shop] || []).push(p); });
       return this.hd('Plans d’action', ouverts.length + ' en cours · ' + ouverts.filter(p => p.statut === 'attente').length + ' à valider')
         + (this.role !== 'franchise' ? `<div class="row" style="margin-bottom:8px"><button class="btn s" data-a="go" data-v="admin">Corrections à valider</button></div>` : '')
@@ -1434,11 +1466,15 @@
       if (a === 'note') { const p = this.point(parts[0], parts[1], parts[2]); p.note = p.note === Number(parts[3]) ? null : Number(parts[3]); if (p.note != null && !p.etat) { p.etat = p.note <= 2 ? 'ko' : 'ok'; } this.point_save(parts[0], p); return; }
       if (a === 'cause') { const p = this.point(parts[0], parts[1], parts[2]); p.causes = p.causes || []; const i = p.causes.indexOf(parts[3]); if (i >= 0) { p.causes.splice(i, 1); } else { p.causes.push(parts[3]); } this.point_save(parts[0], p); return; }
       if (a === 'cause-diag') { const c = this.form.causes || (this.form.causes = []); const i = c.indexOf(v); if (i >= 0) { c.splice(i, 1); } else { c.push(v); } this.rendre(); return; }
-      if (a === 'etape') { const E = this._etapes; if (!E) { return; } const vis = this.visite(E.visite); const vers = Math.max(0, Math.min(E.n - 1, Number(v))); if (E.cur === E.chiffres) { this.ouvert['lu:' + E.visite] = true; } if (E.cur === E.revue && vers !== E.revue && vis) { this.sauverReview(vis); } this.ouvert[E.cle] = vers; this.rendre(); if (this.o.tablette) { window.scrollTo(0, 0); return; } const el = document.getElementById('et-' + vers); if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } return; }
+      if (a === 'etape') { const E = this._etapes; if (!E) { return; } const vis = this.visite(E.visite); const vers = Math.max(0, Math.min(E.n - 1, Number(v))); if (E.lus && E.lus[E.cur]) { this.ouvert[E.lus[E.cur]] = true; } if (E.cur === E.chiffres) { this.ouvert['lu:' + E.visite] = true; } if (E.cur === E.revue && vers !== E.revue && vis) { this.sauverReview(vis); } this.ouvert[E.cle] = vers; this.rendre(); if (this.o.tablette) { window.scrollTo(0, 0); return; } const el = document.getElementById('et-' + vers); if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } return; }
       if (a === 'pa') { const i = Number(parts[0]); if (this.form.pa && this.form.pa[i]) { this.form.pa[i][parts[1]] = parts[2]; this.rendre(); } return; }
       if (a === 'pa-del') { this.form.pa.splice(Number(v), 1); this.rendre(); return; }
       if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), 3) }); this.rendre(); return; }
       if (a === 'terminer') { this.terminer(v); return; }
+      if (a === 'meteo') { this.meteo(v); this.rendre(); return; }
+      if (a === 'sig-effacer') { this.form.sig = null; this.rendre(); return; }
+      if (a === 'ck') { this.ckF[parts[0]] = Object.assign(this.ckF[parts[0]] || {}, { etat: (this.ckF[parts[0]] || {}).etat === parts[1] ? '' : parts[1] }); this.rendre(); return; }
+      if (a === 'ck-save') { this.ckSauver(v); return; }
       if (a === 'statut') { this.statut(parts[0], parts[1]); return; }
       if (a === 'msp') { this.msp(v); return; }
       if (a === 'equipe') { const f = this.form; this.ecrire({ method: 'PUT', path: '/equipe/' + encodeURIComponent(v), body: { effectif: f.effectif, prevu: f.prevu, departs: f.departs, qui: this.qui() } }); const b = this.boutique(v); if (b) { b.equipe = { effectif: f.effectif != null && f.effectif !== '' ? Number(f.effectif) : null, prevu: f.prevu ? Number(f.prevu) : null, departs: f.departs ? Number(f.departs) : null, releve_le: auj() }; } this.form = {}; this.dire('Effectif relevé.'); return; }
@@ -1455,6 +1491,7 @@
       const parts = f.split('|');
       if (parts[0] === 'form') { this.form[parts[1]] = el.value; return; }
       if (parts[0] === 'pa') { if (this.form.pa && this.form.pa[Number(parts[1])]) { this.form.pa[Number(parts[1])][parts[2]] = el.value; } return; }
+      if (parts[0] === 'ckc') { this.ckF[parts[1]] = Object.assign(this.ckF[parts[1]] || {}, { commentaire: el.value }); return; }
       if (parts[0] === 'se') { this.form.seuils[parts[1]] = el.type === 'number' ? Number(el.value) : el.value; return; }
       if (parts[0] === 'fq') { this.form.frequence[parts[1]] = el.value; return; }
       if (parts[0] === 'cl') { this.form.checklist[Number(parts[1])].points[Number(parts[2])][parts[3]] = el.value; return; }
@@ -1475,7 +1512,7 @@
     /* --- actions ------------------------------------------------------------- */
     point(vid, ref, module) {
       let p = (this.D.points || []).find(x => String(x.visite_id) === String(vid) && x.ref === ref);
-      if (!p) { const lib = ((this.D.checklist || []).find(m => m.id === module) || { points: [] }).points.find(x => x.ref === ref); p = { visite_id: vid, module, ref, libelle: lib ? lib.libelle : ref, etat: '', note: null, valeur: null, commentaire: '', causes: [] }; this.D.points.push(p); }
+      if (!p) { const vis = this.visite(vid); const lib = (((vis ? this.checklistDe(vis) : null) || this.D.checklist || []).find(m => m.id === module) || { points: [] }).points.find(x => x.ref === ref); p = { visite_id: vid, module, ref, libelle: lib ? lib.libelle : ref, etat: '', note: null, valeur: null, commentaire: '', causes: [] }; this.D.points.push(p); }
       return p;
     }
     point_save(vid, p) {
@@ -1521,19 +1558,120 @@
       };
       inp.click();
     }
+    /**
+     * Terminer : la visite se ferme, rien ne part au franchisé. Les points sont
+     * PROPOSÉS, le brouillon du rapport attend au bureau, qui l'adapte et l'envoie.
+     * La météo remplie et la signature partent avec.
+     */
     terminer(vid) {
       const v = this.visite(vid); if (!v) { return; }
       const f = this.form;
-      const plans = (f.pa || []).filter(a => a.titre && a.titre.trim()).map(a => ({ client_id: a.cid, shop: v.shop, visite_id: v.id, ref: a.ref || null, titre: a.titre.trim(), detail: a.detail || '', priorite: a.priorite, assigne: a.assigne, echeance: a.echeance || null, campagne_id: Number(a.campagne_id) > 0 ? Number(a.campagne_id) : null }));
+      const plans = (f.pa || []).filter(a => a.titre && a.titre.trim()).map(a => ({ client_id: a.cid, shop: v.shop, visite_id: v.id, ref: a.ref || null, titre: a.titre.trim(), detail: a.detail || '', priorite: a.priorite, assigne: a.assigne, echeance: a.echeance || null, campagne_id: Number(a.campagne_id) > 0 ? Number(a.campagne_id) : null, statut: 'propose' }));
       if (plans.length) {
-        plans.forEach(p => this.D.plans.push(Object.assign({ id: p.client_id, statut: 'ouvert', cree_par: this.qui(), cree_le: maintenant(), maj_le: maintenant(), retard: 0, age: 0, attente: true }, p)));
+        plans.forEach(p => this.D.plans.push(Object.assign({ id: p.client_id, cree_par: this.qui(), cree_le: maintenant(), maj_le: maintenant(), retard: 0, age: 0, attente: true }, p)));
         this.ecrire({ method: 'POST', path: '/plans', body: { plans, qui: this.qui() }, apres: 'plans' });
+      }
+      if (!f.mt_ok) { this.meteo(vid, true); }
+      if (f.sig) {
+        const cid = uuid();
+        this.D.photos.unshift({ client_id: cid, visite_id: v.id, shop: v.shop, genre: 'signature', data: f.sig, prise_a: maintenant(), attente: true });
+        this.ecrire({ method: 'POST', path: '/visites/photos', body: { client_id: cid, shop: v.shop, visite_id: v.id, genre: 'signature', data: f.sig, prise_a: maintenant(), par: this.role }, apres: 'photo' });
       }
       this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, meteo: f.meteo || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '' });
       const b = this.boutique(v.shop); if (b) { b.visiteEnCours = null; b.derniereVisite = { id: v.id, le: v.prevu_le, consultant: v.consultantNom }; if (b.prochaineVisite && String(b.prochaineVisite.id) === String(v.id)) { b.prochaineVisite = null; } }
+      v.rapportStatut = 'brouillon';
       this.form = {};
       this.go(this.o.tablette ? 'shops' : 'historique', v.shop);
-      this.dire(plans.length ? plans.length + ' action(s) envoyée(s) au franchisé.' : 'Visite terminée.');
+      this.dire('Visite terminée · le brouillon part au bureau' + (plans.length ? ' avec ' + plans.length + ' point' + (plans.length > 1 ? 's' : '') + ' proposé' + (plans.length > 1 ? 's' : '') : '') + '.');
+    }
+    /** La météo du franchisé : moral, envie, équipe, relation, ses demandes (chacune devient une tâche du consultant à J+7). */
+    meteo(vid, silencieux) {
+      const v = this.visite(vid); if (!v) { return false; } const f = this.form;
+      const body = { client_id: f.mt_cid || (f.mt_cid = uuid()), shop: v.shop, consultant: this.moi || v.consultant || '', qui: this.qui(),
+        demandes: f.mt_demandes || '', envies: f.mt_envies || '', inquietudes: f.mt_inquietudes || '', note: f.mt_note || '' };
+      METEO_ECH.forEach(([k]) => { body[k] = f['mt_' + k] || null; });
+      const vide = !METEO_ECH.some(([k]) => body[k]) && !['demandes', 'envies', 'inquietudes', 'note'].some(k => body[k].trim());
+      if (vide) { if (!silencieux) { this.dire('La météo est vide.'); } return false; }
+      this.ecrire({ method: 'POST', path: '/franchises/meteo', body });
+      f.mt_ok = true; if (!silencieux) { this.dire('Météo enregistrée.'); }
+      return true;
+    }
+    /* --- la signature au doigt, sur la dernière étape -------------------------------- */
+    ecouterSignature(host) {
+      host.addEventListener('pointerdown', e => {
+        const c = e.target; if (!c || c.id !== 'vi-sig') { return; }
+        e.preventDefault(); if (c.setPointerCapture) { try { c.setPointerCapture(e.pointerId); } catch (x) { /* rien */ } }
+        const r = c.getBoundingClientRect(); const x = c.getContext('2d');
+        this._sig = { c, x, r }; x.lineWidth = 2.6; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#222';
+        x.beginPath(); x.moveTo((e.clientX - r.left) * c.width / r.width, (e.clientY - r.top) * c.height / r.height);
+      });
+      host.addEventListener('pointermove', e => { const s = this._sig; if (!s) { return; } e.preventDefault(); s.x.lineTo((e.clientX - s.r.left) * s.c.width / s.r.width, (e.clientY - s.r.top) * s.c.height / s.r.height); s.x.stroke(); });
+      const fin = () => { const s = this._sig; if (!s) { return; } this._sig = null; this.form.sig = s.c.toDataURL('image/png'); };
+      host.addEventListener('pointerup', fin); host.addEventListener('pointercancel', fin);
+    }
+    /* --- le dossier du bureau, la checklist du consultant, la météo, la fin ----------- */
+    dossierHtml(v) {
+      const P = v.prep;
+      if (!P) { return '<div class="card sm mu">Le bureau n’a pas encore envoyé le dossier de cette visite. Les chiffres du magasin sont à l’étape suivante.</div>'; }
+      const quand = P.figeLe || v.prepEnvoyeeLe;
+      return (P.points.length ? `<div class="cap">Points demandés par le bureau · ${P.points.length}</div><div class="card sm">${P.points.map(p => '· ' + esc(p.libelle) + (p.odj ? '' : ' <span class="xs mu">(pas dans l’ordre du jour)</span>')).join('<br>')}<div class="xs mu" style="margin-top:4px">Ils ouvrent la checklist.</div></div>` : '')
+        + (P.note ? `<div class="card sm">${esc(P.note)}</div>` : '')
+        + (P.dossier || []).map(d => `<div class="card ${d.alerte ? 'alerte' : ''}"><div class="row"><b class="sm">${esc(d.titre)}</b>${d.interne ? '<span class="pill int">interne</span>' : ''}</div>${(d.lignes || []).length ? '<div class="sm" style="margin-top:4px">' + d.lignes.map(l => '· ' + esc(l)).join('<br>') + '</div>' : '<div class="sm mu">—</div>'}</div>`).join('')
+        + `<div class="xs mu" style="margin:2px 2px 0">Préparé le ${fmtDJ(quand)} ${fmtH(quand)} · ${v.annoncee ? 'visite annoncée' : 'visite inopinée : le franchisé n’a pas été prévenu'}</div>`;
+    }
+    async chargerCk(shop, force) {
+      if (!force && this.CK && this.CK.shop === shop) { return; }
+      this.CK = { shop, chargement: true }; this.ckF = this.ckF || {};
+      const mid = String(this.moi || '').replace(/^u/, '');
+      try { const d = await this.lire('/consultants/checklists?consultant=' + encodeURIComponent(mid) + '&shop=' + encodeURIComponent(shop), 'ck:' + shop + ':' + mid); this.CK = { shop, d }; }
+      catch (e) { this.CK = { shop, erreur: true }; }
+      this.rendre();
+    }
+    ckEtat() {
+      const C = this.CK;
+      if (!C || C.chargement) { return { etat: 'lecture…', fait: false }; }
+      if (C.erreur || !C.d || !C.d.lu) { return { etat: 'non lue', fait: true }; }
+      const ts = []; (C.d.checklists || []).forEach(c => (c.taches || []).forEach(t => ts.push(t)));
+      const sa = C.d.saisies || {}; const faites = ts.filter(t => (this.ckF[t.id] || {}).etat || sa[t.id]).length;
+      return { etat: faites + ' / ' + ts.length, fait: ts.length > 0 && faites >= ts.length };
+    }
+    ckHtml(v) {
+      const C = this.CK; this.ckF = this.ckF || {};
+      if (!C || C.chargement) { return '<div class="card sm mu">Lecture de la checklist du consultant dans le panel…</div>'; }
+      if (C.erreur || !C.d) { return '<div class="card sm mu">Le panel ne répond pas : la checklist du consultant se remplira au retour du réseau.</div>'; }
+      if (!C.d.lu) { return `<div class="card sm mu">La checklist du consultant se lit dans le panel : ${esc(C.d.motif || 'indisponible')}.</div>`; }
+      const sa = C.d.saisies || {};
+      return (C.d.checklists || []).map(c => `<div class="cap">${esc(c.nom)}</div><div class="card">${(c.taches || []).map(t => { const e = (this.ckF[t.id] || {}).etat || (sa[t.id] || {}).etat || ''; const com = (this.ckF[t.id] || {}).commentaire != null ? this.ckF[t.id].commentaire : ((sa[t.id] || {}).commentaire || ''); return `<div class="pt"><div class="l1"><b class="sm" style="flex:1">${esc(t.nom)}${t.obligatoire ? ' <span class="pill P0">obligatoire</span>' : ''}</b></div>${t.description ? `<div class="xs mu">${esc(t.description)}</div>` : ''}<div class="act"><span class="ckb">${[['fait', 'Fait'], ['pas_fait', 'Pas fait'], ['na', 'N/A']].map(([k, l]) => `<button class="${e === k ? k : ''}" data-a="ck" data-v="${esc(t.id)}|${k}">${l}</button>`).join('')}</span><input type="text" data-f="ckc|${esc(t.id)}" value="${esc(com)}" placeholder="Commentaire…" style="flex:1;min-width:120px;padding:5px 8px;font-size:12px"></div>${(sa[t.id] || {}).panel ? `<div class="xs mu">Panel : ${esc(sa[t.id].panel)}</div>` : ''}</div>`; }).join('')}</div>`).join('')
+        + `<div class="btns"><button class="btn w" data-a="ck-save" data-v="${esc(v.id)}">💾 Enregistrer la checklist${C.d.moi ? ' · les tâches faites partent au panel' : ''}</button></div>`;
+    }
+    ckSauver(vid) {
+      const v = this.visite(vid); const C = this.CK; if (!v || !C || !C.d || !C.d.lu) { return; }
+      const ts = []; (C.d.checklists || []).forEach(c => (c.taches || []).forEach(t => { const x = this.ckF[t.id]; if (x && x.etat) { ts.push({ task_id: t.id, nom: t.nom, etat: x.etat, commentaire: x.commentaire || '' }); } }));
+      if (!ts.length) { this.dire('Rien de rempli.'); return; }
+      this.ecrire({ method: 'POST', path: '/consultants/checklists', body: { shop: v.shop, consultant: C.d.choisi, consultant_nom: this.consultantNom(this.moi), moi: !!C.d.moi, panel: true, taches: ts, qui: this.qui() } });
+      ts.forEach(t => { (C.d.saisies = C.d.saisies || {})[t.task_id] = { etat: t.etat, commentaire: t.commentaire }; });
+      this.dire(ts.length + ' tâche(s) de la checklist enregistrée(s).');
+    }
+    meteoDetailHtml(v) {
+      const f = this.form;
+      return `<div class="cap">Le détail, si besoin</div><div class="card sm mu">Reste entre le consultant et le bureau, jamais dans le rapport ; chaque demande devient une tâche du consultant à J+7.</div>
+        <div class="card">${METEO_ECH.map(([k, l]) => `<div class="row" style="margin:5px 0"><span class="sm" style="flex:1">${l}</span><span class="notes">${[1, 2, 3, 4, 5].map(n => `<button data-a="form" data-v="mt_${k}|${n}" class="${f['mt_' + k] === n ? 'on' : ''}" title="${n} / 5" style="width:34px;height:30px;font-size:15px">${METEO_I[n]}</button>`).join('')}</span></div>`).join('')}
+          <textarea data-f="form|mt_demandes" placeholder="Ses demandes — une par ligne : chacune devient une tâche">${esc(f.mt_demandes || '')}</textarea>
+          <textarea data-f="form|mt_envies" placeholder="Ses envies, ses projets" style="margin-top:6px">${esc(f.mt_envies || '')}</textarea>
+          <textarea data-f="form|mt_inquietudes" placeholder="Ses inquiétudes, ce qui bloque" style="margin-top:6px">${esc(f.mt_inquietudes || '')}</textarea>
+          <textarea data-f="form|mt_note" placeholder="Ce que j’en retiens — pour le consultant seulement" style="margin-top:6px">${esc(f.mt_note || '')}</textarea></div>
+        ${f.mt_ok ? '<div class="card sm up">Météo enregistrée.</div>' : `<div class="btns"><button class="btn w" data-a="meteo" data-v="${esc(v.id)}">☀️ Enregistrer la météo</button></div>`}`;
+    }
+    finHtml(v) {
+      const pts = this.pointsDe(v.id); let total = 0, faits = 0, ko = 0;
+      this.checklistDe(v).forEach(m => m.points.forEach(pt => { total++; const p = pts[pt.ref]; if (p && (p.etat || p.note != null || p.valeur != null)) { faits++; if (p.etat === 'ko' || (p.note != null && p.note <= 2)) { ko++; } } }));
+      const pa = (this.form.pa || []).filter(a => a.titre && a.titre.trim());
+      const h = this.D.delaiRapport;
+      return `<div class="stat"><div><div class="xs mu">Checklist</div><div class="k" style="margin-top:4px">${faits} / ${total}</div><div class="xs mu">${ko} non conforme${ko > 1 ? 's' : ''}</div></div><div><div class="xs mu">Points proposés</div><div class="k" style="margin-top:4px">${pa.length}</div><div class="xs mu">${pa.filter(a => a.priorite === 'P0').length} P0</div></div><div><div class="xs mu">Photos</div><div class="k" style="margin-top:4px">${this.photosDe(v.id).length}</div><div class="xs mu">${this.file.filter(o => o.apres === 'photo').length} en attente d’envoi</div></div></div>
+        <div class="cap">Le franchisé a vu le résumé · signature <button class="chip" data-a="sig-effacer" style="margin-left:6px">effacer</button></div>
+        <canvas id="vi-sig" class="sig" width="640" height="180" aria-label="Signature du franchisé"></canvas>
+        <div class="card sm mu" style="margin-top:8px">Terminer n’envoie rien au franchisé : le brouillon du rapport part au bureau, qui le relit et l’envoie${h ? ' sous ' + h + ' h' : ''}. Les points proposés ne s’ouvrent chez lui qu’à ce moment-là.</div>
+        <div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · le brouillon part au bureau</button></div>`;
     }
     statut(id, vers) {
       const p = this.plan(id); if (!p) { return; }
@@ -1586,7 +1724,7 @@
       const cle = (opts.role || 'consultant') + '|' + (opts.shop || '') + '|' + (opts.vue || '');
       let h = instances.get(cle);
       if (h && h.host === host) { h.rendre(); return h; }
-      if (h && !opts.mobile) { h.host = host; host.innerHTML = '<div class="vi desk"></div>'; host.addEventListener('click', e => h.clic(e)); host.addEventListener('input', e => h.saisie(e)); host.addEventListener('change', e => h.change(e)); h.v = opts.vue || h.v; h.p = null; h.rendre(); if (h.D) { h.recharger(); } return h; }
+      if (h && !opts.mobile) { h.host = host; host.innerHTML = '<div class="vi desk"></div>'; host.addEventListener('click', e => h.clic(e)); host.addEventListener('input', e => h.saisie(e)); host.addEventListener('change', e => h.change(e)); h.ecouterSignature(host); h.v = opts.vue || h.v; h.p = null; h.rendre(); if (h.D) { h.recharger(); } return h; }
       h = new Hote(host, opts); instances.set(cle, h); return h;
     },
     compresser, Idb,
