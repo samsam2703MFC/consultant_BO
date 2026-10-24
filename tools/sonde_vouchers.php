@@ -125,6 +125,35 @@ function svErreur(array $r): string
     return 'HTTP ' . $r['code'] . ($d !== '' ? ' · ' . (is_scalar($d) ? $d : json_encode($d)) : '') . $e;
 }
 
+// ── 00b. Le disque du serveur (lecture seule) ────────────────────────────────
+// 11:20 : « The table '/tmp/#sql…' is full » et cinq écritures sans rapport bloquées en RUNNING depuis 7 à 20 min —
+// la signature d'un disque plein (MySQL attend qu'on libère de la place). Où est la place ? Rien n'est effacé ici.
+svTitre('disque du serveur (lecture seule)');
+$sh = static function (string $cmd): string { return trim((string) shell_exec('timeout 90 sh -c ' . escapeshellarg($cmd) . ' 2>&1')); };
+echo preg_replace('/^/m', '  ', $sh('df -hP /')), "\n";
+echo preg_replace('/^/m', '  ', $sh('df -iP /')), "\n";
+// 11:24 : datadir /var/lib/mysql, tmpdir /tmp, log_bin ON (binlog.*, 100 Mo chacun), gardés 30 jours — tout sur /.
+// SHOW BINARY LOGS a calé 8 min (11:24, disque plein) : les journaux binaires se mesurent sur le disque.
+echo '  journaux binaires : ', $sh("ls /var/lib/mysql/binlog.[0-9]* 2>/dev/null | wc -l | tr -d ' '"), ' fichier(s), ',
+    $sh("du -ch /var/lib/mysql/binlog.[0-9]* 2>/dev/null | tail -1 | cut -f1"), ', le plus ancien ',
+    $sh("ls -l --time-style=+%Y-%m-%d /var/lib/mysql/binlog.[0-9]* 2>/dev/null | head -1 | awk '{ print \$6, \$7 }'"), "\n";
+echo '  journal systemd : ', $sh('journalctl --disk-usage'), "\n";
+echo '  cache apt : ', $sh('du -sh /var/cache/apt | cut -f1'), "\n";
+echo "  /var/log, les plus gros :\n";
+echo preg_replace('/^/m', '    ', $sh('du -ah /var/log 2>/dev/null | sort -rh | head -12')), "\n";
+echo "  les plus gros dossiers (même disque) :\n";
+echo preg_replace('/^/m', '    ', $sh('du -xh -d 2 / 2>/dev/null | sort -rh | head -25')), "\n";
+echo "  les plus gros fichiers (> 200 Mo, même disque) :\n";
+echo preg_replace('/^/m', '    ', $sh("find / -xdev -type f -size +200M -printf '%s\\t%TY-%Tm-%Td\\t%p\\n' 2>/dev/null | sort -rn | head -25 | awk -F'\\t' '{ printf \"%7.1f Go  %s  %s\\n\", \$1/1e9, \$2, \$3 }'")), "\n";
+echo "  /tmp, ce qui pèse :\n";
+echo preg_replace('/^/m', '    ', $sh('du -xsh /tmp/* /tmp/.[!.]* 2>/dev/null | sort -rh | head -15')), "\n";
+$plein = (int) trim((string) shell_exec("df -P / /tmp | awk 'NR > 1 { gsub(\"%\", \"\", \$5); if (\$5 > m) m = \$5 } END { print m + 0 }'"));
+if ($plein >= 98 || ($bloquees ?? 0) > 0) {
+    printf("\n  ⇒ disque à %d %% (/ ou /tmp), %d écriture(s) bloquée(s) depuis plus de 5 min : la base n'écrit plus.\n"
+        . "    Sonde arrêtée ici, sans ajouter d'écriture bloquée (le jeton ERP s'enregistre dans la base).\n", $plein, $bloquees ?? 0);
+    exit(2);
+}
+
 // ── 00. Les verrous de la base du cockpit (lecture seule) ──────────────────────
 // 24/10/2026 11:03 et 11:14 : le jeton ERP ne s'enregistre plus (INSERT ceo_app_setting → « Lock wait timeout
 // exceeded »). Qui tient le verrou ? Processus, transactions ouvertes, verrous de métadonnées — rien n'est tué ici.
@@ -156,36 +185,6 @@ try {
         printf("  verrou de métadonnées %s %s %s (thread %s)\n", $r['OBJECT_NAME'], $r['LOCK_TYPE'], $r['LOCK_STATUS'], $r['OWNER_THREAD_ID']);
     }
 } catch (Throwable $e) { echo '  verrous de métadonnées illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n"; }
-
-// ── 00b. Le disque du serveur (lecture seule) ────────────────────────────────
-// 11:20 : « The table '/tmp/#sql…' is full » et cinq écritures sans rapport bloquées en RUNNING depuis 7 à 20 min —
-// la signature d'un disque plein (MySQL attend qu'on libère de la place). Où est la place ? Rien n'est effacé ici.
-svTitre('disque du serveur (lecture seule)');
-$sh = static function (string $cmd): string { return trim((string) shell_exec('timeout 90 sh -c ' . escapeshellarg($cmd) . ' 2>&1')); };
-echo preg_replace('/^/m', '  ', $sh('df -hP / /tmp /var /var/lib/mysql /var/log')), "\n";
-echo preg_replace('/^/m', '  ', $sh('df -iP / /tmp')), "\n";
-try {
-    foreach (Db::rows("SHOW VARIABLES WHERE Variable_name IN ('datadir', 'tmpdir', 'log_bin', 'log_bin_basename', 'binlog_expire_logs_seconds', 'expire_logs_days', 'max_binlog_size', 'general_log', 'general_log_file', 'slow_query_log_file', 'log_error')") as $r) {
-        printf("  mysql %-28s %s\n", $r['Variable_name'], $r['Value']);
-    }
-} catch (Throwable $e) { echo '  variables MySQL illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n"; }
-try {
-    $logs = Db::rows('SHOW BINARY LOGS');
-    $total = array_sum(array_map(static fn ($r) => (int) ($r['File_size'] ?? 0), $logs));
-    printf("  journaux binaires : %d fichier(s), %.1f Go\n", count($logs), $total / 1e9);
-} catch (Throwable $e) { echo '  journaux binaires illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n"; }
-echo "  les plus gros dossiers (même disque) :\n";
-echo preg_replace('/^/m', '    ', $sh('du -xh -d 2 / 2>/dev/null | sort -rh | head -25')), "\n";
-echo "  les plus gros fichiers (> 200 Mo, même disque) :\n";
-echo preg_replace('/^/m', '    ', $sh("find / -xdev -type f -size +200M -printf '%s\\t%TY-%Tm-%Td\\t%p\\n' 2>/dev/null | sort -rn | head -25 | awk -F'\\t' '{ printf \"%7.1f Go  %s  %s\\n\", \$1/1e9, \$2, \$3 }'")), "\n";
-echo "  /tmp, ce qui pèse :\n";
-echo preg_replace('/^/m', '    ', $sh('du -xsh /tmp/* /tmp/.[!.]* 2>/dev/null | sort -rh | head -15')), "\n";
-$plein = (int) trim((string) shell_exec("df -P / /tmp | awk 'NR > 1 { gsub(\"%\", \"\", \$5); if (\$5 > m) m = \$5 } END { print m + 0 }'"));
-if ($plein >= 98 || ($bloquees ?? 0) > 0) {
-    printf("\n  ⇒ disque à %d %% (/ ou /tmp), %d écriture(s) bloquée(s) depuis plus de 5 min : la base n'écrit plus.\n"
-        . "    Sonde arrêtée ici, sans ajouter d'écriture bloquée (le jeton ERP s'enregistre dans la base).\n", $plein, $bloquees ?? 0);
-    exit(2);
-}
 
 // ── 0. Le compte ─────────────────────────────────────────────────────────────
 svTitre('compte admin ERP du cockpit');
