@@ -355,6 +355,33 @@ foreach ($hotes as $base) {
     }
 }
 
+// ── 8b. Pour l'assistant « bon » du dashboard magasin (24/10/2026) ─────────────
+// Les clients du magasin (le ciblage d'un bon) et ce que la fiche d'une promotion « X + Y » dit de son mode
+// d'activation et de sa campagne. Lecture seule ; rien de nominatif n'est affiché (clés et comptes seulement).
+svTitre('clients du magasin et fiche « X + Y » (pour le bon du dashboard)');
+foreach ([4, 2] as $sh) {
+    $c = ErpApi::sondeGet("/shops/$sh/clients?limit=5");
+    $it = svItems($c['corps']);
+    printf("  GET /shops/%d/clients?limit=5 : %s · %d ligne(s) · clés : %s\n", $sh, $c['code'] < 300 ? 'HTTP ' . $c['code'] : svErreur($c), count($it),
+        $it !== [] && is_array($it[0]) ? implode(', ', array_keys($it[0])) : '—');
+    if ($it !== []) {
+        printf("    b2b : %s · avec société : %d · avec e-mail : %d · avec téléphone : %d\n", svRepartition($it, 'is_b2b'),
+            count(array_filter($it, static fn ($x) => !empty($x['company_name']))), count(array_filter($it, static fn ($x) => !empty($x['email']))),
+            count(array_filter($it, static fn ($x) => !empty($x['phone']))));
+    }
+    $c2 = ErpApi::sondeGet("/shops/$sh/clients?limit=500&offset=0");
+    printf("    limit=500 : %s · %d ligne(s)\n", $c2['code'] < 300 ? 'HTTP ' . $c2['code'] : svErreur($c2), count(svItems($c2['corps'])));
+}
+$bx = ErpApi::sondeGet('/admin/promotions/buy-x-get-y?limit=5');
+$bxi = svItems($bx['corps']);
+echo '  GET /admin/promotions/buy-x-get-y?limit=5 : ', $bx['code'] < 300 ? 'HTTP ' . $bx['code'] : svErreur($bx), ' · ', count($bxi), " ligne(s)\n";
+if ($bxi !== [] && isset($bxi[0]['id'])) {
+    $fx = ErpApi::sondeGet('/admin/promotions/buy-x-get-y/' . (int) $bxi[0]['id']);
+    $fxc = svFiche($fx['corps']) ?? [];
+    echo '    fiche : activation_mode=', json_encode($fxc['activation_mode'] ?? null), ' · voucher_campaign_id=', json_encode(array_key_exists('voucher_campaign_id', $fxc) ? $fxc['voucher_campaign_id'] : 'absent'),
+         ' · voucher_campaign=', json_encode(array_key_exists('voucher_campaign', $fxc) ? (is_array($fxc['voucher_campaign']) ? array_keys($fxc['voucher_campaign']) : $fxc['voucher_campaign']) : 'absent'), "\n";
+}
+
 // ── 9. Ce que montre le PANEL (l'écran de Sam), en lecture ───────────────────
 // Sam regarde le panel de production et « ne voit rien dans la création de bon ». On s'y connecte avec le compte
 // admin du cockpit (formulaire `login` / `password` de /panel/), on relève les liens du menu qui parlent de bons
