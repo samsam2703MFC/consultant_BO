@@ -1808,3 +1808,24 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 @media (max-width: 800px) { .tfb-dlv-week { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tfb-dlv-stats { margin-left: 0; } }
 @media (max-width: 520px) { .tfb-dlv-week { grid-template-columns: minmax(0, 1fr); } .tfb-dlv-day { min-height: 0; } }
 .tfb-dlv-search { width: 280px; max-width: 100%; }
+
+/* Rentowność grup : tydzień i miesiąc. */
+.at-gw-table thead th { font-size: 12px; text-transform: uppercase; letter-spacing: .3px; color: #6b625b; white-space: nowrap; }
+.at-gw-table thead tr:first-child th[colspan] { border-bottom: 2px solid #e6dfd8; }
+.at-gw-sub th { font-weight: 600; text-transform: none !important; color: #8a817a !important; }
+.at-gw-sub th:nth-child(odd) { border-left: 1px solid #efe9e3; }
+.at-gw-table td { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.at-gw-table td:nth-child(even) { border-left: 1px solid #efe9e3; }
+.at-gw-row { cursor: pointer; }
+.at-gw-row:hover > *, .at-gw-row:focus-visible > * { background: #faf6f2; }
+.at-gw-row.is-selected > * { background: #f6ecec; }
+.at-gw-row.is-selected > th { box-shadow: inset 3px 0 0 #8D1D2C; }
+.at-gw-row.is-hours-only > td { color: #8a817a; }
+.at-gw-name { font-weight: 700; }
+.at-gw-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.at-gw-cobot { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #eef3ff; color: #2d4a8a; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.at-gw-pos { color: #22663a; }
+.at-gw-neg { color: #b02a37; }
+.at-gw-table tfoot th, .at-gw-table tfoot td { border-top: 2px solid #e6dfd8; font-weight: 700; }
+.at-gw-chart { position: relative; height: 340px; }
+.at-gw-table tbody th, .at-gw-table tfoot th { vertical-align: middle; }

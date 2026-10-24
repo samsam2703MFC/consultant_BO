@@ -20,6 +20,9 @@ use App\Repositories\Dashboard\ProfitabilityRepository;
 use App\Services\Dashboard\GrowthActionService;
 use App\Repositories\Workshop\ParamRepository;
 use App\Services\Dashboard\ProfitabilityService;
+use App\Services\Dashboard\GroupWeekProfitService;
+use App\Repositories\Workshop\ExecutionRepository;
+use App\Repositories\Workshop\PlanningRepository;
 use App\Repositories\Analysis\WdtSalesRepository;
 use App\Repositories\Production\Cost\SectionUnitCostRepository;
 use App\Services\Production\Cost\SectionUnitCostService;
@@ -56,7 +59,8 @@ try {
                  'document_wdt_product', 'final_product', 'customer_order', 'customer_order_product', 'n_growth_action', 'user', 'category_product',
                  'production_employee', 'n_staff_pay', 'n_prod_employee', 'recipe_competency', 'recipe_competency_connection', 'n_employee_competency',
                  'flattened_recipe_ingredient', 'raw_material', 'category_material', 'supplier', 'raw_material_price_changelog', 'unit', 'n_wdt_superseded',
-                 'n_store_price_config', 'n_store_product', 'n_store_product_shop', 'n_store_product_link', 'n_store_price_sync'] as $table) {
+                 'n_store_price_config', 'n_store_product', 'n_store_product_shop', 'n_store_product_link', 'n_store_price_sync',
+                 'carton_stock', 'n_prod_group', 'n_prod_workstation', 'n_prod_item', 'n_prod_routing_step', 'n_prod_routing_alternative', 'n_prod_clock'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -340,6 +344,42 @@ try {
     near(array_sum(array_column($buy['categories'], 'pct')), 100, 'udziały kategorii = 100 %');
     $oct2 = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo)))))->overview('month', $today);
     near($oct2['totals']['materials'], 200, 'październik : Chleb bez receptury, koszt z karty (20 × 40 zł / 4)');
+
+    // --- Rentowność grup : tydzień i miesiąc (tydzień od poniedziałku, dziś 19.10 18:00).
+    // Pointowanie Piekarni : 6.10 (4 h) i 19.10 (8 h) ; 3 kartony z etykietą 6.10 ; cobot na 2. etapie (połowa czasu marszruty).
+    $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, color, sort_order, id_section, active) VALUES (1, 'PIE', 'Piekarnia', 'Boulangerie', '#8D1D2C', 1, 1, 1)");
+    $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (90, 'Jan', 'Test', 0, 1)");
+    $pdo->exec("INSERT INTO n_prod_employee (id, id_production_employee, id_primary_group, active) VALUES (90, 90, 1, 1)");
+    $pdo->exec("INSERT INTO n_prod_clock (id_employee, clock_in, clock_out, source) VALUES (90, '2026-10-06 06:00:00', '2026-10-06 10:00:00', 'manual'), (90, '2026-10-19 06:00:00', '2026-10-19 14:00:00', 'manual')");
+    $pdo->exec("INSERT INTO carton_stock (id_carton, batch_number, id_product, status, date_add) VALUES (1, 'L1', 1, 1, '2026-10-06'), (2, 'L1', 1, 1, '2026-10-06'), (3, 'L1', 1, 1, '2026-10-06')");
+    $pdo->exec("INSERT INTO n_prod_workstation (id, code, id_group, name_pl, name_fr, type, robot_mode, operator_share, capacity_per_pass, active) VALUES (5, 'COBOT', 1, 'Cobot', 'Cobot', 'robot', 'collaboratif', 0.25, 1, 1)");
+    $pdo->exec("INSERT INTO n_prod_item (id, item_type, id_final_product, base_unit) VALUES (7, 'product', 1, 'szt')");
+    $pdo->exec("INSERT INTO n_prod_routing_step (id, id_item, step_no, name_pl, name_fr, id_workstation, fixed_time_s, variable_time_s, capacity_per_pass, operators_required) VALUES
+        (70, 7, 1, 'Ręcznie', 'Main', 5, 0, 1, 1, 1), (71, 7, 2, 'Cobot', 'Cobot', 5, 0, 1, 1, 1)");
+    $pdo->exec("INSERT INTO n_prod_routing_alternative (id_step, id_workstation, fixed_time_s, variable_time_s, capacity_per_pass, priority) VALUES (71, 5, 0, 1, 1, 1)");
+    $weekly = (new GroupWeekProfitService(new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo)))),
+        new ProfitabilityRepository($pdo), new ExecutionRepository($pdo), new PlanningRepository($pdo), new ParamRepository($pdo)))->overview(new DateTimeImmutable('2026-10-19 18:00:00'));
+    expectProfit(count($weekly['weeks']) === 12 && $weekly['weeks'][11]['from'] === '2026-10-19' && $weekly['weeks'][0]['from'] === '2026-08-03', '12 tygodni od poniedziałku, ostatni = bieżący');
+    expectProfit(count($weekly['groups']) === 1 && $weekly['groups'][0]['name'] === 'Piekarnia', 'jedna grupa (dział wspólny pominięty)');
+    $pg = $weekly['groups'][0];
+    $series = array_column(array_map(fn($w, $s) => $s + ['from' => $w['from']], $weekly['weeks'], $pg['series']), null, 'from');
+    near($series['2026-10-05']['revenue'], 1000, 'tydzień 5.10 : sprzedaż 20 × 50 €');
+    near($series['2026-10-05']['materials'], 200, 'tydzień 5.10 : surowce wg wskaźnika miesiąca (20 × 40 zł / 4)');
+    near($series['2026-10-05']['staff'], 2000 * 7 / 31, 'tydzień 5.10 : personel = miesiąc × 7 / 31 dni');
+    near($series['2026-10-05']['margin'], 1000 - 200 - 2000 * 7 / 31 - 100 * 7 / 31, 'tydzień 5.10 : marża = sprzedaż − surowce − personel − amortyzacja');
+    near($series['2026-10-05']['hours'], 4, 'tydzień 5.10 : 4 h pointowania');
+    near($series['2026-10-05']['hours_pct'], 100, 'tydzień 5.10 : 100 % godzin wszystkich grup');
+    expectProfit($series['2026-10-05']['cartons'] === 3, 'tydzień 5.10 : 3 kartony z etykietą');
+    near($series['2026-10-05']['production'], 150, 'wartość produkcji : 3 × średnia cena kartonu 50 €');
+    near($series['2026-09-07']['margin'], 5000 - 1000 - 2000 * 7 / 30 - 100 * 7 / 30, 'tydzień 7.09 : marża (wrzesień, 30 dni)');
+    near($pg['week']['hours'], 8, 'bieżący tydzień : 8 h');
+    near($pg['week']['revenue'], 0, 'bieżący tydzień : bez sprzedaży');
+    near($pg['week']['margin'], -(2000 + 100) / 31, 'bieżący tydzień (1 dzień) : koszty dnia');
+    near($pg['month']['hours'], 12, 'miesiąc : 12 h');
+    near($pg['month']['margin'], 1000 - 200 - (2000 + 100) * 19 / 31, 'miesiąc do 19.10 : koszty × 19 / 31');
+    expectProfit($pg['cobot'] !== null && $pg['cobot']['names'] === ['Cobot'], 'cobot w procesie grupy');
+    near($pg['cobot']['share_pct'], 50, 'cobot : połowa czasu marszruty');
+    expectProfit(count(array_filter($weekly['notes'], fn($n) => str_starts_with($n, 'Brak wprowadzonych kosztów miesięcznych'))) === 1, 'brak kosztów miesięcy : jedno ostrzeżenie dla wszystkich tygodni');
 
     // Duplikat WDT oznaczony w n_wdt_superseded : sprzedaż liczona raz.
     $pdo->exec("INSERT INTO document_wdt (id, doc_num, established_date, currency) VALUES (950, 'W/1', '2026-09-10', 'eur')");

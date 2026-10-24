@@ -3,6 +3,7 @@ namespace App\Controllers\Web\Dashboard;
 
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
+use App\Services\Dashboard\GroupWeekProfitService;
 use App\Services\Dashboard\GrowthActionService;
 use App\Services\Dashboard\ProfitabilityService;
 use App\Services\Dashboard\TodayService;
@@ -26,6 +27,7 @@ class DashboardController extends BaseController
         private ManagerService $manager,
         private AuthRepository $auth,
         private UserMailRepository $mail,
+        private GroupWeekProfitService $groupWeeks,
     ) {}
 
     /** Strona startowa: rentowność produkcji (sprzedaż a koszt personelu na dział, brakująca sprzedaż do celu). */
@@ -39,6 +41,12 @@ class DashboardController extends BaseController
     public function results()
     {
         $this->profitView('dashboard/results');
+    }
+
+    /** Rentowność grup : tydzień i miesiąc (godziny, produkcja, marża, sprzedaż), cobot i 12 tygodni na wykresie. */
+    public function groups()
+    {
+        $this->view('dashboard/groups', $this->groupWeeks->overview());
     }
 
     private function profitView(string $view): void

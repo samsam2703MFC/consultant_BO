@@ -43,6 +43,68 @@ final class ProfitabilityRepository extends WorkshopRepository
         );
     }
 
+    /** Ventes WDT par jour et groupe (EUR, cartons) — rentabilité des groupes par semaine. */
+    public function dailySales(string $from, string $to): array
+    {
+        return $this->all(
+            "SELECT s.sale_date AS day, s.ym, fp.id_section, SUM(s.value_eur) AS revenue_eur, SUM(s.cartons) AS cartons
+             FROM (" . WdtSalesRepository::linesSql() . ") s
+             LEFT JOIN final_product fp ON fp.id = s.id_product
+             WHERE s.sale_date BETWEEN :from AND :to
+             GROUP BY s.sale_date, s.ym, fp.id_section",
+            ['from' => $from, 'to' => $to]
+        );
+    }
+
+    /** Prix moyen de vente d'un carton par produit (EUR) sur [from, to] — valeur de la production. */
+    public function cartonPrices(string $from, string $to): array
+    {
+        $out = [];
+        foreach ($this->all(
+            "SELECT s.id_product, SUM(s.value_eur) / NULLIF(SUM(s.cartons), 0) AS price
+             FROM (" . WdtSalesRepository::linesSql() . ") s
+             WHERE s.sale_date BETWEEN :from AND :to AND s.cartons > 0
+             GROUP BY s.id_product",
+            ['from' => $from, 'to' => $to]
+        ) as $r) if ($r['price'] !== null) $out[(int) $r['id_product']] = (float) $r['price'];
+        return $out;
+    }
+
+    /** Cartons produits (étiquette = entrée en stock) par jour, produit et groupe. */
+    public function producedDaily(string $from, string $to): array
+    {
+        return $this->all(
+            'SELECT cs.date_add AS day, cs.id_product, fp.id_section, COUNT(*) AS cartons, COALESCE(fp.ppc, 0) AS ppc
+             FROM carton_stock cs LEFT JOIN final_product fp ON fp.id = cs.id_product
+             WHERE cs.date_add BETWEEN :from AND :to
+             GROUP BY cs.date_add, cs.id_product, fp.id_section, fp.ppc',
+            ['from' => $from, 'to' => $to]
+        );
+    }
+
+    /** Groupes de production (tablettes, pointage) et leur groupe de produits (dział). */
+    public function productionGroups(): array
+    {
+        return $this->all('SELECT id, name_pl, name_fr, color, id_section, active FROM n_prod_group ORDER BY sort_order, id');
+    }
+
+    /** Cobots actifs (robots en mode collaboratif) par groupe de production. */
+    public function cobots(): array
+    {
+        return $this->all("SELECT id, id_group, name_pl, operator_share FROM n_prod_workstation
+                           WHERE type = 'robot' AND robot_mode = 'collaboratif' AND active = 1 ORDER BY name_pl");
+    }
+
+    /** Articles de production des produits finis (gamme) : id article => produit. */
+    public function productItems(): array
+    {
+        $out = [];
+        foreach ($this->all("SELECT id, id_final_product FROM n_prod_item WHERE item_type = 'product' AND id_final_product IS NOT NULL") as $r) {
+            $out[(int) $r['id_final_product']] = (int) $r['id'];
+        }
+        return $out;
+    }
+
     /** Cartons vendus (WDT) par mois, groupe et produit, avec la recette et le coût matières de la fiche produit (PLN). */
     public function soldProducts(string $from, string $to): array
     {

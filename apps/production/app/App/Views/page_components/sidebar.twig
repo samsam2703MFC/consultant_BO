@@ -55,6 +55,13 @@
                 </li>
 
                 <li class="sidebar-item">
+                    <a href="{{ root }}/dashboard/groups" class="sidebar-link">
+                        <i class="bi bi-calendar-week"></i>
+                        <span>Rentowność grup : tydzień</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
                     <a href="{{ root }}/finances/sales-analytics" class="sidebar-link">
                         <i class="bi bi-bar-chart-line"></i>
                         <span>Analiza sprzedaży</span>
@@ -551,6 +558,8 @@
                 {% for g in page_tab_groups() %}{% for t in g.tabs %}
                 <li><a href="{{ root }}{{ t[0] }}" data-where="{{ g.section }} › {{ g.label }}"><i class="bi {{ t[2] }}"></i> {{ t[1] }}</a></li>
                 {% endfor %}{% endfor %}
+                <li><a href="{{ root }}/dashboard/groups" data-where="Analiza › Rentowność grup"><i class="bi bi-robot"></i> Godziny, produkcja, marża i sprzedaż grup w tygodniu i miesiącu, coboty, wykres 12 tygodni</a></li>
+                <li><a href="{{ root }}/workshop/deliveries" data-where="Produkcja › Dostawy surowców"><i class="bi bi-truck"></i> Kto dostarcza co i kiedy : dostawcy surowców i opakowań, dni dostaw</a></li>
                 <li><a href="{{ root }}/semi-products" data-where="Produkt › Receptury"><i class="bi bi-diagram-2"></i> Półprodukty</a></li>
                 <li><a href="{{ root }}/compositions" data-where="Produkt › Receptury"><i class="bi bi-layers"></i> Kompozycje</a></li>
                 <li><a href="{{ root }}/products/new-with-recipe" data-where="Produkt › Produkty"><i class="bi bi-plus-circle"></i> Nowy produkt z recepturą</a></li>

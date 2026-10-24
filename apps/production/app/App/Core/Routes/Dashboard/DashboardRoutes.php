@@ -11,6 +11,10 @@ return function(RouteCollector $r) {
         'controller' => App\Controllers\Web\Dashboard\DashboardController::class,
         'method'     => 'results'
     ]);
+    $r->addRoute('GET', '/dashboard/groups', [
+        'controller' => App\Controllers\Web\Dashboard\DashboardController::class,
+        'method'     => 'groups'
+    ]);
     $r->addRoute('GET', '/today', [
         'controller' => App\Controllers\Web\Dashboard\DashboardController::class,
         'method'     => 'today'
