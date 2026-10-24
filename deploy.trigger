@@ -1021,3 +1021,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T07:22:50Z kalkulacja receptury (#129)
 2026-10-24T07:26Z ERP production : les réglages regroupés sous Ustawienia dans le rail
 2026-10-24T07:44Z primes : choix du mois, l'année des primes (magasin et réseau)
+2026-10-24T07:49:37Z tablet receptury + zdjęcia + grupa półproduktów (#130 #133)
