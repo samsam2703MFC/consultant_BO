@@ -1,6 +1,6 @@
 # Clients par mois, 2026 face à 2025 — deux maquettes
 
-**Statut : maquettes à valider, rien n'est codé dans le cockpit.**
+**Statut : maquette A choisie (24/10/2026) et codée — `public/assets/js/clients-annee-vals.js`, `clients-annee-tpl.js`, `n1Mois` dans `src/ventes_semaines.php`.**
 
 La demande (24/10/2026) : dans le suivi à l'année des résultats des magasins
 (**Cockpit › Résultat › Année › 1 an — 2026**), voir le nombre de clients mois par mois sur
