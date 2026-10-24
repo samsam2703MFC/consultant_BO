@@ -287,4 +287,19 @@ try {
     echo '  croisement impossible : ', mb_substr($e->getMessage(), 0, 200), "\n";
 }
 
+// ── 6. Le passage en caisse côté ERP : valider, encaisser, annuler un bon ────
+// « Rien en local » (Sam, 24/10) : le webshop devra valider et encaisser ses bons À L'ERP, pas dans sa base. La
+// spécification publique liste /vouchers/validate, /redeem et /reverse sans en décrire le contrat : on envoie des
+// corps VIDES, que l'API ne peut que refuser, pour lire les champs qu'elle exige. Aucun code n'est envoyé : rien ne
+// peut être validé ni encaissé.
+svTitre('routes de caisse /vouchers/* (corps vides : refus attendu, rien d\'encaissé)');
+foreach (['/vouchers/validate', '/vouchers/redeem', '/vouchers/reverse'] as $ch) {
+    $r = ErpApi::ecrire('POST', $ch, ['_sonde' => true]);
+    echo '  POST ', str_pad($ch, 20), ' compte admin : ', svErreur($r), "\n";
+    if ($r['code'] >= 200 && $r['code'] < 300) { echo '    ⚠ accepté — corps : ', mb_substr((string) json_encode(svAplatir($r['corps']), JSON_UNESCAPED_UNICODE), 0, 400), "\n"; }
+}
+$pc = ErpApi::sondeGet('/promo-codes?limit=5');
+echo '  GET /promo-codes : ', $pc['code'] < 300 ? 'HTTP ' . $pc['code'] . ' · ' . count(svItems($pc['corps'])) . ' élément(s)' : svErreur($pc), "\n";
+if ($pc['code'] < 300 && svItems($pc['corps']) !== []) { svChamps(array_slice(svItems($pc['corps']), 0, 5)); }
+
 echo "\n=== FIN SONDE VOUCHERS ===\n";
