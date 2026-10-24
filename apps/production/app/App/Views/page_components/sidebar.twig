@@ -1,0 +1,611 @@
+<div id="sidebar" class="active">
+    <div class="sidebar-wrapper active">
+        <div class="sidebar-header">
+            <div class="d-flex justify-content-between">
+                <div class="logo">
+                    <a href="{{ root }}/home" title="Strona startowa stanowiska">
+                        <img src="{{ root }}/assets/images/atelier-logo.png" alt="L'Atelier">
+                    </a>
+                </div>
+                <div class="toggler">
+                    <a href="#" class="sidebar-hide d-xl-none d-block"><i class="bi bi-x bi-middle"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-menu">
+            <ul class="menu">
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/today" class="sidebar-link">
+                        <i class="bi bi-grid-1x2-fill"></i>
+                        <span>Dzisiaj</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/my-tasks" class="sidebar-link">
+                        <i class="bi bi-check2-square"></i>
+                        <span>Moje zadania</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-title">Analiza</li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/dashboard" class="sidebar-link">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Rentowność</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/dashboard/results" class="sidebar-link">
+                        <i class="bi bi-bar-chart-steps"></i>
+                        <span>Wynik i produkcja grup</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/finances/sales-analytics" class="sidebar-link">
+                        <i class="bi bi-bar-chart-line"></i>
+                        <span>Analiza sprzedaży</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-percent"></i>
+                        <span>Marże i koszty</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item"><a href="{{ root }}/finances/product-margin"><i class="bi bi-percent"></i> Marża produktów</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/category-margin"><i class="bi bi-bar-chart-line"></i> Marża kategorii</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/cost-analysis"><i class="bi bi-search"></i> Koszty produktu</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/finances/cost-analysis/section"><i class="bi bi-cash"></i> Koszty działów</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/cost-calculator"><i class="bi bi-calculator"></i> Kalkulator kosztów</a></li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-title">Produkcja</li>
+
+                {# Produkcja : jedna strona z zakładkami (PageTabs « production ») #}
+                {% set g = page_tab_groups().production %}
+                <li class="sidebar-item">
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
+                    </a>
+                </li>
+
+                {# Tablet produkcji pod Produkcją : sam tablet (ekran zespołu) i jego zarządzanie (tablety, PIN, czas pracy). #}
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-tablet"></i>
+                        <span>Tablet produkcji</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/kiosk" target="_blank" rel="noopener">
+                                <i class="bi bi-box-arrow-up-right"></i> Otwórz tablet
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/workshop/execution">
+                                <i class="bi bi-sliders"></i> Zarządzanie : tablety, PIN, czas pracy
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+<li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-person-badge"></i>
+                        <span>Zespół</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/production-employees">
+                                <i class="bi bi-people-fill"></i> Pracownicy produkcji
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/staff/budget">
+                                <i class="bi bi-wallet2"></i> Budżet personelu i premie
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                {# Zakupy : jedna sekcja (dawniej Produkcja › Zaopatrzenie, Produkt › Surowce › ceny i dostawcy, Finanse › Zakupy i jakość,
+                   Finanse › Faktury zakupowe KSeF). Faktury zakupowe : zakładka « Faktury » Zaopatrzenia. #}
+                <li class="sidebar-title">Zakupy</li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/workshop/supply" class="sidebar-link" data-also="/settings/ksef/purchase-invoices /purchases">
+                        <i class="bi bi-cart-check"></i>
+                        <span>Zaopatrzenie</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/purchasing" class="sidebar-link">
+                        <i class="bi bi-wallet2"></i>
+                        <span>Koszty surowców</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/materials/prices" class="sidebar-link">
+                        <i class="bi bi-cash-stack"></i>
+                        <span>Ceny surowców</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-tags"></i>
+                        <span>Oferty i zapytania</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item"><a href="{{ root }}/purchasing/offers"><i class="bi bi-tags"></i> Oferty cenowe</a></li>
+                        <li class="submenu-item"><a href="{{ root }}/purchasing/tenders"><i class="bi bi-envelope"></i> Zapytania ofertowe</a></li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-title">Produkt</li>
+
+<li class="sidebar-item">
+                    <a href="{{ root }}/workshop/products" class="sidebar-link">
+                        <i class="bi bi-diagram-3"></i>
+                        <span>Karty produktów</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Produkty</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/recipes">
+                                <i class="bi bi-journal-text"></i> Receptury
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/test-products">
+                                <i class="bi bi-clipboard-data"></i> Produkty testowe
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-stack"></i>
+                        <span>Surowce</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/materials/all">
+                                <i class="bi bi-diagram-3"></i> Surowce i kategorie
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/materials/nutritional-values">
+                                <i class="bi bi-clipboard-data"></i> Wartości odżywcze
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                {% set g = page_tab_groups().bdo %}
+                <li class="sidebar-item">
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
+                    </a>
+                </li>
+
+                {% set g = page_tab_groups().ppwr %}
+                <li class="sidebar-item">
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-title">Zamówienia</li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/client-orders" class="sidebar-link">
+                        <i class="bi bi-bag-check"></i>
+                        <span>Zamówienia klientów</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-shop"></i>
+                        <span>Franczyza</span>
+                        <span class="at-count" data-count="complaints" hidden></span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/franchise-products">
+                                <i class="bi bi-box-seam"></i> Produkty franczyzowe
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/franchise-complaints">
+                                <i class="bi bi-exclamation-triangle"></i> Reklamacje
+                                <span class="at-count" data-count="complaints" hidden></span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                
+                {% set g = page_tab_groups().returns %}
+                <li class="sidebar-item">
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-envelope"></i>
+                        <span>Komunikacja</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/communication/distribution" data-also="/communication/automations">
+                                <i class="bi bi-diagram-3"></i> Dystrybucja dokumentów
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/communication/messages">
+                                <i class="bi bi-envelope-open"></i> Historia wiadomości
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-title">Finanse</li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Proformy i faktury</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/proforma-documents">
+                                <i class="bi bi-receipt"></i> Proforma
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/invoice-documents">
+                                <i class="bi bi-receipt-cutoff"></i> Faktury inne
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/communication/payment-reminders" class="sidebar-link" data-also="/communication/compose/reminder">
+                        <i class="bi bi-bell"></i>
+                        <span>Przypomnienia płatności</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/finances/clients" class="sidebar-link">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Klienci : wolumen i marża</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-title">Logistyka</li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/logistics/week" class="sidebar-link">
+                        <i class="bi bi-calendar-week"></i>
+                        <span>Tydzień: ciężarówki</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/logistics" class="sidebar-link">
+                        <i class="bi bi-stack"></i>
+                        <span>Załadunek dnia</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/logistics/documents" class="sidebar-link">
+                        <i class="bi bi-printer"></i>
+                        <span>Dokumenty dostawy</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/logistics/notices" class="sidebar-link">
+                        <i class="bi bi-chat-dots"></i>
+                        <span>Powiadomienia klientów</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-truck"></i>
+                        <span>Wysyłka</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/shipping/wizard">
+                                <i class="bi bi-calendar-check"></i> Wyślij dzień
+                            </a>
+                        </li>
+                        {% set g = page_tab_groups().shipments %}
+                        <li class="submenu-item">
+                            <a href="{{ root }}{{ g.tabs[0][0] }}" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
+                                <i class="bi bi-check2-square"></i> {{ g.label }}
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-title">Administracja</li>
+
+                {# Tylko administrator : moduł kierownika produkcji i uprawnienia stanowisk (link ukryty dla innych). #}
+                <li class="sidebar-item">
+                    <a href="{{ root }}/workshop/manager" class="sidebar-link">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span>Kierownik produkcji : stanowisko i premia</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/organization/activity" class="sidebar-link">
+                        <i class="bi bi-activity"></i>
+                        <span>Aktywność w ERP</span>
+                    </a>
+                </li>
+
+                {# Ustawienia (24/10/2026, Sam : « regrouper les paramètres dans le rail, pour éviter de chercher ») : wszystkie strony
+                   ustawień i danych podstawowych w jednym miejscu, po dziedzinach — klienci, dostawcy, produkty, logistyka,
+                   organizacja, ogólne. Wcześniej rozrzucone po Zamówieniach, Zakupach, Logistyce i Administracji. #}
+                <li class="sidebar-title">Ustawienia</li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-people"></i>
+                        <span>Klienci</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/clients?type=active">
+                                <i class="bi bi-people"></i> Klienci
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/price-lists/general">
+                                <i class="bi bi-tags-fill"></i> Cennik ogólny
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/client-franchise-networks">
+                                <i class="bi bi-diagram-3-fill"></i> Sieci franczyzowe
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/communication/document-templates" data-also="/communication/templates">
+                                <i class="bi bi-file-earmark-richtext"></i> Wzory dokumentów i e-maili
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/material-suppliers" class="sidebar-link">
+                        <i class="bi bi-truck"></i>
+                        <span>Dostawcy</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Produkty</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/workshop/products#/categories">
+                                <i class="bi bi-tags"></i> Kategorie produktów i marże docelowe
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/settings/languages">
+                                <i class="bi bi-fonts"></i> Języki etykiet
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-signpost-split"></i>
+                        <span>Logistyka</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/logistics/tours">
+                                <i class="bi bi-signpost-split"></i> Trasy
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/logistics/vehicles">
+                                <i class="bi bi-truck"></i> Pojazdy i pojemność
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/product-carriers">
+                                <i class="bi bi-truck"></i> Przewoźnicy
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-diagram-3"></i>
+                        <span>Organizacja</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/organization/positions">
+                                <i class="bi bi-diagram-3"></i> Stanowiska i zadania
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/organization/access">
+                                <i class="bi bi-shield-lock"></i> Uprawnienia stanowisk
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/users">
+                                <i class="bi bi-people"></i> Użytkownicy systemu
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-gear-fill"></i>
+                        <span>Ogólne</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/communication/email-settings">
+                                <i class="bi bi-envelope-at"></i> Poczta e-mail
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/settings/ksef">
+                                <i class="bi bi-file-earmark-check"></i> KSeF
+                            </a>
+                        </li>
+                        {% if can_see('/settings/panel-api') %}
+                        <li class="submenu-item">
+                            <a href="{{ root }}/settings/panel-api">
+                                <i class="bi bi-shop"></i> Konto API panelu (ceny w sklepach)
+                            </a>
+                        </li>
+                        {% endif %}
+                        <li class="submenu-item">
+                            <a href="{{ root }}/devices">
+                                <i class="bi bi-display"></i> Dostęp API (urządzenia)
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/aliases">
+                                <i class="bi bi-book"></i> Aliasy
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/settings/page-usage">
+                                <i class="bi bi-bar-chart"></i> Licznik stron
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/other-settings">
+                                <i class="bi bi-sliders"></i> Pozostałe
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+            </ul>
+            {# Wyszukiwarka : strony bez własnej pozycji w railu (zakładki grup, przyciski na stronach). #}
+            <ul class="d-none" data-search-extra aria-hidden="true">
+                {% for g in page_tab_groups() %}{% for t in g.tabs %}
+                <li><a href="{{ root }}{{ t[0] }}" data-where="{{ g.section }} › {{ g.label }}"><i class="bi {{ t[2] }}"></i> {{ t[1] }}</a></li>
+                {% endfor %}{% endfor %}
+                <li><a href="{{ root }}/semi-products" data-where="Produkt › Receptury"><i class="bi bi-diagram-2"></i> Półprodukty</a></li>
+                <li><a href="{{ root }}/compositions" data-where="Produkt › Receptury"><i class="bi bi-layers"></i> Kompozycje</a></li>
+                <li><a href="{{ root }}/products/new-with-recipe" data-where="Produkt › Produkty"><i class="bi bi-plus-circle"></i> Nowy produkt z recepturą</a></li>
+                <li><a href="{{ root }}/workshop/gantt#view=day" data-where="Produkcja › Tydzień produkcji"><i class="bi bi-bar-chart-steps"></i> Dzień : godziny</a></li>
+                <li><a href="{{ root }}/workshop/team-sheet#lists=1" data-where="Produkcja › Plan zespołów"><i class="bi bi-file-earmark-pdf"></i> Listy dnia (PDF) : lista produkcyjna, zapotrzebowanie, zwroty</a></li>
+                <li><a href="{{ root }}/client-orders/archive" data-where="Zamówienia › Zamówienia klientów"><i class="bi bi-archive"></i> Archiwum zamówień</a></li>
+                <li><a href="{{ root }}/devices/logs" data-where="Ustawienia › Ogólne › Dostęp API"><i class="bi bi-journal-text"></i> Logi urządzeń</a></li>
+                <li><a href="{{ root }}/devices/new" data-where="Ustawienia › Ogólne › Dostęp API"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
+                <li><a href="{{ root }}/settings/ksef/purchase-invoices" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-cloud-download"></i> Faktury zakupowe KSeF (pobieranie)</a></li>
+                <li><a href="{{ root }}/purchases" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-archive"></i> Archiwum dostaw (ręczne)</a></li>
+                <li><a href="{{ root }}/communication/distribution?tab=history" data-where="Komunikacja › Dystrybucja dokumentów"><i class="bi bi-lightning-charge"></i> Automatyczne e-maile : historia wysyłek</a></li>
+            </ul>
+        </div>
+
+        <button class="sidebar-toggler btn x"><i data-feather="x"></i></button>
+    </div>
+</div>
+
+<script>
+    // Uprawnienia stanowisk : linki do stron, których użytkownik nie widzi, znikają z railu i wyszukiwarki (serwer i tak
+    // odmawia dostępu) ; podmenu i sekcje bez linków znikają ; grupa z zakładkami prowadzi do pierwszej widocznej zakładki.
+    (function () {
+        var access = {{ rail_access()|json_encode|raw }};
+        var prefixes = Object.keys(access);
+        if (!prefixes.length) return;
+        var base = (document.querySelector('#sidebar .logo a') || {pathname: ''}).pathname.replace(/\/home\/?$/, '');
+        // Jak serwer : decyduje najdłuższy pasujący prefiks ; ścieżka spoza katalogu jest widoczna.
+        var off = function (path) {
+            var p = path.replace(/\/+$/, '') || '/', best = null;
+            prefixes.forEach(function (h) { if ((p === h || p.indexOf(h + '/') === 0) && (best === null || h.length > best.length)) best = h; });
+            return best !== null && !access[best];
+        };
+        var rel = function (a) { return a.pathname.indexOf(base) === 0 ? a.pathname.slice(base.length) || '/' : a.pathname; };
+        document.querySelectorAll('#sidebar a[href]').forEach(function (a) {
+            if (a.getAttribute('href') === '#' || a.closest('.logo')) return;
+            if (!off(rel(a))) return;
+            var also = (a.dataset.also || '').split(' ').filter(function (u) { return u && !off(u); });
+            if (also.length) { a.setAttribute('href', base + also[0]); return; }
+            var li = a.closest('li');
+            if (li) li.remove();
+        });
+        document.querySelectorAll('#sidebar .sidebar-item.has-sub').forEach(function (li) {
+            if (!li.querySelector('.submenu a[href]')) li.remove();
+        });
+        document.querySelectorAll('#sidebar .sidebar-title').forEach(function (title) {
+            var n = title.nextElementSibling;
+            while (n && !n.classList.contains('sidebar-title') && !n.classList.contains('sidebar-item')) n = n.nextElementSibling;
+            if (!n || n.classList.contains('sidebar-title')) title.remove();
+        });
+    })();
+
+    // Pozycja bieżącej strony: podświetlona i rozwinięta (mazer.js szuka .sidebar-item.active).
+    (function () {
+        var here = location.pathname.replace(/\/+$/, '');
+        var best = null, bestLen = -1;
+        // Prefiks aplikacji (np. /production) : z linku logo /dashboard.
+        var base = (document.querySelector('#sidebar .logo a') || {pathname: ''}).pathname.replace(/\/home\/?$/, '');
+        document.querySelectorAll('#sidebar .menu a[href]').forEach(function (a) {
+            if (a.getAttribute('href') === '#') return;
+            // Grupa z zakładkami (data-also) : pozycja aktywna na każdej stronie grupy.
+            var paths = [a.pathname].concat((a.dataset.also || '').split(' ').filter(Boolean).map(function (u) { return base + u; }));
+            paths.forEach(function (raw) {
+                var p = raw.replace(/\/+$/, '');
+                if ((here === p || here.indexOf(p + '/') === 0) && p.length > bestLen) { best = a; bestLen = p.length; }
+            });
+        });
+        if (!best) return;
+        var li = best.closest('li');
+        li.classList.add('active');
+        var sub = li.closest('.submenu');
+        if (sub) { sub.classList.add('active'); sub.closest('.sidebar-item').classList.add('active'); }
+    })();
+</script>
