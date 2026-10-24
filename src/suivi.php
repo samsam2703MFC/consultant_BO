@@ -555,7 +555,7 @@ function suDossier(string $shop): array
     // 4. Le scoring du trimestre.
     $l = [];
     try {
-        $s = function_exists('frScoring') ? frScoring($shop) : null;
+        $s = suScoring($shop);
         if ($s && $s['total'] !== null) {
             $l[] = 'Scoring ' . ($s['trimestre']['court'] ?? '') . ' : ' . $nf($s['total'], 1) . ' / ' . $s['sur'] . ($s['rang'] ? ' · ' . $s['rang'] . ($s['rang'] === 1 ? 'er' : 'e') . ' du réseau' : '');
             if (is_array($s['prec'] ?? null) && ($s['prec']['total'] ?? null) !== null) { $l[] = 'trimestre précédent : ' . $nf($s['prec']['total'], 1); }
@@ -1020,6 +1020,33 @@ function suEtape(array $v): ?string
 }
 
 /** GET /suivi/tableau?consultant=&semaine=0 — les visites dans le circuit, les franchisés, les points et les corrections. */
+/**
+ * Le scoring du trimestre, gardé : son calcul relit le panel pour tous les magasins (≈ 20 s en production,
+ * 24/10/2026), et le tableau de bord, la préparation et la page du franchisé l'ouvraient à chaque lecture.
+ * L'horloge des visites le recalcule toutes les 25 minutes (suHorloge) ; une lecture ne paie le calcul que
+ * si le cache est vide ou a plus de 2 heures.
+ */
+function suScoringTous(bool $forcer = false): ?array
+{
+    if (!function_exists('frScoringTous')) { return null; }
+    if (!function_exists('rcServi')) { return frScoringTous(); }
+    $r = rcServi('suScoring', static fn (): array => frScoringTous() ?? [], static fn (array $x): int => $x ? 7200 : 0, $forcer, '/suivi/scoring', 10800);
+    unset($r['cache']);
+    return $r ?: null;
+}
+
+/** Le scoring d'un magasin, lu dans le cache (même forme que frScoring). */
+function suScoring(string $shop): ?array
+{
+    $d = suScoringTous();
+    foreach ($d['magasins'] ?? [] as $l) {
+        if ((string) $l['id'] !== $shop) { continue; }
+        return ['trimestre' => $d['trimestre'], 'postes' => $l['postes'], 'total' => $l['total'], 'n' => $l['n'], 'sur' => $l['sur'], 'etoiles' => $l['etoiles'],
+            'prec' => $l['prec'], 'delta' => $l['delta'], 'rang' => $l['rang'], 'magasins' => count($d['magasins']), 'noms' => array_map(static fn ($p) => $p['nom'], $d['postes'] ?? [])];
+    }
+    return null;
+}
+
 function ep_suivi_tableau(): array
 {
     ensureSuivi();
@@ -1082,7 +1109,7 @@ function ep_suivi_tableau(): array
     unset($p);
     // Les franchisés : le feu, la dernière visite, le dernier rapport, les points, la prochaine visite, le cadre du mois, le scoring.
     $attendu = function_exists('vcAttendu') ? vcAttendu(date('Y-m')) : [];
-    $sc = function_exists('frScoringTous') ? frScoringTous() : null; $scPar = [];
+    $sc = suScoringTous(); $scPar = [];
     foreach ($sc['magasins'] ?? [] as $l) { $scPar[(string) $l['id']] = $l; }
     $franchises = [];
     foreach ($etat['boutiques'] as $b) {
@@ -1374,7 +1401,7 @@ function ep_suivi_franchise(): array
             array_values(array_filter(array_map('suMspLigne', Db::rows('SELECT * FROM ceo_scoring_msp WHERE shop_id = ? ORDER BY COALESCE(passage_le, DATE(le)) DESC LIMIT 4', [$shop])), static fn ($m) => $m['montrer'])));
     }
     if ($voit['scoring']) {
-        $s = function_exists('frScoring') ? frScoring($shop) : null;
+        $s = suScoring($shop);
         $out['scoring'] = $s ? ['trimestre' => $s['trimestre']['court'] ?? '', 'total' => $s['total'], 'sur' => $s['sur'], 'etoiles' => $s['etoiles'] ?? null,
             'rang' => $s['rang'] ?? null, 'magasins' => $s['magasins'] ?? null, 'prec' => isset($s['prec']['total']) ? $s['prec']['total'] : null,
             'postes' => array_map(static fn ($p) => ['v' => $p['v'] ?? null], (array) $s['postes'])] : null;
@@ -1654,7 +1681,12 @@ function suHorloge(array &$fait): void
 {
     ensureSuivi();
     $regles = suRegles(); $d = $regles['delais']; $auj = date('Y-m-d'); $now = time();
-    $fait += ['odj' => 0, 'rapportsRappel' => 0, 'rapportsAuto' => 0, 'relances' => 0];
+    $fait += ['odj' => 0, 'rapportsRappel' => 0, 'rapportsAuto' => 0, 'relances' => 0, 'scoring' => 0];
+    // Le scoring gardé est recalculé ici, hors de toute lecture d'écran, dès qu'il a plus de 25 minutes.
+    $sc = setting('suScoring');
+    if (!is_array($sc) || !isset($sc['le']) || $now - (int) $sc['le'] > 1500) {
+        try { suScoringTous(true); $fait['scoring'] = 1; } catch (Throwable $e) { /* le prochain passage réessaiera */ }
+    }
     if ($d['odjAuto']) {
         $jusque = date('Y-m-d', strtotime('+' . (int) $d['odjJours'] . ' days'));
         foreach (Db::rows('SELECT * FROM ceo_visite WHERE statut IN (\'planifiee\', \'confirmee\') AND odj_envoye_le IS NULL AND prevu_le BETWEEN ? AND ?', [$auj, $jusque]) as $v) {
