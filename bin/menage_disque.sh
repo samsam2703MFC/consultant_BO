@@ -19,7 +19,8 @@
 # 5 000 dernières lignes) ; les caches de pip, composer, npm, yarn et node-gyp de root ; les images
 # et le cache de construction Docker inutilisés depuis 7 jours (jamais un conteneur ni un volume) ;
 # les anciennes révisions des snaps ; les binlogs MySQL de plus de 2 jours (seulement sans réplica) ;
-# les fichiers de /tmp de plus de 2 jours.
+# les fichiers de /tmp de plus de 2 jours. Hors relevé, il règle aussi la rétention des binlogs à 3 jours.
+# MySQL est piloté par le compte de maintenance d'Ubuntu (/etc/mysql/debian.cnf) : root a un mot de passe.
 #
 # Posé par bin/deploy.sh : au début de chaque livraison, et toutes les 6 heures par
 # /etc/cron.d/cockpit-disque (journal : /var/log/cockpit-disque.log). La dernière ligne dit
@@ -44,6 +45,8 @@ warn() { printf '\033[1;33m[disque]\033[0m %s\n' "$*"; }
 pct()  { df -P / | awk 'NR==2 { gsub("%", "", $5); print $5 }'; }
 libre_mo() { df -Pm / | awk 'NR==2 { print $4 }'; }
 etat() { df -hP / | awk 'NR==2 { print $3 " utilisés sur " $2 " (" $5 "), " $4 " libres" }'; }
+# MySQL en administrateur : root y a un mot de passe ; le compte de maintenance d'Ubuntu (debian.cnf) a les droits.
+mysqladm() { if [[ -r /etc/mysql/debian.cnf ]]; then mysql --defaults-file=/etc/mysql/debian.cnf "$@"; else mysql "$@"; fi; }
 
 log "$(date '+%Y-%m-%d %H:%M') · disque / : $(etat)"
 avant="$(pct)"
@@ -55,9 +58,9 @@ if [[ "$avant" -ge "$SEUIL" || "$FORCE" -eq 1 || "$RELEVE" -eq 1 ]]; then
     log "Les plus gros dans ${d} :"
     du -xh --max-depth=1 "$d" 2>/dev/null | sort -rh | sed -n '2,7p' | sed 's/^/    /'
   done
-  datadir="$(mysql -N -e 'SELECT @@datadir' 2>/dev/null || true)"
+  datadir="$(mysqladm -N -e 'SELECT @@datadir' 2>/dev/null || true)"
   if [[ -n "$datadir" ]]; then
-    bl="$(mysql -N -e 'SHOW BINARY LOGS' 2>/dev/null | awk '{ s += $2 } END { if (NR) printf "%d binlog(s), %.0f Mo", NR, s / 1048576 }')"
+    bl="$(mysqladm -N -e 'SHOW BINARY LOGS' 2>/dev/null | awk '{ s += $2 } END { if (NR) printf "%d binlog(s), %.0f Mo", NR, s / 1048576 }')"
     log "MySQL : datadir ${datadir}${bl:+ · $bl}"
   fi
   if command -v docker >/dev/null 2>&1; then
@@ -90,18 +93,28 @@ if [[ "$RELEVE" -eq 0 && ( "$avant" -ge "$SEUIL" || "$FORCE" -eq 1 ) ]]; then
     snap list --all 2>/dev/null | awk '/disabled/ { print $1, $3 }' | while read -r nom rev; do snap remove "$nom" --revision="$rev" >/dev/null 2>&1 || true; done
   fi
   # Les binlogs ne servent qu'à un réplica ou à une restauration point par point : aucun réplica ici.
-  if mysql -N -e 'SELECT 1' >/dev/null 2>&1; then
-    if [[ -z "$(mysql -N -e 'SHOW REPLICAS' 2>/dev/null || mysql -N -e 'SHOW SLAVE HOSTS' 2>/dev/null || true)" ]]; then
-      mysql -e 'PURGE BINARY LOGS BEFORE NOW() - INTERVAL 2 DAY' >/dev/null 2>&1 || true
+  if mysqladm -N -e 'SELECT 1' >/dev/null 2>&1; then
+    if [[ -z "$(mysqladm -N -e 'SHOW REPLICAS' 2>/dev/null || mysqladm -N -e 'SHOW SLAVE HOSTS' 2>/dev/null || true)" ]]; then
+      mysqladm -e 'PURGE BINARY LOGS BEFORE NOW() - INTERVAL 2 DAY' >/dev/null 2>&1 || true
     fi
   fi
   find /tmp -xdev -maxdepth 1 -type f -mtime +2 -delete 2>/dev/null || true
   log "Après ménage : $(etat) (avant : ${avant} %)."
 fi
 
+# --- Les binlogs ne s'accumulent plus : 3 jours au lieu des 30 par défaut de MySQL 8 ----
+# (le 24/10/2026, 4 Go de binlogs sur un disque de 25 Go). Réglage persistant, posé une fois.
+if [[ "$RELEVE" -eq 0 ]]; then
+  exp="$(mysqladm -N -e 'SELECT @@binlog_expire_logs_seconds' 2>/dev/null || true)"
+  if [[ "$exp" =~ ^[0-9]+$ && "$exp" -gt 259200 ]]; then
+    mysqladm -e 'SET PERSIST binlog_expire_logs_seconds = 259200' >/dev/null 2>&1 \
+      && log "MySQL : binlogs gardés 3 jours (au lieu de $((exp / 86400)) j)." || warn "MySQL : la rétention des binlogs n'a pas pu être réglée."
+  fi
+fi
+
 # --- MySQL bloqué par le disque plein : il refuse toute connexion -----------------
 if [[ "$RELANCE_MYSQL" -eq 1 && "$(libre_mo)" -ge 400 ]]; then
-  if mysql -N -e 'SELECT 1' 2>&1 | grep -q '1040\|Too many connections'; then
+  if mysqladm -N -e 'SELECT 1' 2>&1 | grep -q '1040\|Too many connections'; then
     svc="$(systemctl list-units --type=service --no-legend 2>/dev/null | awk '{ print $1 }' | grep -m1 -E '^(mysql|mariadb|mysqld)\.service$' || true)"
     if [[ -n "$svc" ]]; then
       warn "MySQL refuse les connexions (Too many connections) : relance de ${svc}."
