@@ -262,6 +262,46 @@ Puis dans le navigateur : `$BASE/` →
 | `/api/cockpit/*` → 404 | `mod_rewrite` inactif ou `AllowOverride` ≠ `All` sur le répertoire |
 | Partages panel vides | `mac_report_share` inexistante (aucun partage encore créé côté panel) — normal, volet vide |
 | Boutique « #n » au lieu du nom dans les partages | `ceo_shop.pwa_shop_id` pas encore mappé aux vrais ids du panel |
+| `/api/cockpit/*` → 503 « Too many connections », livraison bloquée sur `/api/cockpit/meta` | **disque plein** : MySQL n'écrit plus, ses connexions s'empilent → voir « Disque plein » ci-dessous |
+
+### Disque plein (24/10/2026)
+
+Le 24/10/2026, le disque de 25 Go était plein à 100 % : MySQL n'écrivait plus, l'API répondait 503
+« Too many connections » et chaque livraison restait bloquée sur `/api/cockpit/meta`. Depuis :
+
+- chaque livraison commence par `bin/menage_disque.sh` (relevé, ménage sûr dès 90 %, relance de MySQL
+  s'il refuse les connexions) et **s'arrête avant de copier** s'il reste moins de 300 Mo libres ;
+- `/etc/cron.d/cockpit-disque` relance ce ménage toutes les 6 heures dès 85 % et notifie les abonnés
+  « admin » du cockpit si le disque reste à 90 % ou plus (journal : `/var/log/cockpit-disque.log`) ;
+- `/etc/logrotate.d/cockpit` fait tourner les journaux `/var/log/cockpit-*.log` chaque semaine.
+
+Le ménage ne retire que ce qui se recrée : cache apt, journaux systemd au-delà de 100 Mo, journaux tournés
+de plus de 7 jours, journaux du cockpit au-delà de 50 Mo (les 5 000 dernières lignes restent), caches pip,
+composer, npm, yarn et node-gyp de root, images et cache de construction Docker inutilisés depuis 7 jours,
+anciennes révisions des snaps, binlogs MySQL de plus de 2 jours (sans réplica), fichiers de `/tmp` de plus
+de 2 jours. Jamais une base, un téléversement, un conteneur ni un volume.
+
+**À la main, en root (PuTTY), quand le serveur est déjà plein :**
+
+```bash
+df -h /                                                     # 1. combien il reste
+du -xh --max-depth=1 /var/lib /var/www /srv /root 2>/dev/null | sort -rh | head -20
+ls -lh /var/lib/mysql | grep -i bin | tail                  #    binlogs MySQL, s'il y en a
+apt-get clean                                               # 2. le ménage sûr
+journalctl --vacuum-size=100M
+find /var/log -xdev -type f \( -name '*.gz' -o -name '*.[0-9]' \) -mtime +7 -delete
+rm -rf /root/.cache/pip /root/.cache/composer /root/.npm/_cacache
+docker image prune -af --filter until=168h 2>/dev/null     #    seulement si Docker est installé
+df -h /                                                     # 3. il faut au moins 1 Go libre
+systemctl restart mysql                                     # 4. libère les connexions bloquées
+mysql -e "PURGE BINARY LOGS BEFORE NOW() - INTERVAL 2 DAY"  # 5. les binlogs (aucun réplica ici)
+df -h / && curl -s http://127.0.0.1/consulant_bo/api/cockpit/meta | head -c 120; echo
+```
+
+Une fois le cockpit livré, la même chose s'écrit `bash /var/www/consulant_bo/bin/menage_disque.sh --force --mysql`.
+Si le disque reste plein après le ménage, ce sont des données : le relevé dit où (base MySQL dans
+`/var/lib/mysql`, sites dans `/var/www` et `/srv`, sauvegardes dans `/root/backups`) — à trier à la main.
+Puis relancer la livraison (GitHub › Actions › « Deploy — Cockpit CEO » › Run workflow).
 
 ## Application terrain (visites)
 
