@@ -365,5 +365,6 @@
   "gp_won_by": "wygrywa {n}",
   "gp_season": "od {du} do {au}",
   "gp_sponsor_site": "Sponsor",
-  "gp_note": "Gra trwa cały sezon; minimum godzin lub paragonów rośnie razem z nim. Ranking odświeża się co piętnaście minut."
+  "gp_note": "Gra trwa cały sezon; minimum godzin lub paragonów rośnie razem z nim. Ranking odświeża się co piętnaście minut.",
+  "step1_line_set": "Twoja średnia z miesiąca, {v} artykułu na paragon, staje się Twoim rekordem: w przyszłym miesiącu {o} daje {e} €, potem {e} € za każdą kolejną dziesiątą."
 }
