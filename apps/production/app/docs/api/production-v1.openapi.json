@@ -159,7 +159,7 @@
                         "$ref": "#/components/responses/Error503"
                     }
                 },
-                "description": "Le compte doit avoir au moins un rôle du module (tfb_prod_user_role). Après auth.max_failed_logins échecs en auth.lockout_window_min minutes : 429.",
+                "description": "Le compte doit avoir au moins un rôle du module (n_prod_user_role). Après auth.max_failed_logins échecs en auth.lockout_window_min minutes : 429.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"

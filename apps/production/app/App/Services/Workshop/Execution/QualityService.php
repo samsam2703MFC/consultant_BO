@@ -16,7 +16,7 @@ use App\Services\Workshop\Referentiel\AuditTrail;
 
 /**
  * Tablet grupy, zakładka « Kontrola jakości » : każda partia dnia sprawdzona jednym dotknięciem — OK albo
- * niezgodność. Niezgodność (z partii albo zgłoszona osobno) trafia do rejestru niezgodności ERP (tfb_nc,
+ * niezgodność. Niezgodność (z partii albo zgłoszona osobno) trafia do rejestru niezgodności ERP (n_nc,
  * źródło « production ») z numerem, produktem, ilością i osobą, która ją zgłosiła na tablecie.
  */
 final class QualityService

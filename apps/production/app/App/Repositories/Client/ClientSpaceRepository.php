@@ -6,13 +6,13 @@ namespace App\Repositories\Client;
 use App\Core\Helpers\BaseRepository;
 
 /**
- * Strona klienta : opcje klienta (tfb_customer_space), współczynniki sprzedaży kategorii
- * (tfb_category_sales_coefficient), dokumenty klienta i zakupy z proform do celu obrotu.
+ * Strona klienta : opcje klienta (n_customer_space), współczynniki sprzedaży kategorii
+ * (n_category_sales_coefficient), dokumenty klienta i zakupy z proform do celu obrotu.
  * Zakupy z faktur WDT : WdtSalesRepository (jedna definicja sprzedaży WDT).
  */
 class ClientSpaceRepository extends BaseRepository
 {
-    protected string $table = 'tfb_customer_space';
+    protected string $table = 'n_customer_space';
 
     /** Typy dokumentów klienta : etykieta, tabela. */
     public const DOCUMENT_TYPES = [
@@ -26,14 +26,14 @@ class ClientSpaceRepository extends BaseRepository
 
     public function settings(int $customerId): array
     {
-        $rows = $this->query('SELECT * FROM tfb_customer_space WHERE id_customer = :id', ['id' => $customerId]);
+        $rows = $this->query('SELECT * FROM n_customer_space WHERE id_customer = :id', ['id' => $customerId]);
         return is_array($rows) && $rows ? $rows[0] : [];
     }
 
     public function saveSettings(int $customerId, bool $docs, bool $goal, ?float $coefficient, ?int $openDays, ?string $author): void
     {
         $this->query(
-            'INSERT INTO tfb_customer_space (id_customer, docs_enabled, goal_enabled, coefficient, open_days, updated_by)
+            'INSERT INTO n_customer_space (id_customer, docs_enabled, goal_enabled, coefficient, open_days, updated_by)
              VALUES (:id, :docs, :goal, :coefficient, :open_days, :author)
              ON DUPLICATE KEY UPDATE docs_enabled = VALUES(docs_enabled), goal_enabled = VALUES(goal_enabled),
                  coefficient = VALUES(coefficient), open_days = VALUES(open_days), updated_by = VALUES(updated_by)',
@@ -44,14 +44,14 @@ class ClientSpaceRepository extends BaseRepository
     /** @return list<int> klienci z włączoną stroną (dokumenty albo cel obrotu) */
     public function enabledCustomerIds(): array
     {
-        $rows = $this->query('SELECT id_customer FROM tfb_customer_space WHERE docs_enabled = 1 OR goal_enabled = 1');
+        $rows = $this->query('SELECT id_customer FROM n_customer_space WHERE docs_enabled = 1 OR goal_enabled = 1');
         return array_map('intval', array_column(is_array($rows) ? $rows : [], 'id_customer'));
     }
 
     /** Domyślny współczynnik z Ustawień (cennik sklepów, mnożnik franczyzy). */
     public function defaultCoefficient(): ?float
     {
-        $rows = $this->query('SELECT multiplier FROM tfb_store_price_config ORDER BY id LIMIT 1');
+        $rows = $this->query('SELECT multiplier FROM n_store_price_config ORDER BY id LIMIT 1');
         $value = is_array($rows) && $rows ? (float) $rows[0]['multiplier'] : 0.0;
         return $value > 0 ? $value : null;
     }
@@ -63,7 +63,7 @@ class ClientSpaceRepository extends BaseRepository
             'SELECT cp.id, cp.name, csc.coefficient, COALESCE(csc.excluded, 0) AS excluded,
                     (SELECT COUNT(*) FROM final_product fp WHERE fp.id_category = cp.id AND fp.active = 1) AS active_products
              FROM category_product cp
-             LEFT JOIN tfb_category_sales_coefficient csc ON csc.id_category = cp.id
+             LEFT JOIN n_category_sales_coefficient csc ON csc.id_category = cp.id
              ORDER BY cp.name'
         );
         return is_array($rows) ? $rows : [];
@@ -73,11 +73,11 @@ class ClientSpaceRepository extends BaseRepository
     {
         if ($coefficient === null && !$excluded) {
             // Bez własnego współczynnika i nie « poza celem » : kategoria bierze współczynnik klienta.
-            $this->query('DELETE FROM tfb_category_sales_coefficient WHERE id_category = :id', ['id' => $categoryId]);
+            $this->query('DELETE FROM n_category_sales_coefficient WHERE id_category = :id', ['id' => $categoryId]);
             return;
         }
         $this->query(
-            'INSERT INTO tfb_category_sales_coefficient (id_category, coefficient, excluded, updated_by)
+            'INSERT INTO n_category_sales_coefficient (id_category, coefficient, excluded, updated_by)
              VALUES (:id, :coefficient, :excluded, :author)
              ON DUPLICATE KEY UPDATE coefficient = VALUES(coefficient), excluded = VALUES(excluded), updated_by = VALUES(updated_by)',
             ['id' => $categoryId, 'coefficient' => $coefficient, 'excluded' => (int) $excluded, 'author' => $author]
@@ -132,7 +132,7 @@ class ClientSpaceRepository extends BaseRepository
                              IF(sup.id_document_wdt IS NULL, NULL, 'zastąpiona') AS note
                       FROM document_wdt w
                       LEFT JOIN ksef_submission k ON k.id_document_wdt = w.id
-                      LEFT JOIN tfb_wdt_superseded sup ON sup.id_document_wdt = w.id
+                      LEFT JOIN n_wdt_superseded sup ON sup.id_document_wdt = w.id
                       WHERE w.id_customer = :c AND COALESCE(NULLIF(w.invoiced_date, ''), w.established_date) >= :from AND w.doc_num LIKE :q",
             'invoice' => "SELECT i.id, i.invoiced_date AS date, i.doc_num AS number,
                                  (SELECT SUM(ip.quantity * ip.single_price) FROM document_invoice_product ip WHERE ip.id_document_invoice = i.id) AS amount,

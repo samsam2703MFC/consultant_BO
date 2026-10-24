@@ -73,7 +73,7 @@ final class MaterialCostRepository extends WorkshopRepository
         $where = $materialId === null ? '' : 'AND o.id_raw_material = ?';
         return $this->all(
             "SELECT o.*, s.name AS supplier_name
-             FROM tfb_mp_offer o LEFT JOIN supplier s ON s.id = o.id_supplier
+             FROM n_mp_offer o LEFT JOIN supplier s ON s.id = o.id_supplier
              WHERE o.status = 'received' AND o.valid_from <= CURDATE() AND (o.valid_to IS NULL OR o.valid_to >= CURDATE()) {$where}
              ORDER BY o.price_per_base",
             $materialId === null ? [] : [$materialId]
@@ -83,7 +83,7 @@ final class MaterialCostRepository extends WorkshopRepository
     /** @return array<int,int> fournisseur => nombre de NC sur la période */
     public function supplierNcCounts(int $months): array
     {
-        $rows = $this->all('SELECT id_supplier, COUNT(*) AS n FROM tfb_nc WHERE id_supplier IS NOT NULL AND reported_at >= CURDATE() - INTERVAL ? MONTH GROUP BY id_supplier', [$months]);
+        $rows = $this->all('SELECT id_supplier, COUNT(*) AS n FROM n_nc WHERE id_supplier IS NOT NULL AND reported_at >= CURDATE() - INTERVAL ? MONTH GROUP BY id_supplier', [$months]);
         return array_map('intval', array_column($rows, 'n', 'id_supplier'));
     }
 

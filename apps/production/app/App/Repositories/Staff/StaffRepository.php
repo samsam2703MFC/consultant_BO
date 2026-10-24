@@ -5,12 +5,12 @@ use App\Repositories\Workshop\WorkshopRepository;
 
 /**
  * Personel : pracownicy produkcji ERP (production_employee) z ich wynagrodzeniem minimalnym
- * i udziałem w premiach (tfb_staff_pay). « Aktywny » = jeden wskaźnik pracownika, wspólny z modułem
- * produkcji (tfb_prod_employee.active : tablet, pointage, zespoły) — brak profilu = aktywny.
+ * i udziałem w premiach (n_staff_pay). « Aktywny » = jeden wskaźnik pracownika, wspólny z modułem
+ * produkcji (n_prod_employee.active : tablet, pointage, zespoły) — brak profilu = aktywny.
  */
 final class StaffRepository extends WorkshopRepository
 {
-    protected string $table = 'tfb_staff_pay';
+    protected string $table = 'n_staff_pay';
     protected array $writable = ['base_monthly', 'bonus_eligible', 'notes', 'updated_by'];
 
     public function employees(): array
@@ -20,8 +20,8 @@ final class StaffRepository extends WorkshopRepository
                     p.base_monthly, COALESCE(p.bonus_eligible, 1) AS bonus_eligible, COALESCE(pe.active, 1) AS active, p.notes
              FROM production_employee e
              JOIN production_sections s ON s.id = e.id_section
-             LEFT JOIN tfb_staff_pay p ON p.id_production_employee = e.id
-             LEFT JOIN tfb_prod_employee pe ON pe.id_production_employee = e.id
+             LEFT JOIN n_staff_pay p ON p.id_production_employee = e.id
+             LEFT JOIN n_prod_employee pe ON pe.id_production_employee = e.id
              ORDER BY s.id, e.surname, e.name'
         );
     }
@@ -29,7 +29,7 @@ final class StaffRepository extends WorkshopRepository
     /** Jeden wskaźnik « aktywny » pracownika (profil produkcji tworzony, gdy go jeszcze nie ma). */
     public function setActive(int $employeeId, bool $active): void
     {
-        $this->db->prepare('INSERT INTO tfb_prod_employee (id_production_employee, active) VALUES (?, ?) ON DUPLICATE KEY UPDATE active = VALUES(active)')
+        $this->db->prepare('INSERT INTO n_prod_employee (id_production_employee, active) VALUES (?, ?) ON DUPLICATE KEY UPDATE active = VALUES(active)')
             ->execute([$employeeId, (int) $active]);
     }
 
@@ -44,7 +44,7 @@ final class StaffRepository extends WorkshopRepository
         if (!$data) return;
         $columns = array_keys($data);
         $sql = sprintf(
-            'INSERT INTO tfb_staff_pay (id_production_employee, %s) VALUES (:id, %s) ON DUPLICATE KEY UPDATE %s',
+            'INSERT INTO n_staff_pay (id_production_employee, %s) VALUES (:id, %s) ON DUPLICATE KEY UPDATE %s',
             implode(', ', $columns),
             implode(', ', array_map(fn($c) => ':' . $c, $columns)),
             implode(', ', array_map(fn($c) => "{$c} = VALUES({$c})", $columns))

@@ -9,13 +9,13 @@ use App\Domain\Stock\ToProduce;
 use App\Repositories\Analysis\WdtSalesRepository;
 
 /**
- * Articles planifiables (tfb_prod_item) : un produit fini ou un semi-fini de l'ERP, avec ses
+ * Articles planifiables (n_prod_item) : un produit fini ou un semi-fini de l'ERP, avec ses
  * réglages de production, sa gamme et les pertes de sa nomenclature. Nom, colisage et
  * nomenclature sont relus dans les tables de l'ERP, jamais recopiés.
  */
 final class ItemRepository extends WorkshopRepository
 {
-    protected string $table = 'tfb_prod_item';
+    protected string $table = 'n_prod_item';
     protected array $writable = ['item_type', 'id_final_product', 'id_recipe', 'base_unit'];
 
     private const SETTINGS = ['mode', 'never_frozen', 'stock_min', 'stock_max', 'coverage_days', 'batch_min', 'batch_multiple', 'batch_people', 'batch_minutes',
@@ -34,12 +34,12 @@ final class ItemRepository extends WorkshopRepository
             s.shelf_life_workshop_days, s.shelf_life_shop_days, s.id_primary_group, s.status, s.wizard_step,
             s.validated_at, s.validated_by, s.updated_at AS settings_updated_at,
             lg.carton_length_mm, lg.carton_width_mm, lg.carton_height_mm, lg.carton_tare_g, lg.carton_type, lg.carton_ean, lg.pallet_type, lg.storage,
-            (SELECT COUNT(*) FROM tfb_prod_routing_step r WHERE r.id_item = i.id) AS step_count
-        FROM tfb_prod_item i
+            (SELECT COUNT(*) FROM n_prod_routing_step r WHERE r.id_item = i.id) AS step_count
+        FROM n_prod_item i
         LEFT JOIN final_product fp ON fp.id = i.id_final_product
         LEFT JOIN product_recipe pr ON pr.id = i.id_recipe
-        LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id
-        LEFT JOIN tfb_prod_item_logistics lg ON lg.id_item = i.id";
+        LEFT JOIN n_prod_product_settings s ON s.id_item = i.id
+        LEFT JOIN n_prod_item_logistics lg ON lg.id_item = i.id";
 
     /**
      * Karta dla każdego aktywnego produktu ERP bez karty (na zamówienie, w przygotowaniu, grupa domyślna jego działu) :
@@ -47,14 +47,14 @@ final class ItemRepository extends WorkshopRepository
      */
     public function createMissingCards(): int
     {
-        $created = (int) $this->db->exec("INSERT IGNORE INTO tfb_prod_item (item_type, id_final_product, base_unit)
+        $created = (int) $this->db->exec("INSERT IGNORE INTO n_prod_item (item_type, id_final_product, base_unit)
             SELECT 'product', fp.id, 'szt' FROM final_product fp
-            WHERE fp.active = 1 AND NOT EXISTS (SELECT 1 FROM tfb_prod_item i WHERE i.id_final_product = fp.id)");
+            WHERE fp.active = 1 AND NOT EXISTS (SELECT 1 FROM n_prod_item i WHERE i.id_final_product = fp.id)");
         if ($created > 0) {
-            $this->db->exec("INSERT IGNORE INTO tfb_prod_product_settings (id_item, mode, never_frozen, id_primary_group, status, wizard_step)
-                SELECT i.id, 'MTO', 0, (SELECT MIN(g.id) FROM tfb_prod_group g WHERE g.active = 1 AND g.id_section = fp.id_section), 'draft', 1
-                FROM tfb_prod_item i JOIN final_product fp ON fp.id = i.id_final_product
-                WHERE NOT EXISTS (SELECT 1 FROM tfb_prod_product_settings s WHERE s.id_item = i.id)");
+            $this->db->exec("INSERT IGNORE INTO n_prod_product_settings (id_item, mode, never_frozen, id_primary_group, status, wizard_step)
+                SELECT i.id, 'MTO', 0, (SELECT MIN(g.id) FROM n_prod_group g WHERE g.active = 1 AND g.id_section = fp.id_section), 'draft', 1
+                FROM n_prod_item i JOIN final_product fp ON fp.id = i.id_final_product
+                WHERE NOT EXISTS (SELECT 1 FROM n_prod_product_settings s WHERE s.id_item = i.id)");
         }
         return $created;
     }
@@ -79,13 +79,13 @@ final class ItemRepository extends WorkshopRepository
 
     public function idForProduct(int $finalProductId): ?int
     {
-        $id = $this->all('SELECT id FROM tfb_prod_item WHERE id_final_product = ?', [$finalProductId])[0]['id'] ?? null;
+        $id = $this->all('SELECT id FROM n_prod_item WHERE id_final_product = ?', [$finalProductId])[0]['id'] ?? null;
         return $id === null ? null : (int) $id;
     }
 
     public function idForRecipe(int $recipeId): ?int
     {
-        $id = $this->all('SELECT id FROM tfb_prod_item WHERE id_recipe = ?', [$recipeId])[0]['id'] ?? null;
+        $id = $this->all('SELECT id FROM n_prod_item WHERE id_recipe = ?', [$recipeId])[0]['id'] ?? null;
         return $id === null ? null : (int) $id;
     }
 
@@ -106,14 +106,14 @@ final class ItemRepository extends WorkshopRepository
         if ($type === 'product') {
             return $this->all(
                 'SELECT fp.id, fp.name, fp.ppc, fp.weight, fp.id_section FROM final_product fp
-                 WHERE fp.active = 1 AND fp.name LIKE ? AND NOT EXISTS (SELECT 1 FROM tfb_prod_item i WHERE i.id_final_product = fp.id)
+                 WHERE fp.active = 1 AND fp.name LIKE ? AND NOT EXISTS (SELECT 1 FROM n_prod_item i WHERE i.id_final_product = fp.id)
                  ORDER BY fp.name LIMIT ' . $limit,
                 [$like]
             );
         }
         return $this->all(
             'SELECT pr.id, pr.name, pr.yield_quantity FROM product_recipe pr
-             WHERE pr.is_subrecipe = 1 AND pr.name LIKE ? AND NOT EXISTS (SELECT 1 FROM tfb_prod_item i WHERE i.id_recipe = pr.id)
+             WHERE pr.is_subrecipe = 1 AND pr.name LIKE ? AND NOT EXISTS (SELECT 1 FROM n_prod_item i WHERE i.id_recipe = pr.id)
              ORDER BY pr.name LIMIT ' . $limit,
             [$like]
         );
@@ -124,7 +124,7 @@ final class ItemRepository extends WorkshopRepository
         $data = array_intersect_key($data, array_flip(self::SETTINGS));
         $columns = array_keys($data);
         $sql = sprintf(
-            'INSERT INTO tfb_prod_product_settings (id_item%s) VALUES (?%s) ON DUPLICATE KEY UPDATE %s',
+            'INSERT INTO n_prod_product_settings (id_item%s) VALUES (?%s) ON DUPLICATE KEY UPDATE %s',
             $columns ? ', ' . implode(', ', $columns) : '',
             str_repeat(', ?', count($columns)),
             $columns ? implode(', ', array_map(fn($c) => "{$c} = VALUES({$c})", $columns)) : 'id_item = id_item'
@@ -138,7 +138,7 @@ final class ItemRepository extends WorkshopRepository
         if (!$data) return;
         $columns = array_keys($data);
         $sql = sprintf(
-            'INSERT INTO tfb_prod_item_logistics (id_item, %s) VALUES (?%s) ON DUPLICATE KEY UPDATE %s',
+            'INSERT INTO n_prod_item_logistics (id_item, %s) VALUES (?%s) ON DUPLICATE KEY UPDATE %s',
             implode(', ', $columns), str_repeat(', ?', count($columns)),
             implode(', ', array_map(fn($c) => "{$c} = VALUES({$c})", $columns))
         );
@@ -189,10 +189,10 @@ final class ItemRepository extends WorkshopRepository
                                   fp.pre_calculated_raw_price_per_carton / ? AS material_cost_eur,
                                   COALESCE(cs.cartons, 0) AS free_cartons, COALESCE(cs.palletised, 0) AS palletised_cartons, COALESCE(oo.cartons, 0) AS ordered_cartons, COALESCE(mo.pieces, 0) AS in_production
                            FROM final_product fp
-                           LEFT JOIN tfb_prod_item i ON i.id_final_product = fp.id AND i.item_type = 'product'
+                           LEFT JOIN n_prod_item i ON i.id_final_product = fp.id AND i.item_type = 'product'
                            LEFT JOIN category_product cp ON cp.id = fp.id_category
-                           LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id
-                           LEFT JOIN (SELECT id_section, MIN(id) AS id FROM tfb_prod_group WHERE active = 1 AND id_section IS NOT NULL GROUP BY id_section) dg ON dg.id_section = fp.id_section
+                           LEFT JOIN n_prod_product_settings s ON s.id_item = i.id
+                           LEFT JOIN (SELECT id_section, MIN(id) AS id FROM n_prod_group WHERE active = 1 AND id_section IS NOT NULL GROUP BY id_section) dg ON dg.id_section = fp.id_section
                            LEFT JOIN (SELECT sl.id_product, SUM(sl.cartons) AS cartons, COUNT(DISTINCT sl.id_customer) AS shops, SUM(sl.value_eur) AS value_eur
                                       FROM (" . WdtSalesRepository::linesSql() . ") sl
                                       WHERE sl.sale_date >= CURDATE() - INTERVAL ? DAY AND sl.sale_date < CURDATE()
@@ -200,7 +200,7 @@ final class ItemRepository extends WorkshopRepository
                            LEFT JOIN (SELECT id_product, SUM(status = 1) AS cartons, SUM(status = 2) AS palletised FROM carton_stock WHERE status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) cs ON cs.id_product = fp.id
                            LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co JOIN customer_order_product cop ON cop.id_order = co.id
                                       WHERE " . OpenOrders::quantitySql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
-                           LEFT JOIN (SELECT id_item, SUM(quantity) AS pieces FROM tfb_prod_order WHERE " . ToProduce::IN_PRODUCTION_WHERE . " GROUP BY id_item) mo ON mo.id_item = i.id
+                           LEFT JOIN (SELECT id_item, SUM(quantity) AS pieces FROM n_prod_order WHERE " . ToProduce::IN_PRODUCTION_WHERE . " GROUP BY id_item) mo ON mo.id_item = i.id
                            WHERE {$where}
                            ORDER BY cp.name IS NULL, cp.name, fp.name, fp.id", $params);
     }
@@ -237,9 +237,9 @@ final class ItemRepository extends WorkshopRepository
         return $this->all(
             'SELECT r.*, w.code AS workstation_code, w.name_pl AS workstation_name_pl, w.name_fr AS workstation_name_fr, w.type AS workstation_type,
                     d.code AS delay_workstation_code, d.name_pl AS delay_workstation_name_pl, d.name_fr AS delay_workstation_name_fr
-             FROM tfb_prod_routing_step r
-             JOIN tfb_prod_workstation w ON w.id = r.id_workstation
-             LEFT JOIN tfb_prod_workstation d ON d.id = r.delay_id_workstation
+             FROM n_prod_routing_step r
+             JOIN n_prod_workstation w ON w.id = r.id_workstation
+             LEFT JOIN n_prod_workstation d ON d.id = r.delay_id_workstation
              WHERE r.id_item = ? ORDER BY r.step_no',
             [$itemId]
         );
@@ -247,7 +247,7 @@ final class ItemRepository extends WorkshopRepository
 
     public function step(int $id): ?array
     {
-        return $this->all('SELECT * FROM tfb_prod_routing_step WHERE id = ?', [$id])[0] ?? null;
+        return $this->all('SELECT * FROM n_prod_routing_step WHERE id = ?', [$id])[0] ?? null;
     }
 
     /** @return array<int,list<array>> id étape => alternatives */
@@ -258,7 +258,7 @@ final class ItemRepository extends WorkshopRepository
         $out = [];
         foreach ($this->all(
             "SELECT a.*, w.code AS workstation_code, w.name_pl AS workstation_name_pl, w.name_fr AS workstation_name_fr
-             FROM tfb_prod_routing_alternative a JOIN tfb_prod_workstation w ON w.id = a.id_workstation
+             FROM n_prod_routing_alternative a JOIN n_prod_workstation w ON w.id = a.id_workstation
              WHERE a.id_step IN ({$in}) ORDER BY a.priority, a.id",
             array_values($stepIds)
         ) as $row) {
@@ -281,27 +281,27 @@ final class ItemRepository extends WorkshopRepository
             $notIn = ' AND id NOT IN (' . implode(', ', array_fill(0, count($keep), '?')) . ')';
             $params = [...$params, ...$keep];
         }
-        $this->db->prepare('DELETE FROM tfb_prod_routing_step WHERE id_item = ?' . $notIn)->execute($params);
-        $this->db->prepare('UPDATE tfb_prod_routing_step SET step_no = step_no + 100000 WHERE id_item = ?')->execute([$itemId]);
+        $this->db->prepare('DELETE FROM n_prod_routing_step WHERE id_item = ?' . $notIn)->execute($params);
+        $this->db->prepare('UPDATE n_prod_routing_step SET step_no = step_no + 100000 WHERE id_item = ?')->execute([$itemId]);
 
         foreach ($steps as $step) {
             $data = array_intersect_key($step, array_flip(self::STEP));
             $data = array_map(fn($v) => is_bool($v) ? (int) $v : $v, $data);
             if (!empty($step['id'])) {
                 $set = implode(', ', array_map(fn($c) => "{$c} = ?", array_keys($data)));
-                $this->db->prepare("UPDATE tfb_prod_routing_step SET {$set} WHERE id = ? AND id_item = ?")->execute([...array_values($data), $step['id'], $itemId]);
+                $this->db->prepare("UPDATE n_prod_routing_step SET {$set} WHERE id = ? AND id_item = ?")->execute([...array_values($data), $step['id'], $itemId]);
                 $stepId = (int) $step['id'];
             } else {
                 $columns = array_keys($data);
-                $this->db->prepare(sprintf('INSERT INTO tfb_prod_routing_step (id_item, %s) VALUES (?%s)', implode(', ', $columns), str_repeat(', ?', count($columns))))
+                $this->db->prepare(sprintf('INSERT INTO n_prod_routing_step (id_item, %s) VALUES (?%s)', implode(', ', $columns), str_repeat(', ?', count($columns))))
                     ->execute([$itemId, ...array_values($data)]);
                 $stepId = (int) $this->db->lastInsertId();
             }
-            $this->db->prepare('DELETE FROM tfb_prod_routing_alternative WHERE id_step = ?')->execute([$stepId]);
+            $this->db->prepare('DELETE FROM n_prod_routing_alternative WHERE id_step = ?')->execute([$stepId]);
             foreach ($step['alternatives'] ?? [] as $alt) {
                 $alt = array_intersect_key($alt, array_flip(self::ALT));
                 $columns = array_keys($alt);
-                $this->db->prepare(sprintf('INSERT INTO tfb_prod_routing_alternative (id_step, %s) VALUES (?%s)', implode(', ', $columns), str_repeat(', ?', count($columns))))
+                $this->db->prepare(sprintf('INSERT INTO n_prod_routing_alternative (id_step, %s) VALUES (?%s)', implode(', ', $columns), str_repeat(', ?', count($columns))))
                     ->execute([$stepId, ...array_values($alt)]);
             }
         }
@@ -312,7 +312,7 @@ final class ItemRepository extends WorkshopRepository
         $data = array_intersect_key($data, array_flip(['fixed_time_s', 'variable_time_s']));
         if (!$data) return;
         $set = implode(', ', array_map(fn($c) => "{$c} = ?", array_keys($data)));
-        $this->db->prepare("UPDATE tfb_prod_routing_step SET {$set} WHERE id = ?")->execute([...array_values($data), $stepId]);
+        $this->db->prepare("UPDATE n_prod_routing_step SET {$set} WHERE id = ?")->execute([...array_values($data), $stepId]);
     }
 
     /** Nomenclature directe d'une recette de l'ERP, avec le taux de perte ajouté par le module. */
@@ -326,7 +326,7 @@ final class ItemRepository extends WorkshopRepository
              LEFT JOIN product_recipe sub ON sub.id = c.child_recipe_id
              LEFT JOIN raw_material rm ON rm.id = c.child_ingredient_id
              LEFT JOIN unit u ON u.id = COALESCE(sub.id_unit, rm.id_unit)
-             LEFT JOIN tfb_prod_bom_loss l ON l.parent_recipe_id = c.parent_recipe_id
+             LEFT JOIN n_prod_bom_loss l ON l.parent_recipe_id = c.parent_recipe_id
                   AND l.child_kind = CASE WHEN c.child_recipe_id IS NOT NULL THEN 'recipe' ELSE 'material' END
                   AND l.child_id = COALESCE(c.child_recipe_id, c.child_ingredient_id)
              WHERE c.parent_recipe_id = ?
@@ -337,7 +337,7 @@ final class ItemRepository extends WorkshopRepository
 
     public function saveBomLoss(int $recipeId, string $kind, int $childId, float $lossPct, ?int $userId): void
     {
-        $this->db->prepare('INSERT INTO tfb_prod_bom_loss (parent_recipe_id, child_kind, child_id, loss_pct, updated_by) VALUES (?, ?, ?, ?, ?)
+        $this->db->prepare('INSERT INTO n_prod_bom_loss (parent_recipe_id, child_kind, child_id, loss_pct, updated_by) VALUES (?, ?, ?, ?, ?)
                             ON DUPLICATE KEY UPDATE loss_pct = VALUES(loss_pct), updated_by = VALUES(updated_by)')
             ->execute([$recipeId, $kind, $childId, $lossPct, $userId]);
     }
@@ -347,7 +347,7 @@ final class ItemRepository extends WorkshopRepository
         if (!$ids) return [];
         $in = implode(', ', array_fill(0, count($ids), '?'));
         $out = [];
-        foreach ($this->all("SELECT id, type, active, capacity_per_pass, id_group FROM tfb_prod_workstation WHERE id IN ({$in})", array_values($ids)) as $row) {
+        foreach ($this->all("SELECT id, type, active, capacity_per_pass, id_group FROM n_prod_workstation WHERE id IN ({$in})", array_values($ids)) as $row) {
             $out[(int) $row['id']] = $row;
         }
         return $out;

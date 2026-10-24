@@ -137,11 +137,11 @@ class FinalProductStockRepository extends BaseRepository
                     ON fp.id_category = cp.id
                 LEFT JOIN production_sections sec
                     ON fp.id_section = sec.id
-                LEFT JOIN tfb_prod_item ti
+                LEFT JOIN n_prod_item ti
                     ON ti.id_final_product = fp.id
-                LEFT JOIN tfb_prod_product_settings ts
+                LEFT JOIN n_prod_product_settings ts
                     ON ts.id_item = ti.id
-                LEFT JOIN (SELECT id_item, SUM(quantity) as pieces FROM tfb_prod_order
+                LEFT JOIN (SELECT id_item, SUM(quantity) as pieces FROM n_prod_order
                            WHERE " . ToProduce::IN_PRODUCTION_WHERE . " GROUP BY id_item) mo
                     ON mo.id_item = ti.id
                 LEFT JOIN (

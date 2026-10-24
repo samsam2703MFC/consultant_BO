@@ -8,7 +8,7 @@ use App\Core\Helpers\BaseRepository;
 /** Historia powiadomień klientów o dostawie (e-mail, SMS). */
 class DeliveryNoticeRepository extends BaseRepository
 {
-    protected string $table = 'tfb_delivery_notice';
+    protected string $table = 'n_delivery_notice';
 
     protected $allowedColumns = [
         'ship_date', 'id_customer', 'channel', 'language', 'recipient', 'subject', 'body', 'status', 'id_message', 'provider', 'error', 'created_by',
@@ -19,7 +19,7 @@ class DeliveryNoticeRepository extends BaseRepository
     {
         return $this->query(
             'SELECT n.*, c.company, m.status AS mail_status
-             FROM tfb_delivery_notice n
+             FROM n_delivery_notice n
              JOIN customer c ON c.id = n.id_customer
              LEFT JOIN communication_message m ON m.id = n.id_message
              WHERE n.ship_date = :d ORDER BY n.id DESC',

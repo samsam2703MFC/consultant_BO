@@ -277,7 +277,7 @@ final class DocumentDistributionService
         return ['date' => $date, 'days' => $days, 'shipments' => $rows, 'total_copies' => $totalCopies];
     }
 
-    /** Clé d'événement (tfb_mail_dispatch.ref_key) de chaque moment pour une expédition. */
+    /** Clé d'événement (n_mail_dispatch.ref_key) de chaque moment pour une expédition. */
     private static function shipmentKeys(array $s, string $date): array
     {
         return [

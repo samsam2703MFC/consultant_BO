@@ -14,7 +14,7 @@ namespace App\Services\Workshop\Product;
 final class CobotRouting
 {
     /**
-     * @param list<array> $steps kroki jednej karty (tfb_prod_routing_step)
+     * @param list<array> $steps kroki jednej karty (n_prod_routing_step)
      * @param array<int, array> $cobots id etapu => alternatywa na cobocie (fixed_time_s, variable_time_s,
      *        capacity_per_pass, id_workstation, operator_share, name)
      * @return list<array>

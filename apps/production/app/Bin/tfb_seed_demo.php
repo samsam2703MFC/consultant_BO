@@ -165,22 +165,22 @@ $summary = ['workstations' => 0, 'teams' => 0, 'profiles' => 0, 'members' => 0, 
 
 $pdo->beginTransaction();
 try {
-    $groups = array_column($pdo->query('SELECT code, id FROM tfb_prod_group')->fetchAll(), 'id', 'code');
-    $shifts = array_column($pdo->query('SELECT code, id FROM tfb_prod_shift_template')->fetchAll(), 'id', 'code');
+    $groups = array_column($pdo->query('SELECT code, id FROM n_prod_group')->fetchAll(), 'id', 'code');
+    $shifts = array_column($pdo->query('SELECT code, id FROM n_prod_shift_template')->fetchAll(), 'id', 'code');
     if (count($groups) < 6 || count($shifts) < 3) {
         throw new RuntimeException('Default groups and shifts are missing: run php Bin/tfb_migrate.php apply first.');
     }
 
-    $insertWs = $pdo->prepare('INSERT IGNORE INTO tfb_prod_workstation (code, id_group, name_pl, name_fr, type, robot_mode, capacity_per_pass, capacity_unit, hourly_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $availability = $pdo->prepare('INSERT IGNORE INTO tfb_prod_workstation_shift (id_workstation, id_shift_template, available) VALUES (?, ?, ?)');
+    $insertWs = $pdo->prepare('INSERT IGNORE INTO n_prod_workstation (code, id_group, name_pl, name_fr, type, robot_mode, capacity_per_pass, capacity_unit, hourly_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $availability = $pdo->prepare('INSERT IGNORE INTO n_prod_workstation_shift (id_workstation, id_shift_template, available) VALUES (?, ?, ?)');
     foreach ($workstations as [$code, $group, $pl, $fr, $type, $mode, $capacity, $unit, $cost, $night]) {
         $insertWs->execute([$code, $groups[$group], $pl, $fr, $type, $mode, $capacity, $unit, $cost]);
         $summary['workstations'] += $insertWs->rowCount();
-        $wsId = $id('tfb_prod_workstation', $code);
+        $wsId = $id('n_prod_workstation', $code);
         $availability->execute([$wsId, $shifts['NUIT'], (int) $night]);
     }
 
-    $insertTeam = $pdo->prepare('INSERT IGNORE INTO tfb_prod_team (code, id_group, id_shift_template, name, planned_headcount, active) VALUES (?, ?, ?, ?, ?, ?)');
+    $insertTeam = $pdo->prepare('INSERT IGNORE INTO n_prod_team (code, id_group, id_shift_template, name, planned_headcount, active) VALUES (?, ?, ?, ?, ?, ?)');
     foreach ($teams as [$code, $group, $shift, $name, $headcount, $active]) {
         $insertTeam->execute([$code, $groups[$group], $shifts[$shift], $name, $headcount, (int) $active]);
         $summary['teams'] += $insertTeam->rowCount();
@@ -188,18 +188,18 @@ try {
 
     // Employés de l'atelier : profil + équipe de jour de leur groupe principal
     $employees = $pdo->query('SELECT pe.id, ps.name AS section FROM production_employee pe LEFT JOIN production_sections ps ON ps.id = pe.id_section')->fetchAll();
-    $insertProfile = $pdo->prepare('INSERT IGNORE INTO tfb_prod_employee (id_production_employee, id_primary_group) VALUES (?, ?)');
-    $insertMember = $pdo->prepare('INSERT IGNORE INTO tfb_prod_team_member (id_team, id_employee, is_lead) VALUES (?, ?, 0)');
+    $insertProfile = $pdo->prepare('INSERT IGNORE INTO n_prod_employee (id_production_employee, id_primary_group) VALUES (?, ?)');
+    $insertMember = $pdo->prepare('INSERT IGNORE INTO n_prod_team_member (id_team, id_employee, is_lead) VALUES (?, ?, 0)');
     foreach ($employees as $employee) {
         $group = $sectionToGroup[$employee['section']] ?? null;
         if ($group === null) continue; // administration : pas d'équipe de production
         $insertProfile->execute([$employee['id'], $groups[$group]]);
         $summary['profiles'] += $insertProfile->rowCount();
-        $profile = $pdo->prepare('SELECT id, id_primary_group FROM tfb_prod_employee WHERE id_production_employee = ?');
+        $profile = $pdo->prepare('SELECT id, id_primary_group FROM n_prod_employee WHERE id_production_employee = ?');
         $profile->execute([$employee['id']]);
         $p = $profile->fetch();
         $teamCode = array_search((int) $p['id_primary_group'], $groups, false) . '_JOUR';
-        $teamId = $id('tfb_prod_team', $teamCode);
+        $teamId = $id('n_prod_team', $teamCode);
         if ($teamId !== null) {
             $insertMember->execute([$teamId, $p['id']]);
             $summary['members'] += $insertMember->rowCount();
@@ -208,16 +208,16 @@ try {
 
     // Articles, réglages, gammes
     $exists = ['product' => $pdo->prepare('SELECT 1 FROM final_product WHERE id = ?'), 'semi' => $pdo->prepare('SELECT 1 FROM product_recipe WHERE id = ? AND id_type IN (1, 2)')];
-    $insertItem = $pdo->prepare('INSERT IGNORE INTO tfb_prod_item (item_type, id_final_product, id_recipe, base_unit) VALUES (?, ?, ?, ?)');
-    $findItem = ['product' => $pdo->prepare('SELECT id FROM tfb_prod_item WHERE id_final_product = ?'), 'semi' => $pdo->prepare('SELECT id FROM tfb_prod_item WHERE id_recipe = ?')];
-    $insertSettings = $pdo->prepare('INSERT IGNORE INTO tfb_prod_product_settings
+    $insertItem = $pdo->prepare('INSERT IGNORE INTO n_prod_item (item_type, id_final_product, id_recipe, base_unit) VALUES (?, ?, ?, ?)');
+    $findItem = ['product' => $pdo->prepare('SELECT id FROM n_prod_item WHERE id_final_product = ?'), 'semi' => $pdo->prepare('SELECT id FROM n_prod_item WHERE id_recipe = ?')];
+    $insertSettings = $pdo->prepare('INSERT IGNORE INTO n_prod_product_settings
         (id_item, mode, never_frozen, stock_min, stock_max, coverage_days, batch_min, batch_multiple, shelf_life_workshop_days, shelf_life_shop_days, id_primary_group, status, wizard_step, validated_at)
         VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, \'validated\', 7, NOW())');
-    $hasSteps = $pdo->prepare('SELECT COUNT(*) FROM tfb_prod_routing_step WHERE id_item = ?');
-    $insertStep = $pdo->prepare('INSERT INTO tfb_prod_routing_step
+    $hasSteps = $pdo->prepare('SELECT COUNT(*) FROM n_prod_routing_step WHERE id_item = ?');
+    $insertStep = $pdo->prepare('INSERT INTO n_prod_routing_step
         (id_item, step_no, name_pl, name_fr, id_workstation, fixed_time_s, variable_time_s, capacity_per_pass, operators_required, delay_after_s, delay_id_workstation, cleaning_required, cleaning_time_s)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $insertAlt = $pdo->prepare('INSERT IGNORE INTO tfb_prod_routing_alternative (id_step, id_workstation, fixed_time_s, variable_time_s, capacity_per_pass, priority) VALUES (?, ?, ?, ?, ?, 1)');
+    $insertAlt = $pdo->prepare('INSERT IGNORE INTO n_prod_routing_alternative (id_step, id_workstation, fixed_time_s, variable_time_s, capacity_per_pass, priority) VALUES (?, ?, ?, ?, ?, 1)');
 
     foreach ($items as [$type, $refId, $group, $mode, $unit, $min, $max, $coverage, $batchMin, $multiple, $dlcWorkshop, $dlcShop, $routing]) {
         $exists[$type]->execute([$refId]);
@@ -236,15 +236,15 @@ try {
         $hasSteps->execute([$itemId]);
         if ((int) $hasSteps->fetchColumn() > 0) continue;
         foreach ($routing as $n => [$pl, $fr, $ws, $fixed, $variable, $capacity, $operators, $delay, $delayWs, $cleaning]) {
-            $insertStep->execute([$itemId, $n + 1, $pl, $fr, $id('tfb_prod_workstation', $ws), $fixed, $variable, $capacity, $operators,
-                $delay, $delayWs === null ? null : $id('tfb_prod_workstation', $delayWs), (int) ($cleaning > 0), $cleaning]);
+            $insertStep->execute([$itemId, $n + 1, $pl, $fr, $id('n_prod_workstation', $ws), $fixed, $variable, $capacity, $operators,
+                $delay, $delayWs === null ? null : $id('n_prod_workstation', $delayWs), (int) ($cleaning > 0), $cleaning]);
             $summary['steps']++;
             $stepId = (int) $pdo->lastInsertId();
             // Postes alternatifs : façonnage manuel si le robot est pris, laminoir si la ligne est prise
-            if ($ws === 'ROBOT_CROISSANT') $insertAlt->execute([$stepId, $id('tfb_prod_workstation', 'TABLE_VIENNOISERIE'), 300, 6, 200]);
-            if ($ws === 'ROBOT_BOUDINEUSE') $insertAlt->execute([$stepId, $id('tfb_prod_workstation', 'TABLE_PATISSERIE'), 300, 10, 100]);
-            if ($ws === 'ROBOT_LAMINAGE') $insertAlt->execute([$stepId, $id('tfb_prod_workstation', 'LAMINOIR'), 300, 90, 25]);
-            if ($ws === 'FOUR_VENTILE_1') $insertAlt->execute([$stepId, $id('tfb_prod_workstation', 'FOUR_VENTILE_2'), 2700, 0, 30]);
+            if ($ws === 'ROBOT_CROISSANT') $insertAlt->execute([$stepId, $id('n_prod_workstation', 'TABLE_VIENNOISERIE'), 300, 6, 200]);
+            if ($ws === 'ROBOT_BOUDINEUSE') $insertAlt->execute([$stepId, $id('n_prod_workstation', 'TABLE_PATISSERIE'), 300, 10, 100]);
+            if ($ws === 'ROBOT_LAMINAGE') $insertAlt->execute([$stepId, $id('n_prod_workstation', 'LAMINOIR'), 300, 90, 25]);
+            if ($ws === 'FOUR_VENTILE_1') $insertAlt->execute([$stepId, $id('n_prod_workstation', 'FOUR_VENTILE_2'), 2700, 0, 30]);
         }
     }
 
@@ -253,10 +253,10 @@ try {
         $user->execute([$options['grant-admin']]);
         $userId = $user->fetchColumn();
         if ($userId !== false) {
-            $has = $pdo->prepare("SELECT 1 FROM tfb_prod_user_role WHERE id_user = ? AND role_code = 'prod_admin' AND id_group IS NULL");
+            $has = $pdo->prepare("SELECT 1 FROM n_prod_user_role WHERE id_user = ? AND role_code = 'prod_admin' AND id_group IS NULL");
             $has->execute([$userId]);
             if (!$has->fetchColumn()) {
-                $pdo->prepare("INSERT INTO tfb_prod_user_role (id_user, role_code) VALUES (?, 'prod_admin')")->execute([$userId]);
+                $pdo->prepare("INSERT INTO n_prod_user_role (id_user, role_code) VALUES (?, 'prod_admin')")->execute([$userId]);
             }
             $summary['admin'] = $options['grant-admin'];
         }

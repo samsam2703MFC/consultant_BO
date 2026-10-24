@@ -6,13 +6,13 @@ use App\Repositories\Workshop\WorkshopRepository;
 /** Formulaires des tâches (protocoles de réunion) et actions décidées, suivies d'une réunion à l'autre. */
 final class TaskFormRepository extends WorkshopRepository
 {
-    protected string $table = 'tfb_task_form';
+    protected string $table = 'n_task_form';
     protected array $writable = ['id_occurrence', 'form_code', 'meeting_date', 'period_from', 'period_to', 'data', 'status', 'created_by', 'updated_by'];
 
     private const FORM = "SELECT f.*, t.title_pl, t.title_fr, o.period_key, o.due_date, o.status AS occurrence_status, cu.displayed_name AS created_by_name, uu.displayed_name AS updated_by_name
-        FROM tfb_task_form f
-        JOIN tfb_task_occurrence o ON o.id = f.id_occurrence
-        JOIN tfb_position_task t ON t.id = o.id_task
+        FROM n_task_form f
+        JOIN n_task_occurrence o ON o.id = f.id_occurrence
+        JOIN n_position_task t ON t.id = o.id_task
         LEFT JOIN user cu ON cu.id = f.created_by
         LEFT JOIN user uu ON uu.id = f.updated_by";
 
@@ -40,7 +40,7 @@ final class TaskFormRepository extends WorkshopRepository
     }
 
     private const ACTION = "SELECT a.*, u.displayed_name AS user_name, f.meeting_date, du.displayed_name AS done_by_name
-        FROM tfb_task_action a JOIN tfb_task_form f ON f.id = a.id_form LEFT JOIN user u ON u.id = a.id_user LEFT JOIN user du ON du.id = a.done_by";
+        FROM n_task_action a JOIN n_task_form f ON f.id = a.id_form LEFT JOIN user u ON u.id = a.id_user LEFT JOIN user du ON du.id = a.done_by";
 
     /** Działania protokołu. */
     public function actions(int $formId): array
@@ -62,18 +62,18 @@ final class TaskFormRepository extends WorkshopRepository
 
     public function insertAction(int $formId, string $title, ?int $userId, ?string $dueDate): int
     {
-        $this->db->prepare('INSERT INTO tfb_task_action (id_form, title, id_user, due_date) VALUES (?, ?, ?, ?)')->execute([$formId, $title, $userId, $dueDate]);
+        $this->db->prepare('INSERT INTO n_task_action (id_form, title, id_user, due_date) VALUES (?, ?, ?, ?)')->execute([$formId, $title, $userId, $dueDate]);
         return (int) $this->db->lastInsertId();
     }
 
     public function deleteAction(int $id): void
     {
-        $this->db->prepare('DELETE FROM tfb_task_action WHERE id = ?')->execute([$id]);
+        $this->db->prepare('DELETE FROM n_task_action WHERE id = ?')->execute([$id]);
     }
 
     public function setActionDone(int $id, bool $done, ?int $userId, ?int $formId): void
     {
-        $this->db->prepare('UPDATE tfb_task_action SET status = ?, done_at = ?, done_by = ?, done_in_form = ? WHERE id = ?')
+        $this->db->prepare('UPDATE n_task_action SET status = ?, done_at = ?, done_by = ?, done_in_form = ? WHERE id = ?')
             ->execute([$done ? 'done' : 'open', $done ? date('Y-m-d H:i:s') : null, $done ? $userId : null, $done ? $formId : null, $id]);
     }
 
@@ -81,7 +81,7 @@ final class TaskFormRepository extends WorkshopRepository
     public function users(): array
     {
         return $this->all("SELECT u.id, COALESCE(NULLIF(u.displayed_name, ''), u.login) AS name, p.name_pl AS position_name
-                           FROM user u LEFT JOIN tfb_user_position up ON up.id_user = u.id LEFT JOIN tfb_position p ON p.id = up.id_position
+                           FROM user u LEFT JOIN n_user_position up ON up.id_user = u.id LEFT JOIN n_position p ON p.id = up.id_position
                            ORDER BY name");
     }
 }

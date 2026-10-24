@@ -15,7 +15,9 @@ use RuntimeException;
 final class MigrationRunner
 {
     public const VERSION = '1';
-    private const TABLE = 'tfb_schema_migration';
+    private const TABLE = 'n_schema_migration';
+    /** Nom d'avant le préfixe n_ (migration 069) : renommée ici, avant de lire l'état des migrations. */
+    private const LEGACY_TABLE = 'tfb_' . 'schema_migration';
     private const LOCK = 'tfb_migrate';
 
     public function __construct(private PDO $db, private string $directory)
@@ -115,6 +117,10 @@ final class MigrationRunner
 
     private function ensureTable(): void
     {
+        $exists = fn(string $table): bool => (bool) $this->db->query('SHOW TABLES LIKE ' . $this->db->quote($table))->fetchColumn();
+        if (!$exists(self::TABLE) && $exists(self::LEGACY_TABLE)) {
+            $this->db->exec('RENAME TABLE ' . self::LEGACY_TABLE . ' TO ' . self::TABLE);
+        }
         $this->db->exec('CREATE TABLE IF NOT EXISTS ' . self::TABLE . " (
             version         CHAR(3)      NOT NULL,
             name            VARCHAR(128) NOT NULL,

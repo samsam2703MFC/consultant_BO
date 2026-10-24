@@ -5,7 +5,7 @@ namespace App\Repositories\Workshop;
 
 final class AuditLogRepository extends WorkshopRepository
 {
-    protected string $table = 'tfb_prod_audit_log';
+    protected string $table = 'n_prod_audit_log';
     protected array $writable = ['id_user', 'action', 'entity', 'entity_id', 'before_json', 'after_json', 'request_id'];
 
     public function record(?int $userId, string $action, string $entity, int|string|null $entityId, ?array $before, ?array $after, ?string $requestId): void

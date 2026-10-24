@@ -419,7 +419,7 @@ final class ItemService
     /**
      * Étape 1 : logistique du produit. Poids, pièces par sachet / carton, cartons par couche et par
      * palette restent dans l'ERP (final_product) ; carton (dimensions, tare, type, EAN), palette et
-     * conservation vont dans tfb_prod_item_logistics. Un semi-fini n'a pas de logistique.
+     * conservation vont dans n_prod_item_logistics. Un semi-fini n'a pas de logistique.
      */
     public function updateLogistics(int $id, array $input, ApiContext $context): array
     {

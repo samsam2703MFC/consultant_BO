@@ -124,14 +124,14 @@ class TodayRepository extends BaseRepository
                 SELECT " . ToProduce::minCartonsSql('ts', 'fp') . " AS min_cartons,
                        COALESCE(st.qty, 0) - COALESCE(oo.cartons, 0) + IF(fp.ppc > 0, COALESCE(mo.pieces, 0) / fp.ppc, 0) AS available
                 FROM final_product fp
-                LEFT JOIN tfb_prod_item ti ON ti.id_final_product = fp.id AND ti.item_type = 'product'
-                LEFT JOIN tfb_prod_product_settings ts ON ts.id_item = ti.id
+                LEFT JOIN n_prod_item ti ON ti.id_final_product = fp.id AND ti.item_type = 'product'
+                LEFT JOIN n_prod_product_settings ts ON ts.id_item = ti.id
                 LEFT JOIN (SELECT id_product, COUNT(*) AS qty FROM carton_stock
                            WHERE status IN (" . OpenOrders::STOCK_STATUSES . ") GROUP BY id_product) st ON st.id_product = fp.id
                 LEFT JOIN (SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons FROM customer_order co
                            JOIN customer_order_product cop ON cop.id_order = co.id
                            WHERE " . OpenOrders::quantitySql('co') . " GROUP BY cop.id_product) oo ON oo.id_product = fp.id
-                LEFT JOIN (SELECT id_item, SUM(quantity) AS pieces FROM tfb_prod_order WHERE " . ToProduce::IN_PRODUCTION_WHERE . " GROUP BY id_item) mo ON mo.id_item = ti.id
+                LEFT JOIN (SELECT id_item, SUM(quantity) AS pieces FROM n_prod_order WHERE " . ToProduce::IN_PRODUCTION_WHERE . " GROUP BY id_item) mo ON mo.id_item = ti.id
                 WHERE fp.active = 1
              ) x WHERE x.min_cartons IS NOT NULL AND ROUND(x.available, 1) < x.min_cartons"
         );

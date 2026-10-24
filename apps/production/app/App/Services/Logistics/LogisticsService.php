@@ -563,7 +563,7 @@ final class LogisticsService
         $email = trim((string) ($input['driver_email'] ?? ''));
         if ($email !== '' && (mb_strlen($email) > 120 || !filter_var($email, FILTER_VALIDATE_EMAIL))) throw new CustomException('Nieprawidłowy e-mail kierowcy.', 'errors', 422);
         $data = $this->vehicleData($input + ['active' => true], $userId, true);
-        // Jeden formularz nowego pojazdu (dawniej też Przewoźnicy → Pojazdy) : tożsamość w carrier_vehicle, pojemność w tfb_vehicle.
+        // Jeden formularz nowego pojazdu (dawniej też Przewoźnicy → Pojazdy) : tożsamość w carrier_vehicle, pojemność w n_vehicle.
         $id = $this->repo->addVehicle($carrierId, $regis, trim((string) ($input['driver_name'] ?? '')), trim((string) ($input['driver_surname'] ?? '')), trim((string) ($input['driver_phone'] ?? '')), $email);
         $this->repo->saveVehicle($id, $data);
         return $id;

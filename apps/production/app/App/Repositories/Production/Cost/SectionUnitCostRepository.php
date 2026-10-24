@@ -34,7 +34,7 @@ final class SectionUnitCostRepository extends WorkshopRepository
             'SELECT ps.id, ps.name, COALESCE(ps.depreciation, 0) AS depreciation,
                     COALESCE(ps.water_cost, 0) + COALESCE(ps.power_supply_cost, 0) + COALESCE(ps.fuel_cost, 0) + COALESCE(ps.other_cost, 0) AS static_media,
                     COALESCE(t.is_shared, 0) AS is_shared
-             FROM production_sections ps LEFT JOIN tfb_section_target t ON t.id_section = ps.id ORDER BY ps.id'
+             FROM production_sections ps LEFT JOIN n_section_target t ON t.id_section = ps.id ORDER BY ps.id'
         );
     }
 

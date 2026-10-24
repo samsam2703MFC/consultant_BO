@@ -136,7 +136,7 @@ final class OpenApiSpec
         return [
             'GET /openapi.json' => ['tag' => 'docs', 'id' => 'openapi', 'summary' => 'Opis OpenAPI / Description OpenAPI', 'response' => 'OpenApiDocument'],
             'POST /auth/login' => ['tag' => 'auth', 'id' => 'login', 'summary' => 'Logowanie kontem ERP / Connexion avec un compte de l\'ERP', 'body' => 'LoginInput', 'response' => 'Tokens', 'errors' => [400, 401, 403, 422, 429, 503],
-                'description' => 'Le compte doit avoir au moins un rôle du module (tfb_prod_user_role). Après auth.max_failed_logins échecs en auth.lockout_window_min minutes : 429.'],
+                'description' => 'Le compte doit avoir au moins un rôle du module (n_prod_user_role). Après auth.max_failed_logins échecs en auth.lockout_window_min minutes : 429.'],
             'POST /auth/refresh' => ['tag' => 'auth', 'id' => 'refresh', 'summary' => 'Odśwież tokeny / Renouveler les jetons', 'body' => 'RefreshInput', 'response' => 'Tokens', 'errors' => [400, 401, 422, 503],
                 'description' => 'Usage unique : le jeton présenté est remplacé. Un jeton déjà utilisé qui revient révoque toute sa famille.'],
             'POST /auth/logout' => ['tag' => 'auth', 'id' => 'logout', 'summary' => 'Wyloguj / Déconnexion (révoque le jeton de renouvellement)', 'body' => 'RefreshInput', 'response' => 'LogoutResult', 'errors' => [400, 422]],

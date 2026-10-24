@@ -68,32 +68,32 @@ try { (new MigrationRunner($pdo, $tmp))->apply(); } catch (RuntimeException $e) 
 array_map('unlink', glob($tmp . '/*.sql'));
 rmdir($tmp);
 check($drift, 'an applied migration edited afterwards blocks the run');
-check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_group")->fetchColumn() === 6, '6 default groups');
-check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_shift_template")->fetchColumn() === 3, '3 default shift templates');
+check((int) $pdo->query("SELECT COUNT(*) FROM n_prod_group")->fetchColumn() === 6, '6 default groups');
+check((int) $pdo->query("SELECT COUNT(*) FROM n_prod_shift_template")->fetchColumn() === 3, '3 default shift templates');
 // Grupy = działy produkcji ERP : dwie grupy piekarni (zakwas, formowanie) w jednej grupie « Piekarnia »,
 // zespół dzienny = pracownicy działu. Dalej test buduje własne zespoły.
-$bakery = $pdo->query("SELECT code, name_pl, active, id_section FROM tfb_prod_group WHERE id = 1")->fetch();
+$bakery = $pdo->query("SELECT code, name_pl, active, id_section FROM n_prod_group WHERE id = 1")->fetch();
 check($bakery['code'] === 'PIEKARNIA' && $bakery['name_pl'] === 'Piekarnia' && (int) $bakery['active'] === 1 && (int) $bakery['id_section'] === 1
-    && (int) $pdo->query("SELECT active FROM tfb_prod_group WHERE code = 'FACONNAGE'")->fetchColumn() === 0, 'groups = ERP production sections (bakery groups merged into « Piekarnia »)');
-check((int) $pdo->query("SELECT planned_headcount FROM tfb_prod_team WHERE code = 'PIEKARNIA_DZIEN' AND active = 1")->fetchColumn() === 2, 'day team of the section = its 2 employees');
-$pdo->exec("DELETE FROM tfb_prod_team");
+    && (int) $pdo->query("SELECT active FROM n_prod_group WHERE code = 'FACONNAGE'")->fetchColumn() === 0, 'groups = ERP production sections (bakery groups merged into « Piekarnia »)');
+check((int) $pdo->query("SELECT planned_headcount FROM n_prod_team WHERE code = 'PIEKARNIA_DZIEN' AND active = 1")->fetchColumn() === 2, 'day team of the section = its 2 employees');
+$pdo->exec("DELETE FROM n_prod_team");
 
 // --- Contrôles en base (tests d'acceptation 1 : jamais congelé ⇒ jamais MTS)
 $pdo->exec("INSERT INTO final_product (id, name, id_category, weight, ppc, ppb, bpc, cpl, lpp, cpp, id_section, active) VALUES (500, 'Baguette test', 1, 350, 18, 1, 18, 8, 6, 48, 1, 1)");
-$pdo->exec("INSERT INTO tfb_prod_item (id, item_type, id_final_product) VALUES (1, 'product', 500)");
+$pdo->exec("INSERT INTO n_prod_item (id, item_type, id_final_product) VALUES (1, 'product', 500)");
 $refused = function (string $sql) use ($pdo): bool {
     try { $pdo->exec($sql); return false; } catch (PDOException) { return true; }
 };
-check($refused("INSERT INTO tfb_prod_product_settings (id_item, mode, never_frozen) VALUES (1, 'MTS', 1)"), 'DB refuses never_frozen + MTS');
-$pdo->exec("INSERT INTO tfb_prod_product_settings (id_item, mode, never_frozen) VALUES (1, 'MTO', 1)");
-check($refused("UPDATE tfb_prod_product_settings SET mode = 'MTS' WHERE id_item = 1"), 'DB refuses switching a never_frozen product to MTS');
-check($refused("UPDATE tfb_prod_product_settings SET stock_min = 10, stock_max = 5 WHERE id_item = 1"), 'DB refuses stock_max < stock_min');
-check($refused("INSERT INTO tfb_prod_workstation (code, id_group, name_pl, name_fr, type) VALUES ('R', 1, 'r', 'r', 'robot')"), 'DB refuses a robot without mode');
-check($refused("INSERT INTO tfb_prod_workstation (code, id_group, name_pl, name_fr, type, robot_mode) VALUES ('M', 1, 'm', 'm', 'four', 'autonome')"), 'DB refuses a robot mode on an oven');
+check($refused("INSERT INTO n_prod_product_settings (id_item, mode, never_frozen) VALUES (1, 'MTS', 1)"), 'DB refuses never_frozen + MTS');
+$pdo->exec("INSERT INTO n_prod_product_settings (id_item, mode, never_frozen) VALUES (1, 'MTO', 1)");
+check($refused("UPDATE n_prod_product_settings SET mode = 'MTS' WHERE id_item = 1"), 'DB refuses switching a never_frozen product to MTS');
+check($refused("UPDATE n_prod_product_settings SET stock_min = 10, stock_max = 5 WHERE id_item = 1"), 'DB refuses stock_max < stock_min');
+check($refused("INSERT INTO n_prod_workstation (code, id_group, name_pl, name_fr, type) VALUES ('R', 1, 'r', 'r', 'robot')"), 'DB refuses a robot without mode');
+check($refused("INSERT INTO n_prod_workstation (code, id_group, name_pl, name_fr, type, robot_mode) VALUES ('M', 1, 'm', 'm', 'four', 'autonome')"), 'DB refuses a robot mode on an oven');
 
 // --- Rôles
-$pdo->exec("INSERT INTO tfb_prod_user_role (id_user, role_code) VALUES (1, 'prod_manager'), (2, 'team_lead'), (4, 'direction')");
-$pdo->exec("UPDATE tfb_prod_param SET value = '3' WHERE code = 'auth.max_failed_logins'");
+$pdo->exec("INSERT INTO n_prod_user_role (id_user, role_code) VALUES (1, 'prod_manager'), (2, 'team_lead'), (4, 'direction')");
+$pdo->exec("UPDATE n_prod_param SET value = '3' WHERE code = 'auth.max_failed_logins'");
 
 // --- Noyau de l'API, branché sur la base de test
 $builder = new DI\ContainerBuilder();
@@ -168,7 +168,7 @@ for ($i = 0; $i < 3; $i++) $call('POST', '/auth/login', ['login' => 'direction',
 check($s === 429 && $b['description'] === 'TOO_MANY_ATTEMPTS', 'too many failures → 429, even with the right password');
 [$s] = $call('POST', '/auth/login', ['login' => 'direction', 'password' => 'pass-direction'], null, 'pl', '10.0.0.2');
 check($s === 429, 'the account stays locked from another address (no distributed guessing)');
-$pdo->exec("UPDATE tfb_prod_login_attempt SET created_at = NOW() - INTERVAL 16 MINUTE");
+$pdo->exec("UPDATE n_prod_login_attempt SET created_at = NOW() - INTERVAL 16 MINUTE");
 [$s, $direction] = $call('POST', '/auth/login', ['login' => 'direction', 'password' => 'pass-direction'], null, 'pl', '10.0.0.2');
 check($s === 200, 'login works again once the window has passed');
 
@@ -264,7 +264,7 @@ $pdo->exec("INSERT INTO raw_material (id, name, id_unit, price_per_unit) VALUES 
 $pdo->exec("INSERT INTO product_recipe (id, name, id_type, is_subrecipe, id_unit) VALUES (700, 'Croissant — receptura', 3, 0, 1), (701, 'Ciasto francuskie', 2, 1, 1)");
 $pdo->exec("INSERT INTO product_recipe_connection (parent_recipe_id, child_recipe_id, child_ingredient_id, quantity) VALUES (700, 701, NULL, 2000), (700, NULL, 901, 300)");
 $pdo->exec("INSERT INTO final_product (id, name, id_category, weight, ppc, ppb, bpc, cpl, lpp, cpp, id_section, id_recipe, active) VALUES (501, 'Croissant test', 1, 70, 60, 1, 60, 8, 6, 48, 1, 700, 1)");
-$pdo->exec("INSERT INTO tfb_prod_workstation (id, code, id_group, name_pl, name_fr, type, capacity_per_pass) VALUES
+$pdo->exec("INSERT INTO n_prod_workstation (id, code, id_group, name_pl, name_fr, type, capacity_per_pass) VALUES
     (90, 'STOL_P2', 1, 'Stół', 'Table', 'manuel', 200), (91, 'PIEC_P2', 1, 'Piec', 'Four', 'four', 60),
     (92, 'PIEC_P2B', 1, 'Piec 2', 'Four 2', 'four', 40), (93, 'KOMORA_P2', 1, 'Komora', 'Chambre de pousse', 'fermentation', 400)");
 [$s, $teamLead] = $call('POST', '/auth/login', ['login' => 'legacy', 'password' => 'plain-pass']);
@@ -404,14 +404,14 @@ check($s === 422 && $codes($b) === ['quantity:OUT_OF_RANGE', 'workstation_id:NOT
 check($s === 403, 'a team lead measures but does not change standards');
 [$s, $b] = $call('POST', "/produits/routing-steps/{$step2}/apply-standard", ['component' => 'fixed'], $access);
 check($s === 409 && $b['description'] === 'NOT_ENOUGH_MEASUREMENTS', 'no standard without enough measurements');
-$firstId = $b === null ? 0 : (int) $pdo->query("SELECT MIN(id) FROM tfb_prod_time_study")->fetchColumn();
+$firstId = $b === null ? 0 : (int) $pdo->query("SELECT MIN(id) FROM n_prod_time_study")->fetchColumn();
 [$s, $b] = $call('PATCH', "/produits/time-studies/{$firstId}", ['excluded' => true, 'note' => 'awaria'], $lead);
 check($s === 200 && $b['data']['proposals'][0]['count'] === 2 && !$b['data']['proposals'][0]['ready'], 'an excluded measurement leaves the average');
 $call('PATCH', "/produits/time-studies/{$firstId}", ['excluded' => false], $lead);
 [$s, $b] = $call('POST', "/produits/routing-steps/{$step1}/apply-standard", ['component' => 'variable'], $access);
 check($s === 200 && $b['data']['step']['variable_time_s'] === 5.5 && $b['data']['proposals'][0]['deviation_pct'] === 0.0, 'proposed standard applied to the routing');
-check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_time_study WHERE applied_at IS NOT NULL")->fetchColumn() === 3, 'measurements marked as used');
-check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE entity = 'routing_step' AND action = 'apply_standard'")->fetchColumn() === 1, 'standard change audited');
+check((int) $pdo->query("SELECT COUNT(*) FROM n_prod_time_study WHERE applied_at IS NOT NULL")->fetchColumn() === 3, 'measurements marked as used');
+check((int) $pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE entity = 'routing_step' AND action = 'apply_standard'")->fetchColumn() === 1, 'standard change audited');
 [$s, $b] = $call('POST', "/produits/routing-steps/{$step2}/time-studies", ['quantity' => 120, 'duration_s' => 2400], $lead, 'fr');
 check($s === 201 && $b['data']['measurements'][0]['component'] === 'fixed' && $b['data']['measurements'][0]['passes'] === 2
     && $b['data']['measurements'][0]['unit_time_s'] === 1200.0 && $b['data']['step']['name'] === 'Pieczenie', 'oven measured per pass (2 passes for 120 pieces)');
@@ -420,8 +420,8 @@ check($s === 201 && $b['data']['measurements'][0]['component'] === 'fixed' && $b
 [$s, $b] = $call('PUT', "/produits/items/{$itemId}/routing", ['steps' => [['id' => $step2, 'name_pl' => 'Pieczenie', 'workstation_id' => 91, 'fixed_time_s' => 1100]]], $access);
 check($s === 200 && count($b['data']['routing']) === 1 && $b['data']['routing'][0]['id'] === $step2 && $b['data']['routing'][0]['step_no'] === 1
     && $b['data']['routing'][0]['alternatives'] === [], 'kept step renumbered, removed step deleted');
-check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_time_study WHERE id_routing_step = {$step1}")->fetchColumn() === 0
-    && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_time_study WHERE id_routing_step = {$step2}")->fetchColumn() === 1, 'measurements follow their step');
+check((int) $pdo->query("SELECT COUNT(*) FROM n_prod_time_study WHERE id_routing_step = {$step1}")->fetchColumn() === 0
+    && (int) $pdo->query("SELECT COUNT(*) FROM n_prod_time_study WHERE id_routing_step = {$step2}")->fetchColumn() === 1, 'measurements follow their step');
 [$s, $b] = $call('PUT', "/produits/items/{$itemId}/routing", ['steps' => [['id' => 99999, 'name_pl' => 'X', 'workstation_id' => 91, 'fixed_time_s' => 1]]], $access);
 check($s === 422 && $codes($b) === ['steps.0.id:REFERENCE_NOT_FOUND'], 'a step of another item cannot be reused');
 
@@ -437,7 +437,7 @@ $call('PATCH', "/produits/items/{$semiId}/settings", ['primary_group_id' => 1, '
 $call('PUT', "/produits/items/{$semiId}/routing", ['steps' => [['name_pl' => 'Laminowanie', 'workstation_id' => 90, 'fixed_time_s' => 600, 'variable_time_s' => 30]]], $access);
 [$s, $b] = $call('PUT', "/produits/items/{$semiId}/logistics", ['ppc' => 10], $access);
 check($s === 409 && $b['description'] === 'NOT_ALLOWED_FOR_TYPE', 'a semi-finished item has no carton logistics');
-$pdo->exec("UPDATE tfb_prod_product_settings SET stock_min = 60, stock_max = 300, batch_min = NULL, batch_multiple = 160, coverage_days = NULL WHERE id_item = {$itemId}");
+$pdo->exec("UPDATE n_prod_product_settings SET stock_min = 60, stock_max = 300, batch_min = NULL, batch_multiple = 160, coverage_days = NULL WHERE id_item = {$itemId}");
 $d1 = date('Y-m-d', strtotime('+2 days'));
 $cutoff = date('Y-m-d', strtotime('+0 days')) . ' 13:00:00';
 $pdo->exec("INSERT INTO customer_order (id, id_customer, status, expected_shipping_date, create_order_date, id_wdt) VALUES
@@ -482,14 +482,14 @@ check($byItem[1]['late_orders'] === 1, 'order placed after the cut-off is flagge
 check($byItem[1]['due_at'] === $d1 . ' 19:00:00', 'due before the truck leaves (20:00 − 60 min loading)');
 // Klient 2 na trasie z wyjazdem 16:00 : linia MTO (klienci 1 i 2) na 15:00 ; trasa nie w ten dzień tygodnia : bez zmian
 $pdo->exec("INSERT IGNORE INTO customer (id, company) VALUES (1, 'Klient A'), (2, 'Klient B')");
-$pdo->exec("INSERT INTO tfb_tour (id, name, weekdays, departure_time) VALUES (1, 'Rano', 127, '16:00:00')");
-$pdo->exec("INSERT INTO tfb_tour_customer (id_tour, id_customer, stop_order) VALUES (1, 2, 1)");
+$pdo->exec("INSERT INTO n_tour (id, name, weekdays, departure_time) VALUES (1, 'Rano', 127, '16:00:00')");
+$pdo->exec("INSERT INTO n_tour_customer (id_tour, id_customer, stop_order) VALUES (1, 2, 1)");
 [, $b] = $call('GET', '/planning/demand' . $period, null, $lead);
 $toured = array_column($b['data']['lines'], 'due_at', 'item_id');
-$pdo->exec("UPDATE tfb_tour SET weekdays = 127 & ~(1 << (" . date('N', strtotime($d1)) . " - 1)) WHERE id = 1");
+$pdo->exec("UPDATE n_tour SET weekdays = 127 & ~(1 << (" . date('N', strtotime($d1)) . " - 1)) WHERE id = 1");
 [, $b] = $call('GET', '/planning/demand' . $period, null, $lead);
 check($toured[1] === $d1 . ' 15:00:00' && array_column($b['data']['lines'], 'due_at', 'item_id')[1] === $d1 . ' 19:00:00', 'MTO due before the earliest tour departure of its customers');
-$pdo->exec('DELETE FROM tfb_tour');
+$pdo->exec('DELETE FROM n_tour');
 $m = $byItem[$itemId]['mts'];
 check($m['free_stock'] == 180.0 && $m['available'] == 0.0 && $m['min'] == 60.0 && $m['max'] == 300.0 && $m['reason'] === 'below_min' && $byItem[$itemId]['qty_mts'] == 300.0,
     'MTS (simple rule): free stock 3 cartons − 3 ordered = 0 available, below min 60 → refill up to max 300');
@@ -558,19 +558,19 @@ check($s === 200 && array_column($b['data'], 'id') === [$planId], 'direction rea
 [$s, $b] = $call('POST', "/planning/plans/{$plan2['data']['id']}/schedule", null, $access);
 check($s === 409 && $b['description'] === 'PLAN_NOT_VALIDATED', 'only a validated plan is scheduled');
 // Échéances décalées d'un jour : le test ne dépend pas de l'heure à laquelle il tourne (shift de jour 06:00–14:00).
-$pdo->exec("UPDATE tfb_prod_order SET due_at = due_at + INTERVAL 1 DAY WHERE id_plan = {$planId}");
+$pdo->exec("UPDATE n_prod_order SET due_at = due_at + INTERVAL 1 DAY WHERE id_plan = {$planId}");
 [$s, $b] = $call('POST', "/planning/plans/{$planId}/schedule", null, $access);
 check($s === 200 && $b['data']['operations'] > 0, 'plan scheduled');
 $conflicts = array_column($b['data']['conflicts'], 'reason', 'code');
 check(($conflicts[$orders['MTO']['code']] ?? '') === 'NO_ROUTING', 'an order without routing is reported, not placed');
-$late = (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_operation op JOIN tfb_prod_order o ON o.id = op.id_order WHERE op.planned_end > o.due_at")->fetchColumn();
+$late = (int) $pdo->query("SELECT COUNT(*) FROM n_prod_operation op JOIN n_prod_order o ON o.id = op.id_order WHERE op.planned_end > o.due_at")->fetchColumn();
 check($late === 0, 'acceptance: no operation ends after its order is due (truck departure)');
-$outsideShift = (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_operation WHERE kind <> 'delay' AND (TIME(planned_start) < '06:00' OR TIME(planned_end) > '14:00' OR DATE(planned_end) <> DATE(planned_start))")->fetchColumn();
+$outsideShift = (int) $pdo->query("SELECT COUNT(*) FROM n_prod_operation WHERE kind <> 'delay' AND (TIME(planned_start) < '06:00' OR TIME(planned_end) > '14:00' OR DATE(planned_end) <> DATE(planned_start))")->fetchColumn();
 check($outsideShift === 0, 'work only on the staffed day shift (no afternoon or night team in this group)');
-$semiEnd = $pdo->query("SELECT MAX(planned_end) FROM tfb_prod_operation WHERE id_order = {$orders['SEMI']['id']}")->fetchColumn();
-$parentStart = $pdo->query("SELECT MIN(planned_start) FROM tfb_prod_operation WHERE id_order = {$orders['MTS']['id']}")->fetchColumn();
+$semiEnd = $pdo->query("SELECT MAX(planned_end) FROM n_prod_operation WHERE id_order = {$orders['SEMI']['id']}")->fetchColumn();
+$parentStart = $pdo->query("SELECT MIN(planned_start) FROM n_prod_operation WHERE id_order = {$orders['MTS']['id']}")->fetchColumn();
 check($semiEnd !== null && $parentStart !== null && $semiEnd <= $parentStart, 'semi-finished ends before its parent starts');
-check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_operation WHERE kind <> 'delay' AND id_team IS NULL")->fetchColumn() === 0, 'each operation has its team');
+check((int) $pdo->query("SELECT COUNT(*) FROM n_prod_operation WHERE kind <> 'delay' AND id_team IS NULL")->fetchColumn() === 0, 'each operation has its team');
 $from = date('Y-m-d', strtotime('-1 day'));
 $to = date('Y-m-d', strtotime('+6 days'));
 [$s, $ops] = $call('GET', "/planning/operations?from={$from}&to={$to}&group_id=1", null, $lead);
@@ -578,15 +578,15 @@ check($s === 200 && count($ops['data']) === $b['data']['operations'] && $ops['da
 [$s, $load] = $call('GET', "/planning/load?from={$from}&to={$to}", null, $dir);
 $busy = array_values(array_filter($load['data'], fn($l) => $l['required_h'] > 0));
 check($s === 200 && $busy && $busy[0]['shift'] === 'JOUR' && $busy[0]['available_h'] == 16 && in_array($busy[0]['status'], ['under', 'ok', 'over'], true), 'load = planned hours ÷ (team T1: 2 people × 8 h)');
-$pdo->exec("UPDATE tfb_prod_operation SET locked = 1 WHERE id = (SELECT id FROM (SELECT MIN(id) AS id FROM tfb_prod_operation) x)");
-$lockedBefore = $pdo->query("SELECT planned_start FROM tfb_prod_operation WHERE locked = 1")->fetchColumn();
+$pdo->exec("UPDATE n_prod_operation SET locked = 1 WHERE id = (SELECT id FROM (SELECT MIN(id) AS id FROM n_prod_operation) x)");
+$lockedBefore = $pdo->query("SELECT planned_start FROM n_prod_operation WHERE locked = 1")->fetchColumn();
 [$s, $b2] = $call('POST', "/planning/plans/{$planId}/schedule", null, $access);
-check($s === 200 && $pdo->query("SELECT planned_start FROM tfb_prod_operation WHERE locked = 1")->fetchColumn() === $lockedBefore, 'a locked operation stays where it is when rescheduling');
+check($s === 200 && $pdo->query("SELECT planned_start FROM n_prod_operation WHERE locked = 1")->fetchColumn() === $lockedBefore, 'a locked operation stays where it is when rescheduling');
 
 // --- P5 : déplacer / verrouiller une opération sur le Gantt
-$pdo->exec("UPDATE tfb_prod_operation SET locked = 0");
-$semiOp = $pdo->query("SELECT * FROM tfb_prod_operation WHERE id_order = {$orders['SEMI']['id']} ORDER BY planned_start DESC LIMIT 1")->fetch();
-$mtsFirst = $pdo->query("SELECT * FROM tfb_prod_operation WHERE id_order = {$orders['MTS']['id']} ORDER BY planned_start LIMIT 1")->fetch();
+$pdo->exec("UPDATE n_prod_operation SET locked = 0");
+$semiOp = $pdo->query("SELECT * FROM n_prod_operation WHERE id_order = {$orders['SEMI']['id']} ORDER BY planned_start DESC LIMIT 1")->fetch();
+$mtsFirst = $pdo->query("SELECT * FROM n_prod_operation WHERE id_order = {$orders['MTS']['id']} ORDER BY planned_start LIMIT 1")->fetch();
 $at = fn(string $dt, int $minutes) => date('Y-m-d H:i', strtotime($dt) + $minutes * 60);
 [$s, $b] = $call('PATCH', "/planning/operations/{$semiOp['id']}", ['start' => $at($semiOp['planned_start'], -60)], $dir);
 check($s === 403, 'direction reads the Gantt but does not move operations');
@@ -598,40 +598,40 @@ check($s === 422 && in_array('start:OUTSIDE_STAFFED_SHIFT', $codes($b), true), '
 check($s === 422 && in_array('start:AFTER_PARENT_START', $codes($b), true), 'a semi-finished product must be ready before its parent order starts');
 [$s, $b] = $call('PATCH', "/planning/operations/{$mtsFirst['id']}", ['start' => $at($semiOp['planned_start'], -15)], $lead);
 check($s === 422 && in_array('start:CHILD_NOT_READY', $codes($b), true), 'a parent order cannot start before its semi-finished products are ready');
-$mtsLast = $pdo->query("SELECT o.*, ord.due_at FROM tfb_prod_operation o JOIN tfb_prod_order ord ON ord.id = o.id_order WHERE o.id_order = {$orders['MTS']['id']} ORDER BY o.planned_start DESC LIMIT 1")->fetch();
+$mtsLast = $pdo->query("SELECT o.*, ord.due_at FROM n_prod_operation o JOIN n_prod_order ord ON ord.id = o.id_order WHERE o.id_order = {$orders['MTS']['id']} ORDER BY o.planned_start DESC LIMIT 1")->fetch();
 [$s, $b] = $call('PATCH', "/planning/operations/{$mtsLast['id']}", ['start' => $at($mtsLast['due_at'], 0)], $lead);
 check($s === 422 && in_array('start:AFTER_DUE', $codes($b), true), 'acceptance: never moved after the order is due (truck departure)');
 [$s, $b] = $call('PATCH', "/planning/operations/{$semiOp['id']}", ['start' => date('Y-m-d H:i', strtotime('-2 days'))], $lead);
 check($s === 422 && in_array('start:IN_PAST', $codes($b), true), 'no move into the past');
 [$s, $b] = $call('PATCH', "/planning/operations/{$semiOp['id']}", ['workstation_id' => 9999], $lead);
 check($s === 422 && $codes($b) === ['workstation_id:REFERENCE_NOT_FOUND'], 'unknown workstation');
-$semiFirst = $pdo->query("SELECT * FROM tfb_prod_operation WHERE id_order = {$orders['SEMI']['id']} ORDER BY planned_start LIMIT 1")->fetch();
+$semiFirst = $pdo->query("SELECT * FROM n_prod_operation WHERE id_order = {$orders['SEMI']['id']} ORDER BY planned_start LIMIT 1")->fetch();
 [$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", ['start' => $at($semiFirst['planned_start'], -60)], $lead);
 check($s === 200 && $b['data']['start'] === $at($semiFirst['planned_start'], -60) . ':00' && $b['data']['locked'] === true
     && strtotime($b['data']['end']) - strtotime($b['data']['start']) === strtotime($semiFirst['planned_end']) - strtotime($semiFirst['planned_start']), 'moved one hour earlier, duration kept, locked');
-check($pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE entity = 'operation' AND action = 'move'")->fetchColumn() == 1, 'move recorded in the audit log');
+check($pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE entity = 'operation' AND action = 'move'")->fetchColumn() == 1, 'move recorded in the audit log');
 [$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", ['locked' => false], $lead);
 check($s === 200 && $b['data']['locked'] === false && $b['data']['start'] === $at($semiFirst['planned_start'], -60) . ':00', 'unlock without moving');
 [$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", [], $lead);
 check($s === 422, 'nothing to change');
 [$s, $b] = $call('PATCH', '/planning/operations/999999', ['locked' => true], $lead);
 check($s === 404, 'unknown operation');
-$pdo->exec("UPDATE tfb_prod_operation SET status = 'done' WHERE id = {$semiFirst['id']}");
+$pdo->exec("UPDATE n_prod_operation SET status = 'done' WHERE id = {$semiFirst['id']}");
 [$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", ['start' => $at($semiFirst['planned_start'], -30)], $lead);
 check($s === 409 && $b['description'] === 'OPERATION_NOT_MOVABLE', 'a finished operation does not move');
-$pdo->exec("UPDATE tfb_prod_operation SET status = 'planned' WHERE id = {$semiFirst['id']}");
+$pdo->exec("UPDATE n_prod_operation SET status = 'planned' WHERE id = {$semiFirst['id']}");
 
 // --- P6 : optimiseur de shifts (95 %), application, simulation
 // Deuxième produit MTS (pain façonné à 2, 30 s/pièce sur sa table) : de quoi remplir les shifts.
-$pdo->exec("UPDATE tfb_prod_product_settings SET stock_max = 5000 WHERE id_item = {$itemId}");
-$pdo->exec("INSERT INTO tfb_prod_workstation (id, code, id_group, name_pl, name_fr, type, capacity_per_pass) VALUES (94, 'STOL_P6', 1, 'Stół 2', 'Table 2', 'manuel', 1000)");
+$pdo->exec("UPDATE n_prod_product_settings SET stock_max = 5000 WHERE id_item = {$itemId}");
+$pdo->exec("INSERT INTO n_prod_workstation (id, code, id_group, name_pl, name_fr, type, capacity_per_pass) VALUES (94, 'STOL_P6', 1, 'Stół 2', 'Table 2', 'manuel', 1000)");
 $pdo->exec("INSERT INTO final_product (id, name, id_category, weight, ppc, ppb, bpc, cpl, lpp, cpp, id_section, active) VALUES (502, 'Pain test', 1, 300, 10, 1, 10, 8, 6, 48, 1, 1)");
-$pdo->exec("INSERT INTO tfb_prod_item (id, item_type, id_final_product) VALUES (50, 'product', 502)");
-$pdo->exec("INSERT INTO tfb_prod_product_settings (id_item, mode, stock_max, batch_multiple, id_primary_group, status) VALUES (50, 'MTS', 100000, 10, 1, 'validated')");
-$pdo->exec("INSERT INTO tfb_prod_routing_step (id_item, step_no, name_pl, name_fr, id_workstation, variable_time_s, capacity_per_pass, operators_required) VALUES (50, 1, 'Formowanie', 'Façonnage', 94, 30, 1000, 2)");
+$pdo->exec("INSERT INTO n_prod_item (id, item_type, id_final_product) VALUES (50, 'product', 502)");
+$pdo->exec("INSERT INTO n_prod_product_settings (id_item, mode, stock_max, batch_multiple, id_primary_group, status) VALUES (50, 'MTS', 100000, 10, 1, 'validated')");
+$pdo->exec("INSERT INTO n_prod_routing_step (id_item, step_no, name_pl, name_fr, id_workstation, variable_time_s, capacity_per_pass, operators_required) VALUES (50, 1, 'Formowanie', 'Façonnage', 94, 30, 1000, 2)");
 $wFrom = date('Y-m-d', strtotime('+1 day'));
 $wTo = date('Y-m-d', strtotime('+6 days'));
-$before = $pdo->query("SELECT id, planned_start, planned_end, id_workstation FROM tfb_prod_operation ORDER BY id")->fetchAll();
+$before = $pdo->query("SELECT id, planned_start, planned_end, id_workstation FROM n_prod_operation ORDER BY id")->fetchAll();
 [$s, $opt] = $call('GET', "/planning/optimizer?from={$wFrom}&to={$wTo}", null, $lead);
 check($s === 200 && $opt['data']['summary']['before']['green'] < $opt['data']['summary']['after']['green'], 'optimizer proposes more shifts in the green band');
 $worked = array_values(array_filter($opt['data']['rows'], fn($r) => $r['after']['required_h'] > 0));
@@ -639,39 +639,39 @@ check($worked && !array_filter($worked, fn($r) => $r['after']['status'] !== 'ok'
 check(count(array_filter($opt['data']['rows'], fn($r) => $r['actions'] && $r['actions'][0]['lever'] === 'advance_mts')) >= 1, 'underloaded shifts filled by advancing MTS');
 [$s, $b] = $call('POST', '/planning/optimizer/apply', ['from' => $wFrom, 'to' => $wTo], $lead);
 check($s === 403, 'a team lead does not apply the optimizer');
-$staffingRows = (int) $pdo->query('SELECT COUNT(*) FROM tfb_prod_staffing')->fetchColumn();
-[$s, $sim] = $call('POST', '/planning/simulate', ['from' => $wFrom, 'to' => $wFrom, 'staffing' => [['date' => $wFrom, 'group_id' => 1, 'shift_id' => $jourId = (int) $pdo->query("SELECT id FROM tfb_prod_shift_template WHERE code = 'JOUR'")->fetchColumn(), 'headcount' => 4, 'overtime_h' => 1]]], $lead);
+$staffingRows = (int) $pdo->query('SELECT COUNT(*) FROM n_prod_staffing')->fetchColumn();
+[$s, $sim] = $call('POST', '/planning/simulate', ['from' => $wFrom, 'to' => $wFrom, 'staffing' => [['date' => $wFrom, 'group_id' => 1, 'shift_id' => $jourId = (int) $pdo->query("SELECT id FROM n_prod_shift_template WHERE code = 'JOUR'")->fetchColumn(), 'headcount' => 4, 'overtime_h' => 1]]], $lead);
 $simRow = array_values(array_filter($sim['data']['rows'], fn($r) => $r['group_id'] === 1 && $r['shift_id'] === $jourId))[0] ?? null;
 check($s === 200 && $simRow && $simRow['headcount'] === 4 && $simRow['before']['available_h'] == 33.0 && $simRow['staffing'] === 'simulation', 'simulation: 4 people × 8 h + 1 h overtime');
-check((int) $pdo->query('SELECT COUNT(*) FROM tfb_prod_staffing')->fetchColumn() === $staffingRows, 'simulation saves nothing');
+check((int) $pdo->query('SELECT COUNT(*) FROM n_prod_staffing')->fetchColumn() === $staffingRows, 'simulation saves nothing');
 [$s, $b] = $call('POST', '/planning/simulate', ['from' => $wFrom, 'to' => $wFrom, 'staffing' => [['date' => $wFrom, 'group_id' => 1, 'shift_id' => $jourId, 'headcount' => 99]]], $lead);
 check($s === 422 && $codes($b) === ['staffing.0.headcount:OUT_OF_RANGE'], 'simulated headcount checked');
 [$s, $res] = $call('POST', '/planning/optimizer/apply', ['from' => $wFrom, 'to' => $wTo], $access);
 check($s === 200 && $res['data']['mts_orders'] === 5 && $res['data']['operations'] >= 5 && $res['data']['conflicts'] === [] && $res['data']['staffing_rows'] === 0,
     'proposal applied: 5 MTS orders scheduled without conflict, no staffing change needed');
-$after = $pdo->query("SELECT id, planned_start, planned_end, id_workstation FROM tfb_prod_operation WHERE id <= " . (int) max(array_column($before, 'id')) . " ORDER BY id")->fetchAll();
+$after = $pdo->query("SELECT id, planned_start, planned_end, id_workstation FROM n_prod_operation WHERE id <= " . (int) max(array_column($before, 'id')) . " ORDER BY id")->fetchAll();
 check($after == $before, 'acceptance: existing operations (MTO) untouched — never delayed');
-$newOps = $pdo->query("SELECT op.planned_end, o.due_at FROM tfb_prod_operation op JOIN tfb_prod_order o ON o.id = op.id_order WHERE o.origin = 'MTS' AND op.id > " . (int) max(array_column($before, 'id')))->fetchAll();
+$newOps = $pdo->query("SELECT op.planned_end, o.due_at FROM n_prod_operation op JOIN n_prod_order o ON o.id = op.id_order WHERE o.origin = 'MTS' AND op.id > " . (int) max(array_column($before, 'id')))->fetchAll();
 check($newOps && !array_filter($newOps, fn($o) => $o['planned_end'] > $o['due_at']), 'advanced MTS placed before the end of its shift');
 check($res['data']['summary_after']['green'] === 5 && $res['data']['summary_after']['load_pct'] >= 90 && $res['data']['summary_after']['load_pct'] <= 100, 'acceptance: the week brought to 90–100 % (5 shifts of 5)');
 [$s, $load] = $call('GET', "/planning/load?from={$wFrom}&to={$wTo}", null, $dir);
 $worked = array_filter($load['data'], fn($l) => $l['required_h'] > 0);
 check(count($worked) === 5 && !array_filter($worked, fn($l) => $l['status'] !== 'ok'), 'stored load of every shift in the green band');
 // Réduction d'effectif écrite comme obsada du jour quand il n'y a rien à avancer
-$pdo->exec("UPDATE tfb_prod_product_settings SET status = 'draft' WHERE id_item IN ({$itemId}, 50)");
-$pdo->exec("UPDATE tfb_prod_team SET planned_headcount = 3 WHERE code = 'T1'");
+$pdo->exec("UPDATE n_prod_product_settings SET status = 'draft' WHERE id_item IN ({$itemId}, 50)");
+$pdo->exec("UPDATE n_prod_team SET planned_headcount = 3 WHERE code = 'T1'");
 [$s, $res2] = $call('POST', '/planning/optimizer/apply', ['from' => $wFrom, 'to' => $wTo], $access);
-$row = $pdo->query("SELECT headcount, source FROM tfb_prod_staffing WHERE work_date = '{$wFrom}'")->fetch();
+$row = $pdo->query("SELECT headcount, source FROM n_prod_staffing WHERE work_date = '{$wFrom}'")->fetch();
 check($s === 200 && $res2['data']['mts_orders'] === 0 && $res2['data']['staffing_rows'] === 5 && (int) $row['headcount'] === 2 && $row['source'] === 'optimizer',
     'surplus person removed from each shift (3 → 2), written as staffing of the day');
 [$s, $load] = $call('GET', "/planning/load?from={$wFrom}&to={$wFrom}", null, $dir);
 check($load['data'][0]['headcount'] === 2 && $load['data'][0]['base_headcount'] === 3 && $load['data'][0]['staffing'] === 'optimizer', 'load uses the staffing of the day');
-$pdo->exec("UPDATE tfb_prod_team SET planned_headcount = 2 WHERE code = 'T1'");
+$pdo->exec("UPDATE n_prod_team SET planned_headcount = 2 WHERE code = 'T1'");
 $day = array_values($worked)[1]['date'];
 [$s, $b] = $call('PUT', '/planning/staffing', ['date' => $day, 'group_id' => 1, 'shift_id' => $jourId, 'headcount' => 3, 'overtime_h' => 2, 'note' => 'urlop'], $access);
 check($s === 200 && $b['data']['headcount'] === 3 && $b['data']['available_h'] == 26.0 && $b['data']['staffing'] === 'manual', 'manual staffing for a day');
 [$s, $b] = $call('PUT', '/planning/staffing', ['date' => $day, 'group_id' => 1, 'shift_id' => $jourId, 'headcount' => null], $access);
-check($s === 200 && $pdo->query("SELECT COUNT(*) FROM tfb_prod_staffing WHERE work_date = '{$day}'")->fetchColumn() == 0 && $b['data']['headcount'] === 2, 'back to the teams');
+check($s === 200 && $pdo->query("SELECT COUNT(*) FROM n_prod_staffing WHERE work_date = '{$day}'")->fetchColumn() == 0 && $b['data']['headcount'] === 2, 'back to the teams');
 [$s, $b] = $call('PUT', '/planning/staffing', ['date' => $day, 'group_id' => 999, 'shift_id' => $jourId, 'headcount' => 1], $access);
 check($s === 422 && $codes($b) === ['group_id:REFERENCE_NOT_FOUND'], 'unknown group');
 
@@ -683,13 +683,13 @@ $kiosk = function (string $method, string $path, ?array $body, string $device, ?
     $response = $kernel->handle($request, parse_url('/api/v1/production' . $path, PHP_URL_PATH));
     return [$response->getStatusCode(), json_decode((string) $response->getContent(), true)];
 };
-$jan = (int) $pdo->query('SELECT id FROM tfb_prod_employee WHERE id_production_employee = 10')->fetchColumn();
-$ewa = (int) $pdo->query('SELECT id FROM tfb_prod_employee WHERE id_production_employee = 11')->fetchColumn();
+$jan = (int) $pdo->query('SELECT id FROM n_prod_employee WHERE id_production_employee = 10')->fetchColumn();
+$ewa = (int) $pdo->query('SELECT id FROM n_prod_employee WHERE id_production_employee = 11')->fetchColumn();
 [$s] = $call('POST', '/kiosk/devices', ['name' => 'Tablet Piekarnia', 'group_id' => 1], $dir);
 check($s === 403, 'direction does not register tablets');
 [$s, $dev] = $call('POST', '/kiosk/devices', ['name' => 'Tablet Piekarnia', 'group_id' => 1], $access);
 check($s === 201 && preg_match('/^[A-Z2-9]{8}$/', $dev['data']['pairing_code']) === 1, 'tablet registered, one-time pairing code');
-check($pdo->query("SELECT pairing_code_hash FROM tfb_prod_device WHERE id = {$dev['data']['id']}")->fetchColumn() === hash('sha256', $dev['data']['pairing_code']), 'only the hash of the code is stored');
+check($pdo->query("SELECT pairing_code_hash FROM n_prod_device WHERE id = {$dev['data']['id']}")->fetchColumn() === hash('sha256', $dev['data']['pairing_code']), 'only the hash of the code is stored');
 [$s, $b] = $call('POST', '/kiosk/pair', ['code' => 'WRONGCOD']);
 check($s === 422 && $codes($b) === ['code:PAIRING_CODE_INVALID'], 'wrong pairing code');
 // Appel brut (cookies, en-têtes de réponse) : l'appairage est aussi gardé dans un cookie HttpOnly du serveur.
@@ -729,7 +729,7 @@ check($s === 200 && in_array($jan, array_column($people['data'], 'id'), true) &&
 check($s === 422 && $codes($b) === ['pin:INVALID_PIN'], 'PIN of 4 to 6 digits');
 [$s, $b] = $call('PUT', "/kiosk/employees/{$jan}/credentials", ['badge' => '04:A3:7F:11', 'pin' => '2468'], $access);
 check($s === 200 && $b['data']['has_badge'] && $b['data']['has_pin'] && !$b['data']['biometric_consent'], 'badge and PIN set');
-$stored = $pdo->query("SELECT badge_hash, pin_hash FROM tfb_prod_employee_credential WHERE id_employee = {$jan}")->fetch();
+$stored = $pdo->query("SELECT badge_hash, pin_hash FROM n_prod_employee_credential WHERE id_employee = {$jan}")->fetch();
 check(!str_contains($stored['badge_hash'], '04A37F11') && strlen($stored['badge_hash']) === 64 && str_starts_with($stored['pin_hash'], '$2y$'), 'badge and PIN never stored in clear');
 [$s, $b] = $call('PUT', "/kiosk/employees/{$ewa}/credentials", ['badge' => '04a37f11'], $access);
 check($s === 422 && $codes($b) === ['badge:BADGE_TAKEN'], 'one badge per person');
@@ -753,7 +753,7 @@ check($s === 401 && $b['description'] === 'EMPLOYEE_UNAUTHENTICATED', 'personal 
 
 // Opérations du jour : la tablette montre de maintenant − 6 h à + 24 h ; on place deux opérations du groupe de la
 // tablette dans cette fenêtre (le plan de test est daté, l'heure d'exécution du test ne doit pas compter).
-$pdo->exec("UPDATE tfb_prod_operation op JOIN tfb_prod_workstation w ON w.id = op.id_workstation SET op.planned_start = NOW() + INTERVAL 1 HOUR, op.planned_end = NOW() + INTERVAL 2 HOUR
+$pdo->exec("UPDATE n_prod_operation op JOIN n_prod_workstation w ON w.id = op.id_workstation SET op.planned_start = NOW() + INTERVAL 1 HOUR, op.planned_end = NOW() + INTERVAL 2 HOUR
             WHERE w.id_group = 1 AND op.status = 'planned' ORDER BY op.id LIMIT 2");
 [$s, $me] = $kiosk('GET', '/kiosk/me', null, $device, $emp);
 check($s === 200 && !$me['data']['clocked_in'] && count($me['data']['operations']) > 0, 'my day: not clocked in, operations of my group');
@@ -787,7 +787,7 @@ $partial[1]['yes'] = false;
 check($s === 422 && $b['description'] === 'CLOCK_QUESTIONS_REQUIRED', 'every required question must be confirmed');
 [$s, $in] = $kiosk('POST', '/kiosk/clock', ['client_uuid' => $uuid, 'answers' => $yes($qIn, $optId)], $device, $emp);
 check($s === 200 && $in['data']['clock']['clock_out'] === null && !$in['data']['replayed'], 'questions confirmed, OK: clock in');
-$saved = $pdo->query("SELECT id_question, answer FROM tfb_clock_answer WHERE id_clock = {$in['data']['clock']['id']} AND direction = 'in'")->fetchAll(PDO::FETCH_KEY_PAIR);
+$saved = $pdo->query("SELECT id_question, answer FROM n_clock_answer WHERE id_clock = {$in['data']['clock']['id']} AND direction = 'in'")->fetchAll(PDO::FETCH_KEY_PAIR);
 check(count($saved) === count($qIn) && (int) $saved[$optId] === 0 && array_sum(array_map('intval', $saved)) === count($qIn) - 1, 'answers kept with the clock (optional one answered no)');
 [$s, $b] = $kiosk('POST', '/kiosk/clock', ['client_uuid' => $uuid], $device, $emp);
 check($s === 200 && $b['data']['replayed'] && $b['data']['clock']['id'] === $in['data']['clock']['id'], 'replayed tap (offline tablet) creates nothing twice');
@@ -798,22 +798,22 @@ check($s === 200 && $op['data']['status'] === 'in_progress' && $op['data']['work
 [$s, $op] = $kiosk('POST', "/kiosk/operations/{$opId}/pause", null, $device, $emp);
 check($s === 200 && $op['data']['status'] === 'paused' && $op['data']['working'] === [], 'paused');
 $kiosk('POST', "/kiosk/operations/{$opId}/start", [], $device, $emp);
-$pdo->exec("UPDATE tfb_prod_time_log SET started_at = NOW() - INTERVAL 20 MINUTE WHERE id_operation = {$opId} AND ended_at IS NULL");
+$pdo->exec("UPDATE n_prod_time_log SET started_at = NOW() - INTERVAL 20 MINUTE WHERE id_operation = {$opId} AND ended_at IS NULL");
 [$s, $b] = $kiosk('POST', "/kiosk/operations/{$opId}/finish", ['qty_good' => 90, 'qty_scrap' => 2], $device, $emp);
 check($s === 422 && $codes($b) === ['scrap_reason:REQUIRED'], 'scrap needs a reason');
-$studies = (int) $pdo->query('SELECT COUNT(*) FROM tfb_prod_time_study')->fetchColumn();
+$studies = (int) $pdo->query('SELECT COUNT(*) FROM n_prod_time_study')->fetchColumn();
 [$s, $op] = $kiosk('POST', "/kiosk/operations/{$opId}/finish", ['qty_good' => 90, 'qty_scrap' => 2, 'scrap_reason' => 'przypalone'], $device, $emp);
 check($s === 200 && $op['data']['status'] === 'done' && $op['data']['qty_good'] == 90.0 && $op['data']['qty_scrap'] == 2.0, 'operation finished with quantities');
-$opKind = $pdo->query("SELECT kind FROM tfb_prod_operation WHERE id = {$opId}")->fetchColumn();
-check($opKind !== 'work' || (int) $pdo->query('SELECT COUNT(*) FROM tfb_prod_time_study')->fetchColumn() === $studies + 1, 'real time of a work operation becomes a time study (P2)');
+$opKind = $pdo->query("SELECT kind FROM n_prod_operation WHERE id = {$opId}")->fetchColumn();
+check($opKind !== 'work' || (int) $pdo->query('SELECT COUNT(*) FROM n_prod_time_study')->fetchColumn() === $studies + 1, 'real time of a work operation becomes a time study (P2)');
 [$s, $b] = $kiosk('POST', "/kiosk/operations/{$opId}/start", [], $device, $emp);
 check($s === 409 && $b['description'] === 'OPERATION_NOT_STARTABLE', 'a finished operation does not restart');
-$other = (int) $pdo->query("SELECT op.id FROM tfb_prod_operation op WHERE op.status = 'planned' ORDER BY op.id LIMIT 1")->fetchColumn();
+$other = (int) $pdo->query("SELECT op.id FROM n_prod_operation op WHERE op.status = 'planned' ORDER BY op.id LIMIT 1")->fetchColumn();
 $kiosk('POST', "/kiosk/operations/{$other}/start", [], $device, $emp);
 [$s, $out] = $kiosk('POST', '/kiosk/clock', ['answers' => $yes($me['data']['questions']['out'])], $device, $emp);
 check($s === 200 && $out['data']['clock']['clock_out'] !== null && $out['data']['signature_required'], 'second tap: clock out, signature asked');
-check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_time_log WHERE id_employee = {$jan} AND ended_at IS NULL")->fetchColumn() === 0
-    && $pdo->query("SELECT status FROM tfb_prod_operation WHERE id = {$other}")->fetchColumn() === 'paused', 'clocking out closes my running work');
+check((int) $pdo->query("SELECT COUNT(*) FROM n_prod_time_log WHERE id_employee = {$jan} AND ended_at IS NULL")->fetchColumn() === 0
+    && $pdo->query("SELECT status FROM n_prod_operation WHERE id = {$other}")->fetchColumn() === 'paused', 'clocking out closes my running work');
 [$s, $b] = $kiosk('POST', '/kiosk/signatures', ['purpose' => 'clock_out', 'ref' => (string) $out['data']['clock']['id'], 'image' => 'data:image/png;base64,AAAA'], $device, $emp);
 check($s === 422 && $codes($b) === ['image:INVALID_IMAGE'], 'signature must be a PNG');
 $img = imagecreatetruecolor(300, 120);
@@ -834,9 +834,9 @@ $pdo->exec("INSERT INTO category_material (id, id_group, name) VALUES (105, 0, '
 $pdo->exec("INSERT INTO raw_material (id, name, id_unit, id_category, price_per_unit) VALUES (902, 'Karton 60', 1, 200, 3.7)");
 $pdo->exec("UPDATE raw_material SET id_category = 105 WHERE id IN (900, 901)");
 $pdo->exec("INSERT INTO flattened_recipe_ingredient (recipe_id, material_id, quantity) VALUES (700, 900, 1500), (700, 901, 300), (700, 902, 1)");
-$croissant = (int) $pdo->query('SELECT id FROM tfb_prod_item WHERE id_final_product = 501')->fetchColumn();
-$pdo->exec("UPDATE tfb_prod_product_settings SET id_primary_group = 1 WHERE id_item = {$croissant}");
-$pdo->exec("INSERT INTO tfb_prod_week_slot (week_start, id_item, work_date, quantity) VALUES ('" . date('Y-m-d', strtotime('monday this week')) . "', {$croissant}, CURDATE(), 120)");
+$croissant = (int) $pdo->query('SELECT id FROM n_prod_item WHERE id_final_product = 501')->fetchColumn();
+$pdo->exec("UPDATE n_prod_product_settings SET id_primary_group = 1 WHERE id_item = {$croissant}");
+$pdo->exec("INSERT INTO n_prod_week_slot (week_start, id_item, work_date, quantity) VALUES ('" . date('Y-m-d', strtotime('monday this week')) . "', {$croissant}, CURDATE(), 120)");
 [$s, $b] = $kiosk('GET', '/kiosk/production', null, $device);
 check($s === 401 && $b['description'] === 'EMPLOYEE_UNAUTHENTICATED', 'production of the day needs the person');
 [$s, $b] = $kiosk('POST', '/kiosk/refresh', null, $device, $emp);
@@ -846,13 +846,13 @@ $emp = $b['data']['employee_token'];
 $row = array_values(array_filter($pd['data']['items'] ?? [], fn($i) => $i['item_id'] === $croissant))[0] ?? null;
 check($s === 200 && $pd['data']['group']['id'] === 1 && $row && $row['planned'] == 120.0 && $row['produced'] == 0.0 && $row['ppc'] === 60
     && in_array($croissant, array_column($pd['data']['catalog'], 'item_id'), true), 'production of the day: planned from the week Gantt, group catalog');
-$batchOf = (float) $pdo->query("SELECT COALESCE(batch_multiple, 0) FROM tfb_prod_product_settings WHERE id_item = {$croissant}")->fetchColumn();
+$batchOf = (float) $pdo->query("SELECT COALESCE(batch_multiple, 0) FROM n_prod_product_settings WHERE id_item = {$croissant}")->fetchColumn();
 check(($row['batch'] ?? null) == ($batchOf > 0 ? $batchOf : null), 'tablet: production batch of the card (one tile per planned batch)');
 [$s, $b] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 0], $device, $emp);
 check($s === 422 && $codes($b) === ['quantity:OUT_OF_RANGE'], 'quantity above zero');
 $outUuid = '5b1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c4d';
 [$s, $batch] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 120, 'client_uuid' => $outUuid], $device, $emp);
-$prefix = date('ymd') . '-' . strtoupper(substr(preg_replace('/[^A-Z0-9]/i', '', (string) $pdo->query('SELECT code FROM tfb_prod_group WHERE id = 1')->fetchColumn()), 0, 4)) . '-';
+$prefix = date('ymd') . '-' . strtoupper(substr(preg_replace('/[^A-Z0-9]/i', '', (string) $pdo->query('SELECT code FROM n_prod_group WHERE id = 1')->fetchColumn()), 0, 4)) . '-';
 $ing = array_column($batch['data']['ingredients'] ?? [], null, 'material_id');
 check($s === 201 && $batch['data']['lot_code'] === $prefix . '01' && $batch['data']['basis'] === 'batch' && count($ing) === 3
     && $ing[900]['quantity'] == 3000.0 && $ing[902]['packaging'] && !$ing[900]['packaging'] && $ing[900]['lot_number'] === null, 'batch recorded: own lot number, recipe scaled to 2 cartons');
@@ -872,7 +872,7 @@ check($s === 422 && $codes($b) === ['material_id:MATERIAL_NOT_IN_RECIPE'], 'only
 [$s, $b] = $kiosk('PUT', "/kiosk/production/{$batchId}/lots/900", ['lot_number' => '  l2310-a ', 'best_before' => '2026-12-01',
     'photo' => 'data:image/jpeg;base64,' . base64_encode($jpeg), 'ocr_text' => "MĄKA T65\nLOT L2310-A"], $device, $emp);
 $ing = array_column($b['data']['ingredients'] ?? [], null, 'material_id');
-$photo = $pdo->query("SELECT p.sha256, p.mime FROM tfb_prod_output_lot l JOIN tfb_prod_lot_photo p ON p.id = l.id_photo WHERE l.id_output = {$batchId} AND l.id_material = 900")->fetch();
+$photo = $pdo->query("SELECT p.sha256, p.mime FROM n_prod_output_lot l JOIN n_prod_lot_photo p ON p.id = l.id_photo WHERE l.id_output = {$batchId} AND l.id_material = 900")->fetch();
 check($s === 200 && $ing[900]['lot_number'] === 'L2310-A' && $ing[900]['best_before'] === '2026-12-01' && $ing[900]['photo'] && $b['data']['lots_done'] === 1 && $b['data']['lots_total'] === 3
     && $photo && $photo['sha256'] === hash('sha256', $jpeg) && $photo['mime'] === 'image/jpeg', 'material lot saved with best-before date and label photo');
 [$s, $b2] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 60], $device, $emp);
@@ -890,7 +890,7 @@ $row = array_values(array_filter($pd['data']['items'], fn($i) => $i['item_id'] =
 check($row['produced'] == 120.0, 'cancelled batch not counted');
 [$s, $b] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 10, 'date' => date('Y-m-d', strtotime('-5 days'))], $device, $emp);
 check($s === 409 && $b['description'] === 'OUTPUT_LOCKED', 'old days locked on the tablet');
-$pdo->exec("INSERT INTO tfb_prod_output (work_date, id_group, id_item, quantity, lot_code) VALUES (CURDATE(), 2, {$croissant}, 5, 'X-OTHER-01')");
+$pdo->exec("INSERT INTO n_prod_output (work_date, id_group, id_item, quantity, lot_code) VALUES (CURDATE(), 2, {$croissant}, 5, 'X-OTHER-01')");
 $foreign = (int) $pdo->lastInsertId();
 [$s, $b] = $kiosk('GET', "/kiosk/production/{$foreign}", null, $device, $emp);
 check($s === 403 && $b['description'] === 'OUTPUT_NOT_IN_YOUR_GROUPS', 'batches of another group hidden');
@@ -921,7 +921,7 @@ check($s === 200 && $wasteOf($pd)['good'] == 108.0 && $wasteOf($pd)['wastes'][1]
 check($s === 409 && $b['description'] === 'WASTE_CANCELLED', 'a cancelled waste stays cancelled');
 check($pd['data']['closed'] === null, 'day not validated yet');
 [$s, $pd] = $kiosk('POST', '/kiosk/production/close', ['note' => 'Piec 2 za gorący'], $device, $emp);
-$close = $pdo->query('SELECT * FROM tfb_prod_day_close WHERE work_date = CURDATE() AND id_group = 1')->fetch();
+$close = $pdo->query('SELECT * FROM n_prod_day_close WHERE work_date = CURDATE() AND id_group = 1')->fetch();
 $sum = array_column(json_decode((string) ($close['summary'] ?? '[]'), true), null, 'item_id');
 check($s === 200 && $pd['data']['closed']['employee'] !== null && $pd['data']['closed']['note'] === 'Piec 2 za gorący' && !$pd['data']['closed']['changed']
     && $close && (int) $close['id_employee'] > 0 && $sum[$croissant]['produced'] == 120 && $sum[$croissant]['waste'] == 12, 'team validates the day (who, when, summary per product)');
@@ -929,7 +929,7 @@ check($s === 200 && $pd['data']['closed']['employee'] !== null && $pd['data']['c
 check($s === 201 && $pd['data']['closed']['changed'], 'change after the validation shown');
 [$s, $pd] = $kiosk('POST', '/kiosk/production/close', [], $device, $emp);
 check($s === 200 && !$pd['data']['closed']['changed'] && $pd['data']['closed']['note'] === null
-    && (int) $pdo->query('SELECT COUNT(*) FROM tfb_prod_day_close WHERE work_date = CURDATE() AND id_group = 1')->fetchColumn() === 1, 'validated again: one record per day and group');
+    && (int) $pdo->query('SELECT COUNT(*) FROM n_prod_day_close WHERE work_date = CURDATE() AND id_group = 1')->fetchColumn() === 1, 'validated again: one record per day and group');
 [$s, $b] = $kiosk('POST', '/kiosk/production/close', ['date' => date('Y-m-d', strtotime('-5 days'))], $device, $emp);
 check($s === 409 && $b['description'] === 'OUTPUT_LOCKED', 'old days are not validated on the tablet');
 $weekGood = (new \App\Repositories\Workshop\WeekRepository($pdo))->produced(date('Y-m-d'), date('Y-m-d'));
@@ -938,15 +938,15 @@ check(abs(($weekGood[$croissant] ?? 0) - (120 + 5 - 12 - 2)) < 0.001, 'week prog
 $pdo->exec("INSERT INTO test_product_status (id, name) VALUES (1, 'Propozycja') ON DUPLICATE KEY UPDATE name = name");
 $pdo->exec("INSERT INTO test_product_type (id, name) VALUES (1, 'Produkt') ON DUPLICATE KEY UPDATE name = name");
 $pdo->exec("INSERT INTO test_product_stage (id, priority, name) VALUES (4, 2, 'Prototypage') ON DUPLICATE KEY UPDATE name = name");
-$sect = (int) $pdo->query('SELECT id_section FROM tfb_prod_group WHERE id = 1')->fetchColumn();
+$sect = (int) $pdo->query('SELECT id_section FROM n_prod_group WHERE id = 1')->fetchColumn();
 $pdo->exec("INSERT INTO production_sections (id, name, depreciation, water_cost, power_supply_cost, fuel_cost, other_cost) VALUES (77, 'Inny dział', 0, 0, 0, 0, 0)");
 $pdo->exec("INSERT INTO test_product (id, name, id_section, id_status, id_type) VALUES (901, 'Bagietka 10 zbóż', " . ($sect ?: 'NULL') . ", 1, 1), (902, 'Dla wszystkich', NULL, 1, 1),
     (903, 'Inny dział', 77, 1, 1), (904, 'Ukryty', NULL, 1, 1)");
-$pdo->exec("INSERT INTO tfb_dev_product (id_test_product, on_tablet, video_url, notes) VALUES (901, 1, 'https://youtu.be/dQw4w9WgXcQ', 'Woda 22 °C'), (902, 1, 'https://example.test/film.mp4', NULL),
+$pdo->exec("INSERT INTO n_dev_product (id_test_product, on_tablet, video_url, notes) VALUES (901, 1, 'https://youtu.be/dQw4w9WgXcQ', 'Woda 22 °C'), (902, 1, 'https://example.test/film.mp4', NULL),
     (903, 1, NULL, NULL), (904, 0, NULL, NULL)");
 $pdo->exec("INSERT INTO test_product_changelog (id_test_product, id_stage, description, deadline) VALUES (901, 4, 'Pierwszy wypiek', '2026-11-05 00:00:00')");
 $devPng = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
-$pdo->prepare('INSERT INTO tfb_dev_product_photo (id_test_product, mime, bytes, image, caption) VALUES (901, ?, ?, ?, ?)')->execute(['image/png', strlen($devPng), $devPng, 'Przekrój']);
+$pdo->prepare('INSERT INTO n_dev_product_photo (id_test_product, mime, bytes, image, caption) VALUES (901, ?, ?, ?, ?)')->execute(['image/png', strlen($devPng), $devPng, 'Przekrój']);
 [$s, $dv] = $kiosk('GET', '/kiosk/development', null, $device, $emp);
 $names = array_column($dv['data']['products'] ?? [], 'name');
 sort($names);
@@ -973,7 +973,7 @@ check($s === 422 && $codes($b) === ['reason:STOP_REASON_REQUIRED'], 'a stop need
 check($s === 422 && $codes($b) === ['note:STOP_NOTE_REQUIRED'], 'reason « other » needs a note');
 [$s, $b] = $kiosk('POST', "/kiosk/machines/999999/state", ['state' => 'run'], $device, $emp);
 check($s === 404, 'unknown machine');
-$pdo->exec("INSERT INTO tfb_prod_workstation (code, id_group, name_pl, name_fr, type, capacity_per_pass, hourly_cost, oee_tracked, active) VALUES ('OEE_OTHER', 2, 'Maszyna grupy 2', 'Machine groupe 2', 'machine', 1, 0, 1, 1)");
+$pdo->exec("INSERT INTO n_prod_workstation (code, id_group, name_pl, name_fr, type, capacity_per_pass, hourly_cost, oee_tracked, active) VALUES ('OEE_OTHER', 2, 'Maszyna grupy 2', 'Machine groupe 2', 'machine', 1, 0, 1, 1)");
 $otherWs = (int) $pdo->lastInsertId();
 [$s, $b] = $kiosk('POST', "/kiosk/machines/{$otherWs}/state", ['state' => 'run'], $device, $emp);
 check($s === 403 && $b['description'] === 'MACHINE_NOT_IN_YOUR_GROUP', 'machines of another group are not driven from this tablet');
@@ -983,17 +983,17 @@ $mine = array_column($m['data']['machines'] ?? [], null, 'id')[$cobotId] ?? null
 check($s === 200 && $mine && $mine['state']['state'] === 'run' && $mine['collaborative'] && !in_array($otherWs, array_column($m['data']['machines'], 'id'), true), 'machine running (tablet group only)');
 [$s, $m] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'run', 'client_uuid' => $stateUuid], $device, $emp);
 [$s2] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'run'], $device, $emp);
-check($s === 200 && $m['data']['replayed'] && $s2 === 200 && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_ws_state WHERE id_workstation = {$cobotId}")->fetchColumn() === 1, 'replay and same state: no new record');
+check($s === 200 && $m['data']['replayed'] && $s2 === 200 && (int) $pdo->query("SELECT COUNT(*) FROM n_prod_ws_state WHERE id_workstation = {$cobotId}")->fetchColumn() === 1, 'replay and same state: no new record');
 [$s, $m] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'stop', 'reason' => 'breakdown', 'note' => 'chwytak'], $device, $emp);
 $mine = array_column($m['data']['machines'] ?? [], null, 'id')[$cobotId] ?? null;
 check($s === 200 && $mine['state']['state'] === 'stop' && $mine['state']['reason'] === 'breakdown' && $mine['state']['note'] === 'chwytak'
-    && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_ws_state WHERE id_workstation = {$cobotId} AND ended_at IS NULL")->fetchColumn() === 1, 'stop: previous state closed, one open state');
+    && (int) $pdo->query("SELECT COUNT(*) FROM n_prod_ws_state WHERE id_workstation = {$cobotId} AND ended_at IS NULL")->fetchColumn() === 1, 'stop: previous state closed, one open state');
 [$s, $m] = $kiosk('POST', "/kiosk/machines/{$cobotId}/state", ['state' => 'off'], $device, $emp);
 $mine = array_column($m['data']['machines'] ?? [], null, 'id')[$cobotId] ?? null;
-check($s === 200 && $mine['state'] === null && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_ws_state WHERE id_workstation = {$cobotId} AND ended_at IS NULL")->fetchColumn() === 0, 'end of work: no open state');
+check($s === 200 && $mine['state'] === null && (int) $pdo->query("SELECT COUNT(*) FROM n_prod_ws_state WHERE id_workstation = {$cobotId} AND ended_at IS NULL")->fetchColumn() === 0, 'end of work: no open state');
 // Wczoraj : praca 08:00–10:00, awaria 10:00–10:30, przerwa 10:30–10:45 (planowana), praca 10:45–11:45 ; 600 rogali na cobocie (15 s/szt.), 30 strat.
 $yday = date('Y-m-d', strtotime('-1 day'));
-$pdo->exec("INSERT INTO tfb_prod_ws_state (id_workstation, state, reason, started_at, ended_at) VALUES
+$pdo->exec("INSERT INTO n_prod_ws_state (id_workstation, state, reason, started_at, ended_at) VALUES
     ({$cobotId}, 'run', NULL, '{$yday} 08:00:00', '{$yday} 10:00:00'), ({$cobotId}, 'stop', 'breakdown', '{$yday} 10:00:00', '{$yday} 10:30:00'),
     ({$cobotId}, 'stop', 'break', '{$yday} 10:30:00', '{$yday} 10:45:00'), ({$cobotId}, 'run', NULL, '{$yday} 10:45:00', '{$yday} 11:45:00')");
 [, $ci] = $call('GET', "/produits/items/{$croissant}", null, $access);
@@ -1001,13 +1001,13 @@ $croissantRouting = array_map(fn($st) => array_intersect_key($st, array_flip(['i
     'min_level_order', 'delay_after_s', 'delay_workstation_id', 'cleaning_required', 'cleaning_time_s', 'temperature_c'])) + ['alternatives' => array_map(fn($a) => array_intersect_key($a,
     array_flip(['workstation_id', 'fixed_time_s', 'variable_time_s', 'capacity_per_pass', 'priority'])), $st['alternatives'])], $ci['data']['routing'] ?? []);
 // Etap 1 rogala przechodzi na cobota (własna kadencja 15 s/szt.) ; bez marszruty — jeden etap ręczny z cobotem.
-$manualWs = (int) $pdo->query("SELECT id FROM tfb_prod_workstation WHERE id_group = 1 AND type = 'manuel' AND active = 1 ORDER BY id LIMIT 1")->fetchColumn();
+$manualWs = (int) $pdo->query("SELECT id FROM n_prod_workstation WHERE id_group = 1 AND type = 'manuel' AND active = 1 ORDER BY id LIMIT 1")->fetchColumn();
 $oeeRouting = $croissantRouting ?: [['name_pl' => 'Zwijanie', 'workstation_id' => $manualWs, 'fixed_time_s' => 0, 'variable_time_s' => 20, 'capacity_per_pass' => 1, 'operators_required' => 1, 'alternatives' => []]];
 $oeeRouting[0]['alternatives'][] = ['workstation_id' => $cobotId, 'fixed_time_s' => 0, 'variable_time_s' => 15, 'capacity_per_pass' => 1];
 [$s] = $call('PUT', "/produits/items/{$croissant}/routing", ['steps' => $oeeRouting], $access);
-$pdo->exec("INSERT INTO tfb_prod_output (work_date, id_group, id_item, quantity, lot_code) VALUES ('{$yday}', 1, {$croissant}, 600, 'OEE-TEST-1')");
+$pdo->exec("INSERT INTO n_prod_output (work_date, id_group, id_item, quantity, lot_code) VALUES ('{$yday}', 1, {$croissant}, 600, 'OEE-TEST-1')");
 $oeeOutput = (int) $pdo->lastInsertId();
-$pdo->exec("INSERT INTO tfb_prod_waste (work_date, id_group, id_item, quantity, reason) VALUES ('{$yday}', 1, {$croissant}, 30, 'quality')");
+$pdo->exec("INSERT INTO n_prod_waste (work_date, id_group, id_item, quantity, reason) VALUES ('{$yday}', 1, {$croissant}, 30, 'quality')");
 $oeeWaste = (int) $pdo->lastInsertId();
 [$s2, $m] = $kiosk('GET', "/kiosk/machines?date={$yday}", null, $device, $emp);
 $mine = array_column($m['data']['machines'] ?? [], null, 'id')[$cobotId] ?? null;
@@ -1015,10 +1015,10 @@ $stops = array_column($mine['stops'] ?? [], null, 'reason');
 check($s === 200 && $s2 === 200 && $mine && $mine['run_h'] == 3.0 && $mine['stop_h'] == 0.5 && $mine['planned_stop_h'] == 0.25 && $stops['breakdown']['minutes'] == 30.0 && $stops['break']['planned']
     && $mine['ideal_h'] == 2.5 && $mine['pieces'] == 600.0 && $mine['availability'] == 85.7 && $mine['performance'] == 83.3 && $mine['quality'] == 95.0 && $mine['oee'] == 67.9
     && count($mine['segments']) === 4 && $mine['items'][0]['item_id'] === $croissant, 'TRS of the day: 85.7 % × 83.3 % × 95 % = 67.9 % (cobot cadence from the routing)');
-$pdo->exec("DELETE FROM tfb_prod_waste WHERE id = {$oeeWaste}");
-$pdo->exec("DELETE FROM tfb_prod_output WHERE id = {$oeeOutput}");
-$pdo->exec("DELETE FROM tfb_prod_ws_state WHERE id_workstation = {$cobotId}");
-$pdo->exec("DELETE FROM tfb_prod_workstation WHERE id = {$otherWs}");
+$pdo->exec("DELETE FROM n_prod_waste WHERE id = {$oeeWaste}");
+$pdo->exec("DELETE FROM n_prod_output WHERE id = {$oeeOutput}");
+$pdo->exec("DELETE FROM n_prod_ws_state WHERE id_workstation = {$cobotId}");
+$pdo->exec("DELETE FROM n_prod_workstation WHERE id = {$otherWs}");
 [$s] = $call('PUT', "/produits/items/{$croissant}/routing", ['steps' => $croissantRouting], $access);
 check($s === 200, 'croissant routing restored');
 // --- Receptury na tablecie : drzewo receptury na karton (podreceptury, surowce, etapy) i etapy produkcji karty
@@ -1050,7 +1050,7 @@ $qb = array_column($q['data']['batches'] ?? [], null, 'id');
 check($s === 200 && $qb[$batchId]['qc']['status'] === 'ok' && $qb[$batchId]['qc']['note'] === 'waga OK' && $qb[$batchId]['qc']['employee'] !== null, 'batch checked OK (who, when)');
 [$s, $q] = $kiosk('POST', "/kiosk/quality/batches/{$batchId}", ['result' => 'nc', 'description' => 'Za jasne, niedopieczone', 'severity' => 'major'], $device, $emp);
 $qb = array_column($q['data']['batches'] ?? [], null, 'id');
-$nc = $pdo->query("SELECT * FROM tfb_nc WHERE id = (SELECT id_nc FROM tfb_prod_output WHERE id = {$batchId})")->fetch();
+$nc = $pdo->query("SELECT * FROM n_nc WHERE id = (SELECT id_nc FROM n_prod_output WHERE id = {$batchId})")->fetch();
 check($s === 200 && $qb[$batchId]['qc']['status'] === 'nc' && $nc && $nc['source'] === 'production' && $nc['severity'] === 'major' && (int) $nc['id_prod_group'] === 1
     && (int) $nc['id_final_product'] === 501 && $nc['quantity'] == 120 && str_contains($nc['description'], $prefix . '01') && $qb[$batchId]['qc']['nc_number'] === $nc['number']
     && in_array($nc['number'], array_column($q['data']['reports'], 'number'), true), 'non-conformity of a batch: in the ERP register (production, product, quantity, lot, group)');
@@ -1059,15 +1059,15 @@ check($s === 409 && $b['description'] === 'QC_ALREADY_NC', 'a batch with a non-c
 [$s, $b] = $kiosk('POST', "/kiosk/quality/batches/{$foreign}", ['result' => 'ok'], $device, $emp);
 check($s === 403, 'batches of another group are not checked');
 [$s, $q] = $kiosk('POST', '/kiosk/quality/reports', ['item_id' => $croissant, 'description' => 'Folia rozdarta na rolce', 'severity' => 'minor'], $device, $emp);
-check($s === 201 && count($q['data']['reports']) === 2 && (int) $pdo->query("SELECT COUNT(*) FROM tfb_nc WHERE source = 'production' AND id_prod_group = 1")->fetchColumn() === 2,
+check($s === 201 && count($q['data']['reports']) === 2 && (int) $pdo->query("SELECT COUNT(*) FROM n_nc WHERE source = 'production' AND id_prod_group = 1")->fetchColumn() === 2,
     'non-conformity reported from the tablet without a batch');
-$pdo->exec("UPDATE tfb_prod_device SET id_group = NULL WHERE id = {$dev['data']['id']}");
+$pdo->exec("UPDATE n_prod_device SET id_group = NULL WHERE id = {$dev['data']['id']}");
 [$s, $b] = $kiosk('GET', '/kiosk/production', null, $device, $emp);
 check($s === 409 && $b['description'] === 'DEVICE_WITHOUT_GROUP', 'tablet without group');
-$pdo->exec("UPDATE tfb_prod_device SET id_group = 1 WHERE id = {$dev['data']['id']}");
-$pdo->exec("DELETE FROM tfb_prod_week_slot WHERE id_item = {$croissant}");
+$pdo->exec("UPDATE n_prod_device SET id_group = 1 WHERE id = {$dev['data']['id']}");
+$pdo->exec("DELETE FROM n_prod_week_slot WHERE id_item = {$croissant}");
 // Plan : sztuki do produkcji ÷ szt./karton × receptura na karton = surowce planu (półprodukty już w recepturze wypłaszczonej).
-$finalCroissant = (float) $pdo->query("SELECT SUM(qty_final) FROM tfb_prod_plan_line WHERE id_plan = {$planId} AND id_item = {$croissant}")->fetchColumn();
+$finalCroissant = (float) $pdo->query("SELECT SUM(qty_final) FROM n_prod_plan_line WHERE id_plan = {$planId} AND id_item = {$croissant}")->fetchColumn();
 [$s, $pl] = $call('GET', "/planning/plans/{$planId}", null, $access);
 $mat = array_column($pl['data']['materials'] ?? [], null, 'material_id');
 check($s === 200 && $finalCroissant > 0 && isset($mat[900], $mat[902]) && abs($mat[900]['quantity'] - $finalCroissant / 60 * 1500) < 0.01 && $mat[902]['packaging'] && !$mat[900]['packaging']
@@ -1123,7 +1123,7 @@ check($s === 401 && $b['description'] === 'PIN_INVALID', 'phone registration che
 [$s, $en] = $phone('POST', '/kiosk/phone/enroll', ['employee_id' => $jan, 'pin' => '2468'], $qr);
 $phoneToken = $en['data']['phone_token'] ?? '';
 check($s === 201 && strlen($phoneToken) === 64 && $en['data']['employee']['id'] === $jan && $en['data']['expires_in_days'] === 180, 'phone registered with name + PIN');
-$storedPhone = $pdo->query("SELECT token_hash, label FROM tfb_prod_phone WHERE id_employee = {$jan}")->fetch();
+$storedPhone = $pdo->query("SELECT token_hash, label FROM n_prod_phone WHERE id_employee = {$jan}")->fetch();
 check($storedPhone['token_hash'] === hash('sha256', $phoneToken) && str_contains($storedPhone['label'], 'Android'), 'phone token stored only as a hash, with the device description');
 [$s, $pm] = $phone('GET', '/kiosk/phone/me', null, $qr, $phoneToken);
 check($s === 200 && !$pm['data']['clocked_in'] && $pm['data']['employee']['id'] === $jan && !isset($pm['data']['operations']), 'phone: my clock state only');
@@ -1134,7 +1134,7 @@ check(count($pm['data']['questions']['in']) === count($qIn), 'phone: same questi
 check($s === 422 && $b['description'] === 'CLOCK_QUESTIONS_REQUIRED', 'phone: questions to confirm before OK');
 [$s, $pin] = $phone('POST', '/kiosk/phone/clock', ['client_uuid' => '8e9f0c2e-1a2b-4c3d-8e9f-0a1b2c3d4e5f', 'answers' => $yes($pm['data']['questions']['in'])], $qr, $phoneToken);
 check($s === 200 && $pin['data']['clock']['clock_out'] === null
-    && (int) $pdo->query("SELECT id_device FROM tfb_prod_clock WHERE id = {$pin['data']['clock']['id']}")->fetchColumn() === $dev['data']['id'], 'one tap on the phone: clock in, recorded at the tablet of the QR');
+    && (int) $pdo->query("SELECT id_device FROM n_prod_clock WHERE id = {$pin['data']['clock']['id']}")->fetchColumn() === $dev['data']['id'], 'one tap on the phone: clock in, recorded at the tablet of the QR');
 [$s, $pout] = $phone('POST', '/kiosk/phone/clock', ['answers' => $yes($pm['data']['questions']['out'])], $qr, $phoneToken);
 check($s === 200 && $pout['data']['clock']['clock_out'] !== null && $pout['data']['signature_required'], 'second tap: clock out, signature asked');
 [$s] = $phone('POST', '/kiosk/phone/signatures', ['purpose' => 'clock_out', 'ref' => (string) $pout['data']['clock']['id'], 'image' => 'data:image/png;base64,' . base64_encode($png)], $qr, $phoneToken);
@@ -1148,7 +1148,7 @@ check($s === 200 && $r['data']['revoked'] === 1, 'manager revokes the phone');
 [$s, $b] = $phone('POST', '/kiosk/phone/clock', [], $qr, $phoneToken);
 check($s === 401 && $b['description'] === 'PHONE_REVOKED', 'revoked phone cannot clock');
 [$s, $r] = $call('DELETE', "/kiosk/clock-questions/{$optId}", null, $access);
-check($s === 200 && $r['data']['deleted'] && (int) $pdo->query("SELECT COUNT(*) FROM tfb_clock_answer WHERE id_question = {$optId}")->fetchColumn() >= 2, 'question deleted, given answers kept');
+check($s === 200 && $r['data']['deleted'] && (int) $pdo->query("SELECT COUNT(*) FROM n_clock_answer WHERE id_question = {$optId}")->fetchColumn() >= 2, 'question deleted, given answers kept');
 [$s, $b] = $call('DELETE', "/kiosk/clock-questions/{$optId}", null, $access);
 check($s === 404, 'deleted question is gone');
 
@@ -1175,7 +1175,7 @@ check($devices['data'][0]['pairing_pending'] && !$devices['data'][0]['paired'], 
 check($s === 200, 'production days are a parameter');
 $today = date('Y-m-d');
 // Tydzień produkcji od week.start_day (w pracowni środa) : $monday = pierwszy dzień tygodnia, $sunday = ostatni.
-$weekStartDay = (int) ($pdo->query("SELECT value FROM tfb_prod_param WHERE code = 'week.start_day'")->fetchColumn() ?: 1);
+$weekStartDay = (int) ($pdo->query("SELECT value FROM n_prod_param WHERE code = 'week.start_day'")->fetchColumn() ?: 1);
 $monday = App\Services\Workshop\Planning\WeekStart::of($today, $weekStartDay);
 [$s, $w] = $call('GET', "/planning/week?date={$today}", null, $dir);
 $wp = array_column($w['data']['products'] ?? [], null, 'item_id');
@@ -1225,12 +1225,12 @@ if ($slotDay < $sunday) {
     [$s, $b] = $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 'from' => $slotDay, 'to' => $other], $lead);
     $bp = array_column($b['data']['products'], null, 'item_id')[$itemId];
     check($s === 200 && count($bp['slots']) === 1 && $bp['slots'][0]['day'] === $other && $bp['slots'][0]['quantity'] == $qty - 16, 'drag and drop: the block moves to another day');
-    check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE entity = 'week_slot' AND action = 'move'")->fetchColumn() === 2, 'day moves are audited');
+    check((int) $pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE entity = 'week_slot' AND action = 'move'")->fetchColumn() === 2, 'day moves are audited');
     // Uszeregowanie : zlecenie MTS kończy się najpóźniej w dniu z Gantta tygodnia.
-    $mtsOrder = (int) $pdo->query("SELECT id FROM tfb_prod_order WHERE id_plan = {$planId} AND origin = 'MTS'")->fetchColumn();
+    $mtsOrder = (int) $pdo->query("SELECT id FROM n_prod_order WHERE id_plan = {$planId} AND origin = 'MTS'")->fetchColumn();
     [$s, $b] = $call('POST', "/planning/plans/{$planId}/schedule", null, $access);
-    $due = $pdo->query("SELECT due_at FROM tfb_prod_order WHERE id = {$mtsOrder}")->fetchColumn();
-    $lastEnd = $pdo->query("SELECT MAX(planned_end) FROM tfb_prod_operation WHERE id_order = {$mtsOrder} AND status = 'planned'")->fetchColumn();
+    $due = $pdo->query("SELECT due_at FROM n_prod_order WHERE id = {$mtsOrder}")->fetchColumn();
+    $lastEnd = $pdo->query("SELECT MAX(planned_end) FROM n_prod_operation WHERE id_order = {$mtsOrder} AND status = 'planned'")->fetchColumn();
     check($s === 200 && $due === $other . ' 23:59:00' && ($lastEnd === null || $lastEnd <= $due), 'scheduling: the MTS order is due on its day of the week Gantt');
 }
 [$s, $r] = $call('POST', '/planning/week/distribute', ['date' => $today, 'reset' => true], $access);
@@ -1291,7 +1291,7 @@ $need = function (string $day) use ($call, $access, $itemId) {
     return [array_sum(array_column($lines, 'qty_proposed')), array_sum(array_column($lines, 'qty_fixed'))];
 };
 // Potrzeba na następny tydzień : wysoki stan min./maks. (uzupełnienie kilku partii).
-$pdo->exec("UPDATE tfb_prod_product_settings SET stock_min = 5000, stock_max = 5000 WHERE id_item = {$itemId}");
+$pdo->exec("UPDATE n_prod_product_settings SET stock_min = 5000, stock_max = 5000 WHERE id_item = {$itemId}");
 [$qNext, $fixedNext] = $need($nextDay);
 [$s, $n] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
 $np = array_column($n['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
@@ -1310,21 +1310,21 @@ check($onDay($np1, $nextDay) == 0 || array_column($np1['slots'], 'time', 'day')[
 if (!$noShift) {
     $weekday = (int) date('N', strtotime($pinDay));
     // Więcej miejsca niż partii : dzień dostaje wszystkie partie tygodnia, nic nie czeka, miejsce zostaje częściowo wolne.
-    $pdo->exec("UPDATE tfb_prod_fixed_batch SET quantity = " . ($qNext + 3 * 160) . " WHERE id_item = {$itemId} AND weekday = {$weekday}");
+    $pdo->exec("UPDATE n_prod_fixed_batch SET quantity = " . ($qNext + 3 * 160) . " WHERE id_item = {$itemId} AND weekday = {$weekday}");
     [, $n2] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
     $np2 = array_column($n2['data']['products'], null, 'item_id')[$itemId];
     check($onDay($np2, $nextDay) == $qNext && $np2['unassigned_qty'] == 0 && $np2['pins'][0]['filled'] == $qNext && $np2['pins'][0]['room'] == $qNext + 3 * 160,
         'not enough batches for the pinned room: the day gets what the week needs, the rest of the room stays free');
     // Na żywo : potrzeba spada do zera (stan maks. = 0) → przypięty dzień pustoszeje ; wraca, gdy potrzeba wraca.
-    $pdo->exec("UPDATE tfb_prod_product_settings SET stock_min = NULL, stock_max = 0 WHERE id_item = {$itemId}");
+    $pdo->exec("UPDATE n_prod_product_settings SET stock_min = NULL, stock_max = 0 WHERE id_item = {$itemId}");
     [, $n3] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
     $np3 = array_column($n3['data']['products'], null, 'item_id')[$itemId] ?? null;
-    $emptied = (float) $pdo->query("SELECT COALESCE(SUM(quantity), 0) FROM tfb_prod_week_slot WHERE week_start = '{$n3['data']['week_start']}' AND id_item = {$itemId} AND work_date = '{$nextDay}'")->fetchColumn();
-    $pdo->exec("UPDATE tfb_prod_product_settings SET stock_min = 5000, stock_max = 5000 WHERE id_item = {$itemId}");
+    $emptied = (float) $pdo->query("SELECT COALESCE(SUM(quantity), 0) FROM n_prod_week_slot WHERE week_start = '{$n3['data']['week_start']}' AND id_item = {$itemId} AND work_date = '{$nextDay}'")->fetchColumn();
+    $pdo->exec("UPDATE n_prod_product_settings SET stock_min = 5000, stock_max = 5000 WHERE id_item = {$itemId}");
     [, $n4] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
     $np4 = array_column($n4['data']['products'], null, 'item_id')[$itemId];
     check($np3 === null && $emptied == 0 && $onDay($np4, $nextDay) == $qNext, 'live: no need → the pinned day is empty; the need comes back → the batches go back on the pinned day');
-    $pdo->exec("UPDATE tfb_prod_fixed_batch SET quantity = {$pinQty} WHERE id_item = {$itemId} AND weekday = {$weekday}");
+    $pdo->exec("UPDATE n_prod_fixed_batch SET quantity = {$pinQty} WHERE id_item = {$itemId} AND weekday = {$weekday}");
     [, $n5] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
     $np5 = array_column($n5['data']['products'], null, 'item_id')[$itemId];
     check($onDay($np5, $nextDay) == $expect && abs($np5['unassigned_qty'] - ($qNext - $expect)) < 0.001, 'smaller pin again: the surplus is back in « to do »');
@@ -1342,17 +1342,17 @@ check(array_sum(array_column(array_filter($dm['data']['lines'] ?? [], fn($l) => 
     'proposal: unchanged by the pin (no minimum from fixed batches)');
 [, $before] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
 $bpNext = array_column($before['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
-$placedNext = (float) $pdo->query("SELECT COALESCE(SUM(placed), 0) FROM tfb_prod_fixed_batch_week WHERE week_start > '{$monday}' AND id_item = {$itemId}")->fetchColumn();
+$placedNext = (float) $pdo->query("SELECT COALESCE(SUM(placed), 0) FROM n_prod_fixed_batch_week WHERE week_start > '{$monday}' AND id_item = {$itemId}")->fetchColumn();
 [$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $pinDay, 'pinned' => false], $access);
 $bp = array_column($b['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
 check($s === 200 && $bp && $bp['pins'] === [] && $b['data']['pins'] === [] && $onDay($bp, $pinDay) == $pinQty, 'unpin: this week stays as it is');
 [$s, $n3] = $call('GET', "/planning/week?date={$nextDay}", null, $access);
 $np3 = array_column($n3['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
 check($s === 200 && abs($onDay($np3, $nextDay) - ($onDay($bpNext, $nextDay) - $placedNext)) < 0.001
-    && (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_fixed_batch_week WHERE week_start > '{$monday}'")->fetchColumn() === 0,
+    && (int) $pdo->query("SELECT COUNT(*) FROM n_prod_fixed_batch_week WHERE week_start > '{$monday}'")->fetchColumn() === 0,
     'unpin: what the pin put in the later week is undone (what was placed by hand stays)');
-check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE entity = 'fixed_batch'")->fetchColumn() === 2, 'pin and unpin are audited');
-$pdo->exec("UPDATE tfb_prod_product_settings SET stock_min = 60, stock_max = 300 WHERE id_item = {$itemId}");
+check((int) $pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE entity = 'fixed_batch'")->fetchColumn() === 2, 'pin and unpin are audited');
+$pdo->exec("UPDATE n_prod_product_settings SET stock_min = 60, stock_max = 300 WHERE id_item = {$itemId}");
 // « Wyczyść tydzień » : wszystko z dni od dzisiaj wraca do « Do zrobienia »
 [$s, $b] = $call('POST', '/planning/week/clear', ['date' => $today], $dir);
 check($s === 403, 'direction does not clear the week');
@@ -1365,15 +1365,15 @@ $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 't
 $call('POST', '/planning/week/move', ['date' => $today, 'item_id' => $itemId, 'from' => $today, 'to' => null], $access);
 [$s, $b] = $call('POST', '/planning/week/pin', ['date' => $today, 'item_id' => $itemId, 'day' => $today, 'pinned' => false], $access);
 $bp = array_column($b['data']['products'] ?? [], null, 'item_id')[$itemId] ?? null;
-$others = (float) $pdo->query("SELECT COALESCE(SUM(placed), 0) FROM tfb_prod_fixed_batch_week WHERE week_start = '{$monday}' AND id_item = {$itemId} AND work_date <> '{$today}'")->fetchColumn();
-$todayMarks = (int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_fixed_batch_week WHERE week_start = '{$monday}' AND id_item = {$itemId} AND work_date = '{$today}'")->fetchColumn();
+$others = (float) $pdo->query("SELECT COALESCE(SUM(placed), 0) FROM n_prod_fixed_batch_week WHERE week_start = '{$monday}' AND id_item = {$itemId} AND work_date <> '{$today}'")->fetchColumn();
+$todayMarks = (int) $pdo->query("SELECT COUNT(*) FROM n_prod_fixed_batch_week WHERE week_start = '{$monday}' AND id_item = {$itemId} AND work_date = '{$today}'")->fetchColumn();
 check($s === 200 && $bp && $todayMarks === 0 && abs($bp['fixed_qty'] - $others) < 0.001 && $bp['pins'] === [],
     'pinned block moved off its day then unpinned: no fixed batch left on that day this week');
 
 // Pracownik dodany w ERP : obsada zmiany dziennej grupy działu nadąża (osoby × 40 h w Gantcie tygodnia).
 $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (12, 'Ola', 'Wiśniewska', 5100, 1)");
 (new App\Repositories\Employee\ProductionEmployeeRepository($pdo))->syncWorkshopHeadcount();
-check((int) $pdo->query("SELECT planned_headcount FROM tfb_prod_team WHERE code = 'T1'")->fetchColumn() === 3, 'day team headcount follows the employees of the section');
+check((int) $pdo->query("SELECT planned_headcount FROM n_prod_team WHERE code = 'T1'")->fetchColumn() === 3, 'day team headcount follows the employees of the section');
 
 // Coboty w planie : etap z cobotem (stanowisko alternatywne, własna kadencja) liczy się na cobocie — godziny × część osoby ;
 // arkusz pokazuje godziny oszczędzone wobec pracy ręcznej.
@@ -1418,7 +1418,7 @@ check($s === 403, 'a team lead does not see the production manager module');
 [$s] = $call('GET', "/manager/plan?year={$year}", null, $access);
 check($s === 403, 'migration 050: the module is admin only — the production manager role no longer sees it');
 // Parcours de la personne sur le poste (saisie non vérifiée) : droits de saisie rendus au rôle dans la base de test seulement.
-$pdo->exec("INSERT INTO tfb_prod_role_permission (role_code, permission) VALUES ('prod_manager', 'prod.manager.read'), ('prod_manager', 'prod.manager.report')");
+$pdo->exec("INSERT INTO n_prod_role_permission (role_code, permission) VALUES ('prod_manager', 'prod.manager.read'), ('prod_manager', 'prod.manager.report')");
 [, $tok] = $call('POST', '/auth/login', ['login' => 'manager', 'password' => 'Secret-123']);
 $access = $tok['data']['access_token'] ?? $access;
 [$s, $b] = $call('GET', "/manager/plan?year={$year}", null, $access);
@@ -1452,7 +1452,7 @@ check($s === 409 && $b['description'] === 'MANAGER_NO_DRAFTS', 'nothing left to 
 [$s, $bn] = $call('GET', "/manager/bonus?period={$quarter}", null, $access);
 check(!array_filter($bn['data']['sections'], fn($x) => $x['status'] !== 'no_objective'), 'objectives validated after the start of the quarter do not count for this quarter');
 // Cele zatwierdzone przed kwartałem : sekcje liczone z danych ERP (albo brak danych — wtedy brak premii, bez zgadywania)
-$pdo->exec("UPDATE tfb_mgr_objective SET validated_at = '{$year}-01-01 00:00:00'");
+$pdo->exec("UPDATE n_mgr_objective SET validated_at = '{$year}-01-01 00:00:00'");
 [$s, $bn] = $call('GET', "/manager/bonus?period={$quarter}", null, $access);
 $statuses = array_column($bn['data']['sections'], 'status', 'code');
 check($s === 200 && !in_array('no_objective', $statuses, true) && $statuses['purchasing'] === 'missing_data' && $bn['data']['sections'][0]['provisional'],
@@ -1490,7 +1490,7 @@ check($s === 200 && !$bn['data']['haccp']['blocked'], 'treated cold-chain break:
 [$s, $b] = $call('POST', '/manager/haccp', ['event_date' => date('Y-m-d'), 'kind' => 'independent_audit', 'score' => 75], $dir);
 [$s, $bn] = $call('GET', "/manager/bonus?period={$quarter}", null, $dir);
 check($bn['data']['haccp']['blocked'] && $bn['data']['haccp']['blocking'][0]['code'] === 'AUDIT_BELOW_THRESHOLD', 'independent audit at 75 % under the 80 % threshold blocks the bonus');
-$pdo->exec('DELETE FROM tfb_mgr_haccp_event');
+$pdo->exec('DELETE FROM n_mgr_haccp_event');
 // Nowy produkt : cele wprowadzenia i zalecana decyzja
 $pdo->exec("UPDATE final_product SET create_timestamp = NOW() - INTERVAL 1 YEAR");
 [$s, $b] = $call('PUT', '/manager/launches/501', ['launch_date' => date('Y-m-d', strtotime('-10 weeks')), 'min_margin_pct' => 99, 'expected_week_shop' => 1000, 'target_price' => 40], $access);
@@ -1595,7 +1595,7 @@ check(str_starts_with($p['data']['body'], 'Bonjour') && str_contains($p['data'][
 [$s, $b] = $call('POST', "/supply/orders/{$flourPo['id']}/receive", ['lines' => [['id' => $flourPo['lines'][0]['id'], 'quantity' => 10]]], $access);
 check($s === 409 && $b['description'] === 'PO_NOT_RECEIVABLE', 'a draft order cannot be received');
 [$s, $sent] = $call('POST', "/supply/orders/{$flourPo['id']}/send", [], $access);
-$msg = $pdo->query("SELECT m.recipient_email, m.status, m.message_type, COUNT(a.id) AS files FROM communication_message m LEFT JOIN communication_message_attachment a ON a.id_message = m.id WHERE m.id = " . (int) ($pdo->query("SELECT id_message FROM tfb_po WHERE id = {$flourPo['id']}")->fetchColumn() ?: 0) . ' GROUP BY m.id')->fetch();
+$msg = $pdo->query("SELECT m.recipient_email, m.status, m.message_type, COUNT(a.id) AS files FROM communication_message m LEFT JOIN communication_message_attachment a ON a.id_message = m.id WHERE m.id = " . (int) ($pdo->query("SELECT id_message FROM n_po WHERE id = {$flourPo['id']}")->fetchColumn() ?: 0) . ' GROUP BY m.id')->fetch();
 check($s === 200 && $sent['data']['status'] === 'sent' && $sent['data']['sent_by'] === 'email' && $msg && $msg['recipient_email'] === 'mlyn@supplier.test'
     && $msg['status'] === 'queued' && $msg['message_type'] === 'supplier_order' && (int) $msg['files'] === 1, 'order sent: e-mail queued (CSV attached), nothing sent from the test');
 [$s, $b] = $call('PATCH', "/supply/orders/{$flourPo['id']}", ['note' => 'x'], $access);
@@ -1627,7 +1627,7 @@ check($s === 422 && $codes($b) === ['lines.1.raw_material_id:DUPLICATE_IN_LIST']
 [$s, $b] = $call('PUT', "/supply/orders/{$draft}/lines", ['lines' => [['raw_material_id' => 902, 'quantity' => 200, 'unit_price' => 3.5]]], $access);
 check($s === 200 && $b['data']['lines'][0]['quantity'] == 200 && $b['data']['lines'][0]['unit_price'] == 3.5 && $b['data']['value_ordered'] == 700, 'draft lines replaced');
 [$s, $b] = $call('DELETE', "/supply/orders/{$draft}", null, $access);
-check($s === 200 && $b['data']['deleted'] && (int) $pdo->query("SELECT COUNT(*) FROM tfb_po WHERE id = {$draft}")->fetchColumn() === 0, 'draft deleted');
+check($s === 200 && $b['data']['deleted'] && (int) $pdo->query("SELECT COUNT(*) FROM n_po WHERE id = {$draft}")->fetchColumn() === 0, 'draft deleted');
 [$s, $b] = $call('POST', "/supply/orders/{$boxPo['id']}/cancel", null, $access);
 check($s === 200 && $b['data']['status'] === 'cancelled', 'sent order cancelled');
 [$s] = $call('GET', '/supply/orders/999999', null, $access);
@@ -1658,8 +1658,8 @@ $c = $inv['data']['lines'][0]['control'] ?? [];
 check($s === 200 && $inv['data']['order']['id'] === $flourPo['id'] && $c['quantity_base'] == 50000 && abs($c['price_gap_pct'] - 10) < 0.01
     && $c['flags'] === ['price_over'] && $inv['data']['control']['state'] === 'gaps' && abs($inv['data']['control']['value_gap'] - 20) < 0.01,
     'mapped (2 bags × 25 kg): linked to the flour order, quantity = received, price +10 % over the order → 20 PLN gap');
-check((int) $pdo->query("SELECT COUNT(*) FROM tfb_inv_mapping WHERE supplier_key = 'nip:5260250274' AND id_raw_material = 900 AND factor = 25000")->fetchColumn() === 1
-    && (int) $pdo->query("SELECT id_supplier FROM tfb_inv_supplier WHERE seller_nip = '5260250274'")->fetchColumn() === 60, 'supplier name mapping and seller NIP remembered');
+check((int) $pdo->query("SELECT COUNT(*) FROM n_inv_mapping WHERE supplier_key = 'nip:5260250274' AND id_raw_material = 900 AND factor = 25000")->fetchColumn() === 1
+    && (int) $pdo->query("SELECT id_supplier FROM n_inv_supplier WHERE seller_nip = '5260250274'")->fetchColumn() === 60, 'supplier name mapping and seller NIP remembered');
 [$s, $b] = $call('POST', "/supply/invoices/{$invId}/receive", null, $access);
 check($s === 409 && $b['description'] === 'PO_NOT_RECEIVABLE', 'an order already received is not received again from the invoice');
 [$s, $b] = $call('PUT', "/supply/invoices/{$invId}/lines", ['lines' => [['name' => 'x', 'quantity' => 1]]], $access);
@@ -1797,7 +1797,7 @@ check(!array_filter($team['products'], fn($r) => abs($r['quantity'] - array_sum(
     'team sheet total = what lies on the days + what waits (weekly need given apart)');
 // Dostawa mąki w tygodniu : zespół croissanta jej potrzebuje (receptura) — na liście i w kalendarzu dnia.
 $deliveryDay = $ts['data']['days'][1]['date'];
-$pdo->exec("UPDATE tfb_po SET delivery_date = '{$deliveryDay}' WHERE id = {$flourPo['id']}");
+$pdo->exec("UPDATE n_po SET delivery_date = '{$deliveryDay}' WHERE id = {$flourPo['id']}");
 [$s, $ts] = $call('GET', "/planning/team-sheet?date={$today}&group_id={$team['id']}", null, $access);
 $t1 = $ts['data']['teams'][0] ?? null;
 $flourLine = null;
@@ -1824,14 +1824,14 @@ check($s === 200 && str_starts_with($bin, '%PDF') && preg_match('/^plan_zespolow
 $device = $pair2['data']['device_token'];
 [$s, $kw] = $kiosk('GET', "/kiosk/week?date={$today}", null, $device);
 check($s === 200 && count($kw['data']['teams']) === 1 && $kw['data']['teams'][0]['id'] === 1, 'tablet: week plan of its own team (device token only)');
-$pdo->exec("UPDATE tfb_prod_device SET id_group = NULL WHERE id = {$dev['data']['id']}");
+$pdo->exec("UPDATE n_prod_device SET id_group = NULL WHERE id = {$dev['data']['id']}");
 [$s, $b] = $kiosk('GET', '/kiosk/week', null, $device);
-$pdo->exec("UPDATE tfb_prod_device SET id_group = 1 WHERE id = {$dev['data']['id']}");
+$pdo->exec("UPDATE n_prod_device SET id_group = 1 WHERE id = {$dev['data']['id']}");
 [$s2] = $kiosk('GET', '/kiosk/week', null, 'bad-token');
 check($s === 409 && $b['description'] === 'DEVICE_WITHOUT_GROUP' && $s2 === 401, 'tablet without team → 409 ; unknown tablet → 401');
 
 // Journal, en-têtes, JSON invalide, OpenAPI public
-check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');
+check((int) $pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE id_user = 1")->fetchColumn() >= 8, 'every write is audited');
 [$s, $b] = $call('POST', '/referentiels/groups', null, $access);
 $request = Request::create('/api/v1/production/referentiels/groups', 'POST', [], [], [], ['HTTP_AUTHORIZATION' => 'Bearer ' . $access, 'CONTENT_TYPE' => 'application/json'], '{bad');
 $response = $kernel->handle($request, '/api/v1/production/referentiels/groups');

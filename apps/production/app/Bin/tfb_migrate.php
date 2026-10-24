@@ -2,7 +2,7 @@
 <?php
 declare(strict_types=1);
 /*
- * Migrations du module « Gestion de production atelier » (tables tfb_*).
+ * Migrations du module « Gestion de production atelier » (tables n_*, créées par migrations/tfb).
  *
  *   php Bin/tfb_migrate.php status   état de chaque fichier de migrations/tfb
  *   php Bin/tfb_migrate.php plan     ce qu'apply exécuterait

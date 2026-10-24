@@ -7,7 +7,7 @@ use App\Repositories\Workshop\ParamRepository;
 
 /**
  * Początek tygodnia produkcji (week.start_day : 1 = poniedziałek … 7 = niedziela ; w pracowni środa).
- * Tydzień = 7 dni od tego dnia ; klucz przydziałów Gantta (tfb_prod_week_slot.week_start).
+ * Tydzień = 7 dni od tego dnia ; klucz przydziałów Gantta (n_prod_week_slot.week_start).
  */
 final class WeekStart
 {

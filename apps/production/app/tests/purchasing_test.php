@@ -41,9 +41,9 @@ $material = $pdo->query("SELECT rm.* FROM raw_material rm JOIN unit u ON u.id = 
 expectPurch((bool) $material, 'a material in grams is available');
 $materialId = (int) $material['id'];
 $maxMessage = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM communication_message')->fetchColumn();
-$maxOccurrence = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM tfb_task_occurrence')->fetchColumn();
+$maxOccurrence = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM n_task_occurrence')->fetchColumn();
 $userId = (int) $pdo->query('SELECT MIN(id) FROM user')->fetchColumn();
-$userPosition = $pdo->query("SELECT * FROM tfb_user_position WHERE id_user = {$userId}")->fetch(PDO::FETCH_ASSOC) ?: null;
+$userPosition = $pdo->query("SELECT * FROM n_user_position WHERE id_user = {$userId}")->fetch(PDO::FETCH_ASSOC) ?: null;
 $supplierIds = [];
 $tenderId = null;
 
@@ -74,7 +74,7 @@ try {
     $missing = apiFields(fn() => $offers->add(['pack_price' => 'abc'], $userId));
     expectPurch(in_array('supplier_id', $missing, true) && in_array('material_id', $missing, true) && in_array('pack_price', $missing, true) && in_array('pack_size', $missing, true), 'offer: all errors at once');
     $offerId = $offers->add(['supplier_id' => $supplierIds[0], 'material_id' => $materialId, 'pack_price' => '250', 'pack_size' => '25'], $userId);
-    $offer = $pdo->query("SELECT * FROM tfb_mp_offer WHERE id = {$offerId}")->fetch(PDO::FETCH_ASSOC);
+    $offer = $pdo->query("SELECT * FROM n_mp_offer WHERE id = {$offerId}")->fetch(PDO::FETCH_ASSOC);
     expectPurch((float) $offer['pack_size_base'] === 25000.0 && abs((float) $offer['price_per_base'] - 0.01) < 1e-9, '25 kg pack stored as 25 000 g, 10 zł/kg');
     expectPurch($offer['valid_to'] > $offer['valid_from'], 'default validity applied');
     $offers->reject($offerId);
@@ -110,9 +110,9 @@ try {
     expectPurch($result['applied'] === [$material['name']] && $result['notified'] === 2, 'award applied and result e-mails queued');
     $after = $pdo->query("SELECT price_per_unit, id_current_supplier FROM raw_material WHERE id = {$materialId}")->fetch(PDO::FETCH_ASSOC);
     expectPurch((int) $after['id_current_supplier'] === $supplierIds[0] && abs((float) $after['price_per_unit'] * 1000 - $currentKg * 0.9) < 0.05, 'material price and supplier updated');
-    $statuses = $pdo->query("SELECT id_supplier, status FROM tfb_mp_offer WHERE id_tender = {$tenderId}")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $statuses = $pdo->query("SELECT id_supplier, status FROM n_mp_offer WHERE id_tender = {$tenderId}")->fetchAll(PDO::FETCH_KEY_PAIR);
     expectPurch($statuses[$supplierIds[0]] === 'accepted' && $statuses[$supplierIds[1]] === 'rejected', 'winner accepted, other refused');
-    expectPurch($pdo->query("SELECT status FROM tfb_tender WHERE id = {$tenderId}")->fetchColumn() === 'awarded', 'tender closed');
+    expectPurch($pdo->query("SELECT status FROM n_tender WHERE id = {$tenderId}")->fetchColumn() === 'awarded', 'tender closed');
     $awardMails = $pdo->query("SELECT body_text FROM communication_message WHERE id > {$maxMessage} AND message_type = 'tender_award' ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
     expectPurch(count($awardMails) === 2 && str_contains(implode("\n", $awardMails), 'Wybraliśmy Państwa ofertę') && str_contains(implode("\n", $awardMails), 'nie wybraliśmy'), 'winner and loser get their own result');
 
@@ -121,12 +121,12 @@ try {
     $errors = apiFields(fn() => $nc->save(['severity' => 'huge'], null, $userId));
     expectPurch(in_array('source', $errors, true) && in_array('description', $errors, true) && in_array('severity', $errors, true), 'NC: required fields and choices checked');
     $ncId = $nc->save(['source' => 'supplier_delivery', 'supplier_id' => $supplierIds[0], 'material_id' => $materialId, 'description' => 'TEST: uszkodzone worki', 'quantity' => '12.5', 'unit' => 'kg'], null, $userId);
-    $row = $pdo->query("SELECT number, status, closed_at FROM tfb_nc WHERE id = {$ncId}")->fetch(PDO::FETCH_ASSOC);
+    $row = $pdo->query("SELECT number, status, closed_at FROM n_nc WHERE id = {$ncId}")->fetch(PDO::FETCH_ASSOC);
     expectPurch(preg_match('/^NC-\d{4}-\d{3}$/', $row['number']) === 1 && $row['status'] === 'open' && $row['closed_at'] === null, 'NC numbered and open');
     $nc->save(['status' => 'closed', 'root_cause' => 'Transport', 'corrective_action' => 'Palety foliowane'], $ncId, $userId);
-    expectPurch($pdo->query("SELECT closed_at FROM tfb_nc WHERE id = {$ncId}")->fetchColumn() !== null, 'closing sets the date');
+    expectPurch($pdo->query("SELECT closed_at FROM n_nc WHERE id = {$ncId}")->fetchColumn() !== null, 'closing sets the date');
     $nc->save(['status' => 'in_progress'], $ncId, $userId);
-    expectPurch($pdo->query("SELECT closed_at FROM tfb_nc WHERE id = {$ncId}")->fetchColumn() === null, 'reopening clears it');
+    expectPurch($pdo->query("SELECT closed_at FROM n_nc WHERE id = {$ncId}")->fetchColumn() === null, 'reopening clears it');
 
     // --- Zadania stanowisk : okresy
     $tasks = $container->get(PositionTaskService::class);
@@ -140,7 +140,7 @@ try {
     expectPurch($tasks->period('quarterly', new DateTimeImmutable('2026-02-10')) === ['key' => '2026-Q1', 'due' => '2026-03-31'], 'Q1 ends 31.03');
 
     // Moje zadania : stanowisko Zakupy, wtorek → środa (zaległe), zrobione, pominięte z powodem
-    $positionId = (int) $pdo->query("SELECT id FROM tfb_position WHERE code = 'ZAKUPY'")->fetchColumn();
+    $positionId = (int) $pdo->query("SELECT id FROM n_position WHERE code = 'ZAKUPY'")->fetchColumn();
     $tasks->assign($userId, ['position_id' => $positionId]);
     $tue = $tasks->myTasks($userId, new DateTimeImmutable('2026-10-20'));
     expectPurch($tasks->period('weekly', $wed, 1) === ['key' => '2026-W43', 'due' => '2026-10-19'], 'weekly with a due weekday (Monday)');
@@ -168,21 +168,21 @@ try {
     $pdo->prepare('UPDATE raw_material SET price_per_unit = ?, id_current_supplier = ?, package_size_in_base_unit = ? WHERE id = ?')
         ->execute([$material['price_per_unit'], $material['id_current_supplier'], $material['package_size_in_base_unit'], $materialId]);
     $container->get(RecipeCostRecalculationService::class)->recalculateForMaterial($materialId);
-    if ($tenderId) $pdo->exec("DELETE FROM tfb_tender WHERE id = {$tenderId}");
+    if ($tenderId) $pdo->exec("DELETE FROM n_tender WHERE id = {$tenderId}");
     if ($supplierIds) {
         $in = implode(',', $supplierIds);
         $pdo->exec("DELETE FROM raw_material_price_changelog WHERE id_supplier IN ({$in})");
-        $pdo->exec("DELETE FROM tfb_mp_offer WHERE id_supplier IN ({$in})");
-        $pdo->exec("DELETE FROM tfb_nc WHERE id_supplier IN ({$in})");
+        $pdo->exec("DELETE FROM n_mp_offer WHERE id_supplier IN ({$in})");
+        $pdo->exec("DELETE FROM n_nc WHERE id_supplier IN ({$in})");
         $pdo->exec("DELETE FROM supplier WHERE id IN ({$in})");
     }
     foreach (['communication_message_attachment', 'communication_message_attempt'] as $table) {
         $pdo->exec("DELETE FROM {$table} WHERE id_message > {$maxMessage}");
     }
     $pdo->exec("DELETE FROM communication_message WHERE id > {$maxMessage}");
-    $pdo->exec("DELETE FROM tfb_task_occurrence WHERE id > {$maxOccurrence}");
-    $pdo->exec("DELETE FROM tfb_user_position WHERE id_user = {$userId}");
+    $pdo->exec("DELETE FROM n_task_occurrence WHERE id > {$maxOccurrence}");
+    $pdo->exec("DELETE FROM n_user_position WHERE id_user = {$userId}");
     if ($userPosition) {
-        $pdo->prepare('INSERT INTO tfb_user_position (id_user, id_position, since) VALUES (?, ?, ?)')->execute([$userId, $userPosition['id_position'], $userPosition['since']]);
+        $pdo->prepare('INSERT INTO n_user_position (id_user, id_position, since) VALUES (?, ?, ?)')->execute([$userId, $userPosition['id_position'], $userPosition['since']]);
     }
 }

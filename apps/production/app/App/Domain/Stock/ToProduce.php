@@ -17,7 +17,7 @@ final class ToProduce
 {
     /**
      * Stan minimalny w kartonach (SQL) : MTS z kartą = stan min. karty ÷ szt./karton ; MTO = brak minimum ;
-     * produkt bez karty produkcyjnej = stan minimalny ERP. Alias tfb_prod_product_settings i final_product.
+     * produkt bez karty produkcyjnej = stan minimalny ERP. Alias n_prod_product_settings i final_product.
      */
     public static function minCartonsSql(string $settings = 'ts', string $product = 'fp'): string
     {
@@ -26,7 +26,7 @@ final class ToProduce
                      ELSE NULL END";
     }
 
-    /** Zlecenia MTS w toku (sztuki) — po stronie « dostępne » formuły. Alias tfb_prod_order. */
+    /** Zlecenia MTS w toku (sztuki) — po stronie « dostępne » formuły. Alias n_prod_order. */
     public const IN_PRODUCTION_WHERE = "origin = 'MTS' AND (status = 'in_progress' OR (status IN ('planned', 'released') AND due_at >= CURDATE()))";
 
     /** @return array{available: float, orders: float, to_min: ?float, total: float} */

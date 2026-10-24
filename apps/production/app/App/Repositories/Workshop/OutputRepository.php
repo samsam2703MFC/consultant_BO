@@ -6,15 +6,15 @@ namespace App\Repositories\Workshop;
 /** Tablet grupy : partie wyrobu dnia, partie surowców i opakowań, zdjęcia etykiet (identyfikowalność). */
 final class OutputRepository extends WorkshopRepository
 {
-    protected string $table = 'tfb_prod_output';
+    protected string $table = 'n_prod_output';
     protected array $writable = ['work_date', 'id_group', 'id_item', 'quantity', 'lot_code', 'id_employee', 'id_device', 'client_uuid', 'note', 'cancelled_at', 'cancelled_by'];
 
     private const ITEM = "SELECT i.id, i.item_type, i.base_unit, i.id_final_product, COALESCE(i.id_recipe, fp.id_recipe) AS id_recipe,
             COALESCE(fp.name, pr.name) AS name, fp.ppc, s.id_primary_group, s.batch_multiple
-        FROM tfb_prod_item i
+        FROM n_prod_item i
         LEFT JOIN final_product fp ON fp.id = i.id_final_product
         LEFT JOIN product_recipe pr ON pr.id = i.id_recipe
-        LEFT JOIN tfb_prod_product_settings s ON s.id_item = i.id";
+        LEFT JOIN n_prod_product_settings s ON s.id_item = i.id";
 
     /** Karty grupy (produkty aktywne w ERP i półprodukty). */
     public function groupItems(int $groupId): array
@@ -33,7 +33,7 @@ final class OutputRepository extends WorkshopRepository
         if (!$itemIds) return [];
         $in = implode(',', array_map('intval', $itemIds));
         $out = [];
-        foreach ($this->all("SELECT id_item, SUM(quantity) AS q FROM tfb_prod_week_slot WHERE work_date = ? AND id_item IN ({$in}) GROUP BY id_item", [$day]) as $r) {
+        foreach ($this->all("SELECT id_item, SUM(quantity) AS q FROM n_prod_week_slot WHERE work_date = ? AND id_item IN ({$in}) GROUP BY id_item", [$day]) as $r) {
             $out[(int) $r['id_item']] = (float) $r['q'];
         }
         return $out;
@@ -43,9 +43,9 @@ final class OutputRepository extends WorkshopRepository
     public function day(string $day, int $groupId): array
     {
         return $this->all("SELECT o.*, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name,
-                                  (SELECT COUNT(*) FROM tfb_prod_output_lot l WHERE l.id_output = o.id AND l.lot_number IS NOT NULL AND l.lot_number <> '') AS lots_done
-                           FROM tfb_prod_output o
-                           LEFT JOIN tfb_prod_employee e ON e.id = o.id_employee
+                                  (SELECT COUNT(*) FROM n_prod_output_lot l WHERE l.id_output = o.id AND l.lot_number IS NOT NULL AND l.lot_number <> '') AS lots_done
+                           FROM n_prod_output o
+                           LEFT JOIN n_prod_employee e ON e.id = o.id_employee
                            LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
                            WHERE o.work_date = ? AND o.id_group = ? ORDER BY o.created_at, o.id", [$day, $groupId]);
     }
@@ -53,25 +53,25 @@ final class OutputRepository extends WorkshopRepository
     public function output(int $id): ?array
     {
         return $this->all("SELECT o.*, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name
-                           FROM tfb_prod_output o
-                           LEFT JOIN tfb_prod_employee e ON e.id = o.id_employee
+                           FROM n_prod_output o
+                           LEFT JOIN n_prod_employee e ON e.id = o.id_employee
                            LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
                            WHERE o.id = ?", [$id])[0] ?? null;
     }
 
     public function byUuid(string $uuid): ?array
     {
-        return $this->all('SELECT * FROM tfb_prod_output WHERE client_uuid = ?', [$uuid])[0] ?? null;
+        return $this->all('SELECT * FROM n_prod_output WHERE client_uuid = ?', [$uuid])[0] ?? null;
     }
 
     public function lotCodeTaken(string $code): bool
     {
-        return (bool) $this->all('SELECT 1 FROM tfb_prod_output WHERE lot_code = ?', [$code]);
+        return (bool) $this->all('SELECT 1 FROM n_prod_output WHERE lot_code = ?', [$code]);
     }
 
     public function countForDay(string $day, int $groupId): int
     {
-        return (int) ($this->all('SELECT COUNT(*) AS n FROM tfb_prod_output WHERE work_date = ? AND id_group = ?', [$day, $groupId])[0]['n'] ?? 0);
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_prod_output WHERE work_date = ? AND id_group = ?', [$day, $groupId])[0]['n'] ?? 0);
     }
 
     /** Surowce i opakowania receptury : ilość na karton (produkt) albo na recepturę (półprodukt). */
@@ -89,7 +89,7 @@ final class OutputRepository extends WorkshopRepository
 
     public function insertWaste(array $w): int
     {
-        $this->db->prepare('INSERT INTO tfb_prod_waste (work_date, id_group, id_item, id_output, quantity, reason, note, id_employee, id_device, client_uuid)
+        $this->db->prepare('INSERT INTO n_prod_waste (work_date, id_group, id_item, id_output, quantity, reason, note, id_employee, id_device, client_uuid)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
             ->execute([$w['work_date'], $w['id_group'], $w['id_item'], $w['id_output'], $w['quantity'], $w['reason'], $w['note'], $w['id_employee'], $w['id_device'], $w['client_uuid']]);
         return (int) $this->db->lastInsertId();
@@ -97,26 +97,26 @@ final class OutputRepository extends WorkshopRepository
 
     public function waste(int $id): ?array
     {
-        return $this->all('SELECT * FROM tfb_prod_waste WHERE id = ?', [$id])[0] ?? null;
+        return $this->all('SELECT * FROM n_prod_waste WHERE id = ?', [$id])[0] ?? null;
     }
 
     public function wasteByUuid(string $uuid): ?array
     {
-        return $this->all('SELECT * FROM tfb_prod_waste WHERE client_uuid = ?', [$uuid])[0] ?? null;
+        return $this->all('SELECT * FROM n_prod_waste WHERE client_uuid = ?', [$uuid])[0] ?? null;
     }
 
     public function cancelWaste(int $id, ?int $employeeId): void
     {
-        $this->db->prepare('UPDATE tfb_prod_waste SET cancelled_at = NOW(), cancelled_by = ? WHERE id = ? AND cancelled_at IS NULL')->execute([$employeeId, $id]);
+        $this->db->prepare('UPDATE n_prod_waste SET cancelled_at = NOW(), cancelled_by = ? WHERE id = ? AND cancelled_at IS NULL')->execute([$employeeId, $id]);
     }
 
     /** Straty dnia grupy (z anulowanymi), z osobą i numerem partii wyrobu. */
     public function dayWaste(string $day, int $groupId): array
     {
         return $this->all("SELECT w.*, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name, o.lot_code
-                           FROM tfb_prod_waste w
-                           LEFT JOIN tfb_prod_output o ON o.id = w.id_output
-                           LEFT JOIN tfb_prod_employee e ON e.id = w.id_employee
+                           FROM n_prod_waste w
+                           LEFT JOIN n_prod_output o ON o.id = w.id_output
+                           LEFT JOIN n_prod_employee e ON e.id = w.id_employee
                            LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
                            WHERE w.work_date = ? AND w.id_group = ? ORDER BY w.created_at, w.id", [$day, $groupId]);
     }
@@ -124,15 +124,15 @@ final class OutputRepository extends WorkshopRepository
     public function dayClose(string $day, int $groupId): ?array
     {
         return $this->all("SELECT c.*, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name
-                           FROM tfb_prod_day_close c
-                           LEFT JOIN tfb_prod_employee e ON e.id = c.id_employee
+                           FROM n_prod_day_close c
+                           LEFT JOIN n_prod_employee e ON e.id = c.id_employee
                            LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
                            WHERE c.work_date = ? AND c.id_group = ?", [$day, $groupId])[0] ?? null;
     }
 
     public function saveDayClose(string $day, int $groupId, ?int $employeeId, ?int $deviceId, ?string $note, string $summary): void
     {
-        $this->db->prepare('INSERT INTO tfb_prod_day_close (work_date, id_group, id_employee, id_device, note, summary) VALUES (?, ?, ?, ?, ?, ?)
+        $this->db->prepare('INSERT INTO n_prod_day_close (work_date, id_group, id_employee, id_device, note, summary) VALUES (?, ?, ?, ?, ?, ?)
                             ON DUPLICATE KEY UPDATE id_employee = VALUES(id_employee), id_device = VALUES(id_device), note = VALUES(note),
                                 summary = VALUES(summary), closed_at = NOW()')
             ->execute([$day, $groupId, $employeeId, $deviceId, $note, $summary]);
@@ -172,7 +172,7 @@ final class OutputRepository extends WorkshopRepository
     public function routing(int $itemId): array
     {
         return $this->all('SELECT rs.step_no, rs.name_pl, rs.name_fr, rs.temperature_c, w.name_pl AS ws_pl, w.name_fr AS ws_fr
-                           FROM tfb_prod_routing_step rs LEFT JOIN tfb_prod_workstation w ON w.id = rs.id_workstation
+                           FROM n_prod_routing_step rs LEFT JOIN n_prod_workstation w ON w.id = rs.id_workstation
                            WHERE rs.id_item = ? ORDER BY rs.step_no, rs.id', [$itemId]);
     }
 
@@ -180,7 +180,7 @@ final class OutputRepository extends WorkshopRepository
     public function lots(int $outputId): array
     {
         $out = [];
-        foreach ($this->all('SELECT * FROM tfb_prod_output_lot WHERE id_output = ?', [$outputId]) as $r) $out[(int) $r['id_material']] = $r;
+        foreach ($this->all('SELECT * FROM n_prod_output_lot WHERE id_output = ?', [$outputId]) as $r) $out[(int) $r['id_material']] = $r;
         return $out;
     }
 
@@ -191,7 +191,7 @@ final class OutputRepository extends WorkshopRepository
         $in = implode(',', array_map('intval', $materialIds));
         $out = [];
         foreach ($this->all("SELECT l.id_material, l.lot_number, l.best_before, l.updated_at
-                             FROM tfb_prod_output_lot l JOIN tfb_prod_output o ON o.id = l.id_output
+                             FROM n_prod_output_lot l JOIN n_prod_output o ON o.id = l.id_output
                              WHERE o.id_group = ? AND o.id <> ? AND o.cancelled_at IS NULL AND l.id_material IN ({$in})
                                AND l.lot_number IS NOT NULL AND l.lot_number <> '' AND o.work_date >= CURDATE() - INTERVAL 60 DAY
                              ORDER BY l.updated_at DESC", [$groupId, $exceptOutput]) as $r) {
@@ -202,7 +202,7 @@ final class OutputRepository extends WorkshopRepository
 
     public function saveLot(int $outputId, int $materialId, ?float $quantity, ?string $lot, ?string $bestBefore, ?int $photoId, ?string $ocr, ?int $employeeId): void
     {
-        $this->db->prepare('INSERT INTO tfb_prod_output_lot (id_output, id_material, quantity, lot_number, best_before, id_photo, ocr_text, id_employee)
+        $this->db->prepare('INSERT INTO n_prod_output_lot (id_output, id_material, quantity, lot_number, best_before, id_photo, ocr_text, id_employee)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                             ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), lot_number = VALUES(lot_number), best_before = VALUES(best_before),
                                 id_photo = COALESCE(VALUES(id_photo), id_photo), ocr_text = COALESCE(VALUES(ocr_text), ocr_text), id_employee = VALUES(id_employee)')
@@ -211,14 +211,14 @@ final class OutputRepository extends WorkshopRepository
 
     public function insertPhoto(string $mime, string $bytes, ?int $deviceId, ?int $employeeId): int
     {
-        $this->db->prepare('INSERT INTO tfb_prod_lot_photo (mime, bytes, sha256, image, id_device, id_employee) VALUES (?, ?, ?, ?, ?, ?)')
+        $this->db->prepare('INSERT INTO n_prod_lot_photo (mime, bytes, sha256, image, id_device, id_employee) VALUES (?, ?, ?, ?, ?, ?)')
             ->execute([$mime, strlen($bytes), hash('sha256', $bytes), $bytes, $deviceId, $employeeId]);
         return (int) $this->db->lastInsertId();
     }
 
     public function photo(int $id): ?array
     {
-        return $this->all('SELECT id, mime, image, created_at FROM tfb_prod_lot_photo WHERE id = ?', [$id])[0] ?? null;
+        return $this->all('SELECT id, mime, image, created_at FROM n_prod_lot_photo WHERE id = ?', [$id])[0] ?? null;
     }
 
     /**
@@ -231,21 +231,21 @@ final class OutputRepository extends WorkshopRepository
         $params = [$from, $to];
         if ($groupId) { $where[] = 'o.id_group = ?'; $params[] = $groupId; }
         if ($search !== null && $search !== '') {
-            $where[] = '(o.lot_code LIKE ? OR COALESCE(fp.name, pr.name) LIKE ? OR EXISTS (SELECT 1 FROM tfb_prod_output_lot l2 JOIN raw_material rm2 ON rm2.id = l2.id_material
+            $where[] = '(o.lot_code LIKE ? OR COALESCE(fp.name, pr.name) LIKE ? OR EXISTS (SELECT 1 FROM n_prod_output_lot l2 JOIN raw_material rm2 ON rm2.id = l2.id_material
                          WHERE l2.id_output = o.id AND (l2.lot_number LIKE ? OR rm2.name LIKE ?)))';
             $like = '%' . addcslashes($search, '\\%_') . '%';
             array_push($params, $like, $like, $like, $like);
         }
         return $this->all("SELECT o.*, COALESCE(fp.name, pr.name) AS item_name, i.base_unit, fp.ppc, g.name_pl AS group_name,
                                   TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name, d.name AS device_name
-                           FROM tfb_prod_output o
-                           JOIN tfb_prod_item i ON i.id = o.id_item
+                           FROM n_prod_output o
+                           JOIN n_prod_item i ON i.id = o.id_item
                            LEFT JOIN final_product fp ON fp.id = i.id_final_product
                            LEFT JOIN product_recipe pr ON pr.id = i.id_recipe
-                           JOIN tfb_prod_group g ON g.id = o.id_group
-                           LEFT JOIN tfb_prod_employee e ON e.id = o.id_employee
+                           JOIN n_prod_group g ON g.id = o.id_group
+                           LEFT JOIN n_prod_employee e ON e.id = o.id_employee
                            LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
-                           LEFT JOIN tfb_prod_device d ON d.id = o.id_device
+                           LEFT JOIN n_prod_device d ON d.id = o.id_device
                            WHERE " . implode(' AND ', $where) . ' ORDER BY o.work_date DESC, o.created_at DESC LIMIT 500', $params);
     }
 
@@ -256,7 +256,7 @@ final class OutputRepository extends WorkshopRepository
         $in = implode(',', array_map('intval', $outputIds));
         $out = [];
         foreach ($this->all("SELECT l.*, rm.name AS material_name, u.name AS unit
-                             FROM tfb_prod_output_lot l JOIN raw_material rm ON rm.id = l.id_material LEFT JOIN unit u ON u.id = rm.id_unit
+                             FROM n_prod_output_lot l JOIN raw_material rm ON rm.id = l.id_material LEFT JOIN unit u ON u.id = rm.id_unit
                              WHERE l.id_output IN ({$in}) ORDER BY rm.name") as $r) {
             $out[(int) $r['id_output']][] = $r;
         }

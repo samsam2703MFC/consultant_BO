@@ -55,7 +55,7 @@ final class MailEventSource
     {
         $limit = max(1, min(500, $limit));
         [$table, $prefix] = self::SOURCES[$rule['event']];
-        $notDone = "NOT EXISTS (SELECT 1 FROM tfb_mail_dispatch d WHERE d.id_rule = :rule AND d.ref_key = CONCAT('{$prefix}:', %s))";
+        $notDone = "NOT EXISTS (SELECT 1 FROM n_mail_dispatch d WHERE d.id_rule = :rule AND d.ref_key = CONCAT('{$prefix}:', %s))";
 
         if ($rule['event'] === 'delivery_planned') {
             $sql = "SELECT co.id_customer, co.expected_shipping_date AS day
@@ -245,7 +245,7 @@ final class MailEventSource
     public function acknowledge(string $event, array $ref): void
     {
         if ($event !== 'price_list_changed' || ($ref['hash'] ?? '') === '') return;
-        $this->db->prepare('INSERT INTO tfb_price_list_state (id_customer, hash) VALUES (?, ?) ON DUPLICATE KEY UPDATE hash = VALUES(hash)')
+        $this->db->prepare('INSERT INTO n_price_list_state (id_customer, hash) VALUES (?, ?) ON DUPLICATE KEY UPDATE hash = VALUES(hash)')
             ->execute([(int) $ref['id_customer'], $ref['hash']]);
     }
 
@@ -289,7 +289,7 @@ final class MailEventSource
         $from = $month . '-01';
         $to = date('Y-m-t', strtotime($from));
         $stmt = $this->db->prepare('SELECT COUNT(*) FROM document_wdt w WHERE w.id_customer = ? AND w.established_date BETWEEN ? AND ?
-                                    AND NOT EXISTS (SELECT 1 FROM tfb_wdt_superseded s WHERE s.id_document_wdt = w.id)');
+                                    AND NOT EXISTS (SELECT 1 FROM n_wdt_superseded s WHERE s.id_document_wdt = w.id)');
         $stmt->execute([$customerId, $from, $to]);
         $ref = ['id' => $customerId, 'month' => $month, 'from' => $from, 'to' => $to];
         $context = $this->customerContext($customerId, (int) $stmt->fetchColumn() > 0 ? ['summary' => $ref, 'goal' => $ref] : []);
@@ -300,8 +300,8 @@ final class MailEventSource
     /** Clients dont le tarif a changé depuis le dernier passage ; un client vu pour la première fois est seulement noté. */
     private function priceCandidates(array $rule, int $limit): array
     {
-        $known = array_column($this->db->query('SELECT id_customer, hash FROM tfb_price_list_state')->fetchAll(PDO::FETCH_ASSOC), 'hash', 'id_customer');
-        $done = $this->db->prepare('SELECT 1 FROM tfb_mail_dispatch WHERE id_rule = ? AND ref_key = ?');
+        $known = array_column($this->db->query('SELECT id_customer, hash FROM n_price_list_state')->fetchAll(PDO::FETCH_ASSOC), 'hash', 'id_customer');
+        $done = $this->db->prepare('SELECT 1 FROM n_mail_dispatch WHERE id_rule = ? AND ref_key = ?');
         $out = [];
         foreach ($this->priceHashes() as $customerId => $hash) {
             if (!isset($known[$customerId])) {
@@ -338,7 +338,7 @@ final class MailEventSource
         $month = self::previousMonth();
         if ($rule['enabled_at'] !== null && strtotime((string) $rule['enabled_at']) >= strtotime(date('Y-m-01'))) return [];
         $stmt = $this->db->prepare("SELECT c.id FROM customer c WHERE c.active = 1
-                                    AND NOT EXISTS (SELECT 1 FROM tfb_mail_dispatch d WHERE d.id_rule = ? AND d.ref_key = CONCAT('month:', c.id, ':', ?))
+                                    AND NOT EXISTS (SELECT 1 FROM n_mail_dispatch d WHERE d.id_rule = ? AND d.ref_key = CONCAT('month:', c.id, ':', ?))
                                     ORDER BY c.id LIMIT {$limit}");
         $stmt->execute([$rule['id'], $month]);
         return array_map(fn($id) => ['key' => "month:{$id}:{$month}", 'ref' => ['id_customer' => (int) $id, 'month' => $month]], $stmt->fetchAll(PDO::FETCH_COLUMN));

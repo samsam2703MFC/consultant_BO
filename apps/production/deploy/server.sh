@@ -5,7 +5,7 @@
 # transférée sur le serveur :   bash apps/production/deploy/server.sh
 #
 # - code : $ERP_TARGET/app ; seul app/public est exposé (Alias Apache)
-# - base : $ERP_DB_NAME, utilisateur dédié ; mot de passe généré au premier
+# - base : $ERP_DB_NAME (« erp »), utilisateur dédié ; mot de passe généré au premier
 #   passage et gardé dans $ERP_TARGET/app/.env (hors Git)
 # - données : au premier passage seulement (base vide), import du dump déposé
 #   dans $ERP_IMPORT_DIR (.zip, .sql ou .sql.gz). La copie est ensuite coupée
@@ -20,7 +20,10 @@ set -euo pipefail
 ERP_TARGET="${ERP_TARGET:-/var/www/production}"
 ERP_ALIAS="${ERP_ALIAS:-/production}"
 ERP_URL="${ERP_URL:-http://185.180.206.46${ERP_ALIAS}}"
-ERP_DB_NAME="${ERP_DB_NAME:-erp_production}"
+# Une seule base, « erp » (tables d'origine de l'ERP + tables n_* ajoutées) ; l'ancienne base
+# erp_production des premiers passages y est déplacée (section 5). Le compte MySQL garde son nom.
+ERP_DB_NAME="${ERP_DB_NAME:-erp}"
+ERP_OLD_DB_NAME="${ERP_OLD_DB_NAME:-erp_production}"
 ERP_DB_USER="${ERP_DB_USER:-erp_production}"
 ERP_IMPORT_DIR="${ERP_IMPORT_DIR:-/root/erp_import}"
 # Serveur de test : compte ouvert par un bouton « Entrer », sans mot de passe ERP.
@@ -182,6 +185,36 @@ else
   log "Entrée : login et mot de passe de l'ERP."
 fi
 
+# Base unique « erp » : la base des passages précédents (erp_production) est déplacée telle quelle
+# (RENAME TABLE : instantané, données, index et clés gardés), puis le .env pointe sur erp.
+count_tables() { "${ADMIN[@]}" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$1'"; }
+if [[ "$ERP_OLD_DB_NAME" != "$ERP_DB_NAME" ]]; then
+  old_n="$(count_tables "$ERP_OLD_DB_NAME")"
+  new_n="$(count_tables "$ERP_DB_NAME")"
+  if [[ "$old_n" -gt 0 && "$new_n" -eq 0 ]]; then
+    others="$("${ADMIN[@]}" -N -e "SELECT (SELECT COUNT(*) FROM information_schema.views WHERE table_schema='${ERP_OLD_DB_NAME}')
+      + (SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_schema='${ERP_OLD_DB_NAME}')
+      + (SELECT COUNT(*) FROM information_schema.routines WHERE routine_schema='${ERP_OLD_DB_NAME}')")"
+    [[ "$others" -eq 0 ]] || fail "Base ${ERP_OLD_DB_NAME} : vues, déclencheurs ou procédures présents, déplacement vers ${ERP_DB_NAME} à faire à la main."
+    "${ADMIN[@]}" -e "CREATE DATABASE IF NOT EXISTS \`${ERP_DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;" \
+      || fail "Le compte MySQL ${ADMIN_KIND} ne peut pas créer la base ${ERP_DB_NAME}."
+    rename_sql="$("${ADMIN[@]}" -N -e "SET SESSION group_concat_max_len = 1000000;
+      SELECT CONCAT('RENAME TABLE ', GROUP_CONCAT(CONCAT('\`${ERP_OLD_DB_NAME}\`.\`', table_name, '\` TO \`${ERP_DB_NAME}\`.\`', table_name, '\`') SEPARATOR ', '))
+      FROM information_schema.tables WHERE table_schema='${ERP_OLD_DB_NAME}'")"
+    "${ADMIN[@]}" -e "$rename_sql" || fail "Déplacement des tables de ${ERP_OLD_DB_NAME} vers ${ERP_DB_NAME} en échec (rien n'est déplacé : RENAME TABLE est atomique)."
+    set_env DB_NAME "$ERP_DB_NAME"
+    if [[ "$(count_tables "$ERP_OLD_DB_NAME")" -eq 0 ]]; then
+      "${ADMIN[@]}" -e "DROP DATABASE \`${ERP_OLD_DB_NAME}\`;"
+    fi
+    log "Base ${ERP_OLD_DB_NAME} déplacée dans ${ERP_DB_NAME} (${old_n} tables, données gardées)."
+  elif [[ "$old_n" -gt 0 ]]; then
+    warn "Deux bases : ${ERP_OLD_DB_NAME} (${old_n} tables) et ${ERP_DB_NAME} (${new_n} tables) ; l'ERP utilise $(envget DB_NAME)."
+  fi
+fi
+if [[ "$(envget DB_NAME)" != "$ERP_DB_NAME" && "$(count_tables "$(envget DB_NAME)")" -eq 0 ]]; then
+  set_env DB_NAME "$ERP_DB_NAME"
+fi
+
 "${ADMIN[@]}" -e "CREATE DATABASE IF NOT EXISTS \`${ERP_DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;" \
   || fail "Le compte MySQL ${ADMIN_KIND} ne peut pas créer la base ${ERP_DB_NAME} : créez-la à la main puis relancez."
 grant_err="$(mktemp)"
@@ -311,7 +344,7 @@ SQL
   fi
 fi
 
-# --- 5b. Module « Gestion de production atelier » (tables tfb_*) ----------
+# --- 5b. Module « Gestion de production atelier » (tables n_*) ------------
 # Migrations versionnées (jamais de schéma modifié à la main), secret des jetons JWT généré
 # une fois sur le serveur, données de démonstration seulement si ERP_TFB_DEMO=1.
 if [[ -f "$IMPORT_OK" ]]; then

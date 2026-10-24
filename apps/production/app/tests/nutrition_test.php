@@ -88,16 +88,16 @@ try {
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
-    foreach (['raw_material', 'user', 'tfb_nutrition_category', 'tfb_nutrition_off_cache', 'tfb_material_nutrition_source', 'tfb_page_access', 'tfb_user_position',
-                 'tfb_prod_user_role', 'tfb_position'] as $table) {
+    foreach (['raw_material', 'user', 'n_nutrition_category', 'n_nutrition_off_cache', 'n_material_nutrition_source', 'n_page_access', 'n_user_position',
+                 'n_prod_user_role', 'n_position'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
     $pdo->exec("SET SESSION sql_mode = ''");
     $pdo->exec("INSERT INTO user (id, name, surname, displayed_name, email, phone, permission, login, password) VALUES
         (1, 'Ad', 'Min', 'Admin', 'a@x.test', '1', 0, 'admin', 'x'), (2, 'Jan', 'K', 'Jan K.', 'j@x.test', '2', 0, 'jan', 'x'), (3, 'Ola', 'P', 'Ola P.', 'o@x.test', '3', 0, 'ola', 'x')");
-    $pdo->exec("INSERT INTO tfb_user_position (id_user, id_position) VALUES (2, 5), (3, 6)");
-    $pdo->exec("INSERT INTO tfb_page_access (id_position, page_key) VALUES (5, 'materials')");
+    $pdo->exec("INSERT INTO n_user_position (id_user, id_position) VALUES (2, 5), (3, 6)");
+    $pdo->exec("INSERT INTO n_page_access (id_position, page_key) VALUES (5, 'materials')");
     $pdo->exec("INSERT INTO raw_material (id, name, is_part_of_package, energy_100g, fat_100g, saturated_fat_100g, carbohydrates_100g, sugars_100g, salt_100g, fiber_100g, proteins_100g)
         VALUES (10, 'Masło extra 82% blok 10 kg', 0, 0, 0, 0, 0, 0, 0, 0, 0), (11, 'Truskawka mrożona', 0, 0, 0, 0, 0, 0, 0, 0, 0), (12, 'Kostka rosołowa Maga', 0, 1, 1, 1, 1, 1, 1, 1, 1)");
 
@@ -170,10 +170,10 @@ try {
 
     // --- OFF niedostępne : kategorie zostają z pamięci
     $off->down = true;
-    $pdo->exec("UPDATE tfb_nutrition_category SET loaded_at = '2020-01-01 00:00:00'");
+    $pdo->exec("UPDATE n_nutrition_category SET loaded_at = '2020-01-01 00:00:00'");
     $r6 = $svc->lookup(10, null, null, 1);
     expectNutri($r6['chosen']['tag'] === 'en:butters', 'OFF down: old taxonomy and cached medians still used');
-    $pdo->exec('DELETE FROM tfb_nutrition_off_cache');
+    $pdo->exec('DELETE FROM n_nutrition_off_cache');
     failsNutri(fn() => $svc->lookup(10, null, null, 1), 502, 'OFF down without cached medians: clear error');
 
     echo "nutrition_test: OK\n";

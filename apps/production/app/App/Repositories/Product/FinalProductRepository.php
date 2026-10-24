@@ -318,16 +318,16 @@ class FinalProductRepository extends BaseRepository
 
 
     /**
-     * Karta produkcyjna nowego produktu (tfb_prod_item + ustawienia) : minimum > 0 kartonów = MTS ze stanem
+     * Karta produkcyjna nowego produktu (n_prod_item + ustawienia) : minimum > 0 kartonów = MTS ze stanem
      * min. karty w sztukach, inaczej MTO ; grupa = pierwsza aktywna grupa działu (jak karty tworzone automatycznie).
      */
     public function createCard(int $productId, int $minCartons): void
     {
-        $this->db->prepare("INSERT IGNORE INTO tfb_prod_item (item_type, id_final_product, base_unit) VALUES ('product', ?, 'szt')")->execute([$productId]);
-        $this->db->prepare("INSERT IGNORE INTO tfb_prod_product_settings (id_item, mode, never_frozen, id_primary_group, status, wizard_step, stock_min)
-            SELECT i.id, IF(? > 0, 'MTS', 'MTO'), 0, (SELECT MIN(g.id) FROM tfb_prod_group g WHERE g.active = 1 AND g.id_section = fp.id_section),
+        $this->db->prepare("INSERT IGNORE INTO n_prod_item (item_type, id_final_product, base_unit) VALUES ('product', ?, 'szt')")->execute([$productId]);
+        $this->db->prepare("INSERT IGNORE INTO n_prod_product_settings (id_item, mode, never_frozen, id_primary_group, status, wizard_step, stock_min)
+            SELECT i.id, IF(? > 0, 'MTS', 'MTO'), 0, (SELECT MIN(g.id) FROM n_prod_group g WHERE g.active = 1 AND g.id_section = fp.id_section),
                    'draft', 1, IF(? > 0 AND fp.ppc > 0, ? * fp.ppc, NULL)
-            FROM tfb_prod_item i JOIN final_product fp ON fp.id = i.id_final_product WHERE i.id_final_product = ?")
+            FROM n_prod_item i JOIN final_product fp ON fp.id = i.id_final_product WHERE i.id_final_product = ?")
             ->execute([$minCartons, $minCartons, $minCartons, $productId]);
     }
 }

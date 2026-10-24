@@ -95,7 +95,7 @@
 </div>
 
 <script>
-    // Parametry zapasów MTS (tfb_prod_param) : tygodnie min. / maks. i okres średniej sprzedaży.
+    // Parametry zapasów MTS (n_prod_param) : tygodnie min. / maks. i okres średniej sprzedaży.
     document.getElementById('stockParamsForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         const form = e.target;

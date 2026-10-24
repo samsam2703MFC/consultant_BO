@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace App\Repositories\Workshop;
 
-/** Grupa, która przygotowuje półprodukt / kompozycję (tfb_recipe_producer) — czasem jedna grupa robi recepturę dla innej. */
+/** Grupa, która przygotowuje półprodukt / kompozycję (n_recipe_producer) — czasem jedna grupa robi recepturę dla innej. */
 final class RecipeProducerRepository extends WorkshopRepository
 {
-    protected string $table = 'tfb_recipe_producer';
+    protected string $table = 'n_recipe_producer';
 
     /** @return array<int, array{id:int, name_pl:string, name_fr:string, color:string}> receptura => grupa */
     public function forRecipes(array $recipeIds): array
@@ -15,8 +15,8 @@ final class RecipeProducerRepository extends WorkshopRepository
         if (!$ids) return [];
         $in = implode(',', $ids);
         $out = [];
-        foreach ($this->all("SELECT p.id_recipe, g.id, g.name_pl, g.name_fr, g.color FROM tfb_recipe_producer p
-                             JOIN tfb_prod_group g ON g.id = p.id_group WHERE p.id_recipe IN ({$in})") as $r) {
+        foreach ($this->all("SELECT p.id_recipe, g.id, g.name_pl, g.name_fr, g.color FROM n_recipe_producer p
+                             JOIN n_prod_group g ON g.id = p.id_group WHERE p.id_recipe IN ({$in})") as $r) {
             $out[(int) $r['id_recipe']] = ['id' => (int) $r['id'], 'name_pl' => $r['name_pl'], 'name_fr' => $r['name_fr'], 'color' => $r['color']];
         }
         return $out;
@@ -25,21 +25,21 @@ final class RecipeProducerRepository extends WorkshopRepository
     public function set(int $recipeId, ?int $groupId, ?int $userId): void
     {
         if ($groupId === null) {
-            $this->db->prepare('DELETE FROM tfb_recipe_producer WHERE id_recipe = ?')->execute([$recipeId]);
+            $this->db->prepare('DELETE FROM n_recipe_producer WHERE id_recipe = ?')->execute([$recipeId]);
             return;
         }
-        $this->db->prepare('INSERT INTO tfb_recipe_producer (id_recipe, id_group, updated_by) VALUES (?, ?, ?)
+        $this->db->prepare('INSERT INTO n_recipe_producer (id_recipe, id_group, updated_by) VALUES (?, ?, ?)
                             ON DUPLICATE KEY UPDATE id_group = VALUES(id_group), updated_by = VALUES(updated_by)')->execute([$recipeId, $groupId, $userId]);
     }
 
     public function groups(): array
     {
-        return $this->all('SELECT id, name_pl, name_fr, color FROM tfb_prod_group WHERE active = 1 ORDER BY sort_order, name_pl');
+        return $this->all('SELECT id, name_pl, name_fr, color FROM n_prod_group WHERE active = 1 ORDER BY sort_order, name_pl');
     }
 
     public function groupExists(int $groupId): bool
     {
-        return (bool) $this->all('SELECT 1 FROM tfb_prod_group WHERE id = ? AND active = 1', [$groupId]);
+        return (bool) $this->all('SELECT 1 FROM n_prod_group WHERE id = ? AND active = 1', [$groupId]);
     }
 
     /** Półprodukt / kompozycja (nie produkt gotowy). */
@@ -60,11 +60,11 @@ final class RecipeProducerRepository extends WorkshopRepository
                                (SELECT GROUP_CONCAT(DISTINCT g.name_pl ORDER BY g.name_pl SEPARATOR ', ')
                                 FROM flattened_recipe_recipe f
                                 JOIN final_product fp ON fp.id_recipe = f.recipe_id AND fp.active = 1
-                                JOIN tfb_prod_item i ON i.id_final_product = fp.id
-                                JOIN tfb_prod_product_settings s ON s.id_item = i.id
-                                JOIN tfb_prod_group g ON g.id = s.id_primary_group
+                                JOIN n_prod_item i ON i.id_final_product = fp.id
+                                JOIN n_prod_product_settings s ON s.id_item = i.id
+                                JOIN n_prod_group g ON g.id = s.id_primary_group
                                 WHERE f.subrecipe_id = pr.id AND s.id_primary_group <> p.id_group) AS for_groups
-                        FROM tfb_recipe_producer p
+                        FROM n_recipe_producer p
                         JOIN product_recipe pr ON pr.id = p.id_recipe
                         LEFT JOIN unit u ON u.id = pr.id_unit
                         WHERE p.id_group = ? ORDER BY pr.name", [$groupId]));

@@ -16,7 +16,7 @@ use App\Services\Workshop\Referentiel\AuditTrail;
  * P4 — ordonnancement d'un plan validé et charge des équipes.
  *
  * Fenêtres : pour chaque jour, les shifts actifs ce jour-là (active_days) où le poste est disponible
- * (tfb_prod_workstation_shift, disponible par défaut) et où le groupe du poste a une équipe d'au moins
+ * (n_prod_workstation_shift, disponible par défaut) et où le groupe du poste a une équipe d'au moins
  * autant de personnes que l'étape demande d'opérateurs — la nuit comprise : sans équipe de nuit, pas
  * de travail de nuit. Les robots autonomes tournent sur toutes leurs fenêtres ; les attentes en
  * chambre sont passives.
@@ -324,7 +324,7 @@ final class SchedulingService
     }
 
     /**
-     * Effectif d'un groupe sur un shift un jour donné : obsada du jour (tfb_prod_staffing ou simulation),
+     * Effectif d'un groupe sur un shift un jour donné : obsada du jour (n_prod_staffing ou simulation),
      * sinon somme des équipes. @return callable(int $group, int $shift, string $date): array{0:int, 1:float, 2:?string}
      */
     private function crew(array $teams, array $staffing): callable

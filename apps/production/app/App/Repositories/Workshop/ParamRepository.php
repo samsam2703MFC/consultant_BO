@@ -5,18 +5,18 @@ namespace App\Repositories\Workshop;
 
 final class ParamRepository extends WorkshopRepository
 {
-    protected string $table = 'tfb_prod_param';
+    protected string $table = 'n_prod_param';
 
     private ?array $cache = null;
 
     public function list(): array
     {
-        return $this->all('SELECT * FROM tfb_prod_param ORDER BY code');
+        return $this->all('SELECT * FROM n_prod_param ORDER BY code');
     }
 
     public function findByCode(string $code): ?array
     {
-        $rows = $this->all('SELECT * FROM tfb_prod_param WHERE code = ?', [$code]);
+        $rows = $this->all('SELECT * FROM n_prod_param WHERE code = ?', [$code]);
         return $rows[0] ?? null;
     }
 
@@ -25,7 +25,7 @@ final class ParamRepository extends WorkshopRepository
     {
         if ($this->cache === null) {
             try {
-                $this->cache = array_column($this->all('SELECT code, value FROM tfb_prod_param'), 'value', 'code');
+                $this->cache = array_column($this->all('SELECT code, value FROM n_prod_param'), 'value', 'code');
             } catch (\PDOException) {
                 $this->cache = [];
             }
@@ -35,7 +35,7 @@ final class ParamRepository extends WorkshopRepository
 
     public function setValue(string $code, string $value, ?int $userId): void
     {
-        $this->db->prepare('UPDATE tfb_prod_param SET value = ?, updated_by = ? WHERE code = ?')->execute([$value, $userId, $code]);
+        $this->db->prepare('UPDATE n_prod_param SET value = ?, updated_by = ? WHERE code = ?')->execute([$value, $userId, $code]);
         $this->cache = null;
     }
 }

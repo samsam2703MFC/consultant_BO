@@ -16,14 +16,16 @@ Livrée par le workflow du cockpit (`.github/workflows/deploy.yml`, étape « D�
 avec `deploy/server.sh`, sur le même serveur que le cockpit :
 
 - code dans `/var/www/production/app`, seul `app/public` est exposé (Alias Apache `/production`) ;
-- base séparée `erp_production`, identifiants dans `/var/www/production/app/.env` (créé au
-  premier passage, jamais écrasé) ;
+- une seule base, `erp` : les tables d'origine de l'ERP et les tables ajoutées pendant le développement,
+  toutes préfixées `n_` (migration 069, auparavant `tfb_`). L'ancienne base `erp_production` des
+  premiers passages y est déplacée au déploiement (RENAME TABLE, données gardées). Identifiants dans
+  `/var/www/production/app/.env` (créé au premier passage, jamais écrasé ; `DB_NAME` mis à jour) ;
 - **accès MySQL** : `root` par socket, sinon `/etc/mysql/debian.cnf`, sinon le compte du cockpit
   (`/var/www/consulant_bo/config/config.php`). Si ce compte ne peut pas créer d'utilisateur,
   l'ERP s'en sert directement, sur sa propre base ;
 - **données** : déposer le dump (`.zip`, `.sql` ou `.sql.gz`) dans `/root/erp_import/` sur le
   serveur. Il est importé au déploiement suivant, une seule fois (base vide), puis rangé dans
-  `/root/erp_import/importe/`. Pour réimporter : `DROP DATABASE erp_production;` puis redéployer ;
+  `/root/erp_import/importe/`. Pour réimporter : `DROP DATABASE erp;` puis redéployer ;
 - **sans accès au serveur**, le dump passe par le dépôt, chiffré : tant que la base est vide, le
   log du déploiement affiche la « CLE PUBLIQUE DE TRANSFERT ERP » du serveur ;
   `deploy/encrypt_dump.sh erp.zip cle.pem` produit `deploy/incoming/`, à pousser avec une ligne

@@ -14,7 +14,7 @@ use App\Repositories\Workshop\WorkshopRepository;
  */
 final class ProfitabilityRepository extends WorkshopRepository
 {
-    protected string $table = 'tfb_section_target';
+    protected string $table = 'n_section_target';
     protected array $writable = ['staff_pct_target', 'margin_pct_target', 'bonus_pct', 'is_shared', 'updated_by'];
 
     public function sections(): array
@@ -22,7 +22,7 @@ final class ProfitabilityRepository extends WorkshopRepository
         return $this->all(
             'SELECT ps.id, ps.name, ps.depreciation, ps.water_cost, ps.power_supply_cost, ps.fuel_cost, ps.other_cost,
                     t.staff_pct_target, t.margin_pct_target, t.bonus_pct, COALESCE(t.is_shared, 0) AS is_shared
-             FROM production_sections ps LEFT JOIN tfb_section_target t ON t.id_section = ps.id
+             FROM production_sections ps LEFT JOIN n_section_target t ON t.id_section = ps.id
              ORDER BY ps.id'
         );
     }
@@ -188,7 +188,7 @@ final class ProfitabilityRepository extends WorkshopRepository
         $data = $this->filter($data);
         $columns = array_keys($data);
         $sql = sprintf(
-            'INSERT INTO tfb_section_target (id_section, %s) VALUES (:id_section, %s) ON DUPLICATE KEY UPDATE %s',
+            'INSERT INTO n_section_target (id_section, %s) VALUES (:id_section, %s) ON DUPLICATE KEY UPDATE %s',
             implode(', ', $columns),
             implode(', ', array_map(fn($c) => ':' . $c, $columns)),
             implode(', ', array_map(fn($c) => "{$c} = VALUES({$c})", $columns))

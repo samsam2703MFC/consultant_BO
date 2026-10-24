@@ -26,7 +26,7 @@ use App\Services\Workshop\Scheduling\SchedulingService;
  * w week.start_day (w pracowni środa : śr → wt).
  * Ilość produktu dzieli się na « na wysyłkę » (zamówienia klientów MTO i półprodukty do nich — termin =
  * dzień wyjazdu ciężarówki) i « na magazyn » (uzupełnienie stanu MTS). Podział na dni zapisuje się w
- * tfb_prod_week_slot (przeciągnij i upuść albo « Ułóż tydzień ») ; nieprzydzielona reszta czeka w
+ * n_prod_week_slot (przeciągnij i upuść albo « Ułóż tydzień ») ; nieprzydzielona reszta czeka w
  * « Do rozplanowania ». Układanie : najpierw wysyłka — jak najwcześniej od dzisiaj, najbliższe terminy
  * najpierw, nigdy po dniu wyjazdu (termin miniony = pierwszy wolny dzień, oznaczony jako po terminie) ;
  * potem magazyn — tylko w dni magazynowe (week.stock_days, domyślnie śr–pt), w wolnych godzinach.

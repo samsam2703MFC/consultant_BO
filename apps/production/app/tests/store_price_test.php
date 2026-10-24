@@ -83,17 +83,17 @@ try {
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
-    foreach (['final_product', 'category_product', 'user', 'tfb_store_price_config', 'tfb_store_product', 'tfb_store_product_shop', 'tfb_store_product_link',
-                 'tfb_store_price_sync', 'tfb_page_access', 'tfb_user_position', 'tfb_prod_user_role', 'tfb_position'] as $table) {
+    foreach (['final_product', 'category_product', 'user', 'n_store_price_config', 'n_store_product', 'n_store_product_shop', 'n_store_product_link',
+                 'n_store_price_sync', 'n_page_access', 'n_user_position', 'n_prod_user_role', 'n_position'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
     $pdo->exec("SET SESSION sql_mode = ''");
-    $pdo->exec("INSERT INTO tfb_store_price_config (id) VALUES (1)");
+    $pdo->exec("INSERT INTO n_store_price_config (id) VALUES (1)");
     $pdo->exec("INSERT INTO user (id, name, surname, displayed_name, email, phone, permission, login, password) VALUES
         (1, 'Ad', 'Min', 'Admin', 'a@x.test', '1', 0, 'admin', 'x'), (2, 'Jan', 'K', 'Jan K.', 'j@x.test', '2', 0, 'jan', 'x'), (3, 'Ola', 'P', 'Ola P.', 'o@x.test', '3', 0, 'ola', 'x')");
-    $pdo->exec("INSERT INTO tfb_user_position (id_user, id_position) VALUES (2, 5), (3, 6)");
-    $pdo->exec("INSERT INTO tfb_page_access (id_position, page_key) VALUES (5, 'margins')");
+    $pdo->exec("INSERT INTO n_user_position (id_user, id_position) VALUES (2, 5), (3, 6)");
+    $pdo->exec("INSERT INTO n_page_access (id_position, page_key) VALUES (5, 'margins')");
     $pdo->exec("INSERT INTO category_product (id, name, target_margin_percentage) VALUES (1, 'Cake', 30), (2, 'Cookie''s', 30)");
     $pdo->exec("INSERT INTO final_product (id, name, id_category, ppc, standard_price, active) VALUES
         (101, 'Cake Citron - 350 g.', 1, 15, 46.24, 1), (102, 'Cake Chocolat - 350 g.', 1, 15, 58.51, 1), (103, 'Cookie Chocolat Noir', 2, 54, 62.75, 1),
@@ -126,14 +126,14 @@ try {
     // --- Konto z cockpitu konsultanta (wdrożenie) : kopia zaszyfrowana, bez zmian gdy to samo, konto ręczne nie nadpisane
     expectStore($account->importFromCockpit(['phone' => '', 'password' => 'x']) === 'empty', 'cockpit import: no account');
     expectStore($account->importFromCockpit(['phone' => ' 0470 11 22 33 ', 'password' => 'haslo-cockpit']) === 'copied', 'cockpit import: copied');
-    $row = $pdo->query('SELECT * FROM tfb_store_price_config WHERE id = 1')->fetch();
+    $row = $pdo->query('SELECT * FROM n_store_price_config WHERE id = 1')->fetch();
     expectStore($row['phone'] === '0470 11 22 33' && $row['source'] === 'cockpit' && $row['base_url'] === 'https://atelierby.tfbuddy.com/api/v1'
         && !str_contains((string) $row['password_enc'], 'haslo') && $cipher->decrypt($row['password_enc']) === 'haslo-cockpit', 'cockpit account stored as is, password encrypted, default API address');
     expectStore($account->importFromCockpit(['phone' => '0470 11 22 33', 'password' => 'haslo-cockpit']) === 'unchanged', 'cockpit import: unchanged');
     expectStore($account->importFromCockpit(['base' => 'https://panel.test/api/v1/', 'phone' => '0470 11 22 33', 'password' => 'nowe']) === 'copied'
-        && $cipher->decrypt($pdo->query('SELECT password_enc FROM tfb_store_price_config')->fetchColumn()) === 'nowe'
-        && $pdo->query('SELECT base_url FROM tfb_store_price_config')->fetchColumn() === 'https://panel.test/api/v1', 'cockpit import: refreshed when changed in the cockpit');
-    $pdo->exec("UPDATE tfb_store_price_config SET phone = NULL, password_enc = NULL, source = NULL, base_url = 'https://atelierby.tfbuddy.com/api/v1'");
+        && $cipher->decrypt($pdo->query('SELECT password_enc FROM n_store_price_config')->fetchColumn()) === 'nowe'
+        && $pdo->query('SELECT base_url FROM n_store_price_config')->fetchColumn() === 'https://panel.test/api/v1', 'cockpit import: refreshed when changed in the cockpit');
+    $pdo->exec("UPDATE n_store_price_config SET phone = NULL, password_enc = NULL, source = NULL, base_url = 'https://atelierby.tfbuddy.com/api/v1'");
 
     // --- Konto API : tylko administrator, walidacja, hasło zaszyfrowane, puste = bez zmiany
     failsWith(fn() => $account->save(['base_url' => 'https://panel.test/api/v1', 'phone' => '+32470000000', 'password' => 'tajne-haslo'], 2), 403, 'account: non admin refused');
@@ -142,16 +142,16 @@ try {
     failsWith(fn() => $account->save(['base_url' => 'https://panel.test/api/v1', 'phone' => '+32470000000', 'password' => ''], 1), 422, 'account: password required first time');
     failsWith(fn() => $sync->sync(1), 422, 'sync refused while the account is not configured');
     $shown = $account->save(['base_url' => 'https://panel.test/api/v1/', 'phone' => '+32 470 00 00 00', 'password' => 'tajne-haslo'], 1);
-    $row = $pdo->query('SELECT * FROM tfb_store_price_config WHERE id = 1')->fetch();
+    $row = $pdo->query('SELECT * FROM n_store_price_config WHERE id = 1')->fetch();
     expectStore($row['base_url'] === 'https://panel.test/api/v1' && $row['phone'] === '+32470000000' && $row['source'] === 'manual' && $shown['password_set'] && $shown['password_readable'] && !isset($shown['password']), 'account saved, normalized');
-    expectStore($account->importFromCockpit(['phone' => '0470 99', 'password' => 'inne']) === 'manual' && $pdo->query('SELECT phone FROM tfb_store_price_config')->fetchColumn() === '+32470000000', 'cockpit import keeps an account typed in the ERP');
+    expectStore($account->importFromCockpit(['phone' => '0470 99', 'password' => 'inne']) === 'manual' && $pdo->query('SELECT phone FROM n_store_price_config')->fetchColumn() === '+32470000000', 'cockpit import keeps an account typed in the ERP');
     expectStore(!str_contains((string) $row['password_enc'], 'tajne') && str_starts_with((string) $row['password_enc'], 'p1:') && $cipher->decrypt($row['password_enc']) === 'tajne-haslo', 'password encrypted at rest');
     expectStore((new PanelSecretCipher(new WorkshopConfig(['PRODUCTION_JWT_SECRET' => str_repeat('z', 48)])))->decrypt($row['password_enc']) === null, 'another server secret cannot read the password');
     $account->save(['base_url' => 'https://panel.test/api/v1', 'phone' => '+32470000000', 'password' => ''], 1);
-    expectStore($cipher->decrypt($pdo->query('SELECT password_enc FROM tfb_store_price_config')->fetchColumn()) === 'tajne-haslo', 'empty password keeps the saved one');
+    expectStore($cipher->decrypt($pdo->query('SELECT password_enc FROM n_store_price_config')->fetchColumn()) === 'tajne-haslo', 'empty password keeps the saved one');
     $t = $account->test(1);
     expectStore($t['shops'] === 3 && $t['names'] === ['Bruxelles', 'Namur', 'Liège'], 'account test: login and Belgian shops');
-    $tok = $pdo->query('SELECT token_enc, token_exp FROM tfb_store_price_config')->fetch();
+    $tok = $pdo->query('SELECT token_enc, token_exp FROM n_store_price_config')->fetch();
     expectStore(!str_contains((string) $tok['token_enc'], 'jwt-') && str_starts_with((string) $cipher->decrypt($tok['token_enc']), 'jwt-') && strtotime($tok['token_exp']) > time(), 'token encrypted and cached');
     failsWith(fn() => $account->test(2), 403, 'account test: admin only');
 
@@ -246,18 +246,18 @@ try {
     unset($api->products[1][3]);
     $r = $sync->sync(1);
     expectStore($r['status'] === 'ok' && $repo->storeProductByKey('brioche') === null && $repo->storeProductByKey('pomme cake tranche') === null, 'vanished products removed');
-    expectStore((int) $pdo->query('SELECT COUNT(*) FROM tfb_store_product_shop s LEFT JOIN tfb_store_product p ON p.id = s.id_store_product WHERE p.id IS NULL')->fetchColumn() === 0, 'no orphan shop prices');
+    expectStore((int) $pdo->query('SELECT COUNT(*) FROM n_store_product_shop s LEFT JOIN n_store_product p ON p.id = s.id_store_product WHERE p.id IS NULL')->fetchColumn() === 0, 'no orphan shop prices');
     $ev = (new StoreSellabilityService($repo, $access))->evaluate([105]);
     expectStore($ev[105]['link'] === 'manual' && $ev[105]['store'] === null && $ev[105]['verdict'] === 'none', 'manual link kept, product gone from shops');
 
     // --- Błędy API : złe hasło, brak sklepów → synchronizacja nieudana, stare ceny zostają
-    $before = (int) $pdo->query('SELECT COUNT(*) FROM tfb_store_product')->fetchColumn();
-    $pdo->exec('UPDATE tfb_store_price_config SET token_enc = NULL, token_exp = NULL');
+    $before = (int) $pdo->query('SELECT COUNT(*) FROM n_store_product')->fetchColumn();
+    $pdo->exec('UPDATE n_store_price_config SET token_enc = NULL, token_exp = NULL');
     $repo->saveConfig(['password_enc' => $cipher->encrypt('zle')]);
     $bad = new FakePanel($repo, $cipher);
     failsWith(fn() => (new StorePriceSyncService($repo, $bad))->sync(1), 502, 'wrong password: sync fails');
     expectStore($repo->lastSync()['status'] === 'failed' && str_contains((string) $repo->lastSync()['message'], 'HTTP 401') && !str_contains((string) $repo->lastSync()['message'], 'zle'), 'failure logged without the password');
-    expectStore((int) $pdo->query('SELECT COUNT(*) FROM tfb_store_product')->fetchColumn() === $before, 'failed sync keeps previous prices');
+    expectStore((int) $pdo->query('SELECT COUNT(*) FROM n_store_product')->fetchColumn() === $before, 'failed sync keeps previous prices');
     expectStore($repo->lastSuccessfulSync()['status'] === 'ok', 'last successful sync still shown');
 
     echo "store_price_test: OK\n";

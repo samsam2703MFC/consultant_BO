@@ -51,12 +51,12 @@ try {
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
-    foreach (['production_sections', 'tfb_section_target', 'tfb_prod_param', 'cost_month', 'cost_month_employee', 'cost_media_type',
+    foreach (['production_sections', 'n_section_target', 'n_prod_param', 'cost_month', 'cost_month_employee', 'cost_media_type',
                  'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_month_section', 'erp_company_other_settings', 'document_wdt',
-                 'document_wdt_product', 'final_product', 'customer_order', 'customer_order_product', 'tfb_growth_action', 'user', 'category_product',
-                 'production_employee', 'tfb_staff_pay', 'tfb_prod_employee', 'recipe_competency', 'recipe_competency_connection', 'tfb_employee_competency',
-                 'flattened_recipe_ingredient', 'raw_material', 'category_material', 'supplier', 'raw_material_price_changelog', 'unit', 'tfb_wdt_superseded',
-                 'tfb_store_price_config', 'tfb_store_product', 'tfb_store_product_shop', 'tfb_store_product_link', 'tfb_store_price_sync'] as $table) {
+                 'document_wdt_product', 'final_product', 'customer_order', 'customer_order_product', 'n_growth_action', 'user', 'category_product',
+                 'production_employee', 'n_staff_pay', 'n_prod_employee', 'recipe_competency', 'recipe_competency_connection', 'n_employee_competency',
+                 'flattened_recipe_ingredient', 'raw_material', 'category_material', 'supplier', 'raw_material_price_changelog', 'unit', 'n_wdt_superseded',
+                 'n_store_price_config', 'n_store_product', 'n_store_product_shop', 'n_store_product_link', 'n_store_price_sync'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -66,8 +66,8 @@ try {
     $pdo->exec("INSERT INTO erp_company_other_settings (id, exchange_rate_euro) VALUES (1, 4.00)");
     $pdo->exec("INSERT INTO production_sections (id, name, depreciation, water_cost, power_supply_cost, fuel_cost, other_cost) VALUES
         (1, 'Piekarnia', 400, 0, 0, 0, 0), (2, 'Pakowanie', 0, 0, 0, 0, 0), (3, 'Pusty', 0, 0, 0, 0, 0)");
-    $pdo->exec("INSERT INTO tfb_section_target (id_section, staff_pct_target, margin_pct_target, is_shared) VALUES (1, 20, NULL, 0), (2, NULL, NULL, 1)");
-    $pdo->exec("INSERT INTO tfb_prod_param (code, value, default_value, value_type) VALUES
+    $pdo->exec("INSERT INTO n_section_target (id_section, staff_pct_target, margin_pct_target, is_shared) VALUES (1, 20, NULL, 0), (2, NULL, NULL, 1)");
+    $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES
         ('profit.staff_target_pct', '25', '25', 'decimal'), ('profit.total_staff_target_pct', '40', '35', 'decimal'),
         ('profit.section_margin_target_pct', '30', '30', 'decimal'), ('profit.margin_target_pct', '10', '10', 'decimal')");
 
@@ -96,7 +96,7 @@ try {
     near($g['revenue'], 5000, 'sprzedaż grupy');
     near($g['staff'], 2000, 'personel grupy 8 000 zł / 4 (pracownik wyłączony pominięty)');
     near($g['staff_pct'], 40, 'personel / sprzedaż grupy');
-    near($g['staff_target'], 20, 'cel grupy z tfb_section_target');
+    near($g['staff_target'], 20, 'cel grupy z n_section_target');
     near($g['needed'], 10000, 'sprzedaż potrzebna = personel ÷ cel');
     near($g['missing'], 5000, 'brakująca sprzedaż');
     near($g['missing_pct'], 100, 'brakująca sprzedaż w % sprzedaży');
@@ -175,10 +175,10 @@ try {
     expectProfit($refused(fn() => $service->saveTarget(99, ['staff_pct_target' => '20'], 1)), 'nieznany dział odrzucony');
     expectProfit($refused(fn() => $service->saveGeneralTargets(['profit.total_staff_target_pct' => '150'], 1)), 'cel ogólny > 100 % odrzucony');
     $service->saveTarget(1, ['staff_pct_target' => '', 'margin_pct_target' => '12,5'], 1);
-    $row = $pdo->query('SELECT staff_pct_target, margin_pct_target FROM tfb_section_target WHERE id_section = 1')->fetch();
+    $row = $pdo->query('SELECT staff_pct_target, margin_pct_target FROM n_section_target WHERE id_section = 1')->fetch();
     expectProfit($row['staff_pct_target'] === null && (float) $row['margin_pct_target'] === 12.5, 'pusty cel = cel ogólny, przecinek przyjęty');
     $service->saveTarget(3, ['staff_pct_target' => '30'], 1);
-    expectProfit((float) $pdo->query('SELECT staff_pct_target FROM tfb_section_target WHERE id_section = 3')->fetchColumn() === 30.0, 'cel działu bez wiersza tworzy wiersz');
+    expectProfit((float) $pdo->query('SELECT staff_pct_target FROM n_section_target WHERE id_section = 3')->fetchColumn() === 30.0, 'cel działu bez wiersza tworzy wiersz');
     $service->saveGeneralTargets(['profit.staff_target_pct' => '30'], 1);
     $after = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo)))))->overview('2026-09', $today);
     near($after['groups'][0]['staff_target'], 30, 'grupa bez własnego celu bierze nowy cel ogólny');
@@ -236,7 +236,7 @@ try {
 
 
     // --- Budżet personelu : minimum + pula premii (% sprzedaży działu) ÷ aktywne osoby z premią
-    $pdo->exec("INSERT INTO tfb_prod_param (code, value, default_value, value_type) VALUES ('pay.bonus_pool_pct', '4', '5', 'decimal')");
+    $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES ('pay.bonus_pool_pct', '4', '5', 'decimal')");
     $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES
         (1, 'Ala', 'A', 5000, 1), (2, 'Bartek', 'B', 3000, 1), (3, 'Cezary', 'C', 4000, 2), (4, 'Dorota', 'D', 2000, 1)");
     $staffRepo = new StaffRepository($pdo);
@@ -250,7 +250,7 @@ try {
     expectProfit($refused(fn() => $budgetService->savePay(99, ['base_monthly' => '1'], 1)), 'nieznany pracownik odrzucony');
     expectProfit($budgetService->savePay(2, ['base_monthly' => '3500'], 1)['warning'] !== null, 'minimum wyższe niż koszt sygnalizowane');
     $budgetService->savePay(2, ['base_monthly' => ''], 1);
-    expectProfit($pdo->query('SELECT base_monthly FROM tfb_staff_pay WHERE id_production_employee = 2')->fetchColumn() === null, 'puste minimum = nie podano');
+    expectProfit($pdo->query('SELECT base_monthly FROM n_staff_pay WHERE id_production_employee = 2')->fetchColumn() === null, 'puste minimum = nie podano');
 
     $b = $budgetService->overview('2026-09');
     $p = $b['sections'][1];
@@ -341,12 +341,12 @@ try {
     $oct2 = (new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo)))))->overview('month', $today);
     near($oct2['totals']['materials'], 200, 'październik : Chleb bez receptury, koszt z karty (20 × 40 zł / 4)');
 
-    // Duplikat WDT oznaczony w tfb_wdt_superseded : sprzedaż liczona raz.
+    // Duplikat WDT oznaczony w n_wdt_superseded : sprzedaż liczona raz.
     $pdo->exec("INSERT INTO document_wdt (id, doc_num, established_date, currency) VALUES (950, 'W/1', '2026-09-10', 'eur')");
     $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, name, quantity, price_carton) VALUES (950, 1, 'Chleb', 100, 50)");
     $fresh = fn() => new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo))));
     near($fresh()->overview('2026-09', $today)['totals']['revenue'], 10000, 'duplikat bez oznaczenia : liczony dwa razy');
-    $pdo->exec("INSERT INTO tfb_wdt_superseded (id_document_wdt, superseded_by, reason) VALUES (950, 1, 'test')");
+    $pdo->exec("INSERT INTO n_wdt_superseded (id_document_wdt, superseded_by, reason) VALUES (950, 1, 'test')");
     $dedup = $fresh()->overview('2026-09', $today);
     near($dedup['totals']['revenue'], 5000, 'duplikat oznaczony : sprzedaż liczona raz');
     near($dedup['production']['groups'][0]['cartons'], 100, 'duplikat oznaczony : produkcja liczona raz');

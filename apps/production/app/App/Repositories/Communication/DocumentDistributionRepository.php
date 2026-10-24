@@ -4,20 +4,20 @@ namespace App\Repositories\Communication;
 use App\Repositories\Workshop\WorkshopRepository;
 
 /**
- * Dystrybucja dokumentów (tfb_doc_distribution) : wiersz = klient × dokument (e-mail na który adres, papier z dostawą,
+ * Dystrybucja dokumentów (n_doc_distribution) : wiersz = klient × dokument (e-mail na który adres, papier z dostawą,
  * SMS) ; id_customer 0 = ustawienia domyślne, -1 = biuro rachunkowe SL Food. Moment wysłania dokumentu
- * (tfb_doc_distribution_moment) jest wspólny dla wszystkich klientów.
+ * (n_doc_distribution_moment) jest wspólny dla wszystkich klientów.
  */
 final class DocumentDistributionRepository extends WorkshopRepository
 {
-    protected string $table = 'tfb_doc_distribution';
+    protected string $table = 'n_doc_distribution';
 
     /** @return array<int, array<string, array>> id_customer => doc_key => wiersz */
     public function cells(?int $customerId = null): array
     {
         $rows = $customerId === null
-            ? $this->all('SELECT * FROM tfb_doc_distribution')
-            : $this->all('SELECT * FROM tfb_doc_distribution WHERE id_customer IN (?, 0, -1)', [$customerId]);
+            ? $this->all('SELECT * FROM n_doc_distribution')
+            : $this->all('SELECT * FROM n_doc_distribution WHERE id_customer IN (?, 0, -1)', [$customerId]);
         $cells = [];
         foreach ($rows as $r) $cells[(int) $r['id_customer']][$r['doc_key']] = $r;
         return $cells;
@@ -26,12 +26,12 @@ final class DocumentDistributionRepository extends WorkshopRepository
     /** @return array<string, string> doc_key => moment */
     public function moments(): array
     {
-        return array_column($this->all('SELECT doc_key, moment FROM tfb_doc_distribution_moment'), 'moment', 'doc_key');
+        return array_column($this->all('SELECT doc_key, moment FROM n_doc_distribution_moment'), 'moment', 'doc_key');
     }
 
     public function saveCell(int $customerId, string $doc, string $mailTo, ?string $address, int $paper, bool $sms, ?string $author): void
     {
-        $this->db->prepare('INSERT INTO tfb_doc_distribution (id_customer, doc_key, mail_to, mail_address, paper_copies, sms, updated_by)
+        $this->db->prepare('INSERT INTO n_doc_distribution (id_customer, doc_key, mail_to, mail_address, paper_copies, sms, updated_by)
                             VALUES (?, ?, ?, ?, ?, ?, ?)
                             ON DUPLICATE KEY UPDATE mail_to = VALUES(mail_to), mail_address = VALUES(mail_address),
                                 paper_copies = VALUES(paper_copies), sms = VALUES(sms), updated_by = VALUES(updated_by)')
@@ -40,7 +40,7 @@ final class DocumentDistributionRepository extends WorkshopRepository
 
     public function saveMoment(string $doc, string $moment, ?string $author): void
     {
-        $this->db->prepare('INSERT INTO tfb_doc_distribution_moment (doc_key, moment, updated_by) VALUES (?, ?, ?)
+        $this->db->prepare('INSERT INTO n_doc_distribution_moment (doc_key, moment, updated_by) VALUES (?, ?, ?)
                             ON DUPLICATE KEY UPDATE moment = VALUES(moment), updated_by = VALUES(updated_by)')
             ->execute([$doc, $moment, $author]);
     }
@@ -61,15 +61,15 @@ final class DocumentDistributionRepository extends WorkshopRepository
     public function distributionRules(): array
     {
         $rules = [];
-        foreach ($this->all("SELECT * FROM tfb_mail_rule WHERE recipient_kind = 'distribution' ORDER BY sort_order, id") as $r) $rules[$r['event']] = $r;
+        foreach ($this->all("SELECT * FROM n_mail_rule WHERE recipient_kind = 'distribution' ORDER BY sort_order, id") as $r) $rules[$r['event']] = $r;
         return $rules;
     }
 
     public function setRuleEnabled(int $ruleId, bool $enabled, ?int $startRefId, ?string $author): void
     {
         $sql = $enabled
-            ? 'UPDATE tfb_mail_rule SET enabled = 1, start_ref_id = ?, enabled_at = NOW(), updated_by = ? WHERE id = ? AND enabled = 0'
-            : 'UPDATE tfb_mail_rule SET enabled = 0, updated_by = ? WHERE id = ?';
+            ? 'UPDATE n_mail_rule SET enabled = 1, start_ref_id = ?, enabled_at = NOW(), updated_by = ? WHERE id = ? AND enabled = 0'
+            : 'UPDATE n_mail_rule SET enabled = 0, updated_by = ? WHERE id = ?';
         $this->db->prepare($sql)->execute($enabled ? [$startRefId, $author, $ruleId] : [$author, $ruleId]);
     }
 
@@ -109,7 +109,7 @@ final class DocumentDistributionRepository extends WorkshopRepository
         foreach ($refKeys as $key) array_push($params, $key, $key . '>%');
         $rows = $this->all(
             "SELECT d.*, r.code AS rule_code, m.recipient_email, m.status AS message_status, m.provider_message_id
-             FROM tfb_mail_dispatch d JOIN tfb_mail_rule r ON r.id = d.id_rule
+             FROM n_mail_dispatch d JOIN n_mail_rule r ON r.id = d.id_rule
              LEFT JOIN communication_message m ON m.id = d.id_message
              WHERE r.recipient_kind = 'distribution' AND ({$likes}) ORDER BY d.id",
             $params

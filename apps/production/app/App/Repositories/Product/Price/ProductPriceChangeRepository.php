@@ -5,10 +5,10 @@ namespace App\Repositories\Product\Price;
 
 use App\Repositories\Workshop\WorkshopRepository;
 
-/** Cena standardowa produktu, ceny klientów idące za nią i historia zmian (tfb_product_price_change). */
+/** Cena standardowa produktu, ceny klientów idące za nią i historia zmian (n_product_price_change). */
 final class ProductPriceChangeRepository extends WorkshopRepository
 {
-    protected string $table = 'tfb_product_price_change';
+    protected string $table = 'n_product_price_change';
 
     public function standardPrice(int $productId): ?float
     {
@@ -38,7 +38,7 @@ final class ProductPriceChangeRepository extends WorkshopRepository
             }
             $this->db->prepare('UPDATE final_product SET standard_price = ? WHERE id = ?')->execute([$new, $productId]);
             $now = date('Y-m-d H:i:s');
-            $log = $this->db->prepare('INSERT INTO tfb_product_price_change (id_final_product, id_customer, old_price, new_price, source, changed_by, changed_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            $log = $this->db->prepare('INSERT INTO n_product_price_change (id_final_product, id_customer, old_price, new_price, source, changed_by, changed_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
             $log->execute([$productId, null, $old, $new, $source, $userId, $now]);
             if ($followers) {
                 $in = implode(',', array_fill(0, count($followers), '?'));

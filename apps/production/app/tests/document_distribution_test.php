@@ -42,7 +42,7 @@ try {
     echo "document_distribution_test: SKIPPED (no database: {$e->getMessage()})\n";
     exit(0);
 }
-if (!$pdo->query("SHOW TABLES LIKE 'tfb_doc_distribution'")->fetchColumn()) {
+if (!$pdo->query("SHOW TABLES LIKE 'n_doc_distribution'")->fetchColumn()) {
     echo "document_distribution_test: SKIPPED (run php Bin/tfb_migrate.php apply first)\n";
     exit(0);
 }
@@ -54,15 +54,15 @@ if (count($customers) < 2) {
 [$x, $y] = [(int) $customers[0]['id'], (int) $customers[1]['id']];
 $service = $container->get(D::class);
 $snapshot = [
-    'cells' => $pdo->query('SELECT * FROM tfb_doc_distribution')->fetchAll(PDO::FETCH_ASSOC),
-    'moments' => $pdo->query('SELECT * FROM tfb_doc_distribution_moment')->fetchAll(PDO::FETCH_ASSOC),
-    'rules' => $pdo->query('SELECT id, enabled, start_ref_id, enabled_at FROM tfb_mail_rule')->fetchAll(PDO::FETCH_ASSOC),
+    'cells' => $pdo->query('SELECT * FROM n_doc_distribution')->fetchAll(PDO::FETCH_ASSOC),
+    'moments' => $pdo->query('SELECT * FROM n_doc_distribution_moment')->fetchAll(PDO::FETCH_ASSOC),
+    'rules' => $pdo->query('SELECT id, enabled, start_ref_id, enabled_at FROM n_mail_rule')->fetchAll(PDO::FETCH_ASSOC),
 ];
 try {
     // Client sans réglage propre : réglages par défaut ; podsumowanie / cel tylko dla franczyzobiorców
-    $pdo->exec("DELETE FROM tfb_doc_distribution WHERE id_customer IN ($x, $y)");
+    $pdo->exec("DELETE FROM n_doc_distribution WHERE id_customer IN ($x, $y)");
     $row = array_values(array_filter($service->matrix()['rows'], fn($r) => $r['id'] === $x))[0];
-    expectDist($row['inherited'] && $row['cells']['wz']['paper_copies'] === (int) $pdo->query("SELECT paper_copies FROM tfb_doc_distribution WHERE id_customer = 0 AND doc_key = 'wz'")->fetchColumn(), 'nouveau client : réglages par défaut');
+    expectDist($row['inherited'] && $row['cells']['wz']['paper_copies'] === (int) $pdo->query("SELECT paper_copies FROM n_doc_distribution WHERE id_customer = 0 AND doc_key = 'wz'")->fetchColumn(), 'nouveau client : réglages par défaut');
     expectDist(($row['cells']['summary']['mail_to'] === 'head') === (bool) $customers[0]['franchise'], 'récapitulatif mensuel seulement pour les franchisés');
 
     // Validation d'une cellule
@@ -76,7 +76,7 @@ try {
 
     // Première modification : le client reçoit une copie complète des réglages par défaut
     $row = $service->saveCell($x, 'wz', ['mail_to' => 'head', 'paper_copies' => 2], 'test');
-    expectDist(!$row['inherited'] && (int) $pdo->query("SELECT COUNT(*) FROM tfb_doc_distribution WHERE id_customer = $x")->fetchColumn() === count(D::DOCS), 'cellule modifiée : réglages propres complets');
+    expectDist(!$row['inherited'] && (int) $pdo->query("SELECT COUNT(*) FROM n_doc_distribution WHERE id_customer = $x")->fetchColumn() === count(D::DOCS), 'cellule modifiée : réglages propres complets');
     $service->saveCell($x, 'cmr', ['mail_to' => '', 'paper_copies' => 3], 'test');
     $service->saveCell($x, 'ppwr', ['mail_to' => 'other', 'mail_address' => 'ppwr@example.org'], 'test');
     $service->saveCell($x, 'wdt', ['mail_to' => 'acc', 'paper_copies' => 1], 'test');
@@ -101,9 +101,9 @@ try {
     // Moment commun → règles e-mail activées / désactivées
     rejects(fn() => $service->saveMoment('wz', 'month_start', 'test'), 'moment non autorisé pour le document');
     $service->saveMoment('wdt', 'wdt_issued', 'test');
-    $enabled = $pdo->query("SELECT code, enabled FROM tfb_mail_rule WHERE code IN ('WDT_TO_CLIENT', 'WDT_KSEF_TO_CLIENT')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $enabled = $pdo->query("SELECT code, enabled FROM n_mail_rule WHERE code IN ('WDT_TO_CLIENT', 'WDT_KSEF_TO_CLIENT')")->fetchAll(PDO::FETCH_KEY_PAIR);
     expectDist((int) $enabled['WDT_TO_CLIENT'] === 1 && (int) $enabled['WDT_KSEF_TO_CLIENT'] === 0, 'moment changé : règle correspondante active, l\'autre arrêtée');
-    $start = $pdo->query("SELECT start_ref_id FROM tfb_mail_rule WHERE code = 'WDT_TO_CLIENT'")->fetchColumn();
+    $start = $pdo->query("SELECT start_ref_id FROM n_mail_rule WHERE code = 'WDT_TO_CLIENT'")->fetchColumn();
     expectDist((int) $start === (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM document_wdt')->fetchColumn(), 'règle activée à partir de maintenant');
     $service->saveMoment('wdt', 'wdt_ksef_accepted', 'test');
 
@@ -111,13 +111,13 @@ try {
     expectDist($service->copyClient($x, [$y, $x, -1], 'test') === 1 && $service->forCustomer($y) === $service->forCustomer($x), 'réglages copiés');
     rejects(fn() => $service->copyClient(D::ACCOUNTING, [$y], 'test'), 'pas de copie depuis la comptabilité');
 } finally {
-    $pdo->exec('DELETE FROM tfb_doc_distribution');
-    $insert = $pdo->prepare('INSERT INTO tfb_doc_distribution (id_customer, doc_key, mail_to, mail_address, paper_copies, sms, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    $pdo->exec('DELETE FROM n_doc_distribution');
+    $insert = $pdo->prepare('INSERT INTO n_doc_distribution (id_customer, doc_key, mail_to, mail_address, paper_copies, sms, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
     foreach ($snapshot['cells'] as $c) $insert->execute([$c['id_customer'], $c['doc_key'], $c['mail_to'], $c['mail_address'], $c['paper_copies'], $c['sms'], $c['updated_by'], $c['updated_at']]);
-    $pdo->exec('DELETE FROM tfb_doc_distribution_moment');
-    $insert = $pdo->prepare('INSERT INTO tfb_doc_distribution_moment (doc_key, moment, updated_by, updated_at) VALUES (?, ?, ?, ?)');
+    $pdo->exec('DELETE FROM n_doc_distribution_moment');
+    $insert = $pdo->prepare('INSERT INTO n_doc_distribution_moment (doc_key, moment, updated_by, updated_at) VALUES (?, ?, ?, ?)');
     foreach ($snapshot['moments'] as $m) $insert->execute([$m['doc_key'], $m['moment'], $m['updated_by'], $m['updated_at']]);
-    $restore = $pdo->prepare('UPDATE tfb_mail_rule SET enabled = ?, start_ref_id = ?, enabled_at = ? WHERE id = ?');
+    $restore = $pdo->prepare('UPDATE n_mail_rule SET enabled = ?, start_ref_id = ?, enabled_at = ? WHERE id = ?');
     foreach ($snapshot['rules'] as $r) $restore->execute([$r['enabled'], $r['start_ref_id'], $r['enabled_at'], $r['id']]);
 }
 

@@ -9,7 +9,7 @@ namespace App\Core\Api\Workshop;
  *   API_BASE_URL                  adresse publique de l'API (OpenAPI « servers »)
  *   PRODUCTION_API_CORS_ORIGINS   origines autorisées, séparées par des virgules
  *   R2_PUBLIC_BASE_URL            adresse publique du bucket Cloudflare R2 des photos
- * Les valeurs métier, elles, sont dans tfb_prod_param.
+ * Les valeurs métier, elles, sont dans n_prod_param.
  */
 final class WorkshopConfig
 {

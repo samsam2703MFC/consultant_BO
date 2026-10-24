@@ -70,7 +70,7 @@ class TodayService
 
     /**
      * „Do zrobienia” oznaczone według stanowisk : każda pozycja ma stanowiska odpowiedzialne (kody
-     * tfb_position) ; pozycje stanowiska użytkownika są oznaczone jako jego i idą na początek listy.
+     * n_position) ; pozycje stanowiska użytkownika są oznaczone jako jego i idą na początek listy.
      * @param array<string,string> $positionNames kod => nazwa
      */
     public function markTodo(array $todo, ?string $positionCode, array $positionNames): array

@@ -70,19 +70,19 @@ try {
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
-    foreach (['tfb_prod_param', 'carrier', 'carrier_vehicle', 'tfb_vehicle', 'tfb_tour', 'tfb_tour_vehicle', 'tfb_tour_customer', 'tfb_shipping_assignment', 'customer', 'customer_order',
+    foreach (['n_prod_param', 'carrier', 'carrier_vehicle', 'n_vehicle', 'n_tour', 'n_tour_vehicle', 'n_tour_customer', 'n_shipping_assignment', 'customer', 'customer_order',
                  'customer_order_product', 'final_product', 'palets_delivery', 'document_cmr', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'raw_material',
                  'category_product'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
     $pdo->exec("SET SESSION sql_mode = ''");
-    $pdo->exec("INSERT INTO tfb_prod_param (code, value, default_value, value_type) VALUES
+    $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) VALUES
         ('logistics.mixed_pallets', '1', '1', 'bool'), ('logistics.pallet_tare_kg', '25', '25', 'decimal'), ('logistics.default_pallet_places', '33', '33', 'int'),
         ('planning.default_departure_time', '20:00', '20:00', 'time'), ('planning.loading_time_min', '60', '60', 'int')");
     $pdo->exec("INSERT INTO carrier (id, name, active) VALUES (1, 'Trans', 1), (2, 'Stary', 0)");
     $pdo->exec("INSERT INTO carrier_vehicle (id, id_carrier, regis_num, driver_name, driver_surname) VALUES (1, 1, 'DX 1', 'Jan', 'K'), (2, 1, 'DX 2', '', ''), (3, 1, 'DX 3', '', '')");
-    $pdo->exec("INSERT INTO tfb_vehicle (id_carrier_vehicle, pallet_places, max_load_kg, departure_time, active) VALUES (1, 10, 5000, '18:00:00', 1), (2, 33, NULL, NULL, 1)");
+    $pdo->exec("INSERT INTO n_vehicle (id_carrier_vehicle, pallet_places, max_load_kg, departure_time, active) VALUES (1, 10, 5000, '18:00:00', 1), (2, 33, NULL, NULL, 1)");
     $pdo->exec("INSERT INTO customer (id, name, surname, company, fac_town, fac_country) VALUES
         (1, '', '', 'Sklep A', 'Wrocław', 'PL'), (2, '', '', 'Sklep B', 'Berlin', 'DE'), (3, 'Jan', 'Kowalski', '', 'Opole', 'PL'), (4, '', '', 'Sklep D', 'Łódź', 'PL')");
     $pdo->exec("INSERT INTO final_product (id, name, cpp, cpl, lpp, ppc, weight, active) VALUES
@@ -98,7 +98,7 @@ try {
     $pdo->exec("INSERT INTO customer_order_product (id_order, id_product, quantity_carton) VALUES
         (1, 10, 70), (1, 11, 30), (2, 10, 50), (2, 13, 10), (3, 10, 600), (4, 12, 10), (4, 13, 25), (5, 10, 99), (6, 10, 5)");
     $pdo->exec("INSERT INTO palets_delivery (client, delivery_date, status, id_customer) VALUES ('B', '{$d}', 2, 2), ('B', '{$d}', 2, 2)");
-    $pdo->exec("INSERT INTO tfb_shipping_assignment (ship_date, id_customer, id_carrier_vehicle, stop_order) VALUES ('{$d}', 1, 1, 2)");
+    $pdo->exec("INSERT INTO n_shipping_assignment (ship_date, id_customer, id_carrier_vehicle, stop_order) VALUES ('{$d}', 1, 1, 2)");
     $pdo->exec("INSERT INTO document_cmr (id, id_customer, id_carrier, id_carrier_vehicle) VALUES (1, 3, 1, 3), (2, 3, 1, 2)");
 
     $new = fn() => new LogisticsService(new LogisticsRepository($pdo), new ParamRepository($pdo));
@@ -110,7 +110,7 @@ try {
     $t1 = $service->createTour(['name' => '  Wrocław   Berlin ', 'days' => [1, 2, 3, 4, 5], 'color' => '#AA3300'], 1);
     $service->setTourVehicles($t1, ['vehicle_ids' => [1]]);
     $service->setTourCustomers($t1, ['customers' => [['id' => 2, 'stop' => 1]]]);
-    expectLogi($pdo->query("SELECT CONCAT(name, '|', weekdays, '|', color) FROM tfb_tour WHERE id = {$t1}")->fetchColumn() === 'Wrocław Berlin|31|#aa3300', 'trasa : nazwa, dni pon.–pt., kolor');
+    expectLogi($pdo->query("SELECT CONCAT(name, '|', weekdays, '|', color) FROM n_tour WHERE id = {$t1}")->fetchColumn() === 'Wrocław Berlin|31|#aa3300', 'trasa : nazwa, dni pon.–pt., kolor');
     $day = $service->day($d);
     $c = $day['by_id'];
     expectLogi(count($day['customers']) === 3 && !isset($c[4]), '3 klientów (zamówienie zarchiwizowane i inny dzień pominięte)');
@@ -159,7 +159,7 @@ try {
     $b = $new()->day($d)['by_id'][2];
     expectLogi($b['tour_id'] === null && $b['tour_source'] === 'day' && $b['vehicle_id'] === null, 'B bez trasy tylko na ten dzień');
     $service->assign(['date' => $d, 'customer_id' => 2, 'tour_id' => (string) $t1, 'vehicle_id' => 'auto'], 1);
-    expectLogi((int) $pdo->query("SELECT tour_set FROM tfb_shipping_assignment WHERE ship_date = '{$d}' AND id_customer = 2")->fetchColumn() === 0
+    expectLogi((int) $pdo->query("SELECT tour_set FROM n_shipping_assignment WHERE ship_date = '{$d}' AND id_customer = 2")->fetchColumn() === 0
         && $new()->day($d)['by_id'][2]['tour_source'] === 'tour', 'trasa dnia = trasa klienta : bez wyjątku');
     $t2 = $service->createTour(['name' => 'Opole', 'days' => [2, 6]], 1);
     $service->setTourCustomers($t2, ['customers' => [3, ['id' => 3, 'stop' => '4']]]);
@@ -167,21 +167,21 @@ try {
     expectLogi(array_column($tours['tours'], 'name') === ['Opole', 'Wrocław Berlin'] && $tours['tours'][0]['customers'][0]['stop'] === 4 && $tours['tours'][0]['days'] === 'wt., sob.',
         'lista tras : klienci bez powtórzeń, dni');
     $service->assign(['date' => $d, 'customer_id' => 3, 'tour_id' => $t1, 'vehicle_id' => 'auto', 'stop' => '3', 'remember' => true], 1);
-    expectLogi($pdo->query("SELECT GROUP_CONCAT(CONCAT(id_tour, ':', stop_order)) FROM tfb_tour_customer WHERE id_customer = 3")->fetchColumn() === "{$t1}:3",
+    expectLogi($pdo->query("SELECT GROUP_CONCAT(CONCAT(id_tour, ':', stop_order)) FROM n_tour_customer WHERE id_customer = 3")->fetchColumn() === "{$t1}:3",
         'na stałe w trasie T1 z kolejnością 3 ; usunięty z trasy Opole jeżdżącej też we wtorki');
     $c3 = $new()->day($d)['by_id'][3];
     expectLogi($c3['tour_source'] === 'tour' && $c3['vehicle_source'] === 'tour' && $c3['stop'] === 3, 'klient 3 : trasa i pojazd z trasy');
     $service->assign(['date' => $d, 'customer_id' => 3, 'tour_id' => $t1, 'vehicle_id' => 'auto', 'stop' => '3', 'remember' => false], 1);
-    expectLogi((int) $pdo->query('SELECT COUNT(*) FROM tfb_tour_customer WHERE id_customer = 3')->fetchColumn() === 0
+    expectLogi((int) $pdo->query('SELECT COUNT(*) FROM n_tour_customer WHERE id_customer = 3')->fetchColumn() === 0
         && $new()->day($d)['by_id'][3]['tour_source'] === 'day', 'odznaczone : usunięty z trasy, trasa zostaje na ten dzień');
     $service->setTourCustomers($t2, ['customers' => [['id' => 3, 'stop' => 1]]]);
     $moved = $service->setTourCustomers($t1, ['customers' => [['id' => 2, 'stop' => 1], ['id' => 3, 'stop' => 2]]])['moved'];
     expectLogi($moved === [['customer' => 'Jan Kowalski', 'tour' => 'Opole']]
-        && $pdo->query('SELECT GROUP_CONCAT(id_tour) FROM tfb_tour_customer WHERE id_customer = 3')->fetchColumn() === (string) $t1,
+        && $pdo->query('SELECT GROUP_CONCAT(id_tour) FROM n_tour_customer WHERE id_customer = 3')->fetchColumn() === (string) $t1,
         'klient dodany do trasy : usunięty z trasy jeżdżącej w te same dni (wt.)');
     $service->updateTour($t2, ['days' => [6]], 1);
     expectLogi($service->setTourCustomers($t2, ['customers' => [['id' => 3, 'stop' => 1]]])['moved'] === []
-        && (int) $pdo->query('SELECT COUNT(*) FROM tfb_tour_customer WHERE id_customer = 3')->fetchColumn() === 2, 'inne dni tygodnia : klient w obu trasach');
+        && (int) $pdo->query('SELECT COUNT(*) FROM n_tour_customer WHERE id_customer = 3')->fetchColumn() === 2, 'inne dni tygodnia : klient w obu trasach');
     $service->updateTour($t2, ['days' => [2, 6]], 1);
     expectLogi(count(array_filter($service->tours()['warnings'], fn($w) => str_contains($w, 'Jan Kowalski') && str_contains($w, 'wt.'))) === 1, 'dni trasy zmienione później : ostrzeżenie');
     expectLogi($refused(fn() => $service->createTour(['name' => 'Opole'], 1)), 'nazwa trasy zajęta');
@@ -195,17 +195,17 @@ try {
     expectLogi($refused(fn() => $service->setTourCustomers($t2, ['customers' => [['id' => 1, 'stop' => 100]]])), 'kolejność 1–99');
     expectLogi($refused(fn() => $service->assign(['date' => $d, 'customer_id' => 1, 'tour_id' => 999], 1)), 'nieznana trasa przydziału');
     $service->deleteTour($t2);
-    $pdo->exec("DELETE FROM tfb_tour_customer WHERE id_tour = {$t2}");
+    $pdo->exec("DELETE FROM n_tour_customer WHERE id_tour = {$t2}");
     expectLogi($refused(fn() => $service->updateTour($t2, ['name' => 'Y'], 1)) && count($service->tours()['tours']) === 1, 'trasa usunięta');
     $service->setTourVehicles($t1, ['vehicle_ids' => [1]]);
     $service->setTourCustomers($t1, ['customers' => [['id' => 2, 'stop' => 1]]]);
-    $pdo->exec("DELETE FROM tfb_shipping_assignment WHERE id_customer IN (2, 3)");
+    $pdo->exec("DELETE FROM n_shipping_assignment WHERE id_customer IN (2, 3)");
 
     // Lista pojazdów : tylko w użyciu ; podpowiedź z CMR tylko dla pojazdu w użyciu
-    $pdo->exec('UPDATE tfb_vehicle SET active = 0 WHERE id_carrier_vehicle = 2');
+    $pdo->exec('UPDATE n_vehicle SET active = 0 WHERE id_carrier_vehicle = 2');
     $off = $new()->day($d);
     expectLogi(array_column($off['vehicles'], 'id') === [1] && $off['by_id'][3]['vehicle_id'] === null, 'pojazd nieaktywny : nie na liście i nie podpowiadany');
-    $pdo->exec('UPDATE tfb_vehicle SET active = 1 WHERE id_carrier_vehicle = 2');
+    $pdo->exec('UPDATE n_vehicle SET active = 1 WHERE id_carrier_vehicle = 2');
 
     // Bez palet mieszanych
     (new ParamRepository($pdo))->setValue('logistics.mixed_pallets', '0', 1);
@@ -217,7 +217,7 @@ try {
     $day = $new()->day($d);
     $fleet = array_column($day['fleet'], null, 'id');
     expectLogi($fleet[1]['pallets'] === 3 && !$fleet[1]['over'] && $fleet[2]['pallets'] === 11, 'B przeniesiony na ten dzień do pojazdu 2');
-    expectLogi((int) $pdo->query('SELECT COUNT(*) FROM tfb_tour_customer WHERE id_customer = 2')->fetchColumn() === 1 && $day['by_id'][2]['tour_id'] === $t1, 'trasa klienta bez zmian');
+    expectLogi((int) $pdo->query('SELECT COUNT(*) FROM n_tour_customer WHERE id_customer = 2')->fetchColumn() === 1 && $day['by_id'][2]['tour_id'] === $t1, 'trasa klienta bez zmian');
     $service->assign(['date' => $d, 'customer_id' => 1, 'vehicle_id' => null], 1);
     expectLogi($new()->day($d)['by_id'][1]['vehicle_id'] === null && count($new()->day($d)['unassigned']) === 1, 'klient bez pojazdu na ten dzień (przydział ma pierwszeństwo przed trasą)');
     expectLogi($refused(fn() => $service->assign(['date' => $d, 'customer_id' => 1, 'vehicle_id' => 99], 1)), 'nieznany pojazd odrzucony');
@@ -228,13 +228,13 @@ try {
     expectLogi($refused(fn() => $service->saveVehicle(3, ['pallet_places' => 0], 1)), 'miejsca paletowe > 0');
     expectLogi($refused(fn() => $service->saveVehicle(3, ['pallet_places' => 18, 'departure_time' => '25:00'], 1)), 'zła godzina wyjazdu');
     $service->saveVehicle(3, ['pallet_places' => '18', 'max_load_kg' => '12 000', 'departure_time' => '05:30', 'active' => true], 1);
-    $row = $pdo->query('SELECT * FROM tfb_vehicle WHERE id_carrier_vehicle = 3')->fetch();
+    $row = $pdo->query('SELECT * FROM n_vehicle WHERE id_carrier_vehicle = 3')->fetch();
     expectLogi((int) $row['pallet_places'] === 18 && (int) $row['max_load_kg'] === 12000 && $row['departure_time'] === '05:30:00', 'pojemność pojazdu zapisana');
     expectLogi($refused(fn() => $service->addVehicle(['carrier_id' => 2, 'regis_num' => 'X', 'pallet_places' => 10], 1)), 'nieaktywny przewoźnik odrzucony');
     expectLogi($refused(fn() => $service->addVehicle(['carrier_id' => 1, 'regis_num' => ' ', 'pallet_places' => 10], 1)), 'numer rejestracyjny wymagany');
     $id = $service->addVehicle(['carrier_id' => 1, 'regis_num' => 'DX 99', 'pallet_places' => '33', 'driver_name' => 'Ola'], 1);
     expectLogi($pdo->query("SELECT regis_num FROM carrier_vehicle WHERE id = {$id}")->fetchColumn() === 'DX 99'
-        && (int) $pdo->query("SELECT pallet_places FROM tfb_vehicle WHERE id_carrier_vehicle = {$id}")->fetchColumn() === 33, 'nowy pojazd w ERP z pojemnością');
+        && (int) $pdo->query("SELECT pallet_places FROM n_vehicle WHERE id_carrier_vehicle = {$id}")->fetchColumn() === 33, 'nowy pojazd w ERP z pojemnością');
 
     // Karta produktu
     expectLogi($refused(fn() => $service->savePalletData(12, ['cpl' => 10, 'lpp' => 5, 'cpp' => 0])), 'kartony na paletę > 0');

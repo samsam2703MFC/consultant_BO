@@ -24,13 +24,13 @@ try {
     echo "product_media_producer_test: SKIPPED (no database: {$e->getMessage()})\n";
     exit(0);
 }
-if (!$pdo->query("SHOW TABLES LIKE 'tfb_product_media'")->fetchColumn()) {
+if (!$pdo->query("SHOW TABLES LIKE 'n_product_media'")->fetchColumn()) {
     echo "product_media_producer_test: SKIPPED (run php Bin/tfb_migrate.php apply first)\n";
     exit(0);
 }
-$product = (int) $pdo->query('SELECT id FROM final_product WHERE id NOT IN (SELECT id_final_product FROM tfb_product_media) ORDER BY id LIMIT 1')->fetchColumn();
-$component = (int) $pdo->query('SELECT id FROM product_recipe WHERE id_type IN (1, 2) AND id NOT IN (SELECT id_recipe FROM tfb_recipe_producer) ORDER BY id LIMIT 1')->fetchColumn();
-$group = (int) $pdo->query('SELECT id FROM tfb_prod_group WHERE active = 1 ORDER BY id LIMIT 1')->fetchColumn();
+$product = (int) $pdo->query('SELECT id FROM final_product WHERE id NOT IN (SELECT id_final_product FROM n_product_media) ORDER BY id LIMIT 1')->fetchColumn();
+$component = (int) $pdo->query('SELECT id FROM product_recipe WHERE id_type IN (1, 2) AND id NOT IN (SELECT id_recipe FROM n_recipe_producer) ORDER BY id LIMIT 1')->fetchColumn();
+$group = (int) $pdo->query('SELECT id FROM n_prod_group WHERE active = 1 ORDER BY id LIMIT 1')->fetchColumn();
 if (!$product || !$component || !$group) { echo "product_media_producer_test: SKIPPED (no data)\n"; exit(0); }
 
 $media = $container->get(ProductMediaService::class);
@@ -59,7 +59,7 @@ try {
     $media->deleteImage($product, 2);
     expectMedia($media->forKiosk($product, false)['steps'][0]['src'] === null, 'usunięte zdjęcie, opis zostaje');
     $media->save($product, 3, ['caption' => '', 'caption_fr' => ''], null);
-    expectMedia(!$pdo->query("SELECT 1 FROM tfb_product_media WHERE id_final_product = {$product} AND slot = 3")->fetchColumn(), 'pusty slot znika');
+    expectMedia(!$pdo->query("SELECT 1 FROM n_product_media WHERE id_final_product = {$product} AND slot = 3")->fetchColumn(), 'pusty slot znika');
 
     $producers->set($component, $group, null);
     expectMedia(($producers->forRecipes([$component])[$component]['id'] ?? null) === $group, 'grupa przygotowująca zapisana');
@@ -68,8 +68,8 @@ try {
     $producers->set($component, null, null);
     expectMedia($producers->forRecipes([$component]) === [], 'grupa usunięta');
 } finally {
-    $pdo->exec("DELETE FROM tfb_product_media WHERE id_final_product = {$product}");
-    $pdo->exec("DELETE FROM tfb_recipe_producer WHERE id_recipe = {$component}");
+    $pdo->exec("DELETE FROM n_product_media WHERE id_final_product = {$product}");
+    $pdo->exec("DELETE FROM n_recipe_producer WHERE id_recipe = {$component}");
 }
 
 $root = __DIR__ . '/..';

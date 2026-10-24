@@ -4,10 +4,10 @@ namespace App\Repositories\Dashboard;
 use App\Repositories\Analysis\WdtSalesRepository;
 use App\Repositories\Workshop\WorkshopRepository;
 
-/** Actions de développement du CA par groupe (tfb_growth_action) et données ERP pour les proposer. */
+/** Actions de développement du CA par groupe (n_growth_action) et données ERP pour les proposer. */
 final class GrowthActionRepository extends WorkshopRepository
 {
-    protected string $table = 'tfb_growth_action';
+    protected string $table = 'n_growth_action';
     protected array $writable = ['id_section', 'title', 'id_final_product', 'product_name', 'pieces_per_shop_month', 'shops', 'selling_price_eur',
         'target_margin_pct', 'investment_eur', 'start_month', 'status', 'owner_user', 'notes', 'created_by'];
 
@@ -15,7 +15,7 @@ final class GrowthActionRepository extends WorkshopRepository
     {
         return $this->all(
             "SELECT a.*, fp.name AS erp_product_name, fp.ppc, fp.pre_calculated_raw_price_per_carton, u.displayed_name AS owner_name
-             FROM tfb_growth_action a
+             FROM n_growth_action a
              LEFT JOIN final_product fp ON fp.id = a.id_final_product
              LEFT JOIN user u ON u.id = a.owner_user"
             . ($sectionId !== null ? ' WHERE a.id_section = ?' : '')

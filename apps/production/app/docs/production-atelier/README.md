@@ -8,7 +8,7 @@ Ce document suit les phases P1 → P7. **Phase livrée : P1** (audit, schéma, m
 | Sujet | Décision |
 |---|---|
 | Où vit le module | Dans l'ERP de production : produits, recettes, commandes et stock y sont déjà. |
-| Employés, postes, niveaux | Le panel TFB est maître (identité, postes, niveaux) ; le personnel de Wrocław y est. L'ERP garde `production_employee`, relié au panel par `tfb_prod_employee.panel_employee_id`. Le niveau (`level_order`, `level_name`) est une copie du panel, saisissable tant que la synchronisation n'existe pas. |
+| Employés, postes, niveaux | Le panel TFB est maître (identité, postes, niveaux) ; le personnel de Wrocław y est. L'ERP garde `production_employee`, relié au panel par `n_prod_employee.panel_employee_id`. Le niveau (`level_order`, `level_name`) est une copie du panel, saisissable tant que la synchronisation n'existe pas. |
 | Produits congelés | Les produits partent congelés : `never_frozen = 0` par défaut. Le contrôle « jamais congelé ⇒ jamais MTS » existe quand même, en base, en API et (P2) en UI. |
 | Jetons | L'ERP émet ses propres JWT (HS256, accès 15 min, renouvellement 30 jours à usage unique). *Par défaut, en attente de confirmation.* |
 | Groupes | Les 6 groupes du cahier, chacun relié si besoin à une section de coûts de l'ERP (`production_sections`). *Par défaut.* |
@@ -25,14 +25,14 @@ Ce document suit les phases P1 → P7. **Phase livrée : P1** (audit, schéma, m
 - commandes : `customer_order` ;
 - comptes : la table `user` de l'ERP.
 
-**Créé (préfixe `tfb_`)**
+**Créé (préfixe `n_`, « nouveau » : tables ajoutées à la base `erp` pendant le développement ; préfixe `tfb_` jusqu’à la migration 069)**
 
 | Domaine | Tables |
 |---|---|
-| Socle | `tfb_prod_param` (toutes les valeurs [PARAM]), `tfb_prod_role`, `tfb_prod_role_permission`, `tfb_prod_user_role`, `tfb_prod_refresh_token`, `tfb_prod_login_attempt`, `tfb_prod_audit_log`, `tfb_schema_migration` |
-| Référentiels | `tfb_prod_group`, `tfb_prod_workstation`, `tfb_prod_workstation_shift`, `tfb_prod_shift_template`, `tfb_prod_team`, `tfb_prod_team_member`, `tfb_prod_employee` |
-| Produit | `tfb_prod_item` (article planifiable = produit ou semi-fini existant), `tfb_prod_product_settings`, `tfb_prod_bom_loss` (pertes par ligne de nomenclature), `tfb_prod_routing_step`, `tfb_prod_routing_alternative` |
-| Planification | `tfb_prod_forecast`, `tfb_prod_plan`, `tfb_prod_plan_line`, `tfb_prod_order` (OF), `tfb_prod_order_demand`, `tfb_prod_operation`, `tfb_prod_time_log` |
+| Socle | `n_prod_param` (toutes les valeurs [PARAM]), `n_prod_role`, `n_prod_role_permission`, `n_prod_user_role`, `n_prod_refresh_token`, `n_prod_login_attempt`, `n_prod_audit_log`, `n_schema_migration` |
+| Référentiels | `n_prod_group`, `n_prod_workstation`, `n_prod_workstation_shift`, `n_prod_shift_template`, `n_prod_team`, `n_prod_team_member`, `n_prod_employee` |
+| Produit | `n_prod_item` (article planifiable = produit ou semi-fini existant), `n_prod_product_settings`, `n_prod_bom_loss` (pertes par ligne de nomenclature), `n_prod_routing_step`, `n_prod_routing_alternative` |
+| Planification | `n_prod_forecast`, `n_prod_plan`, `n_prod_plan_line`, `n_prod_order` (OF), `n_prod_order_demand`, `n_prod_operation`, `n_prod_time_log` |
 
 **Contrôles en base (CHECK) :**
 - jamais congelé ⇒ pas de MTS ;

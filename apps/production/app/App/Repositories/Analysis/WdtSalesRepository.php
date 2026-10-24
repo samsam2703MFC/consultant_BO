@@ -9,7 +9,7 @@ use App\Repositories\Workshop\WorkshopRepository;
  * Jedna definicja sprzedaży z dokumentów WDT dla wszystkich stron (Analiza sprzedaży, Rentowność, eksport
  * i rentowność klienta, koszty, magazyn, planowanie) :
  *  - data sprzedaży = document_wdt.established_date (tekst RRRR-MM-DD), zakres od–do włącznie ;
- *  - WDT zastąpione innym (tfb_wdt_superseded) nigdy nie liczą się ;
+ *  - WDT zastąpione innym (n_wdt_superseded) nigdy nie liczą się ;
  *  - wartość = linie dokumentu (ilość × cena kartonu, netto), nigdy nagłówek total_net ;
  *  - wartość w EUR : dokument w PLN dzielony przez kurs euro z ustawień firmy ;
  *  - linie produktu usuniętego z kartoteki zostają w sumach (« Nieznany produkt »).
@@ -34,7 +34,7 @@ final class WdtSalesRepository extends WorkshopRepository
                        UPPER(w.currency) AS currency
                 FROM document_wdt w
                 JOIN document_wdt_product p ON p.id_document_wdt = w.id
-                WHERE NOT EXISTS (SELECT 1 FROM tfb_wdt_superseded sup WHERE sup.id_document_wdt = w.id)";
+                WHERE NOT EXISTS (SELECT 1 FROM n_wdt_superseded sup WHERE sup.id_document_wdt = w.id)";
     }
 
     /**

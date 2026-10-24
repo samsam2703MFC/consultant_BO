@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Request;
 /** Ustawienia › Pozostałe : operacje na recepturach i parametry ogólne (zapasy produktów na magazynie). */
 class SettingsController extends BaseController
 {
-    /** Parametry zapasów (tfb_prod_param) : kod => [min, maks, liczba całkowita]. */
+    /** Parametry zapasów (n_prod_param) : kod => [min, maks, liczba całkowita]. */
     private const STOCK_PARAMS = [
         'stock.suggest_weeks' => [1, 52, true],
         'stock.suggest_min_weeks' => [0, 26, false],

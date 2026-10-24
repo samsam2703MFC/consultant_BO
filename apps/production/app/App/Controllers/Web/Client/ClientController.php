@@ -91,7 +91,7 @@ class ClientController extends BaseController
             $newData = $_POST;
 
             $this->errors = $this->clientService->validate($newData);
-            // Opcje « Strona klienta » (tfb_customer_space) : sprawdzone przed zapisem klienta.
+            // Opcje « Strona klienta » (n_customer_space) : sprawdzone przed zapisem klienta.
             try {
                 if (empty($this->errors)) $this->clientSpaceService->saveSettings((int) $id, $newData, user('displayed_name') ?: user('login') ?: null);
             } catch (\App\Exceptions\CustomException $e) {

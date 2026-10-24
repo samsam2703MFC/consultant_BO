@@ -4,7 +4,7 @@ declare(strict_types=1);
 /*
  * Ceny w sklepach (marże, Belgia) : konto API panelu = to samo co w cockpicie konsultanta.
  * Czyta na serwerze konto cockpitu (tabela ceo_app_setting, klucz panelApi ; potem 'panelApi' z config.php cockpitu ;
- * potem PANEL_API_PHONE / _PASSWORD / _BASE) i zapisuje je w tfb_store_price_config, hasło zaszyfrowane.
+ * potem PANEL_API_PHONE / _PASSWORD / _BASE) i zapisuje je w n_store_price_config, hasło zaszyfrowane.
  * Konto wpisane w ERP ręcznie nie jest nadpisywane. Hasło nigdy nie jest wypisywane (tylko końcówka telefonu).
  *
  *   COCKPIT_CFG=/var/www/consulant_bo/config/config.php php Bin/store_price_cockpit_account.php

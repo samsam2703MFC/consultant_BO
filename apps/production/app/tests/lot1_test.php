@@ -43,8 +43,8 @@ try {
 $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
 try {
-    foreach (['final_product', 'final_product_customer_price', 'tfb_product_price_change', 'cost_month', 'document_wdt', 'document_wdt_product',
-                 'tfb_wdt_superseded', 'carton_stock', 'raw_material', 'unit', 'supplier', 'tfb_material_nutrition_source', 'production_sections',
+    foreach (['final_product', 'final_product_customer_price', 'n_product_price_change', 'cost_month', 'document_wdt', 'document_wdt_product',
+                 'n_wdt_superseded', 'carton_stock', 'raw_material', 'unit', 'supplier', 'n_material_nutrition_source', 'production_sections',
                  'category_product', 'erp_company_other_settings'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
@@ -63,13 +63,13 @@ try {
     expectLot((float) $pdo->query('SELECT standard_price FROM final_product WHERE id = 10')->fetchColumn() === 22.4, 'cena standardowa zapisana');
     expectLot($client(1, 10) === 22.4 && $client(3, 10) === 22.4 && $client(2, 10) === 18.5 && $client(4, 10) === 0.0 && $client(1, 11) === 30.0,
         'klienci 1 i 3 (cena = standardowa) idą za nią ; 18,50 i 0 zostają ; inny produkt bez zmian');
-    $log = $pdo->query('SELECT id_customer, old_price, new_price, source, changed_by FROM tfb_product_price_change ORDER BY id')->fetchAll();
+    $log = $pdo->query('SELECT id_customer, old_price, new_price, source, changed_by FROM n_product_price_change ORDER BY id')->fetchAll();
     expectLot(count($log) === 3 && $log[0]['id_customer'] === null && (float) $log[0]['old_price'] === 20.0 && (float) $log[0]['new_price'] === 22.4
         && array_map('intval', array_column(array_slice($log, 1), 'id_customer')) === [1, 3] && $log[0]['source'] === 'general_price_list' && (int) $log[2]['changed_by'] === 7,
         'historia : cena standardowa + 2 klientów, źródło i użytkownik');
     expectLot(str_contains($r['message'], '20,00 → 22,40') && str_contains($r['message'], 'ceną standardową: 2') && str_contains($r['message'], 'wynegocjowane bez zmian: 2'), 'komunikat z liczbami');
     $same = $prices->change(10, 22.4, 'category_margin', null);
-    expectLot($same['followers'] === 0 && (int) $pdo->query('SELECT COUNT(*) FROM tfb_product_price_change')->fetchColumn() === 3, 'ta sama cena : nic do zapisania');
+    expectLot($same['followers'] === 0 && (int) $pdo->query('SELECT COUNT(*) FROM n_product_price_change')->fetchColumn() === 3, 'ta sama cena : nic do zapisania');
     $refused = function (callable $fn): bool {
         try { $fn(); return false; } catch (CustomException) { return true; }
     };
@@ -81,7 +81,7 @@ try {
     $pdo->exec("INSERT INTO cost_month (id, year, month) VALUES (1, 2026, 9), (2, 2026, 10)");
     $pdo->exec("INSERT INTO document_wdt (id, doc_num, id_customer, established_date) VALUES (1, 'W1', 1, '2026-09-10'), (2, 'W2', 1, '2026-09-20'), (3, 'W3', 1, '2026-10-02')");
     $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, quantity) VALUES (1, 10, 100), (1, 11, 40), (2, 12, 25), (2, 11, 5), (3, 11, 7)");
-    $pdo->exec("INSERT INTO tfb_wdt_superseded (id_document_wdt) VALUES (2)");
+    $pdo->exec("INSERT INTO n_wdt_superseded (id_document_wdt) VALUES (2)");
     $wdt = new WdtSalesRepository($pdo);
     $bySection = fn(string $from, string $to) => array_map('intval', array_column($wdt->sales($from, $to, [], ['section']), 'cartons', 'section_id'));
     expectLot($bySection('2026-09-01', '2026-09-30') == [1 => 100, 2 => 40], 'wrzesień : dział 1 = 100, dział 2 = 40 kartonów (WDT zastąpiony pominięty)');
@@ -101,7 +101,7 @@ try {
     $pdo->exec("INSERT INTO unit (id, name) VALUES (1, 'g')");
     $pdo->exec("INSERT INTO raw_material (id, name, waste_perc, id_unit, id_category, package_size_in_base_unit, price_per_unit, energy_100g, fat_100g, saturated_fat_100g,
         carbohydrates_100g, sugars_100g, salt_100g, fiber_100g, proteins_100g, is_part_of_package) VALUES (5, 'Cukier', 100, 1, 3, 1000, 0.004, 400, 0, 0, 100, 100, 0.01, 0, 0, 0)");
-    $pdo->exec("INSERT INTO tfb_material_nutrition_source (id_raw_material, source, ref, label, sample, applied_at) VALUES (5, 'off', 'en:sugars', 'Cukry', 40, NOW())");
+    $pdo->exec("INSERT INTO n_material_nutrition_source (id_raw_material, source, ref, label, sample, applied_at) VALUES (5, 'off', 'en:sugars', 'Cukry', 40, NOW())");
     $materials = new MaterialService(new MaterialRepository($pdo), new NutritionRepository($pdo));
     // Jak na serwerze (DB_SQL_MODE strict) : puste pola BDO formularza nie mogą blokować zapisu
     $pdo->exec("SET SESSION sql_mode = 'STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
@@ -112,7 +112,7 @@ try {
     expectLot($materials->validate(['salt_100g' => '-1'] + $form) === false && $materials->validate(['fat_100g' => ''] + $form) === false, 'nowy surowiec : wartość ujemna albo pusta odrzucona');
     expectLot($materials->validateUpdate(['fat_100g' => ''] + $form) === true && $materials->validateUpdate(['fat_100g' => 'x'] + $form) === false, 'edycja : puste = 0, nieliczbowe odrzucone');
     $nutrition = fn() => $pdo->query('SELECT energy_100g, salt_100g, is_part_of_package FROM raw_material WHERE id = 5')->fetch();
-    $hasSource = fn() => (bool) $pdo->query('SELECT COUNT(*) FROM tfb_material_nutrition_source WHERE id_raw_material = 5')->fetchColumn();
+    $hasSource = fn() => (bool) $pdo->query('SELECT COUNT(*) FROM n_material_nutrition_source WHERE id_raw_material = 5')->fetchColumn();
     $materials->setPackagePart(5, 1);
     $row = $nutrition();
     expectLot((int) $row['is_part_of_package'] === 1 && (float) $row['energy_100g'] === 400.0 && (float) $row['salt_100g'] === 0.01 && $hasSource(), 'przełącznik opakowania : wartości odżywcze i źródło bez zmian');
