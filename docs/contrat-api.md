@@ -3024,7 +3024,7 @@ courriels, par code et par langue fr, nl, en, de). Les types de visite (`visites
 visites (`viHorloge`, `bin/visites_cron.sh`) envoie les ordres du jour, rappelle ou envoie tel quel les rapports en
 retard (`delais.rapportTard`) et relance les rapports pas lus.
 
-`voit` : rapports, points, prochaine, msp, scoring (faux par défaut), journalier, journal. `dashboard/suivi.html?shop=`
+`voit` : rapports, points, prochaine, msp, scoring, journalier, journal — tout est vrai par défaut. `dashboard/suivi.html?shop=`
 (l'ancienne page « Mon suivi ») redirige vers `suivi/?shop=&jeton=&apercu=1` pour une session du cockpit (par
 `GET /suivi/lien`) ; sans session, elle dit au franchisé de demander son lien.
 

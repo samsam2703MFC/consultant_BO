@@ -106,7 +106,7 @@ function suReglesDefaut(): array
         'admins' => [],
         'delais' => ['prepJours' => 2, 'odjAuto' => true, 'odjJours' => 2, 'rapportHeures' => 48, 'rapportTard' => 'rappel',
             'p0' => 2, 'p1' => 7, 'p2' => 14, 'validationHeures' => 24, 'relanceLuJours' => 3],
-        'voit' => ['rapports' => true, 'points' => true, 'prochaine' => true, 'msp' => true, 'scoring' => false, 'journalier' => true, 'journal' => true],
+        'voit' => ['rapports' => true, 'points' => true, 'prochaine' => true, 'msp' => true, 'scoring' => true, 'journalier' => true, 'journal' => true],
     ];
 }
 
