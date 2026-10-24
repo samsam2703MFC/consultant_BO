@@ -129,14 +129,26 @@ function svErreur(array $r): string
 // 24/10/2026 11:03 et 11:14 : le jeton ERP ne s'enregistre plus (INSERT ceo_app_setting → « Lock wait timeout
 // exceeded »). Qui tient le verrou ? Processus, transactions ouvertes, verrous de métadonnées — rien n'est tué ici.
 svTitre('verrous de la base du cockpit (lecture seule)');
+// Une requête relue peut porter le jeton ERP qu'elle enregistre : il ne s'imprime pas.
+function svSansJeton(string $q): string { return preg_replace('/(erpAdminToken\'\s*,\s*\').*/s', '$1…', $q); }
 try {
     foreach (Db::rows("SELECT ID, USER, COMMAND, TIME, STATE, LEFT(COALESCE(INFO, ''), 160) AS INFO FROM information_schema.PROCESSLIST WHERE COMMAND <> 'Sleep' OR TIME > 300 ORDER BY TIME DESC LIMIT 25") as $r) {
-        printf("  proc #%-8s %-12s %-8s %6ss  %-28s %s\n", $r['ID'], $r['USER'], $r['COMMAND'], $r['TIME'], mb_substr((string) $r['STATE'], 0, 28), preg_replace('/\s+/', ' ', (string) $r['INFO']));
+        printf("  proc #%-8s %-12s %-8s %6ss  %-28s %s\n", $r['ID'], $r['USER'], $r['COMMAND'], $r['TIME'], mb_substr((string) $r['STATE'], 0, 28), svSansJeton(preg_replace('/\s+/', ' ', (string) $r['INFO'])));
     }
-} catch (Throwable $e) { echo '  processus illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n"; }
+} catch (Throwable $e) {
+    echo '  processus illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n";
+    // information_schema passe par une table temporaire ; SHOW PROCESSLIST, non (11:20 : « /tmp/#sql… is full »).
+    try {
+        foreach (Db::rows('SHOW FULL PROCESSLIST') as $r) {
+            if (($r['Command'] ?? '') === 'Sleep' && (int) ($r['Time'] ?? 0) <= 300) { continue; }
+            printf("  proc #%-8s %-12s %-8s %6ss  %-28s %s\n", $r['Id'], $r['User'], $r['Command'], $r['Time'], mb_substr((string) $r['State'], 0, 28), svSansJeton(mb_substr(preg_replace('/\s+/', ' ', (string) $r['Info']), 0, 160)));
+        }
+    } catch (Throwable $e2) { echo '  SHOW PROCESSLIST illisible : ', mb_substr($e2->getMessage(), 0, 160), "\n"; }
+}
 try {
     foreach (Db::rows("SELECT trx_id, trx_state, trx_started, TIMESTAMPDIFF(SECOND, trx_started, NOW()) AS age, trx_mysql_thread_id, trx_rows_locked, trx_tables_locked, LEFT(COALESCE(trx_query, ''), 160) AS q FROM information_schema.INNODB_TRX ORDER BY trx_started LIMIT 20") as $r) {
-        printf("  trx %s %-10s depuis %s (%ss) · thread %s · %s lignes / %s tables verrouillées · %s\n", $r['trx_id'], $r['trx_state'], $r['trx_started'], $r['age'], $r['trx_mysql_thread_id'], $r['trx_rows_locked'], $r['trx_tables_locked'], preg_replace('/\s+/', ' ', (string) $r['q']));
+        if ((int) $r['age'] > 300 && preg_match('/^\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i', (string) $r['q'])) { $bloquees = ($bloquees ?? 0) + 1; }
+        printf("  trx %s %-10s depuis %s (%ss) · thread %s · %s lignes / %s tables verrouillées · %s\n", $r['trx_id'], $r['trx_state'], $r['trx_started'], $r['age'], $r['trx_mysql_thread_id'], $r['trx_rows_locked'], $r['trx_tables_locked'], svSansJeton(preg_replace('/\s+/', ' ', (string) $r['q'])));
     }
 } catch (Throwable $e) { echo '  transactions illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n"; }
 try {
@@ -144,6 +156,36 @@ try {
         printf("  verrou de métadonnées %s %s %s (thread %s)\n", $r['OBJECT_NAME'], $r['LOCK_TYPE'], $r['LOCK_STATUS'], $r['OWNER_THREAD_ID']);
     }
 } catch (Throwable $e) { echo '  verrous de métadonnées illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n"; }
+
+// ── 00b. Le disque du serveur (lecture seule) ────────────────────────────────
+// 11:20 : « The table '/tmp/#sql…' is full » et cinq écritures sans rapport bloquées en RUNNING depuis 7 à 20 min —
+// la signature d'un disque plein (MySQL attend qu'on libère de la place). Où est la place ? Rien n'est effacé ici.
+svTitre('disque du serveur (lecture seule)');
+$sh = static function (string $cmd): string { return trim((string) shell_exec('timeout 90 sh -c ' . escapeshellarg($cmd) . ' 2>&1')); };
+echo preg_replace('/^/m', '  ', $sh('df -hP / /tmp /var /var/lib/mysql /var/log')), "\n";
+echo preg_replace('/^/m', '  ', $sh('df -iP / /tmp')), "\n";
+try {
+    foreach (Db::rows("SHOW VARIABLES WHERE Variable_name IN ('datadir', 'tmpdir', 'log_bin', 'log_bin_basename', 'binlog_expire_logs_seconds', 'expire_logs_days', 'max_binlog_size', 'general_log', 'general_log_file', 'slow_query_log_file', 'log_error')") as $r) {
+        printf("  mysql %-28s %s\n", $r['Variable_name'], $r['Value']);
+    }
+} catch (Throwable $e) { echo '  variables MySQL illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n"; }
+try {
+    $logs = Db::rows('SHOW BINARY LOGS');
+    $total = array_sum(array_map(static fn ($r) => (int) ($r['File_size'] ?? 0), $logs));
+    printf("  journaux binaires : %d fichier(s), %.1f Go\n", count($logs), $total / 1e9);
+} catch (Throwable $e) { echo '  journaux binaires illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n"; }
+echo "  les plus gros dossiers (même disque) :\n";
+echo preg_replace('/^/m', '    ', $sh('du -xh -d 2 / 2>/dev/null | sort -rh | head -25')), "\n";
+echo "  les plus gros fichiers (> 200 Mo, même disque) :\n";
+echo preg_replace('/^/m', '    ', $sh("find / -xdev -type f -size +200M -printf '%s\\t%TY-%Tm-%Td\\t%p\\n' 2>/dev/null | sort -rn | head -25 | awk -F'\\t' '{ printf \"%7.1f Go  %s  %s\\n\", \$1/1e9, \$2, \$3 }'")), "\n";
+echo "  /tmp, ce qui pèse :\n";
+echo preg_replace('/^/m', '    ', $sh('du -xsh /tmp/* /tmp/.[!.]* 2>/dev/null | sort -rh | head -15')), "\n";
+$plein = (int) trim((string) shell_exec("df -P / /tmp | awk 'NR > 1 { gsub(\"%\", \"\", \$5); if (\$5 > m) m = \$5 } END { print m + 0 }'"));
+if ($plein >= 98 || ($bloquees ?? 0) > 0) {
+    printf("\n  ⇒ disque à %d %% (/ ou /tmp), %d écriture(s) bloquée(s) depuis plus de 5 min : la base n'écrit plus.\n"
+        . "    Sonde arrêtée ici, sans ajouter d'écriture bloquée (le jeton ERP s'enregistre dans la base).\n", $plein, $bloquees ?? 0);
+    exit(2);
+}
 
 // ── 0. Le compte ─────────────────────────────────────────────────────────────
 svTitre('compte admin ERP du cockpit');
