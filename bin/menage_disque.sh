@@ -14,11 +14,11 @@
 #   bash bin/menage_disque.sh --mysql          relance MySQL s'il refuse les connexions (« Too many connections »)
 #                                              et que le disque a de nouveau de la place
 #
-# Ce que le ménage retire : le cache apt ; les journaux systemd au-delà de 100 Mo ; les journaux
-# tournés de /var/log de plus de 7 jours ; les journaux du cockpit au-delà de 50 Mo (on garde les
+# Ce que le ménage retire : le cache apt ; les journaux systemd au-delà de 200 Mo ; les journaux
+# tournés de /var/log de plus de 3 jours ; les journaux du cockpit au-delà de 50 Mo (on garde les
 # 5 000 dernières lignes) ; les caches de pip, composer, npm, yarn et node-gyp de root ; les images
 # et le cache de construction Docker inutilisés depuis 7 jours (jamais un conteneur ni un volume) ;
-# les anciennes révisions des snaps ; les binlogs MySQL de plus de 2 jours (seulement sans réplica) ;
+# les anciennes révisions des snaps ; les binlogs MySQL de plus de 3 jours (seulement sans réplica) ;
 # les fichiers de /tmp de plus de 2 jours. Hors relevé, il règle aussi la rétention des binlogs à 3 jours.
 # MySQL est piloté par le compte de maintenance d'Ubuntu (/etc/mysql/debian.cnf) : root a un mot de passe.
 #
@@ -58,10 +58,16 @@ if [[ "$avant" -ge "$SEUIL" || "$FORCE" -eq 1 || "$RELEVE" -eq 1 ]]; then
     log "Les plus gros dans ${d} :"
     du -xh --max-depth=1 "$d" 2>/dev/null | sort -rh | sed -n '2,7p' | sed 's/^/    /'
   done
+  log "Fichiers de plus de 200 Mo :"
+  find / -xdev -type f -size +200M -printf '%s\t%p\n' 2>/dev/null | sort -rn | head -15 | awk -F'\t' '{ printf "    %d Mo\t%s\n", $1 / 1048576, $2 }' || true
   datadir="$(mysqladm -N -e 'SELECT @@datadir' 2>/dev/null || true)"
   if [[ -n "$datadir" ]]; then
     bl="$(mysqladm -N -e 'SHOW BINARY LOGS' 2>/dev/null | awk '{ s += $2 } END { if (NR) printf "%d binlog(s), %.0f Mo", NR, s / 1048576 }')"
     log "MySQL : datadir ${datadir}${bl:+ · $bl}"
+    mysqladm -N -e "SELECT table_schema, ROUND(SUM(data_length + index_length) / 1048576) FROM information_schema.tables GROUP BY table_schema ORDER BY 2 DESC LIMIT 8" 2>/dev/null \
+      | awk '{ printf "    base %s : %s Mo\n", $1, $2 }' || true
+  elif command -v mysql >/dev/null 2>&1; then
+    warn "MySQL : pas d'accès administrateur (root, debian.cnf) — binlogs non relevés ni purgés."
   fi
   if command -v docker >/dev/null 2>&1; then
     log "Docker :"; docker system df 2>/dev/null | sed 's/^/    /' || true
@@ -73,8 +79,8 @@ fi
 if [[ "$RELEVE" -eq 0 && ( "$avant" -ge "$SEUIL" || "$FORCE" -eq 1 ) ]]; then
   log "Ménage (seuil ${SEUIL} %, disque à ${avant} %)…"
   apt-get clean >/dev/null 2>&1 || true
-  journalctl --vacuum-size=100M >/dev/null 2>&1 || true
-  find /var/log -xdev -type f \( -name '*.gz' -o -name '*.[0-9]' -o -name '*.old' -o -name '*.xz' \) -mtime +7 -delete 2>/dev/null || true
+  journalctl --vacuum-size=200M >/dev/null 2>&1 || true
+  find /var/log -xdev -type f \( -name '*.gz' -o -name '*.[0-9]' -o -name '*.old' -o -name '*.xz' \) -mtime +3 -delete 2>/dev/null || true
   for f in /var/log/cockpit-*.log; do
     [[ -f "$f" ]] || continue
     if [[ "$(stat -c %s "$f" 2>/dev/null || echo 0)" -gt 52428800 ]]; then
@@ -95,7 +101,7 @@ if [[ "$RELEVE" -eq 0 && ( "$avant" -ge "$SEUIL" || "$FORCE" -eq 1 ) ]]; then
   # Les binlogs ne servent qu'à un réplica ou à une restauration point par point : aucun réplica ici.
   if mysqladm -N -e 'SELECT 1' >/dev/null 2>&1; then
     if [[ -z "$(mysqladm -N -e 'SHOW REPLICAS' 2>/dev/null || mysqladm -N -e 'SHOW SLAVE HOSTS' 2>/dev/null || true)" ]]; then
-      mysqladm -e 'PURGE BINARY LOGS BEFORE NOW() - INTERVAL 2 DAY' >/dev/null 2>&1 || true
+      mysqladm -e 'PURGE BINARY LOGS BEFORE NOW() - INTERVAL 3 DAY' >/dev/null 2>&1 || true
     fi
   fi
   find /tmp -xdev -maxdepth 1 -type f -mtime +2 -delete 2>/dev/null || true

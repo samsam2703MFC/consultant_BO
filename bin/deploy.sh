@@ -45,7 +45,7 @@ fi
 # --- 0. Disque -------------------------------------------------------------
 # Un disque plein casse tout (apt, MySQL, sessions PHP : l'API répond 503). Relevé à chaque livraison ;
 # à 90 % ou plus, ménage sans toucher aux données (bin/menage_disque.sh : caches, journaux tournés,
-# images Docker inutilisées, binlogs MySQL de plus de 2 jours…), puis relance de MySQL s'il refusait
+# images Docker inutilisées, binlogs MySQL de plus de 3 jours…), puis relance de MySQL s'il refusait
 # les connexions. Sous 300 Mo libres après le ménage, la livraison s'arrête AVANT de copier quoi que ce
 # soit : le site garde sa version précédente, au lieu d'une copie à moitié écrite.
 libre_disque="$(bash "$REPO_SRC/bin/menage_disque.sh" --seuil 90 --mysql | tee /dev/stderr | sed -n 's/^LIBRE_MO=//p' | tail -1)"

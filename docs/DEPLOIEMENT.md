@@ -277,10 +277,10 @@ Le 24/10/2026, le disque de 25 Go était plein à 100 % : MySQL n'écrivait plus
 
 Le 24/10/2026, les binlogs de MySQL pesaient 4 Go (30 jours gardés par défaut) : le ménage règle leur
 rétention à 3 jours. MySQL s'administre avec le compte de maintenance d'Ubuntu (`/etc/mysql/debian.cnf`),
-root y ayant un mot de passe. Le ménage ne retire que ce qui se recrée : cache apt, journaux systemd au-delà de 100 Mo, journaux tournés
-de plus de 7 jours, journaux du cockpit au-delà de 50 Mo (les 5 000 dernières lignes restent), caches pip,
+root y ayant un mot de passe. Le ménage ne retire que ce qui se recrée : cache apt, journaux systemd au-delà de 200 Mo, journaux tournés
+de plus de 3 jours, journaux du cockpit au-delà de 50 Mo (les 5 000 dernières lignes restent), caches pip,
 composer, npm, yarn et node-gyp de root, images et cache de construction Docker inutilisés depuis 7 jours,
-anciennes révisions des snaps, binlogs MySQL de plus de 2 jours (sans réplica), fichiers de `/tmp` de plus
+anciennes révisions des snaps, binlogs MySQL de plus de 3 jours (sans réplica), fichiers de `/tmp` de plus
 de 2 jours. Jamais une base, un téléversement, un conteneur ni un volume.
 
 **À la main, en root (PuTTY), quand le serveur est déjà plein :**
@@ -296,7 +296,7 @@ rm -rf /root/.cache/pip /root/.cache/composer /root/.npm/_cacache
 docker image prune -af --filter until=168h 2>/dev/null     #    seulement si Docker est installé
 df -h /                                                     # 3. il faut au moins 1 Go libre
 systemctl restart mysql                                     # 4. libère les connexions bloquées
-mysql --defaults-file=/etc/mysql/debian.cnf -e "PURGE BINARY LOGS BEFORE NOW() - INTERVAL 2 DAY"   # 5. binlogs
+mysql --defaults-file=/etc/mysql/debian.cnf -e "PURGE BINARY LOGS BEFORE NOW() - INTERVAL 3 DAY"   # 5. binlogs
 mysql --defaults-file=/etc/mysql/debian.cnf -e "SET PERSIST binlog_expire_logs_seconds = 259200"   #    3 jours
 df -h / && curl -s http://127.0.0.1/consulant_bo/api/cockpit/meta | head -c 120; echo
 ```
