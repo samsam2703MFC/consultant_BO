@@ -7255,6 +7255,50 @@ function tplPrimesApp(c, x){
   // La page franchisé (23/10/2026, Sam : « le panneau de contrôle des primes pour son magasin ») : UN magasin, celui de
   // l'adresse (#/primes-app-worker?shop=3), dans la même forme sobre. Les primes de la marque et des sponsors qui y
   // tournent, à lire ; les siennes, à poser avec les données du magasin ; ses chiffres ; les promotions du panel.
+  const segm = ls => `<div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${ls.map(k => `<button ${x.A(k.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:500 12.5px ${sf};cursor:pointer;background:${k.on ? 'var(--color-surface)' : 'transparent'};color:${k.on ? 'var(--color-text)' : muet};box-shadow:${k.on ? '0 1px 2px rgba(0,0,0,.08)' : 'none'}">${esc(k.nom)}</button>`).join('')}</div>`;
+  // Le choix du mois (24/10/2026, « un month picker ») : ‹ octobre 2026 ›, et au toucher du mois la grille des douze mois
+  // de l'année, l'année d'un geste ; les mois à venir sont grisés. L'année seule : ‹ 2026 ›.
+  const flecheBt = (fn, sens) => `<button ${fn ? x.A(fn) : 'disabled'} aria-label="${sens < 0 ? 'Précédent' : 'Suivant'}" style="border:0;border-radius:8px;width:30px;height:30px;font:500 17px/1 ${sf};cursor:${fn ? 'pointer' : 'default'};background:transparent;color:${fn ? 'var(--color-text)' : 'var(--color-border-secondary)'}">${sens < 0 ? '‹' : '›'}</button>`;
+  const pastille = `display:inline-flex;align-items:center;gap:0;background:var(--color-border-tertiary);border-radius:10px;padding:2px`;
+  const pickerMoisT = P => `<div data-pr-mois style="position:relative;${pastille}">
+      ${flecheBt(P.prec, -1)}
+      <button ${x.A(P.ouvrir)} data-pr-mois-ouvrir aria-expanded="${P.ouvert}" style="border:0;border-radius:8px;padding:6px 12px;min-width:148px;font:600 12.5px ${sf};cursor:pointer;background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 2px rgba(0,0,0,.08)">${esc(P.lib)}${P.enCours ? `<span style="font-weight:400;color:${muet}"> · en cours</span>` : ''}</button>
+      ${flecheBt(P.suiv, 1)}
+      ${P.ouvert ? `<div data-pr-mois-grille style="position:absolute;top:calc(100% + 8px);right:0;z-index:30;width:276px;background:var(--color-surface);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.14),0 0 0 .5px rgba(0,0,0,.06);padding:10px 12px 12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 0 6px">${flecheBt(P.anPrec, -1)}<b style="font:600 14px ${sf}">${P.an}</b>${flecheBt(P.anSuiv, 1)}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${P.grille.map(g => `<button ${g.choisir ? x.A(g.choisir) : 'disabled'} style="border:0;border-radius:9px;padding:9px 0;font:${g.on ? 600 : 500} 13px ${sf};cursor:${g.choisir ? 'pointer' : 'default'};background:${g.on ? 'var(--color-primary)' : 'transparent'};color:${g.on ? 'var(--color-surface)' : g.choisir ? 'var(--color-text)' : 'var(--color-border-secondary)'};${g.enCours && !g.on ? 'box-shadow:inset 0 0 0 1px var(--color-primary);' : ''}">${esc(g.nom)}</button>`).join('')}</div>
+        <div style="display:flex;justify-content:flex-end;padding-top:8px"><button ${x.A(P.fermer)} style="border:0;background:none;font:500 12.5px ${sf};color:${muet};cursor:pointer">Fermer</button></div>
+      </div>` : ''}
+    </div>`;
+  const stepperT = P => `<div data-pr-an style="${pastille}">${flecheBt(P.prec, -1)}<span style="border-radius:8px;padding:6px 14px;font:600 12.5px ${sf};background:var(--color-surface);box-shadow:0 1px 2px rgba(0,0,0,.08)">${esc(P.lib)}${P.enCours ? `<span style="font-weight:400;color:${muet}"> · en cours</span>` : ''}</span>${flecheBt(P.suiv, 1)}</div>`;
+  // L'année des primes (24/10/2026) : une ligne par vendeuse (ou par magasin), une colonne par prime gagnée — le montant de
+  // l'année, et combien de mois ; l'en-tête trie, la première colonne reste en place.
+  const tableAn = (A, nomCol) => {
+    const g = 'position:sticky;left:0;z-index:1;background:var(--color-surface)';
+    const bt = 'border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;cursor:pointer;display:block;width:100%';
+    const fl = t => (t.fleche ? `<span data-an-fleche style="color:var(--color-primary);font-weight:600;margin-left:4px">${t.fleche}</span>` : '');
+    const petit = `font:600 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet}`;
+    return `<div style="${groupeSt};margin-top:12px"><div style="overflow-x:auto">
+      <table data-an style="border-collapse:separate;border-spacing:0;min-width:100%;font-family:${sf}">
+        <thead><tr>
+          <th aria-sort="${A.triNom.aria}" style="${g};text-align:left;padding:14px 16px 10px;${petit};min-width:160px;vertical-align:bottom"><button ${x.A(A.triNom.trier)} data-an-tri="nom" style="${bt}">${esc(nomCol)}${fl(A.triNom)}</button></th>
+          ${A.cols.map(p => `<th data-an-prime="${esc(p.cle)}" aria-sort="${p.tri.aria}" style="text-align:left;padding:14px 12px 10px;vertical-align:bottom;min-width:112px"><button ${x.A(p.tri.trier)} data-an-tri="${esc(p.cle)}" style="${bt}">
+            <div style="font:600 13px/1.25 ${sf};color:var(--color-text);max-width:150px">${esc(p.lib)}${fl(p.tri)}</div>
+            <div style="font:400 11.5px/1.35 ${sf};color:${p.duMagasin ? 'var(--color-on-abricot)' : muet};margin-top:3px;white-space:nowrap">${esc(p.payeur)}</div>
+            <div style="font:600 11.5px/1.35 ${sf};color:#2d7a3e;margin-top:2px;white-space:nowrap">${esc(p.somme)}</div></button></th>`).join('')}
+          <th aria-sort="${A.triTotal.aria}" style="text-align:right;padding:14px 16px 10px;vertical-align:bottom;${petit};white-space:nowrap"><button ${x.A(A.triTotal.trier)} data-an-tri="total" style="${bt}">Total${fl(A.triTotal)}</button></th>
+        </tr></thead>
+        <tbody>${A.lignes.map(r => `<tr data-an-ligne>
+          <td style="${g};padding:11px 16px;border-top:${filet};vertical-align:top"><div style="font:600 14px/1.3 ${sf};white-space:nowrap">${esc(r.nom)}</div><div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(r.sous)}</div></td>
+          ${r.cases.map(k => !k ? `<td style="padding:11px 12px;border-top:${filet};color:var(--color-border-secondary)">·</td>` : `<td style="padding:11px 12px;border-top:${filet};vertical-align:top">
+            <div style="font:600 13.5px/1.3 ${sf};color:#2d7a3e;font-variant-numeric:tabular-nums;white-space:nowrap">${esc(k.haut)}</div><div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(k.bas)}</div></td>`).join('')}
+          <td style="padding:11px 16px;border-top:${filet};text-align:right;vertical-align:top;font:600 14px/1.3 ${sf};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(r.total)}</td></tr>`).join('')}</tbody>
+      </table></div></div>`;
+  };
+  // Les mois du réseau en barres fines : ce qui a été gagné chaque mois.
+  const barresAn = ls => (ls.length ? `<div data-an-barres style="${groupeSt};margin-top:12px;padding:14px 18px 10px;display:flex;align-items:flex-end;gap:10px;height:96px">${ls.map(b => `<div title="${esc(b.titre)}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end">
+      <div style="width:100%;max-width:34px;height:${Math.max(2, b.h)}%;border-radius:5px 5px 2px 2px;background:${b.enCours ? 'var(--color-secondary)' : 'var(--color-primary)'};opacity:${b.h ? 1 : .25}"></div>
+      <span style="font:500 11px ${sf};color:${muet}">${esc(b.lib)}</span></div>`).join('')}</div>` : '');
   const FR = c.prFr;
   const frPage = () => {
     const shopId = `<span data-pr-shop="${esc(FR.id)}" style="font:600 12.5px ${sf};padding:6px 13px;border-radius:999px;background:var(--color-surface);color:var(--color-text);font-variant-numeric:tabular-nums">shop ${esc(FR.id)}</span>`;
@@ -7269,7 +7313,6 @@ function tplPrimesApp(c, x){
     // L'équipe face à ses primes (23/10/2026) : une ligne par vendeuse, une colonne par prime — gagnée en vert, en tête,
     // sa place, ou sa valeur face à l'objectif avec une barre fine. Le nom reste en place quand le tableau défile.
     const EQ = FR.equipe;
-    const segm = ls => `<div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${ls.map(k => `<button ${x.A(k.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:500 12.5px ${sf};cursor:pointer;background:${k.on ? 'var(--color-surface)' : 'transparent'};color:${k.on ? 'var(--color-text)' : muet};box-shadow:${k.on ? '0 1px 2px rgba(0,0,0,.08)' : 'none'}">${esc(k.nom)}</button>`).join('')}</div>`;
     const tonCouleur = { gagne: '#2d7a3e', tete: 'var(--color-primary)', route: 'var(--color-text)', perdu: muet, vide: muet, hors: muet };
     const caseEq = k => k.ton === 'hors' ? `<td data-eq-case="hors" style="padding:11px 12px;border-top:${filet};color:var(--color-border-secondary);text-align:left">·</td>` : `<td data-eq-case="${esc(k.ton)}" style="padding:11px 12px;border-top:${filet};vertical-align:top;min-width:104px">
         <div style="font:${k.ton === 'vide' ? 400 : 600} 13.5px/1.3 ${sf};color:${tonCouleur[k.ton] || 'var(--color-text)'};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(k.haut)}</div>
@@ -7296,9 +7339,11 @@ function tplPrimesApp(c, x){
       </table></div></div>
       <div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">✓ gagnée · <span style="color:var(--color-primary)">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin vers l’objectif · un clic sur un en-tête trie${EQ.quand ? ' · lu à ' + esc(EQ.quand) : ''}</div>`;
     const equipe = `<section data-pr="fr-equipe">
-      ${tete('Où en sont tes vendeuses', 'Ce que chacune voit dans Mes primes, prime par prime.',
-        `<div style="display:flex;gap:8px;flex-wrap:wrap">${segm(EQ.filtres)}${segm(EQ.mois)}</div>`)}
-      ${EQ.chargement ? vide('Lecture des fiches de l’équipe…') : EQ.motif ? vide(esc(EQ.motif)) : !EQ.vendeuses.length ? vide('Personne au planning ni en caisse dans ce magasin ce mois-là.')
+      ${tete('Où en sont tes vendeuses', EQ.vue === 'annee' ? (EQ.annee.periode ? esc(EQ.annee.periode) + ' · ' + esc(EQ.annee.total) + ' gagnés' : 'L’année du magasin, prime par prime.') : 'Ce que chacune voit dans Mes primes, prime par prime.',
+        `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${segm(EQ.filtres)}${segm(EQ.vues)}${EQ.vue === 'annee' ? stepperT(EQ.annee.picker) : pickerMoisT(EQ.picker)}</div>`)}
+      ${EQ.vue === 'annee' ? (EQ.annee.chargement ? vide('Calcul de l’année, mois par mois…') : EQ.annee.motif ? vide(esc(EQ.annee.motif)) : !EQ.annee.lignes.length ? vide('Aucune prime gagnée dans ce magasin cette année-là' + (EQ.filtres[1].on ? ' parmi celles du magasin.' : '.'))
+        : tableAn(EQ.annee, 'Vendeuse') + `<div style="font:400 12px/1.5 ${sf};color:${muet};padding:8px 6px 0">Le montant gagné sur l’année et le nombre de mois · ✓ cadeau : une prime sans euros · un clic sur un en-tête trie</div>`)
+      : EQ.chargement ? vide('Lecture des fiches de l’équipe…') : EQ.motif ? vide(esc(EQ.motif)) : !EQ.vendeuses.length ? vide('Personne au planning ni en caisse dans ce magasin ce mois-là.')
         : !EQ.primes.length ? vide(`<span style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="flex:1">Aucune prime du magasin ce mois-là.</span>${FR.nouvelle ? `<button ${x.A(FR.nouvelle)} style="${btP}" data-eq-nouvelle>+ Nouvelle prime du magasin</button>` : ''}</span>`) : tableEq()}
     </section>`;
     const marque = `<section data-pr="fr-marque" class="prl-mag">
@@ -7344,6 +7389,13 @@ function tplPrimesApp(c, x){
 <div data-screen="primesApp" style="display:flex;flex-direction:column;gap:34px;max-width:1560px;font-family:${sf}">
   ${c.prOnglets && !c.prChargement && !c.prMotif ? `<div data-pr-onglets style="display:inline-flex;align-self:flex-start;gap:2px;background:var(--color-border-tertiary);border-radius:12px;padding:3px">${c.prOnglets.map(o => `<button ${x.A(o.choisir)} data-pr-onglet="${o.nouveau ? 'gp' : 'mois'}" style="border:0;border-radius:9px;padding:8px 15px;font:${o.on ? 600 : 500} 13.5px ${sf};background:${o.on ? 'var(--color-surface)' : 'transparent'};color:var(--color-text);cursor:pointer;${o.on ? 'box-shadow:0 1px 3px rgba(0,0,0,.12)' : ''}">${esc(o.nom)}</button>`).join('')}</div>` : ''}
   ${c.prChargement ? `<div style="${groupeSt};padding:18px;color:${muet}">Lecture des paramètres…</div>` : c.prMotif ? `<div style="${groupeSt};padding:18px;color:var(--color-primary)">${esc(c.prMotif)}</div>` : c.prGp ? tplPrGrandsPrix(c.prGp, x) : FR ? frPage() : `
+  ${P.annee ? `<section data-pr="annee">
+    ${tete('L’année des primes', P.annee.periode ? esc(P.annee.periode) + ' · ' + esc(P.annee.total) + ' gagnés dans le réseau' : 'Le réseau, prime par prime.',
+      `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${segm(P.annee.vues)}${stepperT(P.annee.picker)}</div>`)}
+    ${P.annee.chargement ? vide('Calcul de l’année, mois par mois…') : P.annee.motif ? vide(esc(P.annee.motif)) : !P.annee.lignes.length ? vide('Aucune prime gagnée cette année-là.')
+      : barresAn(P.annee.barres) + tableAn(P.annee, P.annee.vues[0].on ? 'Magasin' : 'Vendeuse')}
+  </section>` : ''}
+
   <section data-pr="app"${voir('app')}>
     ${tete('Primes de la marque', 'Posées par la marque, payées par elle ou par un sponsor. Chaque franchisé les voit ; ses vendeuses les retrouvent dans Mes primes.',
       `<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font:500 13px ${sf};color:var(--color-text)">

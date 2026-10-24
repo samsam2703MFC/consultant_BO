@@ -477,7 +477,7 @@ function primesCachesVider(): void
 {
     $m = date('Y-m');
     try {
-        motCacheVider('primesMoi%:' . $m, 'primesTous' . $m, 'primesEq%:' . $m);
+        motCacheVider('primesMoi%:' . $m, 'primesTous' . $m, 'primesEq%:' . $m, 'primesAn' . date('Y'));
     } catch (Throwable $e) { /* le cache expire de lui-même */ }
 }
 
