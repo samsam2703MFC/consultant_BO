@@ -190,7 +190,7 @@
                             <div class="col-2"></div>
                             <div class="col-8">
                                 <button class="btn btn-success">Utwórz</button>
-                                <a href="<?=ROOT?>/material-categories" role="button" class="btn btn-secondary float-end">Powrót</a>
+                                <a href="<?=ROOT?>/materials/all" role="button" class="btn btn-secondary float-end">Powrót</a>
                             </div>
                         </div>
 

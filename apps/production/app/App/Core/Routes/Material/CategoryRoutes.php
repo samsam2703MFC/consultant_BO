@@ -3,10 +3,8 @@ use FastRoute\RouteCollector;
 
 return function(RouteCollector $r) {
 
-    $r->addRoute('GET', '/material-categories', [
-        'controller' => App\Controllers\Web\Material\CategoryController::class,
-        'method'     => 'overview'
-    ]);
+    // Kategorie surowców : zakładka « Kategorie » strony « Surowce i kategorie » (/materials/all).
+    $r->addRoute('GET', '/material-categories', ['redirect' => '/materials/all?tab=categories']);
 
     $r->addRoute('POST', '/ajax/material-categories', [
         'controller' => App\Controllers\Web\Material\CategoryController::class,

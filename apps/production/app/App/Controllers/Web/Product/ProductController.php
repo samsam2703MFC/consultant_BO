@@ -48,7 +48,7 @@ class ProductController extends BaseController
                 $this->handleAction(function () {
                     $id = $this->productService->insert($_POST);
                     // Dalej w Karcie produktu (tryb, grupa, etapy i czasy) — jedyne miejsce edycji produktu
-                    header('Location: ' . ROOT . ($id && $id !== true ? '/workshop/products#/product/' . (int) $id : '/product-categories/' . (int) $_POST['id_category'] . '/products'));
+                    header('Location: ' . ROOT . ($id && $id !== true ? '/workshop/products#/product/' . (int) $id : '/workshop/products#/?category=' . (int) $_POST['id_category']));
                     exit;
                 }, default: false);
             }
@@ -63,7 +63,7 @@ class ProductController extends BaseController
      */
     public function editProduct($id)
     {
-        header('Location: ' . ROOT . ($this->productService->first($id) ? '/workshop/products#/product/' . (int) $id : '/product-categories'));
+        header('Location: ' . ROOT . ($this->productService->first($id) ? '/workshop/products#/product/' . (int) $id : '/workshop/products'));
         exit;
     }
 
@@ -92,28 +92,12 @@ class ProductController extends BaseController
             }, default: false);
 
             if ($success) {
-                header('Location: ' . ROOT . '/product-categories/' . $_POST['id_category'] . '/products');
+                header('Location: ' . ROOT . '/workshop/products#/?erp=all&category=' . (int) ($data['row']['id_category'] ?? 0));
                 exit;
             }
         }
 
         $this->view("product/product/delete", $data);
-    }
-
-    public function filterByCategory($idCategory)
-    {
-        $data['rows'] = $this->productService->getByIdCategory($idCategory);
-        $data['category'] = $this->productCategoryService->getById($idCategory);
-
-
-        $this->view("product/product/filter", $data);
-    }
-
-    public function showAllProducts()
-    {
-        $data['rows'] = $this->productService->getAll("fp.name");
-
-        $this->view("product/product/filter", $data);
     }
 
 }

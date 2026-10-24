@@ -2736,6 +2736,20 @@
                         }
                     },
                     {
+                        "name": "erp",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "active",
+                                "inactive",
+                                "all"
+                            ],
+                            "description": "active (défaut) : produits actifs dans l'ERP et fiches ; inactive / all : produits inactifs dans l'ERP aussi"
+                        }
+                    },
+                    {
                         "$ref": "#/components/parameters/Lang"
                     }
                 ],
@@ -13507,6 +13521,15 @@
                                                 "type": "integer",
                                                 "nullable": true
                                             },
+                                            "workload_points": {
+                                                "type": "integer",
+                                                "nullable": true,
+                                                "description": "pracochłonność 1–5 (marże, koszty)"
+                                            },
+                                            "recipe_id": {
+                                                "type": "integer",
+                                                "nullable": true
+                                            },
                                             "status": {
                                                 "type": "string"
                                             },
@@ -22344,6 +22367,10 @@
                     "level_name": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "active": {
+                        "type": "boolean",
+                        "description": "jeden wskaźnik z Budżetem personelu ; nieaktywni nie liczą się do member_count"
                     }
                 }
             },

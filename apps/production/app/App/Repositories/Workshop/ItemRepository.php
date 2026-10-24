@@ -169,16 +169,21 @@ final class ItemRepository extends WorkshopRepository
      * Zapasy wg kategorii (lista kart) : produkty z trybem, stanami, kartonami na paletę i sprzedażą WDT
      * z ostatnich $days dni (bez dokumentów zastąpionych) — kartony i liczba sklepów (klientów), które kupiły.
      */
-    public function stockOverview(int $days, ?int $groupId, ?int $itemId = null): array
+    /** @param string $erp 'active' (domyślnie : aktywne w ERP i produkty z kartą), 'inactive' (nieaktywne w ERP) albo 'all' */
+    public function stockOverview(int $days, ?int $groupId, ?int $itemId = null, string $erp = 'active'): array
     {
         // Kurs EUR (WDT w PLN przeliczane jak w Rentowności) : średnia cena kartonu i koszt surowców w €.
         $rate = (float) ($this->all('SELECT exchange_rate_euro FROM erp_company_other_settings ORDER BY id LIMIT 1')[0]['exchange_rate_euro'] ?? 0) ?: 1.0;
         $params = [$rate, $days];
         // Wszystkie aktywne produkty ERP (bez karty : MTO, grupa z działu ERP) oraz karty produktów nieaktywnych.
-        $where = '(i.id IS NOT NULL OR fp.active = 1)';
+        $where = match ($erp) {
+            'inactive' => 'fp.active = 0',
+            'all' => '1 = 1',
+            default => '(i.id IS NOT NULL OR fp.active = 1)',
+        };
         if ($groupId !== null) { $where .= ' AND COALESCE(s.id_primary_group, dg.id) = ?'; $params[] = $groupId; }
         if ($itemId !== null) { $where .= ' AND i.id = ?'; $params[] = $itemId; }
-        return $this->all("SELECT i.id, fp.id AS id_final_product, fp.name, fp.id_category, cp.name AS category, fp.ppc, fp.cpp, fp.active AS erp_active,
+        return $this->all("SELECT i.id, fp.id AS id_final_product, fp.name, fp.id_category, cp.name AS category, fp.ppc, fp.cpp, fp.active AS erp_active, fp.workload_points, fp.id_recipe,
                                   s.mode, s.never_frozen, s.stock_min, s.stock_max, s.stock_calc_at, s.batch_multiple, COALESCE(s.id_primary_group, dg.id) AS id_primary_group, s.status,
                                   COALESCE(w.cartons, 0) AS shipped_cartons, COALESCE(w.shops, 0) AS shops, COALESCE(w.value_eur, 0) AS shipped_value_eur,
                                   fp.pre_calculated_raw_price_per_carton / ? AS material_cost_eur,

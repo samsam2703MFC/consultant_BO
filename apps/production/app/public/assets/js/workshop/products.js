@@ -63,11 +63,14 @@
     async function renderList() {
         const params = new URLSearchParams(location.hash.split('?')[1] || '');
         const group = params.get('group_id') || '';
-        if (!listData || listData.group !== group) {
+        // Produkty nieaktywne w ERP (dawne listy produktów ERP) : erp=inactive albo erp=all.
+        const erp = ['inactive', 'all'].includes(params.get('erp')) ? params.get('erp') : '';
+        if (!listData || listData.group !== group || listData.erp !== erp) {
             el.innerHTML = header(`<a class="btn btn-primary btn-sm" href="#/new"><i class="bi bi-plus"></i> ${esc(t('new_sheet'))}</a>`) + viewTabs('list') + `<p class="text-muted">${esc(t('loading'))}</p>`;
             const q = group ? '?group_id=' + group : '';
-            const [cards, overview] = await Promise.all([api.list('/produits/items' + q), api.get('/produits/stock-overview' + q)]);
-            listData = {group, cards: cards.data, overview};
+            const qo = new URLSearchParams({...(group ? {group_id: group} : {}), ...(erp ? {erp} : {})}).toString();
+            const [cards, overview] = await Promise.all([api.list('/produits/items' + q), api.get('/produits/stock-overview' + (qo ? '?' + qo : ''))]);
+            listData = {group, erp, cards: cards.data, overview};
         }
         drawList(params);
     }
@@ -76,21 +79,35 @@
         const search = (params.get('search') || '').trim().toLowerCase();
         const status = params.get('status') || '';
         const type = params.get('item_type') || '';
+        const category = params.get('category') || '';
+        const erp = listData.erp;
         const n = (v, d) => ui.fmt(v, d ?? 1, api.lang);
         const cardOf = new Map(listData.cards.filter(c => c.final_product_id).map(c => [c.final_product_id, c]));
         const keep = (name, card) => (!search || name.toLowerCase().includes(search)) && (!status || (card && card.settings.status === status));
-        const cats = type === 'semi' ? [] : listData.overview.categories.map(c => ({key: 'c' + (c.id ?? 0), name: c.name || t('st.no_category'),
+        const cats = type === 'semi' ? [] : listData.overview.categories.filter(c => !category || String(c.id ?? 0) === category).map(c => ({key: 'c' + (c.id ?? 0), name: c.name || t('st.no_category'),
             rows: c.items.map(i => ({semi: false, i, card: cardOf.get(i.final_product_id) || null})).filter(r => keep(r.i.name, r.card))}));
-        if (type !== 'product') cats.push({key: 'semi', name: t('list.semi'),
+        if (type !== 'product' && !category && erp !== 'inactive') cats.push({key: 'semi', name: t('list.semi'),
             rows: listData.cards.filter(c => c.item_type === 'semi').map(c => ({semi: true, i: null, card: c})).filter(r => keep(r.card.name, r.card))});
         const shown = cats.filter(c => c.rows.length);
         const params0 = listData.overview.params;
         const overviewItems = listData.overview.categories.flatMap(c => c.items);
         const mtsCount = overviewItems.filter(i => i.mode === 'MTS').length;
         const opened = openCats();
-        const isOpen = (c) => search !== '' || opened.has(c.key);
+        const isOpen = (c) => search !== '' || category !== '' || opened.has(c.key);
         const batchOf = (r) => r.semi ? r.card.settings.batch_multiple : r.i.batch;
         const link = (r) => r.card ? `#/item/${r.card.id}/${r.card.settings.status === 'validated' ? 7 : Math.max(1, r.card.settings.wizard_step)}` : `#/product/${r.i.final_product_id}`;
+        // Menu ⋯ produktu : dawna lista produktów ERP (receptura, karta techniczna, pracochłonność, aktywność, usunięcie).
+        const root = esc(api.root || '');
+        const more = (i) => `<div class="at-more"><button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="${esc(t('row.more'))}" title="${esc(t('row.more'))}"><i class="bi bi-three-dots"></i></button>
+            <div class="at-more-menu" role="menu" hidden>
+                ${i.recipe_id ? `<a role="menuitem" href="${root}/recipes/${i.recipe_id}/calculation"><i class="bi bi-journal-text"></i>${esc(t('row.recipe'))}</a>
+                    <button type="button" role="menuitem" data-act="tech"><i class="bi bi-file-earmark-arrow-down"></i>${esc(t('row.tech_card'))}</button>`
+                    : `<button type="button" role="menuitem" disabled><i class="bi bi-file-earmark-arrow-down"></i>${esc(t('row.no_recipe'))}</button>`}
+                <div class="tfb-workload" title="${esc(t('row.workload_help'))}"><span>${esc(t('row.workload'))}</span>${[1, 2, 3, 4, 5].map(v => `<button type="button" role="menuitem" data-act="workload" data-value="${v}" class="${(i.workload_points ?? 3) === v ? 'active' : ''}" aria-pressed="${(i.workload_points ?? 3) === v}">${v}</button>`).join('')}</div>
+                <button type="button" role="menuitem" data-act="active"><i class="bi ${i.erp_active ? 'bi-toggle-off' : 'bi-toggle-on'}"></i>${esc(t(i.erp_active ? 'row.deactivate' : 'row.activate'))}</button>
+                <hr>
+                <a role="menuitem" class="at-more-danger" href="${root}/products/${i.final_product_id}/delete"><i class="bi bi-trash"></i>${esc(t('row.delete'))}</a>
+            </div></div>`;
         const row = (r) => {
             const name = r.semi ? r.card.name : r.i.name;
             const groupId = r.semi ? r.card.settings.primary_group_id : r.i.group_id;
@@ -115,7 +132,8 @@
                 <td class="text-end">${hours !== null ? `<strong>${esc(n(hours, hours % 1 ? 2 : 0))} h</strong>` : `<span class="small text-muted">${esc(t(batch ? 'list.hours_empty' : 'list.hours_no_batch'))}</span>`}</td>
                 <td class="text-end">${r.card ? r.card.step_count : '<span class="text-muted">—</span>'}</td>
                 <td>${r.card ? `<span class="badge ${r.card.settings.status === 'validated' ? 'bg-success' : 'bg-warning'}">${esc(t('status.' + r.card.settings.status))}</span>`
-                    : `<span class="badge bg-light text-muted" title="${esc(t('st.no_card_help'))}">${esc(t('st.no_card'))}</span>`}</td></tr>`;
+                    : `<span class="badge bg-light text-muted" title="${esc(t('st.no_card_help'))}">${esc(t('st.no_card'))}</span>`}</td>
+                <td class="text-end">${r.semi ? '' : more(r.i)}</td></tr>`;
         };
         const y = window.scrollY;
         el.innerHTML = header(`<a class="btn btn-primary btn-sm" href="#/new"><i class="bi bi-plus"></i> ${esc(t('new_sheet'))}</a>`) + viewTabs('list') + `
@@ -127,6 +145,9 @@
                     ${['product', 'semi'].map(s2 => `<option value="${s2}" ${type === s2 ? 'selected' : ''}>${esc(t('type.' + s2))}</option>`).join('')}</select>
                 <select class="form-select form-select-sm" name="group_id"><option value="">${esc(t('col.group'))}: ${esc(t('all'))}</option>
                     ${state.groups.map(g => `<option value="${g.id}" ${listData.group === String(g.id) ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
+                <select class="form-select form-select-sm" name="category"><option value="">${esc(t('list.category'))}: ${esc(t('all'))}</option>
+                    ${state.erp.categories.map(c => `<option value="${c.id}" ${category === String(c.id) ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+                <select class="form-select form-select-sm" name="erp">${['', 'inactive', 'all'].map(v => `<option value="${v}" ${erp === v ? 'selected' : ''}>${esc(t('list.erp'))}: ${esc(t('list.erp.' + (v || 'active')))}</option>`).join('')}</select>
             </form>
             <div class="tfb-stock-bar card"><div class="card-body d-flex flex-wrap gap-3 align-items-center justify-content-between">
                 <div>${esc(t('st.params', {min: n(params0.min_weeks), max: n(params0.max_weeks), weeks: params0.weeks}))}
@@ -144,7 +165,7 @@
                 <div class="card-body pt-0"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
                     <thead><tr><th>${esc(t('col.name'))}</th><th class="text-center">${esc(t('col.mode'))}</th><th style="width:150px" title="${esc(t('list.batch_help'))}">${esc(t('f.batch_multiple'))}</th>
                         <th title="${esc(t('list.labour_help'))}">${esc(t('list.labour'))}</th><th class="text-end" title="${esc(t('list.labour_help'))}">${esc(t('list.hours'))}</th>
-                        <th class="text-end">${esc(t('col.steps'))}</th><th>${esc(t('col.status'))}</th></tr></thead>
+                        <th class="text-end">${esc(t('col.steps'))}</th><th>${esc(t('col.status'))}</th><th></th></tr></thead>
                     <tbody>${c.rows.map(row).join('')}</tbody></table></div></div></details>`).join('') || `<p class="text-muted">${esc(t('empty_list'))}</p>`}`;
         window.scrollTo(0, y);
         const form = el.querySelector('[data-filters]');
@@ -194,10 +215,23 @@
                 return true;
             } catch (err) { fail(null, err); return false; }
         };
+        // Pola ERP produktu (jak dawna lista produktów) : zapis sesją ERP (/ajax/products), lista poprawiana na miejscu.
+        const erpAction = async (i, b) => {
+            if (b.dataset.act === 'tech') { window.downloadPDF(`/ajax/products/${i.final_product_id}/technical-card`, {}, 'Karta_produktu'); return; }
+            const data = b.dataset.act === 'workload' ? {workload_points: Number(b.dataset.value)} : {active: i.erp_active ? 0 : 1};
+            try {
+                const res = await window.api(`/ajax/products/${i.final_product_id}`, {method: 'PATCH', data});
+                if (!res.ok) throw new Error(res.message || ('HTTP ' + res.status));
+                if (data.workload_points) i.workload_points = data.workload_points; else i.erp_active = data.active === 1;
+                drawList(params);
+                ui.notify(true, t('saved'));
+            } catch (err) { ui.notify(false, err.message); }
+        };
         const rows = shown.flatMap(c => c.rows);
         el.querySelectorAll('tr[data-row]').forEach(tr => {
             const r = rows.find(x => (x.semi ? 's' + x.card.id : 'p' + x.i.final_product_id) === tr.dataset.row);
             tr.querySelector('[data-mts]')?.addEventListener('change', (e) => modeSwitch(e.target, r.i, (i, body, ok) => save(r, body, ok)));
+            tr.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => erpAction(r.i, b)));
             const input = tr.querySelector('[data-batch]');
             input.addEventListener('change', () => {
                 const v = ui.num(input.value);
@@ -221,7 +255,79 @@
         return `<ul class="nav nav-pills tfb-view-tabs mb-3">
             <li class="nav-item"><a class="nav-link ${current === 'list' ? 'active' : ''}" href="#/"><i class="bi bi-list-ul"></i> ${esc(t('view.list'))}</a></li>
             <li class="nav-item"><a class="nav-link ${current === 'stock' ? 'active' : ''}" href="#/stock"><i class="bi bi-boxes"></i> ${esc(t('view.stock'))}</a></li>
-            <li class="nav-item"><a class="nav-link ${current === 'levels' ? 'active' : ''}" href="#/levels"><i class="bi bi-bar-chart-line"></i> ${esc(t('view.levels'))}</a></li></ul>`;
+            <li class="nav-item"><a class="nav-link ${current === 'levels' ? 'active' : ''}" href="#/levels"><i class="bi bi-bar-chart-line"></i> ${esc(t('view.levels'))}</a></li>
+            <li class="nav-item"><a class="nav-link ${current === 'categories' ? 'active' : ''}" href="#/categories"><i class="bi bi-tags"></i> ${esc(t('view.categories'))}</a></li></ul>`;
+    }
+
+    // --- Kategorie i marże (dawna strona /product-categories) : nazwa, marża docelowa, produkty aktywne / nieaktywne ;
+    // zapis od razu sesją ERP (/ajax/product-categories), « Produkty » = lista tej kategorii (aktywne i nieaktywne w ERP).
+    async function renderCategories() {
+        const params = new URLSearchParams(location.hash.split('?')[1] || '');
+        const root = esc(api.root || '');
+        const head = header(`<a class="btn btn-primary btn-sm" href="${root}/products/new-with-recipe"><i class="bi bi-plus"></i> ${esc(t('cat.new_product'))}</a>
+            <a class="btn btn-outline-secondary btn-sm" href="${root}/products/export"><i class="bi bi-download"></i> ${esc(t('cat.export'))}</a>`) + viewTabs('categories');
+        el.innerHTML = head + `<p class="text-muted">${esc(t('loading'))}</p>`;
+        const res = await window.api('/ajax/product-categories');
+        if (!res.ok) throw new Error(res.message || ('HTTP ' + res.status));
+        const search = (params.get('search') || '').trim().toLowerCase();
+        const filter = params.get('filter') || '';
+        const shown = (res.rows || []).filter(c => (!search || c.name.toLowerCase().includes(search))
+            && (!filter || (filter === 'active' ? c.qty_active > 0 : c.qty_active === 0)));
+        el.innerHTML = head + `<p class="small text-muted">${esc(t('cat.help'))}</p>
+            <form class="tfb-filters" data-filters>
+                <input class="form-control form-control-sm" name="search" placeholder="${esc(t('cat.search'))}" value="${esc(params.get('search') || '')}">
+                <select class="form-select form-select-sm" name="filter">${[['', 'all'], ['active', 'cat.filter.with_active'], ['inactive', 'cat.filter.only_inactive']]
+                    .map(([v, k]) => `<option value="${v}" ${filter === v ? 'selected' : ''}>${esc(t('cat.filter'))}: ${esc(t(k))}</option>`).join('')}</select>
+            </form>
+            <form class="card" data-new><div class="card-body d-flex flex-wrap gap-2 align-items-end">
+                <label class="mb-0 flex-grow-1">${esc(t('cat.new_name'))}<input class="form-control form-control-sm" name="name" maxlength="255" required></label>
+                <label class="mb-0">${esc(t('cat.col.margin'))}<div class="input-group input-group-sm" style="width:120px"><input class="form-control text-end" name="margin" inputmode="decimal" value="0"><span class="input-group-text">%</span></div></label>
+                <button class="btn btn-sm btn-success"><i class="bi bi-folder-plus"></i> ${esc(t('cat.new'))}</button></div></form>
+            <div class="card"><div class="card-body"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
+                <thead><tr><th>${esc(t('col.category'))}</th><th class="text-center">${esc(t('cat.col.active'))}</th><th class="text-center">${esc(t('cat.col.inactive'))}</th>
+                    <th style="width:150px">${esc(t('cat.col.margin'))}</th><th></th></tr></thead>
+                <tbody>${shown.map(c => `<tr data-cat="${c.id}">
+                    <td><input class="form-control form-control-sm" data-f="name" maxlength="255" value="${esc(c.name)}" aria-label="${esc(t('col.category'))}"></td>
+                    <td class="text-center"><strong class="text-success">${c.qty_active}</strong></td>
+                    <td class="text-center"><span class="${c.qty_inactive ? 'text-danger' : 'text-muted'}">${c.qty_inactive}</span></td>
+                    <td><div class="input-group input-group-sm"><input class="form-control text-end" data-f="target_margin_percentage" inputmode="decimal" value="${esc(ui.fmt(c.target_margin_percentage ?? 0, 1, api.lang))}" aria-label="${esc(t('cat.col.margin'))}"><span class="input-group-text">%</span></div></td>
+                    <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="#/?erp=all&category=${c.id}"><i class="bi bi-list-ul"></i> ${esc(t('cat.products'))}</a></td></tr>`).join('')
+                    || `<tr><td colspan="5" class="text-muted">${esc(t('cat.empty'))}</td></tr>`}</tbody></table></div></div></div>`;
+        const form = el.querySelector('[data-filters]');
+        const apply = () => {
+            const q = new URLSearchParams();
+            new FormData(form).forEach((v, k) => { if (v) q.set(k, v); });
+            location.hash = '#/categories' + (q.toString() ? '?' + q : '');
+        };
+        form.addEventListener('change', apply);
+        form.addEventListener('submit', (e) => { e.preventDefault(); apply(); });
+        const margin = (v) => { const m = ui.num(v); return typeof m === 'number' && m >= 0 && m <= 100 ? m : null; };
+        const send = async (url, method, data) => {
+            const r = await window.api(url, {method, data});
+            if (!r.ok) throw new Error(r.message || ('HTTP ' + r.status));
+            return r;
+        };
+        el.querySelector('[data-new]').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const f = e.currentTarget;
+            const name = f.name.value.trim();
+            const m = margin(f.margin.value);
+            if (!name) { ui.notify(false, t('cat.name_required')); return; }
+            if (m === null) { ui.notify(false, t('cat.margin_invalid')); return; }
+            try { await send('/ajax/product-categories', 'POST', {name, target_margin_percentage: m}); ui.notify(true, t('saved')); await renderCategories(); }
+            catch (err) { ui.notify(false, err.message); }
+        });
+        el.querySelectorAll('tr[data-cat] [data-f]').forEach(input => input.addEventListener('change', async () => {
+            const id = input.closest('tr').dataset.cat;
+            const before = input.defaultValue;
+            const value = input.dataset.f === 'name' ? input.value.trim() : margin(input.value);
+            if (input.dataset.f === 'name' && !value) { ui.notify(false, t('cat.name_required')); input.value = before; return; }
+            if (input.dataset.f !== 'name' && value === null) { ui.notify(false, t('cat.margin_invalid')); input.value = before; return; }
+            input.disabled = true;
+            try { await send(`/ajax/product-categories/${id}`, 'PATCH', {[input.dataset.f]: value}); input.defaultValue = input.value; ui.notify(true, t('saved')); }
+            catch (err) { input.value = before; ui.notify(false, err.message); }
+            finally { input.disabled = false; }
+        }));
     }
 
     // --- Zapasy wg kategorii : szybki MTS / MTO, stany min. / maks. w kartonach, sprzedaż, zapas optymalny ---
@@ -1149,6 +1255,7 @@
             if (path === '/new') await renderNew();
             else if (path === '/stock') await renderStock();
             else if (path === '/levels') await renderLevels();
+            else if (path === '/categories') await renderCategories();
             else if ((m = path.match(/^\/product\/(\d+)$/))) await openProduct(Number(m[1]), Number(new URLSearchParams(hash.split('?')[1] || '').get('step')) || 1);
             else if ((m = path.match(/^\/item\/(\d+)\/([1-8])$/))) await renderItem(Number(m[1]), Number(m[2]));
             else await renderList();

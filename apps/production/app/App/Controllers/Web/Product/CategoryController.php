@@ -19,11 +19,10 @@ class CategoryController extends BaseController
     }
 
 
-    public function overview()
+    /** Kategorie z liczbą produktów dla zakładki « Kategorie » w Kartach produktów (dawna strona /product-categories). */
+    public function ajaxList()
     {
-        $data['rows'] = $this->finalProductCategoryService->getExistedCategoryInProductList();
-
-        $this->view("product/category/overview", $data);
+        return $this->json(['ok' => true, 'rows' => $this->finalProductCategoryService->allWithCounts()]);
     }
 
     public function ajaxUpdateCategory($id)

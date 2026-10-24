@@ -38,7 +38,7 @@ class MaterialController extends BaseController
             if ($this->materialService->validate($_POST)) {
                 $result = $this->handleAction(function () {
                     $this->materialService->insert($_POST);
-                    header('Location: ' . ROOT . '/material-categories/' . $_POST['id_category'] . '/materials');
+                    header('Location: ' . ROOT . '/materials/all?category=' . (int) $_POST['id_category']);
                     exit;
                 }, default: false);
                 $this->errors[] = 'Nie udało się zapisać surowca — sprawdź pola i spróbuj ponownie.';
@@ -66,7 +66,7 @@ class MaterialController extends BaseController
                 }, default: false);
 
                 if (!empty($result['ok'])) {
-                    header('Location: ' . ROOT . '/material-categories/' . $_POST['id_category'] . '/materials');
+                    header('Location: ' . ROOT . '/materials/all?category=' . (int) $_POST['id_category']);
                     exit;
                 }
                 $this->errors[] = 'Nie udało się zapisać surowca — sprawdź pola i spróbuj ponownie.';
@@ -89,7 +89,7 @@ class MaterialController extends BaseController
             }, default: false);
 
             if ($success) {
-                header('Location: ' . ROOT . '/material-categories/' . $data['row']['id_category'] . '/materials');
+                header('Location: ' . ROOT . '/materials/all?category=' . (int) $data['row']['id_category']);
                 exit;
             }
         }
@@ -97,20 +97,20 @@ class MaterialController extends BaseController
         $this->view("material/material/delete", $data);
     }
 
-    public function filterByCategory($idCategory)
-    {
-        $data['rows'] = $this->materialService->getByIdCategory($idCategory);
-        $data['allergens'] = $this->allergenService->getAll();
-        $data['id_category'] = $idCategory;
-        $data['category'] = $this->materialCategoryService->getById($idCategory);
-
-        $this->view("material/material/filter", $data);
-    }
-
+    /**
+     * Surowce i kategorie : jedna strona (zakładki « Surowce » i « Kategorie ») zamiast listy kategorii,
+     * listy surowców kategorii i listy wszystkich surowców. ?category= wybiera kategorię, ?tab=categories — kategorie.
+     */
     public function listAll()
     {
-        $data['rows'] = $this->materialService->getAll();
-        $data['categories'] = $this->materialCategoryService->getAll();
+        $data['rows'] = $this->materialService->getAll() ?: [];
+        $counts = array_count_values(array_map(fn($r) => (int) $r['id_category'], $data['rows']));
+        $data['categories'] = array_map(fn($c) => $c + ['materials_count' => $counts[(int) $c['id']] ?? 0],
+            $this->materialCategoryService->getAll() ?: []);
+        usort($data['categories'], fn($a, $b) => strcasecmp((string) $a['name'], (string) $b['name']));
+        $data['allergens'] = $this->allergenService->getAll();
+        $data['selected_category'] = (int) ($_GET['category'] ?? 0);
+        $data['tab'] = ($_GET['tab'] ?? '') === 'categories' ? 'categories' : 'materials';
 
         $this->view("material/list", $data);
     }

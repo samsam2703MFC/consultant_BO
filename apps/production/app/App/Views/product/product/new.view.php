@@ -155,7 +155,7 @@
                             <div class="col-2"></div>
                             <div class="col-8">
                                 <button class="btn btn-success">Utwórz</button>
-                                <a href="<?= ROOT ?>/product-categories" role="button"
+                                <a href="<?= ROOT ?>/workshop/products#/categories" role="button"
                                    class="btn btn-secondary float-end">Powrót</a>
                             </div>
                         </div>

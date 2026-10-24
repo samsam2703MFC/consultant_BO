@@ -68,7 +68,8 @@ final class ItemService
      * stany proponowane (stock.suggest_min_weeks / stock.suggest_max_weeks tygodni sprzedaży) i zapas
      * optymalny (stan maks. proponowany) w kartonach i paletach (kartony ÷ kartony na paletę z ERP).
      */
-    public function stockOverview(?int $groupId): array
+    /** @param string $erp 'active' (domyślnie), 'inactive' albo 'all' : produkty nieaktywne w ERP na liście Kart produktów. */
+    public function stockOverview(?int $groupId, string $erp = 'active'): array
     {
         $this->items->createMissingCards();
         $weeks = max(1, (int) $this->params->get('stock.suggest_weeks', '6'));
@@ -103,7 +104,7 @@ final class ItemService
             if ($item['price_eur'] === null) $t['no_price']++;
             if ($item['target_cartons'] > 0 && $item['cpp'] === null) $t['no_cpp']++;
         };
-        foreach ($this->items->stockOverview($weeks * 7, $groupId) as $r) {
+        foreach ($this->items->stockOverview($weeks * 7, $groupId, null, in_array($erp, ['inactive', 'all'], true) ? $erp : 'active') as $r) {
             $ppc = (int) $r['ppc'] > 0 ? (int) $r['ppc'] : null;
             $cpp = (int) $r['cpp'] > 0 ? (int) $r['cpp'] : null;
             $weekly = (float) $r['shipped_cartons'] / $weeks;
@@ -116,6 +117,7 @@ final class ItemService
                 // Produkt bez karty : id null (karta powstaje przy pierwszym przełączeniu na MTS / zmianie stanów).
                 'id' => $r['id'] !== null ? (int) $r['id'] : null, 'has_card' => $r['id'] !== null,
                 'final_product_id' => (int) $r['id_final_product'], 'name' => $r['name'], 'erp_active' => (bool) $r['erp_active'],
+                'workload_points' => $r['workload_points'] !== null ? (int) $r['workload_points'] : null, 'recipe_id' => $r['id_recipe'] !== null ? (int) $r['id_recipe'] : null,
                 'group_id' => $r['id_primary_group'] !== null ? (int) $r['id_primary_group'] : null, 'status' => $r['status'] ?? 'draft',
                 'mode' => $r['mode'] ?? 'MTO', 'never_frozen' => (bool) ($r['never_frozen'] ?? false), 'ppc' => $ppc, 'cpp' => $cpp,
                 'stock_min' => $this->num($r['stock_min']), 'stock_max' => $this->num($r['stock_max']), 'batch' => $this->num($r['batch_multiple']),

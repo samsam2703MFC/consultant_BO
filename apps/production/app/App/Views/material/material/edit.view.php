@@ -176,7 +176,7 @@
                                 <div class="col-2"></div>
                                 <div class="col-8">
                                     <button class="btn btn-warning">Zapisz</button>
-                                    <a href="<?= ROOT ?>/material-categories/<?= $row['id_category'] ?>/materials"
+                                    <a href="<?= ROOT ?>/materials/all?category=<?= (int) $row['id_category'] ?>"
                                        role="button" class="btn btn-secondary float-end">Powrót</a>
                                 </div>
                             </div>
@@ -192,7 +192,7 @@
                         <div class="row mt-4">
                             <div class="col-4"></div>
                             <div class="col-4 text-center">
-                                <a href="<?= ROOT ?>/material-categories" role="button" class="btn btn-secondary">Powrót</a>
+                                <a href="<?= ROOT ?>/materials/all?tab=categories" role="button" class="btn btn-secondary">Powrót</a>
                             </div>
                         </div>
                     <?php endif; ?>

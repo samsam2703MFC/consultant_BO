@@ -56,10 +56,7 @@ return function(RouteCollector $r) {
     ]);
 
 
-    $r->addRoute('GET', '/material-categories/{idCategory:\d+}/materials', [
-        'controller' => App\Controllers\Web\Material\MaterialController::class,
-        'method'     => 'filterByCategory'
-    ]);
+    $r->addRoute('GET', '/material-categories/{idCategory:\d+}/materials', ['redirect' => '/materials/all?category={idCategory}']);
 
     $r->addRoute('GET', '/materials/export', [
         'controller' => App\Controllers\Web\Material\MaterialExportController::class,

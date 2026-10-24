@@ -3,10 +3,8 @@ use FastRoute\RouteCollector;
 
 return function(RouteCollector $r) {
 
-    $r->addRoute('GET', '/products/all', [
-        'controller' => App\Controllers\Web\Product\ProductController::class,
-        'method'     => 'showAllProducts'
-    ]);
+    // Listy produktów ERP (wszystkie / kategorii) : lista w Kartach produktów (filtry kategorii i aktywności w ERP).
+    $r->addRoute('GET', '/products/all', ['redirect' => '/workshop/products#/?erp=all']);
 
     $r->addRoute('GET', '/products/new', [
         'controller' => App\Controllers\Web\Product\ProductController::class,
@@ -67,10 +65,7 @@ return function(RouteCollector $r) {
     ]);
 
 
-    $r->addRoute('GET', '/product-categories/{idCategory:\d+}/products', [
-        'controller' => App\Controllers\Web\Product\ProductController::class,
-        'method'     => 'filterByCategory'
-    ]);
+    $r->addRoute('GET', '/product-categories/{idCategory:\d+}/products', ['redirect' => '/workshop/products#/?erp=all&category={idCategory}']);
 
 
     $r->addRoute('GET', '/products/export', [

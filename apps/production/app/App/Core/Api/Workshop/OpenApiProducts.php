@@ -31,7 +31,7 @@ final class OpenApiProducts
             'GET /produits/items/{id:\d+}/production-summary' => ['tag' => $t, 'id' => 'getItemProductionSummary', 'summary' => 'Produkcja i Gantt / Production et Gantt (étape 7)', 'response' => 'ProductionSummary', 'errors' => [404],
                 'description' => "Rendement (pièces par heure de travail, par personne et pour le groupe), temps par carton et pour 1000 pièces, durée du début à la fin d'un lot (palette, sinon lot minimum, sinon 1000), étapes avec début depuis le départ et étape suivante : tout de suite, + minutes ou J+1 quand l'attente dure 8 h ou plus ; quantité de la semaine (plan), jours du Gantt de la semaine, opérations."],
             'GET /produits/stock-overview' => ['tag' => $t, 'id' => 'getStockOverview', 'summary' => 'Zapasy wg kategorii / Stocks par catégorie', 'response' => 'StockOverview', 'errors' => [401, 403],
-                'query' => ['group_id' => ['type' => 'integer']],
+                'query' => ['group_id' => ['type' => 'integer'], 'erp' => ['type' => 'string', 'enum' => ['active', 'inactive', 'all'], 'description' => 'active (défaut) : produits actifs dans l\'ERP et fiches ; inactive / all : produits inactifs dans l\'ERP aussi']],
                 'description' => "Produits par catégorie : mode MTS / MTO, stocks min./max., ventes WDT (stock.suggest_weeks semaines), moyenne par magasin et par semaine, stock optimal (stock.suggest_max_weeks semaines) en cartons et palettes ; stock cible MTS (stock max.) en cartons, palettes et valeur (prix moyen de vente, coût matières), totaux par catégorie, par groupe et au total."],
             'GET /produits/items/{id:\d+}/stock-suggestion' => ['tag' => $t, 'id' => 'getItemStockSuggestion', 'summary' => 'Stany ze sprzedaży / Stocks depuis les ventes (étape 4)', 'response' => 'StockSuggestion', 'errors' => [404, 409],
                 'description' => "Ventes WDT (sans doublons) des stock.suggest_weeks dernières semaines : moyenne par semaine ; stock min = stock.suggest_min_weeks semaines, max = stock.suggest_max_weeks semaines, arrondis aux cartons entiers. Rien n'est enregistré."],
@@ -151,6 +151,7 @@ final class OpenApiProducts
                     'totals' => ['$ref' => '#/components/schemas/StockTotals'],
                     'items' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                         'id' => $int, 'final_product_id' => $int, 'name' => ['type' => 'string'], 'erp_active' => ['type' => 'boolean'], 'group_id' => ['type' => 'integer', 'nullable' => true],
+                        'workload_points' => ['type' => 'integer', 'nullable' => true, 'description' => 'pracochłonność 1–5 (marże, koszty)'], 'recipe_id' => ['type' => 'integer', 'nullable' => true],
                         'status' => ['type' => 'string'], 'mode' => ['type' => 'string', 'enum' => ItemService::MODES], 'never_frozen' => ['type' => 'boolean'],
                         'ppc' => ['type' => 'integer', 'nullable' => true], 'cpp' => ['type' => 'integer', 'nullable' => true],
                         'stock_min' => ['type' => 'number', 'nullable' => true], 'stock_max' => ['type' => 'number', 'nullable' => true],

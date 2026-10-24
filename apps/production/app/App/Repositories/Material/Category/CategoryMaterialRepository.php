@@ -19,18 +19,6 @@ class CategoryMaterialRepository extends BaseRepository
         'name'
     ];
 
-    public function getExistedCategoryInMaterialList()
-    {
-        $sql = "SELECT DISTINCT
-                    rm.id_category,
-                    cm.name
-                FROM raw_material rm
-                INNER JOIN $this->table cm
-                ON rm.id_category = cm.id
-                ORDER BY cm.name";
-        return $this->query($sql);
-    }
-
     public function getPackCategory()
     {
         $sql = "SELECT id, name FROM $this->table WHERE id_group = 1";

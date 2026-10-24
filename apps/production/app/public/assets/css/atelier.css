@@ -1528,6 +1528,11 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-list-cat[open] .tfb-list-chevron { transform: rotate(90deg); }
 .tfb-list-batch { width: 150px; margin-left: auto; }
 .tfb-list-labour { display: flex; align-items: center; gap: 4px; }
+/* Karty produktów : pracochłonność 1–5 w menu ⋯ produktu (dawna lista produktów ERP) */
+.at-more-menu .tfb-workload { display: flex; align-items: center; gap: 4px; padding: 6px 10px; }
+.at-more-menu .tfb-workload > span { flex: 1; font-size: 13px; }
+.at-more-menu .tfb-workload > button { width: 26px; height: 26px; padding: 0; border: 1px solid var(--at-line); border-radius: 6px; background: #fff; font-size: 12px; }
+.at-more-menu .tfb-workload > button.active { background: var(--at-primary); border-color: var(--at-primary); color: #fff; }
 .tfb-list-labour .input-group { width: 96px; flex-wrap: nowrap; }
 
 /* Zaopatrzenie : potrzeby wg dostawcy, zamówienia (statusy), przyjęcia, podgląd maila. */

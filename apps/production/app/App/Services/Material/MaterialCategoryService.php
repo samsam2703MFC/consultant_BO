@@ -20,11 +20,6 @@ class MaterialCategoryService
         return  $this->categoryMaterialRepository->findAll();
     }
 
-    public function getUsed()
-    {
-        return  $this->categoryMaterialRepository->getExistedCategoryInMaterialList();
-    }
-
     public function create(array $data)
     {
         return $this->categoryMaterialRepository->insert($data);

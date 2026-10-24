@@ -3,9 +3,12 @@ use FastRoute\RouteCollector;
 
 return function(RouteCollector $r) {
 
-    $r->addRoute('GET', '/product-categories', [
+    // Kategorie produktów : zakładka « Kategorie » w Kartach produktów (jedna strona zamiast dwóch).
+    $r->addRoute('GET', '/product-categories', ['redirect' => '/workshop/products#/categories']);
+
+    $r->addRoute('GET', '/ajax/product-categories', [
         'controller' => App\Controllers\Web\Product\CategoryController::class,
-        'method'     => 'overview'
+        'method'     => 'ajaxList'
     ]);
 
     $r->addRoute('PATCH', '/ajax/product-categories/{id:\d+}', [

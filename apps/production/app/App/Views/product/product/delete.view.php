@@ -56,7 +56,7 @@
                         <div class="col-2"></div>
                         <div class="col-8">
                             <button class="btn btn-danger">Usuń</button>
-                            <a href="<?=ROOT?>/FinalProduct/products/filter/<?=$row['id_category']?>" role="button" class="btn btn-secondary float-end">Powrót</a>
+                            <a href="<?=ROOT?>/workshop/products#/?erp=all&category=<?=(int) $row['id_category']?>" role="button" class="btn btn-secondary float-end">Powrót</a>
                         </div>
                     </div>
                 </form>
@@ -71,7 +71,7 @@
                 <div class="row mt-4">
                     <div class="col-4"></div>
                     <div class="col-4 text-center">
-                        <a href="<?=ROOT?>/FinalProduct/products" role="button" class="btn btn-secondary">Powrót</a>
+                        <a href="<?=ROOT?>/workshop/products" role="button" class="btn btn-secondary">Powrót</a>
                     </div>
                 </div>
             <?php endif; ?>

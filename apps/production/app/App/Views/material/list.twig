@@ -1,21 +1,20 @@
 {% extends "layouts/base.twig" %}
 
-{% block title %}{{ translations.all_materials|default('Wszystkie surowce') }}{% endblock %}
+{% block title %}{{ translations.materials_and_categories }}{% endblock %}
 
 {% block page_heading %}
 <div class="page-heading">
     <div class="page-title">
         <div class="row">
             <div class="col-12 col-md-6 order-md-1 order-last">
-                <h3>{{ translations.all_materials }}</h3>
-                <p class="text-subtitle text-muted">{{ translations.all_materials_list }}</p>
+                <h3>{{ translations.materials_and_categories }}</h3>
+                <p class="text-subtitle text-muted">{{ translations.materials_and_categories_subtitle }}</p>
             </div>
             <div class="col-12 col-md-6 order-md-2 order-first">
                 <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item"><a href="{{ root }}">Dashboard</a></li>
-                        <li class="breadcrumb-item"><a href="{{ root }}/material-categories">{{ translations.material_categories }}</a></li>
-                        <li class="breadcrumb-item active" aria-current="page">{{ translations.all_materials }}</li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ translations.materials_and_categories }}</li>
                     </ol>
                 </nav>
             </div>
@@ -46,14 +45,23 @@
 {% endblock %}
 
 {% block content %}
-    <section class="section">
+    {# Jedna strona zamiast trzech (kategorie, surowce kategorii, wszystkie surowce) : zakładki « Surowce » i « Kategorie ». #}
+    {% set new_material_url = selected_category ? root ~ '/material-categories/' ~ selected_category ~ '/materials/new' : root ~ '/materials/new' %}
+    <ul class="nav nav-pills mb-3">
+        <li class="nav-item"><a class="nav-link {{ tab == 'materials' ? 'active' }}" href="{{ root }}/materials/all{{ selected_category ? '?category=' ~ selected_category }}"><i class="bi bi-list-ul"></i> {{ translations.tab_materials }}</a></li>
+        <li class="nav-item"><a class="nav-link {{ tab == 'categories' ? 'active' }}" href="{{ root }}/materials/all?tab=categories"><i class="bi bi-diagram-3"></i> {{ translations.tab_categories }}</a></li>
+    </ul>
+    <section class="section {{ tab != 'materials' ? 'd-none' }}" data-tab="materials">
         <div class="card">
             <div class="card-header">
                 <div class="row align-items-center">
-                    <div class="col-12 col-md-8">
+                    <div class="col-12 col-md-6">
                         <h4 class="card-title mb-0">{{ translations.all_materials_list }}</h4>
                     </div>
-                    <div class="col-12 col-md-4 text-end mt-2 mt-md-0">
+                    <div class="col-12 col-md-6 text-end mt-2 mt-md-0">
+                        <a href="{{ new_material_url }}" class="btn btn-primary btn-sm" data-new-material>
+                            <i class="bi bi-plus-circle"></i> {{ translations.new_material }}
+                        </a>
                         <a href="{{ root }}/materials/export" class="btn btn-info btn-sm">
                             <i class="bi bi-download"></i> {{ translations.export_materials|default('Eksportuj') }}
                         </a>
@@ -72,12 +80,8 @@
                     <div class="col-12 col-md-4">
                         <select class="form-select" id="categoryFilter">
                             <option value="">{{ translations.all_categories }}</option>
-                            {% set processedCategories = [] %}
-                            {% for material in rows %}
-                                {% if material.category_name and material.category_name not in processedCategories %}
-                                    <option value="{{ material.category_name }}">{{ material.category_name }}</option>
-                                    {% set processedCategories = processedCategories|merge([material.category_name]) %}
-                                {% endif %}
+                            {% for c in categories %}
+                                <option value="{{ c.id }}" {{ c.id == selected_category ? 'selected' }}>{{ c.name }} ({{ c.materials_count }})</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -123,7 +127,7 @@
                                 {% for material in rows %}
                                     <tr class="material-row"
                                         data-material-name="{{ material.name|lower }}"
-                                        data-category="{{ material.category_name|default('') }}"
+                                        data-category="{{ material.id_category|default('') }}"
                                         data-is-package="{{ material.is_part_of_package }}">
                                         <td class="text-center">
                                             {% if material.is_part_of_package == 1 %}
@@ -178,12 +182,20 @@
                                                        title="{{ translations.toggle_package_status }}">
                                             </div>
                                         </td>
-                                        <td class="text-center">
-                                            <a href="{{ root }}/materials/{{ material.id }}/edit"
-                                               class="btn btn-sm btn-primary"
-                                               title="{{ translations.edit }}">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
+                                        <td class="text-end">
+                                            <div class="at-actions">
+                                                <a href="{{ root }}/materials/{{ material.id }}/edit" class="btn btn-sm btn-primary" title="{{ translations.edit }}">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <div class="at-more">
+                                                    <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="{{ translations.more_actions }}" title="{{ translations.more_actions }}"><i class="bi bi-three-dots"></i></button>
+                                                    <div class="at-more-menu" role="menu" hidden>
+                                                        <button type="button" role="menuitem" data-allergens="{{ material.id }}" data-name="{{ material.name }}"><i class="bi bi-exclamation-diamond"></i>{{ translations.allergens }}</button>
+                                                        <hr>
+                                                        <a role="menuitem" class="at-more-danger" href="{{ root }}/materials/{{ material.id }}/delete"><i class="bi bi-trash"></i>{{ translations.delete }}</a>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -194,6 +206,108 @@
             </div>
         </div>
     </section>
+
+    <section class="section {{ tab != 'categories' ? 'd-none' }}" data-tab="categories">
+        <div class="card">
+            <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                <h4 class="card-title mb-0">{{ translations.material_categories }}</h4>
+                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#categoryModal">
+                    <i class="bi bi-folder-plus"></i> {{ translations.add_category }}
+                </button>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">{{ translations.categories_help }}</p>
+                <table class="table table-striped align-middle" data-at-table>
+                    <thead>
+                    <tr>
+                        <th>{{ translations.category }}</th>
+                        <th class="text-center">{{ translations.materials_count }}</th>
+                        <th class="text-end">{{ translations.actions }}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for c in categories %}
+                        <tr data-category-id="{{ c.id }}">
+                            <td>{{ c.name }}</td>
+                            <td class="text-center">{{ c.materials_count }}</td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#categoryModal"
+                                        data-category-id="{{ c.id }}" data-category-name="{{ c.name }}">{{ translations.edit }}</button>
+                                <a href="{{ root }}/materials/all?category={{ c.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-list-ul"></i> {{ translations.category_materials }}</a>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="3" class="text-center text-muted">{{ translations.no_categories }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    {# Kategoria : nowa / zmiana nazwy (dawna strona /material-categories) #}
+    <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="categoryModalLabel">{{ translations.add_category }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ translations.close }}"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="categoryForm">
+                        <input type="hidden" id="categoryId" value="">
+                        <div class="mb-3">
+                            <label for="categoryName" class="form-label">{{ translations.category_name }}</label>
+                            <input type="text" class="form-control" id="categoryName" required>
+                            <div class="invalid-feedback">{{ translations.field_required }}</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ translations.cancel }}</button>
+                    <button type="button" class="btn btn-primary" id="saveCategoryBtn">{{ translations.save }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Alergeny surowca (dawna lista surowców kategorii) #}
+    <div class="modal fade" id="allergensModal" tabindex="-1" aria-labelledby="allergensModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="allergensModalLabel">Alergeny surowca</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ translations.close }}"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="allergens-material-id" value="">
+                    <div class="alert alert-info py-2" id="allergens-material-name" style="display:none;"></div>
+                    <div id="allergens-loading" class="text-muted" style="display:none;">Ładowanie…</div>
+                    <div class="row" id="allergens-checkboxes">
+                        {% for aid, a in allergens %}
+                            <div class="col-12 col-md-6 col-lg-4 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input allergen-checkbox" type="checkbox" id="allergen_{{ aid }}" value="{{ aid }}">
+                                    <label class="form-check-label" for="allergen_{{ aid }}">{{ a.name|default(a.code|default('-')) }}</label>
+                                    <div class="text-muted small">{{ a.code|default('') }}</div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="col-12"><div class="alert alert-warning mb-0">Brak zdefiniowanych alergenów.</div></div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3 d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-outline-secondary" data-allergens-all="1">Zaznacz wszystkie</button>
+                        <button type="button" class="btn btn-outline-secondary" data-allergens-all="0">Odznacz wszystkie</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ translations.close }}</button>
+                    <button type="button" class="btn btn-primary" id="allergens-save-btn">{{ translations.save }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
@@ -241,8 +355,82 @@ function applyFilters() {
 
 // Event listeners
 searchInput.addEventListener('input', applyFilters);
-categoryFilter.addEventListener('change', applyFilters);
+categoryFilter.addEventListener('change', function () {
+    applyFilters();
+    // Wybrana kategoria w adresie (powrót z formularzy) i nowy surowiec od razu w tej kategorii.
+    const url = new URL(window.location.href);
+    if (categoryFilter.value) url.searchParams.set('category', categoryFilter.value); else url.searchParams.delete('category');
+    window.history.replaceState(null, '', url);
+    document.querySelector('[data-new-material]').href = categoryFilter.value
+        ? `{{ root }}/material-categories/${categoryFilter.value}/materials/new` : '{{ root }}/materials/new';
+});
 typeFilter.addEventListener('change', applyFilters);
+if (categoryFilter.value) applyFilters();
+
+// Kategoria : nowa / zmiana nazwy
+const categoryModalEl = document.getElementById('categoryModal');
+categoryModalEl.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button ? button.getAttribute('data-category-id') : '';
+    const name = button ? button.getAttribute('data-category-name') : '';
+    document.getElementById('categoryForm').classList.remove('was-validated');
+    document.getElementById('categoryId').value = id || '';
+    document.getElementById('categoryName').value = name || '';
+    document.getElementById('categoryModalLabel').textContent = id ? "{{ translations.edit_category }} - " + (name || '') : "{{ translations.add_category }}";
+});
+document.getElementById('saveCategoryBtn').addEventListener('click', async function () {
+    const id = document.getElementById('categoryId').value;
+    const name = document.getElementById('categoryName').value.trim();
+    if (!name) { document.getElementById('categoryForm').classList.add('was-validated'); return; }
+    try {
+        const response = await api(id ? `/ajax/material-categories/${id}` : '/ajax/material-categories', {method: id ? 'PATCH' : 'POST', data: {id_group: 0, name}});
+        if (!response.ok) throw new Error(response.message || "{{ translations.error_saving }}");
+        window.location.href = '{{ root }}/materials/all?tab=categories';
+    } catch (e) {
+        Swal.fire({icon: 'error', title: 'Błąd!', text: e.message || "{{ translations.error_saving }}", confirmButtonText: 'OK'});
+    }
+});
+
+// Alergeny surowca
+let allergensModal = null;
+const allergenBoxes = () => Array.from(document.querySelectorAll('#allergens-checkboxes .allergen-checkbox'));
+const allergensLoading = (on) => {
+    document.getElementById('allergens-loading').style.display = on ? '' : 'none';
+    document.getElementById('allergens-save-btn').disabled = !!on;
+};
+document.querySelectorAll('[data-allergens-all]').forEach(b => b.addEventListener('click', () => allergenBoxes().forEach(cb => cb.checked = b.dataset.allergensAll === '1')));
+document.addEventListener('click', async function (e) {
+    const b = e.target.closest('[data-allergens]');
+    if (!b) return;
+    const id = b.dataset.allergens;
+    document.getElementById('allergens-material-id').value = id;
+    const nameBox = document.getElementById('allergens-material-name');
+    nameBox.style.display = '';
+    nameBox.textContent = `Surowiec: ${b.dataset.name}`;
+    allergenBoxes().forEach(cb => cb.checked = false);
+    allergensModal = allergensModal || new bootstrap.Modal(document.getElementById('allergensModal'));
+    allergensModal.show();
+    allergensLoading(true);
+    try {
+        const result = await api(`/ajax/materials/${id}/allergens`, {method: 'GET'});
+        if (!result.ok) { showSnack(false, result.message || 'Nie udało się pobrać alergenów'); return; }
+        const ids = (result.rows || result.data?.rows || []).map(r => parseInt(r.id, 10));
+        allergenBoxes().forEach(cb => { cb.checked = ids.includes(parseInt(cb.value, 10)); });
+    } catch (err) { showSnack(false, 'Błąd komunikacji'); }
+    finally { allergensLoading(false); }
+});
+document.getElementById('allergens-save-btn').addEventListener('click', async function () {
+    const id = parseInt(document.getElementById('allergens-material-id').value || '0', 10);
+    if (!id) return;
+    const allergenIds = allergenBoxes().filter(cb => cb.checked).map(cb => parseInt(cb.value, 10));
+    allergensLoading(true);
+    try {
+        const result = await api(`/ajax/materials/${id}/allergens`, {method: 'PATCH', data: {allergenIds}});
+        showSnack(!!result.ok, result.message || (result.ok ? 'Zapisano' : 'Nie udało się zapisać'));
+        if (result.ok) allergensModal.hide();
+    } catch (err) { showSnack(false, 'Błąd komunikacji'); }
+    finally { allergensLoading(false); }
+});
 
 // Keyboard shortcut for search
 document.addEventListener('keydown', function(e) {

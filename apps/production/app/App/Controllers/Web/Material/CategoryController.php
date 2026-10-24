@@ -19,13 +19,6 @@ class CategoryController extends BaseController
     }
 
 
-    public function overview()
-    {
-        $data['rows'] = $this->materialCategoryService->getUsed();
-
-        $this->view("material/category/overview", $data);
-    }
-
     public function createCategory()
     {
         $request = \Symfony\Component\HttpFoundation\Request::createFromGlobals();

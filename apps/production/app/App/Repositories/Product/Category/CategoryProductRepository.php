@@ -19,20 +19,17 @@ class CategoryProductRepository extends BaseRepository
         'target_margin_percentage'
     ];
 
-    public function getExistedCategoryInProductList()
+    /** Wszystkie kategorie produktów z liczbą produktów aktywnych i nieaktywnych (także kategorie bez produktów). */
+    public function allWithCounts(): array
     {
-        $sql = "SELECT DISTINCT
-                    fp.id_category as id_category,
-                    fp.id_category as id_category_subquery,
-                    cp.name,
-                    cp.target_margin_percentage,
-                    (SELECT COUNT(id) FROM final_product ifp WHERE ifp.id_category = id_category_subquery AND ifp.active = 1) as qty_active,
-                    (SELECT COUNT(id) FROM final_product ifp WHERE ifp.id_category = id_category_subquery AND ifp.active = 0) as qty_no_active
-                FROM final_product fp
-                INNER JOIN $this->table cp
-                ON fp.id_category = cp.id
+        $sql = "SELECT cp.id, cp.name, cp.target_margin_percentage,
+                       COALESCE(SUM(fp.active = 1), 0) AS qty_active,
+                       COALESCE(SUM(fp.active = 0), 0) AS qty_inactive
+                FROM $this->table cp
+                LEFT JOIN final_product fp ON fp.id_category = cp.id
+                GROUP BY cp.id, cp.name, cp.target_margin_percentage
                 ORDER BY cp.name";
-        return $this->query($sql);
+        return $this->query($sql) ?: [];
     }
 
     public function updateCategory($id, array $data)

@@ -66,6 +66,17 @@
   "actions": "Akcje",
   "toggle_package_status": "Przełącz status opakowania",
   "status_updated": "Status zaktualizowany pomyślnie",
-  "status_update_error": "Błąd podczas aktualizacji statusu"
+  "status_update_error": "Błąd podczas aktualizacji statusu",
+  "materials_and_categories": "Surowce i kategorie",
+  "materials_and_categories_subtitle": "Lista surowców (filtr kategorii, typ, dostawca, cena) i kategorie surowców — jedna strona.",
+  "tab_materials": "Surowce",
+  "tab_categories": "Kategorie",
+  "new_material": "Nowy surowiec",
+  "materials_count": "Surowców",
+  "category_materials": "Surowce kategorii",
+  "more_actions": "Więcej akcji",
+  "allergens": "Alergeny…",
+  "delete": "Usuń…",
+  "categories_help": "Kategorie surowców : nazwa (zakupy, receptury, BDO). « Surowce kategorii » otwiera listę z filtrem tej kategorii."
 }
 

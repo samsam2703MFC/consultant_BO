@@ -12,9 +12,14 @@ class ProductCategoryService
         $this->categoryProductRepository = $categoryProductRepository;
     }
 
-    public function getExistedCategoryInProductList()
+    /** Kategorie z liczbą produktów : zakładka « Kategorie » w Kartach produktów. */
+    public function allWithCounts(): array
     {
-        return $this->categoryProductRepository->getExistedCategoryInProductList();
+        return array_map(fn($r) => [
+            'id' => (int) $r['id'], 'name' => (string) $r['name'],
+            'target_margin_percentage' => $r['target_margin_percentage'] !== null ? (float) $r['target_margin_percentage'] : null,
+            'qty_active' => (int) $r['qty_active'], 'qty_inactive' => (int) $r['qty_inactive'],
+        ], $this->categoryProductRepository->allWithCounts());
     }
 
     public function findAll()
