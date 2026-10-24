@@ -35,15 +35,7 @@ function ep_ventes_semaines(): array
     $lu = vsLireMagasin($sid, $periodes);
     $m = vsMagasin($sid, $periodes, $lu);
     if (!empty($_GET['articles'])) {
-        $fen = [];
-        foreach ($periodes as $p) { if (!$p['futur']) { $fen[] = [$p['du'], $p['jusqua']]; $fen[] = [$p['du1'], $p['au1']]; } }
-        $A = vsArticles($fen);
-        foreach ($m['periodes'] as $i => $l) {
-            $p = $periodes[$i];
-            if ($p['futur']) { continue; }
-            $m['periodes'][$i]['articles'] = $A[$p['du'] . '|' . $p['jusqua']][(string) $sid] ?? null;
-            if ($l['n1'] !== null) { $m['periodes'][$i]['n1']['articles'] = $A[$p['du1'] . '|' . $p['au1']][(string) $sid] ?? null; }
-        }
+        $m['periodes'] = vsArticlesLignes((string) $sid, $periodes, $m['periodes'], vsArticles(vsArticlesFenetres($periodes)));
     }
     // `pro=1` (le dashboard magasin, 21/10/2026) : le comptoir de chaque période, pour le panier hors clients pro. À la
     // demande : une centaine de relevés à relire, que le cockpit, qui n'en montre pas le panier, n'a pas à payer.
@@ -54,10 +46,12 @@ function ep_ventes_semaines(): array
 }
 
 /**
- * GET /ventes/reseau?vue=semaine|mois|annee&date=YYYY-MM-DD — tous les
- * magasins actifs, chacun face à son N-1, et le réseau sommé. Le N-1 du
+ * GET /ventes/reseau?vue=semaine|mois|annee&date=YYYY-MM-DD[&articles=1] — tous
+ * les magasins actifs, chacun face à son N-1, et le réseau sommé. Le N-1 du
  * réseau ne compte que les magasins qui en ont un ; `comparables` donne le N
- * de ces mêmes magasins, pour un écart à périmètre constant.
+ * de ces mêmes magasins, pour un écart à périmètre constant. Avec `articles=1`,
+ * chaque période d'un magasin porte `articles` (pièces vendues), et son `n1`
+ * et son `n1Mois` aussi.
  */
 function ep_ventes_reseau(): array
 {
@@ -66,17 +60,22 @@ function ep_ventes_reseau(): array
     try { $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name'); }
     catch (PDOException $e) { $shops = Db::rows("SELECT id, name FROM ceo_shop WHERE status = 'Ouvert' ORDER BY name"); }
     $magasins = []; $sources = [];
+    // `articles=1` (Résultat › Année, articles par ticket, 24/10/2026) : les pièces de chaque fenêtre, un appel au panel
+    // par fenêtre pour tout le réseau — lues une fois, avant la boucle des magasins.
+    $A = !empty($_GET['articles']) ? vsArticles(vsArticlesFenetres($periodes)) : null;
     $reseau = array_map(static fn ($p) => ['ca' => 0.0, 'tickets' => 0, 'jours' => 0, 'ca1' => 0.0, 'tickets1' => 0, 'caComp' => 0.0, 'ticketsComp' => 0, 'magasins' => 0, 'comparables' => 0], $periodes);
     foreach ($shops as $s) {
         $sid = (int) $s['id'];
         $lu = vsLireMagasin($sid, $periodes);
         $m = vsMagasin($sid, $periodes, $lu);
         if ($m['total']['jours'] === 0 && $m['totalN1'] === null) { continue; } // jamais vendu : hors réseau
+        if ($A !== null) { $m['periodes'] = vsArticlesLignes((string) $sid, $periodes, $m['periodes'], $A); }
         foreach ($m['sources'] as $k => $v) { $sources[$k] = true; }
         $par = [];
         foreach ($m['periodes'] as $i => $p) {
             $par[] = ['ca' => $p['ca'], 'tickets' => $p['tickets'], 'jours' => $p['jours'], 'source' => $p['source'], 'n1' => $p['n1']]
-                + (array_key_exists('n1Mois', $p) ? ['n1Mois' => $p['n1Mois']] : []);
+                + (array_key_exists('n1Mois', $p) ? ['n1Mois' => $p['n1Mois']] : [])
+                + (array_key_exists('articles', $p) ? ['articles' => $p['articles']] : []);
             if ($p['source'] !== null) { $reseau[$i]['ca'] += $p['ca']; $reseau[$i]['tickets'] += $p['tickets']; $reseau[$i]['jours'] += $p['jours']; $reseau[$i]['magasins']++; }
             if ($p['n1'] !== null) {
                 $reseau[$i]['ca1'] += $p['n1']['ca']; $reseau[$i]['tickets1'] += $p['n1']['tickets']; $reseau[$i]['comparables']++;
@@ -98,6 +97,31 @@ function ep_ventes_reseau(): array
     }
     return ['vue' => $vue, 'date' => $date, 'aujourdhui' => date('Y-m-d'), 'du' => $periodes[0]['du'], 'au' => end($periodes)['au'],
         'periodes' => $out, 'magasins' => $magasins, 'source' => vsSourceTexte($sources, $vue)];
+}
+
+/** Les fenêtres dont il faut les pièces : chaque période et son N-1 à date, et le mois N-1 entier (vues mois et année). */
+function vsArticlesFenetres(array $periodes): array
+{
+    $fen = [];
+    foreach ($periodes as $p) {
+        if (!$p['futur']) { $fen[] = [$p['du'], $p['jusqua']]; $fen[] = [$p['du1'], $p['au1']]; }
+        if (isset($p['au1Mois'])) { $fen[] = [$p['du1'], $p['au1Mois']]; }
+    }
+    return $fen;
+}
+
+/** Pose `articles` sur les lignes d'un magasin (période, `n1`, `n1Mois`) depuis le relevé de vsArticles. */
+function vsArticlesLignes(string $sid, array $periodes, array $lignes, array $A): array
+{
+    foreach ($lignes as $i => $l) {
+        $p = $periodes[$i];
+        if (!$p['futur']) {
+            $lignes[$i]['articles'] = $A[$p['du'] . '|' . $p['jusqua']][$sid] ?? null;
+            if ($l['n1'] !== null) { $lignes[$i]['n1']['articles'] = $A[$p['du1'] . '|' . $p['au1']][$sid] ?? null; }
+        }
+        if (!empty($l['n1Mois'])) { $lignes[$i]['n1Mois']['articles'] = $A[$p['du1'] . '|' . $p['au1Mois']][$sid] ?? null; }
+    }
+    return $lignes;
 }
 
 /**
