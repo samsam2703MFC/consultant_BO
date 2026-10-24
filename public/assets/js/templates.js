@@ -986,7 +986,7 @@ function tplObjectifs(c, x){
             <th style="text-align:right;${TH2}">Cible prorata</th>
             <th style="text-align:center;${TH2}">Écart</th>
             <th style="text-align:center;${TH2}">Atteinte</th>
-            ${c.clAn ? `<th style="text-align:right;${TH2}">Clients vs ${c.objExo - 1}</th>` : ''}
+            ${c.clAn ? `<th style="text-align:right;${TH2}">${esc(c.clAn.colTitre)}</th>` : ''}
             <th style="text-align:right;${TH2.replace('padding:12px', 'padding:12px 14px')}">Suivi budget</th>
           </tr></thead>
           <tbody>
