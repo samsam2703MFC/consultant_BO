@@ -1038,3 +1038,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T10:51Z Résultat › Année : les clients mois par mois face à l'an passé (n1Mois)
 2026-10-24T10:54Z app employé : jauge de Bats ton record en articles par ticket
 2026-10-24T10:56Z app employé : Planning, rentabilité du service à venir
+2026-10-24T10:59Z Suivi des franchisés : tableau de bord, tablette, client mystère, page du franchisé, qui fait quoi, sous-menu Budget

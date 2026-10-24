@@ -31,6 +31,7 @@ require __DIR__ . '/../../src/visites.php';
 require __DIR__ . '/../../src/visites_conformite.php';
 require __DIR__ . '/../../src/visites_cadre.php';
 require __DIR__ . '/../../src/franchises.php';
+require __DIR__ . '/../../src/suivi.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
 require __DIR__ . '/../../src/push.php';
@@ -157,6 +158,13 @@ try {
         $out = ep_ventes_moi_jeton();
         tempsServeur($tCharge, $tInstall);
         echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    // La page du franchisé (suivi/) n'a pas de session du cockpit : le jeton du magasin est sa clé (src/suivi.php).
+    if (str_starts_with($path, '/suivi/franchise') && ($pub = suRoutePublique($method, $path)) !== null) {
+        tempsServeur($tCharge, $tInstall);
+        echo json_encode($pub, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
 
@@ -496,6 +504,14 @@ function route(string $method, string $path): mixed
             $path === '/rapports/ca-net'               => ep_rapports_ca_net(),
             $path === '/consultants/checklists'        => ep_consultants_checklists(),
             $path === '/franchises/meteo'              => ep_franchises_meteo(),
+            // Suivi des franchisés : tableau de bord, préparation, rapport, client mystère, qui fait quoi, lien de la page.
+            $path === '/suivi/tableau'                 => ep_suivi_tableau(),
+            $path === '/suivi/preparation'             => ep_suivi_preparation(),
+            $path === '/suivi/rapport'                 => ep_suivi_rapport(),
+            $path === '/suivi/rapport/apercu'          => ep_suivi_rapport_apercu(),
+            $path === '/suivi/msp'                     => ep_suivi_msp(),
+            $path === '/suivi/regles'                  => ep_suivi_regles(),
+            $path === '/suivi/lien'                    => ep_suivi_lien(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             $path === '/marketing/social/regles'   => ep_fb_regles(),
@@ -736,6 +752,14 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/visites/photos') { return wr_visites_photos_post(); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})/points$#', $path, $m)) { return wr_visites_points_put($m[1]); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})$#', $path, $m)) { return wr_visites_put($m[1]); }
+    if ($method === 'PUT' && preg_match('#^/suivi/preparation/([\w-]{1,40})$#', $path, $m)) { return wr_suivi_preparation($m[1]); }
+    if ($method === 'PUT' && preg_match('#^/suivi/rapport/([\w-]{1,40})$#', $path, $m)) { return wr_suivi_rapport($m[1]); }
+    if ($method === 'POST' && preg_match('#^/suivi/rapport/([\w-]{1,40})/envoyer$#', $path, $m)) { return wr_suivi_rapport_envoyer($m[1]); }
+    if ($method === 'POST' && $path === '/suivi/msp') { return wr_suivi_msp(); }
+    if ($method === 'PUT' && $path === '/suivi/regles') { return wr_suivi_regles(); }
+    if ($method === 'POST' && $path === '/suivi/modeles/apercu') { return wr_suivi_modeles_apercu(); }
+    if ($method === 'POST' && $path === '/suivi/modeles/essai') { return wr_suivi_modeles_essai(); }
+    if ($method === 'POST' && $path === '/suivi/lien/envoyer') { return wr_suivi_lien_envoyer(); }
     if ($method === 'POST' && $path === '/plans') { return wr_plans_post(); }
     if ($method === 'PUT' && preg_match('#^/plans/([\w-]{1,40})$#', $path, $m)) { return wr_plans_put($m[1]); }
     if ($method === 'POST' && $path === '/msp') { return wr_msp_post(); }
