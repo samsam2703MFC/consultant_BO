@@ -83,7 +83,7 @@ final class MailEventSource
         if ($rule['event'] === 'month_start') return $this->monthCandidates($rule, $limit);
 
         $extra = match ($rule['event']) {
-            'proforma_issued' => " AND t.status <> 'cancelled'",
+            'proforma_issued' => " AND t.status NOT IN ('cancelled', 'archived')",
             // écarts réels (une ligne au moins) d'une expédition enregistrée
             'difference_issued' => ' AND EXISTS (SELECT 1 FROM shipment_log sl WHERE sl.id_diff = t.id)
                 AND EXISTS (SELECT 1 FROM document_order_shipping_difference_products p WHERE p.id_document_order_shipping_difference = t.id

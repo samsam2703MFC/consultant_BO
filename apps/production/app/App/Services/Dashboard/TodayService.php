@@ -126,7 +126,7 @@ class TodayService
         }
         if ($belowMinimum) {
             $items[] = ['tone' => 'info', 'icon' => 'bi-box-seam', 'count' => $belowMinimum,
-                'one' => 'produkt poniżej stanu minimalnego', 'few' => 'produkty poniżej stanu minimalnego', 'many' => 'produktów poniżej stanu minimalnego', 'url' => '/stock', 'positions' => ['KIEROWNIK_PRODUKCJI', 'LOGISTYKA']];
+                'one' => 'produkt poniżej stanu minimalnego', 'few' => 'produkty poniżej stanu minimalnego', 'many' => 'produktów poniżej stanu minimalnego', 'url' => '/workshop/products#/levels', 'positions' => ['KIEROWNIK_PRODUKCJI', 'LOGISTYKA']];
         }
         return $items;
     }

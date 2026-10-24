@@ -108,7 +108,7 @@
                     <td class="r">{% if d.amount is not null %}{{ d.amount|number_format(2, ',', ' ') }} {{ d.currency == 'EUR' ? '€' : d.currency }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                     <td>
                         {% if d.type == 'proforma' %}
-                            {% if d.status == 'paid' %}<span class="text-success fw-semibold">opłacona</span>{% elseif d.status == 'cancelled' %}<span class="text-muted">anulowana</span>{% else %}<span class="text-warning fw-semibold">czeka na płatność</span>{% endif %}
+                            {% if d.status == 'paid' %}<span class="text-success fw-semibold">opłacona</span>{% elseif d.status == 'cancelled' %}<span class="text-muted">anulowana</span>{% elseif d.status == 'archived' %}<span class="text-muted">zarchiwizowana</span>{% else %}<span class="text-warning fw-semibold">czeka na płatność</span>{% endif %}
                         {% elseif d.type == 'wdt' %}
                             {% if d.status == 'accepted' %}<span class="text-success fw-semibold">KSeF przyjęta</span>{% elseif d.status %}<span class="text-muted">KSeF : {{ d.status }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
                         {% else %}<span class="text-muted">—</span>{% endif %}

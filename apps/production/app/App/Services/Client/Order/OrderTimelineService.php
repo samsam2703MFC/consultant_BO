@@ -33,6 +33,8 @@ class OrderTimelineService
             $stages[] = $this->stage('Proforma', 'bi-receipt', 'todo', 'brak');
         } elseif ($f['proforma_status'] === 'cancelled') {
             $stages[] = $this->stage('Proforma', 'bi-receipt', 'warn', $f['proforma_num'] . ' · anulowana');
+        } elseif ($f['proforma_status'] === 'archived') {
+            $stages[] = $this->stage('Proforma', 'bi-receipt', 'done', $f['proforma_num'] . ' · zarchiwizowana');
         } else {
             $stages[] = $this->stage('Proforma', 'bi-receipt', 'done', $f['proforma_num'] . ' · ' . $this->date($f['proforma_at']));
         }
@@ -70,7 +72,7 @@ class OrderTimelineService
 
         $stages[] = ($f['proforma_status'] ?? '') === 'paid'
             ? $this->stage('Opłacone', 'bi-wallet2', 'done', 'proforma opłacona')
-            : $this->stage('Opłacone', 'bi-wallet2', 'todo', empty($f['id_proforma']) ? 'brak proformy' : 'nieopłacona');
+            : $this->stage('Opłacone', 'bi-wallet2', 'todo', empty($f['id_proforma']) ? 'brak proformy' : (($f['proforma_status'] ?? '') === 'archived' ? 'zarchiwizowana bez płatności' : 'nieopłacona'));
 
         // Następny krok po ciągłej serii zakończonych etapów.
         foreach ($stages as $i => $stage) {
