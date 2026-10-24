@@ -154,6 +154,26 @@ if ($plein >= 98 || ($bloquees ?? 0) > 0) {
     exit(2);
 }
 
+// ── 000. Le bon du dashboard, en ligne (lecture seule) ──────────────────────
+// Mis en ligne le 24/10/2026 à 12:09 (#50) ; la recette du déploiement ne passe pas par ses routes. Rien de nominatif :
+// une promotion inexistante (404 attendu), la recherche de clients sans texte (le total seulement), le dashboard servi.
+svTitre('le bon du dashboard, en ligne');
+$app = 'http://185.180.206.46/consulant_bo';
+$http = static function (string $url): array {
+    $corps = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 60, 'ignore_errors' => true, 'header' => "Accept: application/json\r\n"]]));
+    $code = isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m) ? (int) $m[1] : 0;
+    return [$code, (string) $corps];
+};
+[$c, $b] = $http($app . '/api/cockpit/exploitation/promos-magasin/bon?shop=4&id=p0');
+printf("  GET …/promos-magasin/bon (promotion inexistante) : HTTP %d %s\n", $c, mb_substr($b, 0, 120));
+[$c, $b] = $http($app . '/api/cockpit/exploitation/promos-magasin/clients?shop=4&q=');
+$j = json_decode($b, true);
+printf("  GET …/promos-magasin/clients (sans texte) : HTTP %d · clients du magasin 4 lus au panel : %s · résultats : %s%s\n", $c,
+    $j['total'] ?? '—', isset($j['clients']) ? count($j['clients']) : '—', isset($j['error']) ? ' · ' . mb_substr((string) $j['error'], 0, 120) : '');
+[$c, $b] = $http($app . '/dashboard/dashboard.js');
+printf("  dashboard.js : HTTP %d · « + Nouveau bon » %s · étape « Bon de réduction » %s\n", $c,
+    str_contains($b, 'data-pmnewbon') ? 'présent' : 'ABSENT', str_contains($b, "'Bon de réduction'") ? 'présente' : 'ABSENTE');
+
 // ── 00. Les verrous de la base du cockpit (lecture seule) ──────────────────────
 // 24/10/2026 11:03 et 11:14 : le jeton ERP ne s'enregistre plus (INSERT ceo_app_setting → « Lock wait timeout
 // exceeded »). Qui tient le verrou ? Processus, transactions ouvertes, verrous de métadonnées — rien n'est tué ici.
