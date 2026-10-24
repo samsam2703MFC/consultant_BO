@@ -184,6 +184,7 @@
                 const r = await api('POST', '/kiosk/pair', {code: e.target.code.value});
                 device = r.device_token;
                 paired = true;
+                deviceInfo = null;
                 store.set(DEVICE_KEY, device);
                 persist();
                 toast(t('paired', {name: r.device.name}));
@@ -193,22 +194,34 @@
         el.querySelector('[name=code]').focus();
     }
 
-    // --- Accueil : badge ou nom -----------------------------------------------------------------------
+    // --- Accueil -------------------------------------------------------------------------------------------
+    // Tablette d'un groupe : le jour en un coup d'œil (présents, produits, heures, livraisons), les noms à toucher,
+    // ce qu'on produit aujourd'hui, le QR du téléphone. Tablette sans groupe (bureau) : le QR au centre, les noms en appui.
+    let deviceInfo = null;
     async function renderHome() {
         if (!paired) return renderPairing();
         stopWeek();
-        el.innerHTML = header() + `<div class="kiosk-home">
-            <section class="kiosk-card kiosk-home-people"><div class="kiosk-home-title"><h2>${esc(t('home_title'))}</h2><p class="kiosk-muted">${esc(t('home_help'))}</p></div>
-                <div class="kiosk-people" data-people><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>
-            <aside class="kiosk-home-side">
-                <section class="kiosk-card"><div class="kiosk-badge-hint"><span class="kiosk-badge-icon">${icon('id-card')}</span><div><strong>${esc(t('badge_hint'))}</strong></div>
+        if (deviceInfo === null) {
+            try { deviceInfo = await api('GET', '/kiosk/device'); } catch (err) { deviceInfo = {group_id: null}; }
+        }
+        const office = !deviceInfo.group_id;
+        const peopleCard = `<section class="kiosk-card kiosk-home-people"><div class="kiosk-home-title"><h2>${esc(t(office ? 'office_people' : 'home_people_title'))}</h2></div><div class="kiosk-people" data-people><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>`;
+        const qrCard = `<section class="kiosk-card kiosk-qr ${office ? 'is-office' : ''}" data-qr-card hidden><canvas data-qr width="220" height="220" role="img" aria-label="${esc(t('qr_title'))}"></canvas>
+                <div class="kiosk-qr-text"><h2>${esc(t(office ? 'office_title' : 'qr_title'))}</h2>
+                ${office ? `<ol class="kiosk-steps"><li>${esc(t('office_step1'))}</li><li>${esc(t('office_step2'))}</li><li>${esc(t('office_step3'))}</li></ol>` : `<p class="kiosk-muted">${esc(t('qr_help'))}</p>`}</div></section>`;
+        const badgeCard = `<section class="kiosk-card kiosk-badge-card"><div class="kiosk-badge-hint"><span class="kiosk-badge-icon">${icon('id-card')}</span><div><strong>${esc(t('badge_hint'))}</strong></div>
                     ${'NDEFReader' in window ? `<button type="button" class="kiosk-btn is-small" data-nfc>${esc(t('nfc'))}</button>` : ''}</div>
-                    <input class="kiosk-badge-input" data-badge autocomplete="off" aria-label="${esc(t('badge'))}"></section>
-                <section class="kiosk-card kiosk-qr" data-qr-card hidden><canvas data-qr width="220" height="220" role="img" aria-label="${esc(t('qr_title'))}"></canvas>
-                    <div class="kiosk-qr-text"><h2>${esc(t('qr_title'))}</h2><p class="kiosk-muted">${esc(t('qr_help'))}</p></div></section>
-                <button type="button" class="kiosk-btn kiosk-week-open" data-week-open><span>${icon('calendar-days')}</span>
-                    <span><strong>${esc(t('week_open'))}</strong><small>${esc(t('week_open_help'))}</small></span></button>
-            </aside></div>`;
+                    <input class="kiosk-badge-input" data-badge autocomplete="off" aria-label="${esc(t('badge'))}"></section>`;
+        el.innerHTML = header() + (office
+            ? `<div class="kiosk-home is-office"><section class="kiosk-hero"><div><h2>${esc(t('office_hero'))}</h2><p class="kiosk-muted">${esc(t('office_hero_help'))}</p></div>
+                    <div class="kiosk-stats" data-stats></div></section>${qrCard}<div class="kiosk-office-side">${peopleCard}${badgeCard}</div></div>`
+            : `<div class="kiosk-home"><section class="kiosk-hero"><div><h2 data-hero-title>${esc(t('home_title'))}</h2><p class="kiosk-muted">${esc(t('home_help'))}</p></div>
+                    <div class="kiosk-stats" data-stats></div></section>
+                <div class="kiosk-home-main">${peopleCard}
+                    <section class="kiosk-card kiosk-today" data-today><div class="kiosk-home-title"><h2>${esc(t('home_today_title'))}</h2>
+                        <button type="button" class="kiosk-btn is-small" data-week-open>${icon('calendar-days')} ${esc(t('home_week_all'))}</button></div>
+                        <div data-today-list><p class="kiosk-muted">${esc(t('loading'))}</p></div></section></div>
+                <aside class="kiosk-home-side">${qrCard}<section class="kiosk-card kiosk-deliveries" data-deliveries hidden><h2>${icon('truck')} ${esc(t('home_deliveries_title'))}</h2><div data-delivery-list></div></section>${badgeCard}</aside></div>`);
         const badge = el.querySelector('[data-badge]');
         const focusBadge = () => { if (document.activeElement !== badge && !el.querySelector('input:not([data-badge])')) badge.focus({preventScroll: true}); };
         focusBadge();
@@ -223,17 +236,43 @@
                 reader.addEventListener('reading', (ev) => { if (!session) renderPin({badge: ev.serialNumber}); }, {once: true});
             } catch (e) { toast(t('nfc_error'), true); }
         });
-        el.querySelector('[data-week-open]').addEventListener('click', () => renderWeek(null, false));
+        const weekBtn = el.querySelector('[data-week-open]');
+        if (weekBtn) weekBtn.addEventListener('click', () => renderWeek(null, false));
         drawQr();
-        try {
-            const people = await api('GET', '/kiosk/people');
-            const box = el.querySelector('[data-people]');
-            if (!box) return;
-            box.innerHTML = people.length ? people.map(p => `<button type="button" class="kiosk-btn kiosk-person ${p.clocked_in ? 'is-in' : ''}" data-person="${p.id}" data-name="${esc(p.name)}">
+        const [people, w] = await Promise.all([
+            api('GET', '/kiosk/people').catch((err) => { if (!err.code) toast(err.message, true); return null; }),
+            office ? Promise.resolve(null) : api('GET', '/kiosk/week').catch(() => null),
+        ]);
+        const box = el.querySelector('[data-people]');
+        if (!box) return;
+        const list = people || [];
+        const present = list.filter(p => p.clocked_in).length;
+        box.innerHTML = list.length ? list.map(p => `<button type="button" class="kiosk-btn kiosk-person ${p.clocked_in ? 'is-in' : ''} ${p.has_pin ? '' : 'is-nopin'}" data-person="${p.id}" data-name="${esc(p.name)}">
                 ${avatar(p.name)}<span class="kiosk-person-text"><strong>${esc(p.name)}</strong>
-                <span class="kiosk-pill ${p.clocked_in ? 'is-in' : (p.has_pin ? '' : 'is-warn')}">${esc(p.clocked_in ? t('present') : (p.has_pin ? t('absent') : t('no_pin')))}</span></span></button>`).join('') : `<p class="kiosk-muted">${esc(t('nobody'))}</p>`;
-            box.addEventListener('click', (e) => { const b = e.target.closest('[data-person]'); if (b) renderPin({employee_id: Number(b.dataset.person), name: b.dataset.name}); });
-        } catch (err) { if (!err.code) toast(err.message, true); }
+                <small>${esc(p.clocked_in ? t('home_on_shift') : (p.has_pin ? t('absent') : t('home_no_pin_short')))}</small></span></button>`).join('') : `<p class="kiosk-muted">${esc(t('nobody'))}</p>`;
+        box.addEventListener('click', (e) => { const b = e.target.closest('[data-person]'); if (b) renderPin({employee_id: Number(b.dataset.person), name: b.dataset.name}); });
+        const team = w && w.teams && w.teams[0];
+        const day = team ? (team.days.find(d => d.today) || null) : null;
+        const blocks = day ? day.blocks : [];
+        const deliveries = day ? day.deliveries : [];
+        const stat = (value, label, cls) => `<div class="kiosk-stat ${cls || ''}"><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`;
+        el.querySelector('[data-stats]').innerHTML = stat(`${present}/${list.length}`, t('home_present'), present ? 'is-ok' : '')
+            + (office ? '' : stat(String(blocks.length), t('home_products_today')) + stat(fmt(Math.round(blocks.reduce((sum, b) => sum + (b.hours || 0), 0) * 10) / 10) + ' h', t('home_hours'))
+                + stat(String(deliveries.length), t('home_deliveries'), deliveries.length ? 'is-info' : ''));
+        if (office) return;
+        if (team && team.name) el.querySelector('[data-hero-title]').textContent = t('home_team', {team: team.name});
+        const todayBox = el.querySelector('[data-today-list]');
+        const shown = blocks.slice(0, 7);
+        const timed = blocks.some(b => b.time);
+        todayBox.innerHTML = blocks.length ? `<ul class="kiosk-today-list ${timed ? '' : 'is-untimed'}">${shown.map(b => `<li>${timed ? `<span class="kiosk-today-time">${esc(b.time || '')}</span>` : ''}
+                <span class="kiosk-today-name">${esc(b.name)}</span><span class="kiosk-today-qty">${esc(fmt(b.quantity / (b.factor || 1)))} ${esc(b.unit)}${b.cartons ? ` · ${esc(fmt(b.cartons))} ${esc(t('week_cartons'))}` : ''}</span></li>`).join('')}</ul>
+                ${blocks.length > shown.length ? `<p class="kiosk-muted">${esc(t('home_more', {n: blocks.length - shown.length}))}</p>` : ''}`
+            : `<p class="kiosk-muted">${esc(t('home_today_empty'))}</p>`;
+        if (deliveries.length) {
+            el.querySelector('[data-deliveries]').hidden = false;
+            el.querySelector('[data-delivery-list]').innerHTML = deliveries.map(d => `<div class="kiosk-delivery"><strong>${esc(d.supplier || '—')}</strong>
+                <span class="kiosk-muted">${esc(d.materials.slice(0, 4).join(', '))}${d.materials.length > 4 ? '…' : ''}</span></div>`).join('');
+        }
     }
 
     // Kod QR wejścia / wyjścia telefonem : nowy co refresh_s sekund, tylko na ekranie głównym.
