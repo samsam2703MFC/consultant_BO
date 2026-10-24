@@ -125,6 +125,26 @@ function svErreur(array $r): string
     return 'HTTP ' . $r['code'] . ($d !== '' ? ' · ' . (is_scalar($d) ? $d : json_encode($d)) : '') . $e;
 }
 
+// ── 00. Les verrous de la base du cockpit (lecture seule) ──────────────────────
+// 24/10/2026 11:03 et 11:14 : le jeton ERP ne s'enregistre plus (INSERT ceo_app_setting → « Lock wait timeout
+// exceeded »). Qui tient le verrou ? Processus, transactions ouvertes, verrous de métadonnées — rien n'est tué ici.
+svTitre('verrous de la base du cockpit (lecture seule)');
+try {
+    foreach (Db::rows("SELECT ID, USER, COMMAND, TIME, STATE, LEFT(COALESCE(INFO, ''), 160) AS INFO FROM information_schema.PROCESSLIST WHERE COMMAND <> 'Sleep' OR TIME > 300 ORDER BY TIME DESC LIMIT 25") as $r) {
+        printf("  proc #%-8s %-12s %-8s %6ss  %-28s %s\n", $r['ID'], $r['USER'], $r['COMMAND'], $r['TIME'], mb_substr((string) $r['STATE'], 0, 28), preg_replace('/\s+/', ' ', (string) $r['INFO']));
+    }
+} catch (Throwable $e) { echo '  processus illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n"; }
+try {
+    foreach (Db::rows("SELECT trx_id, trx_state, trx_started, TIMESTAMPDIFF(SECOND, trx_started, NOW()) AS age, trx_mysql_thread_id, trx_rows_locked, trx_tables_locked, LEFT(COALESCE(trx_query, ''), 160) AS q FROM information_schema.INNODB_TRX ORDER BY trx_started LIMIT 20") as $r) {
+        printf("  trx %s %-10s depuis %s (%ss) · thread %s · %s lignes / %s tables verrouillées · %s\n", $r['trx_id'], $r['trx_state'], $r['trx_started'], $r['age'], $r['trx_mysql_thread_id'], $r['trx_rows_locked'], $r['trx_tables_locked'], preg_replace('/\s+/', ' ', (string) $r['q']));
+    }
+} catch (Throwable $e) { echo '  transactions illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n"; }
+try {
+    foreach (Db::rows("SELECT OBJECT_NAME, LOCK_TYPE, LOCK_STATUS, OWNER_THREAD_ID FROM performance_schema.metadata_locks WHERE OBJECT_SCHEMA = DATABASE() AND OBJECT_NAME = 'ceo_app_setting'") as $r) {
+        printf("  verrou de métadonnées %s %s %s (thread %s)\n", $r['OBJECT_NAME'], $r['LOCK_TYPE'], $r['LOCK_STATUS'], $r['OWNER_THREAD_ID']);
+    }
+} catch (Throwable $e) { echo '  verrous de métadonnées illisibles : ', mb_substr($e->getMessage(), 0, 160), "\n"; }
+
 // ── 0. Le compte ─────────────────────────────────────────────────────────────
 svTitre('compte admin ERP du cockpit');
 $st = ErpApi::statut();
