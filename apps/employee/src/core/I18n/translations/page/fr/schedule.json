@@ -1,5 +1,6 @@
 {
   "back_this_week": "revenir à cette semaine",
+  "coming_soon": "à venir",
   "day_off": "Repos",
   "days_off": "jours de repos",
   "hours": "heures",
@@ -14,6 +15,7 @@
   "schedule": "Planning",
   "shift": "service",
   "shift_other_shop": "magasin {n}",
+  "shift_profit": "Rentabilité du service",
   "shifts": "services",
   "this_week": "cette semaine",
   "today": "Aujourd’hui",

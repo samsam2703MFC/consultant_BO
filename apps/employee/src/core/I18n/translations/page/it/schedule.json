@@ -1,5 +1,6 @@
 {
   "back_this_week": "torna a questa settimana",
+  "coming_soon": "in arrivo",
   "day_off": "Riposo",
   "days_off": "giorni liberi",
   "hours": "ore",
@@ -14,6 +15,7 @@
   "schedule": "Pianificazione",
   "shift": "turno",
   "shift_other_shop": "negozio {n}",
+  "shift_profit": "Redditività del turno",
   "shifts": "turni",
   "this_week": "questa settimana",
   "today": "Oggi",
