@@ -168,28 +168,6 @@ function printRecipeInTable($data)
     }
 }
 
-function recipeList2html($list)
-{
-    $html = '';
-    foreach ($list as $item)
-    {
-        $html .= "<li style='margin-left: 50px; margin-top: 10px; font-size: 1rem'>";
-
-        if($item['type'] == "sub-recipe"){
-            $html .= "<span class='font-bold'><u>{$item['name']}</u></span>";
-        } else {
-            $html .= "{$item['name']}";
-        }
-
-        $required_quantity = round($item['required_quantity'],0);
-        $html .= "<span class='text-muted mx-5'> {$required_quantity}{$item['unit_name']} => [{$item['price_for_required_quantity']}zł]</span>";
-        if ( !empty($item['elements']) ) // recurse here
-            $html .= recipeList2html($item['elements']);
-        $html .= '</li>';
-    }
-    return '<ul>' . $html . '</ul>';
-}
-
 function countIngredients($recipe, &$ingredientData) {
 
     foreach ($recipe as $item) {

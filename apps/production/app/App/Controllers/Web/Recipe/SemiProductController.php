@@ -1,6 +1,7 @@
 <?php
 namespace App\Controllers\Web\Recipe;
 
+use App\Services\Recipe\RecipeCalculationViewService;
 use App\Core\Web\BaseController;
 use App\Services\Material\MaterialService;
 use App\Services\Product\ProductService;
@@ -30,7 +31,8 @@ class SemiProductController extends BaseController
         SemiProductService $semiProductService,
         private RecipeCostRecalculationService $recipeCostRecalculationService,
         private RecipeCompetencyService $recipeCompetencyService,
-        private ProductService $productService
+        private ProductService $productService,
+        private RecipeCalculationViewService $calculationView
     )
     {
         $this->compositionService = $compositionService;
@@ -148,10 +150,7 @@ class SemiProductController extends BaseController
 
     public function calculation($id)
     {
-        $data['recipe_calculation_data'] = $this->recipeService->getRecipeCalculation($id);
-        $data['recipe_data'] = $this->recipeService->getRecipeSummary($id);
-
-        $this->view("recipe/semi_product/calculation", $data);
+        $this->view('recipe/calculation', $this->calculationView->build((int) $id, 'semi'));
     }
 
 

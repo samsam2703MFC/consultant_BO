@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Web\Recipe;
 
+use App\Services\Recipe\RecipeCalculationViewService;
 use App\Core\Route;
 use App\Core\Web\BaseController;
 use App\Repositories\Product\FinalProductRepository;
@@ -41,7 +42,8 @@ class RecipeController extends BaseController
         private RecipeCostRecalculationService $recipeCostRecalculationService,
         private PredefinedRecipeLabelService $predefinedRecipeLabelService,
         private RecipeCompetencyService $recipeCompetencyService,
-        private ProductsWithoutRecipePdfBuilder $productsWithoutRecipePdfBuilder
+        private ProductsWithoutRecipePdfBuilder $productsWithoutRecipePdfBuilder,
+        private RecipeCalculationViewService $calculationView
     )
     {
     }
@@ -197,10 +199,7 @@ class RecipeController extends BaseController
 
     public function calculation($id)
     {
-        $data['recipe_calculation_data'] = $this->recipeService->getRecipeCalculation($id);
-        $data['recipe_price'] = $this->recipeService->getRecipeSummary($id)['total_ingredient_cost'];
-
-        $this->view("recipe/recipe/calculation", $data);
+        $this->view('recipe/calculation', $this->calculationView->build((int) $id, 'product'));
     }
 
 

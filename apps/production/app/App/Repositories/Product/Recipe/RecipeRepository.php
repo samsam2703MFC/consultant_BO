@@ -347,6 +347,7 @@ class RecipeRepository extends BaseRepository
                     'suggested_base_unit_price' => $ppu,
                     'id_unit' => $item['id_unit'],
                     'unit_name' => $item['unit_name'],
+                    'is_packaging' => (int) ($item['is_packaging'] ?? 0),
                     'price_for_required_quantity' => round($ingredientPrice, 2)
                 ];
                 continue;
@@ -392,6 +393,7 @@ class RecipeRepository extends BaseRepository
                     'name' => $item['ing_name'],
                     'parent_id' => $id_recipe,
                     'type' => 'sub-recipe',
+                    'id_type' => (int) ($item['id_type'] ?? 0),
                     'quantity_in_recipe' => $itemQty,
                     'required_quantity' => $quantity_to_recipe,
                     'yield_quantity' => $childYield,
@@ -419,6 +421,7 @@ class RecipeRepository extends BaseRepository
                         mat.name,  
                         IF(pr.name IS NULL, prod.name, pr.name)) as ing_name,
                     mat.price_per_unit as suggested_base_unit_price,
+                    IFNULL(mat.is_part_of_package, 0) as is_packaging,
                     IF(prc.child_ingredient_id IS NOT NULL, mat.id_unit, pr.id_unit) as id_unit,
                     IF(prc.child_ingredient_id IS NOT NULL, mat_unit.name, rec_unit.name) as unit_name,
                     IFNULL(pr.id_type, 0) as id_type
@@ -459,6 +462,23 @@ class RecipeRepository extends BaseRepository
             }
         }
         unset($element);
+    }
+
+    /** Strona kalkulacji : typ, zapisany koszt, produkt gotowy (cena standardowa EUR, kategoria), kurs EUR i miejsca użycia. */
+    public function calculationContext(int $id): array
+    {
+        $recipe = $this->query('SELECT pr.id, pr.id_type, pr.precalculated_material_cost FROM product_recipe pr WHERE pr.id = :id', ['id' => $id], 'assoc')[0] ?? null;
+        if (!$recipe) return [];
+        $product = $this->query('SELECT fp.id, fp.name, fp.ppc, fp.standard_price, fp.pre_calculated_raw_price_per_carton, cat.name AS category
+                                 FROM final_product fp LEFT JOIN category_product cat ON cat.id = fp.id_category
+                                 WHERE fp.id_recipe = :id ORDER BY fp.active DESC, fp.id LIMIT 1', ['id' => $id], 'assoc')[0] ?? null;
+        $usedIn = $this->query('SELECT DISTINCT pr.id, pr.id_type, IFNULL(pr.name, fp.name) AS name
+                                FROM product_recipe_connection prc
+                                JOIN product_recipe pr ON pr.id = prc.parent_recipe_id
+                                LEFT JOIN final_product fp ON fp.id_recipe = pr.id
+                                WHERE prc.child_recipe_id = :id ORDER BY name', ['id' => $id], 'assoc') ?: [];
+        $rate = $this->query('SELECT exchange_rate_euro FROM erp_company_other_settings ORDER BY id LIMIT 1', [], 'assoc')[0]['exchange_rate_euro'] ?? 0;
+        return ['recipe' => $recipe, 'product' => $product, 'used_in' => $usedIn, 'exchange_rate' => (float) $rate];
     }
 
     /** Koszt surowców receptury → karta produktów tej receptury (jedno źródło kosztu, patrz RecipeCostRecalculationService). */

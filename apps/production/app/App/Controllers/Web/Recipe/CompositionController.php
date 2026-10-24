@@ -1,6 +1,7 @@
 <?php
 namespace App\Controllers\Web\Recipe;
 
+use App\Services\Recipe\RecipeCalculationViewService;
 use App\Core\Web\BaseController;
 use App\Repositories\Product\FinalProductRepository;
 use App\Services\Material\MaterialService;
@@ -28,7 +29,8 @@ class CompositionController extends BaseController
         UnitService        $unitService,
         PreparationService $preparationService,
         RecipeService      $recipeService,
-        private RecipeCostRecalculationService $recipeCostRecalculationService
+        private RecipeCostRecalculationService $recipeCostRecalculationService,
+        private RecipeCalculationViewService $calculationView
     )
     {
         $this->compositionService = $compositionService;
@@ -124,10 +126,7 @@ class CompositionController extends BaseController
 
     public function calculation($id)
     {
-        $data['recipe_calculation_data'] = $this->recipeService->getRecipeCalculation($id);
-        $data['recipe_data'] = $this->recipeService->getRecipeSummary($id);
-
-        $this->view("recipe/composition/calculation", $data);
+        $this->view('recipe/calculation', $this->calculationView->build((int) $id, 'composition'));
     }
 
 
