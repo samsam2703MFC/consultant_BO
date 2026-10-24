@@ -52,13 +52,23 @@ une variable vide seule sur sa ligne disparaît. Sans SMTP configuré, rien ne p
 ## La page du franchisé
 
 `suivi/?shop=&jeton=` : sans mot de passe, le jeton est propre au magasin (changer le réglage `visitesJeton` invalide
-tous les liens). Elle parle la langue du magasin et montre, selon les réglages : sa prochaine visite annoncée et ses
-sujets, ses points à travailler (et l'envoi de la photo de correction, réduite à 1600 px avant l'envoi), ses rapports
-de visite (marqués lus à l'ouverture), ses passages client mystère montrés, son scoring. `&apercu=1` est la vue du
-bureau : rien n'est envoyé ni marqué lu.
+tous les liens). C'est la seule page du franchisé : elle reprend l'ancienne « Mon suivi » (`dashboard/suivi.html`).
+Elle parle la langue du magasin et montre, selon les réglages de Qui fait quoi :
 
-L'ancienne page `dashboard/suivi.html?shop=` (les données journalières et le terrain, lue avec une session) reste en
-place pour la fiche franchisé ; elle sera fusionnée quand on affinera.
+- sa prochaine visite annoncée et ses sujets ;
+- ses points à travailler, avec l'envoi de la photo de correction (réduite à 1600 px avant l'envoi) ;
+- **à surveiller** : obligatoires manquées, contrôles majeurs ou critiques, infractions mineures, invendus au-dessus
+  de la cible, réclamations sans réponse, avis faibles ;
+- **chaque jour** : tâches sur 30 jours (jour par jour), notes du consultant, infractions, invendus, réclamations
+  fournisseur, objectifs, remarques à l'équipe, note Google, CA de la semaine, comptoir — chaque tuile se déplie,
+  « Tout voir » ouvre la liste complète. Les lectures sont celles de la fiche franchisé, gardées cinq minutes ;
+- ses rapports de visite (marqués lus à l'ouverture), ses passages client mystère montrés, son scoring ;
+- le journal des 60 jours, sans ce qui reste interne (points proposés ou gardés au bureau, rapports encore en
+  brouillon, passages client mystère non montrés).
+
+`&apercu=1` est la vue du bureau : rien n'est envoyé ni marqué lu. `dashboard/suivi.html?shop=` (le bouton « La page
+du franchisé » de la fiche franchisé, les anciens signets) redirige vers cet aperçu quand une session du cockpit est
+ouverte ; sans session, elle dit au franchisé de demander son lien personnel.
 
 ## Vérifier
 

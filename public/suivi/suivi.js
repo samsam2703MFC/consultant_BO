@@ -1,4 +1,5 @@
-/* La page du franchisé (24/10/2026). Une lecture : GET ../api/cockpit/suivi/franchise?shop=&jeton= ; deux
+/* La page du franchisé (24/10/2026) — l'unique page du franchisé : elle reprend aussi l'ancienne « Mon suivi »
+ * (dashboard/suivi.html, qui redirige ici) avec son volet « chaque jour » et son journal (chaque-jour.js). Une lecture : GET ../api/cockpit/suivi/franchise?shop=&jeton= ; deux
  * écritures : POST …/suivi/franchise/correction (la photo d'un point, qui attend la validation du bureau) et
  * POST …/suivi/franchise/lu (le rapport ouvert). La page parle la langue du magasin (réglée dans « Qui fait
  * quoi » du cockpit, sinon sa région). ?apercu=1 : la vue du bureau, qui n'envoie rien et ne marque rien lu. */
@@ -17,28 +18,32 @@
       envoyer: 'Envoyer la correction', envoi: 'Envoi…', envoye: 'Envoyé : le bureau valide votre photo.', vide: 'Ajoutez une photo ou un mot.', visite: 'visite du', msp: 'client mystère',
       valides: 'Validés ce mois-ci', rapports: 'Vos rapports de visite', aucunRap: 'Pas encore de rapport.', conformes: 'points conformes', nouveau: 'nouveau', positif: 'Ce qui va bien', vu: 'Vu sur place',
       causes: 'Les causes', reco: 'Recommandation', ptsRap: 'Les points à travailler', photos: 'Les photos', ancien: 'Visite faite avant les rapports en ligne : demandez le détail à votre consultant.',
-      mspT: 'Client mystère', pdf: 'Le rapport (PDF)', scoring: 'Scoring du trimestre', erreur: 'La page ne répond pas. Réessayez dans un instant.', min: 'min' },
+      mspT: 'Client mystère', pdf: 'Le rapport (PDF)', scoring: 'Scoring du trimestre', rang: '{r}ᵉ sur {m}', prec: 'précédent',
+      postes: { google: 'Note Google', taches: 'Tâches', msp: 'Client mystère', budget: 'Budget' }, postesDef: 'Chaque poste vaut 5 : la note Google, vos tâches, le client mystère, le budget.', erreur: 'La page ne répond pas. Réessayez dans un instant.', min: 'min' },
     nl: { titre: 'Mijn opvolging', maj: 'bijgewerkt op', pro: 'Uw volgende bezoek', avec: 'met', sujets: 'Wat we samen bekijken', aucunePro: 'Momenteel geen aangekondigd bezoek.',
       points: 'Uw werkpunten', aucunPoint: 'Geen open punten: proficiat.', pour: 'tegen', retard: '{n} d. te laat', st_ouvert: 'te verbeteren', st_reprendre: 'opnieuw te doen', st_escalade: 'dringend',
       st_attente: 'foto verstuurd, wacht op goedkeuring', retour: 'Het kantoor vraagt', photo: 'Foto van de verbetering nemen', autre: 'Andere foto', mot: 'Een woordje voor het kantoor (optioneel)',
       envoyer: 'Verbetering versturen', envoi: 'Versturen…', envoye: 'Verstuurd: het kantoor keurt uw foto goed.', vide: 'Voeg een foto of een woordje toe.', visite: 'bezoek van', msp: 'mystery shopper',
       valides: 'Goedgekeurd deze maand', rapports: 'Uw bezoekverslagen', aucunRap: 'Nog geen verslag.', conformes: 'punten in orde', nouveau: 'nieuw', positif: 'Wat goed gaat', vu: 'Ter plaatse gezien',
       causes: 'De oorzaken', reco: 'Aanbeveling', ptsRap: 'De werkpunten', photos: 'De foto’s', ancien: 'Bezoek van vóór de online verslagen: vraag de details aan uw consultant.',
-      mspT: 'Mystery shopper', pdf: 'Het verslag (PDF)', scoring: 'Kwartaalscore', erreur: 'De pagina antwoordt niet. Probeer het zo meteen opnieuw.', min: 'min' },
+      mspT: 'Mystery shopper', pdf: 'Het verslag (PDF)', scoring: 'Kwartaalscore', rang: '{r}e van {m}', prec: 'vorige',
+      postes: { google: 'Google-score', taches: 'Taken', msp: 'Mystery shopper', budget: 'Budget' }, postesDef: 'Elk onderdeel telt voor 5: de Google-score, uw taken, de mystery shopper, het budget.', erreur: 'De pagina antwoordt niet. Probeer het zo meteen opnieuw.', min: 'min' },
     en: { titre: 'My follow-up', maj: 'updated', pro: 'Your next visit', avec: 'with', sujets: 'What we will look at together', aucunePro: 'No visit announced for now.',
       points: 'Your points to work on', aucunPoint: 'No open points: well done.', pour: 'by', retard: '{n} d late', st_ouvert: 'to fix', st_reprendre: 'to redo', st_escalade: 'urgent',
       st_attente: 'photo sent, awaiting approval', retour: 'The office asks', photo: 'Take a photo of the fix', autre: 'Change photo', mot: 'A note for the office (optional)',
       envoyer: 'Send the fix', envoi: 'Sending…', envoye: 'Sent: the office will review your photo.', vide: 'Add a photo or a note.', visite: 'visit of', msp: 'mystery shopper',
       valides: 'Approved this month', rapports: 'Your visit reports', aucunRap: 'No report yet.', conformes: 'points compliant', nouveau: 'new', positif: 'What is going well', vu: 'Seen on site',
       causes: 'The causes', reco: 'Recommendation', ptsRap: 'Points to work on', photos: 'Photos', ancien: 'Visit made before online reports: ask your consultant for the details.',
-      mspT: 'Mystery shopper', pdf: 'The report (PDF)', scoring: 'Quarterly score', erreur: 'The page is not responding. Try again in a moment.', min: 'min' },
+      mspT: 'Mystery shopper', pdf: 'The report (PDF)', scoring: 'Quarterly score', rang: 'rank {r} of {m}', prec: 'previous',
+      postes: { google: 'Google rating', taches: 'Tasks', msp: 'Mystery shopper', budget: 'Budget' }, postesDef: 'Each part is worth 5: the Google rating, your tasks, the mystery shopper, the budget.', erreur: 'The page is not responding. Try again in a moment.', min: 'min' },
     de: { titre: 'Meine Betreuung', maj: 'aktualisiert am', pro: 'Ihr nächster Besuch', avec: 'mit', sujets: 'Was wir gemeinsam ansehen', aucunePro: 'Derzeit kein angekündigter Besuch.',
       points: 'Ihre Arbeitspunkte', aucunPoint: 'Keine offenen Punkte: bravo.', pour: 'bis zum', retard: '{n} T. überfällig', st_ouvert: 'zu beheben', st_reprendre: 'nachzubessern', st_escalade: 'dringend',
       st_attente: 'Foto gesendet, wartet auf Freigabe', retour: 'Das Büro bittet', photo: 'Foto der Korrektur aufnehmen', autre: 'Anderes Foto', mot: 'Eine Notiz für das Büro (optional)',
       envoyer: 'Korrektur senden', envoi: 'Senden…', envoye: 'Gesendet: das Büro prüft Ihr Foto.', vide: 'Fügen Sie ein Foto oder eine Notiz hinzu.', visite: 'Besuch vom', msp: 'Testkauf',
       valides: 'Diesen Monat freigegeben', rapports: 'Ihre Besuchsberichte', aucunRap: 'Noch kein Bericht.', conformes: 'Punkte konform', nouveau: 'neu', positif: 'Was gut läuft', vu: 'Vor Ort gesehen',
       causes: 'Die Ursachen', reco: 'Empfehlung', ptsRap: 'Die Arbeitspunkte', photos: 'Die Fotos', ancien: 'Besuch vor den Online-Berichten: fragen Sie Ihren Berater nach den Details.',
-      mspT: 'Testkauf', pdf: 'Der Bericht (PDF)', scoring: 'Quartalsbewertung', erreur: 'Die Seite antwortet nicht. Versuchen Sie es gleich noch einmal.', min: 'Min.' }
+      mspT: 'Testkauf', pdf: 'Der Bericht (PDF)', scoring: 'Quartalsbewertung', rang: 'Platz {r} von {m}', prec: 'vorher',
+      postes: { google: 'Google-Bewertung', taches: 'Aufgaben', msp: 'Testkauf', budget: 'Budget' }, postesDef: 'Jeder Teil zählt 5: die Google-Bewertung, Ihre Aufgaben, der Testkauf, das Budget.', erreur: 'Die Seite antwortet nicht. Versuchen Sie es gleich noch einmal.', min: 'Min.' }
   };
   const LIEN_KO = ['Ce lien n’est pas (ou plus) valable. Demandez le lien de votre page à votre consultant.', 'Deze link is niet (meer) geldig. Vraag de link van uw pagina aan uw consultant.',
     'This link is not (or no longer) valid. Ask your consultant for the link to your page.', 'Dieser Link ist nicht (mehr) gültig. Fragen Sie Ihren Berater nach dem Link zu Ihrer Seite.'];
@@ -82,6 +87,9 @@
       h += `<div class="fr-carte"><h2>${esc(L.points)}</h2>${pts.length ? pts.map(point).join('') : `<div class="fr-mu">${esc(L.aucunPoint)}</div>`}
         ${(D.valides || []).length ? `<div style="margin-top:12px;font-weight:600;font-size:13px">${esc(L.valides)}</div><ul class="fr-val">${D.valides.map(v => '<li>✓ ' + esc(v.titre) + ' · ' + esc(fD(v.le)) + '</li>').join('')}</ul>` : ''}</div>`;
     }
+    // Le volet « chaque jour » et le journal, repris de l'ancienne page « Mon suivi » (chaque-jour.js).
+    const J = window.SuiviJour ? window.SuiviJour.rendre(D, LG, { esc, nf, fD, fDL }) : { jour: '', fin: '' };
+    h += J.jour;
     if (V.rapports) {
       const raps = D.rapports || [];
       h += `<div class="fr-carte"><h2>${esc(L.rapports)}</h2>${raps.length ? raps.map(rapport).join('') : `<div class="fr-mu">${esc(L.aucunRap)}</div>`}</div>`;
@@ -93,11 +101,14 @@
     }
     if (V.scoring && D.scoring) {
       const S = D.scoring; const P = S.postes || {};
-      h += `<div class="fr-carte"><h2>${esc(L.scoring)} · ${esc(S.trimestre)}</h2><div style="font:400 26px var(--font-display);margin-bottom:8px">${esc(nf(S.total, 1))} / ${esc(S.sur)}</div>
-        <div class="fr-sc">${Object.keys(P).map(k => `<div><small>${esc(k)}</small><b>${esc(P[k] && P[k].v != null ? nf(P[k].v, 1) : '—')}</b></div>`).join('')}</div></div>`;
+      const sous = [S.etoiles != null ? nf(S.etoiles, 1) + ' ★' : '', S.rang ? L.rang.replace('{r}', S.rang).replace('{m}', S.magasins) : '', S.prec != null ? L.prec + ' ' + nf(S.prec, 1) : ''].filter(Boolean).join(' · ');
+      h += `<div class="fr-carte"><h2>${esc(L.scoring)} · ${esc(S.trimestre)}</h2><div style="font:400 26px var(--font-display)">${esc(nf(S.total, 1))} / ${esc(S.sur)}</div>${sous ? `<div class="fr-mu" style="margin-bottom:8px">${esc(sous)}</div>` : ''}
+        <div class="fr-sc">${Object.keys(P).map(k => `<div><small>${esc(L.postes[k] || k)}</small><b>${esc(P[k] && P[k].v != null ? nf(P[k].v, 1) : '—')}</b></div>`).join('')}</div><div class="fr-mu" style="margin-top:6px">${esc(L.postesDef)}</div></div>`;
     }
+    h += J.fin;
     $.innerHTML = h;
     brancher();
+    if (window.SuiviJour) { window.SuiviJour.brancher($); }
   }
 
   function point(p) {

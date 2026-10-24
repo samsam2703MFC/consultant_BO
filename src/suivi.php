@@ -106,7 +106,7 @@ function suReglesDefaut(): array
         'admins' => [],
         'delais' => ['prepJours' => 2, 'odjAuto' => true, 'odjJours' => 2, 'rapportHeures' => 48, 'rapportTard' => 'rappel',
             'p0' => 2, 'p1' => 7, 'p2' => 14, 'validationHeures' => 24, 'relanceLuJours' => 3],
-        'voit' => ['rapports' => true, 'points' => true, 'prochaine' => true, 'msp' => true, 'scoring' => false],
+        'voit' => ['rapports' => true, 'points' => true, 'prochaine' => true, 'msp' => true, 'scoring' => false, 'journalier' => true, 'journal' => true],
     ];
 }
 
@@ -1370,7 +1370,53 @@ function ep_suivi_franchise(): array
     }
     if ($voit['scoring']) {
         $s = function_exists('frScoring') ? frScoring($shop) : null;
-        $out['scoring'] = $s ? ['trimestre' => $s['trimestre']['court'] ?? '', 'total' => $s['total'], 'sur' => $s['sur'], 'postes' => $s['postes']] : null;
+        $out['scoring'] = $s ? ['trimestre' => $s['trimestre']['court'] ?? '', 'total' => $s['total'], 'sur' => $s['sur'], 'etoiles' => $s['etoiles'] ?? null,
+            'rang' => $s['rang'] ?? null, 'magasins' => $s['magasins'] ?? null, 'prec' => isset($s['prec']['total']) ? $s['prec']['total'] : null,
+            'postes' => array_map(static fn ($p) => ['v' => $p['v'] ?? null], (array) $s['postes'])] : null;
+    }
+    // Ce que l'ancienne page « Mon suivi » (dashboard/suivi.html) montrait, repris ici : le volet de chaque jour et le journal.
+    if ($voit['journalier']) { $out['journalier'] = suJournalier($shop); }
+    if ($voit['journal']) { $out['journal'] = suJournalFranchise($shop, $voit); }
+    return $out;
+}
+
+/**
+ * Le volet « chaque jour » de la page du franchisé : ce que les données disent sans aller sur place — les tâches
+ * sur 30 jours et les notes du consultant, les infractions, les invendus, les réclamations fournisseur, les
+ * objectifs, les remarques à l'équipe, la note Google, le CA de la semaine, le comptoir. Les mêmes lectures que la
+ * fiche franchisé (src/franchises.php), gardées cinq minutes : la page est publique, chaque ouverture ne relit pas
+ * le panel.
+ */
+function suJournalier(string $shop): array
+{
+    if (!function_exists('frTachesJours')) { return ['indispo' => 'module des franchisés absent']; }
+    $calc = static fn (): array => ['lu' => date('Y-m-d H:i'), 'taches' => frTachesJours($shop), 'tachesJour' => frTachesJour($shop), 'revues' => frRevues($shop),
+        'invendus' => frInvendus($shop), 'reclamations' => frReclamations($shop), 'objectifs' => frObjectifs($shop), 'remarques' => frRemarques($shop),
+        'google' => function_exists('viGoogle') ? (viGoogle()[$shop] ?? null) : null, 'ca' => function_exists('viCa') ? (viCa()[$shop] ?? null) : null,
+        'comptoir' => frConformite($shop)];
+    if (!function_exists('rcServi')) { return $calc(); }
+    $r = rcServi('suFrJ:' . $shop, $calc, static fn (array $x): int => 300, false, '/suivi/franchise', 900);
+    unset($r['cache']);
+    return $r;
+}
+
+/**
+ * Le journal des 60 jours (frJournal), sans ce que le franchisé ne doit pas voir : les points proposés ou gardés
+ * en interne (et le passage d'un point par ces états), les visites dont le rapport est encore un brouillon, les
+ * passages client mystère non montrés.
+ */
+function suJournalFranchise(string $shop, array $voit): array
+{
+    if (!function_exists('frJournal')) { return []; }
+    $plans = []; $visites = []; $msp = [];
+    foreach (Db::rows('SELECT id FROM ceo_visite_action WHERE shop_id = ? AND statut IN (\'propose\', \'interne\')', [$shop]) as $r) { $plans[(int) $r['id']] = true; }
+    foreach (Db::rows('SELECT id FROM ceo_visite WHERE shop_id = ? AND rapport_statut = \'brouillon\'', [$shop]) as $r) { $visites[(int) $r['id']] = true; }
+    foreach (Db::rows('SELECT id, montrer FROM ceo_scoring_msp WHERE shop_id = ?', [$shop]) as $r) { if (!$voit['msp'] || (isset($r['montrer']) && (int) $r['montrer'] !== 1)) { $msp[(int) $r['id']] = true; } }
+    $out = [];
+    foreach (frJournal($shop) as $e) {
+        $id = (int) ($e['id'] ?? 0);
+        if (($e['genre'] === 'plan' && (isset($plans[$id]) || in_array($e['vers'] ?? null, ['propose', 'interne'], true))) || ($e['genre'] === 'visite' && isset($visites[$id])) || ($e['genre'] === 'msp' && isset($msp[$id]))) { continue; }
+        $out[] = ['le' => $e['le'], 'volet' => $e['volet'], 'genre' => $e['genre'], 'texte' => $e['texte']];
     }
     return $out;
 }

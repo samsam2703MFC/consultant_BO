@@ -11,6 +11,9 @@ const PLAN_CLS = { ouvert: 'att', attente: 'info', valide: 'ok', reprendre: 'vio
 const EXEC = { standards: 'Standards appliqués', raccourcis: 'Quelques raccourcis', ecarts: 'Écarts fréquents' };
 const CLIENTS = { satisfaits: 'Clients satisfaits', mitiges: 'Clients mitigés', insatisfaits: 'Clients insatisfaits' };
 const DROITS = { preparer: 'Préparer', visiter: 'Visiter', adapter: 'Adapter', envoyer: 'Envoyer', valider: 'Valider', regler: 'Régler' };
+// Ce que voit le franchisé sur sa page (réglage `voit`) ; « chaque jour » et le journal viennent de l'ancienne page « Mon suivi ».
+const VOIT = [['points', 'ses points à travailler et leurs photos'], ['journalier', 'ses chiffres de chaque jour : tâches, notes, infractions, invendus, réclamations, objectifs, avis, comptoir'],
+  ['rapports', 'ses rapports de visite'], ['prochaine', 'sa prochaine visite annoncée'], ['msp', 'ses rapports client mystère'], ['scoring', 'son scoring du trimestre'], ['journal', 'le journal des 60 jours']];
 const BLOCS_LIB = { sante: 'Fiche franchisé · santé', points: 'Plans d’action', taches: 'Tâches et contrôles photo', scoring: 'Scoring du trimestre', msp: 'Client mystère · comptoir', meteo: 'Fin de visite · météo' };
 const auj = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const fmtD = d => d ? String(d).slice(8, 10) + '/' + String(d).slice(5, 7) : '';
@@ -371,7 +374,7 @@ export function valsSvFranchise(app, common){
       copier: () => app.tbCopier(d.url, 'Lien copié : il ouvre la page du franchisé sans mot de passe.'),
       envoyer: () => { app.setState({ svBusy: true }); app.api('POST', '/suivi/lien/envoyer', { shop, qui: 'Cockpit' }).then(r => { app.setState({ svBusy: false }); const en = (r && r.envoi) || {}; message(app, en.envoye ? 'Lien envoyé à ' + en.a + ' (' + (en.langue || '') + ').' : 'Lien non envoyé : ' + (en.motif || (r && r.error) || '—') + '.', !en.envoye); }); },
       busy: !!S.svBusy,
-      voit: [['rapports', 'ses rapports de visite'], ['points', 'ses points à travailler et leurs photos'], ['prochaine', 'sa prochaine visite annoncée'], ['msp', 'ses rapports client mystère'], ['scoring', 'son scoring du trimestre']].map(([k, l]) => ({ l, on: !!V[k] })),
+      voit: VOIT.map(([k, l]) => ({ l, on: !!V[k] })),
       regler: () => app.setState({ screen: 'suiviAdmin' }) });
   }
   common.sv = sv;
@@ -422,8 +425,7 @@ export function valsSvAdmin(app, common){
     p0: De.p0, setP0: setD('p0', true), p1: De.p1, setP1: setD('p1', true), p2: De.p2, setP2: setD('p2', true),
     validationHeures: De.validationHeures, setValidationHeures: setD('validationHeures', true), escaladeJours: De.escaladeJours, setEscaladeJours: setD('escaladeJours', true),
     relanceLuJours: De.relanceLuJours, setRelanceLuJours: setD('relanceLuJours', true) };
-  sv.voit = [['rapports', 'ses rapports de visite'], ['points', 'ses points et leurs photos'], ['prochaine', 'sa prochaine visite annoncée'], ['msp', 'ses rapports client mystère'], ['scoring', 'son scoring du trimestre']]
-    .map(([k, l]) => ({ l, on: !!F.voit[k], basculer: () => maj({ voit: Object.assign({}, F.voit, { [k]: !F.voit[k] }) }) }));
+  sv.voit = VOIT.map(([k, l]) => ({ l, on: !!F.voit[k], basculer: () => maj({ voit: Object.assign({}, F.voit, { [k]: !F.voit[k] }) }) }));
   sv.modifie = !!F.modifie; sv.busy = !!S.svBusy;
   sv.enregistrer = () => reglesSauver(app, F);
   sv.annuler = F.modifie ? () => app.setState({ svReglesF: null }) : null;
