@@ -764,6 +764,17 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   primes du mois). Cache `primesAn{y}` : une heure (une année close : un jour), vidé avec les fiches ; `&frais=1`
   recalcule. Écrans : la page franchisé (« Où en sont tes vendeuses » › Année) et la page admin (« L'année des
   primes », par magasin ou par vendeuse, les mois en barres).
+- `GET /ventes/primes-api[?frais=1]` (24/10/2026) : l'API du module (`src/api_module.php`, écran `#/api`, rail ›
+  Application employé › API du module) — l'inventaire de ce que le module des primes et l'application employé
+  appellent, et l'état de chaque route à l'instant. `sources[] {cle (cockpit, panel, erp, base, sms), nom, hote, unite,
+  resume, dit, n, etat (ok, lent, alerte, erreur : le pire de ses routes), compte {ok, lent, neutre, alerte, erreur,
+  ecriture, pas}, note, groupes[] {nom, routes[] {id, m, r, dit, pages (admin, franchise, app), garde, etat {niveau,
+  texte}}}}`, `pages`, `quand`, `ms`. Les sondes ne font que lire : les GET du panel (compte consultant ; une route
+  réservée au jeton de la personne qui répond 401/403 est « neutre ») et de l'ERP admin, menés de front, quatre à la
+  fois, 8 s chacun ; une ligne lue par table ; le compte Twilio relu (jamais de SMS) ; pour le cockpit, l'âge des
+  calculs gardés (`mot_cache.maj`). Les écritures sont listées, jamais appelées. Le magasin et la personne pris pour
+  exemple ne sortent pas. Cache `apiModule`, une minute ; `&frais=1` resonde. L'inventaire est vérifié par
+  `bin/tests_primes.php` : chaque route du cockpit existe au routeur, chaque appel de l'application au panel y figure.
 - La moisson des lignes par ticket (`pvL{shop}:{jour}`, version 3) compte `c` (les tickets à deux lignes ou
   plus), `cc` ces mêmes tickets par catégorie de produits qu'ils contiennent (`k` : le jour les compte), `q`
   les pièces par famille — les catégories (motif) et les **promos** (leurs identifiants de produits,

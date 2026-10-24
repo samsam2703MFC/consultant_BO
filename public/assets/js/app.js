@@ -366,6 +366,8 @@ class App {
       tablette: 'tablette',
       // Les primes de l'app worker (16/10/2026) : la page admin, et celle d'un magasin avec « ?shop=4 ».
       primesApp: 'primes',
+      // L'API du module (24/10/2026) : « #/api », et une source avec « ?source=panel ».
+      apiModule: 'api',
       brandGuard: 'brandguard', invendus: 'invendus', inventaires: 'inventaires',
       // Franchisés · évaluation et suivi (09/10/2026)
       ficheFranchise: 'fiche', controlesQualite: 'qualite',
@@ -452,6 +454,7 @@ class App {
   adresseDe(id){
     const base = '#/' + (App.ADRESSES[id] || id);
     if (id === 'primesApp' && this.state.prSection === 'franchise' && this.state.prShop) { return base + '?shop=' + encodeURIComponent(this.state.prShop); }
+    if (id === 'apiModule' && this.state.apiSrc) { return base + '?source=' + encodeURIComponent(this.state.apiSrc); }
     return base;
   }
   /** Le magasin écrit dans l'ancre : « #/primes?shop=3 » ; '' sans lui. */
@@ -460,6 +463,7 @@ class App {
   }
   /** Ce que l'adresse dit en plus de l'écran : le magasin de la page franchisé des primes. */
   etatDeAdresse(id){
+    if (id === 'apiModule') { return { apiSrc: (new URLSearchParams(String(location.hash || '').split('?')[1] || '').get('source') || '').trim() }; }
     if (id !== 'primesApp') { return {}; }
     const shop = App.shopDeAdresse();
     return shop ? { prSection: 'franchise', prShop: shop } : { prSection: 'marque' };
@@ -476,7 +480,7 @@ class App {
     // L'ancre suit l'écran — et l'historique avec elle : le bouton « retour »
     // du navigateur ramène à l'écran précédent, ce qu'on attend d'une adresse.
     // Les primes suivent aussi leur page (admin ou franchisé) et leur magasin.
-    if (this.state.screen !== avant || this.state.screen === 'primesApp') {
+    if (this.state.screen !== avant || this.state.screen === 'primesApp' || this.state.screen === 'apiModule') {
       const cible = this.adresseDe(this.state.screen);
       if (avantAdr !== cible && location.hash !== cible) { this._hashInterne = cible; location.hash = cible; }
     }
@@ -1063,6 +1067,7 @@ class App {
       catalogue: ['Catalogue', 'Quatre questions, une liste, une fiche : ce qu’il faut retirer de la gamme, où l’on vend moins que le réseau, si les prix sont tenus, ce qui décroche. Un clic sur une référence ouvre sa fiche.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
       promosMag: ['Promotions des magasins', 'Les promotions « X achetés + Y » que les franchisés enregistrent dans leur dashboard, sans validation : elles partent au panel aussitôt. Ici, celles que le panel n’a pas prises, et l’historique.'],
+      apiModule: ['API du module', 'Primes et application employé : ce que chaque page lit et écrit, d’où viennent les données, et ce que chaque route répond à l’instant.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
@@ -1530,7 +1535,12 @@ class App {
       ['Application employé', [
         ['primesApp', 'Page admin', 0, [], { prSection: 'marque', prShop: '' }],
         ['primesApp', 'Page franchisé (magasin)', 0, [], { prSection: 'franchise', prShop: '' }],
-        ['ext:employee/auth', 'Application ↗', 0]]],
+        ['ext:employee/auth', 'Application ↗', 0],
+        // Ce que le module appelle, source par source, et ce que chaque route répond à l'instant (24/10/2026, Sam).
+        // Le badge : les routes en erreur, une fois la page ouverte.
+        { sub: 'API du module', children: [['apiModule', 'Vue d’ensemble', 0, [], { apiSrc: '' }]].concat(
+          [['cockpit', 'Cockpit'], ['panel', 'Panel tfbuddy'], ['erp', 'ERP admin'], ['base', 'Base partagée'], ['sms', 'SMS · Twilio']]
+            .map(([cle, nom]) => ['apiModule', nom, ((this._apiL || {}).erreurs || {})[cle] || 0, [], { apiSrc: cle }])) }]],
         // « Production ↗ » (production/, qui s'ouvrait sur Validation et suivi) a quitté le rail (23/10/2026, Sam).
       ['Administration', [
         ['parametres', 'Paramètres', 0, ['scoring', 'clientMystere', 'mktTypes', 'kpiTable', 'brandGuard']],
@@ -1563,11 +1573,11 @@ class App {
     // lui, la mesure ne rendrait que des identifiants.
     this._navDef = navDef;
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', primesApp: 'isPrimesApp', promosMag: 'isPromosMag' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', primesApp: 'isPrimesApp', apiModule: 'isApiModule', promosMag: 'isPromosMag' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (key) { common[key] = true; }
@@ -1982,6 +1992,7 @@ class App {
     if (common.isManque) { this.manqueCharge(); this.valsManque(common); }
     if (common.isVentes) { this.ventesCharge(); this.crossCharge(); this.valsVentes(common); this.valsCross(common); }
     if (common.isPrimesApp) { this.valsPrimesParams(common); }
+    if (common.isApiModule) { this.valsApiModule(common); }
     if (common.isPromosMag) { this.valsPromosMag(common); }
     if (common.isCrois) { this.croisCharge(); this.valsCrois(common); }
     // --- scoring produits
@@ -7211,6 +7222,58 @@ class App {
    * qui l'offre, qui peut gagner et la saison. Page admin : ceux de la marque pour tout le réseau, ceux des franchisés à
    * lire ; page franchisé : ceux de la marque à lire (avec la mieux classée du magasin), les siens à poser.
    */
+  /* --- L'API du module (24/10/2026, Sam : « un sous-menu dans le rail qui indique quelles API sont utilisées pour le
+   * module entier », avec l'état en direct) ---------------------------------------------------------------------
+   * Ce que le module des primes et l'application employé appellent, source par source, et ce que chaque route répond
+   * à l'instant : GET /ventes/primes-api (src/api_module.php), gardé une minute ; « Retester » resonde. Le rail porte
+   * une entrée par source (apiSrc, « #/api?source=panel ») ; la page filtre aussi par page et par mot. */
+  valsApiModule(common){
+    const S = this.state;
+    const L = this._apiL || (this._apiL = { d: undefined, enCours: false, erreurs: {} });
+    const charger = frais => {
+      L.enCours = true;
+      readOne('/ventes/primes-api' + (frais ? '?frais=1' : '')).then(x => {
+        L.enCours = false; L.d = x && !x.error && Array.isArray(x.sources) ? x : null;
+        L.erreurs = {}; (L.d ? L.d.sources : []).forEach(s => { L.erreurs[s.cle] = (s.compte || {}).erreur || 0; });
+        this.setState({});
+      }).catch(() => { L.enCours = false; L.d = null; this.setState({}); });
+    };
+    // La première lecture part du rendu : pas de setState ici, la réponse en fera un.
+    if (L.d === undefined && !L.enCours) { charger(false); }
+    const d = L.d || null;
+    const src = S.apiSrc || '';
+    const page = S.apiPage || '';
+    const q = String(S.apiQ || '').trim().toLowerCase();
+    const PAGES = (d && d.pages) || { admin: 'Page admin', franchise: 'Page franchisé', app: 'Application' };
+    const pl = (n, u) => n + ' ' + u + (n > 1 ? 's' : '');
+    const heure = d && d.quand ? new Date(d.quand * 1000) : null;
+    const duree = d && d.ms != null ? (d.ms >= 1000 ? String(Math.round(d.ms / 100) / 10).replace('.', ',') + ' s' : d.ms + ' ms') : '';
+    const sources = d ? d.sources : [];
+    const garde = r => (!page || r.pages.indexOf(page) >= 0)
+      && (!q || (r.r + ' ' + r.dit + ' ' + r.etat.texte).toLowerCase().indexOf(q) >= 0);
+    const vues = sources.filter(s => !src || s.cle === src).map(s => {
+      const groupes = s.groupes.map(g => ({ nom: g.nom, routes: g.routes.filter(garde).map(r => ({
+        m: r.m, r: r.r, dit: r.dit, garde: r.garde, niveau: r.etat.niveau, texte: r.etat.texte,
+        pages: r.pages.map(k => ({ cle: k, nom: k === 'app' ? 'App' : (k === 'admin' ? 'Admin' : 'Franchisé') })) })) }))
+        .filter(g => g.routes.length);
+      const n = groupes.reduce((a, g) => a + g.routes.length, 0);
+      return { cle: s.cle, nom: s.nom, hote: s.hote, dit: s.dit, note: s.note, etat: s.etat, groupes, n,
+        compte: (n < s.n ? n + ' sur ' : '') + pl(s.n, s.unite) + (s.compte.erreur ? ' · ' + s.compte.erreur + ' en erreur' : '') };
+    }).filter(s => s.n);
+    common.am = {
+      chargement: !d && L.enCours, echec: L.d === null && !L.enCours, resonde: !!d && L.enCours,
+      quand: heure ? 'sondé à ' + String(heure.getHours()).padStart(2, '0') + ':' + String(heure.getMinutes()).padStart(2, '0') + (duree ? ' · en ' + duree : '') : '',
+      retester: () => { if (!L.enCours) { charger(true); this.setState({}); } },
+      etats: sources.reduce((o, s) => { o[s.cle] = s.etat; return o; }, {}),
+      tuiles: sources.map(s => ({ cle: s.cle, nom: s.nom, n: s.n, unite: s.unite + (s.n > 1 ? 's' : ''), resume: s.resume, etat: s.etat,
+        bilan: s.compte.erreur ? pl(s.compte.erreur, 'erreur') : (s.compte.alerte ? pl(s.compte.alerte, 'alerte') : (s.compte.lent ? pl(s.compte.lent, 'lente') : 'tout répond')),
+        on: src === s.cle, aller: () => this.setState({ apiSrc: src === s.cle ? '' : s.cle }) })),
+      pages: [['', 'Toutes les pages']].concat(Object.keys(PAGES).map(k => [k, PAGES[k]])).map(([k, nom]) => ({ nom, on: page === k, aller: () => this.setState({ apiPage: k }) })),
+      q: S.apiQ || '', poserQ: e => this.setState({ apiQ: e.target.value }),
+      filtre: src ? (sources.find(s => s.cle === src) || {}).nom || '' : '', toutVoir: () => this.setState({ apiSrc: '', apiPage: '', apiQ: '' }),
+      sources: vues, vide: !!d && !vues.length,
+    };
+  }
   valsGrandsPrix(common){
     const S = this.state;
     const tab = S.prOnglet === 'gp' ? 'gp' : 'mois';

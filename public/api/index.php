@@ -95,6 +95,7 @@ require __DIR__ . '/../../src/motivation.php';
 require __DIR__ . '/../../src/primes.php';
 require __DIR__ . '/../../src/primes_app.php';
 require __DIR__ . '/../../src/primes_b2b.php';
+require __DIR__ . '/../../src/api_module.php';
 require __DIR__ . '/../../src/grands_prix.php';
 require __DIR__ . '/../../src/promos_magasin.php';
 require __DIR__ . '/../../src/promos_doc.php';
@@ -425,6 +426,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/primes-mois'           => ep_primes_mois(),
             $path === '/ventes/primes-equipe'         => ep_primes_equipe(),
             $path === '/ventes/primes-annee'          => ep_primes_annee(),
+            $path === '/ventes/primes-api'            => ep_primes_api(),
             $path === '/ventes/primes-promos'         => ep_primes_promos(),
             $path === '/ventes/primes-catalogue'      => ep_primes_catalogue(),
             $path === '/ventes/primes-promos/sonde'   => ep_primes_promos_sonde(),

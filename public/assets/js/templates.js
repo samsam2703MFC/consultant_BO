@@ -144,6 +144,7 @@ export function render(c, x){
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
+      ${c.isApiModule ? tplApiModule(c, x) : ''}
       ${c.isPromosMag ? tplPromosMag(c, x) : ''}
       ${c.isMktObj ? tplMktObj(c, x) : ''}
       ${c.isScoringTri ? tplScoringTri(c, x) : ''}
@@ -6953,6 +6954,62 @@ function tplPrWiz(W, x){
    moyennes par magasin ; l'assistant « Nouvelle prime » par-dessus. */
 /* Les promotions des magasins (17/10/2026) — Analyse magasin › Promotions : les « X achetés + Y » écrites dans le
  * dashboard des magasins, lues au panel (18/10/2026, plus de copie au cockpit). Lecture seule. */
+/* L'API du module (24/10/2026) : les sources du module des primes et de l'application employé, qui appelle qui, puis
+   chaque route — méthode, chemin, ce qu'elle fait, ses pages, ce que le cockpit en garde, ce qu'elle répond à l'instant.
+   Maquette : docs/maquettes/api-module. */
+function tplApiModule(c, x){
+  const { esc } = x;
+  const A = c.am;
+  const pastille = n => `<i class="am-pt am-${esc(n)}"></i>`;
+  const tuiles = A.tuiles.length ? `<div class="am-tuiles">${A.tuiles.map(t => `
+    <button class="am-carte am-tuile${t.on ? ' on' : ''}" ${x.A(t.aller)} data-am-source="${esc(t.cle)}">
+      <b>${t.n}<small>${esc(t.unite)}</small></b>
+      <span>${esc(t.nom)}</span>
+      <em>${esc(t.resume)}</em>
+      <span class="am-bilan am-${esc(t.etat)}">${pastille(t.etat)}${esc(t.bilan)}</span>
+    </button>`).join('')}</div>` : '';
+  const nd = (nom, sous, cle) => `<div class="am-nd">${cle ? pastille(A.etats[cle] || 'neutre') : ''}<div>${esc(nom)}<small>${esc(sous)}</small></div></div>`;
+  const flux = `<section class="am-carte am-flux">
+    <h2>Qui appelle qui</h2>
+    <div class="am-grille">
+      <div class="am-col">${nd('Page admin', 'les primes de la marque et des sponsors')}${nd('Page franchisé', 'les primes d’un magasin, son équipe')}${nd('Application employé', 'Mes primes, Accueil, Statistiques, Planning')}</div>
+      <div class="am-fl">→</div>
+      <div class="am-nd am-coeur">${pastille(A.etats.cockpit || 'neutre')}<div>Cockpit<small><code>…/api/cockpit</code></small><small>calcule chaque prime, garde les calculs de 10 min à 1 jour</small></div></div>
+      <div class="am-fl">→</div>
+      <div class="am-col">${nd('Panel tfbuddy', 'compte consultant · ventes par vendeuse, tickets, catégories', 'panel')}${nd('ERP admin', 'compte admin · les promotions', 'erp')}${nd('Base partagée', 'planning, clients pro, note Google, réglages', 'base')}${nd('Twilio', 'le SMS, si config.php › sms est réglé', 'sms')}</div>
+    </div>
+    <p class="am-direct"><i></i>L’application parle aussi au panel en direct, avec le jeton de la personne : connexion, planning, tâches, photos.</p>
+  </section>`;
+  const barre = `<div class="am-barre">
+    <div class="am-segm">${A.pages.map(p => `<button class="${p.on ? 'on' : ''}" ${x.A(p.aller)}>${esc(p.nom)}</button>`).join('')}</div>
+    <div class="am-droite">
+      ${A.filtre ? `<button class="am-lien" ${x.A(A.toutVoir)}>${esc(A.filtre)} seulement · tout voir</button>` : ''}
+      <input id="am-q" type="search" value="${esc(A.q)}" ${x.I(A.poserQ)} placeholder="Chercher une route…" autocomplete="off">
+    </div>
+  </div>`;
+  const ligne = r => `<tr data-am-route>
+    <td class="am-m"><span class="am-mt am-${r.m === 'GET' || r.m === 'LIT' ? 'get' : 'post'}">${esc(r.m)}</span></td>
+    <td class="am-r"><code>${esc(r.r)}</code><span>${esc(r.dit)}</span></td>
+    <td class="am-p">${r.pages.map(p => `<span class="am-pg am-pg-${esc(p.cle)}">${esc(p.nom)}</span>`).join('')}</td>
+    <td class="am-g">${esc(r.garde || '')}</td>
+    <td class="am-e am-${esc(r.niveau)}" data-am-etat="${esc(r.niveau)}">${pastille(r.niveau)}<span>${esc(r.texte)}</span></td>
+  </tr>`;
+  const sources = A.sources.map(s => `<section class="am-carte am-src" data-am-src="${esc(s.cle)}">
+    <div class="am-h"><div><h2>${pastille(s.etat)}${esc(s.nom)}</h2><p><code>${esc(s.hote)}</code> · ${esc(s.dit)}</p></div><span>${esc(s.compte)}</span></div>
+    ${s.note ? `<p class="am-note">${esc(s.note)}</p>` : ''}
+    ${s.groupes.map(g => `<div class="am-grp">${esc(g.nom)}</div><table><colgroup><col class="am-cm"><col><col class="am-cp"><col class="am-cg"><col class="am-ce"></colgroup><tbody>${g.routes.map(ligne).join('')}</tbody></table>`).join('')}
+  </section>`).join('');
+  const tete = `<div class="am-tete"><span>${A.resonde ? 'Nouvelle sonde en cours…' : esc(A.quand)}</span>
+    <button class="am-bt" ${x.A(A.retester)} ${A.chargement || A.resonde ? 'disabled' : ''}>Retester</button></div>`;
+  if (A.chargement) {
+    return `<div data-screen="apiModule" class="am">${tete}<div class="am-carte am-attente">Les sources sont sondées : le panel, l’ERP, la base, Twilio. Quelques secondes…</div></div>`;
+  }
+  if (A.echec) {
+    return `<div data-screen="apiModule" class="am">${tete}<div class="am-carte am-attente">L’état n’a pas pu être lu (GET /ventes/primes-api). Retester ?</div></div>`;
+  }
+  return `<div data-screen="apiModule" class="am">${tete}${tuiles}${flux}${barre}${A.vide ? '<div class="am-carte am-attente">Aucune route ne correspond.</div>' : sources}</div>`;
+}
+
 function tplPromosMag(c, x){
   const { esc } = x;
   const carte = 'background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px';
