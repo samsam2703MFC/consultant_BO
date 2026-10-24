@@ -44,21 +44,36 @@ fi
 
 # --- 0. Disque -------------------------------------------------------------
 # Un disque plein casse tout (apt, MySQL, sessions PHP : l'API répond 503). Relevé à chaque livraison ;
-# à 90 % ou plus, ménage sans toucher aux données : cache apt, journaux systemd au-delà de 200 Mo,
-# binlogs MySQL de plus de 3 jours (aucun réplica sur ce serveur de test).
+# à 90 % ou plus : relevé détaillé, puis ménage sans toucher aux données des applications (cache apt,
+# journaux systemd au-delà de 200 Mo, journaux tournés de plus de 3 jours, caches pip / composer / npm de
+# root, binlogs MySQL de plus de 3 jours — aucun réplica sur ce serveur de test).
 disk_pct() { df -P / | awk 'NR==2 { gsub("%", "", $5); print $5 }'; }
 log "Disque / : $(df -hP / | awk 'NR==2 { print $3 " utilisés sur " $2 " (" $5 "), " $4 " libres" }')"
 if [[ "$(disk_pct)" -ge 90 ]]; then
-  warn "Disque presque plein : relevé des plus gros dossiers puis ménage."
-  du -xhd2 / 2>/dev/null | sort -rh | head -25 || true
-  binlogs="$(mysql -N -e "SELECT @@log_bin, @@datadir" 2>/dev/null || true)"
-  [[ -n "$binlogs" ]] && log "MySQL log_bin / datadir : ${binlogs}"
+  warn "Disque presque plein : relevé détaillé puis ménage."
+  du -xh --max-depth=3 /var /srv /root /home /opt 2>/dev/null | sort -rh | head -40 || true
+  log "Fichiers de plus de 200 Mo :"
+  find / -xdev -type f -size +200M -printf '%s\t%p\n' 2>/dev/null | sort -rn | head -15 \
+    | awk -F'\t' '{ printf "  %d Mo\t%s\n", $1 / 1048576, $2 }' || true
+  command -v docker >/dev/null 2>&1 && { docker system df 2>/dev/null || true; }
+  MYSQLA=(mysql)
+  "${MYSQLA[@]}" -e 'SELECT 1' >/dev/null 2>&1 || MYSQLA=(mysql --defaults-file=/etc/mysql/debian.cnf)
+  if "${MYSQLA[@]}" -e 'SELECT 1' >/dev/null 2>&1; then
+    log "MySQL : $("${MYSQLA[@]}" -N -e "SELECT CONCAT('log_bin=', @@log_bin, ', datadir=', @@datadir)" 2>/dev/null) ; binlogs : $("${MYSQLA[@]}" -N -e 'SHOW BINARY LOGS' 2>/dev/null | awk '{ s += $2; n++ } END { printf "%d fichiers, %d Mo", n, s / 1048576 }')"
+    "${MYSQLA[@]}" -N -e "SELECT table_schema, ROUND(SUM(data_length + index_length) / 1048576) FROM information_schema.tables GROUP BY table_schema ORDER BY 2 DESC LIMIT 8" 2>/dev/null \
+      | awk '{ printf "  base %s : %s Mo\n", $1, $2 }' || true
+    if [[ -z "$("${MYSQLA[@]}" -N -e 'SHOW REPLICAS' 2>/dev/null || "${MYSQLA[@]}" -N -e 'SHOW SLAVE HOSTS' 2>/dev/null || true)" ]]; then
+      "${MYSQLA[@]}" -e "PURGE BINARY LOGS BEFORE NOW() - INTERVAL 3 DAY" >/dev/null 2>&1 || true
+    fi
+  else
+    warn "MySQL : pas d'accès administrateur (root, debian.cnf) — binlogs non purgés."
+  fi
   before_pct="$(disk_pct)"
   apt-get clean >/dev/null 2>&1 || true
   journalctl --vacuum-size=200M >/dev/null 2>&1 || true
-  if [[ -z "$(mysql -N -e "SHOW REPLICAS" 2>/dev/null || mysql -N -e "SHOW SLAVE HOSTS" 2>/dev/null || true)" ]]; then
-    mysql -e "PURGE BINARY LOGS BEFORE NOW() - INTERVAL 3 DAY" >/dev/null 2>&1 || true
-  fi
+  find /var/log -xdev -type f \( -name '*.gz' -o -name '*.[0-9]' -o -name '*.old' \) -mtime +3 -delete 2>/dev/null || true
+  rm -rf /root/.cache/pip /root/.cache/composer 2>/dev/null || true
+  command -v npm >/dev/null 2>&1 && { npm cache clean --force >/dev/null 2>&1 || true; }
   log "Après ménage : $(df -hP / | awk 'NR==2 { print $5 " utilisés, " $4 " libres" }') (avant : ${before_pct} %)."
 fi
 
