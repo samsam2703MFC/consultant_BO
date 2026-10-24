@@ -1,5 +1,11 @@
 # Fidélité — quatre maquettes
 
+> **Retenu** (24/10/2026) : le Programme de C, les Clients de B. **Codé** le même jour : serveur
+> `src/fidelite.php` (`GET /fidelite`, `GET /fidelite/clients`, `POST /fidelite/regles` — voir
+> `docs/contrat-api.md`), écran `public/assets/js/fidelite-vals.js` + `fidelite-tpl.js` +
+> `assets/css/fidelite.css`, rail **ERP franchisé › Fidélité** (`#/fidelity`). Les règles s'enregistrent
+> pour de vrai ; l'analyse des clients tourne sur un jeu d'essai tant que `ceo_fid_visite` est vide.
+
 Demande du 24/10/2026 : un module **fidélité** dans l'ERP, page `/fidelity` —
 les cartes de fidélité, les points, les bons et les cadeaux du client, ce qui
 les déclenche (points → bon, événements), les jours et heures où les points
