@@ -32,7 +32,7 @@ Ce document suit les phases P1 → P7. **Phase livrée : P1** (audit, schéma, m
 | Socle | `n_prod_param` (toutes les valeurs [PARAM]), `n_prod_role`, `n_prod_role_permission`, `n_prod_user_role`, `n_prod_refresh_token`, `n_prod_login_attempt`, `n_prod_audit_log`, `n_schema_migration` |
 | Référentiels | `n_prod_group`, `n_prod_workstation`, `n_prod_workstation_shift`, `n_prod_shift_template`, `n_prod_team`, `n_prod_team_member`, `n_prod_employee` |
 | Produit | `n_prod_item` (article planifiable = produit ou semi-fini existant), `n_prod_product_settings`, `n_prod_bom_loss` (pertes par ligne de nomenclature), `n_prod_routing_step`, `n_prod_routing_alternative` |
-| Planification | `n_prod_forecast`, `n_prod_plan`, `n_prod_plan_line`, `n_prod_order` (OF), `n_prod_order_demand`, `n_prod_operation`, `n_prod_time_log` |
+| Planification | `n_prod_plan`, `n_prod_plan_line`, `n_prod_order` (OF), `n_prod_order_demand`, `n_prod_operation`, `n_prod_time_log` |
 
 **Contrôles en base (CHECK) :**
 - jamais congelé ⇒ pas de MTS ;

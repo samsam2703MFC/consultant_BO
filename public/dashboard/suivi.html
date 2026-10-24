@@ -3,53 +3,39 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
 <title>Mon suivi — L'Atelier by</title>
-<!-- La page du franchisé (09/10/2026) : comment il voit son suivi — ce que les données disent chaque jour,
-     ce que le consultant a constaté sur place, ce qu'il a à faire. Chemins RELATIFS : la page vit sous
-     /dashboard/, l'API sous ../api/cockpit (GET /franchises/fiche?shop=). -->
+<!-- L'ancienne page « Mon suivi » (09/10/2026) est fusionnée dans la page du franchisé (24/10/2026) : suivi/?shop=&jeton=,
+     qui reprend son volet « chaque jour » et son journal. Cette adresse reste pour les liens et les signets : avec une
+     session du cockpit, elle ouvre la page du magasin en aperçu (rien n'est envoyé ni marqué lu) ; sans session, elle
+     dit au franchisé de demander son lien personnel. -->
 <link rel="icon" href="../assets/img/logo.png">
 <link rel="stylesheet" href="../assets/ds/global.css">
-<link rel="stylesheet" href="dashboard.css">
 <style>
-  .sv{max-width:1180px;margin:0 auto;padding:16px 16px 40px}
-  .sv-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px}
-  .sv-kpi{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px}
-  .sv-kpi .k{font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
-  .sv-kpi .v{font:400 26px/1.1 var(--font-display);margin:6px 0 4px}.sv-kpi .v.ko{color:#C0182B}.sv-kpi .v.ok{color:#2d7a3e}.sv-kpi .v.att{color:#B26A00}
-  .sv-kpi .s{font-size:11.5px;color:var(--color-text-muted)}
-  .sv-deux{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
-  .sv-volet h2{font:400 20px/1.1 var(--font-display);margin:0 0 3px}.sv-volet .def{font-size:11.5px;color:var(--color-text-muted);margin-bottom:6px;line-height:1.45}
-  .sv-volet.j h2{color:#1f3f7a}.sv-volet.t h2{color:var(--color-primary)}
-  .sv-bloc{padding:10px 0;border-bottom:.5px solid var(--color-border-tertiary)}.sv-bloc:last-child{border-bottom:none}
-  .sv-bloc b.t{display:block;font-size:13px;margin-bottom:3px}.sv-bloc .l{font-size:12.5px;line-height:1.55}.sv-bloc .mu{color:var(--color-text-muted)}.sv-bloc .ko{color:#C0182B;font-weight:600}.sv-bloc .ok{color:#2d7a3e;font-weight:600}
-  .sv-faire{background:#FBEFE0;border:1px solid #E8C9A0;border-radius:12px;padding:12px 16px;margin-bottom:12px}
-  .sv-faire h2{font:400 18px/1.1 var(--font-display);margin:0 0 6px}
-  .sv-faire .it{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:.5px dashed #E8C9A0;font-size:12.5px}.sv-faire .it:last-child{border-bottom:none}
-  .sv-faire .it .p{font:700 10px var(--font-ui);letter-spacing:.06em;border-radius:8px;padding:3px 8px;white-space:nowrap;background:#EDE7E0}.sv-faire .it .p.p0{background:#C0182B;color:#fff}.sv-faire .it .p.p1{background:#FFF1D6;color:#8a5a00}
-  .sv-heat{display:grid;grid-template-columns:repeat(30,1fr);gap:3px;margin-top:6px}.sv-heat i{display:block;height:11px;border-radius:2px;background:#C9E3CD}.sv-heat i.m{background:#E8A0A0}.sv-heat i.p{background:#F5D58F}.sv-heat i.x{background:#EDE7E0}
-  .sv-postes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}.sv-postes div{background:var(--color-background-secondary);border:.5px solid var(--color-border-tertiary);border-radius:8px;padding:7px 9px}.sv-postes div small{display:block;font:700 9.5px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-muted)}.sv-postes div b{font:400 18px/1.2 var(--font-display)}
-  .sv-jl{display:flex;gap:12px;padding:8px 0;border-bottom:.5px dashed var(--color-border-tertiary);font-size:12.5px;align-items:baseline}.sv-jl:last-child{border-bottom:none}.sv-jl .d{width:54px;flex:0 0 auto;font-weight:600;color:var(--color-text-muted)}
-  .sv-src{font:700 9px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:#E3ECF7;color:#1f3f7a;flex:0 0 auto}.sv-src.t{background:#EFE3DE;color:#5a1320}
-  .sv-liens{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
-  .sv-liens a{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;padding:7px 14px;font:600 12px var(--font-ui);color:var(--color-text);text-decoration:none}.sv-liens a.p{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
-  .sv-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);margin-top:4px}.sv-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
-  @media (max-width:760px){.sv-deux{grid-template-columns:1fr}.sv-postes{grid-template-columns:repeat(2,1fr)}}
-  .sv-nc{display:flex;flex-direction:column;gap:4px;margin-top:6px}.sv-nc>div{display:flex;gap:8px;align-items:baseline;font-size:12.5px;line-height:1.4}.sv-niv{font:700 9px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;border-radius:5px;padding:2px 6px;flex:0 0 auto;background:#FBE9C8;color:#7a4a06}.sv-niv.majeure{background:#F7D6D6;color:#8a1020}.sv-niv.critique{background:#8D1D2C;color:#fff}
-  .sv-grille{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:6px}
-  .sv-k{background:var(--color-background-secondary,#f7f3ee);border:.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden;min-width:0}.sv-k[open]{grid-column:1/-1}
-  .sv-k summary{list-style:none;cursor:pointer;padding:9px 26px 9px 11px;position:relative}.sv-k summary::-webkit-details-marker{display:none}.sv-k summary::after{content:'▾';position:absolute;right:10px;top:8px;font-size:11px;color:var(--color-text-muted)}.sv-k[open] summary::after{content:'▴'}
-  .sv-k summary small{display:block;font:700 9.5px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sv-k summary b{display:block;font:400 22px/1.15 var(--font-display);margin-top:2px}.sv-k summary span{display:block;font-size:11.5px;color:var(--color-text-muted);margin-top:2px;line-height:1.35}
-  .sv-k.k-ok summary b{color:#2d7a3e}.sv-k.k-att summary b{color:#D97706}.sv-k.k-ko summary b{color:#C0182B}.sv-k.k-mu summary b{color:var(--color-text-muted)}
-  .sv-k .d{padding:8px 11px 10px;font-size:12.5px;line-height:1.5;border-top:.5px dashed var(--color-border-tertiary)}.sv-k .d .mu{color:var(--color-text-muted)}.sv-k .d .ko{color:#C0182B;font-weight:600}.sv-k .d .ok{color:#2d7a3e;font-weight:600}
-  .sv-lien{all:unset;cursor:pointer;color:var(--color-primary);font-weight:700;font-size:12px;margin-top:6px;display:inline-block}
-  .sv-rep>div{display:flex;align-items:center;gap:8px;font-size:12px;margin:2px 0}.sv-rep>div>span:first-child{width:170px;flex:0 0 auto}.sv-rep i{flex:1;height:8px;background:#EDE7E0;border-radius:4px;overflow:hidden;display:block}.sv-rep i b{display:block;height:100%;background:#8D1D2C}
-  .sv-modal{position:fixed;inset:0;background:rgba(30,20,20,.45);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px}.sv-modal[hidden]{display:none}.sv-modal .c{background:#fff;border-radius:14px;max-width:880px;width:100%;max-height:85vh;overflow:auto;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.25);font-size:13px;position:relative}.sv-modal h3{margin:0 0 10px;font:400 20px var(--font-display);padding-right:30px}.sv-modal .x{all:unset;cursor:pointer;position:absolute;right:14px;top:12px;font-size:15px;color:var(--color-text-muted)}
-  .sv-tab{width:100%;border-collapse:collapse;font-size:12.5px}.sv-tab th{text-align:left;font:700 9.5px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-muted);padding:4px 6px;border-bottom:.5px solid var(--color-border-tertiary)}.sv-tab td{padding:5px 6px;border-bottom:.5px dashed var(--color-border-tertiary);vertical-align:top}.sv-tab .mu{color:var(--color-text-muted)}.sv-tab .ko{color:#C0182B;font-weight:600}.sv-tab .ok{color:#2d7a3e;font-weight:600}
-  @media (max-width:700px){.sv-grille{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  body{margin:0;background:var(--color-background,#F6F1EC);color:var(--color-text,#222);font-family:var(--font-ui)}
+  .m{max-width:560px;margin:40px auto;padding:0 16px;font-size:13px;line-height:1.55}
+  .m img{height:30px;margin-bottom:14px}.m p{margin:0 0 8px;color:var(--color-text-muted)}
 </style>
 </head>
 <body>
-<div id="suivi" class="sv"><div class="db-attente">Lecture de votre suivi…</div></div>
-<script src="suivi.js"></script>
+<div class="m" id="m"><img src="../assets/img/logo.png" alt="L'Atelier by"><p>Ouverture de la page du franchisé…</p></div>
+<script>
+(function () {
+  'use strict';
+  var shop = new URLSearchParams(location.search).get('shop') || '';
+  var m = document.getElementById('m');
+  function demenage() {
+    m.innerHTML = '<img src="../assets/img/logo.png" alt="L\'Atelier by">'
+      + '<p>Cette page a déménagé : votre suivi s’ouvre avec le lien personnel que votre consultant vous envoie.</p>'
+      + '<p>Deze pagina is verhuisd: uw opvolging opent met de persoonlijke link die uw consultant u stuurt.</p>'
+      + '<p>This page has moved: your follow-up opens with the personal link your consultant sends you.</p>'
+      + '<p>Diese Seite ist umgezogen: Ihre Betreuung öffnet sich mit dem persönlichen Link, den Ihr Berater Ihnen sendet.</p>';
+  }
+  if (!shop) { demenage(); return; }
+  fetch('../api/cockpit/suivi/lien?shop=' + encodeURIComponent(shop), { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) { if (d && d.chemin) { location.replace('../' + d.chemin + '&apercu=1'); } else { demenage(); } }, demenage);
+})();
+</script>
 </body>
 </html>

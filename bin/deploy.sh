@@ -42,6 +42,26 @@ if [[ -f "$REPO_SRC/.deployenv" ]]; then
   COCKPIT_DB_PASSWORD="${COCKPIT_DB_PASSWORD:-}"
 fi
 
+# --- 0. Disque -------------------------------------------------------------
+# Un disque plein casse tout (apt, MySQL, sessions PHP : l'API répond 503). Relevé à chaque livraison ;
+# à 90 % ou plus, ménage sans toucher aux données : cache apt, journaux systemd au-delà de 200 Mo,
+# binlogs MySQL de plus de 3 jours (aucun réplica sur ce serveur de test).
+disk_pct() { df -P / | awk 'NR==2 { gsub("%", "", $5); print $5 }'; }
+log "Disque / : $(df -hP / | awk 'NR==2 { print $3 " utilisés sur " $2 " (" $5 "), " $4 " libres" }')"
+if [[ "$(disk_pct)" -ge 90 ]]; then
+  warn "Disque presque plein : relevé des plus gros dossiers puis ménage."
+  du -xhd2 / 2>/dev/null | sort -rh | head -25 || true
+  binlogs="$(mysql -N -e "SELECT @@log_bin, @@datadir" 2>/dev/null || true)"
+  [[ -n "$binlogs" ]] && log "MySQL log_bin / datadir : ${binlogs}"
+  before_pct="$(disk_pct)"
+  apt-get clean >/dev/null 2>&1 || true
+  journalctl --vacuum-size=200M >/dev/null 2>&1 || true
+  if [[ -z "$(mysql -N -e "SHOW REPLICAS" 2>/dev/null || mysql -N -e "SHOW SLAVE HOSTS" 2>/dev/null || true)" ]]; then
+    mysql -e "PURGE BINARY LOGS BEFORE NOW() - INTERVAL 3 DAY" >/dev/null 2>&1 || true
+  fi
+  log "Après ménage : $(df -hP / | awk 'NR==2 { print $5 " utilisés, " $4 " libres" }') (avant : ${before_pct} %)."
+fi
+
 # --- 1. Prérequis (sans perturber le panel déjà en place) ----------------
 log "Vérification des prérequis…"
 export DEBIAN_FRONTEND=noninteractive

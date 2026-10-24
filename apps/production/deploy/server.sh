@@ -350,6 +350,23 @@ fi
 if [[ -f "$IMPORT_OK" ]]; then
   [[ -n "$(envget PRODUCTION_JWT_SECRET)" ]] || set_env PRODUCTION_JWT_SECRET "$(openssl rand -hex 32)"
   [[ -n "$(envget API_BASE_URL)" ]] || set_env API_BASE_URL "$ERP_URL"
+  # Sauvegarde complète de la base avant d'appliquer des migrations en attente (certaines suppriment des copies de
+  # sauvegarde de l'ERP d'origine ou des lignes orphelines : 074, 076). Lisible par root seulement, 5 dernières gardées.
+  pending="$( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/tfb_migrate.php plan | grep -c '^pending' || true )"
+  if [[ "${pending:-0}" -gt 0 ]]; then
+    DUMPBIN="$(command -v mysqldump || command -v mariadb-dump || true)"
+    [[ -n "$DUMPBIN" ]] || fail "mysqldump introuvable : sauvegarde impossible, migrations non appliquées."
+    DUMPER=()
+    for a in "${ADMIN[@]}"; do [[ "$a" == "$MYSQL" ]] && DUMPER+=("$DUMPBIN") || DUMPER+=("$a"); done
+    BACKUP_DIR="$ERP_IMPORT_DIR/sauvegardes"
+    mkdir -p "$BACKUP_DIR" && chmod 700 "$BACKUP_DIR"
+    backup="$BACKUP_DIR/${ERP_DB_NAME}_avant_migrations_$(date -u +%Y%m%d_%H%M%S).sql.gz"
+    "${DUMPER[@]}" --single-transaction --no-tablespaces "$ERP_DB_NAME" | gzip > "$backup.part" \
+      || { rm -f "$backup.part"; fail "Sauvegarde de ${ERP_DB_NAME} avant migrations en échec : migrations non appliquées."; }
+    mv "$backup.part" "$backup" && chmod 600 "$backup"
+    log "Sauvegarde avant ${pending} migration(s) : ${backup} ($(du -h "$backup" | cut -f1))."
+    ls -1t "$BACKUP_DIR"/*_avant_migrations_*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -f
+  fi
   ( cd "$ERP_TARGET/app" && "$PHPBIN" Bin/tfb_migrate.php apply ) \
     || fail "Migrations du module atelier (migrations/tfb) en échec : voir le message ci-dessus."
   # Mots de passe des comptes : bcrypt (ceux encore en clair, idempotent ; même mot de passe pour se connecter).

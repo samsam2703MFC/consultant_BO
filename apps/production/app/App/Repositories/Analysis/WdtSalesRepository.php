@@ -8,7 +8,7 @@ use App\Repositories\Workshop\WorkshopRepository;
 /**
  * Jedna definicja sprzedaży z dokumentów WDT dla wszystkich stron (Analiza sprzedaży, Rentowność, eksport
  * i rentowność klienta, koszty, magazyn, planowanie) :
- *  - data sprzedaży = document_wdt.established_date (tekst RRRR-MM-DD), zakres od–do włącznie ;
+ *  - data sprzedaży = document_wdt.established_date (DATE), zakres od–do włącznie ;
  *  - WDT zastąpione innym (n_wdt_superseded) nigdy nie liczą się ;
  *  - wartość = linie dokumentu (ilość × cena kartonu, netto), nigdy nagłówek total_net ;
  *  - wartość w EUR : dokument w PLN dzielony przez kurs euro z ustawień firmy ;

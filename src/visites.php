@@ -26,8 +26,10 @@ const VI_MOTIFS         = ['reguliere', 'asap', 'due', 'revisite'];
 const VI_MODULES        = ['produit', 'hygiene', 'visuel', 'planogramme', 'assortiment', 'msp'];
 const VI_PRIORITES      = ['P0', 'P1', 'P2'];
 const VI_ASSIGNES       = ['franchise', 'equipe', 'consultant', 'admin'];
-const VI_STATUTS_PLAN   = ['ouvert', 'attente', 'valide', 'reprendre', 'ferme', 'escalade'];
-const VI_GENRES_PHOTO   = ['jour_facade', 'jour_interieur', 'jour_arriere', 'point', 'avant', 'apres', 'correction', 'msp'];
+// « propose » : un point écrit sur la tablette, qui attend l'envoi du rapport au bureau ;
+// « interne » : un point que le bureau a gardé pour lui à l'envoi (suivi.php).
+const VI_STATUTS_PLAN   = ['ouvert', 'attente', 'valide', 'reprendre', 'ferme', 'escalade', 'propose', 'interne'];
+const VI_GENRES_PHOTO   = ['jour_facade', 'jour_interieur', 'jour_arriere', 'point', 'avant', 'apres', 'correction', 'msp', 'signature'];
 const VI_ROLES          = ['consultant', 'franchise', 'admin'];
 
 /**
@@ -208,6 +210,8 @@ function ensureVisites(): void
     // Le jeton de l'horloge : lu en base par bin/visites_cron.sh à chaque appel.
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
         ['visitesJeton', json_encode(bin2hex(random_bytes(24)))]);
+    // Le suivi des franchisés (rapport, préparation, annoncée) ajoute ses colonnes à la visite.
+    if (function_exists('ensureSuivi')) { ensureSuivi(); }
 }
 
 function viSettingSet(string $cle, mixed $valeur): void
@@ -424,7 +428,12 @@ function viVisiteLigne(array $v): array
         'causes' => !empty($v['causes']) ? (json_decode((string) $v['causes'], true) ?: []) : [],
         'diagnostic' => $v['diagnostic'] ?? null, 'reco' => $v['reco'] ?? null,
         'type' => (string) (($v['type_code'] ?? '') ?: 'reguliere'), 'ics_seq' => (int) ($v['ics_seq'] ?? 0),
-        'maj_le' => $v['maj_le']];
+        'maj_le' => $v['maj_le'],
+        // Le suivi des franchisés : annoncée ou inopinée, la préparation envoyée sur la tablette, le rapport.
+        'annoncee' => function_exists('suAnnoncee') ? suAnnoncee($v) : true,
+        'prep' => !empty($v['prep_envoyee_le']) && function_exists('suPrep') ? suPrep($v) : null, 'prepEnvoyeeLe' => $v['prep_envoyee_le'] ?? null,
+        'odjEnvoyeLe' => $v['odj_envoye_le'] ?? null, 'rapportStatut' => $v['rapport_statut'] ?? null,
+        'rapportEnvoyeLe' => $v['rapport_envoye_le'] ?? null, 'rapportLuLe' => $v['rapport_lu_le'] ?? null];
 }
 
 function viPointLigne(array $p): array
@@ -469,15 +478,19 @@ function viPlans(?string $shop, int $joursFermes = 90): array
 
 function viMsp(?string $shop, int $n = 3): array
 {
+    // Un seul encodage du client mystère (24/10/2026) : la table du scoring, un rapport par passage.
+    // Les rapports mensuels d'avant (ceo_msp) complètent les mois qu'elle n'a pas.
+    $out = function_exists('suMspPourVisites') ? suMspPourVisites($shop, $n) : [];
     $sql = 'SELECT * FROM ceo_msp' . ($shop !== null ? ' WHERE shop_id = ?' : '') . ' ORDER BY mois DESC';
-    $out = [];
     foreach (Db::rows($sql, $shop !== null ? [$shop] : []) as $r) {
         $s = (string) $r['shop_id'];
-        if (count($out[$s] ?? []) >= $n) { continue; }
+        if (count($out[$s] ?? []) >= $n || in_array($r['mois'], array_column($out[$s] ?? [], 'mois'), true)) { continue; }
         $out[$s][] = ['id' => (int) $r['id'], 'shop' => $s, 'mois' => $r['mois'], 'total' => $r['total'] !== null ? (float) $r['total'] : null,
             'rubriques' => $r['rubriques'] ? (json_decode((string) $r['rubriques'], true) ?: []) : [],
-            'commentaires' => $r['commentaires'], 'fichier' => $r['fichier'], 'par' => $r['par'], 'le' => $r['le']];
+            'commentaires' => $r['commentaires'], 'fichier' => $r['fichier'], 'par' => $r['par'], 'le' => $r['le'], 'source' => 'mois'];
     }
+    foreach ($out as &$l) { usort($l, static fn ($a, $b) => strcmp((string) $b['mois'], (string) $a['mois'])); }
+    unset($l);
     return $out;
 }
 
@@ -701,11 +714,12 @@ function viBoutiquesEtat(?string $shop, string $du, string $au): array
         // La clé du tableau redevient un entier en PHP : la boutique porte son identifiant en chaîne.
         $sid = (string) $m['id'];
         if ($shop !== null && $sid !== $shop) { continue; }
-        $derniere = null; $prochaine = null; $enCours = null;
+        $derniere = null; $prochaine = null; $enCours = null; $annoncee = null;
         foreach ($visites as $v) {
             if ($v['shop'] !== $sid) { continue; }
             if ($v['statut'] === 'terminee' && ($derniere === null || $v['prevu_le'] > $derniere['prevu_le'])) { $derniere = $v; }
             if (in_array($v['statut'], ['planifiee', 'confirmee'], true) && $v['prevu_le'] >= $auj && ($prochaine === null || $v['prevu_le'] < $prochaine['prevu_le'])) { $prochaine = $v; }
+            if (in_array($v['statut'], ['planifiee', 'confirmee'], true) && $v['prevu_le'] >= $auj && !empty($v['annoncee']) && ($annoncee === null || $v['prevu_le'] < $annoncee['prevu_le'])) { $annoncee = $v; }
             if ($v['statut'] === 'en_cours') { $enCours = $v; }
         }
         $plano = viPlano($sid);
@@ -718,7 +732,8 @@ function viBoutiquesEtat(?string $shop, string $du, string $au): array
             'plansOuverts' => count($ouverts), 'p0' => count(array_filter($ouverts, fn ($p) => $p['priorite'] === 'P0')),
             'derniereVisite' => $derniere ? ['id' => $derniere['id'], 'le' => $derniere['prevu_le'], 'consultant' => $derniere['consultantNom'], 'type' => $derniere['type'],
                 'causes' => $derniere['causes'], 'reco' => $derniere['reco'], 'diagnostic' => $derniere['diagnostic'], 'execution' => $derniere['execution'], 'clients' => $derniere['clients'], 'positif' => $derniere['positif']] : null,
-            'prochaineVisite' => $prochaine ? ['id' => $prochaine['id'], 'le' => $prochaine['prevu_le'], 'h' => $prochaine['debut_h'], 'consultant' => $prochaine['consultantNom'], 'type' => $prochaine['type']] : null,
+            'prochaineVisite' => $prochaine ? ['id' => $prochaine['id'], 'le' => $prochaine['prevu_le'], 'h' => $prochaine['debut_h'], 'consultant' => $prochaine['consultantNom'], 'type' => $prochaine['type'], 'annoncee' => !empty($prochaine['annoncee'])] : null,
+            'prochaineAnnoncee' => $annoncee ? ['id' => $annoncee['id'], 'le' => $annoncee['prevu_le'], 'h' => $annoncee['debut_h'], 'consultant' => $annoncee['consultantNom'], 'type' => $annoncee['type'], 'annoncee' => true] : null,
             'visiteEnCours' => $enCours ? $enCours['id'] : null, 'frequence' => viFrequence($sid),
         ]);
     }
@@ -746,13 +761,51 @@ function ep_visites_app(): array
     // Le cadre de visite : les types (la liste déroulante, chacun avec sa checklist et ses tâches), le cadre, les tâches des visites.
     $types = function_exists('vcTypes') ? vcTypes() : [];
     $taches = function_exists('vcTachesDesVisites') && $ids ? vcTachesDesVisites($ids) : [];
+    if ($role === 'franchise') { [$e, $visites, $points, $photos, $taches] = viPourFranchise($e, $visites, $points, $photos, $taches); }
     return ['role' => $role, 'id' => $id, 'shop' => $shop, 'maintenant' => date('Y-m-d H:i'),
         'boutiques' => $e['boutiques'], 'consultants' => array_map(fn ($c) => $c + ['profil' => function_exists('vcProfilDe') ? vcProfilDe($c['id']) : '', 'profilNom' => function_exists('vcProfilDe') ? vcProfilNom(vcProfilDe($c['id'])) : ''], viConsultants()),
         'visites' => $visites, 'points' => $points, 'photos' => $photos, 'plans' => $e['plans'],
         'msp' => $e['msp'], 'equipe' => $e['equipe'], 'checklist' => viChecklist(), 'types' => $types, 'cadre' => function_exists('vcCadre') ? vcCadre() : [], 'taches' => $taches,
         'causes' => viCausesPlano(), 'causesDiag' => viCausesDiag(), 'seuils' => viSeuils(),
         'frequence' => setting('visitesFrequence', []) ?: (object) [],
-        'reseau' => viReseau($e['boutiques'])];
+        'reseau' => viReseau($e['boutiques']),
+        // Le délai d'envoi du rapport par le bureau, que la fin de visite annonce (suivi.php).
+        'delaiRapport' => function_exists('suRegles') ? (int) suRegles()['delais']['rapportHeures'] : null];
+}
+
+/**
+ * Ce que l'application montre au franchisé (dashboard magasin, visites/?shop=) :
+ * ni les points proposés ou gardés en interne, ni les visites inopinées à venir,
+ * ni la préparation et les notes du consultant ; la review d'une visite ne se lit
+ * qu'une fois son rapport envoyé (ou pour les visites d'avant le circuit).
+ */
+function viPourFranchise(array $e, array $visites, array $points, array $photos, array $taches): array
+{
+    $auj = date('Y-m-d');
+    $e['plans'] = array_values(array_filter($e['plans'], static fn ($p) => !in_array($p['statut'], ['propose', 'interne'], true)));
+    $caches = [];
+    $visites = array_values(array_filter(array_map(static function (array $v) use ($auj, &$caches): ?array {
+        if (in_array($v['statut'], ['planifiee', 'confirmee', 'en_cours'], true) && $v['prevu_le'] >= $auj && empty($v['annoncee'])) { $caches[] = $v['id']; return null; }
+        $v['prep'] = null; $v['notes'] = null; $v['meteo'] = null;
+        if (($v['rapportStatut'] ?? null) === 'brouillon') {
+            foreach (['positif', 'diagnostic', 'reco', 'execution', 'clients', 'sentiment'] as $k) { $v[$k] = null; }
+            $v['causes'] = [];
+        }
+        return $v;
+    }, $visites)));
+    $points = array_values(array_filter($points, static fn ($p) => !in_array($p['visite_id'], $caches, true)));
+    $photos = array_values(array_filter($photos, static fn ($p) => $p['genre'] !== 'signature' && !in_array($p['visite_id'], $caches, true)));
+    $taches = [];
+    foreach ($e['boutiques'] as &$b) {
+        $b['prochaineVisite'] = $b['prochaineAnnoncee'] ?? null;
+        if (!empty($b['derniereVisite'])) {
+            $dv = null; foreach ($visites as $v) { if ($v['id'] === $b['derniereVisite']['id']) { $dv = $v; } }
+            if ($dv === null || ($dv['rapportStatut'] ?? null) === 'brouillon') { foreach (['causes', 'reco', 'diagnostic', 'execution', 'clients', 'positif'] as $k) { $b['derniereVisite'][$k] = $k === 'causes' ? [] : null; } }
+            else { $b['derniereVisite']['diagnostic'] = $dv['diagnostic']; }
+        }
+    }
+    unset($b);
+    return [$e, $visites, $points, $photos, $taches];
 }
 
 /** Les moyennes du réseau, pour situer une boutique. */
@@ -834,6 +887,10 @@ function wr_visites_post(): array
     Db::exec('INSERT INTO ceo_visite (client_id, shop_id, consultant_id, consultant_nom, prevu_le, debut_h, duree_min, motif, type_code, statut, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
         [$cid, $shop, $cons, $consNom, $date, viHeure($b['debut_h'] ?? null) ?? '09:00', max(15, min(480, $duree)), $motif, $type, 'planifiee', $now, $now]);
     $id = (int) Db::pdo()->lastInsertId();
+    // Annoncée ou inopinée : celle du type, sauf choix contraire à la planification.
+    if (array_key_exists('annoncee', $b) && $b['annoncee'] !== null && $b['annoncee'] !== '') {
+        try { Db::exec('UPDATE ceo_visite SET annoncee = ? WHERE id = ?', [(bool) $b['annoncee'] ? 1 : 0, $id]); } catch (Throwable $e) { /* colonne absente : le type décide */ }
+    }
     journalAdd($consNom ?: 'Consultant', 'Visite', null, 'Visite planifiée : ' . viMagasins()[$shop]['court'] . ' le ' . $date . ($typeDef ? ' (' . $typeDef['nom'] . ')' : ''));
     // Les tâches du type entrent dans la liste du consultant, l'invitation .ics part (réglage).
     $suite = function_exists('vcApresPlanification') ? vcApresPlanification($id) : null;
@@ -868,6 +925,7 @@ function wr_visites_put(string $id): array
     if (array_key_exists('reco', $b)) { $set[] = 'reco = ?'; $args[] = mb_substr((string) $b['reco'], 0, 4000) ?: null; }
     if (isset($b['consultant'])) { $set[] = 'consultant_id = ?'; $args[] = mb_substr((string) $b['consultant'], 0, 32); $set[] = 'consultant_nom = ?'; $args[] = viConsultantNom((string) $b['consultant']); }
     if (isset($b['type']) && function_exists('vcTypeCode')) { if (function_exists('ensureVisitesCadre')) { ensureVisitesCadre(); } $set[] = 'type_code = ?'; $args[] = vcTypeCode($b['type']); }
+    if (array_key_exists('annoncee', $b)) { $set[] = 'annoncee = ?'; $args[] = $b['annoncee'] === null || $b['annoncee'] === '' ? null : ((bool) $b['annoncee'] ? 1 : 0); }
     if (!$set) { return ['ok' => true, 'visite' => viVisiteLigne($v)]; }
     $set[] = 'maj_le = ?'; $args[] = date('Y-m-d H:i:s'); $args[] = (int) $v['id'];
     Db::exec('UPDATE ceo_visite SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
@@ -878,6 +936,8 @@ function wr_visites_put(string $id): array
     if (($b['statut'] ?? '') === 'terminee') {
         journalAdd($v['consultant_nom'] ?: 'Consultant', 'Visite', null, 'Visite terminée : ' . (viMagasins()[(string) $v['shop_id']]['court'] ?? $v['shop_id'])
             . (!empty($b['reco']) ? ' — ' . mb_substr((string) $b['reco'], 0, 160) : ''));
+        // Le brouillon du rapport part au bureau : c'est lui qui l'adapte et l'envoie (suivi.php).
+        if ($v['statut'] !== 'terminee' && function_exists('suApresTerminee')) { suApresTerminee($v); $apres = Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']]); }
     }
     return ['ok' => true, 'visite' => viVisiteLigne($apres ?? Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']])), 'suite' => $suite];
 }
@@ -920,7 +980,12 @@ function wr_visites_points_put(string $id): array
 function wr_visites_photos_post(): array
 {
     ensureVisites();
-    $b = body();
+    return viPhotoEnregistrer(body());
+}
+
+/** Une photo enregistrée — par l'application (POST /visites/photos) ou par la page du franchisé (suivi.php). */
+function viPhotoEnregistrer(array $b): array
+{
     $cid = mb_substr(trim((string) ($b['client_id'] ?? '')), 0, 40) ?: null;
     if ($cid !== null && ($ex = Db::row('SELECT * FROM ceo_visite_photo WHERE client_id = ?', [$cid])) !== null) {
         return ['ok' => true, 'photo' => viPhotoLigne($ex), 'deja' => true];
@@ -995,13 +1060,16 @@ function wr_plans_post(): array
         $ass = in_array($p['assigne'] ?? '', VI_ASSIGNES, true) ? $p['assigne'] : 'franchise';
         $now = date('Y-m-d H:i:s');
         $camp = (int) ($p['campagne_id'] ?? 0) > 0 ? (int) $p['campagne_id'] : null;
+        // Écrit sur la tablette, un point est PROPOSÉ : il attend que le bureau envoie le rapport.
+        $statut = ($p['statut'] ?? $b['statut'] ?? '') === 'propose' ? 'propose' : 'ouvert';
         Db::exec('INSERT INTO ceo_visite_action (client_id, shop_id, visite_id, point_ref, titre, detail, priorite, assigne, echeance, statut, cree_par, cree_le, maj_le, campagne_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [$cid, $shop, $visite ? (int) $visite['id'] : null, mb_substr(preg_replace('/[^\w-]/', '', (string) ($p['ref'] ?? '')), 0, 60) ?: null,
-             $titre, mb_substr((string) ($p['detail'] ?? ''), 0, 2000) ?: null, $prio, $ass, viDate($p['echeance'] ?? null), 'ouvert', $qui, $now, $now, $camp]);
+             $titre, mb_substr((string) ($p['detail'] ?? ''), 0, 2000) ?: null, $prio, $ass, viDate($p['echeance'] ?? null), $statut, $qui, $now, $now, $camp]);
         $id = (int) Db::pdo()->lastInsertId();
-        Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [$id, $now, $qui, null, 'ouvert', 'créé']);
+        Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [$id, $now, $qui, null, $statut, $statut === 'propose' ? 'proposé en visite' : 'créé']);
         $ligne = viPlanLigne(Db::row('SELECT * FROM ceo_visite_action WHERE id = ?', [$id]));
-        $out[] = $ligne; $nouveaux[$shop][] = $ligne;
+        $out[] = $ligne;
+        if ($statut === 'ouvert') { $nouveaux[$shop][] = $ligne; }
     }
     foreach ($nouveaux as $shop => $ls) {
         $shop = (string) $shop;
@@ -1083,6 +1151,14 @@ function wr_msp_post(): array
     if (!isset(viMagasins()[$shop])) { http_response_code(422); return ['error' => 'magasin inconnu']; }
     $mois = (string) ($b['mois'] ?? date('Y-m'));
     if (!preg_match('/^\d{4}-\d{2}$/', $mois)) { http_response_code(422); return ['error' => 'mois attendu AAAA-MM']; }
+    // Un seul encodage (24/10/2026) : le rapport entre dans la table du scoring, un passage rangé dans son trimestre.
+    if (function_exists('suMspEnregistrer')) {
+        $rub = [];
+        foreach (is_array($b['rubriques'] ?? null) ? $b['rubriques'] : [] as $k => $v) { if (is_numeric($v)) { $rub[(string) $k] = (float) $v; } }
+        if ($rub === []) { http_response_code(422); return ['error' => 'au moins une rubrique notée sur 20']; }
+        $r = suMspEnregistrer($shop, $mois === date('Y-m') ? date('Y-m-d') : $mois . '-01', null, null, $rub, (string) ($b['commentaires'] ?? ''), $b['fichier'] ?? null, true, viQui($b));
+        return !empty($r['error']) ? $r : ['ok' => true, 'msp' => viMsp($shop, 4)[$shop] ?? []];
+    }
     $rub = [];
     foreach (is_array($b['rubriques'] ?? null) ? $b['rubriques'] : [] as $k => $v) {
         $k = mb_substr(trim((string) $k), 0, 40);
@@ -1278,7 +1354,8 @@ function viHorloge(bool $force = false): array
             $ouverts = Db::rows('SELECT priorite, titre FROM ceo_visite_action WHERE shop_id = ? AND statut IN (\'ouvert\', \'reprendre\', \'escalade\') ORDER BY FIELD(priorite, \'P0\', \'P1\', \'P2\') LIMIT 2', [$shop]);
             $suite = $ouverts ? ' — ' . implode(', ', array_map(fn ($o) => $o['priorite'] . ' ' . $o['titre'], $ouverts)) : '';
             viNotifier('c:' . $v['consultant_id'], 'Demain ' . $v['debut_h'] . ' — ' . $court, 'Visite prévue' . $suite, 'visites/?role=consultant&id=' . rawurlencode((string) $v['consultant_id']) . '#fiche/' . $v['id'], 'j1-' . $v['id']);
-            viNotifier($shop, 'Visite demain ' . $v['debut_h'], $v['consultant_nom'] . ' passe demain' . ($ouverts ? ' — préparez : ' . $ouverts[0]['titre'] : ''), 'dashboard/?shop=' . rawurlencode($shop) . '&vue=actions', 'j1-' . $v['id']);
+            // Une visite inopinée ne prévient pas le magasin.
+            if (!function_exists('suAnnoncee') || suAnnoncee($v)) { viNotifier($shop, 'Visite demain ' . $v['debut_h'], $v['consultant_nom'] . ' passe demain' . ($ouverts ? ' — préparez : ' . $ouverts[0]['titre'] : ''), 'dashboard/?shop=' . rawurlencode($shop) . '&vue=actions', 'j1-' . $v['id']); }
             $fait['rappelsJ1']++;
             if ($mails) {
                 foreach (viConsultants() as $c) {
@@ -1308,6 +1385,8 @@ function viHorloge(bool $force = false): array
         $fait['synthese'] = true;
         $etat['synthese'] = $auj;
     }
+    // Le suivi des franchisés : ordre du jour des visites annoncées, rapports en retard, relances.
+    if (function_exists('suHorloge')) { try { suHorloge($fait); } catch (Throwable $e) { $fait['suiviErreur'] = $e->getMessage(); } }
     $etat['dernier'] = date('Y-m-d H:i:s');
     viSettingSet('visitesCron', $etat);
     return ['ok' => true, 'fait' => $fait, 'etat' => $etat];
