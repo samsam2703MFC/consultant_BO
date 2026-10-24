@@ -49,15 +49,15 @@ class WDTService implements IDocument
         $P = fn(string $key) => DocumentLabels::pair($key, $lang);
         $cur = strtoupper((string) ($wdt['currency'] ?? 'EUR')) === 'EUR' || empty($wdt['currency']) ? '€' : strtoupper((string) $wdt['currency']);
 
-        // Wiersze w kolejności KSeF (id rosnąco) : Lp. na wydruku = NrWierszaFa w XML.
+        // Wiersze jak w XML KSeF (KsefWdtInvoiceXmlMapper) : kolejność id = NrWierszaFa, stawka zawsze « 0 WDT »
+        // (P_12), więc VAT 0 i brutto = netto, także gdy cennik klienta podał stawkę VAT.
         $items = array_values((array) $data['wdtProductData']);
         usort($items, fn($x, $y) => (int) ($x['id'] ?? 0) <=> (int) ($y['id'] ?? 0));
         $lines = [];
         foreach ($items as $item) {
-            $vat = (float) ($item['total_tva'] ?? 0);
             $lines[] = ['code' => $item['id_product'], 'name' => $item['name'], 'stat' => $item['code'], 'quantity' => $item['quantity'],
-                'price' => $item['price_carton'], 'net' => $item['total_net'], 'vat_rate' => $item['tva_perc'] ?? 0, 'vat' => $vat,
-                'gross' => (float) $item['total_net'] + $vat, 'weight' => $item['weight_carton_total'], 'ppc' => $item['ppc'], 'price_piece' => $item['price_per_piece']];
+                'price' => $item['price_carton'], 'net' => $item['total_net'], 'vat_rate' => 0, 'vat_label' => '0 WDT', 'vat' => 0.0,
+                'gross' => $item['total_net'], 'weight' => $item['weight_carton_total'], 'ppc' => $item['ppc'], 'price_piece' => $item['price_per_piece']];
         }
 
         $submission = $data['ksefSubmission'] ?? [];

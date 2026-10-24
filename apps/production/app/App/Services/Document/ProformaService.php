@@ -124,12 +124,13 @@ class ProformaService implements IDocument
         $lang = $data['lang'] ?? 'fr';
         $P = fn(string $key) => DocumentLabels::pair($key, $lang);
 
-        // Proforma = przedpłata bez VAT (zwolnienie w uwadze pod sumami) : VAT 0, razem = netto
+        // Proforma = przedpłata bez VAT (zwolnienie w uwadze pod sumami) : VAT 0, razem = netto.
+        // Pozycje według kategorii produktu (ProformaProductRepository::getByIdProforma) z nagłówkiem kategorii.
         $lines = [];
         foreach ((array) $data['proformaProductData'] as $item) {
             $lines[] = ['code' => $item['id_product'], 'name' => $item['product_name'], 'stat' => $item['code_stat'], 'quantity' => $item['quantity'],
                 'price' => $item['price_per_carton'], 'net' => $item['total_price_net'], 'vat_rate' => 0, 'vat' => 0.0, 'gross' => $item['total_price_net'],
-                'weight' => $item['total_weight_kg'], 'ppc' => $item['ppc'], 'price_piece' => $item['price_per_piece']];
+                'weight' => $item['total_weight_kg'], 'ppc' => $item['ppc'], 'price_piece' => $item['price_per_piece'], 'group' => (string) ($item['category_name'] ?? '')];
         }
 
         return InvoiceLayout::render($pdf, [

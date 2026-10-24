@@ -10,7 +10,8 @@ use App\Services\Utils\TCPDFService;
  * Jedna struktura faktur (faktura, faktura WDT, proforma) dla programu OCR biura rachunkowego :
  *  - nagłówek : numer, data wystawienia, data dostawy — zawsze te same etykiety i to samo miejsce ;
  *  - Sprzedawca po lewej, Nabywca po prawej, NIP w ostatniej linii bloku ;
- *  - tabela z tymi samymi kolumnami (Lp. = numer wiersza jak w KSeF), bez wierszy grup ;
+ *  - tabela z tymi samymi kolumnami (Lp. = numer wiersza jak w KSeF) ; faktura i WDT bez wierszy grup,
+ *    proforma z nagłówkami kategorii produktów (line['group']) — Lp. liczy tylko pozycje ;
  *  - jeden blok sum (netto, VAT, razem brutto) zawsze na dole ostatniej strony, w tym samym miejscu,
  *    obok płatności (rachunek, SWIFT, tytuł przelewu) ; uwaga prawna pod sumami.
  */
@@ -22,7 +23,8 @@ final class InvoiceLayout
     /**
      * $doc : title_key, number, issue_date, delivery_date, lang, currency, company_line,
      *        seller / buyer [name, lines[]], payment [[etykieta, wartość], …], note, correction (kwota albo 0), qr (callable|null)
-     * $lines : [code, name, stat, quantity, price, net, vat_rate, vat, gross, weight, ppc, price_piece]
+     * $lines : [code, name, stat, quantity, price, net, vat_rate, vat_label (opcjonalnie, np. « 0 WDT »), vat, gross, weight, ppc, price_piece,
+     *          group (opcjonalnie : nagłówek kategorii nad pierwszą pozycją grupy)]
      */
     public static function render(TCPDFService $pdf, array $doc, array $lines): TCPDFService
     {
@@ -58,9 +60,14 @@ final class InvoiceLayout
         ];
         $rows = [];
         $sum = ['qty' => 0.0, 'net' => 0.0, 'vat' => 0.0, 'gross' => 0.0, 'weight' => 0.0];
+        $group = null;
         foreach (array_values($lines) as $i => $l) {
+            if (($l['group'] ?? '') !== '' && $l['group'] !== $group) {
+                $rows[] = ['_group' => $l['group']];
+                $group = $l['group'];
+            }
             $rows[] = [$i + 1, $l['code'], $l['name'], $l['stat'] ?? '', DocumentLabels::number($l['quantity']), $money($l['price']), $money($l['net']),
-                DocumentLabels::number($l['vat_rate']) . ' %', $money($l['vat']), $money($l['gross']), DocumentLabels::number($l['weight'], 2) . ' kg',
+                ($l['vat_label'] ?? DocumentLabels::number($l['vat_rate']) . ' %'), $money($l['vat']), $money($l['gross']), DocumentLabels::number($l['weight'], 2) . ' kg',
                 DocumentLabels::number($l['ppc']), $money($l['price_piece'])];
             $sum['qty'] += (float) $l['quantity'];
             $sum['net'] += (float) $l['net'];

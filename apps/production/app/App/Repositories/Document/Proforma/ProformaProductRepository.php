@@ -103,9 +103,15 @@ class ProformaProductRepository extends BaseRepository
         ]);
     }
 
+    /** Pozycje proformy według kategorii produktu (jak cennik klienta), w kategorii według nazwy ; category_name do nagłówków. */
     public function getByIdProforma($id)
     {
-        $sql = "SELECT * FROM `document_proforma_product` WHERE `id_proforma` = :id_proforma ORDER BY product_name";
+        $sql = "SELECT dpp.*, cat.name AS category_name
+                FROM `document_proforma_product` dpp
+                LEFT JOIN final_product fp ON fp.id = dpp.id_product
+                LEFT JOIN category_product cat ON cat.id = fp.id_category
+                WHERE dpp.`id_proforma` = :id_proforma
+                ORDER BY cat.name IS NULL, cat.name, dpp.product_name";
         return $this->query($sql, [':id_proforma' => $id]);
     }
 }

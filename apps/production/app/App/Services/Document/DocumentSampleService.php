@@ -50,6 +50,10 @@ class DocumentSampleService
         [1005010, 'Éclair au chocolat', 2, 42.00, 24, 0.09, 2],
     ];
 
+    /** Kategorie produktów przykładowych (nagłówki na proformie). */
+    private const SAMPLE_CATEGORIES = [1004184 => 'Viennoiserie', 1004185 => 'Viennoiserie', 1002112 => 'Pain', 1003134 => 'Quiche 26⌀',
+        1002168 => 'Tarte 24⌀', 1005010 => 'Pâtisserie Individuelle'];
+
     public function __construct(
         private ErpCompanyDataRepository $companyData,
         private WZService $wz,
@@ -120,6 +124,9 @@ class DocumentSampleService
                     'single_weight' => round($p[4] * $p[5], 2), 'ppc' => $p[4]], $products)]);
                 break;
             case 'proforma':
+                // Jak w ProformaProductRepository::getByIdProforma : według kategorii, potem nazwy.
+                $byCategory = array_map(fn($p) => $p + [7 => self::SAMPLE_CATEGORIES[$p[0]] ?? ''], $products);
+                usort($byCategory, fn($a, $b) => [$a[7], $a[1]] <=> [$b[7], $b[1]]);
                 $this->proforma->renderDocument($pdf, ['lang' => $lang, 'proformaData' => [
                     'doc_num' => 'FP-00001/' . date('d/m/Y'), 'established_date' => $date,
                     'consignor_name' => $company['proforma_company_name'], 'consignor_address_1' => $company['proforma_company_address_1'],
@@ -128,7 +135,7 @@ class DocumentSampleService
                 ] + $this->consignee($client), 'proformaProductData' => array_map(fn($p) => [
                     'id_product' => $p[0], 'product_name' => $p[1], 'code_stat' => '19059090', 'quantity' => $p[2], 'price_per_carton' => $p[3],
                     'total_price_net' => round($p[2] * $p[3], 2), 'tva_perc' => 0, 'single_carton_weight_kg' => round($p[4] * $p[5], 3),
-                    'total_weight_kg' => round($p[2] * $p[4] * $p[5], 3), 'ppc' => $p[4], 'price_per_piece' => round($p[3] / $p[4], 2)], $products)]);
+                    'total_weight_kg' => round($p[2] * $p[4] * $p[5], 3), 'ppc' => $p[4], 'price_per_piece' => round($p[3] / $p[4], 2), 'category_name' => $p[7]], $byCategory)]);
                 break;
             case 'difference':
                 $wdt = ['doc_num' => 'WDT-0001/' . date('Y'), 'invoiced_date' => $date,
