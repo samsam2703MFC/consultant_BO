@@ -80,6 +80,7 @@ function ensureVisites(): void
         commence_a DATETIME NULL,
         termine_a DATETIME NULL,
         sentiment TINYINT NULL,
+        meteo TINYINT NULL,
         positif TEXT NULL,
         notes TEXT NULL,
         execution VARCHAR(12) NULL,
@@ -200,6 +201,10 @@ function ensureVisites(): void
             try { Db::exec('ALTER TABLE ceo_visite ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
         }
     }
+    // La météo du franchisé en fin de contrôle (12/10/2026) : 1 orage … 5 grand soleil.
+    $sansMeteo = true;
+    try { $sansMeteo = Db::row("SHOW COLUMNS FROM ceo_visite LIKE 'meteo'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    if ($sansMeteo) { try { Db::exec('ALTER TABLE ceo_visite ADD COLUMN meteo TINYINT NULL'); } catch (Throwable $e) { /* déjà là */ } }
     // Le jeton de l'horloge : lu en base par bin/visites_cron.sh à chaque appel.
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
         ['visitesJeton', json_encode(bin2hex(random_bytes(24)))]);
@@ -414,6 +419,7 @@ function viVisiteLigne(array $v): array
         'prevu_le' => $v['prevu_le'], 'debut_h' => $v['debut_h'], 'duree_min' => (int) $v['duree_min'],
         'motif' => $v['motif'], 'statut' => $v['statut'], 'commence_a' => $v['commence_a'], 'termine_a' => $v['termine_a'],
         'sentiment' => $v['sentiment'] !== null ? (int) $v['sentiment'] : null, 'positif' => $v['positif'], 'notes' => $v['notes'],
+        'meteo' => isset($v['meteo']) && $v['meteo'] !== null ? (int) $v['meteo'] : null,
         'execution' => $v['execution'] ?? null, 'clients' => $v['clients'] ?? null,
         'causes' => !empty($v['causes']) ? (json_decode((string) $v['causes'], true) ?: []) : [],
         'diagnostic' => $v['diagnostic'] ?? null, 'reco' => $v['reco'] ?? null,
@@ -834,7 +840,7 @@ function wr_visites_post(): array
     return ['ok' => true, 'visite' => viVisiteLigne(Db::row('SELECT * FROM ceo_visite WHERE id = ?', [$id])), 'suite' => $suite];
 }
 
-/** PUT /visites/{id} — statut, créneau, début, fin, sentiment, notes. */
+/** PUT /visites/{id} — statut, créneau, début, fin, sentiment, météo du franchisé, notes. */
 function wr_visites_put(string $id): array
 {
     ensureVisites();
@@ -852,6 +858,7 @@ function wr_visites_put(string $id): array
     if (($h = viHeure($b['debut_h'] ?? null)) !== null) { $set[] = 'debut_h = ?'; $args[] = $h; }
     if (isset($b['duree_min'])) { $set[] = 'duree_min = ?'; $args[] = max(15, min(480, (int) $b['duree_min'])); }
     if (array_key_exists('sentiment', $b)) { $s = (int) $b['sentiment']; $set[] = 'sentiment = ?'; $args[] = $s >= 1 && $s <= 5 ? $s : null; }
+    if (array_key_exists('meteo', $b)) { $m = (int) $b['meteo']; $set[] = 'meteo = ?'; $args[] = $m >= 1 && $m <= 5 ? $m : null; }
     if (array_key_exists('positif', $b)) { $set[] = 'positif = ?'; $args[] = mb_substr((string) $b['positif'], 0, 2000); }
     if (array_key_exists('notes', $b)) { $set[] = 'notes = ?'; $args[] = mb_substr((string) $b['notes'], 0, 4000); }
     if (array_key_exists('execution', $b)) { $set[] = 'execution = ?'; $args[] = in_array($b['execution'], VI_EXECUTION, true) && $b['execution'] !== '' ? $b['execution'] : null; }

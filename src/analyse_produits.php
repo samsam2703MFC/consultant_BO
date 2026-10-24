@@ -384,8 +384,19 @@ function ep_analyse_produit_magasin(): array
         else {
             $m = $ref['mag'][(string) $sid]; $v = array_column($ref['mag'], 'v10k');
             $nom = $nom ?? (string) $ref['nom']; $cat = $cat ?? (string) $ref['cat'];
-            $prix = ['mois' => $mp, 'periode' => $PV['periode'], 'du' => $PV['du'], 'au' => $PV['au'],
-                'magasin' => ['q' => $m['q'], 'qm' => $m['qm'], 'ca' => $m['ca'], 'p' => $m['p'], 'ec' => $m['ec'], 'v10k' => $m['v10k'], 'rel' => $m['rel'], 'auMed' => $m['auMed'], 'peu' => $m['peu']],
+            // Le prix de vente en caisse de chaque magasin (10/10/2026) : le prix pratiqué que le panel donne pour lui
+            // (products/available), à côté du prix encaissé (remises comprises) ; les autres magasins nommés.
+            $brut = static function (int $s) use ($pid): ?float {
+                if (!function_exists('cataloguePrixMagasin')) { return null; }
+                $v = cataloguePrixMagasin($s)[$pid] ?? null; return $v !== null ? round((float) $v, 2) : null;
+            };
+            $mags = [];
+            foreach ($ref['mag'] as $s => $x) {
+                $mags[] = ['nom' => preg_replace('/^.* - /', '', (string) ($shops[(int) $s] ?? ('Magasin ' . $s))), 'moi' => (int) $s === $sid,
+                    'p' => $x['p'], 'v10k' => $x['v10k'], 'q' => $x['q'], 'brut' => $brut((int) $s)];
+            }
+            $prix = ['mois' => $mp, 'periode' => $PV['periode'], 'du' => $PV['du'], 'au' => $PV['au'], 'magasins' => $mags,
+                'magasin' => ['q' => $m['q'], 'qm' => $m['qm'], 'ca' => $m['ca'], 'p' => $m['p'], 'ec' => $m['ec'], 'v10k' => $m['v10k'], 'rel' => $m['rel'], 'auMed' => $m['auMed'], 'peu' => $m['peu'], 'brut' => $brut($sid)],
                 'reseau' => ['med' => $ref['med'], 'min' => $ref['min'], 'max' => $ref['max'], 'volMoyen' => round(array_sum($v) / max(1, count($v)), 2),
                     'volMin' => round(min($v), 2), 'volMax' => round(max($v), 2), 'magasins' => count($ref['mag'])]];
         }
@@ -449,6 +460,63 @@ function ep_analyse_categorie_magasin(): array
             'jours' => array_map(fn ($t) => (int) round((strtotime($t[1] . ' 12:00:00') - strtotime($t[0] . ' 12:00:00')) / 86400) + 1, $tranches),
             'magasin' => array_values($moi), 'reseau' => array_values($res), 'magasinQ' => array_values($moiQ), 'reseauQ' => array_values($resQ),
             'muettes' => $muet, 'magasins' => count($shops)]];
+}
+
+/**
+ * GET /analyse/categories/journee?shop=4&niveau=groupe&nom=Tartes&date=2026-10-10
+ *
+ * La journée de vente d'une catégorie ou d'un groupe (10/10/2026) : de 6 h à 18 h, heure par heure, le
+ * chiffre d'affaires et les pièces du jour face à la moyenne des 6 derniers mêmes jours (un jour sans
+ * aucune vente au magasin, fermé, ne compte pas). Lecture : les relevés de tickets (svProduitsJour), le
+ * jour en cours relu par ses nouveaux tickets seulement, les jours passés déjà gravés.
+ */
+function ep_analyse_categorie_journee(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $niveau = ($_GET['niveau'] ?? '') === 'groupe' ? 'groupe' : 'categorie';
+    $nom = trim((string) ($_GET['nom'] ?? ''));
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if ($sid <= 0 || $nom === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(400); return ['error' => 'shop, nom et date requis']; }
+    if (!function_exists('svProduitsJour')) { return ['indispo' => true, 'motif' => 'lecture des tickets indisponible']; }
+    if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
+    $catDe = function_exists('svCategories') ? svCategories() : [];
+    $grpDe = function_exists('svGroupes') ? svGroupes() : [];
+    $groupe = static fn (string $c): string => explode(' · ', (string) ($grpDe[$c] ?? 'Autres'))[0];
+    $H = range(6, 17);
+    // Un relevé de tickets [heure][produit ou produit:portion] = [nom, pièces, CA, coût] : la catégorie, heure par heure.
+    $plier = static function (array $p) use ($H, $catDe, $groupe, $niveau, $nom): array {
+        $ca = array_fill_keys($H, 0.0); $q = array_fill_keys($H, 0.0); $tout = 0.0;
+        foreach ($p as $h => $lst) {
+            foreach ((array) $lst as $k => $x) {
+                $tout += (float) ($x[2] ?? 0);
+                if (!isset($ca[(int) $h])) { continue; }
+                $c = (string) ($catDe[(int) explode(':', (string) $k)[0]] ?? '');
+                if (($niveau === 'categorie' ? $c : $groupe($c)) !== $nom) { continue; }
+                $ca[(int) $h] += (float) ($x[2] ?? 0); $q[(int) $h] += (float) ($x[1] ?? 0);
+            }
+        }
+        return [$ca, $q, $tout];
+    };
+    $cout = 0; $budget = defined('SV_BUDGET_DEMANDE') ? SV_BUDGET_DEMANDE : 500;
+    $p0 = svProduitsJour($sid, $date, $cout, $budget);
+    [$ca0, $q0] = $p0 !== null ? $plier($p0) : [array_fill_keys($H, 0.0), array_fill_keys($H, 0.0)];
+    $jours = [];
+    for ($i = 1; $i <= 6; $i++) { $j = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); if (!defined('SV_DEBUT') || $j >= SV_DEBUT) { $jours[] = $j; } }
+    $lus = []; $manq = []; $sCa = array_fill_keys($H, 0.0); $sQ = array_fill_keys($H, 0.0);
+    foreach ($jours as $j) {
+        $p = svProduitsJour($sid, $j, $cout, $budget);
+        if ($p === null) { $manq[] = $j; continue; }
+        [$ca, $q, $tout] = $plier($p);
+        if ($tout <= 0) { continue; }
+        $lus[] = $j;
+        foreach ($H as $h) { $sCa[$h] += $ca[$h]; $sQ[$h] += $q[$h]; }
+    }
+    $n = count($lus);
+    $noms = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+    return ['shop' => $sid, 'niveau' => $niveau, 'nom' => $nom, 'date' => $date, 'jourNom' => $noms[(int) date('w', strtotime($date . ' 12:00:00'))],
+        'maintenant' => $date === date('Y-m-d') ? date('H:i') : null, 'lu' => $p0 !== null, 'jours' => $lus, 'manquants' => $manq,
+        'heures' => array_map(static fn ($h) => ['h' => $h, 'ca' => round($ca0[$h], 2), 'q' => round($q0[$h], 1),
+            'moyCa' => $n ? round($sCa[$h] / $n, 2) : null, 'moyQ' => $n ? round($sQ[$h] / $n, 2) : null], $H)];
 }
 
 /**

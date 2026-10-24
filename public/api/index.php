@@ -36,6 +36,7 @@ require __DIR__ . '/../../src/resultat_pdf.php';
 require __DIR__ . '/../../src/plan.php';
 require __DIR__ . '/../../src/plan_pdf.php';
 require __DIR__ . '/../../src/stats_ventes.php';
+require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
 require __DIR__ . '/../../src/notes_jour.php';
 require __DIR__ . '/../../src/objectifs_produits.php';
@@ -75,6 +76,7 @@ require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
 require __DIR__ . '/../../src/mesure.php';
 require __DIR__ . '/../../src/taches_suivi.php';
+require __DIR__ . '/../../src/controles_qualite.php';
 require __DIR__ . '/../../src/kpi_table.php';
 require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
@@ -234,6 +236,7 @@ function route(string $method, string $path): mixed
             $path === '/production/flux/commandes'     => ep_production_flux_commandes(),
             $path === '/production/flux/fours'         => ep_production_flux_fours(),
             $path === '/exploitation/invendus/sonde'   => ep_exploitation_invendus_sonde(),
+            $path === '/exploitation/couts/sonde'      => ep_couts_sonde(),
             $path === '/exploitation/invendus/detail'  => ep_exploitation_invendus_detail(),
             $path === '/exploitation/invendus/actions' => ep_exploitation_invendus_actions(),
             $path === '/equipe/remarques'              => ep_equipe_remarques(),
@@ -268,6 +271,7 @@ function route(string $method, string $path): mixed
             $path === '/analyse/produits/jours'        => ep_analyse_produits_jours(),
             $path === '/analyse/produits/magasin'      => ep_analyse_produit_magasin(),
             $path === '/analyse/categories/magasin'    => ep_analyse_categorie_magasin(),
+            $path === '/analyse/categories/journee'    => ep_analyse_categorie_journee(),
             $path === '/analyse/produits/recette'      => ep_analyse_produit_recette(),
             $path === '/analyse/matieres/fiche'        => ep_analyse_matiere_fiche(),
             $path === '/analyse/pnl/mois'              => ep_analyse_pnl_mois(),
@@ -352,6 +356,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
             $path === '/ventes/clients/sonde'         => ep_ventes_clients_sonde(),
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
+            $path === '/ventes/tickets'               => ep_ventes_tickets(),
             $path === '/ventes/mensuel'              => ep_ventes_mensuel(),
             $path === '/ventes/stock'                => ep_ventes_stock(),
             $path === '/ventes/commandes'            => ep_ventes_commandes(),
@@ -407,6 +412,7 @@ function route(string $method, string $path): mixed
             $path === '/pwa/tasks/heatmap/detail'      => ep_taches_heatmap_detail(),
             $path === '/pwa/tasks/detail'              => ep_pwa_task_detail(),
             $path === '/pwa/tasks/photos'              => ep_pwa_tasks_photos(),
+            $path === '/controles/qualite'             => ep_controles_qualite(),
             $path === '/pwa/tasks/nc'                  => ep_pwa_tasks_nc(),
             $path === '/pwa/waste/debug'               => ep_pwa_waste_debug(),
             $path === '/pwa/tasks/sonde'               => ep_pwa_tasks_sonde(),
