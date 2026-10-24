@@ -238,9 +238,23 @@ ouvre toujours l'Accueil. Pour remettre un onglet : sa ligne dans `components/bo
 (`{ key: 'stats', label: translations.statistics, icon: 'bi-bar-chart-line', href: ROOT ~ '/statistiques' }`,
 `dashboard` → `bi-house` `/dashboard`, `schedule` → `bi-calendar3` `/schedule`).
 
-**L'Accueil est revenu dans la barre le 24/10/2026** (Sam : « il manque l'icône dans le menu, la page est déjà
-présente ») : la barre a **Accueil** (`bi-house`, `/dashboard`), **Primes** et **Profil** ; les tâches allument
-Accueil. Le Planning et les Statistiques restent hors de la barre.
+**L'Accueil et le Planning sont revenus dans la barre le 24/10/2026** (Sam : « il manque l'icône dans le menu, la
+page est déjà présente », « remettre aussi Planning ») : la barre a **Accueil** (`bi-house`, `/dashboard`),
+**Planning** (`bi-calendar3`, `/schedule`), **Primes** et **Profil** ; les tâches allument Accueil. Les
+Statistiques restent hors de la barre.
+
+## Planning (24/10/2026) : la semaine, en forme sobre
+
+Demande de Sam (« améliore la vue du planning, ça ne ressemble à rien »). `/schedule` montre une semaine, du lundi au
+dimanche (`?semaine=AAAA-MM-JJ`, un jour de la semaine ; l'ancien `?date_from=` y mène aussi), dans la forme de Mes
+primes (`assets/atelier/primes.css`) : la semaine et ses chevrons (« 19 – 25 oct. », « cette semaine » ou un lien pour
+y revenir), le service en cours (une barre : ce qui est fait, « encore 5 h 40 · jusqu'à 16:00 ») ou le prochain
+(« Demain · 07:00 – 15:00 · 8 h · dans 18 h », cherché jusqu'à deux semaines plus loin si la semaine n'en a plus), le
+total de la semaine (heures, services, jours de repos), puis un jour par ligne : ses services, leur durée et leur place
+sur la journée (de 6 h à 22 h, élargie si un service en sort, arrêtée à minuit pour un service de nuit), le trait de
+l'heure sur aujourd'hui, les jours passés en gris, un autre magasin que d'habitude signalé. Le calcul :
+`ScheduleService::semaine` (`construire` sans réseau) ; les jours dans la langue de la personne : la fonction Twig
+`jour()` (`core/Twig/AppExtension.php`).
 
 `/statistiques` (`StatsController`, `Views/stats/statistiques.twig`, styles `assets/atelier/stats.css`, textes
 `translations/page/{fr,en,it,nl,pl}/stats.json`) : **ses chiffres à elle, rien que les siens**, depuis la même

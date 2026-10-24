@@ -14,14 +14,12 @@ class ScheduleController extends Controller
         private ScheduleService $scheduleService,
     ) {}
 
+    /** Le planning, semaine par semaine (24/10/2026) : « ?semaine=AAAA-MM-JJ » (un jour de la semaine) ; « ?date_from= », l'ancien lien, y mène aussi. */
     #[Route('GET', '/schedule')]
     public function index()
     {
-        $dateFrom = $_GET['date_from'] ?? date('Y-m-d');
-        $dateTo = $_GET['date_to'] ??  date('Y-m-d', strtotime(date('Y-m-d') . ' +7 days'));
-        $data['date_from'] = $dateFrom;
-        $data['date_to'] = $dateTo;
-        $data['schedule'] = $this->scheduleService->getForMe($dateFrom, $dateTo);
+        $jour = $_GET['semaine'] ?? ($_GET['date_from'] ?? null);
+        $data['semaine'] = $this->scheduleService->semaine(is_string($jour) ? $jour : null);
 
         $this->view("schedule/schedule", $data);
     }
