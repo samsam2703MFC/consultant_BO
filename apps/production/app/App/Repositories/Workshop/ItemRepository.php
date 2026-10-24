@@ -165,6 +165,40 @@ final class ItemRepository extends WorkshopRepository
         )[0]['cartons'] ?? 0);
     }
 
+    /** Zamówienia otwarte (ta sama definicja co ilości « Zamówione ») : produkt, klient, referencja, wysyłka, kartony. */
+    public function openOrderLines(): array
+    {
+        return $this->all(
+            "SELECT cop.id_product, co.id AS order_id, co.reference, DATE(co.expected_shipping_date) AS shipping_date,
+                    COALESCE(NULLIF(c.company, ''), TRIM(CONCAT(COALESCE(c.name, ''), ' ', COALESCE(c.surname, '')))) AS customer,
+                    SUM(cop.quantity_carton) AS cartons
+             FROM customer_order_product cop
+             JOIN customer_order co ON co.id = cop.id_order
+             LEFT JOIN customer c ON c.id = co.id_customer
+             WHERE " . OpenOrders::quantitySql('co') . "
+             GROUP BY cop.id_product, co.id, co.reference, co.expected_shipping_date, customer
+             HAVING cartons > 0
+             ORDER BY co.expected_shipping_date, customer, co.id"
+        );
+    }
+
+    /** Zamówione rok temu w tym samym okresie wysyłek co zamówienia otwarte (porównanie N-1), kartony na produkt. */
+    public function orderedYearAgo(): array
+    {
+        $out = [];
+        foreach ($this->all(
+            "SELECT cop.id_product, SUM(cop.quantity_carton) AS cartons
+             FROM customer_order_product cop
+             JOIN customer_order co ON co.id = cop.id_order
+             JOIN (SELECT DATE_SUB(MIN(DATE(o.expected_shipping_date)), INTERVAL 1 YEAR) AS date_from,
+                          DATE_SUB(MAX(DATE(o.expected_shipping_date)), INTERVAL 1 YEAR) AS date_to
+                   FROM customer_order o WHERE " . OpenOrders::sql('o') . ") period
+             WHERE DATE(co.expected_shipping_date) BETWEEN period.date_from AND period.date_to
+             GROUP BY cop.id_product"
+        ) as $r) $out[(int) $r['id_product']] = (float) $r['cartons'];
+        return $out;
+    }
+
     /**
      * Zapasy wg kategorii (lista kart) : produkty z trybem, stanami, kartonami na paletę i sprzedażą WDT
      * z ostatnich $days dni (bez dokumentów zastąpionych) — kartony i liczba sklepów (klientów), które kupiły.

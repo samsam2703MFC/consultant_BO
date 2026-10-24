@@ -20,7 +20,7 @@ final class PageTabs
             ['/workshop/gantt', 'Plan tygodnia', 'bi-calendar-week'],
             ['/workshop/team-sheet', 'Plan zespołów i listy dnia (PDF)', 'bi-printer'],
             ['/workshop/deliveries', 'Dostawy surowców', 'bi-truck'],
-            ['/stock', 'Stany magazynowe', 'bi-building'],
+            ['/workshop/products#/levels', 'Stan magazynu', 'bi-building'],
             ['/workshop/traceability', 'Partie i identyfikowalność', 'bi-upc-scan'],
             ['/production/follow-up', 'Śledzenie produkcji', 'bi-graph-up-arrow'],
             ['/purchasing/nc', 'Niezgodności', 'bi-exclamation-octagon'],

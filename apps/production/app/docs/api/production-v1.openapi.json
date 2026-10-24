@@ -14123,6 +14123,41 @@
                                             "current_value_eur": {
                                                 "type": "number",
                                                 "nullable": true
+                                            },
+                                            "coverage_weeks": {
+                                                "type": "number",
+                                                "nullable": true,
+                                                "description": "(wolne + na paletach) ÷ średnia sprzedaż tygodnia"
+                                            },
+                                            "ordered_year_ago_cartons": {
+                                                "type": "number",
+                                                "description": "zamówione rok temu w okresie wysyłek zamówień otwartych"
+                                            },
+                                            "orders": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "order_id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "customer": {
+                                                            "type": "string"
+                                                        },
+                                                        "reference": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "shipping_date": {
+                                                            "type": "string",
+                                                            "format": "date",
+                                                            "nullable": true
+                                                        },
+                                                        "cartons": {
+                                                            "type": "number"
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
