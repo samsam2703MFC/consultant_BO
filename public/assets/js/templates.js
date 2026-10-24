@@ -7,6 +7,7 @@
 import { tplSvTableau, tplSvTablette, tplSvMsp, tplSvFranchise, tplSvAdmin } from './suivi-tpl.js';
 import { tplFF, tplCQM } from './franchises-tpl.js';
 import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
+import { tplFidelite } from './fidelite-tpl.js';
 
 /* Entrée du rail : feuille (bouton simple) ou sous-menu (parent repliable +
    enfants indentés). Le badge s'affiche à droite. */
@@ -143,6 +144,7 @@ export function render(c, x){
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
+      ${c.isFid ? tplFidelite(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
       ${c.isApiModule ? tplApiModule(c, x) : ''}
       ${c.isPromosMag ? tplPromosMag(c, x) : ''}
