@@ -1048,3 +1048,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T12:03:54Z Promotions du magasin : le bon de réduction (#50), avec #48 et #49
 2026-10-24T12:16:37Z Fidélité : le programme (règles en phrases) et la récurrence des clients (#51)
 2026-10-24T12:19Z Résultat › Année : les articles par ticket face à l'an passé
+2026-10-24T12:29:16Z réclamations → cloche, suppression avec historique refusée, tests stables
