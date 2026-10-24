@@ -302,4 +302,29 @@ $pc = ErpApi::sondeGet('/promo-codes?limit=5');
 echo '  GET /promo-codes : ', $pc['code'] < 300 ? 'HTTP ' . $pc['code'] . ' · ' . count(svItems($pc['corps'])) . ' élément(s)' : svErreur($pc), "\n";
 if ($pc['code'] < 300 && svItems($pc['corps']) !== []) { svChamps(array_slice(svItems($pc['corps']), 0, 5)); }
 
+// ── 7. Le contrat de caisse, champ après champ ───────────────────────────────
+// Troisième passage : validate rend {valid, validation_token, campaign, promotion, errors[]} ; redeem et reverse
+// exigent d'abord un request_key. On ajoute un champ à la fois pour lire l'exigence suivante. Le code envoyé
+// N'EXISTE PAS (ZZSONDE…) et le jeton est faux : rien ne peut être validé, encaissé ni annulé.
+svTitre('contrat de caisse : exigence suivante, un champ à la fois (code inexistant, jeton faux)');
+$cle = 'SONDE-COCKPIT-' . gmdate('YmdHis');
+$essais = [
+    ['/vouchers/validate', ['code' => 'ZZSONDE0000']],
+    ['/vouchers/validate', ['code' => 'ZZSONDE0000', 'id_shop' => 2, 'channel' => 'WS', 'subtotal' => 10, 'items' => []]],
+    ['/vouchers/redeem',   ['request_key' => $cle]],
+    ['/vouchers/redeem',   ['request_key' => $cle, 'validation_token' => 'jeton-sonde-faux']],
+    ['/vouchers/redeem',   ['request_key' => $cle, 'code' => 'ZZSONDE0000']],
+    ['/vouchers/reverse',  ['request_key' => $cle]],
+    ['/vouchers/reverse',  ['request_key' => $cle, 'id_redemption' => 999999999]],
+];
+foreach ($essais as [$ch, $corps]) {
+    $r = ErpApi::ecrire('POST', $ch, $corps);
+    printf("  POST %-18s %-70s → %s\n", $ch, json_encode(array_keys($corps)), svErreur($r));
+    $c = $r['corps'];
+    if (is_array($c) && isset($c['errors']) && is_array($c['errors']) && array_is_list($c['errors'])) {
+        foreach ($c['errors'] as $e) { if (is_array($e)) { echo '      · ', $e['code'] ?? '?', ' — ', mb_substr((string) ($e['message'] ?? ''), 0, 160), "\n"; } }
+    }
+    if ($r['code'] >= 200 && $r['code'] < 300 && is_array($c)) { echo '      clés : ', implode(', ', array_keys($c)), "\n"; }
+}
+
 echo "\n=== FIN SONDE VOUCHERS ===\n";
