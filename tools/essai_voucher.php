@@ -8,7 +8,7 @@ declare(strict_types=1);
  *
  * Le bon ne peut servir à personne :
  *   - promotion « remise programmée » de 1 % sur UN produit, dans UNE boutique (ESSAI_SHOP), activation par code seul ;
- *   - campagne UNIQUE, une utilisation au total, valable jusqu'à demain ;
+ *   - campagne UNIQUE, trois utilisations au plus (une par code), valable jusqu'à demain ;
  *   - un code aléatoire de 12 caractères préfixé ZZSONDE (masqué dans le journal) ;
  *   - actif seulement le temps de l'essai : un `finally` remet code DISABLED, campagne INACTIVE, promotion INACTIVE.
  * Les passages suivants REPRENNENT la même campagne (retrouvée par son nom) : aucun doublon.
