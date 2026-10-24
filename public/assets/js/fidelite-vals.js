@@ -87,7 +87,7 @@ function ajouter(app, type, arg){
   const n = (app.state.fidNouvellesN || 0) + 1;
   const tamp = ((app.state.fidP || {}).d && app.state.fidP.d.regles || []).filter(r => r.type === 'tampons').length + L.filter(r => r.type === 'tampons').length;
   const params = type === 'tampons' ? NOUVELLES.tampons(tamp) : type === 'declencheur' ? NOUVELLES.declencheur(arg) : NOUVELLES[type]();
-  app.setState({ fidNouvellesN: n, fidNouvelles: L.concat([{ id: 'n' + n, type, bloc: BLOC_DE[type], params, shop: app.state.fidShop || '', actif: true }]) });
+  app.setState({ fidNouvellesN: n, fidOuvert: 'n' + n, fidNouvelles: L.concat([{ id: 'n' + n, type, bloc: BLOC_DE[type], params, shop: app.state.fidShop || '', actif: true }]) });
 }
 function annuler(app){ app.setState({ fidBrouillon: {}, fidNouvelles: [], fidMsg: null }); }
 function publier(app){
@@ -160,6 +160,43 @@ function phrase(app, r){
   return [T(r.type)];
 }
 
+/* --- Une règle en une ligne : titre court, résumé en clair, icône ---------------------------------- */
+const JOURS_M = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
+const joursTxt = j => {
+  const s = (j || []).slice().sort((a, c) => a - c);
+  if (s.length === 7) { return 'tous les jours'; }
+  if (s.length > 2 && s[s.length - 1] - s[0] === s.length - 1) { return 'du ' + JOURS_M[s[0]] + ' au ' + JOURS_M[s[s.length - 1]]; }
+  return s.length === 1 ? 'le ' + ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'][s[0]] : s.map(i => JOURS_M[i]).join(', ');
+};
+const dateTxt = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '…';
+const recTxt = rc => !rc ? '' : rc.type === 'bon' ? 'bon de ' + fE(rc.valeur, rc.valeur % 1 ? 2 : 0) : rc.type === 'points' ? '+' + nf(rc.valeur) + ' points' : rc.libelle;
+const IC = { euro: ['€', '#8D1D2C'], mult: ['×', '#E8964B'], bon: ['€', '#1d1d1f'], decl: ['✦', '#5856d6'], garde: ['!', '#8e8e93'] };
+function enClair(r){
+  const p = r.params, rc = p.recompense, val = rc && rc.type !== 'points' && p.validite ? ' · valable ' + p.validite + ' j' : '';
+  switch (r.type) {
+    case 'base': return ['Points par euro', fE(p.euros, p.euros % 1 ? 2 : 0) + ' = ' + nf(p.points) + ' point' + (p.points > 1 ? 's' : '') + ' · boutique, click & collect, livraison', IC.euro];
+    case 'panier': return ['Bonus panier', 'dès ' + fE(p.min) + ' : +' + nf(p.points) + ' points', IC.euro];
+    case 'creneau': return ['×' + p.mult + ' ' + joursTxt(p.jours) + ', ' + p.de + ' – ' + p.a, (p.famille ? 'sur ' + (FAMILLES.find(x => x[0] === p.famille) || ['', ''])[1] : 'tous les achats') + (p.pourquoi ? ' · ' + p.pourquoi : ''), ['×' + p.mult, IC.mult[1]]];
+    case 'gamme': return ['×' + p.mult + ' sur la gamme ' + p.gamme, 'du ' + dateTxt(p.du) + ' au ' + dateTxt(p.au), ['×' + p.mult, IC.mult[1]]];
+    case 'anniversaire': return ['×' + p.mult + ' pour l’anniversaire', 'le jour même' + (p.jours ? ', et ' + p.jours + ' jours avant ou après' : ''), ['×' + p.mult, IC.mult[1]]];
+    case 'jauge': return ['Bon d’achat', 'un bon de ' + fE(p.valeur, p.valeur % 1 ? 2 : 0) + ' tous les ' + nf(p.points) + ' points · valable ' + p.validite + ' j', IC.bon];
+    case 'tampons': return [p.nom, p.n + ' ' + p.unite + ' = ' + p.recompense, ['●', p.couleur]];
+    case 'declencheur': {
+      const t = { inscription: ['Bienvenue', 'à l’inscription : ' + recTxt(rc) + ' dès ' + fE(p.n) + ' d’achat'], visite2: ['Deuxième visite', 'revenu dans les ' + p.n + ' jours : ' + recTxt(rc)],
+        anniversaire: ['Anniversaire', recTxt(rc)], visiteN: [p.n + 'e visite du mois', recTxt(rc)], panier: ['Gros panier', 'dès ' + fE(p.n) + ' : ' + recTxt(rc)],
+        parrainage: ['Parrainage', recTxt(rc) + ' au parrain'], absence: ['Retour après ' + p.n + ' jours', 'un régulier absent reçoit ' + recTxt(rc)] }[p.evenement] || [p.evenement, ''];
+      return [t[0], t[1] + val, IC.decl];
+    }
+    case 'plafond': return ['Plafond des bonus', nf(p.points) + ' points bonus par jour et par client', IC.garde];
+    case 'cumul': return ['Pas de cumul', 'le multiplicateur le plus fort l’emporte', IC.garde];
+    case 'unbon': return ['Un bon par ticket', 'pas de cumul avec les promotions jours creux', IC.garde];
+    case 'expiration': return ['Expiration des points', 'après ' + p.mois + ' mois sans visite · prévenu ' + p.preavis + ' jours avant', IC.garde];
+    case 'exclus': return ['Jours sans multiplicateur', p.dates, IC.garde];
+    case 'budget': return ['Budget', 'au plus ' + nf(p.pct, 1) + ' % du chiffre des clients carte', IC.garde];
+  }
+  return [r.type, '', IC.garde];
+}
+
 /* --- Programme ------------------------------------------------------------------------------------ */
 function valsProgramme(app, f){
   const S = app.state, b = S.fidP || {}, d = b.d && !b.d.error ? b.d : null;
@@ -179,18 +216,22 @@ function valsProgramme(app, f){
   f.envoi = !!S.fidEnvoi;
   f.blocs = BLOCS.map(([k, titre, sous], i) => {
     const R = vues.filter(r => r.bloc === k);
-    const ajouts = k === 'gain' ? [['+ Un bonus panier', () => ajouter(app, 'panier')]]
-      : k === 'multi' ? [['+ Un créneau', () => ajouter(app, 'creneau')], ['+ Une gamme', () => ajouter(app, 'gamme')]]
-        : k === 'recoit' ? [['+ Une carte à tampons', () => ajouter(app, 'tampons')]] : [];
+    const ajouts = k === 'gain' ? [['Ajouter un bonus panier', () => ajouter(app, 'panier')]]
+      : k === 'multi' ? [['Ajouter un créneau', () => ajouter(app, 'creneau')], ['Ajouter une gamme', () => ajouter(app, 'gamme')]]
+        : k === 'recoit' ? [['Ajouter une carte à tampons', () => ajouter(app, 'tampons')]] : [];
     return { n: i + 1, titre, sous, ajouts,
-      declencheurs: k === 'recoit' ? { opts: [['', '+ Un déclencheur…']].concat(EVENEMENTS), choisir: e => { if (e.target.value) { ajouter(app, 'declencheur', e.target.value); } } } : null,
+      declencheurs: k === 'recoit' ? { opts: [['', 'Ajouter un déclencheur…']].concat(EVENEMENTS), choisir: e => { if (e.target.value) { ajouter(app, 'declencheur', e.target.value); } } } : null,
       regles: R.map(r => {
         const st = stats[r.id];
         const unique = UNIQUES.includes(r.type);
         const portee = r.type === 'base' || r.bloc === 'garde' ? null
           : { v: r.shop, opts: [['', 'Réseau']].concat(mags.map(m => [m.id, m.nom])), set: e => brouillon(app, r, { shop: e.target.value }), nom: r.shop ? nomMag(r.shop) : 'Réseau' };
-        return { id: r.id, morceaux: phrase(app, r), actif: r.actif, supprimer: r.supprimer, nouvelle: !!r.nouvelle, modifiee: r.modifiee, portee,
-          stat: r.nouvelle ? 'nouvelle — se lira après publication' : r.supprimer ? 'retirée à la publication' : r.modifiee ? 'modifiée — se relira après publication' : (st ? st.txt : ''),
+        const [titre, resume, ic] = enClair(r);
+        const ouvert = String(S.fidOuvert) === String(r.id);
+        return { id: r.id, titre, resume: resume + (r.shop ? ' · ' + nomMag(r.shop) : ''), ic: { txt: ic[0], couleur: ic[1] }, ouvert,
+          ouvrir: () => app.setState({ fidOuvert: ouvert ? null : r.id }), fermer: () => app.setState({ fidOuvert: null }),
+          morceaux: ouvert ? phrase(app, r) : [], actif: r.actif, supprimer: r.supprimer, nouvelle: !!r.nouvelle, modifiee: r.modifiee, portee,
+          stat: r.nouvelle ? 'nouvelle' : r.supprimer ? 'retirée à la publication' : r.modifiee ? 'modifiée' : (st ? st.txt : ''),
           statCls: r.modifiee ? 'mu' : (st && st.cls === 'alerte' ? 'ko' : (st && /^\+|tickets|paniers/.test(st.txt) ? '' : 'mu')),
           basculer: r.type === 'base' ? null : () => brouillon(app, r, { actif: !r.actif }),
           retirer: unique ? null : (r.nouvelle ? () => app.setState({ fidNouvelles: (S.fidNouvelles || []).filter(n => n.id !== r.id) }) : () => brouillon(app, r, { supprimer: !r.supprimer })) };
@@ -219,14 +260,14 @@ function valsProgramme(app, f){
     const bonus = bonusPanier.filter(r => p.panier >= r.params.min).reduce((s, r) => s + r.params.points * p.visites, 0);
     const pts = ca * ratio * (1 + p.partCreneau * (multMax - 1)) + bonus;
     const rend = ca > 0 ? 100 * (pts / g.points * g.valeur) / ca : null;
-    return { nom: p.nom + ' — ' + p.mission.toLowerCase(), sous: nf(p.visites) + ' visite' + (p.visites > 1 ? 's' : '') + ' par mois · panier ' + fE(p.panier, 2) + ' · ' + nf(100 * p.partCreneau) + ' % des visites sur un créneau multiplié',
+    return { nom: p.nom, mission: p.mission, sous: nf(p.visites) + ' visite' + (p.visites > 1 ? 's' : '') + ' par mois · ' + fE(p.panier, 2) + ' le panier',
       pts: nf(pts), jours: pts > 0 ? nf(30 * g.points / pts) : '—', rend: rend == null ? '—' : nf(rend, 1) + ' %', fort: rend != null && rend > 5 };
   });
   const bud = (d.stats || {}).budget || {};
   const plafond = +((act.find(r => r.type === 'budget') || { params: { pct: bud.plafond || 5 } }).params.pct) || 5;
   f.budget = { cout: fE(bud.cout), ca: fE(bud.ca), pct: bud.pct == null ? '—' : nf(bud.pct, 1) + ' %', plafond: nf(plafond, 1) + ' %',
     largeur: bud.pct == null ? 0 : Math.min(100, 100 * bud.pct / (plafond * 1.25)), repere: 80, depasse: bud.pct != null && bud.pct > plafond,
-    hypotheses: bud.hypotheses || '', brouillon: f.nbModifs > 0 };
+    hypotheses: bud.hypotheses || '', brouillon: f.nbModifs > 0, part: bud.pct == null ? 0 : Math.min(1, bud.pct / plafond) };
 }
 
 /* --- Clients ---------------------------------------------------------------------------------------- */
@@ -291,6 +332,8 @@ function valsClients(app, f){
   const tr = d.transitions || { ordre: [], noms: [], m: [] };
   f.trans = { noms: tr.noms, lignes: tr.m.map((r, i) => { const t = r.reduce((a, v) => a + v, 0) || 1;
     return { nom: tr.noms[i], total: nf(r.reduce((a, v) => a + v, 0)), cases: r.map((v, j) => { const p = 100 * v / t; return { txt: p < 0.5 ? '·' : pc(p), sens: i === j ? 'reste' : (j < i ? 'monte' : 'descend'), a: Math.min(0.85, p / 30), titre: tr.noms[i] + ' → ' + tr.noms[j] + ' : ' + nf(v) }; }) }; }) };
+  f.flux = tr.m.map((r, i) => { const t = r.reduce((a, v) => a + v, 0) || 1, m = r.filter((v, j) => j < i).reduce((a, v) => a + v, 0), dsc = r.filter((v, j) => j > i).reduce((a, v) => a + v, 0);
+    return { nom: tr.noms[i], total: nf(r.reduce((a, v) => a + v, 0)), reste: 100 * r[i] / t, monte: 100 * m / t, descend: 100 * dsc / t, resteTxt: pc(100 * r[i] / t), monteTxt: m ? '↑ ' + pc(100 * m / t) : '', descendTxt: dsc ? '↓ ' + pc(100 * dsc / t) : '' }; });
   const revenus = tr.m.length > 4 ? tr.m[3].slice(0, 3).reduce((a, v) => a + v, 0) + tr.m[4].slice(0, 3).reduce((a, v) => a + v, 0) : 0;
   f.trans.lecture = tr.m.length > 4 ? nf(tr.m[1][3]) + ' réguliers sont passés « à risque » en 30 jours ; ' + nf(revenus) + ' clients à risque ou endormis sont revenus.' : '';
   // Ce qu'achète chaque segment.

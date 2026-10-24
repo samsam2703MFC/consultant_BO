@@ -528,12 +528,12 @@ function fidStats(array $regles, array $V, int $R, string $shop): array
         $p = $r['params']; $id = $r['id']; $n = $cpt[$id];
         $txt = ''; $cls = '';
         switch ($r['type']) {
-            case 'base': $txt = fidN($pointsBase) . ' points sur 30 jours'; break;
+            case 'base': $txt = fidN($pointsBase) . ' points en 30 jours'; break;
             case 'panier': $txt = fidN($n) . ' paniers · ' . fidN($n * $p['points']) . ' points'; break;
-            case 'creneau': $txt = fidN($n) . ' tickets carte sur le créneau' . ($r['actif'] ? ' · + ' . fidN($bonus[$id]) . ' points' : ''); break;
-            case 'anniversaire': $txt = fidN($n) . ' achats d’anniversaire' . ($r['actif'] ? ' · + ' . fidN($bonus[$id]) . ' points' : ''); break;
-            case 'gamme': $txt = 'lecture des ventes par gamme à brancher'; break;
-            case 'jauge': $txt = '≈ ' . fidN($bonsJauge) . ' bons sur 30 jours'; break;
+            case 'creneau': $txt = fidN($n) . ' tickets' . ($r['actif'] ? ' · + ' . fidN($bonus[$id]) . ' points' : ''); break;
+            case 'anniversaire': $txt = fidN($n) . ' achats' . ($r['actif'] ? ' · + ' . fidN($bonus[$id]) . ' points' : ''); break;
+            case 'gamme': $txt = 'ventes par gamme à brancher'; break;
+            case 'jauge': $txt = 'environ ' . fidN($bonsJauge) . ' bons sur 30 jours'; break;
             case 'tampons': $txt = 'tampons tenus par la PWA'; break;
             case 'declencheur':
                 $ev = $p['evenement'];
