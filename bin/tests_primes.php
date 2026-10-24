@@ -815,6 +815,41 @@ $_GET = ['shop' => '99']; $eq404 = ep_primes_equipe(); $_GET = [];
 verifie('un magasin inconnu : 404', ($eq404['error'] ?? '') === 'magasin inconnu');
 $GLOBALS['TABLES']['employes'] = $empAvant; $GLOBALS['TABLES']['planning'] = $plAvant;
 
+// --- 19. l'année des primes (24/10/2026) : par prime et par personne, un magasin ou le réseau ------------------------
+echo "\nL'année des primes\n";
+$pA = ['croisees' => ['montant' => 50], 'record' => ['montant' => 0], 'magasin' => 40.0, 'google' => 0.0, 'meilleure' => 0,
+    'cibles' => ['liste' => [['cle' => 'cib4a', 'lib' => 'Croisées Halle', 'montant' => 20.0, 'atteint' => true]]],
+    'concours' => ['titres' => [['cle' => 'concours:quiche', 'lib' => 'Queen of Quiches', 'montant' => 0]]], 'promo' => ['titres' => []],
+    'b2b' => ['montant' => 22.5, 'parCle' => ['b2b0123abcd' => 22.5]]];
+$gA = primesAnneeGains($pA);
+verifie('les gains d’un mois : les euros, le titre sans euros (un cadeau) compté gagné à 0 €, rien pour une prime non gagnée',
+    ($gA['croisees']['montant'] ?? null) === 50.0 && ($gA['objectif']['montant'] ?? null) === 40.0 && ($gA['cib4a']['montant'] ?? null) === 20.0
+    && ($gA['concours:quiche']['montant'] ?? null) === 0.0 && ($gA['b2b0123abcd']['montant'] ?? null) === 22.5 && !isset($gA['record']) && !isset($gA['google']), json_encode($gA));
+$gB = primesAnneeGains(['b2b' => ['montant' => 30.0]]);
+verifie('un mois gravé sans le détail des clients pro : une seule ligne B2B', array_keys($gB) === ['b2b'] && $gB['b2b']['montant'] === 30.0);
+$anT = ['y' => 2026, 'enCours' => true, 'quand' => 1, 'libs' => ['croisees' => 'Ventes croisées', 'concours:quiche' => 'Queen of Quiches', 'objectif' => 'Objectif magasin'],
+    'mois' => [['m' => '2026-09', 'lib' => 'septembre 2026', 'total' => 140.0], ['m' => '2026-10', 'lib' => 'octobre 2026', 'total' => 90.0]],
+    'personnes' => [
+        ['id' => 1, 'nom' => 'Léa', 'shopId' => '4', 'magasinNom' => 'Halle', 'total' => 140.0, 'mois' => 2, 'cases' => ['croisees' => ['montant' => 100.0, 'fois' => 2], 'concours:quiche' => ['montant' => 0.0, 'fois' => 1], 'objectif' => ['montant' => 40.0, 'fois' => 1]]],
+        ['id' => 2, 'nom' => 'Sofia', 'shopId' => '4', 'magasinNom' => 'Halle', 'total' => 40.0, 'mois' => 1, 'cases' => ['objectif' => ['montant' => 40.0, 'fois' => 1]]],
+        ['id' => 3, 'nom' => 'Inès', 'shopId' => '5', 'magasinNom' => 'Namur', 'total' => 50.0, 'mois' => 1, 'cases' => ['croisees' => ['montant' => 50.0, 'fois' => 1]]]]];
+$vR = primesAnneeVue($anT);
+verifie('le réseau : les primes dans l’ordre de l’app, leur total, leurs mois gagnés, leurs gagnantes',
+    array_column($vR['primes'], 'cle') === ['croisees', 'objectif', 'concours:quiche'] && $vR['primes'][0]['total'] === 150.0 && $vR['primes'][0]['fois'] === 3
+    && $vR['primes'][0]['gagnantes'] === 2 && $vR['primes'][1]['gagnantes'] === 2 && $vR['total'] === 230.0, json_encode($vR['primes']));
+verifie('le réseau : les magasins, le plus primé d’abord, leurs cases', array_column($vR['magasins'], 'id') === ['4', '5'] && $vR['magasins'][0]['total'] === 180.0
+    && $vR['magasins'][0]['gagnantes'] === 2 && $vR['magasins'][0]['cases']['objectif']['gagnantes'] === 2 && $vR['magasins'][1]['cases']['croisees']['montant'] === 50.0);
+$vM = primesAnneeVue($anT, '4');
+verifie('un magasin : ses seules vendeuses, ses primes, sans le total du réseau par mois', array_column($vM['personnes'], 'nom') === ['Léa', 'Sofia'] && $vM['total'] === 180.0
+    && $vM['primes'][0]['total'] === 100.0 && $vM['magasins'] === [] && !isset($vM['mois'][0]['total']));
+$_GET = ['y' => '2026', 'shop' => '99']; $an404 = ep_primes_annee(); $_GET = [];
+verifie('l’année d’un magasin inconnu : 404', ($an404['error'] ?? '') === 'magasin inconnu');
+verifie('le cache de l’année vit dans mot_cache', motCle('primesAn2026') === 'cache');
+$anV = primesAnnee((int) date('Y'), true);
+verifie('de bout en bout, sur la base simulée : un mois par mois de l’année jusqu’au mois en cours, gravée',
+    count($anV['mois']) === (int) date('n') && end($anV['mois'])['m'] === date('Y-m') && end($anV['mois'])['enCours'] === true
+    && isset($GLOBALS['REGLAGES']['primesAn' . date('Y')]), json_encode(array_column($anV['mois'], 'm')));
+
 // --- Les tables du module : toutes sous mot_ (23/10/2026) ---------------------------------------------
 echo "\nLes tables mot_\n";
 verifie('les réglages et l’historique vont dans mot_reglage, les caches dans mot_cache, le reste ailleurs',

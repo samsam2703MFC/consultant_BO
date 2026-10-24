@@ -6840,10 +6840,76 @@ class App {
       };
     }
 
+    // Le choix du mois et l'année des primes (24/10/2026, Sam : « un month picker », « un récapitulatif de l'année par prime
+    // et par personne, par magasin et sur la page réseau »). Les mois partent de janvier 2026, le 1er des primes de l'app.
+    const MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+    const MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const auj = new Date(); const mAuj = auj.getFullYear() + '-' + String(auj.getMonth() + 1).padStart(2, '0'); const yAuj = auj.getFullYear();
+    const M_DEBUT = '2026-01'; const Y_DEBUT = 2026;
+    const decale = (m, n) => { const x = new Date(+m.slice(0, 4), +m.slice(5, 7) - 1 + n, 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); };
+    const libMois = m => MOIS_L[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4);
+    // Un mois : ‹ octobre 2026 ›, et au toucher la grille des douze mois (ceux à venir, et d'avant 2026, grisés).
+    const pickerMois = (m, cle) => {
+      const ouvert = !!S[cle + 'Pick']; const yG = S[cle + 'PickY'] || +m.slice(0, 4);
+      const aller = v => () => this.setState({ [cle + 'Mois']: v, [cle + 'Pick']: false });
+      return { lib: libMois(m), enCours: m === mAuj, ouvert,
+        prec: m > M_DEBUT ? aller(decale(m, -1)) : null, suiv: m < mAuj ? aller(decale(m, 1)) : null,
+        ouvrir: () => this.setState({ [cle + 'Pick']: !ouvert, [cle + 'PickY']: +m.slice(0, 4) }), fermer: () => this.setState({ [cle + 'Pick']: false }),
+        an: yG, anPrec: yG > Y_DEBUT ? () => this.setState({ [cle + 'PickY']: yG - 1 }) : null, anSuiv: yG < yAuj ? () => this.setState({ [cle + 'PickY']: yG + 1 }) : null,
+        grille: MOIS_C.map((nom, i) => { const v = yG + '-' + String(i + 1).padStart(2, '0');
+          return { nom, on: v === m, enCours: v === mAuj, choisir: v >= M_DEBUT && v <= mAuj ? aller(v) : null }; }) };
+    };
+    const pickerAn = (y, cle) => ({ lib: String(y), enCours: y === yAuj,
+      prec: y > Y_DEBUT ? () => this.setState({ [cle]: y - 1 }) : null, suiv: y < yAuj ? () => this.setState({ [cle]: y + 1 }) : null });
+    // L'année : une colonne par prime gagnée, une ligne par vendeuse (ou par magasin), ce qu'elle a touché et combien de
+    // mois ; un toucher sur l'en-tête trie, un 2e inverse. Les totaux suivent les colonnes montrées (le filtre).
+    const eurA = v => (+v).toLocaleString('fr-BE', { minimumFractionDigits: (+v) % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €';
+    const payeurLib = p => (p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : p.payeur === 'magasin' ? 'le magasin' : 'la marque');
+    const pl = (n, mot) => n + ' ' + mot + (n > 1 && !/s$/.test(mot) ? 's' : '');
+    const anneeVue = (A, cleTri, o) => {
+      if (!A) { return { cols: [], lignes: [], total: '', periode: '', barres: [] }; }
+      const cols = (A.primes || []).filter(o.filtre || (() => true));
+      const tri0 = S[cleTri] || { col: 'total', sens: -1 };
+      const tri = tri0.col === 'nom' || tri0.col === 'total' || cols.some(p => p.cle === tri0.col) ? tri0 : { col: 'total', sens: -1 };
+      const totalDe = r => cols.reduce((t, p) => t + (((r.cases || {})[p.cle] || {}).montant || 0), 0);
+      const val = r => (tri.col === 'nom' ? String(r.nom) : tri.col === 'total' ? totalDe(r) : ((r.cases || {})[tri.col] ? r.cases[tri.col].montant * 1000 + r.cases[tri.col].fois : -1));
+      const src = (o.magasins ? A.magasins : A.personnes) || [];
+      const rangs = src.filter(r => cols.some(p => (r.cases || {})[p.cle])).sort((a, b) => {
+        const xa = val(a); const xb = val(b); const c = typeof xa === 'string' ? xa.localeCompare(xb, 'fr') : xa - xb;
+        return c * tri.sens || totalDe(b) - totalDe(a) || String(a.nom).localeCompare(String(b.nom), 'fr');
+      });
+      const colTri = col => { const on = tri.col === col;
+        return { fleche: on ? (tri.sens < 0 ? '↓' : '↑') : '', aria: on ? (tri.sens < 0 ? 'descending' : 'ascending') : 'none',
+          trier: () => this.setState({ [cleTri]: { col, sens: on ? -tri.sens : (col === 'nom' ? 1 : -1) } }) }; };
+      const caseAn = c => (!c ? null : { haut: c.montant > 0 ? eurA(c.montant) : '✓ cadeau',
+        bas: o.magasins ? pl(c.gagnantes, 'vendeuse') + ' · ' + pl(c.fois, 'fois') : pl(c.fois, 'mois') });
+      const mois = A.mois || [];
+      const maxM = Math.max(1, ...mois.map(x => +x.total || 0));
+      return {
+        periode: mois.length ? libMois(mois[0].m).split(' ')[0] + ' → ' + libMois(mois[mois.length - 1].m) + (mois[mois.length - 1].enCours ? ' (en cours)' : '') : '',
+        total: eurA(rangs.reduce((t, r) => t + totalDe(r), 0)), triNom: colTri('nom'), triTotal: colTri('total'),
+        cols: cols.map(p => ({ cle: p.cle, lib: p.lib, payeur: payeurLib(p), duMagasin: p.payeur === 'magasin', tri: colTri(p.cle),
+          somme: eurA(p.total) + ' · ' + pl(p.gagnantes, 'gagnante') })),
+        lignes: rangs.map(r => ({ nom: r.nom, total: eurA(totalDe(r)), cases: cols.map(p => caseAn((r.cases || {})[p.cle])),
+          sous: o.magasins ? pl(r.gagnantes, 'vendeuse') + ' primée' + (r.gagnantes > 1 ? 's' : '') : [o.reseau ? r.magasinNom : '', pl(r.mois, 'mois') + ' primé' + (r.mois > 1 ? 's' : '')].filter(Boolean).join(' · ') })),
+        // Le réseau : ce qui a été gagné mois par mois, en barres fines.
+        barres: mois.filter(x => x.total != null).map(x => ({ lib: MOIS_C[+x.m.slice(5, 7) - 1].replace('.', ''), titre: libMois(x.m) + ' · ' + eurA(x.total || 0), h: Math.round(100 * (+x.total || 0) / maxM), enCours: !!x.enCours })),
+      };
+    };
+
     // Les deux familles (16/10/2026) : la marque et ses sponsors d'un côté, les franchisés — magasin par magasin — de l'autre.
     const filtreMag = S.prMag || '';
     const lignesMag = lignes.filter(l => l.famille === 'magasin');
+    // L'année du réseau (24/10/2026) : par magasin ou par vendeuse, sur la page admin seule.
+    const vueAnR = S.prAnVue === 'vendeuses' ? 'vendeuses' : 'magasins';
+    const yAnR = S.prAnY || yAuj;
+    const anR = common.prSection !== 'franchise' ? lire('an:' + yAnR, '/ventes/primes-annee?y=' + yAnR) : null;
+    const anneeReseau = common.prSection === 'franchise' ? null : Object.assign({
+      chargement: anR === undefined, motif: anR === null ? 'L’année des primes n’a pas pu être calculée.' : '', picker: pickerAn(yAnR, 'prAnY'),
+      vues: [['magasins', 'Par magasin'], ['vendeuses', 'Par vendeuse']].map(([k, nom]) => ({ nom, on: k === vueAnR, choisir: () => this.setState({ prAnVue: k }) })),
+    }, anneeVue(anR, vueAnR === 'magasins' ? 'prAnTriM' : 'prAnTriV', { magasins: vueAnR === 'magasins', reseau: true }));
     common.prApp = {
+      annee: anneeReseau,
       lignes: lignes.filter(l => l.famille !== 'magasin'),
       lignesMag: lignesMag.filter(l => !filtreMag || l.shop === filtreMag),
       magsFiltre: [{ nom: 'Tous les magasins', n: lignesMag.length, on: !filtreMag, choisir: () => this.setState({ prMag: '' }) }]
@@ -6974,10 +7040,12 @@ class App {
       });
       // L'équipe face à ses primes (23/10/2026, Sam : « la liste des primes, qui les a et à quel niveau ») : une ligne par
       // vendeuse, une colonne par prime de Mes primes, ce que chacune y voit ; ce mois-ci ou le mois dernier.
-      const ici = new Date(); const moisDe = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
-      const mC = moisDe(ici); const mP = moisDe(new Date(ici.getFullYear(), ici.getMonth() - 1, 1));
-      const mEq = S.prEqMois === mP ? mP : mC;
-      const eq = connu ? lire('eq:' + sid + ':' + mEq, '/ventes/primes-equipe?shop=' + encodeURIComponent(sid) + '&m=' + mEq) : null;
+      // Le mois se choisit (24/10/2026, un month picker) ; « Année » montre le récapitulatif de l'année du magasin.
+      const vueEq = S.prEqVue === 'annee' ? 'annee' : 'mois';
+      const mEq = S.prEqMois && S.prEqMois >= M_DEBUT && S.prEqMois <= mAuj ? S.prEqMois : mAuj;
+      const yEq = S.prEqAn || yAuj;
+      const eq = connu && vueEq === 'mois' ? lire('eq:' + sid + ':' + mEq, '/ventes/primes-equipe?shop=' + encodeURIComponent(sid) + '&m=' + mEq) : null;
+      const anEq = connu && vueEq === 'annee' ? lire('an:' + yEq + ':' + sid, '/ventes/primes-annee?y=' + yEq + '&shop=' + encodeURIComponent(sid)) : null;
       const fx = (v, k) => fr(+v, Number.isInteger(+v) ? 0 : k);
       const valTxt = (u, v) => (v == null ? '' : u === 'pct' ? fx(v, 1) + ' %' : u === 'lpt' ? fr(+v, 2) + ' art./ticket' : u === 'note' ? fr(+v, 1) + ' ★'
         : u === 'pcs' ? fx(v, 1) + ' pcs' : u === 'eur' ? Math.round(v).toLocaleString('fr-BE') + ' €' : u === 'score' ? 'score ' + fx(v, 1) : fx(v, 1));
@@ -7005,7 +7073,6 @@ class App {
       };
       const filtreEq = S.prEqFiltre === 'magasin' ? 'magasin' : 'toutes';
       const colsEq = eq ? (eq.primes || []).filter(p => filtreEq === 'toutes' || p.payeur === 'magasin') : [];
-      const nomMois = mm => new Date(+mm.slice(0, 4), +mm.slice(5, 7) - 1, 1).toLocaleString('fr-BE', { month: 'long' });
       // Le tri au clic sur un en-tête (23/10/2026) : la vendeuse de A à Z, l'acquis, ou une prime — gagnée d'abord (le
       // gain), puis en tête, puis le chemin fait vers l'objectif et la place ; un 2e clic inverse. Par défaut : l'acquis.
       // Une prime que le filtre cache : l'acquis reprend la main.
@@ -7032,9 +7099,12 @@ class App {
       };
       const equipe = {
         triNom: colTri('nom'), triAcquis: colTri('acquis'),
-        chargement: eq === undefined, motif: eq === null && connu ? 'Les fiches de l’équipe n’ont pas pu être lues.' : '',
+        vue: vueEq, vues: [['mois', 'Mois'], ['annee', 'Année']].map(([k, nom]) => ({ nom, on: k === vueEq, choisir: () => this.setState({ prEqVue: k, prEqPick: false }) })),
+        picker: pickerMois(mEq, 'prEq'),
+        annee: vueEq !== 'annee' ? null : Object.assign({ chargement: anEq === undefined, motif: anEq === null && connu ? 'L’année du magasin n’a pas pu être calculée.' : '', picker: pickerAn(yEq, 'prEqAn') },
+          anneeVue(anEq, 'prEqTriAn', { filtre: p => filtreEq === 'toutes' || p.payeur === 'magasin' })),
+        chargement: vueEq === 'mois' && eq === undefined, motif: vueEq === 'mois' && eq === null && connu ? 'Les fiches de l’équipe n’ont pas pu être lues.' : '',
         enCours: !!(eq && eq.enCours), lib: eq ? eq.lib : '', quand: eq && eq.quand ? new Date(eq.quand * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '',
-        mois: [[mC, nomMois(mC) + ' · en cours'], [mP, nomMois(mP)]].map(([k, nom]) => ({ nom, on: k === mEq, choisir: () => this.setState({ prEqMois: k }) })),
         filtres: [['toutes', 'Toutes les primes'], ['magasin', 'Celles du magasin']].map(([k, nom]) => ({ nom, on: k === filtreEq, choisir: () => this.setState({ prEqFiltre: k }) })),
         primes: colsEq.map(p => ({ cle: p.cle, lib: p.lib, tri: colTri(p.cle), recompense: recompense(p), payeur: p.payeur === 'sponsor' ? (p.sponsor || 'sponsor') : p.payeur === 'magasin' ? 'le magasin' : 'la marque',
           duMagasin: p.payeur === 'magasin', compte: p.gagnees + ' / ' + p.vendeuses, compteLong: p.gagnees + ' vendeuse' + (p.gagnees > 1 ? 's' : '') + ' sur ' + p.vendeuses + ' l’' + (p.gagnees > 1 ? 'ont' : 'a') + ' gagnée' })),
@@ -9426,7 +9496,7 @@ class App {
     const xpN1 = L.googleN1Des ? neutre('N-1 : ' + moisAn(L.googleN1Des)) : neutre('pas de N-1');
     // La Récurrence (23/10/2026) : le taux de retour des clients PWA — tant que la période n'est pas entièrement
     // relevée, la case dit où en est la lecture plutôt qu'un taux sur une partie des jours.
-    const pl = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
+    const pl = (n, mot) => n + ' ' + mot + (n > 1 && !/s$/.test(mot) ? 's' : '');
     const casRec = x => {
       if (!x) { return { v: '—', mu: true, n1: 'pas encore relevé' }; }
       if (!x.complet) { return { v: '—', mu: true, n1: 'relevé en cours', tags: x.jours ? ['tickets lus : ' + x.joursLus + ' / ' + x.jours + ' jours'] : [] }; }
