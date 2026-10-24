@@ -91,7 +91,7 @@ class ProformaService implements IDocument
                 "consignee_nip" => $clientData['tax_number'],
                 "consignor_bank" => $erpCompanyData['proforma_company_bank'],
                 "consignor_swift" => $erpCompanyData['proforma_company_swift'],
-                "established_date" => date("Y/m/d"),
+                "established_date" => date("Y-m-d"),
                 "status" => "issued",
                 "uuid" => $uuid
             ]);

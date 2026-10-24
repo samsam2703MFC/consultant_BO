@@ -57,7 +57,7 @@ try {
     foreach (['production_sections', 'n_section_target', 'n_prod_param', 'cost_month', 'cost_month_employee', 'cost_media_type',
                  'cost_media_month', 'cost_media_section_allocation', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_month_section', 'erp_company_other_settings', 'document_wdt',
                  'document_wdt_product', 'final_product', 'customer_order', 'customer_order_product', 'n_growth_action', 'user', 'category_product',
-                 'production_employee', 'n_staff_pay', 'n_prod_employee', 'recipe_competency', 'recipe_competency_connection', 'n_employee_competency',
+                 'production_employee', 'n_staff_pay', 'n_prod_employee', 'recipe_competency', 'recipe_competency_connection',
                  'flattened_recipe_ingredient', 'raw_material', 'category_material', 'supplier', 'raw_material_price_changelog', 'unit', 'n_wdt_superseded',
                  'n_store_price_config', 'n_store_product', 'n_store_product_shop', 'n_store_product_link', 'n_store_price_sync',
                  'carton_stock', 'n_prod_group', 'n_prod_workstation', 'n_prod_item', 'n_prod_routing_step', 'n_prod_routing_alternative', 'n_prod_clock'] as $table) {

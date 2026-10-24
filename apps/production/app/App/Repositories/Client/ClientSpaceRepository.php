@@ -121,19 +121,19 @@ class ClientSpaceRepository extends BaseRepository
     {
         $params = ['c' => $customerId, 'from' => $from, 'q' => '%' . $search . '%'];
         $sql = match ($type) {
-            'proforma' => "SELECT p.id, REPLACE(p.established_date, '/', '-') AS date, p.doc_num AS number,
+            'proforma' => "SELECT p.id, p.established_date AS date, p.doc_num AS number,
                                   (SELECT SUM(pp.total_price_net) FROM document_proforma_product pp WHERE pp.id_proforma = p.id) AS amount,
                                   'EUR' AS currency, p.status, NULL AS note
                            FROM document_proforma p
-                           WHERE p.id_customer = :c AND REPLACE(p.established_date, '/', '-') >= :from AND p.doc_num LIKE :q",
-            'wdt' => "SELECT w.id, COALESCE(NULLIF(w.invoiced_date, ''), w.established_date) AS date, w.doc_num AS number,
+                           WHERE p.id_customer = :c AND p.established_date >= :from AND p.doc_num LIKE :q",
+            'wdt' => "SELECT w.id, COALESCE(w.invoiced_date, w.established_date) AS date, w.doc_num AS number,
                              (SELECT SUM(l.quantity * l.price_carton) FROM document_wdt_product l WHERE l.id_document_wdt = w.id) AS amount,
                              UPPER(COALESCE(NULLIF(w.currency, ''), 'EUR')) AS currency, k.status,
                              IF(sup.id_document_wdt IS NULL, NULL, 'zastąpiona') AS note
                       FROM document_wdt w
                       LEFT JOIN ksef_submission k ON k.id_document_wdt = w.id
                       LEFT JOIN n_wdt_superseded sup ON sup.id_document_wdt = w.id
-                      WHERE w.id_customer = :c AND COALESCE(NULLIF(w.invoiced_date, ''), w.established_date) >= :from AND w.doc_num LIKE :q",
+                      WHERE w.id_customer = :c AND COALESCE(w.invoiced_date, w.established_date) >= :from AND w.doc_num LIKE :q",
             'invoice' => "SELECT i.id, i.invoiced_date AS date, i.doc_num AS number,
                                  (SELECT SUM(ip.quantity * ip.single_price) FROM document_invoice_product ip WHERE ip.id_document_invoice = i.id) AS amount,
                                  'EUR' AS currency, NULL AS status, NULL AS note
@@ -183,7 +183,7 @@ class ClientSpaceRepository extends BaseRepository
              JOIN document_proforma p ON p.id = pp.id_proforma
              LEFT JOIN final_product fp ON fp.id = pp.id_product
              LEFT JOIN category_product cp ON cp.id = fp.id_category
-             WHERE p.id_customer = :c AND p.status <> 'cancelled' AND REPLACE(p.established_date, '/', '-') BETWEEN :from AND :to
+             WHERE p.id_customer = :c AND p.status <> 'cancelled' AND p.established_date BETWEEN :from AND :to
              GROUP BY fp.id_category, pp.id_product",
             ['c' => $customerId, 'from' => $from, 'to' => $to]
         );

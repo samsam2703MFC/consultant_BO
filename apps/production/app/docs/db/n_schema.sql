@@ -1,8 +1,8 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 071, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 071 ; compatible MySQL 8.
--- Modifications des tables d'origine : voir docs/db/README.md (customer.communication_lang, 2 index WDT).
+-- 001 → 080, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 080 ; compatible MySQL 8.
+-- Modifications des tables d'origine : voir docs/db/README.md (colonne customer.communication_lang, nettoyage 074 → 080).
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `n_activity_click` (
   `day` date NOT NULL,
@@ -70,17 +70,6 @@ CREATE TABLE `n_clock_question` (
   `updated_by` int(11) DEFAULT NULL,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-CREATE TABLE `n_customer_route` (
-  `id_customer` int(11) NOT NULL,
-  `id_carrier_vehicle` int(11) DEFAULT NULL COMMENT 'Stały pojazd (trasa) klienta',
-  `stop_order` int(11) DEFAULT NULL COMMENT 'Kolejność rozładunku na trasie',
-  `updated_by` int(11) DEFAULT NULL,
-  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id_customer`),
-  KEY `idx_tfb_customer_route_vehicle` (`id_carrier_vehicle`),
-  CONSTRAINT `fk_tfb_customer_route_customer` FOREIGN KEY (`id_customer`) REFERENCES `customer` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_tfb_customer_route_vehicle` FOREIGN KEY (`id_carrier_vehicle`) REFERENCES `carrier_vehicle` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_customer_space` (
   `id_customer` int(11) NOT NULL,
@@ -152,18 +141,6 @@ CREATE TABLE `n_doc_distribution_moment` (
   `updated_by` varchar(100) DEFAULT NULL,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`doc_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-CREATE TABLE `n_employee_competency` (
-  `id_production_employee` int(11) NOT NULL,
-  `id_competency` int(11) NOT NULL,
-  `level` tinyint(4) NOT NULL COMMENT '1 w szkoleniu, 2 samodzielny, 3 ekspert',
-  `updated_by` int(11) DEFAULT NULL,
-  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id_production_employee`,`id_competency`),
-  KEY `idx_tfb_employee_competency_competency` (`id_competency`),
-  CONSTRAINT `fk_tfb_employee_competency_competency` FOREIGN KEY (`id_competency`) REFERENCES `recipe_competency` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_tfb_employee_competency_employee` FOREIGN KEY (`id_production_employee`) REFERENCES `production_employee` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `ck_tfb_employee_competency_level` CHECK (`level` between 1 and 3)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_growth_action` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -813,20 +790,6 @@ CREATE TABLE `n_prod_fixed_batch_week` (
   PRIMARY KEY (`week_start`,`id_item`,`work_date`),
   KEY `idx_tfb_fixed_week_item` (`id_item`,`work_date`),
   CONSTRAINT `fk_tfb_fixed_week_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-CREATE TABLE `n_prod_forecast` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `id_item` int(11) NOT NULL,
-  `iso_year` smallint(6) NOT NULL,
-  `iso_week` tinyint(4) NOT NULL,
-  `base_qty` decimal(12,3) NOT NULL DEFAULT 0.000,
-  `seasonal_coef` decimal(6,3) NOT NULL DEFAULT 1.000,
-  `result_qty` decimal(12,3) NOT NULL DEFAULT 0.000,
-  `computed_at` datetime NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_tfb_forecast` (`id_item`,`iso_year`,`iso_week`),
-  CONSTRAINT `fk_tfb_forecast_item` FOREIGN KEY (`id_item`) REFERENCES `n_prod_item` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `ck_tfb_forecast` CHECK (`iso_week` between 1 and 53 and `seasonal_coef` >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_prod_group` (
   `id` int(11) NOT NULL AUTO_INCREMENT,

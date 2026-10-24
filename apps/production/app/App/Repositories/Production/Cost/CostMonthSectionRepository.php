@@ -56,7 +56,7 @@ class CostMonthSectionRepository extends BaseRepository
 
     /**
      * Pobiera ilości kartonów sprzedanych per dział z faktur WDT
-     * w podanym zakresie dat (established_date jako TEXT YYYY-MM-DD).
+     * w podanym zakresie dat (established_date : DATE).
      *
      * Zwraca tablicę: [['section_id' => int, 'section_name' => string, 'cartons_qty' => int], ...]
      */
