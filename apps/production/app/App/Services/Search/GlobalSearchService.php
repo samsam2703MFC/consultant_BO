@@ -2,11 +2,12 @@
 
 namespace App\Services\Search;
 
+use App\Repositories\Mail\UserMailRepository;
 use App\Repositories\Search\GlobalSearchRepository;
 
 /**
  * Wyszukiwarka z górnego paska (GET /ajax/search?q=): zamówienia, klienci, produkty, receptury
- * (z kalkulacją), surowce, dostawcy, pracownicy, proformy, faktury i WDT. Do 5 trafień na typ, minimum 2 znaki.
+ * (z kalkulacją), surowce, dostawcy, pracownicy, proformy, faktury, WDT i poczta zalogowanego użytkownika. Do 5 trafień na typ, minimum 2 znaki.
  * Adresy są względne (bez ROOT) — strona dokleja katalog aplikacji.
  */
 class GlobalSearchService
@@ -19,7 +20,7 @@ class GlobalSearchService
     /** product_recipe.id_type → rodzaj i strona kalkulacji. */
     private const RECIPE_KIND = [1 => ['Kompozycja', '/compositions'], 2 => ['Półprodukt', '/semi-products'], 3 => ['Receptura produktu', '/recipes']];
 
-    public function __construct(private GlobalSearchRepository $repository)
+    public function __construct(private GlobalSearchRepository $repository, private UserMailRepository $mail)
     {
     }
 
@@ -31,7 +32,7 @@ class GlobalSearchService
         return mb_strlen($q) >= self::MIN_LENGTH ? $q : null;
     }
 
-    public function search(string $q): array
+    public function search(string $q, ?int $userId = null): array
     {
         // „#1484” → numer zamówienia 1484
         $term = ltrim($q, '#');
@@ -92,6 +93,13 @@ class GlobalSearchService
                 'sub'   => $r['section'] ? 'dział ' . $r['section'] : '',
                 'url'   => '/production-employees/' . (int) $r['id'] . '/edit',
             ], $this->repository->employees($pattern, $n))],
+
+            // Poczta : tylko własna skrzynka zalogowanego (indeks pełnotekstowy : temat, nadawca, adresaci, treść).
+            ['type' => 'mail', 'label' => 'Poczta', 'icon' => 'bi-envelope', 'items' => $userId ? array_map(fn($r) => [
+                'title' => $r['subject'] ?: '(bez tematu)',
+                'sub'   => trim(($r['folder'] === 'INBOX' ? 'od ' . ($r['from_name'] ?: $r['from_email']) : 'do ' . $r['to_list']) . ' · ' . $this->date($r['sent_at']), ' ·'),
+                'url'   => '/mail?id=' . (int) $r['id'],
+            ], $this->mail->search($userId, $q, $n)) : []],
 
             // Proforma nie ma własnej strony: zamówienie, a bez niego PDF.
             ['type' => 'proformas', 'label' => 'Proformy', 'icon' => 'bi-receipt', 'items' => array_map(fn($r) => [

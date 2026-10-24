@@ -365,10 +365,12 @@ if [[ -f "$IMPORT_OK" ]]; then
   [[ "$mail_mode" == "redirect" || "$mail_mode" == "log_only" ]] || mail_mode="log_only"
   [[ "$(envget MAIL_DELIVERY_MODE)" == "$mail_mode" ]] || set_env MAIL_DELIVERY_MODE "$mail_mode"
   [[ "$mail_mode" != "redirect" ]] || set_env MAIL_REDIRECT_TO "${ERP_MAIL_REDIRECT_TO:-}"
-  # Toutes les 5 minutes : événements → messages, puis file d'envoi (selon le mode ci-dessus).
+  # Toutes les 5 minutes : événements → messages, puis file d'envoi (selon le mode ci-dessus) ;
+  # boîtes mail des utilisateurs (Poczta) : nouveaux messages.
   cat > /etc/cron.d/production-erp-mail <<CRON
 # ERP /production — e-mails automatiques (écrit par apps/production/deploy/server.sh)
 */5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/mail_dispatch.php >> /var/log/production-erp-mail.log 2>&1
+*/5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/user_mail_sync.php >> /var/log/production-erp-mail.log 2>&1
 CRON
   chmod 644 /etc/cron.d/production-erp-mail
   touch /var/log/production-erp-mail.log && chown www-data:www-data /var/log/production-erp-mail.log

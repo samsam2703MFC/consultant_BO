@@ -30,6 +30,14 @@
                     </a>
                 </li>
 
+                <li class="sidebar-item">
+                    <a href="{{ root }}/mail" class="sidebar-link">
+                        <i class="bi bi-envelope"></i>
+                        <span>Poczta</span>
+                        <span class="at-count" data-count="mail" hidden></span>
+                    </a>
+                </li>
+
                 <li class="sidebar-title">Analiza</li>
 
                 <li class="sidebar-item">
@@ -381,6 +389,13 @@
                    organizacja, ogólne. Wcześniej rozrzucone po Zamówieniach, Zakupach, Logistyce i Administracji. #}
                 <li class="sidebar-title">Ustawienia</li>
 
+                <li class="sidebar-item">
+                    <a href="{{ root }}/mail/settings" class="sidebar-link">
+                        <i class="bi bi-envelope-at"></i>
+                        <span>Moja skrzynka e-mail</span>
+                    </a>
+                </li>
+
                 <li class="sidebar-item has-sub">
                     <a href="#" class="sidebar-link">
                         <i class="bi bi-people"></i>
@@ -547,6 +562,7 @@
                 <li><a href="{{ root }}/settings/ksef/purchase-invoices" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-cloud-download"></i> Faktury zakupowe KSeF (pobieranie)</a></li>
                 <li><a href="{{ root }}/purchases" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-archive"></i> Archiwum dostaw (ręczne)</a></li>
                 <li><a href="{{ root }}/communication/distribution?tab=history" data-where="Komunikacja › Dystrybucja dokumentów"><i class="bi bi-lightning-charge"></i> Automatyczne e-maile : historia wysyłek</a></li>
+                <li><a href="{{ root }}/mail?folder=ERP" data-where="Poczta"><i class="bi bi-journal-check"></i> Wysłane z ERP (dziennik wysyłek z mojej skrzynki)</a></li>
                 <li><a href="{{ root }}/workshop/execution#questions" data-where="Produkcja › Tablet produkcji › Zarządzanie"><i class="bi bi-ui-checks"></i> Pytania przy wejściu i wyjściu (odzież robocza, higiena)</a></li>
                 <li><a href="{{ root }}/workshop/execution#devices" data-where="Produkcja › Tablet produkcji › Zarządzanie"><i class="bi bi-tablet"></i> Tablety : parowanie i blokada</a></li>
                 <li><a href="{{ root }}/workshop/execution#people" data-where="Produkcja › Tablet produkcji › Zarządzanie"><i class="bi bi-person-badge"></i> Identyfikatory, PIN i telefony pracowników</a></li>

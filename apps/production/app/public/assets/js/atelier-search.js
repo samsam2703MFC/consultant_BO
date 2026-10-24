@@ -59,7 +59,7 @@
         'question': 'pytania', 'questions': 'pytania', 'tenue': 'pytania odziez', 'hygiene': 'higiena pytania', 'heures': 'godziny',
         'badge': 'identyfikatory', 'badges': 'identyfikatory', 'telephone': 'telefony', 'distribution': 'dystrybucja',
         'document': 'dokumenty', 'documents': 'dokumenty', 'calcul': 'kalkulacja kalkulator', 'cmr': 'cmr dokumenty', 'imprimer': 'drukuj dokumenty',
-        'mail': 'poczta e-mail', 'mails': 'poczta e-mail', 'email': 'poczta e-mail', 'courriel': 'poczta', 'boite': 'poczta skrzynka',
+        'mail': 'poczta skrzynka', 'mails': 'poczta skrzynka', 'email': 'poczta skrzynka', 'courriel': 'poczta', 'boite': 'poczta skrzynka', 'reception': 'poczta', 'envoyes': 'wyslane',
         'messagerie': 'poczta', 'groupe': 'grupy', 'groupes': 'grupy', 'cobot': 'coboty', 'photo': 'zdjecia', 'photos': 'zdjecia'
     };
 

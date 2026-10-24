@@ -11,6 +11,7 @@ use App\Services\Staff\StaffBudgetService;
 use Symfony\Component\HttpFoundation\Request;
 use App\Services\Workshop\Manager\ManagerService;
 use App\Repositories\Workshop\AuthRepository;
+use App\Repositories\Mail\UserMailRepository;
 
 class DashboardController extends BaseController
 {
@@ -24,6 +25,7 @@ class DashboardController extends BaseController
         private PositionTaskService $tasks,
         private ManagerService $manager,
         private AuthRepository $auth,
+        private UserMailRepository $mail,
     ) {}
 
     /** Strona startowa: rentowność produkcji (sprzedaż a koszt personelu na dział, brakująca sprzedaż do celu). */
@@ -100,7 +102,7 @@ class DashboardController extends BaseController
     /** Liczniki przy pozycjach menu i wskaźnik rentowności w górnym pasku (assets/js/notifications.js). */
     public function ajaxCounters()
     {
-        return $this->json($this->today->counters() + ['profit' => $this->profitBadge()]);
+        return $this->json($this->today->counters() + ['mail' => $this->userId() ? $this->mail->unread($this->userId()) : 0, 'profit' => $this->profitBadge()]);
     }
 
     public function saveTargets()

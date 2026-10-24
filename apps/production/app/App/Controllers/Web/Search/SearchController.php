@@ -21,7 +21,7 @@ class SearchController extends BaseController
         }
 
         try {
-            return $this->json($this->search->search($q));
+            return $this->json($this->search->search($q, user('id') ? (int) user('id') : null));
         } catch (\Throwable $e) {
             error_log('[search] failed: ' . $e->getMessage());
             return $this->json(['message' => 'Wyszukiwanie chwilowo nie działa.', 'groups' => []], 500);

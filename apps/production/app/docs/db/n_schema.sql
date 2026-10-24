@@ -1,10 +1,9 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 070, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 070 ; compatible MySQL 8.
+-- 001 → 071, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 071 ; compatible MySQL 8.
 -- Modifications des tables d'origine : voir docs/db/README.md (customer.communication_lang, 2 index WDT).
 SET FOREIGN_KEY_CHECKS = 0;
-/*M!999999\- enable the sandbox mode */ 
 CREATE TABLE `n_activity_click` (
   `day` date NOT NULL,
   `route` varchar(190) NOT NULL,
@@ -1693,6 +1692,83 @@ CREATE TABLE `n_user_cost` (
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id_user`),
   CONSTRAINT `fk_tfb_user_cost_user` FOREIGN KEY (`id_user`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_user_mail` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_user` int(11) NOT NULL,
+  `folder` varchar(190) NOT NULL,
+  `uid_validity` bigint(20) unsigned NOT NULL,
+  `uid` int(10) unsigned NOT NULL,
+  `message_id` varchar(255) DEFAULT NULL,
+  `in_reply_to` varchar(255) DEFAULT NULL,
+  `from_email` varchar(255) DEFAULT NULL,
+  `from_name` varchar(255) DEFAULT NULL,
+  `to_list` varchar(1000) DEFAULT NULL,
+  `cc_list` varchar(1000) DEFAULT NULL,
+  `subject` varchar(500) DEFAULT NULL,
+  `sent_at` datetime DEFAULT NULL,
+  `size` int(10) unsigned DEFAULT NULL,
+  `seen` tinyint(1) NOT NULL DEFAULT 0,
+  `answered` tinyint(1) NOT NULL DEFAULT 0,
+  `flagged` tinyint(1) NOT NULL DEFAULT 0,
+  `has_attachments` tinyint(1) NOT NULL DEFAULT 0,
+  `snippet` varchar(300) DEFAULT NULL,
+  `body_text` mediumtext DEFAULT NULL,
+  `id_customer` int(11) DEFAULT NULL,
+  `id_supplier` int(11) DEFAULT NULL,
+  `synced_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_n_user_mail` (`id_user`,`folder`,`uid_validity`,`uid`),
+  KEY `idx_n_user_mail_list` (`id_user`,`folder`,`sent_at`),
+  KEY `idx_n_user_mail_customer` (`id_customer`),
+  KEY `idx_n_user_mail_supplier` (`id_supplier`),
+  FULLTEXT KEY `ft_n_user_mail` (`subject`,`from_name`,`from_email`,`to_list`,`body_text`),
+  CONSTRAINT `fk_n_user_mail_user` FOREIGN KEY (`id_user`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_user_mailbox` (
+  `id_user` int(11) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `display_name` varchar(160) DEFAULT NULL,
+  `provider` varchar(30) DEFAULT NULL,
+  `imap_host` varchar(255) NOT NULL,
+  `imap_port` smallint(5) unsigned NOT NULL DEFAULT 993,
+  `imap_security` enum('ssl','starttls') NOT NULL DEFAULT 'ssl',
+  `imap_username` varchar(255) NOT NULL,
+  `imap_secret` text DEFAULT NULL,
+  `smtp_host` varchar(255) NOT NULL,
+  `smtp_port` smallint(5) unsigned NOT NULL DEFAULT 587,
+  `smtp_security` enum('ssl','starttls') NOT NULL DEFAULT 'starttls',
+  `smtp_username` varchar(255) NOT NULL,
+  `smtp_secret` text DEFAULT NULL,
+  `tls_verify` tinyint(1) NOT NULL DEFAULT 1,
+  `signature` text DEFAULT NULL,
+  `sent_folder` varchar(190) DEFAULT NULL,
+  `last_sync_at` datetime DEFAULT NULL,
+  `last_error` varchar(500) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_user`),
+  CONSTRAINT `fk_n_user_mailbox_user` FOREIGN KEY (`id_user`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_user_mail_sent` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_user` int(11) NOT NULL,
+  `to_list` varchar(1000) NOT NULL,
+  `cc_list` varchar(1000) DEFAULT NULL,
+  `subject` varchar(500) NOT NULL,
+  `body_text` mediumtext NOT NULL,
+  `attachments` varchar(1000) DEFAULT NULL COMMENT 'nazwy i rozmiary (JSON), bez treści',
+  `id_reply_to` bigint(20) DEFAULT NULL COMMENT 'n_user_mail.id, na którą to odpowiedź',
+  `message_id` varchar(255) DEFAULT NULL,
+  `mode` enum('live','redirect','log_only') NOT NULL,
+  `status` enum('sent','failed') NOT NULL,
+  `error` varchar(500) DEFAULT NULL,
+  `id_customer` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_n_user_mail_sent_user` (`id_user`,`created_at`),
+  KEY `idx_n_user_mail_sent_customer` (`id_customer`),
+  FULLTEXT KEY `ft_n_user_mail_sent` (`subject`,`to_list`,`body_text`),
+  CONSTRAINT `fk_n_user_mail_sent_user` FOREIGN KEY (`id_user`) REFERENCES `user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_user_position` (
   `id_user` int(11) NOT NULL,
