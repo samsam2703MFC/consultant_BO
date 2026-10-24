@@ -73,6 +73,7 @@ function ensureInstalled(): void
     connecteurTable();
     ensureScouting();
     ensureNewsletter();
+    ensureFidelite();
     ensureProspection();
     ensureVisites();
     ensureFacebook();

@@ -2178,6 +2178,8 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **Résultat › Année : le panier moyen face à l'an passé (24/10/2026, demande de Sam).** La carte des clients prend un bouton **Clients | Panier moyen**. En panier, le même graphique ligne trace le panier du mois (CA ÷ clients) de l'exercice face au même mois de l'an passé, l'écart de chaque mois en pastille, et trois chiffres : panier de l'année à date, celui de l'an passé sur la même période, l'écart en euros et en % (avec, pour le réseau, l'écart à périmètre constant). Le panier du réseau est le CA total ÷ les clients totaux (chaque magasin pesé par ses clients) ; le mois en cours se lit à date (point creux, sans prolongement), face aux mêmes jours de l'an passé ; l'an passé se trace sur douze mois (`n1Mois.ca` ÷ `n1Mois.tickets`). Les puces, la colonne du tableau (**Panier vs 2025**) et la bulle suivent la mesure choisie. Aucune lecture de plus : `ca` et `tickets` de `/ventes/reseau?vue=annee` suffisent.
 
+**Résultat › Année : les articles par ticket face à l'an passé (24/10/2026, demande de Sam).** Troisième position du bouton de la carte : **Clients | Panier moyen | Articles / ticket**. Les articles par ticket du mois (pièces vendues ÷ clients) de l'exercice face au même mois de l'an passé, mêmes pastilles, mêmes trois chiffres, même colonne (**Articles vs 2025**) ; le réseau pèse chaque magasin par ses clients, le mois en cours se lit à date. Les pièces viennent du relevé des ventes du panel (`/consultant/shops/sales-kpis`, `products`) : `GET /ventes/reseau?…&articles=1` pose `articles` sur chaque période d'un magasin, sur son `n1` et sur son `n1Mois` (un appel au panel par fenêtre pour tout le réseau, les fenêtres closes gravées — `vsArticlesFenetres`, `vsArticlesLignes`, partagées avec `/ventes/semaines?…&articles=1`, qui gagne `n1Mois.articles` en vues mois et année). L'écran ne la lit qu'au premier clic sur « Articles / ticket ». Une pièce non lue (ou à zéro face à des clients) retire le magasin du rapport de ce mois, elle ne compte pas pour zéro.
+
 **L'e-mail « contrôle qualité non réalisé » de 19:00 (20/10/2026, maquette validée par Sam).** Une ligne du reporting automatisé, semée au premier chargement de l'écran Rapports : code `cq-non-realise`, quotidien, 19 h, par magasin — heure, activation et carnet d'adresses s'y règlent comme les autres. Au passage du cron horaire de 19 h, chaque magasin qui a des contrôles obligatoires ce jour-là et **aucune** photo (aucune tâche notée ni à contrôler ; « cochée sans photo » ne compte pas) reçoit un e-mail : le constat (« 0 photo sur N contrôles attendus »), le mot (« Bonjour, nous vous informons que les tâches de contrôle qualité n'ont pas été réalisées aujourd'hui… »), les contrôles attendus (tâche par tâche jusqu'à huit, par checklist au-delà), le mois en calendrier (une case par jour : contrôles faits avec photo sur attendus — réalisé, partiel, aucun, aucun contrôle prévu, pas encore relevé, à venir) et un bouton vers les contrôles du jour au dashboard. Un magasin avec au moins une photo, ou sans contrôle prévu, ne reçoit rien. Panel muet : aucun envoi. Adresses : le carnet de la ligne, sinon celui de l'affiche du mois. Un magasin n'est servi qu'une fois par jour, envoi à la main compris (`cqMailEnvoyes`) ; « Générer » montre l'e-mail d'un magasin concerné sans rien envoyer. Le lien du bouton garde l'adresse publique du cockpit vue par un navigateur (`cqMailBase`), le cron appelant par 127.0.0.1. Le mois se lit dans le relevé des tâches (`ceo_tache_jour`, tâches obligatoires), la journée en direct (`/pwa/tasks`).
 
 **Le relevé des tâches : les tâches notées restent obligatoires (20/10/2026).** `/pwa/tasks` ne donnait pas aux tâches déjà notées le drapeau `obligatoire` du panel : le relevé les gardait « facultatives » (0) et le mois des tâches obligatoires (dashboard magasin, `?obligatoires=1`) les perdait — des jours faits paraissaient moins faits. Les tâches notées portent maintenant le drapeau du panel (`null` s'il ne le dit pas), le relevé garde `NULL` pour « inconnu », et les tâches notées déjà relevées à 0 repassent à `NULL`, une fois (`tachesNoteeObligReset`). Le scoring n'en dépend pas (une tâche notée est faite).
@@ -4119,3 +4121,31 @@ Le sous-menu **Budget** (Suivi budget, Encodage du budget, Paramètres du budget
 rend aussi `types` (les types de visite, avec `annoncee`), pour le formulaire de planification. Sur la tablette, le
 contrôle gagne le dossier du bureau, la checklist du consultant, les points proposés, la météo (le temps d'un toucher
 gardé sur `ceo_visite.meteo`, puis le détail facultatif `POST /franchises/meteo`) et la fin de visite signée.
+
+### Fidélité — le programme et la récurrence des clients (24/10/2026, demande de Sam)
+
+Écran **ERP franchisé › Fidélité** (`#/fidelity`), deux onglets : le **Programme** (maquette C de
+`docs/maquettes/fidelite`) et les **Clients** (maquette B). Serveur : `src/fidelite.php`.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/fidelite?shop=&mois=` | `{test, source, ref, magasins[], missions[], regles[], stats:{regles:{id:{txt,n,cls}}, budget:{cout, ca, pct, plafond, tickets, points, nouveaux, hypotheses}}, profils[], maintenant}` — les règles (`{id, bloc, type, params, shop, actif, ordre}`), ce que chacune a donné sur les 30 derniers jours, le budget estimé, trois clients types (médianes des habitués, réguliers, occasionnels) pour le simulateur. |
+| GET | `/fidelite/clients?shop=&mois=` | `{test, source, ref, magasins[], missions[], kpis:{actifs, actifsPrec, retour30, nouveauxPrec, montes, descendus, ca30, tickets30, panier}, rf:{lignes, colonnes, cases[5][5], segments[5][5]}, segments[], mixMoyen[6], transitions:{ordre, noms, m[5][5]}, retourSpontane:{7,14,21,30,45,60}}`. |
+| POST | `/fidelite/regles` | `{regles:[{id?, type, params, shop, actif, supprimer?}], qui}` — publie en une transaction ; une règle invalide refuse tout l'envoi (422 type inconnu, règle unique retirée ou doublée, magasin inconnu ; 404 règle introuvable). Journalisé (`Fidélité`). |
+
+**Règles** (`ceo_fid_regle`, posées une fois sur table vide : le programme de la maquette C). Blocs et types :
+`gain` — `base` {euros, points} (unique, toujours active), `panier` {min, points} ; `multi` — `creneau` {mult, jours[0=lundi…6], de, a, famille, pourquoi},
+`gamme` {mult, gamme, du, au}, `anniversaire` {mult, jours} ; `recoit` — `jauge` {points, valeur, validite} (unique), `tampons` {nom, unite, n, recompense, couleur},
+`declencheur` {evenement: inscription | visite2 | anniversaire | visiteN | panier | parrainage | absence, n, recompense:{type: bon | points | produit, valeur, libelle}, validite} ;
+`garde` (uniques) — `plafond` {points}, `cumul`, `unbon`, `expiration` {mois, preavis}, `exclus` {dates}, `budget` {pct du CA des clients carte}.
+`shop` = "" pour tout le réseau. Le serveur ramène chaque valeur dans ses bornes (`fidNormalise`).
+
+**Visites** (`ceo_fid_visite` : `client_ref`, `shop_id`, `visited_at`, `montant`, `mission` pain | petitdej | lunch | gouter | occasion | bureau, ou NULL → déduite du
+montant et de l'heure). Vide, les deux lectures calculent sur un **jeu d'essai** généré (7 700 clients, 150 jours, tirage fixe) et le disent (`test: true`) ; dès
+qu'une visite y est déposée, tout se calcule sur les vraies. Segments à la date de lecture : nouveau (1re visite < 30 j), puis la grille — visites par mois
+(moyenne 90 j) × jours depuis la dernière visite : habitué (8+, < 7 j), à risque (2+ par mois, 21–45 j), régulier (2+ par mois, < 21 j), occasionnel (moins de 2),
+endormi (> 45 j). « D'un mois à l'autre » compare l'état à J−30.
+
+**À brancher** : le flux des visites carte (PWA ou panel) vers `ceo_fid_visite` ; la PWA qui lit ces règles (ses cartes et sa jauge vivent dans
+`pwa_loyalty_card` / `pwa_loyalty_config`, réglées aujourd'hui par `/franchisor/loyalty-*` du webshop) ; les ventes par gamme ; le suivi des parrainages.
+Le budget repose sur trois hypothèses dites à l'écran (bons utilisés à 65 %, produits pris à 85 %, 2,50 € le produit offert).
