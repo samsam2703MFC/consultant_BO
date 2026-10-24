@@ -36,7 +36,7 @@ final class PageTabs
             ['/ppwr/reports', 'Raporty PPWR', 'bi-file-earmark-text'],
         ]],
         // Wzory wydruków PDF (przykłady w językach klientów) i szablony e-maili
-        'templates' => ['label' => 'Wzory dokumentów i e-maili', 'section' => 'Zamówienia', 'icon' => 'bi-file-earmark-richtext', 'tabs' => [
+        'templates' => ['label' => 'Wzory dokumentów i e-maili', 'section' => 'Ustawienia › Klienci', 'icon' => 'bi-file-earmark-richtext', 'tabs' => [
             ['/communication/document-templates', 'Dokumenty PDF', 'bi-file-earmark-pdf'],
             ['/communication/templates', 'Szablony e-mail', 'bi-envelope-paper'],
         ]],

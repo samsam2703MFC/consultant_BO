@@ -1019,3 +1019,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T06:13:51Z strona klienta (dokumenty, cel obrotu), fuzja kategorii produktów i surowców
 2026-10-24T07:00:25Z dystrybucja dokumentów (#128)
 2026-10-24T07:22:50Z kalkulacja receptury (#129)
+2026-10-24T07:26Z ERP production : les réglages regroupés sous Ustawienia dans le rail

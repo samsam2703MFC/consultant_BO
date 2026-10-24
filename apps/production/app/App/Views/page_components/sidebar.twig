@@ -142,13 +142,6 @@
                     </a>
                 </li>
 
-                <li class="sidebar-item">
-                    <a href="{{ root }}/material-suppliers" class="sidebar-link">
-                        <i class="bi bi-truck"></i>
-                        <span>Dostawcy</span>
-                    </a>
-                </li>
-
                 <li class="sidebar-item has-sub">
                     <a href="#" class="sidebar-link">
                         <i class="bi bi-tags"></i>
@@ -232,20 +225,6 @@
                     </a>
                 </li>
 
-                <li class="sidebar-item">
-                    <a href="{{ root }}/clients?type=active" class="sidebar-link">
-                        <i class="bi bi-people"></i>
-                        <span>Klienci</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a href="{{ root }}/price-lists/general" class="sidebar-link">
-                        <i class="bi bi-tags-fill"></i>
-                        <span>Cennik ogólny</span>
-                    </a>
-                </li>
-
                 <li class="sidebar-item has-sub">
                     <a href="#" class="sidebar-link">
                         <i class="bi bi-shop"></i>
@@ -253,11 +232,6 @@
                         <span class="at-count" data-count="complaints" hidden></span>
                     </a>
                     <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/client-franchise-networks">
-                                <i class="bi bi-diagram-3-fill"></i> Sieci franczyzowe
-                            </a>
-                        </li>
                         <li class="submenu-item">
                             <a href="{{ root }}/franchise-products">
                                 <i class="bi bi-box-seam"></i> Produkty franczyzowe
@@ -290,11 +264,6 @@
                         <li class="submenu-item">
                             <a href="{{ root }}/communication/distribution" data-also="/communication/automations">
                                 <i class="bi bi-diagram-3"></i> Dystrybucja dokumentów
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/communication/document-templates" data-also="/communication/templates">
-                                <i class="bi bi-file-earmark-richtext"></i> Wzory dokumentów i e-maili
                             </a>
                         </li>
                         <li class="submenu-item">
@@ -372,25 +341,6 @@
 
                 <li class="sidebar-item has-sub">
                     <a href="#" class="sidebar-link">
-                        <i class="bi bi-signpost-split"></i>
-                        <span>Trasy i pojazdy</span>
-                    </a>
-                    <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/logistics/tours">
-                                <i class="bi bi-signpost-split"></i> Trasy
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/logistics/vehicles">
-                                <i class="bi bi-truck"></i> Pojazdy i pojemność
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
                         <i class="bi bi-truck"></i>
                         <span>Wysyłka</span>
                     </a>
@@ -404,11 +354,6 @@
                         <li class="submenu-item">
                             <a href="{{ root }}{{ g.tabs[0][0] }}" data-also="{{ g.tabs|map(t => t[0])|join(' ') }}">
                                 <i class="bi bi-check2-square"></i> {{ g.label }}
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/product-carriers">
-                                <i class="bi bi-truck"></i> Przewoźnicy
                             </a>
                         </li>
                     </ul>
@@ -425,40 +370,62 @@
                 </li>
 
                 <li class="sidebar-item">
-                    <a href="{{ root }}/organization/access" class="sidebar-link">
-                        <i class="bi bi-shield-lock"></i>
-                        <span>Uprawnienia stanowisk</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
                     <a href="{{ root }}/organization/activity" class="sidebar-link">
                         <i class="bi bi-activity"></i>
                         <span>Aktywność w ERP</span>
                     </a>
                 </li>
 
+                {# Ustawienia (24/10/2026, Sam : « regrouper les paramètres dans le rail, pour éviter de chercher ») : wszystkie strony
+                   ustawień i danych podstawowych w jednym miejscu, po dziedzinach — klienci, dostawcy, produkty, logistyka,
+                   organizacja, ogólne. Wcześniej rozrzucone po Zamówieniach, Zakupach, Logistyce i Administracji. #}
+                <li class="sidebar-title">Ustawienia</li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-people"></i>
+                        <span>Klienci</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/clients?type=active">
+                                <i class="bi bi-people"></i> Klienci
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/price-lists/general">
+                                <i class="bi bi-tags-fill"></i> Cennik ogólny
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/client-franchise-networks">
+                                <i class="bi bi-diagram-3-fill"></i> Sieci franczyzowe
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/communication/document-templates" data-also="/communication/templates">
+                                <i class="bi bi-file-earmark-richtext"></i> Wzory dokumentów i e-maili
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
                 <li class="sidebar-item">
-                    <a href="{{ root }}/organization/positions" class="sidebar-link">
-                        <i class="bi bi-diagram-3"></i>
-                        <span>Stanowiska i zadania</span>
+                    <a href="{{ root }}/material-suppliers" class="sidebar-link">
+                        <i class="bi bi-truck"></i>
+                        <span>Dostawcy</span>
                     </a>
                 </li>
 
                 <li class="sidebar-item has-sub">
                     <a href="#" class="sidebar-link">
-                        <i class="bi bi-gear-fill"></i>
-                        <span>Ustawienia</span>
+                        <i class="bi bi-box-seam"></i>
+                        <span>Produkty</span>
                     </a>
                     <ul class="submenu">
                         <li class="submenu-item">
-                            <a href="{{ root }}/users">
-                                <i class="bi bi-people"></i> Użytkownicy systemu
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/aliases">
-                                <i class="bi bi-book"></i> Aliasy
+                            <a href="{{ root }}/workshop/products#/categories">
+                                <i class="bi bi-tags"></i> Kategorie produktów i marże docelowe
                             </a>
                         </li>
                         <li class="submenu-item">
@@ -466,6 +433,63 @@
                                 <i class="bi bi-fonts"></i> Języki etykiet
                             </a>
                         </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-signpost-split"></i>
+                        <span>Logistyka</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/logistics/tours">
+                                <i class="bi bi-signpost-split"></i> Trasy
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/logistics/vehicles">
+                                <i class="bi bi-truck"></i> Pojazdy i pojemność
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/product-carriers">
+                                <i class="bi bi-truck"></i> Przewoźnicy
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-diagram-3"></i>
+                        <span>Organizacja</span>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{{ root }}/organization/positions">
+                                <i class="bi bi-diagram-3"></i> Stanowiska i zadania
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/organization/access">
+                                <i class="bi bi-shield-lock"></i> Uprawnienia stanowisk
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/users">
+                                <i class="bi bi-people"></i> Użytkownicy systemu
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="sidebar-item has-sub">
+                    <a href="#" class="sidebar-link">
+                        <i class="bi bi-gear-fill"></i>
+                        <span>Ogólne</span>
+                    </a>
+                    <ul class="submenu">
                         <li class="submenu-item">
                             <a href="{{ root }}/communication/email-settings">
                                 <i class="bi bi-envelope-at"></i> Poczta e-mail
@@ -484,13 +508,18 @@
                         </li>
                         {% endif %}
                         <li class="submenu-item">
-                            <a href="{{ root }}/settings/page-usage">
-                                <i class="bi bi-bar-chart"></i> Licznik stron
+                            <a href="{{ root }}/devices">
+                                <i class="bi bi-display"></i> Dostęp API (urządzenia)
                             </a>
                         </li>
                         <li class="submenu-item">
-                            <a href="{{ root }}/devices">
-                                <i class="bi bi-display"></i> Dostęp API (urządzenia)
+                            <a href="{{ root }}/aliases">
+                                <i class="bi bi-book"></i> Aliasy
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/settings/page-usage">
+                                <i class="bi bi-bar-chart"></i> Licznik stron
                             </a>
                         </li>
                         <li class="submenu-item">
@@ -510,12 +539,11 @@
                 <li><a href="{{ root }}/semi-products" data-where="Produkt › Receptury"><i class="bi bi-diagram-2"></i> Półprodukty</a></li>
                 <li><a href="{{ root }}/compositions" data-where="Produkt › Receptury"><i class="bi bi-layers"></i> Kompozycje</a></li>
                 <li><a href="{{ root }}/products/new-with-recipe" data-where="Produkt › Produkty"><i class="bi bi-plus-circle"></i> Nowy produkt z recepturą</a></li>
-                <li><a href="{{ root }}/workshop/products#/categories" data-where="Produkt › Karty produktów"><i class="bi bi-tags"></i> Kategorie produktów i marże docelowe</a></li>
                 <li><a href="{{ root }}/workshop/gantt#view=day" data-where="Produkcja › Tydzień produkcji"><i class="bi bi-bar-chart-steps"></i> Dzień : godziny</a></li>
                 <li><a href="{{ root }}/workshop/team-sheet#lists=1" data-where="Produkcja › Plan zespołów"><i class="bi bi-file-earmark-pdf"></i> Listy dnia (PDF) : lista produkcyjna, zapotrzebowanie, zwroty</a></li>
                 <li><a href="{{ root }}/client-orders/archive" data-where="Zamówienia › Zamówienia klientów"><i class="bi bi-archive"></i> Archiwum zamówień</a></li>
-                <li><a href="{{ root }}/devices/logs" data-where="Administracja › Ustawienia › Dostęp API"><i class="bi bi-journal-text"></i> Logi urządzeń</a></li>
-                <li><a href="{{ root }}/devices/new" data-where="Administracja › Ustawienia › Dostęp API"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
+                <li><a href="{{ root }}/devices/logs" data-where="Ustawienia › Ogólne › Dostęp API"><i class="bi bi-journal-text"></i> Logi urządzeń</a></li>
+                <li><a href="{{ root }}/devices/new" data-where="Ustawienia › Ogólne › Dostęp API"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
                 <li><a href="{{ root }}/settings/ksef/purchase-invoices" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-cloud-download"></i> Faktury zakupowe KSeF (pobieranie)</a></li>
                 <li><a href="{{ root }}/purchases" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-archive"></i> Archiwum dostaw (ręczne)</a></li>
                 <li><a href="{{ root }}/communication/distribution?tab=history" data-where="Komunikacja › Dystrybucja dokumentów"><i class="bi bi-lightning-charge"></i> Automatyczne e-maile : historia wysyłek</a></li>
