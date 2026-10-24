@@ -760,9 +760,35 @@ check($s === 200 && !$me['data']['clocked_in'] && count($me['data']['operations'
 $opId = $me['data']['operations'][0]['id'];
 [$s, $b] = $kiosk('POST', "/kiosk/operations/{$opId}/start", [], $device, $emp);
 check($s === 409 && $b['description'] === 'NOT_CLOCKED_IN', 'clock in before starting work');
+// Pytania przy wejściu / wyjściu : kierownik je ustawia, osoba potwierdza przed « OK, zatwierdzam ».
+[$s, $ql] = $call('GET', '/kiosk/clock-questions', null, $access);
+check($s === 200 && count(array_filter($ql['data'], fn($q) => $q['active'] && $q['required'] && $q['direction'] === 'in')) >= 1, 'clock questions: seeded (work clothes, hands, symptoms)');
+[$s] = $call('POST', '/kiosk/clock-questions', ['text_pl' => 'x'], $dir);
+check($s === 403, 'direction cannot change the clock questions');
+[$s, $b] = $call('POST', '/kiosk/clock-questions', ['direction' => 'in'], $access);
+check($s === 422 && $codes($b) === ['text_pl:REQUIRED'], 'a question needs its Polish text');
+[$s, $b] = $call('POST', '/kiosk/clock-questions', ['text_pl' => 'Pytanie testowe', 'direction' => 'sometimes'], $access);
+check($s === 422 && $codes($b) === ['direction:INVALID_CHOICE'], 'direction in / out / both');
+[$s, $oq] = $call('POST', '/kiosk/clock-questions', ['text_pl' => 'Pytanie testowe', 'direction' => 'both', 'required' => false], $access);
+check($s === 201 && $oq['data']['direction'] === 'both' && !$oq['data']['required'] && $oq['data']['active'] && $oq['data']['text_fr'] === null, 'optional question at both clock in and clock out');
+$optId = $oq['data']['id'];
+[$s, $oq] = $call('PATCH', "/kiosk/clock-questions/{$optId}", ['text_fr' => 'Question de test', 'sort_order' => 1], $access);
+check($s === 200 && $oq['data']['text_fr'] === 'Question de test' && $oq['data']['sort_order'] === 1, 'question translated and moved first');
+[$s, $me] = $kiosk('GET', '/kiosk/me', null, $device, $emp);
+$qIn = $me['data']['questions']['in'];
+check($qIn[0]['id'] === $optId && !$qIn[0]['required'] && count($me['data']['questions']['out']) >= 2 && !isset($qIn[0]['text_fr']), 'tablet: questions of clock in and out, in the screen language');
+$yes = fn(array $qs, ?int $no = null) => array_map(fn($q) => ['question_id' => $q['id'], 'yes' => $q['id'] !== $no], $qs);
 $uuid = '7d9f0c2e-1a2b-4c3d-8e9f-0a1b2c3d4e5f';
-[$s, $in] = $kiosk('POST', '/kiosk/clock', ['client_uuid' => $uuid], $device, $emp);
-check($s === 200 && $in['data']['clock']['clock_out'] === null && !$in['data']['replayed'], 'one tap: clock in');
+[$s, $b] = $kiosk('POST', '/kiosk/clock', ['client_uuid' => $uuid], $device, $emp);
+check($s === 422 && $b['description'] === 'CLOCK_QUESTIONS_REQUIRED' && str_contains($b['errors'][0]['message'] ?? $b['message'] ?? '', 'odzież'), 'no clock in without confirming the required questions');
+$partial = $yes($qIn);
+$partial[1]['yes'] = false;
+[$s, $b] = $kiosk('POST', '/kiosk/clock', ['client_uuid' => $uuid, 'answers' => $partial], $device, $emp);
+check($s === 422 && $b['description'] === 'CLOCK_QUESTIONS_REQUIRED', 'every required question must be confirmed');
+[$s, $in] = $kiosk('POST', '/kiosk/clock', ['client_uuid' => $uuid, 'answers' => $yes($qIn, $optId)], $device, $emp);
+check($s === 200 && $in['data']['clock']['clock_out'] === null && !$in['data']['replayed'], 'questions confirmed, OK: clock in');
+$saved = $pdo->query("SELECT id_question, answer FROM tfb_clock_answer WHERE id_clock = {$in['data']['clock']['id']} AND direction = 'in'")->fetchAll(PDO::FETCH_KEY_PAIR);
+check(count($saved) === count($qIn) && (int) $saved[$optId] === 0 && array_sum(array_map('intval', $saved)) === count($qIn) - 1, 'answers kept with the clock (optional one answered no)');
 [$s, $b] = $kiosk('POST', '/kiosk/clock', ['client_uuid' => $uuid], $device, $emp);
 check($s === 200 && $b['data']['replayed'] && $b['data']['clock']['id'] === $in['data']['clock']['id'], 'replayed tap (offline tablet) creates nothing twice');
 [$s, $b] = $kiosk('POST', '/kiosk/clock', ['direction' => 'in'], $device, $emp);
@@ -784,7 +810,7 @@ check($opKind !== 'work' || (int) $pdo->query('SELECT COUNT(*) FROM tfb_prod_tim
 check($s === 409 && $b['description'] === 'OPERATION_NOT_STARTABLE', 'a finished operation does not restart');
 $other = (int) $pdo->query("SELECT op.id FROM tfb_prod_operation op WHERE op.status = 'planned' ORDER BY op.id LIMIT 1")->fetchColumn();
 $kiosk('POST', "/kiosk/operations/{$other}/start", [], $device, $emp);
-[$s, $out] = $kiosk('POST', '/kiosk/clock', [], $device, $emp);
+[$s, $out] = $kiosk('POST', '/kiosk/clock', ['answers' => $yes($me['data']['questions']['out'])], $device, $emp);
 check($s === 200 && $out['data']['clock']['clock_out'] !== null && $out['data']['signature_required'], 'second tap: clock out, signature asked');
 check((int) $pdo->query("SELECT COUNT(*) FROM tfb_prod_time_log WHERE id_employee = {$jan} AND ended_at IS NULL")->fetchColumn() === 0
     && $pdo->query("SELECT status FROM tfb_prod_operation WHERE id = {$other}")->fetchColumn() === 'paused', 'clocking out closes my running work');
@@ -1058,6 +1084,9 @@ check($s === 201, 'manual entry added');
 check($s === 200 && $ts['data']['totals']['hours'] == 10.0 && $ts['data']['totals']['night_hours'] == 8.0 && $ts['data']['days'][0]['source'] === 'manual', 'timesheet: 10 h of which 8 h at night (22:00–06:00)');
 [$s, $ts] = $call('GET', "/kiosk/employees/{$jan}/timesheet?month={$month}", null, $access);
 check($s === 200 && $ts['data']['totals']['hours'] == 2.0 && $ts['data']['totals']['signed'] === 1 && $ts['data']['days'][0]['corrected'] && $ts['data']['month_signature'] !== null, 'timesheet of the month: corrected 2 h, signed day and signed month');
+$tsAnswers = $ts['data']['days'][0]['answers'];
+check($tsAnswers['in']['total'] === count($qIn) && $tsAnswers['in']['yes'] === count($qIn) - 1 && $tsAnswers['in']['no'] === ['Pytanie testowe'] && $tsAnswers['out']['yes'] === $tsAnswers['out']['total'],
+    'timesheet: confirmations of clock in / out (unconfirmed optional question named)');
 [$s, $list] = $call('GET', "/kiosk/employees?month={$month}&group_id=1", null, $access);
 $row = array_values(array_filter($list['data'], fn($r) => $r['employee_id'] === $jan))[0] ?? null;
 check($s === 200 && $row && $row['hours'] == 2.0 && $row['month_signed'], 'monthly summary per person');
@@ -1100,10 +1129,13 @@ check($storedPhone['token_hash'] === hash('sha256', $phoneToken) && str_contains
 check($s === 200 && !$pm['data']['clocked_in'] && $pm['data']['employee']['id'] === $jan && !isset($pm['data']['operations']), 'phone: my clock state only');
 [$s, $b] = $phone('GET', '/kiosk/phone/me', null, '', $phoneToken);
 check($s === 401 && $b['description'] === 'QR_INVALID', 'no clocking from home: a fresh QR of the tablet is needed');
-[$s, $pin] = $phone('POST', '/kiosk/phone/clock', ['client_uuid' => '8e9f0c2e-1a2b-4c3d-8e9f-0a1b2c3d4e5f'], $qr, $phoneToken);
+check(count($pm['data']['questions']['in']) === count($qIn), 'phone: same questions as the tablet');
+[$s, $b] = $phone('POST', '/kiosk/phone/clock', ['client_uuid' => '8e9f0c2e-1a2b-4c3d-8e9f-0a1b2c3d4e5f'], $qr, $phoneToken);
+check($s === 422 && $b['description'] === 'CLOCK_QUESTIONS_REQUIRED', 'phone: questions to confirm before OK');
+[$s, $pin] = $phone('POST', '/kiosk/phone/clock', ['client_uuid' => '8e9f0c2e-1a2b-4c3d-8e9f-0a1b2c3d4e5f', 'answers' => $yes($pm['data']['questions']['in'])], $qr, $phoneToken);
 check($s === 200 && $pin['data']['clock']['clock_out'] === null
     && (int) $pdo->query("SELECT id_device FROM tfb_prod_clock WHERE id = {$pin['data']['clock']['id']}")->fetchColumn() === $dev['data']['id'], 'one tap on the phone: clock in, recorded at the tablet of the QR');
-[$s, $pout] = $phone('POST', '/kiosk/phone/clock', [], $qr, $phoneToken);
+[$s, $pout] = $phone('POST', '/kiosk/phone/clock', ['answers' => $yes($pm['data']['questions']['out'])], $qr, $phoneToken);
 check($s === 200 && $pout['data']['clock']['clock_out'] !== null && $pout['data']['signature_required'], 'second tap: clock out, signature asked');
 [$s] = $phone('POST', '/kiosk/phone/signatures', ['purpose' => 'clock_out', 'ref' => (string) $pout['data']['clock']['id'], 'image' => 'data:image/png;base64,' . base64_encode($png)], $qr, $phoneToken);
 check($s === 201, 'finger signature on the phone');
@@ -1115,6 +1147,10 @@ check($s === 403, 'direction cannot revoke phones');
 check($s === 200 && $r['data']['revoked'] === 1, 'manager revokes the phone');
 [$s, $b] = $phone('POST', '/kiosk/phone/clock', [], $qr, $phoneToken);
 check($s === 401 && $b['description'] === 'PHONE_REVOKED', 'revoked phone cannot clock');
+[$s, $r] = $call('DELETE', "/kiosk/clock-questions/{$optId}", null, $access);
+check($s === 200 && $r['data']['deleted'] && (int) $pdo->query("SELECT COUNT(*) FROM tfb_clock_answer WHERE id_question = {$optId}")->fetchColumn() >= 2, 'question deleted, given answers kept');
+[$s, $b] = $call('DELETE', "/kiosk/clock-questions/{$optId}", null, $access);
+check($s === 404, 'deleted question is gone');
 
 [$s, $k] = $call('GET', '/execution/kpis?from=' . date('Y-m-d') . '&to=' . date('Y-m-d', strtotime('+6 days')), null, $dir);
 check($s === 200 && $k['data']['totals']['operations_done'] >= 1 && $k['data']['totals']['qty_scrap'] == 2.0 && abs($k['data']['totals']['scrap_pct'] - 2 / 92 * 100) < 0.1, 'KPIs: done operations, scrap rate');

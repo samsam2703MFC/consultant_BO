@@ -35,6 +35,7 @@ final class ExecutionService
         private TransactionManager $tx,
         private AuditTrail $audit,
         private SignatureStorage $storage,
+        private ClockQuestionService $questions,
     ) {
     }
 
@@ -50,6 +51,7 @@ final class ExecutionService
             'clock' => $open ? $this->clockRow($open, $now) : null,
             'signature_on_clock_out' => $signOnOut,
             'idle_logout_s' => max(15, (int) $this->params->get('kiosk.idle_logout_s', '45')),
+            'questions' => $this->questions->forKiosk($context->translator->lang() === 'fr'),
             'operations' => $this->operations($context, $now),
             'working_on' => array_map(fn($l) => (int) $l['id_operation'], $this->repo->openLogsOfEmployee((int) $context->employeeId)),
         ];
@@ -66,6 +68,7 @@ final class ExecutionService
             'clocked_in' => $open !== null,
             'clock' => $open ? $this->clockRow($open, $now) : null,
             'signature_on_clock_out' => $this->params->get('kiosk.signature_on_clock_out', '1') === '1',
+            'questions' => $this->questions->forKiosk($context->translator->lang() === 'fr'),
         ];
     }
 
@@ -88,7 +91,7 @@ final class ExecutionService
     public function clock(array $body, ApiContext $context, ?int $now = null): array
     {
         $now ??= time();
-        $v = (new Validator($body))->only(['direction', 'client_uuid'])->choice('direction', ['in', 'out'], false)
+        $v = (new Validator($body))->only(['direction', 'client_uuid', 'answers'])->choice('direction', ['in', 'out'], false)
             ->string('client_uuid', 36, false, true, '/^[0-9a-fA-F-]{36}$/', 'INVALID_UUID');
         $v->throwIfInvalid();
         $c = $v->clean();
@@ -100,18 +103,22 @@ final class ExecutionService
         $open = $this->repo->openClock($employeeId);
         $direction = $c['direction'] ?? ($open ? 'out' : 'in');
         $at = date('Y-m-d H:i:s', $now);
+        if ($direction === 'in' && $open) throw new ApiException('CLOCK_ALREADY_IN', 409, [], ['since' => substr($open['clock_in'], 11, 5)]);
+        if ($direction === 'out' && !$open) throw new ApiException('CLOCK_NOT_IN', 409);
+        // Questions du pointage (tenue de travail, mains…) : obligatoires confirmées, sinon 422.
+        $answers = $this->questions->check($direction, $body['answers'] ?? [], $context->translator->lang() === 'fr');
         if ($direction === 'in') {
-            if ($open) throw new ApiException('CLOCK_ALREADY_IN', 409, [], ['since' => substr($open['clock_in'], 11, 5)]);
-            $id = $this->tx->execute(function () use ($employeeId, $at, $context, $uuid) {
+            $id = $this->tx->execute(function () use ($employeeId, $at, $context, $uuid, $answers) {
                 $id = $this->repo->clockIn($employeeId, $at, $context->deviceId, $uuid);
+                $this->questions->save($id, 'in', $answers);
                 $this->audit->record($context, 'clock_in', 'clock', $id, null, ['employee_id' => $employeeId, 'device_id' => $context->deviceId]);
                 return $id;
             });
         } else {
-            if (!$open) throw new ApiException('CLOCK_NOT_IN', 409);
             $id = (int) $open['id'];
-            $this->tx->execute(function () use ($id, $at, $employeeId, $context, $uuid) {
+            $this->tx->execute(function () use ($id, $at, $employeeId, $context, $uuid, $answers) {
                 $this->repo->clockOut($id, $at, $uuid);
+                $this->questions->save($id, 'out', $answers);
                 foreach ($this->repo->openLogsOfEmployee($employeeId) as $log) {
                     $this->repo->endLog((int) $log['id'], $at);
                     if (!$this->repo->openLogs((int) $log['id_operation'])) $this->repo->setOperation((int) $log['id_operation'], ['status' => 'paused']);

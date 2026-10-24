@@ -6,6 +6,7 @@ namespace App\Controllers\Api\Workshop;
 use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\ApiRequest;
 use App\Core\Api\Workshop\ApiResult;
+use App\Services\Workshop\Execution\ClockQuestionService;
 use App\Services\Workshop\Execution\DevProductService;
 use App\Services\Workshop\Execution\ExecutionService;
 use App\Services\Workshop\Execution\KioskAuthService;
@@ -33,6 +34,7 @@ final class ExecutionController
         private KioskRecipeService $recipes,
         private OeeService $oee,
         private DevProductService $dev,
+        private ClockQuestionService $questions,
     ) {
     }
 
@@ -63,6 +65,10 @@ final class ExecutionController
 
     public function cockpit(ApiRequest $request): ApiResult { return new ApiResult($this->kpis->cockpit($request->context)); }
     public function revokePhones(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->revokePhones($request->id(), $request->context)); }
+    public function clockQuestions(ApiRequest $request): ApiResult { return ApiResult::list($this->questions->list()); }
+    public function createClockQuestion(ApiRequest $request): ApiResult { return new ApiResult($this->questions->create($request->body(), $request->context), 201); }
+    public function updateClockQuestion(ApiRequest $request): ApiResult { return new ApiResult($this->questions->update($request->id(), $request->body(), $request->context)); }
+    public function deleteClockQuestion(ApiRequest $request): ApiResult { return new ApiResult($this->questions->delete($request->id())); }
 
     // Tablette
     public function pair(ApiRequest $request): ApiResult { $r = $this->kiosk->pair($request->body()); return new ApiResult($r, 200, null, $r['device_token']); }

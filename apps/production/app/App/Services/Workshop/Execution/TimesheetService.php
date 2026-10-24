@@ -7,17 +7,19 @@ use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\Validator;
 use App\Core\TransactionManager;
+use App\Repositories\Workshop\ClockQuestionRepository;
 use App\Repositories\Workshop\ExecutionRepository;
 use App\Services\Workshop\Referentiel\AuditTrail;
 
 /**
  * Godziny pracy z tabletu : miesięczna karta pracownika (wejścia / wyjścia, godziny, godziny nocne
- * 22:00–06:00, podpisy), zestawienie miesiąca dla wszystkich, korekty kierownika (zawsze z powodem,
- * w dzienniku). Karta drukowana jest podpisywana na tablecie (podpis miesiąca) albo na papierze.
+ * 22:00–06:00, podpisy, pytania potwierdzone przy wejściu / wyjściu), zestawienie miesiąca dla wszystkich,
+ * korekty kierownika (zawsze z powodem, w dzienniku). Karta drukowana jest podpisywana na tablecie (podpis miesiąca) albo na papierze.
  */
 final class TimesheetService
 {
-    public function __construct(private ExecutionRepository $repo, private TransactionManager $tx, private AuditTrail $audit, private SignatureStorage $storage)
+    public function __construct(private ExecutionRepository $repo, private TransactionManager $tx, private AuditTrail $audit, private SignatureStorage $storage,
+        private ClockQuestionRepository $questions)
     {
     }
 
@@ -33,7 +35,9 @@ final class TimesheetService
         foreach ($signatures as $s) if ($s['purpose'] === 'clock_out') $byClock[(int) $s['ref']] = $s;
         $monthly = array_values(array_filter($signatures, fn($s) => $s['purpose'] === 'timesheet_month' && $s['ref'] === $month));
         $days = [];
-        foreach ($this->repo->clocks($from, $to, $employeeId) as $k) {
+        $clocks = $this->repo->clocks($from, $to, $employeeId);
+        $answers = $this->questions->answersFor(array_column($clocks, 'id'));
+        foreach ($clocks as $k) {
             $in = strtotime($k['clock_in']);
             $out = $k['clock_out'] !== null ? strtotime($k['clock_out']) : null;
             $end = $out ?? $now;
@@ -42,6 +46,7 @@ final class TimesheetService
                 'hours' => round(max(0, $end - $in) / 3600, 2), 'night_hours' => round(self::nightSeconds($in, $end) / 3600, 2),
                 'open' => $out === null, 'source' => $k['source'], 'note' => $k['note'], 'corrected' => $k['corrected_at'] !== null,
                 'signature_id' => isset($byClock[(int) $k['id']]) ? (int) $byClock[(int) $k['id']]['id'] : null,
+                'answers' => self::answers($answers[(int) $k['id']] ?? []),
             ];
         }
         $closed = array_filter($days, fn($d) => !$d['open']);
@@ -58,6 +63,19 @@ final class TimesheetService
             ],
             'month_signature' => $monthly ? ['id' => (int) end($monthly)['id'], 'signed_at' => end($monthly)['signed_at'], 'sha256' => end($monthly)['sha256']] : null,
         ];
+    }
+
+    /** Pytania przy wejściu / wyjściu : ile potwierdzonych, które nie (tylko nieobowiązkowe mogą zostać bez « tak »). */
+    private static function answers(array $rows): array
+    {
+        $out = [];
+        foreach ($rows as $r) {
+            $d = $r['direction'];
+            $out[$d] ??= ['yes' => 0, 'total' => 0, 'no' => []];
+            $out[$d]['total']++;
+            if ((int) $r['answer'] === 1) $out[$d]['yes']++; else $out[$d]['no'][] = $r['question'];
+        }
+        return $out;
     }
 
     /** Zestawienie miesiąca : godziny na osobę (grupa opcjonalnie). */

@@ -211,6 +211,11 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/phone/clock', ExecutionController::class, 'clock', 'phone'],
             ['POST', '/kiosk/phone/signatures', ExecutionController::class, 'sign', 'phone'],
             ['DELETE', '/kiosk/employees/{id:\d+}/phones', ExecutionController::class, 'revokePhones', 'prod.employees.write'],
+            // Pytania przy wejściu / wyjściu (« OK, zatwierdzam »)
+            ['GET', '/kiosk/clock-questions', ExecutionController::class, 'clockQuestions', 'prod.employees.write'],
+            ['POST', '/kiosk/clock-questions', ExecutionController::class, 'createClockQuestion', 'prod.employees.write'],
+            ['PATCH', '/kiosk/clock-questions/{id:\d+}', ExecutionController::class, 'updateClockQuestion', 'prod.employees.write'],
+            ['DELETE', '/kiosk/clock-questions/{id:\d+}', ExecutionController::class, 'deleteClockQuestion', 'prod.employees.write'],
         ];
     }
 

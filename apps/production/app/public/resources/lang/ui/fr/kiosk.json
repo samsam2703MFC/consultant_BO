@@ -334,5 +334,10 @@
   "rec_materials": "Matières",
   "rec_ppc": "{ppc} pcs par carton",
   "rec_how_much": "Quelle quantité ?",
-  "rec_steps_photos": "Étapes de production"
+  "rec_steps_photos": "Étapes de production",
+  "confirm_in": "Entrée — à confirmer",
+  "confirm_out": "Sortie — à confirmer",
+  "confirm_help": "Touchez chaque point pour le confirmer.",
+  "confirm_ok": "OK, je valide",
+  "optional": "facultatif"
 }

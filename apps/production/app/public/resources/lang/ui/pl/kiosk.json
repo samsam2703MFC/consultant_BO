@@ -334,5 +334,10 @@
   "rec_materials": "Surowce",
   "rec_ppc": "{ppc} szt. w kartonie",
   "rec_how_much": "Ile robimy ?",
-  "rec_steps_photos": "Etapy produkcji"
+  "rec_steps_photos": "Etapy produkcji",
+  "confirm_in": "Wejście — potwierdź",
+  "confirm_out": "Wyjście — potwierdź",
+  "confirm_help": "Dotknij każdego punktu, żeby go potwierdzić.",
+  "confirm_ok": "OK, zatwierdzam",
+  "optional": "nieobowiązkowe"
 }

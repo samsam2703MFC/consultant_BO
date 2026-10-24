@@ -1,8 +1,9 @@
 /*
  * Wejście / wyjście telefonem / Entrée / sortie au téléphone (P7).
  * Strona otwierana kodem QR z tabletu (…/kiosk/scan#t=…) : kod jest ważny chwilę (obecność na miejscu).
- * Pierwszy raz : nazwisko + PIN, telefon dostaje własny token (pamięć przeglądarki). Potem jedno
- * dotknięcie WEJŚCIE / WYJŚCIE, przy wyjściu podpis palcem. „To nie ja” zapomina telefon.
+ * Pierwszy raz : nazwisko + PIN, telefon dostaje własny token (pamięć przeglądarki). Potem WEJŚCIE / WYJŚCIE :
+ * pytania ustawione przez kierownika (np. « Jestem w odzieży roboczej ») do potwierdzenia i « OK, zatwierdzam »,
+ * przy wyjściu podpis palcem. „To nie ja” zapomina telefon.
  */
 (function () {
     'use strict';
@@ -157,14 +158,46 @@
                 <p class="kiosk-error" data-error></p>
             </section>
             <button type="button" class="kiosk-btn is-small kiosk-phone-forget" data-forget>${esc(t('not_me'))}</button>`;
-        el.querySelector('[data-clock-tap]').addEventListener('click', (e) => clockTap(e.currentTarget, e.currentTarget.dataset.clockTap));
+        el.querySelector('[data-clock-tap]').addEventListener('click', (e) => {
+            const direction = e.currentTarget.dataset.clockTap;
+            if ((me.questions?.[direction] || []).length) renderQuestions(me.questions[direction], direction);
+            else clockTap(e.currentTarget, direction, []);
+        });
     }
 
-    async function clockTap(button, direction) {
+    // Pytania przy wejściu / wyjściu : dotknięcie potwierdza punkt, « OK, zatwierdzam » gdy obowiązkowe są potwierdzone.
+    function renderQuestions(questions, direction, error) {
+        const yes = new Set();
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-confirm">
+                <h2>${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}</h2>
+                <p class="kiosk-muted">${esc(t('confirm_help'))}</p>
+                <div class="kiosk-checks">${questions.map(q => `<button type="button" class="kiosk-check" data-q="${q.id}" aria-pressed="false">
+                    <span class="kiosk-check-box" aria-hidden="true"></span><span>${esc(q.text)}${q.required ? '' : `<small>${esc(t('optional'))}</small>`}</span></button>`).join('')}</div>
+                <p class="kiosk-error" data-error>${esc(error || '')}</p>
+                <button type="button" class="kiosk-btn kiosk-big ${direction === 'in' ? 'is-ok' : 'is-danger'}" data-confirm>${esc(t('confirm_ok'))}</button>
+                <button type="button" class="kiosk-btn is-small" data-back>${esc(t('back'))}</button>
+            </section>`;
+        const ok = el.querySelector('[data-confirm]');
+        const refresh = () => { ok.disabled = questions.some(q => q.required && !yes.has(q.id)); };
+        refresh();
+        el.querySelector('.kiosk-checks').addEventListener('click', (e) => {
+            const b = e.target.closest('[data-q]');
+            if (!b) return;
+            const id = Number(b.dataset.q);
+            if (yes.has(id)) yes.delete(id); else yes.add(id);
+            b.classList.toggle('is-on', yes.has(id));
+            b.setAttribute('aria-pressed', String(yes.has(id)));
+            refresh();
+        });
+        ok.addEventListener('click', () => clockTap(ok, direction, questions.map(q => ({question_id: q.id, yes: yes.has(q.id)}))));
+        el.querySelector('[data-back]').addEventListener('click', () => renderClock());
+    }
+
+    async function clockTap(button, direction, answers) {
         button.disabled = true;
         if (!pending || pending.direction !== direction) pending = {uuid: uuid(), direction};
         try {
-            const r = await api('POST', '/kiosk/phone/clock', {direction, client_uuid: pending.uuid});
+            const r = await api('POST', '/kiosk/phone/clock', {direction, client_uuid: pending.uuid, answers});
             pending = null;
             if (navigator.vibrate) navigator.vibrate(80);
             if (direction === 'out' && r.signature_required) return renderSignature(String(r.clock.id), t('sign_out_help', {hours: fmt(r.clock.hours)}));
@@ -174,6 +207,11 @@
             if (['PHONE_UNAUTHENTICATED', 'PHONE_REVOKED'].includes(err.code)) { forget(); return renderPeople(); }
             // Hors ligne : on garde le bouton (même client_uuid, pas de doublon) ; sinon message (QR expiré…).
             if (err.offline) { el.querySelector('[data-error]').textContent = t('offline_retry'); return; }
+            // Pytania zmienione w międzyczasie : aktualna lista z komunikatem.
+            if (err.code === 'CLOCK_QUESTIONS_REQUIRED') {
+                const me = await api('GET', '/kiosk/phone/me').catch(() => null);
+                if (me) return renderQuestions(me.questions?.[direction] || [], direction, err.message);
+            }
             message(err.message, true);
         }
     }

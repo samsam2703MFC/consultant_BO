@@ -37,7 +37,8 @@
             <td>{{ d.clock_out ? (d.clock_out|slice(0, 10) != d.date ? d.clock_out|date('d.m H:i') : d.clock_out|slice(11, 5)) : 'brak wyjścia' }}</td>
             <td class="num">{{ d.hours|number_format(2, ',', ' ') }}</td>
             <td class="num">{{ d.night_hours > 0 ? d.night_hours|number_format(2, ',', ' ') : '' }}</td>
-            <td class="note">{{ d.source == 'manual' ? 'wpis ręczny' : '' }}{{ d.corrected ? ' korekta' : '' }}{{ d.note ? ' — ' ~ d.note : '' }}</td>
+            <td class="note">{{ d.source == 'manual' ? 'wpis ręczny' : '' }}{{ d.corrected ? ' korekta' : '' }}{{ d.note ? ' — ' ~ d.note : '' }}
+                {% for dir, a in d.answers %}<div>{{ dir == 'in' ? 'wejście' : 'wyjście' }} : potwierdzono {{ a.yes }}/{{ a.total }}{{ a.no ? ' — nie : ' ~ a.no|join(', ') : '' }}</div>{% endfor %}</td>
             <td>{% if d.signature_id and images[d.signature_id] is defined %}<img class="sig" src="{{ images[d.signature_id] }}" alt="podpis">{% endif %}</td>
         </tr>
     {% else %}
@@ -46,7 +47,7 @@
     </tbody>
     <tfoot><tr class="totals"><td colspan="3">Razem</td><td class="num">{{ sheet.totals.hours|number_format(2, ',', ' ') }}</td><td class="num">{{ sheet.totals.night_hours|number_format(2, ',', ' ') }}</td><td colspan="2"></td></tr></tfoot>
 </table>
-<p class="note">Godziny z tabletu produkcji (wejście / wyjście). Wpisy bez wyjścia nie są liczone do sumy. Podpisy złożone na tablecie mają zapisany skrót SHA-256 (integralność).</p>
+<p class="note">Godziny z tabletu produkcji (wejście / wyjście). Wpisy bez wyjścia nie są liczone do sumy. « Potwierdzono » : pytania przy wejściu / wyjściu (np. odzież robocza) zatwierdzone przez pracownika. Podpisy złożone na tablecie mają zapisany skrót SHA-256 (integralność).</p>
 <div class="sign">
     <div>Pracownik — potwierdzam godziny pracy
         {% if sheet.month_signature and images[sheet.month_signature.id] is defined %}<img src="{{ images[sheet.month_signature.id] }}" alt="podpis pracownika"><span class="note">podpisano na tablecie {{ sheet.month_signature.signed_at|date('d.m.Y H:i') }}</span>{% endif %}

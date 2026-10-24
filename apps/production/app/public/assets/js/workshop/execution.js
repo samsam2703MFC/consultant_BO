@@ -1,6 +1,6 @@
 /*
  * Hala / Atelier (P7) — kierownik : kokpit dnia i wskaźniki, tablety (parowanie), identyfikatory i PIN
- * osób, godziny pracy miesiąca (druk karty, wpis ręczny). Wszystko przez API /api/v1/production.
+ * osób, pytania przy wejściu / wyjściu, godziny pracy miesiąca (druk karty, wpis ręczny). Wszystko przez API /api/v1/production.
  */
 (async function () {
     'use strict';
@@ -25,7 +25,7 @@
     const pct = (v) => v === null || v === undefined ? '—' : fmt(v, 1) + ' %';
     const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     const canManage = perms.includes('prod.employees.write');
-    const tabs = ['cockpit', ...(canManage ? ['devices', 'people', 'hours'] : [])];
+    const tabs = ['cockpit', ...(canManage ? ['devices', 'people', 'questions', 'hours'] : [])];
     let tab = tabs.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'cockpit';
     const groupOptions = (selected, empty) => `<option value="">${esc(empty)}</option>` + groups.map(g => `<option value="${g.id}" ${g.id === selected ? 'selected' : ''}>${esc(g.name)}</option>`).join('');
     const fail = (err, box) => { const o = box ? ui.fieldErrors(box, err) : []; ui.notify(false, o.length ? o.join(' ') : (((err.body && err.body.errors) || []).map(x => x.message).join(' ') || err.message)); };
@@ -40,7 +40,7 @@
 
     async function render() {
         frame();
-        try { await ({cockpit, devices, people, hours})[tab](); } catch (err) { el.querySelector('[data-body]').innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`; }
+        try { await ({cockpit, devices, people, questions, hours})[tab](); } catch (err) { el.querySelector('[data-body]').innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`; }
     }
 
     // --- Kokpit i wskaźniki -------------------------------------------------------------------------
@@ -165,6 +165,59 @@
                 if (!Object.keys(payload).length) return;
             } else return;
             try { await api.put(`/kiosk/employees/${id}/credentials`, payload); ui.notify(true, t('saved')); people(); } catch (err) { fail(err, row); }
+        }));
+    }
+
+    // --- Pytania przy wejściu / wyjściu (« OK, zatwierdzam » na telefonie i tablecie) -------------------
+    async function questions() {
+        const list = (await api.list('/kiosk/clock-questions')).data;
+        const body = el.querySelector('[data-body]');
+        const dirOptions = (v) => ['in', 'out', 'both'].map(d => `<option value="${d}" ${d === v ? 'selected' : ''}>${esc(t('q.dir.' + d))}</option>`).join('');
+        body.innerHTML = `<div class="card"><div class="card-body pt-3">
+            <div class="table-responsive"><table class="table table-sm align-middle tfb-exec-questions">
+            <thead><tr><th style="width:90px">${esc(t('q.order'))}</th><th>${esc(t('q.text_pl'))}</th><th>${esc(t('q.text_fr'))}</th><th>${esc(t('q.direction'))}</th>
+                <th></th><th></th></tr></thead>
+            <tbody>${list.map(q => `<tr data-question="${q.id}" class="${q.active ? '' : 'text-muted'}">
+                <td><input class="form-control form-control-sm" style="width:72px" name="sort_order" data-field="sort_order" type="number" min="0" value="${q.sort_order}"></td>
+                <td><textarea class="form-control form-control-sm" style="min-width:200px" rows="2" name="text_pl" data-field="text_pl" maxlength="200" required>${esc(q.text_pl)}</textarea></td>
+                <td><textarea class="form-control form-control-sm" style="min-width:180px" rows="2" name="text_fr" data-field="text_fr" maxlength="200">${esc(q.text_fr || '')}</textarea></td>
+                <td><select class="form-select form-select-sm" style="min-width:140px" name="direction" data-field="direction">${dirOptions(q.direction)}</select></td>
+                <td class="text-nowrap small"><label class="d-block"><input type="checkbox" class="form-check-input me-1" name="required" ${q.required ? 'checked' : ''}>${esc(t('q.required'))}</label>
+                    <label class="d-block mt-1"><input type="checkbox" class="form-check-input me-1" name="active" ${q.active ? 'checked' : ''}>${esc(t('q.active'))}</label></td>
+                <td class="text-end"><div class="d-flex flex-column align-items-end gap-1"><button type="button" class="btn btn-sm btn-primary" data-save>${esc(t('save'))}</button>
+                    <button type="button" class="btn btn-sm btn-link text-danger p-0" data-delete>${esc(t('q.delete'))}</button></div></td></tr>`).join('')
+                || `<tr><td colspan="6" class="text-muted">${esc(t('q.none'))}</td></tr>`}</tbody></table></div>
+            <h6 class="mt-3">${esc(t('q.add_title'))}</h6>
+            <form class="tfb-filters" data-add-question>
+                <input class="form-control form-control-sm" name="text_pl" data-field="text_pl" maxlength="200" required placeholder="${esc(t('q.text_pl'))}" style="min-width:260px">
+                <input class="form-control form-control-sm" name="text_fr" data-field="text_fr" maxlength="200" placeholder="${esc(t('q.text_fr'))}" style="min-width:220px">
+                <select class="form-select form-select-sm" name="direction" data-field="direction" style="width:auto">${dirOptions('in')}</select>
+                <label class="tfb-inline"><input type="checkbox" class="form-check-input" name="required" checked> ${esc(t('q.required'))}</label>
+                <button class="btn btn-sm btn-primary">${esc(t('q.add'))}</button></form>
+            <p class="at-profit-note">${esc(t('q.help'))}</p></div></div>`;
+        body.querySelector('[data-add-question]').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            try {
+                await api.post('/kiosk/clock-questions', {text_pl: f.text_pl.value.trim(), text_fr: f.text_fr.value.trim() || null, direction: f.direction.value, required: f.required.checked});
+                ui.notify(true, t('saved'));
+                questions();
+            } catch (err) { fail(err, f); }
+        });
+        body.querySelectorAll('[data-question]').forEach(row => row.addEventListener('click', async (e) => {
+            const id = Number(row.dataset.question);
+            try {
+                if (e.target.closest('[data-delete]')) {
+                    if (!window.confirm(t('q.delete_confirm'))) return;
+                    await api.del(`/kiosk/clock-questions/${id}`);
+                } else if (e.target.closest('[data-save]')) {
+                    const v = (n) => row.querySelector(`[name=${n}]`);
+                    await api.patch(`/kiosk/clock-questions/${id}`, {sort_order: Number(v('sort_order').value) || 0, text_pl: v('text_pl').value.trim(),
+                        text_fr: v('text_fr').value.trim() || null, direction: v('direction').value, required: v('required').checked, active: v('active').checked});
+                } else return;
+                ui.notify(true, t('saved'));
+                questions();
+            } catch (err) { fail(err, row); }
         }));
     }
 

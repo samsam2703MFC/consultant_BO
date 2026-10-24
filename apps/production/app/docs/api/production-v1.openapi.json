@@ -12710,6 +12710,307 @@
                 ],
                 "x-permission": "prod.employees.write"
             }
+        },
+        "/kiosk/clock-questions": {
+            "get": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Pytania przy wejściu / wyjściu / Questions au pointage",
+                "operationId": "listClockQuestions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ClockQuestion"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            },
+            "post": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Nowe pytanie / Nouvelle question",
+                "operationId": "createClockQuestion",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClockQuestion"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Question confirmée avant « OK, zatwierdzam » (téléphone ou tablette) : entrée, sortie ou les deux ; obligatoire = pointage refusé sans la case cochée.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ClockQuestionInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
+        },
+        "/kiosk/clock-questions/{id}": {
+            "patch": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Zmień pytanie / Modifier la question",
+                "operationId": "updateClockQuestion",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClockQuestion"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ClockQuestionUpdateInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            },
+            "delete": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Usuń pytanie / Supprimer la question",
+                "operationId": "deleteClockQuestion",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ClockQuestionDeleted"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Les réponses déjà données gardent le texte de la question.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
         }
     },
     "components": {
@@ -16829,6 +17130,168 @@
                     "client_uuid": {
                         "type": "string",
                         "format": "uuid"
+                    },
+                    "answers": {
+                        "type": "array",
+                        "description": "Questions du pointage (questions.in / questions.out) ; une question obligatoire sans yes: true → 422 CLOCK_QUESTIONS_REQUIRED",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "question_id",
+                                "yes"
+                            ],
+                            "properties": {
+                                "question_id": {
+                                    "type": "integer"
+                                },
+                                "yes": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "ClockQuestion": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "text_pl": {
+                        "type": "string"
+                    },
+                    "text_fr": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "direction": {
+                        "type": "string",
+                        "enum": [
+                            "in",
+                            "out",
+                            "both"
+                        ]
+                    },
+                    "required": {
+                        "type": "boolean"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "ClockQuestionInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "text_pl"
+                ],
+                "properties": {
+                    "text_pl": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "text_fr": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "nullable": true
+                    },
+                    "direction": {
+                        "type": "string",
+                        "enum": [
+                            "in",
+                            "out",
+                            "both"
+                        ],
+                        "default": "in"
+                    },
+                    "required": {
+                        "type": "boolean"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "ClockQuestionUpdateInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "text_pl": {
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "text_fr": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "nullable": true
+                    },
+                    "direction": {
+                        "type": "string",
+                        "enum": [
+                            "in",
+                            "out",
+                            "both"
+                        ]
+                    },
+                    "required": {
+                        "type": "boolean"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "ClockQuestionDeleted": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "deleted": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ClockQuestions": {
+                "type": "object",
+                "description": "Questions actives à confirmer, dans la langue de l'écran",
+                "properties": {
+                    "in": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ClockQuestionShort"
+                        }
+                    },
+                    "out": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ClockQuestionShort"
+                        }
+                    }
+                }
+            },
+            "ClockQuestionShort": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "required": {
+                        "type": "boolean"
                     }
                 }
             },
@@ -16973,6 +17436,9 @@
                         "items": {
                             "type": "integer"
                         }
+                    },
+                    "questions": {
+                        "$ref": "#/components/schemas/ClockQuestions"
                     }
                 }
             },
@@ -18414,6 +18880,9 @@
                     },
                     "signature_on_clock_out": {
                         "type": "boolean"
+                    },
+                    "questions": {
+                        "$ref": "#/components/schemas/ClockQuestions"
                     }
                 }
             },
@@ -18554,6 +19023,27 @@
                                 "signature_id": {
                                     "type": "integer",
                                     "nullable": true
+                                },
+                                "answers": {
+                                    "type": "object",
+                                    "description": "Questions confirmées au pointage, par sens (in / out)",
+                                    "additionalProperties": {
+                                        "type": "object",
+                                        "properties": {
+                                            "yes": {
+                                                "type": "integer"
+                                            },
+                                            "total": {
+                                                "type": "integer"
+                                            },
+                                            "no": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

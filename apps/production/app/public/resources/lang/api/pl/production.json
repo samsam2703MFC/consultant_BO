@@ -43,6 +43,7 @@
     "EMPLOYEE_LOCKED": "Zbyt wiele błędnych PIN-ów — blokada do {until}.",
     "CLOCK_ALREADY_IN": "Wejście jest już zarejestrowane (od {since}).",
     "CLOCK_NOT_IN": "Nie ma zarejestrowanego wejścia.",
+    "CLOCK_QUESTIONS_REQUIRED": "Potwierdź przed zatwierdzeniem : {questions}.",
     "NOT_CLOCKED_IN": "Najpierw zarejestruj wejście.",
     "OPERATION_NOT_STARTABLE": "Operacji o statusie „{status}” nie można rozpocząć.",
     "OPERATION_NOT_IN_PROGRESS": "Operacja nie jest w toku (status „{status}”).",

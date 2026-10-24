@@ -43,6 +43,7 @@
     "EMPLOYEE_LOCKED": "Trop de PIN erronés — bloqué jusqu'à {until}.",
     "CLOCK_ALREADY_IN": "L'entrée est déjà enregistrée (depuis {since}).",
     "CLOCK_NOT_IN": "Aucune entrée enregistrée.",
+    "CLOCK_QUESTIONS_REQUIRED": "À confirmer avant de valider : {questions}.",
     "NOT_CLOCKED_IN": "Enregistrez d'abord votre entrée.",
     "OPERATION_NOT_STARTABLE": "Une opération « {status} » ne peut pas démarrer.",
     "OPERATION_NOT_IN_PROGRESS": "L'opération n'est pas en cours (« {status} »).",
