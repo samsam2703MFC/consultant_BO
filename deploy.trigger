@@ -1032,4 +1032,5 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T09:23:56Z #131 accueil tablette
 2026-10-24T09:38:01Z #132 dostawy surowców
 2026-10-24T09:53:29Z #134 rentowność grup tydzień
-2026-10-24T10:17Z Résultat › Année : les clients mois par mois face à l'an passé (n1Mois)
+2026-10-24T10:23:40Z tablette dostawy + lien rentowność tydzień
+2026-10-24T10:46Z Résultat › Année : les clients mois par mois face à l'an passé (n1Mois)

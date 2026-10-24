@@ -588,11 +588,35 @@
     async function renderProduction(message) {
         longIdle = true;
         resetIdle();
-        let day, me;
+        let day, me, w;
         try {
-            [day, me] = await Promise.all([api('GET', '/kiosk/production', undefined, true), api('GET', '/kiosk/me', undefined, true).catch(() => null)]);
+            [day, me, w] = await Promise.all([api('GET', '/kiosk/production', undefined, true), api('GET', '/kiosk/me', undefined, true).catch(() => null),
+                api('GET', '/kiosk/week').catch(() => null)]);
         } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        prodWeek = w && w.teams && w.teams[0] ? {today: w.today, deliveries: w.teams[0].deliveries || []} : null;
         drawProduction(day, me, message);
+    }
+
+    // Dostawy surowców zespołu : zamówienia u dostawców w tygodniu z surowcami, których zespół potrzebuje
+    // (kto, kiedy, co, ile, dla jakich produktów) ; przyjęte dawniej niż dziś pominięte.
+    let prodWeek = null;
+    function deliveriesCard() {
+        if (!prodWeek) return '';
+        const today = prodWeek.today;
+        const tomorrow = isoDay(today, 1);
+        const state = (l) => l.received >= l.quantity - 0.0005 ? 'received' : (l.received > 0 ? 'partial' : 'expected');
+        const list = prodWeek.deliveries
+            .map(o => ({...o, done: o.lines.every(l => state(l) === 'received'), late: o.date !== null && o.date < today && !o.lines.every(l => state(l) === 'received')}))
+            .filter(o => !(o.done && o.date !== null && o.date < today))
+            .sort((a, b) => (a.date || '9999') < (b.date || '9999') ? -1 : 1);
+        const when = (o) => o.date === null ? t('week_undated') : (o.date === today ? t('delivery_today') : (o.date === tomorrow ? t('delivery_tomorrow')
+            : `${t('weekday_' + (((new Date(o.date + 'T12:00:00').getDay() + 6) % 7) + 1))} ${dm(o.date)}`));
+        return `<section class="kiosk-card kiosk-prod-deliveries"><h2>${icon('truck')} ${esc(t('prod_deliveries_title'))}</h2>
+            ${list.length ? list.map(o => `<div class="kiosk-plan-delivery ${o.late ? 'is-late' : ''} ${o.date === today ? 'is-today' : ''}"><span>${icon('truck')}</span><div>
+                <h3>${esc(o.supplier || '—')} <span class="kiosk-tag ${o.late ? 'is-late' : (o.date === today ? 'is-ship' : '')}">${esc(o.late ? t('delivery_late', {date: dm(o.date)}) : when(o))}</span></h3>
+                ${o.lines.map(l => `<p>${esc(l.name)} — ${esc(wq(l.quantity, l.unit, l.factor))} <span class="kiosk-muted">(${esc(t('week_delivery_' + state(l)))} · ${esc(t('week_need', {qty: wq(l.need, l.unit, l.factor)}))})</span>
+                    ${l.products && l.products.length ? `<br><small class="kiosk-muted">${esc(t('delivery_for', {products: l.products.slice(0, 3).join(', ') + (l.products.length > 3 ? '…' : '')}))}</small>` : ''}</p>`).join('')}
+            </div></div>`).join('') : `<p class="kiosk-muted">${esc(t('prod_deliveries_none'))}</p>`}</section>`;
     }
 
     function drawProduction(day, me, message) {
@@ -630,6 +654,7 @@
             ${day.editable && others.length ? `<section class="kiosk-card"><h2>${esc(t('prod_other'))}</h2><div class="kiosk-row">
                 <select class="kiosk-select" data-other><option value="">—</option>${others.map(c => `<option value="${c.item_id}">${esc(c.name)}</option>`).join('')}</select>
                 <button type="button" class="kiosk-btn is-ok" data-other-go>＋ ${esc(t('prod_batch'))}</button></div></section>` : ''}
+            ${deliveriesCard()}
             ${operationsCard(me)}`;
         if (message) toast(message);
         const find = (id) => day.items.find(i => i.item_id === id) || day.catalog.find(c => c.item_id === id);
