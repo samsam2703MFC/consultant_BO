@@ -1015,3 +1015,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-23T19:51Z production : relance lot A i B (migracja 060 zgodna z MySQL 8)
 2026-10-23T20:05Z production : lot C i D (powiadomienia o dostawie, Finanse, przypomnienia 1–5, wolumen i marża)
 2026-10-23T20:34:56Z faktury OCR, PDF bez kolizji, karta produktu → półprodukt → receptura
+2026-10-24T05:17:46Z proforma według kategorii, WDT 0 WDT jak KSeF
