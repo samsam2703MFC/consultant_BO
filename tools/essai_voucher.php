@@ -47,7 +47,8 @@ function evPropre($x, string $cle = '', int $prof = 0)
     }
     if (is_string($x)) {
         if (str_starts_with($x, 'ZZSONDE')) { return evMasque($x); }
-        if (preg_match('/(^|_)code$|shared_code|token|request_key/i', $cle) && !preg_match('/^[A-Z_]+$/', $x)) { return evMasque($x); }
+        // Un code ou un jeton se masque ; une PHRASE (message d'erreur rangé sous `shared_code`, 2e passage) reste lisible.
+        if (preg_match('/(^|_)code$|shared_code|token|request_key/i', $cle) && !preg_match('/^[A-Z_]+$/', $x) && !str_contains($x, ' ')) { return evMasque($x); }
         if (preg_match('/mail|phone/i', $cle)) { return '<masqué>'; }
         return mb_substr($x, 0, 120);
     }
@@ -233,8 +234,13 @@ try {
     // Ordre imposé par l'ERP (1er passage) : une campagne UNIQUE ne passe ACTIVE qu'avec un code déjà actif.
     if ($codeId !== null) { evEcrire('PATCH', "/admin/voucher-codes/$codeId/status", ['status' => 'ACTIVE']); }
     evEcrire('PATCH', "/admin/promotions/scheduled-product-discount/$promoId", ['status' => 'ACTIVE'] + $promoCorps);
-    evEcrire('PATCH', "/admin/voucher-campaigns/$campId/status", ['status' => 'ACTIVE']);
+    $a = evEcrire('PATCH', "/admin/voucher-campaigns/$campId/status", ['status' => 'ACTIVE']);
+    if ($a['code'] >= 300) {
+        // 2e passage : refus sous `shared_code`. Seconde voie : la fiche complète, code_type UNIQUE et shared_code vide.
+        evEcrire('PATCH', "/admin/voucher-campaigns/$campId", ['status' => 'ACTIVE', 'code_type' => 'UNIQUE', 'shared_code' => null]);
+    }
     $f = ErpApi::sondeGet("/admin/voucher-campaigns/$campId")['corps'];
+    echo '  shared_code de la fiche : ', json_encode(isset($f['shared_code']) ? evMasque((string) $f['shared_code']) : null), "\n";
     echo '  après activation : configuration_complete=', json_encode($f['configuration_complete'] ?? null),
          ' missing_requirements=', json_encode($f['missing_requirements'] ?? null), ' · fiche : ', mb_substr(evJson($f), 0, 900), "\n";
     $act = evLire('/shops/' . ESSAI_SHOP . '/scheduled-product-discounts/active');
