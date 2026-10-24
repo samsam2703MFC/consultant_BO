@@ -43,7 +43,7 @@
 .vi .sp{flex:1}
 .vi .feu{width:12px;height:12px;border-radius:50%;flex:0 0 auto;display:inline-block}
 .vi .feu.vert{background:#2d7a3e}.vi .feu.orange{background:#E0A526}.vi .feu.rouge{background:#C0182B}
-.vi .pill{display:inline-flex;align-items:center;gap:4px;font:700 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap;background:var(--color-background-secondary);color:var(--color-text)}
+.vi .pill{display:inline-flex;align-items:center;gap:4px;font:700 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:8px;white-space:nowrap;background:var(--color-background-secondary);color:var(--color-text)}
 .vi .api{background:#E6F2E9;color:#2d7a3e}.vi .loc{background:#F7E4E6;color:#C0182B}.vi .mix{background:#FBEFE0;color:#B26A00}
 .vi .P0{background:#C0182B;color:#fff}.vi .P1{background:#E0A526;color:#3a2a00}.vi .P2{background:var(--color-background-secondary);color:var(--color-text)}
 .vi .st-ouv{background:#FBEFE0;color:#B26A00}.vi .st-att{background:#FFF6D6;color:#7a5a00}.vi .st-val{background:#E6F2E9;color:#2d7a3e}.vi .st-rep{background:#EEE6FA;color:#5b3d9e}.vi .st-fer{background:var(--color-background-secondary);color:var(--color-text-muted)}.vi .st-esc{background:#C0182B;color:#fff}
@@ -60,7 +60,7 @@
 .vi .bas button i{display:block;font-style:normal;font-size:17px;opacity:.55;margin-bottom:2px}
 .vi .bas button.on{color:var(--color-primary)}.vi .bas button.on i{opacity:1}
 .vi .onglets{display:flex;gap:6px;margin:0 0 14px;flex-wrap:wrap}
-.vi .onglets button{font:600 12px var(--font-ui);padding:7px 12px;border-radius:999px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer}
+.vi .onglets button{font:600 12px var(--font-ui);padding:7px 12px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer}
 .vi .onglets button.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
 .vi .jour{display:grid;grid-template-columns:54px 1fr;gap:10px;padding:10px 0;border-bottom:.5px solid var(--color-border-tertiary)}
 .vi .jour .j{font-size:11px;color:var(--color-text-muted);line-height:1.3}.vi .jour .j b{display:block;font-size:14px;color:var(--color-text)}
@@ -91,10 +91,10 @@
 .vi .notes button{width:24px;height:24px;border-radius:6px;background:var(--color-background-secondary);border:none;display:inline-flex;align-items:center;justify-content:center;font:600 11px var(--font-ui);color:var(--color-text-muted);cursor:pointer;padding:0}
 .vi .notes button.on{background:var(--color-text);color:#fff}.vi .notes button.bad{background:#C0182B;color:#fff}
 .vi .act{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
-.vi .chip{font:600 11px var(--font-ui);padding:5px 9px;border-radius:999px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer}
+.vi .chip{font:600 11px var(--font-ui);padding:5px 9px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer}
 .vi .chip.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
 .vi .chip.ko{border-color:#C0182B;color:#C0182B}
-.vi .bar{height:6px;border-radius:999px;background:var(--color-background-secondary);overflow:hidden;margin-top:4px}
+.vi .bar{height:6px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden;margin-top:4px}
 .vi .bar i{display:block;height:100%;background:var(--color-primary)}
 .vi .spark{display:flex;align-items:flex-end;gap:4px;height:44px;margin-top:6px}
 .vi .spark i{flex:1;background:#d8cfc3;border-radius:3px 3px 0 0;min-height:2px}
@@ -136,7 +136,7 @@
 .vi .et-c .card{background:var(--color-bg)}
 /* Objectif de campagne : trois chiffres, la trajectoire, le CA. Toi en couleur,
    le N-1 en gris, l'objectif en trait. */
-.vi .pc-lien{display:inline-flex;align-items:center;gap:6px;font:600 10.5px var(--font-ui);color:var(--color-primary);background:#fdf4f5;border-radius:999px;padding:3px 9px;margin-top:8px}
+.vi .pc-lien{display:inline-flex;align-items:center;gap:6px;font:600 10.5px var(--font-ui);color:var(--color-primary);background:#fdf4f5;border-radius:8px;padding:3px 9px;margin-top:8px}
 .vi .pc-lien.mu{color:var(--color-text-muted);background:var(--color-background-secondary)}
 .vi .pc-g{display:block;width:100%;height:auto;margin-top:8px}
 .vi .pc-g text{font-family:var(--font-ui);font-size:9px;fill:var(--color-text-muted);paint-order:stroke;stroke:var(--color-surface);stroke-width:3px;stroke-linejoin:round}
@@ -169,7 +169,7 @@
 .vi .db-cqc .m{font-size:10px}.vi .db-cqc .c{font-size:10px;white-space:normal;line-height:1.25}
 .vi .cq-ouvrir{display:flex;flex-direction:column;width:100%;border:none;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
 .vi .cq-acts{display:flex;align-items:center;gap:6px;margin-top:auto;padding-top:7px}
-.vi .cq-rapide{min-width:34px;height:30px;border-radius:999px;border:1.5px solid var(--c,#2d7a3e);background:transparent;color:var(--c,#2d7a3e);font:700 13px var(--font-ui);padding:0 10px;cursor:pointer}
+.vi .cq-rapide{min-width:34px;height:30px;border-radius:8px;border:1.5px solid var(--c,#2d7a3e);background:transparent;color:var(--c,#2d7a3e);font:700 13px var(--font-ui);padding:0 10px;cursor:pointer}
 .vi .cq-rapide.lg{flex:1;height:40px;font-size:13px}
 .vi .cq-pied{font-size:10.5px;color:var(--color-text-muted);margin:8px 0 2px}
 .vi .cq-l{position:fixed;inset:0;background:#0d0b09;z-index:21;display:flex;flex-direction:column;color:#fff}
@@ -181,6 +181,110 @@
 .vi .cq-l .fi .t{display:block;font-family:var(--font-display);font-size:18px;font-weight:400;margin:6px 0 2px}
 .vi .cq-l .fi .q{font-size:11.5px;color:var(--color-text-muted);line-height:1.4}
 .vi .cq-l .fi .cq-acts{margin-top:10px;padding-top:0}.vi .cq-l .fi .act{margin-top:10px}.vi .cq-l .fi .act .btn{flex:1}
+.vi .meteo{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.vi .meteo button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;border-radius:12px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);cursor:pointer;font:600 12px var(--font-ui);color:var(--color-text);text-align:center;line-height:1.2}
+.vi .meteo button .i{font-size:28px;line-height:1.1}
+.vi .meteo button small{font:500 10.5px var(--font-ui);color:var(--color-text-muted)}
+.vi .meteo button.on{border:1.5px solid var(--color-primary);background:#F7E4E6;color:var(--color-primary)}
+.vi.mob .meteo button small{display:none}
+.vi.tab .meteo button{min-height:104px;padding:14px 6px}
+.vi.tab .meteo button .i{font-size:36px}
+/* ── Tablette (12/10/2026) : la liste des boutiques ou l'agenda, puis le contrôle étape par étape,
+   les étapes en barre de menu en bas. Écran plein, cibles tactiles de 44 px au moins. */
+.vi.tab{min-height:100vh;font-size:15px}
+.vi.tab .sc{padding:0;max-width:none}
+.vi.tab .tb-top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;min-height:66px;padding:8px 24px;background:var(--color-surface);border-bottom:.5px solid var(--color-border-tertiary)}
+.vi.tab .tb-top img{height:24px}
+.vi.tab .tb-top .sep{width:1px;height:28px;background:var(--color-border-secondary)}
+.vi.tab .tb-top .t{font-family:var(--font-display);font-size:21px;line-height:1.05}
+.vi.tab .tb-top .d{font-size:11.5px;color:var(--color-text-muted);margin-top:3px}
+.vi.tab .tb-ret{height:44px;padding:0 14px;border-radius:12px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);font:600 13px var(--font-ui);color:var(--color-text);cursor:pointer;white-space:nowrap}
+.vi.tab .tb-ch{display:inline-flex;align-items:center;gap:6px;font:600 11.5px var(--font-ui);padding:7px 11px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text);white-space:nowrap;border:none}
+.vi.tab .tb-ch i{width:7px;height:7px;border-radius:50%;background:#2d7a3e;display:inline-block}
+.vi.tab .tb-ch.off i{background:#C0182B}
+.vi.tab .tb-av{width:38px;height:38px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font:700 12px var(--font-ui);border:none;cursor:pointer;flex:0 0 auto}
+.vi.tab .tb-pr{text-align:right;font:700 13px var(--font-ui)}
+.vi.tab .tb-pr .bar{width:120px;margin-top:5px}
+.vi.tab .tb-main{padding:20px 24px 28px;max-width:1240px;margin:0 auto}
+.vi.tab .tb-h{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.vi.tab .tb-h h1{font-family:var(--font-display);font-size:30px;line-height:1.05;margin:6px 0 0;font-weight:400}
+.vi.tab .tb-tog{display:inline-flex;padding:4px;border-radius:14px;background:var(--color-background-secondary);gap:4px}
+.vi.tab .tb-tog button{height:42px;padding:0 18px;border-radius:10px;border:none;background:none;font:600 14px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
+.vi.tab .tb-tog button.on{background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 4px rgba(34,34,34,.12)}
+.vi.tab .tb-shops{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.vi.tab .tb-shop{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:18px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:12px}
+.vi.tab .tb-shop.cours{border-color:var(--color-primary);box-shadow:0 0 0 1.5px var(--color-primary) inset}
+.vi.tab .tb-shop .n{display:flex;align-items:center;gap:10px}
+.vi.tab .tb-shop .n b{font-family:var(--font-display);font-size:24px;font-weight:400;line-height:1}
+.vi.tab .tb-quand{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--color-background-secondary)}
+.vi.tab .tb-quand .cal{width:52px;flex:0 0 auto;text-align:center;border-radius:10px;background:var(--color-surface);overflow:hidden;border:.5px solid var(--color-border-tertiary)}
+.vi.tab .tb-quand .cal i{display:block;font:700 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;background:var(--color-primary);color:#fff;padding:3px 0;font-style:normal}
+.vi.tab .tb-quand .cal b{display:block;font:700 20px var(--font-ui);padding:3px 0 4px}
+.vi.tab .tb-quand .cal.vide i{background:var(--color-text-muted)}
+.vi.tab .tb-quand .l{font:700 14px var(--font-ui)}
+.vi.tab .tb-quand .m{font-size:12px;color:var(--color-text-muted);margin-top:2px}
+.vi.tab .tb-meta{display:flex;gap:6px;flex-wrap:wrap}
+.vi.tab .tb-meta span{font:600 11.5px var(--font-ui);padding:5px 9px;border-radius:8px;background:var(--color-background-secondary)}
+.vi.tab .tb-meta span.ko{background:#F7E4E6;color:#C0182B}
+.vi.tab .tb-act{display:flex;gap:8px;margin-top:auto}
+.vi.tab .tb-b{height:50px;padding:0 18px;border-radius:13px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);font:600 14.5px var(--font-ui);color:var(--color-text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.vi.tab .tb-b.p{background:var(--color-primary);border-color:var(--color-primary);color:#fff;flex:1}
+.vi.tab .tb-b:disabled{opacity:.45;cursor:default}
+.vi.tab .tb-cal{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:18px;overflow:hidden}
+.vi.tab .tb-cal .g{display:grid;grid-template-columns:repeat(7,1fr)}
+.vi.tab .tb-cal .wd{font:600 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted);padding:10px 10px 8px;border-bottom:.5px solid var(--color-border-tertiary)}
+.vi.tab .tb-cal .j{min-height:104px;padding:8px;border-right:.5px solid var(--color-border-tertiary);border-bottom:.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;gap:4px}
+.vi.tab .tb-cal .j:nth-child(7n){border-right:none}
+.vi.tab .tb-cal .j .d{font:700 13px var(--font-ui);color:var(--color-text);margin-bottom:2px}
+.vi.tab .tb-cal .j.hors{background:var(--color-bg);opacity:.55}
+.vi.tab .tb-cal .j.auj .d{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--color-primary);color:#fff}
+.vi.tab .tb-cal .j.we{background:#fbf9f6}
+.vi.tab .tb-cal .v{display:block;width:100%;text-align:left;border:none;border-radius:8px;padding:6px 7px;font:600 11.5px var(--font-ui);line-height:1.2;cursor:pointer;background:var(--color-background-secondary);color:var(--color-text)}
+.vi.tab .tb-cal .v small{display:block;font:500 10.5px var(--font-ui);color:var(--color-text-muted)}
+.vi.tab .tb-cal .v.en_cours{background:var(--color-primary);color:#fff}.vi.tab .tb-cal .v.en_cours small{color:rgba(255,255,255,.8)}
+.vi.tab .tb-cal .v.terminee{background:#E6F2E9;color:#2d7a3e}
+.vi.tab .tb-cal .v.confirmee{background:#FBEFE0;color:#7a4a00}
+.vi.tab .tb-nav{display:flex;gap:10px;margin-top:18px}
+.vi.tab .tb-nav .tb-b{flex:0 0 auto}
+.vi.tab .tb-nav .tb-b.p{flex:1}
+.vi.tab .tb-ctl{padding-bottom:132px}
+.vi.tab .tb-pills{display:flex;gap:6px;flex-wrap:wrap}
+.vi.tab .tb-pills span{font:700 10.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted)}
+.vi.tab .tb-pills span.ok{background:#E6F2E9;color:#2d7a3e}.vi.tab .tb-pills span.ko{background:#F7E4E6;color:#C0182B}
+.vi.tab .tb-bar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:grid;gap:2px;background:var(--color-surface);border-top:.5px solid var(--color-border-tertiary);box-shadow:0 -6px 18px rgba(34,34,34,.06);padding:8px 8px max(14px,env(safe-area-inset-bottom))}
+.vi.tab .tb-bar button{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 1px 2px;border:none;background:none;cursor:pointer;font:600 10.5px var(--font-ui);color:var(--color-text-muted);text-align:center;line-height:1.15;min-width:0}
+.vi.tab .tb-bar .ic{position:relative;width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:var(--color-background-secondary)}
+.vi.tab .tb-bar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.vi.tab .tb-bar .lb{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.vi.tab .tb-bar .es{font:600 9.5px var(--font-ui);color:var(--color-text-muted);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.vi.tab .tb-bar button.fait{color:var(--color-text)}
+.vi.tab .tb-bar button.fait .ic{background:#E6F2E9;color:#2d7a3e}
+.vi.tab .tb-bar button.on{color:var(--color-primary)}
+.vi.tab .tb-bar button.on .ic{background:var(--color-primary);color:#fff;box-shadow:0 4px 12px rgba(141,29,44,.3)}
+.vi.tab .tb-bar button.on::after{content:'';position:absolute;top:-8px;left:24%;right:24%;height:3px;border-radius:0 0 3px 3px;background:var(--color-primary)}
+.vi.tab .tb-bar button.on .es{color:var(--color-primary)}
+.vi.tab .tb-bar .ok{position:absolute;right:-5px;bottom:-5px;width:17px;height:17px;border-radius:50%;background:#2d7a3e;color:#fff;font:700 10px/17px var(--font-ui);text-align:center;border:2px solid #fff}
+.vi.tab .tb-bar .ko{position:absolute;right:-6px;top:-6px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#C0182B;color:#fff;font:700 10px/18px var(--font-ui);text-align:center;border:2px solid #fff}
+.vi.tab .tb-step .mod{margin:0}
+.vi.tab .tb-step .card{border-radius:16px}
+.vi.tab .pt.t{padding:14px 16px;border-radius:16px;margin-bottom:10px}
+.vi.tab .pt.t .l1{gap:14px}
+.vi.tab .pt.t .l1 b{font-size:15px !important;line-height:1.3}
+.vi.tab .pt.t.ko{background:linear-gradient(90deg,rgba(192,24,43,.05),var(--color-surface) 60%)}
+.vi.tab .pt.t .act{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.vi.tab .pt.t .act .chip{min-height:38px;padding:0 12px;font-size:12.5px}
+.vi.tab .pt.t .act input[type=text]{min-height:40px;font-size:13.5px !important;border-radius:10px}
+.vi.tab .pt.t input[type=number]{height:44px;width:84px !important;font-size:15px}
+.vi.tab .tri{display:inline-flex;border-radius:12px;overflow:hidden;border:.5px solid var(--color-border-secondary);flex:0 0 auto}
+.vi.tab .tri button{width:68px;height:46px;border:none;border-left:.5px solid var(--color-border-secondary);background:var(--color-surface);font:700 13px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
+.vi.tab .tri button:first-child{border-left:none}
+.vi.tab .tri button.ok{background:#2d7a3e;color:#fff}.vi.tab .tri button.ko{background:#C0182B;color:#fff}.vi.tab .tri button.na{background:var(--color-text-muted);color:#fff}
+.vi.tab .tb-step > .cap:first-child{display:none}
+.vi.tab .tb-step .phs{gap:12px}
+.vi.tab .tb-step .phs .ph{height:210px;border-radius:14px;font-size:15px}
+.vi.tab .tb-vide{padding:30px;text-align:center;color:var(--color-text-muted);font-size:14px}
+@media (orientation:portrait){.vi.tab .tb-shops{grid-template-columns:1fr 1fr}.vi.tab .tb-cal .j{min-height:92px}}
+@media (max-width:700px){.vi.tab .tb-shops{grid-template-columns:1fr}.vi.tab .tb-bar .lb,.vi.tab .tb-bar .es{display:none}}
 `;
 
   /* --- IndexedDB : une réserve de lectures, une file d'écritures --------- */
@@ -258,6 +362,25 @@
   const cqCl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '');
   const hm = v => v ? String(v).slice(11, 16) : '';
   const pcLeg = avecObj => '<div class="pc-leg"><span><i class="r"></i>cette année</span><span><i class="n"></i>N-1, mêmes jours</span>' + (avecObj ? '<span><i class="o"></i>objectif</span>' : '') + '</div>';
+  const TAB_IC = {
+    photo: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+    controles: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
+    chiffres: '<path d="M5 20V11M11 20V5M17 20v-8M2 20h20"/>',
+    produit: '<path d="M3 15c2.5-7 15.5-7 18 0"/><path d="M3 15h18"/><path d="M8 10.5l1.2 4.5M12 9.5v5.5M16 10.5l-1.2 4.5"/>',
+    hygiene: '<path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/>',
+    visuel: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    planogramme: '<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/>',
+    assortiment: '<path d="M10 6h10M10 12h10M10 18h10"/><path d="M3 6l1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/>',
+    msp: '<circle cx="12" cy="10" r="3.5"/><path d="M5 20c1-4 4-6 7-6s6 2 7 6"/><path d="M5 6.5h14M8 6.5l1-3h6l1 3"/>',
+    constat: '<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>',
+    plan: '<path d="M5 21V4h12l-2.5 4L17 12H5"/>',
+    suivi: '<path d="M5 21V4h12l-2.5 4L17 12H5"/>',
+    liste: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  };
+  // La météo du franchisé, notée en fin de contrôle (12/10/2026).
+  const METEO = [[5, '☀️', 'Grand soleil', 'motivé, moteur'], [4, '🌤️', 'Éclaircies', 'plutôt confiant'], [3, '⛅', 'Nuageux', 'mitigé'], [2, '🌧️', 'Pluie', 'découragé'], [1, '⛈️', 'Orage', 'tendu, en conflit']];
+  const meteoDe = n => METEO.find(m => m[0] === Number(n)) || null;
+  const MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const jours = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
   const lundiDe = (iso, dec) => { const d = new Date(iso + 'T12:00:00'); const j = (d.getDay() + 6) % 7; d.setDate(d.getDate() - j + 7 * (dec || 0)); return d.toISOString().slice(0, 10); };
 
@@ -295,17 +418,18 @@
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
       this.D = null; this.B = {}; this.C = {}; this.K = {}; this.T = {}; this.cqF = {}; this.cqV = null; this.S = null; this.R = null;
-      this.v = o.vue || (this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
+      this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
+      this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
       this.toast = null; this.voir = null; this.ouvert = {};
       if (!document.getElementById('vi-css')) { const st = document.createElement('style'); st.id = 'vi-css'; st.textContent = CSS; document.head.appendChild(st); }
-      host.innerHTML = '<div class="vi ' + (o.mobile ? 'mob' : 'desk') + '"><div class="sc"><div class="mu sm" style="padding:20px 0">Lecture…</div></div></div>';
+      host.innerHTML = '<div class="vi ' + (o.tablette ? 'tab' : o.mobile ? 'mob' : 'desk') + '"><div class="sc"><div class="mu sm" style="padding:20px 0">Lecture…</div></div></div>';
       host.addEventListener('click', e => this.clic(e));
       host.addEventListener('input', e => this.saisie(e));
       host.addEventListener('change', e => this.change(e));
       window.addEventListener('online', () => { this.enLigne = true; this.rejouer(); this.rendre(); });
       window.addEventListener('offline', () => { this.enLigne = false; this.rendre(); });
-      if (o.mobile) { window.addEventListener('hashchange', () => this.deHash()); this.deHash(true); }
+      if (o.mobile || o.tablette) { window.addEventListener('hashchange', () => this.deHash()); this.deHash(true); }
       this.demarrer();
     }
 
@@ -469,8 +593,10 @@
 
     /* --- navigation --------------------------------------------------------- */
     go(v, p) {
+      // Sur la tablette, l'agenda et la liste des boutiques ne font qu'un écran : l'accueil.
+      if (this.o.tablette && (v === 'agenda' || v === 'portfolio')) { v = 'shops'; p = null; }
       this.v = v; this.p = p == null ? null : p; this.form = {};
-      if (this.o.mobile) { const h = '#' + v + (p != null ? '/' + p : ''); if (location.hash !== h) { history.pushState(null, '', h); } }
+      if (this.o.mobile || this.o.tablette) { const h = '#' + v + (p != null ? '/' + p : ''); if (location.hash !== h) { history.pushState(null, '', h); } }
       window.scrollTo(0, 0);
       this.rendre();
       if (v === 'tb' || v === 'historique') { this.chargerBoutique(p); }
@@ -583,7 +709,7 @@
       } catch (e) { this.T[shop] = Object.assign({}, T, { enCours: false, erreur: true, lu: Date.now() - 14 * 60 * 1000 }); this.rendre(); return; }
       const sh = ((pt && pt.shops) || []).find(x => String(x.shopId) === String(shop));
       const photos = {}; ((ph && ph.photos) || []).forEach(p => { if (/^https:\/\//.test(String(p.photo || ''))) { photos[String(p.taskId)] = p; } });
-      const taches = ((sh && sh.taches) || []).filter(t => !(t.maitrise && t.maitrise.masquee)).map(t => {
+      const taches = ((sh && sh.taches) || []).map(t => {
         const p = photos[String(t.taskId)] || null;
         return Object.assign({}, t, { photoUrl: p ? p.photo : null, reperes: p && Array.isArray(p.reperes) ? p.reperes : [], checklistId: p ? p.checklistId : null, completionId: p ? p.completionId : null });
       });
@@ -703,15 +829,16 @@
       if (!this.D) { return; }
       // Le cockpit fusionne son DOM à chaque rendu et peut vider le div hôte : on le repeuple.
       let vi = this.host.querySelector('.vi');
-      if (!vi) { this.host.innerHTML = '<div class="vi ' + (this.o.mobile ? 'mob' : 'desk') + '"></div>'; vi = this.host.querySelector('.vi'); }
+      if (!vi) { this.host.innerHTML = '<div class="vi ' + (this.o.tablette ? 'tab' : this.o.mobile ? 'mob' : 'desk') + '"></div>'; vi = this.host.querySelector('.vi'); }
       const actif = document.activeElement; const focus = actif && this.host.contains(actif) && actif.dataset && actif.dataset.f ? { f: actif.dataset.f, pos: actif.selectionStart } : null;
       const V = this['v_' + this.v] ? this['v_' + this.v]() : this.v_agenda();
       const onglets = this.onglets();
       // Les bandes de photos gardent leur défilement d'un rendu à l'autre.
       const pistes = [...vi.querySelectorAll('.db-cqpiste')].map(e => e.scrollLeft);
-      vi.innerHTML = (this.o.mobile || this.o.sansOnglets ? '' : `<div class="onglets">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}">${t[2]}</button>`).join('')}</div>`)
-        + `<div class="sc">${this.etat()}${V}</div>`
-        + (this.o.mobile && !this.o.sansOnglets ? `<div class="bas" style="grid-template-columns:repeat(${onglets.length},1fr)">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}"><i>${t[1]}</i>${t[2]}</button>`).join('')}</div>` : '')
+      const tab = !!this.o.tablette;
+      vi.innerHTML = (tab ? this.tabCadre(V) : this.o.mobile || this.o.sansOnglets ? '' : `<div class="onglets">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}">${t[2]}</button>`).join('')}</div>`)
+        + (tab ? '' : `<div class="sc">${this.etat()}${V}</div>`)
+        + (this.o.mobile && !this.o.sansOnglets && !tab ? `<div class="bas" style="grid-template-columns:repeat(${onglets.length},1fr)">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}"><i>${t[1]}</i>${t[2]}</button>`).join('')}</div>` : '')
         + (this.toast ? `<div class="toast">${esc(this.toast)}</div>` : '')
         + (this.voir ? `<div class="voir" data-a="fermer-voir"><img src="${esc(this.voir.src)}" alt=""><div class="txt">${esc(this.voir.txt)}</div></div>` : '')
         + (this.cqV ? this.cqLoupe() : '');
@@ -910,6 +1037,13 @@
             cnt.total++; const p = pts[pt.ref] || {}; if (p.etat || p.note != null || p.valeur != null) { cnt.faits++; }
             const phs = photos.filter(x => x.ref === pt.ref);
             const k = `${esc(v.id)}|${esc(pt.ref)}|${m.id}`;
+            if (this.o.tablette) {
+              const tri = [['ok', 'OK'], ['ko', 'Écart'], ['na', 'N/A']].map(([e, l]) => `<button data-a="etat-set" data-v="${k}|${e}" class="${p.etat === e ? e : ''}">${l}</button>`).join('');
+              return `<div class="pt t ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1"><b style="flex:1">${esc(pt.libelle)}</b>${pt.pct ? `<input type="number" data-f="pct|${k}" value="${p.valeur != null ? p.valeur : ''}" placeholder="%">` : ''}<span class="tri">${tri}</span></div>
+              <div class="act">${pt.photo || phs.length ? `<button class="chip" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' photo' + (phs.length > 1 ? 's' : '') : 'Photo'}</button>` : ''}${phs.map(x => `<button class="chip" data-a="voir" data-v="${esc(x.client_id || x.id)}">${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</button>`).join('')}
+              ${pt.pct ? Object.keys(causes).map(c => `<button class="chip ${(p.causes || []).includes(c) ? 'on' : ''}" data-a="cause" data-v="${k}|${c}">${esc(causes[c])}</button>`).join('') : ''}
+              <input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="Remarque…" style="flex:1;min-width:180px;padding:6px 10px"></div></div>`;
+            }
             return `<div class="pt ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1"><button class="cb ${p.etat || ''}" data-a="etat" data-v="${k}">${p.etat === 'ok' ? '✓' : p.etat === 'ko' ? '!' : p.etat === 'na' ? '–' : ''}</button><b class="sm" style="flex:1">${esc(pt.libelle)}</b>${pt.pct ? `<input type="number" data-f="pct|${k}" value="${p.valeur != null ? p.valeur : ''}" placeholder="%" style="width:64px;padding:5px 7px">` : `<span class="notes">${[1, 2, 3, 4, 5].map(n => `<button data-a="note" data-v="${k}|${n}" class="${p.note === n ? (n <= 2 ? 'bad' : 'on') : ''}">${n}</button>`).join('')}</span>`}</div>
               <div class="act">${pt.photo || phs.length ? `<button class="chip" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' photo' + (phs.length > 1 ? 's' : '') : 'Photo'}</button>` : ''}${phs.map(x => `<button class="chip" data-a="voir" data-v="${esc(x.client_id || x.id)}">${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</button>`).join('')}
               ${pt.pct ? Object.keys(causes).map(c => `<button class="chip ${(p.causes || []).includes(c) ? 'on' : ''}" data-a="cause" data-v="${k}|${c}">${esc(causes[c])}</button>`).join('') : ''}
@@ -946,7 +1080,11 @@
       const f = this.form;
       if (f.pa) { return; }
       f.pa = finie ? [] : (ecarts || this.ecartsDe(v)).map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true }));
-      f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || '';
+      f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.meteo = v.meteo || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || '';
+    }
+    /** La météo du franchisé, en fin de contrôle : cinq temps, un toucher. */
+    meteoHtml(f) {
+      return `<div class="cap">Météo du franchisé</div><div class="card"><div class="meteo">${METEO.map(([n, ic, l, aide]) => `<button data-a="form" data-v="meteo|${n}" class="${f.meteo === n ? 'on' : ''}"><span class="i">${ic}</span><b>${esc(l)}</b><small>${esc(aide)}</small></button>`).join('')}</div></div>`;
     }
     /** Le plan d'action en cours de rédaction. */
     planFormHtml(v, f) {
@@ -998,25 +1136,125 @@
       const pj = this.photosJour(v.shop).filter(x => String(x.prise_a).slice(0, 10) === t).length;
       const B = this.B[v.shop];
       const etapes = [];
-      etapes.push({ titre: 'Photo du jour', etat: pj ? pj + ' / 3' : 'à prendre', fait: pj >= 3, html: () => this.photosJourHtml(v.shop, v) });
+      etapes.push({ ic: 'photo', court: 'Photo du jour', titre: 'Photo du jour', etat: pj ? pj + ' / 3' : 'à prendre', fait: pj >= 3, html: () => this.photosJourHtml(v.shop, v) });
       // Ce que l'équipe a rendu aujourd'hui : la bande du dashboard, la note
       // rapide sous chaque photo. Faite quand plus rien n'attend une note.
       const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
-      etapes.push({ titre: 'Les contrôles en photo', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
+      etapes.push({ ic: 'controles', court: 'Contrôles photo', titre: 'Les contrôles en photo', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
         fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) });
-      etapes.push({ titre: 'Les chiffres et les alertes', etat: 'à lire', fait: !!this.ouvert['lu:' + v.id], html: () => this.kpis(b) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
-      this.checklistDe(v).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
+      etapes.push({ ic: 'chiffres', court: 'Chiffres', chiffres: true, titre: 'Les chiffres et les alertes', etat: 'à lire', fait: !!this.ouvert['lu:' + v.id], html: () => this.kpis(b) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
+      this.checklistDe(v).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ ic: m.id, court: m.nom, module: true, ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
       const revueFaite = !!(f.reco && (f.execution || f.clients || (f.causes || []).length));
-      etapes.push({ titre: 'Vu sur place et recommandation', etat: revueFaite ? 'rédigée' : f.reco || f.execution ? 'en cours' : 'à écrire', fait: revueFaite, revue: true, html: () => this.reviewFormHtml(v, b, f) });
-      etapes.push({ titre: 'Plan d’action et fin de visite', etat: (f.pa || []).length + ' action' + ((f.pa || []).length > 1 ? 's' : ''), fait: false, html: () => this.planFormHtml(v, f) + `<div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>` });
+      etapes.push({ ic: 'constat', court: 'Constat', titre: 'Vu sur place et recommandation', etat: revueFaite ? 'rédigée' : f.reco || f.execution ? 'en cours' : 'à écrire', fait: revueFaite, revue: true, html: () => this.reviewFormHtml(v, b, f) });
+      etapes.push({ ic: 'plan', court: 'Plan d’action', titre: 'Plan d’action et fin de visite', etat: (f.pa || []).length + ' action' + ((f.pa || []).length > 1 ? 's' : '') + (meteoDe(f.meteo) ? ' · ' + meteoDe(f.meteo)[1] : ''), fait: false, html: () => this.planFormHtml(v, f) + this.meteoHtml(f) + `<div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · notifier le franchisé</button></div>` });
       const cle = 'et:' + v.id;
       let cur = this.ouvert[cle]; if (cur == null) { cur = etapes.findIndex(e => !e.fait); if (cur < 0) { cur = etapes.length - 1; } }
       cur = Math.max(0, Math.min(etapes.length - 1, cur));
-      this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), visite: v.id, cur };
+      this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), chiffres: etapes.findIndex(e => e.chiffres), visite: v.id, cur };
       const faits = etapes.filter(e => e.fait).length;
+      if (this.o.tablette) { return this.tabControle(v, b, etapes, cur, faits); }
       return this.hd('Contrôle — ' + b.court, fmtDJ(v.prevu_le) + (v.commence_a ? ' · depuis ' + fmtH(v.commence_a) : '') + ' · ' + esc(v.consultantNom || ''), 'fiche/' + v.id, `<span class="pill">${cur + 1} / ${etapes.length}</span>`)
         + `<div class="bar" style="margin:2px 0 12px"><i style="width:${Math.round(faits / etapes.length * 100)}%"></i></div>`
         + etapes.map((e, i) => `<div class="et ${i === cur ? 'on' : ''} ${e.fait ? 'ok' : ''}" id="et-${i}"><div class="et-h" data-a="etape" data-v="${i}"><span class="num">${e.fait ? '✓' : i + 1}</span><b>${esc(e.titre)}</b><span class="sp"></span><span class="xs mu">${esc(e.etat)}</span></div>${i === cur ? `<div class="et-c">${e.html()}${i < etapes.length - 1 ? `<div class="btns"><button class="btn p w" data-a="etape" data-v="${i + 1}">Suivant ›</button><button class="btn" data-a="etape" data-v="${i - 1}" ${i === 0 ? 'disabled' : ''}>‹</button></div>` : ''}</div>` : ''}</div>`).join('');
+    }
+    /* --- la tablette (12/10/2026) --------------------------------------------------------------
+     * L'accueil n'a pas de barre : la liste des boutiques avec leur date de contrôle, ou l'agenda en
+     * calendrier (bascule en haut). Une boutique ouvre le contrôle : une étape à l'écran, toutes les
+     * étapes dans la barre du bas. Les autres écrans (fiche, planifier, réglages…) gardent leur
+     * rendu, sous l'en-tête de la tablette. */
+    tabCadre(V) {
+      if (V.startsWith('<div class="tb-top"')) { return V; }
+      return this.tabTop({ titre: 'Contrôles franchisés', retour: true }) + `<div class="tb-main">${V}</div>`;
+    }
+    tabTop(o) {
+      const n = this.file.length;
+      const ini = this.role === 'consultant' && this.moi ? (this.consultantNom(this.moi) || '?').split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase() : 'C';
+      return `<div class="tb-top">${o.retour ? '<button class="tb-ret" data-a="go" data-v="shops">‹ Contrôles</button>' : `<img src="${esc((this.o.racine || '') + 'assets/img/logo.png')}" alt="L’Atelier by">`}<span class="sep"></span>`
+        + `<div style="min-width:0"><div class="t">${esc(o.titre)}</div>${o.sous ? `<div class="d">${o.sous}</div>` : ''}</div><span style="flex:1"></span>${o.droite || ''}`
+        + `<button class="tb-ch ${this.enLigne ? '' : 'off'}" data-a="sync"><i></i>${this.enLigne ? 'en ligne' : 'hors ligne'}${n ? ' · ' + n + ' à envoyer' : ''}</button>`
+        + `<button class="tb-av" data-a="go" data-v="reglages" title="Réglages">${esc(ini)}</button></div>`;
+    }
+    /** La visite qui compte pour une boutique : celle en cours, sinon la prochaine planifiée. */
+    tabVisites(shop, vs) {
+      const t = auj();
+      const ici = vs.filter(v => String(v.shop) === String(shop));
+      const cours = ici.find(v => v.statut === 'en_cours') || null;
+      const proch = ici.filter(v => (v.statut === 'planifiee' || v.statut === 'confirmee') && v.prevu_le >= t).sort((a, c) => (a.prevu_le + a.debut_h) < (c.prevu_le + c.debut_h) ? -1 : 1)[0] || null;
+      const der = ici.filter(v => v.statut === 'terminee').sort((a, c) => a.prevu_le < c.prevu_le ? 1 : -1)[0] || null;
+      return { cours, proch, der };
+    }
+    v_shops() {
+      const D = this.D; const t = auj();
+      const vs = this.mesVisites().filter(v => v.statut !== 'annulee');
+      const enCours = vs.filter(v => v.statut === 'en_cours').length;
+      const sem = vs.filter(v => v.prevu_le >= t && v.prevu_le <= plusJours(t, 6) && (v.statut === 'planifiee' || v.statut === 'confirmee')).length;
+      const qui = this.role === 'consultant' && this.moi ? this.consultantNom(this.moi) : 'tous les consultants';
+      const ag = this.tabVue === 'agenda';
+      const tog = `<span class="tb-tog"><button data-a="tab-vue" data-v="liste" class="${ag ? '' : 'on'}">Boutiques</button><button data-a="tab-vue" data-v="agenda" class="${ag ? 'on' : ''}">Agenda</button></span>`;
+      return this.tabTop({ titre: 'Contrôles franchisés', sous: esc(fmtDJ(t) + ' · ' + qui) })
+        + `<div class="tb-main"><div class="tb-h"><div><div class="cap" style="margin:0">${(D.boutiques || []).length} boutiques${enCours ? ' · ' + enCours + ' en cours' : ''}${sem ? ' · ' + sem + ' cette semaine' : ''}</div><h1>${ag ? 'Agenda des contrôles' : 'Les boutiques'}</h1></div><span style="flex:1"></span>${tog}</div>`
+        + (ag ? this.tabAgenda(vs) : this.tabListe(vs)) + '</div>';
+    }
+    tabListe(vs) {
+      const t = auj(); const ordreFeu = { rouge: 0, orange: 1, vert: 2 };
+      const L = (this.D.boutiques || []).map(b => Object.assign({ b }, this.tabVisites(b.id, vs)));
+      L.sort((x, y) => (x.cours ? 0 : x.proch ? 1 : 2) - (y.cours ? 0 : y.proch ? 1 : 2)
+        || (x.proch && y.proch ? ((x.proch.prevu_le + x.proch.debut_h) < (y.proch.prevu_le + y.proch.debut_h) ? -1 : 1) : 0)
+        || (ordreFeu[x.b.feu] ?? 3) - (ordreFeu[y.b.feu] ?? 3));
+      if (!L.length) { return '<div class="tb-vide">Aucune boutique à contrôler.</div>'; }
+      return '<div class="tb-shops">' + L.map(({ b, cours, proch, der }) => {
+        const v = cours || proch;
+        const cal = v ? `<div class="cal"><i>${esc(MOIS[Number(v.prevu_le.slice(5, 7)) - 1])}</i><b>${Number(v.prevu_le.slice(8, 10))}</b></div>` : '<div class="cal vide"><i>à fixer</i><b>—</b></div>';
+        const ligne = cours ? 'Contrôle en cours' : proch ? (proch.prevu_le === t ? 'Aujourd’hui' : fmtDJ(proch.prevu_le)) + ' · ' + esc(proch.debut_h || '') : 'Pas de contrôle planifié';
+        const sous = cours ? 'commencé ' + (cours.commence_a ? 'le ' + fmtDJ(cours.commence_a) + ' à ' + fmtH(cours.commence_a) : 'le ' + fmtDJ(cours.prevu_le)) + ' · ' + esc(this.typeNom(cours.type))
+          : proch ? esc(this.typeNom(proch.type)) + (proch.statut === 'confirmee' ? ' · confirmé' : ' · planifié') : esc(b.due || 'à planifier');
+        const derLe = der ? der.prevu_le : (b.derniereVisite && b.derniereVisite.le);
+        const meta = [derLe ? `<span>dernier contrôle ${esc(fmtD(derLe))}</span>` : '',
+          b.plansOuverts ? `<span class="${b.p0 ? 'ko' : ''}">${b.plansOuverts} action${b.plansOuverts > 1 ? 's' : ''} ouverte${b.plansOuverts > 1 ? 's' : ''}${b.p0 ? ' · P0' : ''}</span>` : '',
+          b.google && b.google.note != null ? `<span>Google ${note1(b.google.note)}</span>` : '',
+          der && meteoDe(der.meteo) ? `<span>météo ${meteoDe(der.meteo)[1]} ${esc(meteoDe(der.meteo)[2].toLowerCase())}</span>` : ''].join('');
+        const act = cours ? `<button class="tb-b p" data-a="go" data-v="controle/${esc(cours.id)}">Reprendre le contrôle ›</button>`
+          : proch ? `<button class="tb-b" data-a="go" data-v="fiche/${esc(proch.id)}">Fiche</button><button class="tb-b p" data-a="demarrer" data-v="${esc(proch.id)}">Démarrer le contrôle ›</button>`
+          : `<button class="tb-b" data-a="go" data-v="planifier/${esc(b.id)}">Planifier</button><button class="tb-b p" data-a="demarrer-ici" data-v="${esc(b.id)}">Démarrer maintenant ›</button>`;
+        return `<div class="tb-shop ${cours ? 'cours' : ''}"><div class="n">${this.feuDot(b)}<b>${esc(b.court)}</b><span style="flex:1"></span><span class="xs mu">${b.ville && b.ville !== b.court ? esc(b.ville) : ''}</span></div>
+          <div class="tb-quand">${cal}<div><div class="l">${ligne}</div><div class="m">${sous}</div></div></div>
+          <div class="tb-meta">${meta}</div><div class="tb-act">${act}</div></div>`;
+      }).join('') + '</div>';
+    }
+    tabAgenda(vs) {
+      const t = auj();
+      const d0 = new Date(t.slice(0, 7) + '-01T12:00:00'); d0.setMonth(d0.getMonth() + this.mois);
+      const ym = d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0');
+      const finM = ym + '-' + String(new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate()).padStart(2, '0');
+      const debut = lundiDe(ym + '-01', 0);
+      const cases = [];
+      for (let i = 0; i < 42; i++) { const d = plusJours(debut, i); if (i % 7 === 0 && i > 0 && d > finM) { break; } cases.push(d); }
+      const par = {}; vs.forEach(v => { (par[v.prevu_le] = par[v.prevu_le] || []).push(v); });
+      const ST = { planifiee: 'planifié', confirmee: 'confirmé', en_cours: 'en cours', terminee: 'fait' };
+      const cible = v => v.statut === 'en_cours' ? 'controle/' + v.id : v.statut === 'terminee' ? 'historique/' + v.shop : 'fiche/' + v.id;
+      const tete = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'].map(j => `<div class="wd">${j}</div>`).join('');
+      const corps = cases.map((d, i) => {
+        const du = (par[d] || []).slice().sort((a, c) => (a.debut_h || '') < (c.debut_h || '') ? -1 : 1);
+        return `<div class="j ${d.slice(0, 7) !== ym ? 'hors' : ''} ${d === t ? 'auj' : ''} ${i % 7 >= 5 ? 'we' : ''}"><span class="d">${Number(d.slice(8, 10))}</span>`
+          + du.map(v => `<button class="v ${esc(v.statut)}" data-a="go" data-v="${esc(cible(v))}">${esc(v.debut_h || '')} ${esc((this.boutique(v.shop) || { court: v.shop }).court)}<small>${esc(ST[v.statut] || v.statut)}</small></button>`).join('') + '</div>';
+      }).join('');
+      const sans = (this.D.boutiques || []).filter(b => { const x = this.tabVisites(b.id, vs); return !x.cours && !x.proch; });
+      return `<div class="tb-h" style="margin:-4px 0 12px;align-items:center"><button class="tb-b" data-a="mois" data-v="-1">‹</button><b style="font:700 18px var(--font-ui);min-width:170px;text-align:center">${MOIS_L[d0.getMonth()]} ${d0.getFullYear()}</b><button class="tb-b" data-a="mois" data-v="1">›</button>${this.mois ? '<button class="tb-b" data-a="mois" data-v="0">Aujourd’hui</button>' : ''}</div>`
+        + `<div class="tb-cal"><div class="g">${tete}${corps}</div></div>`
+        + (sans.length ? `<div class="cap" style="margin:20px 2px 10px">Sans contrôle planifié · ${sans.length}</div><div class="tb-shops">` + sans.map(b => `<div class="tb-shop"><div class="n">${this.feuDot(b)}<b>${esc(b.court)}</b><span style="flex:1"></span><span class="xs mu">${esc(b.due || '')}</span></div><div class="tb-act"><button class="tb-b" data-a="go" data-v="planifier/${esc(b.id)}">Planifier</button><button class="tb-b p" data-a="demarrer-ici" data-v="${esc(b.id)}">Démarrer maintenant ›</button></div></div>`).join('') + '</div>' : '');
+    }
+    /** Le contrôle à la tablette : l'étape choisie à l'écran, toutes les étapes dans la barre du bas. */
+    tabControle(v, b, etapes, cur, faits) {
+      const e = etapes[cur]; const n = etapes.length;
+      const prog = `<div class="tb-pr">${faits} / ${n} étapes<div class="bar"><i style="width:${Math.round(faits / n * 100)}%"></i></div></div>`;
+      let pills = '';
+      if (e.module && e.n) { const reste = e.n.total - e.n.faits; pills = `<span class="ok">${e.n.faits} / ${e.n.total} vus</span>${e.ko ? `<span class="ko">${e.ko} écart${e.ko > 1 ? 's' : ''}</span>` : ''}${reste ? `<span>${reste} à voir</span>` : ''}`; }
+      const prec = cur > 0 ? etapes[cur - 1] : null; const suiv = cur < n - 1 ? etapes[cur + 1] : null;
+      const nav = `<div class="tb-nav"><button class="tb-b" data-a="etape" data-v="${cur - 1}" ${prec ? '' : 'disabled'}>‹ ${esc(prec ? prec.court : 'Début')}</button>${suiv ? `<button class="tb-b p" data-a="etape" data-v="${cur + 1}">${esc(suiv.court)} ›</button>` : ''}</div>`;
+      const barre = `<div class="tb-bar" style="grid-template-columns:repeat(${n},minmax(0,1fr))">` + etapes.map((x, i) => `<button data-a="etape" data-v="${i}" class="${i === cur ? 'on' : x.fait ? 'fait' : ''}"><span class="ic"><svg viewBox="0 0 24 24">${TAB_IC[x.ic] || TAB_IC.liste}</svg>${x.fait && i !== cur ? '<span class="ok">✓</span>' : ''}${x.ko ? `<span class="ko">${x.ko}</span>` : ''}</span><span class="lb">${esc(x.court)}</span><span class="es">${esc(x.etat)}</span></button>`).join('') + '</div>';
+      return this.tabTop({ titre: 'Contrôle · ' + b.court, sous: esc(fmtDJ(v.prevu_le) + (v.commence_a ? ' · commencé à ' + fmtH(v.commence_a) : '') + ' · ' + this.typeNom(v.type)), retour: true, droite: prog })
+        + `<div class="tb-main tb-ctl"><div class="tb-h"><div><div class="cap" style="margin:0">Étape ${cur + 1} sur ${n}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
+        + `<div class="tb-step">${e.html()}</div>${nav}</div>` + barre;
     }
     v_historique() {
       const shop = this.p || this.shop; const b = this.boutique(shop); if (!b) { return this.hd('Boutique introuvable', '', 'portfolio'); }
@@ -1109,10 +1347,10 @@
     }
     /** Ce que le consultant a vu, diagnostiqué et recommandé — lu par le franchisé, l'admin, l'historique. */
     vuSurPlace(v, titre) {
-      if (!v || !(v.reco || v.diagnostic || (v.causes || []).length || v.execution || v.clients || v.sentiment || v.positif)) { return ''; }
+      if (!v || !(v.reco || v.diagnostic || (v.causes || []).length || v.execution || v.clients || v.sentiment || v.positif || v.meteo)) { return ''; }
       const CD = this.D.causesDiag || {};
       return `<div class="cap">${titre || 'Vu sur place'}</div><div class="card sm">
-        ${v.sentiment || v.execution || v.clients ? `<div class="row" style="flex-wrap:wrap;gap:6px">${v.sentiment ? `<span class="pill">équipe ${'★'.repeat(v.sentiment)}</span>` : ''}${v.execution ? `<span class="pill ${v.execution === 'standards' ? 'api' : v.execution === 'ecarts' ? 'loc' : 'mix'}">${EXECUTION[v.execution] || v.execution}</span>` : ''}${v.clients ? `<span class="pill ${v.clients === 'satisfaits' ? 'api' : v.clients === 'insatisfaits' ? 'loc' : 'mix'}">clients ${(CLIENTS[v.clients] || v.clients).toLowerCase()}</span>` : ''}</div>` : ''}
+        ${v.sentiment || v.execution || v.clients || v.meteo ? `<div class="row" style="flex-wrap:wrap;gap:6px">${meteoDe(v.meteo) ? `<span class="pill">météo du franchisé ${meteoDe(v.meteo)[1]} ${esc(meteoDe(v.meteo)[2])}</span>` : ''}${v.sentiment ? `<span class="pill">équipe ${'★'.repeat(v.sentiment)}</span>` : ''}${v.execution ? `<span class="pill ${v.execution === 'standards' ? 'api' : v.execution === 'ecarts' ? 'loc' : 'mix'}">${EXECUTION[v.execution] || v.execution}</span>` : ''}${v.clients ? `<span class="pill ${v.clients === 'satisfaits' ? 'api' : v.clients === 'insatisfaits' ? 'loc' : 'mix'}">clients ${(CLIENTS[v.clients] || v.clients).toLowerCase()}</span>` : ''}</div>` : ''}
         ${(v.causes || []).length ? `<div style="margin-top:6px"><b>Le vrai problème :</b> ${esc(v.causes.map(c => CD[c] || c).join(', '))}</div>` : ''}
         ${v.diagnostic ? `<div class="mu" style="margin-top:2px">${esc(v.diagnostic)}</div>` : ''}
         ${v.reco ? `<div style="margin-top:6px"><b>Recommandation :</b> ${esc(v.reco)}</div>` : ''}
@@ -1140,7 +1378,7 @@
       const moi = this.role === 'consultant' ? `<div class="cap">Qui suis-je</div><div class="card"><select data-c="moi">${[['', '— choisir —']].concat((D.consultants || []).map(c => [c.id, c.nom])).map(([v, l]) => `<option value="${esc(v)}" ${v === this.moi ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><div class="xs mu" style="margin-top:6px">L’agenda montre les visites de ce consultant ; les visites planifiées ici lui sont attribuées.</div></div>` : '';
       const push = `<div class="cap">Notifications</div><div class="card"><div class="sm mu">${this.o.mobile ? 'Sur ce téléphone : rappels J-1 et jour J, plans d’action, corrections reçues, escalades.' : 'À activer sur le téléphone (page Application mobile).'}</div>${this.o.mobile ? `<div class="btns"><button class="btn w" data-a="push">${this.pushEtat === 'abonne' ? '🔕 Désactiver' : '🔔 Activer les notifications'}</button></div>${this.pushMotif ? `<div class="xs dn" style="margin-top:4px">${esc(this.pushMotif)}</div>` : ''}` : ''}</div>`;
       const hors = `<div class="cap">Hors ligne</div><div class="card sm"><div>${this.file.length} écriture(s) en attente · dernière sync ${esc(this.sync || '—')}</div><div class="btns"><button class="btn s" data-a="sync">📤 Synchroniser</button><button class="btn s" data-a="recharger">↻ Recharger</button><button class="btn s" data-a="raz">Vider la réserve</button></div></div>`;
-      if (this.role !== 'admin' && !(this.role === 'consultant' && !this.o.mobile)) { return this.hd('Réglages', '') + moi + push + hors; }
+      if (this.role !== 'admin' && !(this.role === 'consultant' && !this.o.mobile && !this.o.tablette)) { return this.hd('Réglages', '') + moi + push + hors; }
       const R = this.R;
       if (!R) { this.chargerReglages(); }
       const cl = f.checklist || (R ? R.checklist : D.checklist) || [];
@@ -1149,7 +1387,7 @@
       if (!f.checklist) { f.checklist = JSON.parse(JSON.stringify(cl)); f.seuils = se; f.frequence = fq; }
       const num = (k, l, aide) => `<div class="champ"><label>${l}</label><input type="number" step="${/google/i.test(k) ? '0.1' : '1'}" data-f="se|${k}" value="${esc(f.seuils[k])}">${aide ? `<div class="xs mu">${aide}</div>` : ''}</div>`;
       return this.hd('Réglages visites', 'checklist, seuils du feu, fréquences, horloge') + moi + push
-        + '<div class="card sm mu">Les types de visite (la liste déroulante du planning), leur checklist et leurs tâches à faire, et le cadre par magasin se règlent dans le cockpit : Gestion consultant › Cadre de visite. La checklist ci-dessous est celle de la visite régulière.</div>'
+        + '<div class="card sm mu">La checklist ci-dessous est celle de la visite régulière.</div>'
         + `<div class="cap">Checklist (${f.checklist.reduce((a, m) => a + m.points.length, 0)} points)</div>${f.checklist.map((m, mi) => `<div class="card"><div class="row"><b>${esc(m.nom)}</b><span class="sp"></span><button class="chip" data-a="cl-add" data-v="${mi}">+ point</button></div>${m.points.map((p, pi) => `<div class="row" style="margin-top:6px"><input type="text" data-f="cl|${mi}|${pi}|libelle" value="${esc(p.libelle)}" style="flex:1"><button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|photo" title="photo attendue">📷</button>${m.id === 'planogramme' ? `<button class="chip ${p.pct ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|pct" title="saisie en %">%</button>` : ''}<button class="chip ko" data-a="cl-del" data-v="${mi}|${pi}">×</button></div>`).join('')}</div>`).join('')}
           <div class="cap">Feu tricolore</div><div class="card"><div class="l2">${num('p0Jours', 'P0 ouvert plus de (jours) → rouge')}${num('escaladeJours', 'Échéance dépassée de (jours) → escalade auto')}${num('googleCible', 'Cible Google')}${num('googleRouge', 'Sous la cible de (points) → rouge')}${num('planoOrange', 'Planogramme sous (%) → orange')}${num('planoRouge', 'Planogramme sous (%) → rouge')}${num('mspAlerte', 'Rubrique MSP sous (/20) → rouge')}${num('caOrange', 'CA sous l’objectif de (%) → orange')}</div><div class="act"><button class="chip ${f.seuils.caSeul ? 'on' : ''}" data-a="se-tog" data-v="caSeul">Le CA seul peut colorer le feu</button></div></div>
           <div class="cap">Fréquence de visite (jours)</div><div class="card"><div class="l2">${D.boutiques.map(b => `<div class="champ"><label>${esc(b.court)}</label><input type="number" data-f="fq|${esc(b.id)}" value="${esc(f.frequence[b.id] || '')}" placeholder="${esc(s.visiteJours || 7)}"></div>`).join('')}</div></div>
@@ -1189,11 +1427,14 @@
       if (a === 'demarrer') { const vis = this.visite(v); if (vis && vis.statut !== 'en_cours') { this.majVisite(v, { statut: 'en_cours' }); const b = this.boutique(vis.shop); if (b) { b.visiteEnCours = vis.id; } } if (vis) { this.chargerBoutique(vis.shop); this.go('controle', vis.id); } else { this.go('agenda'); } return; }
       if (a === 'demarrer-ici') { this.form = { shop: v, prevu_le: auj(), debut_h: maintenant().slice(11), duree_min: 60, motif: 'asap' }; this.planifier(true); return; }
       if (a === 'photo') { this.prendrePhoto(parts[0], parts[1], parts[2], parts[3], parts[4]); return; }
+      if (a === 'etat-set') { const p = this.point(parts[0], parts[1], parts[2]); p.etat = p.etat === parts[3] ? '' : parts[3]; this.point_save(parts[0], p); return; }
+      if (a === 'tab-vue') { this.tabVue = v; try { localStorage.setItem('vi.tabVue', v); } catch (e) { /* privé */ } this.rendre(); return; }
+      if (a === 'mois') { this.mois = v === '0' ? 0 : this.mois + Number(v); this.rendre(); return; }
       if (a === 'etat') { const cyc = { '': 'ok', ok: 'ko', ko: 'na', na: '' }; const p = this.point(parts[0], parts[1], parts[2]); p.etat = cyc[p.etat || ''] || ''; this.point_save(parts[0], p); return; }
       if (a === 'note') { const p = this.point(parts[0], parts[1], parts[2]); p.note = p.note === Number(parts[3]) ? null : Number(parts[3]); if (p.note != null && !p.etat) { p.etat = p.note <= 2 ? 'ko' : 'ok'; } this.point_save(parts[0], p); return; }
       if (a === 'cause') { const p = this.point(parts[0], parts[1], parts[2]); p.causes = p.causes || []; const i = p.causes.indexOf(parts[3]); if (i >= 0) { p.causes.splice(i, 1); } else { p.causes.push(parts[3]); } this.point_save(parts[0], p); return; }
       if (a === 'cause-diag') { const c = this.form.causes || (this.form.causes = []); const i = c.indexOf(v); if (i >= 0) { c.splice(i, 1); } else { c.push(v); } this.rendre(); return; }
-      if (a === 'etape') { const E = this._etapes; if (!E) { return; } const vis = this.visite(E.visite); const vers = Math.max(0, Math.min(E.n - 1, Number(v))); if (E.cur === 1) { this.ouvert['lu:' + E.visite] = true; } if (E.cur === E.revue && vers !== E.revue && vis) { this.sauverReview(vis); } this.ouvert[E.cle] = vers; this.rendre(); const el = document.getElementById('et-' + vers); if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } return; }
+      if (a === 'etape') { const E = this._etapes; if (!E) { return; } const vis = this.visite(E.visite); const vers = Math.max(0, Math.min(E.n - 1, Number(v))); if (E.cur === E.chiffres) { this.ouvert['lu:' + E.visite] = true; } if (E.cur === E.revue && vers !== E.revue && vis) { this.sauverReview(vis); } this.ouvert[E.cle] = vers; this.rendre(); if (this.o.tablette) { window.scrollTo(0, 0); return; } const el = document.getElementById('et-' + vers); if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } return; }
       if (a === 'pa') { const i = Number(parts[0]); if (this.form.pa && this.form.pa[i]) { this.form.pa[i][parts[1]] = parts[2]; this.rendre(); } return; }
       if (a === 'pa-del') { this.form.pa.splice(Number(v), 1); this.rendre(); return; }
       if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), 3) }); this.rendre(); return; }
@@ -1288,10 +1529,10 @@
         plans.forEach(p => this.D.plans.push(Object.assign({ id: p.client_id, statut: 'ouvert', cree_par: this.qui(), cree_le: maintenant(), maj_le: maintenant(), retard: 0, age: 0, attente: true }, p)));
         this.ecrire({ method: 'POST', path: '/plans', body: { plans, qui: this.qui() }, apres: 'plans' });
       }
-      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '' });
+      this.majVisite(vid, { statut: 'terminee', sentiment: f.sentiment || null, meteo: f.meteo || null, positif: f.positif || '', notes: f.notes || '', execution: f.execution || '', clients: f.clients || '', causes: f.causes || [], diagnostic: f.diagnostic || '', reco: f.reco || '' });
       const b = this.boutique(v.shop); if (b) { b.visiteEnCours = null; b.derniereVisite = { id: v.id, le: v.prevu_le, consultant: v.consultantNom }; if (b.prochaineVisite && String(b.prochaineVisite.id) === String(v.id)) { b.prochaineVisite = null; } }
       this.form = {};
-      this.go('historique', v.shop);
+      this.go(this.o.tablette ? 'shops' : 'historique', v.shop);
       this.dire(plans.length ? plans.length + ' action(s) envoyée(s) au franchisé.' : 'Visite terminée.');
     }
     statut(id, vers) {

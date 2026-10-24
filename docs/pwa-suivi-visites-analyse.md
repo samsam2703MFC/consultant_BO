@@ -55,7 +55,7 @@ Vocabulaire du brief : 🟢 API = vient d'une source automatique, 🔴 local = s
 | Besoin du brief | Existe | Où | Source |
 |---|---|---|---|
 | CA jour / semaine vs objectif | oui | `GET /exploitation/jour` (7 jours par magasin, `ca` et `objectif`), `/exploitation/magasin` | 🟢 ERP |
-| Note et avis Google, derniers avis | oui | `GET /reputation`, `POST /reputation/sync`, tables `ceo_shop_reputation`, `ceo_shop_review` | 🟢 Google Places |
+| Note et avis Google, derniers avis | oui | `GET /reputation`, `POST /reputation/sync`, tables `mar_avis_fiche`, `mar_avis` | 🟢 Google Places |
 | Tâches consultant, notes 1..5, validation | oui | `GET /pwa/tasks`, `POST /pwa/tasks/review`, `POST /pwa/tasks/validate`, `PUT /pwa/tasks/annotation`, journal `mac_task_review` | 🟢 panel |
 | Non-conformités, récidive, seuil de signalement | oui | `GET /pwa/tasks/nc?shop=&date=` (ou `du/au`), seuil 4 | 🟢 panel |
 | Planogramme de référence, photos produits | oui | `GET /planogramme`, `/planogramme/photos` (liens S3 signés 1 h), tables `pla_*`, `ceo_plano_photo` | 🟢 |

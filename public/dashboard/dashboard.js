@@ -17,19 +17,22 @@
   // ?embed=1 : la page servie dans le cockpit (Gestion de production) — sans entête, sans onglets ;
   // seule la vue Production y vit, le sous-onglet vient du rail (?onglet=plan|suivi|params).
   const EMBED = q.get('embed') === '1';
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
+    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
     calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
+    levVue: (function () { try { return localStorage.getItem('db.levVue') === 'cumul' ? 'cumul' : 'mois'; } catch (e) { return 'mois'; } })(),
+    opPro: (function () { try { return localStorage.getItem('db.opPro') === 'combi' ? 'combi' : 'sep'; } catch (e) { return 'sep'; } })(),
     stockOuvert: false, stockVues: null, cmdOuvert: false, invOuvert: false, cmdListeOuvert: false,
     ppOnglet: ['plan', 'suivi', 'params'].includes(q.get('onglet')) ? q.get('onglet') : 'plan', ppEdit: null, ppOuvert: {}, ppMsg: null, ppEnvoi: false,
-    noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false,
+    noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false, coCanal: null,
     a4: null, a4Vise: false,
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
+    pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null, pmC: null, pmCanJ: 30, pmCanM: 'n',
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -97,7 +100,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900 };
+  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -111,6 +114,10 @@
       }).catch(e => { S.err[cle] = e.message; }).finally(() => { S.enCours[cle] = false; rendre(); });
     }
   }
+  /** Les mois des deux années (/stores/perf), avec le split pro de CE magasin (`pro=`, 21/10/2026 : le panier des mois
+   * hors clients pro) — la clé porte donc le magasin. */
+  function clePerf() { return 'perf|' + annee() + '|' + S.shop; }
+  function cheminPerf() { return '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee() + '&pro=' + encodeURIComponent(S.shop); }
   function charger(force) {
     // Le plan d'action n'est pas une période : le module des visites lit lui-même.
     if (S.vue === 'actions' || S.vue === 'campagne') { rendre(); return; }
@@ -118,10 +125,14 @@
     // qu'il faut pour en écrire une — produits, livraisons, motifs.
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
     if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
+    // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
+    // Et où elles s'appliquent : comptoir, click & collect, livraison (18/10/2026).
+    // Le panel est relu à chaque ouverture de l'onglet (21/10/2026, Sam) : voir pmRelire().
+    if (S.vue === 'promos') { S.pmRelu = null; lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee' || S.vue === 'trimestre') {
       lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
-      lireAux('perf|' + annee(), '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee(), force);
+      lireAux(clePerf(), cheminPerf(), force);
       lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
       rendre(); return;
     }
@@ -161,12 +172,14 @@
     // aujourd'hui : si ce mois est ancien, la fenêtre recule d'autant.
     lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
-    // Les six dernières semaines face au N-1 : sur la vue Semaine seulement.
-    if (S.vue === 'semaine') { lireAux('s6|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=6', force); }
+    // Les douze dernières semaines face au N-1 (19/10/2026, avant six) : sur la vue Semaine seulement. Treize lues : douze
+    // closes et, si la semaine choisie est en cours, celle-ci à part. `pro=1` : le comptoir de chaque semaine, pour le panier hors
+    // clients pro (21/10/2026).
+    if (S.vue === 'semaine') { lireAux('s12|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=13&articles=1&pro=1', force); }
     // La frise des périodes (10/10/2026), au bureau : les jours, les semaines ou les mois autour de la période regardée.
     if (!EMBED && !estMobile()) {
       if (S.vue === 'ops' || S.vue === 'semaine') { [...new Set(friseJours().map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
-      if (S.vue === 'mois') { lireAux('perf|' + annee(), '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee(), force); }
+      if (S.vue === 'mois') { lireAux(clePerf(), cheminPerf(), force); }
     }
     // Le stock est vivant : il se relit avec la page, et la page se relit
     // toute seule toutes les dix minutes en vue Jour sur aujourd'hui.
@@ -175,6 +188,7 @@
     else if (S.vue === 'jour') { lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force); lireAux('record|' + S.shop + '|' + S.date, '/ventes/record?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux('tend|' + S.shop + '|' + S.date, '/ventes/tendance?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); lireAux(cleNote(), cheminNote(), force); lireAux(cleObj(), cheminObj(), force); lireAux(clePromo(), cheminPromo(), force); lireAux(clePro(), cheminPro(), force); lireAux(cleCQ(), cheminCQ(), force); lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
     else { const [du, au] = bornes(); lireAux('tachesP|' + du + '|' + au, '/pwa/tasks/heatmap/mois?du=' + du + '&au=' + (au < AUJ ? au : AUJ) + '&obligatoires=1', force); }
     if (coPer()) { lireAux(cleCanaux(), cheminCanaux(), force); lireAux(cleOffres(), cheminOffres(), force); }
+    if (S.vue === 'mois') { lireAux(cleCanM(), cheminCanM(), force); lireAux(cleLev(), cheminLev(), force); }
     if (S.vue === 'jour' || coPer()) { lireAux(cleInv(), cheminInv(), force); }
     // Les commandes clients et les livraisons : une seule lecture, elle porte
     // les deux et ne dépend pas de la période regardée.
@@ -541,7 +555,7 @@
   /** Le libellé du bouton, qui dit toujours où on en est. */
   function pushBouton() {
     if (S.pushEtat === 'impossible' || S.pushEtat === 'refuse') {
-      return `<span class="db-stnote" title="${esc(S.pushMotif)}">🔕 ${esc(S.pushMotif || 'notifications indisponibles')}</span>`;
+      return `<span class="db-stnote" title="${esc(S.pushMotif || 'notifications indisponibles')}">🔕</span>`;
     }
     const occ = S.pushOccupe ? ' disabled' : '';
     if (S.pushEtat === 'abonne') {
@@ -668,6 +682,47 @@
     }).join('')}</div>`;
   }
 
+  /* --- Le panier moyen hors clients pro (21/10/2026, demande de Sam : « dans le panier moyen sortir les commandes b2b,
+   * elles faussent le panier moyen ») ---------------------------------------------------------------------------------
+   * Le serveur le compte : CA comptoir ÷ tickets comptoir, les tickets pro (TVA valide) retirés des deux côtés
+   * (`panierRetenu`) ; tant que les tickets pro d'un jour ne sont pas lus, le total, dit (`panierBase` = total). Mesuré le
+   * 20/10 à Gosselies : deux tickets pro pour 1 110 € faisaient un panier de 17,92 € quand le comptoir était à 9,59 €.
+   * Règle de toute comparaison (J−7, réseau, rang, semaines, mois) : deux paniers sur la même base, jamais un hors pro
+   * face à un pro compris. `panier` reste le total : les clients manquants sur le CA total s'en servent. */
+  /** Le panier d'une ligne : { v, base } — base null pour une réponse gardée d'avant le 21/10/2026 (pas de mention). */
+  function panDe(m) {
+    if (!m) { return { v: null, base: null }; }
+    return m.panierBase ? { v: m.panierRetenu, base: m.panierBase } : { v: m.panier, base: null };
+  }
+  /** La clé du panier à classer : le retenu quand le serveur le donne. */
+  const kPan = m => m && m.panierBase ? 'panierRetenu' : 'panier';
+  /** La mention, en sous-titre : ce que le panier compte. */
+  const panSous = base => base === 'comptoir' ? 'hors clients pro' : (base === 'total' ? 'tickets pro pas encore lus' : '');
+  /** « panier 9,59 € hors pro » ; « (pro compris) » tant que le pro n'est pas lu. */
+  const panTxt = (P, mot) => P.v == null ? '' : (mot === false ? '' : 'panier ') + fU(P.v) + (P.base === 'comptoir' ? ' hors pro' : (P.base === 'total' ? ' (pro compris)' : ''));
+  /** La case « Panier » d'un tableau de mois ou de trimestres : hors pro quand le pro est lu ; sinon le total, en gris. */
+  const PAN_TH = 'hors clients pro quand leurs tickets sont lus ; en gris, clients pro compris (tickets pro pas encore lus)';
+  const panTd = P => `<td${P.base === 'total' ? ' class="mu" title="tickets pro pas encore lus : clients pro compris"' : (P.base === 'comptoir' ? ' title="hors clients pro"' : '')}>${P.v == null ? '—' : fU(P.v)}</td>`;
+  /** Les valeurs du réseau pour un classement : un panier ne se range qu'entre magasins de même base. */
+  function valsRang(L, k, m) {
+    return L.filter(x => x[k] != null && isFinite(x[k]) && (k !== 'panierRetenu' || !m || x.panierBase === m.panierBase)).map(x => x[k]).sort((a, b) => b - a);
+  }
+  /** Le panier du réseau face à celui du magasin, sur sa base : le comptoir des magasins lus, ou le total. */
+  function panReseau(R, base) {
+    if (!R) { return null; }
+    return base === 'comptoir' ? (R.panierComptoir != null ? R.panierComptoir : null) : (R.panier || null);
+  }
+  /**
+   * Deux paniers face à face (J−7, N−1) : hors pro quand les deux côtés ont leurs tickets pro lus, sinon tous les deux
+   * pro compris. a, b : { ca, tk, caC, tkC } — caC et tkC null tant que le pro n'est pas lu.
+   */
+  function panPaire(a, b) {
+    const lu = x => !!x && x.caC != null && x.tkC != null;
+    const comptoir = lu(a) && lu(b);
+    const p = x => !x ? null : (comptoir ? (x.tkC > 0 ? x.caC / x.tkC : null) : (x.tk > 0 ? x.ca / x.tk : null));
+    return { a: p(a), b: p(b), base: a && b ? (comptoir ? 'comptoir' : 'total') : null };
+  }
+
   /**
    * Les clients manquants du jour : au comptoir quand le serveur les a comptés
    * ((CA comptoir − objectif) ÷ panier comptoir, le CA des clients pro exclu),
@@ -720,11 +775,11 @@
     const L = (d.magasins || []).filter(x => x.ouvert !== false);
     if (!m || L.length < 2) { return ''; }
     const jour = S.vue === 'jour';
-    const defs = [['Chiffre d’affaires', jour ? 'ca' : 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))]];
+    const defs = [['Chiffre d’affaires', jour ? 'ca' : 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen' + (panDe(m).base === 'comptoir' ? ' <em>· hors pro</em>' : ''), kPan(m), fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))]];
     const ord = n => n === 1 ? '1er' : n + 'e';
     let premiers = 0;
     const cols = defs.map(([lib, k, f, fd]) => {
-      const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
+      const vals = valsRang(L, k, m);
       const v = m[k];
       if (v == null || !vals.length) { return `<div class="mb-cl"><div class="k">${lib}</div><div class="rg mu">—</div><div class="v">—</div><div class="s">pas de valeur</div></div>`; }
       const n = vals.length, rang = vals.findIndex(x => x <= v) + 1;
@@ -738,7 +793,7 @@
         <div class="jg"><i class="l"></i>${autres}<span class="md" style="left:${pos(med).toFixed(1)}%"></span><span class="mo${top ? ' top' : ''}" style="left:${pos(v).toFixed(1)}%"></span></div>
         <div class="v">${f(v)}</div><div class="s"><span class="${v - med >= 0 ? 'ok' : 'ko'}">${fd(v - med)}</span> vs médiane ${f(med)}</div></div>`;
     }).join('');
-    return `<div class="mb-r un mb-cls"><div><div class="k">Ta place dans le réseau <em>· ${L.length} magasins · ${jour ? 'la journée' : 'la semaine'} · anonyme${premiers ? ' · ' + premiers + ' × 🏆' : ''}</em></div><div class="mb-clg">${cols}</div></div></div>`;
+    return `<div class="mb-r un mb-cls"><div><div class="k">Ta place dans le réseau <em>· ${L.length} magasins${premiers ? ' · ' + premiers + ' × 🏆' : ''}</em></div><div class="mb-clg">${cols}</div></div></div>`;
   }
 
   /** La semaine vue depuis le jour : le retard, et les sept barres. */
@@ -964,7 +1019,7 @@
   /** Le rang du magasin dans le réseau sur une mesure (le plus haut d'abord) : [rang, nombre] ou null. */
   function maRang(d, m, k) {
     if (!d || !m || m[k] == null) { return null; }
-    const v = (d.magasins || []).filter(x => x.ouvert !== false && x[k] != null && isFinite(x[k])).map(x => x[k]).sort((a, b) => b - a);
+    const v = valsRang((d.magasins || []).filter(x => x.ouvert !== false), k, m);
     return v.length >= 2 ? [v.findIndex(x => x <= m[k]) + 1, v.length] : null;
   }
   const maRangPt = r => !r ? 'n' : (r[0] <= Math.ceil(r[1] / 2) ? 'v' : (r[0] < r[1] ? 'o' : 'r'));
@@ -999,7 +1054,7 @@
     const proj = enCours && m.projectionAtteinte != null ? 100 * m.projectionAtteinte : null;
     const CJ = clientsJour(m), cl = CJ ? Math.abs(CJ.n) : null;
     const I = maInvJour();
-    const rc = maRang(d, m, 'ca'), rt = maRang(d, m, 'tickets'), rp = maRang(d, m, 'panier');
+    const rc = maRang(d, m, 'ca'), rt = maRang(d, m, 'tickets'), rp = maRang(d, m, kPan(m)), PM = panDe(m);
     const C = S.aux['canaux|' + S.shop + '|' + S.date], web = C && !C.error && C.jour ? C.jour.webshop : null;
     const H = Array.isArray(m.heures) ? m.heures : [];
     const pic = H.reduce((a, x) => (x.ca || 0) > ((a && a.ca) || 0) ? x : a, null);
@@ -1013,7 +1068,7 @@
     T.push({ k: 'Résultat', court: 'le résultat', pt: auj || m.net == null ? 'n' : MA.net(m.netPct),
       v: m.net != null ? fS(m.net) : '—', s: m.netPct != null ? fPS(m.netPct) + ' des ventes' + (auj ? ' · la journée continue' : '') : 'P&amp;L incomplet' });
     T.push({ k: 'Clients', court: 'les clients', pt: MA.cli(m.tickets, m.j7 && m.j7.tickets),
-      v: m.tickets != null ? fN(m.tickets) + j7Delta(m) : '—', s: [m.j7 && m.j7.tickets != null ? fN(m.j7.tickets) + ' à J−7' : '', m.panier ? 'panier ' + fU(m.panier) : ''].filter(Boolean).join(' · ') });
+      v: m.tickets != null ? fN(m.tickets) + j7Delta(m) : '—', s: [m.j7 && m.j7.tickets != null ? fN(m.j7.tickets) + ' à J−7' : '', panTxt(PM)].filter(Boolean).join(' · ') });
     T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct), v: fP(m.coutMatierePct),
       s: 'seuil 35 %' + (m.margeBrutePct != null ? ' · marge brute ' + fP(m.margeBrutePct) : '') });
     T.push({ k: 'Main-d’œuvre', court: 'la main-d’œuvre', pt: auj ? 'n' : MA.mo(m.labourPct), v: m.labourPct != null ? fP(m.labourPct) : '—',
@@ -1035,12 +1090,19 @@
   function maPageExp(m, d) {
     const T = maTuilesExp(m, d);
     if (!T) { return `<div class="ma-v"><span class="n mu">…</span><span class="t">lecture de la journée<em>le chiffre, les marges, les clients</em></span></div>${squeletteMa(6)}`; }
-    let h = maVerdict(T.filter(t => t.pt !== undefined), false) + maGrille(T);
+    // Une donnée, un seul endroit (11/10/2026) : le verdict se juge sur tout, mais le chiffre, le résultat, la matière, la
+    // main-d'œuvre et la poubelle se lisent dans le P&L court ; les clients et les heures dans Opérationnel. Restent en
+    // tuiles le rang dans le réseau et les canaux, que le P&L ne dit pas.
+    const PJ = jourPieces(m, d, S.st[cleSt()]);
+    let h = maVerdict(T.filter(t => t.pt !== undefined), false) + `<div class="ma-large">${PJ.pnl}</div>` + maGrille(T.filter(t => /^(Réseau|Canaux)/.test(t.k)).map(t => Object.assign({}, t, { w: false })));
     // Les campagnes et les promotions du jour, quand il y en a : leurs cellules et leurs tiroirs.
     const ext = []; murObjectifs().forEach(t => ext.push(murR([t], true))); murPromos().forEach(t => ext.push(murR([t], true)));
     if (ext.length) { h += `<div class="mb-mur ma-ext">${ext.join('')}</div>`; }
     if (S.objOuvert) { h += `<div class="mb-tir">${objectifsCarte(true)}</div>`; }
     if (S.promoOuvert) { h += `<div class="mb-tir">${promosCarte(true)}</div>`; }
+    // Les ventes par catégorie (liste, treemap, promotions, portions), venues d'Opérationnel (10/10/2026) : les chiffres
+    // de la journée au même endroit. Les bundles vendus sont retirés (23/10/2026) : double emploi avec les promotions.
+    h += `<div class="ma-large">${PJ.categories}</div>`;
     return h;
   }
 
@@ -1077,14 +1139,11 @@
       s: !I ? 'lecture de la poubelle…' : (!I.lu ? 'panel muet' : (I.declare ? 'déclarée' + (top ? ' · surtout ' + esc(String(top.nom).toLowerCase()) + ', ' + fN(top.pieces) : '') : (auj ? 'se déclare à la fermeture' : 'pas déclarée ce jour'))) });
     return { T: T, L: L };
   }
+  // Contrôle au téléphone (20/10/2026, demande de Sam) : les contrôles en photo et le bouton de réclamation, rien d'autre.
+  // Le verdict, les tuiles (commandes, stock, poubelle…) et la note du jour en sortent ; la note reste dans Exploitation.
   function maPageCtrl() {
-    const { T } = maTuilesCtrl();
-    let h = maVerdict(T, true);
-    h += `<div class="ma-car">${rendCQ(true) || `<div class="mb-cq"><div class="k">Les contrôles en photo</div><div class="s">${S.err['taches|' + S.date] ? esc(S.err['taches|' + S.date]) : 'lecture du panel…'}</div></div>`}</div>`;
-    h += maGrille(T);
+    let h = `<div class="ma-car">${rendCQ(true) || `<div class="mb-cq"><div class="k">Les contrôles en photo</div><div class="s">${S.err['taches|' + S.date] ? esc(S.err['taches|' + S.date]) : 'lecture du panel…'}</div></div>`}</div>`;
     h += `<button type="button" class="ma-rc" data-vue="reclamation">✎ Réclamer un produit au fournisseur</button>`;
-    h += `<div class="mb-mur ma-ext">${murR([murNote()], true)}</div>`;
-    if (S.noteOuvert) { h += `<div class="mb-tir">${noteCarte(true)}</div>`; }
     return h;
   }
 
@@ -1107,7 +1166,7 @@
     const T = [];
     T.push({ k: 'Chiffre de la semaine' + (passes.length ? ' · au ' + esc(fD(passes[passes.length - 1].date)) : ''), court: 'le chiffre', w: true, pt: MA.ca(att),
       v: fE(realise) + (m.attendu ? ` <small class="mu">/ ${fE(m.attendu)}</small>` : ''),
-      s: (att != null ? fP(att) + ' de l’attendu' : '') + (m.tickets ? ' · ' + fN(m.tickets) + ' clients' : '') + (prochain ? ' · ' + esc(jl(prochain)).toLowerCase() + ' : objectif ' + fE(prochain.objectif) : ''),
+      s: (att != null ? fP(att) + ' de l’objectif à ce jour' : '') + (m.tickets ? ' · ' + fN(m.tickets) + ' clients' : '') + (prochain ? ' · ' + esc(jl(prochain)).toLowerCase() + ' : objectif ' + fE(prochain.objectif) : ''),
       apres: maBarres(J.map(j => ({ l: jl(j), v: j.ca != null && j.objectif ? 100 * j.ca / j.objectif : null, c: j.ca != null && j.objectif ? 'p' + maJourCA(j) : '' })), 120) });
     T.push({ k: 'Résultat', court: 'le résultat', pt: netSem == null ? 'n' : MA.net(realise ? 100 * netSem / realise : null),
       v: netSem != null ? fS(netSem) : '—', s: netSem != null ? (m.net == null ? 'somme des jours, main-d’œuvre répartie' : 'la semaine') + (realise ? ' · ' + fPS(100 * netSem / realise) + ' des ventes' : '') : 'P&amp;L incomplet' });
@@ -1115,7 +1174,7 @@
     T.push({ k: 'Poubelle', court: 'la poubelle', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true), pt: m.invendus == null ? 'n' : MA.poub(m.invendusPct),
       v: m.invendus != null ? fE(m.invendus) : '—', s: m.invendusPieces != null ? maPl(m.invendusPieces, 'pièce') + (m.invendusPct != null ? ' · ' + fP(m.invendusPct) + ' du chiffre' : '') : 'pas déclarée' });
     T.push({ k: 'Réseau', court: 'le rang', ouvre: 'rgdrop', ouvert: S.rgOuvert, tir: () => murClassement(m, d), pt: maRangPt(rc),
-      v: rc ? maOrd(rc[0]) + ' / ' + rc[1] : '—', s: m.panier ? 'panier ' + fU(m.panier) : '' });
+      v: rc ? maOrd(rc[0]) + ' / ' + rc[1] : '—', s: panTxt(panDe(m)) });
     return { T: T, J: J, NET: NET, X: X, SJ: SJ, att: att, dessous: dessous.map(jl), dessus: dessus.map(jl) };
   }
   function maDamier(R) {
@@ -1124,7 +1183,7 @@
     const ligne = (lib, f) => `<tr><td class="l">${lib}</td>${J.map(j => (!j.passe || j.ferme) ? cell('f', j.ferme ? '×' : '·') : f(j)).join('')}</tr>`;
     const auj = j => j.date === AUJ;
     let h = `<div class="ma-dam"><table><tr><th class="l">la semaine</th>${J.map(j => `<th class="${auj(j) ? 'auj' : ''}">${esc(j.court || fD(j.date))}</th>`).join('')}</tr>`;
-    h += ligne('Chiffre / obj.', j => j.ca != null && j.objectif ? cell(auj(j) && j.ca < j.objectif ? 'n' : MA.ca(100 * j.ca / j.objectif), nf(Math.round(100 * j.ca / j.objectif), 0)) : cell('n', '—'));
+    if (!R.sansChiffre) h += ligne('Chiffre / obj.', j => j.ca != null && j.objectif ? cell(auj(j) && j.ca < j.objectif ? 'n' : MA.ca(100 * j.ca / j.objectif), nf(Math.round(100 * j.ca / j.objectif), 0)) : cell('n', '—'));
     const jmLu = !!S.aux['jourM|' + S.date];
     h += ligne('Résultat', j => { const x = NET[j.date]; return x && x.net != null ? cell(auj(j) ? 'n' : MA.net(x.ca ? 100 * x.net / x.ca : null), fSigne(x.net)) : cell('n', jmLu ? '—' : '…'); });
     h += ligne('Contrôles', j => { const c = X[j.date] && X[j.date].controles; return c ? cell(c.total ? (auj(j) && c.rendus < c.total ? 'o' : MA.ctrl(c.rendus, c.total)) : 'n', c.total ? c.rendus + '/' + c.total : '—') : cell('n', SJ ? '—' : '…'); });
@@ -1143,9 +1202,9 @@
     const [ca, ...reste] = R.T;
     const ecart = m.ecart;
     const em = [R.dessous.length ? 'en dessous : ' + R.dessous.join(', ') : '', R.dessus.length ? 'au-dessus : ' + R.dessus.join(', ') : ''].filter(Boolean).join(' · ') || 'la semaine commence';
-    let h = `<div class="ma-v"><span class="n ${ecart == null ? 'mu' : (ecart >= 0 ? 'ok' : (R.att >= 90 ? 'wa' : 'ko'))} long">${ecart == null ? '…' : fS(ecart)}</span><span class="t">${ecart == null ? 'la semaine' : (ecart >= 0 ? 'd’avance sur l’attendu' : 'sur l’attendu à ce jour')}<em>${em}</em></span>`
+    let h = `<div class="ma-v"><span class="n ${ecart == null ? 'mu' : (ecart >= 0 ? 'ok' : (R.att >= 90 ? 'wa' : 'ko'))} long">${ecart == null ? '…' : fS(ecart)}</span><span class="t">${ecart == null ? 'la semaine' : (ecart >= 0 ? 'd’avance sur l’objectif' : 'sur l’objectif à ce jour')}<em>${em}</em></span>`
       + `<span class="dots">${R.J.filter(j => j.passe && !j.ferme && j.ca != null && j.objectif).map(j => `<i class="${maJourCA(j)}"></i>`).join('')}</span></div>`;
-    h += maGrille([ca]) + maDamier(R) + maGrille(reste);
+    h += maGrille([ca]) + maDamier(Object.assign({ sansChiffre: true }, R)) + maGrille(reste);
     const v = valeurMagasin();
     h += `<div class="mb-mur ma-ext">${murR([murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? VALO_JOURS + ' jours · ÷ ' + VALO_JOURS + ' × ' + VALO_AN + ' ÷ ' + VALO_DIV : 'lecture des ventes…', 'or', 'vdrop')], true)}</div>`;
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
@@ -1165,7 +1224,8 @@
   function maDate() {
     if (S.vue === 'semaine') { const [du, au] = bornesSemaine(); return 'du ' + fD(du) + ' au ' + fD(au); }
     const t = new Date(S.date + 'T12:00:00');
-    return (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
+    // Au téléphone, la forme courte : « aujourd’hui · sam. 10 oct. » tient sur une ligne.
+    return (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', estMobile() ? { weekday: 'short', day: 'numeric', month: 'short' } : { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
   function rendMobile(m, d) {
@@ -1353,6 +1413,7 @@
    * sous le même déclencheur.
    */
   function canauxCarte(m, C) {
+    if (S.vue === 'mois') { return canauxMoisCarte(m, C); }
     const per = coPer(), J = per ? C.periode : C.jour, P = per ? null : proData(), PJ = P ? P.jour : null;
     const ouvert = !per && !!S.proOuvert, lue = J.joursLus > 0;
     const comptoir = lue ? J.comptoir : null, cc = J.cc, liv = J.liv, total = (comptoir || 0) + J.webshop;
@@ -1368,7 +1429,10 @@
     const mini = 'comptoir = tickets caisse (dont clients pro) · click & collect = commande webshop retirée en boutique · livraison = commande webshop livrée'
       + (per && J.joursEcoules && J.joursLus < J.joursEcoules ? ' · caisse lue sur ' + J.joursLus + ' jour' + (J.joursLus > 1 ? 's' : '') + ' sur ' + J.joursEcoules : '');
     const bar = lue && total > 0 ? `<div class="db-split-bar" title="comptoir ${fP(pct(comptoir))} · click & collect ${fP(pct(cc.ca))} · livraison ${fP(pct(liv.ca))}"><i class="c" style="width:${pct(comptoir).toFixed(1)}%"></i><i class="w" style="width:${pct(cc.ca).toFixed(1)}%"></i><i class="l" style="width:${pct(liv.ca).toFixed(1)}%"></i></div>` : '';
-    const sC = lue ? [fP(pct(comptoir)) + ' du CA', fN(J.tickets) + ' ticket' + (J.tickets > 1 ? 's' : ''), J.tickets ? 'panier ' + fU(comptoir / J.tickets) : ''].filter(Boolean).join(' · ')
+    // Le panier du comptoir sans les clients pro quand ils sont lus (21/10/2026) : un ticket pro de 500 € le ferait monter.
+    const proLu = caPro != null && tkPro != null && (!per || !!(m && m.proComplet)), tkHP = proLu ? J.tickets - tkPro : null;
+    const panC = proLu ? (tkHP > 0 ? 'panier ' + fU(Math.max(0, comptoir - caPro) / tkHP) + ' hors pro' : '') : (J.tickets ? 'panier ' + fU(comptoir / J.tickets) : '');
+    const sC = lue ? [fP(pct(comptoir)) + ' du CA', fN(J.tickets) + ' ticket' + (J.tickets > 1 ? 's' : ''), panC].filter(Boolean).join(' · ')
       + (caPro != null && tkPro ? `<br>dont clients pro <b>${fE(caPro)}</b> (${fN(tkPro)} ticket${tkPro > 1 ? 's' : ''}${PJ && PJ.aFacturer ? ', à facturer ' + fE(PJ.aFacturer) : ''})${partPro != null ? ' · ' + proPart(partPro, per) : ''}` : (X && X.manque ? '<br>' + esc(X.manque) : '')) : 'caisse pas encore lue';
     const sW = cc.n ? [fP(pct(cc.ca)) + ' du CA', cc.n + ' commande' + (cc.n > 1 ? 's' : ''), 'panier ' + fU(cc.ca / cc.n)].join(' · ') + (per ? '' : '<br>' + [nSt('cc', 'remise') ? `<b>${nSt('cc', 'remise')} remise${nSt('cc', 'remise') > 1 ? 's' : ''}</b>` : '', nSt('cc', 'prête') ? nSt('cc', 'prête') + ' prête' + (nSt('cc', 'prête') > 1 ? 's' : '') : '', nSt('cc', 'à préparer') + nSt('cc', 'en préparation') ? (nSt('cc', 'à préparer') + nSt('cc', 'en préparation')) + ' à préparer' : ''].filter(Boolean).join(' · ')) : 'aucune commande ' + (per ? 'sur ' + perLib() : ceJour());
     const sL = liv.n ? [fP(pct(liv.ca)) + ' du CA', liv.n + ' commande' + (liv.n > 1 ? 's' : ''), 'panier ' + fU(liv.ca / liv.n)].join(' · ') + (per ? '' : '<br>' + [nSt('liv', 'livrée') ? `<b>${nSt('liv', 'livrée')} livrée${nSt('liv', 'livrée') > 1 ? 's' : ''}</b>` : '', nSt('liv', 'en route') ? nSt('liv', 'en route') + ' en route' : ''].filter(Boolean).join(' · ')) : 'aucune livraison ' + (per ? 'sur ' + perLib() : ceJour());
@@ -1376,6 +1440,142 @@
       <div class="db-split-g co3"><div class="c"><div class="k">Comptoir</div><div class="v">${comptoir != null ? fK(comptoir) : '—'}</div><div class="s">${sC}</div></div>
       <div class="w"><div class="k">Click &amp; collect</div><div class="v">${fK(cc.ca)}</div><div class="s">${sW}</div></div>
       <div class="l"><div class="k">Livraison</div><div class="v">${fK(liv.ca)}</div><div class="s">${sL}</div></div></div>${canauxCorps(C)}${deplie}</div>`;
+  }
+  /* --- le mois : quatre canaux, le niveau et l'évolution de chacun (demande du 17/10/2026) ---
+   * Les clients pro sortent du comptoir et ont leur tuile. Chaque tuile porte sa courbe des six
+   * derniers mois (le mois en cours projeté au rythme des jours lus) et l'écart au mois d'avant
+   * aux mêmes dates ; un clic ouvre le cumul du mois face au mois d'avant. Lecture :
+   * /exploitation/canaux-mois (src/canaux_offres.php). */
+  function cleCanM() { return 'canM|' + S.shop + '|' + S.date.slice(0, 7); }
+  function cheminCanM() { return '/exploitation/canaux-mois?shop=' + encodeURIComponent(S.shop) + '&mois=' + S.date.slice(0, 7) + '&n=6'; }
+  function canMData() { const H = S.aux[cleCanM()]; return H && !H.error && Array.isArray(H.historique) ? H : null; }
+  const CANAUX_M = [['c', 'Comptoir', '#b8ad9f', 'c'], ['p', 'Clients pro — B2B', '#2d7a3e', 'b'], ['w', 'Click &amp; collect', '#1f5f8b', 'w'], ['l', 'Livraison', '#0f3b5c', 'l']];
+  const MOIS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  const moisNom = ym => MOIS_FR[+ym.slice(5, 7) - 1];
+  const moisCourt = ym => { const n = moisNom(ym); return n.length > 5 ? n.slice(0, 4) + '.' : n; };
+  /** Un canal sur un mois de l'historique : le comptoir sans les clients pro (inconnu tant que le pro ne se lit pas). */
+  function valMois(k, h) {
+    if (k === 'c') { return h.comptoir == null || h.pro == null ? null : h.comptoir - h.pro; }
+    return k === 'p' ? h.pro : (k === 'w' ? h.cc : h.liv);
+  }
+  /** Un canal sur un jour : un jour sans tickets pro gravés compte son comptoir entier. */
+  function valJour(k, x) {
+    if (k === 'c') { return x.comptoir == null ? null : x.comptoir - (x.pro || 0); }
+    return k === 'p' ? x.pro : (k === 'w' ? x.cc : x.liv);
+  }
+  /** Le cumul d'un canal jour après jour : [jour du mois, cumul] sur les jours lus (le webshop : jusqu'à aujourd'hui). */
+  function cumulCanal(k, L) {
+    const out = []; let t = 0;
+    (L || []).forEach(x => {
+      const v = valJour(k, x);
+      if (v == null || x.j > AUJ) { return; }
+      t += v; out.push([+x.j.slice(8, 10), t]);
+    });
+    return out;
+  }
+  /** L'écart au mois d'avant aux mêmes dates (mois en cours) ou mois entier contre mois entier. */
+  function ecartCanal(k, H) {
+    const c = cumulCanal(k, H.jours.courant), p = cumulCanal(k, H.jours.precedent);
+    if (!c.length || !p.length) { return null; }
+    const d = c[c.length - 1][0], cour = c[c.length - 1][1];
+    const enCours = (H.historique[H.historique.length - 1] || {}).enCours;
+    const avant = enCours ? (p.filter(x => x[0] <= d).pop() || [0, 0])[1] : p[p.length - 1][1];
+    return { jour: d, cour, avant, pct: avant > 0 ? 100 * (cour / avant - 1) : null, enCours };
+  }
+  /** La petite courbe d'une tuile : les mois clos en trait plein, le mois en cours projeté en pointillé. */
+  function sparkCanal(k, H, coul) {
+    const P = H.historique.map(h => {
+      let v = valMois(k, h);
+      const lus = k === 'w' || k === 'l' ? h.joursEcoules : h.joursLus;
+      if (v != null && h.enCours && lus > 0) { v = v / lus * h.jours; }
+      return { m: h.m, v, proj: h.enCours };
+    });
+    const vals = P.filter(x => x.v != null).map(x => x.v);
+    if (vals.length < 2) { return ''; }
+    const mx = Math.max(...vals), mn = Math.min(...vals), et = mx - mn || 1;
+    const X = i => 4 + i * 88 / (P.length - 1), Y = v => 30 - 24 * (v - mn) / et;
+    const pts = P.map((x, i) => x.v == null ? null : [X(i), Y(x.v), x]);
+    const pleins = pts.filter(x => x && !x[2].proj).map(x => x[0].toFixed(1) + ',' + x[1].toFixed(1)).join(' ');
+    const der = pts[pts.length - 1], avd = pts.slice(0, -1).filter(Boolean).pop();
+    const titre = P.map(x => moisNom(x.m) + ' ' + (x.v == null ? '—' : fK(x.v)) + (x.proj ? ' (projeté)' : '')).join(' · ');
+    return `<svg class="co-spk" width="96" height="34" viewBox="0 0 96 34" role="img" aria-label="${esc(titre)}"><title>${esc(titre)}</title>
+      <polyline fill="none" stroke="${coul}" stroke-width="2" stroke-linejoin="round" points="${pleins}"/>
+      ${der && der[2].proj && avd ? `<line x1="${avd[0].toFixed(1)}" y1="${avd[1].toFixed(1)}" x2="${der[0].toFixed(1)}" y2="${der[1].toFixed(1)}" stroke="${coul}" stroke-width="2" stroke-dasharray="3 3"/>` : ''}
+      ${pts.filter(Boolean).map(x => `<circle cx="${x[0].toFixed(1)}" cy="${x[1].toFixed(1)}" r="${x === der ? 3 : 1.6}" fill="${x === der && x[2].proj ? '#fff' : coul}"${x === der && x[2].proj ? ` stroke="${coul}" stroke-width="1.6"` : ''}/>`).join('')}</svg>`;
+  }
+  /** Le cumul du mois du canal ouvert face au mois d'avant, et la fin de mois au rythme actuel. */
+  function grapheCanal(k, H, coul, nom) {
+    const c = cumulCanal(k, H.jours.courant), p = cumulCanal(k, H.jours.precedent);
+    const hC = H.historique[H.historique.length - 1], hP = H.historique[H.historique.length - 2];
+    if (!c.length) { return `<div class="co-graphe" style="--cc:${coul}"><span class="db-lab" style="color:${coul}">${nom} — le cumul du mois</span><div class="db-mini" style="margin-top:8px">${k === 'p' || k === 'c' ? 'Les tickets pro de ce mois ne sont pas encore lus.' : 'Rien sur ce mois.'}</div></div>`; }
+    const nM = hC.jours, nP = hP.jours, nX = Math.max(nM, nP);
+    const dern = c[c.length - 1], proj = hC.enCours ? dern[1] / dern[0] * nM : null;
+    const mx = Math.max(1, dern[1], proj || 0, p.length ? p[p.length - 1][1] : 0) * 1.08;
+    const W = 1340, Hh = 180, g = { l: 52, r: 14, t: 24, b: 24 }, iw = W - g.l - g.r, ih = Hh - g.t - g.b;
+    const X = d => g.l + (d - 1) * iw / (nX - 1), Y = v => g.t + ih - ih * v / mx;
+    const pas = [1, 2, 2.5, 5].map(f => f * Math.pow(10, Math.floor(Math.log10(mx / 3)))).find(s => mx / s <= 4.5) || mx / 3;
+    let axes = ''; for (let v = 0; v <= mx; v += pas) { axes += `<line x1="${g.l}" x2="${W - g.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="#ebe5dd"/><text x="${g.l - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end">${fK(v)}</text>`; }
+    const jx = [1, 5, 10, 15, 20, 25, nX].filter((d, i, a) => a.indexOf(d) === i && d <= nX);
+    if (hC.enCours && !jx.includes(dern[0])) { jx.push(dern[0]); }
+    const xs = jx.map(d => `<text x="${X(d).toFixed(1)}" y="${Hh - 6}" text-anchor="middle"${d === dern[0] && hC.enCours ? ' class="fort"' : ''}>${d}</text>`).join('');
+    const ligne = L => L.map(x => X(x[0]).toFixed(1) + ',' + Y(x[1]).toFixed(1)).join(' ');
+    const E = ecartCanal(k, H);
+    const avantMeme = E ? E.avant : null;
+    const yA = avantMeme != null ? Y(avantMeme) : null, xD = X(dern[0]);
+    const ecart = E && E.pct != null ? `<line x1="${xD.toFixed(1)}" x2="${xD.toFixed(1)}" y1="${Y(dern[1]).toFixed(1)}" y2="${yA.toFixed(1)}" stroke="${E.cour >= E.avant ? '#2d7a3e' : '#A61E1E'}" stroke-width="2"/>
+      <circle cx="${xD.toFixed(1)}" cy="${yA.toFixed(1)}" r="3.5" fill="#fff" stroke="#b8ad9f" stroke-width="2"/>
+      <text x="${(xD + 8).toFixed(1)}" y="${((Y(dern[1]) + yA) / 2 + 4).toFixed(1)}" class="ecart ${E.cour >= E.avant ? 'ok' : 'ko'}">${E.cour >= E.avant ? '+' : '−'}${fE(Math.abs(E.cour - E.avant))}${E.enCours ? ' au ' + E.jour : ''}</text>` : '';
+    const projL = proj != null && dern[0] < nM ? `<line x1="${xD.toFixed(1)}" y1="${Y(dern[1]).toFixed(1)}" x2="${X(nM).toFixed(1)}" y2="${Y(proj).toFixed(1)}" stroke="${coul}" stroke-width="2" stroke-dasharray="2 4" opacity=".75"/>
+      <text x="${X(nM).toFixed(1)}" y="${(Y(proj) - 8).toFixed(1)}" text-anchor="end" class="proj" style="fill:${coul}">fin ${moisNom(hC.m)} au rythme : ${fE(proj)}</text>` : '';
+    const finP = p.length ? `<text x="${(X(p[p.length - 1][0]) - 4).toFixed(1)}" y="${(Y(p[p.length - 1][1]) + (proj != null && Y(proj) < Y(p[p.length - 1][1]) ? 17 : -8)).toFixed(1)}" text-anchor="end" class="mu">${moisNom(hP.m)} ${fE(p[p.length - 1][1])}</text>` : '';
+    const svg = `<svg class="co-cumul" viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="${esc(nom + ' : cumul de ' + moisNom(hC.m) + ' face à ' + moisNom(hP.m))}">${axes}
+      ${p.length ? `<polyline fill="none" stroke="#b8ad9f" stroke-width="2" stroke-dasharray="5 4" points="${ligne(p)}"/>` : ''}
+      <polyline fill="none" stroke="${coul}" stroke-width="3" stroke-linejoin="round" points="${ligne(c)}"/>${projL}
+      <circle cx="${xD.toFixed(1)}" cy="${Y(dern[1]).toFixed(1)}" r="5" fill="${coul}"/>${ecart}${finP}${xs}</svg>`;
+    // La ligne de pied : à date, le nombre, le panier, la part du CA face au mois d'avant.
+    const part = h => { const v = valMois(k, h), t = h.total; return v != null && t ? 100 * v / t : null; };
+    const nb = { c: h => h.tickets != null && h.ticketsPro != null ? h.tickets - h.ticketsPro : null, p: h => h.ticketsPro, w: h => h.ccN, l: h => h.livN }[k];
+    const unite = { c: ['ticket', 'tickets'], p: ['ticket pro', 'tickets pro'], w: ['commande', 'commandes'], l: ['commande', 'commandes'] }[k];
+    const nC = nb(hC), vC = valMois(k, hC);
+    const pied = [E ? `${E.enCours ? 'Au ' + E.jour : 'Sur le mois'} : <b>${fE(E.cour)}</b> contre ${fE(E.avant)} ${E.enCours ? 'au ' + E.jour + ' ' + moisNom(hP.m) : 'en ' + moisNom(hP.m)}${E.pct != null ? ` (<b class="${E.pct >= 0 ? 'ok' : 'ko'}">${E.pct >= 0 ? '+' : '−'}${nf(Math.abs(E.pct), 0)} %</b>)` : ''}` : '',
+      nC ? fN(nC) + ' ' + unite[nC > 1 ? 1 : 0] + (vC != null ? ' · panier ' + fU(vC / nC) : '') : '',
+      part(hC) != null ? fP(part(hC)) + ' du CA' + (part(hP) != null ? ' (' + moisNom(hP.m) + ' ' + fP(part(hP)) + ')' : '') : ''].filter(Boolean).join(' · ');
+    const leg = `trait plein : ${moisNom(hC.m)} jour après jour · pointillé gris : ${moisNom(hP.m)} aux mêmes dates${proj != null ? ' · pointillé : la fin du mois au rythme actuel' : ''}${k === 'c' || k === 'p' ? ' · le pro se lit depuis le ' + fD(H.proDepuis || '') : ''}`;
+    return `<div class="co-graphe" style="--cc:${coul}"><div class="hd"><span class="db-lab" style="color:${coul}">${nom} — le cumul du mois face à ${moisNom(hP.m)}</span><span class="db-mini">${esc(leg)}</span></div>${svg}
+      <div class="db-mini pied">${pied}</div></div>`;
+  }
+  /** La carte du mois : la barre des quatre canaux, leurs tuiles, le graphique du canal ouvert, puis les jours et les semaines. */
+  function canauxMoisCarte(m, C) {
+    const J = C.periode, H = canMData(), lue = J.joursLus > 0;
+    const hC = H ? H.historique[H.historique.length - 1] : null;
+    const caPro = m && m.caPro != null ? m.caPro : (hC ? hC.pro : null), tkPro = m && m.ticketsPro != null ? m.ticketsPro : (hC ? hC.ticketsPro : null);
+    const comptoir = lue ? J.comptoir - (caPro || 0) : null, tkC = lue && J.tickets != null ? J.tickets - (tkPro || 0) : null;
+    const total = (lue ? J.comptoir : 0) + J.webshop;
+    const pct = v => total > 0 && v != null ? 100 * v / total : 0;
+    const V = { c: comptoir, p: caPro, w: J.cc.ca, l: J.liv.ca };
+    const sous = {
+      c: lue ? [fP(pct(comptoir)) + ' du CA', fN(tkC) + ' ticket' + (tkC > 1 ? 's' : ''), tkC ? 'panier ' + fU(comptoir / tkC) : ''].filter(Boolean).join(' · ') : 'caisse pas encore lue',
+      p: caPro != null ? [fP(pct(caPro)) + ' du CA', fN(tkPro) + ' ticket' + (tkPro > 1 ? 's' : ''), tkPro ? 'panier ' + fU(caPro / tkPro) : ''].filter(Boolean).join(' · ') : 'tickets pro pas encore lus',
+      w: J.cc.n ? [fP(pct(J.cc.ca)) + ' du CA', J.cc.n + ' commande' + (J.cc.n > 1 ? 's' : ''), 'panier ' + fU(J.cc.ca / J.cc.n)].join(' · ') : 'aucune commande sur le mois',
+      l: J.liv.n ? [fP(pct(J.liv.ca)) + ' du CA', J.liv.n + ' commande' + (J.liv.n > 1 ? 's' : ''), 'panier ' + fU(J.liv.ca / J.liv.n)].join(' · ') : 'aucune livraison sur le mois',
+    };
+    const prec = H ? moisCourt(H.precedent) : '';
+    const tuiles = CANAUX_M.map(([k, nom, coul, cls]) => {
+      const on = S.coCanal === k, E = H ? ecartCanal(k, H) : null;
+      const badge = E && E.pct != null ? `<span class="co-delta ${E.pct >= 0 ? 'ok' : 'ko'}" title="${esc((E.enCours ? 'au ' + E.jour + ', ' : 'sur le mois, ') + fE(E.cour) + ' contre ' + fE(E.avant))}">${E.pct >= 0 ? '+' : '−'}${nf(Math.abs(E.pct), 0)} % vs ${esc(prec)}</span>` : '';
+      return `<div class="${cls} co-tuile${on ? ' on' : ''}" style="--cc:${coul}" data-coc="${k}" role="button" tabindex="0" aria-expanded="${on}">
+        <div class="hd"><div style="flex:1;min-width:0"><div class="k">${nom}</div><div class="v">${V[k] != null ? (k === 'c' ? fK(V[k]) : fE(V[k])) : '—'}${badge}</div></div>${H ? sparkCanal(k, H, coul) : ''}</div>
+        <div class="s">${sous[k]}</div><div class="co-voir">${on ? 'graphique ouvert ▴' : 'voir l’évolution ▾'}</div></div>`;
+    }).join('');
+    const bar = lue && total > 0 ? `<div class="db-split-bar" title="comptoir ${fP(pct(comptoir))} · clients pro ${fP(pct(caPro))} · click & collect ${fP(pct(J.cc.ca))} · livraison ${fP(pct(J.liv.ca))}">${CANAUX_M.map(([k, , coul]) => `<i style="background:${coul};width:${pct(V[k]).toFixed(1)}%"></i>`).join('')}</div>` : '';
+    const ouvert = CANAUX_M.find(x => x[0] === S.coCanal);
+    const err = S.err[cleCanM()] || (S.aux[cleCanM()] || {}).error;
+    const graphe = !ouvert ? '' : (H ? grapheCanal(ouvert[0], H, ouvert[2], ouvert[1])
+      : `<div class="co-graphe" style="--cc:${ouvert[2]}"><div class="db-mini">${err ? 'Lecture de l’historique impossible : ' + esc(err) : 'Lecture des six derniers mois…'}</div></div>`);
+    const mini = 'comptoir = tickets caisse hors clients pro · clients pro = tickets des sociétés (TVA valide) · click & collect = webshop retiré en boutique · livraison = webshop livré · un clic sur un canal ouvre son évolution'
+      + (J.joursEcoules && J.joursLus < J.joursEcoules ? ' · caisse lue sur ' + J.joursLus + ' jour' + (J.joursLus > 1 ? 's' : '') + ' sur ' + J.joursEcoules : '');
+    return `<div class="db-card db-split co${caPro ? ' on' : ''}"><div class="ct"><span class="db-lab">Commandes et canaux — le mois</span><span class="db-mini">${esc(mini)}</span></div>${bar}
+      <div class="db-split-g co4">${tuiles}</div>${graphe}${canauxCorps(C)}</div>`;
   }
   const CO_SEUIL_MARGE = 50;
   const OFFRE_VERDICT = { tot: ['Trop tôt', 'tot'], garder: ['Garder', 'ok'], ajuster: ['Ajuster', 'att'], arreter: ['Arrêter', 'ko'] };
@@ -1866,9 +2066,12 @@
     const detail = mobile === 'detail';
     const rienJour = !J || !J.ticketsPro, rienMois = !(M.ticketsPro > 0);
     // La vue Jour ne parle que du jour choisi : ni les 30 jours, ni les comptes, ni la série (demande du 03/10/2026).
-    const sous = 'tickets portés par un client dont la fiche est professionnelle';
+    const sous = 'tickets portés par un client dont la fiche est professionnelle, avec un numéro de TVA valide';
+    // Les tickets marqués pro au panel dont la fiche n'a pas de TVA valide (11/10/2026) : comptés au comptoir, à compléter.
+    const ST = J && J.sansTva && J.sansTva.tickets > 0 ? J.sansTva : null;
+    const nonTva = ST ? `<div class="db-mini db-pro-st">${fN(ST.tickets)} ticket${ST.tickets > 1 ? 's' : ''} marqué${ST.tickets > 1 ? 's' : ''} pro sans TVA valide sur la fiche du client (${fU(ST.ca)}), compté${ST.tickets > 1 ? 's' : ''} au comptoir · à compléter dans le panel</div>` : '';
     if (rienJour) {
-      const t = `<div class="db-mini" style="padding:${mobile && !detail ? '4px 4px 8px' : '12px 16px'}">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.${J && !J.tickets ? ' Aucun ticket lu ce jour.' : ''}</div>`;
+      const t = `<div class="db-mini" style="padding:${mobile && !detail ? '4px 4px 8px' : '12px 16px'}">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.${J && !J.tickets ? ' Aucun ticket lu ce jour.' : ''}</div>${nonTva}`;
       if (detail) { return t; }
       return mobile ? `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${t}</div>` : `<div class="db-card db-pro"><div class="ct"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${esc(sous)}</span></div>${t}</div>`;
     }
@@ -1889,8 +2092,8 @@
     const gauche = `<div><span class="db-lab">Les tickets pro ${auj ? 'du jour' : 'de ce jour'}</span>
       ${tickets.length ? `<table class="db-pro-tab"><thead><tr><th>Heure</th><th class="n">Montant</th><th class="r"></th></tr></thead><tbody>${tickets.slice(0, mobile ? 8 : 14).map(t => `<tr><td class="mu">${esc(t.heure)}</td><td class="n">${fU(t.montant)}</td><td class="r">${t.differe ? '<span class="db-pro-tag d">différé</span>' : (t.facture ? '<span class="db-pro-tag f">facturé</span>' : '<span class="db-pro-tag">comptoir</span>')}</td></tr>`).join('')}${tickets.length > (mobile ? 8 : 14) ? `<tr><td colspan="3" class="mu">… et ${tickets.length - (mobile ? 8 : 14)} ${tickets.length - (mobile ? 8 : 14) > 1 ? 'autres' : 'autre'}</td></tr>` : ''}</tbody></table>` : `<div class="db-mini" style="margin-top:6px">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.</div>`}</div>`;
     // Le détail ne répète pas la définition ni la part sur 30 jours (en tête du bloc) : seulement les jours non lus.
-    if (detail) { return `${kpi}<div class="db-pro-corps un">${gauche}</div>`; }
-    if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps un">${gauche}</div></div>`; }
+    if (detail) { return `${kpi}<div class="db-pro-corps un">${gauche}</div>${nonTva}`; }
+    if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps un">${gauche}</div>${nonTva}</div>`; }
     // Sur ordinateur, la carte se replie : l'en-tête garde le jour en une
     // ligne (CA pro, sa part, clients, à facturer) ; le clic déplie les
     // chiffres et les tickets du jour.
@@ -1901,7 +2104,7 @@
     const mois = '';
     return `<div class="db-card db-pro${J && J.ticketsPro ? ' on' : ''}${ouvert ? ' ouv' : ''}"><div class="ct" data-prodrop="1" style="cursor:pointer" title="${esc(sous)}"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${resume}${esc(mois)}</span>
       <span class="db-cdr" style="padding:0;margin-left:auto">${ouvert ? 'replier ▴' : 'voir le détail ▾'}</span></div>
-      ${ouvert ? `<div class="db-mini db-pro-def">${esc(sous)}</div>${kpi}<div class="db-pro-corps un">${gauche}</div>` : ''}</div>`;
+      ${ouvert ? `<div class="db-mini db-pro-def">${esc(sous)}</div>${kpi}<div class="db-pro-corps un">${gauche}</div>${nonTva}` : ''}</div>`;
   }
   /** Le split comptoir / pro de la vue (jour, semaine, mois) : lu dans la réponse de Résultat, pas un appel de plus. */
   function splitDe(m) {
@@ -1946,7 +2149,7 @@
     if (!X.lu) { return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque)}</span>${bascule}</div>${deplie}</div>`; }
     const bar = X.complet && m.partPro != null ? `<div class="db-split-bar" title="comptoir ${fP(X.partC)} · pro ${fP(m.partPro)}${X.per ? ' · limite : ' + PRO_MAX + ' % de pro' : ''}"><i class="c" style="width:${X.partC}%"></i><i class="p" style="width:${m.partPro}%"></i>${X.per ? `<b class="lim" style="left:${100 - PRO_MAX}%" title="limite : ${PRO_MAX} % de pro"></b>` : ''}</div>` : '';
     const plusP = jour && P ? [J && J.aFacturer ? 'à facturer ' + fE(J.aFacturer) : ''].filter(Boolean).join(' · ') : '';
-    return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque || 'pro = tickets d’un client dont la fiche panel est professionnelle · comptoir = le reste des ventes')}</span>${bascule}</div>${bar}
+    return `<div class="db-card db-split${pro ? ' on' : ''}"><div class="ct"${ct}><span class="db-lab">${lib}</span><span class="db-mini">${esc(X.manque || 'pro = tickets d’un client dont la fiche panel est professionnelle, avec une TVA valide · comptoir = le reste des ventes')}</span>${bascule}</div>${bar}
       <div class="db-split-g"><div class="c"><div class="k">Comptoir</div><div class="v">${m.caComptoir != null ? fK(m.caComptoir) : '—'}</div><div class="s">${X.sC}</div></div>
       <div class="p"><div class="k">Clients pro B2B</div><div class="v">${fK(m.caPro)}</div><div class="s">${X.sP}${plusP ? '<br>' + esc(plusP) : ''}</div></div></div>${deplie}</div>`;
   }
@@ -2063,6 +2266,7 @@
   const cleOpSuivi = () => 'opSuivi|' + S.shop + '|' + S.date;
   function opCharger(force) {
     lireAux(cleOpSuivi(), '/production/flux/suivi?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force);
+    if (S.eqOuvert && S.eqDeplie) { lireAux('eqh|' + S.shop + '|' + S.date, '/exploitation/equipe-heures?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, force); }
     lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force);
     lireAux('taches|' + S.date, '/pwa/tasks?date=' + S.date, force);
     lireAux('cmd|' + S.shop, '/ventes/commandes?shop=' + encodeURIComponent(S.shop), force);
@@ -2102,41 +2306,7 @@
   }
   const opFaire = p => p.verdict === 'rupture' || p.verdict === 'manque' ? (p.conseil && p.conseil.pieces ? 'recuire ' + fN(p.conseil.pieces) : 'à recuire') : (p.verdict === 'trop' ? 'ne pas recuire' : '');
   const OP_RANG = { rupture: 0, manque: 1, trop: 2, ok: 3 };
-  function opTuile(cls, k, v, s) { return `<div class="op-tl ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`; }
   const opSk = () => '<div class="db-sk" style="width:70%;margin:6px 0"></div><div class="db-sk" style="width:50%"></div>';
-  /* Les bundles vendus sur la journée (10/10/2026), à côté des ventes par catégorie : quantité, nom, prix moyen
-   * encaissé, CA, marge, première et dernière vente, lus dans les mêmes tickets (catégorie « Bundle »). */
-  const BUNDLE_RE = /bundle|promotion/i;
-  function bundlesDe(st) {
-    if (st.bundles && Array.isArray(st.bundles.lignes)) { return st.bundles; }
-    // Une réponse d'avant le 10/10/2026 : les bundles se retrouvent dans les catégories.
-    const L = [];
-    (st.categories || []).filter(c => BUNDLE_RE.test((c.nom || '') + ' ' + (c.groupe || ''))).forEach(c => (c.produits || []).forEach(p => L.push(Object.assign({}, p, { cat: c.nom, prix: p.q ? p.v / p.q : null, heures: null }))));
-    L.sort((a, b) => (b.q - a.q) || (b.v - a.v));
-    const ca = L.reduce((a, x) => a + (x.v || 0), 0), avec = L.filter(x => x.m != null), mV = avec.reduce((a, x) => a + x.v, 0), tot = st.totaux && st.totaux.ca;
-    return { lignes: L, n: L.length, pieces: L.reduce((a, x) => a + (x.q || 0), 0), ca, taux: mV > 0 ? 100 * avec.reduce((a, x) => a + x.m, 0) / mV : null, part: tot ? 100 * ca / tot : null };
-  }
-  function bundlesCarte() {
-    const ks = cleSt(), st = S.st[ks], err = S.err[ks], jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
-    const tete = mini => `<div class="ct"><span class="db-lab">Bundles vendus</span><span class="db-mini">${mini}</span></div>`;
-    if (!st) { return `<div class="db-card op-bun">${tete(err ? esc(err) : 'lecture des tickets en cours…')}<div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`; }
-    const B = bundlesDe(st);
-    if (!B.lignes.length) { return `<div class="db-card op-bun">${tete('la journée · catégorie Bundle')}<div class="op-bun-vide">Aucun bundle vendu ${jour}.</div></div>`; }
-    const quand = x => x.premiere == null ? '' : (x.premiere === x.derniere ? 'à ' + x.premiere + ' h' : 'de ' + x.premiere + ' h à ' + x.derniere + ' h');
-    const mc = v => v == null ? 'mu' : (v >= 60 ? 'ok' : (v >= 50 ? 'att' : 'ko'));
-    // La composition : la recette du bundle au panel (la même lecture que la fiche produit), lue une fois.
-    const cleR = x => 'recette|' + x.id + '|' + S.shop;
-    B.lignes.forEach(x => { const k = cleR(x); if (/^\d+$/.test(String(x.id)) && !S.aux[k] && !S.enCours[k] && !S.err[k]) { setTimeout(() => lireAux(k, '/analyse/produits/recette?pid=' + encodeURIComponent(x.id) + '&shop=' + encodeURIComponent(S.shop)), 0); } });
-    const compo = x => { const R = S.aux[cleR(x)], L = R && Array.isArray(R.lignes) ? R.lignes.filter(l => l && l.nom) : []; if (!L.length) { return ''; }
-      const t = L.slice(0, 4).map(l => (l.qte == null ? '' : (!l.unite || /^pc/i.test(l.unite) ? nf(l.qte, l.qte % 1 ? 1 : 0) + ' × ' : nf(l.qte, l.qte % 1 ? 2 : 0) + ' ' + l.unite + ' ')) + l.nom).join(' + ') + (L.length > 4 ? ' + ' + (L.length - 4) + ' autre' + (L.length > 5 ? 's' : '') : '');
-      return `<small class="op-bun-co">${esc(t)}</small>`; };
-    const lignes = B.lignes.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q != null ? x.q : ''}" data-fv="${x.v != null ? x.v : ''}" data-ft="${x.taux != null ? x.taux : ''}" data-fc="${x.c != null ? x.c : ''}" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0" title="les ventes sur 12 semaines, la recette et la marge">
-      <td class="n op-bun-q">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td><b>${esc(x.nom)}</b>${compo(x)}${quand(x) ? `<small>${quand(x)}</small>` : ''}</td><td class="n">${fU(x.prix)}</td><td class="n">${fE(x.v)}</td><td class="n ${mc(x.taux)}">${x.taux != null ? fP0(x.taux) : '—'}</td></tr>`).join('');
-    return `<div class="db-card op-bun">${tete('la journée · ' + B.n + ' bundle' + (B.n > 1 ? 's' : '') + ' · clic : la fiche')}
-      <div class="op-bun-k"><div><div class="k">Vendus</div><div class="v">${nf(B.pieces, B.pieces % 1 ? 1 : 0)}</div></div><div><div class="k">CA bundles</div><div class="v">${fE(B.ca)}</div></div><div><div class="k">Part du CA</div><div class="v">${B.part != null ? fP(B.part) : '—'}</div></div><div><div class="k">Marge brute</div><div class="v ${mc(B.taux)}">${B.taux != null ? fP0(B.taux) : '—'}</div></div></div>
-      <div class="op-large"><table class="db-pro-tab op-bun-tab"><thead><tr><th class="n">Qté</th><th>Bundle</th><th class="n" title="prix moyen encaissé">Prix</th><th class="n">CA</th><th class="n">Marge</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
-  }
-
   /* La vitrine selon la durée de vie (demande du 06/10/2026) : les trois onglets du suivi de
    * production — short life (vendu le jour même), medium life (se garde 2 à 3 jours), long life
    * (une semaine et plus) — chacun avec le niveau actuel de marchandises. La durée de vie vient du
@@ -2244,14 +2414,16 @@
     const descend = (ligneN, ligneP) => arbre.map(g => ligneN(g, 1) + (ouv(g.cle) ? g.sc.map(c => ligneN(c, 2) + (ouv(c.cle) ? c.P.map(ligneP).join('') : '')).join('') : '')).join('');
     if (mob) {
       const resume = x => long ? `${fN(x.n)} réf. · ${fN(x.st)} en stock · ${x.pj ? nf(x.pj, 1) + ' par jour · ' + nf(jours(x.st, x.pj), 1) + ' j' : 'pas de vente lue'}` : `${fN(x.n)} réf. · ${fN(x.st)} en vitrine`;
-      const ligneN = (x, nv) => `<div class="r nv${nv}${long ? '' : ' hs'}${ouv(x.cle) ? ' on' : ''}" data-opouv="${esc(x.cle)}"><span class="n"><b><span class="fl">▸</span>${esc(x.nom)}</b><small>${resume(x)}</small></span><span class="e">${etatN(x)}<b>${esc(faireN(x))}</b></span>${long ? '' : opBandeDe(x.V, H, nowH)}</div>`;
+      // Compacte (11/10/2026) : une ligne par section ou catégorie ; ses heures ne s'ouvrent qu'avec elle.
+      const bande = x => long || !ouv(x.cle) ? '' : opBandeDe(x.V, H, nowH);
+      const ligneN = (x, nv) => `<div class="r nv${nv}${bande(x) ? ' hs' : ''}${ouv(x.cle) ? ' on' : ''}" data-opouv="${esc(x.cle)}"><span class="n"><b><span class="fl">▸</span>${esc(x.nom)}</b><small>${resume(x)}</small></span><span class="e">${faireN(x) ? `<b>${esc(faireN(x))}</b>` : ''}${etatN(x)}</span>${bande(x)}</div>`;
       const ligneP = long
         ? p => `<div class="r nv3"><span class="n"><b>${esc(p.nom)}</b><small><b class="${opSous(p) ? 'ko' : ''}">${fN(p.stock)}</b> en stock · ${opParJour(p) ? nf(opParJour(p), 1) + ' par jour · ' + nf(jours(pos(p), opParJour(p)), 1) + ' j' : 'pas de vente lue'}</small></span><span class="e">${etatL(p)}<b>${esc(opFaireLong(U, p, now))}</b></span></div>`
         : p => `<div class="r nv3 hs"><span class="n"><b>${esc(p.nom)}</b><small>${fN(p.sorti)} sortie${Math.round(p.sorti) >= 2 ? 's' : ''} · ${fN(p.vendu)} vendue${Math.round(p.vendu) >= 2 ? 's' : ''} · <b class="${p.stock <= 0 ? 'ko' : ''}">${fN(p.stock)}</b> en vitrine</small></span><span class="e"><span class="op-vd ${esc(p.verdict)}">${esc(opEtat(p))}</span><b>${esc(opFaire(p))}</b></span>${opBande(p, U, now)}</div>`;
       return `<div class="op-vl op-arbre">${descend(ligneN, ligneP)}</div>`;
     }
     const sousTitre = (x, nv) => `${fN(x.n)} réf.${nv === 1 ? ' · ' + fN(x.sc.length) + ' sous-catégorie' + (x.sc.length > 1 ? 's' : '') : ''}`;
-    const aide = '<span>▸ un clic ouvre la sous-catégorie, puis les produits</span>';
+    const aide = '';
     if (long) {
       const ligneN = (x, nv) => `<tr class="nv${nv}${ouv(x.cle) ? ' on' : ''}" data-opouv="${esc(x.cle)}"><td><span class="fl">▸</span><b>${esc(x.nom)}</b><small>${sousTitre(x, nv)}</small></td><td class="n">${fN(x.sorti)}</td><td class="n">${fN(x.vendu)}</td><td class="n">${fN(x.st)}</td><td class="n">${x.pj ? nf(x.pj, 1) : '—'}</td><td>${jg(x.st, x.pj)}</td><td class="n">${x.pj ? nf(jours(x.st, x.pj), 1) : '—'}</td><td>${etatN(x)}</td><td class="n"><b>${esc(faireN(x))}</b></td></tr>`;
       const ligneP = p => { const pj = opParJour(p);
@@ -2271,8 +2443,7 @@
    * filtrée par trois badges — rouge : vide maintenant, orange : va manquer d'ici la fermeture, vert : en ordre
    * (replié au départ, pour consultation). Short et medium life se recuisent au rythme des 6 derniers mêmes jours,
    * heure par heure : la journée du produit en cases, et la prochaine cuisson où l'ajouter. Long life est un stock
-   * en magasin : face à trois jours de vente. Un clic sur un produit ouvre sa fiche. */
-  const VIT_REGLE = { S: 'vendu le jour même · recuit plusieurs fois par jour, au rythme des ventes heure par heure', M: 'se garde 2 à 3 jours · recuit au rythme des ventes heure par heure', L: 'stock en magasin · non périssable ou longue DLC' };
+   * en magasin : face à trois jours de vente. Un clic sur un produit ouvre sa fiche de stock. */
   const VIT_F = [['ko', 'Vide maintenant'], ['att', 'Va manquer'], ['ok', 'En ordre']];
   function vitLire(D, p) {
     const { U, now } = D, H = Array.isArray(U.heures) ? U.heures : [], nowH = now == null ? 99 : Math.floor(now / 60);
@@ -2284,16 +2455,26 @@
       if (st < pj * OP_VIE_JOURS || opSous(p)) { return { c: 'att', st, pj, n, txt: 'stock pour ' + nf(st / pj, 1) + ' jour' + (st / pj >= 2 ? 's' : '') }; }
       return { c: 'ok', st, pj };
     }
-    // La première heure au bout de laquelle il n'y en a plus alors que des clients le demandent encore ensuite
-    // (la prévision de l'heure suivante, et au moins une demi-pièce d'ici la fermeture) : la dernière pièce vendue
-    // en fin de journée n'est pas un manque.
-    let hv = null;
-    for (const h of H) { const c = caseH(h); if (!c || +c.q > 0.05) { continue; } const apres = H.filter(k => k > h).reduce((a, k) => a + prevH(k), 0); if (prevH(h + 1) >= 0.3 && apres >= 0.5) { hv = h; break; } }
-    if (hv == null && (p.verdict === 'rupture' || p.verdict === 'manque') && p.manque && p.manque.h != null) { hv = +p.manque.h; }
-    if (hv == null) { return { c: 'ok' }; }
-    const q = p.manque && +p.manque.q >= 0.5 ? +p.manque.q : ((p.conseil && +p.conseil.pieces) || Math.max(1, Math.ceil(H.filter(h => h >= hv).reduce((a, h) => a + prevH(h), 0))));
-    const n = (p.conseil && +p.conseil.pieces) || Math.ceil(q);
-    return hv <= nowH ? { c: 'ko', h: hv, q, n, txt: (now == null ? 'vide à ' : 'vide depuis ') + hv + ' h' } : { c: 'att', h: hv, q, n, txt: 'vide vers ' + hv + ' h' };
+    // Une heure vide compte quand des clients le demandent encore ensuite (la prévision de l'heure suivante, et au
+    // moins une demi-pièce d'ici la fermeture) : la dernière pièce vendue en fin de journée n'est pas un manque.
+    const vide = h => { const c = caseH(h); return !!c && +c.q <= 0.05; };
+    const demande = h => prevH(h + 1) >= 0.3 && H.filter(k => k > h).reduce((a, k) => a + prevH(k), 0) >= 0.5;
+    if (now == null) {
+      // Journée terminée : la première heure vide alors que des clients le demandaient.
+      const hv = H.find(h => vide(h) && demande(h));
+      if (hv == null) { return { c: 'ok' }; }
+      const q = p.manque && +p.manque.q >= 0.5 ? +p.manque.q : Math.max(1, Math.ceil(H.filter(h => h >= hv).reduce((a, h) => a + prevH(h), 0)));
+      return { c: 'ko', h: hv, q, n: Math.ceil(q), txt: 'vide à ' + hv + ' h' };
+    }
+    // En cours de journée, d'après la fiche de stock : vide maintenant (la vitrine à zéro, et encore à vendre),
+    // sinon la première heure à venir où elle sera vide. Une rupture du matin réapprovisionnée depuis ne compte plus.
+    const K = vitStock(D, p), pv = !K.rec && K.futur.length ? K.futur[0] : null;
+    let c = null, hv = null;
+    if (K.st <= 0.05 && K.reste >= 0.5) { c = 'ko'; hv = nowH; while (H.includes(hv - 1) && vide(hv - 1)) { hv--; } }
+    else { hv = H.find(h => h >= nowH && vide(h) && demande(h)); if (hv != null) { c = 'att'; } }
+    if (c == null) { return { c: 'ok' }; }
+    const perte = K.reste - K.st - K.prevu, q = perte >= 0.5 ? perte : (p.manque && +p.manque.q >= 0.5 ? +p.manque.q : 1);
+    return { c, h: hv, q, n: K.rec, pv, txt: (c === 'ko' ? 'vide depuis ' : 'vide vers ') + hv + ' h' };
   }
   /** La journée d'un produit, une case par heure : vert s'il y en a, orange si la vitrine sera basse, rouge si elle est vide alors que des clients le demandent. */
   function vitBande(D, p) {
@@ -2308,35 +2489,41 @@
   function opVitrineE(D) {
     const { now, U, prods } = D;
     const H = Array.isArray(U.heures) ? U.heures : [], fin = now == null;
-    const jour = esc(U.jourNom || '') + (/s$/.test(U.jourNom || '') ? '' : 's');
     const suite = fin ? null : (Array.isArray(U.cuissons) ? U.cuissons : []).filter(c => !c.valide && opMin(c.de) > now).sort((a, b) => opMin(a.de) - opMin(b.de))[0] || null;
-    const F = S.vitF || (S.vitF = { ko: true, att: true, ok: false });
+    // Les filtres, par durée de vie (10/10/2026) : trois petits carrés discrets en bout de ligne.
+    const FB = S.vitFb || (S.vitFb = {}), filtre = k => FB[k] || (FB[k] = { ko: true, att: true, ok: false });
     const L = prods.map(p => Object.assign({ p, e: vitLire(D, p) }));
     const nb = c => L.filter(x => x.e.c === c).length;
     const manque = L.filter(x => x.e.c !== 'ok'), eur = manque.filter(x => opVieDe(x.p) !== 'L').reduce((a, x) => a + (x.e.q || 0) * (+x.p.prix || 0), 0);
-    const puces = VIT_F.map(([c, nom]) => `<button type="button" class="vt-f ${c}${F[c] ? ' on' : ''}" data-vitf="${c}" aria-pressed="${F[c] ? 'true' : 'false'}"><i></i>${fin && c === 'ko' ? 'A manqué' : nom}<b>${fN(nb(c))}</b></button>`).join('');
     const ordre = { ko: 0, att: 1, ok: 2 };
     const geste = (x, k) => {
       if (x.e.c === 'ok') { const fj = Math.max(0, +x.p.finJour || 0); return k === 'L' ? `<span class="g ok">en stock<small>${x.e.pj ? nf(x.e.st / x.e.pj, 1) + ' jours de vente' : ''}</small></span>` : `<span class="g ok">${fj >= 0.5 ? fN(fj) : '—'}<small>${fj >= 0.5 ? 'restera ce soir' : 'juste assez'}</small></span>`; }
       if (k === 'L') { const pr = opProchaine(U, x.p, now); return pr ? `<span class="g">${fN(pr.q)}<small>cuisson de ${esc(pr.de)}</small></span>` : `<span class="g">+${fN(x.e.n)}<small>pour tenir ${OP_VIE_JOURS} jours</small></span>`; }
       if (fin) { return `<span class="g">${fN(x.e.q)}<small>ventes perdues</small></span>`; }
+      if (!x.e.n) { return x.e.pv ? `<span class="g">${fN(x.e.pv.q)}<small>déjà prévu à ${esc(x.e.pv.de)}</small></span>` : '<span class="g ok">—<small>juste assez</small></span>'; }
       return `<span class="g">+${fN(x.e.n)}<small>${suite ? 'dans la cuisson de ' + esc(suite.de) : 'à recuire'}</small></span>`;
     };
-    const attrs = p => `data-fprod="${esc(p.pid)}" data-fnom="${esc(p.nom)}" data-fq="${p.vendu != null ? p.vendu : ''}" data-fv="${p.vendu != null && p.prix ? (+p.vendu * +p.prix).toFixed(2) : ''}" data-ft="" data-fc="" data-fcat="${esc(p.cat || '')}" role="button" tabindex="0"`;
+    const attrs = p => `data-vstk="${esc(p.pid)}" role="button" tabindex="0"`;
     const ligne = (x, k) => {
       const p = x.p, e = x.e;
       const w = k === 'L' ? `stock <b>${fN(e.st || 0)}</b> · ${e.pj ? nf(e.pj, 1) + ' vendus par jour' : 'pas de vente lue'}${e.txt ? ' · <b>' + esc(e.txt) + '</b>' : ''}`
         : (e.c === 'ok' ? `sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)} · en vitrine ${fN(Math.max(0, +p.stock || 0))}` : `<b>${esc(e.txt)}</b> · sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)}`);
       const vis = k === 'L' ? `<span class="vt-jl"><i class="${e.c}" style="width:${e.pj > 0 ? Math.min(100, 100 * (e.st || 0) / (e.pj * OP_VIE_JOURS)).toFixed(0) : 0}%"></i></span>` : vitBande(D, p);
       const mq = e.c === 'ok' ? '' : (k === 'L' ? `<b>${fN(e.n)}</b>pour ${OP_VIE_JOURS} jours de vente` : `<b>${fN(e.q)} pièce${e.q >= 2 ? 's' : ''}</b>${fE((e.q || 0) * (+p.prix || 0))} de ventes`);
-      return `<div class="vt-l ${e.c} clic" ${attrs(p)} title="la fiche du produit"><span class="n"><i class="pt ${e.c}"></i><b>${esc(p.nom)}</b><small>${esc(p.cat || '')}</small><span class="w">${w}</span></span><span class="v">${vis}</span><span class="mq">${mq}</span>${geste(x, k)}</div>`;
+      // La micro-vignette (10/10/2026, D2) : l'heure de la rupture, rouge pâle si vide, cadre orange si ça va manquer ;
+      // long life : le stock. Le reste du texte passe dans l'infobulle.
+      const tl = e.c === 'ok' ? '' : (k === 'L' ? fN(e.st || 0) : (e.h != null ? e.h + 'h' : ''));
+      const info = w.replace(/<[^>]+>/g, '');
+      return `<div class="vt-l ${e.c} clic" ${attrs(p)} title="${esc(info)} · un clic : le stock du produit"><span class="n"><i class="tl">${tl}</i><b>${esc(p.nom)}</b><small>${esc(p.cat || '')}</small></span><span class="v">${vis}</span><span class="mq">${mq}</span>${geste(x, k)}</div>`;
     };
     const blocs = OP_VIES.map(k => {
       const B = L.filter(x => opVieDe(x.p) === k);
       if (!B.length) { return ''; }
+      const F = filtre(k);
       const V = B.filter(x => F[x.e.c]).sort((a, b) => (ordre[a.e.c] - ordre[b.e.c]) || ((a.e.h ?? 99) - (b.e.h ?? 99)) || ((b.e.q || 0) - (a.e.q || 0)) || a.p.nom.localeCompare(b.p.nom));
       const tout = !!(S.vitTout || {})[k], MAX = 12, vus = tout ? V : V.slice(0, MAX);
-      const cpt = ['ko', 'att', 'ok'].map(c => { const n = B.filter(x => x.e.c === c).length; return n ? `<span class="c ${c}"><i></i>${fN(n)}</span>` : ''; }).join('');
+      const cpt = VIT_F.map(([c, nom]) => { const n = B.filter(x => x.e.c === c).length;
+        return `<button type="button" class="vt-q ${c}${F[c] ? ' on' : ''}" data-vitq="${k}:${c}" aria-pressed="${F[c] ? 'true' : 'false'}" title="${fin && c === 'ko' ? 'A manqué' : nom} : ${fN(n)} · un clic filtre la liste"><i></i>${fN(n)}</button>`; }).join('');
       // Chaque durée de vie est une liste déroulante (10/10/2026) : l'en-tête résume, le détail s'ouvre au clic.
       const ouvert = !!(S.vitOuv || {})[k];
       const M = B.filter(x => x.e.c !== 'ok'), aCuire = M.reduce((a, x) => a + (x.e.n || 0), 0), eurB = k === 'L' ? 0 : M.reduce((a, x) => a + (x.e.q || 0) * (+x.p.prix || 0), 0);
@@ -2344,21 +2531,123 @@
         : `<span class="rs">${fN(M.length)} ${fin ? 'ont manqué' : 'vont manquer'}${aCuire && !fin ? ' · <b>+' + fN(aCuire) + '</b> ' + (k === 'L' ? 'à refaire' : 'à cuire') : ''}${eurB >= 1 ? ' · ' + fE(eurB) + (fin ? ' perdus' : ' à sauver') : ''}</span>`;
       const axe = k === 'L' ? '<div class="vt-ax l"><span>stock face à ' + OP_VIE_JOURS + ' jours de vente</span></div>' : `<div class="vt-ax">${H.map(h => `<span>${h} h</span>`).join('')}</div>`;
       const vide = !V.length ? `<div class="vt-vide">${F.ko || F.att ? (B.some(x => x.e.c !== 'ok') ? 'rien dans les filtres choisis' : '✓ rien ne va manquer d’ici la fermeture') : 'aucun produit dans les filtres choisis'}</div>` : '';
-      return `<div class="vt-b${ouvert ? ' on' : ''}"><button type="button" class="vt-h" data-vitb="${k}" aria-expanded="${ouvert ? 'true' : 'false'}"><span class="fl">${ouvert ? '▾' : '▸'}</span><span class="op-vie ${k}">${k}</span><b>${OP_VIE_NOM[k]}</b><span class="r">${fN(B.length)} réf. · ${esc(VIT_REGLE[k])}</span>${resB}<span class="cpt">${cpt}</span></button>
+      return `<div class="vt-b${ouvert ? ' on' : ''}"><div class="vt-h"><button type="button" class="vt-ht" data-vitb="${k}" aria-expanded="${ouvert ? 'true' : 'false'}"><span class="fl">${ouvert ? '▾' : '▸'}</span><span class="op-vie ${k}">${k}</span><b>${OP_VIE_NOM[k]}</b><span class="r">${fN(B.length)} réf.</span>${resB}</button><span class="cpt">${cpt}</span></div>
         ${ouvert ? `${V.length ? `<div class="vt-t"><span></span>${axe}<span></span><span></span></div>` : ''}${vus.map(x => ligne(x, k)).join('')}${vide}
         ${V.length > MAX ? `<button type="button" class="vt-plus" data-vitall="${k}">${tout ? '▴ replier' : (V.length - MAX === 1 ? '▸ voir le dernier' : '▸ voir les ' + fN(V.length - MAX) + ' autres')}</button>` : ''}` : ''}</div>`;
     }).join('');
-    const tete = `<span class="db-mini">${fin ? 'journée terminée' : 'à ' + esc(U.maintenant || opHM(now))} · prévision des ${U.base && U.base.semaines ? U.base.semaines : 6} derniers ${jour}</span><span class="db-mini" style="margin-left:auto">${suite ? `prochaine cuisson : <b>${esc(suite.nom)}</b> à ${esc(suite.de)}${suite.four ? ' (four ' + esc(suite.four) + ')' : ''}` : (fin ? '' : 'plus de cuisson prévue aujourd’hui')}</span>`;
+    const tete = `<span class="db-mini" style="margin-left:auto">${suite ? `prochaine cuisson : <b>${esc(suite.nom)}</b> à ${esc(suite.de)}${suite.four ? ' (four ' + esc(suite.four) + ')' : ''}` : (fin ? '' : 'plus de cuisson prévue aujourd’hui')}</span>`;
     const resume = manque.length ? `<b>${fN(manque.length)}</b><span>produit${manque.length > 1 ? 's' : ''} ${fin ? 'ont manqué' : 'vont manquer d’ici la fermeture'}${eur >= 1 ? ' · ' + fE(eur) + ' de ventes ' + (fin ? 'perdues' : 'à sauver') : ''}</span>` : `<b class="ok">✓</b><span>rien ne va manquer d’ici la fermeture</span>`;
     return `<div class="db-card op-bloc vt"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div>
-      <div class="vt-top"><span class="vt-res">${resume}</span><span class="vt-fs">${puces}</span></div>${blocs}
-      <div class="vt-leg"><span><i class="ok"></i>en vitrine</span><span><i class="att"></i>vitrine basse</span><span><i class="ko"></i>vide alors que des clients le demandent</span><span>une case par heure · cadre noir : maintenant · pâle : à venir · un clic ouvre la fiche du produit</span></div></div>`;
+      <div class="vt-top"><span class="vt-res">${resume}</span></div>${blocs}
+      <div class="vt-leg"><span><i class="ok"></i>en vitrine</span><span><i class="att"></i>vitrine basse</span><span><i class="ko"></i>vide alors que des clients le demandent</span></div></div>`;
+  }
+
+  /* La fiche de stock d'un produit de La vitrine (10/10/2026, maquette 2 « la réponse d'abord ») : faut-il
+   * recuire, et combien, pour finir la journée au plus juste. Le calcul part de la vitrine (jamais sous zéro :
+   * un stock négatif au panel veut dire des ventes au-delà des sorties déclarées), retire ce qui se vendra
+   * encore d'ici la fermeture (la prévision des derniers mêmes jours, l'heure entamée au prorata) et ce qui
+   * est déjà prévu dans les cuissons à venir. Le graphique : la moyenne vendue par heure, le vendu
+   * d'aujourd'hui, la vitrine heure par heure, et la vitrine avec la recuisson proposée. */
+  function vitStock(D, p) {
+    const { U, now } = D, H = Array.isArray(U.heures) ? U.heures : [], t = now == null ? null : now / 60;
+    const prevH = h => +((p.prevH || {})[h]) || 0;
+    const reste = t == null ? 0 : H.reduce((a, h) => a + prevH(h) * Math.max(0, Math.min(1, h + 1 - t)), 0);
+    const st = Math.max(0, +p.stock || 0);
+    const futur = t == null ? [] : (Array.isArray(U.cuissons) ? U.cuissons : []).filter(c => !c.valide && opMin(c.de) > now)
+      .map(c => ({ nom: c.nom, de: c.de, q: +(((c.lignes || []).find(l => l.pid === p.pid) || {}).sortie) || 0 })).filter(c => c.q > 0);
+    const prevu = futur.reduce((a, c) => a + c.q, 0);
+    const suite = t == null ? null : (Array.isArray(U.cuissons) ? U.cuissons : []).filter(c => !c.valide && opMin(c.de) > now).sort((a, b) => opMin(a.de) - opMin(b.de))[0] || null;
+    const long = opVieDe(p) === 'L';
+    const rec = t == null ? 0 : (long ? opRecuireLong(U, p, now) : Math.max(0, Math.ceil(reste - st - prevu - 0.25)));
+    return { reste, st, futur, prevu, suite, rec, long, sans: st + prevu - reste, avec: st + prevu + rec - reste, plaque: p.conseil && p.conseil.plaque ? +p.conseil.plaque : null };
+  }
+  function stkCourbe(D, p, K) {
+    const { U, now } = D, H = Array.isArray(U.heures) ? U.heures : [], n = H.length;
+    if (!n) { return ''; }
+    const W = 580, HH = 240, m = { l: 30, r: 14, t: 30, b: 26 }, bw = (W - m.l - m.r) / n, t = now == null ? null : now / 60;
+    const g = (o, h) => +((o || {})[h]) || 0, cas = h => (Array.isArray(p.cases) ? p.cases : []).find(c => c.h === h);
+    const moy = H.map(h => g(p.moy, h)), vc = H.map(h => (p.vc || {})[h] == null ? null : +p.vc[h]);
+    const c0 = cas(H[0]), dep = c0 ? Math.max(0, +c0.q + (+c0.v || 0)) : 0;
+    const passe = [[H[0], dep]].concat(H.filter(h => { const c = cas(h); return c && c.reel && (t == null || h + 1 <= t); }).map(h => [h + 1, Math.max(0, +cas(h).q)]));
+    if (t != null) { passe.push([t, K.st]); }
+    // La vitrine à venir : les cuissons prévues, la recuisson proposée (à la prochaine cuisson, sinon tout de suite), la prévision au prorata.
+    const proj = [];
+    if (t != null && t < H[n - 1] + 1) {
+      let cur = K.st + (K.suite ? 0 : K.rec); proj.push([t, cur]);
+      const tS = K.suite ? opMin(K.suite.de) / 60 : null;
+      H.forEach(h => { if (h + 1 <= t) { return; }
+        K.futur.forEach(f => { const x = opMin(f.de) / 60; if (x >= h && x < h + 1) { cur += f.q; } });
+        if (K.rec && tS != null && tS >= h && tS < h + 1) { cur += K.rec; }
+        cur -= g(p.prevH, h) * (h + 1 - Math.max(h, t)); proj.push([h + 1, Math.max(0, cur)]); });
+    }
+    const mx = Math.max(1, dep, ...moy, ...vc.map(v => v || 0), ...passe.map(x => x[1]), ...proj.map(x => x[1]));
+    const pas = mx <= 6 ? 1 : mx <= 12 ? 2 : mx <= 30 ? 5 : mx <= 60 ? 10 : mx <= 150 ? 25 : 50, top = Math.ceil(mx / pas) * pas;
+    const X = x => m.l + bw * (x - H[0]), Y = v => m.t + (HH - m.t - m.b) * (1 - v / top), y0 = Y(0);
+    let s = '';
+    for (let v = 0; v <= top + 1e-9; v += pas) { s += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="gl"/><text class="ax" x="${m.l - 6}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end">${v}</text>`; }
+    if (t != null) { s += `<rect x="${X(t).toFixed(1)}" y="${m.t}" width="${Math.max(0, X(H[n - 1] + 1) - X(t)).toFixed(1)}" height="${(y0 - m.t).toFixed(1)}" class="fu"/>`; }
+    H.forEach((h, i) => { const x0 = X(h) + bw * 0.18, w = bw * 0.3;
+      if (moy[i] > 0) { s += `<rect x="${x0.toFixed(1)}" y="${Y(moy[i]).toFixed(1)}" width="${w.toFixed(1)}" height="${(y0 - Y(moy[i])).toFixed(1)}" rx="3" class="my"><title>${h} h · moyenne ${nf(moy[i], 1)}</title></rect>`; }
+      if (vc[i] != null && (t == null || h <= t)) { s += `<rect x="${(x0 + w + 2).toFixed(1)}" y="${Y(vc[i]).toFixed(1)}" width="${w.toFixed(1)}" height="${(y0 - Y(vc[i])).toFixed(1)}" rx="3" class="vc"><title>${h} h · vendu aujourd’hui ${fN(vc[i])}</title></rect>`; }
+      const c = cas(h);
+      if (c && c.reel && +c.q <= 0.05 && (g(p.prevH, h + 1) >= 0.3 || (i === n - 1 && g(p.prevH, h) >= 0.3))) { s += `<rect x="${(X(h) + 2).toFixed(1)}" y="${(y0 + 2).toFixed(1)}" width="${(bw - 4).toFixed(1)}" height="4" rx="2" class="vd"><title>${h} h · vide</title></rect>`; }
+      s += `<text class="ax" x="${(X(h) + bw / 2).toFixed(1)}" y="${HH - 9}" text-anchor="middle">${h} h</text>`; });
+    const repere = (x, lb, cls) => { const xx = X(x); return `<line x1="${xx.toFixed(1)}" x2="${xx.toFixed(1)}" y1="${m.t - 4}" y2="${y0.toFixed(1)}" class="cu ${cls}"/><text class="lb ${cls}" x="${xx.toFixed(1)}" y="${m.t - 9}" text-anchor="${xx < m.l + 50 ? 'start' : (xx > W - 60 ? 'end' : 'middle')}">${lb}</text>`; };
+    (Array.isArray(U.cuissons) ? U.cuissons : []).forEach(c => { const l = (c.lignes || []).find(x => x.pid === p.pid); if (l && +l.sortie > 0 && opMin(c.de) / 60 >= H[0]) { s += repere(opMin(c.de) / 60, '+' + fN(l.sortie) + ' · ' + esc(c.de), t != null && opMin(c.de) > now ? 'av' : ''); } });
+    if (K.rec && t != null) { s += repere(K.suite ? opMin(K.suite.de) / 60 : t, '+' + fN(K.rec) + ' proposé', 'pr'); }
+    const pts = L => L.map(([x, v]) => X(x).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ');
+    s += `<polyline points="${pts(passe)}" class="vi"/>` + passe.slice(1).map(([x, v]) => `<circle cx="${X(x).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.2" class="vi"/>`).join('');
+    if (proj.length > 1) { const z = proj[proj.length - 1]; s += `<polyline points="${pts(proj)}" class="pj${K.rec ? ' pr' : ''}"/><text class="lb${K.rec ? ' pr' : ' gr'}" x="${(X(z[0]) - 2).toFixed(1)}" y="${(Y(z[1]) - 6).toFixed(1)}" text-anchor="end">ce soir ${fN(z[1])}</text>`; }
+    if (t != null) { s += `<line x1="${X(t).toFixed(1)}" x2="${X(t).toFixed(1)}" y1="${m.t - 2}" y2="${y0.toFixed(1)}" class="nw"/>`; }
+    return `<svg viewBox="0 0 ${W} ${HH}" class="sk-gr" role="img" aria-label="La journée de ${esc(p.nom)} heure par heure">${s}</svg>`;
+  }
+  function stkOuvrir(pid) { S.stk = { pid, retour: document.activeElement }; stkRendre(); }
+  function stkFermer() { const r = S.stk && S.stk.retour; S.stk = null; stkRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* la ligne a été redessinée */ } } }
+  function stkRendre() {
+    let box = document.getElementById('db-stk');
+    if (!S.stk) { if (box) { box.innerHTML = ''; } if (!S.fiche && !S.invModale) { document.documentElement.classList.remove('db-fiche-ouverte'); } return; }
+    const D = opDonnees(), U = D.U, p = U && (D.prods || []).find(x => String(x.pid) === String(S.stk.pid));
+    if (!p) { S.stk = null; if (box) { box.innerHTML = ''; } return; }
+    if (!box) { box = document.createElement('div'); box.id = 'db-stk'; document.body.appendChild(box); }
+    document.documentElement.classList.add('db-fiche-ouverte');
+    const K = vitStock(D, p), fin = D.now == null, k = opVieDe(p), pl = (n, m) => fN(n) + ' ' + m + (Math.round(n) >= 2 ? 's' : '');
+    const jour = esc(U.jourNom || '') + (/s$/.test(U.jourNom || '') ? '' : 's'), sem = U.base && U.base.semaines ? U.base.semaines : 6;
+    const q = (v, lb) => `<div><b>${v}</b>${lb}</div>`;
+    let rep;
+    if (fin) {
+      const lu = Math.max(0, +p.stock || 0);
+      const e = vitLire(D, p);
+      rep = `<div class="sk-rep no"><span class="big">${fN(lu)}</span><span class="t"><b>Journée terminée</b><span>sorti ${fN(p.sorti)} · vendu ${fN(p.vendu)} · ${pl(lu, 'pièce')} en vitrine à la fermeture${e.c !== 'ok' && !K.long ? ' · ' + esc(e.txt) + ', ' + pl(Math.round(e.q), 'vente') + ' perdue' + (Math.round(e.q) >= 2 ? 's' : '') : ''}</span></span></div>`;
+    } else if (K.long) {
+      const pj = opParJour(p), pr = opProchaine(U, p, D.now);
+      rep = K.rec ? `<div class="sk-rep go"><span class="big">+${fN(K.rec)}</span><span class="t"><b>Refaire ${pl(K.rec, 'pièce')}</b><span>de quoi tenir ${OP_VIE_JOURS} jours de vente</span></span><span class="eq">${q(nf(pj * OP_VIE_JOURS, 1), 'vente de ' + OP_VIE_JOURS + ' jours')}<em>−</em>${q(fN(K.st), 'en stock')}<em>=</em>${q(fN(K.rec), 'à refaire')}</span></div>`
+        : `<div class="sk-rep no"><span class="big">${pj > 0 ? nf(K.st / pj, 1) : '—'}</span><span class="t"><b>${pr ? 'Cuisson prévue à ' + esc(pr.de) + ' : ' + fN(pr.q) : 'Stock suffisant'}</b><span>${fN(K.st)} en stock · ${pj > 0 ? nf(pj, 1) + ' vendus par jour, soit ' + nf(K.st / pj, 1) + ' jours de vente' : 'pas de vente lue'}</span></span></div>`;
+    } else if (K.rec) {
+      const ou = K.suite ? ' dans la cuisson de ' + esc(K.suite.de) : ' maintenant';
+      rep = `<div class="sk-rep go"><span class="big">+${fN(K.rec)}</span><span class="t"><b>Recuire ${pl(K.rec, 'pièce')}${ou}</b><span>pour finir la journée au plus juste : ${pl(Math.max(0, Math.round(K.avec)), 'pièce')} ce soir${K.plaque ? ' · plaque de ' + fN(K.plaque) : ''}</span></span>
+        <span class="eq">${q(nf(K.reste, 1), 'à vendre d’ici la fermeture')}<em>−</em>${q(fN(K.st), 'en vitrine')}${K.prevu ? '<em>−</em>' + q(fN(K.prevu), 'déjà prévu') : ''}<em>=</em>${q(fN(K.rec), 'à recuire')}</span></div>`;
+    } else {
+      const reste = Math.max(0, Math.round(K.sans));
+      rep = `<div class="sk-rep no"><span class="big">0</span><span class="t"><b>Pas de recuisson</b><span>${fN(K.st)} en vitrine${K.prevu ? ' et ' + fN(K.prevu) + ' prévu' + (K.prevu >= 2 ? 's' : '') : ''} pour ${nf(K.reste, 1)} à vendre : ${reste ? pl(reste, 'pièce') + ' en trop ce soir' : 'juste assez'}</span></span>
+        <span class="eq">${q(fN(K.st + K.prevu), K.prevu ? 'en vitrine et prévu' : 'en vitrine')}<em>−</em>${q(nf(K.reste, 1), 'à vendre d’ici la fermeture')}<em>=</em>${q(fN(reste), 'en trop ce soir')}</span></div>`;
+    }
+    const cu = (Array.isArray(U.cuissons) ? U.cuissons : []).map(c => { const l = (c.lignes || []).find(x => x.pid === p.pid); return l && +l.sortie > 0 ? `<div><span>${esc(c.nom)} · ${esc(c.de)}${!fin && opMin(c.de) > D.now ? ' <small>à venir</small>' : ''}</span><b>+${fN(l.sortie)}</b></div>` : ''; }).join('')
+      + (K.rec && !fin && !K.long ? `<div class="pr"><span>proposé · ${K.suite ? esc(K.suite.nom) + ' ' + esc(K.suite.de) : 'maintenant'}</span><b>+${fN(K.rec)}</b></div>` : '');
+    const sc = K.rec && !fin && !K.long ? `<div class="sk-sc"><div class="a">Sans recuisson<b>${K.sans < -0.5 ? 'vide, ' + pl(Math.round(-K.sans), 'vente') + ' perdue' + (Math.round(-K.sans) >= 2 ? 's' : '') : fN(Math.max(0, K.sans)) + ' ce soir'}</b></div><div class="b">Avec +${fN(K.rec)}<b>${fN(Math.max(0, Math.round(K.avec)))} ce soir</b></div></div>` : '';
+    const neg = +p.stock < -0.5 ? `<div class="sk-nt">Le panel compte ${fN(+p.stock)} : ${pl(-Math.round(+p.stock), 'vente')} au-delà des sorties déclarées. Le calcul part d’une vitrine vide.</div>` : '';
+    const lg = `<div class="sk-lg"><span><i class="my"></i>moyenne des ${sem} derniers ${jour}</span><span><i class="vc"></i>vendu aujourd’hui</span><span><i class="l vi"></i>en vitrine</span>${!fin ? `<span><i class="l pj${K.rec ? ' pr' : ''}"></i>${K.rec ? 'avec la recuisson' : 'prévu'}</span>` : ''}</div>`;
+    const lien = `<button type="button" class="sk-fi" data-fprod="${esc(p.pid)}" data-fnom="${esc(p.nom)}" data-fq="${p.vendu != null ? p.vendu : ''}" data-fv="${p.vendu != null && p.prix ? (+p.vendu * +p.prix).toFixed(2) : ''}" data-ft="" data-fc="" data-fcat="${esc(p.cat || '')}">la fiche du produit ›</button>`;
+    box.innerHTML = `<div class="fi-voile" data-skfermer="1"></div><div class="fi-modale sk-modale" role="dialog" aria-modal="true" aria-label="Le stock de ${esc(p.nom)}">
+      <div class="fi-hd"><span class="op-vie ${k}">${k}</span><div class="t"><h2>${esc(p.nom)}</h2><div class="s">${esc(p.cat || '')}${p.cat ? ' · ' : ''}${esc(nomShop())} · ${fin ? 'journée terminée' : 'à ' + esc(U.maintenant || opHM(D.now))}${p.prix ? ' · prix ' + fU(+p.prix) : ''} · ${lien}</div></div><button type="button" class="fi-x" data-skfermer="1" aria-label="Fermer">✕</button></div>
+      <div class="fi-bd">${rep}<div class="sk-duo"><div>${lg}${stkCourbe(D, p, K)}${neg}</div><div class="sk-cu"><h4>Les cuissons du jour</h4>${cu || '<div><span>aucune cuisson prévue</span><b>—</b></div>'}${sc}</div></div></div></div>`;
+    box.querySelectorAll('[data-skfermer]').forEach(b => b.addEventListener('click', stkFermer));
+    box.querySelectorAll('[data-fprod]').forEach(b => b.addEventListener('click', () => { S.stk = null; stkRendre(); ficheOuvrir(b); }));
   }
 
   /** La carte « La vitrine » : trois onglets de durée de vie, le niveau de chacun, puis ses références en dépliant. */
   function opVitrine(D, mob) {
     if (!mob) { return opVitrineE(D); }
-    const { now, U, prods, lienProd } = D;
+    const { now, U, prods } = D;
     const k = S.opVie;
     const N = {}; OP_VIES.forEach(x => { N[x] = opNiveau(prods.filter(p => opVieDe(p) === x)); });
     const onglet = x => { const n = N[x];
@@ -2366,13 +2655,16 @@
       const lib = x === 'L' ? (n.parJ > 0 ? `${nf(n.st / n.parJ, 1)} jour${n.st / n.parJ >= 2 ? 's' : ''} de vente` : 'pas de vente lue')
         : (now == null ? (x === 'S' ? `${fN(n.fin)} jeté${n.fin >= 2 ? 's' : ''} ce soir` : `${fN(n.fin)} pour demain`) : (n.reste > 0.5 ? `pour ${fN(n.reste)} à vendre d’ici la fermeture` : 'plus rien à vendre aujourd’hui'));
       const al = x === 'L' ? (n.sous ? `<span class="op-vd rupture">${n.sous} sous le stock</span>` : '') : (n.rupt ? `<span class="op-vd rupture">${n.rupt} vide${n.rupt > 1 ? 's' : ''}</span>` : '') + (n.manq ? `<span class="op-vd manque">${n.manq} va manquer</span>` : '');
+      // Au téléphone (11/10/2026), l'onglet tient en deux lignes : le niveau, puis les alertes ; la jauge et la phrase restent au bureau.
+      if (mob) { return `<button type="button" class="op-v3 ${x}${x === k ? ' on' : ''}" data-opvie="${x}" title="${esc(lib)}${n.val > 0 ? ' · ' + fE(n.val) : ''}"><span class="hd"><span class="op-vie ${x}">${x}</span><b>${OP_VIE_NOM[x]}</b></span>
+        <span class="niv"><b>${fN(n.st)}</b> ${x === 'L' ? 'en stock' : 'en vitrine'}</span>${al ? `<span class="al">${al}</span>` : ''}</button>`; }
       return `<button type="button" class="op-v3 ${x}${x === k ? ' on' : ''}" data-opvie="${x}"><span class="hd"><span class="op-vie ${x}">${x}</span><b>${OP_VIE_NOM[x]}</b><small>${fN(n.n)} réf.${mob ? '' : ' · ' + OP_VIE_SOUS[x]}</small></span>
         <span class="niv"><b>${fN(n.st)}</b> pièce${n.st >= 2 ? 's' : ''} ${x === 'L' ? 'en stock' : 'en vitrine'}${n.val > 0 ? ` · ${fE(n.val)}` : ''}</span>
         ${jauge != null ? `<span class="jg"><i style="width:${jauge.toFixed(0)}%"></i></span>` : ''}<span class="lib">${lib}</span>${al ? `<span class="al">${al}</span>` : ''}</button>`; };
     const L = prods.filter(p => opVieDe(p) === k);
     const corps = L.length ? opArbre(D, L, mob, k) : `<div class="op-vvide">Aucune référence en ${OP_VIE_NOM[k].toLowerCase()} ce jour.</div>`;
-    const tete = mob ? `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi ›</a></span>`
-      : `<span class="db-mini">ce qui est sorti du four face à ce qui est vendu · prévision des ${U.base && U.base.semaines ? U.base.semaines : 6} derniers ${esc(U.jourNom || '')}${/s$/.test(U.jourNom || '') ? '' : 's'}</span><span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.sorti)} sorties · ${fN(U.totaux && U.totaux.vendu)} vendues · ${fN(U.totaux && U.totaux.stock)} en vitrine · <a class="db-lien" href="${lienProd('suivi')}">suivi de production ›</a></span>`;
+    const tete = mob ? `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.stock)} en vitrine</span>`
+      : `<span class="db-mini" style="margin-left:auto">${fN(U.totaux && U.totaux.sorti)} sorties · ${fN(U.totaux && U.totaux.vendu)} vendues · ${fN(U.totaux && U.totaux.stock)} en vitrine</span>`;
     return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span>${tete}</div><div class="op-v3s">${OP_VIES.map(onglet).join('')}</div>${corps}</div>`;
   }
 
@@ -2396,23 +2688,11 @@
     const retardN = cmd ? (cmd.retard != null ? cmd.retard : retard.length) : 0;
     // Les tickets du jour d'abord ; tant qu'ils se lisent, le chiffre du Résultat du jour.
     const ca = ST && ST.totaux ? ST.totaux.ca : (m ? m.ca : null), tk = ST && ST.totaux ? ST.totaux.tickets : (m ? m.tickets : null);
-    const lienProd = page => `../production/?shop=${encodeURIComponent(S.shop)}&date=${S.date}&page=${page}`;
     const ncL = NC && Array.isArray(NC.nc) ? NC.nc : [];
     const sk = SK && !SK.indispo ? SK : null;
 
     const listeC = CA && Array.isArray(CA.liste) ? CA.liste : [];
-    return { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC };
-  }
-  /** Les six tuiles « maintenant » : l'heure, les ventes, l'objectif, la vitrine, l'équipe, la cuisson. */
-  function opTuiles(D) {
-    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
-    const sansPlanning = m && !planning.length;
-    return `
-      ${opTuile('heure', esc(fDL(S.date).replace(/ \d{4}$/, '')), fin ? 'Journée' : opHM(now), fin ? 'journée terminée · le récit, pas le direct' : 'en direct · relu toutes les 2 min')}
-      ${U ? opTuile(vides.length ? 'ko' : (manques.length ? 'att' : 'ok'), 'Vitrine', fN(U.totaux && U.totaux.stock) + '<small>pièces</small>', `${vides.length} vide${vides.length > 1 ? 's' : ''} · ${manques.length} ${manques.length > 1 ? 'vont' : 'va'} manquer · ${trop.length} en trop`) : opTuile('', 'Vitrine', '—', S.err[cleOpSuivi()] ? esc(S.err[cleOpSuivi()]) : 'lecture du suivi de production…')}
-      ${m ? opTuile(sansPlanning ? 'att' : '', 'Équipe en poste', fin ? fN(planning.length) + '<small>au planning</small>' : fN(enPoste.length) + `<small>personne${enPoste.length > 1 ? 's' : ''}</small>`, sansPlanning ? 'pas de planning lu pour ce jour' : (fin ? '' : (enPoste.length ? enPoste.map(p => 'jusqu’à ' + esc(p.fin)).join(' et ') + ' · ' : '') + (releve ? 'relève à ' + esc(releve.debut) + ' · ' : '')) + nf(m.planningHeures || 0, 1) + ' h au planning') : opTuile('', 'Équipe en poste', '—', opSk())}
-      ${U ? (prochaine ? opTuile('', 'Prochaine cuisson', esc(prochaine.nom) + `<small>four à ${esc(prochaine.four)}</small>`, `${fN(prochaine.pieces)} pièces pour ${esc(prochaine.de)} à ${esc(prochaine.a)} · ${opDans(opMin(prochaine.four), now)}`) : opTuile('', 'Cuissons', fN(cuissons.length), fin ? cuissons.map(c => esc(c.nom) + ' ' + esc(c.four)).join(' · ') : 'plus de cuisson prévue aujourd’hui')) : opTuile('', 'Prochaine cuisson', '—', opSk())}
-`;
+    return { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC };
   }
   /* ── Le duel avec J−7 (maquette B du 08/10/2026) ──────────────────────────────
    * Chaque chiffre du jour se compare d'abord à J−7 à la même heure (le serveur arrête la
@@ -2427,7 +2707,14 @@
     const proj = m && !fin && m.projection != null && m.projectionPart != null && m.projectionPart < 100 ? m.projection : null;
     const dCa = j7 && j7.ca && ca != null ? 100 * (ca - j7.ca) / j7.ca : null;
     const dTk = j7 && j7.tickets && tk != null ? 100 * (tk - j7.tickets) / j7.tickets : null;
-    const panA = tk ? ca / tk : null, pan7 = j7 && j7.tickets ? j7.ca / j7.tickets : null;
+    // Le panier face à J−7 (21/10/2026) : hors clients pro quand les deux jours ont leurs tickets pro lus, sinon les deux
+    // pro compris (panPaire). Aujourd'hui : le chiffre en direct moins les tickets pro que le Résultat du jour a lus.
+    const proA = m && m.caPro != null && m.ticketsPro != null && ca != null && tk != null;
+    const PP = panPaire({ ca, tk, caC: proA ? Math.max(0, ca - m.caPro) : null, tkC: proA ? Math.max(0, tk - m.ticketsPro) : null },
+      j7 ? { ca: j7.ca, tk: j7.tickets, caC: j7.caComptoir, tkC: j7.ticketsComptoir } : null);
+    const panA = j7 ? PP.a : (tk ? (proA ? (tk - m.ticketsPro > 0 ? Math.max(0, ca - m.caPro) / (tk - m.ticketsPro) : null) : ca / tk) : null);
+    const panBase = j7 ? PP.base : (proA ? 'comptoir' : 'total'), pan7 = j7 ? PP.b : null;
+    const pan7J = j7 ? (panBase === 'comptoir' ? (j7.ticketsComptoirJour > 0 ? j7.caComptoirJour / j7.ticketsComptoirJour : null) : (j7.ticketsJour ? j7.caJour / j7.ticketsJour : null)) : null;
     const dPan = panA != null && pan7 ? 100 * (panA - pan7) / pan7 : null;
     const dProj = proj != null && j7 && j7.caJour ? 100 * (proj - j7.caJour) / j7.caJour : null;
     const mb7 = j7 && j7.mb != null && j7.ca ? j7.mb : null, mb7Pct = mb7 != null ? 100 * mb7 / j7.ca : null;
@@ -2435,17 +2722,26 @@
     const dMb = mbPct != null && mb7Pct != null ? mbPct - mb7Pct : null;
     const jourNom = JOURS_L ? JOURS_L[new Date(S.date + 'T12:00:00').getDay()] : 'J−7';
     const lblB = j7 ? (j7.moment ? jourNom + ' dernier à ' + j7.moment : jourNom + ' dernier') : 'J−7';
-    return { j7, obj, proj, dCa, dTk, dPan, dProj, panA, pan7, mb7, mb7Pct, mbPct, dMb, jourNom, lblB, moment: j7 && j7.moment ? j7.moment : null };
+    // Le comptoir et le B2B (23/10/2026, Sam : « le B2B fausse la vue ») : l'objectif du jour se partage selon la part B2B
+    // habituelle (les quatre derniers mêmes jours lus) ; sans elle, tout l'objectif reste au comptoir.
+    const caPro = m && m.caPro != null ? +m.caPro : null, part = m && m.partProHabituelle != null ? +m.partProHabituelle : null;
+    const objB = obj && part != null ? obj * part / 100 : null, objC = obj ? obj - (objB || 0) : null;
+    return { j7, obj, proj, dCa, dTk, dPan, dProj, panA, pan7, pan7J, panBase, mb7, mb7Pct, mbPct, dMb, jourNom, lblB, moment: j7 && j7.moment ? j7.moment : null, caPro, part, objB, objC };
   }
   const JOURS_L = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
   /** La carte du duel : deux pistes sur la même échelle (l'objectif), le curseur du temps, le verdict. */
-  function opDuel(D) {
+  function opDuel(D, o) {
     const { now, fin, JD, m, ca, tk } = D;
+    // o.comptoir : la jauge du comptoir seul (opDuelSplit) ; o.j7Total : J−7 sans son B2B lu, comptoir et pro ensemble.
+    const cpt = !!(o && o.comptoir), sous7 = cpt ? (o.j7Total ? 'comptoir + pro · ' : 'comptoir · ') : '';
     const estAuj = !!(JD && JD.estAujourdhui);
     if (!m) { return `<div class="op-duel"><div class="dh"><span class="lab">Objectif du jour</span><span class="dr">${S.err['jourM|' + S.date] ? esc(S.err['jourM|' + S.date]) : 'lecture du Résultat du jour…'}</span></div>${opSk()}</div>`; }
     const B = opDuelBase(D), j7 = B.j7, obj = B.obj;
-    const echelle = obj || Math.max(ca || 0, j7 ? j7.caJour || 0 : 0, B.proj || 0, 1);
-    const pct = v => Math.max(0, Math.min(100, 100 * (v || 0) / echelle));
+    // Au-delà de l'objectif (10/10/2026), l'échelle s'allonge jusqu'au plus haut, l'objectif devient un repère :
+    // un 124 % se voit, au lieu d'une barre bloquée au bout de la piste.
+    const haut = Math.max(ca || 0, j7 ? Math.max(j7.ca || 0, j7.caJour || 0) : 0, B.proj || 0), depasse = !!obj && haut > obj;
+    const echelle = obj ? (depasse ? haut * 1.06 : obj) : Math.max(haut, 1);
+    const pct = v => Math.max(0, Math.min(100, 100 * (v || 0) / echelle)), pO = obj ? pct(obj) : null;
     const atteint = obj && ca != null && ca >= obj;
     const part = m.projectionPart != null ? Math.max(0, Math.min(100, m.projectionPart)) : null;
     // Les étiquettes : à droite de leur ancre quand la place le permet, sinon à l'intérieur du segment (à gauche de
@@ -2465,25 +2761,68 @@
       if (aDed && bDed && b.p - wb < a.p) { return pill({ p: b.p, txt: a.txt + ' → ' + b.txt, cls: b.cls, titre: b.titre }, true); }
       return pill(a, aDed) + pill(b, bDed);
     };
-    const piste = (lb, sous, segs, L) => `<div class="op-piste"><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${part != null && !fin ? `<i class="temps" style="left:${part.toFixed(1)}%" title="${fP0(part)} de la journée écoulée"></i>` : ''}${etiquettes(L)}</div></div>`;
-    let h = `<div class="op-duel"><div class="dh"><span class="lab">Objectif du ${esc(B.jourNom)}${obj ? `<b>${fE(obj)}</b>` : ''}</span>${obj ? `<span class="chip">${m.objectifSource === 'budget' ? 'budget du mois' : 'CA théorique'} · profil des ${esc(B.jourNom)}s</span>` : '<span class="chip">pas d’objectif du jour : l’échelle, c’est le meilleur des deux</span>'}${atteint ? '<span class="chip" style="background:#f7edc8;color:#7d6310">🏆 objectif atteint</span>' : ''}<span class="dr">${fin ? 'journée terminée' : opHM(now) + (part != null ? ' · ' + fP0(part) + ' de la journée écoulée' : '')}</span></div>`;
+    const piste = (lb, sous, segs, L) => `<div class="op-piste"><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${depasse ? `<i class="objm" style="left:${pO.toFixed(1)}%" title="objectif ${fE(obj)}"></i>` : ''}${part != null && !fin ? `<i class="temps" style="left:${(obj ? pct(obj * part / 100) : part).toFixed(1)}%" title="${fP0(part)} de la journée écoulée"></i>` : ''}${etiquettes(L)}</div></div>`;
+    let h = `<div class="op-duel"><div class="dh"><span class="lab">Objectif ${cpt ? 'comptoir ' : ''}du ${esc(B.jourNom)}${obj ? `<b>${fE(obj)}</b>` : ''}</span>${atteint ? '<span class="chip" style="background:#f7edc8;color:#7d6310">🏆 objectif atteint</span>' : ''}<span class="dr">${fin ? 'journée terminée' : opHM(now) + (part != null ? ' · ' + fP0(part) + ' de la journée écoulée' : '')}</span></div>`;
     const pA = pct(ca), pP = B.proj != null ? pct(B.proj) : null;
     const LA = [];
     if (ca != null) { LA.push({ p: pA, txt: fE(ca) + (obj ? ' · ' + fP0(100 * ca / obj) : ''), cls: '' }); }
     if (pP != null && pP > pA) { LA.push({ p: pP, txt: 'projection ' + fE(B.proj), cls: 'proj', titre: 'au rythme de la journée, ' + fE(B.proj) + ' ce soir' }); }
-    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', fin ? (estAuj ? 'journée terminée' : fD(S.date)) : 'à ' + opHM(now),
+    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', (cpt ? 'comptoir · ' : '') + (fin ? (estAuj ? 'journée terminée' : fD(S.date)) : 'à ' + opHM(now)),
       `<div class="seg ${atteint ? 'or' : 'fait'}" style="width:${pA.toFixed(1)}%"></div>${pP != null && pP > pA ? `<div class="seg proj" style="left:${pA.toFixed(1)}%;width:${(pP - pA).toFixed(1)}%" title="projection au rythme de la journée : ${fE(B.proj)}"></div>` : ''}`, LA);
     if (j7) {
       const p7 = pct(j7.ca), p7j = j7.moment ? pct(j7.caJour) : p7;
       const L7 = [{ p: p7, txt: fE(j7.ca) + (j7.moment ? ' à ' + esc(j7.moment) : (obj ? ' · ' + fP0(100 * j7.ca / obj) : '')), cls: '' }];
       if (j7.moment) { L7.push({ p: p7j, txt: 'journée ' + fE(j7.caJour) + (obj ? ' · ' + fP0(100 * j7.caJour / obj) : ''), cls: 'fin' }); }
-      h += piste(B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1) + ' dernier', fD(j7.date),
+      h += piste(B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1) + ' dernier', sous7 + fD(j7.date),
         `<div class="seg j7" style="width:${p7.toFixed(1)}%"></div>${j7.moment && p7j > p7 ? `<div class="seg j7j" style="left:${p7.toFixed(1)}%;width:${(p7j - p7).toFixed(1)}%"></div>` : ''}`, L7);
     } else {
       h += `<div class="op-piste"><div class="pl"><b>${esc(B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1))} dernier</b><small>pas de ventes gravées</small></div><div class="pb"></div></div>`;
     }
-    h += `<div class="op-dax"><span>0 €</span><span>${fE(echelle / 2)}</span><span>${obj ? 'objectif ' + fE(obj) : fE(echelle)}</span></div>`;
+    h += depasse ? `<div class="op-dax ab"><span>0 €</span><span class="o${pO > 80 ? ' d' : ''}" style="left:${pO.toFixed(1)}%">objectif ${cpt ? 'comptoir ' : ''}${fE(obj)}</span></div>`
+      : `<div class="op-dax"><span>0 €</span><span>${fE(echelle / 2)}</span><span>${obj ? 'objectif ' + (cpt ? 'comptoir ' : '') + fE(obj) : fE(echelle)}</span></div>`;
     // La ligne « face à samedi dernier · clients · panier · au rythme de la journée » est retirée (10/10/2026).
+    return h + '</div>';
+  }
+  /**
+   * Les jauges du comptoir et du B2B (23/10/2026, Sam, maquette A) : la jauge du haut ne compte que le comptoir, face à
+   * l'objectif du jour moins la part B2B habituelle ; la seconde, le B2B seul, face à cette part. Le B2B pas encore lu :
+   * une seule jauge, comptoir et pro ensemble, comme avant.
+   */
+  function opDuelSplit(D) {
+    const { m, ca } = D;
+    if (!m || ca == null) { return opDuel(D); }
+    const B = opDuelBase(D), j7 = B.j7;
+    if (B.caPro == null) { return opDuel(D); }
+    const caC = Math.max(0, ca - B.caPro);
+    // Le comptoir de J−7 : celui du serveur quand il le donne (le même que le panier comptoir), sinon CA − CA pro.
+    const j7Lu = !!(j7 && (j7.caComptoir != null || j7.caPro != null));
+    const j7C = j7 && j7Lu ? Object.assign({}, j7, { ca: j7.caComptoir != null ? +j7.caComptoir : Math.max(0, j7.ca - j7.caPro),
+      caJour: j7.caComptoirJour != null ? +j7.caComptoirJour : Math.max(0, j7.caJour - (j7.caProJour || 0)) }) : j7;
+    const mC = Object.assign({}, m, { objectifJour: B.objC, j7: j7C, caPro: null, partProHabituelle: null,
+      projection: m.projection != null && ca > 0 ? m.projection * caC / ca : m.projection });
+    return opDuel(Object.assign({}, D, { ca: caC, m: mC }), { comptoir: true, j7Total: !!j7 && !j7Lu }) + opDuelPro(D, B);
+  }
+  /** La jauge du B2B : aujourd'hui et J−7 au même moment, à sa propre échelle, face à sa part de l'objectif du jour. */
+  function opDuelPro(D, B) {
+    const { JD, m } = D, j7 = B.j7, estAuj = !!(JD && JD.estAujourdhui);
+    const ca = B.caPro || 0, n = +m.ticketsPro || 0, objB = B.objB;
+    const p7 = j7 && j7.caPro != null ? +j7.caPro : null, p7j = j7 && j7.caProJour != null ? +j7.caProJour : null;
+    // Un magasin sans B2B (rien aujourd'hui, ni à J−7, ni d'habitude) : pas de seconde jauge.
+    if (!ca && !p7j && !objB) { return ''; }
+    const echelle = Math.max(objB || 0, ca, p7j || 0, 1) * 1.08, pct = v => Math.max(0, Math.min(100, 100 * (v || 0) / echelle)), pO = objB ? pct(objB) : null;
+    const marque = pO != null ? `<i class="objm" style="left:${pO.toFixed(1)}%" title="part B2B habituelle ${fE(objB)}"></i>` : '';
+    const val = (p, t, cls) => `<span class="val${cls ? ' ' + cls : ''}${p > 72 ? ' dedans' : ''}" style="left:${p.toFixed(1)}%">${t}</span>`;
+    const piste = (lb, sous, segs) => `<div class="op-piste"><div class="pl"><b>${lb}</b><small>${sous}</small></div><div class="pb">${segs}${marque}</div></div>`;
+    const tks = k => fN(k) + ' ticket' + (k > 1 ? 's' : '') + ' pro', jn = B.jourNom.charAt(0).toUpperCase() + B.jourNom.slice(1);
+    let h = `<div class="op-duel b2b"><div class="dh"><span class="lab">${objB ? 'Objectif B2B du ' + esc(B.jourNom) + `<b>${fE(objB)}</b>` : 'B2B du ' + esc(B.jourNom)}</span><span class="dr">${tks(n)}${B.part != null ? ' · part habituelle ' + nf(B.part, 0) + ' %' : ' · part habituelle pas encore lue'}</span></div>`;
+    const pA = pct(ca);
+    h += piste(estAuj ? 'Aujourd’hui' : 'Cette journée', 'B2B · ' + tks(n), `<div class="seg fait" style="width:${pA.toFixed(1)}%"></div>${val(pA, fE(ca) + (objB ? ' · ' + fP0(100 * ca / objB) : ''))}`);
+    if (p7 != null) {
+      const q7 = pct(p7), q7j = pct(p7j);
+      h += piste(jn + ' dernier', 'B2B · ' + fD(j7.date), `<div class="seg j7" style="width:${q7.toFixed(1)}%"></div>${p7j > p7 ? `<div class="seg j7j" style="left:${q7.toFixed(1)}%;width:${(q7j - q7).toFixed(1)}%"></div>` : ''}`
+        + val(q7, fE(p7) + (j7.moment ? ' à ' + esc(j7.moment) : '')) + (p7j > p7 ? val(q7j, 'journée ' + fE(p7j), 'fin') : ''));
+    } else { h += `<div class="op-piste"><div class="pl"><b>${esc(jn)} dernier</b><small>B2B pas encore lu</small></div><div class="pb"></div></div>`; }
+    h += `<div class="op-dax ab"><span>0 €</span>${pO != null ? `<span class="o${pO > 80 ? ' d' : ''}" style="left:${pO.toFixed(1)}%">part B2B habituelle ${fE(objB)}</span>` : ''}</div>`;
     return h + '</div>';
   }
   /** Le cumul heure par heure d'aujourd'hui face à celui de J−7 : le CA jusqu'à l'objectif, ou les clients
@@ -2497,46 +2836,70 @@
     // Les clients ne se dessinent que si les deux journées ont leurs tickets heure par heure.
     const aTk = hA.some(x => x.tickets != null) && h7.some(x => x.tickets != null);
     const mode = aTk && S.opCrb === 'tk' ? 'tk' : 'ca', champ = mode === 'tk' ? 'tickets' : 'ca';
+    // Comptoir et pro séparés, ou combinés (23/10/2026, Sam) : les tickets pro d'aujourd'hui et de J−7 heure par heure
+    // (heuresPro, j7.heures[].pro) ; sans eux, une ligne par journée comme avant, sans bascule.
+    const proOk = !!(m && Array.isArray(m.heuresPro) && h7.some(x => x.pro != null))
+      && (m.heuresPro.length > 0 || h7.some(x => +x.pro > 0) || +m.partProHabituelle > 0);   // un magasin sans B2B : pas de bascule
+    const sep = proOk && S.opPro !== 'combi';
+    const proA = new Map(((m && m.heuresPro) || []).map(x => [+x.h, x]));
+    const vPro = (x, a) => a ? (mode === 'tk' ? (proA.get(+x.h) || {}).n || 0 : (proA.get(+x.h) || {}).ca || 0) : (mode === 'tk' ? +x.proN || 0 : +x.pro || 0);
     const fmtV = v => mode === 'tk' ? fN(Math.round(v)) + ' clients' : fE(v);
-    const cible = mode === 'tk' ? (m && m.refTickets ? m.refTickets : null) : B.obj;
-    const cibleLib = cible == null ? '' : (mode === 'tk' ? 'référence ' + fN(Math.round(cible)) + ' clients' : 'objectif ' + fE(cible));
+    const cible = mode === 'tk' ? (m && m.refTickets ? m.refTickets : null) : (sep ? B.objC : B.obj);
+    const cibleLib = cible == null ? '' : (mode === 'tk' ? 'référence ' + fN(Math.round(cible)) + ' clients' : (sep ? 'objectif comptoir ' : 'objectif ') + fE(cible));
+    const cibleB = sep && mode === 'ca' && B.objB ? B.objB : null;
     const hNow = now == null ? 24 : Math.floor(now / 60), frac = now == null ? 0 : (now % 60) / 60;
-    const cumul = (hs, limite) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += +x[champ] || 0; out.push({ h: x.h, v: c }); }); return out; };
-    const cA = cumul(hA, fin ? null : hNow), c7 = cumul(h7, null);
-    if (!cA.length || !c7.length) { return ''; }
-    const h0 = Math.min(6, ...cA.map(x => x.h), ...c7.map(x => x.h)), h1 = Math.max(19, ...cA.map(x => x.h + 1), ...c7.map(x => x.h + 1));
-    const mx = Math.max(cible || 0, cA[cA.length - 1].v, c7[c7.length - 1].v, 1) * (cible && cible >= Math.max(cA[cA.length - 1].v, c7[c7.length - 1].v) ? 1 : 1.08);
+    const cumul = (hs, limite, val) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += Math.max(0, val(x)); out.push({ h: x.h, v: c }); }); return out; };
+    const lim = fin ? null : hNow, jn = esc(B.jourNom) + ' dernier', auj = fin ? 'cette journée' : 'aujourd’hui';
+    // Les courbes : [points, classe de la ligne, classe du point, étiquette de fin (ou ''), classe de l'étiquette, en paliers].
+    const L = sep
+      ? [[cumul(h7, null, x => (+x[champ] || 0) - vPro(x, false)), 'l7', 'p7', jn, 't7', false],
+         [cumul(h7, null, x => vPro(x, false)), 'l7p', 'p7p', '', '', true],
+         [cumul(hA, lim, x => (+x[champ] || 0) - vPro(x, true)), 'la', 'pa', auj, 'ta', false],
+         [cumul(hA, lim, x => vPro(x, true)), 'lap', 'pap', '', '', true]]
+      : [[cumul(h7, null, x => +x[champ] || 0), 'l7', 'p7', jn, 't7', false], [cumul(hA, lim, x => +x[champ] || 0), 'la', 'pa', auj, 'ta', false]];
+    if (L.some(c => !c[0].length)) { return ''; }
+    const fins = L.map(c => c[0][c[0].length - 1].v);
+    const h0 = Math.min(6, ...L.map(c => c[0][0].h)), h1 = Math.max(19, ...L.map(c => c[0][c[0].length - 1].h + 1));
+    const mx = Math.max(cible || 0, cibleB || 0, ...fins, 1) * (cible && cible >= Math.max(...fins) ? 1 : 1.08);
     const axe = v => mode === 'tk' ? fN(Math.round(v)) : fN(Math.round(v / 10) * 10);
     const dessine = (W, Hh, pas, cls) => {
       const tel = cls === 'tel';
       const X0 = 44, X1 = W - 16, Y0 = 14, Y1 = Hh - 26;
       const x = hh => X0 + (X1 - X0) * (hh - h0) / (h1 - h0), y = v => Y1 - (Y1 - Y0) * v / mx;
-      const chemin = c => 'M' + x(h0).toFixed(1) + ' ' + y(0).toFixed(1) + ' ' + c.map(p => 'L' + x(p.h + 1).toFixed(1) + ' ' + y(p.v).toFixed(1)).join(' ');
-      const lastA = cA[cA.length - 1], last7 = c7[c7.length - 1];
+      // Le pro tombe par tickets : en paliers, la marche au milieu de l'heure ; le comptoir monte heure par heure.
+      const chemin = (c, palier) => 'M' + x(h0).toFixed(1) + ' ' + y(0).toFixed(1) + ' ' + c.map((p, k) => palier
+        ? 'L' + x(p.h + 0.5).toFixed(1) + ' ' + y(k ? c[k - 1].v : 0).toFixed(1) + ' L' + x(p.h + 0.5).toFixed(1) + ' ' + y(p.v).toFixed(1) + ' L' + x(p.h + 1).toFixed(1) + ' ' + y(p.v).toFixed(1)
+        : 'L' + x(p.h + 1).toFixed(1) + ' ' + y(p.v).toFixed(1)).join(' ');
       let g = `<svg class="op-crb ${cls}" viewBox="0 0 ${W} ${Hh}">`;
       [0.25, 0.5, 0.75, 1].forEach(f => { g += `<line x1="${X0}" x2="${X1}" y1="${y(mx * f).toFixed(1)}" y2="${y(mx * f).toFixed(1)}" class="gr"/><text x="${X0 - 6}" y="${(y(mx * f) + 3).toFixed(1)}" text-anchor="end" class="ax">${axe(mx * f)}</text>`; });
       if (cible) { g += `<line x1="${X0}" x2="${X1}" y1="${y(cible).toFixed(1)}" y2="${y(cible).toFixed(1)}" class="cib"/><text x="${X0 + 4}" y="${(y(cible) - 4).toFixed(1)}" class="obj">${cibleLib}</text>`; }
+      if (cibleB) { g += `<line x1="${X0}" x2="${X1}" y1="${y(cibleB).toFixed(1)}" y2="${y(cibleB).toFixed(1)}" class="cibp"/><text x="${X0 + 4}" y="${(y(cibleB) - 4).toFixed(1)}" class="objp">part B2B habituelle ${fE(cibleB)}</text>`; }
       for (let hh = h0; hh <= h1; hh += pas) { g += `<text x="${x(hh).toFixed(1)}" y="${Hh - 8}" text-anchor="middle" class="ax">${hh} h</text>`; }
-      g += `<path d="${chemin(c7)}" class="l7"/><path d="${chemin(cA)}" class="la"/>`;
+      L.forEach(c => { g += `<path d="${chemin(c[0], c[5])}" class="${c[1]}"/>`; });
+      const cA = L[sep ? 2 : 1][0], c7 = L[0][0], lastA = cA[cA.length - 1], last7 = c7[c7.length - 1];
       // L'heure qu'il est : en haut de son trait, sauf quand l'étiquette de fin de J−7 est à côté (fin de journée),
       // alors en bas ; au téléphone, toujours en bas et les valeurs de fin passent dans la légende.
       if (!fin && now != null) { const v7now = (c7.find(q => q.h === hNow) || last7).v; const bas = tel || hNow + frac > h1 - 2.5 || lastA.v / mx > 0.8 || v7now / mx > 0.8; g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${bas ? Y1 - 6 : Y0 + 12}" class="nowt">${opHM(now)}</text>`; }
-      g += `<circle cx="${x(lastA.h + 1).toFixed(1)}" cy="${y(lastA.v).toFixed(1)}" r="4" class="pa"/>${tel ? '' : `<text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.v) + 18).toFixed(1)}" text-anchor="end" class="ta">${fin ? 'cette journée' : 'aujourd’hui'} ${fmtV(lastA.v)}</text>`}`;
-      g += `<circle cx="${x(last7.h + 1).toFixed(1)}" cy="${y(last7.v).toFixed(1)}" r="4" class="p7"/>${tel ? '' : `<text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.v) - 10).toFixed(1)}" text-anchor="end" class="t7">${esc(B.jourNom)} dernier ${fmtV(last7.v)}</text>`}`;
+      L.forEach(c => { const p = c[0][c[0].length - 1]; g += `<circle cx="${x(p.h + 1).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4" class="${c[2]}"/>`; });
+      if (!tel) {
+        g += `<text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.v) + 18).toFixed(1)}" text-anchor="end" class="ta">${L[sep ? 2 : 1][3]} ${fmtV(lastA.v)}</text>`;
+        g += `<text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.v) - 10).toFixed(1)}" text-anchor="end" class="t7">${L[0][3]} ${fmtV(last7.v)}</text>`;
+      }
       return g + '</svg>';
     };
-    const valA = fmtV(cA[cA.length - 1].v), val7 = fmtV(c7[c7.length - 1].v);
     const bascule = aTk ? `<span class="op-crbtog" role="tablist"><button type="button" class="${mode === 'ca' ? 'on' : ''}" data-opcrb="ca">CA</button><button type="button" class="${mode === 'tk' ? 'on' : ''}" data-opcrb="tk">Clients</button></span>` : '';
-    const sous = mode === 'tk'
-      ? `le cumul des clients ${fin ? 'de cette journée' : 'd’aujourd’hui'} face à celui de ${esc(B.jourNom)} dernier${cible ? ', la référence des mêmes jours en pointillé' : ''}`
-      : `le cumul ${fin ? 'de cette journée' : 'd’aujourd’hui'} face à celui de ${esc(B.jourNom)} dernier${cible ? ', jusqu’à l’objectif' : ''}`;
-    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${bascule}<span class="db-mini">${sous}</span><span class="db-mini" style="margin-left:auto">${mode === 'tk' ? 'tickets encaissés, pro compris' : 'ventes encaissées, pro compris'}</span></div>
+    const basculePro = proOk ? `<span class="op-crbtog" role="tablist"><button type="button" class="${sep ? 'on' : ''}" data-oppro="sep">Comptoir et pro séparés</button><button type="button" class="${sep ? '' : 'on'}" data-oppro="combi">Combinés</button></span>` : '';
+    const leg = sep
+      ? [['la', auj + ' · comptoir', fins[2]], ['lap', auj + ' · pro', fins[3]], ['l7', jn + ' · comptoir (' + fD(j7.date) + ')', fins[0]], ['l7p', jn + ' · pro', fins[1]]]
+      : [['la', auj, fins[1]], ['l7', jn + ' (' + fD(j7.date) + ')', fins[0]]];
+    return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${basculePro}${bascule}</div>
       <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
-      <div class="op-dleg"><span><i class="la"></i>${fin ? 'cette journée' : 'aujourd’hui'}<b class="tv"> ${valA}</b></span><span><i class="l7"></i>${esc(B.jourNom)} dernier (${fD(j7.date)})<b class="tv"> ${val7}</b></span>${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
+      <div class="op-dleg">${leg.map(([c, t, v]) => `<span><i class="${c}"></i>${t}<b class="tv"> ${fmtV(v)}</b></span>`).join('')}${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
   }
   /** Le duel, chiffre par chiffre : aujourd'hui, J−7 à la même heure, l'écart, la journée de J−7, la référence. */
-  function opDuelTable(D) {
+  function opDuelTable(D, opt) {
     const { now, fin, JD, m, ca, tk } = D;
+    const sansCa = !!(opt && opt.sansCa);
     if (!m) { return ''; }
     const B = opDuelBase(D), j7 = B.j7;
     const lblA = fin ? 'cette journée' : 'aujourd’hui · ' + opHM(now);
@@ -2547,10 +2910,11 @@
     const ligne = (k, note, a, b, d, j, r) => `<div class="op-dl"><div class="k">${k}${note ? `<small>${note}</small>` : ''}</div>${cell('a', lblA, a[0], a[1])}${cell('b', esc(B.lblB), b[0], b[1])}<div class="d">${d}</div>${cell('j', lblJ, j[0], j[1])}${cell('r', 'référence', r[0], r[1])}</div>`;
     const ref = JD && JD.reference ? JD.reference : {};
     const sansJ = !j7 || !j7.moment;
-    let h = `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Le duel, chiffre par chiffre</span><span class="db-mini">${sansJ ? 'face à la journée entière de la semaine passée' : 'à la même heure, puis la journée entière de la semaine passée'}</span></div><div class="op-dt${sansJ ? ' sans-j' : ''}">`;
-    h += ligne('Chiffre d’affaires', '', [fE(ca), m.objectifJour ? fP0(100 * (ca || 0) / m.objectifJour) + ' de l’objectif' : ''], [j7 ? fE(j7.ca) : eq, ''], ecart(B.dCa), [j7 && j7.moment ? fE(j7.caJour) : eq, j7 && j7.moment && m.objectifJour ? fP0(100 * j7.caJour / m.objectifJour) + ' de l’objectif' : ''], [m.refCa != null ? fE(m.refCa) : eq, esc(ref.libelle || '')]);
+    let h = `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Le duel, chiffre par chiffre</span></div><div class="op-dt${sansJ ? ' sans-j' : ''}">`;
+    if (!sansCa) h += ligne('Chiffre d’affaires', '', [fE(ca), m.objectifJour ? fP0(100 * (ca || 0) / m.objectifJour) + ' de l’objectif' : ''], [j7 ? fE(j7.ca) : eq, ''], ecart(B.dCa), [j7 && j7.moment ? fE(j7.caJour) : eq, j7 && j7.moment && m.objectifJour ? fP0(100 * j7.caJour / m.objectifJour) + ' de l’objectif' : ''], [m.refCa != null ? fE(m.refCa) : eq, esc(ref.libelle || '')]);
     h += ligne('Clients', '', [fN(tk), ''], [j7 ? fN(j7.tickets) : eq, ''], ecart(B.dTk), [j7 && j7.moment ? fN(j7.ticketsJour) : eq, ''], [m.refTickets != null ? fN(m.refTickets) : eq, m.ticketsDelta != null ? fSP(m.ticketsDelta) + ' face à la référence' : '']);
-    h += ligne('Panier moyen', '', [fU(B.panA), m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''], [B.pan7 != null ? fU(B.pan7) : eq, ''], ecart(B.dPan), [j7 && j7.moment && j7.ticketsJour ? fU(j7.caJour / j7.ticketsJour) : eq, ''], [JD && JD.reseau && JD.reseau.panier ? fU(JD.reseau.panier) : eq, 'réseau ' + (fin ? 'ce jour-là' : 'aujourd’hui')]);
+    const panR = JD ? panReseau(JD.reseau, B.panBase) : null;
+    h += ligne('Panier moyen', panSous(B.panBase), [fU(B.panA), m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''], [B.pan7 != null ? fU(B.pan7) : eq, ''], ecart(B.dPan), [j7 && j7.moment && B.pan7J != null ? fU(B.pan7J) : eq, ''], [panR ? fU(panR) : eq, 'réseau ' + (fin ? 'ce jour-là' : 'aujourd’hui')]);
     // Marge brute, projection et résultat net retirés du duel (10/10/2026) : ils restent dans le P&L court.
     return h + '</div></div>';
   }
@@ -2565,87 +2929,235 @@
     let heures = '';
     if (HS.length) {
       const W = 520, Ht = 110, bw = W / HS.length, mx = Math.max(1, ...HS.map(hh => Math.max(moy[hh] || 0, vend[hh] || 0))) * 1.15, y = v => Ht - Ht * v / mx;
-      heures = `<div class="op-h4">Ventes au comptoir, heure par heure · face aux ${U.base && U.base.semaines ? U.base.semaines : 6} derniers ${esc(U.jourNom || 'mêmes jours')}${/s$/.test(U.jourNom || '') ? '' : 's'}</div><svg width="100%" viewBox="0 0 ${W} ${Ht + 18}" class="op-svg">${HS.map((hh, i) => {
+      heures = `<div class="op-h4">Ventes au comptoir, heure par heure</div><svg width="100%" viewBox="0 0 ${W} ${Ht + 18}" class="op-svg">${HS.map((hh, i) => {
         const mo = moy[hh] || 0, v = vend[hh], X = i * bw, enCours = now != null && hh * 60 <= now && now < hh * 60 + 60;
         const c = enCours ? '#8D1D2C' : (v != null && v >= mo ? '#2D7A3E' : '#D97706');
         return `<rect x="${(X + bw * .12).toFixed(1)}" y="${y(mo).toFixed(1)}" width="${(bw * .36).toFixed(1)}" height="${(Ht - y(mo)).toFixed(1)}" rx="2" fill="#e3dbcf"/><text x="${(X + bw * .3).toFixed(1)}" y="${(y(mo) - 3).toFixed(1)}" font-size="9" text-anchor="middle" fill="#888">${fN(mo)}</text>`
           + (v != null && (now == null || hh * 60 <= now) ? `<rect x="${(X + bw * .52).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw * .36).toFixed(1)}" height="${(Ht - y(v)).toFixed(1)}" rx="2" fill="${c}"/><text x="${(X + bw * .7).toFixed(1)}" y="${(y(v) - 3).toFixed(1)}" font-size="9.5" font-weight="700" text-anchor="middle" fill="${c}">${fN(v)}</text>` : '')
           + `<text x="${(X + bw / 2).toFixed(1)}" y="${Ht + 13}" font-size="10" text-anchor="middle" fill="#666">${hh} h</text>`;
-      }).join('')}</svg><div class="op-leg"><span><i style="background:#e3dbcf"></i>moyenne</span><span><i style="background:#D97706"></i>vendu, sous la moyenne</span><span><i style="background:#2D7A3E"></i>au-dessus</span>${now != null ? '<span><i style="background:#8D1D2C"></i>heure en cours</span>' : ''}<span class="mu">en euros, au prix de vente, hors commandes</span></div>`;
+      }).join('')}</svg><div class="op-leg"><span><i style="background:#e3dbcf"></i>moyenne</span><span><i style="background:#D97706"></i>vendu, sous la moyenne</span><span><i style="background:#2D7A3E"></i>au-dessus</span>${now != null ? '<span><i style="background:#8D1D2C"></i>heure en cours</span>' : ''}</div>`;
     } else { heures = U ? '' : `<div style="padding:8px 0">${opSk()}</div>`; }
     return heures;
-  }
-  /** En un coup d'œil : commandes clients, non-conformités d'hier, poubelle, promotions. */
-  function opMinis(D) {
-    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
-    const mini = (vd, k, v, s) => `<div class="db-card op-mini"><div class="k"><span class="vd ${vd}"></span>${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
-    return `
-      ${cmd ? mini(retardN ? 'att' : 'ok', 'Commandes clients', retardN ? fN(retardN) + ' en retard' : 'À jour', `${fN(cmd.aVenir || 0)} à venir · aujourd’hui : ${fN(listeC.length)}${CA && CA.demain ? ' · demain : ' + fN(CA.demain.n) + (CA.demain.n ? ', ' + fU(CA.demain.ca) : '') : ''}`) : mini('', 'Commandes clients', '—', opSk())}
-      ${NC && !NC.indispo ? mini(ncL.length ? 'ko' : 'ok', 'Hier', ncL.length ? fN(ncL.length) + ' non-conformité' + (ncL.length > 1 ? 's' : '') : 'Aucune non-conformité', `${fN(NC.notees || 0)} photo${(NC.notees || 0) > 1 ? 's' : ''} notée${(NC.notees || 0) > 1 ? 's' : ''} le ${esc(fDL(veille()).replace(/ \d{4}$/, ''))}`) : mini('', 'Hier', '—', NC ? 'panel muet' : opSk())}
-      ${INV ? mini(INV.declare ? (INV.cout > 0 ? 'att' : 'ok') : '', 'Poubelle', INV.declare ? fE(INV.cout) : 'Pas encore déclarée', INV.declare ? fN(INV.pieces) + ' pièces · ' + fU(INV.caPerdu) + ' de vente perdue' : 'à encoder à la fermeture') : mini('', 'Poubelle', '—', opSk())}
-      ${PR ? mini('', 'Promotions', (PR.promos || []).length ? fN(PR.promos.length) + ' en cours' : 'Aucune', (PR.promos || []).length ? PR.promos.map(p => esc(p.nom || p.titre || '')).filter(Boolean).slice(0, 2).join(' · ') : 'pas de promotion posée pour aujourd’hui') : mini('', 'Promotions', '—', opSk())}
-`;
   }
   /** L'onglet Opérationnel au téléphone (06/10/2026) : les mêmes chiffres que le bureau, en une
    * colonne. La vitrine en liste courte, l'équipe et les cuissons en lignes, les photos du jour,
    * le P&L et les catégories, puis commandes, hier, poubelle, promotions et le stock. */
   function rendOpsMobile() {
     const D = opDonnees();
-    const { now, U, ST, JD, m, prods, cuissons, planning, lienProd } = D;
-    let h = opDuel(D) + `<div class="op-mnt quatre">${opTuiles(D)}</div>` + opDuelTable(D) + opDuelHeures(D);
+    const { now, U, ST, JD, m, prods, cuissons, planning } = D;
+    // Une donnée, un seul endroit (11/10/2026) : la jauge porte le CA face à l'objectif et à J−7 ; le duel, les clients
+    // et le panier ; la courbe, l'heure par heure. Les quatre tuiles (heure, vitrine, équipe, cuissons) redisaient les
+    // cartes du dessous : retirées au téléphone.
+    let h = opDuelSplit(D) + opDuelTable(D, { sansCa: true }) + opDuelHeures(D);
     // La vitrine : ce qui demande un geste, puis le reste replié.
     if (U) {
       h += opVitrine(D, true);
     } else { h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La vitrine</span><span class="db-mini">${S.err[cleOpSuivi()] ? esc(S.err[cleOpSuivi()]) : 'lecture du suivi de production…'}</span></div><div style="padding:10px 14px">${opSk()}</div></div>`; }
-    // Les heures, puis l'équipe et les cuissons en lignes.
-    const heures = opHeures(D);
-    if (heures) { h += `<div class="db-card op-bloc"><div style="padding:10px 12px">${heures}</div></div>`; }
-    const lg = (cls, a, b, c) => `<div class="op-jl${cls ? ' ' + cls : ''}"><span class="a">${a}</span><span class="b">${b}</span><span class="c">${c}</span></div>`;
-    h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span>${m && m.planningHeures ? `<span class="db-mini" style="margin-left:auto">${nf(m.planningHeures, 1)} h au planning</span>` : ''}</div><div class="op-jour">
-      ${planning.length ? planning.map(p => { const ici = now != null && opMin(p.debut) <= now && now < opMin(p.fin); return lg(ici ? 'ici' : (now != null && opMin(p.fin) <= now ? 'fini' : ''), esc(p.debut) + '–' + esc(p.fin), esc(p.nom || (p.postes || []).join(', ')), ici ? 'en poste' : (now != null && opMin(p.debut) > now ? 'arrive' : '')); }).join('') : `<div class="op-jl"><span class="b mu">${m ? 'pas de planning lu' : 'lecture…'}</span></div>`}
-      ${cuissons.map(c => lg(now != null && opMin(c.four) > now ? 'av' : '', 'four ' + esc(c.four), esc(c.nom) + ' · ' + fN(c.pieces) + ' pièces, ' + esc(c.de) + ' à ' + esc(c.a), c.valide ? 'validée' : (now != null && opMin(c.four) > now ? opDans(opMin(c.four), now) : 'à valider'))).join('')}
-    </div></div>`;
-    // Les photos du jour : le carrousel du téléphone.
-    h += `<div id="op-cq">${rendCQ(true)}</div>`;
-    // Le P&L court et les ventes par catégorie, comme au bureau.
-    const PJ = m ? jourPieces(m, JD, ST) : null;
-    if (PJ) { h += `<div class="op-large">${PJ.pnl}</div><div class="op-large">${PJ.categories}</div>`; }
-    h += bundlesCarte();
-    h += `<div class="op-mini4">${opMinis(D)}</div>`;
-    h += `<div class="op-stock">${S.aux['stock|' + S.shop] ? rendStock() : ''}</div>`;
-    h += `<div class="op-renvoi">Le chiffre, la marge et le résultat de la journée : l’onglet <button type="button" class="db-lien" data-mo="exp">Exploitation ›</button></div>`;
+    // La journée (11/10/2026, compacte) : l'équipe et les cuissons sur une même frise. Les ventes au comptoir heure par heure,
+    // un second graphique des heures, restent au bureau.
+    h += opJourneeMob(D);
+    // Le téléphone (10/10/2026) : Opérationnel garde le direct (objectif, vitrine, heures, équipe, cuissons). Le P&L, les
+    // ventes par catégorie, les promotions et les portions sont dans Exploitation ; les photos, les commandes, le stock et
+    // la poubelle dans Contrôle. Les onglets du bas y mènent ; plus de ligne de renvoi (11/10/2026).
     return h;
+  }
+  /**
+   * La journée au téléphone (11/10/2026) : une frise de la journée. Une barre fine par personne au planning, le nom dedans
+   * (vert en poste, gris fini, cadre à venir), le trait de maintenant, et les cuissons en repères dessous, à l'heure du four
+   * (vert validée, orange à valider, cadre à venir). Le détail de chaque barre ou repère dans son infobulle.
+   */
+  function opJourneeMob(D) {
+    const { now, m, planning, cuissons } = D;
+    const tete = `<div class="ct"><span class="op-h2">La journée</span><span class="db-mini" style="margin-left:auto">${m && m.planningHeures ? nf(m.planningHeures, 1) + ' h au planning' : ''}${now != null && planning.length ? ' · ' + fN(planning.filter(p => opMin(p.debut) <= now && now < opMin(p.fin)).length) + ' en poste' : ''}</span></div>`;
+    const pts = [];
+    planning.forEach(p => { pts.push(opMin(p.debut), opMin(p.fin)); });
+    cuissons.forEach(c => { pts.push(opMin(c.four)); });
+    if (!pts.length) { return `<div class="db-card op-bloc">${tete}<div class="db-mini" style="padding:10px 14px">${m ? 'pas de planning ni de cuisson lus' : 'lecture…'}</div></div>`; }
+    const h0 = Math.floor(Math.min(...pts) / 60), h1 = Math.max(h0 + 1, Math.ceil(Math.max(...pts) / 60));
+    const x = mn => Math.max(0, Math.min(100, 100 * (mn / 60 - h0) / (h1 - h0)));
+    const pas = h1 - h0 > 12 ? 3 : 2, axe = [];
+    for (let hh = h0; hh <= h1; hh += pas) { axe.push(`<span style="left:${x(hh * 60).toFixed(2)}%">${hh} h</span>`); }
+    const barres = planning.slice().sort((a, b) => opMin(a.debut) - opMin(b.debut)).map(p => {
+      const d = opMin(p.debut), f = opMin(p.fin), nom = p.nom || (p.postes || []).join(', ');
+      const cls = now == null ? 'jr' : (d <= now && now < f ? 'ici' : (f <= now ? 'fini' : 'av'));
+      const etat = { ici: 'en poste', fini: 'fini', av: 'arrive à ' + p.debut, jr: 'au planning' }[cls];
+      return `<div class="jm-l"><i class="${cls}" style="left:${x(d).toFixed(2)}%;width:${(x(f) - x(d)).toFixed(2)}%" title="${esc(nom)} · ${esc(p.debut)}–${esc(p.fin)} · ${esc(etat)}"><b>${esc(nom)}</b></i></div>`;
+    }).join('');
+    const CS = cuissons.slice().sort((a, b) => opMin(a.four) - opMin(b.four)).map(c => {
+      const t = opMin(c.four), cls = c.valide ? 'ok' : (now != null && t > now ? 'av' : 'kv');
+      return { c, t, cls, etat: c.valide ? 'validée' : (now != null && t > now ? opDans(t, now) : 'à valider') };
+    });
+    // Les cuissons : un repère à l'heure du four sur la frise, et leurs libellés en une ligne dessous (sans chevauchement).
+    const reperes = CS.map(k => `<span class="${k.cls}" style="left:${x(k.t).toFixed(2)}%" title="four ${esc(k.c.four)} · ${esc(k.c.nom)}"></span>`).join('');
+    // Court : l'heure, la cuisson, les pièces ; la couleur dit l'état, et la prochaine cuisson dit dans combien de temps.
+    const prochaine = CS.find(k => k.cls === 'av');
+    const fours = CS.map(k => `<span class="${k.cls}" title="${esc(k.c.nom)} · ${fN(k.c.pieces)} pièces, ${esc(k.c.de)} à ${esc(k.c.a)} · four ${esc(k.c.four)} · ${esc(k.etat)}"><i></i><b>${esc(k.c.four)}</b> ${esc(k.c.nom)} ${fN(k.c.pieces)}${k === prochaine ? ' · <em>' + esc(k.etat) + '</em>' : ''}</span>`).join('');
+    const tn = now != null && now >= h0 * 60 && now <= h1 * 60 ? `<span class="jm-now" style="left:${x(now).toFixed(2)}%"></span>` : '';
+    return `<div class="db-card op-bloc">${tete}<div class="jm">
+      <div class="jm-ax">${axe.join('')}</div>
+      <div class="jm-z">${tn}${barres || '<div class="db-mini">pas de planning lu</div>'}</div>
+      ${reperes ? `<div class="jm-r">${reperes}</div><div class="jm-cl">${fours}</div>` : ''}
+      </div></div>`;
+  }
+  /**
+   * L'équipe du jour (20/10/2026, maquette D choisie par Sam) : au clic sur une barre de la frise, une ligne par personne —
+   * son planning, les heures faites à l'heure qu'il est, ce qu'elle a vendu (le vendeur sur chaque ticket, au panel), ses
+   * ventes à l'heure de vente, son panier, ce qu'elle a produit, ce qu'elle coûte et ce coût rapporté à ses ventes. La
+   * personne cliquée est surlignée.
+   *  - Heures de vente : les heures de son poste où le magasin a vendu (une boulangère qui cuit avant l'ouverture n'est
+   *    pas comptée en vente sur ces heures-là).
+   *  - Produit : les cuissons dont l'heure de four tombe dans son poste, si l'un de ses postes de travail est un poste de
+   *    production (boulangerie, four, production, cuisine, pâtisserie, labo). Sans cela, rien n'est attribué.
+   *  - Coût : son taux horaire au panel × ses heures faites ; un franchisé ne pèse pas au P&L, sa ligne le dit.
+   */
+  function opEquipe(D) {
+    const { now, m, planning, cuissons } = D;
+    const fin = now == null ? 24 * 60 : now;
+    const heureT = now == null ? 'la journée' : String(Math.floor(now / 60)).padStart(2, '0') + ':' + String(now % 60).padStart(2, '0');
+    const ov = (a, b, c, d) => Math.max(0, Math.min(b, d) - Math.max(a, c));
+    const hVend = new Set(((m && m.heures) || []).filter(x => (+x.ca || 0) > 0).map(x => +x.h));
+    const PROD = /boulang|four|fournil|prod|cuis|p[aâ]tiss|labo/i;
+    const V = m && Array.isArray(m.vendeurs) ? m.vendeurs : null;
+    const cleNom = n => String(n || '').trim().toLowerCase();
+    const venteDe = {}; (V || []).forEach(v => { const k = cleNom(v.nom); const o = venteDe[k] || (venteDe[k] = { ca: 0, tickets: 0, articles: 0, artLu: true, nom: v.nom });
+      o.ca += +v.ca || 0; o.tickets += +v.tickets || 0; if (v.articles == null) { o.artLu = false; } else { o.articles += +v.articles; } });
+    // Une ligne par personne : ses services du jour réunis.
+    const P = {}, ordre = [];
+    planning.forEach(p => { const k = cleNom(p.nom); if (!P[k]) { P[k] = { nom: p.nom || 'Sans nom', srv: [], postes: [], taux: p.tauxH, franchise: !!p.franchise }; ordre.push(k); }
+      P[k].srv.push([opMin(p.debut), opMin(p.fin), p.debut, p.fin]); (p.postes || []).forEach(x => { if (!P[k].postes.includes(x)) { P[k].postes.push(x); } }); });
+    const L = ordre.map(k => {
+      const o = P[k], v = venteDe[k] || null;
+      const prevu = o.srv.reduce((a, s2) => a + (s2[1] - s2[0]), 0) / 60;
+      const fait = o.srv.reduce((a, s2) => a + ov(s2[0], s2[1], 0, fin), 0) / 60;
+      let hV = 0; o.srv.forEach(s2 => { hVend.forEach(H => { hV += ov(s2[0], Math.min(s2[1], fin), H * 60, H * 60 + 60); }); });
+      hV /= 60;
+      const prodPoste = o.postes.some(x => PROD.test(x));
+      const cs = prodPoste ? (cuissons || []).filter(c => o.srv.some(s2 => opMin(c.four) >= s2[0] && opMin(c.four) < s2[1]) && (now == null || opMin(c.four) <= now)) : [];
+      const debut = Math.min(...o.srv.map(s2 => s2[0])), finS = Math.max(...o.srv.map(s2 => s2[1]));
+      const etat = now == null ? 'journée close' : (now < debut ? 'arrive à ' + o.srv[0][2] : (o.srv.some(s2 => now >= s2[0] && now < s2[1]) ? 'en poste' : (now >= finS ? 'fini' : 'en pause')));
+      const cout = o.franchise || o.taux == null ? null : o.taux * fait;
+      return { k, nom: o.nom, srv: o.srv, prodPoste, horaires: o.srv.map(s2 => s2[2] + '–' + s2[3]).join(' · '), postes: o.postes, prevu, fait, hV, etat,
+        ca: v ? v.ca : (V ? 0 : null), tickets: v ? v.tickets : null, articles: v && v.artLu && v.tickets ? v.articles / v.tickets : null,
+        parH: v && hV >= 0.25 ? v.ca / hV : null, pieces: cs.reduce((a, c) => a + (+c.pieces || 0), 0), cuissons: cs.map(c => c.nom + ' ' + c.four),
+        taux: o.taux, franchise: o.franchise, cout };
+    });
+    // Celles et ceux qui ont vendu sans être au planning du jour.
+    const horsPl = V ? Object.keys(venteDe).filter(k => !P[k]).map(k => ({ k, nom: venteDe[k].nom || 'Sans vendeur', hors: true, ca: venteDe[k].ca, tickets: venteDe[k].tickets,
+      articles: venteDe[k].artLu && venteDe[k].tickets ? venteDe[k].articles / venteDe[k].tickets : null })) : [];
+    L.sort((a, b) => (b.parH == null ? -1 : b.parH) - (a.parH == null ? -1 : a.parH) || (b.ca || 0) - (a.ca || 0));
+    const hh = x => { const t = Math.round(x * 60); return Math.floor(t / 60) + ' h ' + String(t % 60).padStart(2, '0'); };
+    const pct = (a, b) => b ? Math.round(100 * a / b) + ' %' : '—';
+    const sel = S.eqSel ? cleNom(S.eqSel) : null, dep = S.eqDeplie ? cleNom(S.eqDeplie) : null;
+    // La ligne dépliée (20/10/2026, maquette A choisie par Sam) : une case par heure de son poste — ce qu'elle a vendu
+    // (la liste des tickets du jour, au panel : le vendeur et l'heure de chaque ticket), ses cuissons à l'heure du four,
+    // la production quand le magasin ne vend pas encore. Lue au premier dépliage, pour ce magasin et ce jour.
+    const cleEqh = 'eqh|' + S.shop + '|' + S.date;
+    const magH = {}; ((m && m.heures) || []).forEach(x => { magH[+x.h] = +x.ca || 0; });
+    // Les articles arrivent par lots (le serveur lit chaque ticket, vingt secondes par passage) : on relit tant que
+    // ça avance, cinq fois au plus.
+    const eqhRelance = n => {
+      const R = S.eqhRel || (S.eqhRel = {});
+      const r = R[cleEqh] || (R[cleEqh] = { n: 0, avant: null, prevu: false });
+      if (r.prevu || S.enCours[cleEqh] || r.n >= 5 || r.avant === n) { return; }
+      r.prevu = true; r.avant = n; r.n++;
+      setTimeout(() => { r.prevu = false; if (S.eqOuvert && S.eqDeplie) { lireAux(cleEqh, '/exploitation/equipe-heures?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date, true); } }, 1500);
+    };
+    const deplie = l => {
+      if (l.hors || !l.srv) { return ''; }
+      lireAux(cleEqh, '/exploitation/equipe-heures?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date);
+      const HD = S.aux[cleEqh];
+      const corps = (() => {
+        if (!HD) { return `<div class="db-mini" style="padding:8px 0">${S.err[cleEqh] ? esc(S.err[cleEqh]) : 'lecture des tickets du jour…'}</div>`; }
+        if (HD.indispo) { return `<div class="db-mini" style="padding:8px 0">${esc(HD.motif || 'tickets du jour indisponibles')}</div>`; }
+        const P = HD.personnes || {}, cle = Object.keys(P).find(n => cleNom(n) === l.k), V2 = cle ? P[cle] : {};
+        // [ca, tickets, articles, tickets aux articles lus] : les articles se lisent ticket par ticket, `aLire` attend encore.
+        const vh = h => { const x = V2['h' + h]; return x ? { ca: +x[0] || 0, t: +x[1] || 0, a: +x[2] || 0, ta: +x[3] || 0 } : null; };
+        if (HD.aLire > 0) { eqhRelance(HD.aLire); }
+        const h0 = Math.floor(Math.min(...l.srv.map(s2 => s2[0])) / 60), h1 = Math.ceil(Math.max(...l.srv.map(s2 => s2[1])) / 60);
+        const dansPoste = h => l.srv.some(s2 => ov(s2[0], s2[1], h * 60, h * 60 + 60) > 0);
+        const HS = []; for (let h = h0; h < h1; h++) { if (dansPoste(h)) { HS.push(h); } }
+        const mxV = Math.max(1, ...HS.map(h => (vh(h) || { ca: 0 }).ca));
+        const fours = (cuissons || []).filter(c => l.prodPoste && l.srv.some(s2 => opMin(c.four) >= s2[0] && opMin(c.four) < s2[1]));
+        const cases = HS.map(h => {
+          const v = vh(h), futur = now != null && h * 60 >= now, enCours = now != null && h * 60 < now && now < h * 60 + 60, mg = magH[h] || 0;
+          const fo = fours.filter(c => Math.floor(opMin(c.four) / 60) === h).map(c => `<span class="eq-four">four ${esc(c.four)} · ${fN(c.pieces)} p.</span>`).join('');
+          let c2;
+          if (v && v.ca > 0) {
+            c2 = `<i class="eq-bar" style="height:${Math.max(4, Math.round(52 * v.ca / mxV))}px"></i><b>${fE(v.ca)}</b><small>${fN(v.t)} ticket${v.t > 1 ? 's' : ''} · ${fU(v.ca / Math.max(1, v.t))}</small><small>${v.ta ? nf(v.a / v.ta, 1) + ' art./ticket' : (HD.aLire ? 'articles : lecture…' : '')}</small><small>${mg > 0 ? Math.min(100, Math.round(100 * v.ca / mg)) + ' % du magasin' : ''}</small>`;
+          } else if (futur) { c2 = `<span class="mu">à venir</span>`; }
+          else if (enCours) { c2 = `<span class="mu">pas encore de vente</span>`; }
+          else if (mg <= 0) { c2 = `${l.prodPoste ? '<span class="eq-prod">production</span>' : '<span class="mu">—</span>'}<small>magasin fermé</small>`; }
+          else { c2 = `${l.prodPoste ? '<span class="eq-prod">production</span>' : ''}<small>aucune vente à son nom</small>`; }
+          return `<div class="eq-c${futur ? ' fut' : ''}${enCours ? ' cur' : ''}${!(v && v.ca > 0) && !futur ? ' vide' : ''}"><div class="hh">${h} h – ${h + 1} h${enCours ? ' · en cours' : ''}</div>${fo}<div class="cz">${c2}</div></div>`;
+        }).join('');
+        // Le bandeau : la production avant les premières ventes du magasin, la vente ensuite, et qui était au comptoir avec elle.
+        const venteH = HS.filter(h => (magH[h] || 0) > 0);
+        const pills = [];
+        if (l.prodPoste && HS.length && venteH.length && HS[0] < venteH[0]) { pills.push(`<span class="pill pr">production ${String(HS[0]).padStart(2, '0')}:00 → ${String(venteH[0]).padStart(2, '0')}:00</span>`); }
+        if (venteH.length) { pills.push(`<span class="pill ve">vente ${String(venteH[0]).padStart(2, '0')}:00 → ${String(Math.min(h1, venteH[venteH.length - 1] + 1)).padStart(2, '0')}:00</span>`); }
+        const avec = L.filter(o => o.k !== l.k && o.srv && o.srv.some(a => l.srv.some(b2 => venteH.some(h => ov(Math.max(a[0], b2[0]), Math.min(a[1], b2[1]), h * 60, h * 60 + 60) > 0)))).map(o => o.nom);
+        return `<div class="eq-dt"><span class="k">${esc(l.nom)}, heure par heure</span>${pills.join('')}${avec.length ? `<span class="mu">au comptoir avec ${esc(avec.join(', '))}</span>` : ''}${HD.lu ? `<span class="mu" style="margin-left:auto">tickets lus à ${esc(HD.lu)}${HD.aLire ? ' · articles de ' + fN(HD.aLire) + ' ticket' + (HD.aLire > 1 ? 's' : '') + ' en lecture' : ''}</span>` : ''}</div><div class="eq-h">${cases || '<span class="db-mini">aucune heure de poste</span>'}</div>`;
+      })();
+      return `<tr class="eq-dep"><td colspan="9">${corps}</td></tr>`;
+    };
+    const ligne = l => `<tr data-eqsel="${esc(l.nom)}" class="${sel === l.k ? 'on' : ''}"><td class="l"><b>${esc(l.nom)}</b>${!l.hors ? `<span class="eq-hp">${dep === l.k ? '▾' : '▸'} heure par heure</span>` : ''}<small>${l.hors ? 'vend sans être au planning' : esc(l.postes.join(' · ') || '—')}</small></td>
+      <td>${l.hors ? '—' : esc(l.horaires)}<small>${l.hors ? '' : nf(l.prevu, 1) + ' h'}</small></td>
+      <td>${l.hors ? '—' : hh(l.fait)}<small>${l.hors ? '' : esc(l.etat)}</small></td>
+      <td>${l.ca == null ? '<span class="mu">—</span>' : '<b>' + fE(l.ca) + '</b>'}<small>${l.tickets != null ? fN(l.tickets) + ' ticket' + (l.tickets > 1 ? 's' : '') : ''}</small></td>
+      <td>${l.parH == null ? '<span class="mu">—</span>' : '<b>' + fE(l.parH) + '/h</b>'}<small>${l.hors || l.parH == null ? '' : 'sur ' + nf(l.hV, 1) + ' h de vente'}</small></td>
+      <td>${l.tickets ? fU(l.ca / l.tickets) : '<span class="mu">—</span>'}<small>${l.articles != null ? nf(l.articles, 1) + ' art./client' : ''}</small></td>
+      <td>${l.pieces ? fN(l.pieces) + ' p.' : '<span class="mu">—</span>'}<small>${l.pieces ? esc(l.cuissons.join(' · ')) : ''}</small></td>
+      <td>${l.hors ? '—' : (l.franchise ? '<span class="mu">franchisé</span>' : (l.cout == null ? '<span class="mu">—</span>' : fE(l.cout)))}<small>${l.hors ? '' : (l.franchise ? 'hors P&amp;L' : (l.taux != null ? fU(l.taux) + '/h' : 'taux absent au panel'))}</small></td>
+      <td>${l.cout != null && l.ca ? '<b>' + pct(l.cout, l.ca) + '</b>' : '<span class="mu">—</span>'}<small>${l.cout && l.ca ? nf(l.ca / l.cout, 1) + ' ×' : ''}</small></td></tr>${dep === l.k ? deplie(l) : ''}`;
+    const T = L.concat(horsPl);
+    const tCa = T.reduce((a, l) => a + (l.ca || 0), 0), tTk = T.reduce((a, l) => a + (l.tickets || 0), 0);
+    const tHV = L.reduce((a, l) => a + l.hV, 0), tCout = L.reduce((a, l) => a + (l.cout || 0), 0), tPcs = L.reduce((a, l) => a + l.pieces, 0);
+    const pied = `<tr class="tot"><td class="l"><b>Magasin</b></td><td>${nf(L.reduce((a, l) => a + l.prevu, 0), 1)} h</td><td>${hh(L.reduce((a, l) => a + l.fait, 0))}</td>
+      <td><b>${V ? fE(tCa) : '—'}</b><small>${V ? fN(tTk) + ' tickets' : ''}</small></td><td><b>${V && tHV ? fE(tCa / tHV) + '/h' : '—'}</b></td><td>${tTk ? fU(tCa / tTk) : '—'}</td>
+      <td>${tPcs ? fN(tPcs) + ' p.' : '—'}</td><td>${tCout ? fE(tCout) : '—'}</td><td><b>${tCout && tCa ? pct(tCout, tCa) : '—'}</b></td></tr>`;
+    const avert = V === null ? `<div class="db-note" style="padding:10px 16px 0">Les ventes par vendeuse ne sont pas encore lues pour cette journée (panel) : les heures et les coûts se lisent, pas les ventes.</div>` : '';
+    return `<div class="db-card eq-carte"><div class="ct"><span class="op-h2">L’équipe du jour, ${now == null ? 'la journée' : 'à ' + heureT}</span><span class="db-mini">rangée par ventes à l’heure de vente · un clic sur une personne déplie son heure par heure</span><button type="button" class="eq-ferme" data-eqferme aria-label="Fermer l’équipe du jour">×</button></div>${avert}
+      <div class="eq-defil"><table class="eq-tab"><thead><tr><th class="l">Personne</th><th>Planning</th><th>Faites</th><th>Vendu</th><th>Par heure</th><th>Panier</th><th>Produit</th><th>Coût</th><th>Coût / ventes</th></tr></thead>
+      <tbody>${T.map(ligne).join('')}${pied}</tbody></table></div>
+      <div class="db-note" style="padding:8px 16px 12px">Vendu : le vendeur sur chaque ticket. Par heure : ses ventes ÷ les heures de son poste où le magasin a vendu. Produit : les cuissons de son poste, si elle tient un poste de production. Coût : son taux horaire au panel × ses heures faites (un franchisé ne pèse pas au P&amp;L).</div></div>`;
   }
   function rendOps() {
     const D = opDonnees();
-    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, lienProd, ncL, sk, listeC } = D;
+    const { now, fin, U, ST, JD, m, CM, SK, CA, INV, NC, PR, prods, vides, manques, trop, cuissons, prochaine, planning, enPoste, releve, cmd, lignesC, retard, retardN, ca, tk, ncL, sk, listeC } = D;
     let h = '';
+
+    /* 0. Ta place dans le réseau, la journée (10/10/2026) : juste au-dessus des objectifs, anonyme. */
+    if (m && JD) { h += rendBench(m, JD); }
 
     /* 1. Le duel avec J−7 (maquette B du 08/10/2026) : la jauge à deux pistes, les quatre tuiles
      * du moment, le cumul heure par heure, le tableau chiffre par chiffre. */
-    h += opDuel(D);
-    h += `<div class="op-mnt quatre">${opTuiles(D)}</div>`;
+    // Les vignettes du moment (l'heure, vitrine, équipe en poste, cuissons) sont retirées au bureau aussi (23/10/2026, Sam ;
+    // au téléphone depuis le 11/10/2026) : les cartes du dessous les disent.
+    h += opDuelSplit(D);
     h += opDuelHeures(D);
-    h += opDuelTable(D);
-
-    /* 2. Les ventes par catégorie (liste ou treemap) et le P&L court de la journée, coût du
-     * personnel compris : les cartes de la vue Jour, telles quelles. */
     const PJ = m ? jourPieces(m, JD, ST) : null;
     const attente = t => `<div class="db-card"><div class="ct"><span class="db-lab">${t}</span><span class="db-mini">${S.err['jourM|' + S.date] ? esc(S.err['jourM|' + S.date]) : 'lecture du Résultat du jour…'}</span></div><div style="padding:12px 16px">${opSk()}${opSk()}</div></div>`;
-    h += `<div class="op-deux"><div>${PJ ? PJ.categories : attente('Ventes par catégorie')}</div><div>${bundlesCarte()}${PJ ? PJ.pnl : attente('Le P&amp;L court de la journée')}</div></div>`;
+    h += opDuelTable(D);
+    // Le P&L court sous le duel chiffre par chiffre (23/10/2026, Sam).
+    h += PJ ? PJ.pnl : attente('Le P&amp;L court de la journée');
+
+    /* 2. Les ventes par catégorie (liste, treemap, promotions, portions) : la carte de la vue Jour, telle quelle.
+     * La carte Bundles vendus est retirée (23/10/2026, Sam) : double emploi avec l'onglet Promotions. */
+    h += PJ ? PJ.categories : attente('Ventes par catégorie');
 
     /* La journée : la frise de 04:00 à 20:00 et les ventes de chaque heure face à la moyenne */
     const H0 = 4 * 60, H1 = 20 * 60, x = mm => (100 * (Math.max(H0, Math.min(H1, mm)) - H0) / (H1 - H0)).toFixed(2) + '%', w = (a, b) => (100 * (Math.min(H1, b) - Math.max(H0, a)) / (H1 - H0)).toFixed(2) + '%';
     const trait = now == null ? '' : `<span class="op-now" style="left:${x(now)}"></span>`;
     const ligneF = (lb, haut, contenu) => `<div class="op-fl" style="height:${haut + 8}px"><span class="lb">${lb}</span><div class="pis" style="height:${haut}px">${contenu}${trait}</div></div>`;
     let frise = '';
-    frise += ligneF('Équipe' + (m && m.planningHeures ? `<small>${nf(m.planningHeures, 1)} h</small>` : ''), Math.max(22, 4 + 15 * planning.length), planning.length ? planning.map((p, i) => `<b class="eq${now != null && !(opMin(p.debut) <= now && now < opMin(p.fin)) ? ' hors' : ''}" style="left:${x(opMin(p.debut))};width:${w(opMin(p.debut), opMin(p.fin))};top:${3 + 15 * i}px">${esc(p.debut)}–${esc(p.fin)} · ${esc(p.nom || (p.postes || []).join(', '))}</b>`).join('') : `<span class="vide">${m ? 'pas de planning lu' : 'lecture…'}</span>`);
+    frise += ligneF('Équipe' + (m && m.planningHeures ? `<small>${nf(m.planningHeures, 1)} h</small>` : ''), Math.max(22, 4 + 15 * planning.length), planning.length ? planning.map((p, i) => `<b class="eq${now != null && !(opMin(p.debut) <= now && now < opMin(p.fin)) ? ' hors' : ''}${S.eqOuvert && S.eqSel === (p.nom || '') ? ' choisi' : ''}" data-eqsel="${esc(p.nom || '')}" title="${esc(p.nom || '')} : ses ventes, ses heures, son coût" style="left:${x(opMin(p.debut))};width:${w(opMin(p.debut), opMin(p.fin))};top:${3 + 15 * i}px">${esc(p.debut)}–${esc(p.fin)} · ${esc(p.nom || (p.postes || []).join(', '))}</b>`).join('') : `<span class="vide">${m ? 'pas de planning lu' : 'lecture…'}</span>`);
     frise += ligneF('Four', 22, cuissons.map(c => `<b class="fo${now != null && opMin(c.four) > now ? ' av' : ''}" style="left:${x(opMin(c.four))};width:${w(opMin(c.four), opMin(c.four) + 45)}"></b><span class="lbl" style="left:calc(${x(opMin(c.four) + 50)})">${esc(c.nom)} ${esc(c.four)}${c.valide || (now != null && opMin(c.four) > now) ? '' : ' · à valider'}</span>`).join(''));
     frise += ligneF('Vitrine', 22, cuissons.map(c => `<b class="vi" style="left:${x(opMin(c.de))};width:${w(opMin(c.de), opMin(c.a))}">${fN(c.pieces)} p.</b>`).join(''));
     frise += ligneF('Commandes', 22, listeC.map(l => `<b class="cmd" style="left:${x(opMin(l.heure))}" title="${esc(l.heure)} · ${esc(l.statut || '')}"></b>`).join('') + `<span class="lbl" style="right:8px;color:#777">${listeC.length ? listeC.length + ' commande' + (listeC.length > 1 ? 's' : '') + ' aujourd’hui · ' + listeC.filter(l => /remis|retir/i.test(l.statut || '')).length + ' retirée' + (listeC.filter(l => /remis|retir/i.test(l.statut || '')).length > 1 ? 's' : '') : (CA ? 'pas de commande aujourd’hui' : 'lecture…')}</span>`);
     frise += `<div class="op-ax"><span></span><div class="ax">${[4, 6, 8, 10, 12, 14, 16, 18, 20].map(hh => `<span style="left:${x(hh * 60)}">${hh} h</span>`).join('')}</div></div>`;
     const heures = opHeures(D);
-    h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span><span class="db-mini">de 04:00 à 20:00${now != null ? ' · le trait rouge : maintenant' : ''}</span></div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;
+    h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span>${planning.length ? `<button type="button" class="eq-ouvre${S.eqOuvert ? ' on' : ''}" data-eqouvre>L’équipe du jour ${S.eqOuvert ? '▴' : '›'}</button>` : ''}</div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;
+    if (S.eqOuvert && planning.length) { h += opEquipe(D); }
 
     /* 3. La vitrine, selon la durée de vie */
     if (U) {
@@ -2656,11 +3168,1006 @@
     /* 4. Les contrôles en photo : le carrousel de la vue Jour */
     h += `<div id="op-cq">${rendCQ(false)}</div>`;
 
-    /* 5. En un coup d'œil */
-    h += `<div class="op-mini4">${opMinis(D)}</div>`;
+    // Les vignettes Commandes clients, Hier, Poubelle et Promotions sont retirées (23/10/2026, Sam).
     // Le stock du magasin : la barre de la vue Semaine, sa liste en liste déroulante.
     h += `<div class="op-stock">${S.aux['stock|' + S.shop] ? rendStock() : `<div class="db-stbar mu"><span class="t">Stock<small>lecture de l’inventaire…</small></span></div>`}</div>`;
     return h;
+  }
+
+  /* --- Promotions du magasin (17/10/2026) -----------------------------------------------------------------
+   * L'onglet Promotions : la liste, toute lue au panel (18/10/2026, plus de copie au cockpit) — celles de la marque
+   * qui touchent le magasin, et celles du magasin (les promotions du panel réservées à lui seul : actives = en caisse,
+   * inactives = brouillons) —, un sélecteur de statut et de sorte, et l'assistant « X achetés + Y », calqué sur le
+   * formulaire « Buy X Get Y » du panel, qui écrit au panel. Le coefficient du lot (prix payé HT ÷ coût matière, le cas
+   * le plus serré, la pièce la moins chère remisée) se recalcule à chaque changement avec les prix et coûts de recette
+   * du magasin ; le serveur refait le calcul à l'envoi ; ×2 est un repère, il ne bloque pas.
+   *   ../api/cockpit/exploitation/promos-magasin?shop=       (la liste, les règles)
+   *   ../api/cockpit/exploitation/promos-magasin/produits?shop= (prix HT, TVA, catégorie, coût de recette du magasin,
+   *                                                              sinon du réseau — la liste que le serveur chiffre à l'envoi)
+   */
+  const clePM = () => 'pm|' + S.shop;
+  const cheminPM = () => '/exploitation/promos-magasin?shop=' + encodeURIComponent(S.shop);
+  const clePMP = () => 'pmProd|' + S.shop;
+  const cheminPMP = () => '/exploitation/promos-magasin/produits?shop=' + encodeURIComponent(S.shop);
+  const clePMC = () => 'pmCan|' + S.shop + '|' + S.pmCanJ;
+  const cheminPMC = () => '/exploitation/promos-magasin/canaux?shop=' + encodeURIComponent(S.shop) + '&jours=' + S.pmCanJ;
+  const PM_JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+  const PM_TYPES = [['FREE', 'Offert', 'gratuité'], ['FIXED_PRICE', 'Prix fixe', 'ex. 1,00 €'], ['FIXED_AMOUNT_DISCOUNT', 'Remise €', 'montant fixe'], ['PERCENTAGE_DISCOUNT', 'Remise %', 'pourcentage']];
+  // Le panel seul (18/10/2026) : une promotion du magasin est une promotion du panel réservée au magasin — active, elle est
+  // en caisse (`en_caisse`) ; inactive, c'est un brouillon. Le cockpit n'en garde rien.
+  const PM_ETAT = { brouillon: ['Brouillon · inactive au panel', 'b'], en_caisse: ['En caisse', 'ok'],
+    active: ['En caisse', 'ok'], a_venir: ['À venir', 'a'], terminee: ['Terminée', 'b'], inactive: ['Inactive au panel', 'b'] };
+  const PM_FILTRES = [['actives', 'Actives', e => e === 'active' || e === 'en_caisse'], ['a_venir', 'À venir', e => e === 'a_venir'],
+    ['brouillons', 'Brouillons', e => e === 'brouillon'], ['terminees', 'Terminées', e => e === 'terminee' || e === 'inactive'], ['toutes', 'Toutes', () => true]];
+  // Le magasin est celui du dashboard (?shop=), lui seul (17/10/2026) : plus d'étape « Magasins ».
+  // Les conditions du ticket (23/10/2026, les nouveaux paramètres du panel) : le canal, le seuil du ticket, la règle du
+  // ticket (répétable, nombre maximal) — une étape à elles, avant la période.
+  const PM_ETAPES = ['Nom', 'Ce qu’on achète (X)', 'Ce qu’on reçoit (Y)', 'Conditions du ticket', 'Période', 'Vérifier et enregistrer'];
+  const PM_ICO_CPT = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M9 20v-6h6v6"/></svg>';
+  const PM_ICO_WEB = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M2.5 3.5h3l2.4 11.2h10.4l2.2-8.2H6.6"/></svg>';
+  const PM_CANAUX = [['tous', 'Comptoir et webshop', 'en caisse au magasin et sur les commandes en ligne', PM_ICO_CPT + PM_ICO_WEB],
+    ['comptoir', 'Comptoir seulement', 'en caisse au magasin', PM_ICO_CPT], ['webshop', 'Webshop seulement', 'click & collect et livraison', PM_ICO_WEB]];
+  const pmCanalLib = c => (PM_CANAUX.find(o => o[0] === c) || PM_CANAUX[0])[1];
+  const pmSeuilTxt = v => +v > 0 ? 'dès ' + fU(+v) + ' de ticket' : 'sans seuil';
+  /** Le canal et le seuil en étiquettes : « Comptoir », « Webshop », « dès 15,00 € ». Rien quand c'est partout, sans seuil. */
+  const pmBadges = (canal, seuil, tout) => [canal === 'comptoir' || (tout && canal !== 'webshop') ? `<span class="pm-bdg c">${PM_ICO_CPT}Comptoir</span>` : '',
+    canal === 'webshop' || (tout && canal !== 'comptoir') ? `<span class="pm-bdg w">${PM_ICO_WEB}Webshop</span>` : '',
+    +seuil > 0 ? `<span class="pm-bdg s">dès ${fU(+seuil)}</span>` : ''].join('');
+  const PM_FIN = PM_ETAPES.length;
+  const fX = v => v == null ? '—' : '×' + nf(v, 2);
+  const fXm = v => '×' + nf(v, Number.isInteger(+v) ? 0 : 2);
+  /** L'avantage en mots : « offerte », « à 1,00 € », « −1,40 € », « à −30 % ». */
+  const pmGain = (type, v, n) => type === 'FIXED_PRICE' ? 'à ' + fU(+v || 0) : (type === 'FIXED_AMOUNT_DISCOUNT' ? '−' + fU(+v || 0) : (type === 'PERCENTAGE_DISCOUNT' ? 'à −' + nf(+v || 0, 0) + ' %' : (n > 1 ? 'offertes' : 'offerte')));
+  const pmMaint = () => { const t = new Date(), p = n => String(n).padStart(2, '0'); return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()) + ' ' + p(t.getHours()) + ':' + p(t.getMinutes()); };
+  // L'année quand ce n'est pas celle en cours (une promotion d'un an : « du 19/10 au 18/10/2027 »).
+  const pmQuand = v => !v ? '' : (fD(v.slice(0, 10)) + (v.slice(0, 4) !== String(new Date().getFullYear()) ? '/' + v.slice(0, 4) : '') + (v.length > 10 && v.slice(11, 16) !== '00:00' ? ' ' + v.slice(11, 16) : ''));
+  function pmProduits() { const P = S.aux[clePMP()]; return P && Array.isArray(P.produits) ? P.produits : null; }
+  /** Les catégories vendues au magasin, depuis ses produits : {id, nom, n, min, max} (prix TTC). */
+  function pmCategories() {
+    const m = new Map();
+    (pmProduits() || []).forEach(p => {
+      if (!p.catId) { return; }
+      const c = m.get(p.catId) || { id: p.catId, nom: p.cat || ('Catégorie ' + p.catId), n: 0, min: null, max: null };
+      c.n++; const t = pmTtc(p); if (t != null) { c.min = c.min == null ? t : Math.min(c.min, t); c.max = c.max == null ? t : Math.max(c.max, t); }
+      m.set(p.catId, c);
+    });
+    return [...m.values()].sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  }
+  const pmTtc = p => p.prixTtc != null ? +p.prixTtc : (p.prixHt != null ? +p.prixHt * (1 + (+p.tva || 0) / 100) : null);
+  /** Ce qu'un côté vise vraiment : la catégorie (moins les exclus) ou les produits, selon le mode choisi. */
+  const pmEffectif = c => ({ q: Math.max(1, +c.q || 1), cats: c.mode === 'cats' ? c.cats : [], prods: c.mode === 'prods' ? c.prods : [], exclus: c.mode === 'cats' ? c.exclus : [], portion: c.portion || null });
+  /** Les variantes d'un côté (17/10/2026) : la portion du panel, sa fraction, ses mots. Sans : toutes les variantes. Au panel, la
+   * portion de chaque produit par son n° (21/10/2026, `id_product_portion`) : une catégorie part produit par produit. */
+  const PM_PORTIONS = { ONE_HALF: { f: 0.5, lib: '½', un: 'demi', des: 'demis' }, ONE_QUARTER: { f: 0.25, lib: '¼', un: 'quart', des: 'quarts' } };
+  const pmFrac = c => (PM_PORTIONS[c.portion] || { f: 1 }).f;
+  function pmEligibles(prods, c) {
+    const cats = c.cats.map(o => +o.id), ids = c.prods.map(o => +o.id), ex = c.exclus.map(o => +o.id), out = new Map();
+    prods.forEach(p => { const id = +p.id; if (id > 0 && !ex.includes(id) && (ids.includes(id) || cats.includes(+p.catId))) { out.set(id, p); } });
+    return out;
+  }
+  function pmRecompense(p, type, v, f) {
+    const ht = +p.prixHt * (f || 1), tva = 1 + (+p.tva || 0) / 100, val = +v || 0;
+    if (type === 'FREE') { return 0; }
+    if (type === 'FIXED_PRICE') { return Math.max(0, Math.min(ht, val / tva)); }
+    if (type === 'FIXED_AMOUNT_DISCOUNT') { return Math.max(0, ht - val / tva); }
+    if (type === 'PERCENTAGE_DISCOUNT') { return Math.max(0, ht * (1 - Math.min(100, Math.max(0, val)) / 100)); }
+    return ht;
+  }
+  /**
+   * Toutes les combinaisons de X et de Y qui se présentent en caisse, chacune chiffrée : {px, py, paye, cout, lot, sans}
+   * (lot et sans non arrondis), avec les produits visés et ceux qui ne se chiffrent pas. pmCoef en garde la plus serrée.
+   */
+  function pmPaires(prods, x, y) {
+    const ch = p => p.prixHt != null && p.cout != null && +p.prixHt > 0 && +p.cout > 0;
+    const X = pmEligibles(prods, x), Y = pmEligibles(prods, y), tous = [...new Map([...X, ...Y]).values()];
+    const sansPrix = [...new Set(tous.filter(p => !(+p.prixHt > 0)).map(p => p.nom))];
+    const sansCout = [...new Set(tous.filter(p => +p.prixHt > 0 && !(+p.cout > 0)).map(p => p.nom))];
+    const coutReseau = [...new Set(tous.filter(p => ch(p) && p.source === 'reseau').map(p => p.nom))];
+    const L = [];
+    // Une portion visée (¼, ½) : l'article est cette part de la pièce — prix et coût à la fraction.
+    const fx = pmFrac(x), fy = pmFrac(y);
+    X.forEach(px => { if (!ch(px)) { return; } Y.forEach(py => {
+      if (!ch(py)) { return; }
+      if (+px.id !== +py.id && Y.has(+px.id) && fx * px.prixHt < fy * py.prixHt) { return; }
+      const cout = x.q * fx * px.cout + y.q * fy * py.cout, paye = x.q * fx * px.prixHt + y.q * pmRecompense(py, y.type, y.valeur, fy), sans = x.q * fx * px.prixHt + y.q * fy * py.prixHt;
+      L.push({ px, py, paye, cout, lot: paye / cout, sans: sans / cout });
+    }); });
+    return { L, X, Y, sansCout, sansPrix, coutReseau };
+  }
+  /** Le coefficient du lot, le cas le plus serré — le même calcul que le serveur (pmCoef). */
+  function pmCoef(prods, x, y) {
+    const P = pmPaires(prods, x, y);
+    let pire = null;
+    P.L.forEach(q => { if (!pire || q.lot < pire.lot) { pire = { lot: Math.round(q.lot * 100) / 100, sans: Math.round(q.sans * 100) / 100, px: q.px, py: q.py, paye: q.paye, cout: q.cout }; } });
+    return Object.assign(pire || { lot: null, sans: null }, { paires: P.L.length, nX: P.X.size, nY: P.Y.size, sansCout: P.sansCout, sansPrix: P.sansPrix, coutReseau: P.coutReseau });
+  }
+  /** Pourquoi le coefficient ne se calcule pas (le même texte que le serveur, pmManqueTxt). */
+  function pmManqueTxt(C) {
+    const l = n => n.slice(0, 4).join(', ') + (n.length > 4 ? '…' : '');
+    const m = [];
+    if (C.sansCout.length) { m.push('sans coût de recette au panel, ni pour ce magasin ni pour le réseau — ' + l(C.sansCout)); }
+    if (C.sansPrix.length) { m.push('sans prix au panel — ' + l(C.sansPrix)); }
+    return m.length ? m.join(' ; ') : 'aucune combinaison de X et de Y ne se présente en caisse';
+  }
+  const pmNoms = c => [...(c.cats || []).map(o => o.nom), ...(c.prods || []).map(o => o.nom)].filter(Boolean);
+  const pmLib = c => { const n = pmNoms(c); return n.length ? n.slice(0, 2).join(', ') + (n.length > 2 ? '…' : '') : 'à choisir'; };
+  const pmMeme = (x, y) => JSON.stringify([x.cats.map(o => +o.id).sort(), x.prods.map(o => +o.id).sort()]) === JSON.stringify([y.cats.map(o => +o.id).sort(), y.prods.map(o => +o.id).sort()]);
+  /** La règle en mots, en HTML : « 2 achetés, le 3<sup>e</sup> offert ». */
+  function pmPhrase(x, y) {
+    const xq = Math.max(1, +x.q || 1), yq = Math.max(1, +y.q || 1), v = y.valeur;
+    const gain = { FREE: yq > 1 ? 'offerts' : 'offert', FIXED_PRICE: 'à ' + fU(+v || 0), FIXED_AMOUNT_DISCOUNT: '−' + fU(+v || 0), PERCENTAGE_DISCOUNT: 'à −' + nf(+v || 0, 0) + ' %' }[y.type] || 'remisé';
+    const Px = PM_PORTIONS[x.portion], Py = PM_PORTIONS[y.portion];
+    const ach = xq + (Px ? ' ' + (xq > 1 ? Px.des : Px.un) : '') + ' acheté' + (xq > 1 ? 's' : '');
+    if (pmMeme(x, y) && x.portion === y.portion) { return ach + ', ' + (yq > 1 ? 'les ' + yq + ' suivants ' : 'le ' + (xq + 1) + '<sup>e</sup> ') + gain; }
+    return ach + ' (' + esc(pmLib(x)) + '), ' + (yq > 1 ? yq + ' × ' : '') + (Py ? Py.lib + ' ' : '') + esc(pmLib(y)) + ' ' + gain;
+  }
+  function pmCreneauxTxt(l) {
+    if (!l || !l.length) { return 'tous les jours'; }
+    const h = (de, a) => de.slice(3) === '00' && a.slice(3) === '00' ? de.slice(0, 2) + '–' + a.slice(0, 2) + ' h' : de + '–' + a;
+    return l.map(c => {
+      const j = c.jours.slice().sort((a, b) => a - b), suite = j.length >= 3 && j.every((v, i) => i === 0 || v === j[i - 1] + 1);
+      return (j.length === 7 ? 'tous les jours' : (suite ? PM_JOURS[j[0] - 1] + '–' + PM_JOURS[j[j.length - 1] - 1] : j.map(v => PM_JOURS[v - 1]).join(', '))) + ' ' + h(c.de, c.a);
+    }).join(' · ');
+  }
+  /** La durée maximale en mots : « un an » (366 jours, depuis le 18/10/2026), sinon « N jours ». */
+  /**
+   * Les durées rapides de l'étape Période (18/10/2026) : une semaine, un mois, un an, à partir du début choisi s'il n'est
+   * pas passé, demain sinon ; la fin la veille du même jour, à 23:59 (le 31 janvier + un mois : le dernier jour de février).
+   * « Tout le temps » (23/10/2026, Sam) : une promotion qui ne s'arrête pas — d'aujourd'hui 00:00 au 31/12/2037 23:59.
+   * Le panel refuse « depuis 99 ans, pour 99 ans » (1927 → 2125) : ses dates s'arrêtent au début de 2038 (comme un
+   * TIMESTAMP), la fin la plus lointaine sûre est donc le 31/12/2037.
+   */
+  const PM_DUREES = [['7j', '1 semaine'], ['1m', '1 mois'], ['1a', '1 an'], ['tt', 'Tout le temps']];
+  const PM_TOUJOURS_AU = '2037-12-31 23:59';
+  function pmDuree(d, k) {
+    const p = n => String(n).padStart(2, '0'), loc = t => t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+    if (k === 'tt') { return { du: loc(new Date()) + ' 00:00', au: PM_TOUJOURS_AU }; }
+    const dem = new Date(); dem.setDate(dem.getDate() + 1);
+    const du = d.du && d.du.slice(0, 10) >= loc(new Date()) ? d.du : loc(dem) + ' 00:00';
+    const t = new Date(du.slice(0, 10) + 'T12:00:00'), y = t.getFullYear(), m = t.getMonth(), j = t.getDate();
+    let fin;
+    if (k === '7j') { fin = new Date(y, m, j + 6, 12); }
+    else {
+      const [yy, mm] = k === '1m' ? [y, m + 1] : [y + 1, m];
+      fin = new Date(yy, mm, j, 12);
+      // Le même jour n'existe pas (31 → février, 29 février) : le dernier jour du mois visé ; sinon la veille.
+      if (fin.getMonth() !== ((mm % 12) + 12) % 12) { fin = new Date(yy, mm + 1, 0, 12); } else { fin.setDate(fin.getDate() - 1); }
+    }
+    return { du, au: loc(fin) + ' 23:59' };
+  }
+  const pmJours = d => d.du && d.au ? Math.round((new Date(d.au.slice(0, 10) + 'T12:00:00') - new Date(d.du.slice(0, 10) + 'T12:00:00')) / 86400000) + 1 : null;
+  /** Une fin « Tout le temps » : le 31/12/2037 ou plus tard. */
+  const pmTjAu = v => !!v && v.slice(0, 10) >= PM_TOUJOURS_AU.slice(0, 10);
+  const pmToujours = d => pmTjAu(d.au);
+  /** La période en mots : « du 24/10 au 23/11 23:59 », ou « du 23/10, sans fin ». */
+  const pmPeriodeTxt = d => 'du ' + pmQuand(d.du) + (pmTjAu(d.au) ? ', sans fin' : ' au ' + pmQuand(d.au));
+
+  /**
+   * Une promotion du magasin relue au panel porte les numéros de ses produits et catégories, pas toujours leurs noms :
+   * ceux de la liste du magasin les complètent.
+   */
+  function pmNommer(d) {
+    const prods = pmProduits() || [], np = new Map(prods.map(p => [+p.id, p.nom])), nc = new Map(pmCategories().map(c => [+c.id, c.nom]));
+    const cote = c => c && Object.assign({}, c, { cats: (c.cats || []).map(o => ({ id: o.id, nom: o.nom || nc.get(+o.id) || '' })),
+      prods: (c.prods || []).map(o => ({ id: o.id, nom: o.nom || np.get(+o.id) || '' })), exclus: (c.exclus || []).map(o => ({ id: o.id, nom: o.nom || np.get(+o.id) || '' })) });
+    return Object.assign({}, d, { x: cote(d.x), y: cote(d.y) });
+  }
+  /*
+   * Le tableau de la liste (23/10/2026, Sam : la proposition B, avec les deux colonnes Comptoir et Webshop de C) : une
+   * information par colonne. Dix colonnes par défaut ; « Colonnes » ajoute ou retire les autres, le choix est gardé
+   * dans ce navigateur. Les actions passent dans le menu « ⋯ » de la ligne.
+   * [clé, en-tête, classe, par défaut, bulle]
+   */
+  const PM_COLS = [['nom', 'Promotion', 'nm', true], ['origine', 'Origine', '', true], ['achete', 'Le client achète', '', true], ['recoit', 'Il reçoit', '', true],
+    ['comptoir', 'Comptoir', 'c', true, 'la promotion vaut en caisse au magasin'], ['webshop', 'Webshop', 'c', true, 'la promotion vaut sur les commandes en ligne (click & collect, livraison)'],
+    ['seuil', 'Seuil', 'r', true, 'montant minimal du ticket pour que la promotion se déclenche'], ['debut', 'Début', '', true], ['fin', 'Fin', '', true],
+    ['statut', 'Statut', '', true], ['coef', 'Coef.', 'n', true, 'prix payé HT ÷ coût matière, le cas le plus serré'],
+    ['sorte', 'Sorte', '', false], ['creneaux', 'Créneaux', '', false], ['ticket', 'Par ticket', '', false], ['numero', 'N° au panel', 'r', false]];
+  const PM_ICO_DOTS = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+  function pmColsVues() {
+    if (!S.pmCols) {
+      let v = null; try { v = JSON.parse(localStorage.getItem('db.pmCols') || 'null'); } catch (e) { v = null; }
+      S.pmCols = Array.isArray(v) ? v.filter(k => PM_COLS.some(c => c[0] === k)) : PM_COLS.filter(c => c[3]).map(c => c[0]);
+      if (!S.pmCols.includes('nom')) { S.pmCols.unshift('nom'); }
+    }
+    return S.pmCols;
+  }
+  function pmColsGarder() { try { localStorage.setItem('db.pmCols', JSON.stringify(S.pmCols)); } catch (e) { /* stockage indisponible */ } }
+  /** « 2 × Cookies », « 1 × ½ Tartes » : ce que le client achète. */
+  const pmAchete = x => Math.max(1, +x.q || 1) + ' × ' + (PM_PORTIONS[x.portion] ? PM_PORTIONS[x.portion].lib + ' ' : '') + esc(pmLib(x));
+  /** Ce qu'il reçoit : « le 3<sup>e</sup> à −50 % », « les 2 suivants offerts », « Café offert ». */
+  function pmRecoit(x, y) {
+    const xq = Math.max(1, +x.q || 1), yq = Math.max(1, +y.q || 1);
+    const gain = { FREE: yq > 1 ? 'offerts' : 'offert', FIXED_PRICE: 'à ' + fU(+y.valeur || 0), FIXED_AMOUNT_DISCOUNT: '−' + fU(+y.valeur || 0), PERCENTAGE_DISCOUNT: 'à −' + nf(+y.valeur || 0, 0) + ' %' }[y.type] || 'remisé';
+    if (pmMeme(x, y) && x.portion === y.portion) { return (yq > 1 ? 'les ' + yq + ' suivants ' : 'le ' + (xq + 1) + '<sup>e</sup> ') + gain; }
+    return (yq > 1 ? yq + ' × ' : '') + (PM_PORTIONS[y.portion] ? PM_PORTIONS[y.portion].lib + ' ' : '') + esc(pmLib(y)) + ' ' + gain;
+  }
+  /** Les valeurs d'une ligne, colonne par colonne (HTML), et ses actions. */
+  function pmValeurs(l) {
+    const P = S.aux[clePM()] || {}, min = (P.regles || {}).coefMin || 2, r = l.r || {}, d = l.d || null, mu = t => `<span class="mu">${t}</span>`;
+    let x = null, y = null;
+    if (l.sorte === 'xy') {
+      const D = d ? pmDepuis(d) : pmDuPanel(r);
+      x = pmEffectif(D.x); y = Object.assign(pmEffectif(D.y), { type: D.y.type, valeur: D.y.valeur });
+    }
+    const b = r.bundle || null;
+    // Sans restriction de canal au panel, la promotion vaut au comptoir comme au webshop.
+    const can = (d ? d.canaux : r.canaux) || null, ok = k => !can || can.includes(k);
+    const seuil = d ? d.seuil : r.seuil, rep = d ? d.repetable : r.repetable, max = d ? d.maxParTicket : r.maxParTicket;
+    const e = PM_ETAT[l.etat] || [l.etat, 'b'], num = d ? d.panelId : (l.src === 'panel' ? l.id : null);
+    const fin = l.au && !pmTjAu(l.au) ? esc(pmQuand(l.au)) : mu('sans fin');
+    const reste = l.au && (l.etat === 'active' || l.etat === 'en_caisse') ? Math.round((new Date(l.au.slice(0, 10) + 'T12:00:00') - new Date(AUJ + 'T12:00:00')) / 86400000) : null;
+    // Les actions : celles qui existaient sur la ligne, dans le menu.
+    const it = (attr, v, lib, cl) => `<button class="${cl || ''}" ${attr}="${esc(v)}">${lib}</button>`;
+    let actions = '';
+    if (l.src === 'mag') {
+      const dup = it('data-pmdup', 'mag:' + l.id, 'Dupliquer');
+      if (l.etat === 'brouillon') { actions = it('data-pmedit', l.id, 'Reprendre') + dup + it('data-pmdel', l.id, 'Supprimer le brouillon', 'ko'); }
+      else if (l.etat === 'en_caisse') { actions = it('data-pmedit', l.id, 'Modifier') + dup; }
+      else { actions = dup; }
+    } else if (l.sorte === 'xy') { actions = it('data-pmdup', 'panel:' + l.id, 'Dupliquer en promotion du magasin'); }
+    return {
+      nom: `<b>${esc(l.nom)}</b>`,
+      origine: `<span class="pm-or ${l.src === 'mag' ? 'm' : 'r'}" title="${esc(l.qui)}">${l.src === 'mag' ? 'Magasin' : 'Marque'}</span>`,
+      achete: x ? pmAchete(x) : (b && b.items.length ? esc(b.items.join(' + ')) : mu('—')),
+      recoit: x ? pmRecoit(x, y) : (b && b.prix != null ? 'le lot à ' + fU(+b.prix) : mu('—')),
+      comptoir: ok('comptoir') ? '<span class="pm-oui">✓</span>' : mu('—'),
+      webshop: ok('webshop') ? '<span class="pm-oui">✓</span>' : mu('—'),
+      seuil: +seuil > 0 ? fU(+seuil) : mu('—'),
+      debut: l.du ? esc(pmQuand(l.du)) : mu('—'),
+      fin: reste != null && reste >= 0 && reste <= 7 ? `<span title="${reste === 0 ? 'dernier jour' : 'encore ' + reste + ' jour' + (reste > 1 ? 's' : '')}">${fin}</span>` : fin,
+      statut: `<span class="pm-chip ${e[1]}">${esc(e[0])}</span>`,
+      coef: pmCoefCellule(l, min),
+      sorte: l.sorte === 'bundle' ? 'Bundle' : 'X + Y',
+      creneaux: esc(d ? pmCreneauxTxt(d.creneaux) : (l.sorte === 'xy' || (r.creneaux || []).length ? pmCreneauxTxt(r.creneaux || []) : '—')),
+      ticket: rep ? (max ? esc(max) + ' fois max' : 'répétable') : '1 fois',
+      numero: num ? esc(num) : mu('—'),
+      actions,
+    };
+  }
+  /* La liste : les promotions de la marque et celles du magasin, toutes lues au panel, rangées par état. */
+  function pmLignes() {
+    const P = S.aux[clePM()];
+    if (!P) { return []; }
+    const m = pmMaint(), L = [];
+    (P.panel || []).forEach(r => L.push({ src: 'panel', id: r.id, nom: r.nom, texte: esc(r.texte || ''), sorte: r.type === 'bundle' ? 'bundle' : 'xy', du: r.du, au: r.au, cren: '—', etat: r.etat,
+      qui: r.reseau ? 'marque · tout le réseau' : 'marque' + (r.magasins > 1 ? ' · ' + r.magasins + ' magasins' : ''), coef: null, r }));
+    (P.demandes || []).map(pmNommer).forEach(d => {
+      const fini = d.au && d.au < m && d.statut !== 'brouillon';
+      L.push({ src: 'mag', id: d.id, nom: d.nom || 'Sans nom', texte: pmPhrase(pmEffectif(pmDepuis(d).x), Object.assign(pmEffectif(pmDepuis(d).y), { type: d.y.type, valeur: d.y.valeur })), sorte: 'xy', du: d.du, au: d.au,
+        cren: pmCreneauxTxt(d.creneaux), etat: fini ? 'terminee' : d.statut, qui: 'magasin', coef: null, d });
+    });
+    const rang = { active: 0, en_caisse: 0, a_venir: 2, brouillon: 4, inactive: 5, terminee: 6 };
+    return L.sort((a, b) => (rang[a.etat] ?? 9) - (rang[b.etat] ?? 9) || String(a.du || '').localeCompare(String(b.du || '')));
+  }
+  /**
+   * Le panel relu (21/10/2026, Sam) : une promotion créée ou changée directement au panel se voit à l'ouverture de
+   * l'onglet, sans attendre les dix minutes de la lecture gardée. La liste gardée s'affiche d'abord ; la relecture
+   * (`&frais=1`) la remplace dès qu'elle arrive, jamais par une lecture plus ancienne.
+   */
+  function pmRelire() {
+    const k = clePM(), sh = S.shop;
+    if (S.pmRelecture) { return; }
+    S.pmRelecture = true; S.pmRelErr = null; rendre();
+    lire(cheminPM() + '&frais=1').then(d => { if (S.shop === sh && d && (!S.aux[k] || (+d.luTs || 0) >= (+S.aux[k].luTs || 0))) { S.aux[k] = d; S.auxLu[k] = Date.now(); delete S.err[k]; } })
+      .catch(e => { S.pmRelErr = e.message; }).finally(() => { S.pmRelecture = false; rendre(); });
+  }
+  function rendPromos() {
+    if (S.pmW) { return rendPmAssistant(); }
+    const P = S.aux[clePM()], k = clePM();
+    if (P && S.pmRelu !== k && !S.pmRelecture) { S.pmRelu = k; setTimeout(pmRelire, 0); }
+    const relu = S.pmRelecture ? 'relecture du panel…'
+      : (S.pmRelErr ? 'relecture du panel impossible : ' + esc(S.pmRelErr) : (P && P.lu ? 'relu au panel ' + (P.luJour && P.luJour !== AUJ ? 'le ' + esc(P.luJour.slice(8, 10) + '/' + P.luJour.slice(5, 7)) + ' ' : '') + 'à ' + esc(P.lu) : ''));
+    let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Promotions</div><div class="pm-titre">Promotions du magasin</div>
+      <div class="db-mini pm-relu">${relu}${S.pmRelecture ? '' : ` <button class="pm-lien" data-pmrelire="1">↻ relire le panel</button>`}</div></div><span style="flex:1"></span>
+      <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
+      <button class="db-btn prim pm-gros" data-pmnew="1">+ Nouvelle promotion</button></div>`;
+    if (S.pmMsg) { h += `<div class="pm-ok">${S.pmMsg}<button class="pm-x" data-pmmsg="1" aria-label="fermer">✕</button></div>`; }
+    if (S.err[k]) { return h + `<div class="db-err">Promotions : ${esc(S.err[k])}</div>`; }
+    if (!P) { return h + squelette(3); }
+    const L = pmLignes();
+    const parSorte = L.filter(l => S.pmSorte === 'tout' || l.sorte === S.pmSorte);
+    const q = (S.pmQ || '').trim().toLowerCase();
+    const f = PM_FILTRES.find(x => x[0] === S.pmF) || PM_FILTRES[0];
+    const vues = parSorte.filter(l => f[2](l.etat) && (!q || (l.nom + ' ' + l.texte).toLowerCase().includes(q)));
+    h += rendPmCanaux();
+    h += `<div class="db-card pm-liste"><div class="pm-filtres">
+      <div class="db-ong">${PM_FILTRES.map(x => { const n = parSorte.filter(l => x[2](l.etat)).length; return `<button data-pmf-st="${x[0]}" class="${x[0] === f[0] ? 'on' : ''}">${x[1]} <small>${n}</small></button>`; }).join('')}</div>
+      <select class="pm-in" data-pmsorte="1">${[['tout', 'Toutes les sortes'], ['xy', 'X achetés + Y'], ['bundle', 'Bundles']].map(o => `<option value="${o[0]}"${S.pmSorte === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>
+      <input class="pm-in pm-cherche" type="search" placeholder="Chercher une promotion…" value="${esc(S.pmQ || '')}" data-pmq="1">
+      <span class="pm-colsw"><button class="db-btn" data-pmcols="1" aria-expanded="${!!S.pmColsOuv}">Colonnes ▾</button>${S.pmColsOuv ? `<div class="pm-menu pm-cols"><div class="db-lab">Colonnes affichées</div>${PM_COLS.map(c => `<label><input type="checkbox" data-pmcol="${c[0]}"${pmColsVues().includes(c[0]) ? ' checked' : ''}${c[0] === 'nom' ? ' disabled' : ''}> ${c[1]}</label>`).join('')}<button class="pm-lien" data-pmcolsraz="1">Revenir aux colonnes par défaut</button></div>` : ''}</span></div>`;
+    if (!vues.length) {
+      h += `<div class="pm-vide">${f[0] === 'actives' ? 'Aucune promotion en caisse aujourd’hui dans ce magasin.' : 'Rien ici.'} <button class="db-btn" data-pmnew="1">+ Nouvelle promotion</button></div>`;
+    } else {
+      const cols = PM_COLS.filter(c => pmColsVues().includes(c[0]));
+      h += `<div class="pm-large"><table class="pm-tab pm-tab2"><thead><tr>${cols.map(c => `<th class="${c[2]}"${c[4] ? ` title="${esc(c[4])}"` : ''}>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody>${vues.map(l => {
+        const v = pmValeurs(l), cle = l.src + ':' + l.id, ouvert = S.pmMenu === cle;
+        return `<tr>${cols.map(c => `<td class="${c[2]}">${v[c[0]]}</td>`).join('')}<td class="pm-act">${v.actions ? `<button class="pm-dots${ouvert ? ' on' : ''}" data-pmmenu="${esc(cle)}" aria-label="actions" aria-expanded="${ouvert}">${PM_ICO_DOTS}</button>${ouvert ? `<div class="pm-menu">${v.actions}</div>` : ''}` : ''}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+    }
+    // Le paragraphe d'explication sous la liste est retiré (23/10/2026, Sam) ; reste l'erreur du panel, s'il y en a une.
+    h += `${P.erreurPanel ? `<div class="pm-pied db-mini"><b>${esc(P.erreurPanel)}</b></div>` : ''}</div>`;
+    return h;
+  }
+
+  /* --- Où les promotions sont utilisées (18/10/2026, maquette C, le coefficient en plus) ---------------------------
+   * Les promotions reconnues dans les tickets, par canal : comptoir, click & collect, livraison (le ticket d'une
+   * commande webshop encaissée au magasin compte dans son canal). Une barre par promotion avec son coefficient de
+   * marge (le bouton de la liste), et le jour par jour, comptoir en bas, webshop au-dessus. En nombre ou en remise €. */
+  const PM_CAN = [['compt', 'Comptoir', 'c'], ['cc', 'Click & collect', 'w'], ['liv', 'Livraison', 'l']];
+  function rendPmCanaux() {
+    const k = clePMC(), D = S.aux[k], M = S.pmCanM, J = S.pmCanJ;
+    let h = `<div class="db-card cn-card"><div class="ct"><span class="cn-h">Où les promotions sont utilisées</span>
+      <span class="fi-seg">${[['n', 'En nombre'], ['r', 'En remise €']].map(o => `<button type="button" class="${M === o[0] ? 'on' : ''}" data-pmcanm="${o[0]}">${o[1]}</button>`).join('')}</span>
+      <span class="fi-seg">${[7, 30].map(v => `<button type="button" class="${J === v ? 'on' : ''}" data-pmcanj="${v}">${v} jours</button>`).join('')}</span>`;
+    if (S.err[k]) { return h + `</div><div class="db-err" style="margin:12px 16px">Promotions par canal : ${esc(S.err[k])}</div></div>`; }
+    if (!D) { return h + `</div><div style="padding:12px 16px">${squelette(2)}</div></div>`; }
+    const v = c => M === 'r' ? +c.r || 0 : +c.n || 0, tot = p => v(p.compt) + v(p.cc) + v(p.liv), web = p => v(p.cc) + v(p.liv);
+    const fv = x => M === 'r' ? fU(x) : nf(x, 0), part = p => tot(p) ? Math.round(100 * web(p) / tot(p)) : 0;
+    const P = D.promos || [], T = D.total || { compt: {}, cc: {}, liv: {} }, nT = tot(T);
+    h += `<span class="db-mini">${nT ? part(T) + ' % sur le webshop · ' + (M === 'r' ? fU(nT) + ' de remise' : nf(nT, 0) + ' utilisation' + (nT > 1 ? 's' : '')) : ''}</span></div>`;
+    const enL = (D.enLigne || {}).cc + (D.enLigne || {}).liv || 0, sans = (D.joursSans || []).length;
+    const notes = [`<span class="cn-leg">${PM_CAN.map(c => `<span><i class="${c[2]}"></i>${c[1]}</span>`).join('')}</span>`,
+      `<span class="cn-note">Une utilisation : une fois où une promotion s’applique sur un ticket. Le ticket d’une commande webshop encaissée au magasin compte dans son canal.${enL ? ` ${enL} commande${enL > 1 ? 's' : ''} webshop payée${enL > 1 ? 's' : ''} en ligne sur la période : leurs promotions ne se lisent pas encore.` : ''}${D.commandes === false ? ' Commandes du webshop illisibles : tout est compté au comptoir.' : ''}${sans ? ` ${sans} jour${sans > 1 ? 's' : ''} pas encore lu${sans > 1 ? 's' : ''}.` : ''}${D.erreur ? ' Panel : ' + esc(D.erreur) + '.' : ''}</span>`].join('');
+    if (!P.length) { return h + `<div class="pm-vide">Aucune promotion reconnue dans les tickets sur ${J} jours.</div><div class="cn-pied db-mini">${notes}</div></div>`; }
+    const max = Math.max(1, ...P.map(tot)), Rg = (S.aux[clePM()] || {}).regles || {}, min = Rg.coefMin || 2, L = pmLignes();
+    const ligne = p => {
+      // La ligne de la liste qui porte le coefficient : une promotion du magasin (son n° au panel) ou de la marque.
+      const l = p.id === 'x' ? null : (L.find(o => o.src === 'mag' && o.d && +o.d.panelId === +p.id) || L.find(o => o.src === 'panel' && +o.id === +p.id));
+      const n = tot(p), w = Math.max(3, 100 * n / max);
+      const seg = PM_CAN.map(([c, lib, cl]) => { const x = v(p[c]), pc = n ? 100 * x / n : 0; return x ? `<i class="${cl}" style="width:${pc}%" title="${lib} : ${fv(x)}"><em>${pc * w / 100 >= (M === 'r' ? 11 : 5) ? fv(x) : ''}</em></i>` : ''; }).join('');
+      return `<div class="cn-r${p.id === 'x' ? ' mu' : ''}"><div class="cn-rn"><b>${esc(p.nom)}</b><span class="db-mini">${M === 'r' ? fU(n) + ' de remise' : nf(n, 0) + ' fois'} · ${part(p)} % web</span></div>
+        <div class="cn-rb"><span class="cn-bar big" style="width:${w}%">${seg}</span></div>
+        <div class="cn-rc n">${l && l.sorte === 'xy' ? pmCoefCellule(l, min) : '<span class="mu">—</span>'}</div></div>`;
+    };
+    // Le jour par jour : comptoir en bas, webshop au-dessus ; un jour pas encore lu reste vide, marqué.
+    const PJ = D.parJour || [], W = 520, H = 160, mx = Math.max(1, ...PJ.map(j => v(j.compt) + v(j.web))), bw = (W - 32) / Math.max(1, PJ.length);
+    const pas = mx <= 4 ? 1 : (mx <= 10 ? 2 : (mx <= 25 ? 5 : (mx <= 60 ? 10 : Math.ceil(mx / 5 / 10) * 10))), y = x => H - x / mx * (H - 12);
+    const grad = []; for (let g = 0; g <= mx; g += pas) { grad.push(g); }
+    const svg = `<svg class="cn-svg" viewBox="0 0 ${W} ${H + 22}" role="img" aria-label="Utilisations des promotions jour par jour, comptoir et webshop">
+      ${grad.map(g => `<line x1="28" x2="${W}" y1="${y(g)}" y2="${y(g)}" stroke="#eee7de"/><text x="22" y="${y(g) + 3}" text-anchor="end" font-size="9.5" fill="#8a8178">${M === 'r' ? nf(g, 0) + ' €' : g}</text>`).join('')}
+      ${PJ.map((j, i) => { const X = 32 + i * bw, c = v(j.compt), w = v(j.web), hc = H - y(c), hw = H - y(w), dt = j.j.slice(8, 10) + '/' + j.j.slice(5, 7);
+        const bord = X + bw / 2 + 16 > W, lab = PJ.length <= 7 || i % 7 === (PJ.length - 1) % 7 ? `<text x="${bord ? X + bw - 1 : X + bw / 2}" y="${H + 15}" text-anchor="${bord ? 'end' : 'middle'}" font-size="9.5" fill="#8a8178">${dt}</text>` : '';
+        if (j.lu === false) { return `<rect x="${X + 1}" y="${H - 3}" width="${Math.max(2, bw - 4)}" height="3" fill="#e2dbd1"><title>${dt} : pas encore lu</title></rect>` + lab; }
+        return `<g><title>${dt} : comptoir ${fv(c)} · webshop ${fv(w)}</title><rect x="${X + 1}" y="${H - hc}" width="${Math.max(2, bw - 4)}" height="${hc}" fill="#b8ad9f" rx="1.5"/><rect x="${X + 1}" y="${H - hc - hw - (w ? 1 : 0)}" width="${Math.max(2, bw - 4)}" height="${hw}" fill="#1f5f8b" rx="1.5"/></g>` + lab; }).join('')}</svg>`;
+    return h + `<div class="cn-deux"><div><div class="cn-r cn-th"><span class="db-lab">Promotion</span><span class="db-lab">Par canal</span><span class="db-lab n" title="prix payé HT ÷ coût matière, le cas le plus serré">Coef. du lot</span></div>${P.map(ligne).join('')}</div>
+      <div><div class="db-lab">Jour par jour · toutes promotions</div><div class="db-mini">comptoir en bas, webshop au-dessus</div>${svg}</div></div>
+      <div class="cn-pied db-mini">${notes}</div></div>`;
+  }
+
+  /* --- Le coefficient de marge d'une promotion (18/10/2026, maquette A, le tableau de B derrière un bouton) ---------
+   * Au clic sur le coefficient d'une ligne : le coefficient du lot dans le cas le plus serré, la jauge (minimum,
+   * avec et sans la promotion), le panier qui le fixe, puis « produit par produit » : le pire lot de chaque produit
+   * visé. Recalculé aux prix HT et coûts de recette d'aujourd'hui (/promos-magasin/produits) — pour les promotions
+   * du magasin comme pour celles de la marque (X achetés + Y ; pas les bundles). */
+  /** Le coefficient d'une ligne, aux prix et coûts d'aujourd'hui : {d, x, y, P, C}, ou null (bundle, prix pas encore lus). */
+  function pmCoefDe(l) {
+    const prods = pmProduits();
+    if (!prods || l.sorte !== 'xy' || (l.src === 'panel' && !(l.r && l.r.x && l.r.y))) { return null; }
+    const d = l.src === 'mag' ? pmDepuis(l.d) : pmDuPanel(l.r);
+    const x = pmEffectif(d.x), y = Object.assign(pmEffectif(d.y), { type: d.y.type, valeur: d.y.valeur });
+    return { d, x, y, P: pmPaires(prods, x, y), C: pmCoef(prods, x, y) };
+  }
+  /** La cellule « Coef. du lot » : le coefficient d'aujourd'hui (sinon celui de l'enregistrement), un bouton qui ouvre le détail. */
+  function pmCoefCellule(l, min) {
+    if (l.sorte !== 'xy') { return '<span class="mu">—</span>'; }
+    const K = pmCoefDe(l), v = K && K.C.lot != null ? K.C.lot : (K ? null : l.coef);
+    if (!K && v == null) { return `<span class="mu" title="lecture des prix et coûts du magasin">${pmProduits() || S.err[clePMP()] ? '—' : '…'}</span>`; }
+    return `<button type="button" class="pm-coefb ${v == null ? 'mu' : (v >= min ? 'ok' : 'ko')}" data-pmcoef="${esc(l.src + ':' + l.id)}" title="le coefficient de marge en détail">${v == null ? 'non chiffré' : fX(v)} <span aria-hidden="true">ⓘ</span></button>`;
+  }
+  function pmCoefOuvrir(cle) { S.pmC = { cle, vue: 'lot', retour: document.activeElement }; pmCoefRendre(); }
+  function pmCoefFermer() {
+    const r = S.pmC && S.pmC.retour; S.pmC = null; pmCoefRendre();
+    if (r && r.focus) { try { r.focus(); } catch (e) { /* la ligne a été redessinée */ } }
+  }
+  /** Le nom d'un produit avec sa portion (« Tarte Tatin ¼ »). */
+  const pmNomP = (p, c) => esc(p.nom) + (PM_PORTIONS[c.portion] ? ' ' + PM_PORTIONS[c.portion].lib : '');
+  /** Ce que reçoit le client, accordé à l'article : « offert », « à −50 % », « −1,40 € ». */
+  const pmGainArt = y => y.type === 'FREE' ? (y.q > 1 ? 'offerts' : 'offert') : pmGain(y.type, y.valeur, y.q);
+  function pmCoefRendre() {
+    let box = document.getElementById('db-pmc');
+    const l = S.pmC ? pmLignes().find(o => o.src + ':' + o.id === S.pmC.cle) : null;
+    if (!S.pmC || !l) {
+      S.pmC = null;
+      if (box) { box.innerHTML = ''; }
+      if (!S.fiche && !S.invModale && !S.stk) { document.documentElement.classList.remove('db-fiche-ouverte'); }
+      return;
+    }
+    if (!box) { box = document.createElement('div'); box.id = 'db-pmc'; document.body.appendChild(box); }
+    document.documentElement.classList.add('db-fiche-ouverte');
+    const Rg = (S.aux[clePM()] || {}).regles || {}, min = Rg.coefMin || 2, e = PM_ETAT[l.etat] || [l.etat, 'b'];
+    const K = pmCoefDe(l), C = K && K.C, vue = S.pmC.vue;
+    const num = l.src === 'mag' ? (l.d.panelId ? 'promotion n° ' + l.d.panelId : 'promotion du magasin') : 'promotion de la marque n° ' + l.id;
+    const regle = l.src === 'mag' ? (l.d.repetable ? ' · répétable' + (l.d.maxParTicket ? ', ' + l.d.maxParTicket + ' fois au plus par ticket' : '') : ' · une fois par ticket') : '';
+    const nProd = K ? new Set([...K.P.X.keys(), ...K.P.Y.keys()]).size : 0;
+    const chips = [`<span class="fi-chip"><b>${esc(e[0])}</b>${l.au && !pmTjAu(l.au) ? ' jusqu’au ' + esc(pmQuand(l.au)) : ''}</span>`, `<span class="fi-chip">${esc(nomShop())}</span>`,
+      l.src === 'panel' ? `<span class="fi-chip">${esc(l.qui)}</span>` : '', K ? `<span class="fi-chip">${esc(pmLib(K.x))} · ${nProd} produit${nProd > 1 ? 's' : ''}</span>` : '',
+      `<span class="fi-chip">repère <b>${fXm(min)}</b></span>`].join('');
+    const ok = v => v >= min ? 'ok' : 'ko';
+    let corps = '', pied = '';
+    if (!K) { corps = `<div class="db-mini" style="padding:14px 0">${S.err[clePMP()] ? 'Prix et coûts du magasin illisibles : ' + esc(S.err[clePMP()]) : 'Lecture des prix et coûts de recette du magasin…'}</div>`; }
+    else if (C.lot == null) { corps = `<div class="pm-warn">Rien ne se chiffre : ${esc(pmManqueTxt(C))}.</div>`; }
+    else if (vue === 'produits') { corps = pmCoefProduits(K, min); }
+    else {
+      const x = K.x, y = K.y, pc = v => Math.max(1, Math.min(99, 100 * v / 4.5));
+      const lots = K.P.L.map(q => Math.round(q.lot * 100) / 100).sort((a, b) => a - b), autres = lots.slice(1);
+      const marge = C.paye - C.cout, margeSans = x.q * pmFrac(x) * C.px.prixHt + y.q * pmFrac(y) * C.py.prixHt - C.cout, nb = x.q + y.q, ecart = C.lot - min;
+      const enr = l.src === 'mag' && l.d.coef && l.d.coef.lot != null ? +l.d.coef.lot : null;
+      const sortis = [...C.sansCout.map(n => n + ' (sans coût de recette)'), ...C.sansPrix.map(n => n + ' (sans prix)')];
+      corps = `<div class="pmc-hero"><div><div class="db-lab">Coefficient du lot · le cas le plus serré</div><div class="pmc-big ${ok(C.lot)}">${fX(C.lot)}</div><div class="db-mini">prix payé HT ÷ coût matière</div></div>
+          <div class="pmc-cmp"><div class="db-lab">Sans la promotion</div><b>${fX(C.sans)}</b><div class="db-mini">−${nf(C.sans - C.lot, 2)} avec la promotion</div></div>
+          <div class="pmc-cmp"><div class="db-lab">Écart au repère</div><b class="${ok(C.lot)}">${ecart >= 0 ? '+' : '−'}${nf(Math.abs(ecart), 2)}</b><div class="db-mini">${ecart >= 0 ? 'au-dessus de' : 'sous'} ${fXm(min)}</div></div></div>
+        <div class="pm-jauge" style="background:linear-gradient(90deg,rgba(166,30,30,.22) 0 ${pc(min)}%,rgba(45,122,62,.18) ${pc(min)}% 100%)">
+          <i class="min" style="left:${pc(min)}%"></i><span style="left:${pc(min)}%;color:#A61E1E">min. ${fXm(min)}</span>
+          <i class="sp" style="left:${pc(C.sans)}%"></i><span class="haut pmc-d" style="left:${pc(C.sans)}%">sans promo ${fX(C.sans)}</span>
+          <i class="lot ${ok(C.lot)}" style="left:${pc(C.lot)}%"></i><span class="haut pmc-g" style="left:${pc(C.lot)}%;color:${C.lot >= min ? '#2d7a3e' : '#A61E1E'}">avec la promo ${fX(C.lot)}</span></div>
+        <div class="pmc-cas"><div class="db-lab" style="margin-bottom:6px">Ce qui fixe le chiffre</div>
+          <div class="pmc-phr">${x.q} × <b>${pmNomP(C.px, x)}</b> acheté${x.q > 1 ? 's' : ''} + ${y.q} × <b>${pmNomP(C.py, y)}</b> ${pmGainArt(y)}</div>
+          <div class="pmc-l"><span>Payé par le client, HT</span><b>${fU(C.paye)}</b></div>
+          <div class="pmc-l"><span>Coût matière des ${nb} article${nb > 1 ? 's' : ''}</span><b>${fU(C.cout)}</b></div>
+          <div class="pmc-l"><span>Marge brute du lot</span><b>${fU(marge)} <small class="mu">au lieu de ${fU(margeSans)}</small></b></div></div>
+        ${C.lot < min ? `<div class="pm-warn pmc-ko">Sous ${fXm(min)} avec les prix et coûts d’aujourd’hui. ${l.src === 'mag' ? 'Retirez-la, ou dupliquez-la avec un avantage plus petit.' : 'Promotion de la marque : à lui signaler.'}</div>` : ''}
+        ${enr != null && Math.abs(enr - C.lot) >= 0.01 ? `<div class="pm-warn">À l’enregistrement : ${fX(enr)}. Les prix ou les coûts de recette ont changé depuis.</div>` : ''}
+        <div class="fi-note" style="margin-top:10px">${autres.length ? (autres[0] === autres[autres.length - 1] ? `L${autres.length > 1 ? 'es ' + autres.length + ' autres combinaisons' : '’autre combinaison'} possible${autres.length > 1 ? 's' : ''} en caisse : ${fX(autres[0])}.` : `Les ${autres.length} autres combinaisons possibles en caisse sont plus confortables : de ${fX(autres[0])} à ${fX(autres[autres.length - 1])}.`) + ' ' : ''}Prix HT de la caisse et coûts de recette du magasin, aujourd’hui.
+          ${C.coutReseau.length ? ` Coût du réseau, faute de coût calculé pour le magasin : ${esc(C.coutReseau.slice(0, 4).join(', '))}${C.coutReseau.length > 4 ? '…' : ''}.` : ''}
+          ${sortis.length ? ` Hors calcul : ${esc(sortis.slice(0, 4).join(', '))}${sortis.length > 4 ? '…' : ''}.` : ''}</div>`;
+    }
+    if (K && C.lot != null) {
+      pied = `<div class="pmc-pied">${vue === 'produits' ? '<button type="button" class="db-btn" data-pmcvue="lot">← L’essentiel</button>' : (nProd > 1 ? `<button type="button" class="db-btn" data-pmcvue="produits">Voir produit par produit (${nProd})</button>` : '')}
+        <button type="button" class="db-btn" data-pmcdup="${esc((l.src === 'mag' ? 'mag:' : 'panel:') + l.id)}">Dupliquer</button><span style="flex:1"></span><button type="button" class="db-btn prim" data-pmcfermer="1">Fermer</button></div>`;
+    }
+    const ancienne = box.querySelector('.fi-modale'), defil = ancienne && ancienne.dataset.vue === vue ? ancienne.scrollTop : 0;
+    box.innerHTML = `<div class="fi-voile" data-pmcfermer="1"></div><div class="fi-modale${vue === 'produits' ? '' : ' pmc-etroite'}" data-vue="${vue}" role="dialog" aria-modal="true" aria-label="Coefficient de marge — ${esc(l.nom)}">
+      <div class="fi-hd"><div class="t"><div class="db-lab">Coefficient de marge · ${esc(num)}</div><h2>${esc(l.nom)}</h2><div class="s">${l.texte}${regle}</div><div class="fi-chips">${chips}</div></div><button type="button" class="fi-x" data-pmcfermer="1" aria-label="Fermer">✕</button></div>
+      <div class="fi-bd">${corps}</div>${pied}</div>`;
+    if (defil) { const nm = box.querySelector('.fi-modale'); if (nm) { nm.scrollTop = defil; } }
+    box.querySelectorAll('[data-pmcfermer]').forEach(b => b.addEventListener('click', pmCoefFermer));
+    box.querySelectorAll('[data-pmcvue]').forEach(b => b.addEventListener('click', () => { S.pmC.vue = b.dataset.pmcvue; pmCoefRendre(); const nm = box.querySelector('.fi-modale'); if (nm) { nm.scrollTop = 0; } }));
+    box.querySelectorAll('[data-pmcdup]').forEach(b => b.addEventListener('click', () => { const c = b.dataset.pmcdup; S.pmC = null; pmCoefRendre(); pmDupliquer(c); }));
+    if (!box.contains(document.activeElement)) { const x = box.querySelector('.fi-x'); if (x) { x.focus(); } }
+  }
+  /** Produit par produit : le pire lot de chaque produit visé (acheté en X, sinon reçu en Y), le plus serré d'abord. */
+  function pmCoefProduits(K, min) {
+    const { x, y, P, C } = K, pc = v => Math.max(1, Math.min(99, 100 * v / 4.5)), r2 = v => Math.round(v * 100) / 100;
+    const lignes = [];
+    new Map([...P.X, ...P.Y]).forEach((p, id) => {
+      const mes = P.L.filter(q => P.X.has(id) ? +q.px.id === id : +q.py.id === id);
+      if (!mes.length) { return; }
+      const w = mes.reduce((a, b) => b.lot < a.lot ? b : a);
+      lignes.push({ p, w, normal: +p.prixHt / +p.cout, lot: r2(w.lot) });
+    });
+    lignes.sort((a, b) => a.lot - b.lot || a.p.nom.localeCompare(b.p.nom, 'fr'));
+    const lots = P.L.map(q => r2(q.lot)).sort((a, b) => a - b), med = lots[Math.floor((lots.length - 1) / 2)];
+    const cedes = P.L.map(q => q.sans * q.cout - q.paye), sous = lignes.filter(r => r.lot < min).length;
+    const nomC = (p, c) => pmNomP(p, c);
+    const etat = v => v < min ? `<span class="pm-chip r">sous ${fXm(min)}</span>` : (v < min * 1.1 ? '<span class="pm-chip a">à surveiller</span>' : '<span class="pm-chip ok">ok</span>');
+    const barre = (n, v) => `<div class="pmc-bar" style="background:linear-gradient(90deg,rgba(166,30,30,.16) 0 ${pc(min)}%,rgba(45,122,62,.12) ${pc(min)}% 100%)"><i class="m" style="left:${pc(min)}%"></i><u style="left:${pc(v)}%;width:${Math.max(0, pc(n) - pc(v))}%"></u><i class="s" style="left:${pc(n)}%"></i><i class="l ${v >= min ? '' : 'ko'}" style="left:${pc(v)}%"></i></div>`;
+    const sortis = [...C.sansCout.map(n => n + ' (sans coût de recette)'), ...C.sansPrix.map(n => n + ' (sans prix)')];
+    return `<div class="db-tuiles pmc-tuiles">
+        <div class="db-tui ${C.lot >= min ? 'bon' : 'vif'}"><div class="k">Coef. le plus bas</div><div class="v">${fX(C.lot)}</div><div class="s">${pmNomP(C.px, x)}${+C.px.id === +C.py.id ? ', acheté et remisé' : ' + ' + pmNomP(C.py, y)}</div></div>
+        <div class="db-tui"><div class="k">Coef. d’un lot type</div><div class="v">${fX(med)}</div><div class="s">la moitié des ${lots.length} combinaisons font au moins autant</div></div>
+        <div class="db-tui ${sous ? 'vif' : ''}"><div class="k">Sous ${fXm(min)}</div><div class="v">${sous} <small class="mu">sur ${lignes.length}</small></div><div class="s">le repère de marge, il ne bloque pas</div></div>
+        <div class="db-tui"><div class="k">Marge cédée par lot</div><div class="v">${Math.abs(Math.max(...cedes) - Math.min(...cedes)) < 0.005 ? fU(cedes[0]) : fU(Math.min(...cedes)) + ' – ' + fU(Math.max(...cedes))}</div><div class="s">ce que coûte l’avantage, HT</div></div></div>
+      <div class="pm-large"><table class="fi-st pmc-st"><thead><tr><th>Produit</th><th class="n">Prix HT</th><th class="n">Coût recette</th><th class="n">Coef. normal</th><th class="n">Coef. dans la promo</th><th class="pmc-gr">×1 → ×4,5</th><th>Le pire lot</th><th></th></tr></thead><tbody>
+      ${lignes.map(r => `<tr><td class="nm">${esc(r.p.nom)}${P.X.has(+r.p.id) ? '' : ' <small class="mu">reçu</small>'}</td><td class="n">${fU(+r.p.prixHt)}</td><td class="n">${fU(+r.p.cout)}${r.p.source === 'reseau' ? ' <small class="mu" title="coût du réseau, pas encore calculé pour ce magasin">r</small>' : ''}</td>
+        <td class="n mu">${fX(r.normal)}</td><td class="n"><b class="${r.lot < min ? 'ko' : (r.lot < min * 1.1 ? 'wa' : 'ok')}">${fX(r.lot)}</b></td><td class="pmc-gr">${barre(r.normal, r.lot)}</td>
+        <td class="db-mini">${x.q} × ${nomC(r.w.px, x)} + ${y.q} × ${nomC(r.w.py, y)} ${pmGainArt(y)}</td><td>${etat(r.lot)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="pmc-leg db-mini"><span><i class="m"></i>repère ${fXm(min)}</span><span><i class="s"></i>sans promo</span><span><i class="l"></i>avec la promo</span>
+        <span class="pmc-legn">« à surveiller » : moins de 10 % au-dessus de ${fXm(min)}. Pour chaque produit, le lot le plus serré où il est acheté (ou reçu).</span></div>
+      ${sortis.length ? `<div class="pm-warn">Hors calcul, sortis de la promotion au panel : ${esc(sortis.join(', '))}.</div>` : ''}`;
+  }
+
+  /* L'assistant : une demande en cours d'écriture (S.pmW = {etape, d, erreurs, envoi}). */
+  const pmCote = (c, y) => Object.assign({ q: Math.max(1, +(c && c.q) || 1), mode: c && !(c.cats || []).length && (c.prods || []).length ? 'prods' : 'cats', cats: (c && c.cats) || [], prods: (c && c.prods) || [], exclus: (c && c.exclus) || [], portion: (c && c.portion) || null },
+    y ? { type: (c && c.type) || 'FREE', valeur: c && c.valeur != null ? c.valeur : '' } : {});
+  function pmDepuis(d) {
+    return { id: d.id || null, nom: d.nom || '', description: d.description || '', shops: (d.shops && d.shops.length ? d.shops : [+S.shop]).map(Number),
+      x: pmCote(d.x, false), y: pmCote(d.y, true), du: d.du || '', au: d.au || '', creneaux: (d.creneaux || []).map(c => ({ jours: c.jours.slice(), de: c.de, a: c.a })),
+      repetable: !!d.repetable, maxParTicket: d.maxParTicket || '',
+      canal: PM_CANAUX.some(o => o[0] === d.canal) ? d.canal : (Array.isArray(d.canaux) && d.canaux.length === 1 && PM_CANAUX.some(o => o[0] === d.canaux[0]) ? d.canaux[0] : 'tous'), seuil: +d.seuil > 0 ? String(d.seuil) : '', seuilOn: +d.seuil > 0 };
+  }
+  function pmNouvelle() {
+    const t = new Date(); t.setDate(t.getDate() + 1); const du = iso(t); t.setDate(t.getDate() + 6);
+    return pmDepuis({ du: du + ' 00:00', au: iso(t) + ' 23:59', x: { q: 2 }, y: { q: 1, type: 'FREE' } });
+  }
+  /** Une promotion du panel reprise en demande du magasin : ce qu'on achète, ce qu'on reçoit, la récompense. */
+  function pmDuPanel(r) {
+    const prods = pmProduits() || [], nom = id => { const p = prods.find(x => +x.id === +id); return p ? p.nom : ''; };
+    const cote = c => ({ q: Math.round((c && c.q) || 1), cats: Object.entries((c && c.c) || {}).map(([id, n]) => ({ id: +id, nom: n })),
+      prods: Object.entries((c && c.p) || {}).map(([k, n]) => ({ id: parseInt(k, 10), nom: n || nom(parseInt(k, 10)) })), exclus: ((c && c.x) || []).map(id => ({ id: +id, nom: nom(id) })),
+      portion: (c && PM_PORTIONS[c.portion] && c.portion) || null });
+    const rc = r.recompense || {};
+    return pmDepuis({ nom: r.nom + ' · ' + nomShop().replace(/^.* - /, ''), x: cote(r.x), y: Object.assign(cote(r.y), { type: rc.type || 'FREE', valeur: rc.valeur }), canaux: r.canaux, seuil: r.seuil });
+  }
+  /**
+   * Un exemple complet, pour tester (18/10/2026) : la catégorie du magasin qui a le plus de produits chiffrés, « 2 achetés
+   * + le 3e » avec le premier avantage qui garde le repère de marge (offert, −50 %, −30 %, −20 %), sur la durée choisie
+   * (1 semaine, 1 mois, 1 an). Rien ne part avant « Enregistrer » : l'assistant s'ouvre sur l'étape Vérifier. Null quand
+   * aucune catégorie n'a deux produits chiffrés.
+   */
+  function pmExemple(k) {
+    const prods = pmProduits();
+    if (!prods) { return null; }
+    const parCat = new Map();
+    prods.forEach(p => { if (p.catId && +p.prixHt > 0 && +p.cout > 0) { const c = parCat.get(+p.catId) || { id: +p.catId, nom: p.cat || ('Catégorie ' + p.catId), n: 0 }; c.n++; parCat.set(+p.catId, c); } });
+    const cats = [...parCat.values()].filter(c => c.n >= 2).sort((a, b) => b.n - a.n || a.nom.localeCompare(b.nom, 'fr'));
+    if (!cats.length) { return null; }
+    const min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2, essais = [['FREE', ''], ['PERCENTAGE_DISCOUNT', 50], ['PERCENTAGE_DISCOUNT', 30], ['PERCENTAGE_DISCOUNT', 20]];
+    let choix = null;
+    for (const c of cats.slice(0, 6)) {
+      const x = { q: 2, cats: [{ id: c.id, nom: c.nom }], prods: [], exclus: [], portion: null };
+      const t = essais.find(([type, valeur]) => { const C = pmCoef(prods, x, Object.assign({}, x, { q: 1, type, valeur })); return C.lot != null && C.lot >= min; });
+      if (t) { choix = { c, type: t[0], valeur: t[1] }; break; }
+    }
+    choix = choix || { c: cats[0], type: 'PERCENTAGE_DISCOUNT', valeur: 20 };
+    const dur = (PM_DUREES.find(o => o[0] === k) || PM_DUREES[0])[1], cat = [{ id: choix.c.id, nom: choix.c.nom }];
+    const d = pmDepuis({ nom: 'Test · ' + choix.c.nom + ' 2 + 1 ' + (choix.type === 'FREE' ? 'offert' : 'à −' + choix.valeur + ' %') + ' · ' + dur,
+      description: 'Exemple rempli automatiquement pour tester : relisez avant d’enregistrer.',
+      x: { q: 2, cats: cat }, y: { q: 1, type: choix.type, valeur: choix.valeur, cats: cat } });
+    const r = pmDuree(d, k); d.du = r.du; d.au = r.au;
+    return d;
+  }
+  function pmOuvrir(d, etape) { S.pmW = { etape: etape || 1, d, erreurs: null, envoi: false }; S.pmMsg = null; S.pmMenu = null; S.pmColsOuv = false; rendre(); window.scrollTo(0, 0); }
+  /** Ce que chaque étape demande encore (vide = faite). */
+  function pmManque(d, i) {
+    const x = pmEffectif(d.x), y = pmEffectif(d.y);
+    if (i === 1) { return d.nom.trim() ? '' : 'un nom'; }
+    if (i === 2) { return x.cats.length || x.prods.length ? '' : d.x.mode === 'cats' ? 'une catégorie' : 'des produits'; }
+    if (i === 3) {
+      if (!y.cats.length && !y.prods.length) { return d.y.mode === 'cats' ? 'une catégorie' : 'des produits'; }
+      if (d.y.type !== 'FREE' && !(+d.y.valeur > 0)) { return 'la valeur de l’avantage'; }
+      if (d.y.type === 'PERCENTAGE_DISCOUNT' && +d.y.valeur > 100) { return 'une remise de 100 % au plus'; }
+      return '';
+    }
+    if (i === 4) {
+      const CO = ((S.aux[clePM()] || {}).regles || {}).conditions || { seuil: true, canal: true };
+      if (d.seuilOn && !CO.seuil) { return 'le seuil ne s’écrit pas encore au panel'; }
+      if (d.canal !== 'tous' && !(CO[d.canal] ?? CO.canal)) { return 'le canal ne s’écrit pas encore au panel'; }
+      return d.seuilOn && !(+d.seuil > 0) ? 'le montant du seuil' : '';
+    }
+    if (i === 5) {
+      const R = (S.aux[clePM()] || {}).regles || {}, n = pmJours(d);
+      if (!d.du || !d.au) { return 'les dates'; }
+      if (d.au <= d.du) { return 'une fin après le début'; }
+      return '';
+    }
+    return '';
+  }
+  function pmCoefCourant(d) {
+    const prods = pmProduits();
+    if (!prods) { return null; }
+    return pmCoef(prods, pmEffectif(d.x), Object.assign(pmEffectif(d.y), { type: d.y.type, valeur: d.y.valeur }));
+  }
+  /** Les produits visés qui sortiront d'office à l'enregistrement : sans coût de recette ou sans prix (pmExclureNonChiffres). */
+  const pmSortis = C => C ? [...C.sansCout, ...C.sansPrix] : [];
+  const pmSortisTxt = C => { const n = pmSortis(C); return n.slice(0, 5).join(', ') + (n.length > 5 ? '… (' + n.length + ')' : ''); };
+  function pmStepper(W) {
+    return PM_ETAPES.map((n, i) => { const e = i + 1, fait = e < PM_FIN && !pmManque(W.d, e);
+      return `<button class="e${e === W.etape ? ' on' : (fait ? ' fait' : '')}" data-pmet="${e}"><span class="n">${e !== W.etape && fait ? '✓' : e}</span>${n}</button>`; }).join('<span class="sep"></span>');
+  }
+  /** Le coefficient en une ligne, sous les étapes X et Y. */
+  function pmFixe(W) {
+    const C = pmCoefCourant(W.d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
+    if (!C) { return S.err[clePMP()] ? `<div class="pm-fixe ko">Prix et coûts du magasin illisibles : ${esc(S.err[clePMP()])}</div>` : `<div class="pm-fixe">Lecture des prix et coûts de recette du magasin…</div>`; }
+    if (C.lot == null) { return C.nX + C.nY ? `<div class="pm-fixe ko"><span>Rien ne se chiffre : ${esc(pmManqueTxt(C))}. Choisissez d’autres produits.</span></div>` : `<div class="pm-fixe">Le coefficient se calcule dès que X et Y sont choisis.</div>`; }
+    const ok = C.lot >= min, sortis = pmSortis(C).length ? ` Sortent d’office, sans coût de recette ou sans prix : ${esc(pmSortisTxt(C))}.` : '';
+    return `<div class="pm-fixe ${ok ? 'ok' : 'ko'}"><span class="pm-chip ${ok ? 'ok' : 'r'}">${fX(C.lot)} ${ok ? '✓' : '✕'}</span><span>${ok ? 'Le lot reste au-dessus de ' + fXm(min) + ' pour chaque produit chiffré.' + sortis : 'Sous ' + fXm(min) + ' : ' + esc(C.px.nom) + ' + ' + esc(C.py.nom) + '. La promotion s’enregistre quand même ; pour la marge, baissez l’avantage, montez X ou retirez ce produit.'}</span></div>`;
+  }
+  function pmDroite(W) {
+    const d = W.d, C = pmCoefCourant(d), min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
+    const x = pmEffectif(d.x), y = pmEffectif(d.y), n = pmJours(d);
+    const ck = (ok, t) => `<div class="pm-ck${ok ? '' : ' no'}">${ok ? '✓' : '○'} ${t}</div>`;
+    const mags = d.shops.map(s => { const o = S.stores.find(z => +z.id === +s); return o ? o.nom.replace(/^.* - /, '') : 'magasin ' + s; });
+    let h = `<div class="db-card pm-c"><div class="db-lab">Récapitulatif</div>
+      <div class="pm-phrase">${pmPhrase(x, Object.assign(y, { type: d.y.type, valeur: d.y.valeur }))}</div>
+      <div class="pm-badges">${pmBadges(d.canal, d.seuil)}</div>
+      <div class="db-mini" style="margin-top:4px">${esc(mags.join(', '))} · ${d.du && d.au ? esc(pmPeriodeTxt(d)) : 'période à régler'}${d.creneaux.length ? ' · ' + esc(pmCreneauxTxt(d.creneaux)) : ''}${d.repetable ? ' · répétable' + (d.maxParTicket ? ', ' + d.maxParTicket + ' fois par ticket au plus' : '') : ''}</div>
+      ${ck(!pmManque(d, 1), 'Nom')}
+      ${ck(!pmManque(d, 2), 'Déclencheur : ' + (x.cats.length || x.prods.length ? x.q + ' × ' + (PM_PORTIONS[x.portion] ? PM_PORTIONS[x.portion].lib + ' ' : '') + esc(pmLib(x)) : 'à l’étape 2'))}
+      ${ck(!pmManque(d, 3), 'Avantage : ' + (y.cats.length || y.prods.length ? y.q + ' pièce' + (y.q > 1 ? 's' : '') + ' ' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + ', la moins chère' : 'à l’étape 3'))}
+      ${ck(!pmManque(d, 4), 'Conditions : ' + esc(pmCanalLib(d.canal).toLowerCase()) + ' · ' + esc(pmSeuilTxt(d.seuil)) + ' · ' + (d.repetable ? 'répétable' + (d.maxParTicket ? ', ' + esc(d.maxParTicket) + ' fois au plus' : '') : 'une fois par ticket'))}
+      ${ck(!pmManque(d, 5), 'Période : ' + (pmManque(d, 5) ? esc(pmManque(d, 5)) : (pmToujours(d) ? 'sans fin' : n + ' jour' + (n > 1 ? 's' : '')) + (d.creneaux.length ? ', ' + d.creneaux.length + ' créneau' + (d.creneaux.length > 1 ? 'x' : '') : '')))}
+      ${C && C.lot != null ? `<div class="pm-ck${C.lot >= min ? '' : ' wa'}">${C.lot >= min ? '✓' : '!'} Coefficient du lot ${fX(C.lot)}${C.lot >= min ? '' : ' : sous ' + fXm(min) + ', n’empêche pas l’enregistrement'}</div>` : ck(false, 'Coefficient du lot : se calcule avec X et Y')}</div>`;
+    h += `<div class="db-card pm-c"><div class="pm-ligne"><div class="db-lab">Calculateur de coefficient</div>${C && C.lot != null ? `<span class="pm-chip ${C.lot >= min ? 'ok' : 'r'}">repère ${fXm(min)} ${C.lot >= min ? '✓' : '✕'}</span>` : ''}</div>`;
+    if (!C) { h += `<div class="db-mini" style="margin-top:8px">${S.err[clePMP()] ? 'Prix et coûts illisibles : ' + esc(S.err[clePMP()]) : 'Lecture des prix et coûts de recette du magasin…'}</div></div>`; }
+    else if (C.lot == null) { h += `<div class="db-mini" style="margin-top:8px">${C.nX + C.nY ? 'Rien ne se chiffre : ' + esc(pmManqueTxt(C)) + '.' : 'Choisissez ce que le client achète et ce qu’il reçoit : le coefficient se calcule aussitôt.'}</div></div>`; }
+    else {
+      const pc = v => Math.max(1, Math.min(99, 100 * v / 4.5)), nb = x.q + y.q;
+      h += `<div class="pm-cl"><span>Payé pour le lot (${nb} pièces), HT</span><b>${fU(C.paye)}</b></div>
+        <div class="pm-cl"><span>Coût matière du lot</span><b>${fU(C.cout)}</b></div>
+        <div class="pm-cl big"><span>Coefficient du lot<br><small class="db-mini">prix payé HT ÷ coût matière</small></span><b class="${C.lot >= min ? 'ok' : 'ko'}">${fX(C.lot)}</b></div>
+        <div class="pm-jauge" style="background:linear-gradient(90deg,rgba(166,30,30,.22) 0 ${pc(min)}%,rgba(45,122,62,.18) ${pc(min)}% 100%)"><i class="min" style="left:${pc(min)}%"></i><span style="left:${pc(min)}%;color:#A61E1E">min. ${fXm(min)}</span>
+          ${C.sans != null ? `<i class="sp" style="left:${pc(C.sans)}%"></i><span class="haut" style="left:${pc(C.sans)}%">sans promo ${fX(C.sans)}</span>` : ''}<i class="lot ${C.lot >= min ? 'ok' : 'ko'}" style="left:${pc(C.lot)}%"></i></div>
+        <div class="db-mini">Le cas le plus serré : ${x.q} × ${esc(C.px.nom)} + ${y.q} × ${esc(C.py.nom)}, sur ${C.paires} combinaison${C.paires > 1 ? 's' : ''} (${C.nX} produit${C.nX > 1 ? 's' : ''} en X, ${C.nY} en Y). Sous ${fXm(min)}, la promotion s’enregistre quand même, le coefficient en rouge.${d.shops.length > 1 ? ' Prix de ce magasin ; les autres se vérifient à l’envoi.' : ''}</div>
+        ${C.coutReseau.length ? `<div class="db-mini" style="margin-top:6px">Coût du réseau (pas encore calculé pour ce magasin au panel) : ${esc(C.coutReseau.slice(0, 5).join(', '))}${C.coutReseau.length > 5 ? '…' : ''}.</div>` : ''}
+        ${pmSortis(C).length ? `<div class="pm-warn">Sortent de la promotion d’office (exclus au panel), ${esc(pmManqueTxt(C))}.</div>` : ''}</div>`;
+      // Le ticket du cas le plus serré, aux prix TTC de la caisse.
+      const fx = pmFrac(x), fy = pmFrac(y), Px = PM_PORTIONS[x.portion], Py = PM_PORTIONS[y.portion];
+      const tx = fx * pmTtc(C.px), ty = fy * pmTtc(C.py), ry = pmRecompense(C.py, d.y.type, d.y.valeur, fy) * (1 + (+C.py.tva || 0) / 100), rem = y.q * (ty - ry);
+      C.px = Object.assign({}, C.px, { nom: C.px.nom + (Px ? ' ' + Px.lib : '') }); C.py = Object.assign({}, C.py, { nom: C.py.nom + (Py ? ' ' + Py.lib : '') });
+      const lg = (a, b, c) => `<div class="l${c ? ' ' + c : ''}"><span>${a}</span><span>${b}</span></div>`;
+      // Le seuil du ticket (23/10/2026) : le lot seul l'atteint-il ? Sinon, ce qu'il faut acheter en plus.
+      const lotTtc = x.q * tx + y.q * ty, seuil = +d.seuil > 0 ? +d.seuil : 0, manqueS = seuil - lotTtc;
+      const seuilL = !seuil ? '' : (manqueS <= 0 ? `<div class="pm-tks ok">✓ Seuil de ${fU(seuil)} atteint par le lot seul (${fU(lotTtc)} TTC aux prix normaux).</div>`
+        : `<div class="pm-tks">Seuil de ${fU(seuil)} : le lot fait ${fU(lotTtc)} TTC aux prix normaux — <b>${fU(manqueS)} d’achats en plus</b> pour que l’avantage tombe.</div>`);
+      h += `<div class="db-card pm-c"><div class="pm-ligne"><div class="db-lab" style="margin-bottom:8px">Sur le ticket</div><span class="db-mini">${esc(pmCanalLib(d.canal).toLowerCase())}</span></div><div class="pm-tk">
+        ${Array.from({ length: x.q }, () => lg(esc(C.px.nom), nf(tx, 2))).join('')}${Array.from({ length: y.q }, () => lg(esc(C.py.nom), nf(ty, 2))).join('')}
+        ${manqueS > 0 ? lg('  autres articles', nf(manqueS, 2), 'aut') : ''}
+        ${lg('  ' + esc(d.nom || 'Promotion') , '−' + nf(rem, 2), 'rem')}<div class="l tot"><b>Total TTC</b><b>${nf(lotTtc + Math.max(0, manqueS) - rem, 2)}</b></div></div>${seuilL}</div>`;
+    }
+    return h;
+  }
+  /** Une liste de choix (catégories, produits, exclus) : les étiquettes, retirables. */
+  function pmTags(cote, champ, l) {
+    return l.map(o => `<span class="pm-tag">${esc(o.nom || ('#' + o.id))}<button data-pmrm="${cote}|${champ}|${o.id}" aria-label="retirer">✕</button></span>`).join('');
+  }
+  const pmLabel = p => p.nom + ' — ' + (p.cat || '') + (pmTtc(p) != null ? ', ' + nf(pmTtc(p), 2) + ' €' : '') + ' · #' + p.id;
+  function pmCible(W, cote) {
+    const c = W.d[cote], prods = pmProduits() || [], cats = pmCategories();
+    const ex = c.mode === 'cats' && c.cats.length ? prods.filter(p => c.cats.some(o => +o.id === +p.catId) && !c.exclus.some(o => +o.id === +p.id)) : [];
+    const variante = `<div class="pm-f"><label>Variante</label><select class="pm-in" data-pmportion="${cote}"><option value="">Toutes les variantes</option>${Object.entries(PM_PORTIONS).map(([k, v]) => `<option value="${k}"${c.portion === k ? ' selected' : ''}>${v.lib} seulement (${v.un})</option>`).join('')}</select>${c.portion ? `<small class="db-mini">au panel, la part ${PM_PORTIONS[c.portion].lib} de chaque produit${c.mode === 'cats' ? ' de la catégorie qui en a une' : ''}</small>` : ''}</div>`;
+    let h = `<div class="pm-row" style="grid-template-columns:auto 190px 1fr"><div class="pm-f"><label>Sur</label><span class="pm-seg"><button class="${c.mode === 'cats' ? 'on' : ''}" data-pmmode="${cote}|cats">Catégorie</button><button class="${c.mode === 'prods' ? 'on' : ''}" data-pmmode="${cote}|prods">Produits</button></span></div>${variante}`;
+    if (c.mode === 'cats') {
+      h += `<div class="pm-f"><label>Catégorie</label><select class="pm-in" data-pmaddcat="${cote}"><option value="">${cats.length ? '+ Ajouter une catégorie…' : 'lecture des catégories…'}</option>${cats.filter(o => !c.cats.some(z => +z.id === +o.id)).map(o => `<option value="${o.id}">${esc(o.nom)} (${o.n} produit${o.n > 1 ? 's' : ''})</option>`).join('')}</select></div></div>`;
+      h += `<div class="pm-choix">${c.cats.map(o => { const k = cats.find(z => +z.id === +o.id); return `<span class="pm-tag">${esc(o.nom)} — ${c.portion ? PM_PORTIONS[c.portion].lib + ' seulement' : 'toutes les variantes'}${k ? `<small>${k.n} produit${k.n > 1 ? 's' : ''}${k.min != null ? ', de ' + fU(k.min) + ' à ' + fU(k.max) : ''}</small>` : ''}<button data-pmrm="${cote}|cats|${o.id}" aria-label="retirer">✕</button></span>`; }).join('') || '<span class="db-mini">Aucune catégorie choisie.</span>'}</div>`;
+      if (c.cats.length) {
+        h += `<div class="pm-f" style="margin-top:10px"><label>Produits exclus de la catégorie</label><div class="pm-choix">${pmTags(cote, 'exclus', c.exclus)}
+          <input class="pm-in pm-cherche" list="pm-dl-ex-${cote}" placeholder="+ Exclure un produit…" data-pmexc="${cote}"></div>
+          <datalist id="pm-dl-ex-${cote}">${ex.map(p => `<option value="${esc(pmLabel(p))}"></option>`).join('')}</datalist></div>`;
+      }
+    } else {
+      h += `<div class="pm-f"><label>Produits</label><input class="pm-in" list="pm-dl-prod" placeholder="${prods.length ? 'Chercher un produit…' : 'lecture des produits…'}" data-pmprod="${cote}"></div></div>
+        <div class="pm-choix">${pmTags(cote, 'prods', c.prods) || '<span class="db-mini">Aucun produit choisi.</span>'}</div>`;
+    }
+    return h;
+  }
+  function pmEtape(W) {
+    const d = W.d, e = W.etape, R = (S.aux[clePM()] || {}).regles || {};
+    const tete = (lab, t) => `<div class="pm-sh"><span class="n">${e}</span><div><div class="db-lab">Étape ${e}${lab ? ' · ' + lab : ''}</div><div class="pm-h2">${t}</div></div></div>`;
+    if (e === 1) {
+      return tete('la promotion', 'Nom') + `<div class="pm-f" style="margin-bottom:10px"><label>Magasin</label><div class="pm-in ro"><b>${esc(nomShop())}</b></div><span class="db-mini">la promotion vaut pour ce magasin seulement</span></div>
+        <div class="pm-f"><label>Nom</label><input class="pm-in" maxlength="80" placeholder="ex. Cookies 2+1 · Halle" value="${esc(d.nom)}" data-pmf="nom"></div>
+        <div class="pm-f" style="margin-top:10px"><label>Description <small class="db-mini">facultatif</small></label><textarea class="pm-in" rows="3" maxlength="500" placeholder="Quand l’utiliser, ce qu’on en attend…" data-pmf="description">${esc(d.description)}</textarea></div>
+        <div class="pm-info"><b>Fixé par la marque</b> · priorité normale · non exclusive · activation automatique en caisse · enregistrée dès l’envoi, sans validation</div>`;
+    }
+    if (e === 2) {
+      return tete('ce que le client achète', 'Déclencheur (X)') + `<div class="pm-row" style="grid-template-columns:110px 1fr"><div class="pm-f"><label>Quantité X</label><input class="pm-in c" type="number" min="1" max="20" value="${esc(d.x.q)}" data-pmf="x.q"></div><div></div></div>`
+        + pmCible(W, 'x') + `<div class="db-mini" style="margin-top:10px">Une catégorie OU des produits : la règle « OU » du panel. Le coefficient se calcule pour chaque produit visé.</div>`;
+    }
+    if (e === 3) {
+      return tete('ce que le client reçoit', 'Avantage (Y)') + `<div class="pm-row" style="grid-template-columns:110px repeat(4,1fr)"><div class="pm-f"><label>Quantité Y</label><input class="pm-in c" type="number" min="1" max="20" value="${esc(d.y.q)}" data-pmf="y.q"></div>
+        ${PM_TYPES.map(t => `<button class="pm-opt${d.y.type === t[0] ? ' on' : ''}" data-pmtype="${t[0]}"><b>${t[1]}</b><small>${t[2]}</small></button>`).join('')}</div>
+        ${d.y.type === 'FREE' ? '' : `<div class="pm-row" style="grid-template-columns:200px 1fr;margin-top:10px"><div class="pm-f"><label>${d.y.type === 'PERCENTAGE_DISCOUNT' ? 'Remise, en %' : (d.y.type === 'FIXED_PRICE' ? 'Prix de la pièce, TTC' : 'Remise, en € TTC')}</label><input class="pm-in c" type="number" min="0" step="${d.y.type === 'PERCENTAGE_DISCOUNT' ? '1' : '0.05'}" value="${esc(d.y.valeur)}" data-pmf="y.valeur"></div><div></div></div>`}
+        <div class="pm-calc"><span class="db-lab">Ou depuis le prix final</span>
+          <span class="pm-seg">${[['lot', 'du lot'], ['piece', 'de la pièce Y']].map(([k, lib]) => `<button type="button" class="${pmPf(W).mode === k ? 'on' : ''}" data-pmpfmode="${k}">${lib}</button>`).join('')}</span>
+          <span class="pm-eur"><input class="pm-in c" type="text" inputmode="decimal" autocomplete="off" placeholder="${pmPf(W).mode === 'lot' ? 'ex. 6,00' : 'ex. 1,20'}" value="${esc(pmPf(W).prix)}" data-pmpfprix="1"><i>€ TTC</i></span>
+          <span class="db-mini" id="pm-pfmsg">${pmPf(W).msg ? (pmPf(W).msg.startsWith('→') ? esc(pmPf(W).msg) : `<span class="ko">${esc(pmPf(W).msg)}</span>`) : (pmPf(W).mode === 'lot' ? 'le prix payé pour tout le lot (X + Y) : la valeur Y se calcule' : 'le prix payé pour une pièce Y : la valeur Y se calcule')}</span></div>
+        <div style="margin-top:12px">${pmCible(W, 'y')}</div>
+        <div class="pm-f" style="margin-top:10px"><label>Stratégie de sélection</label><div class="pm-in ro">Produit le moins cher</div><span class="db-mini">la caisse remise la moins chère des pièces éligibles</span></div>
+        <div class="pm-pf" id="pm-pf">${pmPrixFinal(W)}</div>`;
+    }
+    if (e === 4) {
+      // Le seuil et le canal ne s'écrivent au panel que sous un nom de champ relu sur une de ses promotions (23/10/2026) :
+      // sans lui, le panel les ignorait et la promotion passait en caisse sans eux. Le seuil est `minimum_receipt_gross` ;
+      // le canal `sales_channel_scope`, dont il faut aussi la valeur exacte de chaque côté (« BOTH » seule relue).
+      const CO = R.conditions || { seuil: true, canal: true };
+      const N = CO.noms || {};
+      const cote = k => CO[k] ?? CO.canal;
+      const bloque = k => k !== 'tous' && !cote(k) && d.canal !== k;
+      const manque = [];
+      if (!CO.seuil) { manque.push('le seuil du ticket (aucun champ de seuil relu au panel)'); }
+      const sans = ['comptoir', 'webshop'].filter(k => !cote(k));
+      if (sans.length) {
+        manque.push(N.canal ? `${sans.map(k => '« ' + k + ' seulement »').join(' et ')} : le panel a le champ ${esc(N.canal)}, mais sa valeur pour ${sans.length > 1 ? 'ces deux cas n’est' : 'ce cas n’est'} pas encore connue`
+          : 'le canal (comptoir ou webshop seulement) : aucun champ de canal relu au panel');
+      }
+      const conseil = N.canal && sans.length ? `Créez au panel une promotion ${sans.map(k => '« ' + k + ' seulement »').join(' et une ')} : le cockpit relira la valeur et le choix s’activera de lui-même.`
+        : 'Ils s’activeront d’eux-mêmes dès qu’une promotion du panel en portera.';
+      return tete('où et à partir de quand le ticket y a droit', 'Conditions du ticket')
+        + (manque.length ? `<div class="pm-warn" style="margin:0 0 12px">Pas encore disponible : ${manque.join(' ; ')}. ${conseil}</div>` : '')
+        + `<div class="pm-f"><label>Où la promotion s’applique</label></div>
+        <div class="pm-row pm-canaux">${PM_CANAUX.map(([k, lib, sous, ico]) => `<button class="pm-opt${d.canal === k ? ' on' : ''}" data-pmcanal="${k}"${bloque(k) ? ' disabled title="pas encore disponible au panel"' : ''}><span class="pm-ico">${ico}</span><b>${lib}</b><small>${sous}</small></button>`).join('')}</div>
+        <div class="pm-f" style="margin-top:16px"><label>Seuil du ticket</label>
+          <div class="pm-seuil"><span class="pm-seg"><button type="button" class="${d.seuilOn ? '' : 'on'}" data-pmseuil="sans">Sans seuil</button><button type="button" class="${d.seuilOn ? 'on' : ''}" data-pmseuil="avec"${!CO.seuil && !d.seuilOn ? ' disabled title="pas encore disponible au panel"' : ''}>À partir d’un montant</button></span>
+          ${d.seuilOn ? `<span class="pm-eur"><input class="pm-in c" type="number" min="0.5" step="0.5" placeholder="15,00" value="${esc(d.seuil)}" data-pmf="seuil"><i>€ TTC</i></span>` : ''}</div>
+          <span class="db-mini">${d.seuilOn ? 'Le ticket doit atteindre ce montant TTC (minimum_receipt_gross au panel) pour que l’avantage se déclenche ; en dessous, la caisse ne remise rien.' : 'L’avantage tombe dès que le client prend le lot, quel que soit le montant du ticket.'}</span></div>
+        ${pmRegleTicket(d, 16)}`;
+    }
+    if (e === 5) {
+      const n = pmJours(d), dl = v => v ? v.replace(' ', 'T') : '';
+      const autres = ((S.aux[clePM()] || {}).demandes || []).filter(o => o.id !== d.id && o.statut === 'en_caisse' && d.du && d.au && o.du < d.au && o.au > d.du);
+      return tete('règles d’application et période de validité', 'Période') + `<div class="pm-row" style="grid-template-columns:1fr 1fr"><div class="pm-f"><label>Active à partir du</label><input class="pm-in" type="datetime-local" value="${dl(d.du)}" data-pmf="du"></div>
+        <div class="pm-f"><label>Jusqu’au <small class="db-mini">obligatoire — « Tout le temps » pour ne pas l’arrêter</small></label><input class="pm-in" type="datetime-local" value="${dl(d.au)}" data-pmf="au"></div></div>
+        <div class="pm-durees"><span class="db-lab">Durée rapide</span><span class="pm-seg">${PM_DUREES.map(([k, lib]) => { const r = pmDuree(d, k); return `<button type="button" class="${r.du === d.du && r.au === d.au ? 'on' : ''}" data-pmduree="${k}" title="du ${esc(pmQuand(r.du))} au ${esc(pmQuand(r.au))}">${lib}</button>`; }).join('')}</span><span class="db-mini">à partir du début choisi, demain sinon</span></div>
+        <div class="db-mini" id="pm-duree" style="margin-top:6px">${pmDureeTxt(d)}</div>
+        ${autres.length ? `<div class="pm-info">Aussi en caisse sur ces dates dans ce magasin : ${autres.map(o => '« ' + esc(o.nom) + ' »').join(', ')}.</div>` : ''}
+        <div class="pm-f" style="margin-top:14px"><label>Créneaux hebdomadaires <small class="db-mini">aucun = toute la journée, tous les jours</small></label>
+        ${d.creneaux.map((c, i) => `<div class="pm-cr"><span class="pm-jours">${PM_JOURS.map((j, k) => `<button class="${c.jours.includes(k + 1) ? 'on' : ''}" data-pmj="${i}|${k + 1}" title="${j}">${j.slice(0, 1).toUpperCase()}</button>`).join('')}</span>
+          <label>de <input class="pm-in" type="time" value="${esc(c.de)}" data-pmcr="${i}|de"></label><label>à <input class="pm-in" type="time" value="${esc(c.a)}" data-pmcr="${i}|a"></label><button class="db-btn" data-pmcrdel="${i}">Retirer</button></div>`).join('')}
+        <div><button class="db-btn" data-pmcradd="1">+ Ajouter un créneau</button></div></div>`;
+    }
+    // 6 · vérifier et envoyer
+    const x = pmEffectif(d.x), y = pmEffectif(d.y);
+    const lgn = (lab, v, et) => `<tr><td class="db-mini" style="width:170px">${lab}</td><td>${v}</td><td class="r">${et ? `<button class="pm-lien" data-pmet="${et}">modifier</button>` : ''}</td></tr>`;
+    const desc = c => c.cats.length ? 'catégorie ' + c.cats.map(o => '<b>' + esc(o.nom) + '</b>').join(', ') + ', ' + (c.portion ? '<b>' + PM_PORTIONS[c.portion].lib + ' seulement</b>' : 'toutes les variantes') + ' · ' + (c.exclus.length ? 'sauf ' + esc(c.exclus.map(o => o.nom).join(', ')) : 'aucune exclusion') : (c.prods.length ? c.prods.map(o => '<b>' + esc(o.nom) + '</b>').join(', ') + (c.portion ? ', <b>' + PM_PORTIONS[c.portion].lib + ' seulement</b>' : '') : '<span class="ko">à choisir</span>');
+    const manque = [1, 2, 3, 4, 5].map(i => pmManque(d, i) ? PM_ETAPES[i - 1] + ' : ' + pmManque(d, i) : '').filter(Boolean);
+    return tete('', 'Vérifier et enregistrer') + `<div class="pm-phrase g">${pmPhrase(x, Object.assign(y, { type: d.y.type, valeur: d.y.valeur }))}</div><div class="db-mini">« ${esc(d.nom || 'sans nom')} »</div>
+      <table class="pm-recap">${lgn('Magasin', '<b>' + esc(nomShop()) + '</b>', 0)}${lgn('Ce qu’on achète (X)', '<b>' + x.q + '</b> pièce' + (x.q > 1 ? 's' : '') + ' · ' + desc(x), 2)}
+        ${lgn('Ce qu’on reçoit (Y)', '<b>' + y.q + '</b> pièce' + (y.q > 1 ? 's' : '') + ' <b>' + esc(pmGain(d.y.type, d.y.valeur, y.q)) + '</b> · ' + desc(y) + ' · la moins chère', 3)}
+        ${lgn('Où', '<b>' + esc(pmCanalLib(d.canal)) + '</b> · ' + esc((PM_CANAUX.find(o => o[0] === d.canal) || PM_CANAUX[0])[2]), 4)}
+        ${lgn('Seuil du ticket', +d.seuil > 0 ? 'le ticket atteint <b>' + fU(+d.seuil) + '</b> TTC' : 'sans seuil', 4)}
+        ${lgn('Dans un ticket', d.repetable ? 'répétable' + (d.maxParTicket ? ' · <b>' + esc(d.maxParTicket) + '</b> fois au plus' : ' · sans limite') : 'une fois par ticket', 4)}
+        ${lgn('Période', d.du && d.au ? (pmToujours(d) ? 'du <b>' + esc(pmQuand(d.du)) + '</b>, <b>sans fin</b> (jusqu’au 31/12/2037, la date la plus lointaine que le panel accepte)' : 'du <b>' + esc(pmQuand(d.du)) + '</b> au <b>' + esc(pmQuand(d.au)) + '</b>') + ' · ' + esc(pmCreneauxTxt(d.creneaux)) : '<span class="ko">à régler</span>', 5)}
+        ${lgn('Fixé par la marque', 'priorité normale · non exclusive · activation automatique', 0)}</table>
+      <div id="pm-fixe">${pmFixe(W)}</div>
+      ${manque.length ? `<div class="pm-warn">À compléter avant l’enregistrement : ${esc(manque.join(' · '))}</div>` : ''}
+      ${W.erreurs ? `<div class="db-err" style="margin-top:10px">${W.erreurs.map(esc).join('<br>')}</div>` : ''}
+      <div class="db-mini" style="margin-top:10px">« Enregistrer la promotion » l’enregistre et la crée au panel, <b>sans validation</b> : créée inactive, relue, puis activée — en caisse pour ses dates.${pmSortis(pmCoefCourant(W.d)).length ? ' <b>Sortent d’office</b> (sans coût de recette ou sans prix, leur coefficient ne se vérifie pas) : ' + esc(pmSortisTxt(pmCoefCourant(W.d))) + '.' : ''}</div>`;
+  }
+  /** La règle du ticket : répétable, et combien de fois au plus. */
+  function pmRegleTicket(d, marge) {
+    return `<div class="pm-row" style="grid-template-columns:auto 220px;margin-top:${marge}px;align-items:center"><label class="pm-case"><input type="checkbox" ${d.repetable ? 'checked' : ''} data-pmrep="1"> Promotion répétable dans un ticket <small class="db-mini">(2 lots dans le même ticket = 2 fois l’avantage)</small></label>
+        ${d.repetable ? `<div class="pm-f"><label>Nombre max par ticket</label><input class="pm-in c" type="number" min="1" max="50" placeholder="sans limite" value="${esc(d.maxParTicket)}" data-pmf="maxParTicket"></div>` : '<div></div>'}</div>`;
+  }
+  /**
+   * Le prix final, à l'étape Y (23/10/2026, Sam) : ce que paie le client pour chaque produit qu'il reçoit, au prix normal
+   * et avec l'avantage (TTC, aux prix du magasin), puis le lot du cas le plus serré — le même que « Sur le ticket ». Il se
+   * recalcule à chaque frappe ; « Recalculer » relit en plus les prix du magasin au panel.
+   */
+  function pmPrixFinal(W) {
+    const d = W.d, k = clePMP(), prods = pmProduits(), lu = S.auxLu[k];
+    const tete = `<div class="pm-ligne"><div class="db-lab">Prix final pour le client</div><span class="pm-pfr">${S.enCours[k] ? 'relecture des prix…' : (lu ? 'prix du magasin lus à ' + new Date(lu).toTimeString().slice(0, 5) : '')}<button class="db-btn" data-pmrecalc="1"${S.enCours[k] ? ' disabled' : ''}>↻ Recalculer</button></span></div>`;
+    if (!prods) { return tete + `<div class="db-mini">${S.err[k] ? 'Prix du magasin illisibles : ' + esc(S.err[k]) : 'Lecture des prix du magasin…'}</div>`; }
+    const y = pmEffectif(d.y), fy = pmFrac(y), Py = PM_PORTIONS[y.portion];
+    if (!y.cats.length && !y.prods.length) { return tete + '<div class="db-mini">Choisissez ce que le client reçoit : le prix final s’affiche ici.</div>'; }
+    if (d.y.type !== 'FREE' && !(+d.y.valeur > 0)) { return tete + '<div class="db-mini">Donnez la valeur de l’avantage : le prix final se calcule aussitôt.</div>'; }
+    const L = [...pmEligibles(prods, y).values()].filter(p => pmTtc(p) != null && +p.prixHt > 0)
+      .map(p => ({ nom: p.nom + (Py ? ' ' + Py.lib : ''), avant: fy * pmTtc(p), apres: pmRecompense(p, d.y.type, d.y.valeur, fy) * (1 + (+p.tva || 0) / 100) }))
+      .sort((a, b) => a.avant - b.avant || a.nom.localeCompare(b.nom, 'fr'));
+    if (!L.length) { return tete + '<div class="db-mini">Aucun produit reçu n’a de prix au magasin.</div>'; }
+    const lg = o => `<tr><td>${esc(o.nom)}</td><td class="r mu">${fU(o.avant)}</td><td class="r"><b>${fU(o.apres)}</b></td><td class="r ok">−${fU(o.avant - o.apres)}</td></tr>`;
+    const m = a => a.reduce((t, v) => t + v, 0) / a.length;
+    const moyL = L.length > 1 ? `<tfoot><tr><td>Moyenne (${L.length} produits)</td><td class="r mu">${fU(m(L.map(o => o.avant)))}</td><td class="r"><b>${fU(m(L.map(o => o.apres)))}</b></td><td class="r ok">−${fU(m(L.map(o => o.avant - o.apres)))}</td></tr></tfoot>` : '';
+    let h = tete + `<table class="pm-pft"><thead><tr><th>Ce que le client reçoit</th><th class="r">Prix normal</th><th class="r">Prix final</th><th class="r">Remise</th></tr></thead><tbody>${L.slice(0, 8).map(lg).join('')}</tbody>${moyL}</table>`;
+    if (L.length > 8) { h += `<div class="db-mini">… et ${L.length - 8} autre${L.length - 8 > 1 ? 's' : ''} produit${L.length - 8 > 1 ? 's' : ''} (dans la moyenne).</div>`; }
+    // Le lot sur la moyenne : prix de vente moyen et coût d'achat moyen de chaque côté (catégories, plusieurs produits).
+    const xE = pmEffectif(d.x), mx = pmMoyenne(prods, xE), my = pmMoyenne(prods, y);
+    if (mx && my && (mx.n > 1 || my.n > 1)) {
+      const yHt = pmRecompense({ prixHt: my.ht, tva: my.tva }, d.y.type, d.y.valeur, fy), avant = xE.q * mx.ttc + y.q * my.ttc, apres = xE.q * mx.ttc + y.q * yHt * (1 + my.tva / 100);
+      const cout = mx.cout != null && my.cout != null ? xE.q * mx.cout + y.q * my.cout : null, coef = cout ? (xE.q * mx.ht * mx.f + y.q * yHt) / cout : null;
+      const min = ((S.aux[clePM()] || {}).regles || {}).coefMin || 2;
+      h += `<div class="pm-pflot">Le lot moyen, ${xE.q} + ${y.q} pièces aux prix moyens : <s>${fU(avant)}</s> <b>${fU(apres)}</b> TTC${coef != null ? ` · coefficient sur la moyenne <b class="${coef >= min ? 'ok' : 'ko'}">${fX(Math.round(coef * 100) / 100)}</b> <span class="mu">(prix payé HT moyen ÷ coût d’achat moyen)</span>` : ''}.</div>`;
+    }
+    const C = pmCoefCourant(d);
+    if (C && C.lot != null) {
+      const x = pmEffectif(d.x), Px = PM_PORTIONS[x.portion], tx = pmFrac(x) * pmTtc(C.px), ty = fy * pmTtc(C.py), ry = pmRecompense(C.py, d.y.type, d.y.valeur, fy) * (1 + (+C.py.tva || 0) / 100);
+      h += `<div class="pm-pflot">${L.length > 1 || pmEligibles(prods, x).size > 1 ? 'Le cas le plus serré' : 'Le lot'}, ${x.q} × ${esc(C.px.nom)}${Px ? ' ' + Px.lib : ''} + ${y.q} × ${esc(C.py.nom)}${Py ? ' ' + Py.lib : ''} : <s>${fU(x.q * tx + y.q * ty)}</s> <b>${fU(x.q * tx + y.q * ry)}</b> TTC au lieu du prix normal.</div>`;
+    }
+    return h;
+  }
+  /**
+   * La moyenne d'un côté (23/10/2026, Sam : « si ce sont des catégories, prendre la moyenne d'achat et la moyenne de prix
+   * de vente ») : prix de vente TTC et HT, TVA et coût matière moyens des produits visés qui ont un prix (le coût, sur
+   * ceux qui en ont un), à la fraction de la portion visée. Null sans aucun prix.
+   */
+  function pmMoyenne(prods, c) {
+    const L = [...pmEligibles(prods, c).values()].filter(p => pmTtc(p) != null && +p.prixHt > 0), f = pmFrac(c);
+    if (!L.length) { return null; }
+    const m = a => a.reduce((t, v) => t + v, 0) / a.length, K = L.filter(p => +p.cout > 0);
+    return { n: L.length, ttc: f * m(L.map(pmTtc)), ht: m(L.map(p => +p.prixHt)), tva: m(L.map(p => +p.tva || 0)), f, cout: K.length ? f * m(K.map(p => +p.cout)) : null };
+  }
+  const pmPf = W => (W.pf = W.pf || { mode: 'lot', prix: '', msg: '' });
+  /**
+   * La valeur Y depuis un prix final (23/10/2026, Sam) : le prix du lot (X + Y) ou d'une pièce Y, TTC. Le prix de la
+   * pièce Y qui en découle, au prix moyen des produits visés, donne la valeur du type choisi : prix fixe = ce prix,
+   * remise € = prix normal − ce prix, remise % = ce qu'il retire du prix normal (arrondie au %). « Offert » passe en prix
+   * fixe, sauf pour un prix final nul. Rend {type, valeur, txt} ou {erreur}.
+   */
+  function pmDepuisPrixFinal(d, mode, T) {
+    const prods = pmProduits(), x = pmEffectif(d.x), y = pmEffectif(d.y);
+    if (!prods) { return { erreur: 'prix du magasin pas encore lus' }; }
+    const my = pmMoyenne(prods, y), mx = pmMoyenne(prods, x);
+    if (!my) { return { erreur: 'choisissez d’abord ce que le client reçoit (avec un prix au magasin)' }; }
+    if (mode === 'lot' && !mx) { return { erreur: 'choisissez d’abord ce que le client achète (étape 2)' }; }
+    const pX = mode === 'lot' ? x.q * mx.ttc : 0, piece = mode === 'lot' ? (T - pX) / y.q : T;
+    if (piece < -0.004) { return { erreur: 'le lot à ' + fU(T) + ' coûte moins que les ' + x.q + ' pièces achetées seules (' + fU(pX) + ')' }; }
+    if (piece > my.ttc + 0.004) { return { erreur: 'au-dessus du prix normal de la pièce Y (' + fU(my.ttc) + ') : il n’y a rien à remiser' }; }
+    let type = d.y.type;
+    if (piece < 0.005) { type = 'FREE'; } else if (type === 'FREE') { type = 'FIXED_PRICE'; }
+    const r2 = v => Math.round(v * 100) / 100;
+    const valeur = type === 'FREE' ? '' : (type === 'FIXED_PRICE' ? r2(piece) : (type === 'FIXED_AMOUNT_DISCOUNT' ? r2(my.ttc - piece) : Math.round((1 - piece / my.ttc) * 100)));
+    const moy = (my.n > 1 || (mode === 'lot' && mx.n > 1)) ? ', sur les prix moyens' : '';
+    const lib = { FREE: 'offerte', FIXED_PRICE: 'prix fixe ' + fU(+valeur || 0), FIXED_AMOUNT_DISCOUNT: 'remise de ' + fU(+valeur || 0), PERCENTAGE_DISCOUNT: 'remise de ' + valeur + ' %' }[type];
+    return { type, valeur, txt: '→ pièce Y ' + lib + ' (' + fU(piece) + ' au lieu de ' + fU(my.ttc) + moy + ')' };
+  }
+  /** Recalculer : les prix du magasin relus au panel, le prix final et le coefficient refaits. */
+  function pmRecalculer() { lireAux(clePMP(), cheminPMP(), true); rendre(); }
+  function pmDureeTxt(d) {
+    const n = pmJours(d), R = (S.aux[clePM()] || {}).regles || {};
+    if (!d.du || !d.au) { return 'Donnez le début et la fin.'; }
+    if (d.au <= d.du) { return '<span class="ko">La fin vient après le début.</span>'; }
+    return pmToujours(d) ? 'Tout le temps : sans fin — jusqu’au 31/12/2037, la date la plus lointaine que le panel accepte.' : `${n} jour${n > 1 ? 's' : ''}.`;
+  }
+  function rendPmAssistant() {
+    const W = S.pmW, e = W.etape;
+    const prec = e > 1 ? `<button class="db-btn pm-gros" data-pmet="${e - 1}">‹ Retour : ${esc(PM_ETAPES[e - 2].toLowerCase())}</button>` : '<span></span>';
+    const suiv = e < PM_FIN ? `<button class="db-btn prim pm-gros" data-pmet="${e + 1}">Suivant : ${esc(PM_ETAPES[e].toLowerCase())} ›</button>`
+      : `<span class="pm-boutons">${W.enCaisse ? '' : `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''} title="écrite au panel, inactive : elle ne passe pas en caisse">Garder en brouillon</button>`}<button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Enregistrement…' : (W.enCaisse ? 'Enregistrer les changements ›' : 'Enregistrer la promotion ›')}</button></span>`;
+    return `<div class="pm-tete"><div><div class="db-mini"><button class="pm-lien" data-pmfermer="1">‹ Promotions du magasin</button></div><div class="pm-titre">${W.d.id ? 'Modifier' : 'Nouvelle'} promotion « X achetés + Y »</div></div><span style="flex:1"></span>
+        ${W.d.id ? '' : `<div class="pm-f"><span class="db-lab">Remplir un exemple</span><span class="pm-seg">${PM_DUREES.map(([k, lib]) => `<button type="button" data-pmexemple="${k}"${pmProduits() ? '' : ' disabled title="lecture des produits du magasin…"'}>${lib}</button>`).join('')}</span></div>`}
+        <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
+        ${e < PM_FIN && !W.enCaisse ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''} title="écrite au panel, inactive : elle ne passe pas en caisse">Garder en brouillon</button>` : ''}</div>
+      ${W.enCaisse ? `<div class="pm-warn" style="margin-bottom:10px">En caisse${W.enCaisse !== true ? ' (promotion n° ' + esc(W.enCaisse) + ' au panel)' : ''} : les changements partent au panel sur la même promotion — mise inactive le temps de la relecture, puis réactivée. Pour garder l’actuelle telle quelle, dupliquez-la plutôt.</div>` : ''}
+      ${W.exempleErr ? `<div class="pm-warn" style="margin-bottom:10px">${esc(W.exempleErr)}</div>` : ''}
+      <div class="pm-wz" id="pm-wz">${pmStepper(W)}</div>
+      <div class="pm-grille"><div class="db-card pm-etape"><div class="pm-step">${pmEtape(W)}</div>${e === 2 || e === 3 ? `<div style="padding:0 20px 16px" id="pm-fixe">${pmFixe(W)}</div>` : ''}<div class="pm-piedw">${prec}${suiv}</div></div>
+      <div class="pm-droite" id="pm-droite">${pmDroite(W)}</div></div>
+      <datalist id="pm-dl-prod">${(pmProduits() || []).map(p => `<option value="${esc(pmLabel(p))}"></option>`).join('')}</datalist>`;
+  }
+  /** Après une frappe : le récapitulatif, le calculateur et les étapes se redessinent, le champ garde la main. */
+  function pmMajDroite() {
+    const W = S.pmW; if (!W) { return; }
+    const set = (id, h) => { const el = document.getElementById(id); if (el) { el.innerHTML = h; } };
+    set('pm-wz', pmStepper(W)); set('pm-droite', pmDroite(W)); set('pm-fixe', pmFixe(W));
+    if (W.etape === 5) { set('pm-duree', pmDureeTxt(W.d)); }
+    if (W.etape === 3) { set('pm-pf', pmPrixFinal(W)); const rb = document.querySelector('#pm-pf [data-pmrecalc]'); if (rb) { rb.addEventListener('click', pmRecalculer); } }
+    const wz = document.getElementById('pm-wz'); if (wz) { pmBrancherEtapes(wz); }
+  }
+  /** Les boutons qui changent d'étape (le fil des étapes se redessine à chaque frappe : on les rebranche). */
+  function pmBrancherEtapes(racine) {
+    racine.querySelectorAll('[data-pmet]').forEach(el => el.addEventListener('click', () => { if (!S.pmW) { return; } S.pmW.etape = +el.dataset.pmet; rendre(); window.scrollTo(0, 0); }));
+  }
+  function pmGarder() {
+    const a = document.activeElement;
+    if (!a || !$.contains(a)) { return null; }
+    for (const at of ['data-pmf', 'data-pmprod', 'data-pmexc', 'data-pmq']) { if (a.hasAttribute(at)) { return { at, v: a.getAttribute(at), s: a.selectionStart }; } }
+    return null;
+  }
+  function pmRestaurer(g) {
+    if (!g) { return; }
+    const el = $.querySelector(`[${g.at}="${g.v}"]`);
+    if (el) { el.focus(); try { if (g.s != null) { el.setSelectionRange(g.s, g.s); } } catch (e) { /* champ sans curseur */ } }
+  }
+  function pmCorps(action) {
+    const d = S.pmW.d, x = pmEffectif(d.x), y = pmEffectif(d.y);
+    return { shop: +S.shop, id: d.id, action, nom: d.nom, description: d.description, x, y: Object.assign(y, { type: d.y.type, valeur: d.y.type === 'FREE' ? null : d.y.valeur }),
+      du: d.du, au: d.au, creneaux: d.creneaux, repetable: d.repetable, maxParTicket: d.repetable ? d.maxParTicket : null,
+      canal: d.canal, seuil: d.seuilOn && +d.seuil > 0 ? +d.seuil : null };
+  }
+  function pmEnregistrer(action) {
+    const W = S.pmW; if (!W || W.envoi) { return; }
+    W.envoi = true; W.erreurs = null; rendre();
+    fetch(API + '/exploitation/promos-magasin', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(pmCorps(action)) })
+      .then(r => r.json().catch(() => ({})).then(j => ({ ok: r.ok, j, code: r.status })))
+      .then(({ ok, j, code }) => {
+        if (!ok) { W.erreurs = j.erreurs || [j.error || ('HTTP ' + code)]; if (action === 'envoyer' || W.etape === PM_FIN) { W.etape = PM_FIN; } return; }
+        const dm = j.demande || {}, sortis = j.exclusAuto || [];
+        S.pmMsg = action !== 'envoyer' ? `Brouillon gardé au panel, inactif : « ${esc(dm.nom || 'sans nom')} » (promotion n° ${esc(dm.panelId)}).`
+          : (!j.panelErreur && dm.statut === 'en_caisse' ? `En caisse : « ${esc(dm.nom)} » — ${W.enCaisse ? 'mise à jour' : 'créée'} au panel (promotion n° ${esc(dm.panelId)}), active ${esc(pmPeriodeTxt(dm))}.${sortis.length ? ' Sortis d’office : ' + esc(sortis.slice(0, 5).join(', ')) + (sortis.length > 5 ? '…' : '') + '.' : ''}`
+            : `Pas en caisse : « ${esc(dm.nom)} » est au panel (promotion n° ${esc(dm.panelId)}), inactive — ${esc(j.panelErreur || 'le panel ne l’a pas activée')}. Reprenez-la dans les brouillons.`);
+        S.pmF = action === 'envoyer' && !j.panelErreur && dm.statut === 'en_caisse' ? 'actives' : 'brouillons';
+        S.pmW = null; lireAux(clePM(), cheminPM(), true);
+      })
+      .catch(e => { W.erreurs = [e.message]; })
+      .finally(() => { W.envoi = false; rendre(); });
+  }
+  function pmSupprimer(id) {
+    const l = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === id);
+    if (!l || !window.confirm('Supprimer le brouillon « ' + (l.nom || 'sans nom') + ' » ? Il est supprimé du panel.')) { return; }
+    fetch(API + '/exploitation/promos-magasin?shop=' + encodeURIComponent(S.shop) + '&id=' + encodeURIComponent(id), { method: 'DELETE', headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then(r => r.json().catch(() => ({})).then(j => { if (!r.ok) { throw new Error(j.error || ('HTTP ' + r.status)); } }))
+      .then(() => { S.pmMsg = 'Supprimée du panel : « ' + esc(l.nom || 'sans nom') + ' ».'; lireAux(clePM(), cheminPM(), true); })
+      .catch(e => { S.pmMsg = 'Pas supprimée : ' + esc(e.message); rendre(); });
+  }
+  /** Le produit choisi dans une liste de suggestions : son identifiant est au bout de l'étiquette (« · #123 »). */
+  function pmProduitDe(v) { const m = /#(\d+)$/.exec(v || ''); const id = m ? +m[1] : 0; return (pmProduits() || []).find(p => +p.id === id) || null; }
+  /** Dupliquer une promotion (« mag:<id> » du magasin, « panel:<id> » de la marque) : l'assistant s'ouvre sur la copie. */
+  function pmDupliquer(cle) {
+    const i = cle.indexOf(':'), src = cle.slice(0, i), id = cle.slice(i + 1), P = S.aux[clePM()] || {};
+    if (src === 'mag') { const d = (P.demandes || []).find(o => o.id === id); if (d) { const c = pmDepuis(pmNommer(d)); c.id = null; c.nom = d.nom + ' (copie)'; c.shops = [+S.shop]; const n = pmNouvelle(); c.du = n.du; c.au = n.au; pmOuvrir(c, 1); } }
+    else { const r = (P.panel || []).find(o => String(o.id) === id); if (r) { pmOuvrir(pmDuPanel(r), 1); } }
+  }
+  function pmBrancher() {
+    const on = (sel, ev, fn) => $.querySelectorAll(sel).forEach(el => el.addEventListener(ev, e => fn(el, e)));
+    on('[data-pmf-st]', 'click', el => { S.pmF = el.dataset.pmfSt; rendre(); });
+    on('[data-pmsorte]', 'change', el => { S.pmSorte = el.value; rendre(); });
+    on('[data-pmq]', 'input', el => { S.pmQ = el.value; rendre(); });
+    on('[data-pmmsg]', 'click', () => { S.pmMsg = null; rendre(); });
+    on('[data-pmnew]', 'click', () => pmOuvrir(pmNouvelle(), 1));
+    on('[data-pmrelire]', 'click', () => pmRelire());
+    on('[data-pmedit]', 'click', el => {
+      const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit);
+      if (d) { pmOuvrir(pmDepuis(pmNommer(d)), PM_FIN); S.pmW.enCaisse = d.statut === 'en_caisse' ? (d.panelId || true) : null; rendre(); }
+    });
+    on('[data-pmdup]', 'click', el => pmDupliquer(el.dataset.pmdup));
+    on('[data-pmcoef]', 'click', el => pmCoefOuvrir(el.dataset.pmcoef));
+    on('[data-pmcanm]', 'click', el => { S.pmCanM = el.dataset.pmcanm; rendre(); });
+    on('[data-pmcanj]', 'click', el => { S.pmCanJ = +el.dataset.pmcanj; lireAux(clePMC(), cheminPMC(), false); rendre(); });
+    if (S.pmC) { pmCoefRendre(); }
+    on('[data-pmdel]', 'click', el => { S.pmMenu = null; pmSupprimer(el.dataset.pmdel); });
+    on('[data-pmmenu]', 'click', (el, e) => { e.stopPropagation(); S.pmMenu = S.pmMenu === el.dataset.pmmenu ? null : el.dataset.pmmenu; S.pmColsOuv = false; rendre(); });
+    on('[data-pmcols]', 'click', (el, e) => { e.stopPropagation(); S.pmColsOuv = !S.pmColsOuv; S.pmMenu = null; rendre(); });
+    on('.pm-menu', 'click', (el, e) => e.stopPropagation());
+    on('[data-pmcol]', 'change', el => { const k = el.dataset.pmcol, v = pmColsVues();
+      S.pmCols = el.checked ? PM_COLS.map(c => c[0]).filter(c => c === k || v.includes(c)) : v.filter(c => c !== k); pmColsGarder(); rendre(); });
+    on('[data-pmcolsraz]', 'click', () => { S.pmCols = PM_COLS.filter(c => c[3]).map(c => c[0]); pmColsGarder(); rendre(); });
+    // Le menu « ⋯ » se cale sur son bouton, hors du cadre défilant du tableau (qui le couperait) ; au-dessus quand la
+    // place manque en bas.
+    const mn = $.querySelector('.pm-act .pm-menu');
+    if (mn) {
+      const rb = mn.previousElementSibling.getBoundingClientRect(), h = mn.offsetHeight;
+      mn.style.position = 'fixed'; mn.style.right = 'auto';
+      mn.style.left = Math.max(8, rb.right - mn.offsetWidth) + 'px';
+      mn.style.top = (rb.bottom + 4 + h > window.innerHeight - 8 ? Math.max(8, rb.top - 4 - h) : rb.bottom + 4) + 'px';
+    }
+    if ((S.pmMenu || S.pmColsOuv) && !S.pmMenuEcoute) {
+      // Un clic ailleurs, ou Échap, ferme le menu ouvert.
+      S.pmMenuEcoute = true;
+      const fermer = ev => { if (ev.type === 'keydown' && ev.key !== 'Escape') { return; }
+        document.removeEventListener('click', fermer); document.removeEventListener('keydown', fermer); window.removeEventListener('scroll', fermer, true); S.pmMenuEcoute = false;
+        if (S.pmMenu || S.pmColsOuv) { S.pmMenu = null; S.pmColsOuv = false; rendre(); } };
+      setTimeout(() => { document.addEventListener('click', fermer); document.addEventListener('keydown', fermer); window.addEventListener('scroll', fermer, true); }, 0);
+    }
+    if (!S.pmW) { return; }
+    const W = S.pmW, d = W.d;
+    on('[data-pmfermer]', 'click', () => { if (window.confirm('Quitter sans enregistrer ?')) { S.pmW = null; rendre(); } });
+    pmBrancherEtapes($);
+    on('[data-pmsave]', 'click', el => pmEnregistrer(el.dataset.pmsave));
+    on('[data-pmf]', 'input', el => {
+      const k = el.dataset.pmf, v = el.value;
+      if (k === 'x.q' || k === 'y.q') { d[k[0]].q = Math.max(1, Math.min(20, parseInt(v, 10) || 1)); }
+      else if (k === 'y.valeur') { d.y.valeur = v; if (W.pf && W.pf.prix !== '') { W.pf.prix = ''; W.pf.msg = ''; const i = $.querySelector('[data-pmpfprix]'); if (i) { i.value = ''; } const mz = document.getElementById('pm-pfmsg'); if (mz) { mz.textContent = ''; } } }
+      else if (k === 'du' || k === 'au') { d[k] = v ? v.replace('T', ' ').slice(0, 16) : ''; }
+      else { d[k] = v; }
+      pmMajDroite();
+    });
+    on('[data-pmmode]', 'click', el => { const [c, m] = el.dataset.pmmode.split('|'); d[c].mode = m; rendre(); });
+    on('[data-pmportion]', 'change', el => { d[el.dataset.pmportion].portion = el.value || null; rendre(); });
+    on('[data-pmaddcat]', 'change', el => { const c = el.dataset.pmaddcat, k = pmCategories().find(o => String(o.id) === el.value); if (k && !d[c].cats.some(o => +o.id === +k.id)) { d[c].cats.push({ id: k.id, nom: k.nom }); } rendre(); });
+    on('[data-pmprod]', 'change', el => { const c = el.dataset.pmprod, p = pmProduitDe(el.value); if (p && !d[c].prods.some(o => +o.id === +p.id)) { d[c].prods.push({ id: +p.id, nom: p.nom }); } el.value = ''; rendre(); });
+    on('[data-pmexc]', 'change', el => { const c = el.dataset.pmexc, p = pmProduitDe(el.value); if (p && !d[c].exclus.some(o => +o.id === +p.id)) { d[c].exclus.push({ id: +p.id, nom: p.nom }); } el.value = ''; rendre(); });
+    on('[data-pmrm]', 'click', el => { const [c, ch, id] = el.dataset.pmrm.split('|'); d[c][ch] = d[c][ch].filter(o => String(o.id) !== id); rendre(); });
+    on('[data-pmtype]', 'click', el => {
+      d.y.type = el.dataset.pmtype;
+      // Un prix final saisi se garde d'un type à l'autre : la valeur se recalcule pour le même prix ; « Offert » l'efface.
+      const P = pmPf(W), T = parseFloat(String(P.prix).replace(',', '.'));
+      if (d.y.type === 'FREE') { d.y.valeur = ''; P.prix = ''; P.msg = ''; }
+      else if (P.prix !== '' && T >= 0) { const r = pmDepuisPrixFinal(d, P.mode, T); if (r.erreur) { P.msg = r.erreur; } else { d.y.type = r.type; d.y.valeur = r.valeur; P.msg = r.txt; } }
+      rendre();
+    });
+    on('[data-pmcradd]', 'click', () => { d.creneaux.push({ jours: [6, 7], de: '15:00', a: '18:00' }); rendre(); });
+    on('[data-pmcrdel]', 'click', el => { d.creneaux.splice(+el.dataset.pmcrdel, 1); rendre(); });
+    on('[data-pmj]', 'click', el => { const [i, j] = el.dataset.pmj.split('|').map(Number), c = d.creneaux[i]; c.jours = c.jours.includes(j) ? c.jours.filter(v => v !== j) : c.jours.concat(j).sort((a, b) => a - b); rendre(); });
+    on('[data-pmexemple]', 'click', el => {
+      const x = pmExemple(el.dataset.pmexemple);
+      if (x) { pmOuvrir(x, PM_FIN); } else { W.exempleErr = 'Pas d’exemple possible : aucune catégorie du magasin n’a deux produits avec un prix et un coût de recette.'; rendre(); }
+    });
+    on('[data-pmduree]', 'click', el => { const r = pmDuree(d, el.dataset.pmduree); d.du = r.du; d.au = r.au; rendre(); });
+    on('[data-pmcr]', 'change', el => { const [i, k] = el.dataset.pmcr.split('|'); d.creneaux[+i][k] = el.value; pmMajDroite(); });
+    on('[data-pmrep]', 'change', el => { d.repetable = el.checked; rendre(); });
+    on('[data-pmrecalc]', 'click', () => pmRecalculer());
+    on('[data-pmpfmode]', 'click', el => { const P = pmPf(W); P.mode = el.dataset.pmpfmode; P.prix = ''; P.msg = ''; rendre(); });
+    on('[data-pmpfprix]', 'input', el => {
+      const P = pmPf(W); P.prix = el.value;
+      const T = parseFloat(String(el.value).replace(',', '.'));
+      if (!(T >= 0) || el.value.trim() === '') { P.msg = ''; const mz = document.getElementById('pm-pfmsg'); if (mz) { mz.textContent = ''; } return; }
+      const r = pmDepuisPrixFinal(d, P.mode, T);
+      if (r.erreur) { P.msg = r.erreur; const mz = document.getElementById('pm-pfmsg'); if (mz) { mz.innerHTML = '<span class="ko">' + esc(r.erreur) + '</span>'; } return; }
+      P.msg = r.txt;
+      const change = r.type !== d.y.type;
+      d.y.type = r.type; d.y.valeur = r.valeur;
+      if (change) {
+        // Le type change (offert → prix fixe…) : l'étape se redessine, le prix final garde la main.
+        rendre(); const i = $.querySelector('[data-pmpfprix]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+        return;
+      }
+      const v = $.querySelector('[data-pmf="y.valeur"]'); if (v) { v.value = r.valeur; }
+      const mz = document.getElementById('pm-pfmsg'); if (mz) { mz.textContent = r.txt; }
+      pmMajDroite();
+    });
+    on('[data-pmcanal]', 'click', el => { d.canal = el.dataset.pmcanal; rendre(); });
+    on('[data-pmseuil]', 'click', el => { d.seuilOn = el.dataset.pmseuil === 'avec'; if (!d.seuilOn) { d.seuil = ''; } rendre(); if (d.seuilOn) { const i = $.querySelector('[data-pmf="seuil"]'); if (i) { i.focus(); } } });
   }
 
   function rendre() {
@@ -2702,14 +4209,15 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'trimestre'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
-      ${['ops', 'semaine', 'mois', 'trimestre'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${(S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
+    if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }
@@ -2731,6 +4239,7 @@
     if (m) { h += rendBench(m, d); }
     h += rendTaches();
     h += rendCQ(false);
+    if (S.vue === 'mois') { h += rendLeviers(); }
     // La barre du stock ne s'affiche plus en vues Semaine et Mois (10/10/2026) : elle reste dans Opérationnel.
     h += `<div class="db-sec">Résultat — ${S.vue === 'jour' ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')}<small>${S.vue === 'jour' ? 'budget du jour, référence des mêmes jours, P&amp;L court' : 'objectif réparti par la pondération réseau, attendu à ce jour, P&amp;L'}</small></div>`;
     if (!d && !S.err[kr]) { h += squelette(3); }
@@ -2747,6 +4256,116 @@
     brancher();
     noteRestaurer(garde);
     cqRestaurer(cqPos);
+  }
+  /** Les six leviers du mois, une lecture pour tout le réseau (la même que Résultat › Mois au cockpit). */
+  function cleLev() { return 'lev|' + S.date.slice(0, 7); }
+  function cheminLev() { return '/leviers/magasins?annee=' + S.date.slice(0, 4) + '&mois=' + (+S.date.slice(5, 7)); }
+  /**
+   * Les six leviers du magasin, vue Mois (21/10/2026, demande de Sam) : une tuile par levier — la valeur du mois (à date
+   * s'il est en cours), sa pastille (seuils de la Table KPI), l'écart au même mois de l'année d'avant, le réseau et le
+   * seuil, la courbe des douze derniers mois. « Cumul de l'année » : janvier → le dernier mois clos, face aux mêmes mois.
+   * Quand l'écart porte sur moins de mois que la valeur (ouverture, frais non saisis), la tuile dit les deux chiffres
+   * comparés. La Récurrence reste grise : elle attend sa mesure.
+   */
+  function rendLeviers() {
+    const k = cleLev(), L = S.aux[k];
+    if (S.err[k]) { return `<div class="db-err">Les six leviers : ${esc(S.err[k])}</div>`; }
+    if (!L) { return `<div class="db-card lv-card"><div class="ct"><span class="db-lab">Les six leviers</span><span class="db-mini">lecture…</span></div><div class="lv-g">${Array.from({ length: 6 }, () => '<div class="lv-tu"><div class="db-sk" style="width:55%;margin-top:12px"></div><div class="db-sk" style="height:22px;margin:10px 0 6px;width:60%"></div><div class="db-sk" style="width:85%"></div></div>').join('')}</div></div>`; }
+    const g = (L.magasins || []).find(x => String(x.id) === String(S.shop));
+    if (!g) { return `<div class="db-card lv-card"><div class="ct"><span class="db-lab">Les six leviers</span></div><div class="lv-vide">Pas de P&amp;L pour ce magasin ce mois-ci : les six leviers se liront quand il sera saisi.</div></div>`; }
+    const cumul = S.levVue === 'cumul' && !!L.cumulAu && !!g.cumul;
+    const dc = (n, d) => nf(n, d);
+    const sg = (n, d, u) => (n > 0 ? '+' : (n < 0 ? '−' : '±')) + dc(Math.abs(n), d) + u;
+    const nomMois = (m, long) => new Date(2000, m - 1, 15).toLocaleDateString('fr-BE', { month: long ? 'long' : 'short' });
+    const moisAn = (ym, long) => nomMois(+ym.slice(5, 7), long) + ' ' + ym.slice(0, 4);
+    const pct = v => dc(v, 1) + ' %';
+    const pa = n => n ? `<i class="lv-p ${n}"></i>` : '';
+    // L'écart est bon quand il y a plus de clients, une meilleure note, un coût plus bas.
+    const puce = (d, dec, u, hausseBonne) => d == null ? '' : `<span class="lv-c ${d === 0 ? 'z' : ((d > 0) === hausseBonne ? 'b' : 'm')}">${sg(d, dec, u)}</span>`;
+    const neutre = t => `<span class="lv-c z">${esc(t)}</span>`;
+    const etendue = l => l.length ? nomMois(l[0]) + ' → ' + nomMois(l[l.length - 1]) : '';
+    const seuil = (cle, f) => { const x = (L.seuils || {})[cle]; return x && x.alerte != null ? 'seuil ' + f(x.alerte) : ''; };
+    const R = cumul ? L.reseau.cumul : L.reseau.mois;
+    const ouvLib = g.ouverture ? 'ouvert en ' + moisAn(g.ouverture, true) : 'pas de N-1';
+    const mc = cumul ? (g.cumul.moisComparables || []) : [];
+    const memesMois = cumul && mc.length && mc.length < L.cumulAu ? 'mêmes mois : ' + etendue(mc) : '';
+    const ymSel = L.annee + '-' + String(L.mois).padStart(2, '0');
+    // La courbe des douze derniers mois : un trait, le dernier point marqué ; chaque mois se lit au survol.
+    const courbe = (vals, coul, f) => {
+      const W = 160, H = 34, v = (vals || []).map(x => x == null ? null : +x), ok = v.filter(x => x != null);
+      if (ok.length < 2) { return ''; }
+      const lo = Math.min(...ok), hi = Math.max(...ok), sx = W / Math.max(1, v.length - 1);
+      const y = x => H - 4 - (hi === lo ? 0.5 : (x - lo) / (hi - lo)) * (H - 8);
+      let d = '', lev = true;
+      v.forEach((x, i) => { if (x == null) { lev = true; return; } d += (lev ? 'M' : 'L') + (i * sx).toFixed(1) + ' ' + y(x).toFixed(1); lev = false; });
+      const last = v.length - 1;
+      const pts = v.map((x, i) => x == null ? '' : `<circle cx="${(i * sx).toFixed(1)}" cy="${y(x).toFixed(1)}" r="7" fill="transparent"><title>${esc(moisAn(L.serieMois[i]) + ' : ' + f(x))}</title></circle>`).join('');
+      return `<svg class="lv-sp" viewBox="-3 0 ${W + 6} ${H}" preserveAspectRatio="none" height="34" role="img" aria-label="les douze derniers mois"><path d="${d}" fill="none" stroke="${coul}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>${v[last] != null ? `<circle cx="${(last * sx).toFixed(1)}" cy="${y(v[last]).toFixed(1)}" r="2.8" fill="${coul}"/>` : ''}${pts}</svg>`;
+    };
+    const tuile = (l, val, pas, l1, l2, spark, q) => `<div class="lv-tu"><div class="bar" style="background:${esc(l.couleur)}"></div><div class="k" style="color:${esc(l.couleur)}">${esc(l.nom)}</div><div class="q">${esc(q)}</div>
+      <div class="v${val === '—' ? ' mu' : ''}">${esc(val)}${pa(pas)}</div><div class="l">${l1}</div>${l2 ? `<div class="l">${l2}</div>` : ''}${spark || ''}</div>`;
+    const tuiles = (L.leviers || []).map(l => {
+      if (l.vide) { return `<div class="lv-tu vide"><div class="bar" style="background:${esc(l.couleur)}"></div><div class="k" style="color:${esc(l.couleur)}">${esc(l.nom)}</div><div class="q">à définir</div><div class="v mu">—</div><div class="l">laissée vide pour l’instant</div></div>`; }
+      if (l.cle === 'recurrence') {
+        // Le taux de retour des clients identifiés en caisse, hors pro (23/10/2026) — la part venus au moins deux jours ;
+        // en dessous, celui des seuls clients PWA.
+        const x = ((cumul ? g.cumul : g.mois) || {}).recurrence, r = R.recurrence || {};
+        const q = 'taux de retour des clients identifiés' + (cumul ? ' · janvier → ' + nomMois(L.cumulAu, true) : '');
+        const sp = courbe(g.serie.recurrence, l.couleur, v => nf(v, 0) + ' %');
+        const l2 = esc('réseau ' + (r.v != null ? nf(r.v, 0) + ' %' : '—') + (seuil('recurrence', a => nf(a, 0) + ' %') ? ' · ' + seuil('recurrence', a => nf(a, 0) + ' %') : ''));
+        if (!x) { return tuile(l, '—', null, 'pas encore relevé', l2, sp, q); }
+        if (!x.complet) { return tuile(l, '—', null, neutre('relevé en cours'), esc('tickets lus : ' + x.joursLus + ' / ' + x.jours + ' jours'), sp, q); }
+        if (!x.clients) { return tuile(l, '—', null, 'aucun client identifié en caisse', l2, sp, q); }
+        const p = x.pwa || {};
+        const l1 = (x.n1 != null ? puce(x.delta, 1, ' pt', true) + ' N-1 ' + nf(x.n1, 0) + ' %' : neutre('pas de N-1')) + ' ' + esc(x.revenus + ' sur ' + x.clients + ' client' + (x.clients > 1 ? 's' : ''));
+        const lp = esc('PWA : ' + (p.clients ? nf(p.v, 0) + ' % (' + p.revenus + ' sur ' + p.clients + ')' : 'aucun client identifié'));
+        return tuile(l, nf(x.v, 0) + ' %', x.niveau, l1, (x.partTickets != null ? esc(nf(x.partTickets, 1) + ' % des tickets') + ' · ' : '') + lp + '<br>' + l2, sp, q);
+      }
+      if (l.cle === 'trafic') {
+        const fT = x => nf(x, 0) + (cumul ? '' : ' /j');
+        if (cumul) {
+          const x = g.cumul.trafic, r = R.trafic || {};
+          const l1 = x.comp == null ? neutre('pas de N-1') + ' ' + esc(ouvLib) : puce(x.delta, 1, ' %', true) + ' ' + esc(memesMois ? nf(x.comp, 0) + ' vs ' + nf(x.n1, 0) : 'N-1 ' + nf(x.n1, 0));
+          return tuile(l, nf(x.v, 0), null, l1, esc((memesMois ? memesMois + ' · ' : '') + (r.delta != null ? 'réseau ' + sg(r.delta, 1, ' %') : '')), courbe(g.serie.trafic, l.couleur, fT), 'clients · janvier → ' + nomMois(L.cumulAu, true));
+        }
+        const x = g.mois.trafic, r = R.trafic || {};
+        if (x.v == null) { return tuile(l, '—', null, 'pas de P&amp;L ce mois', '', courbe(g.serie.trafic, l.couleur, fT), 'clients par jour'); }
+        const l1 = g.mois.ouverture ? neutre('mois d’ouverture') : (x.n1 == null ? neutre('pas de N-1') + ' ' + esc(ouvLib) : puce(x.delta, 1, ' %', true) + ' N-1 ' + nf(x.n1, 0));
+        return tuile(l, nf(x.v, 0), x.niveau, l1, esc('réseau ' + (r.v != null ? nf(r.v, 0) : '—') + (x.ecartReseau != null ? ' · ' + sg(x.ecartReseau, 0, ' %') : '')), courbe(g.serie.trafic, l.couleur, fT), 'clients par jour' + (L.moisEnCours ? ' · ' + L.jours + ' jours' : ''));
+      }
+      if (l.cle === 'xp') {
+        const x = (cumul ? g.cumul : g.mois).xp || {}, r = R.xp || {};
+        const n1 = x.n1 != null ? puce(x.delta, 2, '', true) + ' N-1 ' + dc(x.n1, 1) + ' ★' : neutre(L.googleN1Des ? 'N-1 : ' + moisAn(L.googleN1Des) : 'pas de N-1');
+        const deb = L.googleN1Des ? moisAn(String(+L.googleN1Des.slice(0, 4) - 1) + L.googleN1Des.slice(4)) : '';
+        return tuile(l, x.v != null ? dc(x.v, 1) + ' ★' : '—', x.niveau, x.v != null ? n1 : 'pas de relevé ce mois-là',
+          esc('réseau ' + (r.v != null ? dc(r.v, 2) + ' ★' : '—') + (seuil('xp', a => dc(a, 1)) ? ' · ' + seuil('xp', a => dc(a, 1)) : '')),
+          `<div class="l lv-pied">${esc(deb ? 'relevé mensuel depuis ' + deb : 'la note de la fiche, aujourd’hui')}</div>`, 'note Google' + (x.avis ? ' · ' + nf(x.avis, 0) + ' avis' : ''));
+      }
+      const r = R[l.cle] || {}, s = seuil(l.cle, a => pct(a));
+      const l2 = esc('réseau ' + (r.v != null ? pct(r.v) : '—') + (s ? ' · ' + s : ''));
+      const sp = courbe(g.serie[l.cle], l.couleur, pct);
+      if (cumul) {
+        const x = g.cumul[l.cle] || {};
+        if (x.v == null) { return tuile(l, '—', null, 'pas saisi', l2, sp, '% du CA · janvier → ' + nomMois(L.cumulAu, true)); }
+        const part = x.comp != null && x.moisCompares < mc.length ? 'sur ' + x.moisCompares + ' mois saisis les deux années' : memesMois;
+        const l1 = x.comp == null || x.n1 == null ? neutre('pas de N-1') + ' ' + esc(mc.length ? 'pas saisi l’an dernier' : ouvLib)
+          : puce(x.delta, 1, ' pt', false) + ' ' + esc(part ? pct(x.comp) + ' vs ' + pct(x.n1) : 'N-1 ' + pct(x.n1));
+        return tuile(l, pct(x.v), x.niveau, l1, (part ? esc(part) + '<br>' : '') + l2, sp, '% du CA · janvier → ' + nomMois(L.cumulAu, true));
+      }
+      const x = g.mois[l.cle] || {};
+      if (x.nonSaisi) { return tuile(l, '—', null, neutre('pas saisi ce mois'), l2, sp, '% du CA'); }
+      if (x.v == null) { return tuile(l, '—', null, 'pas de P&amp;L ce mois', l2, sp, '% du CA'); }
+      const l1 = x.n1 == null ? neutre(g.mois.ouverture ? 'mois d’ouverture' : 'pas de N-1') + (g.mois.ouverture ? '' : ' ' + esc(ouvLib)) : puce(x.delta, 1, ' pt', false) + ' N-1 ' + pct(x.n1);
+      const hors = l.cle === 'food' && (g.horsNorme || []).some(h => h.mois === ymSel) ? '<span class="lv-al">⚠ hors norme, à vérifier au P&amp;L</span>' : '';
+      return tuile(l, pct(x.v), x.niveau, l1 + hors, l2, sp, '% du CA');
+    }).join('');
+    const titre = cumul ? 'cumul ' + L.annee : moisAn(ymSel, true);
+    const sous = cumul ? 'janvier → ' + nomMois(L.cumulAu, true) + ', face aux mêmes mois de ' + (L.annee - 1) + (L.moisEnCours ? ' · le mois en cours n’entre pas' : '')
+      : (L.moisEnCours ? 'à date (' + L.jours + ' jours), ' : '') + 'face à ' + moisAn((L.annee - 1) + '-' + String(L.mois).padStart(2, '0'), true) + ' et au réseau';
+    const seg = `<div class="lv-seg">${[['mois', 'Le mois'], ['cumul', 'Cumul de l’année']].map(o => `<button data-levvue="${o[0]}" class="${(cumul ? 'cumul' : 'mois') === o[0] ? 'on' : ''}"${o[0] === 'cumul' && !(L.cumulAu && g.cumul) ? ' disabled title="le cumul commence avec le premier mois clos"' : ''}>${o[1]}</button>`).join('')}</div>`;
+    return `<div class="db-card lv-card"><div class="ct"><span class="db-lab">Les six leviers — ${esc(titre)}</span><span class="db-mini lv-st">${esc(sous)}</span>${seg}</div>
+      <div class="lv-g">${tuiles}</div>
+      <div class="db-perleg lv-leg"><span>Pastille — seuils de la Table KPI : ${pa('v')} sous l’alerte ${pa('o')} entre alerte et critique ${pa('r')} au-delà${cumul ? '' : ' · trafic : l’écart au réseau'}</span><span>Écart vert : mieux qu’en ${L.annee - 1}</span><span>Courbe : les douze derniers mois${L.moisEnCours ? ', le dernier à date' : ''}</span></div></div>`;
   }
   function squelette(n) {
     return `<div class="db-tuiles">${Array.from({ length: 5 }, () => `<div class="db-tui"><div class="db-sk" style="width:60%"></div><div class="db-sk" style="height:24px;margin:8px 0 6px"></div><div class="db-sk" style="width:80%"></div></div>`).join('')}</div>
@@ -2778,19 +4397,19 @@
     const ligne = (lib, sous, v, pct, coul, w, fort, note, attr) => `<div class="db-cl${fort ? ' fort' : ''}${attr ? ' clic' : ''}"${attr || ''}><span><b>${lib}</b>${sous ? `<br><span class="mu">${sous}</span>` : ''}</span><span class="b"><i style="width:${w}%;background:${coul}"></i></span><span class="v">${v}</span><span class="p" style="color:${coul}">${pct}</span><span class="n mu">${note || ''}</span></div>`;
     const fr = m.planningHeuresFranchise ? 'hors ' + nf(m.planningHeuresFranchise, 1) + ' h de franchisé (' + esc((m.planningFranchiseNoms || []).join(', ')) + ')' : '';
     return `<div class="db-cascade">
-      ${ligne('Chiffre d’affaires', m.tickets != null ? fN(m.tickets) + ' clients · ' + fU(m.panier) : '', fE(ca), '100 %', 'var(--color-text)', 100, true, '')}
-      ${ligne('− Coût matière', (se.food != null ? 'seuil ' + fP(se.food) : 'coût des recettes vendues') + (m.coutMatiereSource && m.coutMatiereSource !== 'panel' ? ' · ' + esc(m.coutMatiereSource) : ''), m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
+      ${ligne('Chiffre d’affaires', m.tickets != null ? [fN(m.tickets) + ' clients', panTxt(panDe(m))].filter(Boolean).join(' · ') : '', fE(ca), '100 %', 'var(--color-text)', 100, true, '')}
+      ${ligne('− Coût matière', se.food != null ? 'seuil ' + fP(se.food) : '', m.coutMatiere == null ? '—' : fE(-m.coutMatiere), fP(m.coutMatierePct), feu(m.coutMatierePct, se.food), barre(m.coutMatierePct), false)}
       ${ligne('= Marge brute', '', fE(m.margeBrute), fP(mbPct), 'var(--color-text)', barre(mbPct), true)}
-      ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? 'coût de production des pièces jetées' + (m.invendusPieces ? ' · ' + fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#C0182B' : '#D97706') : 'var(--color-text-muted)', barre(m.invendusPct), false, 'les saisies ▸', ' data-invmodale="1" role="button" tabindex="0" title="Le détail des saisies : heure, opérateur, produit, quantité"')}
-      ${ligne('− Main-d’œuvre', (se.labour != null ? 'seuil ' + fP(se.labour) : '') + (m.labourSource ? ' · ' + esc(m.labourSource) : ''), m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
-      ${ligne('− Frais généraux', (se.overhead != null ? 'seuil ' + fP(se.overhead) : '') + (m.overheadSource ? ' · ' + esc(m.overheadSource) : ''), m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false)}
+      ${m.invendus === undefined ? '' : ligne('− Invendus et poubelle', m.invendus == null ? 'panel muet — rien retranché' : (m.invendusDeclare ? (m.invendusPieces ? fN(m.invendusPieces) + ' pièce' + (m.invendusPieces > 1 ? 's' : '') : '') : 'rien déclaré au panel'), m.invendus == null ? '—' : fE(-m.invendus), m.invendus == null ? '' : fP(m.invendusPct), m.invendus ? (m.invendusPct > 5 ? '#C0182B' : '#D97706') : 'var(--color-text-muted)', barre(m.invendusPct), false, 'les saisies ▸', ' data-invmodale="1" role="button" tabindex="0" title="Le détail des saisies : heure, opérateur, produit, quantité"')}
+      ${ligne('− Main-d’œuvre', se.labour != null ? 'seuil ' + fP(se.labour) : '', m.labour == null ? '—' : fE(-m.labour), fP(m.labourPct), feu(m.labourPct, se.labour), barre(m.labourPct), false, fr)}
+      ${ligne('− Frais généraux', se.overhead != null ? 'seuil ' + fP(se.overhead) : '', m.overhead == null ? '—' : fE(-m.overhead), fP(m.overheadPct), feu(m.overheadPct, se.overhead), barre(m.overheadPct), false)}
       ${ligne('= Résultat', m.net == null ? esc(m.motifNet || 'non calculable') : '', m.net == null ? '—' : fS(m.net), fP(m.netPct), feuRes(m.netPct), barre(m.netPct), true, m.net != null && m.motifNet ? esc(m.motifNet) : '')}
     </div>`;
   }
   function cascadeVieille(m) {
     const ov = m.overhead == null ? null : m.overhead;
     return `<div class="db-casc">
-      <div><div class="k">Chiffre d’affaires</div><div class="v">${fK(m.ca != null ? m.ca : m.realise)}</div><div class="s">${m.tickets != null ? fN(m.tickets) + ' clients · ' + fU(m.panier) : ''}</div></div>
+      <div><div class="k">Chiffre d’affaires</div><div class="v">${fK(m.ca != null ? m.ca : m.realise)}</div><div class="s">${m.tickets != null ? [fN(m.tickets) + ' clients', panTxt(panDe(m))].filter(Boolean).join(' · ') : ''}</div></div>
       <div><div class="k">− Coût matière</div><div class="v">${fK(m.coutMatiere)}</div><div class="s">${fP(m.coutMatierePct)} · food cost${m.coutMatiereSource && m.coutMatiereSource !== 'panel' ? ' · ' + esc(m.coutMatiereSource) : ''}</div></div>
       <div><div class="k">= Marge brute</div><div class="v">${fK(m.margeBrute)}</div><div class="s">${fP(m.margeBrutePct != null ? m.margeBrutePct : (m.ca ? 100 * m.margeBrute / m.ca : null))}</div></div>
       <div><div class="k">− Personnel</div><div class="v">${fK(m.labour)}</div><div class="s">${fP(m.labourPct)}${m.labourSource ? ' · ' + esc(m.labourSource) : ''}</div></div>
@@ -2812,31 +4431,34 @@
     const ecart = m && m.ca != null ? m.ca - somme : null;
     const lignes = (A.lignes || []).filter(x => x.type === 'ligne'), tickets = (A.lignes || []).filter(x => x.type === 'ticket');
     const reste = ecart != null ? ecart - (A.caLignes || 0) - (A.caTickets || 0) : null;
-    const rien = !lignes.length && !tickets.length && !(A.sansCout || []).length && (ecart == null || Math.abs(ecart) < 0.5);
+    // Ce qui reste une fois les lignes sans produit et les remises sur ticket comptées, ce sont des tickets passés depuis
+    // la dernière lecture (11/10/2026) : rien à rattacher dans la caisse. Ils ne montrent pas la carte à eux seuls.
+    const nonLus = A.detail && m && m.tickets != null && A.ticketsLus != null ? Math.max(0, m.tickets - A.ticketsLus) : null;
+    const rien = !lignes.length && !tickets.length && !(A.sansCout || []).length && (ecart == null || Math.abs(ecart) < 0.5 || A.detail);
     // Rien à compléter : pas de carte (10/10/2026), elle ne se montre que quand quelque chose ne va pas.
     if (rien) { return ''; }
     const hm = x => (x.mn || '') + (x.j && x.j !== S.date ? ' · ' + fD(x.j) : '');
     // Ouverte ou fermée, la liste le reste quand la page se relit (S.cOuv).
     const ouvre = (k, n) => (S.cOuv['acp:' + k] != null ? S.cOuv['acp:' + k] : n <= 8) ? ' open' : '';
     let v1 = '';
-    if (ecart != null && Math.abs(ecart) >= 0.5 || lignes.length || tickets.length) {
+    if (ecart != null && Math.abs(ecart) >= 0.5 && !A.detail || lignes.length || tickets.length) {
       const det = !A.detail ? '<div class="acp-n">Le détail de ce jour se lit à la prochaine ouverture de la page.</div>'
         : `<details data-acpo="l"${ouvre('l', lignes.length + tickets.length)}><summary>${lignes.length} ligne${lignes.length > 1 ? 's' : ''} sans produit${tickets.length ? ' · ' + tickets.length + ' remise' + (tickets.length > 1 ? 's' : '') + ' sur ticket' : ''}</summary>
           <table class="db-pro-tab acp-t"><thead><tr><th>Heure</th><th>Libellé de caisse</th><th class="n">Qté</th><th class="n">Montant</th></tr></thead><tbody>
           ${lignes.concat(tickets).map(x => `<tr class="${x.type === 'ticket' ? 'tk' : ''}"><td>${esc(hm(x))}</td><td>${esc(x.nom)}</td><td class="n">${x.q ? nf(x.q, x.q % 1 ? 1 : 0) : ''}</td><td class="n">${fU(x.v)}</td></tr>`).join('')}
           </tbody></table></details>`;
-      v1 = `<div class="acp-v"><div class="k">Ventes sans produit</div><div class="b">${ecart != null ? fE(ecart) : fE((A.caLignes || 0) + (A.caTickets || 0))}</div>
-        <div class="s">à rattacher à un produit dans la caisse${A.caTickets ? ' · dont ' + fU(A.caTickets) + ' de remises sur ticket' : ''}${reste != null && A.detail && Math.abs(reste) >= 0.5 ? ' · ' + fU(reste) + ' d’arrondis ou de tickets pas encore lus' : ''}</div>${det}</div>`;
+      const lu = reste != null && A.detail && reste >= 0.5 ? ' · ' + fU(reste) + ' de ' + (nonLus ? nonLus + ' ticket' + (nonLus > 1 ? 's' : '') : 'tickets') + ' pas encore lu' + (nonLus > 1 || !nonLus ? 's' : '') + (A.luA ? ', dernière lecture à ' + A.luA : '') : '';
+      v1 = `<div class="acp-v"><div class="k">Ventes sans produit</div><div class="b">${fU(A.detail || ecart == null ? (A.caLignes || 0) + (A.caTickets || 0) : ecart)}</div>
+        ${A.caTickets || lu ? `<div class="s">${[A.caTickets ? 'dont ' + fU(A.caTickets) + ' de remises sur ticket' : '', lu.replace(/^ · /, '')].filter(Boolean).join(' · ')}</div>` : ''}${det}</div>`;
     }
     let v2 = '';
     if ((A.sansCout || []).length) {
       v2 = `<div class="acp-v"><div class="k">Produits sans coût</div><div class="b">${A.nSansCout} <small>produit${A.nSansCout > 1 ? 's' : ''} · ${fU(A.caSansCout)} de ventes</small></div>
-        <div class="s">à chiffrer dans le panel : recette ou coût de revient · leur marge, estimée par le P&L, reste dans « Non ventilé » le temps de les chiffrer</div>
         <details data-acpo="p"${ouvre('p', A.sansCout.length)}><summary>les ${A.sansCout.length} produit${A.sansCout.length > 1 ? 's' : ''}</summary><table class="db-pro-tab acp-t"><thead><tr><th>Produit</th><th>Catégorie</th><th class="n">Qté</th><th class="n">CA</th></tr></thead><tbody>
         ${A.sansCout.map(x => `<tr class="clic" data-fprod="${esc(x.id)}" data-fnom="${esc(x.nom)}" data-fq="${x.q}" data-fv="${x.v}" data-ft="" data-fc="" data-fcat="${esc(x.cat || '')}" role="button" tabindex="0"><td>${esc(x.nom)}</td><td class="mu">${esc(x.cat || '')}</td><td class="n">${nf(x.q, x.q % 1 ? 1 : 0)}</td><td class="n">${fU(x.v)}</td></tr>`).join('')}
         </tbody></table>${A.nSansCout > A.sansCout.length ? `<div class="acp-n">et ${A.nSansCout - A.sansCout.length} autres</div>` : ''}</details></div>`;
     }
-    return `<div class="db-card acp"><div class="ct"><span class="db-lab">À compléter pour des chiffres justes</span><span class="db-mini">ce qui manque dans la caisse et le panel · la ligne « Non ventilé » ci-dessus</span></div><div class="acp-g">${v1}${v2}</div></div>`;
+    return `<div class="db-card acp"><div class="ct"><span class="db-lab">À compléter pour des chiffres justes</span></div><div class="acp-g">${v1}${v2}</div></div>`;
   }
 
   function jourPieces(m, d, st) {
@@ -2847,11 +4469,18 @@
     // Aujourd'hui, chaque tuile se compare à J−7 à la même heure (08/10/2026) ; un jour passé, au dernier même jour entier.
     const J7 = d.estAujourdhui && m.j7 && m.j7.moment ? m.j7 : null;
     const c7 = (val, quoi) => J7 && val ? { val, lib: 'vs J−7 à ' + esc(J7.moment), titre: quoi + ' de J−7 (' + fD(J7.date) + ') à ' + J7.moment } : null;
+    // Le panier moyen hors clients pro quand ils sont lus (21/10/2026) : la tendance, J−7 et le réseau sur la même base —
+    // un jour de la tendance sans tickets pro lus sort de la courbe plutôt que d'y entrer pro compris.
+    const PM = panDe(m), pCpt = PM.base === 'comptoir';
+    const panJ = j => pCpt ? (j.panierBase === 'comptoir' ? j.panierComptoir : null) : j.panier;
+    const pan7 = !J7 ? null : (pCpt ? (J7.panierBase === 'comptoir' ? J7.panierRetenu : null) : (J7.tickets ? J7.ca / J7.tickets : null));
+    const derP = TJ.slice().reverse().find(j => panJ(j) != null), panRes = panReseau(d.reseau, PM.base);
+    const cmpP = c7(pan7, 'panier') || (derP && derP !== TJ[TJ.length - 1] ? { val: panJ(derP), lib: 'vs ' + esc(fD(derP.date)), titre: 'panier du ' + esc(fD(derP.date)) } : null);
     let h = `<div class="db-tuiles">
       ${tuileTend('CA du jour', fK(m.ca), m.objectifJour ? 'objectif ' + fK(m.objectifJour) + ' · ' + fP(100 * (m.objectifAtteinte || 0)) + ' atteint' + ((CJ => !CJ ? '' : (CJ.n > 0 ? ' · <b class="ko">−' + fN(CJ.n) + ' clients' + (CJ.comptoir ? ' comptoir' : '') + '</b> (' + fE(Math.abs(CJ.ecart)) + ' ÷ ' + fU(CJ.panier) + ')' : ' · <b class="ok">+' + fN(-CJ.n) + ' clients' + (CJ.comptoir ? ' comptoir' : '') + '</b> d’avance'))(clientsJour(m))) : 'pas d’objectif du jour', '', TJ.map(j => j.ca), m.ca, fK, false, c7(J7 && J7.ca, 'CA'))}
       ${tuileTend('Marge brute', fK(m.margeBrute), fP(m.margeBrutePct != null ? m.margeBrutePct : (m.ca ? 100 * m.margeBrute / m.ca : null)) + ' des ventes · matière ' + fK(m.coutMatiere), '', TJ.map(j => j.mb), m.margeBrute, fK, false, c7(J7 && J7.mb, 'marge brute'))}
       ${tuileTend('Clients', fN(m.tickets) + j7Delta(m), [j7Texte(m), 'référence ' + fN(m.refTickets) + (m.ticketsDelta != null ? ' · ' + (m.ticketsDelta >= 0 ? '+ ' : '− ') + fP(Math.abs(m.ticketsDelta)) : ''), m.produits ? fN(m.produits) + ' produits vendus' : ''].filter(Boolean).join(' · '), '', TJ.map(j => j.tickets), m.tickets, fN, false, c7(J7 && J7.tickets, 'clients'))}
-      ${tuileTend('Panier moyen', fU(m.panier), (d.reseau && d.reseau.panier ? 'réseau ' + fU(d.reseau.panier) + ' · ' : '') + (m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''), '', TJ.map(j => j.panier), m.panier, fU, false, c7(J7 && J7.tickets ? J7.ca / J7.tickets : null, 'panier'))}
+      ${tuileTend('Panier moyen', fU(PM.v), [panSous(PM.base), panRes ? 'réseau ' + fU(panRes) : '', m.produitsParClient ? nf(m.produitsParClient, 2) + ' produits / client' : ''].filter(Boolean).join(' · '), '', TJ.map(panJ), PM.v, fU, false, cmpP)}
       ${tuile('Projection fin de journée', m.projection != null ? fK(m.projection) : '—', m.projection != null ? (m.projectionPart != null ? fP(m.projectionPart) + ' de la journée écoulée' : '') + (m.projectionRythme ? ' · au rythme : ' + fK(m.projectionRythme) : '') : esc(m.projectionMotif || ''))}
       ${tuile('Résultat net du jour', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
     </div>`;
@@ -2879,7 +4508,7 @@
       }
     }
     P.objectif = h; h = '';
-    h = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span><span class="db-mini">matière : coût des recettes vendues · personnel : ${esc(m.planningSource || 'planning')} · frais généraux : ${esc(m.overheadSource || '—')}${m.overheadSource === 'reparti' ? ' — allocation du panel, le mois ÷ ses jours' : ''}</span></div>${cascade(m, d)}</div>`;
+    h = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L court de la journée</span></div>${cascade(m, d)}</div>`;
     P.pnl = h; h = '';
     const cats = Array.isArray(m.categories) ? m.categories : [];
     const plan = Array.isArray(m.planning) ? m.planning : [];
@@ -2894,8 +4523,8 @@
     const catsAttend = !st && !S.err[cleSt()];
     h += catsAttend
       ? `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-mini">lecture des tickets en cours…</span></div><div class="db-acc"><div class="db-sk" style="height:300px"></div></div></div>`
-      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue !== 'treemap' ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button></span><span class="db-mini">${S.cVue === 'treemap' ? 'surface : poids dans le CA' : 'groupe › catégorie › produit · barre : poids dans le CA'} · couleur : ${parMarge ? 'marge brute, CA − coût matière' + (S.cVue === 'treemap' ? '' : ' · coef : CA ÷ coût matière') : 'écart à la référence'}</span></div>
-      ${(parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
+      : `<div class="db-card"><div class="ct"><span class="db-lab">Ventes par catégorie</span><span class="db-ong db-cvue"><button data-cvue="liste" class="${S.cVue === 'liste' || (['promo', 'portion'].includes(S.cVue) && !parMarge) ? 'on' : ''}">Liste</button><button data-cvue="treemap" class="${S.cVue === 'treemap' ? 'on' : ''}">Treemap</button>${parMarge ? `<button data-cvue="promo" class="${S.cVue === 'promo' ? 'on' : ''}">Promotions</button><button data-cvue="portion" class="${S.cVue === 'portion' ? 'on' : ''}">Portions</button>` : ''}</span></div>
+      ${S.cVue === 'portion' && parMarge ? portionOnglet(st, catsM) : S.cVue === 'promo' && parMarge ? promoOnglet(st, catsM) : (parMarge ? catsM : cats).length ? (S.cVue === 'treemap' ? `<div class="db-tm">${treemap(parMarge ? catsM : cats)}</div>` : accordeon(parMarge ? catsM : cats, parMarge, m && m.ca != null && m.margeBrute != null ? { ca: m.ca, m: m.margeBrute, A: st && st.aCompleter } : null)) + `<div class="db-leg">${lc.map(e => `<span><i class="${e.c === 'or' ? 'or' : ''}" style="${e.c === 'or' ? '' : 'background:' + e.c}"></i>${e.l}</span>`).join('')}<span><i style="background:#B9B2A8"></i>${parMarge ? 'coût matière inconnu' : 'sans référence'}</span></div>` : `<div class="db-note" style="padding-top:12px">Pas de ventilation par catégorie pour ce jour.</div>`}</div>`;
     P.categories = h + aCompleterCarte(st, m); h = '';
     const hMin = plan.length ? Math.floor(Math.min(...plan.map(p => hDe(p.debut)))) : 6, hMax = plan.length ? Math.ceil(Math.max(...plan.map(p => hDe(p.fin)))) : 19;
     // Qui est en poste : replié, la frise effectif / budget de l'heure ; déplié, le planning par personne.
@@ -3042,7 +4671,7 @@
       const face = J7 ? `face au ${esc(fD(J7.date))} à ${esc(J7.moment)}` : (der ? `face au ${esc(fD(der.date))}` : '');
       const mx = Math.max(0, ...LH.map(x => x.ca));
       return { v: fK(m.ca),
-        s: [fN(m.tickets) + ' clients' + j7Delta(m), 'panier ' + fU(m.panier), dp != null ? `<span class="${dp >= 0 ? 'ok' : 'ko'}">${dp >= 0 ? '+ ' : '− '}${fP(Math.abs(dp))}</span> ${face}` : '',
+        s: [fN(m.tickets) + ' clients' + j7Delta(m), panTxt(panDe(m)), dp != null ? `<span class="${dp >= 0 ? 'ok' : 'ko'}">${dp >= 0 ? '+ ' : '− '}${fP(Math.abs(dp))}</span> ${face}` : '',
           m.projection != null && m.projectionPart != null && m.projectionPart < 100 ? 'projection ' + fK(m.projection) : ''].filter(Boolean).join(' · '),
         vd: 'neutre', mini: LH.length ? a4Barres(LH.map(x => x.ca), v => v === mx ? 'var(--color-primary)' : '#cfa3a9') : '' };
     }), m ? P.tuiles : attente(1));
@@ -3073,10 +4702,10 @@
     ajoute('reseau', 'chiffre', 'Place dans le réseau', resume(() => {
       const R = (d.magasins || []).filter(x => x.ouvert !== false);
       if (R.length < 2) { return { v: '—', s: 'un seul magasin ouvert', vd: 'neutre', mini: '' }; }
-      const rang = k => { const v = R.map(x => x[k]).filter(x => x != null && isFinite(x)).sort((a, b) => b - a); return m[k] == null || !v.length ? null : v.findIndex(x => x <= m[k]) + 1; };
+      const rang = k => { const v = valsRang(R, k, m); return m[k] == null || !v.length ? null : v.findIndex(x => x <= m[k]) + 1; };
       const ord = n => n === 1 ? '1er' : n + 'e';
       const rCa = rang('ca');
-      const premiers = [['clients', 'tickets'], ['panier', 'panier'], ['marge brute', 'margeBrutePct'], ['résultat net', 'netPct']].filter(([, k]) => rang(k) === 1).map(([l]) => l);
+      const premiers = [['clients', 'tickets'], [panDe(m).base === 'comptoir' ? 'panier hors pro' : 'panier', kPan(m)], ['marge brute', 'margeBrutePct'], ['résultat net', 'netPct']].filter(([, k]) => rang(k) === 1).map(([l]) => l);
       const tete = R.map(x => x.ca).filter(x => x != null).sort((a, b) => b - a)[0];
       return { v: rCa ? ord(rCa) + ' / ' + R.length : '—',
         s: 'en chiffre d’affaires sur ' + R.length + ' magasins ouverts' + (premiers.length ? ' · <b>1er en ' + premiers.join(', ') + '</b>' : '') + (rCa > 1 ? ' · le 1er vend ' + fK(tete) : '') + ' · anonyme',
@@ -3270,7 +4899,7 @@
    * nuage prix × volume. Aucun autre magasin n'y est nommé ni montré : le réseau n'y est qu'un
    * repère (moyenne, médiane, bornes). Lecture : /analyse/produits/magasin. */
   const cleFiche = () => S.fiche ? 'fiche|' + S.shop + '|' + S.fiche.pid + '|' + S.fiche.mois : null;
-  function ficheLire() { const k = cleFiche(); if (k) { lireAux(k, '/analyse/produits/magasin?pid=' + encodeURIComponent(S.fiche.pid) + '&shop=' + encodeURIComponent(S.shop) + '&mois=' + S.fiche.mois); } }
+  function ficheLire() { const k = cleFiche(); if (k) { lireAux(k, '/analyse/produits/magasin?pid=' + encodeURIComponent(S.fiche.pid) + '&shop=' + encodeURIComponent(S.shop) + '&mois=' + S.fiche.mois + '&v=2'); } }   // v=2 : les magasins et le prix de vente (10/10/2026), hors du cache d'avant
   function cleRecette() { return S.fiche ? 'recette|' + S.fiche.pid + '|' + S.shop : null; }
   function cleMat(mid) { return 'matiere|' + mid + '|' + S.shop; }
   function ficheLireMatiere(mid, frais) { lireAux(cleMat(mid), '/analyse/matieres/fiche?mid=' + encodeURIComponent(mid) + '&shop=' + encodeURIComponent(S.shop) + (frais ? '&rafraichir=1' : ''), !!frais); }
@@ -3294,54 +4923,148 @@
     lireAux(cleC12(), '/analyse/categories/magasin?shop=' + encodeURIComponent(S.shop) + '&niveau=' + encodeURIComponent(S.fiche.c12) + '&nom=' + encodeURIComponent(S.fiche.nom));
     ficheRendre();
   }
+  /* La modale d'une catégorie (10/10/2026, maquette A) : deux onglets. « 12 dernières semaines » : la courbe
+   * face au réseau avec la tendance du magasin (droite des moindres carrés sur les semaines closes) et l'écart
+   * de chaque semaine à la précédente, la tendance des 4 dernières semaines closes face aux 4 d'avant (le tableau
+   * des sous-catégories est retiré le 10/10/2026). « La journée · 6 h – 18 h » : les
+   * ventes de chaque heure du jour choisi face à la moyenne des 6 derniers mêmes jours. */
+  const cleC12J = () => S.fiche && S.fiche.c12 ? 'c12j|' + S.shop + '|' + S.fiche.c12 + '|' + S.fiche.nom + '|' + S.date : null;
+  function c12LireJ(force) {
+    const F = S.fiche; if (!F || !F.c12) { return; }
+    lireAux(cleC12J(), '/analyse/categories/journee?shop=' + encodeURIComponent(S.shop) + '&niveau=' + encodeURIComponent(F.c12) + '&nom=' + encodeURIComponent(F.nom) + '&date=' + encodeURIComponent(S.date), force);
+  }
+  const c12Moy = a => { const v = a.filter(x => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0; };
+  /** La tendance : les 4 dernières semaines closes face aux 4 d'avant (la dernière, en cours, ne compte pas). */
+  const c12T44 = S2 => { const n = S2.length, a = c12Moy(S2.slice(n - 9, n - 5).map(v => v || 0)), b = c12Moy(S2.slice(n - 5, n - 1).map(v => v || 0)); return { a, b, t: a > 0 ? 100 * (b - a) / a : null }; };
+  /** La pente des semaines closes (moindres carrés), par semaine. */
+  function c12Pente(S2) {
+    const ys = S2.slice(0, -1).map(v => v || 0), n = ys.length; if (n < 3) { return { p: 0, b: ys[0] || 0 }; }
+    const mx = (n - 1) / 2, my = c12Moy(ys); let num = 0, den = 0; ys.forEach((y, x) => { num += (x - mx) * (y - my); den += (x - mx) * (x - mx); });
+    const p = den ? num / den : 0; return { p, b: my - p * mx };
+  }
+  function c12Semaines(F, d, court) {
+    const eu = F.u !== 'q', W0 = d.semaines, W = Object.assign({}, W0, { magasin: eu ? W0.magasin : W0.magasinQ, reseau: eu ? W0.reseau : W0.reseauQ });
+    const M = W.magasin || [], R = W.reseau || [], n = M.length, T = W.tranches || [], clos = M.slice(0, -1), clR = R.slice(0, -1);
+    const f = v => v == null ? '—' : (eu ? fE(v) : fN(v)), fs = v => (v >= 0 ? '+' : '−') + (eu ? fE(Math.abs(v)) : nf(Math.abs(v), 1));
+    const tM = c12T44(M), tR = c12T44(R), P = c12Pente(M);
+    const tot = clos.reduce((a, v) => a + (v || 0), 0), totR = clR.reduce((a, v) => a + (v || 0), 0), face = totR > 0 ? 100 * (tot - totR) / totR : null;
+    const iB = clos.reduce((b, v, i) => (v || 0) > (clos[b] || 0) ? i : b, 0), iF = clos.reduce((b, v, i) => (v || 0) < (clos[b] || 0) ? i : b, 0);
+    const cls = t => t == null ? '' : (t >= 0 ? 'up' : 'dn');
+    const cote = `<div class="fi-cote"><div class="k">${esc(court)}, la tendance</div>
+      <div class="fi-big ${cls(tM.t)}">${tM.t == null ? '—' : (tM.t >= 0 ? '▲ ' : '▼ ') + fSg(tM.t, 1)}</div><div class="fi-note" style="margin:0 0 6px">les 4 dernières semaines closes face aux 4 d’avant</div>
+      <div class="r"><span>Le réseau, même calcul</span><b class="${cls(tR.t)}">${fSg(tR.t, 1)}</b></div>
+      <div class="r"><span>Pente sur ${clos.length} semaines</span><b class="${cls(P.p)}">${fs(P.p)} / sem.</b></div>
+      <div class="sep"></div>
+      <div class="r"><span>Meilleure semaine</span><b>${esc(T[iB] || '')} · ${f(clos[iB])}</b></div><div class="r"><span>Plus faible</span><b>${esc(T[iF] || '')} · ${f(clos[iF])}</b></div>
+      <div class="r"><span>En cours, ${esc(T[n - 1] || '')}${W.jours ? ' (' + W.jours[n - 1] + ' j)' : ''}</span><b>${f(M[n - 1])}</b></div>
+      <div class="r"><span>Face au réseau, ${clos.length} semaines</span><b class="${cls(face)}">${fSg(face)}</b></div></div>`;
+    return `<div class="fi-barre"><span class="fi-seg">${[['ca', 'Chiffre d’affaires'], ['q', 'Pièces']].map(([v, l]) => `<button type="button" data-c12u="${v}" class="${F.u === v ? 'on' : ''}">${l}</button>`).join('')}</span><span class="fi-note">semaines du lundi au dimanche · la dernière est en cours${W.jours ? ' (' + W.jours[n - 1] + ' j)' : ''} · le réseau : la moyenne par magasin</span></div>
+      <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#2a78d6"></i>${esc(court)}</span><span><i class="ln" style="background:#eb6834"></i>le réseau, moyenne par magasin</span><span><i class="ln tdc"></i>la tendance de ${esc(court)}</span><span>▲▼ : face à la semaine d’avant · un clic sur une semaine : sa valeur</span></div>${ficheCourbe(W, eu, P)}</div>${cote}</div>
+      <div class="fi-note">${eu ? 'Ventes encaissées, remises comprises.' : 'En pièces.'}</div>`;
+  }
+  function c12Journee(F, court) {
+    const k = cleC12J(), J = S.aux[k], err = S.err[k];
+    if (err && !J) { return `<div class="fi-msg">Lecture impossible : ${esc(err)}</div>`; }
+    if (!J) { return '<div class="fi-msg"><div class="db-sk" style="width:60%;margin:6px 0"></div><div class="db-sk" style="width:85%;height:180px;margin:10px 0"></div></div>'; }
+    if (J.indispo) { return `<div class="fi-msg">${esc(J.motif || 'indisponible')}</div>`; }
+    const eu = F.u !== 'q', H = J.heures || [], v = x => (eu ? x.ca : x.q) || 0, mv = x => (eu ? x.moyCa : x.moyQ) || 0;
+    const f = x => eu ? fE(x) : nf(x, x % 1 && x < 10 ? 1 : 0), now = J.maintenant ? opMin(J.maintenant) / 60 : null, nowH = now == null ? 99 : Math.floor(now);
+    const n = (J.jours || []).length, jn = J.jourNom || '', jns = jn + (/s$/.test(jn) ? '' : 's');
+    const passe = x => now == null || x.h < nowH, vu = x => now == null || x.h <= nowH;
+    const vendu = H.reduce((a, x) => a + (vu(x) ? v(x) : 0), 0);
+    const moyA = H.reduce((a, x) => a + mv(x) * (now == null ? 1 : Math.max(0, Math.min(1, now - x.h))), 0);
+    const ecart = moyA > 0 ? 100 * (vendu - moyA) / moyA : null, jMoy = H.reduce((a, x) => a + mv(x), 0);
+    const pk = H.filter(vu).reduce((b, x) => (!b || v(x) > v(b) ? x : b), null);
+    const am = vendu > 0 ? 100 * H.filter(x => x.h < 12 && vu(x)).reduce((a, x) => a + v(x), 0) / vendu : null, amM = jMoy > 0 ? 100 * H.filter(x => x.h < 12).reduce((a, x) => a + mv(x), 0) / jMoy : null;
+    const quand = now != null ? 'Aujourd’hui' : 'Ce jour', dj = fDL(J.date).replace(/ \d{4}$/, '');
+    const cote = `<div class="fi-cote"><div class="k">${esc(dj)}${now != null ? ', à ' + esc(J.maintenant) : ''}</div>
+      <div class="r"><span>Vendu</span><b>${f(vendu)}</b></div>
+      <div class="r"><span>La moyenne des ${n} derniers ${esc(jns)}${now != null ? ' à la même heure' : ''}</span><b>${n ? f(moyA) : '—'}</b></div>
+      <div class="r"><span>Écart</span><b class="${ecart == null ? '' : (ecart >= 0 ? 'up' : 'dn')}">${fSg(ecart, 1)}</b></div><div class="sep"></div>
+      <div class="r"><span>L’heure forte</span><b>${pk && v(pk) > 0 ? pk.h + ' h · ' + f(v(pk)) : '—'}</b></div>
+      <div class="r"><span>Avant midi</span><b>${am == null ? '—' : fN(am) + ' % du jour'}</b></div><div class="r"><span>Avant midi, d’habitude</span><b>${amM == null ? '—' : fN(amM) + ' %'}</b></div>
+      <div class="r"><span>Une journée moyenne</span><b>${n ? f(jMoy) : '—'}</b></div></div>`;
+    // Les barres : la moyenne en gris, le jour en bleu, l'heure en cours au trait rouge, l'avenir teinté.
+    const Wd = 700, Hd = 250, m = { l: 42, r: 12, t: 14, b: 26 }, bw = (Wd - m.l - m.r) / Math.max(1, H.length), h0 = H.length ? H[0].h : 6;
+    const mx = Math.max(1, ...H.map(v), ...H.map(mv)), pasR = x => { const r = x / 5, e = Math.pow(10, Math.floor(Math.log10(r))), q = r / e; return (q <= 1 ? 1 : q <= 2 ? 2 : q <= 5 ? 5 : 10) * e; };
+    const pas = pasR(mx * 1.1), haut = Math.ceil(mx * 1.1 / pas) * pas, X = h => m.l + bw * (h - h0), Y = x => m.t + (Hd - m.t - m.b) * (1 - x / haut);
+    let g = '';
+    for (let x = 0; x <= haut + 1e-9; x += pas) { g += `<line x1="${m.l}" x2="${Wd - m.r}" y1="${Y(x).toFixed(1)}" y2="${Y(x).toFixed(1)}" stroke="#ece6de"/><text class="ax" x="${m.l - 6}" y="${(Y(x) + 3.5).toFixed(1)}" text-anchor="end">${fN(x)}</text>`; }
+    if (now != null && now < h0 + H.length) { const xn = X(Math.max(h0, now)); g += `<rect x="${xn.toFixed(1)}" y="${m.t}" width="${(X(h0 + H.length) - xn).toFixed(1)}" height="${(Y(0) - m.t).toFixed(1)}" fill="#f7f3ed"/>`; }
+    H.forEach(x => { const x0 = X(x.h) + bw * 0.16, w = bw * 0.32;
+      if (mv(x) > 0) { g += `<rect x="${x0.toFixed(1)}" y="${Y(mv(x)).toFixed(1)}" width="${w.toFixed(1)}" height="${(Y(0) - Y(mv(x))).toFixed(1)}" rx="3" fill="#cfc6ba"><title>${x.h} h · moyenne ${f(mv(x))}</title></rect>`; }
+      if (vu(x) && v(x) > 0) { g += `<rect x="${(x0 + w + 2).toFixed(1)}" y="${Y(v(x)).toFixed(1)}" width="${w.toFixed(1)}" height="${(Y(0) - Y(v(x))).toFixed(1)}" rx="3" fill="#2a78d6"><title>${x.h} h · ${quand.toLowerCase()} ${f(v(x))}</title></rect>`; }
+      g += `<text class="ax" x="${(X(x.h) + bw / 2).toFixed(1)}" y="${Hd - 9}" text-anchor="middle">${x.h} h</text>`; });
+    if (now != null && now >= h0 && now < h0 + H.length) { const xn = X(now); g += `<line x1="${xn.toFixed(1)}" x2="${xn.toFixed(1)}" y1="${m.t - 2}" y2="${Y(0).toFixed(1)}" stroke="#C0182B" stroke-width="1.5"/><text class="ax" x="${(xn + 4).toFixed(1)}" y="${m.t + 10}" style="fill:#C0182B;font-weight:700">${esc(J.maintenant)}</text>`; }
+    // Un clic sur une heure : la mini-vignette de ses valeurs, au lieu d'un tableau (10/10/2026).
+    H.forEach(x => { const e = v(x) - mv(x), tip = `<b>${x.h} h – ${x.h + 1} h</b>${vu(x) ? `<i style="background:#2a78d6"></i>${quand.toLowerCase()} ${f(v(x))}<br>` : ''}<i style="background:#cfc6ba"></i>moyenne ${n ? f(mv(x)) : '—'}${passe(x) && n ? `<br>${e >= 0 ? '▲ +' : '▼ −'}${f(Math.abs(e))}` : ''}`;
+      g += `<rect class="hit" x="${X(x.h).toFixed(1)}" y="${m.t}" width="${bw.toFixed(1)}" height="${(Y(0) - m.t).toFixed(1)}" data-tip="${esc(tip)}" data-tx="${(100 * (X(x.h) + bw / 2) / Wd).toFixed(1)}" data-ty="${(100 * Y(Math.max(vu(x) ? v(x) : 0, mv(x))) / Hd).toFixed(1)}"/>`; });
+    const graphe = `<div class="fi-gw"><svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Les ventes de chaque heure face à la moyenne">${g}</svg></div>`;
+    const manq = (J.manquants || []).length ? ` · ${J.manquants.length} jour${J.manquants.length > 1 ? 's' : ''} pas encore lu${J.manquants.length > 1 ? 's' : ''}` : '';
+    return `<div class="fi-barre"><span class="fi-seg">${[['ca', 'Chiffre d’affaires'], ['q', 'Pièces']].map(([x, l]) => `<button type="button" data-c12u="${x}" class="${F.u === x ? 'on' : ''}">${l}</button>`).join('')}</span><span class="fi-note">${esc(dj)} · heure par heure · face à la moyenne des ${n} derniers ${esc(jns)}${manq}</span></div>
+      <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln br" style="background:#cfc6ba"></i>moyenne des ${n} derniers ${esc(jns)}</span><span><i class="ln br" style="background:#2a78d6"></i>${quand.toLowerCase()}</span><span>un clic sur une heure : sa valeur</span></div>${graphe}</div>${cote}</div>
+      <div class="fi-note">${eu ? 'Montants en euros, ventes encaissées.' : 'En pièces.'} Les tickets du magasin, de 6 h à 18 h.</div>`;
+  }
   function c12Rendre(box) {
-    const F = S.fiche, k = cleC12(), d = S.aux[k], err = S.err[k], court = nomShop().replace(/^.* - /, ''), eu = F.u !== 'q';
+    const F = S.fiche, k = cleC12(), d = S.aux[k], err = S.err[k], court = nomShop().replace(/^.* - /, ''), o = F.o === 2 ? 2 : 1;
     let corps;
-    if (err && !d) { corps = `<div class="fi-msg">Lecture impossible : ${esc(err)}</div>`; }
+    if (o === 2) {
+      // Le jour en cours se relit toutes les deux minutes.
+      const kj = cleC12J(); if (!S.aux[kj] || (J_auj(kj) && Date.now() - (S.auxLu[kj] || 0) > 120000)) { c12LireJ(!!S.aux[kj]); }
+      corps = c12Journee(F, court);
+    } else if (err && !d) { corps = `<div class="fi-msg">Lecture impossible : ${esc(err)}</div>`; }
     else if (!d) { corps = '<div class="fi-msg"><div class="db-sk" style="width:60%;margin:6px 0"></div><div class="db-sk" style="width:85%;height:180px;margin:10px 0"></div></div>'; }
     else if (d.indispo) { corps = `<div class="fi-msg">${esc(d.motif || 'indisponible')}</div>`; }
-    else {
-      const W0 = d.semaines, W = Object.assign({}, W0, { magasin: eu ? W0.magasin : W0.magasinQ, reseau: eu ? W0.reseau : W0.reseauQ });
-      const M = W.magasin || [], R = W.reseau || [], clos = M.slice(0, -1), clR = R.slice(0, -1);
-      const tot = clos.reduce((a, v) => a + (v || 0), 0), totR = clR.reduce((a, v) => a + (v || 0), 0), moy = tot / Math.max(1, clos.length);
-      const av = clos.slice(0, 6).reduce((a, v) => a + (v || 0), 0), ap = clos.slice(6).reduce((a, v) => a + (v || 0), 0), tend = av > 0 ? 100 * (ap - av) / av : null;
-      const face = totR > 0 ? 100 * (tot - totR) / totR : null, f = v => v == null ? '—' : (eu ? fE(v) : fN(v));
-      corps = `<div class="fi-barre"><span class="fi-seg">${[['ca', 'Chiffre d’affaires'], ['q', 'Pièces']].map(([v, l]) => `<button type="button" data-c12u="${v}" class="${F.u === v ? 'on' : ''}">${l}</button>`).join('')}</span><span class="fi-note">semaines du lundi au dimanche · la dernière est en cours (${W.jours ? W.jours[W.jours.length - 1] : '?'} j) · le réseau : la moyenne par magasin, sans magasin nommé</span></div>
-        <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#2a78d6"></i>${esc(court)}</span><span><i class="ln" style="background:#eb6834"></i>le réseau, moyenne par magasin</span></div>${ficheCourbe(W, eu)}</div>
-          <div class="fi-cote"><div class="k">${esc(court)}, 12 semaines</div>
-            <div class="r"><span>${eu ? 'Chiffre d’affaires' : 'Pièces'}</span><b>${f(tot)}</b></div><div class="r"><span>Par semaine</span><b>${eu ? fE(moy) : nf(moy, 1)}</b></div>
-            <div class="r"><span>6 dernières face aux 6 d’avant</span><b class="${tend == null ? '' : (tend >= 0 ? 'up' : 'dn')}">${fSg(tend)}</b></div>
-            <div class="sep"></div><div class="r"><span>Moyenne par magasin du réseau</span><b>${f(totR)}</b></div><div class="r"><span>Face au réseau</span><b class="${face == null ? '' : (face >= 0 ? 'up' : 'dn')}">${fSg(face)}</b></div>
-            <div class="fi-note">${eu ? 'ventes encaissées, remises comprises' : 'en pièces'} ; un grand magasin vend plus : la taille compte</div></div></div>
-        <table class="fi-tab"><thead><tr><th>Semaine</th>${(W.tranches || []).map((l, i) => `<th>${esc(l)}${i === M.length - 1 ? '*' : ''}</th>`).join('')}</tr></thead><tbody>
-          <tr class="moi"><td>${esc(court)}</td>${M.map(v => `<td>${v == null ? '—' : fN(v)}</td>`).join('')}</tr><tr><td>Réseau, moyenne</td>${R.map(v => `<td>${v == null ? '—' : fN(v)}</td>`).join('')}</tr></tbody></table>
-        <div class="fi-note">* en cours.${eu ? ' Montants en euros.' : ''}</div>`;
-    }
+    else { corps = c12Semaines(F, d, court); }
     const sous = F.c12 === 'groupe' ? 'groupe de catégories' + (d && d.categories && d.categories.length ? ' · ' + d.categories.map(esc).join(', ') : '') : 'catégorie' + (d && d.groupe ? ' · groupe ' + esc(d.groupe) : '');
     box.innerHTML = `<div class="fi-voile" data-ffermer="1"></div><div class="fi-modale" role="dialog" aria-modal="true" aria-label="${esc(F.nom)}">
       <div class="fi-hd"><div class="t"><h2>${esc(F.nom)}</h2><div class="s">${sous} · ${esc(nomShop())}</div></div><button type="button" class="fi-x" data-ffermer="1" aria-label="fermer">✕</button></div>
-      <div class="fi-ong"><button type="button" class="on">Ventes · 12 semaines</button></div>
+      <div class="fi-ong"><button type="button" data-c12o="1" class="${o === 1 ? 'on' : ''}">12 dernières semaines</button><button type="button" data-c12o="2" class="${o === 2 ? 'on' : ''}">La journée · 6 h – 18 h</button></div>
       <div class="fi-bd">${corps}</div></div>`;
     box.querySelectorAll('[data-ffermer]').forEach(b => b.addEventListener('click', ficheFermer));
-    box.querySelectorAll('[data-c12u]').forEach(b => b.addEventListener('click', () => { S.fiche.u = b.dataset.c12u; ficheRendre(); }));
+    box.querySelectorAll('[data-c12u]').forEach(b => b.addEventListener('click', () => { S.fiche.u = b.dataset.c12u; S.fiche.tip = null; ficheRendre(); }));
+    box.querySelectorAll('[data-c12o]').forEach(b => b.addEventListener('click', () => { S.fiche.o = +b.dataset.c12o; S.fiche.tip = null; ficheRendre(); }));
+    ficheTips(box);
   }
+  /** La mini-vignette d'un point (10/10/2026) : un clic sur une colonne du graphique montre ses valeurs, un second clic la retire. */
+  function ficheTips(box) {
+    const H = [...box.querySelectorAll('.fi-gw .hit')];
+    const montrer = r => {
+      const gw = r.closest('.fi-gw'), t = document.createElement('div'), tx = +r.dataset.tx, ty = +r.dataset.ty;
+      t.className = 'fi-tip' + (tx < 14 ? ' g' : (tx > 86 ? ' d' : '')); t.innerHTML = r.dataset.tip; t.style.left = tx + '%'; t.style.top = Math.max(8, ty) + '%';
+      gw.appendChild(t); r.classList.add('on');
+    };
+    H.forEach((r, i) => r.addEventListener('click', ev => {
+      ev.stopPropagation();
+      const deja = r.classList.contains('on');
+      box.querySelectorAll('.fi-tip').forEach(t => t.remove()); box.querySelectorAll('.hit.on').forEach(t => t.classList.remove('on'));
+      if (S.fiche) { S.fiche.tip = deja ? null : i; }
+      if (!deja) { montrer(r); }
+    }));
+    // La vignette ouverte survit à la relecture des données (le dashboard se redessine toutes les deux minutes).
+    if (S.fiche && S.fiche.tip != null && H[S.fiche.tip]) { montrer(H[S.fiche.tip]); }
+  }
+  const J_auj = k => !!(S.aux[k] && S.aux[k].maintenant);
   function ficheFermer() { const r = S.fiche && S.fiche.retour; S.fiche = null; ficheRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* la ligne a été redessinée */ } } }
   const fPx = n => n == null ? '—' : nf(n, 2) + ' €';
   const fSg = (n, d) => n == null ? '—' : (n > 0 ? '+' : (n < 0 ? '−' : '')) + nf(Math.abs(n), d || 0) + ' %';
   /** Onglet 1 : la courbe du magasin face à la moyenne par magasin du réseau, semaine par semaine. */
-  function ficheCourbe(W, eu) {
+  function ficheCourbe(W, eu, tend) {
     const M = W.magasin || [], R = W.reseau || [], n = M.length, lib = W.tranches || [];
-    const iEnC = n - 1, Wd = 700, Hd = 270, m = { l: eu ? 46 : 34, r: eu ? 104 : 92, t: 14, b: 34 };
+    // `tend` (une catégorie, 10/10/2026) : la tendance du magasin en pointillé, et l'écart de chaque semaine à la précédente sous l'axe.
     const max = Math.max(1, ...M.map(v => v || 0), ...R.map(v => v || 0));
+    const iEnC = n - 1, Wd = 700, Hd = tend ? 292 : 270, m = { l: eu || max >= 1000 ? 46 : 34, r: eu ? 104 : 92, t: 14, b: tend ? 54 : 34 };
     // En euros (une catégorie, 10/10/2026), un pas rond pour six à dix lignes : 1, 2 ou 5 × 10ⁿ.
     const pasRond = v => { const r = v / 6, e = Math.pow(10, Math.floor(Math.log10(r))), q = r / e; return (q <= 1 ? 1 : q <= 2 ? 2 : q <= 5 ? 5 : 10) * e; };
-    const pas = eu ? pasRond(max) : (max > 60 ? 20 : (max > 30 ? 10 : (max > 12 ? 5 : 2))), haut = Math.ceil(max / pas) * pas;
+    // Les pièces aussi (10/10/2026) : au-delà de 60, le même pas rond (une catégorie compte des milliers de pièces).
+    const pas = eu || max > 60 ? pasRond(max) : (max > 30 ? 10 : (max > 12 ? 5 : 2)), haut = Math.ceil(max / pas) * pas;
     const vU = v => eu ? fN(v) + ' €' : fN(v);
     const y = v => m.t + (Hd - m.t - m.b) * (1 - v / haut), cx = k => m.l + (Wd - m.l - m.r) * k / Math.max(1, n - 1);
     let g = '';
-    for (let v = 0; v <= haut; v += pas) { g += `<line x1="${m.l}" x2="${Wd - m.r}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#ece6de"/><text class="ax" x="${m.l - 7}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${eu ? fN(v) : v}</text>`; }
+    for (let v = 0; v <= haut; v += pas) { g += `<line x1="${m.l}" x2="${Wd - m.r}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#ece6de"/><text class="ax" x="${m.l - 7}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end">${fN(v)}</text>`; }
     const date = k => { const b = (W.bornes || [])[k]; return b ? b[0].slice(8, 10) + '/' + b[0].slice(5, 7) : ''; };
-    g += lib.map((l, k) => (k % 2 === 0 || k === n - 1) ? `<text class="ax" x="${cx(k).toFixed(1)}" y="${Hd - 18}" text-anchor="middle">${esc(l)}</text><text class="ax" x="${cx(k).toFixed(1)}" y="${Hd - 5}" text-anchor="middle" style="font-size:9.5px">${k === iEnC ? (W.jours ? W.jours[k] + ' j' : 'en cours') : date(k)}</text>` : '').join('');
+    const yL = Hd - (tend ? 38 : 18), yD = Hd - (tend ? 25 : 5);
+    g += lib.map((l, k) => (k % 2 === 0 || k === n - 1) ? `<text class="ax" x="${cx(k).toFixed(1)}" y="${yL}" text-anchor="middle">${esc(l)}</text><text class="ax" x="${cx(k).toFixed(1)}" y="${yD}" text-anchor="middle" style="font-size:9.5px">${k === iEnC ? (W.jours ? W.jours[k] + ' j' : 'en cours') : date(k)}</text>` : '').join('');
     const ligne = (S2, coul, nom, pts) => { const P = S2.map((v, k) => v == null ? null : [cx(k), y(v)]); const ok = P.map((p, k) => [p, k]).filter(x => x[0]);
       const plein = ok.filter(x => x[1] < iEnC).map(x => x[0]), fin = ok.filter(x => x[1] >= iEnC - 1).map(x => x[0]);
       return `<polyline points="${plein.map(p => p.map(z => z.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="${coul}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
@@ -3351,7 +5074,19 @@
     const k1 = Math.max(0, n - 2); let yM = y(M[k1] || 0) + 4, yR = y(R[k1] || 0) + 4;
     if (Math.abs(yM - yR) < 14) { const mid = (yM + yR) / 2, sgn = yM <= yR ? -1 : 1; yM = mid + 7 * sgn; yR = mid - 7 * sgn; }
     const fin = `<text class="lab" x="${Wd - m.r + 10}" y="${yM.toFixed(1)}">${esc(nomShop().replace(/^.* - /, ''))} ${vU(M[k1])}</text><text class="ax" x="${Wd - m.r + 10}" y="${yR.toFixed(1)}" style="font-weight:600">réseau ${eu ? vU(R[k1] || 0) : nf(R[k1] || 0, 0)}</text><text class="ax" x="${Wd - m.r + 10}" y="${(Math.max(yM, yR) + 13).toFixed(1)}" style="font-size:9.5px">en ${esc(lib[k1] || '')}</text>`;
-    return `<svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Ventes par semaine face à la moyenne du réseau">${g}${ligne(R, '#eb6834', 'moyenne par magasin du réseau', true)}${ligne(M, '#2a78d6', 'le magasin', true)}${fin}</svg>`;
+    if (tend && n >= 4) {
+      const yc = v => y(Math.max(0, Math.min(haut, v)));
+      g += `<line x1="${cx(0).toFixed(1)}" y1="${yc(tend.b).toFixed(1)}" x2="${cx(n - 2).toFixed(1)}" y2="${yc(tend.b + tend.p * (n - 2)).toFixed(1)}" stroke="#1d1d1b" stroke-width="1.6" stroke-dasharray="6 5" opacity=".7"><title>la tendance : ${tend.p >= 0 ? '+' : '−'}${eu ? fE(Math.abs(tend.p)) : nf(Math.abs(tend.p), 1)} par semaine</title></line>`;
+      for (let k = 1; k < n - 1; k++) { const a = M[k - 1], v = M[k]; if (!a || v == null) { continue; } const d = 100 * (v - a) / a;
+        g += `<text class="ax" x="${cx(k).toFixed(1)}" y="${Hd - 5}" text-anchor="middle" style="font-size:9.5px;font-weight:700;fill:${d >= 0 ? '#2d7a3e' : '#B45309'}">${d >= 0 ? '▲' : '▼'}${fN(Math.abs(d))} %</text>`; }
+    }
+    // Un clic sur une semaine : la mini-vignette de ses valeurs (10/10/2026).
+    const pasX = (Wd - m.l - m.r) / Math.max(1, n - 1), court = esc(nomShop().replace(/^.* - /, ''));
+    const hits = lib.map((l, k) => { if (M[k] == null && R[k] == null) { return ''; }
+      const dl = tend && k > 0 && k < n - 1 && M[k - 1] && M[k] != null ? 100 * (M[k] - M[k - 1]) / M[k - 1] : null;
+      const tip = `<b>${esc(l)} · ${k === iEnC ? (W.jours ? W.jours[k] + ' j, en cours' : 'en cours') : 'du ' + date(k)}</b>${M[k] != null ? `<i style="background:#2a78d6"></i>${court} ${eu ? vU(M[k]) : nf(M[k], M[k] % 1 ? 1 : 0) + ' pièces'}<br>` : ''}${R[k] != null ? `<i style="background:#eb6834"></i>réseau ${eu ? vU(R[k]) : nf(R[k], R[k] % 1 ? 1 : 0) + ' pièces'}` : ''}${dl != null ? `<br>${dl >= 0 ? '▲ +' : '▼ −'}${nf(Math.abs(dl), 1)} % face à ${esc(lib[k - 1])}` : ''}`;
+      return `<rect class="hit" x="${(cx(k) - pasX / 2).toFixed(1)}" y="${m.t}" width="${pasX.toFixed(1)}" height="${(Hd - m.t - m.b).toFixed(1)}" data-tip="${esc(tip)}" data-tx="${(100 * cx(k) / Wd).toFixed(1)}" data-ty="${(100 * y(Math.max(M[k] || 0, R[k] || 0)) / Hd).toFixed(1)}"/>`; }).join('');
+    return `<div class="fi-gw"><svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Ventes par semaine face à la moyenne du réseau">${g}${ligne(R, '#eb6834', 'moyenne par magasin du réseau', true)}${ligne(M, '#2a78d6', 'le magasin', true)}${fin}${hits}</svg></div>`;
   }
   /** Onglet 2 : le nuage prix × volume, le seul point du magasin, le prix réseau et le volume moyen en repères. */
   function ficheNuage(P) {
@@ -3372,7 +5107,13 @@
     const nomM = esc(nomShop().replace(/^.* - /, '')), t = `${nomM} · ${fPx(me.p)}`, lg = t.length * 6.4, xd = X(me.p) + 15, gauche = xd + lg > Wd - m.r;
     g += `<circle cx="${X(me.p).toFixed(1)}" cy="${Y(me.v10k).toFixed(1)}" r="9" fill="#2a78d6" stroke="#fff" stroke-width="2"><title>${nomM} · ${fPx(me.p)} (${fSg(me.ec, 1)} face au prix réseau) · ${nf(me.v10k, 1)} pièces pour 10 000 € de chiffre (${fSg(me.rel)} face aux autres) · ${fN(me.q)} pièces</title></circle><text class="lab" x="${(gauche ? X(me.p) - 15 : xd).toFixed(1)}" y="${(Y(me.v10k) + 4).toFixed(1)}" text-anchor="${gauche ? 'end' : 'start'}">${t}</text>`;
     g += `<text class="ax" x="${(m.l + Wd - m.r) / 2}" y="${Hd - 6}" text-anchor="middle" style="font-weight:600">prix encaissé →</text><text class="ax" transform="translate(13 ${(m.t + Hd - m.b) / 2}) rotate(-90)" text-anchor="middle" style="font-weight:600">pièces pour 10 000 € de chiffre →</text>`;
-    return `<svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Prix encaissé face au volume">${g}</svg>`;
+    // Les autres magasins (10/10/2026), en gris et nommés ; chaque point s'ouvre au clic.
+    (P.magasins || []).filter(x => !x.moi && x.p != null && x.v10k != null).forEach(x => { const cx = X(x.p), cy = Y(x.v10k), d = cx + 70 > Wd - m.r;
+      g += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="6.5" fill="#9a9187" stroke="#fff" stroke-width="2"/><text class="ax" x="${(d ? cx - 10 : cx + 10).toFixed(1)}" y="${(cy + 3.5).toFixed(1)}" text-anchor="${d ? 'end' : 'start'}" style="font-weight:600">${esc(x.nom)}</text>`; });
+    const tip = x => `<b>${esc(x.nom)}</b>${x.brut != null ? 'prix de vente ' + fPx(x.brut) + '<br>' : ''}prix encaissé ${fPx(x.p)}<br>${nf(x.v10k, 1)} pièces pour 10 000 €<br>${fN(x.q)} pièces vendues`;
+    const pts = (P.magasins && P.magasins.length ? P.magasins : [Object.assign({ nom: nomShop().replace(/^.* - /, ''), moi: true }, me)]).filter(x => x.p != null && x.v10k != null);
+    g += pts.map(x => `<circle class="hit" cx="${X(x.p).toFixed(1)}" cy="${Y(x.v10k).toFixed(1)}" r="15" data-tip="${esc(tip(x))}" data-tx="${(100 * X(x.p) / Wd).toFixed(1)}" data-ty="${(100 * (Y(x.v10k) - 8) / Hd).toFixed(1)}"/>`).join('');
+    return `<div class="fi-gw"><svg class="fi-graph" viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Prix encaissé face au volume">${g}</svg></div>`;
   }
   /* ── Onglet « Recette & marge » (demande du 08/10/2026) ─────────────────────────────────────────
    * La pièce : prix encaissé, coût de recette et marge viennent de la ligne cliquée (ce que les tickets ont
@@ -3404,13 +5145,8 @@
     const serre = typeof matchMedia === 'function' && matchMedia('(max-width:700px)').matches ? 27 : 17;
     reperes.forEach((r, i) => { if (i > 0 && pct(r.v) - pct(reperes[i - 1].v) < serre && !/\bh2\b/.test(reperes[i - 1].cls || '')) { r.cls = ((r.cls || '') + ' h2').trim(); } });
     const etage = reperes.some(r => /\bh2\b/.test(r.cls || ''));
-    // Le prix pour y arriver : chaque palier de la jauge traduit en prix à pratiquer, arrondi aux 5 centimes supérieurs.
-    const a5 = p => Math.ceil(p * 20 - 1e-9) / 20;
     const fD = v => (v >= 0 ? '+ ' : '− ') + nf(Math.abs(v), 2) + ' €', fPs = v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 0) + ' %';
-    const paliers = mat > 0 && prix != null ? [{ lib: 'marge 40 %', coef: FI_ZONES.ko }, catCoef != null ? { lib: 'sa catégorie', coef: catCoef } : null,
-      med != null ? { lib: 'le prix réseau', coef: med / mat, fixe: med } : null, { lib: 'marge 60 %', coef: FI_ZONES.att }, magCoef != null ? { lib: 'le magasin aujourd’hui', coef: magCoef } : null,
-      { lib: 'objectif · matière ' + fP0(se.food), coef: obj }].filter(Boolean).map(p => Object.assign(p, { prix: p.fixe != null ? p.fixe : a5(mat * p.coef) })).sort((a, b) => a.coef - b.coef) : [];
-    // La simulation : un autre prix, choisi dans les paliers ou tapé, et la pièce recalculée à ce prix.
+    // La simulation : un autre prix, tapé, et la pièce recalculée à ce prix.
     const sim = F.simPrix != null && F.simPrix > 0 && mat > 0 && prix != null ? F.simPrix : null;
     const sCoef = sim != null ? sim / mat : null, sTaux = sim != null ? 100 * (sim - mat) / sim : null;
     const lignes = R && Array.isArray(R.lignes) ? R.lignes : [];
@@ -3422,14 +5158,14 @@
     const simOn = sim != null && Math.abs(sim - prix) >= 0.005, pV = simOn ? sim : prix, cV = simOn ? sCoef : coef, tV = simOn ? sTaux : taux;
     const saisie = F.simSaisie != null ? F.simSaisie : (pV != null ? nf(pV, 2) : '');
     const champ = prix != null && mat > 0 ? `<div class="fi-rsc"><span class="k">Prix de vente</span><span class="fi-rsimc"><button type="button" data-fsimpas="-0.05" aria-label="moins 5 centimes">−</button><input type="text" inputmode="decimal" data-fsiminput="1" value="${esc(saisie)}" aria-label="prix de vente"><b>€</b><button type="button" data-fsimpas="0.05" aria-label="plus 5 centimes">+</button></span>${simOn ? `<small>au lieu de ${fPt(prix)} encaissé · <button type="button" class="fi-rlien" data-fsimx="1">remettre</button></small>` : `<small>le prix encaissé ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · tapez un autre prix pour voir le coefficient</small>`}</div>` : '';
-    let h = `<section class="fi-rc fi-rjauge"><div class="fi-rct"><span class="fi-rh">Le coefficient</span><span class="fi-note">ce que le prix fait de la matière : prix de vente ÷ coût de recette${mat != null ? ' (' + fPt(mat) + ')' : ''}</span></div>
+    let h = `<section class="fi-rc fi-rjauge"><div class="fi-rct"><span class="fi-rh">Le coefficient</span></div>
       <div class="fi-rjg"><div class="fi-rjn ${niv(cV)}">${champ}<b>${fX(cV)}</b><span>${NIV[niv(cV)]}</span><small>${tV != null ? 'marge brute ' + fP0(tV) + ' · matière ' + fP0(100 - tV) + ' du prix' : 'le coût de recette de cette pièce n’est pas gravé'}</small></div>
         <div class="fi-rjb${etage ? ' etage' : ''}${simOn ? ' sim' : ''}"><div class="fi-rband"><i class="ko" style="width:${pct(FI_ZONES.ko).toFixed(1)}%"></i><i class="att" style="width:${(pct(FI_ZONES.att) - pct(FI_ZONES.ko)).toFixed(1)}%"></i><i class="ok" style="width:${(100 - pct(FI_ZONES.att)).toFixed(1)}%"></i>
           ${reperes.map(r => `<span class="fi-rrep ${r.cls || ''}" style="left:${pct(r.v).toFixed(1)}%"><i></i><em>${esc(r.lib)}<small>${esc(r.sous)}</small></em></span>`).join('')}
           ${cV != null ? `<span class="fi-rmoi ${niv(cV)}" style="left:${pct(cV).toFixed(1)}%"><i></i><em>${simOn ? 'à ' + fPt(sim) : 'ce produit'}<small>${fX(cV)}</small></em></span>` : ''}
           ${simOn ? `<span class="fi-rmoi enc" style="left:${pct(coef).toFixed(1)}%"><i></i><em>encaissé ${fPt(prix)}<small>${fX(coef)}</small></em></span>` : ''}</div>
           <div class="fi-raxe"><span>× 1</span><span>× ${nf(FI_ZONES.ko, 2)} · marge 40 %</span><span>× 2,5 · marge 60 %</span><span>× 4</span></div>
-          ${paliers.length ? `<div class="fi-rpcs"><span class="k">Le prix pour y arriver</span>${paliers.map(p => `<button type="button" class="fi-rpc${Math.abs(p.prix - pV) < 0.005 ? ' on' : ''}${p.coef <= coef + 1e-9 ? ' atteint' : ''}" data-fsim="${p.prix.toFixed(2)}" title="${esc(p.lib)} : ${fX(p.coef)} · ${fD(p.prix - prix)} face au prix encaissé${p.coef <= coef + 1e-9 ? ' · déjà atteint' : ''}">${esc(p.lib)} <b>${fPt(p.prix)}</b></button>`).join('')}</div>` : ''}</div></div>`;
+          </div></div>`;
     if (simOn) {
       const sLab = sim * se.labour / 100, sOh = sim * se.overhead / 100, sNet = sim - mat - sLab - sOh, nv = niv(sCoef);
       h += `<div class="fi-rverdict ${nv}">À <b>${fPt(sim)}</b>, la pièce passe à <b>${fX(sCoef)}</b> : ${NIV[nv]}. Marge brute <b>${fP0(sTaux)}</b>, résultat par pièce <b>${sNet < 0 ? '− ' : ''}${fPt(Math.abs(sNet))}</b>.${med != null ? ` ${fPs(100 * (sim - med) / med)} face au prix réseau (${fPt(med)}).` : ''}${q > 0 ? ` Sur les ${fN(q)} vendu${q >= 2 ? 's' : ''} ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} : ${fD(q * (sim - prix))} de chiffre, à volume égal.` : ''}</div>`;
@@ -3446,9 +5182,9 @@
     else {
       const fQ = l => l.qte == null ? '—' : nf(l.qte, Number.isInteger(+l.qte) ? 0 : (l.qte >= 10 ? 1 : 2)) + (l.unite ? ' ' + esc(l.unite) : '');
       rec = `<table class="fi-rtab"><thead><tr><th>Ingrédient</th><th>Quantité</th><th>Coût</th><th class="p">Part du coût</th></tr></thead><tbody>
-        ${lignes.map((l, i) => { const cl = l.type === 'matiere' && l.id != null, on = cl && F.mat === i; return `<tr class="${top && l === top ? 'top' : ''}${cl ? ' clic' : ''}${on ? ' on' : ''}"${cl ? ` data-fmat="${i}" tabindex="0" role="button" aria-expanded="${on ? 'true' : 'false'}" title="le prix de cette matière : ce magasin, le réseau, le fournisseur"` : ''}><td><b>${esc(l.nom)}</b>${l.sous ? `<small>${esc(l.sous)}</small>` : (l.cat && l.type !== 'recette' ? `<small>${esc(l.cat)}</small>` : '')}</td><td>${fQ(l)}</td><td${l.prixUnite != null ? ` title="${nf(l.prixUnite, l.prixUnite < 0.1 ? 4 : 2)} € / ${esc(l.prixParUnite || l.unite || 'unité')}${l.prixSource ? ' · prix ' + (l.prixSource === 'magasin' ? 'du magasin' : 'd’un autre magasin') : ''}"` : ''}>${l.cout != null ? fPt(l.cout) : `<span class="mu" title="${esc(l.motif || 'pas de prix pour cette matière')}">—</span>`}</td><td class="p">${l.cout != null && baseL > 0 ? `<i style="width:${Math.min(100, 100 * l.cout / baseL).toFixed(1)}%"></i><span>${fP0(100 * l.cout / baseL)}</span>` : ''}</td></tr>${on ? ficheMatiere(l, S.aux[cleMat(l.id)], S.err[cleMat(l.id)]) : ''}`; }).join('')}
+        ${lignes.map((l, i) => { const cl = l.type === 'matiere' && l.id != null && lignes.length > 1, on = cl && F.mat === i; return `<tr class="${top && l === top ? 'top' : ''}${cl ? ' clic' : ''}${on ? ' on' : ''}"${cl ? ` data-fmat="${i}" tabindex="0" role="button" aria-expanded="${on ? 'true' : 'false'}" title="le prix de cette matière : ce magasin, le réseau, le fournisseur"` : ''}><td><b>${esc(l.nom)}</b>${l.sous ? `<small>${esc(l.sous)}</small>` : (l.cat && l.type !== 'recette' ? `<small>${esc(l.cat)}</small>` : '')}</td><td>${fQ(l)}</td><td${l.prixUnite != null ? ` title="${nf(l.prixUnite, l.prixUnite < 0.1 ? 4 : 2)} € / ${esc(l.prixParUnite || l.unite || 'unité')}${l.prixSource ? ' · prix ' + (l.prixSource === 'magasin' ? 'du magasin' : 'd’un autre magasin') : ''}"` : ''}>${l.cout != null ? fPt(l.cout) : `<span class="mu" title="${esc(l.motif || 'pas de prix pour cette matière')}">—</span>`}</td><td class="p">${l.cout != null && baseL > 0 ? `<i style="width:${Math.min(100, 100 * l.cout / baseL).toFixed(1)}%"></i><span>${fP0(100 * l.cout / baseL)}</span>` : ''}</td></tr>${on ? ficheMatiere(l, S.aux[cleMat(l.id)], S.err[cleMat(l.id)]) : ''}`; }).join('')}
         </tbody><tfoot><tr><td>${R.api ? 'Coût de recette aujourd’hui' : 'Lignes chiffrées'}${R.sansPrix ? `<small>${R.sansPrix} sans prix</small>` : ''}</td><td></td><td>${totalL != null ? fPt(totalL) : '—'}</td><td class="p">${totalL != null && matT != null && Math.abs(totalL - matT) > 0.05 ? `<small>tickets du jour ${fPt(matT)}</small>` : ''}</td></tr></tfoot></table>
-        <div class="fi-note fi-rnote">${esc(R.source || '')}${mat == null && R.cout && R.cout.net != null ? ` · coût de recette ${fPt(R.cout.net)} (${esc(R.cout.source || '')})` : ''}${R.recette && R.recette.rendement && R.recette.rendement !== 1 ? ` · rendement ${nf(R.recette.rendement, 2)}` : ''}${lignes.some(l => l.prixSource && l.prixSource !== 'magasin') ? ' · les prix sans valeur pour ce magasin viennent d’un autre magasin' : ''}</div>`;
+        ${(n => n ? `<div class="fi-note fi-rnote">${n}</div>` : '')([mat == null && R.cout && R.cout.net != null ? `coût de recette ${fPt(R.cout.net)} (${esc(R.cout.source || '')})` : '', R.recette && R.recette.rendement && R.recette.rendement !== 1 ? `rendement ${nf(R.recette.rendement, 2)}` : '', lignes.some(l => l.prixSource && l.prixSource !== 'magasin') ? 'les prix sans valeur pour ce magasin viennent d’un autre magasin' : ''].filter(Boolean).join(' · '))}`;
     }
     const titreRec = `<div class="fi-rct"><span class="fi-rh">La recette, pièce par pièce</span><span class="fi-note">${matA != null ? 'coût de recette ' + fPt(matA) + ' la pièce, aux prix du panel aujourd’hui' + (matT != null ? ' · ' + fPt(matT) + ' gravé avec les tickets du jour' : '') : (mat != null ? 'coût matière ' + fPt(mat) + ' la pièce, gravé avec les tickets' : 'coût de la pièce inconnu')}</span></div>`;
     // 3. La marge brute en %, seule (10/10/2026) : la cascade pièce par pièce et le « Face à » sont retirés.
@@ -3459,8 +5195,7 @@
       const pS = sim != null ? sim : prix, tauxS = 100 * (pS - mat) / pS;
       marge = `<div class="fi-rmb${sim != null ? ' sim' : ''}"><b class="${tauxS >= 100 - se.food ? 'ok' : (tauxS >= 100 - se.food - 8 ? 'att' : 'ko')}">${fP0(tauxS)}</b><small>${sim != null ? 'au prix testé ' + fPt(sim) : 'au prix encaissé ' + fPt(prix)}</small></div>`;
     }
-    return `<div class="fi-barre"><span class="fi-note">une pièce vendue ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · ${matA != null ? 'coût de recette aux prix du panel aujourd’hui, relu à chaque ouverture' : 'coût de recette net gravé avec les tickets'}</span></div>
-      ${h}<div class="fi-rdeux mb"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">Marge brute</span></div>${marge}</section></div>`;
+    return `${h}<div class="fi-rdeux mb"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">Marge brute</span></div>${marge}</section></div>`;
   }
   let ficheEnRendu = false;   // vrai pendant le redessin : le blur que Chrome lance en retirant le champ n'est pas une sortie du champ
   /** La fiche d'une matière première, dépliée sous sa ligne de recette : lue sur l'API du panel seulement. */
@@ -3524,26 +5259,28 @@
       const av = clos.slice(0, 6).reduce((a, v) => a + (v || 0), 0), ap = clos.slice(6).reduce((a, v) => a + (v || 0), 0), tend = av > 0 ? 100 * (ap - av) / av : null;
       const face = totR > 0 ? 100 * (tot - totR) / totR : null;
       corps = `<div class="fi-barre"><span class="fi-note">semaines du lundi au dimanche · la dernière est en cours (${W.jours ? W.jours[W.jours.length - 1] : '?'} j) · le réseau : la moyenne par magasin, sans magasin nommé</span></div>
-        <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#2a78d6"></i>${esc(court)}</span><span><i class="ln" style="background:#eb6834"></i>le réseau, moyenne par magasin</span></div>${ficheCourbe(W)}</div>
+        <div class="fi-deux"><div><div class="fi-leg"><span><i class="ln" style="background:#2a78d6"></i>${esc(court)}</span><span><i class="ln" style="background:#eb6834"></i>le réseau, moyenne par magasin</span><span>un clic sur une semaine : sa valeur</span></div>${ficheCourbe(W)}</div>
           <div class="fi-cote"><div class="k">${esc(court)}, 12 semaines</div>
             <div class="r"><span>Pièces</span><b>${fN(tot)}</b></div><div class="r"><span>Par semaine</span><b>${nf(moy, 1)}</b></div>
             <div class="r"><span>6 dernières face aux 6 d’avant</span><b class="${tend == null ? '' : (tend >= 0 ? 'up' : 'dn')}">${fSg(tend)}</b></div>
             <div class="sep"></div><div class="r"><span>Moyenne par magasin du réseau</span><b>${fN(totR)}</b></div><div class="r"><span>Face au réseau</span><b class="${face == null ? '' : (face >= 0 ? 'up' : 'dn')}">${fSg(face)}</b></div>
-            <div class="fi-note">en pièces ; un grand magasin vend plus : la taille compte (onglet Prix, volume à taille égale)</div></div></div>
-        <table class="fi-tab"><thead><tr><th>Semaine</th>${(W.tranches || []).map((l, i) => `<th>${esc(l)}${i === M.length - 1 ? '*' : ''}</th>`).join('')}</tr></thead><tbody>
-          <tr class="moi"><td>${esc(court)}</td>${M.map(v => `<td>${v == null ? '—' : fN(v)}</td>`).join('')}</tr><tr><td>Réseau, moyenne</td>${R.map(v => `<td>${v == null ? '—' : nf(v, 0)}</td>`).join('')}</tr></tbody></table>
-        <div class="fi-note">* en cours.</div>`;
+            </div></div>`;
+      // Plus de tableau des semaines (10/10/2026) : un clic sur un point du graphique montre sa valeur.
     } else {
       const P = d.prix, seg = `<span class="fi-seg">${[[1, 'Dernier mois'], [3, '3 derniers mois'], [12, '12 mois']].map(([v, l]) => `<button type="button" data-fmois="${v}" class="${F.mois === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
       if (!P) { corps = `<div class="fi-barre">${seg}</div><div class="fi-msg">${esc(d.prixMotif || 'pas de prix comparable sur la période')}</div>`; }
       else { const me = P.magasin, re = P.reseau;
-        corps = `<div class="fi-barre">${seg}<span class="fi-note">${esc(P.periode)} · prix encaissé = chiffre ÷ pièces, remises comprises · volume à taille égale = pièces pour 10 000 € de chiffre du magasin</span></div>
-          <div class="fi-deux"><div><div class="fi-leg"><span><i class="pt"></i>${esc(court)}</span><span><i class="zn"></i>la plage du réseau : du plus bas au plus haut, en prix et en volume</span><span><i class="ln" style="background:#5f5a54;height:1px"></i>prix réseau et volume moyen</span></div>${ficheNuage(P)}</div>
+        // Les autres magasins (10/10/2026) : leur prix de vente en caisse, leur prix encaissé et leur volume.
+        const MG = (P.magasins || []).slice().sort((a, b) => (b.moi ? 1 : 0) - (a.moi ? 1 : 0) || a.p - b.p);
+        const mgL = MG.length ? `<div class="sep"></div><div class="fi-mg"><span class="t">Magasin</span><span class="t">Vente</span><span class="t">Encaissé</span><span class="t">/ 10 k€</span>${MG.map(x => `<span class="${x.moi ? 'moi' : ''}">${esc(x.nom)}</span><span>${x.brut != null ? fPx(x.brut) : '—'}</span><span>${fPx(x.p)}</span><span>${nf(x.v10k, 0)}</span>`).join('')}</div>` : '';
+        corps = `<div class="fi-barre">${seg}</div>
+          <div class="fi-deux"><div><div class="fi-leg"><span><i class="pt"></i>${esc(court)}</span><span><i class="pt" style="background:#9a9187"></i>les autres magasins</span><span><i class="ln" style="background:#5f5a54;height:1px"></i>prix réseau et volume moyen</span><span>un clic sur un point : ses valeurs</span></div>${ficheNuage(P)}</div>
             <div class="fi-cote"><div class="k">${esc(court)}, ${esc(P.periode)}</div>
+              <div class="r"><span>Prix de vente en caisse</span><b>${me.brut != null ? fPx(me.brut) : '—'}</b></div>
               <div class="r"><span>Prix encaissé</span><b>${fPx(me.p)}</b></div><div class="r"><span>Prix réseau (médiane)</span><b>${fPx(re.med)}</b></div><div class="r"><span>Écart</span><b>${fSg(me.ec, 1)}</b></div>
               <div class="sep"></div><div class="r"><span>Pièces vendues</span><b>${fN(me.q)}</b></div><div class="r"><span>Pour 10 000 € de chiffre</span><b>${nf(me.v10k, 1)}</b></div><div class="r"><span>Face aux autres magasins</span><b class="${me.rel == null ? '' : (me.rel >= 0 ? 'up' : 'dn')}">${fSg(me.rel)}</b></div>
               <div class="sep"></div><div class="r"><span>Au prix réseau, par mois</span><b class="${me.auMed > 0 ? 'up' : ''}">${me.auMed > 0 ? '+' : (me.auMed < 0 ? '−' : '')}${fE(Math.abs(me.auMed))}</b></div>
-              <div class="fi-note">à volume égal ; un prix plus haut peut faire vendre moins${me.peu ? ' · moins de 5 pièces sur la période : à lire avec prudence' : ''} · le réseau : ${re.magasins} magasins, prix de ${fPx(re.min)} à ${fPx(re.max)}</div></div></div>`; }
+              ${me.peu ? '<div class="fi-note">moins de 5 pièces sur la période : à lire avec prudence</div>' : ''}${mgL}</div></div>`; }
     }
     box.innerHTML = `<div class="fi-voile" data-ffermer="1"></div><div class="fi-modale" role="dialog" aria-modal="true" aria-label="${esc(F.nom)}">
       <div class="fi-hd"><div class="t"><h2>${esc(F.nom)}</h2><div class="s">${esc(d && d.cat ? d.cat + ' · ' : '')}${esc(mag)}</div><div class="fi-chips">${chips}</div></div><button type="button" class="fi-x" data-ffermer="1" aria-label="fermer">✕</button></div>
@@ -3551,9 +5288,10 @@
       <div class="fi-bd">${corps}</div></div>`;
     if (defil) { const nm = box.querySelector('.fi-modale'); if (nm) { nm.scrollTop = defil; } }
     box.querySelectorAll('[data-ffermer]').forEach(b => b.addEventListener('click', ficheFermer));
-    box.querySelectorAll('[data-fong]').forEach(b => b.addEventListener('click', () => { S.fiche.onglet = +b.dataset.fong; ficheRendre(); }));
+    ficheTips(box);
+    box.querySelectorAll('[data-fong]').forEach(b => b.addEventListener('click', () => { S.fiche.onglet = +b.dataset.fong; S.fiche.tip = null; ficheRendre(); }));
     box.querySelectorAll('[data-fmois]').forEach(b => b.addEventListener('click', () => { S.fiche.mois = +b.dataset.fmois; ficheLire(); ficheRendre(); }));
-    // Le prix de vente de l'onglet « Recette & marge » : tapé, par pas de 5 centimes ou choisi dans les paliers ; il recalcule la pièce.
+    // Le prix de vente de l'onglet « Recette & marge » : tapé ou par pas de 5 centimes ; il recalcule la pièce.
     const prixEnc = F.q > 0 && F.v != null ? F.v / F.q : null;
     const simA = (v, saisie) => { S.fiche.simPrix = v > 0 && (prixEnc == null || Math.abs(v - prixEnc) >= 0.005) ? Math.round(v * 100) / 100 : null; if (saisie != null) { S.fiche.simSaisie = saisie; } else { delete S.fiche.simSaisie; } ficheRendre(); };
     const refocus = (sel, pos) => { const n = document.querySelector('#db-fiche ' + sel); if (n) { n.focus(); if (pos != null) { try { n.setSelectionRange(pos, pos); } catch (e) { /* champ sans sélection */ } } } };
@@ -3563,7 +5301,6 @@
       tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bascule(); } });
     });
     box.querySelectorAll('[data-fmatrelire]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); ficheLireMatiere(b.dataset.fmatrelire, true); ficheRendre(); }));
-    box.querySelectorAll('[data-fsim]').forEach(b => b.addEventListener('click', () => simA(+b.dataset.fsim)));
     box.querySelectorAll('[data-fsimx]').forEach(b => b.addEventListener('click', () => simA(null)));
     box.querySelectorAll('[data-fsimpas]').forEach(b => b.addEventListener('click', () => { simA(Math.max(0.05, (S.fiche.simPrix != null ? S.fiche.simPrix : (prixEnc || 0)) + +b.dataset.fsimpas)); refocus(`[data-fsimpas="${b.dataset.fsimpas}"]`); }));
     const inp = box.querySelector('[data-fsiminput]');
@@ -3650,10 +5387,182 @@
     const sommeM = parMarge ? cats.reduce((t, c) => t + (c.m == null ? 0 : c.m), 0) : null;
     const totM = R ? R.m : sommeM;
     const ecCa = R ? R.ca - somme : 0, ecM = R ? R.m - sommeM : 0;
-    const ecart = R && (Math.abs(ecCa) >= 0.5 || Math.abs(ecM) >= 0.5) ? `<div class="db-al ec" title="CA et marge de la journée moins la somme des produits : lignes de caisse sans produit, remises sur ticket, arrondis"><span></span><span class="nom">Non ventilé<span class="sub">${(() => { const nS = cats.reduce((t, c) => t + (c.nSans || 0), 0), vS = cats.reduce((t, c) => t + (c.vSans || 0), 0);
-      return nS ? 'la marge des ' + nS + ' produit' + (nS > 1 ? 's' : '') + ' sans coût (' + fU(vS) + ' de ventes), estimée par le P&L' + (Math.abs(ecCa) >= 0.5 ? ' · lignes sans produit, remises' : '') : 'lignes de caisse sans produit, remises, arrondis'; })()}</span></span><span></span><span class="n">${fE(ecCa)}</span><span class="n mu">${tot > 0 ? fP0(100 * ecCa / tot) : ''}</span><span class="n mg">${fE(ecM)}</span><span class="n"></span><span class="n coef"></span></div>` : '';
+    const ecart = R && (Math.abs(ecCa) >= 0.5 || Math.abs(ecM) >= 0.5) ? `<div class="db-al ec" title="CA et marge de la journée moins la somme des produits : lignes de caisse sans produit, remises sur ticket, tickets pas encore lus, arrondis"><span></span><span class="nom">Non ventilé<span class="sub">${(() => { const nS = cats.reduce((t, c) => t + (c.nSans || 0), 0), vS = cats.reduce((t, c) => t + (c.vSans || 0), 0);
+      // Ce que l'écart de CA contient (11/10/2026) : les lignes sans produit et les remises sur ticket des relevés, le reste
+      // ce sont des tickets passés depuis la dernière lecture.
+      const A = R.A, cL = A && A.detail ? (A.caLignes || 0) + (A.caTickets || 0) : null;
+      const quoi = Math.abs(ecCa) < 0.5 ? '' : cL == null ? 'lignes sans produit, remises, tickets pas encore lus'
+        : [Math.abs(cL) >= 0.5 ? 'lignes sans produit, remises' : '', ecCa - cL >= 0.5 ? 'tickets pas encore lus' + (A.luA ? ' (lecture de ' + A.luA + ')' : '') : ''].filter(Boolean).join(', ');
+      return [nS ? 'la marge des ' + nS + ' produit' + (nS > 1 ? 's' : '') + ' sans coût (' + fU(vS) + ' de ventes), estimée par le P&L' : '', quoi].filter(Boolean).join(' · ') || 'arrondis'; })()}</span></span><span></span><span class="n">${fE(ecCa)}</span><span class="n mu">${tot > 0 ? fP0(100 * ecCa / tot) : ''}</span><span class="n mg">${fE(ecM)}</span><span class="n"></span><span class="n coef"></span></div>` : '';
     const pied = ecart + `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${fams.length} groupe${fams.length > 1 ? 's' : ''} · ${cats.length} catégorie${cats.length > 1 ? 's' : ''}</span></span><span></span><span class="n">${fE(tot)}</span><span class="n mu">100 %</span><span class="n mg">${parMarge ? fE(totM) : ''}</span><span class="n">${parMarge && tot > 0 ? (R ? fP(100 * totM / tot) : fP0(100 * totM / tot)) : ''}</span><span class="n coef">${parMarge && tot > 0 ? coefTxt(coef(tot, totM)) : ''}</span></div>`;
     return `<div class="db-acc">${entete}${rows}${pied}</div>`;
+  }
+
+  /* Les promotions du panel reconnues dans les tickets (10/10/2026, maquette B3 · 3) : l'onglet Promotions des ventes
+   * par catégorie. Une couleur par promotion, dans l'ordre de leurs
+   * ventes ; la remise qu'aucune promotion n'explique en gris. Le poids d'une promotion : ses ventes ÷ le CA complet,
+   * et dans chaque catégorie qu'elle touche, ses ventes ÷ le CA de la catégorie. */
+  const PROMO_COUL = ['#2a78d6', '#eb6834', '#2d7a3e', '#8e44ad', '#c2185b', '#00838f', '#b8860b'];
+  function promosDe(st) {
+    const P = st && st.promos;
+    if (!P || !Array.isArray(P.regles)) { return null; }
+    const coul = {}, regle = {}; let i = 0;
+    P.regles.forEach(r => { coul[r.id] = r.id === 'x' ? '#9a9187' : PROMO_COUL[i++ % PROMO_COUL.length]; regle[r.id] = r; });
+    const PP = P.produits || {}, parCat = {}, caCat = {};
+    (st.categories || []).forEach(c => { caCat[c.nom] = (caCat[c.nom] || 0) + (c.v || 0); (c.produits || []).forEach(p => { const x = PP[String(p.id)]; if (!x) { return; }
+      Object.keys(x).forEach(id => { const o = parCat[id] || (parCat[id] = {}); o[c.nom] = (o[c.nom] || 0) + x[id][1]; }); }); });
+    return { P, coul, regle, PP, parCat, caCat, ca: (st.totaux && st.totaux.ca) || 0, tickets: st.totaux && st.totaux.tickets };
+  }
+  const promoPastille = p => { const a = 0.12 + 0.88 * Math.min(1, p / 80); return `<span class="pr-pl" style="background:rgba(42,120,214,${a.toFixed(2)});color:${a > 0.55 ? '#fff' : '#1f4e8c'}">${p > 0 && p < 10 ? fP(p) : fP0(p)}</span>`; };
+  const promoPct = p => p > 0 && p < 10 ? fP(p) : fP0(p);
+  /** L'onglet Promotions : le bandeau (part du CA, remises, tickets, les promotions), puis groupe › catégorie › produit › promotion. */
+  function promoOnglet(st, catsM) {
+    const D = promosDe(st), jour = S.date === AUJ ? 'aujourd’hui' : 'ce jour';
+    if (!D) { return `<div class="db-note" style="padding:12px 16px">Les promotions se lisent dans les tickets : pas encore disponibles pour cette période.</div>`; }
+    const { P, coul, regle, PP } = D, tot = D.ca || catsM.reduce((a, c) => a + c.ca, 0);
+    const reglesV = P.regles.filter(r => r.v > 0 || r.r > 0);
+    const chips = reglesV.map(r => `<span class="pr-tg" style="--c:${coul[r.id]}" title="${esc(r.texte || '')}">${esc(r.nom)} <b>×${fN(r.fois)}</b></span>`).join('');
+    const bande = `<div class="pr-bd"><div class="k"><b>${promoPct(tot > 0 ? 100 * P.v / tot : 0)}</b><span>du CA en promotion<br>${fU(P.v)} sur ${fU(tot)}</span></div>
+      <div class="k"><b>${fU(P.r)}</b><span>de remises<br>${tot > 0 ? promoPct(100 * P.r / tot) : '—'} du CA</span></div>
+      <div class="k"><b>${fN(P.tickets || 0)}${D.tickets ? ' / ' + fN(D.tickets) : ''}</b><span>tickets avec<br>une promotion</span></div>
+      <div class="pr-chips">${chips || `<span class="db-mini">aucune promotion déclenchée ${jour}</span>`}</div></div>`;
+    const sans = (P.joursSans || []).length ? `<div class="db-mini pr-sans">${P.joursSans.length} jour${P.joursSans.length > 1 ? 's' : ''} lu${P.joursSans.length > 1 ? 's' : ''} avant le relevé des remises : sans promotions.</div>` : '';
+    const err = P.erreur ? `<div class="db-mini pr-sans">${esc(P.erreur)}</div>` : '';
+    // Chaque produit : ses ventes en promotion, toutes promotions confondues.
+    const somme = id => { const x = PP[String(id)]; if (!x) { return null; } let q = 0, v = 0, r = 0; Object.values(x).forEach(a => { q += a[0]; v += a[1]; r += a[2]; }); return { q, v, r }; };
+    const G = {};
+    catsM.forEach(c => {
+      const g = (c.groupe || 'Autres').split(' · ')[0];
+      const f = G[g] || (G[g] = { nom: g, ca: 0, q: 0, cats: [], nCats: 0, pv: 0, pq: 0, pr: 0 });
+      f.ca += c.ca; f.q += c.q || 0; f.nCats++;
+      const prods = (c.produits || []).map(p => Object.assign({ pr: somme(p.id) }, p)).filter(p => p.pr);
+      if (!prods.length) { return; }
+      const cx = { nom: c.categorie, ca: c.ca, q: c.q || 0, refs: c.refs, prods, pv: 0, pq: 0, pr: 0 };
+      prods.forEach(p => { cx.pv += p.pr.v; cx.pq += p.pr.q; cx.pr += p.pr.r; });
+      f.cats.push(cx); f.pv += cx.pv; f.pq += cx.pq; f.pr += cx.pr;
+    });
+    const touches = Object.values(G).filter(f => f.cats.length).sort((a, b) => b.pv / b.ca - a.pv / a.ca);
+    const autres = Object.values(G).filter(f => !f.cats.length).sort((a, b) => b.ca - a.ca);
+    const part = (v, ca) => ca > 0 ? 100 * v / ca : 0;
+    const barre = (w, c) => `<span class="barre"><i style="width:${Math.max(w > 0 ? 1 : 0, Math.min(100, w)).toFixed(1)}%;background:${c || '#2a78d6'}"></i></span>`;
+    const cols = (ca, pv, pr, pq, qt) => `${barre(part(pv, ca))}<span class="n">${fU(ca)}</span><span class="n pr-pv">${fU(pv)}</span><span class="n">${promoPastille(part(pv, ca))}</span><span class="n pr-rm">${pr > 0.004 ? '−' + fU(pr) : '<span class="mu">—</span>'}</span><span class="n">${fN(pq)}<small> / ${fN(qt)}</small></span>`;
+    // Le premier groupe et sa première catégorie s'ouvrent d'eux-mêmes ; un clic les referme (clé « ! »).
+    const ouvert = (k, defaut) => defaut ? !S.cOuv[k + '!'] : !!S.cOuv[k];
+    const cle = (k, defaut) => defaut ? k + '!' : k;
+    const tog = on => `<span class="db-tog ${on ? 'on' : ''}">${on ? '▾' : '▸'}</span>`;
+    let rows = '';
+    touches.forEach((f, gi) => {
+      f.cats.sort((a, b) => b.pv / b.ca - a.pv / a.ca);
+      const kg = 'pg:' + f.nom, og = ouvert(kg, gi === 0);
+      rows += `<div class="db-al g" data-cacc="${esc(cle(kg, gi === 0))}"><span>${tog(og)}</span><span class="nom">${esc(f.nom)}<span class="sub">${f.nCats} catégorie${f.nCats > 1 ? 's' : ''}${f.cats.length < f.nCats ? ' · ' + f.cats.length + ' avec promotion' : ''}</span></span>${cols(f.ca, f.pv, f.pr, f.pq, f.q)}</div>`;
+      if (!og) { return; }
+      f.cats.forEach((c, ci) => {
+        const kc = 'pc:' + c.nom, oc = ouvert(kc, gi === 0 && ci === 0);
+        rows += `<div class="db-al c" data-cacc="${esc(cle(kc, gi === 0 && ci === 0))}"><span>${tog(oc)}</span><span class="nom">${esc(c.nom)}<span class="sub">${c.refs != null ? c.refs + ' réf. · ' : ''}${fN(c.q)} pièces${c.prods.length < (c.refs || 0) ? ' · ' + c.prods.length + ' en promotion' : ''}</span></span>${cols(c.ca, c.pv, c.pr, c.pq, c.q)}</div>`;
+        if (!oc) { return; }
+        c.prods.sort((a, b) => part(b.pr.v, b.v) - part(a.pr.v, a.v) || b.v - a.v).forEach(p => {
+          const clic = /^\d+$/.test(String(p.id || ''));
+          rows += `<div class="db-al p${clic ? ' clic' : ''}"${clic ? ` data-fprod="${esc(p.id)}" data-fnom="${esc(p.nom)}" data-fq="${p.q != null ? p.q : ''}" data-fv="${p.v != null ? p.v : ''}" data-ft="${p.taux != null ? p.taux : ''}" data-fc="${p.c != null ? p.c : ''}" data-fcat="${esc(c.nom)}" role="button" tabindex="0" title="les ventes sur 12 semaines, le prix face au réseau, la recette et la marge"` : ''}><span></span><span class="nom">${esc(p.nom)}<span class="sub">${fN(p.q)} vendu${p.q > 1 ? 's' : ''}</span></span>${cols(p.v, p.pr.v, p.pr.r, p.pr.q, p.q)}</div>`;
+          // Une ligne par promotion, ses propres chiffres dans les colonnes.
+          Object.entries(PP[String(p.id)] || {}).sort((a, b) => b[1][1] - a[1][1]).forEach(([id, x]) => {
+            const R = regle[id] || { nom: 'Promotion ' + id };
+            rows += `<div class="db-al u3" title="${esc(R.texte || '')}"><span></span><span class="nom"><i class="pr-pd" style="background:${coul[id] || '#9a9187'}"></i>${esc(R.nom)}<span class="sub">${fN(x[3])} fois</span></span>${barre(part(x[1], p.v), coul[id])}<span class="n"></span><span class="n pr-pv">${fU(x[1])}</span><span class="n mu">${promoPct(part(x[1], p.v))}</span><span class="n pr-rm">${x[2] > 0.004 ? '−' + fU(x[2]) : '<span class="mu">—</span>'}</span><span class="n">${fN(x[0])}</span></div>`;
+          });
+        });
+      });
+    });
+    if (autres.length) {
+      const caA = autres.reduce((a, f) => a + f.ca, 0);
+      rows += `<div class="db-al g eteint"><span></span><span class="nom">Sans promotion ${jour}<span class="sub">${autres.map(f => esc(f.nom)).join(' · ')}</span></span>${barre(0)}<span class="n">${fU(caA)}</span><span class="n"><span class="mu">—</span></span><span class="n"></span><span class="n"></span><span class="n"></span></div>`;
+    }
+    const qT = catsM.reduce((a, c) => a + (c.q || 0), 0);
+    rows += `<div class="db-al tot"><span></span><span class="nom">Total<span class="sub">${Object.keys(G).length} groupe${Object.keys(G).length > 1 ? 's' : ''} · ${touches.length} touché${touches.length > 1 ? 's' : ''} par une promotion</span></span>${cols(tot, P.v, P.r, P.q, qT)}</div>`;
+    const ent = `<div class="db-ent"><span></span><span>Groupe › catégorie › produit</span><span>Part vendue en promotion</span><span class="n">CA</span><span class="n">En promo</span><span class="n">Part</span><span class="n">Remise</span><span class="n">Pièces promo</span></div>`;
+    return bande + sans + err + `<div class="db-acc pro">${ent}${rows}</div>`;
+  }
+  /* Les portions (10/10/2026, maquette A + la colonne « reste » de B) : les catégories qui vendent en parts. Par produit,
+   * combien en entière, en ½, en ¼… ; ce que ça fait en pièces entières ; ce qui reste en parts dans la dernière pièce
+   * coupée (estimation : rien de la veille, rien de recoupé) ; le CA et le CA par pièce entière. */
+  const PORT_COUL = ['#1f4e8c', '#2a78d6', '#5c9be3', '#9cc3f0', '#c5dcf6'];
+  const PORT_LIB = { 1: 'Entière', 0.5: '½', 0.3333: '⅓', 0.25: '¼', 0.1667: '⅙', 0.125: '⅛', 0.75: '¾' };
+  const portLib = (f, lib) => PORT_LIB[f] || lib || nf(f, 2);
+  /** Un nombre de pièces en quarts lisibles : 3 ¾, ½ ; sinon deux décimales. */
+  const portFrac = v => { if (v < 0.001) { return '0'; } const e = Math.floor(v + 1e-9), r = v - e, q = Math.round(r * 4); if (Math.abs(r - q / 4) > 0.01) { return nf(v, 2); } const s = ['', '¼', '½', '¾', ''][q]; const n = q === 4 ? e + 1 : e; return (n ? String(n) : '') + (n && s ? ' ' : '') + s; };
+  function portionsDe(st, catsM) {
+    const prixCat = (st && st.portions && st.portions.prix) || {};
+    const cats = [];
+    catsM.forEach(c => {
+      const P = c.produits || [];
+      if (!P.some(p => p.portion)) { return; }
+      const B = {};
+      P.forEach(p => {
+        const pid = String(p.id).split(':')[0], f = p.portion ? p.portion.f : 1;
+        const x = B[pid] || (B[pid] = { pid, nom: p.portion ? String(p.nom).replace(/\s+—\s+[^—]*$/, '') : p.nom, t: {}, q: 0, v: 0, c: 0, cInconnu: false });
+        const k = f == null ? 'x:' + (p.portion.lib || '?') : String(f);
+        const o = x.t[k] || (x.t[k] = { f, lib: p.portion ? p.portion.lib : '', q: 0, v: 0 });
+        o.q += p.q || 0; o.v += p.v || 0; x.q += p.q || 0; x.v += p.v || 0;
+      });
+      const prods = Object.values(B).map(x => {
+        const ent = x.t['1'];
+        const pe = Object.values(x.t).reduce((a, o) => a + (o.f != null && o.f < 1 ? o.f * o.q : 0), 0);
+        const coupees = Math.ceil(pe - 1e-9);
+        return Object.assign(x, { eq: Object.values(x.t).reduce((a, o) => a + (o.f != null ? o.f * o.q : 0), 0), parts: Object.values(x.t).some(o => o.f !== 1),
+          prixE: ent && ent.q > 0 ? ent.v / ent.q : null, prixCat: prixCat[x.pid] != null ? +prixCat[x.pid] : null, reste: coupees - pe });
+      }).sort((a, b) => b.eq - a.eq);
+      cats.push({ nom: c.categorie, ca: c.ca, refs: c.refs, prods, eq: prods.reduce((a, x) => a + x.eq, 0), reste: prods.reduce((a, x) => a + x.reste, 0),
+        caParts: prods.reduce((a, x) => a + Object.values(x.t).reduce((b, o) => b + (o.f !== 1 ? o.v : 0), 0), 0) });
+    });
+    return cats;
+  }
+  function portionOnglet(st, catsM) {
+    const C = portionsDe(st, catsM);
+    if (!C.length) { return `<div class="db-note" style="padding:12px 16px">Aucune catégorie vendue en portions sur cette période.</div>`; }
+    // Les tailles présentes, de l'entière à la plus petite part : une colonne chacune.
+    const F = {}; C.forEach(c => c.prods.forEach(x => Object.entries(x.t).forEach(([k, o]) => { F[k] = o; })));
+    const tailles = Object.keys(F).sort((a, b) => (F[b].f == null ? -1 : F[b].f) - (F[a].f == null ? -1 : F[a].f));
+    const coul = {}; tailles.forEach((k, i) => { coul[k] = PORT_COUL[Math.min(i, PORT_COUL.length - 1)]; });
+    const grille = `grid-template-columns:22px minmax(120px,1.25fr) minmax(56px,1.4fr) ${tailles.map(() => '44px').join(' ')} 66px 66px 78px 72px`;
+    const caT = C.reduce((a, c) => a + c.ca, 0), caParts = C.reduce((a, c) => a + c.caParts, 0), eqT = C.reduce((a, c) => a + c.eq, 0), resteT = C.reduce((a, c) => a + c.reste, 0);
+    const noms = C.map(c => c.nom.split(' ')[0].toLowerCase()).join(' et ');
+    const leg = `<span class="pt-leg">${tailles.map(k => `<span><i style="background:${coul[k]}"></i>${portLib(F[k].f, F[k].lib)}</span>`).join('')}<span><i class="rs"></i>reste en parts</span></span>`;
+    const bande = `<div class="pr-bd"><div class="k"><b>${fP0(caT > 0 ? 100 * caParts / caT : 0)}</b><span>du CA ${esc(noms)}<br>vendu en portions</span></div>
+      <div class="k"><b>${portFrac(eqT)}</b><span>pièces entières<br>vendues</span></div><div class="k"><b>${fU(eqT > 0 ? caT / eqT : 0)}</b><span>par pièce entière<br>en moyenne</span></div>
+      <div class="k"><b class="ko">${portFrac(resteT)}</b><span>pièces encore en parts<br>si rien ne restait d’hier</span></div>${leg}</div>`;
+    const barre = (x, ref) => { let g = 0; const segs = tailles.map(k => { const o = x.t[k]; if (!o || o.f == null || !o.q) { return ''; } const w = 100 * o.f * o.q / Math.max(ref, 1e-9); const s = `<i style="left:${g.toFixed(2)}%;width:${w.toFixed(2)}%;background:${coul[k]}"></i>`; g += w; return s; }).join('');
+      return `<span class="barre pt-b">${segs}</span>`; };
+    const reste = r => r > 1e-6 ? `<span class="pt-r">reste ${portFrac(r)}</span>` : '<span class="mu">—</span>';
+    const cols = (x, ref) => barre(x, ref) + tailles.map(k => `<span class="n ts">${x.t[k] && x.t[k].q ? fN(x.t[k].q) : '<span class="mu">—</span>'}</span>`).join('')
+      + `<span class="n b eq">${portFrac(x.eq)}</span><span class="n rs">${reste(x.reste)}</span><span class="n ca">${fU(x.v != null ? x.v : x.ca)}</span><span class="n mu pe">${x.eq > 0 ? fU((x.v != null ? x.v : x.ca) / x.eq) : '—'}</span>`;
+    const ouvert = (k, defaut) => defaut ? !S.cOuv[k + '!'] : !!S.cOuv[k];
+    const cle = (k, defaut) => defaut ? k + '!' : k;
+    const tog = on => `<span class="db-tog ${on ? 'on' : ''}">${on ? '▾' : '▸'}</span>`;
+    const maxEq = Math.max(...C.map(c => c.eq));
+    let rows = '';
+    C.forEach((c, ci) => {
+      const k = 'po:' + c.nom, o = ouvert(k, ci === 0);
+      const cx = { t: {}, eq: c.eq, reste: c.reste, v: c.ca };
+      c.prods.forEach(x => Object.entries(x.t).forEach(([kk, t]) => { const a = cx.t[kk] || (cx.t[kk] = { f: t.f, q: 0 }); a.q += t.q; }));
+      rows += `<div class="db-al c" data-cacc="${esc(cle(k, ci === 0))}" style="${grille}"><span>${tog(o)}</span><span class="nom">${esc(c.nom)}<span class="sub">${c.refs != null ? c.refs + ' réf. · ' : ''}${fP0(c.ca > 0 ? 100 * c.caParts / c.ca : 0)} du CA en portions</span></span>${cols(cx, maxEq)}</div>`;
+      if (!o) { return; }
+      const ref = Math.max(...c.prods.map(x => x.eq));
+      c.prods.filter(x => x.parts).forEach(x => {
+        const pE = x.prixE != null ? 'entière à ' + fU(x.prixE) : (x.prixCat != null ? 'entière à ' + fU(x.prixCat) + ' au catalogue' : 'pas vendue entière');
+        const clic = /^\d+$/.test(x.pid);
+        rows += `<div class="db-al p${clic ? ' clic' : ''}" style="${grille}"${clic ? ` data-fprod="${esc(x.pid)}" data-fnom="${esc(x.nom)}" data-fq="${x.q}" data-fv="${x.v}" data-ft="" data-fc="" data-fcat="${esc(c.nom)}" role="button" tabindex="0" title="les ventes sur 12 semaines, le prix face au réseau, la recette et la marge"` : ''}><span></span><span class="nom">${esc(x.nom)}<span class="sub">${pE}</span></span>${cols(x, ref)}</div>`;
+      });
+      const ent = c.prods.filter(x => !x.parts);
+      if (ent.length) {
+        const ex = { t: { 1: { f: 1, q: ent.reduce((a, x) => a + x.q, 0) } }, eq: ent.reduce((a, x) => a + x.eq, 0), reste: 0, v: ent.reduce((a, x) => a + x.v, 0) };
+        rows += `<div class="db-al p eteint" style="${grille}"><span></span><span class="nom">${ent.length} autre${ent.length > 1 ? 's' : ''} vendue${ent.length > 1 ? 's' : ''} entière${ent.length > 1 ? 's' : ''} seulement<span class="sub">${esc(ent.slice(0, 3).map(x => x.nom).join(', '))}${ent.length > 3 ? '…' : ''}</span></span>${cols(ex, ref)}</div>`;
+      }
+    });
+    if (C.length > 1) {
+      const tx = { t: {}, eq: eqT, reste: resteT, v: caT };
+      C.forEach(c => c.prods.forEach(x => Object.entries(x.t).forEach(([kk, t]) => { const a = tx.t[kk] || (tx.t[kk] = { f: t.f, q: 0 }); a.q += t.q; })));
+      rows += `<div class="db-al tot" style="${grille}"><span></span><span class="nom">Total<span class="sub">${C.length} catégories vendues en portions</span></span>${cols(tx, Math.max(eqT, 1e-9))}</div>`;
+    }
+    const ent = `<div class="db-ent" style="${grille}"><span></span><span>Catégorie › produit</span><span class="pt-bh">En pièces entières, par taille</span>${tailles.map(k => `<span class="n ts">${portLib(F[k].f, F[k].lib)}</span>`).join('')}<span class="n eq">En entières</span><span class="n rs" title="ce qui reste en parts dans la dernière pièce coupée, si rien ne restait d’hier et que rien n’a été recoupé">Reste</span><span class="n ca">CA</span><span class="n pe">€ par entière</span></div>`;
+    return bande + `<div class="db-acc pot">${ent}${rows}</div>`;
   }
   /** Le planning déplié, groupé par secteur : le premier poste de travail de la personne dans le panel ; « sans secteur » sinon. */
   function planningSecteurs(plan, hMin, hMax) {
@@ -3693,7 +5602,7 @@
       ${tuile('Atteinte', sansO ? '—' : fP(100 * m.realise / m.attendu), sansO ? '' : 'à ce jour · ' + fSK(m.ecart) + ' · ' + fN(Math.abs(m.clientsManquants)) + ' clients ' + (m.clientsManquants > 0 ? 'manquants' : 'd’avance'), sansO ? '' : (m.ecart < 0 ? 'vif' : 'bon'))}
       ${tuile('Projection', proj == null ? '—' : fK(proj), proj == null ? '' : 'au rythme actuel · ' + fSK(proj - m.objectif) + ' vs objectif', proj == null ? '' : (proj < m.objectif ? 'vif' : 'bon'))}
       ${tuile('Reste à faire', sansO ? '—' : fK(m.reste), sansO ? '' : (restants.length ? restants.length + ' jour' + (restants.length > 1 ? 's' : '') + ' · ' + fK(m.reste / restants.length) + ' par jour' : (sem ? 'semaine close' : 'mois clos')))}
-      ${tuile('Par jour ouvert', fE(m.realise / nJ), fN(m.tickets / nJ) + ' clients · panier ' + fU(m.panier).replace(' €', '\u00a0€'))}
+      ${tuile('Par jour ouvert', fE(m.realise / nJ), [fN(m.tickets / nJ) + ' clients', panTxt(panDe(m)).replace(' €', '\u00a0€')].filter(Boolean).join(' · '))}
       ${tuile('Marge brute', m.margeBrutePct != null ? fP(m.margeBrutePct) : '—', fK(m.margeBrute || 0) + ' · matière ' + fP(m.coutMatierePct) + ' (seuil ' + fP((d.seuils || {}).food || 32) + ')')}
       ${tuile('Résultat net', m.net == null ? '—' : fSK(m.net), m.net == null ? esc(m.motifNet || '') : fP(m.netPct) + ' des ventes', m.net == null ? '' : (m.net >= 0 ? 'bon' : 'vif'))}
       ${tuile('Record', record ? fE(record.ca) : '—', record ? record.court + ' · ' + fN(record.tickets) + ' clients' + (record.objectif ? ' · ' + (pc(record.ca, record.objectif) >= 100 ? '+' : '') + Math.round(pc(record.ca, record.objectif) - 100) + ' % vs objectif' : '') : '', 'or')}
@@ -3707,6 +5616,7 @@
     // La journée en cours n'est pas jugée (hachurée) ; un jour futur montre son objectif.
     if (jours.length) {
       const cv = ['ca', 'att', 'cli'].includes(S.calVal) ? S.calVal : 'ca';
+      // Le panier total, clients pro compris (21/10/2026) : l'objectif clients se compare aux clients du jour, pro compris.
       const pan = m.panier || null;
       const objCli = j => j.objectif && pan ? Math.round(j.objectif / pan) : null;
       const fini = j => j.passe && !j.aujourdhui && j.ca != null && !j.ferme;
@@ -3721,7 +5631,7 @@
           v: j => [fN(j.ca), '€'], l: j => j.objectif ? 'objectif ' + fE(j.objectif) + ' · ' + sg(j.ca - j.objectif, ' €') : 'pas d’objectif', f: j => j.objectif ? 'objectif ' + fE(j.objectif) : '', leg: 'le CA face à l’objectif du jour' },
         att: { t: sem ? 'L’atteinte de chaque jour' : 'L’atteinte de chaque jour du mois', s: 'En grand : le CA en % de l’objectif du jour.', p: pCa,
           v: j => j.objectif ? [fN(pCa(j)), '%'] : ['—', ''], l: j => j.objectif ? fE(j.ca) + ' sur ' + fE(j.objectif) : fE(j.ca) + ' · pas d’objectif', f: j => j.objectif ? 'objectif ' + fE(j.objectif) : '', leg: 'l’atteinte de l’objectif du jour' },
-        cli: { t: sem ? 'Les clients de chaque jour' : 'Les clients de chaque jour du mois', s: 'En grand : les clients du jour. Couleur et jauge : face à l’objectif clients (objectif CA ÷ panier moyen ' + (pan ? fU(pan) : '—') + ').', p: pCli,
+        cli: { t: sem ? 'Les clients de chaque jour' : 'Les clients de chaque jour du mois', s: 'En grand : les clients du jour. Couleur et jauge : face à l’objectif clients (objectif CA ÷ panier moyen ' + (pan ? fU(pan) : '—') + (panDe(m).base === 'comptoir' ? ', clients pro compris comme les clients du jour' : '') + ').', p: pCli,
           v: j => [fN(j.tickets), 'clients'], l: j => objCli(j) ? 'objectif ' + fN(objCli(j)) + ' · ' + sg(j.tickets - objCli(j)) : 'pas d’objectif', f: j => objCli(j) ? 'objectif ' + fN(objCli(j)) + ' clients' : '', leg: 'les clients face à l’objectif clients du jour' }
       };
       const X = MODE[cv];
@@ -3751,7 +5661,7 @@
         <div class="db-perleg"><span class="cal-q">Couleur et jauge = ${X.leg}</span>${leg}<span><i class="cal-tr"></i>le trait : 100 % de l’objectif</span><span>hachuré : la journée en cours, pas encore jugée</span></div></div>`;
     }
     // Le P&L, et au mois le profil des jours à côté — deux cartes de même hauteur.
-    const pl = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${sem ? 'de la semaine' : 'du mois'}</span><span class="db-mini">matière : coût des recettes vendues · personnel : planning × taux · frais généraux : panel</span></div>${cascade(m, d)}</div>`;
+    const pl = `<div class="db-card"><div class="ct"><span class="db-lab">Le P&amp;L ${sem ? 'de la semaine' : 'du mois'}</span></div>${cascade(m, d)}</div>`;
     let prof = '';
     if (!sem && passes.length) {
       const NOMJ = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
@@ -3769,65 +5679,121 @@
   }
 
   /**
-   * Les six dernières semaines, face au N-1 — la même section que le drop du
-   * cockpit : la courbe des clients sur celle d'un an plus tôt en pointillé,
-   * trois tuiles, l'écart semaine par semaine. Sans N-1 (magasin trop jeune),
-   * la courbe reste seule et le motif se lit à la place de la tuile.
+   * Les douze dernières semaines, face au N-1 (19/10/2026, la courbe de Résultat › Trafic clients, demande de Sam) : une
+   * mesure de chaque semaine close sur celle de la même semaine un an plus tôt en pointillé, la bande entre les deux —
+   * bleue au-dessus du N-1, orange en dessous —, l'écart semaine par semaine et trois tuiles. Un sélecteur à trois
+   * positions choisit la mesure : les clients (tickets), le panier moyen (CA ÷ tickets), les articles par client (pièces
+   * vendues ÷ tickets). La semaine en cours, servie un jour ou deux, reste hors de la courbe (elle la ferait plonger) :
+   * sa tuile la compare au N-1 aux mêmes jours. Sans N-1 (magasin trop jeune), la courbe reste seule et le motif se lit
+   * à la place de la tuile.
    */
   function rendSemaines() {
-    const cle = 's6|' + S.shop + '|' + bornes()[0];
+    // Le panier hors clients pro (21/10/2026) : la courbe l'est quand chacune de ses semaines closes a ses tickets pro lus
+    // (`caComptoir` du serveur), et le N-1 ne s'y montre alors que hors pro lui aussi — sans relevé pro un an plus tôt,
+    // il se tait plutôt que de comparer un panier pro compris. Sinon toute la carte reste pro compris, et le dit.
+    let pCpt = false;
+    const S12_MESURES = {
+      clients: { nom: 'Clients', titre: 'clients', unite: 'clients de la semaine',
+        v: x => x && x.tickets > 0 ? x.tickets : null, cumul: L => ({ a: L.reduce((t, x) => t + x.tickets, 0), b: 1 }), f: v => fN(v) },
+      panier: { nom: 'Panier moyen', titre: 'panier moyen', unite: 'panier moyen de la semaine',
+        v: x => !x ? null : (pCpt ? (x.caComptoir != null && x.ticketsComptoir > 0 ? x.caComptoir / x.ticketsComptoir : null) : (x.tickets > 0 ? x.ca / x.tickets : null)),
+        cumul: L => pCpt ? { a: L.reduce((t, x) => t + x.caComptoir, 0), b: L.reduce((t, x) => t + x.ticketsComptoir, 0) } : { a: L.reduce((t, x) => t + x.ca, 0), b: L.reduce((t, x) => t + x.tickets, 0) }, f: v => fU(v) },
+      articles: { nom: 'Articles par client', titre: 'articles par client', unite: 'articles par client de la semaine',
+        v: x => x && x.tickets > 0 && x.articles != null ? x.articles / x.tickets : null, cumul: L => ({ a: L.reduce((t, x) => t + x.articles, 0), b: L.reduce((t, x) => t + x.tickets, 0) }), f: v => nf(v, 2) }
+    };
+    if (!S12_MESURES[S.s12m]) { let m = null; try { m = localStorage.getItem('db.s12m'); } catch (e) { /* navigation privée */ } S.s12m = S12_MESURES[m] ? m : 'clients'; }
+    const cle = 's12|' + S.shop + '|' + bornes()[0];
     const D = S.aux[cle];
-    const carte = (corps, sous) => `<div class="db-card"><div class="ct"><span class="db-lab">Les six dernières semaines — clients, face au N-1</span>${sous ? `<span class="db-mini">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
-    if (!D) { return carte(`<div class="db-note">${S.err[cle] ? esc(S.err[cle]) : 'Lecture des six semaines…'}</div>`); }
+    const mk = S.s12m, M = S12_MESURES[mk];
+    const bascule = `<span class="db-ong db-ong-p">${Object.entries(S12_MESURES).map(([k, x]) => `<button type="button" data-s12m="${k}" class="${k === mk ? 'on' : ''}" aria-pressed="${k === mk}">${x.nom}</button>`).join('')}</span>`;
+    const carte = (corps, sous) => `<div class="db-card"><div class="ct" style="flex-wrap:wrap;gap:8px"><span class="db-lab">Les douze dernières semaines — ${M.titre}, face au N-1</span>${bascule}${sous ? `<span class="db-mini" style="margin-left:auto">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
+    if (!D) { return carte(`<div class="db-note">${S.err[cle] ? esc(S.err[cle]) : 'Lecture des douze semaines…'}</div>`); }
     const pc = (a, b) => b ? 100 * a / b : 0;
-    const sg = v => (v >= 0 ? '+' : '−') + Math.abs(Math.round(v));
-    const col = v => v >= 3 ? '#2d7a3e' : (v <= -3 ? '#C0182B' : '#8a6508');
-    const W = (D.semaines || []).filter(w => w.source || (w.n1 && w.n1.source));
-    if (!W.length) { return carte(`<div class="db-note">Aucune semaine lue pour ce magasin.</div>`); }
-    const avecN1 = W.some(w => w.n1);
+    // Le signe se lit sur la valeur arrondie : −0,3 % s'écrit « 0 % », pas « −0 % ».
+    const sg = v => { const r = Math.round(v); return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r); };
+    // Bleu au-dessus du N-1, orange en dessous (des couleurs que les daltoniens distinguent), gris autour de zéro.
+    const HAUT = '#2E6DB4', BAS = '#C0632B';
+    const col = v => v >= 3 ? HAUT : (v <= -3 ? BAS : '#8b8177');
+    const lues = (D.semaines || []).filter(w => w.source || (w.n1 && w.n1.source));
+    const enCours = lues.length && lues[lues.length - 1].enCours ? lues[lues.length - 1] : null;
+    const W = lues.filter(w => !w.enCours).slice(-12);
+    if (!W.length) { return carte(`<div class="db-note">Aucune semaine close lue pour ce magasin.</div>`); }
+    const pLu = mk === 'panier' && W.some(w => 'caComptoir' in w);   // une réponse d'avant le 21/10/2026 n'en dit rien
+    pCpt = pLu && W.filter(w => w.source).every(w => w.caComptoir != null);
+    const n1Motif = pCpt && W.some(w => w.n1 && w.n1.source) && !W.some(w => w.n1 && w.n1.caComptoir != null)
+      ? 'N-1 sans ses tickets pro lus : pas de comparaison hors clients pro' : D.n1Motif;
+    const unite = M.unite + (pCpt ? ' hors clients pro' : (pLu ? ' (pro compris : tickets pro pas encore lus)' : ''));
+    const v = w => w.source ? M.v(w) : null, v1 = w => w.n1 ? M.v(w.n1) : null;
+    if (!W.some(w => v(w) != null)) {
+      return carte(`<div class="db-note">${mk === 'articles' ? 'Le panel ne rend pas les articles vendus pour ce magasin sur ces semaines.' : 'Aucune semaine close lue pour ce magasin.'}</div>`);
+    }
+    const avecN1 = W.some(w => v1(w) != null);
     const vals = [];
-    W.forEach(w => { if (w.source) { vals.push(w.tickets); } if (w.n1) { vals.push(w.n1.tickets); } });
-    const lo = Math.min(...vals) * 0.88, hi = Math.max(...vals) * 1.06 || 1;
-    const Wd = 1000, Hh = 190, ml = 30, mr = 64, mt = 26, mb = 30;
+    W.forEach(w => { if (v(w) != null) { vals.push(v(w)); } if (v1(w) != null) { vals.push(v1(w)); } });
+    // L'échelle suit l'étendue des valeurs : un panier qui va de 7,10 € à 7,60 € ne doit pas se lire tout plat.
+    const mn = Math.min(...vals), mx = Math.max(...vals), et = mx - mn;
+    const lo = mn - Math.max(et * 0.5, mn * 0.02), hi = mx + Math.max(et * 0.18, mx * 0.01) || 1;
+    const Wd = 1000, Hh = 190, ml = 30, mr = 30, mt = 26, mb = 30;
     const X = i => (ml + i * (Wd - ml - mr) / Math.max(1, W.length - 1)).toFixed(1);
-    const Y = v => (mt + (hi - v) / (hi - lo || 1) * (Hh - mt - mb)).toFixed(1);
+    const Y = y => (mt + (hi - y) / (hi - lo || 1) * (Hh - mt - mb)).toFixed(1);
     const ft = 'font-family:var(--font-ui)';
     let svg = `<svg viewBox="0 0 ${Wd} ${Hh}" preserveAspectRatio="xMinYMin meet" class="db-s6c">`;
     [1, 2].forEach(k => { const y = Y(lo + (hi - lo) * k / 3); svg += `<line x1="${ml}" x2="${Wd - mr}" y1="${y}" y2="${y}" stroke="rgba(34,34,34,.10)"/>`; });
-    const P = W.map((w, i) => w.source ? X(i) + ',' + Y(w.tickets) : null).filter(Boolean);
-    const P1 = W.map((w, i) => w.n1 ? X(i) + ',' + Y(w.n1.tickets) : null).filter(Boolean);
+    // La bande entre les deux courbes, semaine par semaine.
+    for (let i = 0; i < W.length - 1; i++) {
+      const a = v(W[i]), b = v(W[i + 1]), a1 = v1(W[i]), b1 = v1(W[i + 1]);
+      if (a == null || b == null || a1 == null || b1 == null) { continue; }
+      svg += `<polygon points="${X(i)},${Y(a)} ${X(i + 1)},${Y(b)} ${X(i + 1)},${Y(b1)} ${X(i)},${Y(a1)}" fill="${a + b >= a1 + b1 ? HAUT : BAS}" fill-opacity="0.14"/>`;
+    }
+    const P = W.map((w, i) => v(w) != null ? X(i) + ',' + Y(v(w)) : null).filter(Boolean);
+    const P1 = W.map((w, i) => v1(w) != null ? X(i) + ',' + Y(v1(w)) : null).filter(Boolean);
     if (P1.length > 1) { svg += `<polyline points="${P1.join(' ')}" fill="none" stroke="#b9b1a6" stroke-width="2" stroke-dasharray="5 4"/>`; }
     if (P.length > 1) { svg += `<polyline points="${P.join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="2.5"/>`; }
     W.forEach((w, i) => {
-      const up = !w.n1 || !w.source || w.tickets >= w.n1.tickets;
-      if (w.n1) { svg += `<circle cx="${X(i)}" cy="${Y(w.n1.tickets)}" r="3.5" fill="#fff" stroke="#b9b1a6" stroke-width="2"/><text x="${X(i)}" y="${(+Y(w.n1.tickets) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#666" style="${ft}">${fN(w.n1.tickets)}</text>`; }
-      if (w.source) { svg += `<circle cx="${X(i)}" cy="${Y(w.tickets)}" r="4" fill="#8D1D2C"/><text x="${X(i)}" y="${(+Y(w.tickets) + (up ? -9 : 16)).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${fN(w.tickets)}</text>`; }
-      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${w.enCours ? '#8D1D2C' : '#222'}" style="${ft}">S${w.iso}${w.enCours ? ' · en cours' : ''}</text>`;
+      const n = v(w), n1 = v1(w), up = n1 == null || n == null || n >= n1;
+      if (n1 != null) { svg += `<circle cx="${X(i)}" cy="${Y(n1)}" r="3.5" fill="#fff" stroke="#b9b1a6" stroke-width="2"/><text x="${X(i)}" y="${(+Y(n1) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#666" style="${ft}">${M.f(n1)}</text>`; }
+      if (n != null) { svg += `<circle cx="${X(i)}" cy="${Y(n)}" r="4" fill="#8D1D2C"/><text x="${X(i)}" y="${(+Y(n) + (up ? -9 : 16)).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${M.f(n)}</text>`; }
+      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#222" style="${ft}">S${w.iso}</text>`;
     });
     svg += '</svg>';
     const chips = W.map(w => {
-      const e = w.n1 && w.source ? pc(w.tickets - w.n1.tickets, w.n1.tickets) : null;
+      const n = v(w), n1 = v1(w), e = n != null && n1 ? pc(n - n1, n1) : null;
       const dates = (w.du.slice(5, 7) === w.au.slice(5, 7) ? w.du.slice(8, 10) : fD(w.du)) + '→' + fD(w.au);
-      const titre = (w.source ? fN(w.tickets) + ' clients · ' + fK(w.ca) : 'pas de vente lue') + (w.n1 ? ' · N-1 : ' + fN(w.n1.tickets) + ' clients · ' + fK(w.n1.ca) : ' · pas de N-1') + (w.enCours ? ' · ' + w.joursServis + ' jours servis' : '');
-      return `<div class="ch" title="${esc(titre)}"><span><b>S${w.iso}</b><span>${dates}</span></span>${avecN1 ? `<em style="background:${e == null ? '#c9c2b8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${w.source ? fN(w.tickets) : '—'}</em>`}</div>`;
+      const titre = (n != null ? M.f(n) + ' · ' + fN(w.tickets) + ' clients · ' + fK(w.ca) : 'pas de vente lue') + (n1 != null ? ' · N-1 : ' + M.f(n1) : ' · pas de N-1');
+      return `<div class="ch" title="${esc(titre)}"><span><b>S${w.iso}</b><span>${dates}</span></span>${avecN1 ? `<em style="background:${e == null ? '#c9c2b8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`}</div>`;
     }).join('');
-    const cur = W[W.length - 1], prev = W.length > 1 ? W[W.length - 2] : null;
-    const eT = D.totalN1 && D.totalN1.tickets ? pc(D.total.tickets - D.totalN1.tickets, D.totalN1.tickets) : null;
-    const meilleure = W.filter(w => w.source).reduce((a, b) => !a || b.tickets > a.tickets ? b : a, null);
-    const eP = prev && prev.source && cur.source ? pc(cur.tickets - prev.tickets, prev.tickets) : null;
+    // Les douze semaines : la mesure cumulée (clients : la somme ; panier et articles : le rapport des sommes), face au
+    // N-1 sur les seules semaines qui en ont un.
+    const comp = W.filter(w => v(w) != null && v1(w) != null);
+    const cN = M.cumul(comp), c1 = M.cumul(comp.map(w => w.n1));
+    const gN = cN.b ? cN.a / cN.b : null, g1 = c1.b ? c1.a / c1.b : null;
+    const eT = comp.length && g1 ? pc(gN - g1, g1) : null;
+    const tous = W.filter(w => v(w) != null), cT = M.cumul(tous), gT = cT.b ? cT.a / cT.b : null;
+    const der = W[W.length - 1], prev = W.length > 1 ? W[W.length - 2] : null;
+    const meilleure = W.filter(w => v(w) != null).reduce((a, b) => !a || v(b) > v(a) ? b : a, null);
+    let tCur;
+    if (enCours) {
+      const n = v(enCours), n1 = v1(enCours), eC = n != null && n1 ? pc(n - n1, n1) : null;
+      const j = enCours.joursServis || 0;
+      tCur = tuile('Semaine en cours', n != null ? M.f(n) : '—',
+        (eC != null ? sg(eC) + ' % vs N-1 aux mêmes jours · ' : '') + j + ' jour' + (j > 1 ? 's' : '') + ' servi' + (j > 1 ? 's' : ''), eC == null ? '' : (eC >= 0 ? 'bon' : 'vif'));
+    } else {
+      const n = v(der), n1 = v1(der), eD = n != null && n1 ? pc(n - n1, n1) : null;
+      tCur = tuile('Semaine S' + der.iso, n != null ? M.f(n) : '—', eD != null ? sg(eD) + ' % vs N-1' : (prev && v(prev) && n != null ? sg(pc(n - v(prev), v(prev))) + ' % vs S' + prev.iso : ''),
+        eD == null ? '' : (eD >= 0 ? 'bon' : 'vif'));
+    }
+    const lib12 = 'Douze semaines';
     const tuiles = [
-      eT != null ? tuile('Six semaines vs N-1', sg(eT) + ' %', fN(D.total.tickets) + ' clients contre ' + fN(D.totalN1.tickets), eT >= 0 ? 'bon' : 'vif')
-        : tuile('Six semaines', fN(D.total.tickets), esc(D.n1Motif || 'pas de N-1')),
-      tuile(cur.enCours ? 'Semaine en cours' : 'Dernière semaine', cur.source ? fN(cur.tickets) : '—',
-        (eP != null ? sg(eP) + ' % vs S' + prev.iso : '') + (cur.enCours ? (eP != null ? ' · ' : '') + cur.joursServis + ' jour' + (cur.joursServis > 1 ? 's' : '') + ' servi' + (cur.joursServis > 1 ? 's' : '') : ''),
-        eP == null ? '' : (eP >= 0 ? 'bon' : 'vif')),
-      tuile('Meilleure semaine', meilleure ? fN(meilleure.tickets) : '—', meilleure ? 'S' + meilleure.iso + ' · ' + fD(meilleure.du) + ' → ' + fD(meilleure.au) : '')
+      eT != null ? tuile(lib12 + ' vs N-1', sg(eT) + ' %', M.f(gN) + ' contre ' + M.f(g1), eT >= 0 ? 'bon' : 'vif')
+        : tuile(lib12, gT != null ? M.f(gT) : '—', esc(n1Motif || 'pas de N-1')),
+      tCur,
+      tuile(mk === 'clients' ? 'Meilleure semaine' : 'Semaine la plus haute', meilleure ? M.f(v(meilleure)) : '—', meilleure ? 'S' + meilleure.iso + ' · ' + fD(meilleure.du) + ' → ' + fD(meilleure.au) : '')
     ].join('');
     const corps = `<div class="db-s6"><div>${svg}
-        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px"><span><i class="c" style="background:#8D1D2C;border-radius:50%"></i>clients de la semaine</span>${avecN1 ? `<span><i class="c" style="background:#b9b1a6;border-radius:50%"></i>même semaine en N-1 (pointillé)</span>` : `<span>${esc(D.n1Motif || '')}</span>`}</div>
+        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:#8D1D2C;border-radius:50%"></i>${esc(unite)}</span>${avecN1 ? `<span><i class="c" style="background:#b9b1a6;border-radius:50%"></i>même semaine en N-1 (pointillé)</span><span><i class="c" style="background:${HAUT};opacity:.45"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.45"></i>en dessous</span>` : `<span>${esc(n1Motif || '')}</span>`}</div>
         <div class="db-s6ch">${chips}</div></div>
       <div class="db-s6t">${tuiles}</div></div>`;
-    return carte(corps, 'S' + W[0].iso + ' → S' + cur.iso + ' · ' + (D.source || ''));
+    return carte(corps, 'S' + W[0].iso + ' → S' + der.iso + ' · ' + (D.source || ''));
   }
 
   /* Le résultat net jour par jour du mois en cours — les cases de l'analyse rentabilité. */
@@ -3886,14 +5852,14 @@
       tete = 'semaine du ' + fdC(J[0]) + ' au ' + fdC(J[6]) + (!ops && totS ? ' · ' + fE(totS) : '');
       chips = attente && !Object.keys(lus).length ? sk(7) : J.map(d => {
         const j = lus[d] || {}, t = new Date(d + 'T12:00:00'), lib = JOURS_FR[t.getDay()] + ' ' + t.getDate(), on = ops && d === S.date;
-        if (d > AUJ) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>${j.objectif ? 'obj. ' + nf(j.objectif / 1000, 1) + ' k€' : 'à venir'}</small></div>`; }
+        if (d > AUJ) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>${j.objectif ? '<i class="eu">obj. </i>' + nf(j.objectif / 1000, 1) + ' k€' : 'à venir'}</small></div>`; }
         if (j.ferme) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>fermé</small></div>`; }
         const p = j.objectif && j.ca != null ? 100 * j.ca / j.objectif : null, auj = d === AUJ;
-        return `<button type="button" class="fr-c${on ? ' on' : ''}" ${ops ? 'data-fdate' : 'data-fops'}="${d}" title="${esc(fDL(d))}${ops ? '' : ' · ouvrir en Opérationnel'}"><span class="n">${lib}<i class="dot" style="background:${auj ? '#1d1d1b' : col(p)}"></i></span><b>${j.ca != null ? fE(j.ca) : '—'}</b><small>${auj ? 'en cours' : (p != null ? fN(p) + ' % obj.' : (j.ca != null ? 'sans objectif' : 'pas de vente'))}</small></button>`;
+        return `<button type="button" class="fr-c${on ? ' on' : ''}" ${ops ? 'data-fdate' : 'data-fops'}="${d}" title="${esc(fDL(d))}${ops ? '' : ' · ouvrir en Opérationnel'}"><span class="n">${lib}<i class="dot" style="background:${auj ? '#1d1d1b' : col(p)}"></i></span><b>${j.ca != null ? fN(j.ca) + '<i class="eu"> €</i>' : '—'}</b><small>${auj ? 'en cours' : (p != null ? fN(p) + ' %<i class="eu"> obj.</i>' : (j.ca != null ? 'sans objectif' : 'pas de vente'))}</small></button>`;
       }).join('');
     } else if (S.vue === 'trimestre') {
       // Les 4 trimestres de l'année (10/10/2026) : le CA des mois lus, face à l'objectif des trois mois.
-      const Y = annee(), P = S.aux['perf|' + Y], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
+      const Y = annee(), P = S.aux[clePerf()], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
       const qAuj = +AUJ.slice(0, 4) === Y ? Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 : (+AUJ.slice(0, 4) > Y ? 5 : 0);
       tete = `<button type="button" class="fr-an" data-fan="-1">‹</button>${Y}<button type="button" class="fr-an" data-fan="1"${Y >= +AUJ.slice(0, 4) ? ' disabled' : ''}>›</button>`;
       chips = !L ? sk(4) : [1, 2, 3, 4].map(q => {
@@ -3908,7 +5874,7 @@
         return `<button type="button" class="fr-c${on ? ' on' : ''}" data-trim="${q}"><span class="n">${lib}${cours ? '<em>en cours</em>' : ''}</span><b>${fK(ca)}</b><i class="jg"><em style="width:${Math.min(100, p || 0).toFixed(0)}%;background:${on ? 'var(--color-primary)' : col(p)}"></em></i><small>${p != null ? fN(p) + ' % de l’objectif' + (obj ? ' ' + fK(obj) : '') : 'sans objectif'}</small></button>`;
       }).join('');
     } else {
-      const Y = annee(), P = S.aux['perf|' + Y], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
+      const Y = annee(), P = S.aux[clePerf()], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
       tete = `<button type="button" class="fr-an" data-fan="-1">‹</button>${Y}<button type="button" class="fr-an" data-fan="1"${Y >= +AUJ.slice(0, 4) ? ' disabled' : ''}>›</button>`;
       chips = !L ? sk(12) : Array.from({ length: 12 }, (_, i) => {
         const x = L.find(r => +r.mois === i + 1) || {}, ym = Y + '-' + String(i + 1).padStart(2, '0'), on = S.date.slice(0, 7) === ym, cours = ym === AUJ.slice(0, 7);
@@ -3924,16 +5890,18 @@
 
   function rendBench(m, d) {
     const L = (d.magasins || []).filter(x => x.ouvert !== false);
-    const jour = S.vue === 'jour';
+    const jour = S.vue === 'jour' || S.vue === 'ops';   // l'Opérationnel lit la journée, comme la vue Jour
+    // Le panier se classe hors clients pro, entre magasins lus de la même façon (21/10/2026).
+    const PB = panDe(m).base, defP = ['Panier moyen', kPan(m), fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v)), () => panSous(PB)];
     const defs = jour
-      ? [['Chiffre d’affaires', 'ca', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))], ['Marge brute', 'margeBrutePct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']]
-      : [['Chiffre d’affaires', 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], ['Panier moyen', 'panier', fU, v => (v >= 0 ? '+ ' : '− ') + fU(Math.abs(v))], ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(100 * v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']];
+      ? [['Chiffre d’affaires', 'ca', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], defP, ['Marge brute', 'margeBrutePct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']]
+      : [['Chiffre d’affaires', 'realise', fK, v => fSK(v)], ['Clients', 'tickets', fN, v => (v >= 0 ? '+' : '−') + fN(Math.abs(v))], defP, ['Atteinte de l’attendu', 'atteinte', v => fP(100 * v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(100 * v), 1) + ' pts'], ['Résultat net', 'netPct', v => fP(v), v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1) + ' pts']];
     // Le B2B (10/10/2026), à la place des messages du panel : le CA des clients pro, sa part du CA dessous.
     defs.splice(4, defs.length - 4, ['B2B · clients pro', 'caPro', fK, v => fSK(v), x => x.partPro != null ? fP(x.partPro) + ' du CA' : '']);
     const ord = n => n === 1 ? '1er' : n + 'e';
     let premiers = 0;
     const tuiles = defs.map(([lib, k, f, fd, extra]) => {
-      const vals = L.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => b - a);
+      const vals = valsRang(L, k, m);
       const v = m[k];
       if (v == null || !vals.length) { return `<div class="db-bt"><div class="k">${lib}</div><span class="rg mu">—</span><div class="v mu">—</div><div class="s">pas de valeur</div></div>`; }
       const n = vals.length, rang = vals.findIndex(x => x <= v) + 1;
@@ -3949,7 +5917,7 @@
         <div class="v">${f(v)}<small>médiane ${f(med)}</small></div>
         <div class="s">${extra && extra(m) ? extra(m) + ' · ' : ''}${fd(v - med)} vs médiane · ${top ? (second != null ? 'le 2e : ' + f(second) : 'seul en lice') : 'le 1er : ' + f(meilleur)}</div></div>`;
     }).join('');
-    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts · ${jour ? 'la journée' : (S.vue === 'semaine' ? 'la semaine' : 'le mois')} · anonyme${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:#c9c2b8"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}</div>`;
+    return `<div class="db-bench"><div class="db-bt tit"><div class="k">Ta place dans le réseau</div><div class="s">${L.length} magasins ouverts${premiers ? ' · <b>' + premiers + ' × 🏆</b>' : ''}</div><div class="leg"><span><i style="background:var(--color-primary)"></i>toi</span><span><i style="background:#c9c2b8"></i>un autre</span><span><b></b>médiane</span></div></div>${tuiles}</div>`;
   }
 
   /* --- Les non-conformités de la veille -----------------------------------
@@ -4243,8 +6211,7 @@
    * que le consultant en a dit : une bande de photos sous les tâches du jour,
    * les écarts d'abord, puis ce qui attend encore le consultant, puis le
    * conforme ; les contrôles jamais rendus y tiennent leur place en case
-   * vide. Un clic ouvre la photo en grand, avec les repères, le constat et la
-   * tenue de la tâche sur ses derniers contrôles.
+   * vide. Un clic ouvre la photo en grand, avec les repères et le constat.
    *
    * Deux lectures : la journée (`/pwa/tasks`, déjà lue pour les tâches) et
    * ses photos (`/pwa/tasks/photos`, une seule volée). L'URL signée d'une
@@ -4372,9 +6339,9 @@
       <div class="db-cqrail"><button type="button" class="db-cqfl g" data-cqpas="-1" aria-label="précédentes">‹</button>
         <div class="db-cqpiste" id="db-cqpiste">${F.map(x => cqCarte(x, false)).join('')}</div>
         <button type="button" class="db-cqfl d" data-cqpas="1" aria-label="suivantes">›</button></div>
-      <div class="db-cqpied" id="db-cqpied">${F.length} contrôle${F.length > 1 ? 's' : ''}${S.cqFiltre === 'tout' ? ' · les écarts d’abord' : ''} · un clic ouvre la photo en grand</div></div>`;
+      <div class="db-cqpied" id="db-cqpied">${F.length} contrôle${F.length > 1 ? 's' : ''}</div></div>`;
   }
-  /** La photo en grand : repères, constat, tenue de la tâche ; ‹ › et Échap. */
+  /** La photo en grand : repères, constat ; ‹ › et Échap. */
   function cqLoupe(mobile) {
     if (!S.cqVoir || (S.vue !== 'jour' && S.vue !== 'ops')) { return ''; }
     const L = cqListe();
@@ -4384,16 +6351,13 @@
     const x = F[i];
     const note = x.note != null ? `${x.note}/5${x.valideeLe ? ' ' + (String(x.valideeLe).slice(0, 10) === S.date ? 'à ' : '') + cqQuand(x.valideeLe) : ''}${(x.valideePar || x.consultant) ? ' par ' + esc(x.valideePar || x.consultant) : ''}`
       : (x.e.c === 'ctl' ? 'pas encore notée' : '—');
-    const M = x.maitrise || {};
-    const tenue = M.moyenne != null ? `${nf(M.moyenne, 1)} / 5 sur ${M.nb} contrôle${M.nb > 1 ? 's' : ''}${M.masquee && M.recontrole ? ` · maîtrisée, recontrôlée le ${esc(fD(M.recontrole))}` : ''}`
-      : (M.nb === 0 ? 'pas encore d’historique' : '');
     const reps = x.reperes.filter(r => r.txt);
     const constat = x.comment && !/^auto/i.test(x.comment) ? x.comment : '';
     const q = reps.length || constat ? `<q class="${x.e.c}">${reps.map(r => `<b>${r.n}. ${esc(r.txt)}</b>`).join('<br>')}${constat && (!reps.length || !reps.some(r => constat.indexOf(r.txt) >= 0)) ? (reps.length ? '<br>' : '') + esc(constat) : ''}</q>` : '';
     const rendu = x.e.c === 'ko' ? (S.date === AUJ ? 'pas encore rendue' : 'pas rendue ce jour')
       : (x.faitLe ? (String(x.faitLe).slice(0, 10) === S.date ? 'à ' : '') + cqQuand(x.faitLe) + (x.faitePar ? ' par ' + esc(x.faitePar) : '') + (x.e.c === 'mu' ? ', sans photo' : '') : 'rendue');
     const fiche = `<div class="fi"><em class="cqbd ${x.e.c}">${esc(x.e.bd)}</em><h3>${esc(cqNom(x))}</h3>${x.cl ? `<div class="q">${esc(cqCl(x.cl))}</div>` : ''}${q}
-      <dl><dt>Rendue</dt><dd>${rendu}</dd><dt>Notée</dt><dd>${note}</dd>${tenue ? `<dt>Tenue</dt><dd>${tenue}</dd>` : ''}</dl>
+      <dl><dt>Rendue</dt><dd>${rendu}</dd><dt>Notée</dt><dd>${note}</dd></dl>
       ${x.ph ? `<a class="db-lien" href="${esc(x.ph.photo)}" target="_blank" rel="noopener">Ouvrir la photo seule ↗</a>` : ''}</div>`;
     const nav = `${i + 1} / ${F.length}${S.cqFiltre !== 'tout' ? ' · ' + esc((CQ_FILTRES.find(f => f[0] === S.cqFiltre) || [])[1] || '').toLowerCase() : ''}`;
     if (mobile) {
@@ -4439,7 +6403,7 @@
     if (pied && c) {
       const w = c.getBoundingClientRect().width + 12, n = p.children.length;
       const a = Math.min(n, Math.round(p.scrollLeft / w) + 1), b = Math.min(n, Math.round((p.scrollLeft + p.clientWidth) / w));
-      if (b < n || a > 1) { pied.textContent = a + ' – ' + b + ' sur ' + n + (S.cqFiltre === 'tout' ? ' · les écarts d’abord' : '') + ' · un clic ouvre la photo en grand'; }
+      if (b < n || a > 1) { pied.textContent = a + ' – ' + b + ' sur ' + n; }
     }
   }
 
@@ -5115,9 +7079,9 @@
   }
   function rendTrimestre() {
     const Y = annee(), q = trimestre();
-    const perf = S.aux['perf|' + Y], plan = S.aux['plan|' + S.shop + '|' + Y];
+    const perf = S.aux[clePerf()], plan = S.aux['plan|' + S.shop + '|' + Y];
     let h = '';
-    if (S.err['perf|' + Y]) { h += `<div class="db-err">Mois : ${esc(S.err['perf|' + Y])}</div>`; }
+    if (S.err[clePerf()]) { h += `<div class="db-err">Mois : ${esc(S.err[clePerf()])}</div>`; }
     if (S.err['plan|' + S.shop + '|' + Y]) { h += `<div class="db-err">Plan : ${esc(S.err['plan|' + S.shop + '|' + Y])}</div>`; }
     h += `<div class="db-sec">Résultat — le trimestre T${q} ${Y}<small>objectif du plan de développement, attendu au rythme des budgets mensuels</small></div>`;
     if (!plan && !S.err['plan|' + S.shop + '|' + Y]) { return h + squelette(3); }
@@ -5129,7 +7093,7 @@
       ${tuile('Objectif ' + t.label, fK(t.objectif), 'plan de développement · ' + t.mois.map(m => MO[m - 1]).join(' · '))}
       ${tuile('Réalisé', fK(t.realise), (att != null ? fP(att) + ' de l’objectif · ' : '') + (t.moisRealises || 0) + ' mois lu(s)')}
       ${tuile('Attendu à ce jour', fK(t.attendu), 'au rythme des budgets mensuels')}
-      ${tuile('Écart', t.ecart == null ? '—' : fSK(t.ecart), t.ecart == null ? (t.futur ? 'trimestre à venir' : '') : fP(t.ecartPct) + ' · ' + (t.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’attendu', t.ecart == null ? '' : (t.ecart >= 0 ? 'bon' : 'vif'))}
+      ${tuile('Écart', t.ecart == null ? '—' : fSK(t.ecart), t.ecart == null ? (t.futur ? 'trimestre à venir' : '') : fP(t.ecartPct) + ' · ' + (t.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’objectif', t.ecart == null ? '' : (t.ecart >= 0 ? 'bon' : 'vif'))}
       ${tuile('Clients manquants', t.clients == null ? '—' : fN(t.clients), t.panier ? 'au panier moyen ' + fU(t.panier) : '')}
       ${tuile('Marge nette', fP(t.netPct), (t.food != null ? 'food ' + fP(t.food) : '') + (t.labour != null ? ' · labour ' + fP(t.labour) : ''), t.netPct == null ? '' : (t.netPct >= 10 ? 'bon' : 'vif'))}
     </div>`;
@@ -5140,10 +7104,10 @@
     const moisAuj = +AUJ.slice(5, 7), anAuj = +AUJ.slice(0, 4);
     h += `<div class="db-g2" style="grid-template-columns:1.4fr 1fr;margin-bottom:12px">
       <div class="db-card"><div class="ct"><span class="db-lab">Les 3 mois du trimestre</span><span class="db-mini">gris : budget du mois · couleur : réalisé (vert ≥ 95 %, rouge sinon, orange = mois en cours)</span></div>
-        ${!perf && !S.err['perf|' + Y] ? squelette(1) : `<div class="db-mo">${M.map(x => { const bud = x.caBudget || x.caTheorique || 0, ca = x.ca || 0, pct = bud ? 100 * ca / bud : null; const enc = Y === anAuj && +x.mois === moisAuj, futur = Y > anAuj || (Y === anAuj && +x.mois > moisAuj);
+        ${!perf && !S.err[clePerf()] ? squelette(1) : `<div class="db-mo">${M.map(x => { const bud = x.caBudget || x.caTheorique || 0, ca = x.ca || 0, pct = bud ? 100 * ca / bud : null; const enc = Y === anAuj && +x.mois === moisAuj, futur = Y > anAuj || (Y === anAuj && +x.mois > moisAuj);
           return `<div><div class="bars"><i class="b" style="height:${(140 * bud / mx).toFixed(0)}px" title="budget ${fE(bud)}"></i><i class="r ${enc ? 'enc' : (pct != null && pct >= 95 ? 'ok' : '')}" style="height:${(140 * ca / mx).toFixed(0)}px" title="réalisé ${fE(ca)}"></i></div><div class="n">${MO[x.mois - 1]} · ${futur ? '—' : fK(ca)}</div><div class="d">budget ${fK(bud)}${pct != null && !futur ? ' · ' + fP(pct) : ''}${enc ? ' · en cours' : ''}${x.tickets ? ' · ' + fN(x.tickets) + ' clients' : ''}</div></div>`; }).join('')}</div>`}
       </div>
-      <div class="db-card"><div class="ct"><span class="db-lab">Les annotations du trimestre</span><span class="db-mini">plan de développement · <a class="db-lien" href="../#/plan-developpement">Cockpit › Budget › Plan ›</a></span></div><div style="padding:10px 16px 12px">${blocNotes(plan, t)}</div></div>
+      <div class="db-card"><div class="ct"><span class="db-lab">Les annotations du trimestre</span><span class="db-mini">plan de développement</span></div><div style="padding:10px 16px 12px">${blocNotes(plan, t)}</div></div>
     </div>`;
     return h;
   }
@@ -5160,18 +7124,18 @@
       const notes = t.notes || {}, acts = actionsDe(plan, t.t), et = (t.revue && t.revue.etape) || 1;
       const an = VOIX.filter(v => notes[v[0]] && notes[v[0]].texte).map(v => `<div><i class="v ${v[2]}"></i><b>${esc(nomVoix(plan, v))}</b> — ${esc(notes[v[0]].texte.length > 140 ? notes[v[0]].texte.slice(0, 140) + '…' : notes[v[0]].texte)}</div>`).join('');
       const pied = `${acts.length ? acts.length + ' action(s) · ' + acts.filter(a => stAct(a) === 'ok').length + ' faite(s) · ' : ''}rituel ${et}/5${t.revue && t.revue.valideLe ? ' validé' : ''}`;
-      return `<tr data-trimq="${t.t}"><td class="l"><b>${esc(t.label)}</b>${tag(t)}<br><span class="mu">${t.mois.map(m => MO[m - 1]).join(' · ')}</span></td><td>${fK(t.objectif)}</td><td>${fK(t.realise)}</td><td>${fK(t.attendu)}</td><td style="color:${t.ecart == null ? 'inherit' : (t.ecart >= 0 ? 'var(--color-success,#2d7a3e)' : 'var(--color-primary)')}">${t.ecart == null ? '—' : fSK(t.ecart)}</td><td>${att == null ? '—' : `<span class="db-pill" style="background:${col(att)}">${fP(att)}</span>`}</td><td>${t.clients == null ? '—' : '− ' + fN(t.clients)}</td><td>${t.panier == null ? '—' : fU(t.panier)}</td><td>${fP(t.food)}</td><td>${fP(t.labour)}</td><td>${fP(t.netPct)}</td><td class="an">${an || '<span class="mu" style="font-style:italic">pas encore d’annotation</span>'}<div class="mu" style="margin-top:2px">${pied}</div></td></tr>`; }).join('');
+      return `<tr data-trimq="${t.t}"><td class="l"><b>${esc(t.label)}</b>${tag(t)}<br><span class="mu">${t.mois.map(m => MO[m - 1]).join(' · ')}</span></td><td>${fK(t.objectif)}</td><td>${fK(t.realise)}</td><td>${fK(t.attendu)}</td><td style="color:${t.ecart == null ? 'inherit' : (t.ecart >= 0 ? 'var(--color-success,#2d7a3e)' : 'var(--color-primary)')}">${t.ecart == null ? '—' : fSK(t.ecart)}</td><td>${att == null ? '—' : `<span class="db-pill" style="background:${col(att)}">${fP(att)}</span>`}</td><td>${t.clients == null ? '—' : '− ' + fN(t.clients)}</td>${panTd(panDe(t))}<td>${fP(t.food)}</td><td>${fP(t.labour)}</td><td>${fP(t.netPct)}</td><td class="an">${an || '<span class="mu" style="font-style:italic">pas encore d’annotation</span>'}<div class="mu" style="margin-top:2px">${pied}</div></td></tr>`; }).join('');
     const A = plan.annee || {};
     return `<div class="db-card"><div class="ct"><span class="db-lab">${Y}, trimestre par trimestre</span><span class="db-mini">objectif du plan · réalisé · les annotations des trois voix, et les actions · cliquer un trimestre pour l’ouvrir</span></div>
-      <div style="padding:4px 16px 12px;overflow-x:auto"><table class="db-t db-tq"><tr><th>Trimestre</th><th>Objectif</th><th>Réalisé</th><th>Attendu</th><th>Écart</th><th>Atteinte</th><th>Clients</th><th>Panier</th><th>Food</th><th>Labour</th><th>Marge nette</th><th class="l">Annotations</th></tr>${rows}
+      <div style="padding:4px 16px 12px;overflow-x:auto"><table class="db-t db-tq"><tr><th>Trimestre</th><th>Objectif</th><th>Réalisé</th><th>Attendu</th><th>Écart</th><th>Atteinte</th><th>Clients</th><th title="${esc(PAN_TH)}">Panier</th><th>Food</th><th>Labour</th><th>Marge nette</th><th class="l">Annotations</th></tr>${rows}
       <tr class="tot"><td class="l">${Y}</td><td>${fK(tot.o)}</td><td>${fK(tot.r)}</td><td>${fK(tot.a)}</td><td style="color:${tot.r - tot.a >= 0 ? 'var(--color-success,#2d7a3e)' : 'var(--color-primary)'}">${fSK(tot.r - tot.a)}</td><td>${tot.a ? `<span class="db-pill" style="background:${col(100 * tot.r / tot.a)}">${fP(100 * tot.r / tot.a)}</span>` : '—'}</td><td colspan="5"></td><td class="an mu">${A.objectif ? 'objectif de l’année ' + fK(A.objectif) : ''}${A.projection ? ' · projection ' + fK(A.projection) : ''}</td></tr></table></div></div>`;
   }
 
   function rendAnnee() {
     const Y = annee();
-    const perf = S.aux['perf|' + Y], plan = S.aux['plan|' + S.shop + '|' + Y];
+    const perf = S.aux[clePerf()], plan = S.aux['plan|' + S.shop + '|' + Y];
     let h = '';
-    if (S.err['perf|' + Y]) { h += `<div class="db-err">Mois : ${esc(S.err['perf|' + Y])}</div>`; }
+    if (S.err[clePerf()]) { h += `<div class="db-err">Mois : ${esc(S.err[clePerf()])}</div>`; }
     if (S.err['plan|' + S.shop + '|' + Y]) { h += `<div class="db-err">Objectif : ${esc(S.err['plan|' + S.shop + '|' + Y])}</div>`; }
     // --- l'objectif de l'année, et la rampe
     h += `<div class="db-sec">L’objectif — ${Y}, 3 ans, 5 ans<small>engagement du franchisé, sinon la rampe de l’étude de marché</small></div>`;
@@ -5183,7 +7147,7 @@
         ${tuile('Objectif ' + Y, fK(A.objectif), src)}
         ${tuile('Réalisé', fK(A.realise), A.partEcoulee != null ? fP(A.partEcoulee) + ' de l’année écoulée' : '')}
         ${tuile('Attendu à ce jour', fK(A.attendu), 'au rythme des budgets mensuels')}
-        ${tuile('Écart', fSK(A.ecart), A.ecart == null ? '' : (A.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’attendu', A.ecart == null ? '' : (A.ecart >= 0 ? 'bon' : 'vif'))}
+        ${tuile('Écart', fSK(A.ecart), A.ecart == null ? '' : (A.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’objectif', A.ecart == null ? '' : (A.ecart >= 0 ? 'bon' : 'vif'))}
         ${tuile('Projection fin d’année', fK(A.projection), A.projection != null && A.objectif ? fSK(A.projection - A.objectif) + ' sur l’objectif' : 'au rythme actuel', A.projection != null && A.objectif ? (A.projection >= A.objectif ? 'bon' : 'vif') : '')}
         ${tuile('Rampe à 5 ans', plan.rampe && plan.rampe.potentiel ? fK(plan.rampe.potentiel) : '—', plan.rampe && plan.rampe.potentiel ? 'potentiel à maturité · ' + (function () { const n = (plan.rampe.annees || []).find(a => a.an === Y + 1); return n ? 'l’an prochain ' + fK(n.ca) : ''; })() : 'sans étude de marché')}
       </div>
@@ -5195,13 +7159,13 @@
         h += `<div class="db-card"><div class="ct"><span class="db-lab">La rampe à 5 ans</span><span class="db-mini">${plan.rampe.potentiel ? 'potentiel à maturité ' + fK(plan.rampe.potentiel) + ' · année ' + plan.rampe.anneeExploitation + ' d’exploitation en ' + Y : 'sans étude de marché'}</span></div>
           <div class="db-jours" style="grid-template-columns:repeat(${R.length},1fr);height:190px">${R.map(a => { const en = engs[String(a.an)]; const cur = a.an === Y;
             return `<div><em>${fK(a.ca)}${en && en.objectif ? '<br><span class="mu" style="font-weight:500">engagé ' + fK(en.objectif) + '</span>' : ''}</em><div class="bb"><i class="${cur ? '' : 'ferme'}" style="height:${(100 * (a.ca || 0) / mx).toFixed(1)}%;${cur ? '' : 'background:#e5d9cc'}"></i>${cur && A.realise ? `<b style="bottom:${(100 * A.realise / mx).toFixed(1)}%;background:#D97706"></b>` : ''}</div><span>${a.an} · ${a.maturite ? 'maturité' : 'année ' + a.anneeExploitation + ' · ' + a.coef + ' %'}</span></div>`; }).join('')}</div>
-          <div class="db-note">Barres : la rampe de l’étude (potentiel × montée en régime) ; trait orange sur ${Y} : le réalisé à ce jour. L’engagement se dépose dans Cockpit › Plan de développement.</div></div>`;
+          <div class="db-note">Barres : la rampe de l’étude (potentiel × montée en régime) ; trait orange sur ${Y} : le réalisé à ce jour.</div></div>`;
       }
       h += tableauTrimestres(plan, Y);
     } else if (plan) { h += `<div class="db-alerte">${esc(plan.error || 'Pas de plan pour ce magasin.')}</div>`; }
     // --- la heatmap des mois
     h += `<div class="db-sec">Les mois — ${Y - 1} et ${Y}<small>CA du mois et atteinte du budget, magasin seul</small></div>`;
-    if (!perf && !S.err['perf|' + Y]) { h += squelette(2); }
+    if (!perf && !S.err[clePerf()]) { h += squelette(2); }
     else if (perf) {
       const cells = (Array.isArray(perf) ? perf : []).filter(c => String(c.storeId) === String(S.shop));
       const MO = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
@@ -5220,16 +7184,16 @@
             const pct = c && bud ? 100 * c.ca / bud : null; const futur = an > auj.getFullYear() || (an === auj.getFullYear() && i > auj.getMonth());
             const enCours = an === auj.getFullYear() && i === auj.getMonth();
             if (!c || futur || !c.ca) { return `<div style="${tPct(null)};border-radius:6px;min-height:46px;display:flex;align-items:center;justify-content:center;font-size:10.5px">${futur ? '' : '—'}</div>`; }
-            return `<div title="${an}-${String(i + 1).padStart(2, '0')} · CA ${fE(c.ca)}${bud ? ' · budget ' + fE(bud) + ' · ' + fP(pct) : ''} · ${fN(c.tickets)} tickets · panier ${fU(c.panierMoyen)}" style="${S.hmMetric === 'pct' ? tPct(pct) : tCa(c.ca)};border-radius:6px;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.2;${enCours ? 'outline:2px dashed #222;outline-offset:-2px' : ''}"><b>${S.hmMetric === 'pct' ? (pct == null ? '—' : Math.round(pct) + ' %') : fK(c.ca)}</b><span style="font-size:9.5px;opacity:.85">${S.hmMetric === 'pct' ? fK(c.ca) : (pct == null ? '' : Math.round(pct) + ' %')}</span></div>`; }).join('')).join('')}
+            return `<div title="${an}-${String(i + 1).padStart(2, '0')} · CA ${fE(c.ca)}${bud ? ' · budget ' + fE(bud) + ' · ' + fP(pct) : ''} · ${fN(c.tickets)} tickets · ${esc(panTxt(panDe({ panierBase: c.panierBase, panierRetenu: c.panierRetenu, panier: c.panierMoyen })))}" style="${S.hmMetric === 'pct' ? tPct(pct) : tCa(c.ca)};border-radius:6px;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.2;${enCours ? 'outline:2px dashed #222;outline-offset:-2px' : ''}"><b>${S.hmMetric === 'pct' ? (pct == null ? '—' : Math.round(pct) + ' %') : fK(c.ca)}</b><span style="font-size:9.5px;opacity:.85">${S.hmMetric === 'pct' ? fK(c.ca) : (pct == null ? '' : Math.round(pct) + ' %')}</span></div>`; }).join('')).join('')}
         </div></div>
         <div class="db-note">Atteinte : rouge &lt; 80 % · orange 80–95 · vert 95–105 · doré &gt; 105 %. Survolez une case : CA, budget, tickets, panier.</div></div>`;
       // Le tableau des mois de l'année : tickets, panier, marge, ratios.
       const an = cells.filter(c => +c.annee === Y && c.ca).sort((a, b) => a.mois - b.mois);
       if (an.length) {
-        h += `<div class="db-card"><div class="ct"><span class="db-lab">${Y}, mois par mois</span><span class="db-mini">marge, labour et overhead connus depuis juillet 2026, food cost depuis janvier</span></div>
-          <table class="db-t"><tr><th>Mois</th><th>CA</th><th>Budget</th><th>Atteinte</th><th>Clients</th><th>Panier</th><th>Food cost</th><th>Labour</th><th>Overhead</th><th>Marge nette</th></tr>
+        h += `<div class="db-card"><div class="ct"><span class="db-lab">${Y}, mois par mois</span></div>
+          <table class="db-t"><tr><th>Mois</th><th>CA</th><th>Budget</th><th>Atteinte</th><th>Clients</th><th title="${esc(PAN_TH)}">Panier</th><th>Food cost</th><th>Labour</th><th>Overhead</th><th>Marge nette</th></tr>
           ${an.map(c => { const bud = c.caBudget || c.caTheorique; const pct = bud ? 100 * c.ca / bud : null;
-            return `<tr><td>${MO[c.mois - 1]} ${Y}</td><td>${fK(c.ca)}</td><td class="mu">${fK(bud)}</td><td class="${pct == null ? 'mu' : (pct >= 100 ? 'ok' : (pct >= 90 ? 'wa' : 'ko'))}">${fP(pct)}</td><td>${fN(c.tickets)}</td><td>${fU(c.panierMoyen)}</td><td>${fP(c.foodCostPct)}</td><td>${fP(c.labourCostPct)}</td><td>${fP(c.overheadPct)}</td><td class="${c.margePct == null ? 'mu' : (c.margePct >= 0.15 ? 'ok' : (c.margePct >= 0.05 ? 'wa' : 'ko'))}">${c.margePct == null ? '—' : fP(100 * c.margePct)}${c.margeNette != null ? ' <span class="mu">· ' + fK(c.margeNette) + '</span>' : ''}</td></tr>`; }).join('')}</table></div>`;
+            return `<tr><td>${MO[c.mois - 1]} ${Y}</td><td>${fK(c.ca)}</td><td class="mu">${fK(bud)}</td><td class="${pct == null ? 'mu' : (pct >= 100 ? 'ok' : (pct >= 90 ? 'wa' : 'ko'))}">${fP(pct)}</td><td>${fN(c.tickets)}</td>${panTd(panDe({ panierBase: c.panierBase, panierRetenu: c.panierRetenu, panier: c.panierMoyen }))}<td>${fP(c.foodCostPct)}</td><td>${c.coutsManque ? '<span class="mu" title="le P&L mensuel du panel ne répond pas pour ce mois">…</span>' : fP(c.labourCostPct)}${c.sansPlanning ? ` <b class="ko" title="${c.sansPlanning} jour${c.sansPlanning > 1 ? 's' : ''} vendu${c.sansPlanning > 1 ? 's' : ''} sans planning au panel : la main-d’œuvre du mois est incomplète">!</b>` : ''}</td><td>${c.coutsManque ? '<span class="mu">…</span>' : fP(c.overheadPct)}</td><td class="${c.margePct == null ? 'mu' : (c.margePct >= 0.15 ? 'ok' : (c.margePct >= 0.05 ? 'wa' : 'ko'))}">${c.margePct == null ? '—' : fP(100 * c.margePct)}${c.margeNette != null ? ' <span class="mu">· ' + fK(c.margeNette) + '</span>' : ''}</td></tr>`; }).join('')}</table></div>`;
       }
     }
     return h;
@@ -5248,7 +7212,7 @@
     const LH = Array.isArray(st.heures) ? st.heures.filter(x => x.ca > 0) : [];
     const hCli = LH.length ? LH.reduce((m, x) => x.tickets > m.tickets ? x : m) : null, hCa = LH.length ? LH.reduce((m, x) => x.ca > m.ca ? x : m) : null;
     let h = `<div class="db-tuiles">
-      ${hCli ? tuile('Heure avec le plus de clients', hCli.h + ' – ' + (hCli.h + 1) + ' h', fN(moy ? hCli.moy.tickets : hCli.tickets) + ' clients' + (moy ? ' par jour ouvert' : '') + ' · panier ' + fU(hCli.panier) + ' · ' + fP(tot.tickets ? 100 * hCli.tickets / tot.tickets : null) + ' des clients') : tuile('Heure avec le plus de clients', '—', '')}
+      ${hCli ? tuile('Heure avec le plus de clients', hCli.h + ' – ' + (hCli.h + 1) + ' h', fN(moy ? hCli.moy.tickets : hCli.tickets) + ' clients' + (moy ? ' par jour ouvert' : '') + ' · ' + panTxt(panDe(hCli)) + ' · ' + fP(tot.tickets ? 100 * hCli.tickets / tot.tickets : null) + ' des clients') : tuile('Heure avec le plus de clients', '—', '')}
       ${hCa ? tuile('Heure avec le plus de CA', hCa.h + ' – ' + (hCa.h + 1) + ' h', fK(moy ? hCa.moy.ca : hCa.ca) + (moy ? ' par jour ouvert' : '') + ' · ' + fP(tot.ca ? 100 * hCa.ca / tot.ca : null) + ' des ventes · matière ' + fP(hCa.mbPct == null ? null : 100 - hCa.mbPct)) : tuile('Heure avec le plus de CA', '—', '')}
       ${tuile('Marge brute', fK(tot.mb), fP(tot.mbPct) + ' des ventes')}
       ${tuile('Marge nette des heures', fSK(tot.res), fP(tot.resPct) + ' des ventes · rémunération ' + fK(tot.trav), tot.res >= 0 ? 'bon' : 'vif')}
@@ -5285,10 +7249,10 @@
     // Tableau + panneau.
     h += `<div class="db-g2">`;
     h += `<div class="db-card"><div class="ct"><span class="db-lab">Heure par heure — ventes − matière = marge brute · marge brute − rémunération = marge nette</span></div>
-      <table class="db-t"><tr><th>Heure</th><th>Clients</th><th>Panier</th><th>Ventes</th><th>− Matière</th><th>= Marge brute</th><th>En poste</th><th>− Rémunération</th><th>= Marge nette</th></tr>
-      ${L.map(l => `<tr class="hv${l.h === sel.h ? ' sel' : ''}${val(l, 'res') < 0 ? ' perte' : ''}" data-h="${l.h}"><td>${l.h === sel.h ? '▾' : '▸'} ${l.h} – ${l.h + 1} h</td><td>${moy ? nf(l.moy.tickets, 0) : fN(l.tickets)}</td><td>${fU(l.panier)}</td><td>${fE(val(l, 'ca'))}</td><td class="mu">${fE(val(l, 'mat'))}</td><td><b>${fE(val(l, 'mb'))}</b> <span class="mu" style="font-weight:400">${fP(l.mbPct)}</span></td><td>${l.poste}</td><td class="mu">${fE(val(l, 'trav'))}</td><td class="${coul(val(l, 'res'))}"><b>${fS(val(l, 'res'))}</b></td></tr>`).join('')}
-      <tr class="tot"><td>${S.vue === 'jour' ? 'Journée' : (moy ? 'Jour type' : 'Période')}</td><td>${fN(tot.tickets / (moy ? nJ : 1))}</td><td>${fU(tot.panier)}</td><td>${fE(tot.ca / (moy ? nJ : 1))}</td><td>${fE(tot.mat / (moy ? nJ : 1))}</td><td>${fE(tot.mb / (moy ? nJ : 1))} <span class="mu" style="font-weight:400">${fP(tot.mbPct)}</span></td><td>—</td><td>${fE(tot.trav / (moy ? nJ : 1))}</td><td class="${coul(tot.res)}">${fS(tot.res / (moy ? nJ : 1))}</td></tr></table>
-      <div class="db-note" style="padding-top:10px">Ventes, matière, rémunération et marge de l’heure viennent du panel (répartition horaire). Le personnel en poste est la moyenne des jours ouverts.</div></div>`;
+      <table class="db-t"><tr><th>Heure</th><th>Clients</th><th${panDe(tot).base ? ` title="${esc(panSous(panDe(tot).base))}"` : ''}>Panier${panDe(tot).base === 'comptoir' ? ' <small class="mu">hors pro</small>' : ''}</th><th>Ventes</th><th>− Matière</th><th>= Marge brute</th><th>En poste</th><th>− Rémunération</th><th>= Marge nette</th></tr>
+      ${L.map(l => `<tr class="hv${l.h === sel.h ? ' sel' : ''}${val(l, 'res') < 0 ? ' perte' : ''}" data-h="${l.h}"><td>${l.h === sel.h ? '▾' : '▸'} ${l.h} – ${l.h + 1} h</td><td>${moy ? nf(l.moy.tickets, 0) : fN(l.tickets)}</td><td>${fU(panDe(l).v)}</td><td>${fE(val(l, 'ca'))}</td><td class="mu">${fE(val(l, 'mat'))}</td><td><b>${fE(val(l, 'mb'))}</b> <span class="mu" style="font-weight:400">${fP(l.mbPct)}</span></td><td>${l.poste}</td><td class="mu">${fE(val(l, 'trav'))}</td><td class="${coul(val(l, 'res'))}"><b>${fS(val(l, 'res'))}</b></td></tr>`).join('')}
+      <tr class="tot"><td>${S.vue === 'jour' ? 'Journée' : (moy ? 'Jour type' : 'Période')}</td><td>${fN(tot.tickets / (moy ? nJ : 1))}</td><td>${fU(panDe(tot).v)}</td><td>${fE(tot.ca / (moy ? nJ : 1))}</td><td>${fE(tot.mat / (moy ? nJ : 1))}</td><td>${fE(tot.mb / (moy ? nJ : 1))} <span class="mu" style="font-weight:400">${fP(tot.mbPct)}</span></td><td>—</td><td>${fE(tot.trav / (moy ? nJ : 1))}</td><td class="${coul(tot.res)}">${fS(tot.res / (moy ? nJ : 1))}</td></tr></table>
+      <div class="db-note" style="padding-top:10px">Ventes, matière, rémunération et marge de l’heure viennent du panel (répartition horaire). Le personnel en poste est la moyenne des jours ouverts.${panDe(tot).base === 'comptoir' ? ' Le panier est hors clients pro.' : (panDe(tot).base === 'total' ? ' Le panier compte les clients pro : leurs tickets ne sont pas encore lus sur toute la période.' : '')}</div></div>`;
     h += rendPanneau(st, sel, moy, nJ);
     h += `</div>`;
     return h;
@@ -5371,7 +7335,7 @@
     const mx = Math.max(...top.map(x => x.v), 1);
     const pr = st.produits || {};
     const couv = pr.total ? `${pr.jours.length} jour(s) sur ${pr.total}` : '';
-    return `<div class="db-card"><div class="ct"><span class="db-lab">${l.h} – ${l.h + 1} h</span><span class="db-mini">${moy ? nf(l.moy.tickets, 0) : fN(l.tickets)} clients · panier ${fU(l.panier)}${moy ? ' · par jour ouvert' : ''}</span></div>
+    return `<div class="db-card"><div class="ct"><span class="db-lab">${l.h} – ${l.h + 1} h</span><span class="db-mini">${moy ? nf(l.moy.tickets, 0) : fN(l.tickets)} clients · ${esc(panTxt(panDe(l)))}${moy ? ' · par jour ouvert' : ''}</span></div>
       <div class="db-wf">${rows.map((r, k) => `<div class="r${k === 4 ? ' tot' : ''}"><span class="n">${r[0]}</span><span class="b"><i style="left:${Math.max(0, 100 * r[2] / base).toFixed(1)}%;width:${Math.max(0, 100 * (r[3] - r[2]) / base).toFixed(1)}%;background:${r[4]}"></i></span><span class="v ${k === 4 ? coul(R) : ''}">${k === 4 ? fS(R) : fE(r[1])}</span></div>`).join('')}</div>
       <div class="ct" style="border-top:.5px solid var(--color-border-tertiary);border-bottom:none;padding:10px 16px 4px"><span class="db-lab">Top 5 de l’heure — par marge brute</span><span class="db-mini">■ marge &nbsp;<span style="color:#c9a36a">■</span> coût matière</span></div>
       ${top.length ? `<div class="db-pl">${top.map((x, k) => `<div class="r"><b class="n">${k + 1}</b><span title="${esc(x.nom)}">${esc(x.nom)}</span><span class="v mu">${nf(x.q, 0)} pcs</span><span class="b"><i style="width:${(100 * x.v / mx).toFixed(1)}%;background:#e5c9a0"></i>${x.m != null ? `<i style="width:${(100 * Math.max(0, x.m) / mx).toFixed(1)}%"></i>` : ''}</span><span class="v"><b>${x.m != null ? fU(x.m) : fU(x.v)}</b></span><span class="v ${x.taux == null ? 'mu' : (x.taux < 50 ? 'wa' : 'ok')}">${x.taux != null ? nf(x.taux, 0) + ' %' : 'sans coût'}</span></div>`).join('')}</div>
@@ -5409,8 +7373,10 @@
     $.querySelectorAll('canvas.db-feux').forEach(feux);
     $.querySelectorAll('[data-c12]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); c12Ouvrir(b); }));
     $.querySelectorAll('[data-fprod]').forEach(b => { b.addEventListener('click', () => ficheOuvrir(b)); b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ficheOuvrir(b); } }); });
+    $.querySelectorAll('[data-vstk]').forEach(b => { b.addEventListener('click', () => stkOuvrir(b.dataset.vstk)); b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); stkOuvrir(b.dataset.vstk); } }); });
     ficheRendre();
     invModaleRendre();
+    stkRendre();
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
@@ -5434,26 +7400,45 @@
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
     $.querySelectorAll('[data-opvit]').forEach(b => b.addEventListener('click', () => { S.opVitTout = !S.opVitTout; rendre(); }));
     $.querySelectorAll('[data-opvie]').forEach(b => b.addEventListener('click', () => { S.opVie = b.dataset.opvie; S.opVitTout = false; rendre(); }));
-    $.querySelectorAll('[data-vitf]').forEach(b => b.addEventListener('click', () => { const F = S.vitF || (S.vitF = { ko: true, att: true, ok: false }); F[b.dataset.vitf] = !F[b.dataset.vitf]; rendre(); }));
+    $.querySelectorAll('[data-vitq]').forEach(b => b.addEventListener('click', () => { const [k, c] = b.dataset.vitq.split(':'), FB = S.vitFb || (S.vitFb = {}), F = FB[k] || (FB[k] = { ko: true, att: true, ok: false });
+      F[c] = !F[c]; const O = S.vitOuv || (S.vitOuv = {}); O[k] = true; rendre(); }));
     $.querySelectorAll('[data-vitall]').forEach(b => b.addEventListener('click', () => { const T = S.vitTout || (S.vitTout = {}); T[b.dataset.vitall] = !T[b.dataset.vitall]; rendre(); }));
     $.querySelectorAll('[data-vitb]').forEach(b => b.addEventListener('click', () => { const O = S.vitOuv || (S.vitOuv = {}); O[b.dataset.vitb] = !O[b.dataset.vitb]; rendre(); }));
     $.querySelectorAll('[data-opcrb]').forEach(b => b.addEventListener('click', () => { S.opCrb = b.dataset.opcrb; rendre(); }));
+    $.querySelectorAll('[data-oppro]').forEach(b => b.addEventListener('click', () => { S.opPro = b.dataset.oppro; try { localStorage.setItem('db.opPro', S.opPro); } catch (e) { /* stockage indisponible */ } rendre(); }));
     $.querySelectorAll('[data-opouv]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.opouv; if (S.opOuv[k]) { delete S.opOuv[k]; } else { S.opOuv[k] = true; } rendre(); }));
-    $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = b.dataset.cvue === 'treemap' ? 'treemap' : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
+    $.querySelectorAll('[data-cvue]').forEach(b => b.addEventListener('click', () => { S.cVue = ['treemap', 'promo', 'portion'].includes(b.dataset.cvue) ? b.dataset.cvue : 'liste'; try { localStorage.setItem('db.cVue', S.cVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-cacc]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.cacc; S.cOuv[k] = !S.cOuv[k]; rendre(); }));
     $.querySelectorAll('details[data-acpo]').forEach(d => d.addEventListener('toggle', () => { S.cOuv['acp:' + d.dataset.acpo] = d.open; }));
     $.querySelectorAll('[data-pdrop]').forEach(b => b.addEventListener('click', () => { S.pOuvert = !S.pOuvert; rendre(); }));
     $.querySelectorAll('[data-perdrop]').forEach(b => b.addEventListener('click', () => { S.perOuvert = !S.perOuvert; rendre(); }));
     $.querySelectorAll('[data-percol]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.perCol = b.dataset.percol; rendre(); }));
+    $.querySelectorAll('[data-levvue]').forEach(b => b.addEventListener('click', () => { S.levVue = b.dataset.levvue === 'cumul' ? 'cumul' : 'mois'; try { localStorage.setItem('db.levVue', S.levVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-calval]').forEach(b => b.addEventListener('click', () => { S.calVal = ['ca', 'att', 'cli'].includes(b.dataset.calval) ? b.dataset.calval : 'ca'; try { localStorage.setItem('db.calVal', S.calVal); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; rendre(); }));
+    // L'équipe du jour : une barre ou une ligne choisit la personne (un second clic sur la même referme), × ferme.
+    $.querySelectorAll('[data-eqsel]').forEach(b => b.addEventListener('click', () => { const n = b.dataset.eqsel;
+      if (b.tagName === 'B') {
+        if (S.eqOuvert && S.eqSel === n) { S.eqOuvert = false; S.eqSel = null; S.eqDeplie = null; } else { S.eqOuvert = true; S.eqSel = n; S.eqDeplie = n; }
+      } else { S.eqSel = n; S.eqDeplie = S.eqDeplie === n ? null : n; }
+      rendre(); }));
+    $.querySelectorAll('[data-eqouvre]').forEach(b => b.addEventListener('click', () => { S.eqOuvert = !S.eqOuvert; if (!S.eqOuvert) { S.eqSel = null; S.eqDeplie = null; } rendre(); }));
+    $.querySelectorAll('[data-eqferme]').forEach(b => b.addEventListener('click', () => { S.eqOuvert = false; S.eqSel = null; S.eqDeplie = null; rendre(); }));
+    // Les douze semaines : clients, panier moyen ou articles par client (gardé pour la prochaine visite).
+    $.querySelectorAll('[data-s12m]').forEach(b => b.addEventListener('click', () => { S.s12m = b.dataset.s12m; try { localStorage.setItem('db.s12m', S.s12m); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-vdrop]').forEach(b => b.addEventListener('click', () => { S.valoOuvert = !S.valoOuvert; rendre(); }));
     $.querySelectorAll('[data-stdrop]').forEach(b => b.addEventListener('click', () => { S.stockOuvert = !S.stockOuvert; rendre(); }));
     $.querySelectorAll('[data-notedrop]').forEach(b => b.addEventListener('click', () => { S.noteOuvert = !S.noteOuvert; rendre(); }));
     $.querySelectorAll('[data-objdrop]').forEach(b => b.addEventListener('click', () => { S.objOuvert = !S.objOuvert; rendre(); }));
     $.querySelectorAll('[data-promodrop]').forEach(b => b.addEventListener('click', () => { S.promoOuvert = !S.promoOuvert; rendre(); }));
     $.querySelectorAll('[data-prodrop]').forEach(b => b.addEventListener('click', () => { S.proOuvert = !S.proOuvert; rendre(); }));
+    // Commandes et canaux, au mois : un canal s'ouvre (son évolution) et se referme d'un second clic.
+    $.querySelectorAll('[data-coc]').forEach(b => {
+      const bascule = () => { S.coCanal = S.coCanal === b.dataset.coc ? null : b.dataset.coc; rendre(); };
+      b.addEventListener('click', bascule);
+      b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bascule(); } });
+    });
     $.querySelectorAll('[data-note-texte]').forEach(t => t.addEventListener('input', () => {
       S.noteBrouillon = { cle: cleNote(), texte: t.value };
       const N = S.aux[cleNote()], lu = N && N.note ? N.note.texte : '';
@@ -5489,6 +7474,7 @@
       b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); invModaleOuvrir(); } });
     });
     ppBrancher();
+    pmBrancher();
     $.querySelectorAll('[data-cmdliste]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.cmdListeOuvert = !S.cmdListeOuvert; rendre(); }));
     // Les contrôles en photo : filtres, flèches, loupe.
     $.querySelectorAll('[data-cqf]').forEach(b => b.addEventListener('click', () => { S.cqFiltre = b.dataset.cqf; S.cqRaz = true; rendre(); }));
@@ -5520,7 +7506,7 @@
   });
 
   // La loupe se ferme à Échap et se feuillette aux flèches du clavier.
-  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } else if (S.invModale && e.key === 'Escape') { invModaleFermer(); } });
+  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } else if (S.invModale && e.key === 'Escape') { invModaleFermer(); } else if (S.stk && e.key === 'Escape') { stkFermer(); } else if (S.pmC && e.key === 'Escape') { pmCoefFermer(); } });
   document.addEventListener('keydown', e => {
     if (!S.cqVoir) { return; }
     if (e.key === 'Escape') { S.cqVoir = null; rendre(); }

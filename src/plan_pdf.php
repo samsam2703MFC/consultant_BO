@@ -188,7 +188,7 @@ function planPdfHtml(array $d, int $q): string
     $cumEc = $cumAtt > 0 ? $cumRea - $cumAtt : null;
     $h .= '<tr class="tot"><td class="l">Cumul</td><td>' . $k($cumObj) . '</td><td>' . $k($cumAtt) . '</td><td>' . $k($cumRea) . '</td>'
         . '<td class="' . $cls($cumEc) . '">' . $sigK($cumEc) . '</td><td class="' . $cls($cumEc) . '">' . ($cumAtt > 0 ? $sigP(($cumRea / $cumAtt - 1) * 100) : '—') . '</td><td></td><td></td><td></td><td></td></tr></table>'
-        . '<div class="mut" style="font-size:7.5pt;margin-bottom:3mm">Objectif = budget validé du mois, à défaut le CA théorique de l’étude. Attendu = les mois écoulés, le mois en cours au prorata des jours. Clients = écart ÷ panier moyen du trimestre. Ratios pondérés par le CA ; labour et résultat net connus depuis juillet 2026.</div>';
+        . '<div class="mut" style="font-size:7.5pt;margin-bottom:3mm">Objectif = budget validé du mois, à défaut le CA théorique de l’étude. Attendu = les mois écoulés, le mois en cours au prorata des jours. Clients = écart ÷ panier moyen du trimestre. Ratios pondérés par le CA ; main-d’œuvre et frais généraux : le panel, jour par jour.</div>';
 
     // Les quatre derniers trimestres jusqu'à T{q} inclus, avec leurs voix.
     $derniers = [];

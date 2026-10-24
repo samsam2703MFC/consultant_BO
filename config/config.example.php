@@ -44,6 +44,17 @@ return [
         'graphVersion' => 'v21.0',
     ],
 
+    // SMS (14/10/2026) : la vendeuse reçoit un SMS quand elle gagne une prime (Équipe & ventes ›
+    // Paramètres, « SMS à la réussite »). Un compte Twilio : SID, jeton, et l'expéditeur (un numéro
+    // Twilio au format +32…, ou un nom alphanumérique de 11 caractères au plus). Sans ces trois valeurs,
+    // aucun SMS ne part. Les variables d'environnement priment.
+    'sms' => [
+        'fournisseur' => 'twilio',
+        'sid'         => getenv('TWILIO_SID') ?: null,
+        'token'       => getenv('TWILIO_TOKEN') ?: null,
+        'expediteur'  => getenv('SMS_EXPEDITEUR') ?: null,
+    ],
+
     // Jeu de démonstration. false (défaut) : base vide, prête pour les vraies
     // données — aucune donnée fictive n'est chargée. true (ou COCKPIT_SEED=1) :
     // charge sql/seed.sql (réseau belge de démo) si la base est vide.

@@ -19,7 +19,7 @@ declare(strict_types=1);
  * étoiles sont le total ramené sur 5.
  *
  * Tout ce qui se lit ailleurs est relu, jamais recopié : la réputation
- * (`ceo_shop_reputation`), le relevé des tâches (`ceo_tache_jour`), le budget
+ * (`mar_avis_fiche`), le relevé des tâches (`ceo_tache_jour`), le budget
  * (`/stores/perf`). Deux tables à ce module : la note Google gelée en fin de
  * trimestre (sinon un trimestre passé ne se comparerait plus) et le rapport du
  * client mystère. Le rapport A4 part par le reporting, le 1er jour du
@@ -144,7 +144,7 @@ function sqGoogle(array $tri): array
     $out = [];
     if ($tri['enCours'] || !$tri['clos']) {
         try {
-            foreach (Db::rows('SELECT shop_id, rating_avg, rating_count, synced_at FROM ceo_shop_reputation') as $r) {
+            foreach (Db::rows('SELECT shop_id, rating_avg, rating_count, synced_at FROM mar_avis_fiche') as $r) {
                 $sid = (string) $r['shop_id'];
                 $note = $r['rating_avg'] !== null ? round((float) $r['rating_avg'], 2) : null;
                 $out[$sid] = ['v' => $note, 'note' => $note, 'avis' => (int) $r['rating_count'], 'le' => $r['synced_at'] ? substr((string) $r['synced_at'], 0, 16) : null, 'gele' => false];

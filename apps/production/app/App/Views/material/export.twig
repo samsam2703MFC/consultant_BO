@@ -1,0 +1,427 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.export_materials|default('Eksport surowców') }}{% endblock %}
+
+{% block page_heading %}
+<div class="page-heading">
+    <div class="page-title">
+        <div class="row">
+            <div class="col-12 col-md-6 order-md-1 order-last">
+                <h3>{{ translations.export_materials }}</h3>
+                <p class="text-subtitle text-muted">{{ translations.export_subtitle }}</p>
+            </div>
+            <div class="col-12 col-md-6 order-md-2 order-first">
+                <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ root }}/dashboard">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ root }}/materials">{{ translations.materials }}</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ translations.export }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+    .material-selection-table {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+    }
+
+    .material-row {
+        cursor: pointer;
+        transition: background-color 0.15s ease-in-out;
+    }
+
+    .material-row:hover {
+        background-color: #f8f9fa;
+    }
+
+    .material-row.selected {
+        background-color: #cfe2ff;
+    }
+
+    .material-checkbox {
+        cursor: pointer;
+    }
+
+    .export-info-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #0d6efd;
+    }
+
+    .sticky-header {
+        position: sticky;
+        top: 0;
+        background-color: white;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <section class="section">
+        <div class="row">
+            <div class="col-12 col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">{{ translations.select_materials }}</h4>
+                        <small class="text-info">
+                            <i class="bi bi-info-circle"></i>
+                            {{ translations.package_materials_hidden|default('Surowce będące częścią pakietu są ukryte') }}
+                        </small>
+                    </div>
+                    <div class="card-body">
+                        <!-- Search and filters -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <input type="text"
+                                       class="form-control"
+                                       id="searchMaterials"
+                                       placeholder="{{ translations.search_materials }}">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <select class="form-select" id="categoryFilter">
+                                    <option value="">{{ translations.all_categories }}</option>
+                                    {% set processedCategories = [] %}
+                                    {% for material in materials %}
+                                        {% if material.category_name and material.category_name not in processedCategories %}
+                                            <option value="{{ material.category_name }}">{{ material.category_name }}</option>
+                                            {% set processedCategories = processedCategories|merge([material.category_name]) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Bulk actions -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" id="selectAllBtn">
+                                    <i class="bi bi-check-square"></i> {{ translations.select_all }}
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" id="deselectAllBtn">
+                                    <i class="bi bi-square"></i> {{ translations.deselect_all }}
+                                </button>
+                            </div>
+                            <div>
+                                <span class="badge bg-primary" id="selectedCount">{{ translations.selected_count }}: 0</span>
+                            </div>
+                        </div>
+
+                        <!-- Materials table -->
+                        <div class="material-selection-table">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="sticky-header">
+                                    <tr>
+                                        <th style="width: 50px">
+                                            <input type="checkbox" class="form-check-input" id="selectAllCheckbox">
+                                        </th>
+                                        <th>{{ translations.material_name }}</th>
+                                        <th>{{ translations.category }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="materialsTableBody">
+                                    {% if materials is empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-4">
+                                                {{ translations.no_materials }}
+                                            </td>
+                                        </tr>
+                                    {% else %}
+                                        {% for material in materials %}
+                                            <tr class="material-row"
+                                                data-material-id="{{ material.id }}"
+                                                data-material-name="{{ material.name|lower }}"
+                                                data-category="{{ material.category_name|default('') }}">
+                                                <td>
+                                                    <input type="checkbox"
+                                                           class="form-check-input material-checkbox"
+                                                           value="{{ material.id }}"
+                                                           data-name="{{ material.name }}">
+                                                </td>
+                                                <td>{{ material.name }}</td>
+                                                <td>
+                                                    {% if material.category_name %}
+                                                        <span class="badge bg-light text-dark">{{ material.category_name }}</span>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">{{ translations.export }}</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Language selection -->
+                        <div class="mb-3">
+                            <label for="exportLanguage" class="form-label">
+                                {{ translations.select_language }}
+                            </label>
+                            <select class="form-select" id="exportLanguage">
+                                {% if languages is empty %}
+                                    <option value="pl">Polski (domyślny)</option>
+                                {% else %}
+                                    {% for language in languages %}
+                                        <option value="{{ language.code }}" {% if language.code == 'pl' %}selected{% endif %}>
+                                            {{ language.name }}
+                                        </option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+
+                        <!-- Export info -->
+                        <div class="export-info-card p-3 rounded mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-info-circle text-primary me-2"></i>
+                                <strong>Informacje</strong>
+                            </div>
+                            <ul class="small mb-0 ps-3">
+                                <li>Format: JSON</li>
+                                <li>Zawiera wartości odżywcze</li>
+                                <li>Zawiera alergeny (jeśli przypisane)</li>
+                                <li>Tłumaczenia wg wybranego języka</li>
+                            </ul>
+                        </div>
+
+                        <!-- Export button -->
+                        <button class="btn btn-primary w-100" id="exportBtn" disabled>
+                            <i class="bi bi-download"></i> {{ translations.export_to_json }}
+                        </button>
+
+                        <div class="text-center mt-2">
+                            <small class="text-muted" id="exportStatusText">
+                                {{ translations.no_materials_selected }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Translations for JS
+const translations = {
+    selected_count: "{{ translations.selected_count }}",
+    no_materials_selected: "{{ translations.no_materials_selected }}",
+    export_success: "{{ translations.export_success }}",
+    export_error: "{{ translations.export_error }}",
+    export_to_json: "{{ translations.export_to_json }}",
+    communication_error: "{{ translations.communication_error }}"
+};
+let selectedMaterials = new Set();
+
+// DOM Elements
+const materialsTableBody = document.getElementById('materialsTableBody');
+const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+const selectAllBtn = document.getElementById('selectAllBtn');
+const deselectAllBtn = document.getElementById('deselectAllBtn');
+const selectedCountBadge = document.getElementById('selectedCount');
+const exportBtn = document.getElementById('exportBtn');
+const exportStatusText = document.getElementById('exportStatusText');
+const searchInput = document.getElementById('searchMaterials');
+const categoryFilter = document.getElementById('categoryFilter');
+const exportLanguage = document.getElementById('exportLanguage');
+
+// Update selected count
+function updateSelectedCount() {
+    const count = selectedMaterials.size;
+    selectedCountBadge.textContent = `${translations.selected_count}: ${count}`;
+    exportBtn.disabled = count === 0;
+
+    if (count === 0) {
+        exportStatusText.textContent = translations.no_materials_selected;
+    } else {
+        exportStatusText.textContent = `${count} ${count === 1 ? 'surowiec' : count < 5 ? 'surowce' : 'surowców'}`;
+    }
+}
+
+// Handle checkbox change
+function handleCheckboxChange(checkbox) {
+    const materialId = parseInt(checkbox.value);
+    const row = checkbox.closest('.material-row');
+
+    if (checkbox.checked) {
+        selectedMaterials.add(materialId);
+        row.classList.add('selected');
+    } else {
+        selectedMaterials.delete(materialId);
+        row.classList.remove('selected');
+    }
+
+    updateSelectedCount();
+    updateSelectAllCheckbox();
+}
+
+// Update select all checkbox state
+function updateSelectAllCheckbox() {
+    const visibleCheckboxes = getVisibleCheckboxes();
+    const checkedCount = visibleCheckboxes.filter(cb => cb.checked).length;
+
+    if (checkedCount === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    } else if (checkedCount === visibleCheckboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+    } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+// Get visible checkboxes
+function getVisibleCheckboxes() {
+    return Array.from(document.querySelectorAll('.material-checkbox'))
+        .filter(cb => cb.closest('.material-row').style.display !== 'none');
+}
+
+// Select all visible
+selectAllCheckbox.addEventListener('change', function() {
+    const visibleCheckboxes = getVisibleCheckboxes();
+    visibleCheckboxes.forEach(cb => {
+        cb.checked = this.checked;
+        handleCheckboxChange(cb);
+    });
+});
+
+selectAllBtn.addEventListener('click', function() {
+    const visibleCheckboxes = getVisibleCheckboxes();
+    visibleCheckboxes.forEach(cb => {
+        cb.checked = true;
+        handleCheckboxChange(cb);
+    });
+});
+
+deselectAllBtn.addEventListener('click', function() {
+    document.querySelectorAll('.material-checkbox').forEach(cb => {
+        cb.checked = false;
+        handleCheckboxChange(cb);
+    });
+});
+
+// Row click handling
+materialsTableBody.addEventListener('click', function(e) {
+    if (e.target.type === 'checkbox') return;
+
+    const row = e.target.closest('.material-row');
+    if (!row) return;
+
+    const checkbox = row.querySelector('.material-checkbox');
+    if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        handleCheckboxChange(checkbox);
+    }
+});
+
+// Checkbox change handling
+materialsTableBody.addEventListener('change', function(e) {
+    if (e.target.classList.contains('material-checkbox')) {
+        handleCheckboxChange(e.target);
+    }
+});
+
+// Search and filter
+function applyFilters() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const categoryValue = categoryFilter.value;
+
+    document.querySelectorAll('.material-row').forEach(row => {
+        const materialName = row.dataset.materialName || '';
+        const category = row.dataset.category || '';
+
+        const matchesSearch = !searchTerm || materialName.includes(searchTerm);
+        const matchesCategory = !categoryValue || category === categoryValue;
+
+        row.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
+    });
+
+    updateSelectAllCheckbox();
+}
+
+searchInput.addEventListener('input', applyFilters);
+categoryFilter.addEventListener('change', applyFilters);
+
+// Export functionality
+exportBtn.addEventListener('click', async function() {
+    if (selectedMaterials.size === 0) {
+        Swal.fire('Ostrzeżenie', translations.no_materials_selected, 'warning');
+        return;
+    }
+
+    const langCode = exportLanguage.value;
+    const materialIds = Array.from(selectedMaterials);
+
+    exportBtn.disabled = true;
+    exportBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eksportowanie...';
+
+    try {
+        const response = await api('/ajax/materials/export', {
+            method: 'POST',
+            data: {
+                material_ids: materialIds,
+                lang_code: langCode
+            }
+        });
+
+        if (response.ok && response.data) {
+            // Download JSON file
+            const jsonString = JSON.stringify(response.data, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `materials_export_${langCode}_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            Swal.fire({
+                icon: 'success',
+                title: translations.export_success,
+                text: response.description || 'Plik JSON został pobrany',
+                timer: 3000
+            });
+        } else {
+            Swal.fire('Błąd', response.error || translations.export_error, 'error');
+        }
+    } catch (error) {
+        console.error('Export error:', error);
+        Swal.fire('Błąd', translations.communication_error, 'error');
+    } finally {
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = '<i class="bi bi-download"></i> ' + translations.export_to_json;
+    }
+});
+
+// Initialize
+updateSelectedCount();
+</script>
+{% endblock %}
+
+
+
+
+

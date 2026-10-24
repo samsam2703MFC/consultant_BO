@@ -1,297 +1,372 @@
-{# primes/primes.twig — « Mes primes », un seul écran, centré sur elle : ce qu'elle peut gagner, comment, et sa collection de titres (06/10/2026). #}
+{# primes/primes.twig — « Mes primes » (23/10/2026) : tournée vers la motivation — combien est encore en jeu, puis tes primes en une
+   seule liste par état : à aller chercher (le plan, PrimesPlan, avec ce qu'il faut faire), déjà gagnées, pas ce mois-ci — dans une forme sobre, façon iOS : la police du système, des listes groupées, une seule
+   couleur, des icônes au trait à la place des émojis (une icône déposée par l'admin reste). Avant, le 16/10/2026 : les targets et les catégories une par ligne, en drapeau (la barre, le trait de l'objectif, la récompense dessus), qui se déroulent sur leur détail ; les promos en carrés deux par ligne ; chaque carré a sa récompense, une demi-jauge (où elle en est aujourd'hui, l'objectif à atteindre) et son état, en gris tant qu'elle n'est pas gagnée ; l'icône déposée par l'admin, sinon l'emoji ; le classement à la Strava dans un menu qui monte du bas. #}
 {% extends "layouts/mobile_base.twig" %}
 {% set active_nav = 'primes' %}
 {% set T = translations %}
 {% block title %}{{ T.my_bonuses ?? 'Mes primes' }}{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}">{% endblock %}
 {% block page_title %}{{ T.my_bonuses ?? 'Mes primes' }}{% endblock %}
-{% block page_subtitle %}{% if primes %}{{ primes.magasin.nom|replace({'Atelier by - ': ''}) }} · {{ mois(primes.m) }}{% if primes.enCours %}, {{ T.as_of ?? 'au' }} {{ jour }}{% endif %}{% endif %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
 {% block content %}
+{% import 'primes/_macros.twig' as m %}
 {% set p = primes %}
-{% if not p %}
+{% if not p or p.cartes is not defined %}
 <div class="pr-card"><div class="pr-h"><h2>{{ T.my_bonuses ?? 'Mes primes' }}</h2></div>
   <div class="note">{{ T.unavailable ?? 'Les primes ne peuvent pas être lues pour le moment. Réessaie dans un instant.' }}{% if primesErreur %}<br><span class="mu" style="font-size:11px">{{ T.cockpit_said ?? 'Le cockpit a répondu :' }} {{ primesErreur }}</span>{% endif %}</div></div>
 {% else %}
-{% set b = p.briques %}{% set g = p.prime %}{% set c = b.croisees %}{% set r = b.record %}{% set v = b.meilleure %}{% set k = b.concours ?? null %}
-{% set coll = p.collection ?? null %}
 {% set eur = '€' %}
-{% set nbTitres = 0 %}{% if coll %}{% for t in coll.titres %}{% set nbTitres = nbTitres + t.n %}{% endfor %}{% endif %}
-{% set nbEnCours = coll ? coll.enCours|length : 0 %}
+{% set pcs = T.pcs ?? 'pcs' %}
+{% set rangPre = T.rank_prefix ?? '' %}{% set rangSuf = T.rank_suffix ?? 'e' %}
+{# Les icônes déposées dans le cockpit vivent à côté de lui (public/uploads/primes) : PrimesService donne son adresse. #}
+{% set ib = p.iconesBase ?? (ROOT ~ '/..') %}
 
-{# ── 1. Le héros : déjà gagné, jusqu'à, les titres ── #}
-{% set part = p.aPortee > 0 ? min(1, p.acquis / p.aPortee) : 0 %}
-<div class="pr-card hero">
-  <div class="hero-haut">
-    <div class="anneau"><svg viewBox="0 0 120 120"><circle class="fond" cx="60" cy="60" r="52"/><circle class="val" cx="60" cy="60" r="52" style="stroke-dasharray:{{ (part * 326.7)|round(1) }} 326.7"/></svg>
-      <div class="centre"><b>{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b><small>{{ T.already_won ?? 'déjà gagné' }}</small></div></div>
-    <div class="tx">
-      <div class="k">{{ T.my_month ?? 'Mon mois' }}{% if p.enCours %}, {{ T.as_of ?? 'au' }} {{ jour }}{% endif %}</div>
-      {% if p.enCours %}
-      <div class="gros2">{{ T.up_to ?? 'jusqu’à' }} {{ p.aPortee|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div>
-      <div class="s">{{ T.up_to_if ?? 'si tu passes un cran de plus partout' }}</div>
-      {% else %}
-      <div class="gros2">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</div>
-      <div class="s">{{ T.month_closed ?? 'mois clos, payé en bons début du mois suivant' }}</div>
-      {% endif %}
+{# ── Le mois (16/10/2026) : une flèche à gauche, le mois au centre, une flèche à droite ; douze mois en arrière au
+   plus, trois mois à venir (les primes prévues). ── #}
+{% set mCour = 'now'|date('Y-m') %}
+{% set mPrec = (p.m ~ '-01')|date_modify('-1 month')|date('Y-m') %}
+{% set mSuiv = (p.m ~ '-01')|date_modify('+1 month')|date('Y-m') %}
+{% set mMin = ('now'|date('Y-m') ~ '-01')|date_modify('-12 months')|date('Y-m') %}
+{% set mMax = ('now'|date('Y-m') ~ '-01')|date_modify('+3 months')|date('Y-m') %}
+<nav class="mois-sel" aria-label="{{ T.month ?? 'Mois' }}" data-mois>
+  {% if mPrec >= mMin %}<a class="ms-f" href="{{ ROOT }}/primes?m={{ mPrec }}" aria-label="{{ T.prev_month ?? 'Mois précédent' }}"><i class="bi bi-chevron-left"></i></a>
+  {% else %}<span class="ms-f off" aria-hidden="true"><i class="bi bi-chevron-left"></i></span>{% endif %}
+  <div class="ms-l"><b>{{ mois(p.m)|capitalize }}</b>{% if p.enCours %}<small>{{ T.in_progress ?? 'en cours' }} · {{ T.as_of ?? 'au' }} {{ jour }}</small>{% elseif p.aVenir ?? false %}<small>{{ T.upcoming ?? 'à venir' }}</small>{% endif %}</div>
+  {% if mSuiv <= mMax %}<a class="ms-f" href="{{ ROOT }}/primes{{ mSuiv != mCour ? '?m=' ~ mSuiv }}" aria-label="{{ T.next_month ?? 'Mois suivant' }}"><i class="bi bi-chevron-right"></i></a>
+  {% else %}<span class="ms-f off" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>{% endif %}
+</nav>
+
+{% if p.aVenir ?? false %}
+{# ── Un mois à venir (16/10/2026) : les primes prévues, leur récompense, leur règle, leur objectif ; rien de compté. ── #}
+{% set eur = '€' %}{% set pcs = T.pcs ?? 'pcs' %}
+{% set nomFixe = { croisees: T.cross_sales ?? null, record: T.beat_your_record ?? null, objectif: T.shop_target_title ?? null, google: T.google_rating ?? null, meilleure: T.best_seller ?? null } %}
+<section class="sb-heros"><p class="sb-sur">{{ (T.in_play_in ?? 'En jeu en {m}')|replace({'{m}': mois(p.m)|split(' ')|first}) }}</p><p class="sb-chiffre">{{ p.enJeu|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</p></section>
+<div class="pl-vide av"><i class="bi bi-calendar-event"></i><div><b>{{ T.upcoming_title ?? 'Les primes prévues ce mois-là' }}</b>
+  <span>{{ T.upcoming_text ?? 'Ce que tu pourras gagner. Le compteur démarre le premier jour du mois.' }}</span></div></div>
+{% for g in [
+  { cle: 'targets', titre: T.section_targets ?? 'Targets', liste: p.cartes|filter(c => c.type == 'target' or c.type == 'classement' or c.type == 'b2b') },
+  { cle: 'promos', titre: T.section_promos ?? 'Promos', liste: p.cartes|filter(c => c.type == 'promo') }]|filter(g => g.liste|length) %}
+{% set max = 0 %}{% for c in g.liste %}{% set max = max + c.montant %}{% endfor %}
+<div class="titre-section" data-section="{{ g.cle }}"><h2>{{ g.titre }}</h2><small>{% if max == 0 and g.liste|filter(c => c.cadeau ?? null)|length %}<i class="bi bi-gift"></i>{% else %}{{ T.up_to ?? 'jusqu’à' }} {{ max|number_format(0, ',', ' ') }}&nbsp;{{ eur }}{% endif %}</small></div>
+<div class="pl-liste">
+{% for c in g.liste %}
+{% set u = c.unite %}{% set dec = u == 'note' ? 1 : 0 %}
+{% set suf = u == 'pct' ? ' %' : (u == 'pcs' ? ' ' ~ pcs : (u == 'note' ? ' ★' : '')) %}
+{% set n = c.objectif is not null ? c.objectif|number_format(dec, ',', ' ') : '' %}
+<div class="pl av" data-carte="{{ c.cle }}">
+  <div class="pl-b">
+    <div class="pl-h">
+      <span class="emo">{{ m.ic(c, ib) }}</span>
+      <b class="pl-t">{{ nomFixe[c.cle] ?? c.lib }}</b>
+      <span class="pl-v">{% if c.type == 'b2b' %}{{ c.mode == 'fixe' ? c.fixe : c.taux|number_format(c.taux == c.taux|round ? 0 : 1, ',', ' ') }}<small>{{ c.mode == 'fixe' ? eur : '%' }}</small>{% elseif c.cadeau ?? null %}<i class="bi bi-gift"></i><small>{{ c.cadeau.nom }}</small>{% else %}{{ c.montant|number_format(0, ',', ' ') }}<small>{{ eur }}{{ c.max ? ' max' }}</small>{% endif %}</span>
+    </div>
+    <div class="pl-s">
+      <span class="mu">
+      {%- if c.type == 'b2b' %}{{ m.b2b(c, T) }}
+      {%- elseif c.regle == 'magasin' %}{{ (T.rule_shop ?? 'le magasin : objectif {n} {u}')|replace({'{n}': n, '{u}': pcs}) }}
+      {%- elseif c.regle == 'vendeuse' %}{{ (T.rule_mine ?? 'ton objectif : {n} {u}')|replace({'{n}': n, '{u}': pcs}) }}
+      {%- elseif c.regle == 'seuil' %}{{ (T.rule_threshold ?? 'chacune dès {n} {u}')|replace({'{n}': n, '{u}': pcs}) }}
+      {%- elseif c.regle == 'premiere' %}{{ T.rule_first ?? 'la 1re du magasin gagne' }}
+      {%- elseif c.objectif is not null %}{{ T.goal_lower ?? 'objectif' }} {{ n }}{{ suf }}
+      {%- endif -%}
+      </span>
+      {% if (c.du or c.au) and c.type != 'b2b' %}<span>{{ (T.dates_from_to ?? 'du {du} au {au}')|replace({'{du}': c.du ? c.du|date('d/m') : '…', '{au}': c.au ? c.au|date('d/m') : '…'}) }}</span>{% endif %}
     </div>
   </div>
-  <div class="hero-chips">
-    <a class="chip" href="#collection"><span class="emo">👑</span> {{ nbTitres }} {{ T.titles ?? 'titres' }}{% if nbEnCours %} · {{ nbEnCours }} {{ T.live ?? 'en cours' }}{% endif %}</a>
-    {% set gg = p.google ?? null %}
-    {% if gg and gg.actif and gg.note is not null %}<span class="chip"><span class="emo">⭐</span> Google {{ gg.note|number_format(1, ',', ' ') }} → × {{ gg.coef|number_format(2, ',', ' ') }}</span>{% endif %}
-    {% if g.vous > 0 %}<span class="chip"><span class="emo">🏪</span> {{ g.vous|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.of_shop_bonus ?? 'de prime magasin' }}</span>{% endif %}
-  </div>
 </div>
-
-{# ── 2. Aujourd'hui ── #}
-{% if p.enCours %}
-{% set a = p.aujourdhui %}
-<div class="pr-card auj-carte">
-  {% if a %}
-  <div class="auj"><div class="cercle" style="--p:{{ a.tickets > 0 ? (100 * a.croisees / a.tickets)|round : 0 }}%"><b>{{ a.croisees }}</b><small>{{ T.out_of ?? 'sur' }} {{ a.tickets }}</small></div>
-    <div class="tx"><div class="q">{{ T.today ?? 'Aujourd’hui' }} · {{ a.croisees }} {{ T.cross_sales_today ?? 'ventes croisées' }}</div>
-      {% if a.tickets > 0 %}{{ a.taux|number_format(0, ',', ' ') }}&nbsp;% {{ T.of_your_tickets_have ?? 'de tes tickets ont 2 articles ou plus' }} · {{ T.target ?? 'cible' }} {{ c.cible|number_format(0, ',', ' ') }}&nbsp;%{% else %}{{ T.no_ticket_yet ?? 'Pas encore de ticket à ton nom.' }}{% endif %}
-      <div class="mu" style="font-size:11.5px;margin-top:3px">{{ T.read_at ?? 'lu à' }} {{ a.quand }} · « {{ T.anything_else ?? 'Et avec ça ?' }} »</div></div></div>
+{% endfor %}
+</div>
+{% endfor %}
+{% else %}
+{# ── Combien : ce qui est encore en jeu ce mois-ci, ce qui est déjà gagné, le temps qu'il reste (23/10/2026). ── #}
+{% set part = p.enJeu > 0 ? min(1, p.acquis / p.enJeu) : 0 %}
+{% set encore = max(0, p.enJeu - p.acquis) %}
+<section class="sb-heros">
+  {% if p.enCours and encore > 0 %}
+  <p class="sb-sur">{{ T.still_in_play ?? 'Encore en jeu ce mois-ci' }}</p>
+  <p class="sb-chiffre">+{{ encore|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</p>
+  <div class="sb-barre grande"><i style="width:{{ (100 * part)|round(1) }}%"></i></div>
+  <p class="sb-sous"><b>{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b> {{ T.won_so_far ?? 'déjà gagnés' }} · {{ p.enJeu|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.in_play ?? 'en jeu' }}</p>
+  {% elseif p.enCours %}
+  <p class="sb-sur">{{ T.my_month ?? 'Mon mois' }}</p>
+  <p class="sb-chiffre">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</p>
+  <p class="sb-sous">{{ p.acquis > 0 ? (T.all_won ?? 'Tout ce qui est en jeu est gagné : garde le rythme jusqu’à la fin du mois.') : (T.counters_start ?? 'Tes compteurs démarrent avec tes premiers tickets du mois : chaque vente compte.') }}</p>
   {% else %}
-  <div class="note" style="margin-top:0">{{ T.today_unavailable ?? 'Le compteur du jour n’a pas pu être lu.' }}</div>
+  <p class="sb-sur">{{ (T.you_won_in ?? 'En {m}, tu as gagné')|replace({'{m}': mois(p.m)|split(' ')|first}) }}</p>
+  <p class="sb-chiffre">{{ p.acquis|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</p>
   {% endif %}
-</div>
+  {% if p.enCours and heuresRestantes %}<p class="sb-pied">{{ (T.hours_left_short ?? '{h} h de service restantes ce mois-ci')|replace({'{h}': heuresRestantes|number_format(1, ',', ' ')|replace({',0': ''})}) }}</p>{% endif %}
+</section>
+
+{% if p.cartes|filter(c => c.motif == 'sans_vente')|length %}
+<div class="pl-vide"><i class="bi bi-receipt"></i><div><b>{{ T.no_sale_title ?? 'Aucune vente à ton nom ce mois-ci' }}</b>
+  <span>{{ T.no_sale_text ?? 'Tes primes à toi (ventes croisées, record, classements) s’affichent dès ton premier ticket encaissé à ton nom. Le magasin et la note Google, eux, comptent déjà.' }}</span></div></div>
 {% endif %}
 
-{# ── 3. Ce que tu peux gagner, et comment ── #}
-<div class="titre-section"><h2>{{ T.what_you_can_win ?? 'Ce que tu peux gagner' }}</h2><small>{{ T.and_how ?? 'et comment' }}</small></div>
-
-{# Ventes croisées #}
-{% set maxC = 0 %}{% for pal in c.paliers %}{% set maxC = max(maxC, pal.m) %}{% endfor %}
-<div class="mission {{ c.montant > 0 ? 'gagne' }}">
-  <div class="m-haut"><span class="emo">🛍️</span><div class="m-t"><b>{{ T.cross_sales ?? 'Ventes croisées' }}</b><small>{{ T.cross_how ?? 'Un ticket avec 2 articles ou plus. Dépasse la cible du magasin : chaque palier rapporte.' }}</small></div>
-    <div class="m-gain">{% if c.montant > 0 %}<b>+{{ c.montant }}&nbsp;{{ eur }}</b><small>{{ T.won ?? 'gagné' }}</small>{% else %}<b>{{ T.up_to_short ?? 'jusqu’à' }} {{ maxC }}&nbsp;{{ eur }}</b><small>{{ T.per_month ?? 'par mois' }}</small>{% endif %}</div></div>
-  {% if c.taux is not null %}
-  <div class="etapes">
-    {% for pal in c.paliers %}{% set seuil = c.cible + pal.plus %}{% set fait = c.tickets >= c.minTickets and c.taux + 0.0001 >= seuil %}{% set ici = not fait and (loop.first or (c.taux + 0.0001 >= c.cible + c.paliers[loop.index0 - 1].plus)) %}
-    <div class="et {{ fait ? 'ok' : (ici ? 'ici' : '') }}"><i></i><span class="l">{{ seuil|number_format(0, ',', ' ') }}&nbsp;%</span><span class="v">{{ pal.m }}&nbsp;{{ eur }}</span></div>{% endfor %}
-  </div>
-  <div class="m-etat"><b>{{ T.you_are_at ?? 'Tu es à' }} {{ c.taux|number_format(0, ',', ' ') }}&nbsp;%</b> · {{ c.croisees }} {{ T.out_of ?? 'sur' }} {{ c.tickets }} {{ T.tickets ?? 'tickets' }}{% if c.prochain %} · <span class="next">{{ T.next_step ?? 'prochain cran' }} : {{ c.prochain.manque }} {{ T.more_cross ?? 'ventes croisées de plus' }} = {{ c.prochain.montant }}&nbsp;{{ eur }}</span>{% endif %}</div>
-  {% else %}<div class="m-etat mu">{{ c.motif ?? (T.not_harvested ?? 'Les tickets de ce mois ne sont pas encore comptés.') }}</div>{% endif %}
-</div>
-
-{# Bats ton record #}
-<div class="mission {{ r.montant > 0 ? 'gagne' }}">
-  <div class="m-haut"><span class="emo">🚀</span><div class="m-t"><b>{{ T.beat_your_record ?? 'Bats ton record' }}</b><small>{{ T.record_how ?? 'Tes lignes par ticket face à ton record des 12 derniers mois. Chaque dixième au-dessus rapporte.' }}</small></div>
-    <div class="m-gain">{% if r.montant > 0 %}<b>+{{ r.montant }}&nbsp;{{ eur }}</b><small>{{ T.won ?? 'gagné' }}</small>{% else %}<b>{{ r.eurDixieme }}&nbsp;{{ eur }}</b><small>{{ T.per_tenth ?? 'par dixième' }} · {{ r.maxDixiemes }} max</small>{% endif %}</div></div>
-  {% if r.lt is not null and r.record is not null %}
-  <div class="etapes">
-    <div class="et {{ r.lt + 0.0001 >= r.record + 0.1 ? 'ok' : 'ici' }}"><i></i><span class="l">{{ (r.record + 0.1)|number_format(1, ',', ' ') }}</span><span class="v">{{ T.new_record_short ?? 'record' }}</span></div>
-    {% for tr in 1..max(1, r.maxDixiemes) %}{% set seuil = r.record + 0.1 * (tr + 1) %}{% set fait = r.lt + 0.0001 >= seuil %}{% set ici = not fait and r.lt + 0.0001 >= seuil - 0.1 %}
-    <div class="et {{ fait ? 'ok' : (ici ? 'ici' : '') }}"><i></i><span class="l">{{ seuil|number_format(1, ',', ' ') }}</span><span class="v">{{ tr * r.eurDixieme }}&nbsp;{{ eur }}</span></div>{% endfor %}
-  </div>
-  <div class="m-etat"><b>{{ T.you_are_at ?? 'Tu es à' }} {{ r.lt|number_format(2, ',', ' ') }}</b> {{ T.lines_per_ticket ?? 'lignes par ticket' }} · {{ T.record ?? 'record' }} {{ r.record|number_format(1, ',', ' ') }} ({{ mois(r.recordM ?? r.recordMois) }}){% if r.ecart < 0 %} · <span class="next">{{ T.next_step ?? 'prochain cran' }} : +{{ (0 - r.ecart)|number_format(2, ',', ' ') }} = {{ r.eurDixieme }}&nbsp;{{ eur }}</span>{% endif %}</div>
-  {% elseif r.lt is not null %}<div class="m-etat"><b>{{ r.lt|number_format(2, ',', ' ') }}</b> {{ T.lines_per_ticket ?? 'lignes par ticket' }} · {{ T.no_record_yet ?? 'pas encore de record' }}</div>
-  {% else %}<div class="m-etat mu">{{ T.not_harvested ?? 'Les tickets de ce mois ne sont pas encore comptés.' }}</div>{% endif %}
-</div>
-
-{# Meilleure vendeuse #}
-<div class="mission {{ v.montant > 0 ? 'gagne' }}">
-  <div class="m-haut"><span class="emo">🏆</span><div class="m-t"><b>{{ T.best_seller ?? 'Meilleure vendeuse' }}</b><small>{{ T.best_how ?? 'Ton CA par heure, corrigé du créneau, face aux autres vendeuses.' }}</small></div>
-    <div class="m-gain">{% if v.montant > 0 %}<b>+{{ v.montant }}&nbsp;{{ eur }}</b><small>{{ v.rangRes == 1 ? (T.of_network_title ?? 'du réseau') : (T.of_shop_title ?? 'du magasin') }}</small>{% else %}<b>{{ v.montantMag }} / {{ v.montantRes }}&nbsp;{{ eur }}</b><small>{{ T.shop_network ?? 'magasin / réseau' }}</small>{% endif %}</div></div>
-  {% if v.score is not null %}
-  <div class="etapes deux">
-    <div class="et {{ v.rangMag == 1 ? 'ok' : 'ici' }}"><i></i><span class="l">{{ T.first_shop ?? '1re du magasin' }}</span><span class="v">{{ v.montantMag }}&nbsp;{{ eur }}</span></div>
-    <div class="et {{ v.rangRes == 1 ? 'ok' : (v.rangMag == 1 ? 'ici' : '') }}"><i></i><span class="l">{{ T.first_network ?? '1re du réseau' }}</span><span class="v">{{ v.montantRes }}&nbsp;{{ eur }}</span></div>
-  </div>
-  <div class="m-etat"><b>{{ T.score ?? 'score' }} {{ v.score }}</b> · {{ v.rangMag }}e {{ T.of_shop ?? 'du magasin' }}{% if v.rangRes %}, {{ v.rangRes }}e {{ T.of_network ?? 'du réseau' }} {{ T.out_of ?? 'sur' }} {{ v.surRes }}{% endif %}{% if v.rangMag != 1 and v.scorePremier %} · <span class="next">{{ T.first_is_at ?? 'la 1re est à' }} {{ v.scorePremier }}</span>{% endif %}</div>
-  {% else %}<div class="m-etat mu">{{ v.motif ?? (T.not_ranked_reason ?? 'Sans vente ou sans heure au planning ce mois-ci : pas de classement.') }}</div>{% endif %}
-</div>
-
-{# Les concours : une couronne par famille #}
-{% if k and k.actif %}{% for q in k.liste %}
-<div class="mission {{ q.montant > 0 ? 'gagne' }}">
-  <div class="m-haut"><span class="emo">👑</span><div class="m-t"><b>{{ q.lib }}</b><small>{{ T.contest_how_1 ?? 'Le nombre de' }} {{ q.lib|replace({'Queen of ': '', 'Reine des ': '', 'King of ': ''})|lower }} {{ T.contest_how_2 ?? 'vendues ce mois. La 1re du magasin prend la couronne du magasin, la 1re du réseau celle du réseau.' }} {{ q.minPieces }} {{ T.pieces_min ?? 'pièces au moins' }}.</small></div>
-    <div class="m-gain">{% if q.montant > 0 %}<b>+{{ q.montant }}&nbsp;{{ eur }}</b><small>{{ q.titre == 'reseau' ? (T.crown_network ?? 'couronne du réseau') : (T.crown_shop ?? 'couronne du magasin') }}</small>{% else %}<b>{{ q.montantMag }} / {{ q.montantRes }}&nbsp;{{ eur }}</b><small>{{ T.shop_network ?? 'magasin / réseau' }}</small>{% endif %}</div></div>
-  {% if q.pieces is not null %}
-  <div class="etapes deux">
-    <div class="et {{ q.rangMag == 1 ? 'ok' : 'ici' }}"><i></i><span class="l">{{ T.crown_shop ?? 'couronne du magasin' }}</span><span class="v">{{ q.montantMag }}&nbsp;{{ eur }}</span></div>
-    <div class="et {{ q.rangRes == 1 ? 'ok' : (q.rangMag == 1 ? 'ici' : '') }}"><i></i><span class="l">{{ T.crown_network ?? 'couronne du réseau' }}</span><span class="v">{{ q.montantRes }}&nbsp;{{ eur }}</span></div>
-  </div>
-  <div class="m-etat"><b>{{ q.pieces|number_format(0, ',', ' ') }} {{ T.pieces ?? 'pièces' }}</b>{% if q.rangMag %} · {{ q.rangMag }}e {{ T.of_shop ?? 'du magasin' }}{% endif %}{% if q.rangRes %}, {{ q.rangRes }}e {{ T.of_network ?? 'du réseau' }} {{ T.out_of ?? 'sur' }} {{ q.surRes }}{% endif %}{% if q.jours is defined %}{% endif %}
-    {% if q.rangRes == 1 %} · <span class="next">{{ T.you_are_queen ?? 'c’est toi la reine du réseau' }} 👑</span>
-    {% elseif q.rangMag == 1 and q.premierRes %} · <span class="next">{{ T.next_step ?? 'prochain cran' }} : {{ max(1, (q.premierRes - q.pieces)|round(0, 'ceil') + 1) }} {{ T.more_pieces_network ?? 'pièces de plus pour la couronne du réseau' }}</span>
-    {% elseif q.premierMag %} · <span class="next">{{ T.next_step ?? 'prochain cran' }} : {{ max(1, (max(q.premierMag, q.minPieces) - q.pieces)|round(0, 'ceil') + 1) }} {{ T.more_pieces_shop ?? 'pièces de plus pour la couronne du magasin' }}</span>
-    {% elseif q.pieces < q.minPieces %} · <span class="next">{{ T.min_to_enter ?? 'dès' }} {{ q.minPieces }} {{ T.pieces ?? 'pièces' }}, {{ T.you_are_in ?? 'tu es dans la course' }}</span>{% endif %}</div>
-  {% else %}<div class="m-etat mu">{{ k.motif ?? (T.not_harvested ?? 'Les tickets de ce mois ne sont pas encore comptés.') }}</div>{% endif %}
-</div>
-{% endfor %}{% endif %}
-
-{# La prime magasin, en dernier #}
-{% if g.objectif is not null %}
-{% set maxEh = 0 %}{% for x in g.paliers %}{% set maxEh = max(maxEh, x.eh) %}{% endfor %}
-<div class="mission {{ g.vous > 0 ? 'gagne' }}">
-  <div class="m-haut"><span class="emo">🏪</span><div class="m-t"><b>{{ T.shop_bonus_title ?? 'Prime magasin' }}</b><small>{{ T.shop_how ?? 'Si le magasin atteint son objectif du mois, chaque palier te donne des euros par heure prestée.' }}</small></div>
-    <div class="m-gain">{% if g.vous > 0 %}<b>+{{ g.vous|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b><small>{{ g.clos ? (T.won ?? 'gagné') : (T.at_pace ?? 'au rythme actuel') }}</small>{% else %}<b>{{ T.up_to_short ?? 'jusqu’à' }} {{ maxEh|number_format(2, ',', ' ') }}&nbsp;{{ eur }}/h</b><small>{{ p.heures.mois|number_format(0, ',', ' ') }}&nbsp;h {{ T.planned ?? 'au planning' }}</small>{% endif %}</div></div>
-  <div class="etapes">
-    {% for x in g.paliers %}{% set ici = not x.atteint and (loop.first or g.paliers[loop.index0 - 1].atteint) %}
-    <div class="et {{ x.atteint ? 'ok' : (ici ? 'ici' : '') }}"><i></i><span class="l">{{ x.pct }}&nbsp;%</span><span class="v">{{ (x.vous ?? 0)|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span></div>{% endfor %}
-  </div>
-  <div class="m-etat">{% set att = g.atteinteProj ?? g.atteinte %}{% if att is not null %}<b>{{ T.the_shop_is_at ?? 'Le magasin est à' }} {{ att|number_format(1, ',', ' ') }}&nbsp;%</b> {{ g.clos ? (T.reached ?? 'atteint') : (T.at_current_pace ?? 'au rythme actuel') }}{% if g.sousMin %} · {{ T.below ?? 'sous' }} {{ g.heuresMin }}&nbsp;h, {{ T.in_month_no_share ?? 'pas de part ce mois-ci' }}{% elseif not g.clos and g.paliers|length and g.paliers[0].manque %} · <span class="next">{{ T.next_step ?? 'prochain cran' }} : {{ g.paliers[0].manque|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.for_the_shop ?? 'de plus pour le magasin' }}{% if g.paliers[0].parJour %}, {{ g.paliers[0].parJour|number_format(0, ',', ' ') }}&nbsp;{{ eur }} {{ T.per_day ?? 'par jour' }}{% endif %}</span>{% endif %}{% else %}{{ T.no_target ?? 'Pas d’objectif encodé pour ce mois.' }}{% endif %}</div>
-</div>
+{# Les primes fixes portent leur nom dans la langue de l'app ; les catégories et les promos, celui que l'admin leur donne. #}
+{% set nomFixe = { croisees: T.cross_sales ?? null, record: T.beat_your_record ?? null, objectif: T.shop_target_title ?? null, google: T.google_rating ?? null, meilleure: T.best_seller ?? null } %}
+{% set b = p.briques %}{% set pm = p.prime %}{% set a = p.aujourdhui ?? null %}
+{% set aCl = (p.classements ?? [])|map(x => x.cle) %}
+{% set aPortee = (plan ?? [])|filter(e => not e.horsPortee) %}
+{% set planPar = {} %}{% for e in plan ?? [] %}{% set planPar = planPar|merge({ (e.cle): e }) %}{% endfor %}
+{% set toutes = p.cartes|filter(c => c.type in ['target', 'classement', 'promo', 'categorie', 'b2b']) %}
+{% set chercher = aPortee|map(e => e.carte) %}
+{% set cles1 = chercher|map(c => c.cle) %}
+{% set gagnees = toutes|filter(c => c.cle not in cles1 and (c.etat in ['gagne', 'tete'] or (c.actif ?? false))) %}
+{% set cles2 = gagnees|map(c => c.cle) %}
+{% set reste = toutes|filter(c => c.cle not in cles1 and c.cle not in cles2) %}
+{% set totC = 0 %}{% for e in aPortee %}{% set totC = totC + e.gain %}{% endfor %}
+{% set totG = 0 %}{% for c in gagnees %}{% set totG = totG + c.gain %}{% endfor %}
+{% set totR = 0 %}{% for c in reste %}{% set totR = totR + c.montant %}{% endfor %}
+{# ── Tes primes (23/10/2026, option retenue) : « Comment y arriver » et « Où tu en es » ne font plus qu'une liste, par
+   état — à aller chercher (le plan, la plus proche d'abord ; sous chaque ligne, ce qu'il faut faire), déjà gagnées,
+   pas ce mois-ci (hors de portée, ou rien de compté). Les catégories y reviennent ; leur classement reste plus bas.
+   Un mois clos : gagnées, pas gagnées. Toucher une ligne déroule son détail ; l'Accueil y mène par #prime-<clé>. ── #}
+{% if toutes|length %}
+<h2 class="sb-titre">{{ T.your_bonuses ?? 'Tes primes' }}</h2>
+{% for sec in [
+  { cle: 'chercher', titre: T.to_chase ?? 'À aller chercher', note: totC ? '+' ~ totC|number_format(0, ',', ' ') ~ ' ' ~ eur : '', liste: chercher },
+  { cle: 'gagnees', titre: p.enCours ? (T.won_title ?? 'Déjà gagnées') : (T.won_title_past ?? 'Gagnées'), note: totG ? totG|number_format(0, ',', ' ') ~ ' ' ~ eur : '', liste: gagnees },
+  { cle: 'reste', titre: p.enCours ? (T.not_this_month_title ?? 'Pas ce mois-ci') : (T.not_won_title ?? 'Pas gagnées'), note: p.enCours and totR ? (T.up_to ?? 'jusqu’à') ~ ' ' ~ totR|number_format(0, ',', ' ') ~ ' ' ~ eur : '', liste: reste }]|filter(x => x.liste|length) %}
+<div class="titre-section" data-section="{{ sec.cle }}"><h2>{{ sec.titre }}</h2><small>{{ sec.note }}</small></div>
+<div class="pl-liste">{% for c in sec.liste %}{% set etape = planPar[c.cle] ?? null %}{% include 'primes/_ligne.twig' %}{% endfor %}</div>
+{% endfor %}
 {% endif %}
 
-{# ── 4. Ma collection ── #}
-{% if coll %}
-{% set vivants = {} %}{% for t in coll.enCours %}{% set vivants = vivants|merge({ (t.cle ~ '|' ~ (t.cle == 'meilleure' or t.cle starts with 'concours:' ? t.niveau : '')): t }) %}{% endfor %}
-{% set gagnes = {} %}{% for t in coll.titres %}{% set gagnes = gagnes|merge({ (t.cle ~ '|' ~ (t.cle == 'meilleure' or t.cle starts with 'concours:' ? t.niveau : '')): t }) %}{% endfor %}
-{% set badges = [] %}
-{% if k and k.actif %}{% for q in k.liste %}
-  {% set badges = badges|merge([{ cle: 'concours:' ~ q.cle ~ '|reseau', emo: '👑', lib: q.lib, sous: T.of_network_title ?? 'du réseau', montant: q.montantRes }]) %}
-  {% set badges = badges|merge([{ cle: 'concours:' ~ q.cle ~ '|magasin', emo: '👑', lib: q.lib, sous: T.of_shop_title ?? 'du magasin', montant: q.montantMag }]) %}
-{% endfor %}{% endif %}
-{% set badges = badges|merge([
-  { cle: 'meilleure|reseau', emo: '🏆', lib: T.best_seller ?? 'Meilleure vendeuse', sous: T.of_network_title ?? 'du réseau', montant: v.montantRes },
-  { cle: 'meilleure|magasin', emo: '🏆', lib: T.best_seller ?? 'Meilleure vendeuse', sous: T.of_shop_title ?? 'du magasin', montant: v.montantMag },
-  { cle: 'croisees|', emo: '🛍️', lib: T.cross_sales ?? 'Ventes croisées', sous: T.target_beaten ?? 'cible battue', montant: maxC },
-  { cle: 'record|', emo: '🚀', lib: T.record_beaten ?? 'Record battu', sous: T.lines_per_ticket ?? 'lignes par ticket', montant: r.eurDixieme },
-  { cle: 'magasin|', emo: '🏪', lib: T.shop_bonus_title ?? 'Prime magasin', sous: T.target_reached ?? 'objectif atteint', montant: 0 },
-]) %}
-<div class="titre-section" id="collection"><h2>{{ T.my_collection ?? 'Ma collection' }}</h2><small>{{ nbTitres }} {{ T.titles_won ?? 'titres gagnés' }}{% if coll.mois|length %} {{ T.since ?? 'depuis' }} {{ mois(coll.depuis, true) }}{% endif %}</small></div>
-<div class="coll">
-  {% for bd in badges %}{% set gg2 = gagnes[bd.cle] ?? null %}{% set vv = vivants[bd.cle] ?? null %}
-  <div class="tb {{ gg2 ? 'on' : 'off' }} {{ vv ? 'live' }}">
-    <span class="emo">{{ bd.emo }}</span>
-    {% if gg2 and gg2.n > 1 %}<span class="n">× {{ gg2.n }}</span>{% endif %}
-    {% if vv %}<span class="tag">{{ T.live ?? 'en cours' }}</span>{% endif %}
-    <b>{{ bd.lib }}</b><small>{{ bd.sous }}</small>
-    <em>{% if gg2 %}{{ T.last ?? 'dernier' }} : {{ mois(gg2.mois|last, true) }}{% else %}{{ T.to_win ?? 'à gagner' }}{% if bd.montant %} · {{ bd.montant }}&nbsp;{{ eur }}{% endif %}{% endif %}</em>
+{# ── Les grands prix de l'année (23/10/2026) : les gros lots de la marque, des sponsors et du magasin, joués sur toute
+   l'année ; des cartes qui défilent : le lot et sa valeur, qui l'offre, le défi, ma place (ou ce qu'il me manque pour
+   être classée), le top 3, la saison. Seulement sur le mois en cours (src/grands_prix.php, gpPourVendeuse). ── #}
+{% set gps = p.enCours ? (p.grandsPrix ?? []) : [] %}
+{% if gps|length %}
+<h2 class="sb-titre" id="grands-prix">{{ T.gp_title ?? 'Grands prix de l’année' }}</h2>
+<div class="gp-rail" data-grands-prix>
+{% for g in gps %}
+{% set rang = g.moi ? (g.moi.rang == 1 ? (T.first_abbr ?? '1re') : rangPre ~ g.moi.rang ~ rangSuf) : null %}
+<article class="gp-c {{ g.etat }}" data-gp="{{ g.id }}">
+  <div class="gp-img d-{{ g.defi }}">
+    {% if g.photo %}<img src="{{ ib }}/{{ g.photo }}" alt="">{% else %}<i class="bi {{ { vendeuse: 'bi-trophy', b2b: 'bi-briefcase', ticket: 'bi-receipt', croisees: 'bi-bag', progression: 'bi-graph-up-arrow', magasin: 'bi-shop' }[g.defi] ?? 'bi-award' }}"></i>{% endif %}
+    <span class="gp-val">{{ g.valeur|number_format(0, ',', ' ') }}&nbsp;€</span>
   </div>
-  {% endfor %}
+  <div class="gp-b">
+    <small class="gp-off">{{ g.payeur == 'sponsor' and g.sponsor ? (T.gp_offered_by ?? 'Offert par') ~ ' ' ~ g.sponsor : (g.payeur == 'magasin' ? (T.gp_by_shop ?? 'Offert par ton magasin') : (T.gp_by_brand ?? 'Offert par la marque')) }}</small>
+    <b class="gp-t">{{ g.titre }}</b>
+    {% if g.lot %}<span class="gp-lot">{{ g.lot }}</span>{% endif %}
+    <span class="gp-d"><b>{{ attribute(T, 'gp_defi_' ~ g.defi) ?? g.defi }}</b> · {{ attribute(T, 'gp_rule_' ~ g.defi) ?? '' }}{% if g.portee == 'magasin' %} · {{ T.gp_in_shop ?? 'entre les vendeuses du magasin' }}{% endif %}</span>
+    {% if g.etat == 'a_venir' %}
+    <div class="gp-moi mu">{{ (T.gp_starts ?? 'Le classement s’ouvre le {d}.')|replace({'{d}': g.du|date('d/m/Y')}) }}</div>
+    {% elseif g.moi %}
+    <div class="gp-moi"><span>{{ g.defi == 'magasin' ? (T.gp_your_shop ?? 'Ton magasin') : (T.you_short ?? 'Toi') }}</span><b>{{ rang }}<small> / {{ g.enCourse }}</small></b><em>{{ m.gpVal(g.moi.valeur, g.unite) }}</em></div>
+    {% elseif g.manque %}
+    <div class="gp-moi mu">{{ (g.manque.sorte == 'tickets' ? (T.gp_need_tickets ?? 'Encore {n} tickets pour entrer au classement.') : (T.gp_need_hours ?? 'Encore {n} h de service pour entrer au classement.'))|replace({'{n}': g.manque.n|number_format(0, ',', ' ')}) }}</div>
+    {% else %}
+    <div class="gp-moi mu">{{ T.gp_not_ranked ?? 'Pas encore classée : chaque vente compte.' }}</div>
+    {% endif %}
+    {% if g.top|length %}
+    <ol class="gp-top">{% for r in g.top %}
+      <li class="{{ r.moi ? 'moi' }}"><span class="r">{{ r.rang }}</span><span class="n">{{ r.moi ? (g.defi == 'magasin' ? (T.gp_your_shop ?? 'Ton magasin') : (T.you_short ?? 'Toi')) : r.nom }}{% if r.lieu and not r.moi %}<small> · {{ r.lieu }}</small>{% endif %}</span><span class="v">{{ m.gpVal(r.valeur, g.unite) }}</span></li>
+    {% endfor %}</ol>
+    {% endif %}
+    <div class="gp-fin">
+      {% if g.etat == 'en_cours' %}<span class="sb-barre"><i style="width:{{ (100 * g.part)|round }}%"></i></span><small>{{ (T.gp_days_left ?? 'J − {n}')|replace({'{n}': g.joursRestants}) }}</small>
+      {% elseif g.etat == 'finie' %}<small>{{ (T.gp_ended ?? 'Terminé le {d}')|replace({'{d}': g.au|date('d/m/Y')}) }}{% if g.top|length %} · {{ (T.gp_won_by ?? 'gagné par {n}')|replace({'{n}': (g.top|first).moi ? (T.you_short ?? 'Toi') : (g.top|first).nom}) }}{% endif %}</small>
+      {% else %}<small>{{ (T.gp_season ?? 'du {du} au {au}')|replace({'{du}': g.du|date('d/m'), '{au}': g.au|date('d/m/Y')}) }}</small>{% endif %}
+      {% if g.payeur == 'sponsor' and g.sponsorSite %}<a href="{{ g.sponsorSite }}" target="_blank" rel="noopener noreferrer">{{ T.gp_sponsor_site ?? 'Le sponsor' }} ↗</a>{% endif %}
+    </div>
+  </div>
+</article>
+{% endfor %}
 </div>
-<div class="note" style="margin:-4px 2px 12px">{{ T.collection_note ?? 'Un titre par mois et par prime. Les couronnes et les trophées restent : la collection grandit mois après mois.' }}</div>
+<p class="sb-pied gp-pied">{{ T.gp_note ?? 'Joués sur toute la saison ; le minimum d’heures ou de tickets monte avec elle. Le classement se met à jour toutes les quinze minutes.' }}</p>
 {% endif %}
 
-{# ── 4 bis. Les classements, à la Strava : une liste par catégorie, magasin ou réseau ── #}
+{# ── Le classement, à la Strava : un menu qui monte du bas (le nom, mon rang, la 1re), mon magasin ou le réseau ── #}
 {% set cls = p.classements ?? [] %}
 {% if cls|length %}
-<div class="titre-section"><h2>{{ T.leaderboards ?? 'Classements' }}</h2><small>{{ mois(p.m) }}</small></div>
-<div class="pr-card" data-classements>
-  <div class="cl-chips">{% for x in cls %}<span class="{{ loop.first ? 'on' }}" data-cl-cat="{{ x.cle }}">{% if x.unite == 'pieces' %}👑 {% else %}🛍️ {% endif %}{{ x.lib }}</span>{% endfor %}</div>
-  <div class="cl-togs">
-    <div class="cl-tog"><span class="on" data-cl-niv="magasin">{{ T.my_shop_short ?? 'Mon magasin' }}</span><span data-cl-niv="reseau">{{ T.network ?? 'Réseau' }}</span></div>
-    <div class="cl-tog"><span class="on" data-cl-per="mois">{{ T.this_month ?? 'ce mois-ci' }}</span><span data-cl-per="semaine">{{ T.this_week ?? 'cette semaine' }}</span></div>
+{% set c0 = cls|first %}
+<h2 class="sb-titre" id="classement">{{ T.leaderboard ?? 'Classement' }}</h2>
+{# Une ligne du menu : l'icône, le nom, le type, mon rang dans le magasin, la 1re. #}
+{% set ligneCl = [] %}
+{% for x in cls %}
+  {% set moiR = (x.magasin|filter(r => r.moi))|first %}
+  {% set un = x.magasin|first %}
+  {% set champ = x.unite == 'pieces' ? 'pieces' : 'taux' %}
+  {% set ligneCl = ligneCl|merge([{ x: x, rang: moiR ? moiR.rang : null, sur: x.nMag ?? x.magasin|length, un: un, q: un ? attribute(un, champ) : null, champ: champ }]) %}
+{% endfor %}
+{% set l0 = ligneCl|first %}
+<button type="button" class="dd" data-cl-ouvrir aria-haspopup="listbox" aria-expanded="false" aria-controls="cl-feuille">
+  <span class="emo" data-cl-emo>{{ m.ic(c0, ib) }}</span>
+  <span class="t"><b data-cl-lib>{{ nomFixe[c0.cle] ?? c0.lib }}{% if c0.categorie ?? '' %} · {{ c0.categorie }}{% endif %}</b><span class="typ {{ c0.type }}" data-cl-typ>{{ attribute(T, 'type_' ~ c0.type) ?? c0.type }}</span></span>
+  <span class="dd-r" data-cl-rang>{% if l0.rang %}{{ l0.rang == 1 ? (T.first_abbr ?? '1re') : rangPre ~ l0.rang ~ rangSuf }}<small>/ {{ l0.sur }}</small>{% else %}—{% endif %}</span>
+  <i class="bi bi-chevron-down"></i>
+</button>
+<div class="feuille" id="cl-feuille" data-feuille hidden>
+  <div class="feuille-fond" data-fermer></div>
+  <div class="feuille-c" role="dialog" aria-modal="true" aria-label="{{ T.lb_choose ?? 'Choisir un classement' }}">
+    <div class="feuille-poignee"></div>
+    <div class="feuille-t"><b>{{ T.lb_choose ?? 'Choisir un classement' }}</b><button type="button" class="feuille-x" data-fermer aria-label="{{ T.close ?? 'Fermer' }}"><i class="bi bi-x-lg"></i></button></div>
+    <ul role="listbox" aria-label="{{ T.leaderboard ?? 'Classement' }}">
+      {% for l in ligneCl %}{% set x = l.x %}
+      <li role="option" tabindex="0" aria-selected="{{ loop.first ? 'true' : 'false' }}" data-choix="{{ x.cle }}" data-type="{{ x.type }}">
+        <span class="emo">{{ m.ic(x, ib) }}</span>
+        <span class="t"><b>{{ nomFixe[x.cle] ?? x.lib }}{% if x.categorie ?? '' %} · {{ x.categorie }}{% endif %}</b><span class="typ {{ x.type }}">{{ attribute(T, 'type_' ~ x.type) ?? x.type }}</span>
+          <small>{% if l.un %}{{ T.first_abbr ?? '1re' }} : {{ l.un.moi ? (T.you_short ?? 'Toi') : l.un.nom }} {{ l.q|number_format(l.champ == 'taux' ? 1 : 0, ',', ' ') }}{{ l.champ == 'taux' ? ' %' : ' ' ~ pcs }}{% else %}{{ T.lb_empty_short ?? 'personne encore' }}{% endif %}</small></span>
+        <span class="dd-r">{% if l.rang %}{{ l.rang == 1 ? (T.first_abbr ?? '1re') : rangPre ~ l.rang ~ rangSuf }}<small>/ {{ l.sur }}</small>{% else %}—{% endif %}</span>
+        <i class="bi bi-check-lg coche"></i>
+      </li>{% endfor %}
+    </ul>
   </div>
-  {% for x in cls %}{% for per in ['mois', 'semaine'] %}{% set src = per == 'mois' ? x : (x.semaine ?? null) %}{% for niv in ['magasin', 'reseau'] %}
-  <div class="cl-liste {{ loop.parent.parent.loop.first and per == 'mois' and niv == 'magasin' ? 'on' }}" data-cl="{{ x.cle }}:{{ niv }}:{{ per }}">
-    {% set liste = src ? attribute(src, niv) : [] %}
-    {% if per == 'semaine' and src %}<div class="k" style="margin:4px 0 6px">{{ src.lib }}{% if src.du %} · {{ T.from_date ?? 'dès le' }} {{ src.du|date('d/m') }}{% endif %}</div>{% endif %}
+</div>
+<div class="cl-carte" data-classements>
+  <div class="seg" role="tablist"><button type="button" role="tab" class="on" aria-selected="true" data-cl-niv="magasin">{{ T.my_shop_short ?? 'Mon magasin' }}</button><button type="button" role="tab" aria-selected="false" data-cl-niv="reseau">{{ T.network ?? 'Réseau' }}</button></div>
+  {% for x in cls %}{% for niv in ['magasin', 'reseau'] %}
+  {% set liste = attribute(x, niv) %}
+  {% set champ = x.unite == 'pieces' ? 'pieces' : 'taux' %}
+  <div class="cl-liste {{ loop.parent.loop.first and niv == 'magasin' ? 'on' }}" data-cl="{{ x.cle }}:{{ niv }}">
     {% if liste|length %}
-    {% for row in liste %}
-    <div class="cl-row {{ row.moi ? 'moi' }} {{ row.rang == 1 ? 'un' }}"><span class="r">{% if row.rang == 1 %}👑{% else %}{{ row.rang }}{% endif %}</span>
-      <span class="nom">{{ row.moi ? (T.you_short ?? 'Toi') : row.nom }}{% if niv == 'reseau' %}<span class="mag">· {{ row.lieu ?? (T.other_shop ?? 'autre magasin') }}</span>{% endif %}</span>
-      <span class="val">{% if x.unite == 'pieces' %}{{ row.pieces|number_format(0, ',', ' ') }}<small>{{ T.pieces ?? 'pièces' }}</small>{% else %}{{ row.taux|number_format(1, ',', ' ') }}&nbsp;%<small>{{ row.croisees }}/{{ row.tickets }}</small>{% endif %}</span></div>
-    {% endfor %}
-    <div class="note">{% if per == 'mois' %}{% if x.unite == 'pieces' %}{{ T.lb_note_pieces ?? 'Au nombre de pièces vendues ce mois ; à égalité, moins de tickets gagne. La couronne demande' }} {{ x.minPieces }} {{ T.pieces ?? 'pièces' }}.{% else %}{{ T.lb_note_cross ?? 'Au taux de tickets à 2 articles ou plus, dès' }} {{ x.minTickets }} {{ T.tickets ?? 'tickets' }}.{% endif %}{% else %}{{ T.lb_note_week ?? 'La semaine en cours, pour le plaisir : les couronnes se jouent sur le mois.' }}{% endif %} {{ niv == 'magasin' ? (src.nMag ~ ' ' ~ (T.in_the_race ?? 'dans la course')) : (src.nRes ~ ' ' ~ (T.in_the_race ?? 'dans la course')) }}.</div>
-    {% else %}<div class="note">{{ per == 'mois' ? (T.lb_empty ?? 'Personne n’est encore classée ce mois-ci.') : (T.lb_empty_week ?? 'Personne n’est encore classée cette semaine.') }}</div>{% endif %}
-  </div>
-  {% endfor %}{% endfor %}{% endfor %}
-</div>
-{% endif %}
-
-{# ── 5. Les 12 dernières semaines ── #}
-{% set s12 = p.semaines12 ?? [] %}
-{% if s12|length %}
-{% set tauxVals = s12|filter(w => w.taux is not null)|map(w => w.taux) %}
-{% set caHVals = s12|filter(w => w.caHeure is not null)|map(w => w.caHeure) %}
-{% set maxT = max(60, max(tauxVals|merge([0]))) %}
-{% set maxH = max(1, max(caHVals|merge([0]))) %}
-{% set n = s12|length %}{% set pas = 348 / n %}
-<div class="pr-card"><div class="pr-h"><h2>{{ T.twelve_weeks ?? 'Mes 12 dernières semaines' }}</h2><small>{{ T.twelve_sub ?? 'ventes croisées, place, CA par heure' }}</small></div>
-  <svg class="g12" viewBox="0 0 360 170" preserveAspectRatio="none">
-    <line x1="6" x2="354" y1="{{ (118 - 100 * c.cible / maxT)|round(1) }}" y2="{{ (118 - 100 * c.cible / maxT)|round(1) }}" class="cible"/>
-    {% for w in s12 %}{% set x = 6 + loop.index0 * pas %}
-      {% if w.taux is not null %}<rect class="col {{ loop.last ? 'on' }}" x="{{ (x + 3)|round(1) }}" y="{{ (118 - 100 * w.taux / maxT)|round(1) }}" width="{{ (pas - 6)|round(1) }}" height="{{ (100 * w.taux / maxT)|round(1) }}" rx="3"/>
-      <text class="val" x="{{ (x + pas / 2)|round(1) }}" y="{{ (113 - 100 * w.taux / maxT)|round(1) }}" text-anchor="middle">{{ w.taux|round }}</text>
-      {% if w.rang %}<text class="rang" x="{{ (x + pas / 2)|round(1) }}" y="132" text-anchor="middle">{{ w.rang }}e</text>{% endif %}
-      {% else %}<rect class="col vide" x="{{ (x + 3)|round(1) }}" y="115" width="{{ (pas - 6)|round(1) }}" height="3" rx="1.5"/>{% endif %}
-      <text class="sem" x="{{ (x + pas / 2)|round(1) }}" y="146" text-anchor="middle">{{ w.lib }}</text>
-      {% if w.pieces is not null and w.pieces > 0 %}<text class="pieces" x="{{ (x + pas / 2)|round(1) }}" y="162" text-anchor="middle">{{ w.pieces|round }}{% if w.rangPieces %}<tspan class="rang2"> {{ w.rangPieces }}e</tspan>{% endif %}</text>{% endif %}
-    {% endfor %}
-    {% if caHVals|length > 1 %}
-    <polyline class="cah" points="{% for w in s12 %}{% if w.caHeure is not null %}{{ (6 + loop.index0 * pas + pas / 2)|round(1) }},{{ (118 - 74 * w.caHeure / maxH)|round(1) }} {% endif %}{% endfor %}"/>
-    {% for w in s12 %}{% if w.caHeure is not null %}<circle class="cah" cx="{{ (6 + loop.index0 * pas + pas / 2)|round(1) }}" cy="{{ (118 - 74 * w.caHeure / maxH)|round(1) }}" r="2.6"/>{% if loop.last %}<text class="cahv" x="{{ (6 + loop.index0 * pas + pas / 2)|round(1) }}" y="{{ (112 - 74 * w.caHeure / maxH)|round(1) }}" text-anchor="end">{{ w.caHeure }}&nbsp;€/h</text>{% endif %}{% endif %}{% endfor %}
-    {% endif %}
-  </svg>
-  <div class="legende"><span><i class="b"></i>{{ T.cross_rate ?? 'ventes croisées, % de tes tickets' }}</span><span><i class="r"></i>{{ T.rank_network ?? 'ta place dans le réseau' }}</span>{% if caHVals|length > 1 %}<span><i class="h"></i>{{ T.sales_per_hour ?? 'CA par heure' }}</span>{% endif %}{% if k and k.actif %}<span><i class="p"></i>{{ T.pieces_and_rank ?? 'pièces des concours et place' }}</span>{% endif %}</div>
-  <div class="note">{{ T.twelve_note ?? 'La place : parmi les vendeuses du réseau avec dix tickets au moins la semaine. Le trait : la cible du magasin.' }}</div>
-</div>
-{% endif %}
-
-{# ── 6. Mes ventes, mois par mois : un graphique, puis une ligne par mois ── #}
-{% set vs = (p.ventes ?? [])|filter(v2 => v2.motif is not defined) %}
-{% if vs|length %}
-{% set vx = vs|filter(v2 => v2.caHeure is defined and v2.caHeure is not null) %}
-{% set maxCA = max(1, max(vs|map(v2 => v2.ca)|merge([0]))) %}
-{% set maxHM = max(1, max(vx|map(v2 => v2.caHeure)|merge([0])), max(vx|map(v2 => v2.medianeCaH ?? 0)|merge([0]))) %}
-{% set derMed = null %}{% for v2 in vs %}{% if derMed is null and not v2.enCours and v2.medianeCaH is defined and v2.medianeCaH %}{% set derMed = v2.medianeCaH %}{% endif %}{% endfor %}
-{% set enc = null %}{% for v2 in vs %}{% if v2.enCours %}{% set enc = v2 %}{% endif %}{% endfor %}
-{% set ordre = vs|reverse %}{% set nv = ordre|length %}{% set pasV = 348 / nv %}
-<div class="pr-card vm">
-  <div class="pr-h"><h2>{{ T.my_sales_monthly ?? 'Mes ventes, mois par mois' }}</h2><small>{{ T.sales_sub ?? 'CA par heure, place dans le réseau' }}</small></div>
-  {% if enc %}
-  <div class="vm-kpis">
-    <div><b>{{ enc.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</b><small>{{ T.this_month ?? 'ce mois-ci' }}</small></div>
-    <div><b>{% if enc.caHeure is not null %}{{ enc.caHeure }}&nbsp;{{ eur }}/h{% else %}—{% endif %}</b><small>{{ T.per_hour_worked ?? 'par heure prestée' }}</small></div>
-    <div><b>{% if enc.rangCaH %}{{ enc.rangCaH }}<span class="mu" style="font-size:12px">e</span> / {{ enc.surCaH }}{% else %}—{% endif %}</b><small>{{ T.in_network ?? 'dans le réseau' }}</small></div>
-  </div>
-  {% endif %}
-  <svg class="gvm" viewBox="0 0 360 200" preserveAspectRatio="none">
-    {% if derMed %}<line x1="6" x2="354" y1="{{ (50 - 34 * derMed / maxHM)|round(1) }}" y2="{{ (50 - 34 * derMed / maxHM)|round(1) }}" class="med"/>{% endif %}
-    {% for v2 in ordre %}{% set x = 6 + loop.index0 * pasV %}{% set hb = 62 * v2.ca / maxCA %}
-      <rect class="bar {{ v2.enCours ? 'on' }}" x="{{ (x + 5)|round(1) }}" y="{{ (124 - hb)|round(1) }}" width="{{ (pasV - 10)|round(1) }}" height="{{ max(2, hb)|round(1) }}" rx="5"/>
-      <text class="ca" x="{{ (x + pasV / 2)|round(1) }}" y="{{ (119 - hb)|round(1) }}" text-anchor="middle">{{ v2.ca >= 1000 ? (v2.ca / 1000)|number_format(1, ',', ' ') ~ 'k' : v2.ca|number_format(0, ',', ' ') }}</text>
-      <text class="mo" x="{{ (x + pasV / 2)|round(1) }}" y="142" text-anchor="middle">{{ mois(v2.m, true) }}</text>
-      {% if v2.rangCaH %}<rect class="pill {{ v2.rangCaH == 1 ? 'or' }}" x="{{ (x + pasV / 2 - 15)|round(1) }}" y="150" width="30" height="16" rx="8"/><text class="pt" x="{{ (x + pasV / 2)|round(1) }}" y="161.5" text-anchor="middle">{{ v2.rangCaH }}e/{{ v2.surCaH }}</text>{% endif %}
-    {% endfor %}
-    {% if vx|length > 1 %}
-    <polyline class="hl" points="{% for v2 in ordre %}{% if v2.caHeure is not null %}{{ (6 + loop.index0 * pasV + pasV / 2)|round(1) }},{{ (50 - 34 * v2.caHeure / maxHM)|round(1) }} {% endif %}{% endfor %}"/>
-    {% for v2 in ordre %}{% if v2.caHeure is not null %}<circle class="hp" cx="{{ (6 + loop.index0 * pasV + pasV / 2)|round(1) }}" cy="{{ (50 - 34 * v2.caHeure / maxHM)|round(1) }}" r="3.2"/><text class="hv" x="{{ (6 + loop.index0 * pasV + pasV / 2)|round(1) }}" y="{{ (43 - 34 * v2.caHeure / maxHM)|round(1) }}" text-anchor="middle">{{ v2.caHeure }}</text>{% endif %}{% endfor %}
-    {% endif %}
-    <text class="ax" x="6" y="192">{{ T.chart_bars ?? 'barres : le CA' }} · {{ T.chart_line ?? 'courbe : €/h' }}{% if derMed %} · {{ T.chart_median ?? 'pointillé : médiane du réseau' }} {{ derMed }}&nbsp;{{ eur }}/h{% endif %} · {{ T.chart_pill ?? 'pastille : ta place au €/h' }}</text>
-  </svg>
-  <div class="vm-liste">
-    {% for v2 in vs %}
-    <div class="vm-row {{ v2.enCours ? 'enc' }}">
-      <div class="vm-m"><b>{{ mois(v2.m)|split(' ')|first|capitalize }}</b>{% if v2.enCours %}<small>{{ T.in_progress ?? 'en cours' }}</small>{% endif %}</div>
-      <div class="vm-d">{{ v2.ca|number_format(0, ',', ' ') }}&nbsp;{{ eur }} · {{ v2.tickets|number_format(0, ',', ' ') }} {{ T.tickets ?? 'tickets' }} · {{ v2.heures|number_format(1, ',', ' ') }}&nbsp;h</div>
-      <div class="vm-h">{% if v2.caHeure is not null %}{{ v2.caHeure }}<small>{{ eur }}/h</small>{% else %}—{% endif %}</div>
-      <div class="vm-r {{ v2.rangCaH == 1 ? 'or' : '' }}">{% if v2.rangCaH %}{{ v2.rangCaH }}e<small>/{{ v2.surCaH }}</small>{% else %}—{% endif %}</div>
+    {% set podium = liste|filter(r => r.rang <= 3) %}
+    {% if podium|length %}
+    <div class="podium">
+      {% for place in [2, 1, 3] %}{% set r = (podium|filter(z => z.rang == place))|first %}
+      {% if r %}
+      <div class="pod p{{ place }}{{ r.moi ? ' moi' }}">
+        <span class="av {{ r.moi ? 'moi' : 't' ~ (r.nom|length % 8) }}">{% if r.moi %}<i class="bi bi-person-fill"></i>{% else %}{{ r.nom|first|upper }}{% endif %}</span>
+        <b>{{ r.moi ? (T.you_short ?? 'Toi') : r.nom }}</b>{% if niv == 'reseau' %}<small>{{ r.lieu }}</small>{% endif %}
+        <div class="q">{% if champ == 'pieces' %}{{ r.pieces|number_format(0, ',', ' ') }}<small> {{ pcs }}</small>{% else %}{{ r.taux|number_format(0, ',', ' ') }}<small> %</small>{% endif %}</div>
+        <div class="socle">{{ place }}</div>
+      </div>
+      {% else %}<div class="pod p{{ place }} vide"></div>{% endif %}
+      {% endfor %}
     </div>
+    {% endif %}
+    {% set prec = 3 %}
+    {% for r in liste|filter(z => z.rang > 3) %}
+    {% if r.rang > prec + 1 %}<div class="cl-row ecart">···</div>{% endif %}{% set prec = r.rang %}
+    <div class="cl-row {{ r.moi ? 'moi' }}"><span class="r">{{ r.rang }}</span>
+      <span class="av {{ r.moi ? 'moi' : 't' ~ (r.nom|length % 8) }}">{% if r.moi %}<i class="bi bi-person-fill"></i>{% else %}{{ r.nom|first|upper }}{% endif %}</span>
+      <span class="nom">{{ r.moi ? (T.you_short ?? 'Toi') : r.nom }}{% if niv == 'reseau' %}<span class="mag">· {{ r.lieu }}</span>{% endif %}</span>
+      <span class="val">{% if champ == 'pieces' %}{{ r.pieces|number_format(0, ',', ' ') }}<small>{{ pcs }}</small>{% else %}{{ r.taux|number_format(1, ',', ' ') }}&nbsp;%<small>{{ r.croisees }}/{{ r.tickets }}</small>{% endif %}</span></div>
     {% endfor %}
+    {% else %}<div class="note">{{ T.lb_empty ?? 'Personne n’est encore classée ce mois-ci.' }}</div>{% endif %}
   </div>
-  <div class="note">{{ T.sales_note ?? '€/h : tes ventes divisées par tes heures du planning, ce mois-ci par les heures déjà prestées. Réseau : ta place au CA par heure parmi les vendeuses classées.' }}</div>
+  {% endfor %}{% endfor %}
 </div>
 {% endif %}
+{% endif %}{# fin du mois compté (le mois à venir est plus haut) #}
 
-{# ── 7. Mes mois ── #}
-<div class="pr-card"><div class="pr-h"><h2>{{ T.my_months ?? 'Mes mois' }}</h2><small>{{ T.paid_in_vouchers ?? 'payés en bons' }}</small></div>
-  <div class="hist">{% for x in p.mois %}<div class="ligne"><span class="m">{{ mois(x.m)|split(' ')|first|capitalize }}{% if x.titres is defined and x.titres|length %}<span class="mini">{% for t in x.titres %}{{ t.cle starts with 'concours:' ? '👑' : (t.cle == 'meilleure' ? '🏆' : (t.cle == 'record' ? '🚀' : (t.cle == 'croisees' ? '🛍️' : '🏪'))) }}{% endfor %}</span>{% endif %}</span><span class="det">{% if langue == 'fr' or x.croisees is not defined %}{{ x.detail|join(' · ') }}{% else %}{% set parts = [] %}{% if x.croisees %}{% set parts = parts|merge([(T.cross_sales ?? 'Ventes croisées')|lower ~ ' ' ~ x.croisees ~ ' ' ~ eur]) %}{% endif %}{% if x.record %}{% set parts = parts|merge([(T.record ?? 'record') ~ ' ' ~ x.record ~ ' ' ~ eur]) %}{% endif %}{% if x.meilleure %}{% set parts = parts|merge([(T.best_seller ?? 'Meilleure vendeuse')|lower ~ ' ' ~ x.meilleure ~ ' ' ~ eur]) %}{% endif %}{% if x.concours is defined and x.concours %}{% set parts = parts|merge([(T.contest ?? 'Concours')|lower ~ ' ' ~ x.concours ~ ' ' ~ eur]) %}{% endif %}{% if x.magasin %}{% set parts = parts|merge([(T.shop_bonus_title ?? 'Prime magasin')|lower ~ ' ' ~ x.magasin|number_format(2, ',', ' ') ~ ' ' ~ eur]) %}{% endif %}{% if x.coef is defined and x.coef and x.coef != 1 %}{% set parts = parts|merge(['Google × ' ~ x.coef|number_format(2, ',', ' ')]) %}{% endif %}{{ parts|length ? parts|join(' · ') : '—' }}{% endif %}{% if x.paye %} · <b class="ok">{{ T.paid ?? 'payée' }}</b>{% endif %}</span><span class="tot">{{ x.total|number_format(0, ',', ' ') }}&nbsp;{{ eur }}</span></div>{% else %}<div class="note">{{ T.no_month_yet ?? 'Pas encore de mois clos.' }}</div>{% endfor %}</div>
+{# ── La fiche d'une prime (16/10/2026) : toucher un carré, ou une ligne d'un mois à venir, l'ouvre — ce qu'on gagne
+   (de l'argent ou un cadeau), la ligne de description, qui l'offre (le logo et le site du sponsor), la règle, les dates. ── #}
+<div class="feuille" id="pr-detail" data-detail-feuille hidden>
+  <div class="feuille-fond" data-detail-fermer></div>
+  <div class="feuille-c" role="dialog" aria-modal="true" aria-label="{{ T.details ?? 'Détails' }}">
+    <div class="feuille-poignee"></div>
+    {% for c in p.cartes %}
+    {% set objD = c.objPcs ?? (c.objectif ?? ((c.minPieces ?? 0) > 0 ? c.minPieces : null)) %}
+    {% set nD = objD is not null ? objD|number_format(0, ',', ' ') : '' %}
+    <section class="pdm" data-pdm="{{ c.cle }}" hidden>
+      <div class="pdm-h"><span class="emo">{{ m.ic(c, ib) }}</span><b>{{ nomFixe[c.cle] ?? c.lib }}</b><button type="button" class="feuille-x" data-detail-fermer aria-label="{{ T.close ?? 'Fermer' }}"><i class="bi bi-x-lg"></i></button></div>
+      {{ m.infos(c, T, ib) }}
+      <dl class="pl-l">
+        {% if c.type == 'promo' or c.type == 'categorie' %}<div><dt>{{ T.d_rule ?? 'Qui gagne' }}</dt><dd>
+          {%- if c.regle == 'magasin' %}{{ (T.rule_shop ?? 'le magasin : objectif {n} {u}')|replace({'{n}': nD, '{u}': pcs}) }}
+          {%- elseif c.regle == 'vendeuse' %}{{ (T.rule_mine ?? 'ton objectif : {n} {u}')|replace({'{n}': nD, '{u}': pcs}) }}
+          {%- elseif c.regle == 'seuil' %}{{ (T.rule_threshold ?? 'chacune dès {n} {u}')|replace({'{n}': nD, '{u}': pcs}) }}
+          {%- else %}{{ T.rule_first ?? 'la 1re du magasin gagne' }}{% if objD %} · {{ nD }} {{ pcs }} min.{% endif %}{% endif -%}
+        </dd></div>{% endif %}
+        {% if (c.du ?? null) or (c.au ?? null) %}<div><dt>{{ T.d_period ?? 'Période' }}</dt><dd>{{ (T.dates_from_to ?? 'du {du} au {au}')|replace({'{du}': c.du ? c.du|date('d/m') : '…', '{au}': c.au ? c.au|date('d/m') : '…'}) }}</dd></div>{% endif %}
+      </dl>
+      {% if c.cle in (aCl ?? []) %}<button type="button" class="pl-cl" data-voir-cl="{{ c.cle }}" data-detail-fermer>{{ T.d_see_leaderboard ?? 'Voir le classement' }} <i class="bi bi-arrow-down"></i></button>{% endif %}
+    </section>
+    {% endfor %}
+  </div>
 </div>
-
-<div class="pr-card doux"><div class="note">{{ T.rules ?? 'Tout se calcule sur le mois complet et se paie début du mois suivant, en bons payés par la marque. Les ventes sont celles encaissées à ton nom ; les heures, celles du planning. Le calcul est le même pour toutes : s’il te semble faux, dis-le, on vérifie.' }}</div></div>
 {% endif %}
 {% endblock %}
 {% block scripts %}
 <script>
 (function () {
-  var bloc = document.querySelector('[data-classements]'); if (!bloc) { return; }
-  var cat = (bloc.querySelector('[data-cl-cat].on') || {}).dataset ? bloc.querySelector('[data-cl-cat].on').dataset.clCat : '';
-  var niv = 'magasin', per = 'mois';
-  function montre() {
-    bloc.querySelectorAll('[data-cl]').forEach(function (l) { l.classList.toggle('on', l.dataset.cl === cat + ':' + niv + ':' + per); });
-    bloc.querySelectorAll('[data-cl-cat]').forEach(function (c) { c.classList.toggle('on', c.dataset.clCat === cat); });
-    bloc.querySelectorAll('[data-cl-niv]').forEach(function (c) { c.classList.toggle('on', c.dataset.clNiv === niv); });
-    bloc.querySelectorAll('[data-cl-per]').forEach(function (c) { c.classList.toggle('on', c.dataset.clPer === per); });
+  var m = document.querySelector('[data-mois]');
+  if (m) { m.querySelectorAll('a.ms-f').forEach(function (a) { a.addEventListener('click', function () { m.classList.add('charge'); }); }); }
+})();
+(function () {
+  // Les targets : toucher une ligne déroule son détail, une seule ouverte à la fois.
+  var lignes = Array.prototype.slice.call(document.querySelectorAll('[data-pl]'));
+  function bascule(l) {
+    var ouvrir = l.getAttribute('aria-expanded') !== 'true';
+    lignes.forEach(function (x) { var on = ouvrir && x === l; x.setAttribute('aria-expanded', on ? 'true' : 'false'); document.getElementById(x.getAttribute('aria-controls')).hidden = !on; });
   }
-  bloc.querySelectorAll('[data-cl-cat]').forEach(function (c) { c.addEventListener('click', function () { cat = c.dataset.clCat; montre(); }); });
+  lignes.forEach(function (l) {
+    l.addEventListener('click', function () { bascule(l); });
+    l.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bascule(l); } });
+  });
+})();
+(function () {
+  var bloc = document.querySelector('[data-classements]'); if (!bloc) { return; }
+  var bouton = document.querySelector('[data-cl-ouvrir]');
+  var feuille = document.querySelector('[data-feuille]');
+  var options = Array.prototype.slice.call(feuille.querySelectorAll('[data-choix]'));
+  var cat = options.length ? options[0].dataset.choix : '', niv = 'magasin';
+  function montre() {
+    bloc.querySelectorAll('[data-cl]').forEach(function (l) { l.classList.toggle('on', l.dataset.cl === cat + ':' + niv); });
+    bloc.querySelectorAll('[data-cl-niv]').forEach(function (c) { var on = c.dataset.clNiv === niv; c.classList.toggle('on', on); c.setAttribute('aria-selected', on ? 'true' : 'false'); });
+    options.forEach(function (o) {
+      var on = o.dataset.choix === cat;
+      o.setAttribute('aria-selected', on ? 'true' : 'false');
+      if (!on) { return; }
+      // Le bouton reprend l'icône, le nom, le type et mon rang de la ligne choisie.
+      bouton.querySelector('[data-cl-emo]').innerHTML = o.querySelector('.emo').innerHTML;
+      bouton.querySelector('[data-cl-lib]').textContent = o.querySelector('.t b').textContent;
+      var t = bouton.querySelector('[data-cl-typ]'); t.textContent = o.querySelector('.typ').textContent; t.className = 'typ ' + o.dataset.type;
+      bouton.querySelector('[data-cl-rang]').innerHTML = o.querySelector('.dd-r').innerHTML;
+    });
+  }
+  function ouvre() {
+    feuille.hidden = false;
+    requestAnimationFrame(function () { feuille.classList.add('ouverte'); });
+    bouton.setAttribute('aria-expanded', 'true');
+    var sel = feuille.querySelector('[aria-selected="true"]') || options[0]; if (sel) { sel.focus(); }
+  }
+  function ferme() {
+    feuille.classList.remove('ouverte');
+    bouton.setAttribute('aria-expanded', 'false');
+    setTimeout(function () { feuille.hidden = true; }, 200);
+    bouton.focus();
+  }
+  function choisit(cle) { cat = cle; montre(); ferme(); }
+  bouton.addEventListener('click', ouvre);
+  feuille.querySelectorAll('[data-fermer]').forEach(function (f) { f.addEventListener('click', ferme); });
+  options.forEach(function (o, i) {
+    o.addEventListener('click', function () { choisit(o.dataset.choix); });
+    o.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choisit(o.dataset.choix); }
+      else if (e.key === 'ArrowDown' && options[i + 1]) { e.preventDefault(); options[i + 1].focus(); }
+      else if (e.key === 'ArrowUp' && options[i - 1]) { e.preventDefault(); options[i - 1].focus(); }
+    });
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !feuille.hidden) { ferme(); } });
   bloc.querySelectorAll('[data-cl-niv]').forEach(function (c) { c.addEventListener('click', function () { niv = c.dataset.clNiv; montre(); }); });
-  bloc.querySelectorAll('[data-cl-per]').forEach(function (c) { c.addEventListener('click', function () { per = c.dataset.clPer; montre(); }); });
+  // Un carré avec un classement ouvre le sien ; dans le détail d'une ligne, « Voir le classement » aussi.
+  document.querySelectorAll('[data-voir-cl]').forEach(function (v) {
+    v.addEventListener('click', function () { cat = v.dataset.voirCl; montre(); document.getElementById('classement').scrollIntoView({ behavior: 'smooth' }); });
+  });
+})();
+(function () {
+  // La fiche d'une prime (16/10/2026) : toucher un carré, ou une ligne d'un mois à venir, ouvre son détail.
+  var f = document.querySelector('[data-detail-feuille]'); if (!f) { return; }
+  var der = null;
+  function ouvre(cle, src) {
+    var sec = f.querySelector('[data-pdm="' + cle + '"]'); if (!sec) { return; }
+    f.querySelectorAll('[data-pdm]').forEach(function (x) { x.hidden = x !== sec; });
+    der = src || null; f.hidden = false;
+    requestAnimationFrame(function () { f.classList.add('ouverte'); });
+  }
+  function ferme() { f.classList.remove('ouverte'); setTimeout(function () { f.hidden = true; }, 200); if (der) { der.focus(); } }
+  document.querySelectorAll('.pq[data-carte], .pl.av[data-carte]').forEach(function (k) {
+    k.classList.add('cliquable'); k.setAttribute('role', 'button'); k.tabIndex = 0;
+    k.addEventListener('click', function () { ouvre(k.dataset.carte, k); });
+    k.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvre(k.dataset.carte, k); } });
+  });
+  f.querySelectorAll('[data-detail-fermer]').forEach(function (b) { b.addEventListener('click', ferme); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !f.hidden) { ferme(); } });
 })();
 </script>
 {% endblock %}

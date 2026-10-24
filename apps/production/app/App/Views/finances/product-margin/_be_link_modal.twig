@@ -1,0 +1,78 @@
+{# Powiązanie produktu fabryki z produktem sklepu (API panelu) : automatycznie po nazwie, ręcznie albo « nie sprzedawany w sklepach ». #}
+<div class="modal fade" id="beLinkModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Produkt w sklepach : <span data-be-modal-name></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-be-mode="auto"><i class="bi bi-magic me-1"></i> Dopasowanie po nazwie</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-be-mode="excluded"><i class="bi bi-slash-circle me-1"></i> Nie sprzedawany w sklepach</button>
+                    <span class="small text-muted align-self-center" data-be-modal-mode></span>
+                </div>
+                <input type="search" class="form-control mb-2" placeholder="Szukaj produktu sklepu…" data-be-modal-q>
+                <div class="list-group" data-be-modal-list><div class="text-muted small p-2">Ładowanie…</div></div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(() => {
+    const modalEl = document.getElementById('beLinkModal');
+    if (!modalEl) return;
+    const fmt = (v) => v === null || v === undefined ? '—' : Number(v).toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const modes = {auto: 'teraz : dopasowanie po nazwie', manual: 'teraz : powiązanie ręczne', excluded: 'teraz : nie sprzedawany w sklepach'};
+    let productId = null, timer = null;
+    const save = (body) => at.send(`/ajax/store-prices/products/${productId}/link`, 'PUT', body).then(res => {
+        at.notify(res.ok, res.message);
+        if (res.ok) setTimeout(() => location.reload(), 500);
+    });
+    const load = () => {
+        const q = modalEl.querySelector('[data-be-modal-q]').value;
+        at.send(`/ajax/store-prices/products/${productId}/candidates?q=${encodeURIComponent(q)}`, 'GET').then(res => {
+            const list = modalEl.querySelector('[data-be-modal-list]');
+            if (!res.ok) { list.innerHTML = `<div class="text-danger small p-2">${at.esc(res.message)}</div>`; return; }
+            modalEl.querySelector('[data-be-modal-mode]').textContent = modes[res.data.mode] || '';
+            list.innerHTML = res.data.items.length ? res.data.items.map(i => `<button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ${i.key === res.data.current ? 'active' : ''}" data-be-key="${at.esc(i.key)}">
+                <span><strong>${at.esc(i.name)}</strong> <span class="small text-muted">${at.esc(i.category || '')}</span></span>
+                <span class="small text-nowrap">${fmt(i.net)} € netto · ${fmt(i.gross)} € brutto · ${i.shops} skl.</span></button>`).join('')
+                : '<div class="text-muted small p-2">Brak produktów sklepów — zsynchronizuj ceny albo zmień wyszukiwanie.</div>';
+        });
+    };
+    document.addEventListener('click', (e) => {
+        const a = e.target.closest('[data-be-link]');
+        if (!a) return;
+        e.preventDefault();
+        productId = a.dataset.beLink;
+        modalEl.querySelector('[data-be-modal-name]').textContent = a.dataset.beName;
+        modalEl.querySelector('[data-be-modal-q]').value = '';
+        (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).show();
+        load();
+    });
+    modalEl.querySelector('[data-be-modal-q]').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 250); });
+    modalEl.querySelector('[data-be-modal-list]').addEventListener('click', (e) => { const b = e.target.closest('[data-be-key]'); if (b) save({mode: 'manual', key: b.dataset.beKey}); });
+    modalEl.querySelectorAll('[data-be-mode]').forEach(b => b.addEventListener('click', () => save({mode: b.dataset.beMode})));
+
+    // Progi (administrator) i synchronizacja
+    const params = document.getElementById('beParams');
+    const saveBtn = params && params.querySelector('[data-be-save-params]');
+    if (saveBtn) {
+        params.addEventListener('input', () => saveBtn.classList.remove('d-none'));
+        saveBtn.addEventListener('click', () => at.send('/ajax/store-prices/params', 'PUT', at.formData(params)).then(res => {
+            at.notify(res.ok, res.message); if (res.ok) setTimeout(() => location.reload(), 500);
+        }));
+    }
+    const syncBtn = document.querySelector('[data-be-sync]');
+    if (syncBtn) syncBtn.addEventListener('click', () => {
+        syncBtn.disabled = true;
+        syncBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Synchronizacja… (do minuty)';
+        at.send('/ajax/store-prices/sync', 'POST', {}).then(res => {
+            at.notify(res.ok, res.message);
+            if (res.ok) setTimeout(() => location.reload(), 700);
+            else { syncBtn.disabled = false; syncBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Synchronizuj ceny w sklepach'; }
+        });
+    });
+})();
+</script>

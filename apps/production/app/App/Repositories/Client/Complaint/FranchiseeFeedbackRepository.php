@@ -1,0 +1,277 @@
+<?php
+
+namespace App\Repositories\Client\Complaint;
+
+use App\Models\ApiCURL;
+use App\Core\Helpers\BaseRepository;
+
+/**
+ * User class
+ */
+class FranchiseeFeedbackRepository extends BaseRepository
+{
+
+    protected string $table = 'franchisee_order_note_collector';
+
+    protected $allowedColumns = [
+        'franchisee_name',
+        'subject',
+        'id_supplier',
+        'supplier_name',
+        'incident_date',
+        'content',
+        'content_pl',
+        'id_product',
+        'product_name',
+        'file_path',
+        'file_path_2',
+        'update_timestamp',
+        'id_franchisee',
+        'id_note',
+        'id_order_note_status',
+        'response'
+    ];
+
+    public function getLastUpdateDate()
+    {
+        $sql = "SELECT IFNULL(MAX(update_timestamp), '0000-00-00') as last_update_record_datetime FROM franchisee_order_note_collector";
+        return $this->query($sql)[0];
+    }
+
+    public function getNew()
+    {
+        $last_inserted_date = $this->getLastUpdateDate();
+
+        $options = array(
+            'http' => array(
+                'method' => "GET",
+                'header' => ["auth: cHJvZHVjdGlvbjoxMjM=",
+                    "User-Type: Production"]
+            )
+        );
+        $context = stream_context_create($options);
+
+        //$api_url = "https://franchiseatelier.com/FAPI/public/Proforma/getProformaPDFString/{$data['id_proforma']}";
+
+        $api_url = urlencode(APIPREFIXE . "OrderFeedback/getFeedback/{$last_inserted_date->last_update_record_datetime}");
+        $fixedEncodedUrl = str_replace(['%2F', '%3A'], ['/', ':'], $api_url);
+
+        $json_data = file_get_contents($fixedEncodedUrl, false, $context);
+        $convertedToArrObj = json_decode(json_encode(json_decode($json_data)), true);
+
+        $this->insertOrderNote($convertedToArrObj);
+    }
+
+    public function insertOrderNote($data)
+    {
+
+        if (empty($data)) {
+            return true;
+        }
+
+        foreach ($data as $noteItem) {
+            $sql = "INSERT INTO `franchisee_order_note_collector`(
+                                                    `franchisee_name`,
+                                                    `subject`,
+                                                    `id_supplier`,
+                                                    `supplier_name`,
+                                                    `incident_date`,
+                                                    `content`,
+                                                    `id_product`,
+                                                    `product_quantity`,
+                                                    `product_name`,
+                                                    `file_path`,
+                                                    `file_path_2`,
+                                                    `update_timestamp`,
+                                                    `id_franchisee`,
+                                                    `id_note`,
+                                                    `id_order_note_status`,
+                                                    `invoice_num`
+                        ) VALUES (
+                                    :franchisee_name,
+                                    :subject_name,
+                                    :id_supplier,
+                                    :supplier_name,
+                                    :incident_date,
+                                    :content,
+                                    :id_product,
+                                    :product_quantity,
+                                    :product_name,
+                                    :file_path,
+                                    :file_path_2,
+                                    :last_update,
+                                    :id_franchisee,
+                                    :id_note,
+                                    :id_order_note_status,
+                                    :invoice_num
+                        ) ON DUPLICATE KEY UPDATE
+                        subject = :subject_name,
+                        id_supplier = :id_supplier,
+                        supplier_name = :supplier_name,
+                        incident_date = :incident_date,
+                        content = :content,
+                        id_product = :id_product,
+                        product_quantity = :product_quantity,                          
+                        product_name = :product_name,
+                        file_path = :file_path,
+                        file_path_2 = :file_path_2,
+                        update_timestamp = :last_update";
+            $this->query($sql, $noteItem);
+        }
+
+        return true;
+    }
+
+    public function getAll()
+    {
+        $sql = "SELECT 
+                    fo.`id`,
+                    fo.`franchisee_name`,
+                    fo.`subject`,
+                    fo.`id_supplier`,
+                    fo.`supplier_name`,
+                    fo.`incident_date`,
+                    fo.`content`,
+                    fo.`id_product`,
+                    fo.`product_name`,
+                    fo.`file_path`,
+                    fo.`file_path_2`,
+                    fo.`update_timestamp`,
+                    fo.`id_franchisee`,
+                    fo.`id_note`,
+                    fo.`id_order_note_status`,
+                    ons.content as status_name
+                 FROM franchisee_order_note_collector fo
+                 INNER JOIN order_note_status ons 
+                     ON fo.id_order_note_status = ons.id
+                 ORDER BY update_timestamp";
+        return $this->query($sql, []);
+    }
+
+    public function getOwnLog()
+    {
+        $sql = "SELECT 
+                    fo.`id`,
+                    fo.`franchisee_name`,
+                    fo.`subject`,
+                    fo.`id_supplier`,
+                    fo.`supplier_name`,
+                    fo.`incident_date`,
+                    fo.`content`,
+                    fo.content_pl,
+                    fo.`id_product`,
+                    fo.`product_name`,
+                    fo.`file_path`,
+                    fo.`file_path_2`,
+                    fo.`update_timestamp`,
+                    fo.`id_franchisee`,
+                    fo.`id_note`,
+                    fo.`id_order_note_status`,
+                    ons.content as status_name
+                 FROM franchisee_order_note_collector fo
+                 INNER JOIN order_note_status ons 
+                     ON fo.id_order_note_status = ons.id
+                WHERE fo.id_supplier = 1 AND fo.id_order_note_status < 3
+                 ORDER BY update_timestamp";
+        return $this->query($sql, []);
+    }
+
+    public function getById($data)
+    {
+        $sql = "SELECT 
+                    fo.`id`,
+                    fo.`franchisee_name`,
+                    cust.company,
+                    cust.id as id_customer,
+                    fo.`subject`,
+                    fo.`id_supplier`,
+                    fo.`supplier_name`,
+                    fo.`incident_date`,
+                    fo.`content`,
+                    fo.invoice_num,
+                    fo.content_pl,
+                    fo.`id_product`,
+                    fo.product_quantity,
+                    IFNULL(fo.`product_name`, '-') as product_name,
+                    fo.`file_path`,
+                    fo.`file_path_2`,
+                    fo.`update_timestamp`,
+                    fo.`id_franchisee`,
+                    fo.`id_note`,
+                    fo.`id_order_note_status`,
+                    fo.response,
+                    IFNULL(dwp.price_carton, 0) as single_purchase_price,
+                    ons.content as status_name
+                 FROM franchisee_order_note_collector fo
+                 INNER JOIN order_note_status ons 
+                     ON fo.id_order_note_status = ons.id
+                INNER JOIN customer cust
+                    ON fo.id_franchisee = cust.franchisee_id
+                LEFT JOIN document_wdt dw
+                    ON fo.invoice_num = dw.doc_num
+                LEFT JOIN document_wdt_product dwp    
+                    ON dw.id = dwp.id_document_wdt AND fo.id_product = dwp.id_product
+                WHERE fo.id = :id
+                GROUP BY fo.id_product";
+
+        $res = $this->query($sql, $data);
+        if (!$res) return [];
+
+        return $res[0];
+    }
+
+    public function getOwnLogByStatus($data)
+    {
+        $sql = "SELECT 
+                    fo.`id`,
+                    fo.`franchisee_name`,
+                    fo.`subject`,
+                    fo.`id_supplier`,
+                    fo.`supplier_name`,
+                    fo.`incident_date`,
+                    fo.`content`,
+                    fo.content_pl,
+                    fo.`id_product`,
+                    fo.`product_name`,
+                    fo.product_quantity,
+                    fo.`file_path`,
+                    fo.`file_path_2`,
+                    fo.`update_timestamp`,
+                    fo.`id_franchisee`,
+                    fo.`id_note`,
+                    fo.`id_order_note_status`,
+                    fo.response,
+                    ons.content as status_name
+                 FROM franchisee_order_note_collector fo
+                 INNER JOIN order_note_status ons 
+                     ON fo.id_order_note_status = ons.id
+                WHERE fo.id_supplier = 1 AND fo.id_order_note_status = :id_status
+                 ORDER BY update_timestamp DESC";
+        return $this->query($sql, $data);
+    }
+
+    public function updateFranchisee($data)
+    {
+        $data_for_update = $this->getIdNoteWithStatusById($data)[0];
+        $apiCurl = new ApiCURL();
+        $url = APIPREFIXE . "/OrderFeedback/update/{$data_for_update->id}";
+
+        unset($data_for_update->id);
+
+        $res = $apiCurl->update(json_encode($data_for_update), $url);
+        return $res['success'];
+    }
+
+    public function getIdNoteWithStatusById($data)
+    {
+        $sql = "SELECT id_order_note_status, response as supplier_response, id_note as id FROM franchisee_order_note_collector WHERE id = :id";
+        return $this->query($sql, $data);
+    }
+
+    public function getStatusName($data)
+    {
+        $sql = "SELECT ons.content as status_name FROM order_note_status ons WHERE id = :id_status";
+        return $this->query($sql, $data)[0];
+    }
+
+}

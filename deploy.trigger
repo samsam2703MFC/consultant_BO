@@ -667,3 +667,374 @@ sonde-notifications 2026-09-13T16:08:10Z
 2026-10-09T12:52:55Z coefficients produits
 2026-10-09T13:10:57Z dossier halle v2 et liste des produits
 2026-10-09T13:27:27Z dossier halle v3
+2026-10-09T14:17:07Z scouting : zones par temps de parcours, routes, qualification des concurrents, relevé terrain
+2026-10-09T15:02:08Z invendus : sonde étendue (chemins racine, tables de mouvements)
+2026-10-09T15:20:38Z dashboard : modale du détail des invendus (heure, opérateur, quantité)
+2026-10-09T15:24:59Z dashboard : modale des invendus au téléphone
+2026-10-09T15:52:02Z invendus : réclamation fournisseur et remarque à l'opérateur depuis la modale
+2026-10-09T16:06:23Z sonde : détail OpenAPI élargi
+2026-10-09T17:31:09Z Franchisés · évaluation et suivi : cadre de visite, gestion consultant, agenda Google, fiche et page du franchisé
+2026-10-09T18:27:10Z suivi franchisé : part des invendus, réclamations, points moyens et infractions
+2026-10-09T18:46:38Z suivi franchisé : tuiles KPI, dépliant, modale
+2026-10-09T18:51:41Z fiche franchisé : intro en une phrase
+2026-10-09T19:11:02Z fiche franchisé : santé, checklists, météo
+2026-10-09T19:36:52Z fiche franchisé tablette, checklists au diagnostic
+2026-10-09T19:50:01Z checklists de la fiche : API du panel seulement
+2026-10-09T19:53:43Z diagnostic : tâches des consultants
+2026-10-09T19:58:11Z diagnostic : contrat des tâches consultant
+2026-10-09T20:09:21Z fiche franchisé : parcours de visite, checklist du consultant
+2026-10-10T04:50:32Z fiche franchise en app tablette consultant
+2026-10-10T05:06:29Z bundles vendus dans le dashboard operationnel
+2026-10-10T05:12:58Z sonde des promotions bundle du panel
+2026-10-10T05:20:16Z composition des bundles vendus
+2026-10-10T05:30:27Z bundles sans colonne heures
+2026-10-10T07:14:57Z dashboard sans onglet jour sur ordinateur
+2026-10-10T07:23:35Z main d oeuvre jour par jour et duel allege
+2026-10-10T07:27:38Z semaine sans barre du stock
+2026-10-10T07:33:15Z classement b2b et mois sans stock
+2026-10-10T07:59:54Z calendrier A et frise des periodes
+2026-10-10T08:06:10Z frise objectif au lieu de budget
+2026-10-10T08:25:23Z frise trimestres et case du jour en direct
+2026-10-10T08:40:04Z modale produit marge brute seule
+2026-10-10T08:59:14Z total categories egal au pnl
+2026-10-10T09:08:07Z À compléter : détail du non ventilé
+2026-10-10T09:14:10Z À compléter : listes ouvertes, catégories en gris
+2026-10-10T09:24:03Z Frise Opérationnel : semaine active
+2026-10-10T10:35:54Z Frise Semaine : sept jours
+2026-10-10T10:44:17Z Catégories : 12 semaines
+2026-10-10T10:47:55Z Catégories : 12 semaines, retouches
+2026-10-10T10:54:38Z Catégories : (i) discret
+2026-10-10T11:01:03Z Mois : caisse locale en cache
+2026-10-10T11:09:22Z Catégories : A et B ; en-tête allégé
+2026-10-10T11:18:05Z Recettes : 10 secondes
+2026-10-10T11:32:26Z À compléter : masquée quand tout va bien
+2026-10-10T11:41:10Z Contrôle des tâches : photos maîtrisées
+2026-10-10T11:51:16Z La vitrine : ce qui va manquer
+2026-10-10T12:15:45Z La vitrine : filtres en petits carrés
+2026-10-10T12:26:58Z La vitrine : fiche de stock
+2026-10-10T12:56:25Z La vitrine : micro-vignette
+2026-10-10T15:45:20Z Catégories : tendance et journée ; tablette
+2026-10-10T15:47:38Z Catégories : sans sous-catégories
+2026-10-10T15:59:49Z Fiche produit sans tableau ; benchmark dans l'Opérationnel
+2026-10-10T16:46:50Z Fiche produit : prix de vente et magasins
+2026-10-10T16:51:21Z Fiche produit : cache
+2026-10-10T17:29:30Z Ventes : tickets par catégorie
+2026-10-10T17:34:05Z Sonde promotions par quantité
+2026-10-10T17:35:43Z Sonde promotions par identifiant
+2026-10-10T18:00:58Z Sonde promotions compte admin
+2026-10-10T18:05:51Z Tickets à remise
+2026-10-10T18:24:40Z sonde promotions detail
+2026-10-10T18:38:39Z promotions du panel dans les categories et bundles
+2026-10-10T18:41:37Z promotions badges rectangulaires
+2026-10-10T18:59:07Z onglet portions
+2026-10-10T20:23:40Z telephone vues reparties
+2026-10-11T05:14:57Z telephone une donnee un onglet
+2026-10-11T05:36:49Z telephone vitrine compacte
+2026-10-11T07:50:19Z telephone journee compacte
+2026-10-11T09:29:15Z tickets pas encore lus
+2026-10-11T10:53:30Z tickets par mode de service
+2026-10-11T11:04:50Z tickets avec client
+2026-10-11T12:00:34Z fiche client TVA
+2026-10-11T12:02:22Z fiche client en blocs
+2026-10-11T12:04:50Z fiche client societe et rang
+2026-10-11T12:13:26Z pro seulement si TVA valide
+2026-10-11T12:19:58Z retirer trois lignes du dashboard
+2026-10-11T12:51:19Z tickets et commandes
+2026-10-11T13:21:09Z fiche produit sans source ni note du coefficient
+2026-10-11T13:23:46Z fiche produit sans paliers, pastilles rectangulaires
+2026-10-11T13:29:11Z couts du panel jour par jour
+2026-10-11T13:32:39Z perf API seule
+2026-10-11T13:44:07Z jours sans planning
+2026-10-11T13:46:20Z perf budget
+2026-10-11T13:51:27Z sonde des couts
+2026-10-11T13:53:28Z sonde des couts variantes
+2026-10-11T13:57:03Z pnl mensuel du panel
+2026-10-11T14:01:46Z pnl mensuel par annee
+2026-10-11T14:21:34Z retrait pro compris et renvoi telephone
+2026-10-11T14:30:44Z retrait des petites phrases operationnel
+2026-10-11T14:33:46Z retrait phrases pnl a completer reseau
+2026-10-11T17:39:41Z retrait textes ecran resultat cockpit
+2026-10-11T17:44:26Z ponderation perime les caches du resultat
+2026-10-12T04:54:43Z controle franchises tablette
+2026-10-12T05:00:28Z stock : sonde des inventaires
+2026-10-12T05:02:46Z stock : sonde, grand livre matiere
+2026-10-12T05:08:09Z stock : sonde, recettes
+2026-10-12T05:08:55Z controles qualite du mois et meteo du franchise
+2026-10-12T05:12:34Z controles qualite noms des magasins
+2026-10-12T05:15:52Z stock : ecart entre deux inventaires
+2026-10-12T05:17:32Z stock : sonde, fuseaux
+2026-10-12T05:19:27Z stock : inventaires a l heure locale
+2026-10-12T05:24:08Z stock : ecart sur plusieurs semaines
+2026-10-12T05:29:26Z stock : matieres fiables, sans recette, a verifier
+2026-10-12T05:32:57Z stock : solde attendu du resume, qualite des semaines
+2026-10-12T05:38:10Z stock : releve en direct des inventaires
+2026-10-12T05:44:11Z magasins : page Inventaires
+2026-10-12T05:47:21Z inventaires : semaines sans livraison non calculables
+2026-10-12T05:51:31Z inventaires : historique sur quatre semaines glissantes
+2026-10-12T05:53:14Z inventaires : fenetres de quatre semaines, precalcul par lots
+2026-10-12T05:56:14Z inventaires : justesse plafonnee par matiere
+2026-10-13T07:22:59Z marketing : portail en cinq etapes, tables mar_, publication reseaux (eteinte)
+2026-10-13T07:46:14Z marketing : rail du menu
+2026-10-14T20:28:54Z primes : une carte par prime, note Google 25 euros, icones, design system
+2026-10-16T11:09:58Z primes : carres, jauge au jour J, menu du classement ; statistiques a la place de taches
+2026-10-16T11:26:42Z primes : jauge pleine largeur ; statistiques : chiffres du magasin, etat vide
+2026-10-16T11:47:32Z statistiques : rien que ses chiffres (ticket moyen, lignes par ticket) ; primes : deux colonnes
+2026-10-16T12:07:57Z statistiques : 12 semaines en trois lignes (moi, mon magasin, reseau) ; lignes par ticket de chaque semaine
+2026-10-16T12:27:01Z primes : podium des categories ; fiche versionnee ; statistiques : record hors echelle
+2026-10-16T12:46:11Z primes : targets une par ligne, detail deroulant
+2026-10-16T13:05:28Z primes : targets en drapeau, en couleur
+2026-10-16T13:10:25Z primes : drapeau sans cadenas
+2026-10-16T13:17:05Z primes : categories en drapeau
+2026-10-16T13:22:17Z app : statistiques retiree du menu
+2026-10-16T13:23:11Z app : accueil et planning masques du menu
+2026-10-16T18:08:09Z primes : aucune vente a ton nom
+2026-10-16T18:12:59Z primes : selecteur de mois
+2026-10-16T18:17:21Z primes : section categories retiree
+2026-10-16T18:21:59Z primes : promotions de l'API promotions seulement
+2026-10-16T18:35:01Z cockpit : assistant nouvelle prime promotion
+2026-10-16T18:44:18Z promotions du panel via le compte admin ERP
+2026-10-16T18:48:21Z primes marque / franchisé (serveur) + sonde promotions
+2026-10-16T18:54:07Z primes : Marketing franchisé, marque / franchisés, fiches des promotions
+2026-10-16T18:55:25Z primes : Marketing franchisé, marque / franchisés, fiches des promotions
+2026-10-16T18:59:23Z primes : icône dans l'assistant
+2026-10-16T19:06:24Z primes : tableau par magasin, objectif en %, prime magasin ou par vendeuse
+2026-10-16T19:07:17Z analyse magasin : onglet Leviers retiré
+2026-10-16T19:15:07Z primes : objectif du magasin = une prime pour le magasin
+2026-10-16T19:20:52Z primes : tableau en lecture seule, modification dans l'assistant
+2026-10-16T19:24:47Z app worker : mois à venir, primes prévues
+2026-10-16T19:24:53Z console allégée : écrans morts retirés, production et prospection regroupées
+2026-10-16T19:37:03Z primes : un seul assistant (promotion ou catégorie)
+2026-10-16T19:45:19Z primes : période du … au …
+2026-10-16T19:46:33Z console : production, prospection, centrale d'achat, offres et canaux sortis ; export CSV prospection
+2026-10-16T20:15:03Z jours creux retiré de la console
+2026-10-16T20:34:16Z fusions : Résultat + Performance, Fiche & scoring, Marketing (hub)
+2026-10-16T20:39:10Z primes : argent ou cadeau, sponsor, fiche détaillée
+2026-10-16T21:08:30Z fiche allégée, client mystère dans Paramètres, remarques opérateurs retiré
+2026-10-17T04:39:27Z primes : description réglable et indications dans la fiche (avis 5★, ventes croisées, CA)
+2026-10-17T05:26:46Z posts au portail social, Marketing sans Créer › Post, Valider, Publier
+2026-10-17T06:00:01Z primes : conditions à interrupteur, plus de « Tes heures » dans l'app
+2026-10-17T08:13:59Z commandes et canaux du mois : quatre canaux, leur évolution au clic
+2026-10-17T14:03:32Z sonde lecture seule d'une promotion du panel (promo test)
+2026-10-17T14:30:37Z promotions du magasin : onglet du dashboard (assistant X + Y, coefficient ×2) et Analyse magasin › Promotions dans la console
+2026-10-17T15:35:00Z promotions du magasin : coût du réseau quand le magasin n'en a pas, validées d'office quand le lot tient ×2
+2026-10-17T15:48:37Z promotions du magasin : le magasin du dashboard seul, assistant en cinq étapes
+2026-10-17T16:04:36Z promotions du magasin : enregistrées aussitôt, sans validation
+2026-10-17T16:19:27Z promotions du magasin : écrites au panel (inactive, relue, activée)
+2026-10-17T16:40:56Z promotions du magasin : produits non chiffrés sortis d'office
+2026-10-17T19:42:27Z sonde des portions (lecture seule)
+2026-10-17T19:47:44Z promotions : portions ½ ¼, un envoi au panel à la fois
+2026-10-18T09:34:39Z promotions : coefficient de marge au clic, promotions par canal (comptoir, webshop)
+2026-10-18T12:05:15Z promotions : le coefficient du lot ne bloque plus
+2026-10-18T12:11:25Z promotions : à la semaine, au mois, à l'année
+2026-10-18T12:18:40Z promotions : remplir un exemple
+2026-10-18T12:27:12Z sonde des commandes webshop payées en ligne (lecture seule)
+2026-10-18T12:31:41Z promotions : créneaux time_from/time_to, modifier et dupliquer
+2026-10-18T12:41:05Z contrôle des tâches : toute photo est à noter, plus de maîtrise
+2026-10-18T13:04:27Z promotions au panel seul, Catalogue à onglets, Gestion consultant et Plan de développement retirés
+2026-10-18T13:14:27Z catalogue : où ça se vend en onglets, comptoir en entrée
+2026-10-18T13:43:24Z catalogue refondu : quatre questions, une liste, une fiche
+2026-10-18T14:08:05Z nécessaire fondu dans obligatoire, marge nette, part des ventes, interrupteur obligatoire
+2026-10-18T14:17:04Z catalogue : rang, saison, tri par colonne
+2026-10-18T14:21:36Z catalogue : rang de catégorie en colonne, Réinitialiser
+2026-10-18T14:47:45Z catalogue : le 20/80 à imprimer, prix et volume par magasin
+2026-10-18T15:01:16Z PDF 20/80 : par catégorie, assortiment proposé par saison
+2026-10-18T15:12:43Z boutons et listes en rectangles aux coins arrondis
+2026-10-18T15:13:05Z boutons et listes en rectangles aux coins arrondis
+2026-10-18T15:32:30Z PDF 20/80 : assortiment en fiches lisibles
+2026-10-19T12:23:22Z ERP sous /production (apps/production, base erp_production)
+2026-10-19T12:24:06Z ERP sous /production : relance (le push précédent dépassait 300 fichiers, filtre paths non évalué)
+2026-10-19T12:36:23Z ERP sous /production : accès MySQL sans root, clé de transfert
+2026-10-19T12:42:19Z ERP sous /production : import de la base (dump chiffré pour la clé du serveur)
+2026-10-19T12:58:31Z ERP sous /production : import MySQL 8 (conversion du dump MariaDB, mode SQL MariaDB)
+2026-10-19T13:26:27Z ERP sous /production : mot de passe navigateur + bouton Entrer
+2026-10-19T13:50:43Z ERP : style L'Atelier et menu Produkcja / Produkt / Zamówienia
+2026-10-19T13:59:37Z ERP : liens en https quand la page est en https
+2026-10-19T15:17:25Z ERP : tableau Dzisiaj, cloche, formulaires, réclamations ; module atelier P1 (schéma tfb_, API référentiels, démo)
+2026-10-19T15:45:11Z ERP : page de commande sans connexion franchise
+2026-10-19T16:10:43Z ERP : e-mails automatiques (log_only sur la copie), étiquettes avec allergènes
+2026-10-19T16:33:53Z ERP : page d'accueil Rentowność (ventes vs coût du personnel par groupe, CA manquant au target), base achats
+2026-10-19T16:36:01Z Résultat : Trafic clients, 12 semaines et carte des écarts
+2026-10-19T16:48:53Z Dashboard magasin : douze semaines face au N-1
+2026-10-19T16:49:14Z ERP : achats MP (coûts, offres, appels d'offres par mail, NC), postes et tâches, utilisateur connecté
+2026-10-19T16:56:30Z Dashboard magasin : clients, panier moyen, articles par client
+2026-10-19T17:08:59Z ERP : assistants (expédier une journée, planifier, nouveau produit), recherche globale, menus ⋯ ; atelier P2 (fiche produit, gamme, temps standards, chronométrage)
+2026-10-19T17:24:34Z ERP : actions de développement du CA par groupe (ROI), atelier P2 écran (fiches de production)
+2026-10-19T17:59:07Z atelier P3 (besoin + plan) et P4 (ordonnancement + charge)
+2026-10-19T18:11:22Z ERP : budżet personelu (minimum + premie), kto co potrafi
+2026-10-19T18:31:32Z atelier P5 (Gantt), logistyka (pojazdy, palety, załadunek)
+2026-10-19T18:47:01Z atelier P6 (optimiseur de shifts, obsada du jour, simulation)
+2026-10-19T19:05:33Z atelier P7 (tablettes, pointage, signatures, heures, KPIs) ; Rentowność : tableau des périodes
+2026-10-19T19:30:08Z logistyka : palety według rodzaju kartonu i kategorii, trasy z pojazdami i klientami
+2026-10-19T19:40:07Z atelier P7 : wejście / wyjście telefonem przez kod QR z tabletu
+2026-10-19T20:45:18Z audit serwera : pliki statyczne z pamięci przeglądarki, mniej wywołań, ponowienia po zerwanym połączeniu
+2026-10-19T21:00:24Z audit serwera : cache szablonów Twig, Server-Timing
+2026-10-19T21:12:28Z audit serwera : jedno sprawdzenie hasła na żądanie
+2026-10-19T21:27:14Z audit serwera : brakujące pliki (ikona, generator PDF KSeF)
+2026-10-20T07:09:30Z rentowność : zakupy miesiąca według kategorii i dostawcy, surowce z receptur
+2026-10-20T07:15:48Z migracja 019 : indeks daty WDT dla kolumny tekstowej
+2026-10-20T08:00:02Z rentowność : sprzedaż na osobę, tabela 18 miesięcy
+2026-10-20T08:16:18Z rentowność : co wyprodukowały grupy, menu Analiza
+2026-10-20T08:26:41Z rentowność : marża brutto, działy wspólne osobno
+2026-10-20T08:34:44Z wdrożenie : świeże szablony Twig (marża brutto, działy wspólne)
+2026-10-20T09:17:40Z dostęp bcrypt 5, duplikaty WDT, kategorie surowców
+2026-10-20T11:43:23Z karta produkcyjna, Gantt tygodnia API, Dzisiaj, logistyka tygodnia
+2026-10-20T11:49:31Z Gantt tygodnia : produkty na dni, przeciągnij i upuść
+2026-10-20T11:55:14Z Dzisiaj : jedna karta na szerokość
+2026-10-20T12:12:15Z Gantt tygodnia : etykieta grupy = nazwa + godziny
+2026-10-20T12:32:05Z grupy = działy produkcji ERP (migracja 024)
+2026-10-20T12:42:14Z produkt : produkcja i Gantt ; Gantt bez 3 dni
+2026-10-20T13:02:34Z jeden kreator produktu, bez optymalizatora (migracja 025)
+2026-10-20T13:08:58Z stany min/maks ze sprzedaży 6 tygodni (migracja 026)
+2026-10-20T13:14:19Z marge: przelicz wszystkie marże
+2026-10-20T13:20:34Z licznik stron + wyszukiwarka menu
+2026-10-20T13:25:59Z stany w kartonach i sztukach
+2026-10-20T13:32:57Z kreator uproszczony + API tabletu
+2026-10-20T13:39:44Z tablet grupy PWA + tryb bez partii
+2026-10-20T13:47:40Z zapasy wg kategorii + identyfikowalność
+2026-10-20T13:59:53Z czyszczenie pokrycia i partii
+2026-10-20T14:05:59Z plan : kartony i surowce
+2026-10-20T14:18:18Z tydzień : wysyłka / magazyn
+2026-10-20T14:24:05Z marże celu + stan magazynu
+2026-10-20T14:27:52Z marże 2 miejsca + okresy sprzedaży
+2026-10-20T14:33:06Z stan magazynu : poza zamówieniami
+2026-10-20T14:41:46Z marże : efekt nie zeruje się
+2026-10-20T14:48:11Z audyt : przekierowania i porządki
+2026-10-20T14:51:05Z Dashboard magasin : Contrôle au téléphone, « sur l'objectif »
+2026-10-20T14:55:29Z Dashboard magasin : l'équipe du jour
+2026-10-20T15:14:55Z L'équipe du jour : heure par heure
+2026-10-20T15:21:47Z l'heure par heure : articles par ticket
+2026-10-20T15:25:22Z Audyt ERP 1-3 i 5 + rail skrócony
+2026-10-20T15:31:54Z e-mail contrôle qualité 19:00
+2026-10-20T15:39:15Z Audyt ERP 4, 6, 7
+2026-10-20T15:53:36Z Rail : zakładki BDO, PPWR, zwroty, archiwum
+2026-10-20T16:09:46Z Zapas MTS : wartość, kartony, palety wg grupy i kategorii
+2026-10-20T16:14:32Z équipe du jour : seule en vente
+2026-10-20T16:16:16Z Zapasy : wszystkie produkty ERP
+2026-10-20T16:16:59Z retrait réattribution
+2026-10-20T16:21:02Z pointages suspects
+2026-10-20T16:27:52Z Zapasy : wartość magazynu dziś
+2026-10-20T16:50:51Z Tydzień produkcji środa → wtorek, Do zrobienia
+2026-10-20T17:08:07Z Partia produkcyjna w planowaniu
+2026-10-20T18:19:41Z Stałe partie co tydzień, partie do stanów, bez Plan tygodnia
+2026-10-20T19:31:07Z Tydzień typowy : przełącznik 📌, godzina, wyczyść tydzień
+2026-10-20T19:42:57Z Kafelka na partię
+2026-10-20T19:58:35Z Tablet : zakładki + kontrola jakości ; partie w tabeli tygodnia
+2026-10-20T20:05:15Z Godziny i ETP grup w tabeli tygodnia
+2026-10-20T20:30:23Z arkusz tygodnia + zakładki Produkcja
+2026-10-21T20:02:10Z plan d'expansion par province FR/NL + panier moyen hors clients pro
+2026-10-21T20:10:55Z scouting : CA reel du reseau garde six heures
+2026-10-21T20:11:18Z stałe partie 📌 na żywo
+2026-10-21T20:19:36Z promotions relues au panel
+2026-10-21T20:34:20Z promotions : structure API portions
+2026-10-21T21:11:57Z six leviers : Résultat Mois et dashboard Mois
+2026-10-22T06:00:32Z assistant de campagne : renvoi vers le Marketing
+2026-10-22T07:45:17Z ancien portail marketing retire : renvoi vers /marketing/
+2026-10-22T07:54:51Z module kierownik produkcji
+2026-10-22T08:08:44Z karta stanowiska : maksimum absolutne
+2026-10-22T08:26:24Z rola modułu + moje wskaźniki
+2026-10-22T08:38:31Z czas partii + wskaźniki kierownika dla dyrekcji
+2026-10-22T09:01:40Z nettoyage marketing retire : les tables du module restent
+2026-10-22T09:11:43Z paramètres produits de l'Arkusz tygodnia, bascule Liste / Calendrier des campagnes
+2026-10-22T09:14:10Z rail : entree Marketing vers /marketing/
+2026-10-22T09:24:56Z documents + CA net du mois
+2026-10-22T09:25:15Z documents + CA net du mois
+2026-10-22T09:28:15Z produits par catégorie avec bascule MTO/MTS et lot
+2026-10-22T09:57:25Z tous les produits en production, lot/personnes/durée sur la page Produits, minutes seules dans la feuille
+2026-10-22T10:55:48Z mail matériel
+2026-10-22T11:13:03Z module approvisionnement (besoins, stocks, commandes fournisseurs, réceptions)
+2026-10-22T11:23:43Z versionnage des scripts et libellés, recalcul des stocks sur la page Produits
+2026-10-22T12:06:20Z kontrola faktur zakupowych (Zaopatrzenie › Faktury)
+2026-10-22T12:40:42Z plan des équipes (PDF à imprimer, tablette de l'équipe)
+2026-10-22T12:47:26Z plan des équipes : total planifié (lots fixes inclus)
+2026-10-22T12:53:13Z plan des équipes : surplus des lots fixes compté pour le stock
+2026-10-22T13:29:51Z une seule page de planification : Plan des équipes (listes du jour PDF incluses)
+2026-10-22T13:54:57Z mots de passe des comptes ERP en bcrypt
+2026-10-22T14:08:13Z factures : import des derniers prix et des quantités
+2026-10-22T14:18:47Z correctif : migration 045 compatible MySQL
+2026-10-22T14:47:06Z tablet : walidacja dnia, straty, receptury
+2026-10-22T15:01:58Z zadania : kategorie, protokół zebrania, śledzenie produkcji
+2026-10-22T15:53:14Z coboty : stanowisko współpracujące, etap na cobocie
+2026-10-22T16:33:01Z objectifs de CA à date (réel et cible prorata au jour)
+2026-10-22T16:41:30Z TRS na tablecie (stany maszyn, migracja 049)
+2026-10-22T16:52:00Z objectifs de CA : relecture de /stores/perf manqué au chargement
+2026-10-22T18:09:18Z uprawnienia stanowisk, kierownik tylko admin, tablet w railu, bez « Kto co potrafi » (migracja 050)
+2026-10-22T18:15:33Z tablet : skan numeru partii kamerą (OCR wideo)
+2026-10-22T18:24:42Z tablet : nowe produkty (receptura, film, zdjęcia, notatki ; migracja 051)
+2026-10-22T18:33:17Z aktywność w ERP : sesje, strony, kliknięcia, koszt czasu (migracja 052)
+2026-10-22T19:15:00Z tablet : nowy wygląd (menu na dole, ikony Lucide) + parowanie zapamiętane (ciasteczko)
+2026-10-23T06:29:49Z promotions : sonde des champs du panel
+2026-10-23T06:53:19Z promotions : liste en tableau, une information par colonne
+2026-10-23T07:04:21Z promotions : étape Conditions du ticket (canal, seuil)
+2026-10-23T07:19:45Z promotions : plus de limite à deux, prix final à l'étape Y
+2026-10-23T07:29:21Z promotions : valeur Y depuis le prix final, moyennes d'une catégorie
+2026-10-23T07:59:56Z promotions : Tout le temps, plus de durée maximale
+2026-10-23T08:07:15Z promotions : Tout le temps jusqu'au 31/12/2037
+2026-10-23T08:20:46Z marże : sprzedawalność w Belgii (ceny w sklepach z API panelu, konto z cockpitu ; migracja 053)
+2026-10-23T08:25:12Z dashboard : jauge comptoir seul, jauge B2B dessous, heure par heure séparé ou combiné
+2026-10-23T08:31:21Z rozwój sprzedaży grupy : sprzedawalność w Belgii przy działaniach (+ marże, migracja 053)
+2026-10-23T13:03:55Z serveur de test : bac à sable ouvert (sans mot de passe navigateur)
+2026-10-23T13:13:17Z dashboard : vignettes du moment retirées
+2026-10-23T14:10:37Z promotions : seuil et canal sous les noms relus seulement
+2026-10-23T14:36:46Z dashboard : P&L sous le duel, bundles retirés
+2026-10-23T14:41:57Z production : page Validation et suivi retirée, Production ↗ hors du rail
+2026-10-23T14:43:35Z dashboard : vignettes du bas retirées
+2026-10-23T14:48:34Z console : page Marketing (#/marketing) et son entrée du rail retirées
+2026-10-23T15:00:22Z faktury OCR (skany, zdjęcia)
+2026-10-23T15:07:05Z console : onglets de campagne retirés
+2026-10-23T15:07:14Z rentowność : pulpit minimalistyczny + wynik i produkcja grup
+2026-10-23T15:25:38Z récurrence : taux de retour des clients PWA
+2026-10-23T15:30:05Z wartości odżywcze z internetu + pełna szerokość
+2026-10-23T15:31:20Z récurrence : répartition des clients identifiés
+2026-10-23T15:38:50Z primes : combien, comment y arriver, où tu en es ; module Primes dans le rail
+2026-10-23T15:42:00Z récurrence : tous les clients identifiés
+2026-10-23T15:48:04Z primes : jauge de la meilleure vendeuse (le bout, la 1re du magasin)
+2026-10-23T15:51:44Z primes : meilleure vendeuse en €/h
+2026-10-23T16:13:53Z primes : une seule liste par état (à aller chercher, déjà gagnées, pas ce mois-ci)
+2026-10-23T16:38:22Z primes : bats ton record en trois étapes (poser, battre, gagner)
+2026-10-23T16:43:41Z rail : menu Application employé
+2026-10-23T16:46:20Z production : audit lot 1 (ceny, magazyn, marże, trasy, karta surowca)
+2026-10-23T16:49:30Z promotions : destination et seuil de déclenchement reconnus
+2026-10-23T17:05:41Z promotions : sonde complète et documentation
+2026-10-23T17:24:56Z promotions : seuil minimum_receipt_gross, canal sales_channel_scope
+2026-10-23T17:31:35Z primes : prime B2B en une phrase, tableau des primes façon Apple
+2026-10-23T17:39:20Z primes : page franchisé sur le magasin de l'adresse (?shop=3)
+2026-10-23T17:42:49Z primes de l'app worker : mise en page bureau
+Mise en ligne : lot 2 audytu — jeden sposób liczenia (koszt działu, sprzedaż WDT, zamówienia otwarte, do produkcji) 2026-10-23T17:52:32Z
+2026-10-23 primes app worker : page d'un magasin avec la marque, tous les déclencheurs, id shop dans l'adresse
+2026-10-23T18:16Z primes : tables mot_ (réglages, caches) ; promotions du magasin sans paragraphe d'explication
+Mise en ligne : lot 3 audytu — jedna karta produktu (walidacja logistyki, minimum opcjonalne, pracownik aktywny) 2026-10-23T18:25:08Z
+2026-10-23T18:32Z primes : grands prix de l'année (vitrine, création), réseau et magasin
+2026-10-23T18:38Z primes : page franchisé, où en sont tes vendeuses (qui a quelle prime, à quel niveau)
+2026-10-23T18:52Z app des vendeuses : grands prix de l'année dans Mes primes
+2026-10-23T18:56Z primes : page franchisé, tri au clic sur chaque colonne du tableau des vendeuses
+Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, strona startowa stanowiska) i martwy kod 2026-10-23T19:03:24Z
+2026-10-23T19:07Z primes : pages plus compactes (sections, en-tête du magasin, primes de la marque repliées)
+2026-10-23T19:08Z grands prix : les six de la maquette, éteints
+2026-10-23T19:16Z relance : pages des primes compactes et grands prix (le run précédent s'est arrêté sur des marques de conflit, corrigées)
+2026-10-23T19:46Z production : lot A i B (styl wydruków PDF, wzory dokumentów, e-maile w językach klientów)
+2026-10-23T19:51Z production : relance lot A i B (migracja 060 zgodna z MySQL 8)
+2026-10-23T20:05Z production : lot C i D (powiadomienia o dostawie, Finanse, przypomnienia 1–5, wolumen i marża)
+2026-10-23T20:34:56Z faktury OCR, PDF bez kolizji, karta produktu → półprodukt → receptura
+2026-10-24T05:17:46Z proforma według kategorii, WDT 0 WDT jak KSeF
+2026-10-24T06:13:51Z strona klienta (dokumenty, cel obrotu), fuzja kategorii produktów i surowców
+2026-10-24T07:00:25Z dystrybucja dokumentów (#128)
+2026-10-24T07:22:50Z kalkulacja receptury (#129)
+2026-10-24T07:26Z ERP production : les réglages regroupés sous Ustawienia dans le rail
+2026-10-24T07:44Z primes : choix du mois, l'année des primes (magasin et réseau)
+2026-10-24T07:49:37Z tablet receptury + zdjęcia + grupa półproduktów (#130 #133)
+2026-10-24T07:57Z console : adresses sans tiret (#/primes?shop=4…)
+2026-10-24T08:10:22Z pointage : questions avant OK, zatwierdzam (#135)
+2026-10-24T08:23:03Z base : tables n_*, base unique erp (#136)
+2026-10-24T08:29Z app employé : Accueil dans la barre du bas
+2026-10-24T08:34:27Z base : migration 070 (collation n_, index) + docs/db (#136)
+2026-10-24T08:47:05Z recherche : recettes, fournisseurs, employés, onglets tablettes, alias FR
+2026-10-24T09:10:37Z poczta : skrzynka e-mail każdego użytkownika (#137)
+2026-10-24T09:23:56Z #131 accueil tablette
+2026-10-24T09:38:01Z #132 dostawy surowców
+2026-10-24T09:53:29Z #134 rentowność grup tydzień
+2026-10-24T10:23:40Z tablette dostawy + lien rentowność tydzień
+2026-10-24T10:48:55Z #138 décisions : proformas archivées, WDT 0 %, Stan magazynu seul
+2026-10-24T10:51Z app employé : Planning dans la barre et vue refaite
+2026-10-24T10:51Z Résultat › Année : les clients mois par mois face à l'an passé (n1Mois)
+2026-10-24T10:54Z app employé : jauge de Bats ton record en articles par ticket
+2026-10-24T10:56Z app employé : Planning, rentabilité du service à venir

@@ -23,15 +23,13 @@
     if (new URLSearchParams(location.search).get('app') !== 'consultant') { return; }
     document.documentElement.setAttribute('data-app', 'consultant');
     var l = document.createElement('link'); l.rel = 'manifest'; l.href = 'consultant.webmanifest'; document.head.appendChild(l);
-    if (!location.hash || location.hash === '#' || location.hash === '#/') { location.hash = '#/fiche-franchise'; }
+    if (!location.hash || location.hash === '#' || location.hash === '#/') { location.hash = '#/fiche'; }
   } catch (e) { /* sans app : le cockpit */ }
 })();
 </script>
 </head>
 <body>
 <div id="app"><div style="padding:60px;color:#666;font-size:13px;font-family:sans-serif">Chargement des données du réseau…</div></div>
-<script src="assets/js/prospection.js"></script>
-<script src="assets/js/newsletter.js"></script>
 <script type="module" src="assets/js/app.js"></script>
 </body>
 </html>
