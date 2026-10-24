@@ -182,7 +182,7 @@ try {
     // ── 3. La campagne ───────────────────────────────────────────────────────
     evTitre('3. campagne UNIQUE (DRAFT)');
     $campCorps = ['name' => ESSAI_NOM, 'description' => 'Essai technique du cockpit — ne pas utiliser.', 'status' => 'DRAFT',
-        'code_type' => 'UNIQUE', 'valid_from' => $debut, 'valid_to' => $fin, 'usage_limit_total' => 1, 'usage_limit_per_code' => 1,
+        'code_type' => 'UNIQUE', 'valid_from' => $debut, 'valid_to' => $fin, 'usage_limit_total' => 3, 'usage_limit_per_code' => 1,
         'requires_customer' => false];
     if ($campId === null) {
         $r = evEcrire('POST', '/admin/voucher-campaigns', $campCorps);
@@ -207,7 +207,9 @@ try {
     foreach (evItems(ErpApi::sondeGet("/admin/voucher-campaigns/$campId/codes?limit=50")['corps']) as $k) {
         $kc = is_array($k) ? (string) ($k['code'] ?? '') : '';
         // Les dates d'un code ne se modifient pas (seul son statut) : on ne reprend qu'un code sans date de début.
-        if ($code === null && str_starts_with($kc, 'ZZSONDE') && !str_starts_with($kc, 'ZZSONDE-G') && empty($k['valid_from'])) { $code = $kc; $codeId = (int) $k['id']; }
+        // … et encore utilisable (4e passage : le code #12 a servi une fois, sa limite).
+        if ($code === null && str_starts_with($kc, 'ZZSONDE') && !str_starts_with($kc, 'ZZSONDE-G') && empty($k['valid_from'])
+            && (int) ($k['usage_count'] ?? 0) < (int) ($k['usage_limit'] ?? 1)) { $code = $kc; $codeId = (int) $k['id']; }
     }
     if ($code === null) {
         $alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; $rnd = '';
@@ -252,69 +254,44 @@ try {
     foreach (evItems($act['corps']) as $it) { if (is_array($it) && (int) ($it['id'] ?? $it['id_promotion'] ?? 0) === $promoId) { $vu = true; } }
     echo '  la promotion VOUCHER_ONLY apparaît-elle dans les remises actives de la boutique ? ', $vu ? 'oui' : 'non', "\n";
 
-    // ── 7. Valider ───────────────────────────────────────────────────────────
-    evTitre('7. POST /vouchers/validate — quels champs, quelle réponse');
-    $ligne = ['id_product' => $pid, 'quantity' => 1] + ($prix !== null ? ['unit_price' => (float) $prix] : []);
-    $variantes = [
-        ['code' => $code],
-        ['code' => $code, 'id_shop' => ESSAI_SHOP],
-        ['code' => $code, 'id_shop' => ESSAI_SHOP, 'items' => [$ligne]],
-        ['code' => $code, 'id_shop' => ESSAI_SHOP, 'products' => [$ligne]],
-        ['code' => $code, 'shop_id' => ESSAI_SHOP, 'cart' => ['items' => [['product_id' => $pid, 'quantity' => 1]]]],
-    ];
-    $jeton = null;
-    foreach ($variantes as $v) {
-        $r = evEcrire('POST', '/vouchers/validate', $v);
-        $c = $r['corps'];
-        if (is_array($c)) {
-            printf("      valid=%s · jeton=%s · erreurs=%s\n", json_encode($c['valid'] ?? null), isset($c['validation_token']) && is_string($c['validation_token']) ? 'oui' : 'non',
-                json_encode(array_map(static fn ($e) => is_array($e) ? ($e['code'] ?? '?') : $e, (array) ($c['errors'] ?? [])), JSON_UNESCAPED_UNICODE));
-            if (is_string($c['validation_token'] ?? null) && $c['validation_token'] !== '') { $jeton = $c['validation_token']; }
-        }
+    // ── 7. Valider (4e passage : code + id_shop suffisent) ───────────────────
+    evTitre('7. POST /vouchers/validate {code, id_shop}');
+    $r = evEcrire('POST', '/vouchers/validate', ['code' => $code, 'id_shop' => ESSAI_SHOP]);
+    $c = is_array($r['corps']) ? $r['corps'] : [];
+    printf("      valid=%s · jeton=%s · cart_addition_offer=%s · product_selection=%s\n", json_encode($c['valid'] ?? null),
+        is_string($c['validation_token'] ?? null) ? 'oui (' . strlen($c['validation_token']) . ' car.)' : 'non',
+        mb_substr(evJson($c['cart_addition_offer'] ?? null), 0, 300), mb_substr(evJson($c['product_selection'] ?? null), 0, 300));
+    if (is_array($c['promotion'] ?? null)) { echo '      clés de promotion : ', implode(', ', array_keys($c['promotion'])), "\n"; }
+
+    // ── 8. Encaisser AVEC une transaction, puis rejouer (idempotence) ────────
+    // 4e passage : encaissé sans transaction, l'encaissement ne s'annule plus (reverse exige id_transaction et
+    // compare : VOUCHER_TRANSACTION_MISMATCH). Ici : la transaction 999999999, qui n'existe pas.
+    evTitre('8. POST /vouchers/redeem {request_key, code, id_shop, id_transaction} puis le même une 2e fois');
+    $cle = 'SONDE-COCKPIT-ESSAI-' . gmdate('YmdHis') . '-RT';
+    $corps = ['request_key' => $cle, 'code' => $code, 'id_shop' => ESSAI_SHOP, 'id_transaction' => FAUX_ID];
+    $r1 = evEcrire('POST', '/vouchers/redeem', $corps);
+    $ok = $r1['code'] >= 200 && $r1['code'] < 300;
+    if ($ok) {
+        $r2 = evEcrire('POST', '/vouchers/redeem', $corps);
+        echo '      2e envoi : idempotent=', json_encode($r2['corps']['idempotent'] ?? null), ' · même encaissement=',
+            json_encode(($r2['corps']['redemption']['id'] ?? null) === ($r1['corps']['redemption']['id'] ?? null)), "\n";
+        $k = ErpApi::sondeGet("/admin/voucher-campaigns/$campId/codes?limit=50&code=" . rawurlencode($code))['corps'];
+        foreach (evItems($k) as $x) { if (is_array($x) && ($x['code'] ?? '') === $code) { echo '      usage du code après encaissement : ', json_encode($x['usage_count'] ?? null), "\n"; } }
     }
 
-    // ── 8. Annuler : le nom du champ transaction, sans rien annuler ──────────
-    evTitre('8. POST /vouchers/reverse — nom du champ transaction (identifiant inexistant)');
-    $base = 'SONDE-COCKPIT-ESSAI-' . gmdate('YmdHis');
-    // 1er passage : seul `id_transaction` est reconnu (404 VOUCHER_REDEMPTION_NOT_FOUND ; les autres noms : 422).
-    foreach (['id_transaction'] as $i => $champ) {
-        evEcrire('POST', '/vouchers/reverse', ['request_key' => "$base-X$i", $champ => FAUX_ID]);
-    }
-
-    // ── 9. Encaisser ─────────────────────────────────────────────────────────
-    evTitre('9. POST /vouchers/redeem — champs exigés, puis réponse');
-    $essais = [
-        ['request_key' => "$base-R1", 'code' => $code],
-        ['request_key' => "$base-R2", 'code' => $code, 'id_shop' => ESSAI_SHOP],
-        ['request_key' => "$base-R3", 'code' => $code, 'id_shop' => ESSAI_SHOP, 'items' => [$ligne]],
-        ['request_key' => "$base-R4", 'code' => $code, 'id_shop' => ESSAI_SHOP, 'items' => [$ligne], 'id_transaction' => FAUX_ID],
-    ];
-    if ($jeton !== null) {
-        array_splice($essais, 1, 0, [['request_key' => "$base-T1", 'validation_token' => $jeton]]);
-        $essais[] = ['request_key' => "$base-T2", 'validation_token' => $jeton, 'id_shop' => ESSAI_SHOP, 'id_transaction' => FAUX_ID];
-    }
-    $encaisse = null;
-    foreach ($essais as $e) {
-        $r = evEcrire('POST', '/vouchers/redeem', $e);
-        if ($r['code'] >= 200 && $r['code'] < 300) { $encaisse = [$e, $r['corps']]; echo "  ⇒ ENCAISSÉ avec les champs ", json_encode(array_keys($e)), "\n"; break; }
-    }
-
-    // ── 10. Si encaissé : annuler pour de bon ────────────────────────────────
-    if ($encaisse !== null) {
-        evTitre('10. annuler l\'encaissement d\'essai');
-        [$e, $c] = $encaisse;
-        $tx = null;
-        foreach ([$c['id_transaction'] ?? null, $c['data']['id_transaction'] ?? null, $c['redemption']['id_transaction'] ?? null,
-                  $c['data']['redemption']['id_transaction'] ?? null, $e['id_transaction'] ?? null] as $t) { if (is_numeric($t)) { $tx = (int) $t; break; } }
-        foreach ([['request_key' => $e['request_key'], 'id_transaction' => $tx ?? FAUX_ID],
-                  ['request_key' => $e['request_key'] . '-REV', 'id_transaction' => $tx ?? FAUX_ID, 'code' => $code]] as $x) {
-            $rv = evEcrire('POST', '/vouchers/reverse', $x);
-            if ($rv['code'] >= 200 && $rv['code'] < 300) { echo "  ⇒ annulé\n"; break; }
-        }
+    // ── 9. Annuler ───────────────────────────────────────────────────────────
+    evTitre('9. POST /vouchers/reverse {request_key, id_transaction}');
+    if ($ok) {
+        $rv = evEcrire('POST', '/vouchers/reverse', ['request_key' => $cle, 'id_transaction' => FAUX_ID]);
+        if ($rv['code'] >= 300) { evEcrire('POST', '/vouchers/reverse', ['request_key' => $cle . '-REV', 'id_transaction' => FAUX_ID, 'code' => $code]); }
+        $rv2 = evEcrire('POST', '/vouchers/reverse', ['request_key' => $cle, 'id_transaction' => FAUX_ID]);
+        echo '      2e annulation : HTTP ', $rv2['code'], "\n";
+        $k = ErpApi::sondeGet("/admin/voucher-campaigns/$campId/codes?limit=50&code=" . rawurlencode($code))['corps'];
+        foreach (evItems($k) as $x) { if (is_array($x) && ($x['code'] ?? '') === $code) { echo '      usage du code après annulation : ', json_encode($x['usage_count'] ?? null), "\n"; } }
         $f = ErpApi::sondeGet("/admin/voucher-campaigns/$campId")['corps'];
-        echo '  redemptions_total après annulation : ', json_encode($f['redemptions_total'] ?? null), "\n";
+        echo '      redemptions_total : ', json_encode($f['redemptions_total'] ?? null), "\n";
     } else {
-        echo "\n  ⇒ aucun encaissement abouti : rien à annuler\n";
+        echo "  encaissement avec transaction refusé : rien à annuler\n";
     }
 } catch (Throwable $e) {
     echo "\n  ⇒ essai interrompu : ", mb_substr($e->getMessage(), 0, 300), "\n";
