@@ -10,6 +10,8 @@ name: Sonde — bons de l'API ERP (lecture seule)
 # Déclenchement : pousser un changement sur `sonde-vouchers.trigger` (ou sur le
 # script / ce fichier) dans la branche ci-dessous, ou « Run workflow ».
 # Ne déploie rien : le déploiement du cockpit reste dans deploy.yml.
+#
+# Ce que les passages du 24/10/2026 ont établi : dépôt WebShop, VOUCHERS_ERP.md.
 
 on:
   push:
