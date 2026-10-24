@@ -253,14 +253,14 @@ class App {
       bScope: 'shop', repFFreq: null, repFEtat: null, repFType: null, tplAxe: null,
       pwaType: 'gestion:month', pwaScope: 'all', gate: null,
       repCible: null, repRech: null, repBusy: false, pdCat: 'Toutes les catégories', pdSort: 'score' };
-    // La page du franchisé (23/10/2026) : « #/primes-app-worker?shop=3 » ouvre les primes de ce magasin. « ?shop=3 » avant
+    // La page du franchisé (23/10/2026) : « #/primes?shop=3 » ouvre les primes de ce magasin. « ?shop=3 » avant
     // l'ancre (lien de la PR #33) passe dans l'ancre, seule à dire le magasin ensuite : sans quoi il collerait à l'adresse
     // et la page admin ne se rouvrirait plus.
     const shopAvant = (new URLSearchParams(location.search).get('shop') || '').trim();
     if (shopAvant) {
       const reste = new URLSearchParams(location.search); reste.delete('shop');
       const h = String(location.hash || '');
-      const ancre = (!h || /^#\/?(primes-app-worker)?(\?|$)/.test(h)) && !App.shopDeAdresse() ? '#/' + App.ADRESSES.primesApp + '?shop=' + encodeURIComponent(shopAvant) : h;
+      const ancre = (!h || /^#\/?(primes|primes-app-worker)?(\?|$)/.test(h)) && !App.shopDeAdresse() ? '#/' + App.ADRESSES.primesApp + '?shop=' + encodeURIComponent(shopAvant) : h;
       try { history.replaceState(null, '', location.pathname + (reste.toString() ? '?' + reste : '') + ancre); } catch (e) { /* adresse inchangée */ }
     }
     this._h = [];
@@ -333,38 +333,50 @@ class App {
    * sien : rien ne se casse si un écran naît sans qu'on y pense.
    */
   static get ADRESSES(){
+    // Sans tiret (24/10/2026, Sam : « réorganiser le nav bar pour ne pas avoir de - dans les liens ») : un mot, ou la
+    // page puis sa sous-page (« budget/encodage »). Les anciennes adresses mènent toujours au bon écran
+    // (ADRESSES_ANCIENNES) et la barre se remet aussitôt sur la nouvelle.
     return {
       resultatJour: 'resultat',
       magasins: 'magasins', objectifs: 'objectifs', marge: 'marge',
-      reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
-      budgetparam: 'budget-parametres', catalogue: 'catalogue', assortiment: 'assortiment',
+      reputation: 'reputation', budget: 'budget', encodage: 'budget/encodage',
+      budgetparam: 'budget/parametres', catalogue: 'catalogue', assortiment: 'assortiment',
       planogramme: 'planogramme', analyse: 'analyse',
-      anaprod: 'analyse-produits', prixvolume: 'prix-volume',
-      manque: 'manque-a-gagner',
-      ventes: 'target-ventes',
+      anaprod: 'catalogue/analyse', prixvolume: 'catalogue/prix',
+      manque: 'catalogue/manque',
+      ventes: 'equipe',
       // Les promotions demandées par les magasins (17/10/2026) : un onglet d'Analyse magasin.
       promosMag: 'promotions',
       croisements: 'croisements',
       projets: 'projets', fonds: 'fonds',
-      mktTypes: 'types-campagne', mktObjectifs: 'objectifs-produits', scoringTri: 'scoring-trimestre', clientMystere: 'client-mystere',
-      suivi: 'suivi-taches', controle: 'controle-taches', suiviMensuel: 'suivi-mensuel', kpiTable: 'table-kpi', reporting: 'reporting',
+      mktTypes: 'parametres/campagnes', mktObjectifs: 'objectifs/produits', scoringTri: 'fiche/scoring', clientMystere: 'parametres/mystere',
+      suivi: 'suivi/taches', controle: 'suivi/controles', suiviMensuel: 'suivi/mois', kpiTable: 'parametres/kpi', reporting: 'reporting',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
       // #/parametres depuis un signet résolvait vers un écran inconnu et
       // l'affichage tombait — « rendu impossible », page blanche.
-      diagnostic: 'diagnostic', parametres: 'parametres', usageConsole: 'usage-console',
+      diagnostic: 'diagnostic', parametres: 'parametres', usageConsole: 'journal/usage',
       // Ces trois-là n'avaient PAS d'adresse, et le défaut « garde son
       // identifiant » ne suffisait pas : `ecranDeAdresse` n'accepte un
       // identifiant nu que s'il est CLÉ de cette table. L'ancre affichait
       // donc « #/journal » — que rouvrir ramenait aux tâches, sans un mot.
-      journal: 'journal', scoring: 'scoring-reglages', scouting: 'scouting',
-      tablette: 'tablette-vendeuses',
-      // Les primes de l'app worker (16/10/2026) : sorties d'Équipe & ventes, rangées dans Marketing franchisé.
-      primesApp: 'primes-app-worker',
-      brandGuard: 'brand-guard', invendus: 'invendus-poubelle', inventaires: 'inventaires',
+      journal: 'journal', scoring: 'parametres/scoring', scouting: 'scouting',
+      tablette: 'tablette',
+      // Les primes de l'app worker (16/10/2026) : la page admin, et celle d'un magasin avec « ?shop=4 ».
+      primesApp: 'primes',
+      brandGuard: 'brandguard', invendus: 'invendus', inventaires: 'inventaires',
       // Franchisés · évaluation et suivi (09/10/2026)
-      ficheFranchise: 'fiche-franchise', controlesQualite: 'controles-qualite',
+      ficheFranchise: 'fiche', controlesQualite: 'qualite',
     };
+  }
+  /** Les adresses d'avant le 24/10/2026, avec un tiret : un signet ou un lien envoyé les ouvre toujours. */
+  static get ADRESSES_ANCIENNES(){
+    return { 'budget-encodage': 'encodage', 'budget-parametres': 'budgetparam', 'analyse-produits': 'anaprod', 'prix-volume': 'prixvolume',
+      'manque-a-gagner': 'manque', 'target-ventes': 'ventes', 'types-campagne': 'mktTypes', 'objectifs-produits': 'mktObjectifs',
+      'scoring-trimestre': 'scoringTri', 'client-mystere': 'clientMystere', 'suivi-taches': 'suivi', 'controle-taches': 'controle',
+      'suivi-mensuel': 'suiviMensuel', 'table-kpi': 'kpiTable', 'usage-console': 'usageConsole', 'scoring-reglages': 'scoring',
+      'tablette-vendeuses': 'tablette', 'primes-app-worker': 'primesApp', 'brand-guard': 'brandGuard', 'invendus-poubelle': 'invendus',
+      'fiche-franchise': 'ficheFranchise', 'controles-qualite': 'controlesQualite' };
   }
   /**
    * Les adresses d'écrans RETIRÉS. Un signet ou un lien envoyé par courriel
@@ -421,6 +433,7 @@ class App {
     if (!brut) { return ''; }
     const t = App.ADRESSES;
     for (const id of Object.keys(t)) { if (t[id] === brut) { return id; } }
+    if (App.ADRESSES_ANCIENNES[brut]) { return App.ADRESSES_ANCIENNES[brut]; }
     if (App.ADRESSES_RETIREES[brut]) { return App.ADRESSES_RETIREES[brut]; }
     if (App.ADRESSES_SORTIES[brut]) { location.replace(location.pathname.replace(/[^/]*$/, '') + App.ADRESSES_SORTIES[brut]); return ''; }
     // Un identifiant technique reste accepté : les liens d'avant continuent
@@ -429,7 +442,7 @@ class App {
   }
   /**
    * L'adresse d'un écran, pour un lien à copier. La page franchisé des primes porte son magasin (23/10/2026, Sam :
-   * « dans la barre il doit y avoir l'id shop, je le changerai à la main pour vérifier ») : #/primes-app-worker?shop=3 ;
+   * « dans la barre il doit y avoir l'id shop, je le changerai à la main pour vérifier ») : #/primes?shop=3 ;
    * sans magasin, c'est la page admin.
    */
   adresseDe(id){
@@ -437,7 +450,7 @@ class App {
     if (id === 'primesApp' && this.state.prSection === 'franchise' && this.state.prShop) { return base + '?shop=' + encodeURIComponent(this.state.prShop); }
     return base;
   }
-  /** Le magasin écrit dans l'ancre : « #/primes-app-worker?shop=3 » ; '' sans lui. */
+  /** Le magasin écrit dans l'ancre : « #/primes?shop=3 » ; '' sans lui. */
   static shopDeAdresse(){
     return (new URLSearchParams(String(location.hash || '').split('?')[1] || '').get('shop') || '').trim();
   }
@@ -7005,7 +7018,7 @@ class App {
     };
 
     // La page franchisé (23/10/2026, Sam : « le panneau de contrôle des primes pour son magasin ») : UN magasin, celui de
-    // l'adresse (#/primes-app-worker?shop=3). Les primes de la marque et des sponsors qui y tournent, à lire ; les siennes,
+    // l'adresse (#/primes?shop=3). Les primes de la marque et des sponsors qui y tournent, à lire ; les siennes,
     // à poser avec les données du magasin ; ses moyennes face au réseau ; les promotions du panel qui y tournent.
     common.prFr = null;
     if (common.prSection === 'franchise') {
