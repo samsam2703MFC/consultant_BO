@@ -9,6 +9,7 @@ name: Essai — bon de test dans l'ERP (écriture)
 # ÉCRIT dans l'ERP : il ne part que sur un changement de `essai-vouchers.trigger`
 # (pas sur une retouche du script), dont le premier mot donne le mode :
 #   essai      — créer ou reprendre, activer, essayer, désactiver
+#   visible    — un bon complet mais hors service, pour le voir dans le panel
 #   nettoyage  — désactiver, détacher et supprimer la promotion de test
 
 on:
@@ -20,7 +21,7 @@ on:
       mode:
         description: "essai : créer/reprendre, activer, essayer, désactiver · nettoyage : supprimer la promotion de test"
         type: choice
-        options: [essai, nettoyage]
+        options: [essai, visible, nettoyage]
         default: essai
 
 concurrency:
@@ -48,7 +49,7 @@ jobs:
           php -l tools/essai_voucher.php
           mode="${{ github.event.inputs.mode }}"
           [ -z "$mode" ] && mode="$(head -1 essai-vouchers.trigger | awk '{print $1}')"
-          case "$mode" in essai|nettoyage) ;; *) echo "::error::mode inconnu « $mode » (essai ou nettoyage)"; exit 1 ;; esac
+          case "$mode" in essai|visible|nettoyage) ;; *) echo "::error::mode inconnu « $mode » (essai, visible ou nettoyage)"; exit 1 ;; esac
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "Mode : $mode"
 

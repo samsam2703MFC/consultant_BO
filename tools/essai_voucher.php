@@ -14,6 +14,8 @@ declare(strict_types=1);
  * Les passages suivants REPRENNENT la même campagne (retrouvée par son nom) : aucun doublon.
  *
  *   php -- /var/www/consulant_bo essai      (défaut) — créer ou reprendre, activer, essayer, désactiver
+ *   php -- /var/www/consulant_bo visible    — un bon complet mais hors service (promotion INACTIVE rattachée, code
+ *                                             DISABLED, campagne INACTIVE), pour le voir dans le panel
  *   php -- /var/www/consulant_bo nettoyage  — désactiver, détacher puis supprimer la promotion ; la campagne reste
  *                                             INACTIVE (l'API ne supprime pas les campagnes)
  *
@@ -166,6 +168,45 @@ $promoCorps = [
     // ACTIVE promotions. ») : toute la semaine, toute la journée — la durée de vie reste bornée par valid_to.
     'schedule' => array_map(static fn ($j) => ['day_of_week' => $j, 'time_from' => '00:00', 'time_to' => '23:59'], range(1, 7)),
 ];
+
+// ── Mode « visible » : un bon COMPLET mais hors service, pour le voir dans le panel ──
+// 24/10, Sam ne voit rien dans le panel : le nettoyage avait laissé la campagne #9 vide (DRAFT, sans promotion,
+// codes désactivés). Ici : promotion recréée puis INACTIVE, rattachée, un code DISABLED, campagne INACTIVE jusqu'au
+// 31/12. Rien n'est jamais ACTIVE : le bon se voit, il ne s'utilise pas.
+if ($mode === 'visible') {
+    $finVis = '2026-12-31 23:59:59';
+    $pc = ['description' => 'Essai technique du cockpit — visible pour contrôle, désactivé. 1 % sur un produit.',
+           'valid_to' => $finVis] + $promoCorps;
+    if ($campId === null) { echo "  ⇒ campagne d'essai introuvable : arrêt avant toute écriture\n"; exit(1); }
+    evTitre('visible : promotion');
+    if ($promoId === null) {
+        $r = evEcrire('POST', '/admin/promotions/scheduled-product-discount', $pc);
+        $promoId = evId($r['corps']);
+        if ($promoId === null) { echo "  ⇒ promotion non créée : arrêt\n"; exit(1); }
+    }
+    evEcrire('PATCH', "/admin/promotions/scheduled-product-discount/$promoId", ['status' => 'INACTIVE'] + $pc);
+    evTitre('visible : campagne #' . $campId);
+    evEcrire('PATCH', "/admin/voucher-campaigns/$campId", ['name' => ESSAI_NOM, 'description' => 'Essai technique du cockpit — visible pour contrôle, désactivé.',
+        'code_type' => 'UNIQUE', 'shared_code' => null, 'valid_from' => $debut, 'valid_to' => $finVis, 'usage_limit_total' => 3, 'usage_limit_per_code' => 1]);
+    $f = ErpApi::sondeGet("/admin/voucher-campaigns/$campId")['corps'];
+    if ((int) ($f['campaign']['id_promotion'] ?? 0) !== $promoId) {
+        evEcrire('PUT', "/admin/voucher-campaigns/$campId/promotion", ['id_promotion' => $promoId, 'confirm_activation_mode_change' => false]);
+    }
+    evTitre('visible : un code (désactivé)');
+    $alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; $rnd = '';
+    for ($i = 0; $i < 12; $i++) { $rnd .= $alpha[random_int(0, strlen($alpha) - 1)]; }
+    evEcrire('POST', "/admin/voucher-campaigns/$campId/codes", ['code' => 'ZZSONDE' . $rnd, 'status' => 'DISABLED', 'usage_limit' => 1, 'valid_from' => null, 'valid_to' => $finVis]);
+    evTitre('visible : campagne INACTIVE');
+    $r = evEcrire('PATCH', "/admin/voucher-campaigns/$campId", ['status' => 'INACTIVE', 'code_type' => 'UNIQUE', 'shared_code' => null]);
+    if ($r['code'] >= 300) { evEcrire('PATCH', "/admin/voucher-campaigns/$campId/status", ['status' => 'INACTIVE']); }
+    $f = ErpApi::sondeGet("/admin/voucher-campaigns/$campId")['corps'];
+    echo '  état final : ', evJson(['status' => $f['campaign']['status'] ?? null, 'id_promotion' => $f['campaign']['id_promotion'] ?? null,
+        'valid_to' => $f['campaign']['valid_to'] ?? null, 'promotion_status' => $f['promotion']['status'] ?? null,
+        'code_stats' => $f['code_stats'] ?? null, 'redemptions_total' => $f['redemptions_total'] ?? null,
+        'configuration_complete' => $f['configuration_complete'] ?? null, 'missing_requirements' => $f['missing_requirements'] ?? null]), "\n";
+    echo "\n=== FIN ESSAI (visible) ===\n";
+    exit(0);
+}
 
 try {
     // ── 2. La promotion (la remise) ──────────────────────────────────────────
