@@ -148,7 +148,10 @@ function tobCacheLu(string $cle): ?array
     $age = time() - (int) $c['le'];
     $complet = !empty($c['base']['complet']);
     if ($age < 0 || $age >= ($complet ? TOB_PERIME_S : TOB_CACHE_TROUE_S)) { return null; }
-    return ['base' => $c['base'], 'frais' => $age < ($complet ? TOB_CACHE_S : TOB_CACHE_TROUE_S)];
+    // Calculé avant l'adoption de la pondération des jours en vigueur : plus frais (11/10/2026).
+    $pjTs = function_exists('pjAdopteTs') ? pjAdopteTs() : 0;
+    $avantPj = $pjTs > 0 && (int) $c['le'] < $pjTs;
+    return ['base' => $c['base'], 'frais' => !$avantPj && $age < ($complet ? TOB_CACHE_S : TOB_CACHE_TROUE_S)];
 }
 
 /** Les deux vues de Résultat, réduites à ce que la tablette lit ; une vue en panne le dit sans arrêter l'autre. */
@@ -200,7 +203,7 @@ function tobVenteAdd(string $date, string $auj, array $bornes): array
             }
         }
     }
-    $cfg = setting('venteCrossTargets');
+    $cfg = motReglage('venteCrossTargets');
     $cibles = [];
     foreach ($shops as $sid) {
         $c = (is_array($cfg) && function_exists('venteCrossTarget')) ? venteCrossTarget($cfg, $sid, substr($date, 0, 7)) : null;

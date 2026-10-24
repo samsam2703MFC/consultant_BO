@@ -1,0 +1,59 @@
+{# components/primes_etape.twig — une ligne du plan « comment y arriver » (PrimesPlan, 23/10/2026) : ce que la prime rapporte,
+   où elle en est, ce qu'il faut faire. Sobre, façon liste iOS. Reçoit : e (l'étape), T (les textes), ib (l'adresse des icônes
+   déposées), lien (la ligne de la prime, ou rien). Les textes vivent dans components.json : l'Accueil et les Primes s'en servent. #}
+{% import 'primes/_macros.twig' as mp %}
+{% set c = e.carte %}
+{% set nom = { croisees: T.plan_t_croisees ?? null, record: T.plan_t_record ?? null, objectif: T.plan_t_objectif ?? null, google: T.plan_t_google ?? null, meilleure: T.plan_t_meilleure ?? null }[e.cle] ?? c.lib %}
+{% set icone = { croisees: 'bi-bag', record: 'bi-graph-up-arrow', objectif: 'bi-shop', google: 'bi-star', meilleure: 'bi-trophy' }[e.cle] ?? ({ promo: 'bi-tag', b2b: 'bi-briefcase' }[c.type ?? ''] ?? 'bi-award') %}
+{% if e.unite == 'pct' %}{% set de = e.de is not null ? e.de|number_format(e.cle == 'objectif' ? 1 : 0, ',', ' ') ~ ' %' : '—' %}{% set a = e.a|number_format(0, ',', ' ') ~ ' %' %}
+{% elseif e.unite == 'lpt' %}{% set de = e.de|number_format(2, ',', ' ') %}{% set a = e.a|number_format(1, ',', ' ') %}
+{% elseif e.unite == 'note' %}{% set de = e.de is not null ? e.de|number_format(1, ',', ' ') ~ ' ★' : '—' %}{% set a = e.a|number_format(1, ',', ' ') ~ ' ★' %}
+{% elseif e.unite == 'score' %}{% set de = e.de is not null ? e.de|number_format(0, ',', ' ') ~ ' €/h' : '—' %}{% set a = e.a|number_format(0, ',', ' ') ~ ' €/h' %}
+{% else %}{% set de = e.de is not null ? e.de|number_format(0, ',', ' ') : '—' %}{% set a = e.a|number_format(0, ',', ' ') %}{% endif %}
+{% if e.b2b ?? false %}
+  {# La prime B2B (23/10/2026) : la règle en une phrase, et ce qu'elle a déjà gagné ce mois-ci. #}
+  {% set comment = (T.plan_b2b ?? 'Un nouveau client pro — une école, une entreprise, une association : {r} pour toi.')|replace({'{r}': mp.b2b(c, T)|trim}) %}
+  {% if e.gagne > 0 %}{% set comment = comment ~ ' ' ~ (T.plan_b2b_done ?? 'Déjà +{g} € ce mois-ci.')|replace({'{g}': e.gagne|number_format(e.gagne == e.gagne|round ? 0 : 2, ',', ' ')}) %}{% endif %}
+{% elseif e.cle == 'croisees' %}
+  {% if e.horsPortee %}{% set comment = T.plan_cross_hard ?? 'Il faudrait plus de 100 % sur tes prochains tickets : cette prime se joue le mois prochain.' %}
+  {% elseif e.futurs %}{% set comment = (T.plan_cross_aim ?? 'Sur tes ~{n} prochains tickets, vise {p} % : {d} tickets sur 10 avec un 2e article.')|replace({'{n}': e.futurs|number_format(0, ',', ' '), '{p}': e.vise, '{d}': e.surDix}) %}
+  {% else %}{% set comment = (T.plan_cross_row ?? '{n} ventes croisées d’affilée pour passer {p} %.')|replace({'{n}': e.affilee, '{p}': a}) %}{% endif %}
+  {% if not e.horsPortee and e.minTickets and e.tickets < e.minTickets %}{% set comment = comment ~ ' ' ~ (T.plan_cross_min ?? 'Il faut aussi {n} tickets dans le mois.')|replace({'{n}': e.minTickets}) %}{% endif %}
+{% elseif e.cle == 'record' %}
+  {% if e.pose ?? false %}{% set mS = mois(e.moisSuivant)|split(' ')|first %}
+    {% set comment = (T.plan_record_first ?? 'Ta moyenne du mois deviendra ton record, à battre dès {m}.')|replace({'{m}': mS}) %}
+  {% elseif e.horsPortee %}{% set comment = (T.plan_record_hard ?? 'Il faudrait {v} articles par ticket d’ici la fin du mois : ton record se bat plutôt le mois prochain.')|replace({'{v}': e.vise|number_format(1, ',', ' ')}) %}
+  {% elseif e.futurs %}{% set comment = (T.plan_record_aim ?? 'Sur tes ~{n} prochains tickets, vise {v} articles en moyenne pour passer {a} lignes par ticket.')|replace({'{n}': e.futurs|number_format(0, ',', ' '), '{v}': e.vise|number_format(1, ',', ' '), '{a}': a}) %}
+  {% else %}{% set comment = (T.plan_record_gap ?? '+{e} ligne par ticket pour passer {a}.')|replace({'{e}': e.ecart|number_format(2, ',', ' '), '{a}': a}) %}{% endif %}
+{% elseif e.cle == 'objectif' %}
+  {% set comment = e.manqueCa and e.parJour
+    ? (T.plan_target_team ?? 'Avec l’équipe : {m} € de chiffre de plus, soit {j} € par jour sur {d} jours.')|replace({'{m}': e.manqueCa|number_format(0, ',', ' '), '{j}': e.parJour|number_format(0, ',', ' '), '{d}': e.joursRestants})
+    : (T.plan_target_reach ?? 'Avec l’équipe : le magasin doit finir le mois à {a} de son objectif.')|replace({'{a}': a}) %}
+{% elseif e.cle == 'google' %}
+  {% set comment = e.avis5
+    ? (T.plan_google ?? 'Le magasin a besoin de {n} avis 5★ de plus pour passer {s}.')|replace({'{n}': e.avis5|number_format(0, ',', ' '), '{s}': a})
+    : (T.plan_google_short ?? 'La note du magasin doit passer {s} : chaque avis 5★ compte.')|replace({'{s}': a}) %}
+{% elseif (c.type ?? '') == 'classement' %}
+  {# Le score de la 1re elle-même (celui de la jauge) ; « e » : les points pour la passer. #}
+  {% set aMv = (c.premier ?? null) and not c.premier.moi ? c.premier.q|number_format(0, ',', ' ') ~ ' €/h' : a %}
+  {% set comment = (T.plan_best_shop ?? 'La 1re du magasin est à {a}, toi {de} : {e} points pour la passer, en vendant plus par heure prestée.')|replace({'{a}': aMv, '{de}': de, '{e}': e.ecart}) %}
+{% else %}
+  {% if e.regle == 'magasin' %}{% set comment = (T.plan_pieces_shop ?? 'Avec l’équipe : {n} pièces de plus pour l’objectif du magasin.')|replace({'{n}': e.manque}) %}
+  {% elseif e.regle in ['vendeuse', 'seuil'] %}{% set comment = (T.plan_pieces_goal ?? '{n} pièces de plus pour ton objectif.')|replace({'{n}': e.manque}) %}
+  {% else %}{% set comment = (e.manque == 1 ? (T.plan_pieces_first_one ?? '1 pièce de plus pour être 1re du magasin.') : (T.plan_pieces_first ?? '{n} pièces de plus pour être 1re du magasin.'))|replace({'{n}': e.manque}) %}{% endif %}
+  {% if e.rythme %}{% set comment = comment ~ ' ' ~ (T.plan_pace ?? 'À ton rythme : ~{n} de plus d’ici la fin du mois.')|replace({'{n}': e.rythme}) %}{% endif %}
+{% endif %}
+{% set inner %}
+  <span class="sb-ic">{% if c.icone ?? '' %}<img src="{{ ib }}/{{ c.icone }}" alt="">{% else %}<i class="bi {{ icone }}"></i>{% endif %}</span>
+  <span class="sb-corps">
+    <span class="sb-l1"><b>{{ nom }}</b><span class="sb-gain">{% if c.cadeau ?? null %}<i class="bi bi-gift"></i> {{ c.cadeau.nom }}{% elseif (e.b2b ?? false) and e.mode != 'fixe' %}+{{ e.taux|number_format(e.taux == e.taux|round ? 0 : 1, ',', ' ') }}&nbsp;%{% else %}+{{ e.gain|number_format(0, ',', ' ') }}&nbsp;€{% endif %}</span></span>
+    <span class="sb-l2">{{ comment }}{% if e.magasin %} <span class="sb-tag">{{ T.plan_for_shop ?? 'prime du magasin' }}</span>{% endif %}</span>
+    {#- La meilleure vendeuse (23/10/2026) : le bout de la jauge est la 1re du magasin, le point la vendeuse. #}
+    {% set un = e.cle == 'meilleure' and e.de is not null ? (c.premier ?? null) : null %}
+    {% if un and not un.moi and un.q > 0 %}{% set pos = min(100, 100 * e.de / un.q) %}
+    <span class="sb-prog"><span class="sb-jv"><i style="width:{{ pos|round(1) }}%"></i><b class="bout">{{ un.nom|first|upper }}</b><b class="pt" style="left:{{ pos|round(1) }}%"></b></span><span class="sb-bornes">{{ un.nom }} · {{ un.q|number_format(0, ',', ' ') }}&nbsp;€/h</span></span>
+    {% elseif e.progres is not null %}<span class="sb-prog"><span class="sb-barre"><i style="width:{{ (100 * e.progres)|round(1) }}%"></i></span><span class="sb-bornes">{{ de }} → {{ a }}</span></span>{% endif %}
+  </span>
+{% endset %}
+{% if texte ?? false %}{{ comment }}
+{% elseif lien %}<a class="sb-ligne sb-etape {{ e.horsPortee ? 'dur' }}" href="{{ lien }}">{{ inner }}</a>{% else %}<div class="sb-ligne sb-etape {{ e.horsPortee ? 'dur' }}">{{ inner }}</div>{% endif %}

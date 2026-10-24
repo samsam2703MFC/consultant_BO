@@ -1,0 +1,80 @@
+Array
+(
+    [0] => App\Models\Client\PriceList\PriceListItemModel Object
+        (
+            [id_product:App\Models\Client\PriceList\PriceListItemModel:private] => 1003221
+            [sku:App\Models\Client\PriceList\PriceListItemModel:private] => 1003221
+            [product_name:App\Models\Client\PriceList\PriceListItemModel:private] => Abricot & Cerise - 22⌀
+            [price_net:App\Models\Client\PriceList\PriceListItemModel:private] => 46.43
+            [vat_rate:App\Models\Client\PriceList\PriceListItemModel:private] => 0.00
+            [package_size:App\Models\Client\PriceList\PriceListItemModel:private] => 8.000
+            [package_unit:App\Models\Client\PriceList\PriceListItemModel:private] => pcs
+            [is_active:App\Models\Client\PriceList\PriceListItemModel:private] => 1
+            [valid_from:App\Models\Client\PriceList\PriceListItemModel:private] => 2026-03-05
+        )
+
+    [1] => App\Models\Client\PriceList\PriceListItemModel Object
+        (
+            [id_product:App\Models\Client\PriceList\PriceListItemModel:private] => 1002128
+            [sku:App\Models\Client\PriceList\PriceListItemModel:private] => 1002128
+            [product_name:App\Models\Client\PriceList\PriceListItemModel:private] => Abricot & Rhubarbe - 22⌀
+            [price_net:App\Models\Client\PriceList\PriceListItemModel:private] => 46.43
+            [vat_rate:App\Models\Client\PriceList\PriceListItemModel:private] => 0.00
+            [package_size:App\Models\Client\PriceList\PriceListItemModel:private] => 8.000
+            [package_unit:App\Models\Client\PriceList\PriceListItemModel:private] => pcs
+            [is_active:App\Models\Client\PriceList\PriceListItemModel:private] => 1
+            [valid_from:App\Models\Client\PriceList\PriceListItemModel:private] => 2026-03-05
+        )
+
+    [2] => App\Models\Client\PriceList\PriceListItemModel Object
+        (
+            [id_product:App\Models\Client\PriceList\PriceListItemModel:private] => 1007503
+            [sku:App\Models\Client\PriceList\PriceListItemModel:private] => 1007503
+            [product_name:App\Models\Client\PriceList\PriceListItemModel:private] => Abricot - 12⌀
+            [price_net:App\Models\Client\PriceList\PriceListItemModel:private] => 0.00
+            [vat_rate:App\Models\Client\PriceList\PriceListItemModel:private] => 0.00
+            [package_size:App\Models\Client\PriceList\PriceListItemModel:private] => 24.000
+            [package_unit:App\Models\Client\PriceList\PriceListItemModel:private] => pcs
+            [is_active:App\Models\Client\PriceList\PriceListItemModel:private] => 0
+            [valid_from:App\Models\Client\PriceList\PriceListItemModel:private] =>
+        )
+
+    [3] => App\Models\Client\PriceList\PriceListItemModel Object
+        (
+            [id_product:App\Models\Client\PriceList\PriceListItemModel:private] => 1002120
+            [sku:App\Models\Client\PriceList\PriceListItemModel:private] => 1002120
+            [product_name:App\Models\Client\PriceList\PriceListItemModel:private] => Abricot - 22⌀
+            [price_net:App\Models\Client\PriceList\PriceListItemModel:private] => 46.43
+            [vat_rate:App\Models\Client\PriceList\PriceListItemModel:private] => 0.00
+            [package_size:App\Models\Client\PriceList\PriceListItemModel:private] => 8.000
+            [package_unit:App\Models\Client\PriceList\PriceListItemModel:private] => pcs
+            [is_active:App\Models\Client\PriceList\PriceListItemModel:private] => 1
+            [valid_from:App\Models\Client\PriceList\PriceListItemModel:private] => 2026-03-05
+        )
+
+    [4] => App\Models\Client\PriceList\PriceListItemModel Object
+        (
+            [id_product:App\Models\Client\PriceList\PriceListItemModel:private] => 1007985
+            [sku:App\Models\Client\PriceList\PriceListItemModel:private] => 1007985
+            [product_name:App\Models\Client\PriceList\PriceListItemModel:private] => Abricot Treille - 12⌀
+            [price_net:App\Models\Client\PriceList\PriceListItemModel:private] => 0.00
+            [vat_rate:App\Models\Client\PriceList\PriceListItemModel:private] => 0.00
+            [package_size:App\Models\Client\PriceList\PriceListItemModel:private] => 24.000
+            [package_unit:App\Models\Client\PriceList\PriceListItemModel:private] => pcs
+            [is_active:App\Models\Client\PriceList\PriceListItemModel:private] => 0
+            [valid_from:App\Models\Client\PriceList\PriceListItemModel:private] =>
+        )
+
+    [5] => App\Models\Client\PriceList\PriceListItemModel Object
+        (
+            [id_product:App\Models\Client\PriceList\PriceListItemModel:private] => 1007517
+            [sku:App\Models\Client\PriceList\PriceListItemModel:private] => 1007517
+            [product_name:App\Models\Client\PriceList\PriceListItemModel:private] => Abricot-Cerise - 12⌀
+            [price_net:App\Models\Client\PriceList\PriceListItemModel:private] => 0.00
+            [vat_rate:App\Models\Client\PriceList\PriceListItemModel:private] => 0.00
+            [package_size:App\Models\Client\PriceList\PriceListItemModel:private] => 24.000
+            [package_unit:App\Models\Client\PriceList\PriceListItemModel:private] => pcs
+            [is_active:App\Models\Client\PriceList\PriceListItemModel:private] => 0
+            [valid_from:App\Models\Client\PriceList\PriceListItemModel:private] =>
+        )
+)

@@ -1,0 +1,532 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Wynik i produkcja grup{% endblock %}
+
+{% set t = totals %}
+{% set current = period.current %}
+{% set until = period.end|date('d.m') %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Wynik i produkcja grup</h3>
+            <p class="text-subtitle text-muted">
+                {{ period.label }}{% if current %} · stan na {{ period.to|date('d.m') }} ({{ (period.elapsed * 100)|round }} % okresu){% endif %}
+            </p>
+        </div>
+        {% include 'dashboard/_period.twig' with {period_base: '/dashboard/results'} %}
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-profit">
+
+    {% for w in notices %}
+        <div class="alert alert-warning at-profit-warn">
+            <i class="bi bi-exclamation-triangle"></i> {{ w }}
+            <a href="{{ root }}/cost-calculator">Uzupełnij koszty miesięczne</a>
+        </div>
+    {% endfor %}
+
+    {# Sekcje strony : jedna pozycja w railu, nawigacja po sekcjach tutaj (okres zostaje w adresie). #}
+    <nav class="at-profit-nav" aria-label="Sekcje strony" data-profit-nav>
+        <a href="#grupy"><i class="bi bi-people"></i> Grupy</a>
+        <a href="#produkcja"><i class="bi bi-box-seam"></i> Produkcja grup</a>
+        <a href="#wynik"><i class="bi bi-bar-chart-steps"></i> Wynik</a>
+        <a href="#zakupy"><i class="bi bi-basket"></i> Zakupy</a>
+        <a href="#trend"><i class="bi bi-clock-history"></i> 6 miesięcy</a>
+        <a href="#na-osobe"><i class="bi bi-person-lines-fill"></i> Na osobę</a>
+    </nav>
+
+    {# --- Grupy produktów -------------------------------------------------------- #}
+    <div class="card at-anchor" id="grupy">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Grupy produktów: szczegóły</h4>
+            <span class="d-flex gap-2 flex-wrap">
+                <a href="{{ root }}/staff/budget{{ selected != 'month' ? '?period=' ~ selected : '' }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-wallet2"></i> Minimum i premie</a>
+                <a href="{{ root }}/dashboard{{ selected != 'month' ? '?period=' ~ selected : '' }}#cele" class="btn btn-sm btn-outline-primary"><i class="bi bi-bullseye"></i> Cele</a>
+            </span>
+        </div>
+        <div class="card-body pt-0">
+            {% if groups %}
+            {# Telefon: karty zamiast tabeli — brakująca sprzedaż od razu widoczna. #}
+            <ul class="at-profit-cards d-md-none">
+                {% for g in groups %}
+                    {% set width = g.staff_pct is null ? 100 : min(100, g.staff_pct / max(g.staff_target, 1) * 50) %}
+                    <li class="{{ g.ok ? 'at-profit-ok' : 'at-profit-bad' }}">
+                        <div class="at-profit-card-head"><button type="button" class="at-growth-link" data-growth="{{ g.id }}" data-growth-name="{{ g.name }}">{{ g.name }} <i class="bi bi-chevron-right"></i></button><span class="at-ratio-value">{{ g.staff_pct|pct }}</span></div>
+                        {% if growth[g.id] is defined %}<div class="at-sub">{{ growth[g.id].count|plural_pl('działanie', 'działania', 'działań') }} · +{{ growth[g.id].revenue_month|eur }}/mies.</div>{% endif %}
+                        <div class="at-ratio"><span class="at-ratio-bar" style="width: {{ width|round(1) }}%"></span><span class="at-ratio-target" style="left: 50%"></span></div>
+                        <div class="at-sub">sprzedaż {{ g.revenue|eur }} · personel {{ g.staff|eur }} · cel ≤ {{ g.staff_target|pct(0) }}</div>
+                        <div class="at-sub">marża brutto <strong>{{ g.gross|eur }}</strong> ({{ g.gross_pct|pct(0) }}) · surowce {{ g.materials|eur }}</div>
+                        {% if g.revenue_per_person is not null %}<div class="at-sub">na osobę <strong>{{ g.revenue_per_person|eur }}</strong>/mies. · {{ g.people|number_format(g.people == g.people|round ? 0 : 1, ',', ' ') }} os.{{ current ? ' · tempo' : '' }}</div>{% endif %}
+                        {% if staff_budget[g.id] is defined %}<div class="at-sub">premia (model) {{ staff_budget[g.id].per_person_month_pln|pln }}/os./mies.</div>{% endif %}
+                        {% if g.missing > 0 %}
+                            <div class="at-profit-card-gap">Brakuje <strong>{{ g.missing|eur }}</strong>{% if g.missing_pct is not null %} <span class="at-profit-badge">+{{ g.missing_pct|pct(0) }}</span>{% endif %}
+                                {% if current %}<div class="at-sub">{{ g.missing_after_open > 0 ? 'po zamówieniach do znalezienia ' ~ g.missing_after_open|eur : 'pokryte zamówieniami (' ~ g.open|eur ~ ')' }}</div>{% endif %}
+                            </div>
+                        {% else %}
+                            <div class="at-profit-card-gap ok"><i class="bi bi-check-circle"></i> w normie · zapas {{ (g.revenue - g.needed)|eur }}</div>
+                        {% endif %}
+                        <div class="at-sub">marża działu {{ g.margin_pct|pct }} (cel ≥ {{ g.margin_target|pct(0) }})</div>
+                    </li>
+                {% endfor %}
+                {% for d in shared.sections %}
+                <li class="at-profit-card-shared">
+                    <div class="at-profit-card-head"><strong>{{ d.name }}</strong><span class="at-sub">dział wspólny</span></div>
+                    <div class="at-sub">personel {{ d.staff|eur }}{{ d.staff_share is null ? '' : ' · ' ~ d.staff_share|pct(1) ~ ' sprzedaży firmy' }}{{ d.people ? ' · ' ~ d.people|number_format(d.people == d.people|round ? 0 : 1, ',', ' ') ~ ' os.' : '' }}</div>
+                </li>
+                {% endfor %}
+                <li class="at-profit-card-total">
+                    <div class="at-profit-card-head"><strong>Razem z działami wspólnymi</strong><span class="at-ratio-value">{{ t.staff_pct|pct }}</span></div>
+                    <div class="at-sub">sprzedaż {{ t.revenue|eur }} · personel {{ t.staff|eur }} · cel ≤ {{ t.staff_target|pct(0) }}</div>
+                    <div class="at-sub">marża brutto <strong>{{ t.gross|eur }}</strong> ({{ t.gross_pct|pct(0) }}) · surowce {{ t.materials|eur }}</div>
+                    {% if t.revenue_per_person is not null %}<div class="at-sub">na osobę <strong>{{ t.revenue_per_person|eur }}</strong>/mies. ({{ t.people|number_format(0, ',', ' ') }} os.) · produkcja {{ t.revenue_per_person_production|eur }}</div>{% endif %}
+                    {% if t.staff_missing > 0 %}<div class="at-profit-card-gap">Brakuje <strong>{{ t.staff_missing|eur }}</strong> <span class="at-profit-badge">+{{ t.staff_missing_pct|pct(0) }}</span></div>{% endif %}
+                </li>
+            </ul>
+            <div class="table-responsive d-none d-md-block">
+                <table class="table mb-0 at-profit-table">
+                    <thead>
+                        <tr>
+                            <th>Grupa</th>
+                            <th class="text-end">Sprzedaż</th>
+                            <th class="text-end" title="Sprzedaż grupy ÷ osoby opłacone w miesiącu (kalkulator kosztów){{ current ? ' — bieżący miesiąc: tempo na cały miesiąc' : '' }}">Sprzedaż / osobę<div class="at-sub">miesięcznie</div></th>
+                            <th class="text-end" title="Sprzedaż − surowce i opakowania (receptury × kartony, ceny z końca miesiąca)">Marża brutto<div class="at-sub">po surowcach</div></th>
+                            <th class="text-end">Personel</th>
+                            <th>Personel / sprzedaż</th>
+                            <th class="text-end">Brakuje</th>
+                            <th class="text-end">Sprzedaż do celu</th>
+                            <th class="text-end">Marża działu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for g in groups %}
+                        {% set width = g.staff_pct is null ? 100 : min(100, g.staff_pct / max(g.staff_target, 1) * 50) %}
+                        <tr class="{{ g.ok ? 'at-profit-ok' : 'at-profit-bad' }}">
+                            <td>
+                                <button type="button" class="at-growth-link" data-growth="{{ g.id }}" data-growth-name="{{ g.name }}" title="Rozwój sprzedaży grupy">{{ g.name }} <i class="bi bi-chevron-right"></i></button>
+                                <div class="at-sub">{{ g.cartons|plural_pl('karton', 'kartony', 'kartonów') }}{% if growth[g.id] is defined %} · {{ growth[g.id].count|plural_pl('działanie', 'działania', 'działań') }} +{{ growth[g.id].revenue_month|eur }}/mies.{% endif %}</div>
+                            </td>
+                            <td class="text-end">{{ g.revenue|eur }}
+                                {% if t.revenue > 0 %}<div class="at-sub" title="Udział w sprzedaży firmy">{{ (g.revenue / t.revenue * 100)|pct(1) }} firmy</div>{% endif %}</td>
+                            <td class="text-end">
+                                {{ g.revenue_per_person|eur }}
+                                <div class="at-sub">{{ g.people is null ? '—' : g.people|number_format(g.people == g.people|round ? 0 : 1, ',', ' ') ~ ' os.' }}{{ current and g.people ? ' · tempo' : '' }}</div>
+                            </td>
+                            <td class="text-end">
+                                {{ g.gross|eur }} <span class="at-sub">{{ g.gross_pct|pct(0) }}</span>
+                                <div class="at-sub">surowce {{ g.materials|eur }}</div>
+                            </td>
+                            <td class="text-end">
+                                {{ g.staff|eur }}
+                                {% if t.staff > 0 %}<div class="at-sub" title="Udział w koszcie personelu firmy (z działami wspólnymi)">{{ (g.staff / t.staff * 100)|pct(1) }} personelu</div>{% endif %}
+                                {% set sb = staff_budget[g.id] ?? null %}
+                                {% if sb %}<div class="at-sub" title="Model: minimum {{ sb.base|eur }} + pula premii {{ sb.pct|pct }} sprzedaży {{ sb.pool|eur }}">model {{ sb.budget|eur }}<br>premia {{ sb.per_person_month_pln|pln }}/os.</div>{% endif %}
+                            </td>
+                            <td class="at-profit-ratio">
+                                <div class="at-ratio" title="Cel ≤ {{ g.staff_target|pct(0) }}">
+                                    <span class="at-ratio-bar" style="width: {{ width|round(1) }}%"></span>
+                                    <span class="at-ratio-target" style="left: 50%"></span>
+                                </div>
+                                <span class="at-ratio-value">{{ g.staff_pct|pct }}</span>
+                                <span class="at-sub">cel ≤ {{ g.staff_target|pct(0) }}{{ g.staff_target_custom ? '' : '*' }}</span>
+                            </td>
+                            <td class="text-end">
+                                {% if g.missing > 0 %}
+                                    <strong class="text-danger">{{ g.missing_pct is null ? '—' : '+' ~ g.missing_pct|pct(0) }}</strong>
+                                {% else %}
+                                    <span class="text-success"><i class="bi bi-check-circle"></i> w normie</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if g.missing > 0 %}
+                                    <strong>{{ g.missing|eur }}</strong>
+                                    {% if current %}
+                                        <div class="at-sub">{% if g.open > 0 %}w zamówieniach {{ g.open|eur }}<br>{% endif %}{{ g.missing_after_open > 0 ? 'do znalezienia ' ~ g.missing_after_open|eur : 'pokryte zamówieniami' }}</div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="at-sub">zapas {{ (g.revenue - g.needed)|eur }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <span class="{{ g.margin_pct is not null and g.margin_pct >= g.margin_target ? 'text-success' : 'text-danger' }}">{{ g.margin_pct|pct }}</span>
+                                <div class="at-sub">{{ g.contribution|eur }}<br>cel ≥ {{ g.margin_target|pct(0) }}</div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        {% for d in shared.sections %}
+                        <tr class="at-profit-shared">
+                            <td><strong>{{ d.name }}</strong><div class="at-sub">dział wspólny</div></td>
+                            <td class="text-end">{{ d.revenue > 0 ? d.revenue|eur : '' }}</td>
+                            <td class="text-end at-sub">{{ d.people ? d.people|number_format(d.people == d.people|round ? 0 : 1, ',', ' ') ~ ' os.' : '' }}</td>
+                            <td class="text-end at-sub">{{ d.materials > 0 ? 'surowce ' ~ d.materials|eur : '' }}</td>
+                            <td class="text-end">{{ d.staff|eur }}</td>
+                            <td class="at-sub">{{ d.staff_share is null ? '' : d.staff_share|pct(1) ~ ' sprzedaży firmy' }}</td>
+                            <td colspan="3" class="at-sub">{{ d.overhead > 0 ? 'media i amortyzacja ' ~ d.overhead|eur ~ ' · ' : '' }}bez własnej sprzedaży — koszt w wyniku całej firmy</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="at-profit-total">
+                            <td><strong>Razem</strong></td>
+                            <td class="text-end"><strong>{{ t.revenue|eur }}</strong></td>
+                            <td class="text-end"><strong>{{ t.revenue_per_person|eur }}</strong>
+                                {% if t.people is not null %}<div class="at-sub">{{ t.people|number_format(0, ',', ' ') }} os.<br>produkcja {{ t.revenue_per_person_production|eur }}</div>{% endif %}</td>
+                            <td class="text-end"><strong>{{ t.gross|eur }}</strong> <span class="at-sub">{{ t.gross_pct|pct(0) }}</span>
+                                <div class="at-sub">surowce {{ t.materials|eur }}</div></td>
+                            <td class="text-end"><strong>{{ t.staff|eur }}</strong></td>
+                            <td><strong>{{ t.staff_pct|pct }}</strong> <span class="at-sub">cel ≤ {{ t.staff_target|pct(0) }}</span></td>
+                            <td class="text-end">{% if t.staff_missing > 0 %}<strong class="text-danger">+{{ t.staff_missing_pct|pct(0) }}</strong>{% else %}<span class="text-success">w normie</span>{% endif %}</td>
+                            <td class="text-end"><strong>{{ t.staff_missing > 0 ? t.staff_missing|eur : '—' }}</strong></td>
+                            <td class="text-end"><strong>{{ t.margin_pct|pct }}</strong><div class="at-sub">wynik {{ t.result|eur }}</div></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="at-profit-note">
+                <strong>Brakuje</strong> = ile więcej sprzedaży potrzeba, żeby koszt personelu zmieścił się w celu (sprzedaż do celu = koszt personelu ÷ cel).
+                {% if current %}Okres bieżący: wskaźnik liczony od kosztu personelu proporcjonalnego do upływu dni, brakująca sprzedaż na cały okres (do {{ until }}).{% endif %}
+                * cel ogólny ({{ targets['profit.staff_target_pct']|pct(0) }}).
+                Kliknij grupę, żeby zobaczyć i dodać działania rozwoju sprzedaży (produkt, ilość na sklep, cena, marża, inwestycja, zwrot).
+            </p>
+            {% else %}
+                <p class="at-empty">Brak sprzedaży i kosztów personelu w tym okresie.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {# --- Co wyprodukowały grupy : grupa → kategoria → produkt ------------------ #}
+    {% set made = production %}
+    {% if made.groups %}
+    <div class="card at-anchor" id="produkcja">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Co wyprodukowały grupy — {{ period.label }}</h4>
+            <span class="at-sub">kartony sprzedane (WDT) · kategorie produktów, potem produkty</span>
+        </div>
+        <div class="card-body pt-0">
+            <div class="at-buy-tabs at-made-tabs" role="tablist" aria-label="Grupy produktów">
+                {% for g in made.groups %}
+                    <button type="button" role="tab" id="madeTab{{ g.id }}" aria-controls="madePanel{{ g.id }}" aria-selected="{{ loop.first ? 'true' : 'false' }}" data-made-tab="{{ g.id }}">{{ g.name }} <span class="at-made-tab-sub">{{ g.revenue|eur }}</span></button>
+                {% endfor %}
+            </div>
+            {% for g in made.groups %}
+            <div class="at-made-panel" id="madePanel{{ g.id }}" role="tabpanel" aria-labelledby="madeTab{{ g.id }}" data-made-panel="{{ g.id }}" {{ loop.first ? '' : 'hidden' }}>
+                <div class="at-made-kpis">
+                    <div><span class="at-sub">Kartony</span><strong>{{ g.cartons|number_format(0, ',', ' ') }}</strong></div>
+                    <div><span class="at-sub">Sztuki</span><strong>{{ g.pieces > 0 ? g.pieces|number_format(0, ',', ' ') : '—' }}</strong></div>
+                    <div><span class="at-sub">Waga</span><strong>{{ g.kg >= 1000 ? (g.kg / 1000)|number_format(1, ',', ' ') ~ ' t' : g.kg|number_format(0, ',', ' ') ~ ' kg' }}</strong></div>
+                    <div><span class="at-sub">Sprzedaż</span><strong>{{ g.revenue|eur }}</strong><span class="at-sub">{{ g.pct|pct(0) }} firmy</span></div>
+                    <div><span class="at-sub">Surowce (receptury)</span><strong>{{ g.materials|eur }}</strong></div>
+                    <div><span class="at-sub">Marża po surowcach</span><strong>{{ g.margin_pct|pct(0) }}</strong><span class="at-sub">{{ (g.revenue - g.materials)|eur }}</span></div>
+                    <div><span class="at-sub">Produkty</span><strong>{{ g.products }}</strong><span class="at-sub">{{ g.categories|length|plural_pl('kategoria', 'kategorie', 'kategorii') }}</span></div>
+                </div>
+                <div class="at-made-head" aria-hidden="true"><span>Kategoria</span><span></span><span>Kartony</span><span>Sprzedaż</span><span>Marża po sur.</span><span>Udział</span></div>
+                <div class="at-buy-list">
+                    {% for c in g.categories %}
+                    <details class="at-buy-item at-made-item {{ c.name == 'Bez kategorii' ? 'is-warn' : '' }}">
+                        <summary>
+                            <span class="at-buy-name" title="{{ c.name }}">{{ c.name }} <span class="at-sub">· {{ c.products|length }}</span></span>
+                            <span class="at-buy-bar" aria-hidden="true"><span style="width: {{ min(100, c.pct ?? 0)|round(1) }}%"></span></span>
+                            <span class="at-made-num at-made-cartons">{{ c.cartons|number_format(0, ',', ' ') }} <span class="at-sub">kart.</span></span>
+                            <span class="at-buy-amount">{{ c.revenue|eur }}</span>
+                            <span class="at-made-num {{ c.margin_pct is not null and c.margin_pct < 50 ? 'text-danger' : '' }}">{{ c.margin_pct|pct(0) }}</span>
+                            <span class="at-buy-pct">{{ c.pct|pct(0) }}</span>
+                        </summary>
+                        <div class="table-responsive">
+                            <table class="at-buy-detail at-made-detail">
+                                <thead>
+                                    <tr>
+                                        <th>Produkt</th><th class="text-end">Kartony</th><th class="text-end d-none d-md-table-cell">Sztuki</th><th class="text-end d-none d-md-table-cell">kg</th>
+                                        <th class="text-end">Sprzedaż</th><th class="text-end d-none d-md-table-cell">€ / karton</th><th class="text-end d-none d-md-table-cell">Surowce</th><th class="text-end">Marża po sur.</th><th class="text-end d-none d-md-table-cell">Udział</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% for i in c.products %}
+                                    <tr>
+                                        <td>{{ i.name }}</td>
+                                        <td class="text-end text-nowrap">{{ i.cartons|number_format(i.cartons == i.cartons|round ? 0 : 1, ',', ' ') }}</td>
+                                        <td class="text-end text-nowrap at-sub d-none d-md-table-cell">{{ i.pieces > 0 ? i.pieces|number_format(0, ',', ' ') : '—' }}</td>
+                                        <td class="text-end text-nowrap at-sub d-none d-md-table-cell">{{ i.kg > 0 ? i.kg|number_format(i.kg < 10 ? 1 : 0, ',', ' ') : '—' }}</td>
+                                        <td class="text-end text-nowrap">{{ i.revenue|eur }}</td>
+                                        <td class="text-end text-nowrap at-sub d-none d-md-table-cell">{{ i.price_carton|eur(2) }}</td>
+                                        <td class="text-end text-nowrap at-sub d-none d-md-table-cell">{{ i.materials|eur }}</td>
+                                        <td class="text-end text-nowrap {{ i.margin_pct is not null and i.margin_pct < 50 ? 'text-danger' : '' }}">{{ i.margin_pct|pct(0) }}</td>
+                                        <td class="text-end text-nowrap at-sub d-none d-md-table-cell">{{ i.pct|pct(0) }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            <p class="at-profit-note">Produkcja = kartony wysłane na dokumentach WDT w okresie (data wystawienia); sztuki = kartony × sztuk w kartonie, waga = sztuki × waga sztuki (karta produktu). Surowce: receptura × kartony po cenach z końca miesiąca (bez receptury: koszt z karty produktu). Marża po surowcach poniżej 50 % na czerwono. Udział: w sprzedaży kategorii (produkt), grupy (kategoria) i firmy (grupa).</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        {# --- Od sprzedaży do wyniku ------------------------------------------- #}
+        <div class="col-12 col-xl-5">
+            <div class="card at-anchor" id="wynik">
+                <div class="card-header"><h4 class="card-title">Od sprzedaży do wyniku</h4></div>
+                <div class="card-body pt-0">
+                    <table class="table mb-0 at-profit-cascade">
+                        <tbody>
+                            <tr><td>Sprzedaż</td><td class="text-end"><strong>{{ t.revenue|eur }}</strong></td><td class="text-end at-sub">100 %</td></tr>
+                            {% set buy = purchases ?? null %}
+                            <tr class="at-buy-row at-anchor" id="zakupy">
+                                <td>{% if buy and (buy.categories or buy.suppliers) %}<button type="button" class="at-buy-toggle" data-buy-toggle aria-expanded="false" aria-controls="atBuyPanel"><i class="bi bi-chevron-right" aria-hidden="true"></i> − Surowce i opakowania <span class="at-sub">(zakupy: kategorie, dostawcy)</span></button>{% else %}− Surowce i opakowania{% endif %}</td>
+                                <td class="text-end">{{ t.materials|eur }}</td><td class="text-end at-sub">{{ t.materials_pct|pct(0) }}</td>
+                            </tr>
+                            {% if buy and (buy.categories or buy.suppliers) %}
+                            <tr class="at-buy-panel" id="atBuyPanel" hidden>
+                                <td colspan="3">
+                                    <div class="at-buy-tabs" role="tablist" aria-label="Zakupy surowców i opakowań">
+                                        <button type="button" role="tab" aria-selected="true" data-buy-view="categories">Według kategorii</button>
+                                        <button type="button" role="tab" aria-selected="false" data-buy-view="suppliers">Według dostawcy</button>
+                                    </div>
+                                    {% for view in ['categories', 'suppliers'] %}
+                                    <div class="at-buy-list" data-buy-list="{{ view }}" role="tabpanel" {{ loop.first ? '' : 'hidden' }}>
+                                        {% for g in buy[view] %}
+                                        <details class="at-buy-item {{ g.no_recipe is defined ? 'is-card' : '' }} {{ g.name == 'Bez kategorii' ? 'is-warn' : '' }}">
+                                            <summary>
+                                                <span class="at-buy-name" title="{{ g.name }}">{{ g.name }}</span>
+                                                <span class="at-buy-bar" aria-hidden="true"><span style="width: {{ min(100, g.pct ?? 0)|round(1) }}%"></span></span>
+                                                <span class="at-buy-amount">{{ g.amount|eur }}</span>
+                                                <span class="at-buy-pct">{{ g.pct|pct(0) }}</span>
+                                            </summary>
+                                            <table class="at-buy-detail">
+                                                {% for i in g.items|slice(0, 30) %}
+                                                    {% set q = i.qty %}
+                                                    <tr>
+                                                        <td>{{ i.name }}{% if view == 'categories' and i.supplier %} <span class="at-sub">· {{ i.supplier }}</span>{% elseif view == 'suppliers' and i.category %} <span class="at-sub">· {{ i.category }}</span>{% endif %}</td>
+                                                        <td class="text-end at-sub text-nowrap">{% if i.unit == 'g' and q >= 1000 %}{{ (q / 1000)|number_format(q >= 100000 ? 0 : 1, ',', ' ') }} kg{% elseif i.unit == 'ml' and q >= 1000 %}{{ (q / 1000)|number_format(1, ',', ' ') }} l{% else %}{{ q|number_format(q < 10 ? 1 : 0, ',', ' ') }} {{ i.unit }}{% endif %}</td>
+                                                        <td class="text-end text-nowrap">{{ i.amount|eur }}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                                {% if g.items|length > 30 %}<tr><td colspan="3" class="at-sub">… i {{ g.items|length - 30 }} innych pozycji</td></tr>{% endif %}
+                                            </table>
+                                        </details>
+                                        {% endfor %}
+                                    </div>
+                                    {% endfor %}
+                                    <p class="at-profit-note">
+                                        Zakupy potrzebne na sprzedane kartony: receptura × kartony, ceny i dostawcy z końca miesiąca (historia cen surowców).
+                                        {% if buy.uncategorised > 0 %}<br><strong>{{ buy.uncategorised|eur }}</strong> w surowcach bez kategorii (kategoria nie istnieje) — popraw kategorię w karcie surowca.{% endif %}
+                                        {% if buy.no_recipe > 0 %}<br>{{ buy.no_recipe_products|plural_pl('produkt', 'produkty', 'produktów') }} bez receptury — koszt z karty produktu.{% endif %}
+                                        {% if (buy.card_total - buy.total)|abs > 1 %}<br>Według zapisanego kosztu kart produktów byłoby {{ buy.card_total|eur }} — część kart ma koszt 0 lub nieaktualny.{% endif %}
+                                    </p>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            <tr><td>− Personel</td><td class="text-end">{{ t.staff|eur }}</td><td class="text-end at-sub">{{ t.staff_pct|pct(0) }}</td></tr>
+                            <tr><td>− Koszty działów (media, amortyzacja)</td><td class="text-end">{{ t.overhead|eur }}</td><td class="text-end at-sub">{{ t.revenue > 0 ? (t.overhead / t.revenue * 100)|pct(0) : '—' }}</td></tr>
+                            <tr><td>− Koszty stałe firmy</td><td class="text-end">{{ t.fixed|eur }}</td><td class="text-end at-sub">{{ t.revenue > 0 ? (t.fixed / t.revenue * 100)|pct(0) : '—' }}</td></tr>
+                            <tr><td>− Logistyka</td><td class="text-end">{{ (t.logistics ?? 0)|eur }}</td><td class="text-end at-sub">{{ t.revenue > 0 ? ((t.logistics ?? 0) / t.revenue * 100)|pct(0) : '—' }}</td></tr>
+                            <tr class="at-profit-total"><td><strong>= Wynik produkcji</strong></td><td class="text-end"><strong class="{{ t.result >= 0 ? 'text-success' : 'text-danger' }}">{{ t.result|eur }}</strong></td><td class="text-end"><strong>{{ t.margin_pct|pct(0) }}</strong></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {# --- Ostatnie 6 miesięcy ----------------------------------------------- #}
+        <div class="col-12 col-xl-7">
+            <div class="card at-anchor" id="trend">
+                <div class="card-header"><h4 class="card-title">Ostatnie 6 miesięcy</h4></div>
+                <div class="card-body pt-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0 at-profit-trend">
+                            <thead><tr><th>Miesiąc</th><th class="text-end">Sprzedaż</th><th>Personel / sprzedaż</th><th class="text-end">Wynik</th></tr></thead>
+                            <tbody>
+                            {% for m in trend %}
+                                <tr>
+                                    <td><a href="{{ root }}/dashboard/results?period={{ m.current ? 'month' : m.ym }}">{{ m.label }}</a>{% if m.current %} <span class="at-sub">w toku</span>{% endif %}{% if m.estimated %} <span class="at-sub" title="Koszty tego miesiąca nie są jeszcze wprowadzone">koszty szac.</span>{% endif %}</td>
+                                    <td class="text-end">{{ m.revenue|eur }}</td>
+                                    <td>
+                                        {% if m.staff_pct is not null %}
+                                        <div class="at-ratio at-ratio-sm">
+                                            <span class="at-ratio-bar {{ m.staff_pct <= t.staff_target ? 'ok' : '' }}" style="width: {{ min(100, m.staff_pct / max(t.staff_target, 1) * 50)|round(1) }}%"></span>
+                                            <span class="at-ratio-target" style="left: 50%"></span>
+                                        </div>
+                                        {% endif %}
+                                        <span class="at-ratio-value">{{ m.staff_pct|pct }}</span>
+                                    </td>
+                                    <td class="text-end"><span class="{{ m.margin_pct is not null and m.margin_pct >= t.margin_target ? 'text-success' : 'text-danger' }}">{{ m.margin_pct|pct }}</span></td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# --- Sprzedaż na osobę : grupy × ostatnie 18 miesięcy ----------------------- #}
+    {% set pp = per_person %}
+    {% if pp.groups %}
+    <div class="card at-anchor" id="na-osobe">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h4 class="card-title mb-0">Sprzedaż na osobę — ostatnie {{ pp.count }} miesięcy</h4>
+                <span class="at-sub">sprzedaż grupy ÷ osoby opłacone w miesiącu · {{ pp.real }} z {{ pp.count }} mies. z wprowadzonymi kosztami</span>
+            </div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Widok">
+                <button type="button" class="btn btn-outline-primary active" data-ppl-view="table" aria-pressed="true"><i class="bi bi-table"></i> Tabela</button>
+                <button type="button" class="btn btn-outline-primary" data-ppl-view="chart" aria-pressed="false"><i class="bi bi-graph-up"></i> Wykres</button>
+            </div>
+        </div>
+        <div class="card-body pt-0">
+            {% set months = pp.months|reverse %}
+            <div class="table-responsive at-ppl-scroll" data-ppl-panel="table">
+                <table class="table mb-0 at-ppl-table">
+                    <thead>
+                        <tr>
+                            <th class="at-ppl-name">Grupa</th>
+                            {% for m in months %}
+                                <th class="text-end{{ m.estimated ? ' at-ppl-est' : '' }}{{ m.current ? ' at-ppl-current' : '' }}">
+                                    <a href="{{ root }}/dashboard/results?period={{ m.current ? 'month' : m.ym }}">{{ m.label }}</a>
+                                    {% if m.current %}<div class="at-sub">tempo</div>{% elseif m.estimated_from %}<div class="at-sub" title="Koszty i osoby tego miesiąca nie są wprowadzone w kalkulatorze kosztów — przyjęto {{ m.estimated_from }}">os. szac.</div>{% endif %}
+                                </th>
+                            {% endfor %}
+                            <th class="text-end at-ppl-sum">Średnio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for g in pp.groups %}
+                        <tr>
+                            <th class="at-ppl-name" scope="row">{{ g.name }}</th>
+                            {% for m in months %}
+                                {% set c = m.groups[g.id] ?? null %}
+                                <td class="text-end{{ m.estimated ? ' at-ppl-est' : '' }}{{ m.current ? ' at-ppl-current' : '' }}{{ c and not m.current and c.revenue_per_person is not null and c.revenue_per_person == g.best ? ' at-ppl-best' : '' }}">
+                                    {% if c and c.revenue_per_person is not null %}{{ c.revenue_per_person|eur }}<div class="at-sub">{{ c.people|number_format(c.people == c.people|round ? 0 : 1, ',', ' ') }} os.</div>
+                                    {% elseif c and c.revenue > 0 %}<span class="at-sub" title="Sprzedaż {{ c.revenue|eur }} bez osób w kalkulatorze kosztów">bez osób</span>
+                                    {% else %}<span class="at-sub">—</span>{% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-end at-ppl-sum"><strong>{{ g.average|eur }}</strong><div class="at-sub">sprzedaż {{ g.revenue|eur }}</div></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="at-profit-total">
+                            <th class="at-ppl-name" scope="row">Produkcja</th>
+                            {% for m in months %}<td class="text-end{{ m.estimated ? ' at-ppl-est' : '' }}{{ m.current ? ' at-ppl-current' : '' }}"><strong>{{ m.revenue_per_person_production|eur }}</strong><div class="at-sub">{{ m.people_production ? m.people_production|number_format(0, ',', ' ') ~ ' os.' : '' }}</div></td>{% endfor %}
+                            <td class="text-end at-ppl-sum"><strong>{{ pp.average_production|eur }}</strong></td>
+                        </tr>
+                        <tr class="at-profit-total">
+                            <th class="at-ppl-name" scope="row">Cała firma</th>
+                            {% for m in months %}<td class="text-end{{ m.estimated ? ' at-ppl-est' : '' }}{{ m.current ? ' at-ppl-current' : '' }}"><strong>{{ m.revenue_per_person|eur }}</strong><div class="at-sub">{{ m.people ? m.people|number_format(0, ',', ' ') ~ ' os.' : '' }}</div></td>{% endfor %}
+                            <td class="text-end at-ppl-sum"><strong>{{ pp.average|eur }}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="at-ppl-chart" data-ppl-panel="chart" hidden>
+                <canvas id="atPplChart" aria-label="Sprzedaż na osobę według grup, ostatnie {{ pp.count }} miesięcy" role="img"></canvas>
+            </div>
+            <script type="application/json" id="atPplData">{{ {
+                labels: months|map(m => m.label ~ (m.current ? ' (tempo)' : '')),
+                estimated: months|map(m => m.estimated),
+                groups: pp.groups|map(g => {name: g.name, values: months|map(m => (m.groups[g.id] ?? null) ? m.groups[g.id].revenue_per_person : null)}),
+                production: months|map(m => m.revenue_per_person_production),
+                company: months|map(m => m.revenue_per_person)
+            }|json_encode|raw }}</script>
+            <p class="at-profit-note">Sprzedaż WDT grupy w miesiącu na jedną osobę opłaconą w tym miesiącu (osoby z <a href="{{ root }}/cost-calculator">kalkulatora kosztów</a>, pozycje wliczone). Miesiące bez wprowadzonych kosztów (os. szac., szare) przyjmują osoby z najbliższego znanego miesiąca — uzupełnij je w kalkulatorze, aby wynik był dokładny. Bieżący miesiąc: tempo (sprzedaż do dziś przeliczona na cały miesiąc). Średnio: sprzedaż okresu ÷ suma osobo-miesięcy. Wyróżnienie: najlepszy miesiąc grupy.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% include 'dashboard/_growth_modal.twig' %}
+
+    <p class="at-profit-note">
+        Sprzedaż: dokumenty WDT według daty wystawienia (EUR). Personel, media, amortyzacja i koszty stałe: <a href="{{ root }}/cost-calculator">kalkulator kosztów</a> (miesięcznie, PLN, kurs {{ rate|number_format(2, ',', ' ') }} z ustawień firmy).
+        Surowce: koszt surowców kartonu z receptury. Szczegóły: <a href="{{ root }}/finances/sales-analytics">sprzedaż wg działów</a>, <a href="{{ root }}/finances/cost-analysis/section">koszty działów</a>.
+    </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/growth.js" defer></script>
+<script>
+(() => {
+    const notify = (ok, message) => (typeof showSnack === 'function' ? showSnack(ok, message) : alert(message));
+    // Surowce i opakowania : rozwijane zakupy według kategorii lub dostawcy.
+    const buyToggle = document.querySelector('[data-buy-toggle]');
+    const buyPanel = document.getElementById('atBuyPanel');
+    if (buyToggle && buyPanel) {
+        buyToggle.addEventListener('click', () => {
+            const open = buyToggle.getAttribute('aria-expanded') !== 'true';
+            buyToggle.setAttribute('aria-expanded', String(open));
+            buyPanel.hidden = !open;
+        });
+        buyPanel.querySelectorAll('[data-buy-view]').forEach(tab => tab.addEventListener('click', () => {
+            buyPanel.querySelectorAll('[data-buy-view]').forEach(t => t.setAttribute('aria-selected', String(t === tab)));
+            buyPanel.querySelectorAll('[data-buy-list]').forEach(list => { list.hidden = list.dataset.buyList !== tab.dataset.buyView; });
+        }));
+    }
+    // Sprzedaż na osobę : tabela (grupy × miesiące) albo wykres ; Chart.js ładowany przy pierwszym otwarciu wykresu.
+    const pplScroll = document.querySelector('[data-ppl-panel="table"]');
+    if (pplScroll) pplScroll.scrollLeft = pplScroll.scrollWidth;
+    let pplChart = null;
+    const drawPpl = () => {
+        if (pplChart) return;
+        const data = JSON.parse(document.getElementById('atPplData').textContent);
+        const palette = ['#8D1D2C', '#B5651D', '#C9A227', '#6D4C8F', '#2E7D4F', '#4A6FA5', '#9B5DE5', '#E07A5F', '#3D405B', '#81B29A'];
+        const eur = (v) => v === null || v === undefined ? '—' : new Intl.NumberFormat('pl-PL', {maximumFractionDigits: 0}).format(v) + ' €';
+        const point = data.estimated.map(e => e ? 'rectRot' : 'circle');
+        const sets = data.groups.map((g, i) => ({label: g.name, data: g.values, borderColor: palette[i % palette.length], backgroundColor: palette[i % palette.length],
+            tension: .25, spanGaps: true, pointStyle: point, pointRadius: 3, borderWidth: 2}));
+        sets.push({label: 'Produkcja', data: data.production, borderColor: '#222222', backgroundColor: '#222222', borderDash: [6, 4], borderWidth: 3, tension: .25, spanGaps: true, pointStyle: point, pointRadius: 3});
+        sets.push({label: 'Cała firma', data: data.company, borderColor: '#777777', backgroundColor: '#777777', borderDash: [2, 3], borderWidth: 2, tension: .25, spanGaps: true, pointStyle: point, pointRadius: 3});
+        pplChart = new Chart(document.getElementById('atPplChart'), {
+            type: 'line',
+            data: {labels: data.labels, datasets: sets},
+            options: {
+                responsive: true, maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
+                plugins: {legend: {position: 'bottom', labels: {usePointStyle: true}},
+                    tooltip: {callbacks: {label: (c) => `${c.dataset.label}: ${eur(c.parsed.y)}`, footer: (items) => data.estimated[items[0].dataIndex] ? 'osoby szacowane' : ''}}},
+                scales: {y: {beginAtZero: true, ticks: {callback: (v) => eur(v)}, title: {display: true, text: '€ na osobę'}}},
+            },
+        });
+    };
+    const loadChart = () => window.Chart ? Promise.resolve() : new Promise((resolve, reject) => {
+        const tag = document.createElement('script');
+        tag.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+        tag.onload = resolve;
+        tag.onerror = reject;
+        document.head.appendChild(tag);
+    });
+    document.querySelectorAll('[data-ppl-view]').forEach(btn => btn.addEventListener('click', () => {
+        const view = btn.dataset.pplView;
+        document.querySelectorAll('[data-ppl-view]').forEach(b => { b.classList.toggle('active', b === btn); b.setAttribute('aria-pressed', String(b === btn)); });
+        document.querySelectorAll('[data-ppl-panel]').forEach(panel => { panel.hidden = panel.dataset.pplPanel !== view; });
+        if (view === 'chart') loadChart().then(drawPpl).catch(() => notify(false, 'Nie udało się wczytać wykresu.'));
+    }));
+    // Co wyprodukowały grupy : jedna zakładka na grupę.
+    document.querySelectorAll('[data-made-tab]').forEach(tab => tab.addEventListener('click', () => {
+        document.querySelectorAll('[data-made-tab]').forEach(t => t.setAttribute('aria-selected', String(t === tab)));
+        document.querySelectorAll('[data-made-panel]').forEach(panel => { panel.hidden = panel.dataset.madePanel !== tab.dataset.madeTab; });
+    }));
+    // Sekcje strony : ancre courante en surbrillance ; #zakupy ouvre le détail des achats.
+    const sectionNav = document.querySelector('[data-profit-nav]');
+    const openFromHash = () => {
+        const hash = location.hash || '#grupy';
+        sectionNav?.querySelectorAll('a').forEach(a => a.classList.toggle('active', a.hash === hash));
+        if (hash === '#zakupy' && buyToggle && buyToggle.getAttribute('aria-expanded') !== 'true') buyToggle.click();
+    };
+    openFromHash();
+    window.addEventListener('hashchange', openFromHash);
+    // Wiersz tabeli okresów : całe pole klikalne (link w pierwszej kolumnie dla klawiatury).
+    document.querySelectorAll('.at-period-table tr[data-href]').forEach(row => row.addEventListener('click', (e) => {
+        if (!e.target.closest('a')) window.location.href = row.dataset.href;
+    }));
+})();
+</script>
+{% endblock %}

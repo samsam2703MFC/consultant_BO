@@ -578,8 +578,13 @@ function suDossier(string $shop): array
         }
     } catch (Throwable $e) { /* conformité muette */ }
     $bloc('msp', $l, $alerte, $l === [] ? 'pas de rapport ni de relevé du comptoir' : null);
-    // 6. La dernière météo du franchisé — interne, jamais montrée au franchisé.
+    // 6. La dernière météo du franchisé — interne, jamais montrée au franchisé : le temps noté en fin de contrôle
+    // (ceo_visite.meteo, 1 orage … 5 grand soleil), puis le détail de la tablette (ceo_franchise_meteo).
     $l = [];
+    try {
+        $vm = Db::row('SELECT prevu_le, meteo FROM ceo_visite WHERE shop_id = ? AND statut = \'terminee\' AND meteo IS NOT NULL ORDER BY prevu_le DESC, id DESC LIMIT 1', [$shop]);
+        if ($vm) { $l[] = date('d/m', strtotime((string) $vm['prevu_le'])) . ' : ' . ([1 => 'orage', 2 => 'pluie', 3 => 'nuageux', 4 => 'éclaircies', 5 => 'grand soleil'][(int) $vm['meteo']] ?? '—') . ' (fin de contrôle)'; }
+    } catch (Throwable $e) { /* colonne absente */ }
     try {
         if (function_exists('ensureFrMeteo')) {
             ensureFrMeteo();
@@ -685,7 +690,7 @@ function wr_suivi_preparation(string $id): array
     $court = suCourt((string) $v['shop_id']);
     $out = ['ok' => true];
     if ($envoyer) {
-        viNotifier('c:' . $v['consultant_id'], 'Dossier prêt — ' . $court, 'Visite du ' . date('d/m', strtotime((string) $v['prevu_le'])) . ' : ' . count($prep['points']) . ' point(s) du bureau', 'visites/?role=consultant&id=' . rawurlencode((string) $v['consultant_id']) . '#fiche/' . $v['id'], 'prep-' . $v['id']);
+        viNotifier('c:' . $v['consultant_id'], 'Dossier prêt — ' . $court, 'Visite du ' . date('d/m', strtotime((string) $v['prevu_le'])) . ' : ' . count($prep['points']) . ' point(s) du bureau', 'controle/?id=' . rawurlencode((string) $v['consultant_id']) . '#fiche/' . $v['id'], 'prep-' . $v['id']);
         journalAdd($qui, 'Visite', null, 'Dossier de visite envoyé sur la tablette : ' . $court . ' le ' . $v['prevu_le']);
     }
     if (!empty($b['odj'])) {
@@ -982,7 +987,7 @@ function suApresTerminee(array $v): void
     $roles = suRoles($v); $court = suCourt((string) $v['shop_id']);
     $d = suRapportDelai(['termine_a' => $v['termine_a'] ?? date('Y-m-d H:i:s')] + $v);
     if ($roles['adapte'] !== '') {
-        viNotifier('c:' . $roles['adapte'], 'Rapport à adapter — ' . $court, 'Brouillon de la visite du ' . date('d/m', strtotime((string) $v['prevu_le'])) . ($d ? ' · à envoyer avant le ' . date('d/m H:i', strtotime($d['limite'])) : ''), '#/suivi-tableau', 'rapport-' . $v['id']);
+        viNotifier('c:' . $roles['adapte'], 'Rapport à adapter — ' . $court, 'Brouillon de la visite du ' . date('d/m', strtotime((string) $v['prevu_le'])) . ($d ? ' · à envoyer avant le ' . date('d/m H:i', strtotime($d['limite'])) : ''), '#/franchises', 'rapport-' . $v['id']);
     }
 }
 
@@ -1099,7 +1104,7 @@ function ep_suivi_tableau(): array
     $envMois = array_filter($rows, static fn ($v) => ($v['rapport_statut'] ?? null) === 'envoye' && (string) $v['rapport_envoye_le'] >= $debutMois);
     $urgent = array_filter($cartes['adapter'], static fn ($c) => $c['delai'] && $c['delai']['resteH'] < 12);
     return ['lu' => date('Y-m-d H:i'), 'aujourdhui' => $auj, 'semaine' => ['du' => $lundi, 'au' => $dimanche, 'decalage' => $sem], 'consultant' => $cons,
-        'consultants' => viConsultants(), 'delais' => $regles['delais'], 'cartes' => $cartes,
+        'consultants' => viConsultants(), 'types' => function_exists('vcTypesCourts') ? vcTypesCourts() : [], 'delais' => $regles['delais'], 'cartes' => $cartes,
         'kpis' => ['visitesSemaine' => count($semaine), 'aPreparer' => count($cartes['preparer']), 'surTablette' => count($cartes['tablette']),
             'aAdapter' => count($cartes['adapter']), 'urgent' => count($urgent), 'urgentTxt' => $urgent ? array_values($urgent)[0]['court'] . ' avant ' . date('H:i', strtotime(array_values($urgent)[0]['delai']['limite'])) : null,
             'envoyesMois' => count($envMois), 'lusMois' => count(array_filter($envMois, static fn ($v) => !empty($v['rapport_lu_le']))),
@@ -1441,7 +1446,7 @@ function wr_suivi_franchise_correction(): array
     $now = date('Y-m-d H:i:s'); $qui = 'Franchisé ' . suCourt($shop);
     Db::exec('UPDATE ceo_visite_action SET statut = \'attente\', photo_id = COALESCE(?, photo_id), maj_le = ? WHERE id = ?', [$photoId, $now, (int) $p['id']]);
     Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire, photo_id) VALUES (?,?,?,?,?,?,?)', [(int) $p['id'], $now, $qui, $p['statut'], 'attente', $com !== '' ? $com : null, $photoId]);
-    viNotifier('admin', 'Correction reçue — ' . suCourt($shop), $p['titre'] . ' : photo à valider', '#/suivi-tableau', 'valider-' . $p['id']);
+    viNotifier('admin', 'Correction reçue — ' . suCourt($shop), $p['titre'] . ' : photo à valider', '#/franchises', 'valider-' . $p['id']);
     journalAdd($qui, 'Plan d’action', null, suCourt($shop) . ' : « ' . $p['titre'] . ' » ' . $p['statut'] . ' → attente (correction envoyée depuis sa page)');
     return ['ok' => true, 'plan' => viPlanLigne(Db::row('SELECT * FROM ceo_visite_action WHERE id = ?', [(int) $p['id']]))];
 }
@@ -1664,10 +1669,10 @@ function suHorloge(array &$fait): void
         if ($d['rapportTard'] === 'tel_quel') { suRapportEnvoyer($v, 'horloge (délai dépassé, envoyé tel quel)'); $fait['rapportsAuto']++; continue; }
         $r = suJson($v['rapport'] ?? null); $roles = suRoles($v); $court = suCourt((string) $v['shop_id']);
         if (empty($r['rappel1'])) {
-            viNotifier('c:' . $roles['adapte'], 'Rapport en retard — ' . $court, 'Le délai de ' . $d['rapportHeures'] . ' h est dépassé : le franchisé attend son rapport.', '#/suivi-tableau', 'rapport-' . $v['id']);
+            viNotifier('c:' . $roles['adapte'], 'Rapport en retard — ' . $court, 'Le délai de ' . $d['rapportHeures'] . ' h est dépassé : le franchisé attend son rapport.', '#/franchises', 'rapport-' . $v['id']);
             $r['rappel1'] = date('Y-m-d H:i');
         } elseif (empty($r['rappel2']) && $now > $limite + 24 * 3600) {
-            viNotifier($roles['responsable'] !== '' && $roles['responsable'] !== $roles['adapte'] ? 'c:' . $roles['responsable'] : 'admin', 'Rapport en retard de 24 h — ' . $court, 'Visite du ' . date('d/m', strtotime((string) $v['prevu_le'])) . ' par ' . $v['consultant_nom'], '#/suivi-tableau', 'rapport2-' . $v['id']);
+            viNotifier($roles['responsable'] !== '' && $roles['responsable'] !== $roles['adapte'] ? 'c:' . $roles['responsable'] : 'admin', 'Rapport en retard de 24 h — ' . $court, 'Visite du ' . date('d/m', strtotime((string) $v['prevu_le'])) . ' par ' . $v['consultant_nom'], '#/franchises', 'rapport2-' . $v['id']);
             $r['rappel2'] = date('Y-m-d H:i');
         } else { continue; }
         Db::exec('UPDATE ceo_visite SET rapport = ? WHERE id = ?', [json_encode($r, JSON_UNESCAPED_UNICODE), (int) $v['id']]);

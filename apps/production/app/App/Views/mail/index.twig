@@ -1,0 +1,82 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ mail_page == 'settings' ? 'Moja skrzynka e-mail' : 'Poczta' }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title d-flex flex-wrap align-items-end gap-3">
+            <div class="me-auto">
+                <h3>{{ mail_page == 'settings' ? 'Moja skrzynka e-mail' : 'Poczta' }}</h3>
+                <p class="text-subtitle text-muted mb-0">{{ mail_page == 'settings'
+                    ? 'Twoja własna skrzynka w ERP : odbiór (IMAP) i wysyłka (SMTP) z Twojego adresu. Hasło jest zaszyfrowane i nie jest nigdzie pokazywane.'
+                    : 'Twoja skrzynka w ERP : odebrane, wysłane, odpowiedzi do klientów i dostawców.' }}</p>
+            </div>
+            {% if mail_page == 'settings' %}
+                <a class="btn btn-outline-secondary btn-sm" href="{{ root }}/mail"><i class="bi bi-envelope"></i> Poczta</a>
+            {% else %}
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-sync hidden><i class="bi bi-arrow-repeat"></i> Odśwież</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{{ root }}/mail/settings"><i class="bi bi-gear"></i> Ustawienia skrzynki</a>
+                <button type="button" class="btn btn-primary btn-sm" data-compose hidden><i class="bi bi-pencil-square"></i> Nowa wiadomość</button>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.ml-app{--ml-line:#e9e2da;--ml-soft:#f7f3ef;--ml-accent:#8D1D2C}
+.ml-banner{display:flex;gap:8px;align-items:center;background:#fff8e6;border:1px solid #f1dfb0;color:#6b4e00;border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:12px}
+.ml-shell{display:grid;grid-template-columns:200px minmax(280px,380px) 1fr;background:#fff;border:1px solid var(--ml-line);border-radius:14px;overflow:hidden;height:calc(100vh - 230px);min-height:520px}
+.ml-folders{border-right:1px solid var(--ml-line);padding:12px 8px;display:flex;flex-direction:column;gap:2px;background:var(--ml-soft)}
+.ml-folder{display:flex;align-items:center;gap:8px;border:0;background:none;text-align:left;padding:8px 10px;border-radius:8px;font-size:14px;color:#3a332e}
+.ml-folder:hover{background:#efe8e1}.ml-folder.is-on{background:#fff;font-weight:600;box-shadow:0 0 0 1px var(--ml-line)}
+.ml-folder .ml-n{margin-left:auto;background:var(--ml-accent);color:#fff;border-radius:999px;font-size:11px;padding:1px 7px}
+.ml-account{margin-top:auto;font-size:12px;color:#7a716a;padding:8px 10px;word-break:break-all}
+.ml-list{border-right:1px solid var(--ml-line);display:flex;flex-direction:column;min-width:0}
+.ml-search{padding:10px;border-bottom:1px solid var(--ml-line)}
+.ml-rows{overflow:auto;flex:1}
+.ml-row{display:block;width:100%;border:0;border-bottom:1px solid #f1ece6;background:#fff;text-align:left;padding:10px 12px;font-size:13px;color:#3a332e}
+.ml-row:hover{background:#faf7f4}.ml-row.is-on{background:#f6ecec;box-shadow:inset 3px 0 0 var(--ml-accent)}
+.ml-row .ml-top{display:flex;gap:6px;align-items:baseline}.ml-row .ml-who{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ml-row .ml-date{color:#8a817a;font-size:12px;white-space:nowrap}
+.ml-row .ml-subj{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.ml-row .ml-snip{color:#8a817a;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.ml-row.is-unread .ml-who,.ml-row.is-unread .ml-subj{font-weight:700}
+.ml-row.is-unread .ml-who::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ml-accent);margin-right:6px;vertical-align:1px}
+.ml-tag{display:inline-block;font-size:11px;border-radius:6px;padding:0 6px;background:#eef3ff;color:#2d4a8a;margin-right:4px}
+.ml-tag.is-supplier{background:#eef8ef;color:#256b33}.ml-tag.is-test{background:#fff3d6;color:#7a5a00}.ml-tag.is-fail{background:#fde8e8;color:#9b1c1c}
+.ml-more{padding:10px;text-align:center}
+.ml-reader{display:flex;flex-direction:column;min-width:0}
+.ml-empty{margin:auto;color:#8a817a;text-align:center;padding:24px}
+.ml-head{padding:16px 18px;border-bottom:1px solid var(--ml-line)}
+.ml-head h4{font-size:18px;margin:0 0 6px}
+.ml-meta{font-size:13px;color:#5d554f;line-height:1.6}
+.ml-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ml-body{flex:1;overflow:auto;padding:0}
+.ml-body iframe{width:100%;height:100%;min-height:420px;border:0;background:#fff}
+.ml-text{white-space:pre-wrap;word-wrap:break-word;font-family:inherit;font-size:14px;padding:16px 18px;margin:0}
+.ml-files{display:flex;flex-wrap:wrap;gap:6px;padding:10px 18px;border-top:1px solid var(--ml-line)}
+.ml-file{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--ml-line);border-radius:8px;padding:4px 10px;font-size:13px;text-decoration:none;color:#3a332e}
+.ml-compose{position:fixed;right:24px;bottom:24px;width:min(640px,calc(100vw - 32px));background:#fff;border:1px solid var(--ml-line);border-radius:14px;box-shadow:0 18px 48px rgba(0,0,0,.18);z-index:1050;display:flex;flex-direction:column;max-height:calc(100vh - 48px)}
+.ml-compose header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--ml-line);font-weight:600}
+.ml-compose .ml-cbody{padding:12px 14px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.ml-compose textarea{min-height:220px;font-size:14px}
+.ml-compose footer{display:flex;gap:8px;align-items:center;padding:10px 14px;border-top:1px solid var(--ml-line)}
+.ml-err{color:#b02a37;font-size:12px}
+.ml-status{font-size:13px;min-height:20px}
+.ml-settings{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+.ml-settings .card{border:1px solid var(--ml-line);border-radius:14px}
+.ml-help{font-size:13px;color:#5d554f}
+.ml-check{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:4px 0}
+.ml-check .bi-check-circle-fill{color:#248A3D}.ml-check .bi-x-circle-fill{color:#b02a37}
+@media (max-width: 1100px){.ml-shell{grid-template-columns:170px 1fr}.ml-reader{grid-column:1 / -1;border-top:1px solid var(--ml-line)}.ml-shell{height:auto}.ml-rows{max-height:50vh}.ml-settings{grid-template-columns:1fr}}
+@media (max-width: 700px){.ml-shell{grid-template-columns:1fr}.ml-folders{flex-direction:row;overflow:auto;border-right:0;border-bottom:1px solid var(--ml-line)}.ml-account{display:none}}
+</style>
+<section class="section ml-app" id="mailApp" data-root="{{ root }}" data-page="{{ mail_page }}">
+    <p class="text-muted">Wczytywanie…</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/mail.js?v={{ asset_v() }}"></script>
+{% endblock %}

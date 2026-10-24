@@ -21,7 +21,11 @@
  * dit, il ne montre pas un zéro.
  */
 
-/** GET /ventes/semaines?shop=4&vue=semaine|mois|annee&date=YYYY-MM-DD&n=6 */
+/**
+ * GET /ventes/semaines?shop=4&vue=semaine|mois|annee&date=YYYY-MM-DD&n=6 (2 à 13 semaines)[&articles=1][&pro=1] — avec
+ * `articles=1`, chaque période (et son N-1) porte aussi `articles`, les pièces vendues (dashboard magasin, articles par
+ * client, 19/10/2026) ; avec `pro=1`, `caComptoir` et `ticketsComptoir` (le panier hors clients pro, 21/10/2026).
+ */
 function ep_ventes_semaines(): array
 {
     $sid = (int) ($_GET['shop'] ?? 0);
@@ -30,6 +34,20 @@ function ep_ventes_semaines(): array
     $periodes = vsPeriodes($vue, $date, $n);
     $lu = vsLireMagasin($sid, $periodes);
     $m = vsMagasin($sid, $periodes, $lu);
+    if (!empty($_GET['articles'])) {
+        $fen = [];
+        foreach ($periodes as $p) { if (!$p['futur']) { $fen[] = [$p['du'], $p['jusqua']]; $fen[] = [$p['du1'], $p['au1']]; } }
+        $A = vsArticles($fen);
+        foreach ($m['periodes'] as $i => $l) {
+            $p = $periodes[$i];
+            if ($p['futur']) { continue; }
+            $m['periodes'][$i]['articles'] = $A[$p['du'] . '|' . $p['jusqua']][(string) $sid] ?? null;
+            if ($l['n1'] !== null) { $m['periodes'][$i]['n1']['articles'] = $A[$p['du1'] . '|' . $p['au1']][(string) $sid] ?? null; }
+        }
+    }
+    // `pro=1` (le dashboard magasin, 21/10/2026) : le comptoir de chaque période, pour le panier hors clients pro. À la
+    // demande : une centaine de relevés à relire, que le cockpit, qui n'en montre pas le panier, n'a pas à payer.
+    if (!empty($_GET['pro'])) { $m['periodes'] = vsComptoirPeriodes($sid, $periodes, $m['periodes'], $lu); }
     return ['shop' => (string) $sid, 'vue' => $vue, 'n' => count($periodes), 'du' => $periodes[0]['du'], 'au' => end($periodes)['au'],
         'aujourdhui' => date('Y-m-d'), 'semaines' => $m['periodes'], 'total' => $m['total'], 'totalN1' => $m['totalN1'],
         'n1Motif' => $m['n1Motif'], 'source' => vsSourceTexte($m['sources'], $vue)];
@@ -81,13 +99,78 @@ function ep_ventes_reseau(): array
         'periodes' => $out, 'magasins' => $magasins, 'source' => vsSourceTexte($sources, $vue)];
 }
 
+/**
+ * Les pièces vendues de chaque fenêtre, magasin par magasin : `/consultant/shops/sales-kpis` (`products`, les produits
+ * vendus — la même source que les articles par ticket de l'année), un appel par fenêtre pour tout le réseau. Une fenêtre
+ * finie avant aujourd'hui se grave : lue un jour plus tard, elle est close. Rend ['du|au' => [magasin => pièces]].
+ */
+function vsArticles(array $fenetres): array
+{
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return []; }
+    $auj = date('Y-m-d'); $out = []; $paths = [];
+    foreach ($fenetres as [$d1, $d2]) {
+        $k = $d1 . '|' . $d2;
+        if (isset($out[$k]) || isset($paths[$k])) { continue; }
+        if ($d2 < $auj) { $c = setting('vsA:' . $k); if (is_array($c) && $c !== []) { $out[$k] = $c; continue; } }
+        $paths[$k] = '/consultant/shops/sales-kpis?' . http_build_query(['date_from' => $d1, 'date_to' => $d2]);
+    }
+    if ($paths === []) { return $out; }
+    try { $res = PanelApi::getParallele($paths, 6); } catch (Throwable $e) { return $out; }
+    foreach ($paths as $k => $ch) {
+        $par = [];
+        foreach (analyseListe($res[$k] ?? null) as $x) {
+            if (!is_array($x)) { continue; }
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c) { if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; } }
+            $pr = nombreOuNull($x, ['products', 'items', 'product_count']);
+            if ($id > 0 && $pr !== null) { $par[(string) $id] = (int) round($pr); }
+        }
+        $out[$k] = $par;
+        if ($par !== [] && explode('|', $k)[1] < $auj && function_exists('svGrave')) { try { svGrave('vsA:' . $k, $par); } catch (Throwable $e) { /* sans cache */ } }
+    }
+    return $out;
+}
+
+/**
+ * Le CA et les tickets comptoir de chaque période et de son N-1 (21/10/2026, le panier moyen hors clients pro du
+ * dashboard) : le total moins les tickets pro gravés de ses jours vendus — seulement si chacun de ces jours a son relevé
+ * pro, sinon null (le panier de la période reste alors pro compris, et le dashboard ne le compare pas à un hors pro).
+ * Les jours des périodes N d'avant les relevés se complètent de quelques listes (vpJoursLus, sept au plus, les plus
+ * récents d'abord) ; le N-1 ne se lit qu'au gravé — avant SV_DEBUT, rien n'a été lu.
+ */
+function vsComptoirPeriodes(int $sid, array $periodes, array $lignes, array $lu): array
+{
+    if (!function_exists('vpProJours') || !function_exists('vpComptoirDe') || !function_exists('vpJoursLus')) { return $lignes; }
+    $vendus = static function (?string $src, string $d1, string $d2) use ($lu): array {
+        $jours = $src === null ? [] : array_keys(array_filter($lu[$src] ?? [], static fn ($v, $j) => $j >= $d1 && $j <= $d2, ARRAY_FILTER_USE_BOTH));
+        sort($jours);
+        return $jours;
+    };
+    $joursN = [];
+    foreach ($lignes as $i => $l) {
+        if ($periodes[$i]['futur'] || $l['source'] === null) { continue; }
+        foreach ($vendus($l['source'], $periodes[$i]['du'], $periodes[$i]['jusqua']) as $j) { if (!defined('SV_DEBUT') || $j >= SV_DEBUT) { $joursN[] = $j; } }
+    }
+    $lusN = $joursN === [] ? [] : (vpJoursLus([$sid], array_values(array_unique($joursN)), 7)[$sid] ?? []);
+    foreach ($lignes as $i => $l) {
+        $p = $periodes[$i];
+        if ($p['futur'] || $l['source'] === null) { continue; }
+        $lignes[$i] += vpComptoirDe(vpProJours($sid, $vendus($l['source'], $p['du'], $p['jusqua']), true, $lusN), (float) $l['ca'], (int) $l['tickets']);
+        if ($l['n1'] !== null) {
+            $lignes[$i]['n1'] += vpComptoirDe(vpProJours($sid, $vendus($l['n1']['source'], $p['du1'], $p['au1']), true), (float) $l['n1']['ca'], (int) $l['n1']['tickets']);
+        }
+    }
+    return $lignes;
+}
+
 function vsParams(): array
 {
     $auj = date('Y-m-d');
     $vue = in_array($_GET['vue'] ?? '', ['semaine', 'mois', 'annee'], true) ? (string) $_GET['vue'] : 'semaine';
     $date = (string) ($_GET['date'] ?? $auj);
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
-    $n = max(2, min(12, (int) ($_GET['n'] ?? 6)));
+    // 13 au plus : douze semaines closes et celle en cours (Résultat › Trafic clients, 19/10/2026).
+    $n = max(2, min(13, (int) ($_GET['n'] ?? 6)));
     return [$vue, $date, $n];
 }
 

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Karta czasu pracy {{ sheet.employee.name }} {{ sheet.month }}</title>
+<style>
+    :root { --text: #222; --muted: #666; --line: #bbb; }
+    body { font-family: Arial, Helvetica, sans-serif; color: var(--text); background: #fff; margin: 24px; font-size: 12.5px; }
+    h1 { font-size: 19px; margin: 0 0 4px; }
+    .meta { color: var(--muted); margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+    th, td { border: 1px solid var(--line); padding: 5px 7px; text-align: left; vertical-align: middle; }
+    th { background: #f2f2f2; }
+    .num { text-align: right; white-space: nowrap; }
+    .sig { height: 34px; max-width: 120px; }
+    .totals td { font-weight: bold; }
+    .note { color: var(--muted); font-size: 11px; }
+    .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 28px; }
+    .sign div { border-top: 1px solid var(--text); padding-top: 4px; color: var(--muted); min-height: 60px; }
+    .sign img { height: 56px; display: block; }
+    .actions { margin-bottom: 14px; }
+    @media print { .actions { display: none; } body { margin: 10mm; } }
+</style>
+</head>
+<body>
+<div class="actions"><button type="button" onclick="window.print()">Drukuj / Imprimer</button></div>
+<h1>Karta czasu pracy — {{ sheet.employee.name }}</h1>
+<div class="meta">Miesiąc {{ sheet.month }} · {{ sheet.totals.days }} dni · {{ sheet.totals.hours|number_format(2, ',', ' ') }} h, w tym w nocy (22:00–06:00) {{ sheet.totals.night_hours|number_format(2, ',', ' ') }} h</div>
+<table>
+    <thead><tr><th>Dzień</th><th>Wejście</th><th>Wyjście</th><th class="num">Godziny</th><th class="num">W nocy</th><th>Uwagi</th><th>Podpis</th></tr></thead>
+    <tbody>
+    {% for d in sheet.days %}
+        <tr>
+            <td>{{ d.date|day_pl }}</td>
+            <td>{{ d.clock_in|slice(11, 5) }}</td>
+            <td>{{ d.clock_out ? (d.clock_out|slice(0, 10) != d.date ? d.clock_out|date('d.m H:i') : d.clock_out|slice(11, 5)) : 'brak wyjścia' }}</td>
+            <td class="num">{{ d.hours|number_format(2, ',', ' ') }}</td>
+            <td class="num">{{ d.night_hours > 0 ? d.night_hours|number_format(2, ',', ' ') : '' }}</td>
+            <td class="note">{{ d.source == 'manual' ? 'wpis ręczny' : '' }}{{ d.corrected ? ' korekta' : '' }}{{ d.note ? ' — ' ~ d.note : '' }}
+                {% for dir, a in d.answers %}<div>{{ dir == 'in' ? 'wejście' : 'wyjście' }} : potwierdzono {{ a.yes }}/{{ a.total }}{{ a.no ? ' — nie : ' ~ a.no|join(', ') : '' }}</div>{% endfor %}</td>
+            <td>{% if d.signature_id and images[d.signature_id] is defined %}<img class="sig" src="{{ images[d.signature_id] }}" alt="podpis">{% endif %}</td>
+        </tr>
+    {% else %}
+        <tr><td colspan="7">Brak wpisów w tym miesiącu.</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr class="totals"><td colspan="3">Razem</td><td class="num">{{ sheet.totals.hours|number_format(2, ',', ' ') }}</td><td class="num">{{ sheet.totals.night_hours|number_format(2, ',', ' ') }}</td><td colspan="2"></td></tr></tfoot>
+</table>
+<p class="note">Godziny z tabletu produkcji (wejście / wyjście). Wpisy bez wyjścia nie są liczone do sumy. « Potwierdzono » : pytania przy wejściu / wyjściu (np. odzież robocza) zatwierdzone przez pracownika. Podpisy złożone na tablecie mają zapisany skrót SHA-256 (integralność).</p>
+<div class="sign">
+    <div>Pracownik — potwierdzam godziny pracy
+        {% if sheet.month_signature and images[sheet.month_signature.id] is defined %}<img src="{{ images[sheet.month_signature.id] }}" alt="podpis pracownika"><span class="note">podpisano na tablecie {{ sheet.month_signature.signed_at|date('d.m.Y H:i') }}</span>{% endif %}
+    </div>
+    <div>Kierownik</div>
+</div>
+</body>
+</html>

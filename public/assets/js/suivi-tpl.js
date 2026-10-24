@@ -29,7 +29,23 @@ export function tplSvTableau(c, x){
   else { corps = tplEnsemble(s, x); }
   const apercu = s.apercu ? `<div class="sv-voile" ${x.A(s.fermerApercu)}><div class="sv-modal" ${x.A(() => {})}><div class="mko-ct"><span class="mko-lab">${esc(s.apercu.titre)}</span><button ${x.A(s.fermerApercu)} class="mko-pied-btn" style="margin-left:auto">Fermer</button></div>
       ${s.apercu.chargement ? '<div class="mko-corps mko-mu">Mise en page du rapport…</div>' : `<iframe class="sv-ifr" srcdoc="${esc(s.apercu.html)}" title="Aperçu du rapport"></iframe>`}</div></div>` : '';
-  return `<div data-screen="suivi-tableau">${entete}${msgDe(esc, s.msg)}<div class="gc-kpis">${s.kpis.map(k => kpi(esc, k)).join('')}</div>${corps}${apercu}</div>`;
+  const planif = s.planif ? tplPlanif(s.planif, x) : '';
+  return `<div data-screen="suivi-tableau">${entete}${msgDe(esc, s.msg)}${planif}<div class="gc-kpis">${s.kpis.map(k => kpi(esc, k)).join('')}</div>${corps}${apercu}</div>`;
+}
+
+function tplPlanif(p, x){
+  const { esc } = x;
+  return `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">Planifier une visite — le type charge sa checklist, ses tâches, sa durée</span><button ${x.A(p.fermer)} class="mko-pied-btn" style="margin-left:auto">Fermer</button></div>
+    <div class="mko-corps gc-form">
+      <div class="f"><label>Magasin</label>${sel(x, esc, p.setShop, p.magasins)}</div>
+      <div class="f"><label>Type de visite</label>${sel(x, esc, p.setType, p.types)}<small>${esc(p.typeInfo)}</small></div>
+      <div class="f"><label>Consultant</label>${sel(x, esc, p.setCons, p.consultants)}</div>
+      <div class="f"><label>Le franchisé</label>${duo(x, esc, { nom: 'Annoncée', on: p.annoncee, fn: p.annoncer }, { nom: 'Inopinée', on: !p.annoncee, fn: p.inopiner })}<small>${p.annoncee ? 'l’ordre du jour lui part avant la visite' : 'il n’est pas prévenu'}</small></div>
+      <div class="f"><label>Date</label><input type="date" class="mko-inp" value="${esc(p.date)}" ${x.C(p.setDate)}></div>
+      <div class="f"><label>Heure</label><input type="time" class="mko-inp" value="${esc(p.heure)}" ${x.C(p.setHeure)}></div>
+      <div class="f"><label>Durée (min)</label><input type="number" class="mko-inp" value="${esc(p.duree)}" ${x.C(p.setDuree)}><small>du type, modifiable</small></div>
+      <div class="f" style="align-self:end"><button ${x.A(p.envoyer)} class="cx-btn prim" ${p.busy ? 'disabled' : ''}>${p.busy ? 'Planification…' : 'Planifier la visite'}</button></div>
+    </div></div>`;
 }
 
 const carteVisite = (x, esc, k) => `<button ${x.A(k.ouvrir)} class="sv-carte${k.on ? ' on' : ''}"><span class="t"><i class="gc-feu ${esc(k.feu)}"></i>${esc(k.court)}${k.inopinee ? ' <span class="gc-pill">inopinée</span>' : ''}</span>
@@ -196,7 +212,7 @@ export function tplSvAdmin(c, x){
   if (s.chargement) { return `<div data-screen="suivi-qui-fait-quoi">${attente(esc, 'Lecture des règles du suivi…')}</div>`; }
   const barre = `<div class="sv-barre${s.modifie ? ' on' : ''}"><span>${s.modifie ? 'Modifications non enregistrées.' : 'Les règles valent pour tout le réseau ; un magasin peut avoir les siennes.'}</span>
     ${s.annuler ? `<button ${x.A(s.annuler)} class="cx-btn">Annuler</button>` : ''}<button ${x.A(s.enregistrer)} class="cx-btn prim" ${s.busy || !s.modifie ? 'disabled' : ''}>${s.busy ? 'Enregistrement…' : 'Enregistrer'}</button></div>`;
-  const mags = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Par magasin — qui fait quoi</span><span class="mko-mini">qui visite et combien de fois : <button ${x.A(s.cadre)} class="gc-lien">le cadre de visite ›</button></span></div><div style="overflow-x:auto"><table class="mko-tab sv-tab sv-qfq">
+  const mags = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Par magasin — qui fait quoi</span><span class="mko-mini">sous chaque magasin : son responsable et son cadre de visite</span></div><div style="overflow-x:auto"><table class="mko-tab sv-tab sv-qfq">
       <thead><tr><th>Magasin</th><th>Prépare</th><th>Adapte le rapport</th><th>Envoie</th><th>Valide les corrections</th><th>En copie</th><th>Courriel du franchisé</th><th>Langue</th></tr></thead>
       <tbody>${s.magasins.map(m => `<tr><td class="nom">${esc(m.court)}<small>${esc(m.responsable)}</small><small>${esc(m.cadre)}</small></td>
         <td>${sel(x, esc, m.setPrepare, m.prepare)}</td><td>${sel(x, esc, m.setAdapte, m.adapte)}</td><td>${sel(x, esc, m.setEnvoie, m.envoie)}</td><td>${sel(x, esc, m.setCorrections, m.corrections)}</td>

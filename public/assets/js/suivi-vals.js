@@ -56,7 +56,7 @@ export function valsSvTableau(app, common){
   sv.semPrec = () => app.setState({ svSem: sem - 1 }); sv.semSuiv = () => app.setState({ svSem: sem + 1 });
   sv.semLib = d && d.semaine ? 'semaine du ' + fmtD(d.semaine.du) + ' au ' + fmtD(d.semaine.au) : 'semaine';
   sv.relire = () => { charge(app, 'svT', path, true); if (S.svPrep && S.svPrep.path) { charge(app, 'svPrep', S.svPrep.path, true); } if (S.svRap && S.svRap.path) { charge(app, 'svRap', S.svRap.path, true); } };
-  sv.planifier = () => app.setState({ screen: 'gestionConsultant', gcOnglet: 'planning', gcPlanif: { shop: '', type: 'reguliere', consultant: '', date: plusJours(auj(), 1), heure: '09:00', duree: '', motif: 'reguliere' } });
+  sv.planifier = () => app.setState({ svPlanif: { shop: '', type: 'reguliere', consultant: cons, date: plusJours(auj(), 1), heure: '09:00', duree: '', annoncee: null } });
   sv.lu = d && d.lu ? 'relu à ' + d.lu.slice(11, 16) : '';
   if (!K) { common.sv = sv; return; }
   const D = d.delais;
@@ -108,7 +108,41 @@ export function valsSvTableau(app, common){
   }
   if (onglet === 'points') { pointsVals(app, sv, d); }
   sv.apercu = S.svApercu || null; sv.fermerApercu = () => app.setState({ svApercu: null });
+  if (S.svPlanif) { planifVals(app, sv, d); }
   common.sv = sv;
+}
+
+/* Planifier une visite (Gestion consultant est retiré de la console depuis le 18/10/2026) : le type charge sa
+ * checklist, ses tâches et sa durée ; annoncée ou inopinée suit le type, modifiable. POST /visites. */
+function planifVals(app, sv, d){
+  const S = app.state; const F = S.svPlanif;
+  const maj = patch => app.setState({ svPlanif: Object.assign({}, F, patch) });
+  const mags = app.open().map(m => ({ id: String(m.id), court: String(m.nom).split(' - ').pop() }));
+  const types = (d.types || []).filter(t => t.actif !== false);
+  const t = types.find(x => x.code === F.type) || types[0] || null;
+  const annoncee = F.annoncee != null ? F.annoncee : (t ? t.annoncee !== false : true);
+  const consNom = ((d.consultants || []).find(c => c.id === F.consultant) || {}).nom || '';
+  sv.planif = {
+    magasins: [{ v: '', nom: 'Choisir le magasin', on: !F.shop }].concat(mags.map(m => ({ v: m.id, nom: m.court, on: m.id === F.shop }))), setShop: e => maj({ shop: e.target.value }),
+    types: types.map(x => ({ v: x.code, nom: x.nom + (x.annoncee === false ? ' · inopinée' : ''), on: t && x.code === t.code })), setType: e => maj({ type: e.target.value, annoncee: null, duree: '' }),
+    typeInfo: t ? t.duree + ' min · ' + (t.dynamique === 'plans' ? 'checklist : les plans ouverts' : t.dynamique === 'ko' ? 'checklist : les non-conformes de la dernière visite' : pl(t.points, 'point')) : '',
+    consultants: [{ v: '', nom: 'Choisir le consultant', on: !F.consultant }].concat((d.consultants || []).map(c => ({ v: c.id, nom: c.nom, on: c.id === F.consultant }))), setCons: e => maj({ consultant: e.target.value }),
+    date: F.date, setDate: e => maj({ date: e.target.value }), heure: F.heure, setHeure: e => maj({ heure: e.target.value }),
+    duree: F.duree || (t ? t.duree : 90), setDuree: e => maj({ duree: e.target.value }),
+    annoncee, annoncer: () => maj({ annoncee: true }), inopiner: () => maj({ annoncee: false }),
+    busy: !!S.svBusy, fermer: () => app.setState({ svPlanif: null }),
+    envoyer: () => {
+      if (!F.shop || !F.consultant || !F.date) { message(app, 'Choisissez le magasin, le consultant et la date.', true); return; }
+      app.setState({ svBusy: true });
+      app.api('POST', '/visites', { client_id: 'sv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), shop: F.shop, consultant: F.consultant, consultant_nom: consNom,
+        type: t ? t.code : 'reguliere', prevu_le: F.date, debut_h: F.heure || '09:00', duree_min: Number(F.duree || (t ? t.duree : 90)), motif: 'reguliere', annoncee, qui: 'Cockpit' }).then(r => {
+        const ok = r && r.ok !== false && !r.error; const su = (r && r.suite) || {};
+        app.setState({ svBusy: false, svPlanif: ok ? null : app.state.svPlanif });
+        message(app, ok ? 'Visite planifiée le ' + fmtDJ(F.date) + ' à ' + (F.heure || '09:00') + ' (' + (annoncee ? 'annoncée' : 'inopinée') + ')' + (su.taches ? ' · ' + pl(su.taches, 'tâche') + ' du type dans la liste du consultant' : '')
+          + (su.invitation && su.invitation.envoye ? ' · invitation envoyée à ' + su.invitation.a : '') + '.' : 'Refusé : ' + ((r && r.error) || 'sans réponse'), !ok);
+        relireTableau(app);
+      });
+    } };
 }
 
 /* Préparer : le dossier, ce que la tablette emportera, l'ordre du jour. */
@@ -270,7 +304,8 @@ export function valsSvTablette(app, common){
   const L = lu(app, 'svConsList', '/consultants');
   const cons = Array.isArray(L) ? L : [];
   const id = S.svTabCons != null ? S.svTabCons : ((cons[0] || {}).id || '');
-  const chemin = 'visites/?role=consultant' + (id ? '&id=' + encodeURIComponent(id) : '');
+  // L'application de contrôle sur tablette (controle/, mode tablette de l'app Visites).
+  const chemin = 'controle/' + (id ? '?id=' + encodeURIComponent(id) : '');
   const abs = (() => { try { return new URL(racine() + chemin, window.location.href).href; } catch (e) { return racine() + chemin; } })();
   common.sv = {
     consultants: [{ v: '', nom: 'Choisir le consultant', on: !id }].concat(cons.map(c => ({ v: c.id, nom: c.nom, on: c.id === id }))),
@@ -429,7 +464,6 @@ export function valsSvAdmin(app, common){
   sv.modifie = !!F.modifie; sv.busy = !!S.svBusy;
   sv.enregistrer = () => reglesSauver(app, F);
   sv.annuler = F.modifie ? () => app.setState({ svReglesF: null }) : null;
-  sv.cadre = () => app.setState({ screen: 'gestionConsultant', gcOnglet: 'cadre' });
   // Les courriels aux franchisés : un modèle, une langue, l'aperçu, l'essai.
   const codes = Object.keys(d.modeles); const code = codes.includes(S.svModCode) ? S.svModCode : codes[0];
   const langs = Object.keys(d.langues); const lg = langs.includes(S.svModLang) ? S.svModLang : 'fr';

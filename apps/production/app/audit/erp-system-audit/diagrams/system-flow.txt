@@ -1,0 +1,10 @@
+[Browser] -> public/index.php -> App/Core/App.php -> FastRoute (314 web routes)
+    -> Controller -> Service -> Repository -> [MySQL]
+    -> PHP/Twig | PDF | CSV | XLSX
+
+[Integration client] -> public/api.php -> ApiRoutes (3 routes) -> App API -> [MySQL]
+
+[Unverified POS/shop/supplier] -> Agent/api_app_dir -> [MySQL]
+    -> webhook inbox/outbox -> workers -> partner systems
+    -> S3/R2 | e-mail | Peppol | RabbitMQ
+

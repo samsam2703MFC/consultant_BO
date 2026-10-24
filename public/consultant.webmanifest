@@ -1,8 +1,8 @@
 {
   "name": "Visite consultant — L'Atelier by",
   "short_name": "Visite",
-  "description": "La visite en magasin : le dossier du bureau, la checklist, les points à travailler, la météo du franchisé, la signature.",
-  "start_url": "./visites/?role=consultant",
+  "description": "L'agenda, la checklist, la santé du magasin, le benchmark réseau et la météo du franchisé, en visite.",
+  "start_url": "./?app=consultant#/fiche-franchise",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

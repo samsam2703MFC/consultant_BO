@@ -48,15 +48,10 @@ export const ENDPOINTS = {
   pwaTasks:       '/pwa/tasks',
   pwaCompte:      '/pwa/compte',
   erpCompte:      '/erp/compte',
-  exploitation:   '/exploitation',
   prodCatalogue:  '/production/catalogue',
   prodGroupes:    '/production/groupes',
   prodCategories: '/production/categories',
-  prodPeriodes:   '/production/periodes',
-  fbRegles:       '/referentiels/facebook-regles',
-  fbPosts:        '/facebook/posts',
-  bgStats:        '/marketing/brand-guard/stats',
-  bgPages:        '/marketing/brand-guard/pages'
+  prodPeriodes:   '/production/periodes'
 };
 
 /* --- Chronométrage des appels ---------------------------------------------
@@ -232,11 +227,7 @@ function shape(p, source){
       // Niveaux, seuil et référentiel du signalement — réglage serveur,
       // jamais une constante d'écran. `ensureValidation()` garantit qu'il
       // existe : le repli ne sert qu'à un serveur injoignable.
-      SIGNAL: meta.signalement || { seuil: 4, niveaux: [], familles: [] },
-      // Pack de règles de l'agent de contrôle Facebook. Les cinq niveaux de
-      // notes ne sont PAS ici : ce sont ceux de SIGNAL, une seule échelle de
-      // conformité pour les tâches consultants comme pour les posts.
-      FB: p.fbRegles || { seuil: 4, familles: [], regles: [] } },
+      SIGNAL: meta.signalement || { seuil: 4, niveaux: [], familles: [] } },
     D: Object.assign({}, p.raw || {}, {
       stores: joinPerf(p.stores, p.perf, meta && meta.exercice, p.etp),
       // Les lignes PLATES telles que la base les rend, gardées à côté des
@@ -263,15 +254,11 @@ function shape(p, source){
       pwaTasks: p.pwaTasks,
       pwaCompte: p.pwaCompte,
       erpCompte: p.erpCompte,
-      exploitation: p.exploitation,
       prodCatalogue: p.prodCatalogue,
       prodGroupes: (p.prodGroupes || {}).groupes || [],
       prodCategories: (p.prodCategories || {}).categories || [],
       prodPeriodes: (p.prodPeriodes || {}).periodes || [],
-      roles: (p.roles || {}).roles || [],
-      fbPosts: p.fbPosts || [],
-      bgStats: p.bgStats || null,
-      bgPages: p.bgPages || null
+      roles: (p.roles || {}).roles || []
     })
   };
 }
@@ -336,10 +323,8 @@ function emptyPayload(){
     pwaTasks: { date: '', dates: [], shops: [], consultants: [], totals: { taches: 0, valides: 0, refuses: 0, aValider: 0, noteMoy: null }, indispo: true },
     pwaCompte: { base: '', phone: '', motDePasseDefini: false, configure: false },
     erpCompte: { base: '', phone: '', motDePasseDefini: false, configure: false, jetonValide: false },
-    exploitation: { jour: null, semaine: null, mois: null, magasins: [], reseau: {}, avertissement: null },
     prodCatalogue: [], prodGroupes: { groupes: [] }, prodCategories: { categories: [] },
     prodPeriodes: { periodes: [] },
-    roles: { source: null, roles: [] },
-    fbRegles: { seuil: 4, familles: [], regles: [] }, fbPosts: [], bgStats: null, bgPages: null
+    roles: { source: null, roles: [] }
   };
 }

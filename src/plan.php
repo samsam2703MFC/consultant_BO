@@ -128,6 +128,8 @@ function ep_plan(): array
     // ── Le constat : les mois du suivi (budget contre réel, ratios), agrégés
     //    par trimestre. Même source que Suivi budget et Performance.
     $_GET['annees'] = ($exercice - 1) . ',' . $exercice;
+    // Le panier des trimestres hors clients pro (21/10/2026) : ep_perf porte le split des mois de ce seul magasin.
+    $_GET['pro'] = $shop;
     $cells = [];
     foreach (ep_perf() as $c) {
         if ((string) $c['storeId'] !== $shop) { continue; }
@@ -206,6 +208,7 @@ function planTrimestres(array $cells, int $exercice, array $notes, array $revues
     for ($q = 1; $q <= 4; $q++) {
         $obj = 0.0; $objN = 0; $ca = 0.0; $caN = 0; $tk = 0.0; $food = 0.0; $foodCa = 0.0; $lab = 0.0; $labCa = 0.0; $net = 0.0; $netCa = 0.0;
         $attendu = 0.0;
+        $caC = 0.0; $tkC = 0; $moisC = 0;   // le comptoir des mois dont les tickets pro sont tous lus (ep_perf, `pro=`)
         for ($m = ($q - 1) * 3 + 1; $m <= $q * 3; $m++) {
             $c = $cells[$exercice][$m] ?? null;
             $o = $objDe($c);
@@ -219,6 +222,7 @@ function planTrimestres(array $cells, int $exercice, array $notes, array $revues
                 if ($c['foodCostPct'] !== null) { $food += $c['foodCostPct'] * $c['ca']; $foodCa += $c['ca']; }
                 if ($c['labourCostPct'] !== null) { $lab += $c['labourCostPct'] * $c['ca']; $labCa += $c['ca']; }
                 if ($c['margeNette'] !== null) { $net += (float) $c['margeNette']; $netCa += $c['ca']; }
+                if (($c['caComptoir'] ?? null) !== null && ($c['ticketsComptoir'] ?? null) !== null) { $caC += (float) $c['caComptoir']; $tkC += (int) $c['ticketsComptoir']; $moisC++; }
             }
         }
         $clos = $dernierComplet >= $q * 3;
@@ -241,6 +245,12 @@ function planTrimestres(array $cells, int $exercice, array $notes, array $revues
             'netPct' => $netCa > 0 ? round($net / $netCa * 100, 1) : null,
             'notes' => $notes[$q] ?? (object) [],
             'revue' => $rv];
+        // Le panier du trimestre hors clients pro (21/10/2026) : seulement si chacun de ses mois vendus a ses tickets pro
+        // lus — un trimestre à moitié lu garde le panier total et le dit (`panierBase` = total). `clients` reste au total.
+        if (function_exists('vpPanier')) {
+            $complet = $caN > 0 && $moisC === $caN;
+            $trimestres[count($trimestres) - 1] += vpPanier($complet ? $caC : null, $complet ? $tkC : null, $panier);
+        }
     }
     return $trimestres;
 }

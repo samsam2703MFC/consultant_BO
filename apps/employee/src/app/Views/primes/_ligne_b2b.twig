@@ -1,0 +1,33 @@
+{# primes/_ligne_b2b.twig — la ligne d'une prime B2B (23/10/2026, src/primes_b2b.php) : ce qu'elle a gagné avec les clients
+   pro qu'elle a ramenés, la règle en court ; le détail : ses clients (jamais leur nom), ce qui compte. Incluse par
+   primes/_ligne.twig, avec son contexte. #}
+{% import 'primes/_macros.twig' as m %}
+{% set n = (c.clients ?? [])|length %}
+{% set gain = c.gain|number_format(c.gain == c.gain|round ? 0 : 2, ',', ' ') %}
+<div class="pl{{ c.gain > 0 ? ' ok' }}" data-carte="{{ c.cle }}" id="prime-{{ c.cle }}">
+  <div class="pl-b" role="button" tabindex="0" aria-expanded="false" aria-controls="pd-{{ c.cle }}" data-pl>
+    <div class="pl-h">
+      <span class="emo">{{ m.ic(c, ib) }}</span>
+      <b class="pl-t">{{ c.lib }}</b>
+      <span class="pl-v">{% if c.gain > 0 %}{{ gain }}<small>{{ eur }}</small>{% elseif c.mode == 'fixe' %}{{ c.fixe }}<small>{{ eur }}</small>{% else %}{{ c.taux|number_format(c.taux == c.taux|round ? 0 : 1, ',', ' ') }}<small>%</small>{% endif %}</span>
+      <i class="bi bi-chevron-down chev" aria-hidden="true"></i>
+    </div>
+    <div class="pl-s">
+      <span class="{{ c.gain > 0 ? 'ok' : 'mu' }}">{% if n %}{{ n == 1 ? (T.b2b_one_client ?? '1 client pro') : (T.b2b_n_clients ?? '{n} clients pro')|replace({'{n}': n}) }}{% else %}{{ T.b2b_no_client ?? 'aucun client pro pour l’instant' }}{% endif %}</span>
+      <span>{{ m.b2bCourt(c, T) }}</span>
+    </div>
+    {% if etape ?? null %}<p class="pl-how">{% include "components/primes_etape.twig" with { e: etape, T: T, ib: ib, lien: null, texte: true } only %}</p>{% endif %}
+  </div>
+  <div class="pl-d" id="pd-{{ c.cle }}" hidden>
+    {{ m.infos(c, T, ib) }}
+    {% if n %}<p class="pl-st">{{ T.b2b_your_clients ?? 'Tes clients pro' }}</p>
+    <ol class="b2b-cl">{% for k in c.clients %}
+      <li><span class="n">{{ (T.b2b_client_of ?? 'Client du {d}')|replace({'{d}': k.debut|date('d/m')}) }}<small>{{ (k.commandes == 1 ? (T.b2b_order_one ?? '1 commande ce mois') : (T.b2b_orders ?? '{n} commandes ce mois'))|replace({'{n}': k.commandes}) }}{% if k.commandes %} · {{ k.ht|number_format(0, ',', ' ') }} € {{ T.b2b_ht ?? 'HT' }}{% endif %}{% if k.plafond %} · {{ T.b2b_cap_reached ?? 'plafond atteint' }}{% elseif k.ouvert and k.fin %} · {{ (T.b2b_until ?? 'jusqu’au {d}')|replace({'{d}': k.fin|date('d/m')}) }}{% elseif not k.ouvert %} · {{ T.b2b_over ?? 'terminé' }}{% endif %}</small></span>
+        <b class="{{ k.gain > 0 ? 'ok' }}">+{{ k.gain|number_format(k.gain == k.gain|round ? 0 : 2, ',', ' ') }}&nbsp;{{ eur }}</b></li>{% endfor %}</ol>{% endif %}
+    <dl class="pl-l">
+      <div><dt>{{ T.d_b2b_new ?? 'Un nouveau client pro' }}</dt><dd>{{ T.d_b2b_new_v ?? '12 mois' }}<small>{{ T.d_b2b_new_s ?? 'sans commande pro' }}</small></dd></div>
+      <div><dt>{{ T.d_b2b_counts ?? 'Ce qui compte' }}</dt><dd>{{ T.d_b2b_ht ?? 'le montant HT' }}{% if c.min %}<small>{{ (T.d_b2b_min ?? 'dès {m} € par commande')|replace({'{m}': c.min}) }}</small>{% endif %}</dd></div>
+      {% if c.plafond %}<div><dt>{{ T.d_b2b_cap ?? 'Plafond' }}</dt><dd>{{ c.plafond|number_format(0, ',', ' ') }}&nbsp;{{ eur }}<small>{{ T.d_b2b_per_client ?? 'par client' }}</small></dd></div>{% endif %}
+    </dl><p class="pl-n">{{ T.b2b_how ?? 'Une école, une crèche, une entreprise commande chez nous pour la 1re fois ? Encaisse sa 1re commande : la prime est pour toi.' }}</p>
+  </div>
+</div>
