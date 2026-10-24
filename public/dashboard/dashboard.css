@@ -2109,6 +2109,17 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .pm-fixe{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:8px;background:var(--color-background-secondary);font-size:12px;margin-top:12px}
 .pm-fixe.ok{background:rgba(45,122,62,.07)}.pm-fixe.ko{background:rgba(166,30,30,.07)}
 .pm-warn{margin-top:10px;padding:8px 12px;border-radius:8px;background:#FBF3DC;color:#8a5a13;font-size:12px}
+/* Le bon (24/10/2026) : la recherche des clients du magasin, les codes d'un bon. */
+.pm-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;text-transform:uppercase}
+.pm-bres{display:flex;flex-direction:column;gap:4px;margin-top:6px;max-height:260px;overflow-y:auto}
+.pm-bcl{display:flex;align-items:center;gap:8px;text-align:left;border:.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 10px;background:var(--color-surface);font:500 12.5px var(--font-ui);color:var(--color-text);cursor:pointer}
+.pm-bcl:hover{border-color:var(--color-primary);background:#fdf8f6}
+.pm-bcl > span:first-child{flex:1;min-width:0}.pm-bcl .mu{color:var(--color-text-muted)}
+.pm-plus{font:600 11.5px var(--font-ui);color:var(--color-primary);white-space:nowrap}
+.pm-bon{padding:16px 18px;margin-bottom:12px}
+.pm-bon-tete{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.pm-bon-code{margin-top:12px;font:700 26px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em}
+.pm-bontab td:first-child{min-width:120px}
 .pm-cr{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0;font-size:12px}
 .pm-cr label{display:flex;gap:6px;align-items:center}
 .pm-jours{display:inline-flex;gap:3px}

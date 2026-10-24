@@ -1,0 +1,447 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Le bon d'une promotion du magasin (24/10/2026, Sam : « dans le module voucher il faut pouvoir créer un voucher en
+ * assistant et directement enchaîner avec la promotion qui sera liée … aller chercher ses clients … dans le dashboard
+ * franchisé »).
+ *
+ * Au panel, un bon = une CAMPAGNE (/admin/voucher-campaigns) rattachée à UNE promotion en mode VOUCHER_ONLY : la
+ * promotion ne s'applique en caisse qu'avec un des codes de la campagne. Le cockpit n'en garde rien (« rien en local ») :
+ * la campagne, ses codes et leurs clients vivent au panel, relus à la demande.
+ *
+ * Trois façons de distribuer le bon (`cible`) :
+ *  - « code »    : un code pour tous (campagne SHARED, `shared_code`), saisi ou généré, un nombre d'utilisations au plus ;
+ *  - « uniques » : N codes d'une utilisation chacun (campagne UNIQUE, codes/generate) ;
+ *  - « clients » : un code personnel par client du magasin (campagne UNIQUE, requires_customer, un code par client avec
+ *                  son id_customer, une utilisation) — les clients se lisent au panel (GET /shops/{id}/clients).
+ *
+ * L'ordre d'écriture, appris par l'essai du 24/10/2026 (dépôt WebShop, VOUCHERS_ERP.md §2) :
+ *   1. la promotion écrite INACTIVE et relue (pmPanelEnvoyer sans activer) ;
+ *   2. la campagne créée en brouillon (DRAFT) avec ses codes, puis rattachée à la promotion ;
+ *   3. à l'envoi seulement : la promotion activée, puis la campagne (PATCH /{id} : PATCH /status refuse une campagne
+ *      UNIQUE, « shared_code is not supported for UNIQUE campaigns »), relue complète (configuration_complete).
+ * Un refus à l'étape 2 : la promotion reste inactive (un brouillon), rien ne passe en caisse. Une campagne n'a pas de
+ * début (le panel compare les débuts en UTC, une heure locale « pas encore commencée » bloquait l'essai) : elle vit avec
+ * sa promotion, et finit avec elle. Le panel ne supprime pas une campagne : un bon retiré passe INACTIVE et se détache.
+ */
+
+const PB_CIBLES = ['code', 'uniques', 'clients'];
+const PB_MAX_CODES = 500;
+const PB_MAX_CLIENTS = 100;
+const PB_LOT_CODES = 100;
+/** Les lettres et chiffres d'un code généré : sans 0/O ni 1/I, qui se confondent sur un ticket. */
+const PB_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+/** Un code saisi : 4 à 20 lettres, chiffres ou tirets, en majuscules ; null sinon. */
+function pbCode($v): ?string
+{
+    $v = strtoupper(trim((string) $v));
+    return preg_match('/^[A-Z0-9][A-Z0-9-]{3,19}$/', $v) === 1 ? $v : null;
+}
+
+/** Un code au hasard, lisible. */
+function pbGenerer(int $n = 8, string $prefixe = ''): string
+{
+    $c = '';
+    for ($i = 0; $i < $n; $i++) { $c .= PB_ALPHABET[random_int(0, strlen(PB_ALPHABET) - 1)]; }
+    return $prefixe . $c;
+}
+
+/**
+ * Le bon tel que le navigateur l'envoie, rendu propre — null quand la promotion est automatique (sans bon). Le numéro
+ * de la campagne n'est jamais pris du navigateur : il se relit au panel sur la promotion (pbCampagneDe).
+ */
+function pbBon($b): ?array
+{
+    if (!is_array($b) || empty($b['on'])) { return null; }
+    $cible = in_array($b['cible'] ?? '', PB_CIBLES, true) ? (string) $b['cible'] : 'code';
+    $clients = [];
+    foreach ((array) ($b['clients'] ?? []) as $c) {
+        $id = (int) (is_array($c) ? ($c['id'] ?? 0) : $c);
+        if ($id > 0 && !isset($clients[$id])) { $clients[$id] = ['id' => $id, 'nom' => mb_substr(trim((string) (is_array($c) ? ($c['nom'] ?? '') : '')), 0, 80)]; }
+    }
+    $saisi = trim((string) ($b['code'] ?? ''));
+    $prefixe = strtoupper(trim((string) ($b['prefixe'] ?? '')));
+    $limite = $b['limite'] ?? null;
+    return [
+        'cible' => $cible,
+        'code' => $cible === 'code' ? pbCode($saisi) : null,
+        'codeSaisi' => $cible === 'code' ? $saisi : '',
+        'nombre' => $cible === 'uniques' ? max(0, min(PB_MAX_CODES, (int) ($b['nombre'] ?? 0))) : 0,
+        'prefixe' => $cible === 'uniques' && preg_match('/^[A-Z0-9-]{0,8}$/', $prefixe) === 1 ? $prefixe : '',
+        'clients' => $cible === 'clients' ? array_values($clients) : [],
+        'limite' => $cible === 'code' && is_numeric($limite) && (int) $limite > 0 ? min(100000, (int) $limite) : null,
+    ];
+}
+
+/** Ce que le bon demande encore : une phrase par manque (vide = il s'écrit). */
+function pbErreurs(?array $bon): array
+{
+    if ($bon === null) { return []; }
+    $e = [];
+    if ($bon['cible'] === 'code' && $bon['codeSaisi'] !== '' && $bon['code'] === null) { $e[] = 'Le code du bon : 4 à 20 lettres, chiffres ou tirets (vide : le cockpit en crée un).'; }
+    if ($bon['cible'] === 'uniques' && $bon['nombre'] < 1) { $e[] = 'Le nombre de codes du bon : de 1 à ' . PB_MAX_CODES . '.'; }
+    if ($bon['cible'] === 'clients' && $bon['clients'] === []) { $e[] = 'Choisissez au moins un client du magasin pour le bon.'; }
+    if ($bon['cible'] === 'clients' && count($bon['clients']) > PB_MAX_CLIENTS) { $e[] = 'Le bon vise ' . PB_MAX_CLIENTS . ' clients au plus en une fois.'; }
+    return $e;
+}
+
+/** Les éléments d'une réponse paginée du panel ({items}, {data: {items}}, {data: […]}, ou une liste). */
+function pbItems($corps): array
+{
+    if (!is_array($corps)) { return []; }
+    foreach ([$corps['items'] ?? null, $corps['data']['items'] ?? null, $corps['data'] ?? null, $corps] as $n) {
+        if (is_array($n) && array_is_list($n)) { return $n; }
+    }
+    return [];
+}
+
+/** Le premier numéro rendu par une création : à la racine, dans `data`, dans `data.campaign`, dans `campaign`. */
+function pbId($corps): ?int
+{
+    if (!is_array($corps)) { return null; }
+    foreach ([$corps['data']['campaign'] ?? null, $corps['campaign'] ?? null, $corps['data'] ?? null, $corps] as $n) {
+        if (is_array($n) && isset($n['id']) && is_numeric($n['id']) && (int) $n['id'] > 0) { return (int) $n['id']; }
+    }
+    return null;
+}
+
+/**
+ * La campagne rattachée à une promotion du panel : celle que la fiche nomme (`voucher_campaign_id`, `voucher_campaign`),
+ * sinon celle que la liste des campagnes rend pour cette promotion (`?id_promotion=`). Null : pas de bon.
+ */
+function pbCampagneDe(int $promoId, ?array $fiche = null): ?int
+{
+    foreach ([$fiche['voucher_campaign_id'] ?? null, $fiche['voucher_campaign']['id'] ?? null] as $v) {
+        if (is_numeric($v) && (int) $v > 0) { return (int) $v; }
+    }
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { return null; }
+    $l = ErpApi::sondeGet('/admin/voucher-campaigns?limit=10&id_promotion=' . $promoId);
+    foreach (pbItems($l['corps']) as $c) {
+        if (is_array($c) && (int) ($c['id_promotion'] ?? 0) === $promoId && (int) ($c['id'] ?? 0) > 0) { return (int) $c['id']; }
+    }
+    return null;
+}
+
+/** La fiche d'une campagne : {campaign, promotion, shared_code, code_stats, …} (la forme relue le 24/10/2026). */
+function pbFiche(int $id): ?array
+{
+    $r = ErpApi::sondeGet('/admin/voucher-campaigns/' . $id);
+    if ($r['code'] < 200 || $r['code'] >= 300 || !is_array($r['corps'])) { return null; }
+    $c = $r['corps'];
+    return is_array($c['data'] ?? null) && isset($c['data']['campaign']) ? $c['data'] : $c;
+}
+
+/** Les codes d'une campagne, toutes pages (200 par page, 600 au plus). */
+function pbCodes(int $id): array
+{
+    $out = [];
+    for ($page = 1; $page <= 3; $page++) {
+        $r = ErpApi::sondeGet('/admin/voucher-campaigns/' . $id . '/codes?limit=200&page=' . $page);
+        $l = pbItems($r['corps']);
+        foreach ($l as $k) { if (is_array($k)) { $out[] = $k; } }
+        $pg = is_array($r['corps']) ? ($r['corps']['pagination'] ?? ($r['corps']['data']['pagination'] ?? null)) : null;
+        if (count($l) < 200 || !is_array($pg) || $page >= (int) ($pg['pages'] ?? 1)) { break; }
+    }
+    return $out;
+}
+
+/** La cible d'une campagne relue : un code pour tous (SHARED), des clients (UNIQUE avec client requis), des codes. */
+function pbCibleDe(array $camp): string
+{
+    if (strtoupper((string) ($camp['code_type'] ?? '')) === 'SHARED') { return 'code'; }
+    return !empty($camp['requires_customer']) ? 'clients' : 'uniques';
+}
+
+/**
+ * Le bon d'une promotion, relu au panel, pour l'assistant et la liste : {campagne, nom, statut, actif, cible, code,
+ * limite, codes: [{id, code, statut, client, nomClient, usages, limite}], nCodes, nActifs, utilisations, complete,
+ * manque}. `$noms` : {id client → nom}, pour nommer les codes des clients. Null : la campagne ne se lit pas.
+ */
+function pbLire(int $campId, array $noms = []): ?array
+{
+    $f = pbFiche($campId);
+    if ($f === null) { return null; }
+    $c = is_array($f['campaign'] ?? null) ? $f['campaign'] : $f;
+    $cible = pbCibleDe($c);
+    $codes = [];
+    if ($cible !== 'code') {
+        foreach (pbCodes($campId) as $k) {
+            $cl = (int) ($k['id_customer'] ?? 0);
+            $codes[] = ['id' => (int) ($k['id'] ?? 0), 'code' => (string) ($k['code'] ?? ''), 'statut' => strtoupper((string) ($k['status'] ?? '')),
+                'client' => $cl > 0 ? $cl : null, 'nomClient' => $cl > 0 ? ($noms[$cl] ?? null) : null,
+                'usages' => (int) ($k['usage_count'] ?? 0), 'limite' => isset($k['usage_limit']) ? (int) $k['usage_limit'] : null];
+        }
+    }
+    $statut = strtoupper((string) ($c['status'] ?? ''));
+    return ['campagne' => $campId, 'promotion' => (int) ($c['id_promotion'] ?? 0) ?: null,
+        'nom' => (string) ($c['name'] ?? ''), 'statut' => $statut, 'actif' => $statut === 'ACTIVE', 'cible' => $cible,
+        'code' => $cible === 'code' ? (string) ($f['shared_code'] ?? $c['shared_code'] ?? '') : null,
+        'limite' => isset($c['usage_limit_total']) ? (int) $c['usage_limit_total'] : null,
+        'codes' => $codes, 'nCodes' => $cible === 'code' ? 1 : count($codes),
+        'nActifs' => $cible === 'code' ? 1 : count(array_filter($codes, static fn ($k) => $k['statut'] === 'ACTIVE')),
+        'utilisations' => (int) ($f['redemptions_total'] ?? 0), 'complete' => (bool) ($f['configuration_complete'] ?? false),
+        'manque' => array_values(array_map('strval', (array) ($f['missing_requirements'] ?? [])))];
+}
+
+/** Le corps d'une campagne : celui de la promotion pour le nom et la fin, celui du bon pour la distribution. */
+function pbCorpsCampagne(array $d, array $bon, ?string $statut): array
+{
+    $code = $bon['cible'] === 'code';
+    $corps = [
+        'name' => $d['nom'], 'description' => 'Bon de la promotion « ' . $d['nom'] . ' » · ' . pmNomShop((int) $d['shop']) . ' · dashboard magasin',
+        'planned_promotion_type' => 'BUY_X_GET_Y', 'code_type' => $code ? 'SHARED' : 'UNIQUE',
+        'valid_from' => null, 'valid_to' => $d['au'] !== null ? $d['au'] . ':00' : null,
+        'usage_limit_total' => $code ? $bon['limite'] : null,
+        'usage_limit_per_code' => $code ? null : 1,
+        'usage_limit_per_customer' => $bon['cible'] === 'clients' ? 1 : null,
+        'requires_customer' => $bon['cible'] === 'clients',
+        'shared_code' => $code ? $bon['code'] : null,
+    ];
+    return $statut === null ? $corps : $corps + ['status' => $statut];
+}
+
+/** Les codes à créer : N codes générés (par lots), ou un code par client nouveau. Rend la première erreur, ou null. */
+function pbAjouterCodes(int $campId, array $d, array $bon, array $deja): ?string
+{
+    $fin = $d['au'] !== null ? $d['au'] . ':00' : null;
+    if ($bon['cible'] === 'uniques') {
+        $reste = $bon['nombre'] - count($deja);
+        while ($reste > 0) {
+            $n = min(PB_LOT_CODES, $reste);
+            $w = ErpApi::ecrire('POST', '/admin/voucher-campaigns/' . $campId . '/codes/generate', ['count' => $n, 'length' => 8, 'prefix' => $bon['prefixe']]);
+            if ($w['erreur'] !== null) { return 'codes non générés : ' . $w['erreur']; }
+            $reste -= $n;
+        }
+        return null;
+    }
+    if ($bon['cible'] === 'clients') {
+        $ont = [];
+        foreach ($deja as $k) { if ($k['client'] !== null && $k['statut'] === 'ACTIVE') { $ont[$k['client']] = true; } }
+        foreach ($bon['clients'] as $cl) {
+            if (isset($ont[$cl['id']])) { continue; }
+            // Un code déjà pris au panel (le hasard) : un autre, deux fois au plus.
+            for ($essai = 0; $essai < 3; $essai++) {
+                $w = ErpApi::ecrire('POST', '/admin/voucher-campaigns/' . $campId . '/codes',
+                    ['code' => pbGenerer(8), 'status' => 'ACTIVE', 'id_customer' => $cl['id'], 'valid_from' => null, 'valid_to' => $fin, 'usage_limit' => 1]);
+                if ($w['erreur'] === null || (int) $w['code'] !== 422 || stripos((string) $w['erreur'], 'code') === false) { break; }
+            }
+            if ($w['erreur'] !== null) { return 'code de ' . ($cl['nom'] !== '' ? $cl['nom'] : 'client n° ' . $cl['id']) . ' non créé : ' . $w['erreur']; }
+        }
+        // Un client retiré du bon : son code se désactive (le panel ne supprime pas un code).
+        $voulus = array_flip(array_column($bon['clients'], 'id'));
+        foreach ($deja as $k) {
+            if ($k['client'] !== null && $k['statut'] === 'ACTIVE' && !isset($voulus[$k['client']])) {
+                $w = ErpApi::ecrire('PATCH', '/admin/voucher-codes/' . $k['id'] . '/status', ['status' => 'DISABLED']);
+                if ($w['erreur'] !== null) { return 'code d’un client retiré non désactivé : ' . $w['erreur']; }
+            }
+        }
+    }
+    return null;
+}
+
+/**
+ * Le bon posé sur la promotion n° $promoId, sans rien activer : la campagne créée (DRAFT) ou mise à jour, ses codes,
+ * le rattachement. Une distribution qui change (un code pour tous, des codes, des clients) fait un nouveau bon :
+ * l'ancien passe INACTIVE et se détache. Rend [numéro de campagne, erreur|null].
+ */
+function pbPoser(array $d, array $bon, int $promoId, ?int $campId): array
+{
+    $actuel = $campId !== null ? pbLire($campId) : null;
+    if ($actuel !== null && $actuel['cible'] !== $bon['cible']) {
+        pbRetirer($campId);
+        $campId = null; $actuel = null;
+    }
+    // Un code pour tous laissé vide : celui du bon actuel, sinon un nouveau.
+    if ($bon['cible'] === 'code' && $bon['code'] === null) { $bon['code'] = ($actuel['code'] ?? '') !== '' ? $actuel['code'] : pbGenerer(8); }
+    if ($campId === null) {
+        $w = ErpApi::ecrire('POST', '/admin/voucher-campaigns', pbCorpsCampagne($d, $bon, 'DRAFT'));
+        if ($w['erreur'] !== null) { return [null, 'le panel refuse le bon : ' . $w['erreur']]; }
+        $campId = pbId($w['corps']);
+        if ($campId === null) { return [null, 'le panel n’a pas rendu le numéro du bon créé']; }
+        $deja = [];
+    } else {
+        $w = ErpApi::ecrire('PATCH', '/admin/voucher-campaigns/' . $campId, pbCorpsCampagne($d, $bon, null));
+        if ($w['erreur'] !== null) { return [$campId, 'le panel refuse la mise à jour du bon : ' . $w['erreur']]; }
+        $deja = $actuel['codes'] ?? [];
+    }
+    $e = pbAjouterCodes($campId, $d, $bon, $deja);
+    if ($e !== null) { return [$campId, $e]; }
+    if ($actuel === null || (int) ($actuel['promotion'] ?? 0) !== $promoId) {
+        $w = ErpApi::ecrire('PUT', '/admin/voucher-campaigns/' . $campId . '/promotion', ['id_promotion' => $promoId, 'confirm_activation_mode_change' => true]);
+        // 409 : déjà rattachée à cette promotion (une reprise) — la fiche le dira à la relecture.
+        if ($w['erreur'] !== null && (int) $w['code'] !== 409) { return [$campId, 'le bon ne se rattache pas à la promotion : ' . $w['erreur']]; }
+    }
+    return [$campId, null];
+}
+
+/** La campagne activée (PATCH /{id}, le type et le code commun rappelés) puis relue complète. Rend l'erreur, ou null. */
+function pbActiver(int $campId): ?string
+{
+    $l = pbLire($campId);
+    if ($l === null) { return 'bon illisible au panel'; }
+    $w = ErpApi::ecrire('PATCH', '/admin/voucher-campaigns/' . $campId,
+        ['status' => 'ACTIVE', 'code_type' => $l['cible'] === 'code' ? 'SHARED' : 'UNIQUE', 'shared_code' => $l['cible'] === 'code' ? $l['code'] : null]);
+    if ($w['erreur'] !== null) { return 'activation du bon refusée : ' . $w['erreur']; }
+    $l = pbLire($campId);
+    if ($l === null || !$l['actif']) { return 'bon pas relu actif'; }
+    if (!$l['complete']) { return 'bon incomplet au panel (' . implode(', ', $l['manque']) . ')'; }
+    return null;
+}
+
+/** La campagne mise hors service (INACTIVE). Rend l'erreur, ou null. */
+function pbDesactiver(int $campId): ?string
+{
+    $w = ErpApi::ecrire('PATCH', '/admin/voucher-campaigns/' . $campId . '/status', ['status' => 'INACTIVE']);
+    if ($w['erreur'] === null) { return null; }
+    $l = pbLire($campId);
+    $w = ErpApi::ecrire('PATCH', '/admin/voucher-campaigns/' . $campId,
+        ['status' => 'INACTIVE', 'code_type' => ($l['cible'] ?? '') === 'code' ? 'SHARED' : 'UNIQUE', 'shared_code' => ($l['cible'] ?? '') === 'code' ? $l['code'] : null]);
+    return $w['erreur'] !== null ? 'désactivation du bon refusée : ' . $w['erreur'] : null;
+}
+
+/** Un bon retiré de sa promotion : hors service, puis détaché (le panel le repasse en brouillon). */
+function pbRetirer(int $campId): ?string
+{
+    $e = pbDesactiver($campId);
+    $w = ErpApi::ecrire('DELETE', '/admin/voucher-campaigns/' . $campId . '/promotion');
+    return $e ?? ($w['erreur'] !== null && (int) $w['code'] !== 404 ? 'le bon ne se détache pas : ' . $w['erreur'] : null);
+}
+
+/**
+ * L'envoi d'une promotion du magasin avec son bon (à la place de pmPanelEnvoyer) : promotion écrite inactive et relue,
+ * bon posé (campagne, codes, rattachement), puis — à l'envoi — promotion activée et bon activé. Sans bon, et quand la
+ * promotion en avait un : envoi ordinaire (activation automatique), puis l'ancien bon retiré. Rend {ok, id, erreur, campagne}.
+ */
+function pbEnvoyer(array $d, ?int $panelId, bool $envoi, ?int $campAvant): array
+{
+    $bon = $d['bon'] ?? null;
+    if ($bon === null) {
+        $r = pmPanelEnvoyer($d, $panelId, $envoi);
+        if ($campAvant !== null && $r['id'] !== null) {
+            $e = pbRetirer($campAvant);
+            if ($e !== null && $r['erreur'] === null) { $r = ['ok' => $r['ok'], 'id' => $r['id'], 'erreur' => 'promotion enregistrée, mais l’ancien bon reste au panel : ' . $e]; }
+        }
+        return $r + ['campagne' => null];
+    }
+    $r = pmPanelEnvoyer($d, $panelId, false);
+    if ($r['id'] === null || !$r['ok']) { return $r + ['campagne' => $campAvant]; }
+    $id = (int) $r['id'];
+    [$campId, $e] = pbPoser($d, $bon, $id, $campAvant);
+    if ($e !== null) { return ['ok' => false, 'id' => $id, 'erreur' => 'promotion n° ' . $id . ' au panel, inactive — ' . $e, 'campagne' => $campId]; }
+    if (!$envoi) {
+        // Un brouillon : le bon reste hors service avec lui (une reprise d'une promotion en caisse ne passe pas par ici).
+        if ($campAvant !== null) { pbDesactiver($campId); }
+        return ['ok' => true, 'id' => $id, 'erreur' => null, 'campagne' => $campId];
+    }
+    $r = pmPanelEnvoyer($d, $id, true);
+    if (!$r['ok']) { return $r + ['campagne' => $campId]; }
+    $e = pbActiver($campId);
+    return $e === null ? ['ok' => true, 'id' => $id, 'erreur' => null, 'campagne' => $campId]
+        : ['ok' => false, 'id' => $id, 'erreur' => 'promotion n° ' . $id . ' active au panel, mais ' . $e . ' : elle ne s’applique pas tant que le bon n’est pas actif', 'campagne' => $campId];
+}
+
+/* --- les clients du magasin -------------------------------------------------------------------------------- */
+
+/** Les clients du magasin au panel (500 par page, 2 000 au plus), gardés le temps de la requête. */
+function pbClientsDuMagasin(int $shop): ?array
+{
+    static $garde = [];
+    if (isset($garde[$shop])) { return $garde[$shop]; }
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { return null; }
+    $out = [];
+    for ($off = 0; $off < 2000; $off += 500) {
+        $r = ErpApi::sondeGet('/shops/' . $shop . '/clients?limit=500&offset=' . $off);
+        if ($r['code'] < 200 || $r['code'] >= 300) { if ($off === 0) { return null; } break; }
+        $l = pbItems($r['corps']);
+        foreach ($l as $c) { if (is_array($c) && (int) ($c['id'] ?? 0) > 0) { $out[(int) $c['id']] = $c; } }
+        if (count($l) < 500) { break; }
+    }
+    return $garde[$shop] = $out;
+}
+
+/** Le nom d'un client du panel : prénom et nom, sinon la société, sinon son numéro. */
+function pbNomClient(array $c): string
+{
+    $n = trim(trim((string) ($c['name'] ?? '')) . ' ' . trim((string) ($c['surname'] ?? '')));
+    return $n !== '' ? $n : (trim((string) ($c['company_name'] ?? '')) ?: 'client n° ' . (int) ($c['id'] ?? 0));
+}
+
+/** Un e-mail montré à moitié (« j…@exemple.be »), pour distinguer deux homonymes sans l'exposer. */
+function pbMasquer(?string $mail, ?string $tel): ?string
+{
+    $mail = trim((string) $mail); $tel = preg_replace('/\D+/', '', (string) $tel);
+    if ($mail !== '' && str_contains($mail, '@')) { [$a, $b] = explode('@', $mail, 2); return mb_substr($a, 0, 1) . '…@' . $b; }
+    return $tel !== '' && strlen($tel) >= 3 ? '…' . substr($tel, -3) : null;
+}
+
+/**
+ * GET /exploitation/promos-magasin/clients?shop=4&q=dup — les clients du magasin, lus au panel, pour le bon : nom,
+ * société, ville, B2B, un contact masqué. 30 au plus ; deux lettres au moins pour chercher.
+ */
+function ep_promos_magasin_clients(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    $q = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
+    $tous = pbClientsDuMagasin($shop);
+    if ($tous === null) { http_response_code(502); return ['error' => 'clients du magasin illisibles au panel' . (ErpApi::$lastError ? ' : ' . ErpApi::$lastError : '')]; }
+    $l = [];
+    if (mb_strlen($q) >= 2) {
+        foreach ($tous as $c) {
+            $tx = mb_strtolower(implode(' ', array_map('strval', [$c['name'] ?? '', $c['surname'] ?? '', $c['company_name'] ?? '', $c['email'] ?? '', $c['phone'] ?? '', $c['city'] ?? ''])));
+            if (!str_contains($tx, $q)) { continue; }
+            $l[] = ['id' => (int) $c['id'], 'nom' => pbNomClient($c), 'soc' => trim((string) ($c['company_name'] ?? '')) ?: null, 'ville' => trim((string) ($c['city'] ?? '')) ?: null,
+                'b2b' => !empty($c['is_b2b']), 'contact' => pbMasquer($c['email'] ?? null, $c['phone'] ?? null)];
+            if (count($l) >= 30) { break; }
+        }
+        usort($l, static fn ($a, $b) => strcmp(mb_strtolower($a['nom']), mb_strtolower($b['nom'])));
+    }
+    return ['shop' => (string) $shop, 'total' => count($tous), 'clients' => $l];
+}
+
+/* --- le bon d'une promotion, relu et basculé depuis la liste ---------------------------------------------------- */
+
+/** La promotion n° (« p21 ») du magasin et son bon : [demande, numéro de campagne] — ou une erreur HTTP. */
+function pbDuMagasin(int $shop, $id): array
+{
+    $pid = pmNumero($id);
+    if ($shop <= 0 || $pid === null) { return [null, null, 404, 'promotion introuvable']; }
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { return [null, null, 503, 'compte admin du panel indisponible']; }
+    $d = pmMienne($shop, $pid);
+    if ($d === null) { return [null, null, 404, 'promotion introuvable']; }
+    $camp = ($d['bon'] ?? null) !== null ? (($d['bon']['campagne'] ?? null) ?: pbCampagneDe($pid)) : null;
+    if ($camp === null) { return [$d, null, 404, 'cette promotion n’a pas de bon']; }
+    return [$d, $camp, 200, null];
+}
+
+/**
+ * GET /exploitation/promos-magasin/bon?shop=4&id=p21 — le bon de la promotion, relu au panel : sa distribution, ses
+ * codes (en clair : le magasin les remet à ses clients) et le nom du client de chacun.
+ */
+function ep_promos_magasin_bon(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    [, $camp, $code, $err] = pbDuMagasin($shop, $_GET['id'] ?? '');
+    if ($err !== null) { http_response_code($code); return ['error' => $err]; }
+    $noms = [];
+    foreach ((pbClientsDuMagasin($shop) ?? []) as $cid => $c) { $noms[$cid] = pbNomClient($c); }
+    $b = pbLire($camp, $noms);
+    if ($b === null) { http_response_code(502); return ['error' => 'bon illisible au panel'];  }
+    return ['ok' => true, 'bon' => $b];
+}
+
+/** POST /exploitation/promos-magasin/bon {shop, id: « p21 », actif} — le bon de la promotion activé ou mis hors service. */
+function wr_promos_magasin_bon(): array
+{
+    $b = body();
+    $shop = (int) ($b['shop'] ?? 0);
+    [$d, $camp, $code, $err] = pbDuMagasin($shop, $b['id'] ?? '');
+    if ($err !== null) { http_response_code($code); return ['error' => $err]; }
+    $actif = !empty($b['actif']);
+    if ($actif && ($d['statut'] ?? '') !== 'en_caisse') { http_response_code(409); return ['error' => 'la promotion est en brouillon : enregistrez-la d’abord, son bon s’active avec elle']; }
+    $e = $actif ? pbActiver($camp) : pbDesactiver($camp);
+    if ($e !== null) { http_response_code(502); return ['error' => $e]; }
+    return ['ok' => true, 'bon' => pbLire($camp)];
+}

@@ -258,6 +258,9 @@ function pvNormaliser(array $d): array
         'creneaux' => pvCreneaux($d['schedule'] ?? []),
         'repetable' => !empty($d['is_repeatable']),
         'maxParTicket' => isset($d['max_applications_per_transaction']) && (int) $d['max_applications_per_transaction'] > 0 ? (int) $d['max_applications_per_transaction'] : null,
+        // Le déclenchement (24/10/2026, le bon du dashboard magasin) : automatique, ou par un code de sa campagne.
+        'activation' => strtoupper((string) ($d['activation_mode'] ?? 'AUTOMATIC')),
+        'campagne' => (static function ($v) { return is_numeric($v) && (int) $v > 0 ? (int) $v : null; })($d['voucher_campaign_id'] ?? ($d['voucher_campaign']['id'] ?? null)),
     ] + pvConditions($d);
 }
 

@@ -2463,6 +2463,57 @@ dashboard en même temps) de créer deux promotions au panel ; le second relit l
 Tests : `php bin/tests_promos.php` (un panel en doublure : création, relecture, activation, refus, créneaux non repris,
 reprise par PUT, activation par PATCH, portions).
 
+**Le bon de réduction (24/10/2026, `src/promos_bons.php`).** Une promotion du magasin peut ne s'appliquer en caisse
+qu'avec un code : l'étape 5 de l'assistant, « Bon de réduction » (Nom → X → Y → Conditions → **Bon** → Période →
+Vérifier), et le bouton « + Nouveau bon » de l'onglet, qui ouvre l'assistant sur cette étape puis enchaîne sur la
+promotion liée. Au panel, un bon = une campagne (`/admin/voucher-campaigns`) rattachée à la promotion, passée en
+`activation_mode: "VOUCHER_ONLY"` (sans bon : `AUTOMATIC`, comme avant). **Rien en local** : la campagne, ses codes et
+leurs clients vivent au panel, relus à la demande ; le numéro de la campagne n'est jamais pris du navigateur.
+
+`POST /exploitation/promos-magasin` accepte `bon` (absent ou `{on: false}` : promotion automatique) :
+
+    bon: { on: true, cible: "code"|"uniques"|"clients",
+           code: "NOEL24",           // cible code : 4 à 20 lettres, chiffres, tirets ; vide = généré
+           limite: 50,               // cible code : utilisations au plus, toutes confondues ; vide = sans limite
+           nombre: 100, prefixe: "NL",   // cible uniques : 1 à 500 codes d'une utilisation, préfixe de 0 à 8 signes
+           clients: [ { id, nom } ] }    // cible clients : 1 à 100 clients du magasin, un code personnel chacun
+
+- `code` : un code pour tous (campagne SHARED, `shared_code`) ; `uniques` : N codes générés par lots de 100
+  (`codes/generate`, 8 signes) ; `clients` : campagne UNIQUE `requires_customer`, un code par client (`POST …/codes`
+  avec `id_customer`, une utilisation). Un bon incomplet : **422** avec les autres manques (`erreurs`).
+- L'ordre d'écriture, celui que l'essai du 24/10/2026 a validé (dépôt WebShop, `VOUCHERS_ERP.md`) : la promotion écrite
+  inactive et relue → la campagne créée en brouillon avec ses codes → rattachée (`PUT …/promotion`,
+  `confirm_activation_mode_change`) → à l'envoi seulement, la promotion activée, puis la campagne (`PATCH /{id}` —
+  `PATCH /status` refuse une campagne UNIQUE), relue `configuration_complete`. Un refus en route : la promotion reste
+  inactive (`panelErreur`), rien ne passe en caisse. `brouillon` laisse le bon hors service.
+- La campagne n'a pas de début (le panel compare les débuts en UTC) et finit avec la promotion (`valid_to`). Une
+  distribution qui change (code → clients, …) fait un nouveau bon : l'ancien passe INACTIVE et se détache — le panel
+  ne supprime pas une campagne. Des clients retirés : leurs codes passent DISABLED ; des clients ajoutés : un code chacun.
+- La réponse porte `bon` relu (forme de `GET …/bon` ci-dessous) ; `demandes[].bon` vaut `{campagne}` quand la
+  promotion est en `VOUCHER_ONLY`, null sinon. La liste montre une puce « bon » et une colonne « Bon » (lien « codes »).
+
+`GET /exploitation/promos-magasin/clients?shop=4&q=dup` — les clients du magasin, lus au panel
+(`GET /shops/{shop}/clients`, 500 par page, 2 000 au plus), pour choisir ceux du bon : `{ shop, total, clients: [ { id,
+nom, soc, ville, b2b, contact } ] }` — deux lettres au moins, 30 résultats au plus, triés par nom ; `contact` est un
+e-mail ou un téléphone montré à moitié (« j…@exemple.be »), pour distinguer deux homonymes. Panel illisible : 502.
+
+`GET /exploitation/promos-magasin/bon?shop=4&id=p21` — le bon de la promotion, relu au panel :
+
+    { ok, bon: { campagne, promotion, nom, statut, actif, cible, code, limite,
+                 codes: [ { id, code, statut, client, nomClient, usages, limite } ],   // 600 au plus
+                 nCodes, nActifs, utilisations, complete, manque: [missing_requirements] } }
+
+Les codes sont en clair : le magasin les remet à ses clients (bouton « Copier les codes »). Une promotion d'un autre
+magasin, ou sans bon : 404 ; compte admin absent : 503.
+
+`POST /exploitation/promos-magasin/bon` `{ shop, id: "p21", actif }` — la bascule de la liste : le bon activé (la
+promotion doit être en caisse, sinon **409**) ou mis hors service (`PATCH …/status` INACTIVE, `PATCH /{id}` en repli) ;
+la promotion reste telle quelle. Rend `{ ok, bon }` relu ; un refus du panel : 502 `{ error }`.
+
+Tests : `php bin/tests_bons.php` (un panel en doublure qui refuse comme le vrai, `PATCH /status` sur une UNIQUE
+compris : les trois distributions, l'ordre d'écriture, changement de distribution, clients ajoutés et retirés,
+brouillon, promotion ou bon refusés, bascule, un autre magasin).
+
 ### `GET /exploitation/offres` — ce que les promotions et les bundles rapportent
 
     ?shop=4&date=2026-10-02&periode=7      un magasin, les 7 derniers jours
