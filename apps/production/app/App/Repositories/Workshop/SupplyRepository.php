@@ -127,6 +127,83 @@ final class SupplyRepository extends WorkshopRepository
         );
     }
 
+    /**
+     * Dostawy tygodnia : zamówienia wysłane / przyjęte z terminem w [from, to] albo przyjęte w tych dniach, oraz otwarte
+     * (wysłane, częściowo przyjęte) z terminem wcześniejszym (zaległe) albo bez terminu ; linie z przyjętą ilością.
+     */
+    public function schedule(string $from, string $to): array
+    {
+        return $this->all(
+            "SELECT p.id, p.code, p.status, p.delivery_date, p.week_start, p.id_supplier, s.name AS supplier_name, s.phone AS supplier_phone,
+                    l.id_raw_material, l.quantity, rm.name, rm.name_fr, u.name AS unit, COALESCE(c.id_group, 0) = 1 AS packaging,
+                    COALESCE(r.qty, 0) AS received_qty, r.last_on
+             FROM n_po p
+             JOIN supplier s ON s.id = p.id_supplier
+             JOIN n_po_line l ON l.id_po = p.id
+             JOIN raw_material rm ON rm.id = l.id_raw_material
+             LEFT JOIN unit u ON u.id = rm.id_unit
+             LEFT JOIN category_material c ON c.id = rm.id_category
+             LEFT JOIN (SELECT id_po_line, SUM(quantity) AS qty, MAX(received_on) AS last_on FROM n_po_receipt GROUP BY id_po_line) r ON r.id_po_line = l.id
+             WHERE (p.status IN ('sent', 'partial', 'received') AND p.delivery_date BETWEEN ? AND ?)
+                OR (p.status IN ('sent', 'partial') AND (p.delivery_date IS NULL OR p.delivery_date < ?))
+                OR (p.status IN ('partial', 'received') AND EXISTS (SELECT 1 FROM n_po_receipt rr JOIN n_po_line ll ON ll.id = rr.id_po_line
+                                                                    WHERE ll.id_po = p.id AND rr.received_on BETWEEN ? AND ?))
+             ORDER BY COALESCE(p.delivery_date, p.week_start), s.name, p.id, rm.name",
+            [$from, $to, $from, $from, $to]
+        );
+    }
+
+    /** Dostawcy (aktywni i ci, którzy są bieżącym dostawcą surowca albo mają zamówienia). */
+    public function suppliersWithSupply(): array
+    {
+        return $this->all(
+            "SELECT s.id, s.name, s.phone, s.email, s.is_active FROM supplier s
+             WHERE s.is_active = 1 OR EXISTS (SELECT 1 FROM raw_material rm WHERE rm.id_current_supplier = s.id) OR EXISTS (SELECT 1 FROM n_po p WHERE p.id_supplier = s.id)
+             ORDER BY s.name, s.id"
+        );
+    }
+
+    /** Co dostarcza dostawca : surowce, których jest bieżącym dostawcą, i surowce z jego zamówień i faktur od daty. */
+    public function suppliedMaterials(string $since): array
+    {
+        return $this->all(
+            "SELECT x.id_supplier, rm.id, rm.name, rm.name_fr, COALESCE(c.id_group, 0) = 1 AS packaging, MAX(x.current_supplier) AS current_supplier
+             FROM (SELECT rm.id_current_supplier AS id_supplier, rm.id AS id_raw_material, 1 AS current_supplier FROM raw_material rm WHERE rm.id_current_supplier IS NOT NULL
+                   UNION ALL
+                   SELECT p.id_supplier, l.id_raw_material, 0 FROM n_po p JOIN n_po_line l ON l.id_po = p.id WHERE p.status <> 'cancelled' AND p.created_at >= ?
+                   UNION ALL
+                   SELECT i.id_supplier, il.id_raw_material, 0 FROM n_inv i JOIN n_inv_line il ON il.id_inv = i.id
+                   WHERE i.id_supplier IS NOT NULL AND il.id_raw_material IS NOT NULL AND i.issue_date >= ?) x
+             JOIN raw_material rm ON rm.id = x.id_raw_material
+             LEFT JOIN category_material c ON c.id = rm.id_category
+             GROUP BY x.id_supplier, rm.id, rm.name, rm.name_fr, c.id_group
+             ORDER BY x.id_supplier, rm.name",
+            [$since, $since]
+        );
+    }
+
+    /** Dni dostaw od daty : przyjęcia zamówień i daty faktur zakupowych (dostawca, dzień). */
+    public function deliveryDays(string $since): array
+    {
+        return $this->all(
+            "SELECT p.id_supplier, r.received_on AS day FROM n_po_receipt r JOIN n_po_line l ON l.id = r.id_po_line JOIN n_po p ON p.id = l.id_po WHERE r.received_on >= ?
+             UNION
+             SELECT i.id_supplier, i.issue_date FROM n_inv i WHERE i.id_supplier IS NOT NULL AND i.issue_date >= ?
+             ORDER BY 1, 2",
+            [$since, $since]
+        );
+    }
+
+    /** Otwarte zamówienia na dostawcę : liczba i najbliższy termin od dnia. */
+    public function openBySupplier(string $today): array
+    {
+        return $this->all(
+            "SELECT id_supplier, COUNT(*) AS open_orders, MIN(CASE WHEN delivery_date >= ? THEN delivery_date END) AS next_delivery
+             FROM n_po WHERE status IN ('sent', 'partial') GROUP BY id_supplier",
+            [$today]
+        );
+    }
+
     /** @return array<int, float> zamówione, jeszcze nie przyjęte (szkice, wysłane, częściowo przyjęte) */
     public function onOrder(): array
     {

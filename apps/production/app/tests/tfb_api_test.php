@@ -1616,6 +1616,23 @@ check($s === 200 && $r['data']['status'] === 'received' && $r['data']['lines'][0
 $sum = array_column($list['data']['orders'] ?? [], null, 'id')[$flourPo['id']] ?? null;
 check($s === 200 && $sum && $sum['received_pct'] == 100 && $sum['price_gaps'] === 1 && abs($sum['value_ordered'] - 200) < 0.01 && abs($sum['value_received'] - 210) < 0.01,
     'order list: received %, price gaps, ordered 200 / received 210 PLN');
+// Dostawy surowców (Produkcja) : kto dostarcza co i kiedy
+[$s, $dv] = $call('GET', "/supply/deliveries?date={$today}", null, $lead);
+$inWeek = array_column(array_merge(...array_map(fn($d) => $d['deliveries'], $dv['data']['days'] ?? [])), null, 'order_id');
+$flourD = $inWeek[$flourPo['id']] ?? null;
+$mill = array_column($dv['data']['suppliers'] ?? [], null, 'id')[60] ?? null;
+check($s === 200 && $flourD && $flourD['state'] === 'received' && $flourD['date'] === $today && $flourD['lines'][0]['received'] == 50000 && $flourD['lines'][0]['unit'] === 'kg'
+    && $mill && in_array(900, array_column($mill['materials'], 'id'), true) && $mill['last_delivery'] === $today && $mill['in_week'] === $today && $mill['deliveries'] === 1
+    && $dv['data']['can_order'] === false && ($dv['data']['suppliers'][0]['id'] ?? 0) === 60,
+    'deliveries of the week (team lead, read only): flour received on the receipt day, the mill supplies « Mąka T65 », listed first');
+[$s, $dv2] = $call('GET', "/supply/deliveries?date={$delivery}", null, $access);
+$boxD = array_column(array_merge(...array_map(fn($d) => $d['deliveries'], $dv2['data']['days'] ?? [])), null, 'order_id')[$boxPo['id']] ?? null;
+$pakcer = array_column($dv2['data']['suppliers'] ?? [], null, 'id')[61] ?? null;
+check($s === 200 && $boxD && $boxD['state'] === 'expected' && $boxD['date'] === $delivery && $boxD['supplier']['id'] === 61
+    && $pakcer && $pakcer['next_delivery'] === $delivery && $pakcer['open_orders'] === 1 && $dv2['data']['can_order'] === true,
+    'order placed by phone: expected on its delivery day, next delivery of the supplier');
+[$s, $b] = $call('GET', '/supply/deliveries?date=2026-13-01', null, $access);
+check($s === 422 && $codes($b) === ['date:INVALID_DATE'], 'deliveries: invalid date refused');
 [$s, $b] = $call('GET', '/supply/orders?status=bad', null, $access);
 check($s === 422, 'unknown status filter refused');
 [$s, $b] = $call('DELETE', "/supply/orders/{$flourPo['id']}", null, $access);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Core\Routes\Api;
 
 use App\Controllers\Api\Workshop\AuthController;
+use App\Controllers\Api\Workshop\DeliveryController;
 use App\Controllers\Api\Workshop\EmployeeController;
 use App\Controllers\Api\Workshop\ExecutionController;
 use App\Controllers\Api\Workshop\GroupController;
@@ -126,6 +127,8 @@ final class WorkshopApiRoutes
             ['GET', '/manager/interview', ManagerController::class, 'interview', 'prod.manager.read'],
             ['GET', '/manager/audits', ManagerController::class, 'audits', 'prod.manager.read'],
             ['POST', '/manager/audits', ManagerController::class, 'addAudit', 'prod.manager.report'],
+            // Dostawy surowców (Produkcja) : kto dostarcza co i kiedy — dla planujących produkcję (bez zamawiania).
+            ['GET', '/supply/deliveries', DeliveryController::class, 'week', 'prod.plan.read'],
             // Zaopatrzenie : potrzeby z produkcji, surowce (tryb, stany, inwentaryzacja), zamówienia do dostawców, przyjęcia.
             ['GET', '/supply/needs', SupplyController::class, 'needs', 'prod.supply.read'],
             ['GET', '/supply/materials', SupplyController::class, 'materials', 'prod.supply.read'],

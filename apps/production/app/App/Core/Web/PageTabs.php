@@ -13,12 +13,13 @@ final class PageTabs
     /** grupa => [rail : etykieta, sekcja, ikona ; tabs : [ścieżka, etykieta, ikona]] */
     public const GROUPS = [
         // Produkcja na jednej stronie : arkusz tygodnia (jedna linia na produkt), plan tygodnia (dni), plan zespołów
-        // (druk, tablet) z listami dnia (PDF), stany, partie, śledzenie produkcji (plan / zrobione / straty), jakość, stanowiska i coboty.
+        // (druk, tablet) z listami dnia (PDF), dostawy surowców (kto dostarcza co i kiedy), stany, partie, śledzenie produkcji (plan / zrobione / straty), jakość, stanowiska i coboty.
         // Tablet produkcji i jego zarządzanie : osobna pozycja w railu pod Produkcją.
         'production' => ['label' => 'Produkcja', 'section' => 'Produkcja', 'icon' => 'bi-gear-wide-connected', 'tabs' => [
             ['/workshop/sheet', 'Arkusz tygodnia', 'bi-table'],
             ['/workshop/gantt', 'Plan tygodnia', 'bi-calendar-week'],
             ['/workshop/team-sheet', 'Plan zespołów i listy dnia (PDF)', 'bi-printer'],
+            ['/workshop/deliveries', 'Dostawy surowców', 'bi-truck'],
             ['/stock', 'Stany magazynowe', 'bi-building'],
             ['/workshop/traceability', 'Partie i identyfikowalność', 'bi-upc-scan'],
             ['/production/follow-up', 'Śledzenie produkcji', 'bi-graph-up-arrow'],

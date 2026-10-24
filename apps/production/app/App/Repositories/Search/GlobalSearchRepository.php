@@ -122,6 +122,20 @@ class GlobalSearchRepository extends BaseRepository
         return $this->query($sql, $this->like($pattern, 3)) ?: [];
     }
 
+    /** Kto dostarcza : dostawcy (bieżący dostawca surowca) według nazwy surowca albo dostawcy. */
+    public function materialSuppliers(string $pattern, int $limit): array
+    {
+        $sql = "SELECT s.id, s.name, COUNT(*) AS n,
+                       SUBSTRING(GROUP_CONCAT(rm.name ORDER BY rm.name SEPARATOR ', '), 1, 300) AS materials
+                FROM raw_material rm
+                JOIN supplier s ON s.id = rm.id_current_supplier
+                WHERE rm.name LIKE :t1 OR rm.name_fr LIKE :t2 OR s.name LIKE :t3
+                GROUP BY s.id, s.name
+                ORDER BY n DESC, s.name
+                LIMIT " . (int) $limit;
+        return $this->query($sql, $this->like($pattern, 3)) ?: [];
+    }
+
     public function employees(string $pattern, int $limit): array
     {
         $sql = "SELECT e.id, e.name, e.surname, s.name AS section

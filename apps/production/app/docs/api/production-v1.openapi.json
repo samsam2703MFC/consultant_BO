@@ -6510,6 +6510,79 @@
                 "x-permission": "prod.manager.report"
             }
         },
+        "/supply/deliveries": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Dostawy surowców : kto, co, kiedy / Livraisons de matières : qui, quoi, quand",
+                "operationId": "getSupplierDeliveries",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierDeliveries"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Semaine de production (week.start_day) : commandes envoyées par jour de livraison — state expected, partial, late (date dépassée), received (au jour de la réception) ; late = commandes ouvertes des semaines précédentes, undated = sans date. Fournisseurs : matières (fournisseur actuel, commandes et factures des 6 derniers mois), jours habituels (au moins 2 livraisons et un quart des livraisons ce jour-là, réceptions et dates de factures sur 6 mois), dernière et prochaine livraison, commandes ouvertes.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "un jour de la semaine de production (défaut : aujourd'hui)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.read"
+            }
+        },
         "/supply/needs": {
             "get": {
                 "tags": [
@@ -21100,6 +21173,264 @@
                     "note": {
                         "type": "string",
                         "nullable": true
+                    }
+                }
+            },
+            "SupplierDeliveries": {
+                "type": "object",
+                "properties": {
+                    "week_start": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "week_end": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "iso_week": {
+                        "type": "integer"
+                    },
+                    "today": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "history_days": {
+                        "type": "integer"
+                    },
+                    "days": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "date": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "weekday": {
+                                    "type": "integer",
+                                    "description": "1 = lundi … 7 = dimanche"
+                                },
+                                "today": {
+                                    "type": "boolean"
+                                },
+                                "deliveries": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/SupplierDelivery"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "late": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SupplierDelivery"
+                        }
+                    },
+                    "undated": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SupplierDelivery"
+                        }
+                    },
+                    "totals": {
+                        "type": "object",
+                        "properties": {
+                            "deliveries": {
+                                "type": "integer"
+                            },
+                            "suppliers": {
+                                "type": "integer"
+                            },
+                            "received": {
+                                "type": "integer"
+                            },
+                            "late": {
+                                "type": "integer"
+                            },
+                            "undated": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "suppliers": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "phone": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "email": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "active": {
+                                    "type": "boolean"
+                                },
+                                "materials": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "packaging": {
+                                                "type": "boolean"
+                                            },
+                                            "current": {
+                                                "type": "boolean",
+                                                "description": "fournisseur actuel de la matière"
+                                            }
+                                        }
+                                    }
+                                },
+                                "weekdays": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "day": {
+                                                "type": "integer"
+                                            },
+                                            "deliveries": {
+                                                "type": "integer"
+                                            }
+                                        }
+                                    }
+                                },
+                                "usual_days": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "deliveries": {
+                                    "type": "integer",
+                                    "description": "jours de livraison sur history_days"
+                                },
+                                "last_delivery": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "next_delivery": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "open_orders": {
+                                    "type": "integer"
+                                },
+                                "in_week": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "can_order": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "SupplierDelivery": {
+                "type": "object",
+                "properties": {
+                    "order_id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "sent",
+                            "partial",
+                            "received"
+                        ]
+                    },
+                    "state": {
+                        "type": "string",
+                        "enum": [
+                            "expected",
+                            "partial",
+                            "late",
+                            "received"
+                        ]
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "planned_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "received_on": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "supplier": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "phone": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "material_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "packaging": {
+                                    "type": "boolean"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "received": {
+                                    "type": "number"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "factor": {
+                                    "type": "number"
+                                }
+                            }
+                        }
                     }
                 }
             },

@@ -24,6 +24,11 @@ final class OpenApiSupply
             'PATCH /supply/materials/{id:\d+}' => ['tag' => $t, 'id' => 'saveSupplyMaterial', 'summary' => 'Tryb i stany surowca / Mode et stocks d\'une matière', 'body' => 'SupplyMaterialInput', 'response' => 'SupplyMaterial', 'errors' => [400, 404, 422]],
             'POST /supply/materials/{id:\d+}/count' => ['tag' => $t, 'id' => 'countSupplyMaterial', 'summary' => 'Inwentaryzacja surowca / Inventaire d\'une matière', 'body' => 'SupplyCountInput', 'response' => 'SupplyMaterial', 'ok' => 201, 'errors' => [400, 404, 422],
                 'description' => 'Stock compté en fin de journée (unité de base) ; la consommation et les réceptions comptent à partir du lendemain.'],
+            'GET /supply/deliveries' => ['tag' => $t, 'id' => 'getSupplierDeliveries', 'summary' => 'Dostawy surowców : kto, co, kiedy / Livraisons de matières : qui, quoi, quand', 'response' => 'SupplierDeliveries', 'errors' => [422],
+                'query' => ['date' => ['type' => 'string', 'format' => 'date', 'description' => 'un jour de la semaine de production (défaut : aujourd\'hui)']],
+                'description' => "Semaine de production (week.start_day) : commandes envoyées par jour de livraison — state expected, partial, late (date dépassée), received (au jour de la réception) ; "
+                    . "late = commandes ouvertes des semaines précédentes, undated = sans date. Fournisseurs : matières (fournisseur actuel, commandes et factures des 6 derniers mois), "
+                    . "jours habituels (au moins 2 livraisons et un quart des livraisons ce jour-là, réceptions et dates de factures sur 6 mois), dernière et prochaine livraison, commandes ouvertes."],
             'GET /supply/orders' => ['tag' => $t, 'id' => 'listSupplierOrders', 'summary' => 'Zamówienia do dostawców / Commandes fournisseurs', 'response' => 'SupplierOrders', 'errors' => [422],
                 'query' => ['status' => ['type' => 'string', 'enum' => ['open', 'all', ...SupplyService::STATUSES], 'description' => 'défaut : open (brouillon, envoyée, reçue en partie)']]],
             'POST /supply/orders' => ['tag' => $t, 'id' => 'createSupplierOrders', 'summary' => 'Zamówienia z potrzeb (jedno na dostawcę) / Commandes depuis les besoins (une par fournisseur)', 'body' => 'SupplierOrdersInput', 'response' => 'SupplierOrdersCreated', 'ok' => 201, 'errors' => [400, 422],
@@ -127,6 +132,30 @@ final class OpenApiSupply
             ]],
             'SupplyCountInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['quantity'], 'properties' => [
                 'quantity' => ['type' => 'number', 'minimum' => 0], 'count_date' => ['type' => 'string', 'format' => 'date', 'description' => 'défaut : aujourd\'hui'], 'note' => $nStr,
+            ]],
+            'SupplierDeliveries' => ['type' => 'object', 'properties' => [
+                'week_start' => $date, 'week_end' => $date, 'iso_week' => ['type' => 'integer'], 'today' => $date, 'history_days' => ['type' => 'integer'],
+                'days' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['date' => $date, 'weekday' => ['type' => 'integer', 'description' => '1 = lundi … 7 = dimanche'],
+                    'today' => ['type' => 'boolean'], 'deliveries' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/SupplierDelivery']]]]],
+                'late' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/SupplierDelivery']],
+                'undated' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/SupplierDelivery']],
+                'totals' => ['type' => 'object', 'properties' => ['deliveries' => ['type' => 'integer'], 'suppliers' => ['type' => 'integer'], 'received' => ['type' => 'integer'], 'late' => ['type' => 'integer'], 'undated' => ['type' => 'integer']]],
+                'suppliers' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'phone' => $nStr, 'email' => $nStr, 'active' => ['type' => 'boolean'],
+                    'materials' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'packaging' => ['type' => 'boolean'],
+                        'current' => ['type' => 'boolean', 'description' => 'fournisseur actuel de la matière']]]],
+                    'weekdays' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['day' => ['type' => 'integer'], 'deliveries' => ['type' => 'integer']]]],
+                    'usual_days' => ['type' => 'array', 'items' => ['type' => 'integer']], 'deliveries' => ['type' => 'integer', 'description' => 'jours de livraison sur history_days'],
+                    'last_delivery' => $nDate, 'next_delivery' => $nDate, 'open_orders' => ['type' => 'integer'], 'in_week' => $nDate,
+                ]]],
+                'can_order' => ['type' => 'boolean'],
+            ]],
+            'SupplierDelivery' => ['type' => 'object', 'properties' => [
+                'order_id' => ['type' => 'integer'], 'code' => ['type' => 'string'], 'status' => ['type' => 'string', 'enum' => ['sent', 'partial', 'received']],
+                'state' => ['type' => 'string', 'enum' => ['expected', 'partial', 'late', 'received']], 'date' => $nDate, 'planned_date' => $nDate, 'received_on' => $nDate,
+                'supplier' => ['type' => 'object', 'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'phone' => $nStr]],
+                'lines' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['material_id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'packaging' => ['type' => 'boolean'],
+                    'quantity' => $num, 'received' => $num, 'unit' => ['type' => 'string'], 'factor' => $num]]],
             ]],
             'SupplierOrders' => ['type' => 'object', 'properties' => ['orders' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => $summary]], 'can_write' => ['type' => 'boolean']]],
             'SupplierOrdersCreated' => ['type' => 'object', 'properties' => ['orders' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/SupplierOrder']]]],

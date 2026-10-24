@@ -46,8 +46,8 @@
         'marge': 'marza', 'prix': 'ceny cennik', 'cout': 'koszt', 'couts': 'koszty', 'vente': 'sprzedaz', 'ventes': 'sprzedaz',
         'commande': 'zamowienia', 'commandes': 'zamowienia', 'client': 'klienci', 'clients': 'klienci', 'franchise': 'franczyza',
         'produit': 'produkt produkty', 'produits': 'produkty', 'fiche': 'karty', 'recette': 'receptura receptury', 'recettes': 'receptury',
-        'matiere': 'surowce', 'matieres': 'surowce', 'fournisseur': 'dostawcy', 'fournisseurs': 'dostawcy', 'achat': 'zakupy', 'achats': 'zakupy',
-        'facture': 'faktury proforma', 'factures': 'faktury', 'livraison': 'wysylka', 'expedition': 'wysylka', 'camion': 'ciezarowki pojazdy',
+        'matiere': 'surowce', 'matieres': 'surowce', 'fournisseur': 'dostawcy dostawy', 'fournisseurs': 'dostawcy dostawy', 'achat': 'zakupy', 'achats': 'zakupy',
+        'facture': 'faktury proforma', 'factures': 'faktury', 'livraison': 'wysylka dostawy', 'livraisons': 'dostawy wysylka', 'arrivage': 'dostawy', 'arrivages': 'dostawy', 'approvisionnement': 'dostawy zaopatrzenie', 'expedition': 'wysylka', 'camion': 'ciezarowki pojazdy',
         'camions': 'ciezarowki pojazdy', 'tournee': 'trasy', 'tournees': 'trasy', 'chargement': 'zaladunek', 'transporteur': 'przewoznicy',
         'stock': 'stany magazynowe', 'emballage': 'opakowania', 'emballages': 'opakowania', 'production': 'produkcja', 'planning': 'planowanie gantt',
         'equipe': 'zespol', 'personnel': 'pracownicy personelu', 'employe': 'pracownicy', 'employes': 'pracownicy', 'tablette': 'tablety',
@@ -59,7 +59,7 @@
         'question': 'pytania', 'questions': 'pytania', 'tenue': 'pytania odziez', 'hygiene': 'higiena pytania', 'heures': 'godziny',
         'badge': 'identyfikatory', 'badges': 'identyfikatory', 'telephone': 'telefony', 'distribution': 'dystrybucja',
         'document': 'dokumenty', 'documents': 'dokumenty', 'calcul': 'kalkulacja kalkulator', 'cmr': 'cmr dokumenty', 'imprimer': 'drukuj dokumenty',
-        'mail': 'poczta skrzynka', 'mails': 'poczta skrzynka', 'email': 'poczta skrzynka', 'courriel': 'poczta', 'boite': 'poczta skrzynka', 'reception': 'poczta', 'envoyes': 'wyslane',
+        'mail': 'poczta skrzynka', 'mails': 'poczta skrzynka', 'email': 'poczta skrzynka', 'courriel': 'poczta', 'boite': 'poczta skrzynka', 'reception': 'poczta dostawy', 'envoyes': 'wyslane',
         'messagerie': 'poczta', 'groupe': 'grupy', 'groupes': 'grupy', 'cobot': 'coboty', 'photo': 'zdjecia', 'photos': 'zdjecia'
     };
 
@@ -111,7 +111,8 @@
                 var aliases = alias ? alias.split(' ') : [];
                 if (e.label.indexOf(w) === 0 || e.label.indexOf(' ' + w) >= 0) score += 4;
                 else if (e.label.indexOf(w) >= 0) score += 3;
-                else if (aliases.some(function (a) { return e.label.indexOf(a) === 0 || e.label.indexOf(' ' + a) >= 0; })) score += 2.5;
+                else if (aliases.some(function (a) { return e.label.indexOf(a) === 0; })) score += 2.7;
+                else if (aliases.some(function (a) { return e.label.indexOf(' ' + a) >= 0; })) score += 2.5;
                 else if (e.where.indexOf(w) >= 0 || aliases.some(function (a) { return e.label.indexOf(a) >= 0; })) score += 2;
                 else if (aliases.some(function (a) { return e.where.indexOf(a) >= 0; })) score += 1;
                 else return;

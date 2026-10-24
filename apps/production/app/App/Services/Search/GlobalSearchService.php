@@ -88,6 +88,13 @@ class GlobalSearchService
                 'url'   => '/material-suppliers/' . (int) $r['id'] . '/edit',
             ], $this->repository->suppliers($pattern, $n))],
 
+            // Kto dostarcza co : strona « Dostawy surowców » (Produkcja) z wyszukiwaniem dostawcy albo surowca.
+            ['type' => 'deliveries', 'label' => 'Kto dostarcza (dostawy surowców)', 'icon' => 'bi-truck', 'items' => array_map(fn($r) => [
+                'title' => $r['name'],
+                'sub'   => 'dostarcza : ' . (mb_strlen((string) $r['materials']) > 90 ? mb_substr((string) $r['materials'], 0, 88) . '…' : $r['materials']),
+                'url'   => '/workshop/deliveries#q=' . rawurlencode($q),
+            ], $this->repository->materialSuppliers($pattern, $n))],
+
             ['type' => 'employees', 'label' => 'Pracownicy', 'icon' => 'bi-person-badge', 'items' => array_map(fn($r) => [
                 'title' => trim($r['name'] . ' ' . $r['surname']),
                 'sub'   => $r['section'] ? 'dział ' . $r['section'] : '',

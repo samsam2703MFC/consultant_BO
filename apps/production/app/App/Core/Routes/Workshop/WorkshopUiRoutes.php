@@ -10,6 +10,7 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/workshop/sheet', ['controller' => $c, 'method' => 'sheet']);
     $r->addRoute('GET', '/workshop/manager', ['controller' => $c, 'method' => 'manager']);
     $r->addRoute('GET', '/workshop/supply', ['controller' => $c, 'method' => 'supply']);
+    $r->addRoute('GET', '/workshop/deliveries', ['controller' => $c, 'method' => 'deliveries']);
     $r->addRoute('GET', '/workshop/team-sheet', ['controller' => $c, 'method' => 'teamSheet']);
     $r->addRoute('GET', '/workshop/execution', ['controller' => $c, 'method' => 'execution']);
     $r->addRoute('GET', '/workshop/workstations', ['controller' => $c, 'method' => 'workstations']);
