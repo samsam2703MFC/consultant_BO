@@ -1045,3 +1045,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T11:54:29Z disque : relevé détaillé + ménage étendu (accord utilisateur), puis #138/#139
 2026-10-24T11:44Z disque : ménage sûr à chaque livraison et toutes les 6 h, arrêt sous 300 Mo libres, alerte à 90 %, rotation des journaux
 2026-10-24T12:01Z Résultat › Année : le panier moyen face à l'an passé
+2026-10-24T12:03:54Z Promotions du magasin : le bon de réduction (#50), avec #48 et #49
