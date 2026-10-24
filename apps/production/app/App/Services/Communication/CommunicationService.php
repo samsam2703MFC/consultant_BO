@@ -41,6 +41,7 @@ class CommunicationService
         'delivery_details' => 'Informacja o dostawie : kierowca, pojazd, palety (Logistyka)',
         'delivery_details_sms' => 'SMS : informacja o dostawie (Logistyka)',
         'accounting_document' => 'Kopia dokumentu dla księgowości (automatyczne)',
+        'sales_goal' => 'Cel obrotu franczyzobiorcy (zakupy × współczynnik, PDF)',
     ];
 
     public function __construct(
@@ -57,7 +58,9 @@ class CommunicationService
         private OrderShippingDifferenceService $differences,
         private ProformaRepository $proformaRepository,
         private CommunicationMessageAttachmentRepository $attachments,
-        private CommunicationIncomingMessageRepository $incoming
+        private CommunicationIncomingMessageRepository $incoming,
+        private SalesGoalEmailContextService $salesGoalContexts,
+        private \App\Services\Client\SalesGoalPdfService $salesGoalPdf
     ) {}
 
     public function templates(): array { return $this->templates->getAllForManagement(); }
@@ -118,9 +121,9 @@ class CommunicationService
         return $this->prepareComposer('proforma', $proformaId, 'proforma');
     }
 
-    public function prepareComposer(string $source, int $sourceId, string $messageType): array
+    public function prepareComposer(string $source, int $sourceId, string $messageType, array $params = []): array
     {
-        $context = $this->contextFor($source, $sourceId);
+        $context = $this->contextFor($source, $sourceId, $params);
         if (!array_key_exists($messageType, self::TEMPLATE_TYPES)) {
             throw new CustomException('Nieprawidłowy typ wiadomości.', 'errors', 422);
         }
@@ -151,6 +154,7 @@ class CommunicationService
             'proforma_payment_reminder_final' => 'Stanowcze przypomnienie za proformę',
             'proforma_reminder_1' => 'Przypomnienie proformy 1/5', 'proforma_reminder_2' => 'Przypomnienie proformy 2/5', 'proforma_reminder_3' => 'Przypomnienie proformy 3/5',
             'proforma_reminder_4' => 'Przypomnienie proformy 4/5', 'proforma_reminder_5' => 'Przypomnienie proformy 5/5',
+            'sales_goal' => 'Cel obrotu (franczyza)',
         ];
         return array_merge($context, ['templates' => $templates, 'message_type' => $messageType, 'message_type_label' => $labels[$messageType] ?? 'Wiadomość']);
     }
@@ -179,9 +183,9 @@ class CommunicationService
     }
 
     /** Saves a document/reminder snapshot and optionally queues it for SMTP delivery. */
-    public function saveMessage(string $source, int $sourceId, string $messageType, array $data, ?string $author): array
+    public function saveMessage(string $source, int $sourceId, string $messageType, array $data, ?string $author, array $params = []): array
     {
-        $context = $this->contextFor($source, $sourceId);
+        $context = $this->contextFor($source, $sourceId, $params);
         $this->assertReminderEligibility($source, $messageType, $context);
         $templateId = filter_var($data['template_id'] ?? null, FILTER_VALIDATE_INT);
         $template = $templateId ? $this->templates->first(['id' => $templateId, 'template_type' => $messageType, 'is_active' => 1]) : [];
@@ -226,7 +230,7 @@ class CommunicationService
         ]);
         $id = (int) $messageIdDb;
         try {
-            $pdf = $this->generateSourcePdf($source, $sourceId);
+            $pdf = $this->generateSourcePdf($source, $sourceId, $params);
             $content = (string)($pdf['file_string'] ?? '');
             if (!str_starts_with(ltrim($content), '%PDF')) throw new \RuntimeException('Generator dokumentu nie zwrócił prawidłowego pliku PDF.');
             $this->attachments->insert([
@@ -254,9 +258,10 @@ class CommunicationService
         return $message;
     }
 
-    private function contextFor(string $source, int $sourceId): array
+    private function contextFor(string $source, int $sourceId, array $params = []): array
     {
         return match ($source) {
+            'sales_goal' => $this->salesGoalContexts->forCustomer($sourceId, (string) ($params['month'] ?? ''), (string) ($params['source'] ?? 'wdt')),
             'proforma' => $this->proformaContexts->forProforma($sourceId),
             'invoice' => $this->documentContexts->forInvoice($sourceId),
             'wdt' => $this->documentContexts->forWdt($sourceId),
@@ -265,9 +270,10 @@ class CommunicationService
         };
     }
 
-    private function generateSourcePdf(string $source, int $sourceId): array
+    private function generateSourcePdf(string $source, int $sourceId, array $params = []): array
     {
         return match ($source) {
+            'sales_goal' => $this->salesGoalPdf->generate($sourceId, (string) ($params['month'] ?? ''), (string) ($params['source'] ?? 'wdt')),
             'proforma' => $this->proformas->generateDocumentPDF($sourceId),
             'invoice' => $this->invoices->generateDocumentPDF($sourceId),
             'wdt' => $this->wdts->generateDocumentPDF($sourceId),

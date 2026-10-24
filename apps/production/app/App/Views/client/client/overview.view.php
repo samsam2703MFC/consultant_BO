@@ -133,6 +133,7 @@
                                             <button type="button" class="at-more-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Więcej akcji" title="Więcej akcji"><i class="bi bi-three-dots"></i></button>
                                             <div class="at-more-menu" role="menu" hidden>
                                                 <button type="button" role="menuitem" onclick="getPriceListByClient(<?= $row['id'] ?>)"><i class="bi bi-file-earmark-text"></i>Cennik (PDF)</button>
+                                                <?php if (isset($space_enabled[(int) $row['id']])): ?><a role="menuitem" href="<?= ROOT ?>/clients/<?= $row['id'] ?>/space"><i class="bi bi-folder2-open"></i>Strona klienta</a><?php endif; ?>
                                                 <a role="menuitem" href="<?= ROOT ?>/clients/<?= $row['id'] ?>/profitability"><i class="bi bi-graph-up"></i>Rentowność</a>
                                                 <a role="menuitem" href="<?= ROOT ?>/finances/sales-analytics?customer_id=<?= $row['id'] ?>"><i class="bi bi-box-seam"></i>Sprzedaż WDT</a>
                                                 <?php if (!empty($row['franchisee_uid'])): ?>

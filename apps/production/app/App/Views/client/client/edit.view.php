@@ -167,6 +167,35 @@
                                 </div>
                             </div>
                         </div>
+                        <?php $space = $space ?? []; $spaceValue = fn(string $key, $current) => isset($_POST[$key]) ? $_POST[$key] : $current; ?>
+                        <div class="row mt-4" id="client-options">
+                            <div class="col-2"></div>
+                            <div class="col-8">
+                                <div class="border rounded-3 p-3">
+                                    <h6 class="text-uppercase mb-3" style="color:#8D1D2C;letter-spacing:.04em">Opcje klienta</h6>
+                                    <div class="d-flex justify-content-between align-items-center gap-3 py-2 border-bottom">
+                                        <label for="space_docs"><strong>Strona klienta : dokumenty</strong><br><span class="text-muted small">Wszystkie dokumenty klienta w jednym miejscu (proformy, faktury WDT, faktury, WZ, CMR, różnice, cennik).</span></label>
+                                        <div class="form-check form-switch m-0"><input type="hidden" name="space_docs" value="0"><input class="form-check-input" type="checkbox" role="switch" id="space_docs" name="space_docs" value="1" <?= $spaceValue('space_docs', !empty($space['docs']) ? '1' : '0') === '1' ? 'checked' : '' ?>></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center gap-3 py-2 border-bottom">
+                                        <label for="space_goal"><strong>Cel obrotu (franczyza) : zakupy × współczynnik</strong><br><span class="text-muted small">Obrót brutto, który sklep powinien osiągnąć z towaru kupionego w SL Food.</span></label>
+                                        <div class="form-check form-switch m-0"><input type="hidden" name="space_goal" value="0"><input class="form-check-input" type="checkbox" role="switch" id="space_goal" name="space_goal" value="1" <?= $spaceValue('space_goal', !empty($space['goal']) ? '1' : '0') === '1' ? 'checked' : '' ?>></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center gap-3 py-2 border-bottom">
+                                        <label for="space_coefficient"><strong>Współczynnik sprzedaży klienta</strong><br><span class="text-muted small">Puste = domyślny z Ustawień (× <?= number_format((float) ($space['default_coefficient'] ?? 2.5), 2, ',', '') ?>). Współczynnik kategorii ma pierwszeństwo.</span></label>
+                                        <div class="d-flex align-items-center gap-2"><span class="text-muted">×</span><input class="form-control" style="width:90px" id="space_coefficient" name="space_coefficient" inputmode="decimal" placeholder="<?= number_format((float) ($space['default_coefficient'] ?? 2.5), 2, ',', '') ?>" value="<?= htmlspecialchars((string) $spaceValue('space_coefficient', isset($space['coefficient']) && $space['coefficient'] !== null ? number_format((float) $space['coefficient'], 2, ',', '') : '')) ?>"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center gap-3 py-2 border-bottom">
+                                        <label for="space_open_days"><strong>Dni otwarcia sklepu w miesiącu</strong><br><span class="text-muted small">Do celu dziennego (obrót ÷ dni). Puste = <?= \App\Services\Client\ClientSpaceService::DEFAULT_OPEN_DAYS ?>.</span></label>
+                                        <input class="form-control" style="width:90px" id="space_open_days" name="space_open_days" inputmode="numeric" placeholder="<?= \App\Services\Client\ClientSpaceService::DEFAULT_OPEN_DAYS ?>" value="<?= htmlspecialchars((string) $spaceValue('space_open_days', $space['open_days'] ?? '')) ?>">
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center gap-3 pt-2">
+                                        <span class="text-muted small">Strona klienta : przycisk tutaj i w menu ⋯ na liście klientów.</span>
+                                        <?php if (!empty($space['docs']) || !empty($space['goal'])): ?><a class="btn btn-sm btn-outline-primary" href="<?= ROOT ?>/clients/<?= (int) $row['id'] ?>/space">Strona klienta →</a><?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="row mt-4">
                             <div class="col-2"></div>
                             <div class="col-8">

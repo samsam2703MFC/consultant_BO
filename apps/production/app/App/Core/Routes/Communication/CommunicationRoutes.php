@@ -23,6 +23,8 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/communication/compose/invoice/{id:\\d+}', ['controller' => $controller, 'method' => 'composeInvoice']);
     $r->addRoute('POST', '/ajax/communication/compose/invoice/{id:\\d+}', ['controller' => $controller, 'method' => 'saveInvoiceMessage']);
     $r->addRoute('GET', '/communication/compose/wdt/{id:\\d+}', ['controller' => $controller, 'method' => 'composeWdt']);
+    $r->addRoute('GET', '/communication/compose/sales-goal/{id:\\d+}', ['controller' => $controller, 'method' => 'composeSalesGoal']);
+    $r->addRoute('POST', '/ajax/communication/compose/sales-goal/{id:\\d+}', ['controller' => $controller, 'method' => 'saveSalesGoalMessage']);
     $r->addRoute('POST', '/ajax/communication/compose/wdt/{id:\\d+}', ['controller' => $controller, 'method' => 'saveWdtMessage']);
     $r->addRoute('GET', '/communication/compose/reminder/proforma/{id:\\d+}', ['controller' => $controller, 'method' => 'composeReminderProforma']);
     $r->addRoute('POST', '/ajax/communication/compose/reminder/proforma/{id:\\d+}', ['controller' => $controller, 'method' => 'saveReminderProformaMessage']);

@@ -4,6 +4,7 @@ namespace App\Controllers\Web\Client;
 
 use App\Core\Web\BaseController;
 use App\Services\Client\ClientSalesSummaryService;
+use App\Services\Client\ClientSpaceService;
 use App\Services\Client\ClientService;
 use App\Services\Client\FranchiseNetwork\IntegrationOnboardingTokenService;
 use App\Services\Client\Integration\ClientIntegrationService;
@@ -27,7 +28,8 @@ class ClientController extends BaseController
         ProfitabilityService $profitabilityService,
         IntegrationOnboardingTokenService $integrationOnboardingTokenService,
         ClientIntegrationService $clientIntegrationService,
-        ClientSalesSummaryService $clientSalesSummaryService
+        ClientSalesSummaryService $clientSalesSummaryService,
+        private ClientSpaceService $clientSpaceService
     )
     {
         $this->clientService = $clientService;
@@ -56,6 +58,7 @@ class ClientController extends BaseController
             $data['rows'] = $this->clientService->getAll();
         }
 
+        $data['space_enabled'] = array_flip($this->clientSpaceService->enabledCustomerIds());
         $this->view("client/client/overview", $data);
     }
 
@@ -82,11 +85,18 @@ class ClientController extends BaseController
     {
         $data['row'] = $this->clientService->getById($id);
         $data['countries'] = $this->countryService->getAll();
+        $data['space'] = $this->clientSpaceService->settings((int) $id);
 
         if ($_SERVER['REQUEST_METHOD'] == "POST") {
             $newData = $_POST;
 
             $this->errors = $this->clientService->validate($newData);
+            // Opcje « Strona klienta » (tfb_customer_space) : sprawdzone przed zapisem klienta.
+            try {
+                if (empty($this->errors)) $this->clientSpaceService->saveSettings((int) $id, $newData, user('displayed_name') ?: user('login') ?: null);
+            } catch (\App\Exceptions\CustomException $e) {
+                $this->errors[] = $e->getMessage();
+            }
 
             if (empty($this->errors)) {
                 $this->handleAction(function () use ($id, $newData, $data) {

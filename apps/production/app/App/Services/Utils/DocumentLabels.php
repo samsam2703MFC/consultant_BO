@@ -74,9 +74,44 @@ final class DocumentLabels
         'doc_difference' => ['pl' => 'Różnice zamówienie / faktura', 'fr' => 'Écarts commande / facture', 'nl' => 'Verschillen bestelling / factuur', 'en' => 'Order / invoice differences'],
         'doc_price_list' => ['pl' => 'Cennik', 'fr' => 'Liste de prix', 'nl' => 'Prijslijst', 'en' => 'Price list'],
         'doc_sales_summary' => ['pl' => 'Podsumowanie sprzedaży', 'fr' => 'Récapitulatif des ventes', 'nl' => 'Verkoopoverzicht', 'en' => 'Sales summary'],
+        'doc_sales_goal' => ['pl' => 'Cel obrotu', 'fr' => 'Objectif de chiffre d\'affaires', 'nl' => 'Omzetdoelstelling', 'en' => 'Revenue target'],
+        'client' => ['pl' => 'Klient', 'fr' => 'Client', 'nl' => 'Klant', 'en' => 'Customer'],
+        'period' => ['pl' => 'Okres', 'fr' => 'Période', 'nl' => 'Periode', 'en' => 'Period'],
+        'purchase_source' => ['pl' => 'Zakupy', 'fr' => 'Achats', 'nl' => 'Aankopen', 'en' => 'Purchases'],
+        'source_wdt' => ['pl' => 'faktury WDT', 'fr' => 'factures (WDT)', 'nl' => 'facturen (WDT)', 'en' => 'invoices (WDT)'],
+        'source_proforma' => ['pl' => 'proformy', 'fr' => 'proformas', 'nl' => 'proforma\'s', 'en' => 'proformas'],
+        'purchases_net' => ['pl' => 'Zakupy netto', 'fr' => 'Achats HT', 'nl' => 'Aankopen excl. btw', 'en' => 'Purchases excl. VAT'],
+        'pieces' => ['pl' => 'Sztuki', 'fr' => 'Pièces', 'nl' => 'Stuks', 'en' => 'Pieces'],
+        'purchase_price_piece' => ['pl' => 'Cena zakupu / szt.', 'fr' => 'Prix d\'achat / pièce', 'nl' => 'Aankoopprijs / stuk', 'en' => 'Purchase price / piece'],
+        'coefficient' => ['pl' => 'Współczynnik', 'fr' => 'Coefficient', 'nl' => 'Coëfficiënt', 'en' => 'Coefficient'],
+        'sale_price_piece' => ['pl' => 'Cena sprzedaży / szt. brutto', 'fr' => 'Prix de vente / pièce TTC', 'nl' => 'Verkoopprijs / stuk incl. btw', 'en' => 'Selling price / piece incl. VAT'],
+        'revenue_target' => ['pl' => 'Obrót do osiągnięcia (brutto)', 'fr' => 'CA à atteindre TTC', 'nl' => 'Te behalen omzet incl. btw', 'en' => 'Revenue to reach incl. VAT'],
+        'per_open_day' => ['pl' => 'Na dzień otwarcia', 'fr' => 'Par jour d\'ouverture', 'nl' => 'Per openingsdag', 'en' => 'Per opening day'],
+        'per_week' => ['pl' => 'Na tydzień', 'fr' => 'Par semaine', 'nl' => 'Per week', 'en' => 'Per week'],
+        'previous_year' => ['pl' => 'Rok wcześniej (N-1)', 'fr' => 'Année précédente (N-1)', 'nl' => 'Vorig jaar (N-1)', 'en' => 'Previous year (N-1)'],
+        'goal_total' => ['pl' => 'Cel obrotu', 'fr' => 'Objectif CA TTC', 'nl' => 'Omzetdoel incl. btw', 'en' => 'Target incl. VAT'],
+        'not_for_resale' => ['pl' => 'poza celem (nie do odsprzedaży)', 'fr' => 'hors objectif (non revendu)', 'nl' => 'buiten doelstelling (geen doorverkoop)', 'en' => 'excluded (not for resale)'],
+        'goal_note' => ['pl' => 'Cel orientacyjny : zakupy netto × współczynnik sprzedaży kategorii = obrót brutto, który sklep powinien osiągnąć z tych produktów.',
+            'fr' => 'Objectif indicatif : achats HT × coefficient de vente de la catégorie = chiffre d\'affaires TTC que le magasin devrait réaliser avec ces produits.',
+            'nl' => 'Indicatieve doelstelling: aankopen excl. btw × verkoopcoëfficiënt van de categorie = omzet incl. btw die de winkel met deze producten zou moeten halen.',
+            'en' => 'Indicative target: purchases excl. VAT × the category sales coefficient = revenue incl. VAT the shop should make with these products.'],
     ];
 
     /** Język komunikacji klienta (pl, fr, nl, en) ; nieznany → domyślny. */
+    private const MONTHS = [
+        'pl' => ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'],
+        'fr' => ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],
+        'nl' => ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'],
+        'en' => ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    ];
+
+    /** Miesiąc RRRR-MM słownie w języku dokumentu (« septembre 2026 »). */
+    public static function month(string $ym, string $lang): string
+    {
+        [$y, $m] = array_map('intval', explode('-', $ym) + [1 => 1]);
+        return (self::MONTHS[self::lang($lang)][$m - 1] ?? (string) $m) . ' ' . $y;
+    }
+
     public static function lang(?string $lang, string $default = 'pl'): string
     {
         $lang = strtolower(trim((string) $lang));
