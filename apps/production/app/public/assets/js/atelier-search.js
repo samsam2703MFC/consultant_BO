@@ -55,7 +55,12 @@
         'reclamation': 'reklamacje', 'reclamations': 'reklamacje', 'retour': 'zwroty', 'retours': 'zwroty', 'parametres': 'ustawienia',
         'reglages': 'ustawienia', 'utilisateur': 'uzytkownicy', 'utilisateurs': 'uzytkownicy', 'compteur': 'licznik', 'appareil': 'urzadzenia',
         'appareils': 'urzadzenia', 'rentabilite': 'rentownosc', 'tableau': 'dashboard', 'aujourdhui': 'dzisiaj', 'logistique': 'logistyka',
-        'finances': 'finanse', 'analyse': 'analiza', 'langues': 'jezyki', 'poids': 'wagi', 'nutrition': 'odzywcze', 'archives': 'archiwum'
+        'finances': 'finanse', 'analyse': 'analiza', 'langues': 'jezyki', 'poids': 'wagi', 'nutrition': 'odzywcze', 'archives': 'archiwum',
+        'question': 'pytania', 'questions': 'pytania', 'tenue': 'pytania odziez', 'hygiene': 'higiena pytania', 'heures': 'godziny',
+        'badge': 'identyfikatory', 'badges': 'identyfikatory', 'telephone': 'telefony', 'distribution': 'dystrybucja',
+        'document': 'dokumenty', 'documents': 'dokumenty', 'calcul': 'kalkulacja kalkulator', 'cmr': 'cmr dokumenty', 'imprimer': 'drukuj dokumenty',
+        'mail': 'poczta e-mail', 'mails': 'poczta e-mail', 'email': 'poczta e-mail', 'courriel': 'poczta', 'boite': 'poczta skrzynka',
+        'messagerie': 'poczta', 'groupe': 'grupy', 'groupes': 'grupy', 'cobot': 'coboty', 'photo': 'zdjecia', 'photos': 'zdjecia'
     };
 
     var menu = null;
@@ -106,6 +111,7 @@
                 var aliases = alias ? alias.split(' ') : [];
                 if (e.label.indexOf(w) === 0 || e.label.indexOf(' ' + w) >= 0) score += 4;
                 else if (e.label.indexOf(w) >= 0) score += 3;
+                else if (aliases.some(function (a) { return e.label.indexOf(a) === 0 || e.label.indexOf(' ' + a) >= 0; })) score += 2.5;
                 else if (e.where.indexOf(w) >= 0 || aliases.some(function (a) { return e.label.indexOf(a) >= 0; })) score += 2;
                 else if (aliases.some(function (a) { return e.where.indexOf(a) >= 0; })) score += 1;
                 else return;

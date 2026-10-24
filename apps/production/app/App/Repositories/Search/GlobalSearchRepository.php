@@ -98,4 +98,38 @@ class GlobalSearchRepository extends BaseRepository
                 LIMIT " . (int) $limit;
         return $this->query($sql, $this->like($pattern, 2)) ?: [];
     }
+
+    /** Receptury (produkt gotowy, półprodukt, kompozycja) z grupą, która przygotowuje półprodukt / kompozycję. */
+    public function recipes(string $pattern, string $exact, int $limit): array
+    {
+        $sql = "SELECT pr.id, pr.name, pr.id_type, g.name_pl AS producer
+                FROM product_recipe pr
+                LEFT JOIN n_recipe_producer rp ON rp.id_recipe = pr.id
+                LEFT JOIN n_prod_group g ON g.id = rp.id_group
+                WHERE pr.name LIKE :t1 OR CAST(pr.id AS CHAR) = :exact
+                ORDER BY (CAST(pr.id AS CHAR) = :exact_order) DESC, pr.name
+                LIMIT " . (int) $limit;
+        return $this->query($sql, $this->like($pattern, 1) + ['exact' => $exact, 'exact_order' => $exact]) ?: [];
+    }
+
+    public function suppliers(string $pattern, int $limit): array
+    {
+        $sql = "SELECT id, name, phone, email, is_active
+                FROM supplier
+                WHERE name LIKE :t1 OR email LIKE :t2 OR phone LIKE :t3
+                ORDER BY is_active DESC, name
+                LIMIT " . (int) $limit;
+        return $this->query($sql, $this->like($pattern, 3)) ?: [];
+    }
+
+    public function employees(string $pattern, int $limit): array
+    {
+        $sql = "SELECT e.id, e.name, e.surname, s.name AS section
+                FROM production_employee e
+                LEFT JOIN production_sections s ON s.id = e.id_section
+                WHERE e.name LIKE :t1 OR e.surname LIKE :t2 OR CONCAT(e.name, ' ', e.surname) LIKE :t3 OR CONCAT(e.surname, ' ', e.name) LIKE :t4
+                ORDER BY e.surname, e.name
+                LIMIT " . (int) $limit;
+        return $this->query($sql, $this->like($pattern, 4)) ?: [];
+    }
 }

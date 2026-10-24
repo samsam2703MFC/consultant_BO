@@ -5,8 +5,8 @@ namespace App\Services\Search;
 use App\Repositories\Search\GlobalSearchRepository;
 
 /**
- * Wyszukiwarka z górnego paska (GET /ajax/search?q=): zamówienia, klienci, produkty,
- * surowce, proformy, faktury i WDT. Do 5 trafień na typ, minimum 2 znaki.
+ * Wyszukiwarka z górnego paska (GET /ajax/search?q=): zamówienia, klienci, produkty, receptury
+ * (z kalkulacją), surowce, dostawcy, pracownicy, proformy, faktury i WDT. Do 5 trafień na typ, minimum 2 znaki.
  * Adresy są względne (bez ROOT) — strona dokleja katalog aplikacji.
  */
 class GlobalSearchService
@@ -16,6 +16,8 @@ class GlobalSearchService
     private const MAX_LENGTH = 100;
 
     private const PROFORMA_STATUS = ['issued' => 'nieopłacona', 'paid' => 'opłacona', 'cancelled' => 'anulowana'];
+    /** product_recipe.id_type → rodzaj i strona kalkulacji. */
+    private const RECIPE_KIND = [1 => ['Kompozycja', '/compositions'], 2 => ['Półprodukt', '/semi-products'], 3 => ['Receptura produktu', '/recipes']];
 
     public function __construct(private GlobalSearchRepository $repository)
     {
@@ -63,11 +65,33 @@ class GlobalSearchService
                 'url'   => '/products/' . (int) $r['id'] . '/edit',
             ], $this->repository->products($pattern, $exact, $n))],
 
+            ['type' => 'recipes', 'label' => 'Receptury', 'icon' => 'bi-journal-richtext', 'items' => array_map(fn($r) => [
+                'title' => $r['name'],
+                'sub'   => implode(' · ', array_filter([
+                    (self::RECIPE_KIND[(int) $r['id_type']] ?? self::RECIPE_KIND[3])[0],
+                    $r['producer'] ? 'przygotowuje ' . $r['producer'] : null,
+                    'kalkulacja',
+                ])),
+                'url'   => (self::RECIPE_KIND[(int) $r['id_type']] ?? self::RECIPE_KIND[3])[1] . '/' . (int) $r['id'] . '/calculation',
+            ], $this->repository->recipes($pattern, $exact, $n))],
+
             ['type' => 'materials', 'label' => 'Surowce', 'icon' => 'bi-basket', 'items' => array_map(fn($r) => [
                 'title' => $r['name'],
                 'sub'   => trim(($r['name_fr'] ? $r['name_fr'] . ' · ' : '') . ($r['unit_name'] ?? ''), ' ·'),
                 'url'   => '/materials/' . (int) $r['id'] . '/edit',
             ], $this->repository->materials($pattern, $n))],
+
+            ['type' => 'suppliers', 'label' => 'Dostawcy', 'icon' => 'bi-truck-flatbed', 'items' => array_map(fn($r) => [
+                'title' => $r['name'],
+                'sub'   => implode(' · ', array_filter([$r['email'] ?: null, $r['phone'] ?: null, (string) $r['is_active'] === '1' ? null : 'nieaktywny'])),
+                'url'   => '/material-suppliers/' . (int) $r['id'] . '/edit',
+            ], $this->repository->suppliers($pattern, $n))],
+
+            ['type' => 'employees', 'label' => 'Pracownicy', 'icon' => 'bi-person-badge', 'items' => array_map(fn($r) => [
+                'title' => trim($r['name'] . ' ' . $r['surname']),
+                'sub'   => $r['section'] ? 'dział ' . $r['section'] : '',
+                'url'   => '/production-employees/' . (int) $r['id'] . '/edit',
+            ], $this->repository->employees($pattern, $n))],
 
             // Proforma nie ma własnej strony: zamówienie, a bez niego PDF.
             ['type' => 'proformas', 'label' => 'Proformy', 'icon' => 'bi-receipt', 'items' => array_map(fn($r) => [
