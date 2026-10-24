@@ -440,3 +440,9 @@ details.kiosk-section summary { cursor: pointer; font-weight: 600; padding: 8px 
 .kiosk-check.is-on .kiosk-check-box::after { content: ''; width: 10px; height: 18px; margin-top: -4px; border: solid #fff; border-width: 0 4px 4px 0; transform: rotate(45deg); }
 .kiosk-confirm .kiosk-big:disabled { opacity: .45; }
 .kiosk-phone .kiosk-check { font-size: 18px; min-height: 70px; }
+/* Produkcja : dostawy surowców zespołu. */
+.kiosk-prod-deliveries > h2 { display: flex; align-items: center; gap: 8px; }
+.kiosk-prod-deliveries .kiosk-plan-delivery .kiosk-tag { margin: 0 0 0 6px; font-size: 13px; vertical-align: 2px; }
+.kiosk-plan-delivery.is-today { box-shadow: inset 0 0 0 2px #1f4f7a; }
+.kiosk-plan-delivery.is-late { background: var(--k-danger-50); color: var(--k-text); }
+.kiosk-prod-deliveries .kiosk-plan-delivery.is-today .kiosk-tag { background: #1f4f7a; color: #fff; }

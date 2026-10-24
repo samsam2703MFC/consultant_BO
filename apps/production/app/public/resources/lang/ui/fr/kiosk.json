@@ -359,5 +359,11 @@
   "office_step1": "Ouvrez l'appareil photo et scannez le code.",
   "office_step2": "Confirmez les questions (tenue, hygiène…).",
   "office_step3": "Touchez « OK, je valide » — c'est fait.",
-  "office_people": "Sans téléphone"
+  "office_people": "Sans téléphone",
+  "prod_deliveries_title": "Livraisons de matières pour l'équipe",
+  "prod_deliveries_none": "Aucune livraison commandée de matières utiles à l'équipe cette semaine.",
+  "delivery_today": "aujourd'hui",
+  "delivery_tomorrow": "demain",
+  "delivery_late": "en retard ({date})",
+  "delivery_for": "pour : {products}"
 }

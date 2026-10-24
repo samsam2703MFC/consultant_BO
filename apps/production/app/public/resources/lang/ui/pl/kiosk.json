@@ -359,5 +359,11 @@
   "office_step1": "Otwórz aparat i zeskanuj kod.",
   "office_step2": "Potwierdź pytania (strój, higiena…).",
   "office_step3": "Dotknij « OK, zatwierdzam » — gotowe.",
-  "office_people": "Bez telefonu"
+  "office_people": "Bez telefonu",
+  "prod_deliveries_title": "Dostawy surowców dla zespołu",
+  "prod_deliveries_none": "Brak zamówionych dostaw surowców potrzebnych zespołowi w tym tygodniu.",
+  "delivery_today": "dziś",
+  "delivery_tomorrow": "jutro",
+  "delivery_late": "po terminie ({date})",
+  "delivery_for": "do : {products}"
 }
