@@ -288,8 +288,8 @@
                     </a>
                     <ul class="submenu">
                         <li class="submenu-item">
-                            <a href="{{ root }}/communication/automations">
-                                <i class="bi bi-lightning-charge"></i> Automatyczne e-maile
+                            <a href="{{ root }}/communication/distribution" data-also="/communication/automations">
+                                <i class="bi bi-diagram-3"></i> Dystrybucja dokumentów
                             </a>
                         </li>
                         <li class="submenu-item">
@@ -353,6 +353,13 @@
                     <a href="{{ root }}/logistics" class="sidebar-link">
                         <i class="bi bi-stack"></i>
                         <span>Załadunek dnia</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ root }}/logistics/documents" class="sidebar-link">
+                        <i class="bi bi-printer"></i>
+                        <span>Dokumenty dostawy</span>
                     </a>
                 </li>
 
@@ -511,6 +518,7 @@
                 <li><a href="{{ root }}/devices/new" data-where="Administracja › Ustawienia › Dostęp API"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
                 <li><a href="{{ root }}/settings/ksef/purchase-invoices" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-cloud-download"></i> Faktury zakupowe KSeF (pobieranie)</a></li>
                 <li><a href="{{ root }}/purchases" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-archive"></i> Archiwum dostaw (ręczne)</a></li>
+                <li><a href="{{ root }}/communication/distribution?tab=history" data-where="Komunikacja › Dystrybucja dokumentów"><i class="bi bi-lightning-charge"></i> Automatyczne e-maile : historia wysyłek</a></li>
             </ul>
         </div>
 

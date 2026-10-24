@@ -93,6 +93,8 @@ class DeliveryNoticeService
             $c = $day['by_id'][$id] ?? null;
             if ($c === null) { $problems[] = "Klient {$id} nie ma dostawy {$date}."; continue; }
             $n = $this->customerNotice($day, $c, $item);
+            // adresse imposée (Dystrybucja dokumentów : principal, comptabilité, commercial ou autre)
+            if (filter_var(trim((string) ($item['email'] ?? '')), FILTER_VALIDATE_EMAIL)) $n['email'] = trim((string) $item['email']);
             if (!empty($item['mail'])) {
                 if ($n['email'] === '') $problems[] = "{$c['name']} : brak adresu e-mail.";
                 elseif (!$n['mail']['template']) $problems[] = "{$c['name']} : brak szablonu e-maila « delivery_details ».";
@@ -104,7 +106,7 @@ class DeliveryNoticeService
                     ]);
                     $this->notices->insert(['ship_date' => $date, 'id_customer' => $id, 'channel' => 'mail', 'language' => $n['language'], 'recipient' => $n['email'],
                         'subject' => $n['mail']['subject'], 'body' => $n['mail']['body'], 'status' => 'queued', 'id_message' => $messageId, 'created_by' => $author]);
-                    $sent[] = ['customer' => $c['name'], 'channel' => 'mail', 'status' => 'queued', 'recipient' => $n['email']];
+                    $sent[] = ['customer' => $c['name'], 'channel' => 'mail', 'status' => 'queued', 'recipient' => $n['email'], 'id_message' => $messageId];
                 }
             }
             if (!empty($item['sms'])) {

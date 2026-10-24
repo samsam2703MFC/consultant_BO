@@ -1,0 +1,293 @@
+{% extends "layouts/base.twig" %}
+
+{% set rule_labels = {
+    'ORDER_CONFIRMATION': 'Po zamówieniu',
+    'PROFORMA_TO_CLIENT': 'Po wystawieniu proformy',
+    'DELIVERY_PLANNED': 'Dzień przed dostawą',
+    'SHIPMENT_SENT': 'Z dostawą',
+    'WDT_TO_CLIENT': 'Po wystawieniu WDT',
+    'WDT_KSEF_TO_CLIENT': 'Po przyjęciu WDT w KSeF',
+    'INVOICE_TO_CLIENT': 'Po wystawieniu faktury',
+    'DIFFERENCE_TO_CLIENT': 'Różnice (≠ 0)',
+    'PRICE_LIST_TO_CLIENT': 'Zmiana cen',
+    'MONTHLY_REPORT': '1. dnia miesiąca',
+    'ACCOUNTING_WDT': 'Kopia WDT (stara reguła)',
+    'ACCOUNTING_INVOICE': 'Kopia faktury (stara reguła)',
+    'ACCOUNTING_PROFORMA': 'Kopia proformy (stara reguła)'
+} %}
+{% set ref_labels = {'order': 'Zamówienie', 'proforma': 'Proforma', 'invoice': 'Faktura', 'wdt': 'WDT', 'wdtksef': 'WDT (KSeF)', 'shipment': 'Wysyłka',
+    'diff': 'Różnice', 'delivery': 'Dostawa', 'price': 'Cennik klienta', 'month': 'Raport miesięczny klienta'} %}
+
+{% block title %}Dystrybucja dokumentów{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Dystrybucja dokumentów</h3>
+            <p class="text-subtitle text-muted">Kto dostaje który dokument, jak (e-mail / papier z dostawą), na jaki adres i kiedy. Operator nic nie wybiera :
+                plik dostawy zawiera tylko papier klienta, e-maile wychodzą same w języku klienta.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.dd-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--at-muted,#666);margin:10px 0;align-items:center}
+.dd-wrap{overflow-x:auto;background:#fff;border-radius:12px;border:1px solid #eee}
+.dd-table{border-collapse:collapse;font-size:12.5px;min-width:100%}
+.dd-table th,.dd-table td{border-bottom:1px solid #f0ebe7;padding:6px 5px;vertical-align:middle}
+.dd-table thead th{background:#8D1D2C;color:#fff;font-weight:600;text-align:center;line-height:1.2;font-size:11.5px;min-width:70px}
+.dd-table thead tr.dd-when th{background:#f6e9eb;color:#8D1D2C;font-weight:500;font-size:11px}
+.dd-table thead tr.dd-when select{font-size:10.5px;padding:1px 18px 1px 4px;border:1px solid #e6c9ce;border-radius:6px;color:#8D1D2C;max-width:140px;background-position:right 3px center}
+.dd-table thead tr.dd-when span{display:inline-block;font-size:10.5px;border:1px solid #e6c9ce;border-radius:6px;padding:2px 5px;background:#fff;color:#8D1D2C}
+.dd-table th:first-child,.dd-table td:first-child{position:sticky;left:0;z-index:1;text-align:left;background:inherit}
+.dd-table tbody td:first-child{background:#fff}
+.dd-table thead tr:first-child th:first-child{background:#8D1D2C}
+.dd-table thead tr.dd-when th:first-child{background:#f6e9eb}
+.dd-table tr.dd-special td:first-child{background:#fbf7f5}
+.dd-table td.c{text-align:center;white-space:nowrap;cursor:pointer}
+.dd-table td.c:hover{background:#fbf3f4}
+.dd-table td.name{white-space:nowrap;font-weight:600}
+.dd-table tr.dd-special td{background:#fbf7f5}
+.dd-chip{display:inline-block;border-radius:999px;padding:2px 6px;font-size:10.5px;font-weight:600;margin:1px;white-space:nowrap}
+.dd-mail{background:#e8f1fb;color:#1d5a99}.dd-paper{background:#f1eefa;color:#5a3d99}.dd-sms{background:#eef6ee;color:#2e6b2e}
+.dd-bad{background:#fde8e8;color:#b42318;outline:1px dashed #e8a5a5}.dd-tag{background:#f6e9eb;color:#8D1D2C}.dd-inh{background:#f2f2f2;color:#777;font-weight:500}
+.dd-none{color:#c9c2bd}
+.dd-sum{font-size:12px;white-space:nowrap}
+.dd-warn{color:#b42318;font-weight:600}
+.dd-pop{position:absolute;z-index:1050;background:#fff;border:1px solid #e6dcd5;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.16);padding:14px 16px;width:340px;font-size:13px}
+.dd-pop h6{margin:0 0 8px;font-size:13px;color:#8D1D2C}
+.dd-pop .dd-line{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f3eeea}
+.dd-hl{outline:3px solid #8D1D2C;outline-offset:-3px}
+.dd-hist code{font-size:11px}
+</style>
+<section class="section">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <div class="at-tabs" role="tablist">
+            <button type="button" data-tab="table" class="active">Tabela</button>
+            <button type="button" data-tab="history">Historia wysyłek <span class="at-tab-count">{{ dispatches|length }}</span></button>
+        </div>
+        <span class="ms-auto small {{ delivery_mode == 'live' ? 'text-muted' : 'text-warning' }}"><i class="bi {{ delivery_mode == 'live' ? 'bi-send-check' : 'bi-shield-lock' }}"></i> {{ delivery_label }}</span>
+        <button type="button" class="btn btn-sm btn-outline-dark" id="ddRunNow"><i class="bi bi-play-fill"></i> Uruchom teraz</button>
+    </div>
+
+    <div data-pane="table">
+        <div class="dd-legend">
+            <span><span class="dd-chip dd-mail">✉ ks.</span> e-mail : gł. = adres główny, ks. = księgowość, hand. = handlowiec (z karty klienta), inny = podany adres</span>
+            <span><span class="dd-chip dd-paper">🖨 ×2</span> papier z dostawą, liczba egzemplarzy</span>
+            <span><span class="dd-chip dd-sms">SMS</span> SMS</span>
+            <span><span class="dd-chip dd-bad">✉ gł.</span> brak adresu w karcie klienta</span>
+            <span>* brak tego adresu → adres zapasowy z karty</span>
+            <span class="ms-auto"><button type="button" class="btn btn-sm btn-outline-secondary" id="ddCopy">Kopiuj ustawienia klienta…</button></span>
+        </div>
+        <div class="dd-wrap"><table class="dd-table" id="ddTable"></table></div>
+        <p class="text-muted small mt-2 mb-0">Kliknięcie komórki : kanał, adres, liczba egzemplarzy. Nagłówek « Kiedy » : moment wysłania, wspólny dla wszystkich klientów.
+            Podsumowanie sprzedaży i cel obrotu domyślnie tylko dla franczyzobiorców. Na papierze : <a href="{{ root }}/logistics/documents">Logistyka › Dokumenty dostawy</a>.</p>
+    </div>
+
+    <div data-pane="history" class="d-none">
+        <div class="card">
+            <div class="card-body">
+                <form id="ddSettings" class="row g-3 align-items-end mb-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="ddAccounting">Adres biura rachunkowego SL Food (gdy wiersz « Biuro rachunkowe » nie ma własnego)</label>
+                        <input type="email" class="form-control" id="ddAccounting" value="{{ accounting_address }}" placeholder="faktury@biuro-rachunkowe.pl">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label" for="ddLanguage">Język zapasowy (bez klienta)</label>
+                        <select class="form-select" id="ddLanguage">
+                            {% for code, label in {'fr': 'Francuski', 'nl': 'Niderlandzki', 'pl': 'Polski', 'en': 'Angielski'} %}
+                                <option value="{{ code }}" {{ client_language == code ? 'selected' }}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3"><button type="submit" class="btn btn-outline-dark w-100">Zapisz</button></div>
+                </form>
+                {% if not has_account and delivery_mode != 'log_only' %}<div class="alert alert-warning py-2">Brak aktywnego konta e-mail : <a href="{{ root }}/communication/email-settings">skonfiguruj</a>.</div>{% endif %}
+                {% if dispatches %}
+                <div class="table-responsive dd-hist">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>Kiedy</th><th>Moment</th><th>Zdarzenie</th><th>Odbiorca / temat</th><th>Stan</th><th></th></tr></thead>
+                        <tbody>
+                        {% for d in dispatches %}
+                            {% set parts = d.ref_key|split('>') %}
+                            {% set base = parts[0]|split(':') %}
+                            <tr>
+                                <td class="text-nowrap">{{ d.created_at }}</td>
+                                <td>{{ rule_labels[d.rule_code]|default(d.rule_code) }}</td>
+                                <td>{{ ref_labels[base[0]]|default(base[0]) }} {% if base[0] == 'delivery' %}{{ base[2]|default('') }} · #{{ base[1] }}{% elseif base[0] == 'month' %}{{ base[2]|default('') }} · #{{ base[1] }}{% else %}#{{ base[1]|default('') }}{% endif %}
+                                    {% if parts|length > 1 %}<div class="text-muted small">{{ parts[1] starts with 'acc:' ? 'kopia dla biura' : (parts[1] == 'notice' ? 'powiadomienie' : 'wiadomość do klienta') }}</div>{% endif %}</td>
+                                <td>{% if d.id_message %}<a href="{{ root }}/communication/messages/{{ d.id_message }}">{{ d.recipient_email }}</a><div class="text-muted small">{{ d.subject_text }}</div>{% endif %}
+                                    {% if d.reason and d.status == 'queued' %}<div class="text-muted small">{{ d.reason }}</div>{% endif %}
+                                    {% if not d.id_message and d.status == 'queued' and not d.reason %}—{% endif %}</td>
+                                <td>
+                                    {% if d.status == 'queued' %}
+                                        {% if d.message_status == 'sent' and (d.provider_message_id ?? '') starts with 'LOG_ONLY:' %}<span class="at-pill at-pill-muted">Zarejestrowana (nie wysłana)</span>
+                                        {% elseif d.message_status == 'sent' %}<span class="at-pill at-pill-ok">Wysłana</span>
+                                        {% elseif d.message_status == 'failed' %}<span class="at-pill at-pill-danger">Błąd wysyłki</span>
+                                        {% else %}<span class="at-pill at-pill-warn">W kolejce</span>{% endif %}
+                                    {% else %}
+                                        <span class="at-pill {{ d.status == 'failed' ? 'at-pill-danger' : 'at-pill-warn' }}">{{ d.status == 'failed' ? 'Błąd' : 'Pominięte' }}</span>
+                                        <div class="text-muted small">{{ d.reason }}</div>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">{% if d.status != 'queued' %}<button type="button" class="btn btn-sm btn-outline-dark" data-retry="{{ d.id }}">Ponów</button>{% endif %}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="at-empty mb-0">Brak wysyłek. E-maile wychodzą od chwili włączenia, dla nowych zamówień, wysyłek i dokumentów (bez historii).</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const root = {{ root|json_encode|raw }};
+    const M = {{ matrix|json_encode|raw }};
+    const LABEL = {{ recipient_labels|json_encode|raw }};
+    const SHORT = {{ recipient_short|json_encode|raw }};
+    const MAX = {{ max_copies }};
+    const send = (url, method, data) => fetch(root + url, {
+        method, credentials: 'same-origin',
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: data ? JSON.stringify(data) : undefined,
+    }).then(r => r.json().then(body => ({ok: r.ok, ...body})));
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    const table = document.getElementById('ddTable');
+
+    const cellHtml = (row, doc) => {
+        const c = row.cells[doc.key];
+        const parts = [];
+        if (c.mail_to) {
+            const bad = !row.special && !c.address;
+            const label = row.id === -1 ? '✉ ' + (c.mail_address || 'biuro (ustawienia)') : '✉ ' + SHORT[c.mail_to] + (c.fallback ? '*' : '');
+            parts.push(`<span class="dd-chip ${bad ? 'dd-bad' : 'dd-mail'}" title="${esc(bad ? c.problem : (c.address || LABEL[c.mail_to]))}">${esc(label)}</span>`);
+        }
+        if (c.sms) parts.push(`<span class="dd-chip ${!row.special && !row.phone ? 'dd-bad' : 'dd-sms'}" title="${!row.special && !row.phone ? 'Brak telefonu w karcie klienta' : 'SMS'}">SMS</span>`);
+        if (c.paper_copies) parts.push(`<span class="dd-chip dd-paper">🖨 ×${c.paper_copies}</span>`);
+        return parts.length ? parts.join('') : '<span class="dd-none">—</span>';
+    };
+    const rowHtml = (row) => {
+        const tags = (row.franchise ? ' <span class="dd-chip dd-tag">franczyza</span>' : '') + (row.inherited ? ' <span class="dd-chip dd-inh" title="Ustawienia domyślne — zmiana komórki tworzy własne ustawienia klienta">domyślne</span>' : '');
+        const sum = row.id === 0 ? 'dla nowych<br>klientów' : row.id === -1 ? `✉ ${row.mails} kopie`
+            : `🖨 ${row.paper} egz.<br>✉ ${row.mails} auto${row.problems ? '<br><span class="dd-warn">⚠ brak adresu</span>' : ''}`;
+        return `<tr data-row="${row.id}" class="${row.special ? 'dd-special' : ''}"><td class="name">${row.id > 0 ? `<a href="${root}/clients/${row.id}/edit" class="text-reset">${esc(row.name)}</a>` : esc(row.name)}${tags}</td>
+            <td class="text-center">${esc(row.lang)}</td>
+            ${M.docs.map(d => (row.id === -1 && !d.accounting) ? '<td class="text-center"><span class="dd-none">—</span></td>' : `<td class="c" data-doc="${d.key}">${cellHtml(row, d)}</td>`).join('')}
+            <td class="dd-sum">${sum}</td></tr>`;
+    };
+    const render = () => {
+        table.innerHTML = `<thead><tr><th>Klient</th><th>Język</th>${M.docs.map(d => `<th>${esc(d.label)}</th>`).join('')}<th style="text-align:left">Razem</th></tr>
+            <tr class="dd-when"><th>Kiedy →</th><th></th>${M.docs.map(d => `<th>${Object.keys(d.moments).length > 1
+                ? `<select class="form-select" data-moment="${d.key}">${Object.entries(d.moments).map(([k, v]) => `<option value="${k}" ${k === d.moment ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`
+                : `<span>${esc(M.moment_labels[d.moment])}</span>`}</th>`).join('')}<th></th></tr></thead>
+            <tbody>${M.rows.map(rowHtml).join('')}</tbody>`;
+    };
+    render();
+
+    let pop = null;
+    const closePop = () => { pop?.remove(); pop = null; table.querySelector('.dd-hl')?.classList.remove('dd-hl'); };
+    table.addEventListener('click', (e) => {
+        const td = e.target.closest('td.c');
+        if (!td) return;
+        closePop();
+        const row = M.rows.find(r => r.id === +td.parentElement.dataset.row);
+        const doc = M.docs.find(d => d.key === td.dataset.doc);
+        const c = row.cells[doc.key];
+        td.classList.add('dd-hl');
+        const options = row.id === -1 ? {'': '— nie', other: 'adres biura'} : {'': '— nie', head: LABEL.head, acc: LABEL.acc, sales: LABEL.sales, other: LABEL.other + '…'};
+        const missing = row.id > 0 && !row.emails.head && !row.emails.acc && !row.emails.sales;
+        pop = document.createElement('div');
+        pop.className = 'dd-pop';
+        pop.innerHTML = `<h6>${esc(row.name)} · ${esc(doc.label)}</h6>
+            ${doc.paper && row.id !== -1 ? `<div class="dd-line"><span>🖨 Papier z dostawą</span><span class="d-flex align-items-center gap-1"><input type="number" min="0" max="${MAX}" class="form-control form-control-sm" style="width:64px" name="paper" value="${c.paper_copies}"> egz.</span></div>` : ''}
+            <div class="dd-line"><span>✉ E-mail</span><select class="form-select form-select-sm" style="width:170px" name="mail_to">${Object.entries(options).map(([k, v]) => `<option value="${k}" ${k === c.mail_to ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
+            <div class="dd-line ${c.mail_to === 'other' ? '' : 'd-none'}" data-other><input type="email" class="form-control form-control-sm" name="address" placeholder="${row.id === -1 ? 'adres z ustawień (Historia wysyłek)' : 'adres@klient.be'}" value="${esc(c.mail_address || '')}"></div>
+            ${doc.sms && row.id !== -1 ? `<div class="dd-line"><span>SMS</span><input class="form-check-input" type="checkbox" name="sms" ${c.sms ? 'checked' : ''}></div>` : ''}
+            <div class="small text-muted pt-2">Kiedy : ${esc(M.moment_labels[doc.moment])} (dla wszystkich klientów)${c.address ? '<br>Adres : ' + esc(c.address) : ''}</div>
+            ${missing ? '<div class="small text-danger pt-1">⚠ Karta klienta : brak adresów e-mail — e-maile do tego klienta nie wyjdą.</div>' : (c.problem ? `<div class="small text-danger pt-1">⚠ ${esc(c.problem)}</div>` : '')}
+            ${row.inherited ? '<div class="small text-muted pt-1">Klient ma ustawienia domyślne : zapis utworzy jego własne ustawienia.</div>' : ''}
+            <div class="d-flex justify-content-between align-items-center mt-2">${row.id > 0 ? `<a href="${root}/clients/${row.id}/edit" class="small">Karta klienta</a>` : '<span></span>'}
+                <span><button type="button" class="btn btn-sm btn-light" data-cancel>Anuluj</button> <button type="button" class="btn btn-sm btn-primary" data-save>Zapisz</button></span></div>`;
+        document.body.appendChild(pop);
+        const r = td.getBoundingClientRect();
+        pop.style.left = Math.max(8, Math.min(window.innerWidth - 356, r.left + window.scrollX - 150)) + 'px';
+        pop.style.top = (r.bottom + window.scrollY + 6) + 'px';
+        pop.querySelector('[name=mail_to]').addEventListener('change', (ev) => pop.querySelector('[data-other]').classList.toggle('d-none', ev.target.value !== 'other'));
+        pop.querySelector('[data-cancel]').addEventListener('click', closePop);
+        pop.querySelector('[data-save]').addEventListener('click', () => {
+            const val = (n) => pop.querySelector(`[name=${n}]`);
+            send('/ajax/communication/distribution/cell', 'PUT', {
+                customer: row.id, doc: doc.key, mail_to: val('mail_to').value, mail_address: val('address').value,
+                paper_copies: val('paper') ? val('paper').value : 0, sms: val('sms') ? val('sms').checked : false,
+            }).then(res => {
+                showSnack(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+                if (!res.ok) return;
+                M.rows[M.rows.indexOf(row)] = res.data;
+                table.querySelector(`tr[data-row="${row.id}"]`).outerHTML = rowHtml(res.data);
+                closePop();
+            });
+        });
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePop(); });
+    document.addEventListener('mousedown', (e) => { if (pop && !pop.contains(e.target) && !e.target.closest('td.c')) closePop(); });
+
+    table.addEventListener('change', (e) => {
+        const sel = e.target.closest('[data-moment]');
+        if (!sel) return;
+        const doc = M.docs.find(d => d.key === sel.dataset.moment);
+        send('/ajax/communication/distribution/moment', 'PUT', {doc: doc.key, moment: sel.value}).then(res => {
+            showSnack(res.ok, res.message || 'Błąd');
+            if (res.ok) doc.moment = sel.value; else sel.value = doc.moment;
+        });
+    });
+
+    document.getElementById('ddCopy').addEventListener('click', () => {
+        const clients = M.rows.filter(r => r.id >= 0);
+        Swal.fire({
+            title: 'Kopiuj ustawienia', width: 560, showCancelButton: true, confirmButtonText: 'Kopiuj', cancelButtonText: 'Anuluj',
+            html: `<div class="text-start small"><label class="form-label">Z :</label><select id="ddFrom" class="form-select form-select-sm mb-2">${clients.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
+                <label class="form-label">Do klientów :</label><div style="max-height:260px;overflow:auto;border:1px solid #eee;border-radius:8px;padding:6px 10px">
+                ${clients.filter(r => r.id > 0).map(r => `<div class="form-check"><input class="form-check-input" type="checkbox" value="${r.id}" id="ddTo${r.id}"><label class="form-check-label" for="ddTo${r.id}">${esc(r.name)}</label></div>`).join('')}</div></div>`,
+            preConfirm: () => ({from: +document.getElementById('ddFrom').value, to: [...document.querySelectorAll('[id^=ddTo]:checked')].map(i => +i.value)}),
+        }).then(r => {
+            if (!r.isConfirmed) return;
+            if (!r.value.to.length) return showSnack(false, 'Wybierz klientów.');
+            send('/ajax/communication/distribution/copy', 'POST', r.value).then(res => { showSnack(res.ok, res.message); if (res.ok) location.reload(); });
+        });
+    });
+
+    const showTab = (name) => {
+        document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+        document.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('d-none', p.dataset.pane !== name));
+    };
+    document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { showTab(b.dataset.tab); history.replaceState(null, '', '?tab=' + b.dataset.tab); }));
+    if (new URLSearchParams(location.search).get('tab') === 'history') showTab('history');
+
+    document.getElementById('ddSettings').addEventListener('submit', (e) => {
+        e.preventDefault();
+        send('/ajax/communication/automations/settings', 'POST', {
+            accounting_address: document.getElementById('ddAccounting').value,
+            client_language: document.getElementById('ddLanguage').value,
+        }).then(res => showSnack(res.ok, res.message));
+    });
+    document.getElementById('ddRunNow').addEventListener('click', (e) => {
+        e.currentTarget.disabled = true;
+        send('/ajax/communication/automations/run', 'POST').then(res => {
+            Swal.fire({icon: res.ok ? 'success' : 'error', text: res.message}).then(() => location.reload());
+        });
+    });
+    document.addEventListener('click', (e) => {
+        const retry = e.target.closest('[data-retry]');
+        if (retry) send(`/ajax/communication/automations/dispatches/${retry.dataset.retry}/retry`, 'POST').then(res => { showSnack(res.ok, res.message); location.reload(); });
+    });
+})();
+</script>
+{% endblock %}

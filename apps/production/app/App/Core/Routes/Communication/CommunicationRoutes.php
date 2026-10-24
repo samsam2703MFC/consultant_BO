@@ -3,9 +3,13 @@ use FastRoute\RouteCollector;
 return function (RouteCollector $r) {
     $controller = App\Controllers\Web\Communication\CommunicationController::class;
     $automation = App\Controllers\Web\Communication\MailAutomationController::class;
-    $r->addRoute('GET', '/communication/automations', ['controller' => $automation, 'method' => 'index']);
-    $r->addRoute('PATCH', '/ajax/communication/automations/{id:\\d+}', ['controller' => $automation, 'method' => 'updateRule']);
-    $r->addRoute('GET', '/ajax/communication/automations/{id:\\d+}/preview', ['controller' => $automation, 'method' => 'preview']);
+    // « Automatyczne e-maile » : zastąpione tabelą « Dystrybucja dokumentów » (historia wysyłek w zakładce)
+    $r->addRoute('GET', '/communication/automations', ['redirect' => '/communication/distribution?tab=history']);
+    $distribution = App\Controllers\Web\Communication\DocumentDistributionController::class;
+    $r->addRoute('GET', '/communication/distribution', ['controller' => $distribution, 'method' => 'index']);
+    $r->addRoute('PUT', '/ajax/communication/distribution/cell', ['controller' => $distribution, 'method' => 'saveCell']);
+    $r->addRoute('PUT', '/ajax/communication/distribution/moment', ['controller' => $distribution, 'method' => 'saveMoment']);
+    $r->addRoute('POST', '/ajax/communication/distribution/copy', ['controller' => $distribution, 'method' => 'copy']);
     $r->addRoute('POST', '/ajax/communication/automations/settings', ['controller' => $automation, 'method' => 'saveSettings']);
     $r->addRoute('POST', '/ajax/communication/automations/run', ['controller' => $automation, 'method' => 'runNow']);
     $r->addRoute('POST', '/ajax/communication/automations/dispatches/{id:\\d+}/retry', ['controller' => $automation, 'method' => 'retry']);

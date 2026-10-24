@@ -42,6 +42,8 @@ class CommunicationService
         'delivery_details_sms' => 'SMS : informacja o dostawie (Logistyka)',
         'accounting_document' => 'Kopia dokumentu dla księgowości (automatyczne)',
         'sales_goal' => 'Cel obrotu franczyzobiorcy (zakupy × współczynnik, PDF)',
+        'price_list' => 'Nowy cennik klienta (automatyczne, po zmianie cen)',
+        'monthly_report' => 'Raport miesięczny : podsumowanie sprzedaży i cel obrotu (automatyczne)',
     ];
 
     public function __construct(

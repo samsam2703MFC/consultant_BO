@@ -9,6 +9,9 @@ return function(RouteCollector $r) {
     $r->addRoute('GET', '/logistics/vehicles', ['controller' => $c, 'method' => 'vehicles']);
     $r->addRoute('GET', '/logistics/tours', ['controller' => $c, 'method' => 'tours']);
     $r->addRoute('GET', '/logistics/loading-list', ['controller' => $c, 'method' => 'loadingList']);
+    $d = App\Controllers\Web\Logistics\DeliveryDocumentsController::class;
+    $r->addRoute('GET', '/logistics/documents', ['controller' => $d, 'method' => 'index']);
+    $r->addRoute('GET', '/ajax/logistics/documents/day.pdf', ['controller' => $d, 'method' => 'dayPdf']);
     $n = App\Controllers\Web\Logistics\DeliveryNoticeController::class;
     $r->addRoute('GET', '/logistics/notices', ['controller' => $n, 'method' => 'index']);
     $r->addRoute('POST', '/ajax/logistics/notices/preview', ['controller' => $n, 'method' => 'preview']);

@@ -41,7 +41,8 @@ class DocumentController extends BaseController
 
     public function ajaxGetDocuments($id)
     {
-        $respDoc = $this->safeFetch([$this->shippingDocumentService, 'generateDocumentsInOneFile'], $this->errors, $id);
+        // papier selon la Dystrybucja dokumentów ; ?all=1 : jeu complet (WZ ×3, CMR ×3, WDT, PPWR, écarts)
+        $respDoc = $this->safeFetch([$this->shippingDocumentService, 'generateDocumentsInOneFile'], $this->errors, [$id, empty($_GET['all'])]);
 
 
         if (!$respDoc) {
