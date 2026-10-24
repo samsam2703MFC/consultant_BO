@@ -1031,3 +1031,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T09:10:37Z poczta : skrzynka e-mail każdego użytkownika (#137)
 2026-10-24T09:23:56Z #131 accueil tablette
 2026-10-24T09:38:01Z #132 dostawy surowców
+2026-10-24T09:53:29Z #134 rentowność grup tydzień
