@@ -108,7 +108,10 @@ if ($promoId === null) {
 printf("  repris d'un passage précédent : campagne=%s · promotion=%s\n", json_encode($campId), json_encode($promoId));
 
 $tz = new DateTimeZone('Europe/Brussels');
-$debut = (new DateTimeImmutable('now', $tz))->modify('-10 minutes')->format('Y-m-d H:i:s');
+// 3e passage : « Voucher campaign has not started yet » avec un début à l'heure de Bruxelles moins 10 minutes —
+// l'ERP compare en UTC (ses activated_at / disabled_at sont en UTC, ses created_at à l'heure locale). Un début
+// trois heures plus tôt est passé dans les deux fuseaux.
+$debut = (new DateTimeImmutable('now', $tz))->modify('-3 hours')->format('Y-m-d H:i:s');
 $fin   = (new DateTimeImmutable('now', $tz))->modify('+1 day')->format('Y-m-d H:i:s');
 
 // ── Nettoyage final ──────────────────────────────────────────────────────────
@@ -203,15 +206,18 @@ try {
     // Le code d'essai d'un passage précédent : ZZSONDE…, mais pas celui de la génération (ZZSONDE-G…).
     foreach (evItems(ErpApi::sondeGet("/admin/voucher-campaigns/$campId/codes?limit=50")['corps']) as $k) {
         $kc = is_array($k) ? (string) ($k['code'] ?? '') : '';
-        if ($code === null && str_starts_with($kc, 'ZZSONDE') && !str_starts_with($kc, 'ZZSONDE-G')) { $code = $kc; $codeId = (int) $k['id']; }
+        // Les dates d'un code ne se modifient pas (seul son statut) : on ne reprend qu'un code sans date de début.
+        if ($code === null && str_starts_with($kc, 'ZZSONDE') && !str_starts_with($kc, 'ZZSONDE-G') && empty($k['valid_from'])) { $code = $kc; $codeId = (int) $k['id']; }
     }
     if ($code === null) {
         $alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; $rnd = '';
         for ($i = 0; $i < 12; $i++) { $rnd .= $alpha[random_int(0, strlen($alpha) - 1)]; }
-        $r = evEcrire('POST', "/admin/voucher-campaigns/$campId/codes", ['code' => 'ZZSONDE' . $rnd, 'status' => 'DISABLED', 'usage_limit' => 1, 'valid_from' => $debut, 'valid_to' => $fin]);
+        $r = evEcrire('POST', "/admin/voucher-campaigns/$campId/codes", ['code' => 'ZZSONDE' . $rnd, 'status' => 'DISABLED', 'usage_limit' => 1, 'valid_from' => null, 'valid_to' => $fin]);
         $codeId = evId($r['corps']); $code = 'ZZSONDE' . $rnd;
-        // La génération, une seule fois, pour en lire la réponse ; le code généré est aussitôt désactivé.
-        $g = evEcrire('POST', "/admin/voucher-campaigns/$campId/codes/generate", ['count' => 1, 'length' => 12, 'prefix' => 'ZZSONDE-G']);
+        // La génération, une seule fois (1er passage), pour en lire la réponse ; le code généré est aussitôt désactivé.
+        $dejaGenere = false;
+        foreach (evItems(ErpApi::sondeGet("/admin/voucher-campaigns/$campId/codes?limit=50")['corps']) as $k) { if (is_array($k) && str_starts_with((string) ($k['code'] ?? ''), 'ZZSONDE-G')) { $dejaGenere = true; } }
+        if (!$dejaGenere) { evEcrire('POST', "/admin/voucher-campaigns/$campId/codes/generate", ['count' => 1, 'length' => 12, 'prefix' => 'ZZSONDE-G']); }
         foreach (evItems(ErpApi::sondeGet("/admin/voucher-campaigns/$campId/codes?limit=50")['corps']) as $k) {
             if (is_array($k) && str_starts_with((string) ($k['code'] ?? ''), 'ZZSONDE-G') && ($k['status'] ?? '') !== 'DISABLED') {
                 evEcrire('PATCH', '/admin/voucher-codes/' . (int) $k['id'] . '/status', ['status' => 'DISABLED']);
@@ -234,11 +240,9 @@ try {
     // Ordre imposé par l'ERP (1er passage) : une campagne UNIQUE ne passe ACTIVE qu'avec un code déjà actif.
     if ($codeId !== null) { evEcrire('PATCH', "/admin/voucher-codes/$codeId/status", ['status' => 'ACTIVE']); }
     evEcrire('PATCH', "/admin/promotions/scheduled-product-discount/$promoId", ['status' => 'ACTIVE'] + $promoCorps);
-    $a = evEcrire('PATCH', "/admin/voucher-campaigns/$campId/status", ['status' => 'ACTIVE']);
-    if ($a['code'] >= 300) {
-        // 2e passage : refus sous `shared_code`. Seconde voie : la fiche complète, code_type UNIQUE et shared_code vide.
-        evEcrire('PATCH', "/admin/voucher-campaigns/$campId", ['status' => 'ACTIVE', 'code_type' => 'UNIQUE', 'shared_code' => null]);
-    }
+    // 3e passage : PATCH /status refuse une campagne UNIQUE (« shared_code is not supported for UNIQUE campaigns » —
+    // la fiche rend un shared_code calculé) ; PATCH /{id} avec shared_code vide passe.
+    evEcrire('PATCH', "/admin/voucher-campaigns/$campId", ['status' => 'ACTIVE', 'code_type' => 'UNIQUE', 'shared_code' => null]);
     $f = ErpApi::sondeGet("/admin/voucher-campaigns/$campId")['corps'];
     echo '  shared_code de la fiche : ', json_encode(isset($f['shared_code']) ? evMasque((string) $f['shared_code']) : null), "\n";
     echo '  après activation : configuration_complete=', json_encode($f['configuration_complete'] ?? null),
