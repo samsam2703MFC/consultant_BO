@@ -102,6 +102,7 @@ require __DIR__ . '/../src/primes.php';
 require __DIR__ . '/../src/primes_app.php';
 require __DIR__ . '/../src/primes_b2b.php';
 require __DIR__ . '/../src/sms.php';
+require __DIR__ . '/../src/api_module.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -849,6 +850,81 @@ $anV = primesAnnee((int) date('Y'), true);
 verifie('de bout en bout, sur la base simulée : un mois par mois de l’année jusqu’au mois en cours, gravée',
     count($anV['mois']) === (int) date('n') && end($anV['mois'])['m'] === date('Y-m') && end($anV['mois'])['enCours'] === true
     && isset($GLOBALS['REGLAGES']['primesAn' . date('Y')]), json_encode(array_column($anV['mois'], 'm')));
+
+// --- L'API du module (24/10/2026) : l'inventaire colle au code, l'état se lit juste -----------------------
+echo "\nL'API du module\n";
+$inv = apiModInventaire();
+$parSource = [];
+foreach ($inv as $src) { $parSource[$src['cle']] = array_merge(...array_column($src['groupes'], 'routes')); }
+verifie('cinq sources : 14 routes du cockpit, 19 du panel, 4 de l’ERP admin, 10 tables, 1 route Twilio',
+    array_map('count', $parSource) === ['cockpit' => 14, 'panel' => 19, 'erp' => 4, 'base' => 10, 'sms' => 1], json_encode(array_map('count', $parSource)));
+$malFaites = [];
+foreach ($parSource as $cle => $rs) {
+    foreach ($rs as $r) {
+        if (!isset($r['m'], $r['r'], $r['dit'], $r['pages']) || $r['pages'] === [] || array_diff($r['pages'], array_keys(API_MOD_PAGES)) !== []) { $malFaites[] = $cle . ' ' . ($r['r'] ?? '?'); }
+        // Une lecture se sonde ou dit pourquoi elle ne se sonde pas ; une écriture ne s'appelle jamais.
+        if (in_array($r['m'], ['GET', 'LIT', 'ÉCRIT'], true) && !isset($r['sonde'])) { $malFaites[] = $cle . ' ' . $r['r'] . ' sans sonde'; }
+        if ($r['m'] === 'POST' && isset($r['sonde']) && !isset($r['sonde']['twilio'])) { $malFaites[] = $cle . ' ' . $r['r'] . ' écriture sondée'; }
+    }
+}
+verifie('chaque route a sa méthode, son chemin, ce qu’elle fait, ses pages ; chaque lecture sa sonde, aucune écriture appelée', $malFaites === [], implode(' · ', $malFaites));
+// Chaque route du cockpit existe dans le routeur — l'inventaire ne ment pas.
+$routeur = (string) file_get_contents(__DIR__ . '/../public/api/index.php');
+$absentes = [];
+foreach ($parSource['cockpit'] as $r) {
+    $ch = preg_replace('/[?\[].*$/', '', $r['r']);
+    if (!str_contains($routeur, "\$path === '" . $ch . "'")) { $absentes[] = $r['m'] . ' ' . $ch; }
+}
+verifie('chaque route du cockpit listée existe dans public/api/index.php', $absentes === [], implode(', ', $absentes));
+// Chaque appel de l'application au panel est listé.
+// « /employees/{$id}{$queryStr} » : la chaîne de requête tombe, chaque identifiant devient {}.
+$norm = static fn (string $c): string => (string) preg_replace(['/\{\$query[A-Za-z]*\}/', '/\?.*$/', '/\{\$?[A-Za-z]+\}|\$[A-Za-z]+/'], ['', '', '{}'], $c);
+$listees = array_map(static fn ($r) => $norm($r['r']), $parSource['panel']);
+$app = [];
+foreach (glob(__DIR__ . '/../apps/employee/src/app/Repositories/*/*.php') as $f) {
+    if (preg_match_all('/apiClient->[a-zA-Z]+\(\s*["\']([^"\']+)["\']/', (string) file_get_contents($f), $mm)) {
+        foreach ($mm[1] as $c) { $app[] = $norm($c); }
+    }
+}
+$nonListes = array_values(array_diff(array_unique($app), $listees));
+verifie('chaque appel de l’application au panel figure dans l’inventaire (' . count(array_unique($app)) . ' appels)', $app !== [] && $nonListes === [], implode(', ', $nonListes));
+$routeIn = static function (string $src, string $chemin) use ($inv): array {
+    foreach ($inv as $s) { if ($s['cle'] !== $src) { continue; } foreach ($s['groupes'] as $g) { foreach ($g['routes'] as $r) { if ($r['r'] === $chemin) { return $r; } } } }
+    return [];
+};
+$rKpi = $routeIn('panel', '/shops/{id}/statistics/sales/kpis?date_from=&date_to=');
+$rEmp = $routeIn('panel', '/employees/{id}/schedule?date_from=&date_to=');
+$etat = static fn (array $r, ?array $m): string => apiModEtat($r, $m)['niveau'];
+verifie('l’état d’une route : 200 rapide ok, 200 lent « lente », injoignable, 404 et 500 en erreur',
+    $etat($rKpi, ['type' => 'http', 'code' => 200, 'ms' => 230]) === 'ok' && $etat($rKpi, ['type' => 'http', 'code' => 200, 'ms' => 4200]) === 'lent'
+    && $etat($rKpi, ['type' => 'http', 'code' => 0, 'ms' => 8000, 'erreur' => 'Timeout was reached']) === 'erreur'
+    && $etat($rKpi, ['type' => 'http', 'code' => 404, 'ms' => 90]) === 'erreur' && $etat($rKpi, ['type' => 'http', 'code' => 502, 'ms' => 90]) === 'erreur'
+    && apiModEtat($rKpi, ['type' => 'http', 'code' => 200, 'ms' => 4200])['texte'] === 'lente · 4,2 s');
+verifie('un 403 : erreur pour le compte consultant, normal pour une route réservée au jeton de la personne',
+    $etat($rKpi, ['type' => 'http', 'code' => 403, 'ms' => 80]) === 'erreur' && $etat($rEmp, ['type' => 'http', 'code' => 403, 'ms' => 80]) === 'neutre');
+verifie('une écriture n’est pas appelée ; une lecture sans exemple le dit ; un calcul gardé dit son âge',
+    $etat($routeIn('cockpit', '/ventes/primes-app'), null) === 'ecriture' && $etat($routeIn('panel', '/tasks/completions/{id}'), null) === 'pas'
+    && $etat($routeIn('cockpit', '/ventes/primes-equipe?shop=&m='), ['type' => 'cache', 'n' => 0, 'maj' => null]) === 'neutre'
+    && apiModEtat($routeIn('cockpit', '/ventes/primes-equipe?shop=&m='), ['type' => 'cache', 'n' => 8, 'maj' => date('Y-m-d H:i:s', time() - 720)])['texte'] === 'calculé il y a 12 min · 8 en mémoire'
+    && $etat($routeIn('base', 'shops'), ['type' => 'table', 'ms' => 2, 'erreur' => "Table 'shops' doesn't exist"]) === 'erreur');
+$vue = apiModuleVue($inv, [apiModId('panel', $rKpi) => ['type' => 'http', 'code' => 403, 'ms' => 80],
+    apiModId('panel', $rEmp) => ['type' => 'http', 'code' => 403, 'ms' => 80]], ['notes' => ['erp' => 'non réglé']]);
+$vs = array_column($vue['sources'], null, 'cle');
+verifie('une source prend le pire de ses routes et compte ses erreurs ; les autres restent à « pas mesurée »',
+    $vs['panel']['etat'] === 'erreur' && $vs['panel']['compte']['erreur'] === 1 && $vs['panel']['compte']['ecriture'] === 3
+    && $vs['cockpit']['etat'] === 'ok' && $vs['cockpit']['compte']['ecriture'] === 5 && $vs['erp']['note'] === 'non réglé' && $vs['base']['n'] === 10);
+verifie('le chemin d’une sonde : les repères remplacés, null s’il en manque un ; le premier ticket d’une liste',
+    apiModChemin('/shops/{sid}/transactions?date={date}', ['sid' => '4', 'date' => '2026-10-24']) === '/shops/4/transactions?date=2026-10-24'
+    && apiModChemin('/transactions/{tid}?include=products', ['tid' => null]) === null
+    && apiModPremierTicket(['data' => [['id' => 0], ['id' => 812]]]) === 812 && apiModPremierTicket(['data' => ['data' => [['id' => 5]]]]) === 5 && apiModPremierTicket(null) === null);
+verifie('l’état gardé une minute vit dans mot_cache', motCle('apiModule') === 'cache');
+// De bout en bout, sans réseau ni compte : le panel et l'ERP disent ce qui manque, rien n'est appelé, l'état est gardé.
+$_GET = ['frais' => '1']; $api = ep_primes_api(); $_GET = [];
+$as = array_column($api['sources'], null, 'cle');
+verifie('de bout en bout, sans compte consultant ni compte admin : les manques dits, l’état gardé',
+    count($api['sources']) === 5 && $as['panel']['etat'] === 'erreur' && str_contains($as['panel']['note'], 'pas réglé')
+    && $as['erp']['etat'] === 'alerte' && $as['sms']['etat'] === 'alerte' && $as['base']['etat'] === 'ok'
+    && isset($GLOBALS['REGLAGES']['apiModule']['sources']) && is_int($api['ms']), json_encode(array_column($api['sources'], 'etat', 'cle')));
 
 // --- Les tables du module : toutes sous mot_ (23/10/2026) ---------------------------------------------
 echo "\nLes tables mot_\n";
