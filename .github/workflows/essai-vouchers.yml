@@ -1,0 +1,72 @@
+name: Essai — bon de test dans l'ERP (écriture)
+
+# Crée (ou reprend) UNE campagne de bons de test dans l'ERP TFBuddy, l'active le
+# temps de lire le contrat de caisse (/vouchers/validate, redeem, reverse), puis
+# la remet hors service. Accord de Sam le 24/10/2026. Détail et garde-fous :
+# en-tête de tools/essai_voucher.php. Résultats : WebShop/VOUCHERS_ERP.md.
+#
+# Contrairement à la sonde (sonde-vouchers.yml, lecture seule), ce workflow
+# ÉCRIT dans l'ERP : il ne part que sur un changement de `essai-vouchers.trigger`
+# (pas sur une retouche du script), dont le premier mot donne le mode :
+#   essai      — créer ou reprendre, activer, essayer, désactiver
+#   nettoyage  — désactiver, détacher et supprimer la promotion de test
+
+on:
+  push:
+    branches: [claude/admiring-archimedes-8cr84j]
+    paths: ['essai-vouchers.trigger']
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "essai : créer/reprendre, activer, essayer, désactiver · nettoyage : supprimer la promotion de test"
+        type: choice
+        options: [essai, nettoyage]
+        default: essai
+
+concurrency:
+  group: essai-vouchers
+  cancel-in-progress: false
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  TARGET_DIR: "/var/www/consulant_bo"
+
+jobs:
+  essai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Mode et syntaxe
+        id: mode
+        run: |
+          php -l tools/essai_voucher.php
+          mode="${{ github.event.inputs.mode }}"
+          [ -z "$mode" ] && mode="$(head -1 essai-vouchers.trigger | awk '{print $1}')"
+          case "$mode" in essai|nettoyage) ;; *) echo "::error::mode inconnu « $mode » (essai ou nettoyage)"; exit 1 ;; esac
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "Mode : $mode"
+
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      - name: Essai depuis le serveur du cockpit
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "php -- '${TARGET_DIR}' '${{ steps.mode.outputs.mode }}'" < tools/essai_voucher.php
