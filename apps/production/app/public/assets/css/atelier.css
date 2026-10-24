@@ -1745,3 +1745,19 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
     .at-dash-row-head { display: none; }
     .at-dash-row-total .at-dash-ratio { justify-content: flex-start; }
 }
+
+/* --- Karta produktu : zdjęcie produktu i 4 etapy produkcji (tablet) ------------------------- */
+.tfb-media-grid { display: grid; grid-template-columns: 260px 1fr; gap: 16px; align-items: start; }
+.tfb-media-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.tfb-media-photo, .tfb-media-step { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.tfb-media-no { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--at-primary); color: #fff; font-size: 11px; margin-right: 6px; }
+.tfb-media-zone { position: relative; aspect-ratio: 4 / 3; border: 2px dashed var(--at-line-2); border-radius: var(--at-radius); display: grid; place-items: center; cursor: pointer; overflow: hidden; background: var(--at-bg-2); }
+.tfb-media-zone.is-photo { aspect-ratio: 1; }
+.tfb-media-zone.has-image { border-style: solid; border-color: var(--at-line); }
+.tfb-media-zone.is-over { border-color: var(--at-primary); background: rgba(141, 29, 44, .06); }
+.tfb-media-zone.is-busy { opacity: .5; pointer-events: none; }
+.tfb-media-zone img { width: 100%; height: 100%; object-fit: cover; }
+.tfb-media-empty { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--at-muted); font-size: 12px; text-align: center; padding: 8px; }
+.tfb-media-empty .bi { font-size: 22px; }
+.tfb-media-del { position: absolute; top: 6px; right: 6px; }
+@media (max-width: 991px) { .tfb-media-grid { grid-template-columns: 1fr; } .tfb-media-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

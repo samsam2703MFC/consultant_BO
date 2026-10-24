@@ -674,6 +674,80 @@
     }
 
     // --- 1. Produit : données de l'ERP (mêmes champs que l'ancien formulaire d'édition) ----------
+    // Zdjęcie produktu i 4 etapy produkcji ze zdjęciem (przeciągnij i upuść) → tablet, zakładka Receptury.
+    async function mediaBlock(box, productId) {
+        const url = (slot) => `${api.root}/ajax/products/${productId}/media${slot === undefined ? '' : '/' + slot}`;
+        const call = async (method, slot, body) => {
+            const r = await fetch(url(slot), {method, credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+            const j = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(j.message || r.statusText);
+            return j.data;
+        };
+        // Zmniejszenie w przeglądarce : najdłuższy bok 1600 px, JPEG 85 %.
+        const shrink = (file) => new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+                const c = document.createElement('canvas');
+                c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                URL.revokeObjectURL(img.src);
+                resolve(c.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => reject(new Error(t('m.bad_image')));
+            img.src = URL.createObjectURL(file);
+        });
+        const zone = (s, big) => `<div class="tfb-media-zone ${big ? 'is-photo' : ''} ${s.image ? 'has-image' : ''}" data-zone="${s.slot}" tabindex="0" role="button" aria-label="${esc(big ? t('m.photo') : t('m.step', {n: s.slot}))}">
+                ${s.image ? `<img src="${esc(s.image)}" alt="">` : `<span class="tfb-media-empty"><i class="bi bi-cloud-arrow-up"></i>${esc(t('m.drop'))}</span>`}
+                ${s.image ? `<button type="button" class="btn btn-sm btn-light tfb-media-del" data-del="${s.slot}" aria-label="${esc(t('m.remove'))}"><i class="bi bi-trash"></i></button>` : ''}
+                <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-file="${s.slot}"></div>`;
+        const draw = (m) => {
+            box.innerHTML = `<h5 class="mt-4 mb-1">${esc(t('m.title'))}</h5><p class="form-text mt-0">${esc(t('m.help'))}</p>
+                <div class="tfb-media-grid">
+                    <div class="tfb-media-photo"><strong>${esc(t('m.photo'))}</strong>${zone(m.photo, true)}</div>
+                    <div class="tfb-media-steps">${m.steps.map(s => `<div class="tfb-media-step"><strong><span class="tfb-media-no">${s.slot}</span>${esc(t('m.step', {n: s.slot}))}</strong>${zone(s, false)}
+                        <textarea class="form-control form-control-sm" rows="2" maxlength="300" data-caption="${s.slot}" data-key="caption" placeholder="${esc(t('m.caption'))}">${esc(s.caption)}</textarea>
+                        <textarea class="form-control form-control-sm" rows="2" maxlength="300" data-caption="${s.slot}" data-key="caption_fr" placeholder="${esc(t('m.caption_fr'))}">${esc(s.caption_fr)}</textarea></div>`).join('')}</div>
+                </div>`;
+        };
+        const upload = async (slot, file) => {
+            if (!file || !/^image\//.test(file.type)) { ui.notify(false, t('m.bad_image')); return; }
+            const z = box.querySelector(`[data-zone="${slot}"]`);
+            z.classList.add('is-busy');
+            try { draw(await call('PUT', slot, {image: await shrink(file)})); ui.notify(true, t('m.saved')); }
+            catch (err) { z.classList.remove('is-busy'); ui.notify(false, err.message); }
+        };
+        try { draw(await call('GET')); } catch (err) { box.innerHTML = `<p class="text-danger">${esc(err.message)}</p>`; return; }
+        box.addEventListener('click', async (e) => {
+            const del = e.target.closest('[data-del]');
+            if (del) {
+                e.stopPropagation();
+                try { draw(await call('DELETE', Number(del.dataset.del))); } catch (err) { ui.notify(false, err.message); }
+                return;
+            }
+            const z = e.target.closest('[data-zone]');
+            if (z) box.querySelector(`[data-file="${z.dataset.zone}"]`).click();
+        });
+        box.addEventListener('keydown', (e) => { const z = e.target.closest('[data-zone]'); if (z && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); z.click(); } });
+        box.addEventListener('change', (e) => { const f = e.target.closest('[data-file]'); if (f && f.files[0]) upload(Number(f.dataset.file), f.files[0]); });
+        box.addEventListener('dragover', (e) => { const z = e.target.closest('[data-zone]'); if (z) { e.preventDefault(); z.classList.add('is-over'); } });
+        box.addEventListener('dragleave', (e) => { const z = e.target.closest('[data-zone]'); if (z) z.classList.remove('is-over'); });
+        box.addEventListener('drop', (e) => {
+            const z = e.target.closest('[data-zone]');
+            if (!z) return;
+            e.preventDefault();
+            z.classList.remove('is-over');
+            upload(Number(z.dataset.zone), e.dataTransfer.files[0]);
+        });
+        // Opis etapu : zapis po opuszczeniu pola.
+        box.addEventListener('focusout', async (e) => {
+            const ta = e.target.closest('[data-caption]');
+            if (!ta || ta.value === ta.defaultValue) return;
+            try { await call('PUT', Number(ta.dataset.caption), {[ta.dataset.key]: ta.value}); ta.defaultValue = ta.value; ui.notify(true, t('m.saved')); }
+            catch (err) { ui.notify(false, err.message); }
+        });
+    }
+
     function stepProduct(body, item) {
         const e = item.erp;
         if (item.item_type !== 'product') {
@@ -691,7 +765,9 @@
                 ${state.erp.label_types.map(v => `<option value="${v}" ${v === e.label_type ? 'selected' : ''}>${esc(t('p.label_type.' + v))}</option>`).join('')}</select></label>
             <label>${esc(t('p.shelf_life'))}<input class="form-control" name="shelf_life" data-field="shelf_life" inputmode="numeric" value="${e.shelf_life ?? ''}"></label>
             <p class="form-text tfb-full">${esc(t('p.help'))}</p>
-            ${nav(1)}</form>`;
+            ${nav(1)}</form>
+            ${item.final_product_id ? '<section class="tfb-media" data-media></section>' : ''}`;
+        if (item.final_product_id) mediaBlock(body.querySelector('[data-media]'), item.final_product_id);
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', async (ev) => {
             ev.preventDefault();

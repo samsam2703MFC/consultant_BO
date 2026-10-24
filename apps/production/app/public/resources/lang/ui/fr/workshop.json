@@ -390,5 +390,15 @@
   "row.workload_help": "Pénibilité 1–5 (1 très faible … 5 très élevée) : marges et coûts du produit.",
   "row.deactivate": "Désactiver dans l'ERP (inactif)",
   "row.activate": "Activer dans l'ERP (actif)",
-  "row.delete": "Supprimer…"
+  "row.delete": "Supprimer…",
+  "m.title": "Photo du produit et étapes de production (tablette)",
+  "m.help": "Glissez une photo sur la case ou cliquez pour choisir un fichier. La tablette du groupe montre la photo et les 4 étapes dans la recette du produit. La description s'enregistre en quittant le champ.",
+  "m.photo": "Photo du produit",
+  "m.step": "Étape {n}",
+  "m.drop": "Déposez une photo ou cliquez",
+  "m.caption": "Description (PL)",
+  "m.caption_fr": "Description (FR, facultatif)",
+  "m.remove": "Supprimer la photo",
+  "m.saved": "Enregistré.",
+  "m.bad_image": "Ce n'est pas une photo (JPEG, PNG, WebP)."
 }

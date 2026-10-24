@@ -87,6 +87,8 @@
 
     // Ikony Lucide (lucide.dev, licencja ISC) wbudowane w skrypt : linia, bez emoji, działają offline.
     const ICONS = {
+        'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />',
+        'list-ordered': '<path d="M10 12h11" /><path d="M10 18h11" /><path d="M10 6h11" /><path d="M4 10h2" /><path d="M4 6h1v4" /><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />',
         'clock': '<circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />',
         'package': '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /><path d="M12 22V12" /><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" /><path d="m7.5 4.27 9 5.15" />',
         'shield-check': '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" />',
@@ -664,20 +666,25 @@
         try { r = await api('GET', '/kiosk/recipes', undefined, true); } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
         const today = r.items.filter(i => i.planned);
         const rest = r.items.filter(i => !i.planned);
+        const components = r.components || [];
         const tile = (i) => `<button type="button" class="kiosk-card kiosk-recipe-tile" data-recipe="${i.item_id}"><strong>${esc(i.name)}</strong>
             <span class="kiosk-muted">${i.planned ? esc(t('prod_planned', {q: qty(i.planned, i)})) : esc(t(i.type === 'semi' ? 'rec_semi' : 'rec_product'))}</span></button>`;
+        const compTile = (c) => `<button type="button" class="kiosk-card kiosk-recipe-tile is-component" data-component="${c.id}"><strong>${esc(c.name)}</strong>
+            <span class="kiosk-muted">${c.for_groups ? esc(t('rec_for_groups', {groups: c.for_groups})) : esc(t('rec_component'))}</span></button>`;
         el.innerHTML = personHeader() + tabs('recipes') + `
             <section class="kiosk-card"><h2>${esc(t('rec_title'))}</h2><p class="kiosk-muted">${esc(t('rec_help'))}</p>
                 <input class="kiosk-search" type="search" data-rec-search placeholder="${esc(t('rec_search'))}" autocomplete="off"></section>
             ${today.length ? `<h2 class="kiosk-section">${esc(t('rec_today'))}</h2><div class="kiosk-recipe-grid">${today.map(tile).join('')}</div>` : ''}
+            ${components.length ? `<h2 class="kiosk-section">${icon('users')} ${esc(t('rec_components'))}</h2><div class="kiosk-recipe-grid">${components.map(compTile).join('')}</div>` : ''}
             ${rest.length ? `<h2 class="kiosk-section">${esc(t('rec_all'))}</h2><div class="kiosk-recipe-grid">${rest.map(tile).join('')}</div>` : ''}
-            ${r.items.length ? '' : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('rec_none'))}</p></section>`}`;
+            ${r.items.length || components.length ? '' : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('rec_none'))}</p></section>`}`;
         if (message) toast(message);
         el.querySelectorAll('[data-recipe]').forEach(b => b.addEventListener('click', () => renderRecipe(Number(b.dataset.recipe))));
+        el.querySelectorAll('[data-component]').forEach(b => b.addEventListener('click', () => renderRecipe(Number(b.dataset.component), true)));
         el.querySelector('[data-rec-search]').addEventListener('input', (e) => {
             resetIdle();
             const q = e.target.value.trim().toLowerCase();
-            el.querySelectorAll('[data-recipe]').forEach(b => { b.hidden = q !== '' && !b.textContent.toLowerCase().includes(q); });
+            el.querySelectorAll('[data-recipe], [data-component]').forEach(b => { b.hidden = q !== '' && !b.textContent.toLowerCase().includes(q); });
         });
     }
 
@@ -687,25 +694,54 @@
         return `${amount(q)} ${unit || ''}`.trim();
     };
 
-    // Drzewo receptury (podreceptury, surowce, opakowania, etapy przygotowania) × mnożnik.
-    function recNode(n, f, depth) {
-        const items = n.lines.filter(l => l.kind === 'recipe' || !l.packaging);
-        const pack = depth === 0 ? n.lines.filter(l => l.kind === 'material' && l.packaging) : [];
-        return `<div class="kiosk-rec-node ${depth ? 'is-sub' : ''}">
-            ${n.steps.length ? `<ol class="kiosk-rec-steps">${n.steps.map(st => `<li>${esc(st)}</li>`).join('')}</ol>` : ''}
-            <ul class="kiosk-rec-lines">${items.map(l => l.kind === 'recipe'
-                ? `<li class="kiosk-rec-sub"><details open><summary><strong>${esc(l.name)}</strong> <span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></summary>
-                    ${l.node ? recNode(l.node, f, depth + 1) : ''}</details></li>`
-                : `<li><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`).join('')}</ul>
-            ${pack.length ? `<details class="kiosk-rec-pack"><summary>${esc(t('lot_packaging', {n: pack.length}))}</summary><ul class="kiosk-rec-lines">${pack.map(l =>
-                `<li><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`).join('')}</ul></details>` : ''}</div>`;
+    // Grupa, która przygotowuje półprodukt (inna grupa : wyróżniona).
+    const producerBadge = (p) => p ? `<span class="kiosk-rec-group ${p.other ? 'is-other' : ''}" style="--g:${esc(p.color || '#8D1D2C')}">${icon('users', 'is-sm')} ${esc(p.other ? t('rec_made_by', {group: p.name}) : t('rec_made_here', {group: p.name}))}</span>` : '';
+    const lineRow = (l, f) => `<li><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`;
+
+    // Półprodukt / kompozycja : karta z ilością, grupą, etapami przygotowania i składnikami (zagnieżdżone półprodukty niżej).
+    // Przygotowuje inna grupa : karta zwinięta, bo grupa bierze gotowe.
+    function recBlock(l, f, depth) {
+        const n = l.node;
+        const materials = n ? n.lines.filter(x => x.kind === 'material' && !x.packaging) : [];
+        const subs = n ? n.lines.filter(x => x.kind === 'recipe') : [];
+        const other = l.producer && l.producer.other;
+        return `<details class="kiosk-rec-block ${depth ? 'is-nested' : ''} ${other ? 'is-other' : ''}" ${other ? '' : 'open'}>
+            <summary><span class="kiosk-rec-title">${esc(l.name)}</span>${producerBadge(l.producer)}<span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></summary>
+            <div class="kiosk-rec-block-body">
+                ${other ? `<p class="kiosk-rec-note">${icon('users', 'is-sm')} ${esc(t('rec_ready_from', {group: l.producer.name}))}</p>` : ''}
+                ${n && n.steps.length ? `<ol class="kiosk-rec-steps">${n.steps.map(st => `<li>${esc(st)}</li>`).join('')}</ol>` : ''}
+                ${materials.length ? `<ul class="kiosk-rec-lines">${materials.map(x => lineRow(x, f)).join('')}</ul>` : ''}
+                ${subs.map(x => recBlock(x, f, depth + 1)).join('')}
+                ${!n ? `<p class="kiosk-muted">${esc(t('rec_no_tree'))}</p>` : ''}
+            </div></details>`;
     }
 
-    async function renderRecipe(itemId) {
+    // Drzewo receptury : półprodukty jako karty, potem surowce pierwszego poziomu i opakowania.
+    function recTree(tree, f) {
+        const subs = tree.lines.filter(l => l.kind === 'recipe');
+        const materials = tree.lines.filter(l => l.kind === 'material' && !l.packaging);
+        const pack = tree.lines.filter(l => l.kind === 'material' && l.packaging);
+        return `${tree.steps.length ? `<section class="kiosk-card"><h2>${icon('list-ordered')} ${esc(t('rec_preparation'))}</h2><ol class="kiosk-rec-steps">${tree.steps.map(st => `<li>${esc(st)}</li>`).join('')}</ol></section>` : ''}
+            ${subs.length ? `<section class="kiosk-card"><h2>${esc(t('rec_components_of'))}</h2>${subs.map(l => recBlock(l, f, 0)).join('')}</section>` : ''}
+            ${materials.length ? `<section class="kiosk-card"><h2>${esc(t('rec_materials'))}</h2><ul class="kiosk-rec-lines">${materials.map(l => lineRow(l, f)).join('')}</ul></section>` : ''}
+            ${pack.length ? `<section class="kiosk-card"><details class="kiosk-rec-pack"><summary>${esc(t('lot_packaging', {n: pack.length}))}</summary>
+                <ul class="kiosk-rec-lines">${pack.map(l => lineRow(l, f)).join('')}</ul></details></section>` : ''}`;
+    }
+
+    // Zdjęcie na cały ekran (dotknięcie zamyka).
+    function zoom(src) {
+        const box = document.createElement('div');
+        box.className = 'kiosk-zoom';
+        box.innerHTML = `<img src="${src}" alt="">`;
+        box.addEventListener('click', () => box.remove());
+        document.body.appendChild(box);
+    }
+
+    async function renderRecipe(id, component) {
         longIdle = true;
         resetIdle();
         let r;
-        try { r = await api('GET', `/kiosk/recipes/${itemId}`, undefined, true); } catch (err) { toast(err.message, true); return; }
+        try { r = await api('GET', component ? `/kiosk/recipes/components/${id}` : `/kiosk/recipes/${id}`, undefined, true); } catch (err) { toast(err.message, true); return; }
         // Mnożnik drzewa : karton (produkt), kg (półprodukt) albo receptura.
         const presets = [];
         if (r.basis === 'carton') {
@@ -721,22 +757,32 @@
         }
         let factor = (presets.find(p => p.k === 'plan') || presets[0]).f;
         const customLabel = r.basis === 'carton' ? t('rec_custom_pieces', {unit: r.unit}) : (r.basis === 'kg' ? t('rec_custom_kg') : t('rec_custom_times'));
+        const media = r.media || {photo: null, steps: []};
         const draw = () => {
-            el.querySelector('[data-rec-tree]').innerHTML = recNode(r.tree, factor, 0);
+            el.querySelector('[data-rec-tree]').innerHTML = recTree(r.tree, factor);
             const pieces = r.basis === 'carton' ? factor * r.ppc : null;
             el.querySelector('[data-rec-for]').textContent = r.basis === 'carton' ? t('rec_for_pieces', {q: qty(pieces, r)})
                 : (r.basis === 'kg' ? t('rec_for_kg', {q: fmt(factor)}) : t('rec_for_times', {q: fmt(factor)}));
         };
+        const meta = [r.ppc ? t('rec_ppc', {ppc: r.ppc}) : null, component ? t('rec_component') : null].filter(Boolean).join(' · ');
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-back>‹ ${esc(t('back'))}</button>`, true) + `
-            <section class="kiosk-card"><h2>${esc(r.name)}</h2>
-                <div class="kiosk-row kiosk-rec-presets" data-presets>${presets.map(p => `<button type="button" class="kiosk-btn is-small" data-f="${p.f}">${esc(p.label)}</button>`).join('')}
-                    <label class="kiosk-rec-custom">${esc(customLabel)}<input data-custom inputmode="decimal"></label></div>
-                <p class="kiosk-status" data-rec-for></p></section>
-            <section class="kiosk-card" data-rec-tree></section>
+            <section class="kiosk-card kiosk-rec-hero ${media.photo ? '' : 'no-photo'}">
+                ${media.photo ? `<img class="kiosk-rec-photo" src="${media.photo}" alt="${esc(r.name)}" data-zoom>` : (component ? '' : `<div class="kiosk-rec-photo is-empty" aria-hidden="true">${icon('image')}</div>`)}
+                <div class="kiosk-rec-hero-body"><h2>${esc(r.name)}</h2>
+                    ${meta ? `<p class="kiosk-muted">${esc(meta)}</p>` : ''}${r.producer ? `<p>${producerBadge(r.producer)}</p>` : ''}
+                    <p class="kiosk-rec-ask">${esc(t('rec_how_much'))}</p>
+                    <div class="kiosk-row kiosk-rec-presets" data-presets>${presets.map(p => `<button type="button" class="kiosk-btn" data-f="${p.f}">${esc(p.label)}</button>`).join('')}
+                        <label class="kiosk-rec-custom">${esc(customLabel)}<input data-custom inputmode="decimal"></label></div>
+                    <p class="kiosk-status" data-rec-for></p></div></section>
+            ${media.steps.length ? `<section class="kiosk-card"><h2>${icon('camera')} ${esc(t('rec_steps_photos'))}</h2><div class="kiosk-rec-stepgrid">${media.steps.map(st =>
+                `<figure class="kiosk-rec-step">${st.src ? `<img src="${st.src}" alt="" data-zoom>` : `<div class="kiosk-rec-step-empty">${icon('image')}</div>`}
+                    <figcaption><span class="kiosk-rec-stepno">${st.no}</span><span>${esc(st.text)}</span></figcaption></figure>`).join('')}</div></section>` : ''}
+            <div class="kiosk-rec-tree" data-rec-tree></div>
             ${r.routing.length ? `<section class="kiosk-card"><h2>${esc(t('rec_routing'))}</h2><ol class="kiosk-rec-steps">${r.routing.map(st =>
                 `<li><strong>${esc(st.name)}</strong>${st.workstation ? ' · ' + esc(st.workstation) : ''}${st.temperature_c !== null ? ' · ' + esc(fmt(st.temperature_c)) + ' °C' : ''}</li>`).join('')}</ol></section>` : ''}`;
         const mark = () => el.querySelectorAll('[data-f]').forEach(b => b.classList.toggle('is-primary', Math.abs(Number(b.dataset.f) - factor) < 1e-9));
         el.querySelector('[data-back]').addEventListener('click', () => renderRecipes());
+        el.addEventListener('click', (e) => { const img = e.target.closest('[data-zoom]'); if (img) zoom(img.src); });
         el.querySelector('[data-presets]').addEventListener('click', (e) => {
             const b = e.target.closest('[data-f]');
             if (!b) return;
@@ -800,14 +846,14 @@
                 `<button type="button" class="kiosk-dev-photo" data-photo-open="${ph.id}"><img src="${ph.src}" alt="${esc(ph.caption || p.name)}">${ph.caption ? `<span>${esc(ph.caption)}</span>` : ''}</button>`).join('')}</div></section>` : ''}
             ${p.recipe ? `<section class="kiosk-card"><h2>${icon('book-open')} ${esc(t('dev_recipe', {name: p.recipe.name}))}</h2>
                 <div class="kiosk-row kiosk-rec-presets"><label class="kiosk-rec-custom">${esc(t('rec_custom_times'))}<input data-times inputmode="decimal" value="1"></label></div>
-                <p class="kiosk-status" data-dev-for></p><div data-dev-tree></div></section>`
+                <p class="kiosk-status" data-dev-for></p></section><div class="kiosk-rec-tree" data-dev-tree></div>`
                 : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('dev_no_recipe'))}</p></section>`}
             ${p.stages.length > 1 ? `<section class="kiosk-card"><details><summary>${esc(t('dev_history', {n: p.stages.length}))}</summary><ul class="kiosk-dev-stages">${p.stages.map(s =>
                 `<li><strong>${esc(s.name || '')}</strong>${s.deadline ? ' · ' + esc(dateFmt(s.deadline)) : ''}${s.description ? `<div class="kiosk-muted">${esc(s.description)}</div>` : ''}</li>`).join('')}</ul></details></section>` : ''}`;
         el.querySelector('[data-back]').addEventListener('click', () => renderDev());
         const draw = () => {
             if (!p.recipe) return;
-            el.querySelector('[data-dev-tree]').innerHTML = recNode(p.recipe, factor, 0);
+            el.querySelector('[data-dev-tree]').innerHTML = recTree(p.recipe, factor);
             el.querySelector('[data-dev-for]').textContent = t('dev_for', {q: fmt(factor), yield: measure(p.recipe.yield * factor, p.recipe.unit)});
         };
         el.querySelector('[data-times]')?.addEventListener('input', (e) => {

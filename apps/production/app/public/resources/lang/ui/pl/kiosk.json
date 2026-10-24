@@ -249,7 +249,7 @@
   "rec_for_pieces": "Składniki na {q}",
   "rec_for_kg": "Składniki na {q} kg",
   "rec_for_times": "Składniki na {q} × receptura",
-  "rec_routing": "Etapy produkcji",
+  "rec_routing": "Etapy i stanowiska",
   "qc_title": "Kontrola jakości — {group}",
   "qc_help": "Sprawdź każdą partię dnia : ✓ OK albo ✗ niezgodność. Niezgodność trafia do rejestru niezgodności w ERP (z numerem partii i Twoim nazwiskiem).",
   "qc_report": "Zgłoś niezgodność",
@@ -321,5 +321,18 @@
   "weekday_long_5": "Piątek",
   "weekday_long_6": "Sobota",
   "weekday_long_7": "Niedziela",
-  "week_need_total": "potrzeba tygodnia : {qty}"
+  "week_need_total": "potrzeba tygodnia : {qty}",
+  "rec_components": "Przygotowujemy dla innych grup",
+  "rec_component": "półprodukt / kompozycja",
+  "rec_for_groups": "dla : {groups}",
+  "rec_made_by": "przygotowuje : {group}",
+  "rec_made_here": "przygotowuje : {group}",
+  "rec_ready_from": "Gotowe od grupy {group} — weź przygotowane.",
+  "rec_no_tree": "Brak receptury.",
+  "rec_preparation": "Przygotowanie",
+  "rec_components_of": "Półprodukty i kompozycje",
+  "rec_materials": "Surowce",
+  "rec_ppc": "{ppc} szt. w kartonie",
+  "rec_how_much": "Ile robimy ?",
+  "rec_steps_photos": "Etapy produkcji"
 }

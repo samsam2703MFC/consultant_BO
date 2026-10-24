@@ -249,7 +249,7 @@
   "rec_for_pieces": "Ingrédients pour {q}",
   "rec_for_kg": "Ingrédients pour {q} kg",
   "rec_for_times": "Ingrédients pour {q} × recette",
-  "rec_routing": "Étapes de production",
+  "rec_routing": "Étapes et postes",
   "qc_title": "Contrôle qualité — {group}",
   "qc_help": "Contrôlez chaque lot du jour : ✓ OK ou ✗ non-conformité. La non-conformité va au registre des non-conformités de l'ERP (avec le numéro de lot et votre nom).",
   "qc_report": "Signaler une non-conformité",
@@ -321,5 +321,18 @@
   "weekday_long_5": "Vendredi",
   "weekday_long_6": "Samedi",
   "weekday_long_7": "Dimanche",
-  "week_need_total": "besoin de la semaine : {qty}"
+  "week_need_total": "besoin de la semaine : {qty}",
+  "rec_components": "Nous préparons pour d'autres groupes",
+  "rec_component": "semi-fini / composition",
+  "rec_for_groups": "pour : {groups}",
+  "rec_made_by": "préparé par : {group}",
+  "rec_made_here": "préparé par : {group}",
+  "rec_ready_from": "Prêt, préparé par le groupe {group} — prendre le préparé.",
+  "rec_no_tree": "Pas de recette.",
+  "rec_preparation": "Préparation",
+  "rec_components_of": "Semi-finis et compositions",
+  "rec_materials": "Matières",
+  "rec_ppc": "{ppc} pcs par carton",
+  "rec_how_much": "Quelle quantité ?",
+  "rec_steps_photos": "Étapes de production"
 }

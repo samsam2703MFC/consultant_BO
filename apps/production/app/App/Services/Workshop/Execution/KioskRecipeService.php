@@ -6,10 +6,13 @@ namespace App\Services\Workshop\Execution;
 use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
 use App\Repositories\Workshop\OutputRepository;
+use App\Repositories\Workshop\RecipeProducerRepository;
+use App\Services\Workshop\ProductMediaService;
 
 /**
  * Tablet grupy, zakładka « Receptury » : karty grupy z recepturą i drzewo receptury (podreceptury, surowce,
- * opakowania, etapy przygotowania, etapy produkcji karty).
+ * opakowania, etapy przygotowania, etapy produkcji karty), zdjęcie produktu i 4 etapy ze zdjęciem (karta produktu),
+ * grupa przygotowująca każdy półprodukt / kompozycję oraz receptury, które grupa przygotowuje dla innych grup.
  *
  * Ilości drzewa na jednostkę bazową : produkt = 1 karton (receptura produktu jest na karton), półprodukt = 1 kg
  * (wydajność receptury w g / kg) ; tablet mnoży przez wybraną ilość (karton, partia, plan dnia, własna).
@@ -18,8 +21,11 @@ final class KioskRecipeService
 {
     private const MAX_DEPTH = 6;
 
-    public function __construct(private OutputRepository $repo)
-    {
+    public function __construct(
+        private OutputRepository $repo,
+        private ProductMediaService $media,
+        private RecipeProducerRepository $producers,
+    ) {
     }
 
     /** Karty grupy tabletu z recepturą ; plan dnia (Gantt tygodnia) dla podpowiedzi ilości. */
@@ -31,13 +37,13 @@ final class KioskRecipeService
         $planned = $this->repo->planned($day, array_map(fn($i) => (int) $i['id'], $items));
         $rows = array_map(fn($i) => $this->itemRow($i) + ['planned' => isset($planned[(int) $i['id']]) ? round($planned[(int) $i['id']], 3) : null], $items);
         usort($rows, fn($a, $b) => [$a['planned'] === null, $a['name']] <=> [$b['planned'] === null, $b['name']]);
-        return ['date' => $day, 'items' => $rows];
+        return ['date' => $day, 'items' => $rows, 'components' => $this->producers->recipesOfGroup($groupId)];
     }
 
     /** Drzewo receptury karty na jednostkę bazową (karton / kg / receptura). */
     public function recipe(int $itemId, ApiContext $context, ?string $date = null): array
     {
-        $this->groupId($context);
+        $groupId = $this->groupId($context);
         $item = $this->repo->item($itemId) ?? throw ApiException::notFound('item', $itemId);
         if ($item['id_recipe'] === null) throw new ApiException('ITEM_WITHOUT_RECIPE', 409);
         $head = $this->repo->recipeHead((int) $item['id_recipe']) ?? throw new ApiException('ITEM_WITHOUT_RECIPE', 409);
@@ -50,12 +56,36 @@ final class KioskRecipeService
             'basis' => $basis,
             // Wydajność jednej receptury w jednostce bazowej (półprodukt : kg z jednego zarobu).
             'recipe_yield' => $yield,
-            'tree' => $this->node($head, $multiplier, $fr, [], 0),
+            'tree' => $this->withProducers($this->node($head, $multiplier, $fr, [], 0), $groupId, $fr),
+            'media' => $item['id_final_product'] !== null ? $this->media->forKiosk((int) $item['id_final_product'], $fr) : ['photo' => null, 'steps' => []],
             'routing' => array_map(fn($r) => [
                 'step_no' => (int) $r['step_no'], 'name' => $fr && $r['name_fr'] ? $r['name_fr'] : $r['name_pl'],
                 'workstation' => $fr && $r['ws_fr'] ? $r['ws_fr'] : $r['ws_pl'],
                 'temperature_c' => $r['temperature_c'] !== null ? (float) $r['temperature_c'] : null,
             ], $this->repo->routing($itemId)),
+        ];
+    }
+
+    /**
+     * Półprodukt / kompozycja bez karty (np. przygotowywany dla innej grupy) : drzewo na 1 kg (wydajność w g / ml)
+     * albo na jedną recepturę, z grupą przygotowującą.
+     */
+    public function component(int $recipeId, ApiContext $context): array
+    {
+        $groupId = $this->groupId($context);
+        if (!$this->producers->isComponent($recipeId)) throw ApiException::notFound('recipe', $recipeId);
+        $head = $this->repo->recipeHead($recipeId) ?? throw ApiException::notFound('recipe', $recipeId);
+        $fr = $context->translator->lang() === 'fr';
+        $yield = (float) $head['yield_quantity'];
+        $perKg = ['g' => 1000.0, 'kg' => 1.0, 'ml' => 1000.0, 'l' => 1.0][$head['unit'] ?? ''] ?? null;
+        [$basis, $multiplier, $recipeYield] = $yield > 0 && $perKg !== null ? ['kg', $perKg / $yield, round($yield / $perKg, 3)] : ['recipe', 1.0, null];
+        $producer = $this->producers->forRecipes([$recipeId])[$recipeId] ?? null;
+        return [
+            'recipe_id' => $recipeId, 'name' => (string) $head['name'], 'type' => 'component', 'unit' => $basis === 'kg' ? 'kg' : (string) $head['unit'],
+            'ppc' => null, 'batch' => null, 'planned' => null, 'basis' => $basis, 'recipe_yield' => $recipeYield,
+            'producer' => $producer !== null ? self::producerRow($producer, $groupId, $fr) : null,
+            'tree' => $this->withProducers($this->node($head, $multiplier, $fr, [], 0), $groupId, $fr),
+            'media' => ['photo' => null, 'steps' => []], 'routing' => [],
         ];
     }
 
@@ -102,6 +132,32 @@ final class KioskRecipeService
         ];
     }
 
+    /** Podreceptury drzewa : grupa przygotowująca (other = przygotowuje inna grupa niż grupa tabletu). */
+    private function withProducers(array $tree, int $groupId, bool $fr): array
+    {
+        $ids = [];
+        $collect = function (array $n) use (&$collect, &$ids): void {
+            foreach ($n['lines'] as $l) if ($l['kind'] === 'recipe') { $ids[] = $l['recipe_id']; if ($l['node']) $collect($l['node']); }
+        };
+        $collect($tree);
+        $producers = $this->producers->forRecipes($ids);
+        $annotate = function (array $n) use (&$annotate, $producers, $groupId, $fr): array {
+            foreach ($n['lines'] as &$l) {
+                if ($l['kind'] !== 'recipe') continue;
+                $l['producer'] = isset($producers[$l['recipe_id']]) ? self::producerRow($producers[$l['recipe_id']], $groupId, $fr) : null;
+                if ($l['node']) $l['node'] = $annotate($l['node']);
+            }
+            unset($l);
+            return $n;
+        };
+        return $annotate($tree);
+    }
+
+    private static function producerRow(array $g, int $groupId, bool $fr): array
+    {
+        return ['id' => $g['id'], 'name' => $fr && $g['name_fr'] ? $g['name_fr'] : $g['name_pl'], 'color' => $g['color'], 'other' => $g['id'] !== $groupId];
+    }
+
     /** @return array{0: string, 1: float, 2: ?float} [jednostka bazowa, mnożnik korzenia, wydajność receptury w jednostce bazowej] */
     private function basis(array $item, array $head): array
     {
@@ -121,7 +177,7 @@ final class KioskRecipeService
 
     private function itemRow(array $i): array
     {
-        return ['item_id' => (int) $i['id'], 'name' => $i['name'], 'type' => $i['item_type'], 'unit' => $i['base_unit'],
+        return ['item_id' => (int) $i['id'], 'product_id' => $i['id_final_product'] !== null ? (int) $i['id_final_product'] : null, 'name' => $i['name'], 'type' => $i['item_type'], 'unit' => $i['base_unit'],
             'ppc' => $i['ppc'] !== null && (int) $i['ppc'] > 0 ? (int) $i['ppc'] : null,
             'batch' => isset($i['batch_multiple']) && (float) $i['batch_multiple'] > 0 ? (float) $i['batch_multiple'] : null];
     }

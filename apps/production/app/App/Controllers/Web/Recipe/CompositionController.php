@@ -2,6 +2,7 @@
 namespace App\Controllers\Web\Recipe;
 
 use App\Services\Recipe\RecipeCalculationViewService;
+use App\Repositories\Workshop\RecipeProducerRepository;
 use App\Core\Web\BaseController;
 use App\Repositories\Product\FinalProductRepository;
 use App\Services\Material\MaterialService;
@@ -30,7 +31,8 @@ class CompositionController extends BaseController
         PreparationService $preparationService,
         RecipeService      $recipeService,
         private RecipeCostRecalculationService $recipeCostRecalculationService,
-        private RecipeCalculationViewService $calculationView
+        private RecipeCalculationViewService $calculationView,
+        private RecipeProducerRepository $producers
     )
     {
         $this->compositionService = $compositionService;
@@ -84,6 +86,8 @@ class CompositionController extends BaseController
         $data['old_data']['composition_data'] = $this->recipeService->getRecipeCompositions($id);
         $data['old_data']['preparation_type'] = $this->recipeService->getRecipePreparationType($id);
         $data['id_recipe'] = $id;
+        $data['producer_groups'] = $this->producers->groups();
+        $data['producer'] = $this->producers->forRecipes([(int) $id])[(int) $id] ?? null;
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['id_recipe'] = $id;

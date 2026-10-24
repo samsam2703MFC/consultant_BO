@@ -3,6 +3,7 @@ namespace App\Services\Recipe;
 
 use App\Exceptions\CustomException;
 use App\Repositories\Product\Recipe\RecipeRepository;
+use App\Repositories\Workshop\RecipeProducerRepository;
 
 /**
  * Strona « Kalkulacja » receptury (produkt gotowy, półprodukt, kompozycja) : koszt surowców całej receptury
@@ -22,7 +23,7 @@ final class RecipeCalculationViewService
     /** Różnica (zł) między kosztem zapisanym (karta produktu, marże) a bieżącym wyliczeniem, od której ostrzegamy. */
     public const STORED_TOLERANCE = 0.05;
 
-    public function __construct(private RecipeRepository $recipes) {}
+    public function __construct(private RecipeRepository $recipes, private RecipeProducerRepository $producers) {}
 
     public function build(int $id, string $kind): array
     {
@@ -34,6 +35,10 @@ final class RecipeCalculationViewService
         $elements = $calc['elements'] ?? [];
         $total = self::total($elements);
         $rows = self::rows($elements, $total);
+        // grupa przygotowująca : ta receptura (półprodukt / kompozycja) i jej podreceptury
+        $producers = $this->producers->forRecipes(array_merge([$id], array_map(fn($r) => $r['id'], array_filter($rows, fn($r) => $r['sub']))));
+        foreach ($rows as &$row) $row['producer'] = $row['sub'] ? ($producers[$row['id']] ?? null) : null;
+        unset($row);
         $materials = self::materials($elements, $total);
         $packaging = array_sum(array_map(fn($m) => $m['packaging'] ? $m['cost'] : 0.0, $materials));
         $yield = (float) $calc['yield_quantity'];
@@ -79,6 +84,8 @@ final class RecipeCalculationViewService
             'materials' => $materials,
             'missing' => array_values(array_filter($materials, fn($m) => $m['missing'])),
             'cycles' => array_values(array_filter($rows, fn($r) => $r['cycle'])),
+            'producer' => $kind !== 'product' ? ($producers[$id] ?? null) : null,
+            'groups' => $kind !== 'product' ? $this->producers->groups() : [],
             'used_in' => array_map(fn($u) => ['id' => (int) $u['id'], 'name' => (string) $u['name'],
                 'url' => (self::KINDS[self::TYPE_KIND[(int) $u['id_type']] ?? 'product']['base']) . '/' . (int) $u['id'] . '/calculation'], $context['used_in']),
         ];

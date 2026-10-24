@@ -11604,7 +11604,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Arbre de la recette (sous-recettes, matières, emballages, étapes de préparation) pour une unité de base : produit = 1 carton, semi-fini = 1 kg (sinon 1 recette) ; la tablette multiplie par la quantité choisie. routing = étapes de production de la fiche. 409 ITEM_WITHOUT_RECIPE.",
+                "description": "Arbre de la recette (sous-recettes, matières, emballages, étapes de préparation) pour une unité de base : produit = 1 carton, semi-fini = 1 kg (sinon 1 recette) ; la tablette multiplie par la quantité choisie. routing = étapes de production de la fiche. media = photo du produit et 4 étapes en photos (fiche produit). producer = groupe qui prépare chaque sous-recette (other = un autre groupe que celui de la tablette). 409 ITEM_WITHOUT_RECIPE.",
                 "parameters": [
                     {
                         "name": "id",
@@ -11623,6 +11623,78 @@
                             "type": "string",
                             "format": "date",
                             "description": "défaut : aujourd'hui"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/recipes/components/{id}": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Receptura półproduktu / kompozycji / Recette d'un semi-fini ou d'une composition",
+                "operationId": "kioskComponentRecipe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskRecipe"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Semi-fini ou composition sans fiche (par ex. préparé pour un autre groupe) : arbre pour 1 kg (rendement en g / ml) sinon 1 recette, groupe qui le prépare.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
                         }
                     },
                     {
@@ -17895,6 +17967,30 @@
                                 }
                             ]
                         }
+                    },
+                    "components": {
+                        "type": "array",
+                        "description": "recettes que le groupe prépare (for_groups = groupes des produits qui les utilisent)",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "yield": {
+                                    "type": "number"
+                                },
+                                "for_groups": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -17924,6 +18020,41 @@
                             },
                             "tree": {
                                 "$ref": "#/components/schemas/RecipeNode"
+                            },
+                            "producer": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/RecipeProducer"
+                                    }
+                                ],
+                                "nullable": true
+                            },
+                            "media": {
+                                "type": "object",
+                                "properties": {
+                                    "photo": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "steps": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "no": {
+                                                    "type": "integer"
+                                                },
+                                                "text": {
+                                                    "type": "string"
+                                                },
+                                                "src": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             },
                             "routing": {
                                 "type": "array",
@@ -18007,6 +18138,14 @@
                                 "packaging": {
                                     "type": "boolean"
                                 },
+                                "producer": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/RecipeProducer"
+                                        }
+                                    ],
+                                    "nullable": true
+                                },
                                 "node": {
                                     "allOf": [
                                         {
@@ -18017,6 +18156,23 @@
                                 }
                             }
                         }
+                    }
+                }
+            },
+            "RecipeProducer": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "color": {
+                        "type": "string"
+                    },
+                    "other": {
+                        "type": "boolean"
                     }
                 }
             },

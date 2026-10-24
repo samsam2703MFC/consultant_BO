@@ -390,5 +390,15 @@
   "row.workload_help": "Pracochłonność 1–5 (1 bardzo niska … 5 bardzo wysoka) : marże i koszty produktu.",
   "row.deactivate": "Wyłącz w ERP (nieaktywny)",
   "row.activate": "Włącz w ERP (aktywny)",
-  "row.delete": "Usuń…"
+  "row.delete": "Usuń…",
+  "m.title": "Zdjęcie produktu i etapy produkcji (tablet)",
+  "m.help": "Przeciągnij zdjęcie na pole albo kliknij, aby wybrać plik. Tablet grupy pokazuje zdjęcie i 4 etapy w recepturze produktu. Opis zapisuje się po wyjściu z pola.",
+  "m.photo": "Zdjęcie produktu",
+  "m.step": "Etap {n}",
+  "m.drop": "Upuść zdjęcie albo kliknij",
+  "m.caption": "Opis etapu (PL)",
+  "m.caption_fr": "Description (FR, opcjonalnie)",
+  "m.remove": "Usuń zdjęcie",
+  "m.saved": "Zapisano.",
+  "m.bad_image": "To nie jest zdjęcie (JPEG, PNG, WebP)."
 }

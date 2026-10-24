@@ -44,6 +44,12 @@ return function(RouteCollector $r) {
     ]);
 
 
+    // Półprodukt / kompozycja : grupa, która go przygotowuje
+    $r->addRoute('PUT', '/ajax/recipes/{id:\d+}/producer', [
+        'controller' => App\Controllers\Web\Recipe\RecipeProducerController::class,
+        'method'     => 'save'
+    ]);
+
     // Koszt surowców szkicu receptury (kreator „Nowy produkt z recepturą”), tylko odczyt
     $r->addRoute('POST', '/ajax/recipes/draft-cost', [
         'controller' => App\Controllers\Web\Product\ProductRecipeWizardController::class,

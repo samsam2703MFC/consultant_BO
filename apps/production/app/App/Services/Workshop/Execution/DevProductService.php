@@ -7,6 +7,7 @@ use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
 use App\Exceptions\CustomException;
 use App\Repositories\Workshop\DevProductRepository;
+use App\Services\Utils\DataUrlImage;
 
 /**
  * Nowe produkty (produkty testowe ERP) na tablecie produkcji : lista produktów pokazanych grupie, karta produktu
@@ -17,7 +18,6 @@ final class DevProductService
 {
     public const MAX_PHOTO_BYTES = 3_000_000;
     public const MAX_PHOTOS = 12;
-    private const MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 
     public function __construct(private DevProductRepository $repo, private KioskRecipeService $recipes)
     {
@@ -43,7 +43,7 @@ final class DevProductService
             'video' => self::video($p['video_url']),
             'stages' => array_map(fn($s) => $this->stage($s), $this->repo->stages($id)),
             'photos' => array_map(fn($ph) => ['id' => (int) $ph['id'], 'caption' => $ph['caption'],
-                'src' => 'data:' . $ph['mime'] . ';base64,' . base64_encode($ph['image'])], $this->repo->photosWithImage($id)),
+                'src' => DataUrlImage::toDataUrl($ph['mime'], $ph['image'])], $this->repo->photosWithImage($id)),
             'recipe' => $p['id_recipe'] !== null ? $this->recipes->tree((int) $p['id_recipe'], $fr) : null,
         ];
     }
@@ -73,15 +73,9 @@ final class DevProductService
     {
         if ($this->repo->product($id) === null) throw new CustomException('Nie znaleziono produktu testowego.', 'errors', 404);
         if ($this->repo->photoCount($id) >= self::MAX_PHOTOS) throw new CustomException('Najwyżej ' . self::MAX_PHOTOS . ' zdjęć na produkt.', 'errors', 422);
-        if (!preg_match('~^data:(image/[a-z]+);base64,([A-Za-z0-9+/=\s]+)$~', (string) ($input['image'] ?? ''), $m) || !in_array($m[1], self::MIMES, true)) {
-            throw new CustomException('Zdjęcie : JPEG, PNG albo WebP.', 'errors', 422);
-        }
-        $bytes = base64_decode(preg_replace('~\s+~', '', $m[2]), true);
-        if ($bytes === false || $bytes === '' || strlen($bytes) > self::MAX_PHOTO_BYTES) throw new CustomException('Zdjęcie za duże albo uszkodzone (najwyżej 3 MB).', 'errors', 422);
-        $info = @getimagesizefromstring($bytes);
-        if ($info === false || ($info['mime'] ?? '') !== $m[1]) throw new CustomException('To nie jest obraz.', 'errors', 422);
+        $image = DataUrlImage::parse((string) ($input['image'] ?? ''), self::MAX_PHOTO_BYTES);
         $caption = trim((string) ($input['caption'] ?? ''));
-        $this->repo->addPhoto($id, $m[1], $bytes, $caption !== '' ? mb_substr($caption, 0, 200) : null, $userId);
+        $this->repo->addPhoto($id, $image['mime'], $image['bytes'], $caption !== '' ? mb_substr($caption, 0, 200) : null, $userId);
         return $this->sheet($id);
     }
 

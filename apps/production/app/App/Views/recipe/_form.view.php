@@ -107,6 +107,18 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                             <label class="form-label">Jednostka</label>
                             <div class="form-control bg-light"><?= $kind === 'composition' ? 'g' : 'szt' ?></div>
                         </div>
+                        <?php if ($kind !== 'product' && !$isNew && isset($producer_groups)): ?>
+                            <div class="col-12 col-md-6">
+                                <label for="recipe_producer" class="form-label">Przygotowuje grupa</label>
+                                <select class="form-select" id="recipe_producer" data-producer="<?= (int) ($row['id'] ?? 0) ?>">
+                                    <option value="">— nie ustawiono</option>
+                                    <?php foreach ($producer_groups as $g): ?>
+                                        <option value="<?= (int) $g['id'] ?>" <?= ($producer['id'] ?? null) === (int) $g['id'] ? 'selected' : '' ?>><?= $e($g['name_pl']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <span class="form-text">Zapis od razu ; tablet tej grupy pokazuje recepturę, a receptury innych grup — kto ją przygotowuje.</span>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <h5 class="mt-4">Surowce</h5>
@@ -245,6 +257,13 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
             table.tBodies[0].appendChild(tr);
             qty.value = '';
             if (!select.classList.contains('choices')) select.selectedIndex = 0;
+        });
+        // Grupa przygotowująca : zapis od razu (poza formularzem receptury)
+        document.querySelector('[data-producer]')?.addEventListener('change', (e) => {
+            fetch('<?= ROOT ?>/ajax/recipes/' + e.target.dataset.producer + '/producer', {
+                method: 'PUT', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+                body: JSON.stringify({group_id: e.target.value || null}),
+            }).then(r => r.json().then(b => showSnack(r.ok, b.message || 'Błąd')));
         });
     })();
 </script>

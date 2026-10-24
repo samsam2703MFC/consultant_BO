@@ -285,6 +285,50 @@ details.kiosk-section summary { cursor: pointer; font-weight: 600; padding: 8px 
 .kiosk-rec-steps { margin: 0 0 10px; padding-left: 26px; font-size: 18px; line-height: 1.5; }
 .kiosk-rec-pack { margin-top: 10px; }
 .kiosk-rec-pack summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+
+/* Receptura : zdjęcie produktu, ilość, 4 etapy ze zdjęciem, półprodukty jako karty z grupą przygotowującą */
+.kiosk-recipe-tile.is-component { box-shadow: inset 3px 0 0 var(--k-primary); }
+.kiosk-section .k-ico { color: var(--k-primary); }
+.kiosk-rec-hero { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: start; }
+.kiosk-rec-hero.no-photo { grid-template-columns: 1fr; }
+.kiosk-rec-hero h2 { margin: 0 0 4px; font-size: 26px; }
+.kiosk-rec-photo { width: 220px; height: 220px; object-fit: cover; border-radius: var(--k-radius); background: var(--k-surface-2); cursor: zoom-in; }
+.kiosk-rec-photo.is-empty { display: grid; place-items: center; color: var(--k-muted); cursor: default; }
+.kiosk-rec-photo.is-empty .k-ico { width: 48px; height: 48px; opacity: .4; }
+.kiosk-rec-hero:has(.kiosk-rec-photo.is-empty) { grid-template-columns: 120px 1fr; }
+.kiosk-rec-hero:has(.kiosk-rec-photo.is-empty) .kiosk-rec-photo { width: 120px; height: 120px; }
+.kiosk-rec-ask { margin: 14px 0 8px; font-weight: 600; color: var(--k-muted); font-size: 15px; text-transform: uppercase; letter-spacing: .05em; }
+.kiosk-rec-presets .kiosk-btn { min-height: 56px; }
+.kiosk-rec-hero .kiosk-status { margin: 10px 0 0; font-size: 18px; font-weight: 600; }
+.kiosk-rec-stepgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kiosk-rec-step { margin: 0; background: var(--k-surface-2); border-radius: var(--k-radius); overflow: hidden; display: flex; flex-direction: column; }
+.kiosk-rec-step img, .kiosk-rec-step-empty { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; cursor: zoom-in; }
+.kiosk-rec-step-empty { display: grid; place-items: center; color: var(--k-muted); cursor: default; }
+.kiosk-rec-step figcaption { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px 12px; font-size: 17px; line-height: 1.35; }
+.kiosk-rec-stepno { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--k-primary); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 15px; }
+.kiosk-rec-tree { display: flex; flex-direction: column; gap: 14px; }
+.kiosk-rec-block { border: 1px solid var(--k-line); border-radius: var(--k-radius); margin-top: 10px; background: var(--k-surface); }
+.kiosk-rec-block.is-nested { margin: 10px 0 0; background: var(--k-surface-2); border-color: transparent; }
+.kiosk-rec-block.is-other { border-color: color-mix(in srgb, var(--k-warn) 35%, transparent); background: var(--k-warn-50); }
+.kiosk-rec-block > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 16px; font-size: 19px; }
+.kiosk-rec-block > summary::-webkit-details-marker { display: none; }
+.kiosk-rec-block > summary::before { content: '›'; font-size: 26px; line-height: 1; color: var(--k-muted); transition: transform .15s; width: 14px; }
+.kiosk-rec-block[open] > summary::before { transform: rotate(90deg); }
+.kiosk-rec-title { font-weight: 650; }
+.kiosk-rec-block > summary .kiosk-rec-q { margin-left: auto; font-size: 20px; }
+.kiosk-rec-block-body { padding: 0 16px 12px 40px; }
+.kiosk-rec-block-body > .kiosk-rec-lines > li:last-child { border-bottom: 0; }
+.kiosk-rec-group { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+  color: var(--g, var(--k-primary)); background: color-mix(in srgb, var(--g, var(--k-primary)) 12%, transparent); }
+.kiosk-rec-group.is-other { color: var(--k-warn); background: #fff; box-shadow: inset 0 0 0 1.5px var(--k-warn); }
+.kiosk-rec-note { margin: 0 0 8px; color: var(--k-warn); font-weight: 600; font-size: 16px; }
+.kiosk-zoom { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .86); display: grid; place-items: center; padding: 20px; cursor: zoom-out; }
+.kiosk-zoom img { max-width: 100%; max-height: 100%; border-radius: var(--k-radius); }
+@media (max-width: 820px) {
+  .kiosk-rec-hero, .kiosk-rec-hero:has(.kiosk-rec-photo.is-empty) { grid-template-columns: 1fr; }
+  .kiosk-rec-photo { width: 100%; height: 220px; }
+  .kiosk-rec-stepgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 600px) { .kiosk-prod-actions { justify-content: flex-start; } }
 /* Maszyny (TRS) : stan, przyciski, wskaźniki, przebieg dnia */
 .kiosk-machine { border-left: 5px solid #C7C7CC; }

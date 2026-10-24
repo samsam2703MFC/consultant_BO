@@ -107,6 +107,7 @@ final class ExecutionController
     public function closeDay(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->closeDay($request->body(), $request->context)); }
     public function recipes(ApiRequest $request): ApiResult { return new ApiResult($this->recipes->list($request->context, $request->query('date'))); }
     public function recipe(ApiRequest $request): ApiResult { return new ApiResult($this->recipes->recipe($request->id(), $request->context, $request->query('date'))); }
+    public function component(ApiRequest $request): ApiResult { return new ApiResult($this->recipes->component($request->id(), $request->context)); }
     // TRS : stany maszyn grupy tabletu (praca, postój z powodem, koniec pracy).
     public function machines(ApiRequest $request): ApiResult { return new ApiResult($this->oee->day($request->context, $request->query('date'))); }
     public function machineState(ApiRequest $request): ApiResult { return new ApiResult($this->oee->setState($request->id(), $request->body(), $request->context)); }

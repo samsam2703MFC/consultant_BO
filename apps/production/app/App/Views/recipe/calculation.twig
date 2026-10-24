@@ -16,6 +16,15 @@
                 <p class="text-subtitle text-muted mb-0">Kalkulacja kosztu surowców · {{ kind_info.label }}
                     · {% if kind == 'product' %}receptura na 1 karton{{ recipe.ppc ? ' (' ~ recipe.ppc ~ ' szt.)' }}{% else %}receptura na {{ f.qty(recipe.yield) }} {{ recipe.unit }}{% endif %}
                     {% if product and product.category %} · {{ product.category }}{% endif %}</p>
+                {% if kind != 'product' %}
+                    <label class="d-inline-flex align-items-center gap-2 mt-2 small" title="Grupa, która przygotowuje tę recepturę (widoczne na tabletach)">
+                        <i class="bi bi-people"></i> Przygotowuje grupa
+                        <select class="form-select form-select-sm" style="width:auto" data-producer="{{ recipe.id }}">
+                            <option value="">— nie ustawiono</option>
+                            {% for g in groups %}<option value="{{ g.id }}" {{ producer and producer.id == g.id ? 'selected' }}>{{ g.name_pl }}</option>{% endfor %}
+                        </select>
+                    </label>
+                {% endif %}
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <a class="btn btn-sm btn-outline-dark" href="{{ base }}/edit"><i class="bi bi-pencil"></i> Edytuj recepturę</a>
@@ -117,6 +126,7 @@
                                 {% elseif not r.sub %}<a href="{{ root }}/materials/{{ r.id }}/edit" class="text-reset">{{ r.name }}</a>
                                 {% else %}{{ r.name }}{% endif %}
                                 {% if r.sub %}<span class="rc-tag rc-tag-sub">{{ r.kind == 'composition' ? 'kompozycja' : 'półprodukt' }} · {{ r.children }}</span>{% endif %}
+                                {% if r.producer %}<span class="rc-tag" style="background:{{ r.producer.color }}1f;color:{{ r.producer.color }}" title="Przygotowuje grupa"><i class="bi bi-people"></i> {{ r.producer.name_pl }}</span>{% endif %}
                                 {% if r.packaging %}<span class="rc-tag rc-tag-pack">opakowanie</span>{% endif %}
                                 {% if r.missing %}<span class="rc-tag rc-tag-miss">brak ceny</span>{% endif %}
                                 {% if r.cycle %}<span class="rc-tag rc-tag-miss">cykl</span>{% endif %}
@@ -188,6 +198,12 @@
         const open = b.dataset.expand === '1';
         rows.forEach(r => { r.hidden = !open && r.dataset.parent !== ''; r.classList.toggle('rc-open', open && r.classList.contains('rc-sub')); });
     }));
+    document.querySelector('[data-producer]')?.addEventListener('change', (e) => {
+        fetch({{ root|json_encode|raw }} + '/ajax/recipes/' + e.target.dataset.producer + '/producer', {
+            method: 'PUT', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: JSON.stringify({group_id: e.target.value || null}),
+        }).then(r => r.json().then(b => showSnack(r.ok, b.message || 'Błąd')));
+    });
     document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
         document.querySelectorAll('[data-view]').forEach(x => x.classList.toggle('active', x === b));
         document.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('d-none', p.dataset.pane !== b.dataset.view));
