@@ -327,4 +327,32 @@ foreach ($essais as [$ch, $corps]) {
     if ($r['code'] >= 200 && $r['code'] < 300 && is_array($c)) { echo '      clés : ', implode(', ', array_keys($c)), "\n"; }
 }
 
+// ── 8. Les campagnes, une par une, sur chaque hôte de l'ERP ──────────────────
+// 24/10 après l'essai, Sam : « je vois rien dans la création de bon ». Où est la campagne d'essai #9 ? On liste
+// les campagnes de l'hôte du cockpit ET de l'hôte de test (même adresse IP, peut-être une autre base), avec les
+// mêmes identifiants admin (jamais affichés).
+svTitre('campagnes par hôte (nom, statut, type, promotion)');
+$cfgErp = ErpApi::config();
+$hotes = array_values(array_unique([$cfgErp['base'], 'https://atelierby.tfbuddy.com/api/v1', 'https://test.tfbuddy.com/api/v1']));
+foreach ($hotes as $base) {
+    echo "  --- $base\n";
+    $ch = curl_init($base . '/admin/auth/login');
+    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 20,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json'],
+        CURLOPT_POSTFIELDS => json_encode(['phone' => $cfgErp['phone'], 'password' => $cfgErp['password']])]);
+    $lr = json_decode((string) curl_exec($ch), true); $lc = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+    $tok = is_array($lr) ? ($lr['access_token'] ?? $lr['data']['access_token'] ?? $lr['token'] ?? null) : null;
+    if (!is_string($tok) || $tok === '') { echo "    connexion admin : HTTP $lc — refusée\n"; continue; }
+    $ch = curl_init($base . '/admin/voucher-campaigns?limit=100');
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 20, CURLOPT_HTTPHEADER => ['Accept: application/json', 'Authorization: Bearer ' . $tok]]);
+    $cr = json_decode((string) curl_exec($ch), true); $cc = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+    $its = svItems($cr);
+    printf("    GET /admin/voucher-campaigns : HTTP %d · %d campagne(s)\n", $cc, count($its));
+    foreach ($its as $c) {
+        if (!is_array($c)) { continue; }
+        printf("    #%-4s %-62s %-8s %-6s promo=%-5s complète=%s\n", $c['id'] ?? '?', mb_substr((string) svValeur('name', (string) ($c['name'] ?? '')), 0, 62),
+            $c['status'] ?? '?', $c['code_type'] ?? '?', json_encode($c['id_promotion'] ?? null), json_encode($c['configuration_complete'] ?? null));
+    }
+}
+
 echo "\n=== FIN SONDE VOUCHERS ===\n";
