@@ -7184,7 +7184,7 @@ function tplPrimesApp(c, x){
   const nomPrime = (l, nom) => `<span style="display:inline-flex;align-items:center;gap:var(--spacing-sm)">${tuile(l)}${nom}</span>`;
   const P = c.prApp, PR = c.prPromos, MY = c.prMoy;
   // Deux entrées du rail (23/10/2026) : la page admin (la marque, les primes de tous les franchisés, les promotions, les
-  // moyennes) ; la page franchisé, celle d'UN magasin (#/primes-app-worker?shop=3), plus bas (tplPrimesMagasin).
+  // moyennes) ; la page franchisé, celle d'UN magasin (#/primes?shop=3), plus bas (tplPrimesMagasin).
   const voir = () => '';
   // Qui paie la prime : la marque, le magasin ou un sponsor (son nom).
   // Une prime de la marque est payée par la marque ou un sponsor ; celle d'un franchisé, par son magasin (16/10/2026).
@@ -7253,7 +7253,7 @@ function tplPrimesApp(c, x){
       <div style="flex:1;min-width:280px"><div style="font:700 22px/1.2 ${sf};letter-spacing:-.018em;color:var(--color-text)">${titre}</div>${sous ? `<div style="font:400 13px/1.45 ${sf};color:${muet};margin-top:3px;max-width:760px">${sous}</div>` : ''}</div>${droite || ''}</div>`;
   const vide = t => `<div style="${groupeSt};margin-top:12px;padding:16px 18px;font:400 14px ${sf};color:${muet}">${t}</div>`;
   // La page franchisé (23/10/2026, Sam : « le panneau de contrôle des primes pour son magasin ») : UN magasin, celui de
-  // l'adresse (#/primes-app-worker?shop=3), dans la même forme sobre. Les primes de la marque et des sponsors qui y
+  // l'adresse (#/primes?shop=3), dans la même forme sobre. Les primes de la marque et des sponsors qui y
   // tournent, à lire ; les siennes, à poser avec les données du magasin ; ses chiffres ; les promotions du panel.
   const segm = ls => `<div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${ls.map(k => `<button ${x.A(k.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:500 12.5px ${sf};cursor:pointer;background:${k.on ? 'var(--color-surface)' : 'transparent'};color:${k.on ? 'var(--color-text)' : muet};box-shadow:${k.on ? '0 1px 2px rgba(0,0,0,.08)' : 'none'}">${esc(k.nom)}</button>`).join('')}</div>`;
   // Le choix du mois (24/10/2026, « un month picker ») : ‹ octobre 2026 ›, et au toucher du mois la grille des douze mois
@@ -7416,7 +7416,7 @@ function tplPrimesApp(c, x){
       </div>`)}
     ${`<div style="display:inline-flex;flex-wrap:wrap;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px;margin:14px 0 0 4px">${P.magsFiltre.map(m => `<button ${x.A(m.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:${m.on ? 600 : 500} 12.5px ${sf};background:${m.on ? 'var(--color-surface)' : 'transparent'};color:var(--color-text);cursor:pointer;${m.on ? 'box-shadow:0 1px 3px rgba(0,0,0,.12)' : ''}">${esc(m.nom)}${m.n ? ` <span style="color:${muet};font-weight:400">${m.n}</span>` : ''}</button>`).join('')}</div>`}
     ${P.lignesMag.length ? groupes(P.lignesMag) : vide(P.magFiltreNom ? 'Aucune prime pour ' + esc(P.magFiltreNom) + ' pour l’instant : il la pose depuis sa page (Page franchisé), ou posez-la ici avec « + Nouvelle prime du magasin ».'
-      : 'Aucun franchisé n’a encore posé de prime. Chacun la pose depuis la page de son magasin (Page franchisé, #/primes-app-worker?shop=…) ; vous pouvez aussi la poser ici pour lui.')}
+      : 'Aucun franchisé n’a encore posé de prime. Chacun la pose depuis la page de son magasin (Page franchisé, #/primes?shop=…) ; vous pouvez aussi la poser ici pour lui.')}
   </section>
 
   <div style="${carte2};overflow:hidden" data-pr="promos"${voir('promos')}>
