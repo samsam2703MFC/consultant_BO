@@ -13,10 +13,11 @@ function bulle(b, esc){
 
 export function tplClientsAnnee(c, x){
   const { esc } = x;
-  const tete = `<div class="clan-tete"><span class="clan-titre">Clients par mois — ${esc(c.an)} face à ${esc(c.an1)}</span>
-      <span class="clan-leg"><span><i></i>${esc(c.an)}</span><span><i class="n1"></i>${esc(c.an1)}</span><span><i class="bd"></i>${esc(c.an)} devant / derrière</span></span></div>`;
+  const tete = `<div class="clan-tete"><span class="clan-titre">${esc(c.titre)}</span>
+      <span class="clan-leg"><span><i></i>${esc(c.an)}</span><span><i class="n1"></i>${esc(c.an1)}</span><span><i class="bd"></i>${esc(c.an)} devant / derrière</span></span>
+      <span class="clan-seg">${c.mesures.map(m => `<button ${x.A(m.go)} class="${m.on ? 'on' : ''}">${esc(m.nom)}</button>`).join('')}</span></div>`;
   if (c.chargement) {
-    return `<div class="clan">${tete}<div class="clan-etat"><i class="rj-ring"></i>Lecture des clients de l’année au panel…</div></div>`;
+    return `<div class="clan">${tete}<div class="clan-etat"><i class="rj-ring"></i>Lecture des ventes de l’année au panel…</div></div>`;
   }
   if (c.erreur) {
     return `<div class="clan">${tete}<div class="clan-etat err"><span style="flex:1">${esc(c.erreur)}</span><button ${x.A(c.relire)} class="clan-relire">Relire</button></div></div>`;
@@ -33,7 +34,7 @@ export function tplClientsAnnee(c, x){
   </div>`;
 }
 
-/** La cellule de la colonne « Clients N vs N-1 » du tableau des magasins. */
+/** La cellule de la colonne « Clients (ou Panier) vs N-1 » du tableau des magasins. */
 export function tplClientsCellule(m, esc){
   if (!m) { return '<span style="color:var(--color-text-muted)">—</span>'; }
   return `${esc(m.v)}${m.e ? ` <b style="font-weight:600;color:${esc(m.coul)}">${esc(m.e)}</b>` : ''}<div style="font-size:10px;color:var(--color-text-muted)"${m.titre ? ` title="${esc(m.titre)}"` : ''}>${esc(m.s)}</div>`;

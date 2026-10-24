@@ -1226,6 +1226,9 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{
 .clan-puce b{font-weight:600;font-size:11px}
 .clan-puce:hover{background:var(--color-background-secondary)}
 .clan-puce.on{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+.clan-seg{display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:8px;margin-left:auto}
+.clan-seg button{border:none;background:none;cursor:pointer;font:500 12px var(--font-ui);color:var(--color-text-muted);padding:6px 12px;border-radius:6px;white-space:nowrap}
+.clan-seg button.on{background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .clan-perim{display:inline-flex;gap:6px;align-items:center;font-size:11px;color:var(--color-text-muted);margin-left:4px}
 .clan-perim button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:6px;padding:3px 8px;font:500 11px var(--font-ui);cursor:pointer;color:var(--color-text-muted)}
 .clan-perim button.on{border-color:var(--color-text);color:var(--color-text)}
