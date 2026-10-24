@@ -1027,3 +1027,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T08:23:03Z base : tables n_*, base unique erp (#136)
 2026-10-24T08:29Z app employé : Accueil dans la barre du bas
 2026-10-24T08:34:27Z base : migration 070 (collation n_, index) + docs/db (#136)
+2026-10-24T08:47:05Z recherche : recettes, fournisseurs, employés, onglets tablettes, alias FR
