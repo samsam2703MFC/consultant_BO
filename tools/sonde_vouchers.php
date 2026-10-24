@@ -174,7 +174,12 @@ foreach ($choix as $id => $c) {
     svTitre("campagne #$id (" . svValeur('name', (string) ($c['name'] ?? '')) . ')');
     $f = ErpApi::sondeGet("/admin/voucher-campaigns/$id");
     echo '  GET /{id} : ', $f['code'] >= 200 && $f['code'] < 300 ? 'HTTP ' . $f['code'] : svErreur($f), "\n";
-    if (($fi = svFiche($f['corps'])) !== null && $f['code'] < 300) { $fiches[] = $fi; }
+    if (($fi = svFiche($f['corps'])) !== null && $f['code'] < 300) {
+        $fiches[] = $fi;
+        printf("    configuration_complete=%s · missing_requirements=%s · id_promotion=%s · promotion=%s\n",
+            json_encode($fi['configuration_complete'] ?? null), json_encode($fi['missing_requirements'] ?? null, JSON_UNESCAPED_UNICODE),
+            json_encode($fi['campaign']['id_promotion'] ?? null), json_encode(is_array($fi['promotion'] ?? null) ? array_keys($fi['promotion']) : ($fi['promotion'] ?? null)));
+    }
     $k = ErpApi::sondeGet("/admin/voucher-campaigns/$id/codes?limit=5");
     $ki = svItems($k['corps']);
     echo '  GET /{id}/codes : ', $k['code'] < 300 ? 'HTTP ' . $k['code'] . ' · total=' . json_encode(svPagination($k['corps'])['total'] ?? count($ki)) : svErreur($k), "\n";
@@ -228,6 +233,58 @@ try {
     echo '  campagnes par canal : ', json_encode($canaux, JSON_UNESCAPED_UNICODE), "\n";
 } catch (Throwable $e) {
     echo '  lecture impossible : ', mb_substr($e->getMessage(), 0, 200), "\n";
+}
+
+// ── 5. L'API et la base parlent-elles des mêmes campagnes ? ──────────────────
+// Le 24/10 au premier passage : 8 campagnes à l'API, aucune « Webshop — … », alors que la base du cockpit en a au
+// canal WS ; et l'API rend un `office_id` sur les codes, colonne absente de `voucher_code` ici. On croise.
+svTitre('croisement API ↔ base : mêmes campagnes ?');
+try {
+    $cfgDb = Db::config()['db'] ?? [];
+    $hn = Db::rows('SELECT @@hostname AS h, DATABASE() AS d')[0] ?? [];
+    printf("  base du cockpit : hôte configuré=%s · @@hostname=%s · base=%s\n", $cfgDb['host'] ?? '?', $hn['h'] ?? '?', $hn['d'] ?? '?');
+    // La base du webshop (hôte et nom seulement — jamais l'utilisateur ni le mot de passe).
+    foreach (['/var/www/html/api/config.php', '/var/www/html/webshop/api/config.php'] as $wc) {
+        if (!is_file($wc)) { continue; }
+        $w = (static function (string $f) { return include $f; })($wc);
+        printf("  base du webshop (%s) : hôte=%s · base=%s\n", $wc, $w['db']['host'] ?? '?', $w['db']['name'] ?? '?');
+    }
+    $tv = array_map(static fn ($r) => (string) $r['TABLE_NAME'], Db::rows("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%voucher%' ORDER BY TABLE_NAME"));
+    echo '  tables « voucher » de la base : ', implode(', ', $tv), "\n";
+    $lignes = Db::rows("SELECT vc.id, vc.name, vc.status, vc.code_type, vc.id_shop, vc.target_kind, vc.created_by, vc.created_at,
+                               (SELECT GROUP_CONCAT(ch.channel) FROM voucher_campaign_channel ch WHERE ch.id_voucher_campaign = vc.id) AS canaux,
+                               p.promotion_type, p.activation_mode,
+                               (SELECT COUNT(*) FROM voucher_code k WHERE k.id_voucher_campaign = vc.id) AS nb_codes
+                          FROM voucher_campaign vc LEFT JOIN promotion p ON p.id = vc.id_promotion
+                         ORDER BY vc.id LIMIT 80");
+    printf("  %d campagne(s) en base :\n", count($lignes));
+    $enBase = [];
+    foreach ($lignes as $r) {
+        $enBase[(int) $r['id']] = (string) $r['name'];
+        printf("    #%-4d %-44s %-8s %-6s shop=%-4s cible=%-8s canaux=%-6s promo=%s/%s codes=%d par=%s le %s\n", (int) $r['id'],
+            mb_substr((string) svValeur('name', (string) $r['name']), 0, 44), $r['status'], $r['code_type'], $r['id_shop'] ?? '—', $r['target_kind'] ?? '—',
+            $r['canaux'] ?? '—', $r['promotion_type'] ?? '—', $r['activation_mode'] ?? '—', (int) $r['nb_codes'], $r['created_by'] ?? '—', substr((string) $r['created_at'], 0, 10));
+    }
+    $aApi = [];
+    foreach ($campagnes as $c) { if (is_array($c) && isset($c['id'])) { $aApi[(int) $c['id']] = (string) ($c['name'] ?? ''); } }
+    $communs = array_intersect_key($aApi, $enBase);
+    $memeNom = count(array_filter(array_keys($communs), static fn ($id) => $aApi[$id] === $enBase[$id]));
+    printf("  identifiants : API=%s · base=%s\n", json_encode(array_keys($aApi)), json_encode(array_keys($enBase)));
+    printf("  communs=%d (même nom : %d) · à l'API seulement=%d · en base seulement=%d\n", count($communs), $memeNom,
+        count(array_diff_key($aApi, $enBase)), count(array_diff_key($enBase, $aApi)));
+    // Une campagne de la base absente de la liste : l'API la connaît-elle par son numéro ?
+    foreach (array_slice(array_keys(array_diff_key($enBase, $aApi)), 0, 4) as $id) {
+        $g = ErpApi::sondeGet("/admin/voucher-campaigns/$id");
+        $gn = svFiche($g['corps'])['campaign']['name'] ?? null;
+        printf("    GET /admin/voucher-campaigns/%d (en base seulement) : %s%s\n", $id, $g['code'] < 300 ? 'HTTP ' . $g['code'] : svErreur($g),
+            $gn !== null ? ' · nom API=' . svValeur('name', (string) $gn) . ($gn === $enBase[$id] ? ' (identique à la base)' : ' (DIFFÉRENT de la base)') : '');
+    }
+    $verdict = $communs === [] ? 'NON — aucune campagne commune : l\'API ERP lit une autre base que le cockpit'
+             : ($memeNom === count($communs) && count($communs) === count($aApi) && count($communs) === count($enBase) ? 'OUI — mêmes campagnes, mêmes noms'
+             : 'EN PARTIE — des numéros communs mais des noms ou des listes qui diffèrent');
+    echo "  ⇒ l'API et la base du cockpit voient-elles les mêmes campagnes ? $verdict\n";
+} catch (Throwable $e) {
+    echo '  croisement impossible : ', mb_substr($e->getMessage(), 0, 200), "\n";
 }
 
 echo "\n=== FIN SONDE VOUCHERS ===\n";
