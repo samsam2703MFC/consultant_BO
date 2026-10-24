@@ -365,5 +365,6 @@
   "gp_won_by": "gagné par {n}",
   "gp_season": "du {du} au {au}",
   "gp_sponsor_site": "Le sponsor",
-  "gp_note": "Joués sur toute la saison ; le minimum d’heures ou de tickets monte avec elle. Le classement se met à jour toutes les quinze minutes."
+  "gp_note": "Joués sur toute la saison ; le minimum d’heures ou de tickets monte avec elle. Le classement se met à jour toutes les quinze minutes.",
+  "step1_line_set": "Ta moyenne du mois, {v} articles par ticket, devient ton record : le mois prochain, {o} rapporte {e} €, puis {e} € par dixième de plus."
 }

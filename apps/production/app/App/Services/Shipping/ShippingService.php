@@ -430,13 +430,15 @@ class ShippingService
             /** @var \App\Models\Client\PriceList\PriceListItemModel $priceItem */
             $priceItem   = $priceMap[$productId];
             $priceNet    = (float)$priceItem->getPriceNet();
-            $vatRate     = (float)$priceItem->getVatRate();
+            // Cennik klienta = ceny netto (HTVA) ; WDT to dostawa wewnątrzwspólnotowa : zawsze 0 % (« 0 WDT », jak w KSeF),
+            // stawka VAT z cennika (np. 6 % dla sklepu w Belgii) nie trafia na WDT.
+            $vatRate     = 0.0;
             $quantity    = (int)$product['quantity'];
             $ppc         = (int)$product['ppc'];
 
             $totalNet    = $priceNet * $quantity;
-            $totalTva    = $totalNet * ($vatRate / 100);
-            $priceBrut   = $priceNet * (1 + $vatRate / 100);
+            $totalTva    = 0.0;
+            $priceBrut   = $priceNet;
             $pricePerPiece = $ppc > 0 ? round($priceNet / $ppc, 2) : 0;
 
             $product['price_carton']        = $priceNet;

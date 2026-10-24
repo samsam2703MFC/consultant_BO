@@ -295,8 +295,8 @@ class CommunicationService
         if (in_array($messageType, $proformaReminderTypes, true) && $source !== 'proforma') {
             throw new CustomException('Szablon przypomnienia proformy może zostać użyty wyłącznie dla proformy.', 'errors', 422);
         }
-        if ($source === 'proforma' && in_array($context['proforma_status'] ?? '', ['paid', 'cancelled'], true)) {
-            throw new CustomException('Nie można wysłać przypomnienia dla opłaconej lub anulowanej proformy.', 'errors', 422);
+        if ($source === 'proforma' && in_array($context['proforma_status'] ?? '', ['paid', 'cancelled', 'archived'], true)) {
+            throw new CustomException('Nie można wysłać przypomnienia dla opłaconej, anulowanej lub zarchiwizowanej proformy.', 'errors', 422);
         }
         if ($source === 'difference' && (float) ($context['difference_amount'] ?? 0) <= 0) {
             throw new CustomException('Przypomnienie można wysłać wyłącznie dla dodatniej dopłaty.', 'errors', 422);

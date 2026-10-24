@@ -6,6 +6,7 @@
 
 import { tplSvTableau, tplSvTablette, tplSvMsp, tplSvFranchise, tplSvAdmin } from './suivi-tpl.js';
 import { tplFF, tplCQM } from './franchises-tpl.js';
+import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
 
 /* Entrée du rail : feuille (bouton simple) ou sous-menu (parent repliable +
    enfants indentés). Le badge s'affiche à droite. */
@@ -974,6 +975,7 @@ function tplObjectifs(c, x){
           </div>
         </div>
       </div>
+      ${c.clAn ? tplClientsAnnee(c.clAn, x) : ''}
       <div style="background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
         <table style="width:100%;border-collapse:collapse;font-size:12.5px">
           <thead><tr>
@@ -983,17 +985,19 @@ function tplObjectifs(c, x){
             <th style="text-align:right;${TH2}">Cible prorata</th>
             <th style="text-align:center;${TH2}">Écart</th>
             <th style="text-align:center;${TH2}">Atteinte</th>
+            ${c.clAn ? `<th style="text-align:right;${TH2}">Clients vs ${c.objExo - 1}</th>` : ''}
             <th style="text-align:right;${TH2.replace('padding:12px', 'padding:12px 14px')}">Suivi budget</th>
           </tr></thead>
           <tbody>
             ${c.objRows.map(r => `
-              <tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+              <tr ${c.clAn ? x.A(r.clSel) : ''} class="${c.clAn ? 'clan-cl' + (r.clOn ? ' clan-sel' : '') : ''}" style="border-bottom:0.5px solid var(--color-border-tertiary)"${c.clAn ? ` title="${esc(r.clOn ? 'Revenir au réseau dans le graphique des clients' : 'Voir ce magasin dans le graphique des clients')}"` : ''}>
                 <td style="padding:10px 14px;font-weight:500">${esc(r.nom)}</td>
                 <td style="padding:10px 12px;text-align:right">${r.cible}${r.source ? `<div style="font-size:9.5px;color:var(--color-text-muted)">${esc(r.source)}</div>` : ''}</td>
                 <td style="padding:10px 12px;text-align:right">${r.reel}</td>
                 <td style="padding:10px 12px;text-align:right;color:var(--color-text-muted)">${r.prorata}</td>
-                <td style="padding:10px 12px;text-align:center"><span style="${r.ecartSt}">${r.ecart}</span></td>
+                <td style="padding:10px 12px;text-align:center;white-space:nowrap"><span style="${r.ecartSt}">${r.ecart}</span></td>
                 <td style="padding:10px 12px;text-align:center"><span style="${r.attSt}">${r.att}</span></td>
+                ${c.clAn ? `<td style="padding:10px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">${r.clients === undefined ? '<span style="color:var(--color-text-muted)">…</span>' : tplClientsCellule(r.clients, esc)}</td>` : ''}
                 <td style="padding:10px 14px;text-align:right"><button ${x.A(r.goBudget)} style="border:none;background:none;color:var(--color-primary);font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font-ui);white-space:nowrap">Ouvrir →</button></td>
               </tr>`).join('')}
           </tbody>

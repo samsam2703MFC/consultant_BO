@@ -322,6 +322,7 @@
                                 {% if o.proforma_status == 'paid' %}<span class="at-pill at-pill-ok">Opłacona</span>
                                 {% elseif o.proforma_status == 'issued' %}<span class="at-pill at-pill-warn">Nieopłacona</span>
                                 {% elseif o.proforma_status == 'cancelled' %}<span class="at-pill at-pill-muted">Anulowana</span>
+                                {% elseif o.proforma_status == 'archived' %}<span class="at-pill at-pill-muted">Zarchiwizowana</span>
                                 {% else %}<span class="at-pill at-pill-muted">Brak</span>{% endif %}
                             </td>
                         </tr>

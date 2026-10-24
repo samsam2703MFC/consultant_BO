@@ -542,16 +542,19 @@
                     <th class="text-end" title="${esc(t('lv.free_help'))}">${esc(t('lv.free'))}</th><th class="text-end" title="${esc(t('lv.ordered_help'))}">${esc(t('lv.ordered'))}</th>
                     <th class="text-end" title="${esc(t('lv.in_production_help'))}">${esc(t('lv.in_production'))}</th><th class="text-end" title="${esc(t('lv.available_help'))}">${esc(t('lv.available'))}</th>
                     <th class="text-end">${esc(t('lv.min'))}</th><th class="text-end">${esc(t('lv.max'))}</th>
+                    <th class="text-end" title="${esc(t('lv.coverage_help'))}">${esc(t('lv.coverage'))}</th>
                     <th class="text-end" title="${esc(t('lv.to_produce_help'))}">${esc(t('lv.to_produce'))}</th></tr></thead>
                 <tbody>${rows.map(i => `<tr data-fp="${i.final_product_id}" class="${i.below_min ? 'tfb-level-low' : ''}">
                     <td><a href="${i.id ? `#/item/${i.id}/4` : `#/product/${i.final_product_id}`}"><strong>${esc(i.name)}</strong></a><div class="small text-muted">${esc(i.category)} · ${esc(groupName(i.group_id))}${i.ppc ? ' · ' + esc(t('st.ppc', {ppc: i.ppc})) : ''}</div></td>
                     <td class="text-center"><div class="form-check form-switch d-inline-block m-0" title="${esc(i.never_frozen ? t('f.never_frozen') : t('st.toggle_help'))}">
                         <input class="form-check-input" type="checkbox" role="switch" data-mts ${i.mode === 'MTS' ? 'checked' : ''} ${i.never_frozen ? 'disabled' : ''} aria-label="${esc(t('mode.MTS'))}"></div></td>
-                    <td class="text-end">${n(i.free_cartons)}</td>
-                    <td class="text-end">${i.ordered_cartons ? n(i.ordered_cartons) : '—'}</td>
+                    <td class="text-end">${n(i.free_cartons)}${i.palletised_cartons ? `<div class="small text-muted" title="${esc(t('lv.palletised_help'))}">${esc(t('lv.palletised', {c: n(i.palletised_cartons)}))}</div>` : ''}</td>
+                    <td class="text-end">${i.ordered_cartons ? (i.orders && i.orders.length ? `<button type="button" class="btn btn-link btn-sm p-0" data-orders="${i.final_product_id}" aria-expanded="false" title="${esc(t('lv.orders_toggle'))}">${n(i.ordered_cartons)} <i class="bi bi-chevron-down"></i></button>` : n(i.ordered_cartons)) : '—'}
+                        ${i.ordered_year_ago_cartons ? `<div class="small text-muted" title="${esc(t('lv.year_ago_help'))}">${esc(t('lv.year_ago', {c: n(i.ordered_year_ago_cartons)}))}</div>` : ''}</td>
                     <td class="text-end">${i.in_production_cartons ? n(i.in_production_cartons, 1) : '—'}</td>
                     <td class="text-end"><strong class="${i.available_cartons < 0 ? 'text-danger' : ''}">${n(i.available_cartons, 1)}</strong></td>
                     <td class="text-end">${n(i.stock_min_cartons, 1)}</td><td class="text-end">${n(i.stock_max_cartons, 1)}</td>
+                    <td class="text-end">${i.coverage_weeks === null ? '<span class="text-muted">—</span>' : `<span class="${i.coverage_weeks < 1 ? 'text-danger' : ''}">${esc(t('lv.coverage_w', {w: n(i.coverage_weeks, 1)}))}</span>`}</td>
                     <td class="text-end">${i.mode === 'MTS'
                         ? (i.to_min_cartons === null ? `<span class="text-muted small">${esc(t('lv.no_min'))}</span>`
                             : `<strong class="${i.to_min_cartons > 0 ? 'text-danger' : 'text-success'}">${i.to_min_cartons > 0 ? n(i.to_min_cartons) + ' ' + esc(t('st.cart')) : '✓ 0'}</strong>
@@ -559,7 +562,10 @@
                           + (i.orders_over_stock_cartons > 0 ? `<div class="small text-danger">${esc(t('lv.orders_short', {c: n(i.orders_over_stock_cartons)}))}</div>` : '')
                           + batchesCell(i)
                         : (i.orders_over_stock_cartons > 0 ? `<strong>${n(i.orders_over_stock_cartons)} ${esc(t('st.cart'))}</strong><div class="small text-muted">${esc(t('lv.for_orders'))}</div>` : '<span class="text-muted">—</span>')}</td>
-                </tr>`).join('') || `<tr><td colspan="9" class="text-muted">${esc(t('empty_list'))}</td></tr>`}</tbody></table></div>
+                </tr>${i.orders && i.orders.length ? `<tr class="tfb-level-orders" data-orders-for="${i.final_product_id}" hidden><td colspan="10">
+                    <table class="table table-sm mb-0"><thead><tr><th>${esc(t('lv.orders_customer'))}</th><th>${esc(t('lv.orders_ref'))}</th><th>${esc(t('lv.orders_date'))}</th><th class="text-end">${esc(t('lv.orders_cartons'))}</th></tr></thead>
+                    <tbody>${i.orders.map(o => `<tr><td>${esc(o.customer || '—')}</td><td><a href="${esc(api.root)}/client-orders/${o.order_id}/edit">${esc(o.reference || '#' + o.order_id)}</a></td>
+                        <td>${esc(o.shipping_date || '—')}</td><td class="text-end">${n(o.cartons)}</td></tr>`).join('')}</tbody></table></td></tr>` : ''}`).join('') || `<tr><td colspan="10" class="text-muted">${esc(t('empty_list'))}</td></tr>`}</tbody></table></div>
                 <p class="text-muted small mb-0 mt-2">${esc(t('lv.note'))}</p></div></div>`;
         if (message) ui.notify(true, message);
         const save = async (item, body, ok) => {
@@ -576,6 +582,12 @@
             const i = all.find(x => x.final_product_id === Number(tr.dataset.fp));
             tr.querySelector('[data-mts]').addEventListener('change', (e) => modeSwitch(e.target, i, save));
         });
+        // Zamówienia otwarte produktu klient po kliencie (dawne /stock).
+        el.querySelectorAll('[data-orders]').forEach(b => b.addEventListener('click', () => {
+            const row = el.querySelector(`[data-orders-for="${b.dataset.orders}"]`);
+            row.hidden = !row.hidden;
+            b.setAttribute('aria-expanded', String(!row.hidden));
+        }));
     }
 
     // --- Nouvelle fiche (étape 1) ---------------------------------------------------

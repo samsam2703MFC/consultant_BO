@@ -49,7 +49,7 @@
         'matiere': 'surowce', 'matieres': 'surowce', 'fournisseur': 'dostawcy dostawy', 'fournisseurs': 'dostawcy dostawy', 'achat': 'zakupy', 'achats': 'zakupy',
         'facture': 'faktury proforma', 'factures': 'faktury', 'livraison': 'wysylka dostawy', 'livraisons': 'dostawy wysylka', 'arrivage': 'dostawy', 'arrivages': 'dostawy', 'approvisionnement': 'dostawy zaopatrzenie', 'expedition': 'wysylka', 'camion': 'ciezarowki pojazdy',
         'camions': 'ciezarowki pojazdy', 'tournee': 'trasy', 'tournees': 'trasy', 'chargement': 'zaladunek', 'transporteur': 'przewoznicy',
-        'stock': 'stany magazynowe', 'emballage': 'opakowania', 'emballages': 'opakowania', 'production': 'produkcja', 'planning': 'planowanie gantt',
+        'stock': 'magazynu magazynowe', 'stocks': 'magazynu magazynowe', 'inventaire': 'magazynu inwentaryzacja', 'couverture': 'magazynu pokrycie', 'emballage': 'opakowania', 'emballages': 'opakowania', 'production': 'produkcja', 'planning': 'planowanie gantt',
         'equipe': 'zespol', 'personnel': 'pracownicy personelu', 'employe': 'pracownicy', 'employes': 'pracownicy', 'tablette': 'tablety',
         'pointage': 'czas pracy', 'competences': 'kompetencje', 'prime': 'premie', 'primes': 'premie', 'tache': 'zadania', 'taches': 'zadania',
         'reclamation': 'reklamacje', 'reclamations': 'reklamacje', 'retour': 'zwroty', 'retours': 'zwroty', 'parametres': 'ustawienia',

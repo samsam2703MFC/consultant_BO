@@ -4,17 +4,10 @@ use FastRoute\RouteCollector;
 return function(RouteCollector $r) {
 
 
-    $r->addRoute('GET', '/stock', [
-        'controller' => App\Controllers\Web\Stock\FinalProductStockController::class,
-        'method'     => 'supplyMonitor'
-    ]);
+    // /stock połączone z zakładką « Stan magazynu » Kart produktów (zamówienia klient po kliencie, rok temu, pokrycie).
+    $r->addRoute('GET', '/stock', ['redirect' => '/workshop/products#/levels']);
 
-    $r->addRoute('POST', '/ajax/stock/supply-monitor', [
-        'controller' => App\Controllers\Web\Stock\FinalProductStockController::class,
-        'method'     => 'ajaxSupplyMonitor'
-    ]);
-
-    $r->addRoute('GET', '/products/stock/all', ['redirect' => '/stock']);
+    $r->addRoute('GET', '/products/stock/all', ['redirect' => '/workshop/products#/levels']);
 
     $r->addRoute('GET', '/ajax/stock/stock-state', [
         'controller' => App\Controllers\Web\Document\StockDocumentController::class,

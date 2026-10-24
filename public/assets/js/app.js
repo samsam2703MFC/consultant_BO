@@ -8,6 +8,7 @@ import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, api
 import { render as tplRender, tplPsImpression } from './templates.js';
 import { valsFF, valsCQM } from './franchises-vals.js';
 import { valsSvTableau, valsSvTablette, valsSvMsp, valsSvFranchise, valsSvAdmin } from './suivi-vals.js';
+import { valsClientsAnnee } from './clients-annee-vals.js';
 import { Scouting } from './scouting.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
@@ -1799,13 +1800,19 @@ class App {
           // D'où vient la cible : validée, ou reprise de l'étude. Les deux ne
           // se valent pas, et la ligne doit pouvoir le dire.
           const nBud = s.perf[E].filter(r => r.caT).length;
-          return { nom: s.nom, cible: cible > 0 ? this.fK(cible) : '',
+          return { _id: String(s.id), nom: s.nom, cible: cible > 0 ? this.fK(cible) : '',
             source: nBud === 12 ? '' : (nBud > 0 ? nBud + ' mois validés, le reste théorique' : 'théorique'),
             reel: this.fK(reel), prorata: pro > 0 ? this.fK(pro) : '', ecart: t.txt, ecartSt: t.st,
             att: att == null ? '' : this.fP(att, 0), attSt: att == null ? 'color:var(--color-text-muted)' : this.pill(att), _att: att || 0,
             goBudget: () => this.setState({ bStore: s.id, screen: 'budget' }) }; });
         rows.sort((a, b) => b._att - a._att);
         common.objRows = rows;
+        // Les clients mois par mois face à l'an passé (24/10/2026) : la carte, et sa colonne dans le
+        // tableau — un clic sur une ligne choisit le magasin du graphique, un second revient au réseau.
+        valsClientsAnnee(this, common, rows.map(r => r._id));
+        rows.forEach(r => { const pm = common.clAn.parMagasin;
+          r.clients = pm ? (pm[r._id] || null) : undefined; r.clOn = common.clAn.sel === r._id;
+          r.clSel = () => this.setState({ clAnSel: this.state.clAnSel === r._id ? 'reseau' : r._id }); });
         // La cible RÉSEAU vient des objectifs encodés (écran Objectifs) ; sans
         // eux, elle valait « 0,0 M€ » à côté d'un tableau qui, lui, affichait
         // 2,5 M€ de cibles magasins. On additionne alors les magasins, et on

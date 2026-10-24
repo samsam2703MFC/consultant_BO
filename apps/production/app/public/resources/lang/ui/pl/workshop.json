@@ -400,5 +400,17 @@
   "m.caption_fr": "Description (FR, opcjonalnie)",
   "m.remove": "Usuń zdjęcie",
   "m.saved": "Zapisano.",
-  "m.bad_image": "To nie jest zdjęcie (JPEG, PNG, WebP)."
+  "m.bad_image": "To nie jest zdjęcie (JPEG, PNG, WebP).",
+  "lv.palletised": "+ {c} na paletach",
+  "lv.palletised_help": "Kartony już na paletach (do wysyłki) — liczą się do stanu.",
+  "lv.coverage": "Pokrycie",
+  "lv.coverage_help": "Stan (wolne + na paletach) ÷ średnia sprzedaż WDT tygodnia (okres kart produktów).",
+  "lv.coverage_w": "{w} tyg.",
+  "lv.year_ago": "rok temu : {c}",
+  "lv.year_ago_help": "Zamówione rok temu w tym samym okresie wysyłek co zamówienia otwarte.",
+  "lv.orders_toggle": "Zamówienia klient po kliencie",
+  "lv.orders_customer": "Klient",
+  "lv.orders_ref": "Zamówienie",
+  "lv.orders_date": "Wysyłka",
+  "lv.orders_cartons": "Kartony"
 }

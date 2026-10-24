@@ -365,5 +365,6 @@
   "gp_won_by": "won by {n}",
   "gp_season": "from {du} to {au}",
   "gp_sponsor_site": "The sponsor",
-  "gp_note": "Played over the whole season; the minimum hours or receipts rise with it. The ranking updates every fifteen minutes."
+  "gp_note": "Played over the whole season; the minimum hours or receipts rise with it. The ranking updates every fifteen minutes.",
+  "step1_line_set": "Your average this month, {v} items per ticket, becomes your record: next month, {o} earns {e} €, then {e} € per extra tenth."
 }

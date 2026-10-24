@@ -169,6 +169,10 @@ final class OpenApiProducts
                         'cost_eur' => ['type' => 'number', 'nullable' => true, 'description' => 'coût matières du carton (recette ERP)'],
                         'target_cartons' => ['type' => 'integer', 'description' => 'stock cible MTS : stock max. de la fiche (sinon proposition) ; 0 en MTO'],
                         'target_pallets' => ['type' => 'number', 'nullable' => true], 'target_value_eur' => $num, 'target_cost_eur' => $num, 'current_value_eur' => $num,
+                        'coverage_weeks' => ['type' => 'number', 'nullable' => true, 'description' => '(wolne + na paletach) ÷ średnia sprzedaż tygodnia'],
+                        'ordered_year_ago_cartons' => ['type' => 'number', 'description' => 'zamówione rok temu w okresie wysyłek zamówień otwartych'],
+                        'orders' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['order_id' => ['type' => 'integer'], 'customer' => ['type' => 'string'],
+                            'reference' => ['type' => 'string', 'nullable' => true], 'shipping_date' => ['type' => 'string', 'format' => 'date', 'nullable' => true], 'cartons' => ['type' => 'number']]]],
                     ]]],
                 ]]],
                 'groups' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
