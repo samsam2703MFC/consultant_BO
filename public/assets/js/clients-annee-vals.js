@@ -1,6 +1,6 @@
 /* Cockpit CEO — Résultat › Année › 1 an : les clients mois par mois, l'exercice face à l'an passé (24/10/2026,
  * maquette A de docs/maquettes/clients-annee-n1). Le levier trafic sur l'année complète — et, d'un bouton, le
- * panier moyen (CA ÷ clients) face au même mois de l'an passé.
+ * panier moyen (CA ÷ clients) ou les articles par ticket (pièces ÷ clients) face au même mois de l'an passé.
  *
  * Une lecture : GET /ventes/reseau?vue=annee&date=… — chaque magasin, douze mois, chacun face à son N-1 arrêté au
  * même jour servi (`n1`) et au mois civil N-1 entier (`n1Mois`). La courbe de l'an passé trace `n1Mois` (le mois en
@@ -11,8 +11,9 @@
  *  - un mois d'ouverture (Halle : 7 jours en février 2026) n'est pas relié : partiel, il ferait croire à une chute ;
  *  - le réseau compte tous les magasins, ou ceux qui ont un N-1 (« périmètre constant ») : les ouvertures ne sont
  *    pas du trafic gagné ;
- *  - le panier du réseau est le CA total ÷ les clients totaux (chaque magasin pesé par ses clients) ; le mois en
- *    cours se lit à date, sans prolongement — un rapport ne se projette pas.
+ *  - le panier (les articles) du réseau est le CA (les pièces) total ÷ les clients totaux : chaque magasin pesé par
+ *    ses clients ; le mois en cours se lit à date, sans prolongement — un rapport ne se projette pas ;
+ *  - les pièces viennent du panel (sales-kpis, `articles=1`) : lues au premier clic sur « Articles / ticket ».
  *
  * Remplit `common.clAn` ; le gabarit est tplClientsAnnee (clients-annee-tpl.js). */
 import { readOne } from './api.js';
@@ -27,20 +28,23 @@ const pc = (v, d) => { if (v == null) { return '—'; } const k = d == null ? 1 
   return (r < 0 ? '−' : (r > 0 ? '+' : '')) + Math.abs(r).toLocaleString('fr-BE', { minimumFractionDigits: k, maximumFractionDigits: k }) + '\u00A0%'; };
 const fE2 = v => v == null ? '—' : v.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\u202F/g, '\u00A0') + '\u00A0€';
 const sgE = v => (Math.round(v * 100) < 0 ? '−\u00A0' : '+\u00A0') + fE2(Math.abs(v));
+const f2 = v => v == null ? '—' : v.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const sg2 = v => (Math.round(v * 100) < 0 ? '−\u00A0' : '+\u00A0') + f2(Math.abs(v));
 // Les seuils des barres jumelles de Trafic clients (rrBarres) : vert dès +3 %, rouge dès −3 %, ocre entre les deux.
 const teinte = v => v == null ? { bg: '#F1EEEA', tx: '#8a837a' } : v >= 3 ? { bg: '#E6F2E8', tx: '#2d7a3e' } : v <= -3 ? { bg: '#FBE5E7', tx: '#C0182B' } : { bg: '#F6EFD9', tx: '#8a6508' };
 
-export function clAnCharge(app, an, force){
-  const D = app.D;
+export function clAnCharge(app, an, force, articles){
+  const D = app.D, cle = an + (articles ? ':ar' : '');
   if (!D.clAn) { D.clAn = {}; }
   if (!app._clAnEnCours) { app._clAnEnCours = {}; }
-  if (app._clAnEnCours[an] || (D.clAn[an] && !force)) { return; }
-  app._clAnEnCours[an] = true;
-  // Le 31/12 de l'exercice : le serveur le ramène à aujourd'hui pour l'année en cours.
-  readOne('/ventes/reseau?vue=annee&date=' + an + '-12-31&_cache=600' + (force ? '&rafraichir=1' : '')).then(d => {
-    D.clAn[an] = d && Array.isArray(d.periodes) && Array.isArray(d.magasins) ? d : { erreur: (d && d.error) || 'lecture impossible' };
-  }).catch(e => { D.clAn[an] = { erreur: (e && e.message) || 'lecture impossible' }; })
-    .finally(() => { app._clAnEnCours[an] = false; app.setState({}); });
+  if (app._clAnEnCours[cle] || (D.clAn[cle] && !force)) { return; }
+  app._clAnEnCours[cle] = true;
+  // Le 31/12 de l'exercice : le serveur le ramène à aujourd'hui pour l'année en cours. Les pièces (`articles=1`)
+  // coûtent une lecture du panel par mois : elles ne se lisent qu'à la demande.
+  readOne('/ventes/reseau?vue=annee&date=' + an + '-12-31' + (articles ? '&articles=1' : '') + '&_cache=600' + (force ? '&rafraichir=1' : '')).then(d => {
+    D.clAn[cle] = d && Array.isArray(d.periodes) && Array.isArray(d.magasins) ? d : { erreur: (d && d.error) || 'lecture impossible' };
+  }).catch(e => { D.clAn[cle] = { erreur: (e && e.message) || 'lecture impossible' }; })
+    .finally(() => { app._clAnEnCours[cle] = false; app.setState({}); });
 }
 
 /** Les mois d'un magasin, préparés : N, N-1 à date, N-1 entier, jours, ouverture. */
@@ -56,46 +60,53 @@ function moisMagasin(mg, P, an){
     const p = P[i], etat = p.futur ? 'futur' : (p.enCours ? 'encours' : 'clos');
     const n = !p.futur && x.source ? x.tickets : null;
     const m1 = x.n1Mois || (etat === 'clos' ? x.n1 : null);
-    return { i, etat, n, nJ: x.jours || 0, nCal: p.joursServis || jm(an, i + 1), nCa: n != null ? +x.ca || 0 : null,
-      n1c: x.n1 ? x.n1.tickets : null, n1cJ: x.n1 ? x.n1.jours : 0, n1cCa: x.n1 ? +x.n1.ca || 0 : null,
-      n1: m1 ? m1.tickets : null, n1J: m1 ? m1.jours : 0, n1Ca: m1 ? +m1.ca || 0 : null,
+    // pièces : null = pas lues — le rapport ne compte alors pas ce magasin ; un zéro face à des clients n'est pas une lecture
+    const pc0 = v => v == null || !(+v > 0) ? null : +v;
+    return { i, etat, n, nJ: x.jours || 0, nCal: p.joursServis || jm(an, i + 1), nCa: n != null ? +x.ca || 0 : null, nAr: n != null ? pc0(x.articles) : null,
+      n1c: x.n1 ? x.n1.tickets : null, n1cJ: x.n1 ? x.n1.jours : 0, n1cCa: x.n1 ? +x.n1.ca || 0 : null, n1cAr: x.n1 ? pc0(x.n1.articles) : null,
+      n1: m1 ? m1.tickets : null, n1J: m1 ? m1.jours : 0, n1Ca: m1 ? +m1.ca || 0 : null, n1Ar: m1 ? pc0(m1.articles) : null,
       ouv: i === iOuv, ouv1: i === iOuv1 };
   });
 }
 
-/** Une série à tracer : douze points { n, proj, creux, n1, ecart, notes, bulle } — clients ou panier moyen. */
+/** Une série à tracer : douze points { n, proj, creux, n1, ecart, notes, bulle } — clients, panier moyen ou articles
+ *  par ticket. Les deux rapports se calculent sur les magasins dont le numérateur (CA, pièces) est lu. */
 function serie(mags, P, an, perim, reseau, mesure){
-  const panier = mesure === 'panier';
+  const ratio = mesure !== 'clients', suf = mesure === 'panier' ? 'Ca' : 'Ar';
   const jl = (P.find(p => p.enCours) || {}).joursServis || null;
   const nbMag = k => k + ' magasin' + (k > 1 ? 's' : '');
   const parJ = (t, j) => j ? ' · ' + nf(t / j) + ' / jour' : '';
-  const pan = (ca, t) => t > 0 ? ca / t : null;
+  const rap = (a, b) => b > 0 ? a / b : null;
+  const fR = v => mesure === 'panier' ? fE2(v) : f2(v) + ' articles';
+  const detail = (t, num) => nf(t) + ' clients · ' + nf(num) + (mesure === 'panier' ? ' € de CA' : ' pièces');
   return P.map((p, i) => {
     const etat = p.futur ? 'futur' : (p.enCours ? 'encours' : 'clos');
     const comparable = x => x.n != null && x.n1c != null && !x.ouv && !x.ouv1;
     const pris = mags.filter(m => perim !== 'comp' || (etat === 'futur' ? m.mois[i].n1 != null : comparable(m.mois[i])));
     // brut (la bulle), tracé (la courbe : un mois d'ouverture d'un magasin n'est pas relié), écart (à date)
-    let nR = 0, nRJ = 0, nRCa = 0, nbR = 0, n1R = 0, n1RJ = 0, n1RCa = 0, nb1R = 0;
-    let n = 0, nCa = 0, nP = 0, nb = 0, n1 = 0, n1Ca = 0, nb1 = 0, n1c = 0, n1cCa = 0, nbc = 0, ouv = false;
+    let nR = 0, nRJ = 0, nbR = 0, n1R = 0, n1RJ = 0, nb1R = 0;
+    let n = 0, nP = 0, nb = 0, n1 = 0, nb1 = 0, n1c = 0, nbc = 0, ouv = false;
+    // les rapports : numérateur et clients des seuls magasins dont le numérateur est lu
+    let rRN = 0, rRD = 0, r1RN = 0, r1RD = 0, rN = 0, rD = 0, r1N = 0, r1D = 0, rcN = 0, rcD = 0;
     pris.forEach(m => {
-      const x = m.mois[i];
+      const x = m.mois[i], v = x['n' + suf], v1 = x['n1' + suf], vc = x['n1c' + suf];
       if (x.ouv || x.ouv1) { ouv = true; }
-      if (x.n != null) { nR += x.n; nRJ += x.nJ; nRCa += x.nCa; nbR++; }
-      if (x.n1c != null) { n1R += x.n1c; n1RJ += x.n1cJ; n1RCa += x.n1cCa; nb1R++; }
-      if (x.n != null && (reseau || !x.ouv)) { n += x.n; nCa += x.nCa; nb++; nP += etat === 'encours' ? x.n / Math.max(1, x.nCal) * jm(an, i + 1) : x.n; }
-      if (x.n1 != null && (reseau || !x.ouv1)) { n1 += x.n1; n1Ca += x.n1Ca; nb1++; }
-      if (reseau && perim !== 'comp' ? x.n1c != null : comparable(x)) { n1c += x.n1c; n1cCa += x.n1cCa; nbc++; }
+      if (x.n != null) { nR += x.n; nRJ += x.nJ; nbR++; if (v != null) { rRN += v; rRD += x.n; } }
+      if (x.n1c != null) { n1R += x.n1c; n1RJ += x.n1cJ; nb1R++; if (vc != null) { r1RN += vc; r1RD += x.n1c; } }
+      if (x.n != null && (reseau || !x.ouv)) { n += x.n; nb++; nP += etat === 'encours' ? x.n / Math.max(1, x.nCal) * jm(an, i + 1) : x.n; if (v != null) { rN += v; rD += x.n; } }
+      if (x.n1 != null && (reseau || !x.ouv1)) { n1 += x.n1; nb1++; if (v1 != null) { r1N += v1; r1D += x.n1; } }
+      if (reseau && perim !== 'comp' ? x.n1c != null : comparable(x)) { n1c += x.n1c; nbc++; if (vc != null) { rcN += vc; rcD += x.n1c; } }
     });
     const pt = { i, lab: MOIS[i], etat, cur: etat === 'encours', notes: [] };
-    // Clients : le mois en cours prolongé au rythme des jours lus. Panier : lu tel quel, à date (point creux).
-    pt.n = !nb ? null : (panier ? pan(nCa, n) : Math.round(nP));
-    pt.proj = !panier && etat === 'encours' && nb > 0;
-    pt.creux = etat === 'encours' && nb > 0;
-    pt.n1 = !nb1 ? null : (panier ? pan(n1Ca, n1) : n1);
+    // Clients : le mois en cours prolongé au rythme des jours lus. Rapports : lus tels quels, à date (point creux).
+    pt.n = !nb ? null : (ratio ? rap(rN, rD) : Math.round(nP));
+    pt.proj = !ratio && etat === 'encours' && nb > 0;
+    pt.creux = etat === 'encours' && pt.n != null;
+    pt.n1 = !nb1 ? null : (ratio ? rap(r1N, r1D) : n1);
     pt.nonComp = !reseau && ouv && etat !== 'futur';
     const ok = etat !== 'futur' && nb && nbc && n1c > 0 && !pt.nonComp;
-    pt.ecart = !ok ? null : (panier ? 100 * (pan(nCa, n) / pan(n1cCa, n1c) - 1) : 100 * (n / n1c - 1));
-    if (!panier && !reseau && etat === 'clos' && pt.ecart != null) {
+    pt.ecart = !ok ? null : (ratio ? (rD > 0 && rcD > 0 && rcN > 0 ? 100 * (rap(rN, rD) / rap(rcN, rcD) - 1) : null) : 100 * (n / n1c - 1));
+    if (!ratio && !reseau && etat === 'clos' && pt.ecart != null) {
       const x = mags[0].mois[i];
       if (Math.abs(x.nJ - x.n1cJ) >= 3) { pt.notes.push(x.n1cJ < x.nJ ? (an - 1) + ' : ' + (jm(an - 1, i + 1) - x.n1cJ) + ' j fermés' : an + ' : ' + (jm(an, i + 1) - x.nJ) + ' j fermés'); }
     }
@@ -104,16 +115,18 @@ function serie(mags, P, an, perim, reseau, mesure){
     const qui = k => reseau ? nbMag(k) + ' · ' : '';
     if (etat === 'futur') {
       L.push(pt.n1 == null ? { s: 'pas de ' + (an - 1) }
-        : panier ? { k: String(an - 1), v: fE2(pt.n1), s: qui(nb1) + nf(n1) + ' clients · le mois à battre' }
+        : ratio ? { k: String(an - 1), v: fR(pt.n1), s: qui(nb1) + detail(r1D, r1N) + ' · le mois à battre' }
         : { k: String(an - 1), v: nf(n1) + ' clients', s: qui(nb1) + 'le mois à battre' });
-    } else if (panier) {
+    } else if (ratio) {
       if (!nbR) { L.push({ s: an + ' : pas de vente lue' }); }
-      else { L.push({ k: String(an), v: fE2(pan(nRCa, nR)), s: (etat === 'encours' ? 'en ' + jl + ' j · ' : '') + qui(nbR) + nf(nR) + ' clients · ' + nf(nRCa) + ' € de CA' }); }
+      else if (!rRD) { L.push({ s: an + ' : pièces pas encore lues au panel' }); }
+      else { L.push({ k: String(an), v: fR(rap(rRN, rRD)), s: (etat === 'encours' ? 'en ' + jl + ' j · ' : '') + qui(nbR) + detail(rRD, rRN) }); }
       if (!nb1R) { L.push({ s: (an - 1) + ' : pas encore ouvert' }); }
-      else { L.push({ k: (an - 1) + (etat === 'encours' ? ' au ' + jl + '/' + String(i + 1).padStart(2, '0') : ''), v: fE2(pan(n1RCa, n1R)),
-        s: qui(nb1R) + nf(n1R) + ' clients' + (etat === 'encours' && pt.n1 != null ? ' · mois entier ' + fE2(pt.n1) : ' · ' + nf(n1RCa) + ' € de CA') }); }
+      else if (r1RD) { L.push({ k: (an - 1) + (etat === 'encours' ? ' au ' + jl + '/' + String(i + 1).padStart(2, '0') : ''), v: fR(rap(r1RN, r1RD)),
+        s: qui(nb1R) + (etat === 'encours' && pt.n1 != null ? nf(r1RD) + ' clients · mois entier ' + fR(pt.n1) : detail(r1RD, r1RN)) }); }
       if (pt.nonComp) { L.push({ s: 'mois d’ouverture : pas d’écart' }); }
-      if (pt.ecart != null) { const d = pan(nCa, n) - pan(n1cCa, n1c); pt.ecartTxt = { v: sgE(d) + ' · ' + pc(pt.ecart), up: d >= 0, a: etat === 'encours' ? 'à date' : '', s: '' }; }
+      if (pt.ecart != null) { const d = rap(rN, rD) - rap(rcN, rcD);
+        pt.ecartTxt = { v: (mesure === 'panier' ? sgE(d) : sg2(d) + ' article') + ' · ' + pc(pt.ecart), up: d >= 0, a: etat === 'encours' ? 'à date' : '', s: '' }; }
     } else {
       if (!nbR) { L.push({ s: an + ' : pas de vente lue' }); }
       else if (etat === 'encours') {
@@ -137,22 +150,30 @@ function serie(mags, P, an, perim, reseau, mesure){
   });
 }
 
-/** L'année à date, sur les mois comparables (ou tout le réseau, ouvertures comprises) : clients et CA. */
+/** L'année à date, sur les mois comparables (ou tout le réseau, ouvertures comprises) : clients, panier, articles. */
 function cumul(mags, P, perim, reseau){
-  let n = 0, n1 = 0, nCa = 0, n1Ca = 0, tout = 0, toutCa = 0; const mois = new Set();
+  let n = 0, n1 = 0, tout = 0; const mois = new Set();
+  const R = { Ca: [0, 0, 0, 0, 0, 0], Ar: [0, 0, 0, 0, 0, 0] };   // [num N, clients N, num N-1, clients N-1, num tout, clients tout]
+  const ajoute = (x, n1Aussi) => ['Ca', 'Ar'].forEach(k => { const r = R[k];
+    if (x['n' + k] != null) { r[0] += x['n' + k]; r[1] += x.n; }
+    if (n1Aussi && x['n1c' + k] != null) { r[2] += x['n1c' + k]; r[3] += x.n1c; } });
   mags.forEach(m => m.mois.forEach((x, i) => {
     if (P[i].futur || x.n == null) { return; }
-    tout += x.n; toutCa += x.nCa;
+    tout += x.n;
+    ['Ca', 'Ar'].forEach(k => { if (x['n' + k] != null) { R[k][4] += x['n' + k]; R[k][5] += x.n; } });
     const comp = x.n1c != null && !x.ouv && !x.ouv1;
-    if (reseau && perim !== 'comp') { n += x.n; nCa += x.nCa; if (x.n1c != null) { n1 += x.n1c; n1Ca += x.n1cCa; } mois.add(i); return; }
-    if (comp) { n += x.n; nCa += x.nCa; n1 += x.n1c; n1Ca += x.n1cCa; mois.add(i); }
+    if (reseau && perim !== 'comp') { n += x.n; if (x.n1c != null) { n1 += x.n1c; } ajoute(x, x.n1c != null); mois.add(i); return; }
+    if (comp) { n += x.n; n1 += x.n1c; ajoute(x, true); mois.add(i); }
   }));
   const M = [...mois].sort((a, b) => a - b), nMois = P.filter(p => !p.futur).length, ec = P.find(p => p.enCours);
   const fin = ec ? ' (au ' + ec.joursServis + '/' + String(ec.iso).padStart(2, '0') + ')' : '';
-  const pa = n > 0 ? nCa / n : null, pa1 = n1 > 0 ? n1Ca / n1 : null;
-  return { n, n1, tout, ecart: n1 > 0 ? 100 * (n / n1 - 1) : null,
-    pa, pa1, paTout: tout > 0 ? toutCa / tout : null, ecartPa: pa != null && pa1 ? 100 * (pa / pa1 - 1) : null,
+  const rap = (a, b) => b > 0 ? a / b : null;
+  const out = { n, n1, tout, ecart: n1 > 0 ? 100 * (n / n1 - 1) : null,
     plage: !M.length ? '' : (M.length === nMois ? 'janv. → ' + MOIS[nMois - 1] + fin : MOIS[M[0]] + ' → ' + MOIS[M[M.length - 1]] + (M[M.length - 1] === nMois - 1 ? fin : '')) };
+  // pa (panier) et ar (articles) : la valeur, l'an passé, tout l'exercice, l'écart.
+  [['pa', 'Ca'], ['ar', 'Ar']].forEach(([c, k]) => { const r = R[k], v = rap(r[0], r[1]), v1 = rap(r[2], r[3]);
+    out[c] = v; out[c + '1'] = v1; out[c + 'Tout'] = rap(r[4], r[5]); out['ecart' + c.replace(/^./, x => x.toUpperCase())] = v != null && v1 ? 100 * (v / v1 - 1) : null; });
+  return out;
 }
 
 /** La géométrie du graphique, en repère 1000 × H : des primitives SVG que le gabarit écrit telles quelles.
@@ -217,19 +238,31 @@ function geometrie(Pt, fv, ft){
   return { W, H, el, cols };
 }
 
+// Les trois mesures : ce que chacune lit dans le cumul, comment elle s'écrit, ce qu'elle dit.
+const MESURES = {
+  clients: { nom: 'Clients', titre: 'Clients par mois', col: 'Clients vs ', chiffre: 'Clients ', unite: ' de clients',
+    e: k => k.ecart, v: k => k.n, v1: k => k.n1, tout: k => k.tout, f: nf, fd: sg, geo: [nf, nf] },
+  panier: { nom: 'Panier moyen', titre: 'Panier moyen par mois', col: 'Panier vs ', chiffre: 'Panier moyen ', unite: ' par client',
+    e: k => k.ecartPa, v: k => k.pa, v1: k => k.pa1, tout: k => k.paTout, f: fE2, fd: sgE, geo: [f2, v => f2(v) + '\u00A0€'] },
+  articles: { nom: 'Articles / ticket', titre: 'Articles par ticket, mois par mois', col: 'Articles vs ', chiffre: 'Articles par ticket ', unite: ' par ticket',
+    e: k => k.ecartAr, v: k => k.ar, v1: k => k.ar1, tout: k => k.arTout, f: f2, fd: sg2, geo: [f2, f2] },
+};
+
 export function valsClientsAnnee(app, common, ordre){
   const S = app.state, an = app.exo();
-  clAnCharge(app, an, false);
-  const d = (app.D.clAn || {})[an];
-  // Deux mesures, un bouton : les clients (le levier trafic) ou le panier moyen (CA ÷ clients).
-  const mesure = S.clAnMesure === 'panier' ? 'panier' : 'clients', panier = mesure === 'panier';
-  const c = { an: String(an), an1: String(an - 1), relire: () => clAnCharge(app, an, true),
-    titre: (panier ? 'Panier moyen par mois — ' : 'Clients par mois — ') + an + ' face à ' + (an - 1),
-    colTitre: (panier ? 'Panier vs ' : 'Clients vs ') + (an - 1),
-    mesures: [['clients', 'Clients'], ['panier', 'Panier moyen']].map(o => ({ nom: o[1], on: o[0] === mesure, go: () => app.setState({ clAnMesure: o[0] }) })) };
+  // Trois mesures, un bouton : les clients (le levier trafic), le panier moyen (CA ÷ clients), les articles par
+  // ticket (pièces ÷ clients). Les pièces ont leur propre lecture, faite à la demande.
+  const mesure = MESURES[S.clAnMesure] ? S.clAnMesure : 'clients', M = MESURES[mesure], articles = mesure === 'articles';
+  clAnCharge(app, an, false, articles);
+  const D = app.D.clAn || {};
+  const d = articles ? D[an + ':ar'] : (D[an] || (D[an + ':ar'] && !D[an + ':ar'].erreur ? D[an + ':ar'] : null));
+  const c = { an: String(an), an1: String(an - 1), relire: () => clAnCharge(app, an, true, articles),
+    titre: M.titre + ' — ' + an + ' face à ' + (an - 1), colTitre: M.col + (an - 1),
+    chargementTxt: articles ? 'Lecture des pièces vendues au panel… (une lecture par mois la première fois)' : 'Lecture des ventes de l’année au panel…',
+    mesures: Object.keys(MESURES).map(k => ({ nom: MESURES[k].nom, on: k === mesure, go: () => app.setState({ clAnMesure: k }) })) };
   common.clAn = c;
   if (!d) { c.chargement = true; return; }
-  if (d.erreur) { c.erreur = 'Les ventes de l’année n’ont pas pu être lues (' + d.erreur + ').'; return; }
+  if (d.erreur) { c.erreur = (articles ? 'Les pièces vendues' : 'Les ventes de l’année') + ' n’ont pas pu être lues (' + d.erreur + ').'; return; }
   const P = d.periodes;
   const jl = (P.find(p => p.enCours) || {}).joursServis || null;
   const mags = d.magasins.map(mg => ({ id: String(mg.id), nom: mg.nom, motif: mg.n1Motif, mois: moisMagasin(mg, P, an) }));
@@ -247,7 +280,7 @@ export function valsClientsAnnee(app, common, ordre){
   const court = m => { const st = (app.D.stores || []).find(z => String(z.id) === m.id); return (st && st.zone) || String(m.nom).replace(/^Atelier by\s*(?:.*?\s)?-\s+/i, '').trim() || m.nom; };
   const cuDe = id => id === 'reseau' ? cumul(mags, P, perim, true) : cumul(mags.filter(m => m.id === id), P, perim, false);
   c.puces = [{ id: 'reseau', nom: 'Réseau · ' + mags.length + ' magasins' }].concat(mags.map(m => ({ id: m.id, nom: court(m) }))).map(o => {
-    const k = cuDe(o.id), e = panier ? k.ecartPa : k.ecart;
+    const e = M.e(cuDe(o.id));
     return { nom: o.nom, on: o.id === sel, ecart: e == null ? 'pas de N-1' : pc(e), coul: teinte(e).tx,
       go: () => app.setState({ clAnSel: o.id }) };
   });
@@ -257,33 +290,29 @@ export function valsClientsAnnee(app, common, ordre){
   const mg = reseau ? null : choisis[0];
   const prem = mg && mg.motif ? (/(\d\d\/\d\d\/\d{4})/.exec(mg.motif) || [])[1] : null;
   const fin = jl ? 'au ' + jl + '/' + String(P.findIndex(p => p.enCours) + 1).padStart(2, '0') : '';
-  const sans1 = prem ? 'première vente le ' + prem : 'pas d’année précédente';
-  const constant = reseau && perim === 'tous' ? ' · à périmètre constant ' + pc(panier ? cumul(mags, P, 'comp', true).ecartPa : cumul(mags, P, 'comp', true).ecart) : '';
-  c.chiffres = panier ? [
-    { k: 'Panier moyen ' + an, v: fE2(cu.ecartPa == null ? cu.paTout : cu.pa), s: cu.ecartPa == null ? fin : cu.plage },
-    { k: (an - 1) + ', même période', v: cu.ecartPa == null ? '—' : fE2(cu.pa1), s: cu.ecartPa == null ? sans1 : 'arrêté au même jour servi' },
-    { k: 'Écart', v: cu.ecartPa == null ? '—' : sgE(cu.pa - cu.pa1), coul: teinte(cu.ecartPa).tx, s: cu.ecartPa == null ? '' : pc(cu.ecartPa) + ' par client' + constant }]
-  : [
-    { k: 'Clients ' + an, v: nf(cu.ecart == null ? cu.tout : cu.n), s: cu.ecart == null ? fin : cu.plage },
-    { k: (an - 1) + ', même période', v: cu.ecart == null ? '—' : nf(cu.n1), s: cu.ecart == null ? sans1 : 'arrêté au même jour servi' },
-    { k: 'Écart', v: cu.ecart == null ? '—' : sg(cu.n - cu.n1), coul: teinte(cu.ecart).tx, s: cu.ecart == null ? '' : pc(cu.ecart) + ' de clients' + constant }];
-  const deux = v => v.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  c.svg = panier ? geometrie(Pt, deux, v => deux(v) + '\u00A0€') : geometrie(Pt, nf, nf);
+  const e = M.e(cu), v = M.v(cu), v1 = M.v1(cu);
+  const constant = reseau && perim === 'tous' ? ' · à périmètre constant ' + pc(M.e(cumul(mags, P, 'comp', true))) : '';
+  c.chiffres = [
+    { k: M.chiffre + an, v: M.f(e == null ? M.tout(cu) : v), s: e == null ? fin : cu.plage },
+    { k: (an - 1) + ', même période', v: e == null ? '—' : M.f(v1), s: e == null ? (prem ? 'première vente le ' + prem : 'pas d’année précédente') : 'arrêté au même jour servi' },
+    { k: 'Écart', v: e == null ? '—' : M.fd(v - v1), coul: teinte(e).tx, s: e == null ? '' : pc(e) + M.unite + constant }];
+  c.svg = geometrie(Pt, M.geo[0], M.geo[1]);
+  c.vide = articles ? 'Aucune pièce vendue lue au panel pour ' + an + '.' : 'Aucun client lu pour ' + an + '.';
   c.legende = { n: String(an), n1: String(an - 1) };
   const ec = P.find(p => p.enCours);
   const Mois = ec ? MOISL[ec.iso - 1].replace(/^./, x => x.toUpperCase()) : '';
-  c.note = (panier ? 'Panier moyen = CA du mois ÷ clients du mois ; celui du réseau pèse chaque magasin par ses clients. ' : '')
-    + (ec ? (panier ? Mois + ' est en cours (' + jl + ' jours lus) : son panier se lit à date (point creux), face aux ' + jl + ' premiers jours de ' + (an - 1) + '. '
+  c.note = (mesure === 'panier' ? 'Panier moyen = CA du mois ÷ clients du mois ; celui du réseau pèse chaque magasin par ses clients. '
+      : articles ? 'Articles par ticket = pièces vendues du mois ÷ clients du mois (pièces : relevé des ventes du panel ; clients : ventes par jour) ; celui du réseau pèse chaque magasin par ses clients. ' : '')
+    + (ec ? (mesure !== 'clients' ? Mois + ' est en cours (' + jl + ' jours lus) : sa valeur se lit à date (point creux), face aux ' + jl + ' premiers jours de ' + (an - 1) + '. '
       : Mois + ' est en cours (' + jl + ' jours lus) : sa valeur est prolongée au rythme du mois (pointillé, point creux), mais son écart se calcule à date, ' + (an - 1) + ' arrêté au même jour. ') : '')
     + (P.some(p => p.futur) ? 'Les mois à venir montrent ' + (an - 1) + ' : ce sont les mois à battre. ' : '')
     + (reseau && perim === 'tous' ? 'Le réseau compte tous les magasins, ouvertures comprises ; « périmètre constant » ne garde que ceux qui ont un ' + (an - 1) + '. ' : '')
     + 'Un mois d’ouverture n’est pas relié (mois partiel). Source : ' + (d.source || 'panel') + '.';
   // La colonne du tableau, par magasin.
   c.parMagasin = {};
-  mags.forEach(m => { const k = cumul([m], P, 'comp', false), e = panier ? k.ecartPa : k.ecart;
-    const v = x => panier ? fE2(x) : nf(x);
-    c.parMagasin[m.id] = e == null ? { v: v(panier ? k.paTout : k.tout), e: '', s: 'pas de ' + (an - 1), coul: '' }
-      : { v: v(panier ? k.pa : k.n), e: pc(e), coul: teinte(e).tx, s: (an - 1) + ' : ' + v(panier ? k.pa1 : k.n1) + (k.plage.startsWith('janv.') ? '' : '*'),
+  mags.forEach(m => { const k = cumul([m], P, 'comp', false), ek = M.e(k);
+    c.parMagasin[m.id] = ek == null ? { v: M.f(M.tout(k)), e: '', s: 'pas de ' + (an - 1), coul: '' }
+      : { v: M.f(M.v(k)), e: pc(ek), coul: teinte(ek).tx, s: (an - 1) + ' : ' + M.f(M.v1(k)) + (k.plage.startsWith('janv.') ? '' : '*'),
         titre: (an - 1) + ' sur la même période' + (k.plage.startsWith('janv.') ? '' : ' (* mois comparables : ' + k.plage + ')') }; });
   c.sel = sel;
 }

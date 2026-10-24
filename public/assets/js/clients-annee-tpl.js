@@ -17,7 +17,7 @@ export function tplClientsAnnee(c, x){
       <span class="clan-leg"><span><i></i>${esc(c.an)}</span><span><i class="n1"></i>${esc(c.an1)}</span><span><i class="bd"></i>${esc(c.an)} devant / derrière</span></span>
       <span class="clan-seg">${c.mesures.map(m => `<button ${x.A(m.go)} class="${m.on ? 'on' : ''}">${esc(m.nom)}</button>`).join('')}</span></div>`;
   if (c.chargement) {
-    return `<div class="clan">${tete}<div class="clan-etat"><i class="rj-ring"></i>Lecture des ventes de l’année au panel…</div></div>`;
+    return `<div class="clan">${tete}<div class="clan-etat"><i class="rj-ring"></i>${esc(c.chargementTxt)}</div></div>`;
   }
   if (c.erreur) {
     return `<div class="clan">${tete}<div class="clan-etat err"><span style="flex:1">${esc(c.erreur)}</span><button ${x.A(c.relire)} class="clan-relire">Relire</button></div></div>`;
@@ -29,12 +29,12 @@ export function tplClientsAnnee(c, x){
     <div class="clan-chiffres">${c.chiffres.map(k => `<div><small>${esc(k.k)}</small><b${k.coul ? ` style="color:${esc(k.coul)}"` : ''}>${esc(k.v)}</b><span>${esc(k.s)}</span></div>`).join('')}</div>
     ${g ? `<div class="clan-g"><svg viewBox="0 0 ${g.W} ${g.H}" class="clan-svg" role="img" aria-label="${esc('Clients par mois, ' + c.an + ' face à ' + c.an1)}">${g.el.map(([tag, a, txt]) => txt == null ? `<${tag} ${attrs(a, esc)}/>` : `<${tag} ${attrs(a, esc)}>${esc(txt)}</${tag}>`).join('')}</svg>
       <div class="clan-cols">${g.cols.map(k => `<div class="clan-col" style="left:${k.l}%;width:${k.w}%"><i class="clan-guide" style="bottom:${(100 - k.hb).toFixed(2)}%"></i><div class="clan-tip${k.droite ? ' d' : ''}">${bulle(k.bulle, esc)}</div></div>`).join('')}</div></div>`
-      : `<div class="clan-etat">Aucun client lu pour ${esc(c.an)}.</div>`}
+      : `<div class="clan-etat">${esc(c.vide)}</div>`}
     <div class="clan-note">${esc(c.note)}</div>
   </div>`;
 }
 
-/** La cellule de la colonne « Clients (ou Panier) vs N-1 » du tableau des magasins. */
+/** La cellule de la colonne « Clients (Panier, Articles) vs N-1 » du tableau des magasins. */
 export function tplClientsCellule(m, esc){
   if (!m) { return '<span style="color:var(--color-text-muted)">—</span>'; }
   return `${esc(m.v)}${m.e ? ` <b style="font-weight:600;color:${esc(m.coul)}">${esc(m.e)}</b>` : ''}<div style="font-size:10px;color:var(--color-text-muted)"${m.titre ? ` title="${esc(m.titre)}"` : ''}>${esc(m.s)}</div>`;
