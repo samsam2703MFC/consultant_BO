@@ -1042,3 +1042,5 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T11:22Z API du module : sous-menu du rail et état en direct des routes (#/api)
 2026-10-24T11:28:32Z #139 nettoyage de la base (074 → 080)
 2026-10-24T11:34:42Z disque plein : relevé + ménage, puis #138/#139
+2026-10-24T11:54:29Z disque : relevé détaillé + ménage étendu (accord utilisateur), puis #138/#139
+2026-10-24T11:44Z disque : ménage sûr à chaque livraison et toutes les 6 h, arrêt sous 300 Mo libres, alerte à 90 %, rotation des journaux
