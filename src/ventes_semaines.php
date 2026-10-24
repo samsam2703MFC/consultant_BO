@@ -75,7 +75,8 @@ function ep_ventes_reseau(): array
         foreach ($m['sources'] as $k => $v) { $sources[$k] = true; }
         $par = [];
         foreach ($m['periodes'] as $i => $p) {
-            $par[] = ['ca' => $p['ca'], 'tickets' => $p['tickets'], 'jours' => $p['jours'], 'source' => $p['source'], 'n1' => $p['n1']];
+            $par[] = ['ca' => $p['ca'], 'tickets' => $p['tickets'], 'jours' => $p['jours'], 'source' => $p['source'], 'n1' => $p['n1']]
+                + (array_key_exists('n1Mois', $p) ? ['n1Mois' => $p['n1Mois']] : []);
             if ($p['source'] !== null) { $reseau[$i]['ca'] += $p['ca']; $reseau[$i]['tickets'] += $p['tickets']; $reseau[$i]['jours'] += $p['jours']; $reseau[$i]['magasins']++; }
             if ($p['n1'] !== null) {
                 $reseau[$i]['ca1'] += $p['n1']['ca']; $reseau[$i]['tickets1'] += $p['n1']['tickets']; $reseau[$i]['comparables']++;
@@ -182,8 +183,9 @@ function vsSourceTexte(array $sources, string $vue): string
 }
 
 /**
- * Les périodes de l'étendue : [lab, iso, du, au, jusqua, du1, au1, enCours,
- * futur, joursServis]. `au1` s'arrête au même rang de jour que `jusqua`.
+ * Les périodes de l'étendue : [lab, iso, du, au, jusqua, du1, au1, au1Mois,
+ * enCours, futur, joursServis]. `au1` s'arrête au même rang de jour que
+ * `jusqua` ; `au1Mois` (vues mois et année) est la fin du mois civil N-1.
  */
 function vsPeriodes(string $vue, string $date, int $n): array
 {
@@ -212,7 +214,7 @@ function vsPeriodes(string $vue, string $date, int $n): array
         $jusqua = min($au, $auj);
         $du1 = sprintf('%04d-%02d-01', $yy - 1, $mm); $au1 = min(date('Y-m-t', strtotime($du1)), sprintf('%04d-%02d-%s', $yy - 1, $mm, substr($jusqua, 8, 2)));
         $out[] = ['lab' => $MN[$mm], 'iso' => $mm, 'du' => $du, 'au' => $au, 'jusqua' => $futur ? null : $jusqua,
-            'du1' => $du1, 'au1' => $au1, 'enCours' => !$futur && $au >= $auj, 'futur' => $futur,
+            'du1' => $du1, 'au1' => $au1, 'au1Mois' => date('Y-m-t', strtotime($du1)), 'enCours' => !$futur && $au >= $auj, 'futur' => $futur,
             'joursServis' => $futur ? 0 : (int) ((strtotime($jusqua) - strtotime($du)) / 86400) + 1];
     }
     return $out;
@@ -223,6 +225,8 @@ function vsLireMagasin(int $sid, array $periodes): array
 {
     $fen = [];
     foreach ($periodes as $p) {
+        // Le mois N-1 entier se lit même pour un mois à venir : c'est le mois à battre.
+        if (isset($p['au1Mois'])) { $fen[] = [$p['du1'], $p['au1Mois']]; }
         if ($p['futur']) { continue; }
         $fen[] = [$p['du'], $p['jusqua']];
         $fen[] = [$p['du1'], $p['au1']];
@@ -250,6 +254,13 @@ function vsMagasin(int $sid, array $periodes, array $lu): array
             'ca' => $s['ca'], 'tickets' => $s['tickets'], 'jours' => $s['jours'], 'source' => $s['source'],
             'panier' => $s['tickets'] > 0 ? round($s['ca'] / $s['tickets'], 2) : null,
             'n1' => $s1['source'] === null ? null : ['du' => $p['du1'], 'ca' => $s1['ca'], 'tickets' => $s1['tickets'], 'jours' => $s1['jours'], 'source' => $s1['source']]];
+        // Le mois civil N-1 entier (vues mois et année), hors des totaux : la courbe de l'an passé
+        // sur douze mois, le mois en cours et les mois à venir compris (Résultat › Année, 24/10/2026).
+        // L'écart, lui, reste sur `n1`, arrêté au même jour servi.
+        if (isset($p['au1Mois'])) {
+            $sM = vsSomme($lu['panel'], $lu['caisse'], $p['du1'], $p['au1Mois']);
+            $ligne['n1Mois'] = $sM['source'] === null ? null : ['ca' => $sM['ca'], 'tickets' => $sM['tickets'], 'jours' => $sM['jours'], 'source' => $sM['source']];
+        }
         if ($s['source'] !== null) { $tot['ca'] += $s['ca']; $tot['tickets'] += $s['tickets']; $tot['jours'] += $s['jours']; $srcs[$s['source']] = true; }
         if ($ligne['n1'] !== null) { $n1Vu = true; $tot1['ca'] += $s1['ca']; $tot1['tickets'] += $s1['tickets']; $tot1['jours'] += $s1['jours']; $srcs[$s1['source']] = true; }
         $out[] = $ligne;
