@@ -1,0 +1,214 @@
+{% extends "layouts/base.twig" %}
+
+{% macro qty(q) %}{{ q == q|round ? q|number_format(0, ',', ' ') : (q < 10 ? q|number_format(2, ',', ' ') : q|number_format(1, ',', ' ')) }}{% endmacro %}
+{% macro zl(v) %}{{ v|number_format(2, ',', ' ') }} zł{% endmacro %}
+{% import _self as f %}
+
+{% set base = root ~ kind_info.base ~ '/' ~ recipe.id %}
+
+{% block title %}Kalkulacja — {{ recipe.name }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title d-flex flex-wrap align-items-start gap-2">
+            <div class="me-auto">
+                <h3>{{ recipe.name }}</h3>
+                <p class="text-subtitle text-muted mb-0">Kalkulacja kosztu surowców · {{ kind_info.label }}
+                    · {% if kind == 'product' %}receptura na 1 karton{{ recipe.ppc ? ' (' ~ recipe.ppc ~ ' szt.)' }}{% else %}receptura na {{ f.qty(recipe.yield) }} {{ recipe.unit }}{% endif %}
+                    {% if product and product.category %} · {{ product.category }}{% endif %}</p>
+                {% if kind != 'product' %}
+                    <label class="d-inline-flex align-items-center gap-2 mt-2 small" title="Grupa, która przygotowuje tę recepturę (widoczne na tabletach)">
+                        <i class="bi bi-people"></i> Przygotowuje grupa
+                        <select class="form-select form-select-sm" style="width:auto" data-producer="{{ recipe.id }}">
+                            <option value="">— nie ustawiono</option>
+                            {% for g in groups %}<option value="{{ g.id }}" {{ producer and producer.id == g.id ? 'selected' }}>{{ g.name_pl }}</option>{% endfor %}
+                        </select>
+                    </label>
+                {% endif %}
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-sm btn-outline-dark" href="{{ base }}/edit"><i class="bi bi-pencil"></i> Edytuj recepturę</a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/recipes/{{ recipe.id }}/preparation-steps"><i class="bi bi-list-ol"></i> Etapy</a>
+                {% if product %}
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/workshop/products#/product/{{ product.id }}"><i class="bi bi-card-text"></i> Karta produktu</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/finances/product-margin?product_id={{ product.id }}"><i class="bi bi-percent"></i> Marża</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.rc-table{width:100%;border-collapse:collapse;font-size:13px}
+.rc-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted);border-bottom:1px solid var(--at-line);padding:8px 10px;white-space:nowrap}
+.rc-table td{border-bottom:1px solid var(--at-line);padding:7px 10px;vertical-align:middle}
+.rc-table td.n,.rc-table th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rc-table tr.rc-sub>td{font-weight:600}
+.rc-table tr.rc-sub td.rc-name{cursor:pointer}
+.rc-table tr.rc-total td{font-weight:700;border-top:2px solid var(--at-line-2);border-bottom:0}
+.rc-caret{display:inline-block;width:16px;color:var(--at-muted);transition:transform .15s}
+.rc-open>td .rc-caret{transform:rotate(90deg)}
+.rc-bar{display:flex;align-items:center;gap:8px;min-width:150px}
+.rc-bar span{flex:1;height:6px;border-radius:3px;background:var(--at-bg-2);overflow:hidden}
+.rc-bar span i{display:block;height:100%;background:var(--at-primary)}
+.rc-bar.rc-pack span i{background:#8a7fb8}
+.rc-bar b{font-weight:500;width:46px;text-align:right;font-variant-numeric:tabular-nums}
+.rc-tag{display:inline-block;font-size:10.5px;font-weight:600;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+.rc-tag-pack{background:#f1eefa;color:#5a3d99}.rc-tag-sub{background:#f6e9eb;color:#8D1D2C}.rc-tag-miss{background:#fde8e8;color:#b42318}
+.rc-split{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--at-bg-2);margin-top:4px}
+.rc-split i{display:block;height:100%}
+</style>
+<section class="section">
+    <ul class="nav nav-tabs mb-3" aria-label="Typ receptury">
+        {% for key, k in {'product': ['/recipes', 'Produkty gotowe'], 'semi': ['/semi-products', 'Półprodukty'], 'composition': ['/compositions', 'Kompozycje']} %}
+            <li class="nav-item"><a class="nav-link {{ key == kind ? 'active' }}" href="{{ root }}{{ k[0] }}">{{ k[1] }}</a></li>
+        {% endfor %}
+    </ul>
+
+    {% if missing or cycles or stored_differs %}
+        <div class="alert alert-warning py-2">
+            {% if missing %}<div><i class="bi bi-exclamation-triangle"></i> <strong>Brak ceny : {{ missing|length }} {{ missing|length == 1 ? 'surowiec' : 'surowce/ów' }}</strong> — koszt jest zaniżony :
+                {% for m in missing %}<a href="{{ root }}/materials/{{ m.id }}/edit">{{ m.name }}</a>{{ not loop.last ? ', ' }}{% endfor %}.</div>{% endif %}
+            {% if cycles %}<div><i class="bi bi-arrow-repeat"></i> Receptura zawiera samą siebie ({% for c in cycles %}{{ c.name }}{{ not loop.last ? ', ' }}{% endfor %}) — ta pozycja liczona jako 0.</div>{% endif %}
+            {% if stored_differs %}<div><i class="bi bi-info-circle"></i> Koszt zapisany w karcie produktu i w marżach : <strong>{{ f.zl(stored) }}</strong> — bieżące wyliczenie : {{ f.zl(total) }}
+                (zapis odświeża się przy zmianie receptury lub ceny surowca ; Ustawienia › « Przelicz wszystkie receptury »).</div>{% endif %}
+        </div>
+    {% endif %}
+
+    <div class="at-tiles">
+        <div class="at-tile at-tile-ok"><span class="at-tile-label"><i class="bi bi-calculator"></i> Koszt surowców{{ kind == 'product' ? ' / karton' : ' — cała receptura' }}</span>
+            <strong class="at-tile-value">{{ f.zl(total) }}</strong>
+            <span class="at-tile-meta">{% if kind == 'product' %}receptura na 1 karton{{ recipe.ppc ? ' · ' ~ recipe.ppc ~ ' szt.' }}{% else %}receptura na {{ f.qty(recipe.yield) }} {{ recipe.unit }}{% endif %}</span></div>
+        {% if kind == 'product' and unit_costs|length > 1 %}
+            <div class="at-tile"><span class="at-tile-label"><i class="bi bi-1-circle"></i> Koszt surowców / sztuka</span>
+                <strong class="at-tile-value">{{ f.zl(unit_costs[1].value) }}</strong><span class="at-tile-meta">karton ÷ {{ recipe.ppc }} szt.</span></div>
+        {% elseif kind != 'product' %}
+            <div class="at-tile"><span class="at-tile-label"><i class="bi bi-1-circle"></i> Koszt / {{ unit_costs[0].label }}</span>
+                <strong class="at-tile-value">{{ f.zl(unit_costs[0].value) }}</strong><span class="at-tile-meta">koszt receptury ÷ wydajność</span></div>
+        {% endif %}
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-pie-chart"></i> Surowce spożywcze / opakowania</span>
+            <strong class="at-tile-value">{{ f.zl(food) }} <small class="text-muted">/ {{ f.zl(packaging) }}</small></strong>
+            {% set fp = total > 0 ? food / total * 100 : 0 %}
+            <div class="rc-split" title="spożywcze {{ fp|round }} % · opakowania {{ (100 - fp)|round }} %"><i style="width:{{ fp }}%;background:var(--at-primary)"></i><i style="width:{{ 100 - fp }}%;background:#8a7fb8"></i></div>
+            <span class="at-tile-meta">{{ fp|number_format(0) }} % spożywcze · {{ (100 - fp)|number_format(0) }} % opakowania</span></div>
+        {% if sale %}
+            <div class="at-tile"><span class="at-tile-label"><i class="bi bi-tag"></i> Cena standardowa / karton</span>
+                <strong class="at-tile-value">{{ sale.price_eur|number_format(2, ',', ' ') }} €</strong>
+                <span class="at-tile-meta">{% if sale.price_pln %}≈ {{ f.zl(sale.price_pln) }} (kurs {{ sale.rate|number_format(4, ',', ' ') }}) · surowce = <strong>{{ sale.food_share|number_format(1, ',', ' ') }} %</strong> ceny{% else %}brak kursu EUR w ustawieniach{% endif %}</span></div>
+        {% elseif used_in %}
+            <div class="at-tile"><span class="at-tile-label"><i class="bi bi-diagram-3"></i> Używany w</span>
+                <strong class="at-tile-value">{{ used_in|length }}</strong><span class="at-tile-meta">{{ used_in|length == 1 ? 'recepturze' : 'recepturach' }} (lista poniżej)</span></div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2">
+            <div class="at-tabs" role="tablist">
+                <button type="button" class="active" data-view="tree">Skład receptury</button>
+                <button type="button" data-view="materials">Surowce łącznie <span class="at-tab-count">{{ materials|length }}</span></button>
+            </div>
+            <span class="ms-auto" data-tree-tools>
+                <button type="button" class="btn btn-sm btn-light" data-expand="1">Rozwiń wszystko</button>
+                <button type="button" class="btn btn-sm btn-light" data-expand="0">Zwiń</button>
+            </span>
+        </div>
+        <div class="card-body pt-0">
+            <div class="table-responsive" data-pane="tree">
+                <table class="rc-table">
+                    <thead><tr><th>Składnik</th><th class="n">Ilość</th><th class="n">Cena jedn.</th><th class="n">Koszt</th><th>Udział w koszcie</th></tr></thead>
+                    <tbody>
+                    {% for r in rows %}
+                        <tr data-key="{{ r.key }}" data-parent="{{ r.parent }}" class="{{ r.sub ? 'rc-sub' }}" {{ r.depth > 0 ? 'hidden' }}>
+                            <td class="{{ r.sub ? 'rc-name' }}" style="padding-left:{{ 10 + r.depth * 22 }}px">
+                                {% if r.sub %}<span class="rc-caret">▸</span>{% else %}<span class="rc-caret"></span>{% endif %}
+                                {% if r.sub and r.kind %}<a href="{{ root }}{{ r.kind == 'semi' ? '/semi-products' : (r.kind == 'composition' ? '/compositions' : '/recipes') }}/{{ r.id }}/calculation" class="text-reset" title="Kalkulacja tej receptury">{{ r.name }}</a>
+                                {% elseif not r.sub %}<a href="{{ root }}/materials/{{ r.id }}/edit" class="text-reset">{{ r.name }}</a>
+                                {% else %}{{ r.name }}{% endif %}
+                                {% if r.sub %}<span class="rc-tag rc-tag-sub">{{ r.kind == 'composition' ? 'kompozycja' : 'półprodukt' }} · {{ r.children }}</span>{% endif %}
+                                {% if r.producer %}<span class="rc-tag" style="background:{{ r.producer.color }}1f;color:{{ r.producer.color }}" title="Przygotowuje grupa"><i class="bi bi-people"></i> {{ r.producer.name_pl }}</span>{% endif %}
+                                {% if r.packaging %}<span class="rc-tag rc-tag-pack">opakowanie</span>{% endif %}
+                                {% if r.missing %}<span class="rc-tag rc-tag-miss">brak ceny</span>{% endif %}
+                                {% if r.cycle %}<span class="rc-tag rc-tag-miss">cykl</span>{% endif %}
+                            </td>
+                            <td class="n">{{ f.qty(r.qty) }} {{ r.unit }}</td>
+                            <td class="n text-muted">{% if r.unit_price is not null %}{{ (r.unit_price * r.price_factor)|number_format(2, ',', ' ') }} zł/{{ r.price_unit }}{% endif %}</td>
+                            <td class="n">{{ f.zl(r.cost) }}</td>
+                            <td><div class="rc-bar {{ r.packaging ? 'rc-pack' }}"><span><i style="width:{{ min(100, r.share) }}%"></i></span><b>{{ r.share|number_format(1, ',', ' ') }} %</b></div></td>
+                        </tr>
+                    {% endfor %}
+                    <tr class="rc-total"><td>Razem{{ kind == 'product' ? ' (karton)' : '' }}</td><td></td><td></td><td class="n">{{ f.zl(total) }}</td><td></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-responsive d-none" data-pane="materials">
+                <table class="rc-table">
+                    <thead><tr><th>Surowiec / opakowanie</th><th class="n">Ilość łącznie</th><th class="n">Cena</th><th class="n">Koszt</th><th>Udział w koszcie</th></tr></thead>
+                    <tbody>
+                    {% for m in materials %}
+                        <tr>
+                            <td><a href="{{ root }}/materials/{{ m.id }}/edit" class="text-reset">{{ m.name }}</a>
+                                {% if m.packaging %}<span class="rc-tag rc-tag-pack">opakowanie</span>{% endif %}
+                                {% if m.missing %}<span class="rc-tag rc-tag-miss">brak ceny</span>{% endif %}
+                                {% if m.uses > 1 %}<span class="text-muted small ms-1">w {{ m.uses }} miejscach</span>{% endif %}</td>
+                            <td class="n">{{ f.qty(m.qty) }} {{ m.unit }}</td>
+                            <td class="n text-muted">{{ (m.unit_price * m.price_factor)|number_format(2, ',', ' ') }} zł/{{ m.price_unit }}</td>
+                            <td class="n">{{ f.zl(m.cost) }}</td>
+                            <td><div class="rc-bar {{ m.packaging ? 'rc-pack' }}"><span><i style="width:{{ min(100, m.share) }}%"></i></span><b>{{ m.share|number_format(1, ',', ' ') }} %</b></div></td>
+                        </tr>
+                    {% endfor %}
+                    <tr class="rc-total"><td>Razem</td><td></td><td></td><td class="n">{{ f.zl(total) }}</td><td></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted small mt-3 mb-0">Koszt = ilość × cena surowca (Zakupy › Ceny surowców) ; półprodukty i kompozycje według ich receptur, proporcjonalnie do użytej ilości.
+                {% if stored is not null and not stored_differs %}Ten sam koszt w karcie produktu, marżach i Rentowności.{% endif %}</p>
+        </div>
+    </div>
+
+    {% if used_in %}
+        <div class="card">
+            <div class="card-header"><h4 class="card-title mb-0">Używany w ({{ used_in|length }})</h4></div>
+            <div class="card-body pt-0 d-flex flex-wrap gap-2">
+                {% for u in used_in %}<a class="btn btn-sm btn-light" href="{{ root }}{{ u.url }}">{{ u.name }}</a>{% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const rows = [...document.querySelectorAll('[data-pane="tree"] tr[data-key]')];
+    const children = (key) => rows.filter(r => r.dataset.parent === key);
+    const hideDeep = (key) => children(key).forEach(c => { c.hidden = true; c.classList.remove('rc-open'); hideDeep(c.dataset.key); });
+    const toggle = (row) => {
+        const open = !row.classList.contains('rc-open');
+        row.classList.toggle('rc-open', open);
+        if (open) children(row.dataset.key).forEach(c => { c.hidden = false; });
+        else hideDeep(row.dataset.key);
+    };
+    document.querySelector('[data-pane="tree"]').addEventListener('click', (e) => {
+        if (e.target.closest('a')) return;
+        const row = e.target.closest('tr.rc-sub');
+        if (row) toggle(row);
+    });
+    document.querySelectorAll('[data-expand]').forEach(b => b.addEventListener('click', () => {
+        const open = b.dataset.expand === '1';
+        rows.forEach(r => { r.hidden = !open && r.dataset.parent !== ''; r.classList.toggle('rc-open', open && r.classList.contains('rc-sub')); });
+    }));
+    document.querySelector('[data-producer]')?.addEventListener('change', (e) => {
+        fetch({{ root|json_encode|raw }} + '/ajax/recipes/' + e.target.dataset.producer + '/producer', {
+            method: 'PUT', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: JSON.stringify({group_id: e.target.value || null}),
+        }).then(r => r.json().then(b => showSnack(r.ok, b.message || 'Błąd')));
+    });
+    document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
+        document.querySelectorAll('[data-view]').forEach(x => x.classList.toggle('active', x === b));
+        document.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('d-none', p.dataset.pane !== b.dataset.view));
+        document.querySelector('[data-tree-tools]').classList.toggle('d-none', b.dataset.view !== 'tree');
+    }));
+})();
+</script>
+{% endblock %}

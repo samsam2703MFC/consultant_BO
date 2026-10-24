@@ -1,0 +1,23 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Brak dostępu{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3><i class="bi bi-shield-lock"></i> Brak dostępu</h3>
+            <p class="text-subtitle text-muted">
+                {% if admin_only %}Strona « {{ page_label }} » jest tylko dla administratora.
+                {% elseif page_label %}Twoje stanowisko nie ma dostępu do strony « {{ page_label }} ». Dostęp ustawia administrator (Uprawnienia stanowisk).
+                {% else %}Nie masz dostępu do tej strony.{% endif %}
+            </p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <a class="btn btn-primary" href="{{ root }}/today"><i class="bi bi-house"></i> Dzisiaj</a>
+    <a class="btn btn-outline-primary" href="{{ root }}/my-tasks"><i class="bi bi-check2-square"></i> Moje zadania</a>
+</section>
+{% endblock %}

@@ -1,0 +1,288 @@
+{% extends "layouts/base.twig" %}
+
+{% set months_pl = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'] %}
+{% set langs = {'fr': 'FR', 'nl': 'NL', 'pl': 'PL', 'en': 'EN'} %}
+{% set type_pills = {'proforma': ['Proforma', 'cs-p-pro'], 'wdt': ['Faktura WDT', 'cs-p-wdt'], 'invoice': ['Faktura', 'cs-p-inv'], 'wz': ['WZ', 'cs-p-wz'], 'cmr': ['CMR', 'cs-p-wz'], 'difference': ['Różnice', 'cs-p-diff']} %}
+{% macro eur(v, d) %}{{ v|number_format(d ?? 2, ',', ' ') }} €{% endmacro %}
+{% macro month(ym, names) %}{{ names[ym|split('-')[1] - 1] }} {{ ym|split('-')[0] }}{% endmacro %}
+
+{% block title %}{{ client.company }} — strona klienta{% endblock %}
+
+{% block page_heading %}
+<div class="page-heading cs-head">
+    <div>
+        <h3>{{ client.company }}</h3>
+        <p class="text-subtitle text-muted mb-0">
+            {{ [client.name, client.surname]|join(' ')|trim }}{% if client.fac_town %} · {{ client.fac_town }}{% endif %}
+            {% if client.franchise_network_id or client.type == 1 %} · <span class="cs-badge">Franczyzobiorca</span>{% endif %}
+            · język dokumentów : {{ langs[client.lang] ?? client.lang|upper }}
+        </p>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        <div class="cs-tabs" role="tablist">
+            <a role="tab" class="{{ tab == 'docs' ? 'on' }}" href="{{ root }}/clients/{{ client.id }}/space?tab=docs">Dokumenty</a>
+            <a role="tab" class="{{ tab == 'goal' ? 'on' }}" href="{{ root }}/clients/{{ client.id }}/space?tab=goal">Cel obrotu</a>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/clients/{{ client.id }}/edit">Karta klienta</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+.cs-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.cs-badge{display:inline-block;background:#f6e9eb;color:#8D1D2C;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
+.cs-tabs{display:inline-flex;background:#efe9e4;border-radius:10px;padding:3px;gap:2px}
+.cs-tabs a{padding:7px 16px;border-radius:8px;font-size:14px;color:#555;text-decoration:none}
+.cs-tabs a.on{background:#fff;color:#8D1D2C;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.cs-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.cs-tiles .at-tile{text-decoration:none}
+.cs-tile-big{background:#8D1D2C;border-color:#8D1D2C}.cs-tile-big .at-tile-label,.cs-tile-big .at-tile-meta{color:#f4cdd3}.cs-tile-big .at-tile-value{color:#fff}
+.cs-formula{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;border:1px solid var(--at-line, #eee);border-radius:12px;padding:12px 16px;margin-bottom:16px}
+.cs-formula b{font-size:19px}.cs-formula .op{color:#8D1D2C;font-size:20px;font-weight:700}
+.cs-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.cs-filters .form-select,.cs-filters .form-control{width:auto;min-width:150px}
+.cs-table{width:100%;font-size:13px}
+.cs-table th{white-space:nowrap}
+.cs-table .r{text-align:right;white-space:nowrap}
+.cs-table tr.cs-cat td{background:#f6e9eb;color:#8D1D2C;font-weight:600;cursor:pointer}
+.cs-table tr.cs-cat.cs-ex td{background:#f3f3f3;color:#888}
+.cs-table tr.cs-tot td{font-weight:700;border-top:2px solid #8D1D2C;background:#fbf7f5}
+.cs-chev{display:inline-block;width:14px}
+.cs-table tr.cs-cat td:first-child{white-space:nowrap}
+.cs-src{font-size:11px;font-weight:500;color:#888;margin-left:4px}
+.cs-pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;white-space:nowrap}
+.cs-p-pro{background:#fdf0e1;color:#9a5b00}.cs-p-wdt{background:#e8f1fb;color:#1d5a99}.cs-p-inv{background:#eef6ee;color:#2e6b2e}.cs-p-wz{background:#f1eefa;color:#5a3d99}.cs-p-diff{background:#fbeef0;color:#8D1D2C}
+.cs-note{font-size:12px;color:#777;margin-top:10px}
+.cs-coef-input{width:84px}
+</style>
+
+{% if (tab == 'docs' and not settings.docs) or (tab == 'goal' and not settings.goal) %}
+<section class="section"><div class="card"><div class="card-body">
+    <p class="mb-2"><strong>{{ tab == 'docs' ? 'Dokumenty klienta' : 'Cel obrotu' }}</strong> : opcja wyłączona dla tego klienta.</p>
+    <a class="btn btn-sm btn-primary" href="{{ root }}/clients/{{ client.id }}/edit#client-options">Włącz w karcie klienta</a>
+</div></div></section>
+
+{% elseif tab == 'docs' %}
+<section class="section">
+    <div class="cs-tiles">
+        {% for key, label in docs.types %}
+            <a class="at-tile" href="{{ root }}/clients/{{ client.id }}/space?tab=docs&type={{ key }}&period=all"><span class="at-tile-label">{{ label }}</span>
+                <strong class="at-tile-value">{{ docs.counts[key] ?? 0 }}</strong><span class="at-tile-meta">pokaż wszystkie</span></a>
+        {% endfor %}
+        <a class="at-tile" href="{{ root }}/franchise-complaints"><span class="at-tile-label">Reklamacje</span><strong class="at-tile-value">{{ docs.counts.complaint ?? 0 }}</strong><span class="at-tile-meta">lista reklamacji</span></a>
+        <a class="at-tile" href="#" onclick="downloadPDF('/ajax/clients/{{ client.id }}/price-list'); return false;"><span class="at-tile-label">Cennik klienta</span><strong class="at-tile-value">PDF</strong><span class="at-tile-meta">aktualne ceny</span></a>
+        <a class="at-tile" target="_blank" href="{{ root }}/ajax/clients/{{ client.id }}/sales-summary/export/pdf?date_from={{ 'now'|date_modify('-12 months')|date('Y-m-d') }}&date_to={{ 'now'|date('Y-m-d') }}"><span class="at-tile-label">Podsumowanie sprzedaży</span><strong class="at-tile-value">PDF</strong><span class="at-tile-meta">12 miesięcy</span></a>
+    </div>
+
+    <div class="card"><div class="card-body">
+        <form class="cs-filters" method="get" action="{{ root }}/clients/{{ client.id }}/space">
+            <input type="hidden" name="tab" value="docs">
+            <select name="type" class="form-select" onchange="this.form.submit()" aria-label="Typ dokumentu">
+                <option value="">Wszystkie typy</option>
+                {% for key, label in docs.types %}<option value="{{ key }}" {{ docs.filters.type == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+            </select>
+            <select name="period" class="form-select" onchange="this.form.submit()" aria-label="Okres">
+                {% for key, label in docs.periods %}<option value="{{ key }}" {{ docs.filters.period == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+            </select>
+            <input type="search" name="q" class="form-control" placeholder="Numer dokumentu…" value="{{ docs.filters.q }}">
+            <button class="btn btn-outline-secondary" type="submit">Szukaj</button>
+            <span class="ms-auto d-flex gap-2 align-items-center">
+                <span class="text-muted small" id="cs-selected">Zaznacz dokumenty → jeden PDF</span>
+                <button type="button" class="btn btn-sm btn-primary" id="cs-pdf-selected" disabled>PDF zaznaczonych</button>
+            </span>
+        </form>
+        {% if docs.rows is empty %}
+            <p class="text-muted mb-0">Brak dokumentów w wybranym okresie.</p>
+        {% else %}
+        <div class="table-responsive">
+        <table class="table cs-table align-middle mb-0">
+            <thead><tr><th style="width:28px"><input type="checkbox" id="cs-all" aria-label="Zaznacz wszystkie"></th><th>Data</th><th>Typ</th><th>Numer</th><th class="r">Kwota netto</th><th>Status</th><th class="r">Akcje</th></tr></thead>
+            <tbody>
+            {% for d in docs.rows %}
+                <tr>
+                    <td><input type="checkbox" class="cs-doc" value="{{ d.type }}:{{ d.id }}" aria-label="Zaznacz {{ d.number }}"></td>
+                    <td>{{ d.date|date('d.m.Y') }}</td>
+                    <td><span class="cs-pill {{ type_pills[d.type][1] }}">{{ type_pills[d.type][0] }}</span></td>
+                    <td>{{ d.number }}{% if d.note %} <span class="text-muted small">({{ d.note }})</span>{% endif %}</td>
+                    <td class="r">{% if d.amount is not null %}{{ d.amount|number_format(2, ',', ' ') }} {{ d.currency == 'EUR' ? '€' : d.currency }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                    <td>
+                        {% if d.type == 'proforma' %}
+                            {% if d.status == 'paid' %}<span class="text-success fw-semibold">opłacona</span>{% elseif d.status == 'cancelled' %}<span class="text-muted">anulowana</span>{% elseif d.status == 'archived' %}<span class="text-muted">zarchiwizowana</span>{% else %}<span class="text-warning fw-semibold">czeka na płatność</span>{% endif %}
+                        {% elseif d.type == 'wdt' %}
+                            {% if d.status == 'accepted' %}<span class="text-success fw-semibold">KSeF przyjęta</span>{% elseif d.status %}<span class="text-muted">KSeF : {{ d.status }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="r">
+                        <a class="btn btn-sm btn-outline-secondary" target="_blank" href="{{ root }}/ajax/clients/{{ client.id }}/space/documents.pdf?docs={{ d.type }}:{{ d.id }}">PDF</a>
+                        {% if d.type in ['proforma', 'invoice', 'wdt'] %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}/communication/compose/{{ d.type }}/{{ d.id }}">Wyślij</a>{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% if docs.rows|length >= docs.limit %}<p class="cs-note">Pokazano {{ docs.limit }} najnowszych — zawęź okres albo typ.</p>{% endif %}
+        {% endif %}
+        <p class="cs-note mb-0">PDF w języku klienta ; « Wyślij » otwiera wiadomość w Komunikacji (szablon w języku klienta, log wysyłek). Dokumenty tylko do odczytu — dokumenty przekazane do KSeF nie są zmieniane.</p>
+    </div></div>
+</section>
+
+{% else %}
+{% set t = goal.totals %}
+{% set q = 'month=' ~ goal.month ~ '&source=' ~ goal.source %}
+<section class="section">
+    <form class="cs-filters" method="get" action="{{ root }}/clients/{{ client.id }}/space">
+        <input type="hidden" name="tab" value="goal">
+        <select name="month" class="form-select" onchange="this.form.submit()" aria-label="Miesiąc">
+            {% for m in months %}<option value="{{ m }}" {{ m == goal.month ? 'selected' }}>{{ _self.month(m, months_pl) }}</option>{% endfor %}
+        </select>
+        <select name="source" class="form-select" onchange="this.form.submit()" aria-label="Źródło zakupów">
+            <option value="wdt" {{ goal.source == 'wdt' ? 'selected' }}>Zakupy : faktury WDT (dostarczone)</option>
+            <option value="proforma" {{ goal.source == 'proforma' ? 'selected' }}>Zakupy : proformy (zamówione)</option>
+        </select>
+        {% if goal.documents is not null %}<span class="text-muted small">{{ goal.documents }} faktur WDT w miesiącu</span>{% endif %}
+        <span class="ms-auto d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#cs-coef-modal">Współczynniki kategorii</button>
+            <a class="btn btn-sm btn-outline-secondary" target="_blank" href="{{ root }}/ajax/clients/{{ client.id }}/space/goal.pdf?{{ q }}">PDF dla franczyzobiorcy ({{ langs[client.lang] ?? client.lang|upper }})</a>
+            <a class="btn btn-sm btn-primary" href="{{ root }}/communication/compose/sales-goal/{{ client.id }}?{{ q }}">Wyślij e-mailem</a>
+        </span>
+    </form>
+
+    <div class="cs-formula">
+        <span>Zakupy netto (do odsprzedaży)</span><b>{{ _self.eur(t.purchases_sell) }}</b>
+        <span class="op">×</span><span>współczynnik</span><b>{{ t.coefficient is not null ? t.coefficient|number_format(2, ',', ' ') : '—' }}</b>
+        <span class="op">=</span><span>Obrót do osiągnięcia</span><b style="color:#8D1D2C">{{ _self.eur(t.target, 0) }}</b><span class="text-muted">(ceny sklepowe brutto)</span>
+    </div>
+
+    <div class="cs-tiles">
+        <div class="at-tile cs-tile-big"><span class="at-tile-label">Obrót do osiągnięcia</span><strong class="at-tile-value">{{ _self.eur(t.target, 0) }}</strong><span class="at-tile-meta">{{ _self.month(goal.month, months_pl) }}</span></div>
+        <div class="at-tile"><span class="at-tile-label">Na dzień otwarcia</span><strong class="at-tile-value">{{ _self.eur(goal.per_day, 0) }}</strong><span class="at-tile-meta">{{ goal.open_days }} dni otwarcia</span></div>
+        <div class="at-tile"><span class="at-tile-label">Na tydzień</span><strong class="at-tile-value">{{ _self.eur(goal.per_week, 0) }}</strong><span class="at-tile-meta">miesiąc ÷ {{ ((goal.month ~ '-01')|date('t') / 7)|number_format(1, ',', ' ') }} tyg.</span></div>
+        <div class="at-tile"><span class="at-tile-label">{{ _self.month(goal.month_n1, months_pl) }} (N-1)</span><strong class="at-tile-value">{{ _self.eur(goal.n1.target, 0) }}</strong>
+            <span class="at-tile-meta">{% if goal.n1_change_pct is not null %}<span class="{{ goal.n1_change_pct >= 0 ? 'text-success' : 'text-danger' }}">{{ goal.n1_change_pct > 0 ? '+' }}{{ goal.n1_change_pct|number_format(1, ',', ' ') }} %</span> vs N-1{% else %}brak zakupów N-1{% endif %}</span></div>
+        <div class="at-tile"><span class="at-tile-label">Sprzedaż w kasie</span><strong class="at-tile-value text-muted">—</strong><span class="at-tile-meta">po podłączeniu kas sklepów</span></div>
+    </div>
+
+    <div class="card"><div class="card-body">
+    {% if goal.categories is empty %}
+        <p class="text-muted mb-0">Brak zakupów w {{ _self.month(goal.month, months_pl) }} ({{ goal.source == 'wdt' ? 'faktury WDT' : 'proformy' }}).</p>
+    {% else %}
+        <div class="d-flex justify-content-end gap-2 mb-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="cs-expand">Rozwiń wszystko</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="cs-collapse">Zwiń</button>
+        </div>
+        <div class="table-responsive">
+        <table class="table cs-table align-middle mb-0">
+            <thead><tr><th class="r" style="width:44px">Lp.</th><th>Kategoria / produkt</th><th class="r">Kartony</th><th class="r">Sztuki</th><th class="r">Cena zakupu / szt.</th>
+                <th class="r">Zakupy netto</th><th class="r">Współczynnik</th><th class="r">Cena sprzedaży / szt.</th><th class="r">Obrót do osiągnięcia</th></tr></thead>
+            <tbody>
+            {% set lp = 0 %}
+            {% for c in goal.categories %}
+                <tr class="cs-cat{{ c.excluded ? ' cs-ex' }}" data-cat="{{ loop.index }}" tabindex="0" aria-expanded="false">
+                    <td colspan="2"><span class="cs-chev">▸</span>{{ c.name }} <span class="text-muted fw-normal">· {{ c.items|length }} prod.</span></td>
+                    <td class="r">{{ c.cartons|number_format(0, ',', ' ') }}</td><td class="r">{{ c.pieces|number_format(0, ',', ' ') }}</td><td></td>
+                    <td class="r">{{ _self.eur(c.purchases) }}</td>
+                    <td class="r">{% if c.excluded %}—{% else %}× {{ c.coefficient|number_format(2, ',', ' ') }}<span class="cs-src">{{ c.coefficient_source == 'category' ? 'kategoria' : 'klient' }}</span>{% endif %}</td>
+                    <td></td>
+                    <td class="r">{% if c.excluded %}<span class="fw-normal">poza celem (nie do odsprzedaży)</span>{% else %}{{ _self.eur(c.target) }}{% endif %}</td>
+                </tr>
+                {% for i in c.items %}
+                    {% set lp = lp + 1 %}
+                    <tr class="cs-item" data-of="{{ loop.parent.loop.index }}" hidden>
+                        <td class="r text-muted">{{ lp }}</td><td>{{ i.name }}</td>
+                        <td class="r">{{ i.cartons|number_format(0, ',', ' ') }}</td><td class="r">{{ i.pieces|number_format(0, ',', ' ') }}</td>
+                        <td class="r">{{ i.piece_price is not null ? _self.eur(i.piece_price) : '—' }}</td><td class="r">{{ _self.eur(i.purchases) }}</td>
+                        <td class="r">{{ c.excluded ? '—' : '× ' ~ c.coefficient|number_format(2, ',', ' ') }}</td>
+                        <td class="r">{{ i.sale_price is not null ? _self.eur(i.sale_price) : '—' }}</td><td class="r">{{ c.excluded ? '—' : _self.eur(i.target) }}</td>
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+                <tr class="cs-tot"><td></td><td>Razem do odsprzedaży</td><td></td><td class="r">{{ t.pieces|number_format(0, ',', ' ') }}</td><td></td>
+                    <td class="r">{{ _self.eur(t.purchases_sell) }}</td><td class="r">{{ t.coefficient is not null ? '× ' ~ t.coefficient|number_format(2, ',', ' ') }}</td><td></td><td class="r">{{ _self.eur(t.target) }}</td></tr>
+                {% if t.excluded > 0 %}<tr><td></td><td class="text-muted">Poza celem (nie do odsprzedaży)</td><td></td><td></td><td></td><td class="r text-muted">{{ _self.eur(t.excluded) }}</td><td></td><td></td><td></td></tr>{% endif %}
+            </tbody>
+        </table>
+        </div>
+    {% endif %}
+        <p class="cs-note mb-0">Cena sprzedaży / szt. = cena zakupu / szt. × współczynnik ; obrót do osiągnięcia = zakupy netto × współczynnik (ceny w sklepie brutto).
+            Współczynnik : kategorii (dla wszystkich klientów) → klienta (karta klienta : {{ settings.coefficient is not null ? '× ' ~ settings.coefficient|number_format(2, ',', ' ') : 'domyślny' }}) → domyślny z Ustawień (× {{ settings.default_coefficient|number_format(2, ',', ' ') }}).
+            Zakupy z faktur WDT liczone jak w Analizie sprzedaży (linie faktur, bez dokumentów zastąpionych).</p>
+    </div></div>
+</section>
+
+<div class="modal fade" id="cs-coef-modal" tabindex="-1" aria-labelledby="cs-coef-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title" id="cs-coef-title">Współczynniki sprzedaży kategorii</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button></div>
+        <div class="modal-body">
+            <p class="text-muted small">Dla wszystkich klientów. Puste = współczynnik klienta (domyślnie × {{ settings.default_coefficient|number_format(2, ',', ' ') }}). « Poza celem » : kategoria nie jest odsprzedawana w sklepie (usługi, opakowania…).</p>
+            <table class="table table-sm align-middle" id="cs-coef-table">
+                <thead><tr><th>Kategoria</th><th class="text-end">Aktywne produkty</th><th>Współczynnik</th><th>Poza celem</th></tr></thead>
+                <tbody>
+                {% for cat in category_coefficients %}
+                    <tr data-id="{{ cat.id }}"{% if cat.active_products == 0 %} class="text-muted"{% endif %}>
+                        <td>{{ cat.name }}</td><td class="text-end">{{ cat.active_products }}</td>
+                        <td><input class="form-control form-control-sm cs-coef-input" inputmode="decimal" name="coefficient" value="{{ cat.coefficient is not null ? cat.coefficient|number_format(2, ',', '') }}" placeholder="—" aria-label="Współczynnik {{ cat.name }}"></td>
+                        <td><input class="form-check-input" type="checkbox" name="excluded" {{ cat.excluded ? 'checked' }} aria-label="Poza celem {{ cat.name }}"></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button><button type="button" class="btn btn-primary" id="cs-coef-save">Zapisz</button></div>
+    </div></div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    // Dokumenty : zaznaczone → jeden PDF
+    const boxes = () => [...document.querySelectorAll('.cs-doc')];
+    const button = document.getElementById('cs-pdf-selected');
+    const label = document.getElementById('cs-selected');
+    const refresh = () => {
+        const n = boxes().filter(b => b.checked).length;
+        if (button) button.disabled = n === 0;
+        if (label) label.textContent = n ? `Zaznaczone : ${n}` : 'Zaznacz dokumenty → jeden PDF';
+    };
+    document.getElementById('cs-all')?.addEventListener('change', e => { boxes().forEach(b => { b.checked = e.target.checked; }); refresh(); });
+    boxes().forEach(b => b.addEventListener('change', refresh));
+    button?.addEventListener('click', () => {
+        const docs = boxes().filter(b => b.checked).map(b => b.value).join(',');
+        window.open(`${at.root}/ajax/clients/{{ client.id }}/space/documents.pdf?docs=${encodeURIComponent(docs)}`, '_blank');
+    });
+
+    // Cel obrotu : kategorie rozwijane jak w proformie
+    const toggle = (row, open) => {
+        open ??= row.getAttribute('aria-expanded') !== 'true';
+        row.setAttribute('aria-expanded', open ? 'true' : 'false');
+        row.querySelector('.cs-chev').textContent = open ? '▾' : '▸';
+        document.querySelectorAll(`.cs-item[data-of="${row.dataset.cat}"]`).forEach(r => { r.hidden = !open; });
+    };
+    document.querySelectorAll('.cs-cat').forEach(row => {
+        row.addEventListener('click', () => toggle(row));
+        row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(row); } });
+    });
+    document.getElementById('cs-expand')?.addEventListener('click', () => document.querySelectorAll('.cs-cat').forEach(r => toggle(r, true)));
+    document.getElementById('cs-collapse')?.addEventListener('click', () => document.querySelectorAll('.cs-cat').forEach(r => toggle(r, false)));
+
+    // Współczynniki kategorii
+    document.getElementById('cs-coef-save')?.addEventListener('click', e => {
+        const items = [...document.querySelectorAll('#cs-coef-table tbody tr')].map(tr => ({
+            id: Number(tr.dataset.id),
+            coefficient: tr.querySelector('[name=coefficient]').value.trim().replace(/\s/g, '').replace(',', '.') || null,
+            excluded: tr.querySelector('[name=excluded]').checked,
+        }));
+        e.target.disabled = true;
+        at.send('/ajax/clients/space/category-coefficients', 'PUT', {items}).then(res => {
+            e.target.disabled = false;
+            at.notify(res.ok, res.message);
+            if (res.ok) setTimeout(() => window.location.reload(), 600);
+        });
+    });
+})();
+</script>
+{% endblock %}

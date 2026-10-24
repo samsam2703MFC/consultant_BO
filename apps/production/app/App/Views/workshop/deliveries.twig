@@ -1,0 +1,16 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Dostawy surowców · Livraisons de matières{% endblock %}
+
+{% block content %}
+<section class="section tfb">
+    <div id="tfbDeliveries" class="tfb-app" data-root="{{ root }}" data-api-base="{{ api_base }}" data-user="{{ session_user }}" data-labels="deliveries" aria-live="polite">
+        <p class="text-muted">Wczytywanie… / Chargement…</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/workshop/api.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/workshop/deliveries.js?v={{ asset_v() }}"></script>
+{% endblock %}

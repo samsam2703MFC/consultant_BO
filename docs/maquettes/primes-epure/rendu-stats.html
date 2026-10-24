@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Statistiques</title>
+    <link rel="stylesheet" href="/public/employee/assets/atelier/app.css?v=1791869247">
+    <link rel="stylesheet" href="/public/employee/assets/bootstrap-icons/bootstrap-icons.css?v=1791869247">
+    <link rel="stylesheet" href="/public/employee/assets/atelier/marque.css?v=1792152004">
+
+    <link rel="manifest" href="/public/employee/manifest.webmanifest">
+    <meta name="theme-color" content="#8D1D2C">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/public/employee/assets/pwa/icon-192.png">
+
+    <style>
+        :root{
+            --emp-tabbar-h: 72px;
+        }
+
+        body{
+            background: var(--la-beige); /* Mazer-ish */
+        }
+
+        /* CONTENT: zawsze nad tabbarem */
+        .emp-content{
+            padding-bottom: calc(var(--emp-tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px);
+        }
+        /* Sur un grand écran, l'app garde sa largeur de téléphone au centre. */
+        .emp-content .container, .emp-topbar .container{ max-width: 600px; }
+
+        /* TOP BAR */
+        .emp-topbar{
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            padding-top: env(safe-area-inset-top, 0px);
+            background: rgba(234,228,220,.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,.05);
+        }
+
+        .emp-topbar-inner{
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .emp-title{
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .emp-subtitle{
+            margin: 0;
+            font-size: .85rem;
+            color: var(--la-muet);
+        }
+
+        /* BOTTOM NAV */
+        .emp-bottom-nav{
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1030;
+
+            height: calc(var(--emp-tabbar-h) + env(safe-area-inset-bottom, 0px));
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+
+            background: rgba(255,255,255,.92);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(0,0,0,.06);
+            max-width: 600px;
+            margin: 0 auto;
+
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: 1fr;
+        }
+
+        .emp-bottom-item{
+            text-decoration: none;
+            color: var(--la-muet);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+        .emp-bottom-item i{
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        .emp-bottom-item.is-active{
+            color: var(--la-rubis); /* Mazer primary-ish */
+        }
+
+        .emp-bottom-item.is-active i{
+            transform: translateY(-1px);
+        }
+    </style>
+
+    <link rel="stylesheet" href="/public/employee/assets/atelier/primes.css?v=1792211944"><link rel="stylesheet" href="/public/employee/assets/atelier/stats.css?v=1792152064"></head>
+<body>
+
+    <div class="emp-topbar">
+        <div class="container">
+            <div class="emp-topbar-inner">
+                <div>
+                    <p class="emp-title">Statistiques</p>
+                    <p class="emp-subtitle">Halle · octobre 2026, au 17</p>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                                    </div>
+            </div>
+        </div>
+    </div>
+
+<main class="emp-content">
+    <div class="container py-3">
+        
+
+<div class="titre-section"><h2>Aujourd’hui</h2><small>à 15:40</small></div>
+<div class="st-grille trois">
+  <div class="st"><span class="st-l">Tickets</span><b class="st-v">19</b></div>
+  <div class="st"><span class="st-l">Lignes/ticket</span><b class="st-v">2,74</b></div>
+  <div class="st"><span class="st-l">Croisées</span><b class="st-v">58<small>%</small></b><span class="st-s">cible 55&nbsp;%</span></div>
+</div>
+
+<div class="titre-section"><h2>Ce mois-ci</h2><small>J17</small></div>
+<div class="st-grille">
+  <div class="st fort"><span class="st-l">Ticket moyen</span><b class="st-v">12,56<small>€</small></b></div>
+  <div class="st fort"><span class="st-l">Lignes par ticket</span><b class="st-v">2,74</b>
+    <span class="st-s ">record 2,80</span></div>
+  <div class="st"><span class="st-l">Ventes croisées</span><b class="st-v">56<small>%</small></b>
+    <span class="st-s ok">✓ cible 55&nbsp;%</span></div>
+  <div class="st"><span class="st-l">CA par heure</span><b class="st-v">85<small>€/h</small></b><span class="st-s">38,5&nbsp;h</span></div>
+  <div class="st"><span class="st-l">Chiffre d’affaires</span><b class="st-v">3 290<small>€</small></b></div>
+  <div class="st"><span class="st-l">Tickets</span><b class="st-v">262</b></div>
+  <div class="st"><span class="st-l">Score</span><b class="st-v">59</b>
+    <span class="st-s">2e / 4 · Mon magasin</span></div>
+  <div class="st"><span class="st-l">Réseau</span><b class="st-v">2e<small>/ 4</small></b><span class="st-s">place au score</span></div>
+</div>
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div class="titre-section"><h2>12 semaines</h2><small>S31 → S42</small></div>
+<div class="cl-carte st-graphe" data-graphe>
+  <div class="st-puces" role="tablist"><button type="button" role="tab" class="on" aria-selected="true" data-ind="panier">Ticket moyen</button><button type="button" role="tab" class="" aria-selected="false" data-ind="lignesTicket">Lignes/ticket</button><button type="button" role="tab" class="" aria-selected="false" data-ind="taux">Croisées</button><button type="button" role="tab" class="" aria-selected="false" data-ind="caHeure">CA par heure</button><button type="button" role="tab" class="" aria-selected="false" data-ind="tickets">Tickets</button></div>                          <div class="st-ind on" data-ind-v="panier">
+    <p class="st-cap" data-sem>Semaine S42</p>
+    <div class="st-leg" aria-live="polite">
+      <div class="st-li moi"><span><i></i>Moi</span><b data-v="moi">30,15 €</b></div>
+      <div class="st-li mag"><span><i></i>Mon magasin</span><b data-v="mag">30,55 €</b></div>
+      <div class="st-li res"><span><i></i>Réseau</span><b data-v="res">28,92 €</b></div>
+    </div>
+    <svg viewBox="0 0 340 140" role="img" aria-label="Ticket moyen, 12 semaines : Moi, Mon magasin, Réseau">
+            <line class="st-grl" x1="34" y1="120" x2="332" y2="120"/>
+      <text class="st-y" x="29" y="123" text-anchor="end">26</text>      <line class="st-grl" x1="34" y1="59.4" x2="332" y2="59.4"/>
+      <text class="st-y" x="29" y="62.4" text-anchor="end">30</text>      <line class="st-grl" x1="34" y1="14" x2="332" y2="14"/>
+      <text class="st-y" x="29" y="17" text-anchor="end">33</text>                  <g class="st-col" data-i="0" tabindex="0" data-lib="Semaine S31" data-moi="29,29 €" data-mag="28,40 €" data-res="27,60 €">
+        <title>S31 · Moi 29,29 € · Mon magasin 28,40 € · Réseau 27,60 €</title>
+        <rect class="st-hit" x="34" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="46.4" y1="8" x2="46.4" y2="120"/>
+        <text class="st-x" x="46.4" y="134" text-anchor="middle">S31</text>
+      </g>      <g class="st-col" data-i="1" tabindex="0" data-lib="Semaine S32" data-moi="29,79 €" data-mag="28,05 €" data-res="27,72 €">
+        <title>S32 · Moi 29,79 € · Mon magasin 28,05 € · Réseau 27,72 €</title>
+        <rect class="st-hit" x="58.8" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="71.3" y1="8" x2="71.3" y2="120"/>
+        <text class="st-x" x="71.3" y="134" text-anchor="middle">S32</text>
+      </g>      <g class="st-col" data-i="2" tabindex="0" data-lib="Semaine S33" data-moi="30,48 €" data-mag="28,90 €" data-res="27,84 €">
+        <title>S33 · Moi 30,48 € · Mon magasin 28,90 € · Réseau 27,84 €</title>
+        <rect class="st-hit" x="83.7" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="96.1" y1="8" x2="96.1" y2="120"/>
+        <text class="st-x" x="96.1" y="134" text-anchor="middle">S33</text>
+      </g>      <g class="st-col" data-i="3" tabindex="0" data-lib="Semaine S34" data-moi="29,37 €" data-mag="28,55 €" data-res="27,96 €">
+        <title>S34 · Moi 29,37 € · Mon magasin 28,55 € · Réseau 27,96 €</title>
+        <rect class="st-hit" x="108.5" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="120.9" y1="8" x2="120.9" y2="120"/>
+        <text class="st-x" x="120.9" y="134" text-anchor="middle">S34</text>
+      </g>      <g class="st-col" data-i="4" tabindex="0" data-lib="Semaine S35" data-moi="—" data-mag="29,40 €" data-res="28,08 €">
+        <title>S35 · Moi — · Mon magasin 29,40 € · Réseau 28,08 €</title>
+        <rect class="st-hit" x="133.3" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="145.8" y1="8" x2="145.8" y2="120"/>
+        <text class="st-x" x="145.8" y="134" text-anchor="middle">S35</text>
+      </g>      <g class="st-col" data-i="5" tabindex="0" data-lib="Semaine S36" data-moi="29,86 €" data-mag="29,05 €" data-res="28,20 €">
+        <title>S36 · Moi 29,86 € · Mon magasin 29,05 € · Réseau 28,20 €</title>
+        <rect class="st-hit" x="158.2" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="170.6" y1="8" x2="170.6" y2="120"/>
+        <text class="st-x" x="170.6" y="134" text-anchor="middle">S36</text>
+      </g>      <g class="st-col" data-i="6" tabindex="0" data-lib="Semaine S37" data-moi="30,68 €" data-mag="29,90 €" data-res="28,32 €">
+        <title>S37 · Moi 30,68 € · Mon magasin 29,90 € · Réseau 28,32 €</title>
+        <rect class="st-hit" x="183" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="195.4" y1="8" x2="195.4" y2="120"/>
+        <text class="st-x" x="195.4" y="134" text-anchor="middle">S37</text>
+      </g>      <g class="st-col" data-i="7" tabindex="0" data-lib="Semaine S38" data-moi="30,63 €" data-mag="29,55 €" data-res="28,44 €">
+        <title>S38 · Moi 30,63 € · Mon magasin 29,55 € · Réseau 28,44 €</title>
+        <rect class="st-hit" x="207.8" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="220.3" y1="8" x2="220.3" y2="120"/>
+        <text class="st-x" x="220.3" y="134" text-anchor="middle">S38</text>
+      </g>      <g class="st-col" data-i="8" tabindex="0" data-lib="Semaine S39" data-moi="31,69 €" data-mag="30,40 €" data-res="28,56 €">
+        <title>S39 · Moi 31,69 € · Mon magasin 30,40 € · Réseau 28,56 €</title>
+        <rect class="st-hit" x="232.7" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="245.1" y1="8" x2="245.1" y2="120"/>
+        <text class="st-x" x="245.1" y="134" text-anchor="middle">S39</text>
+      </g>      <g class="st-col" data-i="9" tabindex="0" data-lib="Semaine S40" data-moi="30,55 €" data-mag="30,05 €" data-res="28,68 €">
+        <title>S40 · Moi 30,55 € · Mon magasin 30,05 € · Réseau 28,68 €</title>
+        <rect class="st-hit" x="257.5" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="269.9" y1="8" x2="269.9" y2="120"/>
+        <text class="st-x" x="269.9" y="134" text-anchor="middle">S40</text>
+      </g>      <g class="st-col" data-i="10" tabindex="0" data-lib="Semaine S41" data-moi="30,88 €" data-mag="30,90 €" data-res="28,80 €">
+        <title>S41 · Moi 30,88 € · Mon magasin 30,90 € · Réseau 28,80 €</title>
+        <rect class="st-hit" x="282.3" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="294.8" y1="8" x2="294.8" y2="120"/>
+        <text class="st-x" x="294.8" y="134" text-anchor="middle">S41</text>
+      </g>      <g class="st-col der sel" data-i="11" tabindex="0" data-lib="Semaine S42" data-moi="30,15 €" data-mag="30,55 €" data-res="28,92 €">
+        <title>S42 · Moi 30,15 € · Mon magasin 30,55 € · Réseau 28,92 €</title>
+        <rect class="st-hit" x="307.2" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="319.6" y1="8" x2="319.6" y2="120"/>
+        <text class="st-x" x="319.6" y="134" text-anchor="middle">S42</text>
+      </g>                              <path class="st-ligne res" d="M46.4 95.8 L71.3 94 L96.1 92.1 L120.9 90.3 L145.8 88.5 L170.6 86.7 L195.4 84.9 L220.3 83.1 L245.1 81.2 L269.9 79.4 L294.8 77.6 L319.6 75.8"/>            <path class="st-ligne mag" d="M46.4 83.7 L71.3 89 L96.1 76.1 L120.9 81.4 L145.8 68.5 L170.6 73.8 L195.4 60.9 L220.3 66.2 L245.1 53.4 L269.9 58.7 L294.8 45.8 L319.6 51.1"/>            <path class="st-ligne moi" d="M46.4 70.2 L71.3 62.6 L96.1 52.2 L120.9 69 M170.6 61.5 L195.4 49.1 L220.3 49.9 L245.1 33.8 L269.9 51.1 L294.8 46.1 L319.6 57.2"/>            <g class="st-pts" data-i="0">                <circle class="st-pt res" cx="46.4" cy="95.8" r="3"/>                <circle class="st-pt mag" cx="46.4" cy="83.7" r="3"/>                <circle class="st-pt moi" cx="46.4" cy="70.2" r="3.5"/></g>      <g class="st-pts" data-i="1">                <circle class="st-pt res" cx="71.3" cy="94" r="3"/>                <circle class="st-pt mag" cx="71.3" cy="89" r="3"/>                <circle class="st-pt moi" cx="71.3" cy="62.6" r="3.5"/></g>      <g class="st-pts" data-i="2">                <circle class="st-pt res" cx="96.1" cy="92.1" r="3"/>                <circle class="st-pt mag" cx="96.1" cy="76.1" r="3"/>                <circle class="st-pt moi" cx="96.1" cy="52.2" r="3.5"/></g>      <g class="st-pts" data-i="3">                <circle class="st-pt res" cx="120.9" cy="90.3" r="3"/>                <circle class="st-pt mag" cx="120.9" cy="81.4" r="3"/>                <circle class="st-pt moi" cx="120.9" cy="69" r="3.5"/></g>      <g class="st-pts" data-i="4">                <circle class="st-pt res" cx="145.8" cy="88.5" r="3"/>                <circle class="st-pt mag" cx="145.8" cy="68.5" r="3"/></g>      <g class="st-pts" data-i="5">                <circle class="st-pt res" cx="170.6" cy="86.7" r="3"/>                <circle class="st-pt mag" cx="170.6" cy="73.8" r="3"/>                <circle class="st-pt moi" cx="170.6" cy="61.5" r="3.5"/></g>      <g class="st-pts" data-i="6">                <circle class="st-pt res" cx="195.4" cy="84.9" r="3"/>                <circle class="st-pt mag" cx="195.4" cy="60.9" r="3"/>                <circle class="st-pt moi" cx="195.4" cy="49.1" r="3.5"/></g>      <g class="st-pts" data-i="7">                <circle class="st-pt res" cx="220.3" cy="83.1" r="3"/>                <circle class="st-pt mag" cx="220.3" cy="66.2" r="3"/>                <circle class="st-pt moi" cx="220.3" cy="49.9" r="3.5"/></g>      <g class="st-pts" data-i="8">                <circle class="st-pt res" cx="245.1" cy="81.2" r="3"/>                <circle class="st-pt mag" cx="245.1" cy="53.4" r="3"/>                <circle class="st-pt moi" cx="245.1" cy="33.8" r="3.5"/></g>      <g class="st-pts" data-i="9">                <circle class="st-pt res" cx="269.9" cy="79.4" r="3"/>                <circle class="st-pt mag" cx="269.9" cy="58.7" r="3"/>                <circle class="st-pt moi" cx="269.9" cy="51.1" r="3.5"/></g>      <g class="st-pts" data-i="10">                <circle class="st-pt res" cx="294.8" cy="77.6" r="3"/>                <circle class="st-pt mag" cx="294.8" cy="45.8" r="3"/>                <circle class="st-pt moi" cx="294.8" cy="46.1" r="3.5"/></g>      <g class="st-pts sel" data-i="11">                <circle class="st-pt res" cx="319.6" cy="75.8" r="3"/>                <circle class="st-pt mag" cx="319.6" cy="51.1" r="3"/>                <circle class="st-pt moi" cx="319.6" cy="57.2" r="3.5"/></g>    </svg>
+    <div class="st-mag-l">
+            <span>Magasin, réseau : la vendeuse moyenne de la semaine</span>
+    </div>
+            <table class="visually-hidden"><caption>Ticket moyen</caption>
+      <thead><tr><th>Semaine</th><th>Moi</th><th>Mon magasin</th><th>Réseau</th></tr></thead>
+      <tbody><tr><th>S31</th><td>29,29 €</td><td>28,40 €</td><td>27,60 €</td></tr><tr><th>S32</th><td>29,79 €</td><td>28,05 €</td><td>27,72 €</td></tr><tr><th>S33</th><td>30,48 €</td><td>28,90 €</td><td>27,84 €</td></tr><tr><th>S34</th><td>29,37 €</td><td>28,55 €</td><td>27,96 €</td></tr><tr><th>S35</th><td>—</td><td>29,40 €</td><td>28,08 €</td></tr><tr><th>S36</th><td>29,86 €</td><td>29,05 €</td><td>28,20 €</td></tr><tr><th>S37</th><td>30,68 €</td><td>29,90 €</td><td>28,32 €</td></tr><tr><th>S38</th><td>30,63 €</td><td>29,55 €</td><td>28,44 €</td></tr><tr><th>S39</th><td>31,69 €</td><td>30,40 €</td><td>28,56 €</td></tr><tr><th>S40</th><td>30,55 €</td><td>30,05 €</td><td>28,68 €</td></tr><tr><th>S41</th><td>30,88 €</td><td>30,90 €</td><td>28,80 €</td></tr><tr><th>S42</th><td>30,15 €</td><td>30,55 €</td><td>28,92 €</td></tr></tbody></table>
+  </div>
+                          <div class="st-ind " data-ind-v="lignesTicket">
+    <p class="st-cap" data-sem>Semaine S42</p>
+    <div class="st-leg" aria-live="polite">
+      <div class="st-li moi"><span><i></i>Moi</span><b data-v="moi">2,86</b></div>
+      <div class="st-li mag"><span><i></i>Mon magasin</span><b data-v="mag">2,69</b></div>
+      <div class="st-li res"><span><i></i>Réseau</span><b data-v="res">2,58</b></div>
+    </div>
+    <svg viewBox="0 0 340 140" role="img" aria-label="Lignes/ticket, 12 semaines : Moi, Mon magasin, Réseau">
+            <line class="st-grl" x1="34" y1="120" x2="332" y2="120"/>
+      <text class="st-y" x="29" y="123" text-anchor="end">2,3</text>      <line class="st-grl" x1="34" y1="59.4" x2="332" y2="59.4"/>
+      <text class="st-y" x="29" y="62.4" text-anchor="end">2,7</text>      <line class="st-grl" x1="34" y1="14" x2="332" y2="14"/>
+      <text class="st-y" x="29" y="17" text-anchor="end">3,0</text>                  <g class="st-col" data-i="0" tabindex="0" data-lib="Semaine S31" data-moi="2,45" data-mag="2,52" data-res="2,47">
+        <title>S31 · Moi 2,45 · Mon magasin 2,52 · Réseau 2,47</title>
+        <rect class="st-hit" x="34" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="46.4" y1="8" x2="46.4" y2="120"/>
+        <text class="st-x" x="46.4" y="134" text-anchor="middle">S31</text>
+      </g>      <g class="st-col" data-i="1" tabindex="0" data-lib="Semaine S32" data-moi="2,52" data-mag="2,54" data-res="2,48">
+        <title>S32 · Moi 2,52 · Mon magasin 2,54 · Réseau 2,48</title>
+        <rect class="st-hit" x="58.8" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="71.3" y1="8" x2="71.3" y2="120"/>
+        <text class="st-x" x="71.3" y="134" text-anchor="middle">S32</text>
+      </g>      <g class="st-col" data-i="2" tabindex="0" data-lib="Semaine S33" data-moi="2,59" data-mag="2,55" data-res="2,49">
+        <title>S33 · Moi 2,59 · Mon magasin 2,55 · Réseau 2,49</title>
+        <rect class="st-hit" x="83.7" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="96.1" y1="8" x2="96.1" y2="120"/>
+        <text class="st-x" x="96.1" y="134" text-anchor="middle">S33</text>
+      </g>      <g class="st-col" data-i="3" tabindex="0" data-lib="Semaine S34" data-moi="2,54" data-mag="2,57" data-res="2,50">
+        <title>S34 · Moi 2,54 · Mon magasin 2,57 · Réseau 2,50</title>
+        <rect class="st-hit" x="108.5" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="120.9" y1="8" x2="120.9" y2="120"/>
+        <text class="st-x" x="120.9" y="134" text-anchor="middle">S34</text>
+      </g>      <g class="st-col" data-i="4" tabindex="0" data-lib="Semaine S35" data-moi="—" data-mag="2,58" data-res="2,51">
+        <title>S35 · Moi — · Mon magasin 2,58 · Réseau 2,51</title>
+        <rect class="st-hit" x="133.3" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="145.8" y1="8" x2="145.8" y2="120"/>
+        <text class="st-x" x="145.8" y="134" text-anchor="middle">S35</text>
+      </g>      <g class="st-col" data-i="5" tabindex="0" data-lib="Semaine S36" data-moi="2,68" data-mag="2,60" data-res="2,52">
+        <title>S36 · Moi 2,68 · Mon magasin 2,60 · Réseau 2,52</title>
+        <rect class="st-hit" x="158.2" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="170.6" y1="8" x2="170.6" y2="120"/>
+        <text class="st-x" x="170.6" y="134" text-anchor="middle">S36</text>
+      </g>      <g class="st-col" data-i="6" tabindex="0" data-lib="Semaine S37" data-moi="2,63" data-mag="2,61" data-res="2,53">
+        <title>S37 · Moi 2,63 · Mon magasin 2,61 · Réseau 2,53</title>
+        <rect class="st-hit" x="183" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="195.4" y1="8" x2="195.4" y2="120"/>
+        <text class="st-x" x="195.4" y="134" text-anchor="middle">S37</text>
+      </g>      <g class="st-col" data-i="7" tabindex="0" data-lib="Semaine S38" data-moi="2,70" data-mag="2,63" data-res="2,54">
+        <title>S38 · Moi 2,70 · Mon magasin 2,63 · Réseau 2,54</title>
+        <rect class="st-hit" x="207.8" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="220.3" y1="8" x2="220.3" y2="120"/>
+        <text class="st-x" x="220.3" y="134" text-anchor="middle">S38</text>
+      </g>      <g class="st-col" data-i="8" tabindex="0" data-lib="Semaine S39" data-moi="2,77" data-mag="2,64" data-res="2,55">
+        <title>S39 · Moi 2,77 · Mon magasin 2,64 · Réseau 2,55</title>
+        <rect class="st-hit" x="232.7" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="245.1" y1="8" x2="245.1" y2="120"/>
+        <text class="st-x" x="245.1" y="134" text-anchor="middle">S39</text>
+      </g>      <g class="st-col" data-i="9" tabindex="0" data-lib="Semaine S40" data-moi="2,72" data-mag="2,66" data-res="2,56">
+        <title>S40 · Moi 2,72 · Mon magasin 2,66 · Réseau 2,56</title>
+        <rect class="st-hit" x="257.5" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="269.9" y1="8" x2="269.9" y2="120"/>
+        <text class="st-x" x="269.9" y="134" text-anchor="middle">S40</text>
+      </g>      <g class="st-col" data-i="10" tabindex="0" data-lib="Semaine S41" data-moi="2,79" data-mag="2,67" data-res="2,57">
+        <title>S41 · Moi 2,79 · Mon magasin 2,67 · Réseau 2,57</title>
+        <rect class="st-hit" x="282.3" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="294.8" y1="8" x2="294.8" y2="120"/>
+        <text class="st-x" x="294.8" y="134" text-anchor="middle">S41</text>
+      </g>      <g class="st-col der sel" data-i="11" tabindex="0" data-lib="Semaine S42" data-moi="2,86" data-mag="2,69" data-res="2,58">
+        <title>S42 · Moi 2,86 · Mon magasin 2,69 · Réseau 2,58</title>
+        <rect class="st-hit" x="307.2" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="319.6" y1="8" x2="319.6" y2="120"/>
+        <text class="st-x" x="319.6" y="134" text-anchor="middle">S42</text>
+      </g>      <line class="st-cible" x1="34" y1="44.3" x2="332" y2="44.3"/>                        <path class="st-ligne res" d="M46.4 94.3 L71.3 92.7 L96.1 91.2 L120.9 89.7 L145.8 88.2 L170.6 86.7 L195.4 85.2 L220.3 83.7 L245.1 82.1 L269.9 80.6 L294.8 79.1 L319.6 77.6"/>            <path class="st-ligne mag" d="M46.4 86.7 L71.3 83.7 L96.1 82.1 L120.9 79.1 L145.8 77.6 L170.6 74.6 L195.4 73.1 L220.3 70 L245.1 68.5 L269.9 65.5 L294.8 64 L319.6 60.9"/>            <path class="st-ligne moi" d="M46.4 97.3 L71.3 86.7 L96.1 76.1 L120.9 83.7 M170.6 62.5 L195.4 70 L220.3 59.4 L245.1 48.8 L269.9 56.4 L294.8 45.8 L319.6 35.2"/>            <g class="st-pts" data-i="0">                <circle class="st-pt res" cx="46.4" cy="94.3" r="3"/>                <circle class="st-pt mag" cx="46.4" cy="86.7" r="3"/>                <circle class="st-pt moi" cx="46.4" cy="97.3" r="3.5"/></g>      <g class="st-pts" data-i="1">                <circle class="st-pt res" cx="71.3" cy="92.7" r="3"/>                <circle class="st-pt mag" cx="71.3" cy="83.7" r="3"/>                <circle class="st-pt moi" cx="71.3" cy="86.7" r="3.5"/></g>      <g class="st-pts" data-i="2">                <circle class="st-pt res" cx="96.1" cy="91.2" r="3"/>                <circle class="st-pt mag" cx="96.1" cy="82.1" r="3"/>                <circle class="st-pt moi" cx="96.1" cy="76.1" r="3.5"/></g>      <g class="st-pts" data-i="3">                <circle class="st-pt res" cx="120.9" cy="89.7" r="3"/>                <circle class="st-pt mag" cx="120.9" cy="79.1" r="3"/>                <circle class="st-pt moi" cx="120.9" cy="83.7" r="3.5"/></g>      <g class="st-pts" data-i="4">                <circle class="st-pt res" cx="145.8" cy="88.2" r="3"/>                <circle class="st-pt mag" cx="145.8" cy="77.6" r="3"/></g>      <g class="st-pts" data-i="5">                <circle class="st-pt res" cx="170.6" cy="86.7" r="3"/>                <circle class="st-pt mag" cx="170.6" cy="74.6" r="3"/>                <circle class="st-pt moi" cx="170.6" cy="62.5" r="3.5"/></g>      <g class="st-pts" data-i="6">                <circle class="st-pt res" cx="195.4" cy="85.2" r="3"/>                <circle class="st-pt mag" cx="195.4" cy="73.1" r="3"/>                <circle class="st-pt moi" cx="195.4" cy="70" r="3.5"/></g>      <g class="st-pts" data-i="7">                <circle class="st-pt res" cx="220.3" cy="83.7" r="3"/>                <circle class="st-pt mag" cx="220.3" cy="70" r="3"/>                <circle class="st-pt moi" cx="220.3" cy="59.4" r="3.5"/></g>      <g class="st-pts" data-i="8">                <circle class="st-pt res" cx="245.1" cy="82.1" r="3"/>                <circle class="st-pt mag" cx="245.1" cy="68.5" r="3"/>                <circle class="st-pt moi" cx="245.1" cy="48.8" r="3.5"/></g>      <g class="st-pts" data-i="9">                <circle class="st-pt res" cx="269.9" cy="80.6" r="3"/>                <circle class="st-pt mag" cx="269.9" cy="65.5" r="3"/>                <circle class="st-pt moi" cx="269.9" cy="56.4" r="3.5"/></g>      <g class="st-pts" data-i="10">                <circle class="st-pt res" cx="294.8" cy="79.1" r="3"/>                <circle class="st-pt mag" cx="294.8" cy="64" r="3"/>                <circle class="st-pt moi" cx="294.8" cy="45.8" r="3.5"/></g>      <g class="st-pts sel" data-i="11">                <circle class="st-pt res" cx="319.6" cy="77.6" r="3"/>                <circle class="st-pt mag" cx="319.6" cy="60.9" r="3"/>                <circle class="st-pt moi" cx="319.6" cy="35.2" r="3.5"/></g>    </svg>
+    <div class="st-mag-l">
+      <span><span class="lg-ligne"></span>mon record 2,80</span>      <span>Magasin, réseau : la vendeuse moyenne de la semaine</span>
+    </div>
+            <table class="visually-hidden"><caption>Lignes/ticket</caption>
+      <thead><tr><th>Semaine</th><th>Moi</th><th>Mon magasin</th><th>Réseau</th></tr></thead>
+      <tbody><tr><th>S31</th><td>2,45</td><td>2,52</td><td>2,47</td></tr><tr><th>S32</th><td>2,52</td><td>2,54</td><td>2,48</td></tr><tr><th>S33</th><td>2,59</td><td>2,55</td><td>2,49</td></tr><tr><th>S34</th><td>2,54</td><td>2,57</td><td>2,50</td></tr><tr><th>S35</th><td>—</td><td>2,58</td><td>2,51</td></tr><tr><th>S36</th><td>2,68</td><td>2,60</td><td>2,52</td></tr><tr><th>S37</th><td>2,63</td><td>2,61</td><td>2,53</td></tr><tr><th>S38</th><td>2,70</td><td>2,63</td><td>2,54</td></tr><tr><th>S39</th><td>2,77</td><td>2,64</td><td>2,55</td></tr><tr><th>S40</th><td>2,72</td><td>2,66</td><td>2,56</td></tr><tr><th>S41</th><td>2,79</td><td>2,67</td><td>2,57</td></tr><tr><th>S42</th><td>2,86</td><td>2,69</td><td>2,58</td></tr></tbody></table>
+  </div>
+                          <div class="st-ind " data-ind-v="taux">
+    <p class="st-cap" data-sem>Semaine S42</p>
+    <div class="st-leg" aria-live="polite">
+      <div class="st-li moi"><span><i></i>Moi</span><b data-v="moi">56 %</b></div>
+      <div class="st-li mag"><span><i></i>Mon magasin</span><b data-v="mag">49 %</b></div>
+      <div class="st-li res"><span><i></i>Réseau</span><b data-v="res">46 %</b></div>
+    </div>
+    <svg viewBox="0 0 340 140" role="img" aria-label="Croisées, 12 semaines : Moi, Mon magasin, Réseau">
+            <line class="st-grl" x1="34" y1="120" x2="332" y2="120"/>
+      <text class="st-y" x="29" y="123" text-anchor="end">41</text>      <line class="st-grl" x1="34" y1="67" x2="332" y2="67"/>
+      <text class="st-y" x="29" y="70" text-anchor="end">51</text>      <line class="st-grl" x1="34" y1="14" x2="332" y2="14"/>
+      <text class="st-y" x="29" y="17" text-anchor="end">61</text>                  <g class="st-col" data-i="0" tabindex="0" data-lib="Semaine S31" data-moi="47 %" data-mag="46 %" data-res="44 %">
+        <title>S31 · Moi 47 % · Mon magasin 46 % · Réseau 44 %</title>
+        <rect class="st-hit" x="34" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="46.4" y1="8" x2="46.4" y2="120"/>
+        <text class="st-x" x="46.4" y="134" text-anchor="middle">S31</text>
+      </g>      <g class="st-col" data-i="1" tabindex="0" data-lib="Semaine S32" data-moi="49 %" data-mag="47 %" data-res="45 %">
+        <title>S32 · Moi 49 % · Mon magasin 47 % · Réseau 45 %</title>
+        <rect class="st-hit" x="58.8" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="71.3" y1="8" x2="71.3" y2="120"/>
+        <text class="st-x" x="71.3" y="134" text-anchor="middle">S32</text>
+      </g>      <g class="st-col" data-i="2" tabindex="0" data-lib="Semaine S33" data-moi="52 %" data-mag="48 %" data-res="46 %">
+        <title>S33 · Moi 52 % · Mon magasin 48 % · Réseau 46 %</title>
+        <rect class="st-hit" x="83.7" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="96.1" y1="8" x2="96.1" y2="120"/>
+        <text class="st-x" x="96.1" y="134" text-anchor="middle">S33</text>
+      </g>      <g class="st-col" data-i="3" tabindex="0" data-lib="Semaine S34" data-moi="50 %" data-mag="49 %" data-res="44 %">
+        <title>S34 · Moi 50 % · Mon magasin 49 % · Réseau 44 %</title>
+        <rect class="st-hit" x="108.5" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="120.9" y1="8" x2="120.9" y2="120"/>
+        <text class="st-x" x="120.9" y="134" text-anchor="middle">S34</text>
+      </g>      <g class="st-col" data-i="4" tabindex="0" data-lib="Semaine S35" data-moi="—" data-mag="46 %" data-res="45 %">
+        <title>S35 · Moi — · Mon magasin 46 % · Réseau 45 %</title>
+        <rect class="st-hit" x="133.3" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="145.8" y1="8" x2="145.8" y2="120"/>
+        <text class="st-x" x="145.8" y="134" text-anchor="middle">S35</text>
+      </g>      <g class="st-col" data-i="5" tabindex="0" data-lib="Semaine S36" data-moi="51 %" data-mag="47 %" data-res="46 %">
+        <title>S36 · Moi 51 % · Mon magasin 47 % · Réseau 46 %</title>
+        <rect class="st-hit" x="158.2" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="170.6" y1="8" x2="170.6" y2="120"/>
+        <text class="st-x" x="170.6" y="134" text-anchor="middle">S36</text>
+      </g>      <g class="st-col" data-i="6" tabindex="0" data-lib="Semaine S37" data-moi="55 %" data-mag="48 %" data-res="44 %">
+        <title>S37 · Moi 55 % · Mon magasin 48 % · Réseau 44 %</title>
+        <rect class="st-hit" x="183" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="195.4" y1="8" x2="195.4" y2="120"/>
+        <text class="st-x" x="195.4" y="134" text-anchor="middle">S37</text>
+      </g>      <g class="st-col" data-i="7" tabindex="0" data-lib="Semaine S38" data-moi="53 %" data-mag="49 %" data-res="45 %">
+        <title>S38 · Moi 53 % · Mon magasin 49 % · Réseau 45 %</title>
+        <rect class="st-hit" x="207.8" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="220.3" y1="8" x2="220.3" y2="120"/>
+        <text class="st-x" x="220.3" y="134" text-anchor="middle">S38</text>
+      </g>      <g class="st-col" data-i="8" tabindex="0" data-lib="Semaine S39" data-moi="57 %" data-mag="46 %" data-res="46 %">
+        <title>S39 · Moi 57 % · Mon magasin 46 % · Réseau 46 %</title>
+        <rect class="st-hit" x="232.7" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="245.1" y1="8" x2="245.1" y2="120"/>
+        <text class="st-x" x="245.1" y="134" text-anchor="middle">S39</text>
+      </g>      <g class="st-col" data-i="9" tabindex="0" data-lib="Semaine S40" data-moi="56 %" data-mag="47 %" data-res="44 %">
+        <title>S40 · Moi 56 % · Mon magasin 47 % · Réseau 44 %</title>
+        <rect class="st-hit" x="257.5" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="269.9" y1="8" x2="269.9" y2="120"/>
+        <text class="st-x" x="269.9" y="134" text-anchor="middle">S40</text>
+      </g>      <g class="st-col" data-i="10" tabindex="0" data-lib="Semaine S41" data-moi="58 %" data-mag="48 %" data-res="45 %">
+        <title>S41 · Moi 58 % · Mon magasin 48 % · Réseau 45 %</title>
+        <rect class="st-hit" x="282.3" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="294.8" y1="8" x2="294.8" y2="120"/>
+        <text class="st-x" x="294.8" y="134" text-anchor="middle">S41</text>
+      </g>      <g class="st-col der sel" data-i="11" tabindex="0" data-lib="Semaine S42" data-moi="56 %" data-mag="49 %" data-res="46 %">
+        <title>S42 · Moi 56 % · Mon magasin 49 % · Réseau 46 %</title>
+        <rect class="st-hit" x="307.2" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="319.6" y1="8" x2="319.6" y2="120"/>
+        <text class="st-x" x="319.6" y="134" text-anchor="middle">S42</text>
+      </g>      <line class="st-cible" x1="34" y1="45.8" x2="332" y2="45.8"/>                        <path class="st-ligne res" d="M46.4 104.1 L71.3 98.8 L96.1 93.5 L120.9 104.1 L145.8 98.8 L170.6 93.5 L195.4 104.1 L220.3 98.8 L245.1 93.5 L269.9 104.1 L294.8 98.8 L319.6 93.5"/>            <path class="st-ligne mag" d="M46.4 93.5 L71.3 88.2 L96.1 82.9 L120.9 77.6 L145.8 93.5 L170.6 88.2 L195.4 82.9 L220.3 77.6 L245.1 93.5 L269.9 88.2 L294.8 82.9 L319.6 77.6"/>            <path class="st-ligne moi" d="M46.4 88.2 L71.3 77.6 L96.1 61.7 L120.9 72.3 M170.6 67 L195.4 45.8 L220.3 56.4 L245.1 35.2 L269.9 40.5 L294.8 29.9 L319.6 40.5"/>            <g class="st-pts" data-i="0">                <circle class="st-pt res" cx="46.4" cy="104.1" r="3"/>                <circle class="st-pt mag" cx="46.4" cy="93.5" r="3"/>                <circle class="st-pt moi" cx="46.4" cy="88.2" r="3.5"/></g>      <g class="st-pts" data-i="1">                <circle class="st-pt res" cx="71.3" cy="98.8" r="3"/>                <circle class="st-pt mag" cx="71.3" cy="88.2" r="3"/>                <circle class="st-pt moi" cx="71.3" cy="77.6" r="3.5"/></g>      <g class="st-pts" data-i="2">                <circle class="st-pt res" cx="96.1" cy="93.5" r="3"/>                <circle class="st-pt mag" cx="96.1" cy="82.9" r="3"/>                <circle class="st-pt moi" cx="96.1" cy="61.7" r="3.5"/></g>      <g class="st-pts" data-i="3">                <circle class="st-pt res" cx="120.9" cy="104.1" r="3"/>                <circle class="st-pt mag" cx="120.9" cy="77.6" r="3"/>                <circle class="st-pt moi" cx="120.9" cy="72.3" r="3.5"/></g>      <g class="st-pts" data-i="4">                <circle class="st-pt res" cx="145.8" cy="98.8" r="3"/>                <circle class="st-pt mag" cx="145.8" cy="93.5" r="3"/></g>      <g class="st-pts" data-i="5">                <circle class="st-pt res" cx="170.6" cy="93.5" r="3"/>                <circle class="st-pt mag" cx="170.6" cy="88.2" r="3"/>                <circle class="st-pt moi" cx="170.6" cy="67" r="3.5"/></g>      <g class="st-pts" data-i="6">                <circle class="st-pt res" cx="195.4" cy="104.1" r="3"/>                <circle class="st-pt mag" cx="195.4" cy="82.9" r="3"/>                <circle class="st-pt moi" cx="195.4" cy="45.8" r="3.5"/></g>      <g class="st-pts" data-i="7">                <circle class="st-pt res" cx="220.3" cy="98.8" r="3"/>                <circle class="st-pt mag" cx="220.3" cy="77.6" r="3"/>                <circle class="st-pt moi" cx="220.3" cy="56.4" r="3.5"/></g>      <g class="st-pts" data-i="8">                <circle class="st-pt res" cx="245.1" cy="93.5" r="3"/>                <circle class="st-pt mag" cx="245.1" cy="93.5" r="3"/>                <circle class="st-pt moi" cx="245.1" cy="35.2" r="3.5"/></g>      <g class="st-pts" data-i="9">                <circle class="st-pt res" cx="269.9" cy="104.1" r="3"/>                <circle class="st-pt mag" cx="269.9" cy="88.2" r="3"/>                <circle class="st-pt moi" cx="269.9" cy="40.5" r="3.5"/></g>      <g class="st-pts" data-i="10">                <circle class="st-pt res" cx="294.8" cy="98.8" r="3"/>                <circle class="st-pt mag" cx="294.8" cy="82.9" r="3"/>                <circle class="st-pt moi" cx="294.8" cy="29.9" r="3.5"/></g>      <g class="st-pts sel" data-i="11">                <circle class="st-pt res" cx="319.6" cy="93.5" r="3"/>                <circle class="st-pt mag" cx="319.6" cy="77.6" r="3"/>                <circle class="st-pt moi" cx="319.6" cy="40.5" r="3.5"/></g>    </svg>
+    <div class="st-mag-l">
+      <span><span class="lg-ligne"></span>cible 55 %</span>      <span>Magasin, réseau : la vendeuse moyenne de la semaine</span>
+    </div>
+            <table class="visually-hidden"><caption>Croisées</caption>
+      <thead><tr><th>Semaine</th><th>Moi</th><th>Mon magasin</th><th>Réseau</th></tr></thead>
+      <tbody><tr><th>S31</th><td>47 %</td><td>46 %</td><td>44 %</td></tr><tr><th>S32</th><td>49 %</td><td>47 %</td><td>45 %</td></tr><tr><th>S33</th><td>52 %</td><td>48 %</td><td>46 %</td></tr><tr><th>S34</th><td>50 %</td><td>49 %</td><td>44 %</td></tr><tr><th>S35</th><td>—</td><td>46 %</td><td>45 %</td></tr><tr><th>S36</th><td>51 %</td><td>47 %</td><td>46 %</td></tr><tr><th>S37</th><td>55 %</td><td>48 %</td><td>44 %</td></tr><tr><th>S38</th><td>53 %</td><td>49 %</td><td>45 %</td></tr><tr><th>S39</th><td>57 %</td><td>46 %</td><td>46 %</td></tr><tr><th>S40</th><td>56 %</td><td>47 %</td><td>44 %</td></tr><tr><th>S41</th><td>58 %</td><td>48 %</td><td>45 %</td></tr><tr><th>S42</th><td>56 %</td><td>49 %</td><td>46 %</td></tr></tbody></table>
+  </div>
+                          <div class="st-ind " data-ind-v="caHeure">
+    <p class="st-cap" data-sem>Semaine S42</p>
+    <div class="st-leg" aria-live="polite">
+      <div class="st-li moi"><span><i></i>Moi</span><b data-v="moi">88 €/h</b></div>
+      <div class="st-li mag"><span><i></i>Mon magasin</span><b data-v="mag">83 €/h</b></div>
+      <div class="st-li res"><span><i></i>Réseau</span><b data-v="res">74 €/h</b></div>
+    </div>
+    <svg viewBox="0 0 340 140" role="img" aria-label="CA par heure, 12 semaines : Moi, Mon magasin, Réseau">
+            <line class="st-grl" x1="34" y1="120" x2="332" y2="120"/>
+      <text class="st-y" x="29" y="123" text-anchor="end">65</text>      <line class="st-grl" x1="34" y1="65" x2="332" y2="65"/>
+      <text class="st-y" x="29" y="68" text-anchor="end">79</text>      <line class="st-grl" x1="34" y1="14" x2="332" y2="14"/>
+      <text class="st-y" x="29" y="17" text-anchor="end">92</text>                  <g class="st-col" data-i="0" tabindex="0" data-lib="Semaine S31" data-moi="78 €/h" data-mag="72 €/h" data-res="69 €/h">
+        <title>S31 · Moi 78 €/h · Mon magasin 72 €/h · Réseau 69 €/h</title>
+        <rect class="st-hit" x="34" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="46.4" y1="8" x2="46.4" y2="120"/>
+        <text class="st-x" x="46.4" y="134" text-anchor="middle">S31</text>
+      </g>      <g class="st-col" data-i="1" tabindex="0" data-lib="Semaine S32" data-moi="74 €/h" data-mag="73 €/h" data-res="69 €/h">
+        <title>S32 · Moi 74 €/h · Mon magasin 73 €/h · Réseau 69 €/h</title>
+        <rect class="st-hit" x="58.8" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="71.3" y1="8" x2="71.3" y2="120"/>
+        <text class="st-x" x="71.3" y="134" text-anchor="middle">S32</text>
+      </g>      <g class="st-col" data-i="2" tabindex="0" data-lib="Semaine S33" data-moi="81 €/h" data-mag="74 €/h" data-res="70 €/h">
+        <title>S33 · Moi 81 €/h · Mon magasin 74 €/h · Réseau 70 €/h</title>
+        <rect class="st-hit" x="83.7" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="96.1" y1="8" x2="96.1" y2="120"/>
+        <text class="st-x" x="96.1" y="134" text-anchor="middle">S33</text>
+      </g>      <g class="st-col" data-i="3" tabindex="0" data-lib="Semaine S34" data-moi="79 €/h" data-mag="75 €/h" data-res="70 €/h">
+        <title>S34 · Moi 79 €/h · Mon magasin 75 €/h · Réseau 70 €/h</title>
+        <rect class="st-hit" x="108.5" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="120.9" y1="8" x2="120.9" y2="120"/>
+        <text class="st-x" x="120.9" y="134" text-anchor="middle">S34</text>
+      </g>      <g class="st-col" data-i="4" tabindex="0" data-lib="Semaine S35" data-moi="—" data-mag="76 €/h" data-res="71 €/h">
+        <title>S35 · Moi — · Mon magasin 76 €/h · Réseau 71 €/h</title>
+        <rect class="st-hit" x="133.3" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="145.8" y1="8" x2="145.8" y2="120"/>
+        <text class="st-x" x="145.8" y="134" text-anchor="middle">S35</text>
+      </g>      <g class="st-col" data-i="5" tabindex="0" data-lib="Semaine S36" data-moi="80 €/h" data-mag="77 €/h" data-res="71 €/h">
+        <title>S36 · Moi 80 €/h · Mon magasin 77 €/h · Réseau 71 €/h</title>
+        <rect class="st-hit" x="158.2" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="170.6" y1="8" x2="170.6" y2="120"/>
+        <text class="st-x" x="170.6" y="134" text-anchor="middle">S36</text>
+      </g>      <g class="st-col" data-i="6" tabindex="0" data-lib="Semaine S37" data-moi="84 €/h" data-mag="78 €/h" data-res="72 €/h">
+        <title>S37 · Moi 84 €/h · Mon magasin 78 €/h · Réseau 72 €/h</title>
+        <rect class="st-hit" x="183" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="195.4" y1="8" x2="195.4" y2="120"/>
+        <text class="st-x" x="195.4" y="134" text-anchor="middle">S37</text>
+      </g>      <g class="st-col" data-i="7" tabindex="0" data-lib="Semaine S38" data-moi="82 €/h" data-mag="79 €/h" data-res="72 €/h">
+        <title>S38 · Moi 82 €/h · Mon magasin 79 €/h · Réseau 72 €/h</title>
+        <rect class="st-hit" x="207.8" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="220.3" y1="8" x2="220.3" y2="120"/>
+        <text class="st-x" x="220.3" y="134" text-anchor="middle">S38</text>
+      </g>      <g class="st-col" data-i="8" tabindex="0" data-lib="Semaine S39" data-moi="86 €/h" data-mag="80 €/h" data-res="73 €/h">
+        <title>S39 · Moi 86 €/h · Mon magasin 80 €/h · Réseau 73 €/h</title>
+        <rect class="st-hit" x="232.7" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="245.1" y1="8" x2="245.1" y2="120"/>
+        <text class="st-x" x="245.1" y="134" text-anchor="middle">S39</text>
+      </g>      <g class="st-col" data-i="9" tabindex="0" data-lib="Semaine S40" data-moi="85 €/h" data-mag="81 €/h" data-res="73 €/h">
+        <title>S40 · Moi 85 €/h · Mon magasin 81 €/h · Réseau 73 €/h</title>
+        <rect class="st-hit" x="257.5" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="269.9" y1="8" x2="269.9" y2="120"/>
+        <text class="st-x" x="269.9" y="134" text-anchor="middle">S40</text>
+      </g>      <g class="st-col" data-i="10" tabindex="0" data-lib="Semaine S41" data-moi="87 €/h" data-mag="82 €/h" data-res="74 €/h">
+        <title>S41 · Moi 87 €/h · Mon magasin 82 €/h · Réseau 74 €/h</title>
+        <rect class="st-hit" x="282.3" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="294.8" y1="8" x2="294.8" y2="120"/>
+        <text class="st-x" x="294.8" y="134" text-anchor="middle">S41</text>
+      </g>      <g class="st-col der sel" data-i="11" tabindex="0" data-lib="Semaine S42" data-moi="88 €/h" data-mag="83 €/h" data-res="74 €/h">
+        <title>S42 · Moi 88 €/h · Mon magasin 83 €/h · Réseau 74 €/h</title>
+        <rect class="st-hit" x="307.2" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="319.6" y1="8" x2="319.6" y2="120"/>
+        <text class="st-x" x="319.6" y="134" text-anchor="middle">S42</text>
+      </g>                              <path class="st-ligne res" d="M46.4 104.3 L71.3 104.3 L96.1 100.4 L120.9 100.4 L145.8 96.4 L170.6 96.4 L195.4 92.5 L220.3 92.5 L245.1 88.6 L269.9 88.6 L294.8 84.7 L319.6 84.7"/>            <path class="st-ligne mag" d="M46.4 92.5 L71.3 88.6 L96.1 84.7 L120.9 80.7 L145.8 76.8 L170.6 72.9 L195.4 69 L220.3 65 L245.1 61.1 L269.9 57.2 L294.8 53.3 L319.6 49.3"/>            <path class="st-ligne moi" d="M46.4 69 L71.3 84.7 L96.1 57.2 L120.9 65 M170.6 61.1 L195.4 45.4 L220.3 53.3 L245.1 37.6 L269.9 41.5 L294.8 33.6 L319.6 29.7"/>            <g class="st-pts" data-i="0">                <circle class="st-pt res" cx="46.4" cy="104.3" r="3"/>                <circle class="st-pt mag" cx="46.4" cy="92.5" r="3"/>                <circle class="st-pt moi" cx="46.4" cy="69" r="3.5"/></g>      <g class="st-pts" data-i="1">                <circle class="st-pt res" cx="71.3" cy="104.3" r="3"/>                <circle class="st-pt mag" cx="71.3" cy="88.6" r="3"/>                <circle class="st-pt moi" cx="71.3" cy="84.7" r="3.5"/></g>      <g class="st-pts" data-i="2">                <circle class="st-pt res" cx="96.1" cy="100.4" r="3"/>                <circle class="st-pt mag" cx="96.1" cy="84.7" r="3"/>                <circle class="st-pt moi" cx="96.1" cy="57.2" r="3.5"/></g>      <g class="st-pts" data-i="3">                <circle class="st-pt res" cx="120.9" cy="100.4" r="3"/>                <circle class="st-pt mag" cx="120.9" cy="80.7" r="3"/>                <circle class="st-pt moi" cx="120.9" cy="65" r="3.5"/></g>      <g class="st-pts" data-i="4">                <circle class="st-pt res" cx="145.8" cy="96.4" r="3"/>                <circle class="st-pt mag" cx="145.8" cy="76.8" r="3"/></g>      <g class="st-pts" data-i="5">                <circle class="st-pt res" cx="170.6" cy="96.4" r="3"/>                <circle class="st-pt mag" cx="170.6" cy="72.9" r="3"/>                <circle class="st-pt moi" cx="170.6" cy="61.1" r="3.5"/></g>      <g class="st-pts" data-i="6">                <circle class="st-pt res" cx="195.4" cy="92.5" r="3"/>                <circle class="st-pt mag" cx="195.4" cy="69" r="3"/>                <circle class="st-pt moi" cx="195.4" cy="45.4" r="3.5"/></g>      <g class="st-pts" data-i="7">                <circle class="st-pt res" cx="220.3" cy="92.5" r="3"/>                <circle class="st-pt mag" cx="220.3" cy="65" r="3"/>                <circle class="st-pt moi" cx="220.3" cy="53.3" r="3.5"/></g>      <g class="st-pts" data-i="8">                <circle class="st-pt res" cx="245.1" cy="88.6" r="3"/>                <circle class="st-pt mag" cx="245.1" cy="61.1" r="3"/>                <circle class="st-pt moi" cx="245.1" cy="37.6" r="3.5"/></g>      <g class="st-pts" data-i="9">                <circle class="st-pt res" cx="269.9" cy="88.6" r="3"/>                <circle class="st-pt mag" cx="269.9" cy="57.2" r="3"/>                <circle class="st-pt moi" cx="269.9" cy="41.5" r="3.5"/></g>      <g class="st-pts" data-i="10">                <circle class="st-pt res" cx="294.8" cy="84.7" r="3"/>                <circle class="st-pt mag" cx="294.8" cy="53.3" r="3"/>                <circle class="st-pt moi" cx="294.8" cy="33.6" r="3.5"/></g>      <g class="st-pts sel" data-i="11">                <circle class="st-pt res" cx="319.6" cy="84.7" r="3"/>                <circle class="st-pt mag" cx="319.6" cy="49.3" r="3"/>                <circle class="st-pt moi" cx="319.6" cy="29.7" r="3.5"/></g>    </svg>
+    <div class="st-mag-l">
+            <span>Magasin, réseau : la vendeuse moyenne de la semaine</span>
+    </div>
+            <table class="visually-hidden"><caption>CA par heure</caption>
+      <thead><tr><th>Semaine</th><th>Moi</th><th>Mon magasin</th><th>Réseau</th></tr></thead>
+      <tbody><tr><th>S31</th><td>78 €/h</td><td>72 €/h</td><td>69 €/h</td></tr><tr><th>S32</th><td>74 €/h</td><td>73 €/h</td><td>69 €/h</td></tr><tr><th>S33</th><td>81 €/h</td><td>74 €/h</td><td>70 €/h</td></tr><tr><th>S34</th><td>79 €/h</td><td>75 €/h</td><td>70 €/h</td></tr><tr><th>S35</th><td>—</td><td>76 €/h</td><td>71 €/h</td></tr><tr><th>S36</th><td>80 €/h</td><td>77 €/h</td><td>71 €/h</td></tr><tr><th>S37</th><td>84 €/h</td><td>78 €/h</td><td>72 €/h</td></tr><tr><th>S38</th><td>82 €/h</td><td>79 €/h</td><td>72 €/h</td></tr><tr><th>S39</th><td>86 €/h</td><td>80 €/h</td><td>73 €/h</td></tr><tr><th>S40</th><td>85 €/h</td><td>81 €/h</td><td>73 €/h</td></tr><tr><th>S41</th><td>87 €/h</td><td>82 €/h</td><td>74 €/h</td></tr><tr><th>S42</th><td>88 €/h</td><td>83 €/h</td><td>74 €/h</td></tr></tbody></table>
+  </div>
+                          <div class="st-ind " data-ind-v="tickets">
+    <p class="st-cap" data-sem>Semaine S42</p>
+    <div class="st-leg" aria-live="polite">
+      <div class="st-li moi"><span><i></i>Moi</span><b data-v="moi">131</b></div>
+      <div class="st-li mag"><span><i></i>Mon magasin</span><b data-v="mag">209</b></div>
+      <div class="st-li res"><span><i></i>Réseau</span><b data-v="res">190</b></div>
+    </div>
+    <svg viewBox="0 0 340 140" role="img" aria-label="Tickets, 12 semaines : Moi, Mon magasin, Réseau">
+            <line class="st-grl" x1="34" y1="120" x2="332" y2="120"/>
+      <text class="st-y" x="29" y="123" text-anchor="end">104</text>      <line class="st-grl" x1="34" y1="66.7" x2="332" y2="66.7"/>
+      <text class="st-y" x="29" y="69.7" text-anchor="end">197</text>      <line class="st-grl" x1="34" y1="14" x2="332" y2="14"/>
+      <text class="st-y" x="29" y="17" text-anchor="end">289</text>                  <g class="st-col" data-i="0" tabindex="0" data-lib="Semaine S31" data-moi="210" data-mag="176" data-res="168">
+        <title>S31 · Moi 210 · Mon magasin 176 · Réseau 168</title>
+        <rect class="st-hit" x="34" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="46.4" y1="8" x2="46.4" y2="120"/>
+        <text class="st-x" x="46.4" y="134" text-anchor="middle">S31</text>
+      </g>      <g class="st-col" data-i="1" tabindex="0" data-lib="Semaine S32" data-moi="190" data-mag="179" data-res="170">
+        <title>S32 · Moi 190 · Mon magasin 179 · Réseau 170</title>
+        <rect class="st-hit" x="58.8" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="71.3" y1="8" x2="71.3" y2="120"/>
+        <text class="st-x" x="71.3" y="134" text-anchor="middle">S32</text>
+      </g>      <g class="st-col" data-i="2" tabindex="0" data-lib="Semaine S33" data-moi="230" data-mag="182" data-res="172">
+        <title>S33 · Moi 230 · Mon magasin 182 · Réseau 172</title>
+        <rect class="st-hit" x="83.7" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="96.1" y1="8" x2="96.1" y2="120"/>
+        <text class="st-x" x="96.1" y="134" text-anchor="middle">S33</text>
+      </g>      <g class="st-col" data-i="3" tabindex="0" data-lib="Semaine S34" data-moi="205" data-mag="185" data-res="174">
+        <title>S34 · Moi 205 · Mon magasin 185 · Réseau 174</title>
+        <rect class="st-hit" x="108.5" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="120.9" y1="8" x2="120.9" y2="120"/>
+        <text class="st-x" x="120.9" y="134" text-anchor="middle">S34</text>
+      </g>      <g class="st-col" data-i="4" tabindex="0" data-lib="Semaine S35" data-moi="—" data-mag="188" data-res="176">
+        <title>S35 · Moi — · Mon magasin 188 · Réseau 176</title>
+        <rect class="st-hit" x="133.3" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="145.8" y1="8" x2="145.8" y2="120"/>
+        <text class="st-x" x="145.8" y="134" text-anchor="middle">S35</text>
+      </g>      <g class="st-col" data-i="5" tabindex="0" data-lib="Semaine S36" data-moi="214" data-mag="191" data-res="178">
+        <title>S36 · Moi 214 · Mon magasin 191 · Réseau 178</title>
+        <rect class="st-hit" x="158.2" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="170.6" y1="8" x2="170.6" y2="120"/>
+        <text class="st-x" x="170.6" y="134" text-anchor="middle">S36</text>
+      </g>      <g class="st-col" data-i="6" tabindex="0" data-lib="Semaine S37" data-moi="251" data-mag="194" data-res="180">
+        <title>S37 · Moi 251 · Mon magasin 194 · Réseau 180</title>
+        <rect class="st-hit" x="183" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="195.4" y1="8" x2="195.4" y2="120"/>
+        <text class="st-x" x="195.4" y="134" text-anchor="middle">S37</text>
+      </g>      <g class="st-col" data-i="7" tabindex="0" data-lib="Semaine S38" data-moi="222" data-mag="197" data-res="182">
+        <title>S38 · Moi 222 · Mon magasin 197 · Réseau 182</title>
+        <rect class="st-hit" x="207.8" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="220.3" y1="8" x2="220.3" y2="120"/>
+        <text class="st-x" x="220.3" y="134" text-anchor="middle">S38</text>
+      </g>      <g class="st-col" data-i="8" tabindex="0" data-lib="Semaine S39" data-moi="248" data-mag="200" data-res="184">
+        <title>S39 · Moi 248 · Mon magasin 200 · Réseau 184</title>
+        <rect class="st-hit" x="232.7" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="245.1" y1="8" x2="245.1" y2="120"/>
+        <text class="st-x" x="245.1" y="134" text-anchor="middle">S39</text>
+      </g>      <g class="st-col" data-i="9" tabindex="0" data-lib="Semaine S40" data-moi="236" data-mag="203" data-res="186">
+        <title>S40 · Moi 236 · Mon magasin 203 · Réseau 186</title>
+        <rect class="st-hit" x="257.5" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="269.9" y1="8" x2="269.9" y2="120"/>
+        <text class="st-x" x="269.9" y="134" text-anchor="middle">S40</text>
+      </g>      <g class="st-col" data-i="10" tabindex="0" data-lib="Semaine S41" data-moi="262" data-mag="206" data-res="188">
+        <title>S41 · Moi 262 · Mon magasin 206 · Réseau 188</title>
+        <rect class="st-hit" x="282.3" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="294.8" y1="8" x2="294.8" y2="120"/>
+        <text class="st-x" x="294.8" y="134" text-anchor="middle">S41</text>
+      </g>      <g class="st-col der sel" data-i="11" tabindex="0" data-lib="Semaine S42" data-moi="131" data-mag="209" data-res="190">
+        <title>S42 · Moi 131 · Mon magasin 209 · Réseau 190</title>
+        <rect class="st-hit" x="307.2" y="4" width="24.8" height="132"/>
+        <line class="st-guide" x1="319.6" y1="8" x2="319.6" y2="120"/>
+        <text class="st-x" x="319.6" y="134" text-anchor="middle">S42</text>
+      </g>                              <path class="st-ligne res" d="M46.4 83.3 L71.3 82.2 L96.1 81 L120.9 79.9 L145.8 78.7 L170.6 77.6 L195.4 76.5 L220.3 75.3 L245.1 74.2 L269.9 73 L294.8 71.9 L319.6 70.7"/>            <path class="st-ligne mag" d="M46.4 78.7 L71.3 77 L96.1 75.3 L120.9 73.6 L145.8 71.9 L170.6 70.2 L195.4 68.4 L220.3 66.7 L245.1 65 L269.9 63.3 L294.8 61.6 L319.6 59.8"/>            <path class="st-ligne moi" d="M46.4 59.3 L71.3 70.7 L96.1 47.8 L120.9 62.1 M170.6 57 L195.4 35.8 L220.3 52.4 L245.1 37.5 L269.9 44.4 L294.8 29.5 L319.6 104.5"/>            <g class="st-pts" data-i="0">                <circle class="st-pt res" cx="46.4" cy="83.3" r="3"/>                <circle class="st-pt mag" cx="46.4" cy="78.7" r="3"/>                <circle class="st-pt moi" cx="46.4" cy="59.3" r="3.5"/></g>      <g class="st-pts" data-i="1">                <circle class="st-pt res" cx="71.3" cy="82.2" r="3"/>                <circle class="st-pt mag" cx="71.3" cy="77" r="3"/>                <circle class="st-pt moi" cx="71.3" cy="70.7" r="3.5"/></g>      <g class="st-pts" data-i="2">                <circle class="st-pt res" cx="96.1" cy="81" r="3"/>                <circle class="st-pt mag" cx="96.1" cy="75.3" r="3"/>                <circle class="st-pt moi" cx="96.1" cy="47.8" r="3.5"/></g>      <g class="st-pts" data-i="3">                <circle class="st-pt res" cx="120.9" cy="79.9" r="3"/>                <circle class="st-pt mag" cx="120.9" cy="73.6" r="3"/>                <circle class="st-pt moi" cx="120.9" cy="62.1" r="3.5"/></g>      <g class="st-pts" data-i="4">                <circle class="st-pt res" cx="145.8" cy="78.7" r="3"/>                <circle class="st-pt mag" cx="145.8" cy="71.9" r="3"/></g>      <g class="st-pts" data-i="5">                <circle class="st-pt res" cx="170.6" cy="77.6" r="3"/>                <circle class="st-pt mag" cx="170.6" cy="70.2" r="3"/>                <circle class="st-pt moi" cx="170.6" cy="57" r="3.5"/></g>      <g class="st-pts" data-i="6">                <circle class="st-pt res" cx="195.4" cy="76.5" r="3"/>                <circle class="st-pt mag" cx="195.4" cy="68.4" r="3"/>                <circle class="st-pt moi" cx="195.4" cy="35.8" r="3.5"/></g>      <g class="st-pts" data-i="7">                <circle class="st-pt res" cx="220.3" cy="75.3" r="3"/>                <circle class="st-pt mag" cx="220.3" cy="66.7" r="3"/>                <circle class="st-pt moi" cx="220.3" cy="52.4" r="3.5"/></g>      <g class="st-pts" data-i="8">                <circle class="st-pt res" cx="245.1" cy="74.2" r="3"/>                <circle class="st-pt mag" cx="245.1" cy="65" r="3"/>                <circle class="st-pt moi" cx="245.1" cy="37.5" r="3.5"/></g>      <g class="st-pts" data-i="9">                <circle class="st-pt res" cx="269.9" cy="73" r="3"/>                <circle class="st-pt mag" cx="269.9" cy="63.3" r="3"/>                <circle class="st-pt moi" cx="269.9" cy="44.4" r="3.5"/></g>      <g class="st-pts" data-i="10">                <circle class="st-pt res" cx="294.8" cy="71.9" r="3"/>                <circle class="st-pt mag" cx="294.8" cy="61.6" r="3"/>                <circle class="st-pt moi" cx="294.8" cy="29.5" r="3.5"/></g>      <g class="st-pts sel" data-i="11">                <circle class="st-pt res" cx="319.6" cy="70.7" r="3"/>                <circle class="st-pt mag" cx="319.6" cy="59.8" r="3"/>                <circle class="st-pt moi" cx="319.6" cy="104.5" r="3.5"/></g>    </svg>
+    <div class="st-mag-l">
+            <span>Magasin, réseau : la vendeuse moyenne de la semaine</span>
+    </div>
+            <table class="visually-hidden"><caption>Tickets</caption>
+      <thead><tr><th>Semaine</th><th>Moi</th><th>Mon magasin</th><th>Réseau</th></tr></thead>
+      <tbody><tr><th>S31</th><td>210</td><td>176</td><td>168</td></tr><tr><th>S32</th><td>190</td><td>179</td><td>170</td></tr><tr><th>S33</th><td>230</td><td>182</td><td>172</td></tr><tr><th>S34</th><td>205</td><td>185</td><td>174</td></tr><tr><th>S35</th><td>—</td><td>188</td><td>176</td></tr><tr><th>S36</th><td>214</td><td>191</td><td>178</td></tr><tr><th>S37</th><td>251</td><td>194</td><td>180</td></tr><tr><th>S38</th><td>222</td><td>197</td><td>182</td></tr><tr><th>S39</th><td>248</td><td>200</td><td>184</td></tr><tr><th>S40</th><td>236</td><td>203</td><td>186</td></tr><tr><th>S41</th><td>262</td><td>206</td><td>188</td></tr><tr><th>S42</th><td>131</td><td>209</td><td>190</td></tr></tbody></table>
+  </div>
+  </div>
+
+<div class="titre-section"><h2>Mes titres</h2><small>6 mois</small></div>
+<div class="st-titres">
+  <span class="st-titre live">🔥 Ventes croisées</span>  <span class="st-titre">👑 Queen of Quiches <b>×2</b></span><span class="st-titre">👑 Ventes croisées <b>×3</b></span></div>
+    </div>
+</main>
+
+
+<nav class="emp-bottom-nav" role="navigation" aria-label="Navigation principale">
+                    <a class="emp-bottom-item "
+           href="/public/employee/primes"
+           aria-current="false">
+            <i class="bi bi-trophy"></i>
+            <span>Primes</span>
+        </a>
+                    <a class="emp-bottom-item "
+           href="/public/employee/me"
+           aria-current="false">
+            <i class="bi bi-person"></i>
+            <span>Profil</span>
+        </a>
+    </nav>
+<script>
+(function () {
+  document.querySelectorAll('[data-graphe]').forEach(function (g) {
+    // Un indicateur à la fois.
+    g.querySelectorAll('[data-ind]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        g.querySelectorAll('[data-ind]').forEach(function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); });
+        g.querySelectorAll('[data-ind-v]').forEach(function (v) { v.classList.toggle('on', v.dataset.indV === b.dataset.ind); });
+      });
+    });
+    // Toucher une semaine affiche ses trois valeurs au-dessus du graphique.
+    g.querySelectorAll('.st-ind').forEach(function (ind) {
+      var sem = ind.querySelector('[data-sem]');
+      ind.querySelectorAll('.st-col').forEach(function (col) {
+        function montre() {
+          ind.querySelectorAll('[data-i]').forEach(function (c) { c.classList.toggle('sel', c.dataset.i === col.dataset.i); });
+          sem.textContent = col.dataset.lib;
+          ['moi', 'mag', 'res'].forEach(function (k) { ind.querySelector('[data-v="' + k + '"]').textContent = col.dataset[k]; });
+        }
+        col.addEventListener('click', montre);
+        col.addEventListener('focus', montre);
+      });
+    });
+  });
+})();
+</script>
+
+<script>
+    (function () {
+        if (!("serviceWorker" in navigator)) return;
+
+        window.addEventListener("load", async () => {
+            try {
+                const reg = await navigator.serviceWorker.register("/public/employee/sw.js", { scope: "/public/employee/" });
+                // Opcjonalnie log:
+                console.log("SW registered", reg);
+            } catch (e) {
+                console.warn("SW register failed", e);
+            }
+        });
+    })();
+</script>
+</body>
+</html>

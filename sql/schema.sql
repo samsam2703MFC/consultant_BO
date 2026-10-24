@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS ceo_shop_day_note (
 
 -- Les objectifs produits d'une campagne : les produits qui comptent, et
 -- l'objectif en pièces de chaque magasin sur la période de la campagne.
-CREATE TABLE IF NOT EXISTS ceo_campagne_produit (
+CREATE TABLE IF NOT EXISTS mar_campagne_produit (
   campagne_id INT          NOT NULL,
   product_id  INT          NOT NULL,   -- identifiant de caisse (product.id, tickets du panel)
   nom         VARCHAR(200) NOT NULL DEFAULT '',
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS ceo_campagne_produit (
   PRIMARY KEY (campagne_id, product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_campagne_objectif_produit (
+CREATE TABLE IF NOT EXISTS mar_campagne_objectif_produit (
   campagne_id INT         NOT NULL,
   shop_id     VARCHAR(32) NOT NULL,
   pieces      INT         NULL,
@@ -685,17 +685,17 @@ CREATE TABLE IF NOT EXISTS ceo_plano_std_montage (
 --
 -- Deux tables, parce que ce sont deux faits différents :
 --
---  - `ceo_shop_reputation` porte ce que Google affiche sur la fiche : la note
+--  - `mar_avis_fiche` porte ce que Google affiche sur la fiche : la note
 --    moyenne et le NOMBRE TOTAL d'avis. C'est la seule base de calcul valable
 --    pour « combien d'avis 5 étoiles pour atteindre la cible » — le compter sur
 --    les avis rapatriés donnerait un chiffre faux d'un ordre de grandeur.
---  - `ceo_shop_review` porte les avis eux-mêmes, dont on n'affiche que les cinq
+--  - `mar_avis` porte les avis eux-mêmes, dont on n'affiche que les cinq
 --    derniers. C'est un échantillon de lecture, pas la source des moyennes.
 --
 -- L'import (API Google Business Profile) n'est pas branché : ces tables sont
 -- alimentées par le connecteur le jour où il existera. Vides, l'écran le dit.
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_shop_reputation (
+CREATE TABLE IF NOT EXISTS mar_avis_fiche (
   shop_id      VARCHAR(8)   PRIMARY KEY,
   place_id     VARCHAR(120) NULL,           -- identifiant Google de la fiche
   profile_url  VARCHAR(400) NULL,           -- lien public, pour ouvrir la fiche
@@ -705,7 +705,7 @@ CREATE TABLE IF NOT EXISTS ceo_shop_reputation (
   CONSTRAINT fk_reput_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_shop_review (
+CREATE TABLE IF NOT EXISTS mar_avis (
   id          BIGINT AUTO_INCREMENT PRIMARY KEY,
   shop_id     VARCHAR(8)   NOT NULL,
   source      VARCHAR(20)  NOT NULL DEFAULT 'google',
@@ -821,16 +821,16 @@ CREATE TABLE IF NOT EXISTS ceo_scouting_population (
 --
 -- Un franchisé soumet un post ; l'agent de contrôle (src/fbcontrole.php) le
 -- relit et note de 1 à 5 sur la MÊME échelle que les tâches consultants
--- (réglage `signalement`) ; le CEO valide ou refuse. Rien n'est publié par le
--- cockpit : `published_at` et `fb_post_id` sont remplis à la main aujourd'hui,
--- et resteront les mêmes colonnes le jour où l'API Meta Graph sera branchée.
+-- (réglage `signalement`) ; le CEO valide ou refuse. La publication passe par
+-- `mar_social_publication` (Facebook, Instagram, LinkedIn — portail Marketing) ;
+-- publié à la main, `published_at` et `fb_post_id` se remplissent à la main.
 --
 -- `status` porte tout le cycle — un post refusé qui revient corrigé repasse en
 -- `a_controler`, et `agent_runs` compte les passages de l'agent.
 -- Le pack de règles vit dans `ceo_app_setting` sous la clé `fbControle` : la
 -- charte du réseau bouge plus souvent que le code.
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_fb_post (
+CREATE TABLE IF NOT EXISTS mar_social_post (
   id               VARCHAR(16) PRIMARY KEY,
   shop_id          VARCHAR(8)   NULL,           -- NULL = post réseau (pas d'ancrage local exigé)
   author           VARCHAR(120) NOT NULL,       -- le franchisé ou le community manager qui soumet
@@ -852,9 +852,12 @@ CREATE TABLE IF NOT EXISTS ceo_fb_post (
   decided_at       DATETIME     NULL,
   decided_by       VARCHAR(80)  NULL,
   published_at     DATETIME     NULL,
-  fb_post_id       VARCHAR(64)  NULL,           -- id Facebook, quand la publication sera branchée
+  fb_post_id       VARCHAR(64)  NULL,           -- id Facebook (publié par le portail, ou saisi à la main)
+  reseaux          VARCHAR(40)  NOT NULL DEFAULT 'facebook',  -- facebook,instagram,linkedin (portail Marketing)
+  campagne_id      INT          NULL,           -- mar_campaign.id : la campagne du post
   KEY idx_status (status, planned_at),
   KEY idx_shop (shop_id, planned_at),
+  KEY k_campagne (campagne_id),
   CONSTRAINT fk_fbpost_shop FOREIGN KEY (shop_id) REFERENCES ceo_shop(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -864,7 +867,7 @@ CREATE TABLE IF NOT EXISTS ceo_fb_post (
 -- est, pas l'historique. Seul `status = 'ignore'` survit d'un contrôle au
 -- suivant (voir wr_fb_controle) — une dérogation accordée par le CEO ne doit
 -- pas se rejouer à chaque passage de l'agent.
-CREATE TABLE IF NOT EXISTS ceo_fb_finding (
+CREATE TABLE IF NOT EXISTS mar_social_ecart (
   id         BIGINT AUTO_INCREMENT PRIMARY KEY,
   post_id    VARCHAR(16)  NOT NULL,
   rule_code  VARCHAR(40)  NOT NULL,
@@ -877,7 +880,32 @@ CREATE TABLE IF NOT EXISTS ceo_fb_finding (
   status     ENUM('ouvert','ignore','corrige') NOT NULL DEFAULT 'ouvert',
   created_at DATETIME     NOT NULL,
   KEY idx_post (post_id, gravite),
-  CONSTRAINT fk_finding_post FOREIGN KEY (post_id) REFERENCES ceo_fb_post(id) ON DELETE CASCADE
+  CONSTRAINT fk_finding_post FOREIGN KEY (post_id) REFERENCES mar_social_post(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Une publication par post et par réseau (portail Marketing, 13/10/2026).
+--
+-- Un post validé part sur ses réseaux (`mar_social_post.reseaux`) : une ligne
+-- ici par réseau, programmée à l'heure du post, publiée par l'horloge
+-- (`/marketing/publication/cron`, toutes les 5 minutes) ou tout de suite.
+-- Quand tous ses réseaux non annulés sont publiés, le post passe « publie »
+-- avec l'id Facebook rendu. Voir docs/publication-reseaux.md.
+CREATE TABLE IF NOT EXISTS mar_social_publication (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  post_id     VARCHAR(16)  NOT NULL,
+  reseau      VARCHAR(12)  NOT NULL,                     -- facebook | instagram | linkedin
+  statut      VARCHAR(10)  NOT NULL DEFAULT 'programme', -- programme | en_cours | publie | erreur | annule
+  prevu_le    DATETIME     NOT NULL,
+  publie_le   DATETIME     NULL,
+  cible       VARCHAR(80)  NULL,                         -- la page, le compte, l'organisation
+  externe_id  VARCHAR(120) NULL,                         -- l'identifiant rendu par le réseau
+  lien        VARCHAR(400) NULL,
+  erreur      VARCHAR(400) NULL,
+  tentatives  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  cree_le     DATETIME     NOT NULL,
+  maj_le      DATETIME     NULL,
+  UNIQUE KEY u_post_reseau (post_id, reseau),
+  KEY k_du (statut, prevu_le)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------------------------------------------------------
@@ -891,7 +919,7 @@ CREATE TABLE IF NOT EXISTS ceo_fb_finding (
 -- sans demande liée est SAUVAGE. Aucun secret ici : tokens et clé en variables
 -- d'environnement.
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS brand_guard_pages (
+CREATE TABLE IF NOT EXISTS mar_bg_page (
   id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   shop_id          VARCHAR(8)   NULL,
   boutique         VARCHAR(80)  NOT NULL,
@@ -908,7 +936,7 @@ CREATE TABLE IF NOT EXISTS brand_guard_pages (
   KEY idx_shop (shop_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS brand_guard_rules (
+CREATE TABLE IF NOT EXISTS mar_bg_regle (
   code        VARCHAR(40)  PRIMARY KEY,
   famille     VARCHAR(60)  NOT NULL,
   libelle     VARCHAR(160) NOT NULL,
@@ -919,9 +947,9 @@ CREATE TABLE IF NOT EXISTS brand_guard_rules (
   maj_le      DATETIME     NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS brand_guard_checks (
+CREATE TABLE IF NOT EXISTS mar_bg_controle (
   id             BIGINT AUTO_INCREMENT PRIMARY KEY,
-  post_id        VARCHAR(16)  NULL,           -- la demande (ceo_fb_post), flux « avant »
+  post_id        VARCHAR(16)  NULL,           -- la demande (mar_social_post), flux « avant »
   fb_post_id     VARCHAR(64)  NULL,           -- le post Facebook, flux « après »
   shop_id        VARCHAR(8)   NULL,
   boutique       VARCHAR(80)  NULL,

@@ -64,7 +64,8 @@ function coStatut(array $c, string $canal): string
  */
 function coCommandes(int $sid, string $depuis): ?array
 {
-    $cle = 'coCmd:' . $sid . ':' . $depuis;
+    // `coCmd2` (18/10/2026) : la ligne porte la transaction de caisse (`tx`), pour ranger les tickets du webshop.
+    $cle = 'coCmd2:' . $sid . ':' . $depuis;
     $memo = setting($cle);
     if (is_array($memo) && isset($memo['le'], $memo['v']) && (time() - (int) $memo['le']) < CO_CACHE_MIN * 60) { return $memo['v']; }
     if (!PanelApi::configured()) { return null; }
@@ -86,7 +87,7 @@ function coCommandes(int $sid, string $depuis): ?array
             $articles = $aQte ? round($q, 1) : (float) count($prods);
         }
         $out[] = ['quand' => substr($quand, 0, 16), 'canal' => $canal, 'montant' => round((float) ($c['total_value'] ?? 0), 2),
-            'articles' => $articles, 'statut' => $statut, 'encaissee' => (int) ($c['id_transaction'] ?? 0) > 0];
+            'articles' => $articles, 'statut' => $statut, 'encaissee' => (int) ($c['id_transaction'] ?? 0) > 0, 'tx' => (int) ($c['id_transaction'] ?? 0)];
     }
     usort($out, static fn ($a, $b) => strcmp($a['quand'], $b['quand']));
     try {
@@ -261,6 +262,96 @@ function coCanauxPeriode(int $sid, string $du, string $au, string $auj): array
         'serie' => $serie, 'parJour' => $parJour, 'parSemaine' => $parSemaine, 'liste' => $liste, 'nCommandes' => $nTot, 'nWebshop' => $nWeb,
         'aPreparer' => $aPreparer, 'aVenir' => ['n' => $aVenir['n'], 'ca' => round($aVenir['ca'], 2)],
         'indispo' => $cmds === null, 'source' => $cmds === null ? 'panel muet' : 'commandes du panel + tickets caisse'];
+}
+
+/* --- le niveau et l'évolution de chaque canal, mois par mois ------------------------- */
+
+/**
+ * GET /exploitation/canaux-mois?shop=4&mois=2026-10&n=6 — chaque canal sur les `n` derniers
+ * mois (le mois choisi compris) et, jour par jour, le mois choisi et celui d'avant : la carte
+ * « Commandes et canaux » du mois en tire une mini-courbe par canal, l'écart au mois d'avant
+ * et, au clic, le cumul du mois face au mois d'avant (demande du 17/10/2026).
+ *
+ * Les canaux : `comptoir` = la caisse moins les commandes webshop encaissées en caisse (comme
+ * /exploitation/canaux, clients pro compris), `pro` = les tickets des sociétés (gravés depuis
+ * SV_DEBUT ; null avant, ou quand aucun jour n'est gravé), `cc` et `liv` = le webshop. Le mois
+ * choisi et celui d'avant se lisent jour par jour (la caisse heure par heure, gravée) ; les
+ * mois plus anciens prennent la caisse du mois (statistics/sales/kpis, gardée une fois le mois
+ * clos). Une seule lecture des commandes du panel, depuis le premier mois.
+ */
+function ep_exploitation_canaux_mois(): array
+{
+    $auj = date('Y-m-d');
+    $sid = (int) ($_GET['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    $mois = (string) ($_GET['mois'] ?? '');
+    if (!preg_match('/^\d{4}-\d{2}$/', $mois) || $mois > substr($auj, 0, 7)) { $mois = substr($auj, 0, 7); }
+    $n = max(2, min(12, (int) ($_GET['n'] ?? 6)));
+    @set_time_limit(120);
+    $liste = [];
+    for ($i = $n - 1; $i >= 0; $i--) { $liste[] = date('Y-m', strtotime($mois . '-01 -' . $i . ' month')); }
+    $cmds = coCommandes($sid, $liste[0] . '-01');
+    // Le webshop de chaque mois, jusqu'à aujourd'hui : ce qui est à venir n'est pas encore vendu.
+    $W = [];
+    foreach ((array) $cmds as $c) {
+        $j = substr($c['quand'], 0, 10);
+        if ($c['canal'] === 'compt' || $j > $auj) { continue; }
+        $ym = substr($j, 0, 7);
+        if (!isset($W[$ym])) { $W[$ym] = ['cc' => [0, 0.0], 'liv' => [0, 0.0], 'enc' => 0.0]; }
+        $W[$ym][$c['canal']][0]++; $W[$ym][$c['canal']][1] += $c['montant'];
+        if ($c['encaissee']) { $W[$ym]['enc'] += $c['montant']; }
+    }
+    $joursDe = static function (string $ym) use ($auj): array {
+        $out = []; $fin = date('Y-m-t', strtotime($ym . '-01'));
+        for ($d = $ym . '-01'; $d <= $fin && $d <= $auj; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $out[] = $d; }
+        return $out;
+    };
+    $proDe = static fn (?array $b): ?float => $b === null ? null : array_sum(array_map(static fn ($t) => (float) $t[2], $b['t']));
+    // Le mois choisi et celui d'avant : jour par jour.
+    $parJour = [];
+    foreach (array_slice($liste, -2) as $ym) {
+        $jours = $joursDe($ym);
+        $m = coMagasin($sid, $jours, $cmds);
+        $pro = $jours === [] ? [] : (vpJoursLus([$sid], $jours, 10)[$sid] ?? []);
+        $L = []; $t = ['pro' => 0.0, 'proJours' => 0, 'ticketsPro' => 0];
+        foreach ($m['serie'] as $x) {
+            $b = $pro[$x['j']] ?? null;
+            $cp = $proDe($b);
+            if ($cp !== null) { $t['pro'] += $cp; $t['proJours']++; $t['ticketsPro'] += count($b['t']); }
+            $L[] = ['j' => $x['j'], 'lu' => $x['lu'], 'comptoir' => $x['comptoir'], 'tickets' => $x['tickets'], 'pro' => $cp === null ? null : round($cp, 2), 'ticketsPro' => $b === null ? null : count($b['t']),
+                'cc' => $x['cc'], 'ccN' => $x['ccN'], 'liv' => $x['liv'], 'livN' => $x['livN']];
+        }
+        $parJour[$ym] = ['serie' => $L, 'm' => $m, 't' => $t, 'jours' => count($jours)];
+    }
+    // Les mois plus anciens : la caisse du mois, le pro des jours déjà gravés (rien n'est relu pour eux).
+    $anciens = array_slice($liste, 0, -2);
+    if ($anciens !== [] && function_exists('pvKpisMoisLot')) { pvKpisMoisLot(array_map(static fn ($ym) => [$sid, $ym], $anciens)); }
+    $historique = [];
+    foreach ($liste as $ym) {
+        $nbJ = (int) date('t', strtotime($ym . '-01'));
+        $w = $W[$ym] ?? ['cc' => [0, 0.0], 'liv' => [0, 0.0], 'enc' => 0.0];
+        if (isset($parJour[$ym])) {
+            $P = $parJour[$ym]; $m = $P['m'];
+            $h = ['comptoir' => $m['joursLus'] ? $m['comptoir'] : null, 'tickets' => $m['joursLus'] ? $m['tickets'] : null, 'joursLus' => $m['joursLus'], 'joursEcoules' => $P['jours'],
+                'pro' => $P['t']['proJours'] ? round($P['t']['pro'], 2) : null, 'proJours' => $P['t']['proJours'], 'ticketsPro' => $P['t']['proJours'] ? $P['t']['ticketsPro'] : null,
+                'cc' => $m['cc']['ca'], 'ccN' => $m['cc']['n'], 'liv' => $m['liv']['ca'], 'livN' => $m['liv']['n']];
+        } else {
+            $kp = function_exists('pvKpisMois') ? pvKpisMois($sid, $ym) : null;
+            $proJ = $ym . '-01' >= (defined('SV_DEBUT') ? substr(SV_DEBUT, 0, 7) . '-01' : '9999') ? $joursDe($ym) : [];
+            $pro = 0.0; $pj = 0; $tkp = 0;
+            foreach ($proJ as $j) { $b = vpLu($sid, $j); if ($b !== null) { $pro += (float) $proDe($b); $pj++; $tkp += count($b['t']); } }
+            $h = ['comptoir' => $kp !== null && $kp['ca'] > 0 ? round(max(0.0, $kp['ca'] - $w['enc']), 2) : null, 'tickets' => $kp !== null ? $kp['tickets'] : null, 'joursLus' => $kp !== null && $kp['ca'] > 0 ? $nbJ : 0, 'joursEcoules' => $nbJ,
+                'pro' => $pj ? round($pro, 2) : null, 'proJours' => $pj, 'ticketsPro' => $pj ? $tkp : null,
+                'cc' => round($w['cc'][1], 2), 'ccN' => $w['cc'][0], 'liv' => round($w['liv'][1], 2), 'livN' => $w['liv'][0]];
+        }
+        $h['total'] = $h['comptoir'] === null ? null : round($h['comptoir'] + $h['cc'] + $h['liv'], 2);
+        $historique[] = ['m' => $ym, 'jours' => $nbJ, 'enCours' => $ym === substr($auj, 0, 7)] + $h;
+    }
+    $prec = $liste[count($liste) - 2];
+    return ['shop' => (string) $sid, 'mois' => $mois, 'precedent' => $prec, 'historique' => $historique,
+        'jours' => ['courant' => $parJour[$mois]['serie'], 'precedent' => $parJour[$prec]['serie']],
+        'proDepuis' => defined('SV_DEBUT') ? SV_DEBUT : null, 'indispo' => $cmds === null,
+        'source' => $cmds === null ? 'panel muet : le webshop manque' : 'commandes du panel, caisse heure par heure (mois choisi et précédent), caisse du mois (avant), tickets pro gravés'];
 }
 
 /* --- les offres : bundles et promotions ------------------------------------------- */

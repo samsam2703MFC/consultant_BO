@@ -42,6 +42,19 @@ if [[ -f "$REPO_SRC/.deployenv" ]]; then
   COCKPIT_DB_PASSWORD="${COCKPIT_DB_PASSWORD:-}"
 fi
 
+# --- 0. Disque -------------------------------------------------------------
+# Un disque plein casse tout (apt, MySQL, sessions PHP : l'API répond 503). Relevé à chaque livraison ;
+# à 90 % ou plus, ménage sans toucher aux données (bin/menage_disque.sh : caches, journaux tournés,
+# images Docker inutilisées, binlogs MySQL de plus de 3 jours…), puis relance de MySQL s'il refusait
+# les connexions. Sous 300 Mo libres après le ménage, la livraison s'arrête AVANT de copier quoi que ce
+# soit : le site garde sa version précédente, au lieu d'une copie à moitié écrite.
+libre_disque="$(bash "$REPO_SRC/bin/menage_disque.sh" --seuil 90 --mysql | tee /dev/stderr | sed -n 's/^LIBRE_MO=//p' | tail -1)"
+if [[ -n "$libre_disque" && "$libre_disque" -lt 300 ]]; then
+  warn "Déploiement interrompu : ${libre_disque} Mo libres sur / après le ménage — il en faut 300."
+  warn "Libérer de la place sur le serveur (docs/DEPLOIEMENT.md › « Disque plein »), puis relancer la livraison."
+  exit 1
+fi
+
 # --- 1. Prérequis (sans perturber le panel déjà en place) ----------------
 log "Vérification des prérequis…"
 export DEBIAN_FRONTEND=noninteractive
@@ -154,6 +167,7 @@ rsync -a --delete \
   --exclude 'node_modules' --exclude '.deployenv' \
   --exclude 'public/uploads' \
   --exclude 'public/assistant/uploads' \
+  --exclude 'apps/production' \
   "$REPO_SRC/" "$TARGET_DIR/"
 
 # Photos annexées au planogramme : elles vivent HORS du dépôt et doivent
@@ -162,6 +176,7 @@ rsync -a --delete \
 mkdir -p "$TARGET_DIR/public/uploads/plano"
 mkdir -p "$TARGET_DIR/public/uploads/visites"
 mkdir -p "$TARGET_DIR/public/uploads/reclamations"
+mkdir -p "$TARGET_DIR/public/uploads/social"     # visuels des posts (portail Marketing → Publier)
 # Vignettes 640 px de la tablette des vendeuses (src/tablette.php) : sous
 # uploads/, donc protégées du rsync --delete par la même exclusion.
 mkdir -p "$TARGET_DIR/public/uploads/tablette"
@@ -543,7 +558,9 @@ done
 # (le jeton cuit dans le fichier avait ces deux faiblesses).
 chmod +x "$TARGET_DIR/bin/rapports_cron.sh"
 chmod +x "$TARGET_DIR/bin/newsletter_cron.sh"
+chmod +x "$TARGET_DIR/bin/social_cron.sh"
 chmod +x "$TARGET_DIR/bin/visites_cron.sh"
+chmod +x "$TARGET_DIR/bin/stock_cron.sh"
 # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
 # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
 # passer les tâches de l'heure pile.
@@ -555,7 +572,13 @@ chmod +x "$TARGET_DIR/bin/visites_cron.sh"
   # Newsletter : l'horloge des campagnes, toutes les 5 minutes (lots de 100 par
   # minute ; en mode test elle ne fait rien partir et le dit).
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/newsletter_cron.sh >/dev/null 2>&1"
+  # Publication : les posts validés partent sur Facebook, Instagram, LinkedIn à l'heure prévue
+  # (rien tant que la publication réelle est éteinte dans le portail Marketing).
+  echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/social_cron.sh >/dev/null 2>&1"
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/visites_cron.sh >/dev/null 2>&1"
+  # Le stock matière des magasins : relu toutes les 5 minutes pour garder chaque inventaire et chaque
+  # livraison du panel au moment où ils passent (l'API ne rend que le stock courant).
+  echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/stock_cron.sh >/dev/null 2>&1"
 } > /etc/cron.d/cockpit-rapports
 # cron refuse un fichier de /etc/cron.d écrivable par un autre que root.
 chown root:root /etc/cron.d/cockpit-rapports
@@ -616,6 +639,31 @@ php "$TARGET_DIR/bin/carte_sources.php" >>/var/log/cockpit-carte.log 2>&1 || tru
 log "Carte des sources : /etc/cron.d/cockpit-carte — chaque nuit à 3 h 40 (journal : /var/log/cockpit-carte.log)."
 
 log "Notifications de stock : /etc/cron.d/cockpit-push — toutes les 15 min de 5 h à 20 h (journal : /var/log/cockpit-push.log)."
+
+# Le disque, surveillé entre deux livraisons (24/10/2026) : toutes les 6 heures, ménage sûr dès 85 %,
+# alerte à l'admin du cockpit (notification) s'il reste à 90 % ou plus — avant que MySQL ne tombe.
+{
+  echo "# Cockpit CEO — le disque du serveur (bin/deploy.sh)"
+  echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  echo "23 */6 * * * root bash ${TARGET_DIR}/bin/menage_disque.sh --seuil 85 --alerte --mysql >>/var/log/cockpit-disque.log 2>&1"
+} > /etc/cron.d/cockpit-disque
+chown root:root /etc/cron.d/cockpit-disque
+chmod 600 /etc/cron.d/cockpit-disque
+# Les journaux des tâches du cockpit tournent chaque semaine (4 semaines gardées, compressées, 50 Mo au
+# plus) : sans cela, ils grossissaient sans fin.
+cat > /etc/logrotate.d/cockpit <<'LOGROTATE'
+/var/log/cockpit-*.log {
+  weekly
+  rotate 4
+  maxsize 50M
+  compress
+  delaycompress
+  missingok
+  notifempty
+  copytruncate
+}
+LOGROTATE
+log "Disque : /etc/cron.d/cockpit-disque — relevé et ménage toutes les 6 h, alerte à 90 % (journal : /var/log/cockpit-disque.log) ; journaux du cockpit tournés chaque semaine (/etc/logrotate.d/cockpit)."
 
 systemctl reload cron 2>/dev/null || systemctl restart cron 2>/dev/null || service cron reload 2>/dev/null || true
 # Les secteurs absents ou trop vieux se relisent tout de suite, en arrière-plan :

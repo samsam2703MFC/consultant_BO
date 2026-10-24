@@ -33,14 +33,31 @@ env:
   SRC_DIR: "/opt/consulant_bo_src"
   PWA_BASE: "http://185.180.206.46/pwa_consultant"
   APP_BASE: "http://185.180.206.46/consulant_bo"
+  ERP_URL: "http://185.180.206.46/production"
+  # Serveur de test : un bouton « Entrer » ouvre l'ERP sur ce compte. Vide : login et mot de passe de l'ERP.
+  ERP_ENTREE_LIBRE: "admin"
+  # Bac à sable ouvert (décision du 23/10/2026) : pas de mot de passe navigateur, « Entrer » sans mot de passe.
+  # Sans "1", le bouton « Entrer » n'est accepté que derrière apps/production/deploy/acces_test.htpasswd.
+  ERP_SANDBOX_OUVERT: "1"
+  # Données de démonstration du module « Gestion de production atelier » (serveur de test seulement).
+  ERP_TFB_DEMO: "1"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 20 et non 15 : le premier passage de l'ERP importe sa base (~110 Mo).
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # L'ERP (apps/production) livre ses dépendances : vendor/ n'est pas dans
+      # Git et le serveur n'a pas forcément composer. Le composer.lock est figé
+      # pour PHP 8.1 (config.platform), la version du serveur.
+      - name: Préparer l'ERP (composer install)
+        run: |
+          composer install --working-dir=apps/production/app/public \
+            --no-dev --no-interaction --no-progress --optimize-autoloader
 
       # Un script de déploiement mal quoté part sur le serveur sans que rien
       # ne l'arrête : le transfert réussit, et c'est l'exécution distante qui
@@ -135,6 +152,23 @@ jobs:
         run: |
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
             "rm -f ${SRC_DIR}/.deployenv" || true
+
+      # ERP servi sous /production, base séparée (copie importée une fois depuis
+      # /root/erp_import). Détail : apps/production/deploy/server.sh.
+      - name: Déployer l'ERP (/production)
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "ERP_URL='${ERP_URL}' ERP_ENTREE_LIBRE='${ERP_ENTREE_LIBRE}' ERP_SANDBOX_OUVERT='${ERP_SANDBOX_OUVERT}' ERP_TFB_DEMO='${ERP_TFB_DEMO}' bash ${SRC_DIR}/apps/production/deploy/server.sh"
+          # Avec le mot de passe navigateur, l'extérieur sans identifiants doit recevoir 401.
+          expected=200
+          [ -f apps/production/deploy/acces_test.htpasswd ] && expected=401
+          code=$(curl -s -o /dev/null -w '%{http_code}' "${ERP_URL}/")
+          if [ "$code" != "$expected" ]; then
+            echo "::error title=ERP::${ERP_URL}/ répond HTTP ${code} depuis l'extérieur (${expected} attendu)"; exit 1
+          fi
+          echo "OK  ${ERP_URL}/ répond ${code} depuis l'extérieur"
 
       - name: Recette publique (endpoints depuis le runner)
         run: |
@@ -280,4 +314,13 @@ jobs:
             echo; echo "=== toutes les routes GET ==="
             grep -rhoE "get\([\"'\''][^\"'\'']+" /var/www/html/tfb/api --include="*.php" 2>/dev/null \
               | grep -v vendor | sort -u | head -100
+            echo; echo "=== promotions, remises, bundles : routes et fichiers (16/10/2026) ==="
+            grep -rnoE "(get|post|put|delete)\([\"'\''][^\"'\'']*(promotion|discount|bundle|buy-x|voucher)[^\"'\'']*" /var/www/html/tfb/api --include="*.php" 2>/dev/null \
+              | grep -v vendor | sort -u | head -80
+            echo; echo "=== connexions (auth/login) ==="
+            grep -rhoE "post\([\"'\''][^\"'\'']*(login|auth)[^\"'\'']*" /var/www/html/tfb/api --include="*.php" 2>/dev/null | grep -v vendor | sort -u | head -30
+            echo; echo "=== qui a le droit : les routes promotions et ce qui les garde ==="
+            for f in $(grep -rlE "promotions" /var/www/html/tfb/api --include="*Routes*.php" 2>/dev/null | grep -v vendor | head -6); do
+              echo "--- $f"; grep -nE "promotion|middleware|Middleware|role|Role|admin|consultant|group\(" "$f" | head -60
+            done
           '
