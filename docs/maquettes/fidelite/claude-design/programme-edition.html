@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fidélité — Programme — une règle ouverte</title>
+<!--
+  Cockpit L'Atelier by — ERP franchisé › Fidélité (#/fidelity), vue « Programme · édition ».
+  Export statique de l'écran codé (24/10/2026) : le HTML tel que le cockpit le rend, les styles intégrés
+  (jetons du design system + fidelite.css). Les chiffres clients sont un jeu d'essai.
+  Le créneau ×2 du mardi au jeudi est ouvert et son heure de début modifiée (15:00) : la phrase aux valeurs modifiables, la portée, « Retirer la règle » / « OK », et la barre flottante de publication en bas.
+  Polices : celles du design system (Gotham, Vank) ; à défaut, la pile système prend le relais.
+  Les classes fi-* sont celles du code (public/assets/css/fidelite.css) : les garder facilite le retour.
+-->
+<style>
+/* --- Jetons du design system L'Atelier by (public/assets/ds/global.css) --- */
+:root {
+  /* --- Brand palette ----------------------------------------------------- */
+  --color-primary:            #8D1D2C;   /* Ruby Red — primary actions, badges, borders */
+  --color-secondary:          #F2C9A0;   /* Abricot — linked state, delivery mode ON */
+  --color-bg:                 #EAE4DC;   /* Beige — page background */
+  --color-surface:            #FFFFFF;   /* Blanc — cards, panels */
+  --color-text:               #222222;   /* Noir — body text */
+  --color-text-muted:         #666666;   /* Muted grey — secondary text, placeholders */
+
+  /* Semantic aliases used by components */
+  --color-text-primary:       var(--color-text);
+  --color-text-secondary:     var(--color-text-muted);
+  --color-background-secondary: #F4EFE8;         /* faint beige — input / secondary surfaces */
+  --color-border-secondary:   rgba(34, 34, 34, 0.18);
+  --color-border-tertiary:    rgba(34, 34, 34, 0.10);
+
+  /* State + accent colors */
+  --color-linked:             #F2C9A0;   /* Office client linked (Abricot) */
+  --color-collect:            #8D1D2C;   /* Not linked / collect mode */
+  --color-on-abricot:         #6b4420;   /* Dark amber — text on Abricot backgrounds */
+  --color-collection-border:  #c17a2a;   /* Deep amber */
+  --color-collection-fill:    #FAC775;   /* Collection badge background */
+  --color-collection-icon:    #6b3d0a;   /* Collection badge icon/label */
+
+  /* Website / marketing accents */
+  --color-popup:              #78554B;   /* Third color — Pop-Up markers & badges */
+  --color-ink:                #222222;   /* Illustration stroke ink */
+
+  /* --- Typography -------------------------------------------------------- */
+  /* Brand typography — strict. No system fallback allowed.
+     Vank ships full Latin so accents render natively; Gotham is the
+     last-resort fallback for any remaining missing glyph (e.g. € in
+     Regular/Italic, which falls through to Book/Medium). */
+  --font-display:             'Vank', 'Gotham';          /* informational / display */
+  --font-ui:                   'Gotham';                  /* body / UI */
+  --font-accent:               'Playwrite DEVA', 'Gotham'; /* script informational accent */
+
+  /* Type scale (px) */
+  --font-size-page-title:     32px;   /* Page title / brand name (display) */
+  --font-size-section-title:  20px;   /* Section title (display) */
+  --font-size-navbar-brand:   15px;   /* Brand name in navbar */
+  --font-size-body:           16px;   /* Body text */
+  --font-size-label:          13px;   /* Labels / secondary */
+  --font-size-small:          11px;   /* Small label / uppercase nav */
+  --font-size-button:         14px;   /* Button text */
+  --font-size-price:          14px;   /* Price (range 12–16px) */
+  --font-size-admin-label:    11px;   /* Section label (admin) */
+
+  /* Line heights */
+  --line-height-display:      1.2;
+  --line-height-section:      1.3;
+  --line-height-body:         1.6;
+
+  /* Letter spacing */
+  --tracking-nav:             0.06em;
+  --tracking-admin:           0.08em;
+
+  /* Font weights */
+  --weight-regular:           400;
+  --weight-medium:            500;
+
+  /* --- Grid -------------------------------------------------------------- */
+  --grid-cols-desktop:        6;   /* @kind other */
+  --grid-cols-tablet:         3;   /* @kind other */
+  --grid-cols-mobile:         2;   /* @kind other */
+  --grid-gap:                 12px;
+
+  /* --- Border radius ---------------------------------------------------- */
+  --radius-sm:                6px;
+  --radius-md:                8px;
+  --radius-lg:                12px;
+  --radius-pill:              999px;
+
+  /* --- Spacing ---------------------------------------------------------- */
+  --spacing-xs:               4px;
+  --spacing-sm:               8px;
+  --spacing-md:               16px;
+  --spacing-lg:               24px;
+  --spacing-xl:               32px;
+
+  /* --- PACKAGING — accents de variété (confitures & miels) ---------------
+     ⚠ PORTÉE LIMITÉE : ces couleurs s'appliquent UNIQUEMENT au packaging
+     (étiquettes 65×45 mm et pastille couvercle Ø52 mm). Elles ne remplacent
+     PAS la palette de marque (--color-primary, --color-secondary, etc.).
+     Usage : pastille couleur / accent de variété — jamais en fond pleine
+     surface. Fond d'étiquette : toujours blanc (--color-surface). @kind color
+     -------------------------------------------------------------------- */
+  /* Confitures — fruits rouges */
+  --pkg-fraise:               #8D1D2C;   /* Ruby Red maison */
+  --pkg-framboise:            #A61E4D;   /* Rosé magenta profond */
+  --pkg-groseille:            #C41E3A;   /* Rouge vif éclatant */
+  --pkg-cerise:               #7B1424;   /* Rouge griotte profond */
+  --pkg-mure:                 #4A1E3C;   /* Pourpre foncé */
+  --pkg-myrtille:             #3B3468;   /* Bleu-violet */
+  --pkg-cassis:               #2E1A47;   /* Violet nuit */
+
+  /* Confitures — fruits jaunes / orangés */
+  --pkg-abricot:              #E8964B;   /* Abricot saturé (dérivé Abricot Pastel) */
+  --pkg-peche:                #F4A97F;   /* Pêche douce */
+  --pkg-mirabelle:            #E8B84B;   /* Jaune doré */
+  --pkg-orange-amere:         #D97B29;   /* Orange brûlé */
+  --pkg-coing:                #D9A441;   /* Ambre rosé */
+
+  /* Confitures — autres */
+  --pkg-rhubarbe:             #C96A6E;   /* Rose-vert (dominante rosée) */
+  --pkg-figue:                #6E3B5C;   /* Violet chaud */
+  --pkg-prune:                #5C3A6E;   /* Violet prune (prune / quetsche) */
+  --pkg-poire:                #C8C87A;   /* Vert-jaune doux */
+  --pkg-pomme:                #A8C47A;   /* Vert tendre */
+
+  /* Miels — dégradé d'ambres (clair → foncé = intensité du goût) */
+  --pkg-miel-acacia:          #F5DFA8;   /* Ambre très clair */
+  --pkg-miel-colza:           #EFD9A0;   /* Crème clair */
+  --pkg-miel-toutes-fleurs:   #E3B155;   /* Ambre classique */
+  --pkg-miel-tilleul:         #DCC26B;   /* Jaune-vert clair */
+  --pkg-miel-lavande:         #E8C97F;   /* Ambre doré */
+  --pkg-miel-lavande-accent:  #9A8FBF;   /* Accent secondaire lavande (autorisé) */
+  --pkg-miel-chataignier:     #9C6B2F;   /* Ambre foncé */
+  --pkg-miel-foret:           #6B4A26;   /* Brun foncé (miellat / forêt) */
+  --pkg-miel-sarrasin:        #5C3D22;   /* Brun très foncé */
+
+  /* --- LEVIERS (of_tag) — axes de performance du réseau de franchises -------
+     Système de gestion par levier. TOUT objet opérationnel (checklist, tâche,
+     KPI, formation, compétence) est rattaché à UN levier via of_tag.levid.
+     Ces couleurs SONT la source de vérité of_tag.color — l'UI ne code jamais
+     une couleur de levier en dur, elle lit ces variables (mappées depuis
+     of_tag.color au runtime : var(--lev-<tag-slug-en-minuscules>)).
+     ⚠ Labour Cost & Overhead Cost partagent #8b5cf6 → différencier par le nom.
+     Ordre d'affichage/regroupement : Trafic → Récurrence → Expérience Client
+     → Food Cost → Labour Cost → Overhead Cost. @kind color
+     -------------------------------------------------------------------- */
+  --lev-trafic:               #6366f1;   /* id 4 · TRAFIC */
+  --lev-recurrence:           #ec4899;   /* id 3 · RECURRENCE */
+  --lev-xp:                   #f59e0b;   /* id 2 · XP — Expérience Client */
+  --lev-food-cost:            #10b981;   /* id 5 · FOOD_COST */
+  --lev-labour-cost:          #8b5cf6;   /* id 6 · LABOUR_COST */
+  --lev-overhead-cost:        #8b5cf6;   /* id 7 · OVERHEAD_COST */
+}
+/* Sans les fichiers de polices, une pile de secours sans empattement plutôt que le Times du navigateur. */
+:root{--font-ui:'Gotham',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;--font-display:'Vank','Gotham',-apple-system,'Helvetica Neue',Arial,sans-serif}
+html,body{margin:0}
+body{background:var(--color-bg);font-family:var(--font-ui),'Helvetica Neue',Arial,sans-serif;color:var(--color-text);-webkit-font-smoothing:antialiased}
+.page{max-width:1240px;margin:0 auto;padding:30px 32px 60px}
+.page>header{margin-bottom:22px}
+.page>header h1{font-family:var(--font-display),Georgia,serif;font-size:30px;font-weight:400;margin:0;line-height:1.15}
+.page>header p{font-size:13px;color:var(--color-text-muted);margin:6px 0 0;max-width:640px;line-height:1.5}
+input,select,button{font:inherit}
+/* --- Écran Fidélité (public/assets/css/fidelite.css) --- */
+/* Cockpit CEO — écran Fidélité (ERP franchisé › Fidélité). Préfixe fi-.
+ * Écriture sobre, à la manière des Réglages d'Apple (24/10/2026) : listes groupées sur fond blanc, séparateurs
+ * fins, une seule couleur d'accent (le rubis de la marque), des chiffres grands et légers, peu de cadres.
+ * Les six couleurs des types d'achat sont celles des maquettes (docs/maquettes/fidelite), passées au
+ * validateur de palette (séparation daltonisme ≥ 9,8) ; chacune porte aussi son nom en légende. */
+.fi{--m1:#9a5b16;--m2:#eb6834;--m3:#2a78d6;--m4:#c2336a;--m5:#1baf7a;--m6:#6250d6;
+  --fi-txt:#1d1d1f;--fi-2:#6e6e73;--fi-3:#8e8e93;--fi-sep:rgba(60,60,67,.13);--fi-fill:rgba(118,118,128,.12);--fi-fill2:rgba(118,118,128,.08);
+  --fi-vert:#34c759;--fi-rouge:#d70015;--fi-ok:#248a3d;--fi-r:16px;
+  display:flex;flex-direction:column;gap:22px;font-family:var(--font-ui);font-weight:300;color:var(--fi-txt);font-size:13.5px;line-height:1.4;max-width:1180px;padding-bottom:70px}
+:where(.fi) button{font:inherit;cursor:pointer;color:inherit}
+.fi b{font-weight:400}
+.fi .m1{background:var(--m1)}.fi .m2{background:var(--m2)}.fi .m3{background:var(--m3)}.fi .m4{background:var(--m4)}.fi .m5{background:var(--m5)}.fi .m6{background:var(--m6)}
+.fi .ko{color:var(--fi-rouge)}
+.fi-col{display:flex;flex-direction:column;gap:26px;min-width:0}
+.fi-g21{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:28px;align-items:start}
+.fi-g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:1100px){.fi-g21,.fi-g2{grid-template-columns:minmax(0,1fr)}}
+.fi-vide{padding:40px 0;text-align:center;color:var(--fi-2)}
+
+/* En haut : le contrôle segmenté, la portée */
+.fi-haut{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.fi-segc{display:inline-flex;background:var(--fi-fill);border-radius:9px;padding:2px}
+.fi-segc button{border:none;background:transparent;font-size:13px;font-weight:400;padding:6px 22px;border-radius:7px;min-width:120px}
+.fi-segc button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
+.fi-popup{position:relative;margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:400;color:var(--fi-txt);background:#fff;border-radius:8px;padding:6px 30px 6px 12px;box-shadow:0 0 0 .5px var(--fi-sep),0 1px 2px rgba(0,0,0,.05)}
+.fi-popup::after{content:"";position:absolute;right:11px;top:50%;width:6px;height:6px;border-right:1.5px solid var(--fi-2);border-bottom:1.5px solid var(--fi-2);transform:translateY(-70%) rotate(45deg)}
+.fi-popup select{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:13px}
+.fi-essai{margin:-8px 0 0;font-size:12px;color:var(--fi-2);display:flex;align-items:center;gap:8px}
+.fi-essai i{width:7px;height:7px;border-radius:50%;background:#ff9f0a;flex:none}
+.fi-note-s{margin:8px 0 0;font-size:11.5px;color:var(--fi-3);line-height:1.45}
+.fi-note-s.centre{text-align:center}
+.fi-toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:12px;font-size:13px;font-weight:400;background:rgba(29,29,31,.92);color:#fff;padding:10px 14px 10px 18px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.18);backdrop-filter:blur(10px)}
+.fi-toast.ko{background:rgba(215,0,21,.94)}
+.fi-toast button{border:none;background:none;color:#fff;font-size:17px;opacity:.7;padding:0 2px}
+
+/* Les groupes et leurs listes */
+/* Le design system donne 48 px aux <section> : ici, des groupes serrés (comme les primes, app.css). */
+.fi section.fi-grp{min-width:0;padding:0}
+.fi-grp>h3{margin:0 0 7px 16px;font-size:12px;font-weight:400;text-transform:uppercase;letter-spacing:.04em;color:var(--fi-2)}
+.fi-grp-pied{margin:7px 16px 0;font-size:12px;color:var(--fi-3);line-height:1.45}
+.fi-liste{background:#fff;border-radius:var(--fi-r);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.fi-row{display:flex;align-items:center;gap:12px;padding-right:16px;position:relative}
+/* Les séparateurs commencent après l'icône, comme dans les Réglages. */
+.fi-row+.fi-row::before,.fi-edit+.fi-row::before,.fi-row+.fi-add::before,.fi-edit+.fi-add::before,.fi-add+.fi-add::before{content:"";position:absolute;left:59px;right:0;top:0;height:.5px;background:var(--fi-sep)}
+.fi-row.vide{padding:16px;color:var(--fi-3)}
+.fi-row-main{flex:1;min-width:0;display:flex;align-items:center;gap:13px;border:none;background:none;text-align:left;padding:11px 0 11px 16px}
+.fi-row-main:hover .fi-chev{color:var(--fi-2)}
+.fi-ic{flex:none;width:30px;height:30px;border-radius:8px;background:var(--c);color:#fff;font:500 12px/30px var(--font-ui);text-align:center;letter-spacing:-.02em}
+.fi-row-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.fi-row-txt b{font-size:14px;font-weight:400;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi-row-txt>span{font-size:12.5px;color:var(--fi-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi-pt{width:7px;height:7px;border-radius:50%;background:#0a84ff;flex:none}
+.fi-row-stat{flex:none;max-width:210px;font-size:12px;color:var(--fi-3);text-align:right;line-height:1.3}
+.fi-row-stat.ko{color:var(--fi-rouge)}
+.fi-chev{flex:none;font-size:18px;color:#c7c7cc;transition:transform .15s;margin-left:2px}
+.fi-row.ouvert .fi-chev{transform:rotate(90deg)}
+.fi-row.off .fi-row-txt,.fi-row.off .fi-ic{opacity:.45}
+.fi-row.sup .fi-row-txt b{text-decoration:line-through;color:var(--fi-3)}
+.fi-tog{flex:none;width:46px;height:28px;border-radius:999px;border:none;background:#e9e9eb;position:relative;padding:0;transition:background .18s}
+.fi-tog::after{content:"";position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18),0 0 0 .5px rgba(0,0,0,.04);transition:left .18s}
+.fi-tog.on{background:var(--fi-vert)}.fi-tog.on::after{left:20px}
+.fi-tog.fixe{opacity:.4}
+.fi-add{display:flex;align-items:center;gap:13px;width:100%;border:none;background:none;text-align:left;padding:12px 16px;font-size:14px;font-weight:400;color:var(--color-primary);position:relative}
+.fi-add>span{width:30px;text-align:center;font-size:20px;font-weight:300;line-height:1}
+.fi-add select{border:none;background:none;font:400 14px var(--font-ui);color:var(--color-primary);appearance:none;-webkit-appearance:none;cursor:pointer;padding:0;outline:none}
+
+/* Une règle ouverte : la phrase et ses valeurs */
+.fi-edit{padding:4px 16px 14px 59px;background:#fff}
+.fi-ph{font-size:13.5px;line-height:2.25;color:var(--fi-txt)}
+.fi-in{font:400 13px var(--font-ui);color:var(--color-primary);padding:3px 8px;border:none;border-radius:7px;background:var(--fi-fill2);font-variant-numeric:tabular-nums;vertical-align:baseline;outline:none}
+.fi-in:focus{background:#fff;box-shadow:0 0 0 2px rgba(141,29,44,.35)}
+.fi-in.t{color:var(--fi-txt)}
+.fi-in.s{appearance:none;-webkit-appearance:none;padding-right:20px;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 11px) 55%,calc(100% - 7px) 55%;background-size:4px 4px;background-repeat:no-repeat;background-color:var(--fi-fill2)}
+.fi-in.h{width:52px;text-align:center}.fi-in.d{width:136px}
+.fi-in[type=number]{-moz-appearance:textfield;appearance:textfield;text-align:right}
+.fi-in[type=number]::-webkit-inner-spin-button,.fi-in[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.fi-champ{white-space:nowrap}
+.fi-u{margin-left:4px;color:var(--fi-2)}
+.fi-jours{display:inline-flex;gap:3px;vertical-align:middle}
+.fi-jours button{width:24px;height:24px;border-radius:50%;border:none;background:var(--fi-fill2);color:var(--fi-2);font:400 11px var(--font-ui);padding:0}
+.fi-jours button.on{background:var(--color-primary);color:#fff}
+.fi-pastille{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:0}
+.fi-edit-pied{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px;flex-wrap:wrap}
+.fi-portee{font-size:12.5px;color:var(--fi-2);display:inline-flex;align-items:center;gap:8px}
+.fi-edit-act{display:inline-flex;gap:18px;margin-left:auto}
+.fi-lien{border:none;background:none;padding:0;font-size:13.5px;font-weight:300;color:var(--color-primary)}
+.fi-lien.fort{font-weight:400}
+.fi-lien.rouge{color:var(--fi-rouge)}
+.fi-cta{border:none;background:var(--color-primary);color:#fff;font:400 13.5px var(--font-ui);padding:8px 18px;border-radius:999px}
+.fi-cta[disabled]{opacity:.5;cursor:default}
+
+/* La barre de publication, flottante */
+.fi-dock{position:sticky;bottom:18px;align-self:center;z-index:20;display:flex;align-items:center;gap:18px;background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-radius:999px;padding:7px 7px 7px 20px;box-shadow:0 8px 32px rgba(0,0,0,.14),0 0 0 .5px rgba(0,0,0,.06);font-size:13px}
+.fi-dock>span{color:var(--fi-2)}
+
+/* L'app du client */
+.fi-aside{position:sticky;top:12px}
+.fi-tel{width:250px;margin:0 auto;border-radius:44px;background:#1d1d1f;padding:9px;box-shadow:0 20px 40px rgba(0,0,0,.12)}
+.fi-ecran{border-radius:36px;background:#f2f2f7;overflow:hidden;min-height:440px;padding:38px 14px 18px}
+.fi-pass{background:linear-gradient(160deg,#a32637 0%,var(--color-primary) 60%,#6e1522 100%);color:#fff;border-radius:16px;padding:14px 14px 13px;box-shadow:0 6px 16px rgba(141,29,44,.25)}
+.fi-pass-h{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+.fi-pass-v{font-size:30px;font-weight:200;margin-top:14px;letter-spacing:-.01em}
+.fi-pass-v small{font-size:12px;font-weight:300;opacity:.8}
+.fi-pass-j{height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin-top:8px;overflow:hidden}
+.fi-pass-j i{display:block;height:100%;background:#fff;border-radius:2px}
+.fi-pass-s{font-size:10.5px;margin-top:7px;opacity:.85}
+.fi-notif{margin-top:10px;background:rgba(255,255,255,.85);border-radius:12px;padding:8px 10px;font-size:11px;color:var(--fi-txt);line-height:1.35}
+.fi-notif b{display:block;font-size:10px;color:var(--fi-2);text-transform:uppercase;letter-spacing:.04em}
+.fi-tel-k{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--fi-2);margin:14px 4px 6px}
+.fi-tel-carte{background:#fff;border-radius:11px;padding:8px 10px;margin-top:5px}
+.fi-tel-carte b{display:block;font-size:11px;font-weight:400}
+.fi-tel-carte span{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap}
+.fi-tel-carte span i{width:9px;height:9px;border-radius:50%;background:color-mix(in srgb,var(--c) 20%,#fff)}
+.fi-tel-carte span i.f{background:var(--c)}
+.fi-tel-carte.vide{font-size:11px;color:var(--fi-3)}
+.fi-tel-p{display:flex;gap:6px}
+.fi-tel-p>div{flex:1;min-width:0;background:#fff;border-radius:11px;padding:8px 10px}
+.fi-tel-p b{display:block;font-size:14px;font-weight:400}
+.fi-tel-p span{display:block;font-size:10px;color:var(--fi-2)}
+
+/* Simulateur, budget */
+.fi-sim{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 16px}
+.fi-sim{position:relative}
+.fi-sim+.fi-sim::before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--fi-sep)}
+.fi-sim>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fi-sim b{font-size:14px}
+.fi-sim span{font-size:12px;color:var(--fi-2)}
+.fi-sim-v{text-align:right;flex:none}
+.fi-sim-v b{font-size:20px;font-weight:300}
+.fi-sim em{font-style:normal}.fi-sim em.fort{color:#c93400}
+.fi-bud{display:flex;align-items:center;gap:16px;padding:14px 16px}
+.fi-bud>div{display:flex;flex-direction:column;gap:3px}
+.fi-bud b{font-size:28px;font-weight:200;letter-spacing:-.01em}
+.fi-bud span{font-size:12px;color:var(--fi-2)}
+.fi-bud em{font-style:normal}
+
+/* Clients : les chiffres du haut */
+.fi-chiffres{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:#fff;border-radius:var(--fi-r);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.fi-chiffres>div{padding:16px 18px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.fi-chiffres>div+div{box-shadow:inset .5px 0 0 var(--fi-sep)}
+.fi-chiffres span{font-size:12px;color:var(--fi-2)}
+.fi-chiffres b{font-size:30px;font-weight:200;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.fi-chiffres small{font-size:11.5px;color:var(--fi-3);line-height:1.35}
+.fi-chiffres .fort b{color:var(--color-primary)}
+@media (max-width:1100px){.fi-chiffres{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Récence × fréquence */
+.fi-rfg{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(280px,1fr);gap:0}
+.fi-rfg>div:first-child{padding:18px 20px}
+@media (max-width:1100px){.fi-rfg{grid-template-columns:minmax(0,1fr)}}
+.fi-rf{display:grid;grid-template-columns:62px repeat(5,minmax(0,1fr));gap:5px}
+.fi-rf-h{font-size:11px;color:var(--fi-3);text-align:center;padding-bottom:2px}
+.fi-rf-l{font-size:11px;color:var(--fi-3);display:flex;align-items:center}
+.fi-rf-c{--t:0;position:relative;height:50px;border-radius:10px;border:none;font:300 14px var(--font-ui);font-variant-numeric:tabular-nums;
+  background:color-mix(in srgb,var(--color-primary) calc(var(--t) * 85%),#f5f5f7);color:var(--fi-txt);padding:0;transition:transform .1s}
+.fi-rf-c:hover{transform:scale(1.03)}
+.fi-rf-c.fonce{color:#fff}
+.fi-rf-c.on{box-shadow:0 0 0 2px #fff,0 0 0 3.5px var(--fi-txt)}
+.fi-rf-c i{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#ff3b30;box-shadow:0 0 0 1.5px #fff}
+.fi-rf-axe{display:flex;justify-content:space-between;margin:8px 0 0 67px;font-size:11px;color:var(--fi-3)}
+.fi-det{padding:18px 20px;box-shadow:inset .5px 0 0 var(--fi-sep);min-width:0}
+.fi-segs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px}
+.fi-segs button{border:none;background:var(--fi-fill2);font-size:12px;font-weight:300;padding:5px 11px;border-radius:999px;color:var(--fi-2)}
+.fi-segs button.on{background:var(--fi-txt);color:#fff}
+.fi-det-n{display:flex;align-items:baseline;gap:10px}
+.fi-det-n b{font-size:40px;font-weight:200;letter-spacing:-.02em;line-height:1}
+.fi-det-n span{font-size:13px;color:var(--fi-2)}
+.fi-mix{display:flex;gap:2px;height:6px;border-radius:3px;overflow:hidden;min-width:0;margin-top:14px}
+.fi-mix i{display:block;min-width:2px}
+.fi-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--fi-2);margin-top:8px}
+.fi-leg.pad{padding:4px 16px 14px}
+.fi-leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
+.fi-kv{margin-top:14px}
+.fi-kv>div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;font-size:13px;box-shadow:inset 0 -.5px 0 var(--fi-sep)}
+.fi-kv>div:last-child{box-shadow:none}
+.fi-kv span{color:var(--fi-2)}
+.fi-kv b{font-weight:400;text-align:right}
+.fi-lecture{margin:12px 0 0;font-size:13px;line-height:1.5;color:var(--fi-txt)}
+.fi-act{display:flex;align-items:center;gap:18px;margin-top:14px;flex-wrap:wrap}
+
+/* D'un mois à l'autre, ce qu'achète chaque segment */
+.fi-flux{display:grid;grid-template-columns:170px minmax(0,1fr) 140px;gap:14px;align-items:center;padding:11px 16px}
+.fi-flux+.fi-flux,.fi-mixl+.fi-mixl{box-shadow:inset 0 .5px 0 var(--fi-sep)}
+.fi-flux>div:first-child{display:flex;flex-direction:column;gap:1px}
+.fi-flux>div:first-child span{font-size:11.5px;color:var(--fi-3)}
+.fi-flux-b{display:flex;gap:2px;height:6px;border-radius:3px;overflow:hidden}
+.fi-flux-b i{display:block;min-width:0}
+.fi-flux-b .m{background:var(--fi-vert)}.fi-flux-b .r{background:#d1d1d6}.fi-flux-b .d{background:#ff3b30}
+.fi-flux-v{display:flex;justify-content:flex-end;gap:10px;font-size:12px;color:var(--fi-2);font-variant-numeric:tabular-nums}
+.fi-flux-v .vert{color:var(--fi-ok)}.fi-flux-v .rouge{color:var(--fi-rouge)}
+.fi-mixl{display:grid;grid-template-columns:100px minmax(0,1fr) 64px;gap:14px;align-items:center;padding:11px 16px}
+.fi-mixl .fi-mix{margin-top:0}
+.fi-mixl span{font-size:12px;color:var(--fi-2);text-align:right}
+
+</style>
+</head>
+<body>
+<main class="page">
+<header><h1>Fidélité</h1><p>Les points, les cartes à tampons, les bons et les cadeaux du client : ce qui les déclenche, quand les points comptent double, ce que le programme coûte. Et ce que les clients en font : qui revient, à quel rythme, pour quel type d’achat.</p></header>
+<div data-screen="fidelite" class="fi"><div class="fi-haut"><div class="fi-segc"><button class="on">Programme</button><button class="">Clients</button></div>
+    <label class="fi-popup"><select><option value="" selected="">Réseau</option><option value="2">Corbais</option><option value="3">Gosselies</option><option value="4">Halle</option><option value="5">Sombreffe</option></select><span>Réseau</span></label></div><p class="fi-essai"><i></i>Données d’essai — aucune visite carte en base pour l’instant. Les calculs sont ceux qui tourneront sur les vraies visites.</p><div class="fi-g21"><div class="fi-col"><section class="fi-grp"><h3>On gagne des points</h3><div class="fi-liste">
+    <div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#8D1D2C">€</span>
+      <span class="fi-row-txt"><b>Points par euro</b><span>1&nbsp;€ = 1 point · boutique, click &amp; collect, livraison</span></span>
+      <span class="fi-row-stat">167 199 points en 30 jours</span><span class="fi-chev">›</span></button>
+    <span class="fi-tog on fixe" title="Toujours active"></span></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#8D1D2C">€</span>
+      <span class="fi-row-txt"><b>Bonus panier</b><span>dès 30&nbsp;€ : +50 points</span></span>
+      <span class="fi-row-stat">1 426 paniers · 71 300 points</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div>
+    <button class="fi-add"><span>+</span>Ajouter un bonus panier</button>
+    
+  </div><p class="fi-grp-pied">la base, sur tous les canaux</p></section><section class="fi-grp"><h3>Ça compte double</h3><div class="fi-liste">
+    <div class="fi-row ouvert">
+    <button class="fi-row-main" aria-expanded="true"><span class="fi-ic" style="--c:#E8964B">×2</span>
+      <span class="fi-row-txt"><b><i class="fi-pt" title="modifiée, pas encore publiée"></i>×2 du mar au jeu, 15:00 – 17:00</b><span>tous les achats · jours creux : remplir l’après-midi</span></span>
+      <span class="fi-row-stat">modifiée</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-edit"><div class="fi-ph"><span class="fi-t">Les points comptent</span> <select class="fi-in s"><option value="2" selected="">×2</option><option value="3">×3</option><option value="4">×4</option><option value="5">×5</option></select> <span class="fi-t">le</span> <span class="fi-jours"><button class="" title="lundi">L</button><button class="on" title="mardi">M</button><button class="on" title="mercredi">M</button><button class="on" title="jeudi">J</button><button class="" title="vendredi">V</button><button class="" title="samedi">S</button><button class="" title="dimanche">D</button></span> <span class="fi-t">de</span> <input type="text" inputmode="numeric" maxlength="5" class="fi-in h" value="15:00" placeholder="hh:mm"> <span class="fi-t">à</span> <input type="text" inputmode="numeric" maxlength="5" class="fi-in h" value="17:00" placeholder="hh:mm"><span class="fi-t">, sur</span> <select class="fi-in s"><option value="" selected="">tous les achats</option><option value="pain">le pain</option><option value="petitdej">le petit-déjeuner</option><option value="lunch">le lunch</option><option value="gouter">le goûter</option><option value="occasion">l’occasion</option></select> <span class="fi-t">—</span> <input type="text" class="fi-in t" style="width:200px" value="jours creux : remplir l’après-midi" placeholder="pourquoi ce créneau ?"></div>
+    <div class="fi-edit-pied"><label class="fi-portee">S’applique à <select class="fi-in s"><option value="" selected="">Réseau</option><option value="2">Corbais</option><option value="3">Gosselies</option><option value="4">Halle</option><option value="5">Sombreffe</option></select></label>
+      <span class="fi-edit-act"><button class="fi-lien rouge">Retirer la règle</button><button class="fi-lien fort">OK</button></span></div></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#E8964B">×2</span>
+      <span class="fi-row-txt"><b>×2 du lun au sam, 17:30 – 19:00</b><span>sur le pain · écouler : moins de pain jeté</span></span>
+      <span class="fi-row-stat">896 tickets · + 5 027 points</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#E8964B">×2</span>
+      <span class="fi-row-txt"><b>×2 le lundi, 07:00 – 19:00</b><span>tous les achats · le jour le plus creux · Sombreffe</span></span>
+      <span class="fi-row-stat">216 tickets · + 2 679 points</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#E8964B">×2</span>
+      <span class="fi-row-txt"><b>×2 sur la gamme Automnale</b><span>du 01/10 au 15/11</span></span>
+      <span class="fi-row-stat">ventes par gamme à brancher</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#E8964B">×3</span>
+      <span class="fi-row-txt"><b>×3 pour l’anniversaire</b><span>le jour même, et 3 jours avant ou après</span></span>
+      <span class="fi-row-stat">258 achats · + 5 952 points</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row off">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#E8964B">×2</span>
+      <span class="fi-row-txt"><b>×2 le samedi, 07:00 – 08:00</b><span>tous les achats · brouillon : ouvrir plus tôt ? · Corbais</span></span>
+      <span class="fi-row-stat">88 tickets</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog" role="switch" aria-checked="false" title="Activer"></button></div>
+    <button class="fi-add"><span>+</span>Ajouter un créneau</button><button class="fi-add"><span>+</span>Ajouter une gamme</button>
+    
+  </div><p class="fi-grp-pied">le jour, l’heure, la gamme, l’anniversaire</p></section><section class="fi-grp"><h3>On reçoit</h3><div class="fi-liste">
+    <div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#1d1d1f">€</span>
+      <span class="fi-row-txt"><b>Bon d’achat</b><span>un bon de 5&nbsp;€ tous les 150 points · valable 60 j</span></span>
+      <span class="fi-row-stat">environ 1 742 bons sur 30 jours</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#9a5b16">●</span>
+      <span class="fi-row-txt"><b>Carte Pain</b><span>10 pains achetés = 1 pain offert</span></span>
+      <span class="fi-row-stat">tampons tenus par la PWA</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#eb6834">●</span>
+      <span class="fi-row-txt"><b>Carte Viennoiserie</b><span>10 viennoiseries achetées = 1 croissant offert</span></span>
+      <span class="fi-row-stat">tampons tenus par la PWA</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#5c4033">●</span>
+      <span class="fi-row-txt"><b>Carte Café</b><span>8 cafés achetés = 1 café offert</span></span>
+      <span class="fi-row-stat">tampons tenus par la PWA</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#c2336a">●</span>
+      <span class="fi-row-txt"><b>Carte Tarte</b><span>6 parts de tarte achetées = 1 part de tarte offerte</span></span>
+      <span class="fi-row-stat">tampons tenus par la PWA</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#5856d6">✦</span>
+      <span class="fi-row-txt"><b>Bienvenue</b><span>à l’inscription : bon de 2&nbsp;€ dès 8&nbsp;€ d’achat · valable 30 j</span></span>
+      <span class="fi-row-stat">171 inscrits sur 30 jours</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#5856d6">✦</span>
+      <span class="fi-row-txt"><b>Deuxième visite</b><span>revenu dans les 14 jours : +30 points</span></span>
+      <span class="fi-row-stat">74 sur 172 nouveaux (43 %)</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#5856d6">✦</span>
+      <span class="fi-row-txt"><b>Anniversaire</b><span>une viennoiserie offerte · valable 7 j</span></span>
+      <span class="fi-row-stat">288 anniversaires sur 30 jours</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#5856d6">✦</span>
+      <span class="fi-row-txt"><b>10e visite du mois</b><span>une tartelette surprise · valable 14 j</span></span>
+      <span class="fi-row-stat">255 clients l’atteignent sur 30 jours</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#5856d6">✦</span>
+      <span class="fi-row-txt"><b>Parrainage</b><span>+100 points au parrain</span></span>
+      <span class="fi-row-stat">suivi des parrainages à brancher</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#5856d6">✦</span>
+      <span class="fi-row-txt"><b>Retour après 45 jours</b><span>un régulier absent reçoit bon de 3&nbsp;€ · valable 21 j</span></span>
+      <span class="fi-row-stat ko">400 réguliers passent le seuil sur 30 jours</span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div>
+    <button class="fi-add"><span>+</span>Ajouter une carte à tampons</button>
+    <label class="fi-add"><span>+</span><select><option value="">Ajouter un déclencheur…</option><option value="inscription">à l’inscription</option><option value="visite2">à la 2e visite</option><option value="anniversaire">à l’anniversaire</option><option value="visiteN">à la n-ième visite du mois</option><option value="panier">pour un gros panier</option><option value="parrainage">au parrainage</option><option value="absence">après une absence</option></select></label>
+  </div><p class="fi-grp-pied">la jauge, les cartes à tampons, les déclencheurs</p></section><section class="fi-grp"><h3>Garde-fous</h3><div class="fi-liste">
+    <div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#8e8e93">!</span>
+      <span class="fi-row-txt"><b>Plafond des bonus</b><span>300 points bonus par jour et par client</span></span>
+      <span class="fi-row-stat"></span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#8e8e93">!</span>
+      <span class="fi-row-txt"><b>Pas de cumul</b><span>le multiplicateur le plus fort l’emporte</span></span>
+      <span class="fi-row-stat"></span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#8e8e93">!</span>
+      <span class="fi-row-txt"><b>Un bon par ticket</b><span>pas de cumul avec les promotions jours creux</span></span>
+      <span class="fi-row-stat"></span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#8e8e93">!</span>
+      <span class="fi-row-txt"><b>Expiration des points</b><span>après 12 mois sans visite · prévenu 30 jours avant</span></span>
+      <span class="fi-row-stat"></span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#8e8e93">!</span>
+      <span class="fi-row-txt"><b>Jours sans multiplicateur</b><span>24/12, 31/12</span></span>
+      <span class="fi-row-stat"></span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div><div class="fi-row">
+    <button class="fi-row-main" aria-expanded="false"><span class="fi-ic" style="--c:#8e8e93">!</span>
+      <span class="fi-row-txt"><b>Budget</b><span>au plus 5,0 % du chiffre des clients carte</span></span>
+      <span class="fi-row-stat"></span><span class="fi-chev">›</span></button>
+    <button class="fi-tog on" role="switch" aria-checked="true" title="Désactiver"></button></div>
+    
+    
+  </div><p class="fi-grp-pied">ce qui empêche le programme de coûter trop</p></section></div><aside class="fi-col fi-aside">
+    <section class="fi-grp"><h3>Ce que voit le client</h3><div class="fi-tel"><div class="fi-ecran">
+    <div class="fi-pass"><div class="fi-pass-h"><span>L’Atelier by</span><span>Fidélité</span></div>
+      <div class="fi-pass-v">128<small> / 150 points</small></div>
+      <div class="fi-pass-j"><i style="width:85%"></i></div><div class="fi-pass-s">Encore 22 points pour un bon de 5&nbsp;€</div></div>
+    <div class="fi-notif"><b>Aujourd’hui</b>de 17:30 à 19:00 : vos points comptent double sur le pain</div>
+    <div class="fi-tel-k">Cartes</div>
+    <div class="fi-tel-carte" style="--c:#9a5b16"><b>Carte Pain</b><span><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class=""></i><i class=""></i><i class=""></i></span></div><div class="fi-tel-carte" style="--c:#eb6834"><b>Carte Viennoiserie</b><span><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span></div><div class="fi-tel-carte" style="--c:#5c4033"><b>Carte Café</b><span><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class=""></i><i class=""></i><i class=""></i></span></div>
+    <div class="fi-tel-k">Portefeuille</div>
+    <div class="fi-tel-p"><div><b>5&nbsp;€</b><span>jusqu’au 23/12</span></div><div><b>Cadeau</b><span>une viennoiserie offerte</span></div></div>
+  </div></div></section>
+    <section class="fi-grp"><h3>Simulateur</h3><div class="fi-liste">
+      <div class="fi-sim"><div><b>Habitué</b><span>Pain quotidien · 11 visites par mois · 10,00&nbsp;€ le panier</span></div><div class="fi-sim-v"><b>35 j</b><span>entre deux bons · rend <em class="">3,8&nbsp;%</em></span></div></div><div class="fi-sim"><div><b>Régulier</b><span>Pain quotidien · 4 visites par mois · 12,73&nbsp;€ le panier</span></div><div class="fi-sim-v"><b>78 j</b><span>entre deux bons · rend <em class="">3,8&nbsp;%</em></span></div></div><div class="fi-sim"><div><b>Occasionnel</b><span>Lunch · 1 visite par mois · 18,19&nbsp;€ le panier</span></div><div class="fi-sim-v"><b>221 j</b><span>entre deux bons · rend <em class="">3,7&nbsp;%</em></span></div></div>
+    </div><p class="fi-grp-pied">Trois clients types du réseau, recalculés sur les règles en cours d’écriture.</p></section>
+    <section class="fi-grp"><h3>Budget</h3><div class="fi-liste"><div class="fi-bud"><svg viewBox="0 0 84 84" width="84" height="84" aria-hidden="true"><circle cx="42" cy="42" r="34" fill="none" stroke="var(--fi-fill)" stroke-width="8"></circle>
+    <circle cx="42" cy="42" r="34" fill="none" stroke="var(--color-primary)" stroke-width="8" stroke-linecap="round" stroke-dasharray="200.0 213.6" transform="rotate(-90 42 42)"></circle></svg><div><b>4,7&nbsp;%</b><span>du chiffre des clients carte · plafond 5,0&nbsp;%</span><span>7&nbsp;818&nbsp;€ sur 30 jours</span></div></div></div>
+      <p class="fi-grp-pied">Règles publiées. Hypothèses : bons utilisés à 65 %, produits offerts pris à 85 % et comptés 2,50 € pièce.</p></section>
+  </aside></div><div class="fi-dock"><span>1 modification non publiée</span><button class="fi-lien">Annuler</button><button class="fi-cta">Publier</button></div></div>
+</main>
+</body>
+</html>
