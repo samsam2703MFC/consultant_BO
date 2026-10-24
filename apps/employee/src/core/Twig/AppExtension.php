@@ -25,6 +25,8 @@ class AppExtension extends AbstractExtension implements GlobalsInterface
             new TwigFunction('sin', static fn (float $a): float => sin($a)),
             // Le nom d'un mois « AAAA-MM » dans la langue de la personne : « octobre 2026 », ou « oct. » en court.
             new TwigFunction('mois', [ $this, 'mois' ]),
+            // Le jour de la semaine d'une date « AAAA-MM-JJ » dans la langue de la personne : « lun. », ou « lundi » en long (24/10/2026).
+            new TwigFunction('jour', [ $this, 'jour' ]),
             // L'adresse d'un fichier statique avec sa version (la date du fichier) : le navigateur et le
             // service worker ne gardent plus une vieille feuille de style après un déploiement.
             new TwigFunction('asset', [ $this, 'asset' ]),
@@ -62,6 +64,21 @@ class AppExtension extends AbstractExtension implements GlobalsInterface
         'it' => ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'],
         'pl' => ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'],
     ];
+
+    private const JOURS = [
+        'fr' => [['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'], ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']],
+        'en' => [['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']],
+        'nl' => [['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'], ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag']],
+        'it' => [['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'], ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica']],
+        'pl' => [['pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.', 'niedz.'], ['poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota', 'niedziela']],
+    ];
+
+    /** « 2026-10-26 » → « lun. » (ou « lundi » en long), dans la langue de la personne ; tel quel si ce n'est pas une date. */
+    public function jour(?string $d, bool $long = false): string
+    {
+        if (!is_string($d) || !preg_match('/^\d{4}-\d{2}-\d{2}/', $d) || ($t = strtotime(substr($d, 0, 10))) === false) { return (string) $d; }
+        return self::JOURS[$this->langue()][$long ? 1 : 0][(int) date('N', $t) - 1];
+    }
 
     /** « 2026-10 » → « octobre 2026 » (ou « oct. » en court), dans la langue de la personne ; tel quel si ce n'est pas un mois. */
     public function mois(?string $m, bool $court = false): string
