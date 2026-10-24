@@ -158,6 +158,9 @@ $promoCorps = [
     'shop_scope_type' => 'SELECTED_SHOPS', 'shop_ids' => [ESSAI_SHOP], 'activation_mode' => 'VOUCHER_ONLY',
     'reward_product_ids' => [$pid], 'reward_category_ids' => [], 'excluded_product_ids' => [],
     'discount_type' => 'PERCENTAGE_DISCOUNT', 'discount_value' => 1,
+    // Une promotion ACTIVE exige au moins un créneau (1er passage : « At least one schedule window is required for
+    // ACTIVE promotions. ») : toute la semaine, toute la journée — la durée de vie reste bornée par valid_to.
+    'schedule' => array_map(static fn ($j) => ['day_of_week' => $j, 'time_from' => '00:00', 'time_to' => '23:59'], range(1, 7)),
 ];
 
 try {
@@ -227,9 +230,10 @@ try {
 
     // ── 6. Activer ───────────────────────────────────────────────────────────
     evTitre('6. activer (promotion, campagne, code)');
+    // Ordre imposé par l'ERP (1er passage) : une campagne UNIQUE ne passe ACTIVE qu'avec un code déjà actif.
+    if ($codeId !== null) { evEcrire('PATCH', "/admin/voucher-codes/$codeId/status", ['status' => 'ACTIVE']); }
     evEcrire('PATCH', "/admin/promotions/scheduled-product-discount/$promoId", ['status' => 'ACTIVE'] + $promoCorps);
     evEcrire('PATCH', "/admin/voucher-campaigns/$campId/status", ['status' => 'ACTIVE']);
-    if ($codeId !== null) { evEcrire('PATCH', "/admin/voucher-codes/$codeId/status", ['status' => 'ACTIVE']); }
     $f = ErpApi::sondeGet("/admin/voucher-campaigns/$campId")['corps'];
     echo '  après activation : configuration_complete=', json_encode($f['configuration_complete'] ?? null),
          ' missing_requirements=', json_encode($f['missing_requirements'] ?? null), ' · fiche : ', mb_substr(evJson($f), 0, 900), "\n";
@@ -262,7 +266,8 @@ try {
     // ── 8. Annuler : le nom du champ transaction, sans rien annuler ──────────
     evTitre('8. POST /vouchers/reverse — nom du champ transaction (identifiant inexistant)');
     $base = 'SONDE-COCKPIT-ESSAI-' . gmdate('YmdHis');
-    foreach (['id_transaction', 'transaction_id', 'idTransaction'] as $i => $champ) {
+    // 1er passage : seul `id_transaction` est reconnu (404 VOUCHER_REDEMPTION_NOT_FOUND ; les autres noms : 422).
+    foreach (['id_transaction'] as $i => $champ) {
         evEcrire('POST', '/vouchers/reverse', ['request_key' => "$base-X$i", $champ => FAUX_ID]);
     }
 
