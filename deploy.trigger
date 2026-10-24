@@ -1029,3 +1029,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T08:34:27Z base : migration 070 (collation n_, index) + docs/db (#136)
 2026-10-24T08:47:05Z recherche : recettes, fournisseurs, employés, onglets tablettes, alias FR
 2026-10-24T09:10:37Z poczta : skrzynka e-mail każdego użytkownika (#137)
+2026-10-24T09:23:56Z #131 accueil tablette
