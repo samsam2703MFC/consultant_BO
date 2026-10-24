@@ -1,5 +1,6 @@
 {
   "back_this_week": "back to this week",
+  "coming_soon": "coming soon",
   "day_off": "Off",
   "days_off": "days off",
   "hours": "hours",
@@ -14,6 +15,7 @@
   "schedule": "Schedule",
   "shift": "shift",
   "shift_other_shop": "shop {n}",
+  "shift_profit": "Shift profitability",
   "shifts": "shifts",
   "this_week": "this week",
   "today": "Today",

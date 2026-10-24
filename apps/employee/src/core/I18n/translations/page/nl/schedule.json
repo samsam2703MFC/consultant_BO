@@ -1,5 +1,6 @@
 {
   "back_this_week": "terug naar deze week",
+  "coming_soon": "binnenkort",
   "day_off": "Vrij",
   "days_off": "vrije dagen",
   "hours": "uur",
@@ -14,6 +15,7 @@
   "schedule": "Rooster",
   "shift": "dienst",
   "shift_other_shop": "winkel {n}",
+  "shift_profit": "Rendement van de dienst",
   "shifts": "diensten",
   "this_week": "deze week",
   "today": "Vandaag",

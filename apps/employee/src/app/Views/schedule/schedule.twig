@@ -48,6 +48,10 @@
   .pl-jour.passe .pl-axe i{background:var(--s-second)}
   .pl-axe em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:1px;background:var(--s-texte)}
   .pl-repos{padding-top:6px;font:400 15px var(--s-police);color:var(--s-second)}
+  /* La rentabilité du service (24/10/2026, Sam) : annoncée, en gris, tant qu'elle n'est pas calculée. */
+  .pl-rent{display:flex;align-items:center;gap:6px;margin-top:7px;font:400 12.5px var(--s-police);color:#AEAEB2}
+  .pl-rent i{font-size:12px}
+  .pl-heros .pl-rent{margin-top:10px;font-size:13.5px}
   .pl-shop{font:500 11px var(--s-police);color:var(--s-accent);background:var(--s-accent-doux);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px}
 </style>
 {% endblock %}
@@ -77,6 +81,7 @@
   {% else %}
   <span class="sb-sous"><b>{{ f.duree(P.duree) }}</b> · {{ (T.in ?? 'dans {d}')|replace({'{d}': f.delai(P.dans)}) }}</span>
   {% endif %}
+  <span class="pl-rent" data-rentabilite><i class="bi bi-graph-up-arrow"></i>{{ T.shift_profit ?? 'Rentabilité du service' }} · {{ T.coming_soon ?? 'à venir' }}</span>
 </div>
 {% endif %}
 
@@ -97,6 +102,7 @@
       <div class="pl-svc">
         <div class="sb-l1"><b>{{ s.debut }} – {{ s.fin }}{% if s.autreShop %}<span class="pl-shop">{{ (T.shift_other_shop ?? 'magasin {n}')|replace({'{n}': s.shop}) }}</span>{% endif %}</b><span class="pl-duree">{{ f.duree(s.duree) }}</span></div>
         <div class="pl-axe"><i style="left:{{ s.gauche }}%;width:{{ s.largeur }}%"></i>{% if loop.first and j.maintenant is not null %}<em style="left:{{ j.maintenant }}%"></em>{% endif %}</div>
+        <div class="pl-rent" data-rentabilite><i class="bi bi-graph-up-arrow"></i>{{ T.shift_profit ?? 'Rentabilité du service' }} · {{ T.coming_soon ?? 'à venir' }}</div>
       </div>
       {% else %}
       <span class="pl-repos">{{ T.day_off ?? 'Repos' }}</span>

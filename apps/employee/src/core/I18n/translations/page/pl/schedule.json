@@ -1,5 +1,6 @@
 {
   "back_this_week": "wróć do tego tygodnia",
+  "coming_soon": "wkrótce",
   "day_off": "Wolne",
   "days_off": "dni wolne",
   "hours": "godz.",
@@ -14,6 +15,7 @@
   "schedule": "Grafik",
   "shift": "zmiana",
   "shift_other_shop": "sklep {n}",
+  "shift_profit": "Rentowność zmiany",
   "shifts": "zmiany",
   "this_week": "ten tydzień",
   "today": "Dziś",
