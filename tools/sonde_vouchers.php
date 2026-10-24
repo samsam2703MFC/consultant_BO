@@ -355,4 +355,67 @@ foreach ($hotes as $base) {
     }
 }
 
+// ── 9. Ce que montre le PANEL (l'écran de Sam), en lecture ───────────────────
+// Sam regarde le panel de production et « ne voit rien dans la création de bon ». On s'y connecte avec le compte
+// admin du cockpit (formulaire `login` / `password` de /panel/), on relève les liens du menu qui parlent de bons
+// ou de promotions, puis on lit ces pages : titre, lignes de tableau (codes masqués), et si la campagne d'essai
+// y figure. Uniquement des GET après la connexion.
+svTitre('panel de production : les écrans de bons');
+$panel = 'https://atelierby.tfbuddy.com/panel/';
+$jar = tempnam(sys_get_temp_dir(), 'svp');
+$get = static function (string $url, ?array $post = null) use ($jar): array {
+    $ch = curl_init($url);
+    $o = [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 5, CURLOPT_TIMEOUT => 25,
+          CURLOPT_COOKIEJAR => $jar, CURLOPT_COOKIEFILE => $jar, CURLOPT_HTTPHEADER => ['Accept: text/html']];
+    if ($post !== null) { $o[CURLOPT_POST] = true; $o[CURLOPT_POSTFIELDS] = http_build_query($post); }
+    curl_setopt_array($ch, $o);
+    $b = (string) curl_exec($ch); $c = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE); $u = (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+    curl_close($ch);
+    return [$c, $b, $u];
+};
+$texte = static fn (string $h): string => trim((string) preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($h), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+try {
+    $connecte = false;
+    foreach ([$cfgErp['phone'], ltrim($cfgErp['phone'], '+')] as $login) {
+        [$c, $b, $u] = $get($panel, ['login' => $login, 'password' => $cfgErp['password']]);
+        $connecte = !str_contains($b, 'name="password"');
+        printf("  connexion au panel (identifiant %s) : HTTP %d → %s · %s\n", $login === $cfgErp['phone'] ? 'tel' : 'sans +', $c, preg_replace('#^https?://[^/]+#', '', $u), $connecte ? 'connecté' : 'refusée');
+        if ($connecte) { break; }
+    }
+    if ($connecte) {
+        [$c, $accueil] = $get($panel);
+        preg_match_all('#<a\b[^>]*href="([^"#][^"]*)"[^>]*>(.*?)</a>#si', $accueil, $mm, PREG_SET_ORDER);
+        $liens = [];
+        foreach ($mm as $m) {
+            $t = $texte($m[2]); $h = $m[1];
+            // Jamais un lien d'action (suppression, déconnexion…) : on ne suit que des pages à lire.
+            if (preg_match('/delete|remove|usun|logout|wyloguj|toggle|status|activate|deactivate/i', $h)) { continue; }
+            if (preg_match('/vouch|bon|kupon|promo|rabat|code|kod|discount|remise/i', $h . ' ' . $t)) { $liens[$h] = $t; }
+        }
+        echo '  liens du menu (bons / promotions) : ', count($liens), "\n";
+        foreach ($liens as $h => $t) { printf("    %-60s %s\n", mb_substr($h, 0, 60), mb_substr($t, 0, 60)); }
+        foreach (array_slice(array_keys($liens), 0, 8) as $h) {
+            $url = preg_match('#^https?://#', $h) ? $h : (str_starts_with($h, '/') ? 'https://atelierby.tfbuddy.com' . $h : $panel . $h);
+            [$c, $p] = $get($url);
+            $titre = preg_match('#<h[1-3][^>]*>(.*?)</h[1-3]>#si', $p, $tm) ? $texte($tm[1]) : '';
+            preg_match_all('#<tr\b[^>]*>(.*?)</tr>#si', $p, $rows);
+            printf("  --- %s → HTTP %d · « %s » · %d ligne(s) de tableau · « SONDE COCKPIT » %s · « Office invitation » %s\n",
+                mb_substr($h, 0, 50), $c, mb_substr($titre, 0, 50), count($rows[1]),
+                str_contains($p, 'SONDE COCKPIT') ? 'présent' : 'absent', str_contains($p, 'Office invitation') ? 'présent' : 'absent');
+            foreach (array_slice($rows[1], 0, 14) as $r) {
+                $l = (string) svValeur('name', $texte($r));
+                if ($l !== '') { echo '      | ', mb_substr($l, 0, 150), "\n"; }
+            }
+            // Une page sans tableau (application chargée en JavaScript) : les appels d'API qu'elle fait.
+            if ($rows[1] === [] && preg_match_all('#["\'](/api/v1/[a-z0-9/_\-{}]+|[a-z0-9_\-/]*voucher[a-z0-9_\-/]*)["\']#i', $p, $am)) {
+                echo '      appels relevés : ', implode(', ', array_slice(array_values(array_unique($am[1])), 0, 12)), "\n";
+            }
+        }
+    }
+} catch (Throwable $e) {
+    echo '  panel illisible : ', mb_substr($e->getMessage(), 0, 200), "\n";
+} finally {
+    @unlink($jar);
+}
+
 echo "\n=== FIN SONDE VOUCHERS ===\n";
