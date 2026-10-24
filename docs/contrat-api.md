@@ -754,6 +754,16 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   gravée). Mois en cours ou clos (`m` à venir → le mois en cours) ; cache `primesEq{shop}:{m}`, dix minutes (un
   jour, mois clos), vidé avec les fiches quand un réglage change ; `&frais=1` recalcule. 404 si le magasin est
   inconnu. Des noms de vendeuses, jamais de clients (B2B : un nombre de clients).
+- `GET /ventes/primes-annee?y=[&shop=]` (24/10/2026) : l'année des primes, du réseau ou d'un magasin — mois par
+  mois de janvier (au plus tôt `PRIMES_AN_DEBUT`, 2026-01) au mois en cours, les montants des primes du mois
+  (`primesMoisTous`) prime par prime : `mois[] {m, lib, enCours, total (réseau seulement), motif}`, `primes[] {cle,
+  lib, payeur, sponsor, total, fois (mois gagnés, toutes vendeuses), gagnantes}` dans l'ordre de l'app,
+  `personnes[] {id, nom, shopId, magasinNom, total, mois (mois primés), cases: {cle: {montant, fois}}}` triées par
+  total, `magasins[] {id, nom, total, gagnantes, cases: {cle: {montant, fois, gagnantes}}}` (réseau seulement),
+  `total`. Un titre sans euros (un cadeau) compte gagné à 0 €. Les clients pro, prime par prime (`b2b.parCle` des
+  primes du mois). Cache `primesAn{y}` : une heure (une année close : un jour), vidé avec les fiches ; `&frais=1`
+  recalcule. Écrans : la page franchisé (« Où en sont tes vendeuses » › Année) et la page admin (« L'année des
+  primes », par magasin ou par vendeuse, les mois en barres).
 - La moisson des lignes par ticket (`pvL{shop}:{jour}`, version 3) compte `c` (les tickets à deux lignes ou
   plus), `cc` ces mêmes tickets par catégorie de produits qu'ils contiennent (`k` : le jour les compte), `q`
   les pièces par famille — les catégories (motif) et les **promos** (leurs identifiants de produits,
