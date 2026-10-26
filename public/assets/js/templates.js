@@ -4,7 +4,7 @@
  * x = { A: onClick, C: onChange, I: onInput, DS: dragstart, DP: drop, EN: mouseenter, esc }.
  */
 
-import { tplSvTableau, tplSvTablette, tplSvMsp, tplSvFranchise, tplSvAdmin } from './suivi-tpl.js';
+import { tplSvTableau, tplSvTablette, tplSvMsp, tplSvFranchise, tplSvAdmin, tplSvSources } from './suivi-tpl.js';
 import { tplFF, tplCQM } from './franchises-tpl.js';
 import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
 import { tplFidelite } from './fidelite-tpl.js';
@@ -158,7 +158,7 @@ export function render(c, x){
       ${c.isKpiT ? tplKpiT(c, x) : ''}
       ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isInvendus ? tplInvendus(c, x) : ''}
-      ${c.isSvTableau ? tplSvTableau(c, x) : ''}${c.isSvTablette ? tplSvTablette(c, x) : ''}${c.isSvMsp ? tplSvMsp(c, x) : ''}${c.isSvFranchise ? tplSvFranchise(c, x) : ''}${c.isSvAdmin ? tplSvAdmin(c, x) : ''}
+      ${c.isSvTableau ? tplSvTableau(c, x) : ''}${c.isSvTablette ? tplSvTablette(c, x) : ''}${c.isSvMsp ? tplSvMsp(c, x) : ''}${c.isSvFranchise ? tplSvFranchise(c, x) : ''}${c.isSvAdmin ? tplSvAdmin(c, x) : ''}${c.isSvSources ? tplSvSources(c, x) : ''}
       ${c.isInventaires ? tplInventaires(c, x) : ''}
       ${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
