@@ -12,7 +12,7 @@ declare(strict_types=1);
  *
  * L'API du panel coûte ~1 seconde par journée lue : impossible de relire un
  * an à chaque affichage. Chaque JOURNÉE RÉVOLUE est donc relevée UNE fois
- * dans `ceo_tache_jour` (une ligne par tâche × magasin × jour), et l'écran ne
+ * dans `con_tache_jour` (une ligne par tâche × magasin × jour), et l'écran ne
  * lit que cette table. Le relevé avance tout seul : à chaque passage du cron
  * horaire des rapports, la veille d'abord, puis l'historique à reculons par
  * lots — en quelques heures, les douze mois sont là. La couverture s'affiche
@@ -36,7 +36,7 @@ function tachesSuiviTables(): void
     // sur une base déjà à jour, elle doit donc s'exécuter AVANT lui.
     tachesJourEnsureNote();
     if ((int) setting('tachesSuiviSchema', 0) >= TACHES_SUIVI_SCHEMA) { return; }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_tache_jour ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_tache_jour ('
         . 'jour DATE NOT NULL,'
         . 'id_shop INT NOT NULL,'
         . 'id_task INT NOT NULL,'
@@ -50,7 +50,7 @@ function tachesSuiviTables(): void
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // Le journal des jours relevés : « zéro tâche » et « jamais relevé » sont
     // deux états différents, cette table les sépare.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_tache_jour_etat ('
+    Db::exec('CREATE TABLE IF NOT EXISTS con_tache_jour_etat ('
         . 'jour DATE PRIMARY KEY,'
         . 'releve_le DATETIME NOT NULL,'
         . 'nb INT NOT NULL DEFAULT 0'
@@ -71,40 +71,40 @@ function tachesJourEnsureNote(): void
     if ($fait) { return; }
     $fait = true;
     $r = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
-        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_tache_jour' AND column_name = 'note'");
+        . " WHERE table_schema = DATABASE() AND table_name = 'con_tache_jour' AND column_name = 'note'");
     if ((int) ($r['n'] ?? 0) === 0) {
-        Db::exec('ALTER TABLE ceo_tache_jour ADD COLUMN note TINYINT NULL, ADD COLUMN commentaire VARCHAR(500) NULL');
+        Db::exec('ALTER TABLE con_tache_jour ADD COLUMN note TINYINT NULL, ADD COLUMN commentaire VARCHAR(500) NULL');
     }
     // notes_ok sur le journal des jours : sans lui, un rattrapage forcé sur
     // une fenêtre repart du premier jour à CHAQUE appel — aucune mémoire
     // entre deux passes, aucune progression possible au-delà du budget d'un
     // seul appel.
     $r2 = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
-        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_tache_jour_etat' AND column_name = 'notes_ok'");
+        . " WHERE table_schema = DATABASE() AND table_name = 'con_tache_jour_etat' AND column_name = 'notes_ok'");
     if ((int) ($r2['n'] ?? 0) === 0) {
-        Db::exec('ALTER TABLE ceo_tache_jour_etat ADD COLUMN notes_ok TINYINT NOT NULL DEFAULT 0');
+        Db::exec('ALTER TABLE con_tache_jour_etat ADD COLUMN notes_ok TINYINT NOT NULL DEFAULT 0');
     }
     // L'heure du geste et la personne qui l'a rendu : le relevé ne gardait que
     // le fait et la note, si bien qu'un écart se lisait sans savoir de quand
     // ni de qui il venait.
     $r4 = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
-        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_tache_jour' AND column_name = 'fait_le'");
+        . " WHERE table_schema = DATABASE() AND table_name = 'con_tache_jour' AND column_name = 'fait_le'");
     if ((int) ($r4['n'] ?? 0) === 0) {
-        Db::exec('ALTER TABLE ceo_tache_jour ADD COLUMN fait_le DATETIME NULL, ADD COLUMN fait_par VARCHAR(120) NULL');
+        Db::exec('ALTER TABLE con_tache_jour ADD COLUMN fait_le DATETIME NULL, ADD COLUMN fait_par VARCHAR(120) NULL');
     }
     // Le drapeau « obligatoire » du panel (is_mandatory), jour par jour : le
     // scoring du trimestre met à 0 un jour où une obligatoire manque. NULL sur
     // les jours relevés avant la colonne — le scoring y applique alors la
     // liste des tâches connues obligatoires.
     $r6 = Db::row("SELECT COUNT(*) AS n FROM information_schema.columns"
-        . " WHERE table_schema = DATABASE() AND table_name = 'ceo_tache_jour' AND column_name = 'obligatoire'");
+        . " WHERE table_schema = DATABASE() AND table_name = 'con_tache_jour' AND column_name = 'obligatoire'");
     if ((int) ($r6['n'] ?? 0) === 0) {
-        Db::exec('ALTER TABLE ceo_tache_jour ADD COLUMN obligatoire TINYINT NULL');
+        Db::exec('ALTER TABLE con_tache_jour ADD COLUMN obligatoire TINYINT NULL');
     }
     // Une tâche NOTÉE était relevée « facultative » (0) : /pwa/tasks ne lui donnait pas le drapeau du
     // panel. Elle repasse à NULL (inconnu, donc comptée comme obligatoire), une seule fois (20/10/2026).
     if (setting('tachesNoteeObligReset') === null) {
-        try { Db::exec("UPDATE ceo_tache_jour SET obligatoire = NULL WHERE statut = 'notee' AND obligatoire = 0"); } catch (PDOException $e7) { /* rien à reprendre */ }
+        try { Db::exec("UPDATE con_tache_jour SET obligatoire = NULL WHERE statut = 'notee' AND obligatoire = 0"); } catch (PDOException $e7) { /* rien à reprendre */ }
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
             ['tachesNoteeObligReset', json_encode(date('Y-m-d H:i:s'))]);
     }
@@ -113,7 +113,7 @@ function tachesJourEnsureNote(): void
     // l'opérateur resteraient vides pour toujours. Une seule fois, à la
     // bascule — le réglage garde la trace du passage.
     if (setting('tachesFaitParReset') === null) {
-        try { Db::exec('UPDATE ceo_tache_jour_etat SET notes_ok = 0'); } catch (PDOException $e5) { /* rien à rouvrir */ }
+        try { Db::exec('UPDATE con_tache_jour_etat SET notes_ok = 0'); } catch (PDOException $e5) { /* rien à rouvrir */ }
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
             ['tachesFaitParReset', json_encode(date('Y-m-d H:i:s'))]);
     }
@@ -130,7 +130,7 @@ function tachesJourReleve(string $date): ?int
     if (!PanelApi::configured()) { return null; }
     $d = rapAppel('ep_pwa_tasks', ['date' => $date]);
     if (!is_array($d) || !empty($d['indispo'])) { return null; }
-    Db::exec('DELETE FROM ceo_tache_jour WHERE jour = ?', [$date]);
+    Db::exec('DELETE FROM con_tache_jour WHERE jour = ?', [$date]);
     $n = 0;
     foreach (($d['shops'] ?? []) as $s) {
         foreach (($s['taches'] ?? []) as $t) {
@@ -140,7 +140,7 @@ function tachesJourReleve(string $date): ?int
             $faitLe = trim((string) ($t['faitLe'] ?? '')) !== '' ? substr((string) $t['faitLe'], 0, 19) : null;
             if ($faitLe !== null && strlen($faitLe) === 16) { $faitLe .= ':00'; }
             $faitPar = trim((string) ($t['faitePar'] ?? '')) ?: null;
-            Db::exec('INSERT INTO ceo_tache_jour (jour, id_shop, id_task, nom, fait, statut, note, commentaire, fait_le, fait_par, obligatoire) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            Db::exec('INSERT INTO con_tache_jour (jour, id_shop, id_task, nom, fait, statut, note, commentaire, fait_le, fait_par, obligatoire) VALUES (?,?,?,?,?,?,?,?,?,?,?)
                       ON DUPLICATE KEY UPDATE nom = VALUES(nom), fait = VALUES(fait), statut = VALUES(statut), note = VALUES(note), commentaire = VALUES(commentaire), fait_le = VALUES(fait_le), fait_par = VALUES(fait_par), obligatoire = VALUES(obligatoire)',
                 [$date, (int) $s['shopId'], (int) $t['taskId'], mb_substr((string) $t['tache'], 0, 200), $fait, mb_substr($st, 0, 12),
                  $note, isset($t['comment']) && $t['comment'] !== null ? mb_substr((string) $t['comment'], 0, 500) : null,
@@ -149,7 +149,7 @@ function tachesJourReleve(string $date): ?int
             $n++;
         }
     }
-    Db::exec('INSERT INTO ceo_tache_jour_etat (jour, releve_le, nb, notes_ok) VALUES (?,?,?,1)
+    Db::exec('INSERT INTO con_tache_jour_etat (jour, releve_le, nb, notes_ok) VALUES (?,?,?,1)
               ON DUPLICATE KEY UPDATE releve_le = VALUES(releve_le), nb = VALUES(nb), notes_ok = 1',
         [$date, date('Y-m-d H:i:s'), $n]);
     return $n;
@@ -169,7 +169,7 @@ function tachesReleveFenetre(string $du, string $au, int $budgetS = 25): array
     // reprendrait au premier jour de la fenêtre et n'avancerait jamais au-delà
     // de son propre budget.
     $ok = [];
-    foreach (Db::rows('SELECT jour FROM ceo_tache_jour_etat WHERE jour BETWEEN ? AND ? AND notes_ok = 1', [$du, $au]) as $r3) {
+    foreach (Db::rows('SELECT jour FROM con_tache_jour_etat WHERE jour BETWEEN ? AND ? AND notes_ok = 1', [$du, $au]) as $r3) {
         $ok[(string) $r3['jour']] = true;
     }
     $debut = microtime(true);
@@ -206,7 +206,7 @@ function tachesJoursManquants(int $max = 400): array
 {
     tachesSuiviTables();
     $faits = [];
-    foreach (Db::rows('SELECT jour FROM ceo_tache_jour_etat') as $r) { $faits[(string) $r['jour']] = true; }
+    foreach (Db::rows('SELECT jour FROM con_tache_jour_etat') as $r) { $faits[(string) $r['jour']] = true; }
     $out = [];
     for ($i = 1; $i <= TACHES_SUIVI_PROFONDEUR && count($out) < $max; $i++) {
         $j = date('Y-m-d', strtotime('-' . $i . ' days'));
@@ -274,11 +274,11 @@ function ep_taches_heatmap(): array
     // Agrégat en une requête : mois × magasin.
     $agg = [];
     foreach (Db::rows("SELECT DATE_FORMAT(jour, '%Y-%m') m, id_shop, SUM(fait) f, COUNT(*) t
-                       FROM ceo_tache_jour WHERE jour >= ? GROUP BY m, id_shop", [$mois[0] . '-01']) as $r) {
+                       FROM con_tache_jour WHERE jour >= ? GROUP BY m, id_shop", [$mois[0] . '-01']) as $r) {
         $agg[(string) $r['m']][(string) $r['id_shop']] = ['f' => (int) $r['f'], 't' => (int) $r['t']];
     }
     $couv = [];
-    foreach (Db::rows("SELECT DATE_FORMAT(jour, '%Y-%m') m, COUNT(*) n FROM ceo_tache_jour_etat
+    foreach (Db::rows("SELECT DATE_FORMAT(jour, '%Y-%m') m, COUNT(*) n FROM con_tache_jour_etat
                        WHERE jour >= ? GROUP BY m", [$mois[0] . '-01']) as $r) {
         $couv[(string) $r['m']] = (int) $r['n'];
     }
@@ -339,7 +339,7 @@ function ep_taches_heatmap_mois(): array
     } catch (PDOException $e) { /* liste vide */ }
 
     $releves = array_map(fn ($r2) => (string) $r2['jour'],
-        Db::rows('SELECT jour FROM ceo_tache_jour_etat WHERE jour BETWEEN ? AND ? ORDER BY jour', [$deb, $fin]));
+        Db::rows('SELECT jour FROM con_tache_jour_etat WHERE jour BETWEEN ? AND ? ORDER BY jour', [$deb, $fin]));
     $releves = array_flip($releves);
 
     // ?obligatoires=1 : les tâches obligatoires seules (le dashboard magasin).
@@ -347,7 +347,7 @@ function ep_taches_heatmap_mois(): array
     // les tâches que le panel dit facultatives sont écartées.
     $oblig = ($_GET['obligatoires'] ?? '') === '1' ? ' AND (obligatoire IS NULL OR obligatoire = 1)' : '';
     $parJour = [];
-    foreach (Db::rows("SELECT jour, id_shop, SUM(fait) f, COUNT(*) t FROM ceo_tache_jour
+    foreach (Db::rows("SELECT jour, id_shop, SUM(fait) f, COUNT(*) t FROM con_tache_jour
                        WHERE jour BETWEEN ? AND ?" . $oblig . " GROUP BY jour, id_shop", [$deb, $fin]) as $r2) {
         $parJour[(string) $r2['jour']][(string) $r2['id_shop']] = ['f' => (int) $r2['f'], 't' => (int) $r2['t']];
     }
@@ -395,10 +395,10 @@ function ep_taches_heatmap_detail(): array
     } catch (PDOException $e) { /* nom vide */ }
 
     $jours = array_map(fn ($r2) => (string) $r2['jour'],
-        Db::rows("SELECT jour FROM ceo_tache_jour_etat WHERE jour LIKE ? ORDER BY jour", [$m . '-%']));
+        Db::rows("SELECT jour FROM con_tache_jour_etat WHERE jour LIKE ? ORDER BY jour", [$m . '-%']));
 
     $taches = [];
-    foreach (Db::rows('SELECT jour, id_task, nom, fait, statut FROM ceo_tache_jour
+    foreach (Db::rows('SELECT jour, id_task, nom, fait, statut FROM con_tache_jour
                        WHERE id_shop = ? AND jour LIKE ? ORDER BY jour', [(int) $sid, $m . '-%']) as $r2) {
         $tid = (string) $r2['id_task'];
         if (!isset($taches[$tid])) {

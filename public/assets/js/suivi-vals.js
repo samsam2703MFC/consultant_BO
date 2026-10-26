@@ -706,3 +706,106 @@ function modeleSauver(app, code, lg, texte){
     message(app, ok ? (texte.reset ? 'Modèle remis au texte livré.' : 'Modèle enregistré.') : 'Refusé : ' + ((r && r.error) || 'sans réponse'), !ok);
   });
 }
+
+/* --- 6. Sources et API (26/10/2026, Sam : « quelles API viennent d'atelier.tfbuddy.com, quelles viennent de table
+ * locale, et la liste des API manquantes avec la structure nécessaire et la structure de la table. Tout doit être API
+ * en lecture et en écriture ») — GET /suivi/sources (src/suivi_sources.php), lu dans le code et dans la base à chaque
+ * ouverture. Cinq onglets : l'ensemble, par écran, le panel, les tables locales, les API manquantes (avec leur
+ * spécification à copier ou à télécharger en Markdown pour TFBuddy). ------------------------------------------- */
+const SS_ONGLETS = [['ensemble', 'Vue d’ensemble'], ['ecrans', 'Par écran'], ['panel', 'Panel TFBuddy'], ['tables', 'Tables locales'], ['manquantes', 'API manquantes']];
+const SS_MODE = { lecture: 'lu', ecriture: 'écrit' };
+function ssSpecTable(m, t){
+  const l = ['## ' + m.ressource + ' — table `' + m.table + '`', '', m.quoi + '.', '', '| Verbe | Chemin | Rôle |', '|---|---|---|'];
+  m.endpoints.forEach(e => l.push('| ' + e.m + ' | `' + e.chemin + '` | ' + e.dit + ' |'));
+  const corps = (m.endpoints.find(e => e.corps && (e.m === 'POST' || e.m === 'PUT')) || {}).corps;
+  if (corps) { l.push('', 'Corps (JSON) :', '', '```json', JSON.stringify(corps, null, 2), '```'); }
+  if (t && t.champs.length) {
+    l.push('', '| Champ | Type SQL | Obligatoire | Défaut |', '|---|---|---|---|');
+    t.champs.forEach(c => l.push('| `' + c.nom + '`' + (c.cle === 'PRI' ? ' (clé)' : '') + (c.auto ? ' (auto)' : '') + ' | ' + c.sql + ' | ' + (c.requis ? 'oui' : 'non') + ' | ' + (c.defaut == null ? '' : (c.defaut === '' ? 'chaîne vide' : '`' + c.defaut + '`')) + ' |'));
+  }
+  if (t && t.ddl) { l.push('', 'Structure actuelle (cockpit) :', '', '```sql', t.ddl, '```'); }
+  if (m.routes.length) { l.push('', 'Remplacerait, côté cockpit : ' + m.routes.map(r => '`' + r + '`').join(', ') + '.'); }
+  return l.join('\n');
+}
+function ssSpecTout(d){
+  const reg = {}; d.registre.forEach(t => { reg[t.nom] = t; });
+  const tete = ['# API à ouvrir au panel TFBuddy — consultants et visites', '', 'Généré par le cockpit le ' + d.genere + ' (lu dans le code et dans la base ' + (d.base || '') + ').',
+    'Hôte : ' + ((d.hotes.panel || {}).hote || 'atelierby.tfbuddy.com') + '/api/v1. Chaque ressource en lecture ET en écriture ; listes paginées `{ data, meta: { total, page, per_page } }`.', ''];
+  const directes = ['', '## Lectures à ouvrir — tables TFBuddy lues aujourd’hui directement dans la base', '', '| Table | Ce qu’elle porte | Au panel aujourd’hui | À ouvrir |', '|---|---|---|---|']
+    .concat(d.directes.map(t => '| `' + t.nom + '` | ' + t.quoi + ' | ' + (t.existe ? '`' + t.existe + '`' : '—') + ' | ' + (t.propose ? '`' + t.propose + '`' : (t.existe ? 'basculer sur la route existante' : '—')) + ' |'));
+  return tete.concat(d.manquantes.map(m => ssSpecTable(m, reg[m.table]) + '\n')).concat(directes).join('\n');
+}
+export function valsSvSources(app, common){
+  const S = app.state;
+  const path = '/suivi/sources';
+  charge(app, 'svSrc', path, false);
+  const b = S.svSrc && S.svSrc.path === path ? S.svSrc : null;
+  const d = lu(app, 'svSrc', path);
+  const sv = { msg: S.svMsg, relire: () => charge(app, 'svSrc', path, true), enCours: !!(b && b.chargement) };
+  common.sv = sv;
+  if (!d) { sv.chargement = true; return; }
+  if (d.error) { sv.indispo = 'Le rapport n’a pas pu être lu : ' + d.error + '.'; return; }
+  const og = SS_ONGLETS.some(o => o[0] === S.svSrcOg) ? S.svSrcOg : 'ensemble';
+  const ouv = S.svSrcOuv || '';
+  const basculer = k => () => app.setState({ svSrcOuv: ouv === k ? '' : k });
+  const q = String(S.svSrcQ || '').trim().toLowerCase();
+  const garde = txt => !q || String(txt).toLowerCase().indexOf(q) >= 0;
+  const reg = {}; d.registre.forEach(t => { reg[t.nom] = t; });
+  const panel = d.chemins.filter(c => c.source === 'panel'), erp = d.chemins.filter(c => c.source === 'erp');
+  const lignes = d.registre.reduce((a, t) => a + (t.lignes || 0), 0);
+  const verbes = d.manquantes.reduce((a, m) => a + m.endpoints.length, 0);
+  const hote = (d.hotes.panel || {}).hote || 'atelierby.tfbuddy.com';
+  sv.genere = d.genere; sv.genereLib = fmtDH(d.genere); sv.base = d.base; sv.limites = d.limites; sv.hote = hote;
+  sv.panelConfigure = !!(d.hotes.panel || {}).configure;
+  sv.kpis = [
+    ['Panel ' + hote, pl(panel.length, 'chemin'), panel.filter(c => c.ecriture).length + ' en écriture · ' + (sv.panelConfigure ? 'compte configuré' : 'compte non configuré ici'), ''],
+    ['Tables locales con_', pl(d.registre.length, 'table'), nf(lignes) + ' lignes · lues et écrites par le cockpit', ''],
+    ['Base TFBuddy, sans API', pl(d.directes.length, 'table'), 'lues directement dans la base partagée', d.directes.length ? 'att' : 'ok'],
+    ['API à ouvrir au panel', pl(d.manquantes.length + d.directes.filter(t => t.propose).length, 'ressource'), verbes + ' verbes pour les ' + d.manquantes.length + ' tables con_ · ' + d.directes.filter(t => t.propose).length + ' lectures · ' + d.directes.filter(t => t.existe && !t.propose).length + ' routes existantes à employer', 'att']
+  ];
+  sv.onglets = SS_ONGLETS.map(([k, nom]) => ({ nom, on: k === og, n: { ensemble: '', ecrans: d.routes.length, panel: d.chemins.length, tables: d.registre.length, manquantes: d.manquantes.length + d.directes.length }[k],
+    ouvrir: () => app.setState({ svSrcOg: k, svSrcOuv: '' }) }));
+  sv.og = og;
+  sv.q = S.svSrcQ || ''; sv.setQ = e => app.setState({ svSrcQ: e.target.value });
+  const md = () => ssSpecTout(d);
+  sv.copierTout = () => app.tbCopier(md(), 'La liste des API manquantes est copiée (Markdown) : à coller dans un courriel ou un ticket pour TFBuddy.');
+  sv.telecharger = () => { try { const u = URL.createObjectURL(new Blob([md()], { type: 'text/markdown' })); const a = document.createElement('a'); a.href = u; a.download = 'api-manquantes-consultants-' + d.genere.slice(0, 10) + '.md'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 1000); } catch (e) { message(app, 'Téléchargement impossible : ' + e.message, true); } };
+  const mig = d.migration;
+  sv.migration = mig ? 'Renommées sous con_ le ' + fmtDH(mig.le) + ' : ' + pl(Object.keys(mig.renommees || {}).length, 'table') + (mig.conflits && mig.conflits.length ? ' · à trancher : ' + mig.conflits.join(' ; ') : '') + '.'
+    : (d.registre.some(t => t.ancienExiste) ? 'Des tables portent encore leur ancien nom : la migration se fera au prochain appel après déploiement.' : 'Tables créées directement sous con_.');
+  // Vue d'ensemble
+  const parUsage = panel.slice().sort((a, x) => x.routes.length - a.routes.length);
+  sv.ensemble = {
+    panel: parUsage.slice(0, 10).map(c => ({ m: c.m, chemin: c.chemin, n: c.routes.length })), panelReste: Math.max(0, parUsage.length - 10),
+    erp: erp.map(c => ({ m: c.m, chemin: c.chemin, n: c.routes.length })),
+    familles: Object.values(d.registre.reduce((o, t) => { (o[t.famille] = o[t.famille] || { nom: t.famille, tables: [] }).tables.push({ nom: t.nom, lignes: t.lignes, existe: t.existe }); return o; }, {})),
+    directes: d.directes.slice(0, 8).map(t => ({ nom: t.nom, quoi: t.quoi, vers: t.existe || t.propose || '', existe: !!t.existe })), directesReste: Math.max(0, d.directes.length - 8),
+    allerManquantes: () => app.setState({ svSrcOg: 'manquantes', svSrcOuv: '' }), allerPanel: () => app.setState({ svSrcOg: 'panel', svSrcOuv: '' }), allerTables: () => app.setState({ svSrcOg: 'tables', svSrcOuv: '' }),
+    autres: d.autres.length
+  };
+  // Par écran
+  sv.ecrans = Object.keys(d.ecrans).map(e => ({ nom: d.ecrans[e], routes: d.routes.filter(r => r.ecran === e && garde(r.methode + ' ' + r.chemin + ' ' + r.quoi + ' ' + r.fonction)).map(r => {
+    const k = 'r:' + r.methode + r.chemin;
+    return { m: r.methode, chemin: r.chemin, quoi: r.quoi, fonction: r.fonction, fichier: r.fichier, existe: r.existe,
+      nPanel: r.panel.length + r.erp.length, nCon: r.con.length, nTfb: r.tfbuddy.length, nCk: r.cockpit.length, externes: r.externes,
+      source: r.panel.length || r.erp.length ? (r.con.length || r.tfbuddy.length || r.cockpit.length ? 'mixte' : 'panel') : 'locale',
+      ouvert: ouv === k, basculer: basculer(k),
+      detail: ouv === k ? { panel: r.panel.concat(r.erp.map(c => Object.assign({ erp: true }, c))), con: r.con.map(t => ({ nom: t.nom, mode: SS_MODE[t.mode] })), tfbuddy: r.tfbuddy.map(t => ({ nom: t.nom, mode: SS_MODE[t.mode] })), cockpit: r.cockpit.map(t => ({ nom: t.nom, mode: SS_MODE[t.mode] })), installe: r.installe || [] } : null };
+  }) })).filter(e => e.routes.length);
+  // Panel
+  sv.chemins = d.chemins.filter(c => garde(c.m + ' ' + c.chemin + ' ' + c.routes.join(' '))).map(c => { const k = 'p:' + c.source + c.m + c.chemin;
+    return { m: c.m, chemin: c.chemin, erp: c.source === 'erp', ecriture: c.ecriture, n: c.routes.length, routes: c.routes, ouvert: ouv === k, basculer: basculer(k) }; });
+  // Tables locales
+  sv.tables = d.registre.filter(t => garde(t.nom + ' ' + t.ancien + ' ' + t.quoi + ' ' + t.famille)).map(t => { const k = 't:' + t.nom;
+    return { nom: t.nom, ancien: t.ancien, famille: t.famille, quoi: t.quoi, lignes: t.lignes, existe: t.existe, ancienExiste: t.ancienExiste, n: t.routes.length, ecrite: t.ecrite,
+      etat: t.existe === false ? 'pas encore créée' : (t.ancienExiste ? 'l’ancien nom existe encore' : 'renommée'), etatCls: t.existe === false ? 'mu' : (t.ancienExiste ? 'att' : 'ok'),
+      ouvert: ouv === k, basculer: basculer(k), champs: t.champs, ddl: t.ddl, routes: t.routes }; });
+  sv.autres = d.autres.filter(t => garde(t.nom)).map(t => ({ nom: t.nom, ecrite: t.ecrite, n: t.routes.length, lignes: t.lignes }));
+  // API manquantes
+  sv.manquantes = d.manquantes.filter(m => garde(m.table + ' ' + m.ressource + ' ' + m.quoi)).map(m => { const k = 'm:' + m.table; const t = reg[m.table] || { champs: [] };
+    const corps = (m.endpoints.find(e => e.corps && (e.m === 'POST' || e.m === 'PUT')) || {}).corps;
+    return { table: m.table, ressource: m.ressource, famille: m.famille, quoi: m.quoi, endpoints: m.endpoints, n: m.routes.length, lue: m.structureLue,
+      corps: corps ? JSON.stringify(corps, null, 2) : '', champs: t.champs || [], ddl: t.ddl || '', ouvert: ouv === k, basculer: basculer(k),
+      copier: () => app.tbCopier(ssSpecTable(m, t), 'Spécification de ' + m.ressource + ' copiée (Markdown).') }; });
+  sv.directes = d.directes.filter(t => garde(t.nom + ' ' + t.quoi)).map(t => ({ nom: t.nom, quoi: t.quoi, existe: t.existe, propose: t.propose, n: t.routes.length, routes: t.routes, colonnes: t.colonnes, lignes: t.lignes, ouvert: ouv === 'd:' + t.nom, basculer: basculer('d:' + t.nom) }));
+}

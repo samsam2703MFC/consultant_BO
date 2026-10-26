@@ -7,7 +7,7 @@
 import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, apiTraces, apiTracesRaz, joinPerf } from './api.js';
 import { render as tplRender, tplPsImpression } from './templates.js';
 import { valsFF, valsCQM } from './franchises-vals.js';
-import { valsSvTableau, valsSvTablette, valsSvMsp, valsSvFranchise, valsSvAdmin } from './suivi-vals.js';
+import { valsSvTableau, valsSvTablette, valsSvMsp, valsSvFranchise, valsSvAdmin, valsSvSources } from './suivi-vals.js';
 import { valsClientsAnnee } from './clients-annee-vals.js';
 import { valsFidelite } from './fidelite-vals.js';
 import { valsPromoTableau, valsPromoEdition, promosBadges, peMonter } from './promotions-vals.js';
@@ -376,7 +376,7 @@ class App {
       // Franchisés · évaluation et suivi (09/10/2026)
       ficheFranchise: 'fiche', controlesQualite: 'qualite',
       // Suivi des franchisés (24/10/2026) : le tableau de bord du bureau, la tablette, le client mystère, la page du franchisé, qui fait quoi.
-      suiviTableau: 'franchises', suiviTablette: 'franchises/tablette', suiviMsp: 'franchises/mystere', suiviFranchise: 'franchises/page', suiviAdmin: 'franchises/quifaitquoi',
+      suiviTableau: 'franchises', suiviTablette: 'franchises/tablette', suiviMsp: 'franchises/mystere', suiviFranchise: 'franchises/page', suiviAdmin: 'franchises/quifaitquoi', suiviSources: 'franchises/sources',
     };
   }
   /** Les adresses d'avant le 24/10/2026, avec un tiret : un signet ou un lien envoyé les ouvre toujours. */
@@ -1098,6 +1098,7 @@ class App {
       suiviTablette: ['Visite sur tablette', 'L’application du consultant en visite (controle/), la même hors ligne : photo du jour, dossier du bureau, checklist du type, contrôles photo, points à travailler, météo du franchisé, signature. À la fin, le brouillon part au bureau.'],
       suiviMsp: ['Client mystère', 'Les passages du client mystère, magasin par magasin : la note, les rubriques sur 20, le passage précédent et ce qui a suivi. Un seul encodage par passage, rangé dans son trimestre : il nourrit le feu, le scoring, la visite suivante et la page du franchisé.'],
       suiviFranchise: ['Page du franchisé', 'La page que le franchisé ouvre avec son lien, sans mot de passe : ses points à travailler et l’envoi de sa photo de correction, ses chiffres de chaque jour, ses rapports de visite, sa prochaine visite annoncée, le journal. L’aperçu ne marque rien comme lu.'],
+      suiviSources: ['Sources et API', 'Les consultants et les visites, source par source : ce qui vient du panel atelierby.tfbuddy.com, ce qui vit dans les tables locales con_, ce qui se lit dans la base TFBuddy sans API — et les API à ouvrir au panel pour tout passer en lecture et en écriture, avec la structure de chaque table.'],
       suiviAdmin: ['Qui fait quoi', 'Par magasin, qui prépare, qui adapte le rapport, qui l’envoie, qui valide les corrections, qui est en copie, à quelle adresse et dans quelle langue ; les personnes et leurs droits ; les délais ; les visites annoncées ou inopinées ; les courriels aux franchisés dans les quatre langues.'],
       invendus: ['Invendus et poubelle', 'Ce que les magasins jettent, déclaré en caisse : les pièces, leur coût de production (retranché du résultat), la valeur de vente perdue, les motifs, et les produits les plus jetés du réseau. Les reports au lendemain n\u2019ont pas de route de lecture dans le panel.'],
       mktTypes: ['Types de campagne', 'Le référentiel tel que l\u2019assistant l\u2019affiche : nom, description, couleur, icône, levier lié et KPI attendu. L\u2019ordre est celui de la grille de la première étape. Un type porté par des campagnes se désactive, il ne s\u2019efface pas.'],
@@ -1484,7 +1485,9 @@ class App {
           ['suiviTablette', 'Visite sur tablette', 0],
           ['suiviMsp', 'Client mystère', 0],
           ['suiviFranchise', 'Page du franchisé', 0],
-          ['suiviAdmin', 'Qui fait quoi', 0]] },
+          ['suiviAdmin', 'Qui fait quoi', 0],
+          // Sources et API (26/10/2026) : le panel TFBuddy, les tables locales con_, et les API qui manquent pour tout passer par le panel.
+          ['suiviSources', 'Sources et API', 0]] },
         // Le budget, sorti de Magasins (24/10/2026) : trois entrées au lieu d'un écran à trois onglets.
         { sub: 'Budget', children: [
           ['budget', 'Suivi budget', 0],
@@ -1602,7 +1605,7 @@ class App {
     this._navDef = navDef;
 
     ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin'].forEach(k => common[k] = false);
-    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
+    const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd' }[S.screen];
@@ -2045,6 +2048,7 @@ class App {
     if (common.isSvMsp) valsSvMsp(this, common);
     if (common.isSvFranchise) valsSvFranchise(this, common);
     if (common.isSvAdmin) valsSvAdmin(this, common);
+    if (common.isSvSources) valsSvSources(this, common);
     // --- reporting
     if (common.isReporting) this.valsReporting(common, navDef, titles);
     // --- suivi des tâches

@@ -2430,8 +2430,8 @@ function notePanelDeposer($shopId, string $type, string $texte, string $contexte
  * Le nom d'un consultant, cherché LÀ OÙ L'ÉCRAN L'A PRIS.
  *
  * `/consultants` rend « u<id de user_membership> » quand les tables du panel
- * sont là, et l'identifiant de `ceo_consultant` sinon (installation autonome).
- * L'écriture, elle, ne consultait que `ceo_consultant` : « u8 » n'y étant pas,
+ * sont là, et l'identifiant de `con_consultant` sinon (installation autonome).
+ * L'écriture, elle, ne consultait que `con_consultant` : « u8 » n'y étant pas,
  * chaque note au consultant repartait en « consultant inconnu » — l'écran
  * disait « Note non envoyée », et RIEN n'était écrit. Deux référentiels pour
  * une même question, c'est toujours l'écriture qui perd. On interroge donc les
@@ -2451,7 +2451,7 @@ function consultantNom(string $id): ?string
         } catch (PDOException $e) { /* tables du panel absentes : repli local */ }
     }
     try {
-        $r = Db::row('SELECT name FROM ceo_consultant WHERE id = ?', [$id]);
+        $r = Db::row('SELECT name FROM con_consultant WHERE id = ?', [$id]);
         if ($r !== null) { return (string) $r['name']; }
     } catch (PDOException $e) { /* pas de référentiel local non plus */ }
     return null;

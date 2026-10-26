@@ -118,5 +118,40 @@ verifie('le jeton ouvre son magasin, pas un autre', suJetonOk('4', $j) && !suJet
 $REGLAGES['visitesJeton'] = 'autre-secret';
 verifie('changer le secret invalide les anciens liens', !suJetonOk('4', $j));
 
+// --- Sources et API (26/10/2026) : la lecture des chemins du panel et la spécification des API manquantes ------
+echo "\nSources et API\n";
+require_once __DIR__ . '/../src/marketing_sources.php';
+require_once __DIR__ . '/../src/con_tables.php';
+require_once __DIR__ . '/../src/suivi_sources.php';
+verifie('chemin : variable et urlencode', ssChemin("'/consultant/shops/' . \$shopId . '/tasks?date=' . urlencode(\$date)") === '/consultant/shops/{shop}/tasks?date={date}', (string) ssChemin("'/consultant/shops/' . \$shopId . '/tasks?date=' . urlencode(\$date)"));
+verifie('chemin : la requête fabriquée', ssChemin("'/shops/' . \$sid . '/statistics/sales/kpis?' . http_build_query(['date_from' => \$d])") === '/shops/{shop}/statistics/sales/kpis?{query}');
+verifie('chemin : chaîne entre guillemets', ssChemin('"/transactions/{$id}?include=products"') === '/transactions/{id}?include=products');
+verifie('chemin : ce qui n’est pas un chemin', ssChemin('$x') === null && ssChemin("'abc'") === null);
+$v = ssVariablesChemin("\$base = '/consultant/shops/' . \$shopId . '/pnl';\n\$ch[] = \$base . '/daily?' . http_build_query(['a' => 1]);\n\$ch[] = \$base . '?' . self::q(\$p, \$d);");
+verifie('variable de chemin : la base reprise', ($v['ch'] ?? []) === ['/consultant/shops/{shop}/pnl/daily?{query}', '/consultant/shops/{shop}/pnl?{query}'], json_encode($v));
+$v = ssVariablesChemin("\$paths = ['cats' => '/consultant/shops/category-sales?' . http_build_query([])];\n\$paths['k' . \$id] = '/shops/' . \$id . '/schedule?date=' . \$date;");
+verifie('tableau de chemins à clés', ($v['paths'] ?? []) === ['/consultant/shops/category-sales?{query}', '/shops/{shop}/schedule?date={date}'], json_encode($v));
+$a = ssAppelsApi("\$r = PanelApi::envoi('PUT', '/consultant/shops/' . \$s . '/targets', \$b); \$t = PanelApi::get('/consultant/tasks'); PanelApi::configured();", 'PanelApi::');
+verifie('appels : verbe d’envoi, lecture, socle ignoré', $a === [['m' => 'PUT', 'chemin' => '/consultant/shops/{shop}/targets'], ['m' => 'GET', 'chemin' => '/consultant/tasks']], json_encode($a));
+$a = ssAppelsApi("PanelApi::shopTasks(\$s, \$d);", 'PanelApi::', ['shopTasks' => [['m' => 'GET', 'chemin' => '/consultant/shops/{shop}/tasks?date={date}']]]);
+verifie('appels : une méthode de PanelApi donne ses chemins', $a === [['m' => 'GET', 'chemin' => '/consultant/shops/{shop}/tasks?date={date}']]);
+$col = static fn ($n, $t, $ct, $nul = 'YES', $def = null, $ex = '', $k = '') => ['COLUMN_NAME' => $n, 'DATA_TYPE' => $t, 'COLUMN_TYPE' => $ct, 'IS_NULLABLE' => $nul, 'COLUMN_DEFAULT' => $def, 'EXTRA' => $ex, 'COLUMN_KEY' => $k];
+$ch = [ssChamp($col('id', 'int', 'int(11)', 'NO', null, 'auto_increment', 'PRI'), null), ssChamp($col('visite_id', 'int', 'int(11)', 'NO'), null), ssChamp($col('etat', 'varchar', 'varchar(4)', 'NO', "'ok'"), null),
+    ssChamp($col('rubriques', 'text', 'text', 'YES', 'NULL'), 'objet'), ssChamp($col('maj_le', 'datetime', 'datetime', 'NO'), null)];
+verifie('champ : obligatoire sans défaut, défaut MariaDB lu', $ch[1]['requis'] && !$ch[2]['requis'] && $ch[2]['defaut'] === 'ok' && $ch[3]['defaut'] === null && !$ch[0]['requis']);
+verifie('champ : texte JSON reconnu', $ch[3]['type'] === 'object (JSON)' && $ch[2]['type'] === 'string ≤ 4');
+$e = ssEndpoints('con_visite_point', CON_TABLES['con_visite_point']['api'], $ch);
+verifie('API d’une table : les cinq verbes', array_column($e, 'm') === ['GET', 'GET', 'POST', 'PATCH', 'DELETE'], json_encode(array_column($e, 'm')));
+verifie('API d’une table : le corps sans id, sans parent, sans date technique', array_keys($e[2]['corps']) === ['etat', 'rubriques'], json_encode(array_keys($e[2]['corps'])));
+$e = ssEndpoints('con_tache_jour', CON_TABLES['con_tache_jour']['api'], $ch);
+verifie('API d’une table à clé composée : lister, écrire, retirer', array_column($e, 'm') === ['GET', 'PUT', 'DELETE']);
+$e = ssEndpoints('con_visite_photo', CON_TABLES['con_visite_photo']['api'], $ch);
+verifie('API des photos : dépôt et lien signé', in_array('/consultant/visits/{visite_id}/photos/{id}/presigned-url', array_column($e, 'chemin'), true));
+$routeur = (string) file_get_contents(__DIR__ . '/../public/api/index.php') . (string) file_get_contents(__DIR__ . '/../src/suivi.php');
+$index = msIndex(dirname(__DIR__));
+$absentes = array_values(array_filter(SS_ROUTES, static fn ($r) => !isset($index[$r[3]]) || !preg_match('/\b' . $r[3] . '\(/', $routeur)));
+verifie('chaque route du rapport existe et est routée', $absentes === [], json_encode(array_column($absentes, 3)));
+verifie('chaque écran du rapport est nommé', !array_filter(SS_ROUTES, static fn ($r) => !isset(SS_ECRANS[$r[0]])));
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

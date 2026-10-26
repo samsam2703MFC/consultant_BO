@@ -1068,10 +1068,10 @@ function rapBloc(string $slug, array $seuils, array $periode): array
             // la Table est mensuel ; la heatmap, elle, veut la semaine.
             try {
                 $joursT = array_reverse(array_map(fn ($r2) => (string) $r2['jour'],
-                    Db::rows('SELECT jour FROM ceo_tache_jour_etat ORDER BY jour DESC LIMIT 7')));
+                    Db::rows('SELECT jour FROM con_tache_jour_etat ORDER BY jour DESC LIMIT 7')));
                 if ($joursT !== []) {
                     $gT = [];
-                    foreach (Db::rows('SELECT jour, id_shop, SUM(fait) f, COUNT(*) t FROM ceo_tache_jour
+                    foreach (Db::rows('SELECT jour, id_shop, SUM(fait) f, COUNT(*) t FROM con_tache_jour
                                        WHERE jour >= ? GROUP BY jour, id_shop', [$joursT[0]]) as $r2) {
                         $gT[(string) $r2['id_shop']][(string) $r2['jour']] = ['f' => (int) $r2['f'], 't' => (int) $r2['t']];
                     }

@@ -17,6 +17,7 @@ require __DIR__ . '/../../src/social_publication.php';
 require __DIR__ . '/../../src/brand_guard.php';
 require __DIR__ . '/../../src/installer.php';
 require __DIR__ . '/../../src/marketing_tables.php';
+require __DIR__ . '/../../src/con_tables.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/panel_api.php';
 require __DIR__ . '/../../src/erp_api.php';
@@ -34,6 +35,7 @@ require __DIR__ . '/../../src/visites_conformite.php';
 require __DIR__ . '/../../src/visites_cadre.php';
 require __DIR__ . '/../../src/franchises.php';
 require __DIR__ . '/../../src/suivi.php';
+require __DIR__ . '/../../src/suivi_sources.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
 require __DIR__ . '/../../src/push.php';
@@ -524,6 +526,7 @@ function route(string $method, string $path): mixed
             $path === '/suivi/msp'                     => ep_suivi_msp(),
             $path === '/suivi/regles'                  => ep_suivi_regles(),
             $path === '/suivi/lien'                    => ep_suivi_lien(),
+            $path === '/suivi/sources'                 => ep_suivi_sources(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
             preg_match('#^/visites/kpi/(\d{1,10})$#', $path, $m) === 1 => ep_visites_kpi($m[1]),
             preg_match('#^/visites/taches/(\d{1,10})$#', $path, $m) === 1 => ep_visites_taches($m[1]),
