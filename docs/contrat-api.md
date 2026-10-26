@@ -3069,10 +3069,10 @@ réglages `visitesChecklist`, `visitesSeuils`, `visitesFrequence`,
 (franchisé), `c:{consultant}` ou `admin`.
 
 Écrans du consultant : la fiche de visite ouvre le **contrôle guidé**
-(`#controle/{id}`), un seul écran vertical, étape après étape — photo du jour,
-chiffres et alertes, un module de checklist par étape, vu sur place et
-recommandation, plan d'action et fin de visite ; chaque étape se replie une
-fois faite. Le franchisé n'a pas de page à part : deux onglets de son dashboard magasin
+(`#controle/{id}`), un seul écran vertical, étape après étape, rangées en six
+temps depuis le 26/10/2026 — extérieur, intérieur, suivi de projet, analyse,
+développement, météo et fin (détail : `docs/suivi-franchises.md`) ; chaque étape
+se replie une fois faite. Le franchisé n'a pas de page à part : deux onglets de son dashboard magasin
 montent le module, en **consultation**. « Campagne » (`?vue=campagne`, écran
 `v_campagne`) : la carte « Objectif de campagne » (clients, N-1, objectif, la
 trajectoire cumulée, le CA, les autres campagnes en une ligne), rien d'autre.

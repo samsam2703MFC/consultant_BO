@@ -79,6 +79,11 @@
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
 .vi .kc .k{margin-top:4px}
 .vi .or{color:#B26A00}
+.vi .tb-sous{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.vi .tb-sous button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:6px 12px;font:600 12px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
+.vi .tb-sous button.fait{color:#2d7a3e;border-color:#BFDCC6;background:#F0F7F2}
+.vi .tb-sous button.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
+.vi .tb-sous button i{font-style:normal;background:#C0182B;color:#fff;border-radius:999px;padding:0 6px;margin-left:3px;font-size:10.5px}
 .vi .cx-j{position:relative;height:9px;border-radius:5px;background:var(--color-background-secondary);margin-top:6px}
 .vi .cx-j i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#2d7a3e}.vi .cx-j i.dn{background:#C0182B}.vi .cx-j i.or{background:#E0A526}
 .vi .cx-j em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--color-text)}
@@ -434,12 +439,23 @@
   // Les leviers que le consultant vérifie sur place (26/10/2026, demande de Sam) : un module de checklist comme les
   // autres (état, note, photo, remarque), ajouté à toute visite qui n'est pas un suivi ou une revisite ; au-dessus de
   // ses points, la carte des six leviers du dashboard magasin et les derniers avis Google.
-  const MOD_LEVIERS = { id: 'leviers', nom: 'Les leviers', leviers: true, points: [
-    { ref: 'lev_trafic', libelle: 'Trafic — les KPI de trafic vérifiés avec le franchisé (clients par jour face au N-1 et au réseau)', photo: false, pct: false },
+  // Les leviers (26/10/2026) en deux modules depuis la visite en six temps : l'expérience client se vit à
+  // l'intérieur, le trafic et Google se vérifient assis avec le franchisé, à l'analyse. Mêmes références de points.
+  const MOD_XP = { id: 'xp', nom: 'Expérience client', points: [
     { ref: 'lev_xp', libelle: 'Expérience client — elle est présente : on la vit en entrant', photo: true, pct: false },
     { ref: 'lev_cuisson', libelle: 'Expérience client — la cuisson : produits chauds, bien cuits, au bon moment', photo: true, pct: false },
-    { ref: 'lev_accueil', libelle: 'Expérience client — l’accueil : bonjour, sourire, conseil', photo: false, pct: false },
+    { ref: 'lev_accueil', libelle: 'Expérience client — l’accueil : bonjour, sourire, conseil', photo: false, pct: false }] };
+  const MOD_LEVIERS = { id: 'leviers', nom: 'Les leviers', leviers: true, points: [
+    { ref: 'lev_trafic', libelle: 'Trafic — les KPI de trafic vérifiés avec le franchisé (clients par jour face au N-1 et au réseau)', photo: false, pct: false },
     { ref: 'lev_google', libelle: 'Note Google — la note et les derniers avis vérifiés avec le franchisé', photo: false, pct: false }] };
+  /*
+   * La visite en six temps (26/10/2026, ordre validé par Sam) : on fait le tour debout — l'extérieur, l'intérieur —,
+   * on vérifie sur place ce qui avait été décidé, puis on s'assoit avec le franchisé pour les chiffres, qui mènent
+   * aux décisions ; la météo et les signatures ferment. Chaque étape porte son temps ; la barre du bas montre les six.
+   */
+  const TEMPS = [['ext', 'Extérieur'], ['int', 'Intérieur'], ['suivi', 'Suivi de projet'], ['analyse', 'Analyse'], ['dev', 'Développement'], ['fin', 'Météo et fin']];
+  // Les points d'une checklist qui se regardent dehors : ils forment le module « L'extérieur ».
+  const RX_EXT = /fa[cç]ade|enseigne|vitrine ext|ext[ée]rieur|terrasse|abords|parking|trottoir/i;
   // Le module Produit commence par les produits obligatoires (26/10/2026), avec ce que le cockpit en sait (vus en caisse).
   const PT_OBLIGATOIRES = { ref: 'produits_obligatoires', libelle: 'Les produits obligatoires sont là', photo: true, pct: false };
   const TAB_IC = {
@@ -462,6 +478,14 @@
     bureau: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12l2 2 4-4"/>',
     meteo: '<circle cx="9" cy="9" r="3.5"/><path d="M9 2v2M2 9h2M4 4l1.4 1.4M14 4l-1.4 1.4"/><path d="M8 19h10a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.5A2.8 2.8 0 0 0 8 19z"/>',
     fin: '<path d="M3 17c3-1 4-6 6-6s1 5 3 5 2-3 4-3 2 2 5 2"/><path d="M3 21h18"/>',
+    // La visite en six temps (26/10/2026).
+    t_ext: '<path d="M3 10l1.5-5h15L21 10"/><path d="M3 10c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3"/><path d="M5 13v8h14v-8M10 21v-5h4v5"/>',
+    t_int: '<path d="M3 15c2.5-7 15.5-7 18 0"/><path d="M3 15h18"/><path d="M5 19h14"/>',
+    t_suivi: '<path d="M4 6l2 2 3-3M4 12l2 2 3-3M4 18l2 2 3-3"/><path d="M12 7h8M12 13h8M12 19h8"/>',
+    t_analyse: '<path d="M5 20V11M11 20V5M17 20v-8M2 20h20"/>',
+    t_dev: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    dev: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    t_fin: '<circle cx="9" cy="9" r="3.5"/><path d="M9 2v2M2 9h2M4 4l1.4 1.4M14 4l-1.4 1.4"/><path d="M8 19h10a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.5A2.8 2.8 0 0 0 8 19z"/>',
   };
   // La météo du franchisé, notée en fin de contrôle (12/10/2026).
   const METEO = [[5, '☀️', 'Grand soleil', 'motivé, moteur'], [4, '🌤️', 'Éclaircies', 'plutôt confiant'], [3, '⛅', 'Nuageux', 'mitigé'], [2, '🌧️', 'Pluie', 'découragé'], [1, '⛈️', 'Orage', 'tendu, en conflit']];
@@ -634,10 +658,28 @@
     /** La checklist d'une visite : les points demandés par le bureau en tête, puis celle de son type. */
     checklistDe(v) {
       const t = this.typeDe(v.type);
-      const cl = (t && t.dynamique ? [] : [MOD_LEVIERS]).concat(this.avecObligatoires(this.checklistType(v)));
+      const cl = this.avecExterieur((t && t.dynamique ? [] : [MOD_XP]).concat(this.avecObligatoires(this.checklistType(v)), t && t.dynamique ? [] : [MOD_LEVIERS]));
       const pts = (v.prep && v.prep.points) || [];
       if (!pts.length) { return cl; }
       return [{ id: 'bureau', nom: 'Demandé par le bureau', bureau: true, points: pts.map(p => ({ ref: p.ref, libelle: p.libelle, photo: true, pct: false })) }].concat(cl);
+    }
+    /** Les points qui se regardent dehors (façade, enseigne, terrasse…) sortent de leur module : ils forment « L'extérieur », en tête. */
+    avecExterieur(cl) {
+      const ext = [];
+      const reste = cl.map(m => {
+        if (m.revisite || m.id === 'suivi') { return m; }
+        const e = m.points.filter(pt => RX_EXT.test(pt.libelle || '') || RX_EXT.test(pt.ref || ''));
+        if (!e.length) { return m; }
+        ext.push(...e);
+        return Object.assign({}, m, { points: m.points.filter(pt => !e.includes(pt)) });
+      }).filter(m => m.points.length || m.revisite || m.id === 'suivi');
+      return ext.length ? [{ id: 'exterieur', nom: 'L’extérieur', points: ext }].concat(reste) : reste;
+    }
+    /** Le temps d'un module de checklist dans la visite en six temps. */
+    tempsModule(m) {
+      if (m.bureau || m.revisite || m.id === 'suivi') { return 'suivi'; }
+      if (m.leviers || m.id === 'msp') { return 'analyse'; }
+      return m.id === 'exterieur' ? 'ext' : 'int';
     }
     /** Le module Produit marqué `obligatoires`, le point « Les produits obligatoires sont là » en tête s'il n'y est pas déjà. */
     avecObligatoires(cl) {
@@ -659,9 +701,9 @@
         const mods = [];
         base.forEach(m => {
           const ko = m.points.filter(pt => { const p = pts[pt.ref]; return p && (p.etat === 'ko' || (p.note != null && p.note <= 2) || (pt.pct && p.valeur != null && p.valeur < (s.planoOrange || 80))); });
-          if (ko.length) { mods.push({ id: m.id, nom: m.nom, points: ko }); }
+          if (ko.length) { mods.push({ id: m.id, nom: m.nom, points: ko, revisite: true }); }
         });
-        return mods.length ? mods : [{ id: 'revisite', nom: 'Revisite — rien de non conforme à la dernière visite', points: [] }];
+        return mods.length ? mods : [{ id: 'revisite', nom: 'Revisite — rien de non conforme à la dernière visite', points: [], revisite: true }];
       }
       return t && t.checklist && t.checklist.length ? t.checklist : (this.D.checklist || []);
     }
@@ -1168,7 +1210,10 @@
           <div class="xs mu vb-jl"><span>${x.atteintePct != null ? String(x.atteintePct).replace('.', ',') + ' % de l’objectif' : ''}</span><span>┃ l’attendu à date</span><span>objectif ${eur(obj)}</span></div>` : ''}
           <div class="xs mu" style="margin-top:6px">${SRC[x.source] ? esc(SRC[x.source]) : 'budget'}${x.reseau != null ? ' · le réseau ' + vbPct(x.reseau) : ''}${(x.sansBudget || []).length ? ' · ' + x.sansBudget.length + ' mois sans budget ou sans vente hors comparaison' : ''}</div>`;
       }
-      return cap + `<div class="card vb">${tabs}<div class="vb-c">${corps}</div></div>` + this.vbFormHtml(v, B)
+      // Le formulaire (pourquoi, trois pistes) se remplit au développement ; ici, l'appel à y aller.
+      const E = this._etapes; const sousB = (B.sous || []).length;
+      const renvoi = sousB ? `<div class="card ${this.vbExige(v) === 'fait' ? '' : 'alerte'} sm"><b class="${this.vbExige(v) === 'fait' ? 'up' : 'dn'}">CA à plus de ${String(B.seuil).replace('.', ',')} % sous le budget</b> — ${this.vbExige(v) === 'fait' ? 'le pourquoi et les trois pistes sont notés.' : 'le pourquoi et les trois pistes du franchisé se notent ensemble au développement.'}${E && E.pistes >= 0 ? ` <button class="chip" data-a="etape" data-v="${E.pistes}">${this.vbExige(v) === 'fait' ? 'Revoir' : 'Y aller'}</button>` : ''}</div>` : '';
+      return cap + `<div class="card vb">${tabs}<div class="vb-c">${corps}</div></div>` + renvoi
         + `<div class="xs mu" style="margin:2px 2px 10px">${esc(B.source || '')}${(B.manques || []).length ? ' · relu dans quelques minutes : ' + esc(B.manques.join(', ')) : ''}.</div>`;
     }
     /** 'manque' : une étendue à plus du seuil sous le budget et le formulaire incomplet ; 'fait' : complet ; null : rien à justifier (ou pas encore lu). */
@@ -1183,6 +1228,19 @@
       const t = auj(); const a = Number(t.slice(0, 4)); const m = Number(t.slice(5, 7));
       const fin = mm => new Date(Date.UTC(a, mm, 0)).toISOString().slice(0, 10);
       return { mois: { lab: 'Le mois prochain', echeance: fin(m + 1) }, trimestre: { lab: 'La fin du trimestre', echeance: fin(Math.ceil(m / 3) * 3) } };
+    }
+    /** Le suivi de projet : les points décidés aux visites précédentes, encore ouverts, vérifiés sur place. */
+    pointsDecidesHtml(v) {
+      const pl = this.plansDe(v.shop, true).slice().sort((a, b) => (b.retard || 0) - (a.retard || 0) || String(a.echeance || '9').localeCompare(String(b.echeance || '9')));
+      if (!pl.length) { return '<div class="card sm mu">Aucun point ouvert chez ce franchisé : tout ce qui avait été décidé est fait.</div>'; }
+      return `<div class="card sm mu">Ce qui avait été décidé et envoyé au franchisé, le plus en retard d’abord. Sur place : photographiez la correction, confirmez ce qui est fait, escaladez ce qui bloque.</div>`
+        + pl.map(p => this.planLigne(p, this.actionsPlan(p))).join('');
+    }
+    /** L'étape des pistes (développement) : les étendues sous le budget, puis le formulaire. */
+    vbPistesHtml(v) {
+      const B = this.VB[v.shop]; if (!B || !B.periodes) { return '<div class="card sm mu">Lecture du CA et du budget…</div>'; }
+      const lignes = (B.sous || []).map(k => { const x = B.periodes[k]; return `<div class="row"><b>${esc(cap1(x.lab))}</b><span class="sp"></span><b class="dn">${vbPct(x.ecartPct)}</b><span class="xs mu">il manque ${eur(x.manque)} · ${x.rang ? x.rang + (x.rang === 1 ? 'er' : 'e') + ' sur ' + x.sur : ''}</span></div>`; }).join('');
+      return `<div class="card sm">${lignes}<div class="xs mu" style="margin-top:4px">Arrêté au ${esc(fmtDJ(B.arrete))} · le détail est à l’analyse, étape KPI.</div></div>` + this.vbFormHtml(v, B);
     }
     vbFormHtml(v, B) {
       if (!(B.sous || []).length) { return ''; }
@@ -1404,10 +1462,10 @@
           : `<div class="btns"><button class="btn p w" data-a="demarrer" data-v="${esc(v.id)}">${enCours ? '▶ Reprendre la visite' : '▶ Démarrer la visite'}</button></div>${v.statut === 'planifiee' ? `<div class="btns"><button class="btn w" data-a="confirmer" data-v="${esc(v.id)}">✓ Confirmer</button><button class="btn w" data-a="go" data-v="tb/${esc(v.shop)}">Tableau de bord</button></div>` : `<div class="btns"><button class="btn w" data-a="go" data-v="tb/${esc(v.shop)}">Tableau de bord</button></div>`}`);
     }
     /** Les trois photos du jour : prises, ou à prendre. */
-    photosJourHtml(shop, vEnCours) {
+    photosJourHtml(shop, vEnCours, genres) {
       const pj = this.photosJour(shop); const t = auj();
-      const jour = GENRES_JOUR.map(([g, l]) => { const p = pj.find(x => x.genre === g && String(x.prise_a).slice(0, 10) === t); return p ? `<div class="ph" style="background-image:url('${esc(this.photoSrc(p))}')" data-a="voir" data-v="${esc(p.client_id || p.id)}"><small>${fmtH(p.prise_a)}</small>${p.attente ? '<span class="att">à envoyer</span>' : ''}</div>` : `<div class="ph vide" data-a="photo" data-v="${g}|${esc(shop)}${vEnCours ? '|' + vEnCours.id : ''}">📷 ${l}</div>`; }).join('');
-      return `<div class="cap">Photo du jour</div><div class="phs">${jour}</div><div class="xs mu" style="margin:4px 2px">Horodatée, position si consentie, EXIF retiré à la réduction · ${pj.length ? pj.length + ' photos sur 90 j' : 'première photo'}</div>`;
+      const jour = GENRES_JOUR.filter(([g]) => !genres || genres.includes(g)).map(([g, l]) => { const p = pj.find(x => x.genre === g && String(x.prise_a).slice(0, 10) === t); return p ? `<div class="ph" style="background-image:url('${esc(this.photoSrc(p))}')" data-a="voir" data-v="${esc(p.client_id || p.id)}"><small>${fmtH(p.prise_a)}</small>${p.attente ? '<span class="att">à envoyer</span>' : ''}</div>` : `<div class="ph vide" data-a="photo" data-v="${g}|${esc(shop)}${vEnCours ? '|' + vEnCours.id : ''}">📷 ${l}</div>`; }).join('');
+      return `<div class="cap">${genres && genres.length === 1 ? 'La photo du jour' : 'Les photos du jour'}</div><div class="phs">${jour}</div><div class="xs mu" style="margin:4px 2px">Horodatée, position si consentie, EXIF retiré à la réduction · ${pj.length ? pj.length + ' photos sur 90 j' : 'première photo'}</div>`;
     }
     /** Ce qui cloche dans la boutique, d'après les actions, le planogramme, le comptoir, Google et le panel. */
     alertesDe(shop, b, B) {
@@ -1556,43 +1614,62 @@
       const b = this.boutique(v.shop) || { court: v.shop, motifs: [] }; const f = this.form;
       this.reviewInit(v, false);
       const pts = this.pointsDe(v.id); const photos = this.photosDe(v.id); const t = auj();
-      const pj = this.photosJour(v.shop).filter(x => String(x.prise_a).slice(0, 10) === t).length;
       const B = this.B[v.shop];
       const etapes = [];
-      etapes.push({ ic: 'photo', court: 'Photo du jour', titre: 'Photo du jour', etat: pj ? pj + ' / 3' : 'à prendre', fait: pj >= 3, html: () => this.photosJourHtml(v.shop, v) });
-      // Le dossier que le bureau a préparé et envoyé sur la tablette (suivi des franchisés) : une étape seulement
-      // s'il est arrivé — sans dossier, rien à lire, l'étape n'apparaît pas (26/10/2026, demande de Sam).
-      const P = v.prep;
-      if (P) { etapes.push({ ic: 'dossier', court: 'Dossier', titre: 'Dossier du bureau', etat: P.points.length ? P.points.length + ' point' + (P.points.length > 1 ? 's' : '') + ' demandé' + (P.points.length > 1 ? 's' : '') : 'lu', fait: !!this.ouvert['dos:' + v.id], lu: 'dos:' + v.id, html: () => this.dossierHtml(v) }); }
-      // Ce que l'équipe a rendu aujourd'hui : la bande du dashboard, la note
-      // rapide sous chaque photo. Faite quand plus rien n'attend une note.
+      const jourPris = g => this.photosJour(v.shop).some(x => x.genre === g && String(x.prise_a).slice(0, 10) === t);
+      const mods = this.checklistDe(v).map(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true);
+        return { ic: m.id, court: m.nom, module: true, tps: this.tempsModule(m), ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }; });
+      const modsDe = tps => mods.filter(e => e.tps === tps);
+      // 1. L'extérieur : la façade et l'arrière en photo, les points qui se regardent dehors.
+      const nExt = ['jour_facade', 'jour_arriere'].filter(jourPris).length;
+      etapes.push({ tps: 'ext', ic: 'photo', court: 'Photos', titre: 'L’extérieur en photo', etat: nExt + ' / 2', fait: nExt >= 2, html: () => this.photosJourHtml(v.shop, v, ['jour_facade', 'jour_arriere']) });
+      etapes.push(...modsDe('ext'));
+      // 2. L'intérieur : la photo, l'expérience client, les modules de la checklist, les contrôles en photo du jour
+      // (la bande du dashboard, la note rapide sous chaque photo ; faite quand plus rien n'attend une note).
+      etapes.push({ tps: 'int', ic: 'photo', court: 'Photo', titre: 'L’intérieur en photo', etat: jourPris('jour_interieur') ? '1 / 1' : 'à prendre', fait: jourPris('jour_interieur'), html: () => this.photosJourHtml(v.shop, v, ['jour_interieur']) });
+      etapes.push(...modsDe('int'));
       const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
-      etapes.push({ ic: 'controles', court: 'Contrôles photo', titre: 'Les contrôles en photo', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
-        fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) + this.tachesMoisHtml(v.shop) });
-      // Le CA à plus de 10 % sous le budget : l'étape reste ouverte tant que le pourquoi et les trois pistes manquent.
+      etapes.push({ tps: 'int', ic: 'controles', court: 'Contrôles du jour', titre: 'Les contrôles en photo du jour', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
+        fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) });
+      // 3. Le suivi de projet : le dossier du bureau (seulement s'il est arrivé), ses demandes, ce qui avait été décidé
+      // aux visites précédentes — vérifié sur place —, la checklist du consultant lue dans le panel.
+      const P = v.prep;
+      if (P) { etapes.push({ tps: 'suivi', ic: 'dossier', court: 'Dossier', titre: 'Dossier du bureau', etat: P.points.length ? P.points.length + ' point' + (P.points.length > 1 ? 's' : '') + ' demandé' + (P.points.length > 1 ? 's' : '') : 'lu', fait: !!this.ouvert['dos:' + v.id], lu: 'dos:' + v.id, html: () => this.dossierHtml(v) }); }
+      etapes.push(...modsDe('suivi'));
+      if (!((this.typeDe(v.type) || {}).dynamique === 'plans')) {
+        const ouverts = this.plansDe(v.shop, true); const nR = ouverts.filter(p => p.retard).length;
+        etapes.push({ tps: 'suivi', ic: 'plan', court: 'Points décidés', titre: 'Les points décidés aux visites précédentes', etat: ouverts.length ? ouverts.length + ' ouvert' + (ouverts.length > 1 ? 's' : '') + (nR ? ' · ' + nR + ' en retard' : '') : 'aucun ouvert',
+          ko: nR, fait: !ouverts.length || !!this.ouvert['pd:' + v.id], lu: 'pd:' + v.id, html: () => this.pointsDecidesHtml(v) });
+      }
+      if (this.role === 'consultant') { this.chargerCk(v.shop); const ck = this.ckEtat(); etapes.push({ tps: 'suivi', ic: 'liste', court: 'Checklist', titre: 'Checklist du consultant', etat: ck.etat, fait: ck.fait, html: () => this.ckHtml(v) }); }
+      // 4. L'analyse, assis avec le franchisé : les chiffres, les leviers et Google, le client mystère, les tâches des mois passés.
       const vbx = this.vbExige(v);
-      etapes.push({ ic: 'chiffres', court: 'KPI', chiffres: true, titre: 'KPI et santé du magasin', etat: vbx === 'manque' ? 'budget à justifier' : vbx === 'fait' ? 'budget justifié' : 'à lire', ko: vbx === 'manque' ? '!' : 0,
-        fait: !!this.ouvert['lu:' + v.id] && vbx !== 'manque', lu: 'lu:' + v.id, html: () => this.kpis(b) + this.budgetHtml(v) + this.santeHtml(v.shop) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
-      this.checklistDe(v).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ ic: m.id, court: m.nom, module: true, ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
-      // La checklist du consultant, lue dans le panel (l'ancienne fiche franchisé en mode tablette) : un module de plus.
-      if (this.role === 'consultant') { this.chargerCk(v.shop); const ck = this.ckEtat(); etapes.push({ ic: 'liste', court: 'Checklist', titre: 'Checklist du consultant', etat: ck.etat, fait: ck.fait, html: () => this.ckHtml(v) }); }
+      etapes.push({ tps: 'analyse', ic: 'chiffres', court: 'KPI', chiffres: true, titre: 'KPI et santé du magasin', etat: vbx === 'manque' ? 'CA sous le budget' : 'à lire',
+        fait: !!this.ouvert['lu:' + v.id], lu: 'lu:' + v.id, html: () => this.kpis(b) + this.budgetHtml(v) + this.santeHtml(v.shop) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
+      // Les six leviers et Google, puis les tâches des mois passés, puis le client mystère.
+      etapes.push(...modsDe('analyse').filter(e => e.ic === 'leviers'));
+      etapes.push({ tps: 'analyse', ic: 'controles', court: 'Tâches', titre: 'Les tâches des derniers mois', etat: 'à lire', fait: !!this.ouvert['tm:' + v.id], lu: 'tm:' + v.id, html: () => this.tachesMoisHtml(v.shop) });
+      etapes.push(...modsDe('analyse').filter(e => e.ic !== 'leviers'));
+      // 5. Le développement : le CA sous le budget (pourquoi, trois pistes : l'étape reste ouverte tant que ce n'est pas
+      // noté), ce qu'on a vu et la recommandation, les points à travailler.
+      if (vbx) { etapes.push({ tps: 'dev', ic: 'dev', court: 'Pistes', pistes: true, titre: 'Le CA sous le budget : pourquoi et trois pistes', etat: vbx === 'manque' ? 'à noter' : 'notées', ko: vbx === 'manque' ? '!' : 0, fait: vbx === 'fait', html: () => this.vbPistesHtml(v) }); }
       const revueFaite = !!(f.reco && (f.execution || f.clients || (f.causes || []).length));
-      etapes.push({ ic: 'constat', court: 'Constat', titre: 'Vu sur place et recommandation', etat: revueFaite ? 'rédigée' : f.reco || f.execution ? 'en cours' : 'à écrire', fait: revueFaite, revue: true, html: () => this.reviewFormHtml(v, b, f) });
+      etapes.push({ tps: 'dev', ic: 'constat', court: 'Constat', titre: 'Vu sur place et recommandation', etat: revueFaite ? 'rédigée' : f.reco || f.execution ? 'en cours' : 'à écrire', fait: revueFaite, revue: true, html: () => this.reviewFormHtml(v, b, f) });
       const npa = (f.pa || []).filter(a => a.titre && a.titre.trim()).length;
-      etapes.push({ ic: 'plan', court: 'Points', titre: 'Points à travailler', etat: npa + ' proposé' + (npa > 1 ? 's' : ''), fait: !!this.ouvert['pa:' + v.id], lu: 'pa:' + v.id, html: () => '<div class="card sm mu">Proposés d’après les non-conformes. Ils partent chez le franchisé avec le rapport, si le bureau les garde.</div>' + this.planFormHtml(v, f) });
-      // La météo du franchisé : le temps en un toucher (gardé sur la visite), puis le détail facultatif (moral, envie, demandes).
+      etapes.push({ tps: 'dev', ic: 'plan', court: 'Points', titre: 'Points à travailler', etat: npa + ' proposé' + (npa > 1 ? 's' : ''), fait: !!this.ouvert['pa:' + v.id], lu: 'pa:' + v.id, html: () => '<div class="card sm mu">Proposés d’après les non-conformes et les pistes du franchisé. Ils partent chez lui avec le rapport, si le bureau les garde.</div>' + this.planFormHtml(v, f) });
+      // 6. La météo du franchisé (le temps en un toucher, gardé sur la visite, puis le détail facultatif), la fin signée.
       const mt = meteoDe(f.meteo);
-      etapes.push({ ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne'), fait: !!(mt || f.mt_ok), html: () => this.meteoHtml(f) + this.meteoDetailHtml(v) });
-      etapes.push({ ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig && f.sigC ? 'signée des deux' : f.sig || f.sigC ? '1 signature sur 2' : 'signatures, envoi au bureau', fait: false, html: () => this.finHtml(v) });
+      etapes.push({ tps: 'fin', ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne'), fait: !!(mt || f.mt_ok), html: () => this.meteoHtml(f) + this.meteoDetailHtml(v) });
+      etapes.push({ tps: 'fin', ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig && f.sigC ? 'signée des deux' : f.sig || f.sigC ? '1 signature sur 2' : 'signatures, envoi au bureau', fait: false, html: () => this.finHtml(v) });
       const cle = 'et:' + v.id;
       let cur = this.ouvert[cle]; if (cur == null) { cur = etapes.findIndex(e => !e.fait); if (cur < 0) { cur = etapes.length - 1; } }
       cur = Math.max(0, Math.min(etapes.length - 1, cur));
-      this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), chiffres: etapes.findIndex(e => e.chiffres), visite: v.id, cur, lus: etapes.map(e => e.lu || null) };
+      this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), chiffres: etapes.findIndex(e => e.chiffres), pistes: etapes.findIndex(e => e.pistes), visite: v.id, cur, lus: etapes.map(e => e.lu || null) };
       const faits = etapes.filter(e => e.fait).length;
       if (this.o.tablette) { return this.tabControle(v, b, etapes, cur, faits); }
       return this.hd('Contrôle — ' + b.court, fmtDJ(v.prevu_le) + (v.commence_a ? ' · depuis ' + fmtH(v.commence_a) : '') + ' · ' + esc(v.consultantNom || ''), 'fiche/' + v.id, `<span class="pill">${cur + 1} / ${etapes.length}</span>`)
         + `<div class="bar" style="margin:2px 0 12px"><i style="width:${Math.round(faits / etapes.length * 100)}%"></i></div>`
-        + etapes.map((e, i) => `<div class="et ${i === cur ? 'on' : ''} ${e.fait ? 'ok' : ''}" id="et-${i}"><div class="et-h" data-a="etape" data-v="${i}"><span class="num">${e.fait ? '✓' : i + 1}</span><b>${esc(e.titre)}</b><span class="sp"></span><span class="xs mu">${esc(e.etat)}</span></div>${i === cur ? `<div class="et-c">${e.html()}${i < etapes.length - 1 ? `<div class="btns"><button class="btn p w" data-a="etape" data-v="${i + 1}">Suivant ›</button><button class="btn" data-a="etape" data-v="${i - 1}" ${i === 0 ? 'disabled' : ''}>‹</button></div>` : ''}</div>` : ''}</div>`).join('');
+        + etapes.map((e, i) => (i === 0 || etapes[i - 1].tps !== e.tps ? `<div class="cap">${TEMPS.findIndex(x => x[0] === e.tps) + 1} · ${esc((TEMPS.find(x => x[0] === e.tps) || ['', ''])[1])}</div>` : '') + `<div class="et ${i === cur ? 'on' : ''} ${e.fait ? 'ok' : ''}" id="et-${i}"><div class="et-h" data-a="etape" data-v="${i}"><span class="num">${e.fait ? '✓' : i + 1}</span><b>${esc(e.titre)}</b><span class="sp"></span><span class="xs mu">${esc(e.etat)}</span></div>${i === cur ? `<div class="et-c">${e.html()}${i < etapes.length - 1 ? `<div class="btns"><button class="btn p w" data-a="etape" data-v="${i + 1}">Suivant ›</button><button class="btn" data-a="etape" data-v="${i - 1}" ${i === 0 ? 'disabled' : ''}>‹</button></div>` : ''}</div>` : ''}</div>`).join('');
     }
     /* --- la tablette (12/10/2026) --------------------------------------------------------------
      * L'accueil n'a pas de barre : la liste des boutiques avec leur date de contrôle, ou l'agenda en
@@ -1687,10 +1764,17 @@
       let pills = '';
       if (e.module && e.n) { const reste = e.n.total - e.n.faits; pills = `<span class="ok">${e.n.faits} / ${e.n.total} vus</span>${e.ko ? `<span class="ko">${e.ko} écart${e.ko > 1 ? 's' : ''}</span>` : ''}${reste ? `<span>${reste} à voir</span>` : ''}`; }
       const prec = cur > 0 ? etapes[cur - 1] : null; const suiv = cur < n - 1 ? etapes[cur + 1] : null;
-      const nav = `<div class="tb-nav"><button class="tb-b" data-a="etape" data-v="${cur - 1}" ${prec ? '' : 'disabled'}>‹ ${esc(prec ? prec.court : 'Début')}</button>${suiv ? `<button class="tb-b p" data-a="etape" data-v="${cur + 1}">${esc(suiv.court)} ›</button>` : ''}</div>`;
-      const barre = `<div class="tb-bar" style="grid-template-columns:repeat(${n},minmax(0,1fr))">` + etapes.map((x, i) => `<button data-a="etape" data-v="${i}" class="${i === cur ? 'on' : x.fait ? 'fait' : ''}"><span class="ic"><svg viewBox="0 0 24 24">${TAB_IC[x.ic] || TAB_IC.liste}</svg>${x.fait && i !== cur ? '<span class="ok">✓</span>' : ''}${x.ko ? `<span class="ko">${x.ko}</span>` : ''}</span><span class="lb">${esc(x.court)}</span><span class="es">${esc(x.etat)}</span></button>`).join('') + '</div>';
+      const nav = `<div class="tb-nav"><button class="tb-b" data-a="etape" data-v="${cur - 1}" ${prec ? '' : 'disabled'}>‹ ${esc(prec ? prec.court : 'Début')}</button>${suiv ? `<button class="tb-b p" data-a="etape" data-v="${cur + 1}">${esc(suiv.tps !== e.tps ? (TEMPS.find(x => x[0] === suiv.tps) || ['', suiv.court])[1] + ' · ' + suiv.court : suiv.court)} ›</button>` : ''}</div>`;
+      // La barre du bas : les six temps. Un temps ouvre sa première étape pas encore faite.
+      const temps = TEMPS.map(([k, nom]) => { const idx = etapes.map((x, i) => x.tps === k ? i : -1).filter(i => i >= 0); return { k, nom, idx, faits: idx.filter(i => etapes[i].fait).length, ko: idx.reduce((a, i) => etapes[i].ko === '!' ? '!' : (a === '!' ? a : a + (Number(etapes[i].ko) || 0)), 0) }; }).filter(x => x.idx.length);
+      const ici = temps.find(x => x.k === e.tps) || temps[0];
+      const barre = `<div class="tb-bar" style="grid-template-columns:repeat(${temps.length},minmax(0,1fr))">` + temps.map((x, ti) => { const vers = x.idx.find(i => !etapes[i].fait); const tout = x.faits === x.idx.length;
+        return `<button data-a="etape" data-v="${vers != null ? vers : x.idx[0]}" class="${x === ici ? 'on' : tout ? 'fait' : ''}"><span class="ic"><svg viewBox="0 0 24 24">${TAB_IC['t_' + x.k] || TAB_IC.liste}</svg>${tout && x !== ici ? '<span class="ok">✓</span>' : ''}${x.ko ? `<span class="ko">${x.ko}</span>` : ''}</span><span class="lb">${ti + 1} · ${esc(x.nom)}</span><span class="es">${x.faits} / ${x.idx.length}</span></button>`; }).join('') + '</div>';
+      // En tête du temps en cours : ses étapes, d'un toucher.
+      const sous = ici.idx.length > 1 ? `<div class="tb-sous">${ici.idx.map(i => { const x = etapes[i]; return `<button data-a="etape" data-v="${i}" class="${i === cur ? 'on' : x.fait ? 'fait' : ''}">${x.fait && i !== cur ? '✓ ' : ''}${esc(x.court)}${x.ko ? ` <i>${x.ko}</i>` : ''}</button>`; }).join('')}</div>` : '';
+      const pos = ici.idx.indexOf(cur) + 1;
       return this.tabTop({ titre: 'Contrôle · ' + b.court, sous: esc(fmtDJ(v.prevu_le) + (v.commence_a ? ' · commencé à ' + fmtH(v.commence_a) : '') + ' · ' + this.typeNom(v.type)), retour: true, droite: prog })
-        + `<div class="tb-main tb-ctl">${['planifiee', 'confirmee'].includes(v.statut) ? `<div class="card alerte tb-dem"><div><b>Visite pas encore démarrée</b><div class="sm mu">prévue ${esc(fmtDJ(v.prevu_le))} à ${esc(v.debut_h || '')} — ouverte depuis le cockpit ou son QR code</div></div><span style="flex:1"></span><button class="btn p" data-a="demarrer" data-v="${esc(v.id)}">▶ Démarrer la visite</button></div>` : ''}<div class="tb-h"><div><div class="cap" style="margin:0">Étape ${cur + 1} sur ${n}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
+        + `<div class="tb-main tb-ctl">${['planifiee', 'confirmee'].includes(v.statut) ? `<div class="card alerte tb-dem"><div><b>Visite pas encore démarrée</b><div class="sm mu">prévue ${esc(fmtDJ(v.prevu_le))} à ${esc(v.debut_h || '')} — ouverte depuis le cockpit ou son QR code</div></div><span style="flex:1"></span><button class="btn p" data-a="demarrer" data-v="${esc(v.id)}">▶ Démarrer la visite</button></div>` : ''}${sous}<div class="tb-h"><div><div class="cap" style="margin:0">${TEMPS.findIndex(x => x[0] === ici.k) + 1} · ${esc(ici.nom)} · étape ${pos} sur ${ici.idx.length}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
         + `<div class="tb-step">${e.html()}</div>${nav}</div>` + barre;
     }
     v_historique() {
@@ -1752,8 +1836,8 @@
       if (p.statut === 'ouvert' || p.statut === 'reprendre') { out.push(`<button class="btn s" data-a="photo" data-v="correction|${esc(p.shop)}||${esc(p.ref || '')}|${esc(p.id)}">📷 Corrigé devant moi</button>`); out.push(`<button class="btn s" data-a="form" data-v="esc|${esc(k)}">🚨 Escalader</button>`); }
       if (p.statut === 'escalade') { out.push(btn('ouvert', 'Rouvrir')); out.push(btn('ferme', 'Fermer')); }
       let form = '';
-      if (f.rep === k) { form = `<div class="champ"><input type="text" data-f="form|retour" placeholder="Ce qui manque…" value="${esc(f.retour || '')}"></div><div class="l2" style="margin-top:6px"><input type="date" data-f="form|echeance" value="${esc(f.echeance || plusJours(auj(), 2))}"><button class="btn s p" data-a="statut" data-v="${esc(k)}|reprendre">Renvoyer au franchisé</button></div>`; }
-      if (f.esc === k) { form = `<div class="champ"><input type="text" data-f="form|motif" placeholder="Pourquoi escalader…" value="${esc(f.motif || '')}"></div><div class="btns" style="margin-top:6px"><button class="btn s p" data-a="statut" data-v="${esc(k)}|escalade">Escalader à Sam</button></div>`; }
+      if (String(f.rep) === k) { form = `<div class="champ"><input type="text" data-f="form|retour" placeholder="Ce qui manque…" value="${esc(f.retour || '')}"></div><div class="l2" style="margin-top:6px"><input type="date" data-f="form|echeance" value="${esc(f.echeance || plusJours(auj(), 2))}"><button class="btn s p" data-a="statut" data-v="${esc(k)}|reprendre">Renvoyer au franchisé</button></div>`; }
+      if (String(f.esc) === k) { form = `<div class="champ"><input type="text" data-f="form|motif" placeholder="Pourquoi escalader…" value="${esc(f.motif || '')}"></div><div class="btns" style="margin-top:6px"><button class="btn s p" data-a="statut" data-v="${esc(k)}|escalade">Escalader à Sam</button></div>`; }
       return out.length ? `<div class="btns" style="flex-wrap:wrap">${out.join('')}</div>${form}` : form;
     }
     v_admin() {
@@ -1985,7 +2069,7 @@
       const v = this.visite(vid); if (!v) { return; }
       const f = this.form;
       if (this.vbExige(v) === 'manque') {
-        const E = this._etapes; if (E && E.chiffres >= 0) { this.ouvert[E.cle] = E.chiffres; }
+        const E = this._etapes; if (E && E.pistes >= 0) { this.ouvert[E.cle] = E.pistes; }
         this.dire('Le CA est à plus de ' + String(this.VB[v.shop].seuil).replace('.', ',') + ' % sous le budget : notez d’abord pourquoi, les trois pistes du franchisé et l’horizon.');
         this.rendre(); return;
       }
@@ -2097,7 +2181,7 @@
       const pa = (this.form.pa || []).filter(a => a.titre && a.titre.trim());
       const h = this.D.delaiRapport;
       return `<div class="stat"><div><div class="xs mu">Checklist</div><div class="k" style="margin-top:4px">${faits} / ${total}</div><div class="xs mu">${ko} non conforme${ko > 1 ? 's' : ''}</div></div><div><div class="xs mu">Points proposés</div><div class="k" style="margin-top:4px">${pa.length}</div><div class="xs mu">${pa.filter(a => a.priorite === 'P0').length} P0</div></div><div><div class="xs mu">Photos</div><div class="k" style="margin-top:4px">${this.photosDe(v.id).length}</div><div class="xs mu">${this.file.filter(o => o.apres === 'photo').length} en attente d’envoi</div></div></div>
-        ${this.vbExige(v) === 'manque' ? `<div class="card alerte sm"><b class="dn">CA à plus de ${String(this.VB[v.shop].seuil).replace('.', ',')} % sous le budget</b> — le pourquoi, les trois pistes du franchisé et l’horizon restent à noter à l’étape KPI. <button class="chip" data-a="etape" data-v="${this._etapes ? this._etapes.chiffres : 0}">Y aller</button></div>` : ''}
+        ${this.vbExige(v) === 'manque' ? `<div class="card alerte sm"><b class="dn">CA à plus de ${String(this.VB[v.shop].seuil).replace('.', ',')} % sous le budget</b> — le pourquoi, les trois pistes du franchisé et l’horizon restent à noter au développement. <button class="chip" data-a="etape" data-v="${this._etapes && this._etapes.pistes >= 0 ? this._etapes.pistes : 0}">Y aller</button></div>` : ''}
         <div class="sigs">${[['sigC', 'Le consultant', v.consultantNom || this.consultantNom(this.moi) || ''], ['sig', 'Le franchisé a vu le résumé', (this.boutique(v.shop) || {}).court || '']].map(([k, lab, qui]) => `<div class="sg">
           <div class="cap">${lab}${qui ? ' · ' + esc(qui) : ''} ${this.form[k] ? '<span class="pill st-val">signé</span>' : ''}<button class="chip" data-a="sig-effacer" data-v="${k}" style="margin-left:auto">effacer</button></div>
           <canvas data-sig="${k}" class="sig" width="640" height="180" aria-label="${k === 'sig' ? 'Signature du franchisé' : 'Signature du consultant'}"></canvas></div>`).join('')}</div>
@@ -2111,7 +2195,9 @@
       if (vers === 'reprendre') { body.retour = f.retour || ''; body.echeance = f.echeance || plusJours(auj(), 2); }
       if (vers === 'escalade') { body.escalade_motif = f.motif || ''; }
       Object.assign(p, { statut: vers, attente: true, maj_le: maintenant() }, vers === 'reprendre' ? { retour: body.retour, echeance: body.echeance } : {}, vers === 'escalade' ? { escalade_motif: body.escalade_motif } : {}, vers === 'ferme' ? { ferme_le: maintenant() } : {});
-      this.form = {};
+      // Seulement les champs du renvoi et de l'escalade : pendant un contrôle, le reste du formulaire (points proposés,
+      // pistes, signatures) doit rester (26/10/2026).
+      ['rep', 'esc', 'retour', 'echeance', 'motif'].forEach(k => { delete f[k]; });
       this.ecrire({ method: 'PUT', path: '/plans/' + encodeURIComponent(id), body, apres: 'plan' });
       this.dire({ valide: 'Correction acceptée.', reprendre: 'Renvoyé au franchisé.', ferme: 'Fermé.', escalade: 'Escaladé à Sam.', ouvert: 'Rouvert.', attente: 'En attente.' }[vers] || 'Enregistré.');
     }
