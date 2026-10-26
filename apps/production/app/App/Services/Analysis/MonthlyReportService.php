@@ -23,7 +23,9 @@ use DateTimeImmutable;
  * Raport miesięczny zarządu : rentowność (sprzedaż, marża brutto po surowcach, personel / sprzedaż, wynik), marża
  * produktów i kategorii, klienci, reklamacje (liczba, wartość przyjęta, przyczyny, produkty, klienci, czas decyzji),
  * niezgodności i dostawy z tabletu kierowcy — miesiąc wobec poprzedniego (M-1) i tego samego miesiąca rok wcześniej
- * (N-1). Te same liczby co Rentowność (ProfitabilityService) i Analiza sprzedaży (WDT).
+ * (N-1) ; nowe produkty (w rozwoju i wprowadzone w ostatnich 12 miesiącach : sprzedaż, klienci, marża) i tabela roku
+ * miesiąc po miesiącu z narastającym wynikiem wobec N-1. Te same liczby co Rentowność (ProfitabilityService) i Analiza
+ * sprzedaży (WDT).
  *
  * Strona, PDF (PL / FR) i e-mail z PDF (szablon « management_report »). Wysyłka automatyczna : parametr
  * report.monthly_recipients, od dnia report.monthly_send_day miesiąca za miesiąc poprzedni, raz na miesiąc.
@@ -39,6 +41,10 @@ final class MonthlyReportService
         'product_quality' => 'Qualité du produit', 'delivery_issue' => 'Problème de livraison', 'transport_damage' => 'Transport mal protégé',
         'driver_issue' => 'Problème avec le chauffeur', 'delivery_delay' => 'Retard de livraison', 'other' => 'Autre',
     ];
+    /** status produktu testowego => [PL, FR] */
+    private const DEV_STATUS = [1 => ['Propozycja', 'Proposition'], 2 => ['W produkcji', 'En production']];
+    /** Nowe produkty : ile pokazać w tabeli (najwięcej sprzedaży). */
+    private const NEW_PRODUCTS_SHOWN = 15;
     private const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
     /** klucz => [etykieta PL, etykieta FR, jednostka, lepiej gdy rośnie] */
@@ -163,9 +169,112 @@ final class MonthlyReportService
             'nc' => $nc['cur'],
             'deliveries' => $this->deliveries($from, $to),
             'notes' => $this->notes($p['cur']),
+            'products' => $this->newProducts($month, $from, $to, $rate, (float) $kpi['cur']['revenue']),
+            'year' => $this->year($month, $today, $rate, $p),
         ];
         $data['highlights'] = $this->highlights($data, $p);
         return $data;
+    }
+
+    /**
+     * Nowe produkty : w rozwoju (produkty testowe) i wprowadzone w ostatnich 12 miesiącach (do końca miesiąca raportu)
+     * — sprzedaż od wprowadzenia, kartony, klienci, sprzedaż w miesiącu, marża po surowcach, średnio na miesiąc.
+     */
+    private function newProducts(string $month, string $from, string $to, float $rate, float $monthRevenue): array
+    {
+        $since = (new DateTimeImmutable($month . '-01'))->modify('-11 months')->format('Y-m-d');
+        $launched = $this->repo->launchedProducts($since, $to);
+        $ids = array_map(fn($r) => (int) $r['id'], $launched);
+        $sold = $ids ? array_column($this->wdt->sales($since, $to, ['product_id' => $ids], ['product']), null, 'product_id') : [];
+        $inMonth = $ids ? array_column($this->wdt->sales($from, $to, ['product_id' => $ids], ['product']), null, 'product_id') : [];
+        $materials = [];
+        if ($sold) {
+            foreach ($this->profit->production($since, $to, $rate)['groups'] as $g) {
+                foreach ($g['categories'] as $c) foreach ($c['products'] as $pr) $materials[(int) $pr['id']] = [$pr['revenue'], $pr['materials']];
+            }
+        }
+        $end = new DateTimeImmutable($to);
+        $rows = [];
+        foreach ($launched as $r) {
+            $id = (int) $r['id'];
+            $revenue = (float) ($sold[$id]['value_eur'] ?? 0);
+            $start = new DateTimeImmutable($r['launched']);
+            $months = max(1, ((int) $end->format('Y') - (int) $start->format('Y')) * 12 + (int) $end->format('n') - (int) $start->format('n') + 1);
+            [$mRevenue, $mMaterials] = $materials[$id] ?? [0.0, 0.0];
+            $rows[] = [
+                'id' => $id, 'name' => $r['name'], 'active' => (bool) (int) $r['active'], 'launched' => $r['launched'], 'months' => $months,
+                'revenue' => $revenue, 'cartons' => (float) ($sold[$id]['cartons'] ?? 0), 'customers' => (int) ($sold[$id]['customers'] ?? 0),
+                'month_revenue' => (float) ($inMonth[$id]['value_eur'] ?? 0), 'per_month' => $revenue / $months,
+                'margin_pct' => $mRevenue > 0 ? ($mRevenue - $mMaterials) / $mRevenue * 100 : null,
+                'decision' => $r['decision'],
+            ];
+        }
+        usort($rows, fn($a, $b) => [$b['revenue'], $b['launched']] <=> [$a['revenue'], $a['launched']]);
+        $monthNew = array_sum(array_column($rows, 'month_revenue'));
+        $dev = array_map(fn($d) => [
+            'name' => $d['name'], 'status' => self::DEV_STATUS[(int) $d['id_status']] ?? ['—', '—'], 'stage' => $d['stage'],
+            'stage_at' => $d['stage_at'], 'created_at' => $d['created_at'], 'recipe' => $d['id_recipe'] !== null, 'on_tablet' => (bool) (int) $d['on_tablet'],
+        ], $this->repo->developmentProducts());
+        return [
+            'since' => $since,
+            'count' => count($rows),
+            'with_sales' => count(array_filter($rows, fn($r) => $r['revenue'] > 0)),
+            'revenue' => array_sum(array_column($rows, 'revenue')),
+            'month_revenue' => $monthNew,
+            'month_share' => $monthRevenue > 0 ? $monthNew / $monthRevenue * 100 : null,
+            'rows' => array_slice($rows, 0, self::NEW_PRODUCTS_SHOWN),
+            'development' => $dev,
+            'development_counts' => ['proposal' => count(array_filter($dev, fn($d) => $d['status'][0] === 'Propozycja')), 'production' => count(array_filter($dev, fn($d) => $d['status'][0] === 'W produkcji'))],
+        ];
+    }
+
+    /**
+     * Rok miesiąca raportu, miesiąc po miesiącu (od stycznia do miesiąca raportu) : sprzedaż i ta sama sprzedaż rok
+     * wcześniej (miesiąc w toku : do tego samego dnia), kartony, marża brutto, personel / sprzedaż, wynik, reklamacje ;
+     * narastająco od początku roku wobec N-1.
+     */
+    private function year(string $month, DateTimeImmutable $today, float $rate, array $p): array
+    {
+        $year = (int) substr($month, 0, 4);
+        $last = (int) substr($month, 5, 2);
+        $end = $p['cur']['period']['to'];
+        $endLy = ($year - 1) . substr($end, 4);
+        if (!checkdate((int) substr($endLy, 5, 2), (int) substr($endLy, 8, 2), $year - 1)) $endLy = date('Y-m-t', strtotime(($year - 1) . substr($end, 4, 3) . '-01'));
+        $complaints = $this->repo->complaintsByMonth("{$year}-01-01", $end);
+        $complaintsLy = $this->repo->complaintsByMonth(($year - 1) . '-01-01', $endLy);
+        $salesLy = array_column($this->wdt->sales(($year - 1) . '-01-01', $endLy, [], ['month']), null, 'ym');
+        // Miesiąc raportu i poprzedni są już policzone.
+        $known = [$month => $p['cur'], (new DateTimeImmutable($month . '-01'))->modify('-1 month')->format('Y-m') => $p['prev']];
+        $rows = [];
+        for ($m = 1; $m <= $last; $m++) {
+            $ym = sprintf('%d-%02d', $year, $m);
+            $prof = $known[$ym] ?? $this->profitability($ym, $today, $rate);
+            $t = $prof['totals'];
+            $ly = sprintf('%d-%02d', $year - 1, $m);
+            $revenueLy = isset($salesLy[$ly]) ? (float) $salesLy[$ly]['value_eur'] : 0.0;
+            $rows[] = [
+                'ym' => $ym, 'label' => [ProfitabilityService::monthLabel($ym, true), self::monthFr($ym, true)], 'current' => $prof['period']['current'],
+                'revenue' => $t['revenue'], 'revenue_ly' => $revenueLy, 'delta_ly' => $revenueLy > 0 ? ($t['revenue'] - $revenueLy) / $revenueLy * 100 : null,
+                'cartons' => $t['cartons'], 'gross' => $t['gross'], 'gross_pct' => $t['gross_pct'], 'staff' => $t['staff'], 'staff_pct' => $t['staff_pct'],
+                'result' => $t['result'], 'margin_pct' => $t['margin_pct'],
+                'complaints' => $complaints[$ym]['n'] ?? 0, 'complaint_value' => $complaints[$ym]['value'] ?? 0.0,
+                'complaints_ly' => $complaintsLy[$ly]['n'] ?? 0,
+            ];
+        }
+        $sum = fn(string $k) => array_sum(array_column($rows, $k));
+        $revenue = $sum('revenue');
+        $revenueLy = $sum('revenue_ly');
+        return [
+            'year' => $year,
+            'rows' => $rows,
+            'total' => [
+                'revenue' => $revenue, 'revenue_ly' => $revenueLy, 'delta_ly' => $revenueLy > 0 ? ($revenue - $revenueLy) / $revenueLy * 100 : null,
+                'cartons' => $sum('cartons'), 'gross_pct' => $revenue > 0 ? $sum('gross') / $revenue * 100 : null,
+                'staff_pct' => $revenue > 0 ? $sum('staff') / $revenue * 100 : null, 'result' => $sum('result'),
+                'margin_pct' => $revenue > 0 ? $sum('result') / $revenue * 100 : null,
+                'complaints' => $sum('complaints'), 'complaint_value' => $sum('complaint_value'), 'complaints_ly' => $sum('complaints_ly'),
+            ],
+        ];
     }
 
     /** Uwagi o danych (PL, FR) : koszty miesięczne przyjęte z innego miesiąca, brak kursu EUR lub kosztów. */
@@ -335,6 +444,20 @@ final class MonthlyReportService
             $out[] = ['Brak reklamacji w miesiącu', 'Aucune réclamation dans le mois'];
         }
 
+        $np = $d['products'];
+        if ($np['count'] || $np['development']) {
+            $since = date('m.Y', strtotime($np['since']));
+            $out[] = [sprintf('Nowe produkty (od %s) : %d wprowadzonych, %d ze sprzedażą — %s w miesiącu (%s sprzedaży) · w rozwoju : %d', $since, $np['count'], $np['with_sales'],
+                    self::eur($np['month_revenue']), self::pct($np['month_share']), count($np['development'])),
+                sprintf('Nouveaux produits (depuis %s) : %d lancés, %d vendus — %s dans le mois (%s du CA) · en développement : %d', $since, $np['count'], $np['with_sales'],
+                    self::eur($np['month_revenue']), self::pct($np['month_share']), count($np['development']))];
+        }
+        $yt = $d['year']['total'];
+        if (count($d['year']['rows']) > 1) {
+            $out[] = [sprintf('Od początku roku %d : sprzedaż %s (%s wobec N-1) · wynik %s · reklamacje : %d', $d['year']['year'], self::eur($yt['revenue']), self::signedPct($yt['delta_ly']), self::eur($yt['result']), $yt['complaints']),
+                sprintf('Depuis le début de %d : CA %s (%s vs N-1) · résultat %s · réclamations : %d', $d['year']['year'], self::eur($yt['revenue']), self::signedPct($yt['delta_ly']), self::eur($yt['result']), $yt['complaints'])];
+        }
+
         $dl = $d['deliveries'];
         if ($dl['delivered'] + $dl['problem'] > 0) {
             $out[] = [sprintf('Dostawy potwierdzone na tablecie : %d, z problemem : %d, palety zwrotne : %d', $dl['delivered'], $dl['problem'], $dl['pallets_returned']),
@@ -400,6 +523,20 @@ final class MonthlyReportService
         ], array_map(fn($k) => [$k['label'][$i], self::value($k['values']['cur'], $k['unit']), self::value($k['values']['prev'], $k['unit']),
             self::value($k['values']['ly'], $k['unit']), self::trendText($k['trend_prev']), self::trendText($k['trend_ly'])], $d['kpis']));
 
+        $y = $d['year'];
+        if ($y['rows']) {
+            $pdf->brandSection($t('Rok ', 'Année ') . $y['year'], $t('Miesiąc po miesiącu, narastająco wobec N-1 (miesiąc w toku : N-1 do tego samego dnia)', 'Mois par mois, cumul comparé à N-1 (mois en cours : N-1 au même jour)'));
+            $rows = array_map(fn($r) => [$r['label'][$i] . ($r['current'] ? ' *' : ''), self::eur($r['revenue']), self::eur($r['revenue_ly']), self::signedPct($r['delta_ly']),
+                self::pct($r['gross_pct']), self::pct($r['staff_pct']), self::eur($r['result']), self::pct($r['margin_pct']), $r['complaints']], $y['rows']);
+            $yt = $y['total'];
+            $rows[] = ['_total' => [$t('Razem', 'Total'), self::eur($yt['revenue']), self::eur($yt['revenue_ly']), self::signedPct($yt['delta_ly']), self::pct($yt['gross_pct']),
+                self::pct($yt['staff_pct']), self::eur($yt['result']), self::pct($yt['margin_pct']), $yt['complaints']]];
+            $pdf->brandTable([['label' => $t('Miesiąc', 'Mois'), 'w' => 1.1], ['label' => $t('Sprzedaż', 'CA'), 'w' => 1.3, 'align' => 'R'], ['label' => 'N-1', 'w' => 1.3, 'align' => 'R'],
+                ['label' => 'Δ N-1', 'w' => 0.9, 'align' => 'R'], ['label' => $t('Marża brutto', 'Marge brute'), 'w' => 1, 'align' => 'R'], ['label' => $t('Personel', 'Personnel'), 'w' => 1, 'align' => 'R'],
+                ['label' => $t('Wynik', 'Résultat'), 'w' => 1.2, 'align' => 'R'], ['label' => $t('Marża wyniku', 'Marge nette'), 'w' => 1, 'align' => 'R'], ['label' => $t('Rekl.', 'Récl.'), 'w' => 0.6, 'align' => 'R']],
+                $rows, ['font' => 7.5]);
+        }
+
         if ($d['groups']) {
             $pdf->brandSection($t('Grupy produktów', 'Groupes de produits'), $t('Marża brutto = po surowcach ; marża wyniku = po surowcach, personelu i kosztach grupy', 'Marge brute = après matières ; marge nette = après matières, personnel et coûts du groupe'));
             $pdf->brandTable([
@@ -434,6 +571,25 @@ final class MonthlyReportService
             $pdf->brandTable([['label' => $t('Klient', 'Client'), 'w' => 3.4], ['label' => $t('Sprzedaż', 'CA'), 'w' => 1.3, 'align' => 'R'],
                 ['label' => $t('Udział', 'Part'), 'w' => 0.9, 'align' => 'R'], ['label' => 'N-1', 'w' => 1.3, 'align' => 'R'], ['label' => 'Δ N-1', 'w' => 1, 'align' => 'R']],
                 array_map(fn($c) => [$c['name'], self::eur($c['revenue']), self::pct($c['share']), self::eur($c['revenue_ly']), self::signedPct($c['delta_ly'])], $d['customers']['top']));
+        }
+
+        $np = $d['products'];
+        if ($np['rows'] || $np['development']) {
+            $pdf->brandSection($t('Nowe produkty', 'Nouveaux produits'), sprintf($t('Wprowadzone od %s : %d, ze sprzedażą %d, sprzedaż %s ; w miesiącu %s (%s sprzedaży)', 'Lancés depuis %s : %d, vendus %d, CA %s ; dans le mois %s (%s du CA)'),
+                date('m.Y', strtotime($np['since'])), $np['count'], $np['with_sales'], self::eur($np['revenue']), self::eur($np['month_revenue']), self::pct($np['month_share'])));
+            if ($np['rows']) {
+                $pdf->brandTable([['label' => $t('Produkt', 'Produit'), 'w' => 3], ['label' => $t('Od', 'Depuis'), 'w' => 0.9], ['label' => $t('Sprzedaż', 'CA'), 'w' => 1.1, 'align' => 'R'],
+                    ['label' => $t('Na miesiąc', 'Par mois'), 'w' => 1, 'align' => 'R'], ['label' => $t('W miesiącu', 'Ce mois'), 'w' => 1, 'align' => 'R'], ['label' => $t('Kartony', 'Cartons'), 'w' => 0.8, 'align' => 'R'],
+                    ['label' => $t('Klienci', 'Clients'), 'w' => 0.7, 'align' => 'R'], ['label' => $t('Marża', 'Marge'), 'w' => 0.8, 'align' => 'R']],
+                    array_map(fn($r) => [$r['name'] . ($r['active'] ? '' : ' ' . $t('(nieaktywny)', '(inactif)')), date('m.Y', strtotime($r['launched'])), self::eur($r['revenue']), self::eur($r['per_month']),
+                        self::eur($r['month_revenue']), self::num($r['cartons']), $r['customers'], self::pct($r['margin_pct'])], $np['rows']), ['font' => 7.5]);
+            }
+            if ($np['development']) {
+                $pdf->brandTable([['label' => $t('W rozwoju', 'En développement'), 'w' => 3], ['label' => $t('Status', 'Statut'), 'w' => 1.1], ['label' => $t('Ostatni etap', 'Dernière étape'), 'w' => 2.2],
+                    ['label' => $t('Receptura', 'Recette'), 'w' => 0.8, 'align' => 'R'], ['label' => $t('Od', 'Depuis'), 'w' => 0.9]],
+                    array_map(fn($r) => [$r['name'], $r['status'][$i], ($r['stage'] ?? '—') . ($r['stage_at'] ? ' · ' . date('d.m.Y', strtotime($r['stage_at'])) : ''),
+                        $r['recipe'] ? '✓' : '—', date('m.Y', strtotime($r['created_at']))], array_slice($np['development'], 0, 20)), ['font' => 7.5]);
+            }
         }
 
         $c = $d['complaints'];

@@ -41,8 +41,10 @@
     <nav class="at-profit-nav" aria-label="Sekcje raportu">
         <a href="#najwazniejsze"><i class="bi bi-stars"></i> Najważniejsze</a>
         <a href="#wskazniki"><i class="bi bi-speedometer2"></i> Wskaźniki</a>
+        <a href="#rok"><i class="bi bi-calendar3"></i> Rok {{ r.year.year }}</a>
         <a href="#grupy"><i class="bi bi-people"></i> Grupy</a>
         <a href="#marza"><i class="bi bi-percent"></i> Marża</a>
+        <a href="#nowe"><i class="bi bi-stars"></i> Nowe produkty</a>
         <a href="#klienci"><i class="bi bi-person-badge"></i> Klienci</a>
         <a href="#reklamacje"><i class="bi bi-exclamation-octagon"></i> Reklamacje</a>
         <a href="#wyslij"><i class="bi bi-envelope"></i> Wysyłka</a>
@@ -76,6 +78,35 @@
                 </tbody>
             </table>
             <p class="at-sub mb-0">Sprzedaż = dokumenty WDT netto (EUR) · marża brutto = po surowcach i opakowaniach z receptur · wynik = po surowcach, personelu, kosztach grup, stałych i logistyce (jak w Rentowności) · reklamacje przyjęte = przyjęta ilość × cena zakupu klienta.</p>
+        </div>
+    </div>
+
+    {% set y = r.year %}
+    <div class="card at-anchor" id="rok">
+        <div class="card-header"><h4 class="card-title mb-0">Rok {{ y.year }} : miesiąc po miesiącu</h4></div>
+        <div class="card-body pt-0 table-responsive">
+            <table class="table table-sm align-middle at-report-table">
+                <thead><tr><th>Miesiąc</th><th class="text-end">Sprzedaż</th><th class="text-end">N-1</th><th class="text-end">Δ N-1</th><th class="text-end">Kartony</th>
+                    <th class="text-end">Marża brutto</th><th class="text-end">Personel</th><th class="text-end">Wynik</th><th class="text-end">Marża wyniku</th><th class="text-end">Reklamacje <span class="at-sub">N-1</span></th></tr></thead>
+                <tbody>
+                {% for m in y.rows %}
+                    <tr class="{{ m.ym == r.month ? 'table-active' : '' }}">
+                        <td><a href="{{ root }}/dashboard/monthly?month={{ m.ym }}">{{ m.label[0] }}</a>{% if m.current %} <span class="at-sub">w toku</span>{% endif %}</td>
+                        <td class="text-end">{{ m.revenue|eur }}</td><td class="text-end">{{ m.revenue_ly|eur }}</td><td class="text-end">{{ _self.delta(m.delta_ly) }}</td>
+                        <td class="text-end">{{ m.cartons|number_format(0, ',', ' ') }}</td><td class="text-end">{{ m.gross_pct|pct }}</td><td class="text-end">{{ m.staff_pct|pct }}</td>
+                        <td class="text-end {{ m.result < 0 ? 'text-danger' : '' }}">{{ m.result|eur }}</td><td class="text-end">{{ m.margin_pct|pct }}</td>
+                        <td class="text-end">{{ m.complaints }} <span class="at-sub">{{ m.complaints_ly }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+                <tfoot>
+                    {% set t = y.total %}
+                    <tr class="fw-bold"><td>Od początku roku</td><td class="text-end">{{ t.revenue|eur }}</td><td class="text-end">{{ t.revenue_ly|eur }}</td><td class="text-end">{{ _self.delta(t.delta_ly) }}</td>
+                        <td class="text-end">{{ t.cartons|number_format(0, ',', ' ') }}</td><td class="text-end">{{ t.gross_pct|pct }}</td><td class="text-end">{{ t.staff_pct|pct }}</td>
+                        <td class="text-end {{ t.result < 0 ? 'text-danger' : '' }}">{{ t.result|eur }}</td><td class="text-end">{{ t.margin_pct|pct }}</td><td class="text-end">{{ t.complaints }} <span class="at-sub">{{ t.complaints_ly }}</span></td></tr>
+                </tfoot>
+            </table>
+            <p class="at-sub mb-0">N-1 = ten sam miesiąc rok wcześniej (miesiąc w toku : do tego samego dnia). Wynik jak w Rentowności (miesiąc bez kosztów : koszty z ostatniego miesiąca z kosztami).</p>
         </div>
     </div>
 
@@ -144,6 +175,57 @@
             </table>
             </div>
             {% endif %}
+        </div>
+    </div>
+
+    {% set np = r.products %}
+    <div class="card at-anchor" id="nowe">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Nowe produkty : w rozwoju i wprowadzone</h4>
+            <span class="d-flex gap-2 flex-wrap">
+                <a class="btn btn-sm btn-outline-primary" href="{{ root }}/test-products"><i class="bi bi-clipboard-data"></i> Produkty w rozwoju</a>
+                <a class="btn btn-sm btn-outline-primary" href="{{ root }}/products/new-with-recipe"><i class="bi bi-plus-circle"></i> Nowy produkt</a>
+            </span>
+        </div>
+        <div class="card-body pt-0">
+            <div class="d-flex flex-wrap gap-4 mb-3">
+                <div><div class="at-sub">Wprowadzone od {{ np.since|date('m.Y') }}</div><strong class="fs-5">{{ np.count }}</strong> <span class="at-sub">({{ np.with_sales }} ze sprzedażą)</span></div>
+                <div><div class="at-sub">Sprzedaż od wprowadzenia</div><strong class="fs-5">{{ np.revenue|eur }}</strong></div>
+                <div><div class="at-sub">W miesiącu {{ L.cur[0] }}</div><strong class="fs-5">{{ np.month_revenue|eur }}</strong> <span class="at-sub">{{ np.month_share|pct }} sprzedaży</span></div>
+                <div><div class="at-sub">W rozwoju</div><strong class="fs-5">{{ np.development|length }}</strong> <span class="at-sub">propozycje {{ np.development_counts.proposal }} · w produkcji {{ np.development_counts.production }}</span></div>
+            </div>
+            <div class="row g-4">
+                <div class="col-12 table-responsive">
+                    <h6>Co dają nowe produkty <span class="at-sub">({{ np.rows|length }} z największą sprzedażą)</span></h6>
+                    {% if np.rows %}
+                    <table class="table table-sm align-middle at-report-table">
+                        <thead><tr><th>Produkt</th><th>Od</th><th class="text-end">Sprzedaż</th><th class="text-end">Na miesiąc</th><th class="text-end">W miesiącu</th><th class="text-end">Klienci</th><th class="text-end">Marża</th></tr></thead>
+                        <tbody>
+                        {% for p in np.rows %}
+                            <tr class="{{ p.revenue == 0 ? 'text-muted' : '' }}"><td>{{ p.name }}{% if not p.active %} <span class="badge bg-light text-dark">nieaktywny</span>{% endif %}<div class="at-sub">{{ p.cartons|number_format(0, ',', ' ') }} kartonów</div></td>
+                                <td>{{ p.launched|date('m.Y') }}</td><td class="text-end">{{ p.revenue|eur }}</td><td class="text-end">{{ p.per_month|eur }}</td><td class="text-end">{{ p.month_revenue|eur }}</td>
+                                <td class="text-end">{{ p.customers }}</td><td class="text-end"><strong class="{{ p.margin_pct is not null and p.margin_pct < 50 ? 'text-danger' : '' }}">{{ p.margin_pct|pct }}</strong></td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}<p class="text-muted">Brak nowych produktów w ostatnich 12 miesiącach.</p>{% endif %}
+                </div>
+                <div class="col-12 table-responsive">
+                    <h6>W rozwoju <span class="at-sub">(produkty testowe, ostatnio zmieniane)</span></h6>
+                    {% if np.development %}
+                    <table class="table table-sm align-middle at-report-table">
+                        <thead><tr><th>Produkt</th><th>Status</th><th>Ostatni etap</th></tr></thead>
+                        <tbody>
+                        {% for p in np.development|slice(0, 12) %}
+                            <tr><td>{{ p.name }}{% if p.on_tablet %} <i class="bi bi-tablet" title="na tablecie"></i>{% endif %}{% if p.recipe %} <i class="bi bi-journal-check" title="receptura"></i>{% endif %}</td>
+                                <td>{{ p.status[0] }}</td><td class="at-sub">{{ p.stage ?? '—' }}{{ p.stage_at ? ' · ' ~ p.stage_at|date('d.m.Y') : '' }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if np.development|length > 12 %}<p class="at-sub">… i {{ np.development|length - 12 }} kolejnych.</p>{% endif %}
+                    {% else %}<p class="text-muted">Brak produktów w rozwoju.</p>{% endif %}
+                </div>
+            </div>
         </div>
     </div>
 

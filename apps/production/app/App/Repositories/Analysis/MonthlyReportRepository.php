@@ -85,6 +85,53 @@ final class MonthlyReportRepository extends WorkshopRepository
         }
     }
 
+    /** Reklamacje miesiąc po miesiącu (tabela roku) : [RRRR-MM => [n, value]]. */
+    public function complaintsByMonth(string $from, string $to): array
+    {
+        $out = [];
+        foreach ($this->all(
+            "SELECT DATE_FORMAT(reported_at, '%Y-%m') AS ym, COUNT(*) AS n,
+                    COALESCE(SUM(CASE WHEN acceptance_status = 'ACCEPTED' THEN COALESCE(accepted_quantity, 0) * COALESCE(single_purchase_price, 0) ELSE 0 END), 0) AS value
+             FROM complaint WHERE reported_at >= ? AND reported_at < ? + INTERVAL 1 DAY GROUP BY ym",
+            [$from, $to]
+        ) as $r) $out[$r['ym']] = ['n' => (int) $r['n'], 'value' => (float) $r['value']];
+        return $out;
+    }
+
+    /**
+     * Produkty w rozwoju (produkty testowe rodzaju « Produkt », nie zakończone) : status, ostatni etap z historii,
+     * receptura, pokazany na tablecie. Najpierw ostatnio zmieniane.
+     */
+    public function developmentProducts(): array
+    {
+        try {
+            return $this->all(
+                "SELECT tp.id, tp.name, tp.id_status, tp.id_recipe, tp.create_timestamp AS created_at, COALESCE(d.on_tablet, 0) AS on_tablet,
+                        ch.create_timestamp AS stage_at, st.name AS stage
+                 FROM test_product tp
+                 LEFT JOIN n_dev_product d ON d.id_test_product = tp.id
+                 LEFT JOIN test_product_changelog ch ON ch.id = (SELECT c2.id FROM test_product_changelog c2 WHERE c2.id_test_product = tp.id ORDER BY c2.create_timestamp DESC, c2.id DESC LIMIT 1)
+                 LEFT JOIN test_product_stage st ON st.id = ch.id_stage
+                 WHERE tp.id_type = 1 AND tp.id_status IN (1, 2)
+                 ORDER BY COALESCE(ch.create_timestamp, tp.create_timestamp) DESC, tp.id DESC"
+            );
+        } catch (\PDOException) {
+            return [];
+        }
+    }
+
+    /** Produkty wprowadzone w okresie : data wprowadzenia z karty kierownika produkcji, inaczej data utworzenia produktu. */
+    public function launchedProducts(string $from, string $to): array
+    {
+        return $this->all(
+            "SELECT fp.id, fp.name, fp.active, COALESCE(l.launch_date, DATE(fp.create_timestamp)) AS launched, l.decision
+             FROM final_product fp LEFT JOIN n_mgr_launch l ON l.id_product = fp.id
+             WHERE COALESCE(l.launch_date, DATE(fp.create_timestamp)) BETWEEN ? AND ?
+             ORDER BY launched DESC, fp.name",
+            [$from, $to]
+        );
+    }
+
     /** Czy wiadomość danego typu od autora (np. « monthly-report:2026-09 ») jest już w kolejce lub wysłana. */
     public function alreadySent(string $type, string $author): bool
     {

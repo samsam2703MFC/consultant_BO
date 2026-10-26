@@ -159,9 +159,14 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 - **Palettes** : nombre et numéros des palettes scannées au dépôt pour chaque client (sinon estimation d'après les cartons, signalée).
 - **Consignes de livraison par client** (fiche client › « Dostawa : instrukcje dla kierowcy ») : procédure de déchargement, alarme, clé, congélateur, contact sur place. Chiffrées en base, affichées sur la tablette à l'arrêt du client (alarme et clé seulement après un toucher, 60 s), jamais dans les PDF destinés au client.
 
+## Produkty : une seule entrée (26/10/2026)
+
+- Rail « Produkt › Produkty » : une page à onglets (PageTabs « products ») — Karty produktów, Receptury, Półprodukty, Kompozycje, Produkty w rozwoju (produits test) ; remplace « Karty produktów » et le sous-menu « Produkty ». Droits inchangés (product_cards, products).
+
 ## Rapport mensuel (26/10/2026)
 
 - **Analiza › Raport miesięczny** (`/dashboard/monthly`) : pour un mois (par défaut le dernier mois clos, ou le mois en cours au prorata), comparé à M-1 et N-1 — ventes, cartons, clients actifs, marge brute après matières, personnel / ventes, résultat de production et marge nette (mêmes calculs que Rentowność), réclamations (déclarées, acceptées, refusées, en cours, valeur acceptée = quantité acceptée × prix d'achat, % des ventes, délai de décision, motifs, produits et clients les plus réclamés, réclamations pour 1000 cartons), non-conformités, livraisons de la tablette chauffeur. Groupes (marge vs objectif), 10 meilleures ventes et marges les plus faibles, catégories, 10 premiers clients vs N-1. « L'essentiel » en quelques phrases.
+- **Nouveaux produits** : produits lancés dans les 12 derniers mois (date de lancement du module Kierownik produkcji, sinon date de création) — CA depuis le lancement, par mois, dans le mois du rapport (et part du CA), cartons, clients, marge après matières ; produits en développement (produits test de type « Produkt », statut, dernière étape). **Tableau de l'année** : janvier → mois du rapport, CA et N-1 (mois en cours : N-1 au même jour), cartons, marge brute, personnel, résultat, marge nette, réclamations, cumul depuis le début de l'année.
 - **PDF PL / FR** (`/dashboard/monthly/pdf?month=AAAA-MM&lang=fr`), **envoi par e-mail** (PDF joint, modèle « management_report » modifiable dans Komunikacja) et **envoi automatique** chaque mois pour le mois précédent (adresses, jour et langue réglés sur la page ; lancé par `Bin/mail_dispatch.php`, une seule fois par mois). Accès : même droit que Rentowność.
 
 ## Points ouverts (données réelles à fournir)

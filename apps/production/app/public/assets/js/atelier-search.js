@@ -68,7 +68,9 @@
         'rapport': 'raport', 'rapports': 'raport', 'mensuel': 'miesieczny', 'mensuelle': 'miesieczny', 'mois': 'miesieczny miesiac', 'bilan': 'raport wynik',
         'synthese': 'raport', 'resultat': 'wynik', 'resultats': 'wynik', 'marges': 'marza marze', 'direction': 'zarzadu raport',
         'alarme': 'alarm instrukcje', 'cle': 'klucz instrukcje', 'cles': 'klucz instrukcje', 'dechargement': 'rozladunku rozladunek', 'consignes': 'instrukcje',
-        'consigne': 'instrukcje', 'procedure': 'procedura', 'livreur': 'kierowca kierowcy'
+        'consigne': 'instrukcje', 'procedure': 'procedura', 'livreur': 'kierowca kierowcy',
+        'developpement': 'rozwoju', 'nouveau': 'nowy nowe', 'nouveaux': 'nowe nowy', 'nouveaute': 'nowe rozwoju', 'nouveautes': 'nowe rozwoju',
+        'annuel': 'roku rok', 'annee': 'roku rok', 'lancement': 'wprowadzone nowe'
     };
 
     var menu = null;

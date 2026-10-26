@@ -81,6 +81,13 @@ try {
         (UUID(), 'PRODUCT', 'product_quality', 'REPLACEMENT', 3, 500, 0, 20, 'NEW', '2026-09-28 08:00:00', '2026-09-28 08:00:00'),
         (UUID(), 'PRODUCT', 'other', 'CREDIT', 3, 500, 2, 20, 'ACCEPTED', '2026-08-05 08:00:00', '2026-08-06 08:00:00')");
     $pdo->exec("INSERT INTO n_nc (number, reported_at, source, description, severity, cost_impact, status) VALUES ('NC-T-1', '2026-09-05', 'production', 'Test', 'major', 50, 'open')");
+    // Nowy produkt (czerwiec 2026), sprzedany w lipcu ; produkt w rozwoju z etapem.
+    $pdo->exec("INSERT INTO final_product (id, name, id_category, weight, ppc, id_section, active, create_timestamp) VALUES (501, 'Nouveauté 2026', 1, 80, 40, 1, 1, '2026-06-10 09:00:00')");
+    $pdo->exec("INSERT INTO document_wdt (id, id_customer, established_date, currency) VALUES (4, 3, '2026-07-15', 'EUR')");
+    $pdo->exec("INSERT INTO document_wdt_product (id_document_wdt, id_product, name, quantity, price_carton) VALUES (4, 501, 'Nouveauté 2026', 10, 30)");
+    $pdo->exec("INSERT INTO test_product_stage (id, priority, name) VALUES (6, 4, 'Prototypage et Conception')");
+    $pdo->exec("INSERT INTO test_product (id, name, id_status, id_type, create_timestamp) VALUES (90, 'Crookie pistache', 1, 1, '2026-08-01 08:00:00'), (91, 'Appli caisse', 1, 2, '2026-08-01 08:00:00')");
+    $pdo->exec("INSERT INTO test_product_changelog (id_test_product, id_stage, description, deadline, create_timestamp) VALUES (90, 6, 'Prototype', '2026-09-20 00:00:00', '2026-09-15 10:00:00')");
     $pdo->exec("INSERT INTO n_delivery_stop (ship_date, id_customer, status, reason, pallets_returned, recorded_at) VALUES
         ('2026-09-10', 3, 'delivered', NULL, 2, '2026-09-10 09:00:00'), ('2026-09-11', 3, 'problem', 'closed', 0, '2026-09-11 09:00:00')");
     $pdo->exec("SET SESSION sql_mode = @mode");
@@ -130,9 +137,26 @@ try {
     expectRep((bool) array_filter($d['highlights'], fn($h) => str_contains($h[0], 'Reklamacje : 3') && str_contains($h[1], 'motif principal : Qualité du produit')), 'complaint highlight');
     expectRep((bool) array_filter($d['notes'], fn($n) => str_contains($n[1], 'calculateur de coûts')), 'missing monthly costs noted in PL and FR');
 
+    // Nowe produkty : wprowadzone w 12 miesiącach (sprzedaż od wprowadzenia, w miesiącu, marża), w rozwoju (etap).
+    $np = $d['products'];
+    expectRep($np['since'] === '2025-10-01' && $np['count'] === 1 && $np['with_sales'] === 1 && abs($np['revenue'] - 300) < 0.01 && $np['month_revenue'] == 0.0, 'launched products since 12 months');
+    $new = $np['rows'][0];
+    expectRep($new['name'] === 'Nouveauté 2026' && $new['launched'] === '2026-06-10' && $new['months'] === 4 && abs($new['per_month'] - 75) < 0.01 && $new['customers'] === 1, 'new product: sales since launch, per month, customers');
+    expectRep(count($np['development']) === 1 && $np['development'][0]['name'] === 'Crookie pistache' && $np['development'][0]['stage'] === 'Prototypage et Conception'
+        && $np['development'][0]['status'] === ['Propozycja', 'Proposition'], 'products in development (type Produkt only) with last stage');
+    expectRep((bool) array_filter($d['highlights'], fn($h) => str_contains($h[0], 'Nowe produkty (od 10.2025) : 1 wprowadzonych') && str_contains($h[1], 'en développement : 1')), 'new products highlight');
+
+    // Rok : styczeń → wrzesień, N-1, narastająco.
+    $y = $d['year'];
+    expectRep($y['year'] === 2026 && count($y['rows']) === 9 && $y['rows'][0]['ym'] === '2026-01' && $y['rows'][8]['ym'] === '2026-09', 'year table January to report month');
+    expectRep(abs($y['rows'][6]['revenue'] - 300) < 0.01 && abs($y['rows'][8]['revenue'] - 2000) < 0.01 && abs($y['rows'][8]['revenue_ly'] - 1600) < 0.01 && abs($y['rows'][8]['delta_ly'] - 25) < 0.01, 'monthly revenue and N-1');
+    expectRep(abs($y['total']['revenue'] - 3300) < 0.01 && abs($y['total']['revenue_ly'] - 1600) < 0.01 && $y['total']['complaints'] === 4 && $y['rows'][7]['complaints'] === 1, 'year to date totals');
+    expectRep((bool) array_filter($d['highlights'], fn($h) => str_contains($h[0], 'Od początku roku 2026 : sprzedaż 3 300 €')), 'year to date highlight');
+
     // Bieżący miesiąc : w toku, ułamek okresu.
     $now = $reports->build('2026-10', $today);
     expectRep($now['current'] && abs($now['elapsed'] - 15 / 31) < 0.001 && $now['to'] === '2026-10-15', 'current month in progress');
+    expectRep(count($now['year']['rows']) === 10 && $now['year']['rows'][9]['current'], 'current month closes the year table');
 
     foreach (['pl' => 'RAPORT_MIESIECZNY_2026-09_PL.pdf', 'fr' => 'RAPORT_MIESIECZNY_2026-09_FR.pdf'] as $lang => $name) {
         $pdf = $reports->pdf('2026-09', $lang, $today);
