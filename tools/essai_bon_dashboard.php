@@ -59,6 +59,8 @@ function ebCockpit(string $m, string $chemin, ?array $corps = null): array
     if ($corps !== null) { curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($corps, JSON_UNESCAPED_UNICODE)); }
     $brut = curl_exec($ch);
     $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    // 24/10/2026 : le DELETE du ménage a rendu « HTTP 0 » sans un mot — l'erreur de curl le dit désormais.
+    if ($brut === false || $code === 0) { echo '         curl : ', curl_errno($ch), ' ', curl_error($ch), "\n"; }
     curl_close($ch);
     $j = is_string($brut) ? json_decode($brut, true) : null;
     printf("  %-6s %-58s → HTTP %d\n", $m, preg_replace('/\?.*/', '', $chemin), $code);
@@ -113,7 +115,7 @@ function ebMenage(?int $promo, ?int $camp): void
         sleep(21);
         ebCockpit('GET', '/exploitation/promos-magasin?shop=' . EB_SHOP . '&frais=1');
         [$c] = ebCockpit('DELETE', '/exploitation/promos-magasin?shop=' . EB_SHOP . '&id=p' . $promo);
-        if ($c >= 300) {
+        if ($c === 0 || $c >= 300) {
             $w = ErpApi::ecrire('DELETE', '/admin/promotions/buy-x-get-y/' . $promo);
             printf("  supprimée directement dans l'ERP : HTTP %d %s\n", $w['code'], $w['erreur'] ?? '');
         }
