@@ -167,7 +167,7 @@ verifie('ses notes : 12 notées, 3 sous le seuil, moyenne 3,75', $mp['notees'] =
 verifie('un mois sans relevé n’a pas de pourcentage', $T['mois'][5]['pct'] === null && $T['mois'][5]['demandees'] === 0);
 verifie('le mois en cours vide : le mois passé est choisi d’office', $T['choisi'] === $prec, $T['choisi']);
 verifie('ses tâches sous 4 sont lues sur le mois entier', $GET_NC['du'] === $prec . '-01' && $GET_NC['au'] === date('Y-m-t', strtotime($prec . '-01')) && $GET_NC['shop'] === '2');
-verifie('chaque tâche porte la note, le commentaire et le contrôleur', $T['taches'][0]['note'] === 2 && $T['taches'][0]['commentaire'] === 'Vitrine à moitié vide' && $T['taches'][0]['controleur'] === 'Pierre B.');
+verifie('chaque tâche porte son identifiant (pour sa photo), la note, le commentaire et le contrôleur', $T['taches'][0]['taskId'] === '101' && $T['taches'][0]['note'] === 2 && $T['taches'][0]['commentaire'] === 'Vitrine à moitié vide' && $T['taches'][0]['controleur'] === 'Pierre B.');
 $_GET = ['mois' => $ce, 'n' => '6'];
 $T = ep_visites_taches('2');
 verifie('le mois demandé, arrêté à aujourd’hui ; six mois demandés', $T['choisi'] === $ce && $GET_NC['au'] === date('Y-m-d') && count($T['mois']) === 6);
