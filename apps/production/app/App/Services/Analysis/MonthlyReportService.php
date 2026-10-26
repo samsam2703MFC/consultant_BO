@@ -673,6 +673,8 @@ final class MonthlyReportService
         if ((int) $today->format('j') < $day) return ['skipped' => 'before day ' . $day];
         $month = $today->modify('first day of this month')->modify('-1 month')->format('Y-m');
         if ($this->repo->alreadySent(self::MESSAGE_TYPE, 'monthly-report:' . $month)) return ['skipped' => 'already sent ' . $month];
+        // Rapport juste : seulement quand le mois est fermé dans le calculateur de coûts (sinon coûts estimés) ; réessayé à chaque passage.
+        if (!$this->repo->monthLocked($month)) return ['skipped' => 'month not closed ' . $month];
         $lang = $this->params->get('report.monthly_lang', 'pl') === 'fr' ? 'fr' : 'pl';
         return ['month' => $month] + $this->queue($month, $lang, $recipients, 'monthly-report:' . $month, $today);
     }

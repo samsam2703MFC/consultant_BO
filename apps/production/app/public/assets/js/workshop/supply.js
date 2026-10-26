@@ -592,6 +592,7 @@
                 <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-upload"></i> ${esc(t('inv.upload'))}<input type="file" class="d-none" accept=".pdf,.xml,application/pdf,application/xml,text/xml,image/*" data-upload></label>
                 <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-camera"></i> ${esc(t('inv.photo'))}<input type="file" class="d-none" accept="image/*" capture="environment" data-upload></label>
                 <span class="small text-muted" data-ocr-status></span>` : ''}
+                <a class="btn btn-sm btn-outline-secondary ms-auto" href="${api.root}/settings/ksef/purchase-invoices"><i class="bi bi-eye"></i> ${esc(t('inv.ksef_viewer'))}</a>
                 <a href="#tab=invoices&inv=map" class="btn btn-sm btn-link ms-auto" data-mappings><i class="bi bi-arrow-left-right"></i> ${esc(t('inv.mappings'))}</a></div></div>
             ${ksef}
             <p class="small text-muted mb-2">${esc(t('inv.help'))}</p>

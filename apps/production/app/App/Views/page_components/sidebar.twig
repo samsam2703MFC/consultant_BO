@@ -267,28 +267,13 @@
                     </a>
                 </li>
 
-                <li class="sidebar-item has-sub">
-                    <a href="#" class="sidebar-link">
-                        <i class="bi bi-envelope"></i>
-                        <span>Komunikacja</span>
+                {# Komunikacja : jedna pozycja, strony w zakładkach (PageTabs « communication ») — bez podmenu powtarzającego zakładki #}
+                {% set g = page_tab_groups().communication %}
+                <li class="sidebar-item">
+                    <a href="{{ root }}{{ g.tabs[0][0] }}" class="sidebar-link" data-also="{{ g.tabs|map(t => t[0])|join(' ') }} /communication/automations">
+                        <i class="bi {{ g.icon }}"></i>
+                        <span>{{ g.label }}</span>
                     </a>
-                    <ul class="submenu">
-                        <li class="submenu-item">
-                            <a href="{{ root }}/communication/distribution" data-also="/communication/automations">
-                                <i class="bi bi-diagram-3"></i> Dystrybucja dokumentów
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/communication/messages">
-                                <i class="bi bi-envelope-open"></i> Historia wiadomości
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{{ root }}/communication/outbox">
-                                <i class="bi bi-send-exclamation"></i> Stan wysyłek
-                            </a>
-                        </li>
-                    </ul>
                 </li>
 
                 <li class="sidebar-title">Finanse</li>
@@ -571,35 +556,38 @@
                 <li><a href="{{ root }}/test-products/pipeline" data-where="Produkt › Produkty › Nowe produkty : etapy"><i class="bi bi-kanban"></i> CRM nowych produktów : pomysł, test 1 (receptura i zdjęcia), test 2, receptura zatwierdzona na tablecie, wprowadzenie — testy planowane w biurze, potwierdzane na tablecie grupy bez ponownego wpisywania</a></li>
                 <li><a href="{{ root }}/test-products/pipeline" data-where="Produkt › Produkty › Nowe produkty : etapy"><i class="bi bi-tablet"></i> Nowe produkty na tablecie wybranej grupy : test ze zdjęciami, ilość, wynik (OK, do poprawy, nie), co zmienić, zatwierdzenie receptury</a></li>
                 <li><a href="{{ root }}/kiosk" data-where="Produkcja › Tablet produkcji"><i class="bi bi-tablet-landscape"></i> Ekran główny tabletu grupy (jak iPad) : godzina, zespół, dziś produkujemy, nowe produkty, kod QR telefonem, identyfikator, tydzień</a></li>
-                <li><a href="{{ root }}/shipments/differences" data-where="Logistyka › Wysyłki i dokumenty"><i class="bi bi-exclamation-diamond"></i> Różnice i problemy dostaw (dostawy, wysyłka) : różnica opłacona proforma ↔ WDT (zwrot dla klienta, dopłata), problem zgłoszony przez kierowcę — odpowiedzialny, decyzja, termin, zamknięcie</a></li>
-                <li><a href="{{ root }}/logistics/deliveries" data-where="Logistyka › Dostawy"><i class="bi bi-qr-code"></i> Kod QR trasy dla tabletu kierowcy : pojazd i dzień otwierają się po zeskanowaniu (także na raporcie trasy PDF)</a></li>
+                <li><a href="{{ root }}/shipments/differences" data-where="Logistyka › Wysyłka › Wysyłki i dokumenty"><i class="bi bi-exclamation-diamond"></i> Różnice i problemy dostaw (dostawy, wysyłka) : różnica opłacona proforma ↔ WDT (zwrot dla klienta, dopłata), problem zgłoszony przez kierowcę — odpowiedzialny, decyzja, termin, zamknięcie</a></li>
+                <li><a href="{{ root }}/logistics/deliveries" data-where="Logistyka › Dostawy : potwierdzenia"><i class="bi bi-qr-code"></i> Kod QR trasy dla tabletu kierowcy : pojazd i dzień otwierają się po zeskanowaniu (także na raporcie trasy PDF)</a></li>
                 <li><a href="{{ root }}/workshop/execution" data-where="Produkcja › Tablet produkcji"><i class="bi bi-person-badge"></i> Tablet kierowcy : PIN kierowcy (osoby na tablecie) — kierowca wybiera się z listy i wpisuje PIN ; lista = stanowisko « Kierowca-dostawca » (Stanowiska i zadania)</a></li>
-                <li><a href="{{ root }}/recipes" data-where="Produkt › Receptury"><i class="bi bi-clock-history"></i> Historia receptury : wersje « obowiązuje od », co się zmieniło w składzie (surowce, półprodukty, kompozycje), koszt surowców miesiąc po miesiącu (efekt cen i efekt składu) — przycisk « Historia » w kalkulacji receptury</a></li>
-                <li><a href="{{ root }}/other-settings#alert-params" data-where="Administracja › Ustawienia › Pozostałe"><i class="bi bi-bell"></i> Alerty i terminy w dzwonku : reklamacja bez decyzji (po ilu dniach, alert pilny), zaległe testy nowych produktów, brak kosztów miesiąca (do którego dnia)</a></li>
-                <li><a href="{{ root }}/dashboard/groups" data-where="Analiza › Rentowność grup"><i class="bi bi-robot"></i> Godziny, produkcja, marża i sprzedaż grup w tygodniu i miesiącu, coboty, wykres 12 tygodni</a></li>
-                <li><a href="{{ root }}/organization/positions" data-where="Administracja › Stanowiska i zadania"><i class="bi bi-file-earmark-person"></i> Karty stanowisk (fiches de poste) : cel, obowiązki, kompetencje, wskaźniki, higiena — biuro i pracownia, PDF PL / FR</a></li>
-                <li><a href="{{ root }}/driver" data-where="Logistyka › Tablet kierowcy"><i class="bi bi-tablet-landscape"></i> Tablet kierowcy : trasa dnia, numery palet, zdjęcia przed i po rozładunku z godziną, podpis, raport PDF trasy, problemy w dostawie</a></li>
-                <li><a href="{{ root }}/clients" data-where="Zamówienia › Klienci › edycja klienta"><i class="bi bi-shield-lock"></i> Instrukcje dostawy klienta dla kierowcy : procedura rozładunku, alarm, klucz, zamrażarka, kontakt (zaszyfrowane)</a></li>
-                <li><a href="{{ root }}/logistics/deliveries" data-where="Logistyka › Dostawy"><i class="bi bi-file-earmark-pdf"></i> Raport trasy PDF : zdjęcia przed / po rozładunku, podpisy, palety i ich numery</a></li>
-                <li><a href="{{ root }}/workshop/data-sheet" data-where="Produkcja › Tabela do wypełnienia"><i class="bi bi-file-earmark-spreadsheet"></i> Tabela do wypełnienia (Excel, import) : stanowiska i pojemności, zmiany, obsada zespołów, godziny wyjazdu tras, pojemność zamrażarki</a></li>
-                <li><a href="{{ root }}/workshop/stock-movements" data-where="Produkcja › Ruchy magazynowe"><i class="bi bi-arrow-left-right"></i> Ruchy magazynowe produktów gotowych (magazyn, kartony) : stan na początek i koniec okresu, przyjęcia z produkcji, wydania do klientów, wartość zapasu, kartony przeterminowane, palety, które czekają, partie i daty ważności (FEFO), CSV</a></li>
-                <li><a href="{{ root }}/workshop/deliveries" data-where="Produkcja › Dostawy surowców"><i class="bi bi-truck"></i> Kto dostarcza co i kiedy : dostawcy surowców i opakowań, dni dostaw</a></li>
+                <li><a href="{{ root }}/recipes" data-where="Produkt › Produkty › Receptury"><i class="bi bi-clock-history"></i> Historia receptury : wersje « obowiązuje od », co się zmieniło w składzie (surowce, półprodukty, kompozycje), koszt surowców miesiąc po miesiącu (efekt cen i efekt składu) — przycisk « Historia » w kalkulacji receptury</a></li>
+                <li><a href="{{ root }}/other-settings#alert-params" data-where="Ustawienia › Ogólne › Pozostałe"><i class="bi bi-bell"></i> Alerty i terminy w dzwonku : reklamacja bez decyzji (po ilu dniach, alert pilny), zaległe testy nowych produktów, brak kosztów miesiąca (do którego dnia)</a></li>
+                <li><a href="{{ root }}/dashboard/groups" data-where="Analiza › Rentowność grup : tydzień"><i class="bi bi-robot"></i> Godziny, produkcja, marża i sprzedaż grup w tygodniu i miesiącu, coboty, wykres 12 tygodni</a></li>
+                <li><a href="{{ root }}/organization/positions" data-where="Ustawienia › Organizacja › Stanowiska i zadania"><i class="bi bi-file-earmark-person"></i> Karty stanowisk (fiches de poste) : cel, obowiązki, kompetencje, wskaźniki, higiena — biuro i pracownia, PDF PL / FR</a></li>
+                <li><a href="{{ root }}/driver" data-where="Logistyka › Dostawy : potwierdzenia › Tablet kierowcy"><i class="bi bi-tablet-landscape"></i> Tablet kierowcy : trasa dnia, numery palet, zdjęcia przed i po rozładunku z godziną, podpis, raport PDF trasy, problemy w dostawie</a></li>
+                <li><a href="{{ root }}/clients" data-where="Ustawienia › Klienci › Klienci"><i class="bi bi-shield-lock"></i> Instrukcje dostawy klienta dla kierowcy : procedura rozładunku, alarm, klucz, zamrażarka, kontakt (zaszyfrowane)</a></li>
+                <li><a href="{{ root }}/logistics/deliveries" data-where="Logistyka › Dostawy : potwierdzenia"><i class="bi bi-file-earmark-pdf"></i> Raport trasy PDF : zdjęcia przed / po rozładunku, podpisy, palety i ich numery</a></li>
+                <li><a href="{{ root }}/workshop/data-sheet" data-where="Produkcja › Produkcja › Tabela do wypełnienia"><i class="bi bi-file-earmark-spreadsheet"></i> Tabela do wypełnienia (Excel, import) : stanowiska i pojemności, zmiany, obsada zespołów, godziny wyjazdu tras, pojemność zamrażarki</a></li>
+                <li><a href="{{ root }}/workshop/stock-movements" data-where="Produkcja › Produkcja › Ruchy magazynowe"><i class="bi bi-arrow-left-right"></i> Ruchy magazynowe produktów gotowych (magazyn, kartony) : stan na początek i koniec okresu, przyjęcia z produkcji, wydania do klientów, wartość zapasu, kartony przeterminowane, palety, które czekają, partie i daty ważności (FEFO), CSV</a></li>
+                <li><a href="{{ root }}/workshop/deliveries" data-where="Produkcja › Produkcja › Dostawy surowców"><i class="bi bi-truck"></i> Kto dostarcza co i kiedy : dostawcy surowców i opakowań, dni dostaw</a></li>
                 <li><a href="{{ root }}/products/new-with-recipe" data-where="Produkt › Produkty"><i class="bi bi-plus-circle"></i> Nowy produkt z recepturą</a></li>
-                <li><a href="{{ root }}/workshop/gantt#view=day" data-where="Produkcja › Tydzień produkcji"><i class="bi bi-bar-chart-steps"></i> Dzień : godziny</a></li>
-                <li><a href="{{ root }}/workshop/team-sheet#lists=1" data-where="Produkcja › Plan zespołów"><i class="bi bi-file-earmark-pdf"></i> Listy dnia (PDF) : lista produkcyjna, zapotrzebowanie, zwroty</a></li>
-                <li><a href="{{ root }}/client-orders/queue" data-where="Zamówienia › Do obsłużenia"><i class="bi bi-list-check"></i> Do obsłużenia dziś (sprawy i zadania zamówień) : zamówienia po terminie wysyłki, bez proformy, proforma nieaktualna lub niewysłana, przypomnienie o płatności, palety gotowe do dokumentów (WZ, WDT, CMR), różnice dostaw, e-maile z błędem — termin, stanowisko, działanie</a></li>
+                <li><a href="{{ root }}/workshop/gantt#view=day" data-where="Produkcja › Produkcja › Plan tygodnia"><i class="bi bi-bar-chart-steps"></i> Dzień : godziny</a></li>
+                <li><a href="{{ root }}/workshop/team-sheet#lists=1" data-where="Produkcja › Produkcja › Plan zespołów i listy dnia (PDF)"><i class="bi bi-file-earmark-pdf"></i> Listy dnia (PDF) : lista produkcyjna, zapotrzebowanie, zwroty</a></li>
+                <li><a href="{{ root }}/client-orders/queue" data-where="Zamówienia › Do obsłużenia"><i class="bi bi-list-check"></i> Do obsłużenia dziś (sprawy i zadania zamówień) : zamówienia po terminie wysyłki, bez proformy, proforma nieaktualna lub niewysłana, przypomnienie o płatności, palety gotowe do dokumentów (WZ, WDT, CMR), różnice dostaw, e-maile z błędem, WDT do wysłania lub poprawy w KSeF — termin, stanowisko, działanie</a></li>
                 <li><a href="{{ root }}/client-orders/archive" data-where="Zamówienia › Zamówienia klientów"><i class="bi bi-archive"></i> Archiwum zamówień</a></li>
-                <li><a href="{{ root }}/devices/logs" data-where="Ustawienia › Ogólne › Dostęp API"><i class="bi bi-journal-text"></i> Logi urządzeń</a></li>
-                <li><a href="{{ root }}/devices/new" data-where="Ustawienia › Ogólne › Dostęp API"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
-                <li><a href="{{ root }}/settings/ksef/purchase-invoices" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-cloud-download"></i> Faktury zakupowe KSeF (pobieranie)</a></li>
+                <li><a href="{{ root }}/devices/logs" data-where="Ustawienia › Ogólne › Dostęp API (urządzenia)"><i class="bi bi-journal-text"></i> Logi urządzeń</a></li>
+                <li><a href="{{ root }}/devices/new" data-where="Ustawienia › Ogólne › Dostęp API (urządzenia)"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
+                <li><a href="{{ root }}/settings/ksef/purchase-invoices" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-cloud-download"></i> Faktury zakupowe KSeF : podgląd (PDF, XML, filtry) — import i kontrola w Zaopatrzenie › Faktury</a></li>
                 <li><a href="{{ root }}/purchases" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-archive"></i> Archiwum dostaw (ręczne)</a></li>
-                <li><a href="{{ root }}/communication/outbox" data-where="Komunikacja › Stan wysyłek"><i class="bi bi-send-exclamation"></i> Stan wysyłek (błędy e-mail, kolejka, outbox) : e-maile do klientów, które nie wyszły, wysyłki do sklepów franczyzy (proformy, reklamacje, wysyłki), e-maile automatyczne pominięte, monitoring — ponów jedną pozycję, rozwiązane z powodem</a></li>
-                <li><a href="{{ root }}/communication/distribution?tab=history" data-where="Komunikacja › Dystrybucja dokumentów"><i class="bi bi-lightning-charge"></i> Automatyczne e-maile : historia wysyłek</a></li>
+                <li><a href="{{ root }}/kiosk" data-where="Produkcja › Tablet produkcji › Otwórz tablet"><i class="bi bi-moon"></i> Tablet : Koniec dnia (fin de journée) — partie bez numerów partii surowców, kontrola jakości, straty, maszyny w ruchu, zatwierdzenie dnia z notatką, wyjście i podpis</a></li>
+                <li><a href="{{ root }}/shipping/wizard" data-where="Logistyka › Wysyłka › Wyślij dzień"><i class="bi bi-cloud-upload"></i> Wyślij WDT dnia do KSeF (wszystkie naraz, po utworzeniu dokumentów) ; statusy KSeF odświeżane co 5 minut</a></li>
+                <li><a href="{{ root }}/clients?type=active" data-where="Ustawienia › Klienci › Klienci"><i class="bi bi-tags"></i> Cennik klienta : ceny klienta (karta klienta › Cennik klienta, menu ⋯ na liście klientów)</a></li>
+                <li><a href="{{ root }}/communication/outbox" data-where="Zamówienia › Komunikacja"><i class="bi bi-send-exclamation"></i> Stan wysyłek (błędy e-mail, kolejka, outbox) : e-maile do klientów, które nie wyszły, wysyłki do sklepów franczyzy (proformy, reklamacje, wysyłki), e-maile automatyczne pominięte, monitoring, zamówienia ze sklepów (pobieranie, nieznany produkt, zamówienie odrzucone), domówienia → sklep — ponów jedną pozycję, rozwiązane z powodem</a></li>
+                <li><a href="{{ root }}/communication/distribution?tab=history" data-where="Zamówienia › Komunikacja"><i class="bi bi-lightning-charge"></i> Automatyczne e-maile : historia wysyłek</a></li>
                 <li><a href="{{ root }}/mail?folder=ERP" data-where="Poczta"><i class="bi bi-journal-check"></i> Wysłane z ERP (dziennik wysyłek z mojej skrzynki)</a></li>
-                <li><a href="{{ root }}/workshop/execution#questions" data-where="Produkcja › Tablet produkcji › Zarządzanie"><i class="bi bi-ui-checks"></i> Pytania przy wejściu i wyjściu (odzież robocza, higiena)</a></li>
-                <li><a href="{{ root }}/workshop/execution#devices" data-where="Produkcja › Tablet produkcji › Zarządzanie"><i class="bi bi-tablet"></i> Tablety : parowanie i blokada</a></li>
-                <li><a href="{{ root }}/workshop/execution#people" data-where="Produkcja › Tablet produkcji › Zarządzanie"><i class="bi bi-person-badge"></i> Identyfikatory, PIN i telefony pracowników</a></li>
-                <li><a href="{{ root }}/workshop/execution#hours" data-where="Produkcja › Tablet produkcji › Zarządzanie"><i class="bi bi-clock-history"></i> Godziny pracy i karty czasu pracy</a></li>
+                <li><a href="{{ root }}/workshop/execution#questions" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-ui-checks"></i> Pytania przy wejściu i wyjściu (odzież robocza, higiena)</a></li>
+                <li><a href="{{ root }}/workshop/execution#devices" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-tablet"></i> Tablety : parowanie i blokada</a></li>
+                <li><a href="{{ root }}/workshop/execution#people" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-person-badge"></i> Identyfikatory, PIN i telefony pracowników</a></li>
+                <li><a href="{{ root }}/workshop/execution#hours" data-where="Produkcja › Tablet produkcji › Zarządzanie : tablety, PIN, czas pracy"><i class="bi bi-clock-history"></i> Godziny pracy i karty czasu pracy</a></li>
             </ul>
         </div>
 

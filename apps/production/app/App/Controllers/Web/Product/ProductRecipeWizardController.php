@@ -46,6 +46,7 @@ class ProductRecipeWizardController extends BaseController
             'preset_category' => (int) ($_GET['category'] ?? 0),
             // Zakresy logistyki — ta sama walidacja co Karta produktu (App\Domain\Product\ProductLogistics)
             'logisticsRanges' => \App\Domain\Product\ProductLogistics::RANGES,
+            'shelfLife' => \App\Domain\Product\ProductLogistics::SHELF_LIFE,
         ]);
     }
 

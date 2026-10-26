@@ -941,8 +941,12 @@ check($s === 200 && $pd['data']['closed']['employee'] !== null && $pd['data']['c
     && $close && (int) $close['id_employee'] > 0 && $sum[$croissant]['produced'] == 120 && $sum[$croissant]['waste'] == 12, 'team validates the day (who, when, summary per product)');
 [$s, $pd] = $kiosk('POST', '/kiosk/waste', ['item_id' => $croissant, 'quantity' => 2, 'reason' => 'damaged'], $device, $emp);
 check($s === 201 && $pd['data']['closed']['changed'], 'change after the validation shown');
-[$s, $pd] = $kiosk('POST', '/kiosk/production/close', [], $device, $emp);
-check($s === 200 && !$pd['data']['closed']['changed'] && $pd['data']['closed']['note'] === null
+$gaps = $pd['data']['gaps'];
+check(isset($gaps['lots'], $gaps['qc']) && count($gaps['qc']) > 0, 'day gaps: productions without quality check listed');
+[$s, $b] = $kiosk('POST', '/kiosk/production/close', [], $device, $emp);
+check($s === 422 && $b['description'] === 'DAY_GAPS_NOTE_REQUIRED', 'gaps: validation without a note refused');
+[$s, $pd] = $kiosk('POST', '/kiosk/production/close', ['note' => 'kontrola po południu'], $device, $emp);
+check($s === 200 && !$pd['data']['closed']['changed'] && $pd['data']['closed']['note'] === 'kontrola po południu'
     && (int) $pdo->query('SELECT COUNT(*) FROM n_prod_day_close WHERE work_date = CURDATE() AND id_group = 1')->fetchColumn() === 1, 'validated again: one record per day and group');
 [$s, $b] = $kiosk('POST', '/kiosk/production/close', ['date' => date('Y-m-d', strtotime('-5 days'))], $device, $emp);
 check($s === 409 && $b['description'] === 'OUTPUT_LOCKED', 'old days are not validated on the tablet');
@@ -1692,7 +1696,7 @@ check($s === 200 && $inv['data']['order']['id'] === $flourPo['id'] && $c['quanti
 check((int) $pdo->query("SELECT COUNT(*) FROM n_inv_mapping WHERE supplier_key = 'nip:5260250274' AND id_raw_material = 900 AND factor = 25000")->fetchColumn() === 1
     && (int) $pdo->query("SELECT id_supplier FROM n_inv_supplier WHERE seller_nip = '5260250274'")->fetchColumn() === 60, 'supplier name mapping and seller NIP remembered');
 [$s, $b] = $call('POST', "/supply/invoices/{$invId}/receive", null, $access);
-check($s === 409 && $b['description'] === 'PO_NOT_RECEIVABLE', 'an order already received is not received again from the invoice');
+check($s === 409 && $b['description'] === 'INVOICE_ALREADY_RECEIVED', 'an order already received is not received again from the invoice (quantities already in stock)');
 [$s, $b] = $call('PUT', "/supply/invoices/{$invId}/lines", ['lines' => [['name' => 'x', 'quantity' => 1]]], $access);
 check($s === 409 && $b['description'] === 'INVOICE_LINES_READ_ONLY', 'KSeF invoice lines are not edited');
 [$s, $b] = $call('POST', "/supply/invoices/{$invId}/decision", ['status' => 'disputed', 'note' => 'Cena 4,40 zł/kg zamiast 4,00'], $access);

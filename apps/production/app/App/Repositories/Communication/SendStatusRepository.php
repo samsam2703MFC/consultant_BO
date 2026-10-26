@@ -9,7 +9,8 @@ use App\Repositories\Workshop\WorkshopRepository;
  * Stan wysyłek : les files d'envoi de l'ERP lues ensemble — e-mails clients (communication_message), envois aux
  * franchisés (outbox : proforma.upload / proforma.notify / complaint.update), webhooks d'expédition
  * (webhook_outbox_shipments), notifications de surveillance (cron_notification_outbox), e-mails automatiques
- * (n_mail_dispatch) — et le journal des actions (n_send_issue_action). Les payloads ne sont jamais renvoyés tels quels :
+ * (n_mail_dispatch), récupération des commandes des boutiques (n_order_collect_issue), domówienia transmises aux
+ * boutiques (customer_order.supplement_push_status) — et le journal des actions (n_send_issue_action). Les payloads ne sont jamais renvoyés tels quels :
  * ils contiennent des secrets (signature, jeton, URL de rappel) ; seules les clés utiles sont extraites.
  */
 final class SendStatusRepository extends WorkshopRepository
@@ -88,6 +89,31 @@ final class SendStatusRepository extends WorkshopRepository
             ORDER BY d.id DESC LIMIT 500", array_merge([$since], $ignoredReasons));
     }
 
+    /** Commandes des boutiques : cas ouverts (configuration, récupération, import, produit inconnu) vus depuis $since. */
+    public function shops(string $since): array
+    {
+        return $this->all("SELECT i.id, i.kind, 'failed' AS status, i.occurrences AS attempts, i.message AS error, i.first_at AS created_at, i.last_at,
+                NULL AS next_try_at, i.id_customer, c.company AS customer, i.order_key, i.id_order
+            FROM n_order_collect_issue i LEFT JOIN customer c ON c.id = i.id_customer
+            WHERE i.closed_at IS NULL AND i.last_at >= ?
+            ORDER BY i.id DESC LIMIT 500", [$since]);
+    }
+
+    /** Domówienia non transmises à la boutique : échec, ou en attente depuis $stuckBefore ; motif = dernier changelog système. */
+    public function supplements(string $since, string $stuckBefore): array
+    {
+        return $this->all("SELECT co.id, 'supplement.push' AS kind, co.supplement_push_status AS status, NULL AS attempts,
+                (SELECT l.changed_fields FROM customer_order_changelog l WHERE l.id_order = co.id AND l.source = 'system' ORDER BY l.id DESC LIMIT 1) AS error,
+                co.create_order_date AS created_at, COALESCE(co.supplement_push_at, co.create_order_date) AS last_at,
+                CASE WHEN co.supplement_push_status = 'pending' THEN COALESCE(co.supplement_push_at, co.create_order_date) END AS next_try_at,
+                co.id_customer, c.company AS customer, co.supplement_order_key AS order_key
+            FROM customer_order co LEFT JOIN customer c ON c.id = co.id_customer
+            WHERE co.order_type = 'SUPPLEMENT'
+              AND (co.supplement_push_status = 'failed' OR (co.supplement_push_status = 'pending' AND COALESCE(co.supplement_push_at, co.create_order_date) < ?))
+              AND COALESCE(co.supplement_push_at, co.create_order_date) >= ?
+            ORDER BY co.id DESC LIMIT 500", [$stuckBefore, $since]);
+    }
+
     /** Dernier envoi réussi par file (santé des tâches planifiées). */
     public function lastSuccess(): array
     {
@@ -98,6 +124,8 @@ final class SendStatusRepository extends WorkshopRepository
             'shipment' => $one("SELECT MAX(updated_at) AS at FROM webhook_outbox_shipments WHERE status = 'sent'"),
             'monitoring' => $one("SELECT MAX(sent_at) AS at FROM cron_notification_outbox WHERE status = 'sent'"),
             'automation' => $one("SELECT MAX(created_at) AS at FROM n_mail_dispatch WHERE status = 'queued'"),
+            'shops' => $one("SELECT MAX(created_at) AS at FROM customer_order_changelog WHERE source = 'api' AND action_type = 'create'"),
+            'supplement' => $one("SELECT MAX(supplement_push_at) AS at FROM customer_order WHERE supplement_push_status = 'sent'"),
         ];
     }
 
@@ -153,6 +181,8 @@ final class SendStatusRepository extends WorkshopRepository
             'shipment' => 'SELECT status FROM webhook_outbox_shipments WHERE id = ?',
             'monitoring' => 'SELECT status FROM cron_notification_outbox WHERE id = ?',
             'automation' => 'SELECT status FROM n_mail_dispatch WHERE id = ?',
+            'shops' => "SELECT IF(closed_at IS NULL, 'failed', 'closed') AS status FROM n_order_collect_issue WHERE id = ?",
+            'supplement' => "SELECT supplement_push_status AS status FROM customer_order WHERE id = ? AND order_type = 'SUPPLEMENT'",
         };
         $row = $this->all($sql, [$id])[0] ?? null;
         return $row ? (string) $row['status'] : null;
@@ -173,6 +203,9 @@ final class SendStatusRepository extends WorkshopRepository
                          WHERE id = ? AND status = 'failed'", [self::SHIPMENT_ATTEMPTS - 1, $id]],
             'monitoring' => ["UPDATE cron_notification_outbox SET status = 'pending', attempts = ?, next_try_at = NOW(), locked_at = NULL, locked_by = NULL
                          WHERE id = ? AND status = 'dead'", [self::MONITORING_ATTEMPTS - 1, $id]],
+            // Domówienie : « pending » + date du jour = repris une fois par Bin/mail_dispatch.php (OrderSupplementPusherService::pushRequeued).
+            'supplement' => ["UPDATE customer_order SET supplement_push_status = 'pending', supplement_push_at = NOW()
+                         WHERE id = ? AND order_type = 'SUPPLEMENT' AND supplement_push_status = 'failed'", [$id]],
         };
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

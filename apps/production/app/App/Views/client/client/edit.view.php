@@ -19,8 +19,15 @@
     </div>
     <section class="section">
         <div class="card">
-            <div class="card-header">
-                <h4 class="card-title">Edytuj klienta</h4>
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h4 class="card-title mb-0">Edytuj klienta</h4>
+                <?php if (!empty($row['id'])): ?>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-outline-primary" href="<?= ROOT ?>/clients/<?= (int) $row['id'] ?>/price-list"><i class="bi bi-tags"></i> Cennik klienta</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="<?= ROOT ?>/clients/<?= (int) $row['id'] ?>/profitability"><i class="bi bi-graph-up"></i> Rentowność</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="<?= ROOT ?>/finances/sales-analytics?customer_id=<?= (int) $row['id'] ?>"><i class="bi bi-box-seam"></i> Sprzedaż WDT</a>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="card-body">
 
@@ -44,21 +51,21 @@
                                 <div class="row">
                                     <div class="col-4">
                                         <label class="form-label" for="name">
-                                            Imię
+                                            Imię (osoba kontaktowa)
                                         </label>
                                         <input value="<?=old_value('name', $row['name'])?>" type="text" class="form-control" id="name" name="name" placeholder="Nazwa">
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label" for="surname">
-                                            Nazwisko
+                                            Nazwisko (osoba kontaktowa)
                                         </label>
                                         <input value="<?=old_value('surname', $row['surname'])?>" type="text" class="form-control" id="surnamesurname" name="surname" placeholder="Nazwisko">
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label" for="company">
-                                            Firma
+                                            Firma *
                                         </label>
-                                        <input value="<?=old_value('company', $row['company'])?>" type="text" class="form-control" id="company" name="company" placeholder="Firma">
+                                        <input value="<?=old_value('company', $row['company'])?>" type="text" class="form-control" id="company" name="company" placeholder="Firma" maxlength="60" required>
                                     </div>
                                 </div>
                                 <div class="row mt-4">
@@ -102,10 +109,10 @@
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label" for="tax_number">
-                                            NIP / VAT UE
+                                            NIP / VAT UE *
                                         </label>
                                         <div class="input-group">
-                                            <input value="<?=old_value('tax_number', $row['tax_number'])?>" type="text" class="form-control" id="tax_number" name="tax_number" placeholder="np. PL1234567890" autocomplete="off">
+                                            <input value="<?=old_value('tax_number', $row['tax_number'])?>" type="text" class="form-control" id="tax_number" name="tax_number" placeholder="np. PL1234567890" autocomplete="off" required>
                                             <button class="btn btn-outline-secondary" type="button" data-vies-lookup-button title="Pobierz dane z VIES" aria-label="Pobierz dane z VIES">
                                                 <i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Pobierz dane z VIES</span>
                                             </button>
@@ -116,7 +123,7 @@
                                         <label class="form-label" for="payment_termin">
                                             Czas na płatność (dni)
                                         </label>
-                                        <input value="<?=old_value('payment_termin', $row['payment_termin'])?>" type="text" class="form-control" id="payment_termin" name="payment_termin" placeholder="Ilość dni">
+                                        <input value="<?=old_value('payment_termin', $row['payment_termin'])?>" type="number" min="0" max="365" step="1" class="form-control" id="payment_termin" name="payment_termin" placeholder="Ilość dni (np. 14)">
                                     </div>
                                 </div>
 
@@ -125,19 +132,19 @@
                                         <label class="form-label" for="email_head">
                                             Email główny
                                         </label>
-                                        <input value="<?=old_value('email_head', $row['email_head'])?>" type="email" class="form-control" id="email_head" name="email_head" placeholder="Email">
+                                        <input value="<?=old_value('email_head', $row['email_head'])?>" type="email" multiple class="form-control" id="email_head" name="email_head" placeholder="adres@firma.pl (kilka : przecinek)">
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label" for="email_salesman">
                                             Email do przedstawiciela handlowego
                                         </label>
-                                        <input value="<?=old_value('email_salesman', $row['email_salesman'])?>" type="email" class="form-control" id="email_salesman" name="email_salesman" placeholder="Email">
+                                        <input value="<?=old_value('email_salesman', $row['email_salesman'])?>" type="email" multiple class="form-control" id="email_salesman" name="email_salesman" placeholder="adres@firma.pl (kilka : przecinek)">
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label" for="email_accountant">
                                             Email do działu księgowości
                                         </label>
-                                        <input value="<?=old_value('email_accountant', $row['email_accountant'])?>" type="email" class="form-control" id="email_accountant" name="email_accountant" placeholder="Email">
+                                        <input value="<?=old_value('email_accountant', $row['email_accountant'])?>" type="email" multiple class="form-control" id="email_accountant" name="email_accountant" placeholder="adres@firma.pl (kilka : przecinek)">
                                     </div>
                                 </div>
 

@@ -39,16 +39,27 @@ class ClientService
         return $this->clientRepository->findAll();
     }
 
+    /** Pola e-mail klienta : sterują dystrybucją dokumentów, więc każdy adres musi być poprawny. */
+    public const EMAIL_FIELDS = ['email_head' => 'E-mail właściciela', 'email_salesman' => 'E-mail handlowca', 'email_accountant' => 'E-mail księgowości'];
+
+    /** Termin płatności : liczba dni (puste = brak terminu). */
+    public const PAYMENT_DAYS_MAX = 365;
+
+    /**
+     * Firma i NIP wymagane (dokumenty, KSeF, VIES) ; osoba kontaktowa opcjonalna ; e-maile sprawdzane
+     * (kilka adresów rozdzielonych przecinkiem lub średnikiem) ; termin płatności w dniach 0–365.
+     */
     public function validate($data)
     {
         $errors = [];
 
-        if (empty($data['name'])) {
-            $errors['name'] = "Wprowadź imię właściciela";
+        if (trim((string) ($data['company'] ?? '')) === '') {
+            $errors['company'] = "Wprowadź nazwę firmy";
+        } elseif (mb_strlen(trim((string) $data['company'])) > 60) {
+            $errors['company'] = "Nazwa firmy: najwyżej 60 znaków";
         }
-
-        if (empty($data['surname'])) {
-            $errors['surname'] = "Wprowadź nazwisko właściciela";
+        if (trim((string) ($data['tax_number'] ?? '')) === '') {
+            $errors['tax_number'] = "Wprowadź NIP / numer VAT";
         }
 
         if (empty($data['fac_street'])) {
@@ -69,8 +80,36 @@ class ClientService
         if (isset($data['communication_lang']) && !in_array($data['communication_lang'], \App\Services\Utils\DocumentLabels::LANGUAGES, true)) {
             $errors['communication_lang'] = "Wybierz język komunikacji";
         }
+        foreach (self::EMAIL_FIELDS as $field => $label) {
+            $bad = self::invalidEmails((string) ($data[$field] ?? ''));
+            if ($bad) $errors[$field] = "{$label}: nieprawidłowy adres " . implode(', ', $bad);
+        }
+        $days = trim((string) ($data['payment_termin'] ?? ''));
+        if ($days !== '' && (!preg_match('/^\d+$/', $days) || (int) $days > self::PAYMENT_DAYS_MAX)) {
+            $errors['payment_termin'] = "Termin płatności: liczba dni od 0 do " . self::PAYMENT_DAYS_MAX;
+        }
 
         return $errors;
+    }
+
+    /** Nieprawidłowe adresy z pola (adresy rozdzielone przecinkiem, średnikiem lub spacją). */
+    public static function invalidEmails(string $value): array
+    {
+        $bad = [];
+        foreach (preg_split('/[\s,;]+/', trim($value), -1, PREG_SPLIT_NO_EMPTY) as $email) {
+            if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) $bad[] = $email;
+        }
+        return $bad;
+    }
+
+    /** Termin płatności : puste pole = brak terminu (NULL), inaczej liczba dni. */
+    private function normalizePaymentTerm(array $data): array
+    {
+        if (array_key_exists('payment_termin', $data)) {
+            $days = trim((string) $data['payment_termin']);
+            $data['payment_termin'] = $days === '' ? null : (int) $days;
+        }
+        return $data;
     }
 
     public function getFranchisee()
@@ -88,13 +127,13 @@ class ClientService
 
     public function update($id, $data)
     {
-        $data = $this->normalizeTaxNumber($data);
+        $data = $this->normalizePaymentTerm($this->normalizeTaxNumber((array) $data));
         return $this->clientRepository->update($id, $data);
     }
 
     public function insert($data)
     {
-        $data = $this->normalizeTaxNumber($data);
+        $data = $this->normalizePaymentTerm($this->normalizeTaxNumber((array) $data));
         return $this->transactionManager->execute(function () use ($data) {
 
             $resInsert = $this->clientRepository->insert($data);

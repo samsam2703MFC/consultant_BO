@@ -80,6 +80,7 @@ final class OutputService
             'group' => ['id' => $groupId, 'name' => $context->translator->lang() === 'fr' ? ($group['name_fr'] ?? $group['name_pl']) : $group['name_pl']],
             'items' => $items,
             'totals' => $this->totals($items),
+            'gaps' => $this->gaps($items),
             'closed' => $close === null ? null : [
                 'at' => $close['closed_at'], 'employee' => $close['employee_name'] ?: null, 'note' => $close['note'],
                 // Partie lub straty zmienione po zatwierdzeniu : zespół zatwierdza dzień jeszcze raz.
@@ -149,7 +150,10 @@ final class OutputService
         return $this->day($context, (string) $w['work_date']);
     }
 
-    /** Zespół zatwierdza produkcję dnia : podsumowanie (plan, zrobione, straty, dobre) zapisane z osobą i godziną. */
+    /**
+     * Zespół zatwierdza produkcję dnia : podsumowanie (plan, zrobione, straty, dobre) zapisane z osobą i godziną.
+     * Braki (partie bez numerów partii surowców lub bez kontroli jakości) : zatwierdzenie tylko z notatką.
+     */
     public function closeDay(array $body, ApiContext $context): array
     {
         $groupId = $this->groupId($context);
@@ -161,9 +165,14 @@ final class OutputService
         $current = $this->day($context, $day);
         if (!$current['items']) throw new ApiException('DAY_NOTHING_TO_CLOSE', 409);
         $note = isset($c['note']) && trim((string) $c['note']) !== '' ? trim((string) $c['note']) : null;
-        $this->tx->execute(function () use ($day, $groupId, $note, $current, $context) {
+        // Traçabilité : partie sans lots matières ou sans contrôle qualité → validation possible, mais avec une note (pourquoi).
+        $gaps = $current['gaps'];
+        if (($gaps['lots'] || $gaps['qc']) && $note === null) {
+            throw new ApiException('DAY_GAPS_NOTE_REQUIRED', 422, [], ['lots' => count($gaps['lots']), 'qc' => count($gaps['qc'])]);
+        }
+        $this->tx->execute(function () use ($day, $groupId, $note, $current, $context, $gaps) {
             $this->repo->saveDayClose($day, $groupId, $context->employeeId, $context->deviceId, $note, json_encode($this->summary($current['items'])));
-            $this->audit->record($context, 'close', 'production_day', $groupId, null, ['date' => $day] + $current['totals']);
+            $this->audit->record($context, 'close', 'production_day', $groupId, null, ['date' => $day] + $current['totals'] + ['missing_lots' => count($gaps['lots']), 'missing_qc' => count($gaps['qc'])]);
         });
         return $this->day($context, $day);
     }
@@ -345,6 +354,23 @@ final class OutputService
     }
 
     /** Podsumowanie zatwierdzenia : na produkt plan, zrobione i straty (porównywane przy kolejnym odczycie). */
+    /**
+     * Braki dnia (assistant « Koniec dnia ») : partie bez wszystkich numerów partii surowców, partie bez kontroli
+     * jakości (anulowane pominięte) — identyfikatory partii.
+     */
+    private function gaps(array $items): array
+    {
+        $lots = $qc = [];
+        foreach ($items as $i) {
+            foreach ($i['batches'] as $b) {
+                if ($b['cancelled']) continue;
+                if (($b['lots_total'] ?? 0) > ($b['lots_done'] ?? 0)) $lots[] = $b['id'];
+                if (($b['qc'] ?? null) === null) $qc[] = $b['id'];
+            }
+        }
+        return ['lots' => $lots, 'qc' => $qc];
+    }
+
     private function summary(array $items): array
     {
         return array_map(fn($i) => ['item_id' => $i['item_id'], 'planned' => $i['planned'], 'produced' => $i['produced'], 'waste' => $i['waste']], $items);
@@ -389,6 +415,7 @@ final class OutputService
             'lot_code' => $o['lot_code'], 'employee' => $o['employee_name'] ?? null, 'note' => $o['note'],
             'created_at' => $o['created_at'], 'cancelled' => $o['cancelled_at'] !== null,
             'lots_done' => isset($o['lots_done']) ? (int) $o['lots_done'] : null,
+            'qc' => $o['qc_status'] ?? null,
             'editable' => $o['cancelled_at'] === null && $this->editable((string) $o['work_date']),
         ];
     }

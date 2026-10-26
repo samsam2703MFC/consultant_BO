@@ -120,6 +120,26 @@ class OrderSupplementPusherService
         return true;
     }
 
+    /**
+     * Bin/mail_dispatch.php (toutes les 5 min) : une tentative pour chaque domówienie remise en file par « Ponów » dans
+     * Stan wysyłek ; en cas d'échec elle repasse « failed » (pas de boucle).
+     */
+    public function pushRequeued(): array
+    {
+        $out = ['pushed' => 0, 'failed' => 0];
+        foreach ($this->orderRepository->requeuedSupplementIds() as $id) {
+            $ok = $this->push($id);
+            if (!$ok) {
+                $order = $this->orderRepository->getById($id);
+                if (($order['supplement_push_status'] ?? null) === 'pending') {
+                    $this->orderService->markSupplementPushStatus($id, ['supplement_push_status' => 'failed', 'supplement_push_at' => date('Y-m-d H:i:s')], 'requeue_failed');
+                }
+            }
+            $out[$ok ? 'pushed' : 'failed']++;
+        }
+        return $out;
+    }
+
     private function resolveSupplierName(): string
     {
         // Mozna wczytac z konfiguracji aplikacji lub ustalic statycznie

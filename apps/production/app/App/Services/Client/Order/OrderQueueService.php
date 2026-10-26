@@ -16,7 +16,7 @@ use DateTimeImmutable;
  * les postes responsables et l'action directe. Les règles ne changent aucun statut : elles montrent l'exception.
  * Mêmes définitions que le reste de l'ERP : commandes ouvertes (OpenOrders), proforma périmée (comme la liste des
  * commandes), rappel de paiement dû (Przypomnienia płatności), palettes prêtes (Wyślij dzień), écarts d'expédition
- * (Różnice i problemy dostaw), e-mails en erreur (Stan wysyłek).
+ * (Różnice i problemy dostaw), e-mails en erreur (Stan wysyłek), WDT pas encore acceptées par KSeF (Wysyłki).
  */
 final class OrderQueueService
 {
@@ -29,10 +29,16 @@ final class OrderQueueService
         'documents_ready' => ['label' => 'Dokumenty do wystawienia', 'icon' => 'bi-truck', 'positions' => ['LOGISTYKA']],
         'shipping_issue' => ['label' => 'Różnica / problem dostawy', 'icon' => 'bi-exclamation-diamond', 'positions' => ['ADMINISTRACJA', 'LOGISTYKA']],
         'send_error' => ['label' => 'E-mail do klienta nie wyszedł', 'icon' => 'bi-send-exclamation', 'positions' => ['ADMINISTRACJA']],
+        'ksef' => ['label' => 'WDT do KSeF', 'icon' => 'bi-cloud-upload', 'positions' => ['ADMINISTRACJA', 'LOGISTYKA']],
     ];
     public const WHEN = ['all' => 'Wszystko', 'overdue' => 'Po terminie', 'today' => 'Do dziś', 'week' => 'Do 7 dni'];
     /** Palettes prêtes : comme Dzisiaj, les 14 derniers jours. */
     private const READY_DAYS = 14;
+    /** KSeF : WDT des 60 derniers jours ; « en attente » = sans réponse depuis plus de 60 minutes (rafraîchi toutes les 5 min). */
+    private const KSEF_DAYS = 60;
+    private const KSEF_STUCK_MINUTES = 60;
+    private const KSEF_LABELS = ['ready' => 'przygotowana, niewysłana', 'failed' => 'błąd wysyłki', 'rejected' => 'odrzucona przez KSeF',
+        'submitted' => 'bez odpowiedzi KSeF', 'processing' => 'bez odpowiedzi KSeF'];
 
     public function __construct(
         private OrderQueueRepository $repo,
@@ -187,6 +193,21 @@ final class OrderQueueService
                 ['label' => 'Stan wysyłek', 'url' => '/communication/outbox?filter=error&source=email', 'primary' => true],
                 ['label' => 'Wiadomość', 'url' => '/communication/messages/' . $m['id']],
             ]);
+        }
+        $stuck = $now->modify('-' . self::KSEF_STUCK_MINUTES . ' minutes')->format('Y-m-d H:i:s');
+        foreach ($this->repo->ksefPending($now->modify('-' . self::KSEF_DAYS . ' days')->format('Y-m-d'), $stuck) as $k) {
+            $id = (int) $k['id'];
+            $status = $k['ksef_status'];
+            $waiting = in_array($status, ['submitted', 'processing'], true);
+            $actions = $waiting ? [] : [['label' => $status === null || $status === 'ready' ? 'Wyślij do KSeF' : 'Wyślij ponownie', 'post' => '/ajax/shipments/' . $id . '/ksef/send',
+                'confirm' => 'Wysłać WDT ' . $k['wdt_number'] . ' do KSeF ?', 'primary' => true]];
+            $actions[] = ['label' => 'Wysyłki', 'url' => '/shipments', 'primary' => $waiting];
+            $out[] = $this->item('ksef', 'shipment:' . $id, $k['shipment_date'], [
+                'customer' => $k['customer'], 'customer_id' => $k['id_customer'] ? (int) $k['id_customer'] : null,
+                'title' => 'WDT ' . $k['wdt_number'] . ' · wysyłka ' . date('d.m.Y', strtotime((string) $k['shipment_date'])),
+                'detail' => $status === null ? 'nie wysłana do KSeF' : (self::KSEF_LABELS[$status] ?? $status) . ($waiting && $k['submitted_at'] ? ' od ' . date('d.m H:i', strtotime((string) $k['submitted_at'])) : ''),
+                'note' => in_array($status, ['failed', 'rejected'], true) && $k['error_message'] ? mb_substr((string) $k['error_message'], 0, 160) : null,
+            ], $actions);
         }
         return $out;
     }

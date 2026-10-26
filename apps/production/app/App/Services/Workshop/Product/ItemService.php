@@ -238,7 +238,7 @@ final class ItemService
             ->integer('category_id', false, 1)
             ->integer('section_id', false, 1)
             ->integer('label_type', false, 0, 1)
-            ->integer('shelf_life', false, 0, 3650)
+            ->integer('shelf_life', false, ...ProductLogistics::SHELF_LIFE)
             ->integer('stock_minimum', false, 0, 1000000);
         if ($v->provided('name') && trim((string) $v->value('name')) === '' && !$v->hasError('name')) $v->add('name', 'REQUIRED');
         if ($v->value('category_id') !== null && !$v->hasError('category_id') && !$this->items->categoryExists((int) $v->value('category_id'))) $v->add('category_id', 'REFERENCE_NOT_FOUND', ['id' => $v->value('category_id')]);

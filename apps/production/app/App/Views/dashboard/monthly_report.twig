@@ -354,7 +354,7 @@
                             <select class="form-select" id="autoLang" name="lang"><option value="pl" {{ settings.lang == 'pl' ? 'selected' }}>polski</option><option value="fr" {{ settings.lang == 'fr' ? 'selected' }}>français</option></select></div>
                         <button class="btn btn-outline-primary" type="submit"><i class="bi bi-check2"></i> Zapisz</button>
                     </div>
-                    <p class="at-sub mt-2 mb-0">Od wskazanego dnia : raport za poprzedni miesiąc, raz w miesiącu.</p>
+                    <p class="at-sub mt-2 mb-0">Od wskazanego dnia : raport za poprzedni miesiąc, raz w miesiącu — dopiero gdy miesiąc jest zamknięty w <a href="{{ root }}/cost-calculator">kalkulatorze kosztów</a> (inaczej koszty byłyby szacunkowe).</p>
                 </form>
             </div>
             {% if history %}

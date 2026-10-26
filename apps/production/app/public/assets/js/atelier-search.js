@@ -92,7 +92,8 @@
         'traiter': 'obsluzenia sprawy', 'urgent': 'obsluzenia terminie', 'urgence': 'obsluzenia terminie', 'urgences': 'obsluzenia terminie',
         'impaye': 'nieoplacona przypomnienie platnosci', 'impayes': 'nieoplacone przypomnienie platnosci', 'impayee': 'nieoplacona przypomnienie platnosci', 'impayees': 'nieoplacone przypomnienie platnosci',
         'paiement': 'platnosci oplacona', 'relance': 'przypomnienie', 'relances': 'przypomnienia przypomnienie', 'afaire': 'obsluzenia zadania',
-        'envoye': 'wyslane wyslana niewyslana', 'envoyee': 'wyslana niewyslana', 'envoyees': 'wyslane niewyslane'
+        'envoye': 'wyslane wyslana niewyslana', 'envoyee': 'wyslana niewyslana', 'envoyees': 'wyslane niewyslane',
+        'journee': 'dnia dzien', 'fin': 'koniec', 'boutique': 'sklep sklepy sklepow', 'boutiques': 'sklepy sklepow sklep', 'perte': 'straty strata', 'pertes': 'straty', 'controle': 'kontrola kontroli', 'qualite': 'jakosci jakosc', 'conservation': 'przydatnosc', 'delai': 'termin', 'complement': 'domowienie domowienia', 'complements': 'domowienia'
     };
 
     var menu = null;
@@ -160,6 +161,9 @@
         });
         if (!hits.length) return null;
         hits.sort(function (a, b) { return b.score - a.score || a.order - b.order; });
+        // Une page = un résultat : entre l'entrée du menu et ses descriptions (fonctions de la page), le meilleur score l'emporte.
+        var pages = {};
+        hits = hits.filter(function (h) { if (pages[h.e.href]) return false; pages[h.e.href] = 1; return true; });
         return { type: 'menu', label: 'Moduły i menu', icon: 'bi-compass', items: hits.slice(0, 8).map(function (h) {
             return { title: h.e.title, sub: h.e.sub, href: h.e.href };
         }) };

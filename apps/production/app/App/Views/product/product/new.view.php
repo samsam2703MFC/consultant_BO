@@ -109,15 +109,17 @@
                                     <label class="form-label" for="ppb">
                                         Ilość sztuk w opakowaniu
                                     </label>
-                                    <input value="<?= old_value('ppb') ?>" type="number" class="form-control" id="ppb"
-                                           name="ppb" placeholder="0" required>
+                                    <input value="<?= old_value('ppb') ?>" type="number" min="0" step="1" class="form-control" id="ppb"
+                                           name="ppb" placeholder="0" aria-describedby="ppb_hint">
+                                    <small class="text-muted" id="ppb_hint">0 albo puste = bez opakowania</small>
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="bpc">
                                         Ilość opakowań w kartonie
                                     </label>
-                                    <input value="<?= old_value('bpc') ?>" type="number" class="form-control" id="bpc"
-                                           name="bpc" placeholder="0" required>
+                                    <input value="<?= old_value('bpc') ?>" type="number" min="0" step="1" class="form-control" id="bpc"
+                                           name="bpc" placeholder="0" aria-describedby="bpc_hint">
+                                    <small class="text-muted" id="bpc_hint">0 albo puste = bez opakowania</small>
                                 </div>
                                 <div class="row mt-3">
                                     <label class="form-label" for="cpl">

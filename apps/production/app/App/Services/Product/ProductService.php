@@ -21,7 +21,9 @@ class ProductService {
     /**
      * Błędy danych nowego produktu: [pole => komunikat]; pusta tablica = dane poprawne.
      * Te same reguły co validate() (formularz « Tylko produkt » i kreator „Nowy produkt z recepturą”) ;
-     * logistyka = walidacja Karty produktu (ProductLogistics), nowy produkt : wszystkie pola większe od zera.
+     * logistyka = walidacja Karty produktu (ProductLogistics), nowy produkt : pola większe od zera, poza opakowaniem
+     * (sztuk w opakowaniu, opakowań w kartonie : 0 albo puste = bez opakowania, jak w Karcie).
+     * Przydatność 1–3650 dni, wymagana — ta sama reguła co Karta produktu (SHELF_LIFE).
      * Stan minimalny opcjonalny : puste = brak minimum (produkt na zamówienie).
      */
     public function validationErrors($data): array
@@ -32,14 +34,15 @@ class ProductService {
             $errors['name'] = "Wprowadź nazwę";
         }
 
-        $logistics = array_intersect_key((array) $data, ProductLogistics::RANGES);
-        $errors += ProductLogistics::messages(ProductLogistics::errors($logistics, [], array_keys(ProductLogistics::RANGES)));
+        $logistics = self::withPackaging(array_intersect_key((array) $data, ProductLogistics::RANGES));
+        $errors += ProductLogistics::messages(ProductLogistics::errors($logistics, [], ProductLogistics::REQUIRED_NEW));
 
         $shelfLife = trim((string) ($data['shelf_life'] ?? ''));
+        [$minDays, $maxDays] = ProductLogistics::SHELF_LIFE;
         if ($shelfLife === '') {
             $errors['shelf_life'] = "Podaj czas trwałości produktu";
-        } elseif (!preg_match('/^\d+$/', $shelfLife) || (int) $shelfLife < 1 || (int) $shelfLife > 3650) {
-            $errors['shelf_life'] = "Przydatność: liczba dni od 1 do 3650";
+        } elseif (!preg_match('/^\d+$/', $shelfLife) || (int) $shelfLife < $minDays || (int) $shelfLife > $maxDays) {
+            $errors['shelf_life'] = "Przydatność: liczba dni od {$minDays} do {$maxDays}";
         }
         $minimum = trim((string) ($data['stock_minimum'] ?? ''));
         if ($minimum !== '' && (!preg_match('/^\d+$/', $minimum) || (int) $minimum > 1000000)) {
@@ -62,11 +65,21 @@ class ProductService {
      */
     public function insert($data)
     {
+        $data = self::withPackaging((array) $data);
         $minimum = trim((string) ($data['stock_minimum'] ?? ''));
         $data['stock_minimum'] = $minimum === '' ? 0 : (int) $minimum;
         $id = $this->finalProductRepository->insert($data);
         if ($id && $id !== true) $this->finalProductRepository->createCard((int) $id, (int) $data['stock_minimum']);
         return $id;
+    }
+
+    /** Opakowanie nieobowiązkowe : puste pole = 0 (bez opakowania). */
+    private static function withPackaging(array $data): array
+    {
+        foreach (['ppb', 'bpc'] as $f) {
+            if (array_key_exists($f, $data) && trim((string) $data[$f]) === '') $data[$f] = '0';
+        }
+        return $data;
     }
 
     public function first($id)

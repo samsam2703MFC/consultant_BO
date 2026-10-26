@@ -23,6 +23,12 @@ final class KsefInvoiceSender
         return ['sessionReference'=>$session['referenceNumber'], 'invoiceReference'=>$invoice['referenceNumber']];
     }
 
+    /** Token KSeF zapisany w ustawieniach (bez niego nic nie wysyłamy ani nie odpytujemy). */
+    public function isConfigured(): bool
+    {
+        return !empty($this->settings->get()['token_encrypted']);
+    }
+
     public function authenticate(string $sellerNip): string
     {
         $config = $this->settings->get();

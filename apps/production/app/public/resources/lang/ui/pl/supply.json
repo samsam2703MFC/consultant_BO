@@ -180,6 +180,7 @@
   "inv.flag.qty_under_received": "mniej niż przyjęto",
   "inv.flag.price_over": "drożej niż w zamówieniu",
   "inv.flag.price_under": "taniej niż w zamówieniu",
+  "inv.ksef_viewer": "Podgląd KSeF (PDF, XML, filtry)",
   "inv.from_ksef": "Pobierz z KSeF",
   "inv.upload": "Dodaj plik (PDF / XML / skan)",
   "inv.mappings": "Przypisania nazw dostawców",

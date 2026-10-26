@@ -65,6 +65,25 @@ final class OrderQueueRepository extends WorkshopRepository
             ORDER BY pd.delivery_date, c.company", [$since]);
     }
 
+    /**
+     * WDT à envoyer ou à reprendre dans KSeF depuis $since : pas encore envoyée (ou « ready »), refusée ou en erreur, ou
+     * sans réponse depuis $stuckBefore. Seulement à partir de la première expédition envoyée à KSeF (avant : hors KSeF).
+     */
+    public function ksefPending(string $since, string $stuckBefore): array
+    {
+        return $this->all("SELECT sl.id, sl.shipment_date, sl.id_customer, c.company AS customer, w.doc_num AS wdt_number,
+                k.status AS ksef_status, k.error_message, COALESCE(k.submitted_at, k.updated_at) AS submitted_at
+            FROM shipment_log sl
+            INNER JOIN document_wdt w ON w.id = sl.id_wdt
+            LEFT JOIN customer c ON c.id = sl.id_customer
+            LEFT JOIN ksef_submission k ON k.id_shipment_log = sl.id
+            WHERE sl.shipment_date >= ?
+              AND sl.shipment_date >= (SELECT COALESCE(MIN(s2.shipment_date), '9999-12-31') FROM ksef_submission k2 INNER JOIN shipment_log s2 ON s2.id = k2.id_shipment_log)
+              AND (k.id IS NULL OR k.status IN ('ready', 'failed', 'rejected')
+                   OR (k.status IN ('submitted', 'processing') AND COALESCE(k.submitted_at, k.updated_at) < ?))
+            ORDER BY sl.shipment_date, sl.id", [$since, $stuckBefore]);
+    }
+
     /** Code du poste de l'utilisateur ERP (n_position.code), sinon null. */
     public function positionCode(int $userId): ?string
     {

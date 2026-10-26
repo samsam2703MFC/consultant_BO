@@ -137,6 +137,13 @@ final class MonthlyReportRepository extends WorkshopRepository
     }
 
     /** Czy wiadomość danego typu od autora (np. « monthly-report:2026-09 ») jest już w kolejce lub wysłana. */
+    /** Mois de coûts fermé (calculateur de coûts : statut LOCKED) — condition de l'envoi automatique du rapport. */
+    public function monthLocked(string $ym): bool
+    {
+        [$y, $m] = array_map('intval', explode('-', $ym));
+        return (bool) $this->all("SELECT 1 FROM cost_month WHERE year = ? AND month = ? AND status = 'LOCKED' LIMIT 1", [$y, $m]);
+    }
+
     public function alreadySent(string $type, string $author): bool
     {
         return (bool) $this->all(

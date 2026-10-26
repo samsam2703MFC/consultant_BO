@@ -1,7 +1,7 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 089, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 089 ; compatible MySQL 8.
+-- 001 → 090, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 090 ; compatible MySQL 8.
 -- Modifications des tables d'origine : voir docs/db/README.md (colonne customer.communication_lang, nettoyage 074 → 080).
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `n_activity_click` (
@@ -617,6 +617,25 @@ CREATE TABLE `n_nutrition_off_cache` (
   `values_json` text DEFAULT NULL COMMENT 'mediany na 100 g (kolumny raw_material)',
   `fetched_at` datetime NOT NULL,
   PRIMARY KEY (`tag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_order_collect_issue` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `id_customer` int(11) DEFAULT NULL,
+  `shop_uid` varchar(64) NOT NULL DEFAULT '',
+  `kind` enum('config','pull','import','unknown_product') NOT NULL,
+  `order_key` varchar(128) DEFAULT NULL,
+  `id_order` int(11) DEFAULT NULL,
+  `dedup_key` char(64) NOT NULL,
+  `message` varchar(500) NOT NULL DEFAULT '',
+  `occurrences` int(11) NOT NULL DEFAULT 1,
+  `first_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `last_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `closed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_n_order_collect_issue_dedup` (`dedup_key`),
+  KEY `idx_n_order_collect_issue_open` (`closed_at`,`last_at`),
+  KEY `fk_n_order_collect_issue_customer` (`id_customer`),
+  CONSTRAINT `fk_n_order_collect_issue_customer` FOREIGN KEY (`id_customer`) REFERENCES `customer` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_page_access` (
   `id_position` int(11) NOT NULL COMMENT '0 = bez stanowiska',
@@ -1589,7 +1608,7 @@ CREATE TABLE `n_section_target` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_send_issue_action` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `source` enum('email','franchise','shipment','monitoring','automation') NOT NULL,
+  `source` enum('email','franchise','shipment','monitoring','automation','shops','supplement') NOT NULL,
   `id_item` bigint(20) NOT NULL,
   `action` enum('retry','resolve') NOT NULL,
   `reason` varchar(500) DEFAULT NULL,

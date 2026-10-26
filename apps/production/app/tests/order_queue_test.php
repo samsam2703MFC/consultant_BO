@@ -47,7 +47,7 @@ try {
                  'product_recipe_prepare_instruction_connection', 'test_product', 'test_product_status', 'test_product_type', 'test_product_stage',
                  'test_product_changelog', 'complaint', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'palets_delivery', 'document_cmr', 'document_wz',
                  'shipment_log', 'app_notification', 'outbox', 'webhook_outbox_shipments', 'cron_notification_outbox', 'cron_runs',
-                 'document_proforma', 'document_proforma_product', 'document_invoice'] as $table) {
+                 'document_proforma', 'document_proforma_product', 'document_invoice', 'customer_order_changelog', 'ksef_submission'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -107,7 +107,7 @@ try {
     // --- Une ligne par cas
     $o = $queue->overview(null, 'all', false, 1, $now);
     expectOq($o['counts'] === ['late_shipping' => 1, 'no_proforma' => 1, 'proforma_stale' => 1, 'proforma_not_sent' => 1, 'reminder_due' => 2,
-        'documents_ready' => 1, 'shipping_issue' => 1, 'send_error' => 1], 'one case per rule ; closed order, order with WDT, paid and free proformas left out');
+        'documents_ready' => 1, 'shipping_issue' => 1, 'send_error' => 1, 'ksef' => 0], 'one case per rule ; closed order, order with WDT, paid and free proformas left out');
     $by = [];
     foreach ($o['items'] as $i) $by[$i['key']] = $i;
     expectOq(array_keys($by) === ['reminder_due:proforma:205', 'reminder_due:proforma:202', 'late_shipping:order:101', 'no_proforma:order:101',
@@ -147,6 +147,28 @@ try {
     expectOq($queue->overview('nonsense', 'nonsense', false, null, $now)['rule'] === null && $queue->overview('nonsense', 'nonsense', false, null, $now)['when'] === 'all', 'unknown filters ignored');
     expectOq($o['top'] === ['reminder_due', 'late_shipping', 'no_proforma'], 'tiles: busiest rules first');
     expectOq($queue->counts($now) === $o['counts'], 'counts for Dzisiaj = queue');
+
+    // --- KSeF : WDT à envoyer ou à reprendre, à partir de la première expédition envoyée à KSeF
+    $pdo->exec("INSERT INTO document_wdt (id, doc_num, id_customer, established_date) VALUES
+        (901, 'WDT/1', 51, '2026-10-01'), (902, 'WDT/2', 51, '2026-10-20'), (903, 'WDT/3', 51, '2026-10-21'), (904, 'WDT/4', 52, '2026-10-22'), (905, 'WDT/5', 52, '2026-10-26')");
+    $pdo->exec("INSERT INTO shipment_log (id, shipment_date, id_customer, id_wz, id_cmr, id_wdt, id_diff, id_employee) VALUES
+        (801, '2026-10-01', 51, 0, NULL, 901, 0, 0), (802, '2026-10-20', 51, 0, NULL, 902, 0, 0), (803, '2026-10-21', 51, 0, NULL, 903, 0, 0),
+        (804, '2026-10-22', 52, 0, NULL, 904, 0, 0), (805, '2026-10-26', 52, 0, NULL, 905, 0, 0)");
+    $pdo->exec("INSERT INTO ksef_submission (id_document_wdt, id_shipment_log, status, error_message, submitted_at) VALUES
+        (902, 802, 'accepted', NULL, '2026-10-20 12:00:00'), (904, 804, 'rejected', 'Błąd 450 : zły NIP nabywcy', '2026-10-22 12:00:00'),
+        (905, 805, 'processing', NULL, '2026-10-26 09:30:00')");
+    $k = $queue->overview('ksef', 'all', false, 1, $now);
+    $kb = [];
+    foreach ($k['items'] as $i) $kb[$i['key']] = $i;
+    expectOq($k['counts']['ksef'] === 2 && array_keys($kb) === ['ksef:shipment:803', 'ksef:shipment:804'],
+        'KSeF : unsent and rejected WDT ; accepted, still processing (30 min) and before the first KSeF shipment left out');
+    expectOq($kb['ksef:shipment:803']['detail'] === 'nie wysłana do KSeF' && $kb['ksef:shipment:803']['actions'][0]['post'] === '/ajax/shipments/803/ksef/send'
+        && $kb['ksef:shipment:803']['actions'][0]['label'] === 'Wyślij do KSeF' && str_contains($kb['ksef:shipment:803']['actions'][0]['confirm'], 'WDT/3'), 'unsent WDT: send it (with confirmation)');
+    expectOq($kb['ksef:shipment:804']['actions'][0]['label'] === 'Wyślij ponownie' && $kb['ksef:shipment:804']['note'] === 'Błąd 450 : zły NIP nabywcy'
+        && $kb['ksef:shipment:804']['positions'] === ['ADMINISTRACJA', 'LOGISTYKA'] && $kb['ksef:shipment:804']['customer'] === 'Klient B', 'rejected WDT: error shown, send again');
+    $later = $queue->overview('ksef', 'all', false, 1, new DateTimeImmutable('2026-10-26 11:00:00'));
+    expectOq($later['counts']['ksef'] === 3 && $later['items'][2]['detail'] === 'bez odpowiedzi KSeF od 26.10 09:30' && $later['items'][2]['actions'][0]['url'] === '/shipments',
+        'no KSeF answer for more than an hour: shown, no resend');
 
     // --- Rien n'est modifié par la lecture
     expectOq((int) $pdo->query("SELECT COUNT(*) FROM document_proforma WHERE status = 'issued'")->fetchColumn() === 4

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Services\Workshop\Referentiel;
 
+use App\Domain\Params\ParamRules;
+
 use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\Validator;
@@ -29,12 +31,23 @@ final class ParamService
         return $this->present($this->load($code), $context);
     }
 
-    public function update(string $code, array $input, ApiContext $context): array
+    /** $checkOrder = false : l'appelant (import Excel) a déjà vérifié les règles entre paramètres sur l'état final. */
+    public function update(string $code, array $input, ApiContext $context, bool $checkOrder = true): array
     {
         $param = $this->load($code);
         $v = (new Validator($input))->only(['value']);
         $value = $this->validateValue($v, $param);
         $v->throwIfInvalid();
+        // Bornes et règles entre paramètres : les mêmes que la page Ustawienia › Pozostałe (ParamRules).
+        if (isset(ParamRules::RANGES[$code]) && ParamRules::rangeError($code, $value) !== null) {
+            [$min, $max] = ParamRules::RANGES[$code];
+            throw ApiException::validation([['field' => 'value', 'code' => 'OUT_OF_RANGE', 'params' => ['min' => $min, 'max' => $max]]]);
+        }
+        if ($checkOrder) {
+            foreach (ParamRules::orderErrors([$code => $value], fn($c) => $this->params->findByCode($c)['value'] ?? null) as [$error]) {
+                throw ApiException::validation([['field' => 'value', 'code' => $error, 'params' => []]]);
+            }
+        }
 
         $this->tx->execute(function () use ($code, $value, $param, $context) {
             $this->params->setValue($code, $value, $context->userId);

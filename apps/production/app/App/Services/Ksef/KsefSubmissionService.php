@@ -40,6 +40,19 @@ final class KsefSubmissionService
     }
     public function sendForShipment(int $shipmentId): array { $prepared=$this->prepareForShipment($shipmentId); $row=$prepared['submission']; if (($row['status'] ?? '') === 'accepted') return $row; try { $invoice=$this->source->getForShipment($shipmentId); $result=$this->sender->send((string)$invoice['consignor_nip'], (string)$row['invoice_xml']); $this->submissions->setStatus((int)$row['id'],'processing',['session_reference_number'=>$result['sessionReference'],'invoice_reference_number'=>$result['invoiceReference'],'submitted_at'=>date('Y-m-d H:i:s')]); return $this->submissions->first(['id'=>(int)$row['id']]); } catch (\Throwable $e) { $this->submissions->setStatus((int)$row['id'],'failed',['error_code'=>$e instanceof KsefApiException ? $e->ksefCode() : null,'error_message'=>$e->getMessage()]); $this->events->error((int)$row['id'], $shipmentId, 'wysyłka do KSeF', $e); throw $e; } }
 
+    /**
+     * Cron (Bin/mail_dispatch.php, toutes les 5 min) : statuts KSeF en attente rafraîchis sans ouvrir Wysyłki —
+     * seulement si un token est configuré et qu'une facture attend une réponse ; résumé sans le contenu des factures.
+     */
+    public function refreshPendingStatusesIfConfigured(): array
+    {
+        if (!$this->sender->isConfigured()) return ['skipped' => 'no_token'];
+        if (!$this->submissions->pendingForStatusRefresh()) return ['skipped' => 'nothing_pending'];
+        $result = $this->refreshPendingStatuses();
+        unset($result['updates']);
+        return $result;
+    }
+
     /** @return array{checked:int,accepted:int,rejected:int,pending:int,errors:int,updates:list<array<string,mixed>>} */
     public function refreshPendingStatuses(): array
     {

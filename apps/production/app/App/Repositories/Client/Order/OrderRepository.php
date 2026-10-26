@@ -38,6 +38,14 @@ class OrderRepository extends BaseRepository
         'supplement_order_key'
     ];
 
+    /** Domówienia remises en file depuis Stan wysyłek (« Ponów ») : en attente depuis moins d'un jour. */
+    public function requeuedSupplementIds(): array
+    {
+        $rows = $this->query("SELECT id FROM customer_order WHERE order_type = 'SUPPLEMENT' AND supplement_push_status = 'pending'
+            AND supplement_push_at >= NOW() - INTERVAL 1 DAY ORDER BY id LIMIT 20");
+        return is_array($rows) ? array_map(fn($r) => (int) (is_array($r) ? $r['id'] : $r->id), $rows) : [];
+    }
+
     public function getById($id)
     {
         $sql = "SELECT 

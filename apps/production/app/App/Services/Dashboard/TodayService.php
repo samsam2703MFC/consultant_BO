@@ -148,6 +148,7 @@ class TodayService
         if ($queue !== null) {
             foreach ([
                 ['documents_ready', 'warning', 'bi-truck', 'wysyłka gotowa do wystawienia dokumentów', 'wysyłki gotowe do wystawienia dokumentów', 'wysyłek gotowych do wystawienia dokumentów', ['LOGISTYKA']],
+                ['ksef', 'warning', 'bi-cloud-upload', 'WDT do wysłania lub poprawy w KSeF', 'WDT do wysłania lub poprawy w KSeF', 'WDT do wysłania lub poprawy w KSeF', ['ADMINISTRACJA', 'LOGISTYKA']],
                 ['no_proforma', 'warning', 'bi-file-earmark-plus', 'otwarte zamówienie bez proformy', 'otwarte zamówienia bez proformy', 'otwartych zamówień bez proformy', ['ADMINISTRACJA']],
                 ['proforma_stale', 'warning', 'bi-arrow-repeat', 'proforma nieaktualna (zamówienie zmienione)', 'proformy nieaktualne (zamówienie zmienione)', 'proform nieaktualnych (zamówienie zmienione)', ['ADMINISTRACJA']],
                 ['proforma_not_sent', 'info', 'bi-envelope', 'proforma niewysłana do klienta', 'proformy niewysłane do klienta', 'proform niewysłanych do klienta', ['ADMINISTRACJA']],
