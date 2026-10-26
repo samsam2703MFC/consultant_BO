@@ -7,9 +7,8 @@ declare(strict_types=1);
  *
  *   php bin/tests_visites_kpi.php
  *
- * Ce qui doit rester vrai : le CA par ETP ne devine jamais un ETP et situe le magasin dans le réseau ; l'année face à
- * l'an passé ne cumule que les mois comparables (et les pièces lues des deux côtés) ; la structure des ventes compare
- * le magasin au RESTE du réseau, sans les entrées techniques, et ne regrave pas un mois déjà lu.
+ * Ce qui doit rester vrai : le CA par ETP ne devine jamais un ETP et situe le magasin dans le réseau ; la structure des
+ * ventes compare le magasin au RESTE du réseau, sans les entrées techniques, et ne regrave pas un mois déjà lu.
  *
  * Le module lit le panel, la base et les autres modules par des fonctions : des doublures les remplacent ici.
  */
@@ -66,26 +65,6 @@ function ep_stores_etp(): array
     }
     return $out;
 }
-// L'année : janvier et février clos, mars en cours, avril à venir. Corbais a son N-1 ; Halle n'en a pas.
-$GET_ANNEE = null;
-function ep_ventes_reseau(): array
-{
-    global $GET_ANNEE; $GET_ANNEE = $_GET;
-    $per = static fn (string $lab, bool $enCours, bool $futur): array => ['lab' => $lab, 'enCours' => $enCours, 'futur' => $futur];
-    $l = static fn (int $t, float $ca, int $j, ?float $art, ?array $n1): array => ['ca' => $ca, 'tickets' => $t, 'jours' => $j, 'source' => 'panel', 'n1' => $n1, 'articles' => $art];
-    $n1 = static fn (int $t, float $ca, int $j, ?float $art): array => ['ca' => $ca, 'tickets' => $t, 'jours' => $j, 'source' => 'panel', 'articles' => $art];
-    $fut = ['ca' => 0.0, 'tickets' => 0, 'jours' => 0, 'source' => null, 'n1' => null];
-    return ['periodes' => [$per('janv.', false, false), $per('févr.', false, false), $per('mars', true, false), $per('avr.', false, true)],
-        'magasins' => [
-            ['id' => '2', 'periodes' => [$l(1100, 13200.0, 31, 2420.0, $n1(1000, 11000.0, 31, 2000.0)),
-                $l(900, 11700.0, 28, 2160.0, $n1(1000, 12000.0, 28, null)),
-                $l(500, 6500.0, 15, 1100.0, $n1(400, 5000.0, 15, 840.0)), $fut], 'n1Motif' => null],
-            ['id' => '3', 'periodes' => [$l(600, 6000.0, 31, null, $n1(600, 6600.0, 31, null)), $l(600, 6000.0, 28, null, $n1(500, 5000.0, 28, null)),
-                $l(300, 3000.0, 15, null, null), $fut], 'n1Motif' => null],
-            ['id' => '4', 'periodes' => [$l(700, 7000.0, 31, 1400.0, null), $l(700, 7000.0, 28, 1400.0, null), $l(300, 3000.0, 15, 600.0, null), $fut],
-                'n1Motif' => 'pas de N-1 : la caisse a sonné pour la première fois le 01/02/2025'],
-        ], 'source' => 'panel (margin-heatmap, par jour)'];
-}
 // Les ventes par catégorie : le mois du milieu reste muet ; une entrée technique (99) vend aussi.
 $APPELS = [];
 final class PanelApi
@@ -141,26 +120,7 @@ verifie('Gosselies : 9 400 € par ETP, 2e sur 2', $E3['mois'][2]['caEtp'] === 9
 $E4 = vkCaEtp(4, $MOIS);
 verifie('Halle : CA lu mais pas d’ETP — ni CA par ETP ni rang', $E4['mois'][2]['caEtp'] === null && $E4['mois'][2]['rang'] === null && $E4['mois'][2]['ca'] === 44000.0);
 
-// --- 3. l'année face à l'an passé -----------------------------------------------------------
-echo "L’année face à l’an passé\n";
-$A = vkAnnee(2, $MOIS);
-$C = $A['cumul'];
-verifie('Résultat › Année est lu en vue année, avec les pièces', $GET_ANNEE['vue'] === 'annee' && $GET_ANNEE['articles'] === '1');
-verifie('les mois à venir ne sont pas dans la série', count($A['mois']) === 3 && $A['mois'][2]['enCours'] === true);
-verifie('les clients de l’année face aux mêmes mois de l’an passé', $C['clients']['n'] === 2500 && $C['clients']['n1'] === 2400 && $C['clients']['ecart'] === 4.2, json_encode($C['clients']));
-verifie('le panier : CA total ÷ clients totaux', $C['panier']['n'] === 12.56 && $C['panier']['n1'] === 11.67 && $C['panier']['ecart'] === 7.7, json_encode($C['panier']));
-verifie('les articles par ticket ne comptent que les mois lus des deux côtés (février sorti)', $C['articles']['n'] === 2.2 && $C['articles']['n1'] === 2.03 && $C['articles']['ecart'] === 8.5, json_encode($C['articles']));
-verifie('les jours ouverts et les mois comparables', $C['jours']['n'] === 74 && $C['jours']['n1'] === 74 && $C['mois'] === 3);
-verifie('le mois par mois : clients, panier, articles et leur N-1', $A['mois'][1]['clients'] === 900 && $A['mois'][1]['panierN1'] === 12.0 && $A['mois'][1]['articles'] === 2.4 && $A['mois'][1]['articlesN1'] === null, json_encode($A['mois'][1]));
-$R = $A['reseau'];
-verifie('le réseau à périmètre constant : Gosselies sans mars N-1, Halle sans N-1', $R['magasins'] === 2 && $R['clients']['n'] === 3700 && $R['clients']['n1'] === 3500, json_encode($R['clients']));
-$A4 = vkAnnee(4, $MOIS);
-verifie('Halle n’a pas de N-1 : pas de cumul, le motif dit pourquoi', $A4['cumul'] === null && str_contains((string) $A4['n1Motif'], 'première fois'));
-verifie('Halle garde sa série de l’année', $A4['mois'][0]['clients'] === 700 && $A4['mois'][0]['clientsN1'] === null);
-$A9 = vkAnnee(9, $MOIS);
-verifie('un magasin absent de l’année le dit', $A9['cumul'] === null && $A9['n1Motif'] === 'aucune vente lue cette année');
-
-// --- 4. la structure des ventes face au reste du réseau ---------------------------------------
+// --- 3. la structure des ventes face au reste du réseau ---------------------------------------
 echo "Structure des ventes\n";
 $ECRITS = []; $APPELS = [];
 $S = vkStructure(2, $MOIS);
@@ -177,12 +137,12 @@ vkStructure(2, $MOIS);
 verifie('un mois gravé ne se redemande pas au panel', !in_array($MOIS[0], $APPELS, true) && in_array($MOIS[1], $APPELS, true));
 unset($REGLAGES['vkCat:' . $MOIS[0]]);
 
-// --- 5. la route --------------------------------------------------------------------------
+// --- 4. la route --------------------------------------------------------------------------
 echo "La route\n";
 $r = ep_visites_kpi('77');
 verifie('un magasin inconnu : 404', ($r['error'] ?? '') === 'magasin inconnu');
 $r = ep_visites_kpi('2');
-verifie('les trois blocs', is_array($r['caEtp']) && is_array($r['annee']) && is_array($r['structure']) && $r['shop'] === '2');
+verifie('les deux blocs', is_array($r['caEtp']) && is_array($r['structure']) && !isset($r['annee']) && $r['shop'] === '2');
 verifie('un mois muet : relu dans cinq minutes, pas dans une heure', $r['manques'] === ['structure'] && $TTL === 300, json_encode([$r['manques'], $TTL]));
 
 echo "\n$ok réussi(s), $ko en échec\n";

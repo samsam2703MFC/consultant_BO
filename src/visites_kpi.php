@@ -5,21 +5,20 @@ declare(strict_types=1);
 /**
  * KPI ET SANTÉ DU MAGASIN — l'étape des chiffres du contrôle, sur la tablette du consultant (26/10/2026).
  *
- * GET /visites/kpi/{shop} — trois lectures, chacune avec sa fenêtre et sa source :
+ * GET /visites/kpi/{shop} — deux lectures, chacune avec sa fenêtre et sa source :
  *
  *  - le CA PAR ETP des trois derniers mois clos : le CA du mois (relevé des ventes du panel, pvKpisMois) ÷ les ETP
  *    planifiés (heures du planning ÷ heuresEtpMois, ep_stores_etp — la règle de l'alerte CA/ETP des rapports), face au
  *    réseau (CA total ÷ ETP totaux des magasins qui ont les deux) et au seuil de la Table KPI (`ca-etp`). Un mois sans
  *    planning n'a pas d'ETP : il le dit, il ne le devine pas ;
- *  - l'ANNÉE À DATE face à l'an passé : clients, panier moyen, articles par ticket, mois par mois — la lecture de
- *    Résultat › Année (/ventes/reseau?vue=annee&articles=1). Le cumul ne compte que les mois où le magasin a un N-1
- *    (le mois en cours à date, face aux mêmes jours de l'an passé) ; le réseau, à périmètre constant, situe l'écart ;
  *  - la STRUCTURE DES VENTES par catégorie sur les trois derniers mois clos : la part de chaque catégorie dans le CA du
  *    magasin face à sa part dans le CA du reste du réseau (/consultant/shops/category-sales, un appel par mois pour
  *    tout le réseau, gravé une fois lu : les trois mois sont clos).
  *
  * Gardé une heure (rcServi) et servi périmé six heures pendant le recalcul : des chiffres qui ne bougent pas pendant
- * une visite. La tablette les lit dès l'ouverture du contrôle, avant d'arriver à l'étape.
+ * une visite. La tablette les lit dès l'ouverture du contrôle, avant d'arriver à l'étape. L'année face à l'an passé et
+ * les six leviers, elle les lit aux routes du dashboard magasin (/ventes/semaines, /leviers/magasins) et les dessine
+ * avec ses cartes (assets/js/cartes-magasin.js).
  */
 
 const VK_TTL_S = 3600;
@@ -34,13 +33,13 @@ function ep_visites_kpi(string $shop): array
         static fn (array $x): int => empty($x['manques']) ? VK_TTL_S : 300, !empty($_GET['rafraichir']), '/visites/kpi/' . $shop, VK_PERIME_S);
 }
 
-/** Les trois lectures ; une qui échoue (ou un mois du panel resté muet) laisse les autres, se nomme dans `manques` et se relit dans cinq minutes. */
+/** Les deux lectures ; une qui échoue (ou un mois du panel resté muet) laisse les autres, se nomme dans `manques` et se relit dans cinq minutes. */
 function vkCalcul(int $sid): array
 {
     $mois = vkMoisClos(3);
     $out = ['shop' => (string) $sid, 'lu' => date('Y-m-d H:i')];
     $manques = [];
-    foreach (['caEtp' => 'vkCaEtp', 'annee' => 'vkAnnee', 'structure' => 'vkStructure'] as $k => $f) {
+    foreach (['caEtp' => 'vkCaEtp', 'structure' => 'vkStructure'] as $k => $f) {
         try { $out[$k] = $f($sid, $mois); }
         catch (Throwable $e) { $out[$k] = null; $manques[] = $k; }
     }
@@ -108,61 +107,6 @@ function vkCaEtp(int $sid, array $mois): array
     }
     return ['seuil' => function_exists('kpiSeuil') ? kpiSeuil('ca-etp', 13000.0) : 13000.0, 'heuresEtp' => (float) setting('heuresEtpMois', 168),
         'mois' => $lignes, 'source' => 'CA : relevé des ventes du panel (mois clos) · ETP : heures du planning ÷ ' . (float) setting('heuresEtpMois', 168) . ' h'];
-}
-
-/* --- L'année à date face à l'an passé -------------------------------------------- */
-
-/** Les articles par ticket d'une fenêtre : null si les pièces manquent ou ne valent rien face à des clients. */
-function vkApt(mixed $articles, int $tickets): ?float
-{
-    return (is_numeric($articles) && (float) $articles > 0 && $tickets > 0) ? round((float) $articles / $tickets, 2) : null;
-}
-
-function vkAnnee(int $sid, array $mois): array
-{
-    $r = vkAvecGet(['vue' => 'annee', 'date' => date('Y-m-d'), 'articles' => '1'], 'ep_ventes_reseau');
-    $ici = null;
-    foreach ($r['magasins'] ?? [] as $m) { if ((string) $m['id'] === (string) $sid) { $ici = $m; } }
-    $vide = static fn (): array => ['t' => 0, 'ca' => 0.0, 'j' => 0, 't1' => 0, 'ca1' => 0.0, 'j1' => 0, 'a' => 0.0, 'at' => 0, 'a1' => 0.0, 'at1' => 0, 'n' => 0];
-    // Une période comparable s'ajoute au cumul ; ses pièces seulement si elles sont lues des deux côtés.
-    $cumule = static function (array &$c, array $l): void {
-        $n1 = $l['n1'];
-        $c['t'] += (int) $l['tickets']; $c['ca'] += (float) $l['ca']; $c['j'] += (int) $l['jours'];
-        $c['t1'] += (int) $n1['tickets']; $c['ca1'] += (float) $n1['ca']; $c['j1'] += (int) ($n1['jours'] ?? 0); $c['n']++;
-        if (vkApt($l['articles'] ?? null, (int) $l['tickets']) !== null && vkApt($n1['articles'] ?? null, (int) $n1['tickets']) !== null) {
-            $c['a'] += (float) $l['articles']; $c['at'] += (int) $l['tickets']; $c['a1'] += (float) $n1['articles']; $c['at1'] += (int) $n1['tickets'];
-        }
-    };
-    $cI = $vide(); $cR = $vide(); $series = []; $magasinsR = [];
-    foreach ($r['periodes'] ?? [] as $i => $p) {
-        if (!empty($p['futur'])) { continue; }
-        foreach ($r['magasins'] ?? [] as $m) {
-            $l = $m['periodes'][$i] ?? null;
-            if ($l !== null && $l['source'] !== null && $l['n1'] !== null) { $cumule($cR, $l); $magasinsR[$m['id']] = true; }
-        }
-        $l = $ici['periodes'][$i] ?? null;
-        $vu = $l !== null && $l['source'] !== null; $n1 = $l['n1'] ?? null;
-        $series[] = ['lab' => $p['lab'], 'enCours' => !empty($p['enCours']), 'jours' => $vu ? (int) $l['jours'] : null, 'joursN1' => $n1 !== null ? (int) ($n1['jours'] ?? 0) : null,
-            'clients' => $vu ? (int) $l['tickets'] : null, 'clientsN1' => $n1 !== null ? (int) $n1['tickets'] : null,
-            'panier' => $vu && $l['tickets'] > 0 ? round($l['ca'] / $l['tickets'], 2) : null,
-            'panierN1' => $n1 !== null && $n1['tickets'] > 0 ? round($n1['ca'] / $n1['tickets'], 2) : null,
-            'articles' => $vu ? vkApt($l['articles'] ?? null, (int) $l['tickets']) : null,
-            'articlesN1' => $n1 !== null ? vkApt($n1['articles'] ?? null, (int) $n1['tickets']) : null];
-        if ($vu && $n1 !== null) { $cumule($cI, $l); }
-    }
-    $trois = static function (array $c): array {
-        $p = $c['t'] > 0 ? $c['ca'] / $c['t'] : null; $p1 = $c['t1'] > 0 ? $c['ca1'] / $c['t1'] : null;
-        $a = $c['at'] > 0 ? $c['a'] / $c['at'] : null; $a1 = $c['at1'] > 0 ? $c['a1'] / $c['at1'] : null;
-        return ['clients' => ['n' => $c['t'], 'n1' => $c['t1'], 'ecart' => vkEcart((float) $c['t'], (float) $c['t1'])],
-            'panier' => ['n' => $p !== null ? round($p, 2) : null, 'n1' => $p1 !== null ? round($p1, 2) : null, 'ecart' => vkEcart($p, $p1)],
-            'articles' => ['n' => $a !== null ? round($a, 2) : null, 'n1' => $a1 !== null ? round($a1, 2) : null, 'ecart' => vkEcart($a, $a1)],
-            'jours' => ['n' => $c['j'], 'n1' => $c['j1']], 'mois' => $c['n']];
-    };
-    $annee = (int) date('Y');
-    return ['annee' => $annee, 'du' => $annee . '-01-01', 'au' => date('Y-m-d'), 'mois' => $series,
-        'cumul' => $cI['n'] > 0 ? $trois($cI) : null, 'reseau' => $cR['n'] > 0 ? $trois($cR) + ['magasins' => count($magasinsR)] : null,
-        'n1Motif' => $ici['n1Motif'] ?? ($ici === null ? 'aucune vente lue cette année' : null),
-        'source' => (string) ($r['source'] ?? '') . ' · articles : relevé des ventes du panel (pièces vendues)'];
 }
 
 /* --- La structure des ventes face au reste du réseau ------------------------------- */

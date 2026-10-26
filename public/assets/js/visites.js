@@ -15,6 +15,8 @@
  */
 (function () {
   'use strict';
+  // L'adresse de ce script : les cartes du dashboard magasin (cartes-magasin.js) se chargent à côté quand la page ne les a pas.
+  const ICI = (document.currentScript && document.currentScript.src) || '';
 
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const FEU = { vert: '🟢', orange: '🟡', rouge: '🔴' };
@@ -75,10 +77,8 @@
 .vi .kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .vi.desk .kpi{grid-template-columns:repeat(4,1fr)}
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
-.vi .ks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-@media (max-width:600px){.vi .ks{grid-template-columns:1fr}}
-.vi .ks>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
-.vi .ks .k,.vi .kc .k{margin-top:4px}
+.vi .kc .k{margin-top:4px}
+.vi .cm .db-card{margin-bottom:0}
 .vi .kc .lg{padding:6px 0;border-bottom:.5px solid var(--color-border-tertiary)}.vi .kc .lg:last-child{border:none}
 .vi .kb{height:5px;border-radius:4px;background:var(--color-background-secondary);overflow:hidden;margin-top:3px}
 .vi .kb i{display:block;height:100%;background:var(--color-primary)}.vi .kb.r i{background:#b9ad9e}
@@ -380,7 +380,19 @@
   const cqCl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '');
   const hm = v => v ? String(v).slice(11, 16) : '';
   const pcLeg = avecObj => '<div class="pc-leg"><span><i class="r"></i>cette année</span><span><i class="n"></i>N-1, mêmes jours</span>' + (avecObj ? '<span><i class="o"></i>objectif</span>' : '') + '</div>';
+  // Les leviers que le consultant vérifie sur place (26/10/2026, demande de Sam) : un module de checklist comme les
+  // autres (état, note, photo, remarque), ajouté à toute visite qui n'est pas un suivi ou une revisite ; au-dessus de
+  // ses points, la carte des six leviers du dashboard magasin et les derniers avis Google.
+  const MOD_LEVIERS = { id: 'leviers', nom: 'Les leviers', leviers: true, points: [
+    { ref: 'lev_trafic', libelle: 'Trafic — les KPI de trafic vérifiés avec le franchisé (clients par jour face au N-1 et au réseau)', photo: false, pct: false },
+    { ref: 'lev_xp', libelle: 'Expérience client — elle est présente : on la vit en entrant', photo: true, pct: false },
+    { ref: 'lev_cuisson', libelle: 'Expérience client — la cuisson : produits chauds, bien cuits, au bon moment', photo: true, pct: false },
+    { ref: 'lev_accueil', libelle: 'Expérience client — l’accueil : bonjour, sourire, conseil', photo: false, pct: false },
+    { ref: 'lev_google', libelle: 'Note Google — la note et les derniers avis vérifiés avec le franchisé', photo: false, pct: false }] };
+  // Le module Produit commence par les produits obligatoires (26/10/2026), avec ce que le cockpit en sait (vus en caisse).
+  const PT_OBLIGATOIRES = { ref: 'produits_obligatoires', libelle: 'Les produits obligatoires sont là', photo: true, pct: false };
   const TAB_IC = {
+    leviers: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
     photo: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
     controles: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
     chiffres: '<path d="M5 20V11M11 20V5M17 20v-8M2 20h20"/>',
@@ -440,7 +452,7 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.T = {}; this.cqF = {}; this.cqV = null; this.S = null; this.R = null;
+      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.AN = {}; this.LV = {}; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.S = null; this.R = null;
       this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
@@ -570,10 +582,19 @@
      */
     /** La checklist d'une visite : les points demandés par le bureau en tête, puis celle de son type. */
     checklistDe(v) {
-      const cl = this.checklistType(v);
+      const t = this.typeDe(v.type);
+      const cl = (t && t.dynamique ? [] : [MOD_LEVIERS]).concat(this.avecObligatoires(this.checklistType(v)));
       const pts = (v.prep && v.prep.points) || [];
       if (!pts.length) { return cl; }
       return [{ id: 'bureau', nom: 'Demandé par le bureau', bureau: true, points: pts.map(p => ({ ref: p.ref, libelle: p.libelle, photo: true, pct: false })) }].concat(cl);
+    }
+    /** Le module Produit marqué `obligatoires`, le point « Les produits obligatoires sont là » en tête s'il n'y est pas déjà. */
+    avecObligatoires(cl) {
+      return cl.map(m => {
+        if (m.id !== 'produit' && !/^produits?$/i.test(String(m.nom || '').trim())) { return m; }
+        const deja = m.points.some(pt => pt.ref === PT_OBLIGATOIRES.ref || /obligatoire/i.test(pt.libelle || ''));
+        return Object.assign({}, m, { obligatoires: true, points: deja ? m.points : [PT_OBLIGATOIRES].concat(m.points) });
+      });
     }
     checklistType(v) {
       const t = this.typeDe(v.type); const s = this.D.seuils || {};
@@ -664,15 +685,32 @@
       this.rendre();
     }
     /**
-     * KPI et santé du magasin (26/10/2026) : CA par ETP, l'année face à l'an passé, la structure des ventes face au
-     * reste du réseau. Lus une fois par boutique et par session, dès l'ouverture de la fiche ou du contrôle — avant
-     * d'arriver à l'étape, et pour la garder hors ligne ; le serveur les garde une heure.
+     * KPI et santé du magasin, les leviers (26/10/2026) : trois lectures, chacune rendue dès qu'elle arrive — le CA par
+     * ETP et la structure des ventes (/visites/kpi, gardés une heure), l'année mois par mois face à l'an passé et les
+     * six leviers du mois aux routes du dashboard magasin (/ventes/semaines, /leviers/magasins, même cache que lui).
+     * Lues une fois par boutique et par session, dès l'ouverture de la fiche ou du contrôle : avant d'arriver à
+     * l'étape, et pour les garder hors ligne.
      */
-    async chargerSante(shop) {
+    chargerSante(shop) {
       if (!shop || this.KS[shop]) { return; }
-      this.KS[shop] = { chargement: true };
-      try { this.KS[shop] = await this.lire('/visites/kpi/' + encodeURIComponent(shop), 'kpi:' + shop); } catch (e) { this.KS[shop] = { erreur: true }; }
-      this.rendre();
+      this.chargerCartes();
+      const an = Number(auj().slice(0, 4)), ym = auj().slice(0, 7);
+      const lire = (path, cle, poser) => this.lire(path, cle).then(d => poser(d), () => poser({ erreur: true })).then(() => this.rendre());
+      this.KS[shop] = { chargement: true }; this.AN[shop] = { chargement: true };
+      lire('/visites/kpi/' + encodeURIComponent(shop), 'kpi:' + shop, d => { this.KS[shop] = d; });
+      lire('/ventes/semaines?shop=' + encodeURIComponent(shop) + '&vue=annee&date=' + an + '-12-31&articles=1&_cache=900', 'an12:' + shop + ':' + an, d => { this.AN[shop] = d; });
+      if (!this.LV[ym] || this.LV[ym].erreur) {
+        this.LV[ym] = { chargement: true };
+        lire('/leviers/magasins?annee=' + an + '&mois=' + Number(ym.slice(5, 7)) + '&_cache=900', 'lev:' + ym, d => { this.LV[ym] = d; });
+      }
+    }
+    /** Les cartes du dashboard magasin (cartes-magasin.js et son style) : déjà dans la page sur la tablette et le dashboard, ajoutées ailleurs. */
+    chargerCartes() {
+      if (window.CartesMagasin || this._cartes) { return; }
+      this._cartes = true;
+      const base = ICI || new URL((this.o.racine || '') + 'assets/js/visites.js', location.href).href;
+      if (!document.querySelector('link[href*="cartes-magasin.css"]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = new URL('../css/cartes-magasin.css', base).href; document.head.appendChild(l); }
+      const sc = document.createElement('script'); sc.src = new URL('cartes-magasin.js', base).href; sc.onload = () => this.rendre(); document.head.appendChild(sc);
     }
     /**
      * Les campagnes marketing d'une boutique, avec les clients face au N-1 et
@@ -944,20 +982,51 @@
       </div>`;
     }
     /**
-     * KPI et santé du magasin (26/10/2026) : trois blocs, chacun avec sa fenêtre — le CA par ETP des trois derniers
-     * mois clos face au réseau et au seuil, l'année à date face à l'an passé (clients, panier moyen, articles par
-     * ticket, mois comparables seulement) et la structure des ventes par catégorie face au reste du réseau.
+     * KPI et santé du magasin (26/10/2026) : le CA par ETP des trois derniers mois clos face au réseau et au seuil,
+     * l'année mois par mois face à l'an passé (la carte du dashboard magasin, vue Année) et la structure des ventes
+     * par catégorie face au reste du réseau.
      */
     santeHtml(shop) {
+      this.chargerSante(shop);
       const K = this.KS[shop];
       const cap = t => `<div class="cap">${t} ${this.src('api')}</div>`;
-      if (!K || K.chargement) { return cap('KPI et santé du magasin') + '<div class="card sm mu">Lecture des chiffres du magasin au panel…</div>'; }
-      if (K.erreur || K.error) { return cap('KPI et santé du magasin') + `<div class="card sm mu">Les chiffres du magasin n’ont pas pu être lus. <button class="chip" data-a="sante-relire" data-v="${esc(shop)}">Relire</button></div>`; }
-      if (K.indispo) { return cap('KPI et santé du magasin') + `<div class="card sm mu">${esc(K.motif || 'indisponible')}</div>`; }
-      return cap('CA par ETP') + this.caEtpHtml(K.caEtp)
-        + cap('L’année face à l’an passé') + this.anneeHtml(K.annee, shop)
-        + cap('Structure des ventes face au réseau') + this.structureHtml(K.structure, shop)
-        + `<div class="xs mu" style="margin:2px 2px 0">Lu le ${fmtD(K.lu)} à ${esc(String(K.lu || '').slice(11, 16))}${(K.manques || []).length ? ' · relu dans quelques minutes : ' + esc(K.manques.join(', ')) + ' incomplet' : ''}.</div>`;
+      const lu = K && !K.chargement && !K.erreur && !K.error && !K.indispo;
+      const attente = !K || K.chargement ? '<div class="card sm mu">Lecture du CA par ETP et des ventes par catégorie au panel…</div>'
+        : K.indispo ? `<div class="card sm mu">${esc(K.motif || 'indisponible')}</div>`
+        : `<div class="card sm mu">Le CA par ETP et les ventes par catégorie n’ont pas pu être lus. <button class="chip" data-a="sante-relire" data-v="${esc(shop)}">Relire</button></div>`;
+      return cap('CA par ETP') + (lu ? this.caEtpHtml(K.caEtp) : attente)
+        + cap('L’année face à l’an passé') + this.anneeCarteHtml(shop)
+        + (lu ? cap('Structure des ventes face au réseau') + this.structureHtml(K.structure, shop)
+          + `<div class="xs mu" style="margin:2px 2px 0">Lu le ${fmtD(K.lu)} à ${esc(String(K.lu || '').slice(11, 16))}${(K.manques || []).length ? ' · relu dans quelques minutes : ' + esc(K.manques.join(', ')) + ' incomplet' : ''}.</div>` : '');
+    }
+    /** La carte « l'année, mois par mois, face à l'an passé » du dashboard magasin (cartes-magasin.js), telle quelle. */
+    anneeCarteHtml(shop) {
+      if (!window.CartesMagasin) { return '<div class="card sm mu">Préparation du graphique de l’année…</div>'; }
+      const A = this.AN[shop]; const pret = A && !A.chargement && !A.erreur;
+      return '<div class="cm">' + window.CartesMagasin.annee(pret ? A : null, { annee: Number(auj().slice(0, 4)), mesure: this.anm, err: A && A.erreur ? 'les douze mois n’ont pas pu être lus au panel' : null }) + '</div>';
+    }
+    /**
+     * Au-dessus des points du module « Les leviers » : la carte des six leviers du dashboard magasin (le mois à date,
+     * ou le cumul de l'année) et les derniers avis Google, pour vérifier la note avec le franchisé.
+     */
+    leviersHtml(shop) {
+      this.chargerSante(shop);
+      const L = this.LV[auj().slice(0, 7)]; const pret = L && !L.chargement && !L.erreur;
+      const carte = !window.CartesMagasin ? '<div class="card sm mu">Préparation des six leviers…</div>'
+        : '<div class="cm">' + window.CartesMagasin.leviers(pret ? L : null, { shop: String(shop), vue: this.levVue, err: L && L.erreur ? 'pas de lecture au panel' : null }) + '</div>';
+      const g = (this.boutique(shop) || {}).google;
+      const avis = g && g.note != null ? `<div class="card sm"><div class="row"><b>Google ${note1(g.note)} ★</b><span class="xs mu">${g.avis != null ? g.avis + ' avis' : ''}${g.faibles ? ' · ' + g.faibles + ' avis ≤ 2/5 sur 30 j' : ''}</span></div>${(g.derniers || []).slice(0, 3).map(d => `<div class="xs" style="margin-top:5px"><b class="${d.note != null && d.note <= 2 ? 'dn' : ''}">${d.note != null ? d.note + ' ★' : ''}</b> <span class="mu">${fmtD(d.le)}</span>${d.extrait ? ' · « ' + esc(d.extrait) + ' »' : ''}</div>`).join('')}</div>` : '';
+      return carte + avis + '<div class="xs mu" style="margin:6px 2px 8px">Sur place, levier par levier : chaque point se note, se photographie et part dans le rapport s’il n’est pas conforme.</div>';
+    }
+    /** Au-dessus des points du module Produit : les produits obligatoires d'après le cockpit (vus en caisse, ceux à chercher en rayon). */
+    obligatoiresHtml(shop) {
+      const C = this.C[shop]; const as = C && C.assortiment;
+      if (!C) { return '<div class="card sm mu">Lecture des produits obligatoires…</div>'; }
+      if (!as || as.motif) { return `<div class="card sm mu">Produits obligatoires : ${esc((as && as.motif) || 'aucune liste dans le cockpit')}.</div>`; }
+      const manq = as.liste || [];
+      return `<div class="card sm"><div class="row"><b>Produits obligatoires</b><span class="sp"></span><b>${as.presentes} / ${as.lisibles}</b></div>
+        <div class="xs mu">vus en caisse sur les ${as.jours} derniers jours, jusqu’au ${fmtD(as.au)}</div>
+        ${manq.length ? `<div class="sm" style="margin-top:6px"><b class="dn">À chercher en rayon</b> · ${manq.map(x => esc(x.nom)).join(' · ')}${as.manquantes > manq.length ? ' …' : ''}</div>` : '<div class="xs up" style="margin-top:4px">Toutes les obligatoires sont passées en caisse.</div>'}</div>`;
     }
     /** L'écart en pastille : vert dès +3 %, rouge dès −3 % (les pastilles de Résultat › Année) ; `pts` pour des points de part. */
     ecartPill(e, pts) {
@@ -977,21 +1046,6 @@
         <div class="sm mu" style="margin-top:2px">${d.caEtp == null ? (d.ca == null ? 'CA du mois non lu' : 'pas de planning ce mois : ETP inconnus, jamais devinés') + ' · ' : ''}Réseau ${eur(d.reseau)}${d.etp != null ? ' · ' + etp(d.etp) + ' ETP planifiés' : ''}</div>
         <div class="ksc" style="margin-top:6px"><table class="tbl"><tr><th>Mois</th><th>CA</th><th>ETP</th><th>CA / ETP</th><th>Réseau</th></tr>${E.mois.map(m => `<tr><td>${esc(m.lab)}</td><td>${eur(m.ca)}</td><td>${etp(m.etp)}</td><td><b class="${m.caEtp != null && m.caEtp < E.seuil ? 'dn' : ''}">${eur(m.caEtp)}</b></td><td class="mu">${eur(m.reseau)}</td></tr>`).join('')}</table></div>
         <div class="xs mu" style="margin-top:4px">${esc(E.source || '')}</div></div>`;
-    }
-    anneeHtml(A, shop) {
-      if (!A) { return '<div class="card sm mu">L’année face à l’an passé est indisponible.</div>'; }
-      const C = A.cumul; const R = A.reseau || {};
-      const n2 = x => x == null ? '—' : Number(x).toFixed(2).replace('.', ',');
-      const ent = x => x == null ? '—' : Math.round(x).toLocaleString('fr-BE').replace(/ | /g, ' ');
-      const tuile = (t, k, fmt) => `<div><div class="xs mu">${t}</div><div class="k">${C ? fmt(C[k].n) : '—'}</div><div class="row" style="gap:6px;margin-top:3px">${C ? this.ecartPill(C[k].ecart) : ''}<span class="xs mu">N-1 ${C ? fmt(C[k].n1) : '—'}</span></div>${R[k] ? `<div class="xs mu" style="margin-top:3px">réseau ${(pct(R[k].ecart) || '—').replace('.', ',')}</div>` : ''}</div>`;
-      const cle = 'ks-mois:' + shop; const ouvert = !!this.ouvert[cle];
-      const mois = A.mois || [];
-      const ec = (n, n1) => n != null && n1 ? this.ecartPill(Math.round((n / n1 - 1) * 1000) / 10) : '<span class="ec">—</span>';
-      return (C ? '' : `<div class="card sm mu">${esc(A.n1Motif || 'pas de N-1 à comparer')}</div>`)
-        + `<div class="ks">${tuile('Clients', 'clients', ent)}${tuile('Panier moyen', 'panier', x => x == null ? '—' : n2(x) + ' €')}${tuile('Articles par ticket', 'articles', n2)}</div>`
-        + `<div class="xs mu" style="margin:4px 2px 0">Du 1er janvier au ${fmtD(A.au)}${C ? ' · ' + C.mois + ' mois comparables, le mois en cours à date · ' + C.jours.n + ' j ouverts (N-1 : ' + C.jours.n1 + ' j)' : ''}${R.magasins ? ' · réseau à périmètre constant, ' + R.magasins + ' magasins' : ''}</div>`
-        + (mois.length ? `<div class="act"><button class="chip ${ouvert ? 'on' : ''}" data-a="drop" data-v="${esc(cle)}">Mois par mois ${ouvert ? '▴' : '▾'}</button></div>` : '')
-        + (ouvert ? `<div class="card ksc" style="margin-top:6px"><table class="tbl"><tr><th>Mois</th><th>Clients</th><th>N-1</th><th></th><th>Panier</th><th></th><th>Art./ticket</th><th></th></tr>${mois.map(m => `<tr><td>${esc(m.lab)}${m.enCours ? ' <span class="xs mu">à date</span>' : ''}</td><td>${ent(m.clients)}</td><td class="mu">${ent(m.clientsN1)}</td><td>${ec(m.clients, m.clientsN1)}</td><td>${m.panier != null ? n2(m.panier) + ' €' : '—'}</td><td>${ec(m.panier, m.panierN1)}</td><td>${n2(m.articles)}</td><td>${ec(m.articles, m.articlesN1)}</td></tr>`).join('')}</table></div>` : '');
     }
     structureHtml(S, shop) {
       if (!S || !(S.categories || []).length) { return '<div class="card sm mu">La structure des ventes est indisponible : le panel n’a pas rendu les ventes par catégorie de ces mois.</div>'; }
@@ -1142,8 +1196,9 @@
       const causes = this.D.causes || {};
 
         const msp = m.id === 'msp' ? b.msp : null;
+        const avant = m.leviers ? this.leviersHtml(v.shop) : m.obligatoires ? this.obligatoiresHtml(v.shop) : '';
         return `<div class="mod">${sansTitre ? (m.bureau ? '<div class="xs mu" style="margin:0 2px 6px">Les points que le bureau a ajoutés en préparant la visite.</div>' : '') : `<div class="th"><b>${esc(m.nom)}</b>${m.bureau ? '<span class="pill bur">bureau</span>' : this.src(m.id === 'planogramme' || m.id === 'assortiment' ? 'mix' : 'local')}<span class="sp"></span><span class="xs mu">${m.points.length} points</span></div>`}
-          ${msp ? `<div class="card" style="margin-bottom:6px"><div class="row"><b>${note1(msp.total)} / 20</b><span class="sp"></span><span class="xs mu">MSP ${esc(msp.mois)} · ${esc(msp.par)}</span></div><div class="sm" style="margin-top:4px">${Object.keys(msp.rubriques || {}).map(k => (msp.rubriques[k] < (this.D.seuils.mspAlerte || 12) ? '🔴 ' : msp.rubriques[k] < 16 ? '🟡 ' : '🟢 ') + esc(k) + ' ' + msp.rubriques[k]).join(' · ')}</div>${msp.commentaires ? `<div class="xs mu" style="margin-top:4px">« ${esc(msp.commentaires)} »</div>` : ''}${msp.fichier ? `<div class="act"><a class="chip" target="_blank" rel="noopener" href="${esc((this.o.racine || '') + msp.fichier)}">📄 Rapport PDF</a></div>` : ''}</div>` : m.id === 'msp' ? '<div class="sm mu" style="margin:0 2px 6px">Pas de rapport mystery shopper pour cette boutique (à saisir dans MSP et équipe).</div>' : ''}
+          ${avant}${msp ? `<div class="card" style="margin-bottom:6px"><div class="row"><b>${note1(msp.total)} / 20</b><span class="sp"></span><span class="xs mu">MSP ${esc(msp.mois)} · ${esc(msp.par)}</span></div><div class="sm" style="margin-top:4px">${Object.keys(msp.rubriques || {}).map(k => (msp.rubriques[k] < (this.D.seuils.mspAlerte || 12) ? '🔴 ' : msp.rubriques[k] < 16 ? '🟡 ' : '🟢 ') + esc(k) + ' ' + msp.rubriques[k]).join(' · ')}</div>${msp.commentaires ? `<div class="xs mu" style="margin-top:4px">« ${esc(msp.commentaires)} »</div>` : ''}${msp.fichier ? `<div class="act"><a class="chip" target="_blank" rel="noopener" href="${esc((this.o.racine || '') + msp.fichier)}">📄 Rapport PDF</a></div>` : ''}</div>` : m.id === 'msp' ? '<div class="sm mu" style="margin:0 2px 6px">Pas de rapport mystery shopper pour cette boutique (à saisir dans MSP et équipe).</div>' : ''}
           ${m.points.map(pt => {
             cnt.total++; const p = pts[pt.ref] || {}; if (p.etat || p.note != null || p.valeur != null) { cnt.faits++; }
             const phs = photos.filter(x => x.ref === pt.ref);
@@ -1522,6 +1577,9 @@
 
     /* --- événements --------------------------------------------------------- */
     clic(e) {
+      // Les boutons des cartes du dashboard magasin (cartes-magasin.js) : la mesure de l'année, la vue des leviers.
+      const cm = e.target.closest('[data-anm],[data-levvue]');
+      if (cm && this.host.contains(cm)) { if (cm.dataset.anm) { this.anm = cm.dataset.anm; } else if (!cm.disabled) { this.levVue = cm.dataset.levvue; } this.rendre(); return; }
       const el = e.target.closest('[data-a]'); if (!el || !this.host.contains(el)) { return; }
       const a = el.dataset.a; const v = el.dataset.v || ''; const parts = v.split('|');
       if (a === 'go') { const [vue, p] = v.split('/'); this.go(vue, p); return; }
