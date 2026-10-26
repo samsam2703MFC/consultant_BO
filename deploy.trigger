@@ -1068,3 +1068,7 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T14:20:12Z recherche écarts d'expédition
 2026-10-26 tablette : photo et repères du contrôleur sur les tâches sous 4
 158 ruchy magazynowe 2026-10-26T14:37:08Z
+2026-10-26T14:51:15Z promotions : section au rail (Édition, Tableau d'analyse), dashboard magasin en lecture seule
+2026-10-26T14:58:35Z promotions : menu à part, une entrée repliable au rail
+159 stan wysylek 2026-10-26T15:02:31Z
+2026-10-26T15:02:45Z promotions : menu du rail au même niveau que Produits

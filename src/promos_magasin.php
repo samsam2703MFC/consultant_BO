@@ -4,8 +4,9 @@ declare(strict_types=1);
 /**
  * Les promotions du magasin (demande du 17/10/2026).
  *
- * Un franchisé prépare une promotion « X achetés + Y » du panel pour son magasin, dans l'onglet Promotions du
- * dashboard magasin (un assistant en cinq étapes, calqué sur le formulaire « Buy X Get Y » du panel). PAS DE
+ * Une promotion « X achetés + Y » du panel pour un magasin, préparée dans l'assistant calqué sur le formulaire « Buy X
+ * Get Y » du panel. L'assistant vit au cockpit depuis le 26/10/2026 (Promotions › Édition : le dashboard servi dans un
+ * cadre, ?embed=promos, le magasin au choix) ; l'onglet Promotions du dashboard magasin ne fait plus que lire. PAS DE
  * VALIDATION de la marque (demande du 17/10/2026) : l'envoi l'enregistre aussitôt (`validee`), pourvu que les règles
  * tiennent ; un coefficient qu'un produit sans coût ni prix empêche de vérifier ne bloque pas, il se signale
  * (`auto: false`, `motif`). La marque la met en caisse (« Mise en caisse ✓ », en attendant l'écriture au panel) ou la
@@ -1304,7 +1305,8 @@ function wr_promos_magasin_retirer(): array
 }
 
 /**
- * GET /promos-magasin[?statut=en_caisse|brouillon] — côté marque (console › Analyse magasin › Promotions) : les
+ * GET /promos-magasin[?statut=en_caisse|brouillon] — côté marque (l'ancien onglet Analyse magasin › Promotions, remplacé
+ * le 26/10/2026 par le Tableau d'analyse, GET /promotions/reseau ; la route reste) : les
  * promotions de chaque magasin, lues au panel (celles réservées à un seul magasin), avec le coefficient du lot aux prix
  * et coûts d'aujourd'hui. Lecture seule : le magasin les écrit dans son dashboard, le panel les garde.
  */

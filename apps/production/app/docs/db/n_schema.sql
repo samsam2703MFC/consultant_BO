@@ -1,7 +1,7 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 088, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 088 ; compatible MySQL 8.
+-- 001 → 089, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 089 ; compatible MySQL 8.
 -- Modifications des tables d'origine : voir docs/db/README.md (colonne customer.communication_lang, nettoyage 074 → 080).
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `n_activity_click` (
@@ -1586,6 +1586,19 @@ CREATE TABLE `n_section_target` (
   CONSTRAINT `fk_tfb_section_target_section` FOREIGN KEY (`id_section`) REFERENCES `production_sections` (`id`) ON DELETE CASCADE,
   CONSTRAINT `ck_tfb_section_target_staff` CHECK (`staff_pct_target` is null or `staff_pct_target` > 0 and `staff_pct_target` < 100),
   CONSTRAINT `ck_tfb_section_target_margin` CHECK (`margin_pct_target` is null or `margin_pct_target` > -100 and `margin_pct_target` < 100)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_send_issue_action` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `source` enum('email','franchise','shipment','monitoring','automation') NOT NULL,
+  `id_item` bigint(20) NOT NULL,
+  `action` enum('retry','resolve') NOT NULL,
+  `reason` varchar(500) DEFAULT NULL,
+  `id_user` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_n_send_issue_action_item` (`source`,`id_item`,`id`),
+  KEY `fk_n_send_issue_action_user` (`id_user`),
+  CONSTRAINT `fk_n_send_issue_action_user` FOREIGN KEY (`id_user`) REFERENCES `user` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_shipping_assignment` (
   `ship_date` date NOT NULL,

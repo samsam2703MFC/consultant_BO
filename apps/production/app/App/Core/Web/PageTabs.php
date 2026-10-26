@@ -49,6 +49,12 @@ final class PageTabs
             ['/ppwr/sales-packaging', 'Kartony sprzedażowe PPWR', 'bi-box-seam'],
             ['/ppwr/reports', 'Raporty PPWR', 'bi-file-earmark-text'],
         ]],
+        // Komunikacja : kto dostaje jakie dokumenty, historia wiadomości, stan wysyłek (błędy, kolejki, ponów jedną pozycję)
+        'communication' => ['label' => 'Komunikacja', 'section' => 'Zamówienia', 'icon' => 'bi-envelope', 'tabs' => [
+            ['/communication/distribution', 'Dystrybucja dokumentów', 'bi-diagram-3'],
+            ['/communication/messages', 'Historia wiadomości', 'bi-envelope-open'],
+            ['/communication/outbox', 'Stan wysyłek', 'bi-send-exclamation'],
+        ]],
         // Wzory wydruków PDF (przykłady w językach klientów) i szablony e-maili
         'templates' => ['label' => 'Wzory dokumentów i e-maili', 'section' => 'Ustawienia › Klienci', 'icon' => 'bi-file-earmark-richtext', 'tabs' => [
             ['/communication/document-templates', 'Dokumenty PDF', 'bi-file-earmark-pdf'],

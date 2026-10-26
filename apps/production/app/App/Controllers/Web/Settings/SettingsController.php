@@ -25,6 +25,8 @@ class SettingsController extends BaseController
         'shipping_issue.decision_days' => [1, 30, '3'],
         'shipping_issue.min_amount' => [0, 1000, '1'],
         'shipping_issue.lookback_days' => [7, 365, '45'],
+        'send_status.stuck_minutes' => [5, 1440, '30'],
+        'send_status.lookback_days' => [1, 365, '30'],
     ];
 
     public function __construct(private ParamRepository $params)

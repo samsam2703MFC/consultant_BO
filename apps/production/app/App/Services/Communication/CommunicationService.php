@@ -21,7 +21,7 @@ class CommunicationService
         'en' => 'Angielski',
     ];
 
-    private const TEMPLATE_TYPES = [
+    public const TEMPLATE_TYPES = [
         'invoice' => 'Faktura',
         'proforma' => 'Proforma',
         'wdt' => 'WDT',

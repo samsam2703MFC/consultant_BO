@@ -7,7 +7,7 @@ Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y 
 
 ## Installer / intégrer
 
-Sur une base ERP d'origine (copie de production) : `php Bin/tfb_migrate.php apply` depuis `apps/production/app`. Les migrations `migrations/tfb/001 → 088` créent les tables (`tfb_` puis renommées `n_` par la 069), posent les données de départ (paramètres, rôles, modèles d'e-mails, questions du pointage…) et sont enregistrées dans `n_schema_migration` (une migration déjà appliquée ne peut plus être modifiée). `docs/db/n_schema.sql` donne le schéma final des tables `n_` en un seul fichier, pour lecture.
+Sur une base ERP d'origine (copie de production) : `php Bin/tfb_migrate.php apply` depuis `apps/production/app`. Les migrations `migrations/tfb/001 → 089` créent les tables (`tfb_` puis renommées `n_` par la 069), posent les données de départ (paramètres, rôles, modèles d'e-mails, questions du pointage…) et sont enregistrées dans `n_schema_migration` (une migration déjà appliquée ne peut plus être modifiée). `docs/db/n_schema.sql` donne le schéma final des tables `n_` en un seul fichier, pour lecture.
 
 ## Ce que le développement change dans les tables d'origine
 
@@ -42,6 +42,10 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 ### Tablette chauffeur (migration 082, 26/10/2026)
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
+
+### Stan wysyłek — journal des actions sur les envois (migration 089, 26/10/2026)
+
+`n_send_issue_action` : une ligne par action d'un utilisateur sur une position d'une file d'envoi — `source` `email` (`communication_message`), `franchise` (`outbox` : proforma.upload / proforma.notify / complaint.update), `shipment` (`webhook_outbox_shipments`), `monitoring` (`cron_notification_outbox`), `automation` (`n_mail_dispatch`) ; `id_item` = identifiant dans cette file (pas de clé étrangère : cinq tables) ; `action` `retry` (« Ponów » : la position revient en file avec le nombre de tentatives remis au maximum du worker − 1, donc une seule tentative de plus ; pour `automation` le cas est oublié et la règle le reprend) ou `resolve` (« Rozwiązane » : erreur classée, `reason` obligatoire) ; `id_user` (`user`, SET NULL). Une erreur est « rozwiązana » tant que sa dernière action est `resolve`. Aucune donnée des files n'est copiée, et les payloads (secrets des boutiques) ne sont jamais affichés. Paramètres : `send_status.stuck_minutes` (30 : en file au-delà de cette durée après son heure → « czeka ») et `send_status.lookback_days` (30 : fenêtre par défaut de la page).
 
 ### File des écarts d'expédition (migration 088, 26/10/2026)
 
