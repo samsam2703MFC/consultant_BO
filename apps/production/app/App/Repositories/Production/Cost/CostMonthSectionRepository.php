@@ -35,7 +35,9 @@ class CostMonthSectionRepository extends BaseRepository
     public function upsert(int $monthId, int $sectionId, int $cartonsQty, string $source = 'AUTO'): bool
     {
         $cartonsQty = max(0, (int)$cartonsQty);
-        $source = strtoupper($source) === 'MANUAL' ? 'MANUAL' : 'AUTO';
+        // AUTO = z zamówień, WDT = sprzedaż miesiąca (WDT), MANUAL = wpis ręczny (migracja 095).
+        $source = strtoupper($source);
+        if (!in_array($source, ['AUTO', 'MANUAL', 'WDT'], true)) $source = 'AUTO';
 
         $sql = "
             INSERT INTO {$this->table} (month_id, section_id, cartons_qty, source)

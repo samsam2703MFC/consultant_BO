@@ -105,7 +105,9 @@
         'receptionner': 'przyjecie przyjmij dostawy', 'receptionne': 'przyjecie przyjete', 'nonconformite': 'niezgodnosc nc', 'nonconformites': 'niezgodnosci nc', 'abime': 'problem niezgodnosc uszkodzony', 'casse': 'problem uszkodzony',
         'envoyer': 'wyslij wyslane', 'tout': 'wszystkie', 'tous': 'wszystkie', 'toutes': 'wszystkie', 'habituel': 'zwykly zwykle', 'langue': 'jezyk',
         'commander': 'zamow zamowienia', 'apres': 'po', 'planification': 'planowanie planowaniu plan',
-        'feuille': 'arkusz', 'semaines': 'tyg tygodni', 'clic': 'kliknieciem', 'masse': 'wszystkie', 'compter': 'policzone liczenia', 'max': 'maks maksymalne', 'salaire': 'wynagrodzenie koszt pracodawcy', 'salaires': 'wynagrodzenie koszt pracodawcy', 'paie': 'wynagrodzenie placy', 'verrouiller': 'zamkniety zamknij', 'verrouille': 'zamkniety zamrozony', 'fige': 'zamrozony', 'modifier': 'zmien zmiana edycja korekta', 'calculateur': 'kalkulator', 'budget': 'budzet budzetu budzecie', 'liste': 'lista listy', 'listes': 'listy lista', 'jour': 'dnia dzien dzis', 'besoin': 'zapotrzebowanie potrzeba', 'besoins': 'zapotrzebowanie potrzeba'
+        'feuille': 'arkusz', 'semaines': 'tyg tygodni', 'clic': 'kliknieciem', 'masse': 'wszystkie', 'compter': 'policzone liczenia', 'max': 'maks maksymalne', 'salaire': 'wynagrodzenie koszt pracodawcy', 'salaires': 'wynagrodzenie koszt pracodawcy', 'paie': 'wynagrodzenie placy', 'verrouiller': 'zamkniety zamknij', 'verrouille': 'zamkniety zamrozony', 'fige': 'zamrozony', 'modifier': 'zmien zmiana edycja korekta', 'calculateur': 'kalkulator', 'budget': 'budzet budzetu budzecie', 'liste': 'lista listy', 'listes': 'listy lista', 'jour': 'dnia dzien dzis', 'besoin': 'zapotrzebowanie potrzeba', 'besoins': 'zapotrzebowanie potrzeba',
+        'cloture': 'zamkniecie miesiaca', 'cloturer': 'zamknij zamkniecie miesiaca', 'clore': 'zamknij zamkniecie', 'fermer': 'zamknij zamkniecie', 'fermeture': 'zamkniecie miesiaca',
+        'medias': 'media', 'media': 'media', 'electricite': 'media', 'fixes': 'stale', 'fixe': 'stale', 'copier': 'kopiuj', 'precedent': 'poprzedniego', 'inventorier': 'inwentaryzacja arkusz'
     };
 
     var menu = null;

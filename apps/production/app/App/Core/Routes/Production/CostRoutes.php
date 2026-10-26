@@ -4,6 +4,24 @@ use FastRoute\RouteCollector;
 return function(RouteCollector $r) {
 
 
+    // Kreator « Zamknięcie miesiąca » (audit 2, P14) : 8 kroków zamknięcia miesiąca kosztów.
+    $r->addRoute('GET', '/month-close', [
+        'controller' => App\Controllers\Web\Production\Cost\MonthCloseController::class,
+        'method'     => 'index'
+    ]);
+    $r->addRoute('GET', '/month-close/{ym:\d{4}-\d{2}}', [
+        'controller' => App\Controllers\Web\Production\Cost\MonthCloseController::class,
+        'method'     => 'show'
+    ]);
+    $r->addRoute('POST', '/ajax/month-close/{ym:\d{4}-\d{2}}/start', [
+        'controller' => App\Controllers\Web\Production\Cost\MonthCloseController::class,
+        'method'     => 'ajaxStart'
+    ]);
+    $r->addRoute('POST', '/ajax/month-close/{ym:\d{4}-\d{2}}/copy/{category:media|fixed|logistics}', [
+        'controller' => App\Controllers\Web\Production\Cost\MonthCloseController::class,
+        'method'     => 'ajaxCopy'
+    ]);
+
     $r->addRoute('GET', '/cost-calculator', [
         'controller' => App\Controllers\Web\Production\Cost\CostCalculatorController::class,
         'method'     => 'index'

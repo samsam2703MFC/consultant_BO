@@ -84,6 +84,8 @@ final class WorkshopApiRoutes
             ['GET', '/produits/candidates', ItemController::class, 'candidates', 'prod.products.read'],
             ['GET', '/produits/erp-options', ItemController::class, 'erpOptions', 'prod.products.read'],
             ['GET', '/produits/stock-overview', ItemController::class, 'stockOverview', 'prod.products.read'],
+            ['GET', '/produits/stock-suggestions', ItemController::class, 'stockSuggestions', 'prod.products.read'],
+            ['POST', '/produits/stock-suggestions/apply', ItemController::class, 'applyStockSuggestions', 'prod.products.write'],
             ['GET', '/produits/items/{id:\d+}', ItemController::class, 'get', 'prod.products.read'],
             ['PATCH', '/produits/items/{id:\d+}/settings', ItemController::class, 'updateSettings', 'prod.products.write'],
             ['PUT', '/produits/items/{id:\d+}/product', ItemController::class, 'updateProduct', 'prod.products.write'],

@@ -78,4 +78,10 @@ final class DeadlineAlertRepository extends WorkshopRepository
             FROM cost_month m WHERE EXISTS (SELECT 1 FROM cost_month_employee e WHERE e.month_id = m.id AND e.is_included = 1)
             ORDER BY m.year, m.month"), 'ym');
     }
+
+    /** Statut du mois de coûts (OPEN, LOCKED) ou null s'il n'existe pas. */
+    public function costMonthStatus(string $ym): ?string
+    {
+        return $this->all("SELECT status FROM cost_month WHERE year = ? AND month = ? LIMIT 1", [(int) substr($ym, 0, 4), (int) substr($ym, 5, 2)])[0]['status'] ?? null;
+    }
 }

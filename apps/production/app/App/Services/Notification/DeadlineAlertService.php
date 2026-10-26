@@ -73,8 +73,8 @@ final class DeadlineAlertService
         foreach ($this->missingCostMonths($now) as [$ym, $source]) {
             $this->notifications->publish('cost_month_missing', 'danger', 'Brak kosztów za ' . self::monthLabel($ym),
                 'Rentowność, wynik grup i raport miesięczny liczą ' . self::monthLabel($ym) . ($source ? ' na kosztach z ' . self::monthLabel($source) : ' bez kosztów')
-                    . '. Uzupełnij personel, media i koszty stałe w kalkulatorze kosztów.',
-                '/cost-calculator/' . $ym, ['month' => $ym], 'cost_month_missing:' . $ym);
+                    . '. Uzupełnij personel, media i koszty stałe w kreatorze « Zamknięcie miesiąca ».',
+                '/month-close/' . $ym, ['month' => $ym], 'cost_month_missing:' . $ym);
             $out['costs']++;
         }
         return $out;
@@ -110,7 +110,15 @@ final class DeadlineAlertService
             $items[] = ['tone' => 'danger', 'icon' => 'bi-calculator', 'count' => count($missing),
                 'one' => 'miesiąc bez kosztów', 'few' => 'miesiące bez kosztów', 'many' => 'miesięcy bez kosztów',
                 'note' => implode(', ', array_map(fn($m) => self::monthLabel($m[0]), $missing)) . ' — rentowność liczona na szacunku',
-                'url' => '/cost-calculator/' . $missing[0][0], 'positions' => ['ADMINISTRACJA']];
+                'url' => '/month-close/' . $missing[0][0], 'positions' => ['ADMINISTRACJA']];
+        }
+        // Mois précédent saisi mais pas fermé (à partir du même jour) : l'assistant « Zamknięcie miesiąca ».
+        $previous = $now->modify('first day of last month')->format('Y-m');
+        if (!$missing && (int) $now->format('j') >= $this->int('alerts.cost_due_day', 10, 1) && $this->repo->costMonthStatus($previous) === 'OPEN') {
+            $items[] = ['tone' => 'warning', 'icon' => 'bi-calendar2-check', 'count' => 1,
+                'one' => 'miesiąc do zamknięcia', 'few' => 'miesiące do zamknięcia', 'many' => 'miesięcy do zamknięcia',
+                'note' => self::monthLabel($previous) . ' — kreator « Zamknięcie miesiąca » (raport miesięczny wychodzi po zamknięciu)',
+                'url' => '/month-close/' . $previous, 'positions' => ['ADMINISTRACJA']];
         }
         return $items;
     }

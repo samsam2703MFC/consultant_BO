@@ -143,7 +143,7 @@ try {
     $alerts->run();
     $k = $notes('cost_month_missing');
     expectAl($r['costs'] === 2 && count($k) === 2 && $k[0]['title'] === 'Brak kosztów za ' . $label($m2) && $k[1]['title'] === 'Brak kosztów za ' . $label($m1)
-        && str_contains($k[1]['body'], 'na kosztach z ' . $label($m3)) && $k[0]['link_url'] === '/cost-calculator/' . $m2->format('Y-m') && $k[0]['severity'] === 'danger', 'missing cost months since the last entered one');
+        && str_contains($k[1]['body'], 'na kosztach z ' . $label($m3)) && $k[0]['link_url'] === '/month-close/' . $m2->format('Y-m') && $k[0]['severity'] === 'danger', 'missing cost months since the last entered one');
     expectAl(count($notes('complaint_late')) === 2 && count($notes('dev_trial_late')) === 1, 'alerts published once (dedup)');
 
     // Après 7 jours, la réclamation 11 passe en rouge (nouvelle alerte), une seule fois.

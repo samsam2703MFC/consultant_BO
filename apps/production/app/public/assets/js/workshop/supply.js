@@ -53,7 +53,8 @@
             only: p.get('only') !== '0',
             inv: p.get('inv') === 'map' ? 'map' : Number(p.get('inv')) || null,
             istatus: ['open', 'accepted', 'disputed', 'all'].includes(p.get('ist')) ? p.get('ist') : 'open',
-            search: '', stockMode: 'all', used: true, inventory: false,
+            // #tab=stock&inventory=1 : arkusz inwentaryzacji od razu (kreator « Zamknięcie miesiąca », krok 5).
+            search: '', stockMode: 'all', used: true, inventory: p.get('tab') === 'stock' && p.get('inventory') === '1',
         };
     }
     function writeHash() {
@@ -680,7 +681,7 @@
     }
 
     function drawStock() {
-        if (state.inventory) return drawInventory();
+        if (state.inventory && data.materials.can_write) return drawInventory();
         const d = data.materials;
         const editable = d.can_write;
         const rows = stockRows();
@@ -714,7 +715,7 @@
     }
 
     function bindStock() {
-        if (state.inventory) return bindInventory();
+        if (state.inventory && data.materials.can_write) return bindInventory();
         el.querySelector('[data-inventory]')?.addEventListener('click', () => { state.inventory = true; draw(); window.scrollTo(0, 0); });
         el.querySelector('[data-suggest-all]')?.addEventListener('click', async (e) => {
             const ids = stockRows().filter(r => r.weekly_use > 0).map(r => r.id);

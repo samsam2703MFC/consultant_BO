@@ -481,12 +481,15 @@
         if (!todo.length) { ui.notify(false, t('st.recalc_none')); return 0; }
         if (!window.confirm(t('st.recalc_confirm', {n: todo.length}))) return 0;
         btn.disabled = true;
-        let done = 0;
-        for (const i of todo) {
-            try { await api.patch(`/produits/items/${await ensureCard(i)}/settings`, suggested(i)); done++; } catch (err) { /* produit suivant */ }
-            btn.textContent = `${done}/${todo.length}`;
+        // Jedno wywołanie serwera (te same reguły co karta) : produkty MTS listy mają zawsze kartę.
+        try {
+            const res = await api.post('/produits/stock-suggestions/apply', {ids: todo.filter(i => i.id).map(i => i.id)});
+            return res.applied;
+        } catch (err) {
+            ui.notify(false, err.message);
+            btn.disabled = false;
+            return 0;
         }
-        return done;
     }
 
     // Produkt ERP bez karty : karta tworzona przy pierwszej zmianie (grupa domyślna z działu ERP).
