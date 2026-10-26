@@ -17,10 +17,10 @@ declare(strict_types=1);
 ob_start();
 
 // --- doublures -----------------------------------------------------------------------
-$ECRITS = [];
+$ECRITS = []; $LIGNES = [];
 final class Db
 {
-    public static function rows(string $sql, array $a = []): array { return []; }
+    public static function rows(string $sql, array $a = []): array { global $LIGNES; foreach ($LIGNES as $k => $l) { if (str_contains($sql, $k)) { return $l; } } return []; }
     public static function row(string $sql, array $a = []): ?array { return null; }
     public static function exec(string $sql, array $a = []): void { global $ECRITS; $ECRITS[] = $a; }
 }
@@ -87,6 +87,15 @@ final class PanelApi
     }
 }
 
+// Les tâches non conformes d'une fenêtre (ep_pwa_tasks_nc) : on retient la fenêtre demandée.
+$GET_NC = null;
+function ep_pwa_tasks_nc(): array
+{
+    global $GET_NC; $GET_NC = $_GET;
+    return ['nc' => [['taskId' => '101', 'jour' => '2026-10-03', 'tache' => 'Vitrine salée', 'note' => 2, 'comment' => 'Vitrine à moitié vide', 'consultant' => 'Pierre B.',
+        'releveeLe' => '2026-10-03 14:20', 'recidive' => null, 'suite' => ['jour' => '2026-10-10', 'note' => 4, 'conforme' => true]]], 'indispo' => false];
+}
+
 require __DIR__ . '/../src/visites_kpi.php';
 $MOIS = vkMoisClos(3);
 
@@ -144,6 +153,28 @@ verifie('un magasin inconnu : 404', ($r['error'] ?? '') === 'magasin inconnu');
 $r = ep_visites_kpi('2');
 verifie('les deux blocs', is_array($r['caEtp']) && is_array($r['structure']) && !isset($r['annee']) && $r['shop'] === '2');
 verifie('un mois muet : relu dans cinq minutes, pas dans une heure', $r['manques'] === ['structure'] && $TTL === 300, json_encode([$r['manques'], $TTL]));
+
+// --- 5. les tâches mois par mois ----------------------------------------------------------
+echo "Les tâches mois par mois\n";
+$ce = date('Y-m'); $prec = date('Y-m', strtotime('first day of last month'));
+$LIGNES = ['FROM ceo_tache_jour' => [['m' => $prec, 't' => 40, 'f' => 30, 'j' => 20]], 'FROM mac_task_review' => [['m' => $prec, 'notees' => 12, 'sous' => 3, 'moy' => '3.75']]];
+$_GET = [];
+$T = ep_visites_taches('2');
+verifie('douze mois, du plus récent au plus ancien', count($T['mois']) === 12 && $T['mois'][0]['mois'] === $ce && $T['mois'][0]['enCours'] === true);
+$mp = $T['mois'][1];
+verifie('le mois passé : 30 faites sur 40 demandées, 75 %', $mp['faites'] === 30 && $mp['demandees'] === 40 && $mp['pct'] === 75, json_encode($mp));
+verifie('ses notes : 12 notées, 3 sous le seuil, moyenne 3,75', $mp['notees'] === 12 && $mp['sous'] === 3 && $mp['moyenne'] === 3.75);
+verifie('un mois sans relevé n’a pas de pourcentage', $T['mois'][5]['pct'] === null && $T['mois'][5]['demandees'] === 0);
+verifie('le mois en cours vide : le mois passé est choisi d’office', $T['choisi'] === $prec, $T['choisi']);
+verifie('ses tâches sous 4 sont lues sur le mois entier', $GET_NC['du'] === $prec . '-01' && $GET_NC['au'] === date('Y-m-t', strtotime($prec . '-01')) && $GET_NC['shop'] === '2');
+verifie('chaque tâche porte son identifiant (pour sa photo), la note, le commentaire et le contrôleur', $T['taches'][0]['taskId'] === '101' && $T['taches'][0]['note'] === 2 && $T['taches'][0]['commentaire'] === 'Vitrine à moitié vide' && $T['taches'][0]['controleur'] === 'Pierre B.');
+$_GET = ['mois' => $ce, 'n' => '6'];
+$T = ep_visites_taches('2');
+verifie('le mois demandé, arrêté à aujourd’hui ; six mois demandés', $T['choisi'] === $ce && $GET_NC['au'] === date('Y-m-d') && count($T['mois']) === 6);
+$_GET = ['mois' => '2019-01'];
+verifie('un mois hors de la liste revient au choix d’office', ep_visites_taches('2')['choisi'] === $prec);
+$_GET = [];
+verifie('un magasin inconnu : 404', (ep_visites_taches('77')['error'] ?? '') === 'magasin inconnu');
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

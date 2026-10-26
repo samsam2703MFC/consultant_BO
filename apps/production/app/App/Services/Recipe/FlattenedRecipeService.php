@@ -16,7 +16,8 @@ class FlattenedRecipeService
         private RecipeRepository $recipeRepository,
         private TransactionManager $transactionManager,
         private FlattenedRecipeIngredientRepository $flattenedRecipeIngredientRepository,
-        private FlattenedRecipeRecipeRepository $flattenedRecipeRecipeRepository
+        private FlattenedRecipeRecipeRepository $flattenedRecipeRecipeRepository,
+        private RecipeVersionService $recipeVersionService
     )
     {
     }
@@ -166,6 +167,8 @@ class FlattenedRecipeService
         return $this->transactionManager->execute(function () {
             $recipes = $this->recipeRepository->findAll();
 
+            // wersja początkowa receptur bez historii, zanim lista spłaszczona zostanie wyczyszczona
+            $this->recipeVersionService->prepare(array_column($recipes, 'id'));
             $this->flattenedRecipeIngredientRepository->deleteAll();
             $this->flattenedRecipeRecipeRepository->deleteAll();
 
@@ -198,6 +201,8 @@ class FlattenedRecipeService
             throw new CustomException("FLATTEN_RECIPE_INVALID_RESULT", 'errors', 500);
         }
 
+        // wersje receptury : stan sprzed zmiany (wersja początkowa), po zapisie nowa wersja, jeśli skład się zmienił
+        $this->recipeVersionService->prepare([(int)$recipeId]);
         $this->flattenedRecipeIngredientRepository->delete($recipeId, 'recipe_id');
         $this->flattenedRecipeRecipeRepository->delete($recipeId, 'recipe_id');
 
@@ -222,6 +227,7 @@ class FlattenedRecipeService
                 throw new CustomException("INSERT_FLATTENED_SUBRECIPE_ERROR", 'errors', 500);
             }
         }
+        $this->recipeVersionService->record([(int)$recipeId]);
 
         return true;
     }

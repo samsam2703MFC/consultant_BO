@@ -44,8 +44,8 @@
     // Słowa francuskie i potoczne → słowa z menu (UI po polsku).
     var ALIASES = {
         'marge': 'marza', 'prix': 'ceny cennik', 'cout': 'koszt', 'couts': 'koszty', 'vente': 'sprzedaz', 'ventes': 'sprzedaz',
-        'commande': 'zamowienia', 'commandes': 'zamowienia', 'client': 'klienci', 'clients': 'klienci', 'franchise': 'franczyza',
-        'produit': 'produkt produkty', 'produits': 'produkty', 'fiche': 'karty', 'recette': 'receptura receptury', 'recettes': 'receptury',
+        'commande': 'zamowienia', 'commandes': 'zamowienia', 'client': 'klienci klient', 'clients': 'klienci klient', 'franchise': 'franczyza',
+        'produit': 'produkt produkty', 'produits': 'produkty produkt', 'fiche': 'karty', 'recette': 'receptura receptury', 'recettes': 'receptury',
         'matiere': 'surowce', 'matieres': 'surowce', 'fournisseur': 'dostawcy dostawy', 'fournisseurs': 'dostawcy dostawy', 'achat': 'zakupy', 'achats': 'zakupy',
         'facture': 'faktury proforma', 'factures': 'faktury', 'livraison': 'wysylka dostawy', 'livraisons': 'dostawy wysylka', 'arrivage': 'dostawy', 'arrivages': 'dostawy', 'approvisionnement': 'dostawy zaopatrzenie', 'expedition': 'wysylka', 'camion': 'ciezarowki pojazdy',
         'camions': 'ciezarowki pojazdy', 'tournee': 'trasy', 'tournees': 'trasy', 'chargement': 'zaladunek', 'transporteur': 'przewoznicy',
@@ -75,7 +75,17 @@
         'valider': 'zatwierdzenie zatwierdzona', 'validation': 'zatwierdzenie zatwierdzona', 'lance': 'wprowadzone wprowadzony', 'lances': 'wprowadzone',
         'pipeline': 'etapy', 'prototype': 'test nowe', 'degustation': 'test', 'accueil': 'ekran glowny', 'ipad': 'tablet ekran',
         'alerte': 'alerty dzwonek', 'alertes': 'alerty dzwonek', 'echeance': 'terminy termin', 'echeances': 'terminy', 'retard': 'zalegle terminy alerty',
-        'retards': 'zalegle terminy', 'rappel': 'alerty terminy', 'rappels': 'alerty terminy', 'cloche': 'dzwonek alerty', 'notification': 'dzwonek alerty', 'notifications': 'dzwonek alerty'
+        'retards': 'zalegle terminy', 'rappel': 'alerty terminy', 'rappels': 'alerty terminy', 'cloche': 'dzwonek alerty', 'notification': 'dzwonek alerty', 'notifications': 'dzwonek alerty',
+        'historique': 'historia wersje', 'historiques': 'historia', 'version': 'wersje wersja', 'versions': 'wersje', 'evolution': 'historia koszt miesiac',
+        'vigueur': 'obowiazuje', 'depuis': 'obowiazuje', 'changement': 'zmiany zmiana', 'changements': 'zmiany', 'modification': 'zmiany edycja',
+        'modifications': 'zmiany', 'composition': 'sklad kompozycje', 'compositions': 'kompozycje sklad',
+        'ecart': 'roznice roznica', 'ecarts': 'roznice', 'difference': 'roznice roznica', 'differences': 'roznice', 'remboursement': 'zwrot roznice',
+        'rembourser': 'zwrot roznice', 'manquant': 'brak roznice problem', 'manquants': 'brak roznice', 'litige': 'roznice problem', 'litiges': 'roznice problemy',
+        'decision': 'decyzja decyzji', 'decisions': 'decyzja', 'responsable': 'odpowiedzialny', 'qr': 'kod qr', 'pin': 'pin', 'scanner': 'skanuj', 'scan': 'skanuj',
+        'mouvement': 'ruchy magazynowe', 'mouvements': 'ruchy magazynowe', 'registre': 'ruchy magazynowe', 'entree': 'przyjecia magazynowe', 'entrees': 'przyjecia magazynowe',
+        'sortie': 'wydania magazynowe', 'sorties': 'wydania magazynowe', 'perime': 'przeterminowane', 'perimes': 'przeterminowane', 'peremption': 'przeterminowane daty waznosci',
+        'dlc': 'daty waznosci przeterminowane', 'lot': 'partie partia', 'lots': 'partie', 'fefo': 'fefo partie', 'carton': 'kartony', 'cartons': 'kartony',
+        'magasin': 'magazyn magazynowe', 'solde': 'stan saldo', 'valeur': 'wartosc', 'fini': 'gotowe gotowych', 'finis': 'gotowe gotowych', 'finies': 'gotowe gotowych'
     };
 
     var menu = null;

@@ -393,7 +393,8 @@ final class ProfitabilityService
             $cartons = (float) $p['cartons'];
             $groupKey = $p['ym'] . '|' . (int) $p['id_section'];
             $run['card_total'] += $cartons * (float) $p['card_cost'];
-            $ingredients = $p['id_recipe'] !== null ? ($this->bom['ingredients'][(int) $p['id_recipe']] ?? []) : [];
+            $end = (new DateTimeImmutable($p['ym'] . '-01'))->format('Y-m-t') . ' 23:59:59';
+            $ingredients = $p['id_recipe'] !== null ? $this->ingredientsAt((int) $p['id_recipe'], $end) : [];
             if (!$ingredients) {
                 $pln = $cartons * (float) $p['card_cost'];
                 $run['by_key'][$groupKey] = ($run['by_key'][$groupKey] ?? 0.0) + $pln;
@@ -404,7 +405,6 @@ final class ProfitabilityService
                 unset($run);
                 continue;
             }
-            $end = (new DateTimeImmutable($p['ym'] . '-01'))->format('Y-m-t') . ' 23:59:59';
             foreach ($ingredients as [$materialId, $qty]) {
                 if (!isset($this->bom['materials'][$materialId])) continue;
                 $prices[$p['ym']][$materialId] ??= $this->priceAt($materialId, $end);
@@ -421,7 +421,44 @@ final class ProfitabilityService
         }
     }
 
-    /** Catalogue des matières, recettes aplaties des produits vendus et historique des prix (lus une fois). */
+    /**
+     * Matières aplaties d'une recette en vigueur à $at : version datée de la recette (n_recipe_version) ; la dernière
+     * version et une recette sans version prennent la composition actuelle (flattened_recipe_ingredient).
+     */
+    private function ingredientsAt(int $recipeId, string $at): array
+    {
+        $versions = $this->bom['versions'][$recipeId] ?? [];
+        $current = $this->bom['ingredients'][$recipeId] ?? [];
+        if (!$versions) return $current;
+        $chosen = 0;
+        foreach ($versions as $i => $v) {
+            if ($v['valid_from'] !== null && $v['valid_from'] > $at) break;
+            $chosen = $i;
+        }
+        return $chosen === array_key_last($versions) ? $current : $versions[$chosen]['ingredients'];
+    }
+
+    /** Matières aplaties de la recette en vigueur à $at (même règle que la valorisation des mois passés). */
+    public function recipeIngredientsAt(int $recipeId, string $at): array
+    {
+        $this->loadBom([$recipeId]);
+        return $this->ingredientsAt($recipeId, $at);
+    }
+
+    /** Coût matières (PLN) d'une liste aplatie [[material_id, quantité]] aux prix en vigueur à $at. */
+    public function ingredientsCostAt(array $ingredients, string $at): float
+    {
+        $this->loadBom([]);
+        $cost = 0.0;
+        foreach ($ingredients as [$materialId, $qty]) {
+            if (!isset($this->bom['materials'][(int) $materialId])) continue;
+            [$price] = $this->priceAt((int) $materialId, $at);
+            $cost += (float) $qty * $price;
+        }
+        return $cost;
+    }
+
+    /** Catalogue des matières, recettes aplaties (et leurs versions) des produits vendus, historique des prix (lus une fois). */
     private function loadBom(array $recipeIds): void
     {
         if ($this->bom === null) {
@@ -429,13 +466,17 @@ final class ProfitabilityService
             foreach ($this->repo->materialCatalog() as $m) $materials[(int) $m['id']] = $m;
             $history = [];
             foreach ($this->repo->priceHistory() as $h) $history[(int) $h['material_id']][] = [$h['changed_at'], (float) $h['unit_price'], $h['supplier']];
-            $this->bom = ['materials' => $materials, 'ingredients' => [], 'history' => $history];
+            $this->bom = ['materials' => $materials, 'ingredients' => [], 'versions' => [], 'history' => $history];
         }
         $missing = array_diff(array_unique(array_map('intval', array_filter($recipeIds))), array_keys($this->bom['ingredients']));
         if (!$missing) return;
         foreach ($missing as $id) $this->bom['ingredients'][$id] = [];
         foreach ($this->repo->recipeIngredients($missing) as $r) {
             $this->bom['ingredients'][(int) $r['recipe_id']][] = [(int) $r['material_id'], (float) $r['quantity']];
+        }
+        foreach ($this->repo->recipeVersions($missing) as $v) {
+            $this->bom['versions'][(int) $v['id_recipe']][] = ['valid_from' => $v['valid_from'],
+                'ingredients' => array_map(fn($i) => [(int) $i[0], (float) $i[1]], json_decode((string) $v['ingredients'], true) ?: [])];
         }
     }
 

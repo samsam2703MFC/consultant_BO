@@ -12,7 +12,8 @@ use App\Services\Workshop\Execution\DevProductService;
  * Alertes et échéances (cloche de l'ERP), lancées avec Bin/mail_dispatch.php : réclamation sans décision depuis
  * alerts.complaint_days jours (puis alerte rouge après alerts.complaint_escalate_days), essai d'un nouveau produit
  * planifié et pas fait, date visée d'un nouveau produit dépassée, coûts du mois précédent non saisis à partir du
- * alerts.cost_due_day du mois. Chaque alerte n'est publiée qu'une fois (clé de dédoublonnage) ; la page Dzisiaj
+ * alerts.cost_due_day du mois, écart d'expédition sans décision à l'échéance (shipping_issue.decision_days). Chaque
+ * alerte n'est publiée qu'une fois (clé de dédoublonnage) ; la page Dzisiaj
  * montre les mêmes points dans « Do zrobienia ».
  */
 final class DeadlineAlertService
@@ -26,11 +27,11 @@ final class DeadlineAlertService
     ) {
     }
 
-    /** @return array{complaints:int, trials:int, targets:int, costs:int} alertes examinées (publiées une seule fois chacune) */
+    /** @return array{complaints:int, trials:int, targets:int, costs:int, shipping:int} alertes examinées (publiées une seule fois chacune) */
     public function run(?\DateTimeImmutable $now = null): array
     {
         $now ??= new \DateTimeImmutable();
-        $out = ['complaints' => 0, 'trials' => 0, 'targets' => 0, 'costs' => 0];
+        $out = ['complaints' => 0, 'trials' => 0, 'targets' => 0, 'costs' => 0, 'shipping' => 0];
 
         $days = $this->int('alerts.complaint_days', 3, 1);
         $escalate = max($days, $this->int('alerts.complaint_escalate_days', 7, 1));
@@ -60,6 +61,15 @@ final class DeadlineAlertService
             $out['targets']++;
         }
 
+        foreach ($this->repo->lateShippingIssues($now->format('Y-m-d')) as $i) {
+            $what = $i['source'] === 'delivery' ? 'Problem przy dostawie' : 'Różnica wysyłki';
+            $this->notifications->publish('shipping_issue_late', 'warning', $what . ' bez decyzji',
+                trim((string) ($i['customer'] ?: 'Klient')) . ' — od ' . date('d.m.Y', strtotime((string) $i['opened_on'])) . ', termin decyzji ' . date('d.m.Y', strtotime((string) $i['due_on']))
+                    . ($i['owner'] ? ' ; odpowiedzialny : ' . $i['owner'] : ' ; brak odpowiedzialnego') . '.',
+                '/shipments/differences', ['issue_id' => (int) $i['id']], 'shipping_issue_late:' . $i['id']);
+            $out['shipping']++;
+        }
+
         foreach ($this->missingCostMonths($now) as [$ym, $source]) {
             $this->notifications->publish('cost_month_missing', 'danger', 'Brak kosztów za ' . self::monthLabel($ym),
                 'Rentowność, wynik grup i raport miesięczny liczą ' . self::monthLabel($ym) . ($source ? ' na kosztach z ' . self::monthLabel($source) : ' bez kosztów')
@@ -86,6 +96,14 @@ final class DeadlineAlertService
             $items[] = ['tone' => 'info', 'icon' => 'bi-rocket-takeoff', 'count' => $launch,
                 'one' => 'nowy produkt czeka na wprowadzenie', 'few' => 'nowe produkty czekają na wprowadzenie', 'many' => 'nowych produktów czeka na wprowadzenie',
                 'note' => 'receptura zatwierdzona na tablecie — połącz z produktem ERP', 'url' => '/test-products/pipeline', 'positions' => ['KIEROWNIK_PRODUKCJI']];
+        }
+        $issues = array_column($this->repo->openShippingIssues(), 'n', 'status');
+        $toDecide = (int) ($issues['open'] ?? 0);
+        if ($toDecide) {
+            $late = count($this->repo->lateShippingIssues($now->format('Y-m-d')));
+            $items[] = ['tone' => $late ? 'danger' : 'warning', 'icon' => 'bi-exclamation-diamond', 'count' => $toDecide,
+                'one' => 'różnica wysyłki czeka na decyzję', 'few' => 'różnice wysyłki czekają na decyzję', 'many' => 'różnic wysyłki czeka na decyzję',
+                'note' => $late ? $late . ' po terminie' : null, 'url' => '/shipments/differences', 'positions' => ['ADMINISTRACJA', 'LOGISTYKA']];
         }
         $missing = $this->missingCostMonths($now);
         if ($missing) {

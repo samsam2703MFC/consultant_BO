@@ -78,6 +78,23 @@
 .vi.desk .kpi{grid-template-columns:repeat(4,1fr)}
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
 .vi .kc .k{margin-top:4px}
+.vi .tm-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.vi .tm-t th{text-align:left;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:6px 8px;border-bottom:.5px solid var(--color-border-tertiary)}
+.vi .tm-t td{padding:8px;border-bottom:.5px solid var(--color-border-tertiary);vertical-align:middle}
+.vi .tm-t tr[data-a]{cursor:pointer}.vi .tm-t tr.on td{background:#FBF4F0}.vi .tm-t tr.on td:first-child{box-shadow:inset 3px 0 0 var(--color-primary);font-weight:600}
+.vi .tm-t .bar{width:90px;display:inline-block;vertical-align:middle;margin:0 0 0 8px}
+.vi .tm-n{display:inline-flex;background:var(--color-background-secondary);border-radius:8px;padding:2px;gap:2px;margin-left:auto}
+.vi .tm-n button{border:none;background:none;border-radius:6px;padding:4px 10px;font:600 11px var(--font-ui);color:var(--color-text-muted);cursor:pointer}.vi .tm-n button.on{background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.vi .tm-nc{padding:9px 0;border-bottom:.5px solid var(--color-border-tertiary);display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;align-items:start}.vi .tm-nc:last-child{border:none}
+.vi .tm-ph{position:relative;display:block;width:150px;min-height:60px;border:none;padding:0;border-radius:8px;overflow:hidden;background:#d8cfc3;cursor:pointer}
+.vi .tm-ph img{display:block;width:100%;height:auto}
+.vi .tm-ph .vide{display:flex;align-items:center;justify-content:center;height:100px;font-size:10.5px;color:#6b5f52;padding:0 8px;text-align:center}
+.vi .tm-rp{position:absolute;border:2px solid #D97706;border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.vi .tm-rp b{position:absolute;left:-2px;top:-2px;transform:translate(-40%,-40%);min-width:16px;height:16px;border-radius:999px;background:inherit;color:#fff;font:700 9.5px/16px var(--font-ui);text-align:center;padding:0 3px}
+.vi .tm-ph .tm-note{position:absolute;right:5px;bottom:5px}
+.vi .tm-sm{position:relative;display:block}
+.vi .tm-big{position:relative;display:inline-block;max-width:100%}.vi .cq-l .ph .tm-big img{display:block;max-width:100%;max-height:62dvh;border-radius:10px;object-fit:initial}
+.vi .tm-note{display:inline-block;min-width:34px;text-align:center;font:700 11px var(--font-ui);border-radius:6px;padding:2px 6px;color:#fff;background:#D97706}.vi .tm-note.n1,.vi .tm-note.n2{background:#C0182B}.vi .tm-note.ref{background:#8C857E}
 .vi .cm .db-card{margin-bottom:0}
 .vi .kc .lg{padding:6px 0;border-bottom:.5px solid var(--color-border-tertiary)}.vi .kc .lg:last-child{border:none}
 .vi .kb{height:5px;border-radius:4px;background:var(--color-background-secondary);overflow:hidden;margin-top:3px}
@@ -190,10 +207,10 @@
 .vi .cq-rapide{min-width:34px;height:30px;border-radius:8px;border:1.5px solid var(--c,#2d7a3e);background:transparent;color:var(--c,#2d7a3e);font:700 13px var(--font-ui);padding:0 10px;cursor:pointer}
 .vi .cq-rapide.lg{flex:1;height:40px;font-size:13px}
 .vi .cq-pied{font-size:10.5px;color:var(--color-text-muted);margin:8px 0 2px}
-.vi .cq-l{position:fixed;inset:0;background:#0d0b09;z-index:21;display:flex;flex-direction:column;color:#fff}
+.vi .cq-l{position:fixed;inset:0;background:#0d0b09;z-index:45;display:flex;flex-direction:column;color:#fff}
 .vi .cq-l .hd{display:flex;align-items:center;gap:10px;padding:12px 14px;font:600 13px var(--font-ui)}
 .vi .cq-l .hd .x{width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:16px}
-.vi .cq-l .ph{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 12px}
+.vi .cq-l .ph{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 12px;height:auto;background:transparent;cursor:default}
 .vi .cq-l .ph img{max-width:100%;max-height:100%;border-radius:10px;object-fit:contain}
 .vi .cq-l .fi{flex:0 0 auto;max-height:52dvh;overflow-y:auto;margin:10px 12px calc(12px + env(safe-area-inset-bottom,0px));background:var(--color-surface);color:var(--color-text);border-radius:14px;padding:12px 14px}
 .vi .cq-l .fi .t{display:block;font-family:var(--font-display);font-size:18px;font-weight:400;margin:6px 0 2px}
@@ -452,7 +469,7 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.AN = {}; this.LV = {}; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.S = null; this.R = null;
+      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.AN = {}; this.LV = {}; this.TM = {}; this.tmN = 6; this.TMP = {}; this.tmFile = []; this.tmV = null; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.S = null; this.R = null;
       this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
@@ -704,6 +721,60 @@
         lire('/leviers/magasins?annee=' + an + '&mois=' + Number(ym.slice(5, 7)) + '&_cache=900', 'lev:' + ym, d => { this.LV[ym] = d; });
       }
     }
+    /**
+     * Les tâches du magasin mois par mois (26/10/2026) : faites sur demandées, les notes du contrôle qualité, et les
+     * tâches notées sous 4 du mois choisi, avec le commentaire du contrôleur. Un mois se lit une fois par session.
+     */
+    chargerTachesMois(shop, mois) {
+      if (!shop) { return; }
+      const T = this.TM[shop] || (this.TM[shop] = { parMois: {} });
+      const cle = mois || '';
+      if (T.parMois[cle] && !T.parMois[cle].erreur) { T.sel = cle; return; }
+      T.sel = cle; T.parMois[cle] = { chargement: true };
+      this.lire('/visites/taches/' + encodeURIComponent(shop) + (mois ? '?mois=' + mois : ''), 'tm:' + shop + ':' + cle)
+        .then(d => { T.parMois[cle] = d; if (!cle && d && d.choisi) { T.parMois[d.choisi] = d; } }, () => { T.parMois[cle] = { erreur: true }; }).then(() => this.rendre());
+    }
+    /**
+     * La photo d'une tâche notée sous 4 et les repères du contrôleur (/pwa/tasks/detail) : lue à la demande, quatre à
+     * la fois, relue passé quinze minutes (l'adresse signée de la photo expire à vingt).
+     */
+    chargerPhotoNc(shop, taskId, jour) {
+      const k = shop + '|' + taskId + '|' + jour; const P = this.TMP[k];
+      if (P && (P.attente || P.chargement || Date.now() - (P.lu || 0) < 15 * 60 * 1000)) { return P; }
+      this.TMP[k] = { attente: true }; this.tmFile.push(k); this.tmPompe();
+      return this.TMP[k];
+    }
+    tmPompe() {
+      while ((this._tmEnCours || 0) < 4 && this.tmFile.length) {
+        const k = this.tmFile.shift(); const [shop, taskId, jour] = k.split('|');
+        this._tmEnCours = (this._tmEnCours || 0) + 1; this.TMP[k] = { chargement: true };
+        this.lire('/pwa/tasks/detail?shop=' + encodeURIComponent(shop) + '&task=' + encodeURIComponent(taskId) + '&date=' + jour, 'tmph:' + k)
+          .then(d => { this.TMP[k] = { lu: Date.now(), url: d && /^https?:\/\//.test(String(d.photo || '')) ? d.photo : null, reperes: d && d.reperes && Array.isArray(d.reperes.liste) ? d.reperes.liste : [], faitPar: d ? d.faitPar : null, faitLe: d ? d.faitLe : null }; },
+            () => { this.TMP[k] = { lu: Date.now() - 14 * 60 * 1000, url: null, reperes: [], erreur: true }; })
+          .then(() => { this._tmEnCours--; this.rendre(); this.tmPompe(); });
+      }
+    }
+    /** La photo avec les repères du contrôleur : chaque zone numérotée, à la couleur de son niveau. */
+    tmPhotoHtml(P, t, grand) {
+      const coul = n => n <= 2 ? '#C0182B' : n === 3 ? '#D97706' : '#2F5D8A';
+      const rp = (P.reperes || []).map((r, i) => { const c = coul(+(r.niveau || t.note || 3)); return `<i class="tm-rp" style="left:${(r.x * 100).toFixed(1)}%;top:${(r.y * 100).toFixed(1)}%;width:${(r.l * 100).toFixed(1)}%;height:${(r.h * 100).toFixed(1)}%;border-color:${c}"><b style="background:${c}">${esc(r.n || i + 1)}</b></i>`; }).join('');
+      return `<span class="${grand ? 'tm-big' : 'tm-sm'}"><img src="${esc(P.url)}" alt=""${grand ? '' : ' loading="lazy"'}>${rp}</span>`;
+    }
+    /** La photo en grand, ses repères, la note et le commentaire du contrôleur ; ‹ › dans l'ordre de la liste. */
+    tmLoupe() {
+      const V = this.tmV; const T = V && this.TM[V.shop]; const D = T && T.parMois[T.sel || ''];
+      const L = D && D.taches; const t = L && L[V.i];
+      if (!t) { this.tmV = null; return ''; }
+      const P = this.chargerPhotoNc(V.shop, t.taskId, t.jour);
+      const ph = P.url ? this.tmPhotoHtml(P, t, true) : `<span class="xs" style="color:#bbb">${P.chargement || P.attente ? 'lecture de la photo…' : 'pas de photo pour cette tâche'}</span>`;
+      return `<div class="cq-l" role="dialog" aria-label="${esc(t.tache)}"><div class="hd"><span>${V.i + 1} / ${L.length}</span><span class="sp"></span><button type="button" class="x" data-a="tm-fermer" aria-label="fermer">✕</button></div>
+        <div class="ph">${ph}</div>
+        <div class="fi"><span class="tm-note ${t.note == null ? 'ref' : 'n' + t.note}">${t.note == null ? 'refusée' : t.note + '/5'}</span><b class="t">${esc(t.tache)}</b>
+          <div class="q">${fmtD(t.jour)}${P.faitPar ? ' · faite par ' + esc(P.faitPar) + (P.faitLe ? ' à ' + esc(String(P.faitLe).slice(11, 16)) : '') : ''}</div>
+          ${t.commentaire ? `<div class="sm" style="margin-top:6px">« ${esc(t.commentaire)} »</div>` : ''}
+          <div class="q" style="margin-top:4px">${t.controleur ? 'Contrôle qualité : ' + esc(t.controleur) : 'Contrôle qualité'}${t.releveeLe ? ' · le ' + fmtD(t.releveeLe) + ' ' + esc(String(t.releveeLe).slice(11, 16)) : ''}</div>
+          <div class="act"><button type="button" class="btn" data-a="tm-nav" data-v="-1"${V.i ? '' : ' disabled'}>‹ Précédente</button><button type="button" class="btn p" data-a="tm-nav" data-v="1"${V.i < L.length - 1 ? '' : ' disabled'}>Suivante ›</button></div></div></div>`;
+    }
     /** Les cartes du dashboard magasin (cartes-magasin.js et son style) : déjà dans la page sur la tablette et le dashboard, ajoutées ailleurs. */
     chargerCartes() {
       if (window.CartesMagasin || this._cartes) { return; }
@@ -825,6 +896,33 @@
       const sel0 = this.cqF[shop] || 'tout'; const sel = sel0 !== 'tout' && !cq.nb(sel0) ? 'tout' : sel0;
       return { sel, F: sel === 'tout' ? cq.L : cq.L.filter(t => t.e.c === sel) };
     }
+    /**
+     * Sous les contrôles du jour : les derniers mois, tâches faites sur demandées (6 ou 12 mois, un mois se choisit
+     * d'un toucher), puis les tâches notées sous 4 du mois choisi avec la note et le commentaire du contrôleur qualité.
+     */
+    tachesMoisHtml(shop) {
+      const T = this.TM[shop]; if (!T) { this.chargerTachesMois(shop); return '<div class="cap">Les derniers mois</div><div class="card sm mu">Lecture des tâches des derniers mois…</div>'; }
+      const D = T.parMois[T.sel || ''] || {};
+      if (D.chargement) { return '<div class="cap">Les derniers mois</div><div class="card sm mu">Lecture des tâches des derniers mois…</div>'; }
+      if (D.erreur || D.error || !D.mois) { return `<div class="cap">Les derniers mois</div><div class="card sm mu">Les tâches des derniers mois n’ont pas pu être lues. <button class="chip" data-a="tm-mois" data-v="${esc(shop)}|${esc(T.sel || '')}">Relire</button></div>`; }
+      const n1 = n => n == null ? '—' : String(n).replace('.', ',');
+      const lignes = D.mois.slice(0, this.tmN).map(m => {
+        const vide = !m.demandees && !m.notees;
+        return `<tr data-a="tm-mois" data-v="${esc(shop)}|${esc(m.mois)}" class="${m.mois === D.choisi ? 'on' : ''}"><td>${esc(m.lab)}${m.enCours ? ' <span class="xs mu">à hier</span>' : ''}</td>
+          <td>${vide ? '<span class="mu">—</span>' : `<b>${m.faites}</b> / ${m.demandees}${m.pct != null ? `<span class="bar"><i style="width:${Math.max(2, m.pct)}%"></i></span> <span class="xs ${m.pct < 80 ? 'dn' : 'mu'}">${m.pct} %</span>` : ''}`}</td>
+          <td>${m.notees || '—'}</td><td class="${m.sous ? 'dn' : 'mu'}"><b>${m.sous || '—'}</b></td><td>${n1(m.moyenne)}</td></tr>`;
+      }).join('');
+      const nc = D.taches || [];
+      const liste = nc.length ? nc.map((t, i) => { const P = this.chargerPhotoNc(shop, t.taskId, t.jour); return `<div class="tm-nc"><button type="button" class="tm-ph" data-a="tm-voir" data-v="${esc(shop)}|${i}">${P.url ? this.tmPhotoHtml(P, t, false) : `<span class="vide">${P.chargement || P.attente ? 'lecture de la photo…' : 'pas de photo'}</span>`}<span class="tm-note ${t.note == null ? 'ref' : 'n' + t.note}">${t.note == null ? 'refusée' : t.note + '/5'}</span></button><div><div class="row" style="gap:8px"><span class="tm-note ${t.note == null ? 'ref' : 'n' + t.note}">${t.note == null ? 'refusée' : t.note + '/5'}</span><b class="sm" style="flex:1">${esc(t.tache)}</b><span class="xs mu">${fmtD(t.jour)}</span></div>
+          ${t.commentaire ? `<div class="sm" style="margin-top:4px">« ${esc(t.commentaire)} »</div>` : '<div class="xs mu" style="margin-top:4px">sans commentaire du contrôleur</div>'}
+          <div class="xs mu" style="margin-top:3px">${t.controleur ? 'Contrôle qualité : ' + esc(t.controleur) : 'Contrôle qualité'}${t.releveeLe ? ' · le ' + fmtD(t.releveeLe) + ' ' + esc(String(t.releveeLe).slice(11, 16)) : ''}${t.recidive ? ' · <span class="dn">' + t.recidive + ' jours non conformes sur 7</span>' : ''}${t.suite ? ' · re-notée ' + t.suite.note + '/5 le ' + fmtD(t.suite.jour) + (t.suite.conforme ? ' <span class="up">✓</span>' : '') : ' · pas encore re-notée'}</div></div></div>`; }).join('')
+        : `<div class="sm mu">Aucune tâche notée sous ${D.seuil} en ${esc(D.choisiLab)}.</div>`;
+      return `<div class="cap">Les derniers mois — tâches faites sur demandées</div>
+        <div class="card"><div class="row" style="margin-bottom:6px"><span class="xs mu">Touchez un mois pour voir ses tâches sous ${D.seuil}</span><span class="tm-n">${[6, 12].map(k => `<button class="${this.tmN === k ? 'on' : ''}" data-a="tm-n" data-v="${k}">${k} mois</button>`).join('')}</span></div>
+          <div style="overflow-x:auto"><table class="tm-t"><tr><th>Mois</th><th>Faites / demandées</th><th>Notées</th><th>Sous ${D.seuil}</th><th>Moyenne</th></tr>${lignes}</table></div>
+          <div class="xs mu" style="margin-top:6px">${esc(D.source || '')}</div></div>
+        <div class="cap">Les tâches notées sous ${D.seuil} — ${esc(D.choisiLab)}${nc.length ? ' · ' + nc.length : ''}</div><div class="card">${D.indispo ? '<div class="sm mu">Les notes du contrôle qualité ne se lisent pas.</div>' : liste}</div>`;
+    }
     controlesHtml(shop) {
       this.chargerControles(shop);
       const T = this.T[shop]; const cq = this.cqListe(shop);
@@ -921,7 +1019,7 @@
         + (this.o.mobile && !this.o.sansOnglets && !tab ? `<div class="bas" style="grid-template-columns:repeat(${onglets.length},1fr)">${onglets.map(t => `<button data-a="go" data-v="${t[0]}" class="${t[0] === this.v || (t[3] || []).includes(this.v) ? 'on' : ''}"><i>${t[1]}</i>${t[2]}</button>`).join('')}</div>` : '')
         + (this.toast ? `<div class="toast">${esc(this.toast)}</div>` : '')
         + (this.voir ? `<div class="voir" data-a="fermer-voir"><img src="${esc(this.voir.src)}" alt=""><div class="txt">${esc(this.voir.txt)}</div></div>` : '')
-        + (this.cqV ? this.cqLoupe() : '');
+        + (this.cqV ? this.cqLoupe() : '') + (this.tmV ? this.tmLoupe() : '');
       vi.querySelectorAll('.db-cqpiste').forEach((e, i) => { if (pistes[i]) { e.scrollLeft = pistes[i]; } });
       const sc = vi.querySelector('#vi-sig'); if (sc && this.form.sig) { const im = new Image(); im.onload = () => sc.getContext('2d').drawImage(im, 0, 0); im.src = this.form.sig; }
       if (focus) { const el = this.host.querySelector(`[data-f="${focus.f.replace(/"/g, '\\"')}"]`); if (el) { el.focus(); try { if (focus.pos != null && el.setSelectionRange) { el.setSelectionRange(focus.pos, focus.pos); } } catch (e) { /* select */ } } }
@@ -1310,7 +1408,7 @@
       // rapide sous chaque photo. Faite quand plus rien n'attend une note.
       const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
       etapes.push({ ic: 'controles', court: 'Contrôles photo', titre: 'Les contrôles en photo', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
-        fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) });
+        fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) + this.tachesMoisHtml(v.shop) });
       etapes.push({ ic: 'chiffres', court: 'KPI', chiffres: true, titre: 'KPI et santé du magasin', etat: 'à lire', fait: !!this.ouvert['lu:' + v.id], lu: 'lu:' + v.id, html: () => this.kpis(b) + this.santeHtml(v.shop) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
       this.checklistDe(v).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ ic: m.id, court: m.nom, module: true, ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
       // La checklist du consultant, lue dans le panel (l'ancienne fiche franchisé en mode tablette) : un module de plus.
@@ -1594,6 +1692,11 @@
       if (a === 'sem') { this.sem = v === '0' ? 0 : this.sem + Number(v); this.rendre(); return; }
       if (a === 'tache') { const t = (this.D.taches || []).find(x => String(x.id) === parts[0]); if (t) { t.statut = parts[1]; t.attente = true; } this.ecrire({ method: 'PUT', path: '/consultants/taches/' + parts[0], body: { statut: parts[1] }, apres: 'tache' }); return; }
       if (a === 'drop') { this.ouvert[v] = !this.ouvert[v]; this.rendre(); return; }
+      if (a === 'tm-mois') { this.chargerTachesMois(parts[0], parts[1]); this.rendre(); return; }
+      if (a === 'tm-voir') { this.tmV = { shop: parts[0], i: Number(parts[1]) || 0 }; this.rendre(); return; }
+      if (a === 'tm-fermer') { this.tmV = null; this.rendre(); return; }
+      if (a === 'tm-nav') { if (this.tmV) { this.tmV = { shop: this.tmV.shop, i: Math.max(0, this.tmV.i + Number(v)) }; } this.rendre(); return; }
+      if (a === 'tm-n') { this.tmN = Number(v) === 12 ? 12 : 6; this.rendre(); return; }
       if (a === 'sante-relire') { delete this.KS[v]; this.chargerSante(v); this.rendre(); return; }
       if (a === 'sync') { this.rejouer(); return; }
       if (a === 'recharger') { this.recharger(); return; }

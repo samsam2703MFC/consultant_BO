@@ -42,7 +42,7 @@ $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_gene
 try {
     foreach (['user', 'production_sections', 'production_employee', 'final_product', 'product_recipe', 'product_recipe_connection', 'raw_material', 'unit',
                  'customer_order', 'customer_order_product', 'carton_stock', 'document_wdt', 'document_wdt_product', 'communication_template', 'recipe_competency',
-                 'customer', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings',
+                 'customer', 'document_order_shipping_difference', 'carrier', 'carrier_vehicle', 'category_product', 'flattened_recipe_ingredient', 'category_material', 'erp_company_other_settings',
                  'supplier', 'raw_material_price_changelog', 'cost_month', 'cost_month_employee', 'cost_month_fixed_cost', 'cost_month_logistics', 'cost_media_month',
                  'cost_media_section_allocation', 'cost_media_type', 'communication_message', 'communication_message_attachment', 'communication_email_account',
                  'erp_company_data', 'flattened_recipe_recipe', 'product_preparation_type', 'product_recipe_preparation_connection', 'product_recipe_type',
@@ -110,10 +110,35 @@ try {
     [$s, $b] = $call('POST', '/kiosk/devices', ['name' => 'X', 'mode' => 'driver', 'vehicle_id' => 999], $manager);
     expectDrv($s === 422 && $codes($b) === ['vehicle_id:REFERENCE_NOT_FOUND'], 'unknown vehicle refused');
 
+    // --- Kierowca : lista (stanowisko Kierowca-dostawca, inaczej wszyscy) + PIN, jak na tablecie pracowni
+    $pdo->exec("SET SESSION sql_mode = ''");
+    $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (20, 'Jan', 'Kowal', 0, 1), (21, 'Ewa', 'Piekarz', 0, 1)");
+    $pdo->exec("INSERT INTO n_prod_employee (id, id_production_employee, id_primary_group, active) VALUES (80, 20, NULL, 1), (81, 21, 1, 1)");
+    $pdo->exec("SET SESSION sql_mode = @mode");
+    [, $b] = $call('GET', '/kiosk/people', null, $driver);
+    expectDrv(count($b['data']) === 2, 'no driver position yet: everybody listed');
+    $pdo->exec("UPDATE n_prod_employee SET id_position = (SELECT id FROM n_position WHERE code = 'KIEROWCA') WHERE id = 80");
+    [$s] = $call('PUT', '/kiosk/employees/80/credentials', ['pin' => '2468'], $manager);
+    $call('PUT', '/kiosk/employees/81/credentials', ['pin' => '1357'], $manager);
+    [, $b] = $call('GET', '/kiosk/people', null, $driver);
+    expectDrv($s === 200 && count($b['data']) === 1 && $b['data'][0]['name'] === 'Jan Kowal' && $b['data'][0]['has_pin'] === true, 'driver tablet lists the drivers (position) with their PIN state');
+    [$s, $b] = $call('GET', '/driver/day', null, $driver);
+    expectDrv($s === 401 && $b['description'] === 'EMPLOYEE_UNAUTHENTICATED', 'driver day needs the driver (list + PIN)');
+    [$s, $b] = $call('POST', '/kiosk/identify', ['employee_id' => 80, 'pin' => '9999'], $driver);
+    expectDrv($s === 401 && $b['description'] === 'PIN_INVALID', 'wrong PIN refused');
+    [$s, $b] = $call('POST', '/kiosk/identify', ['employee_id' => 80, 'pin' => '2468'], $driver);
+    expectDrv($s === 200 && $b['data']['employee']['name'] === 'Jan Kowal' && $b['data']['expires_in'] === 12 * 3600, 'driver identified for the whole tour (12 h)');
+    $driver['X-Employee-Token'] = $b['data']['employee_token'];
+
     [, $b] = $call('POST', '/kiosk/devices', ['name' => 'Tablet Piekarnia', 'group_id' => 1], $manager);
     $atelier = ['X-Device-Token' => $call('POST', '/kiosk/pair', ['code' => $b['data']['pairing_code']])[1]['data']['device_token']];
+    [, $b] = $call('POST', '/kiosk/identify', ['employee_id' => 81, 'pin' => '1357'], $atelier);
+    expectDrv($b['data']['expires_in'] < 3600, 'workshop tablet keeps the short session');
+    $atelier['X-Employee-Token'] = $b['data']['employee_token'];
     [$s, $b] = $call('GET', '/driver/day', null, $atelier, 'fr');
     expectDrv($s === 403 && $b['description'] === 'DEVICE_NOT_DRIVER' && str_contains($b['message'], 'tablette chauffeur'), 'workshop tablet cannot open the driver day');
+    [$s, $b] = $call('GET', '/driver/day', null, ['X-Device-Token' => $driver['X-Device-Token'], 'X-Employee-Token' => $atelier['X-Employee-Token']]);
+    expectDrv($s === 401, 'session of another tablet refused');
 
     // --- Trasa dnia
     [$s, $day] = $call('GET', '/driver/day', null, $driver);
@@ -169,8 +194,8 @@ try {
     expectDrv($stop['status'] === 'arrived' && $stop['arrived_at'] === $arrivedAt && count($stop['photos']['before']) === 2 && $stop['photos']['after'] === []
         && $day['data']['counts']['arrived'] === 1 && $day['data']['counts']['delivered'] === 0 && $day['data']['max_photos'] === 6, 'day shows the arrival and photos');
 
-    [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'start', 'driver_name' => 'Jan Kowal'], $driver);
-    expectDrv($s === 200 && $b['data']['started_at'] !== null && $b['data']['finished_at'] === null && $b['data']['driver_name'] === 'Jan Kowal', 'run started');
+    [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'start', 'driver_name' => 'Ktoś inny'], $driver);
+    expectDrv($s === 200 && $b['data']['started_at'] !== null && $b['data']['finished_at'] === null && $b['data']['driver_name'] === 'Jan Kowal', 'run started, driver = person identified with the PIN (typed name ignored)');
 
     // --- Dostawa : podpis obowiązkowy, potem zapis z podpisem i zdjęciem
     $png = function (int $w, int $h): string { $im = imagecreatetruecolor($w, $h); imagefill($im, 0, 0, imagecolorallocate($im, 255, 255, 255));
@@ -206,6 +231,8 @@ try {
     $row = $erp['trucks'][0]['rows'][0];
     expectDrv($erp['trucks'][0]['label'] === 'DW 12345' && $erp['trucks'][0]['driver'] === 'Jan Kowal' && $row['stop']['status'] === 'delivered'
         && $row['stop']['pallets_returned'] === 1 && $row['stop']['signature_id'] !== null && count($row['stop']['photo_ids']) === 1 && $erp['totals']['delivered'] === 1, 'ERP delivery list');
+    expectDrv(str_ends_with($erp['trucks'][0]['tour_url'], '/driver?date=' . $today . '&vehicle=5') && str_starts_with($erp['trucks'][0]['tour_qr'], '<svg')
+        && str_contains($erp['trucks'][0]['tour_qr'], '<path d="M'), 'ERP: QR code of the tour (vehicle + day) for the driver tablet');
     $pdf = $service->proofPdf($row['stop']['id'], 'fr');
     expectDrv(str_starts_with($pdf['content'], '%PDF') && str_starts_with($pdf['filename'], 'POTWIERDZENIE_DOSTAWY_Boulangerie_Test_') && strlen($pdf['content']) > 20000, 'proof of delivery PDF with signature and photo');
     expectDrv($service->statuses($today)[3]['status'] === 'delivered', 'status for the day loading page');

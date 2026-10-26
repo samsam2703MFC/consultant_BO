@@ -22,6 +22,7 @@ final class PageTabs
             ['/workshop/team-sheet', 'Plan zespołów i listy dnia (PDF)', 'bi-printer'],
             ['/workshop/deliveries', 'Dostawy surowców', 'bi-truck'],
             ['/workshop/products#/levels', 'Stan magazynu', 'bi-building'],
+            ['/workshop/stock-movements', 'Ruchy magazynowe', 'bi-arrow-left-right'],
             ['/workshop/traceability', 'Partie i identyfikowalność', 'bi-upc-scan'],
             ['/production/follow-up', 'Śledzenie produkcji', 'bi-graph-up-arrow'],
             ['/purchasing/nc', 'Niezgodności', 'bi-exclamation-octagon'],
@@ -63,6 +64,7 @@ final class PageTabs
         // oraz archiwum list kompletacyjnych ; pozycja « Wysyłka › Wysyłki i dokumenty » w railu.
         'shipments' => ['label' => 'Wysyłki i dokumenty', 'section' => 'Logistyka', 'icon' => 'bi-truck', 'tabs' => [
             ['/shipments', 'Wysyłki i dokumenty', 'bi-truck'],
+            ['/shipments/differences', 'Różnice i problemy dostaw', 'bi-exclamation-diamond'],
             ['/archive/documents/picking-lists', 'Archiwum list kompletacyjnych', 'bi-list-check'],
         ]],
     ];

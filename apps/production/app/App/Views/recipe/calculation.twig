@@ -29,6 +29,7 @@
             <div class="d-flex flex-wrap gap-2">
                 <a class="btn btn-sm btn-outline-dark" href="{{ base }}/edit"><i class="bi bi-pencil"></i> Edytuj recepturę</a>
                 <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/recipes/{{ recipe.id }}/preparation-steps"><i class="bi bi-list-ol"></i> Etapy</a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/recipes/{{ recipe.id }}/history" title="Wersje « obowiązuje od » i koszt surowców miesiąc po miesiącu"><i class="bi bi-clock-history"></i> Historia</a>
                 {% if product %}
                     <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/workshop/products#/product/{{ product.id }}"><i class="bi bi-card-text"></i> Karta produktu</a>
                     <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/finances/product-margin?product_id={{ product.id }}"><i class="bi bi-percent"></i> Marża</a>

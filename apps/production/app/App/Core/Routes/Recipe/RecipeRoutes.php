@@ -43,6 +43,12 @@ return function(RouteCollector $r) {
         'method'     => 'calculation'
     ]);
 
+    // Historia receptury : wersje « obowiązuje od » + koszt surowców miesiąc po miesiącu (produkty, półprodukty, kompozycje)
+    $r->addRoute('GET', '/recipes/{id:\d+}/history', [
+        'controller' => App\Controllers\Web\Recipe\RecipeHistoryController::class,
+        'method'     => 'show'
+    ]);
+
 
     // Półprodukt / kompozycja : grupa, która go przygotowuje
     $r->addRoute('PUT', '/ajax/recipes/{id:\d+}/producer', [
