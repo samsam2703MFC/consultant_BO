@@ -7,7 +7,7 @@ Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y 
 
 ## Installer / intégrer
 
-Sur une base ERP d'origine (copie de production) : `php Bin/tfb_migrate.php apply` depuis `apps/production/app`. Les migrations `migrations/tfb/001 → 097` créent les tables (`tfb_` puis renommées `n_` par la 069), posent les données de départ (paramètres, rôles, modèles d'e-mails, questions du pointage…) et sont enregistrées dans `n_schema_migration` (une migration déjà appliquée ne peut plus être modifiée). `docs/db/n_schema.sql` donne le schéma final des tables `n_` en un seul fichier, pour lecture.
+Sur une base ERP d'origine (copie de production) : `php Bin/tfb_migrate.php apply` depuis `apps/production/app`. Les migrations `migrations/tfb/001 → 098` créent les tables (`tfb_` puis renommées `n_` par la 069), posent les données de départ (paramètres, rôles, modèles d'e-mails, questions du pointage…) et sont enregistrées dans `n_schema_migration` (une migration déjà appliquée ne peut plus être modifiée). `docs/db/n_schema.sql` donne le schéma final des tables `n_` en un seul fichier, pour lecture.
 
 ## Ce que le développement change dans les tables d'origine
 
@@ -42,6 +42,10 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 ### Tablette chauffeur (migration 082, 26/10/2026)
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
+
+### Tablette : validation de la production ligne par ligne, photos des pertes (migration 098, 26/10/2026)
+
+`n_prod_day_line` : une ligne validée par jour, groupe et produit (`work_date`, `id_group` → `n_prod_group`, `id_item` → `n_prod_item`, unique) — `planned` (plan du jour au moment de la validation), `produced` (quantité faite, unité de la fiche), `waste` (pertes du jour), `note` (raison d'un manque au plan, obligatoire), `id_employee` / `id_device` (SET NULL), `validated_at` ; correction du responsable de production dans l'ERP : `corrected_by` (utilisateur ERP), `corrected_at`. La quantité faite validée ajuste les lots du jour (`n_prod_output` : manque → nouveau lot, excédent → retiré des lots les plus récents). `n_prod_waste_photo` (`id_waste` → `n_prod_waste`, `id_photo` → `n_prod_lot_photo`, CASCADE ; une photo ne sert qu'une fois) : photos d'une perte, stockées en base comme les étiquettes de lot. Paramètres `kiosk.waste_photo_required` (1 : photo obligatoire pour toute perte saisie à la validation) et `kiosk.waste_photo_max` (4). Une journée validée (`n_prod_day_close`) n'est plus modifiable sur la tablette (409 `DAY_CLOSED`, lots matières et contrôle qualité toujours possibles) ; Tablet produkcji › Zatwierdzenia produkcji (`/workshop/production-days`) corrige la quantité faite et annule une perte, et recalcule le résumé de la validation.
 
 ### Écarts d'expédition : domówienie et NC liées (migration 097, 26/10/2026)
 

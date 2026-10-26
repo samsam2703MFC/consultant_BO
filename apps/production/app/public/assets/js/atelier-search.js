@@ -49,7 +49,7 @@
         'matiere': 'surowce surowca surowiec', 'matieres': 'surowce surowcow', 'fournisseur': 'dostawcy dostawy', 'fournisseurs': 'dostawcy dostawy', 'achat': 'zakupy', 'achats': 'zakupy',
         'facture': 'faktury proforma', 'factures': 'faktury', 'livraison': 'wysylka dostawy', 'livraisons': 'dostawy wysylka', 'arrivage': 'dostawy', 'arrivages': 'dostawy', 'approvisionnement': 'dostawy zaopatrzenie', 'expedition': 'wysylka', 'camion': 'ciezarowki pojazdy',
         'camions': 'ciezarowki pojazdy', 'tournee': 'trasy', 'tournees': 'trasy', 'chargement': 'zaladunek', 'transporteur': 'przewoznicy',
-        'stock': 'magazynu magazynowe', 'stocks': 'magazynu magazynowe', 'inventaire': 'magazynu inwentaryzacja', 'couverture': 'magazynu pokrycie', 'emballage': 'opakowania', 'emballages': 'opakowania', 'production': 'produkcja', 'planning': 'planowanie gantt',
+        'stock': 'magazynu magazynowe stan magazyn', 'stocks': 'magazynu magazynowe', 'inventaire': 'magazynu inwentaryzacja', 'couverture': 'magazynu pokrycie', 'emballage': 'opakowania', 'emballages': 'opakowania', 'production': 'produkcja', 'planning': 'planowanie gantt',
         'equipe': 'zespol', 'personnel': 'pracownicy personelu', 'employe': 'pracownicy', 'employes': 'pracownicy', 'tablette': 'tablet tablety',
         'pointage': 'czas pracy', 'competences': 'kompetencje', 'prime': 'premie', 'primes': 'premie', 'tache': 'zadania', 'taches': 'zadania',
         'reclamation': 'reklamacje', 'reclamations': 'reklamacje', 'retour': 'zwroty', 'retours': 'zwroty', 'parametres': 'ustawienia',
@@ -60,7 +60,7 @@
         'badge': 'identyfikatory', 'badges': 'identyfikatory', 'telephone': 'telefony', 'distribution': 'dystrybucja',
         'document': 'dokumenty', 'documents': 'dokumenty', 'calcul': 'kalkulacja kalkulator', 'cmr': 'cmr dokumenty', 'imprimer': 'drukuj dokumenty druk',
         'mail': 'poczta skrzynka', 'mails': 'poczta skrzynka e-maile', 'email': 'poczta skrzynka e-maile', 'courriel': 'poczta', 'boite': 'poczta skrzynka', 'reception': 'poczta dostawy przyjecie', 'envoyes': 'wyslane niewyslane',
-        'messagerie': 'poczta', 'groupe': 'grupy grup', 'groupes': 'grupy grup', 'semaine': 'tydzien tygodni', 'qui': 'kto', 'livre': 'dostarcza dostawy', 'livrent': 'dostarcza dostawy', 'quoi': 'co', 'quand': 'kiedy', 'hebdomadaire': 'tydzien', 'hebdo': 'tydzien', 'cobot': 'coboty cobot', 'cobots': 'coboty cobot', 'photo': 'zdjecia', 'photos': 'zdjecia',
+        'messagerie': 'poczta', 'groupe': 'grupy grup grupa zespol', 'groupes': 'grupy grup', 'semaine': 'tydzien tygodni', 'qui': 'kto', 'livre': 'dostarcza dostawy', 'livrent': 'dostarcza dostawy', 'quoi': 'co', 'quand': 'kiedy', 'hebdomadaire': 'tydzien', 'hebdo': 'tydzien', 'cobot': 'coboty cobot', 'cobots': 'coboty cobot', 'photo': 'zdjecia zdjecie', 'photos': 'zdjecia zdjecie',
         'remplir': 'wypelnienia', 'importer': 'import', 'xlsx': 'excel', 'donnees': 'dane tabela', 'capacite': 'pojemnosc pojemnosci', 'capacites': 'pojemnosci',
         'machine': 'stanowiska maszyny', 'machines': 'stanowiska maszyny', 'poste': 'stanowiska', 'postes': 'stanowiska', 'four': 'stanowiska piece', 'fours': 'stanowiska piece',
         'horaire': 'zmiany godziny', 'horaires': 'zmiany godziny', 'shift': 'zmiany', 'shifts': 'zmiany', 'effectif': 'obsada', 'effectifs': 'obsada', 'equipes': 'zespol zespolow obsada',
@@ -72,7 +72,7 @@
         'developpement': 'rozwoju', 'nouveau': 'nowy nowe', 'nouveaux': 'nowe nowy', 'nouveaute': 'nowe rozwoju', 'nouveautes': 'nowe rozwoju',
         'annuel': 'roku rok', 'annee': 'roku rok', 'lancement': 'wprowadzone nowe wprowadzenie',
         'crm': 'nowe produkty etapy crm', 'essai': 'test testy', 'essais': 'testy test', 'etape': 'etapy etap', 'etapes': 'etapy', 'suivi': 'etapy sledzenie',
-        'valider': 'zatwierdzenie zatwierdzona', 'validation': 'zatwierdzenie zatwierdzona', 'lance': 'wprowadzone wprowadzony', 'lances': 'wprowadzone',
+        'valider': 'zatwierdzenie zatwierdzona zatwierdz', 'validation': 'zatwierdzenie zatwierdzona zatwierdzenia', 'lance': 'wprowadzone wprowadzony', 'lances': 'wprowadzone',
         'pipeline': 'etapy', 'prototype': 'test nowe', 'degustation': 'test', 'accueil': 'ekran glowny', 'ipad': 'tablet ekran',
         'alerte': 'alerty dzwonek', 'alertes': 'alerty dzwonek', 'echeance': 'terminy termin', 'echeances': 'terminy', 'retard': 'zalegle terminy termin alerty',
         'retards': 'zalegle terminy termin', 'rappel': 'alerty terminy przypomnienie', 'rappels': 'alerty terminy przypomnienia', 'cloche': 'dzwonek alerty', 'notification': 'dzwonek alerty', 'notifications': 'dzwonek alerty',
@@ -107,7 +107,7 @@
         'commander': 'zamow zamowienia', 'apres': 'po', 'planification': 'planowanie planowaniu plan',
         'feuille': 'arkusz', 'semaines': 'tyg tygodni', 'clic': 'kliknieciem', 'masse': 'wszystkie', 'compter': 'policzone liczenia', 'max': 'maks maksymalne', 'salaire': 'wynagrodzenie koszt pracodawcy', 'salaires': 'wynagrodzenie koszt pracodawcy', 'paie': 'wynagrodzenie placy', 'verrouiller': 'zamkniety zamknij', 'verrouille': 'zamkniety zamrozony', 'fige': 'zamrozony', 'modifier': 'zmien zmiana edycja korekta', 'calculateur': 'kalkulator', 'budget': 'budzet budzetu budzecie', 'liste': 'lista listy', 'listes': 'listy lista', 'jour': 'dnia dzien dzis', 'besoin': 'zapotrzebowanie potrzeba', 'besoins': 'zapotrzebowanie potrzeba',
         'cloture': 'zamkniecie miesiaca', 'cloturer': 'zamknij zamkniecie miesiaca', 'clore': 'zamknij zamkniecie', 'fermer': 'zamknij zamkniecie', 'fermeture': 'zamkniecie miesiaca',
-        'medias': 'media', 'media': 'media', 'electricite': 'media', 'fixes': 'stale', 'fixe': 'stale', 'copier': 'kopiuj', 'precedent': 'poprzedniego', 'inventorier': 'inwentaryzacja arkusz', 'automatique': 'automatyczne automat automatycznie', 'automatiques': 'automatyczne automat', 'paye': 'oplacona oplacone', 'payee': 'oplacona oplacone', 'payees': 'oplacone', 'remplacement': 'zastepcze', 'remplacements': 'zastepcze', 'relivrer': 'ponowna dostawa', 'frise': 'os statusu'
+        'medias': 'media', 'media': 'media', 'electricite': 'media', 'fixes': 'stale', 'fixe': 'stale', 'copier': 'kopiuj', 'precedent': 'poprzedniego', 'inventorier': 'inwentaryzacja arkusz', 'automatique': 'automatyczne automat automatycznie', 'automatiques': 'automatyczne automat', 'paye': 'oplacona oplacone', 'payee': 'oplacona oplacone', 'payees': 'oplacone', 'remplacement': 'zastepcze', 'remplacements': 'zastepcze', 'relivrer': 'ponowna dostawa', 'frise': 'os statusu', 'rebut': 'straty strata odpady', 'rebuts': 'straty strata odpady', 'dechet': 'straty odpady', 'dechets': 'straty odpady', 'encoder': 'zakoduj', 'encodage': 'zakoduj', 'correction': 'poprawka poprawki', 'corriger': 'popraw poprawka', 'maximum': 'maks maksimum', 'autorise': 'wolno maksimum'
     };
 
     var menu = null;

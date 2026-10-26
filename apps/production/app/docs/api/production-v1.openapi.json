@@ -10800,6 +10800,353 @@
                 "x-permission": "prod.kpis.read"
             }
         },
+        "/execution/days": {
+            "get": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Dni z tabletów / Jours des tablettes",
+                "operationId": "listProductionDays",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ProductionDayRow"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Jours et groupes avec de la production, des pertes ou une validation (derniers jours) : validé ou non, produits, lignes validées.",
+                "parameters": [
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 92,
+                            "description": "défaut 14"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.validate"
+            }
+        },
+        "/execution/days/{date}/{group}": {
+            "get": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Produkcja dnia grupy / Production du jour d'un groupe",
+                "operationId": "getProductionDay",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProductionDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Même contenu que la tablette (plan, lots, pertes avec photos, lignes validées), pour le responsable de production.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "group",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.validate"
+            }
+        },
+        "/execution/days/{date}/{group}/items/{item}": {
+            "patch": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Poprawka kierownika / Correction du responsable",
+                "operationId": "correctProductionLine",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProductionDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Corrige la quantité faite après la validation de l'équipe (la tablette ne peut plus) : lots ajustés comme à la validation, ligne marquée corrected_by, résumé de la validation recalculé (le jour reste validé). 409 WASTE_EXCEEDS_PRODUCED.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "group",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "item",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DayLineCorrection"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.validate"
+            }
+        },
+        "/execution/waste/{id}": {
+            "patch": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Anulowanie straty przez kierownika / Annulation d'une perte par le responsable",
+                "operationId": "cancelWasteByManager",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProductionDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Annule une perte (tout jour), ligne et résumé de validation recalculés. 409 WASTE_CANCELLED.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.plan.validate"
+            }
+        },
         "/kiosk/pair": {
             "post": {
                 "tags": [
@@ -12256,6 +12603,218 @@
                         }
                     }
                 },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/production/lines": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zatwierdzenie linii dnia / Validation d'une ligne du jour",
+                "operationId": "validateProductionLine",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProductionDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Page « Zatwierdzenie produkcji » (plan) et « Zakoduj produkcję » (sans plan) : produced = quantité faite du produit dans la journée (unité de la fiche) ; manque → nouveau lot de la différence, excédent → retiré des lots les plus récents. Perte sur la même ligne : waste_quantity, waste_reason, photo_ids (POST /kiosk/photos ; obligatoires si kiosk.waste_photo_required, 422 WASTE_PHOTO_REQUIRED, au plus kiosk.waste_photo_max). Moins que le plan : note obligatoire (422 LINE_SHORT_NOTE_REQUIRED). Ligne enregistrée dans n_prod_day_line (qui, quand). Jour validé : 409 DAY_CLOSED. client_uuid : perte rejouable sans doublon.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DayLineInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/photos": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zdjęcie straty / Photo d'une perte",
+                "operationId": "uploadKioskPhoto",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PhotoUploaded"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Photo prise sur la tablette (JPEG, PNG ou WebP en data URL, au plus kiosk.lot_photo_max_kb), stockée en base ; l'identifiant est ensuite passé dans photo_ids de la ligne validée (une photo ne sert qu'une fois, tablette d'origine).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PhotoInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/stock": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Magazyn grupy / Stock du groupe",
+                "operationId": "kioskStock",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskStock"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Produits du groupe de la tablette : stock (libre + palettes), commandé, min. / max. en cartons — même formule que Stan magazynu de l'ERP — et allowed_cartons = commandes au-delà du stock + jusqu'au stock max. (MTS ; sans max. : jusqu'au min.) − bon fait aujourd'hui sur la tablette. Produits sous le minimum d'abord. Liste de production de la semaine : GET /kiosk/week.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
                 "security": [
                     {
                         "deviceToken": [],
@@ -20217,6 +20776,14 @@
                         "type": "number",
                         "nullable": true,
                         "description": "lot de production de la fiche : une vignette par lot prévu, un lot proposé à la fois"
+                    },
+                    "category_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "category": {
+                        "type": "string",
+                        "nullable": true
                     }
                 }
             },
@@ -20320,6 +20887,43 @@
                                             "items": {
                                                 "$ref": "#/components/schemas/WasteRow"
                                             }
+                                        },
+                                        "line": {
+                                            "type": "object",
+                                            "nullable": true,
+                                            "description": "ligne validée (n_prod_day_line)",
+                                            "properties": {
+                                                "produced": {
+                                                    "type": "number"
+                                                },
+                                                "waste": {
+                                                    "type": "number"
+                                                },
+                                                "planned": {
+                                                    "type": "number",
+                                                    "nullable": true
+                                                },
+                                                "note": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "employee": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "validated_at": {
+                                                    "type": "string",
+                                                    "example": "2026-10-20 06:02:00"
+                                                },
+                                                "corrected_by": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "corrected_at": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -20368,6 +20972,10 @@
                             },
                             "changed": {
                                 "type": "boolean"
+                            },
+                            "locked": {
+                                "type": "boolean",
+                                "description": "jour validé : la tablette ne change plus quantités ni pertes (corrections dans l'ERP)"
                             }
                         }
                     },
@@ -20382,6 +20990,36 @@
                                 "samples",
                                 "other"
                             ]
+                        }
+                    },
+                    "waste_photo": {
+                        "type": "object",
+                        "properties": {
+                            "required": {
+                                "type": "boolean"
+                            },
+                            "max": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "count": {
+                                    "type": "integer"
+                                }
+                            }
                         }
                     },
                     "catalog": {
@@ -20658,6 +21296,240 @@
                     },
                     "editable": {
                         "type": "boolean"
+                    },
+                    "photos": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "description": "photos de la perte (ERP : /workshop/traceability/photo/{id})"
+                    }
+                }
+            },
+            "DayLineInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "item_id",
+                    "produced"
+                ],
+                "properties": {
+                    "item_id": {
+                        "type": "integer"
+                    },
+                    "produced": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    },
+                    "waste_quantity": {
+                        "type": "number",
+                        "minimum": 0,
+                        "nullable": true
+                    },
+                    "waste_reason": {
+                        "type": "string",
+                        "enum": [
+                            "quality",
+                            "burnt",
+                            "damaged",
+                            "samples",
+                            "other"
+                        ],
+                        "nullable": true
+                    },
+                    "waste_note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    },
+                    "photo_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "DayLineCorrection": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "produced"
+                ],
+                "properties": {
+                    "produced": {
+                        "type": "number",
+                        "minimum": 0
+                    }
+                }
+            },
+            "PhotoInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "photo"
+                ],
+                "properties": {
+                    "photo": {
+                        "type": "string",
+                        "description": "data:image/jpeg;base64,…"
+                    }
+                }
+            },
+            "PhotoUploaded": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "bytes": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "KioskStock": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "item_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "category": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "mode": {
+                                    "type": "string"
+                                },
+                                "ppc": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "stock_cartons": {
+                                    "type": "number"
+                                },
+                                "ordered_cartons": {
+                                    "type": "number"
+                                },
+                                "min_cartons": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "max_cartons": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "in_production_cartons": {
+                                    "type": "number"
+                                },
+                                "today_cartons": {
+                                    "type": "number"
+                                },
+                                "orders_over_stock_cartons": {
+                                    "type": "integer"
+                                },
+                                "allowed_cartons": {
+                                    "type": "integer"
+                                },
+                                "below_min": {
+                                    "type": "boolean"
+                                },
+                                "no_max": {
+                                    "type": "boolean"
+                                },
+                                "next_shipping": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "totals": {
+                        "type": "object",
+                        "properties": {
+                            "products": {
+                                "type": "integer"
+                            },
+                            "mts": {
+                                "type": "integer"
+                            },
+                            "below_min": {
+                                "type": "integer"
+                            },
+                            "allowed_cartons": {
+                                "type": "integer"
+                            },
+                            "ordered_cartons": {
+                                "type": "number"
+                            },
+                            "today_cartons": {
+                                "type": "number"
+                            }
+                        }
+                    }
+                }
+            },
+            "ProductionDayRow": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "closed_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "products": {
+                        "type": "integer"
+                    },
+                    "lines_validated": {
+                        "type": "integer"
                     }
                 }
             },

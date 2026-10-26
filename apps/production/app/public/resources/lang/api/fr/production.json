@@ -100,7 +100,8 @@
     "DEVICE_NOT_DRIVER": "Cette tablette n’est pas une tablette chauffeur — changez son mode dans la gestion des tablettes.",
     "DEV_TRIAL_NOT_ALLOWED": "À l’étape « {stage} », on ne fait plus d’essai — le produit est lancé au bureau.",
     "DEV_RECIPE_NOT_READY": "La recette se valide après un second test réussi (étape actuelle : « {stage} »).",
-    "DEV_RECIPE_MISSING": "Le produit n’a pas encore de recette dans l’ERP — le bureau doit la choisir avant la validation."
+    "DEV_RECIPE_MISSING": "Le produit n’a pas encore de recette dans l’ERP — le bureau doit la choisir avant la validation.",
+    "DAY_CLOSED": "La production de ce jour est déjà validée — corrections seulement dans l’ERP (responsable de production)."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -195,7 +196,13 @@
     "POSITION_CYCLE": "Champ « {field} » : un poste ne peut pas dépendre de lui-même ni d’un poste qui lui est rattaché.",
     "DRIVER_CUSTOMER_NOT_PLANNED": "Le client {id} n’a pas de livraison ce jour-là.",
     "DRIVER_DATE_OUT_OF_RANGE": "Champ « {field} » : jour d’expédition d’une semaine en arrière à demain.",
-    "DRIVER_PHOTO_LIMIT": "Champ « {field} » : au plus {max} photos de ce type chez le client."
+    "DRIVER_PHOTO_LIMIT": "Champ « {field} » : au plus {max} photos de ce type chez le client.",
+    "LINE_SHORT_NOTE_REQUIRED": "Moins que le plan ({planned}) — indiquez la raison.",
+    "WASTE_PHOTO_REQUIRED": "Prenez une photo de la perte.",
+    "WASTE_PHOTO_TOO_MANY": "{max} photos au maximum par perte.",
+    "WASTE_PHOTO_INVALID": "Photo d’une autre tablette ou déjà utilisée — reprenez-la.",
+    "WASTE_QTY_REQUIRED": "Indiquez la quantité perdue pour ces photos.",
+    "INVALID_LIST": "Liste invalide."
   },
   "fields": {
     "code": "code",
@@ -461,7 +468,12 @@
     "recorded_at": "heure d’enregistrement",
     "driver_name": "chauffeur",
     "taken_at": "heure de la photo",
-    "photos": "photos"
+    "photos": "photos",
+    "photo_ids": "photos de la perte",
+    "waste_quantity": "quantité perdue",
+    "waste_reason": "raison de la perte",
+    "waste_note": "note de la perte",
+    "produced": "fait"
   },
   "entities": {
     "test_product": "produit test",

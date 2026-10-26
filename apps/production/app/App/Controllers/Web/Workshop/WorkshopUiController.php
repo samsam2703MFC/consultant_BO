@@ -89,6 +89,15 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/execution', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
+    /**
+     * Tablet produkcji › Zatwierdzenia produkcji : dni zatwierdzone przez zespoły na tabletach (linie, straty ze
+     * zdjęciami) ; kierownik produkcji poprawia ilość zrobioną i anuluje straty (tablet po zatwierdzeniu tylko czyta).
+     */
+    public function productionDays()
+    {
+        $this->view('workshop/production_days', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
+    }
+
     /** Ekran tabletu (bez logowania do ERP : tablet ma własny token, osoba identyfikator + PIN). */
     public function kiosk()
     {
