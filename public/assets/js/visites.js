@@ -405,6 +405,17 @@
 .vi .rg-q select{flex:0 0 auto;min-width:170px}.vi .rg-q input.rg-aide{flex:1 1 160px !important;font-size:12px}
 .vi .rg-mod input.rg-nl{flex:0 1 220px;font-size:12px}
 .vi .rg-ch{padding-left:12px;border-left:2px solid var(--color-border-tertiary);display:flex;flex-direction:column;gap:5px}
+.vi .rg-sc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--color-background-secondary);border-radius:10px;padding:6px 10px}
+.vi .rg-sc .cap{margin:0;color:var(--color-primary)}.vi .rg-sc label{font:600 11px var(--font-ui);color:var(--color-text-muted)}
+.vi .rg-sc .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;flex:1 1 140px}.vi .rg-sc .seg button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:32px;font:700 12px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
+.vi .rg-sc .seg button.on{background:var(--color-primary);border-color:var(--color-primary);color:#fff}.vi .rg-sc .seg.off{opacity:.45}
+.vi .sc-fin{border-color:var(--color-primary)}
+.vi .sc-duo{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:center;margin:10px 0}
+.vi .sc-c{background:var(--color-background-secondary);border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px}.vi .sc-n{display:flex;align-items:baseline;gap:10px}.vi .sc-n span{font-size:15px}.vi .sc-c.act{background:var(--color-surface);border:1.5px solid var(--color-primary)}
+.vi .sc-c small{font:600 11px var(--font-ui);color:var(--color-text-muted)}.vi .sc-c b{font:400 34px/1.05 var(--font-display)}.vi .sc-fl{font-size:22px;color:var(--color-text-muted)}
+.vi .sc-c b.ok,.vi .sc-mods b.ok{color:#2d7a3e}.vi .sc-c b.att,.vi .sc-mods b.att{color:#B45309}.vi .sc-c b.ko,.vi .sc-mods b.ko{color:#C0182B}
+.vi .sc-mods{display:grid;grid-template-columns:minmax(0,1fr) 84px 72px 64px;gap:4px 10px;font-size:13px;align-items:center}.vi .sc-mods .h{font:600 10.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)}
+.vi .sc-mods .n{text-align:right}.vi .sc-mods .up,.vi .sc-c .up{color:#2d7a3e;font-weight:700}.vi .sc-mods .dn,.vi .sc-c .dn{color:#C0182B;font-weight:700}
 .vi .rg-nb{align-items:center}.vi .rg-nb label{font:600 11px var(--font-ui);color:var(--color-text-muted)}.vi .rg-nb input{width:90px !important;flex:0 0 auto !important}.vi .rg-nb input[type=text]{width:120px !important}
 .vi.tab .tb-step > .cap:first-child{display:none}
 .vi.tab .tb-step .phs{gap:12px}
@@ -2187,7 +2198,10 @@
           const nombre = t === 'nombre' ? `<div class="row rg-nb"><label>min</label><input type="number" step="any" data-f="cl|${k}|min" value="${p.min != null ? esc(p.min) : ''}"><label>max</label><input type="number" step="any" data-f="cl|${k}|max" value="${p.max != null ? esc(p.max) : ''}"><label>unité</label><input type="text" data-f="cl|${k}|unite" value="${esc(p.unite || '')}" placeholder="kg, °C, pièces…"><span class="xs mu">hors des bornes : écart</span></div>` : '';
           return `<div class="rg-q"><div class="row"><input type="text" data-f="cl|${k}|libelle" value="${esc(p.libelle)}" placeholder="la question en français"><input type="text" data-f="cl|${k}|libelle_nl" value="${esc(p.libelle_nl || '')}" placeholder="de vraag in het Nederlands"></div>
             <div class="row"><select data-c="cl-type|${k}">${Object.keys(TYPES_Q).map(x => opt(t, x, TYPES_Q[x])).join('')}</select><button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${k}|photo" title="photo attendue">📷 photo</button>
-              <input type="text" class="rg-aide" data-f="cl|${k}|aide" value="${esc(p.aide || '')}" placeholder="précision (facultatif)"><input type="text" class="rg-aide" data-f="cl|${k}|aide_nl" value="${esc(p.aide_nl || '')}" placeholder="toelichting (optioneel)"><button class="chip ko" data-a="cl-del" data-v="${k}">×</button></div>${choix}${nombre}</div>`; }).join('')}</div>`).join('');
+              <input type="text" class="rg-aide" data-f="cl|${k}|aide" value="${esc(p.aide || '')}" placeholder="précision (facultatif)"><input type="text" class="rg-aide" data-f="cl|${k}|aide_nl" value="${esc(p.aide_nl || '')}" placeholder="toelichting (optioneel)"><button class="chip ko" data-a="cl-del" data-v="${k}">×</button></div>${choix}${nombre}
+            <div class="rg-sc"><span class="cap">Score</span>${t === 'texte' ? '<span class="xs mu">le texte libre ne compte jamais dans le score</span>'
+              : `<label>Compte</label><span class="seg">${[[1, 'Oui'], [0, 'Non']].map(([x, lab]) => `<button data-a="cl-score" data-v="${k}|${x}" class="${(p.score !== false) === !!x ? 'on' : ''}">${lab}</button>`).join('')}</span>
+              <label>Poids</label><span class="seg${p.score === false ? ' off' : ''}">${[1, 2, 3].map(x => `<button data-a="cl-poids" data-v="${k}|${x}" class="${(Number(p.poids) || 1) === x && p.score !== false ? 'on' : ''}" ${p.score === false ? 'disabled' : ''}>×${x}</button>`).join('')}</span>`}</div></div>`; }).join('')}</div>`).join('');
     }
     v_reglages() {
       const D = this.D; const f = this.form; const s = D.seuils || {};
@@ -2296,6 +2310,8 @@
       if (a === 'equipe') { const f = this.form; this.ecrire({ method: 'PUT', path: '/equipe/' + encodeURIComponent(v), body: { effectif: f.effectif, prevu: f.prevu, departs: f.departs, qui: this.qui() } }); const b = this.boutique(v); if (b) { b.equipe = { effectif: f.effectif != null && f.effectif !== '' ? Number(f.effectif) : null, prevu: f.prevu ? Number(f.prevu) : null, departs: f.departs ? Number(f.departs) : null, releve_le: auj() }; } this.form = {}; this.dire('Effectif relevé.'); return; }
       if (a === 'push') { this.pushBasculer(); return; }
       if (a === 'cl-add') { const plano = this.form.checklist[Number(v)].id === 'planogramme'; this.form.checklist[Number(v)].points.push({ ref: 'p' + Date.now().toString(36), libelle: '', libelle_nl: '', photo: false, type: plano ? 'pct' : 'etat', pct: plano }); this.rendre(); return; }
+      if (a === 'cl-score') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; p.score = parts[2] === '1'; this.rendre(); return; }
+      if (a === 'cl-poids') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; p.poids = Number(parts[2]); this.rendre(); return; }
       if (a === 'clc-add') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; (p.choix = p.choix || []).push({ code: 'c' + Date.now().toString(36), fr: '', nl: '' }); this.rendre(); return; }
       if (a === 'clc-del') { const p = this.form.checklist[Number(parts[0])].points[Number(parts[1])]; (p.choix || []).splice(Number(parts[2]), 1); this.rendre(); return; }
       if (a === 'clc-ko') { const c = (this.form.checklist[Number(parts[0])].points[Number(parts[1])].choix || [])[Number(parts[2])]; if (c) { c.ko = !c.ko; } this.rendre(); return; }
@@ -2526,6 +2542,75 @@
           <textarea data-f="form|mt_note" placeholder="Ce que j’en retiens — pour le consultant seulement" style="margin-top:6px">${esc(f.mt_note || '')}</textarea></div>
         ${f.mt_ok ? '<div class="card sm up">Météo enregistrée.</div>' : `<div class="btns"><button class="btn w" data-a="meteo" data-v="${esc(v.id)}">☀️ Enregistrer la météo</button></div>`}`;
     }
+    /**
+     * Le score d'une visite (26/10/2026, maquette A) — LA MÊME RÈGLE que viScore (src/visites_questions.php), à garder
+     * identiques : Σ poids × réussite / Σ poids sur 100, sur les questions qui comptent et qui ont une réponse ; une note
+     * au prorata, un pourcentage pour sa valeur ; hors score le texte libre, une question qui ne compte pas, N/A, sans
+     * réponse ; les produits obligatoires comptent ensemble pour une question. Pas de score pour un suivi ou une revisite.
+     */
+    scoreDe(v) {
+      if (!v) { return null; }
+      const t = this.typeDe(v.type); if (t && t.dynamique) { return null; }
+      const base = t && t.checklist && t.checklist.length ? t.checklist : (this.D.checklist || []);
+      const HORS = { xp: [MOD_XP.nom, MOD_XP.nom_nl], leviers: [MOD_LEVIERS.nom, MOD_LEVIERS.nom_nl], bureau: ['Demandé par le bureau', 'Gevraagd door het kantoor'], exterieur: ['L’extérieur', 'De buitenkant'] };
+      const defs = {}, noms = {}, ordre = [];
+      base.forEach(m => { noms[m.id] = [m.nom, m.nom_nl || '']; ordre.push(m.id); (m.points || []).forEach(pt => { defs[pt.ref] = pt; }); });
+      const reussite = (def, p) => {
+        const ty = def.type || (def.pct ? 'pct' : 'etat');
+        if (ty === 'texte' || def.score === false) { return null; }
+        if (p.etat === 'na') { return null; }
+        if (ty === 'note' && p.note != null) { return Math.max(0, Math.min(1, (p.note - 1) / 4)); }
+        if (ty === 'pct' && p.valeur != null) { return Math.max(0, Math.min(1, p.valeur / 100)); }
+        if (p.etat === 'ok') { return 1; }
+        if (p.etat === 'ko') { return 0; }
+        if (p.note != null) { return Math.max(0, Math.min(1, (p.note - 1) / 4)); }
+        return null;
+      };
+      const par = {}, obl = {}, vus = [];
+      (this.D.points || []).filter(p => String(p.visite_id) === String(v.id)).forEach(p => {
+        if (!p.ref || !p.module) { return; }
+        if (String(p.ref).indexOf('oblig_') === 0) { if (p.etat === 'ok' || p.etat === 'ko') { const o = obl[p.module] || (obl[p.module] = { ok: 0, ko: 0 }); o[p.etat]++; } return; }
+        const def = defs[p.ref] || {}; const r = reussite(def, p); if (r == null) { return; }
+        const w = [1, 2, 3].indexOf(Number(def.poids)) >= 0 ? Number(def.poids) : 1;
+        (par[p.module] || (par[p.module] = [], vus.push(p.module), par[p.module])).push([w, r]);
+      });
+      Object.keys(obl).forEach(mod => { const n = obl[mod].ok + obl[mod].ko; if (n) { if (!par[mod]) { par[mod] = []; vus.push(mod); } par[mod].push([1, obl[mod].ok / n]); } });
+      const somme = l => l.reduce((a, [w, r]) => [a[0] + w, a[1] + w * r], [0, 0]);
+      const modules = []; let tous = [];
+      ordre.concat(vus.filter(m => ordre.indexOf(m) < 0)).forEach(id => {
+        if (!par[id] || !par[id].length) { return; }
+        const [w, x] = somme(par[id]); const nom = noms[id] || HORS[id] || [id, ''];
+        modules.push({ id, nom: nom[0], nom_nl: nom[1], score: Math.round(x / w * 100), n: par[id].length }); tous = tous.concat(par[id]);
+      });
+      if (!tous.length) { return null; }
+      const [w, x] = somme(tous);
+      return { score: Math.round(x / w * 100), n: tous.length, modules };
+    }
+    /** La visite d'avant, du même type (les mêmes questions), et son score : figé par le serveur s'il l'a été, sinon calculé ici. */
+    scorePrecedent(v) {
+      const av = (this.D.visites || []).filter(x => String(x.shop) === String(v.shop) && x.statut === 'terminee' && String(x.id) !== String(v.id) && x.prevu_le <= v.prevu_le && (x.type || 'reguliere') === (v.type || 'reguliere'))
+        .sort((a, b) => a.prevu_le < b.prevu_le ? 1 : (a.prevu_le > b.prevu_le ? -1 : Number(b.id) - Number(a.id)));
+      for (const x of av) { const s = x.score && x.score.score != null ? x.score : this.scoreDe(x); if (s) { return { le: x.prevu_le, score: s }; } }
+      return null;
+    }
+    /**
+     * Avant de signer (26/10/2026, Sam : « comparaison avant signature avec visite précédente et visite actuelle ») : le
+     * seul endroit de la tablette où le score se montre. Dans la langue de la visite.
+     */
+    scoreFinHtml(v) {
+      const a = this.scoreDe(v); if (!a) { return ''; }
+      const nl = this.lngDe(v) === 'nl';
+      const P = this.scorePrecedent(v); const p = P ? P.score : null;
+      const avant = {}; ((p && p.modules) || []).forEach(m => { avant[m.id] = m.score; });
+      const ec = d => d == null ? '<span class="mu">—</span>' : `<span class="${d > 0 ? 'up' : d < 0 ? 'dn' : 'mu'}">${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)}</span>`;
+      const ton = x => x >= 85 ? 'ok' : x >= 70 ? 'att' : 'ko';
+      return `<div class="card sc-fin"><div class="row"><b>${nl ? 'Score van het bezoek' : 'Le score de la visite'}</b><span class="sp"></span><span class="xs mu">${nl ? 'getoond vóór de handtekening · daarna in het verslag' : 'montré avant de signer · puis dans le rapport'}</span></div>
+        <div class="sc-duo"><div class="sc-c"><small>${nl ? 'Vorig bezoek' : 'Visite précédente'}${P ? ' · ' + String(P.le).slice(8, 10) + '/' + String(P.le).slice(5, 7) : ''}</small><div class="sc-n"><b>${p ? p.score : '—'}</b>${p ? '' : `<span class="xs mu">${nl ? 'geen eerder gescoord bezoek' : 'pas de visite précédente notée'}</span>`}</div></div>
+          <div class="sc-fl">→</div><div class="sc-c act"><small>${nl ? 'Dit bezoek' : 'Cette visite'}</small><div class="sc-n"><b class="${ton(a.score)}">${a.score}</b>${p ? ec(a.score - p.score) : ''}</div></div></div>
+        <div class="sc-mods"><span class="h">${nl ? 'Module' : 'Module'}</span><span class="h n">${nl ? 'Vorig' : 'Précédente'}</span><span class="h n">${nl ? 'Nu' : 'Actuelle'}</span><span class="h n">${nl ? 'Verschil' : 'Écart'}</span>
+          ${a.modules.map(m => `<span>${esc(nomDe(m, nl ? 'nl' : 'fr'))}</span><span class="n mu">${avant[m.id] != null ? avant[m.id] : '—'}</span><span class="n"><b class="${ton(m.score)}">${m.score}</b></span><span class="n">${avant[m.id] != null ? ec(m.score - avant[m.id]) : ''}</span>`).join('')}</div>
+        <div class="xs mu" style="margin-top:6px">${nl ? 'Op ' + a.n + ' gescoorde vragen: elk punt in orde telt volgens zijn gewicht. Tellen niet mee: N.v.t., vrije tekst, vragen buiten de score.' : 'Sur ' + a.n + ' questions notées : chaque point conforme compte selon son poids. Ne comptent pas : N/A, texte libre, questions hors score.'}</div></div>`;
+    }
     finHtml(v) {
       const pts = this.pointsDe(v.id); let total = 0, faits = 0, ko = 0;
       this.checklistDe(v).forEach(m => m.points.forEach(pt => { total++; const p = pts[pt.ref]; if (p && (p.etat || p.note != null || p.valeur != null)) { faits++; if (p.etat === 'ko' || (p.note != null && p.note <= 2)) { ko++; } } }));
@@ -2533,6 +2618,7 @@
       const h = this.D.delaiRapport;
       return `<div class="stat"><div><div class="xs mu">Checklist</div><div class="k" style="margin-top:4px">${faits} / ${total}</div><div class="xs mu">${ko} non conforme${ko > 1 ? 's' : ''}</div></div><div><div class="xs mu">Points proposés</div><div class="k" style="margin-top:4px">${pa.length}</div><div class="xs mu">${pa.filter(a => a.priorite === 'P0').length} P0</div></div><div><div class="xs mu">Photos</div><div class="k" style="margin-top:4px">${this.photosDe(v.id).length}</div><div class="xs mu">${this.file.filter(o => o.apres === 'photo').length} en attente d’envoi</div></div></div>
         ${this.vbExige(v) === 'manque' ? `<div class="card alerte sm"><b class="dn">CA à plus de ${String(this.VB[v.shop].seuil).replace('.', ',')} % sous le budget</b> — le pourquoi, les trois pistes du franchisé et l’horizon restent à noter au développement. <button class="chip" data-a="etape" data-v="${this._etapes && this._etapes.pistes >= 0 ? this._etapes.pistes : 0}">Y aller</button></div>` : ''}
+        ${this.scoreFinHtml(v)}
         <div class="sigs">${[['sigC', 'Le consultant', v.consultantNom || this.consultantNom(this.moi) || ''], ['sig', 'Le franchisé a vu le résumé', (this.boutique(v.shop) || {}).court || '']].map(([k, lab, qui]) => `<div class="sg">
           <div class="cap">${lab}${qui ? ' · ' + esc(qui) : ''} ${this.form[k] ? '<span class="pill st-val">signé</span>' : ''}<button class="chip" data-a="sig-effacer" data-v="${k}" style="margin-left:auto">effacer</button></div>
           <canvas data-sig="${k}" class="sig" width="640" height="180" aria-label="${k === 'sig' ? 'Signature du franchisé' : 'Signature du consultant'}"></canvas></div>`).join('')}</div>
