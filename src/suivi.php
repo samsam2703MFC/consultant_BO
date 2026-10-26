@@ -1024,13 +1024,13 @@ function suEtape(array $v): ?string
  * Le scoring du trimestre, gardé : son calcul relit le panel pour tous les magasins (≈ 20 s en production,
  * 24/10/2026), et le tableau de bord, la préparation et la page du franchisé l'ouvraient à chaque lecture.
  * L'horloge des visites le recalcule toutes les 25 minutes (suHorloge) ; une lecture ne paie le calcul que
- * si le cache est vide ou a plus de 2 heures.
+ * si le cache est vide ou a plus de 2 heures ; périmé, il se relance par /suivi/tableau, la route qui le lit.
  */
 function suScoringTous(bool $forcer = false): ?array
 {
     if (!function_exists('frScoringTous')) { return null; }
     if (!function_exists('rcServi')) { return frScoringTous(); }
-    $r = rcServi('suScoring', static fn (): array => frScoringTous() ?? [], static fn (array $x): int => $x ? 7200 : 0, $forcer, '/suivi/scoring', 10800);
+    $r = rcServi('suScoring', static fn (): array => frScoringTous() ?? [], static fn (array $x): int => $x ? 7200 : 0, $forcer, '/suivi/tableau', 10800);
     unset($r['cache']);
     return $r ?: null;
 }
