@@ -181,8 +181,16 @@ export async function load(opts){
  * fetch, donc aucun `catch` ne se déclenchait et l'écran annonçait
  * « enregistré » alors que le serveur avait refusé. C'est ainsi qu'un budget
  * encodé pouvait disparaître sans un mot.
+ *
+ * Une modification (PUT, DELETE) coupée en route — réseau perdu, serveur qui
+ * redémarre pendant une mise en ligne, 502/503/504 du serveur web — se rejoue
+ * une fois, deux secondes plus tard : la rejouer ne fait rien de plus. Une
+ * création (POST) ne se rejoue jamais (elle pourrait partir deux fois). Le
+ * navigateur ne dit alors que « Failed to fetch » : l'écran dit ce qui se passe.
  */
-export function write(source, method, path, payload){
+const REJOUABLE = { PUT: true, DELETE: true };
+const rejouer = (source, method, path, payload) => new Promise(ok => setTimeout(ok, 2000)).then(() => write(source, method, path, payload, true));
+export function write(source, method, path, payload, rejeu){
   if (source !== 'api') return Promise.resolve({ ok: true, status: 0 });
   return fetch(API_BASE + path, {
     method, credentials: 'same-origin',
@@ -200,6 +208,7 @@ export function write(source, method, path, payload){
       catch (e) { /* corps vide ou non JSON : le statut suffit */ }
       return Object.assign({}, corps, { ok: true, status: r.status });
     }
+    if (REJOUABLE[method] && !rejeu && (r.status === 502 || r.status === 503 || r.status === 504)) { return rejouer(source, method, path, payload); }
     let msg = 'HTTP ' + r.status;
     let corps = {};
     try {
@@ -210,7 +219,9 @@ export function write(source, method, path, payload){
     return Object.assign({}, corps, { ok: false, status: r.status, error: msg });
   }).catch(e => {
     console.warn('[cockpit] écriture ' + path + ' échouée : ' + e.message);
-    return { ok: false, status: 0, error: e.message };
+    if (REJOUABLE[method] && !rejeu) { return rejouer(source, method, path, payload); }
+    const coupe = e && e.name === 'TypeError';
+    return { ok: false, status: 0, error: coupe ? 'serveur injoignable (connexion coupée, peut-être une mise en ligne en cours) — réessayez dans une minute' : e.message };
   });
 }
 

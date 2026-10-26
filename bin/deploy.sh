@@ -256,14 +256,28 @@ a2enconf consulant_bo >/dev/null
 # corrigé depuis) ont retenu des workers PHP jusqu'à coucher l'API — le temps
 # passé dans un process externe échappe à max_execution_time. On tue les
 # traînards et on REDÉMARRE PHP et Apache (un reload garde les workers).
-pkill -9 -f wkhtmltopdf 2>/dev/null || true
-pkill -9 -f xvfb-run    2>/dev/null || true
-pkill -9 -f Xvfb        2>/dev/null || true
-systemctl list-units 'php*-fpm.service' --no-legend 2>/dev/null | awk '{print $1}' | while read -r u; do
-  systemctl restart "$u" || true
+# Seulement s'il y en avait (26/10/2026) : un redémarrage coupe net chaque requête en cours, et le cockpit
+# affichait « Failed to fetch » à qui enregistrait à ce moment-là (le carnet d'un rapport, ce soir-là, avec
+# une livraison toutes les vingt minutes). Sans traînard, un reload en douceur : Apache finit les requêtes en
+# cours avant de passer à la nouvelle configuration, PHP-FPM relit la sienne.
+TRAINARDS=0
+for p in wkhtmltopdf xvfb-run Xvfb; do
+  if pgrep -f "$p" >/dev/null 2>&1; then TRAINARDS=1; pkill -9 -f "$p" 2>/dev/null || true; fi
 done
 apache2ctl configtest
-systemctl restart apache2
+if [[ "$TRAINARDS" == "1" ]]; then
+  warn "Rendus PDF suspendus : PHP et Apache redémarrés (les requêtes en cours sont coupées)."
+  systemctl list-units 'php*-fpm.service' --no-legend 2>/dev/null | awk '{print $1}' | while read -r u; do
+    systemctl restart "$u" || true
+  done
+  systemctl restart apache2
+else
+  systemctl list-units 'php*-fpm.service' --no-legend 2>/dev/null | awk '{print $1}' | while read -r u; do
+    systemctl reload "$u" || systemctl restart "$u" || true
+  done
+  systemctl reload apache2 || systemctl restart apache2
+  log "Apache et PHP rechargés en douceur : aucune requête en cours coupée."
+fi
 
 # --- 5a. HTTPS — la caméra du téléphone l'exige -----------------------------
 # Le scan du code-barres EN DIRECT (onglet Réclamation du dashboard au
