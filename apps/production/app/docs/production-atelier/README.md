@@ -209,6 +209,20 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 - « Ponów » : une seule position, une seule tentative de plus, envoyée par la tâche planifiée habituelle (pas de « tout renvoyer », rien n'est envoyé depuis la page). « Rozwiązane… » : classe une erreur avec un motif obligatoire (journal : qui, quand, pourquoi) ; elle reste visible dans le filtre « Rozwiązane » et peut encore être renvoyée.
 - Dzisiaj › « Do zrobienia » (Administracja) : nombre d'envois à vérifier.
 
+## Do obsłużenia — file des cas à traiter (26/10/2026)
+
+- Zamówienia › « Do obsłużenia » (`/client-orders/queue`) : une ligne par cas, avec échéance (en retard en rouge, aujourd'hui en orange), client, postes responsables et action directe. Règles :
+  - commande ouverte dont la date d'expédition est passée → Załadunek dnia du jour ;
+  - commande ouverte sans proforma → « Wystaw proformę » (même action que la liste des commandes, avec confirmation) ;
+  - proforma non payée dont le contenu ne correspond plus à la commande → « Nowa proforma » (même règle que la liste des commandes) ;
+  - proforma non envoyée (ni au client ni au franchisé) → « Przygotuj e-mail » ;
+  - rappel de paiement dû (niveaux 1–5 à 3, 7, 14, 21 et 30 jours, comme Przypomnienia płatności) → « Przypomnienie n/5 » ou « Oznacz jako opłaconą » ;
+  - palettes prêtes pour les documents (14 derniers jours) → Wyślij dzień du jour ;
+  - écart d'expédition à décider → Różnice i problemy dostaw ;
+  - e-mail client en erreur → Stan wysyłek.
+- Filtres : échéance (tout, en retard, jusqu'à aujourd'hui, 7 jours), règle, « Moje » (poste de l'utilisateur dans Stanowiska). La lecture ne modifie rien : un cas disparaît quand il est réglé.
+- Dzisiaj › « Do zrobienia » compte les commandes, proformas, rappels et documents avec cette file (mêmes chiffres) et ouvre la file filtrée sur la règle.
+
 ## Points ouverts (données réelles à fournir)
 
 Les écrans existent ; ce qui manque, ce sont les données réelles de l'atelier (la copie de test tourne sur une démo réaliste).

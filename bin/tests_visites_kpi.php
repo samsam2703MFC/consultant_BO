@@ -114,6 +114,29 @@ function ep_exploitation_periode(): array
     return ['jusqua' => $jusqua, 'ponderation' => ['ok' => true], 'magasins' => $mag];
 }
 
+// La caisse gravée par jour (vpLu : CA de tous les tickets, tickets des clients pro) et le webshop (coCommandes) :
+// Corbais 1 000 € par jour dont 450 € de pro, une commande click & collect de 500 € encaissée en caisse et une
+// livraison de 200 € le 1er de chaque mois ; Gosselies 1 000 € dont 100 € de pro, sans webshop ; Halle, webshop muet.
+function vpLu(int $sid, string $j): ?array
+{
+    $pro = [2 => 450.0, 3 => 100.0, 4 => 200.0][$sid] ?? null;
+    return $pro === null ? null : ['ca' => 1000.0, 't' => [['10:00', 'c1', $pro, 1, 0]], 'sansTva' => ['tickets' => 1, 'ca' => $sid === 3 ? 50.0 : 0.0]];
+}
+function coCommandes(int $sid, string $depuis): ?array
+{
+    global $MOIS;
+    if ($sid === 4) { return null; }
+    if ($sid === 3) { return []; }
+    $out = [];
+    foreach ($MOIS as $m) {
+        $out[] = ['quand' => $m . '-01 11:00', 'canal' => 'cc', 'montant' => 500.0, 'encaissee' => true];
+        $out[] = ['quand' => $m . '-01 12:00', 'canal' => 'liv', 'montant' => 200.0, 'encaissee' => false];
+        $out[] = ['quand' => $m . '-02 09:00', 'canal' => 'compt', 'montant' => 80.0, 'encaissee' => true];
+    }
+    $out[] = ['quand' => date('Y-m-d') . ' 10:00', 'canal' => 'cc', 'montant' => 999.0, 'encaissee' => false];
+    return $out;
+}
+
 require __DIR__ . '/../src/tablette_objectifs.php';
 require __DIR__ . '/../src/visites_kpi.php';
 $MOIS = vkMoisClos(3);
@@ -194,6 +217,24 @@ $_GET = ['mois' => '2019-01'];
 verifie('un mois hors de la liste revient au choix d’office', ep_visites_taches('2')['choisi'] === $prec);
 $_GET = [];
 verifie('un magasin inconnu : 404', (ep_visites_taches('77')['error'] ?? '') === 'magasin inconnu');
+
+// --- 4bis. la structure du CA par canal -----------------------------------------------------------
+echo "Structure du CA par canal\n";
+$C = vkCanaux(2, $MOIS);
+$N = $C['jours'];
+verifie('les trois mois clos, tous les jours lus', $C['du'] === $MOIS[0] . '-01' && $C['joursLus'] === $N && $N >= 89 && $C['webshop'] === true);
+$tot = 1000.0 * $N + 600.0;
+verifie('le total : la caisse, plus le webshop qu’elle n’a pas encaissé', $C['magasin']['total'] === round($tot), json_encode($C['magasin']));
+verifie('le comptoir : la caisse moins le pro et les commandes encaissées en caisse', $C['magasin']['ca']['comptoir'] === round(550.0 * $N - 1500.0) && $C['magasin']['ca']['cc'] === 1500.0 && $C['magasin']['ca']['liv'] === 600.0);
+verifie('une précommande comptoir et une commande d’aujourd’hui ne comptent pas au webshop', $C['magasin']['ca']['cc'] === 1500.0);
+verifie('la part B2B : 45 %, au-dessus du plafond de 40 %', $C['magasin']['parts']['b2b'] === round(450.0 * $N / $tot * 100, 1) && $C['b2bStatut'] === 'au-dessus' && $C['b2bMax'] === 40.0, json_encode([$C['magasin']['parts'], $C['b2bStatut']]));
+verifie('le reste du réseau : Gosselies seul (Halle, webshop muet, en sort)', $C['reste']['magasins'] === 1 && $C['reste']['parts']['b2b'] === 10.0 && $C['reste']['parts']['comptoir'] === 90.0, json_encode($C['reste']));
+$C4 = vkCanaux(4, $MOIS);
+verifie('les clients pro sans TVA valide restent au comptoir, chiffrés à part', $C['reste']['proSansTva'] === round(50.0 * $N) && $C['reste']['b2bAvecSansTva'] === 15.0 && $C['reste']['parts']['comptoir'] === 90.0, json_encode($C['reste']));
+verifie('Halle, webshop muet : pas de structure plutôt qu’une structure fausse', $C4['magasin'] === null && $C4['webshop'] === false && str_contains((string) $C4['motif'], 'webshop'));
+$p = vkCanauxParts(['caisse' => 1000.0, 'b2b' => 380.0, 'cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0]);
+verifie('les parts d’un cumul : 62 % comptoir, 38 % B2B', $p['parts']['comptoir'] === 62.0 && $p['parts']['b2b'] === 38.0);
+verifie('un cumul sans CA : null', vkCanauxParts(['caisse' => 0.0, 'b2b' => 0.0, 'cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0]) === null);
 
 // --- 5. le CA face au budget ------------------------------------------------------------------
 echo "CA face au budget\n";

@@ -5,13 +5,14 @@ namespace App\Services\Dashboard;
 use App\Repositories\Dashboard\TodayRepository;
 use App\Services\Notification\DeadlineAlertService;
 use App\Services\Communication\SendStatusService;
+use App\Services\Client\Order\OrderQueueService;
 
 /**
  * Strona „Dzisiaj”: co wysyłamy, co trzeba wyprodukować i co czeka na decyzję.
  */
 class TodayService
 {
-    public function __construct(private TodayRepository $repository, private DeadlineAlertService $alerts, private SendStatusService $sends) {}
+    public function __construct(private TodayRepository $repository, private DeadlineAlertService $alerts, private SendStatusService $sends, private OrderQueueService $queue) {}
 
     public function overview(): array
     {
@@ -57,7 +58,7 @@ class TodayService
                 'unpaid' => (int) ($proformas['unpaid'] ?? 0),
                 'not_sent' => (int) ($proformas['not_sent'] ?? 0),
             ],
-            'todo' => array_merge($this->todo($days, $complaints, $proformas, $readyPallets, $belowMinimum, $withoutRecipe, $complaintAgeDays), $this->alertTodo()),
+            'todo' => array_merge($this->todo($days, $complaints, $proformas, $readyPallets, $belowMinimum, $withoutRecipe, $complaintAgeDays, $this->queueCounts()), $this->alertTodo()),
             'latest' => $this->repository->getLatestOrders(),
         ];
     }
@@ -103,12 +104,31 @@ class TodayService
         return $items;
     }
 
-    /** Lista „Do zrobienia”: tylko to, co wymaga ruchu; każda pozycja prowadzi do właściwej strony. */
-    private function todo(array $days, array $complaints, array $proformas, int $readyPallets, int $belowMinimum, int $withoutRecipe, ?int $complaintAgeDays): array
+    /** Sprawy kolejki « Do obsłużenia » według reguły ; null, gdy kolejka nie odpowiada (wtedy liczniki jak dawniej). */
+    private function queueCounts(): ?array
+    {
+        try {
+            return $this->queue->counts();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Lista „Do zrobienia”: tylko to, co wymaga ruchu; każda pozycja prowadzi do właściwej strony. Sprawy zamówień,
+     * proform i wysyłek liczy kolejka « Do obsłużenia » (te same liczby po kliknięciu, lista przefiltrowana).
+     */
+    private function todo(array $days, array $complaints, array $proformas, int $readyPallets, int $belowMinimum, int $withoutRecipe, ?int $complaintAgeDays, ?array $queue = null): array
     {
         $items = [];
         $overdue = array_filter($days, fn($d) => $d['overdue']);
-        if ($overdue) {
+        if ($queue !== null) {
+            if ($queue['late_shipping']) {
+                $items[] = ['tone' => 'danger', 'icon' => 'bi-calendar-x', 'count' => $queue['late_shipping'],
+                    'one' => 'zamówienie po terminie wysyłki', 'few' => 'zamówienia po terminie wysyłki', 'many' => 'zamówień po terminie wysyłki',
+                    'url' => '/client-orders/queue?rule=late_shipping', 'positions' => ['LOGISTYKA', 'KIEROWNIK_PRODUKCJI']];
+            }
+        } elseif ($overdue) {
             $items[] = ['tone' => 'danger', 'icon' => 'bi-calendar-x', 'count' => array_sum(array_column($overdue, 'orders')),
                 'one' => 'zamówienie po terminie wysyłki', 'few' => 'zamówienia po terminie wysyłki', 'many' => 'zamówień po terminie wysyłki',
                 'url' => '/client-orders', 'positions' => ['LOGISTYKA', 'KIEROWNIK_PRODUKCJI']];
@@ -125,18 +145,32 @@ class TodayService
             $items[] = ['tone' => 'warning', 'icon' => 'bi-hourglass-split', 'count' => $review,
                 'one' => 'reklamacja w weryfikacji', 'few' => 'reklamacje w weryfikacji', 'many' => 'reklamacji w weryfikacji', 'url' => '/franchise-complaints', 'positions' => ['JAKOSC']];
         }
-        if ($readyPallets) {
-            $items[] = ['tone' => 'warning', 'icon' => 'bi-truck', 'count' => $readyPallets,
-                'one' => 'wysyłka gotowa do wystawienia dokumentów', 'few' => 'wysyłki gotowe do wystawienia dokumentów', 'many' => 'wysyłek gotowych do wystawienia dokumentów',
-                'url' => '/shipping/wizard', 'positions' => ['LOGISTYKA']];
-        }
-        if ((int) ($proformas['missing'] ?? 0)) {
-            $items[] = ['tone' => 'warning', 'icon' => 'bi-file-earmark-plus', 'count' => (int) $proformas['missing'],
-                'one' => 'otwarte zamówienie bez proformy', 'few' => 'otwarte zamówienia bez proformy', 'many' => 'otwartych zamówień bez proformy', 'url' => '/client-orders', 'positions' => ['ADMINISTRACJA']];
-        }
-        if ((int) ($proformas['not_sent'] ?? 0)) {
-            $items[] = ['tone' => 'info', 'icon' => 'bi-envelope', 'count' => (int) $proformas['not_sent'],
-                'one' => 'proforma niewysłana do klienta', 'few' => 'proformy niewysłane do klienta', 'many' => 'proform niewysłanych do klienta', 'url' => '/client-orders', 'positions' => ['ADMINISTRACJA']];
+        if ($queue !== null) {
+            foreach ([
+                ['documents_ready', 'warning', 'bi-truck', 'wysyłka gotowa do wystawienia dokumentów', 'wysyłki gotowe do wystawienia dokumentów', 'wysyłek gotowych do wystawienia dokumentów', ['LOGISTYKA']],
+                ['no_proforma', 'warning', 'bi-file-earmark-plus', 'otwarte zamówienie bez proformy', 'otwarte zamówienia bez proformy', 'otwartych zamówień bez proformy', ['ADMINISTRACJA']],
+                ['proforma_stale', 'warning', 'bi-arrow-repeat', 'proforma nieaktualna (zamówienie zmienione)', 'proformy nieaktualne (zamówienie zmienione)', 'proform nieaktualnych (zamówienie zmienione)', ['ADMINISTRACJA']],
+                ['proforma_not_sent', 'info', 'bi-envelope', 'proforma niewysłana do klienta', 'proformy niewysłane do klienta', 'proform niewysłanych do klienta', ['ADMINISTRACJA']],
+                ['reminder_due', 'info', 'bi-bell', 'przypomnienie o płatności do wysłania', 'przypomnienia o płatności do wysłania', 'przypomnień o płatności do wysłania', ['ADMINISTRACJA']],
+            ] as [$rule, $tone, $icon, $one, $few, $many, $positions]) {
+                if (!$queue[$rule]) continue;
+                $items[] = ['tone' => $tone, 'icon' => $icon, 'count' => $queue[$rule], 'one' => $one, 'few' => $few, 'many' => $many,
+                    'url' => '/client-orders/queue?rule=' . $rule, 'positions' => $positions];
+            }
+        } else {
+            if ($readyPallets) {
+                $items[] = ['tone' => 'warning', 'icon' => 'bi-truck', 'count' => $readyPallets,
+                    'one' => 'wysyłka gotowa do wystawienia dokumentów', 'few' => 'wysyłki gotowe do wystawienia dokumentów', 'many' => 'wysyłek gotowych do wystawienia dokumentów',
+                    'url' => '/shipping/wizard', 'positions' => ['LOGISTYKA']];
+            }
+            if ((int) ($proformas['missing'] ?? 0)) {
+                $items[] = ['tone' => 'warning', 'icon' => 'bi-file-earmark-plus', 'count' => (int) $proformas['missing'],
+                    'one' => 'otwarte zamówienie bez proformy', 'few' => 'otwarte zamówienia bez proformy', 'many' => 'otwartych zamówień bez proformy', 'url' => '/client-orders', 'positions' => ['ADMINISTRACJA']];
+            }
+            if ((int) ($proformas['not_sent'] ?? 0)) {
+                $items[] = ['tone' => 'info', 'icon' => 'bi-envelope', 'count' => (int) $proformas['not_sent'],
+                    'one' => 'proforma niewysłana do klienta', 'few' => 'proformy niewysłane do klienta', 'many' => 'proform niewysłanych do klienta', 'url' => '/client-orders', 'positions' => ['ADMINISTRACJA']];
+            }
         }
         if ($withoutRecipe) {
             $items[] = ['tone' => 'info', 'icon' => 'bi-journal-x', 'count' => $withoutRecipe,
