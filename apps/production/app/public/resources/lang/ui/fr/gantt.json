@@ -182,5 +182,7 @@
   "week.pin_slot": "libre : {free}",
   "week.pin_slot_title": "📌 {name} : place pour {room}, la semaine a moins de lots — le jour a reçu {filled}. Les lots arriveront seuls si les commandes augmentent ou si le stock baisse.",
   "week.pin_fill": "cette semaine : {filled} sur {room}",
-  "week.pin_released": "modifié à la main cette semaine"
+  "week.pin_released": "modifié à la main cette semaine",
+  "week.supply_next": "Commander les matières ›",
+  "week.supply_help": "Besoins en matières et emballages de la semaine, commandes fournisseurs"
 }

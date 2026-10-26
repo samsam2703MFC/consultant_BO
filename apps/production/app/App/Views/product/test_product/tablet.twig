@@ -115,13 +115,17 @@
                     {% if stage == 'launched' %}
                         <p class="mb-0"><i class="bi bi-check2-circle text-success"></i> Produkt ERP : {% if product.final_product_id %}<a href="{{ root }}/products/{{ product.final_product_id }}/edit">{{ product.final_product_name }}</a>{% else %}—{% endif %}. Data wprowadzenia w module kierownika produkcji i w raporcie miesięcznym.</p>
                     {% else %}
-                        <form id="launchForm" class="d-flex gap-2 flex-wrap align-items-end">
-                            <label class="at-purch-label" style="flex: 1 1 260px">Produkt ERP (po utworzeniu karty produktu)
-                                <input class="form-control" name="final_product" list="finalProducts" placeholder="Szukaj produktu…" autocomplete="off"></label>
-                            <datalist id="finalProducts">{% for fp in final_products %}<option value="{{ fp.name }} · #{{ fp.id }}"></option>{% endfor %}</datalist>
-                            <button class="btn btn-primary" type="submit"><i class="bi bi-rocket-takeoff"></i> Wprowadź</button>
-                        </form>
-                        <p class="at-sub mt-2 mb-0">Produkt znika z tabletu, etap « Wprowadzony », produkt testowy zakończony.</p>
+                        <a class="btn btn-primary" href="{{ root }}/products/new-with-recipe?from_test={{ product.id }}"><i class="bi bi-rocket-takeoff"></i> Wprowadź : utwórz produkt z tego testu</a>
+                        <p class="at-sub mt-2">Kreator produktu z nazwą, kategorią, działem, etykietą i recepturą testu — bez ponownego wpisywania. Po zapisie test jest « Wprowadzony » i powiązany z produktem, znika z tabletu.</p>
+                        <details class="mt-2">
+                            <summary class="at-sub">Produkt już istnieje w ERP ? Powiąż test z nim</summary>
+                            <form id="launchForm" class="d-flex gap-2 flex-wrap align-items-end mt-2">
+                                <label class="at-purch-label" style="flex: 1 1 260px">Produkt ERP
+                                    <input class="form-control" name="final_product" list="finalProducts" placeholder="Szukaj produktu…" autocomplete="off"></label>
+                                <datalist id="finalProducts">{% for fp in final_products %}<option value="{{ fp.name }} · #{{ fp.id }}"></option>{% endfor %}</datalist>
+                                <button class="btn btn-outline-primary" type="submit"><i class="bi bi-link-45deg"></i> Powiąż i wprowadź</button>
+                            </form>
+                        </details>
                     {% endif %}
                 </div>
             </div>

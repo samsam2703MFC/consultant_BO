@@ -7113,6 +7113,158 @@
                 "x-permission": "prod.supply.write"
             }
         },
+        "/supply/materials/counts": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Inwentaryzacja magazynu (arkusz) / Inventaire de toutes les matières",
+                "operationId": "countSupplyMaterials",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplyCountsResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Toutes les quantités comptées de la feuille en un enregistrement (unité de base, même date) ; une ligne en erreur bloque l'ensemble.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplyCountsInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/materials/limits": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Min./maks. 1–2 tyg. / Min./max. 1–2 semaines",
+                "operationId": "suggestSupplyLimits",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplyLimitsResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Pour les matières choisies avec une consommation sur 4 semaines : mode « sur stock », min. = 1 semaine, max. = 2 semaines (arrondis aux emballages entiers).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplyLimitsInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
         "/supply/orders": {
             "get": {
                 "tags": [
@@ -7240,7 +7392,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Brouillons groupés par fournisseur courant de la matière ; livraison souhaitée la veille de la semaine (au plus tôt demain). SUPPLY_NO_SUPPLIER (422) : matière sans fournisseur.",
+                "description": "Brouillons groupés par fournisseur courant de la matière ; livraison : premier jour habituel du fournisseur à partir de la veille de la semaine (au plus tôt demain) ; langue de la fiche fournisseur. SUPPLY_NO_SUPPLIER (422) : matière sans fournisseur.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -7809,7 +7961,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Quantité et prix réels par ligne (prix par défaut : prix commandé) ; reçue en partie ou en totalité. PO_NOT_RECEIVABLE (409) : commande non envoyée, reçue ou annulée.",
+                "description": "Quantité et prix réels par ligne (prix par défaut : prix commandé), lot et date limite ; un problème signalé crée une non-conformité fournisseur liée à la réception. Reçue en partie ou en totalité. PO_NOT_RECEIVABLE (409) : commande non envoyée, reçue ou annulée.",
                 "parameters": [
                     {
                         "name": "id",
@@ -11207,6 +11359,163 @@
                 ]
             }
         },
+        "/kiosk/deliveries/{id}": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Dostawa do przyjęcia (tablet) / Livraison à réceptionner (tablette)",
+                "operationId": "kioskDelivery",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskDelivery"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Commande fournisseur sans les prix : lignes, commandé, reçu, reste ; réceptions déjà faites (lot, DLC, personne).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/deliveries/{id}/receive": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Przyjęcie dostawy na tablecie / Réception sur la tablette",
+                "operationId": "kioskReceiveDelivery",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskDelivery"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Comme POST /supply/orders/{id}/receive, par le salarié identifié (PIN) : quantités, lot, DLC, problème → non-conformité fournisseur. unit_price ignoré (prix de la commande). 409 PO_NOT_RECEIVABLE.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplierOrderReceiveInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/production": {
             "get": {
                 "tags": [
@@ -11653,7 +11962,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Enregistre qui valide et quand, avec le résumé (prévu, produit, pertes par produit). Revalider remplace le résumé ; closed.changed = lots ou pertes modifiés depuis. 409 DAY_NOTHING_TO_CLOSE, OUTPUT_LOCKED.",
+                "description": "Enregistre qui valide et quand, avec le résumé (prévu, produit, pertes par produit). Revalider remplace le résumé ; closed.changed = lots ou pertes modifiés depuis. gaps (production du jour) = productions sans tous leurs lots matières (lots) ou sans contrôle qualité (qc) : la validation exige alors une note (422 DAY_GAPS_NOTE_REQUIRED, details lots / qc). 409 DAY_NOTHING_TO_CLOSE, OUTPUT_LOCKED.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -14845,7 +15154,7 @@
                     },
                     "shelf_life": {
                         "type": "integer",
-                        "minimum": 0,
+                        "minimum": 1,
                         "maximum": 3650
                     },
                     "stock_minimum": {
@@ -17981,6 +18290,102 @@
                     },
                     "pairing_pending": {
                         "type": "boolean"
+                    }
+                }
+            },
+            "KioskDelivery": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "supplier": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "delivery_date": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "receivable": {
+                        "type": "boolean"
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "raw_material_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "base_unit": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "factor": {
+                                    "type": "number"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "received_qty": {
+                                    "type": "number"
+                                },
+                                "remaining": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "receipts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "line_id": {
+                                    "type": "integer"
+                                },
+                                "raw_material_id": {
+                                    "type": "integer"
+                                },
+                                "received_on": {
+                                    "type": "string"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "lot_number": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "best_before": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "nc_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "employee": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -22992,6 +23397,97 @@
                     }
                 }
             },
+            "SupplyCountsInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "counts"
+                ],
+                "properties": {
+                    "count_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "défaut : aujourd'hui"
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "counts": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "id",
+                                "quantity"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "minimum": 0
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "SupplyCountsResult": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/SupplyMaterials"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "saved": {
+                                "type": "integer"
+                            },
+                            "count_date": {
+                                "type": "string",
+                                "format": "date"
+                            }
+                        }
+                    }
+                ]
+            },
+            "SupplyLimitsInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "ids"
+                ],
+                "properties": {
+                    "ids": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            },
+            "SupplyLimitsResult": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/SupplyMaterials"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "updated": {
+                                "type": "integer"
+                            },
+                            "skipped": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                ]
+            },
             "SupplierDeliveries": {
                 "type": "object",
                 "properties": {
@@ -23355,7 +23851,25 @@
                     "orders": {
                         "type": "array",
                         "items": {
-                            "$ref": "#/components/schemas/SupplierOrder"
+                            "allOf": [
+                                {
+                                    "$ref": "#/components/schemas/SupplierOrder"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "usual_days": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 7
+                                            },
+                                            "description": "jours de livraison habituels du fournisseur (1 = lundi) : fiche fournisseur, sinon historique des livraisons"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -23600,6 +24114,25 @@
                                 "unit_price": {
                                     "type": "number",
                                     "nullable": true
+                                },
+                                "lot_number": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "best_before": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "nc_id": {
+                                    "type": "integer",
+                                    "nullable": true,
+                                    "description": "non-conformité créée à la réception"
+                                },
+                                "employee": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "salarié qui a réceptionné sur la tablette"
                                 }
                             }
                         }
@@ -23732,6 +24265,50 @@
                                 "unit_price": {
                                     "type": "number",
                                     "nullable": true
+                                },
+                                "lot_number": {
+                                    "type": "string",
+                                    "maxLength": 64,
+                                    "nullable": true,
+                                    "description": "lot du fournisseur (enregistré en majuscules)"
+                                },
+                                "best_before": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "problems": {
+                        "type": "array",
+                        "description": "une non-conformité fournisseur (source supplier_delivery) par ligne signalée",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "line_id",
+                                "description"
+                            ],
+                            "properties": {
+                                "line_id": {
+                                    "type": "integer"
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "maxLength": 5000
+                                },
+                                "severity": {
+                                    "type": "string",
+                                    "enum": [
+                                        "minor",
+                                        "major",
+                                        "critical"
+                                    ]
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "quantité concernée, unité de base"
                                 }
                             }
                         }

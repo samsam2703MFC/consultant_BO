@@ -178,7 +178,8 @@
                     ${data.teams.map(x => `<button type="button" class="btn ${state.group === x.id ? 'btn-primary' : 'btn-outline-primary'}" data-group="${x.id ?? ''}">${esc(x.name || t('no_group'))}</button>`).join('')}</div>
                 <div class="ms-auto d-flex flex-wrap gap-2">
                     <button type="button" class="btn btn-sm btn-primary" data-pdf="${state.group ?? ''}" ${data.teams.length ? '' : 'disabled'}><i class="bi bi-printer"></i> ${esc(t(state.group ? 'pdf_team' : 'pdf_all'))}</button>
-                    <button type="button" class="btn btn-sm ${tablet ? 'btn-secondary' : 'btn-outline-primary'}" data-tablet><i class="bi bi-tablet"></i> ${esc(t('tablet'))}</button></div></div></div>`;
+                    <button type="button" class="btn btn-sm ${tablet ? 'btn-secondary' : 'btn-outline-primary'}" data-tablet><i class="bi bi-tablet"></i> ${esc(t('tablet'))}</button>
+                    <a class="btn btn-sm btn-outline-success" href="${esc(api.root)}/workshop/supply#tab=needs&date=${esc(data.week_start)}&weeks=1" title="${esc(t('supply_help'))}"><i class="bi bi-cart3"></i> ${esc(t('supply_next'))}</a></div></div></div>`;
     }
 
     function tabletCard() {

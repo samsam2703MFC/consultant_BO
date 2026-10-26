@@ -58,8 +58,8 @@
         'finances': 'finanse', 'analyse': 'analiza', 'langues': 'jezyki', 'poids': 'wagi', 'nutrition': 'odzywcze', 'archives': 'archiwum',
         'question': 'pytania', 'questions': 'pytania', 'tenue': 'pytania odziez', 'hygiene': 'higiena pytania', 'heures': 'godziny',
         'badge': 'identyfikatory', 'badges': 'identyfikatory', 'telephone': 'telefony', 'distribution': 'dystrybucja',
-        'document': 'dokumenty', 'documents': 'dokumenty', 'calcul': 'kalkulacja kalkulator', 'cmr': 'cmr dokumenty', 'imprimer': 'drukuj dokumenty',
-        'mail': 'poczta skrzynka', 'mails': 'poczta skrzynka e-maile', 'email': 'poczta skrzynka e-maile', 'courriel': 'poczta', 'boite': 'poczta skrzynka', 'reception': 'poczta dostawy', 'envoyes': 'wyslane niewyslane',
+        'document': 'dokumenty', 'documents': 'dokumenty', 'calcul': 'kalkulacja kalkulator', 'cmr': 'cmr dokumenty', 'imprimer': 'drukuj dokumenty druk',
+        'mail': 'poczta skrzynka', 'mails': 'poczta skrzynka e-maile', 'email': 'poczta skrzynka e-maile', 'courriel': 'poczta', 'boite': 'poczta skrzynka', 'reception': 'poczta dostawy przyjecie', 'envoyes': 'wyslane niewyslane',
         'messagerie': 'poczta', 'groupe': 'grupy grup', 'groupes': 'grupy grup', 'semaine': 'tydzien tygodni', 'qui': 'kto', 'livre': 'dostarcza dostawy', 'livrent': 'dostarcza dostawy', 'quoi': 'co', 'quand': 'kiedy', 'hebdomadaire': 'tydzien', 'hebdo': 'tydzien', 'cobot': 'coboty cobot', 'cobots': 'coboty cobot', 'photo': 'zdjecia', 'photos': 'zdjecia',
         'remplir': 'wypelnienia', 'importer': 'import', 'xlsx': 'excel', 'donnees': 'dane tabela', 'capacite': 'pojemnosc pojemnosci', 'capacites': 'pojemnosci',
         'machine': 'stanowiska maszyny', 'machines': 'stanowiska maszyny', 'poste': 'stanowiska', 'postes': 'stanowiska', 'four': 'stanowiska piece', 'fours': 'stanowiska piece',
@@ -84,7 +84,7 @@
         'decision': 'decyzja decyzji', 'decisions': 'decyzja', 'responsable': 'odpowiedzialny', 'qr': 'kod qr', 'pin': 'pin', 'scanner': 'skanuj', 'scan': 'skanuj',
         'mouvement': 'ruchy magazynowe', 'mouvements': 'ruchy magazynowe', 'registre': 'ruchy magazynowe', 'entree': 'przyjecia magazynowe', 'entrees': 'przyjecia magazynowe',
         'sortie': 'wydania magazynowe', 'sorties': 'wydania magazynowe', 'perime': 'przeterminowane', 'perimes': 'przeterminowane', 'peremption': 'przeterminowane daty waznosci',
-        'dlc': 'daty waznosci przeterminowane', 'lot': 'partie partia', 'lots': 'partie', 'fefo': 'fefo partie', 'carton': 'kartony', 'cartons': 'kartony',
+        'dlc': 'daty waznosci przeterminowane', 'lot': 'partie partia partii', 'lots': 'partie', 'fefo': 'fefo partie', 'carton': 'kartony', 'cartons': 'kartony',
         'magasin': 'magazyn magazynowe', 'solde': 'stan saldo', 'valeur': 'wartosc', 'fini': 'gotowe gotowych', 'finis': 'gotowe gotowych', 'finies': 'gotowe gotowych',
         'envoi': 'wysylki wysylka', 'envois': 'wysylki wysylek', 'erreur': 'bledy blad', 'erreurs': 'bledy blad', 'echec': 'bledy nie wyszly', 'echecs': 'bledy nie wyszly',
         'attente': 'czeka kolejka', 'bloque': 'czeka kolejka', 'bloques': 'czeka kolejka', 'file': 'kolejka', 'webhook': 'wysylki sklepow', 'webhooks': 'wysylki sklepow',
@@ -99,7 +99,13 @@
         'doublon': 'ponownie jedno', 'realisee': 'zrealizowane', 'realisees': 'zrealizowane', 'emballeur': 'opakowania',
         'assistant': 'kreator', 'assistants': 'kreator', 'wizard': 'kreator', 'creer': 'nowy kreator dodaj', 'creation': 'nowy kreator', 'ajouter': 'dodaj nowy',
         'nouvelle': 'nowy nowe', 'nouvel': 'nowy', 'vehicule': 'pojazd pojazdy', 'vehicules': 'pojazdy pojazd', 'salarie': 'pracownik pracownicy', 'salaries': 'pracownicy pracownik',
-        'compte': 'uzytkownik konto', 'comptes': 'uzytkownicy', 'identifiant': 'login', 'acces': 'uprawnienia dostep', 'droits': 'uprawnienia'
+        'proforma': 'proforma proformy', 'gratuit': 'gratis', 'conformite': 'zgodnosc', 'belgique': 'belgii belgia', 'onglet': 'zakladki', 'onglets': 'zakladki',
+        'instruction': 'instrukcja kroki', 'instructions': 'instrukcja kroki', 'fenetre': 'oknie okno', 'lancer': 'wprowadz wprowadzony', 'introduire': 'wprowadz',
+        'compte': 'uzytkownik konto', 'comptes': 'uzytkownicy', 'identifiant': 'login', 'acces': 'uprawnienia dostep', 'droits': 'uprawnienia',
+        'receptionner': 'przyjecie przyjmij dostawy', 'receptionne': 'przyjecie przyjete', 'nonconformite': 'niezgodnosc nc', 'nonconformites': 'niezgodnosci nc', 'abime': 'problem niezgodnosc uszkodzony', 'casse': 'problem uszkodzony',
+        'envoyer': 'wyslij wyslane', 'tout': 'wszystkie', 'tous': 'wszystkie', 'toutes': 'wszystkie', 'habituel': 'zwykly zwykle', 'langue': 'jezyk',
+        'commander': 'zamow zamowienia', 'apres': 'po', 'planification': 'planowanie planowaniu plan',
+        'feuille': 'arkusz', 'semaines': 'tyg tygodni', 'clic': 'kliknieciem', 'masse': 'wszystkie', 'compter': 'policzone liczenia', 'max': 'maks maksymalne', 'salaire': 'wynagrodzenie koszt pracodawcy', 'salaires': 'wynagrodzenie koszt pracodawcy', 'paie': 'wynagrodzenie placy', 'verrouiller': 'zamkniety zamknij', 'verrouille': 'zamkniety zamrozony', 'fige': 'zamrozony', 'modifier': 'zmien zmiana edycja korekta', 'calculateur': 'kalkulator', 'budget': 'budzet budzetu budzecie'
     };
 
     var menu = null;

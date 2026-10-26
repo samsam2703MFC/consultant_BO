@@ -184,6 +184,28 @@ final class OutputRepository extends WorkshopRepository
         return $out;
     }
 
+    /**
+     * Partie z przyjęć dostaw (asystent « Przyjęcie dostawy ») : ważne, z ostatnich 120 dni, najkrótsza data ważności
+     * najpierw (FEFO) — do 3 różnych partii na surowiec. @return array<int, list<array{lot_number:string, best_before:?string, received_on:string}>>
+     */
+    public function receivedLots(array $materialIds): array
+    {
+        if (!$materialIds) return [];
+        $in = implode(',', array_map('intval', $materialIds));
+        $out = [];
+        foreach ($this->all("SELECT l.id_raw_material, r.lot_number, r.best_before, MAX(r.received_on) AS received_on
+                             FROM n_po_receipt r JOIN n_po_line l ON l.id = r.id_po_line
+                             WHERE l.id_raw_material IN ({$in}) AND r.lot_number IS NOT NULL AND r.lot_number <> ''
+                               AND r.received_on >= CURDATE() - INTERVAL 120 DAY AND (r.best_before IS NULL OR r.best_before >= CURDATE())
+                             GROUP BY l.id_raw_material, r.lot_number, r.best_before
+                             ORDER BY r.best_before IS NULL, r.best_before, received_on") as $r) {
+            $m = (int) $r['id_raw_material'];
+            if (count($out[$m] ?? []) >= 3) continue;
+            $out[$m][] = ['lot_number' => $r['lot_number'], 'best_before' => $r['best_before'], 'received_on' => $r['received_on']];
+        }
+        return $out;
+    }
+
     /** @return array<int, array> surowiec => ostatnia partia użyta w grupie (podpowiedź « jak ostatnio ») */
     public function lastLots(int $groupId, array $materialIds, int $exceptOutput): array
     {

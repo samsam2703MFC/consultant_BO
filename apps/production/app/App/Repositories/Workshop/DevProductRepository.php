@@ -173,6 +173,12 @@ final class DevProductRepository extends WorkshopRepository
             ->execute([$finalProductId, $date, $userId, $finalProductId]);
     }
 
+    /** Pola test_product bez złączeń (kategoria, etykieta) — kreator produktu z testu. */
+    public function testProductRaw(int $id): ?array
+    {
+        return $this->all('SELECT id, name, id_category, id_section, id_recipe, label_type FROM test_product WHERE id = ?', [$id])[0] ?? null;
+    }
+
     public function product(int $id): ?array
     {
         return $this->all(self::PRODUCT . ' WHERE tp.id = ?', [$id])[0] ?? null;

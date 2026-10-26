@@ -24,6 +24,7 @@
                 <h4 class="card-title">Szczegóły zamówienia</h4>
             </div>
             <div class="card-body">
+                <?php $wizard = !empty($prefill['wizard']); if ($wizard) { $wizardStep = 2; require __DIR__ . '/_wizard_steps.view.php'; } ?>
 
                 <div class="row">
                     <div class="col-12">
@@ -76,7 +77,7 @@
                                 </label>
                                 <input type="date" class="form-control" name="expected_shipping_date"
                                        id="expected_shipping_date"
-                                       value="<?=old_value('expected_shipping_date')?>"
+                                       value="<?=old_value('expected_shipping_date', $wizard ? $prefill['date'] : '')?>"
                                        required>
                             </div>
                             <div class="col-md-4">
@@ -85,8 +86,8 @@
                                     <i class="bi bi-tag"></i> Typ zamówienia
                                 </label>
                                 <select class="form-select" name="order_type" id="order_type">
-                                    <option value="SUPPLEMENT" <?=old_select('order_type','SUPPLEMENT') ? 'selected':''?>>Domówienie</option>
-                                    <option value="STANDARD" <?=old_select('order_type','STANDARD') ? 'selected':''?>>Standardowe</option>
+                                    <option value="SUPPLEMENT" <?=old_select('order_type','SUPPLEMENT', $wizard ? $prefill['order_type'] : '') ? 'selected':''?>>Domówienie</option>
+                                    <option value="STANDARD" <?=old_select('order_type','STANDARD', $wizard ? $prefill['order_type'] : '') ? 'selected':''?>>Standardowe</option>
                                 </select>
                                 <?php else: ?>
                                 <input type="hidden" name="order_type" value="STANDARD">
@@ -100,13 +101,13 @@
                                     <i class="bi bi-chat-left-text"></i> Komentarz do zamówienia
                                 </label>
                                 <textarea class="form-control" name="order_description" id="order_description"
-                                          rows="3" placeholder="Dodaj dodatkowe informacje..."><?=old_value('order_description')?></textarea>
+                                          rows="3" placeholder="Dodaj dodatkowe informacje..."><?=htmlspecialchars((string) old_value('order_description', $wizard ? $prefill['note'] : ''))?></textarea>
                             </div>
                             <div class="col-md-4 d-flex align-items-center mt-4">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" role="switch"
                                            form="orderForm" name="is_freebie" id="is_freebie" value="1"
-                                           <?= old_checkbox('is_freebie', 1, 0) ?>>
+                                           <?= old_checkbox('is_freebie', 1, $wizard && $prefill['is_freebie'] ? 1 : 0) ?>>
                                     <label class="form-check-label fw-bold" for="is_freebie">
                                         <span class="badge bg-success fs-6">GRATIS</span>
                                         <div class="small text-muted mt-1">Zamówienie oznaczone jako gratis zostanie pominięte w dokumencie różnic przy generowaniu wysyłki.</div>
@@ -275,7 +276,7 @@
                         <div class="row">
                             <div class="col-12">
                                 <button type="submit" class="btn btn-success btn-lg">
-                                    <i class="bi bi-check-circle"></i> Utwórz zamówienie
+                                    <i class="bi bi-check-circle"></i> Utwórz zamówienie i proformę
                                 </button>
                                 <a href="<?=ROOT?>/client-orders" role="button" class="btn btn-secondary btn-lg">
                                     <i class="bi bi-arrow-left"></i> Anuluj

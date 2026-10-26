@@ -212,9 +212,10 @@ final class OutputService
         $lots = $this->repo->lots($id);
         $recipe = $item && $item['id_recipe'] ? $this->repo->recipe((int) $item['id_recipe']) : [];
         $last = $this->repo->lastLots((int) $o['id_group'], array_map(fn($r) => (int) $r['material_id'], $recipe), $id);
+        $received = $this->repo->receivedLots(array_map(fn($r) => (int) $r['material_id'], $recipe));
         $factor = $this->factor($item, (float) $o['quantity']);
         $fr = $context->translator->lang() === 'fr';
-        $ingredients = array_map(function ($r) use ($lots, $last, $factor, $fr) {
+        $ingredients = array_map(function ($r) use ($lots, $last, $received, $factor, $fr) {
             $m = (int) $r['material_id'];
             $l = $lots[$m] ?? null;
             return [
@@ -224,6 +225,8 @@ final class OutputService
                 'lot_number' => $l['lot_number'] ?? null, 'best_before' => $l['best_before'] ?? null,
                 'photo' => $l !== null && $l['id_photo'] !== null,
                 'last' => isset($last[$m]) ? ['lot_number' => $last[$m]['lot_number'], 'best_before' => $last[$m]['best_before']] : null,
+                // Partie z dostaw (FEFO) : przyjęte z partią i datą ważności, najkrótsza data najpierw.
+                'received' => $received[$m] ?? [],
             ];
         }, $recipe);
         $row = $this->batchRow($o);

@@ -48,11 +48,12 @@
             weeks: Math.min(4, Math.max(1, Number(p.get('weeks')) || 1)),
             status: STATUSES.includes(p.get('status')) ? p.get('status') : 'open',
             order: Number(p.get('order')) || null,
+            receive: p.get('receive') === '1',
             kind: ['all', 'raw', 'pack'].includes(p.get('kind')) ? p.get('kind') : 'all',
             only: p.get('only') !== '0',
             inv: p.get('inv') === 'map' ? 'map' : Number(p.get('inv')) || null,
             istatus: ['open', 'accepted', 'disputed', 'all'].includes(p.get('ist')) ? p.get('ist') : 'open',
-            search: '', stockMode: 'all', used: true,
+            search: '', stockMode: 'all', used: true, inventory: false,
         };
     }
     function writeHash() {
@@ -79,6 +80,8 @@
             if (state.tab === 'needs') data.needs = await api.get(`/supply/needs?date=${state.date}&weeks=${state.weeks}`);
             if (state.tab === 'orders' || !data.orders) data.orders = await api.get(`/supply/orders?status=${state.status}`);
             if (state.tab === 'orders' && state.order) data.order = await api.get(`/supply/orders/${state.order}`);
+            // Z « Dostawy surowców » (przycisk Przyjmij) : zamówienie otwiera się od razu w asystencie przyjęcia.
+            if (state.receive && data.order) { receiving = !!data.order.can_receive; state.receive = false; }
             if (state.tab === 'stock') data.materials = await api.get('/supply/materials');
             if (state.tab === 'invoices') {
                 if (state.inv === 'map') data.mappings = await api.get('/supply/mappings');
@@ -100,13 +103,14 @@
         const y = window.scrollY;
         const invoices = () => state.inv === 'map' ? drawMappings() : state.inv && data.invoice ? drawInvoice() : drawInvoices();
         const body = state.tab === 'needs' ? drawNeeds() : state.tab === 'stock' ? drawStock() : state.tab === 'invoices' ? invoices()
-            : (state.order && data.order ? drawOrder() : drawOrders());
+            : (state.order && data.order ? drawOrder() : data.batch ? drawBatch() : drawOrders());
         el.innerHTML = shell(body);
         bindShell();
         if (state.tab === 'needs') bindNeeds();
         else if (state.tab === 'stock') bindStock();
         else if (state.tab === 'invoices') (state.inv === 'map' ? bindMappings : state.inv && data.invoice ? bindInvoice : bindInvoices)();
         else if (state.order && data.order) bindOrder();
+        else if (data.batch) bindBatch();
         else bindOrders();
         window.scrollTo(0, y);
     }
@@ -117,6 +121,7 @@
             state.tab = a.dataset.tab;
             state.order = null;
             state.inv = null;
+            data.batch = null;
             receiving = false;
             data.preview = null;
             resetInvoice();
@@ -274,6 +279,8 @@
             ui.notify(true, t('orders_created', {n: res.orders.length}));
             state.tab = 'orders';
             state.status = 'open';
+            // Kilku dostawców : podsumowanie (e-mail, dzień dostawy, język) i « Wyślij wszystkie » ; jeden : od razu jego zamówienie.
+            data.batch = res.orders.length > 1 ? res.orders : null;
             state.order = res.orders.length === 1 ? res.orders[0].id : null;
             data.orders = null;
             await load();
@@ -301,6 +308,68 @@
                     <td class="text-end">${o.price_gaps ? `<span class="badge bg-warning text-dark">${o.price_gaps}</span>` : '—'}</td>
                     <td>${o.sent_at ? `${esc(day(o.sent_at.slice(0, 10)))} · ${esc(t('sent_by.' + o.sent_by))}` : '—'}</td></tr>`).join('')
                     || `<tr><td colspan="9" class="text-muted">${esc(t('empty_orders'))}</td></tr>`}</tbody></table></div></div></div>`;
+    }
+
+    // Po « Utwórz wszystkie » : jedno podsumowanie nowych zamówień (adres e-mail, dzień dostawy wg zwykłych dni dostawcy,
+    // język dostawcy), potem « Wyślij wszystkie » — każde zamówienie zapisane i wysłane jak pojedynczo ; błąd zostaje w wierszu.
+    function drawBatch() {
+        const rows = data.batch;
+        const wd = (k) => new Date(2024, 0, k, 12).toLocaleDateString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'short'});
+        const sendable = rows.filter(o => o.status === 'draft');
+        return `<div class="card tfb-supply-batch"><div class="card-header"><h5 class="mb-1">${esc(t('batch.title', {n: rows.length}))}</h5><p class="small text-muted mb-0">${esc(t('batch.help'))}</p></div>
+            <div class="card-body pt-2"><div class="table-responsive"><table class="table table-sm align-middle mb-2">
+                <thead><tr><th>${esc(t('col.supplier'))}</th><th class="text-end">${esc(t('col.lines'))}</th><th class="text-end">${esc(t('col.ordered'))}</th><th>${esc(t('batch.email'))}</th>
+                    <th>${esc(t('col.delivery'))}</th><th>${esc(t('batch.language'))}</th><th>${esc(t('col.status'))}</th></tr></thead>
+                <tbody>${rows.map(o => `<tr data-batch="${o.id}">
+                    <td><a href="#tab=orders&order=${o.id}" data-batch-open="${o.id}"><strong>${esc(o.supplier.name)}</strong></a><div class="small text-muted">${esc(o.code)}</div></td>
+                    <td class="text-end">${o.lines.length}</td><td class="text-end">${esc(money(o.value_ordered))}</td>
+                    <td>${o.status === 'draft' ? `<input type="email" class="form-control form-control-sm" data-bemail value="${esc(o.email_to || '')}" placeholder="${esc(t('batch.no_email'))}" maxlength="255">` : esc(o.email_to || '—')}</td>
+                    <td>${o.status === 'draft' ? `<input type="date" class="form-control form-control-sm" data-bdate value="${esc(o.delivery_date || '')}">` : esc(day(o.delivery_date))}
+                        <div class="small text-muted">${o.usual_days && o.usual_days.length ? esc(t('batch.usual', {days: o.usual_days.map(wd).join(', ')})) : esc(t('batch.usual_unknown'))}</div></td>
+                    <td>${o.status === 'draft' ? `<select class="form-select form-select-sm" data-blang>${['pl', 'fr'].map(l => `<option value="${l}" ${o.language === l ? 'selected' : ''}>${esc(t('lang.' + l))}</option>`).join('')}</select>` : esc(t('lang.' + o.language))}</td>
+                    <td data-bstate>${badge(o.status)}${o.batch_error ? `<div class="small text-danger">${esc(o.batch_error)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    ${sendable.length ? `<button type="button" class="btn btn-primary" data-batch-send><i class="bi bi-send"></i> ${esc(t('batch.send_all', {n: sendable.length}))}</button>
+                    <button type="button" class="btn btn-outline-secondary" data-batch-save>${esc(t('batch.save_only'))}</button>` : ''}
+                    <button type="button" class="btn btn-link ms-auto" data-batch-close>${esc(t('batch.to_list'))}</button></div></div></div>`;
+    }
+
+    function bindBatch() {
+        const values = (tr) => ({email_to: tr.querySelector('[data-bemail]').value.trim() || null, delivery_date: tr.querySelector('[data-bdate]').value || null, language: tr.querySelector('[data-blang]').value});
+        const close = () => { data.batch = null; data.orders = null; load(); };
+        el.querySelector('[data-batch-close]').addEventListener('click', close);
+        el.querySelectorAll('[data-batch-open]').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); state.order = Number(a.dataset.batchOpen); data.batch = null; load(); }));
+        // Zapis jednego zamówienia (e-mail zapamiętany u dostawcy, gdy go nie miał) ; send = potem wysyłka mailem.
+        const one = async (o, tr, send) => {
+            const v = values(tr);
+            try {
+                if (send && !v.email_to) throw new Error(t('batch.missing_email'));
+                const body = {...v, save_supplier_email: !!v.email_to && !o.supplier_email};
+                let res = await api.patch(`/supply/orders/${o.id}`, body);
+                if (send) res = await api.post(`/supply/orders/${o.id}/send`, {});
+                Object.assign(o, res, {batch_error: null});
+                return true;
+            } catch (err) {
+                Object.assign(o, v, {batch_error: err.status ? errText(err) : err.message});
+                return false;
+            }
+        };
+        const run = async (btn, send) => {
+            const drafts = data.batch.filter(o => o.status === 'draft');
+            if (send) {
+                const noMail = drafts.filter(o => !values(el.querySelector(`tr[data-batch="${o.id}"]`)).email_to);
+                if (noMail.length) { ui.notify(false, t('batch.missing_emails', {list: noMail.map(o => o.supplier.name).join(', ')})); return; }
+                if (!window.confirm(t('batch.confirm', {n: drafts.length}))) return;
+            }
+            el.querySelectorAll('[data-batch-send], [data-batch-save]').forEach(b => { b.disabled = true; });
+            let ok = 0;
+            for (const o of drafts) if (await one(o, el.querySelector(`tr[data-batch="${o.id}"]`), send)) ok++;
+            ui.notify(ok === drafts.length, t(send ? 'batch.sent' : 'batch.saved', {ok, n: drafts.length}));
+            data.orders = null;
+            draw();
+        };
+        el.querySelector('[data-batch-send]')?.addEventListener('click', (e) => run(e.currentTarget, true));
+        el.querySelector('[data-batch-save]')?.addEventListener('click', (e) => run(e.currentTarget, false));
     }
 
     function bindOrders() {
@@ -359,17 +428,37 @@
                 <div class="small text-muted">${esc(t('mail.to'))} : <strong>${esc(data.preview.recipient || t('no_email'))}</strong></div>
                 <div class="small text-muted">${esc(t('mail.subject'))} : <strong>${esc(data.preview.subject)}</strong></div>
                 <pre class="tfb-supply-mail-body mb-0">${esc(data.preview.body)}</pre><div class="small text-muted mt-1">${esc(t('mail.csv'))}</div></div></div>` : '';
-        const receive = receiving && o.can_receive ? `<div class="card tfb-supply-receive"><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h5 class="mb-0">${esc(t('receive_title'))}</h5>
-                <input class="form-control form-control-sm" type="date" data-received-on value="${todayIso}" max="${todayIso}" style="width:auto"></div>
-                <div class="card-body pt-0"><table class="table table-sm align-middle mb-2"><thead><tr><th>${esc(t('col.material'))}</th><th class="text-end">${esc(t('col.remaining'))}</th><th>${esc(t('col.received_now'))}</th><th>${esc(t('col.real_price'))}</th></tr></thead>
+        // Asystent « Przyjęcie dostawy » (audyt 2, P12) : 1 Dostawa → 2 Ilości (zamówione) → 3 Partie i daty ważności →
+        // 4 Problem ? (niezgodność dostawcy wypełniona) → 5 Zatwierdź. Kroki przełączane w przeglądarce, zapis na końcu.
+        const rsteps = ['rs.delivery', 'rs.qty', 'rs.lots', 'rs.problem', 'rs.confirm'];
+        const receive = receiving && o.can_receive ? `<div class="card tfb-supply-receive" data-receive>
+                <div class="card-header"><h5 class="mb-2">${esc(t('receive_title'))} · ${esc(o.code)}</h5>
+                    <ol class="at-steps at-steps-compact mb-0">${rsteps.map((k, i) => `<li data-rtab="${i}" class="${i === 0 ? 'is-active' : ''}"><span>${esc(t(k))}</span></li>`).join('')}</ol></div>
+                <div class="card-body pt-2">
+                <section data-rstep="0"><p class="text-muted mb-2">${esc(t('rs.delivery_help', {supplier: o.supplier.name}))}</p>
+                    <label class="form-label">${esc(t('rs.date'))} <input class="form-control form-control-sm d-inline-block ms-2" type="date" data-received-on value="${todayIso}" max="${todayIso}" style="width:auto"></label>
+                    <ul class="small mb-0">${o.lines.filter(l => l.remaining > 0).map(l => `<li>${esc(l.name)} — ${esc(q(l, l.remaining))}</li>`).join('') || `<li>${esc(t('rs.nothing_left'))}</li>`}</ul></section>
+                <section data-rstep="1" hidden><table class="table table-sm align-middle mb-2"><thead><tr><th>${esc(t('col.material'))}</th><th class="text-end">${esc(t('col.remaining'))}</th><th>${esc(t('col.received_now'))}</th><th>${esc(t('col.real_price'))}</th></tr></thead>
                 <tbody>${o.lines.map(l => `<tr data-rline="${l.id}"><td>${esc(l.name)}</td><td class="text-end">${esc(q(l, l.remaining))}</td>
                     <td><div class="input-group input-group-sm tfb-supply-qty"><input class="form-control text-end" inputmode="decimal" data-rqty value="${esc(toInput(l, l.remaining))}"><span class="input-group-text">${esc(l.unit)}</span></div></td>
-                    <td><div class="input-group input-group-sm tfb-supply-qty"><input class="form-control text-end" inputmode="decimal" data-rprice value="${l.unit_price === null ? '' : esc(String(Math.round(l.unit_price * l.factor * 10000) / 10000).replace('.', ','))}"><span class="input-group-text">zł/${esc(l.unit)}</span></div></td></tr>`).join('')}</tbody></table>
-                <button type="button" class="btn btn-sm btn-primary" data-act="save-receipt">${esc(t('act.save_receipt'))}</button>
-                <button type="button" class="btn btn-sm btn-link" data-act="close-receipt">${esc(t('act.close'))}</button></div></div>` : '';
+                    <td><div class="input-group input-group-sm tfb-supply-qty"><input class="form-control text-end" inputmode="decimal" data-rprice value="${l.unit_price === null ? '' : esc(String(Math.round(l.unit_price * l.factor * 10000) / 10000).replace('.', ','))}"><span class="input-group-text">zł/${esc(l.unit)}</span></div></td></tr>`).join('')}</tbody></table></section>
+                <section data-rstep="2" hidden><p class="text-muted mb-2">${esc(t('rs.lots_help'))}</p><table class="table table-sm align-middle mb-2"><thead><tr><th>${esc(t('col.material'))}</th><th>${esc(t('rs.lot'))}</th><th>${esc(t('rs.best_before'))}</th></tr></thead>
+                <tbody>${o.lines.map(l => `<tr data-lotline="${l.id}"><td>${esc(l.name)}</td><td><input class="form-control form-control-sm" data-rlot maxlength="64" autocapitalize="characters"></td>
+                    <td><input class="form-control form-control-sm" type="date" data-rbb min="${todayIso}"></td></tr>`).join('')}</tbody></table></section>
+                <section data-rstep="3" hidden><p class="text-muted mb-2">${esc(t('rs.problem_help'))}</p>
+                    ${o.lines.map(l => `<div class="tfb-supply-problem" data-pline="${l.id}"><label class="form-check"><input class="form-check-input" type="checkbox" data-pon> <span class="form-check-label">${esc(l.name)}</span></label>
+                        <div class="row g-2 mb-2" data-pfields hidden><div class="col-12 col-md-6"><input class="form-control form-control-sm" data-pdesc maxlength="5000" placeholder="${esc(t('rs.problem_desc'))}"></div>
+                        <div class="col-6 col-md-3"><select class="form-select form-select-sm" data-psev><option value="minor">${esc(t('rs.sev.minor'))}</option><option value="major">${esc(t('rs.sev.major'))}</option><option value="critical">${esc(t('rs.sev.critical'))}</option></select></div>
+                        <div class="col-6 col-md-3"><div class="input-group input-group-sm"><input class="form-control text-end" inputmode="decimal" data-pqty placeholder="${esc(t('rs.problem_qty'))}"><span class="input-group-text">${esc(l.unit)}</span></div></div></div></div>`).join('')}</section>
+                <section data-rstep="4" hidden><div data-rsummary></div></section>
+                <div class="d-flex flex-wrap gap-2 mt-2 align-items-center">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-rback hidden>‹ ${esc(t('rs.back'))}</button>
+                    <button type="button" class="btn btn-sm btn-link" data-act="close-receipt">${esc(t('act.close'))}</button>
+                    <button type="button" class="btn btn-sm btn-primary ms-auto" data-rnext>${esc(t('rs.next'))} ›</button>
+                    <button type="button" class="btn btn-sm btn-success ms-auto" data-act="save-receipt" hidden>${esc(t('act.save_receipt'))}</button></div></div></div>` : '';
         const receipts = o.receipts.length ? `<div class="small text-muted mt-2">${esc(t('receipts'))} : ${o.receipts.map(r => {
             const l = o.lines.find(x => x.id === r.line_id);
-            return `${esc(day(r.received_on))} ${esc(l ? l.name : '')} ${esc(l ? q(l, r.quantity) : '')}${r.unit_price !== null && l ? ' @ ' + esc(unitPrice(l, r.unit_price)) : ''}`;
+            return `${esc(day(r.received_on))} ${esc(l ? l.name : '')} ${esc(l ? q(l, r.quantity) : '')}${r.unit_price !== null && l ? ' @ ' + esc(unitPrice(l, r.unit_price)) : ''}${r.lot_number ? ' · ' + esc(t('rs.lot')) + ' ' + esc(r.lot_number) + (r.best_before ? ' (' + esc(day(r.best_before)) + ')' : '') : ''}${r.nc_id ? ' · <a href="' + esc(api.root) + '/purchasing/nc">NC</a>' : ''}${r.employee ? ' · ' + esc(t('rs.by_tablet', {name: r.employee})) : ''}`;
         }).join(' · ')}</div>` : '';
         return `<p><a href="#tab=orders" data-back>‹ ${esc(t('back_orders'))}</a></p>
             <div class="card"><div class="card-header d-flex flex-wrap align-items-center gap-2"><h5 class="mb-0">${esc(o.code)} · ${esc(o.supplier.name)}</h5>${badge(o.status)}
@@ -398,6 +487,58 @@
                 if (btn) btn.disabled = false;
             }
         };
+        // Asystent przyjęcia : dane z kroków (ilości, ceny, partie, problemy) ; null = błąd pokazany.
+        const receiptBody = () => {
+            const box = el.querySelector('[data-receive]');
+            if (!box) return null;
+            const lines = [];
+            for (const tr of box.querySelectorAll('tr[data-rline]')) {
+                const l = o.lines.find(x => x.id === Number(tr.dataset.rline));
+                const v = ui.num(tr.querySelector('[data-rqty]').value);
+                const p = ui.num(tr.querySelector('[data-rprice]').value);
+                if (v === null || v === 0) continue;
+                if (typeof v !== 'number' || v < 0 || (p !== null && (typeof p !== 'number' || p <= 0))) { ui.notify(false, t('qty_invalid', {list: l.name})); return null; }
+                const lt = box.querySelector(`tr[data-lotline="${l.id}"]`);
+                lines.push({id: l.id, quantity: Math.round(v * l.factor * 1000) / 1000, unit_price: p === null ? null : p / l.factor,
+                    lot_number: lt.querySelector('[data-rlot]').value.trim().replace(/\s+/g, ' ').toUpperCase() || null, best_before: lt.querySelector('[data-rbb]').value || null});
+            }
+            if (!lines.length) { ui.notify(false, t('nothing_received')); return null; }
+            const problems = [];
+            for (const pb of box.querySelectorAll('[data-pline]')) {
+                if (!pb.querySelector('[data-pon]').checked) continue;
+                const l = o.lines.find(x => x.id === Number(pb.dataset.pline));
+                const desc = pb.querySelector('[data-pdesc]').value.trim();
+                if (!desc) { ui.notify(false, t('rs.problem_missing', {name: l.name})); return null; }
+                const pq = ui.num(pb.querySelector('[data-pqty]').value);
+                problems.push({line_id: l.id, description: desc, severity: pb.querySelector('[data-psev]').value, quantity: typeof pq === 'number' && pq > 0 ? Math.round(pq * l.factor * 1000) / 1000 : null});
+            }
+            return {received_on: box.querySelector('[data-received-on]').value || todayIso, lines, problems};
+        };
+        const bindReceive = () => {
+            const box = el.querySelector('[data-receive]');
+            if (!box) return;
+            let step = 0;
+            const last = 4;
+            const show = (k) => {
+                step = Math.max(0, Math.min(last, k));
+                box.querySelectorAll('[data-rstep]').forEach(sct => { sct.hidden = Number(sct.dataset.rstep) !== step; });
+                box.querySelectorAll('[data-rtab]').forEach(tb => { const n = Number(tb.dataset.rtab); tb.classList.toggle('is-active', n === step); tb.classList.toggle('is-done', n < step); });
+                box.querySelector('[data-rback]').hidden = step === 0;
+                box.querySelector('[data-rnext]').hidden = step === last;
+                box.querySelector('[data-act="save-receipt"]').hidden = step !== last;
+                if (step === last) {
+                    const body = receiptBody();
+                    if (!body) { show(1); return; }
+                    box.querySelector('[data-rsummary]').innerHTML = `<p class="mb-1">${esc(t('rs.summary', {date: day(body.received_on), n: body.lines.length}))}</p>
+                        <ul class="small mb-1">${body.lines.map(x => { const l = o.lines.find(y => y.id === x.id); return `<li>${esc(l.name)} : ${esc(q(l, x.quantity))}${x.lot_number ? ' · ' + esc(t('rs.lot')) + ' ' + esc(x.lot_number) : ' · <span class="text-warning">' + esc(t('rs.no_lot')) + '</span>'}${x.best_before ? ' (' + esc(day(x.best_before)) + ')' : ''}</li>`; }).join('')}</ul>
+                        ${body.problems.length ? `<p class="text-danger mb-0">${esc(t('rs.summary_nc', {n: body.problems.length}))}</p>` : ''}`;
+                }
+            };
+            box.querySelector('[data-rnext]').addEventListener('click', () => show(step + 1));
+            box.querySelector('[data-rback]').addEventListener('click', () => show(step - 1));
+            box.querySelectorAll('[data-pon]').forEach(c => c.addEventListener('change', () => { c.closest('[data-pline]').querySelector('[data-pfields]').hidden = !c.checked; }));
+        };
+        bindReceive();
         const head = el.querySelector('[data-head]');
         head?.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -442,35 +583,117 @@
             if (act === 'receive') { receiving = true; draw(); el.querySelector('.tfb-supply-receive')?.scrollIntoView({block: 'center'}); return; }
             if (act === 'close-receipt') { receiving = false; draw(); return; }
             if (act === 'save-receipt') {
-                const lines = [];
-                for (const tr of el.querySelectorAll('tr[data-rline]')) {
-                    const l = o.lines.find(x => x.id === Number(tr.dataset.rline));
-                    const v = ui.num(tr.querySelector('[data-rqty]').value);
-                    const p = ui.num(tr.querySelector('[data-rprice]').value);
-                    if (v === null || v === 0) continue;
-                    if (typeof v !== 'number' || v < 0 || (p !== null && (typeof p !== 'number' || p <= 0))) { ui.notify(false, t('qty_invalid', {list: l.name})); return; }
-                    lines.push({id: l.id, quantity: Math.round(v * l.factor * 1000) / 1000, unit_price: p === null ? null : p / l.factor});
-                }
-                if (!lines.length) { ui.notify(false, t('nothing_received')); return; }
-                receiving = false;
-                return run(b, () => api.post(`/supply/orders/${o.id}/receive`, {received_on: el.querySelector('[data-received-on]').value || todayIso, lines}), t('received_ok'));
+                const body = receiptBody();
+                if (!body) return;
+                // Asystent zamyka się dopiero po zapisie : przy błędzie wpisane ilości, partie i problemy zostają.
+                return run(b, async () => { const res = await api.post(`/supply/orders/${o.id}/receive`, body); receiving = false; return res; }, body.problems.length ? t('rs.received_nc', {n: body.problems.length}) : t('received_ok'));
             }
         }));
     }
 
     // --- Surowce i stany ----------------------------------------------------------------------------------------------
+    const stockRows = () => data.materials.rows.filter(r => kindOk(r) && searchOk(r) && (state.stockMode === 'all' || r.mode === state.stockMode)
+        && (!state.used || r.weekly_use > 0 || r.stock !== null || r.on_order > 0 || r.mode === 'stock'));
+
+    // Inwentaryzacja całego magazynu : arkusz do wydruku (kategoria, surowiec, stan w systemie, miejsce na wpis),
+    // potem wszystkie policzone ilości wpisane naraz i jeden zapis (pozycje bez wpisu zostają bez zmian).
+    function drawInventory() {
+        const rows = stockRows();
+        const groups = [];
+        rows.forEach(r => { const k = r.category || t('inv_sheet.no_category'); let g = groups.find(x => x.k === k); if (!g) groups.push(g = {k, rows: []}); g.rows.push(r); });
+        return `<div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-inv-back>‹ ${esc(t('inv_sheet.back'))}</button>
+                ${kindButtons()}
+                <label class="small d-flex align-items-center gap-1 m-0">${esc(t('inv_sheet.date'))} <input type="date" class="form-control form-control-sm" data-inv-date value="${todayIso}" max="${todayIso}" style="width:auto"></label>
+                <input class="form-control form-control-sm" style="max-width:220px" data-inv-note maxlength="255" placeholder="${esc(t('inv_sheet.note'))}">
+                <button type="button" class="btn btn-sm btn-outline-primary ms-auto" data-inv-print><i class="bi bi-printer"></i> ${esc(t('inv_sheet.print'))}</button>
+                <button type="button" class="btn btn-sm btn-primary" data-inv-save ${data.materials.can_write ? '' : 'disabled'}><i class="bi bi-check2-all"></i> ${esc(t('inv_sheet.save'))} <span data-inv-n>(0)</span></button></div></div>
+            <p class="small text-muted mb-2">${esc(t('inv_sheet.help', {n: rows.length}))}</p>
+            <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm align-middle mb-0 tfb-supply-table tfb-inv-sheet">
+                <thead><tr><th>${esc(t('col.material'))}</th><th class="text-end">${esc(t('inv_sheet.system'))}</th><th>${esc(t('inv_sheet.counted'))}</th><th class="text-end">${esc(t('inv_sheet.diff'))}</th></tr></thead>
+                <tbody>${groups.map(g => `<tr class="table-light"><th colspan="4">${esc(g.k)} <span class="text-muted small">(${g.rows.length})</span></th></tr>${g.rows.map(r => `<tr data-inv="${r.id}">
+                    <td><strong>${esc(r.name)}</strong>${r.count_date ? `<div class="small text-muted">${esc(t('inv_sheet.last', {date: day(r.count_date)}))}</div>` : ''}</td>
+                    <td class="text-end">${r.stock !== null ? esc(q(r, r.stock)) : '—'}</td>
+                    <td><div class="input-group input-group-sm tfb-supply-qty"><input class="form-control text-end" inputmode="decimal" data-inv-qty placeholder="—" aria-label="${esc(t('inv_sheet.counted'))} ${esc(r.name)}"><span class="input-group-text">${esc(r.unit)}</span></div></td>
+                    <td class="text-end" data-inv-diff>—</td></tr>`).join('')}`).join('')
+                    || `<tr><td colspan="4" class="text-muted">${esc(t('empty_materials'))}</td></tr>`}</tbody></table></div></div></div>`;
+    }
+
+    function bindInventory() {
+        el.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { state.kind = b.dataset.kind; writeHash(); draw(); }));
+        el.querySelector('[data-inv-back]').addEventListener('click', () => { state.inventory = false; draw(); });
+        const rowOf = (tr) => data.materials.rows.find(x => x.id === Number(tr.dataset.inv));
+        const filled = () => [...el.querySelectorAll('tr[data-inv]')].filter(tr => tr.querySelector('[data-inv-qty]').value.trim() !== '');
+        const refresh = () => {
+            filled().forEach(tr => {
+                const r = rowOf(tr);
+                const v = ui.num(tr.querySelector('[data-inv-qty]').value);
+                const cell = tr.querySelector('[data-inv-diff]');
+                if (typeof v !== 'number' || v < 0) { cell.innerHTML = `<span class="text-danger">${esc(t('count_invalid'))}</span>`; return; }
+                const diff = v * r.factor - (r.stock ?? 0);
+                cell.innerHTML = r.stock === null ? '—' : `<span class="${Math.abs(diff) < 1e-6 ? 'text-muted' : (diff < 0 ? 'text-danger' : 'text-success')}">${diff > 0 ? '+' : ''}${esc(q(r, diff))}</span>`;
+            });
+            el.querySelectorAll('tr[data-inv]').forEach(tr => { if (tr.querySelector('[data-inv-qty]').value.trim() === '') tr.querySelector('[data-inv-diff]').textContent = '—'; });
+            el.querySelector('[data-inv-n]').textContent = `(${filled().length})`;
+        };
+        el.querySelector('.tfb-inv-sheet')?.addEventListener('input', refresh);
+        // Enter = następna pozycja (liczenie z arkuszem w ręku).
+        el.querySelectorAll('[data-inv-qty]').forEach((input, i, all) => input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); all[i + 1]?.focus(); } }));
+        el.querySelector('[data-inv-print]').addEventListener('click', () => {
+            const rows = stockRows();
+            const w = window.open('', '_blank');
+            if (!w) { ui.notify(false, t('inv_sheet.popup')); return; }
+            const groups = [];
+            rows.forEach(r => { const k = r.category || t('inv_sheet.no_category'); let g = groups.find(x => x.k === k); if (!g) groups.push(g = {k, rows: []}); g.rows.push(r); });
+            w.document.write(`<!doctype html><html lang="${api.lang}"><head><meta charset="utf-8"><title>${esc(t('inv_sheet.title'))}</title><style>
+                body{font:12px/1.35 Arial,sans-serif;margin:16mm 12mm;color:#222} h1{font-size:17px;color:#8D1D2C;margin:0 0 4px} p{margin:0 0 10px;color:#555}
+                table{width:100%;border-collapse:collapse} th,td{border:0.5px solid #bbb;padding:4px 6px;text-align:left} th{background:#8D1D2C;color:#fff}
+                tr.g td{background:#F8ECEE;font-weight:bold;color:#8D1D2C} td.n{text-align:right;white-space:nowrap} td.box{width:28%} @page{size:A4;margin:10mm}</style></head><body>
+                <h1>${esc(t('inv_sheet.title'))}</h1><p>${esc(t('inv_sheet.print_sub', {date: fullDay(el.querySelector('[data-inv-date]').value || todayIso), n: rows.length}))}</p>
+                <table><thead><tr><th>${esc(t('col.material'))}</th><th>${esc(t('inv_sheet.unit'))}</th><th>${esc(t('inv_sheet.system'))}</th><th>${esc(t('inv_sheet.counted'))}</th></tr></thead><tbody>
+                ${groups.map(g => `<tr class="g"><td colspan="4">${esc(g.k)}</td></tr>${g.rows.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.unit)}</td><td class="n">${r.stock !== null ? esc(q(r, r.stock)) : '—'}</td><td class="box"></td></tr>`).join('')}`).join('')}
+                </tbody></table></body></html>`);
+            w.document.close();
+            w.focus();
+            w.print();
+        });
+        el.querySelector('[data-inv-save]').addEventListener('click', async (e) => {
+            const counts = [];
+            for (const tr of filled()) {
+                const r = rowOf(tr);
+                const v = ui.num(tr.querySelector('[data-inv-qty]').value);
+                if (typeof v !== 'number' || v < 0) { ui.notify(false, t('qty_invalid', {list: r.name})); tr.querySelector('[data-inv-qty]').focus(); return; }
+                counts.push({id: r.id, quantity: Math.round(v * r.factor * 1000) / 1000});
+            }
+            if (!counts.length) { ui.notify(false, t('inv_sheet.nothing')); return; }
+            const date = el.querySelector('[data-inv-date]').value || todayIso;
+            if (!window.confirm(t('inv_sheet.confirm', {n: counts.length, date: fullDay(date)}))) return;
+            e.currentTarget.disabled = true;
+            try {
+                const res = await api.post('/supply/materials/counts', {count_date: date, note: el.querySelector('[data-inv-note]').value.trim() || null, counts});
+                data.materials = res;
+                state.inventory = false;
+                ui.notify(true, t('inv_sheet.saved', {n: res.saved}));
+                draw();
+            } catch (err) { ui.notify(false, errText(err)); e.currentTarget.disabled = false; }
+        });
+    }
+
     function drawStock() {
+        if (state.inventory) return drawInventory();
         const d = data.materials;
         const editable = d.can_write;
-        const rows = d.rows.filter(r => kindOk(r) && searchOk(r) && (state.stockMode === 'all' || r.mode === state.stockMode)
-            && (!state.used || r.weekly_use > 0 || r.stock !== null || r.on_order > 0 || r.mode === 'stock'));
+        const rows = stockRows();
+        const suggestable = rows.filter(r => r.weekly_use > 0);
         const minmax = (r, field) => `<div class="input-group input-group-sm tfb-supply-qty"><input class="form-control text-end" inputmode="decimal" data-limit="${field}" value="${esc(toInput(r, r[field]))}" placeholder="—" ${editable ? '' : 'disabled'}
             aria-label="${esc(t('col.' + field))}"><span class="input-group-text">${esc(r.unit)}</span></div>`;
         return `<div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">
                 ${kindButtons()}
                 <div class="btn-group btn-group-sm" role="group">${['all', 'stock', 'order'].map(m => `<button type="button" class="btn ${state.stockMode === m ? 'btn-primary' : 'btn-outline-primary'}" data-smode="${m}">${esc(t('smode.' + m))}</button>`).join('')}</div>
                 <label class="form-check form-switch m-0 small"><input class="form-check-input" type="checkbox" data-used ${state.used ? 'checked' : ''}> ${esc(t('only_used'))}</label>
-                <input class="form-control form-control-sm ms-auto" style="max-width:220px" data-search value="${esc(state.search)}" placeholder="${esc(t('search'))}"></div></div>
+                <input class="form-control form-control-sm ms-auto" style="max-width:220px" data-search value="${esc(state.search)}" placeholder="${esc(t('search'))}">
+                ${editable ? `<button type="button" class="btn btn-sm btn-outline-primary" data-inventory><i class="bi bi-clipboard-check"></i> ${esc(t('inv_sheet.open'))}</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-suggest-all ${suggestable.length ? '' : 'disabled'} title="${esc(t('suggest_all_help'))}"><i class="bi bi-magic"></i> ${esc(t('suggest_all', {n: suggestable.length}))}</button>` : ''}</div></div>
             <p class="small text-muted mb-2">${esc(t('stock_help', {weeks: d.use_weeks}))}</p>
             <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm align-middle mb-0 tfb-supply-table">
                 <thead><tr><th>${esc(t('col.material'))}</th><th class="text-center">${esc(t('col.mode'))}</th><th class="text-end">${esc(t('col.weekly_use'))}</th>
@@ -491,6 +714,19 @@
     }
 
     function bindStock() {
+        if (state.inventory) return bindInventory();
+        el.querySelector('[data-inventory]')?.addEventListener('click', () => { state.inventory = true; draw(); window.scrollTo(0, 0); });
+        el.querySelector('[data-suggest-all]')?.addEventListener('click', async (e) => {
+            const ids = stockRows().filter(r => r.weekly_use > 0).map(r => r.id);
+            if (!ids.length || !window.confirm(t('suggest_all_confirm', {n: ids.length}))) return;
+            e.currentTarget.disabled = true;
+            try {
+                const res = await api.post('/supply/materials/limits', {ids});
+                data.materials = res;
+                ui.notify(true, t('suggest_all_done', {n: res.updated, skipped: res.skipped}));
+                draw();
+            } catch (err) { ui.notify(false, errText(err)); e.currentTarget.disabled = false; }
+        });
         el.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { state.kind = b.dataset.kind; writeHash(); draw(); }));
         el.querySelectorAll('[data-smode]').forEach(b => b.addEventListener('click', () => { state.stockMode = b.dataset.smode; draw(); }));
         el.querySelector('[data-used]').addEventListener('change', (e) => { state.used = e.target.checked; draw(); });

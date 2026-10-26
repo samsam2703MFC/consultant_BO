@@ -15,6 +15,7 @@ use App\Services\Recipe\FlattenedRecipeService;
 use App\Services\Recipe\PredefinedRecipeLabelService;
 use App\Services\Recipe\PreparationService;
 use App\Services\Recipe\RecipeCompetencyService;
+use App\Services\Recipe\RecipeExtrasService;
 use App\Services\Recipe\RecipeCostRecalculationService;
 use App\Services\Recipe\RecipeCostService;
 use App\Services\Recipe\RecipeService;
@@ -44,7 +45,8 @@ class RecipeController extends BaseController
         private PredefinedRecipeLabelService $predefinedRecipeLabelService,
         private RecipeCompetencyService $recipeCompetencyService,
         private ProductsWithoutRecipePdfBuilder $productsWithoutRecipePdfBuilder,
-        private RecipeCalculationViewService $calculationView
+        private RecipeCalculationViewService $calculationView,
+        private RecipeExtrasService $extras
     )
     {
     }
@@ -95,6 +97,7 @@ class RecipeController extends BaseController
                 $newRecipeId = $this->recipeService->insert($dataToInsert);
 
                 if ($newRecipeId) {
+                    $this->saveExtras((int) $newRecipeId, true);
 
                     header('Location: ' . ($forProduct ? $this->productService->cardUrl((int) $dataToInsert['final_product'], 3) : ROOT . '/recipes/' . $newRecipeId . '/calculation'));
                     exit;
@@ -106,6 +109,7 @@ class RecipeController extends BaseController
             }
         }
 
+        $data += $this->extras->formData(null, 'product', $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : null);
         $this->view("recipe/recipe/new", $data);
     }
 
@@ -165,7 +169,7 @@ class RecipeController extends BaseController
                 }, default: false);
 
                 if ($success) {
-
+                    $this->saveExtras((int) $id, false);
                     header('Location: ' . ($fromCard ? $data['card_url'] : ROOT . '/recipes/' . $id . '/calculation'));
                     exit;
                 }
@@ -174,6 +178,7 @@ class RecipeController extends BaseController
             }
         }
 
+        $data += $this->extras->formData((int) $id, 'product', $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : null);
         $this->view("recipe/recipe/edit", $data);
     }
 
@@ -206,6 +211,10 @@ class RecipeController extends BaseController
             http_response_code(404);
             echo 'Nie znaleziono receptury.';
             return;
+        }
+        if (($_SESSION['recipe_saved']['id'] ?? null) === (int) $id) {
+            $data['saved'] = $_SESSION['recipe_saved'];
+            unset($_SESSION['recipe_saved']);
         }
         $this->view('recipe/calculation', $data);
     }
@@ -317,5 +326,11 @@ class RecipeController extends BaseController
     {
         $res = $this->predefinedRecipeLabelService->buildForAllRecipes();
         return $this->json($res);
+    }
+
+    /** Zakładki Przygotowanie i Grupa i kompetencje (instrukcja, kompetencje, grupa) po zapisie składu ; wynik na kalkulacji. */
+    private function saveExtras(int $recipeId, bool $isNew): void
+    {
+        $_SESSION['recipe_saved'] = ['id' => $recipeId, 'new' => $isNew, 'problems' => $this->extras->save($recipeId, $_POST, $isNew, user('id') ? (int) user('id') : null)];
     }
 }

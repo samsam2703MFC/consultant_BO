@@ -1343,13 +1343,71 @@
         }));
     }
 
+    // --- 8. Ceny i zgodność (audyt 2, kreator produktu krok 7) : cena standardowa, ceny klientów, PPWR, Belgia -----
+    async function commercialBlock(box, productId) {
+        const base = `${api.root}/ajax/products/${productId}`;
+        const call = async (url, method = 'GET', body) => {
+            const r = await fetch(url, {method, credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+            const j = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(j.message || r.statusText);
+            return j;
+        };
+        const tag = (ok, text) => `<span class="badge ${ok ? 'bg-light-success text-success' : 'bg-light-warning text-warning'}">${esc(text)}</span>`;
+        const draw = (s) => {
+            const be = s.belgium;
+            const c = s.clients;
+            box.innerHTML = `<h5 class="mt-1 mb-1">${esc(t('c.title'))}</h5><p class="form-text mt-0">${esc(t('c.help'))}</p>
+                <div class="tfb-commercial">
+                    <div class="tfb-commercial-row"><strong>${esc(t('c.price'))}</strong>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <input class="form-control form-control-sm" style="max-width: 130px" type="number" min="0.01" step="0.01" inputmode="decimal" data-price value="${s.standard_price > 0 ? s.standard_price : ''}" aria-label="${esc(t('c.price'))}">
+                            <span>${esc(t('c.per_carton'))}</span>
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-save-price>${esc(t('save'))}</button>
+                            ${s.standard_price > 0 ? '' : tag(false, t('c.price_missing'))}
+                        </div></div>
+                    <div class="tfb-commercial-row"><strong>${esc(t('c.clients'))}</strong>
+                        <div>${esc(t('c.clients_state', {with: c.with_price, total: c.direct, fr: c.franchise}))}
+                        ${c.missing.length ? `<div class="tfb-commercial-clients">${c.missing.map(m => `<label class="form-check"><input class="form-check-input" type="checkbox" value="${m.id}" data-client> <span class="form-check-label">${esc(m.name)}</span></label>`).join('')}</div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" data-copy ${s.standard_price > 0 ? '' : 'disabled'}>${esc(t('c.copy'))}</button>` : ' ' + tag(true, t('c.all_set'))}</div></div>
+                    <div class="tfb-commercial-row"><strong>${esc(t('c.ppwr'))}</strong>
+                        <div>${s.ppwr && s.ppwr.complete ? tag(true, t('c.ppwr_ok', {unit: s.ppwr.unit || ''})) : tag(false, t('c.ppwr_todo'))}
+                            <a class="ms-2" href="${api.root}/ppwr/sales-packaging">${esc(t('c.open'))}</a></div></div>
+                    <div class="tfb-commercial-row"><strong>${esc(t('c.be'))}</strong>
+                        <div>${be ? tag(be.verdict === 'ok', t('c.be.' + be.verdict)) + (be.coef !== null ? ' <span class="text-muted">' + esc(t('c.be_coef', {coef: String(be.coef).replace('.', ',')})) + '</span>' : '') : tag(false, t('c.be.none'))}
+                            <a class="ms-2" href="${api.root}/finances/product-margin?product_id=${productId}">${esc(t('c.open'))}</a></div></div>
+                </div>`;
+        };
+        try { draw((await call(base + '/commercial')).data); } catch (err) { box.innerHTML = `<p class="text-danger">${esc(err.message)}</p>`; return; }
+        box.addEventListener('click', async (e) => {
+            const save = e.target.closest('[data-save-price]');
+            const copy = e.target.closest('[data-copy]');
+            if (!save && !copy) return;
+            const btn = save || copy;
+            btn.disabled = true;
+            try {
+                if (save) {
+                    const price = parseFloat(String(box.querySelector('[data-price]').value).replace(',', '.'));
+                    if (!(price > 0)) throw new Error(t('c.price_missing'));
+                    const j = await call(base + '/standard-price', 'PATCH', {standard_price: price});
+                    ui.notify(true, j.message || t('saved'));
+                } else {
+                    const ids = [...box.querySelectorAll('[data-client]:checked')].map(i => +i.value);
+                    const j = await call(base + '/commercial/copy-price', 'POST', {client_ids: ids});
+                    ui.notify(true, j.message || t('saved'));
+                }
+                draw((await call(base + '/commercial')).data);
+            } catch (err) { btn.disabled = false; ui.notify(false, err.message); }
+        });
+    }
+
     function stepValidate(body, item) {
         const label = (c) => c.field.startsWith('routing.') ? t('check.step_time', {no: c.field.split('.')[1]})
             : c.code === 'BAKE_WITHOUT_OVEN' ? t('check.bake_oven') : t('check.' + c.field);
         const ready = item.checklist.every(c => c.ok);
-        body.innerHTML = `<ul class="tfb-checklist">${item.checklist.map(c => `<li class="${c.ok ? 'ok' : 'ko'}"><i class="bi ${c.ok ? 'bi-check-circle' : 'bi-x-circle'}"></i> ${esc(label(c))}</li>`).join('')}</ul>
+        body.innerHTML = `${item.final_product_id ? '<section class="tfb-commercial-box" data-commercial></section>' : ''}<ul class="tfb-checklist">${item.checklist.map(c => `<li class="${c.ok ? 'ok' : 'ko'}"><i class="bi ${c.ok ? 'bi-check-circle' : 'bi-x-circle'}"></i> ${esc(label(c))}</li>`).join('')}</ul>
             ${item.settings.status === 'validated' ? `<p class="text-success">${esc(t('v.validated', {date: (item.settings.validated_at || '').slice(0, 16)}))}</p>` : (ready ? `<p>${esc(t('v.ready'))}</p>` : '')}
             <form data-form>${nav(8, t('v.validate'))}</form>`;
+        if (item.final_product_id) commercialBlock(body.querySelector('[data-commercial]'), item.final_product_id);
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();

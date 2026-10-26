@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\Request;
 
 class CostCalculatorController extends BaseController
 {
+    use \App\Core\Web\JsonErrors;
+
     public function __construct(
         private CostMonthService $monthService,
         private CostCalculatorService $calcService,
@@ -127,7 +129,11 @@ class CostCalculatorController extends BaseController
 
     public function ajaxCopyPrev($monthId)
     {
-        $result = $this->monthService->copyFromPrevious((int)$monthId);
+        try {
+            $result = $this->monthService->copyFromPrevious((int)$monthId);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
         return $this->json(['success' => (bool)$result], $result ? 200 : 500);
     }
 
@@ -188,14 +194,33 @@ class CostCalculatorController extends BaseController
 
         $monthlyCost = isset($data['monthly_cost']) ? (float)$data['monthly_cost'] : null;
 
-        $id = $this->monthService->includeEmployeeFromMaster((int)$monthId, $employeeId, $monthlyCost);
+        try {
+            $id = $this->monthService->includeEmployeeFromMaster((int)$monthId, $employeeId, $monthlyCost);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
 
         return $this->json(['success' => (bool)$id, 'id' => $id], $id ? 200 : 500);
     }
 
+    /** « Pobierz z budżetu » : koszty pracowników otwartego miesiąca z Budżetu personelu. */
+    public function ajaxSyncEmployeesFromBudget($monthId)
+    {
+        try {
+            $n = $this->monthService->syncEmployeesFromBudget((int) $monthId);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+        return $this->json(['success' => true, 'updated' => $n]);
+    }
+
     public function ajaxDeleteEmployee($monthId, $id)
     {
-        $ok = $this->monthService->deleteEmployee($monthId, (int)$id);
+        try {
+            $ok = $this->monthService->deleteEmployee($monthId, (int)$id);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
         return $this->json(['success'=>(bool)$ok], $ok ? 200 : 500);
     }
 
@@ -238,6 +263,7 @@ class CostCalculatorController extends BaseController
         $ym = $data['service_month'] ?? null;
         if ($ym !== null && !preg_match('/^\d{4}-\d{2}$/', (string)$ym)) $ym = null;
 
+        try {
         $id = $this->monthService->insertMonthFixedCost([
             'month_id' => (int)$monthId,
             'name' => (string)$data['name'],
@@ -246,13 +272,20 @@ class CostCalculatorController extends BaseController
             'service_month' => $ym,
             'posting_month' => $ym,
         ]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
 
         return $this->json(['success' => (bool)$id, 'id' => $id], $id ? 200 : 500);
     }
 
     public function ajaxDeleteFixedCost($monthId, $id)
     {
-        $ok = $this->monthService->deleteMonthFixedCost($id);
+        try {
+            $ok = $this->monthService->deleteMonthFixedCost($id, (int) $monthId);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
 
         return $this->json(['success'=>(bool)$ok], $ok ? 200 : 500);
     }
@@ -446,7 +479,8 @@ class CostCalculatorController extends BaseController
         // ...existing code...
         $monthId = (int)$monthId;
         try {
-            $result = $this->monthService->lockMonth($monthId);
+            $uid = user('id');
+            $result = $this->monthService->lockMonth($monthId, $uid ? (int) $uid : null);
             return $this->json([
                 'success'  => (bool)$result['ok'],
                 'warnings' => $result['warnings'] ?? [],

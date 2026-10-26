@@ -28,7 +28,8 @@
         root.querySelectorAll('[required]').forEach(function (field) {
             if (!field.matches(FIELDS)) return;
             var lab = labelFor(field);
-            if (lab) lab.classList.add('at-required');
+            // Etykieta z gwiazdką wpisaną w tekst (kreatory) : bez drugiej gwiazdki.
+            if (lab && !/\*\s*$/.test(lab.textContent)) lab.classList.add('at-required');
         });
     }
 

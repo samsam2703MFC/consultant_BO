@@ -45,6 +45,10 @@ return function(RouteCollector $r) {
         'controller' => App\Controllers\Web\Production\Cost\CostCalculatorController::class,
         'method'     => 'ajaxDeleteEmployee'
     ]);
+    $r->addRoute('POST', '/ajax/cost-calculator/{monthId:\d+}/employees/sync-budget', [
+        'controller' => App\Controllers\Web\Production\Cost\CostCalculatorController::class,
+        'method'     => 'ajaxSyncEmployeesFromBudget'
+    ]);
     $r->addRoute('POST', '/ajax/cost-calculator/{monthId:\d+}/employees/{id:\d+}/update-cost', [
         'controller' => App\Controllers\Web\Production\Cost\CostCalculatorController::class,
         'method'     => 'ajaxUpdateEmployeeCost'

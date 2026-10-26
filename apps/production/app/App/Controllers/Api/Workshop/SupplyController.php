@@ -23,6 +23,8 @@ final class SupplyController
     public function materials(ApiRequest $request): ApiResult { return new ApiResult($this->supply->materials($request->context)); }
     public function saveMaterial(ApiRequest $request): ApiResult { return new ApiResult($this->supply->saveMaterial($request->id(), $request->body(), $request->context)); }
     public function addCount(ApiRequest $request): ApiResult { return new ApiResult($this->supply->addCount($request->id(), $request->body(), $request->context), 201); }
+    public function addCounts(ApiRequest $request): ApiResult { return new ApiResult($this->supply->addCounts($request->body(), $request->context), 201); }
+    public function suggestLimits(ApiRequest $request): ApiResult { return new ApiResult($this->supply->suggestLimits($request->body(), $request->context)); }
     public function orders(ApiRequest $request): ApiResult { return new ApiResult($this->supply->orders((string) $request->query('status', 'open'), $request->context)); }
     public function createOrders(ApiRequest $request): ApiResult { return new ApiResult($this->supply->createOrders($request->body(), $request->context), 201); }
     public function order(ApiRequest $request): ApiResult { return new ApiResult($this->supply->order($request->id(), $request->context)); }

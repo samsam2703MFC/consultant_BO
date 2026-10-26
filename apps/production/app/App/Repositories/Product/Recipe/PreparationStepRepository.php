@@ -42,6 +42,12 @@ class PreparationStepRepository extends BaseRepository
     /**
      * Pobiera maksymalny numer kroku dla danej receptury
      */
+    /** Usuwa wszystkie kroki receptury (zastąpienie całej instrukcji z formularza receptury). */
+    public function deleteByRecipe(int $recipeId): void
+    {
+        $this->query("DELETE FROM {$this->table} WHERE recipe_id = :recipe_id", ['recipe_id' => $recipeId]);
+    }
+
     public function getMaxStepNumber(int $recipeId): int
     {
         $result = $this->query(

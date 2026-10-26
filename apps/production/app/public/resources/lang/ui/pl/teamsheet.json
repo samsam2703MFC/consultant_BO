@@ -75,5 +75,7 @@
   "lists_no_complaints": "Brak zwrotów czekających na wysyłkę.",
   "lists_pick": "Wybierz co najmniej jeden dzień wysyłki.",
   "lists_error": "Serwer odpowiedział kodem {code}.",
-  "lists_safe": "Nic nie jest zapisywane : listy są tylko liczone i pobierane jako PDF."
+  "lists_safe": "Nic nie jest zapisywane : listy są tylko liczone i pobierane jako PDF.",
+  "supply_next": "Zamów surowce ›",
+  "supply_help": "Plan gotowy : zapotrzebowanie surowców i opakowań tego tygodnia, zamówienia u dostawców"
 }

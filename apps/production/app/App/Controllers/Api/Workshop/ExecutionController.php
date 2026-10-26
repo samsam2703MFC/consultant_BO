@@ -17,6 +17,7 @@ use App\Services\Workshop\Execution\OutputService;
 use App\Services\Workshop\Execution\QualityService;
 use App\Services\Workshop\Execution\TimesheetService;
 use App\Services\Workshop\Planning\TeamSheetService;
+use App\Services\Workshop\Supply\SupplyService;
 
 /** P7 : tablettes (appairage, identification, pointage, opérations, signatures), pointage au téléphone par QR code, heures, KPIs, cockpit. */
 final class ExecutionController
@@ -35,6 +36,7 @@ final class ExecutionController
         private OeeService $oee,
         private DevProductService $dev,
         private ClockQuestionService $questions,
+        private SupplyService $supply,
     ) {
     }
 
@@ -101,6 +103,10 @@ final class ExecutionController
         if ($request->context->deviceGroupId === null) throw new ApiException('DEVICE_WITHOUT_GROUP', 409);
         return new ApiResult($this->teams->build((string) $request->query('date', date('Y-m-d')), $request->context->deviceGroupId, $request->context));
     }
+
+    // Tablet grupy : przyjęcie dostawy surowców (ilości, partia, data ważności, problem → NC).
+    public function delivery(ApiRequest $request): ApiResult { return new ApiResult($this->supply->kioskOrder($request->id(), $request->context)); }
+    public function receiveDelivery(ApiRequest $request): ApiResult { return new ApiResult($this->supply->receiveAtKiosk($request->id(), $request->body(), $request->context)); }
 
     // Tablet grupy : produkcja dnia i partie (identyfikowalność).
     public function production(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->day($request->context, $request->query('date'))); }

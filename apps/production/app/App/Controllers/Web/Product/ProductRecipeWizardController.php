@@ -25,7 +25,8 @@ class ProductRecipeWizardController extends BaseController
         private ProductionSectionService   $productionSectionService,
         private MaterialService            $materialService,
         private SemiProductService         $semiProductService,
-        private PreparationService         $preparationService
+        private PreparationService         $preparationService,
+        private \App\Services\Workshop\Execution\DevProductService $dev
     )
     {
     }
@@ -44,6 +45,8 @@ class ProductRecipeWizardController extends BaseController
             'semiProducts' => $pick($this->semiProductService->getAll(), ['id', 'name', 'unit_name']),
             'preparations' => $pick($this->preparationService->getPreparationTypes(), ['id', 'name']),
             'preset_category' => (int) ($_GET['category'] ?? 0),
+            // « Wprowadź » produktu testowego : kreator wypełniony danymi i recepturą testu.
+            'from_test' => $this->testPrefill((int) ($_GET['from_test'] ?? 0)),
             // Zakresy logistyki — ta sama walidacja co Karta produktu (App\Domain\Product\ProductLogistics)
             'logisticsRanges' => \App\Domain\Product\ProductLogistics::RANGES,
             'shelfLife' => \App\Domain\Product\ProductLogistics::SHELF_LIFE,
@@ -117,7 +120,31 @@ class ProductRecipeWizardController extends BaseController
             return $this->json(['message' => 'Nie udało się utworzyć produktu z recepturą. Nic nie zostało zapisane.'], 500);
         }
 
+        // Produkt z testu : powiązanie i etap « Wprowadzony » (błąd powiązania nie cofa produktu — komunikat w karcie testu).
+        $testId = (int) ($payload['from_test'] ?? 0);
+        if ($testId > 0) {
+            try {
+                $this->dev->launch($testId, ['final_product_id' => (int) $created['id_product']], user('id') ? (int) user('id') : null);
+                $created['test_linked'] = true;
+            } catch (\Throwable $e) {
+                error_log('[product-wizard] test link failed: ' . $e->getMessage());
+                $created['test_linked'] = false;
+            }
+        }
+
         // Ciąg dalszy w tym samym kreatorze : karta produktu od logistyki (tryb, grupa, etapy i czasy).
         return $this->json($created + ['redirect' => ROOT . '/workshop/products#/product/' . $created['id_product'] . '?step=2']);
+    }
+
+    /** Kreator z produktu testowego : pola i linie receptury testu (ilości całkowite jak w kreatorze). */
+    private function testPrefill(int $testId): ?array
+    {
+        if ($testId <= 0) return null;
+        $prefill = $this->dev->launchPrefill($testId);
+        if (!$prefill) return null;
+        $lines = static fn($rows) => array_values(array_map(static fn($r) => ['id' => (int) $r['id'], 'quantity' => max(1, (int) round((float) $r['quantity']))], $rows ?: []));
+        $prefill['materials'] = $prefill['id_recipe'] ? $lines($this->recipeService->getRecipeMaterials($prefill['id_recipe'])) : [];
+        $prefill['semi_products'] = $prefill['id_recipe'] ? $lines($this->recipeService->getRecipeSFP($prefill['id_recipe'])) : [];
+        return $prefill;
     }
 }

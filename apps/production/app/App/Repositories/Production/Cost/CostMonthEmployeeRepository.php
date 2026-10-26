@@ -151,6 +151,34 @@ class CostMonthEmployeeRepository extends BaseRepository
     }
 
     /**
+     * « Pobierz z budżetu » : koszty pracowników otwartego miesiąca = koszt z Budżetu personelu (production_employee.cost).
+     * @return int zmienione wiersze
+     */
+    public function syncFromMaster(int $monthId): int
+    {
+        $rows = $this->query("SELECT e.id FROM {$this->table} e JOIN production_employee pe ON pe.id = e.employee_ref_id
+                              WHERE e.month_id = :m AND e.is_included = 1 AND ABS(e.monthly_cost - pe.cost) > 0.005", ['m' => $monthId]) ?: [];
+        if ($rows) {
+            $this->executeStatement("UPDATE {$this->table} e JOIN production_employee pe ON pe.id = e.employee_ref_id
+                                     SET e.monthly_cost = pe.cost WHERE e.month_id = :m AND e.is_included = 1", ['m' => $monthId]);
+        }
+        return count($rows);
+    }
+
+    /**
+     * Zmiana w Budżecie personelu : miesiące otwarte od bieżącego dostają nowy koszt, chyba że w miesiącu wpisano korektę
+     * (wartość inna niż poprzedni koszt z budżetu). Miesiące zamknięte i przeszłe zostają bez zmian.
+     */
+    public function propagateMasterCost(int $employeeId, float $old, float $new, int $fromYm): int
+    {
+        $rows = $this->query("SELECT e.id FROM {$this->table} e JOIN cost_month m ON m.id = e.month_id
+                              WHERE e.employee_ref_id = :e AND m.status = 'OPEN' AND (m.year * 12 + m.month) >= :ym AND ABS(e.monthly_cost - :old) < 0.005",
+            ['e' => $employeeId, 'ym' => $fromYm, 'old' => $old]) ?: [];
+        foreach ($rows as $r) $this->executeStatement("UPDATE {$this->table} SET monthly_cost = :c WHERE id = :id", ['c' => $new, 'id' => (int) $r['id']]);
+        return count($rows);
+    }
+
+    /**
      * Nadpisuje monthly_cost dla konkretnego wpisu (po employee_ref_id + month_id).
      */
     public function updateMonthlyCostByRef(int $monthId, int $employeeRefId, float $monthlyCost): bool

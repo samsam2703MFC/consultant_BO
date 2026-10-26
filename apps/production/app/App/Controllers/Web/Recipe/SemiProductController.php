@@ -35,7 +35,8 @@ class SemiProductController extends BaseController
         private RecipeCompetencyService $recipeCompetencyService,
         private ProductService $productService,
         private RecipeCalculationViewService $calculationView,
-        private RecipeProducerRepository $producers
+        private RecipeProducerRepository $producers,
+        private \App\Services\Recipe\RecipeExtrasService $extras
     )
     {
         $this->compositionService = $compositionService;
@@ -80,7 +81,13 @@ class SemiProductController extends BaseController
                 $newId = $this->semiProductService->insert($dataToInsert);
 
                 if ($newId) {
-
+                    $this->saveExtras((int) $newId, true);
+                    // Okno z kreatora produktu (krok « Receptura ») : półprodukt wraca do kreatora, okno się zamyka.
+                    if (!empty($_GET['popup'])) {
+                        unset($_SESSION['recipe_saved']);
+                        $this->view('recipe/semi_product/popup_done', ['semi' => ['id' => (int) $newId, 'name' => trim((string) ($dataToInsert['name'] ?? '')), 'unit_name' => 'szt']]);
+                        return;
+                    }
                     header('Location: ' . ROOT . ($forProduct
                         ? '/recipes/new?' . http_build_query(['product' => $productId, 'add_sfp' => (int) $newId])
                         : '/semi-products/' . $newId . '/calculation'));
@@ -92,6 +99,7 @@ class SemiProductController extends BaseController
             }
         }
 
+        $data += $this->extras->formData(null, 'semi', $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : null);
         $this->view("recipe/semi_product/new", $data);
     }
 
@@ -124,13 +132,14 @@ class SemiProductController extends BaseController
                 }, default: false);
 
                 if ($success) {
-
+                    $this->saveExtras((int) $id, false);
                     header('Location: ' . ROOT . '/semi-products/' . $id . '/calculation');
                     exit;
                 }
             }
         }
 
+        $data += $this->extras->formData((int) $id, 'semi', $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : null);
         $this->view("recipe/semi_product/edit", $data);
     }
 
@@ -162,8 +171,16 @@ class SemiProductController extends BaseController
             echo 'Nie znaleziono receptury.';
             return;
         }
+        if (($_SESSION['recipe_saved']['id'] ?? null) === (int) $id) {
+            $data['saved'] = $_SESSION['recipe_saved'];
+            unset($_SESSION['recipe_saved']);
+        }
         $this->view('recipe/calculation', $data);
     }
 
-
+    /** Zakładki Przygotowanie i Grupa i kompetencje (instrukcja, kompetencje, grupa) po zapisie składu ; wynik na kalkulacji. */
+    private function saveExtras(int $recipeId, bool $isNew): void
+    {
+        $_SESSION['recipe_saved'] = ['id' => $recipeId, 'new' => $isNew, 'problems' => $this->extras->save($recipeId, $_POST, $isNew, user('id') ? (int) user('id') : null)];
+    }
 }

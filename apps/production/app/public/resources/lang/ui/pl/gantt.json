@@ -182,5 +182,7 @@
   "week.pin_slot": "wolne : {free}",
   "week.pin_slot_title": "📌 {name} : miejsce na {room}, partii tygodnia jest mniej — dzień dostał {filled}. Partie przybędą same, gdy wzrosną zamówienia albo spadnie stan.",
   "week.pin_fill": "ten tydzień : {filled} z {room}",
-  "week.pin_released": "w tym tygodniu zmienione ręcznie"
+  "week.pin_released": "w tym tygodniu zmienione ręcznie",
+  "week.supply_next": "Zamów surowce ›",
+  "week.supply_help": "Zapotrzebowanie surowców i opakowań tego tygodnia, zamówienia u dostawców"
 }

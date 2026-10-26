@@ -24,6 +24,10 @@ final class OpenApiSupply
             'PATCH /supply/materials/{id:\d+}' => ['tag' => $t, 'id' => 'saveSupplyMaterial', 'summary' => 'Tryb i stany surowca / Mode et stocks d\'une matière', 'body' => 'SupplyMaterialInput', 'response' => 'SupplyMaterial', 'errors' => [400, 404, 422]],
             'POST /supply/materials/{id:\d+}/count' => ['tag' => $t, 'id' => 'countSupplyMaterial', 'summary' => 'Inwentaryzacja surowca / Inventaire d\'une matière', 'body' => 'SupplyCountInput', 'response' => 'SupplyMaterial', 'ok' => 201, 'errors' => [400, 404, 422],
                 'description' => 'Stock compté en fin de journée (unité de base) ; la consommation et les réceptions comptent à partir du lendemain.'],
+            'POST /supply/materials/counts' => ['tag' => $t, 'id' => 'countSupplyMaterials', 'summary' => 'Inwentaryzacja magazynu (arkusz) / Inventaire de toutes les matières', 'body' => 'SupplyCountsInput', 'response' => 'SupplyCountsResult', 'ok' => 201, 'errors' => [400, 422],
+                'description' => "Toutes les quantités comptées de la feuille en un enregistrement (unité de base, même date) ; une ligne en erreur bloque l'ensemble."],
+            'POST /supply/materials/limits' => ['tag' => $t, 'id' => 'suggestSupplyLimits', 'summary' => 'Min./maks. 1–2 tyg. / Min./max. 1–2 semaines', 'body' => 'SupplyLimitsInput', 'response' => 'SupplyLimitsResult', 'errors' => [400, 422],
+                'description' => "Pour les matières choisies avec une consommation sur 4 semaines : mode « sur stock », min. = 1 semaine, max. = 2 semaines (arrondis aux emballages entiers)."],
             'GET /supply/deliveries' => ['tag' => $t, 'id' => 'getSupplierDeliveries', 'summary' => 'Dostawy surowców : kto, co, kiedy / Livraisons de matières : qui, quoi, quand', 'response' => 'SupplierDeliveries', 'errors' => [422],
                 'query' => ['date' => ['type' => 'string', 'format' => 'date', 'description' => 'un jour de la semaine de production (défaut : aujourd\'hui)']],
                 'description' => "Semaine de production (week.start_day) : commandes envoyées par jour de livraison — state expected, partial, late (date dépassée), received (au jour de la réception) ; "
@@ -32,7 +36,7 @@ final class OpenApiSupply
             'GET /supply/orders' => ['tag' => $t, 'id' => 'listSupplierOrders', 'summary' => 'Zamówienia do dostawców / Commandes fournisseurs', 'response' => 'SupplierOrders', 'errors' => [422],
                 'query' => ['status' => ['type' => 'string', 'enum' => ['open', 'all', ...SupplyService::STATUSES], 'description' => 'défaut : open (brouillon, envoyée, reçue en partie)']]],
             'POST /supply/orders' => ['tag' => $t, 'id' => 'createSupplierOrders', 'summary' => 'Zamówienia z potrzeb (jedno na dostawcę) / Commandes depuis les besoins (une par fournisseur)', 'body' => 'SupplierOrdersInput', 'response' => 'SupplierOrdersCreated', 'ok' => 201, 'errors' => [400, 422],
-                'description' => "Brouillons groupés par fournisseur courant de la matière ; livraison souhaitée la veille de la semaine (au plus tôt demain). SUPPLY_NO_SUPPLIER (422) : matière sans fournisseur."],
+                'description' => "Brouillons groupés par fournisseur courant de la matière ; livraison : premier jour habituel du fournisseur à partir de la veille de la semaine (au plus tôt demain) ; langue de la fiche fournisseur. SUPPLY_NO_SUPPLIER (422) : matière sans fournisseur."],
             'GET /supply/orders/{id:\d+}' => ['tag' => $t, 'id' => 'getSupplierOrder', 'summary' => 'Zamówienie : linie, przyjęcia, ceny / Commande : lignes, réceptions, prix', 'response' => 'SupplierOrder', 'errors' => [404]],
             'PATCH /supply/orders/{id:\d+}' => ['tag' => $t, 'id' => 'updateSupplierOrder', 'summary' => 'Zmień szkic zamówienia / Modifier une commande brouillon', 'body' => 'SupplierOrderInput', 'response' => 'SupplierOrder', 'errors' => [400, 404, 409, 422],
                 'description' => 'Brouillon seulement (PO_NOT_EDITABLE, 409). save_supplier_email = enregistrer aussi l\'adresse chez le fournisseur.'],
@@ -41,7 +45,7 @@ final class OpenApiSupply
             'POST /supply/orders/{id:\d+}/send' => ['tag' => $t, 'id' => 'sendSupplierOrder', 'summary' => 'Wyślij mailem albo oznacz jako wysłane / Envoyer par e-mail ou marquer envoyée', 'body' => 'SupplierOrderSendInput', 'response' => 'SupplierOrder', 'errors' => [400, 404, 409, 422],
                 'description' => "E-mail mis en file (modèle supplier_order, PL ou FR, CSV joint) ; manual = commande passée autrement (téléphone, magasin). PO_NO_LINES, PO_NO_EMAIL (422)."],
             'POST /supply/orders/{id:\d+}/receive' => ['tag' => $t, 'id' => 'receiveSupplierOrder', 'summary' => 'Przyjęcie dostawy / Réception', 'body' => 'SupplierOrderReceiveInput', 'response' => 'SupplierOrder', 'errors' => [400, 404, 409, 422],
-                'description' => 'Quantité et prix réels par ligne (prix par défaut : prix commandé) ; reçue en partie ou en totalité. PO_NOT_RECEIVABLE (409) : commande non envoyée, reçue ou annulée.'],
+                'description' => 'Quantité et prix réels par ligne (prix par défaut : prix commandé), lot et date limite ; un problème signalé crée une non-conformité fournisseur liée à la réception. Reçue en partie ou en totalité. PO_NOT_RECEIVABLE (409) : commande non envoyée, reçue ou annulée.'],
             'POST /supply/orders/{id:\d+}/cancel' => ['tag' => $t, 'id' => 'cancelSupplierOrder', 'summary' => 'Anuluj zamówienie / Annuler la commande', 'response' => 'SupplierOrder', 'errors' => [404, 409]],
             'DELETE /supply/orders/{id:\d+}' => ['tag' => $t, 'id' => 'deleteSupplierOrder', 'summary' => 'Usuń szkic / Supprimer le brouillon', 'response' => 'SupplierOrderDeleted', 'errors' => [404, 409]],
             'GET /supply/invoices' => ['tag' => $t, 'id' => 'listPurchaseInvoices', 'summary' => 'Faktury zakupowe do kontroli / Factures d\'achat à contrôler', 'response' => 'PurchaseInvoices', 'errors' => [422],
@@ -133,6 +137,13 @@ final class OpenApiSupply
             'SupplyCountInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['quantity'], 'properties' => [
                 'quantity' => ['type' => 'number', 'minimum' => 0], 'count_date' => ['type' => 'string', 'format' => 'date', 'description' => 'défaut : aujourd\'hui'], 'note' => $nStr,
             ]],
+            'SupplyCountsInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['counts'], 'properties' => [
+                'count_date' => ['type' => 'string', 'format' => 'date', 'description' => 'défaut : aujourd\'hui'], 'note' => $nStr,
+                'counts' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'object', 'required' => ['id', 'quantity'], 'properties' => ['id' => ['type' => 'integer'], 'quantity' => ['type' => 'number', 'minimum' => 0]]]],
+            ]],
+            'SupplyCountsResult' => ['allOf' => [['$ref' => '#/components/schemas/SupplyMaterials'], ['type' => 'object', 'properties' => ['saved' => ['type' => 'integer'], 'count_date' => ['type' => 'string', 'format' => 'date']]]]],
+            'SupplyLimitsInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['ids'], 'properties' => ['ids' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'integer']]]],
+            'SupplyLimitsResult' => ['allOf' => [['$ref' => '#/components/schemas/SupplyMaterials'], ['type' => 'object', 'properties' => ['updated' => ['type' => 'integer'], 'skipped' => ['type' => 'integer']]]]],
             'SupplierDeliveries' => ['type' => 'object', 'properties' => [
                 'week_start' => $date, 'week_end' => $date, 'iso_week' => ['type' => 'integer'], 'today' => $date, 'history_days' => ['type' => 'integer'],
                 'days' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['date' => $date, 'weekday' => ['type' => 'integer', 'description' => '1 = lundi … 7 = dimanche'],
@@ -158,7 +169,9 @@ final class OpenApiSupply
                     'quantity' => $num, 'received' => $num, 'unit' => ['type' => 'string'], 'factor' => $num]]],
             ]],
             'SupplierOrders' => ['type' => 'object', 'properties' => ['orders' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => $summary]], 'can_write' => ['type' => 'boolean']]],
-            'SupplierOrdersCreated' => ['type' => 'object', 'properties' => ['orders' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/SupplierOrder']]]],
+            'SupplierOrdersCreated' => ['type' => 'object', 'properties' => ['orders' => ['type' => 'array', 'items' => ['allOf' => [['$ref' => '#/components/schemas/SupplierOrder'],
+                ['type' => 'object', 'properties' => ['usual_days' => ['type' => 'array', 'items' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 7],
+                    'description' => 'jours de livraison habituels du fournisseur (1 = lundi) : fiche fournisseur, sinon historique des livraisons']]]]]]]],
             'SupplierOrdersInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['lines'], 'properties' => ['week_start' => $nDate, 'lines' => $lines]],
             'SupplierOrder' => ['type' => 'object', 'properties' => $summary + [
                 'supplier_email' => $nStr, 'supplier_phone' => $nStr, 'note' => $nStr, 'can_edit' => ['type' => 'boolean'], 'can_receive' => ['type' => 'boolean'],
@@ -168,7 +181,9 @@ final class OpenApiSupply
                     'received_qty' => $num, 'remaining' => $num, 'received_value' => $nNum, 'last_price' => $nNum, 'last_day' => $nDate,
                     'price_gap_pct' => ['type' => 'number', 'nullable' => true, 'description' => 'dernier prix reçu vs prix commandé (%)'], 'qty_gap_pct' => $nNum,
                 ]]],
-                'receipts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['line_id' => ['type' => 'integer'], 'raw_material_id' => ['type' => 'integer'], 'received_on' => $date, 'quantity' => $num, 'unit_price' => $nNum]]],
+                'receipts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['line_id' => ['type' => 'integer'], 'raw_material_id' => ['type' => 'integer'], 'received_on' => $date, 'quantity' => $num, 'unit_price' => $nNum,
+                    'lot_number' => $nStr, 'best_before' => $nDate, 'nc_id' => ['type' => 'integer', 'nullable' => true, 'description' => 'non-conformité créée à la réception'],
+                    'employee' => ['type' => 'string', 'nullable' => true, 'description' => 'salarié qui a réceptionné sur la tablette']]]],
             ]],
             'SupplierOrderInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
                 'delivery_date' => $nDate, 'language' => ['type' => 'string', 'enum' => ['pl', 'fr']], 'email_to' => $nStr, 'note' => $nStr, 'save_supplier_email' => ['type' => 'boolean'],
@@ -180,6 +195,11 @@ final class OpenApiSupply
                 'received_on' => ['type' => 'string', 'format' => 'date', 'description' => 'défaut : aujourd\'hui'],
                 'lines' => ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['id', 'quantity'], 'properties' => [
                     'id' => ['type' => 'integer', 'description' => 'ligne de la commande'], 'quantity' => ['type' => 'number', 'minimum' => 0], 'unit_price' => ['type' => 'number', 'nullable' => true],
+                    'lot_number' => ['type' => 'string', 'maxLength' => 64, 'nullable' => true, 'description' => 'lot du fournisseur (enregistré en majuscules)'], 'best_before' => $nDate,
+                ]]],
+                'problems' => ['type' => 'array', 'description' => 'une non-conformité fournisseur (source supplier_delivery) par ligne signalée', 'items' => ['type' => 'object', 'required' => ['line_id', 'description'], 'properties' => [
+                    'line_id' => ['type' => 'integer'], 'description' => ['type' => 'string', 'maxLength' => 5000], 'severity' => ['type' => 'string', 'enum' => ['minor', 'major', 'critical']],
+                    'quantity' => ['type' => 'number', 'nullable' => true, 'description' => 'quantité concernée, unité de base'],
                 ]]],
             ]],
             'SupplierOrderDeleted' => ['type' => 'object', 'properties' => ['deleted' => ['type' => 'boolean'], 'id' => ['type' => 'integer']]],

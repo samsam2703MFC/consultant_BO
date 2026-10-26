@@ -77,7 +77,8 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                         </div>
                     </div>
                 <?php endif; ?>
-                <form method="POST" id="recipeForm" data-kind="<?= $kind ?>">
+                <form method="POST" id="recipeForm" data-kind="<?= $kind ?>" data-at-steps data-at-steps-free class="at-form-steps">
+                    <section data-step="Skład">
                     <div class="row g-3">
                         <div class="col-12 col-md-6">
                             <?php if ($kind === 'product' && $isNew): ?>
@@ -107,18 +108,6 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                             <label class="form-label">Jednostka</label>
                             <div class="form-control bg-light"><?= $kind === 'composition' ? 'g' : 'szt' ?></div>
                         </div>
-                        <?php if ($kind !== 'product' && !$isNew && isset($producer_groups)): ?>
-                            <div class="col-12 col-md-6">
-                                <label for="recipe_producer" class="form-label">Przygotowuje grupa</label>
-                                <select class="form-select" id="recipe_producer" data-producer="<?= (int) ($row['id'] ?? 0) ?>">
-                                    <option value="">— nie ustawiono</option>
-                                    <?php foreach ($producer_groups as $g): ?>
-                                        <option value="<?= (int) $g['id'] ?>" <?= ($producer['id'] ?? null) === (int) $g['id'] ? 'selected' : '' ?>><?= $e($g['name_pl']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <span class="form-text">Zapis od razu ; tablet tej grupy pokazuje recepturę, a receptury innych grup — kto ją przygotowuje.</span>
-                            </div>
-                        <?php endif; ?>
                     </div>
 
                     <h5 class="mt-4">Surowce</h5>
@@ -178,7 +167,10 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                         </tfoot>
                     </table>
 
-                    <h5 class="mt-4">Przygotowanie <small class="text-muted fw-normal">czynności i czas (minuty, jak w Karcie produktu)</small></h5>
+                    </section>
+
+                    <section data-step="Przygotowanie" hidden>
+                    <h5 class="mt-2">Czynności <small class="text-muted fw-normal">rodzaj i czas (minuty, jak w Karcie produktu)</small></h5>
                     <table class="table table-sm align-middle" data-rows="preparation_type" style="max-width: 720px">
                         <thead><tr><th>Czynność</th><th style="width:180px">Czas [min]</th><th style="width:60px"></th></tr></thead>
                         <tbody>
@@ -206,13 +198,61 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                         </tfoot>
                     </table>
 
+                    <label class="form-label mt-3" for="steps_text"><strong>Instrukcja krok po kroku</strong> <span class="text-muted">— jeden krok w linii ; tablet grupy pokazuje je po kolei</span></label>
+                    <textarea class="form-control" id="steps_text" name="steps_text" rows="6" placeholder="np.&#10;Wymieszać mąkę z wodą (3 min)&#10;Odstawić ciasto na 20 min&#10;Uformować i ułożyć na blachach" data-summary-label="Instrukcja"><?= $e($steps_text ?? '') ?></textarea>
+                    <?php if (!$isNew && !empty($recipe_id)): ?><div class="form-text">Kolejność i pojedyncze kroki : <a href="<?= ROOT ?>/recipes/<?= (int) $recipe_id ?>/preparation-steps">Kroki przygotowania</a>.</div><?php endif; ?>
+                    </section>
+
+                    <section data-step="Grupa i kompetencje" hidden>
+                    <div class="row g-3">
+                        <?php if ($kind === 'product'): ?>
+                            <div class="col-12"><div class="at-note"><i class="bi bi-people"></i><div>Grupę, która produkuje produkt, ustawia <strong>Karta produktu</strong> (krok « Grupa i wypiek ») — receptura produktu jej nie powtarza.</div></div></div>
+                        <?php elseif ($isNew): ?>
+                            <div class="col-12 col-md-6">
+                                <label for="producer_group_id" class="form-label">Przygotowuje grupa</label>
+                                <select class="form-select" id="producer_group_id" name="producer_group_id">
+                                    <option value="">— nie ustawiono</option>
+                                    <?php foreach (($producer_groups ?? []) as $g): ?>
+                                        <option value="<?= (int) $g['id'] ?>" <?= (string) ($producer_new ?? '') === (string) $g['id'] ? 'selected' : '' ?>><?= $e($g['name_pl']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <span class="form-text">Tablet tej grupy pokaże recepturę ; inne grupy zobaczą, kto ją przygotowuje.</span>
+                            </div>
+                        <?php else: ?>
+                                                    <div class="col-12 col-md-6">
+                                <label for="recipe_producer" class="form-label">Przygotowuje grupa</label>
+                                <select class="form-select" id="recipe_producer" data-producer="<?= (int) ($row['id'] ?? 0) ?>">
+                                    <option value="">— nie ustawiono</option>
+                                    <?php foreach ($producer_groups as $g): ?>
+                                        <option value="<?= (int) $g['id'] ?>" <?= ($producer['id'] ?? null) === (int) $g['id'] ? 'selected' : '' ?>><?= $e($g['name_pl']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <span class="form-text">Zapis od razu ; tablet tej grupy pokazuje recepturę, a receptury innych grup — kto ją przygotowuje.</span>
+                            </div>
+                        <?php endif; ?>
+                        <div class="col-12">
+                            <input type="hidden" name="competencies_present" value="1">
+                            <label class="form-label">Kompetencje potrzebne do receptury</label>
+                            <?php if (!empty($competency_list)): ?>
+                                <div class="at-check-grid">
+                                    <?php foreach ($competency_list as $c): ?>
+                                        <label class="form-check"><input class="form-check-input" type="checkbox" name="competency_ids[]" value="<?= (int) $c['id'] ?>" data-summary-group="Kompetencje" <?= in_array((int) $c['id'], $competency_ids ?? [], true) ? 'checked' : '' ?>> <span class="form-check-label"><?= $e($c['name']) ?></span></label>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php else: ?>
+                                <p class="text-muted mb-0">Brak kompetencji na liście — dodaj je na liście receptur (« Kompetencje »).</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    </section>
+
                     <div class="d-flex justify-content-between mt-4">
                         <?php if ($card): ?>
                             <a href="<?= $e($card_url) ?>" class="btn btn-outline-secondary">Powrót do karty produktu</a>
                         <?php else: ?>
                             <a href="<?= ROOT . $labels['list'] ?>" class="btn btn-outline-secondary">Powrót</a>
                         <?php endif; ?>
-                        <button class="btn btn-success"><?= $isNew ? 'Utwórz' : 'Zapisz' ?></button>
+                        <button class="btn btn-success" data-at-steps-submit><?= $isNew ? 'Utwórz' : 'Zapisz' ?></button>
                     </div>
                 </form>
             </div>
@@ -221,6 +261,7 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
 </div>
 
 <?php $this->view("page_components/footer"); ?>
+<script src="<?= ROOT ?>/assets/js/at-form-steps.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>
 
 <script>
     // Wiersze składników i czynności : dodaj z wiersza « Dodaj », usuń ×, bez duplikatów.

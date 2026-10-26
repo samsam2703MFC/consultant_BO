@@ -157,7 +157,7 @@ final class SupplyRepository extends WorkshopRepository
     public function suppliersWithSupply(): array
     {
         return $this->all(
-            "SELECT s.id, s.name, s.phone, s.email, s.is_active FROM supplier s
+            "SELECT s.id, s.name, s.phone, s.email, s.is_active, s.delivery_weekdays FROM supplier s
              WHERE s.is_active = 1 OR EXISTS (SELECT 1 FROM raw_material rm WHERE rm.id_current_supplier = s.id) OR EXISTS (SELECT 1 FROM n_po p WHERE p.id_supplier = s.id)
              ORDER BY s.name, s.id"
         );
@@ -242,7 +242,7 @@ final class SupplyRepository extends WorkshopRepository
 
     public function supplier(int $id): ?array
     {
-        return $this->all('SELECT id, name, email, phone FROM supplier WHERE id = ?', [$id])[0] ?? null;
+        return $this->all('SELECT id, name, email, phone, delivery_weekdays, order_lang FROM supplier WHERE id = ?', [$id])[0] ?? null;
     }
 
     public function setSupplierEmail(int $id, string $email): void
@@ -313,7 +313,9 @@ final class SupplyRepository extends WorkshopRepository
     public function receipts(int $orderId): array
     {
         return $this->all(
-            'SELECT r.*, l.id_raw_material FROM n_po_receipt r JOIN n_po_line l ON l.id = r.id_po_line WHERE l.id_po = ? ORDER BY r.received_on, r.id',
+            "SELECT r.*, l.id_raw_material, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name FROM n_po_receipt r JOIN n_po_line l ON l.id = r.id_po_line
+             LEFT JOIN n_prod_employee e ON e.id = r.id_employee LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
+             WHERE l.id_po = ? ORDER BY r.received_on, r.id",
             [$orderId]
         );
     }
@@ -337,10 +339,26 @@ final class SupplyRepository extends WorkshopRepository
         $this->db->prepare('DELETE FROM n_po_line WHERE id_po = ?')->execute([$orderId]);
     }
 
-    public function addReceipt(int $lineId, string $day, float $quantity, ?float $unitPrice, ?int $userId): void
+    /** Przyjęcie linii ; partia i data ważności (asystent « Przyjęcie dostawy ») — podpowiedź dla tabletu (FEFO). */
+    public function addReceipt(int $lineId, string $day, float $quantity, ?float $unitPrice, ?int $userId, ?string $lot = null, ?string $bestBefore = null, ?int $employeeId = null): int
     {
-        $this->db->prepare('INSERT INTO n_po_receipt (id_po_line, received_on, quantity, unit_price, created_by) VALUES (?, ?, ?, ?, ?)')
-            ->execute([$lineId, $day, $quantity, $unitPrice, $userId]);
+        $this->db->prepare('INSERT INTO n_po_receipt (id_po_line, received_on, quantity, unit_price, lot_number, best_before, created_by, id_employee) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$lineId, $day, $quantity, $unitPrice, $lot, $bestBefore, $userId, $employeeId]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    /** Salarié de production (tablette) : « Imię Nazwisko ». */
+    public function employeeName(int $employeeId): ?string
+    {
+        $name = $this->db->prepare("SELECT TRIM(CONCAT(pe.name, ' ', pe.surname)) FROM n_prod_employee e JOIN production_employee pe ON pe.id = e.id_production_employee WHERE e.id = ?");
+        $name->execute([$employeeId]);
+        $v = $name->fetchColumn();
+        return $v === false || $v === '' ? null : (string) $v;
+    }
+
+    public function linkReceiptNc(int $receiptId, int $ncId): void
+    {
+        $this->db->prepare('UPDATE n_po_receipt SET id_nc = ? WHERE id = ?')->execute([$ncId, $receiptId]);
     }
 
     public function delete(int $id): void

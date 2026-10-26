@@ -78,10 +78,10 @@
                                 </div>
                             </div>
                             <div class="col-4">
-                                <label class="form-label" for="cost">
-                                    Koszt [zł]
-                                </label>
-                                <input value="<?=old_value('cost', $row['cost'])?>" type="text" class="form-control" id="cost" name="cost" placeholder="Koszt">
+                                <span class="form-label d-block">Koszt pracodawcy / mies.</span>
+                                <?php /* Jedna karta płacy (P17) : koszt wpisuje się tylko w Budżecie personelu. */ ?>
+                                <div class="form-control-plaintext"><strong><?= number_format((float) $row['cost'], 2, ',', ' ') ?> zł</strong>
+                                    · <a href="<?= ROOT ?>/staff/budget#emp-<?= (int) $row['id'] ?>">zmień w Budżecie personelu</a></div>
                             </div>
                         </div>
 

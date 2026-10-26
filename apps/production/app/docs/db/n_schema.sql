@@ -1,7 +1,7 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 092, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 092 ; compatible MySQL 8.
+-- 001 → 093, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 093 ; compatible MySQL 8.
 -- Modifications des tables d'origine : voir docs/db/README.md (colonne customer.communication_lang, nettoyage 074 → 080).
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `n_activity_click` (
@@ -763,11 +763,19 @@ CREATE TABLE `n_po_receipt` (
   `received_on` date NOT NULL,
   `quantity` decimal(14,3) NOT NULL,
   `unit_price` decimal(14,6) DEFAULT NULL,
+  `lot_number` varchar(64) DEFAULT NULL,
+  `best_before` date DEFAULT NULL,
+  `id_nc` int(11) DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
+  `id_employee` int(11) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `idx_tfb_po_receipt_day` (`received_on`),
   KEY `fk_tfb_po_receipt_line` (`id_po_line`),
+  KEY `idx_n_po_receipt_lot` (`lot_number`),
+  KEY `idx_n_po_receipt_best_before` (`best_before`),
+  KEY `idx_n_po_receipt_employee` (`id_employee`),
+  CONSTRAINT `fk_n_po_receipt_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_tfb_po_receipt_line` FOREIGN KEY (`id_po_line`) REFERENCES `n_po_line` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_price_list_state` (

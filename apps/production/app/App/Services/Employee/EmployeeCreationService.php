@@ -9,7 +9,7 @@ use App\Repositories\Workshop\ExecutionRepository;
 use App\Services\Workshop\Execution\KioskAuthService;
 
 /**
- * Kreator pracownika produkcji (audyt 2, lot C) : po utworzeniu pracownika (imię, nazwisko, dział, koszt godziny)
+ * Kreator pracownika produkcji (audyt 2, lot C) : po utworzeniu pracownika (imię, nazwisko, dział, koszt pracodawcy na miesiąc)
  * zapisuje profil zespołu (grupa, stanowisko, poziom), płacę z budżetu (podstawa, premia) i dostęp do tabletu
  * (PIN 4–6 cyfr, badge — oba tylko jako skrót, nigdy w jawnej postaci). Każdy krok osobno : błąd jednego trafia
  * na listę « do uzupełnienia » na karcie pracownika.

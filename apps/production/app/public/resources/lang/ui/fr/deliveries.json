@@ -48,5 +48,6 @@
   "weekday_count": "{day} : {n} livraisons",
   "deliveries_n": "{n} jours de livraison",
   "no_history": "pas d'historique de livraison",
-  "no_suppliers": "Aucun fournisseur pour cette recherche."
+  "no_suppliers": "Aucun fournisseur pour cette recherche.",
+  "receive": "Réceptionner"
 }

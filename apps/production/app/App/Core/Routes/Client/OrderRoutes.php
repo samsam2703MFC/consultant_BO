@@ -18,7 +18,9 @@ return function(RouteCollector $r) {
         'method'     => 'overview'
     ]);
 
-    $r->addRoute('GET', '/client-orders/new', ['redirect' => '/client-orders']);
+    // Kreator « Nowe zamówienie » (audyt 2, P4) : krok 1 klient i typ → produkty klienta → zamówienie z proformą.
+    $r->addRoute('GET', '/client-orders/new', ['controller' => App\Controllers\Web\Client\Order\OrderController::class, 'method' => 'newOrderWizard']);
+    $r->addRoute('POST', '/client-orders/new', ['controller' => App\Controllers\Web\Client\Order\OrderController::class, 'method' => 'newOrderWizard']);
 
     // Do obsłużenia : sprawy zamówień, proform i wysyłek czekające na działanie (jedna linia na sprawę)
     $r->addRoute('GET', '/client-orders/queue', ['controller' => \App\Controllers\Web\Client\Order\OrderQueueController::class, 'method' => 'index']);

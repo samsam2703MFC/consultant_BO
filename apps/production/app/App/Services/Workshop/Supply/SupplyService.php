@@ -43,6 +43,7 @@ final class SupplyService
         private MaterialCostRepository $company,
         private TransactionManager $tx,
         private AuditTrail $audit,
+        private \App\Services\Purchasing\NcService $nc,
     ) {
     }
 
@@ -209,6 +210,61 @@ final class SupplyService
         return $this->material($id, $context);
     }
 
+    /**
+     * Inwentaryzacja całego magazynu jednym zapisem : wszystkie policzone ilości z arkusza (jednostka bazowa), jedna data.
+     * Pozycje bez wpisu pomija się ; jedna pozycja z błędem zatrzymuje cały zapis.
+     */
+    public function addCounts(array $body, ApiContext $context): array
+    {
+        $v = (new Validator($body))->only(['count_date', 'note', 'counts'])->date('count_date', false, false)->string('note', 255, false, true);
+        $day = $v->value('count_date') ?? date('Y-m-d');
+        if (!$v->hasError('count_date') && $day > date('Y-m-d')) $v->add('count_date', 'IN_FUTURE');
+        $rows = $body['counts'] ?? null;
+        $clean = [];
+        if (!is_array($rows) || !$rows) $v->add('counts', 'REQUIRED');
+        else {
+            $known = array_flip(array_map(fn($m) => (int) $m['id'], $this->repo->materials(array_map(fn($r) => (int) (is_array($r) ? ($r['id'] ?? 0) : 0), $rows))));
+            foreach (array_values($rows) as $i => $r) {
+                $id = is_array($r) ? ($r['id'] ?? null) : null;
+                $qty = is_array($r) ? ($r['quantity'] ?? null) : null;
+                if (!is_int($id) || !isset($known[$id])) { $v->add("counts.$i.id", 'REFERENCE_NOT_FOUND', ['id' => is_scalar($id) ? (string) $id : '?']); continue; }
+                if ((!is_int($qty) && !is_float($qty)) || $qty < 0 || $qty > self::MAX_QTY) { $v->add("counts.$i.quantity", 'OUT_OF_RANGE', ['min' => 0, 'max' => self::MAX_QTY]); continue; }
+                $clean[$id] = (float) $qty;
+            }
+        }
+        $v->throwIfInvalid();
+        $note = $v->value('note');
+        $this->tx->execute(function () use ($clean, $day, $note, $context) {
+            foreach ($clean as $id => $qty) $this->repo->addCount($id, $day, $qty, $note, $context->userId);
+            $this->audit->record($context, 'create', 'material_inventory', $day, null, ['count_date' => $day, 'materials' => count($clean)]);
+        });
+        return ['saved' => count($clean), 'count_date' => $day] + $this->materials($context);
+    }
+
+    /**
+     * Min./maks. « 1–2 tyg. » jednym kliknięciem : min. = zużycie 1 tygodnia, maks. = 2 tygodni (w górę do pełnych opakowań),
+     * tryb « na stan ». Tylko surowce ze zużyciem w ostatnich 4 tygodniach.
+     */
+    public function suggestLimits(array $body, ApiContext $context): array
+    {
+        $ids = $body['ids'] ?? null;
+        if (!is_array($ids) || !$ids || array_filter($ids, fn($x) => !is_int($x))) throw ApiException::validation([['field' => 'ids', 'code' => 'REQUIRED', 'params' => []]]);
+        $wanted = array_flip($ids);
+        $rows = array_filter($this->materials($context)['rows'], fn($r) => isset($wanted[$r['id']]) && $r['weekly_use'] > 0);
+        $up = fn(array $r, float $v) => $r['package_size'] ? ceil($v / $r['package_size'] - 1e-9) * $r['package_size'] : ceil($v);
+        $changed = [];
+        $this->tx->execute(function () use ($rows, $up, $context, &$changed) {
+            foreach ($rows as $r) {
+                $data = ['supply_mode' => 'stock', 'stock_min' => $up($r, $r['weekly_use']), 'stock_max' => $up($r, 2 * $r['weekly_use'])];
+                if ($r['mode'] === 'stock' && $r['stock_min'] !== null && abs($r['stock_min'] - $data['stock_min']) < 1e-6 && $r['stock_max'] !== null && abs($r['stock_max'] - $data['stock_max']) < 1e-6) continue;
+                $this->repo->saveSupply($r['id'], $data + ['updated_by' => $context->userId]);
+                $changed[] = $r['id'];
+            }
+            if ($changed) $this->audit->record($context, 'update', 'material_supply_limits', null, null, ['materials' => count($changed), 'rule' => '1-2 weeks']);
+        });
+        return ['updated' => count($changed), 'skipped' => count($ids) - count($changed)] + $this->materials($context);
+    }
+
     private function material(int $id, ApiContext $context): array
     {
         $m = $this->repo->materials([$id])[0];
@@ -230,14 +286,24 @@ final class SupplyService
         $bySupplier = [];
         foreach ($lines as $l) $bySupplier[(int) $materials[$l['raw_material_id']]['supplier_id']][] = $l;
         $week = $v->value('week_start');
-        $delivery = $week !== null ? max(date('Y-m-d', strtotime('tomorrow')), date('Y-m-d', strtotime($week . ' -1 day'))) : null;
-        $ids = $this->tx->execute(function () use ($bySupplier, $materials, $week, $delivery, $context) {
+        $base = $week !== null ? max(date('Y-m-d', strtotime('tomorrow')), date('Y-m-d', strtotime($week . ' -1 day'))) : null;
+        // Dostawa : pierwszy zwykły dzień dostawcy od tej daty (karta dostawcy, inaczej historia dostaw) ; język z karty dostawcy.
+        $history = [];
+        foreach ($this->repo->deliveryDays(date('Y-m-d', strtotime('-180 days'))) as $d) $history[(int) $d['id_supplier']][] = $d['day'];
+        $usual = [];
+        foreach (array_keys($bySupplier) as $supplierId) {
+            $sup = $this->repo->supplier($supplierId);
+            $usual[$supplierId] = DeliveryScheduleService::usualDays($sup['delivery_weekdays'] !== null ? (int) $sup['delivery_weekdays'] : null, array_unique($history[$supplierId] ?? []));
+        }
+        $ids = $this->tx->execute(function () use ($bySupplier, $materials, $week, $base, $usual, $context) {
             $ids = [];
             foreach ($bySupplier as $supplierId => $supplierLines) {
                 $supplier = $this->repo->supplier($supplierId);
                 $email = trim((string) $supplier['email']);
+                $lang = in_array($supplier['order_lang'] ?? null, ['pl', 'fr'], true) ? $supplier['order_lang'] : 'pl';
                 $id = $this->repo->insert(['code' => $this->repo->nextCode(date('Y-m-d')), 'id_supplier' => $supplierId, 'status' => 'draft', 'week_start' => $week,
-                    'delivery_date' => $delivery, 'language' => 'pl', 'email_to' => filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null, 'created_by' => $context->userId]);
+                    'delivery_date' => $base !== null ? DeliveryScheduleService::nextUsualDay($base, $usual[$supplierId]) : null, 'language' => $lang,
+                    'email_to' => filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null, 'created_by' => $context->userId]);
                 foreach ($supplierLines as $l) {
                     $m = $materials[$l['raw_material_id']];
                     $this->repo->insertLine($id, $l['raw_material_id'], $l['quantity'], (float) $m['package_size'] > 0 ? (float) $m['package_size'] : null,
@@ -248,7 +314,11 @@ final class SupplyService
             }
             return $ids;
         });
-        return ['orders' => array_map(fn($id) => $this->order($id, $context), $ids)];
+        // Podsumowanie po « Utwórz wszystkie » : zwykłe dni dostaw każdego dostawcy (1 = poniedziałek … 7).
+        return ['orders' => array_map(function ($id) use ($usual, $context) {
+            $o = $this->order($id, $context);
+            return $o + ['usual_days' => $usual[$o['supplier']['id']] ?? []];
+        }, $ids)];
     }
 
     public function orders(string $status, ApiContext $context): array
@@ -283,7 +353,9 @@ final class SupplyService
         return $this->presentSummary($this->repo->orderSummary($id) ?? $o) + [
             'supplier_email' => $o['supplier_email'], 'supplier_phone' => $o['supplier_phone'], 'note' => $o['note'],
             'lines' => $lines, 'receipts' => array_map(fn($r) => ['line_id' => (int) $r['id_po_line'], 'raw_material_id' => (int) $r['id_raw_material'], 'received_on' => $r['received_on'],
-                'quantity' => (float) $r['quantity'], 'unit_price' => $r['unit_price'] !== null ? (float) $r['unit_price'] : null], $this->repo->receipts($id)),
+                'quantity' => (float) $r['quantity'], 'unit_price' => $r['unit_price'] !== null ? (float) $r['unit_price'] : null,
+                'lot_number' => $r['lot_number'] ?? null, 'best_before' => $r['best_before'] ?? null, 'nc_id' => isset($r['id_nc']) ? (int) $r['id_nc'] : null,
+                'employee' => ($r['employee_name'] ?? '') !== '' ? $r['employee_name'] : null], $this->repo->receipts($id)),
             'can_edit' => $o['status'] === 'draft' && $context->can('prod.supply.write'),
             'can_receive' => in_array($o['status'], ['sent', 'partial'], true) && $context->can('prod.supply.write'),
         ];
@@ -364,7 +436,7 @@ final class SupplyService
     {
         $o = $this->load($id);
         if (!in_array($o['status'], ['sent', 'partial'], true)) throw new ApiException('PO_NOT_RECEIVABLE', 409, [], ['status' => $o['status']]);
-        $v = (new Validator($body))->only(['received_on', 'lines'])->date('received_on', false, false);
+        $v = (new Validator($body))->only(['received_on', 'lines', 'problems'])->date('received_on', false, false);
         $day = $v->value('received_on') ?? date('Y-m-d');
         if (!$v->hasError('received_on') && $day > date('Y-m-d')) $v->add('received_on', 'IN_FUTURE');
         $own = [];
@@ -380,12 +452,39 @@ final class SupplyService
             if ($qty < 0 || $qty > self::MAX_QTY) { $v->add("lines.$i.quantity", 'OUT_OF_RANGE', ['min' => 0, 'max' => self::MAX_QTY]); continue; }
             $price = $r['unit_price'] ?? null;
             if ($price !== null && ((!is_int($price) && !is_float($price)) || $price <= 0)) { $v->add("lines.$i.unit_price", 'GREATER_THAN', ['min' => 0]); continue; }
-            if ($qty > 0) $clean[] = ['id' => $lineId, 'quantity' => (float) $qty, 'unit_price' => $price !== null ? (float) $price : ($own[$lineId]['unit_price'] !== null ? (float) $own[$lineId]['unit_price'] : null)];
+            // Partia i data ważności (opcjonalne) : wpisane raz przy przyjęciu, tablet je podpowiada.
+            $lot = isset($r['lot_number']) && is_string($r['lot_number']) ? (preg_replace('/\s+/u', ' ', mb_strtoupper(trim($r['lot_number']))) ?: null) : null;
+            if ($lot !== null && mb_strlen($lot) > 64) { $v->add("lines.$i.lot_number", 'TOO_LONG', ['max' => 64]); continue; }
+            $bb = isset($r['best_before']) && is_string($r['best_before']) && $r['best_before'] !== '' ? $r['best_before'] : null;
+            if ($bb !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $bb)) { $v->add("lines.$i.best_before", 'INVALID_DATE'); continue; }
+            if ($qty > 0) $clean[] = ['id' => $lineId, 'quantity' => (float) $qty, 'unit_price' => $price !== null ? (float) $price : ($own[$lineId]['unit_price'] !== null ? (float) $own[$lineId]['unit_price'] : null),
+                'lot_number' => $lot, 'best_before' => $bb];
+        }
+        // Problem przy przyjęciu (asystent, krok 4) : niezgodność dostawcy wypełniona z linii (dostawca, surowiec, ilość).
+        $problems = [];
+        foreach (is_array($body['problems'] ?? null) ? array_values($body['problems']) : [] as $i => $pb) {
+            $lineId = is_array($pb) ? ($pb['line_id'] ?? null) : null;
+            $desc = is_array($pb) ? trim((string) ($pb['description'] ?? '')) : '';
+            if (!is_int($lineId) || !isset($own[$lineId])) { $v->add("problems.$i.line_id", 'REFERENCE_NOT_FOUND', ['id' => is_scalar($lineId) ? (string) $lineId : '?']); continue; }
+            if ($desc === '' || mb_strlen($desc) > 5000) { $v->add("problems.$i.description", 'REQUIRED'); continue; }
+            $sev = in_array($pb['severity'] ?? 'minor', ['minor', 'major', 'critical'], true) ? $pb['severity'] ?? 'minor' : 'minor';
+            $pq = $pb['quantity'] ?? null;
+            $problems[$lineId] = ['description' => $desc, 'severity' => $sev, 'quantity' => is_int($pq) || is_float($pq) ? (float) $pq : null];
         }
         $v->throwIfInvalid();
         if (!$clean) throw ApiException::validation([['field' => 'lines', 'code' => 'REQUIRED', 'params' => []]]);
-        $this->tx->execute(function () use ($id, $o, $day, $clean, $context) {
-            foreach ($clean as $c) $this->repo->addReceipt($c['id'], $day, $c['quantity'], $c['unit_price'], $context->userId);
+        // Tablet grupy : przyjmuje pracownik zalogowany PIN-em (zapisany przy przyjęciu i w opisie niezgodności).
+        $by = $context->employeeId !== null ? $this->repo->employeeName($context->employeeId) : null;
+        $this->tx->execute(function () use ($id, $o, $day, $clean, $problems, $own, $context, $by) {
+            $receiptOf = [];
+            foreach ($clean as $c) $receiptOf[$c['id']] = $this->repo->addReceipt($c['id'], $day, $c['quantity'], $c['unit_price'], $context->userId, $c['lot_number'], $c['best_before'], $context->employeeId);
+            foreach ($problems as $lineId => $pb) {
+                $line = $own[$lineId];
+                $ncId = $this->nc->save(['reported_at' => $day, 'source' => 'supplier_delivery', 'supplier_id' => (int) $o['id_supplier'], 'material_id' => (int) $line['id_raw_material'],
+                    'description' => mb_substr('Przyjęcie ' . $o['code'] . ' (' . $line['name'] . ($by ? ', tablet : ' . $by : '') . ') : ' . $pb['description'], 0, 5000), 'severity' => $pb['severity'],
+                    'quantity' => $pb['quantity'], 'unit' => $line['unit'] ?? null, 'status' => 'open'], null, $context->userId);
+                if (isset($receiptOf[$lineId])) $this->repo->linkReceiptNc($receiptOf[$lineId], $ncId);
+            }
             $done = true;
             foreach ($this->repo->lines($id) as $l) if ((float) $l['received_qty'] < (float) $l['quantity'] - 1e-6) $done = false;
             $status = $done ? 'received' : 'partial';
@@ -393,6 +492,26 @@ final class SupplyService
             $this->audit->record($context, 'receive', 'supplier_order', $id, ['status' => $o['status']], ['status' => $status, 'received_on' => $day, 'lines' => $clean]);
         });
         return $this->order($id, $context);
+    }
+
+    /** Tablet grupy : dostawa do przyjęcia, bez cen (linie, zamówione, przyjęte, reszta). */
+    public function kioskOrder(int $id, ApiContext $context): array
+    {
+        $o = $this->order($id, $context);
+        $keep = array_flip(['id', 'raw_material_id', 'name', 'base_unit', 'unit', 'factor', 'quantity', 'received_qty', 'remaining']);
+        return ['id' => $o['id'], 'code' => $o['code'], 'status' => $o['status'], 'supplier' => $o['supplier']['name'] ?? null, 'delivery_date' => $o['delivery_date'],
+            'receivable' => in_array($o['status'], ['sent', 'partial'], true),
+            'lines' => array_map(fn($l) => array_intersect_key($l, $keep), $o['lines']),
+            'receipts' => array_map(fn($r) => array_diff_key($r, ['unit_price' => 1]), $o['receipts'])];
+    }
+
+    /** Tablet grupy : przyjęcie (ilości, partia, data ważności, problem → NC) ; cena zawsze z zamówienia. */
+    public function receiveAtKiosk(int $id, array $body, ApiContext $context): array
+    {
+        if ($context->employeeId === null) throw new ApiException('EMPLOYEE_UNAUTHENTICATED', 401);
+        if (is_array($body['lines'] ?? null)) $body['lines'] = array_map(fn($r) => is_array($r) ? array_diff_key($r, ['unit_price' => 1]) : $r, $body['lines']);
+        $this->receive($id, $body, $context);
+        return $this->kioskOrder($id, $context);
     }
 
     public function cancel(int $id, ApiContext $context): array

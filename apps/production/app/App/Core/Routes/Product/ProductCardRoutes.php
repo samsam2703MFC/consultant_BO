@@ -16,6 +16,11 @@ return function (RouteCollector $r) {
     $r->addRoute('DELETE', '/ajax/products/{id:\d+}/media/{slot:[0-4]}', ['controller' => $media, 'method' => 'deleteImage']);
     $r->addRoute('GET', '/products/{id:\d+}/media/{slot:[0-4]}', ['controller' => $media, 'method' => 'image']);
 
+    // Krok « Ceny i zgodność » karty produktu : cena standardowa (PATCH …/standard-price), ceny klientów, PPWR, Belgia
+    $commercial = App\Controllers\Web\Product\ProductCommercialController::class;
+    $r->addRoute('GET', '/ajax/products/{id:\d+}/commercial', ['controller' => $commercial, 'method' => 'summary']);
+    $r->addRoute('POST', '/ajax/products/{id:\d+}/commercial/copy-price', ['controller' => $commercial, 'method' => 'copyPrice']);
+
     $r->addRoute('GET', '/ajax/compositions/{idRecipe:\d+}/technical-card', [
         'controller' => App\Controllers\Web\Product\ProductCardController::class,
         'method' => 'ajaxGetCompositionCard'

@@ -356,6 +356,7 @@
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-redistribute>${esc(t('week.redistribute'))}</button>
                         <button type="button" class="btn btn-outline-danger btn-sm" data-clear-week title="${esc(t('week.clear_help'))}"><i class="bi bi-x-circle"></i> ${esc(t('week.clear'))}</button>` : ''}
                     ${w.can_schedule && w.source.type === 'plan' ? `<button type="button" class="btn btn-outline-primary btn-sm" data-schedule title="${esc(t('week.schedule_hint'))}"><i class="bi bi-diagram-3"></i> ${esc(t('week.schedule'))}</button>` : ''}
+                    <a class="btn btn-outline-success btn-sm" href="${esc(api.root)}/workshop/supply#tab=needs&date=${esc(w.days[0].date)}&weeks=1" title="${esc(t('week.supply_help'))}"><i class="bi bi-cart3"></i> ${esc(t('week.supply_next'))}</a>
                 </div>
             </div>
             <div class="tfb-week-kpis">

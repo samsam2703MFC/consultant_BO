@@ -614,3 +614,17 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .kiosk-eod-steps li.is-on span { background: #8D1D2C; color: #fff; }
 .kiosk-eod-steps li.is-done span { background: #2e7d4f; color: #fff; }
 .kiosk-eod-step { margin: 4px 0 8px; font-size: 19px; }
+
+/* Przyjęcie dostawy na tablecie (asystent 5 kroków) */
+.kiosk-rx-lines { display: grid; gap: 10px; }
+.kiosk-rx-line { display: grid; grid-template-columns: 1fr auto; gap: 8px 14px; align-items: center; margin: 0; }
+.kiosk-rx-line .kiosk-row { grid-column: 1 / -1; margin: 0; }
+.kiosk-rx-qty { display: inline-flex; align-items: center; gap: 6px; font-size: 17px; }
+.kiosk-rx-qty input { width: 120px; font-size: 20px; text-align: right; padding: 8px 10px; border: 1px solid var(--k-line); border-radius: 10px; }
+.kiosk-rx-pb { margin: 0 0 10px; }
+.kiosk-rx-pb.is-on { border-color: #b00020; }
+.kiosk-rx-check { display: flex; align-items: center; gap: 10px; font-size: 18px; }
+.kiosk-rx-check input { width: 24px; height: 24px; }
+.kiosk-rx-pb [data-pfields] { margin-top: 10px; display: grid; gap: 10px; }
+.kiosk-rx-pb [data-pfields] label.is-wide { display: grid; gap: 4px; }
+.kiosk-rx-pb [data-pfields] input[data-pdesc] { font-size: 17px; padding: 8px 10px; border: 1px solid var(--k-line); border-radius: 10px; }

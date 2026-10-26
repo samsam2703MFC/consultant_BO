@@ -19,6 +19,26 @@
             </div>
         </div>
         <section class="section">
+            <?php if (!empty($created)): $pf = $created['proforma']; $wizardStep = $pf ? 4 : 3; require __DIR__ . '/_wizard_steps.view.php'; ?>
+                <!-- Kreator « Nowe zamówienie » : kroki 3 (proforma) i 4 (wysyłka) na utworzonym zamówieniu -->
+                <div class="at-note at-note-safe mb-3" role="status">
+                    <i class="bi bi-check-circle"></i>
+                    <div><strong>Zamówienie #<?= (int) $created['id'] ?> utworzone<?= $pf ? ', proforma ' . esc($pf['num']) . ' wystawiona' : '' ?>.</strong>
+                        <?php if (!empty($created['problems'])): ?><div class="text-danger mt-1"><?= implode('<br>', array_map('esc', $created['problems'])) ?></div><?php endif; ?>
+                        <?php if ($pf): ?>
+                            <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                                <a class="btn btn-sm btn-outline-primary" href="<?= ROOT ?>/ajax/proforma-documents/<?= (int) $pf['id'] ?>/document"><i class="bi bi-file-earmark-pdf"></i> Podgląd proformy (PDF)</a>
+                                <?php if ($created['auto']): ?>
+                                    <span><i class="bi bi-send-check"></i> Wysyłka automatyczna : e-mail na <?= esc($created['address']) ?> <?= esc($created['moment']) ?> (Dystrybucja dokumentów) — stan w <a href="<?= ROOT ?>/communication/outbox">Stan wysyłek</a>.</span>
+                                <?php else: ?>
+                                    <a class="btn btn-sm btn-primary" href="<?= ROOT ?>/communication/compose/proforma/<?= (int) $pf['id'] ?>"><i class="bi bi-envelope"></i> Wyślij proformę klientowi</a>
+                                    <span class="text-muted">wzór e-maila wypełniony w języku klienta ; automat : <a href="<?= ROOT ?>/communication/distribution">Dystrybucja dokumentów</a></span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
             <?php if (!empty($timeline)): ?>
                 <!-- Oś statusu zamówienia (OrderTimelineService) -->
                 <ol class="at-timeline" aria-label="Status zamówienia #<?= (int) ($row['id'] ?? 0) ?>">
