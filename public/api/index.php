@@ -523,6 +523,7 @@ function route(string $method, string $path): mixed
             $path === '/suivi/lien'                    => ep_suivi_lien(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
             preg_match('#^/visites/kpi/(\d{1,10})$#', $path, $m) === 1 => ep_visites_kpi($m[1]),
+            preg_match('#^/visites/taches/(\d{1,10})$#', $path, $m) === 1 => ep_visites_taches($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             $path === '/marketing/social/regles'   => ep_fb_regles(),
             $path === '/marketing/social/posts'                => ep_fb_posts(),
