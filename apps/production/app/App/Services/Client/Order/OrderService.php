@@ -52,7 +52,7 @@ class OrderService
         FinalProductRepository    $finalProductRepository,
         ProformaService           $proformaService,
         OutboxRepository          $outboxRepository,
-        private InTransitPusher $inTransitPusher,
+        private OrderFulfilmentService $fulfilment,
         private FinalProductCustomerPriceRepository $finalProductCustomerPriceRepository,
         OrderChangelogRepository $orderChangelogRepository,
         private PickingListAuditService $pickingListAuditService,
@@ -796,26 +796,18 @@ class OrderService
         return true;
     }
 
+    /**
+     * « Oznacz jako wysłane i powiadom » : statut « W transporcie » (même règle que Wyślij dzień) et avis à la
+     * boutique mis en file (webhook_outbox_shipments) — il part au prochain passage de la file, sans attendre ici.
+     */
     public function notifyIntegrated($id)
     {
-//        $resUpdateStatus = $this->orderRepository->update($id, ['status' => CustomerOrderStatus::IN_TRANSIT]);
-//        if (!$resUpdateStatus) {
-//            throw new CustomException("UPDATE_ORDER_STATUS_ERROR", 'errors', 500);
-//        }
-
-        $resInTransit = $this->inTransitPusher->pushInTransit($id);
-        if (!$resInTransit) {
-            throw new CustomException("PUSH_IN_TRANSIT_ERROR", 'errors', 500);
-        }
-
-        if($resInTransit)
-        {
-            $res = $this->orderRepository->update($id, ['status' => CustomerOrderStatus::IN_TRANSIT]);
-            if (!$res) {
-                throw new CustomException("UPDATE_ORDER_STATUS_ERROR", 'errors', 500);
-            }
-        }
-
+        $order = $this->orderRepository->first(['id' => $id]);
+        if (!$order) throw new CustomException("MISSING_ORDER", 'errors', 404);
+        if (empty($order['id_wdt'])) throw new CustomException("MISSING_INVOICE", 'errors', 404);
+        $notice = $this->fulfilment->queueShopNotices([(int) $id])[0];
+        if ($notice['status'] === 'error') throw new CustomException($notice['code'] ?? 'PUSH_IN_TRANSIT_ERROR', 'errors', 500);
+        $this->fulfilment->markShipped((int) $id, 'Oznacz jako wysłane i powiadom');
         return true;
     }
 

@@ -93,7 +93,10 @@
         'impaye': 'nieoplacona przypomnienie platnosci', 'impayes': 'nieoplacone przypomnienie platnosci', 'impayee': 'nieoplacona przypomnienie platnosci', 'impayees': 'nieoplacone przypomnienie platnosci',
         'paiement': 'platnosci oplacona', 'relance': 'przypomnienie', 'relances': 'przypomnienia przypomnienie', 'afaire': 'obsluzenia zadania',
         'envoye': 'wyslane wyslana niewyslana', 'envoyee': 'wyslana niewyslana', 'envoyees': 'wyslane niewyslane',
-        'journee': 'dnia dzien', 'fin': 'koniec', 'boutique': 'sklep sklepy sklepow', 'boutiques': 'sklepy sklepow sklep', 'perte': 'straty strata', 'pertes': 'straty', 'controle': 'kontrola kontroli', 'qualite': 'jakosci jakosc', 'conservation': 'przydatnosc', 'delai': 'termin', 'complement': 'domowienie domowienia', 'complements': 'domowienia'
+        'journee': 'dnia dzien', 'fin': 'koniec', 'boutique': 'sklep sklepy sklepow', 'boutiques': 'sklepy sklepow sklep', 'perte': 'straty strata', 'pertes': 'straty', 'controle': 'kontrola kontroli', 'qualite': 'jakosci jakosc', 'conservation': 'przydatnosc', 'delai': 'termin', 'complement': 'domowienie domowienia', 'complements': 'domowienia',
+        'entrepot': 'magazyn magazynu', 'livree': 'dostarczono dostarczonych zrealizowane', 'livrees': 'dostarczonych zrealizowane', 'transport': 'transporcie',
+        'statut': 'status statusy', 'statuts': 'status statusy', 'avis': 'powiadomienia powiadomienie', 'expeditions': 'wysylki wysylek', 'etat': 'stan',
+        'doublon': 'ponownie jedno', 'realisee': 'zrealizowane', 'realisees': 'zrealizowane', 'emballeur': 'opakowania'
     };
 
     var menu = null;

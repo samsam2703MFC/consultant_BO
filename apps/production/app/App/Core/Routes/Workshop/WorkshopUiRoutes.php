@@ -4,6 +4,9 @@ use FastRoute\RouteCollector;
 return function (RouteCollector $r) {
     $c = App\Controllers\Web\Workshop\WorkshopUiController::class;
     $r->addRoute('GET', '/workshop/products', ['controller' => $c, 'method' => 'products']);
+    // Magazyn (zakładki) : ta sama aplikacja co Karty produktów, otwarta na stanie magazynu albo zapasie MTS.
+    $r->addRoute('GET', '/workshop/stock', ['controller' => $c, 'method' => 'stock']);
+    $r->addRoute('GET', '/workshop/stock/mts', ['controller' => $c, 'method' => 'stockMts']);
     // « Plan tygodnia i surowce » usunięty : planuje się na tablicy « Tydzień produkcji ».
     $r->addRoute('GET', '/workshop/planning', ['redirect' => '/workshop/gantt']);
     $r->addRoute('GET', '/workshop/gantt', ['controller' => $c, 'method' => 'gantt']);

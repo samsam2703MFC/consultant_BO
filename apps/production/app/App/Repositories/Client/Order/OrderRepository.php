@@ -3,6 +3,7 @@
 namespace App\Repositories\Client\Order;
 
 use App\Domain\Client\Order\CustomerOrderStatus;
+use App\Domain\Client\Order\OpenOrders;
 
 use App\Core\Helpers\BaseRepository;
 use App\Repositories\Document\DocumentRepository;
@@ -128,7 +129,7 @@ class OrderRepository extends BaseRepository
                         ON co.status = cost.id
                     LEFT JOIN document_proforma doc
                         ON co.id_proforma = doc.id
-            WHERE co.status = " . CustomerOrderStatus::PENDING . "
+            WHERE " . OpenOrders::sql('co') . "
             ORDER BY expected_shipping_date;";
         return $this->query($sql);
     }
@@ -171,7 +172,7 @@ class OrderRepository extends BaseRepository
     /** Zwraca zrealizowane i wysłane zamówienia wraz z kluczami dokumentów. */
     public function getArchived(array $filters = []): array
     {
-        $where = ['co.status IN (' . implode(', ', CustomerOrderStatus::archivalValues()) . ')'];
+        $where = [OpenOrders::closedSql('co')];
         $params = [];
         if (!empty($filters['client_id']) && ctype_digit((string) $filters['client_id'])) {
             $where[] = 'co.id_customer = :client_id';
@@ -193,7 +194,7 @@ class OrderRepository extends BaseRepository
             'order_date' => 'co.create_order_date',
             'shipping_date' => 'co.expected_shipping_date',
             'weight' => 'total_sum_kg',
-            'status' => 'co.status',
+            'status' => OpenOrders::effectiveStatusSql('co'),
         ];
         $sort = $sorts[$filters['sort'] ?? 'shipping_date'] ?? $sorts['shipping_date'];
         $direction = strtolower($filters['direction'] ?? 'desc') === 'asc' ? 'ASC' : 'DESC';
@@ -201,13 +202,13 @@ class OrderRepository extends BaseRepository
         $sql = "SELECT co.id, co.reference, co.status, co.order_description,
                     DATE(co.create_order_date) AS create_date, TIME(co.create_order_date) AS create_order_time,
                     DATE(co.expected_shipping_date) AS expected_shipping_date, co.id_proforma, co.id_wdt,
-                    cust.company, COALESCE(cost.name, CASE WHEN co.status = " . CustomerOrderStatus::ARCHIVED . " THEN 'Zarchiwizowane' ELSE CONCAT('Status ', co.status) END) AS status_name,
+                    cust.company, " . $this->statusLabelSql() . " AS status_name,
+                    IF(cust.franchisee_uid IS NOT NULL AND cust.credentials IS NOT NULL, 1, 0) AS integrated_customer,
                     ROUND((SELECT SUM((cop.quantity_carton * fp.ppc * fp.weight) / 1000)
                            FROM customer_order_product cop INNER JOIN final_product fp ON cop.id_product = fp.id
                            WHERE cop.id_order = co.id), 2) AS total_sum_kg
                 FROM customer_order co
                 INNER JOIN customer cust ON co.id_customer = cust.id
-                LEFT JOIN customer_order_status_type cost ON co.status = cost.id
                 WHERE " . implode(' AND ', $where) . "
                 ORDER BY " . $sort . " " . $direction . ", co.id DESC";
         return $this->query($sql, $params);
@@ -356,5 +357,42 @@ class OrderRepository extends BaseRepository
             'shipping_date' => $shippingDate,
             'id_customer' => $customerId
         ]);
+    }
+
+    /** Nazwa statusu z CustomerOrderStatus (tabela customer_order_status_type ma stare nazwy : « Paletyzowane » dla 3). */
+    private function statusLabelSql(): string
+    {
+        $cases = '';
+        foreach (CustomerOrderStatus::labels() as $code => $label) $cases .= ' WHEN ' . (int) $code . ' THEN ' . $this->db->quote($label);
+        return 'CASE ' . OpenOrders::effectiveStatusSql('co') . $cases . " ELSE CONCAT('Status ', co.status) END";
+    }
+
+    /** Wyślij dzień : zamówienia z tą WDT jeszcze « Oczekujące » (id). */
+    public function pendingIdsByWdt(int $wdtId): array
+    {
+        $rows = $this->query('SELECT id FROM customer_order WHERE id_wdt = :wdt AND status = :pending ORDER BY id',
+            ['wdt' => $wdtId, 'pending' => CustomerOrderStatus::PENDING]);
+        return is_array($rows) ? array_map(fn($r) => (int) $r['id'], $rows) : [];
+    }
+
+    /** Dostawa potwierdzona przez kierowcę : zamówienia z WDT wysyłek klienta tego dnia, « Oczekujące » albo « W transporcie » (id). */
+    public function deliverableIds(string $shipDate, int $customerId): array
+    {
+        $rows = $this->query('SELECT co.id FROM customer_order co
+                WHERE co.status IN (:pending, :transit) AND co.id_wdt IN (SELECT sl.id_wdt FROM shipment_log sl WHERE sl.shipment_date = :d AND sl.id_customer = :c)
+                ORDER BY co.id', ['pending' => CustomerOrderStatus::PENDING, 'transit' => CustomerOrderStatus::IN_TRANSIT, 'd' => $shipDate, 'c' => $customerId]);
+        return is_array($rows) ? array_map(fn($r) => (int) $r['id'], $rows) : [];
+    }
+
+    /** Zmienia status zamówień (update_status_date = teraz) ; tylko z podanych statusów wyjściowych. */
+    public function setStatus(array $ids, int $status, array $fromStatuses): int
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $from = array_values(array_unique(array_map('intval', $fromStatuses)));
+        if ($ids === [] || $from === []) return 0;
+        $stmt = $this->db->prepare('UPDATE customer_order SET status = ?, update_status_date = NOW() WHERE id IN (' . implode(',', array_fill(0, count($ids), '?'))
+            . ') AND status IN (' . implode(',', array_fill(0, count($from), '?')) . ')');
+        $stmt->execute(array_merge([$status], $ids, $from));
+        return $stmt->rowCount();
     }
 }

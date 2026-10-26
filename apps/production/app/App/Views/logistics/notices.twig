@@ -9,7 +9,7 @@
     <div class="page-heading at-profit-head">
         <div class="page-title">
             <h3>Powiadomienia klientów o dostawie</h3>
-            <p class="text-subtitle text-muted">Kierowca, pojazd, trasa, godzina i palety — e-mail albo SMS w języku klienta (karta klienta). Dzień wysyłki : {{ date|day_pl }}</p>
+            <p class="text-subtitle text-muted">Kierowca, pojazd, trasa, godzina i palety — e-mail albo SMS w języku klienta (karta klienta). Dzień wysyłki : {{ date|day_pl }}. Jedno powiadomienie na klienta i kanał : także automat (Dystrybucja dokumentów, « dzień przed dostawą ») nie wysyła drugi raz.</p>
         </div>
         <form method="get" action="{{ root }}/logistics/notices" class="at-profit-period at-logi-date">
             <label for="noticeDate" class="visually-hidden">Dzień wysyłki</label>
@@ -81,6 +81,7 @@
                             <td class="small">
                                 <label class="d-block"><input type="checkbox" class="form-check-input" data-channel="mail" {{ c.email ? 'checked' : 'disabled' }}> E-mail <span class="text-muted">{{ c.email ?: 'brak adresu' }}</span></label>
                                 <label class="d-block"><input type="checkbox" class="form-check-input" data-channel="sms" {{ c.phone ? '' : 'disabled' }}> SMS <span class="text-muted">{{ c.phone ?: 'brak telefonu' }}</span></label>
+                                {% if c.last is not empty %}<label class="d-block text-warning-emphasis"><input type="checkbox" class="form-check-input" data-resend> wyślij ponownie <span class="text-muted">(już wysłano)</span></label>{% endif %}
                                 <button type="button" class="btn btn-link btn-sm p-0" data-toggle-preview>Podgląd</button>
                             </td>
                             <td class="small text-muted">
@@ -154,6 +155,7 @@
         eta: row.querySelector('[data-field=eta]').value.trim(),
         mail: row.querySelector('[data-channel=mail]').checked,
         sms: row.querySelector('[data-channel=sms]').checked,
+        resend: !!row.querySelector('[data-resend]')?.checked,
     });
     const picked = () => rows.filter(r => r.querySelector('[data-pick]').checked);
     const refresh = () => { sendBtn.disabled = !picked().some(r => r.querySelector('[data-channel=mail]').checked || r.querySelector('[data-channel=sms]').checked); };

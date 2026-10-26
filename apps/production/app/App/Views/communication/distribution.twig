@@ -1,22 +1,5 @@
 {% extends "layouts/base.twig" %}
 
-{% set rule_labels = {
-    'ORDER_CONFIRMATION': 'Po zamówieniu',
-    'PROFORMA_TO_CLIENT': 'Po wystawieniu proformy',
-    'DELIVERY_PLANNED': 'Dzień przed dostawą',
-    'SHIPMENT_SENT': 'Z dostawą',
-    'WDT_TO_CLIENT': 'Po wystawieniu WDT',
-    'WDT_KSEF_TO_CLIENT': 'Po przyjęciu WDT w KSeF',
-    'INVOICE_TO_CLIENT': 'Po wystawieniu faktury',
-    'DIFFERENCE_TO_CLIENT': 'Różnice (≠ 0)',
-    'PRICE_LIST_TO_CLIENT': 'Zmiana cen',
-    'MONTHLY_REPORT': '1. dnia miesiąca',
-    'ACCOUNTING_WDT': 'Kopia WDT (stara reguła)',
-    'ACCOUNTING_INVOICE': 'Kopia faktury (stara reguła)',
-    'ACCOUNTING_PROFORMA': 'Kopia proformy (stara reguła)'
-} %}
-{% set ref_labels = {'order': 'Zamówienie', 'proforma': 'Proforma', 'invoice': 'Faktura', 'wdt': 'WDT', 'wdtksef': 'WDT (KSeF)', 'shipment': 'Wysyłka',
-    'diff': 'Różnice', 'delivery': 'Dostawa', 'price': 'Cennik klienta', 'month': 'Raport miesięczny klienta'} %}
 
 {% block title %}Dystrybucja dokumentów{% endblock %}
 
@@ -65,7 +48,7 @@
     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
         <div class="at-tabs" role="tablist">
             <button type="button" data-tab="table" class="active">Tabela</button>
-            <button type="button" data-tab="history">Historia wysyłek <span class="at-tab-count">{{ dispatches|length }}</span></button>
+            <button type="button" data-tab="history">Ustawienia wysyłki</button>
         </div>
         <span class="ms-auto small {{ delivery_mode == 'live' ? 'text-muted' : 'text-warning' }}"><i class="bi {{ delivery_mode == 'live' ? 'bi-send-check' : 'bi-shield-lock' }}"></i> {{ delivery_label }}</span>
         <button type="button" class="btn btn-sm btn-outline-dark" id="ddRunNow"><i class="bi bi-play-fill"></i> Uruchom teraz</button>
@@ -104,42 +87,13 @@
                     <div class="col-6 col-md-3"><button type="submit" class="btn btn-outline-dark w-100">Zapisz</button></div>
                 </form>
                 {% if not has_account and delivery_mode != 'log_only' %}<div class="alert alert-warning py-2">Brak aktywnego konta e-mail : <a href="{{ root }}/communication/email-settings">skonfiguruj</a>.</div>{% endif %}
-                {% if dispatches %}
-                <div class="table-responsive dd-hist">
-                    <table class="table align-middle mb-0">
-                        <thead><tr><th>Kiedy</th><th>Moment</th><th>Zdarzenie</th><th>Odbiorca / temat</th><th>Stan</th><th></th></tr></thead>
-                        <tbody>
-                        {% for d in dispatches %}
-                            {% set parts = d.ref_key|split('>') %}
-                            {% set base = parts[0]|split(':') %}
-                            <tr>
-                                <td class="text-nowrap">{{ d.created_at }}</td>
-                                <td>{{ rule_labels[d.rule_code]|default(d.rule_code) }}</td>
-                                <td>{{ ref_labels[base[0]]|default(base[0]) }} {% if base[0] == 'delivery' %}{{ base[2]|default('') }} · #{{ base[1] }}{% elseif base[0] == 'month' %}{{ base[2]|default('') }} · #{{ base[1] }}{% else %}#{{ base[1]|default('') }}{% endif %}
-                                    {% if parts|length > 1 %}<div class="text-muted small">{{ parts[1] starts with 'acc:' ? 'kopia dla biura' : (parts[1] == 'notice' ? 'powiadomienie' : 'wiadomość do klienta') }}</div>{% endif %}</td>
-                                <td>{% if d.id_message %}<a href="{{ root }}/communication/messages/{{ d.id_message }}">{{ d.recipient_email }}</a><div class="text-muted small">{{ d.subject_text }}</div>{% endif %}
-                                    {% if d.reason and d.status == 'queued' %}<div class="text-muted small">{{ d.reason }}</div>{% endif %}
-                                    {% if not d.id_message and d.status == 'queued' and not d.reason %}—{% endif %}</td>
-                                <td>
-                                    {% if d.status == 'queued' %}
-                                        {% if d.message_status == 'sent' and (d.provider_message_id ?? '') starts with 'LOG_ONLY:' %}<span class="at-pill at-pill-muted">Zarejestrowana (nie wysłana)</span>
-                                        {% elseif d.message_status == 'sent' %}<span class="at-pill at-pill-ok">Wysłana</span>
-                                        {% elseif d.message_status == 'failed' %}<span class="at-pill at-pill-danger">Błąd wysyłki</span>
-                                        {% else %}<span class="at-pill at-pill-warn">W kolejce</span>{% endif %}
-                                    {% else %}
-                                        <span class="at-pill {{ d.status == 'failed' ? 'at-pill-danger' : 'at-pill-warn' }}">{{ d.status == 'failed' ? 'Błąd' : 'Pominięte' }}</span>
-                                        <div class="text-muted small">{{ d.reason }}</div>
-                                    {% endif %}
-                                </td>
-                                <td class="text-end">{% if d.status != 'queued' %}<button type="button" class="btn btn-sm btn-outline-dark" data-retry="{{ d.id }}">Ponów</button>{% endif %}</td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
+                {# Jedna historia wysyłek (audyt 2, P11) : wysłane — Historia wiadomości ; błędy i pominięte z « Ponów » — Stan wysyłek. #}
+                <div class="at-note at-note-safe mb-0">
+                    <i class="bi bi-clock-history"></i>
+                    <span><strong>Historia wysyłek jest w jednym miejscu.</strong>
+                    Co wyszło : <a href="{{ root }}/communication/messages">Historia wiadomości</a>.
+                    Co nie wyszło albo zostało pominięte (z « Ponów » i « Rozwiązane ») : <a href="{{ root }}/communication/outbox?source=automation&amp;filter=all">Stan wysyłek › E-maile automatyczne</a>.</span>
                 </div>
-                {% else %}
-                    <p class="at-empty mb-0">Brak wysyłek. E-maile wychodzą od chwili włączenia, dla nowych zamówień, wysyłek i dokumentów (bez historii).</p>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -283,10 +237,6 @@
         send('/ajax/communication/automations/run', 'POST').then(res => {
             Swal.fire({icon: res.ok ? 'success' : 'error', text: res.message}).then(() => location.reload());
         });
-    });
-    document.addEventListener('click', (e) => {
-        const retry = e.target.closest('[data-retry]');
-        if (retry) send(`/ajax/communication/automations/dispatches/${retry.dataset.retry}/retry`, 'POST').then(res => { showSnack(res.ok, res.message); location.reload(); });
     });
 })();
 </script>

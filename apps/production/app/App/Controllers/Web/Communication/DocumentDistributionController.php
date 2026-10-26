@@ -7,7 +7,6 @@ use App\Core\Web\JsonErrors;
 use App\Repositories\Workshop\ParamRepository;
 use App\Services\Communication\DocumentDistributionService;
 use App\Services\Communication\EmailAccountService;
-use App\Services\Communication\MailAutomationService;
 use App\Services\Communication\MailDeliveryPolicy;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -21,7 +20,6 @@ class DocumentDistributionController extends BaseController
 
     public function __construct(
         private DocumentDistributionService $distribution,
-        private MailAutomationService $automation,
         private EmailAccountService $accounts,
         private MailDeliveryPolicy $policy,
         private ParamRepository $params,
@@ -35,7 +33,6 @@ class DocumentDistributionController extends BaseController
             'recipient_labels' => DocumentDistributionService::RECIPIENT_LABELS,
             'recipient_short' => DocumentDistributionService::RECIPIENT_SHORT,
             'max_copies' => DocumentDistributionService::MAX_COPIES,
-            'dispatches' => $this->automation->recentDispatches(100),
             'doc_labels' => array_map(fn($d) => $d['label'], DocumentDistributionService::DOCS),
             'delivery_mode' => $this->policy->mode(),
             'delivery_label' => $this->policy->label(),

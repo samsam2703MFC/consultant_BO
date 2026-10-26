@@ -24,9 +24,12 @@ use App\Repositories\Stock\Complaint\CartonStockComplaintRepository;
 use App\Services\Client\PriceList\ExternalPriceListService;
 use App\Services\Document\WZService;
 use App\Services\Document\DifferenceSettlementService;
+use App\Services\Client\Order\OrderFulfilmentService;
 
 class ShippingService
 {
+    /** Avis aux boutiques de la dernière expédition créée (insertNewShipping), pour la réponse de l'assistant. */
+    private array $lastShopNotices = [];
 
     public function __construct(
         private ShippingLogRepository                    $shippingLogRepository,
@@ -49,14 +52,21 @@ class ShippingService
         private ComplaintShipmentLogRepository           $complaintShipmentLogRepository,
         private CartonStockComplaintRepository           $cartonStockComplaintRepository,
         private DifferenceSettlementService              $differenceSettlementService,
-        private ShipmentPackagingService                 $shipmentPackagingService
+        private ShipmentPackagingService                 $shipmentPackagingService,
+        private OrderFulfilmentService                   $fulfilment
     )
     {
     }
 
+    /**
+     * Documents d'un client pour un jour (WZ, CMR, WDT, différences) ; les commandes du jour passent « W transporcie »
+     * dans la même transaction, puis l'avis aux boutiques intégrées est mis en file (Stan wysyłek › Sklepy franczyzy (wysyłki)).
+     */
     public function insertNewShipping($data)
     {
-        return $this->transactionManager->execute(function () use ($data) {
+        $shipped = [];
+        $this->lastShopNotices = [];
+        $id = $this->transactionManager->execute(function () use ($data, &$shipped) {
 
             $carrier_sec_data = [
                 'id_carrier_sec' => null,
@@ -263,8 +273,25 @@ class ShippingService
                 throw new CustomException("INSERT_SHIPPING_DIFFERENCE_PRODUCT_FAILED", 'errors', 500);
             }
 
+            $shipped = $this->fulfilment->markShippedByWdt((int) $wdtInsertedId, 'Wyślij dzień : dokumenty wysyłki ' . $data['shipping_date']);
+
             return $shipmentLogId;
         });
+        // Après la validation : un avis non mis en file ne doit jamais annuler les documents.
+        if ($id && $shipped) {
+            try {
+                $this->lastShopNotices = $this->fulfilment->queueShopNotices($shipped);
+            } catch (\Throwable $e) {
+                $this->lastShopNotices = [['id_order' => 0, 'status' => 'error', 'code' => 'SHOP_NOTICE_FAILED']];
+            }
+        }
+        return $id;
+    }
+
+    /** @return list<array{id_order:int, status:string, code:?string}> */
+    public function lastShopNotices(): array
+    {
+        return $this->lastShopNotices;
     }
 
     public function insertNewComplaint($data)

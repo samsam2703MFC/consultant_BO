@@ -80,12 +80,16 @@ class DeliveryNoticeService
     }
 
     /**
-     * Wysyła powiadomienia : $items = [['id' => klient, 'mail' => bool, 'sms' => bool, 'arrival_date' => …, 'eta' => …], …].
+     * Wysyła powiadomienia : $items = [['id' => klient, 'mail' => bool, 'sms' => bool, 'arrival_date' => …, 'eta' => …, 'resend' => bool], …].
+     * Jedno powiadomienie na klienta, dzień i kanał : automat (Dystrybucja dokumentów) i ta strona nie wysyłają dwa razy ;
+     * drugi raz tylko z « resend » (strona : « wyślij ponownie »), nigdy z automatu. Błąd poprzedniego nie blokuje.
      * @return array{sent: list<array>, problems: list<string>}
      */
     public function send(string $date, array $items, ?string $author): array
     {
         $day = $this->logistics->day($date);
+        $last = $this->notices->lastByCustomer($date);
+        $automatic = str_starts_with((string) $author, 'automat:');
         $sent = [];
         $problems = [];
         foreach ($items as $item) {
@@ -95,6 +99,11 @@ class DeliveryNoticeService
             $n = $this->customerNotice($day, $c, $item);
             // adresse imposée (Dystrybucja dokumentów : principal, comptabilité, commercial ou autre)
             if (filter_var(trim((string) ($item['email'] ?? '')), FILTER_VALIDATE_EMAIL)) $n['email'] = trim((string) $item['email']);
+            foreach (self::alreadySent($last[$id] ?? [], $item, $automatic) as $channel => $previous) {
+                $item[$channel] = false;
+                $problems[] = "{$c['name']} : " . ($channel === 'sms' ? 'SMS' : 'e-mail') . ' już wysłany ' . date('H:i', strtotime((string) $previous['created_at'])) . ' (' . ($previous['created_by'] ?: '—') . ')'
+                    . ($automatic ? '.' : ' — zaznacz « wyślij ponownie », aby wysłać drugi raz.');
+            }
             if (!empty($item['mail'])) {
                 if ($n['email'] === '') $problems[] = "{$c['name']} : brak adresu e-mail.";
                 elseif (!$n['mail']['template']) $problems[] = "{$c['name']} : brak szablonu e-maila « delivery_details ».";
@@ -122,6 +131,23 @@ class DeliveryNoticeService
             }
         }
         return ['sent' => $sent, 'problems' => $problems];
+    }
+
+    /**
+     * Kanały, których nie wysyłamy drugi raz : poprzednie powiadomienie dnia doszło (nie błąd, nie SMS tylko zapisany
+     * bez dostawcy, nie e-mail odrzucony przez kolejkę) i nie ma « resend » ze strony (automat nigdy nie wysyła drugi raz).
+     * @param array<string, array> $last kanał => ostatnie powiadomienie dnia ; @return array<string, array> kanał => to powiadomienie
+     */
+    public static function alreadySent(array $last, array $item, bool $automatic): array
+    {
+        $out = [];
+        foreach (['mail', 'sms'] as $channel) {
+            $previous = $last[$channel] ?? null;
+            if (empty($item[$channel]) || $previous === null || (!empty($item['resend']) && !$automatic)) continue;
+            if (in_array($previous['status'], ['failed', 'logged'], true) || ($previous['mail_status'] ?? '') === 'failed') continue;
+            $out[$channel] = $previous;
+        }
+        return $out;
     }
 
     private function customerNotice(array $day, array $c, array $override): array

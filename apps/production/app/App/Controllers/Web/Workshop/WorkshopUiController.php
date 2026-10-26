@@ -24,6 +24,18 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/products', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
+    /** Magazyn › Stan magazynu (zakładki Magazyn) : widok « levels » aplikacji kart produktów. */
+    public function stock()
+    {
+        $this->view('workshop/products', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id'), 'start_view' => 'levels', 'page_title' => 'Stan magazynu']);
+    }
+
+    /** Magazyn › Zapas MTS : kartony, palety i wartość zapasu wg grupy i kategorii. */
+    public function stockMts()
+    {
+        $this->view('workshop/products', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id'), 'start_view' => 'stock', 'page_title' => 'Zapas MTS']);
+    }
+
     /** Arkusz tygodnia : cała produkcja tygodnia na jednej kartce (jeden wiersz na produkt). */
     public function sheet()
     {

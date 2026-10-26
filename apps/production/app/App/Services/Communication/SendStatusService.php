@@ -201,7 +201,7 @@ final class SendStatusService
             $out[] = $this->item('automation', $a, [
                 'kind_label' => \App\Services\Communication\CommunicationService::TEMPLATE_TYPES[$a['kind']] ?? self::humanize((string) $a['kind']),
                 'what' => 'Reguła ' . $a['rule_code'] . ' · ' . $a['ref_key'] . ($a['status'] === 'skipped' ? ' (pominięty)' : ''),
-                'url' => '/communication/distribution?tab=history', 'error_state' => true,
+                'url' => '/communication/distribution', 'error_state' => true,
             ], $now);
         }
 

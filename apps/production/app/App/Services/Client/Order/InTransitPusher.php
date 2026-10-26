@@ -67,19 +67,30 @@ class InTransitPusher
         ];
     }
 
-    public function pushInTransit($idOrder)
+    /**
+     * Avis « shipment.sent » à la boutique du franchisé, mis dans la file webhook_outbox_shipments (envoyé par
+     * ShipmentOutboxDispatcher : Bin/mail_dispatch.php toutes les 5 min, Bin/shipments_retry.php). Même contenu =
+     * même event_id : remettre en file une commande déjà avisée ne crée pas de doublon.
+     * @return bool true = en file (ou déjà en file avec ce contenu)
+     */
+    public function enqueueInTransit($idOrder): bool
     {
-        //1) Pobierz order + client + credentials
+        $event = $this->event((int) $idOrder);
+        $this->outboxRepository->enqueue($event);
+        return true;
+    }
+
+    /** @return array{id_order:int, shop_uid:string, url:string, event_id:string, payload_json:string} */
+    public function event(int $idOrder): array
+    {
         $order = $this->orderRepository->first(['id' => $idOrder]);
         if (!$order || empty($order['id_customer'])) {
             throw new CustomException("MISSING_ORDER", 'errors', 404);
         }
         if (empty($order['reference'])) {
-            // wymagany przez odbiorcę
-            throw new CustomException("MISSING_ORDER_KEY", 'errors', 500);
+            throw new CustomException("MISSING_ORDER_KEY", 'errors', 500);   // wymagany przez sklep
         }
         if (empty($order['id_wdt'])) {
-            // u Ciebie to warunek biznesowy – zostawiam
             throw new CustomException("MISSING_INVOICE", 'errors', 404);
         }
 
@@ -88,27 +99,21 @@ class InTransitPusher
         $client = $this->clientRepository->first(['id' => $order['id_customer']]);
         if (!$client) {
             throw new CustomException("MISSING_CLIENT", 'errors', 404);
-        } if (empty($client['franchisee_uid'])) {
+        }
+        if (empty($client['franchisee_uid'])) {
             throw new CustomException("CLIENT_NOT_INTEGRATED", 'errors', 404);
         }
 
         $credentials = json_decode($client['credentials'] ?? '', true);
-        $secretHex   = $credentials['secret'] ?? null;                 // ten sam klucz co w PricelistPusher
-        $baseUrl     = $credentials['webhooks_base_url'] ?? null;
-
-        if (!$secretHex || !preg_match('/^[0-9a-f]{64}$/i', $secretHex)) {
-            throw new CustomException("MISSING_CLIENT_CREDENTIALS", 'errors', 500);
-        }
-        if (!$baseUrl || !filter_var($baseUrl, FILTER_VALIDATE_URL)) {
+        $secretHex = $credentials['secret'] ?? null;                 // ten sam klucz co w PricelistPusher
+        $baseUrl = $credentials['webhooks_base_url'] ?? null;
+        if (!$secretHex || !preg_match('/^[0-9a-f]{64}$/i', $secretHex) || !$baseUrl || !filter_var($baseUrl, FILTER_VALIDATE_URL)) {
             throw new CustomException("MISSING_CLIENT_CREDENTIALS", 'errors', 500);
         }
 
-        // 2) Zbuduj snapshot (upewnij się, że kolejność jest stabilna!)
-        $items = $this->WDTProductRepository->getGroupedByProducts($order['id_wdt']);
-
+        // Snapshot WDT (kolejność stabilna : ten sam event_id przy ponownym wysłaniu tej samej treści).
         $products = [];
-
-        foreach ($items as &$it) {
+        foreach ($this->WDTProductRepository->getGroupedByProducts($order['id_wdt']) as $it) {
             $products[] = [
                 'sku' => $it['id_product'],
                 'name' => $it['name'],
@@ -118,61 +123,23 @@ class InTransitPusher
                 'price_net' => $it['price_carton']
             ];
         }
-        usort($products, fn($a,$b) => strcmp($a['sku'],$b['sku']));     // stabilna kolejność
+        usort($products, fn($a, $b) => strcmp((string) $a['sku'], (string) $b['sku']));
 
-
-        $payload = [
-            'order_key'     => $order['reference'],
-            'sent_at'       => (new \DateTimeImmutable())->format(\DateTime::ATOM),
-            'expected_date' => $order['expected_shipping_date'] ?? null,          // jeżeli masz
-            'carrier'       => $carrierPayload,                        // jeżeli masz
-            'products'      => $products,
-        ];
-        $raw = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-        // 4) Idempotencja eventu – hash treści (deterministyczny)
+        $raw = json_encode([
+            'order_key' => $order['reference'],
+            'sent_at' => (new \DateTimeImmutable())->format(\DateTime::ATOM),
+            'expected_date' => $order['expected_shipping_date'] ?? null,
+            'carrier' => $carrierPayload,
+            'products' => $products,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $contentHash = hash('sha256', json_encode($products, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        $eventId     = hash('sha256', $client['franchisee_uid'].'|'.$order['reference'].'|'.$contentHash);
 
-        // 5) HMAC – obowiązkowy
-        $signature = hash_hmac('sha256', $raw, hex2bin($secretHex));
-
-        $webhookEndpoint = '/webhooks/material-orders/shipment/sent';
-
-        // 6) POST
-        $url = rtrim($baseUrl, '/') . $webhookEndpoint;
-        $ch  = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_POST           => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_TIMEOUT        => 15,
-            CURLOPT_HTTPHEADER     => [
-                'Content-Type: application/json',
-                'X-Event-ID: '.$eventId,
-                'X-Event-Type: shipment.sent',
-                'X-Shop-Uid: '.$client['franchisee_uid'],
-                'X-Signature: '.$signature,
-            ],
-            CURLOPT_POSTFIELDS     => $raw,
-        ]);
-        $body = curl_exec($ch);
-        
-        $err  = curl_errno($ch);
-        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($err !== 0 || $code < 200 || $code >= 300) {
-            $this->outboxRepository->enqueue([
-                'id_order'     => (int)$order['id'],
-                'shop_uid'     => $client['franchisee_uid'],
-                'url'          => rtrim($baseUrl, '/') . $webhookEndpoint,
-                'event_id'     => $eventId,                 // TEN SAM przy retry
-                'payload_json' => $raw                     // dokładny JSON
-            ]);
-            return false;
-        }
-
-        return true;
+        return [
+            'id_order' => (int) $order['id'],
+            'shop_uid' => (string) $client['franchisee_uid'],
+            'url' => rtrim($baseUrl, '/') . '/webhooks/material-orders/shipment/sent',
+            'event_id' => hash('sha256', $client['franchisee_uid'] . '|' . $order['reference'] . '|' . $contentHash),
+            'payload_json' => $raw,
+        ];
     }
 }

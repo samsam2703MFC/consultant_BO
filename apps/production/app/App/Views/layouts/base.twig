@@ -70,7 +70,10 @@
         {% include "page_components/app_notifications.twig" %}
 
         <div id="main-content">
-            {{ page_tabs_html() }}
+            {# Dzień strony (Załadunek, Powiadomienia, Dokumenty, Potwierdzenia : date ; Wyślij dzień : selected_date) dla zakładek i etapów dnia #}
+            {% set page_day = (date is defined and date is not iterable) ? date : ((selected_date is defined and selected_date) ? selected_date : null) %}
+            {{ page_tabs_html(page_day) }}
+            {{ shipping_day_steps(page_day) }}
             {% block page_heading %}{% endblock %}
             {% block content %}{% endblock %}
         </div>
