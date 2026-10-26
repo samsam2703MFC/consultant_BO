@@ -325,5 +325,20 @@
   "rs.no_lot": "bez partii",
   "rs.summary_nc": "Niezgodności dostawcy do utworzenia : {n}.",
   "rs.received_nc": "Przyjęcie zapisane, niezgodności utworzone : {n}.",
-  "rs.by_tablet": "tablet : {name}"
+  "rs.by_tablet": "tablet : {name}",
+  "batch.title": "Nowe zamówienia — dostawcy : {n}",
+  "batch.help": "Sprawdź adres e-mail, dzień dostawy (zwykły dzień dostawcy) i język, potem wyślij wszystkie naraz.",
+  "batch.email": "E-mail dostawcy",
+  "batch.no_email": "brak adresu",
+  "batch.language": "Język",
+  "batch.usual": "zwykle : {days}",
+  "batch.usual_unknown": "zwykłe dni nieznane",
+  "batch.send_all": "Wyślij wszystkie ({n})",
+  "batch.save_only": "Zapisz bez wysyłania",
+  "batch.to_list": "Lista zamówień ›",
+  "batch.missing_email": "Brak adresu e-mail.",
+  "batch.missing_emails": "Brak adresu e-mail : {list}. Wpisz adres albo otwórz zamówienie i oznacz je jako złożone poza e-mailem.",
+  "batch.confirm": "Wysłać mailem wszystkie nowe zamówienia do dostawców ({n}) ?",
+  "batch.sent": "Wysłane : {ok} z {n}.",
+  "batch.saved": "Zapisane : {ok} z {n}."
 }

@@ -75,5 +75,7 @@
   "lists_no_complaints": "Aucun retour en attente d'expédition.",
   "lists_pick": "Choisissez au moins un jour d'expédition.",
   "lists_error": "Le serveur a répondu avec le code {code}.",
-  "lists_safe": "Rien n'est enregistré : les listes sont seulement calculées et téléchargées en PDF."
+  "lists_safe": "Rien n'est enregistré : les listes sont seulement calculées et téléchargées en PDF.",
+  "supply_next": "Commander les matières ›",
+  "supply_help": "Plan prêt : besoins en matières et emballages de la semaine, commandes fournisseurs"
 }

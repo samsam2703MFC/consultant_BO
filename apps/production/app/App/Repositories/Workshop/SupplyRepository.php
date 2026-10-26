@@ -157,7 +157,7 @@ final class SupplyRepository extends WorkshopRepository
     public function suppliersWithSupply(): array
     {
         return $this->all(
-            "SELECT s.id, s.name, s.phone, s.email, s.is_active FROM supplier s
+            "SELECT s.id, s.name, s.phone, s.email, s.is_active, s.delivery_weekdays FROM supplier s
              WHERE s.is_active = 1 OR EXISTS (SELECT 1 FROM raw_material rm WHERE rm.id_current_supplier = s.id) OR EXISTS (SELECT 1 FROM n_po p WHERE p.id_supplier = s.id)
              ORDER BY s.name, s.id"
         );
@@ -242,7 +242,7 @@ final class SupplyRepository extends WorkshopRepository
 
     public function supplier(int $id): ?array
     {
-        return $this->all('SELECT id, name, email, phone FROM supplier WHERE id = ?', [$id])[0] ?? null;
+        return $this->all('SELECT id, name, email, phone, delivery_weekdays, order_lang FROM supplier WHERE id = ?', [$id])[0] ?? null;
     }
 
     public function setSupplierEmail(int $id, string $email): void

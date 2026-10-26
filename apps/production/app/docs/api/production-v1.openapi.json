@@ -7240,7 +7240,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Brouillons groupés par fournisseur courant de la matière ; livraison souhaitée la veille de la semaine (au plus tôt demain). SUPPLY_NO_SUPPLIER (422) : matière sans fournisseur.",
+                "description": "Brouillons groupés par fournisseur courant de la matière ; livraison : premier jour habituel du fournisseur à partir de la veille de la semaine (au plus tôt demain) ; langue de la fiche fournisseur. SUPPLY_NO_SUPPLIER (422) : matière sans fournisseur.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -23608,7 +23608,25 @@
                     "orders": {
                         "type": "array",
                         "items": {
-                            "$ref": "#/components/schemas/SupplierOrder"
+                            "allOf": [
+                                {
+                                    "$ref": "#/components/schemas/SupplierOrder"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "usual_days": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 7
+                                            },
+                                            "description": "jours de livraison habituels du fournisseur (1 = lundi) : fiche fournisseur, sinon historique des livraisons"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }

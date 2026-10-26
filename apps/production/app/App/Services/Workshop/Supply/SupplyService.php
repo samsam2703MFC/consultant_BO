@@ -231,14 +231,24 @@ final class SupplyService
         $bySupplier = [];
         foreach ($lines as $l) $bySupplier[(int) $materials[$l['raw_material_id']]['supplier_id']][] = $l;
         $week = $v->value('week_start');
-        $delivery = $week !== null ? max(date('Y-m-d', strtotime('tomorrow')), date('Y-m-d', strtotime($week . ' -1 day'))) : null;
-        $ids = $this->tx->execute(function () use ($bySupplier, $materials, $week, $delivery, $context) {
+        $base = $week !== null ? max(date('Y-m-d', strtotime('tomorrow')), date('Y-m-d', strtotime($week . ' -1 day'))) : null;
+        // Dostawa : pierwszy zwykły dzień dostawcy od tej daty (karta dostawcy, inaczej historia dostaw) ; język z karty dostawcy.
+        $history = [];
+        foreach ($this->repo->deliveryDays(date('Y-m-d', strtotime('-180 days'))) as $d) $history[(int) $d['id_supplier']][] = $d['day'];
+        $usual = [];
+        foreach (array_keys($bySupplier) as $supplierId) {
+            $sup = $this->repo->supplier($supplierId);
+            $usual[$supplierId] = DeliveryScheduleService::usualDays($sup['delivery_weekdays'] !== null ? (int) $sup['delivery_weekdays'] : null, array_unique($history[$supplierId] ?? []));
+        }
+        $ids = $this->tx->execute(function () use ($bySupplier, $materials, $week, $base, $usual, $context) {
             $ids = [];
             foreach ($bySupplier as $supplierId => $supplierLines) {
                 $supplier = $this->repo->supplier($supplierId);
                 $email = trim((string) $supplier['email']);
+                $lang = in_array($supplier['order_lang'] ?? null, ['pl', 'fr'], true) ? $supplier['order_lang'] : 'pl';
                 $id = $this->repo->insert(['code' => $this->repo->nextCode(date('Y-m-d')), 'id_supplier' => $supplierId, 'status' => 'draft', 'week_start' => $week,
-                    'delivery_date' => $delivery, 'language' => 'pl', 'email_to' => filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null, 'created_by' => $context->userId]);
+                    'delivery_date' => $base !== null ? DeliveryScheduleService::nextUsualDay($base, $usual[$supplierId]) : null, 'language' => $lang,
+                    'email_to' => filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null, 'created_by' => $context->userId]);
                 foreach ($supplierLines as $l) {
                     $m = $materials[$l['raw_material_id']];
                     $this->repo->insertLine($id, $l['raw_material_id'], $l['quantity'], (float) $m['package_size'] > 0 ? (float) $m['package_size'] : null,
@@ -249,7 +259,11 @@ final class SupplyService
             }
             return $ids;
         });
-        return ['orders' => array_map(fn($id) => $this->order($id, $context), $ids)];
+        // Podsumowanie po « Utwórz wszystkie » : zwykłe dni dostaw każdego dostawcy (1 = poniedziałek … 7).
+        return ['orders' => array_map(function ($id) use ($usual, $context) {
+            $o = $this->order($id, $context);
+            return $o + ['usual_days' => $usual[$o['supplier']['id']] ?? []];
+        }, $ids)];
     }
 
     public function orders(string $status, ApiContext $context): array

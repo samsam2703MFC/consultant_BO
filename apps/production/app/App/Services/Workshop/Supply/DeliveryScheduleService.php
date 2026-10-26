@@ -92,6 +92,30 @@ final class DeliveryScheduleService
     }
 
     /** Dostawcy : co, kiedy zwykle, ostatnia / najbliższa dostawa ; najpierw ci z dostawą w tygodniu. */
+    /**
+     * Zwykłe dni dostaw dostawcy (1 = poniedziałek … 7) : dni z karty dostawcy (maska), a bez nich z historii —
+     * co najmniej 2 dostawy i ćwierć wszystkich dostaw w tym dniu tygodnia.
+     */
+    public static function usualDays(?int $mask, array $historyDays): array
+    {
+        if ($mask) return array_values(array_filter(range(1, 7), fn($d) => $mask & (1 << ($d - 1))));
+        $counts = array_fill(1, 7, 0);
+        foreach ($historyDays as $d) $counts[(int) date('N', strtotime($d))]++;
+        $total = count($historyDays);
+        return array_keys(array_filter($counts, fn($n) => $total > 0 && $n >= 2 && $n >= $total * 0.25));
+    }
+
+    /** Pierwszy zwykły dzień dostawy od daty (włącznie) ; bez zwykłych dni : ta data. */
+    public static function nextUsualDay(string $from, array $usual): string
+    {
+        if (!$usual) return $from;
+        for ($k = 0; $k < 7; $k++) {
+            $d = date('Y-m-d', strtotime($from . " +{$k} days"));
+            if (in_array((int) date('N', strtotime($d)), $usual, true)) return $d;
+        }
+        return $from;
+    }
+
     private function suppliers(string $today, string $lang, array $inWeek): array
     {
         $since = date('Y-m-d', strtotime($today . ' -' . self::HISTORY_DAYS . ' days'));
@@ -113,8 +137,7 @@ final class DeliveryScheduleService
             $counts = array_fill(1, 7, 0);
             foreach ($days as $d) $counts[(int) date('N', strtotime($d))]++;
             $total = count($days);
-            // Zwykłe dni : co najmniej 2 dostawy i ćwierć wszystkich dostaw w tym dniu tygodnia.
-            $usual = array_keys(array_filter($counts, fn($n) => $total > 0 && $n >= 2 && $n >= $total * 0.25));
+            $usual = self::usualDays($s['delivery_weekdays'] !== null ? (int) $s['delivery_weekdays'] : null, $days);
             $o = $open[$id] ?? null;
             $out[] = [
                 'id' => $id, 'name' => trim((string) $s['name']), 'phone' => $s['phone'] ?: null, 'email' => $s['email'] ?: null, 'active' => (bool) $s['is_active'],

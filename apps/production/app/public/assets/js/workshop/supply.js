@@ -103,13 +103,14 @@
         const y = window.scrollY;
         const invoices = () => state.inv === 'map' ? drawMappings() : state.inv && data.invoice ? drawInvoice() : drawInvoices();
         const body = state.tab === 'needs' ? drawNeeds() : state.tab === 'stock' ? drawStock() : state.tab === 'invoices' ? invoices()
-            : (state.order && data.order ? drawOrder() : drawOrders());
+            : (state.order && data.order ? drawOrder() : data.batch ? drawBatch() : drawOrders());
         el.innerHTML = shell(body);
         bindShell();
         if (state.tab === 'needs') bindNeeds();
         else if (state.tab === 'stock') bindStock();
         else if (state.tab === 'invoices') (state.inv === 'map' ? bindMappings : state.inv && data.invoice ? bindInvoice : bindInvoices)();
         else if (state.order && data.order) bindOrder();
+        else if (data.batch) bindBatch();
         else bindOrders();
         window.scrollTo(0, y);
     }
@@ -120,6 +121,7 @@
             state.tab = a.dataset.tab;
             state.order = null;
             state.inv = null;
+            data.batch = null;
             receiving = false;
             data.preview = null;
             resetInvoice();
@@ -277,6 +279,8 @@
             ui.notify(true, t('orders_created', {n: res.orders.length}));
             state.tab = 'orders';
             state.status = 'open';
+            // Kilku dostawców : podsumowanie (e-mail, dzień dostawy, język) i « Wyślij wszystkie » ; jeden : od razu jego zamówienie.
+            data.batch = res.orders.length > 1 ? res.orders : null;
             state.order = res.orders.length === 1 ? res.orders[0].id : null;
             data.orders = null;
             await load();
@@ -304,6 +308,68 @@
                     <td class="text-end">${o.price_gaps ? `<span class="badge bg-warning text-dark">${o.price_gaps}</span>` : '—'}</td>
                     <td>${o.sent_at ? `${esc(day(o.sent_at.slice(0, 10)))} · ${esc(t('sent_by.' + o.sent_by))}` : '—'}</td></tr>`).join('')
                     || `<tr><td colspan="9" class="text-muted">${esc(t('empty_orders'))}</td></tr>`}</tbody></table></div></div></div>`;
+    }
+
+    // Po « Utwórz wszystkie » : jedno podsumowanie nowych zamówień (adres e-mail, dzień dostawy wg zwykłych dni dostawcy,
+    // język dostawcy), potem « Wyślij wszystkie » — każde zamówienie zapisane i wysłane jak pojedynczo ; błąd zostaje w wierszu.
+    function drawBatch() {
+        const rows = data.batch;
+        const wd = (k) => new Date(2024, 0, k, 12).toLocaleDateString(api.lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'short'});
+        const sendable = rows.filter(o => o.status === 'draft');
+        return `<div class="card tfb-supply-batch"><div class="card-header"><h5 class="mb-1">${esc(t('batch.title', {n: rows.length}))}</h5><p class="small text-muted mb-0">${esc(t('batch.help'))}</p></div>
+            <div class="card-body pt-2"><div class="table-responsive"><table class="table table-sm align-middle mb-2">
+                <thead><tr><th>${esc(t('col.supplier'))}</th><th class="text-end">${esc(t('col.lines'))}</th><th class="text-end">${esc(t('col.ordered'))}</th><th>${esc(t('batch.email'))}</th>
+                    <th>${esc(t('col.delivery'))}</th><th>${esc(t('batch.language'))}</th><th>${esc(t('col.status'))}</th></tr></thead>
+                <tbody>${rows.map(o => `<tr data-batch="${o.id}">
+                    <td><a href="#tab=orders&order=${o.id}" data-batch-open="${o.id}"><strong>${esc(o.supplier.name)}</strong></a><div class="small text-muted">${esc(o.code)}</div></td>
+                    <td class="text-end">${o.lines.length}</td><td class="text-end">${esc(money(o.value_ordered))}</td>
+                    <td>${o.status === 'draft' ? `<input type="email" class="form-control form-control-sm" data-bemail value="${esc(o.email_to || '')}" placeholder="${esc(t('batch.no_email'))}" maxlength="255">` : esc(o.email_to || '—')}</td>
+                    <td>${o.status === 'draft' ? `<input type="date" class="form-control form-control-sm" data-bdate value="${esc(o.delivery_date || '')}">` : esc(day(o.delivery_date))}
+                        <div class="small text-muted">${o.usual_days && o.usual_days.length ? esc(t('batch.usual', {days: o.usual_days.map(wd).join(', ')})) : esc(t('batch.usual_unknown'))}</div></td>
+                    <td>${o.status === 'draft' ? `<select class="form-select form-select-sm" data-blang>${['pl', 'fr'].map(l => `<option value="${l}" ${o.language === l ? 'selected' : ''}>${esc(t('lang.' + l))}</option>`).join('')}</select>` : esc(t('lang.' + o.language))}</td>
+                    <td data-bstate>${badge(o.status)}${o.batch_error ? `<div class="small text-danger">${esc(o.batch_error)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    ${sendable.length ? `<button type="button" class="btn btn-primary" data-batch-send><i class="bi bi-send"></i> ${esc(t('batch.send_all', {n: sendable.length}))}</button>
+                    <button type="button" class="btn btn-outline-secondary" data-batch-save>${esc(t('batch.save_only'))}</button>` : ''}
+                    <button type="button" class="btn btn-link ms-auto" data-batch-close>${esc(t('batch.to_list'))}</button></div></div></div>`;
+    }
+
+    function bindBatch() {
+        const values = (tr) => ({email_to: tr.querySelector('[data-bemail]').value.trim() || null, delivery_date: tr.querySelector('[data-bdate]').value || null, language: tr.querySelector('[data-blang]').value});
+        const close = () => { data.batch = null; data.orders = null; load(); };
+        el.querySelector('[data-batch-close]').addEventListener('click', close);
+        el.querySelectorAll('[data-batch-open]').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); state.order = Number(a.dataset.batchOpen); data.batch = null; load(); }));
+        // Zapis jednego zamówienia (e-mail zapamiętany u dostawcy, gdy go nie miał) ; send = potem wysyłka mailem.
+        const one = async (o, tr, send) => {
+            const v = values(tr);
+            try {
+                if (send && !v.email_to) throw new Error(t('batch.missing_email'));
+                const body = {...v, save_supplier_email: !!v.email_to && !o.supplier_email};
+                let res = await api.patch(`/supply/orders/${o.id}`, body);
+                if (send) res = await api.post(`/supply/orders/${o.id}/send`, {});
+                Object.assign(o, res, {batch_error: null});
+                return true;
+            } catch (err) {
+                Object.assign(o, v, {batch_error: err.status ? errText(err) : err.message});
+                return false;
+            }
+        };
+        const run = async (btn, send) => {
+            const drafts = data.batch.filter(o => o.status === 'draft');
+            if (send) {
+                const noMail = drafts.filter(o => !values(el.querySelector(`tr[data-batch="${o.id}"]`)).email_to);
+                if (noMail.length) { ui.notify(false, t('batch.missing_emails', {list: noMail.map(o => o.supplier.name).join(', ')})); return; }
+                if (!window.confirm(t('batch.confirm', {n: drafts.length}))) return;
+            }
+            el.querySelectorAll('[data-batch-send], [data-batch-save]').forEach(b => { b.disabled = true; });
+            let ok = 0;
+            for (const o of drafts) if (await one(o, el.querySelector(`tr[data-batch="${o.id}"]`), send)) ok++;
+            ui.notify(ok === drafts.length, t(send ? 'batch.sent' : 'batch.saved', {ok, n: drafts.length}));
+            data.orders = null;
+            draw();
+        };
+        el.querySelector('[data-batch-send]')?.addEventListener('click', (e) => run(e.currentTarget, true));
+        el.querySelector('[data-batch-save]')?.addEventListener('click', (e) => run(e.currentTarget, false));
     }
 
     function bindOrders() {

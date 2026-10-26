@@ -325,5 +325,20 @@
   "rs.no_lot": "sans lot",
   "rs.summary_nc": "Non-conformités fournisseur à créer : {n}.",
   "rs.received_nc": "Réception enregistrée, non-conformités créées : {n}.",
-  "rs.by_tablet": "tablette : {name}"
+  "rs.by_tablet": "tablette : {name}",
+  "batch.title": "Nouvelles commandes — fournisseurs : {n}",
+  "batch.help": "Vérifiez l'e-mail, le jour de livraison (jour habituel du fournisseur) et la langue, puis envoyez tout en une fois.",
+  "batch.email": "E-mail du fournisseur",
+  "batch.no_email": "pas d'adresse",
+  "batch.language": "Langue",
+  "batch.usual": "habituellement : {days}",
+  "batch.usual_unknown": "jours habituels inconnus",
+  "batch.send_all": "Envoyer tout ({n})",
+  "batch.save_only": "Enregistrer sans envoyer",
+  "batch.to_list": "Liste des commandes ›",
+  "batch.missing_email": "Adresse e-mail manquante.",
+  "batch.missing_emails": "Adresse e-mail manquante : {list}. Saisissez-la ou ouvrez la commande et marquez-la passée hors e-mail.",
+  "batch.confirm": "Envoyer par e-mail toutes les nouvelles commandes aux fournisseurs ({n}) ?",
+  "batch.sent": "Envoyées : {ok} sur {n}.",
+  "batch.saved": "Enregistrées : {ok} sur {n}."
 }
