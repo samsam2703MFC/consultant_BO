@@ -180,6 +180,19 @@ l'installation échoue, le déploiement continue et les PDF sortent sans pied de
 page. `src/rapports.php` appelle `/usr/local/bin/wkhtmltopdf` en chemin
 complet — le PATH d'Apache ne contient pas toujours `/usr/local/bin`.
 
+### Une livraison ne coupe pas les requêtes en cours
+
+Après la copie, `bin/deploy.sh` **recharge** Apache et PHP-FPM en douceur
+(`systemctl reload`) : les requêtes en cours finissent sur l'ancienne
+version. Il ne les **redémarre** que s'il a dû tuer des rendus PDF suspendus
+(`wkhtmltopdf`, `xvfb-run`, `Xvfb`), qui retiendraient sinon des workers.
+Avant le 26/10/2026, chaque livraison redémarrait Apache : qui enregistrait à
+cet instant (le carnet d'adresses d'un rapport, ce soir-là, avec une livraison
+toutes les vingt minutes) voyait « Failed to fetch ». Côté cockpit
+(`assets/js/api.js`), une modification (PUT, DELETE) coupée en route ou
+refusée en 502/503/504 se rejoue une fois, deux secondes plus tard ; une
+création (POST) ne se rejoue jamais.
+
 ## Horloge des rapports (posée par `bin/deploy.sh`)
 
 Un rapport porte sa planification en base — « tous les lundis à 10 h » est un
