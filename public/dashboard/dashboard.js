@@ -29,7 +29,7 @@
     auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
     calVal: (function () { try { const v = localStorage.getItem('db.calVal'); return ['ca', 'att', 'cli'].includes(v) ? v : 'ca'; } catch (e) { return 'ca'; } })(),
-    levVue: (function () { try { return localStorage.getItem('db.levVue') === 'cumul' ? 'cumul' : 'mois'; } catch (e) { return 'mois'; } })(),
+    levVue: (function () { try { return ['annee', 'cumul'].includes(localStorage.getItem('db.levVue')) ? 'annee' : 'mois'; } catch (e) { return 'mois'; } })(),
     opPro: (function () { try { return localStorage.getItem('db.opPro') === 'combi' ? 'combi' : 'sep'; } catch (e) { return 'sep'; } })(),
     stockOuvert: false, stockVues: null, cmdOuvert: false, invOuvert: false, cmdListeOuvert: false,
     ppOnglet: ['plan', 'suivi', 'params'].includes(q.get('onglet')) ? q.get('onglet') : 'plan', ppEdit: null, ppOuvert: {}, ppMsg: null, ppEnvoi: false,
@@ -7583,7 +7583,7 @@
     $.querySelectorAll('[data-pdrop]').forEach(b => b.addEventListener('click', () => { S.pOuvert = !S.pOuvert; rendre(); }));
     $.querySelectorAll('[data-perdrop]').forEach(b => b.addEventListener('click', () => { S.perOuvert = !S.perOuvert; rendre(); }));
     $.querySelectorAll('[data-percol]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.perCol = b.dataset.percol; rendre(); }));
-    $.querySelectorAll('[data-levvue]').forEach(b => b.addEventListener('click', () => { S.levVue = b.dataset.levvue === 'cumul' ? 'cumul' : 'mois'; try { localStorage.setItem('db.levVue', S.levVue); } catch (e) { /* navigation privée */ } rendre(); }));
+    $.querySelectorAll('[data-levvue]').forEach(b => b.addEventListener('click', () => { S.levVue = b.dataset.levvue === 'annee' ? 'annee' : 'mois'; try { localStorage.setItem('db.levVue', S.levVue); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-calval]').forEach(b => b.addEventListener('click', () => { S.calVal = ['ca', 'att', 'cli'].includes(b.dataset.calval) ? b.dataset.calval : 'ca'; try { localStorage.setItem('db.calVal', S.calVal); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-h]').forEach(el => el.addEventListener('click', () => { S.heure = +el.dataset.h; rendre(); }));
     $.querySelectorAll('[data-ncdrop]').forEach(b => b.addEventListener('click', () => { S.ncOuvert = !S.ncOuvert; rendre(); }));

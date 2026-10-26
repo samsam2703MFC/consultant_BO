@@ -4,7 +4,7 @@
  * tablette du consultant (visites.js, étapes « KPI et santé du magasin » et « Les leviers ») : un seul code, donc un
  * seul dessin et les mêmes chiffres des deux côtés. Chaque fonction rend du HTML à partir de la réponse de l'API
  * (/ventes/semaines?vue=annee&articles=1, /leviers/magasins) et de l'état que lui passe la page ; les boutons portent
- * `data-anm` (clients, panier, articles) et `data-levvue` (mois, cumul), que la page branche elle-même.
+ * `data-anm` (clients, panier, articles) et `data-levvue` (mois, annee), que la page branche elle-même.
  * Le style vit dans dashboard.css (dashboard) et dans cartes-magasin.css (tablette).
  */
 (function () {
@@ -148,18 +148,20 @@
   /**
    * Les six leviers du magasin, vue Mois (21/10/2026, demande de Sam) : une tuile par levier — la valeur du mois (à date
    * s'il est en cours), sa pastille (seuils de la Table KPI), l'écart au même mois de l'année d'avant, le réseau et le
-   * seuil, la courbe des douze derniers mois. « Cumul de l'année » : janvier → le dernier mois clos, face aux mêmes mois.
-   * Quand l'écart porte sur moins de mois que la valeur (ouverture, frais non saisis), la tuile dit les deux chiffres
-   * comparés. La Récurrence reste grise : elle attend sa mesure.
+   * seuil. Les petites courbes des douze mois sont parties (26/10/2026, Sam : « elles ne servent à rien ») : l'année se
+   * lit dans « L'évolution de l'année » (evolution() ci-dessous), qui remplace le cumul.
    *
-   * `o` : { shop, vue (mois | cumul), err } ; `L` : la réponse de /leviers/magasins (tout le réseau).
+   * `o` : { shop, vue (mois | annee), err } ; `L` : la réponse de /leviers/magasins (tout le réseau).
    */
   function leviers(L, o) {
     if (o.err) { return `<div class="db-err">Les six leviers : ${esc(o.err)}</div>`; }
     if (!L) { return `<div class="db-card lv-card"><div class="ct"><span class="db-lab">Les six leviers</span><span class="db-mini">lecture…</span></div><div class="lv-g">${Array.from({ length: 6 }, () => '<div class="lv-tu"><div class="db-sk" style="width:55%;margin-top:12px"></div><div class="db-sk" style="height:22px;margin:10px 0 6px;width:60%"></div><div class="db-sk" style="width:85%"></div></div>').join('')}</div></div>`; }
     const g = (L.magasins || []).find(x => String(x.id) === String(o.shop));
     if (!g) { return `<div class="db-card lv-card"><div class="ct"><span class="db-lab">Les six leviers</span></div><div class="lv-vide">Pas de P&amp;L pour ce magasin ce mois-ci : les six leviers se liront quand il sera saisi.</div></div>`; }
-    const cumul = o.vue === 'cumul' && !!L.cumulAu && !!g.cumul;
+    // « cumul » : la vue d'avant le 26/10/2026, qu'un navigateur peut avoir gardée.
+    const vue = o.vue === 'annee' || o.vue === 'cumul' ? 'annee' : 'mois';
+    const seg = `<div class="lv-seg">${[['mois', 'Le mois'], ['annee', 'L’évolution de l’année']].map(x => `<button data-levvue="${x[0]}" class="${vue === x[0] ? 'on' : ''}">${x[1]}</button>`).join('')}</div>`;
+    if (vue === 'annee') { return evolution(L, g, seg); }
     const dc = (n, d) => nf(n, d);
     const sg = (n, d, u) => (n > 0 ? '+' : (n < 0 ? '−' : '±')) + dc(Math.abs(n), d) + u;
     const nomMois = (m, long) => new Date(2000, m - 1, 15).toLocaleDateString('fr-BE', { month: long ? 'long' : 'short' });
@@ -169,89 +171,131 @@
     // L'écart est bon quand il y a plus de clients, une meilleure note, un coût plus bas.
     const puce = (d, dec, u, hausseBonne) => d == null ? '' : `<span class="lv-c ${d === 0 ? 'z' : ((d > 0) === hausseBonne ? 'b' : 'm')}">${sg(d, dec, u)}</span>`;
     const neutre = t => `<span class="lv-c z">${esc(t)}</span>`;
-    const etendue = l => l.length ? nomMois(l[0]) + ' → ' + nomMois(l[l.length - 1]) : '';
     const seuil = (cle, f) => { const x = (L.seuils || {})[cle]; return x && x.alerte != null ? 'seuil ' + f(x.alerte) : ''; };
-    const R = cumul ? L.reseau.cumul : L.reseau.mois;
+    const R = L.reseau.mois;
     const ouvLib = g.ouverture ? 'ouvert en ' + moisAn(g.ouverture, true) : 'pas de N-1';
-    const mc = cumul ? (g.cumul.moisComparables || []) : [];
-    const memesMois = cumul && mc.length && mc.length < L.cumulAu ? 'mêmes mois : ' + etendue(mc) : '';
     const ymSel = L.annee + '-' + String(L.mois).padStart(2, '0');
-    // La courbe des douze derniers mois : un trait, le dernier point marqué ; chaque mois se lit au survol.
-    const courbe = (vals, coul, f) => {
-      const W = 160, H = 34, v = (vals || []).map(x => x == null ? null : +x), ok = v.filter(x => x != null);
-      if (ok.length < 2) { return ''; }
-      const lo = Math.min(...ok), hi = Math.max(...ok), sx = W / Math.max(1, v.length - 1);
-      const y = x => H - 4 - (hi === lo ? 0.5 : (x - lo) / (hi - lo)) * (H - 8);
-      let d = '', lev = true;
-      v.forEach((x, i) => { if (x == null) { lev = true; return; } d += (lev ? 'M' : 'L') + (i * sx).toFixed(1) + ' ' + y(x).toFixed(1); lev = false; });
-      const last = v.length - 1;
-      const pts = v.map((x, i) => x == null ? '' : `<circle cx="${(i * sx).toFixed(1)}" cy="${y(x).toFixed(1)}" r="7" fill="transparent"><title>${esc(moisAn(L.serieMois[i]) + ' : ' + f(x))}</title></circle>`).join('');
-      return `<svg class="lv-sp" viewBox="-3 0 ${W + 6} ${H}" preserveAspectRatio="none" height="34" role="img" aria-label="les douze derniers mois"><path d="${d}" fill="none" stroke="${coul}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>${v[last] != null ? `<circle cx="${(last * sx).toFixed(1)}" cy="${y(v[last]).toFixed(1)}" r="2.8" fill="${coul}"/>` : ''}${pts}</svg>`;
-    };
-    const tuile = (l, val, pas, l1, l2, spark, q) => `<div class="lv-tu"><div class="bar" style="background:${esc(l.couleur)}"></div><div class="k" style="color:${esc(l.couleur)}">${esc(l.nom)}</div><div class="q">${esc(q)}</div>
-      <div class="v${val === '—' ? ' mu' : ''}">${esc(val)}${pa(pas)}</div><div class="l">${l1}</div>${l2 ? `<div class="l">${l2}</div>` : ''}${spark || ''}</div>`;
+    const tuile = (l, val, pas, l1, l2, q, pied) => `<div class="lv-tu"><div class="bar" style="background:${esc(l.couleur)}"></div><div class="k" style="color:${esc(l.couleur)}">${esc(l.nom)}</div><div class="q">${esc(q)}</div>
+      <div class="v${val === '—' ? ' mu' : ''}">${esc(val)}${pa(pas)}</div><div class="l">${l1}</div>${l2 ? `<div class="l">${l2}</div>` : ''}${pied || ''}</div>`;
     const tuiles = (L.leviers || []).map(l => {
       if (l.vide) { return `<div class="lv-tu vide"><div class="bar" style="background:${esc(l.couleur)}"></div><div class="k" style="color:${esc(l.couleur)}">${esc(l.nom)}</div><div class="q">à définir</div><div class="v mu">—</div><div class="l">laissée vide pour l’instant</div></div>`; }
       if (l.cle === 'recurrence') {
         // Le taux de retour des clients identifiés en caisse, hors pro (23/10/2026) — la part venus au moins deux jours ;
         // en dessous, celui des seuls clients PWA.
-        const x = ((cumul ? g.cumul : g.mois) || {}).recurrence, r = R.recurrence || {};
-        const q = 'taux de retour des clients identifiés' + (cumul ? ' · janvier → ' + nomMois(L.cumulAu, true) : '');
-        const sp = courbe(g.serie.recurrence, l.couleur, v => nf(v, 0) + ' %');
+        const x = (g.mois || {}).recurrence, r = R.recurrence || {};
+        const q = 'taux de retour des clients identifiés';
         const l2 = esc('réseau ' + (r.v != null ? nf(r.v, 0) + ' %' : '—') + (seuil('recurrence', a => nf(a, 0) + ' %') ? ' · ' + seuil('recurrence', a => nf(a, 0) + ' %') : ''));
-        if (!x) { return tuile(l, '—', null, 'pas encore relevé', l2, sp, q); }
-        if (!x.complet) { return tuile(l, '—', null, neutre('relevé en cours'), esc('tickets lus : ' + x.joursLus + ' / ' + x.jours + ' jours'), sp, q); }
-        if (!x.clients) { return tuile(l, '—', null, 'aucun client identifié en caisse', l2, sp, q); }
+        if (!x) { return tuile(l, '—', null, 'pas encore relevé', l2, q); }
+        if (!x.complet) { return tuile(l, '—', null, neutre('relevé en cours'), esc('tickets lus : ' + x.joursLus + ' / ' + x.jours + ' jours'), q); }
+        if (!x.clients) { return tuile(l, '—', null, 'aucun client identifié en caisse', l2, q); }
         const p = x.pwa || {};
         const l1 = (x.n1 != null ? puce(x.delta, 1, ' pt', true) + ' N-1 ' + nf(x.n1, 0) + ' %' : neutre('pas de N-1')) + ' ' + esc(x.revenus + ' sur ' + x.clients + ' client' + (x.clients > 1 ? 's' : ''));
         const lp = esc('PWA : ' + (p.clients ? nf(p.v, 0) + ' % (' + p.revenus + ' sur ' + p.clients + ')' : 'aucun client identifié'));
-        return tuile(l, nf(x.v, 0) + ' %', x.niveau, l1, (x.partTickets != null ? esc(nf(x.partTickets, 1) + ' % des tickets') + ' · ' : '') + lp + '<br>' + l2, sp, q);
+        return tuile(l, nf(x.v, 0) + ' %', x.niveau, l1, (x.partTickets != null ? esc(nf(x.partTickets, 1) + ' % des tickets') + ' · ' : '') + lp + '<br>' + l2, q);
       }
       if (l.cle === 'trafic') {
-        const fT = x => nf(x, 0) + (cumul ? '' : ' /j');
-        if (cumul) {
-          const x = g.cumul.trafic, r = R.trafic || {};
-          const l1 = x.comp == null ? neutre('pas de N-1') + ' ' + esc(ouvLib) : puce(x.delta, 1, ' %', true) + ' ' + esc(memesMois ? nf(x.comp, 0) + ' vs ' + nf(x.n1, 0) : 'N-1 ' + nf(x.n1, 0));
-          return tuile(l, nf(x.v, 0), null, l1, esc((memesMois ? memesMois + ' · ' : '') + (r.delta != null ? 'réseau ' + sg(r.delta, 1, ' %') : '')), courbe(g.serie.trafic, l.couleur, fT), 'clients · janvier → ' + nomMois(L.cumulAu, true));
-        }
-        const x = g.mois.trafic, r = R.trafic || {};
-        if (x.v == null) { return tuile(l, '—', null, 'pas de P&amp;L ce mois', '', courbe(g.serie.trafic, l.couleur, fT), 'clients par jour'); }
+        const x = g.mois.trafic, r = R.trafic || {}, q = 'clients par jour' + (L.moisEnCours ? ' · ' + L.jours + ' jours' : '');
+        if (x.v == null) { return tuile(l, '—', null, 'pas de P&amp;L ce mois', '', q); }
         const l1 = g.mois.ouverture ? neutre('mois d’ouverture') : (x.n1 == null ? neutre('pas de N-1') + ' ' + esc(ouvLib) : puce(x.delta, 1, ' %', true) + ' N-1 ' + nf(x.n1, 0));
-        return tuile(l, nf(x.v, 0), x.niveau, l1, esc('réseau ' + (r.v != null ? nf(r.v, 0) : '—') + (x.ecartReseau != null ? ' · ' + sg(x.ecartReseau, 0, ' %') : '')), courbe(g.serie.trafic, l.couleur, fT), 'clients par jour' + (L.moisEnCours ? ' · ' + L.jours + ' jours' : ''));
+        return tuile(l, nf(x.v, 0), x.niveau, l1, esc('réseau ' + (r.v != null ? nf(r.v, 0) : '—') + (x.ecartReseau != null ? ' · ' + sg(x.ecartReseau, 0, ' %') : '')), q);
       }
       if (l.cle === 'xp') {
-        const x = (cumul ? g.cumul : g.mois).xp || {}, r = R.xp || {};
-        const n1 = x.n1 != null ? puce(x.delta, 2, '', true) + ' N-1 ' + dc(x.n1, 1) + ' ★' : neutre(L.googleN1Des ? 'N-1 : ' + moisAn(L.googleN1Des) : 'pas de N-1');
+        const x = g.mois.xp || {}, r = R.xp || {};
+        // googleN1Des : le mois où le relevé aura un an — le N-1 n'existe qu'à partir de là.
+        const n1 = x.n1 != null ? puce(x.delta, 2, '', true) + ' N-1 ' + dc(x.n1, 1) + ' ★' : neutre(L.googleN1Des ? 'N-1 dès ' + moisAn(L.googleN1Des) : 'pas de N-1');
         const deb = L.googleN1Des ? moisAn(String(+L.googleN1Des.slice(0, 4) - 1) + L.googleN1Des.slice(4)) : '';
         return tuile(l, x.v != null ? dc(x.v, 1) + ' ★' : '—', x.niveau, x.v != null ? n1 : 'pas de relevé ce mois-là',
           esc('réseau ' + (r.v != null ? dc(r.v, 2) + ' ★' : '—') + (seuil('xp', a => dc(a, 1)) ? ' · ' + seuil('xp', a => dc(a, 1)) : '')),
-          `<div class="l lv-pied">${esc(deb ? 'relevé mensuel depuis ' + deb : 'la note de la fiche, aujourd’hui')}</div>`, 'note Google' + (x.avis ? ' · ' + nf(x.avis, 0) + ' avis' : ''));
+          'note Google' + (x.avis ? ' · ' + nf(x.avis, 0) + ' avis' : ''), `<div class="l lv-pied">${esc(deb ? 'relevé mensuel depuis ' + deb : 'la note de la fiche, aujourd’hui')}</div>`);
       }
       const r = R[l.cle] || {}, s = seuil(l.cle, a => pct(a));
       const l2 = esc('réseau ' + (r.v != null ? pct(r.v) : '—') + (s ? ' · ' + s : ''));
-      const sp = courbe(g.serie[l.cle], l.couleur, pct);
-      if (cumul) {
-        const x = g.cumul[l.cle] || {};
-        if (x.v == null) { return tuile(l, '—', null, 'pas saisi', l2, sp, '% du CA · janvier → ' + nomMois(L.cumulAu, true)); }
-        const part = x.comp != null && x.moisCompares < mc.length ? 'sur ' + x.moisCompares + ' mois saisis les deux années' : memesMois;
-        const l1 = x.comp == null || x.n1 == null ? neutre('pas de N-1') + ' ' + esc(mc.length ? 'pas saisi l’an dernier' : ouvLib)
-          : puce(x.delta, 1, ' pt', false) + ' ' + esc(part ? pct(x.comp) + ' vs ' + pct(x.n1) : 'N-1 ' + pct(x.n1));
-        return tuile(l, pct(x.v), x.niveau, l1, (part ? esc(part) + '<br>' : '') + l2, sp, '% du CA · janvier → ' + nomMois(L.cumulAu, true));
-      }
       const x = g.mois[l.cle] || {};
-      if (x.nonSaisi) { return tuile(l, '—', null, neutre('pas saisi ce mois'), l2, sp, '% du CA'); }
-      if (x.v == null) { return tuile(l, '—', null, 'pas de P&amp;L ce mois', l2, sp, '% du CA'); }
+      if (x.nonSaisi) { return tuile(l, '—', null, neutre('pas saisi ce mois'), l2, '% du CA'); }
+      if (x.v == null) { return tuile(l, '—', null, 'pas de P&amp;L ce mois', l2, '% du CA'); }
       const l1 = x.n1 == null ? neutre(g.mois.ouverture ? 'mois d’ouverture' : 'pas de N-1') + (g.mois.ouverture ? '' : ' ' + esc(ouvLib)) : puce(x.delta, 1, ' pt', false) + ' N-1 ' + pct(x.n1);
       const hors = l.cle === 'food' && (g.horsNorme || []).some(h => h.mois === ymSel) ? '<span class="lv-al">⚠ hors norme, à vérifier au P&amp;L</span>' : '';
-      return tuile(l, pct(x.v), x.niveau, l1 + hors, l2, sp, '% du CA');
+      return tuile(l, pct(x.v), x.niveau, l1 + hors, l2, '% du CA');
     }).join('');
-    const titre = cumul ? 'cumul ' + L.annee : moisAn(ymSel, true);
-    const sous = cumul ? 'janvier → ' + nomMois(L.cumulAu, true) + ', face aux mêmes mois de ' + (L.annee - 1) + (L.moisEnCours ? ' · le mois en cours n’entre pas' : '')
-      : (L.moisEnCours ? 'à date (' + L.jours + ' jours), ' : '') + 'face à ' + moisAn((L.annee - 1) + '-' + String(L.mois).padStart(2, '0'), true) + ' et au réseau';
-    const seg = `<div class="lv-seg">${[['mois', 'Le mois'], ['cumul', 'Cumul de l’année']].map(o => `<button data-levvue="${o[0]}" class="${(cumul ? 'cumul' : 'mois') === o[0] ? 'on' : ''}"${o[0] === 'cumul' && !(L.cumulAu && g.cumul) ? ' disabled title="le cumul commence avec le premier mois clos"' : ''}>${o[1]}</button>`).join('')}</div>`;
-    return `<div class="db-card lv-card"><div class="ct"><span class="db-lab">Les six leviers — ${esc(titre)}</span><span class="db-mini lv-st">${esc(sous)}</span>${seg}</div>
+    const sous = (L.moisEnCours ? 'à date (' + L.jours + ' jours), ' : '') + 'face à ' + moisAn((L.annee - 1) + '-' + String(L.mois).padStart(2, '0'), true) + ' et au réseau';
+    return `<div class="db-card lv-card"><div class="ct"><span class="db-lab">Les six leviers — ${esc(moisAn(ymSel, true))}</span><span class="db-mini lv-st">${esc(sous)}</span>${seg}</div>
       <div class="lv-g">${tuiles}</div>
-      <div class="db-perleg lv-leg"><span>Pastille — seuils de la Table KPI : ${pa('v')} sous l’alerte ${pa('o')} entre alerte et critique ${pa('r')} au-delà${cumul ? '' : ' · trafic : l’écart au réseau'}</span><span>Écart vert : mieux qu’en ${L.annee - 1}</span><span>Courbe : les douze derniers mois${L.moisEnCours ? ', le dernier à date' : ''}</span></div></div>`;
+      <div class="db-perleg lv-leg"><span>Pastille — seuils de la Table KPI : ${pa('v')} sous l’alerte ${pa('o')} entre alerte et critique ${pa('r')} au-delà · trafic : l’écart au réseau</span><span>Écart vert : mieux qu’en ${L.annee - 1}</span></div></div>`;
+  }
+
+  /**
+   * Les leviers, vue « L'évolution de l'année » (26/10/2026, Sam : « pas le cumul de l'année, l'évolution sur l'année
+   * sur les cinq leviers » — la maquette D, en plus fin). Une ligne par levier : une barre fine par mois de l'année
+   * (janvier → le mois en cours, à date), colorée aux seuils de la Table KPI ; le meilleur et le pire mois ; le mois en
+   * cours et son statut ; la moyenne des mois lus face à celle des autres magasins sur les mêmes mois. Le trafic est
+   * rouge à plus de 10 % (le seuil de la Table KPI) sous la moyenne des autres magasins ce mois-là. Google n'a pas de
+   * série mois par mois : sa note reste dans « Le mois ». Un mois hors norme (food cost loin de la médiane du magasin,
+   * à vérifier au P&L) se dessine hachuré et n'entre ni dans la moyenne, ni dans le meilleur et le pire.
+   */
+  function evolution(L, g, seg) {
+    const S = L.seuils || {};
+    const mois = (L.serieMois || []).map((ym, i) => ({ ym, i })).filter(m => +m.ym.slice(0, 4) === +L.annee);
+    const autres = (L.magasins || []).filter(m => String(m.id) !== String(g.id));
+    const hors = new Set((g.horsNorme || []).map(h => h.mois));
+    const LETTRE = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+    const nomMois = (ym, long) => new Date(2000, +ym.slice(5, 7) - 1, 15).toLocaleDateString('fr-BE', { month: long ? 'long' : 'short' });
+    const moy = a => { const x = a.filter(v => v != null); return x.length ? x.reduce((t, v) => t + v, 0) / x.length : null; };
+    const f = (cle, v) => v == null ? '—' : nf(v, cle === 'trafic' ? 0 : 1) + (cle === 'trafic' ? '' : ' %');
+    const num = v => v == null ? null : +v;
+    const reseau = (cle, i) => moy(autres.map(m => num(((m.serie || {})[cle] || [])[i])));
+    const alerteTrafic = (S.trafic || {}).alerte != null ? +S.trafic.alerte : -10;
+    const seuilTxt = cle => {
+      if (cle === 'trafic') { return 'rouge à plus de ' + nf(Math.abs(alerteTrafic), 0) + ' % sous le réseau'; }
+      const s = S[cle];
+      return s && s.alerte != null ? 'seuil ' + (s.sens === 'haut' ? '≤ ' : '≥ ') + nf(s.alerte, s.alerte % 1 ? 1 : 0) + ' %' : '';
+    };
+    const etat = (cle, v, i) => {
+      if (v == null) { return ''; }
+      if (cle === 'trafic') { const r = reseau('trafic', i); return r ? ((v / r - 1) * 100 < alerteTrafic ? 'r' : 'v') : ''; }
+      const s = S[cle]; if (!s || s.alerte == null) { return ''; }
+      const crit = s.critique != null ? +s.critique : +s.alerte;
+      return s.sens === 'haut' ? (v <= s.alerte ? 'v' : (v <= crit ? 'o' : 'r')) : (v >= s.alerte ? 'v' : (v >= crit ? 'o' : 'r'));
+    };
+    const STATUT = { v: 'sous le seuil', o: 'entre alerte et critique', r: 'hors seuil' };
+    const STATUT_TRAFIC = { v: 'au niveau du réseau', r: 'sous le réseau' };
+    const PILL = { v: 'b', o: 'o', r: 'm' };
+    const dernier = mois.length ? mois[mois.length - 1] : null;
+    const lignes = (L.leviers || []).filter(l => !l.vide && l.cle !== 'xp' && (g.serie || {})[l.cle]).map(l => {
+      const cle = l.cle, haut = (S[cle] || {}).sens === 'haut';
+      const pts = mois.map(m => ({ ym: m.ym, i: m.i, v: num(g.serie[cle][m.i]), hors: cle === 'food' && hors.has(m.ym) }));
+      const lus = pts.filter(p => p.v != null && !p.hors);
+      const mx = Math.max(1, ...pts.filter(p => p.v != null).map(p => p.v));
+      const barres = pts.map(p => {
+        const e = p.hors ? 'h' : (p.v == null ? 'n' : (etat(cle, p.v, p.i) || 'z'));
+        const h = p.v == null ? 2 : Math.max(3, Math.round(p.v / mx * 24));
+        const t = nomMois(p.ym, true) + ' : ' + (p.v == null ? 'pas de valeur' : f(cle, p.v)) + (p.hors ? ' · hors norme, à vérifier au P&L' : '') + (p === pts[pts.length - 1] && L.moisEnCours ? ' (à date)' : '');
+        return `<i class="${e}" style="height:${h}px" title="${esc(t)}"></i>`;
+      }).join('');
+      const lettres = pts.map((p, k) => `<span${k === pts.length - 1 ? ' class="cur"' : ''}>${LETTRE[+p.ym.slice(5, 7) - 1]}</span>`).join('');
+      const nom = `<div class="nm"><b style="color:${esc(l.couleur)}">${esc(l.nom)}</b><small>${esc((cle === 'trafic' ? 'clients par jour' : (cle === 'recurrence' ? 'taux de retour des clients identifiés' : '% du CA')) + ' · ' + seuilTxt(cle))}</small></div>`;
+      const sp = `<div class="br"><div class="sp">${barres}</div><div class="lb">${lettres}</div></div>`;
+      if (!lus.length) { return `<div class="lv-ev">${nom}${sp}<div class="bm">pas encore de mois lu cette année</div><div class="an"></div></div>`; }
+      const meilleur = lus.reduce((a, p) => (haut ? p.v < a.v : p.v > a.v) ? p : a);
+      const pire = lus.reduce((a, p) => (haut ? p.v > a.v : p.v < a.v) ? p : a);
+      const cur = pts[pts.length - 1], eCur = cur.v != null && !cur.hors ? etat(cle, cur.v, cur.i) : '';
+      const curTxt = (cur.hors ? '⚠ hors norme' : (eCur ? (cle === 'trafic' ? STATUT_TRAFIC : STATUT)[eCur] : ''));
+      const m = moy(lus.map(p => p.v)), mr = moy(lus.map(p => reseau(cle, p.i)));
+      // L'écart arrondi comme il s'affiche : −0,04 pt se lit « au niveau du réseau ».
+      const dE = cle === 'trafic' ? 0 : 1, ecBrut = m != null && mr != null ? (cle === 'trafic' ? (m / mr - 1) * 100 : m - mr) : null;
+      const ec = ecBrut == null ? null : Math.round(ecBrut * 10 ** dE) / 10 ** dE;
+      const bon = ec == null ? null : (haut ? ec <= 0 : ec >= 0);
+      const ecTxt = ec == null ? '' : (ec === 0 ? 'au niveau du réseau' : (ec > 0 ? '+' : '−') + nf(Math.abs(ec), dE) + (cle === 'trafic' ? ' %' : ' pt') + ' face au réseau');
+      const ecartes = pts.filter(p => p.hors).map(p => nomMois(p.ym) + ' ' + f(cle, p.v));
+      return `<div class="lv-ev">${nom}${sp}
+        <div class="bm"><span>Meilleur <b>${esc(nomMois(meilleur.ym))}</b> ${esc(f(cle, meilleur.v))}</span><span>Pire <b>${esc(nomMois(pire.ym))}</b> ${esc(f(cle, pire.v))}</span>
+          <span>${esc(nomMois(cur.ym, true))}${L.moisEnCours ? ' à date' : ''} <b>${esc(f(cle, cur.v))}</b>${curTxt ? ` <em class="lv-c ${cur.hors ? 'o' : PILL[eCur]}">${esc(curTxt)}</em>` : ''}</span>
+          ${ecartes.length ? `<span class="mu">écarté, hors norme : ${esc(ecartes.join(', '))}</span>` : ''}</div>
+        <div class="an"><b>${esc(f(cle, m))}</b><small>moyenne ${lus.length < mois.length ? 'des ' + lus.length + ' mois lus' : 'de l’année'} · réseau ${esc(f(cle, mr))}</small>${ecTxt ? `<em class="lv-c ${ec === 0 ? 'z' : (bon ? 'b' : 'm')}">${esc(ecTxt)}</em>` : ''}</div></div>`;
+    }).join('');
+    const sous = mois.length ? nomMois(mois[0].ym, true) + ' → ' + nomMois(dernier.ym, true) + (L.moisEnCours ? ' (à date, ' + L.jours + ' jours)' : '') + ', mois par mois' + (g.ouverture && +g.ouverture.slice(0, 4) === +L.annee ? ' · ouvert en ' + nomMois(g.ouverture, true) : '') : '';
+    return `<div class="db-card lv-card"><div class="ct"><span class="db-lab">Les cinq leviers — l’évolution de ${esc(L.annee)}</span><span class="db-mini lv-st">${esc(sous)}</span>${seg}</div>
+      <div class="lv-evs">${lignes}</div>
+      <div class="db-perleg lv-leg"><span>Une barre par mois, à la couleur de la Table KPI : <i class="lv-p v"></i> sous l’alerte <i class="lv-p o"></i> entre alerte et critique <i class="lv-p r"></i> au-delà</span><span>Réseau : la moyenne des autres magasins, sur les mêmes mois</span><span>Expérience client : la note Google n’a pas de relevé mois par mois, elle se lit dans « Le mois »</span></div></div>`;
   }
 
   window.CartesMagasin = { annee, leviers, MESURES_ANNEE: ['clients', 'panier', 'articles'] };

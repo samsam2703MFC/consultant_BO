@@ -3958,6 +3958,15 @@ Une réponse, deux écrans : la carte « Les six leviers » de Résultat › Moi
 dashboard magasin en vue Mois. Un chiffre ne peut donc pas différer de l'un à l'autre. `_cache=900` accepté (les deux
 écrans le demandent). Mois futur → le mois en cours ; mois invalide → 400.
 
+**La carte partagée (`assets/js/cartes-magasin.js`, dashboard magasin et tablette), 26/10/2026** : deux vues, « Le
+mois » (les six tuiles, sans les petites courbes, retirées) et « L'évolution de l'année » (`data-levvue="annee"`, qui
+remplace le cumul ; un `cumul` gardé par un navigateur ouvre l'évolution). L'évolution se lit dans `serieMois` et
+`magasins[].serie` : une ligne par levier (trafic, récurrence, food, labour, overhead — Google n'a pas de série
+mensuelle), une barre fine par mois de l'année colorée aux seuils (`seuils`, le trafic face à la moyenne des autres
+magasins ce mois-là), le meilleur et le pire mois, le mois en cours et son statut, la moyenne des mois lus face à celle
+des autres magasins sur les mêmes mois. Un mois `horsNorme` (food) est hachuré et écarté de la moyenne, du meilleur et
+du pire. Rien de neuf côté serveur.
+
 Sources, aucune nouvelle :
 
 | Levier | Mesure | Source |

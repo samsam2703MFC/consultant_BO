@@ -1363,7 +1363,7 @@
     }
     /**
      * Au-dessus des points du module « Les leviers » : la carte des six leviers du dashboard magasin (le mois à date,
-     * ou le cumul de l'année) et les derniers avis Google, pour vérifier la note avec le franchisé.
+     * ou l'évolution de l'année, mois par mois) et les derniers avis Google, pour vérifier la note avec le franchisé.
      */
     leviersHtml(shop) {
       this.chargerSante(shop);

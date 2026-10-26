@@ -2216,7 +2216,6 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .lv-tu .v.mu{color:var(--color-text-muted);font-weight:500}
 .lv-tu .l{font-size:10.5px;color:var(--color-text-muted);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1.45}
 .lv-tu .lv-pied{margin-top:auto;padding-top:10px}
-.lv-sp{display:block;width:100%;margin-top:auto;padding-top:8px;overflow:visible}
 .lv-p{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
 .lv-p.v{background:#2d7a3e}.lv-p.o{background:#D97706}.lv-p.r{background:#C0182B}
 .lv-c{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap}
@@ -2225,6 +2224,22 @@ textarea.pm-in{padding:8px 12px;resize:vertical;min-height:70px}
 .lv-al{display:block;width:100%;font-size:10px;color:#B45309;font-weight:600}
 .lv-leg .lv-p{margin:0 2px 0 4px;vertical-align:-1px;border-radius:50%;width:9px;height:9px}
 .lv-vide{padding:16px;font-size:12px;color:var(--color-text-muted)}
+/* Les leviers, l’évolution de l’année (26/10/2026) : une ligne par levier, une barre fine par mois. */
+.lv-c.o{background:rgba(217,119,6,.12);color:#B45309}
+.lv-evs{padding:4px 16px 2px}
+.lv-ev{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(150px,1fr) minmax(0,1.7fr) minmax(130px,.9fr);gap:18px;align-items:center;padding:9px 0;border-bottom:.5px solid var(--color-border-tertiary)}
+.lv-ev:last-child{border-bottom:none}
+.lv-ev .nm{min-width:0}.lv-ev .nm b{display:block;font:700 12.5px var(--font-ui)}.lv-ev .nm small{display:block;font-size:10.5px;color:var(--color-text-muted);line-height:1.35;margin-top:2px}
+.lv-ev .br{min-width:0}
+.lv-ev .sp{display:flex;align-items:flex-end;gap:6px;height:24px;border-bottom:1px solid var(--color-border-tertiary);padding:0 1px}
+.lv-ev .sp i{flex:0 0 4px;border-radius:2px 2px 0 0;background:#8d857c}
+.lv-ev .sp i.v{background:#2d7a3e}.lv-ev .sp i.o{background:#D97706}.lv-ev .sp i.r{background:#C0182B}.lv-ev .sp i.n{background:var(--color-border-tertiary)}
+.lv-ev .sp i.h{background:repeating-linear-gradient(180deg,#D97706 0 2px,transparent 2px 4px)}
+.lv-ev .lb{display:flex;gap:6px;margin-top:3px;padding:0 1px}.lv-ev .lb span{flex:0 0 4px;min-width:0;display:flex;justify-content:center;white-space:nowrap;font:600 8.5px var(--font-ui);color:var(--color-text-muted)}.lv-ev .lb span.cur{color:var(--color-text);font-weight:700}
+.lv-ev .bm{display:flex;flex-wrap:wrap;gap:3px 14px;font-size:11px;color:var(--color-text-muted);line-height:1.5;min-width:0}.lv-ev .bm b{color:var(--color-text);font-weight:600}.lv-ev .bm .mu{flex-basis:100%;font-size:10.5px}
+.lv-ev .bm .lv-c{font-size:10px;padding:1px 7px;font-weight:600}
+.lv-ev .an{text-align:right;min-width:0}.lv-ev .an b{display:block;font:700 15px var(--font-ui);font-variant-numeric:tabular-nums}.lv-ev .an small{display:block;font-size:10.5px;color:var(--color-text-muted);margin:1px 0 3px}.lv-ev .an .lv-c{font-size:10px;padding:1px 7px;font-weight:600}
+@media (max-width:760px){.lv-ev{grid-template-columns:minmax(0,1fr) auto;gap:8px 12px}.lv-ev .bm{grid-column:1/-1;order:3}.lv-ev .an{grid-column:2;grid-row:1}}
 /* Les conditions du ticket (23/10/2026) : le canal, le seuil ; leurs étiquettes dans la liste et le récapitulatif. */
 .pm-canaux{grid-template-columns:repeat(3,1fr);margin-top:6px}
 .pm-canaux .pm-opt:disabled,.pm-seuil .pm-seg button:disabled{opacity:.42;cursor:not-allowed}
