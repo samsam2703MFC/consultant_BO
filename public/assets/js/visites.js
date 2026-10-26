@@ -79,11 +79,17 @@
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
 .vi .kc .k{margin-top:4px}
 .vi .or{color:#B26A00}
-.vi .tb-sous{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
-.vi .tb-sous button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:6px 12px;font:600 12px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
+/* Partout sur la tablette (26/10/2026, demande de Sam) : des rectangles aux coins arrondis, répartis sur toute la largeur. */
+.vi .tb-sous{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;margin:0 0 14px}
+.vi .tb-sous button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:10px;padding:8px 6px;min-height:40px;font:600 12px/1.2 var(--font-ui);color:var(--color-text-muted);cursor:pointer;text-align:center;overflow-wrap:anywhere}
+@media (max-width:760px){.vi .tb-sous{grid-auto-flow:row;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}}
+.vi .onglets{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}.vi .onglets button{border-radius:10px;text-align:center}
+.vi .tm-n{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);flex:1 1 100%;width:100%;margin:8px 0 0;border-radius:10px;padding:3px}.vi .tm-n button{border-radius:8px;padding:6px 10px}
+.vi .act .chip{flex:1 1 auto;text-align:center}
+.vi .chip{border-radius:8px}
 .vi .tb-sous button.fait{color:#2d7a3e;border-color:#BFDCC6;background:#F0F7F2}
 .vi .tb-sous button.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
-.vi .tb-sous button i{font-style:normal;background:#C0182B;color:#fff;border-radius:999px;padding:0 6px;margin-left:3px;font-size:10.5px}
+.vi .tb-sous button i{font-style:normal;background:#C0182B;color:#fff;border-radius:5px;padding:0 5px;margin-left:3px;font-size:10.5px}
 .vi .cx-j{position:relative;height:9px;border-radius:5px;background:var(--color-background-secondary);margin-top:6px}
 .vi .cx-j i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#2d7a3e}.vi .cx-j i.dn{background:#C0182B}.vi .cx-j i.or{background:#E0A526}
 .vi .cx-j em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--color-text)}
@@ -996,7 +1002,7 @@
           <div class="xs mu" style="margin-top:3px">${t.controleur ? 'Contrôle qualité : ' + esc(t.controleur) : 'Contrôle qualité'}${t.releveeLe ? ' · le ' + fmtD(t.releveeLe) + ' ' + esc(String(t.releveeLe).slice(11, 16)) : ''}${t.recidive ? ' · <span class="dn">' + t.recidive + ' jours non conformes sur 7</span>' : ''}${t.suite ? ' · re-notée ' + t.suite.note + '/5 le ' + fmtD(t.suite.jour) + (t.suite.conforme ? ' <span class="up">✓</span>' : '') : ' · pas encore re-notée'}</div></div></div>`; }).join('')
         : `<div class="sm mu">Aucune tâche notée sous ${D.seuil} en ${esc(D.choisiLab)}.</div>`;
       return `<div class="cap">Les derniers mois — tâches faites sur demandées</div>
-        <div class="card"><div class="row" style="margin-bottom:6px"><span class="xs mu">Touchez un mois pour voir ses tâches sous ${D.seuil}</span><span class="tm-n">${[6, 12].map(k => `<button class="${this.tmN === k ? 'on' : ''}" data-a="tm-n" data-v="${k}">${k} mois</button>`).join('')}</span></div>
+        <div class="card"><div class="row" style="margin-bottom:6px;flex-wrap:wrap"><span class="xs mu">Touchez un mois pour voir ses tâches sous ${D.seuil}</span><span class="tm-n">${[6, 12].map(k => `<button class="${this.tmN === k ? 'on' : ''}" data-a="tm-n" data-v="${k}">${k} mois</button>`).join('')}</span></div>
           <div style="overflow-x:auto"><table class="tm-t"><tr><th>Mois</th><th>Faites / demandées</th><th>Notées</th><th>Sous ${D.seuil}</th><th>Moyenne</th></tr>${lignes}</table></div>
           <div class="xs mu" style="margin-top:6px">${esc(D.source || '')}</div></div>
         <div class="cap">Les tâches notées sous ${D.seuil} — ${esc(D.choisiLab)}${nc.length ? ' · ' + nc.length : ''}</div><div class="card">${D.indispo ? '<div class="sm mu">Les notes du contrôle qualité ne se lisent pas.</div>' : liste}</div>`;
