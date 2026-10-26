@@ -96,7 +96,10 @@
         'journee': 'dnia dzien', 'fin': 'koniec', 'boutique': 'sklep sklepy sklepow', 'boutiques': 'sklepy sklepow sklep', 'perte': 'straty strata', 'pertes': 'straty', 'controle': 'kontrola kontroli', 'qualite': 'jakosci jakosc', 'conservation': 'przydatnosc', 'delai': 'termin', 'complement': 'domowienie domowienia', 'complements': 'domowienia',
         'entrepot': 'magazyn magazynu', 'livree': 'dostarczono dostarczonych zrealizowane', 'livrees': 'dostarczonych zrealizowane', 'transport': 'transporcie',
         'statut': 'status statusy', 'statuts': 'status statusy', 'avis': 'powiadomienia powiadomienie', 'expeditions': 'wysylki wysylek', 'etat': 'stan',
-        'doublon': 'ponownie jedno', 'realisee': 'zrealizowane', 'realisees': 'zrealizowane', 'emballeur': 'opakowania'
+        'doublon': 'ponownie jedno', 'realisee': 'zrealizowane', 'realisees': 'zrealizowane', 'emballeur': 'opakowania',
+        'assistant': 'kreator', 'assistants': 'kreator', 'wizard': 'kreator', 'creer': 'nowy kreator dodaj', 'creation': 'nowy kreator', 'ajouter': 'dodaj nowy',
+        'nouvelle': 'nowy nowe', 'nouvel': 'nowy', 'vehicule': 'pojazd pojazdy', 'vehicules': 'pojazdy pojazd', 'salarie': 'pracownik pracownicy', 'salaries': 'pracownicy pracownik',
+        'compte': 'uzytkownik konto', 'comptes': 'uzytkownicy', 'identifiant': 'login', 'acces': 'uprawnienia dostep', 'droits': 'uprawnienia'
     };
 
     var menu = null;
