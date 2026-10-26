@@ -212,12 +212,12 @@ $r = ep_visites_kpi('77');
 verifie('un magasin inconnu : 404', ($r['error'] ?? '') === 'magasin inconnu');
 $r = ep_visites_kpi('2');
 verifie('les deux blocs', is_array($r['caEtp']) && is_array($r['structure']) && !isset($r['annee']) && $r['shop'] === '2');
-verifie('un mois muet : relu dans cinq minutes, pas dans une heure', $r['manques'] === ['structure'] && $TTL === 300, json_encode([$r['manques'], $TTL]));
+verifie('un mois muet se dit dans manques (sans cache : la lecture suivante le relit)', $r['manques'] === ['structure'] && $TTL === null, json_encode([$r['manques'], $TTL]));
 
 // --- 5. les tâches mois par mois ----------------------------------------------------------
 echo "Les tâches mois par mois\n";
 $ce = date('Y-m'); $prec = date('Y-m', strtotime('first day of last month'));
-$LIGNES = ['FROM ceo_tache_jour' => [['m' => $prec, 't' => 40, 'f' => 30, 'j' => 20]], 'FROM mac_task_review' => [['m' => $prec, 'notees' => 12, 'sous' => 3, 'moy' => '3.75']]];
+$LIGNES = ['FROM con_tache_jour' => [['m' => $prec, 't' => 40, 'f' => 30, 'j' => 20]], 'FROM mac_task_review' => [['m' => $prec, 'notees' => 12, 'sous' => 3, 'moy' => '3.75']]];
 $_GET = [];
 $T = ep_visites_taches('2');
 verifie('douze mois, du plus récent au plus ancien', count($T['mois']) === 12 && $T['mois'][0]['mois'] === $ce && $T['mois'][0]['enCours'] === true);
@@ -296,6 +296,8 @@ verifie('le P&L du mois : la ligne de Résultat', $B['periodes']['mois']['pnl'][
 $caAn = 120000.0 * ($mRef - 1) + 900.0 * min($jRef + 1, (int) date('t'));
 verifie('le P&L de l’année : les mois clos du P&L mensuel et le mois en cours, sans les invendus', $mRef === 1 || ($B['periodes']['annee']['pnl']['avecInvendus'] === false && $B['periodes']['annee']['pnl']['netPct'] === 35.0 && $B['periodes']['annee']['pnl']['mois'] === $mRef), json_encode($B['periodes']['annee']['pnl']));
 verifie('les seuils du P&L viennent de Résultat', ($B['seuilsPnl']['food'] ?? null) === 32.0);
+$qm = vbPnlCumul([], [10, 11, 12], 10, ['realise' => 1000.0, 'coutMatiere' => 400.0, 'labour' => 200.0, 'overhead' => 0.0, 'motifNet' => 'frais généraux absents du panel pour ce magasin — résultat avant frais généraux'], '2026-10-01', '2026-10-26');
+verifie('le cumul répète ce que Résultat dit du mois en cours (frais généraux absents)', str_contains((string) $qm['motif'], 'le mois en cours : frais généraux absents') && $qm['net'] === 400.0, json_encode($qm));
 verifie('Résultat est lu pour la semaine et le mois', array_column($GET_RES, 'vue') === ['semaine', 'mois'], json_encode($GET_RES));
 verifie('la semaine : −10 %, 2e sur 3 (Halle devant, Gosselies derrière)', $B['periodes']['semaine']['ecartPct'] === -10.0 && $B['periodes']['semaine']['rang'] === 2 && $B['periodes']['semaine']['sur'] === 3, json_encode($B['periodes']['semaine']));
 verifie('le mois : la même lecture coupée à la veille', $B['periodes']['mois']['realise'] === (float) round(900 * $jRef) && $B['periodes']['mois']['attendu'] === (float) round(1000 * $jRef), json_encode($B['periodes']['mois']));
@@ -310,8 +312,8 @@ verifie('une journée à −30 % ne demande pas de justification', $B3['periodes
 verifie('un mois clos sans coût matière : le coût matière de l’année reste inconnu, et le dit', $mRef <= 5 || ($B3['periodes']['annee']['pnl']['coutMatiere'] === null && $B3['periodes']['annee']['pnl']['net'] === null && str_contains((string) $B3['periodes']['annee']['pnl']['motif'], 'coût matière')), json_encode($B3['periodes']['annee']['pnl']));
 verifie('Gosselies : 47 k€ par mois clos pour 100 k€ de budget, l’année aussi à justifier', $mRef === 1 || in_array('annee', $B3['sous'], true), json_encode($B3['periodes']['annee']));
 $B4 = ep_visites_budget('4');
-verifie('Halle : ses mois clos non lus laissent l’année sans chiffre, et se relisent dans cinq minutes',
-    $mRef <= 2 || ($B4['periodes']['annee']['statut'] === 'sans' && in_array('annee', $B4['manques'], true) && $TTL === 300 && str_contains($B4['periodes']['annee']['motif'], 'pas été lu')),
+verifie('Halle : ses mois clos non lus laissent l’année sans chiffre, et le disent ; rien n’est gardé',
+    $mRef <= 2 || ($B4['periodes']['annee']['statut'] === 'sans' && in_array('annee', $B4['manques'], true) && $TTL === null && str_contains($B4['periodes']['annee']['motif'], 'pas été lu')),
     json_encode([$B4['periodes']['annee']['statut'], $B4['manques'], $TTL, $B4['periodes']['annee']['motif'] ?? null]));
 verifie('Halle fermé la veille : pas d’écart du jour, et il le dit', $B4['periodes']['jour']['statut'] === 'sans' && str_contains((string) $B4['periodes']['jour']['motif'], 'fermé') && $B4['periodes']['jour']['pnl'] === null);
 verifie('un magasin inconnu : 404', (ep_visites_budget('77')['error'] ?? '') === 'magasin inconnu');

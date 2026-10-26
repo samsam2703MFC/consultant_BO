@@ -291,3 +291,71 @@ export function tplSvAdmin(c, x){
       ${M.apercu ? `<div class="sv-mail"><b>${esc(M.apercu.sujet)}</b><iframe class="sv-ifr court" srcdoc="${esc(M.apercu.html)}" title="Aperçu du courriel"></iframe></div>` : ''}</div></div></div>`;
   return `<div data-screen="suivi-qui-fait-quoi">${msgDe(esc, s.msg)}<div class="gc-kpis">${s.kpis.map(k => kpi(esc, k)).join('')}</div>${barre}${mags}<div class="cx-deux" style="margin-top:12px"><div class="sv-pile">${types}${pers}</div><div class="sv-pile">${delais}${voit}</div></div>${modeles}</div>`;
 }
+
+/* --- 6. Sources et API ---------------------------------------------------------------------- */
+const ssNf = n => Number(n).toLocaleString('fr-BE');
+const ssPl = (n, u) => ssNf(n) + ' ' + u + (n > 1 ? 's' : '');
+const ssVerbe = (esc, m) => `<span class="ss-v ${esc(String(m).toLowerCase())}">${esc(m)}</span>`;
+const ssChips = (esc, l, cls) => l.length ? l.map(t => `<span class="ss-t ${cls || ''}">${esc(t.nom)}${t.mode ? ` <i>${esc(t.mode)}</i>` : ''}</span>`).join('') : '<span class="mko-mu">—</span>';
+export function tplSvSources(c, x){
+  const { esc } = x, s = c.sv;
+  if (s.indispo) { return `<div data-screen="suivi-sources">${panne(esc, s.indispo)}</div>`; }
+  if (s.chargement) { return `<div data-screen="suivi-sources">${attente(esc, 'Lecture du code et de la base : routes, appels au panel, tables…')}</div>`; }
+  const tete = `<div class="ss-barre"><span class="mko-mu">Lu dans le code et dans la base ${esc(s.base || '')} le ${esc(s.genereLib)} — rien n’est gardé, chaque ouverture relit tout.</span>
+    <div class="ss-act"><button ${x.A(s.relire)} class="mko-pied-btn">${s.enCours ? 'Lecture…' : 'Relire'}</button><button ${x.A(s.copierTout)} class="cx-btn">Copier la spec (Markdown)</button><button ${x.A(s.telecharger)} class="cx-btn prim">Télécharger .md</button></div></div>`;
+  const onglets = `<div class="ss-og">${s.onglets.map(o => `<button ${x.A(o.ouvrir)} class="${o.on ? 'on' : ''}">${esc(o.nom)}${o.n !== '' ? ` <b>${esc(o.n)}</b>` : ''}</button>`).join('')}</div>`;
+  const filtre = s.og === 'ensemble' ? '' : `<div class="ss-filtre"><input class="mko-inp" placeholder="Filtrer : une route, une table, un chemin…" value="${esc(s.q)}" ${x.I(s.setQ)}></div>`;
+  let corps = '';
+  if (s.og === 'ensemble') {
+    const E = s.ensemble;
+    const panelC = carte(`Panel ${esc(s.hote)}/api/v1`, s.panelConfigure ? 'compte consultant configuré' : 'compte non configuré ici',
+      `<div class="ss-liste">${E.panel.map(p => `<div>${ssVerbe(esc, p.m)}<code>${esc(p.chemin)}</code><small>${esc(ssPl(p.n, 'route'))}</small></div>`).join('')}</div>
+      ${E.panelReste ? `<button ${x.A(E.allerPanel)} class="gc-lien">+ ${esc(E.panelReste)} autres chemins ›</button>` : ''}${E.erp.length ? `<div class="mko-mu" style="margin-top:8px">ERP admin : ${E.erp.map(p => esc(p.m + ' ' + p.chemin)).join(', ')}</div>` : ''}`);
+    const conC = carte('Tables locales <code>con_</code>', 'lues et écrites par le cockpit, sans API',
+      `${E.familles.map(f => `<div class="ss-fam"><b>${esc(f.nom)}</b><div>${f.tables.map(t => `<span class="ss-t con">${esc(t.nom)} <i>${t.existe === false ? 'pas créée' : esc(ssNf(t.lignes || 0))}</i></span>`).join('')}</div></div>`).join('')}
+      <div class="mko-mu" style="margin-top:8px">${esc(s.migration)} ${E.autres ? esc(ssPl(E.autres, 'autre table') + ' du cockpit (réglages, journal, rapports, autres modules) sont lues ou écrites au passage.') : ''}</div>
+      <button ${x.A(E.allerTables)} class="gc-lien" style="margin-top:6px">Structure des tables ›</button>`);
+    const tfbC = carte('Base TFBuddy, lue sans API', 'à remplacer par une lecture du panel',
+      `<div class="ss-liste">${E.directes.map(t => `<div><span class="ss-t tfb">${esc(t.nom)}</span><span class="ss-q">${esc(t.quoi)}</span>${t.vers ? `<small class="${t.existe ? 'ok' : 'att'}">${esc(t.existe ? 'existe : ' : 'à ouvrir : ')}${esc(t.vers)}</small>` : ''}</div>`).join('')}</div>
+      ${E.directesReste ? `<div class="mko-mu">+ ${esc(ssPl(E.directesReste, 'autre table'))}</div>` : ''}`);
+    const cible = carte('Pour que tout passe par l’API', '', `<ol class="sv-ol"><li>Le panel ouvre les <b>ressources des tables <code>con_</code></b>, en lecture et en écriture (liste, lecture, création, modification, suppression) : onglet « API manquantes », spécification prête à envoyer.</li>
+      <li>Les <b>tables TFBuddy lues en direct</b> passent par une lecture du panel : la route existe déjà pour certaines, il faut l’ouvrir pour les autres.</li>
+      <li>Le cockpit bascule route par route : chaque table dit les routes qui changeraient.</li></ol>
+      <button ${x.A(E.allerManquantes)} class="cx-btn prim" style="margin-top:8px">Voir les API manquantes</button>`);
+    corps = `<div class="ss-g2">${panelC}${conC}${tfbC}${cible}</div><div class="mko-mu" style="margin-top:10px">${esc(s.limites)}</div>`;
+  } else if (s.og === 'ecrans') {
+    corps = s.ecrans.map(e => `<div class="mko-carte ss-bloc"><div class="mko-ct"><span class="mko-lab">${esc(e.nom)}</span><span class="mko-mini">${esc(ssPl(e.routes.length, 'route'))}</span></div>
+      <div style="overflow-x:auto"><table class="mko-tab ss-tab"><thead><tr><th>Route du cockpit</th><th>Ce qu’elle fait</th><th class="c">Source</th><th class="n">Panel</th><th class="n">con_</th><th class="n">TFBuddy direct</th><th class="n">Cockpit</th><th>Autres</th></tr></thead>
+      <tbody>${e.routes.map(r => `<tr class="ss-ligne${r.ouvert ? ' on' : ''}" ${x.A(r.basculer)}><td class="nom">${ssVerbe(esc, r.m)}<code>${esc(r.chemin)}</code>${r.existe ? '' : ' <span class="ko">absente</span>'}</td><td>${esc(r.quoi)}</td>
+        <td class="c"><span class="ss-src ${esc(r.source)}">${esc({ panel: 'panel', locale: 'locale', mixte: 'panel + locale' }[r.source])}</span></td><td class="n">${r.nPanel || '·'}</td><td class="n">${r.nCon || '·'}</td><td class="n${r.nTfb ? ' att' : ''}">${r.nTfb || '·'}</td><td class="n">${r.nCk || '·'}</td><td>${esc(r.externes.join(', '))}</td></tr>
+        ${r.detail ? `<tr class="ss-det"><td colspan="8"><div class="ss-det-g"><div><b>Panel</b>${r.detail.panel.length ? r.detail.panel.map(p => `<div>${ssVerbe(esc, p.m)}<code>${esc(p.chemin)}</code>${p.erp ? ' <small>ERP</small>' : ''}</div>`).join('') : '<div class="mko-mu">aucun appel</div>'}</div>
+          <div><b>Tables con_</b><div>${ssChips(esc, r.detail.con, 'con')}</div><b>Base TFBuddy, sans API</b><div>${ssChips(esc, r.detail.tfbuddy, 'tfb')}</div><b>Autres tables du cockpit</b><div>${ssChips(esc, r.detail.cockpit)}</div>
+          ${r.detail.installe.length ? `<small class="mko-mu">Créées au besoin (installation) : ${esc(r.detail.installe.join(', '))}</small>` : ''}<small class="mko-mu">${esc(r.fonction)} · ${esc(r.fichier || '')}</small></div></div></td></tr>` : ''}`).join('')}</tbody></table></div></div>`).join('') || attente(esc, 'Aucune route ne correspond au filtre.');
+  } else if (s.og === 'panel') {
+    corps = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Ce que le module appelle au panel ${esc(s.hote)}/api/v1</span><span class="mko-mini">${s.panelConfigure ? 'compte consultant configuré' : 'compte non configuré sur ce serveur'}</span></div>
+      <div style="overflow-x:auto"><table class="mko-tab ss-tab"><thead><tr><th>Chemin</th><th>Usage</th><th class="n">Routes</th></tr></thead><tbody>
+      ${s.chemins.map(p => `<tr class="ss-ligne${p.ouvert ? ' on' : ''}" ${x.A(p.basculer)}><td class="nom">${ssVerbe(esc, p.m)}<code>${esc(p.chemin)}</code>${p.erp ? ' <small>ERP admin</small>' : ''}</td><td>${p.ecriture ? '<span class="att">écriture</span>' : 'lecture'}</td><td class="n">${esc(p.n)}</td></tr>
+        ${p.ouvert ? `<tr class="ss-det"><td colspan="3">${p.routes.map(r => `<code class="ss-r">${esc(r)}</code>`).join(' ')}</td></tr>` : ''}`).join('')}</tbody></table></div></div>`;
+  } else if (s.og === 'tables') {
+    corps = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Les tables du module, sous <code>con_</code></span><span class="mko-mini">${esc(s.migration)}</span></div>
+      <div style="overflow-x:auto"><table class="mko-tab ss-tab"><thead><tr><th>Table</th><th>Famille</th><th>Ce qu’elle porte</th><th class="n">Lignes</th><th>Ancien nom</th><th class="n">Routes</th></tr></thead><tbody>
+      ${s.tables.map(t => `<tr class="ss-ligne${t.ouvert ? ' on' : ''}" ${x.A(t.basculer)}><td class="nom"><code>${esc(t.nom)}</code></td><td>${esc(t.famille)}</td><td>${esc(t.quoi)}</td><td class="n">${t.lignes == null ? '—' : esc(ssNf(t.lignes))}</td>
+        <td><code class="mu">${esc(t.ancien)}</code> <small class="${esc(t.etatCls)}">${esc(t.etat)}</small></td><td class="n">${esc(t.n)}</td></tr>
+        ${t.ouvert ? `<tr class="ss-det"><td colspan="6"><div class="ss-det-g"><div><b>Colonnes</b>${t.champs.length ? `<table class="ss-cols"><tr><th>Champ</th><th>Type</th><th>Obligatoire</th><th>Défaut</th></tr>${t.champs.map(ch => `<tr><td><code>${esc(ch.nom)}</code>${ch.cle === 'PRI' ? ' <small>clé</small>' : ''}${ch.auto ? ' <small>auto</small>' : ''}</td><td>${esc(ch.sql)}</td><td>${ch.requis ? 'oui' : ''}</td><td>${ch.defaut == null ? '' : (ch.defaut === '' ? '<span class="mko-mu">chaîne vide</span>' : `<code>${esc(ch.defaut)}</code>`)}</td></tr>`).join('')}</table>` : '<div class="mko-mu">table pas encore créée sur ce serveur</div>'}</div>
+          <div><b>Routes</b><div>${t.routes.map(r => `<code class="ss-r">${esc(r)}</code>`).join(' ') || '—'}</div>${t.ddl ? `<b>CREATE TABLE</b><pre class="ss-pre">${esc(t.ddl)}</pre>` : ''}</div></div></td></tr>` : ''}`).join('')}</tbody></table></div></div>
+      <div class="mko-carte" style="margin-top:12px"><div class="mko-ct"><span class="mko-lab">Autres tables du cockpit touchées au passage</span><span class="mko-mini">réglages, journal, rapports, autres modules — locales aussi</span></div>
+      <div class="mko-corps"><div class="ss-chips">${s.autres.map(t => `<span class="ss-t">${esc(t.nom)} <i>${t.ecrite ? 'écrite' : 'lue'} · ${esc(ssPl(t.n, 'route'))}</i></span>`).join('')}</div></div></div>`;
+  } else {
+    const verbe = e => `<div class="ss-ep">${ssVerbe(esc, e.m)}<code>${esc(e.chemin)}</code><span>${esc(e.dit)}</span></div>`;
+    corps = `<div class="ss-intro mko-carte"><div class="mko-corps"><b>Pour que tout passe par le panel, en lecture et en écriture :</b> chaque table <code>con_</code> devient une ressource du panel (cinq verbes, le corps JSON tiré de ses colonnes), et chaque table TFBuddy lue en direct, une lecture. « Copier la spec » donne le Markdown d’une ressource ; « Télécharger .md », tout.</div></div>
+      ${s.manquantes.map(m => `<div class="mko-carte ss-bloc"><div class="mko-ct"><span class="mko-lab"><code>${esc(m.ressource)}</code></span><span class="mko-mini">table <code>${esc(m.table)}</code> · ${esc(m.famille)} · ${esc(ssPl(m.n, 'route'))} du cockpit</span>
+          <span class="ss-ct-d"><button ${x.A(m.copier)} class="mko-pied-btn">Copier la spec</button><button ${x.A(m.basculer)} class="mko-pied-btn">${m.ouvert ? 'Replier' : 'Structure'}</button></span></div>
+        <div class="mko-corps"><div class="mko-mu" style="margin-bottom:6px">${esc(m.quoi)}.</div>${m.endpoints.length ? m.endpoints.map(verbe).join('') : '<div class="mko-mu">La table n’existe pas encore sur ce serveur : sa structure se lira quand elle aura servi.</div>'}
+        ${m.ouvert ? `<div class="ss-det-g" style="margin-top:10px">${m.corps ? `<div><b>Corps JSON (création)</b><pre class="ss-pre">${esc(m.corps)}</pre></div>` : ''}<div><b>Champs</b><table class="ss-cols"><tr><th>Champ</th><th>Type</th><th>Obligatoire</th></tr>${m.champs.map(ch => `<tr><td><code>${esc(ch.nom)}</code>${ch.auto ? ' <small>auto</small>' : ''}</td><td>${esc(ch.type)} <small class="mko-mu">${esc(ch.sql)}</small></td><td>${ch.requis ? 'oui' : ''}</td></tr>`).join('')}</table>${m.ddl ? `<b>Structure actuelle</b><pre class="ss-pre">${esc(m.ddl)}</pre>` : ''}</div></div>` : ''}</div></div>`).join('')}
+      <div class="mko-carte ss-bloc"><div class="mko-ct"><span class="mko-lab">Lectures à ouvrir — la base TFBuddy lue sans API</span><span class="mko-mini">${esc(ssPl(s.directes.length, 'table'))}</span></div>
+        <div style="overflow-x:auto"><table class="mko-tab ss-tab"><thead><tr><th>Table</th><th>Ce qu’elle porte</th><th>Au panel aujourd’hui</th><th>À ouvrir</th><th class="n">Routes</th></tr></thead><tbody>
+        ${s.directes.map(t => `<tr class="ss-ligne${t.ouvert ? ' on' : ''}" ${x.A(t.basculer)}><td class="nom"><code>${esc(t.nom)}</code></td><td>${esc(t.quoi)}</td><td>${t.existe ? `<code class="ok">${esc(t.existe)}</code>` : '<span class="mko-mu">—</span>'}</td><td>${t.propose ? `<code class="att">${esc(t.propose)}</code>` : '<span class="mko-mu">basculer sur la route existante</span>'}</td><td class="n">${esc(t.n)}</td></tr>
+          ${t.ouvert ? `<tr class="ss-det"><td colspan="5"><div class="ss-det-g"><div><b>Routes du cockpit</b><div>${t.routes.map(r => `<code class="ss-r">${esc(r)}</code>`).join(' ')}</div></div><div><b>Colonnes${t.lignes != null ? ' · ' + esc(ssNf(t.lignes)) + ' lignes (estimées)' : ''}</b><div class="ss-chips">${t.colonnes.length ? t.colonnes.map(ch => `<span class="ss-t">${esc(ch.nom)} <i>${esc(ch.sql)}</i></span>`).join('') : '<span class="mko-mu">pas dans la base de ce serveur</span>'}</div></div></div></td></tr>` : ''}`).join('')}</tbody></table></div></div>`;
+  }
+  return `<div data-screen="suivi-sources">${tete}${msgDe(esc, s.msg)}<div class="gc-kpis">${s.kpis.map(k => kpi(esc, k)).join('')}</div>${onglets}${filtre}${corps}</div>`;
+}

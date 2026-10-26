@@ -24,8 +24,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_milestone  TO '
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_cost       TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_task       TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_project_crm        TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_consultant         TO 'cockpit_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_consultant_visit   TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_consultant         TO 'cockpit_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.con_consultant_visit   TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_supplier           TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_person             TO 'cockpit_app'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.ceo_report_schedule    TO 'cockpit_app'@'localhost';

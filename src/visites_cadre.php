@@ -18,7 +18,7 @@ declare(strict_types=1);
  *      par trimestre), par quel profil, par quel consultant. Il remplace la
  *      fréquence en jours (gardée en repli) et alimente « À planifier », la
  *      couverture et les visites dues.
- *   3. Les TÂCHES du consultant — une table à part (`ceo_consultant_tache`) :
+ *   3. Les TÂCHES du consultant — une table à part (`con_consultant_tache`) :
  *      celles que le type génère à la planification, avec leur échéance (J−2,
  *      J+1…), et celles qu'il se donne. L'écran « Gestion consultant » les réunit
  *      avec ses visites, les plans d'action et, quand le panel répond, les cas
@@ -30,7 +30,7 @@ declare(strict_types=1);
  * déplacée ou annulée (réglage `invitations` des seuils, SMTP du cockpit).
  *
  * Réglages : `visitesTypes`, `visitesCadre`, `visitesProfils` ; table
- * `ceo_consultant_tache` ; colonnes `type_code` et `ics_seq` sur `ceo_visite`.
+ * `con_consultant_tache` ; colonnes `type_code` et `ics_seq` sur `con_visite`.
  */
 
 const VC_QUAND = ['avant', 'pendant', 'apres'];
@@ -49,13 +49,13 @@ function ensureVisitesCadre(): void
     ensureVisites();
     if ((int) setting('visitesCadreSchema', 0) >= VC_SCHEMA) { return; }
     $manque = true;
-    try { $manque = Db::row("SHOW COLUMNS FROM ceo_visite LIKE 'type_code'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    try { $manque = Db::row("SHOW COLUMNS FROM con_visite LIKE 'type_code'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
     if ($manque) {
         foreach (['type_code VARCHAR(20) NOT NULL DEFAULT \'reguliere\'', 'ics_seq SMALLINT NOT NULL DEFAULT 0'] as $col) {
-            try { Db::exec('ALTER TABLE ceo_visite ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
+            try { Db::exec('ALTER TABLE con_visite ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
         }
     }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_consultant_tache (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_consultant_tache (
         id INT AUTO_INCREMENT PRIMARY KEY,
         client_id VARCHAR(40) NULL,
         consultant_id VARCHAR(32) NOT NULL DEFAULT \'\',
@@ -224,6 +224,7 @@ function vcTypes(): array
     foreach ($defaut as $code => $t) { if (!isset($vus[$code])) { $out[] = $t; } }
     foreach ($out as &$t) {
         if ($t['code'] === 'reguliere' || $t['checklist'] === null) { $t['checklist'] = viChecklist(); }
+        else { $t['checklist'] = viAvecNl(array_map(static fn ($m) => is_array($m) ? viModuleNormalise($m, (string) ($m['id'] ?? '')) : $m, is_array($t['checklist']) ? $t['checklist'] : [])); }
         $t['duree'] = max(15, min(480, (int) $t['duree']));
         $t['profil'] = (string) $t['profil'];
         $t['profilNom'] = vcProfilNom($t['profil']);
@@ -267,15 +268,8 @@ function vcChecklistNormalise(mixed $cl, bool $standard): array
         $id = preg_replace('/[^a-z0-9_]/', '', strtolower((string) ($m['id'] ?? '')));
         if ($standard) { $id = in_array($id, VI_MODULES, true) ? $id : ''; }
         if ($id === '' || mb_strlen($id) > 12) { continue; }
-        $pts = [];
-        foreach (is_array($m['points'] ?? null) ? $m['points'] : [] as $p) {
-            if (!is_array($p)) { continue; }
-            $ref = preg_replace('/[^\w-]/', '', (string) ($p['ref'] ?? ''));
-            $lib = mb_substr(trim((string) ($p['libelle'] ?? '')), 0, 190);
-            if ($ref === '' || $lib === '') { continue; }
-            $pts[] = ['ref' => mb_substr($ref, 0, 60), 'libelle' => $lib, 'photo' => !empty($p['photo']), 'pct' => !empty($p['pct'])];
-        }
-        $out[] = ['id' => $id, 'nom' => mb_substr(trim((string) ($m['nom'] ?? $id)), 0, 60) ?: $id, 'points' => $pts];
+        // Type de réponse, choix, bornes, libellés FR et NL : src/visites_questions.php.
+        $out[] = viModuleNormalise($m, $id);
     }
     return $out;
 }
@@ -365,7 +359,7 @@ function vcAttendu(string $mois): array
 {
     $debut = $mois . '-01'; $fin = date('Y-m-t', strtotime($debut));
     [$tDu, $tAu] = vcTrimestreDe($mois);
-    $rows = Db::rows('SELECT shop_id, type_code, statut, prevu_le, consultant_id, consultant_nom FROM ceo_visite WHERE prevu_le BETWEEN ? AND ? AND statut <> \'annulee\'', [$tDu, $tAu]);
+    $rows = Db::rows('SELECT shop_id, type_code, statut, prevu_le, consultant_id, consultant_nom FROM con_visite WHERE prevu_le BETWEEN ? AND ? AND statut <> \'annulee\'', [$tDu, $tAu]);
     $mags = viMagasins(); $types = []; foreach (vcTypes() as $t) { $types[$t['code']] = $t; }
     $out = [];
     foreach (vcCadre() as $l) {
@@ -492,8 +486,8 @@ function vcTachesGenerer(array $v): int
     $n = 0; $now = date('Y-m-d H:i:s');
     foreach ($t['taches'] as $i => $x) {
         $cid = 'v' . (int) $v['id'] . ':' . $i;
-        if (Db::row('SELECT id FROM ceo_consultant_tache WHERE client_id = ?', [$cid]) !== null) { continue; }
-        Db::exec('INSERT INTO ceo_consultant_tache (client_id, consultant_id, consultant_nom, shop_id, visite_id, source, quand, delai, titre, detail, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        if (Db::row('SELECT id FROM con_consultant_tache WHERE client_id = ?', [$cid]) !== null) { continue; }
+        Db::exec('INSERT INTO con_consultant_tache (client_id, consultant_id, consultant_nom, shop_id, visite_id, source, quand, delai, titre, detail, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [$cid, (string) $v['consultant_id'], (string) $v['consultant_nom'], (string) $v['shop_id'], (int) $v['id'], 'type', $x['quand'], (int) $x['delai'],
              mb_substr($x['libelle'], 0, 190), 'Tâche du type « ' . $t['nom'] . ' »', vcEcheance((string) $v['prevu_le'], $x['quand'], (int) $x['delai']), 'a_faire', 'type', $now, $now]);
         $n++;
@@ -504,14 +498,14 @@ function vcTachesGenerer(array $v): int
 /** La visite a bougé : les tâches du type encore ouvertes suivent la nouvelle date. */
 function vcTachesRecaler(array $v): void
 {
-    foreach (Db::rows('SELECT id, quand, delai FROM ceo_consultant_tache WHERE visite_id = ? AND source = \'type\' AND statut IN (\'a_faire\', \'en_cours\') AND quand IS NOT NULL', [(int) $v['id']]) as $r) {
-        Db::exec('UPDATE ceo_consultant_tache SET echeance = ?, maj_le = ? WHERE id = ?', [vcEcheance((string) $v['prevu_le'], (string) $r['quand'], (int) $r['delai']), date('Y-m-d H:i:s'), (int) $r['id']]);
+    foreach (Db::rows('SELECT id, quand, delai FROM con_consultant_tache WHERE visite_id = ? AND source = \'type\' AND statut IN (\'a_faire\', \'en_cours\') AND quand IS NOT NULL', [(int) $v['id']]) as $r) {
+        Db::exec('UPDATE con_consultant_tache SET echeance = ?, maj_le = ? WHERE id = ?', [vcEcheance((string) $v['prevu_le'], (string) $r['quand'], (int) $r['delai']), date('Y-m-d H:i:s'), (int) $r['id']]);
     }
 }
 
 function vcTachesAnnuler(int $visiteId): void
 {
-    Db::exec('UPDATE ceo_consultant_tache SET statut = \'annule\', maj_le = ? WHERE visite_id = ? AND statut IN (\'a_faire\', \'en_cours\')', [date('Y-m-d H:i:s'), $visiteId]);
+    Db::exec('UPDATE con_consultant_tache SET statut = \'annule\', maj_le = ? WHERE visite_id = ? AND statut IN (\'a_faire\', \'en_cours\')', [date('Y-m-d H:i:s'), $visiteId]);
 }
 
 /** Les tâches de plusieurs visites (l'application terrain les montre sur la fiche). */
@@ -519,7 +513,7 @@ function vcTachesDesVisites(array $ids): array
 {
     if ($ids === []) { return []; }
     $in = implode(',', array_fill(0, count($ids), '?'));
-    return array_map('vcTacheLigne', Db::rows("SELECT * FROM ceo_consultant_tache WHERE visite_id IN ($in) ORDER BY echeance, id", array_map('intval', $ids)));
+    return array_map('vcTacheLigne', Db::rows("SELECT * FROM con_consultant_tache WHERE visite_id IN ($in) ORDER BY echeance, id", array_map('intval', $ids)));
 }
 
 /** POST /consultants/taches — une tâche que le consultant se donne (ou qu'on lui donne). */
@@ -533,24 +527,24 @@ function wr_consultants_tache(): array
     if ($cons === '') { $cons = (string) (consultantIdCompte() ?? ''); }
     if ($cons === '') { http_response_code(422); return ['error' => 'consultant requis']; }
     $cid = mb_substr(trim((string) ($b['client_id'] ?? '')), 0, 40) ?: null;
-    if ($cid !== null && ($ex = Db::row('SELECT * FROM ceo_consultant_tache WHERE client_id = ?', [$cid])) !== null) { return ['ok' => true, 'tache' => vcTacheLigne($ex), 'deja' => true]; }
+    if ($cid !== null && ($ex = Db::row('SELECT * FROM con_consultant_tache WHERE client_id = ?', [$cid])) !== null) { return ['ok' => true, 'tache' => vcTacheLigne($ex), 'deja' => true]; }
     $shop = trim((string) ($b['shop'] ?? ''));
     $shop = $shop !== '' && isset(viMagasins()[$shop]) ? $shop : null;
     $source = in_array($b['source'] ?? '', VC_SOURCES, true) ? $b['source'] : 'perso';
     $ech = viDate($b['echeance'] ?? null);
     $vid = isset($b['visite_id']) && is_numeric($b['visite_id']) ? (int) $b['visite_id'] : null;
     $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO ceo_consultant_tache (client_id, consultant_id, consultant_nom, shop_id, visite_id, source, quand, delai, titre, detail, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    Db::exec('INSERT INTO con_consultant_tache (client_id, consultant_id, consultant_nom, shop_id, visite_id, source, quand, delai, titre, detail, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$cid, $cons, viConsultantNom($cons), $shop, $vid, $source, null, null, $titre, mb_substr(trim((string) ($b['detail'] ?? '')), 0, 2000) ?: null, $ech, 'a_faire', viQui($b), $now, $now]);
     $id = (int) Db::pdo()->lastInsertId();
-    return ['ok' => true, 'tache' => vcTacheLigne(Db::row('SELECT * FROM ceo_consultant_tache WHERE id = ?', [$id]))];
+    return ['ok' => true, 'tache' => vcTacheLigne(Db::row('SELECT * FROM con_consultant_tache WHERE id = ?', [$id]))];
 }
 
 /** PUT /consultants/taches/{id} — statut, titre, échéance, détail. */
 function wr_consultants_tache_put(string $id): array
 {
     ensureVisitesCadre();
-    $t = ctype_digit($id) ? Db::row('SELECT * FROM ceo_consultant_tache WHERE id = ?', [(int) $id]) : Db::row('SELECT * FROM ceo_consultant_tache WHERE client_id = ?', [$id]);
+    $t = ctype_digit($id) ? Db::row('SELECT * FROM con_consultant_tache WHERE id = ?', [(int) $id]) : Db::row('SELECT * FROM con_consultant_tache WHERE client_id = ?', [$id]);
     if ($t === null) { http_response_code(404); return ['error' => 'tâche inconnue']; }
     $b = body();
     $set = []; $args = [];
@@ -565,8 +559,8 @@ function wr_consultants_tache_put(string $id): array
     if (isset($b['shop'])) { $s = trim((string) $b['shop']); $set[] = 'shop_id = ?'; $args[] = $s !== '' && isset(viMagasins()[$s]) ? $s : null; }
     if (!$set) { return ['ok' => true, 'tache' => vcTacheLigne($t)]; }
     $set[] = 'maj_le = ?'; $args[] = date('Y-m-d H:i:s'); $args[] = (int) $t['id'];
-    Db::exec('UPDATE ceo_consultant_tache SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
-    return ['ok' => true, 'tache' => vcTacheLigne(Db::row('SELECT * FROM ceo_consultant_tache WHERE id = ?', [(int) $t['id']]))];
+    Db::exec('UPDATE con_consultant_tache SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
+    return ['ok' => true, 'tache' => vcTacheLigne(Db::row('SELECT * FROM con_consultant_tache WHERE id = ?', [(int) $t['id']]))];
 }
 
 /* --- après une écriture de visite ---------------------------------------------- */
@@ -574,7 +568,7 @@ function wr_consultants_tache_put(string $id): array
 /** Après POST /visites : les tâches du type, l'invitation. */
 function vcApresPlanification(int $visiteId): array
 {
-    $v = Db::row('SELECT * FROM ceo_visite WHERE id = ?', [$visiteId]);
+    $v = Db::row('SELECT * FROM con_visite WHERE id = ?', [$visiteId]);
     if ($v === null) { return ['taches' => 0, 'invitation' => null]; }
     return ['taches' => vcTachesGenerer($v), 'invitation' => vcInviter($v, 'REQUEST')];
 }
@@ -588,21 +582,21 @@ function vcApresChangement(array $avant, array $apres): array
     $annulee = $apres['statut'] === 'annulee' && $avant['statut'] !== 'annulee';
     if ($annulee) {
         vcTachesAnnuler((int) $apres['id']);
-        Db::exec('UPDATE ceo_visite SET ics_seq = ics_seq + 1 WHERE id = ?', [(int) $apres['id']]);
+        Db::exec('UPDATE con_visite SET ics_seq = ics_seq + 1 WHERE id = ?', [(int) $apres['id']]);
         $apres['ics_seq'] = (int) ($apres['ics_seq'] ?? 0) + 1;
         $out['taches'] = true; $out['invitation'] = vcInviter($apres, 'CANCEL');
     } elseif ($bouge && in_array($apres['statut'], ['planifiee', 'confirmee'], true)) {
         if ((string) $avant['consultant_id'] !== (string) $apres['consultant_id'] || ($avant['type_code'] ?? '') !== ($apres['type_code'] ?? '')) {
             vcTachesAnnuler((int) $apres['id']);
-            Db::exec('DELETE FROM ceo_consultant_tache WHERE visite_id = ? AND source = \'type\' AND statut = \'annule\'', [(int) $apres['id']]);
+            Db::exec('DELETE FROM con_consultant_tache WHERE visite_id = ? AND source = \'type\' AND statut = \'annule\'', [(int) $apres['id']]);
             vcTachesGenerer($apres);
         } else { vcTachesRecaler($apres); }
-        Db::exec('UPDATE ceo_visite SET ics_seq = ics_seq + 1 WHERE id = ?', [(int) $apres['id']]);
+        Db::exec('UPDATE con_visite SET ics_seq = ics_seq + 1 WHERE id = ?', [(int) $apres['id']]);
         $apres['ics_seq'] = (int) ($apres['ics_seq'] ?? 0) + 1;
         $out['taches'] = true; $out['invitation'] = vcInviter($apres, 'REQUEST');
     }
     if ($apres['statut'] === 'terminee' && $avant['statut'] !== 'terminee') {
-        Db::exec('UPDATE ceo_consultant_tache SET statut = \'fait\', fait_le = ?, maj_le = ? WHERE visite_id = ? AND quand = \'pendant\' AND statut IN (\'a_faire\', \'en_cours\')', [date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), (int) $apres['id']]);
+        Db::exec('UPDATE con_consultant_tache SET statut = \'fait\', fait_le = ?, maj_le = ? WHERE visite_id = ? AND quand = \'pendant\' AND statut IN (\'a_faire\', \'en_cours\')', [date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), (int) $apres['id']]);
         $out['note'] = vcNotePanel($apres);
     }
     // Une visite annoncée déplacée ou annulée après l'ordre du jour : le franchisé est prévenu, dans sa langue.
@@ -671,7 +665,7 @@ function vcTitre(array $v, ?array $mag): string
     return 'Visite ' . ($mag['court'] ?? (string) ($v['shop_id'] ?? $v['shop'] ?? '')) . ' — ' . ($t['nom'] ?? 'Régulière');
 }
 
-/** Un VEVENT d'une ligne de ceo_visite (colonnes brutes). */
+/** Un VEVENT d'une ligne de con_visite (colonnes brutes). */
 function vcIcsEvenement(array $v, string $methode = 'PUBLISH', ?string $invite = null): string
 {
     $mags = viMagasins(); $mag = $mags[(string) $v['shop_id']] ?? null;
@@ -709,7 +703,7 @@ function vcIcsSortie(string $cons): never
     $jeton = (string) ($_GET['jeton'] ?? '');
     if ($jeton === '' || !hash_equals(vcIcsJeton($cons), $jeton)) { http_response_code(403); header('Content-Type: text/plain; charset=utf-8'); echo 'jeton invalide'; exit; }
     $du = date('Y-m-d', strtotime('-60 days')); $au = date('Y-m-d', strtotime('+180 days'));
-    $rows = Db::rows('SELECT * FROM ceo_visite WHERE consultant_id = ? AND prevu_le BETWEEN ? AND ? AND statut <> \'annulee\' ORDER BY prevu_le, debut_h', [$cons, $du, $au]);
+    $rows = Db::rows('SELECT * FROM con_visite WHERE consultant_id = ? AND prevu_le BETWEEN ? AND ? AND statut <> \'annulee\' ORDER BY prevu_le, debut_h', [$cons, $du, $au]);
     $ics = vcIcsCalendrier($rows, 'PUBLISH', 'Visites — ' . viConsultantNom($cons));
     header('Content-Type: text/calendar; charset=utf-8');
     header('Content-Disposition: inline; filename="visites-' . preg_replace('/[^\w-]/', '', $cons) . '.ics"');
@@ -799,12 +793,12 @@ function ep_consultants_gestion(): array
     $types = vcTypes(); $typeNom = []; foreach ($types as $t) { $typeNom[$t['code']] = $t['nom']; }
 
     // Les visites de la fenêtre, tous consultants : la grille montre celles des autres en gris.
-    $visites = array_map('viVisiteLigne', Db::rows('SELECT * FROM ceo_visite WHERE prevu_le BETWEEN ? AND ? ORDER BY prevu_le, debut_h', [$du, $au]));
+    $visites = array_map('viVisiteLigne', Db::rows('SELECT * FROM con_visite WHERE prevu_le BETWEEN ? AND ? ORDER BY prevu_le, debut_h', [$du, $au]));
     $ids = array_map(fn ($v) => $v['id'], $visites);
     $pts = [];
     if ($ids) {
         $in = implode(',', array_fill(0, count($ids), '?'));
-        foreach (Db::rows("SELECT visite_id, COUNT(*) n, SUM(CASE WHEN etat <> '' OR note IS NOT NULL OR valeur IS NOT NULL THEN 1 ELSE 0 END) faits, SUM(CASE WHEN etat = 'ko' OR (note IS NOT NULL AND note <= 2) THEN 1 ELSE 0 END) ko FROM ceo_visite_point WHERE visite_id IN ($in) GROUP BY visite_id", $ids) as $r) {
+        foreach (Db::rows("SELECT visite_id, COUNT(*) n, SUM(CASE WHEN etat <> '' OR note IS NOT NULL OR valeur IS NOT NULL THEN 1 ELSE 0 END) faits, SUM(CASE WHEN etat = 'ko' OR (note IS NOT NULL AND note <= 2) THEN 1 ELSE 0 END) ko FROM con_visite_point WHERE visite_id IN ($in) GROUP BY visite_id", $ids) as $r) {
             $pts[(int) $r['visite_id']] = ['total' => (int) $r['n'], 'faits' => (int) $r['faits'], 'ko' => (int) $r['ko']];
         }
     }
@@ -822,7 +816,7 @@ function ep_consultants_gestion(): array
     foreach (viPlans(null, 30) as $p) { $p['magasin'] = $mags[$p['shop']]['court'] ?? $p['shop']; $plans[] = $p; }
 
     // Les tâches : ouvertes (toutes), à échéance dans la fenêtre, ou faites ce mois.
-    $sql = 'SELECT * FROM ceo_consultant_tache WHERE (statut IN (\'a_faire\', \'en_cours\') OR (echeance BETWEEN ? AND ?) OR (fait_le >= ?))' . ($cons !== '' ? ' AND consultant_id = ?' : '') . ' ORDER BY echeance IS NULL, echeance, id';
+    $sql = 'SELECT * FROM con_consultant_tache WHERE (statut IN (\'a_faire\', \'en_cours\') OR (echeance BETWEEN ? AND ?) OR (fait_le >= ?))' . ($cons !== '' ? ' AND consultant_id = ?' : '') . ' ORDER BY echeance IS NULL, echeance, id';
     $args = [$du, $au, $debut . ' 00:00:00']; if ($cons !== '') { $args[] = $cons; }
     $taches = [];
     foreach (array_map('vcTacheLigne', Db::rows($sql, $args)) as $t) { $t['magasin'] = $t['shop'] !== null ? ($mags[$t['shop']]['court'] ?? $t['shop']) : null; $taches[] = $t; }
@@ -835,10 +829,10 @@ function ep_consultants_gestion(): array
 
     // Le réseau : consultant × magasin — dernière visite faite, prochaine planifiée, visites du mois, tâches ouvertes.
     $derniers = []; $prochains = [];
-    foreach (Db::rows('SELECT consultant_id, shop_id, MAX(prevu_le) d FROM ceo_visite WHERE statut = \'terminee\' GROUP BY consultant_id, shop_id') as $r) { $derniers[(string) $r['consultant_id']][(string) $r['shop_id']] = $r['d']; }
-    foreach (Db::rows('SELECT consultant_id, shop_id, MIN(prevu_le) d FROM ceo_visite WHERE statut IN (\'planifiee\', \'confirmee\', \'en_cours\') AND prevu_le >= ? GROUP BY consultant_id, shop_id', [$auj]) as $r) { $prochains[(string) $r['consultant_id']][(string) $r['shop_id']] = $r['d']; }
+    foreach (Db::rows('SELECT consultant_id, shop_id, MAX(prevu_le) d FROM con_visite WHERE statut = \'terminee\' GROUP BY consultant_id, shop_id') as $r) { $derniers[(string) $r['consultant_id']][(string) $r['shop_id']] = $r['d']; }
+    foreach (Db::rows('SELECT consultant_id, shop_id, MIN(prevu_le) d FROM con_visite WHERE statut IN (\'planifiee\', \'confirmee\', \'en_cours\') AND prevu_le >= ? GROUP BY consultant_id, shop_id', [$auj]) as $r) { $prochains[(string) $r['consultant_id']][(string) $r['shop_id']] = $r['d']; }
     $ouvertes = []; $retards = [];
-    foreach (Db::rows('SELECT consultant_id, COUNT(*) n, SUM(CASE WHEN echeance IS NOT NULL AND echeance < ? THEN 1 ELSE 0 END) r FROM ceo_consultant_tache WHERE statut IN (\'a_faire\', \'en_cours\') GROUP BY consultant_id', [$auj]) as $r) { $ouvertes[(string) $r['consultant_id']] = (int) $r['n']; $retards[(string) $r['consultant_id']] = (int) $r['r']; }
+    foreach (Db::rows('SELECT consultant_id, COUNT(*) n, SUM(CASE WHEN echeance IS NOT NULL AND echeance < ? THEN 1 ELSE 0 END) r FROM con_consultant_tache WHERE statut IN (\'a_faire\', \'en_cours\') GROUP BY consultant_id', [$auj]) as $r) { $ouvertes[(string) $r['consultant_id']] = (int) $r['n']; $retards[(string) $r['consultant_id']] = (int) $r['r']; }
     $reseau = [];
     foreach ($consultants as $c) {
         $faites = 0; $planifiees = 0; $cells = [];

@@ -118,5 +118,64 @@ verifie('le jeton ouvre son magasin, pas un autre', suJetonOk('4', $j) && !suJet
 $REGLAGES['visitesJeton'] = 'autre-secret';
 verifie('changer le secret invalide les anciens liens', !suJetonOk('4', $j));
 
+// --- Sources et API (26/10/2026) : la lecture des chemins du panel et la spécification des API manquantes ------
+echo "\nSources et API\n";
+require_once __DIR__ . '/../src/marketing_sources.php';
+require_once __DIR__ . '/../src/con_tables.php';
+require_once __DIR__ . '/../src/suivi_sources.php';
+verifie('chemin : variable et urlencode', ssChemin("'/consultant/shops/' . \$shopId . '/tasks?date=' . urlencode(\$date)") === '/consultant/shops/{shop}/tasks?date={date}', (string) ssChemin("'/consultant/shops/' . \$shopId . '/tasks?date=' . urlencode(\$date)"));
+verifie('chemin : la requête fabriquée', ssChemin("'/shops/' . \$sid . '/statistics/sales/kpis?' . http_build_query(['date_from' => \$d])") === '/shops/{shop}/statistics/sales/kpis?{query}');
+verifie('chemin : chaîne entre guillemets', ssChemin('"/transactions/{$id}?include=products"') === '/transactions/{id}?include=products');
+verifie('chemin : ce qui n’est pas un chemin', ssChemin('$x') === null && ssChemin("'abc'") === null);
+$v = ssVariablesChemin("\$base = '/consultant/shops/' . \$shopId . '/pnl';\n\$ch[] = \$base . '/daily?' . http_build_query(['a' => 1]);\n\$ch[] = \$base . '?' . self::q(\$p, \$d);");
+verifie('variable de chemin : la base reprise', ($v['ch'] ?? []) === ['/consultant/shops/{shop}/pnl/daily?{query}', '/consultant/shops/{shop}/pnl?{query}'], json_encode($v));
+$v = ssVariablesChemin("\$paths = ['cats' => '/consultant/shops/category-sales?' . http_build_query([])];\n\$paths['k' . \$id] = '/shops/' . \$id . '/schedule?date=' . \$date;");
+verifie('tableau de chemins à clés', ($v['paths'] ?? []) === ['/consultant/shops/category-sales?{query}', '/shops/{shop}/schedule?date={date}'], json_encode($v));
+$a = ssAppelsApi("\$r = PanelApi::envoi('PUT', '/consultant/shops/' . \$s . '/targets', \$b); \$t = PanelApi::get('/consultant/tasks'); PanelApi::configured();", 'PanelApi::');
+verifie('appels : verbe d’envoi, lecture, socle ignoré', $a === [['m' => 'PUT', 'chemin' => '/consultant/shops/{shop}/targets'], ['m' => 'GET', 'chemin' => '/consultant/tasks']], json_encode($a));
+$a = ssAppelsApi("PanelApi::shopTasks(\$s, \$d);", 'PanelApi::', ['shopTasks' => [['m' => 'GET', 'chemin' => '/consultant/shops/{shop}/tasks?date={date}']]]);
+verifie('appels : une méthode de PanelApi donne ses chemins', $a === [['m' => 'GET', 'chemin' => '/consultant/shops/{shop}/tasks?date={date}']]);
+$col = static fn ($n, $t, $ct, $nul = 'YES', $def = null, $ex = '', $k = '') => ['COLUMN_NAME' => $n, 'DATA_TYPE' => $t, 'COLUMN_TYPE' => $ct, 'IS_NULLABLE' => $nul, 'COLUMN_DEFAULT' => $def, 'EXTRA' => $ex, 'COLUMN_KEY' => $k];
+$ch = [ssChamp($col('id', 'int', 'int(11)', 'NO', null, 'auto_increment', 'PRI'), null), ssChamp($col('visite_id', 'int', 'int(11)', 'NO'), null), ssChamp($col('etat', 'varchar', 'varchar(4)', 'NO', "'ok'"), null),
+    ssChamp($col('rubriques', 'text', 'text', 'YES', 'NULL'), 'objet'), ssChamp($col('maj_le', 'datetime', 'datetime', 'NO'), null)];
+verifie('champ : obligatoire sans défaut, défaut MariaDB lu', $ch[1]['requis'] && !$ch[2]['requis'] && $ch[2]['defaut'] === 'ok' && $ch[3]['defaut'] === null && !$ch[0]['requis']);
+verifie('champ : texte JSON reconnu', $ch[3]['type'] === 'object (JSON)' && $ch[2]['type'] === 'string ≤ 4');
+$e = ssEndpoints('con_visite_point', CON_TABLES['con_visite_point']['api'], $ch);
+verifie('API d’une table : les cinq verbes', array_column($e, 'm') === ['GET', 'GET', 'POST', 'PATCH', 'DELETE'], json_encode(array_column($e, 'm')));
+verifie('API d’une table : le corps sans id, sans parent, sans date technique', array_keys($e[2]['corps']) === ['etat', 'rubriques'], json_encode(array_keys($e[2]['corps'])));
+$e = ssEndpoints('con_tache_jour', CON_TABLES['con_tache_jour']['api'], $ch);
+verifie('API d’une table à clé composée : lister, écrire, retirer', array_column($e, 'm') === ['GET', 'PUT', 'DELETE']);
+$e = ssEndpoints('con_visite_photo', CON_TABLES['con_visite_photo']['api'], $ch);
+verifie('API des photos : dépôt et lien signé', in_array('/consultant/visits/{visite_id}/photos/{id}/presigned-url', array_column($e, 'chemin'), true));
+$routeur = (string) file_get_contents(__DIR__ . '/../public/api/index.php') . (string) file_get_contents(__DIR__ . '/../src/suivi.php');
+$index = msIndex(dirname(__DIR__));
+$absentes = array_values(array_filter(SS_ROUTES, static fn ($r) => !isset($index[$r[3]]) || !preg_match('/\b' . $r[3] . '\(/', $routeur)));
+verifie('chaque route du rapport existe et est routée', $absentes === [], json_encode(array_column($absentes, 3)));
+verifie('chaque écran du rapport est nommé', !array_filter(SS_ROUTES, static fn ($r) => !isset(SS_ECRANS[$r[0]])));
+
+// --- Les questions génériques et bilingues (26/10/2026) ------------------------------------------------------
+echo "\nQuestions de la checklist\n";
+require_once __DIR__ . '/../src/visites_questions.php';
+verifie('question sans type : OK / Écart / N/A, % reconnu', viPointNormalise(['ref' => 'a', 'libelle' => 'A'])['type'] === 'etat' && viPointNormalise(['ref' => 'b', 'libelle' => 'B', 'pct' => true])['type'] === 'pct');
+verifie('question sans libellé ou sans référence : refusée', viPointNormalise(['ref' => '', 'libelle' => 'X']) === null && viPointNormalise(['ref' => 'x', 'libelle' => '  ']) === null);
+$q = viPointNormalise(['ref' => 'etat_vitrine', 'libelle' => 'État de la vitrine', 'libelle_nl' => 'Staat van de vitrine', 'type' => 'multi', 'photo' => 1,
+    'choix' => [['fr' => 'Propre'], ['code' => 'SALE!', 'fr' => 'Sale', 'nl' => 'Vuil', 'ko' => 1], ['fr' => ''], ['code' => 'sale', 'fr' => 'Encore sale']]]);
+verifie('choix multiples : libellés, codes, écart, doublon renommé, vide écarté', $q['type'] === 'multi' && $q['libelle_nl'] === 'Staat van de vitrine' && count($q['choix']) === 3
+    && $q['choix'][0]['code'] === 'propre' && $q['choix'][1] === ['code' => 'sale', 'fr' => 'Sale', 'nl' => 'Vuil', 'ko' => true] && $q['choix'][2]['code'] !== 'sale', json_encode($q['choix']));
+$q = viPointNormalise(['ref' => 't', 'libelle' => 'Température', 'type' => 'nombre', 'min' => '6', 'max' => '2', 'unite' => '°C']);
+verifie('nombre : bornes remises dans l’ordre, unité', $q['min'] === 2.0 && $q['max'] === 6.0 && $q['unite'] === '°C' && !isset($q['choix']));
+verifie('type inconnu : l’ancienne règle', viPointNormalise(['ref' => 'z', 'libelle' => 'Z', 'type' => 'pirate'])['type'] === 'etat');
+verifie('réponse : code, liste, nombre, texte, rien', viReponseNormalise('Sale') === '"Sale"' && viReponseNormalise(['sale', 'Propre', 'sale', '']) === '["sale","propre"]'
+    && viReponseNormalise(4.5) === '4.5' && viReponseNormalise('  ') === null && viReponseNormalise(null) === null && viReponseNormalise([]) === null);
+$def = ['type' => 'multi', 'choix' => [['code' => 'propre', 'fr' => 'Propre', 'nl' => 'Proper'], ['code' => 'sale', 'fr' => 'Sale', 'nl' => 'Vuil', 'ko' => true]]];
+verifie('réponse lue dans la langue', viReponseTexte($def, ['propre', 'sale']) === 'Propre, Sale' && viReponseTexte($def, ['sale'], 'nl') === 'Vuil');
+verifie('nombre lu avec son unité', viReponseTexte(['type' => 'nombre', 'unite' => 'kg'], 12.5) === '12,5 kg' && viReponseTexte(['type' => 'nombre'], 3) === '3');
+$m = viModuleNormalise(['nom' => 'Hygiène', 'nom_nl' => 'Hygiëne', 'points' => [['ref' => 'sol', 'libelle' => 'Sol'], 'pas une question']], 'hygiene');
+verifie('module : noms FR et NL, questions normalisées', $m['nom_nl'] === 'Hygiëne' && count($m['points']) === 1 && $m['points'][0]['type'] === 'etat');
+$cl = viAvecNl([['id' => 'hygiene', 'nom' => 'Hygiène', 'points' => [['ref' => 'sol', 'libelle' => 'Sol zone production propre'], ['ref' => 'frigo', 'libelle' => 'Frigo réécrit par le réseau']]]]);
+verifie('néerlandais livré : seulement là où le français est celui d’origine', $cl[0]['nom_nl'] === 'Hygiëne' && $cl[0]['points'][0]['libelle_nl'] === 'Vloer productiezone proper' && !isset($cl[0]['points'][1]['libelle_nl']));
+verifie('un libellé néerlandais posé n’est pas remplacé', viAvecNl([['id' => 'hygiene', 'points' => [['ref' => 'sol', 'libelle' => 'Sol zone production propre', 'libelle_nl' => 'Eigen']]]])[0]['points'][0]['libelle_nl'] === 'Eigen');
+verifie('libellé dans la langue, repli sur le français', viLibelle(['libelle' => 'A', 'libelle_nl' => 'B'], 'nl') === 'B' && viLibelle(['libelle' => 'A'], 'nl') === 'A');
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

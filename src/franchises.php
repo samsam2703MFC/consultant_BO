@@ -8,7 +8,7 @@ declare(strict_types=1);
  *
  *   - SUIVI JOURNALIER ET OPÉRATIONS : ce que les données disent chaque jour,
  *     sans aller sur place — les tâches du panel et leurs photos (relevé
- *     `ceo_tache_jour`, revues du jour), les invendus, les objectifs produits et
+ *     `con_tache_jour`, revues du jour), les invendus, les objectifs produits et
  *     de campagne, les remarques aux opérateurs, la note Google, le CA de la
  *     semaine face à l'objectif.
  *   - SUIVI DE TERRAIN : ce que le consultant constate sur place — la dernière
@@ -30,7 +30,7 @@ function frTachesJours(string $shop, int $jours = 30): array
         if (function_exists('tachesSuiviTables')) { tachesSuiviTables(); }
         $oblig = [];
         if (function_exists('sqObligatoires')) { try { $oblig = array_map('intval', (array) (sqObligatoires()['ids'] ?? [])); } catch (Throwable $e) { $oblig = []; } }
-        $rows = Db::rows('SELECT jour, id_task, fait FROM ceo_tache_jour WHERE id_shop = ? AND jour >= ? ORDER BY jour', [(int) $shop, $out['du']]);
+        $rows = Db::rows('SELECT jour, id_task, fait FROM con_tache_jour WHERE id_shop = ? AND jour >= ? ORDER BY jour', [(int) $shop, $out['du']]);
     } catch (Throwable $e) { $out['motif'] = 'relevé des tâches indisponible'; return $out; }
     $parJour = [];
     foreach ($rows as $r) {
@@ -119,7 +119,7 @@ function frRevues(string $shop, int $jours = 30): array
     // Le nom de la tâche : le relevé quotidien (le plus récent), le référentiel, sinon l'identifiant.
     $nomsT = []; $vu = [];
     try {
-        foreach (Db::rows("SELECT id_task, nom FROM ceo_tache_jour WHERE id_shop = ? AND jour >= ? AND nom <> '' ORDER BY jour DESC", [(int) $shop, $fenDu]) as $r) {
+        foreach (Db::rows("SELECT id_task, nom FROM con_tache_jour WHERE id_shop = ? AND jour >= ? AND nom <> '' ORDER BY jour DESC", [(int) $shop, $fenDu]) as $r) {
             $t = (int) $r['id_task']; if (isset($vu[$t])) { continue; } $vu[$t] = true; $nomsT[$t] = trim((string) $r['nom']);
         }
     } catch (Throwable $e) { /* sans relevé : le référentiel */ }
@@ -127,7 +127,7 @@ function frRevues(string $shop, int $jours = 30): array
     $reste = array_keys(array_diff_key($vus, $nomsT));
     if ($reste !== []) {
         try {
-            foreach (Db::rows('SELECT id_task, nom FROM ceo_tache_jour WHERE id_task IN (' . implode(',', array_fill(0, count($reste), '?')) . ") AND nom <> '' ORDER BY jour DESC", $reste) as $r) {
+            foreach (Db::rows('SELECT id_task, nom FROM con_tache_jour WHERE id_task IN (' . implode(',', array_fill(0, count($reste), '?')) . ") AND nom <> '' ORDER BY jour DESC", $reste) as $r) {
                 $t = (int) $r['id_task']; $nomsT[$t] = $nomsT[$t] ?? trim((string) $r['nom']);
             }
         } catch (Throwable $e) { /* l'identifiant, jamais un nom inventé */ }
@@ -261,7 +261,7 @@ function frScoring(string $shop): ?array
 function frMsp(string $shop): ?array
 {
     if (!function_exists('sqMspLigne')) { return null; }
-    try { if (function_exists('ensureScoring')) { ensureScoring(); } $r = Db::row('SELECT * FROM ceo_scoring_msp WHERE shop_id = ? ORDER BY trimestre DESC, id DESC LIMIT 1', [$shop]); }
+    try { if (function_exists('ensureScoring')) { ensureScoring(); } $r = Db::row('SELECT * FROM con_scoring_msp WHERE shop_id = ? ORDER BY trimestre DESC, id DESC LIMIT 1', [$shop]); }
     catch (Throwable $e) { return null; }
     return $r ? sqMspLigne($r) : null;
 }
@@ -276,11 +276,11 @@ function frVisites(string $shop): array
     foreach (function_exists('vcTypes') ? vcTypes() : [] as $t) { $typeNom[$t['code']] = $t['nom']; }
     $nomDe = fn ($code) => $typeNom[(string) ($code ?: 'reguliere')] ?? ((string) $code === '' || $code === 'reguliere' ? 'Régulière' : (string) $code);
     $derniere = null;
-    $der = Db::row('SELECT * FROM ceo_visite WHERE shop_id = ? AND statut = \'terminee\' ORDER BY prevu_le DESC, id DESC LIMIT 1', [$shop]);
+    $der = Db::row('SELECT * FROM con_visite WHERE shop_id = ? AND statut = \'terminee\' ORDER BY prevu_le DESC, id DESC LIMIT 1', [$shop]);
     if ($der !== null) {
         $v = viVisiteLigne($der); $v['typeNom'] = $nomDe($v['type']);
         $seuil = (int) viSeuils()['planoOrange'];
-        $pts = array_map('viPointLigne', Db::rows('SELECT * FROM ceo_visite_point WHERE visite_id = ?', [(int) $der['id']]));
+        $pts = array_map('viPointLigne', Db::rows('SELECT * FROM con_visite_point WHERE visite_id = ?', [(int) $der['id']]));
         $ok = 0; $ko = 0; $faits = 0; $ecarts = [];
         foreach ($pts as $p) {
             $fait = $p['etat'] !== '' || $p['note'] !== null || $p['valeur'] !== null;
@@ -294,12 +294,12 @@ function frVisites(string $shop): array
         $derniere = $v;
     }
     $prochaines = [];
-    foreach (Db::rows('SELECT * FROM ceo_visite WHERE shop_id = ? AND statut IN (\'planifiee\', \'confirmee\', \'en_cours\') AND prevu_le >= ? ORDER BY prevu_le, debut_h LIMIT 6', [$shop, $auj]) as $r) {
+    foreach (Db::rows('SELECT * FROM con_visite WHERE shop_id = ? AND statut IN (\'planifiee\', \'confirmee\', \'en_cours\') AND prevu_le >= ? ORDER BY prevu_le, debut_h LIMIT 6', [$shop, $auj]) as $r) {
         $v = viVisiteLigne($r); $v['typeNom'] = $nomDe($v['type']); $v['google'] = function_exists('vcGoogleLien') ? vcGoogleLien($r) : null; $prochaines[] = $v;
     }
-    $n = Db::row('SELECT SUM(CASE WHEN statut = \'terminee\' THEN 1 ELSE 0 END) f, SUM(CASE WHEN statut IN (\'planifiee\', \'confirmee\', \'en_cours\') THEN 1 ELSE 0 END) p FROM ceo_visite WHERE shop_id = ? AND prevu_le BETWEEN ? AND ?', [$shop, date('Y-m-01'), date('Y-m-t')]);
+    $n = Db::row('SELECT SUM(CASE WHEN statut = \'terminee\' THEN 1 ELSE 0 END) f, SUM(CASE WHEN statut IN (\'planifiee\', \'confirmee\', \'en_cours\') THEN 1 ELSE 0 END) p FROM con_visite WHERE shop_id = ? AND prevu_le BETWEEN ? AND ?', [$shop, date('Y-m-01'), date('Y-m-t')]);
     $historique = array_map(fn ($r) => ['id' => (int) $r['id'], 'le' => $r['prevu_le'], 'type' => (string) (($r['type_code'] ?? '') ?: 'reguliere'), 'typeNom' => $nomDe($r['type_code'] ?? ''), 'consultant' => $r['consultant_nom'], 'reco' => $r['reco']],
-        Db::rows('SELECT id, prevu_le, type_code, consultant_nom, reco FROM ceo_visite WHERE shop_id = ? AND statut = \'terminee\' ORDER BY prevu_le DESC LIMIT 8', [$shop]));
+        Db::rows('SELECT id, prevu_le, type_code, consultant_nom, reco FROM con_visite WHERE shop_id = ? AND statut = \'terminee\' ORDER BY prevu_le DESC LIMIT 8', [$shop]));
     return ['derniere' => $derniere, 'prochaines' => $prochaines, 'mois' => ['faites' => (int) ($n['f'] ?? 0), 'planifiees' => (int) ($n['p'] ?? 0)], 'historique' => $historique];
 }
 
@@ -317,15 +317,15 @@ function frJournal(string $shop, int $jours = 60): array
     foreach (function_exists('vcTypes') ? vcTypes() : [] as $t) { $typeNom[$t['code']] = $t['nom']; }
     $ev = [];
     try {
-        foreach (Db::rows('SELECT id, prevu_le, type_code, consultant_nom, reco FROM ceo_visite WHERE shop_id = ? AND statut = \'terminee\' AND prevu_le >= ?', [$shop, $du]) as $r) {
+        foreach (Db::rows('SELECT id, prevu_le, type_code, consultant_nom, reco FROM con_visite WHERE shop_id = ? AND statut = \'terminee\' AND prevu_le >= ?', [$shop, $du]) as $r) {
             $ev[] = ['le' => $r['prevu_le'], 'volet' => 'terrain', 'genre' => 'visite', 'id' => (int) $r['id'],
                 'texte' => 'Visite ' . ($typeNom[(string) (($r['type_code'] ?? '') ?: 'reguliere')] ?? 'régulière') . ' par ' . $r['consultant_nom'] . (!empty($r['reco']) ? ' — ' . mb_substr((string) $r['reco'], 0, 140) : '')];
         }
-        foreach (Db::rows('SELECT e.quand, e.qui, e.de_statut, e.vers_statut, e.commentaire, a.titre, a.priorite, a.id plan_id FROM ceo_visite_action_evt e JOIN ceo_visite_action a ON a.id = e.plan_id WHERE a.shop_id = ? AND e.quand >= ? ORDER BY e.quand DESC LIMIT 40', [$shop, $du . ' 00:00:00']) as $r) {
+        foreach (Db::rows('SELECT e.quand, e.qui, e.de_statut, e.vers_statut, e.commentaire, a.titre, a.priorite, a.id plan_id FROM con_visite_action_evt e JOIN con_visite_action a ON a.id = e.plan_id WHERE a.shop_id = ? AND e.quand >= ? ORDER BY e.quand DESC LIMIT 40', [$shop, $du . ' 00:00:00']) as $r) {
             $ev[] = ['le' => substr((string) $r['quand'], 0, 10), 'volet' => 'terrain', 'genre' => 'plan', 'id' => (int) $r['plan_id'], 'vers' => $r['vers_statut'],
                 'texte' => $r['priorite'] . ' ' . $r['titre'] . ' : ' . ($r['de_statut'] ? $r['de_statut'] . ' → ' : '') . $r['vers_statut'] . (!empty($r['commentaire']) ? ' · ' . mb_substr((string) $r['commentaire'], 0, 100) : '') . ' (' . $r['qui'] . ')'];
         }
-        foreach (Db::rows('SELECT id, titre, priorite, cree_par, cree_le FROM ceo_visite_action WHERE shop_id = ? AND cree_le >= ? ORDER BY cree_le DESC LIMIT 40', [$shop, $du . ' 00:00:00']) as $r) {
+        foreach (Db::rows('SELECT id, titre, priorite, cree_par, cree_le FROM con_visite_action WHERE shop_id = ? AND cree_le >= ? ORDER BY cree_le DESC LIMIT 40', [$shop, $du . ' 00:00:00']) as $r) {
             $ev[] = ['le' => substr((string) $r['cree_le'], 0, 10), 'volet' => 'terrain', 'genre' => 'plan', 'id' => (int) $r['id'], 'texte' => $r['priorite'] . ' ' . $r['titre'] . ' ouvert (' . $r['cree_par'] . ')'];
         }
     } catch (Throwable $e) { /* tables des visites absentes */ }
@@ -336,7 +336,7 @@ function frJournal(string $shop, int $jours = 60): array
         }
     }
     try {
-        foreach (Db::rows('SELECT id, trimestre, obtenu, maximum, le FROM ceo_scoring_msp WHERE shop_id = ? AND le >= ?', [$shop, $du . ' 00:00:00']) as $r) {
+        foreach (Db::rows('SELECT id, trimestre, obtenu, maximum, le FROM con_scoring_msp WHERE shop_id = ? AND le >= ?', [$shop, $du . ' 00:00:00']) as $r) {
             $ev[] = ['le' => substr((string) $r['le'], 0, 10), 'volet' => 'terrain', 'genre' => 'msp', 'id' => (int) $r['id'], 'texte' => 'Client mystère ' . $r['trimestre'] . ' : ' . $r['obtenu'] . ' / ' . $r['maximum'] . ' encodé'];
         }
     } catch (Throwable $e) { /* pas de scoring */ }
@@ -435,14 +435,14 @@ function frMois(string $shop): array
  * consultants et leur niveau (/panel/consultants), les tâches d'un niveau (/levels/{id}/tasks), les tâches du jour
  * du compte avec leur état (/consultant/tasks?date=), les checklists du cadre et leurs tâches
  * (/operational-framework/checklists, …/{id}/tasks). Le cockpit garde ce que le consultant remplit en visite, par
- * magasin et par jour (ceo_consultant_checklist) ; une tâche faite part au panel (POST /consultant/tasks/{id}/mark-as-done)
+ * magasin et par jour (con_consultant_checklist) ; une tâche faite part au panel (POST /consultant/tasks/{id}/mark-as-done)
  * pour le compte du cockpit, une fois par jour. */
 function ensureConsultantChecklist(): void
 {
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_consultant_checklist (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_consultant_checklist (
         id INT AUTO_INCREMENT PRIMARY KEY,
         shop_id VARCHAR(12) NOT NULL,
         jour DATE NOT NULL,
@@ -544,7 +544,7 @@ function ep_consultants_checklists(): array
     if ($shop !== '') {
         ensureConsultantChecklist();
         $sa = [];
-        foreach (Db::rows('SELECT task_id, etat, commentaire, panel, maj_le, cree_par FROM ceo_consultant_checklist WHERE shop_id = ? AND jour = ? AND membership_id = ?', [$shop, $auj, $choisi]) as $x) {
+        foreach (Db::rows('SELECT task_id, etat, commentaire, panel, maj_le, cree_par FROM con_consultant_checklist WHERE shop_id = ? AND jour = ? AND membership_id = ?', [$shop, $auj, $choisi]) as $x) {
             $sa[(string) $x['task_id']] = ['etat' => (string) $x['etat'], 'commentaire' => (string) ($x['commentaire'] ?? ''), 'panel' => $x['panel'], 'le' => substr((string) $x['maj_le'], 11, 5), 'par' => (string) $x['cree_par']];
         }
         $out['saisies'] = $sa ?: (object) [];
@@ -573,7 +573,7 @@ function wr_consultants_checklists(): array
         $panel = null;
         if ($versPanel && $etat === 'fait') {
             // Une fois par jour et par tâche : le panel compte une complétion par jour, pas par magasin.
-            $deja = Db::row("SELECT panel FROM ceo_consultant_checklist WHERE jour = ? AND membership_id = ? AND task_id = ? AND panel LIKE 'envoyée%'", [$auj, $mid, $tid]);
+            $deja = Db::row("SELECT panel FROM con_consultant_checklist WHERE jour = ? AND membership_id = ? AND task_id = ? AND panel LIKE 'envoyée%'", [$auj, $mid, $tid]);
             if ($deja !== null) { $panel = (string) $deja['panel']; }
             else {
                 [$ok, $rep] = PanelApi::post('/consultant/tasks/' . $tid . '/mark-as-done', array_filter(['date' => $auj, 'note' => $com !== '' ? $com : null, 'comment' => $com !== '' ? $com : null, 'shop_id' => (int) $shop], fn ($v) => $v !== null));
@@ -581,7 +581,7 @@ function wr_consultants_checklists(): array
                 else { $refusees++; $panel = mb_substr('refusée · ' . (PanelApi::$lastError ?? 'sans réponse'), 0, 190); }
             }
         }
-        Db::exec('INSERT INTO ceo_consultant_checklist (shop_id, jour, membership_id, consultant_nom, checklist_id, checklist_nom, task_id, tache_nom, etat, commentaire, panel, cree_par, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
+        Db::exec('INSERT INTO con_consultant_checklist (shop_id, jour, membership_id, consultant_nom, checklist_id, checklist_nom, task_id, tache_nom, etat, commentaire, panel, cree_par, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
             . ' ON DUPLICATE KEY UPDATE etat = VALUES(etat), commentaire = VALUES(commentaire), panel = COALESCE(VALUES(panel), panel), checklist_id = VALUES(checklist_id), checklist_nom = VALUES(checklist_nom), tache_nom = VALUES(tache_nom), cree_par = VALUES(cree_par), maj_le = VALUES(maj_le)',
             [$shop, $auj, $mid, $nomC, isset($b['checklist_id']) ? (int) $b['checklist_id'] : null, mb_substr(trim((string) ($b['checklist_nom'] ?? '')), 0, 190), $tid, mb_substr(trim((string) ($t['nom'] ?? '')), 0, 190), $etat, $com !== '' ? $com : null, $panel, viQui($b), $now]);
         $res[(string) $tid] = ['etat' => $etat, 'panel' => $panel];
@@ -597,7 +597,7 @@ function ensureFrMeteo(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_franchise_meteo (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_franchise_meteo (
         id INT AUTO_INCREMENT PRIMARY KEY,
         client_id VARCHAR(40) NULL,
         shop_id VARCHAR(12) NOT NULL,
@@ -638,14 +638,14 @@ function ep_franchises_meteo(): array
     $mags = viMagasins();
     if ($shop === '' || !isset($mags[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
     ensureFrMeteo();
-    $rows = Db::rows('SELECT * FROM ceo_franchise_meteo WHERE shop_id = ? ORDER BY le DESC, id DESC LIMIT 36', [$shop]);
+    $rows = Db::rows('SELECT * FROM con_franchise_meteo WHERE shop_id = ? ORDER BY le DESC, id DESC LIMIT 36', [$shop]);
     $ids = [];
     foreach ($rows as $r) { foreach ((array) json_decode((string) ($r['demandes'] ?? ''), true) as $d) { if (is_array($d) && !empty($d['tache'])) { $ids[] = (int) $d['tache']; } } }
     $taches = [];
     if ($ids !== [] && function_exists('ensureVisitesCadre')) {
         try {
             ensureVisitesCadre();
-            foreach (Db::rows('SELECT id, statut, fait_le FROM ceo_consultant_tache WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', $ids) as $t) { $taches[(int) $t['id']] = $t; }
+            foreach (Db::rows('SELECT id, statut, fait_le FROM con_consultant_tache WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', $ids) as $t) { $taches[(int) $t['id']] = $t; }
         } catch (Throwable $e) { /* les demandes restent, sans leur suite */ }
     }
     $meteos = array_map(fn ($r) => frMeteoLigne($r, $taches), $rows);
@@ -664,7 +664,7 @@ function wr_franchises_meteo(): array
     $shop = trim((string) ($b['shop'] ?? ''));
     if ($shop === '' || !isset(viMagasins()[$shop])) { http_response_code(422); return ['error' => 'magasin requis']; }
     $cid = mb_substr(trim((string) ($b['client_id'] ?? '')), 0, 40) ?: null;
-    if ($cid !== null && ($ex = Db::row('SELECT * FROM ceo_franchise_meteo WHERE client_id = ?', [$cid])) !== null) { return ['ok' => true, 'deja' => true, 'meteo' => frMeteoLigne($ex, [])]; }
+    if ($cid !== null && ($ex = Db::row('SELECT * FROM con_franchise_meteo WHERE client_id = ?', [$cid])) !== null) { return ['ok' => true, 'deja' => true, 'meteo' => frMeteoLigne($ex, [])]; }
     $ech = []; $rien = true;
     foreach (array_keys(FR_METEO_ECHELLES) as $k) {
         $v = isset($b[$k]) && is_numeric($b[$k]) ? (int) $b[$k] : null;
@@ -680,7 +680,7 @@ function wr_franchises_meteo(): array
     if ($cons === '') { $cons = (string) (consultantIdCompte() ?? ''); }
     $consNom = $cons !== '' ? viConsultantNom($cons) : '';
     $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO ceo_franchise_meteo (client_id, shop_id, le, consultant_id, consultant_nom, moral, envie, equipe, relation, envies, demandes, inquietudes, note, cree_par, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    Db::exec('INSERT INTO con_franchise_meteo (client_id, shop_id, le, consultant_id, consultant_nom, moral, envie, equipe, relation, envies, demandes, inquietudes, note, cree_par, cree_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$cid, $shop, $le, $cons, $consNom, $ech['moral'], $ech['envie'], $ech['equipe'], $ech['relation'], $txt('envies') ?: null, '[]', $txt('inquietudes') ?: null, $txt('note') ?: null, viQui($b), $now]);
     $id = (int) Db::pdo()->lastInsertId();
     $dem = []; $creees = 0;
@@ -689,14 +689,14 @@ function wr_franchises_meteo(): array
         $tid = null;
         if ($enTaches && $cons !== '' && function_exists('ensureVisitesCadre')) {
             ensureVisitesCadre();
-            Db::exec('INSERT INTO ceo_consultant_tache (client_id, consultant_id, consultant_nom, shop_id, visite_id, source, quand, delai, titre, detail, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            Db::exec('INSERT INTO con_consultant_tache (client_id, consultant_id, consultant_nom, shop_id, visite_id, source, quand, delai, titre, detail, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                 ['m' . $id . ':' . $n, $cons, $consNom, $shop, null, 'perso', null, null, mb_substr('Demande du franchisé : ' . $d, 0, 190), 'Météo du ' . $le, date('Y-m-d', strtotime($le . ' +7 days')), 'a_faire', viQui($b), $now, $now]);
             $tid = (int) Db::pdo()->lastInsertId(); $creees++;
         }
         $dem[] = ['texte' => $d, 'tache' => $tid];
     }
-    Db::exec('UPDATE ceo_franchise_meteo SET demandes = ? WHERE id = ?', [json_encode($dem, JSON_UNESCAPED_UNICODE), $id]);
+    Db::exec('UPDATE con_franchise_meteo SET demandes = ? WHERE id = ?', [json_encode($dem, JSON_UNESCAPED_UNICODE), $id]);
     if (function_exists('journalAdd')) { try { journalAdd(viQui($b), 'franchise', null, 'Météo du franchisé ' . (viMagasins()[$shop]['court'] ?? $shop) . ' : moral ' . ($ech['moral'] ?? '—') . ' / 5, ' . count($dem) . ' demande(s)'); } catch (Throwable $e) { /* le journal ne bloque pas */ } }
-    $r = Db::row('SELECT * FROM ceo_franchise_meteo WHERE id = ?', [$id]);
+    $r = Db::row('SELECT * FROM con_franchise_meteo WHERE id = ?', [$id]);
     return ['ok' => true, 'meteo' => frMeteoLigne($r, []), 'taches' => $creees];
 }

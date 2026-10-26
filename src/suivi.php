@@ -27,14 +27,14 @@ declare(strict_types=1);
  * français, néerlandais, anglais et allemand : annonce, visite déplacée,
  * annulée, rapport, relance, lien de la page.
  *
- * Le client mystère n'a plus qu'un encodage : `ceo_scoring_msp`, un rapport par
+ * Le client mystère n'a plus qu'un encodage : `con_scoring_msp`, un rapport par
  * passage rangé dans son trimestre, lu par le scoring, le feu, la tablette et la
  * page du franchisé.
  *
- * Colonnes ajoutées à `ceo_visite` : rapport_statut (brouillon | envoye),
+ * Colonnes ajoutées à `con_visite` : rapport_statut (brouillon | envoye),
  * rapport, rapport_envoye_le, rapport_envoye_par, rapport_lu_le,
  * rapport_relance_le, prep, prep_envoyee_le, odj_envoye_le, annoncee ; à
- * `ceo_scoring_msp` : passage_le, montrer, suites.
+ * `con_scoring_msp` : passage_le, montrer, suites.
  */
 
 const SU_SCHEMA = 2;
@@ -58,8 +58,8 @@ function ensureSuivi(): void
     if ((int) setting('suiviSchema', 0) >= SU_SCHEMA) { return; }
     foreach (['rapport_statut VARCHAR(12) NULL', 'rapport MEDIUMTEXT NULL', 'rapport_envoye_le DATETIME NULL', 'rapport_envoye_par VARCHAR(120) NULL',
         'rapport_lu_le DATETIME NULL', 'rapport_relance_le DATETIME NULL', 'prep MEDIUMTEXT NULL', 'prep_envoyee_le DATETIME NULL',
-        'odj_envoye_le DATETIME NULL', 'annoncee TINYINT NULL', 'budget_ca TEXT NULL'] as $c) { suColonne('ceo_visite', $c); }
-    foreach (['passage_le DATE NULL', 'montrer TINYINT NOT NULL DEFAULT 1', 'suites TEXT NULL'] as $c) { suColonne('ceo_scoring_msp', $c); }
+        'odj_envoye_le DATETIME NULL', 'annoncee TINYINT NULL', 'budget_ca TEXT NULL'] as $c) { suColonne('con_visite', $c); }
+    foreach (['passage_le DATE NULL', 'montrer TINYINT NOT NULL DEFAULT 1', 'suites TEXT NULL'] as $c) { suColonne('con_scoring_msp', $c); }
     viSettingSet('suiviSchema', SU_SCHEMA);
 }
 
@@ -168,7 +168,7 @@ function suPersonneEmail(string $id): ?string
     return null;
 }
 
-/** Qui fait quoi pour une visite (ligne brute de ceo_visite). */
+/** Qui fait quoi pour une visite (ligne brute de con_visite). */
 function suRoles(array $v): array
 {
     $shop = (string) $v['shop_id']; $m = suMagasinRegle($shop);
@@ -591,16 +591,16 @@ function suDossier(string $shop): array
     } catch (Throwable $e) { /* conformité muette */ }
     $bloc('msp', $l, $alerte, $l === [] ? 'pas de rapport ni de relevé du comptoir' : null);
     // 6. La dernière météo du franchisé — interne, jamais montrée au franchisé : le temps noté en fin de contrôle
-    // (ceo_visite.meteo, 1 orage … 5 grand soleil), puis le détail de la tablette (ceo_franchise_meteo).
+    // (con_visite.meteo, 1 orage … 5 grand soleil), puis le détail de la tablette (con_franchise_meteo).
     $l = [];
     try {
-        $vm = Db::row('SELECT prevu_le, meteo FROM ceo_visite WHERE shop_id = ? AND statut = \'terminee\' AND meteo IS NOT NULL ORDER BY prevu_le DESC, id DESC LIMIT 1', [$shop]);
+        $vm = Db::row('SELECT prevu_le, meteo FROM con_visite WHERE shop_id = ? AND statut = \'terminee\' AND meteo IS NOT NULL ORDER BY prevu_le DESC, id DESC LIMIT 1', [$shop]);
         if ($vm) { $l[] = date('d/m', strtotime((string) $vm['prevu_le'])) . ' : ' . ([1 => 'orage', 2 => 'pluie', 3 => 'nuageux', 4 => 'éclaircies', 5 => 'grand soleil'][(int) $vm['meteo']] ?? '—') . ' (fin de contrôle)'; }
     } catch (Throwable $e) { /* colonne absente */ }
     try {
         if (function_exists('ensureFrMeteo')) {
             ensureFrMeteo();
-            $m = Db::row('SELECT * FROM ceo_franchise_meteo WHERE shop_id = ? ORDER BY le DESC, id DESC LIMIT 1', [$shop]);
+            $m = Db::row('SELECT * FROM con_franchise_meteo WHERE shop_id = ? ORDER BY le DESC, id DESC LIMIT 1', [$shop]);
             if ($m) {
                 $l[] = date('d/m', strtotime((string) $m['le'])) . ' : moral ' . ($m['moral'] ?? '—') . ' / 5, équipe ' . ($m['equipe'] ?? '—') . ' / 5';
                 foreach (suJson($m['demandes']) as $d) { if (!empty($d['texte'])) { $l[] = 'demande : « ' . $d['texte'] . ' »'; } }
@@ -696,8 +696,8 @@ function wr_suivi_preparation(string $id): array
     }
     $args[0] = json_encode($prep, JSON_UNESCAPED_UNICODE);
     $args[] = (int) $v['id'];
-    Db::exec('UPDATE ceo_visite SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
-    $apres = Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']]);
+    Db::exec('UPDATE con_visite SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
+    $apres = Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']]);
     if (function_exists('vcApresChangement') && ($avant['type_code'] ?? '') !== ($apres['type_code'] ?? '')) { vcApresChangement($avant, $apres); }
     $court = suCourt((string) $v['shop_id']);
     $out = ['ok' => true];
@@ -709,7 +709,7 @@ function wr_suivi_preparation(string $id): array
         if (!suAnnoncee($apres)) { $out['odjEnvoi'] = ['envoye' => false, 'motif' => 'visite inopinée : rien ne part au franchisé']; }
         else { $out['odjEnvoi'] = suOdjEnvoyer($apres); }
     }
-    return $out + suPreparationVue(Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']]));
+    return $out + suPreparationVue(Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']]));
 }
 
 /** L'ordre du jour d'une visite annoncée, au franchisé. */
@@ -718,7 +718,7 @@ function suOdjEnvoyer(array $v): array
     $shop = (string) $v['shop_id']; $l = suLangue($shop);
     $r = suEnvoyerFranchise($shop, 'annonce', suVarsVisite($v, $l));
     if ($r['envoye']) {
-        Db::exec('UPDATE ceo_visite SET odj_envoye_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $v['id']]);
+        Db::exec('UPDATE con_visite SET odj_envoye_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $v['id']]);
         journalAdd('Cockpit', 'Visite', null, 'Ordre du jour envoyé à ' . suCourt($shop) . ' (' . $r['a'] . ', ' . $l . ') pour la visite du ' . $v['prevu_le']);
     }
     return $r;
@@ -740,13 +740,21 @@ function suRapportContenu(array $v): array
 function suChecklistBilan(array $v): array
 {
     $seuil = (int) viSeuils()['planoOrange'];
-    $pts = array_map('viPointLigne', Db::rows('SELECT * FROM ceo_visite_point WHERE visite_id = ?', [(int) $v['id']]));
+    $pts = array_map('viPointLigne', Db::rows('SELECT * FROM con_visite_point WHERE visite_id = ?', [(int) $v['id']]));
+    // Les questions de la visite (son type, sinon la liste standard) : la réponse d'un choix se lit par son libellé.
+    $defs = [];
+    $code = (string) (($v['type_code'] ?? '') ?: 'reguliere');
+    foreach (function_exists('vcTypes') ? vcTypes() : [] as $t) {
+        if (($t['code'] ?? '') !== $code) { continue; }
+        foreach ((array) ($t['checklist'] ?? []) as $m) { foreach ((array) ($m['points'] ?? []) as $pt) { if (isset($pt['ref'])) { $defs[$pt['ref']] = $pt; } } }
+    }
     $ok = 0; $ko = 0; $na = 0; $ecarts = [];
     foreach ($pts as $p) {
         $fait = $p['etat'] !== '' || $p['note'] !== null || $p['valeur'] !== null;
         if ($p['etat'] === 'na') { $na++; continue; }
         $nc = $p['etat'] === 'ko' || ($p['note'] !== null && $p['note'] <= 2) || ($p['valeur'] !== null && $p['valeur'] < $seuil);
-        if ($nc) { $ko++; $ecarts[] = ['ref' => $p['ref'], 'module' => $p['module'], 'libelle' => $p['libelle'], 'note' => $p['note'], 'valeur' => $p['valeur'], 'commentaire' => $p['commentaire']]; }
+        if ($nc) { $ko++; $ecarts[] = ['ref' => $p['ref'], 'module' => $p['module'], 'libelle' => $p['libelle'], 'note' => $p['note'], 'valeur' => $p['valeur'], 'commentaire' => $p['commentaire'],
+            'reponse' => function_exists('viReponseTexte') ? viReponseTexte($defs[$p['ref']] ?? [], $p['reponse'] ?? null) : '']; }
         elseif ($fait) { $ok++; }
     }
     return ['total' => $ok + $ko, 'ok' => $ok, 'ko' => $ko, 'na' => $na, 'ecarts' => $ecarts];
@@ -766,7 +774,7 @@ function suRapportPlans(array $v, array $r): array
 {
     $incl = is_array($r['plans'] ?? null) ? $r['plans'] : [];
     $out = [];
-    foreach (Db::rows('SELECT * FROM ceo_visite_action WHERE visite_id = ? ORDER BY FIELD(priorite, \'P0\', \'P1\', \'P2\'), id', [(int) $v['id']]) as $p) {
+    foreach (Db::rows('SELECT * FROM con_visite_action WHERE visite_id = ? ORDER BY FIELD(priorite, \'P0\', \'P1\', \'P2\'), id', [(int) $v['id']]) as $p) {
         $l = viPlanLigne($p);
         $l['inclus'] = $p['statut'] === 'interne' ? false : ($p['statut'] === 'propose' ? (bool) ($incl[(string) $p['id']] ?? true) : true);
         $l['modifiable'] = $p['statut'] === 'propose';
@@ -779,7 +787,7 @@ function suRapportPhotos(array $v, array $r): array
 {
     $incl = is_array($r['photos'] ?? null) ? $r['photos'] : [];
     $out = []; $n = 0;
-    foreach (Db::rows('SELECT * FROM ceo_visite_photo WHERE visite_id = ? AND genre NOT IN (\'signature\', \'sig_consultant\') ORDER BY prise_a', [(int) $v['id']]) as $p) {
+    foreach (Db::rows('SELECT * FROM con_visite_photo WHERE visite_id = ? AND genre NOT IN (\'signature\', \'sig_consultant\') ORDER BY prise_a', [(int) $v['id']]) as $p) {
         $l = viPhotoLigne($p);
         $l['inclus'] = array_key_exists((string) $p['id'], $incl) ? (bool) $incl[(string) $p['id']] : $n < 6;
         $n++;
@@ -853,7 +861,7 @@ function wr_suivi_rapport(string $id): array
     if (isset($b['plans']) && is_array($b['plans'])) {
         foreach ($b['plans'] as $x) {
             if (!is_array($x) || empty($x['id'])) { continue; }
-            $p = Db::row('SELECT * FROM ceo_visite_action WHERE id = ? AND visite_id = ?', [(int) $x['id'], (int) $v['id']]);
+            $p = Db::row('SELECT * FROM con_visite_action WHERE id = ? AND visite_id = ?', [(int) $x['id'], (int) $v['id']]);
             if ($p === null || $p['statut'] !== 'propose') { continue; }
             $r['plans'][(string) $p['id']] = !isset($x['inclus']) || (bool) $x['inclus'];
             $set = []; $args = [];
@@ -862,7 +870,7 @@ function wr_suivi_rapport(string $id): array
             if (in_array($x['priorite'] ?? '', VI_PRIORITES, true)) { $set[] = 'priorite = ?'; $args[] = $x['priorite']; }
             if (in_array($x['assigne'] ?? '', VI_ASSIGNES, true)) { $set[] = 'assigne = ?'; $args[] = $x['assigne']; }
             if (array_key_exists('echeance', $x)) { $set[] = 'echeance = ?'; $args[] = viDate($x['echeance'] ?? null); }
-            if ($set) { $set[] = 'maj_le = ?'; $args[] = $now; $args[] = (int) $p['id']; Db::exec('UPDATE ceo_visite_action SET ' . implode(', ', $set) . ' WHERE id = ?', $args); }
+            if ($set) { $set[] = 'maj_le = ?'; $args[] = $now; $args[] = (int) $p['id']; Db::exec('UPDATE con_visite_action SET ' . implode(', ', $set) . ' WHERE id = ?', $args); }
         }
     }
     $set = []; $args = [];
@@ -877,8 +885,8 @@ function wr_suivi_rapport(string $id): array
     $set[] = 'rapport = ?'; $args[] = json_encode($r, JSON_UNESCAPED_UNICODE);
     if (($v['rapport_statut'] ?? null) === null) { $set[] = 'rapport_statut = ?'; $args[] = 'brouillon'; }
     $set[] = 'maj_le = ?'; $args[] = $now; $args[] = (int) $v['id'];
-    Db::exec('UPDATE ceo_visite SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
-    return ['ok' => true] + suRapportVue(Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']]));
+    Db::exec('UPDATE con_visite SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
+    return ['ok' => true] + suRapportVue(Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']]));
 }
 
 /** POST /suivi/rapport/{id}/envoyer — les points cochés s'ouvrent chez le franchisé, les autres restent internes, le rapport part. */
@@ -900,17 +908,17 @@ function suRapportEnvoyer(array $v, string $qui, bool $renvoyer = false): array
     $r = suJson($v['rapport'] ?? null);
     $ouverts = 0; $internes = 0;
     if (!$deja) {
-        foreach (Db::rows('SELECT * FROM ceo_visite_action WHERE visite_id = ? AND statut = \'propose\'', [(int) $v['id']]) as $p) {
+        foreach (Db::rows('SELECT * FROM con_visite_action WHERE visite_id = ? AND statut = \'propose\'', [(int) $v['id']]) as $p) {
             $inclus = (bool) ($r['plans'][(string) $p['id']] ?? true);
             $vers = $inclus ? 'ouvert' : 'interne';
-            Db::exec('UPDATE ceo_visite_action SET statut = ?, cree_le = ?, maj_le = ? WHERE id = ?', [$vers, $inclus ? $now : $p['cree_le'], $now, (int) $p['id']]);
-            Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)',
+            Db::exec('UPDATE con_visite_action SET statut = ?, cree_le = ?, maj_le = ? WHERE id = ?', [$vers, $inclus ? $now : $p['cree_le'], $now, (int) $p['id']]);
+            Db::exec('INSERT INTO con_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)',
                 [(int) $p['id'], $now, $qui, 'propose', $vers, $inclus ? 'envoyé au franchisé avec le rapport' : 'gardé en interne']);
             $inclus ? $ouverts++ : $internes++;
         }
-        Db::exec('UPDATE ceo_visite SET rapport_statut = \'envoye\', rapport_envoye_le = ?, rapport_envoye_par = ?, maj_le = ? WHERE id = ?', [$now, mb_substr($qui, 0, 120), $now, (int) $v['id']]);
+        Db::exec('UPDATE con_visite SET rapport_statut = \'envoye\', rapport_envoye_le = ?, rapport_envoye_par = ?, maj_le = ? WHERE id = ?', [$now, mb_substr($qui, 0, 120), $now, (int) $v['id']]);
     }
-    $v = Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']]);
+    $v = Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']]);
     // Le PDF, dans la langue du franchisé ; le courriel, avec les copies.
     $l = suLangue($shop); $plans = suRapportPlans($v, $r); $contenu = suRapportContenu($v);
     if ($contenu['phrase'] === '') { $contenu['phrase'] = suRapportVue($v)['contenu']['phrase']; }
@@ -922,7 +930,7 @@ function suRapportEnvoyer(array $v, string $qui, bool $renvoyer = false): array
     $envoi = suEnvoyerFranchise($shop, 'rapport', ['piece' => $pdf !== null ? suL('piece_pdf', $l) : ''] + suVarsRapport($v, $contenu, $plans, $l), $pieces, $cc);
     $envoi['pdf'] = $pdf !== null; $envoi['le'] = $now;
     $r['envoi'] = $envoi;
-    Db::exec('UPDATE ceo_visite SET rapport = ? WHERE id = ?', [json_encode($r, JSON_UNESCAPED_UNICODE), (int) $v['id']]);
+    Db::exec('UPDATE con_visite SET rapport = ? WHERE id = ?', [json_encode($r, JSON_UNESCAPED_UNICODE), (int) $v['id']]);
     viNotifier($shop, 'Rapport de visite — ' . $court, 'Visite du ' . date('d/m', strtotime((string) $v['prevu_le'])) . ($ouverts ? ' · ' . $ouverts . ' point(s) à travailler' : ''), 'suivi/?shop=' . rawurlencode($shop) . '&jeton=' . suJeton($shop), 'rapport-' . $v['id']);
     journalAdd($qui, 'Visite', null, 'Rapport de visite ' . ($deja ? 'renvoyé' : 'envoyé') . ' : ' . $court . ' (visite du ' . $v['prevu_le'] . ')'
         . ($deja ? '' : ' · ' . $ouverts . ' point(s) ouvert(s), ' . $internes . ' gardé(s) en interne')
@@ -999,7 +1007,7 @@ function suRapportHtml(array $v, string $l): string
     // Les deux signatures de fin de visite, côte à côte : le consultant, le franchisé (une visite d'avant le 26/10/2026 n'a que la seconde).
     $sigs = '';
     foreach (['sig_consultant' => 'sig_consultant', 'signature' => 'sig_franchise'] as $genre => $lib) {
-        $sig = Db::row('SELECT chemin FROM ceo_visite_photo WHERE visite_id = ? AND genre = ? ORDER BY id DESC LIMIT 1', [(int) $v['id'], $genre]);
+        $sig = Db::row('SELECT chemin FROM con_visite_photo WHERE visite_id = ? AND genre = ? ORDER BY id DESC LIMIT 1', [(int) $v['id'], $genre]);
         if (!$sig || !is_file($racine . '/' . $sig['chemin'])) { continue; }
         $qui = $genre === 'sig_consultant' ? (string) $v['consultant_nom'] : suCourt($shop);
         $sigs .= '<td style="padding:0 18px 0 0;vertical-align:top"><div style="color:#666;font-size:11px">' . $e(suL($lib, $l)) . ($qui !== '' ? ' · ' . $e($qui) : '') . '</div>'
@@ -1013,9 +1021,9 @@ function suRapportHtml(array $v, string $l): string
 function suApresTerminee(array $v): void
 {
     ensureSuivi();
-    $v = Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']]) ?? $v;
+    $v = Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']]) ?? $v;
     if (($v['rapport_statut'] ?? null) !== null) { return; }
-    Db::exec('UPDATE ceo_visite SET rapport_statut = \'brouillon\' WHERE id = ?', [(int) $v['id']]);
+    Db::exec('UPDATE con_visite SET rapport_statut = \'brouillon\' WHERE id = ?', [(int) $v['id']]);
     $roles = suRoles($v); $court = suCourt((string) $v['shop_id']);
     $d = suRapportDelai(['termine_a' => $v['termine_a'] ?? date('Y-m-d H:i:s')] + $v);
     if ($roles['adapte'] !== '') {
@@ -1091,9 +1099,9 @@ function ep_suivi_tableau(): array
     $du = date('Y-m-d', strtotime('-45 days')); $au = date('Y-m-d', strtotime('+35 days'));
     $etat = viBoutiquesEtat(null, $du, $au);
     $feux = []; foreach ($etat['boutiques'] as $b) { $feux[(string) $b['id']] = $b; }
-    $rows = Db::rows('SELECT * FROM ceo_visite WHERE prevu_le BETWEEN ? AND ? AND statut <> \'annulee\'' . ($cons !== '' ? ' AND consultant_id = ?' : '') . ' ORDER BY prevu_le, debut_h', $cons !== '' ? [$du, $au, $cons] : [$du, $au]);
+    $rows = Db::rows('SELECT * FROM con_visite WHERE prevu_le BETWEEN ? AND ? AND statut <> \'annulee\'' . ($cons !== '' ? ' AND consultant_id = ?' : '') . ' ORDER BY prevu_le, debut_h', $cons !== '' ? [$du, $au, $cons] : [$du, $au]);
     $plansParVisite = [];
-    foreach (Db::rows('SELECT visite_id, statut, COUNT(*) n FROM ceo_visite_action WHERE visite_id IS NOT NULL GROUP BY visite_id, statut') as $x) { $plansParVisite[(int) $x['visite_id']][$x['statut']] = (int) $x['n']; }
+    foreach (Db::rows('SELECT visite_id, statut, COUNT(*) n FROM con_visite_action WHERE visite_id IS NOT NULL GROUP BY visite_id, statut') as $x) { $plansParVisite[(int) $x['visite_id']][$x['statut']] = (int) $x['n']; }
     $cartes = ['preparer' => [], 'tablette' => [], 'adapter' => [], 'envoye' => []];
     $debutMois = date('Y-m-01');
     foreach ($rows as $v) {
@@ -1122,17 +1130,17 @@ function ep_suivi_tableau(): array
     usort($plans, static fn ($a, $b) => [$a['statut'] === 'escalade' ? 0 : 1, $a['priorite'], -$a['retard'], (string) $a['echeance']] <=> [$b['statut'] === 'escalade' ? 0 : 1, $b['priorite'], -$b['retard'], (string) $b['echeance']]);
     $photos = [];
     $ids = array_values(array_unique(array_merge(array_filter(array_map(static fn ($p) => $p['photo_id'], $plans)))));
-    foreach ($ids ? Db::rows('SELECT * FROM ceo_visite_photo WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', $ids) : [] as $ph) { $photos[(int) $ph['id']] = viPhotoLigne($ph); }
+    foreach ($ids ? Db::rows('SELECT * FROM con_visite_photo WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')', $ids) : [] as $ph) { $photos[(int) $ph['id']] = viPhotoLigne($ph); }
     $corrections = [];
     foreach ($plans as &$p) {
         $p['court'] = suCourt($p['shop']);
         $p['visiteLe'] = null;
-        if ($p['visite_id']) { $vv = Db::row('SELECT prevu_le, type_code FROM ceo_visite WHERE id = ?', [$p['visite_id']]); if ($vv) { $p['visiteLe'] = $vv['prevu_le']; $p['visiteType'] = suTypeNom((string) (($vv['type_code'] ?? '') ?: 'reguliere'), 'fr'); } }
+        if ($p['visite_id']) { $vv = Db::row('SELECT prevu_le, type_code FROM con_visite WHERE id = ?', [$p['visite_id']]); if ($vv) { $p['visiteLe'] = $vv['prevu_le']; $p['visiteType'] = suTypeNom((string) (($vv['type_code'] ?? '') ?: 'reguliere'), 'fr'); } }
         if ($p['statut'] === 'attente') {
-            $avant = $p['visite_id'] && $p['ref'] ? Db::row('SELECT * FROM ceo_visite_photo WHERE visite_id = ? AND point_ref = ? AND genre <> \'correction\' ORDER BY id LIMIT 1', [$p['visite_id'], $p['ref']]) : null;
+            $avant = $p['visite_id'] && $p['ref'] ? Db::row('SELECT * FROM con_visite_photo WHERE visite_id = ? AND point_ref = ? AND genre <> \'correction\' ORDER BY id LIMIT 1', [$p['visite_id'], $p['ref']]) : null;
             $apres = $p['photo_id'] ? ($photos[$p['photo_id']] ?? null) : null;
-            if ($apres === null) { $x = Db::row('SELECT * FROM ceo_visite_photo WHERE plan_id = ? ORDER BY id DESC LIMIT 1', [$p['id']]); $apres = $x ? viPhotoLigne($x) : null; }
-            $com = Db::row('SELECT commentaire, quand FROM ceo_visite_action_evt WHERE plan_id = ? AND vers_statut = \'attente\' ORDER BY id DESC LIMIT 1', [$p['id']]);
+            if ($apres === null) { $x = Db::row('SELECT * FROM con_visite_photo WHERE plan_id = ? ORDER BY id DESC LIMIT 1', [$p['id']]); $apres = $x ? viPhotoLigne($x) : null; }
+            $com = Db::row('SELECT commentaire, quand FROM con_visite_action_evt WHERE plan_id = ? AND vers_statut = \'attente\' ORDER BY id DESC LIMIT 1', [$p['id']]);
             $attenteH = $com ? round(($now - strtotime((string) $com['quand'])) / 3600, 1) : null;
             $corrections[] = $p + ['avant' => $avant ? viPhotoLigne($avant) : null, 'apres' => $apres, 'commentaire' => $com['commentaire'] ?? null, 'recuLe' => $com['quand'] ?? $p['maj_le'],
                 'attenteH' => $attenteH, 'horsDelai' => $attenteH !== null && $attenteH > (int) $regles['delais']['validationHeures'], 'valide' => suRoles(['shop_id' => $p['shop'], 'consultant_id' => ''])['correctionsNom']];
@@ -1146,8 +1154,8 @@ function ep_suivi_tableau(): array
     $franchises = [];
     foreach ($etat['boutiques'] as $b) {
         $sid = (string) $b['id'];
-        $der = Db::row('SELECT * FROM ceo_visite WHERE shop_id = ? AND statut = \'terminee\' ORDER BY prevu_le DESC, id DESC LIMIT 1', [$sid]);
-        $derRap = Db::row('SELECT id, prevu_le, rapport_statut, rapport_envoye_le, rapport_lu_le FROM ceo_visite WHERE shop_id = ? AND statut = \'terminee\' AND rapport_statut IS NOT NULL ORDER BY prevu_le DESC, id DESC LIMIT 1', [$sid]);
+        $der = Db::row('SELECT * FROM con_visite WHERE shop_id = ? AND statut = \'terminee\' ORDER BY prevu_le DESC, id DESC LIMIT 1', [$sid]);
+        $derRap = Db::row('SELECT id, prevu_le, rapport_statut, rapport_envoye_le, rapport_lu_le FROM con_visite WHERE shop_id = ? AND statut = \'terminee\' AND rapport_statut IS NOT NULL ORDER BY prevu_le DESC, id DESC LIMIT 1', [$sid]);
         $pp = array_values(array_filter($plans, static fn ($p) => $p['shop'] === $sid));
         $cad = array_values(array_filter($attendu, static fn ($l) => $l['shop'] === $sid && $l['par'] === 'mois'));
         $s = $scPar[$sid] ?? null; $roles = suMagasinRegle($sid, $regles);
@@ -1200,7 +1208,7 @@ function suMspDernier(string $shop): ?array
 {
     try {
         ensureSuivi();
-        $r = Db::row('SELECT * FROM ceo_scoring_msp WHERE shop_id = ? ORDER BY COALESCE(passage_le, DATE(le)) DESC, id DESC LIMIT 1', [$shop]);
+        $r = Db::row('SELECT * FROM con_scoring_msp WHERE shop_id = ? ORDER BY COALESCE(passage_le, DATE(le)) DESC, id DESC LIMIT 1', [$shop]);
     } catch (Throwable $e) { return null; }
     return $r ? suMspLigne($r) : null;
 }
@@ -1208,7 +1216,7 @@ function suMspDernier(string $shop): ?array
 /** Les rapports client mystère au format de l'application (un par passage, le mois du passage, rubriques sur 20). */
 function suMspPourVisites(?string $shop, int $n): array
 {
-    try { ensureSuivi(); $rows = Db::rows('SELECT * FROM ceo_scoring_msp' . ($shop !== null ? ' WHERE shop_id = ?' : '') . ' ORDER BY COALESCE(passage_le, DATE(le)) DESC, id DESC', $shop !== null ? [$shop] : []); }
+    try { ensureSuivi(); $rows = Db::rows('SELECT * FROM con_scoring_msp' . ($shop !== null ? ' WHERE shop_id = ?' : '') . ' ORDER BY COALESCE(passage_le, DATE(le)) DESC, id DESC', $shop !== null ? [$shop] : []); }
     catch (Throwable $e) { return []; }
     $out = [];
     foreach ($rows as $r) {
@@ -1226,7 +1234,7 @@ function ep_suivi_msp(): array
 {
     ensureSuivi();
     $mags = viMagasins(); $seuil = (float) viSeuils()['mspAlerte']; $regles = suRegles();
-    $rows = Db::rows('SELECT * FROM ceo_scoring_msp ORDER BY COALESCE(passage_le, DATE(le)) DESC, id DESC');
+    $rows = Db::rows('SELECT * FROM con_scoring_msp ORDER BY COALESCE(passage_le, DATE(le)) DESC, id DESC');
     $parShop = [];
     foreach ($rows as $r) { $parShop[(string) $r['shop_id']][] = suMspLigne($r); }
     $magasins = []; $notes = []; $notesPrec = []; $alertes = []; $maxima = [];
@@ -1240,17 +1248,17 @@ function ep_suivi_msp(): array
             $notes[] = $der['sur20']; $maxima[] = (float) $der['maximum'];
             if ($prec) { $notesPrec[] = $prec['sur20']; }
             foreach ($der['rub'] as $nom => $v20) { if ($v20 !== null && $v20 < $seuil) { $alertes[] = ['shop' => $sid, 'court' => $m['court'], 'rubrique' => $nom, 'note' => $v20]; } }
-            foreach (Db::rows('SELECT * FROM ceo_visite_action WHERE shop_id = ? AND point_ref = ? ORDER BY id', [$sid, 'msp' . $der['id']]) as $p) { $plans[] = viPlanLigne($p); }
+            foreach (Db::rows('SELECT * FROM con_visite_action WHERE shop_id = ? AND point_ref = ? ORDER BY id', [$sid, 'msp' . $der['id']]) as $p) { $plans[] = viPlanLigne($p); }
             // La visite qui a suivi le passage : ses points du module client mystère.
-            $vs = Db::row('SELECT * FROM ceo_visite WHERE shop_id = ? AND statut = \'terminee\' AND prevu_le > ? ORDER BY prevu_le LIMIT 1', [$sid, $der['passage']]);
+            $vs = Db::row('SELECT * FROM con_visite WHERE shop_id = ? AND statut = \'terminee\' AND prevu_le > ? ORDER BY prevu_le LIMIT 1', [$sid, $der['passage']]);
             if ($vs) {
-                $pts = Db::rows('SELECT etat, note FROM ceo_visite_point WHERE visite_id = ? AND (module = \'msp\' OR point_ref LIKE \'msp%\')', [(int) $vs['id']]);
+                $pts = Db::rows('SELECT etat, note FROM con_visite_point WHERE visite_id = ? AND (module = \'msp\' OR point_ref LIKE \'msp%\')', [(int) $vs['id']]);
                 $ok = count(array_filter($pts, static fn ($p) => $p['etat'] === 'ok' || ($p['note'] !== null && (int) $p['note'] >= 4)));
                 $suiteVisite = ['id' => (int) $vs['id'], 'le' => $vs['prevu_le'], 'points' => count($pts), 'corriges' => $ok];
                 $releves += count($pts); $corriges += $ok;
             }
         }
-        $proch = Db::row('SELECT id, prevu_le, debut_h, consultant_nom, type_code FROM ceo_visite WHERE shop_id = ? AND statut IN (\'planifiee\', \'confirmee\') AND prevu_le >= ? ORDER BY prevu_le LIMIT 1', [$sid, date('Y-m-d')]);
+        $proch = Db::row('SELECT id, prevu_le, debut_h, consultant_nom, type_code FROM con_visite WHERE shop_id = ? AND statut IN (\'planifiee\', \'confirmee\') AND prevu_le >= ? ORDER BY prevu_le LIMIT 1', [$sid, date('Y-m-d')]);
         $magasins[] = ['id' => $sid, 'court' => $m['court'], 'responsable' => suMagasinRegle($sid, $regles)['responsableNom'], 'dernier' => $der, 'precedent' => $prec,
             'historique' => array_slice($liste, 0, 8), 'plans' => $plans, 'suiteVisite' => $suiteVisite,
             'prochaine' => $proch ? ['id' => (int) $proch['id'], 'le' => $proch['prevu_le'], 'h' => $proch['debut_h'], 'consultant' => $proch['consultant_nom'], 'typeNom' => suTypeNom((string) (($proch['type_code'] ?? '') ?: 'reguliere'), 'fr')] : null];
@@ -1258,7 +1266,7 @@ function ep_suivi_msp(): array
     usort($magasins, static fn ($a, $b) => strcmp((string) ($b['dernier']['passage'] ?? ''), (string) ($a['dernier']['passage'] ?? '')));
     $memeMax = $maxima && count(array_unique($maxima)) === 1 ? $maxima[0] : null;
     $moy = $notes ? array_sum($notes) / count($notes) : null;
-    $plansOuverts = Db::rows('SELECT priorite FROM ceo_visite_action WHERE point_ref LIKE \'msp%\' AND statut IN (\'ouvert\', \'reprendre\', \'escalade\', \'attente\')');
+    $plansOuverts = Db::rows('SELECT priorite FROM con_visite_action WHERE point_ref LIKE \'msp%\' AND statut IN (\'ouvert\', \'reprendre\', \'escalade\', \'attente\')');
     $rubriques = SU_RUBRIQUES_MSP;
     foreach ($rows as $r) { foreach (array_keys(suJson($r['rubriques'])) as $k) { if (!in_array($k, $rubriques, true)) { $rubriques[] = (string) $k; } } }
     return ['lu' => date('Y-m-d H:i'), 'seuil' => $seuil, 'delais' => $regles['delais'], 'magasins' => $magasins, 'rubriques' => array_slice($rubriques, 0, 8),
@@ -1299,12 +1307,12 @@ function wr_suivi_msp(): array
         viNotifier($shop, 'Plan d’action — ' . suCourt($shop), count($suites['points']) . ' point(s) après le client mystère' . ($p0 ? ' dont ' . $p0 . ' P0' : ''), 'suivi/?shop=' . rawurlencode($shop) . '&jeton=' . suJeton($shop), 'plan-' . $shop);
     }
     if (!empty($s['controle'])) {
-        $v = Db::row('SELECT * FROM ceo_visite WHERE shop_id = ? AND statut IN (\'planifiee\', \'confirmee\') AND prevu_le >= ? ORDER BY prevu_le LIMIT 1', [$shop, date('Y-m-d')]);
+        $v = Db::row('SELECT * FROM con_visite WHERE shop_id = ? AND statut IN (\'planifiee\', \'confirmee\') AND prevu_le >= ? ORDER BY prevu_le LIMIT 1', [$shop, date('Y-m-d')]);
         if ($v) {
             $prep = suPrep($v);
             $bas = array_filter($msp['rub'], static fn ($x) => $x !== null && $x < 16);
             $prep['points'][] = ['ref' => 'bur' . (count($prep['points']) + 1), 'libelle' => mb_substr('Client mystère du ' . date('d/m', strtotime($passage)) . ' : contrôler ' . ($bas ? implode(', ', array_map(static fn ($k, $x) => mb_strtolower((string) $k) . ' (' . $x . '/20)', array_keys($bas), $bas)) : 'les relevés du rapport'), 0, 190), 'odj' => false, 'source' => 'msp'];
-            Db::exec('UPDATE ceo_visite SET prep = ?, maj_le = ? WHERE id = ?', [json_encode($prep, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), (int) $v['id']]);
+            Db::exec('UPDATE con_visite SET prep = ?, maj_le = ? WHERE id = ?', [json_encode($prep, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), (int) $v['id']]);
             $suites['controle'] = ['visite' => (int) $v['id'], 'le' => $v['prevu_le'], 'consultant' => $v['consultant_nom']];
         } else { $suites['controle'] = ['visite' => null, 'motif' => 'aucune visite planifiée pour ce magasin']; }
     }
@@ -1312,12 +1320,12 @@ function wr_suivi_msp(): array
         $resp = suMagasinRegle($shop)['responsable'];
         if ($resp !== '') {
             $now = date('Y-m-d H:i:s');
-            Db::exec('INSERT INTO ceo_consultant_tache (client_id, consultant_id, consultant_nom, shop_id, visite_id, source, quand, delai, titre, detail, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            Db::exec('INSERT INTO con_consultant_tache (client_id, consultant_id, consultant_nom, shop_id, visite_id, source, quand, delai, titre, detail, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                 ['msp' . $msp['id'] . ':visite', $resp, viConsultantNom($resp), $shop, null, 'perso', null, null, 'Planifier une visite « Client mystère » à ' . suCourt($shop), 'Après le passage du ' . date('d/m/Y', strtotime($passage)), date('Y-m-d', strtotime('+7 days')), 'a_faire', viQui($b + ['qui' => 'Bureau']), $now, $now]);
             $suites['tache'] = ['consultant' => viConsultantNom($resp)];
         } else { $suites['tache'] = ['motif' => 'pas de consultant responsable au cadre']; }
     }
-    Db::exec('UPDATE ceo_scoring_msp SET suites = ? WHERE id = ?', [json_encode(['points' => count($suites['points']), 'controle' => $suites['controle'], 'tache' => $suites['tache'], 'le' => date('Y-m-d H:i')], JSON_UNESCAPED_UNICODE), (int) $msp['id']]);
+    Db::exec('UPDATE con_scoring_msp SET suites = ? WHERE id = ?', [json_encode(['points' => count($suites['points']), 'controle' => $suites['controle'], 'tache' => $suites['tache'], 'le' => date('Y-m-d H:i')], JSON_UNESCAPED_UNICODE), (int) $msp['id']]);
     return ['ok' => true, 'msp' => $msp, 'suites' => $suites];
 }
 
@@ -1345,11 +1353,11 @@ function suMspEnregistrer(string $shop, string $passage, mixed $obtenu, mixed $m
         if (@file_put_contents($dossier . '/' . $nom, $bin) === false) { http_response_code(500); return ['error' => 'PDF non enregistré (droits du dossier uploads)']; }
         $chemin = 'uploads/scoring/msp/' . $nom;
     }
-    Db::exec('INSERT INTO ceo_scoring_msp (shop_id, trimestre, obtenu, maximum, rubriques, commentaire, fichier, par, le, passage_le, montrer) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+    Db::exec('INSERT INTO con_scoring_msp (shop_id, trimestre, obtenu, maximum, rubriques, commentaire, fichier, par, le, passage_le, montrer) VALUES (?,?,?,?,?,?,?,?,?,?,?)
               ON DUPLICATE KEY UPDATE obtenu = VALUES(obtenu), maximum = VALUES(maximum), rubriques = VALUES(rubriques), commentaire = VALUES(commentaire),
               fichier = COALESCE(VALUES(fichier), fichier), par = VALUES(par), le = VALUES(le), passage_le = VALUES(passage_le), montrer = VALUES(montrer)',
         [$shop, $tri['cle'], $o, $m, json_encode($rub, JSON_UNESCAPED_UNICODE), mb_substr(trim($commentaire), 0, 2000) ?: null, $chemin, mb_substr($par, 0, 120) ?: null, date('Y-m-d H:i:s'), $passage, $montrer ? 1 : 0]);
-    $r = Db::row('SELECT * FROM ceo_scoring_msp WHERE shop_id = ? AND trimestre = ?', [$shop, $tri['cle']]);
+    $r = Db::row('SELECT * FROM con_scoring_msp WHERE shop_id = ? AND trimestre = ?', [$shop, $tri['cle']]);
     journalAdd($par ?: 'Bureau', 'Scoring', null, 'Client mystère du ' . date('d/m/Y', strtotime($passage)) . ' — ' . suCourt($shop) . ' : ' . $o . ' / ' . $m);
     return ['ok' => true, 'msp' => suMspLigne($r)];
 }
@@ -1359,11 +1367,11 @@ function suPlanCreer(string $shop, string $titre, string $detail, string $prio, 
 {
     ensureVisites();
     $now = date('Y-m-d H:i:s');
-    Db::exec('INSERT INTO ceo_visite_action (client_id, shop_id, visite_id, point_ref, titre, detail, priorite, assigne, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    Db::exec('INSERT INTO con_visite_action (client_id, shop_id, visite_id, point_ref, titre, detail, priorite, assigne, echeance, statut, cree_par, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [null, $shop, null, $ref !== null ? mb_substr($ref, 0, 60) : null, mb_substr(trim($titre), 0, 190), mb_substr($detail, 0, 2000) ?: null, in_array($prio, VI_PRIORITES, true) ? $prio : 'P1', 'franchise', $echeance, 'ouvert', mb_substr($qui, 0, 120), $now, $now]);
     $id = (int) Db::pdo()->lastInsertId();
-    Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [$id, $now, $qui, null, 'ouvert', 'créé']);
-    return viPlanLigne(Db::row('SELECT * FROM ceo_visite_action WHERE id = ?', [$id]));
+    Db::exec('INSERT INTO con_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [$id, $now, $qui, null, 'ouvert', 'créé']);
+    return viPlanLigne(Db::row('SELECT * FROM con_visite_action WHERE id = ?', [$id]));
 }
 
 /* --- la page du franchisé (publique, par jeton) ------------------------------------ */
@@ -1397,10 +1405,10 @@ function ep_suivi_franchise(): array
     $out = ['magasin' => ['id' => $shop, 'court' => $mag['court'], 'nom' => $mag['nom']], 'langue' => $l, 'lu' => date('Y-m-d H:i'), 'voit' => $voit, 'aujourdhui' => date('Y-m-d')];
     if ($voit['points']) {
         $pts = []; $valides = [];
-        foreach (Db::rows('SELECT a.*, v.prevu_le AS v_le, v.consultant_nom AS v_cons FROM ceo_visite_action a LEFT JOIN ceo_visite v ON v.id = a.visite_id WHERE a.shop_id = ? AND a.statut NOT IN (\'propose\', \'interne\') AND (a.statut <> \'ferme\' OR a.maj_le >= ?) ORDER BY FIELD(a.priorite, \'P0\', \'P1\', \'P2\'), a.echeance, a.id', [$shop, date('Y-m-01 00:00:00')]) as $p) {
+        foreach (Db::rows('SELECT a.*, v.prevu_le AS v_le, v.consultant_nom AS v_cons FROM con_visite_action a LEFT JOIN con_visite v ON v.id = a.visite_id WHERE a.shop_id = ? AND a.statut NOT IN (\'propose\', \'interne\') AND (a.statut <> \'ferme\' OR a.maj_le >= ?) ORDER BY FIELD(a.priorite, \'P0\', \'P1\', \'P2\'), a.echeance, a.id', [$shop, date('Y-m-01 00:00:00')]) as $p) {
             $x = viPlanLigne($p);
             if (in_array($p['statut'], ['valide', 'ferme'], true)) { $valides[] = ['titre' => $x['titre'], 'le' => substr((string) $p['maj_le'], 0, 10)]; continue; }
-            $ph = $p['photo_id'] ? Db::row('SELECT * FROM ceo_visite_photo WHERE id = ?', [(int) $p['photo_id']]) : Db::row('SELECT * FROM ceo_visite_photo WHERE plan_id = ? ORDER BY id DESC LIMIT 1', [(int) $p['id']]);
+            $ph = $p['photo_id'] ? Db::row('SELECT * FROM con_visite_photo WHERE id = ?', [(int) $p['photo_id']]) : Db::row('SELECT * FROM con_visite_photo WHERE plan_id = ? ORDER BY id DESC LIMIT 1', [(int) $p['id']]);
             $pts[] = ['id' => $x['id'], 'titre' => $x['titre'], 'detail' => $x['detail'], 'priorite' => $x['priorite'], 'echeance' => $x['echeance'], 'retard' => $x['retard'], 'statut' => $x['statut'],
                 'retour' => $p['statut'] === 'reprendre' ? $x['retour'] : null, 'visiteLe' => $p['v_le'], 'consultant' => $p['v_cons'], 'source' => str_starts_with((string) $p['point_ref'], 'msp') ? 'msp' : 'visite',
                 'photo' => $ph ? ['chemin' => $ph['chemin'], 'le' => $ph['prise_a']] : null];
@@ -1409,7 +1417,7 @@ function ep_suivi_franchise(): array
     }
     if ($voit['rapports']) {
         $raps = [];
-        foreach (Db::rows('SELECT * FROM ceo_visite WHERE shop_id = ? AND statut = \'terminee\' AND (rapport_statut = \'envoye\' OR (rapport_statut IS NULL AND prevu_le >= ?)) ORDER BY prevu_le DESC, id DESC LIMIT 12', [$shop, date('Y-m-d', strtotime('-180 days'))]) as $v) {
+        foreach (Db::rows('SELECT * FROM con_visite WHERE shop_id = ? AND statut = \'terminee\' AND (rapport_statut = \'envoye\' OR (rapport_statut IS NULL AND prevu_le >= ?)) ORDER BY prevu_le DESC, id DESC LIMIT 12', [$shop, date('Y-m-d', strtotime('-180 days'))]) as $v) {
             $ck = suChecklistBilan($v); $ancien = ($v['rapport_statut'] ?? null) === null;
             $r = suJson($v['rapport'] ?? null); $c = suRapportContenu($v);
             $plans = $ancien ? [] : array_values(array_filter(suRapportPlans($v, $r), static fn ($p) => $p['inclus'] && $p['statut'] !== 'interne'));
@@ -1424,7 +1432,7 @@ function ep_suivi_franchise(): array
     }
     if ($voit['prochaine']) {
         $out['prochaine'] = null;
-        foreach (Db::rows('SELECT * FROM ceo_visite WHERE shop_id = ? AND statut IN (\'planifiee\', \'confirmee\') AND prevu_le >= ? ORDER BY prevu_le, debut_h LIMIT 6', [$shop, date('Y-m-d')]) as $v) {
+        foreach (Db::rows('SELECT * FROM con_visite WHERE shop_id = ? AND statut IN (\'planifiee\', \'confirmee\') AND prevu_le >= ? ORDER BY prevu_le, debut_h LIMIT 6', [$shop, date('Y-m-d')]) as $v) {
             if (!suAnnoncee($v)) { continue; }
             $out['prochaine'] = ['le' => $v['prevu_le'], 'h' => $v['debut_h'], 'duree' => (int) $v['duree_min'], 'type' => suTypeNom((string) (($v['type_code'] ?? '') ?: 'reguliere'), $l), 'consultant' => $v['consultant_nom'],
                 'sujets' => array_values(array_map(static fn ($p) => $p['libelle'], array_filter(suPrep($v)['points'], static fn ($p) => $p['odj'])))];
@@ -1433,7 +1441,7 @@ function ep_suivi_franchise(): array
     }
     if ($voit['msp']) {
         $out['msp'] = array_map(static fn ($m) => ['passage' => $m['passage'], 'obtenu' => (float) $m['obtenu'], 'maximum' => (float) $m['maximum'], 'rubriques' => array_filter($m['rub'], static fn ($x) => $x !== null), 'fichier' => $m['fichier']],
-            array_values(array_filter(array_map('suMspLigne', Db::rows('SELECT * FROM ceo_scoring_msp WHERE shop_id = ? ORDER BY COALESCE(passage_le, DATE(le)) DESC LIMIT 4', [$shop])), static fn ($m) => $m['montrer'])));
+            array_values(array_filter(array_map('suMspLigne', Db::rows('SELECT * FROM con_scoring_msp WHERE shop_id = ? ORDER BY COALESCE(passage_le, DATE(le)) DESC LIMIT 4', [$shop])), static fn ($m) => $m['montrer'])));
     }
     if ($voit['scoring']) {
         $s = suScoring($shop);
@@ -1476,9 +1484,9 @@ function suJournalFranchise(string $shop, array $voit): array
 {
     if (!function_exists('frJournal')) { return []; }
     $plans = []; $visites = []; $msp = [];
-    foreach (Db::rows('SELECT id FROM ceo_visite_action WHERE shop_id = ? AND statut IN (\'propose\', \'interne\')', [$shop]) as $r) { $plans[(int) $r['id']] = true; }
-    foreach (Db::rows('SELECT id FROM ceo_visite WHERE shop_id = ? AND rapport_statut = \'brouillon\'', [$shop]) as $r) { $visites[(int) $r['id']] = true; }
-    foreach (Db::rows('SELECT id, montrer FROM ceo_scoring_msp WHERE shop_id = ?', [$shop]) as $r) { if (!$voit['msp'] || (isset($r['montrer']) && (int) $r['montrer'] !== 1)) { $msp[(int) $r['id']] = true; } }
+    foreach (Db::rows('SELECT id FROM con_visite_action WHERE shop_id = ? AND statut IN (\'propose\', \'interne\')', [$shop]) as $r) { $plans[(int) $r['id']] = true; }
+    foreach (Db::rows('SELECT id FROM con_visite WHERE shop_id = ? AND rapport_statut = \'brouillon\'', [$shop]) as $r) { $visites[(int) $r['id']] = true; }
+    foreach (Db::rows('SELECT id, montrer FROM con_scoring_msp WHERE shop_id = ?', [$shop]) as $r) { if (!$voit['msp'] || (isset($r['montrer']) && (int) $r['montrer'] !== 1)) { $msp[(int) $r['id']] = true; } }
     $out = [];
     foreach (frJournal($shop) as $e) {
         $id = (int) ($e['id'] ?? 0);
@@ -1495,7 +1503,7 @@ function wr_suivi_franchise_correction(): array
     $b = body();
     $shop = suFranchiseShop($b);
     if ($shop === null) { http_response_code(403); return ['error' => 'lien']; }
-    $p = Db::row('SELECT * FROM ceo_visite_action WHERE id = ? AND shop_id = ?', [(int) ($b['plan'] ?? 0), $shop]);
+    $p = Db::row('SELECT * FROM con_visite_action WHERE id = ? AND shop_id = ?', [(int) ($b['plan'] ?? 0), $shop]);
     if ($p === null) { http_response_code(404); return ['error' => 'point inconnu']; }
     if (!in_array($p['statut'], ['ouvert', 'reprendre', 'escalade'], true)) { http_response_code(409); return ['error' => 'ce point n’attend pas de correction (' . $p['statut'] . ')']; }
     $com = mb_substr(trim((string) ($b['commentaire'] ?? '')), 0, 1000);
@@ -1506,11 +1514,11 @@ function wr_suivi_franchise_correction(): array
         $photoId = (int) $r['photo']['id'];
     } elseif ($com === '') { http_response_code(422); return ['error' => 'une photo ou un mot']; }
     $now = date('Y-m-d H:i:s'); $qui = 'Franchisé ' . suCourt($shop);
-    Db::exec('UPDATE ceo_visite_action SET statut = \'attente\', photo_id = COALESCE(?, photo_id), maj_le = ? WHERE id = ?', [$photoId, $now, (int) $p['id']]);
-    Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire, photo_id) VALUES (?,?,?,?,?,?,?)', [(int) $p['id'], $now, $qui, $p['statut'], 'attente', $com !== '' ? $com : null, $photoId]);
+    Db::exec('UPDATE con_visite_action SET statut = \'attente\', photo_id = COALESCE(?, photo_id), maj_le = ? WHERE id = ?', [$photoId, $now, (int) $p['id']]);
+    Db::exec('INSERT INTO con_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire, photo_id) VALUES (?,?,?,?,?,?,?)', [(int) $p['id'], $now, $qui, $p['statut'], 'attente', $com !== '' ? $com : null, $photoId]);
     viNotifier('admin', 'Correction reçue — ' . suCourt($shop), $p['titre'] . ' : photo à valider', '#/franchises', 'valider-' . $p['id']);
     journalAdd($qui, 'Plan d’action', null, suCourt($shop) . ' : « ' . $p['titre'] . ' » ' . $p['statut'] . ' → attente (correction envoyée depuis sa page)');
-    return ['ok' => true, 'plan' => viPlanLigne(Db::row('SELECT * FROM ceo_visite_action WHERE id = ?', [(int) $p['id']]))];
+    return ['ok' => true, 'plan' => viPlanLigne(Db::row('SELECT * FROM con_visite_action WHERE id = ?', [(int) $p['id']]))];
 }
 
 /** POST /suivi/franchise/lu — { shop, jeton, visite } : le rapport est ouvert. */
@@ -1520,9 +1528,9 @@ function wr_suivi_franchise_lu(): array
     $b = body();
     $shop = suFranchiseShop($b);
     if ($shop === null) { http_response_code(403); return ['error' => 'lien']; }
-    $v = Db::row('SELECT id, rapport_lu_le FROM ceo_visite WHERE id = ? AND shop_id = ? AND rapport_statut = \'envoye\'', [(int) ($b['visite'] ?? 0), $shop]);
+    $v = Db::row('SELECT id, rapport_lu_le FROM con_visite WHERE id = ? AND shop_id = ? AND rapport_statut = \'envoye\'', [(int) ($b['visite'] ?? 0), $shop]);
     if ($v === null) { return ['ok' => true, 'deja' => true]; }
-    if ($v['rapport_lu_le'] === null) { Db::exec('UPDATE ceo_visite SET rapport_lu_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $v['id']]); }
+    if ($v['rapport_lu_le'] === null) { Db::exec('UPDATE con_visite SET rapport_lu_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $v['id']]); }
     return ['ok' => true];
 }
 
@@ -1568,10 +1576,10 @@ function ep_suivi_regles(): array
         $magasins[] = ['id' => $sid, 'court' => $m['court'], 'nom' => $m['nom'], 'regle' => $mr, 'adresse' => $ad, 'langueDefaut' => suLangueDefaut($sid), 'langue' => suLangue($sid, $mr), 'cadre' => $cad];
     }
     // Ce que les délais donnent : l'envoi des rapports et la validation des corrections sur 60 jours.
-    $env = Db::rows('SELECT termine_a, rapport_envoye_le FROM ceo_visite WHERE rapport_statut = \'envoye\' AND rapport_envoye_le >= ? AND termine_a IS NOT NULL', [date('Y-m-d', strtotime('-60 days'))]);
+    $env = Db::rows('SELECT termine_a, rapport_envoye_le FROM con_visite WHERE rapport_statut = \'envoye\' AND rapport_envoye_le >= ? AND termine_a IS NOT NULL', [date('Y-m-d', strtotime('-60 days'))]);
     $hs = array_map(static fn ($r) => (strtotime((string) $r['rapport_envoye_le']) - strtotime((string) $r['termine_a'])) / 3600, $env);
     $horsDelai = count(array_filter($hs, static fn ($h) => $h > (int) $regles['delais']['rapportHeures']));
-    $val = Db::rows('SELECT e1.quand recu, MIN(e2.quand) traite FROM ceo_visite_action_evt e1 JOIN ceo_visite_action_evt e2 ON e2.plan_id = e1.plan_id AND e2.quand >= e1.quand AND e2.vers_statut IN (\'valide\', \'reprendre\')
+    $val = Db::rows('SELECT e1.quand recu, MIN(e2.quand) traite FROM con_visite_action_evt e1 JOIN con_visite_action_evt e2 ON e2.plan_id = e1.plan_id AND e2.quand >= e1.quand AND e2.vers_statut IN (\'valide\', \'reprendre\')
                      WHERE e1.vers_statut = \'attente\' AND e1.quand >= ? GROUP BY e1.id, e1.quand', [date('Y-m-d', strtotime('-60 days'))]);
     $hv = array_map(static fn ($r) => (strtotime((string) $r['traite']) - strtotime((string) $r['recu'])) / 3600, $val);
     $faites = array_sum(array_map(static fn ($l) => $l['par'] === 'mois' ? $l['faites'] : 0, $attendu));
@@ -1724,13 +1732,13 @@ function suHorloge(array &$fait): void
     }
     if ($d['odjAuto']) {
         $jusque = date('Y-m-d', strtotime('+' . (int) $d['odjJours'] . ' days'));
-        foreach (Db::rows('SELECT * FROM ceo_visite WHERE statut IN (\'planifiee\', \'confirmee\') AND odj_envoye_le IS NULL AND prevu_le BETWEEN ? AND ?', [$auj, $jusque]) as $v) {
+        foreach (Db::rows('SELECT * FROM con_visite WHERE statut IN (\'planifiee\', \'confirmee\') AND odj_envoye_le IS NULL AND prevu_le BETWEEN ? AND ?', [$auj, $jusque]) as $v) {
             if (!suAnnoncee($v)) { continue; }
             $r = suOdjEnvoyer($v);
             if ($r['envoye']) { $fait['odj']++; }
         }
     }
-    foreach (Db::rows('SELECT * FROM ceo_visite WHERE statut = \'terminee\' AND rapport_statut = \'brouillon\' AND termine_a IS NOT NULL') as $v) {
+    foreach (Db::rows('SELECT * FROM con_visite WHERE statut = \'terminee\' AND rapport_statut = \'brouillon\' AND termine_a IS NOT NULL') as $v) {
         $limite = strtotime((string) $v['termine_a']) + (int) $d['rapportHeures'] * 3600;
         if ($now < $limite) { continue; }
         if ($d['rapportTard'] === 'tel_quel') { suRapportEnvoyer($v, 'horloge (délai dépassé, envoyé tel quel)'); $fait['rapportsAuto']++; continue; }
@@ -1742,15 +1750,15 @@ function suHorloge(array &$fait): void
             viNotifier($roles['responsable'] !== '' && $roles['responsable'] !== $roles['adapte'] ? 'c:' . $roles['responsable'] : 'admin', 'Rapport en retard de 24 h — ' . $court, 'Visite du ' . date('d/m', strtotime((string) $v['prevu_le'])) . ' par ' . $v['consultant_nom'], '#/franchises', 'rapport2-' . $v['id']);
             $r['rappel2'] = date('Y-m-d H:i');
         } else { continue; }
-        Db::exec('UPDATE ceo_visite SET rapport = ? WHERE id = ?', [json_encode($r, JSON_UNESCAPED_UNICODE), (int) $v['id']]);
+        Db::exec('UPDATE con_visite SET rapport = ? WHERE id = ?', [json_encode($r, JSON_UNESCAPED_UNICODE), (int) $v['id']]);
         $fait['rapportsRappel']++;
     }
     if ((int) $d['relanceLuJours'] > 0) {
         $avant = date('Y-m-d H:i:s', $now - (int) $d['relanceLuJours'] * 86400);
-        foreach (Db::rows('SELECT * FROM ceo_visite WHERE rapport_statut = \'envoye\' AND rapport_lu_le IS NULL AND rapport_relance_le IS NULL AND rapport_envoye_le < ?', [$avant]) as $v) {
+        foreach (Db::rows('SELECT * FROM con_visite WHERE rapport_statut = \'envoye\' AND rapport_lu_le IS NULL AND rapport_relance_le IS NULL AND rapport_envoye_le < ?', [$avant]) as $v) {
             $shop = (string) $v['shop_id']; $l = suLangue($shop);
             $r = suEnvoyerFranchise($shop, 'relance', ['date' => suDateLongue((string) $v['prevu_le'], $l), 'type' => suTypeNom((string) (($v['type_code'] ?? '') ?: 'reguliere'), $l)]);
-            Db::exec('UPDATE ceo_visite SET rapport_relance_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $v['id']]);
+            Db::exec('UPDATE con_visite SET rapport_relance_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $v['id']]);
             if ($r['envoye']) { $fait['relances']++; }
         }
     }

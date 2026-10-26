@@ -515,10 +515,10 @@ function buildStatements(): array
 
     // --- intervenants
     foreach (consultants() as $i => $c) {
-        $sql[] = 'INSERT INTO ceo_consultant (id, position_id, name, role, email, daily_rate, workload) VALUES (' .
+        $sql[] = 'INSERT INTO con_consultant (id, position_id, name, role, email, daily_rate, workload) VALUES (' .
             q($c['id']) . ', ' . ($i + 1) . ', ' . q($c['nom']) . ', ' . q($c['role']) . ', ' . q($c['email']) . ', ' . n($c['tjm']) . ', ' . n($c['charge']) . ');';
         foreach ($c['visites'] as [$date, $store, $objet]) {
-            $sql[] = 'INSERT INTO ceo_consultant_visit (consultant_id, visited_on, store_label, subject) VALUES (' . q($c['id']) . ', ' . q($date) . ', ' . q($store) . ', ' . q($objet) . ');';
+            $sql[] = 'INSERT INTO con_consultant_visit (consultant_id, visited_on, store_label, subject) VALUES (' . q($c['id']) . ', ' . q($date) . ', ' . q($store) . ', ' . q($objet) . ');';
         }
     }
     foreach (suppliers() as $s) {

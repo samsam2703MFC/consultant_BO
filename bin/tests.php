@@ -37,6 +37,7 @@ require __DIR__ . '/../src/brand_guard.php';
 require __DIR__ . '/../src/marketing_hub.php';
 require __DIR__ . '/../src/marketing_sources.php';
 require __DIR__ . '/../src/marketing_tables.php';
+require __DIR__ . '/../src/con_tables.php';
 require __DIR__ . '/../src/linkedin_api.php';
 require __DIR__ . '/../src/social_publication.php';
 require __DIR__ . '/../src/fbcontrole.php';
@@ -264,6 +265,28 @@ foreach (array_merge(glob(dirname(__DIR__) . '/src/*.php'), [dirname(__DIR__) . 
     foreach (array_filter(array_column(MAR_TABLES, 'ancien')) as $a) { if (preg_match('/\b' . $a . '\b/', $t)) { $restes[] = basename($f) . ':' . $a; } }
 }
 verifie('aucun ancien nom ne reste dans le code', $restes === [], implode(', ', $restes));
+
+// --- 11 bis. la migration des tables des consultants et des visites sous con_ -----------------
+echo "Migration con_\n";
+$p = conPlanMigration(['ceo_visite' => null, 'ceo_visite_point' => null, 'ceo_tache_jour' => null]);
+verifie('anciennes seules ⇒ renommées, le reste du nom intact', $p['renommer'] === ['ceo_visite' => 'con_visite', 'ceo_visite_point' => 'con_visite_point', 'ceo_tache_jour' => 'con_tache_jour'] && !$p['effacer'], json_encode($p));
+$p = conPlanMigration(['ceo_visite' => 11, 'con_visite' => 0]);
+verifie('con_ : nouvelle vide, ancienne pleine ⇒ la vide s’efface, l’ancienne est renommée', $p['effacer'] === ['con_visite'] && $p['renommer'] === ['ceo_visite' => 'con_visite'], json_encode($p));
+$p = conPlanMigration(['ceo_visite' => 11, 'con_visite' => 2]);
+verifie('con_ : deux tables pleines ⇒ conflit, rien ne bouge', !$p['renommer'] && !$p['effacer'] && count($p['conflits']) === 1, json_encode($p));
+verifie('con_ : déjà migrée ⇒ rien', conPlanMigration(['con_visite' => null, 'con_msp' => null]) === ['renommer' => [], 'effacer' => [], 'conflits' => []]);
+$noms = array_keys(CON_TABLES);
+verifie('chaque table du registre : con_ + l’ancien nom sans ceo_', !array_filter(CON_TABLES, static fn ($d, $n) => $n !== 'con_' . substr($d['ancien'], 4) || !str_starts_with($d['ancien'], 'ceo_'), ARRAY_FILTER_USE_BOTH));
+$sansCreation = array_filter($noms, static fn ($n) => !isset($creees[$n]));
+verifie('chaque table con_ est créée par le code (CREATE TABLE)', $sansCreation === [], json_encode(array_values($sansCreation)));
+verifie('chaque table con_ dit sa ressource d’API (chemin, clé)', !array_filter(CON_TABLES, static fn ($d) => empty($d['api']['chemin']) || empty($d['api']['cle'])));
+$restes = [];
+foreach (array_merge(glob(dirname(__DIR__) . '/src/*.php'), glob(dirname(__DIR__) . '/bin/*.php'), [dirname(__DIR__) . '/sql/schema.sql', dirname(__DIR__) . '/sql/seed.sql', dirname(__DIR__) . '/sql/grants.sql']) as $f) {
+    if (str_ends_with($f, 'con_tables.php') || str_ends_with($f, 'tests.php')) { continue; }
+    $t = (string) file_get_contents($f);
+    foreach (array_column(CON_TABLES, 'ancien') as $a) { if (preg_match('/\b' . $a . '\b/', $t)) { $restes[] = basename($f) . ':' . $a; } }
+}
+verifie('con_ : aucun ancien nom ne reste dans le code', $restes === [], implode(', ', $restes));
 
 // --- 12. la publication : ce que chaque réseau exige, et ce qu'on lui envoie ---------------
 echo "Publication\n";

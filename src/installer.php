@@ -41,6 +41,16 @@ function ensureInstalled(): void
         }
     }
 
+    // Les tables des consultants et des visites passent sous con_ (26/10/2026), même règle que mar_ :
+    // renommées avant que ensureVisites() et les autres ne créent leurs nouvelles tables vides.
+    if (function_exists('conMigrer')) {
+        try { conMigrer(); }
+        catch (Throwable $e) {
+            $marOk = false;   // l'empreinte ne sera pas posée : l'appel suivant réessaie
+            try { journalAdd('Installation', 'Erreur', 'Suivi des franchisés', 'Migration des tables con_ impossible : ' . $e->getMessage()); } catch (Throwable $x) { /* journal absent */ }
+        }
+    }
+
     // Jeu de démonstration : chargé UNIQUEMENT s'il est explicitement activé
     // (config 'seed' = true, ou variable d'env COCKPIT_SEED=1). Désactivé par
     // défaut → une base neuve reste vide, prête pour les vraies données.

@@ -23,17 +23,16 @@ declare(strict_types=1);
  * avec ses cartes (assets/js/cartes-magasin.js).
  */
 
-const VK_TTL_S = 3600;
-const VK_PERIME_S = 21600;
 
-/** GET /visites/kpi/{shop}[?rafraichir=1] */
+/** GET /visites/kpi/{shop} — recalculé à chaque lecture. */
 function ep_visites_kpi(string $shop): array
 {
     if (!isset(viMagasins()[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['shop' => $shop, 'indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
-    // vkKpi2 (26/10/2026) : la structure du CA par canal s'ajoute — un calcul gardé avant elle ne la porte pas.
-    return rcServi('vkKpi2:' . $shop, static fn (): array => vkCalcul((int) $shop),
-        static fn (array $x): int => empty($x['manques']) ? VK_TTL_S : 300, !empty($_GET['rafraichir']), '/visites/kpi/' . $shop, VK_PERIME_S);
+    // Sans cache (26/10/2026, demande de Sam : « pas de cache ») : chaque lecture recalcule (≈ 5 s mesurées) ; les
+    // sources gardent leurs propres relevés (mois clos gravés, commandes du panel dix minutes).
+    @set_time_limit(120);
+    return vkCalcul((int) $shop);
 }
 
 /** Les deux lectures ; une qui échoue (ou un mois du panel resté muet) laisse les autres, se nomme dans `manques` et se relit dans cinq minutes. */
@@ -262,7 +261,7 @@ function vkCanauxParts(array $t): ?array
 /**
  * GET /visites/taches/{shop}[?mois=AAAA-MM][&n=12] — pour l'étape « Contrôles photo » de la tablette :
  *  - `mois[]` : les n derniers mois (12 au plus), du plus récent au plus ancien — les tâches demandées et faites (le
- *    relevé quotidien du panel, `ceo_tache_jour`, journées révolues : le mois en cours s'arrête à hier), les notes du
+ *    relevé quotidien du panel, `con_tache_jour`, journées révolues : le mois en cours s'arrête à hier), les notes du
  *    contrôle qualité (`mac_task_review`) : combien notées, combien sous le seuil (4), la moyenne ;
  *  - `taches[]` : pour le mois choisi (d'office le mois en cours, ou le précédent s'il n'a encore rien), les tâches
  *    notées sous le seuil ou refusées, avec la note, le commentaire et le nom du contrôleur (ep_pwa_tasks_nc) ; la
@@ -283,7 +282,7 @@ function ep_visites_taches(string $shop): array
     $par = [];
     if (function_exists('tachesSuiviTables')) { tachesSuiviTables(); }
     try {
-        foreach (Db::rows('SELECT DATE_FORMAT(jour, \'%Y-%m\') AS m, COUNT(*) AS t, SUM(fait) AS f, COUNT(DISTINCT jour) AS j FROM ceo_tache_jour'
+        foreach (Db::rows('SELECT DATE_FORMAT(jour, \'%Y-%m\') AS m, COUNT(*) AS t, SUM(fait) AS f, COUNT(DISTINCT jour) AS j FROM con_tache_jour'
             . ' WHERE id_shop = ? AND jour BETWEEN ? AND ? GROUP BY m', [$sid, $du, $au]) as $r) {
             $par[(string) $r['m']] = ['demandees' => (int) $r['t'], 'faites' => (int) $r['f'], 'jours' => (int) $r['j']];
         }
@@ -336,18 +335,18 @@ function ep_visites_taches(string $shop): array
  * champ `budgetCa`). Le rang compare l'écart des magasins du réseau sur la même étendue.
  */
 
-const VB_TTL_S = 1800;
-const VB_PERIME_S = 21600;
 const VB_ETENDUES = ['jour', 'semaine', 'mois', 'trimestre', 'annee'];
 
-/** GET /visites/budget/{shop}[?rafraichir=1] — gardé une demi-heure, cinq minutes si une lecture a manqué. */
+/** GET /visites/budget/{shop} — recalculé à chaque lecture. */
 function ep_visites_budget(string $shop): array
 {
     if (!isset(viMagasins()[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['shop' => $shop, 'indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
-    @set_time_limit(120);
-    return rcServi('vkBud:' . $shop, static fn (): array => vbCalcul((int) $shop, date('Y-m-d', strtotime('-1 day'))),
-        static fn (array $x): int => empty($x['manques']) ? VB_TTL_S : 300, !empty($_GET['rafraichir']), '/visites/budget/' . $shop, VB_PERIME_S);
+    // Sans cache (26/10/2026, demande de Sam) : chaque lecture recalcule (≈ 20 s mesurées en ligne ; la tablette la lit
+    // en arrière-plan dès l'ouverture du contrôle). Les sources gardent les leurs : Résultat cinq minutes, le jour clos
+    // un quart d'heure, comme partout dans le cockpit.
+    @set_time_limit(180);
+    return vbCalcul((int) $shop, date('Y-m-d', strtotime('-1 day')));
 }
 
 /** Les quatre étendues pour un magasin, arrêtées à `$ref` (la veille). */
@@ -486,13 +485,16 @@ function vbPnlLigne(?array $l, string $cle, string $du, string $au): ?array
  */
 function vbPnlCumul(array $cells, array $mois, int $moisRef, ?array $lMois, string $du, string $au): ?array
 {
-    $t = ['ca' => 0.0, 'fc' => 0.0, 'lab' => 0.0, 'oh' => 0.0]; $manque = ['fc' => [], 'lab' => [], 'oh' => []]; $n = 0;
+    $t = ['ca' => 0.0, 'fc' => 0.0, 'lab' => 0.0, 'oh' => 0.0]; $manque = ['fc' => [], 'lab' => [], 'oh' => []]; $n = 0; $motifCourant = null;
     foreach ($mois as $m) {
         if ($m > $moisRef) { continue; }
         if ($m === $moisRef) {
             if ($lMois === null || !is_numeric($lMois['realise'] ?? null)) { continue; }
             $ca = (float) $lMois['realise'];
             $v = ['fc' => $lMois['coutMatiere'] ?? null, 'lab' => $lMois['labour'] ?? null, 'oh' => $lMois['overhead'] ?? null];
+            // Ce que Résultat dit du mois en cours (mesuré à Corbais le 26/10/2026 : « frais généraux absents du panel —
+            // résultat avant frais généraux », 0 € de frais) : le cumul le répète au lieu d'additionner ce zéro en silence.
+            if (!empty($lMois['motifNet'])) { $motifCourant = (string) $lMois['motifNet']; }
         } else {
             $c = $cells[$m] ?? null;
             if ($c === null || !(($c['ca'] ?? 0) > 0)) { continue; }   // un mois sans vente ne compte pas
@@ -515,7 +517,8 @@ function vbPnlCumul(array $cells, array $mois, int $moisRef, ?array $lMois, stri
     return ['du' => $du, 'au' => $au, 'ca' => round($ca), 'coutMatiere' => $r($fc), 'coutMatierePct' => $pct($fc), 'margeBrute' => $r($mb), 'margeBrutePct' => $pct($mb),
         'invendus' => null, 'invendusPct' => null, 'labour' => $r($lab), 'labourPct' => $pct($lab), 'overhead' => $r($oh), 'overheadPct' => $pct($oh),
         'net' => $r($net), 'netPct' => $pct($net), 'mois' => $n, 'avecInvendus' => false,
-        'motif' => $sans ? implode(', ', array_map(static fn ($k, $l) => $k . ' inconnu sur ' . count($l) . ' mois', array_keys($sans), $sans)) : null];
+        'motif' => implode(' · ', array_filter([$sans ? implode(', ', array_map(static fn ($k, $l) => $k . ' inconnu sur ' . count($l) . ' mois', array_keys($sans), $sans)) : null,
+            $motifCourant !== null ? 'le mois en cours : ' . $motifCourant : null])) ?: null];
 }
 
 /** Les budgets de l'année : [magasin][mois] => {v, src} — le budget validé, à défaut le CA théorique. */
