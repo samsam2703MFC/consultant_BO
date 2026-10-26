@@ -44,4 +44,10 @@ final class EmployeeRepository extends WorkshopRepository
         if ($row) return (int) $row['id'];
         return $this->insert(['id_production_employee' => $productionEmployeeId, 'id_primary_group' => $primaryGroupId]);
     }
+
+    /** Stanowisko pracownika (n_position, kind atelier) ; null = bez stanowiska. */
+    public function setPosition(int $profileId, ?int $positionId): void
+    {
+        $this->db->prepare('UPDATE n_prod_employee SET id_position = ? WHERE id = ?')->execute([$positionId, $profileId]);
+    }
 }

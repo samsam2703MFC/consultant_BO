@@ -33,6 +33,17 @@
                         </div>
                     </div>
 
+                    <?php if (!empty($created)):
+                        $todo = [['Telefon i identyfikator', ROOT . '/workshop/execution#people'], ['Godziny pracy', ROOT . '/workshop/execution#hours'], ['Karta stanowiska', ROOT . '/organization/positions'], ['Premie i budżet', ROOT . '/staff/budget']];
+                        ?>
+                        <div class="at-note at-note-safe mb-3" role="status">
+                            <i class="bi bi-check-circle"></i>
+                            <div><strong>Pracownik utworzony.</strong> Dział, koszt, zespół, płaca i dostęp do tabletu są zapisane ; karta poniżej.
+                                <?php if (!empty($created['problems'])): ?><div class="text-danger mt-1"><?= implode('<br>', array_map('htmlspecialchars', $created['problems'])) ?></div><?php endif; ?>
+                                <div class="mt-1">Do uzupełnienia : <?= implode(' · ', array_map(fn($t) => '<a href="' . htmlspecialchars($t[1]) . '">' . htmlspecialchars($t[0]) . '</a>', $todo)) ?></div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                     <form method="POST">
                         <div class="row">
                             <div class="col-2"></div>

@@ -23,6 +23,7 @@
     }
 
     function valueOf(el) {
+        if (el.type === 'password') return el.value ? '••••' : '';
         if (el.type === 'checkbox') return el.checked ? (el.dataset.summaryGroup ? (el.closest('label') || {}).textContent.trim() : 'tak') : '';
         if (el.type === 'radio') return el.checked ? labelOf(el) : '';
         if (el.tagName === 'SELECT') return el.value === '' ? '' : [...el.selectedOptions].map((o) => o.textContent.trim()).join(', ');
