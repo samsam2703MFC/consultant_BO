@@ -121,7 +121,8 @@ final class DriverService
         $vehicleId = (int) $v->value('vehicle_id');
         if (!isset($this->deliveries->vehicles()[$vehicleId])) throw ApiException::validation([['field' => 'vehicle_id', 'code' => 'REFERENCE_NOT_FOUND', 'params' => ['id' => $vehicleId]]]);
         $data = ['id_device' => (int) $device['id']];
-        if ($v->provided('driver_name')) $data['driver_name'] = $v->value('driver_name');
+        $driver = $this->driverName($context, $v->value('driver_name'));
+        if ($driver !== null) $data['driver_name'] = $driver;
         $current = $this->deliveries->run($date, $vehicleId);
         if ($v->value('action') === 'start') {
             $data['started_at'] = $current['started_at'] ?? date('Y-m-d H:i:s');
@@ -177,7 +178,7 @@ final class DriverService
             'status' => $status, 'reason' => $status === 'problem' ? $v->value('reason') : null,
             'receiver_name' => $v->value('receiver_name'), 'pallets_delivered' => $v->value('pallets_delivered'), 'pallets_returned' => $v->value('pallets_returned'),
             'note' => $v->value('note'), 'lat' => $v->value('lat'), 'lng' => $v->value('lng'), 'recorded_at' => $recordedAt,
-            'driver_name' => $v->value('driver_name'), 'id_device' => (int) $device['id'],
+            'driver_name' => $this->driverName($context, $v->value('driver_name')), 'id_device' => (int) $device['id'],
         ];
         $stopId = $this->tx->execute(function () use ($data, $signature, $photo) {
             $id = $this->deliveries->saveStop($data);
@@ -224,14 +225,15 @@ final class DriverService
         $kind = self::PHOTO_KINDS[$v->value('kind')];
         $uuid = $v->value('client_uuid');
         $max = $this->maxPhotos();
+        $driver = $this->driverName($context, $v->value('driver_name'));
 
-        return $this->tx->execute(function () use ($device, $v, $date, $customerId, $customer, $takenAt, $kind, $uuid, $image, $max) {
+        return $this->tx->execute(function () use ($device, $v, $date, $customerId, $customer, $takenAt, $kind, $uuid, $image, $max, $driver) {
             $stop = $this->deliveries->stopFor($date, $customerId);
             if ($stop === null) {
                 $stopId = $this->deliveries->saveStop([
                     'ship_date' => $date, 'id_customer' => $customerId, 'id_carrier_vehicle' => $v->value('vehicle_id') ?? $customer['vehicle_id'],
                     'status' => 'arrived', 'recorded_at' => $takenAt, 'arrived_at' => $kind === 'photo_before' ? $takenAt : null,
-                    'lat' => $v->value('lat'), 'lng' => $v->value('lng'), 'driver_name' => $v->value('driver_name'), 'id_device' => (int) $device['id'],
+                    'lat' => $v->value('lat'), 'lng' => $v->value('lng'), 'driver_name' => $driver, 'id_device' => (int) $device['id'],
                 ]);
             } else {
                 $stopId = (int) $stop['id'];
@@ -289,7 +291,9 @@ final class DriverService
                 unset($stops[$cid]);
             }
             $run = $runs[$truck['id']] ?? null;
+            $tourUrl = self::tourUrl($date, (int) $truck['id']);
             $trucks[] = ['id' => $truck['id'], 'label' => $truck['label'], 'carrier' => $truck['carrier'], 'departure' => $truck['departure'],
+                'tour_url' => $tourUrl, 'tour_qr' => self::qrSvg($tourUrl),
                 'driver' => $run['driver_name'] ?? ($vehicles[$truck['id']]['driver'] ?? null), 'started_at' => $run['started_at'] ?? null, 'finished_at' => $run['finished_at'] ?? null,
                 'rows' => $rows, 'delivered' => count(array_filter($rows, fn($r) => ($r['stop']['status'] ?? null) === 'delivered')),
                 'arrived' => count(array_filter($rows, fn($r) => ($r['stop']['status'] ?? null) === 'arrived')),
@@ -382,6 +386,15 @@ final class DriverService
         ], $customerId !== null ? (string) ($plan['by_id'][$customerId]['name'] ?? $recorded[$customerId]['customer'] ?? '') : $vehicle['label']);
 
         if ($customerId === null) {
+            // Kod QR trasy : tablet kierowcy otwiera ten pojazd i ten dzień (skan w aplikacji).
+            $y = $pdf->GetY() + 1;
+            $x = $pdf->getPageWidth() - 12 - 24;
+            $pdf->write2DBarcode(self::tourUrl($date, $vehicleId), 'QRCODE,M', $x, $y, 24, 24, ['border' => false, 'padding' => 0, 'fgcolor' => [0, 0, 0], 'bgcolor' => false], 'N');
+            $pdf->SetFont('dejavusans', '', 7.5);
+            $pdf->SetXY(12, $y + 8);
+            $pdf->MultiCell($x - 16, 8, $t('Tablet kierowcy : po zalogowaniu (lista + PIN) « Skanuj QR trasy » otwiera ten pojazd i ten dzień.',
+                'Tablette chauffeur : après connexion (liste + PIN), « Scanner le QR de la tournée » ouvre ce véhicule et ce jour.'), 0, 'L');
+            $pdf->SetY($y + 27);
             $status = fn(?array $s) => match ($s['status'] ?? null) {
                 'delivered' => $t('dostarczono', 'livré') . ' ' . $hm($s['recorded_at']),
                 'problem' => $t('problem', 'problème') . ' : ' . (self::REASON_LABELS[$s['reason']][$i] ?? $s['reason']),
@@ -513,6 +526,36 @@ final class DriverService
     private function maxPhotos(): int
     {
         return max(1, min(20, (int) $this->params->get('driver.max_photos', '6')));
+    }
+
+    /** Adres trasy dla tabletu kierowcy (kod QR w ERP i na raporcie trasy) : otwiera pojazd i dzień po zalogowaniu. */
+    public static function tourUrl(string $date, int $vehicleId): string
+    {
+        return (defined('ROOT') ? ROOT : '') . '/driver?date=' . rawurlencode($date) . '&vehicle=' . $vehicleId;
+    }
+
+    /** Kod QR jako SVG (jedna ścieżka, skalowalny) do wstawienia w stronę ERP. */
+    public static function qrSvg(string $text): string
+    {
+        $matrix = (new \TCPDF2DBarcode($text, 'QRCODE,M'))->getBarcodeArray();
+        $n = (int) $matrix['num_cols'];
+        $path = '';
+        foreach ($matrix['bcode'] as $y => $row) {
+            foreach ($row as $x => $on) if ($on) $path .= 'M' . ($x + 2) . ' ' . ($y + 2) . 'h1v1h-1z';
+        }
+        $size = $n + 4;
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' . $size . ' ' . $size . '" shape-rendering="crispEdges" role="img" aria-label="QR">'
+            . '<rect width="' . $size . '" height="' . $size . '" fill="#fff"/><path d="' . $path . '" fill="#000"/></svg>';
+    }
+
+    /** Kierowca zalogowany na tablecie (lista + PIN) ; nazwisko z tabletu tylko bez sesji osoby (stara wersja aplikacji). */
+    private function driverName(ApiContext $context, ?string $typed): ?string
+    {
+        if ($context->employeeId !== null) {
+            $employee = $this->devices->employee((int) $context->employeeId);
+            if ($employee) return mb_substr((string) $employee['name'], 0, 100);
+        }
+        return $typed;
     }
 
     private function driverDevice(ApiContext $context): array

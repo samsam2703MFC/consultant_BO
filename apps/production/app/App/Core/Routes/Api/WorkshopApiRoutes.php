@@ -219,13 +219,14 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/quality/batches/{id:\d+}', ExecutionController::class, 'qualityCheck', 'kiosk_employee'],
             ['POST', '/kiosk/quality/reports', ExecutionController::class, 'qualityReport', 'kiosk_employee'],
             ['GET', '/kiosk/qr', ExecutionController::class, 'qr', 'kiosk'],
-            // Tablet kierowcy (tablet w trybie « driver ») : trasa dnia, potwierdzenia dostaw, dokumenty.
-            ['GET', '/driver/day', DriverController::class, 'day', 'kiosk'],
-            ['POST', '/driver/run', DriverController::class, 'run', 'kiosk'],
-            ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk'],
-            ['POST', '/driver/photos', DriverController::class, 'photo', 'kiosk'],
-            ['GET', '/driver/report', DriverController::class, 'report', 'kiosk'],
-            ['GET', '/driver/documents', DriverController::class, 'documents', 'kiosk'],
+            // Tablet kierowcy (tablet w trybie « driver ») : trasa dnia, potwierdzenia dostaw, dokumenty — po wybraniu
+            // kierowcy z listy i jego PIN-ie (/kiosk/people, /kiosk/identify), jak na tablecie pracowni.
+            ['GET', '/driver/day', DriverController::class, 'day', 'kiosk_employee'],
+            ['POST', '/driver/run', DriverController::class, 'run', 'kiosk_employee'],
+            ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk_employee'],
+            ['POST', '/driver/photos', DriverController::class, 'photo', 'kiosk_employee'],
+            ['GET', '/driver/report', DriverController::class, 'report', 'kiosk_employee'],
+            ['GET', '/driver/documents', DriverController::class, 'documents', 'kiosk_employee'],
             ['GET', '/kiosk/phone/people', ExecutionController::class, 'phonePeople', 'qr'],
             ['POST', '/kiosk/phone/enroll', ExecutionController::class, 'enrollPhone', 'qr'],
             ['GET', '/kiosk/phone/me', ExecutionController::class, 'phoneMe', 'phone'],

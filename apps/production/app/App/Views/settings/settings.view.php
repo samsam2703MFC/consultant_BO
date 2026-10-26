@@ -96,7 +96,7 @@
             <div class="card-header">
                 <h4 class="card-title mb-0">Alerty i terminy (dzwonek)</h4>
                 <p class="text-muted small mb-0">Sprawdzane co kilka minut ; każdy alert pojawia się w dzwonku raz, te same punkty są w « Do zrobienia » na stronie Dzisiaj.
-                    Także : zaległe testy nowych produktów (data minęła) i minięty termin wprowadzenia.</p>
+                    Także : zaległe testy nowych produktów (data minęła), minięty termin wprowadzenia i różnice wysyłki bez decyzji (Wysyłki › Różnice i problemy dostaw).</p>
             </div>
             <div class="card-body">
                 <form class="row g-3 align-items-end" id="alertParamsForm">
@@ -111,6 +111,18 @@
                     <div class="col-12 col-md-3">
                         <label class="form-label" for="apCost">Koszty poprzedniego miesiąca wprowadzone do (dnia miesiąca)</label>
                         <input class="form-control" id="apCost" name="alerts.cost_due_day" inputmode="numeric" value="<?= htmlspecialchars((string) ($ap['alerts.cost_due_day'] ?? '10')) ?>">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="apIssueDays">Różnica / problem dostawy : decyzja w (dniach)</label>
+                        <input class="form-control" id="apIssueDays" name="shipping_issue.decision_days" inputmode="numeric" value="<?= htmlspecialchars((string) ($ap['shipping_issue.decision_days'] ?? '3')) ?>">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="apIssueMin">Różnica proforma ↔ WDT od (EUR)</label>
+                        <input class="form-control" id="apIssueMin" name="shipping_issue.min_amount" inputmode="numeric" value="<?= htmlspecialchars((string) ($ap['shipping_issue.min_amount'] ?? '1')) ?>">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="apIssueBack">Kolejka różnic : ostatnie (dni)</label>
+                        <input class="form-control" id="apIssueBack" name="shipping_issue.lookback_days" inputmode="numeric" value="<?= htmlspecialchars((string) ($ap['shipping_issue.lookback_days'] ?? '45')) ?>">
                     </div>
                     <div class="col-12 col-md-3 d-grid">
                         <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Zapisz alerty</button>

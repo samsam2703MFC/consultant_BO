@@ -63,6 +63,7 @@ final class PageTabs
         // oraz archiwum list kompletacyjnych ; pozycja « Wysyłka › Wysyłki i dokumenty » w railu.
         'shipments' => ['label' => 'Wysyłki i dokumenty', 'section' => 'Logistyka', 'icon' => 'bi-truck', 'tabs' => [
             ['/shipments', 'Wysyłki i dokumenty', 'bi-truck'],
+            ['/shipments/differences', 'Różnice i problemy dostaw', 'bi-exclamation-diamond'],
             ['/archive/documents/picking-lists', 'Archiwum list kompletacyjnych', 'bi-list-check'],
         ]],
     ];

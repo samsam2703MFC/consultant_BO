@@ -32,6 +32,8 @@ final class KioskAuthService
     public const AUDIENCE = 'tfb-kiosk';
     public const QR_AUDIENCE = 'tfb-clock-qr';
     public const MODES = ['atelier', 'driver'];
+    /** Poste des chauffeurs (n_position.code) : liste de la tablette chauffeur. */
+    public const DRIVER_POSITION = 'KIEROWCA';
     private const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
     public function __construct(
@@ -211,11 +213,17 @@ final class KioskAuthService
         return $data;
     }
 
-    /** Personnes proposées sur la tablette (groupe de la tablette), pour s'identifier en touchant son nom. */
+    /**
+     * Personnes proposées sur la tablette, pour s'identifier en touchant son nom : le groupe de la tablette ; tablette
+     * chauffeur : les personnes au poste Kierowca-dostawca (toutes les personnes actives si aucun poste n'est encore saisi).
+     */
     public function people(ApiContext $context): array
     {
-        return array_map(fn($p) => ['id' => (int) $p['id'], 'name' => $p['name'], 'has_pin' => (bool) $p['has_pin'], 'clocked_in' => $p['clocked_in_at'] !== null],
-            $this->repo->people($context->deviceGroupId));
+        $device = $this->repo->find((int) $context->deviceId);
+        $rows = ($device['mode'] ?? 'atelier') === 'driver'
+            ? ($this->repo->people(null, self::DRIVER_POSITION) ?: $this->repo->people(null))
+            : $this->repo->people($context->deviceGroupId);
+        return array_map(fn($p) => ['id' => (int) $p['id'], 'name' => $p['name'], 'has_pin' => (bool) $p['has_pin'], 'clocked_in' => $p['clocked_in_at'] !== null], $rows);
     }
 
     public function identify(array $body, ApiContext $context): array
@@ -238,7 +246,10 @@ final class KioskAuthService
     private function employeeToken(array $employee, int $deviceId): array
     {
         $now = time();
-        $ttl = max(30, (int) $this->params->get('kiosk.employee_token_ttl_s', '120'));
+        // Tablette chauffeur : la session dure la tournée (driver.session_hours) ; atelier : jeton court prolongé en activité.
+        $ttl = ($this->repo->find($deviceId)['mode'] ?? 'atelier') === 'driver'
+            ? max(1, min(24, (int) $this->params->get('driver.session_hours', '12'))) * 3600
+            : max(30, (int) $this->params->get('kiosk.employee_token_ttl_s', '120'));
         return [
             'employee_token' => $this->jwt()->encode(['iss' => self::AUDIENCE, 'aud' => self::AUDIENCE, 'sub' => (string) $employee['id'], 'dev' => $deviceId,
                 'iat' => $now, 'nbf' => $now, 'exp' => $now + $ttl, 'jti' => bin2hex(random_bytes(8))]),

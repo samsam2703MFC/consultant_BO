@@ -1,7 +1,7 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 087, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 087 ; compatible MySQL 8.
+-- 001 → 088, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 088 ; compatible MySQL 8.
 -- Modifications des tables d'origine : voir docs/db/README.md (colonne customer.communication_lang, nettoyage 074 → 080).
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `n_activity_click` (
@@ -1604,6 +1604,39 @@ CREATE TABLE `n_shipping_assignment` (
   CONSTRAINT `fk_tfb_shipping_assignment_customer` FOREIGN KEY (`id_customer`) REFERENCES `customer` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_tfb_shipping_assignment_tour` FOREIGN KEY (`id_tour`) REFERENCES `n_tour` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_tfb_shipping_assignment_vehicle` FOREIGN KEY (`id_carrier_vehicle`) REFERENCES `carrier_vehicle` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_shipping_issue` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `source` enum('difference','delivery') NOT NULL,
+  `id_difference` int(11) DEFAULT NULL,
+  `id_delivery_stop` int(11) DEFAULT NULL,
+  `id_customer` int(11) DEFAULT NULL,
+  `opened_on` date NOT NULL,
+  `due_on` date NOT NULL,
+  `id_owner` int(11) DEFAULT NULL,
+  `status` enum('open','decided','done') NOT NULL DEFAULT 'open',
+  `decision` enum('refund','credit_next','collect','resend','redeliver','complaint','correction','waive') DEFAULT NULL,
+  `note` text DEFAULT NULL,
+  `decided_by` int(11) DEFAULT NULL,
+  `decided_at` datetime DEFAULT NULL,
+  `closed_by` int(11) DEFAULT NULL,
+  `closed_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_n_shipping_issue_difference` (`id_difference`),
+  UNIQUE KEY `uq_n_shipping_issue_stop` (`id_delivery_stop`),
+  KEY `idx_n_shipping_issue_status` (`status`,`due_on`),
+  KEY `idx_n_shipping_issue_owner` (`id_owner`,`status`),
+  KEY `fk_n_shipping_issue_customer` (`id_customer`),
+  KEY `fk_n_shipping_issue_decided_by` (`decided_by`),
+  KEY `fk_n_shipping_issue_closed_by` (`closed_by`),
+  CONSTRAINT `fk_n_shipping_issue_closed_by` FOREIGN KEY (`closed_by`) REFERENCES `user` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_n_shipping_issue_customer` FOREIGN KEY (`id_customer`) REFERENCES `customer` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_n_shipping_issue_decided_by` FOREIGN KEY (`decided_by`) REFERENCES `user` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_n_shipping_issue_difference` FOREIGN KEY (`id_difference`) REFERENCES `document_order_shipping_difference` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_n_shipping_issue_owner` FOREIGN KEY (`id_owner`) REFERENCES `user` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_n_shipping_issue_stop` FOREIGN KEY (`id_delivery_stop`) REFERENCES `n_delivery_stop` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_staff_pay` (
   `id_production_employee` int(11) NOT NULL,
