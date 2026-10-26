@@ -96,6 +96,48 @@ function ep_pwa_tasks_nc(): array
         'releveeLe' => '2026-10-03 14:20', 'recidive' => null, 'suite' => ['jour' => '2026-10-10', 'note' => 4, 'conforme' => true]]], 'indispo' => false];
 }
 
+// Le CA face au budget : le seuil des visites, et Résultat (semaine, mois) — chaque jour vaut 1 000 € d'objectif ;
+// Corbais vend 900 €/jour (−10 %), Gosselies 800 € (−20 %), Halle 1 100 € (+10 %).
+function viSeuils(): array { return ['caOrange' => 10]; }
+$GET_RES = [];
+function ep_exploitation_periode(): array
+{
+    global $GET_RES; $GET_RES[] = $_GET;
+    $vue = (string) $_GET['vue']; $b = tobBornes((string) $_GET['date'])[$vue]; $jusqua = min($b[1], date('Y-m-d'));
+    $mag = [];
+    foreach (['2' => 900.0, '3' => 800.0, '4' => 1100.0] as $id => $ca) {
+        $jours = [];
+        foreach (tobJours($b[0], $b[1]) as $j) { $jours[] = ['date' => $j, 'objectif' => 1000.0] + ($j <= $jusqua ? ['ca' => $ca] : []); }
+        $n = count(tobJours($b[0], $jusqua));
+        $mag[] = ['shopId' => (string) $id, 'jours' => $jours, 'objectif' => 1000.0 * count($jours), 'realise' => $ca * $n, 'attendu' => 1000.0 * $n, 'objectifSource' => 'budget'];
+    }
+    return ['jusqua' => $jusqua, 'ponderation' => ['ok' => true], 'magasins' => $mag];
+}
+
+// La caisse gravée par jour (vpLu : CA de tous les tickets, tickets des clients pro) et le webshop (coCommandes) :
+// Corbais 1 000 € par jour dont 450 € de pro, une commande click & collect de 500 € encaissée en caisse et une
+// livraison de 200 € le 1er de chaque mois ; Gosselies 1 000 € dont 100 € de pro, sans webshop ; Halle, webshop muet.
+function vpLu(int $sid, string $j): ?array
+{
+    $pro = [2 => 450.0, 3 => 100.0, 4 => 200.0][$sid] ?? null;
+    return $pro === null ? null : ['ca' => 1000.0, 't' => [['10:00', 'c1', $pro, 1, 0]], 'sansTva' => ['tickets' => 1, 'ca' => $sid === 3 ? 50.0 : 0.0]];
+}
+function coCommandes(int $sid, string $depuis): ?array
+{
+    global $MOIS;
+    if ($sid === 4) { return null; }
+    if ($sid === 3) { return []; }
+    $out = [];
+    foreach ($MOIS as $m) {
+        $out[] = ['quand' => $m . '-01 11:00', 'canal' => 'cc', 'montant' => 500.0, 'encaissee' => true];
+        $out[] = ['quand' => $m . '-01 12:00', 'canal' => 'liv', 'montant' => 200.0, 'encaissee' => false];
+        $out[] = ['quand' => $m . '-02 09:00', 'canal' => 'compt', 'montant' => 80.0, 'encaissee' => true];
+    }
+    $out[] = ['quand' => date('Y-m-d') . ' 10:00', 'canal' => 'cc', 'montant' => 999.0, 'encaissee' => false];
+    return $out;
+}
+
+require __DIR__ . '/../src/tablette_objectifs.php';
 require __DIR__ . '/../src/visites_kpi.php';
 $MOIS = vkMoisClos(3);
 
@@ -175,6 +217,77 @@ $_GET = ['mois' => '2019-01'];
 verifie('un mois hors de la liste revient au choix d’office', ep_visites_taches('2')['choisi'] === $prec);
 $_GET = [];
 verifie('un magasin inconnu : 404', (ep_visites_taches('77')['error'] ?? '') === 'magasin inconnu');
+
+// --- 4bis. la structure du CA par canal -----------------------------------------------------------
+echo "Structure du CA par canal\n";
+$C = vkCanaux(2, $MOIS);
+$N = $C['jours'];
+verifie('les trois mois clos, tous les jours lus', $C['du'] === $MOIS[0] . '-01' && $C['joursLus'] === $N && $N >= 89 && $C['webshop'] === true);
+$tot = 1000.0 * $N + 600.0;
+verifie('le total : la caisse, plus le webshop qu’elle n’a pas encaissé', $C['magasin']['total'] === round($tot), json_encode($C['magasin']));
+verifie('le comptoir : la caisse moins le pro et les commandes encaissées en caisse', $C['magasin']['ca']['comptoir'] === round(550.0 * $N - 1500.0) && $C['magasin']['ca']['cc'] === 1500.0 && $C['magasin']['ca']['liv'] === 600.0);
+verifie('une précommande comptoir et une commande d’aujourd’hui ne comptent pas au webshop', $C['magasin']['ca']['cc'] === 1500.0);
+verifie('la part B2B : 45 %, au-dessus du plafond de 40 %', $C['magasin']['parts']['b2b'] === round(450.0 * $N / $tot * 100, 1) && $C['b2bStatut'] === 'au-dessus' && $C['b2bMax'] === 40.0, json_encode([$C['magasin']['parts'], $C['b2bStatut']]));
+verifie('le reste du réseau : Gosselies seul (Halle, webshop muet, en sort)', $C['reste']['magasins'] === 1 && $C['reste']['parts']['b2b'] === 10.0 && $C['reste']['parts']['comptoir'] === 90.0, json_encode($C['reste']));
+$C4 = vkCanaux(4, $MOIS);
+verifie('les clients pro sans TVA valide restent au comptoir, chiffrés à part', $C['reste']['proSansTva'] === round(50.0 * $N) && $C['reste']['b2bAvecSansTva'] === 15.0 && $C['reste']['parts']['comptoir'] === 90.0, json_encode($C['reste']));
+verifie('Halle, webshop muet : pas de structure plutôt qu’une structure fausse', $C4['magasin'] === null && $C4['webshop'] === false && str_contains((string) $C4['motif'], 'webshop'));
+$p = vkCanauxParts(['caisse' => 1000.0, 'b2b' => 380.0, 'cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0]);
+verifie('les parts d’un cumul : 62 % comptoir, 38 % B2B', $p['parts']['comptoir'] === 62.0 && $p['parts']['b2b'] === 38.0);
+verifie('un cumul sans CA : null', vkCanauxParts(['caisse' => 0.0, 'b2b' => 0.0, 'cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0]) === null);
+
+// --- 5. le CA face au budget ------------------------------------------------------------------
+echo "CA face au budget\n";
+$e = vbEtendue(['2' => ['realise' => 8800.0, 'attendu' => 10000.0, 'objectif' => 30000.0, 'source' => 'budget'],
+    '3' => ['realise' => 9500.0, 'attendu' => 10000.0], '4' => ['realise' => 11000.0, 'attendu' => 10000.0], '5' => null, '6' => ['realise' => 500.0, 'attendu' => null]], '2', 10.0);
+verifie('réalisé ÷ attendu − 1 : −12 %, il manque 1 200 €', $e['ecartPct'] === -12.0 && $e['manque'] === 1200.0 && $e['atteintePct'] === 29.3, json_encode($e));
+verifie('plus de 10 % sous l’attendu : à justifier', $e['statut'] === 'sous');
+verifie('le rang parmi les magasins qui ont un écart : 3e sur 3', $e['rang'] === 3 && $e['sur'] === 3, json_encode([$e['rang'], $e['sur']]));
+verifie('le réseau : somme des réalisés ÷ somme des attendus', $e['reseau'] === -2.3, (string) $e['reseau']);
+$e10 = vbEtendue(['2' => ['realise' => 9000.0, 'attendu' => 10000.0]], '2', 10.0);
+verifie('à −10 % pile : sous l’attendu, pas encore à justifier (« plus de 10 % »)', $e10['statut'] === 'proche' && $e10['ecartPct'] === -10.0);
+verifie('au-dessus de l’attendu : ok', vbEtendue(['2' => ['realise' => 10000.0, 'attendu' => 10000.0]], '2', 10.0)['statut'] === 'ok');
+$e0 = vbEtendue(['2' => ['realise' => 9000.0, 'attendu' => null]], '2', 10.0);
+verifie('sans attendu : pas d’écart, pas de rang', $e0['statut'] === 'sans' && $e0['ecartPct'] === null && $e0['rang'] === null && $e0['realise'] === 9000.0);
+
+$bud = [7 => ['v' => 30000.0, 'src' => 'budget'], 8 => ['v' => 30000.0, 'src' => 'theorique'], 9 => ['v' => 40000.0, 'src' => 'budget'],
+    10 => ['v' => 40000.0, 'src' => 'budget'], 11 => ['v' => 40000.0, 'src' => 'budget'], 12 => ['v' => 50000.0, 'src' => 'budget']];
+$q = vbCumulMois([10, 11, 12], 10, [], $bud, ['realise' => 20000.0, 'attendu' => 25000.0, 'objectif' => 40000.0]);
+verifie('trimestre au 1er mois : le mois en cours seul ; l’objectif compte les trois mois', $q['realise'] === 20000.0 && $q['attendu'] === 25000.0 && $q['objectif'] === 130000.0, json_encode($q));
+$q3 = vbCumulMois([7, 8, 9], 9, [7 => 33000.0, 8 => 27000.0], $bud, ['realise' => 10000.0, 'attendu' => 20000.0, 'objectif' => 40000.0]);
+verifie('les mois clos entrent en entier face à leur budget', $q3['realise'] === 70000.0 && $q3['attendu'] === 80000.0 && $q3['objectif'] === 100000.0, json_encode($q3));
+verifie('budget validé et CA théorique mêlés : source mixte', $q3['source'] === 'mixte');
+$qs = vbCumulMois([7, 8, 9], 9, [7 => 33000.0, 8 => 27000.0], [8 => $bud[8], 9 => $bud[9]], ['realise' => 10000.0, 'attendu' => 20000.0, 'objectif' => 40000.0]);
+verifie('un mois clos sans budget sort des deux côtés', $qs['realise'] === 37000.0 && $qs['attendu'] === 50000.0 && $qs['sansBudget'] === [7], json_encode($qs));
+$qz = vbCumulMois([7, 8, 9], 9, [7 => 0.0, 8 => 27000.0], $bud, ['realise' => 10000.0, 'attendu' => 20000.0, 'objectif' => 40000.0]);
+verifie('un mois clos sans aucune vente (pas encore ouvert) aussi', $qz['realise'] === 37000.0 && $qz['attendu'] === 50000.0 && $qz['sansBudget'] === [7], json_encode($qz));
+$qi = vbCumulMois([7, 8, 9], 9, [7 => 33000.0], $bud, ['realise' => 10000.0, 'attendu' => 20000.0, 'objectif' => 40000.0]);
+verifie('un mois clos non lu : pas de chiffre plutôt qu’un chiffre faux', $qi['realise'] === null && $qi['attendu'] === null && $qi['incomplet'] === true);
+verifie('les libellés', vbLab('trimestre', '2026-10-25', 10) === '4e trimestre 2026' && vbLab('trimestre', '2026-02-03', 1) === '1er trimestre 2026'
+    && vbLab('mois', '2026-10-25', 10) === 'octobre 2026' && vbLab('semaine', '2026-10-25', 10) === 'semaine du 19/10');
+
+// Le calcul complet, arrêté à la veille : Résultat pour la semaine et le mois, les mois clos au relevé des ventes.
+$hier = date('Y-m-d', strtotime('-1 day')); $mRef = (int) substr($hier, 5, 2); $jRef = (int) substr($hier, 8, 2);
+$LIGNES = ['FROM ceo_shop_month_perf' => array_merge(...array_map(static fn (string $s) => array_map(static fn (int $m) => ['shop_id' => $s, 'month' => $m, 'revenue_budget' => 100000, 'ca_theorique' => null], range(1, 12)), ['2', '3', '4']))];
+$GET_RES = []; $TTL = null;
+$B = ep_visites_budget('2');
+verifie('quatre étendues, arrêtées à la veille', array_keys($B['periodes']) === ['semaine', 'mois', 'trimestre', 'annee'] && $B['arrete'] === $hier);
+verifie('Résultat est lu pour la semaine et le mois', array_column($GET_RES, 'vue') === ['semaine', 'mois'], json_encode($GET_RES));
+verifie('la semaine : −10 %, 2e sur 3 (Halle devant, Gosselies derrière)', $B['periodes']['semaine']['ecartPct'] === -10.0 && $B['periodes']['semaine']['rang'] === 2 && $B['periodes']['semaine']['sur'] === 3, json_encode($B['periodes']['semaine']));
+verifie('le mois : la même lecture coupée à la veille', $B['periodes']['mois']['realise'] === (float) round(900 * $jRef) && $B['periodes']['mois']['attendu'] === (float) round(1000 * $jRef), json_encode($B['periodes']['mois']));
+$attAn = 100000.0 * ($mRef - 1) + 1000.0 * $jRef; $realAn = 120000.0 * ($mRef - 1) + 900.0 * $jRef;
+verifie('l’année : les mois clos (120 k€ pour 100 k€ de budget) et le mois à la veille', $B['periodes']['annee']['realise'] === round($realAn) && $B['periodes']['annee']['attendu'] === round($attAn)
+    && $B['periodes']['annee']['ecartPct'] === round(($realAn / $attAn - 1) * 100, 1), json_encode($B['periodes']['annee']));
+verifie('l’année : seul Corbais a des mois clos lus, il est seul classé', $mRef === 1 || $B['periodes']['annee']['sur'] === 1);
+verifie('aucune étendue à plus de 10 % sous l’attendu', $B['sous'] === [] && $B['seuil'] === 10.0);
+$B3 = ep_visites_budget('3');
+verifie('Gosselies, −20 % sur la semaine et le mois : à justifier', in_array('semaine', $B3['sous'], true) && in_array('mois', $B3['sous'], true) && $B3['periodes']['semaine']['statut'] === 'sous');
+verifie('Gosselies : 47 k€ par mois clos pour 100 k€ de budget, l’année aussi à justifier', $mRef === 1 || in_array('annee', $B3['sous'], true), json_encode($B3['periodes']['annee']));
+$B4 = ep_visites_budget('4');
+verifie('Halle : ses mois clos non lus laissent l’année sans chiffre, et se relisent dans cinq minutes',
+    $mRef <= 2 || ($B4['periodes']['annee']['statut'] === 'sans' && in_array('annee', $B4['manques'], true) && $TTL === 300 && str_contains($B4['periodes']['annee']['motif'], 'pas été lu')),
+    json_encode([$B4['periodes']['annee']['statut'], $B4['manques'], $TTL, $B4['periodes']['annee']['motif'] ?? null]));
+verifie('un magasin inconnu : 404', (ep_visites_budget('77')['error'] ?? '') === 'magasin inconnu');
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

@@ -1071,3 +1071,6 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T14:51:15Z promotions : section au rail (Édition, Tableau d'analyse), dashboard magasin en lecture seule
 2026-10-26T14:58:35Z promotions : menu à part, une entrée repliable au rail
 159 stan wysylek 2026-10-26T15:02:31Z
+2026-10-26T15:02:45Z promotions : menu du rail au même niveau que Produits
+2026-10-26T15:05:47Z visites : CA face au budget, points décidés, QR code de la visite, deux signatures
+2026-10-26T15:26:29Z tablette : structure du CA par canal, part B2B face au plafond de 40 %

@@ -37,7 +37,7 @@ declare(strict_types=1);
  * `ceo_scoring_msp` : passage_le, montrer, suites.
  */
 
-const SU_SCHEMA = 1;
+const SU_SCHEMA = 2;
 const SU_LANGUES = ['fr' => 'Français', 'nl' => 'Nederlands', 'en' => 'English', 'de' => 'Deutsch'];
 const SU_BLOCS = ['sante' => 'Santé du magasin', 'points' => 'Points ouverts', 'taches' => 'Tâches et contrôles photo',
     'scoring' => 'Scoring du trimestre', 'msp' => 'Client mystère et comptoir', 'meteo' => 'Dernière météo du franchisé'];
@@ -58,7 +58,7 @@ function ensureSuivi(): void
     if ((int) setting('suiviSchema', 0) >= SU_SCHEMA) { return; }
     foreach (['rapport_statut VARCHAR(12) NULL', 'rapport MEDIUMTEXT NULL', 'rapport_envoye_le DATETIME NULL', 'rapport_envoye_par VARCHAR(120) NULL',
         'rapport_lu_le DATETIME NULL', 'rapport_relance_le DATETIME NULL', 'prep MEDIUMTEXT NULL', 'prep_envoyee_le DATETIME NULL',
-        'odj_envoye_le DATETIME NULL', 'annoncee TINYINT NULL'] as $c) { suColonne('ceo_visite', $c); }
+        'odj_envoye_le DATETIME NULL', 'annoncee TINYINT NULL', 'budget_ca TEXT NULL'] as $c) { suColonne('ceo_visite', $c); }
     foreach (['passage_le DATE NULL', 'montrer TINYINT NOT NULL DEFAULT 1', 'suites TEXT NULL'] as $c) { suColonne('ceo_scoring_msp', $c); }
     viSettingSet('suiviSchema', SU_SCHEMA);
 }
@@ -316,6 +316,15 @@ function suL(string $k, string $l): string
         'probleme' => ['fr' => 'Le vrai problème', 'nl' => 'Het echte probleem', 'en' => 'The real issue', 'de' => 'Das eigentliche Problem'],
         'reco' => ['fr' => 'Recommandation', 'nl' => 'Aanbeveling', 'en' => 'Recommendation', 'de' => 'Empfehlung'],
         'points' => ['fr' => 'Points à travailler', 'nl' => 'Werkpunten', 'en' => 'Points to work on', 'de' => 'Arbeitspunkte'],
+        'budget' => ['fr' => 'Le chiffre face au budget', 'nl' => 'De omzet tegenover het budget', 'en' => 'Sales against budget', 'de' => 'Umsatz gegenüber dem Budget'],
+        'b_arrete' => ['fr' => 'arrêté au', 'nl' => 'stand op', 'en' => 'as of', 'de' => 'Stand'],
+        'b_pourquoi' => ['fr' => 'Pourquoi', 'nl' => 'Waarom', 'en' => 'Why', 'de' => 'Warum'],
+        'b_pistes' => ['fr' => 'Trois pistes de développement', 'nl' => 'Drie groeipistes', 'en' => 'Three growth leads', 'de' => 'Drei Entwicklungsansätze'],
+        'b_dici' => ['fr' => 'd’ici le', 'nl' => 'tegen', 'en' => 'by', 'de' => 'bis'],
+        'p_semaine' => ['fr' => 'Semaine', 'nl' => 'Week', 'en' => 'Week', 'de' => 'Woche'],
+        'p_mois' => ['fr' => 'Mois', 'nl' => 'Maand', 'en' => 'Month', 'de' => 'Monat'],
+        'p_trimestre' => ['fr' => 'Trimestre', 'nl' => 'Kwartaal', 'en' => 'Quarter', 'de' => 'Quartal'],
+        'p_annee' => ['fr' => 'Année', 'nl' => 'Jaar', 'en' => 'Year', 'de' => 'Jahr'],
         'echeance' => ['fr' => 'échéance', 'nl' => 'deadline', 'en' => 'due', 'de' => 'Frist'],
         'photos' => ['fr' => 'Photos', 'nl' => 'Foto’s', 'en' => 'Photos', 'de' => 'Fotos'],
         'equipe' => ['fr' => 'Énergie de l’équipe', 'nl' => 'Energie van het team', 'en' => 'Team energy', 'de' => 'Energie des Teams'],
@@ -335,6 +344,9 @@ function suL(string $k, string $l): string
         'c_autre' => ['fr' => 'Autre', 'nl' => 'Andere', 'en' => 'Other', 'de' => 'Sonstiges'],
         'piece_pdf' => ['fr' => 'Le rapport est joint en PDF.', 'nl' => 'Het verslag zit als pdf in bijlage.', 'en' => 'The report is attached as a PDF.', 'de' => 'Der Bericht liegt als PDF bei.'],
         'signature' => ['fr' => 'Signature du franchisé', 'nl' => 'Handtekening van de franchisenemer', 'en' => 'Franchisee signature', 'de' => 'Unterschrift des Franchisenehmers'],
+        'signatures' => ['fr' => 'Signatures', 'nl' => 'Handtekeningen', 'en' => 'Signatures', 'de' => 'Unterschriften'],
+        'sig_consultant' => ['fr' => 'Le consultant', 'nl' => 'De consultant', 'en' => 'The consultant', 'de' => 'Der Berater'],
+        'sig_franchise' => ['fr' => 'Le franchisé', 'nl' => 'De franchisenemer', 'en' => 'The franchisee', 'de' => 'Der Franchisenehmer'],
     ];
     return $d[$k][$l] ?? ($d[$k]['fr'] ?? $k);
 }
@@ -767,7 +779,7 @@ function suRapportPhotos(array $v, array $r): array
 {
     $incl = is_array($r['photos'] ?? null) ? $r['photos'] : [];
     $out = []; $n = 0;
-    foreach (Db::rows('SELECT * FROM ceo_visite_photo WHERE visite_id = ? AND genre <> \'signature\' ORDER BY prise_a', [(int) $v['id']]) as $p) {
+    foreach (Db::rows('SELECT * FROM ceo_visite_photo WHERE visite_id = ? AND genre NOT IN (\'signature\', \'sig_consultant\') ORDER BY prise_a', [(int) $v['id']]) as $p) {
         $l = viPhotoLigne($p);
         $l['inclus'] = array_key_exists((string) $p['id'], $incl) ? (bool) $incl[(string) $p['id']] : $n < 6;
         $n++;
@@ -954,6 +966,20 @@ function suRapportHtml(array $v, string $l): string
         $h .= $sec(suL('probleme', $l), ($c['causes'] ? '<div><b>' . $e(implode(', ', array_map(static fn ($k) => suL('c_' . $k, $l), $c['causes']))) . '</b></div>' : '') . ($c['diagnostic'] !== '' ? '<div>' . nl2br($e($c['diagnostic'])) . '</div>' : ''));
     }
     if ($c['reco'] !== '') { $h .= $sec(suL('reco', $l), '<div>' . nl2br($e($c['reco'])) . '</div>'); }
+    // Le CA sous le budget, noté avec le franchisé : les écarts, pourquoi, ses trois pistes et leur échéance.
+    $bc = !empty($v['budget_ca']) ? suJson($v['budget_ca']) : [];
+    if (($bc['pourquoi'] ?? '') !== '' || array_filter((array) ($bc['pistes'] ?? []))) {
+        $ecs = [];
+        foreach ((array) ($bc['ecarts'] ?? []) as $k => $x) { $ecs[] = suL('p_' . $k, $l) . ' ' . ($x > 0 ? '+' : ($x < 0 ? '−' : '')) . str_replace('.', ',', (string) abs((float) $x)) . ' %'; }
+        $corps = $ecs ? '<div><b style="color:#C0182B">' . $e(implode(' · ', $ecs)) . '</b>' . (!empty($bc['arrete']) ? ' <span style="color:#666">· ' . $e(suL('b_arrete', $l)) . ' ' . date('d/m', strtotime((string) $bc['arrete'])) . '</span>' : '') . '</div>' : '';
+        if (($bc['pourquoi'] ?? '') !== '') { $corps .= '<div style="margin-top:4px"><b>' . $e(suL('b_pourquoi', $l)) . '</b> — ' . nl2br($e($bc['pourquoi'])) . '</div>'; }
+        $pi = array_values(array_filter(array_map('strval', (array) ($bc['pistes'] ?? [])), static fn (string $p): bool => trim($p) !== ''));
+        if ($pi) {
+            $corps .= '<div style="margin-top:4px"><b>' . $e(suL('b_pistes', $l)) . '</b>' . (!empty($bc['echeance']) ? ' (' . $e(suL('b_dici', $l)) . ' ' . date('d/m', strtotime((string) $bc['echeance'])) . ')' : '') . '</div><ol style="margin:2px 0 0 18px;padding:0">'
+                . implode('', array_map(static fn (string $p): string => '<li>' . htmlspecialchars($p, ENT_QUOTES, 'UTF-8') . '</li>', $pi)) . '</ol>';
+        }
+        $h .= $sec(suL('budget', $l), $corps);
+    }
     $lp = '';
     foreach ($plans as $p) {
         $lp .= '<tr><td style="padding:4px 8px 4px 0;vertical-align:top"><b style="color:' . ($p['priorite'] === 'P0' ? '#C0182B' : '#222') . '">' . $e($p['priorite']) . '</b></td><td style="padding:4px 8px 4px 0">' . $e($p['titre'])
@@ -970,10 +996,16 @@ function suRapportHtml(array $v, string $l): string
         }
         if ($imgs !== '') { $h .= $sec(suL('photos', $l), '<div>' . $imgs . '</div>'); }
     }
-    $sig = Db::row('SELECT chemin FROM ceo_visite_photo WHERE visite_id = ? AND genre = \'signature\' ORDER BY id DESC LIMIT 1', [(int) $v['id']]);
-    if ($sig && is_file($racine . '/' . $sig['chemin'])) {
-        $h .= $sec(suL('signature', $l), '<img src="data:image/png;base64,' . base64_encode((string) file_get_contents($racine . '/' . $sig['chemin'])) . '" style="height:70px" alt="">');
+    // Les deux signatures de fin de visite, côte à côte : le consultant, le franchisé (une visite d'avant le 26/10/2026 n'a que la seconde).
+    $sigs = '';
+    foreach (['sig_consultant' => 'sig_consultant', 'signature' => 'sig_franchise'] as $genre => $lib) {
+        $sig = Db::row('SELECT chemin FROM ceo_visite_photo WHERE visite_id = ? AND genre = ? ORDER BY id DESC LIMIT 1', [(int) $v['id'], $genre]);
+        if (!$sig || !is_file($racine . '/' . $sig['chemin'])) { continue; }
+        $qui = $genre === 'sig_consultant' ? (string) $v['consultant_nom'] : suCourt($shop);
+        $sigs .= '<td style="padding:0 18px 0 0;vertical-align:top"><div style="color:#666;font-size:11px">' . $e(suL($lib, $l)) . ($qui !== '' ? ' · ' . $e($qui) : '') . '</div>'
+            . '<img src="data:image/png;base64,' . base64_encode((string) file_get_contents($racine . '/' . $sig['chemin'])) . '" style="height:70px" alt=""></td>';
     }
+    if ($sigs !== '') { $h .= $sec(suL('signatures', $l), '<table style="border-collapse:collapse"><tr>' . $sigs . '</tr></table>'); }
     return $h . '</div>';
 }
 

@@ -78,6 +78,35 @@
 .vi.desk .kpi{grid-template-columns:repeat(4,1fr)}
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
 .vi .kc .k{margin-top:4px}
+.vi .or{color:#B26A00}
+.vi .cx-j{position:relative;height:9px;border-radius:5px;background:var(--color-background-secondary);margin-top:6px}
+.vi .cx-j i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#2d7a3e}.vi .cx-j i.dn{background:#C0182B}.vi .cx-j i.or{background:#E0A526}
+.vi .cx-j em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--color-text)}
+.vi .cx-l{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:center;margin-top:6px}
+.vi .cx-b{display:flex;height:16px;border-radius:5px;overflow:hidden;background:var(--color-background-secondary)}.vi .cx-b i{display:block;height:100%}
+.vi .c-comptoir{background:#8D1D2C}.vi .c-b2b{background:#4B74B5}.vi .c-cc{background:#E0A526}.vi .c-liv{background:#2d7a3e}
+.vi .cx-lg{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--color-text-muted)}.vi .cx-lg span{display:inline-flex;align-items:center;gap:5px}.vi .cx-lg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.vi .tb-dem{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.vi .vb{padding:0;overflow:hidden}
+.vi .vb-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;background:var(--color-background-secondary);padding:3px;border-bottom:.5px solid var(--color-border-tertiary)}
+.vi .vb-tabs button{border:none;background:none;border-radius:8px;padding:7px 4px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;font-family:var(--font-ui);color:var(--color-text-muted)}
+.vi .vb-tabs button span{font:600 10.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase}
+.vi .vb-tabs button b{font:700 14px var(--font-ui)}
+.vi .vb-tabs button.on{background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.vi .vb-c{padding:12px 14px 12px}
+.vi .vb-big{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0 8px}
+.vi .vb-big .k{font-size:21px}
+.vi .vb-j{position:relative;height:10px;border-radius:5px;background:var(--color-background-secondary);margin-top:4px}
+.vi .vb-j i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#2d7a3e}.vi .vb-j i.dn{background:#C0182B}.vi .vb-j i.or{background:#E0A526}.vi .vb-j i.mu{background:#a99e92}
+.vi .vb-j em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--color-text)}
+.vi .vb-jl{display:flex;justify-content:space-between;gap:8px;margin-top:4px}
+.vi .vb-f .vb-l{font:600 12.5px var(--font-ui);margin:12px 0 5px}
+.vi .vb-p{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.vi .vb-p .n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--color-primary);color:#fff;font:700 12px var(--font-ui);display:flex;align-items:center;justify-content:center}
+.vi .vb-h{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vi .vb-h button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:10px;padding:10px 12px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;font-family:var(--font-ui);color:var(--color-text)}
+.vi .vb-h button b{font-size:13.5px}.vi .vb-h button span{font-size:11.5px;color:var(--color-text-muted)}
+.vi .vb-h button.on{border-color:var(--color-primary);box-shadow:inset 0 0 0 1.5px var(--color-primary);background:#FBF4F0}
 .vi .tm-t{width:100%;border-collapse:collapse;font-size:12.5px}
 .vi .tm-t th{text-align:left;font:600 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:6px 8px;border-bottom:.5px solid var(--color-border-tertiary)}
 .vi .tm-t td{padding:8px;border-bottom:.5px solid var(--color-border-tertiary);vertical-align:middle}
@@ -137,6 +166,8 @@
 .vi.mob .grid2{grid-template-columns:1fr}
 .vi .plan{border-left:3px solid var(--color-border-secondary);padding-left:10px;margin:8px 0}
 .vi .plan.P0b{border-color:#C0182B}.vi .plan.P1b{border-color:#E0A526}.vi .plan.P2b{border-color:#9a8c6a}
+.vi .sigs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.vi .sigs .cap{display:flex;align-items:center;gap:6px}
+@media (max-width:700px){.vi .sigs{grid-template-columns:1fr}}
 .vi .sig{width:100%;height:170px;background:#fff;border:1.5px dashed var(--color-border-secondary);border-radius:12px;touch-action:none;display:block;cursor:crosshair}
 .vi .pill.bur{background:#F7E4E6;color:#8D1D2C}.vi .pill.int{background:#EEE6FA;color:#5b3d9e}
 .vi .ckb{display:flex;gap:4px;flex-wrap:wrap}.vi .ckb button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;padding:6px 10px;font:600 11.5px var(--font-ui);cursor:pointer;color:var(--color-text)}
@@ -359,6 +390,9 @@
   const fmtDJ = iso => { if (!iso) { return '—'; } const d = new Date(String(iso).slice(0, 10) + 'T12:00:00'); return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()]; };
   const fmtH = dt => dt ? String(dt).slice(11, 16) : '';
   const eur = n => n == null ? '—' : Math.round(n).toLocaleString('fr-BE').replace(/ | /g, ' ') + ' €';
+  // Un écart en % au dixième, signé : « −14,2 % », « +3 % ».
+  const vbPct = e => e == null ? '—' : (e > 0 ? '+' : e < 0 ? '−' : '') + String(Math.abs(Math.round(e * 10) / 10)).replace('.', ',') + ' %';
+  const cap1 = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
   const pct = n => n == null ? '' : (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + ' %';
   const note1 = n => n == null ? '—' : String(Number(n).toFixed(1)).replace('.', ',');
   const nf = n => n == null ? '—' : eur(n).replace(/\s*€$/, '');
@@ -469,7 +503,7 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.AN = {}; this.LV = {}; this.TM = {}; this.tmN = 6; this.TMP = {}; this.tmFile = []; this.tmV = null; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.S = null; this.R = null;
+      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.VB = {}; this.vbVue = null; this.AN = {}; this.LV = {}; this.TM = {}; this.tmN = 6; this.TMP = {}; this.tmFile = []; this.tmV = null; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.S = null; this.R = null;
       this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
@@ -702,7 +736,8 @@
       this.rendre();
     }
     /**
-     * KPI et santé du magasin, les leviers (26/10/2026) : trois lectures, chacune rendue dès qu'elle arrive — le CA par
+     * KPI et santé du magasin, les leviers (26/10/2026) : quatre lectures, chacune rendue dès qu'elle arrive — le CA face
+     * au budget sur la semaine, le mois, le trimestre et l'année (/visites/budget, gardé une demi-heure), le CA par
      * ETP et la structure des ventes (/visites/kpi, gardés une heure), l'année mois par mois face à l'an passé et les
      * six leviers du mois aux routes du dashboard magasin (/ventes/semaines, /leviers/magasins, même cache que lui).
      * Lues une fois par boutique et par session, dès l'ouverture de la fiche ou du contrôle : avant d'arriver à
@@ -713,8 +748,9 @@
       this.chargerCartes();
       const an = Number(auj().slice(0, 4)), ym = auj().slice(0, 7);
       const lire = (path, cle, poser) => this.lire(path, cle).then(d => poser(d), () => poser({ erreur: true })).then(() => this.rendre());
-      this.KS[shop] = { chargement: true }; this.AN[shop] = { chargement: true };
+      this.KS[shop] = { chargement: true }; this.AN[shop] = { chargement: true }; this.VB[shop] = { chargement: true };
       lire('/visites/kpi/' + encodeURIComponent(shop), 'kpi:' + shop, d => { this.KS[shop] = d; });
+      lire('/visites/budget/' + encodeURIComponent(shop), 'vb:' + shop, d => { this.VB[shop] = d; });
       lire('/ventes/semaines?shop=' + encodeURIComponent(shop) + '&vue=annee&date=' + an + '-12-31&articles=1&_cache=900', 'an12:' + shop + ':' + an, d => { this.AN[shop] = d; });
       if (!this.LV[ym] || this.LV[ym].erreur) {
         this.LV[ym] = { chargement: true };
@@ -1021,7 +1057,7 @@
         + (this.voir ? `<div class="voir" data-a="fermer-voir"><img src="${esc(this.voir.src)}" alt=""><div class="txt">${esc(this.voir.txt)}</div></div>` : '')
         + (this.cqV ? this.cqLoupe() : '') + (this.tmV ? this.tmLoupe() : '');
       vi.querySelectorAll('.db-cqpiste').forEach((e, i) => { if (pistes[i]) { e.scrollLeft = pistes[i]; } });
-      const sc = vi.querySelector('#vi-sig'); if (sc && this.form.sig) { const im = new Image(); im.onload = () => sc.getContext('2d').drawImage(im, 0, 0); im.src = this.form.sig; }
+      vi.querySelectorAll('canvas[data-sig]').forEach(sc => { const d = this.form[sc.dataset.sig]; if (d) { const im = new Image(); im.onload = () => sc.getContext('2d').drawImage(im, 0, 0); im.src = d; } });
       if (focus) { const el = this.host.querySelector(`[data-f="${focus.f.replace(/"/g, '\\"')}"]`); if (el) { el.focus(); try { if (focus.pos != null && el.setSelectionRange) { el.setSelectionRange(focus.pos, focus.pos); } } catch (e) { /* select */ } } }
     }
     onglets() {
@@ -1095,7 +1131,106 @@
       return cap('CA par ETP') + (lu ? this.caEtpHtml(K.caEtp) : attente)
         + cap('L’année face à l’an passé') + this.anneeCarteHtml(shop)
         + (lu ? cap('Structure des ventes face au réseau') + this.structureHtml(K.structure, shop)
+          + cap('Structure du CA : comptoir, B2B, click & collect, livraison bureau') + this.canauxHtml(K.canaux)
           + `<div class="xs mu" style="margin:2px 2px 0">Lu le ${fmtD(K.lu)} à ${esc(String(K.lu || '').slice(11, 16))}${(K.manques || []).length ? ' · relu dans quelques minutes : ' + esc(K.manques.join(', ')) + ' incomplet' : ''}.</div>` : '');
+    }
+    /**
+     * Le CA face au budget (26/10/2026) : quatre onglets — la semaine, le mois, le trimestre, l'année, tous arrêtés à
+     * la veille — le réalisé face à l'attendu à date, l'écart, ce qui manque, la place dans le réseau. Une étendue à
+     * plus de 10 % sous l'attendu (le réglage caOrange) ouvre le formulaire : le pourquoi, noté par le consultant avec
+     * le franchisé, ses trois pistes de développement et l'horizon (le mois prochain ou la fin du trimestre).
+     */
+    budgetHtml(v) {
+      const shop = v.shop; this.chargerSante(shop);
+      const B = this.VB[shop];
+      const cap = `<div class="cap">Le CA face au budget ${this.src('api')}</div>`;
+      if (!B || B.chargement) { return cap + '<div class="card sm mu">Lecture du CA et du budget de la semaine, du mois, du trimestre et de l’année…</div>'; }
+      if (B.indispo) { return cap + `<div class="card sm mu">${esc(B.motif || 'indisponible')}</div>`; }
+      if (B.erreur || B.error || !B.periodes) { return cap + `<div class="card sm mu">Le CA face au budget n’a pas pu être lu. <button class="chip" data-a="sante-relire" data-v="${esc(shop)}">Relire</button></div>`; }
+      const P = B.periodes; const ORD = ['semaine', 'mois', 'trimestre', 'annee']; const NOM = { semaine: 'Semaine', mois: 'Mois', trimestre: 'Trimestre', annee: 'Année' };
+      const vue = P[this.vbVue] ? this.vbVue : ((B.sous || [])[0] || 'mois');
+      const cls = st => st === 'sous' ? 'dn' : st === 'proche' ? 'or' : st === 'ok' ? 'up' : 'mu';
+      const tabs = `<div class="vb-tabs" role="tablist">${ORD.map(k => { const x = P[k] || {}; return `<button role="tab" aria-selected="${k === vue}" class="${k === vue ? 'on' : ''}" data-a="vb-vue" data-v="${k}"><span>${NOM[k]}</span><b class="${cls(x.statut)}">${x.ecartPct != null ? vbPct(x.ecartPct) : '—'}</b></button>`; }).join('')}</div>`;
+      const x = P[vue];
+      const SRC = { budget: 'budget validé', theorique: 'CA théorique de l’étude', mixte: 'budget validé et CA théorique' };
+      const arr = B.arrete ? fmtDJ(B.arrete) : '';
+      let corps;
+      if (x.statut === 'sans') {
+        corps = `<div class="row"><b>${esc(cap1(x.lab))}</b><span class="xs mu">arrêté au ${esc(arr)}</span></div><div class="sm mu" style="margin-top:6px">Pas d’écart à montrer : ${esc(x.motif || 'pas de budget')}.${x.realise != null ? ' Réalisé ' + eur(x.realise) + '.' : ''}</div>`;
+      } else {
+        const obj = x.objectif || 0;
+        const rempl = obj > 0 ? Math.max(1, Math.min(100, Math.round(x.realise / obj * 100))) : 0;
+        const repere = obj > 0 ? Math.max(0, Math.min(100, Math.round(x.attendu / obj * 100))) : null;
+        corps = `<div class="row"><b>${esc(cap1(x.lab))}</b><span class="xs mu">arrêté au ${esc(arr)}, jour clos</span><span class="sp"></span>${x.rang ? `<span class="pill">${x.rang}${x.rang === 1 ? 'er' : 'e'} sur ${x.sur} magasins</span>` : ''}</div>
+          <div class="vb-big"><div><div class="xs mu">Réalisé</div><div class="k">${eur(x.realise)}</div></div><div><div class="xs mu">Attendu à date</div><div class="k mu">${eur(x.attendu)}</div></div>
+            <div><div class="xs mu">Écart</div><div class="k ${cls(x.statut)}">${vbPct(x.ecartPct)}</div><div class="xs ${cls(x.statut)}">${x.manque > 0 ? 'il manque ' + eur(x.manque) : 'd’avance de ' + eur(-x.manque)}</div></div></div>
+          ${obj > 0 ? `<div class="vb-j" title="réalisé ${eur(x.realise)} sur un objectif de ${eur(obj)}"><i class="${cls(x.statut)}" style="width:${rempl}%"></i>${repere != null ? `<em style="left:${repere}%"></em>` : ''}</div>
+          <div class="xs mu vb-jl"><span>${x.atteintePct != null ? String(x.atteintePct).replace('.', ',') + ' % de l’objectif' : ''}</span><span>┃ l’attendu à date</span><span>objectif ${eur(obj)}</span></div>` : ''}
+          <div class="xs mu" style="margin-top:6px">${SRC[x.source] ? esc(SRC[x.source]) : 'budget'}${x.reseau != null ? ' · le réseau ' + vbPct(x.reseau) : ''}${(x.sansBudget || []).length ? ' · ' + x.sansBudget.length + ' mois sans budget ou sans vente hors comparaison' : ''}</div>`;
+      }
+      return cap + `<div class="card vb">${tabs}<div class="vb-c">${corps}</div></div>` + this.vbFormHtml(v, B)
+        + `<div class="xs mu" style="margin:2px 2px 10px">${esc(B.source || '')}${(B.manques || []).length ? ' · relu dans quelques minutes : ' + esc(B.manques.join(', ')) : ''}.</div>`;
+    }
+    /** 'manque' : une étendue à plus du seuil sous le budget et le formulaire incomplet ; 'fait' : complet ; null : rien à justifier (ou pas encore lu). */
+    vbExige(v) {
+      const B = this.VB[v.shop];
+      if (!B || !B.periodes || !(B.sous || []).length) { return null; }
+      const bc = v.budgetCa;
+      return bc && bc.pourquoi && (bc.pistes || []).filter(p => p && p.trim()).length === 3 && bc.horizon ? 'fait' : 'manque';
+    }
+    /** L'horizon des pistes : la fin du mois prochain, ou la fin du trimestre en cours. */
+    vbHorizons() {
+      const t = auj(); const a = Number(t.slice(0, 4)); const m = Number(t.slice(5, 7));
+      const fin = mm => new Date(Date.UTC(a, mm, 0)).toISOString().slice(0, 10);
+      return { mois: { lab: 'Le mois prochain', echeance: fin(m + 1) }, trimestre: { lab: 'La fin du trimestre', echeance: fin(Math.ceil(m / 3) * 3) } };
+    }
+    vbFormHtml(v, B) {
+      if (!(B.sous || []).length) { return ''; }
+      const f = this.form; const bc = v.budgetCa || {};
+      if (!f.vb) { f.vb = { pourquoi: bc.pourquoi || '', pistes: [0, 1, 2].map(i => (bc.pistes || [])[i] || ''), horizon: bc.horizon || '' }; }
+      const vb = f.vb; const H = this.vbHorizons();
+      const NOM = { semaine: 'la semaine', mois: 'le mois', trimestre: 'le trimestre', annee: 'l’année' };
+      const ou = B.sous.map(k => NOM[k] + ' ' + vbPct(B.periodes[k].ecartPct)).join(', ');
+      const ok = this.vbExige(v) === 'fait';
+      const nP = vb.pistes.filter(p => p.trim()).length;
+      const manque = [!vb.pourquoi.trim() && 'le pourquoi', nP < 3 && (3 - nP) + ' piste' + (3 - nP > 1 ? 's' : ''), !vb.horizon && 'l’horizon'].filter(Boolean);
+      return `<div class="card vb-f ${ok ? '' : 'alerte'}">
+        <div class="row"><span class="feu ${ok ? 'vert' : 'rouge'}"></span><b>CA à plus de ${String(B.seuil).replace('.', ',')} % sous le budget</b>${ok ? '<span class="sp"></span><span class="pill st-val">noté ✓</span>' : ''}</div>
+        <div class="sm" style="margin-top:4px">Sur ${esc(ou)}. À remplir ensemble : le consultant note pourquoi avec le franchisé ; le franchisé donne trois pistes de développement.</div>
+        <div class="vb-l">Pourquoi ? <span class="xs mu">noté par le consultant avec le franchisé</span></div>
+        <textarea data-f="vb|pourquoi" placeholder="Ce qui explique l’écart : trafic, panier, ruptures, équipe, travaux, météo…">${esc(vb.pourquoi)}</textarea>
+        <div class="vb-l">Trois pistes de développement <span class="xs mu">données par le franchisé</span></div>
+        ${[0, 1, 2].map(i => `<div class="vb-p"><span class="n">${i + 1}</span><input type="text" data-f="vb|p|${i}" value="${esc(vb.pistes[i])}" maxlength="190" placeholder="${['Ex. : relancer la carte de fidélité en caisse', 'Ex. : vitrine traiteur pleine dès 11 h', 'Ex. : une dégustation le samedi matin'][i]}"></div>`).join('')}
+        <div class="vb-l">À mener pour…</div>
+        <div class="vb-h">${['mois', 'trimestre'].map(k => `<button class="${vb.horizon === k ? 'on' : ''}" data-a="vb-h" data-v="${k}"><b>${H[k].lab}</b><span>d’ici le ${fmtD(H[k].echeance)}</span></button>`).join('')}</div>
+        <div class="btns"><button class="btn p w" data-a="vb-save" data-v="${esc(v.id)}">💾 Enregistrer · les pistes passent dans « Points à travailler »</button></div>
+        <div class="xs ${manque.length ? 'dn' : 'mu'}" style="margin-top:6px">${manque.length ? 'À compléter : ' + manque.join(', ') + '.' : bc.le ? 'Enregistré le ' + fmtD(bc.le) + ' à ' + esc(String(bc.le).slice(11, 16)) + '.' : 'Prêt à enregistrer.'}</div>
+      </div>`;
+    }
+    /** Le formulaire posé sur la visite (PUT /visites/{id}, champ budgetCa), et ses pistes proposées au plan d'action. */
+    vbSauver(vid) {
+      const v = this.visite(vid); const vb = this.form.vb; const B = v && this.VB[v.shop];
+      if (!v || !vb || !B || !B.periodes) { return; }
+      const H = this.vbHorizons(); const ecarts = {};
+      (B.sous || []).forEach(k => { ecarts[k] = B.periodes[k].ecartPct; });
+      const bc = { pourquoi: vb.pourquoi.trim(), pistes: vb.pistes.map(p => p.trim()), horizon: vb.horizon || null, echeance: vb.horizon ? H[vb.horizon].echeance : null, ecarts, arrete: B.arrete || null, le: maintenant().replace('T', ' ') };
+      this.majVisite(vid, { budgetCa: bc });
+      this.vbPistesDansPlan(bc);
+      const complet = this.vbExige(v) === 'fait';
+      this.dire(complet ? 'Enregistré : les trois pistes sont proposées dans « Points à travailler », à mener d’ici le ' + fmtD(bc.echeance) + '.' : 'Enregistré — le formulaire reste à compléter.');
+      this.rendre();
+    }
+    /** Les pistes du franchisé dans le plan d'action proposé : une action par piste, assignée au franchisé, à l'échéance choisie. */
+    vbPistesDansPlan(bc) {
+      const f = this.form; if (!f.pa || !bc) { return; }
+      const NOM = { semaine: 'semaine', mois: 'mois', trimestre: 'trimestre', annee: 'année' };
+      const ou = Object.keys(bc.ecarts || {}).map(k => NOM[k] + ' ' + vbPct(bc.ecarts[k])).join(', ');
+      (bc.pistes || []).forEach((t, i) => {
+        const ref = 'budget:' + (i + 1); const j = f.pa.findIndex(a => a.ref === ref);
+        if (!t || !t.trim()) { if (j >= 0) { f.pa.splice(j, 1); } return; }
+        const a = { cid: j >= 0 ? f.pa[j].cid : uuid(), ref, titre: t.trim(), detail: 'Piste de développement du franchisé — CA sous le budget' + (ou ? ' (' + ou + ')' : ''), priorite: 'P1', assigne: 'franchise', echeance: bc.echeance || plusJours(auj(), 30), garde: true };
+        if (j >= 0) { f.pa[j] = a; } else { f.pa.push(a); }
+      });
     }
     /** La carte « l'année, mois par mois, face à l'an passé » du dashboard magasin (cartes-magasin.js), telle quelle. */
     anneeCarteHtml(shop) {
@@ -1161,6 +1296,29 @@
           <div class="kb"><i style="width:${Math.round((c.part || 0) / max * 100)}%"></i></div><div class="kb r"><i style="width:${Math.round((c.partReste || 0) / max * 100)}%"></i></div></div>`).join('')}
         ${cats.length > 8 ? `<div class="act"><button class="chip" data-a="drop" data-v="${esc(cle)}">${tout ? 'Les 8 premières ▴' : 'Les ' + cats.length + ' catégories ▾'}</button></div>` : ''}
         <div class="xs mu" style="margin-top:6px">Part de chaque catégorie dans le CA : le magasin (barre pleine) face au reste du réseau, ${S.autres} magasin${S.autres > 1 ? 's' : ''} (barre grise) · du ${fmtD(S.du)} au ${fmtD(S.au)}${S.moisLus < S.moisDemandes ? ' (' + S.moisLus + ' mois lus sur ' + S.moisDemandes + ')' : ''} · CA du magasin ${eur(S.ca)}, du reste ${eur(S.caReste)}</div></div>`;
+    }
+    /**
+     * La structure du CA par canal (26/10/2026) : sur les trois derniers mois clos, le comptoir, le B2B (face à son
+     * plafond, le réglage b2bMax — 40 %), le click & collect et la livraison bureau, face au reste du réseau.
+     */
+    canauxHtml(C) {
+      if (!C) { return '<div class="card sm mu">La structure du CA par canal se calcule : elle arrive à la prochaine lecture.</div>'; }
+      if (!C.magasin) { return `<div class="card sm mu">Structure du CA par canal indisponible : ${esc(C.motif || 'rien à lire')}.</div>`; }
+      const M = C.magasin, R = C.reste; const K = ['comptoir', 'b2b', 'cc', 'liv'];
+      const NOM = { comptoir: 'Comptoir', b2b: 'B2B · clients pro', cc: 'Click & collect', liv: 'Livraison bureau' };
+      const p1 = x => x == null ? '—' : String(x).replace('.', ',') + ' %';
+      const b2b = M.parts.b2b; const max = C.b2bMax || 40;
+      const st = C.b2bStatut === 'au-dessus' ? ['dn', 'au-dessus du plafond'] : C.b2bStatut === 'proche' ? ['or', 'proche du plafond'] : ['up', 'sous le plafond'];
+      const barre = (P, lab) => `<div class="cx-l"><span class="xs mu">${lab}</span><div class="cx-b">${K.map(k => P.parts[k] > 0 ? `<i class="c-${k}" style="width:${P.parts[k]}%" title="${esc(NOM[k])} ${p1(P.parts[k])}"></i>` : '').join('')}</div></div>`;
+      return `<div class="card kc">
+        <div class="row" style="align-items:baseline;gap:10px"><span class="sm">Part B2B</span><span class="k ${st[0]}">${p1(b2b)}</span><span class="xs ${st[0]}">${st[1]} · ${p1(max)} au plus</span><span class="sp"></span>${R ? `<span class="xs mu">réseau ${p1(R.parts.b2b)}</span>` : ''}</div>
+        <div class="cx-j"><i class="${st[0]}" style="width:${Math.min(100, b2b)}%"></i><em style="left:${max}%"></em></div>
+        <div class="xs mu" style="margin:3px 0 10px">┃ le plafond de ${p1(max)} du CA</div>
+        ${M.proSansTva > 0 ? `<div class="card sm ${M.b2bAvecSansTva > max ? 'alerte' : ''}" style="margin:0 0 10px;padding:8px 10px">Clients marqués pro sans TVA valide : <b>${eur(M.proSansTva)}</b>, comptés au comptoir. S’ils comptaient, la part B2B serait de <b class="${M.b2bAvecSansTva > max ? 'dn' : ''}">${p1(M.b2bAvecSansTva)}</b>${M.b2bAvecSansTva > max ? ' — au-dessus du plafond' : ''}. <span class="mu">Faire compléter leur fiche au panel.</span></div>` : ''}
+        ${barre(M, 'Le magasin')}${R ? barre(R, 'Le reste du réseau · ' + R.magasins + ' magasin' + (R.magasins > 1 ? 's' : '')) : ''}
+        <div class="cx-lg">${K.map(k => `<span><i class="c-${k}"></i>${esc(NOM[k])}</span>`).join('')}</div>
+        <div class="ksc" style="margin-top:6px"><table class="tbl"><tr><th>Canal</th><th>CA</th><th>Part</th><th>Réseau</th><th>Écart</th></tr>${K.map(k => `<tr><td>${esc(NOM[k])}</td><td>${eur(M.ca[k])}</td><td><b class="${k === 'b2b' && b2b > max ? 'dn' : ''}">${p1(M.parts[k])}</b></td><td class="mu">${R ? p1(R.parts[k]) : '—'}</td><td>${R ? (k === 'b2b' ? this.ecartPill(Math.round((M.parts[k] - R.parts[k]) * 10) / 10, true).replace(/ec (up|dn)/, 'ec') : this.ecartPill(Math.round((M.parts[k] - R.parts[k]) * 10) / 10, true)) : ''}</td></tr>`).join('')}<tr><td><b>Total</b></td><td><b>${eur(M.total)}</b></td><td></td><td></td><td></td></tr></table></div>
+        <div class="xs mu" style="margin-top:4px">Du ${fmtD(C.du)} au ${fmtD(C.au)}${C.joursLus < C.jours ? ' · ' + C.joursLus + ' jours de caisse lus sur ' + C.jours : ''} · ${esc(C.source || '')}</div></div>`;
     }
     planLigne(p, actions) {
       const st = ST_PLAN[p.statut] || [p.statut, ''];
@@ -1344,6 +1502,7 @@
       const f = this.form;
       if (f.pa) { return; }
       f.pa = finie ? [] : (ecarts || this.ecartsDe(v)).map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true }));
+      if (!finie && v.budgetCa) { this.vbPistesDansPlan(v.budgetCa); }
       f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.meteo = v.meteo || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || '';
     }
     /** La météo du franchisé, en fin de contrôle : cinq temps, un toucher. */
@@ -1401,15 +1560,19 @@
       const B = this.B[v.shop];
       const etapes = [];
       etapes.push({ ic: 'photo', court: 'Photo du jour', titre: 'Photo du jour', etat: pj ? pj + ' / 3' : 'à prendre', fait: pj >= 3, html: () => this.photosJourHtml(v.shop, v) });
-      // Le dossier que le bureau a préparé et envoyé sur la tablette (suivi des franchisés).
+      // Le dossier que le bureau a préparé et envoyé sur la tablette (suivi des franchisés) : une étape seulement
+      // s'il est arrivé — sans dossier, rien à lire, l'étape n'apparaît pas (26/10/2026, demande de Sam).
       const P = v.prep;
-      etapes.push({ ic: 'dossier', court: 'Dossier', titre: 'Dossier du bureau', etat: P ? (P.points.length ? P.points.length + ' point' + (P.points.length > 1 ? 's' : '') + ' demandé' + (P.points.length > 1 ? 's' : '') : 'lu') : 'pas encore préparé', fait: !P || !!this.ouvert['dos:' + v.id], lu: 'dos:' + v.id, html: () => this.dossierHtml(v) });
+      if (P) { etapes.push({ ic: 'dossier', court: 'Dossier', titre: 'Dossier du bureau', etat: P.points.length ? P.points.length + ' point' + (P.points.length > 1 ? 's' : '') + ' demandé' + (P.points.length > 1 ? 's' : '') : 'lu', fait: !!this.ouvert['dos:' + v.id], lu: 'dos:' + v.id, html: () => this.dossierHtml(v) }); }
       // Ce que l'équipe a rendu aujourd'hui : la bande du dashboard, la note
       // rapide sous chaque photo. Faite quand plus rien n'attend une note.
       const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
       etapes.push({ ic: 'controles', court: 'Contrôles photo', titre: 'Les contrôles en photo', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
         fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) + this.tachesMoisHtml(v.shop) });
-      etapes.push({ ic: 'chiffres', court: 'KPI', chiffres: true, titre: 'KPI et santé du magasin', etat: 'à lire', fait: !!this.ouvert['lu:' + v.id], lu: 'lu:' + v.id, html: () => this.kpis(b) + this.santeHtml(v.shop) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
+      // Le CA à plus de 10 % sous le budget : l'étape reste ouverte tant que le pourquoi et les trois pistes manquent.
+      const vbx = this.vbExige(v);
+      etapes.push({ ic: 'chiffres', court: 'KPI', chiffres: true, titre: 'KPI et santé du magasin', etat: vbx === 'manque' ? 'budget à justifier' : vbx === 'fait' ? 'budget justifié' : 'à lire', ko: vbx === 'manque' ? '!' : 0,
+        fait: !!this.ouvert['lu:' + v.id] && vbx !== 'manque', lu: 'lu:' + v.id, html: () => this.kpis(b) + this.budgetHtml(v) + this.santeHtml(v.shop) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
       this.checklistDe(v).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ ic: m.id, court: m.nom, module: true, ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
       // La checklist du consultant, lue dans le panel (l'ancienne fiche franchisé en mode tablette) : un module de plus.
       if (this.role === 'consultant') { this.chargerCk(v.shop); const ck = this.ckEtat(); etapes.push({ ic: 'liste', court: 'Checklist', titre: 'Checklist du consultant', etat: ck.etat, fait: ck.fait, html: () => this.ckHtml(v) }); }
@@ -1420,7 +1583,7 @@
       // La météo du franchisé : le temps en un toucher (gardé sur la visite), puis le détail facultatif (moral, envie, demandes).
       const mt = meteoDe(f.meteo);
       etapes.push({ ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne'), fait: !!(mt || f.mt_ok), html: () => this.meteoHtml(f) + this.meteoDetailHtml(v) });
-      etapes.push({ ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig ? 'signée' : 'signature, envoi au bureau', fait: false, html: () => this.finHtml(v) });
+      etapes.push({ ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig && f.sigC ? 'signée des deux' : f.sig || f.sigC ? '1 signature sur 2' : 'signatures, envoi au bureau', fait: false, html: () => this.finHtml(v) });
       const cle = 'et:' + v.id;
       let cur = this.ouvert[cle]; if (cur == null) { cur = etapes.findIndex(e => !e.fait); if (cur < 0) { cur = etapes.length - 1; } }
       cur = Math.max(0, Math.min(etapes.length - 1, cur));
@@ -1527,7 +1690,7 @@
       const nav = `<div class="tb-nav"><button class="tb-b" data-a="etape" data-v="${cur - 1}" ${prec ? '' : 'disabled'}>‹ ${esc(prec ? prec.court : 'Début')}</button>${suiv ? `<button class="tb-b p" data-a="etape" data-v="${cur + 1}">${esc(suiv.court)} ›</button>` : ''}</div>`;
       const barre = `<div class="tb-bar" style="grid-template-columns:repeat(${n},minmax(0,1fr))">` + etapes.map((x, i) => `<button data-a="etape" data-v="${i}" class="${i === cur ? 'on' : x.fait ? 'fait' : ''}"><span class="ic"><svg viewBox="0 0 24 24">${TAB_IC[x.ic] || TAB_IC.liste}</svg>${x.fait && i !== cur ? '<span class="ok">✓</span>' : ''}${x.ko ? `<span class="ko">${x.ko}</span>` : ''}</span><span class="lb">${esc(x.court)}</span><span class="es">${esc(x.etat)}</span></button>`).join('') + '</div>';
       return this.tabTop({ titre: 'Contrôle · ' + b.court, sous: esc(fmtDJ(v.prevu_le) + (v.commence_a ? ' · commencé à ' + fmtH(v.commence_a) : '') + ' · ' + this.typeNom(v.type)), retour: true, droite: prog })
-        + `<div class="tb-main tb-ctl"><div class="tb-h"><div><div class="cap" style="margin:0">Étape ${cur + 1} sur ${n}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
+        + `<div class="tb-main tb-ctl">${['planifiee', 'confirmee'].includes(v.statut) ? `<div class="card alerte tb-dem"><div><b>Visite pas encore démarrée</b><div class="sm mu">prévue ${esc(fmtDJ(v.prevu_le))} à ${esc(v.debut_h || '')} — ouverte depuis le cockpit ou son QR code</div></div><span style="flex:1"></span><button class="btn p" data-a="demarrer" data-v="${esc(v.id)}">▶ Démarrer la visite</button></div>` : ''}<div class="tb-h"><div><div class="cap" style="margin:0">Étape ${cur + 1} sur ${n}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
         + `<div class="tb-step">${e.html()}</div>${nav}</div>` + barre;
     }
     v_historique() {
@@ -1663,7 +1826,7 @@
       return this.hd('Réglages visites', 'checklist, seuils du feu, fréquences, horloge') + moi + push
         + '<div class="card sm mu">La checklist ci-dessous est celle de la visite régulière.</div>'
         + `<div class="cap">Checklist (${f.checklist.reduce((a, m) => a + m.points.length, 0)} points)</div>${f.checklist.map((m, mi) => `<div class="card"><div class="row"><b>${esc(m.nom)}</b><span class="sp"></span><button class="chip" data-a="cl-add" data-v="${mi}">+ point</button></div>${m.points.map((p, pi) => `<div class="row" style="margin-top:6px"><input type="text" data-f="cl|${mi}|${pi}|libelle" value="${esc(p.libelle)}" style="flex:1"><button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|photo" title="photo attendue">📷</button>${m.id === 'planogramme' ? `<button class="chip ${p.pct ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|pct" title="saisie en %">%</button>` : ''}<button class="chip ko" data-a="cl-del" data-v="${mi}|${pi}">×</button></div>`).join('')}</div>`).join('')}
-          <div class="cap">Feu tricolore</div><div class="card"><div class="l2">${num('p0Jours', 'P0 ouvert plus de (jours) → rouge')}${num('escaladeJours', 'Échéance dépassée de (jours) → escalade auto')}${num('googleCible', 'Cible Google')}${num('googleRouge', 'Sous la cible de (points) → rouge')}${num('planoOrange', 'Planogramme sous (%) → orange')}${num('planoRouge', 'Planogramme sous (%) → rouge')}${num('mspAlerte', 'Rubrique MSP sous (/20) → rouge')}${num('caOrange', 'CA sous l’objectif de (%) → orange')}</div><div class="act"><button class="chip ${f.seuils.caSeul ? 'on' : ''}" data-a="se-tog" data-v="caSeul">Le CA seul peut colorer le feu</button></div></div>
+          <div class="cap">Feu tricolore</div><div class="card"><div class="l2">${num('p0Jours', 'P0 ouvert plus de (jours) → rouge')}${num('escaladeJours', 'Échéance dépassée de (jours) → escalade auto')}${num('googleCible', 'Cible Google')}${num('googleRouge', 'Sous la cible de (points) → rouge')}${num('planoOrange', 'Planogramme sous (%) → orange')}${num('planoRouge', 'Planogramme sous (%) → rouge')}${num('mspAlerte', 'Rubrique MSP sous (/20) → rouge')}${num('caOrange', 'CA sous l’objectif de (%) → orange, et à justifier à la visite')}${num('b2bMax', 'Part B2B du CA au plus (%)')}</div><div class="act"><button class="chip ${f.seuils.caSeul ? 'on' : ''}" data-a="se-tog" data-v="caSeul">Le CA seul peut colorer le feu</button></div></div>
           <div class="cap">Fréquence de visite (jours)</div><div class="card"><div class="l2">${D.boutiques.map(b => `<div class="champ"><label>${esc(b.court)}</label><input type="number" data-f="fq|${esc(b.id)}" value="${esc(f.frequence[b.id] || '')}" placeholder="${esc(s.visiteJours || 7)}"></div>`).join('')}</div></div>
           <div class="cap">Horloge et mails</div><div class="card"><div class="l2"><div class="champ"><label>Rappel J-1 à</label><input type="time" data-f="se|rappelJ1" value="${esc(f.seuils.rappelJ1)}"></div><div class="champ"><label>Rappel jour J à</label><input type="time" data-f="se|rappelJour" value="${esc(f.seuils.rappelJour)}"></div><div class="champ"><label>Synthèse à</label><input type="time" data-f="se|syntheseHeure" value="${esc(f.seuils.syntheseHeure)}"></div><div class="champ"><label>Adresse de la synthèse</label><input type="email" data-f="se|mailSynthese" value="${esc(f.seuils.mailSynthese || '')}" placeholder="—"></div></div>
             <div class="act"><button class="chip ${f.seuils.mails ? 'on' : ''}" data-a="se-tog" data-v="mails">Les mails partent (rappels aux consultants, synthèse)${R && !R.smtp ? ' — SMTP non configuré' : ''}</button></div>
@@ -1698,6 +1861,9 @@
       if (a === 'tm-nav') { if (this.tmV) { this.tmV = { shop: this.tmV.shop, i: Math.max(0, this.tmV.i + Number(v)) }; } this.rendre(); return; }
       if (a === 'tm-n') { this.tmN = Number(v) === 12 ? 12 : 6; this.rendre(); return; }
       if (a === 'sante-relire') { delete this.KS[v]; this.chargerSante(v); this.rendre(); return; }
+      if (a === 'vb-vue') { this.vbVue = v; this.rendre(); return; }
+      if (a === 'vb-h') { const f = this.form; if (f.vb) { f.vb.horizon = f.vb.horizon === v ? '' : v; } this.rendre(); return; }
+      if (a === 'vb-save') { this.vbSauver(v); return; }
       if (a === 'sync') { this.rejouer(); return; }
       if (a === 'recharger') { this.recharger(); return; }
       if (a === 'synthese') { this.S = null; this.rendre(); return; }
@@ -1723,7 +1889,7 @@
       if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), 3) }); this.rendre(); return; }
       if (a === 'terminer') { this.terminer(v); return; }
       if (a === 'meteo') { this.meteo(v); this.rendre(); return; }
-      if (a === 'sig-effacer') { this.form.sig = null; this.rendre(); return; }
+      if (a === 'sig-effacer') { this.form[v === 'sigC' ? 'sigC' : 'sig'] = null; this.rendre(); return; }
       if (a === 'ck') { this.ckF[parts[0]] = Object.assign(this.ckF[parts[0]] || {}, { etat: (this.ckF[parts[0]] || {}).etat === parts[1] ? '' : parts[1] }); this.rendre(); return; }
       if (a === 'ck-save') { this.ckSauver(v); return; }
       if (a === 'statut') { this.statut(parts[0], parts[1]); return; }
@@ -1741,6 +1907,7 @@
       const el = e.target; const f = el.dataset && el.dataset.f; if (!f) { return; }
       const parts = f.split('|');
       if (parts[0] === 'form') { this.form[parts[1]] = el.value; return; }
+      if (parts[0] === 'vb') { const vb = this.form.vb; if (vb) { if (parts[1] === 'p') { vb.pistes[Number(parts[2])] = el.value; } else { vb[parts[1]] = el.value; } } return; }
       if (parts[0] === 'pa') { if (this.form.pa && this.form.pa[Number(parts[1])]) { this.form.pa[Number(parts[1])][parts[2]] = el.value; } return; }
       if (parts[0] === 'ckc') { this.ckF[parts[1]] = Object.assign(this.ckF[parts[1]] || {}, { commentaire: el.value }); return; }
       if (parts[0] === 'se') { this.form.seuils[parts[1]] = el.type === 'number' ? Number(el.value) : el.value; return; }
@@ -1817,12 +1984,23 @@
     terminer(vid) {
       const v = this.visite(vid); if (!v) { return; }
       const f = this.form;
+      if (this.vbExige(v) === 'manque') {
+        const E = this._etapes; if (E && E.chiffres >= 0) { this.ouvert[E.cle] = E.chiffres; }
+        this.dire('Le CA est à plus de ' + String(this.VB[v.shop].seuil).replace('.', ',') + ' % sous le budget : notez d’abord pourquoi, les trois pistes du franchisé et l’horizon.');
+        this.rendre(); return;
+      }
       const plans = (f.pa || []).filter(a => a.titre && a.titre.trim()).map(a => ({ client_id: a.cid, shop: v.shop, visite_id: v.id, ref: a.ref || null, titre: a.titre.trim(), detail: a.detail || '', priorite: a.priorite, assigne: a.assigne, echeance: a.echeance || null, campagne_id: Number(a.campagne_id) > 0 ? Number(a.campagne_id) : null, statut: 'propose' }));
       if (plans.length) {
         plans.forEach(p => this.D.plans.push(Object.assign({ id: p.client_id, cree_par: this.qui(), cree_le: maintenant(), maj_le: maintenant(), retard: 0, age: 0, attente: true }, p)));
         this.ecrire({ method: 'POST', path: '/plans', body: { plans, qui: this.qui() }, apres: 'plans' });
       }
       if (!f.mt_ok) { this.meteo(vid, true); }
+      // Les deux signatures : le franchisé (genre « signature », comme avant) et le consultant (« sig_consultant »).
+      if (f.sigC) {
+        const cidC = uuid();
+        this.D.photos.unshift({ client_id: cidC, visite_id: v.id, shop: v.shop, genre: 'sig_consultant', data: f.sigC, prise_a: maintenant(), attente: true });
+        this.ecrire({ method: 'POST', path: '/visites/photos', body: { client_id: cidC, shop: v.shop, visite_id: v.id, genre: 'sig_consultant', data: f.sigC, prise_a: maintenant(), par: this.role }, apres: 'photo' });
+      }
       if (f.sig) {
         const cid = uuid();
         this.D.photos.unshift({ client_id: cid, visite_id: v.id, shop: v.shop, genre: 'signature', data: f.sig, prise_a: maintenant(), attente: true });
@@ -1850,14 +2028,14 @@
     /* --- la signature au doigt, sur la dernière étape -------------------------------- */
     ecouterSignature(host) {
       host.addEventListener('pointerdown', e => {
-        const c = e.target; if (!c || c.id !== 'vi-sig') { return; }
+        const c = e.target; if (!c || !c.dataset || !c.dataset.sig) { return; }
         e.preventDefault(); if (c.setPointerCapture) { try { c.setPointerCapture(e.pointerId); } catch (x) { /* rien */ } }
         const r = c.getBoundingClientRect(); const x = c.getContext('2d');
-        this._sig = { c, x, r }; x.lineWidth = 2.6; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#222';
+        this._sig = { c, x, r, k: c.dataset.sig }; x.lineWidth = 2.6; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#222';
         x.beginPath(); x.moveTo((e.clientX - r.left) * c.width / r.width, (e.clientY - r.top) * c.height / r.height);
       });
       host.addEventListener('pointermove', e => { const s = this._sig; if (!s) { return; } e.preventDefault(); s.x.lineTo((e.clientX - s.r.left) * s.c.width / s.r.width, (e.clientY - s.r.top) * s.c.height / s.r.height); s.x.stroke(); });
-      const fin = () => { const s = this._sig; if (!s) { return; } this._sig = null; this.form.sig = s.c.toDataURL('image/png'); };
+      const fin = () => { const s = this._sig; if (!s) { return; } this._sig = null; this.form[s.k] = s.c.toDataURL('image/png'); this.rendre(); };
       host.addEventListener('pointerup', fin); host.addEventListener('pointercancel', fin);
     }
     /* --- le dossier du bureau, la checklist du consultant, la météo, la fin ----------- */
@@ -1919,8 +2097,10 @@
       const pa = (this.form.pa || []).filter(a => a.titre && a.titre.trim());
       const h = this.D.delaiRapport;
       return `<div class="stat"><div><div class="xs mu">Checklist</div><div class="k" style="margin-top:4px">${faits} / ${total}</div><div class="xs mu">${ko} non conforme${ko > 1 ? 's' : ''}</div></div><div><div class="xs mu">Points proposés</div><div class="k" style="margin-top:4px">${pa.length}</div><div class="xs mu">${pa.filter(a => a.priorite === 'P0').length} P0</div></div><div><div class="xs mu">Photos</div><div class="k" style="margin-top:4px">${this.photosDe(v.id).length}</div><div class="xs mu">${this.file.filter(o => o.apres === 'photo').length} en attente d’envoi</div></div></div>
-        <div class="cap">Le franchisé a vu le résumé · signature <button class="chip" data-a="sig-effacer" style="margin-left:6px">effacer</button></div>
-        <canvas id="vi-sig" class="sig" width="640" height="180" aria-label="Signature du franchisé"></canvas>
+        ${this.vbExige(v) === 'manque' ? `<div class="card alerte sm"><b class="dn">CA à plus de ${String(this.VB[v.shop].seuil).replace('.', ',')} % sous le budget</b> — le pourquoi, les trois pistes du franchisé et l’horizon restent à noter à l’étape KPI. <button class="chip" data-a="etape" data-v="${this._etapes ? this._etapes.chiffres : 0}">Y aller</button></div>` : ''}
+        <div class="sigs">${[['sigC', 'Le consultant', v.consultantNom || this.consultantNom(this.moi) || ''], ['sig', 'Le franchisé a vu le résumé', (this.boutique(v.shop) || {}).court || '']].map(([k, lab, qui]) => `<div class="sg">
+          <div class="cap">${lab}${qui ? ' · ' + esc(qui) : ''} ${this.form[k] ? '<span class="pill st-val">signé</span>' : ''}<button class="chip" data-a="sig-effacer" data-v="${k}" style="margin-left:auto">effacer</button></div>
+          <canvas data-sig="${k}" class="sig" width="640" height="180" aria-label="${k === 'sig' ? 'Signature du franchisé' : 'Signature du consultant'}"></canvas></div>`).join('')}</div>
         <div class="card sm mu" style="margin-top:8px">Terminer n’envoie rien au franchisé : le brouillon du rapport part au bureau, qui le relit et l’envoie${h ? ' sous ' + h + ' h' : ''}. Les points proposés ne s’ouvrent chez lui qu’à ce moment-là.</div>
         <div class="btns"><button class="btn p w" data-a="terminer" data-v="${esc(v.id)}">💾 Terminer · le brouillon part au bureau</button></div>`;
     }

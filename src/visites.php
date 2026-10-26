@@ -29,7 +29,8 @@ const VI_ASSIGNES       = ['franchise', 'equipe', 'consultant', 'admin'];
 // « propose » : un point écrit sur la tablette, qui attend l'envoi du rapport au bureau ;
 // « interne » : un point que le bureau a gardé pour lui à l'envoi (suivi.php).
 const VI_STATUTS_PLAN   = ['ouvert', 'attente', 'valide', 'reprendre', 'ferme', 'escalade', 'propose', 'interne'];
-const VI_GENRES_PHOTO   = ['jour_facade', 'jour_interieur', 'jour_arriere', 'point', 'avant', 'apres', 'correction', 'msp', 'signature'];
+// Deux signatures en fin de visite (26/10/2026) : « signature » le franchisé, « sig_consultant » le consultant.
+const VI_GENRES_PHOTO   = ['jour_facade', 'jour_interieur', 'jour_arriere', 'point', 'avant', 'apres', 'correction', 'msp', 'signature', 'sig_consultant'];
 const VI_ROLES          = ['consultant', 'franchise', 'admin'];
 
 /**
@@ -286,6 +287,7 @@ function viSeuilsDefaut(): array
         'caOrange' => 10,      // CA de la semaine sous l'objectif de x % : orange…
         'caSeul' => false,     // …seulement si ce réglage est vrai (sinon le CA colore la carte)
         'mspAlerte' => 12,     // une rubrique MSP sous ce score /20 : rouge
+        'b2bMax' => 40,        // la part B2B du CA au plus (%), lue à la visite (structure du CA par canal)
         'visiteJours' => 7,    // fréquence de visite par défaut
         'rappelJ1' => '18:00',
         'rappelJour' => '07:00',
@@ -433,7 +435,30 @@ function viVisiteLigne(array $v): array
         'annoncee' => function_exists('suAnnoncee') ? suAnnoncee($v) : true,
         'prep' => !empty($v['prep_envoyee_le']) && function_exists('suPrep') ? suPrep($v) : null, 'prepEnvoyeeLe' => $v['prep_envoyee_le'] ?? null,
         'odjEnvoyeLe' => $v['odj_envoye_le'] ?? null, 'rapportStatut' => $v['rapport_statut'] ?? null,
-        'rapportEnvoyeLe' => $v['rapport_envoye_le'] ?? null, 'rapportLuLe' => $v['rapport_lu_le'] ?? null];
+        'rapportEnvoyeLe' => $v['rapport_envoye_le'] ?? null, 'rapportLuLe' => $v['rapport_lu_le'] ?? null,
+        // Le CA sous le budget, noté avec le franchisé : pourquoi, trois pistes, l'horizon (visites_kpi.php, /visites/budget).
+        'budgetCa' => !empty($v['budget_ca']) ? (json_decode((string) $v['budget_ca'], true) ?: null) : null];
+}
+
+/**
+ * Le CA sous le budget, noté pendant la visite (26/10/2026) : le pourquoi (le consultant avec le franchisé), les trois
+ * pistes de développement du franchisé, l'horizon (le mois prochain ou la fin du trimestre) et son échéance, les
+ * écarts au moment de la note. null efface.
+ */
+function viBudgetCa(mixed $x, string $qui): ?array
+{
+    if (!is_array($x)) { return null; }
+    $pistes = array_pad(array_slice(array_map(static fn ($p): string => mb_substr(trim((string) $p), 0, 190), array_values((array) ($x['pistes'] ?? []))), 0, 3), 3, '');
+    $ecarts = [];
+    foreach ((array) ($x['ecarts'] ?? []) as $k => $e) {
+        if (in_array($k, ['semaine', 'mois', 'trimestre', 'annee'], true) && is_numeric($e)) { $ecarts[$k] = round((float) $e, 1); }
+    }
+    $out = ['pourquoi' => mb_substr(trim((string) ($x['pourquoi'] ?? '')), 0, 2000), 'pistes' => $pistes,
+        'horizon' => in_array($x['horizon'] ?? null, ['mois', 'trimestre'], true) ? (string) $x['horizon'] : null,
+        'echeance' => viDate($x['echeance'] ?? null), 'ecarts' => $ecarts, 'arrete' => viDate($x['arrete'] ?? null),
+        'qui' => mb_substr($qui, 0, 120), 'le' => date('Y-m-d H:i:s')];
+    $out['complet'] = $out['pourquoi'] !== '' && count(array_filter($pistes, static fn (string $p): bool => $p !== '')) === 3 && $out['horizon'] !== null;
+    return $out;
 }
 
 function viPointLigne(array $p): array
@@ -794,7 +819,7 @@ function viPourFranchise(array $e, array $visites, array $points, array $photos,
         return $v;
     }, $visites)));
     $points = array_values(array_filter($points, static fn ($p) => !in_array($p['visite_id'], $caches, true)));
-    $photos = array_values(array_filter($photos, static fn ($p) => $p['genre'] !== 'signature' && !in_array($p['visite_id'], $caches, true)));
+    $photos = array_values(array_filter($photos, static fn ($p) => !in_array($p['genre'], ['signature', 'sig_consultant'], true) && !in_array($p['visite_id'], $caches, true)));
     $taches = [];
     foreach ($e['boutiques'] as &$b) {
         $b['prochaineVisite'] = $b['prochaineAnnoncee'] ?? null;
@@ -926,6 +951,7 @@ function wr_visites_put(string $id): array
     if (isset($b['consultant'])) { $set[] = 'consultant_id = ?'; $args[] = mb_substr((string) $b['consultant'], 0, 32); $set[] = 'consultant_nom = ?'; $args[] = viConsultantNom((string) $b['consultant']); }
     if (isset($b['type']) && function_exists('vcTypeCode')) { if (function_exists('ensureVisitesCadre')) { ensureVisitesCadre(); } $set[] = 'type_code = ?'; $args[] = vcTypeCode($b['type']); }
     if (array_key_exists('annoncee', $b)) { $set[] = 'annoncee = ?'; $args[] = $b['annoncee'] === null || $b['annoncee'] === '' ? null : ((bool) $b['annoncee'] ? 1 : 0); }
+    if (array_key_exists('budgetCa', $b)) { $bc = viBudgetCa($b['budgetCa'], viQui($b)); $set[] = 'budget_ca = ?'; $args[] = $bc !== null ? json_encode($bc, JSON_UNESCAPED_UNICODE) : null; }
     if (!$set) { return ['ok' => true, 'visite' => viVisiteLigne($v)]; }
     $set[] = 'maj_le = ?'; $args[] = date('Y-m-d H:i:s'); $args[] = (int) $v['id'];
     Db::exec('UPDATE ceo_visite SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
