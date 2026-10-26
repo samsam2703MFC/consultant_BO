@@ -1,5 +1,12 @@
 # Maquettes « Quelle promotion, dans quel magasin, quel % du CA général » (26/10/2026)
 
+> **Construit le 26/10/2026 : A avec le détail de C** (« A, avec le détail de C »). Le Tableau d'analyse (`#/promotions`)
+> s'ouvre sur « Qui utilise quoi » : la matrice de A (mesure : % du CA du magasin, % du CA général, €, fois ; 7 ou 30
+> jours ; marque et magasins), puis la carte de C pour chaque magasin, dans l'ordre des colonnes ; un clic sur un magasin
+> y mène, « Ses promotions dans la liste » ouvre la liste filtrée. La liste d'avant reste l'onglet « Toutes les
+> promotions (liste) ». `public/assets/js/promotions-vals.js` (`valsMatrice`), `promotions-tpl.js` (`tplMatrice`),
+> `promotions.css`. Aucune route ne change (`parMagasin` et `ca` de `GET /promotions/reseau` suffisent).
+
 Les quatre formes de `docs/maquettes/promotions-analyse` sont écartées (« aucun, recommence »). La demande : « je veux
 savoir quelle promotion est utilisée dans quel magasin et quel est le % sur le CA général ».
 
