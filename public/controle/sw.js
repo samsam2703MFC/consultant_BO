@@ -3,10 +3,8 @@
  * (visites.js), jamais ici ; l'API n'est jamais mise en cache par le worker. Portée : /controle/. */
 'use strict';
 
-const VERSION = 'controle-v2';
-// Le graphique de l'année (étape KPI) : les modules de Résultat › Année, chargés par visites.js, et leur style.
-const COQUILLE = ['./', 'index.html', 'manifest.json', '../assets/js/visites.js', '../assets/ds/global.css', '../assets/css/controles-photo.css', '../assets/img/logo.png',
-  '../assets/css/clients-annee.css', '../assets/js/clients-annee-vals.js', '../assets/js/clients-annee-tpl.js', '../assets/js/api.js'];
+const VERSION = 'controle-v1';
+const COQUILLE = ['./', 'index.html', 'manifest.json', '../assets/js/visites.js', '../assets/ds/global.css', '../assets/css/controles-photo.css', '../assets/img/logo.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(COQUILLE).catch(() => null)).then(() => self.skipWaiting()));

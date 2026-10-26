@@ -158,7 +158,6 @@ $A4 = vkAnnee(4, $MOIS);
 verifie('Halle n’a pas de N-1 : pas de cumul, le motif dit pourquoi', $A4['cumul'] === null && str_contains((string) $A4['n1Motif'], 'première fois'));
 verifie('Halle garde sa série de l’année', $A4['mois'][0]['clients'] === 700 && $A4['mois'][0]['clientsN1'] === null);
 $A9 = vkAnnee(9, $MOIS);
-verifie('la réponse de l’année part entière pour le graphique de Résultat › Année', count($A['ventes']['magasins']) === 3 && count($A['ventes']['periodes']) === 4);
 verifie('un magasin absent de l’année le dit', $A9['cumul'] === null && $A9['n1Motif'] === 'aucune vente lue cette année');
 
 // --- 4. la structure des ventes face au reste du réseau ---------------------------------------

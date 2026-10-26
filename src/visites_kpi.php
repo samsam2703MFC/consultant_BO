@@ -162,8 +162,6 @@ function vkAnnee(int $sid, array $mois): array
     return ['annee' => $annee, 'du' => $annee . '-01-01', 'au' => date('Y-m-d'), 'mois' => $series,
         'cumul' => $cI['n'] > 0 ? $trois($cI) : null, 'reseau' => $cR['n'] > 0 ? $trois($cR) + ['magasins' => count($magasinsR)] : null,
         'n1Motif' => $ici['n1Motif'] ?? ($ici === null ? 'aucune vente lue cette année' : null),
-        // La réponse entière, pour le graphique de Résultat › Année que la tablette reprend tel quel (clients-annee-vals.js).
-        'ventes' => ['vue' => $r['vue'] ?? 'annee', 'periodes' => $r['periodes'] ?? [], 'magasins' => $r['magasins'] ?? [], 'source' => $r['source'] ?? ''],
         'source' => (string) ($r['source'] ?? '') . ' · articles : relevé des ventes du panel (pièces vendues)'];
 }
 
