@@ -33,7 +33,9 @@ export function tplSvTableau(c, x){
   const onglets = `<div class="sva-onglets">${s.onglets.map(o => `<button ${x.A(o.ouvrir)} class="sva-og${o.on ? ' on' : ''}">${o.pt ? `<i class="sva-pt ${esc(o.pt)}"></i>` : ''}${o.nom ? esc(o.nom) + (o.court ? ' · ' : '') : ''}<b>${esc(o.court)}</b>${o.quoi ? ` <em class="${o.urgent ? 'att' : ''}">${esc(o.quoi)}</em>` : ''}${o.echeance ? ` <em class="${o.urgent ? 'att' : ''}">${esc(o.echeance)}</em>` : ''}</button>`).join('')}
     ${s.autres ? sel(x, esc, s.setAutre, s.autres, 'height:34px;margin-bottom:2px;max-width:220px') : ''}
     <button ${x.A(s.creer.ouvrir)} class="sva-og plus${s.creer.on ? ' on' : ''}">${ic('plus')}Créer une visite</button>
+    ${s.ongletPoints ? `<button ${x.A(s.ongletPoints.ouvrir)} class="sva-og pts${s.ongletPoints.on ? ' on' : ''}">${s.ongletPoints.retard ? '<i class="sva-pt ko"></i>' : ''}Points décidés <b>${esc(s.ongletPoints.n)}</b>${s.ongletPoints.retard ? ` <em class="att">${esc(s.ongletPoints.retard)} en retard</em>` : ''}</button>` : ''}
     <span class="sva-og-aide">Chaque visite qui attend quelque chose de vous garde son onglet.</span></div>`;
+  if (s.pointsDecides) { return `<div data-screen="suivi-assistant">${tete}${msgDe(esc, s.msg)}${onglets}<div class="sva-panneau sva-pts">${tplPointsDecides(s.pointsDecides, x)}</div>${apercu}</div>`; }
   let gauche;
   if (s.indispo) { gauche = panne(esc, s.indispo); }
   else if (s.pasChargement) { gauche = `<div class="mko-mu" style="padding:20px">${esc(s.pasChargement)}</div>`; }
@@ -49,6 +51,19 @@ export function tplSvTableau(c, x){
     }).join('');
   }
   return `<div data-screen="suivi-assistant">${tete}${msgDe(esc, s.msg)}${onglets}<div class="sva-panneau"><div class="sva-gauche">${gauche}</div><div class="sva-droite">${s.fiche ? ficheHtml(s.fiche, x) : ''}</div></div>${apercu}</div>`;
+}
+
+/* L'onglet des points décidés : filtres, puis un tableau par échéance. */
+function tplPointsDecides(P, x){
+  const { esc } = x;
+  const filtres = `<div class="sva-ptf">${sel(x, esc, P.setShop, P.magasins, 'height:34px;max-width:260px')}<span class="sva-seg">${P.filtres.map(f => `<button ${x.A(f.choisir)} class="${f.on ? 'on lu' : ''}">${esc(f.nom)}</button>`).join('')}</span></div>`;
+  if (!P.groupes.length) { return filtres + `<div class="mko-mu" style="padding:18px 2px">${P.total ? 'Aucun point pour ce filtre.' : 'Aucun point ouvert : tout ce qui a été décidé est fait.'}</div>`; }
+  return filtres + P.groupes.map(g => `<div class="sva-sect"><h3 class="${esc(g.cls)}">${esc(g.nom)}</h3><span class="mini">${g.lignes.length}</span></div>
+    <div style="overflow-x:auto"><table class="mko-tab sv-tab sva-ptab"><thead><tr><th>Prio</th><th>Le point décidé</th><th>Magasin</th><th>Qui le fait</th><th>Pour quand</th><th>Statut</th></tr></thead>
+    <tbody>${g.lignes.map(l => `<tr${l.ouvrir ? ' class="clic" ' + x.A(l.ouvrir) + ' title="Ouvrir la visite"' : ''}><td><span class="gc-st ${l.prio === 'P0' ? 'p0' : ''}">${esc(l.prio)}</span></td>
+      <td><b>${esc(l.titre)}</b>${l.piste ? ' <span class="gc-pill info">piste CA</span>' : ''}${l.detail ? `<small>${esc(l.detail)}</small>` : ''}</td>
+      <td>${esc(l.court)}<small>${esc(l.origine)}</small></td><td>${esc(l.qui)}</td>
+      <td><b>${esc(l.echeance)}</b><small class="${l.delaiKo ? 'ko' : ''}">${esc(l.delai)}</small></td><td><span class="gc-pill ${esc(l.statutCls)}">${esc(l.statut)}</span></td></tr>`).join('')}</tbody></table></div>`).join('');
 }
 
 /* L'étape ouverte. */
@@ -110,8 +125,12 @@ function ficheHtml(F, x){
     odj = `<div class="sva-fsec"><h4>L’ordre du jour, tel qu’il partira<span class="lang">${esc(F.odj.langue || '')}</span></h4><div class="sva-mail"><b>${esc(F.odj.sujet)}</b><pre>${t}</pre></div></div>`;
   }
   const suite = F.suite.length ? `<div class="sva-fsec"><h4>Et ensuite</h4>${F.suite.map(l => `<div class="sva-tl${l.fait ? ' fait' : ''}${l.cur ? ' cur' : ''}"><i></i><b>${esc(l.quand)}</b><span>${esc(l.quoi)}</span></div>`).join('')}</div>` : '';
+  const Q = F.qr;
+  const qr = Q ? `<div class="sva-fsec"><h4>Sur la tablette · visite n° ${esc(Q.id)}</h4><div class="sva-qr"><div class="sva-qrc">${Q.svg || '<span class="mko-mu">QR…</span>'}</div>
+      <div><b>Scannez avec la tablette</b><small>${Q.faite ? 'elle ouvre cette visite : la review et le plan d’action.' : 'elle ouvre directement le contrôle de cette visite, sans chercher le magasin.'}</small>
+      <button ${x.A(Q.copier)} class="sva-lien" title="${esc(Q.lien)}">Copier le lien</button></div></div></div>` : '';
   return `<div class="sva-fiche"><div class="sva-fh"><div class="sva-fk">Fiche de la visite<em>se remplit à chaque étape</em></div><div class="sva-ft">${esc(F.titre)}</div><div class="sva-fs">${esc(F.sous)}</div>${puces ? `<div class="sva-fb">${puces}</div>` : ''}</div>
-    ${dest}${odj}${suite}<div class="sva-fpied">${ic('ok')}${esc(F.pied)}</div></div>`;
+    ${qr}${dest}${odj}${suite}<div class="sva-fpied">${ic('ok')}${esc(F.pied)}</div></div>`;
 }
 
 /* L'étape 5 : le brouillon de la tablette, relu au bureau, puis envoyé. */
@@ -134,13 +153,18 @@ function tplRapport(r, x){
       : '<div class="mko-mu">Aucun point proposé par la tablette.</div>');
   const photos = carte('Les photos', 'cochées = dans le rapport',
     r.photos.length ? `<div class="sv-photos">${r.photos.map(p => `<button ${x.A(p.basculer)} class="sv-ph${p.inclus ? ' on' : ''}"${p.basculer ? '' : ' disabled'}><img src="${esc(p.src)}" alt="" loading="lazy"><span>${esc(p.genre)}</span></button>`).join('')}</div>` : '<div class="mko-mu">Aucune photo prise pendant la visite.</div>');
+  const B = r.budget;
+  const budget = B ? carte('Le chiffre face au budget', esc(B.ecarts + (B.arrete ? ' · ' + B.arrete : '')),
+    `${B.pourquoi ? `<div class="f sv-f1"><label>Pourquoi · noté avec le franchisé</label><div class="sv-com">${esc(B.pourquoi)}</div></div>` : ''}
+    ${B.pistes.length ? `<div class="f sv-f1"><label>Ses trois pistes de développement · ${esc(B.horizon)} ${esc(B.echeance)}</label><ol class="sv-ul">${B.pistes.map(p => `<li>${esc(p)}</li>`).join('')}</ol></div>` : ''}
+    ${B.complet ? '' : '<div class="gc-pill att">incomplet à la tablette</div>'}<div class="mko-mu">Dans le rapport tel quel ; les pistes sont aussi parmi les points proposés.</div>`) : '';
   const ck = carte('La checklist', esc(r.checklist), r.ecarts.length ? `<ul class="sv-ul">${r.ecarts.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : '<div class="mko-mu">Aucun écart relevé.</div>');
   const envoi = carte('L’envoi', esc(r.statut),
     `<div class="sv-kv"><span>À</span><b class="${r.a ? '' : 'ko'}">${esc(r.a || 'aucune adresse — réglez-la dans Qui fait quoi')}</b><span>Langue</span><b>${esc(r.langue)}</b><span>En copie</span><b>${esc(r.copies)}</b><span>Envoie</span><b>${esc(r.envoie || '—')}</b></div>
     ${r.delai ? `<div class="${r.delaiKo ? 'ko' : 'att'}" style="font-weight:600;font-size:12.5px;margin-top:8px">${esc(r.delai)}</div>` : ''}
     ${!r.smtp ? '<div class="gc-pill att" style="margin-top:8px">SMTP non configuré : le rapport ira sur la page du franchisé, sans courriel</div>' : ''}
     ${r.dernier ? `<div class="mko-mu" style="margin-top:8px">${esc(r.dernier)}</div>` : ''}`);
-  return `<div class="sva-rap"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${photos}${ck}</div></div>
+  return `<div class="sva-rap"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${budget}${photos}${ck}</div></div>
     <div class="sva-act"><button ${x.A(r.voir)} class="cx-btn">Voir le rapport</button>
       ${r.envoye ? `<button ${x.A(r.renvoyer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Renvoyer le courriel</button>`
         : `<button ${x.A(r.envoyer)} class="cx-btn prim sva-lg" ${r.busy ? 'disabled' : ''}>${r.busy ? 'Envoi…' : 'Envoyer au franchisé →'}</button><button ${x.A(r.enregistrer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Enregistrer</button>`}</div>`;

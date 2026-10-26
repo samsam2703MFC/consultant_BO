@@ -1440,6 +1440,15 @@ tr.clan-sel td:first-child{box-shadow:inset 3px 0 0 var(--color-primary);color:v
 .sva-tl{display:grid;grid-template-columns:14px auto minmax(0,1fr);gap:8px;align-items:center;padding:3px 0;font-size:11.5px}
 .sva-tl i{width:11px;height:11px;border-radius:50%;border:1.5px solid #B8B0A8;background:#fff}.sva-tl.fait i{background:var(--sva-ok);border-color:var(--sva-ok)}.sva-tl.cur i{background:var(--color-primary);border-color:var(--color-primary)}
 .sva-tl b{font-weight:600;white-space:nowrap}.sva-tl span{color:#555}
+.sva-qr{display:grid;grid-template-columns:112px minmax(0,1fr);gap:12px;align-items:center}
+.sva-qrc{width:112px;height:112px;border-radius:8px;background:#fff;border:.5px solid var(--sva-trait2);display:flex;align-items:center;justify-content:center;overflow:hidden}.sva-qrc svg{width:100%;height:100%;display:block}
+.sva-qr b{font-size:12.5px;font-weight:600;display:block}.sva-qr small{display:block;font-size:11.5px;color:#555;line-height:1.4;margin:2px 0 6px}
+.sva-og.pts{margin-left:10px}
+.sva-pts{display:block;padding:18px 22px 22px}
+.sva-ptf{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sva-sect h3.ko{color:#C0182B}.sva-sect h3.att{color:var(--sva-att)}
+.sva-ptab td small{display:block;font-size:11px;color:var(--color-text-muted);margin-top:2px}.sva-ptab td small.ko{color:#C0182B;font-weight:600}
+.sva-ptab tr.clic{cursor:pointer}.sva-ptab tr.clic:hover td{background:#FBF7F2}
 .sva-fpied{display:flex;align-items:center;gap:8px;padding:11px 18px;background:#F0F7F2;color:var(--sva-ok);font-size:11.5px;font-weight:600;border-top:.5px solid var(--sva-trait)}
 @media (max-width:1100px){.sv-pipe{grid-template-columns:repeat(2,minmax(0,1fr))}.sv-cote,.sv-tab2,.sv-mod{grid-template-columns:1fr}.sv-liste{position:static;max-height:none;flex-direction:row;overflow-x:auto}.sv-liste .sv-carte{min-width:220px}.gc-form.sv-f3,.gc-form.sv-f4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.sv-corrs{grid-template-columns:1fr}.sv-pipe{grid-template-columns:1fr}.sv-hd-d{margin-left:0}.sv-av{grid-template-columns:1fr}.sv-plan-d{padding-left:0;flex-wrap:wrap}}

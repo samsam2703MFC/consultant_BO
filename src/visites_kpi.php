@@ -234,3 +234,215 @@ function ep_visites_taches(string $shop): array
         'source' => 'tâches : relevé quotidien du panel (journées révolues, le mois en cours jusqu’à hier) · notes : contrôle qualité des tâches'];
 }
 
+
+/* --- Le CA face au budget : semaine, mois, trimestre, année (26/10/2026, demande de Sam) ------------------ */
+
+/*
+ * GET /visites/budget/{shop} — où le magasin se place face à son budget, sur quatre étendues qui finissent toutes à
+ * la VEILLE (le dernier jour clos : une journée en cours, à moitié vendue, mentirait en rouge chaque matin) :
+ *
+ *  - la SEMAINE et le MOIS sont ceux de Résultat (ep_exploitation_periode, la même lecture que la tablette des
+ *    vendeuses) : le CA TTC encaissé jour par jour, et l'ATTENDU = la part du budget des jours écoulés, le budget du
+ *    mois étant réparti par la pondération réseau sur les jours où le magasin ouvre ;
+ *  - le TRIMESTRE et l'ANNÉE ajoutent au mois en cours les mois clos de l'étendue : leur CA (relevé des ventes du
+ *    panel, pvKpisMois) face à leur budget entier. Un mois clos sans budget, ou sans aucune vente (pas encore ouvert),
+ *    sort des deux côtés de la comparaison (`sansBudget`, ses numéros de mois) : il ne gonfle ni le réalisé ni l'attendu ;
+ *  - le budget d'un mois est le budget validé (ceo_shop_month_perf.revenue_budget), à défaut le CA théorique de
+ *    l'étude — `source` dit lequel (budget, theorique, mixte).
+ *
+ * L'écart = réalisé ÷ attendu − 1. Sous le seuil (le réglage `caOrange` des visites, 10 % par défaut), le
+ * consultant note avec le franchisé pourquoi, et le franchisé donne trois pistes de développement (PUT /visites/{id},
+ * champ `budgetCa`). Le rang compare l'écart des magasins du réseau sur la même étendue.
+ */
+
+const VB_TTL_S = 1800;
+const VB_PERIME_S = 21600;
+const VB_ETENDUES = ['semaine', 'mois', 'trimestre', 'annee'];
+
+/** GET /visites/budget/{shop}[?rafraichir=1] — gardé une demi-heure, cinq minutes si une lecture a manqué. */
+function ep_visites_budget(string $shop): array
+{
+    if (!isset(viMagasins()[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['shop' => $shop, 'indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
+    @set_time_limit(120);
+    return rcServi('vkBud:' . $shop, static fn (): array => vbCalcul((int) $shop, date('Y-m-d', strtotime('-1 day'))),
+        static fn (array $x): int => empty($x['manques']) ? VB_TTL_S : 300, !empty($_GET['rafraichir']), '/visites/budget/' . $shop, VB_PERIME_S);
+}
+
+/** Les quatre étendues pour un magasin, arrêtées à `$ref` (la veille). */
+function vbCalcul(int $sid, string $ref): array
+{
+    $seuil = (float) (viSeuils()['caOrange'] ?? 10);
+    $shops = array_map('strval', array_keys(viMagasins()));
+    $annee = (int) substr($ref, 0, 4); $moisRef = (int) substr($ref, 5, 2);
+    $manques = []; $res = [];
+    foreach (['semaine', 'mois'] as $vue) {
+        try { $res[$vue] = vbResultat($vue, $ref); }
+        catch (Throwable $e) { $res[$vue] = ['ok' => false, 'motif' => 'Résultat illisible (' . $e->getMessage() . ')', 'magasins' => []]; }
+        if (!$res[$vue]['ok']) { $manques[] = $vue; }
+    }
+    $budgets = vbBudgets($annee);
+    $clos = [];
+    for ($m = 1; $m < $moisRef; $m++) { $clos[] = sprintf('%04d-%02d', $annee, $m); }
+    $paires = [];
+    foreach ($shops as $s) { foreach ($clos as $ym) { $paires[] = [(int) $s, $ym]; } }
+    if ($paires !== [] && function_exists('pvKpisMoisLot')) { try { pvKpisMoisLot($paires); } catch (Throwable $e) { /* chaque mois se relit seul */ } }
+    $caClos = [];
+    foreach ($shops as $s) {
+        foreach ($clos as $ym) {
+            // Le magasin visité relit seul un mois resté muet ; les autres magasins (le rang) se contentent du lot.
+            if ($s === (string) $sid) { try { $k = pvKpisMois((int) $s, $ym); } catch (Throwable $e) { $k = null; } }
+            else { $c = setting('pvCa' . $s . ':' . $ym); $k = is_array($c) && isset($c['ca']) ? $c : null; }
+            $caClos[$s][(int) substr($ym, 5, 2)] = $k !== null ? (float) $k['ca'] : null;
+        }
+    }
+    $bornes = tobBornes($ref);
+    $q0 = intdiv($moisRef - 1, 3) * 3 + 1;
+    $mois = [
+        'semaine' => null, 'mois' => null,
+        'trimestre' => range($q0, $q0 + 2),
+        'annee' => range(1, 12),
+    ];
+    $out = ['shop' => (string) $sid, 'arrete' => $ref, 'lu' => date('Y-m-d H:i'), 'seuil' => $seuil, 'periodes' => [], 'sous' => []];
+    foreach (VB_ETENDUES as $et) {
+        $par = [];
+        if ($mois[$et] === null) {
+            foreach ($shops as $s) { $par[$s] = $res[$et]['magasins'][$s] ?? null; }
+        } else {
+            foreach ($shops as $s) { $par[$s] = vbCumulMois($mois[$et], $moisRef, $caClos[$s] ?? [], $budgets[$s] ?? [], $res['mois']['magasins'][$s] ?? null); }
+        }
+        $p = vbEtendue($par, (string) $sid, $seuil);
+        [$du, $au] = match ($et) {
+            'semaine' => $bornes['semaine'],
+            'mois' => $bornes['mois'],
+            'trimestre' => [sprintf('%04d-%02d-01', $annee, $q0), date('Y-m-t', strtotime(sprintf('%04d-%02d-01', $annee, $q0 + 2)))],
+            'annee' => [$annee . '-01-01', $annee . '-12-31'],
+        };
+        $p = ['lab' => vbLab($et, $ref, $q0), 'du' => $du, 'au' => $au] + $p;
+        if ($p['statut'] === 'sans') { $p['motif'] = vbMotif($mois[$et] === null ? $res[$et] : $res['mois'], $par[(string) $sid] ?? null, $mois[$et] === null); }
+        if ($p['statut'] === 'sous') { $out['sous'][] = $et; }
+        $out['periodes'][$et] = $p;
+    }
+    foreach (['trimestre', 'annee'] as $et) {
+        $x = $out['periodes'][$et];
+        if ($x['statut'] === 'sans' && !in_array($et, $manques, true) && !empty($x['incomplet'])) { $manques[] = $et; }
+    }
+    $out['manques'] = $manques;
+    $out['source'] = 'Réalisé : CA TTC encaissé jusqu’au ' . date('d/m/Y', strtotime($ref)) . ' inclus (la veille) — semaine et mois tels que Résultat, mois clos au relevé des ventes du panel'
+        . ' · Budget : le budget validé du mois, à défaut le CA théorique de l’étude ; attendu = la part du budget des jours écoulés (pondération réseau des jours d’ouverture), les mois clos en entier'
+        . ' · Seuil : ' . str_replace('.', ',', (string) $seuil) . ' % sous l’attendu (réglage caOrange des visites)';
+    return $out;
+}
+
+/**
+ * Une étendue de Résultat (semaine ou mois) coupée à `$ref` : la lecture d'aujourd'hui, celle de Résultat et de la
+ * tablette des vendeuses, quand `$ref` est dans l'étendue en cours ; l'étendue close de `$ref` sinon (un lundi, la
+ * semaine passée ; un 1er, le mois passé).
+ */
+function vbResultat(string $vue, string $ref): array
+{
+    $auj = date('Y-m-d');
+    $date = $ref >= tobBornes($auj)[$vue][0] ? $auj : $ref;
+    return tobExtraire(tobPeriode($vue, $date), $ref);
+}
+
+/** Les budgets de l'année : [magasin][mois] => {v, src} — le budget validé, à défaut le CA théorique. */
+function vbBudgets(int $annee): array
+{
+    $out = [];
+    try {
+        foreach (Db::rows('SELECT shop_id, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ?', [$annee]) as $b) {
+            if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) { $out[(string) $b['shop_id']][(int) $b['month']] = ['v' => (float) $b['revenue_budget'], 'src' => 'budget']; }
+            elseif ($b['ca_theorique'] !== null && (float) $b['ca_theorique'] > 0) { $out[(string) $b['shop_id']][(int) $b['month']] = ['v' => (float) $b['ca_theorique'], 'src' => 'theorique']; }
+        }
+    } catch (PDOException $e) { /* pas de budget : pas d'attendu */ }
+    return $out;
+}
+
+/**
+ * Trimestre ou année d'un magasin (pure) : les mois clos (CA du panel face au budget entier), le mois de la date
+ * d'arrêt (réalisé et attendu de Résultat), les mois à venir (leur budget compte dans l'objectif, pas dans l'attendu).
+ *
+ * @param int[] $mois les mois de l'étendue ; @param array<int, ?float> $ca ; @param array<int, array{v: float, src: string}> $bud
+ * @return array{realise: ?float, attendu: ?float, objectif: ?float, source: ?string, sansBudget: int[], incomplet: bool}
+ */
+function vbCumulMois(array $mois, int $moisRef, array $ca, array $bud, ?array $courant): array
+{
+    $realise = 0.0; $attendu = 0.0; $objectif = 0.0; $srcs = []; $sansBudget = []; $incomplet = false; $aAttendu = false;
+    foreach ($mois as $m) {
+        $b = $bud[$m] ?? null;
+        if ($b !== null) { $srcs[$b['src']] = true; }
+        if ($m < $moisRef) {
+            if ($b === null) { $sansBudget[] = $m; continue; }
+            $c = array_key_exists($m, $ca) ? $ca[$m] : null;
+            if ($c === null) { $incomplet = true; continue; }
+            // Un mois clos sans aucune vente (pas encore ouvert, fermé) sort de la comparaison comme un mois sans budget.
+            if ($c <= 0) { $sansBudget[] = $m; continue; }
+            $realise += $c; $attendu += $b['v']; $objectif += $b['v']; $aAttendu = true;
+        } elseif ($m === $moisRef) {
+            if ($courant === null || $courant['realise'] === null) { $incomplet = true; $objectif += $b['v'] ?? 0; continue; }
+            if ($courant['attendu'] === null) { $sansBudget[] = $m; continue; }
+            $realise += (float) $courant['realise']; $attendu += (float) $courant['attendu']; $aAttendu = true;
+            $objectif += $courant['objectif'] !== null ? (float) $courant['objectif'] : ($b['v'] ?? 0);
+        } elseif ($b !== null) {
+            $objectif += $b['v'];
+        }
+    }
+    $ok = $aAttendu && !$incomplet;
+    return ['realise' => $ok ? round($realise, 2) : null, 'attendu' => $ok ? round($attendu, 2) : null, 'objectif' => $objectif > 0 ? round($objectif, 2) : null,
+        'source' => $srcs === [] ? null : (count($srcs) > 1 ? 'mixte' : (string) array_key_first($srcs)), 'sansBudget' => $sansBudget, 'incomplet' => $incomplet];
+}
+
+/**
+ * Une étendue face au budget (pure) : réalisé, attendu, écart, statut, et la place du magasin parmi ceux du réseau
+ * qui ont un écart sur la même étendue.
+ *
+ * @param array<string, ?array{realise: ?float, attendu: ?float, objectif?: ?float, source?: ?string}> $par
+ */
+function vbEtendue(array $par, string $sid, float $seuil): array
+{
+    $ecart = static fn (?array $x): ?float => ($x !== null && ($x['realise'] ?? null) !== null && ($x['attendu'] ?? null) !== null && (float) $x['attendu'] > 0)
+        ? round(((float) $x['realise'] / (float) $x['attendu'] - 1) * 100, 1) : null;
+    $ecarts = []; $sR = 0.0; $sA = 0.0;
+    foreach ($par as $s => $x) {
+        $e = $ecart($x);
+        if ($e === null) { continue; }
+        $ecarts[(string) $s] = $e; $sR += (float) $x['realise']; $sA += (float) $x['attendu'];
+    }
+    $ici = $par[$sid] ?? null; $e = $ecarts[$sid] ?? null;
+    $obj = isset($ici['objectif']) && $ici['objectif'] !== null ? (float) $ici['objectif'] : null;
+    $real = isset($ici['realise']) && $ici['realise'] !== null ? (float) $ici['realise'] : null;
+    $att = isset($ici['attendu']) && $ici['attendu'] !== null ? (float) $ici['attendu'] : null;
+    return ['realise' => $real !== null ? round($real) : null, 'attendu' => $att !== null ? round($att) : null, 'objectif' => $obj !== null ? round($obj) : null,
+        'ecartPct' => $e, 'manque' => $e !== null ? round($att - $real) : null,
+        'atteintePct' => $real !== null && $obj !== null && $obj > 0 ? round($real / $obj * 100, 1) : null,
+        'source' => $ici['source'] ?? null,
+        'sansBudget' => array_values((array) ($ici['sansBudget'] ?? [])), 'incomplet' => !empty($ici['incomplet']),
+        'statut' => $e === null ? 'sans' : ($e < -$seuil ? 'sous' : ($e < 0 ? 'proche' : 'ok')),
+        'reseau' => $sA > 0 ? round(($sR / $sA - 1) * 100, 1) : null,
+        'rang' => $e !== null ? 1 + count(array_filter($ecarts, static fn (float $x): bool => $x > $e)) : null,
+        'sur' => count($ecarts)];
+}
+
+/** Pourquoi une étendue n'a pas d'écart : Résultat muet, pas de pondération, CA non lu, pas de budget. */
+function vbMotif(array $res, ?array $ici, bool $resultat): string
+{
+    if (empty($res['ok'])) { return (string) ($res['motif'] ?? 'Résultat indisponible'); }
+    if ($resultat && empty($res['ponderation']['ok'])) { return (string) (($res['ponderation']['motif'] ?? '') ?: 'aucune pondération des jours adoptée'); }
+    if ($ici === null) { return 'CA non lu au panel'; }
+    if (!empty($ici['incomplet'])) { return 'un mois n’a pas été lu au panel — relu dans quelques minutes'; }
+    if ($resultat && ($ici['realise'] ?? null) === null) { return 'CA non lu au panel'; }
+    return 'pas de budget ni de CA théorique encodé sur cette étendue';
+}
+
+function vbLab(string $et, string $ref, int $q0): string
+{
+    $MN = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    $a = substr($ref, 0, 4);
+    return match ($et) {
+        'semaine' => 'semaine du ' . date('d/m', strtotime(tobBornes($ref)['semaine'][0])),
+        'mois' => $MN[(int) substr($ref, 5, 2)] . ' ' . $a,
+        'trimestre' => ($q0 === 1 ? '1er' : intdiv($q0 + 2, 3) . 'e') . ' trimestre ' . $a,
+        default => 'année ' . $a,
+    };
+}
