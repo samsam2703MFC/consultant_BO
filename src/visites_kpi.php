@@ -486,13 +486,16 @@ function vbPnlLigne(?array $l, string $cle, string $du, string $au): ?array
  */
 function vbPnlCumul(array $cells, array $mois, int $moisRef, ?array $lMois, string $du, string $au): ?array
 {
-    $t = ['ca' => 0.0, 'fc' => 0.0, 'lab' => 0.0, 'oh' => 0.0]; $manque = ['fc' => [], 'lab' => [], 'oh' => []]; $n = 0;
+    $t = ['ca' => 0.0, 'fc' => 0.0, 'lab' => 0.0, 'oh' => 0.0]; $manque = ['fc' => [], 'lab' => [], 'oh' => []]; $n = 0; $motifCourant = null;
     foreach ($mois as $m) {
         if ($m > $moisRef) { continue; }
         if ($m === $moisRef) {
             if ($lMois === null || !is_numeric($lMois['realise'] ?? null)) { continue; }
             $ca = (float) $lMois['realise'];
             $v = ['fc' => $lMois['coutMatiere'] ?? null, 'lab' => $lMois['labour'] ?? null, 'oh' => $lMois['overhead'] ?? null];
+            // Ce que Résultat dit du mois en cours (mesuré à Corbais le 26/10/2026 : « frais généraux absents du panel —
+            // résultat avant frais généraux », 0 € de frais) : le cumul le répète au lieu d'additionner ce zéro en silence.
+            if (!empty($lMois['motifNet'])) { $motifCourant = (string) $lMois['motifNet']; }
         } else {
             $c = $cells[$m] ?? null;
             if ($c === null || !(($c['ca'] ?? 0) > 0)) { continue; }   // un mois sans vente ne compte pas
@@ -515,7 +518,8 @@ function vbPnlCumul(array $cells, array $mois, int $moisRef, ?array $lMois, stri
     return ['du' => $du, 'au' => $au, 'ca' => round($ca), 'coutMatiere' => $r($fc), 'coutMatierePct' => $pct($fc), 'margeBrute' => $r($mb), 'margeBrutePct' => $pct($mb),
         'invendus' => null, 'invendusPct' => null, 'labour' => $r($lab), 'labourPct' => $pct($lab), 'overhead' => $r($oh), 'overheadPct' => $pct($oh),
         'net' => $r($net), 'netPct' => $pct($net), 'mois' => $n, 'avecInvendus' => false,
-        'motif' => $sans ? implode(', ', array_map(static fn ($k, $l) => $k . ' inconnu sur ' . count($l) . ' mois', array_keys($sans), $sans)) : null];
+        'motif' => implode(' · ', array_filter([$sans ? implode(', ', array_map(static fn ($k, $l) => $k . ' inconnu sur ' . count($l) . ' mois', array_keys($sans), $sans)) : null,
+            $motifCourant !== null ? 'le mois en cours : ' . $motifCourant : null])) ?: null];
 }
 
 /** Les budgets de l'année : [magasin][mois] => {v, src} — le budget validé, à défaut le CA théorique. */

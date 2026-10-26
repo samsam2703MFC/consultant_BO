@@ -296,6 +296,8 @@ verifie('le P&L du mois : la ligne de Résultat', $B['periodes']['mois']['pnl'][
 $caAn = 120000.0 * ($mRef - 1) + 900.0 * min($jRef + 1, (int) date('t'));
 verifie('le P&L de l’année : les mois clos du P&L mensuel et le mois en cours, sans les invendus', $mRef === 1 || ($B['periodes']['annee']['pnl']['avecInvendus'] === false && $B['periodes']['annee']['pnl']['netPct'] === 35.0 && $B['periodes']['annee']['pnl']['mois'] === $mRef), json_encode($B['periodes']['annee']['pnl']));
 verifie('les seuils du P&L viennent de Résultat', ($B['seuilsPnl']['food'] ?? null) === 32.0);
+$qm = vbPnlCumul([], [10, 11, 12], 10, ['realise' => 1000.0, 'coutMatiere' => 400.0, 'labour' => 200.0, 'overhead' => 0.0, 'motifNet' => 'frais généraux absents du panel pour ce magasin — résultat avant frais généraux'], '2026-10-01', '2026-10-26');
+verifie('le cumul répète ce que Résultat dit du mois en cours (frais généraux absents)', str_contains((string) $qm['motif'], 'le mois en cours : frais généraux absents') && $qm['net'] === 400.0, json_encode($qm));
 verifie('Résultat est lu pour la semaine et le mois', array_column($GET_RES, 'vue') === ['semaine', 'mois'], json_encode($GET_RES));
 verifie('la semaine : −10 %, 2e sur 3 (Halle devant, Gosselies derrière)', $B['periodes']['semaine']['ecartPct'] === -10.0 && $B['periodes']['semaine']['rang'] === 2 && $B['periodes']['semaine']['sur'] === 3, json_encode($B['periodes']['semaine']));
 verifie('le mois : la même lecture coupée à la veille', $B['periodes']['mois']['realise'] === (float) round(900 * $jRef) && $B['periodes']['mois']['attendu'] === (float) round(1000 * $jRef), json_encode($B['periodes']['mois']));
