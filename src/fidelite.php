@@ -81,9 +81,12 @@ function ensureFidelite(): void
 /** Le programme de départ : celui de la maquette C. Posé une fois, sur une table vide. */
 function fidSemer(): void
 {
-    $id = [];
-    foreach (fidMagasins() as $m) { $id[mb_strtolower($m['nom'])] = $m['id']; }
-    $chez = static fn (string $nom): string => $id[$nom] ?? '';
+    // Le nom du magasin contient la ville (« Atelier by Harmonie - Sombreffe ») : on cherche la ville dedans.
+    $mags = fidMagasins();
+    $chez = static function (string $ville) use ($mags): string {
+        foreach ($mags as $m) { if (mb_stripos($m['nom'], $ville) !== false) { return $m['id']; } }
+        return '';
+    };
     $R = [
         ['base', ['euros' => 1, 'points' => 1], '', 1],
         ['panier', ['min' => 30, 'points' => 50], '', 1],
