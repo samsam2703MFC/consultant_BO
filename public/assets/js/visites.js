@@ -79,6 +79,8 @@
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
 .vi .kc .k{margin-top:4px}
 .vi .or{color:#B26A00}
+.vi .pnl{margin-top:14px;padding-top:12px;border-top:.5px solid var(--color-border-tertiary)}
+.vi .pnl-t{margin:6px 0 4px}.vi .pnl-t td.r,.vi .pnl-t th.r{text-align:right}.vi .pnl-t tr.net td{border-top:1px solid var(--color-border-secondary);font-weight:700}
 /* Partout sur la tablette (26/10/2026, demande de Sam) : des rectangles aux coins arrondis, répartis sur toute la largeur.
    Les étapes du temps en cours : l'assistant horizontal de la maquette A. */
 .vi .tb-sous{display:flex;align-items:center;margin:0 0 16px}
@@ -1203,10 +1205,10 @@
       if (!B || B.chargement) { return cap + '<div class="card sm mu">Lecture du CA et du budget de la semaine, du mois, du trimestre et de l’année…</div>'; }
       if (B.indispo) { return cap + `<div class="card sm mu">${esc(B.motif || 'indisponible')}</div>`; }
       if (B.erreur || B.error || !B.periodes) { return cap + `<div class="card sm mu">Le CA face au budget n’a pas pu être lu. <button class="chip" data-a="sante-relire" data-v="${esc(shop)}">Relire</button></div>`; }
-      const P = B.periodes; const ORD = ['semaine', 'mois', 'trimestre', 'annee']; const NOM = { semaine: 'Semaine', mois: 'Mois', trimestre: 'Trimestre', annee: 'Année' };
+      const P = B.periodes; const ORD = ['jour', 'semaine', 'mois', 'trimestre', 'annee'].filter(k => P[k]); const NOM = { jour: 'Jour', semaine: 'Semaine', mois: 'Mois', trimestre: 'Trimestre', annee: 'Année' };
       const vue = P[this.vbVue] ? this.vbVue : ((B.sous || [])[0] || 'mois');
       const cls = st => st === 'sous' ? 'dn' : st === 'proche' ? 'or' : st === 'ok' ? 'up' : 'mu';
-      const tabs = `<div class="vb-tabs" role="tablist">${ORD.map(k => { const x = P[k] || {}; return `<button role="tab" aria-selected="${k === vue}" class="${k === vue ? 'on' : ''}" data-a="vb-vue" data-v="${k}"><span>${NOM[k]}</span><b class="${cls(x.statut)}">${x.ecartPct != null ? vbPct(x.ecartPct) : '—'}</b></button>`; }).join('')}</div>`;
+      const tabs = `<div class="vb-tabs" role="tablist" style="grid-template-columns:repeat(${ORD.length},minmax(0,1fr))">${ORD.map(k => { const x = P[k] || {}; return `<button role="tab" aria-selected="${k === vue}" class="${k === vue ? 'on' : ''}" data-a="vb-vue" data-v="${k}"><span>${NOM[k]}</span><b class="${cls(x.statut)}">${x.ecartPct != null ? vbPct(x.ecartPct) : '—'}</b></button>`; }).join('')}</div>`;
       const x = P[vue];
       const SRC = { budget: 'budget validé', theorique: 'CA théorique de l’étude', mixte: 'budget validé et CA théorique' };
       const arr = B.arrete ? fmtDJ(B.arrete) : '';
@@ -1227,8 +1229,24 @@
       // Le formulaire (pourquoi, trois pistes) se remplit au développement ; ici, l'appel à y aller.
       const E = this._etapes; const sousB = (B.sous || []).length;
       const renvoi = sousB ? `<div class="card ${this.vbExige(v) === 'fait' ? '' : 'alerte'} sm"><b class="${this.vbExige(v) === 'fait' ? 'up' : 'dn'}">CA à plus de ${String(B.seuil).replace('.', ',')} % sous le budget</b> — ${this.vbExige(v) === 'fait' ? 'le pourquoi et les trois pistes sont notés.' : 'le pourquoi et les trois pistes du franchisé se notent ensemble au développement.'}${E && E.pistes >= 0 ? ` <button class="chip" data-a="etape" data-v="${E.pistes}">${this.vbExige(v) === 'fait' ? 'Revoir' : 'Y aller'}</button>` : ''}</div>` : '';
-      return cap + `<div class="card vb">${tabs}<div class="vb-c">${corps}</div></div>` + renvoi
+      return cap + `<div class="card vb">${tabs}<div class="vb-c">${corps}${this.pnlHtml(x.pnl, B.seuilsPnl || {}, B.arrete)}</div></div>` + renvoi
         + `<div class="xs mu" style="margin:2px 2px 10px">${esc(B.source || '')}${(B.manques || []).length ? ' · relu dans quelques minutes : ' + esc(B.manques.join(', ')) : ''}.</div>`;
+    }
+    /**
+     * Le mini P&L de l'étendue (26/10/2026) : le CA, le coût matière, la marge brute, les invendus (jour, semaine, mois),
+     * le personnel, les frais généraux et le résultat net, en euros et en % du CA, face aux seuils de la Table KPI.
+     */
+    pnlHtml(P, S, arrete) {
+      if (!P) { return '<div class="xs mu" style="margin-top:10px">Mini P&L indisponible sur cette étendue.</div>'; }
+      const p1 = x => x == null ? '—' : String(x).replace('.', ',') + ' %';
+      const L = [['CA', P.ca, 100, null], ['Coût matière', P.coutMatiere, P.coutMatierePct, S.food], ['Marge brute', P.margeBrute, P.margeBrutePct, null],
+        P.avecInvendus ? ['Invendus', P.invendus, P.invendusPct, null] : null, ['Personnel', P.labour, P.labourPct, S.labour], ['Frais généraux', P.overhead, P.overheadPct, S.overhead],
+        ['Résultat net', P.net, P.netPct, null]].filter(Boolean);
+      const rows = L.map(([lab, v, pc, seuil], i) => { const net = i === L.length - 1; const ko = seuil != null && pc != null && pc > seuil;
+        return `<tr class="${net ? 'net' : ''}"><td>${lab}</td><td class="r"><b class="${net && v != null ? (v < 0 ? 'dn' : 'up') : ''}">${eur(v)}</b></td><td class="r ${ko ? 'dn' : net && pc != null ? (pc < 0 ? 'dn' : 'up') : 'mu'}">${lab === 'CA' ? '' : p1(pc)}</td><td class="r xs mu">${seuil != null ? '≤ ' + p1(seuil) : ''}</td></tr>`; }).join('');
+      return `<div class="pnl"><div class="row"><b class="sm">Mini P&L</b><span class="xs mu">du ${fmtD(P.du)} au ${fmtD(P.au)}${P.mois ? ' · ' + P.mois + ' mois' : ''}</span></div>
+        <table class="tbl pnl-t"><tr><th></th><th class="r">€</th><th class="r">% du CA</th><th class="r">seuil</th></tr>${rows}</table>
+        <div class="xs mu">${P.avecInvendus ? 'Tel que Résultat le calcule : net = marge brute − invendus − personnel − frais généraux' : 'Mois clos au P&L mensuel du panel (sans les invendus, qu’il ne porte pas), le mois en cours à Résultat'}${arrete && P.au > arrete ? ' · à date, aujourd’hui compris (le budget s’arrête à la veille)' : ''}${P.motif ? ' · ' + esc(P.motif) : ''}.</div></div>`;
     }
     /** 'manque' : une étendue à plus du seuil sous le budget et le formulaire incomplet ; 'fait' : complet ; null : rien à justifier (ou pas encore lu). */
     vbExige(v) {

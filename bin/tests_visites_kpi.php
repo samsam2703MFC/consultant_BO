@@ -109,9 +109,27 @@ function ep_exploitation_periode(): array
         $jours = [];
         foreach (tobJours($b[0], $b[1]) as $j) { $jours[] = ['date' => $j, 'objectif' => 1000.0] + ($j <= $jusqua ? ['ca' => $ca] : []); }
         $n = count(tobJours($b[0], $jusqua));
-        $mag[] = ['shopId' => (string) $id, 'jours' => $jours, 'objectif' => 1000.0 * count($jours), 'realise' => $ca * $n, 'attendu' => 1000.0 * $n, 'objectifSource' => 'budget'];
+        $r = $ca * $n;
+        $mag[] = ['shopId' => (string) $id, 'ouvert' => true, 'jours' => $jours, 'objectif' => 1000.0 * count($jours), 'realise' => $r, 'attendu' => 1000.0 * $n, 'objectifSource' => 'budget',
+            'coutMatiere' => 0.3 * $r, 'coutMatierePct' => 30.0, 'margeBrute' => 0.7 * $r, 'margeBrutePct' => 70.0, 'invendus' => 0.0, 'invendusPct' => 0.0,
+            'labour' => 0.25 * $r, 'labourPct' => 25.0, 'overhead' => 0.1 * $r, 'overheadPct' => 10.0, 'net' => 0.35 * $r, 'netPct' => 35.0];
     }
-    return ['jusqua' => $jusqua, 'ponderation' => ['ok' => true], 'magasins' => $mag];
+    return ['du' => $b[0], 'jusqua' => $jusqua, 'ponderation' => ['ok' => true], 'seuils' => ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5], 'magasins' => $mag];
+}
+// Résultat du jour (la veille) : Corbais 900 € pour 1 000 € d'objectif, Gosselies 700 €, Halle fermé.
+function ep_exploitation_jour(): array
+{
+    $l = static fn (string $id, float $ca): array => ['shopId' => $id, 'ouvert' => true, 'ca' => $ca, 'objectifJour' => 1000.0, 'objectifSource' => 'budget',
+        'coutMatiere' => 300.0, 'coutMatierePct' => 33.3, 'margeBrute' => $ca - 300.0, 'margeBrutePct' => round(($ca - 300) / $ca * 100, 1), 'invendus' => 20.0, 'invendusPct' => 2.2,
+        'labour' => 250.0, 'labourPct' => 27.8, 'overhead' => 100.0, 'overheadPct' => 11.1, 'net' => $ca - 670.0, 'netPct' => round(($ca - 670) / $ca * 100, 1)];
+    return ['date' => $_GET['date'] ?? null, 'seuils' => ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5], 'magasins' => [$l('2', 900.0), $l('3', 700.0), ['shopId' => '4', 'ouvert' => false]]];
+}
+// Le P&L mensuel (ep_perf) : 120 k€ par mois, matière 30 %, personnel 25 %, frais généraux 10 % ; mai sans coût matière à Gosselies.
+function ep_perf(): array
+{
+    $a = (int) ($_GET['annees'] ?? date('Y')); $out = [];
+    foreach (['2', '3'] as $sid) { for ($m = 1; $m <= 12; $m++) { $out[] = ['storeId' => $sid, 'annee' => $a, 'mois' => $m, 'ca' => 120000.0, 'foodCostPct' => $sid === '3' && $m === 5 ? null : 30.0, 'labourCostPct' => 25.0, 'overheadPct' => 10.0]; } }
+    return $out;
 }
 
 // La caisse gravée par jour (vpLu : CA de tous les tickets, tickets des clients pro) et le webshop (coCommandes) :
@@ -271,7 +289,13 @@ $hier = date('Y-m-d', strtotime('-1 day')); $mRef = (int) substr($hier, 5, 2); $
 $LIGNES = ['FROM ceo_shop_month_perf' => array_merge(...array_map(static fn (string $s) => array_map(static fn (int $m) => ['shop_id' => $s, 'month' => $m, 'revenue_budget' => 100000, 'ca_theorique' => null], range(1, 12)), ['2', '3', '4']))];
 $GET_RES = []; $TTL = null;
 $B = ep_visites_budget('2');
-verifie('quatre étendues, arrêtées à la veille', array_keys($B['periodes']) === ['semaine', 'mois', 'trimestre', 'annee'] && $B['arrete'] === $hier);
+verifie('cinq étendues, arrêtées à la veille', array_keys($B['periodes']) === ['jour', 'semaine', 'mois', 'trimestre', 'annee'] && $B['arrete'] === $hier);
+verifie('le jour : Résultat du jour de la veille, 900 € pour 1 000 €', $B['periodes']['jour']['ecartPct'] === -10.0 && $B['periodes']['jour']['du'] === $hier && $B['periodes']['jour']['sur'] === 2, json_encode($B['periodes']['jour']));
+verifie('le P&L du jour, tel que Résultat le calcule', $B['periodes']['jour']['pnl']['ca'] === 900.0 && $B['periodes']['jour']['pnl']['net'] === 230.0 && $B['periodes']['jour']['pnl']['invendus'] === 20.0 && $B['periodes']['jour']['pnl']['avecInvendus'] === true, json_encode($B['periodes']['jour']['pnl']));
+verifie('le P&L du mois : la ligne de Résultat', $B['periodes']['mois']['pnl']['coutMatierePct'] === 30.0 && $B['periodes']['mois']['pnl']['netPct'] === 35.0, json_encode($B['periodes']['mois']['pnl']));
+$caAn = 120000.0 * ($mRef - 1) + 900.0 * min($jRef + 1, (int) date('t'));
+verifie('le P&L de l’année : les mois clos du P&L mensuel et le mois en cours, sans les invendus', $mRef === 1 || ($B['periodes']['annee']['pnl']['avecInvendus'] === false && $B['periodes']['annee']['pnl']['netPct'] === 35.0 && $B['periodes']['annee']['pnl']['mois'] === $mRef), json_encode($B['periodes']['annee']['pnl']));
+verifie('les seuils du P&L viennent de Résultat', ($B['seuilsPnl']['food'] ?? null) === 32.0);
 verifie('Résultat est lu pour la semaine et le mois', array_column($GET_RES, 'vue') === ['semaine', 'mois'], json_encode($GET_RES));
 verifie('la semaine : −10 %, 2e sur 3 (Halle devant, Gosselies derrière)', $B['periodes']['semaine']['ecartPct'] === -10.0 && $B['periodes']['semaine']['rang'] === 2 && $B['periodes']['semaine']['sur'] === 3, json_encode($B['periodes']['semaine']));
 verifie('le mois : la même lecture coupée à la veille', $B['periodes']['mois']['realise'] === (float) round(900 * $jRef) && $B['periodes']['mois']['attendu'] === (float) round(1000 * $jRef), json_encode($B['periodes']['mois']));
@@ -282,11 +306,14 @@ verifie('l’année : seul Corbais a des mois clos lus, il est seul classé', $m
 verifie('aucune étendue à plus de 10 % sous l’attendu', $B['sous'] === [] && $B['seuil'] === 10.0);
 $B3 = ep_visites_budget('3');
 verifie('Gosselies, −20 % sur la semaine et le mois : à justifier', in_array('semaine', $B3['sous'], true) && in_array('mois', $B3['sous'], true) && $B3['periodes']['semaine']['statut'] === 'sous');
+verifie('une journée à −30 % ne demande pas de justification', $B3['periodes']['jour']['statut'] === 'sous' && !in_array('jour', $B3['sous'], true));
+verifie('un mois clos sans coût matière : le coût matière de l’année reste inconnu, et le dit', $mRef <= 5 || ($B3['periodes']['annee']['pnl']['coutMatiere'] === null && $B3['periodes']['annee']['pnl']['net'] === null && str_contains((string) $B3['periodes']['annee']['pnl']['motif'], 'coût matière')), json_encode($B3['periodes']['annee']['pnl']));
 verifie('Gosselies : 47 k€ par mois clos pour 100 k€ de budget, l’année aussi à justifier', $mRef === 1 || in_array('annee', $B3['sous'], true), json_encode($B3['periodes']['annee']));
 $B4 = ep_visites_budget('4');
 verifie('Halle : ses mois clos non lus laissent l’année sans chiffre, et se relisent dans cinq minutes',
     $mRef <= 2 || ($B4['periodes']['annee']['statut'] === 'sans' && in_array('annee', $B4['manques'], true) && $TTL === 300 && str_contains($B4['periodes']['annee']['motif'], 'pas été lu')),
     json_encode([$B4['periodes']['annee']['statut'], $B4['manques'], $TTL, $B4['periodes']['annee']['motif'] ?? null]));
+verifie('Halle fermé la veille : pas d’écart du jour, et il le dit', $B4['periodes']['jour']['statut'] === 'sans' && str_contains((string) $B4['periodes']['jour']['motif'], 'fermé') && $B4['periodes']['jour']['pnl'] === null);
 verifie('un magasin inconnu : 404', (ep_visites_budget('77')['error'] ?? '') === 'magasin inconnu');
 
 echo "\n$ok réussi(s), $ko en échec\n";

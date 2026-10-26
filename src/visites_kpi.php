@@ -338,7 +338,7 @@ function ep_visites_taches(string $shop): array
 
 const VB_TTL_S = 1800;
 const VB_PERIME_S = 21600;
-const VB_ETENDUES = ['semaine', 'mois', 'trimestre', 'annee'];
+const VB_ETENDUES = ['jour', 'semaine', 'mois', 'trimestre', 'annee'];
 
 /** GET /visites/budget/{shop}[?rafraichir=1] — gardé une demi-heure, cinq minutes si une lecture a manqué. */
 function ep_visites_budget(string $shop): array
@@ -362,6 +362,13 @@ function vbCalcul(int $sid, string $ref): array
         catch (Throwable $e) { $res[$vue] = ['ok' => false, 'motif' => 'Résultat illisible (' . $e->getMessage() . ')', 'magasins' => []]; }
         if (!$res[$vue]['ok']) { $manques[] = $vue; }
     }
+    // Le jour : Résultat du jour de la veille (le CA, l'objectif du jour, son P&L).
+    $jourL = [];
+    try {
+        $rj = vkAvecGet(['date' => $ref], 'ep_exploitation_jour');
+        foreach ((array) ($rj['magasins'] ?? []) as $l) { if (is_array($l) && isset($l['shopId']) && !empty($l['ouvert'])) { $jourL[(string) $l['shopId']] = $l; } }
+        $seuilsPnl = (array) ($rj['seuils'] ?? []);
+    } catch (Throwable $e) { $rj = null; $manques[] = 'jour'; }
     $budgets = vbBudgets($annee);
     $clos = [];
     for ($m = 1; $m < $moisRef; $m++) { $clos[] = sprintf('%04d-%02d', $annee, $m); }
@@ -377,31 +384,53 @@ function vbCalcul(int $sid, string $ref): array
             $caClos[$s][(int) substr($ym, 5, 2)] = $k !== null ? (float) $k['ca'] : null;
         }
     }
+    // Le P&L mensuel du magasin (ep_perf, le tableau « mois par mois » du dashboard) : ses mois clos de l'année.
+    $cellsPerf = [];
+    if ($moisRef > 1) {
+        try {
+            foreach ((array) vkAvecGet(['annees' => (string) $annee], 'ep_perf') as $c) {
+                if ((string) ($c['storeId'] ?? '') === (string) $sid && (int) ($c['annee'] ?? 0) === $annee) { $cellsPerf[(int) $c['mois']] = $c; }
+            }
+        } catch (Throwable $e) { $manques[] = 'pnl'; }
+    }
     $bornes = tobBornes($ref);
     $q0 = intdiv($moisRef - 1, 3) * 3 + 1;
     $mois = [
-        'semaine' => null, 'mois' => null,
+        'jour' => null, 'semaine' => null, 'mois' => null,
         'trimestre' => range($q0, $q0 + 2),
         'annee' => range(1, 12),
     ];
-    $out = ['shop' => (string) $sid, 'arrete' => $ref, 'lu' => date('Y-m-d H:i'), 'seuil' => $seuil, 'periodes' => [], 'sous' => []];
+    $out = ['shop' => (string) $sid, 'arrete' => $ref, 'lu' => date('Y-m-d H:i'), 'seuil' => $seuil, 'periodes' => [], 'sous' => [],
+        'seuilsPnl' => ($seuilsPnl ?? []) ?: (array) ($res['mois']['seuils'] ?? [])];
     foreach (VB_ETENDUES as $et) {
         $par = [];
-        if ($mois[$et] === null) {
+        if ($et === 'jour') {
+            foreach ($shops as $s) { $l = $jourL[$s] ?? null; $o = $l !== null && is_numeric($l['objectifJour'] ?? null) ? (float) $l['objectifJour'] : null;
+                $par[$s] = $l === null ? null : ['realise' => (float) $l['ca'], 'attendu' => $o, 'objectif' => $o, 'source' => isset($l['objectifSource']) ? (string) $l['objectifSource'] : null]; }
+        } elseif ($mois[$et] === null) {
             foreach ($shops as $s) { $par[$s] = $res[$et]['magasins'][$s] ?? null; }
         } else {
             foreach ($shops as $s) { $par[$s] = vbCumulMois($mois[$et], $moisRef, $caClos[$s] ?? [], $budgets[$s] ?? [], $res['mois']['magasins'][$s] ?? null); }
         }
         $p = vbEtendue($par, (string) $sid, $seuil);
         [$du, $au] = match ($et) {
+            'jour' => [$ref, $ref],
             'semaine' => $bornes['semaine'],
             'mois' => $bornes['mois'],
             'trimestre' => [sprintf('%04d-%02d-01', $annee, $q0), date('Y-m-t', strtotime(sprintf('%04d-%02d-01', $annee, $q0 + 2)))],
             'annee' => [$annee . '-01-01', $annee . '-12-31'],
         };
         $p = ['lab' => vbLab($et, $ref, $q0), 'du' => $du, 'au' => $au] + $p;
-        if ($p['statut'] === 'sans') { $p['motif'] = vbMotif($mois[$et] === null ? $res[$et] : $res['mois'], $par[(string) $sid] ?? null, $mois[$et] === null); }
-        if ($p['statut'] === 'sous') { $out['sous'][] = $et; }
+        if ($p['statut'] === 'sans') { $p['motif'] = $et === 'jour' ? ($rj === null ? 'Résultat du jour illisible' : (isset($jourL[(string) $sid]) ? 'pas d’objectif du jour' : 'magasin fermé ou CA non lu ce jour-là'))
+            : vbMotif($mois[$et] === null ? $res[$et] : $res['mois'], $par[(string) $sid] ?? null, $mois[$et] === null); }
+        // Une journée sous l'objectif ne demande pas de justification : la semaine, le mois, le trimestre et l'année, oui.
+        if ($p['statut'] === 'sous' && $et !== 'jour') { $out['sous'][] = $et; }
+        // Le mini P&L de l'étendue.
+        $p['pnl'] = match ($et) {
+            'jour' => vbPnlLigne($jourL[(string) $sid] ?? null, 'ca', $ref, $ref),
+            'semaine', 'mois' => vbPnlLigne($res[$et]['lignes'][(string) $sid] ?? null, 'realise', (string) ($res[$et]['du'] ?? $du), (string) ($res[$et]['jusqua'] ?? $au)),
+            default => vbPnlCumul($cellsPerf, $mois[$et], $moisRef, $res['mois']['lignes'][(string) $sid] ?? null, $du, (string) ($res['mois']['jusqua'] ?? $ref)),
+        };
         $out['periodes'][$et] = $p;
     }
     foreach (['trimestre', 'annee'] as $et) {
@@ -424,7 +453,69 @@ function vbResultat(string $vue, string $ref): array
 {
     $auj = date('Y-m-d');
     $date = $ref >= tobBornes($auj)[$vue][0] ? $auj : $ref;
-    return tobExtraire(tobPeriode($vue, $date), $ref);
+    $p = tobPeriode($vue, $date);
+    $lignes = [];
+    foreach ((array) ($p['magasins'] ?? []) as $l) { if (is_array($l) && isset($l['shopId']) && !empty($l['ouvert'])) { $lignes[(string) $l['shopId']] = $l; } }
+    return tobExtraire($p, $ref) + ['lignes' => $lignes, 'jusqua' => (string) ($p['jusqua'] ?? $date), 'du' => (string) ($p['du'] ?? ''), 'seuils' => (array) ($p['seuils'] ?? [])];
+}
+
+/* --- Le mini P&L de chaque étendue (26/10/2026, demande de Sam) ----------------------------------------------- */
+
+/**
+ * Le P&L d'une ligne de Résultat (le jour, la semaine, le mois) : le CA, le coût matière, la marge brute, les invendus,
+ * le personnel, les frais généraux et le résultat net, tels que Résultat les calcule (net = marge brute − invendus −
+ * personnel − frais généraux), en euros et en % du CA.
+ */
+function vbPnlLigne(?array $l, string $cle, string $du, string $au): ?array
+{
+    if ($l === null || !isset($l[$cle]) || !is_numeric($l[$cle])) { return null; }
+    $n = static fn ($v): ?float => $v !== null && is_numeric($v) ? round((float) $v) : null;
+    return ['du' => $du, 'au' => $au, 'ca' => $n($l[$cle]), 'coutMatiere' => $n($l['coutMatiere'] ?? null), 'coutMatierePct' => $l['coutMatierePct'] ?? null,
+        'margeBrute' => $n($l['margeBrute'] ?? null), 'margeBrutePct' => $l['margeBrutePct'] ?? null,
+        'invendus' => $n($l['invendus'] ?? null), 'invendusPct' => $l['invendusPct'] ?? null,
+        'labour' => $n($l['labour'] ?? null), 'labourPct' => $l['labourPct'] ?? null, 'overhead' => $n($l['overhead'] ?? null), 'overheadPct' => $l['overheadPct'] ?? null,
+        'net' => $n($l['net'] ?? null), 'netPct' => $l['netPct'] ?? null, 'motif' => isset($l['motifNet']) ? (string) $l['motifNet'] : null, 'avecInvendus' => true];
+}
+
+/**
+ * Le P&L du trimestre ou de l'année (pure) : les mois clos du P&L mensuel (ep_perf : le CA, le coût matière, le
+ * personnel et les frais généraux en % du CA) et le mois de la date d'arrêt (Résultat). Net = CA − matière − personnel
+ * − frais généraux : le P&L mensuel ne porte pas les invendus. Un poste inconnu un seul mois reste inconnu.
+ *
+ * @param array<int, array{ca: ?float, foodCostPct: ?float, labourCostPct: ?float, overheadPct: ?float}> $cells [mois => cellule]
+ */
+function vbPnlCumul(array $cells, array $mois, int $moisRef, ?array $lMois, string $du, string $au): ?array
+{
+    $t = ['ca' => 0.0, 'fc' => 0.0, 'lab' => 0.0, 'oh' => 0.0]; $manque = ['fc' => [], 'lab' => [], 'oh' => []]; $n = 0;
+    foreach ($mois as $m) {
+        if ($m > $moisRef) { continue; }
+        if ($m === $moisRef) {
+            if ($lMois === null || !is_numeric($lMois['realise'] ?? null)) { continue; }
+            $ca = (float) $lMois['realise'];
+            $v = ['fc' => $lMois['coutMatiere'] ?? null, 'lab' => $lMois['labour'] ?? null, 'oh' => $lMois['overhead'] ?? null];
+        } else {
+            $c = $cells[$m] ?? null;
+            if ($c === null || !(($c['ca'] ?? 0) > 0)) { continue; }   // un mois sans vente ne compte pas
+            $ca = (float) $c['ca'];
+            $pc = static fn ($x): ?float => $x !== null && is_numeric($x) ? $ca * (float) $x / 100 : null;
+            $v = ['fc' => $pc($c['foodCostPct'] ?? null), 'lab' => $pc($c['labourCostPct'] ?? null), 'oh' => $pc($c['overheadPct'] ?? null)];
+        }
+        $n++; $t['ca'] += $ca;
+        foreach ($v as $k => $x) { if ($x === null || !is_numeric($x)) { $manque[$k][] = $m; } else { $t[$k] += (float) $x; } }
+    }
+    if ($n === 0 || $t['ca'] <= 0) { return null; }
+    $ca = $t['ca'];
+    $val = static fn (string $k) => $manque[$k] === [] ? $t[$k] : null;
+    $pct = static fn (?float $x): ?float => $x === null ? null : round($x / $ca * 100, 1);
+    $fc = $val('fc'); $lab = $val('lab'); $oh = $val('oh');
+    $mb = $fc === null ? null : $ca - $fc;
+    $net = ($mb !== null && $lab !== null && $oh !== null) ? $mb - $lab - $oh : null;
+    $r = static fn (?float $x): ?float => $x === null ? null : round($x);
+    $sans = array_filter(['coût matière' => $manque['fc'], 'personnel' => $manque['lab'], 'frais généraux' => $manque['oh']]);
+    return ['du' => $du, 'au' => $au, 'ca' => round($ca), 'coutMatiere' => $r($fc), 'coutMatierePct' => $pct($fc), 'margeBrute' => $r($mb), 'margeBrutePct' => $pct($mb),
+        'invendus' => null, 'invendusPct' => null, 'labour' => $r($lab), 'labourPct' => $pct($lab), 'overhead' => $r($oh), 'overheadPct' => $pct($oh),
+        'net' => $r($net), 'netPct' => $pct($net), 'mois' => $n, 'avecInvendus' => false,
+        'motif' => $sans ? implode(', ', array_map(static fn ($k, $l) => $k . ' inconnu sur ' . count($l) . ' mois', array_keys($sans), $sans)) : null];
 }
 
 /** Les budgets de l'année : [magasin][mois] => {v, src} — le budget validé, à défaut le CA théorique. */
@@ -520,7 +611,9 @@ function vbLab(string $et, string $ref, int $q0): string
 {
     $MN = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     $a = substr($ref, 0, 4);
+    $JS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
     return match ($et) {
+        'jour' => $JS[(int) date('w', strtotime($ref))] . ' ' . date('d/m', strtotime($ref)),
         'semaine' => 'semaine du ' . date('d/m', strtotime(tobBornes($ref)['semaine'][0])),
         'mois' => $MN[(int) substr($ref, 5, 2)] . ' ' . $a,
         'trimestre' => ($q0 === 1 ? '1er' : intdiv($q0 + 2, 3) . 'e') . ' trimestre ' . $a,
