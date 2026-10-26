@@ -28,52 +28,18 @@
                         <div class="col-2"></div>
                         <div class="col-8">
                             <?php if (!empty($errors)): ?>
-                                <div class="alert alert-danger text-center"><?= implode("<br>", $errors) ?></div>
+                                <div class="alert alert-danger text-center"><?= implode("<br>", array_map('htmlspecialchars', $errors)) ?></div>
                             <?php endif; ?>
                         </div>
                     </div>
 
-                    <form method="POST">
-                        <div class="row">
-                            <div class="col-2"></div>
-                            <div class="col-4">
-                                <div class="row">
-                                    <label class="form-label" for="name">
-                                        Nazwa
-                                    </label>
-                                    <input value="<?= old_value('name') ?>" type="text" class="form-control" id="name"
-                                           name="name" placeholder="Nazwa">
-                                </div>
+                        <form method="POST" class="mx-auto" style="max-width: 860px">
+                            <?php $this->view("supplier/material/_fields", ['row' => $row ?? []]); ?>
+                            <div class="d-flex justify-content-between mt-4">
+                                <button class="btn btn-success"><i class="bi bi-check2"></i> Utwórz dostawcę</button>
+                                <a href="<?= ROOT ?>/material-suppliers" role="button" class="btn btn-secondary">Powrót</a>
                             </div>
-                            <div class="col-1"></div>
-                            <div class="col-3">
-                                <div class="row">
-                                    <label class="form-label" for="phone">
-                                        Numer telefonu
-                                    </label>
-                                    <input value="<?= old_value('phone') ?>" type="text" class="form-control" id="phone"
-                                           name="phone" placeholder="Numer telefonu">
-                                </div>
-                                <div class="row mt-3">
-                                    <label class="form-label" for="email">
-                                        Email
-                                    </label>
-                                    <input value="<?= old_value('email') ?>" type="email" class="form-control"
-                                           id="email" name="email" placeholder="przykladowy@email.com">
-                                </div>
-                            </div>
-
-                        </div>
-                        <div class="row mt-4">
-                            <div class="col-2"></div>
-                            <div class="col-8">
-                                <button class="btn btn-success">Utwórz</button>
-                                <a href="<?= ROOT ?>/material-suppliers" role="button"
-                                   class="btn btn-secondary float-end">Powrót</a>
-                            </div>
-                        </div>
-
-                    </form>
+                        </form>
                 </div>
             </div>
         </section>

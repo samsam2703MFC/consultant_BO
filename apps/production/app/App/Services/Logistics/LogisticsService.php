@@ -372,6 +372,14 @@ final class LogisticsService
 
     // --- Trasy -------------------------------------------------------------------------------------
 
+    /** Nowy klient (kreator) : na stałe w trasie, na końcu albo na podanym przystanku ; usunięty z tras w te same dni. */
+    public function placeOnTour(int $customerId, int $tourId, ?int $stop = null): void
+    {
+        $tour = $this->repo->tour($tourId) ?? throw new CustomException('Nie znaleziono trasy.', 'errors', 404);
+        $stop = $stop !== null ? max(1, min(99, $stop)) : $this->repo->nextTourStop($tourId);
+        $this->repo->putCustomerOnTour($tourId, $customerId, $stop, (int) $tour['weekdays']);
+    }
+
     public function tours(): array
     {
         $vehicles = [];

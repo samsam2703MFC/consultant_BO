@@ -77,7 +77,7 @@ class AppExtension extends AbstractExtension
         static $version = null;
         if ($version === null) {
             $public = dirname(__DIR__, 3) . '/public';
-            $files = array_merge(glob($public . '/assets/js/workshop/*.js') ?: [], glob($public . '/assets/css/*.css') ?: [], glob($public . '/resources/lang/ui/*/*.json') ?: []);
+            $files = array_merge(glob($public . '/assets/js/workshop/*.js') ?: [], glob($public . '/assets/js/at-*.js') ?: [], glob($public . '/assets/css/*.css') ?: [], glob($public . '/resources/lang/ui/*/*.json') ?: []);
             $version = (string) max(array_map(fn($f) => (int) @filemtime($f), $files ?: [__FILE__]));
         }
         return $version;

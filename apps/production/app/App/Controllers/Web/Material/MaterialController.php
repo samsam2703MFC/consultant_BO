@@ -6,6 +6,7 @@ namespace App\Controllers\Web\Material;
 use App\Core\Web\BaseController;
 use App\Services\Material\AllergenService;
 use App\Services\Material\MaterialCategoryService;
+use App\Services\Material\MaterialCreationService;
 use App\Services\Material\MaterialService;
 use App\Services\Material\MaterialSupplierService;
 use App\Services\Product\Category\ProductCategoryService;
@@ -18,7 +19,8 @@ class MaterialController extends BaseController
         private MaterialService         $materialService,
         private MaterialSupplierService $materialSupplierService,
         private UnitService             $unitService,
-        private AllergenService $allergenService
+        private AllergenService $allergenService,
+        private MaterialCreationService $creation
     )
     {
     }
@@ -34,11 +36,14 @@ class MaterialController extends BaseController
         if(isset($idCategory)) {
             $_POST['id_category'] = $idCategory;
         }
+        $data['allergens'] = $this->allergenService->getAll();
         if ($_SERVER['REQUEST_METHOD'] == "POST") {
-            if ($this->materialService->validate($_POST)) {
+            if ($this->materialService->validate($_POST, true)) {
                 $result = $this->handleAction(function () {
-                    $this->materialService->insert($_POST);
-                    header('Location: ' . ROOT . '/materials/all?category=' . (int) $_POST['id_category']);
+                    $id = (int) $this->materialService->insert($_POST);
+                    // Kreator : alergeny i zaopatrzenie, potem karta surowca (nie lista) z tym, czego brakuje.
+                    $_SESSION['material_created'] = ['id' => $id, 'problems' => $this->creation->complete($id, $_POST, user('id') ? (int) user('id') : null)];
+                    header('Location: ' . ROOT . '/materials/' . $id . '/edit');
                     exit;
                 }, default: false);
                 $this->errors[] = 'Nie udało się zapisać surowca — sprawdź pola i spróbuj ponownie.';
@@ -56,6 +61,11 @@ class MaterialController extends BaseController
         $data['category_material'] = $this->materialCategoryService->getAll();
         $data['units'] = $this->unitService->getSmallUnit();
         $data['row'] = $this->materialService->getById($id);
+        // Prosto z kreatora : komunikat « utworzono » i lista tego, czego brakuje (raz).
+        if (($_SESSION['material_created']['id'] ?? null) === (int) $id) {
+            $data['created'] = $_SESSION['material_created'] + ['allergens' => count($this->allergenService->getForMaterial((int) $id))];
+            unset($_SESSION['material_created']);
+        }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 

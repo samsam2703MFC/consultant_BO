@@ -42,7 +42,8 @@ class MaterialService
         return  $this->materialRepository->getAll();
     }
     
-    public function validate($data)
+    /** $nutritionLater : kreator — puste wartości odżywcze dozwolone (0, do uzupełnienia), błędne nie. */
+    public function validate($data, bool $nutritionLater = false)
     {
         $errors = [];
 
@@ -79,7 +80,8 @@ class MaterialService
 
         foreach (self::NUTRITION_ERRORS as $field => $message)
         {
-            if (self::nutritionValue($data[$field] ?? null) === null) $errors[$field] = $message;
+            $empty = trim((string) ($data[$field] ?? '')) === '';
+            if (($empty && !$nutritionLater) || (!$empty && self::nutritionValue($data[$field]) === null)) $errors[$field] = $message;
         }
 
         $this->lastErrors = $errors;

@@ -25,15 +25,16 @@ class MaterialSupplierController extends BaseController
         $this->view("supplier/material/overview", $data);
     }
 
+    /** Nowy dostawca : po zapisie karta dostawcy (nie lista). */
     public function newSupplier()
     {
         if ($_SERVER['REQUEST_METHOD'] == "POST") {
-            //$this->errors = $this->supplierService->validate($_POST);
+            $this->errors = $this->supplierService->validate($_POST);
 
             if (empty($this->errors)) {
                 $this->handleAction(function () {
-                    $this->supplierService->insert($_POST);
-                    header('Location: ' . ROOT . '/material-suppliers');
+                    $id = (int) $this->supplierService->insert($_POST);
+                    header('Location: ' . ROOT . '/material-suppliers/' . $id . '/edit?created=1');
                     exit;
                 }, default: false);
             }
@@ -41,17 +42,28 @@ class MaterialSupplierController extends BaseController
         $this->view("supplier/material/new");
     }
 
+    /** POST /ajax/material-suppliers : nowy dostawca z karty surowca (okno), zwraca id i nazwę do listy. */
+    public function ajaxCreate()
+    {
+        $data = $this->getJson(\Symfony\Component\HttpFoundation\Request::createFromGlobals());
+        $errors = $this->supplierService->validate($data);
+        if ($errors) return $this->json(['ok' => false, 'errors' => $errors, 'message' => implode(' ', $errors)], 422);
+        $id = (int) $this->supplierService->insert($data + ['is_active' => 1]);
+        if ($id <= 0) return $this->json(['ok' => false, 'message' => 'Nie udało się zapisać dostawcy.'], 500);
+        return $this->json(['ok' => true, 'id' => $id, 'name' => trim((string) $data['name'])]);
+    }
+
     public function editSupplier($id)
     {
         $data['row'] = $this->supplierService->getById($id);
 
         if ($_SERVER['REQUEST_METHOD'] == "POST") {
-           // $this->errors = $this->supplierService->validate($_POST);
+            $this->errors = $this->supplierService->validate($_POST);
 
             if (empty($this->errors)) {
                 $this->handleAction(function () use ($id) {
                     $this->supplierService->update($id, $_POST);
-                    header('Location: ' . ROOT . '/material-suppliers');
+                    header('Location: ' . ROOT . '/material-suppliers/' . (int) $id . '/edit?saved=1');
                     exit;
                 }, default: false);
             }

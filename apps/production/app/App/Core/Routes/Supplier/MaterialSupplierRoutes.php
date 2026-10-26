@@ -8,6 +8,11 @@ return function(RouteCollector $r) {
         'method'     => 'overview'
     ]);
 
+    $r->addRoute('POST', '/ajax/material-suppliers', [
+        'controller' => App\Controllers\Web\Material\Supplier\MaterialSupplierController::class,
+        'method'     => 'ajaxCreate'
+    ]);
+
     $r->addRoute('GET', '/material-suppliers/new', [
         'controller' => App\Controllers\Web\Material\Supplier\MaterialSupplierController::class,
         'method'     => 'newSupplier'

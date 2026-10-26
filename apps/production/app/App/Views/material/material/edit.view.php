@@ -43,6 +43,24 @@
                         }
                         ?>
 
+                        <?php if (!empty($created)): ?>
+                            <?php
+                            // Kreator surowca : co jeszcze warto uzupełnić.
+                            $todo = [];
+                            $nutrition = array_sum(array_map(fn($k) => (float) ($row[$k] ?? 0), ['energy_100g', 'fat_100g', 'carbohydrates_100g', 'proteins_100g', 'salt_100g']));
+                            if ($nutrition <= 0) $todo[] = ['Wartości odżywcze (wyszukiwanie w internecie)', ROOT . '/materials/nutritional-values'];
+                            if (empty($created['allergens'])) $todo[] = ['Alergeny (jeśli są)', ROOT . '/materials/all?category=' . (int) ($row['id_category'] ?? 0)];
+                            $todo[] = ['Nazwy na etykiety (FR, NL…)', ROOT . '/aliases'];
+                            ?>
+                            <div class="at-note at-note-safe mb-3" role="status">
+                                <i class="bi bi-check-circle"></i>
+                                <div><strong>Surowiec utworzony.</strong> Cena, alergeny i zaopatrzenie są zapisane ; karta poniżej.
+                                    <?php if (!empty($created['problems'])): ?><div class="text-danger mt-1"><?= implode('<br>', array_map('htmlspecialchars', $created['problems'])) ?></div><?php endif; ?>
+                                    <div class="mt-1">Do uzupełnienia : <?= implode(' · ', array_map(fn($t) => '<a href="' . htmlspecialchars($t[1]) . '">' . htmlspecialchars($t[0]) . '</a>', $todo)) ?></div>
+                                    <div class="mt-1"><a href="<?= ROOT ?>/workshop/supply">Zaopatrzenie</a> · <a href="<?= ROOT ?>/recipes">dodaj do receptury</a></div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                         <form method="POST">
                             <div class="row">
                                 <div class="col-4">

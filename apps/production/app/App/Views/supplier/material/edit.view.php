@@ -28,56 +28,22 @@
                         <div class="col-2"></div>
                         <div class="col-8">
                             <?php if(!empty($errors)):?>
-                                <div class="alert alert-danger text-center"><?=implode("<br>", $errors)?></div>
+                                <div class="alert alert-danger text-center"><?= implode("<br>", array_map('htmlspecialchars', $errors)) ?></div>
                             <?php endif; ?>
                         </div>
                     </div>
 
+                    <?php if(!empty($row) && (isset($_GET['created']) || isset($_GET['saved']))): ?>
+                        <div class="at-note at-note-safe" role="status"><i class="bi bi-check-circle"></i><strong><?= isset($_GET['created']) ? 'Dostawca utworzony.' : 'Zapisano.' ?></strong>
+                            <?php if (isset($_GET['created'])): ?> Teraz : <a href="<?= ROOT ?>/materials/all">przypisz go do surowców</a> (karta surowca › dostawca) albo <a href="<?= ROOT ?>/workshop/supply">zamów w Zaopatrzeniu</a>.<?php endif; ?></div>
+                    <?php endif; ?>
                     <?php if(!empty($row)): ?>
 
-                        <form method="POST">
-                            <div class="row">
-                                <div class="col-2"></div>
-                                <div class="col-4">
-                                    <div class="row">
-                                        <label class="form-label" for="name">
-                                            Nazwa
-                                        </label>
-                                        <input value="<?=old_value('name', $row['name'])?>" type="text" class="form-control" id="name" name="name" placeholder="Nazwa">
-                                    </div>
-                                    <div class="row mt-3">
-                                        <label class="form-label" for="is_active">
-                                            Aktywny
-                                        </label>
-                                        <select class="form-select" name="is_active" id="is_active">
-                                            <option value="1" <?php if($row['is_active'] == "1") echo 'selected'; ?>>Tak</option>
-                                            <option value="0" <?php if($row['is_active'] == "0") echo 'selected'; ?>>Nie</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-1"></div>
-                                <div class="col-3">
-                                    <div class="row">
-                                        <label class="form-label" for="phone">
-                                            Numer telefonu
-                                        </label>
-                                        <input value="<?=old_value('phone', $row['phone'])?>" type="text" class="form-control" id="phone" name="phone" placeholder="0">
-                                    </div>
-                                    <div class="row mt-3">
-                                        <label class="form-label" for="email">
-                                            Email
-                                        </label>
-                                        <input value="<?=old_value('email', $row['email'])?>" type="email" class="form-control" id="email" name="email" placeholder="0">
-                                    </div>
-                                </div>
-
-                            </div>
-                            <div class="row mt-4">
-                                <div class="col-2"></div>
-                                <div class="col-8">
-                                    <button class="btn btn-warning">Zapisz</button>
-                                    <a href="<?=ROOT?>/material-suppliers" role="button" class="btn btn-secondary float-end">Powrót</a>
-                                </div>
+                        <form method="POST" class="mx-auto" style="max-width: 860px">
+                            <?php $this->view("supplier/material/_fields", ['row' => $row ?? []]); ?>
+                            <div class="d-flex justify-content-between mt-4">
+                                <button class="btn btn-warning"><i class="bi bi-check2"></i> Zapisz</button>
+                                <a href="<?= ROOT ?>/material-suppliers" role="button" class="btn btn-secondary">Powrót</a>
                             </div>
                         </form>
 

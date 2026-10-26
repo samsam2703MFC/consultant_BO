@@ -806,6 +806,13 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-wizard-nav .at-next { margin-left: auto; }
 .at-wizard-hint { color: var(--at-muted); font-size: 12px; }
 .at-wizard-hint.is-error { color: var(--at-danger); }
+/* Formularze tworzenia krok po kroku (public/assets/js/at-form-steps.js) */
+.at-form-steps section[data-step] { padding: 4px 0 8px; }
+.at-steps li[data-step-tab][tabindex="0"] { cursor: pointer; }
+.at-steps li[data-step-tab][tabindex="0"]:hover span { text-decoration: underline; }
+.at-steps-summary { display: grid; grid-template-columns: minmax(160px, 34%) 1fr; gap: 2px 12px; margin: 0; font-size: 13px; }
+.at-steps-summary dt { font-weight: 500; color: var(--at-muted); }
+.at-steps-summary dd { margin: 0; overflow-wrap: anywhere; }
 /* Choix en cartes (bouton radio ou case masqués) */
 .at-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .at-choice {

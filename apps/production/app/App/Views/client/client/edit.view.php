@@ -41,8 +41,24 @@
                 </div>
 
                 <?php if(!empty($row)): ?>
-
-
+                    <?php if (!empty($created)): ?>
+                        <?php
+                        // Kreator klienta : co jeszcze warto uzupełnić (puste pola karty + kroki, które się nie zapisały).
+                        $todo = [];
+                        if (trim((string) ($row['email_head'] ?? '')) === '') $todo[] = ['E-mail główny (proformy, powiadomienia)', '#email_head'];
+                        if (trim((string) ($row['email_accountant'] ?? '')) === '') $todo[] = ['E-mail księgowości (faktury)', '#email_accountant'];
+                        if (trim((string) ($row['fac_street'] ?? '')) === '' || trim((string) ($row['fac_town'] ?? '')) === '') $todo[] = ['Adres siedziby (WZ, CMR, WDT)', '#fac_street'];
+                        if (empty($delivery_info['fields']) || implode('', (array) $delivery_info['fields']) === '') $todo[] = ['Instrukcje dostawy dla kierowcy', '#delivery-info'];
+                        ?>
+                        <div class="at-note at-note-safe mb-3" role="status">
+                            <i class="bi bi-check-circle"></i>
+                            <div><strong>Klient utworzony.</strong> Karta klienta poniżej ; cennik, trasa i dokumenty są już ustawione.
+                                <?php if (!empty($created['problems'])): ?><div class="text-danger mt-1"><?= implode('<br>', array_map('htmlspecialchars', $created['problems'])) ?></div><?php endif; ?>
+                                <?php if ($todo): ?><div class="mt-1">Do uzupełnienia : <?= implode(' · ', array_map(fn($t) => '<a href="' . $t[1] . '">' . htmlspecialchars($t[0]) . '</a>', $todo)) ?></div><?php endif; ?>
+                                <div class="mt-1"><a href="<?= ROOT ?>/clients/<?= (int) $row['id'] ?>/price-list">Cennik klienta</a> · <a href="<?= ROOT ?>/communication/distribution">Dystrybucja dokumentów</a> · <a href="<?= ROOT ?>/logistics/tours">Trasy</a></div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
                     <form method="POST" data-vies-lookup-form data-vies-lookup-endpoint="<?=ROOT?>/ajax/clients/vies-lookup">
                         <div class="row">

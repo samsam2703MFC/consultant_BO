@@ -3,6 +3,7 @@
 namespace App\Controllers\Web\Client;
 
 use App\Core\Web\BaseController;
+use App\Services\Client\ClientCreationService;
 use App\Services\Client\ClientSalesSummaryService;
 use App\Services\Client\ClientSpaceService;
 use App\Services\Client\ClientService;
@@ -10,6 +11,7 @@ use App\Services\Client\FranchiseNetwork\IntegrationOnboardingTokenService;
 use App\Services\Client\Integration\ClientIntegrationService;
 use App\Services\Finances\ProfitabilityService;
 use App\Services\Logistics\CustomerDeliveryInfoService;
+use App\Services\Logistics\LogisticsService;
 use App\Services\Utils\CountryService;
 use DateTime;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,7 +33,9 @@ class ClientController extends BaseController
         ClientIntegrationService $clientIntegrationService,
         ClientSalesSummaryService $clientSalesSummaryService,
         private ClientSpaceService $clientSpaceService,
-        private CustomerDeliveryInfoService $deliveryInfo
+        private CustomerDeliveryInfoService $deliveryInfo,
+        private ClientCreationService $creation,
+        private LogisticsService $logistics
     )
     {
         $this->clientService = $clientService;
@@ -64,18 +68,26 @@ class ClientController extends BaseController
         $this->view("client/client/overview", $data);
     }
 
+    /**
+     * Kreator klienta (audyt 2, lot C) : firma i VAT → kontakt i język → cennik → dostawa (trasa, instrukcje) →
+     * dokumenty → opcje klienta → podsumowanie ; po zapisie karta klienta (nigdy lista) z tym, co zostało do uzupełnienia.
+     */
     public function newClient()
     {
         $data['countries'] = $this->countryService->getAll();
         $data['rows'] = $this->clientService->getAll();
+        $data['tours'] = array_values(array_filter($this->logistics->tours()['tours'], fn($t) => $t['active']));
+        $data['space'] = $this->clientSpaceService->settings(0);
 
         if ($_SERVER['REQUEST_METHOD'] == "POST") {
             $this->errors = $this->clientService->validate($_POST);
 
             if (empty($this->errors)) {
                 $this->handleAction(function () {
-                    $this->clientService->insert($_POST);
-                    header('Location: ' . ROOT . '/clients');
+                    $id = (int) $this->clientService->insert($_POST);
+                    $author = user('displayed_name') ?: user('login') ?: null;
+                    $_SESSION['client_created'] = ['id' => $id, 'problems' => $this->creation->complete($id, $_POST, $author)];
+                    header('Location: ' . ROOT . '/clients/' . $id . '/edit');
                     exit;
                 }, default: false);
             }
@@ -86,6 +98,11 @@ class ClientController extends BaseController
     public function editClient($id)
     {
         $data['row'] = $this->clientService->getById($id);
+        // Prosto z kreatora : komunikat « utworzono » i lista tego, czego brakuje (raz).
+        if (($_SESSION['client_created']['id'] ?? null) === (int) $id) {
+            $data['created'] = $_SESSION['client_created'];
+            unset($_SESSION['client_created']);
+        }
         $data['countries'] = $this->countryService->getAll();
         $data['space'] = $this->clientSpaceService->settings((int) $id);
         $data['delivery_info'] = $data['row'] ? $this->deliveryInfo->get((int) $id) : null;

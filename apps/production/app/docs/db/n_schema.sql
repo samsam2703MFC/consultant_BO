@@ -1,7 +1,7 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 090, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 090 ; compatible MySQL 8.
+-- 001 → 091, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 091 ; compatible MySQL 8.
 -- Modifications des tables d'origine : voir docs/db/README.md (colonne customer.communication_lang, nettoyage 074 → 080).
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `n_activity_click` (

@@ -15,6 +15,9 @@ class MaterialSupplierRepository extends BaseRepository
         'name',
         'phone',
         'email',
+        'nip',
+        'delivery_weekdays',
+        'order_lang',
         'is_active'
     ];
 
