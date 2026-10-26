@@ -224,6 +224,7 @@ function vcTypes(): array
     foreach ($defaut as $code => $t) { if (!isset($vus[$code])) { $out[] = $t; } }
     foreach ($out as &$t) {
         if ($t['code'] === 'reguliere' || $t['checklist'] === null) { $t['checklist'] = viChecklist(); }
+        else { $t['checklist'] = viAvecNl(array_map(static fn ($m) => is_array($m) ? viModuleNormalise($m, (string) ($m['id'] ?? '')) : $m, is_array($t['checklist']) ? $t['checklist'] : [])); }
         $t['duree'] = max(15, min(480, (int) $t['duree']));
         $t['profil'] = (string) $t['profil'];
         $t['profilNom'] = vcProfilNom($t['profil']);
@@ -267,15 +268,8 @@ function vcChecklistNormalise(mixed $cl, bool $standard): array
         $id = preg_replace('/[^a-z0-9_]/', '', strtolower((string) ($m['id'] ?? '')));
         if ($standard) { $id = in_array($id, VI_MODULES, true) ? $id : ''; }
         if ($id === '' || mb_strlen($id) > 12) { continue; }
-        $pts = [];
-        foreach (is_array($m['points'] ?? null) ? $m['points'] : [] as $p) {
-            if (!is_array($p)) { continue; }
-            $ref = preg_replace('/[^\w-]/', '', (string) ($p['ref'] ?? ''));
-            $lib = mb_substr(trim((string) ($p['libelle'] ?? '')), 0, 190);
-            if ($ref === '' || $lib === '') { continue; }
-            $pts[] = ['ref' => mb_substr($ref, 0, 60), 'libelle' => $lib, 'photo' => !empty($p['photo']), 'pct' => !empty($p['pct'])];
-        }
-        $out[] = ['id' => $id, 'nom' => mb_substr(trim((string) ($m['nom'] ?? $id)), 0, 60) ?: $id, 'points' => $pts];
+        // Type de réponse, choix, bornes, libellés FR et NL : src/visites_questions.php.
+        $out[] = viModuleNormalise($m, $id);
     }
     return $out;
 }

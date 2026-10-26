@@ -427,7 +427,7 @@ function rapVals(app, sv, id){
       setEcheance: e => majPl(p.id, { echeance: e.target.value }), prios: ['P0', 'P1', 'P2'].map(x => ({ v: x, nom: x, on: f.priorite === x })), setPrio: e => majPl(p.id, { priorite: e.target.value }) }; }),
     photos: d.photos.map(p => ({ src: racine() + p.chemin, genre: p.genre, inclus: !!F.photos[p.id], basculer: envoye ? null : () => maj({ photos: Object.assign({}, F.photos, { [p.id]: !F.photos[p.id] }) }) })),
     checklist: d.checklist.ok + ' / ' + d.checklist.total + ' conformes' + (d.checklist.na ? ' · ' + d.checklist.na + ' sans objet' : ''),
-    ecarts: d.checklist.ecarts.map(e => e.libelle + (e.commentaire ? ' — ' + e.commentaire : '')),
+    ecarts: d.checklist.ecarts.map(e => e.libelle + (e.reponse ? ' : ' + e.reponse : '') + (e.commentaire ? ' — ' + e.commentaire : '')),
     nInclus: inclus.length, nInternes: d.plans.length - inclus.length,
     budget: budgetDe(v.budgetCa),
     a: d.envoi.a, source: d.envoi.source, copies: d.envoi.copies.map(x => x.nom + (x.email ? '' : ' (sans adresse)')).join(', ') || 'personne',

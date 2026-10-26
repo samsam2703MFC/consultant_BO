@@ -29,6 +29,7 @@ require __DIR__ . '/../../src/newsletter.php';
 require __DIR__ . '/../../src/newsletter_envoi.php';
 require __DIR__ . '/../../src/fidelite.php';
 require __DIR__ . '/../../src/prospection.php';
+require __DIR__ . '/../../src/visites_questions.php';
 require __DIR__ . '/../../src/visites.php';
 require __DIR__ . '/../../src/visites_kpi.php';
 require __DIR__ . '/../../src/visites_conformite.php';
