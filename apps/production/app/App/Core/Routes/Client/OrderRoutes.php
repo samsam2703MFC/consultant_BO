@@ -20,6 +20,9 @@ return function(RouteCollector $r) {
 
     $r->addRoute('GET', '/client-orders/new', ['redirect' => '/client-orders']);
 
+    // Do obsłużenia : sprawy zamówień, proform i wysyłek czekające na działanie (jedna linia na sprawę)
+    $r->addRoute('GET', '/client-orders/queue', ['controller' => \App\Controllers\Web\Client\Order\OrderQueueController::class, 'method' => 'index']);
+
 
 
     $r->addRoute('GET', '/client-orders/{id:\d+}/edit', [

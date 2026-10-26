@@ -1,0 +1,110 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Do obsłużenia{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3><i class="bi bi-list-check"></i> Do obsłużenia</h3>
+            <p class="text-subtitle text-muted">Zamówienia, proformy, wysyłki i e-maile, które czekają na działanie : jedna linia na sprawę, z terminem, stanowiskiem
+                odpowiedzialnym i działaniem. Lista niczego nie zmienia sama — sprawa znika, gdy zostanie załatwiona.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.oq-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 12px}
+.oq-table{width:100%;border-collapse:collapse;font-size:13px}
+.oq-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted);border-bottom:1px solid var(--at-line);padding:8px 10px;text-align:left;white-space:nowrap}
+.oq-table td{border-bottom:1px solid var(--at-line);padding:9px 10px;vertical-align:top}
+.oq-table tr.is-mine td:first-child{box-shadow:inset 3px 0 0 var(--at-primary)}
+.oq-sub{font-size:12px;color:var(--at-muted)}
+.oq-due{white-space:nowrap}
+.oq-late{color:var(--at-danger);font-weight:600}
+.oq-today{color:var(--at-warning);font-weight:600}
+.oq-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.oq-rules{display:flex;flex-wrap:wrap;gap:6px}
+</style>
+{% set qs = (when != 'all' ? '&when=' ~ when : '') ~ (mine ? '&mine=1' : '') %}
+<section class="section">
+    <div class="at-tiles">
+        <div class="at-tile {{ overdue ? 'at-tile-danger' }}"><span class="at-tile-label"><i class="bi bi-alarm"></i> Po terminie</span>
+            <span class="at-tile-value">{{ overdue }}</span><span class="at-tile-meta">z {{ total|plural_pl('sprawy', 'spraw', 'spraw') }} w kolejce</span></div>
+        {% for code in top %}
+            <a class="at-tile {{ rule == code ? 'at-tile-ok' }}" href="{{ root }}/client-orders/queue?rule={{ code }}{{ qs }}"><span class="at-tile-label"><i class="bi {{ rules[code].icon }}"></i> {{ rules[code].label }}</span>
+                <span class="at-tile-value">{{ counts[code] }}</span><span class="at-tile-meta">pokaż listę</span></a>
+        {% endfor %}
+    </div>
+
+    <div class="oq-bar">
+        <div class="at-pipe-filters" role="navigation" aria-label="Termin">
+            {% for code, label in whens %}
+                <a class="at-pipe-filter {{ when == code ? 'active' }}" href="{{ root }}/client-orders/queue?when={{ code }}{{ rule ? '&rule=' ~ rule }}{{ mine ? '&mine=1' }}">{{ label }} <span class="at-pipe-count">{{ when_counts[code] }}</span></a>
+            {% endfor %}
+            {% if position %}
+                <a class="at-pipe-filter {{ mine ? 'active' }}" href="{{ root }}/client-orders/queue?when={{ when }}{{ rule ? '&rule=' ~ rule }}{{ mine ? '' : '&mine=1' }}"><i class="bi bi-person"></i> Moje ({{ position_name }}) <span class="at-pipe-count">{{ mine_count }}</span></a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="oq-rules" style="margin:-4px 0 14px">
+        <a class="at-chip {{ rule is null ? 'is-used' }}" href="{{ root }}/client-orders/queue?{{ qs|trim('&', 'left') }}">Wszystkie sprawy</a>
+        {% for code, r in rules %}
+            <a class="at-chip {{ rule == code ? 'is-used' }}" href="{{ root }}/client-orders/queue?rule={{ code }}{{ qs }}"><i class="bi {{ r.icon }}"></i> {{ r.label }} · {{ counts[code] }}</a>
+        {% endfor %}
+    </div>
+
+    <div class="card">
+        <div class="card-body table-responsive">
+            {% if items %}
+            <table class="oq-table" data-at-table data-at-table-size="50">
+                <thead><tr><th>Termin</th><th>Sprawa</th><th>Klient</th><th>Co</th><th>Kto</th><th></th></tr></thead>
+                <tbody>
+                {% for i in items %}
+                    <tr class="{{ i.mine ? 'is-mine' }}">
+                        <td class="oq-due">
+                            {% if i.due %}{{ i.due|date('d.m.Y') }}
+                                <div class="{{ i.days < 0 ? 'oq-late' : (i.days == 0 ? 'oq-today' : 'oq-sub') }}">{{ i.days < 0 ? (-i.days)|plural_pl('dzień', 'dni', 'dni') ~ ' po terminie' : (i.days == 0 ? 'dziś' : 'za ' ~ i.days|plural_pl('dzień', 'dni', 'dni')) }}</div>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td><span class="at-pill {{ i.tone == 'danger' ? 'at-pill-danger' : (i.tone == 'warning' ? 'at-pill-warn' : '') }}"><i class="bi {{ i.icon }}"></i> {{ i.rule_label }}</span></td>
+                        <td>{% if i.customer_id %}<a href="{{ root }}/clients/{{ i.customer_id }}/edit">{{ i.customer ?? '—' }}</a>{% else %}{{ i.customer ?? '—' }}{% endif %}</td>
+                        <td>{{ i.title }}{% if i.detail %}<div class="oq-sub">{{ i.detail }}</div>{% endif %}{% if i.note %}<div class="oq-sub">{{ i.note }}</div>{% endif %}</td>
+                        <td class="oq-sub">{{ i.owners|join(', ') }}</td>
+                        <td>
+                            <div class="oq-actions">
+                                {% for a in i.actions %}
+                                    {% if a.post is defined %}
+                                        <button type="button" class="btn btn-sm {{ a.primary ?? false ? 'btn-primary' : 'btn-outline-secondary' }}" data-post="{{ a.post }}" data-confirm="{{ a.confirm ?? '' }}">{{ a.label }}</button>
+                                    {% else %}
+                                        <a class="btn btn-sm {{ a.primary ?? false ? 'btn-primary' : 'btn-outline-secondary' }}" href="{{ root }}{{ a.url }}"{{ a.blank ?? false ? ' target="_blank" rel="noopener"' }}>{{ a.label }}</a>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="at-empty"><i class="bi bi-check-circle text-success"></i> Nic do obsłużenia{{ rule ? ' w tej kategorii' }}{{ mine ? ' na Twoim stanowisku' }}.</p>
+            {% endif %}
+            <p class="oq-sub mt-2 mb-0">Zamówienia otwarte = jak na liście zamówień i w Dzisiaj. Przypomnienia o płatności : poziomy 1–5 po 3, 7, 14, 21 i 30 dniach od proformy.
+                Palety gotowe do dokumentów : ostatnie 14 dni. E-maile z błędem : jak w Stanie wysyłek.</p>
+        </div>
+    </div>
+</section>
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(function () {
+    document.querySelectorAll('[data-post]').forEach(b => b.addEventListener('click', () => {
+        if (b.dataset.confirm && !confirm(b.dataset.confirm)) return;
+        b.disabled = true;
+        at.send(b.dataset.post, 'POST', {}).then(res => {
+            at.notify(res.ok, res.message || (res.ok ? 'Zrobione.' : 'Błąd'));
+            if (res.ok) setTimeout(() => location.reload(), 600); else b.disabled = false;
+        });
+    }));
+})();
+</script>
+{% endblock %}

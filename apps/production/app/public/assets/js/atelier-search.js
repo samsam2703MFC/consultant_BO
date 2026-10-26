@@ -59,7 +59,7 @@
         'question': 'pytania', 'questions': 'pytania', 'tenue': 'pytania odziez', 'hygiene': 'higiena pytania', 'heures': 'godziny',
         'badge': 'identyfikatory', 'badges': 'identyfikatory', 'telephone': 'telefony', 'distribution': 'dystrybucja',
         'document': 'dokumenty', 'documents': 'dokumenty', 'calcul': 'kalkulacja kalkulator', 'cmr': 'cmr dokumenty', 'imprimer': 'drukuj dokumenty',
-        'mail': 'poczta skrzynka', 'mails': 'poczta skrzynka e-maile', 'email': 'poczta skrzynka e-maile', 'courriel': 'poczta', 'boite': 'poczta skrzynka', 'reception': 'poczta dostawy', 'envoyes': 'wyslane',
+        'mail': 'poczta skrzynka', 'mails': 'poczta skrzynka e-maile', 'email': 'poczta skrzynka e-maile', 'courriel': 'poczta', 'boite': 'poczta skrzynka', 'reception': 'poczta dostawy', 'envoyes': 'wyslane niewyslane',
         'messagerie': 'poczta', 'groupe': 'grupy grup', 'groupes': 'grupy grup', 'semaine': 'tydzien tygodni', 'qui': 'kto', 'livre': 'dostarcza dostawy', 'livrent': 'dostarcza dostawy', 'quoi': 'co', 'quand': 'kiedy', 'hebdomadaire': 'tydzien', 'hebdo': 'tydzien', 'cobot': 'coboty cobot', 'cobots': 'coboty cobot', 'photo': 'zdjecia', 'photos': 'zdjecia',
         'remplir': 'wypelnienia', 'importer': 'import', 'xlsx': 'excel', 'donnees': 'dane tabela', 'capacite': 'pojemnosc pojemnosci', 'capacites': 'pojemnosci',
         'machine': 'stanowiska maszyny', 'machines': 'stanowiska maszyny', 'poste': 'stanowiska', 'postes': 'stanowiska', 'four': 'stanowiska piece', 'fours': 'stanowiska piece',
@@ -74,8 +74,8 @@
         'crm': 'nowe produkty etapy crm', 'essai': 'test testy', 'essais': 'testy test', 'etape': 'etapy etap', 'etapes': 'etapy', 'suivi': 'etapy sledzenie',
         'valider': 'zatwierdzenie zatwierdzona', 'validation': 'zatwierdzenie zatwierdzona', 'lance': 'wprowadzone wprowadzony', 'lances': 'wprowadzone',
         'pipeline': 'etapy', 'prototype': 'test nowe', 'degustation': 'test', 'accueil': 'ekran glowny', 'ipad': 'tablet ekran',
-        'alerte': 'alerty dzwonek', 'alertes': 'alerty dzwonek', 'echeance': 'terminy termin', 'echeances': 'terminy', 'retard': 'zalegle terminy alerty',
-        'retards': 'zalegle terminy', 'rappel': 'alerty terminy', 'rappels': 'alerty terminy', 'cloche': 'dzwonek alerty', 'notification': 'dzwonek alerty', 'notifications': 'dzwonek alerty',
+        'alerte': 'alerty dzwonek', 'alertes': 'alerty dzwonek', 'echeance': 'terminy termin', 'echeances': 'terminy', 'retard': 'zalegle terminy termin alerty',
+        'retards': 'zalegle terminy termin', 'rappel': 'alerty terminy', 'rappels': 'alerty terminy', 'cloche': 'dzwonek alerty', 'notification': 'dzwonek alerty', 'notifications': 'dzwonek alerty',
         'historique': 'historia wersje', 'historiques': 'historia', 'version': 'wersje wersja', 'versions': 'wersje', 'evolution': 'historia koszt miesiac',
         'vigueur': 'obowiazuje', 'depuis': 'obowiazuje', 'changement': 'zmiany zmiana', 'changements': 'zmiany', 'modification': 'zmiany edycja',
         'modifications': 'zmiany', 'composition': 'sklad kompozycje', 'compositions': 'kompozycje sklad',
@@ -88,12 +88,16 @@
         'magasin': 'magazyn magazynowe', 'solde': 'stan saldo', 'valeur': 'wartosc', 'fini': 'gotowe gotowych', 'finis': 'gotowe gotowych', 'finies': 'gotowe gotowych',
         'envoi': 'wysylki wysylka', 'envois': 'wysylki wysylek', 'erreur': 'bledy blad', 'erreurs': 'bledy blad', 'echec': 'bledy nie wyszly', 'echecs': 'bledy nie wyszly',
         'attente': 'czeka kolejka', 'bloque': 'czeka kolejka', 'bloques': 'czeka kolejka', 'file': 'kolejka', 'webhook': 'wysylki sklepow', 'webhooks': 'wysylki sklepow',
-        'discord': 'monitoring', 'surveillance': 'monitoring', 'relancer': 'ponow', 'renvoyer': 'ponow', 'retry': 'ponow'
+        'discord': 'monitoring', 'surveillance': 'monitoring', 'relancer': 'ponow', 'renvoyer': 'ponow', 'retry': 'ponow',
+        'traiter': 'obsluzenia sprawy', 'urgent': 'obsluzenia terminie', 'urgence': 'obsluzenia terminie', 'urgences': 'obsluzenia terminie',
+        'impaye': 'nieoplacona przypomnienie platnosci', 'impayes': 'nieoplacone przypomnienie platnosci', 'impayee': 'nieoplacona przypomnienie platnosci', 'impayees': 'nieoplacone przypomnienie platnosci',
+        'paiement': 'platnosci oplacona', 'relance': 'przypomnienie', 'relances': 'przypomnienia przypomnienie', 'afaire': 'obsluzenia zadania',
+        'envoye': 'wyslane wyslana niewyslana', 'envoyee': 'wyslana niewyslana', 'envoyees': 'wyslane niewyslane'
     };
 
     var menu = null;
     // Słowa łączące (FR, PL) pomijane w zapytaniu : « preuve de livraison », « plan na tydzień ».
-    var STOP = { 'de': 1, 'du': 1, 'des': 1, 'la': 1, 'le': 1, 'les': 1, 'et': 1, 'au': 1, 'aux': 1, 'en': 1, 'pour': 1, 'par': 1, 'un': 1, 'une': 1, 'na': 1, 'do': 1, 'od': 1, 'ze': 1 };
+    var STOP = { 'a': 1, 'non': 1, 'de': 1, 'du': 1, 'des': 1, 'la': 1, 'le': 1, 'les': 1, 'et': 1, 'au': 1, 'aux': 1, 'en': 1, 'pour': 1, 'par': 1, 'un': 1, 'une': 1, 'na': 1, 'do': 1, 'od': 1, 'ze': 1 };
 
     function menuIndex() {
         if (menu) return menu;
