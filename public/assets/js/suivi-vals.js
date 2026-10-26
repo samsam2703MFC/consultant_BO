@@ -25,6 +25,26 @@ const pl = (n, u, p) => nf(n) + ' ' + u + (n > 1 ? (p || 's') : '');
 const duree = h => h == null ? '' : (Math.abs(h) < 1 ? Math.round(Math.abs(h) * 60) + ' min' : nf(Math.abs(h), Math.abs(h) < 10 ? 1 : 0) + ' h');
 const racine = () => API_BASE.replace(/api\/cockpit\/?$/, '');
 const fin = t => /\.$/.test(String(t)) ? String(t) : t + '.';
+const ASSIGNE = { franchise: 'le franchisé', equipe: 'l’équipe', consultant: 'le consultant', admin: 'le bureau' };
+
+/* Le QR code d'une visite (26/10/2026) : scanné avec la tablette, il ouvre le contrôle de CETTE visite
+ * (controle/#controle/{id}). Dessiné en SVG par qrcode-generator (assets/vendor/qrcode, MIT), chargé à la
+ * première fiche qui en a besoin ; l'écran se redessine quand il arrive. */
+let qrCharge = null;
+function qrSvg(app, texte){
+  if (typeof window !== 'undefined' && typeof window.qrcode === 'function') {
+    try { const q = window.qrcode(0, 'M'); q.addData(texte); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true, alt: 'QR code : ' + texte }); } catch (e) { return null; }
+  }
+  if (!qrCharge && typeof document !== 'undefined') {
+    qrCharge = new Promise(res => { const sc = document.createElement('script'); sc.src = racine() + 'assets/vendor/qrcode/qrcode.js'; sc.onload = res; sc.onerror = res; document.head.appendChild(sc); })
+      .then(() => app.setState({ svQr: Date.now() }));
+  }
+  return null;
+}
+function lienControle(id){
+  const base = typeof location !== 'undefined' ? new URL(racine(), location.href).href : racine();
+  return base.replace(/\/?$/, '/') + 'controle/#controle/' + encodeURIComponent(String(id));
+}
 
 /* --- lectures et messages ------------------------------------------------------------ */
 function charge(app, cle, path, force){
@@ -74,7 +94,7 @@ export function valsSvTableau(app, common){
   d.cartes.preparer.forEach(c => attente.push({ id: c.id, court: c.court, quoi: c.prepRetard ? 'dossier en retard' : 'dossier à finir', echeance: 'visite ' + fmtDJ(c.le) + ' ' + c.h, urgent: !!c.prepRetard, pt: c.prepRetard ? 'ko' : '', pas: 'dossier' }));
   d.cartes.tablette.filter(c => c.nonFaite || c.statut === 'en_cours').forEach(c => attente.push({ id: c.id, court: c.court, quoi: c.statut === 'en_cours' ? 'en visite' : 'pas encore faite', echeance: fmtDJ(c.le), urgent: !!c.nonFaite, pt: c.nonFaite ? 'ko' : 'ok', pas: 'tablette' }));
   const vus = {}; const tabs = attente.filter(a => { const k = String(a.id); if (vus[k]) { return false; } vus[k] = true; return true; });
-  const sel = S.svSel && (S.svSel.kind === 'nouvelle' || tabs.some(t => String(t.id) === String(S.svSel.id)) || S.svSel.garde) ? S.svSel : { kind: 'nouvelle' };
+  const sel = S.svSel && (S.svSel.kind === 'nouvelle' || S.svSel.kind === 'points' || tabs.some(t => String(t.id) === String(S.svSel.id)) || S.svSel.garde) ? S.svSel : { kind: 'nouvelle' };
   const N = S.svNouv || {};
   // Une visite ouverte reste ouverte, même quand elle change d'étape et quitte la liste de ce qui attend.
   const ouvrir = (s, pas) => app.setState({ svSel: s.kind === 'visite' ? Object.assign({ garde: true }, s) : s, svPas: pas || null, svPrepF: null, svRapF: null, svVisF: null, svRep: null });
@@ -94,10 +114,50 @@ export function valsSvTableau(app, common){
   sv.autres = tabs.length > MAX ? [{ v: '', nom: '+ ' + (tabs.length - MAX) + ' autre' + (tabs.length - MAX > 1 ? 's' : ''), on: true }].concat(tabs.slice(MAX).map(t => ({ v: String(t.id), nom: t.court + ' · ' + t.quoi, on: false }))) : null;
   sv.setAutre = e => { const t = tabs.find(x => String(x.id) === e.target.value); if (t) { ouvrir({ kind: 'visite', id: t.id, garde: true }, t.pas); } };
   sv.creer = { on: sel.kind === 'nouvelle' && !N.shop, ouvrir: () => app.setState({ svSel: { kind: 'nouvelle' }, svNouv: null, svPas: null }) };
+  // L'onglet des points décidés : tout ce qui a été envoyé au franchisé, et pour quand.
+  const pts = d.points || [];
+  const nRetard = pts.filter(q => q.retard > 0).length;
+  sv.ongletPoints = { n: pts.length, retard: nRetard, on: sel.kind === 'points', ouvrir: () => ouvrir({ kind: 'points' }) };
   sv.relire = () => { charge(app, 'svT', path, true); if (S.svPrep && S.svPrep.path) { charge(app, 'svPrep', S.svPrep.path, true); } if (S.svRap && S.svRap.path) { charge(app, 'svRap', S.svRap.path, true); } };
   sv.lu = d.lu ? 'relu à ' + d.lu.slice(11, 16) : '';
-  if (sel.kind === 'nouvelle') { nouvelleVals(app, sv, d, { shopDe, types, consNom }); }
+  if (sel.kind === 'points') { pointsDecidesVals(app, sv, d, vid => ouvrir({ kind: 'visite', id: vid }, 'corrections')); }
+  else if (sel.kind === 'nouvelle') { nouvelleVals(app, sv, d, { shopDe, types, consNom }); }
   else { visiteVals(app, sv, d, sel.id, { shopDe, types, consNom, corrPar }); }
+}
+
+/* Les points décidés (26/10/2026, demande de Sam) : tout point envoyé au franchisé avec le rapport et pas encore
+ * fermé — ouvert, à reprendre, escaladé, photo reçue — groupé par échéance : en retard, cette semaine (jusqu'au
+ * dimanche), d'ici la fin du mois, plus tard. Les pistes de développement notées quand le CA est sous le budget
+ * (référence budget:1…3) se filtrent à part. Une ligne ouvre sa visite, à l'étape des corrections. */
+function pointsDecidesVals(app, sv, d, ouvrirVisite){
+  const S = app.state; const F = S.svPtF || { shop: '', filtre: 'tout' };
+  const maj = patch => app.setState({ svPtF: Object.assign({}, F, patch) });
+  const t = auj(); const td = new Date(t + 'T12:00:00');
+  const finSem = plusJours(t, (7 - td.getDay()) % 7);
+  const finMois = plusJours(t.slice(0, 7) + '-01', 40).slice(0, 7) + '-01'; // le 1er du mois suivant
+  const piste = q => /^budget:/.test(q.ref || '');
+  const tous = d.points || [];
+  const duMag = tous.filter(q => !F.shop || String(q.shop) === String(F.shop));
+  const garde = { tout: () => true, retard: q => q.retard > 0, semaine: q => q.retard > 0 || (!!q.echeance && q.echeance <= finSem), pistes: piste };
+  const vus = duMag.filter(garde[F.filtre] || garde.tout);
+  const groupe = q => q.retard > 0 ? 'retard' : !q.echeance ? 'sans' : q.echeance <= finSem ? 'semaine' : q.echeance < finMois ? 'mois' : 'plus';
+  const G = [['retard', 'En retard', 'ko'], ['semaine', 'À faire d’ici dimanche', 'att'], ['mois', 'D’ici la fin du mois', ''], ['plus', 'Plus tard', ''], ['sans', 'Sans échéance', '']];
+  const jours = e => Math.round((new Date(e + 'T12:00:00') - td) / 86400000);
+  const mags = {}; tous.forEach(q => { mags[q.shop] = q.court || q.shop; });
+  sv.titre = 'Les points décidés';
+  sv.chapo = 'Tout ce qui a été décidé en visite et envoyé au franchisé, avec son échéance — les plus en retard d’abord. Les pistes de développement notées quand le CA est sous le budget sont marquées.';
+  sv.pointsDecides = {
+    total: tous.length,
+    magasins: [{ v: '', nom: 'Tous les magasins · ' + tous.length, on: !F.shop }].concat(Object.keys(mags).sort((a, b) => String(mags[a]).localeCompare(String(mags[b]))).map(k => ({ v: k, nom: mags[k] + ' · ' + tous.filter(q => String(q.shop) === String(k)).length, on: String(F.shop) === String(k) }))),
+    setShop: e => maj({ shop: e.target.value }),
+    filtres: [['tout', 'Tous'], ['retard', 'En retard'], ['semaine', 'D’ici dimanche'], ['pistes', 'Pistes CA']].map(([k, nom]) => ({ nom: nom + ' · ' + duMag.filter(garde[k]).length, on: (F.filtre || 'tout') === k, choisir: () => maj({ filtre: k }) })),
+    groupes: G.map(([k, nom, cls]) => ({ nom, cls, lignes: vus.filter(q => groupe(q) === k).sort((a, b) => b.retard - a.retard || String(a.echeance || '9').localeCompare(String(b.echeance || '9')) || String(a.priorite).localeCompare(String(b.priorite))).map(q => ({
+      prio: q.priorite, titre: q.titre, detail: q.detail || '', court: q.court || q.shop, piste: piste(q),
+      origine: q.visiteLe ? 'visite du ' + fmtD(q.visiteLe) + (q.visiteType ? ' · ' + q.visiteType : '') : (/^msp/.test(q.ref || '') ? 'client mystère' : 'hors visite'),
+      qui: ASSIGNE[q.assigne] || q.assigne || '', echeance: q.echeance ? fmtDJ(q.echeance) : '—',
+      delai: q.retard > 0 ? 'retard ' + pl(q.retard, 'jour') : q.echeance ? (jours(q.echeance) === 0 ? 'aujourd’hui' : 'dans ' + pl(jours(q.echeance), 'jour')) : '', delaiKo: q.retard > 0,
+      statut: PLAN_ST[q.statut] || q.statut, statutCls: PLAN_CLS[q.statut] || '', ouvrir: q.visite_id ? () => ouvrirVisite(q.visite_id) : null })) })).filter(g => g.lignes.length)
+  };
 }
 
 /* La pile d'étapes : l'état de chacune (fait, en cours, à venir), sa ligne repliée, l'étape ouverte. */
@@ -270,6 +330,8 @@ function visiteVals(app, sv, d, id, h){
       { ic: 'lock', qui: 'Le bureau et ' + consN + ' seulement', quoi: [internes.map(b => b.titre.toLowerCase()).join(', '), p.note ? 'votre mot' : '', dem.length - demOdj.length ? pl(dem.length - demOdj.length, 'demande') + ' interne' + (dem.length - demOdj.length > 1 ? 's' : '') : ''].filter(Boolean).join(', ') || 'rien de plus', quand: '' }],
     odj: p.annoncee ? { sujet: P.odj.sujet, texte: P.odj.texte, langue: P.odj.langueNom, sujets: demOdj.map(q => q.libelle) } : null,
     suite: suiteDe(d, { annoncee: p.annoncee, date: v.prevu_le, heure: v.debut_h, consultant: consN, odjLe: P.odj.envoyeLe, faite, rapportLe: rapLe }),
+    qr: v.statut === 'annulee' ? null : (() => { const lien = lienControle(v.id); return { id: v.id, lien, svg: qrSvg(app, lien), faite,
+      copier: () => { const ok = () => message(app, 'Lien du contrôle copié.'); try { navigator.clipboard.writeText(lien).then(ok, () => message(app, lien)); } catch (e) { message(app, lien); } } }; })(),
     pied: rapportEnvoye ? 'Rapport envoyé' + (corr.length ? ' · ' + pl(corr.length, 'correction') + ' à valider' : '') : faite ? 'Visite faite · reste le rapport' : envoyeeLe ? 'Dossier sur la tablette · la visite suit' : 'Magasin, visite' + (inclus.length ? ' et dossier' : '') + ' prêts · reste l’envoi' };
 }
 /* Le formulaire du dossier tel qu'il est à l'écran (repris de prepVals). */
@@ -367,6 +429,7 @@ function rapVals(app, sv, id){
     checklist: d.checklist.ok + ' / ' + d.checklist.total + ' conformes' + (d.checklist.na ? ' · ' + d.checklist.na + ' sans objet' : ''),
     ecarts: d.checklist.ecarts.map(e => e.libelle + (e.commentaire ? ' — ' + e.commentaire : '')),
     nInclus: inclus.length, nInternes: d.plans.length - inclus.length,
+    budget: budgetDe(v.budgetCa),
     a: d.envoi.a, source: d.envoi.source, copies: d.envoi.copies.map(x => x.nom + (x.email ? '' : ' (sans adresse)')).join(', ') || 'personne',
     envoie: d.roles.envoieNom, adapte: d.roles.adapteNom, smtp: d.envoi.smtp,
     dernier: d.envoi.dernier ? (d.envoi.dernier.envoye ? 'Dernier courriel : envoyé à ' + d.envoi.dernier.a + ' (' + (d.envoi.dernier.langue || '') + ')' + (d.envoi.dernier.pdf ? ', PDF joint' : ', sans PDF (moteur PDF muet)') + '.' : 'Dernier courriel non parti : ' + d.envoi.dernier.motif + '.') : null,
@@ -376,6 +439,17 @@ function rapVals(app, sv, id){
     renvoyer: envoye ? () => rapRenvoyer(app, id) : null,
     voir: () => { app.setState({ svApercu: { chargement: true, titre: 'Le rapport tel que le franchisé le reçoit' } }); readOne('/suivi/rapport/apercu?visite=' + id).then(r => app.setState({ svApercu: { titre: 'Le rapport tel que le franchisé le reçoit · ' + ((r && r.langue) || '').toUpperCase(), html: r && r.html ? r.html : '<p>Aperçu indisponible.</p>' } })); }
   };
+}
+/** Le CA sous le budget, noté à la tablette avec le franchisé : les écarts, le pourquoi, ses trois pistes et l'échéance. */
+function budgetDe(bc){
+  if (!bc || (!bc.pourquoi && !(bc.pistes || []).some(p => p && p.trim()))) { return null; }
+  const NOM = { semaine: 'Semaine', mois: 'Mois', trimestre: 'Trimestre', annee: 'Année' };
+  const pct = e => (e > 0 ? '+' : e < 0 ? '−' : '') + String(Math.abs(e)).replace('.', ',') + ' %';
+  const jm = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
+  return { ecarts: Object.keys(bc.ecarts || {}).map(k => NOM[k] + ' ' + pct(bc.ecarts[k])).join(' · '), arrete: bc.arrete ? 'arrêté au ' + jm(bc.arrete) : '',
+    pourquoi: bc.pourquoi || '', pistes: (bc.pistes || []).filter(p => p && p.trim()),
+    horizon: bc.horizon === 'trimestre' ? 'pour la fin du trimestre' : bc.horizon === 'mois' ? 'pour le mois prochain' : '', echeance: bc.echeance ? 'd’ici le ' + jm(bc.echeance) : '',
+    complet: !!bc.complet, qui: bc.qui || '' };
 }
 function rapCorps(F){
   return { phrase: F.phrase, positif: F.positif, sentiment: F.sentiment, execution: F.execution, clients: F.clients, causes: F.causes, diagnostic: F.diagnostic, reco: F.reco,
