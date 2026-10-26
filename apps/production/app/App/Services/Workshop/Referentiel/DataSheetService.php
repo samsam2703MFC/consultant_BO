@@ -48,6 +48,8 @@ final class DataSheetService
         'shipping_issue.decision_days',
         'shipping_issue.min_amount',
         'shipping_issue.lookback_days',
+        'send_status.stuck_minutes',
+        'send_status.lookback_days',
     ];
     private const MAX_BYTES = 2_000_000;
     /** Lignes préparées pour la saisie (listes déroulantes, colonnes en texte). */

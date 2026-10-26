@@ -276,6 +276,11 @@
                                 <i class="bi bi-envelope-open"></i> Historia wiadomości
                             </a>
                         </li>
+                        <li class="submenu-item">
+                            <a href="{{ root }}/communication/outbox">
+                                <i class="bi bi-send-exclamation"></i> Stan wysyłek
+                            </a>
+                        </li>
                     </ul>
                 </li>
 
@@ -580,6 +585,7 @@
                 <li><a href="{{ root }}/devices/new" data-where="Ustawienia › Ogólne › Dostęp API"><i class="bi bi-plus-circle"></i> Dodaj urządzenie</a></li>
                 <li><a href="{{ root }}/settings/ksef/purchase-invoices" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-cloud-download"></i> Faktury zakupowe KSeF (pobieranie)</a></li>
                 <li><a href="{{ root }}/purchases" data-where="Zakupy › Zaopatrzenie"><i class="bi bi-archive"></i> Archiwum dostaw (ręczne)</a></li>
+                <li><a href="{{ root }}/communication/outbox" data-where="Komunikacja › Stan wysyłek"><i class="bi bi-send-exclamation"></i> Stan wysyłek (błędy e-mail, kolejka, outbox) : e-maile do klientów, które nie wyszły, wysyłki do sklepów franczyzy (proformy, reklamacje, wysyłki), e-maile automatyczne pominięte, monitoring — ponów jedną pozycję, rozwiązane z powodem</a></li>
                 <li><a href="{{ root }}/communication/distribution?tab=history" data-where="Komunikacja › Dystrybucja dokumentów"><i class="bi bi-lightning-charge"></i> Automatyczne e-maile : historia wysyłek</a></li>
                 <li><a href="{{ root }}/mail?folder=ERP" data-where="Poczta"><i class="bi bi-journal-check"></i> Wysłane z ERP (dziennik wysyłek z mojej skrzynki)</a></li>
                 <li><a href="{{ root }}/workshop/execution#questions" data-where="Produkcja › Tablet produkcji › Zarządzanie"><i class="bi bi-ui-checks"></i> Pytania przy wejściu i wyjściu (odzież robocza, higiena)</a></li>
