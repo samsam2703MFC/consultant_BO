@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS ceo_promo (
 
 -- Scoring du trimestre : le rapport du client mystère (obtenu / maximum, PDF joint) et la note
 -- Google gelée en fin de trimestre. Les tâches et le budget se relisent là où ils vivent.
-CREATE TABLE IF NOT EXISTS ceo_scoring_msp (
+CREATE TABLE IF NOT EXISTS con_scoring_msp (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   shop_id     VARCHAR(32)  NOT NULL,
   trimestre   CHAR(7)      NOT NULL,           -- 2026-T3
@@ -199,7 +199,7 @@ CREATE TABLE IF NOT EXISTS ceo_scoring_msp (
   UNIQUE KEY uq_sq_msp (shop_id, trimestre)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_scoring_google (
+CREATE TABLE IF NOT EXISTS con_scoring_google (
   shop_id   VARCHAR(32)  NOT NULL,
   trimestre CHAR(7)      NOT NULL,
   note      DECIMAL(3,2) NULL,
@@ -333,7 +333,7 @@ CREATE TABLE IF NOT EXISTS ceo_project_task (
 -- ----------------------------------------------------------------------------
 -- Intervenants (consultants + fournisseurs) et visites magasin
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ceo_consultant (
+CREATE TABLE IF NOT EXISTS con_consultant (
   id          VARCHAR(10) PRIMARY KEY,
   position_id INT UNSIGNED NULL,        -- position.id (app_type = 'CONSULTANT')
   name        VARCHAR(120) NOT NULL,
@@ -350,7 +350,7 @@ CREATE TABLE IF NOT EXISTS ceo_supplier (
   email     VARCHAR(160) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ceo_consultant_visit (
+CREATE TABLE IF NOT EXISTS con_consultant_visit (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   consultant_id VARCHAR(10) NOT NULL,
   visited_on    DATE NOT NULL,

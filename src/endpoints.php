@@ -4324,7 +4324,7 @@ function ep_pwa_tasks_nc(): array
     // ensuite. Sans l'un ni l'autre, l'identifiant — jamais un nom inventé.
     $noms = todoTaskNames();
     try {
-        foreach (Db::rows('SELECT id_task, nom FROM ceo_tache_jour WHERE id_shop = ? AND jour BETWEEN ? AND ?',
+        foreach (Db::rows('SELECT id_task, nom FROM con_tache_jour WHERE id_shop = ? AND jour BETWEEN ? AND ?',
                           [$sid, $du, $au]) as $r) {
             $n = trim((string) $r['nom']);
             if ($n !== '') { $noms[(int) $r['id_task']] = $n; }
@@ -4346,7 +4346,7 @@ function ep_pwa_tasks_nc(): array
         try {
             $ids = array_keys($manquants);
             $in  = implode(',', array_fill(0, count($ids), '?'));
-            foreach (Db::rows('SELECT id_task, nom FROM ceo_tache_jour WHERE id_task IN (' . $in . ')'
+            foreach (Db::rows('SELECT id_task, nom FROM con_tache_jour WHERE id_task IN (' . $in . ')'
                 . " AND nom <> '' ORDER BY jour DESC", $ids) as $r) {
                 $t = (int) $r['id_task'];
                 if (!isset($noms[$t])) { $noms[$t] = trim((string) $r['nom']); }
@@ -5937,7 +5937,7 @@ function ep_roles(): array
 function ep_consultants(): array
 {
     // Vrais consultants du panel : user_membership(app='CONSULTANT') ⨝ user_profile.
-    // Repli sur ceo_consultant pour une installation autonome.
+    // Repli sur con_consultant pour une installation autonome.
     try {
         $rows = Db::rows(
             "SELECT m.id, m.scope_type, m.scope_id,
@@ -5960,9 +5960,9 @@ function ep_consultants(): array
         ], $rows);
     } catch (PDOException $e) {
         $out = [];
-        foreach (Db::rows('SELECT * FROM ceo_consultant ORDER BY id') as $c) {
+        foreach (Db::rows('SELECT * FROM con_consultant ORDER BY id') as $c) {
             $visites = array_map(fn ($v) => ['date' => $v['visited_on'], 'store' => $v['store_label'], 'objet' => $v['subject']],
-                Db::rows('SELECT * FROM ceo_consultant_visit WHERE consultant_id = ? ORDER BY visited_on DESC', [$c['id']]));
+                Db::rows('SELECT * FROM con_consultant_visit WHERE consultant_id = ? ORDER BY visited_on DESC', [$c['id']]));
             $out[] = ['id' => $c['id'], 'nom' => $c['name'], 'role' => $c['role'], 'email' => $c['email'],
                 'tjm' => $c['daily_rate'] !== null ? (float) $c['daily_rate'] : null,
                 'charge' => $c['workload'] !== null ? (int) $c['workload'] : null, 'visites' => $visites];

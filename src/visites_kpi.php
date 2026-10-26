@@ -261,7 +261,7 @@ function vkCanauxParts(array $t): ?array
 /**
  * GET /visites/taches/{shop}[?mois=AAAA-MM][&n=12] — pour l'étape « Contrôles photo » de la tablette :
  *  - `mois[]` : les n derniers mois (12 au plus), du plus récent au plus ancien — les tâches demandées et faites (le
- *    relevé quotidien du panel, `ceo_tache_jour`, journées révolues : le mois en cours s'arrête à hier), les notes du
+ *    relevé quotidien du panel, `con_tache_jour`, journées révolues : le mois en cours s'arrête à hier), les notes du
  *    contrôle qualité (`mac_task_review`) : combien notées, combien sous le seuil (4), la moyenne ;
  *  - `taches[]` : pour le mois choisi (d'office le mois en cours, ou le précédent s'il n'a encore rien), les tâches
  *    notées sous le seuil ou refusées, avec la note, le commentaire et le nom du contrôleur (ep_pwa_tasks_nc) ; la
@@ -282,7 +282,7 @@ function ep_visites_taches(string $shop): array
     $par = [];
     if (function_exists('tachesSuiviTables')) { tachesSuiviTables(); }
     try {
-        foreach (Db::rows('SELECT DATE_FORMAT(jour, \'%Y-%m\') AS m, COUNT(*) AS t, SUM(fait) AS f, COUNT(DISTINCT jour) AS j FROM ceo_tache_jour'
+        foreach (Db::rows('SELECT DATE_FORMAT(jour, \'%Y-%m\') AS m, COUNT(*) AS t, SUM(fait) AS f, COUNT(DISTINCT jour) AS j FROM con_tache_jour'
             . ' WHERE id_shop = ? AND jour BETWEEN ? AND ? GROUP BY m', [$sid, $du, $au]) as $r) {
             $par[(string) $r['m']] = ['demandees' => (int) $r['t'], 'faites' => (int) $r['f'], 'jours' => (int) $r['j']];
         }

@@ -217,7 +217,7 @@ verifie('un mois muet se dit dans manques (sans cache : la lecture suivante le r
 // --- 5. les tâches mois par mois ----------------------------------------------------------
 echo "Les tâches mois par mois\n";
 $ce = date('Y-m'); $prec = date('Y-m', strtotime('first day of last month'));
-$LIGNES = ['FROM ceo_tache_jour' => [['m' => $prec, 't' => 40, 'f' => 30, 'j' => 20]], 'FROM mac_task_review' => [['m' => $prec, 'notees' => 12, 'sous' => 3, 'moy' => '3.75']]];
+$LIGNES = ['FROM con_tache_jour' => [['m' => $prec, 't' => 40, 'f' => 30, 'j' => 20]], 'FROM mac_task_review' => [['m' => $prec, 'notees' => 12, 'sous' => 3, 'moy' => '3.75']]];
 $_GET = [];
 $T = ep_visites_taches('2');
 verifie('douze mois, du plus récent au plus ancien', count($T['mois']) === 12 && $T['mois'][0]['mois'] === $ce && $T['mois'][0]['enCours'] === true);

@@ -47,24 +47,24 @@ $P->exec('CREATE TABLE ceo_app_setting (key TEXT PRIMARY KEY, value TEXT)');
 $P->exec('CREATE TABLE shops (id INT, name TEXT, active INT)');
 $P->exec('CREATE TABLE ceo_rapport (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE, nom TEXT, poste TEXT, frequence TEXT, heure INT, jour INT, blocs TEXT, destinataires TEXT, par_magasin INT, actif INT, envoi_mode TEXT, dest_par_magasin TEXT, jours TEXT)');
 $P->exec('CREATE TABLE ceo_rapport_run (id INTEGER PRIMARY KEY AUTOINCREMENT, rapport_id INT, genere_le TEXT, periode_du TEXT, periode_au TEXT, statut TEXT, resume TEXT, html TEXT, contexte TEXT)');
-$P->exec('CREATE TABLE ceo_tache_jour (jour TEXT, id_shop INT, id_task INT, nom TEXT, fait INT, statut TEXT, note INT, obligatoire INT)');
-$P->exec('CREATE TABLE ceo_tache_jour_etat (jour TEXT PRIMARY KEY)');
+$P->exec('CREATE TABLE con_tache_jour (jour TEXT, id_shop INT, id_task INT, nom TEXT, fait INT, statut TEXT, note INT, obligatoire INT)');
+$P->exec('CREATE TABLE con_tache_jour_etat (jour TEXT PRIMARY KEY)');
 foreach ([[1, 'Atelier by - Florival'], [2, 'Atelier by - Bierges'], [3, 'Atelier by - Rixensart'], [4, 'Atelier by - Ottignies'], [5, 'Atelier by - Limal']] as $s) { Db::exec('INSERT INTO shops VALUES (?,?,1)', $s); }
 // Les relevés du mois pour Florival (1) et Ottignies (4).
 $auj = date('Y-m-d'); $d0 = substr($auj, 0, 8);
 for ($j = 1; $j < min(20, (int) date('j')); $j++) {
   $jour = $d0 . str_pad((string) $j, 2, '0', STR_PAD_LEFT);
   if ($j === 5) { continue; }                       // jour pas relevé
-  Db::exec('INSERT INTO ceo_tache_jour_etat VALUES (?)', [$jour]);
+  Db::exec('INSERT INTO con_tache_jour_etat VALUES (?)', [$jour]);
   if ($j === 12) { continue; }                      // relevé, rien de prévu (fermé)
   $faits = [6 => 0, 13 => 0, 9 => 3, 16 => 4, 19 => 2][$j] ?? 6;
   for ($t = 1; $t <= 6; $t++) {
     $st = $t <= $faits ? ($t % 2 ? 'notee' : 'aControler') : ($t === 6 ? 'sansPhoto' : 'nonRendue');
     // une tâche notée relevée à 0 (l'ancien défaut) : elle doit compter
-    Db::exec('INSERT INTO ceo_tache_jour VALUES (?,?,?,?,?,?,?,?)', [$jour, 1, $t, 'T' . $t, $st === 'nonRendue' ? 0 : 1, $st, null, $st === 'notee' ? 0 : 1]);
+    Db::exec('INSERT INTO con_tache_jour VALUES (?,?,?,?,?,?,?,?)', [$jour, 1, $t, 'T' . $t, $st === 'nonRendue' ? 0 : 1, $st, null, $st === 'notee' ? 0 : 1]);
   }
   // une tâche facultative faite ne compte pas
-  Db::exec('INSERT INTO ceo_tache_jour VALUES (?,?,?,?,?,?,?,?)', [$jour, 1, 99, 'Fac', 1, 'aControler', null, 0]);
+  Db::exec('INSERT INTO con_tache_jour VALUES (?,?,?,?,?,?,?,?)', [$jour, 1, 99, 'Fac', 1, 'aControler', null, 0]);
 }
 // Le jour vivant.
 function ep_pwa_tasks(): array {

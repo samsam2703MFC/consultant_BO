@@ -311,12 +311,14 @@ if [[ "${COCKPIT_RESET:-0}" == "1" || "${COCKPIT_WIPE:-0}" == "1" ]]; then
     export MYSQL_PWD="$COCKPIT_DB_PASSWORD"
     mycli() { "$MYSQL_BIN" -h "$COCKPIT_DB_HOST" -P "$COCKPIT_DB_PORT" -u "$COCKPIT_DB_USER" "$@"; }
 
-    # a) DROP des tables ceo_* existantes (schéma potentiellement obsolète).
+    # a) DROP des tables ceo_* existantes (schéma potentiellement obsolète), et des tables
+    #    con_* des consultants et des visites (src/con_tables.php), nommées une à une :
+    #    aucun motif ne peut viser une table du panel.
     ceo_tables="$(mycli -N -B "$COCKPIT_DB_NAME" \
-      -e "SELECT table_name FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND table_name LIKE 'ceo\\_%';" 2>/dev/null || true)"
+      -e "SELECT table_name FROM information_schema.tables WHERE table_schema='$COCKPIT_DB_NAME' AND (table_name LIKE 'ceo\\_%' OR table_name IN ('con_visite','con_visite_point','con_visite_photo','con_visite_action','con_visite_action_evt','con_equipe_releve','con_consultant_tache','con_consultant_checklist','con_franchise_meteo','con_consultant','con_consultant_visit','con_msp','con_scoring_msp','con_scoring_google','con_tache_jour','con_tache_jour_etat'));" 2>/dev/null || true)"
     ceo_n="$(printf '%s\n' "$ceo_tables" | grep -c . || true)"
     if [[ -n "$ceo_tables" ]]; then
-      log "Suppression de $ceo_n table(s) ceo_* : $(printf '%s ' $ceo_tables)"
+      log "Suppression de $ceo_n table(s) ceo_* / con_* : $(printf '%s ' $ceo_tables)"
       {
         echo "SET FOREIGN_KEY_CHECKS=0;"
         while IFS= read -r t; do [[ -n "$t" ]] && echo "DROP TABLE IF EXISTS \`$t\`;"; done <<< "$ceo_tables"

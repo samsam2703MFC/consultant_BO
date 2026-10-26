@@ -33,7 +33,7 @@ Le sous-menu **Budget** (Suivi budget, Encodage du budget, Paramètres du budget
 « Suivi de terrain » est retiré : la conformité du comptoir est dans Produits › Comptoir · planogramme. Gestion
 consultant ayant quitté la console le 18/10/2026, la planification se fait dans l'assistant Visites et le cadre de visite
 de chaque magasin se lit dans Qui fait quoi. Paramètres › Client mystère encode dans la même table
-(`ceo_scoring_msp`) ; l'écran Client mystère du suivi y ajoute les suites (points, contrôle, tâche).
+(`con_scoring_msp`) ; l'écran Client mystère du suivi y ajoute les suites (points, contrôle, tâche).
 
 ## Annoncée ou inopinée
 

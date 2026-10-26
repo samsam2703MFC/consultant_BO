@@ -69,7 +69,7 @@ function ensureVisites(): void
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_visite (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_visite (
         id INT AUTO_INCREMENT PRIMARY KEY,
         client_id VARCHAR(40) NULL,
         shop_id VARCHAR(32) NOT NULL,
@@ -97,7 +97,7 @@ function ensureVisites(): void
         KEY k_shop (shop_id, prevu_le),
         KEY k_cons (consultant_id, prevu_le)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_visite_point (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_visite_point (
         id INT AUTO_INCREMENT PRIMARY KEY,
         visite_id INT NOT NULL,
         module VARCHAR(12) NOT NULL,
@@ -111,7 +111,7 @@ function ensureVisites(): void
         maj_le DATETIME NOT NULL,
         UNIQUE KEY u_point (visite_id, point_ref)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_visite_photo (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_visite_photo (
         id INT AUTO_INCREMENT PRIMARY KEY,
         client_id VARCHAR(40) NULL,
         visite_id INT NULL,
@@ -132,7 +132,7 @@ function ensureVisites(): void
         KEY k_shop (shop_id, prise_a),
         KEY k_plan (plan_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_visite_action (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_visite_action (
         id INT AUTO_INCREMENT PRIMARY KEY,
         client_id VARCHAR(40) NULL,
         shop_id VARCHAR(32) NOT NULL,
@@ -160,10 +160,10 @@ function ensureVisites(): void
     // l'objectif. Colonne ajoutée après coup, sur une table déjà en place.
     try {
         $col = Db::row("SELECT COUNT(*) n FROM information_schema.columns
-                         WHERE table_schema = DATABASE() AND table_name = 'ceo_visite_action' AND column_name = 'campagne_id'");
-        if ((int) ($col['n'] ?? 0) === 0) { Db::exec('ALTER TABLE ceo_visite_action ADD COLUMN campagne_id INT NULL'); }
+                         WHERE table_schema = DATABASE() AND table_name = 'con_visite_action' AND column_name = 'campagne_id'");
+        if ((int) ($col['n'] ?? 0) === 0) { Db::exec('ALTER TABLE con_visite_action ADD COLUMN campagne_id INT NULL'); }
     } catch (PDOException $e) { /* base sans information_schema (banc) : la colonne est dans le CREATE */ }
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_visite_action_evt (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_visite_action_evt (
         id INT AUTO_INCREMENT PRIMARY KEY,
         plan_id INT NOT NULL,
         quand DATETIME NOT NULL,
@@ -174,7 +174,7 @@ function ensureVisites(): void
         photo_id INT NULL,
         KEY k_plan (plan_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_msp (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_msp (
         id INT AUTO_INCREMENT PRIMARY KEY,
         shop_id VARCHAR(32) NOT NULL,
         mois CHAR(7) NOT NULL,
@@ -186,7 +186,7 @@ function ensureVisites(): void
         le DATETIME NOT NULL,
         UNIQUE KEY u_mois (shop_id, mois)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_equipe_releve (
+    Db::exec('CREATE TABLE IF NOT EXISTS con_equipe_releve (
         id INT AUTO_INCREMENT PRIMARY KEY,
         shop_id VARCHAR(32) NOT NULL,
         releve_le DATE NOT NULL,
@@ -198,16 +198,16 @@ function ensureVisites(): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     // Les colonnes de la review arrivées après la table : ajoutées si elles manquent.
     $manque = true;
-    try { $manque = Db::row("SHOW COLUMNS FROM ceo_visite LIKE 'reco'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    try { $manque = Db::row("SHOW COLUMNS FROM con_visite LIKE 'reco'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
     if ($manque) {
         foreach (['execution VARCHAR(12) NULL', 'clients VARCHAR(12) NULL', 'causes TEXT NULL', 'diagnostic TEXT NULL', 'reco TEXT NULL'] as $col) {
-            try { Db::exec('ALTER TABLE ceo_visite ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
+            try { Db::exec('ALTER TABLE con_visite ADD COLUMN ' . $col); } catch (Throwable $e) { /* déjà là */ }
         }
     }
     // La météo du franchisé en fin de contrôle (12/10/2026) : 1 orage … 5 grand soleil.
     $sansMeteo = true;
-    try { $sansMeteo = Db::row("SHOW COLUMNS FROM ceo_visite LIKE 'meteo'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
-    if ($sansMeteo) { try { Db::exec('ALTER TABLE ceo_visite ADD COLUMN meteo TINYINT NULL'); } catch (Throwable $e) { /* déjà là */ } }
+    try { $sansMeteo = Db::row("SHOW COLUMNS FROM con_visite LIKE 'meteo'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    if ($sansMeteo) { try { Db::exec('ALTER TABLE con_visite ADD COLUMN meteo TINYINT NULL'); } catch (Throwable $e) { /* déjà là */ } }
     // Le jeton de l'horloge : lu en base par bin/visites_cron.sh à chaque appel.
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
         ['visitesJeton', json_encode(bin2hex(random_bytes(24)))]);
@@ -502,7 +502,7 @@ function viPlanLigne(array $p): array
 function viPlans(?string $shop, int $joursFermes = 90): array
 {
     $limite = date('Y-m-d H:i:s', strtotime("-{$joursFermes} days"));
-    $sql = 'SELECT * FROM ceo_visite_action WHERE (statut <> \'ferme\' OR maj_le >= ?)';
+    $sql = 'SELECT * FROM con_visite_action WHERE (statut <> \'ferme\' OR maj_le >= ?)';
     $args = [$limite];
     if ($shop !== null) { $sql .= ' AND shop_id = ?'; $args[] = $shop; }
     $sql .= ' ORDER BY FIELD(priorite, \'P0\', \'P1\', \'P2\'), echeance, id';
@@ -512,9 +512,9 @@ function viPlans(?string $shop, int $joursFermes = 90): array
 function viMsp(?string $shop, int $n = 3): array
 {
     // Un seul encodage du client mystère (24/10/2026) : la table du scoring, un rapport par passage.
-    // Les rapports mensuels d'avant (ceo_msp) complètent les mois qu'elle n'a pas.
+    // Les rapports mensuels d'avant (con_msp) complètent les mois qu'elle n'a pas.
     $out = function_exists('suMspPourVisites') ? suMspPourVisites($shop, $n) : [];
-    $sql = 'SELECT * FROM ceo_msp' . ($shop !== null ? ' WHERE shop_id = ?' : '') . ' ORDER BY mois DESC';
+    $sql = 'SELECT * FROM con_msp' . ($shop !== null ? ' WHERE shop_id = ?' : '') . ' ORDER BY mois DESC';
     foreach (Db::rows($sql, $shop !== null ? [$shop] : []) as $r) {
         $s = (string) $r['shop_id'];
         if (count($out[$s] ?? []) >= $n || in_array($r['mois'], array_column($out[$s] ?? [], 'mois'), true)) { continue; }
@@ -529,7 +529,7 @@ function viMsp(?string $shop, int $n = 3): array
 
 function viEquipe(?string $shop): array
 {
-    $sql = 'SELECT * FROM ceo_equipe_releve' . ($shop !== null ? ' WHERE shop_id = ?' : '') . ' ORDER BY releve_le DESC, id DESC';
+    $sql = 'SELECT * FROM con_equipe_releve' . ($shop !== null ? ' WHERE shop_id = ?' : '') . ' ORDER BY releve_le DESC, id DESC';
     $out = [];
     foreach (Db::rows($sql, $shop !== null ? [$shop] : []) as $r) {
         $s = (string) $r['shop_id'];
@@ -543,9 +543,9 @@ function viEquipe(?string $shop): array
 /** Conformité planogramme de la dernière visite terminée : moyenne des % saisis. */
 function viPlano(string $shop): ?array
 {
-    $v = Db::row('SELECT id, prevu_le FROM ceo_visite WHERE shop_id = ? AND statut = \'terminee\' ORDER BY prevu_le DESC, id DESC LIMIT 1', [$shop]);
+    $v = Db::row('SELECT id, prevu_le FROM con_visite WHERE shop_id = ? AND statut = \'terminee\' ORDER BY prevu_le DESC, id DESC LIMIT 1', [$shop]);
     if ($v === null) { return null; }
-    $pts = Db::rows('SELECT valeur, causes FROM ceo_visite_point WHERE visite_id = ? AND module = \'planogramme\' AND valeur IS NOT NULL', [(int) $v['id']]);
+    $pts = Db::rows('SELECT valeur, causes FROM con_visite_point WHERE visite_id = ? AND module = \'planogramme\' AND valeur IS NOT NULL', [(int) $v['id']]);
     if (!$pts) { return null; }
     $sum = 0; $ruptures = 0;
     foreach ($pts as $p) { $sum += (int) $p['valeur']; if (str_contains((string) $p['causes'], 'rupture')) { $ruptures++; } }
@@ -739,7 +739,7 @@ function viBoutiquesEtat(?string $shop, string $du, string $au): array
     $ca = viCa(); $google = viGoogle();
     $plans = viPlans($shop);
     $msp = viMsp($shop); $equipe = viEquipe($shop);
-    $sql = 'SELECT * FROM ceo_visite WHERE prevu_le BETWEEN ? AND ?' . ($shop !== null ? ' AND shop_id = ?' : '') . ' ORDER BY prevu_le, debut_h';
+    $sql = 'SELECT * FROM con_visite WHERE prevu_le BETWEEN ? AND ?' . ($shop !== null ? ' AND shop_id = ?' : '') . ' ORDER BY prevu_le, debut_h';
     $visites = array_map('viVisiteLigne', Db::rows($sql, $shop !== null ? [$du, $au, $shop] : [$du, $au]));
     $auj = date('Y-m-d');
     $boutiques = [];
@@ -787,9 +787,9 @@ function ep_visites_app(): array
     $points = [];
     if ($ids) {
         $in = implode(',', array_fill(0, count($ids), '?'));
-        $points = array_map('viPointLigne', Db::rows("SELECT * FROM ceo_visite_point WHERE visite_id IN ($in)", $ids));
+        $points = array_map('viPointLigne', Db::rows("SELECT * FROM con_visite_point WHERE visite_id IN ($in)", $ids));
     }
-    $sqlP = 'SELECT * FROM ceo_visite_photo WHERE prise_a >= ?' . ($shop !== null ? ' AND shop_id = ?' : '') . ' ORDER BY prise_a DESC';
+    $sqlP = 'SELECT * FROM con_visite_photo WHERE prise_a >= ?' . ($shop !== null ? ' AND shop_id = ?' : '') . ' ORDER BY prise_a DESC';
     $photos = array_map('viPhotoLigne', Db::rows($sqlP, $shop !== null ? [$du . ' 00:00:00', $shop] : [$du . ' 00:00:00']));
     // Le cadre de visite : les types (la liste déroulante, chacun avec sa checklist et ses tâches), le cadre, les tâches des visites.
     $types = function_exists('vcTypes') ? vcTypes() : [];
@@ -866,17 +866,17 @@ function ep_visites_boutique(string $shop): array
     $mags = viMagasins();
     if (!isset($mags[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
     $du = date('Y-m-d', strtotime('-92 days'));
-    $visites = array_map('viVisiteLigne', Db::rows('SELECT * FROM ceo_visite WHERE shop_id = ? AND prevu_le >= ? AND statut = \'terminee\' ORDER BY prevu_le DESC', [$shop, $du]));
+    $visites = array_map('viVisiteLigne', Db::rows('SELECT * FROM con_visite WHERE shop_id = ? AND prevu_le >= ? AND statut = \'terminee\' ORDER BY prevu_le DESC', [$shop, $du]));
     $parMois = [];
-    foreach (Db::rows('SELECT DATE_FORMAT(cree_le, \'%Y-%m\') mois, statut, COUNT(*) n FROM ceo_visite_action WHERE shop_id = ? AND cree_le >= ? GROUP BY mois, statut', [$shop, $du . ' 00:00:00']) as $r) {
+    foreach (Db::rows('SELECT DATE_FORMAT(cree_le, \'%Y-%m\') mois, statut, COUNT(*) n FROM con_visite_action WHERE shop_id = ? AND cree_le >= ? GROUP BY mois, statut', [$shop, $du . ' 00:00:00']) as $r) {
         $parMois[$r['mois']][$r['statut']] = (int) $r['n'];
     }
     $planoParVisite = [];
     foreach ($visites as $v) {
-        $pts = Db::rows('SELECT valeur FROM ceo_visite_point WHERE visite_id = ? AND module = \'planogramme\' AND valeur IS NOT NULL', [$v['id']]);
+        $pts = Db::rows('SELECT valeur FROM con_visite_point WHERE visite_id = ? AND module = \'planogramme\' AND valeur IS NOT NULL', [$v['id']]);
         if ($pts) { $planoParVisite[] = ['le' => $v['prevu_le'], 'pct' => (int) round(array_sum(array_map(fn ($p) => (int) $p['valeur'], $pts)) / count($pts))]; }
     }
-    $photosJour = array_map('viPhotoLigne', Db::rows('SELECT * FROM ceo_visite_photo WHERE shop_id = ? AND genre LIKE \'jour_%\' AND prise_a >= ? ORDER BY prise_a DESC LIMIT 30', [$shop, $du . ' 00:00:00']));
+    $photosJour = array_map('viPhotoLigne', Db::rows('SELECT * FROM con_visite_photo WHERE shop_id = ? AND genre LIKE \'jour_%\' AND prise_a >= ? ORDER BY prise_a DESC LIMIT 30', [$shop, $du . ' 00:00:00']));
     return ['shop' => $shop, 'nc' => viNc($shop), 'msp' => viMsp($shop, 4)[$shop] ?? [], 'equipe' => viEquipe($shop)[$shop] ?? null,
         'visites' => $visites, 'plansParMois' => $parMois, 'planoParVisite' => array_reverse($planoParVisite), 'photosJour' => $photosJour,
         'ca' => viCa()[$shop] ?? null, 'google' => viGoogle()[$shop] ?? null, 'lu' => date('Y-m-d H:i')];
@@ -890,8 +890,8 @@ function viQui(array $b): string { return mb_substr(trim((string) ($b['qui'] ?? 
 
 function viVisiteParId(string $id): ?array
 {
-    $v = ctype_digit($id) ? Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $id]) : null;
-    if ($v === null) { $v = Db::row('SELECT * FROM ceo_visite WHERE client_id = ?', [$id]); }
+    $v = ctype_digit($id) ? Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $id]) : null;
+    if ($v === null) { $v = Db::row('SELECT * FROM con_visite WHERE client_id = ?', [$id]); }
     return $v;
 }
 
@@ -914,20 +914,20 @@ function wr_visites_post(): array
     $cons = mb_substr(trim((string) ($b['consultant'] ?? '')), 0, 32);
     $consNom = mb_substr(trim((string) ($b['consultant_nom'] ?? '')), 0, 120) ?: viConsultantNom($cons);
     $now = date('Y-m-d H:i:s');
-    if ($cid !== null && ($ex = Db::row('SELECT id FROM ceo_visite WHERE client_id = ?', [$cid])) !== null) {
-        return ['ok' => true, 'visite' => viVisiteLigne(Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $ex['id']])), 'deja' => true];
+    if ($cid !== null && ($ex = Db::row('SELECT id FROM con_visite WHERE client_id = ?', [$cid])) !== null) {
+        return ['ok' => true, 'visite' => viVisiteLigne(Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $ex['id']])), 'deja' => true];
     }
-    Db::exec('INSERT INTO ceo_visite (client_id, shop_id, consultant_id, consultant_nom, prevu_le, debut_h, duree_min, motif, type_code, statut, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+    Db::exec('INSERT INTO con_visite (client_id, shop_id, consultant_id, consultant_nom, prevu_le, debut_h, duree_min, motif, type_code, statut, cree_le, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
         [$cid, $shop, $cons, $consNom, $date, viHeure($b['debut_h'] ?? null) ?? '09:00', max(15, min(480, $duree)), $motif, $type, 'planifiee', $now, $now]);
     $id = (int) Db::pdo()->lastInsertId();
     // Annoncée ou inopinée : celle du type, sauf choix contraire à la planification.
     if (array_key_exists('annoncee', $b) && $b['annoncee'] !== null && $b['annoncee'] !== '') {
-        try { Db::exec('UPDATE ceo_visite SET annoncee = ? WHERE id = ?', [(bool) $b['annoncee'] ? 1 : 0, $id]); } catch (Throwable $e) { /* colonne absente : le type décide */ }
+        try { Db::exec('UPDATE con_visite SET annoncee = ? WHERE id = ?', [(bool) $b['annoncee'] ? 1 : 0, $id]); } catch (Throwable $e) { /* colonne absente : le type décide */ }
     }
     journalAdd($consNom ?: 'Consultant', 'Visite', null, 'Visite planifiée : ' . viMagasins()[$shop]['court'] . ' le ' . $date . ($typeDef ? ' (' . $typeDef['nom'] . ')' : ''));
     // Les tâches du type entrent dans la liste du consultant, l'invitation .ics part (réglage).
     $suite = function_exists('vcApresPlanification') ? vcApresPlanification($id) : null;
-    return ['ok' => true, 'visite' => viVisiteLigne(Db::row('SELECT * FROM ceo_visite WHERE id = ?', [$id])), 'suite' => $suite];
+    return ['ok' => true, 'visite' => viVisiteLigne(Db::row('SELECT * FROM con_visite WHERE id = ?', [$id])), 'suite' => $suite];
 }
 
 /** PUT /visites/{id} — statut, créneau, début, fin, sentiment, météo du franchisé, notes. */
@@ -962,18 +962,18 @@ function wr_visites_put(string $id): array
     if (array_key_exists('budgetCa', $b)) { $bc = viBudgetCa($b['budgetCa'], viQui($b)); $set[] = 'budget_ca = ?'; $args[] = $bc !== null ? json_encode($bc, JSON_UNESCAPED_UNICODE) : null; }
     if (!$set) { return ['ok' => true, 'visite' => viVisiteLigne($v)]; }
     $set[] = 'maj_le = ?'; $args[] = date('Y-m-d H:i:s'); $args[] = (int) $v['id'];
-    Db::exec('UPDATE ceo_visite SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
+    Db::exec('UPDATE con_visite SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
     // Déplacée, annulée, terminée : les tâches du type suivent, l'agenda est prévenu, la note part au panel (réglage).
-    $apres = Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']]);
+    $apres = Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']]);
     $suite = function_exists('vcApresChangement') && $apres !== null ? vcApresChangement($v, $apres) : null;
-    if ($suite !== null && (!empty($suite['taches']) || !empty($suite['invitation']))) { $apres = Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']]); }
+    if ($suite !== null && (!empty($suite['taches']) || !empty($suite['invitation']))) { $apres = Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']]); }
     if (($b['statut'] ?? '') === 'terminee') {
         journalAdd($v['consultant_nom'] ?: 'Consultant', 'Visite', null, 'Visite terminée : ' . (viMagasins()[(string) $v['shop_id']]['court'] ?? $v['shop_id'])
             . (!empty($b['reco']) ? ' — ' . mb_substr((string) $b['reco'], 0, 160) : ''));
         // Le brouillon du rapport part au bureau : c'est lui qui l'adapte et l'envoie (suivi.php).
-        if ($v['statut'] !== 'terminee' && function_exists('suApresTerminee')) { suApresTerminee($v); $apres = Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']]); }
+        if ($v['statut'] !== 'terminee' && function_exists('suApresTerminee')) { suApresTerminee($v); $apres = Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']]); }
     }
-    return ['ok' => true, 'visite' => viVisiteLigne($apres ?? Db::row('SELECT * FROM ceo_visite WHERE id = ?', [(int) $v['id']])), 'suite' => $suite];
+    return ['ok' => true, 'visite' => viVisiteLigne($apres ?? Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']])), 'suite' => $suite];
 }
 
 /** PUT /visites/{id}/points — un lot de points de checklist (idempotent). */
@@ -994,16 +994,16 @@ function wr_visites_points_put(string $id): array
         $note = isset($p['note']) && (int) $p['note'] >= 1 && (int) $p['note'] <= 5 ? (int) $p['note'] : null;
         $valeur = isset($p['valeur']) && $p['valeur'] !== '' && $p['valeur'] !== null ? max(0, min(100, (int) $p['valeur'])) : null;
         $causes = is_array($p['causes'] ?? null) ? array_values(array_intersect(array_map('strval', $p['causes']), array_keys(viCausesPlano()))) : [];
-        Db::exec('INSERT INTO ceo_visite_point (visite_id, module, point_ref, libelle, etat, note, valeur, commentaire, causes, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?)
+        Db::exec('INSERT INTO con_visite_point (visite_id, module, point_ref, libelle, etat, note, valeur, commentaire, causes, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?)
                   ON DUPLICATE KEY UPDATE module = VALUES(module), libelle = VALUES(libelle), etat = VALUES(etat), note = VALUES(note), valeur = VALUES(valeur),
                   commentaire = VALUES(commentaire), causes = VALUES(causes), maj_le = VALUES(maj_le)',
             [(int) $v['id'], $module, mb_substr($ref, 0, 60), mb_substr((string) ($p['libelle'] ?? ''), 0, 190), $etat, $note, $valeur,
              mb_substr((string) ($p['commentaire'] ?? ''), 0, 1000) ?: null, $causes ? json_encode($causes) : null, date('Y-m-d H:i:s')]);
         $n++;
     }
-    Db::exec('UPDATE ceo_visite SET maj_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $v['id']]);
+    Db::exec('UPDATE con_visite SET maj_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $v['id']]);
     return ['ok' => true, 'points' => $n,
-        'liste' => array_map('viPointLigne', Db::rows('SELECT * FROM ceo_visite_point WHERE visite_id = ?', [(int) $v['id']]))];
+        'liste' => array_map('viPointLigne', Db::rows('SELECT * FROM con_visite_point WHERE visite_id = ?', [(int) $v['id']]))];
 }
 
 /**
@@ -1021,7 +1021,7 @@ function wr_visites_photos_post(): array
 function viPhotoEnregistrer(array $b): array
 {
     $cid = mb_substr(trim((string) ($b['client_id'] ?? '')), 0, 40) ?: null;
-    if ($cid !== null && ($ex = Db::row('SELECT * FROM ceo_visite_photo WHERE client_id = ?', [$cid])) !== null) {
+    if ($cid !== null && ($ex = Db::row('SELECT * FROM con_visite_photo WHERE client_id = ?', [$cid])) !== null) {
         return ['ok' => true, 'photo' => viPhotoLigne($ex), 'deja' => true];
     }
     $shop = trim((string) ($b['shop'] ?? ''));
@@ -1050,19 +1050,19 @@ function viPhotoEnregistrer(array $b): array
     $lat = isset($b['lat']) && is_numeric($b['lat']) ? round((float) $b['lat'], 6) : null;
     $lng = isset($b['lng']) && is_numeric($b['lng']) ? round((float) $b['lng'], 6) : null;
     $planId = !empty($b['plan_id']) ? (int) $b['plan_id'] : null;
-    Db::exec('INSERT INTO ceo_visite_photo (client_id, visite_id, shop_id, plan_id, point_ref, genre, chemin, prise_a, lat, lng, largeur, hauteur, octets, par) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    Db::exec('INSERT INTO con_visite_photo (client_id, visite_id, shop_id, plan_id, point_ref, genre, chemin, prise_a, lat, lng, largeur, hauteur, octets, par) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$cid, $visite ? (int) $visite['id'] : null, $shop, $planId, mb_substr(preg_replace('/[^\w-]/', '', (string) ($b['ref'] ?? '')), 0, 60) ?: null,
          $genre, $chemin, $prise, $lat, $lng, $info[0] ?? null, $info[1] ?? null, strlen($bin), in_array($b['par'] ?? '', VI_ROLES, true) ? $b['par'] : 'consultant']);
     $id = (int) Db::pdo()->lastInsertId();
-    return ['ok' => true, 'photo' => viPhotoLigne(Db::row('SELECT * FROM ceo_visite_photo WHERE id = ?', [$id]))];
+    return ['ok' => true, 'photo' => viPhotoLigne(Db::row('SELECT * FROM con_visite_photo WHERE id = ?', [$id]))];
 }
 
 /* --- écritures : plans d'action ---------------------------------------------- */
 
 function viPlanParId(string $id): ?array
 {
-    $p = ctype_digit($id) ? Db::row('SELECT * FROM ceo_visite_action WHERE id = ?', [(int) $id]) : null;
-    if ($p === null) { $p = Db::row('SELECT * FROM ceo_visite_action WHERE client_id = ?', [$id]); }
+    $p = ctype_digit($id) ? Db::row('SELECT * FROM con_visite_action WHERE id = ?', [(int) $id]) : null;
+    if ($p === null) { $p = Db::row('SELECT * FROM con_visite_action WHERE client_id = ?', [$id]); }
     return $p;
 }
 
@@ -1089,19 +1089,19 @@ function wr_plans_post(): array
         $titre = mb_substr(trim((string) ($p['titre'] ?? '')), 0, 190);
         if (!isset(viMagasins()[$shop]) || $titre === '') { continue; }
         $cid = mb_substr(trim((string) ($p['client_id'] ?? '')), 0, 40) ?: null;
-        if ($cid !== null && ($ex = Db::row('SELECT * FROM ceo_visite_action WHERE client_id = ?', [$cid])) !== null) { $out[] = viPlanLigne($ex); continue; }
+        if ($cid !== null && ($ex = Db::row('SELECT * FROM con_visite_action WHERE client_id = ?', [$cid])) !== null) { $out[] = viPlanLigne($ex); continue; }
         $prio = in_array($p['priorite'] ?? '', VI_PRIORITES, true) ? $p['priorite'] : 'P1';
         $ass = in_array($p['assigne'] ?? '', VI_ASSIGNES, true) ? $p['assigne'] : 'franchise';
         $now = date('Y-m-d H:i:s');
         $camp = (int) ($p['campagne_id'] ?? 0) > 0 ? (int) $p['campagne_id'] : null;
         // Écrit sur la tablette, un point est PROPOSÉ : il attend que le bureau envoie le rapport.
         $statut = ($p['statut'] ?? $b['statut'] ?? '') === 'propose' ? 'propose' : 'ouvert';
-        Db::exec('INSERT INTO ceo_visite_action (client_id, shop_id, visite_id, point_ref, titre, detail, priorite, assigne, echeance, statut, cree_par, cree_le, maj_le, campagne_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        Db::exec('INSERT INTO con_visite_action (client_id, shop_id, visite_id, point_ref, titre, detail, priorite, assigne, echeance, statut, cree_par, cree_le, maj_le, campagne_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [$cid, $shop, $visite ? (int) $visite['id'] : null, mb_substr(preg_replace('/[^\w-]/', '', (string) ($p['ref'] ?? '')), 0, 60) ?: null,
              $titre, mb_substr((string) ($p['detail'] ?? ''), 0, 2000) ?: null, $prio, $ass, viDate($p['echeance'] ?? null), $statut, $qui, $now, $now, $camp]);
         $id = (int) Db::pdo()->lastInsertId();
-        Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [$id, $now, $qui, null, $statut, $statut === 'propose' ? 'proposé en visite' : 'créé']);
-        $ligne = viPlanLigne(Db::row('SELECT * FROM ceo_visite_action WHERE id = ?', [$id]));
+        Db::exec('INSERT INTO con_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [$id, $now, $qui, null, $statut, $statut === 'propose' ? 'proposé en visite' : 'créé']);
+        $ligne = viPlanLigne(Db::row('SELECT * FROM con_visite_action WHERE id = ?', [$id]));
         $out[] = $ligne;
         if ($statut === 'ouvert') { $nouveaux[$shop][] = $ligne; }
     }
@@ -1138,10 +1138,10 @@ function wr_plans_put(string $id): array
     }
     $photoId = null;
     if (!empty($b['photo_client_id'])) {
-        $ph = Db::row('SELECT id FROM ceo_visite_photo WHERE client_id = ?', [mb_substr((string) $b['photo_client_id'], 0, 40)]);
+        $ph = Db::row('SELECT id FROM con_visite_photo WHERE client_id = ?', [mb_substr((string) $b['photo_client_id'], 0, 40)]);
         $photoId = $ph ? (int) $ph['id'] : null;
     } elseif (!empty($b['photo_id'])) { $photoId = (int) $b['photo_id']; }
-    if ($photoId !== null) { $set[] = 'photo_id = ?'; $args[] = $photoId; Db::exec('UPDATE ceo_visite_photo SET plan_id = ? WHERE id = ?', [(int) $p['id'], $photoId]); }
+    if ($photoId !== null) { $set[] = 'photo_id = ?'; $args[] = $photoId; Db::exec('UPDATE con_visite_photo SET plan_id = ? WHERE id = ?', [(int) $p['id'], $photoId]); }
     $vers = (string) ($b['statut'] ?? '');
     if ($vers !== '') {
         if (!in_array($vers, VI_STATUTS_PLAN, true)) { http_response_code(422); return ['error' => 'statut inconnu']; }
@@ -1155,13 +1155,13 @@ function wr_plans_put(string $id): array
             if ($vers === 'ferme') { $set[] = 'ferme_le = ?'; $args[] = $now; }
             if ($vers === 'reprendre') { $set[] = 'retour = ?'; $args[] = mb_substr((string) ($b['retour'] ?? $b['commentaire'] ?? ''), 0, 1000) ?: null; }
             if ($vers === 'escalade') { $set[] = 'escalade_motif = ?'; $args[] = mb_substr((string) ($b['escalade_motif'] ?? $b['commentaire'] ?? ''), 0, 1000) ?: null; }
-            Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire, photo_id) VALUES (?,?,?,?,?,?,?)',
+            Db::exec('INSERT INTO con_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire, photo_id) VALUES (?,?,?,?,?,?,?)',
                 [(int) $p['id'], $now, $qui, $p['statut'], $vers, mb_substr((string) ($b['commentaire'] ?? $b['retour'] ?? ''), 0, 1000) ?: null, $photoId]);
         }
     }
     if (!$set) { return ['ok' => true, 'plan' => viPlanLigne($p)]; }
     $set[] = 'maj_le = ?'; $args[] = $now; $args[] = (int) $p['id'];
-    Db::exec('UPDATE ceo_visite_action SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
+    Db::exec('UPDATE con_visite_action SET ' . implode(', ', $set) . ' WHERE id = ?', $args);
     $shop = (string) $p['shop_id']; $court = viMagasins()[$shop]['court'] ?? $shop;
     if ($vers !== '' && $vers !== $p['statut']) {
         $t = $p['titre'];
@@ -1171,7 +1171,7 @@ function wr_plans_put(string $id): array
         if ($vers === 'escalade')  { viNotifier('admin', 'Escalade — ' . $court, $p['priorite'] . ' ' . $t, 'visites/?role=admin', 'escalade-' . $p['id']); }
         journalAdd($qui, 'Plan d’action', null, $court . ' : « ' . $t . ' » ' . $p['statut'] . ' → ' . $vers);
     }
-    return ['ok' => true, 'plan' => viPlanLigne(Db::row('SELECT * FROM ceo_visite_action WHERE id = ?', [(int) $p['id']]))];
+    return ['ok' => true, 'plan' => viPlanLigne(Db::row('SELECT * FROM con_visite_action WHERE id = ?', [(int) $p['id']]))];
 }
 
 /* --- écritures : MSP, équipe, réglages ---------------------------------------- */
@@ -1210,7 +1210,7 @@ function wr_msp_post(): array
             }
         }
     }
-    Db::exec('INSERT INTO ceo_msp (shop_id, mois, total, rubriques, commentaires, fichier, par, le) VALUES (?,?,?,?,?,?,?,?)
+    Db::exec('INSERT INTO con_msp (shop_id, mois, total, rubriques, commentaires, fichier, par, le) VALUES (?,?,?,?,?,?,?,?)
               ON DUPLICATE KEY UPDATE total = VALUES(total), rubriques = VALUES(rubriques), commentaires = VALUES(commentaires),
               fichier = COALESCE(VALUES(fichier), fichier), par = VALUES(par), le = VALUES(le)',
         [$shop, $mois, $total, json_encode($rub, JSON_UNESCAPED_UNICODE), mb_substr((string) ($b['commentaires'] ?? ''), 0, 2000) ?: null, $fichier, viQui($b), date('Y-m-d H:i:s')]);
@@ -1221,7 +1221,7 @@ function wr_msp_post(): array
 function wr_msp_delete(int $id): array
 {
     ensureVisites();
-    Db::exec('DELETE FROM ceo_msp WHERE id = ?', [$id]);
+    Db::exec('DELETE FROM con_msp WHERE id = ?', [$id]);
     return ['ok' => true];
 }
 
@@ -1232,7 +1232,7 @@ function wr_equipe_put(string $shop): array
     if (!isset(viMagasins()[$shop])) { http_response_code(422); return ['error' => 'magasin inconnu']; }
     $b = body();
     $n = fn ($k) => isset($b[$k]) && $b[$k] !== '' && is_numeric($b[$k]) ? max(0, min(99, (int) $b[$k])) : null;
-    Db::exec('INSERT INTO ceo_equipe_releve (shop_id, releve_le, effectif, prevu, departs, par) VALUES (?,?,?,?,?,?)',
+    Db::exec('INSERT INTO con_equipe_releve (shop_id, releve_le, effectif, prevu, departs, par) VALUES (?,?,?,?,?,?)',
         [$shop, viDate($b['releve_le'] ?? null) ?? date('Y-m-d'), $n('effectif'), $n('prevu'), $n('departs'), viQui($b)]);
     return ['ok' => true, 'equipe' => viEquipe($shop)[$shop] ?? null];
 }
@@ -1376,10 +1376,10 @@ function viHorloge(bool $force = false): array
     $mags = viMagasins();
     // 1. Un P0 (ou P1) ouvert dont l'échéance est dépassée de `escaladeJours` : escaladé, l'admin prévenu.
     $limite = date('Y-m-d', strtotime('-' . (int) $s['escaladeJours'] . ' days'));
-    foreach (Db::rows('SELECT * FROM ceo_visite_action WHERE statut IN (\'ouvert\', \'reprendre\') AND priorite = \'P0\' AND echeance IS NOT NULL AND echeance < ?', [$limite]) as $p) {
+    foreach (Db::rows('SELECT * FROM con_visite_action WHERE statut IN (\'ouvert\', \'reprendre\') AND priorite = \'P0\' AND echeance IS NOT NULL AND echeance < ?', [$limite]) as $p) {
         $now = date('Y-m-d H:i:s');
-        Db::exec('UPDATE ceo_visite_action SET statut = \'escalade\', escalade_motif = ?, maj_le = ? WHERE id = ?', ['échéance dépassée (automatique)', $now, (int) $p['id']]);
-        Db::exec('INSERT INTO ceo_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [(int) $p['id'], $now, 'horloge', $p['statut'], 'escalade', 'échéance dépassée']);
+        Db::exec('UPDATE con_visite_action SET statut = \'escalade\', escalade_motif = ?, maj_le = ? WHERE id = ?', ['échéance dépassée (automatique)', $now, (int) $p['id']]);
+        Db::exec('INSERT INTO con_visite_action_evt (plan_id, quand, qui, de_statut, vers_statut, commentaire) VALUES (?,?,?,?,?,?)', [(int) $p['id'], $now, 'horloge', $p['statut'], 'escalade', 'échéance dépassée']);
         $court = $mags[(string) $p['shop_id']]['court'] ?? $p['shop_id'];
         viNotifier('admin', 'Escalade automatique — ' . $court, 'P0 « ' . $p['titre'] . ' » : échéance dépassée', 'visites/?role=admin', 'escalade-' . $p['id']);
         $fait['escalades']++;
@@ -1388,9 +1388,9 @@ function viHorloge(bool $force = false): array
     // 2. Rappel J-1, le soir : consultant et franchisé.
     if (($force || $heure >= (string) $s['rappelJ1']) && ($etat['j1'] ?? '') !== $auj) {
         $demain = date('Y-m-d', strtotime('+1 day'));
-        foreach (Db::rows('SELECT * FROM ceo_visite WHERE prevu_le = ? AND statut IN (\'planifiee\', \'confirmee\')', [$demain]) as $v) {
+        foreach (Db::rows('SELECT * FROM con_visite WHERE prevu_le = ? AND statut IN (\'planifiee\', \'confirmee\')', [$demain]) as $v) {
             $shop = (string) $v['shop_id']; $court = $mags[$shop]['court'] ?? $shop;
-            $ouverts = Db::rows('SELECT priorite, titre FROM ceo_visite_action WHERE shop_id = ? AND statut IN (\'ouvert\', \'reprendre\', \'escalade\') ORDER BY FIELD(priorite, \'P0\', \'P1\', \'P2\') LIMIT 2', [$shop]);
+            $ouverts = Db::rows('SELECT priorite, titre FROM con_visite_action WHERE shop_id = ? AND statut IN (\'ouvert\', \'reprendre\', \'escalade\') ORDER BY FIELD(priorite, \'P0\', \'P1\', \'P2\') LIMIT 2', [$shop]);
             $suite = $ouverts ? ' — ' . implode(', ', array_map(fn ($o) => $o['priorite'] . ' ' . $o['titre'], $ouverts)) : '';
             viNotifier('c:' . $v['consultant_id'], 'Demain ' . $v['debut_h'] . ' — ' . $court, 'Visite prévue' . $suite, 'visites/?role=consultant&id=' . rawurlencode((string) $v['consultant_id']) . '#fiche/' . $v['id'], 'j1-' . $v['id']);
             // Une visite inopinée ne prévient pas le magasin.
@@ -1408,7 +1408,7 @@ function viHorloge(bool $force = false): array
     }
     // 3. Le matin : rappel du jour et synthèse.
     if (($force || $heure >= (string) $s['rappelJour']) && ($etat['jour'] ?? '') !== $auj) {
-        foreach (Db::rows('SELECT * FROM ceo_visite WHERE prevu_le = ? AND statut IN (\'planifiee\', \'confirmee\')', [$auj]) as $v) {
+        foreach (Db::rows('SELECT * FROM con_visite WHERE prevu_le = ? AND statut IN (\'planifiee\', \'confirmee\')', [$auj]) as $v) {
             $shop = (string) $v['shop_id']; $court = $mags[$shop]['court'] ?? $shop;
             viNotifier('c:' . $v['consultant_id'], 'Aujourd’hui ' . $v['debut_h'] . ' — ' . $court, 'Ouvrez la fiche avant d’entrer', 'visites/?role=consultant&id=' . rawurlencode((string) $v['consultant_id']) . '#fiche/' . $v['id'], 'jour-' . $v['id']);
             $fait['rappelsJour']++;

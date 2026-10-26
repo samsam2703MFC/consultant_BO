@@ -17,6 +17,7 @@ require __DIR__ . '/../../src/social_publication.php';
 require __DIR__ . '/../../src/brand_guard.php';
 require __DIR__ . '/../../src/installer.php';
 require __DIR__ . '/../../src/marketing_tables.php';
+require __DIR__ . '/../../src/con_tables.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/panel_api.php';
 require __DIR__ . '/../../src/erp_api.php';

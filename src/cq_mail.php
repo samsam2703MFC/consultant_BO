@@ -17,7 +17,7 @@ declare(strict_types=1);
  *
  * Les contrôles du jour : /pwa/tasks (ep_pwa_tasks), les tâches obligatoires du magasin, comme le
  * dashboard. Une photo = une tâche rendue avec sa photo (notée ou à contrôler) ; cochée sans photo,
- * elle ne compte pas. Le mois : le relevé des journées closes (ceo_tache_jour), la journée en cours
+ * elle ne compte pas. Le mois : le relevé des journées closes (con_tache_jour), la journée en cours
  * lue en direct.
  */
 
@@ -102,14 +102,14 @@ function cqMailMois(int $sid, string $date, ?array $auj): array
     $jours = [];
     try {
         if (function_exists('tachesSuiviTables')) { tachesSuiviTables(); }
-        foreach (Db::rows('SELECT jour FROM ceo_tache_jour_etat WHERE jour BETWEEN ? AND ?', [$deb, $date]) as $r) {
+        foreach (Db::rows('SELECT jour FROM con_tache_jour_etat WHERE jour BETWEEN ? AND ?', [$deb, $date]) as $r) {
             $jours[(string) $r['jour']] = [0, 0];
         }
         // Une tâche notée est obligatoire tant que le panel ne dit pas le contraire (le relevé en
         // gardait le drapeau à 0 avant le 20/10/2026, faute de l'avoir lu).
         foreach (Db::rows("SELECT jour, COUNT(*) t,
                                   SUM(CASE WHEN statut NOT IN ('nonRendue', 'sansPhoto') AND (statut <> '' OR fait = 1) THEN 1 ELSE 0 END) f
-                             FROM ceo_tache_jour
+                             FROM con_tache_jour
                             WHERE id_shop = ? AND jour BETWEEN ? AND ? AND (obligatoire IS NULL OR obligatoire = 1 OR statut = 'notee')
                             GROUP BY jour", [$sid, $deb, $date]) as $r) {
             $jours[(string) $r['jour']] = [(int) $r['t'], (int) $r['f']];
