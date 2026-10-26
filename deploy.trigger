@@ -1076,3 +1076,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T15:26:29Z tablette : structure du CA par canal, part B2B face au plafond de 40 %
 160 do obsluzenia 2026-10-26T15:29:12Z
 2026-10-26T15:34:47Z promotions : tableau d'analyse, qui utilise quoi (matrice promotions × magasins et cartes des magasins)
+2026-10-26T15:47:49Z tablette : la visite en six temps
