@@ -79,17 +79,25 @@
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
 .vi .kc .k{margin-top:4px}
 .vi .or{color:#B26A00}
-/* Partout sur la tablette (26/10/2026, demande de Sam) : des rectangles aux coins arrondis, répartis sur toute la largeur. */
-.vi .tb-sous{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;margin:0 0 14px}
-.vi .tb-sous button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:10px;padding:8px 6px;min-height:40px;font:600 12px/1.2 var(--font-ui);color:var(--color-text-muted);cursor:pointer;text-align:center;overflow-wrap:anywhere}
-@media (max-width:760px){.vi .tb-sous{grid-auto-flow:row;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}}
+/* Partout sur la tablette (26/10/2026, demande de Sam) : des rectangles aux coins arrondis, répartis sur toute la largeur.
+   Les étapes du temps en cours : l'assistant horizontal de la maquette A. */
+.vi .tb-sous{display:flex;align-items:center;margin:0 0 16px}
+.vi .tb-sous button{position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--color-border-secondary);background:var(--color-surface);cursor:pointer;text-align:left;font-family:var(--font-ui)}
+.vi .tb-sous .n{flex:none;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font:700 13px var(--font-ui);background:var(--color-background-secondary);color:var(--color-text-muted)}
+.vi .tb-sous .t{min-width:0;display:flex;flex-direction:column}
+.vi .tb-sous b{font:700 13.5px/1.2 var(--font-ui);color:var(--color-text);overflow-wrap:break-word}
+.vi .tb-sous small{font:600 11px var(--font-ui);color:var(--color-text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vi .tb-sous button.on{background:var(--color-primary);border-color:var(--color-primary)}.vi .tb-sous button.on b,.vi .tb-sous button.on small{color:#fff}.vi .tb-sous button.on .n{background:rgba(255,255,255,.22);color:#fff}
+.vi .tb-sous button.fait{border-color:#BFDCC6;background:#F0F7F2}.vi .tb-sous button.fait .n{background:#2d7a3e;color:#fff}.vi .tb-sous button.fait small{color:#2d7a3e}
+.vi .tb-sous button em{position:absolute;top:-7px;right:-5px;font:700 10.5px/18px var(--font-ui);font-style:normal;min-width:18px;height:18px;padding:0 5px;border-radius:5px;background:#C0182B;color:#fff;text-align:center}
+.vi .tb-sous i.l{flex:0 0 14px;height:2px;background:var(--color-border-secondary)}.vi .tb-sous i.l.fait{background:#2d7a3e}
+.vi .tb-sous.serre{align-items:stretch}.vi .tb-sous.serre i.l{align-self:center}.vi .tb-sous.serre button{flex-direction:column;justify-content:flex-start;align-items:flex-start;padding:8px 9px;gap:5px}.vi .tb-sous.serre .n{width:24px;height:24px;font-size:11.5px}.vi .tb-sous.serre b{font-size:12px;overflow-wrap:normal}.vi .tb-sous.serre i.l{flex-basis:8px}
+@media (max-width:760px){.vi .tb-sous{flex-wrap:wrap;gap:6px}.vi .tb-sous i.l{display:none}.vi .tb-sous button{flex:1 1 140px}}
 .vi .onglets{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}.vi .onglets button{border-radius:10px;text-align:center}
 .vi .tm-n{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);flex:1 1 100%;width:100%;margin:8px 0 0;border-radius:10px;padding:3px}.vi .tm-n button{border-radius:8px;padding:6px 10px}
 .vi .act .chip{flex:1 1 auto;text-align:center}
 .vi .chip{border-radius:8px}
-.vi .tb-sous button.fait{color:#2d7a3e;border-color:#BFDCC6;background:#F0F7F2}
-.vi .tb-sous button.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
-.vi .tb-sous button i{font-style:normal;background:#C0182B;color:#fff;border-radius:5px;padding:0 5px;margin-left:3px;font-size:10.5px}
+
 .vi .cx-j{position:relative;height:9px;border-radius:5px;background:var(--color-background-secondary);margin-top:6px}
 .vi .cx-j i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#2d7a3e}.vi .cx-j i.dn{background:#C0182B}.vi .cx-j i.or{background:#E0A526}
 .vi .cx-j em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--color-text)}
@@ -1777,7 +1785,10 @@
       const barre = `<div class="tb-bar" style="grid-template-columns:repeat(${temps.length},minmax(0,1fr))">` + temps.map((x, ti) => { const vers = x.idx.find(i => !etapes[i].fait); const tout = x.faits === x.idx.length;
         return `<button data-a="etape" data-v="${vers != null ? vers : x.idx[0]}" class="${x === ici ? 'on' : tout ? 'fait' : ''}"><span class="ic"><svg viewBox="0 0 24 24">${TAB_IC['t_' + x.k] || TAB_IC.liste}</svg>${tout && x !== ici ? '<span class="ok">✓</span>' : ''}${x.ko ? `<span class="ko">${x.ko}</span>` : ''}</span><span class="lb">${ti + 1} · ${esc(x.nom)}</span><span class="es">${x.faits} / ${x.idx.length}</span></button>`; }).join('') + '</div>';
       // En tête du temps en cours : ses étapes, d'un toucher.
-      const sous = ici.idx.length > 1 ? `<div class="tb-sous">${ici.idx.map(i => { const x = etapes[i]; return `<button data-a="etape" data-v="${i}" class="${i === cur ? 'on' : x.fait ? 'fait' : ''}">${x.fait && i !== cur ? '✓ ' : ''}${esc(x.court)}${x.ko ? ` <i>${x.ko}</i>` : ''}</button>`; }).join('')}</div>` : '';
+      // Les étapes du temps en cours, en assistant horizontal (maquette A choisie par Sam, 26/10/2026) : numérotées,
+      // reliées par un trait, la faite en vert, l'étape ouverte pleine.
+      const sous = ici.idx.length > 1 ? `<div class="tb-sous ${ici.idx.length > 5 ? 'serre' : ''}">${ici.idx.map((i, j) => { const x = etapes[i]; const st = i === cur ? 'on' : x.fait ? 'fait' : '';
+        return (j ? `<i class="l ${etapes[ici.idx[j - 1]].fait ? 'fait' : ''}"></i>` : '') + `<button data-a="etape" data-v="${i}" class="${st}"><span class="n">${x.fait && i !== cur ? '✓' : j + 1}</span><span class="t"><b>${esc(x.court)}</b><small>${esc(x.module && /^\d+ \/ \d+$/.test(x.etat) ? x.etat + ' vus' : x.etat)}</small></span>${x.ko ? `<em>${x.ko}</em>` : ''}</button>`; }).join('')}</div>` : '';
       const pos = ici.idx.indexOf(cur) + 1;
       return this.tabTop({ titre: 'Contrôle · ' + b.court, sous: esc(fmtDJ(v.prevu_le) + (v.commence_a ? ' · commencé à ' + fmtH(v.commence_a) : '') + ' · ' + this.typeNom(v.type)), retour: true, droite: prog })
         + `<div class="tb-main tb-ctl">${['planifiee', 'confirmee'].includes(v.statut) ? `<div class="card alerte tb-dem"><div><b>Visite pas encore démarrée</b><div class="sm mu">prévue ${esc(fmtDJ(v.prevu_le))} à ${esc(v.debut_h || '')} — ouverte depuis le cockpit ou son QR code</div></div><span style="flex:1"></span><button class="btn p" data-a="demarrer" data-v="${esc(v.id)}">▶ Démarrer la visite</button></div>` : ''}${sous}<div class="tb-h"><div><div class="cap" style="margin:0">${TEMPS.findIndex(x => x[0] === ici.k) + 1} · ${esc(ici.nom)} · étape ${pos} sur ${ici.idx.length}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
