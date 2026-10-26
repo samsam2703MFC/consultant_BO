@@ -64,3 +64,8 @@
 
 /* La tablette seulement : sa règle .vi .bar (les jauges) arrondit et rogne le liseré de couleur des leviers. */
 .cm .lv-tu .bar{border-radius:0;overflow:visible}
+/* Sur la tablette (26/10/2026) : les sélecteurs des cartes occupent toute la largeur, en rectangles aux coins arrondis. */
+.cm .db-ong,.cm .lv-seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);flex:1 1 100%;width:100%;margin-left:0}
+.cm .db-ong button,.cm .lv-seg button{text-align:center}
+.cm .lv-card .ct{flex-wrap:wrap;gap:8px}
+.cm .lv-c{border-radius:6px}

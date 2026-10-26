@@ -1077,3 +1077,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 160 do obsluzenia 2026-10-26T15:29:12Z
 2026-10-26T15:34:47Z promotions : tableau d'analyse, qui utilise quoi (matrice promotions × magasins et cartes des magasins)
 2026-10-26T15:47:49Z tablette : la visite en six temps
+2026-10-26T16:11:21Z tablette : étapes en assistant, mini P&L, Suivant bloquant et passage automatique
