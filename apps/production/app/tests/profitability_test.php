@@ -245,7 +245,7 @@ try {
         (1, 'Ala', 'A', 5000, 1), (2, 'Bartek', 'B', 3000, 1), (3, 'Cezary', 'C', 4000, 2), (4, 'Dorota', 'D', 2000, 1)");
     $staffRepo = new StaffRepository($pdo);
     // Une requête = un service : ProfitabilityService garde les sections lues pendant la requête.
-    $newBudget = fn() => new StaffBudgetService(new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo)))), $staffRepo, new ParamRepository($pdo));
+    $newBudget = fn() => new StaffBudgetService(new ProfitabilityService(new ProfitabilityRepository($pdo), new ParamRepository($pdo), new SectionUnitCostService(new SectionUnitCostRepository($pdo, new WdtSalesRepository($pdo)))), $staffRepo, new ParamRepository($pdo), new App\Repositories\Production\Cost\CostMonthEmployeeRepository($pdo));
     $budgetService = $newBudget();
     $budgetService->savePay(1, ['base_monthly' => '3 600,00'], 1);
     $budgetService->savePay(3, ['base_monthly' => '3000'], 1);

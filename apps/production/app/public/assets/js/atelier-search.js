@@ -105,7 +105,7 @@
         'receptionner': 'przyjecie przyjmij dostawy', 'receptionne': 'przyjecie przyjete', 'nonconformite': 'niezgodnosc nc', 'nonconformites': 'niezgodnosci nc', 'abime': 'problem niezgodnosc uszkodzony', 'casse': 'problem uszkodzony',
         'envoyer': 'wyslij wyslane', 'tout': 'wszystkie', 'tous': 'wszystkie', 'toutes': 'wszystkie', 'habituel': 'zwykly zwykle', 'langue': 'jezyk',
         'commander': 'zamow zamowienia', 'apres': 'po', 'planification': 'planowanie planowaniu plan',
-        'feuille': 'arkusz', 'semaines': 'tyg tygodni', 'clic': 'kliknieciem', 'masse': 'wszystkie', 'compter': 'policzone liczenia', 'max': 'maks maksymalne'
+        'feuille': 'arkusz', 'semaines': 'tyg tygodni', 'clic': 'kliknieciem', 'masse': 'wszystkie', 'compter': 'policzone liczenia', 'max': 'maks maksymalne', 'salaire': 'wynagrodzenie koszt pracodawcy', 'salaires': 'wynagrodzenie koszt pracodawcy', 'paie': 'wynagrodzenie placy', 'verrouiller': 'zamkniety zamknij', 'verrouille': 'zamkniety zamrozony', 'fige': 'zamrozony', 'modifier': 'zmien zmiana edycja korekta', 'calculateur': 'kalkulator', 'budget': 'budzet budzetu budzecie'
     };
 
     var menu = null;

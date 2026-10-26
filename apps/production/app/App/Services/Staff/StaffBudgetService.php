@@ -25,6 +25,7 @@ final class StaffBudgetService
         private ProfitabilityService $profitability,
         private StaffRepository $staff,
         private ParamRepository $params,
+        private \App\Repositories\Production\Cost\CostMonthEmployeeRepository $monthEmployees,
     ) {
     }
 
@@ -174,11 +175,29 @@ final class StaffBudgetService
         return ['sections' => $sections, 'totals' => $totals, 'default_pct' => $default, 'warnings' => $warnings];
     }
 
-    /** Minimum, udział w premii, nieobecność dłuższa ; puste minimum = nie podano. */
+    /**
+     * Jedna karta płacy (P17) : koszt miesięczny pracodawcy, minimum, udział w premii, nieobecność dłuższa ; puste minimum = nie podano.
+     * Zmiana kosztu przechodzi do kalkulatora kosztów : miesiące otwarte od bieżącego (bez korekty w miesiącu) ;
+     * miesiąc zamknięty zostaje zamrożony.
+     */
     public function savePay(int $employeeId, array $input, ?int $userId): array
     {
         $employee = $this->staff->employee($employeeId);
         if ($employee === null) throw new CustomException('Nie znaleziono pracownika.', 'errors', 404);
+        $propagated = null;
+        if (array_key_exists('monthly_cost', $input)) {
+            $raw = trim(str_replace([' ', ','], ['', '.'], (string) ($input['monthly_cost'] ?? '')));
+            if ($raw === '' || !is_numeric($raw) || (float) $raw <= 0 || (float) $raw > 1000000) {
+                throw new CustomException('Koszt miesięczny pracodawcy: kwota w zł większa od 0.', 'errors', 422);
+            }
+            $cost = round((float) $raw, 2);
+            $old = (float) $employee['cost'];
+            if (abs($cost - $old) > 0.004) {
+                $this->staff->setCost($employeeId, $cost);
+                $propagated = $this->monthEmployees->propagateMasterCost($employeeId, $old, $cost, (int) date('Y') * 12 + (int) date('n'));
+                $employee['cost'] = $cost;
+            }
+        }
         $data = ['updated_by' => $userId];
         if (array_key_exists('base_monthly', $input)) {
             $raw = trim(str_replace([' ', ','], ['', '.'], (string) ($input['base_monthly'] ?? '')));
@@ -200,6 +219,7 @@ final class StaffBudgetService
         $this->staff->savePay($employeeId, $data);
         $base = $data['base_monthly'] ?? null;
         return [
+            'cost' => (float) $employee['cost'], 'months_updated' => $propagated,
             'above_min' => $base !== null ? (float) $employee['cost'] - $base : null,
             'warning' => $base !== null && $base > (float) $employee['cost'] ? 'Minimum wyższe niż obecny koszt pracownika — sprawdź koszt w kartotece.' : null,
         ];

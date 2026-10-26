@@ -55,10 +55,10 @@
 
                         <section data-step="Koszt i płaca" hidden>
                             <h4 class="at-step-title">Koszt i płaca</h4>
-                            <p class="at-step-lead">Koszt godziny liczy koszt produkcji ; podstawa i premia to Budżet personelu (jedno miejsce — nie wpisujesz ich drugi raz w kalkulatorze).</p>
+                            <p class="at-step-lead">To jest karta płacy z Budżetu personelu (jedno miejsce) : koszt pracodawcy na miesiąc trafia do kalkulatora kosztów miesiąca, minimum i premia do podziału premii. Później zmieniasz je tylko w Budżecie personelu.</p>
                             <div class="row g-3">
-                                <div class="col-6 col-md-4"><label class="form-label" for="cost">Koszt godziny [zł] *</label>
-                                    <input value="<?= old_value('cost') ?>" type="number" min="0.01" step="0.01" class="form-control" id="cost" name="cost" placeholder="np. 38,50" required></div>
+                                <div class="col-6 col-md-4"><label class="form-label" for="cost">Koszt pracodawcy / mies. [zł] *</label>
+                                    <input value="<?= old_value('cost') ?>" type="number" min="0.01" step="0.01" class="form-control" id="cost" name="cost" placeholder="np. 6 500" required></div>
                                 <div class="col-6 col-md-4"><label class="form-label" for="base_monthly">Podstawa miesięczna [zł]</label>
                                     <input value="<?= old_value('base_monthly') ?>" type="number" min="0" step="0.01" class="form-control" id="base_monthly" name="base_monthly" placeholder="minimum"></div>
                                 <div class="col-12 col-md-4 d-flex align-items-end">

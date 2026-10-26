@@ -38,6 +38,12 @@ final class StaffRepository extends WorkshopRepository
         return $this->all('SELECT e.id, e.cost, e.id_section FROM production_employee e WHERE e.id = ?', [$id])[0] ?? null;
     }
 
+    /** Koszt miesięczny pracodawcy (production_employee.cost) : wpisywany tylko w Budżecie personelu. */
+    public function setCost(int $employeeId, float $cost): void
+    {
+        $this->db->prepare('UPDATE production_employee SET cost = ? WHERE id = ?')->execute([$cost, $employeeId]);
+    }
+
     public function savePay(int $employeeId, array $data): void
     {
         $data = $this->filter($data);

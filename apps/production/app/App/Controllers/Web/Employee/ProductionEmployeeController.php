@@ -64,11 +64,13 @@ class ProductionEmployeeController extends BaseController
         }
 
         if ($_SERVER['REQUEST_METHOD'] == "POST") {
-            $this->errors = $this->productionEmployeeService->validate($_POST);
+            // Koszt pracodawcy zmienia się tylko w Budżecie personelu : z karty pracownika nie przychodzi.
+            $post = ['cost' => $data['row']['cost'] ?? null] + array_diff_key($_POST, ['cost' => true]);
+            $this->errors = $this->productionEmployeeService->validate($post);
 
             if (empty($this->errors)) {
-                $this->handleAction(function () use ($id) {
-                    $this->productionEmployeeService->update($id, $_POST);
+                $this->handleAction(function () use ($id, $post) {
+                    $this->productionEmployeeService->update($id, array_diff_key($post, ['cost' => true]));
                     header('Location: ' . ROOT . '/production-employees');
                     exit;
                 }, default: false);

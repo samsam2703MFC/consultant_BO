@@ -19,6 +19,9 @@ $warnings = $results['warnings'] ?? [];
 
 $monthEmployees = $employees ?? [];
 $employeesMaster = $employees_master ?? [];
+// Budżet personelu = jedyne źródło kosztu pracodawcy (P17) : porównanie z kosztem w tym miesiącu.
+$budgetCost = [];
+foreach ($employeesMaster as $em) $budgetCost[(int) $em['id']] = (float) $em['cost'];
 
 $mediaTypes = $media_types ?? [];
 $mediaCosts = $media_costs ?? [];
@@ -80,8 +83,8 @@ $logisticsCosts = $logistics_costs ?? [];
         <div class="alert alert-success d-flex align-items-center gap-3 mb-3">
             <i class="bi bi-lock-fill fs-4"></i>
             <div>
-                <strong>Miesiąc zamknięty.</strong>
-                Dane są zatwierdzone i stanowią podstawę kalkulacji marży produktów.
+                <strong>Miesiąc zamknięty<?= !empty($month['locked_at']) ? ' ' . htmlspecialchars(date('d.m.Y H:i', strtotime($month['locked_at']))) : '' ?>.</strong>
+                Dane są zatwierdzone i stanowią podstawę kalkulacji marży produktów ; koszty pracowników są zamrożone (zmiany w Budżecie personelu ich nie zmieniają).
                 Edycja jest zablokowana. Aby wprowadzić zmiany, kliknij „Otwórz ponownie".
             </div>
         </div>
@@ -324,8 +327,12 @@ $logisticsCosts = $logistics_costs ?? [];
 
                         <div class="card mb-0 mt-3">
                             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <h4 class="card-title mb-0">Pracownicy (wynagrodzenia)</h4>
+                                <div><h4 class="card-title mb-0">Pracownicy (koszt pracodawcy)</h4>
+                                    <div class="small text-muted">Koszt wpisuje się w <a href="<?= ROOT ?>/staff/budget">Budżecie personelu</a> ; tutaj tylko korekta tego miesiąca (urlop bezpłatny, niepełny miesiąc).</div></div>
                                 <div class="d-flex gap-2">
+                                    <?php if (!$isLocked): ?>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="syncFromBudget()" title="Koszty wszystkich pracowników tego miesiąca = Budżet personelu (korekty miesiąca zostaną zastąpione)"><i class="bi bi-arrow-repeat"></i> Pobierz z budżetu</button>
+                                    <?php endif; ?>
                                     <button class="btn btn-sm btn-primary" onclick="openEmployeeModal()" <?= $isLocked ? 'disabled title="Miesiąc zamknięty"' : '' ?>>+ Dodaj</button>
                                 </div>
                             </div>
@@ -339,6 +346,7 @@ $logisticsCosts = $logistics_costs ?? [];
                                             <th>Imię</th>
                                             <th>Nazwisko</th>
                                             <th class="text-end">Koszt / miesiąc</th>
+                                            <th class="text-end">Budżet personelu</th>
                                             <th style="width:170px"></th>
                                         </tr>
                                         </thead>
@@ -356,23 +364,27 @@ $logisticsCosts = $logistics_costs ?? [];
                                                     <td class="text-end" id="emp_cost_cell_<?= (int)$e['employee_ref_id'] ?>">
                                                         <strong><?= number_format((float)$e['monthly_cost'], 2, ',', ' ') ?> zł</strong>
                                                     </td>
+                                                    <?php $bc = $budgetCost[(int) $e['employee_ref_id']] ?? null; $corr = $bc !== null && abs($bc - (float) $e['monthly_cost']) > 0.005; ?>
+                                                    <td class="text-end <?= $corr ? 'text-warning' : 'text-muted' ?>"<?= $corr ? ' title="Korekta w tym miesiącu (inna niż Budżet personelu)"' : '' ?>>
+                                                        <?= $bc === null ? '—' : number_format($bc, 2, ',', ' ') . ' zł' ?><?= $corr ? ' <i class="bi bi-pencil-square"></i>' : '' ?>
+                                                    </td>
                                                     <td class="text-end">
                                                         <?php if (!$isLocked): ?>
                                                         <button class="btn btn-sm btn-outline-primary me-1"
                                                                 onclick="openEditEmployeeCostModal(<?= (int)$e['employee_ref_id'] ?>)"
-                                                                title="Edytuj wynagrodzenie">
+                                                                title="Korekta kosztu w tym miesiącu">
                                                             <i class="bi bi-pencil"></i>
                                                         </button>
-                                                        <?php endif; ?>
                                                         <button class="btn btn-sm btn-outline-danger"
                                                                 onclick="deleteEmployee(<?= (int)$e['employee_ref_id'] ?>)">
                                                             Usuń
                                                         </button>
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
                                         <?php else: ?>
-                                            <tr><td colspan="6" class="text-muted">Brak wpisów</td></tr>
+                                            <tr><td colspan="7" class="text-muted">Brak wpisów</td></tr>
                                         <?php endif; ?>
                                         </tbody>
                                     </table>
@@ -808,7 +820,7 @@ $logisticsCosts = $logistics_costs ?? [];
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editEmployeeCostModalLabel">
-                    <i class="bi bi-pencil-fill me-2 text-primary"></i>Edycja wynagrodzenia
+                    <i class="bi bi-pencil-fill me-2 text-primary"></i>Korekta kosztu w tym miesiącu
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
             </div>
@@ -836,7 +848,7 @@ $logisticsCosts = $logistics_costs ?? [];
                     </div>
                     <div class="form-text text-muted">
                         <i class="bi bi-info-circle me-1"></i>
-                        Wartość dotyczy tylko tego miesiąca — nie zmienia danych pracownika w systemie.
+                        Tylko ten miesiąc (urlop bezpłatny, niepełny miesiąc). Stała zmiana wynagrodzenia : <a href="<?= ROOT ?>/staff/budget">Budżet personelu</a>.
                     </div>
                 </div>
             </div>
@@ -1443,10 +1455,17 @@ $logisticsCosts = $logistics_costs ?? [];
         if(costVal !== '' && !isNaN(Number(costVal))){
             payload.monthly_cost = Number(costVal);
         }
-console.log(payload); return;
         postJson("<?= ROOT ?>/ajax/cost-calculator/" + MONTH_ID + "/employees/add", payload)
             .then(()=> location.reload())
             .catch(()=> toast("Błąd dodania pracownika"));
+    }
+
+    // « Pobierz z budżetu » : koszty tego (otwartego) miesiąca = Budżet personelu.
+    function syncFromBudget(){
+        if(!confirm("Ustawić koszty wszystkich pracowników tego miesiąca według Budżetu personelu? Korekty miesiąca zostaną zastąpione.")) return;
+        postJson("<?= ROOT ?>/ajax/cost-calculator/" + MONTH_ID + "/employees/sync-budget", {})
+            .then((r)=> { toast("Zaktualizowano: " + ((r && r.updated) || 0)); setTimeout(()=> location.reload(), 500); })
+            .catch(()=> toast("Błąd pobierania z budżetu"));
     }
 
     function deleteEmployee(id){

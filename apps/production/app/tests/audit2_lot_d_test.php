@@ -6,6 +6,9 @@ declare(strict_types=1);
  *    tablette : salarié enregistré, prix toujours celui de la commande, lots reçus proposés en FEFO ;
  *  - P15 commandes en lot : jour de livraison = premier jour habituel du fournisseur (fiche, sinon historique),
  *    langue de la fiche fournisseur ;
+ *  - P17 une seule fiche salaire : coût saisi dans le Budżet personelu, reporté aux mois ouverts à partir du mois courant
+ *    (pas aux mois passés, ni aux corrections du mois, ni aux mois fermés) ; mois fermé = figé (aucun ajout, retrait,
+ *    copie ni « Pobierz z budżetu »), date et auteur du verrouillage ;
  *  - P19 inventaire en masse : un enregistrement pour toute la feuille (une ligne fausse bloque tout) ; min/max 1–2 semaines
  *    seulement pour les matières consommées.
  *
@@ -63,7 +66,7 @@ try {
                  'product_recipe_preparation_step', 'product_recipe_prepare_instruction_connection', 'test_product', 'test_product_status', 'test_product_type',
                  'test_product_stage', 'test_product_changelog', 'complaint', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'palets_delivery',
                  'document_cmr', 'document_wz', 'shipment_log', 'app_notification', 'outbox', 'webhook_outbox_shipments', 'cron_notification_outbox', 'cron_runs',
-                 'document_proforma', 'document_invoice'] as $table) {
+                 'document_proforma', 'document_invoice', 'cost_month_section', 'cost_logistics_type'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -141,6 +144,44 @@ try {
     expectLotD((int) $pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE entity = 'material_inventory'")->fetchColumn() === 1, 'one audit entry for the inventory');
     $limits = $supply->suggestLimits(['ids' => [41, 42]], $office);
     expectLotD($limits['updated'] === 0 && $limits['skipped'] === 2 && (int) $pdo->query('SELECT COUNT(*) FROM n_mp_supply')->fetchColumn() === 0, 'no consumption: limits unchanged');
+
+    // --- P17 : Budżet personelu = seule source du coût pracodawcy, mois fermé figé
+    $cur = [(int) date('Y'), (int) date('n')];
+    $prev = $cur[1] === 1 ? [$cur[0] - 1, 12] : [$cur[0], $cur[1] - 1];
+    $next = $cur[1] === 12 ? [$cur[0] + 1, 1] : [$cur[0], $cur[1] + 1];
+    $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (6, 'Ewa', 'Nowak', 6000, 1), (7, 'Olek', 'Wiśniewski', 4000, 1)");
+    $pdo->exec("INSERT INTO cost_month (id, year, month, status) VALUES (20, {$prev[0]}, {$prev[1]}, 'OPEN'), (21, {$cur[0]}, {$cur[1]}, 'OPEN'), (22, {$next[0]}, {$next[1]}, 'LOCKED')");
+    foreach ([20, 21, 22] as $m) $pdo->exec("INSERT INTO cost_month_employee (month_id, section_id, employee_ref_id, name, surname, monthly_cost, is_included) VALUES
+        ({$m}, 1, 6, 'Ewa', 'Nowak', 6000, 1), ({$m}, 1, 7, 'Olek', 'Wiśniewski', " . ($m === 21 ? 3000 : 4000) . ", 1)");
+    $cost = fn(int $m, int $e) => (float) $pdo->query("SELECT monthly_cost FROM cost_month_employee WHERE month_id = {$m} AND employee_ref_id = {$e}")->fetchColumn();
+    $budget = $container->get(App\Services\Staff\StaffBudgetService::class);
+    $saved = $budget->savePay(6, ['monthly_cost' => '6 500,00'], 1);
+    expectLotD((float) $pdo->query('SELECT cost FROM production_employee WHERE id = 6')->fetchColumn() === 6500.0 && $saved['months_updated'] === 1, 'budget saves the employer cost');
+    expectLotD($cost(21, 6) === 6500.0 && $cost(20, 6) === 6000.0 && $cost(22, 6) === 6000.0, 'current open month follows the budget; past month and locked month do not');
+    $budget->savePay(7, ['monthly_cost' => '4200'], 1);
+    expectLotD($cost(21, 7) === 3000.0, 'a correction typed for the month is kept');
+    try { $budget->savePay(7, ['monthly_cost' => '0'], 1); expectLotD(false, 'zero cost refused'); }
+    catch (App\Exceptions\CustomException $e) { expectLotD($e->getCode() === 422, 'employer cost must be > 0'); }
+    $months = $container->get(App\Services\Production\Cost\CostMonthService::class);
+    expectLotD($months->syncEmployeesFromBudget(21) === 1 && $cost(21, 7) === 4200.0, '« Pobierz z budżetu » replaces the corrections of the open month');
+    $locked = 0;
+    foreach ([fn() => $months->syncEmployeesFromBudget(22), fn() => $months->includeEmployeeFromMaster(22, 6), fn() => $months->deleteEmployee(22, 6),
+                 fn() => $months->copyFromPrevious(22), fn() => $months->insertMonthFixedCost(['month_id' => 22, 'name' => 'Czynsz', 'amount' => 100])] as $call) {
+        try { $call(); } catch (App\Exceptions\CustomException $e) { if ($e->getCode() === 409) $locked++; }
+    }
+    expectLotD($locked === 5, 'locked month: no sync, add, remove, copy or fixed cost');
+    $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (8, 'Nowy', 'Pracownik', 5000, 1)");
+    $months->ensureDefaultEmployees(22);
+    $months->ensureDefaultEmployees(21);
+    $has = fn(int $m) => (int) $pdo->query("SELECT COUNT(*) FROM cost_month_employee WHERE month_id = {$m} AND employee_ref_id = 8")->fetchColumn();
+    expectLotD($has(22) === 0 && $has(21) === 1, 'a new employee joins open months only');
+    $months->lockMonth(21, 1);
+    $lock = $pdo->query('SELECT status, locked_at, locked_by FROM cost_month WHERE id = 21')->fetch();
+    expectLotD($lock['status'] === 'LOCKED' && $lock['locked_at'] !== null && (int) $lock['locked_by'] === 1, 'lock keeps when and who');
+    $budget->savePay(6, ['monthly_cost' => '7000'], 1);
+    expectLotD($cost(21, 6) === 6500.0, 'after the lock, budget changes no longer reach the month');
+    $months->unlockMonth(21);
+    expectLotD($pdo->query('SELECT locked_at FROM cost_month WHERE id = 21')->fetchColumn() === null, 'unlock clears the lock stamp');
 
     echo "audit2_lot_d_test: OK\n";
 } finally {

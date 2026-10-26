@@ -58,11 +58,11 @@ class CostMonthRepository extends BaseRepository
         return $this->query($sql) ?: [];
     }
 
-    public function lockMonth(int $id): bool
+    public function lockMonth(int $id, ?int $userId = null): bool
     {
         return (bool)$this->customUpdate(
-            "UPDATE {$this->table} SET status = 'LOCKED' WHERE id = :id",
-            ['id'=>$id]
+            "UPDATE {$this->table} SET status = 'LOCKED', locked_at = NOW(), locked_by = :u WHERE id = :id",
+            ['id'=>$id, 'u'=>$userId]
         );
     }
 }

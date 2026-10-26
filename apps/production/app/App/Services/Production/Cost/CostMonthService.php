@@ -88,10 +88,18 @@ class CostMonthService
         return [$year,$month];
     }
 
+    /** Miesiąc zamknięty (LOCKED) jest zamrożony : żadna zmiana pracowników, kosztów ani kopiowania. */
+    public function assertOpen(int $monthId): array
+    {
+        $m = $this->monthRepo->getById($monthId);
+        if (!$m) throw new CustomException("MONTH_NOT_FOUND", "error", 404);
+        if (($m['status'] ?? 'OPEN') === 'LOCKED') throw new CustomException("MONTH_LOCKED", "error", 409);
+        return $m;
+    }
+
     public function copyFromPrevious(int $monthId): bool
     {
-        $month = $this->monthRepo->getById($monthId);
-        if (!$month) throw new CustomException("MONTH_NOT_FOUND", "error", 404);
+        $month = $this->assertOpen($monthId);
 
         [$py, $pm] = $this->getPrevYearMonth((int)$month['year'], (int)$month['month']);
         $prev = $this->monthRepo->getByYearMonth($py, $pm);
@@ -187,12 +195,16 @@ class CostMonthService
 
     public function ensureDefaultEmployees(int $monthId): void
     {
+        // Zamknięty miesiąc : skład i koszty zamrożone (nowi pracownicy nie dochodzą przy oglądaniu).
+        $m = $this->monthRepo->getById($monthId);
+        if (!$m || ($m['status'] ?? 'OPEN') === 'LOCKED') return;
         $master = $this->employeeRepo->getAllWithSection();
         $this->monthEmployeeRepo->insertFromMasterIfMissing($monthId, $master);
     }
 
     public function deleteEmployee($monthId, int $id): bool
     {
+        $this->assertOpen((int) $monthId);
         return $this->monthEmployeeRepo->excludeById($monthId, $id);
     }
 
@@ -209,8 +221,16 @@ class CostMonthService
         return $this->monthEmployeeRepo->updateMonthlyCostByRef($monthId, $employeeRefId, $monthlyCost);
     }
 
+    /** « Pobierz z budżetu » : koszty otwartego miesiąca = Budżet personelu. */
+    public function syncEmployeesFromBudget(int $monthId): int
+    {
+        $this->assertOpen($monthId);
+        return $this->monthEmployeeRepo->syncFromMaster($monthId);
+    }
+
     public function includeEmployeeFromMaster(int $monthId, int $employeeId, ?float $monthlyCost = null): int
     {
+        $this->assertOpen($monthId);
         // 1) pobierz pracownika z master
         $emp = $this->employeeRepo->getById($employeeId);
         if (!$emp) return 0;
@@ -238,6 +258,7 @@ class CostMonthService
 
     public function insertMonthFixedCost($data)
     {
+        $this->assertOpen((int) ($data['month_id'] ?? 0));
         $cat = strtoupper((string)($data['category'] ?? 'OTHER'));
         if (!isset(self::FIXED_COST_CATEGORIES[$cat])) {
             $cat = 'OTHER';
@@ -247,8 +268,9 @@ class CostMonthService
         return $this->fixedRepo->insert($data);
     }
 
-    public function deleteMonthFixedCost($id)
+    public function deleteMonthFixedCost($id, ?int $monthId = null)
     {
+        if ($monthId !== null) $this->assertOpen($monthId);
         return $this->fixedRepo->delete($id);
     }
 
@@ -400,7 +422,7 @@ class CostMonthService
      * Locks a cost month (status → LOCKED).
      * Returns ['ok' => bool, 'warnings' => string[]]
      */
-    public function lockMonth(int $monthId): array
+    public function lockMonth(int $monthId, ?int $userId = null): array
     {
         $m = $this->monthRepo->getById($monthId);
         if (!$m) {
@@ -425,7 +447,8 @@ class CostMonthService
             $warnings[] = 'Brak pracowników przypisanych do miesiąca.';
         }
 
-        $ok = $this->monthRepo->lockMonth($monthId);
+        // Zamknięcie = zamrożenie : koszty pracowników zostają takie, jakie są w miesiącu (z budżetu albo z korektą).
+        $ok = $this->monthRepo->lockMonth($monthId, $userId);
         return ['ok' => $ok, 'warnings' => $warnings];
     }
 
@@ -439,7 +462,7 @@ class CostMonthService
             throw new CustomException('MONTH_NOT_FOUND', 'error', 404);
         }
         return (bool)$this->monthRepo->customUpdate(
-            "UPDATE cost_month SET status = 'OPEN' WHERE id = :id",
+            "UPDATE cost_month SET status = 'OPEN', locked_at = NULL, locked_by = NULL WHERE id = :id",
             ['id' => $monthId]
         );
     }
