@@ -1054,3 +1054,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T10:49:47Z atelier : fiches de poste (bureau et atelier, PL / FR, PDF)
 2026-10-26T11:07:26Z atelier : tablette chauffeur (tournée, livraisons, problèmes, Logistyka › Dostawy)
 2026-10-26T11:27:30Z rapport mensuel
+2026-10-26T11:51:48Z tablette chauffeur photos consignes
