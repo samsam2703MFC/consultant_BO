@@ -1,7 +1,7 @@
 # Module « Gestion de production atelier » — ProdAtelier (Wrocław)
 
 Module de l'ERP de production (`apps/production`). Le système calcule et propose, l'humain valide.
-Ce document suit les phases P1 → P7. **Phase livrée : P1** (audit, schéma, migrations, API référentiels).
+Ce document suit les phases P1 → P7. **Phases livrées : P1 → P7** (référentiels, fiche produit, besoin et plan, ordonnancement, Gantt, optimiseur de shifts, tablettes, pointage et indicateurs), en ligne sur le serveur de test.
 
 ## Décisions (19/10/2026)
 
@@ -89,7 +89,7 @@ php Bin/tfb_role.php list
 ```
 
 **Connexion.**
-- Elle se fait avec les comptes de l'ERP. Les mots de passe hachés (bcrypt) et les anciens mots de passe en clair de l'ERP sont acceptés : la migration des mots de passe en clair reste à faire (paquet STB-002 du plan ERP).
+- Elle se fait avec les comptes de l'ERP. Les mots de passe sont hachés (bcrypt) ; ceux encore en clair sont hachés au déploiement (`Bin/hash_passwords.php`).
 - Après `auth.max_failed_logins` échecs en `auth.lockout_window_min` minutes, le compte est bloqué depuis toutes les adresses.
 
 **Configuration (`.env`, jamais dans le dépôt).** `PRODUCTION_JWT_SECRET`, `API_BASE_URL`, `PRODUCTION_API_CORS_ORIGINS`, `R2_PUBLIC_BASE_URL` : voir `.env.example`.
@@ -147,12 +147,14 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 - toute l'API référentiels, avec les messages en polonais et en français ;
 - le journal des écritures.
 
-## Points ouverts (avant P3)
+## Points ouverts (données réelles à fournir)
 
-1. Liste réelle des machines, robots, fours, chambres de pousse et froid, avec leurs capacités. Les données actuelles sont une démo réaliste.
-2. Jours et heures réels de clôture des commandes et de départ des camions par tournée. Aucun calendrier logistique n'existe côté atelier.
-3. Frontière MTO / MTS, sachant que tout part congelé.
-4. Shifts actuellement ouverts et effectifs par groupe.
-5. Système de pointage : aucun n'existe.
-6. Capacité de stockage froid et surgelé.
-7. Confirmations encore attendues sur les jetons (ERP ou panel), les groupes et le bucket R2.
+Les écrans existent ; ce qui manque, ce sont les données réelles de l'atelier (la copie de test tourne sur une démo réaliste).
+
+1. Liste réelle des machines, robots, fours, chambres de pousse et froid, avec leurs capacités : Produkcja › Stanowiska i coboty (25 postes de démonstration aujourd'hui).
+2. Heures de départ des camions par tournée : Logistyka › Trasy (champ heure de départ).
+3. Shifts réellement ouverts et effectifs par groupe : Produkcja › Zespół.
+4. Capacité du surgélateur : paramètre `cold.freezer_capacity_cartons` (0 = non renseignée aujourd'hui, donc non limitée).
+5. Bucket Cloudflare R2 pour les photos (`R2_PUBLIC_BASE_URL`).
+
+Réglés depuis : le pointage (tablette fixe, QR au téléphone, questions de validation) et la frontière MTO / MTS (choisie produit par produit dans Karty produktów).
