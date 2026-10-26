@@ -1838,3 +1838,13 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 /* Logistyka › Dostawy : podpis i zdjęcia w tabeli */
 .at-deliv-media { white-space: nowrap; }
 .at-deliv-media img { height: 38px; max-width: 110px; object-fit: contain; border: 1px solid var(--at-line-2); border-radius: 6px; background: #fff; margin-right: 4px; }
+
+/* Analiza › Raport miesięczny */
+.at-report-highlights { padding-left: 1.1rem; display: grid; gap: 4px; }
+.at-report-table td, .at-report-table th { white-space: nowrap; }
+.at-report-table td:first-child { white-space: normal; }
+.at-report-bars { display: grid; gap: 6px; }
+.at-report-bars li { display: grid; grid-template-columns: minmax(140px, 1.4fr) 1fr auto 80px; gap: 10px; align-items: center; }
+.at-report-bars .at-sub { text-align: right; }
+.at-report-bar { height: 8px; border-radius: 4px; background: var(--at-line-2); overflow: hidden; }
+.at-report-bar span { display: block; height: 100%; background: var(--at-primary); border-radius: 4px; }

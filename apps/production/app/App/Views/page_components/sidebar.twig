@@ -62,6 +62,13 @@
                 </li>
 
                 <li class="sidebar-item">
+                    <a href="{{ root }}/dashboard/monthly" class="sidebar-link">
+                        <i class="bi bi-journal-text"></i>
+                        <span>Raport miesięczny</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
                     <a href="{{ root }}/finances/sales-analytics" class="sidebar-link">
                         <i class="bi bi-bar-chart-line"></i>
                         <span>Analiza sprzedaży</span>
@@ -565,6 +572,7 @@
                 {% for g in page_tab_groups() %}{% for t in g.tabs %}
                 <li><a href="{{ root }}{{ t[0] }}" data-where="{{ g.section }} › {{ g.label }}"><i class="bi {{ t[2] }}"></i> {{ t[1] }}</a></li>
                 {% endfor %}{% endfor %}
+                <li><a href="{{ root }}/dashboard/monthly" data-where="Analiza › Raport miesięczny"><i class="bi bi-envelope-paper"></i> Raport miesięczny zarządu : rentowność, marża, reklamacje, klienci, niezgodności — PDF PL / FR i wysyłka e-mailem co miesiąc</a></li>
                 <li><a href="{{ root }}/dashboard/groups" data-where="Analiza › Rentowność grup"><i class="bi bi-robot"></i> Godziny, produkcja, marża i sprzedaż grup w tygodniu i miesiącu, coboty, wykres 12 tygodni</a></li>
                 <li><a href="{{ root }}/organization/positions" data-where="Administracja › Stanowiska i zadania"><i class="bi bi-file-earmark-person"></i> Karty stanowisk (fiches de poste) : cel, obowiązki, kompetencje, wskaźniki, higiena — biuro i pracownia, PDF PL / FR</a></li>
                 <li><a href="{{ root }}/driver" data-where="Logistyka › Tablet kierowcy"><i class="bi bi-tablet-landscape"></i> Tablet kierowcy : trasa dnia, potwierdzenie dostawy (podpis, zdjęcie, palety zwrotne), problemy w dostawie</a></li>

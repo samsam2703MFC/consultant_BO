@@ -50,7 +50,7 @@
         'facture': 'faktury proforma', 'factures': 'faktury', 'livraison': 'wysylka dostawy', 'livraisons': 'dostawy wysylka', 'arrivage': 'dostawy', 'arrivages': 'dostawy', 'approvisionnement': 'dostawy zaopatrzenie', 'expedition': 'wysylka', 'camion': 'ciezarowki pojazdy',
         'camions': 'ciezarowki pojazdy', 'tournee': 'trasy', 'tournees': 'trasy', 'chargement': 'zaladunek', 'transporteur': 'przewoznicy',
         'stock': 'magazynu magazynowe', 'stocks': 'magazynu magazynowe', 'inventaire': 'magazynu inwentaryzacja', 'couverture': 'magazynu pokrycie', 'emballage': 'opakowania', 'emballages': 'opakowania', 'production': 'produkcja', 'planning': 'planowanie gantt',
-        'equipe': 'zespol', 'personnel': 'pracownicy personelu', 'employe': 'pracownicy', 'employes': 'pracownicy', 'tablette': 'tablety',
+        'equipe': 'zespol', 'personnel': 'pracownicy personelu', 'employe': 'pracownicy', 'employes': 'pracownicy', 'tablette': 'tablet tablety',
         'pointage': 'czas pracy', 'competences': 'kompetencje', 'prime': 'premie', 'primes': 'premie', 'tache': 'zadania', 'taches': 'zadania',
         'reclamation': 'reklamacje', 'reclamations': 'reklamacje', 'retour': 'zwroty', 'retours': 'zwroty', 'parametres': 'ustawienia',
         'reglages': 'ustawienia', 'utilisateur': 'uzytkownicy', 'utilisateurs': 'uzytkownicy', 'compteur': 'licznik', 'appareil': 'urzadzenia',
@@ -64,10 +64,15 @@
         'remplir': 'wypelnienia', 'importer': 'import', 'xlsx': 'excel', 'donnees': 'dane tabela', 'capacite': 'pojemnosc pojemnosci', 'capacites': 'pojemnosci',
         'machine': 'stanowiska maszyny', 'machines': 'stanowiska maszyny', 'poste': 'stanowiska', 'postes': 'stanowiska', 'four': 'stanowiska piece', 'fours': 'stanowiska piece',
         'horaire': 'zmiany godziny', 'horaires': 'zmiany godziny', 'shift': 'zmiany', 'shifts': 'zmiany', 'effectif': 'obsada', 'effectifs': 'obsada', 'equipes': 'zespol zespolow obsada',
-        'fiches': 'karty', 'mission': 'cel karty', 'missions': 'cel karty', 'responsabilites': 'obowiazki karty', 'competence': 'kompetencje', 'organigramme': 'stanowiska przelozony', 'boulanger': 'piekarz piekarnia', 'patissier': 'cukiernik cukiernia', 'chauffeur': 'kierowca kierowcy', 'chauffeurs': 'kierowcy kierowca', 'preuve': 'potwierdzenie potwierdzenia', 'confirmation': 'potwierdzenie potwierdzenia', 'signature': 'podpis', 'probleme': 'problemy problem', 'incident': 'problemy problem', 'palette': 'palety', 'palettes': 'palety', 'surgelateur': 'zamrazarki', 'congelateur': 'zamrazarki', 'surgelation': 'zamrazarki', 'depart': 'wyjazdu', 'departs': 'wyjazdu'
+        'fiches': 'karty', 'mission': 'cel karty', 'missions': 'cel karty', 'responsabilites': 'obowiazki karty', 'competence': 'kompetencje', 'organigramme': 'stanowiska przelozony', 'boulanger': 'piekarz piekarnia', 'patissier': 'cukiernik cukiernia', 'chauffeur': 'kierowca kierowcy', 'chauffeurs': 'kierowcy kierowca', 'preuve': 'potwierdzenie potwierdzenia', 'confirmation': 'potwierdzenie potwierdzenia', 'signature': 'podpis', 'probleme': 'problemy problem', 'incident': 'problemy problem', 'palette': 'palety', 'palettes': 'palety', 'surgelateur': 'zamrazarki', 'congelateur': 'zamrazarki', 'surgelation': 'zamrazarki', 'depart': 'wyjazdu', 'departs': 'wyjazdu',
+        'rapport': 'raport', 'rapports': 'raport', 'mensuel': 'miesieczny', 'mensuelle': 'miesieczny', 'mois': 'miesieczny miesiac', 'bilan': 'raport wynik',
+        'synthese': 'raport', 'resultat': 'wynik', 'resultats': 'wynik', 'marges': 'marza marze', 'direction': 'zarzadu raport'
     };
 
     var menu = null;
+    // Słowa łączące (FR, PL) pomijane w zapytaniu : « preuve de livraison », « plan na tydzień ».
+    var STOP = { 'de': 1, 'du': 1, 'des': 1, 'la': 1, 'le': 1, 'les': 1, 'et': 1, 'au': 1, 'aux': 1, 'en': 1, 'pour': 1, 'par': 1, 'un': 1, 'une': 1, 'na': 1, 'do': 1, 'od': 1, 'ze': 1 };
+
     function menuIndex() {
         if (menu) return menu;
         menu = [];
@@ -105,7 +110,7 @@
 
     // Każde słowo zapytania musi trafić w nazwę, sekcję/grupę albo w alias. Wynik : najpierw trafienia w nazwę.
     function menuGroup(q) {
-        var words = fold(q).split(/\s+/).filter(function (w) { return w.length >= 2; });
+        var words = fold(q).replace(/\b[dl]'/g, ' ').split(/\s+/).filter(function (w) { return w.length >= 2 && !STOP[w]; });
         if (!words.length) return null;
         var hits = [];
         menuIndex().forEach(function (e, order) {

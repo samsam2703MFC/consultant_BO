@@ -1,0 +1,314 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Raport miesięczny · {{ report.label[0] }}{% endblock %}
+
+{% set r = report %}
+{% set L = r.labels %}
+
+{% macro val(v, unit) %}{% if v is null %}—{% elseif unit == 'eur' %}{{ v|eur }}{% elseif unit == 'pct' %}{{ v|pct }}{% elseif unit == 'pct2' %}{{ v|pct(2) }}{% elseif unit == 'days' %}{{ v|number_format(1, ',', ' ') }}{% else %}{{ v|number_format(0, ',', ' ') }}{% endif %}{% endmacro %}
+{% macro trend(t) %}{% if t is null %}<span class="text-muted">—</span>{% else %}<span class="{{ t.good is null ? 'text-muted' : (t.good ? 'text-success' : 'text-danger') }}">{{ t.delta > 0 ? '+' : '' }}{{ t.delta|number_format(1, ',', ' ') }}{{ t.kind == 'pct' ? ' %' : (t.kind == 'days' ? ' d' : ' pp') }}{% if t.good is not null %} <i class="bi {{ t.good ? 'bi-arrow-up-right' : 'bi-arrow-down-right' }}" aria-hidden="true"></i>{% endif %}</span>{% endif %}{% endmacro %}
+{% macro delta(v) %}{% if v is null %}<span class="text-muted">—</span>{% else %}<span class="{{ v >= 0 ? 'text-success' : 'text-danger' }}">{{ v > 0 ? '+' : '' }}{{ v|number_format(1, ',', ' ') }} %</span>{% endif %}{% endmacro %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Raport miesięczny : {{ r.label[0] }}</h3>
+            <p class="text-subtitle text-muted">
+                Rentowność, marża, reklamacje · {{ r.from|date('d.m.Y') }} – {{ r.to|date('d.m.Y') }}{% if r.current %} · miesiąc w toku ({{ (r.elapsed * 100)|round }} %){% endif %}
+                · porównanie z {{ L.prev[0] }} (M-1) i {{ L.ly[0] }} (N-1) · Rapport mensuel
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+            <form method="get" class="d-flex gap-2">
+                <select class="form-select" name="month" aria-label="Miesiąc raportu" onchange="this.form.submit()">
+                    {% for ym, label in months %}<option value="{{ ym }}" {{ ym == r.month ? 'selected' }}>{{ label }}</option>{% endfor %}
+                </select>
+            </form>
+            <a class="btn btn-outline-primary" href="{{ root }}/dashboard/monthly/pdf?month={{ r.month }}&lang=pl" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF PL</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/dashboard/monthly/pdf?month={{ r.month }}&lang=fr" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF FR</a>
+            <a class="btn btn-primary" href="#wyslij"><i class="bi bi-envelope"></i> Wyślij e-mailem</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-profit at-report">
+
+    {% for n in r.notes %}
+        <div class="alert alert-warning at-profit-warn"><i class="bi bi-exclamation-triangle"></i> {{ n[0] }} <a href="{{ root }}/cost-calculator">Kalkulator kosztów</a></div>
+    {% endfor %}
+
+    <nav class="at-profit-nav" aria-label="Sekcje raportu">
+        <a href="#najwazniejsze"><i class="bi bi-stars"></i> Najważniejsze</a>
+        <a href="#wskazniki"><i class="bi bi-speedometer2"></i> Wskaźniki</a>
+        <a href="#grupy"><i class="bi bi-people"></i> Grupy</a>
+        <a href="#marza"><i class="bi bi-percent"></i> Marża</a>
+        <a href="#klienci"><i class="bi bi-person-badge"></i> Klienci</a>
+        <a href="#reklamacje"><i class="bi bi-exclamation-octagon"></i> Reklamacje</a>
+        <a href="#wyslij"><i class="bi bi-envelope"></i> Wysyłka</a>
+    </nav>
+
+    <div class="card at-anchor" id="najwazniejsze">
+        <div class="card-header"><h4 class="card-title mb-0">Najważniejsze</h4></div>
+        <div class="card-body pt-0">
+            <ul class="at-report-highlights mb-0">
+                {% for h in r.highlights %}<li>{{ h[0] }}</li>{% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="card at-anchor" id="wskazniki">
+        <div class="card-header"><h4 class="card-title mb-0">Wskaźniki</h4></div>
+        <div class="card-body pt-0 table-responsive">
+            <table class="table table-sm align-middle at-report-table">
+                <thead><tr><th>Wskaźnik</th><th class="text-end">{{ L.cur[0] }}</th><th class="text-end">{{ L.prev[0] }} <span class="at-sub">M-1</span></th><th class="text-end">{{ L.ly[0] }} <span class="at-sub">N-1</span></th><th class="text-end">Δ M-1</th><th class="text-end">Δ N-1</th></tr></thead>
+                <tbody>
+                {% for k in r.kpis %}
+                    <tr>
+                        <td>{{ k.label[0] }}</td>
+                        <td class="text-end"><strong>{{ _self.val(k.values.cur, k.unit) }}</strong></td>
+                        <td class="text-end">{{ _self.val(k.values.prev, k.unit) }}</td>
+                        <td class="text-end">{{ _self.val(k.values.ly, k.unit) }}</td>
+                        <td class="text-end">{{ _self.trend(k.trend_prev) }}</td>
+                        <td class="text-end">{{ _self.trend(k.trend_ly) }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <p class="at-sub mb-0">Sprzedaż = dokumenty WDT netto (EUR) · marża brutto = po surowcach i opakowaniach z receptur · wynik = po surowcach, personelu, kosztach grup, stałych i logistyce (jak w Rentowności) · reklamacje przyjęte = przyjęta ilość × cena zakupu klienta.</p>
+        </div>
+    </div>
+
+    <div class="card at-anchor" id="grupy">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Grupy produktów</h4>
+            <a class="btn btn-sm btn-outline-primary" href="{{ root }}/dashboard/results?period={{ r.current ? 'month' : r.month }}"><i class="bi bi-bar-chart-steps"></i> Wynik i produkcja grup</a>
+        </div>
+        <div class="card-body pt-0 table-responsive">
+            {% if r.groups %}
+            <table class="table table-sm align-middle at-report-table">
+                <thead><tr><th>Grupa</th><th class="text-end">Sprzedaż</th><th class="text-end">Δ N-1</th><th class="text-end">Marża brutto</th><th class="text-end">Personel <span class="at-sub">/ cel</span></th><th class="text-end">Wynik</th><th class="text-end">Marża wyniku <span class="at-sub">/ cel</span></th></tr></thead>
+                <tbody>
+                {% for g in r.groups %}
+                    <tr class="{{ g.below ? 'table-warning' : '' }}">
+                        <td>{{ g.name }}</td>
+                        <td class="text-end">{{ g.revenue|eur }}</td>
+                        <td class="text-end">{{ _self.delta(g.delta_ly) }}</td>
+                        <td class="text-end">{{ g.gross_pct|pct }}</td>
+                        <td class="text-end">{{ g.staff_pct|pct }} <span class="at-sub">/ {{ g.staff_target|pct(0) }}</span></td>
+                        <td class="text-end">{{ g.contribution|eur }}</td>
+                        <td class="text-end"><strong class="{{ g.below ? 'text-danger' : 'text-success' }}">{{ g.margin_pct|pct }}</strong> <span class="at-sub">/ {{ g.margin_target|pct(0) }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}<p class="text-muted mb-0">Brak sprzedaży w miesiącu.</p>{% endif %}
+        </div>
+    </div>
+
+    <div class="card at-anchor" id="marza">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Marża produktów i kategorii</h4>
+            <a class="btn btn-sm btn-outline-primary" href="{{ root }}/finances/product-margin"><i class="bi bi-percent"></i> Marża produktów</a>
+        </div>
+        <div class="card-body pt-0">
+            <p class="at-sub">Po surowcach i opakowaniach z receptur, ceny surowców z miesiąca.</p>
+            <div class="row g-4">
+                {% for block in [['10 największych sprzedaży', r.margin.top], ['Najniższa marża (sprzedaż ≥ ' ~ r.margin.weak_threshold|eur ~ ')', r.margin.weak]] %}
+                <div class="col-xl-6 table-responsive">
+                    <h6>{{ block[0] }}</h6>
+                    {% if block[1] %}
+                    <table class="table table-sm align-middle at-report-table">
+                        <thead><tr><th>Produkt</th><th class="text-end">Kartony</th><th class="text-end">Sprzedaż</th><th class="text-end">Marża</th></tr></thead>
+                        <tbody>
+                        {% for p in block[1] %}
+                            <tr><td>{{ p.name }}<div class="at-sub">{{ p.category }}</div></td><td class="text-end">{{ p.cartons|number_format(0, ',', ' ') }}</td><td class="text-end">{{ p.revenue|eur }}</td>
+                                <td class="text-end"><strong class="{{ p.margin_pct is not null and p.margin_pct < 50 ? 'text-danger' : '' }}">{{ p.margin_pct|pct }}</strong><div class="at-sub">{{ p.margin|eur }}</div></td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}<p class="text-muted">—</p>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% if r.margin.categories %}
+            <h6 class="mt-2">Kategorie (największe)</h6>
+            <div class="table-responsive">
+            <table class="table table-sm align-middle at-report-table">
+                <thead><tr><th>Kategoria</th><th>Grupa</th><th class="text-end">Sprzedaż</th><th class="text-end">Surowce</th><th class="text-end">Marża</th></tr></thead>
+                <tbody>
+                {% for c in r.margin.categories %}
+                    <tr><td>{{ c.name }}</td><td>{{ c.group }}</td><td class="text-end">{{ c.revenue|eur }}</td><td class="text-end">{{ c.materials|eur }}</td><td class="text-end">{{ c.margin_pct|pct }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card at-anchor" id="klienci">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Klienci</h4>
+            <a class="btn btn-sm btn-outline-primary" href="{{ root }}/finances/clients"><i class="bi bi-people"></i> Klienci : wolumen i marża</a>
+        </div>
+        <div class="card-body pt-0 table-responsive">
+            <p class="at-sub">Kupujący w miesiącu : {{ r.customers.count }} · nowi wobec N-1 : {{ r.customers.new }} · bez zakupów wobec N-1 : {{ r.customers.lost }}</p>
+            {% if r.customers.top %}
+            <table class="table table-sm align-middle at-report-table">
+                <thead><tr><th>Klient</th><th class="text-end">Sprzedaż</th><th class="text-end">Udział</th><th class="text-end">{{ L.ly[0] }} <span class="at-sub">N-1</span></th><th class="text-end">Δ N-1</th></tr></thead>
+                <tbody>
+                {% for c in r.customers.top %}
+                    <tr><td><a href="{{ root }}/clients/{{ c.id }}">{{ c.name }}</a></td><td class="text-end">{{ c.revenue|eur }}</td><td class="text-end">{{ c.share|pct }}</td><td class="text-end">{{ c.revenue_ly|eur }}</td><td class="text-end">{{ _self.delta(c.delta_ly) }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+
+    {% set ct = r.complaints.totals %}
+    <div class="card at-anchor" id="reklamacje">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Reklamacje</h4>
+            <a class="btn btn-sm btn-outline-primary" href="{{ root }}/client-complaints"><i class="bi bi-exclamation-octagon"></i> Reklamacje</a>
+        </div>
+        <div class="card-body pt-0">
+            <div class="row g-4">
+                <div class="col-xl-5 table-responsive">
+                    <table class="table table-sm align-middle at-report-table">
+                        <thead><tr><th></th><th class="text-end">{{ L.cur[0] }}</th><th class="text-end">M-1</th><th class="text-end">N-1</th></tr></thead>
+                        <tbody>
+                            {% for row in [['Zgłoszone', 'count'], ['Przyjęte', 'accepted'], ['Odrzucone', 'rejected'], ['W toku', 'open']] %}
+                                <tr><td>{{ row[0] }}</td><td class="text-end"><strong>{{ ct.cur[row[1]] }}</strong></td><td class="text-end">{{ ct.prev[row[1]] }}</td><td class="text-end">{{ ct.ly[row[1]] }}</td></tr>
+                            {% endfor %}
+                            <tr><td>Wartość przyjęta</td><td class="text-end"><strong>{{ ct.cur.value|eur }}</strong></td><td class="text-end">{{ ct.prev.value|eur }}</td><td class="text-end">{{ ct.ly.value|eur }}</td></tr>
+                            <tr><td>Czas do decyzji (dni)</td><td class="text-end">{{ _self.val(ct.cur.days_to_decision, 'days') }}</td><td class="text-end">{{ _self.val(ct.prev.days_to_decision, 'days') }}</td><td class="text-end">{{ _self.val(ct.ly.days_to_decision, 'days') }}</td></tr>
+                        </tbody>
+                    </table>
+                    {% if r.complaints.per_1000_cartons is not null %}<p class="at-sub mb-0">{{ r.complaints.per_1000_cartons|number_format(2, ',', ' ') }} reklamacji na 1000 kartonów sprzedanych.</p>{% endif %}
+                </div>
+                <div class="col-xl-7">
+                    {% if r.complaints.reasons %}
+                    <h6>Przyczyny</h6>
+                    <ul class="list-unstyled at-report-bars">
+                        {% set maxN = max(r.complaints.reasons|map(x => x.n)) %}
+                        {% for x in r.complaints.reasons %}
+                            <li><span>{{ x.label[0] }}</span><span class="at-report-bar"><span style="width: {{ (x.n / maxN * 100)|round }}%"></span></span><strong>{{ x.n }}</strong><span class="at-sub">{{ x.value|eur }}</span></li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}<p class="text-muted">Brak reklamacji w miesiącu.</p>{% endif %}
+                    <div class="row g-3">
+                        {% for block in [['Produkty', r.complaints.products], ['Klienci', r.complaints.customers]] %}{% if block[1] %}
+                        <div class="col-md-6">
+                            <h6>{{ block[0] }}</h6>
+                            <table class="table table-sm at-report-table"><tbody>
+                                {% for x in block[1] %}<tr><td>{{ x.name }}</td><td class="text-end">{{ x.n }}</td><td class="text-end">{{ x.value|eur }}</td></tr>{% endfor %}
+                            </tbody></table>
+                        </div>
+                        {% endif %}{% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h4 class="card-title mb-0">Niezgodności</h4></div>
+                <div class="card-body pt-0">
+                    {% set sources = {supplier_delivery: 'Dostawa surowców', production: 'Produkcja', customer: 'Klient', internal: 'Wewnętrzna'} %}
+                    {% if r.nc %}
+                    <table class="table table-sm at-report-table">
+                        <thead><tr><th>Źródło</th><th class="text-end">Liczba</th><th class="text-end">Krytyczne</th><th class="text-end">Otwarte</th><th class="text-end">Koszt</th></tr></thead>
+                        <tbody>{% for x in r.nc %}<tr><td>{{ sources[x.source] ?? x.source }}</td><td class="text-end">{{ x.n }}</td><td class="text-end">{{ x.critical }}</td><td class="text-end">{{ x.open }}</td><td class="text-end">{{ x.cost|eur }}</td></tr>{% endfor %}</tbody>
+                    </table>
+                    {% else %}<p class="text-muted mb-0">Brak niezgodności w miesiącu.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h4 class="card-title mb-0">Dostawy (tablet kierowcy)</h4></div>
+                <div class="card-body pt-0">
+                    {% set dl = r.deliveries %}
+                    {% if dl.delivered + dl.problem > 0 %}
+                    <div class="d-flex flex-wrap gap-4 mb-2">
+                        <div><div class="at-sub">Potwierdzone</div><strong class="fs-5 text-success">{{ dl.delivered }}</strong></div>
+                        <div><div class="at-sub">Z problemem</div><strong class="fs-5 {{ dl.problem ? 'text-danger' : '' }}">{{ dl.problem }}</strong></div>
+                        <div><div class="at-sub">Palety zwrotne</div><strong class="fs-5">{{ dl.pallets_returned }}</strong></div>
+                    </div>
+                    {% for x in dl.reasons %}<span class="badge bg-light text-dark me-1">{{ x.label[0] }} : {{ x.n }}</span>{% endfor %}
+                    {% else %}<p class="text-muted mb-0">Brak potwierdzeń z tabletu kierowcy w miesiącu.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card at-anchor mt-4" id="wyslij">
+        <div class="card-header"><h4 class="card-title mb-0">Wysyłka raportu e-mailem</h4></div>
+        <div class="card-body pt-0">
+            <div class="row g-4">
+                <form class="col-lg-6" id="reportSend" novalidate>
+                    <h6>Wyślij teraz : {{ r.label[0] }}</h6>
+                    <input type="hidden" name="month" value="{{ r.month }}">
+                    <label class="form-label" for="reportTo">Adresy e-mail (przecinek)</label>
+                    <input class="form-control" id="reportTo" name="to" value="{{ settings.recipients }}" placeholder="zarzad@firma.pl, direction@atelier.be" autocomplete="off">
+                    <div class="d-flex gap-2 align-items-end mt-2">
+                        <div><label class="form-label" for="reportLang">Język PDF</label>
+                            <select class="form-select" id="reportLang" name="lang"><option value="pl" {{ settings.lang == 'pl' ? 'selected' }}>polski</option><option value="fr" {{ settings.lang == 'fr' ? 'selected' }}>français</option></select></div>
+                        <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> Wyślij PDF</button>
+                    </div>
+                    <p class="at-sub mt-2 mb-0">Wiadomość z PDF w załączniku (szablon « Raport miesięczny zarządu » w Komunikacji), przez kolejkę e-mail.</p>
+                </form>
+                <form class="col-lg-6" id="reportAuto" novalidate>
+                    <h6>Wysyłka automatyczna co miesiąc</h6>
+                    <label class="form-label" for="autoTo">Adresy e-mail (puste = wyłączona)</label>
+                    <input class="form-control" id="autoTo" name="recipients" value="{{ settings.recipients }}" autocomplete="off">
+                    <div class="d-flex gap-2 align-items-end mt-2">
+                        <div><label class="form-label" for="autoDay">Dzień miesiąca</label><input class="form-control" id="autoDay" name="send_day" type="number" min="1" max="28" value="{{ settings.send_day }}" style="width: 110px"></div>
+                        <div><label class="form-label" for="autoLang">Język PDF</label>
+                            <select class="form-select" id="autoLang" name="lang"><option value="pl" {{ settings.lang == 'pl' ? 'selected' }}>polski</option><option value="fr" {{ settings.lang == 'fr' ? 'selected' }}>français</option></select></div>
+                        <button class="btn btn-outline-primary" type="submit"><i class="bi bi-check2"></i> Zapisz</button>
+                    </div>
+                    <p class="at-sub mt-2 mb-0">Od wskazanego dnia : raport za poprzedni miesiąc, raz w miesiącu.</p>
+                </form>
+            </div>
+            {% if history %}
+            <h6 class="mt-4">Ostatnie wysyłki</h6>
+            <div class="table-responsive">
+            <table class="table table-sm at-report-table">
+                <thead><tr><th>Data</th><th>Adres</th><th>Temat</th><th>Status</th><th>Kto</th></tr></thead>
+                <tbody>{% for m in history %}<tr><td>{{ m.created_at|date('d.m.Y H:i') }}</td><td>{{ m.recipient_email }}</td><td>{{ m.subject_text }}</td><td>{{ m.status }}</td><td class="at-sub">{{ m.created_by starts with 'monthly-report:' ? 'automatycznie' : m.created_by }}</td></tr>{% endfor %}</tbody>
+            </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const bind = (id, url, method, after) => {
+        const form = document.getElementById(id);
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            at.clearErrors(form);
+            const button = form.querySelector('button[type=submit]');
+            button.disabled = true;
+            at.send(url, method, at.formData(form)).then(res => {
+                button.disabled = false;
+                at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+                if (res.ok && after) setTimeout(after, 800);
+            });
+        });
+    };
+    bind('reportSend', '/dashboard/monthly/send', 'POST', () => location.reload());
+    bind('reportAuto', '/dashboard/monthly/settings', 'PUT', null);
+})();
+</script>
+{% endblock %}

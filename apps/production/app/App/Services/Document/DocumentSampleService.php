@@ -26,6 +26,7 @@ class DocumentSampleService
         'difference' => ['Różnice zamówienie / faktura', 'Sprzedaż i finanse', DocumentLabels::LANGUAGES, 'List do klienta : dopłata albo zwrot różnicy między proformą a fakturą.', '/shipments?type=difference', null],
         'price_list' => ['Cennik klienta', 'Sprzedaż i finanse', DocumentLabels::LANGUAGES, 'Ceny klienta według kategorii (karta klienta).', '/clients', null],
         'general_price_list' => ['Cennik ogólny produktów', 'Sprzedaż i finanse', [], 'Ceny standardowe wszystkich produktów.', '/price-lists/general', '/ajax/products/price-list/pdf'],
+        'management_report' => ['Raport miesięczny zarządu', 'Sprzedaż i finanse', [], 'Rentowność, marża brutto, grupy, produkty, klienci, reklamacje, niezgodności i dostawy — miesiąc wobec M-1 i N-1, PL i FR, wysyłka e-mailem (także automatyczna).', '/dashboard/monthly', '/dashboard/monthly/pdf'],
         'sales_summary' => ['Podsumowanie sprzedaży WDT', 'Sprzedaż i finanse', [], 'Kartony i średnia miesięczna na produkt dla klienta (w jego języku).', '/finances/sales-analytics', null],
         'wz' => ['WZ — wydanie zewnętrzne', 'Logistyka', DocumentLabels::LANGUAGES, 'Dokument wydania towaru z podpisami wydającego i odbiorcy.', '/shipments?type=wz', null],
         'cmr' => ['CMR', 'Logistyka', ['pl'], 'Międzynarodowy list przewozowy : urzędowy formularz, układ bez zmian (PL / EN).', '/shipments?type=cmr', null],

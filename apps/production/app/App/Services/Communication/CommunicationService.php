@@ -44,6 +44,7 @@ class CommunicationService
         'sales_goal' => 'Cel obrotu franczyzobiorcy (zakupy × współczynnik, PDF)',
         'price_list' => 'Nowy cennik klienta (automatyczne, po zmianie cen)',
         'monthly_report' => 'Raport miesięczny : podsumowanie sprzedaży i cel obrotu (automatyczne)',
+        'management_report' => 'Raport miesięczny zarządu : rentowność, marża, reklamacje (PDF, wewnętrzny)',
     ];
 
     public function __construct(
