@@ -1079,3 +1079,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T15:47:49Z tablette : la visite en six temps
 2026-10-26T16:11:21Z tablette : étapes en assistant, mini P&L, Suivant bloquant et passage automatique
 2026-10-26T16:38:11Z production : audit 2, lot A (saisies, KSeF automatique, échecs boutiques, Koniec dnia, rapport mensuel, factures KSeF, recherche, paramètres)
+2026-10-26T17:08:43Z suivi des franchisés : tables con_, leviers en évolution de l'année, Sources et API
