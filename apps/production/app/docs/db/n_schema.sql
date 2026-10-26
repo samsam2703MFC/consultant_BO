@@ -1,7 +1,7 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 082, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 082 ; compatible MySQL 8.
+-- 001 → 084, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 084 ; compatible MySQL 8.
 -- Modifications des tables d'origine : voir docs/db/README.md (colonne customer.communication_lang, nettoyage 074 → 080).
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `n_activity_click` (
@@ -71,6 +71,14 @@ CREATE TABLE `n_clock_question` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_customer_delivery_info` (
+  `id_customer` int(11) NOT NULL,
+  `payload` text NOT NULL,
+  `updated_by` varchar(160) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_customer`),
+  CONSTRAINT `fk_n_customer_delivery_info_customer` FOREIGN KEY (`id_customer`) REFERENCES `customer` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_customer_space` (
   `id_customer` int(11) NOT NULL,
   `docs_enabled` tinyint(1) NOT NULL DEFAULT 0,
@@ -84,11 +92,14 @@ CREATE TABLE `n_customer_space` (
 CREATE TABLE `n_delivery_media` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `id_stop` int(11) NOT NULL,
-  `kind` enum('signature','photo') NOT NULL,
+  `kind` enum('signature','photo','photo_before','photo_after') NOT NULL,
   `mime` varchar(40) NOT NULL,
   `content` mediumblob NOT NULL,
+  `taken_at` datetime DEFAULT NULL,
+  `client_uuid` varchar(64) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_n_delivery_media_uuid` (`id_stop`,`client_uuid`),
   KEY `idx_n_delivery_media_stop` (`id_stop`),
   CONSTRAINT `fk_n_delivery_media_stop` FOREIGN KEY (`id_stop`) REFERENCES `n_delivery_stop` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -129,7 +140,7 @@ CREATE TABLE `n_delivery_stop` (
   `ship_date` date NOT NULL,
   `id_customer` int(11) NOT NULL,
   `id_carrier_vehicle` int(11) DEFAULT NULL,
-  `status` enum('delivered','problem') NOT NULL,
+  `status` enum('arrived','delivered','problem') NOT NULL,
   `reason` enum('closed','refused','damaged','missing','late','other') DEFAULT NULL,
   `receiver_name` varchar(100) DEFAULT NULL,
   `pallets_delivered` int(11) DEFAULT NULL,
@@ -138,6 +149,7 @@ CREATE TABLE `n_delivery_stop` (
   `lat` decimal(9,6) DEFAULT NULL,
   `lng` decimal(9,6) DEFAULT NULL,
   `recorded_at` datetime NOT NULL,
+  `arrived_at` datetime DEFAULT NULL,
   `driver_name` varchar(100) DEFAULT NULL,
   `id_device` int(11) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),

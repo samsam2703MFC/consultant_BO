@@ -220,6 +220,8 @@ final class WorkshopApiRoutes
             ['GET', '/driver/day', DriverController::class, 'day', 'kiosk'],
             ['POST', '/driver/run', DriverController::class, 'run', 'kiosk'],
             ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk'],
+            ['POST', '/driver/photos', DriverController::class, 'photo', 'kiosk'],
+            ['GET', '/driver/report', DriverController::class, 'report', 'kiosk'],
             ['GET', '/driver/documents', DriverController::class, 'documents', 'kiosk'],
             ['GET', '/kiosk/phone/people', ExecutionController::class, 'phonePeople', 'qr'],
             ['POST', '/kiosk/phone/enroll', ExecutionController::class, 'enrollPhone', 'qr'],

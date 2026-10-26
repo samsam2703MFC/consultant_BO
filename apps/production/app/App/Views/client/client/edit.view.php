@@ -196,6 +196,27 @@
                                 </div>
                             </div>
                         </div>
+                        <?php $delivery = $delivery_info ?? null; ?>
+                        <?php if ($delivery !== null): ?>
+                        <div class="row mt-4" id="delivery-info">
+                            <div class="col-2"></div>
+                            <div class="col-8">
+                                <div class="border rounded-3 p-3">
+                                    <h6 class="text-uppercase mb-1" style="color:#8D1D2C;letter-spacing:.04em"><i class="bi bi-shield-lock"></i> Dostawa : instrukcje dla kierowcy</h6>
+                                    <p class="text-muted small mb-3">Inne u każdego klienta. Pokazywane kierowcy na tablecie przy tym kliencie (alarm i klucz dopiero po dotknięciu). Zapis zaszyfrowany ; nigdy w dokumentach dla klienta.
+                                        <?php if (!empty($delivery['updated_at'])): ?>Ostatnia zmiana : <?= htmlspecialchars(date('d.m.Y H:i', strtotime((string) $delivery['updated_at']))) ?><?= !empty($delivery['updated_by']) ? ', ' . htmlspecialchars((string) $delivery['updated_by']) : '' ?>.<?php endif; ?></p>
+                                    <?php if (!empty($delivery['unreadable'])): ?><div class="alert alert-warning py-2 small">Zapisanych instrukcji nie można odczytać (zmieniony sekret serwera) — wpisz je ponownie.</div><?php endif; ?>
+                                    <?php foreach (\App\Services\Logistics\CustomerDeliveryInfoService::FIELDS as $key => [$label, $labelFr, $max, $secret]): ?>
+                                        <?php $value = isset($_POST['delivery_' . $key]) ? (string) $_POST['delivery_' . $key] : (string) ($delivery['fields'][$key] ?? ''); ?>
+                                        <div class="mb-2">
+                                            <label class="form-label mb-1" for="delivery_<?= $key ?>"><?= htmlspecialchars($label) ?><?= $secret ? ' <i class="bi bi-lock" title="poufne"></i>' : '' ?> <span class="text-muted small">· <?= htmlspecialchars($labelFr) ?></span></label>
+                                            <textarea class="form-control" id="delivery_<?= $key ?>" name="delivery_<?= $key ?>" rows="<?= $key === 'procedure' ? 3 : 2 ?>" maxlength="<?= (int) $max ?>" autocomplete="off"><?= htmlspecialchars($value) ?></textarea>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                         <div class="row mt-4">
                             <div class="col-2"></div>
                             <div class="col-8">

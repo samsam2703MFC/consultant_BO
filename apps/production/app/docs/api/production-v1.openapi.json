@@ -12867,6 +12867,167 @@
                 ]
             }
         },
+        "/driver/photos": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zdjęcie przed / po rozładunku / Photo avant / après déchargement",
+                "operationId": "driverPhoto",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DriverPhotoResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Une photo par envoi (JPEG redimensionné, horodatage incrusté sur la tablette). before : crée l'arrêt « arrived » (sur place) et l'heure d'arrivée ; after : après déchargement. Heure de prise de vue taken_at ; le même client_uuid renvoyé (file hors ligne) ne crée pas de doublon. Au plus driver.max_photos par sorte (DRIVER_PHOTO_LIMIT).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DriverPhotoInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/driver/report": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Raport PDF trasy albo klienta / Rapport PDF de tournée ou d'un client",
+                "operationId": "driverReport",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DocumentFile"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Arrêts (arrivée, livraison, réceptionnaire, palettes et numéros, photos avant / après avec l'heure, signature), dans la langue de la tablette.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "vehicle_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "défaut : véhicule de la tablette"
+                        }
+                    },
+                    {
+                        "name": "customer_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "un seul client"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/driver/documents": {
             "get": {
                 "tags": [
@@ -17836,6 +17997,83 @@
                     }
                 }
             },
+            "DriverPhotoInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "customer_id",
+                    "kind",
+                    "photo"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "customer_id": {
+                        "type": "integer"
+                    },
+                    "vehicle_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "before",
+                            "after"
+                        ]
+                    },
+                    "photo": {
+                        "type": "string",
+                        "description": "data:image/jpeg;base64,… (driver.photo_max_kb)"
+                    },
+                    "taken_at": {
+                        "type": "string",
+                        "example": "2026-10-26 21:35:00",
+                        "nullable": true
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "nullable": true
+                    },
+                    "lat": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "lng": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "driver_name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true
+                    }
+                }
+            },
+            "DriverPhotoResult": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "stop_id": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "taken_at": {
+                        "type": "string"
+                    },
+                    "count": {
+                        "type": "integer"
+                    }
+                }
+            },
             "DriverDay": {
                 "type": "object",
                 "properties": {
@@ -17953,12 +18191,17 @@
                                 "status": {
                                     "type": "string",
                                     "enum": [
+                                        "arrived",
                                         "delivered",
                                         "problem"
                                     ],
                                     "nullable": true
                                 },
                                 "recorded_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "arrived_at": {
                                     "type": "string",
                                     "nullable": true
                                 },
@@ -17969,6 +18212,53 @@
                                 "reason": {
                                     "type": "string",
                                     "nullable": true
+                                },
+                                "pallets_estimated": {
+                                    "type": "boolean"
+                                },
+                                "pallet_numbers": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "photos": {
+                                    "type": "object",
+                                    "properties": {
+                                        "before": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "after": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    }
+                                },
+                                "instructions": {
+                                    "type": "array",
+                                    "description": "consignes de livraison du client (procédure, alarme, clé, congélateur, contact), déchiffrées",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "key": {
+                                                "type": "string"
+                                            },
+                                            "label": {
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "string"
+                                            },
+                                            "secret": {
+                                                "type": "boolean"
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -17984,8 +18274,14 @@
                             },
                             "problem": {
                                 "type": "integer"
+                            },
+                            "arrived": {
+                                "type": "integer"
                             }
                         }
+                    },
+                    "max_photos": {
+                        "type": "integer"
                     },
                     "reasons": {
                         "type": "array",

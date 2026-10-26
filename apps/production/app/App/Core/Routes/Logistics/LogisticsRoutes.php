@@ -17,6 +17,7 @@ return function(RouteCollector $r) {
     $r->addRoute('GET', '/logistics/deliveries', ['controller' => $p, 'method' => 'index']);
     $r->addRoute('GET', '/logistics/deliveries/{id:\d+}/proof.pdf', ['controller' => $p, 'method' => 'proof']);
     $r->addRoute('GET', '/logistics/deliveries/media/{id:\d+}', ['controller' => $p, 'method' => 'media']);
+    $r->addRoute('GET', '/logistics/deliveries/report.pdf', ['controller' => $p, 'method' => 'report']);
     $n = App\Controllers\Web\Logistics\DeliveryNoticeController::class;
     $r->addRoute('GET', '/logistics/notices', ['controller' => $n, 'method' => 'index']);
     $r->addRoute('POST', '/ajax/logistics/notices/preview', ['controller' => $n, 'method' => 'preview']);

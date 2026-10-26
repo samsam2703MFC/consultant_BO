@@ -6,7 +6,7 @@
     <div class="page-heading at-profit-head">
         <div class="page-title">
             <h3>Dostawy : potwierdzenia z tabletu kierowcy</h3>
-            <p class="text-subtitle text-muted">Dzień wysyłki {{ date|date('d.m.Y') }} : start i koniec trasy, dostawy potwierdzone (odbiorca, podpis, zdjęcie, palety) i problemy · Livraisons confirmées sur la tablette chauffeur</p>
+            <p class="text-subtitle text-muted">Dzień wysyłki {{ date|date('d.m.Y') }} : start i koniec trasy, przyjazd i zdjęcia przed rozładunkiem, dostawy potwierdzone (zdjęcia po, odbiorca, podpis, palety i ich numery), problemy, raport PDF trasy · Livraisons confirmées sur la tablette chauffeur</p>
         </div>
         <div class="d-flex gap-2 flex-wrap align-items-center">
             <a class="btn btn-outline-primary" href="{{ root }}/logistics/deliveries?date={{ prev }}" aria-label="Poprzedni dzień"><i class="bi bi-chevron-left"></i></a>
@@ -31,18 +31,20 @@
         {% set s = r.stop %}
         <tr class="{{ s and s.status == 'problem' ? 'table-danger' : '' }}">
             <td><strong>{{ r.name }}</strong>{% if r.town %}<div class="at-sub">{{ r.town }}</div>{% endif %}</td>
-            <td class="text-end">{{ r.pallets ?? '—' }}</td>
+            <td class="text-end">{{ r.pallets ?? '—' }}{% if r.pallet_numbers %}<div class="at-sub" title="Numery palet ze skanera">nr {{ r.pallet_numbers|join(', ') }}</div>{% endif %}</td>
             <td>
                 {% if not s %}<span class="badge bg-light text-dark">bez potwierdzenia</span>
                 {% elseif s.status == 'delivered' %}<span class="badge bg-success">dostarczono {{ s.recorded_at|date('H:i') }}</span>
+                {% elseif s.status == 'arrived' %}<span class="badge bg-info text-dark">na miejscu od {{ (s.arrived_at ?: s.recorded_at)|date('H:i') }}</span>
                 {% else %}<span class="badge bg-danger">problem {{ s.recorded_at|date('H:i') }} : {{ s.reason_label }}</span>{% endif %}
+                {% if s and s.arrived_at and s.status != 'arrived' %}<div class="at-sub">przyjazd {{ s.arrived_at|date('H:i') }}</div>{% endif %}
             </td>
             <td>{{ s ? (s.receiver_name ?: '—') : '' }}{% if s and s.note %}<div class="at-sub">{{ s.note }}</div>{% endif %}</td>
             <td class="text-end">{{ s and s.pallets_delivered is not null ? s.pallets_delivered : '' }}</td>
             <td class="text-end">{{ s and s.pallets_returned is not null ? s.pallets_returned : '' }}</td>
             <td class="at-deliv-media">
                 {% if s and s.signature_id %}<a href="{{ root }}/logistics/deliveries/media/{{ s.signature_id }}" target="_blank" rel="noopener"><img src="{{ root }}/logistics/deliveries/media/{{ s.signature_id }}" alt="Podpis {{ r.name }}" loading="lazy"></a>{% endif %}
-                {% for p in s ? s.photo_ids : [] %}<a href="{{ root }}/logistics/deliveries/media/{{ p }}" target="_blank" rel="noopener"><img src="{{ root }}/logistics/deliveries/media/{{ p }}" alt="Zdjęcie {{ r.name }}" loading="lazy"></a>{% endfor %}
+                {% for kind in s ? [['before_ids', 'przed'], ['after_ids', 'po'], ['photo_ids', 'zdjęcie']] : [] %}{% for p in s[kind[0]] %}<a href="{{ root }}/logistics/deliveries/media/{{ p }}" target="_blank" rel="noopener" title="{{ kind[1] }}"><img src="{{ root }}/logistics/deliveries/media/{{ p }}" alt="Zdjęcie {{ kind[1] }} : {{ r.name }}" loading="lazy" class="is-{{ kind[0]|slice(0, -4) }}"></a>{% endfor %}{% endfor %}
             </td>
             <td class="text-end text-nowrap">{% if s %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}/logistics/deliveries/{{ s.id }}/proof.pdf" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
                 <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/logistics/deliveries/{{ s.id }}/proof.pdf?lang=fr" target="_blank" rel="noopener">FR</a>{% endif %}</td>
@@ -54,10 +56,12 @@
         <div class="card-header d-flex flex-wrap justify-content-between gap-2 align-items-center">
             <div><h4 class="card-title mb-0">{{ t.label }} <span class="at-sub">{{ t.carrier != t.label ? t.carrier : '' }}{{ t.driver ? ' · ' ~ t.driver : '' }}</span></h4>
                 <div class="at-sub">Wyjazd planowany {{ t.departure }}{% if t.started_at %} · start {{ t.started_at|date('H:i') }}{% endif %}{% if t.finished_at %} · koniec {{ t.finished_at|date('d.m H:i') }}{% endif %}</div></div>
-            <div><span class="badge bg-success">{{ t.delivered }}/{{ t.rows|length }} dostarczono</span>{% if t.problems %} <span class="badge bg-danger">{{ t.problems }} problem(y)</span>{% endif %}</div>
+            <div class="d-flex flex-wrap gap-2 align-items-center"><span class="badge bg-success">{{ t.delivered }}/{{ t.rows|length }} dostarczono</span>{% if t.arrived %} <span class="badge bg-info text-dark">{{ t.arrived }} na miejscu</span>{% endif %}{% if t.problems %} <span class="badge bg-danger">{{ t.problems }} problem(y)</span>{% endif %}
+                <a class="btn btn-sm btn-outline-primary" href="{{ root }}/logistics/deliveries/report.pdf?date={{ date }}&vehicle={{ t.id }}" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> Raport trasy</a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/logistics/deliveries/report.pdf?date={{ date }}&vehicle={{ t.id }}&lang=fr" target="_blank" rel="noopener">FR</a></div>
         </div>
         <div class="card-body pt-0"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
-            <thead><tr><th>Klient</th><th class="text-end">Palety plan</th><th>Status</th><th>Odbiorca / uwagi</th><th class="text-end">Dostarczone</th><th class="text-end">Zwrócone EUR</th><th>Podpis, zdjęcie</th><th></th></tr></thead>
+            <thead><tr><th>Klient</th><th class="text-end">Palety plan</th><th>Status</th><th>Odbiorca / uwagi</th><th class="text-end">Dostarczone</th><th class="text-end">Zwrócone EUR</th><th>Podpis, zdjęcia przed / po</th><th></th></tr></thead>
             <tbody>{% for r in t.rows %}{{ _self.stopRow(r, root) }}{% endfor %}</tbody>
         </table></div></div>
     </div>
@@ -69,7 +73,7 @@
     <div class="card">
         <div class="card-header"><h4 class="card-title">Inne potwierdzenia</h4><p class="at-sub mb-0">Klienci potwierdzeni na tablecie, ale bez pojazdu w załadunku dnia.</p></div>
         <div class="card-body pt-0"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
-            <thead><tr><th>Klient</th><th class="text-end">Palety plan</th><th>Status</th><th>Odbiorca / uwagi</th><th class="text-end">Dostarczone</th><th class="text-end">Zwrócone EUR</th><th>Podpis, zdjęcie</th><th></th></tr></thead>
+            <thead><tr><th>Klient</th><th class="text-end">Palety plan</th><th>Status</th><th>Odbiorca / uwagi</th><th class="text-end">Dostarczone</th><th class="text-end">Zwrócone EUR</th><th>Podpis, zdjęcia przed / po</th><th></th></tr></thead>
             <tbody>{% for r in other %}{{ _self.stopRow(r, root) }}{% endfor %}</tbody>
         </table></div></div>
     </div>

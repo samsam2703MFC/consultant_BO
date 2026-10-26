@@ -6,14 +6,15 @@ namespace App\Repositories\Logistics;
 use App\Repositories\Workshop\WorkshopRepository;
 
 /**
- * Dostawy z tabletu kierowcy : przejazd pojazdu w dniu wysyłki (start / koniec), potwierdzenie albo problem
- * u każdego klienta (jedno na klienta i dzień), podpis odbiorcy i zdjęcia.
+ * Dostawy z tabletu kierowcy : przejazd pojazdu w dniu wysyłki (start / koniec), przyjazd do klienta (zdjęcia przed
+ * rozładunkiem), potwierdzenie albo problem u każdego klienta (jedno na klienta i dzień), zdjęcia po rozładunku,
+ * podpis odbiorcy, numery palet ze skanera.
  */
 final class DeliveryRepository extends WorkshopRepository
 {
     protected string $table = 'n_delivery_stop';
     protected array $writable = ['ship_date', 'id_customer', 'id_carrier_vehicle', 'status', 'reason', 'receiver_name', 'pallets_delivered', 'pallets_returned',
-        'note', 'lat', 'lng', 'recorded_at', 'driver_name', 'id_device'];
+        'note', 'lat', 'lng', 'recorded_at', 'arrived_at', 'driver_name', 'id_device'];
 
     public function run(string $date, int $vehicleId): ?array
     {
@@ -75,8 +76,63 @@ final class DeliveryRepository extends WorkshopRepository
              WHERE s.id = ?",
             [$id]
         )[0] ?? null;
-        if ($row) $row['media'] = $this->all('SELECT id, kind, mime FROM n_delivery_media WHERE id_stop = ? ORDER BY id', [$id]);
+        if ($row) $row['media'] = $this->all('SELECT id, kind, mime, taken_at, created_at FROM n_delivery_media WHERE id_stop = ? ORDER BY COALESCE(taken_at, created_at), id', [$id]);
         return $row;
+    }
+
+    /** Przyjazd : pierwsza godzina zostaje (kolejne zdjęcia « przed » jej nie zmieniają). */
+    public function markArrived(int $stopId, string $at): void
+    {
+        $this->db->prepare('UPDATE n_delivery_stop SET arrived_at = COALESCE(arrived_at, ?) WHERE id = ?')->execute([$at, $stopId]);
+    }
+
+    /**
+     * Zdjęcia i podpis postojów (bez treści) : [id_stop => [rodzaj => [[id, taken_at], …]]].
+     * @return array<int, array<string, list<array{id:int, taken_at:?string}>>>
+     */
+    public function mediaIndex(array $stopIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $stopIds))));
+        if (!$ids) return [];
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $out = [];
+        foreach ($this->all("SELECT id, id_stop, kind, COALESCE(taken_at, created_at) AS taken_at FROM n_delivery_media WHERE id_stop IN ({$in})
+                             ORDER BY COALESCE(taken_at, created_at), id", $ids) as $m) {
+            $out[(int) $m['id_stop']][$m['kind']][] = ['id' => (int) $m['id'], 'taken_at' => $m['taken_at']];
+        }
+        return $out;
+    }
+
+    /** Zdjęcie przed / po rozładunku ; to samo client_uuid (kolejka offline wysłana drugi raz) = ten sam zapis. */
+    public function addMedia(int $stopId, string $kind, string $mime, string $content, ?string $takenAt, ?string $uuid): int
+    {
+        if ($uuid !== null) {
+            $existing = $this->all('SELECT id FROM n_delivery_media WHERE id_stop = ? AND client_uuid = ?', [$stopId, $uuid])[0]['id'] ?? null;
+            if ($existing !== null) return (int) $existing;
+        }
+        $this->db->prepare('INSERT INTO n_delivery_media (id_stop, kind, mime, content, taken_at, client_uuid) VALUES (?, ?, ?, ?, ?, ?)')
+            ->execute([$stopId, $kind, $mime, $content, $takenAt, $uuid]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function countMedia(int $stopId, string $kind): int
+    {
+        return (int) ($this->all('SELECT COUNT(*) AS n FROM n_delivery_media WHERE id_stop = ? AND kind = ?', [$stopId, $kind])[0]['n'] ?? 0);
+    }
+
+    public function mediaExists(int $stopId, string $uuid): bool
+    {
+        return (bool) $this->all('SELECT 1 AS x FROM n_delivery_media WHERE id_stop = ? AND client_uuid = ?', [$stopId, $uuid]);
+    }
+
+    /** Numery palet ze skanera magazynu (palets_delivery) na klienta w dniu dostawy. @return array<int, list<int>> */
+    public function palletNumbers(string $date): array
+    {
+        $out = [];
+        foreach ($this->all('SELECT id_customer, id_palet FROM palets_delivery WHERE delivery_date = ? ORDER BY id_palet', [$date]) as $r) {
+            $out[(int) $r['id_customer']][] = (int) $r['id_palet'];
+        }
+        return $out;
     }
 
     /** Zapis postoju : nowy albo nadpisanie (ponowne potwierdzenie, np. problem → dostarczono później). */
@@ -156,7 +212,7 @@ final class DeliveryRepository extends WorkshopRepository
     {
         return $this->all(
             'SELECT status, reason, COUNT(*) AS n, SUM(COALESCE(pallets_returned, 0)) AS pallets_returned
-             FROM n_delivery_stop WHERE ship_date BETWEEN ? AND ? GROUP BY status, reason',
+             FROM n_delivery_stop WHERE ship_date BETWEEN ? AND ? AND status IN (\'delivered\', \'problem\') GROUP BY status, reason',
             [$from, $to]
         );
     }

@@ -4,7 +4,7 @@
         <div class="at-logi-customer-name">
             <strong>{{ c.name }}</strong>
             {% set d = delivery[c.id] ?? null %}
-            {% if d %}<a class="badge {{ d.status == 'delivered' ? 'bg-success' : 'bg-danger' }}" href="{{ root }}/logistics/deliveries?date={{ date }}" title="Tablet kierowcy">{{ d.status == 'delivered' ? 'dostarczono ' ~ d.recorded_at|date('H:i') : 'problem : ' ~ d.reason_label }}</a>{% endif %}
+            {% if d %}<a class="badge {{ d.status == 'delivered' ? 'bg-success' : (d.status == 'arrived' ? 'bg-info text-dark' : 'bg-danger') }}" href="{{ root }}/logistics/deliveries?date={{ date }}" title="Tablet kierowcy">{{ d.status == 'delivered' ? 'dostarczono ' ~ d.recorded_at|date('H:i') : (d.status == 'arrived' ? 'na miejscu od ' ~ (d.arrived_at ?: d.recorded_at)|date('H:i') : 'problem : ' ~ d.reason_label) }}</a>{% endif %}
             <span class="at-sub">{{ c.town }}{{ c.country ? ', ' ~ c.country : '' }} · {{ c.orders|plural_pl('zamówienie', 'zamówienia', 'zamówień') }}{{ c.palletised ? ' · spaletyzowane' : '' }}</span>
         </div>
         <div class="at-logi-customer-total">

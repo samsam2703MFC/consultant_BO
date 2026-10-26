@@ -1838,6 +1838,8 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 /* Logistyka › Dostawy : podpis i zdjęcia w tabeli */
 .at-deliv-media { white-space: nowrap; }
 .at-deliv-media img { height: 38px; max-width: 110px; object-fit: contain; border: 1px solid var(--at-line-2); border-radius: 6px; background: #fff; margin-right: 4px; }
+.at-deliv-media img.is-before { border: 2px solid #0aa2c0; }
+.at-deliv-media img.is-after { border: 2px solid #198754; }
 
 /* Analiza › Raport miesięczny */
 .at-report-highlights { padding-left: 1.1rem; display: grid; gap: 4px; }

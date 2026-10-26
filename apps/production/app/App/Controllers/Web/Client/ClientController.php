@@ -9,6 +9,7 @@ use App\Services\Client\ClientService;
 use App\Services\Client\FranchiseNetwork\IntegrationOnboardingTokenService;
 use App\Services\Client\Integration\ClientIntegrationService;
 use App\Services\Finances\ProfitabilityService;
+use App\Services\Logistics\CustomerDeliveryInfoService;
 use App\Services\Utils\CountryService;
 use DateTime;
 use Symfony\Component\HttpFoundation\Request;
@@ -29,7 +30,8 @@ class ClientController extends BaseController
         IntegrationOnboardingTokenService $integrationOnboardingTokenService,
         ClientIntegrationService $clientIntegrationService,
         ClientSalesSummaryService $clientSalesSummaryService,
-        private ClientSpaceService $clientSpaceService
+        private ClientSpaceService $clientSpaceService,
+        private CustomerDeliveryInfoService $deliveryInfo
     )
     {
         $this->clientService = $clientService;
@@ -86,6 +88,7 @@ class ClientController extends BaseController
         $data['row'] = $this->clientService->getById($id);
         $data['countries'] = $this->countryService->getAll();
         $data['space'] = $this->clientSpaceService->settings((int) $id);
+        $data['delivery_info'] = $data['row'] ? $this->deliveryInfo->get((int) $id) : null;
 
         if ($_SERVER['REQUEST_METHOD'] == "POST") {
             $newData = $_POST;
@@ -94,6 +97,8 @@ class ClientController extends BaseController
             // Opcje « Strona klienta » (n_customer_space) : sprawdzone przed zapisem klienta.
             try {
                 if (empty($this->errors)) $this->clientSpaceService->saveSettings((int) $id, $newData, user('displayed_name') ?: user('login') ?: null);
+                // Instrukcje dostawy dla kierowcy (zaszyfrowane) : tylko gdy formularz je zawiera.
+                if (empty($this->errors) && array_key_exists('delivery_procedure', $newData)) $this->deliveryInfo->save((int) $id, $newData, user('displayed_name') ?: user('login') ?: null);
             } catch (\App\Exceptions\CustomException $e) {
                 $this->errors[] = $e->getMessage();
             }

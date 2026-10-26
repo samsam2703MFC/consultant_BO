@@ -14,6 +14,8 @@ require_once __DIR__ . '/../public/vendor/autoload.php';
 
 use App\Core\Api\Workshop\WorkshopApiKernel;
 use App\Core\Api\Workshop\WorkshopConfig;
+use App\Exceptions\CustomException;
+use App\Services\Logistics\CustomerDeliveryInfoService;
 use App\Services\Logistics\DriverService;
 use App\Services\Workshop\Migration\MigrationRunner;
 use Symfony\Component\HttpFoundation\Request;
@@ -69,6 +71,8 @@ try {
     $pdo->exec("INSERT INTO customer_order (id, id_customer, status, expected_shipping_date, create_order_date) VALUES (10, 3, 1, '{$today}', NOW())");
     $pdo->exec("INSERT INTO customer_order_product (id_order, id_product, quantity_carton) VALUES (10, 500, 50)");
     $pdo->exec("INSERT INTO n_shipping_assignment (ship_date, id_customer, id_carrier_vehicle, vehicle_set, tour_set) VALUES ('{$today}', 3, 5, 1, 0)");
+    // Palety zeskanowane w magazynie dla klienta 3 (numery palet).
+    $pdo->exec("INSERT INTO palets_delivery (id_palet, client, delivery_date, status, id_customer) VALUES (4290, 'Boulangerie Test', '{$today}', 1, 3), (4288, 'Boulangerie Test', '{$today}', 1, 3)");
     $pdo->exec("SET SESSION sql_mode = @mode");
 
     $builder = new DI\ContainerBuilder();
@@ -118,6 +122,52 @@ try {
     $stop = $day['stops'][0];
     expectDrv($stop['name'] === 'Boulangerie Test' && $stop['address'] === 'Rue Haute 12, 1000 Bruxelles, BE' && $stop['phone'] === '+32 2 000 00 00'
         && $stop['pallets'] === 2 && $stop['status'] === null, 'stop: address, phone, pallets (50 cartons / 48 per pallet)');
+    expectDrv($stop['pallet_numbers'] === [4288, 4290] && $stop['pallets_estimated'] === false && $stop['instructions'] === [], 'stop: scanned pallet numbers, no instructions yet');
+
+    // --- Instrukcje dostawy klienta : zaszyfrowane w bazie, odczytane na tablecie (alarm i klucz poufne)
+    $info = $container->get(CustomerDeliveryInfoService::class);
+    $info->save(3, ['delivery_procedure' => "Wejście od podwórza.\nPalety pod wiatą.", 'delivery_alarm' => 'Kod 4471#, wyłączyć w 30 s', 'delivery_key' => 'Skrytka 2580',
+        'delivery_freezer' => 'Zamrażarka nr 2 na zapleczu', 'delivery_contact' => ''], 'Tester');
+    $raw = (string) $pdo->query('SELECT payload FROM n_customer_delivery_info WHERE id_customer = 3')->fetchColumn();
+    expectDrv(str_starts_with($raw, 'd1:') && !str_contains($raw, '4471') && !str_contains($raw, 'Skrytka'), 'delivery instructions encrypted at rest');
+    $got = $info->get(3);
+    expectDrv($got['fields']['alarm'] === 'Kod 4471#, wyłączyć w 30 s' && $got['fields']['contact'] === '' && $got['updated_by'] === 'Tester' && !$got['unreadable'], 'instructions read back');
+    try { $info->save(3, ['delivery_procedure' => str_repeat('x', 2001)], null); throw new RuntimeException('FAILED: long text accepted'); }
+    catch (CustomException $e) { expectDrv($e->getCode() === 422, 'instruction length limited'); }
+    [, $day] = $call('GET', '/driver/day', null, $driver, 'fr');
+    $ins = array_column($day['data']['stops'][0]['instructions'], null, 'key');
+    expectDrv(array_keys($ins) === ['procedure', 'alarm', 'key', 'freezer'] && $ins['alarm']['secret'] === true && $ins['procedure']['secret'] === false
+        && $ins['alarm']['label'] === 'Alarme (code, désactiver et réactiver)' && $ins['key']['value'] === 'Skrytka 2580', 'tablet gets decrypted instructions, secrets flagged');
+    $pdo->exec("INSERT INTO n_customer_delivery_info (id_customer, payload) VALUES (4, 'd1:zepsute:dane:x')");
+    expectDrv($info->get(4)['unreadable'] === true && $info->forCustomers([4]) === [], 'unreadable instructions (other server secret) are not shown');
+    $info->save(4, ['delivery_procedure' => ' ', 'delivery_alarm' => ''], null);
+    expectDrv((int) $pdo->query('SELECT COUNT(*) FROM n_customer_delivery_info WHERE id_customer = 4')->fetchColumn() === 0, 'empty instructions removed');
+
+    // --- Przyjazd : zdjęcie przed rozładunkiem (postój « na miejscu »), powtórka z kolejki bez kopii, limit zdjęć
+    $jpegPhoto = function (): string { $im = imagecreatetruecolor(400, 300); imagefill($im, 0, 0, imagecolorallocate($im, 90, 140, 200)); ob_start(); imagejpeg($im, null, 70); return 'data:image/jpeg;base64,' . base64_encode((string) ob_get_clean()); };
+    $arrivedAt = date('Y-m-d H:i:s', time() - 900);
+    $before = ['date' => $today, 'customer_id' => 3, 'vehicle_id' => 5, 'kind' => 'before', 'photo' => $jpegPhoto(), 'taken_at' => $arrivedAt, 'client_uuid' => 'p-1', 'driver_name' => 'Jan Kowal'];
+    [$s, $b] = $call('POST', '/driver/photos', $before, $driver);
+    expectDrv($s === 201 && $b['data']['kind'] === 'before' && $b['data']['count'] === 1 && $b['data']['taken_at'] === $arrivedAt, 'photo before unloading recorded');
+    $photoId = $b['data']['id'];
+    [$s, $b] = $call('POST', '/driver/photos', $before, $driver);
+    expectDrv($s === 201 && $b['data']['id'] === $photoId && $b['data']['count'] === 1, 'replayed photo (offline queue) not duplicated');
+    $stopRow = $pdo->query('SELECT * FROM n_delivery_stop WHERE id_customer = 3')->fetch();
+    expectDrv($stopRow['status'] === 'arrived' && $stopRow['arrived_at'] === $arrivedAt, 'arrival recorded with the photo time');
+    [$s, $b] = $call('POST', '/driver/photos', ['date' => $today, 'customer_id' => 3, 'kind' => 'before'], $driver);
+    expectDrv($s === 422 && $codes($b) === ['photo:REQUIRED'], 'photo required');
+    [$s, $b] = $call('POST', '/driver/photos', ['date' => $today, 'customer_id' => 4, 'kind' => 'before', 'photo' => $jpegPhoto()], $driver);
+    expectDrv($s === 422 && $codes($b) === ['customer_id:DRIVER_CUSTOMER_NOT_PLANNED'], 'photo for a customer without delivery refused');
+    $params = $container->get(App\Repositories\Workshop\ParamRepository::class);
+    $params->setValue('driver.max_photos', '2', null);
+    [$s] = $call('POST', '/driver/photos', ['client_uuid' => 'p-2', 'taken_at' => date('Y-m-d H:i:s', time() - 800)] + $before, $driver);
+    [$s3, $b] = $call('POST', '/driver/photos', ['client_uuid' => 'p-3'] + $before, $driver, 'fr');
+    expectDrv($s === 201 && $s3 === 422 && $codes($b) === ['photo:DRIVER_PHOTO_LIMIT'] && str_contains($b['errors'][0]['message'], '2 photos'), 'photo limit per kind');
+    $params->setValue('driver.max_photos', '6', null);
+    [, $day] = $call('GET', '/driver/day', null, $driver);
+    $stop = $day['data']['stops'][0];
+    expectDrv($stop['status'] === 'arrived' && $stop['arrived_at'] === $arrivedAt && count($stop['photos']['before']) === 2 && $stop['photos']['after'] === []
+        && $day['data']['counts']['arrived'] === 1 && $day['data']['counts']['delivered'] === 0 && $day['data']['max_photos'] === 6, 'day shows the arrival and photos');
 
     [$s, $b] = $call('POST', '/driver/run', ['date' => $today, 'vehicle_id' => 5, 'action' => 'start', 'driver_name' => 'Jan Kowal'], $driver);
     expectDrv($s === 200 && $b['data']['started_at'] !== null && $b['data']['finished_at'] === null && $b['data']['driver_name'] === 'Jan Kowal', 'run started');
@@ -135,7 +185,10 @@ try {
     expectDrv($s === 201 && $b['data']['status'] === 'delivered', 'delivery recorded');
     [$s] = $call('POST', '/driver/stops', $delivery, $driver);
     expectDrv($s === 201 && (int) $pdo->query('SELECT COUNT(*) FROM n_delivery_stop')->fetchColumn() === 1
-        && (int) $pdo->query('SELECT COUNT(*) FROM n_delivery_media')->fetchColumn() === 2, 'replayed record (offline queue) updates the same stop');
+        && (int) $pdo->query("SELECT COUNT(*) FROM n_delivery_media WHERE kind IN ('signature', 'photo')")->fetchColumn() === 2, 'replayed record (offline queue) updates the same stop');
+    expectDrv($pdo->query('SELECT arrived_at FROM n_delivery_stop')->fetchColumn() === $arrivedAt, 'delivery keeps the arrival time');
+    [$s, $b] = $call('POST', '/driver/photos', ['date' => $today, 'customer_id' => 3, 'kind' => 'after', 'photo' => $jpegPhoto(), 'client_uuid' => 'p-after'], $driver);
+    expectDrv($s === 201 && $b['data']['count'] === 1 && $pdo->query('SELECT status FROM n_delivery_stop')->fetchColumn() === 'delivered', 'photo after unloading keeps the delivered status');
     [, $day] = $call('GET', '/driver/day', null, $driver);
     $stop = $day['data']['stops'][0];
     expectDrv($stop['status'] === 'delivered' && $stop['receiver_name'] === 'Marie Dupont' && $stop['has_signature'] && $stop['has_photo']
@@ -157,6 +210,23 @@ try {
     expectDrv(str_starts_with($pdf['content'], '%PDF') && str_starts_with($pdf['filename'], 'POTWIERDZENIE_DOSTAWY_Boulangerie_Test_') && strlen($pdf['content']) > 20000, 'proof of delivery PDF with signature and photo');
     expectDrv($service->statuses($today)[3]['status'] === 'delivered', 'status for the day loading page');
     expectDrv($service->media($row['stop']['signature_id'])['mime'] === 'image/png', 'signature image served');
+    expectDrv(count($row['stop']['before_ids']) === 2 && count($row['stop']['after_ids']) === 1 && $row['pallet_numbers'] === [4288, 4290] && $row['stop']['arrived_at'] === $arrivedAt, 'ERP list: photos before / after, pallet numbers, arrival');
+    $tour = $service->tourPdf($today, 5, null, 'pl');
+    expectDrv(str_starts_with($tour['content'], '%PDF') && $tour['filename'] === 'RAPORT_TRASY_DW_12345_' . $today . '.pdf' && strlen($tour['content']) > strlen($pdf['content']), 'tour report PDF with photos');
+    if (getenv('DRIVER_PDF_OUT')) file_put_contents((string) getenv('DRIVER_PDF_OUT'), $tour['content']);
+    $one = $service->tourPdf($today, 5, 3, 'fr');
+    expectDrv(str_starts_with($one['content'], '%PDF') && str_starts_with($one['filename'], 'POTWIERDZENIE_DOSTAWY_Boulangerie_Test_'), 'report of one customer');
+    try { $service->tourPdf($today, 5, 4, 'pl'); throw new RuntimeException('FAILED: report of a customer outside the tour'); }
+    catch (CustomException $e) { expectDrv($e->getCode() === 404, 'customer outside the tour → 404'); }
+    [$s, $b] = $call('GET', '/driver/report?date=' . $today, null, $driver);
+    expectDrv($s === 200 && str_starts_with($b['data']['filename'], 'RAPORT_TRASY_') && str_starts_with(base64_decode($b['data']['content_base64']), '%PDF'), 'driver downloads the tour report');
+    [$s] = $call('GET', '/driver/report', null, $driver);
+    expectDrv($s === 422, 'report needs the date');
+    // Raport miesięczny : postój « na miejscu » nie liczy się jako dostawa.
+    $pdo->exec("INSERT INTO n_delivery_stop (ship_date, id_customer, status, recorded_at) VALUES ('{$today}', 4, 'arrived', NOW())");
+    $summary = $container->get(App\Repositories\Logistics\DeliveryRepository::class)->summary($today, $today);
+    expectDrv(array_sum(array_column($summary, 'n')) === 1 && $summary[0]['status'] === 'delivered', 'monthly summary ignores arrivals');
+    $pdo->exec("DELETE FROM n_delivery_stop WHERE id_customer = 4");
 
     // --- Problem : powiadomienie w dzwonku, status zastąpiony ; koniec trasy ; dokumenty dnia
     [$s] = $call('POST', '/driver/stops', ['date' => $today, 'customer_id' => 3, 'status' => 'problem', 'reason' => 'damaged', 'note' => '2 kartony zgniecione'], $driver);

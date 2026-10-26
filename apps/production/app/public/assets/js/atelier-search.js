@@ -66,7 +66,9 @@
         'horaire': 'zmiany godziny', 'horaires': 'zmiany godziny', 'shift': 'zmiany', 'shifts': 'zmiany', 'effectif': 'obsada', 'effectifs': 'obsada', 'equipes': 'zespol zespolow obsada',
         'fiches': 'karty', 'mission': 'cel karty', 'missions': 'cel karty', 'responsabilites': 'obowiazki karty', 'competence': 'kompetencje', 'organigramme': 'stanowiska przelozony', 'boulanger': 'piekarz piekarnia', 'patissier': 'cukiernik cukiernia', 'chauffeur': 'kierowca kierowcy', 'chauffeurs': 'kierowcy kierowca', 'preuve': 'potwierdzenie potwierdzenia', 'confirmation': 'potwierdzenie potwierdzenia', 'signature': 'podpis', 'probleme': 'problemy problem', 'incident': 'problemy problem', 'palette': 'palety', 'palettes': 'palety', 'surgelateur': 'zamrazarki', 'congelateur': 'zamrazarki', 'surgelation': 'zamrazarki', 'depart': 'wyjazdu', 'departs': 'wyjazdu',
         'rapport': 'raport', 'rapports': 'raport', 'mensuel': 'miesieczny', 'mensuelle': 'miesieczny', 'mois': 'miesieczny miesiac', 'bilan': 'raport wynik',
-        'synthese': 'raport', 'resultat': 'wynik', 'resultats': 'wynik', 'marges': 'marza marze', 'direction': 'zarzadu raport'
+        'synthese': 'raport', 'resultat': 'wynik', 'resultats': 'wynik', 'marges': 'marza marze', 'direction': 'zarzadu raport',
+        'alarme': 'alarm instrukcje', 'cle': 'klucz instrukcje', 'cles': 'klucz instrukcje', 'dechargement': 'rozladunku rozladunek', 'consignes': 'instrukcje',
+        'consigne': 'instrukcje', 'procedure': 'procedura', 'livreur': 'kierowca kierowcy'
     };
 
     var menu = null;

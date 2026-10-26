@@ -187,7 +187,8 @@
     "FILE_TOO_LARGE": "Plik jest za duży (maks. {max_kb} KB).",
     "POSITION_CYCLE": "Pole „{field}”: stanowisko nie może podlegać samemu sobie ani swojemu podwładnemu.",
     "DRIVER_CUSTOMER_NOT_PLANNED": "Klient {id} nie ma dostawy w tym dniu.",
-    "DRIVER_DATE_OUT_OF_RANGE": "Pole „{field}”: dzień wysyłki od tygodnia wstecz do jutra."
+    "DRIVER_DATE_OUT_OF_RANGE": "Pole „{field}”: dzień wysyłki od tygodnia wstecz do jutra.",
+    "DRIVER_PHOTO_LIMIT": "Pole „{field}”: najwyżej {max} zdjęć tego rodzaju u klienta."
   },
   "fields": {
     "code": "kod",
@@ -451,7 +452,8 @@
     "pallets_delivered": "palety dostarczone",
     "pallets_returned": "palety zwrócone",
     "recorded_at": "godzina zapisu",
-    "driver_name": "kierowca"
+    "driver_name": "kierowca",
+    "taken_at": "godzina zdjęcia"
   },
   "entities": {
     "test_product": "produkt testowy",

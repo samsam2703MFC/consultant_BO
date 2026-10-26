@@ -1,8 +1,10 @@
 /*
  * Tablet kierowcy / Tablette chauffeur (PWA). Parowanie tym samym kodem co tablet pracowni (tablet w trybie
  * « driver » w zarządzaniu tabletami). Trasa dnia pojazdu : klienci w kolejności rozładunku, adres, telefon,
- * palety, dokumenty ; start i koniec trasy ; « Dostarczono » (odbiorca, podpis, zdjęcie, palety oddane i zwrócone)
- * albo « Problem » (przyczyna, notatka, zdjęcie). Bez sieci zapis czeka w kolejce i wysyła się sam po powrocie sieci.
+ * palety i ich numery, dokumenty, instrukcje dostawy klienta (procedura rozładunku, alarm, klucz, zamrażarka) ;
+ * start i koniec trasy ; przyjazd (zdjęcia przed rozładunkiem z datą i godziną na zdjęciu) ; « Dostarczono »
+ * (zdjęcia po rozładunku, odbiorca, podpis, palety oddane i zwrócone) albo « Problem » (przyczyna, notatka, zdjęcie) ;
+ * raport PDF trasy i klienta. Bez sieci zapisy i zdjęcia czekają w kolejce i wysyłają się same po powrocie sieci.
  */
 (function () {
     'use strict';
@@ -41,7 +43,17 @@
     const pad = (n) => String(n).padStart(2, '0');
     const nowLocal = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
     const dayLabel = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'short', day: 'numeric', month: 'short'});
-    const saveQueue = () => store.set(QUEUE_KEY, queue.length ? JSON.stringify(queue) : null);
+    const stampText = (d) => `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    const localIso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    /** Zapis kolejki ; false = brak miejsca na tablecie (zdjęcia są duże). */
+    const saveQueue = () => {
+        try {
+            if (queue.length) window.localStorage.setItem(QUEUE_KEY, JSON.stringify(queue)); else window.localStorage.removeItem(QUEUE_KEY);
+            return true;
+        } catch (e) { return false; }
+    };
+    const STOP_PATH = '/driver/stops';
+    const PHOTO_PATH = '/driver/photos';
 
     async function loadLabels() {
         const res = await fetch(`${root}/resources/lang/ui/${lang}/driver.json${VERSION ? '?v=' + encodeURIComponent(VERSION) : ''}`, {credentials: 'same-origin'});
@@ -130,12 +142,16 @@
         }
     }
 
-    const queuedFor = (customerId) => queue.find(q => q.body.customer_id === customerId && q.body.date === date);
+    const queuedFor = (customerId) => queue.find(q => (q.path || STOP_PATH) === STOP_PATH && q.body.customer_id === customerId && q.body.date === date);
+    /** Zdjęcia klienta : zapisane na serwerze + czekające w kolejce. */
+    const photoCount = (s, kind) => (s.photos && s.photos[kind] ? s.photos[kind].length : 0)
+        + queue.filter(q => q.path === PHOTO_PATH && q.body.customer_id === s.customer_id && q.body.date === date && q.body.kind === kind).length;
 
     function stopState(s) {
         const q = queuedFor(s.customer_id);
         if (q) return `<span class="driver-state is-queued">${esc(t('state_queued', {status: t('status_' + q.body.status)}))}</span>`;
         if (s.status === 'delivered') return `<span class="driver-state is-ok">${esc(t('state_delivered', {time: hhmm(s.recorded_at), who: s.receiver_name || ''}))}</span>`;
+        if (s.status === 'arrived') return `<span class="driver-state is-arrived">${esc(t('state_arrived', {time: hhmm(s.arrived_at || s.recorded_at)}))}</span>`;
         if (s.status === 'problem') {
             const reason = (data.reasons.find(r => r.code === s.reason) || {}).label || s.reason;
             return `<span class="driver-state is-problem">${esc(t('state_problem', {time: hhmm(s.recorded_at), reason}))}</span>`;
@@ -157,7 +173,8 @@
                     ${!run.started_at ? `<button type="button" class="kiosk-btn is-primary" data-run="start">${esc(t('start_run'))}</button>`
                         : !run.finished_at ? `<span class="kiosk-muted">${esc(t('started', {time: hhmm(run.started_at)}))}</span><button type="button" class="kiosk-btn" data-run="finish">${esc(t('finish_run'))}</button>`
                         : `<span class="driver-state is-ok">${esc(t('finished', {from: hhmm(run.started_at), to: hhmm(run.finished_at)}))}</span>`}
-                    <button type="button" class="kiosk-btn" data-docs>${esc(t('documents'))}</button></div></section>` : '';
+                    <button type="button" class="kiosk-btn" data-docs>${esc(t('documents'))}</button>
+                    <button type="button" class="kiosk-btn" data-report>${esc(t('report_pdf'))}</button></div></section>` : '';
         const choose = `<section class="driver-choose">
                 <div class="driver-days">${d.dates.map(x => `<button type="button" class="kiosk-chip ${x === d.date ? 'is-active' : ''}" data-date="${x}">${esc(dayLabel(x))}</button>`).join('')}</div>
                 ${d.vehicles.length > 1 || !v ? `<select class="driver-vehicle" data-vehicle aria-label="${esc(t('vehicle'))}"><option value="">${esc(t('choose_vehicle'))}</option>
@@ -166,15 +183,20 @@
         const stops = d.stops.map(s => `<article class="kiosk-card driver-stop ${s.status ? 'is-' + s.status : ''}" data-stop="${s.customer_id}">
                 <div class="driver-stop-head"><span class="driver-n">${s.n}</span><div class="driver-stop-title"><h3>${esc(s.name)}</h3>
                     <p class="kiosk-muted">${esc(s.address || '—')}</p></div>${stopState(s)}</div>
-                <div class="driver-facts"><span><strong>${fmt(s.pallets, 0)}</strong> ${esc(t('pallets'))}</span><span><strong>${fmt(s.cartons, 0)}</strong> ${esc(t('cartons'))}</span>
-                    <span><strong>${fmt(s.weight_kg, 0)}</strong> kg</span>${s.scanned ? `<span>${esc(t('scanned', {n: s.scanned}))}</span>` : ''}
+                <div class="driver-facts"><span><strong>${s.pallets_estimated ? '≈ ' : ''}${fmt(s.pallets, 0)}</strong> ${esc(t('pallets'))}${s.pallets_estimated ? ' <span class="kiosk-muted">(' + esc(t('pallets_estimated')) + ')</span>' : ''}</span>
+                    <span><strong>${fmt(s.cartons, 0)}</strong> ${esc(t('cartons'))}</span><span><strong>${fmt(s.weight_kg, 0)}</strong> kg</span>
                     ${s.documents.map(doc => `<span class="driver-doc">${esc(doc.type)} ${esc(doc.num)}</span>`).join('')}</div>
+                ${s.pallet_numbers && s.pallet_numbers.length ? `<p class="driver-pallet-numbers">${esc(t('pallet_numbers'))} : ${s.pallet_numbers.map(n => `<span class="driver-pallet">${esc(n)}</span>`).join('')}</p>` : ''}
+                ${instructionsBlock(s)}
+                ${photoCount(s, 'before') || photoCount(s, 'after') ? `<p class="kiosk-muted driver-photo-summary">📷 ${esc(t('photos_before'))} : ${photoCount(s, 'before')} · ${esc(t('photos_after'))} : ${photoCount(s, 'after')}</p>` : ''}
                 ${s.note && s.status === 'problem' ? `<p class="kiosk-muted">${esc(s.note)}</p>` : ''}
                 <details class="driver-products"><summary>${esc(t('products', {n: s.products.length}))}</summary>
                     <ul>${s.products.map(p => `<li>${esc(p.name)} — ${fmt(p.cartons, 1)} ${esc(t('cartons'))}</li>`).join('')}</ul></details>
                 <div class="kiosk-row driver-actions">
                     ${s.address ? `<a class="kiosk-btn is-small" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address)}" target="_blank" rel="noopener">${esc(t('navigate'))}</a>` : ''}
                     ${s.phone ? `<a class="kiosk-btn is-small" href="tel:${esc(String(s.phone).replace(/[^0-9+]/g, ''))}">${esc(t('call'))}</a>` : ''}
+                    ${s.status ? `<button type="button" class="kiosk-btn is-small" data-stop-pdf>${esc(t('stop_pdf'))}</button>` : ''}
+                    ${s.status !== 'delivered' ? `<button type="button" class="kiosk-btn is-small" data-photo="before">📷 ${esc(t(photoCount(s, 'before') ? 'add_before' : 'arrive_photo'))}</button>` : ''}
                     <button type="button" class="kiosk-btn is-small is-danger-soft" data-problem>${esc(t('problem'))}</button>
                     <button type="button" class="kiosk-btn is-small is-ok" data-deliver>${esc(s.status === 'delivered' ? t('deliver_again') : t('deliver'))}</button></div>
             </article>`).join('');
@@ -199,24 +221,117 @@
             } catch (err) { b.disabled = false; toast(err.message, true); }
         }));
         const docs = el.querySelector('[data-docs]');
-        if (docs) docs.addEventListener('click', async () => {
-            docs.disabled = true;
-            try {
-                const f = await api('GET', '/driver/documents?date=' + encodeURIComponent(date));
-                const bytes = Uint8Array.from(atob(f.content_base64), c => c.charCodeAt(0));
-                const url = URL.createObjectURL(new Blob([bytes], {type: 'application/pdf'}));
-                const a = document.createElement('a');
-                a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.download = f.filename;
-                document.body.appendChild(a); a.click(); a.remove();
-                window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-            } catch (err) { toast(err.message, true); }
-            docs.disabled = false;
-        });
+        if (docs) docs.addEventListener('click', () => openFile('/driver/documents?date=' + encodeURIComponent(date), docs));
+        const report = el.querySelector('[data-report]');
+        if (report) report.addEventListener('click', () => openFile(`/driver/report?date=${encodeURIComponent(date)}&vehicle_id=${vehicle}`, report));
         el.querySelectorAll('[data-stop]').forEach(card => {
             const s = data.stops.find(x => x.customer_id === Number(card.dataset.stop));
             card.querySelector('[data-deliver]').addEventListener('click', () => openDeliver(s));
             card.querySelector('[data-problem]').addEventListener('click', () => openProblem(s));
+            const pdf = card.querySelector('[data-stop-pdf]');
+            if (pdf) pdf.addEventListener('click', () => openFile(`/driver/report?date=${encodeURIComponent(date)}&vehicle_id=${vehicle}&customer_id=${s.customer_id}`, pdf));
+            const before = card.querySelector('[data-photo="before"]');
+            if (before) before.addEventListener('click', () => takePhoto(s, 'before').then(ok => { if (ok) render(); }));
+            bindReveal(card);
         });
+    }
+
+    /** PDF z API (JSON base64) : otwarcie w nowej karcie. */
+    async function openFile(path, button) {
+        if (button) button.disabled = true;
+        try {
+            const f = await api('GET', path);
+            const bytes = Uint8Array.from(atob(f.content_base64), c => c.charCodeAt(0));
+            const url = URL.createObjectURL(new Blob([bytes], {type: 'application/pdf'}));
+            const a = document.createElement('a');
+            a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.download = f.filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } catch (err) { toast(err.message, true); }
+        if (button) button.disabled = false;
+    }
+
+    // --- Instrukcje dostawy klienta ------------------------------------------------------------------------
+    /** Procedura rozładunku, zamrażarka, kontakt widoczne ; alarm i klucz dopiero po dotknięciu (60 s). */
+    function instructionsBlock(s) {
+        if (!s.instructions || !s.instructions.length) return '';
+        return `<details class="driver-info" ${s.status === 'delivered' ? '' : 'open'}><summary>🔑 ${esc(t('instructions'))}</summary><dl>
+            ${s.instructions.map(x => `<dt>${esc(x.label)}</dt><dd>${x.secret
+                ? `<button type="button" class="kiosk-btn is-small" data-reveal="${esc(x.key)}">${esc(t('show_secret'))}</button><span class="driver-secret" data-secret="${esc(x.key)}" hidden>${esc(x.value).replace(/\n/g, '<br>')}</span>`
+                : esc(x.value).replace(/\n/g, '<br>')}</dd>`).join('')}</dl></details>`;
+    }
+
+    function bindReveal(root) {
+        root.querySelectorAll('[data-reveal]').forEach(b => b.addEventListener('click', () => {
+            const secret = root.querySelector(`[data-secret="${b.dataset.reveal}"]`);
+            if (!secret) return;
+            secret.hidden = false; b.hidden = true;
+            window.setTimeout(() => { secret.hidden = true; b.hidden = false; }, 60000);
+        }));
+    }
+
+    // --- Zdjęcia przed / po rozładunku ----------------------------------------------------------------------
+    /** Aparat tabletu ; null, gdy kierowca zrezygnował. Wywołanie w obsłudze kliknięcia (wymóg przeglądarki). */
+    function pickPhoto() {
+        return new Promise(resolve => {
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = 'image/*'; input.setAttribute('capture', 'environment'); input.hidden = true;
+            document.body.appendChild(input);
+            const done = (file) => { input.remove(); resolve(file); };
+            input.addEventListener('change', () => done(input.files[0] || null), {once: true});
+            input.addEventListener('cancel', () => done(null), {once: true});
+            input.click();
+        });
+    }
+
+    /** Zdjęcie zmniejszone do 1280 px (JPEG) z datą, godziną i klientem wpisanymi na dole zdjęcia. */
+    async function stampPhoto(file, caption) {
+        const taken = file.lastModified && Math.abs(Date.now() - file.lastModified) < 6 * 3600 * 1000 ? new Date(file.lastModified) : new Date();
+        const bitmap = await createImageBitmap(file);
+        const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(bitmap.width * scale);
+        canvas.height = Math.round(bitmap.height * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        const band = Math.max(26, Math.round(canvas.height * 0.06));
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(0, canvas.height - band, canvas.width, band);
+        ctx.fillStyle = '#fff';
+        ctx.font = `600 ${Math.round(band * 0.5)}px system-ui, sans-serif`;
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${stampText(taken)} · ${caption}`, Math.round(band * 0.4), canvas.height - band / 2, canvas.width - band);
+        return {photo: canvas.toDataURL('image/jpeg', 0.72), taken_at: localIso(taken)};
+    }
+
+    /** Zdjęcie przed albo po rozładunku : od razu na serwer (przed = przyjazd), bez sieci do kolejki. */
+    async function takePhoto(s, kind) {
+        if (photoCount(s, kind) >= (data.max_photos || 6)) { toast(t('photo_limit', {max: data.max_photos || 6}), true); return false; }
+        const file = await pickPhoto();
+        if (!file) return false;
+        let shot;
+        try { shot = await stampPhoto(file, s.name + ' · ' + t(kind === 'before' ? 'stamp_before' : 'stamp_after')); } catch (e) { toast(t('photo_error'), true); return false; }
+        const pos = await position();
+        const nameInput = el.querySelector('[data-driver-name]');
+        const body = Object.assign({date, customer_id: s.customer_id, vehicle_id: vehicle, kind, client_uuid: uuid(),
+            driver_name: (nameInput && nameInput.value.trim()) || store.get(NAME_KEY) || null}, shot, pos || {});
+        try {
+            const r = await api('POST', PHOTO_PATH, body);
+            s.photos = s.photos || {before: [], after: []};
+            s.photos[kind].push({id: r.id, taken_at: r.taken_at});
+            if (kind === 'before' && !s.status) { s.status = 'arrived'; s.arrived_at = r.taken_at; }
+            toast(t('photo_saved', {time: hhmm(r.taken_at)}));
+            return true;
+        } catch (err) {
+            if (err.offline) {
+                queue.push({path: PHOTO_PATH, body});
+                if (!saveQueue()) { queue.pop(); toast(t('storage_full'), true); return false; }
+                toast(t('photo_queued'));
+                return true;
+            }
+            toast(err.message, true);
+            return false;
+        }
     }
 
     // --- Dostawa / problem ------------------------------------------------------------------------------
@@ -275,23 +390,38 @@
             <label>${esc(t('receiver'))}<input name="receiver_name" required maxlength="100" autocomplete="off" value="${esc(s.receiver_name || '')}"></label>
             <div class="driver-pallets"><label>${esc(t('pallets_delivered'))}<input name="pallets_delivered" type="number" min="0" max="99" inputmode="numeric" value="${s.pallets_delivered ?? s.pallets ?? 0}"></label>
                 <label>${esc(t('pallets_returned'))}<input name="pallets_returned" type="number" min="0" max="99" inputmode="numeric" value="${s.pallets_returned ?? 0}"></label></div>
+            <div class="driver-checklist" data-checklist>${checklist(s)}</div>
             <div><span class="driver-label">${esc(t('signature'))}</span><canvas class="kiosk-sign driver-sign" data-pad width="900" height="300" aria-label="${esc(t('signature'))}"></canvas>
                 <button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div>
-            ${photoField()}
             <label>${esc(t('note'))}<input name="note" maxlength="500" autocomplete="off"></label>
             <p class="kiosk-error" data-error></p>
             <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-close>${esc(t('cancel'))}</button><button class="kiosk-btn is-ok">${esc(t('confirm_delivery'))}</button></div></form>`);
         const pad = signaturePad(box);
-        bindPhoto(box);
+        const bindChecklist = () => box.querySelectorAll('[data-sheet-photo]').forEach(b => b.addEventListener('click', () => takePhoto(s, b.dataset.sheetPhoto).then(ok => {
+            if (!ok) return;
+            box.querySelector('[data-checklist]').innerHTML = checklist(s);
+            bindChecklist();
+        })));
+        bindChecklist();
         box.querySelector('[data-form]').addEventListener('submit', async (e) => {
             e.preventDefault();
             const f = e.target;
             if (!pad.strokes) { box.querySelector('[data-error]').textContent = t('sign_first'); return; }
+            if ((!photoCount(s, 'before') || !photoCount(s, 'after')) && !window.confirm(t('no_photos_confirm'))) return;
             f.querySelector('.is-ok').disabled = true;
             const body = {status: 'delivered', receiver_name: f.receiver_name.value.trim(), pallets_delivered: Number(f.pallets_delivered.value) || 0,
                 pallets_returned: Number(f.pallets_returned.value) || 0, note: f.note.value.trim() || null, signature: pad.canvas.toDataURL('image/png')};
             await submit(s, body, box);
         });
+    }
+
+    /** Lista kontrolna dostawy : zdjęcia przed i po rozładunku (liczba, dodaj kolejne). */
+    function checklist(s) {
+        return ['before', 'after'].map(kind => {
+            const n = photoCount(s, kind);
+            return `<div class="driver-check ${n ? 'is-done' : ''}"><span>${n ? '✓' : '○'} ${esc(t(kind === 'before' ? 'photos_before' : 'photos_after'))}${n ? ' · ' + n : ''}</span>
+                <button type="button" class="kiosk-btn is-small" data-sheet-photo="${kind}">📷 ${esc(t('add_photo'))}</button></div>`;
+        }).join('');
     }
 
     function openProblem(s) {
@@ -328,16 +458,16 @@
         const body = Object.assign({date, customer_id: s.customer_id, vehicle_id: vehicle, recorded_at: nowLocal(), client_uuid: uuid(),
             driver_name: (nameInput && nameInput.value.trim()) || store.get(NAME_KEY) || null, photo}, fields, pos || {});
         try {
-            await api('POST', '/driver/stops', body);
+            await api('POST', STOP_PATH, body);
             box.remove();
             toast(t(fields.status === 'delivered' ? 'saved_delivery' : 'saved_problem'));
             load();
         } catch (err) {
             if (err.offline) {
                 // Bez sieci : zapis w kolejce, wysyłka sama, gdy sieć wróci.
-                queue = queue.filter(q => !(q.body.customer_id === body.customer_id && q.body.date === body.date));
-                queue.push({body});
-                saveQueue();
+                queue = queue.filter(q => !((q.path || STOP_PATH) === STOP_PATH && q.body.customer_id === body.customer_id && q.body.date === body.date));
+                queue.push({path: STOP_PATH, body});
+                if (!saveQueue()) { queue.pop(); toast(t('storage_full'), true); return; }
                 box.remove();
                 toast(t('saved_offline'));
                 render();
@@ -356,7 +486,7 @@
         try {
             while (queue.length) {
                 try {
-                    await api('POST', '/driver/stops', queue[0].body);
+                    await api('POST', queue[0].path || STOP_PATH, queue[0].body);
                     sent++;
                 } catch (err) {
                     // Brak sieci, błąd serwera albo tablet do ponownego sparowania : zapis zostaje w kolejce.

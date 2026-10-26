@@ -187,7 +187,8 @@
     "FILE_TOO_LARGE": "Fichier trop volumineux (max. {max_kb} Ko).",
     "POSITION_CYCLE": "Champ « {field} » : un poste ne peut pas dépendre de lui-même ni d’un poste qui lui est rattaché.",
     "DRIVER_CUSTOMER_NOT_PLANNED": "Le client {id} n’a pas de livraison ce jour-là.",
-    "DRIVER_DATE_OUT_OF_RANGE": "Champ « {field} » : jour d’expédition d’une semaine en arrière à demain."
+    "DRIVER_DATE_OUT_OF_RANGE": "Champ « {field} » : jour d’expédition d’une semaine en arrière à demain.",
+    "DRIVER_PHOTO_LIMIT": "Champ « {field} » : au plus {max} photos de ce type chez le client."
   },
   "fields": {
     "code": "code",
@@ -451,7 +452,8 @@
     "pallets_delivered": "palettes livrées",
     "pallets_returned": "palettes rendues",
     "recorded_at": "heure d’enregistrement",
-    "driver_name": "chauffeur"
+    "driver_name": "chauffeur",
+    "taken_at": "heure de la photo"
   },
   "entities": {
     "test_product": "produit test",
