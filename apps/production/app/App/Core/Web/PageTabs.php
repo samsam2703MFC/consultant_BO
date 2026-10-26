@@ -29,13 +29,14 @@ final class PageTabs
             ['/workshop/data-sheet', 'Tabela do wypełnienia', 'bi-file-earmark-spreadsheet'],
         ]],
         // Produkty na jednej stronie : karty produktów (lista ERP, kategorie, MTO / MTS, stany), receptury, półprodukty,
-        // kompozycje i produkty w rozwoju (testowe) — dawniej « Karty produktów » i podmenu « Produkty » osobno.
+        // kompozycje, nowe produkty (etapy od pomysłu do wprowadzenia, testy z tabletu grupy) i lista produktów testowych.
         'products' => ['label' => 'Produkty', 'section' => 'Produkt', 'icon' => 'bi-box-seam', 'tabs' => [
             ['/workshop/products', 'Karty produktów', 'bi-diagram-3'],
             ['/recipes', 'Receptury', 'bi-journal-text'],
             ['/semi-products', 'Półprodukty', 'bi-diagram-2'],
             ['/compositions', 'Kompozycje', 'bi-layers'],
-            ['/test-products', 'Produkty w rozwoju', 'bi-clipboard-data'],
+            ['/test-products/pipeline', 'Nowe produkty : etapy', 'bi-kanban'],
+            ['/test-products', 'Produkty w rozwoju (lista)', 'bi-clipboard-data'],
         ]],
         'bdo' => ['label' => 'Opakowania BDO', 'section' => 'Produkt', 'icon' => 'bi-box2', 'tabs' => [
             ['/audits/product-weights', 'Wagi produktów', 'bi-speedometer2'],

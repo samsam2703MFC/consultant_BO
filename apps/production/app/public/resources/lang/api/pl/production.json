@@ -95,7 +95,10 @@
     "DATA_SHEET_DUPLICATE_ROW": "« {key} » występuje już w wierszu {row}.",
     "DATA_SHEET_UNKNOWN_PARAM": "Parametr « {code} » nie należy do tej tabeli.",
     "DATA_SHEET_TOUR_NOT_FOUND": "Nie ma trasy nr {id} — usuń numer, aby dodać nową trasę.",
-    "DEVICE_NOT_DRIVER": "Ten tablet nie jest tabletem kierowcy — zmień tryb tabletu w zarządzaniu tabletami."
+    "DEVICE_NOT_DRIVER": "Ten tablet nie jest tabletem kierowcy — zmień tryb tabletu w zarządzaniu tabletami.",
+    "DEV_TRIAL_NOT_ALLOWED": "Na etapie „{stage}” nie robi się już testu — produkt jest wprowadzany w biurze.",
+    "DEV_RECIPE_NOT_READY": "Recepturę zatwierdza się po udanym teście 2 (etap teraz: „{stage}”).",
+    "DEV_RECIPE_MISSING": "Produkt nie ma jeszcze receptury w ERP — biuro musi ją wybrać przed zatwierdzeniem."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -453,7 +456,8 @@
     "pallets_returned": "palety zwrócone",
     "recorded_at": "godzina zapisu",
     "driver_name": "kierowca",
-    "taken_at": "godzina zdjęcia"
+    "taken_at": "godzina zdjęcia",
+    "photos": "zdjęcia"
   },
   "entities": {
     "test_product": "produkt testowy",

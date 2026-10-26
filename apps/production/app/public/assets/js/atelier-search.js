@@ -70,7 +70,10 @@
         'alarme': 'alarm instrukcje', 'cle': 'klucz instrukcje', 'cles': 'klucz instrukcje', 'dechargement': 'rozladunku rozladunek', 'consignes': 'instrukcje',
         'consigne': 'instrukcje', 'procedure': 'procedura', 'livreur': 'kierowca kierowcy',
         'developpement': 'rozwoju', 'nouveau': 'nowy nowe', 'nouveaux': 'nowe nowy', 'nouveaute': 'nowe rozwoju', 'nouveautes': 'nowe rozwoju',
-        'annuel': 'roku rok', 'annee': 'roku rok', 'lancement': 'wprowadzone nowe'
+        'annuel': 'roku rok', 'annee': 'roku rok', 'lancement': 'wprowadzone nowe wprowadzenie',
+        'crm': 'nowe produkty etapy crm', 'essai': 'test testy', 'essais': 'testy test', 'etape': 'etapy etap', 'etapes': 'etapy', 'suivi': 'etapy sledzenie',
+        'valider': 'zatwierdzenie zatwierdzona', 'validation': 'zatwierdzenie zatwierdzona', 'lance': 'wprowadzone wprowadzony', 'lances': 'wprowadzone',
+        'pipeline': 'etapy', 'prototype': 'test nowe', 'degustation': 'test', 'accueil': 'ekran glowny', 'ipad': 'tablet ekran'
     };
 
     var menu = null;

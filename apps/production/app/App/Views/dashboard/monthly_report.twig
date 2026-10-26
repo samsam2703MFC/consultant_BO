@@ -192,7 +192,7 @@
                 <div><div class="at-sub">Wprowadzone od {{ np.since|date('m.Y') }}</div><strong class="fs-5">{{ np.count }}</strong> <span class="at-sub">({{ np.with_sales }} ze sprzedażą)</span></div>
                 <div><div class="at-sub">Sprzedaż od wprowadzenia</div><strong class="fs-5">{{ np.revenue|eur }}</strong></div>
                 <div><div class="at-sub">W miesiącu {{ L.cur[0] }}</div><strong class="fs-5">{{ np.month_revenue|eur }}</strong> <span class="at-sub">{{ np.month_share|pct }} sprzedaży</span></div>
-                <div><div class="at-sub">W rozwoju</div><strong class="fs-5">{{ np.development|length }}</strong> <span class="at-sub">propozycje {{ np.development_counts.proposal }} · w produkcji {{ np.development_counts.production }}</span></div>
+                <div><div class="at-sub">W rozwoju</div><strong class="fs-5">{{ np.development|length }}</strong> <span class="at-sub">w testach {{ np.development_counts.testing }} · receptura {{ np.development_counts.recipe }} · do wprowadzenia {{ np.development_counts.launch }}</span></div>
             </div>
             <div class="row g-4">
                 <div class="col-12 table-responsive">
@@ -211,14 +211,14 @@
                     {% else %}<p class="text-muted">Brak nowych produktów w ostatnich 12 miesiącach.</p>{% endif %}
                 </div>
                 <div class="col-12 table-responsive">
-                    <h6>W rozwoju <span class="at-sub">(produkty testowe, ostatnio zmieniane)</span></h6>
+                    <h6>W rozwoju <span class="at-sub">(ostatnio zmieniane — <a href="{{ root }}/test-products/pipeline">wszystkie etapy</a>)</span></h6>
                     {% if np.development %}
                     <table class="table table-sm align-middle at-report-table">
-                        <thead><tr><th>Produkt</th><th>Status</th><th>Ostatni etap</th></tr></thead>
+                        <thead><tr><th>Produkt</th><th>Etap</th><th>Testy na tablecie</th></tr></thead>
                         <tbody>
                         {% for p in np.development|slice(0, 12) %}
                             <tr><td>{{ p.name }}{% if p.on_tablet %} <i class="bi bi-tablet" title="na tablecie"></i>{% endif %}{% if p.recipe %} <i class="bi bi-journal-check" title="receptura"></i>{% endif %}</td>
-                                <td>{{ p.status[0] }}</td><td class="at-sub">{{ p.stage ?? '—' }}{{ p.stage_at ? ' · ' ~ p.stage_at|date('d.m.Y') : '' }}</td></tr>
+                                <td>{{ p.dev_label[0] }}</td><td class="at-sub">{% if p.trials %}{{ p.trials }} · {{ p.last_result ? p.last_result[0] : '—' }}{{ p.last_trial_at ? ' · ' ~ p.last_trial_at|date('d.m.Y') : '' }}{% else %}{{ p.stage ?? '—' }}{{ p.stage_at ? ' · ' ~ p.stage_at|date('d.m.Y') : '' }}{% endif %}</td></tr>
                         {% endfor %}
                         </tbody>
                     </table>

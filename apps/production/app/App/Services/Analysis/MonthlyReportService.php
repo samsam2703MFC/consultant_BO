@@ -17,6 +17,7 @@ use App\Services\Communication\TemplateRenderer;
 use App\Services\Dashboard\ProfitabilityService;
 use App\Services\Logistics\DriverService;
 use App\Services\Utils\TCPDFService;
+use App\Services\Workshop\Execution\DevProductService;
 use DateTimeImmutable;
 
 /**
@@ -214,6 +215,9 @@ final class MonthlyReportService
         $dev = array_map(fn($d) => [
             'name' => $d['name'], 'status' => self::DEV_STATUS[(int) $d['id_status']] ?? ['—', '—'], 'stage' => $d['stage'],
             'stage_at' => $d['stage_at'], 'created_at' => $d['created_at'], 'recipe' => $d['id_recipe'] !== null, 'on_tablet' => (bool) (int) $d['on_tablet'],
+            // Etap rozwoju (CRM nowych produktów) i testy potwierdzone na tablecie grupy.
+            'dev_stage' => $d['dev_stage'], 'dev_label' => DevProductService::STAGES[$d['dev_stage']] ?? ['—', '—'], 'trials' => (int) $d['trials_done'],
+            'last_result' => $d['last_result'] ? DevProductService::RESULTS[$d['last_result']] : null, 'last_trial_at' => $d['last_trial_at'],
         ], $this->repo->developmentProducts());
         return [
             'since' => $since,
@@ -224,7 +228,9 @@ final class MonthlyReportService
             'month_share' => $monthRevenue > 0 ? $monthNew / $monthRevenue * 100 : null,
             'rows' => array_slice($rows, 0, self::NEW_PRODUCTS_SHOWN),
             'development' => $dev,
-            'development_counts' => ['proposal' => count(array_filter($dev, fn($d) => $d['status'][0] === 'Propozycja')), 'production' => count(array_filter($dev, fn($d) => $d['status'][0] === 'W produkcji'))],
+            'development_counts' => ['proposal' => count(array_filter($dev, fn($d) => $d['status'][0] === 'Propozycja')), 'production' => count(array_filter($dev, fn($d) => $d['status'][0] === 'W produkcji')),
+                'testing' => count(array_filter($dev, fn($d) => in_array($d['dev_stage'], ['idea', 'test1', 'test2'], true))),
+                'recipe' => count(array_filter($dev, fn($d) => $d['dev_stage'] === 'recipe')), 'launch' => count(array_filter($dev, fn($d) => $d['dev_stage'] === 'launch'))],
         ];
     }
 
@@ -585,9 +591,10 @@ final class MonthlyReportService
                         self::eur($r['month_revenue']), self::num($r['cartons']), $r['customers'], self::pct($r['margin_pct'])], $np['rows']), ['font' => 7.5]);
             }
             if ($np['development']) {
-                $pdf->brandTable([['label' => $t('W rozwoju', 'En développement'), 'w' => 3], ['label' => $t('Status', 'Statut'), 'w' => 1.1], ['label' => $t('Ostatni etap', 'Dernière étape'), 'w' => 2.2],
+                $pdf->brandTable([['label' => $t('W rozwoju', 'En développement'), 'w' => 2.6], ['label' => $t('Etap', 'Étape'), 'w' => 1.6], ['label' => $t('Testy na tablecie', 'Essais sur la tablette'), 'w' => 1.8],
                     ['label' => $t('Receptura', 'Recette'), 'w' => 0.8, 'align' => 'R'], ['label' => $t('Od', 'Depuis'), 'w' => 0.9]],
-                    array_map(fn($r) => [$r['name'], $r['status'][$i], ($r['stage'] ?? '—') . ($r['stage_at'] ? ' · ' . date('d.m.Y', strtotime($r['stage_at'])) : ''),
+                    array_map(fn($r) => [$r['name'], $r['dev_label'][$i], $r['trials'] ? $r['trials'] . ' · ' . ($r['last_result'][$i] ?? '—') . ($r['last_trial_at'] ? ' · ' . date('d.m.Y', strtotime($r['last_trial_at'])) : '')
+                        : (($r['stage'] ?? '—') . ($r['stage_at'] ? ' · ' . date('d.m.Y', strtotime($r['stage_at'])) : '')),
                         $r['recipe'] ? '✓' : '—', date('m.Y', strtotime($r['created_at']))], array_slice($np['development'], 0, 20)), ['font' => 7.5]);
             }
         }

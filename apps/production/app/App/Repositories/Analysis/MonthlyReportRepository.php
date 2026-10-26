@@ -102,18 +102,22 @@ final class MonthlyReportRepository extends WorkshopRepository
      * Produkty w rozwoju (produkty testowe rodzaju « Produkt », nie zakończone) : status, ostatni etap z historii,
      * receptura, pokazany na tablecie. Najpierw ostatnio zmieniane.
      */
+    /** Produkty w rozwoju (rodzaj « Produkt ») : etap (pomysł → wprowadzenie), testy z tabletu, ostatni etap z dziennika. */
     public function developmentProducts(): array
     {
         try {
             return $this->all(
                 "SELECT tp.id, tp.name, tp.id_status, tp.id_recipe, tp.create_timestamp AS created_at, COALESCE(d.on_tablet, 0) AS on_tablet,
-                        ch.create_timestamp AS stage_at, st.name AS stage
+                        ch.create_timestamp AS stage_at, st.name AS stage, COALESCE(d.stage, CASE tp.id_status WHEN 2 THEN 'launch' ELSE 'idea' END) AS dev_stage,
+                        (SELECT COUNT(*) FROM n_dev_trial tr WHERE tr.id_test_product = tp.id AND tr.status = 'done') AS trials_done,
+                        (SELECT tr.result FROM n_dev_trial tr WHERE tr.id_test_product = tp.id AND tr.status = 'done' ORDER BY tr.trial_no DESC LIMIT 1) AS last_result,
+                        (SELECT tr.done_at FROM n_dev_trial tr WHERE tr.id_test_product = tp.id AND tr.status = 'done' ORDER BY tr.trial_no DESC LIMIT 1) AS last_trial_at
                  FROM test_product tp
                  LEFT JOIN n_dev_product d ON d.id_test_product = tp.id
                  LEFT JOIN test_product_changelog ch ON ch.id = (SELECT c2.id FROM test_product_changelog c2 WHERE c2.id_test_product = tp.id ORDER BY c2.create_timestamp DESC, c2.id DESC LIMIT 1)
                  LEFT JOIN test_product_stage st ON st.id = ch.id_stage
-                 WHERE tp.id_type = 1 AND tp.id_status IN (1, 2)
-                 ORDER BY COALESCE(ch.create_timestamp, tp.create_timestamp) DESC, tp.id DESC"
+                 WHERE tp.id_type = 1 AND tp.id_status IN (1, 2) AND COALESCE(d.stage, 'idea') NOT IN ('launched', 'stopped')
+                 ORDER BY GREATEST(COALESCE(d.stage_changed_at, '1970-01-01'), COALESCE(ch.create_timestamp, tp.create_timestamp)) DESC, tp.id DESC"
             );
         } catch (\PDOException) {
             return [];

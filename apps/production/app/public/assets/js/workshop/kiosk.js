@@ -126,6 +126,8 @@
         'circle-x': '<circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" />',
         'chevron-left': '<path d="m15 18-6-6 6-6" />',
         'image': '<rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />',
+        'smartphone': '<rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" />',
+        'nfc': '<path d="M6 8.32a7.43 7.43 0 0 1 0 7.36" /><path d="M9.46 6.21a11.76 11.76 0 0 1 0 11.58" /><path d="M12.91 4.1a15.91 15.91 0 0 1 .01 15.8" /><path d="M16.37 2a20.16 20.16 0 0 1 0 20" />',
     };
     const icon = (name, cls) => `<svg class="k-ico ${cls || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
 
@@ -196,40 +198,62 @@
     }
 
     // --- Accueil -------------------------------------------------------------------------------------------
-    // Tablette d'un groupe : le jour en un coup d'œil (présents, produits, heures, livraisons), les noms à toucher,
-    // ce qu'on produit aujourd'hui, le QR du téléphone. Tablette sans groupe (bureau) : le QR au centre, les noms en appui.
+    // Façon iPad : l'heure en grand sur un fond doux, des widgets (équipe en icônes rondes avec anneau vert pour
+    // les présents, aujourd'hui, nouveaux produits du groupe, QR du téléphone, livraisons) et un dock (badge, NFC,
+    // semaine). Tablette sans groupe (bureau) : le QR en grand et les noms. Un nouveau produit touché : la personne
+    // choisit son nom, tape son PIN et arrive directement sur la fiche du produit.
     let deviceInfo = null;
+    let afterLogin = null; // id produit à ouvrir après le PIN (widget « Nouveaux produits »)
     async function renderHome() {
         if (!paired) return renderPairing();
         stopWeek();
+        afterLogin = null;
         if (deviceInfo === null) {
             try { deviceInfo = await api('GET', '/kiosk/device'); } catch (err) { deviceInfo = {group_id: null}; }
         }
         // Tablet kierowcy : własna strona (trasa dnia, potwierdzenia dostaw).
         if (deviceInfo.mode === 'driver') { location.replace(root + '/driver'); return; }
         const office = !deviceInfo.group_id;
-        const peopleCard = `<section class="kiosk-card kiosk-home-people"><div class="kiosk-home-title"><h2>${esc(t(office ? 'office_people' : 'home_people_title'))}</h2></div><div class="kiosk-people" data-people><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>`;
-        const qrCard = `<section class="kiosk-card kiosk-qr ${office ? 'is-office' : ''}" data-qr-card hidden><canvas data-qr width="220" height="220" role="img" aria-label="${esc(t('qr_title'))}"></canvas>
-                <div class="kiosk-qr-text"><h2>${esc(t(office ? 'office_title' : 'qr_title'))}</h2>
-                ${office ? `<ol class="kiosk-steps"><li>${esc(t('office_step1'))}</li><li>${esc(t('office_step2'))}</li><li>${esc(t('office_step3'))}</li></ol>` : `<p class="kiosk-muted">${esc(t('qr_help'))}</p>`}</div></section>`;
-        const badgeCard = `<section class="kiosk-card kiosk-badge-card"><div class="kiosk-badge-hint"><span class="kiosk-badge-icon">${icon('id-card')}</span><div><strong>${esc(t('badge_hint'))}</strong></div>
-                    ${'NDEFReader' in window ? `<button type="button" class="kiosk-btn is-small" data-nfc>${esc(t('nfc'))}</button>` : ''}</div>
-                    <input class="kiosk-badge-input" data-badge autocomplete="off" aria-label="${esc(t('badge'))}"></section>`;
-        el.innerHTML = header() + (office
-            ? `<div class="kiosk-home is-office"><section class="kiosk-hero"><div><h2>${esc(t('office_hero'))}</h2><p class="kiosk-muted">${esc(t('office_hero_help'))}</p></div>
-                    <div class="kiosk-stats" data-stats></div></section>${qrCard}<div class="kiosk-office-side">${peopleCard}${badgeCard}</div></div>`
-            : `<div class="kiosk-home"><section class="kiosk-hero"><div><h2 data-hero-title>${esc(t('home_title'))}</h2><p class="kiosk-muted">${esc(t('home_help'))}</p></div>
-                    <div class="kiosk-stats" data-stats></div></section>
-                <div class="kiosk-home-main">${peopleCard}
-                    <section class="kiosk-card kiosk-today" data-today><div class="kiosk-home-title"><h2>${esc(t('home_today_title'))}</h2>
-                        <button type="button" class="kiosk-btn is-small" data-week-open>${icon('calendar-days')} ${esc(t('home_week_all'))}</button></div>
-                        <div data-today-list><p class="kiosk-muted">${esc(t('loading'))}</p></div></section></div>
-                <aside class="kiosk-home-side">${qrCard}<section class="kiosk-card kiosk-deliveries" data-deliveries hidden><h2>${icon('truck')} ${esc(t('home_deliveries_title'))}</h2><div data-delivery-list></div></section>${badgeCard}</aside></div>`);
+        const now = new Date();
+        const widgetHead = (ic, cls, title, extra) => `<header class="kiosk-widget-head"><span class="kiosk-widget-icon ${cls}">${icon(ic)}</span><h2>${title}</h2>${extra || ''}</header>`;
+        const peopleWidget = `<section class="kiosk-widget is-team" data-team-widget>${widgetHead('users', 'is-green', esc(t(office ? 'office_people' : 'home_people_title')), '<span class="kiosk-widget-meta" data-present></span>')}
+                <div class="kiosk-apps" data-people><p class="kiosk-muted">${esc(t('loading'))}</p></div>
+                <p class="kiosk-widget-hint" data-team-hint>${esc(t('home_team_hint'))}</p></section>`;
+        const qrWidget = `<section class="kiosk-widget is-qr" data-qr-card hidden><canvas data-qr width="220" height="220" role="img" aria-label="${esc(t('qr_title'))}"></canvas>
+                <div class="kiosk-qr-text"><h2>${esc(t(office ? 'office_title' : 'home_qr_title'))}</h2>
+                ${office ? `<ol class="kiosk-steps"><li>${esc(t('office_step1'))}</li><li>${esc(t('office_step2'))}</li><li>${esc(t('office_step3'))}</li></ol>` : `<p class="kiosk-muted">${esc(t('home_qr_help'))}</p>`}</div></section>`;
+        const dockApp = (attr, ic, cls, label) => `<button type="button" class="kiosk-dock-app" ${attr}><span class="kiosk-dock-icon ${cls}">${icon(ic)}</span><span class="kiosk-dock-label">${esc(label)}</span></button>`;
+        el.innerHTML = `<div class="kiosk-ipad ${office ? 'is-office' : ''}">
+            <div class="kiosk-ipad-bar"><span class="kiosk-logo" aria-hidden="true">LA</span><span class="kiosk-ipad-name" data-team-name>${esc(t('title'))}</span>
+                <button type="button" class="kiosk-chip is-glass" data-lang><span class="kiosk-lang-long">${esc(t('lang_switch'))}</span><span class="kiosk-lang-short" aria-hidden="true">${lang === 'pl' ? 'FR' : 'PL'}</span></button></div>
+            <section class="kiosk-ipad-hero"><div class="kiosk-ipad-time" data-clock>${now.toTimeString().slice(0, 5)}</div>
+                <div class="kiosk-ipad-date">${esc(now.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'long', day: 'numeric', month: 'long'}))}</div>
+                <p class="kiosk-ipad-greet" data-hero-title>${esc(t(office ? 'office_hero' : 'home_title'))}</p></section>
+            <div class="kiosk-widgets">${office ? qrWidget + peopleWidget : `${peopleWidget}
+                <section class="kiosk-widget is-today" data-today>${widgetHead('calendar-days', 'is-orange', esc(t('home_today_title')), `<button type="button" class="kiosk-widget-link" data-week-open>${esc(t('home_week_all'))} ›</button>`)}
+                    <div class="kiosk-widget-stats" data-stats></div><div data-today-list><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>
+                <section class="kiosk-widget is-dev" data-dev-widget hidden>${widgetHead('flask-conical', 'is-purple', esc(t('home_dev_title')), '<span class="kiosk-widget-meta" data-dev-count></span>')}
+                    <div class="kiosk-dev-minis" data-dev-list></div></section>
+                ${qrWidget}
+                <section class="kiosk-widget is-deliveries" data-deliveries hidden>${widgetHead('truck', 'is-blue', esc(t('home_deliveries_title')))}<div data-delivery-list></div></section>`}</div>
+            <nav class="kiosk-dock" aria-label="${esc(t('home_dock'))}">
+                ${dockApp('data-dock-badge', 'id-card', 'is-red', t('home_dock_badge'))}
+                ${'NDEFReader' in window ? dockApp('data-nfc', 'nfc', 'is-blue', t('nfc')) : ''}
+                ${office ? '' : dockApp('data-week-open', 'calendar-days', 'is-orange', t('home_week_all'))}
+                ${dockApp('data-dock-qr', 'smartphone', 'is-dark', t('home_dock_phone'))}
+            </nav>
+            <input class="kiosk-badge-input" data-badge autocomplete="off" aria-label="${esc(t('badge'))}"></div>`;
         const badge = el.querySelector('[data-badge]');
         const focusBadge = () => { if (document.activeElement !== badge && !el.querySelector('input:not([data-badge])')) badge.focus({preventScroll: true}); };
         focusBadge();
         badge.addEventListener('keydown', (e) => { if (e.key === 'Enter' && badge.value.trim()) { e.preventDefault(); const v = badge.value.trim(); badge.value = ''; renderPin({badge: v}); } });
         el.addEventListener('click', focusBadge, {once: true});
+        el.querySelector('[data-dock-badge]').addEventListener('click', () => { toast(t('badge_hint')); badge.focus({preventScroll: true}); });
+        el.querySelector('[data-dock-qr]').addEventListener('click', () => {
+            const card = el.querySelector('[data-qr-card]');
+            if (card && !card.hidden) { card.scrollIntoView({behavior: 'smooth', block: 'center'}); card.classList.remove('is-flash'); void card.offsetWidth; card.classList.add('is-flash'); }
+            else toast(t('home_qr_help'));
+        });
         const nfc = el.querySelector('[data-nfc]');
         if (nfc) nfc.addEventListener('click', async () => {
             try {
@@ -239,42 +263,67 @@
                 reader.addEventListener('reading', (ev) => { if (!session) renderPin({badge: ev.serialNumber}); }, {once: true});
             } catch (e) { toast(t('nfc_error'), true); }
         });
-        const weekBtn = el.querySelector('[data-week-open]');
-        if (weekBtn) weekBtn.addEventListener('click', () => renderWeek(null, false));
+        el.querySelectorAll('[data-week-open]').forEach(b => b.addEventListener('click', () => renderWeek(null, false)));
         drawQr();
-        const [people, w] = await Promise.all([
+        const [people, w, dev] = await Promise.all([
             api('GET', '/kiosk/people').catch((err) => { if (!err.code) toast(err.message, true); return null; }),
             office ? Promise.resolve(null) : api('GET', '/kiosk/week').catch(() => null),
+            office ? Promise.resolve(null) : api('GET', '/kiosk/development/summary').catch(() => null),
         ]);
         const box = el.querySelector('[data-people]');
         if (!box) return;
         const list = people || [];
         const present = list.filter(p => p.clocked_in).length;
-        box.innerHTML = list.length ? list.map(p => `<button type="button" class="kiosk-btn kiosk-person ${p.clocked_in ? 'is-in' : ''} ${p.has_pin ? '' : 'is-nopin'}" data-person="${p.id}" data-name="${esc(p.name)}">
-                ${avatar(p.name)}<span class="kiosk-person-text"><strong>${esc(p.name)}</strong>
-                <small>${esc(p.clocked_in ? t('home_on_shift') : (p.has_pin ? t('absent') : t('home_no_pin_short')))}</small></span></button>`).join('') : `<p class="kiosk-muted">${esc(t('nobody'))}</p>`;
+        box.innerHTML = list.length ? list.map(p => `<button type="button" class="kiosk-app-person ${p.clocked_in ? 'is-in' : ''} ${p.has_pin ? '' : 'is-nopin'}" data-person="${p.id}" data-name="${esc(p.name)}">
+                ${avatar(p.name, 'is-app')}<span class="kiosk-app-name">${esc(p.name)}</span>
+                <small>${esc(p.clocked_in ? t('home_on_shift') : (p.has_pin ? t('absent') : t('home_no_pin_short')))}</small></button>`).join('') : `<p class="kiosk-muted">${esc(t('nobody'))}</p>`;
         box.addEventListener('click', (e) => { const b = e.target.closest('[data-person]'); if (b) renderPin({employee_id: Number(b.dataset.person), name: b.dataset.name}); });
+        el.querySelector('[data-present]').textContent = t('home_present_of', {n: present, total: list.length});
+        if (office) return;
         const team = w && w.teams && w.teams[0];
         const day = team ? (team.days.find(d => d.today) || null) : null;
         const blocks = day ? day.blocks : [];
         const deliveries = day ? day.deliveries : [];
-        const stat = (value, label, cls) => `<div class="kiosk-stat ${cls || ''}"><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`;
-        el.querySelector('[data-stats]').innerHTML = stat(`${present}/${list.length}`, t('home_present'), present ? 'is-ok' : '')
-            + (office ? '' : stat(String(blocks.length), t('home_products_today')) + stat(fmt(Math.round(blocks.reduce((sum, b) => sum + (b.hours || 0), 0) * 10) / 10) + ' h', t('home_hours'))
-                + stat(String(deliveries.length), t('home_deliveries'), deliveries.length ? 'is-info' : ''));
-        if (office) return;
-        if (team && team.name) el.querySelector('[data-hero-title]').textContent = t('home_team', {team: team.name});
+        const hours = Math.round(blocks.reduce((sum, b) => sum + (b.hours || 0), 0) * 10) / 10;
+        const stat = (value, label, cls) => `<div class="kiosk-mini-stat ${cls || ''}"><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`;
+        el.querySelector('[data-stats]').innerHTML = stat(String(blocks.length), t('home_products_today')) + stat(fmt(hours) + ' h', t('home_hours'))
+            + stat(String(deliveries.length), t('home_deliveries'), deliveries.length ? 'is-info' : '');
+        if (team && team.name) {
+            el.querySelector('[data-team-name]').textContent = t('home_team', {team: team.name});
+            el.querySelector('[data-hero-title]').textContent = t('home_greet', {team: team.name});
+        }
         const todayBox = el.querySelector('[data-today-list]');
-        const shown = blocks.slice(0, 7);
+        const shown = blocks.slice(0, 5);
         const timed = blocks.some(b => b.time);
         todayBox.innerHTML = blocks.length ? `<ul class="kiosk-today-list ${timed ? '' : 'is-untimed'}">${shown.map(b => `<li>${timed ? `<span class="kiosk-today-time">${esc(b.time || '')}</span>` : ''}
                 <span class="kiosk-today-name">${esc(b.name)}</span><span class="kiosk-today-qty">${esc(fmt(b.quantity / (b.factor || 1)))} ${esc(b.unit)}${b.cartons ? ` · ${esc(fmt(b.cartons))} ${esc(t('week_cartons'))}` : ''}</span></li>`).join('')}</ul>
                 ${blocks.length > shown.length ? `<p class="kiosk-muted">${esc(t('home_more', {n: blocks.length - shown.length}))}</p>` : ''}`
-            : `<p class="kiosk-muted">${esc(t('home_today_empty'))}</p>`;
+            : `<p class="kiosk-widget-empty">${esc(t('home_today_empty'))}</p>`;
         if (deliveries.length) {
             el.querySelector('[data-deliveries]').hidden = false;
             el.querySelector('[data-delivery-list]').innerHTML = deliveries.map(d => `<div class="kiosk-delivery"><strong>${esc(d.supplier || '—')}</strong>
                 <span class="kiosk-muted">${esc(d.materials.slice(0, 4).join(', '))}${d.materials.length > 4 ? '…' : ''}</span></div>`).join('');
+        }
+        // Nouveaux produits du groupe : étape (anneau de progression) et prochaine action ; toucher → nom + PIN → fiche.
+        const products = (dev && dev.products) || [];
+        if (products.length) {
+            el.querySelector('[data-dev-widget]').hidden = false;
+            el.querySelector('[data-dev-count]').textContent = String(products.length);
+            el.querySelector('[data-dev-list]').innerHTML = products.slice(0, 4).map(p => `<button type="button" class="kiosk-dev-mini" data-home-dev="${p.id}">
+                    <span class="kiosk-ring" style="--p:${p.step ? Math.round(p.step / p.steps * 100) : 0}"><span>${p.step || '–'}/${p.steps}</span></span>
+                    <span class="kiosk-dev-mini-text"><strong>${esc(p.name)}</strong><small>${esc(p.stage_label)}</small>
+                    ${p.next ? `<em class="${p.next.kind === 'office' ? '' : 'is-action'}">${esc(p.next.label)}</em>` : ''}</span></button>`).join('')
+                + (products.length > 4 ? `<p class="kiosk-muted">${esc(t('home_more_dev', {n: products.length - 4}))}</p>` : '');
+            el.querySelector('[data-dev-list]').addEventListener('click', (e) => {
+                const b = e.target.closest('[data-home-dev]');
+                if (!b) return;
+                afterLogin = Number(b.dataset.homeDev);
+                el.querySelectorAll('[data-home-dev]').forEach(x => x.classList.toggle('is-picked', x === b));
+                const teamWidget = el.querySelector('[data-team-widget]');
+                teamWidget.classList.remove('is-pick'); void teamWidget.offsetWidth; teamWidget.classList.add('is-pick');
+                el.querySelector('[data-team-hint]').textContent = t('home_dev_who', {name: b.querySelector('strong').textContent});
+                teamWidget.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+            });
         }
     }
 
@@ -395,7 +444,8 @@
             try {
                 const r = await api('POST', '/kiosk/identify', {...(who.badge ? {badge: who.badge} : {employee_id: who.employee_id}), pin});
                 session = {token: r.employee_token, id: r.employee.id, name: r.employee.name, exp: Date.now() + r.expires_in * 1000};
-                renderMe();
+                // Widget « Nouveaux produits » : directement la fiche du produit touché.
+                if (afterLogin) { const id = afterLogin; afterLogin = null; session.dev = 1; session.tab = 'dev'; renderDevProduct(id); } else renderMe();
             } catch (err) {
                 pin = ''; dots(); ok.disabled = false;
                 el.querySelector('[data-error]').textContent = err.message;
@@ -908,8 +958,15 @@
         draw();
     }
 
-    // --- Nowe produkty : produkty testowe pokazane grupie — etap, receptura, film, zdjęcia, notatki --------------------
+    // --- Nowe produkty : rozwój od pomysłu do wprowadzenia. Test (zdjęcia, ilość, wynik, co zmienić) i receptura
+    // potwierdzane tutaj JEDEN raz — biuro widzi wynik bez ponownego wpisywania. Karta : etap, testy, notatki, film,
+    // zdjęcia wzorcowe, receptura. Tablet widzi tylko produkty swojej grupy. -------------------------------------------
     const dateFmt = (d) => d ? d.split('-').reverse().join('.') : '';
+    const dayTime = (s) => s ? `${dateFmt(String(s).slice(0, 10)).slice(0, 5)} ${hhmm(s)}` : '';
+    const RESULT_CLS = {ok: 'is-in', fix: 'is-warn', ko: 'is-bad'};
+    const NEXT_ICON = {trial: 'flask-conical', recipe: 'book-open', office: 'hourglass'};
+    const devProgress = (dev) => dev.step ? `<span class="kiosk-dev-progress" aria-hidden="true"><span style="width:${Math.round(dev.step / dev.steps * 100)}%"></span></span>` : '';
+    const devNext = (dev) => dev.next ? `<span class="kiosk-dev-next ${dev.next.kind === 'office' ? '' : 'is-action'}">${icon(NEXT_ICON[dev.next.kind], 'is-sm')} ${esc(dev.next.label)}</span>` : '';
 
     async function renderDev(message) {
         longIdle = true;
@@ -920,42 +977,73 @@
         el.innerHTML = personHeader() + tabs('dev') + `
             <section class="kiosk-card"><h2>${esc(t('dev_title'))}</h2><p class="kiosk-muted">${esc(t('dev_help'))}</p></section>
             ${d.products.length ? `<div class="kiosk-recipe-grid">${d.products.map(p => `<button type="button" class="kiosk-card kiosk-recipe-tile kiosk-dev-tile" data-dev="${p.id}">
+                <span class="kiosk-dev-stage">${esc(p.dev.stage_label)}</span>
                 <strong>${esc(p.name)}</strong>
-                <span class="kiosk-muted">${esc([p.status, p.stage && p.stage.name].filter(Boolean).join(' · '))}</span>
-                <span class="kiosk-dev-badges">${p.recipe_id ? icon('book-open') : ''}${p.has_video ? icon('clapperboard') : ''}${p.photo_count ? icon('image') + '<small>' + p.photo_count + '</small>' : ''}${p.has_notes ? icon('notebook-pen') : ''}</span>
-                ${p.stage && p.stage.deadline ? `<span class="kiosk-muted">${esc(t('dev_deadline', {date: dateFmt(p.stage.deadline)}))}</span>` : ''}</button>`).join('')}</div>`
+                ${devProgress(p.dev)}${devNext(p.dev)}
+                <span class="kiosk-dev-badges">${p.dev.last_result ? `<span class="kiosk-pill ${RESULT_CLS[p.dev.last_result.code]}">${esc(p.dev.last_result.label)}</span>` : ''}${p.recipe_id ? icon('book-open') : ''}${p.has_video ? icon('clapperboard') : ''}${p.photo_count ? icon('image') + '<small>' + p.photo_count + '</small>' : ''}${p.has_notes ? icon('notebook-pen') : ''}</span>
+                ${p.dev.target_date ? `<span class="kiosk-muted">${esc(t('dev_target', {date: dateFmt(p.dev.target_date)}))}</span>` : ''}</button>`).join('')}</div>`
                 : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('dev_none'))}</p></section>`}`;
         if (message) toast(message);
         el.querySelectorAll('[data-dev]').forEach(b => b.addEventListener('click', () => renderDevProduct(Number(b.dataset.dev))));
     }
 
-    async function renderDevProduct(id) {
+    async function renderDevProduct(id, message) {
         longIdle = true;
         resetIdle();
         let p;
         try { p = await api('GET', `/kiosk/development/${id}`, undefined, true); } catch (err) { toast(err.message, true); return; }
         let factor = 1;
+        const dev = p.dev;
+        const planned = p.trials.find(tr => tr.status === 'planned');
+        const done = p.trials.filter(tr => tr.status === 'done');
         const v = p.video;
         const video = !v ? '' : (v.embed
             ? `<div class="kiosk-dev-video"><iframe src="${esc(v.embed)}" title="${esc(p.name)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe></div>`
             : (v.kind === 'file' ? `<video class="kiosk-dev-file" src="${esc(v.url)}" controls playsinline preload="metadata"></video>` : ''))
             + `<p><a class="kiosk-btn is-small" href="${esc(v.url)}" target="_blank" rel="noopener">${icon('play')} ${esc(t('dev_open_video'))}</a></p>`;
+        // Następny krok : test (aparat), receptura do zatwierdzenia albo czekamy na biuro.
+        let action = '';
+        if (dev.next && dev.next.kind === 'trial') {
+            action = `<button type="button" class="kiosk-btn is-primary kiosk-dev-cta" data-trial>${icon('camera')} ${esc(dev.next.label)}</button>`;
+        } else if (dev.next && dev.next.kind === 'recipe') {
+            action = (p.recipe_id ? `<button type="button" class="kiosk-btn is-ok kiosk-dev-cta" data-confirm-recipe>${icon('circle-check')} ${esc(t('dev_confirm_recipe'))}</button>`
+                : `<p class="kiosk-status">${icon('triangle-alert')} ${esc(t('dev_recipe_missing'))}</p>`)
+                + `<button type="button" class="kiosk-btn is-small" data-trial>${icon('flask-conical')} ${esc(t('dev_another_trial'))}</button>`;
+        } else if (dev.next) {
+            action = `<p class="kiosk-status">${icon('hourglass')} ${esc(t('dev_wait_office'))}</p>`;
+        }
+        const photosOf = {};
+        done.forEach(tr => tr.photos.forEach(ph => { photosOf[ph.id] = ph.src; }));
+        p.photos.forEach(ph => { photosOf['ref' + ph.id] = ph.src; });
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-back>‹ ${esc(t('back'))}</button>`, true) + `
-            <section class="kiosk-card"><h2>${esc(p.name)}</h2>
-                <p class="kiosk-status">${esc([p.status, p.type, p.section].filter(Boolean).join(' · '))}</p>
-                ${p.stages.length ? `<p><strong>${esc(t('dev_stage'))}</strong> ${esc(p.stages[0].name || '')}${p.stages[0].deadline ? ' · ' + esc(t('dev_deadline', {date: dateFmt(p.stages[0].deadline)})) : ''}</p>
-                    ${p.stages[0].description ? `<p class="kiosk-dev-text">${esc(p.stages[0].description)}</p>` : ''}` : ''}</section>
+            <section class="kiosk-card kiosk-dev-hero"><span class="kiosk-dev-stage">${esc(dev.stage_label)}</span><h2>${esc(p.name)}</h2>
+                <p class="kiosk-muted">${esc([...new Set([dev.group && dev.group.name, p.section, dev.target_date && t('dev_target', {date: dateFmt(dev.target_date)})].filter(Boolean))].join(' · '))}</p>
+                <ol class="kiosk-dev-flow">${p.flow.map((f, i) => `<li class="is-${f.state}"><span>${f.state === 'done' ? icon('check', 'is-sm') : i + 1}</span><em>${esc(f.label)}</em></li>`).join('')}</ol>
+                ${planned ? `<div class="kiosk-dev-brief"><strong>${icon('notebook-pen', 'is-sm')} ${esc(t('dev_brief', {n: planned.no}))}${planned.planned_date ? ' · ' + esc(dateFmt(planned.planned_date)) : ''}</strong>
+                    ${planned.instructions ? `<p class="kiosk-dev-text">${esc(planned.instructions)}</p>` : ''}</div>` : ''}
+                ${p.recipe_confirmed ? `<p class="kiosk-status kiosk-dev-ok">${icon('circle-check')} ${esc(t('dev_recipe_confirmed', {date: dayTime(p.recipe_confirmed.at), name: p.recipe_confirmed.by || '—'}))}</p>` : ''}
+                ${action ? `<div class="kiosk-row kiosk-dev-actions">${action}</div>` : ''}</section>
+            ${done.length ? `<section class="kiosk-card"><h2>${icon('flask-conical')} ${esc(t('dev_trials', {n: done.length}))}</h2><div class="kiosk-dev-trials">${done.slice().reverse().map(tr => `<article class="kiosk-dev-trial">
+                <div class="kiosk-dev-trial-head"><strong>${esc(t('dev_trial_no', {n: tr.no}))}</strong><span class="kiosk-pill ${RESULT_CLS[tr.result] || ''}">${esc(tr.result_label || '')}</span>
+                <span class="kiosk-muted">${esc([dayTime(tr.done_at), tr.employee, tr.quantity !== null ? t('dev_qty', {q: fmt(tr.quantity)}) : ''].filter(Boolean).join(' · '))}</span></div>
+                ${tr.instructions ? `<p class="kiosk-muted kiosk-dev-text">${esc(t('dev_brief_short'))} ${esc(tr.instructions)}</p>` : ''}
+                ${tr.notes ? `<p class="kiosk-dev-text">${esc(tr.notes)}</p>` : ''}
+                ${tr.photos.length ? `<div class="kiosk-dev-photos is-small">${tr.photos.map(ph => `<button type="button" class="kiosk-dev-photo" data-zoom="${ph.id}"><img src="${ph.src}" alt="${esc(t('dev_trial_no', {n: tr.no}))}"><span>${esc(hhmm(ph.taken_at))}</span></button>`).join('')}</div>` : ''}
+                </article>`).join('')}</div></section>` : ''}
             ${p.notes ? `<section class="kiosk-card"><h2>${icon('notebook-pen')} ${esc(t('dev_notes'))}</h2><p class="kiosk-dev-text">${esc(p.notes)}</p></section>` : ''}
             ${v ? `<section class="kiosk-card"><h2>${icon('clapperboard')} ${esc(t('dev_video'))}</h2>${video}</section>` : ''}
             ${p.photos.length ? `<section class="kiosk-card"><h2>${icon('image')} ${esc(t('dev_photos', {n: p.photos.length}))}</h2><div class="kiosk-dev-photos">${p.photos.map(ph =>
-                `<button type="button" class="kiosk-dev-photo" data-photo-open="${ph.id}"><img src="${ph.src}" alt="${esc(ph.caption || p.name)}">${ph.caption ? `<span>${esc(ph.caption)}</span>` : ''}</button>`).join('')}</div></section>` : ''}
+                `<button type="button" class="kiosk-dev-photo" data-zoom="ref${ph.id}"><img src="${ph.src}" alt="${esc(ph.caption || p.name)}">${ph.caption ? `<span>${esc(ph.caption)}</span>` : ''}</button>`).join('')}</div></section>` : ''}
             ${p.recipe ? `<section class="kiosk-card"><h2>${icon('book-open')} ${esc(t('dev_recipe', {name: p.recipe.name}))}</h2>
                 <div class="kiosk-row kiosk-rec-presets"><label class="kiosk-rec-custom">${esc(t('rec_custom_times'))}<input data-times inputmode="decimal" value="1"></label></div>
                 <p class="kiosk-status" data-dev-for></p></section><div class="kiosk-rec-tree" data-dev-tree></div>`
                 : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('dev_no_recipe'))}</p></section>`}
-            ${p.stages.length > 1 ? `<section class="kiosk-card"><details><summary>${esc(t('dev_history', {n: p.stages.length}))}</summary><ul class="kiosk-dev-stages">${p.stages.map(s =>
+            ${p.stages.length ? `<section class="kiosk-card"><details><summary>${esc(t('dev_history', {n: p.stages.length}))}</summary><ul class="kiosk-dev-stages">${p.stages.map(s =>
                 `<li><strong>${esc(s.name || '')}</strong>${s.deadline ? ' · ' + esc(dateFmt(s.deadline)) : ''}${s.description ? `<div class="kiosk-muted">${esc(s.description)}</div>` : ''}</li>`).join('')}</ul></details></section>` : ''}`;
+        if (message) toast(message);
         el.querySelector('[data-back]').addEventListener('click', () => renderDev());
+        el.querySelectorAll('[data-trial]').forEach(b => b.addEventListener('click', () => renderDevTrial(p, planned)));
+        el.querySelector('[data-confirm-recipe]')?.addEventListener('click', () => confirmDevRecipe(p));
         const draw = () => {
             if (!p.recipe) return;
             el.querySelector('[data-dev-tree]').innerHTML = recTree(p.recipe, factor);
@@ -966,16 +1054,138 @@
             const n = Number(String(e.target.value).replace(',', '.').replace(/\s/g, ''));
             if (Number.isFinite(n) && n > 0) { factor = n; draw(); }
         });
-        el.querySelectorAll('[data-photo-open]').forEach(b => b.addEventListener('click', () => {
-            const ph = p.photos.find(x => x.id === Number(b.dataset.photoOpen));
-            const box = document.createElement('div');
-            box.className = 'kiosk-lightbox';
-            box.innerHTML = `<img src="${ph.src}" alt=""><button type="button" class="kiosk-btn">${icon('x')} ${esc(t('dev_close'))}</button>`;
-            box.addEventListener('click', () => box.remove());
-            document.body.appendChild(box);
-            resetIdle();
-        }));
+        el.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => { resetIdle(); zoom(photosOf[b.dataset.zoom]); }));
         draw();
+    }
+
+    // Receptura zatwierdzona przez zespół (po udanym teście 2) : potwierdzenie i zapis z nazwiskiem osoby.
+    function confirmDevRecipe(p) {
+        const box = document.createElement('div');
+        box.className = 'kiosk-sheet-backdrop';
+        box.innerHTML = `<div class="kiosk-sheet" role="dialog" aria-modal="true"><h2>${icon('circle-check')} ${esc(t('dev_confirm_recipe'))}</h2>
+            <p class="kiosk-dev-text">${esc(t('dev_confirm_recipe_help', {name: p.recipe_name || p.name}))}</p>
+            <div class="kiosk-row"><button type="button" class="kiosk-btn" data-cancel>${esc(t('cancel'))}</button><button type="button" class="kiosk-btn is-ok" data-ok>${icon('check')} ${esc(t('dev_confirm_yes'))}</button></div></div>`;
+        document.body.appendChild(box);
+        const close = () => box.remove();
+        box.addEventListener('click', (e) => { if (e.target === box) close(); });
+        box.querySelector('[data-cancel]').addEventListener('click', close);
+        box.querySelector('[data-ok]').addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            btn.disabled = true;
+            try {
+                await api('POST', `/kiosk/development/${p.id}/recipe`, {}, true);
+                close();
+                renderDevProduct(p.id, t('dev_recipe_saved'));
+            } catch (err) {
+                btn.disabled = false;
+                if (!session) close(); else toast(err.message, true);
+            }
+        });
+    }
+
+    // Zdjęcie testu : zmniejszone (najdłuższy bok 1280 px), data, godzina i nazwa produktu wpisane w obraz.
+    async function devShot(file, caption) {
+        const taken = file.lastModified && Math.abs(Date.now() - file.lastModified) < 6 * 3600 * 1000 ? new Date(file.lastModified) : new Date();
+        const img = await loadImage(file);
+        const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const band = Math.max(26, Math.round(canvas.height * 0.06));
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(0, canvas.height - band, canvas.width, band);
+        ctx.fillStyle = '#fff';
+        ctx.font = `600 ${Math.round(band * 0.5)}px system-ui, sans-serif`;
+        ctx.textBaseline = 'middle';
+        const pad = (n) => String(n).padStart(2, '0');
+        const local = `${taken.getFullYear()}-${pad(taken.getMonth() + 1)}-${pad(taken.getDate())} ${pad(taken.getHours())}:${pad(taken.getMinutes())}:${pad(taken.getSeconds())}`;
+        ctx.fillText(`${pad(taken.getDate())}.${pad(taken.getMonth() + 1)}.${taken.getFullYear()} ${pad(taken.getHours())}:${pad(taken.getMinutes())} · ${caption}`, Math.round(band * 0.4), canvas.height - band / 2, canvas.width - band);
+        return {image: canvas.toDataURL('image/jpeg', 0.75), taken_at: local};
+    }
+
+    // Test na tablecie : zdjęcia (aparat), ilość, wynik (OK / do poprawy / nie), co zmienić → jeden zapis.
+    function renderDevTrial(p, planned) {
+        longIdle = true;
+        resetIdle();
+        const no = planned ? planned.no : (p.trials.length ? Math.max(...p.trials.map(tr => tr.no)) + 1 : 1);
+        const max = p.max_trial_photos || 6;
+        const shots = [];
+        let result = null;
+        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-back>‹ ${esc(t('back'))}</button>`, true) + `
+            <section class="kiosk-card kiosk-dev-hero"><span class="kiosk-dev-stage">${esc(t('dev_trial_no', {n: no}))}</span><h2>${esc(p.name)}</h2>
+                ${planned && planned.instructions ? `<div class="kiosk-dev-brief"><strong>${icon('notebook-pen', 'is-sm')} ${esc(t('dev_brief', {n: no}))}</strong><p class="kiosk-dev-text">${esc(planned.instructions)}</p></div>` : ''}
+                <p class="kiosk-muted">${esc(t('dev_trial_help'))}</p></section>
+            <section class="kiosk-card"><h2>${icon('camera')} ${esc(t('dev_trial_photos'))} <span class="kiosk-muted" data-count></span></h2>
+                <div class="kiosk-dev-shots" data-shots></div>
+                <label class="kiosk-btn is-primary kiosk-photo" data-add-photo>${icon('camera')} ${esc(t('dev_take_photo'))}<input type="file" accept="image/*" capture="environment" multiple data-photo hidden></label></section>
+            <section class="kiosk-card"><form class="kiosk-form" data-trial-form>
+                <label>${esc(t('dev_trial_qty'))}<input name="quantity" inputmode="decimal" autocomplete="off"></label>
+                <div class="is-wide"><span class="kiosk-label">${esc(t('dev_trial_result'))}</span><div class="kiosk-dev-results" role="radiogroup">
+                    <button type="button" class="kiosk-btn kiosk-dev-result is-ok-choice" data-result="ok" role="radio" aria-checked="false">${icon('circle-check')} ${esc(t('dev_result_ok'))}</button>
+                    <button type="button" class="kiosk-btn kiosk-dev-result is-fix-choice" data-result="fix" role="radio" aria-checked="false">${icon('wrench')} ${esc(t('dev_result_fix'))}</button>
+                    <button type="button" class="kiosk-btn kiosk-dev-result is-ko-choice" data-result="ko" role="radio" aria-checked="false">${icon('circle-x')} ${esc(t('dev_result_ko'))}</button></div></div>
+                <label class="is-wide"><span data-notes-label>${esc(t('dev_trial_notes'))}</span><textarea name="notes" rows="3" maxlength="2000"></textarea></label>
+                <p class="kiosk-error is-wide" data-error></p>
+                <div class="kiosk-row is-wide"><button type="submit" class="kiosk-btn is-ok kiosk-dev-cta" data-save>${icon('check')} ${esc(t('dev_trial_save'))}</button></div></form></section>`;
+        const form = el.querySelector('[data-trial-form]');
+        const errorBox = el.querySelector('[data-error]');
+        const drawShots = () => {
+            el.querySelector('[data-shots]').innerHTML = shots.map((s, i) => `<figure class="kiosk-dev-shot"><img src="${s.image}" alt=""><figcaption>${esc(hhmm(s.taken_at))}</figcaption>
+                <button type="button" class="kiosk-dev-shot-del" data-del="${i}" aria-label="${esc(t('dev_delete_photo'))}">${icon('x', 'is-sm')}</button></figure>`).join('');
+            el.querySelector('[data-count]').textContent = `${shots.length} / ${max}`;
+            el.querySelector('[data-add-photo]').hidden = shots.length >= max;
+        };
+        drawShots();
+        el.querySelector('[data-back]').addEventListener('click', () => {
+            if ((shots.length || result) && !window.confirm(t('dev_trial_leave'))) return;
+            renderDevProduct(p.id);
+        });
+        el.querySelector('[data-shots]').addEventListener('click', (e) => {
+            const b = e.target.closest('[data-del]');
+            if (b) { shots.splice(Number(b.dataset.del), 1); drawShots(); }
+        });
+        el.querySelector('[data-photo]').addEventListener('change', async (e) => {
+            const files = [...e.target.files].slice(0, max - shots.length);
+            e.target.value = '';
+            busy = true;
+            for (const f of files) {
+                try { shots.push(await devShot(f, p.name)); } catch (err) { toast(t('photo_error'), true); }
+            }
+            busy = false;
+            resetIdle();
+            drawShots();
+        });
+        const results = el.querySelectorAll('[data-result]');
+        results.forEach(b => b.addEventListener('click', () => {
+            result = b.dataset.result;
+            results.forEach(x => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-checked', String(x === b)); });
+            el.querySelector('[data-notes-label]').textContent = t(result === 'ok' ? 'dev_trial_notes' : 'dev_trial_notes_required');
+        }));
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.textContent = '';
+            if (!shots.length) { errorBox.textContent = t('dev_trial_need_photo'); return; }
+            if (!result) { errorBox.textContent = t('dev_trial_need_result'); return; }
+            const notes = form.notes.value.trim();
+            if (result !== 'ok' && !notes) { errorBox.textContent = t('dev_trial_need_notes'); form.notes.focus(); return; }
+            const raw = form.quantity.value.replace(/\s/g, '').replace(',', '.');
+            const quantity = raw === '' ? null : Number(raw);
+            if (quantity !== null && !(quantity >= 0)) { errorBox.textContent = t('dev_trial_bad_qty'); return; }
+            const btn = el.querySelector('[data-save]');
+            btn.disabled = true;
+            busy = true;
+            try {
+                await api('POST', `/kiosk/development/${p.id}/trials`, {quantity, result, notes: notes || null, photos: shots}, true);
+                busy = false;
+                renderDevProduct(p.id, t('dev_trial_saved', {n: no}));
+            } catch (err) {
+                busy = false;
+                btn.disabled = false;
+                errorBox.textContent = err.message;
+            }
+        });
     }
 
     // --- Maszyny (TRS) : stan maszyny jednym dotknięciem — praca, postój z powodem, koniec pracy ; TRS dnia ----------

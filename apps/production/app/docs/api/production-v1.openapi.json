@@ -12268,7 +12268,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Produits test (test_product) affichés sur la tablette (on_tablet) : sans section = tous les groupes, avec section = le groupe de cette section. Étape de développement la plus récente.",
+                "description": "Produits en développement affichés sur la tablette (on_tablet) du groupe désigné (id_group) ; sans groupe désigné : sans section = tous les groupes, avec section = le groupe de cette section. Lancés et arrêtés : non. dev = étape (idée, test 1, test 2, recette à valider, lancement), prochaine action (trial / recipe / office), dernier résultat.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -12282,12 +12282,68 @@
                 ]
             }
         },
+        "/kiosk/development/summary": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Nowe produkty na ekranie głównym / Nouveaux produits sur l'accueil",
+                "operationId": "kioskDevelopmentSummary",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DevSummary"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Sans personne identifiée (jeton de la tablette) : nom, étape et prochaine action des produits du groupe — widget de l'accueil. Tablette sans groupe : liste vide.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/development/{id}": {
             "get": {
                 "tags": [
                     "kiosk"
                 ],
-                "summary": "Nowy produkt : receptura, film, zdjęcia / Produit à développer : recette, film, photos",
+                "summary": "Nowy produkt : etapy, testy, receptura, film, zdjęcia / Produit à développer : étapes, essais, recette, film, photos",
                 "operationId": "kioskDevelopmentProduct",
                 "responses": {
                     "200": {
@@ -12331,7 +12387,167 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Notes, film (youtube / vimeo : lecteur intégré ; file : vidéo ; link : lien), photos (data URL), étapes de développement (plus récentes d'abord), arbre de la recette ERP pour une recette (null sans recette). 404 si le produit n'est pas affiché pour ce groupe.",
+                "description": "Étapes (flow : done / current / todo), essais (planifiés par le bureau avec consignes, faits sur la tablette avec photos en data URL), recette confirmée, notes, film (youtube / vimeo : lecteur intégré ; file : vidéo ; link : lien), photos de référence (data URL), journal, arbre de la recette ERP (null sans recette). 404 si le produit n'est pas affiché pour ce groupe.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/development/{id}/trials": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Test zrobiony : zdjęcia, ilość, wynik / Essai fait : photos, quantité, résultat",
+                "operationId": "kioskDevelopmentTrial",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DevProduct"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Confirmé une seule fois sur la tablette (personne identifiée) : termine le prochain essai planifié par le bureau, sinon ajoute l'essai suivant. 1 à 6 photos (JPEG redimensionné, heure de prise de vue), quantité, résultat ok / fix (à corriger) / ko ; notes obligatoires pour fix et ko. Étape : ok après l'essai 1 → test 2 ; ok après l'essai 2 et suivants → recette à valider ; fix → test 2. Notification dans l'ERP. 409 DEV_TRIAL_NOT_ALLOWED (lancement).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DevTrialInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/development/{id}/recipe": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Receptura zatwierdzona na tablecie / Recette validée sur la tablette",
+                "operationId": "kioskDevelopmentRecipe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DevProduct"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Étape « recette à valider » → lancement ; produit test « en production » ; qui et quand. Le bureau relie ensuite le produit ERP (lancé). 409 DEV_RECIPE_NOT_READY (autre étape), DEV_RECIPE_MISSING (pas de recette ERP).",
                 "parameters": [
                     {
                         "name": "id",
@@ -19643,6 +19859,9 @@
                     },
                     "stage": {
                         "$ref": "#/components/schemas/DevStage"
+                    },
+                    "dev": {
+                        "$ref": "#/components/schemas/DevState"
                     }
                 }
             },
@@ -19676,6 +19895,261 @@
                     }
                 }
             },
+            "DevState": {
+                "type": "object",
+                "properties": {
+                    "stage": {
+                        "type": "string",
+                        "enum": [
+                            "idea",
+                            "test1",
+                            "test2",
+                            "recipe",
+                            "launch",
+                            "launched",
+                            "stopped"
+                        ]
+                    },
+                    "stage_label": {
+                        "type": "string"
+                    },
+                    "step": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "steps": {
+                        "type": "integer"
+                    },
+                    "trials_done": {
+                        "type": "integer"
+                    },
+                    "target_date": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "stage_since": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "next": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "kind": {
+                                "type": "string",
+                                "enum": [
+                                    "trial",
+                                    "recipe",
+                                    "office"
+                                ]
+                            },
+                            "label": {
+                                "type": "string"
+                            },
+                            "trial_no": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "date": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "last_result": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "enum": [
+                                    "ok",
+                                    "fix",
+                                    "ko"
+                                ]
+                            },
+                            "label": {
+                                "type": "string"
+                            },
+                            "at": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "group": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "color": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    }
+                }
+            },
+            "DevSummary": {
+                "type": "object",
+                "properties": {
+                    "products": {
+                        "type": "array",
+                        "items": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/components/schemas/DevState"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "DevTrial": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "no": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "planned",
+                            "done"
+                        ]
+                    },
+                    "planned_date": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "instructions": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "group": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "done_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "employee": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "result": {
+                        "type": "string",
+                        "enum": [
+                            "ok",
+                            "fix",
+                            "ko"
+                        ],
+                        "nullable": true
+                    },
+                    "result_label": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "photos": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "taken_at": {
+                                    "type": "string"
+                                },
+                                "src": {
+                                    "type": "string",
+                                    "description": "data:image/…;base64,…"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "DevTrialInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "result",
+                    "photos"
+                ],
+                "properties": {
+                    "quantity": {
+                        "type": "number",
+                        "minimum": 0,
+                        "nullable": true,
+                        "description": "quantité faite pendant l'essai"
+                    },
+                    "result": {
+                        "type": "string",
+                        "enum": [
+                            "ok",
+                            "fix",
+                            "ko"
+                        ]
+                    },
+                    "notes": {
+                        "type": "string",
+                        "maxLength": 2000,
+                        "nullable": true,
+                        "description": "obligatoire pour fix et ko"
+                    },
+                    "photos": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 6,
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "image"
+                            ],
+                            "properties": {
+                                "image": {
+                                    "type": "string",
+                                    "description": "data:image/jpeg;base64,… (2,5 Mo au plus)"
+                                },
+                                "taken_at": {
+                                    "type": "string",
+                                    "example": "2026-10-26 09:15:00",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "DevProduct": {
                 "allOf": [
                     {
@@ -19684,6 +20158,50 @@
                     {
                         "type": "object",
                         "properties": {
+                            "flow": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "string"
+                                        },
+                                        "label": {
+                                            "type": "string"
+                                        },
+                                        "state": {
+                                            "type": "string",
+                                            "enum": [
+                                                "done",
+                                                "current",
+                                                "todo"
+                                            ]
+                                        }
+                                    }
+                                }
+                            },
+                            "trials": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/DevTrial"
+                                }
+                            },
+                            "max_trial_photos": {
+                                "type": "integer"
+                            },
+                            "recipe_confirmed": {
+                                "type": "object",
+                                "nullable": true,
+                                "properties": {
+                                    "at": {
+                                        "type": "string"
+                                    },
+                                    "by": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                }
+                            },
                             "notes": {
                                 "type": "string",
                                 "nullable": true

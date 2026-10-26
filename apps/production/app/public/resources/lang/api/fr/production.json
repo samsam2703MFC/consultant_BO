@@ -95,7 +95,10 @@
     "DATA_SHEET_DUPLICATE_ROW": "« {key} » figure déjà à la ligne {row}.",
     "DATA_SHEET_UNKNOWN_PARAM": "Le paramètre « {code} » ne fait pas partie de ce tableau.",
     "DATA_SHEET_TOUR_NOT_FOUND": "La tournée n° {id} n’existe pas — effacez le numéro pour ajouter une nouvelle tournée.",
-    "DEVICE_NOT_DRIVER": "Cette tablette n’est pas une tablette chauffeur — changez son mode dans la gestion des tablettes."
+    "DEVICE_NOT_DRIVER": "Cette tablette n’est pas une tablette chauffeur — changez son mode dans la gestion des tablettes.",
+    "DEV_TRIAL_NOT_ALLOWED": "À l’étape « {stage} », on ne fait plus d’essai — le produit est lancé au bureau.",
+    "DEV_RECIPE_NOT_READY": "La recette se valide après un second test réussi (étape actuelle : « {stage} »).",
+    "DEV_RECIPE_MISSING": "Le produit n’a pas encore de recette dans l’ERP — le bureau doit la choisir avant la validation."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -453,7 +456,8 @@
     "pallets_returned": "palettes rendues",
     "recorded_at": "heure d’enregistrement",
     "driver_name": "chauffeur",
-    "taken_at": "heure de la photo"
+    "taken_at": "heure de la photo",
+    "photos": "photos"
   },
   "entities": {
     "test_product": "produit test",

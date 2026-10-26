@@ -1850,3 +1850,43 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .at-report-bars .at-sub { text-align: right; }
 .at-report-bar { height: 8px; border-radius: 4px; background: var(--at-line-2); overflow: hidden; }
 .at-report-bar span { display: block; height: 100%; background: var(--at-primary); border-radius: 4px; }
+
+/* Nowe produkty (CRM) : tablica etapów i karta produktu */
+.at-pipe-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 14px; }
+.at-pipe-filter { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--at-surface); border: 1px solid var(--at-line); color: var(--at-text); font-size: 13px; text-decoration: none; }
+.at-pipe-filter:hover { border-color: var(--at-line-2); color: var(--at-text); }
+.at-pipe-filter.active { background: var(--at-primary); border-color: var(--at-primary); color: #fff; }
+.at-pipe-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.at-pipe-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 8px; align-items: start; }
+.at-pipe-col { background: var(--at-bg-2); border-radius: var(--at-radius-lg); padding: 10px; display: grid; gap: 8px; min-height: 120px; }
+.at-pipe-col-title { display: flex; justify-content: space-between; align-items: center; margin: 2px 2px 4px; font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+.at-pipe-count { min-width: 24px; padding: 1px 8px; border-radius: 999px; background: var(--at-surface); color: var(--at-muted); font-size: 12px; text-align: center; }
+.at-pipe-col-recipe .at-pipe-col-title, .at-pipe-col-launch .at-pipe-col-title { color: var(--at-on-abricot); }
+.at-pipe-col-launched .at-pipe-col-title { color: var(--at-success); }
+.at-pipe-col-stopped { opacity: .75; }
+.at-pipe-card { display: grid; gap: 5px; padding: 10px 12px; border-radius: 10px; background: var(--at-surface); border: 1px solid var(--at-line); color: var(--at-text); text-decoration: none; font-size: 13px; }
+.at-pipe-card:hover { color: var(--at-text); border-color: var(--at-line-2); box-shadow: 0 6px 18px rgba(34, 34, 34, .06); }
+.at-pipe-card strong { font-weight: 600; line-height: 1.25; }
+.at-pipe-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--at-muted); font-size: 12px; }
+.at-pipe-group { display: inline-flex; align-items: center; gap: 5px; }
+.at-pipe-next { color: var(--at-primary); font-size: 12.5px; }
+.at-pipe-date, .at-pipe-off { color: var(--at-muted); font-size: 12px; }
+.at-pipe-date.is-late { color: var(--at-danger); }
+.at-dev-flow { display: flex; flex-wrap: wrap; gap: 6px 4px; list-style: none; padding: 0; margin: 0 0 12px; counter-reset: none; }
+.at-dev-flow li { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; background: var(--at-bg-2); color: var(--at-muted); font-size: 13px; }
+.at-dev-flow-dot { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--at-surface); font-size: 12px; font-weight: 600; }
+.at-dev-flow li.is-done { color: var(--at-success); }
+.at-dev-flow li.is-done .at-dev-flow-dot { background: var(--at-success); color: #fff; }
+.at-dev-flow li.is-current { background: var(--at-primary-soft); color: var(--at-primary); font-weight: 600; }
+.at-dev-flow li.is-current .at-dev-flow-dot { background: var(--at-primary); color: #fff; }
+.at-dev-next { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.at-dev-stage { display: flex; gap: 6px; margin-left: auto; }
+.at-dev-stage .form-select { width: auto; }
+.at-dev-trial { border: 1px solid var(--at-line); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+.at-dev-trial.is-planned { border-style: dashed; background: var(--at-bg-2); }
+.at-dev-trial-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 4px; }
+.at-dev-trial-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 6px; }
+.at-dev-trial-photos a { position: relative; display: block; border-radius: 8px; overflow: hidden; }
+.at-dev-trial-photos img { display: block; width: 100%; height: 100px; object-fit: cover; }
+.at-dev-trial-photos span { position: absolute; left: 6px; bottom: 6px; padding: 1px 6px; border-radius: 6px; background: rgba(0, 0, 0, .55); color: #fff; font-size: 11px; }
+@media (max-width: 767.98px) { .at-dev-stage { margin-left: 0; } }

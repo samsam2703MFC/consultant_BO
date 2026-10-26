@@ -121,6 +121,9 @@ final class ExecutionController
     // Nowe produkty (tablet grupy)
     public function development(ApiRequest $request): ApiResult { return new ApiResult($this->dev->list($request->context)); }
     public function developmentProduct(ApiRequest $request): ApiResult { return new ApiResult($this->dev->show($request->id(), $request->context)); }
+    public function developmentSummary(ApiRequest $request): ApiResult { return new ApiResult($this->dev->summary($request->context)); }
+    public function developmentTrial(ApiRequest $request): ApiResult { return new ApiResult($this->dev->recordTrial($request->id(), $request->body(), $request->context), 201); }
+    public function developmentRecipe(ApiRequest $request): ApiResult { return new ApiResult($this->dev->confirmRecipe($request->id(), $request->context)); }
     // Kontrola jakości (tablet grupy)
     public function quality(ApiRequest $request): ApiResult { return new ApiResult($this->quality->day($request->context)); }
     public function qualityCheck(ApiRequest $request): ApiResult { return new ApiResult($this->quality->check($request->id(), $request->body(), $request->context)); }

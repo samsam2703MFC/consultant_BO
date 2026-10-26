@@ -4,6 +4,7 @@ namespace App\Services\Search;
 
 use App\Repositories\Mail\UserMailRepository;
 use App\Repositories\Search\GlobalSearchRepository;
+use App\Services\Workshop\Execution\DevProductService;
 
 /**
  * Wyszukiwarka z górnego paska (GET /ajax/search?q=): zamówienia, klienci, produkty, receptury
@@ -75,6 +76,13 @@ class GlobalSearchService
                 ])),
                 'url'   => (self::RECIPE_KIND[(int) $r['id_type']] ?? self::RECIPE_KIND[3])[1] . '/' . (int) $r['id'] . '/calculation',
             ], $this->repository->recipes($pattern, $exact, $n))],
+
+            // Nowe produkty (CRM) : etap i grupa, której tablet je testuje → karta produktu.
+            ['type' => 'dev_products', 'label' => 'Nowe produkty', 'icon' => 'bi-kanban', 'items' => array_map(fn($r) => [
+                'title' => trim((string) $r['name']),
+                'sub'   => implode(' · ', array_filter([(DevProductService::STAGES[$r['stage']] ?? ['—'])[0], $r['group_name'] ? 'grupa ' . $r['group_name'] : null])),
+                'url'   => '/test-products/' . (int) $r['id'] . '/tablet',
+            ], $this->repository->devProducts($pattern, $n))],
 
             ['type' => 'materials', 'label' => 'Surowce', 'icon' => 'bi-basket', 'items' => array_map(fn($r) => [
                 'title' => $r['name'],

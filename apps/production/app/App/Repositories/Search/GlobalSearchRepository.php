@@ -147,6 +147,23 @@ class GlobalSearchRepository extends BaseRepository
         return $this->query($sql, $this->like($pattern, 4)) ?: [];
     }
 
+    /** Nowe produkty (produkty testowe rodzaju « Produkt ») : nazwa, etap rozwoju, grupa testująca. */
+    public function devProducts(string $pattern, int $limit): array
+    {
+        $sql = "SELECT tp.id, tp.name, COALESCE(d.stage, CASE tp.id_status WHEN 2 THEN 'launch' WHEN 3 THEN 'launched' ELSE 'idea' END) AS stage, g.name_pl AS group_name
+                FROM test_product tp
+                LEFT JOIN n_dev_product d ON d.id_test_product = tp.id
+                LEFT JOIN n_prod_group g ON g.id = d.id_group
+                WHERE tp.id_type = 1 AND tp.name LIKE :t1
+                ORDER BY (tp.name LIKE :t2) DESC, tp.id DESC
+                LIMIT " . (int) $limit;
+        try {
+            return $this->query($sql, $this->like($pattern, 2)) ?: [];
+        } catch (\PDOException) {
+            return [];
+        }
+    }
+
     /** Karty stanowisk (fiches de poste) : nazwa PL / FR, kod, cel i obowiązki. */
     public function positions(string $pattern, int $limit): array
     {

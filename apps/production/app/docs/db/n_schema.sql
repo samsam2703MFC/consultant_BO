@@ -1,7 +1,7 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 084, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 084 ; compatible MySQL 8.
+-- 001 → 085, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 085 ; compatible MySQL 8.
 -- Modifications des tables d'origine : voir docs/db/README.md (colonne customer.communication_lang, nettoyage 074 → 080).
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `n_activity_click` (
@@ -162,11 +162,24 @@ CREATE TABLE `n_delivery_stop` (
 CREATE TABLE `n_dev_product` (
   `id_test_product` int(11) NOT NULL,
   `on_tablet` tinyint(1) NOT NULL DEFAULT 0,
+  `id_group` int(11) DEFAULT NULL,
+  `stage` enum('idea','test1','test2','recipe','launch','launched','stopped') NOT NULL DEFAULT 'idea',
+  `stage_changed_at` datetime DEFAULT NULL,
+  `target_date` date DEFAULT NULL,
+  `recipe_confirmed_at` datetime DEFAULT NULL,
+  `recipe_confirmed_by` int(11) DEFAULT NULL,
+  `id_final_product` int(11) DEFAULT NULL,
   `video_url` varchar(500) DEFAULT NULL COMMENT 'YouTube, Vimeo, plik mp4 albo dowolny link https',
   `notes` text DEFAULT NULL COMMENT 'wskazówki dla zespołu (wykonanie, uwagi do testu)',
   `updated_by` int(11) DEFAULT NULL,
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id_test_product`),
+  KEY `idx_n_dev_product_group` (`id_group`,`on_tablet`),
+  KEY `fk_n_dev_product_final` (`id_final_product`),
+  KEY `fk_n_dev_product_confirmed` (`recipe_confirmed_by`),
+  CONSTRAINT `fk_n_dev_product_confirmed` FOREIGN KEY (`recipe_confirmed_by`) REFERENCES `n_prod_employee` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_n_dev_product_final` FOREIGN KEY (`id_final_product`) REFERENCES `final_product` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_n_dev_product_group` FOREIGN KEY (`id_group`) REFERENCES `n_prod_group` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_tfb_dev_product_tp` FOREIGN KEY (`id_test_product`) REFERENCES `test_product` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_dev_product_photo` (
@@ -181,6 +194,41 @@ CREATE TABLE `n_dev_product_photo` (
   PRIMARY KEY (`id`),
   KEY `ix_tfb_dev_photo_tp` (`id_test_product`,`id`),
   CONSTRAINT `fk_tfb_dev_photo_tp` FOREIGN KEY (`id_test_product`) REFERENCES `test_product` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_dev_trial` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_test_product` int(11) NOT NULL,
+  `trial_no` int(11) NOT NULL,
+  `status` enum('planned','done') NOT NULL DEFAULT 'planned',
+  `planned_date` date DEFAULT NULL,
+  `instructions` text DEFAULT NULL,
+  `id_group` int(11) DEFAULT NULL,
+  `done_at` datetime DEFAULT NULL,
+  `id_employee` int(11) DEFAULT NULL,
+  `quantity` decimal(10,2) DEFAULT NULL,
+  `result` enum('ok','fix','ko') DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_n_dev_trial_no` (`id_test_product`,`trial_no`),
+  KEY `idx_n_dev_trial_group` (`id_group`,`status`),
+  KEY `fk_n_dev_trial_employee` (`id_employee`),
+  CONSTRAINT `fk_n_dev_trial_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_n_dev_trial_group` FOREIGN KEY (`id_group`) REFERENCES `n_prod_group` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_n_dev_trial_tp` FOREIGN KEY (`id_test_product`) REFERENCES `test_product` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_dev_trial_photo` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_trial` int(11) NOT NULL,
+  `mime` varchar(32) NOT NULL,
+  `bytes` int(11) NOT NULL,
+  `image` mediumblob NOT NULL,
+  `taken_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_n_dev_trial_photo` (`id_trial`),
+  CONSTRAINT `fk_n_dev_trial_photo` FOREIGN KEY (`id_trial`) REFERENCES `n_dev_trial` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_doc_distribution` (
   `id_customer` int(11) NOT NULL,
