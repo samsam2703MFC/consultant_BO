@@ -23,11 +23,13 @@ final class WdtSalesRepository extends WorkshopRepository
     /**
      * Linie sprzedaży (do osadzenia jako tabela pochodna) : id_document_wdt, id_customer, sale_date, ym,
      * id_product, cartons, value_eur, value_doc (w walucie dokumentu), currency.
+     * Nazwa linii jako VARCHAR (CAST) : kolumna TEXT w MAX() przy grupowaniu wymusza tabelę tymczasową na dysku
+     * (pomiar 26.10.2026 : 192 ms → 35 ms dla 18 miesięcy) ; najdłuższa nazwa ma 63 znaki.
      */
     public static function linesSql(): string
     {
         return "SELECT w.id AS id_document_wdt, w.id_customer, w.established_date AS sale_date, LEFT(w.established_date, 7) AS ym,
-                       p.id_product, p.name AS line_name, p.quantity AS cartons, p.quantity * p.price_carton AS value_doc,
+                       p.id_product, CAST(p.name AS CHAR(255)) AS line_name, p.quantity AS cartons, p.quantity * p.price_carton AS value_doc,
                        CASE WHEN UPPER(w.currency) = 'PLN'
                             THEN p.quantity * p.price_carton / COALESCE(NULLIF((SELECT s.exchange_rate_euro FROM erp_company_other_settings s ORDER BY s.id LIMIT 1), 0), 1)
                             ELSE p.quantity * p.price_carton END AS value_eur,

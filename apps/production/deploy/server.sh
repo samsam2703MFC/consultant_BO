@@ -508,3 +508,31 @@ else
   fail "${ERP_ALIAS}/ répond HTTP ${code} sans page de connexion."
 fi
 rm -f "$body"
+
+# --- 8. Diagnostic de performance (lecture seule, n'arrête jamais la livraison) ----
+# CPU, mémoire, OPcache du PHP d'Apache, mémoire MySQL et temps de génération de quelques pages lourdes mesurés sur
+# le serveur lui-même (sans le réseau), pour suivre l'effet des index et des réécritures de requêtes.
+perf_diag() {
+  log "Diagnostic performance : $(nproc 2>/dev/null || echo '?') CPU, charge $(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || echo '?'), mémoire $(free -m 2>/dev/null | awk '/^Mem:/ {print $3 " / " $2 " Mo utilisés, " $7 " Mo disponibles"}')."
+  local ini="/etc/php/${APV:-x}/apache2"
+  [[ -d "$ini" ]] || ini="/etc/php/${APV:-x}/fpm"
+  local oc ocmod="absent"
+  oc="$(grep -hsE '^\s*opcache\.(enable|memory_consumption|validate_timestamps|revalidate_freq|max_accelerated_files)\s*=' "$ini/php.ini" "$ini"/conf.d/*.ini 2>/dev/null | tr -s ' ' | paste -sd ';' - || true)"
+  ls "$ini"/conf.d/ 2>/dev/null | grep -q opcache && ocmod="chargé"
+  log "PHP ${APV:-?} (Apache) : module OPcache ${ocmod} ; réglages : ${oc:-valeurs par défaut}."
+  local my
+  my="$("${ADMIN[@]}" -N -e "SELECT CONCAT('MySQL ', @@version, ' : buffer pool ', ROUND(@@innodb_buffer_pool_size/1048576), ' Mo, tmp_table ', ROUND(@@tmp_table_size/1048576), ' Mo, flush_log_at_trx_commit ', @@innodb_flush_log_at_trx_commit, ', base ${DB_NAME} ', (SELECT ROUND(SUM(data_length + index_length)/1048576) FROM information_schema.tables WHERE table_schema = '${DB_NAME}'), ' Mo')" 2>/dev/null || true)"
+  [[ -n "$my" ]] && log "$my"
+  if [[ -n "$ERP_ENTREE_LIBRE" ]]; then
+    local jar p t out=""
+    jar="$(mktemp)"
+    curl -s -c "$jar" -b "$jar" -o /dev/null -X POST "http://127.0.0.1${ERP_ALIAS}/" || true
+    for p in /today /dashboard /dashboard/monthly /finances/sales-analytics /workshop/stock-movements /purchasing /finances/clients /client-orders; do
+      t="$(curl -s -b "$jar" -o /dev/null -w '%{time_starttransfer}' "http://127.0.0.1${ERP_ALIAS}${p}" || echo '?')"
+      out+=" ${p} ${t} s ;"
+    done
+    rm -f "$jar"
+    log "Temps serveur des pages (sans réseau) :${out%;}"
+  fi
+}
+perf_diag || true

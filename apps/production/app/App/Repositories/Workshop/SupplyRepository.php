@@ -64,13 +64,19 @@ final class SupplyRepository extends WorkshopRepository
     public function consumedSinceCount(): array
     {
         $out = [];
+        // Bez inwentaryzacji nic do liczenia ; kartony zliczone najpierw na produkt i dzień (indeks id_product, date_add),
+        // dopiero potem receptura — zamiast łączyć każdy karton z każdym składnikiem.
+        $since = $this->all('SELECT MIN(count_date) AS d FROM n_mp_count')[0]['d'] ?? null;
+        if ($since === null) return $out;
         foreach ($this->all(
-            'SELECT fri.material_id, SUM(fri.quantity) AS qty
+            'SELECT fri.material_id, SUM(c.n * fri.quantity) AS qty
              FROM (SELECT id_raw_material, MAX(count_date) AS d FROM n_mp_count GROUP BY id_raw_material) lc
              JOIN flattened_recipe_ingredient fri ON fri.material_id = lc.id_raw_material
              JOIN final_product fp ON fp.id_recipe = fri.recipe_id
-             JOIN carton_stock cs ON cs.id_product = fp.id AND cs.date_add > lc.d
-             GROUP BY fri.material_id'
+             JOIN (SELECT id_product, date_add, COUNT(*) AS n FROM carton_stock WHERE date_add > ? GROUP BY id_product, date_add) c
+                  ON c.id_product = fp.id AND c.date_add > lc.d
+             GROUP BY fri.material_id',
+            [$since]
         ) as $r) $out[(int) $r['material_id']] = (float) $r['qty'];
         return $out;
     }
@@ -80,11 +86,10 @@ final class SupplyRepository extends WorkshopRepository
     {
         $out = [];
         foreach ($this->all(
-            'SELECT fri.material_id, SUM(fri.quantity) AS qty
-             FROM carton_stock cs
-             JOIN final_product fp ON fp.id = cs.id_product
+            'SELECT fri.material_id, SUM(c.n * fri.quantity) AS qty
+             FROM (SELECT id_product, COUNT(*) AS n FROM carton_stock WHERE date_add BETWEEN ? AND ? GROUP BY id_product) c
+             JOIN final_product fp ON fp.id = c.id_product
              JOIN flattened_recipe_ingredient fri ON fri.recipe_id = fp.id_recipe
-             WHERE cs.date_add BETWEEN ? AND ?
              GROUP BY fri.material_id',
             [$from, $to]
         ) as $r) $out[(int) $r['material_id']] = (float) $r['qty'];

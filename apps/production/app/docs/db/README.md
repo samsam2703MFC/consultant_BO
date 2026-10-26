@@ -7,7 +7,7 @@ Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y 
 
 ## Installer / intégrer
 
-Sur une base ERP d'origine (copie de production) : `php Bin/tfb_migrate.php apply` depuis `apps/production/app`. Les migrations `migrations/tfb/001 → 099` créent les tables (`tfb_` puis renommées `n_` par la 069), posent les données de départ (paramètres, rôles, modèles d'e-mails, questions du pointage…) et sont enregistrées dans `n_schema_migration` (une migration déjà appliquée ne peut plus être modifiée). `docs/db/n_schema.sql` donne le schéma final des tables `n_` en un seul fichier, pour lecture.
+Sur une base ERP d'origine (copie de production) : `php Bin/tfb_migrate.php apply` depuis `apps/production/app`. Les migrations `migrations/tfb/001 → 100` créent les tables (`tfb_` puis renommées `n_` par la 069), posent les données de départ (paramètres, rôles, modèles d'e-mails, questions du pointage…) et sont enregistrées dans `n_schema_migration` (une migration déjà appliquée ne peut plus être modifiée). `docs/db/n_schema.sql` donne le schéma final des tables `n_` en un seul fichier, pour lecture.
 
 ## Ce que le développement change dans les tables d'origine
 
@@ -42,6 +42,10 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 ### Tablette chauffeur (migration 082, 26/10/2026)
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
+
+### Performance : index des colonnes filtrées (migration 100, 26/10/2026)
+
+Audit de performance sur la copie de production (journal de toutes les requêtes pendant un passage sur les 191 pages) : la base est saine (250 tables InnoDB, une collation, toutes avec clé primaire, 131 Mo) ; la lenteur venait d'index manquants et de quelques requêtes. Index ajoutés (ajout seul, conditionnel) : `carton_stock` (`status, id_product`), (`date_add, id_product, status`), (`id_product, date_add, status, date_pallet` — couvre le registre des mouvements), (`status, date_pallet`) ; `palets_delivery` (`delivery_date, id_customer`), (`status, delivery_date`) ; `customer_order` (`status, expected_shipping_date`), (`expected_shipping_date`) ; `document_wz` (`established_date`), (`id_customer, established_date`) ; `document_proforma` (`established_date`) ; `document_order_shipping_difference` (`established_date`) ; `shipment_log` (`shipment_date`), (`id_diff`), (`id_wz`), (`id_cmr`) ; `final_product` (`id_recipe`), (`id_section`) ; `product_recipe_preparation_connection` (`id_recipe`) ; `raw_material_price_changelog` (`id_raw_material, timestamp`). Requêtes réécrites dans le code (même résultat) : cartons et commandes agrégés par produit avant la jointure recette (consommation matières, besoin des commandes), nom de ligne WDT en VARCHAR dans la définition commune des ventes (une colonne TEXT dans `MAX()` forçait une table temporaire sur disque), liste des écarts limitée avant le calcul des sommes. Mesures locales (191 pages) : temps SQL total 10,5 s → 3,1 s, temps serveur cumulé 9,8 s → 4,6 s ; Gantt (vue jour) 2,9 s → 17 ms ; Achats 220 → 40 ms ; rappels de paiement 98 → 49 ms. Le déploiement affiche un relevé de performance du serveur (CPU, mémoire, OPcache, MySQL, temps de génération de pages lourdes).
 
 ### Prix des matières : source de chaque changement ; lot → clients (migration 099, 26/10/2026)
 
