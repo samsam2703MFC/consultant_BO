@@ -15,6 +15,8 @@
  */
 (function () {
   'use strict';
+  // L'adresse de ce script : les cartes du dashboard magasin (cartes-magasin.js) se chargent à côté quand la page ne les a pas.
+  const ICI = (document.currentScript && document.currentScript.src) || '';
 
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const FEU = { vert: '🟢', orange: '🟡', rouge: '🔴' };
@@ -75,6 +77,14 @@
 .vi .kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .vi.desk .kpi{grid-template-columns:repeat(4,1fr)}
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
+.vi .kc .k{margin-top:4px}
+.vi .cm .db-card{margin-bottom:0}
+.vi .kc .lg{padding:6px 0;border-bottom:.5px solid var(--color-border-tertiary)}.vi .kc .lg:last-child{border:none}
+.vi .kb{height:5px;border-radius:4px;background:var(--color-background-secondary);overflow:hidden;margin-top:3px}
+.vi .kb i{display:block;height:100%;background:var(--color-primary)}.vi .kb.r i{background:#b9ad9e}
+.vi .ec{font:600 11px var(--font-ui);padding:1px 6px;border-radius:6px;background:var(--color-background-secondary);color:var(--color-text-muted);white-space:nowrap}
+.vi .ec.up{background:#E3F1E6;color:#2d7a3e}.vi .ec.dn{background:#F7E4E6;color:#C0182B}
+.vi .ksc{overflow-x:auto}.vi .ksc .tbl td,.vi .ksc .tbl th{padding:6px;white-space:nowrap}
 .vi .al{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:.5px solid var(--color-border-tertiary);font-size:12.5px}
 .vi .al:last-child{border:none}
 .vi .ph{height:90px;border-radius:10px;background:#d8cfc3 center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:#6b5f52;font-size:12px;position:relative;cursor:pointer;overflow:hidden}
@@ -370,7 +380,19 @@
   const cqCl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '');
   const hm = v => v ? String(v).slice(11, 16) : '';
   const pcLeg = avecObj => '<div class="pc-leg"><span><i class="r"></i>cette année</span><span><i class="n"></i>N-1, mêmes jours</span>' + (avecObj ? '<span><i class="o"></i>objectif</span>' : '') + '</div>';
+  // Les leviers que le consultant vérifie sur place (26/10/2026, demande de Sam) : un module de checklist comme les
+  // autres (état, note, photo, remarque), ajouté à toute visite qui n'est pas un suivi ou une revisite ; au-dessus de
+  // ses points, la carte des six leviers du dashboard magasin et les derniers avis Google.
+  const MOD_LEVIERS = { id: 'leviers', nom: 'Les leviers', leviers: true, points: [
+    { ref: 'lev_trafic', libelle: 'Trafic — les KPI de trafic vérifiés avec le franchisé (clients par jour face au N-1 et au réseau)', photo: false, pct: false },
+    { ref: 'lev_xp', libelle: 'Expérience client — elle est présente : on la vit en entrant', photo: true, pct: false },
+    { ref: 'lev_cuisson', libelle: 'Expérience client — la cuisson : produits chauds, bien cuits, au bon moment', photo: true, pct: false },
+    { ref: 'lev_accueil', libelle: 'Expérience client — l’accueil : bonjour, sourire, conseil', photo: false, pct: false },
+    { ref: 'lev_google', libelle: 'Note Google — la note et les derniers avis vérifiés avec le franchisé', photo: false, pct: false }] };
+  // Le module Produit commence par les produits obligatoires (26/10/2026), avec ce que le cockpit en sait (vus en caisse).
+  const PT_OBLIGATOIRES = { ref: 'produits_obligatoires', libelle: 'Les produits obligatoires sont là', photo: true, pct: false };
   const TAB_IC = {
+    leviers: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
     photo: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
     controles: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
     chiffres: '<path d="M5 20V11M11 20V5M17 20v-8M2 20h20"/>',
@@ -430,7 +452,7 @@
       this.role = o.role || 'consultant';
       this.shop = o.shop ? String(o.shop) : null;
       this.moi = o.id || (this.role === 'consultant' ? (localStorage.getItem('vi.moi') || '') : '');
-      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.T = {}; this.cqF = {}; this.cqV = null; this.S = null; this.R = null;
+      this.D = null; this.B = {}; this.C = {}; this.K = {}; this.KS = {}; this.AN = {}; this.LV = {}; this.anm = null; this.levVue = 'mois'; this.T = {}; this.cqF = {}; this.cqV = null; this.S = null; this.R = null;
       this.v = o.vue || (o.tablette ? 'shops' : this.role === 'franchise' ? 'plans' : this.role === 'admin' ? 'admin' : 'agenda');
       this.tabVue = (() => { try { return localStorage.getItem('vi.tabVue') || 'liste'; } catch (e) { return 'liste'; } })(); this.mois = 0;
       this.p = null; this.sem = 0; this.form = {}; this.file = []; this.enLigne = navigator.onLine; this.sync = null; this.busy = false;
@@ -560,10 +582,19 @@
      */
     /** La checklist d'une visite : les points demandés par le bureau en tête, puis celle de son type. */
     checklistDe(v) {
-      const cl = this.checklistType(v);
+      const t = this.typeDe(v.type);
+      const cl = (t && t.dynamique ? [] : [MOD_LEVIERS]).concat(this.avecObligatoires(this.checklistType(v)));
       const pts = (v.prep && v.prep.points) || [];
       if (!pts.length) { return cl; }
       return [{ id: 'bureau', nom: 'Demandé par le bureau', bureau: true, points: pts.map(p => ({ ref: p.ref, libelle: p.libelle, photo: true, pct: false })) }].concat(cl);
+    }
+    /** Le module Produit marqué `obligatoires`, le point « Les produits obligatoires sont là » en tête s'il n'y est pas déjà. */
+    avecObligatoires(cl) {
+      return cl.map(m => {
+        if (m.id !== 'produit' && !/^produits?$/i.test(String(m.nom || '').trim())) { return m; }
+        const deja = m.points.some(pt => pt.ref === PT_OBLIGATOIRES.ref || /obligatoire/i.test(pt.libelle || ''));
+        return Object.assign({}, m, { obligatoires: true, points: deja ? m.points : [PT_OBLIGATOIRES].concat(m.points) });
+      });
     }
     checklistType(v) {
       const t = this.typeDe(v.type); const s = this.D.seuils || {};
@@ -625,10 +656,10 @@
     }
     /** La conformité suit l'écran : le tableau de bord et la checklist la lisent. */
     suivreConformite(v, p) {
-      if (v === 'tb' || v === 'historique') { this.chargerConformite(p); return; }
+      if (v === 'tb' || v === 'historique') { this.chargerConformite(p); if (v === 'tb') { this.chargerSante(p); } return; }
       if (v === 'checklist' || v === 'review' || v === 'fiche' || v === 'controle') {
         const vi = this.visite(p);
-        if (vi) { this.chargerConformite(vi.shop); if (v === 'review') { this.chargerCampagnes(vi.shop); } if (v === 'controle') { this.chargerControles(vi.shop); } }
+        if (vi) { this.chargerConformite(vi.shop); if (v === 'review') { this.chargerCampagnes(vi.shop); } if (v === 'controle') { this.chargerControles(vi.shop); } if (v === 'controle' || v === 'fiche') { this.chargerSante(vi.shop); } }
       }
     }
     deHash(init) {
@@ -652,6 +683,34 @@
       if (!shop || this.C[shop]) { return; }
       try { this.C[shop] = await this.lire('/visites/conformite?shop=' + encodeURIComponent(shop), 'conformite:' + shop); } catch (e) { return; }
       this.rendre();
+    }
+    /**
+     * KPI et santé du magasin, les leviers (26/10/2026) : trois lectures, chacune rendue dès qu'elle arrive — le CA par
+     * ETP et la structure des ventes (/visites/kpi, gardés une heure), l'année mois par mois face à l'an passé et les
+     * six leviers du mois aux routes du dashboard magasin (/ventes/semaines, /leviers/magasins, même cache que lui).
+     * Lues une fois par boutique et par session, dès l'ouverture de la fiche ou du contrôle : avant d'arriver à
+     * l'étape, et pour les garder hors ligne.
+     */
+    chargerSante(shop) {
+      if (!shop || this.KS[shop]) { return; }
+      this.chargerCartes();
+      const an = Number(auj().slice(0, 4)), ym = auj().slice(0, 7);
+      const lire = (path, cle, poser) => this.lire(path, cle).then(d => poser(d), () => poser({ erreur: true })).then(() => this.rendre());
+      this.KS[shop] = { chargement: true }; this.AN[shop] = { chargement: true };
+      lire('/visites/kpi/' + encodeURIComponent(shop), 'kpi:' + shop, d => { this.KS[shop] = d; });
+      lire('/ventes/semaines?shop=' + encodeURIComponent(shop) + '&vue=annee&date=' + an + '-12-31&articles=1&_cache=900', 'an12:' + shop + ':' + an, d => { this.AN[shop] = d; });
+      if (!this.LV[ym] || this.LV[ym].erreur) {
+        this.LV[ym] = { chargement: true };
+        lire('/leviers/magasins?annee=' + an + '&mois=' + Number(ym.slice(5, 7)) + '&_cache=900', 'lev:' + ym, d => { this.LV[ym] = d; });
+      }
+    }
+    /** Les cartes du dashboard magasin (cartes-magasin.js et son style) : déjà dans la page sur la tablette et le dashboard, ajoutées ailleurs. */
+    chargerCartes() {
+      if (window.CartesMagasin || this._cartes) { return; }
+      this._cartes = true;
+      const base = ICI || new URL((this.o.racine || '') + 'assets/js/visites.js', location.href).href;
+      if (!document.querySelector('link[href*="cartes-magasin.css"]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = new URL('../css/cartes-magasin.css', base).href; document.head.appendChild(l); }
+      const sc = document.createElement('script'); sc.src = new URL('cartes-magasin.js', base).href; sc.onload = () => this.rendre(); document.head.appendChild(sc);
     }
     /**
      * Les campagnes marketing d'une boutique, avec les clients face au N-1 et
@@ -922,6 +981,89 @@
         <div><div class="row xs mu">Équipe ${this.src('local')}</div><div class="k" style="margin-top:4px">${eq && eq.effectif != null ? eq.effectif + (eq.prevu != null ? ' / ' + eq.prevu : '') : '—'}</div><div class="sm mu">${eq ? (eq.departs ? eq.departs + ' départ(s) · ' : '') + 'relevé ' + fmtD(eq.releve_le) : 'à relever'}</div></div>
       </div>`;
     }
+    /**
+     * KPI et santé du magasin (26/10/2026) : le CA par ETP des trois derniers mois clos face au réseau et au seuil,
+     * l'année mois par mois face à l'an passé (la carte du dashboard magasin, vue Année) et la structure des ventes
+     * par catégorie face au reste du réseau.
+     */
+    santeHtml(shop) {
+      this.chargerSante(shop);
+      const K = this.KS[shop];
+      const cap = t => `<div class="cap">${t} ${this.src('api')}</div>`;
+      const lu = K && !K.chargement && !K.erreur && !K.error && !K.indispo;
+      const attente = !K || K.chargement ? '<div class="card sm mu">Lecture du CA par ETP et des ventes par catégorie au panel…</div>'
+        : K.indispo ? `<div class="card sm mu">${esc(K.motif || 'indisponible')}</div>`
+        : `<div class="card sm mu">Le CA par ETP et les ventes par catégorie n’ont pas pu être lus. <button class="chip" data-a="sante-relire" data-v="${esc(shop)}">Relire</button></div>`;
+      return cap('CA par ETP') + (lu ? this.caEtpHtml(K.caEtp) : attente)
+        + cap('L’année face à l’an passé') + this.anneeCarteHtml(shop)
+        + (lu ? cap('Structure des ventes face au réseau') + this.structureHtml(K.structure, shop)
+          + `<div class="xs mu" style="margin:2px 2px 0">Lu le ${fmtD(K.lu)} à ${esc(String(K.lu || '').slice(11, 16))}${(K.manques || []).length ? ' · relu dans quelques minutes : ' + esc(K.manques.join(', ')) + ' incomplet' : ''}.</div>` : '');
+    }
+    /** La carte « l'année, mois par mois, face à l'an passé » du dashboard magasin (cartes-magasin.js), telle quelle. */
+    anneeCarteHtml(shop) {
+      if (!window.CartesMagasin) { return '<div class="card sm mu">Préparation du graphique de l’année…</div>'; }
+      const A = this.AN[shop]; const pret = A && !A.chargement && !A.erreur;
+      return '<div class="cm">' + window.CartesMagasin.annee(pret ? A : null, { annee: Number(auj().slice(0, 4)), mesure: this.anm, err: A && A.erreur ? 'les douze mois n’ont pas pu être lus au panel' : null }) + '</div>';
+    }
+    /**
+     * Au-dessus des points du module « Les leviers » : la carte des six leviers du dashboard magasin (le mois à date,
+     * ou le cumul de l'année) et les derniers avis Google, pour vérifier la note avec le franchisé.
+     */
+    leviersHtml(shop) {
+      this.chargerSante(shop);
+      const L = this.LV[auj().slice(0, 7)]; const pret = L && !L.chargement && !L.erreur;
+      const carte = !window.CartesMagasin ? '<div class="card sm mu">Préparation des six leviers…</div>'
+        : '<div class="cm">' + window.CartesMagasin.leviers(pret ? L : null, { shop: String(shop), vue: this.levVue, err: L && L.erreur ? 'pas de lecture au panel' : null }) + '</div>';
+      const g = (this.boutique(shop) || {}).google;
+      const avis = g && g.note != null ? `<div class="card sm"><div class="row"><b>Google ${note1(g.note)} ★</b><span class="xs mu">${g.avis != null ? g.avis + ' avis' : ''}${g.faibles ? ' · ' + g.faibles + ' avis ≤ 2/5 sur 30 j' : ''}</span></div>${(g.derniers || []).slice(0, 3).map(d => `<div class="xs" style="margin-top:5px"><b class="${d.note != null && d.note <= 2 ? 'dn' : ''}">${d.note != null ? d.note + ' ★' : ''}</b> <span class="mu">${fmtD(d.le)}</span>${d.extrait ? ' · « ' + esc(d.extrait) + ' »' : ''}</div>`).join('')}</div>` : '';
+      return carte + avis + '<div class="xs mu" style="margin:6px 2px 8px">Sur place, levier par levier : chaque point se note, se photographie et part dans le rapport s’il n’est pas conforme.</div>';
+    }
+    /** Au-dessus des points du module Produit : les produits obligatoires d'après le cockpit (vus en caisse, ceux à chercher en rayon). */
+    obligatoiresHtml(shop) {
+      const C = this.C[shop]; const as = C && C.assortiment;
+      if (!C) { return '<div class="card sm mu">Lecture des produits obligatoires…</div>'; }
+      if (!as || as.motif) { return `<div class="card sm mu">Produits obligatoires : ${esc((as && as.motif) || 'aucune liste dans le cockpit')}.</div>`; }
+      const manq = as.liste || [];
+      return `<div class="card sm"><div class="row"><b>Produits obligatoires</b><span class="sp"></span><b>${as.presentes} / ${as.lisibles}</b></div>
+        <div class="xs mu">vus en caisse sur les ${as.jours} derniers jours, jusqu’au ${fmtD(as.au)}</div>
+        ${manq.length ? `<div class="sm" style="margin-top:6px"><b class="dn">À chercher en rayon</b> · ${manq.map(x => esc(x.nom)).join(' · ')}${as.manquantes > manq.length ? ' …' : ''}</div>` : '<div class="xs up" style="margin-top:4px">Toutes les obligatoires sont passées en caisse.</div>'}</div>`;
+    }
+    /** L'écart en pastille : vert dès +3 %, rouge dès −3 % (les pastilles de Résultat › Année) ; `pts` pour des points de part. */
+    ecartPill(e, pts) {
+      if (e == null) { return '<span class="ec">—</span>'; }
+      const seuil = pts ? 2 : 3;
+      const t = (e > 0 ? '+' : e < 0 ? '−' : '') + String(Math.abs(e)).replace('.', ',') + (pts ? ' pt' + (Math.abs(e) >= 2 ? 's' : '') : ' %');
+      return `<span class="ec ${e >= seuil ? 'up' : e <= -seuil ? 'dn' : ''}">${t}</span>`;
+    }
+    caEtpHtml(E) {
+      if (!E || !(E.mois || []).length) { return '<div class="card sm mu">CA par ETP indisponible : le panel n’a rendu ni le CA ni le planning.</div>'; }
+      const d = E.mois[E.mois.length - 1];
+      const sous = d.caEtp != null && E.seuil ? Math.round((d.caEtp / E.seuil - 1) * 100) : null;
+      const etp = n => n == null ? '—' : String(n).replace('.', ',');
+      return `<div class="card kc">
+        <div class="row"><b class="sm">${esc(d.lab)}</b><span class="xs mu">mois clos</span><span class="sp"></span>${d.rang ? `<span class="xs mu">${d.rang}${d.rang === 1 ? 'er' : 'e'} sur ${d.sur}</span>` : ''}</div>
+        <div class="row" style="align-items:baseline;gap:10px"><span class="k ${sous != null && sous < 0 ? 'dn' : ''}">${d.caEtp != null ? eur(d.caEtp) : '—'}</span><span class="sm mu">par ETP</span>${sous != null ? this.ecartPill(sous) + '<span class="xs mu">vs seuil ' + eur(E.seuil) + '</span>' : ''}</div>
+        <div class="sm mu" style="margin-top:2px">${d.caEtp == null ? (d.ca == null ? 'CA du mois non lu' : 'pas de planning ce mois : ETP inconnus, jamais devinés') + ' · ' : ''}Réseau ${eur(d.reseau)}${d.etp != null ? ' · ' + etp(d.etp) + ' ETP planifiés' : ''}</div>
+        <div class="ksc" style="margin-top:6px"><table class="tbl"><tr><th>Mois</th><th>CA</th><th>ETP</th><th>CA / ETP</th><th>Réseau</th></tr>${E.mois.map(m => `<tr><td>${esc(m.lab)}</td><td>${eur(m.ca)}</td><td>${etp(m.etp)}</td><td><b class="${m.caEtp != null && m.caEtp < E.seuil ? 'dn' : ''}">${eur(m.caEtp)}</b></td><td class="mu">${eur(m.reseau)}</td></tr>`).join('')}</table></div>
+        <div class="xs mu" style="margin-top:4px">${esc(E.source || '')}</div></div>`;
+    }
+    structureHtml(S, shop) {
+      if (!S || !(S.categories || []).length) { return '<div class="card sm mu">La structure des ventes est indisponible : le panel n’a pas rendu les ventes par catégorie de ces mois.</div>'; }
+      const cats = S.categories;
+      const max = Math.max(1, ...cats.map(c => Math.max(c.part || 0, c.partReste || 0)));
+      const p1 = x => x == null ? '—' : String(x).replace('.', ',') + ' %';
+      const nomEc = c => esc(c.categorie) + ' (' + (c.ecart > 0 ? '+' : '−') + String(Math.abs(c.ecart)).replace('.', ',') + ' pts)';
+      const retrait = cats.filter(c => c.ecart != null && c.ecart <= -2).sort((a, b) => a.ecart - b.ecart);
+      const avance = cats.filter(c => c.ecart != null && c.ecart >= 2).sort((a, b) => b.ecart - a.ecart);
+      const cle = 'ks-cats:' + shop; const tout = !!this.ouvert[cle];
+      const vus = tout ? cats : cats.slice(0, 8);
+      return `<div class="card kc">
+        ${retrait.length || avance.length ? `<div class="sm" style="margin-bottom:4px">${retrait.length ? '<b class="dn">En retrait</b> ' + retrait.slice(0, 3).map(nomEc).join(' · ') : ''}${retrait.length && avance.length ? '<br>' : ''}${avance.length ? '<b class="up">En avance</b> ' + avance.slice(0, 3).map(nomEc).join(' · ') : ''}</div>` : '<div class="sm mu" style="margin-bottom:4px">Le magasin vend comme le reste du réseau : aucune catégorie à plus de 2 points.</div>'}
+        ${vus.map(c => `<div class="lg"><div class="row" style="gap:8px"><span class="sm" style="flex:1">${esc(c.categorie)}</span><b class="sm">${p1(c.part)}</b><span class="xs mu">réseau ${p1(c.partReste)}</span>${this.ecartPill(c.ecart, true)}</div>
+          <div class="kb"><i style="width:${Math.round((c.part || 0) / max * 100)}%"></i></div><div class="kb r"><i style="width:${Math.round((c.partReste || 0) / max * 100)}%"></i></div></div>`).join('')}
+        ${cats.length > 8 ? `<div class="act"><button class="chip" data-a="drop" data-v="${esc(cle)}">${tout ? 'Les 8 premières ▴' : 'Les ' + cats.length + ' catégories ▾'}</button></div>` : ''}
+        <div class="xs mu" style="margin-top:6px">Part de chaque catégorie dans le CA : le magasin (barre pleine) face au reste du réseau, ${S.autres} magasin${S.autres > 1 ? 's' : ''} (barre grise) · du ${fmtD(S.du)} au ${fmtD(S.au)}${S.moisLus < S.moisDemandes ? ' (' + S.moisLus + ' mois lus sur ' + S.moisDemandes + ')' : ''} · CA du magasin ${eur(S.ca)}, du reste ${eur(S.caReste)}</div></div>`;
+    }
     planLigne(p, actions) {
       const st = ST_PLAN[p.statut] || [p.statut, ''];
       const photo = p.photo_id ? (this.D.photos || []).find(x => x.id === p.photo_id) : (this.D.photos || []).find(x => String(x.plan_id) === String(p.id) || (x.client_id && x.client_id === p.photo_client_id));
@@ -1042,6 +1184,7 @@
       return this.hd(b.court, (vEnCours ? 'visite en cours depuis ' + fmtH(vEnCours.commence_a) + ' · ' : '') + fmtDJ(t), this.role === 'franchise' ? null : 'portfolio', vEnCours ? '<span class="pill" style="background:#F7E4E6;color:#C0182B">● en visite</span>' : this.feuDot(b))
         + this.photosJourHtml(shop, vEnCours)
         + '<div class="cap">4 chiffres clés</div>' + this.kpis(b)
+        + this.santeHtml(shop)
         + this.alertesHtml(alertes, !!B)
         + (this.role === 'franchise' ? `<div class="btns"><button class="btn p w" data-a="go" data-v="plans">Mon plan d’action</button><button class="btn w" data-a="go" data-v="historique/${esc(shop)}">Historique</button></div>`
           : `<div class="btns">${vEnCours ? `<button class="btn p w" data-a="go" data-v="controle/${esc(vEnCours.id)}">▶ Contrôle guidé</button>` : `<button class="btn p w" data-a="go" data-v="planifier/${esc(shop)}">📅 Planifier</button>`}<button class="btn w" data-a="go" data-v="historique/${esc(shop)}">Historique 3 mois</button></div>
@@ -1053,8 +1196,9 @@
       const causes = this.D.causes || {};
 
         const msp = m.id === 'msp' ? b.msp : null;
+        const avant = m.leviers ? this.leviersHtml(v.shop) : m.obligatoires ? this.obligatoiresHtml(v.shop) : '';
         return `<div class="mod">${sansTitre ? (m.bureau ? '<div class="xs mu" style="margin:0 2px 6px">Les points que le bureau a ajoutés en préparant la visite.</div>' : '') : `<div class="th"><b>${esc(m.nom)}</b>${m.bureau ? '<span class="pill bur">bureau</span>' : this.src(m.id === 'planogramme' || m.id === 'assortiment' ? 'mix' : 'local')}<span class="sp"></span><span class="xs mu">${m.points.length} points</span></div>`}
-          ${msp ? `<div class="card" style="margin-bottom:6px"><div class="row"><b>${note1(msp.total)} / 20</b><span class="sp"></span><span class="xs mu">MSP ${esc(msp.mois)} · ${esc(msp.par)}</span></div><div class="sm" style="margin-top:4px">${Object.keys(msp.rubriques || {}).map(k => (msp.rubriques[k] < (this.D.seuils.mspAlerte || 12) ? '🔴 ' : msp.rubriques[k] < 16 ? '🟡 ' : '🟢 ') + esc(k) + ' ' + msp.rubriques[k]).join(' · ')}</div>${msp.commentaires ? `<div class="xs mu" style="margin-top:4px">« ${esc(msp.commentaires)} »</div>` : ''}${msp.fichier ? `<div class="act"><a class="chip" target="_blank" rel="noopener" href="${esc((this.o.racine || '') + msp.fichier)}">📄 Rapport PDF</a></div>` : ''}</div>` : m.id === 'msp' ? '<div class="sm mu" style="margin:0 2px 6px">Pas de rapport mystery shopper pour cette boutique (à saisir dans MSP et équipe).</div>' : ''}
+          ${avant}${msp ? `<div class="card" style="margin-bottom:6px"><div class="row"><b>${note1(msp.total)} / 20</b><span class="sp"></span><span class="xs mu">MSP ${esc(msp.mois)} · ${esc(msp.par)}</span></div><div class="sm" style="margin-top:4px">${Object.keys(msp.rubriques || {}).map(k => (msp.rubriques[k] < (this.D.seuils.mspAlerte || 12) ? '🔴 ' : msp.rubriques[k] < 16 ? '🟡 ' : '🟢 ') + esc(k) + ' ' + msp.rubriques[k]).join(' · ')}</div>${msp.commentaires ? `<div class="xs mu" style="margin-top:4px">« ${esc(msp.commentaires)} »</div>` : ''}${msp.fichier ? `<div class="act"><a class="chip" target="_blank" rel="noopener" href="${esc((this.o.racine || '') + msp.fichier)}">📄 Rapport PDF</a></div>` : ''}</div>` : m.id === 'msp' ? '<div class="sm mu" style="margin:0 2px 6px">Pas de rapport mystery shopper pour cette boutique (à saisir dans MSP et équipe).</div>' : ''}
           ${m.points.map(pt => {
             cnt.total++; const p = pts[pt.ref] || {}; if (p.etat || p.note != null || p.valeur != null) { cnt.faits++; }
             const phs = photos.filter(x => x.ref === pt.ref);
@@ -1167,7 +1311,7 @@
       const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
       etapes.push({ ic: 'controles', court: 'Contrôles photo', titre: 'Les contrôles en photo', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
         fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) });
-      etapes.push({ ic: 'chiffres', court: 'Chiffres', chiffres: true, titre: 'Les chiffres et les alertes', etat: 'à lire', fait: !!this.ouvert['lu:' + v.id], lu: 'lu:' + v.id, html: () => this.kpis(b) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
+      etapes.push({ ic: 'chiffres', court: 'KPI', chiffres: true, titre: 'KPI et santé du magasin', etat: 'à lire', fait: !!this.ouvert['lu:' + v.id], lu: 'lu:' + v.id, html: () => this.kpis(b) + this.santeHtml(v.shop) + this.carteConformite(v.shop) + this.alertesHtml(this.alertesDe(v.shop, b, B), !!B) });
       this.checklistDe(v).forEach(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true); etapes.push({ ic: m.id, court: m.nom, module: true, ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }); });
       // La checklist du consultant, lue dans le panel (l'ancienne fiche franchisé en mode tablette) : un module de plus.
       if (this.role === 'consultant') { this.chargerCk(v.shop); const ck = this.ckEtat(); etapes.push({ ic: 'liste', court: 'Checklist', titre: 'Checklist du consultant', etat: ck.etat, fait: ck.fait, html: () => this.ckHtml(v) }); }
@@ -1433,6 +1577,9 @@
 
     /* --- événements --------------------------------------------------------- */
     clic(e) {
+      // Les boutons des cartes du dashboard magasin (cartes-magasin.js) : la mesure de l'année, la vue des leviers.
+      const cm = e.target.closest('[data-anm],[data-levvue]');
+      if (cm && this.host.contains(cm)) { if (cm.dataset.anm) { this.anm = cm.dataset.anm; } else if (!cm.disabled) { this.levVue = cm.dataset.levvue; } this.rendre(); return; }
       const el = e.target.closest('[data-a]'); if (!el || !this.host.contains(el)) { return; }
       const a = el.dataset.a; const v = el.dataset.v || ''; const parts = v.split('|');
       if (a === 'go') { const [vue, p] = v.split('/'); this.go(vue, p); return; }
@@ -1447,6 +1594,7 @@
       if (a === 'sem') { this.sem = v === '0' ? 0 : this.sem + Number(v); this.rendre(); return; }
       if (a === 'tache') { const t = (this.D.taches || []).find(x => String(x.id) === parts[0]); if (t) { t.statut = parts[1]; t.attente = true; } this.ecrire({ method: 'PUT', path: '/consultants/taches/' + parts[0], body: { statut: parts[1] }, apres: 'tache' }); return; }
       if (a === 'drop') { this.ouvert[v] = !this.ouvert[v]; this.rendre(); return; }
+      if (a === 'sante-relire') { delete this.KS[v]; this.chargerSante(v); this.rendre(); return; }
       if (a === 'sync') { this.rejouer(); return; }
       if (a === 'recharger') { this.recharger(); return; }
       if (a === 'synthese') { this.S = null; this.rendre(); return; }
