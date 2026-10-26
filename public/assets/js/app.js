@@ -1522,11 +1522,11 @@ class App {
       // Les promotions (26/10/2026, maquette A de docs/maquettes/promotions-cockpit) : sorties du dashboard magasin, qui
       // ne fait plus que les lire. L'Édition (l'assistant du dashboard, le magasin au choix) et le Tableau d'analyse
       // (toutes les promotions de tous les magasins). Les badges, une fois lues : les brouillons à reprendre, les
-      // promotions en caisse sous le repère ×2. Un menu à part (Sam, 26/10/2026) : une seule entrée repliable,
-      // « ▸ Promotions », hors des sections — une section sans titre.
-      ['', [{ sub: 'Promotions', children: [
+      // promotions en caisse sous le repère ×2. Un menu du rail au même niveau que Produits (Sam, 26/10/2026) : son
+      // titre de section, ses deux entrées.
+      ['Promotions', [
         ['promoEdition', 'Édition', promosBadges(this).brouillons],
-        ['promoTableau', 'Tableau d’analyse', promosBadges(this).sousRepere]] }]],
+        ['promoTableau', 'Tableau d’analyse', promosBadges(this).sousRepere]]],
       // Ce que la marque investit (projets, fonds) et ce qu'elle met en avant
       // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
       // l'autre — les deux anciennes sections n'en font qu'une.
