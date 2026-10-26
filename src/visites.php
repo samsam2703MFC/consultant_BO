@@ -289,7 +289,13 @@ function viSeuilsDefaut(): array
         'mspAlerte' => 12,     // une rubrique MSP sous ce score /20 : rouge
         'b2bMax' => 40,        // la part B2B du CA au plus (%), lue à la visite (structure du CA par canal)
         'etapeAuto' => true,   // contrôle guidé : une étape remplie (photos, checklist, contrôles du jour) passe d'elle-même à la suivante
-        'etapeBloque' => true, // contrôle guidé : « Suivant » refuse tant que l'étape n'est pas remplie (les étapes à lire ne bloquent jamais)
+        // Contrôle guidé : les étapes bloquantes, étape par étape (clé → vrai/faux ; « mod:* » pour les modules de checklist
+        // sans réglage propre). Une étape bloquante pas encore remplie empêche d'aller plus loin. Vide : les choix livrés
+        // (visites.js, BLOQUE_DEFAUT). Les étapes à lire ne bloquent jamais.
+        'etapesBloquantes' => [],
+        // Contrôle guidé : le sens de la visite, l'ordre des six temps (clés séparées par des virgules ; vide : extérieur,
+        // intérieur, suivi de projet, analyse, développement, météo et fin). Réglé par glisser-déposer.
+        'ordreTemps' => '',
         'visiteJours' => 7,    // fréquence de visite par défaut
         'rappelJ1' => '18:00',
         'rappelJour' => '07:00',
@@ -1257,7 +1263,12 @@ function wr_visites_reglages_put(): array
         foreach ($d as $k => $v) {
             if (!array_key_exists($k, $b['seuils'])) { continue; }
             $x = $b['seuils'][$k];
-            if (is_bool($v)) { $s[$k] = (bool) $x; }
+            if (is_array($v)) {
+                $m = [];
+                foreach (is_array($x) ? $x : [] as $kk => $vv) { if (is_string($kk) && preg_match('/^[a-z0-9_:*\-]{1,48}$/', $kk) === 1) { $m[$kk] = (bool) $vv; } }
+                $s[$k] = $m;
+            }
+            elseif (is_bool($v)) { $s[$k] = (bool) $x; }
             elseif (is_int($v)) { $s[$k] = max(0, (int) $x); }
             elseif (is_float($v)) { $s[$k] = (float) $x; }
             else { $s[$k] = mb_substr(trim((string) $x), 0, 190); }

@@ -79,6 +79,15 @@
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
 .vi .kc .k{margin-top:4px}
 .vi .or{color:#B26A00}
+.vi .obl .obs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}@media (max-width:760px){.vi .obl .obs{grid-template-columns:1fr}}
+.vi .ob{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:.5px solid var(--color-border-tertiary);background:var(--color-surface)}
+.vi .ob.ok{background:#F0F7F2;border-color:#BFDCC6}.vi .ob.ko{background:#FBEDEF;border-color:#e8b4bb}
+.vi .ob .nm{flex:1;min-width:0;display:flex;flex-direction:column}.vi .ob .nm b{font-size:12.5px;line-height:1.25}.vi .ob .nm small{font-size:10.5px}
+.vi .ob .yn{display:inline-grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--color-background-secondary);border-radius:9px;padding:2px;flex:none}
+.vi .ob .yn button{border:none;background:none;border-radius:7px;padding:6px 12px;font:700 12px var(--font-ui);color:var(--color-text-muted);cursor:pointer;min-width:46px}
+.vi .ob .yn button.ok{background:#2d7a3e;color:#fff}.vi .ob .yn button.ko{background:#C0182B;color:#fff}
+.vi .bq-t td{vertical-align:middle}.vi .bq{display:inline-grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--color-background-secondary);border-radius:9px;padding:2px;min-width:120px}
+.vi .bq button{border:none;background:none;border-radius:7px;padding:5px 12px;font:600 11.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer}.vi .bq button.on{background:var(--color-primary);color:#fff}
 .vi .pnl{margin-top:14px;padding-top:12px;border-top:.5px solid var(--color-border-tertiary)}
 .vi .pnl-t{margin:6px 0 4px}.vi .pnl-t td.r,.vi .pnl-t th.r{text-align:right}.vi .pnl-t tr.net td{border-top:1px solid var(--color-border-secondary);font-weight:700}
 /* Partout sur la tablette (26/10/2026, demande de Sam) : des rectangles aux coins arrondis, répartis sur toute la largeur.
@@ -473,6 +482,9 @@
    * aux décisions ; la météo et les signatures ferment. Chaque étape porte son temps ; la barre du bas montre les six.
    */
   const TEMPS = [['ext', 'Extérieur'], ['int', 'Intérieur'], ['suivi', 'Suivi de projet'], ['analyse', 'Analyse'], ['dev', 'Développement'], ['fin', 'Météo et fin']];
+  // Les étapes bloquantes livrées (26/10/2026) : ce qui se remplit sur place bloque ; ce qui dépend d'une lecture extérieure
+  // (contrôles du jour de l'équipe, checklist du panel) ne bloque pas. Réglages › Contrôle guidé les change étape par étape.
+  const BLOQUE_DEFAUT = { photos_ext: true, photos_int: true, 'mod:*': true, controles: false, checklist: false, pistes: true, constat: true, meteo: true };
   // Les points d'une checklist qui se regardent dehors : ils forment le module « L'extérieur ».
   const RX_EXT = /fa[cç]ade|enseigne|vitrine ext|ext[ée]rieur|terrasse|abords|parking|trottoir/i;
   // Le module Produit commence par les produits obligatoires (26/10/2026), avec ce que le cockpit en sait (vus en caisse).
@@ -610,13 +622,16 @@
       try {
         while (this.file.length) {
           const op = this.file[0];
+          // En vol : un point noté pendant l'envoi ne s'ajoute plus à ce lot (il était perdu au retour du serveur,
+          // mesuré le 26/10/2026 en notant vite plusieurs points) ; il part dans le lot suivant.
+          op.envoi = true;
           let r;
           try {
             r = await fetch(this.api(op.path), { method: op.method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(op.body || {}) });
-          } catch (e) { this.enLigne = false; break; }
+          } catch (e) { this.enLigne = false; op.envoi = false; break; }
           this.enLigne = true;
           let j = null; try { j = await r.json(); } catch (e) { j = {}; }
-          if (!r.ok && r.status >= 500) { break; }
+          if (!r.ok && r.status >= 500) { op.envoi = false; break; }
           this.file.shift(); await Idb.del('file', op.id);
           if (!r.ok) { this.dire('Refusé par le serveur : ' + ((j && j.error) || r.status)); if (op.apres === 'controle') { this.cqAnnule(op.body); } }
           else if (op.apres) { this.apres(op, j); }
@@ -677,7 +692,7 @@
     /** La checklist d'une visite : les points demandés par le bureau en tête, puis celle de son type. */
     checklistDe(v) {
       const t = this.typeDe(v.type);
-      const cl = this.avecExterieur((t && t.dynamique ? [] : [MOD_XP]).concat(this.avecObligatoires(this.checklistType(v)), t && t.dynamique ? [] : [MOD_LEVIERS]));
+      const cl = this.avecExterieur((t && t.dynamique ? [] : [MOD_XP]).concat(this.avecObligatoires(this.checklistType(v), v.shop), t && t.dynamique ? [] : [MOD_LEVIERS]));
       const pts = (v.prep && v.prep.points) || [];
       if (!pts.length) { return cl; }
       return [{ id: 'bureau', nom: 'Demandé par le bureau', bureau: true, points: pts.map(p => ({ ref: p.ref, libelle: p.libelle, photo: true, pct: false })) }].concat(cl);
@@ -700,12 +715,22 @@
       if (m.leviers || m.id === 'msp') { return 'analyse'; }
       return m.id === 'exterieur' ? 'ext' : 'int';
     }
-    /** Le module Produit marqué `obligatoires`, le point « Les produits obligatoires sont là » en tête s'il n'y est pas déjà. */
-    avecObligatoires(cl) {
+    /**
+     * Le module Produit marqué `obligatoires`. Les obligatoires du magasin lues (conformité : l'assortiment obligatoire
+     * exigé, 26/10/2026) : une ligne par produit, un Oui / Non du consultant — et le point « Références obligatoires
+     * toutes présentes » de l'Assortiment s'efface, c'est le même contrôle. Pas encore lues : le point d'ensemble.
+     */
+    avecObligatoires(cl, shop) {
+      const as = shop != null ? ((this.C[shop] || {}).assortiment || null) : null;
+      const toutes = as && Array.isArray(as.toutes) && as.toutes.length ? as.toutes : null;
+      const aProduit = cl.some(m => m.id === 'produit' || /^produits?$/i.test(String(m.nom || '').trim()));
       return cl.map(m => {
+        if (toutes && aProduit && m.id === 'assortiment') { return Object.assign({}, m, { points: m.points.filter(pt => pt.ref !== 'obligatoires') }); }
         if (m.id !== 'produit' && !/^produits?$/i.test(String(m.nom || '').trim())) { return m; }
-        const deja = m.points.some(pt => pt.ref === PT_OBLIGATOIRES.ref || /obligatoire/i.test(pt.libelle || ''));
-        return Object.assign({}, m, { obligatoires: true, points: deja ? m.points : [PT_OBLIGATOIRES].concat(m.points) });
+        const sans = m.points.filter(pt => pt.ref !== PT_OBLIGATOIRES.ref && !/obligatoire/i.test(pt.libelle || ''));
+        const obl = toutes ? toutes.map(o => ({ ref: 'oblig_' + o.ref, libelle: 'Produit obligatoire : ' + o.nom, nom: o.nom, photo: false, pct: false, oblig: true, vue: o.vue, auComptoir: o.auComptoir }))
+          : [m.points.find(pt => pt.ref === PT_OBLIGATOIRES.ref || /obligatoire/i.test(pt.libelle || '')) || PT_OBLIGATOIRES];
+        return Object.assign({}, m, { obligatoires: true, points: obl.concat(sans) });
       });
     }
     checklistType(v) {
@@ -1204,7 +1229,7 @@
     budgetHtml(v) {
       const shop = v.shop; this.chargerSante(shop);
       const B = this.VB[shop];
-      const cap = `<div class="cap">Le CA face au budget ${this.src('api')}</div>`;
+      const cap = `<div class="cap">Le CA face au budget ${this.src('api')} <button class="chip" data-a="sante-relire" data-v="${esc(shop)}" style="margin-left:6px">↻ Relire</button>${B && B.lu ? `<span class="xs mu" style="margin-left:6px;text-transform:none;letter-spacing:0">calculé à ${esc(String(B.lu).slice(11, 16))}</span>` : ''}</div>`;
       if (!B || B.chargement) { return cap + '<div class="card sm mu">Lecture du CA et du budget de la semaine, du mois, du trimestre et de l’année…</div>'; }
       if (B.indispo) { return cap + `<div class="card sm mu">${esc(B.motif || 'indisponible')}</div>`; }
       if (B.erreur || B.error || !B.periodes) { return cap + `<div class="card sm mu">Le CA face au budget n’a pas pu être lu. <button class="chip" data-a="sante-relire" data-v="${esc(shop)}">Relire</button></div>`; }
@@ -1343,6 +1368,19 @@
       const g = (this.boutique(shop) || {}).google;
       const avis = g && g.note != null ? `<div class="card sm"><div class="row"><b>Google ${note1(g.note)} ★</b><span class="xs mu">${g.avis != null ? g.avis + ' avis' : ''}${g.faibles ? ' · ' + g.faibles + ' avis ≤ 2/5 sur 30 j' : ''}</span></div>${(g.derniers || []).slice(0, 3).map(d => `<div class="xs" style="margin-top:5px"><b class="${d.note != null && d.note <= 2 ? 'dn' : ''}">${d.note != null ? d.note + ' ★' : ''}</b> <span class="mu">${fmtD(d.le)}</span>${d.extrait ? ' · « ' + esc(d.extrait) + ' »' : ''}</div>`).join('')}</div>` : '';
       return carte + avis + '<div class="xs mu" style="margin:6px 2px 8px">Sur place, levier par levier : chaque point se note, se photographie et part dans le rapport s’il n’est pas conforme.</div>';
+    }
+    /** Les produits obligatoires du module Produit, un Oui / Non chacun (présent en rayon ou non), et « Toutes présentes ». */
+    obligToggleHtml(v, m, pts, cnt) {
+      const obl = m.points.filter(pt => pt.oblig); if (!obl.length) { return ''; }
+      let oui = 0, non = 0;
+      const lignes = obl.map(pt => { cnt.total++; const p = pts[pt.ref] || {}; if (p.etat) { cnt.faits++; if (p.etat === 'ok') { oui++; } else if (p.etat === 'ko') { non++; } }
+        const k = `${esc(v.id)}|${esc(pt.ref)}|${m.id}`;
+        return `<div class="ob ${p.etat === 'ko' ? 'ko' : p.etat === 'ok' ? 'ok' : ''}"><div class="nm"><b>${esc(pt.nom || pt.libelle)}</b><small class="${pt.vue === false ? 'dn' : 'mu'}">${pt.vue === true ? 'vue en caisse' : pt.vue === false ? 'pas vendue sur la période' : 'sans identifiant de caisse'}${pt.auComptoir === false ? ' · sans place au comptoir' : ''}</small></div>
+          <span class="yn">${[['ok', 'Oui'], ['ko', 'Non']].map(([e, l]) => `<button data-a="etat-set" data-v="${k}|${e}" class="${p.etat === e ? e : ''}">${l}</button>`).join('')}</span></div>`; }).join('');
+      const reste = obl.length - oui - non;
+      return `<div class="card obl"><div class="row"><b>Les produits obligatoires sont là ?</b><span class="sp"></span><span class="xs ${non ? 'dn' : 'mu'}">${oui} oui · ${non} non${reste ? ' · ' + reste + ' à voir' : ''}</span></div>
+        <div class="xs mu" style="margin:2px 0 8px">Un par un, en rayon : Oui il est là, Non il manque. « Vue en caisse » : ce que la caisse en dit.</div>
+        <div class="obs">${lignes}</div>${reste ? `<div class="act"><button class="chip" data-a="oblig-tous" data-v="${esc(v.id)}|${esc(m.id)}">✓ Toutes les autres sont là (${reste})</button></div>` : ''}</div>`;
     }
     /** Au-dessus des points du module Produit : les produits obligatoires d'après le cockpit (vus en caisse, ceux à chercher en rayon). */
     obligatoiresHtml(shop) {
@@ -1545,10 +1583,10 @@
       const causes = this.D.causes || {};
 
         const msp = m.id === 'msp' ? b.msp : null;
-        const avant = m.leviers ? this.leviersHtml(v.shop) : m.obligatoires ? this.obligatoiresHtml(v.shop) : '';
+        const avant = m.leviers ? this.leviersHtml(v.shop) : m.obligatoires && !m.points.some(pt => pt.oblig) ? this.obligatoiresHtml(v.shop) : '';
         return `<div class="mod">${sansTitre ? (m.bureau ? '<div class="xs mu" style="margin:0 2px 6px">Les points que le bureau a ajoutés en préparant la visite.</div>' : '') : `<div class="th"><b>${esc(m.nom)}</b>${m.bureau ? '<span class="pill bur">bureau</span>' : this.src(m.id === 'planogramme' || m.id === 'assortiment' ? 'mix' : 'local')}<span class="sp"></span><span class="xs mu">${m.points.length} points</span></div>`}
           ${avant}${msp ? `<div class="card" style="margin-bottom:6px"><div class="row"><b>${note1(msp.total)} / 20</b><span class="sp"></span><span class="xs mu">MSP ${esc(msp.mois)} · ${esc(msp.par)}</span></div><div class="sm" style="margin-top:4px">${Object.keys(msp.rubriques || {}).map(k => (msp.rubriques[k] < (this.D.seuils.mspAlerte || 12) ? '🔴 ' : msp.rubriques[k] < 16 ? '🟡 ' : '🟢 ') + esc(k) + ' ' + msp.rubriques[k]).join(' · ')}</div>${msp.commentaires ? `<div class="xs mu" style="margin-top:4px">« ${esc(msp.commentaires)} »</div>` : ''}${msp.fichier ? `<div class="act"><a class="chip" target="_blank" rel="noopener" href="${esc((this.o.racine || '') + msp.fichier)}">📄 Rapport PDF</a></div>` : ''}</div>` : m.id === 'msp' ? '<div class="sm mu" style="margin:0 2px 6px">Pas de rapport mystery shopper pour cette boutique (à saisir dans MSP et équipe).</div>' : ''}
-          ${m.points.map(pt => {
+          ${this.obligToggleHtml(v, m, pts, cnt)}${m.points.filter(pt => !pt.oblig).map(pt => {
             cnt.total++; const p = pts[pt.ref] || {}; if (p.etat || p.note != null || p.valeur != null) { cnt.faits++; }
             const phs = photos.filter(x => x.ref === pt.ref);
             const k = `${esc(v.id)}|${esc(pt.ref)}|${m.id}`;
@@ -1653,18 +1691,18 @@
       const etapes = [];
       const jourPris = g => this.photosJour(v.shop).some(x => x.genre === g && String(x.prise_a).slice(0, 10) === t);
       const mods = this.checklistDe(v).map(m => { const cnt = { total: 0, faits: 0 }; const html = this.moduleHtml(v, m, pts, photos, cnt, true);
-        return { ic: m.id, court: m.nom, module: true, tps: this.tempsModule(m), ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }; });
+        return { cle: 'mod:' + m.id, ic: m.id, court: m.nom, module: true, tps: this.tempsModule(m), ko: Object.keys(pts).filter(r => pts[r].etat === 'ko' && m.points.some(x => x.ref === r)).length, n: cnt, titre: m.nom, etat: cnt.faits + ' / ' + cnt.total, fait: cnt.total > 0 && cnt.faits >= cnt.total, html: () => html }; });
       const modsDe = tps => mods.filter(e => e.tps === tps);
       // 1. L'extérieur : la façade et l'arrière en photo, les points qui se regardent dehors.
       const nExt = ['jour_facade', 'jour_arriere'].filter(jourPris).length;
-      etapes.push({ tps: 'ext', ic: 'photo', court: 'Photos', titre: 'L’extérieur en photo', etat: nExt + ' / 2', fait: nExt >= 2, html: () => this.photosJourHtml(v.shop, v, ['jour_facade', 'jour_arriere']) });
+      etapes.push({ cle: 'photos_ext', tps: 'ext', ic: 'photo', court: 'Photos', titre: 'L’extérieur en photo', etat: nExt + ' / 2', fait: nExt >= 2, html: () => this.photosJourHtml(v.shop, v, ['jour_facade', 'jour_arriere']) });
       etapes.push(...modsDe('ext'));
       // 2. L'intérieur : la photo, l'expérience client, les modules de la checklist, les contrôles en photo du jour
       // (la bande du dashboard, la note rapide sous chaque photo ; faite quand plus rien n'attend une note).
-      etapes.push({ tps: 'int', ic: 'photo', court: 'Photo', titre: 'L’intérieur en photo', etat: jourPris('jour_interieur') ? '1 / 1' : 'à prendre', fait: jourPris('jour_interieur'), html: () => this.photosJourHtml(v.shop, v, ['jour_interieur']) });
+      etapes.push({ cle: 'photos_int', tps: 'int', ic: 'photo', court: 'Photo', titre: 'L’intérieur en photo', etat: jourPris('jour_interieur') ? '1 / 1' : 'à prendre', fait: jourPris('jour_interieur'), html: () => this.photosJourHtml(v.shop, v, ['jour_interieur']) });
       etapes.push(...modsDe('int'));
       const cq = this.cqListe(v.shop); const Tc = this.T[v.shop];
-      etapes.push({ tps: 'int', ic: 'controles', court: 'Contrôles du jour', titre: 'Les contrôles en photo du jour', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
+      etapes.push({ cle: 'controles', tps: 'int', ic: 'controles', court: 'Contrôles du jour', titre: 'Les contrôles en photo du jour', etat: cq ? cq.avec + ' photo' + (cq.avec > 1 ? 's' : '') + ' / ' + cq.total + (cq.aNoter ? ' · ' + cq.aNoter + ' à noter' : '') : (Tc && Tc.erreur ? 'indisponible' : 'lecture…'),
         fait: !!cq && cq.aNoter === 0, html: () => this.controlesHtml(v.shop) });
       // 3. Le suivi de projet : le dossier du bureau (seulement s'il est arrivé), ses demandes, ce qui avait été décidé
       // aux visites précédentes — vérifié sur place —, la checklist du consultant lue dans le panel.
@@ -1676,7 +1714,7 @@
         etapes.push({ tps: 'suivi', ic: 'plan', court: 'Points décidés', titre: 'Les points décidés aux visites précédentes', etat: ouverts.length ? ouverts.length + ' ouvert' + (ouverts.length > 1 ? 's' : '') + (nR ? ' · ' + nR + ' en retard' : '') : 'aucun ouvert',
           ko: nR, fait: !ouverts.length || !!this.ouvert['pd:' + v.id], lu: 'pd:' + v.id, html: () => this.pointsDecidesHtml(v) });
       }
-      if (this.role === 'consultant') { this.chargerCk(v.shop); const ck = this.ckEtat(); etapes.push({ tps: 'suivi', ic: 'liste', court: 'Checklist', titre: 'Checklist du consultant', etat: ck.etat, fait: ck.fait, html: () => this.ckHtml(v) }); }
+      if (this.role === 'consultant') { this.chargerCk(v.shop); const ck = this.ckEtat(); etapes.push({ cle: 'checklist', tps: 'suivi', ic: 'liste', court: 'Checklist', titre: 'Checklist du consultant', etat: ck.etat, fait: ck.fait, html: () => this.ckHtml(v) }); }
       // 4. L'analyse, assis avec le franchisé : les chiffres, les leviers et Google, le client mystère, les tâches des mois passés.
       const vbx = this.vbExige(v);
       etapes.push({ tps: 'analyse', ic: 'chiffres', court: 'KPI', chiffres: true, titre: 'KPI et santé du magasin', etat: vbx === 'manque' ? 'CA sous le budget' : 'à lire',
@@ -1687,17 +1725,17 @@
       etapes.push(...modsDe('analyse').filter(e => e.ic !== 'leviers'));
       // 5. Le développement : le CA sous le budget (pourquoi, trois pistes : l'étape reste ouverte tant que ce n'est pas
       // noté), ce qu'on a vu et la recommandation, les points à travailler.
-      if (vbx) { etapes.push({ tps: 'dev', ic: 'dev', court: 'Pistes', pistes: true, titre: 'Le CA sous le budget : pourquoi et trois pistes', etat: vbx === 'manque' ? 'à noter' : 'notées', ko: vbx === 'manque' ? '!' : 0, fait: vbx === 'fait', html: () => this.vbPistesHtml(v) }); }
+      if (vbx) { etapes.push({ cle: 'pistes', tps: 'dev', ic: 'dev', court: 'Pistes', pistes: true, titre: 'Le CA sous le budget : pourquoi et trois pistes', etat: vbx === 'manque' ? 'à noter' : 'notées', ko: vbx === 'manque' ? '!' : 0, fait: vbx === 'fait', html: () => this.vbPistesHtml(v) }); }
       const revueFaite = !!(f.reco && (f.execution || f.clients || (f.causes || []).length));
-      etapes.push({ tps: 'dev', ic: 'constat', court: 'Constat', titre: 'Vu sur place et recommandation', etat: revueFaite ? 'rédigée' : f.reco || f.execution ? 'en cours' : 'à écrire', fait: revueFaite, revue: true, html: () => this.reviewFormHtml(v, b, f) });
+      etapes.push({ cle: 'constat', tps: 'dev', ic: 'constat', court: 'Constat', titre: 'Vu sur place et recommandation', etat: revueFaite ? 'rédigée' : f.reco || f.execution ? 'en cours' : 'à écrire', fait: revueFaite, revue: true, html: () => this.reviewFormHtml(v, b, f) });
       const npa = (f.pa || []).filter(a => a.titre && a.titre.trim()).length;
       etapes.push({ tps: 'dev', ic: 'plan', court: 'Points', titre: 'Points à travailler', etat: npa + ' proposé' + (npa > 1 ? 's' : ''), fait: !!this.ouvert['pa:' + v.id], lu: 'pa:' + v.id, html: () => '<div class="card sm mu">Proposés d’après les non-conformes et les pistes du franchisé. Ils partent chez lui avec le rapport, si le bureau les garde.</div>' + this.planFormHtml(v, f) });
       // 6. La météo du franchisé (le temps en un toucher, gardé sur la visite, puis le détail facultatif), la fin signée.
       const mt = meteoDe(f.meteo);
-      etapes.push({ tps: 'fin', ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne'), fait: !!(mt || f.mt_ok), html: () => this.meteoHtml(f) + this.meteoDetailHtml(v) });
+      etapes.push({ cle: 'meteo', tps: 'fin', ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne'), fait: !!(mt || f.mt_ok), html: () => this.meteoHtml(f) + this.meteoDetailHtml(v) });
       etapes.push({ tps: 'fin', ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig && f.sigC ? 'signée des deux' : f.sig || f.sigC ? '1 signature sur 2' : 'signatures, envoi au bureau', fait: false, html: () => this.finHtml(v) });
       // Ce qui reste à remplir dans chaque étape qui peut l'être (26/10/2026) : « Suivant » refuse tant qu'il en reste
-      // (réglage etapeBloque) ; les photos, la checklist et les contrôles du jour passent d'eux-mêmes à l'étape
+      // (réglage etapesBloquantes, étape par étape) ; les photos, la checklist et les contrôles du jour passent d'eux-mêmes à l'étape
       // suivante une fois remplis (réglage etapeAuto). Les étapes à lire, le constat, les pistes, la météo et la fin
       // ne passent jamais seuls ; les étapes à lire ne bloquent jamais.
       etapes.forEach(e => {
@@ -1708,12 +1746,17 @@
         else if (e.pistes) { e.manque = 'le pourquoi, les trois pistes et l’horizon'; }
         else if (e.revue) { e.manque = 'ce que vous avez vu et la recommandation'; }
         else if (e.ic === 'meteo') { e.manque = 'la météo du franchisé'; }
+        else if (e.cle === 'checklist') { e.manque = 'la checklist du consultant'; }
       });
-      etapes.forEach(e => { if (e.fait) { e.auto = true; } });
+      etapes.forEach(e => { if (e.fait) { e.auto = true; } e.bloquante = !!e.manque && this.etapeBloquante(e.cle); });
       const cle = 'et:' + v.id;
       let cur = this.ouvert[cle]; if (cur == null) { cur = etapes.findIndex(e => !e.fait); if (cur < 0) { cur = etapes.length - 1; } }
       cur = Math.max(0, Math.min(etapes.length - 1, cur));
-      this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), chiffres: etapes.findIndex(e => e.chiffres), pistes: etapes.findIndex(e => e.pistes), visite: v.id, cur, lus: etapes.map(e => e.lu || null) };
+      // Une étape bloquante pas encore remplie arrête tout ce qui la suit : on n'ouvre pas une étape au-delà.
+      const bloq = etapes.findIndex(e => e.bloquante);
+      if (bloq >= 0 && cur > bloq && this.ouvert[cle] != null) { cur = bloq; this.ouvert[cle] = bloq; }
+      this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), chiffres: etapes.findIndex(e => e.chiffres), pistes: etapes.findIndex(e => e.pistes), visite: v.id, cur, lus: etapes.map(e => e.lu || null),
+        bloq: etapes.map(e => e.bloquante ? '« ' + e.court + ' » : ' + e.manque : null) };
       const faits = etapes.filter(e => e.fait).length;
       this.etapeAutoSuivre(v, etapes, cur);
       if (this.o.tablette) { return this.tabControle(v, b, etapes, cur, faits); }
@@ -1721,10 +1764,22 @@
         + `<div class="bar" style="margin:2px 0 12px"><i style="width:${Math.round(faits / etapes.length * 100)}%"></i></div>`
         + etapes.map((e, i) => (i === 0 || etapes[i - 1].tps !== e.tps ? `<div class="cap">${TEMPS.findIndex(x => x[0] === e.tps) + 1} · ${esc((TEMPS.find(x => x[0] === e.tps) || ['', ''])[1])}</div>` : '') + `<div class="et ${i === cur ? 'on' : ''} ${e.fait ? 'ok' : ''}" id="et-${i}"><div class="et-h" data-a="etape" data-v="${i}"><span class="num">${e.fait ? '✓' : i + 1}</span><b>${esc(e.titre)}</b><span class="sp"></span><span class="xs mu">${esc(e.etat)}</span></div>${i === cur ? `<div class="et-c">${e.html()}${i < etapes.length - 1 ? `<div class="btns"><button class="btn p w" data-a="etape" data-v="${i + 1}">Suivant ›</button><button class="btn" data-a="etape" data-v="${i - 1}" ${i === 0 ? 'disabled' : ''}>‹</button></div>` : ''}</div>` : ''}</div>`).join('');
     }
+    /** Une étape est-elle bloquante ? Le réglage de l'étape, à défaut celui des modules (« mod:* »), à défaut le choix livré. */
+    etapeBloquante(cle, R) {
+      const B = R || (this.D.seuils || {}).etapesBloquantes; const r = B && !Array.isArray(B) ? B : {};
+      if (cle in r) { return !!r[cle]; }
+      if (String(cle).startsWith('mod:')) { return 'mod:*' in r ? !!r['mod:*'] : BLOQUE_DEFAUT['mod:*']; }
+      return !!BLOQUE_DEFAUT[cle];
+    }
     /** Aller à une étape du contrôle : marquer lue celle qu'on quitte, garder la review, défiler en haut. */
     allerEtape(n) {
       const E = this._etapes; if (!E) { return; }
-      const vis = this.visite(E.visite); const vers = Math.max(0, Math.min(E.n - 1, n));
+      const vis = this.visite(E.visite); let vers = Math.max(0, Math.min(E.n - 1, n));
+      // En avant, la première étape bloquante pas remplie arrête le saut (Suivant, la barre du bas, les étapes en tête).
+      if (vers > E.cur && E.bloq) {
+        const i = E.bloq.findIndex((b, k) => b && k >= E.cur && k < vers);
+        if (i >= 0) { this.dire('Avant de continuer : ' + E.bloq[i] + '.'); if (i === E.cur) { return; } vers = i; }
+      }
       if (E.lus && E.lus[E.cur]) { this.ouvert[E.lus[E.cur]] = true; }
       if (E.cur === E.chiffres) { this.ouvert['lu:' + E.visite] = true; }
       if (E.cur === E.revue && vers !== E.revue && vis) { this.sauverReview(vis); }
@@ -1838,7 +1893,7 @@
       let pills = '';
       if (e.module && e.n) { const reste = e.n.total - e.n.faits; pills = `<span class="ok">${e.n.faits} / ${e.n.total} vus</span>${e.ko ? `<span class="ko">${e.ko} écart${e.ko > 1 ? 's' : ''}</span>` : ''}${reste ? `<span>${reste} à voir</span>` : ''}`; }
       const prec = cur > 0 ? etapes[cur - 1] : null; const suiv = cur < n - 1 ? etapes[cur + 1] : null;
-      const S = this.D.seuils || {}; const bloque = S.etapeBloque !== false && !!e.manque;
+      const bloque = !!e.bloquante;
       const nomSuiv = suiv ? (suiv.tps !== e.tps ? (TEMPS.find(x => x[0] === suiv.tps) || ['', suiv.court])[1] + ' · ' + suiv.court : suiv.court) : '';
       const nav = `<div class="tb-nav"><button class="tb-b" data-a="etape" data-v="${cur - 1}" ${prec ? '' : 'disabled'}>‹ ${esc(prec ? prec.court : 'Début')}</button><span class="sp"></span>`
         + (suiv ? `<div class="tb-suiv">${e.manque ? `<span class="xs ${bloque ? 'dn' : 'mu'}">Reste : ${esc(e.manque)}</span>` : ''}<button class="tb-b p ${bloque ? 'bloque' : ''}" data-a="${bloque ? 'etape-bloque' : 'etape'}" data-v="${cur + 1}"><small>Suivant</small>${esc(nomSuiv)} ›</button></div>` : '') + '</div>';
@@ -1974,6 +2029,28 @@
           <div class="rub" style="grid-template-columns:repeat(3,1fr)"><div class="champ"><label>Effectif</label><input type="number" data-f="form|effectif" value="${esc(f.effectif || '')}"></div><div class="champ"><label>Prévu</label><input type="number" data-f="form|prevu" value="${esc(f.prevu || '')}"></div><div class="champ"><label>Départs (mois)</label><input type="number" data-f="form|departs" value="${esc(f.departs || '')}"></div></div>
           <div class="btns"><button class="btn w" data-a="equipe" data-v="${esc(shop)}">💾 Relever l’effectif</button></div></div>`;
     }
+    /**
+     * Réglages › Contrôle guidé : les étapes bloquantes, étape par étape (26/10/2026). Une étape bloquante pas encore remplie
+     * empêche d'aller plus loin — Suivant, la barre du bas, les étapes en tête. Les étapes à lire ne bloquent jamais.
+     */
+    reglagesEtapesHtml(B) {
+      const D = this.D; const mods = []; const vus = {};
+      const ajoute = (id, nom, tps) => { if (!id || vus[id]) { return; } vus[id] = true; mods.push(['mod:' + id, nom, tps]); };
+      ajoute('exterieur', 'L’extérieur (points de checklist)', 'ext'); ajoute('xp', MOD_XP.nom, 'int');
+      [].concat(D.checklist || [], ...((D.types || []).map(t => t.checklist || []))).forEach(m => ajoute(m.id, m.nom, m.id === 'msp' ? 'analyse' : 'int'));
+      ajoute('bureau', 'Demandé par le bureau', 'suivi'); ajoute('leviers', MOD_LEVIERS.nom, 'analyse');
+      const lignes = [['ext', 'photos_ext', 'L’extérieur en photo'], ...mods.filter(m => m[2] === 'ext').map(m => [m[2], m[0], m[1]]),
+        ['int', 'photos_int', 'L’intérieur en photo'], ...mods.filter(m => m[2] === 'int').map(m => [m[2], m[0], m[1]]), ['int', 'controles', 'Les contrôles en photo du jour (photos de l’équipe)'],
+        ['suivi', null, 'Dossier du bureau'], ...mods.filter(m => m[2] === 'suivi').map(m => [m[2], m[0], m[1]]), ['suivi', null, 'Les points décidés aux visites précédentes'], ['suivi', 'checklist', 'Checklist du consultant (panel)'],
+        ['analyse', null, 'KPI et santé du magasin'], ...mods.filter(m => m[2] === 'analyse').map(m => [m[2], m[0], m[1]]), ['analyse', null, 'Les tâches des derniers mois'],
+        ['dev', 'pistes', 'Le CA sous le budget : pourquoi et trois pistes'], ['dev', 'constat', 'Vu sur place et recommandation'], ['dev', null, 'Points à travailler'],
+        ['fin', 'meteo', 'Météo du franchisé'], ['fin', null, 'Fin de visite'], ['*', 'mod:*', 'Les autres modules de checklist (nouveaux types, revisites)']];
+      const nomT = k => k === '*' ? '—' : (TEMPS.findIndex(x => x[0] === k) + 1) + ' · ' + (TEMPS.find(x => x[0] === k) || ['', ''])[1];
+      return `<div class="ksc" style="margin-top:10px"><table class="tbl bq-t"><tr><th>Temps</th><th>Étape</th><th>Bloquante</th></tr>${lignes.map(([t, k, nom], i) => `<tr>
+        <td class="xs mu">${i && lignes[i - 1][0] === t ? '' : esc(nomT(t))}</td><td>${esc(nom)}</td>
+        <td>${k ? `<span class="bq">${[[true, 'Oui'], [false, 'Non']].map(([o, l]) => `<button class="${this.etapeBloquante(k, B) === o ? 'on' : ''}" data-a="${this.etapeBloquante(k, B) === o ? '' : 'bloq-tog'}" data-v="${esc(k)}">${l}</button>`).join('')}</span>` : '<span class="xs mu">à lire — jamais bloquante</span>'}</td></tr>`).join('')}</table></div>
+        <div class="xs mu" style="margin-top:6px">Bloquante : tant qu’elle n’est pas remplie, on ne passe pas à la suite — ni par « Suivant », ni par la barre du bas, ni par les étapes en tête. Revenir en arrière reste libre.</div>`;
+    }
     v_reglages() {
       const D = this.D; const f = this.form; const s = D.seuils || {};
       const moi = this.role === 'consultant' ? `<div class="cap">Qui suis-je</div><div class="card"><select data-c="moi">${[['', '— choisir —']].concat((D.consultants || []).map(c => [c.id, c.nom])).map(([v, l]) => `<option value="${esc(v)}" ${v === this.moi ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><div class="xs mu" style="margin-top:6px">L’agenda montre les visites de ce consultant ; les visites planifiées ici lui sont attribuées.</div></div>` : '';
@@ -1983,7 +2060,7 @@
       const R = this.R;
       if (!R) { this.chargerReglages(); }
       const cl = f.checklist || (R ? R.checklist : D.checklist) || [];
-      const se = f.seuils || Object.assign({}, s);
+      const se = f.seuils || Object.assign({}, s, { etapesBloquantes: Object.assign({}, Array.isArray(s.etapesBloquantes) ? {} : s.etapesBloquantes) });
       const fq = f.frequence || Object.assign({}, D.frequence || {});
       if (!f.checklist) { f.checklist = JSON.parse(JSON.stringify(cl)); f.seuils = se; f.frequence = fq; }
       const num = (k, l, aide) => `<div class="champ"><label>${l}</label><input type="number" step="${/google/i.test(k) ? '0.1' : '1'}" data-f="se|${k}" value="${esc(f.seuils[k])}">${aide ? `<div class="xs mu">${aide}</div>` : ''}</div>`;
@@ -1991,7 +2068,8 @@
         + '<div class="card sm mu">La checklist ci-dessous est celle de la visite régulière.</div>'
         + `<div class="cap">Checklist (${f.checklist.reduce((a, m) => a + m.points.length, 0)} points)</div>${f.checklist.map((m, mi) => `<div class="card"><div class="row"><b>${esc(m.nom)}</b><span class="sp"></span><button class="chip" data-a="cl-add" data-v="${mi}">+ point</button></div>${m.points.map((p, pi) => `<div class="row" style="margin-top:6px"><input type="text" data-f="cl|${mi}|${pi}|libelle" value="${esc(p.libelle)}" style="flex:1"><button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|photo" title="photo attendue">📷</button>${m.id === 'planogramme' ? `<button class="chip ${p.pct ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|pct" title="saisie en %">%</button>` : ''}<button class="chip ko" data-a="cl-del" data-v="${mi}|${pi}">×</button></div>`).join('')}</div>`).join('')}
           <div class="cap">Feu tricolore</div><div class="card"><div class="l2">${num('p0Jours', 'P0 ouvert plus de (jours) → rouge')}${num('escaladeJours', 'Échéance dépassée de (jours) → escalade auto')}${num('googleCible', 'Cible Google')}${num('googleRouge', 'Sous la cible de (points) → rouge')}${num('planoOrange', 'Planogramme sous (%) → orange')}${num('planoRouge', 'Planogramme sous (%) → rouge')}${num('mspAlerte', 'Rubrique MSP sous (/20) → rouge')}${num('caOrange', 'CA sous l’objectif de (%) → orange, et à justifier à la visite')}${num('b2bMax', 'Part B2B du CA au plus (%)')}</div><div class="act"><button class="chip ${f.seuils.caSeul ? 'on' : ''}" data-a="se-tog" data-v="caSeul">Le CA seul peut colorer le feu</button></div></div>
-          <div class="cap">Contrôle guidé</div><div class="card"><div class="act"><button class="chip ${f.seuils.etapeAuto !== false ? 'on' : ''}" data-a="se-tog" data-v="etapeAuto">Une étape remplie passe d’elle-même à la suivante</button><button class="chip ${f.seuils.etapeBloque !== false ? 'on' : ''}" data-a="se-tog" data-v="etapeBloque">« Suivant » bloqué tant que l’étape n’est pas remplie</button></div><div class="xs mu" style="margin-top:6px">Passent d’elles-mêmes : les photos, la checklist, les contrôles du jour (un toucher dans la seconde annule). Ne bloquent jamais : les étapes à lire (dossier, KPI, tâches, points). La barre du bas et les étapes en tête restent libres.</div></div>
+          <div class="cap">Contrôle guidé</div><div class="card"><div class="act"><button class="chip ${f.seuils.etapeAuto !== false ? 'on' : ''}" data-a="se-tog" data-v="etapeAuto">Une étape remplie passe d’elle-même à la suivante</button></div>
+            <div class="xs mu" style="margin-top:6px">Passent d’elles-mêmes : les photos, la checklist, les contrôles du jour (un toucher dans la seconde annule).</div>${this.reglagesEtapesHtml(f.seuils.etapesBloquantes)}</div>
           <div class="cap">Fréquence de visite (jours)</div><div class="card"><div class="l2">${D.boutiques.map(b => `<div class="champ"><label>${esc(b.court)}</label><input type="number" data-f="fq|${esc(b.id)}" value="${esc(f.frequence[b.id] || '')}" placeholder="${esc(s.visiteJours || 7)}"></div>`).join('')}</div></div>
           <div class="cap">Horloge et mails</div><div class="card"><div class="l2"><div class="champ"><label>Rappel J-1 à</label><input type="time" data-f="se|rappelJ1" value="${esc(f.seuils.rappelJ1)}"></div><div class="champ"><label>Rappel jour J à</label><input type="time" data-f="se|rappelJour" value="${esc(f.seuils.rappelJour)}"></div><div class="champ"><label>Synthèse à</label><input type="time" data-f="se|syntheseHeure" value="${esc(f.seuils.syntheseHeure)}"></div><div class="champ"><label>Adresse de la synthèse</label><input type="email" data-f="se|mailSynthese" value="${esc(f.seuils.mailSynthese || '')}" placeholder="—"></div></div>
             <div class="act"><button class="chip ${f.seuils.mails ? 'on' : ''}" data-a="se-tog" data-v="mails">Les mails partent (rappels aux consultants, synthèse)${R && !R.smtp ? ' — SMTP non configuré' : ''}</button></div>
@@ -2027,7 +2105,7 @@
       if (a === 'tm-fermer') { this.tmV = null; this.rendre(); return; }
       if (a === 'tm-nav') { if (this.tmV) { this.tmV = { shop: this.tmV.shop, i: Math.max(0, this.tmV.i + Number(v)) }; } this.rendre(); return; }
       if (a === 'tm-n') { this.tmN = Number(v) === 12 ? 12 : 6; this.rendre(); return; }
-      if (a === 'sante-relire') { delete this.KS[v]; this.chargerSante(v); this.rendre(); return; }
+      if (a === 'sante-relire') { delete this.KS[v]; delete this.VB[v]; this.chargerSante(v); this.rendre(); return; }
       if (a === 'vb-vue') { this.vbVue = v; this.rendre(); return; }
       if (a === 'vb-h') { const f = this.form; if (f.vb) { f.vb.horizon = f.vb.horizon === v ? '' : v; } this.rendre(); return; }
       if (a === 'vb-save') { this.vbSauver(v); return; }
@@ -2043,6 +2121,8 @@
       if (a === 'demarrer') { const vis = this.visite(v); if (vis && vis.statut !== 'en_cours') { this.majVisite(v, { statut: 'en_cours' }); const b = this.boutique(vis.shop); if (b) { b.visiteEnCours = vis.id; } } if (vis) { this.chargerBoutique(vis.shop); this.go('controle', vis.id); } else { this.go('agenda'); } return; }
       if (a === 'demarrer-ici') { this.form = { shop: v, prevu_le: auj(), debut_h: maintenant().slice(11), duree_min: 60, motif: 'asap' }; this.planifier(true); return; }
       if (a === 'photo') { this.prendrePhoto(parts[0], parts[1], parts[2], parts[3], parts[4]); return; }
+      if (a === 'oblig-tous') { const vis = this.visite(parts[0]); if (!vis) { return; } const mod = this.checklistDe(vis).find(x => x.id === parts[1]); const pts = this.pointsDe(vis.id);
+        (mod ? mod.points.filter(pt => pt.oblig && !(pts[pt.ref] || {}).etat) : []).forEach(pt => { const p = this.point(vis.id, pt.ref, mod.id); p.etat = 'ok'; this.point_save(vis.id, p); }); this.rendre(); return; }
       if (a === 'etat-set') { const p = this.point(parts[0], parts[1], parts[2]); p.etat = p.etat === parts[3] ? '' : parts[3]; this.point_save(parts[0], p); return; }
       if (a === 'tab-vue') { this.tabVue = v; try { localStorage.setItem('vi.tabVue', v); } catch (e) { /* privé */ } this.rendre(); return; }
       if (a === 'mois') { this.mois = v === '0' ? 0 : this.mois + Number(v); this.rendre(); return; }
@@ -2052,6 +2132,7 @@
       if (a === 'cause-diag') { const c = this.form.causes || (this.form.causes = []); const i = c.indexOf(v); if (i >= 0) { c.splice(i, 1); } else { c.push(v); } this.rendre(); return; }
       if (a === 'etape') { this.allerEtape(Number(v)); return; }
       if (a === 'etape-bloque') { const E = this._etapes; this.dire('Avant de continuer : ' + ((E && E.manque) || 'cette étape n’est pas remplie') + '.'); return; }
+      if (a === 'bloq-tog') { const B = this.form.seuils && this.form.seuils.etapesBloquantes; if (B) { B[v] = !this.etapeBloquante(v, B); this.rendre(); } return; }
       if (a === 'pa') { const i = Number(parts[0]); if (this.form.pa && this.form.pa[i]) { this.form.pa[i][parts[1]] = parts[2]; this.rendre(); } return; }
       if (a === 'pa-del') { this.form.pa.splice(Number(v), 1); this.rendre(); return; }
       if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), 3) }); this.rendre(); return; }

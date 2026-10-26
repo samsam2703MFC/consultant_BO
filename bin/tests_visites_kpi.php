@@ -212,7 +212,7 @@ $r = ep_visites_kpi('77');
 verifie('un magasin inconnu : 404', ($r['error'] ?? '') === 'magasin inconnu');
 $r = ep_visites_kpi('2');
 verifie('les deux blocs', is_array($r['caEtp']) && is_array($r['structure']) && !isset($r['annee']) && $r['shop'] === '2');
-verifie('un mois muet : relu dans cinq minutes, pas dans une heure', $r['manques'] === ['structure'] && $TTL === 300, json_encode([$r['manques'], $TTL]));
+verifie('un mois muet se dit dans manques (sans cache : la lecture suivante le relit)', $r['manques'] === ['structure'] && $TTL === null, json_encode([$r['manques'], $TTL]));
 
 // --- 5. les tâches mois par mois ----------------------------------------------------------
 echo "Les tâches mois par mois\n";
@@ -312,8 +312,8 @@ verifie('une journée à −30 % ne demande pas de justification', $B3['periodes
 verifie('un mois clos sans coût matière : le coût matière de l’année reste inconnu, et le dit', $mRef <= 5 || ($B3['periodes']['annee']['pnl']['coutMatiere'] === null && $B3['periodes']['annee']['pnl']['net'] === null && str_contains((string) $B3['periodes']['annee']['pnl']['motif'], 'coût matière')), json_encode($B3['periodes']['annee']['pnl']));
 verifie('Gosselies : 47 k€ par mois clos pour 100 k€ de budget, l’année aussi à justifier', $mRef === 1 || in_array('annee', $B3['sous'], true), json_encode($B3['periodes']['annee']));
 $B4 = ep_visites_budget('4');
-verifie('Halle : ses mois clos non lus laissent l’année sans chiffre, et se relisent dans cinq minutes',
-    $mRef <= 2 || ($B4['periodes']['annee']['statut'] === 'sans' && in_array('annee', $B4['manques'], true) && $TTL === 300 && str_contains($B4['periodes']['annee']['motif'], 'pas été lu')),
+verifie('Halle : ses mois clos non lus laissent l’année sans chiffre, et le disent ; rien n’est gardé',
+    $mRef <= 2 || ($B4['periodes']['annee']['statut'] === 'sans' && in_array('annee', $B4['manques'], true) && $TTL === null && str_contains($B4['periodes']['annee']['motif'], 'pas été lu')),
     json_encode([$B4['periodes']['annee']['statut'], $B4['manques'], $TTL, $B4['periodes']['annee']['motif'] ?? null]));
 verifie('Halle fermé la veille : pas d’écart du jour, et il le dit', $B4['periodes']['jour']['statut'] === 'sans' && str_contains((string) $B4['periodes']['jour']['motif'], 'fermé') && $B4['periodes']['jour']['pnl'] === null);
 verifie('un magasin inconnu : 404', (ep_visites_budget('77')['error'] ?? '') === 'magasin inconnu');

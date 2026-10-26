@@ -23,17 +23,16 @@ declare(strict_types=1);
  * avec ses cartes (assets/js/cartes-magasin.js).
  */
 
-const VK_TTL_S = 3600;
-const VK_PERIME_S = 21600;
 
-/** GET /visites/kpi/{shop}[?rafraichir=1] */
+/** GET /visites/kpi/{shop} — recalculé à chaque lecture. */
 function ep_visites_kpi(string $shop): array
 {
     if (!isset(viMagasins()[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['shop' => $shop, 'indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
-    // vkKpi2 (26/10/2026) : la structure du CA par canal s'ajoute — un calcul gardé avant elle ne la porte pas.
-    return rcServi('vkKpi2:' . $shop, static fn (): array => vkCalcul((int) $shop),
-        static fn (array $x): int => empty($x['manques']) ? VK_TTL_S : 300, !empty($_GET['rafraichir']), '/visites/kpi/' . $shop, VK_PERIME_S);
+    // Sans cache (26/10/2026, demande de Sam : « pas de cache ») : chaque lecture recalcule (≈ 5 s mesurées) ; les
+    // sources gardent leurs propres relevés (mois clos gravés, commandes du panel dix minutes).
+    @set_time_limit(120);
+    return vkCalcul((int) $shop);
 }
 
 /** Les deux lectures ; une qui échoue (ou un mois du panel resté muet) laisse les autres, se nomme dans `manques` et se relit dans cinq minutes. */
@@ -336,18 +335,18 @@ function ep_visites_taches(string $shop): array
  * champ `budgetCa`). Le rang compare l'écart des magasins du réseau sur la même étendue.
  */
 
-const VB_TTL_S = 1800;
-const VB_PERIME_S = 21600;
 const VB_ETENDUES = ['jour', 'semaine', 'mois', 'trimestre', 'annee'];
 
-/** GET /visites/budget/{shop}[?rafraichir=1] — gardé une demi-heure, cinq minutes si une lecture a manqué. */
+/** GET /visites/budget/{shop} — recalculé à chaque lecture. */
 function ep_visites_budget(string $shop): array
 {
     if (!isset(viMagasins()[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['shop' => $shop, 'indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
-    @set_time_limit(120);
-    return rcServi('vkBud:' . $shop, static fn (): array => vbCalcul((int) $shop, date('Y-m-d', strtotime('-1 day'))),
-        static fn (array $x): int => empty($x['manques']) ? VB_TTL_S : 300, !empty($_GET['rafraichir']), '/visites/budget/' . $shop, VB_PERIME_S);
+    // Sans cache (26/10/2026, demande de Sam) : chaque lecture recalcule (≈ 20 s mesurées en ligne ; la tablette la lit
+    // en arrière-plan dès l'ouverture du contrôle). Les sources gardent les leurs : Résultat cinq minutes, le jour clos
+    // un quart d'heure, comme partout dans le cockpit.
+    @set_time_limit(180);
+    return vbCalcul((int) $shop, date('Y-m-d', strtotime('-1 day')));
 }
 
 /** Les quatre étendues pour un magasin, arrêtées à `$ref` (la veille). */
