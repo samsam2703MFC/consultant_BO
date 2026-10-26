@@ -1050,3 +1050,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-24T12:19Z Résultat › Année : les articles par ticket face à l'an passé
 2026-10-24T12:29:16Z réclamations → cloche, suppression avec historique refusée, tests stables
 2026-10-26T09:57Z Dashboard magasin, vue Année : le trafic de l'année face à l'an passé
+2026-10-26T10:19:47Z atelier : tableau à remplir (Excel) → import des données réelles
