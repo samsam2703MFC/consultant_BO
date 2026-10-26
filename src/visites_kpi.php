@@ -175,3 +175,61 @@ function vkStructure(int $sid, array $mois): array
         'ca' => round($tI), 'caReste' => round($tR), 'autres' => count($autres), 'categories' => $tI > 0 ? $lignes : [],
         'source' => 'panel : ventes par catégorie (/consultant/shops/category-sales), mois clos'];
 }
+
+/* --- Les tâches du magasin, mois par mois (26/10/2026, demande de Sam) ----------------------------- */
+
+/**
+ * GET /visites/taches/{shop}[?mois=AAAA-MM][&n=12] — pour l'étape « Contrôles photo » de la tablette :
+ *  - `mois[]` : les n derniers mois (12 au plus), du plus récent au plus ancien — les tâches demandées et faites (le
+ *    relevé quotidien du panel, `ceo_tache_jour`, journées révolues : le mois en cours s'arrête à hier), les notes du
+ *    contrôle qualité (`mac_task_review`) : combien notées, combien sous le seuil (4), la moyenne ;
+ *  - `taches[]` : pour le mois choisi (d'office le mois en cours, ou le précédent s'il n'a encore rien), les tâches
+ *    notées sous le seuil ou refusées, avec la note, le commentaire et le nom du contrôleur (ep_pwa_tasks_nc).
+ * Tout se lit dans la base du cockpit : rien au panel, rien à garder en cache.
+ */
+function ep_visites_taches(string $shop): array
+{
+    if (!isset(viMagasins()[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
+    $sid = (int) $shop;
+    $n = max(3, min(12, (int) ($_GET['n'] ?? 12)));
+    $sig = setting('signalement', []);
+    $seuil = is_array($sig) && isset($sig['seuil']) ? (int) $sig['seuil'] : 4;
+    $courant = date('Y-m');
+    $liste = [];
+    for ($i = 0; $i < $n; $i++) { $liste[] = date('Y-m', mktime(12, 0, 0, (int) date('n') - $i, 1, (int) date('Y'))); }
+    $du = end($liste) . '-01'; $au = date('Y-m-d');
+    $par = [];
+    if (function_exists('tachesSuiviTables')) { tachesSuiviTables(); }
+    try {
+        foreach (Db::rows('SELECT DATE_FORMAT(jour, \'%Y-%m\') AS m, COUNT(*) AS t, SUM(fait) AS f, COUNT(DISTINCT jour) AS j FROM ceo_tache_jour'
+            . ' WHERE id_shop = ? AND jour BETWEEN ? AND ? GROUP BY m', [$sid, $du, $au]) as $r) {
+            $par[(string) $r['m']] = ['demandees' => (int) $r['t'], 'faites' => (int) $r['f'], 'jours' => (int) $r['j']];
+        }
+    } catch (PDOException $e) { /* relevé absent : les mois le disent */ }
+    try {
+        foreach (Db::rows('SELECT DATE_FORMAT(review_date, \'%Y-%m\') AS m, COUNT(rating) AS notees, SUM(rating < ?) AS sous, AVG(rating) AS moy FROM mac_task_review'
+            . ' WHERE id_shop = ? AND review_date BETWEEN ? AND ? GROUP BY m', [$seuil, $sid, $du, $au]) as $r) {
+            $par[(string) $r['m']] = ($par[(string) $r['m']] ?? []) + ['notees' => (int) $r['notees'], 'sous' => (int) $r['sous'], 'moyenne' => $r['moy'] !== null ? round((float) $r['moy'], 2) : null];
+        }
+    } catch (PDOException $e) { /* pas de notes du contrôle qualité */ }
+    $mois = [];
+    foreach ($liste as $m) {
+        $x = $par[$m] ?? [];
+        $d = $x['demandees'] ?? 0; $f = $x['faites'] ?? 0;
+        $mois[] = ['mois' => $m, 'lab' => vkMoisLab($m), 'enCours' => $m === $courant, 'demandees' => $d, 'faites' => $f, 'jours' => $x['jours'] ?? 0,
+            'pct' => $d > 0 ? (int) round($f / $d * 100) : null, 'notees' => $x['notees'] ?? 0, 'sous' => $x['sous'] ?? 0, 'moyenne' => $x['moyenne'] ?? null];
+    }
+    // Le mois choisi : celui demandé s'il est dans la liste, sinon le mois en cours, ou le précédent s'il n'a encore rien.
+    $choisi = (string) ($_GET['mois'] ?? '');
+    if (!in_array($choisi, $liste, true)) {
+        $choisi = ($mois[0]['demandees'] || $mois[0]['notees'] || !isset($mois[1])) ? $liste[0] : $liste[1];
+    }
+    $fin = $choisi === $courant ? date('Y-m-d') : date('Y-m-t', strtotime($choisi . '-01'));
+    $nc = vkAvecGet(['shop' => (string) $sid, 'du' => $choisi . '-01', 'au' => $fin, 'date' => ''], 'ep_pwa_tasks_nc');
+    $taches = array_map(static fn (array $t): array => ['jour' => $t['jour'], 'tache' => $t['tache'], 'note' => $t['note'], 'commentaire' => $t['comment'],
+        'controleur' => $t['consultant'], 'releveeLe' => $t['releveeLe'], 'recidive' => $t['recidive'], 'suite' => $t['suite']], (array) ($nc['nc'] ?? []));
+    return ['shop' => (string) $sid, 'seuil' => $seuil, 'mois' => $mois, 'choisi' => $choisi, 'choisiLab' => vkMoisLab($choisi), 'taches' => $taches,
+        'indispo' => !empty($nc['indispo']),
+        'source' => 'tâches : relevé quotidien du panel (journées révolues, le mois en cours jusqu’à hier) · notes : contrôle qualité des tâches'];
+}
+
