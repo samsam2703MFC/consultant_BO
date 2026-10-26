@@ -17,6 +17,13 @@ class CommunicationMessageRepository extends BaseRepository
      * Przypomnienia proform już wysłane (lub w kolejce) : id proformy => [level, last_at].
      * proforma_reminder_N = poziom N ; dawne proforma_payment_reminder = 1, proforma_payment_reminder_final = 5.
      */
+    /** Rappel automatique (auteur $author) déjà créé pour la proforma et ce type, quel que soit son statut : jamais deux fois. */
+    public function autoReminderExists(int $proformaId, string $type, string $author): bool
+    {
+        return (bool) $this->query("SELECT 1 FROM communication_message WHERE id_proforma = :p AND message_type = :t AND created_by = :a LIMIT 1",
+            ['p' => $proformaId, 't' => $type, 'a' => $author]);
+    }
+
     public function proformaReminderLevels(array $proformaIds): array
     {
         $ids = array_values(array_filter(array_map('intval', $proformaIds)));

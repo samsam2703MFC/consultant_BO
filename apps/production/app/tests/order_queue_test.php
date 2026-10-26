@@ -47,7 +47,7 @@ try {
                  'product_recipe_prepare_instruction_connection', 'test_product', 'test_product_status', 'test_product_type', 'test_product_stage',
                  'test_product_changelog', 'complaint', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'palets_delivery', 'document_cmr', 'document_wz',
                  'shipment_log', 'app_notification', 'outbox', 'webhook_outbox_shipments', 'cron_notification_outbox', 'cron_runs',
-                 'document_proforma', 'document_proforma_product', 'document_invoice', 'customer_order_changelog', 'ksef_submission'] as $table) {
+                 'document_proforma', 'document_proforma_product', 'document_invoice', 'customer_order_changelog', 'ksef_submission', 'complaint_product_to_send_log', 'complaint_product_pending', 'carton_stock_complaint'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -107,7 +107,7 @@ try {
     // --- Une ligne par cas
     $o = $queue->overview(null, 'all', false, 1, $now);
     expectOq($o['counts'] === ['late_shipping' => 1, 'no_proforma' => 1, 'proforma_stale' => 1, 'proforma_not_sent' => 1, 'reminder_due' => 2,
-        'documents_ready' => 1, 'shipping_issue' => 1, 'send_error' => 1, 'ksef' => 0, 'po_draft' => 0, 'po_late' => 0, 'invoice_unlinked' => 0, 'inventory_old' => 0], 'one case per rule ; closed order, order with WDT, paid and free proformas left out');
+        'documents_ready' => 1, 'shipping_issue' => 1, 'send_error' => 1, 'ksef' => 0, 'po_draft' => 0, 'po_late' => 0, 'invoice_unlinked' => 0, 'inventory_old' => 0, 'complaint_open' => 0, 'return_to_ship' => 0], 'one case per rule ; closed order, order with WDT, paid and free proformas left out');
     $by = [];
     foreach ($o['items'] as $i) $by[$i['key']] = $i;
     expectOq(array_keys($by) === ['reminder_due:proforma:205', 'reminder_due:proforma:202', 'late_shipping:order:101', 'no_proforma:order:101',

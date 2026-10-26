@@ -6,6 +6,7 @@ namespace App\Services\Shipping;
 use App\Exceptions\CustomException;
 use App\Repositories\Shipping\Difference\ShippingIssueRepository;
 use App\Repositories\Workshop\ParamRepository;
+use App\Services\Purchasing\NcService;
 use App\Services\Logistics\DriverService;
 use DateTimeImmutable;
 
@@ -32,7 +33,7 @@ final class ShippingIssueService
     /** Décisions qui demandent une note (pourquoi). */
     private const NOTE_REQUIRED = ['waive', 'correction'];
 
-    public function __construct(private ShippingIssueRepository $repo, private ParamRepository $params) {}
+    public function __construct(private ShippingIssueRepository $repo, private ParamRepository $params, private NcService $nc) {}
 
     /** Ajoute à la file les nouvelles différences et les nouveaux problèmes de livraison (idempotent). */
     public function sync(?DateTimeImmutable $now = null): array
@@ -54,6 +55,12 @@ final class ShippingIssueService
             $logistics ??= $this->repo->ownerFor('LOGISTYKA') ?? 0;
             $this->insert('delivery', ['id_delivery_stop' => (int) $s['id']], $s['id_customer'], (string) $s['ship_date'], $due, $logistics ?: null);
             $out['deliveries']++;
+        }
+        // P7 : la domówienie (dosłanie, ponowna dostawa) a sa WDT → l'écart est réglé.
+        $out['closed'] = 0;
+        foreach ($this->repo->shippedSupplements() as $done) {
+            $this->repo->update((int) $done['id'], ['status' => 'done', 'closed_at' => $now->format('Y-m-d H:i:s')]);
+            $out['closed']++;
         }
         return $out;
     }
@@ -117,7 +124,55 @@ final class ShippingIssueService
         return $this->find($id);
     }
 
-    public function reopen(int $id): array
+    /**
+     * Domówienie pré-remplie (P7) pour « Dosłanie » (lignes manquantes du document de différences, déjà payées : GRATIS)
+     * et « Ponowna dostawa » (produits du jour de livraison, GRATIS) : à relire dans le formulaire avant l'enregistrement.
+     * @return array{issue:int, customer:int, order_type:string, is_freebie:bool, parent_order_id:?int, note:string, products:list<array>}
+     */
+    public function supplementPrefill(int $id): array
+    {
+        $issue = $this->find($id);
+        if (!in_array($issue['decision'], ['resend', 'redeliver'], true)) throw new CustomException('Domówienie tylko dla decyzji « dosłanie » albo « ponowna dostawa ».', 'errors', 422);
+        if ($issue['status'] === 'done') throw new CustomException('Sprawa jest zamknięta.', 'errors', 409);
+        if ($issue['id_order']) throw new CustomException('Domówienie dla tej sprawy już istnieje (zamówienie #' . (int) $issue['id_order'] . ').', 'errors', 409);
+        if ($issue['decision'] === 'resend') {
+            $lines = $this->repo->missingLines((int) $issue['id_difference']);
+            $parent = $this->repo->orderOfDifference((int) $issue['id_difference']);
+            $note = 'Dosłanie brakujących produktów (opłacone w proformie) — sprawa różnic #' . $id;
+        } else {
+            $lines = $this->repo->deliveryLines((int) $issue['id_delivery_stop']);
+            $parent = $lines ? (int) $lines[0]['id_order'] : null;
+            $note = 'Ponowna dostawa po problemie przy dostawie — sprawa #' . $id;
+        }
+        if (!$lines) throw new CustomException('Brak produktów do dosłania w tej sprawie.', 'errors', 422);
+        return ['issue' => $id, 'customer' => (int) $issue['id_customer'], 'order_type' => 'SUPPLEMENT', 'is_freebie' => true, 'parent_order_id' => $parent, 'note' => $note,
+            'products' => array_map(fn($l) => ['id_product' => (int) $l['id_product'], 'product_name' => (string) $l['product_name'],
+                'quantity_carton' => max(1, (int) round((float) $l['quantity'])), 'price_net' => round((float) $l['price'], 2)], $lines)];
+    }
+
+    /** La domówienie créée depuis le formulaire est reliée à l'écart (il se clôt à sa WDT). */
+    public function linkOrder(int $id, int $orderId): void
+    {
+        $issue = $this->find($id);
+        if (!$issue['id_order']) $this->repo->update($id, ['id_order' => $orderId]);
+    }
+
+    /** « Przekazanie do reklamacji » (P7) : non-conformité client pré-remplie (une par écart). */
+    public function createNc(int $id, ?int $userId): array
+    {
+        $issue = $this->find($id);
+        if ($issue['decision'] !== 'complaint') throw new CustomException('Niezgodność tylko dla decyzji « przekazanie do reklamacji ».', 'errors', 422);
+        if ($issue['id_nc']) return ['id_nc' => (int) $issue['id_nc'], 'created' => false];
+        $p = $this->present($this->repo->list(null, null, 1, $id)[0], date('Y-m-d'));
+        $text = 'Problem przy dostawie (sprawa #' . $id . ') — klient : ' . ($p['customer'] ?? '—') . ', dzień wysyłki : ' . ($p['ship_date'] ?? '—')
+            . ($p['reason'] ? ', przyczyna : ' . $p['reason'] : '') . ($p['stop_note'] ? ', kierowca : ' . $p['stop_note'] : '') . ($issue['note'] ? '. Decyzja : ' . $issue['note'] : '') . '.';
+        $ncId = $this->nc->save(['source' => 'customer', 'description' => mb_substr($text, 0, 5000), 'severity' => 'major',
+            'due_date' => date('Y-m-d', strtotime('+7 days'))], null, $userId);
+        $this->repo->update($id, ['id_nc' => $ncId]);
+        return ['id_nc' => $ncId, 'created' => true];
+    }
+
+        public function reopen(int $id): array
     {
         $issue = $this->find($id);
         $this->repo->update($id, ['status' => $issue['decision'] ? 'decided' : 'open', 'closed_by' => null, 'closed_at' => null]);
@@ -164,6 +219,9 @@ final class ShippingIssueService
             'ship_date' => $r['ship_date'],
             'driver_name' => $r['driver_name'],
             'pallets' => $r['source'] === 'delivery' ? [(int) $r['pallets_delivered'], (int) $r['pallets_returned']] : null,
+            'id_order' => isset($r['id_order']) && $r['id_order'] ? (int) $r['id_order'] : null,
+            'id_nc' => isset($r['id_nc']) && $r['id_nc'] ? (int) $r['id_nc'] : null,
+            'nc_number' => $r['nc_number'] ?? null,
             'last_message_at' => $r['last_message_at'],
             'last_message_type' => $r['last_message_type'],
         ];

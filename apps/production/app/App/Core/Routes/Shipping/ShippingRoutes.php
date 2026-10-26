@@ -56,6 +56,7 @@ return function(RouteCollector $r) {
     $r->addRoute('PUT', '/ajax/shipments/differences/{id:\d+}/decision', ['controller' => $issues, 'method' => 'decision']);
     $r->addRoute('POST', '/ajax/shipments/differences/{id:\d+}/close', ['controller' => $issues, 'method' => 'close']);
     $r->addRoute('POST', '/ajax/shipments/differences/{id:\d+}/reopen', ['controller' => $issues, 'method' => 'reopen']);
+    $r->addRoute('POST', '/ajax/shipments/differences/{id:\d+}/nc', ['controller' => $issues, 'method' => 'nc']);
     $r->addRoute('POST', '/ajax/shipments/{id:\d+}/ksef/send', ['controller'=>App\Controllers\Web\Shipping\KsefSubmissionController::class,'method'=>'send']);
     $r->addRoute('POST', '/ajax/shipments/ksef/refresh-statuses', ['controller'=>App\Controllers\Web\Shipping\KsefSubmissionController::class,'method'=>'refreshStatuses']);
     $r->addRoute('GET', '/ajax/shipments/{id:\d+}/ksef/upo', ['controller'=>App\Controllers\Web\Shipping\KsefSubmissionController::class,'method'=>'upo']);

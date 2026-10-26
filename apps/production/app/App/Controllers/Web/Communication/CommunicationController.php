@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 class CommunicationController extends BaseController
 {
     public function __construct(private CommunicationService $service, private EmailAccountService $emailAccounts, private CommunicationEmailDeliveryWorker $deliveryWorker,
-                                private \App\Repositories\Client\ClientRepository $clients) {}
+                                private \App\Repositories\Client\ClientRepository $clients, private \App\Services\Communication\PaymentReminderAutoService $autoReminders) {}
     private function author(): ?string { $user = GlobalRegistry::get('user'); return $user ? $user->getDisplayName() : null; }
     public function templates() { $this->view('communication/templates', ['templates' => $this->service->templates(), 'languages' => $this->service->languages(), 'templateTypes' => $this->service->templateTypes()]); }
     public function emailSettings() { $this->view('communication/email-settings', ['account' => $this->emailAccounts->active()]); }
@@ -56,7 +56,8 @@ class CommunicationController extends BaseController
             };
             $savePath = match (true) {
                 $source === 'proforma' && (in_array($messageType, ['proforma_payment_reminder', 'proforma_payment_reminder_final'], true) || str_starts_with($messageType, 'proforma_reminder_')) => 'reminder/proforma',
-                $source === 'difference' && in_array($messageType, ['payment_reminder', 'payment_reminder_final'], true) => 'reminder/difference',
+                // Dokument różnic (delivery_difference) i przypomnienia o dopłacie : ta sama trasa zapisu (dawniej brak trasy dla dokumentu).
+                $source === 'difference' => 'reminder/difference',
                 $source === 'sales_goal' => 'sales-goal',
                 default => $source,
             };
@@ -143,7 +144,14 @@ class CommunicationController extends BaseController
             $this->templates();
         }
     }
-    public function reminder() { $this->view('communication/reminder', ['differences' => $this->service->selectableDifferences(), 'proformas' => $this->service->selectableUnpaidProformas(), 'languages' => $this->service->languages(), 'messages' => $this->service->messages()]); }
+    public function reminder()
+    {
+        // P5 : niveaux automatiques et aperçu de ce qui partirait (au niveau réglé, sinon pour 1–2 s'il était activé).
+        $levels = $this->autoReminders->levels();
+        $plan = $this->autoReminders->plan(null, $levels ?: \App\Services\Communication\PaymentReminderAutoService::MAX_LEVEL);
+        $this->view('communication/reminder', ['differences' => $this->service->selectableDifferences(), 'proformas' => $this->service->selectableUnpaidProformas(), 'languages' => $this->service->languages(),
+            'messages' => $this->service->messages(), 'auto_levels' => $levels, 'auto_plan' => $plan, 'auto_author' => \App\Services\Communication\PaymentReminderAutoService::AUTHOR]);
+    }
     public function ajaxComposeReminder(int $idDifference) { try { return $this->json($this->service->composeReminder($idDifference, $_GET['type'] ?? 'payment_reminder', $_GET['language'] ?? 'fr')); } catch (\Throwable $e) { return $this->json(['message' => $e->getMessage()], 422); } }
     public function saveReminderDraft() { try { $id = $this->service->saveDraft(Request::createFromGlobals()->request->all(), $this->author()); return $this->json(['id' => $id, 'message' => 'Wiadomość zapisana w audycie jako szkic.']); } catch (\Throwable $e) { return $this->json(['message' => $e->getMessage()], 422); } }
 

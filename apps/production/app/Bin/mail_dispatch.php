@@ -4,7 +4,7 @@ declare(strict_types=1);
 /*
  * E-mails automatiques : transforme les nouveaux événements (commandes, livraisons prévues,
  * expéditions, WDT, factures, proformas) en messages en file selon les règles actives
- * (Komunikacja › Automatyczne e-maile), met en file le rapport mensuel de direction (une fois par
+ * (Komunikacja › Automatyczne e-maile), met en file les rappels de paiement automatiques (niveaux 1–2 si activés), le rapport mensuel de direction (une fois par
  * mois, si des destinataires sont configurés), publie les alertes d'échéances dans la cloche (réclamations sans
  * décision, essais de nouveaux produits en retard, coûts du mois non saisis), crée la version de départ des recettes
  * qui n'en ont pas encore (versions « en vigueur depuis »), alimente la file des écarts d'expédition, rafraîchit les
@@ -35,6 +35,13 @@ try {
         $ksef = ['error' => $e->getMessage()];
     }
     $dispatch = $container->get(App\Services\Communication\MailAutomationService::class)->dispatch();
+    // Rappels de paiement des proformas, niveaux 1 à reminders.auto_levels (P5 ; 0 = désactivé) : avant la file d'envoi.
+    try {
+        $reminders = $container->get(App\Services\Communication\PaymentReminderAutoService::class)->run();
+    } catch (Throwable $e) {
+        fwrite(STDERR, 'mail_dispatch reminders: ' . $e->getMessage() . PHP_EOL);
+        $reminders = ['error' => $e->getMessage()];
+    }
     // Raport miesięczny zarządu : raz w miesiącu za poprzedni miesiąc (błąd raportu nie zatrzymuje wysyłki kolejki).
     try {
         $report = $container->get(App\Services\Analysis\MonthlyReportService::class)->autoSend();
@@ -78,7 +85,7 @@ try {
         $shopNotices = ['error' => $e->getMessage()];
     }
     $delivery = $container->get(App\Services\Communication\CommunicationEmailDeliveryWorker::class)->processDue(50);
-    echo json_encode(['dispatch' => $dispatch, 'monthly_report' => $report, 'alerts' => $alerts, 'recipe_versions' => $recipeVersions, 'shipping_issues' => $shippingIssues, 'ksef' => $ksef, 'supplements' => $supplements, 'shop_notices' => $shopNotices, 'delivery' => $delivery], JSON_UNESCAPED_UNICODE) . PHP_EOL;
+    echo json_encode(['dispatch' => $dispatch, 'reminders' => $reminders, 'monthly_report' => $report, 'alerts' => $alerts, 'recipe_versions' => $recipeVersions, 'shipping_issues' => $shippingIssues, 'ksef' => $ksef, 'supplements' => $supplements, 'shop_notices' => $shopNotices, 'delivery' => $delivery], JSON_UNESCAPED_UNICODE) . PHP_EOL;
 } catch (Throwable $e) {
     fwrite(STDERR, 'mail_dispatch: ' . $e->getMessage() . PHP_EOL);
     exit(1);

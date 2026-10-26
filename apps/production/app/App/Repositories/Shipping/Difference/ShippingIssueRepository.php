@@ -13,7 +13,7 @@ final class ShippingIssueRepository extends WorkshopRepository
 {
     protected string $table = 'n_shipping_issue';
     protected array $writable = ['source', 'id_difference', 'id_delivery_stop', 'id_customer', 'opened_on', 'due_on', 'id_owner', 'status',
-        'decision', 'note', 'decided_by', 'decided_at', 'closed_by', 'closed_at'];
+        'decision', 'note', 'id_order', 'id_nc', 'decided_by', 'decided_at', 'closed_by', 'closed_at'];
 
     /** Montant d'un document de différences (WDT − proforma payée, devise du WDT) : positif = le client doit payer. */
     private const AMOUNT = "SUM(COALESCE(p.invoiced_total_amount, p.invoiced_quantity * p.price_during_invoicing)
@@ -50,22 +50,24 @@ final class ShippingIssueRepository extends WorkshopRepository
     }
 
     /** Écarts de la file avec client, document, montant, responsable et dernier message envoyé au client. */
-    public function list(?string $status, ?int $ownerId, int $limit = 300): array
+    public function list(?string $status, ?int $ownerId, int $limit = 300, ?int $id = null): array
     {
         $where = [];
         $params = [];
+        if ($id !== null) { $where[] = 'i.id = ?'; $params[] = $id; }
         if ($status !== null) { $where[] = 'i.status = ?'; $params[] = $status; }
         if ($ownerId !== null) { $where[] = 'i.id_owner = ?'; $params[] = $ownerId; }
         $sql = "SELECT i.*, c.company AS customer, c.communication_lang,
                 COALESCE(NULLIF(u.displayed_name, ''), u.login) AS owner_name,
                 diff.amount, diff.lines_changed, wdt.wdt_id, wdt.wdt_number, wdt.currency,
-                s.reason, s.note AS stop_note, s.ship_date, s.receiver_name, s.driver_name, s.pallets_delivered, s.pallets_returned,
+                s.reason, s.note AS stop_note, s.ship_date, s.receiver_name, s.driver_name, s.pallets_delivered, s.pallets_returned, nc.number AS nc_number,
                 (SELECT MAX(COALESCE(m.sent_at, m.created_at)) FROM communication_message m WHERE i.id_difference IS NOT NULL AND m.id_difference = i.id_difference) AS last_message_at,
                 (SELECT m.message_type FROM communication_message m WHERE i.id_difference IS NOT NULL AND m.id_difference = i.id_difference ORDER BY m.id DESC LIMIT 1) AS last_message_type
             FROM n_shipping_issue i
             LEFT JOIN customer c ON c.id = i.id_customer
             LEFT JOIN user u ON u.id = i.id_owner
             LEFT JOIN n_delivery_stop s ON s.id = i.id_delivery_stop
+            LEFT JOIN n_nc nc ON nc.id = i.id_nc
             LEFT JOIN (
                 SELECT p.id_document_order_shipping_difference AS id, " . self::AMOUNT . " AS amount,
                     SUM(p.quantity_ordered <> p.invoiced_quantity OR p.price_during_ordering <> p.price_during_invoicing) AS lines_changed
@@ -102,6 +104,39 @@ final class ShippingIssueRepository extends WorkshopRepository
             FROM document_order_shipping_difference_products p
             WHERE p.id_document_order_shipping_difference = ? AND (p.quantity_ordered <> p.invoiced_quantity OR p.price_during_ordering <> p.price_during_invoicing)
             ORDER BY p.product_name", [$differenceId]);
+    }
+
+    /**
+     * Domówienie d'un écart (P7) : lignes manquantes d'un document de différences (commandé − facturé, prix payé),
+     * commande d'origine (même WDT).
+     */
+    public function missingLines(int $differenceId): array
+    {
+        return $this->all("SELECT p.id_product, COALESCE(fp.name, p.product_name) AS product_name, p.quantity_ordered - p.invoiced_quantity AS quantity, p.price_during_ordering AS price
+            FROM document_order_shipping_difference_products p LEFT JOIN final_product fp ON fp.id = p.id_product
+            WHERE p.id_document_order_shipping_difference = ? AND p.quantity_ordered > p.invoiced_quantity ORDER BY product_name", [$differenceId]);
+    }
+
+    public function orderOfDifference(int $differenceId): ?int
+    {
+        $rows = $this->all("SELECT co.id FROM shipment_log l JOIN customer_order co ON co.id_wdt = l.id_wdt WHERE l.id_diff = ? ORDER BY co.id LIMIT 1", [$differenceId]);
+        return $rows ? (int) $rows[0]['id'] : null;
+    }
+
+    /** Ponowna dostawa (P7) : produits des commandes du client expédiées le jour de l'arrêt du chauffeur. */
+    public function deliveryLines(int $stopId): array
+    {
+        return $this->all("SELECT cop.id_product, fp.name AS product_name, SUM(cop.quantity_carton) AS quantity, MAX(cop.purchase_price) AS price, MIN(co.id) AS id_order
+            FROM n_delivery_stop s JOIN customer_order co ON co.id_customer = s.id_customer AND co.expected_shipping_date = s.ship_date
+            JOIN customer_order_product cop ON cop.id_order = co.id LEFT JOIN final_product fp ON fp.id = cop.id_product
+            WHERE s.id = ? GROUP BY cop.id_product, fp.name ORDER BY fp.name", [$stopId]);
+    }
+
+    /** Écarts dont la domówienie liée est expédiée (WDT émise) : à clore. @return list<array{id:int, wdt:string}> */
+    public function shippedSupplements(): array
+    {
+        return $this->all("SELECT i.id, w.doc_num AS wdt FROM n_shipping_issue i JOIN customer_order co ON co.id = i.id_order JOIN document_wdt w ON w.id = co.id_wdt
+            WHERE i.status = 'decided' AND i.id_order IS NOT NULL");
     }
 
     /** Compteurs de la file : à décider, en cours, en retard ; montants ouverts à rembourser / à encaisser. */

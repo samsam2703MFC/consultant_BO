@@ -35,6 +35,9 @@ final class OrderQueueService
         'po_late' => ['label' => 'Dostawa surowców po terminie', 'icon' => 'bi-truck', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
         'invoice_unlinked' => ['label' => 'Faktura zakupowa do przypisania', 'icon' => 'bi-receipt', 'positions' => ['ZAKUPY', 'ADMINISTRACJA']],
         'inventory_old' => ['label' => 'Inwentaryzacja surowców > 30 dni', 'icon' => 'bi-clipboard-check', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
+        // Reklamacje i zwroty (P8) : decyzja w terminie alerts.complaint_days, zamiennik do wysłania.
+        'complaint_open' => ['label' => 'Reklamacja bez decyzji', 'icon' => 'bi-chat-square-text', 'positions' => ['ADMINISTRACJA', 'JAKOSC']],
+        'return_to_ship' => ['label' => 'Zamiennik do wysłania', 'icon' => 'bi-box-arrow-up', 'positions' => ['LOGISTYKA']],
     ];
     public const WHEN = ['all' => 'Wszystko', 'overdue' => 'Po terminie', 'today' => 'Do dziś', 'week' => 'Do 7 dni'];
     /** Palettes prêtes : comme Dzisiaj, les 14 derniers jours. */
@@ -53,6 +56,8 @@ final class OrderQueueService
         private ShippingIssueRepository $issues,
         private CommunicationService $communication,
         private SendStatusService $sends,
+        private \App\Repositories\Client\Complaint\ReturnsRepository $returns,
+        private \App\Repositories\Workshop\ParamRepository $params,
     ) {}
 
     /**
@@ -260,6 +265,27 @@ final class OrderQueueService
                 'detail' => (int) $stale['never'] ? 'nigdy nieliczone : ' . (int) $stale['never'] : 'najstarsza inwentaryzacja ' . date('d.m.Y', strtotime((string) $oldest)),
             ], [
                 ['label' => 'Inwentaryzacja (arkusz)', 'url' => '/workshop/supply#tab=stock', 'primary' => true],
+            ]);
+        }
+
+        // P8 : reklamacje franczyzy bez decyzji (termin = wpłynięcie + alerts.complaint_days) i zamienniki do wysłania.
+        $complaintDays = max(1, (int) $this->params->get('alerts.complaint_days', '3'));
+        foreach ($this->returns->openComplaints() as $c) {
+            $out[] = $this->item('complaint_open', 'complaint:' . (int) $c['id'], date('Y-m-d', strtotime($c['received_at'] . ' +' . $complaintDays . ' days')), [
+                'customer' => $c['customer'], 'customer_id' => $c['id_customer'] !== null ? (int) $c['id_customer'] : null,
+                'title' => 'Reklamacja #' . (int) $c['id'] . ($c['product'] ? ' · ' . $c['product'] : ''),
+                'detail' => ($c['status'] === 'IN_REVIEW' ? 'w trakcie' : 'nowa') . ' · wpłynęła ' . date('d.m.Y', strtotime((string) $c['received_at'])),
+            ], [
+                ['label' => 'Decyzja', 'url' => '/franchise-complaints', 'primary' => true],
+            ]);
+        }
+        foreach ($this->returns->toShip() as $r) {
+            $out[] = $this->item('return_to_ship', 'replacement:' . (int) $r['id'], $r['shipping_date'] ?: date('Y-m-d', strtotime($r['insert_timestamp'] . ' +2 days')), [
+                'customer' => $r['customer'], 'customer_id' => $r['id_customer'] !== null ? (int) $r['id_customer'] : null,
+                'title' => 'Zamiennik : ' . ($r['product'] ?? '—') . ' × ' . (int) $r['carton_qty'] . ' kart.',
+                'detail' => (int) $r['status'] === 1 ? 'spakowany — wyjdzie z najbliższym WZ klienta' : 'do spakowania',
+            ], [
+                ['label' => 'Zwroty do wysłania', 'url' => '/client-complaints/to-ship#zw-ship', 'primary' => true],
             ]);
         }
         return $out;

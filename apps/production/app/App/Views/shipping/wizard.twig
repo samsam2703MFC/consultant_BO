@@ -20,6 +20,7 @@
 {% block content %}
 <section class="section at-wizard" id="shipWizard"
          data-carriers="{{ carriers|json_encode }}"
+         data-replacements="{{ (replacements ?: {})|json_encode }}"
          data-selected-date="{{ selected_date }}">
 
     <ol class="at-steps" aria-label="Kroki kreatora">
@@ -161,6 +162,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const box = document.getElementById('shipWizard');
     const CARRIERS = JSON.parse(box.dataset.carriers || '[]');
+    // P8 : zamienniki z reklamacji klienta (spakowane wychodzą z jego WZ i dostają « Wysłane » automatycznie).
+    const REPLACEMENTS = JSON.parse(box.dataset.replacements || '{}');
+    const replacementsNote = (id) => {
+        const list = REPLACEMENTS[id] || [];
+        if (!list.length) return '';
+        return '<span class="at-run-msg"><i class="bi bi-box-arrow-up"></i> Zamienniki z reklamacji : ' + list.map((r) => esc(r.product) + ' ×' + r.cartons + (r.packed ? ' (spakowany — wyjdzie z tym WZ)' : ' (do spakowania)')).join(', ') + '</span>';
+    };
     const backBtn = box.querySelector('[data-wizard-back]');
     const nextBtn = box.querySelector('[data-wizard-next]');
     const hint = document.getElementById('swHint');
@@ -305,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }).join('');
             return '<tr data-client="' + c.id + '">' +
                 '<td style="width:36px"><input type="checkbox" class="form-check-input" data-include="' + c.id + '"' + (c.include ? ' checked' : '') + (p.has_pallets ? '' : ' disabled') + ' aria-label="Wysyłaj: ' + esc(c.company) + '"></td>' +
-                '<td><strong>' + esc(c.company) + '</strong>' + (other ? '<span class="at-run-msg text-warning"><i class="bi bi-calendar-event"></i> Inne aktywne zamówienia: ' + esc(other) + '</span>' : '') + '</td>' +
+                '<td><strong>' + esc(c.company) + '</strong>' + (other ? '<span class="at-run-msg text-warning"><i class="bi bi-calendar-event"></i> Inne aktywne zamówienia: ' + esc(other) + '</span>' : '') + replacementsNote(c.id) + '</td>' +
                 '<td class="text-end">' + ordered + '</td><td class="text-end">' + scanned + '</td>' +
                 '<td><span class="at-pill ' + st.cls + '">' + esc(st.text) + '</span></td>' +
                 '<td class="text-end">' + (p.products.length ? '<button type="button" class="at-link-btn" data-products="' + c.id + '">Produkty (' + p.products.length + ')</button>' : '') + '</td>' +

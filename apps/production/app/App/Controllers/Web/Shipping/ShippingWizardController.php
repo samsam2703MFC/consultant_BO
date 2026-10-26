@@ -10,7 +10,7 @@ use App\Services\Shipping\ShippingWizardService;
  */
 class ShippingWizardController extends BaseController
 {
-    public function __construct(private ShippingWizardService $wizard)
+    public function __construct(private ShippingWizardService $wizard, private \App\Repositories\Client\Complaint\ReturnsRepository $returns)
     {
     }
 
@@ -24,9 +24,20 @@ class ShippingWizardController extends BaseController
             'dates'         => $dates,
             'carriers'      => $this->wizard->activeCarriers(),
             'complaint_dates' => $this->wizard->complaintDates(),
+            // P8 : zamienniki z reklamacji czekające na wysyłkę, pokazane przy kliencie (spakowane wychodzą z jego WZ).
+            'replacements'  => $this->replacementsByCustomer(),
             'selected_date' => $selected,
             'requested_date' => $requested,
         ]);
+    }
+
+    private function replacementsByCustomer(): array
+    {
+        $out = [];
+        foreach ($this->returns->toShip() as $r) {
+            $out[(int) $r['id_customer']][] = ['product' => (string) ($r['product'] ?? '—'), 'cartons' => (int) $r['carton_qty'], 'packed' => (int) $r['status'] === 1];
+        }
+        return $out;
     }
 
     /** GET /ajax/shipments/last-carrier?client_id= — podpowiedź przewoźnika (tylko odczyt). */

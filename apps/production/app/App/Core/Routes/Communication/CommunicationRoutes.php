@@ -45,4 +45,8 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/communication/payment-reminders', ['controller' => $controller, 'method' => 'reminder']);
     $r->addRoute('GET', '/ajax/communication/differences/{idDifference:\\d+}/compose', ['controller' => $controller, 'method' => 'ajaxComposeReminder']);
     $r->addRoute('POST', '/ajax/communication/payment-reminders/draft', ['controller' => $controller, 'method' => 'saveReminderDraft']);
+    // P5 : wysyłka automatyczna poziomów 1–2 i « Opłacone » dla zaznaczonych proform
+    $reminders = App\Controllers\Web\Communication\PaymentReminderController::class;
+    $r->addRoute('PUT', '/ajax/communication/payment-reminders/settings', ['controller' => $reminders, 'method' => 'saveSettings']);
+    $r->addRoute('POST', '/ajax/communication/payment-reminders/paid', ['controller' => $reminders, 'method' => 'markPaid']);
 };

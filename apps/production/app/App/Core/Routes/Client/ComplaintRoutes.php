@@ -18,6 +18,11 @@ return function(RouteCollector $r) {
 
 
 
+    // P8 : Zwroty do wysłania — une page (réclamations sans décision, remplacements, cartons de retour)
+    $r->addRoute('GET', '/client-complaints/to-ship', [
+        'controller' => App\Controllers\Web\Client\Complaint\ReturnsController::class,
+        'method' => 'index'
+    ]);
     $r->addRoute('GET', '/client-complaints/pending-products', [
         'controller' => \App\Controllers\Web\Client\Complaint\ComplaintController::class,
         'method'     => 'pendingOverview'

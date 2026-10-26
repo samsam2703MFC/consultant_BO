@@ -23,6 +23,7 @@ final class ParamRules
         'shipping_issue.lookback_days' => [7, 365, true],
         'send_status.stuck_minutes' => [5, 1440, true],
         'send_status.lookback_days' => [1, 365, true],
+        'reminders.auto_levels' => [0, 2, true],
     ];
 
     /** [code bas, code haut, code d'erreur API, message ERP] : la valeur haute ne peut pas être inférieure à la basse. */

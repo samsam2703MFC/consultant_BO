@@ -56,6 +56,13 @@
                                     <?= esc($stage['meta']) ?>
                                 <?php endif; ?>
                             </span>
+                            <?php if (!empty($stage['action'])): /* P6 : bouton de l'étape (teczka zamówienia) */ ?>
+                                <?php if (!empty($stage['action']['post'])): ?>
+                                    <button type="button" class="at-link-btn at-tl-action" data-tl-post="<?= esc($stage['action']['post']) ?>" data-tl-confirm="<?= esc($stage['action']['confirm'] ?? '') ?>"><?= esc($stage['action']['label']) ?></button>
+                                <?php else: ?>
+                                    <a class="at-link-btn at-tl-action" href="<?= ROOT . esc($stage['action']['url']) ?>"><?= esc($stage['action']['label']) ?> ›</a>
+                                <?php endif; ?>
+                            <?php endif; ?>
                         </li>
                     <?php endforeach; ?>
                 </ol>
@@ -400,6 +407,18 @@
 <?php $this->view("page_components/footer"); ?>
 
 <script>
+// Teczka zamówienia (P6) : przyciski etapów osi (wystaw proformę, oznacz jako opłaconą).
+document.querySelectorAll('[data-tl-post]').forEach((b) => b.addEventListener('click', async () => {
+    if (b.dataset.tlConfirm && !confirm(b.dataset.tlConfirm)) return;
+    b.disabled = true;
+    try {
+        const r = await fetch('<?= ROOT ?>' + b.dataset.tlPost, {method: 'POST', credentials: 'same-origin', headers: {'Accept': 'application/json', 'Content-Type': 'application/json'}, body: '{}'});
+        const body = await r.json().catch(() => ({}));
+        (typeof showSnack === 'function' ? showSnack(r.ok, body.message || (r.ok ? 'Zapisano' : 'Błąd'), body.message || '') : alert(body.message || (r.ok ? 'Zapisano' : 'Błąd')));
+        if (r.ok) setTimeout(() => location.reload(), 600); else b.disabled = false;
+    } catch (e) { b.disabled = false; }
+}));
+
     const paidProformaEdit = <?= !empty($proforma_context['is_paid']) ? 'true' : 'false' ?>;
     const originalOrderProducts = <?= json_encode(array_map(static fn($product) => [
         'id_product' => (int) $product['id_product'],

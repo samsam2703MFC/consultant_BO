@@ -287,6 +287,7 @@ class OrderRepository extends BaseRepository
                        dp.doc_num   AS proforma_num,
                        dp.status    AS proforma_status,
                        dp.create_timestamp AS proforma_at,
+                       dp.is_sent_to_client AS proforma_sent, dp.sent_to_client_at AS proforma_sent_at,
                        (SELECT MIN(plg.generated_at)
                           FROM picking_list_generation plg
                          WHERE CASE WHEN JSON_VALID(plg.selected_order_ids_json)
@@ -307,7 +308,16 @@ class OrderRepository extends BaseRepository
                        w.doc_num       AS wdt_num,
                        w.invoiced_date AS wdt_at,
                        (SELECT ks.status FROM ksef_submission ks WHERE ks.id_document_wdt = co.id_wdt ORDER BY ks.id DESC LIMIT 1) AS ksef_status,
-                       (SELECT ks2.ksef_number FROM ksef_submission ks2 WHERE ks2.id_document_wdt = co.id_wdt ORDER BY ks2.id DESC LIMIT 1) AS ksef_number
+                       (SELECT ks2.ksef_number FROM ksef_submission ks2 WHERE ks2.id_document_wdt = co.id_wdt ORDER BY ks2.id DESC LIMIT 1) AS ksef_number,
+                       -- P6 : livraison confirmée sur la tablette chauffeur, écart d'expédition de la WDT
+                       (SELECT ds.status FROM n_delivery_stop ds WHERE ds.id_customer = co.id_customer
+                           AND ds.ship_date = COALESCE((SELECT MIN(sl3.shipment_date) FROM shipment_log sl3 WHERE sl3.id_wdt = co.id_wdt), co.expected_shipping_date)
+                         ORDER BY ds.id DESC LIMIT 1) AS delivery_status,
+                       (SELECT ds2.id FROM n_delivery_stop ds2 WHERE ds2.id_customer = co.id_customer
+                           AND ds2.ship_date = COALESCE((SELECT MIN(sl4.shipment_date) FROM shipment_log sl4 WHERE sl4.id_wdt = co.id_wdt), co.expected_shipping_date)
+                         ORDER BY ds2.id DESC LIMIT 1) AS delivery_stop_id,
+                       (SELECT MAX(sl5.id_diff) FROM shipment_log sl5 WHERE sl5.id_wdt = co.id_wdt AND sl5.id_diff > 0) AS id_difference,
+                       (SELECT si.status FROM n_shipping_issue si JOIN shipment_log sl6 ON sl6.id_diff = si.id_difference WHERE sl6.id_wdt = co.id_wdt ORDER BY si.id DESC LIMIT 1) AS issue_status
                 FROM customer_order co
                 LEFT JOIN document_proforma dp ON dp.id = co.id_proforma
                 LEFT JOIN document_wdt w ON w.id = co.id_wdt

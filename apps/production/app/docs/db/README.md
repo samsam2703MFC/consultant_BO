@@ -7,7 +7,7 @@ Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y 
 
 ## Installer / intégrer
 
-Sur une base ERP d'origine (copie de production) : `php Bin/tfb_migrate.php apply` depuis `apps/production/app`. Les migrations `migrations/tfb/001 → 095` créent les tables (`tfb_` puis renommées `n_` par la 069), posent les données de départ (paramètres, rôles, modèles d'e-mails, questions du pointage…) et sont enregistrées dans `n_schema_migration` (une migration déjà appliquée ne peut plus être modifiée). `docs/db/n_schema.sql` donne le schéma final des tables `n_` en un seul fichier, pour lecture.
+Sur une base ERP d'origine (copie de production) : `php Bin/tfb_migrate.php apply` depuis `apps/production/app`. Les migrations `migrations/tfb/001 → 097` créent les tables (`tfb_` puis renommées `n_` par la 069), posent les données de départ (paramètres, rôles, modèles d'e-mails, questions du pointage…) et sont enregistrées dans `n_schema_migration` (une migration déjà appliquée ne peut plus être modifiée). `docs/db/n_schema.sql` donne le schéma final des tables `n_` en un seul fichier, pour lecture.
 
 ## Ce que le développement change dans les tables d'origine
 
@@ -42,6 +42,14 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 ### Tablette chauffeur (migration 082, 26/10/2026)
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
+
+### Écarts d'expédition : domówienie et NC liées (migration 097, 26/10/2026)
+
+`n_shipping_issue` reçoit `id_order` (commande de domówienie ou de nouvelle livraison créée depuis l'écart : `/client-orders/new?issue=ID` pré-remplit les produits manquants, gratis, commande d'origine en parent ; l'écart passe à `done` quand cette commande a sa WDT) et `id_nc` (non-conformité client `n_nc` ouverte depuis l'écart, une seule par écart, échéance +7 jours). Les deux colonnes sont NULL par défaut, sans clé étrangère (la commande ou la NC supprimée laisse l'écart lisible). Les remplacements de réclamation (`complaint` décision « produit de remplacement ») passent à « Wysłane » quand la WZ du client est émise (Zamówienia › Zwroty › Do wysłania).
+
+### Rappels de paiement automatiques (migration 096, 26/10/2026)
+
+Paramètre `reminders.auto_levels` (0 par défaut = désactivé ; 1 = premier rappel, 2 = premier et deuxième) : `Bin/mail_dispatch.php` met en file les rappels des proformas non payées après leur échéance (au plus 90 jours, 25 par passage), dans la langue du client, auteur `auto-reminder` dans `communication_message` (un rappel par proforma et par niveau). Aucune table.
 
 ### Assistant « Zamknięcie miesiąca », cartons WDT (migration 095, 26/10/2026)
 

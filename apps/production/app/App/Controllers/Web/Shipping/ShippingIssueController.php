@@ -66,6 +66,17 @@ class ShippingIssueController extends BaseController
         }
     }
 
+    /** POST /ajax/shipments/differences/{id}/nc : « Przekazanie do reklamacji » → niezgodność klienta (P7). */
+    public function nc($id)
+    {
+        try {
+            $r = $this->issues->createNc((int) $id, $this->userId());
+            return $this->json(['message' => $r['created'] ? 'Utworzono niezgodność klienta.' : 'Niezgodność dla tej sprawy już istnieje.', 'data' => $r]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     public function reopen($id)
     {
         try {

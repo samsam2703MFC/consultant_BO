@@ -32,7 +32,8 @@ class OrderController extends BaseController
         private ExternalPriceListService $externalPriceListService,
         private OrderSupplementPusherService $supplementPusherService,
         private OrderTimelineService $orderTimelineService,
-        private OrderCreationService $creation
+        private OrderCreationService $creation,
+        private \App\Services\Shipping\ShippingIssueService $shippingIssues
     )
     {
     }
@@ -179,6 +180,20 @@ class OrderController extends BaseController
     {
         $data['client'] = $this->clientService->getById($id);
         $data['prefill'] = $this->creation->prefill($_GET);
+        // P7 : domówienie pré-remplie depuis un écart d'expédition (dosłanie, ponowna dostawa), à relire avant l'enregistrement.
+        $issueId = (int) ($_POST['shipping_issue_id'] ?? $_GET['issue'] ?? 0);
+        if ($issueId > 0 && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            try {
+                $fromIssue = $this->shippingIssues->supplementPrefill($issueId);
+                if ($fromIssue['customer'] !== (int) $id) throw new CustomException('Sprawa dotyczy innego klienta.', 'errors', 422);
+                $data['prefill'] = ['wizard' => false, 'apply' => true, 'order_type' => 'SUPPLEMENT', 'is_freebie' => true, 'date' => date('Y-m-d', strtotime('+1 day')),
+                    'note' => $fromIssue['note'], 'issue' => $issueId, 'parent_order_id' => $fromIssue['parent_order_id']];
+                $data['old_products'] = $fromIssue['products'];
+            } catch (\Throwable $e) {
+                $this->errors[] = $e->getMessage();
+                $issueId = 0;
+            }
+        }
 
         $data['client_type'] = "standard";
         if(!is_null($data['client']['franchisee_uid'])){
@@ -202,8 +217,9 @@ class OrderController extends BaseController
             if ($this->orderService->validate($_POST)) {
                 if (empty($_POST['order_description'])) $_POST['order_description'] = "";
 
-                $this->handleAction(function () {
+                $this->handleAction(function () use ($issueId) {
                     $newOrderId = $this->orderService->insertNewOrder($_POST);
+                    if ($issueId > 0 && $newOrderId) $this->shippingIssues->linkOrder($issueId, (int) $newOrderId);
                     if (!empty($_POST['order_type']) && $_POST['order_type'] === 'SUPPLEMENT' && $newOrderId) {
                         $this->supplementPusherService->push((int)$newOrderId);
                     }

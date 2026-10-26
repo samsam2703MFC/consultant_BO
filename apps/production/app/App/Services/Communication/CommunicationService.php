@@ -250,6 +250,26 @@ class CommunicationService
         return ['id' => $id, 'status' => $action === 'queue' ? 'queued' : 'draft'];
     }
 
+    /**
+     * Rappel de proforma mis en file sans relecture (P5, PaymentReminderAutoService) : modèle par défaut du niveau dans
+     * la langue du client (sinon français), destinataire de la fiche client, PDF joint — le même message que le
+     * formulaire, avec $author pour le reconnaître.
+     */
+    public function queueProformaReminder(int $proformaId, int $level, string $author): array
+    {
+        if ($level < 1 || $level > 5) throw new CustomException('Nieprawidłowy poziom przypomnienia.', 'errors', 422);
+        $type = 'proforma_reminder_' . $level;
+        $context = $this->proformaContexts->forProforma($proformaId);
+        $template = $this->templates->getDefault($type, (string) ($context['language'] ?? 'fr')) ?: $this->templates->getDefault($type, 'fr');
+        if ($template === []) throw new CustomException('Brak aktywnego szablonu przypomnienia ' . $level . '/5.', 'errors', 404);
+        if (!filter_var($context['recipient_email'], FILTER_VALIDATE_EMAIL)) throw new CustomException('Brak adresu e-mail klienta (księgowość, szef, handlowiec).', 'errors', 422);
+        return $this->saveMessage('proforma', $proformaId, $type, [
+            'template_id' => $template['id'], 'recipient_email' => $context['recipient_email'], 'action' => 'queue',
+            'subject' => $this->renderer->render($template['subject_template'], $context['variables']),
+            'body' => $this->renderer->render($template['body_template'], $context['variables']),
+        ], $author);
+    }
+
     public function messages(): array { return $this->messages->recent(); }
 
     public function message(int $id): array

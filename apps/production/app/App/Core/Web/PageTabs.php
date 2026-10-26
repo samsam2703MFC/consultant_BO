@@ -65,6 +65,7 @@ final class PageTabs
             ['/communication/templates', 'Szablony e-mail', 'bi-envelope-paper'],
         ]],
         'returns' => ['label' => 'Zwroty', 'section' => 'Zamówienia', 'icon' => 'bi-arrow-counterclockwise', 'tabs' => [
+            ['/client-complaints/to-ship', 'Do wysłania', 'bi-box-arrow-up'],
             ['/client-complaints/pending-products', 'Oczekujące produkty', 'bi-hourglass-split'],
             ['/client-complaints/pending-shipment', 'Oczekujące zwroty (wysyłka)', 'bi-truck'],
             ['/client-complaints/picking-list', 'Listy kompletacyjne', 'bi-list-check'],

@@ -49,6 +49,7 @@ class ProformaEmailContextService
                 'pdf_url' => ROOT . '/ajax/proforma-documents/' . $proformaId . '/document',
             ],
             'recipient_email' => $recipient,
+            'language' => (string) ($client['communication_lang'] ?? '') ?: 'fr',
             'variables' => [
                 'client' => [
                     'company' => (string) ($client['company'] ?? $proforma['consignee_name']),

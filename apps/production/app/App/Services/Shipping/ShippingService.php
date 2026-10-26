@@ -53,7 +53,8 @@ class ShippingService
         private CartonStockComplaintRepository           $cartonStockComplaintRepository,
         private DifferenceSettlementService              $differenceSettlementService,
         private ShipmentPackagingService                 $shipmentPackagingService,
-        private OrderFulfilmentService                   $fulfilment
+        private OrderFulfilmentService                   $fulfilment,
+        private \App\Repositories\Client\Complaint\ReturnsRepository $returns
     )
     {
     }
@@ -124,6 +125,8 @@ class ShippingService
             if (!$resInsertWzProduct) {
                 throw new CustomException("INSERT_WZ_PRODUCT_FAILED", 'errors', 500);
             }
+            // P8 : les remplacements de réclamation emballés pour ce client partent avec ce WZ → « Wysłane ».
+            $this->returns->markShippedWithWz((int) $data['id_customer'], (string) $data['shipping_date']);
 
             $resInsertCMR = $this->cmrRepository->insertSelect([
                 "id_document_wz" => $wzInsertedId,

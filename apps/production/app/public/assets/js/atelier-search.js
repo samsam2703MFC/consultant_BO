@@ -75,12 +75,12 @@
         'valider': 'zatwierdzenie zatwierdzona', 'validation': 'zatwierdzenie zatwierdzona', 'lance': 'wprowadzone wprowadzony', 'lances': 'wprowadzone',
         'pipeline': 'etapy', 'prototype': 'test nowe', 'degustation': 'test', 'accueil': 'ekran glowny', 'ipad': 'tablet ekran',
         'alerte': 'alerty dzwonek', 'alertes': 'alerty dzwonek', 'echeance': 'terminy termin', 'echeances': 'terminy', 'retard': 'zalegle terminy termin alerty',
-        'retards': 'zalegle terminy termin', 'rappel': 'alerty terminy', 'rappels': 'alerty terminy', 'cloche': 'dzwonek alerty', 'notification': 'dzwonek alerty', 'notifications': 'dzwonek alerty',
+        'retards': 'zalegle terminy termin', 'rappel': 'alerty terminy przypomnienie', 'rappels': 'alerty terminy przypomnienia', 'cloche': 'dzwonek alerty', 'notification': 'dzwonek alerty', 'notifications': 'dzwonek alerty',
         'historique': 'historia wersje', 'historiques': 'historia', 'version': 'wersje wersja', 'versions': 'wersje', 'evolution': 'historia koszt miesiac',
         'vigueur': 'obowiazuje', 'depuis': 'obowiazuje', 'changement': 'zmiany zmiana', 'changements': 'zmiany', 'modification': 'zmiany edycja',
         'modifications': 'zmiany', 'composition': 'sklad kompozycje', 'compositions': 'kompozycje sklad',
         'ecart': 'roznice roznica', 'ecarts': 'roznice', 'difference': 'roznice roznica', 'differences': 'roznice', 'remboursement': 'zwrot roznice',
-        'rembourser': 'zwrot roznice', 'manquant': 'brak roznice problem', 'manquants': 'brak roznice', 'litige': 'roznice problem', 'litiges': 'roznice problemy',
+        'rembourser': 'zwrot roznice', 'manquant': 'brak roznice problem brakujacych', 'manquants': 'brak roznice brakujacych', 'litige': 'roznice problem', 'litiges': 'roznice problemy',
         'decision': 'decyzja decyzji', 'decisions': 'decyzja', 'responsable': 'odpowiedzialny', 'qr': 'kod qr', 'pin': 'pin', 'scanner': 'skanuj', 'scan': 'skanuj',
         'mouvement': 'ruchy magazynowe', 'mouvements': 'ruchy magazynowe', 'registre': 'ruchy magazynowe', 'entree': 'przyjecia magazynowe', 'entrees': 'przyjecia magazynowe',
         'sortie': 'wydania magazynowe', 'sorties': 'wydania magazynowe', 'perime': 'przeterminowane', 'perimes': 'przeterminowane', 'peremption': 'przeterminowane daty waznosci',
@@ -107,7 +107,7 @@
         'commander': 'zamow zamowienia', 'apres': 'po', 'planification': 'planowanie planowaniu plan',
         'feuille': 'arkusz', 'semaines': 'tyg tygodni', 'clic': 'kliknieciem', 'masse': 'wszystkie', 'compter': 'policzone liczenia', 'max': 'maks maksymalne', 'salaire': 'wynagrodzenie koszt pracodawcy', 'salaires': 'wynagrodzenie koszt pracodawcy', 'paie': 'wynagrodzenie placy', 'verrouiller': 'zamkniety zamknij', 'verrouille': 'zamkniety zamrozony', 'fige': 'zamrozony', 'modifier': 'zmien zmiana edycja korekta', 'calculateur': 'kalkulator', 'budget': 'budzet budzetu budzecie', 'liste': 'lista listy', 'listes': 'listy lista', 'jour': 'dnia dzien dzis', 'besoin': 'zapotrzebowanie potrzeba', 'besoins': 'zapotrzebowanie potrzeba',
         'cloture': 'zamkniecie miesiaca', 'cloturer': 'zamknij zamkniecie miesiaca', 'clore': 'zamknij zamkniecie', 'fermer': 'zamknij zamkniecie', 'fermeture': 'zamkniecie miesiaca',
-        'medias': 'media', 'media': 'media', 'electricite': 'media', 'fixes': 'stale', 'fixe': 'stale', 'copier': 'kopiuj', 'precedent': 'poprzedniego', 'inventorier': 'inwentaryzacja arkusz'
+        'medias': 'media', 'media': 'media', 'electricite': 'media', 'fixes': 'stale', 'fixe': 'stale', 'copier': 'kopiuj', 'precedent': 'poprzedniego', 'inventorier': 'inwentaryzacja arkusz', 'automatique': 'automatyczne automat automatycznie', 'automatiques': 'automatyczne automat', 'paye': 'oplacona oplacone', 'payee': 'oplacona oplacone', 'payees': 'oplacone', 'remplacement': 'zastepcze', 'remplacements': 'zastepcze', 'relivrer': 'ponowna dostawa', 'frise': 'os statusu'
     };
 
     var menu = null;
