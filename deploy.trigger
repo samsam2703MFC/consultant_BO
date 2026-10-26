@@ -1085,3 +1085,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T17:47:11Z production : audit 2, lot C partie 1 (assistants client, matière, fournisseur, salarié, utilisateur ERP, véhicule et chauffeur ; migrations 091–092)
 2026-10-26T18:15:25Z production : audit 2, lot C partie 2 (recette en 3 onglets, assistant commande + proforma, prix et conformité du produit, semi-produit en fenêtre, Wprowadź depuis un test)
 2026-10-26T18:35:12Z production : lot D P12 réception des livraisons (assistant, tablette, lot, DLC, NC)
+2026-10-26T19:01:16Z production : lot D P15 commandes en lot, P19 inventaire en masse, P17 fiche salaire unique
