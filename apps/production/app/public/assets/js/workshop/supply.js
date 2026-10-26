@@ -392,7 +392,7 @@
                     <button type="button" class="btn btn-sm btn-success ms-auto" data-act="save-receipt" hidden>${esc(t('act.save_receipt'))}</button></div></div></div>` : '';
         const receipts = o.receipts.length ? `<div class="small text-muted mt-2">${esc(t('receipts'))} : ${o.receipts.map(r => {
             const l = o.lines.find(x => x.id === r.line_id);
-            return `${esc(day(r.received_on))} ${esc(l ? l.name : '')} ${esc(l ? q(l, r.quantity) : '')}${r.unit_price !== null && l ? ' @ ' + esc(unitPrice(l, r.unit_price)) : ''}${r.lot_number ? ' · ' + esc(t('rs.lot')) + ' ' + esc(r.lot_number) + (r.best_before ? ' (' + esc(day(r.best_before)) + ')' : '') : ''}${r.nc_id ? ' · <a href="' + esc(api.root) + '/purchasing/nc">NC</a>' : ''}`;
+            return `${esc(day(r.received_on))} ${esc(l ? l.name : '')} ${esc(l ? q(l, r.quantity) : '')}${r.unit_price !== null && l ? ' @ ' + esc(unitPrice(l, r.unit_price)) : ''}${r.lot_number ? ' · ' + esc(t('rs.lot')) + ' ' + esc(r.lot_number) + (r.best_before ? ' (' + esc(day(r.best_before)) + ')' : '') : ''}${r.nc_id ? ' · <a href="' + esc(api.root) + '/purchasing/nc">NC</a>' : ''}${r.employee ? ' · ' + esc(t('rs.by_tablet', {name: r.employee})) : ''}`;
         }).join(' · ')}</div>` : '';
         return `<p><a href="#tab=orders" data-back>‹ ${esc(t('back_orders'))}</a></p>
             <div class="card"><div class="card-header d-flex flex-wrap align-items-center gap-2"><h5 class="mb-0">${esc(o.code)} · ${esc(o.supplier.name)}</h5>${badge(o.status)}

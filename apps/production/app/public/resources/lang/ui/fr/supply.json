@@ -324,5 +324,6 @@
   "rs.summary": "Réception du {date} : {n} lignes.",
   "rs.no_lot": "sans lot",
   "rs.summary_nc": "Non-conformités fournisseur à créer : {n}.",
-  "rs.received_nc": "Réception enregistrée, non-conformités créées : {n}."
+  "rs.received_nc": "Réception enregistrée, non-conformités créées : {n}.",
+  "rs.by_tablet": "tablette : {name}"
 }

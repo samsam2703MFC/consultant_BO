@@ -767,12 +767,15 @@ CREATE TABLE `n_po_receipt` (
   `best_before` date DEFAULT NULL,
   `id_nc` int(11) DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
+  `id_employee` int(11) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `idx_tfb_po_receipt_day` (`received_on`),
   KEY `fk_tfb_po_receipt_line` (`id_po_line`),
   KEY `idx_n_po_receipt_lot` (`lot_number`),
   KEY `idx_n_po_receipt_best_before` (`best_before`),
+  KEY `idx_n_po_receipt_employee` (`id_employee`),
+  CONSTRAINT `fk_n_po_receipt_employee` FOREIGN KEY (`id_employee`) REFERENCES `n_prod_employee` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_tfb_po_receipt_line` FOREIGN KEY (`id_po_line`) REFERENCES `n_po_line` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_price_list_state` (

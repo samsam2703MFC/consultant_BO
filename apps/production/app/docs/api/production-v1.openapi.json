@@ -11207,6 +11207,163 @@
                 ]
             }
         },
+        "/kiosk/deliveries/{id}": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Dostawa do przyjęcia (tablet) / Livraison à réceptionner (tablette)",
+                "operationId": "kioskDelivery",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskDelivery"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Commande fournisseur sans les prix : lignes, commandé, reçu, reste ; réceptions déjà faites (lot, DLC, personne).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/deliveries/{id}/receive": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Przyjęcie dostawy na tablecie / Réception sur la tablette",
+                "operationId": "kioskReceiveDelivery",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KioskDelivery"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Comme POST /supply/orders/{id}/receive, par le salarié identifié (PIN) : quantités, lot, DLC, problème → non-conformité fournisseur. unit_price ignoré (prix de la commande). 409 PO_NOT_RECEIVABLE.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplierOrderReceiveInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/production": {
             "get": {
                 "tags": [
@@ -17984,6 +18141,102 @@
                     }
                 }
             },
+            "KioskDelivery": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "supplier": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "delivery_date": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "receivable": {
+                        "type": "boolean"
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "raw_material_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "base_unit": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "factor": {
+                                    "type": "number"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "received_qty": {
+                                    "type": "number"
+                                },
+                                "remaining": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "receipts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "line_id": {
+                                    "type": "integer"
+                                },
+                                "raw_material_id": {
+                                    "type": "integer"
+                                },
+                                "received_on": {
+                                    "type": "string"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "lot_number": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "best_before": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "nc_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "employee": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "DeviceInput": {
                 "type": "object",
                 "additionalProperties": false,
@@ -23614,6 +23867,11 @@
                                     "type": "integer",
                                     "nullable": true,
                                     "description": "non-conformité créée à la réception"
+                                },
+                                "employee": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "salarié qui a réceptionné sur la tablette"
                                 }
                             }
                         }

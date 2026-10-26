@@ -285,7 +285,8 @@ final class SupplyService
             'supplier_email' => $o['supplier_email'], 'supplier_phone' => $o['supplier_phone'], 'note' => $o['note'],
             'lines' => $lines, 'receipts' => array_map(fn($r) => ['line_id' => (int) $r['id_po_line'], 'raw_material_id' => (int) $r['id_raw_material'], 'received_on' => $r['received_on'],
                 'quantity' => (float) $r['quantity'], 'unit_price' => $r['unit_price'] !== null ? (float) $r['unit_price'] : null,
-                'lot_number' => $r['lot_number'] ?? null, 'best_before' => $r['best_before'] ?? null, 'nc_id' => isset($r['id_nc']) ? (int) $r['id_nc'] : null], $this->repo->receipts($id)),
+                'lot_number' => $r['lot_number'] ?? null, 'best_before' => $r['best_before'] ?? null, 'nc_id' => isset($r['id_nc']) ? (int) $r['id_nc'] : null,
+                'employee' => ($r['employee_name'] ?? '') !== '' ? $r['employee_name'] : null], $this->repo->receipts($id)),
             'can_edit' => $o['status'] === 'draft' && $context->can('prod.supply.write'),
             'can_receive' => in_array($o['status'], ['sent', 'partial'], true) && $context->can('prod.supply.write'),
         ];
@@ -403,13 +404,15 @@ final class SupplyService
         }
         $v->throwIfInvalid();
         if (!$clean) throw ApiException::validation([['field' => 'lines', 'code' => 'REQUIRED', 'params' => []]]);
-        $this->tx->execute(function () use ($id, $o, $day, $clean, $problems, $own, $context) {
+        // Tablet grupy : przyjmuje pracownik zalogowany PIN-em (zapisany przy przyjęciu i w opisie niezgodności).
+        $by = $context->employeeId !== null ? $this->repo->employeeName($context->employeeId) : null;
+        $this->tx->execute(function () use ($id, $o, $day, $clean, $problems, $own, $context, $by) {
             $receiptOf = [];
-            foreach ($clean as $c) $receiptOf[$c['id']] = $this->repo->addReceipt($c['id'], $day, $c['quantity'], $c['unit_price'], $context->userId, $c['lot_number'], $c['best_before']);
+            foreach ($clean as $c) $receiptOf[$c['id']] = $this->repo->addReceipt($c['id'], $day, $c['quantity'], $c['unit_price'], $context->userId, $c['lot_number'], $c['best_before'], $context->employeeId);
             foreach ($problems as $lineId => $pb) {
                 $line = $own[$lineId];
                 $ncId = $this->nc->save(['reported_at' => $day, 'source' => 'supplier_delivery', 'supplier_id' => (int) $o['id_supplier'], 'material_id' => (int) $line['id_raw_material'],
-                    'description' => mb_substr('Przyjęcie ' . $o['code'] . ' (' . $line['name'] . ') : ' . $pb['description'], 0, 5000), 'severity' => $pb['severity'],
+                    'description' => mb_substr('Przyjęcie ' . $o['code'] . ' (' . $line['name'] . ($by ? ', tablet : ' . $by : '') . ') : ' . $pb['description'], 0, 5000), 'severity' => $pb['severity'],
                     'quantity' => $pb['quantity'], 'unit' => $line['unit'] ?? null, 'status' => 'open'], null, $context->userId);
                 if (isset($receiptOf[$lineId])) $this->repo->linkReceiptNc($receiptOf[$lineId], $ncId);
             }
@@ -420,6 +423,26 @@ final class SupplyService
             $this->audit->record($context, 'receive', 'supplier_order', $id, ['status' => $o['status']], ['status' => $status, 'received_on' => $day, 'lines' => $clean]);
         });
         return $this->order($id, $context);
+    }
+
+    /** Tablet grupy : dostawa do przyjęcia, bez cen (linie, zamówione, przyjęte, reszta). */
+    public function kioskOrder(int $id, ApiContext $context): array
+    {
+        $o = $this->order($id, $context);
+        $keep = array_flip(['id', 'raw_material_id', 'name', 'base_unit', 'unit', 'factor', 'quantity', 'received_qty', 'remaining']);
+        return ['id' => $o['id'], 'code' => $o['code'], 'status' => $o['status'], 'supplier' => $o['supplier']['name'] ?? null, 'delivery_date' => $o['delivery_date'],
+            'receivable' => in_array($o['status'], ['sent', 'partial'], true),
+            'lines' => array_map(fn($l) => array_intersect_key($l, $keep), $o['lines']),
+            'receipts' => array_map(fn($r) => array_diff_key($r, ['unit_price' => 1]), $o['receipts'])];
+    }
+
+    /** Tablet grupy : przyjęcie (ilości, partia, data ważności, problem → NC) ; cena zawsze z zamówienia. */
+    public function receiveAtKiosk(int $id, array $body, ApiContext $context): array
+    {
+        if ($context->employeeId === null) throw new ApiException('EMPLOYEE_UNAUTHENTICATED', 401);
+        if (is_array($body['lines'] ?? null)) $body['lines'] = array_map(fn($r) => is_array($r) ? array_diff_key($r, ['unit_price' => 1]) : $r, $body['lines']);
+        $this->receive($id, $body, $context);
+        return $this->kioskOrder($id, $context);
     }
 
     public function cancel(int $id, ApiContext $context): array

@@ -313,7 +313,9 @@ final class SupplyRepository extends WorkshopRepository
     public function receipts(int $orderId): array
     {
         return $this->all(
-            'SELECT r.*, l.id_raw_material FROM n_po_receipt r JOIN n_po_line l ON l.id = r.id_po_line WHERE l.id_po = ? ORDER BY r.received_on, r.id',
+            "SELECT r.*, l.id_raw_material, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name FROM n_po_receipt r JOIN n_po_line l ON l.id = r.id_po_line
+             LEFT JOIN n_prod_employee e ON e.id = r.id_employee LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
+             WHERE l.id_po = ? ORDER BY r.received_on, r.id",
             [$orderId]
         );
     }
@@ -338,11 +340,20 @@ final class SupplyRepository extends WorkshopRepository
     }
 
     /** Przyjęcie linii ; partia i data ważności (asystent « Przyjęcie dostawy ») — podpowiedź dla tabletu (FEFO). */
-    public function addReceipt(int $lineId, string $day, float $quantity, ?float $unitPrice, ?int $userId, ?string $lot = null, ?string $bestBefore = null): int
+    public function addReceipt(int $lineId, string $day, float $quantity, ?float $unitPrice, ?int $userId, ?string $lot = null, ?string $bestBefore = null, ?int $employeeId = null): int
     {
-        $this->db->prepare('INSERT INTO n_po_receipt (id_po_line, received_on, quantity, unit_price, lot_number, best_before, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
-            ->execute([$lineId, $day, $quantity, $unitPrice, $lot, $bestBefore, $userId]);
+        $this->db->prepare('INSERT INTO n_po_receipt (id_po_line, received_on, quantity, unit_price, lot_number, best_before, created_by, id_employee) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$lineId, $day, $quantity, $unitPrice, $lot, $bestBefore, $userId, $employeeId]);
         return (int) $this->db->lastInsertId();
+    }
+
+    /** Salarié de production (tablette) : « Imię Nazwisko ». */
+    public function employeeName(int $employeeId): ?string
+    {
+        $name = $this->db->prepare("SELECT TRIM(CONCAT(pe.name, ' ', pe.surname)) FROM n_prod_employee e JOIN production_employee pe ON pe.id = e.id_production_employee WHERE e.id = ?");
+        $name->execute([$employeeId]);
+        $v = $name->fetchColumn();
+        return $v === false || $v === '' ? null : (string) $v;
     }
 
     public function linkReceiptNc(int $receiptId, int $ncId): void

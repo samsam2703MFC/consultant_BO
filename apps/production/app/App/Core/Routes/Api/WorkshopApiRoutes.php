@@ -196,6 +196,9 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/operations/{id:\d+}/finish', ExecutionController::class, 'finish', 'kiosk_employee'],
             ['POST', '/kiosk/signatures', ExecutionController::class, 'sign', 'kiosk_employee'],
             ['GET', '/kiosk/week', ExecutionController::class, 'week', 'kiosk'],
+            // Przyjęcie dostawy na tablecie (karta « Dostawy surowców » zespołu) : bez cen.
+            ['GET', '/kiosk/deliveries/{id:\d+}', ExecutionController::class, 'delivery', 'kiosk_employee'],
+            ['POST', '/kiosk/deliveries/{id:\d+}/receive', ExecutionController::class, 'receiveDelivery', 'kiosk_employee'],
             ['GET', '/kiosk/production', ExecutionController::class, 'production', 'kiosk_employee'],
             ['POST', '/kiosk/production', ExecutionController::class, 'recordOutput', 'kiosk_employee'],
             ['GET', '/kiosk/production/{id:\d+}', ExecutionController::class, 'output', 'kiosk_employee'],

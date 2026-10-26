@@ -45,7 +45,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 ### Réception des livraisons fournisseurs : lot, DLC, non-conformité (migration 093, 26/10/2026)
 
-`n_po_receipt` reçoit `lot_number` (numéro de lot du fournisseur, en majuscules), `best_before` (date limite) et `id_nc` (`n_nc`, non-conformité créée à la réception, source `supplier_delivery`). Saisis dans l'assistant « Przyjęcie dostawy » (Zaopatrzenie › Zamówienia, ou « Przyjmij dostawę » dans Dostawy surowców). La tablette de groupe propose les lots reçus d'une matière (120 derniers jours, non périmés, ordre FEFO, 3 au plus) lors de la saisie des lots d'un batch.
+`n_po_receipt` reçoit `lot_number` (numéro de lot du fournisseur, en majuscules), `best_before` (date limite), `id_nc` (`n_nc`, non-conformité créée à la réception, source `supplier_delivery`) et `id_employee` (`n_prod_employee`, SET NULL : salarié identifié par son PIN quand la réception est faite sur la tablette de groupe, sans les prix). Saisis dans l'assistant « Przyjęcie dostawy » (Zaopatrzenie › Zamówienia, « Przyjmij dostawę » dans Dostawy surowców, ou la carte « Dostawy surowców » de la tablette). La tablette de groupe propose les lots reçus d'une matière (120 derniers jours, non périmés, ordre FEFO, 3 au plus) lors de la saisie des lots d'un batch.
 
 ### Véhicule : chauffeur parmi les salariés (migration 092, 26/10/2026)
 

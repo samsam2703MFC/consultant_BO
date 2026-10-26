@@ -169,7 +169,8 @@ final class OpenApiSupply
                     'price_gap_pct' => ['type' => 'number', 'nullable' => true, 'description' => 'dernier prix reçu vs prix commandé (%)'], 'qty_gap_pct' => $nNum,
                 ]]],
                 'receipts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['line_id' => ['type' => 'integer'], 'raw_material_id' => ['type' => 'integer'], 'received_on' => $date, 'quantity' => $num, 'unit_price' => $nNum,
-                    'lot_number' => $nStr, 'best_before' => $nDate, 'nc_id' => ['type' => 'integer', 'nullable' => true, 'description' => 'non-conformité créée à la réception']]]],
+                    'lot_number' => $nStr, 'best_before' => $nDate, 'nc_id' => ['type' => 'integer', 'nullable' => true, 'description' => 'non-conformité créée à la réception'],
+                    'employee' => ['type' => 'string', 'nullable' => true, 'description' => 'salarié qui a réceptionné sur la tablette']]]],
             ]],
             'SupplierOrderInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
                 'delivery_date' => $nDate, 'language' => ['type' => 'string', 'enum' => ['pl', 'fr']], 'email_to' => $nStr, 'note' => $nStr, 'save_supplier_email' => ['type' => 'boolean'],

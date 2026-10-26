@@ -670,7 +670,128 @@
                 <h3>${esc(o.supplier || '—')} <span class="kiosk-tag ${o.late ? 'is-late' : (o.date === today ? 'is-ship' : '')}">${esc(o.late ? t('delivery_late', {date: dm(o.date)}) : when(o))}</span></h3>
                 ${o.lines.map(l => `<p>${esc(l.name)} — ${esc(wq(l.quantity, l.unit, l.factor))} <span class="kiosk-muted">(${esc(t('week_delivery_' + state(l)))} · ${esc(t('week_need', {qty: wq(l.need, l.unit, l.factor)}))})</span>
                     ${l.products && l.products.length ? `<br><small class="kiosk-muted">${esc(t('delivery_for', {products: l.products.slice(0, 3).join(', ') + (l.products.length > 3 ? '…' : '')}))}</small>` : ''}</p>`).join('')}
+                ${!o.done && ['sent', 'partial'].includes(o.status) ? `<button type="button" class="kiosk-btn is-primary is-small" data-receive-order="${o.order_id}">${icon('package')} ${esc(t('rx_open'))}</button>` : ''}
             </div></div>`).join('') : `<p class="kiosk-muted">${esc(t('prod_deliveries_none'))}</p>`}</section>`;
+    }
+
+    // Przyjęcie dostawy (asystent, 5 kroków) : 1 dostawa → 2 ilości (z zamówienia) → 3 partia i data ważności (wpisane,
+    // zdjęcie albo skan etykiety) → 4 problem ? (niezgodność dostawcy) → 5 zatwierdzenie. Bez cen (cena z zamówienia).
+    const RX_STEPS = 5;
+    const rxNum = (v) => { const n = Number(String(v ?? '').replace(',', '.').replace(/\s/g, '')); return String(v ?? '').trim() !== '' && Number.isFinite(n) ? n : null; };
+    const rxFmt = (v) => Number(v).toLocaleString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {maximumFractionDigits: 3, useGrouping: false});
+    async function renderReceive(orderId) {
+        stopScan();
+        longIdle = true;
+        resetIdle();
+        let o;
+        try { o = await api('GET', `/kiosk/deliveries/${orderId}`, undefined, true); } catch (err) { toast(err.offline ? t('offline_retry') : err.message, true); return; }
+        if (!o.receivable) { toast(t('rx_not_receivable'), true); return; }
+        const rx = {step: 1, qty: {}, lot: {}, bb: {}, pb: {}};
+        o.lines.filter(l => l.remaining > 0).forEach(l => { rx.qty[l.id] = rxFmt(l.remaining / l.factor); });
+        drawReceive(o, rx);
+    }
+
+    function drawReceive(o, rx) {
+        resetIdle();
+        const open = o.lines.filter(l => l.remaining > 0);
+        const taken = open.filter(l => (rxNum(rx.qty[l.id]) || 0) > 0);
+        const step = rx.step;
+        const bar = `<ol class="kiosk-eod-steps">${Array.from({length: RX_STEPS}, (_, k) => k + 1).map(n => `<li class="${n === step ? 'is-on' : (n < step ? 'is-done' : '')}"><span>${n}</span>${esc(t('rx_step_' + n))}</li>`).join('')}</ol>`;
+        let body = '';
+        if (step === 1) {
+            body = `<p class="kiosk-status">${esc(o.supplier || '—')} · ${esc(o.code)}${o.delivery_date ? ' · ' + esc(t('rx_planned', {date: dm(o.delivery_date)})) : ''}</p>
+                <p class="kiosk-muted">${esc(t('rx_check_help'))}</p>
+                <ul class="kiosk-qc">${open.map(l => `<li class="kiosk-qc-row"><span><strong>${esc(l.name)}</strong></span><span>${esc(wq(l.remaining, l.unit, l.factor))}${l.received_qty > 0 ? ` <small class="kiosk-muted">(${esc(t('rx_already', {qty: wq(l.received_qty, l.unit, l.factor)}))})</small>` : ''}</span></li>`).join('')}</ul>`;
+        } else if (step === 2) {
+            body = `<p class="kiosk-muted">${esc(t('rx_qty_help'))}</p><div class="kiosk-rx-lines">${open.map(l => `<div class="kiosk-card kiosk-rx-line" data-rxline="${l.id}">
+                <div><h3>${esc(l.name)}</h3><span class="kiosk-muted">${esc(t('rx_ordered', {qty: wq(l.remaining, l.unit, l.factor)}))}</span></div>
+                <label class="kiosk-rx-qty"><input inputmode="decimal" autocomplete="off" data-rxqty value="${esc(rx.qty[l.id] ?? '')}"> <span>${esc(l.unit)}</span></label>
+                <div class="kiosk-row"><button type="button" class="kiosk-btn is-small" data-rxall>${esc(t('rx_all'))}</button><button type="button" class="kiosk-btn is-small" data-rxnone>${esc(t('rx_none'))}</button></div></div>`).join('')}</div>
+                <p class="kiosk-error" data-error></p>`;
+        } else if (step === 3) {
+            body = `<p class="kiosk-muted">${esc(t('rx_lots_help'))}</p>${taken.map(l => `<article class="kiosk-card kiosk-lot ${rx.lot[l.id] ? 'is-ok' : ''}" data-rxlot="${l.id}">
+                <div class="kiosk-lot-head"><div><h3>${esc(l.name)}</h3><span class="kiosk-muted">${esc(rx.qty[l.id])} ${esc(l.unit)}</span></div></div>
+                <div class="kiosk-lot-fields">
+                    <label>${esc(t('lot_number'))}<input name="lot" autocomplete="off" autocapitalize="characters" maxlength="64" value="${esc(rx.lot[l.id] || '')}"></label>
+                    <label>${esc(t('lot_best_before'))}<input name="bb" type="date" value="${esc(rx.bb[l.id] || '')}"></label>
+                    ${canScan() ? `<button type="button" class="kiosk-btn is-small is-primary" data-scan>${icon('scan-line')} ${esc(t('lot_scan'))}</button>` : ''}
+                    <label class="kiosk-btn is-small kiosk-photo">${icon('camera')} ${esc(t('lot_photo'))}<input type="file" accept="image/*" capture="environment" data-photo hidden></label></div>
+                <div class="kiosk-ocr" data-ocr hidden></div></article>`).join('')}`;
+        } else if (step === 4) {
+            body = `<p class="kiosk-muted">${esc(t('rx_problem_help'))}</p>${open.map(l => { const pb = rx.pb[l.id] || {}; return `<div class="kiosk-card kiosk-rx-pb ${pb.on ? 'is-on' : ''}" data-rxpb="${l.id}">
+                <label class="kiosk-rx-check"><input type="checkbox" data-pon ${pb.on ? 'checked' : ''}> <strong>${esc(l.name)}</strong></label>
+                <div data-pfields ${pb.on ? '' : 'hidden'}><label class="is-wide">${esc(t('rx_problem_desc'))}<input data-pdesc maxlength="500" value="${esc(pb.desc || '')}" placeholder="${esc(t('rx_problem_ph'))}"></label>
+                    <div class="kiosk-row">${['minor', 'major', 'critical'].map(v => `<button type="button" class="kiosk-btn is-small ${(pb.sev || 'minor') === v ? 'is-primary' : ''}" data-psev="${v}">${esc(t('rx_sev_' + v))}</button>`).join('')}
+                    <label class="kiosk-rx-qty">${esc(t('rx_problem_qty'))} <input inputmode="decimal" data-pqty value="${esc(pb.qty || '')}"> <span>${esc(l.unit)}</span></label></div></div></div>`; }).join('')}
+                <p class="kiosk-error" data-error></p>`;
+        } else {
+            const pbs = open.filter(l => rx.pb[l.id] && rx.pb[l.id].on);
+            body = `<p class="kiosk-muted">${esc(t('rx_confirm_help'))}</p><table class="kiosk-table"><thead><tr><th>${esc(t('rx_col_material'))}</th><th>${esc(t('rx_col_qty'))}</th><th>${esc(t('lot_number'))}</th><th>${esc(t('lot_best_before'))}</th></tr></thead>
+                <tbody>${taken.map(l => `<tr><td>${esc(l.name)}</td><td><strong>${esc(rx.qty[l.id])} ${esc(l.unit)}</strong></td><td>${rx.lot[l.id] ? esc(rx.lot[l.id]) : `<span class="kiosk-muted">${esc(t('rx_no_lot'))}</span>`}</td><td>${rx.bb[l.id] ? esc(dm(rx.bb[l.id]) + '.' + rx.bb[l.id].slice(0, 4)) : '—'}</td></tr>`).join('')}</tbody></table>
+                ${pbs.length ? `<p class="kiosk-error">${icon('triangle-alert', 'is-sm')} ${esc(t('rx_nc_count', {n: pbs.length}))}</p>` : ''}
+                ${taken.length < open.length ? `<p class="kiosk-muted">${esc(t('rx_partial', {n: open.length - taken.length}))}</p>` : ''}
+                <p class="kiosk-error" data-error></p>`;
+        }
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-eod kiosk-rx"><h2>${icon('truck')} ${esc(t('rx_title', {supplier: o.supplier || o.code}))}</h2>${bar}
+            <h3 class="kiosk-eod-step">${esc(t('rx_step_' + step))}</h3>${body}
+            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-rxback>${esc(step > 1 ? t('back') : t('cancel'))}</button>
+                <button type="button" class="kiosk-btn is-primary" data-rxnext>${esc(step < RX_STEPS ? t('eod_next') : t('rx_save'))}</button></div></section>`;
+        // Wartości z bieżącego kroku zostają przy przejściu dalej / wstecz.
+        const keep = () => {
+            el.querySelectorAll('[data-rxline]').forEach(c => { rx.qty[c.dataset.rxline] = c.querySelector('[data-rxqty]').value.trim(); });
+            el.querySelectorAll('[data-rxlot]').forEach(c => { rx.lot[c.dataset.rxlot] = c.querySelector('[name=lot]').value.trim().replace(/\s+/g, ' ').toUpperCase(); rx.bb[c.dataset.rxlot] = c.querySelector('[name=bb]').value; });
+            el.querySelectorAll('[data-rxpb]').forEach(c => {
+                const pb = rx.pb[c.dataset.rxpb] || (rx.pb[c.dataset.rxpb] = {});
+                pb.on = c.querySelector('[data-pon]').checked;
+                pb.desc = c.querySelector('[data-pdesc]').value.trim();
+                pb.qty = c.querySelector('[data-pqty]').value.trim();
+            });
+        };
+        const error = (m) => { const e = el.querySelector('[data-error]'); if (e) e.textContent = m; else toast(m, true); };
+        el.querySelector('section').addEventListener('input', resetIdle);
+        el.querySelectorAll('[data-rxline]').forEach(c => {
+            const l = o.lines.find(x => x.id === Number(c.dataset.rxline));
+            c.querySelector('[data-rxall]').addEventListener('click', () => { c.querySelector('[data-rxqty]').value = rxFmt(l.remaining / l.factor); });
+            c.querySelector('[data-rxnone]').addEventListener('click', () => { c.querySelector('[data-rxqty]').value = '0'; });
+        });
+        el.querySelectorAll('[data-rxlot]').forEach(card => {
+            const slot = {};
+            card.querySelector('[data-photo]')?.addEventListener('change', async (e) => {
+                const file = e.target.files && e.target.files[0];
+                e.target.value = '';
+                busy = false;
+                if (file) await photo(card, file, slot);
+            });
+            card.querySelector('.kiosk-photo')?.addEventListener('click', () => { stopScan(); busy = true; resetIdle(); });
+            card.querySelector('[data-scan]')?.addEventListener('click', () => scan(card, slot));
+        });
+        el.querySelectorAll('[data-rxpb]').forEach(c => {
+            const pb = rx.pb[c.dataset.rxpb] || (rx.pb[c.dataset.rxpb] = {});
+            c.querySelector('[data-pon]').addEventListener('change', (e) => { c.querySelector('[data-pfields]').hidden = !e.target.checked; c.classList.toggle('is-on', e.target.checked); if (e.target.checked) c.querySelector('[data-pdesc]').focus(); });
+            c.querySelectorAll('[data-psev]').forEach(b => b.addEventListener('click', () => { pb.sev = b.dataset.psev; c.querySelectorAll('[data-psev]').forEach(x => x.classList.toggle('is-primary', x === b)); }));
+        });
+        el.querySelector('[data-rxback]').addEventListener('click', () => { stopScan(); keep(); if (step > 1) { rx.step = step - 1; drawReceive(o, rx); } else renderProduction(); });
+        el.querySelector('[data-rxnext]').addEventListener('click', async (e) => {
+            stopScan();
+            keep();
+            if (step === 2) {
+                const bad = open.find(l => rx.qty[l.id] !== '' && (rxNum(rx.qty[l.id]) === null || rxNum(rx.qty[l.id]) < 0));
+                if (bad) return error(t('rx_qty_invalid', {name: bad.name}));
+                if (!open.some(l => (rxNum(rx.qty[l.id]) || 0) > 0)) return error(t('rx_nothing'));
+            }
+            if (step === 4) {
+                const bad = open.find(l => rx.pb[l.id] && rx.pb[l.id].on && !rx.pb[l.id].desc);
+                if (bad) return error(t('rx_problem_missing', {name: bad.name}));
+            }
+            if (step < RX_STEPS) { rx.step = step + 1; drawReceive(o, rx); window.scrollTo(0, 0); return; }
+            const body = {lines: taken.map(l => ({id: l.id, quantity: Math.round(rxNum(rx.qty[l.id]) * l.factor * 1000) / 1000, lot_number: rx.lot[l.id] || null, best_before: rx.bb[l.id] || null})),
+                problems: open.filter(l => rx.pb[l.id] && rx.pb[l.id].on).map(l => { const q = rxNum(rx.pb[l.id].qty); return {line_id: l.id, description: rx.pb[l.id].desc, severity: rx.pb[l.id].sev || 'minor', quantity: q && q > 0 ? Math.round(q * l.factor * 1000) / 1000 : null}; })};
+            e.target.disabled = true;
+            try {
+                await api('POST', `/kiosk/deliveries/${o.id}/receive`, body, true);
+                renderProduction(body.problems.length ? t('rx_saved_nc', {n: body.problems.length}) : t('rx_saved', {supplier: o.supplier || o.code}));
+            } catch (err) { e.target.disabled = false; error(err.offline ? t('offline_retry') : err.message); }
+        });
     }
 
     function drawProduction(day, me, message) {
@@ -713,6 +834,7 @@
         if (message) toast(message);
         const find = (id) => day.items.find(i => i.item_id === id) || day.catalog.find(c => c.item_id === id);
         bindOperations(me);
+        el.querySelectorAll('[data-receive-order]').forEach(b => b.addEventListener('click', () => renderReceive(Number(b.dataset.receiveOrder))));
         el.querySelectorAll('[data-new]').forEach(b => b.addEventListener('click', () => renderNewBatch(find(Number(b.dataset.new)))));
         el.querySelectorAll('[data-batch]').forEach(b => b.addEventListener('click', () => renderBatch(Number(b.dataset.batch))));
         el.querySelectorAll('[data-waste]').forEach(b => b.addEventListener('click', () => renderWaste(find(Number(b.dataset.waste)))));

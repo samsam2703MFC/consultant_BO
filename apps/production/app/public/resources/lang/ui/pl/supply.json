@@ -324,5 +324,6 @@
   "rs.summary": "Przyjęcie {date} : {n} pozycji.",
   "rs.no_lot": "bez partii",
   "rs.summary_nc": "Niezgodności dostawcy do utworzenia : {n}.",
-  "rs.received_nc": "Przyjęcie zapisane, niezgodności utworzone : {n}."
+  "rs.received_nc": "Przyjęcie zapisane, niezgodności utworzone : {n}.",
+  "rs.by_tablet": "tablet : {name}"
 }
