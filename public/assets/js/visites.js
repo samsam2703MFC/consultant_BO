@@ -79,6 +79,11 @@
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
 .vi .kc .k{margin-top:4px}
 .vi .or{color:#B26A00}
+.vi .sens{display:flex;flex-direction:column;gap:6px}
+.vi .sens-l{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:.5px solid var(--color-border-secondary);background:var(--color-surface)}
+.vi .sens-l .gl-h{cursor:grab;touch-action:none;font-size:18px;color:var(--color-text-muted);padding:0 4px;user-select:none}
+.vi .sens-l b{width:22px;height:22px;border-radius:6px;background:var(--color-background-secondary);display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.vi .sens-l.glisse{box-shadow:0 8px 20px rgba(0,0,0,.14);border-color:var(--color-primary);background:#FBF4F0}.vi .sens-l .chip{flex:0 0 auto}
 .vi .obl .obs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}@media (max-width:760px){.vi .obl .obs{grid-template-columns:1fr}}
 .vi .ob{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:.5px solid var(--color-border-tertiary);background:var(--color-surface)}
 .vi .ob.ok{background:#F0F7F2;border-color:#BFDCC6}.vi .ob.ko{background:#FBEDEF;border-color:#e8b4bb}
@@ -568,7 +573,7 @@
       host.addEventListener('click', e => this.clic(e));
       host.addEventListener('input', e => this.saisie(e));
       host.addEventListener('change', e => this.change(e));
-      this.ecouterSignature(host);
+      this.ecouterSignature(host); this.ecouterGlisse(host);
       window.addEventListener('online', () => { this.enLigne = true; this.rejouer(); this.rendre(); });
       window.addEventListener('offline', () => { this.enLigne = false; this.rendre(); });
       if (o.mobile || o.tablette) { window.addEventListener('hashchange', () => this.deHash()); this.deHash(true); }
@@ -1734,6 +1739,8 @@
       const mt = meteoDe(f.meteo);
       etapes.push({ cle: 'meteo', tps: 'fin', ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne'), fait: !!(mt || f.mt_ok), html: () => this.meteoHtml(f) + this.meteoDetailHtml(v) });
       etapes.push({ tps: 'fin', ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig && f.sigC ? 'signée des deux' : f.sig || f.sigC ? '1 signature sur 2' : 'signatures, envoi au bureau', fait: false, html: () => this.finHtml(v) });
+      const ORD = this.tempsOrdre(); const rangT = k => ORD.findIndex(t => t[0] === k);
+      etapes.sort((a, b) => rangT(a.tps) - rangT(b.tps));
       // Ce qui reste à remplir dans chaque étape qui peut l'être (26/10/2026) : « Suivant » refuse tant qu'il en reste
       // (réglage etapesBloquantes, étape par étape) ; les photos, la checklist et les contrôles du jour passent d'eux-mêmes à l'étape
       // suivante une fois remplis (réglage etapeAuto). Les étapes à lire, le constat, les pistes, la météo et la fin
@@ -1762,7 +1769,12 @@
       if (this.o.tablette) { return this.tabControle(v, b, etapes, cur, faits); }
       return this.hd('Contrôle — ' + b.court, fmtDJ(v.prevu_le) + (v.commence_a ? ' · depuis ' + fmtH(v.commence_a) : '') + ' · ' + esc(v.consultantNom || ''), 'fiche/' + v.id, `<span class="pill">${cur + 1} / ${etapes.length}</span>`)
         + `<div class="bar" style="margin:2px 0 12px"><i style="width:${Math.round(faits / etapes.length * 100)}%"></i></div>`
-        + etapes.map((e, i) => (i === 0 || etapes[i - 1].tps !== e.tps ? `<div class="cap">${TEMPS.findIndex(x => x[0] === e.tps) + 1} · ${esc((TEMPS.find(x => x[0] === e.tps) || ['', ''])[1])}</div>` : '') + `<div class="et ${i === cur ? 'on' : ''} ${e.fait ? 'ok' : ''}" id="et-${i}"><div class="et-h" data-a="etape" data-v="${i}"><span class="num">${e.fait ? '✓' : i + 1}</span><b>${esc(e.titre)}</b><span class="sp"></span><span class="xs mu">${esc(e.etat)}</span></div>${i === cur ? `<div class="et-c">${e.html()}${i < etapes.length - 1 ? `<div class="btns"><button class="btn p w" data-a="etape" data-v="${i + 1}">Suivant ›</button><button class="btn" data-a="etape" data-v="${i - 1}" ${i === 0 ? 'disabled' : ''}>‹</button></div>` : ''}</div>` : ''}</div>`).join('');
+        + etapes.map((e, i) => (i === 0 || etapes[i - 1].tps !== e.tps ? `<div class="cap">${rangT(e.tps) + 1} · ${esc((TEMPS.find(x => x[0] === e.tps) || ['', ''])[1])}</div>` : '') + `<div class="et ${i === cur ? 'on' : ''} ${e.fait ? 'ok' : ''}" id="et-${i}"><div class="et-h" data-a="etape" data-v="${i}"><span class="num">${e.fait ? '✓' : i + 1}</span><b>${esc(e.titre)}</b><span class="sp"></span><span class="xs mu">${esc(e.etat)}</span></div>${i === cur ? `<div class="et-c">${e.html()}${i < etapes.length - 1 ? `<div class="btns"><button class="btn p w" data-a="etape" data-v="${i + 1}">Suivant ›</button><button class="btn" data-a="etape" data-v="${i - 1}" ${i === 0 ? 'disabled' : ''}>‹</button></div>` : ''}</div>` : ''}</div>`).join('');
+    }
+    /** Le sens du contrôle (réglage ordreTemps) : les six temps dans l'ordre choisi, ceux qui manquent à leur place d'origine. */
+    tempsOrdre(o) {
+      const vus = {}; const k = String(o != null ? o : ((this.D && this.D.seuils) || {}).ordreTemps || '').split(',').map(x => x.trim()).filter(x => TEMPS.some(t => t[0] === x) && !vus[x] && (vus[x] = true));
+      return k.concat(TEMPS.map(t => t[0]).filter(x => !vus[x])).map(x => TEMPS.find(t => t[0] === x));
     }
     /** Une étape est-elle bloquante ? Le réglage de l'étape, à défaut celui des modules (« mod:* »), à défaut le choix livré. */
     etapeBloquante(cle, R) {
@@ -1898,7 +1910,8 @@
       const nav = `<div class="tb-nav"><button class="tb-b" data-a="etape" data-v="${cur - 1}" ${prec ? '' : 'disabled'}>‹ ${esc(prec ? prec.court : 'Début')}</button><span class="sp"></span>`
         + (suiv ? `<div class="tb-suiv">${e.manque ? `<span class="xs ${bloque ? 'dn' : 'mu'}">Reste : ${esc(e.manque)}</span>` : ''}<button class="tb-b p ${bloque ? 'bloque' : ''}" data-a="${bloque ? 'etape-bloque' : 'etape'}" data-v="${cur + 1}"><small>Suivant</small>${esc(nomSuiv)} ›</button></div>` : '') + '</div>';
       // La barre du bas : les six temps. Un temps ouvre sa première étape pas encore faite.
-      const temps = TEMPS.map(([k, nom]) => { const idx = etapes.map((x, i) => x.tps === k ? i : -1).filter(i => i >= 0); return { k, nom, idx, faits: idx.filter(i => etapes[i].fait).length, ko: idx.reduce((a, i) => etapes[i].ko === '!' ? '!' : (a === '!' ? a : a + (Number(etapes[i].ko) || 0)), 0) }; }).filter(x => x.idx.length);
+      const ORD = this.tempsOrdre();
+      const temps = ORD.map(([k, nom]) => { const idx = etapes.map((x, i) => x.tps === k ? i : -1).filter(i => i >= 0); return { k, nom, idx, faits: idx.filter(i => etapes[i].fait).length, ko: idx.reduce((a, i) => etapes[i].ko === '!' ? '!' : (a === '!' ? a : a + (Number(etapes[i].ko) || 0)), 0) }; }).filter(x => x.idx.length);
       const ici = temps.find(x => x.k === e.tps) || temps[0];
       const barre = `<div class="tb-bar" style="grid-template-columns:repeat(${temps.length},minmax(0,1fr))">` + temps.map((x, ti) => { const vers = x.idx.find(i => !etapes[i].fait); const tout = x.faits === x.idx.length;
         return `<button data-a="etape" data-v="${vers != null ? vers : x.idx[0]}" class="${x === ici ? 'on' : tout ? 'fait' : ''}"><span class="ic"><svg viewBox="0 0 24 24">${TAB_IC['t_' + x.k] || TAB_IC.liste}</svg>${tout && x !== ici ? '<span class="ok">✓</span>' : ''}${x.ko ? `<span class="ko">${x.ko}</span>` : ''}</span><span class="lb">${ti + 1} · ${esc(x.nom)}</span><span class="es">${x.faits} / ${x.idx.length}</span></button>`; }).join('') + '</div>';
@@ -1909,7 +1922,7 @@
         return (j ? `<i class="l ${etapes[ici.idx[j - 1]].fait ? 'fait' : ''}"></i>` : '') + `<button data-a="etape" data-v="${i}" class="${st}"><span class="n">${x.fait && i !== cur ? '✓' : j + 1}</span><span class="t"><b>${esc(x.court)}</b><small>${esc(x.module && /^\d+ \/ \d+$/.test(x.etat) ? x.etat + ' vus' : x.etat)}</small></span>${x.ko ? `<em>${x.ko}</em>` : ''}</button>`; }).join('')}</div>` : '';
       const pos = ici.idx.indexOf(cur) + 1;
       return this.tabTop({ titre: 'Contrôle · ' + b.court, sous: esc(fmtDJ(v.prevu_le) + (v.commence_a ? ' · commencé à ' + fmtH(v.commence_a) : '') + ' · ' + this.typeNom(v.type)), retour: true, droite: prog })
-        + `<div class="tb-main tb-ctl">${['planifiee', 'confirmee'].includes(v.statut) ? `<div class="card alerte tb-dem"><div><b>Visite pas encore démarrée</b><div class="sm mu">prévue ${esc(fmtDJ(v.prevu_le))} à ${esc(v.debut_h || '')} — ouverte depuis le cockpit ou son QR code</div></div><span style="flex:1"></span><button class="btn p" data-a="demarrer" data-v="${esc(v.id)}">▶ Démarrer la visite</button></div>` : ''}${sous}<div class="tb-h"><div><div class="cap" style="margin:0">${TEMPS.findIndex(x => x[0] === ici.k) + 1} · ${esc(ici.nom)} · étape ${pos} sur ${ici.idx.length}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
+        + `<div class="tb-main tb-ctl">${['planifiee', 'confirmee'].includes(v.statut) ? `<div class="card alerte tb-dem"><div><b>Visite pas encore démarrée</b><div class="sm mu">prévue ${esc(fmtDJ(v.prevu_le))} à ${esc(v.debut_h || '')} — ouverte depuis le cockpit ou son QR code</div></div><span style="flex:1"></span><button class="btn p" data-a="demarrer" data-v="${esc(v.id)}">▶ Démarrer la visite</button></div>` : ''}${sous}<div class="tb-h"><div><div class="cap" style="margin:0">${ORD.findIndex(x => x[0] === ici.k) + 1} · ${esc(ici.nom)} · étape ${pos} sur ${ici.idx.length}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
         + `<div class="tb-step">${e.html()}</div>${nav}</div>` + barre;
     }
     v_historique() {
@@ -2045,8 +2058,14 @@
         ['analyse', null, 'KPI et santé du magasin'], ...mods.filter(m => m[2] === 'analyse').map(m => [m[2], m[0], m[1]]), ['analyse', null, 'Les tâches des derniers mois'],
         ['dev', 'pistes', 'Le CA sous le budget : pourquoi et trois pistes'], ['dev', 'constat', 'Vu sur place et recommandation'], ['dev', null, 'Points à travailler'],
         ['fin', 'meteo', 'Météo du franchisé'], ['fin', null, 'Fin de visite'], ['*', 'mod:*', 'Les autres modules de checklist (nouveaux types, revisites)']];
-      const nomT = k => k === '*' ? '—' : (TEMPS.findIndex(x => x[0] === k) + 1) + ' · ' + (TEMPS.find(x => x[0] === k) || ['', ''])[1];
-      return `<div class="ksc" style="margin-top:10px"><table class="tbl bq-t"><tr><th>Temps</th><th>Étape</th><th>Bloquante</th></tr>${lignes.map(([t, k, nom], i) => `<tr>
+      const ORD = this.tempsOrdre(this.form.seuils && this.form.seuils.ordreTemps);
+      const nomT = k => k === '*' ? '—' : (ORD.findIndex(x => x[0] === k) + 1) + ' · ' + (TEMPS.find(x => x[0] === k) || ['', ''])[1];
+      lignes.sort((a, b) => (a[0] === '*' ? 99 : ORD.findIndex(x => x[0] === a[0])) - (b[0] === '*' ? 99 : ORD.findIndex(x => x[0] === b[0])));
+      const sens = `<div class="sm" style="margin:12px 0 6px"><b>Le sens du contrôle</b> <span class="xs mu">— faites glisser un temps (⠿) ou utilisez ↑ ↓</span></div>
+        <div class="sens" data-glisse="ordreTemps">${ORD.map(([k, nom], i) => `<div class="sens-l" data-k="${k}"><span class="gl-h" title="Glisser">⠿</span><b>${i + 1}</b><span class="nm">${esc(nom)}</span><span class="sp"></span>
+          <button class="chip" data-a="sens-mv" data-v="${k}|-1" ${i ? '' : 'disabled'}>↑</button><button class="chip" data-a="sens-mv" data-v="${k}|1" ${i < ORD.length - 1 ? '' : 'disabled'}>↓</button></div>`).join('')}</div>
+        <div class="act"><button class="chip" data-a="sens-raz">Remettre le sens livré</button></div>`;
+      return sens + `<div class="ksc" style="margin-top:10px"><table class="tbl bq-t"><tr><th>Temps</th><th>Étape</th><th>Bloquante</th></tr>${lignes.map(([t, k, nom], i) => `<tr>
         <td class="xs mu">${i && lignes[i - 1][0] === t ? '' : esc(nomT(t))}</td><td>${esc(nom)}</td>
         <td>${k ? `<span class="bq">${[[true, 'Oui'], [false, 'Non']].map(([o, l]) => `<button class="${this.etapeBloquante(k, B) === o ? 'on' : ''}" data-a="${this.etapeBloquante(k, B) === o ? '' : 'bloq-tog'}" data-v="${esc(k)}">${l}</button>`).join('')}</span>` : '<span class="xs mu">à lire — jamais bloquante</span>'}</td></tr>`).join('')}</table></div>
         <div class="xs mu" style="margin-top:6px">Bloquante : tant qu’elle n’est pas remplie, on ne passe pas à la suite — ni par « Suivant », ni par la barre du bas, ni par les étapes en tête. Revenir en arrière reste libre.</div>`;
@@ -2132,6 +2151,9 @@
       if (a === 'cause-diag') { const c = this.form.causes || (this.form.causes = []); const i = c.indexOf(v); if (i >= 0) { c.splice(i, 1); } else { c.push(v); } this.rendre(); return; }
       if (a === 'etape') { this.allerEtape(Number(v)); return; }
       if (a === 'etape-bloque') { const E = this._etapes; this.dire('Avant de continuer : ' + ((E && E.manque) || 'cette étape n’est pas remplie') + '.'); return; }
+      if (a === 'sens-mv') { const f = this.form; if (!f.seuils) { return; } const o = this.tempsOrdre(f.seuils.ordreTemps).map(t => t[0]); const i = o.indexOf(parts[0]); const j = i + Number(parts[1]);
+        if (i >= 0 && j >= 0 && j < o.length) { [o[i], o[j]] = [o[j], o[i]]; f.seuils.ordreTemps = o.join(','); this.rendre(); } return; }
+      if (a === 'sens-raz') { if (this.form.seuils) { this.form.seuils.ordreTemps = ''; this.rendre(); } return; }
       if (a === 'bloq-tog') { const B = this.form.seuils && this.form.seuils.etapesBloquantes; if (B) { B[v] = !this.etapeBloquante(v, B); this.rendre(); } return; }
       if (a === 'pa') { const i = Number(parts[0]); if (this.form.pa && this.form.pa[i]) { this.form.pa[i][parts[1]] = parts[2]; this.rendre(); } return; }
       if (a === 'pa-del') { this.form.pa.splice(Number(v), 1); this.rendre(); return; }
@@ -2275,6 +2297,24 @@
       f.mt_ok = true; if (!silencieux) { this.dire('Météo enregistrée.'); }
       return true;
     }
+    /* --- le glisser-déposer du sens du contrôle (réglages), au doigt ou à la souris ------------ */
+    ecouterGlisse(host) {
+      host.addEventListener('pointerdown', e => {
+        const h = e.target.closest && e.target.closest('.gl-h'); if (!h) { return; }
+        const l = h.closest('.sens-l'); const box = l && l.parentElement; if (!l || !box) { return; }
+        e.preventDefault(); try { h.setPointerCapture(e.pointerId); } catch (x) { /* rien */ }
+        l.classList.add('glisse'); this._gl = { l, box };
+      });
+      host.addEventListener('pointermove', e => {
+        const g = this._gl; if (!g) { return; } e.preventDefault();
+        const autres = [...g.box.querySelectorAll('.sens-l')].filter(x => x !== g.l);
+        const apres = autres.find(x => { const r = x.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; });
+        if (apres) { g.box.insertBefore(g.l, apres); } else { g.box.appendChild(g.l); }
+      });
+      const fin = () => { const g = this._gl; if (!g) { return; } this._gl = null; g.l.classList.remove('glisse');
+        if (this.form.seuils) { this.form.seuils.ordreTemps = [...g.box.querySelectorAll('.sens-l')].map(x => x.dataset.k).join(','); } this.rendre(); };
+      host.addEventListener('pointerup', fin); host.addEventListener('pointercancel', fin);
+    }
     /* --- la signature au doigt, sur la dernière étape -------------------------------- */
     ecouterSignature(host) {
       host.addEventListener('pointerdown', e => {
@@ -2407,7 +2447,7 @@
       const cle = (opts.role || 'consultant') + '|' + (opts.shop || '') + '|' + (opts.vue || '');
       let h = instances.get(cle);
       if (h && h.host === host) { h.rendre(); return h; }
-      if (h && !opts.mobile) { h.host = host; host.innerHTML = '<div class="vi desk"></div>'; host.addEventListener('click', e => h.clic(e)); host.addEventListener('input', e => h.saisie(e)); host.addEventListener('change', e => h.change(e)); h.ecouterSignature(host); h.v = opts.vue || h.v; h.p = null; h.rendre(); if (h.D) { h.recharger(); } return h; }
+      if (h && !opts.mobile) { h.host = host; host.innerHTML = '<div class="vi desk"></div>'; host.addEventListener('click', e => h.clic(e)); host.addEventListener('input', e => h.saisie(e)); host.addEventListener('change', e => h.change(e)); h.ecouterSignature(host); h.ecouterGlisse(host); h.v = opts.vue || h.v; h.p = null; h.rendre(); if (h.D) { h.recharger(); } return h; }
       h = new Hote(host, opts); instances.set(cle, h); return h;
     },
     compresser, Idb,
