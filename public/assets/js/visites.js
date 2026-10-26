@@ -79,6 +79,13 @@
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
 .vi .kc .k{margin-top:4px}
 .vi .or{color:#B26A00}
+.vi .cx-j{position:relative;height:9px;border-radius:5px;background:var(--color-background-secondary);margin-top:6px}
+.vi .cx-j i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#2d7a3e}.vi .cx-j i.dn{background:#C0182B}.vi .cx-j i.or{background:#E0A526}
+.vi .cx-j em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--color-text)}
+.vi .cx-l{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:center;margin-top:6px}
+.vi .cx-b{display:flex;height:16px;border-radius:5px;overflow:hidden;background:var(--color-background-secondary)}.vi .cx-b i{display:block;height:100%}
+.vi .c-comptoir{background:#8D1D2C}.vi .c-b2b{background:#4B74B5}.vi .c-cc{background:#E0A526}.vi .c-liv{background:#2d7a3e}
+.vi .cx-lg{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--color-text-muted)}.vi .cx-lg span{display:inline-flex;align-items:center;gap:5px}.vi .cx-lg i{width:10px;height:10px;border-radius:3px;display:inline-block}
 .vi .tb-dem{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
 .vi .vb{padding:0;overflow:hidden}
 .vi .vb-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;background:var(--color-background-secondary);padding:3px;border-bottom:.5px solid var(--color-border-tertiary)}
@@ -1124,6 +1131,7 @@
       return cap('CA par ETP') + (lu ? this.caEtpHtml(K.caEtp) : attente)
         + cap('L’année face à l’an passé') + this.anneeCarteHtml(shop)
         + (lu ? cap('Structure des ventes face au réseau') + this.structureHtml(K.structure, shop)
+          + cap('Structure du CA : comptoir, B2B, click & collect, livraison bureau') + this.canauxHtml(K.canaux)
           + `<div class="xs mu" style="margin:2px 2px 0">Lu le ${fmtD(K.lu)} à ${esc(String(K.lu || '').slice(11, 16))}${(K.manques || []).length ? ' · relu dans quelques minutes : ' + esc(K.manques.join(', ')) + ' incomplet' : ''}.</div>` : '');
     }
     /**
@@ -1288,6 +1296,28 @@
           <div class="kb"><i style="width:${Math.round((c.part || 0) / max * 100)}%"></i></div><div class="kb r"><i style="width:${Math.round((c.partReste || 0) / max * 100)}%"></i></div></div>`).join('')}
         ${cats.length > 8 ? `<div class="act"><button class="chip" data-a="drop" data-v="${esc(cle)}">${tout ? 'Les 8 premières ▴' : 'Les ' + cats.length + ' catégories ▾'}</button></div>` : ''}
         <div class="xs mu" style="margin-top:6px">Part de chaque catégorie dans le CA : le magasin (barre pleine) face au reste du réseau, ${S.autres} magasin${S.autres > 1 ? 's' : ''} (barre grise) · du ${fmtD(S.du)} au ${fmtD(S.au)}${S.moisLus < S.moisDemandes ? ' (' + S.moisLus + ' mois lus sur ' + S.moisDemandes + ')' : ''} · CA du magasin ${eur(S.ca)}, du reste ${eur(S.caReste)}</div></div>`;
+    }
+    /**
+     * La structure du CA par canal (26/10/2026) : sur les trois derniers mois clos, le comptoir, le B2B (face à son
+     * plafond, le réglage b2bMax — 40 %), le click & collect et la livraison bureau, face au reste du réseau.
+     */
+    canauxHtml(C) {
+      if (!C) { return '<div class="card sm mu">La structure du CA par canal se calcule : elle arrive à la prochaine lecture.</div>'; }
+      if (!C.magasin) { return `<div class="card sm mu">Structure du CA par canal indisponible : ${esc(C.motif || 'rien à lire')}.</div>`; }
+      const M = C.magasin, R = C.reste; const K = ['comptoir', 'b2b', 'cc', 'liv'];
+      const NOM = { comptoir: 'Comptoir', b2b: 'B2B · clients pro', cc: 'Click & collect', liv: 'Livraison bureau' };
+      const p1 = x => x == null ? '—' : String(x).replace('.', ',') + ' %';
+      const b2b = M.parts.b2b; const max = C.b2bMax || 40;
+      const st = C.b2bStatut === 'au-dessus' ? ['dn', 'au-dessus du plafond'] : C.b2bStatut === 'proche' ? ['or', 'proche du plafond'] : ['up', 'sous le plafond'];
+      const barre = (P, lab) => `<div class="cx-l"><span class="xs mu">${lab}</span><div class="cx-b">${K.map(k => P.parts[k] > 0 ? `<i class="c-${k}" style="width:${P.parts[k]}%" title="${esc(NOM[k])} ${p1(P.parts[k])}"></i>` : '').join('')}</div></div>`;
+      return `<div class="card kc">
+        <div class="row" style="align-items:baseline;gap:10px"><span class="sm">Part B2B</span><span class="k ${st[0]}">${p1(b2b)}</span><span class="xs ${st[0]}">${st[1]} · ${p1(max)} au plus</span><span class="sp"></span>${R ? `<span class="xs mu">réseau ${p1(R.parts.b2b)}</span>` : ''}</div>
+        <div class="cx-j"><i class="${st[0]}" style="width:${Math.min(100, b2b)}%"></i><em style="left:${max}%"></em></div>
+        <div class="xs mu" style="margin:3px 0 10px">┃ le plafond de ${p1(max)} du CA</div>
+        ${barre(M, 'Le magasin')}${R ? barre(R, 'Le reste du réseau · ' + R.magasins + ' magasin' + (R.magasins > 1 ? 's' : '')) : ''}
+        <div class="cx-lg">${K.map(k => `<span><i class="c-${k}"></i>${esc(NOM[k])}</span>`).join('')}</div>
+        <div class="ksc" style="margin-top:6px"><table class="tbl"><tr><th>Canal</th><th>CA</th><th>Part</th><th>Réseau</th><th>Écart</th></tr>${K.map(k => `<tr><td>${esc(NOM[k])}</td><td>${eur(M.ca[k])}</td><td><b class="${k === 'b2b' && b2b > max ? 'dn' : ''}">${p1(M.parts[k])}</b></td><td class="mu">${R ? p1(R.parts[k]) : '—'}</td><td>${R ? (k === 'b2b' ? this.ecartPill(Math.round((M.parts[k] - R.parts[k]) * 10) / 10, true).replace(/ec (up|dn)/, 'ec') : this.ecartPill(Math.round((M.parts[k] - R.parts[k]) * 10) / 10, true)) : ''}</td></tr>`).join('')}<tr><td><b>Total</b></td><td><b>${eur(M.total)}</b></td><td></td><td></td><td></td></tr></table></div>
+        <div class="xs mu" style="margin-top:4px">Du ${fmtD(C.du)} au ${fmtD(C.au)}${C.joursLus < C.jours ? ' · ' + C.joursLus + ' jours de caisse lus sur ' + C.jours : ''} · ${esc(C.source || '')}</div></div>`;
     }
     planLigne(p, actions) {
       const st = ST_PLAN[p.statut] || [p.statut, ''];
@@ -1795,7 +1825,7 @@
       return this.hd('Réglages visites', 'checklist, seuils du feu, fréquences, horloge') + moi + push
         + '<div class="card sm mu">La checklist ci-dessous est celle de la visite régulière.</div>'
         + `<div class="cap">Checklist (${f.checklist.reduce((a, m) => a + m.points.length, 0)} points)</div>${f.checklist.map((m, mi) => `<div class="card"><div class="row"><b>${esc(m.nom)}</b><span class="sp"></span><button class="chip" data-a="cl-add" data-v="${mi}">+ point</button></div>${m.points.map((p, pi) => `<div class="row" style="margin-top:6px"><input type="text" data-f="cl|${mi}|${pi}|libelle" value="${esc(p.libelle)}" style="flex:1"><button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|photo" title="photo attendue">📷</button>${m.id === 'planogramme' ? `<button class="chip ${p.pct ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|pct" title="saisie en %">%</button>` : ''}<button class="chip ko" data-a="cl-del" data-v="${mi}|${pi}">×</button></div>`).join('')}</div>`).join('')}
-          <div class="cap">Feu tricolore</div><div class="card"><div class="l2">${num('p0Jours', 'P0 ouvert plus de (jours) → rouge')}${num('escaladeJours', 'Échéance dépassée de (jours) → escalade auto')}${num('googleCible', 'Cible Google')}${num('googleRouge', 'Sous la cible de (points) → rouge')}${num('planoOrange', 'Planogramme sous (%) → orange')}${num('planoRouge', 'Planogramme sous (%) → rouge')}${num('mspAlerte', 'Rubrique MSP sous (/20) → rouge')}${num('caOrange', 'CA sous l’objectif de (%) → orange')}</div><div class="act"><button class="chip ${f.seuils.caSeul ? 'on' : ''}" data-a="se-tog" data-v="caSeul">Le CA seul peut colorer le feu</button></div></div>
+          <div class="cap">Feu tricolore</div><div class="card"><div class="l2">${num('p0Jours', 'P0 ouvert plus de (jours) → rouge')}${num('escaladeJours', 'Échéance dépassée de (jours) → escalade auto')}${num('googleCible', 'Cible Google')}${num('googleRouge', 'Sous la cible de (points) → rouge')}${num('planoOrange', 'Planogramme sous (%) → orange')}${num('planoRouge', 'Planogramme sous (%) → rouge')}${num('mspAlerte', 'Rubrique MSP sous (/20) → rouge')}${num('caOrange', 'CA sous l’objectif de (%) → orange, et à justifier à la visite')}${num('b2bMax', 'Part B2B du CA au plus (%)')}</div><div class="act"><button class="chip ${f.seuils.caSeul ? 'on' : ''}" data-a="se-tog" data-v="caSeul">Le CA seul peut colorer le feu</button></div></div>
           <div class="cap">Fréquence de visite (jours)</div><div class="card"><div class="l2">${D.boutiques.map(b => `<div class="champ"><label>${esc(b.court)}</label><input type="number" data-f="fq|${esc(b.id)}" value="${esc(f.frequence[b.id] || '')}" placeholder="${esc(s.visiteJours || 7)}"></div>`).join('')}</div></div>
           <div class="cap">Horloge et mails</div><div class="card"><div class="l2"><div class="champ"><label>Rappel J-1 à</label><input type="time" data-f="se|rappelJ1" value="${esc(f.seuils.rappelJ1)}"></div><div class="champ"><label>Rappel jour J à</label><input type="time" data-f="se|rappelJour" value="${esc(f.seuils.rappelJour)}"></div><div class="champ"><label>Synthèse à</label><input type="time" data-f="se|syntheseHeure" value="${esc(f.seuils.syntheseHeure)}"></div><div class="champ"><label>Adresse de la synthèse</label><input type="email" data-f="se|mailSynthese" value="${esc(f.seuils.mailSynthese || '')}" placeholder="—"></div></div>
             <div class="act"><button class="chip ${f.seuils.mails ? 'on' : ''}" data-a="se-tog" data-v="mails">Les mails partent (rappels aux consultants, synthèse)${R && !R.smtp ? ' — SMTP non configuré' : ''}</button></div>

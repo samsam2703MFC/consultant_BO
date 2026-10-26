@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  * KPI ET SANTÉ DU MAGASIN — l'étape des chiffres du contrôle, sur la tablette du consultant (26/10/2026).
  *
- * GET /visites/kpi/{shop} — deux lectures, chacune avec sa fenêtre et sa source :
+ * GET /visites/kpi/{shop} — trois lectures, chacune avec sa fenêtre et sa source :
  *
  *  - le CA PAR ETP des trois derniers mois clos : le CA du mois (relevé des ventes du panel, pvKpisMois) ÷ les ETP
  *    planifiés (heures du planning ÷ heuresEtpMois, ep_stores_etp — la règle de l'alerte CA/ETP des rapports), face au
@@ -13,7 +13,9 @@ declare(strict_types=1);
  *    planning n'a pas d'ETP : il le dit, il ne le devine pas ;
  *  - la STRUCTURE DES VENTES par catégorie sur les trois derniers mois clos : la part de chaque catégorie dans le CA du
  *    magasin face à sa part dans le CA du reste du réseau (/consultant/shops/category-sales, un appel par mois pour
- *    tout le réseau, gravé une fois lu : les trois mois sont clos).
+ *    tout le réseau, gravé une fois lu : les trois mois sont clos) ;
+ *  - la STRUCTURE DU CA PAR CANAL sur les mêmes mois (26/10/2026) : comptoir, B2B (face à son plafond, 40 %), click &
+ *    collect et livraison bureau, face au reste du réseau (vkCanaux).
  *
  * Gardé une heure (rcServi) et servi périmé six heures pendant le recalcul : des chiffres qui ne bougent pas pendant
  * une visite. La tablette les lit dès l'ouverture du contrôle, avant d'arriver à l'étape. L'année face à l'an passé et
@@ -29,7 +31,8 @@ function ep_visites_kpi(string $shop): array
 {
     if (!isset(viMagasins()[$shop])) { http_response_code(404); return ['error' => 'magasin inconnu']; }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['shop' => $shop, 'indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
-    return rcServi('vkKpi:' . $shop, static fn (): array => vkCalcul((int) $shop),
+    // vkKpi2 (26/10/2026) : la structure du CA par canal s'ajoute — un calcul gardé avant elle ne la porte pas.
+    return rcServi('vkKpi2:' . $shop, static fn (): array => vkCalcul((int) $shop),
         static fn (array $x): int => empty($x['manques']) ? VK_TTL_S : 300, !empty($_GET['rafraichir']), '/visites/kpi/' . $shop, VK_PERIME_S);
 }
 
@@ -39,11 +42,14 @@ function vkCalcul(int $sid): array
     $mois = vkMoisClos(3);
     $out = ['shop' => (string) $sid, 'lu' => date('Y-m-d H:i')];
     $manques = [];
-    foreach (['caEtp' => 'vkCaEtp', 'structure' => 'vkStructure'] as $k => $f) {
+    foreach (['caEtp' => 'vkCaEtp', 'structure' => 'vkStructure', 'canaux' => 'vkCanaux'] as $k => $f) {
         try { $out[$k] = $f($sid, $mois); }
         catch (Throwable $e) { $out[$k] = null; $manques[] = $k; }
     }
     if (is_array($out['structure']) && $out['structure']['moisLus'] < $out['structure']['moisDemandes']) { $manques[] = 'structure'; }
+    // Le webshop du magasin resté muet : relu dans cinq minutes. Des jours de caisse pas encore gravés ne relancent
+    // rien — la moisson les complète à son rythme.
+    if (is_array($out['canaux']) && empty($out['canaux']['webshop'])) { $manques[] = 'canaux'; }
     $out['manques'] = $manques;
     return $out;
 }
@@ -174,6 +180,73 @@ function vkStructure(int $sid, array $mois): array
     return ['du' => $lus ? $lus[0] . '-01' : null, 'au' => $lus ? date('Y-m-t', strtotime(end($lus) . '-01')) : null, 'moisLus' => count($lus), 'moisDemandes' => count($mois),
         'ca' => round($tI), 'caReste' => round($tR), 'autres' => count($autres), 'categories' => $tI > 0 ? $lignes : [],
         'source' => 'panel : ventes par catégorie (/consultant/shops/category-sales), mois clos'];
+}
+
+/* --- La structure du CA par canal : comptoir, B2B, click & collect, livraison bureau (26/10/2026, demande de Sam) --- */
+
+/**
+ * Sur les trois derniers mois clos, les jours dont la caisse est gravée — le relevé pro du jour (`svP{shop}:{jour}`,
+ * ventes_pro.php) garde le CA de tous les tickets et les tickets des clients pro :
+ *  - B2B = les tickets des clients pro (is_client_b2b, TVA valide : vpLu) ;
+ *  - comptoir = le reste de la caisse, moins les commandes du webshop encaissées en caisse (déjà dans un ticket) ;
+ *  - click & collect et livraison bureau = les commandes du webshop (coCommandes), retirées ou livrées ces jours-là.
+ * Total = comptoir + B2B + click & collect + livraison. Le reste du réseau se compte de même, magasin par magasin,
+ * ceux dont le webshop a répondu. La part B2B se lit face à son plafond (réglage `b2bMax` des visites, 40 %).
+ */
+function vkCanaux(int $sid, array $mois): array
+{
+    $du = $mois[0] . '-01'; $au = date('Y-m-t', strtotime($mois[count($mois) - 1] . '-01'));
+    $jours = [];
+    for ($d = $du; $d <= $au; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $jours[] = $d; }
+    $max = (float) (viSeuils()['b2bMax'] ?? 40);
+    $par = []; $web = [];
+    foreach (array_map('intval', array_keys(viMagasins())) as $s) {
+        $cmds = function_exists('coCommandes') ? coCommandes($s, $du) : null;
+        $web[$s] = $cmds !== null;
+        $w = [];
+        foreach ((array) $cmds as $c) {
+            $j = substr((string) ($c['quand'] ?? ''), 0, 10);
+            if ($j < $du || $j > $au || !in_array($c['canal'] ?? '', ['cc', 'liv'], true)) { continue; }
+            $x = $w[$j] ?? ['cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0];
+            $x[$c['canal']] += (float) $c['montant'];
+            if (!empty($c['encaissee'])) { $x['enc'] += (float) $c['montant']; }
+            $w[$j] = $x;
+        }
+        $t = ['caisse' => 0.0, 'b2b' => 0.0, 'cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0, 'lus' => 0];
+        foreach ($jours as $j) {
+            $b = function_exists('vpLu') ? vpLu($s, $j) : null;
+            if ($b === null) { continue; }
+            $t['lus']++; $t['caisse'] += (float) ($b['ca'] ?? 0);
+            foreach ((array) ($b['t'] ?? []) as $tk) { $t['b2b'] += (float) ($tk[2] ?? 0); }
+            if (isset($w[$j])) { $t['cc'] += $w[$j]['cc']; $t['liv'] += $w[$j]['liv']; $t['enc'] += $w[$j]['enc']; }
+        }
+        $par[$s] = $t;
+    }
+    $ici = $par[$sid] ?? ['lus' => 0];
+    $reste = ['caisse' => 0.0, 'b2b' => 0.0, 'cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0, 'lus' => 0]; $autres = 0;
+    foreach ($par as $s => $t) {
+        if ($s === $sid || !$web[$s] || $t['lus'] === 0) { continue; }
+        foreach ($reste as $k => $v) { $reste[$k] = $v + $t[$k]; }
+        $autres++;
+    }
+    $mag = !empty($web[$sid]) && $ici['lus'] > 0 ? vkCanauxParts($ici) : null;
+    $b2b = $mag['parts']['b2b'] ?? null;
+    return ['du' => $du, 'au' => $au, 'jours' => count($jours), 'joursLus' => (int) $ici['lus'], 'webshop' => !empty($web[$sid]),
+        'magasin' => $mag, 'reste' => $autres > 0 ? vkCanauxParts($reste) + ['magasins' => $autres] : null,
+        'b2bMax' => $max, 'b2bStatut' => $b2b === null ? null : ($b2b > $max ? 'au-dessus' : ($b2b >= $max - 5 ? 'proche' : 'ok')),
+        'motif' => empty($web[$sid]) ? 'le webshop du panel n’a pas répondu (click & collect et livraisons inconnus)' : ($ici['lus'] === 0 ? 'aucun jour de caisse gravé sur ces mois' : null),
+        'source' => 'caisse : relevé des tickets du panel par jour (B2B = clients pro à TVA valide) · webshop : commandes du panel, retrait (click & collect) ou livraison · '
+            . (int) $ici['lus'] . ' jours lus sur ' . count($jours)];
+}
+
+/** Les quatre canaux d'un cumul (pure) : le CA de chacun, le total, la part de chacun en %. null sans CA. */
+function vkCanauxParts(array $t): ?array
+{
+    $ca = ['comptoir' => max(0.0, $t['caisse'] - $t['b2b'] - $t['enc']), 'b2b' => $t['b2b'], 'cc' => $t['cc'], 'liv' => $t['liv']];
+    $total = array_sum($ca);
+    if ($total <= 0) { return null; }
+    return ['ca' => array_map(static fn (float $v): float => round($v), $ca), 'total' => round($total),
+        'parts' => array_map(static fn (float $v): float => round($v / $total * 100, 1), $ca)];
 }
 
 /* --- Les tâches du magasin, mois par mois (26/10/2026, demande de Sam) ----------------------------- */

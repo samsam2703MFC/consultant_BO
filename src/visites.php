@@ -287,6 +287,7 @@ function viSeuilsDefaut(): array
         'caOrange' => 10,      // CA de la semaine sous l'objectif de x % : orange…
         'caSeul' => false,     // …seulement si ce réglage est vrai (sinon le CA colore la carte)
         'mspAlerte' => 12,     // une rubrique MSP sous ce score /20 : rouge
+        'b2bMax' => 40,        // la part B2B du CA au plus (%), lue à la visite (structure du CA par canal)
         'visiteJours' => 7,    // fréquence de visite par défaut
         'rappelJ1' => '18:00',
         'rappelJour' => '07:00',
