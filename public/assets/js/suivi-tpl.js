@@ -11,99 +11,117 @@ const bascule = (x, on, fn, lib) => `<button ${x.A(fn)} class="sv-bas${on ? ' on
 const duo = (x, esc, a, b) => `<span class="sv-duo"><button ${x.A(a.fn)} class="${a.on ? 'on' : ''}">${esc(a.nom)}</button><button ${x.A(b.fn)} class="${b.on ? 'on ko' : ''}">${esc(b.nom)}</button></span>`;
 const carte = (titre, mini, corps, plus) => `<div class="mko-carte"${plus || ''}><div class="mko-ct"><span class="mko-lab">${titre}</span>${mini ? `<span class="mko-mini">${mini}</span>` : ''}</div><div class="mko-corps">${corps}</div></div>`;
 
-/* --- 1. Tableau de bord ------------------------------------------------------------- */
+/* --- 1. Visites : l'assistant (26/10/2026, maquette C, docs/maquettes/franchises-wizard) --------------------
+ * Les étapes à gauche, en accordéon ; la fiche vivante à droite ; un onglet par visite qui attend le bureau. */
+const IC = {
+  tab: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M10 18h4"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>', ok: '<path d="M5 12l5 5 9-10"/>'
+};
+const ic = (k, cls) => `<svg viewBox="0 0 24 24" class="sva-ic ${cls || ''}">${IC[k]}</svg>`;
+const PHASES = { avant: 'Avant la visite · au bureau', pendant: 'Pendant la visite · sur la tablette', apres: 'Après la visite · au bureau' };
+
 export function tplSvTableau(c, x){
   const { esc } = x, s = c.sv;
-  const entete = `<div class="mko-hd sv-hd">
-      <div class="cx-vues">${s.onglets.map(o => `<button ${x.A(o.choisir)} class="${o.on ? 'on' : ''}">${esc(o.nom)}${o.badge ? ` <span class="gc-badge">${o.badge}</span>` : ''}</button>`).join('')}</div>
-      <span class="sv-hd-d">${sel(x, esc, s.setCons, s.consultants)}
-      <button ${x.A(s.semPrec)} class="mko-pied-btn">‹</button><b class="sv-sem">${esc(s.semLib)}</b><button ${x.A(s.semSuiv)} class="mko-pied-btn">›</button>
-      <button ${x.A(s.planifier)} class="cx-btn prim">Planifier une visite</button><button ${x.A(s.relire)} class="mko-pied-btn" title="${esc(s.lu)}">Relire</button></span>
-    </div>`;
-  if (s.indispo) { return `<div data-screen="suivi-tableau">${entete}${panne(esc, s.indispo)}</div>`; }
-  if (s.chargement) { return `<div data-screen="suivi-tableau">${entete}${attente(esc, 'Lecture des visites, des rapports et des points ouverts…')}</div>`; }
-  let corps = '';
-  if (s.onglet === 'preparer') { corps = tplPreparer(s, x); }
-  else if (s.onglet === 'adapter') { corps = tplAdapter(s, x); }
-  else if (s.onglet === 'points') { corps = tplPoints(s, x); }
-  else { corps = tplEnsemble(s, x); }
   const apercu = s.apercu ? `<div class="sv-voile" ${x.A(s.fermerApercu)}><div class="sv-modal" ${x.A(() => {})}><div class="mko-ct"><span class="mko-lab">${esc(s.apercu.titre)}</span><button ${x.A(s.fermerApercu)} class="mko-pied-btn" style="margin-left:auto">Fermer</button></div>
       ${s.apercu.chargement ? '<div class="mko-corps mko-mu">Mise en page du rapport…</div>' : `<iframe class="sv-ifr" srcdoc="${esc(s.apercu.html)}" title="Aperçu du rapport"></iframe>`}</div></div>` : '';
-  const planif = s.planif ? tplPlanif(s.planif, x) : '';
-  return `<div data-screen="suivi-tableau">${entete}${msgDe(esc, s.msg)}${planif}<div class="gc-kpis">${s.kpis.map(k => kpi(esc, k)).join('')}</div>${corps}${apercu}</div>`;
+  if (s.indispo && !s.onglets) { return `<div data-screen="suivi-assistant">${panne(esc, s.indispo)}</div>`; }
+  if (s.chargement) { return `<div data-screen="suivi-assistant">${attente(esc, 'Lecture des visites et de ce qui attend le bureau…')}</div>`; }
+  const tete = `<div class="sva-tete"><div><h1 class="sva-h1">${esc(s.titre || 'Créer une visite')}</h1><p class="sva-chapo">${esc(s.chapo || '')}</p></div>
+    <button ${x.A(s.relire)} class="mko-pied-btn" title="${esc(s.lu)}">Relire</button></div>`;
+  const onglets = `<div class="sva-onglets">${s.onglets.map(o => `<button ${x.A(o.ouvrir)} class="sva-og${o.on ? ' on' : ''}">${o.pt ? `<i class="sva-pt ${esc(o.pt)}"></i>` : ''}${o.nom ? esc(o.nom) + (o.court ? ' · ' : '') : ''}<b>${esc(o.court)}</b>${o.quoi ? ` <em class="${o.urgent ? 'att' : ''}">${esc(o.quoi)}</em>` : ''}${o.echeance ? ` <em class="${o.urgent ? 'att' : ''}">${esc(o.echeance)}</em>` : ''}</button>`).join('')}
+    ${s.autres ? sel(x, esc, s.setAutre, s.autres, 'height:34px;margin-bottom:2px;max-width:220px') : ''}
+    <button ${x.A(s.creer.ouvrir)} class="sva-og plus${s.creer.on ? ' on' : ''}">${ic('plus')}Créer une visite</button>
+    <span class="sva-og-aide">Chaque visite qui attend quelque chose de vous garde son onglet.</span></div>`;
+  let gauche;
+  if (s.indispo) { gauche = panne(esc, s.indispo); }
+  else if (s.pasChargement) { gauche = `<div class="mko-mu" style="padding:20px">${esc(s.pasChargement)}</div>`; }
+  else {
+    let phase = '';
+    gauche = s.etapes.map(e => {
+      const h = e.phase !== phase ? `<div class="sva-phase${e.phase === 'pendant' ? ' tab' : ''}">${esc(PHASES[e.phase])}</div>` : '';
+      phase = e.phase;
+      const pn = e.etat === 'fait' ? ic('ok') : (e.n ? String(e.n) : ic('tab'));
+      const corps = e.etat === 'cur' ? `<div class="sva-ouvert"><div class="sva-pl">${e.n ? e.n + ' · ' : ''}${esc(e.nom)}</div>${pasHtml(s.pas, x)}</div>`
+        : `<div class="sva-ferme"><b>${esc(e.titre)}</b>${e.sous ? `<small>${esc(e.sous)}</small>` : ''}${e.modifier ? `<button ${x.A(e.modifier)} class="sva-lien">${e.etat === 'fait' ? 'Modifier' : 'Ouvrir'}</button>` : ''}</div>`;
+      return `${h}<div class="sva-pas ${e.etat}${e.n ? '' : ' tab'}${e.der ? ' der' : ''}"><div class="sva-pn">${pn}</div><div class="sva-pc">${corps}</div></div>`;
+    }).join('');
+  }
+  return `<div data-screen="suivi-assistant">${tete}${msgDe(esc, s.msg)}${onglets}<div class="sva-panneau"><div class="sva-gauche">${gauche}</div><div class="sva-droite">${s.fiche ? ficheHtml(s.fiche, x) : ''}</div></div>${apercu}</div>`;
 }
 
-function tplPlanif(p, x){
+/* L'étape ouverte. */
+function pasHtml(P, x){
   const { esc } = x;
-  return `<div class="mko-carte" style="margin-bottom:12px"><div class="mko-ct"><span class="mko-lab">Planifier une visite — le type charge sa checklist, ses tâches, sa durée</span><button ${x.A(p.fermer)} class="mko-pied-btn" style="margin-left:auto">Fermer</button></div>
-    <div class="mko-corps gc-form">
-      <div class="f"><label>Magasin</label>${sel(x, esc, p.setShop, p.magasins)}</div>
-      <div class="f"><label>Type de visite</label>${sel(x, esc, p.setType, p.types)}<small>${esc(p.typeInfo)}</small></div>
-      <div class="f"><label>Consultant</label>${sel(x, esc, p.setCons, p.consultants)}</div>
-      <div class="f"><label>Le franchisé</label>${duo(x, esc, { nom: 'Annoncée', on: p.annoncee, fn: p.annoncer }, { nom: 'Inopinée', on: !p.annoncee, fn: p.inopiner })}<small>${p.annoncee ? 'l’ordre du jour lui part avant la visite' : 'il n’est pas prévenu'}</small></div>
-      <div class="f"><label>Date</label><input type="date" class="mko-inp" value="${esc(p.date)}" ${x.C(p.setDate)}></div>
-      <div class="f"><label>Heure</label><input type="time" class="mko-inp" value="${esc(p.heure)}" ${x.C(p.setHeure)}></div>
-      <div class="f"><label>Durée (min)</label><input type="number" class="mko-inp" value="${esc(p.duree)}" ${x.C(p.setDuree)}><small>du type, modifiable</small></div>
-      <div class="f" style="align-self:end"><button ${x.A(p.envoyer)} class="cx-btn prim" ${p.busy ? 'disabled' : ''}>${p.busy ? 'Planification…' : 'Planifier la visite'}</button></div>
-    </div></div>`;
+  if (!P) { return ''; }
+  const tete = `<h2 class="sva-q">${esc(P.question)}</h2>${P.lead ? `<p class="sva-lead">${esc(P.lead)}</p>` : ''}`;
+  if (P.cle === 'magasin') {
+    return tete + `<div class="sva-mags">${P.magasins.map(m => `<button ${x.A(m.choisir)} class="sva-mag${m.on ? ' on' : ''}"><span class="t"><i class="gc-feu ${esc(m.feu)}"></i>${esc(m.court)}</span><span class="l">${esc(m.l1)}</span>
+      <span class="l mu">${esc(m.derniere)}</span><span class="l ${m.pointsKo ? 'ko' : 'mu'}">${esc(m.points)}</span>${m.prochaine ? `<span class="l mu">${esc(m.prochaine)}</span>` : ''}</button>`).join('')}</div>`;
+  }
+  if (P.cle === 'visite') {
+    return tete + `<div class="sva-sect"><h3>Le type de visite</h3></div><div class="sva-liste">${P.types.map(t => `<button ${x.A(t.choisir)} class="sva-ln${t.on ? ' on' : ''}"><span class="sva-rad${t.on ? ' on' : ''}"></span><span><b>${esc(t.nom)}</b><small>${esc(t.sous)}</small></span><span class="r">${esc(t.defaut)}</span></button>`).join('')}</div>
+      <div class="sva-sect"><h3>Le franchisé</h3></div><div class="sva-duo">${duo(x, esc, { nom: 'Annoncée', on: P.annoncee, fn: P.annoncer }, { nom: 'Inopinée', on: !P.annoncee, fn: P.inopiner })}<small>${esc(P.annonceeSous)}</small></div>
+      <div class="sva-sect"><h3>Quand, et qui y va</h3></div><div class="gc-form sva-f4">
+        <div class="f"><label>Date</label><input type="date" class="mko-inp" value="${esc(P.date)}" ${x.C(P.setDate)}></div>
+        <div class="f"><label>Heure</label><input type="time" class="mko-inp" value="${esc(P.heure)}" ${x.C(P.setHeure)}></div>
+        <div class="f"><label>Durée (min)</label><input type="number" class="mko-inp" value="${esc(P.duree)}" ${x.C(P.setDuree)}></div>
+        <div class="f"><label>Consultant</label>${sel(x, esc, P.setCons, P.consultants)}</div></div>
+      <div class="sva-act"><button ${x.A(P.valider)} class="cx-btn prim sva-lg" ${P.busy ? 'disabled' : ''}>${P.busy ? 'Un instant…' : esc(P.action) + ' →'}</button>${P.nouvelle ? '<span class="sva-aide">Rien n’est créé avant ce bouton.</span>' : ''}</div>`;
+  }
+  if (P.cle === 'dossier') {
+    const p = P.prep;
+    if (!p || p.chargement) { return tete + '<div class="mko-mu">Assemblage du dossier…</div>'; }
+    if (p.indispo) { return tete + `<div class="ko">${esc(p.indispo)}</div>`; }
+    return tete + `<div class="sva-sect"><h3>Le dossier du magasin</h3><span class="mini">${p.dossier.filter(b => b.inclus).length} sur ${p.dossier.length} partent</span></div>
+      <div class="sva-liste">${p.dossier.map(b => `<button ${x.A(b.basculer)} class="sva-ln${b.inclus ? '' : ' off'}${b.interne ? ' int' : ''}"><span class="sva-cb${b.inclus ? ' on' : ''}"></span><span><b>${esc(b.titre)}</b>${b.interne ? ' <span class="sva-int">interne</span>' : ''}${b.alerte ? ` <span class="gc-pill ko">${esc(b.alerte)}</span>` : ''}
+        <small>${esc(b.lignes.length ? b.lignes.slice(0, 2).join(' · ') : (b.motif || 'rien à signaler'))}</small></span><span class="r">${b.inclus ? (b.interne ? 'jamais montré au franchisé' : '') : 'retiré'}</span></button>`).join('')}</div>
+      <div class="sva-sect"><h3>Vos demandes à ${esc(P.consultant)}</h3><span class="mini">elles ouvrent sa checklist · le franchisé lit celles de l’ordre du jour</span></div>
+      <div class="sva-liste">${p.points.map(q => `<div class="sva-dm"><input class="mko-inp" value="${esc(q.libelle)}" ${x.I(q.setLib)} placeholder="Ce que ${esc(P.consultant)} doit regarder">
+          <span class="sva-seg"><button ${q.odj ? '' : x.A(q.basculerOdj)} class="${q.odj ? 'on lu' : ''}">${ic('mail')}Ordre du jour</button><button ${q.odj ? x.A(q.basculerOdj) : ''} class="${q.odj ? '' : 'on in'}">${ic('lock')}Interne</button></span>
+          <button ${x.A(q.retirer)} class="sva-x" title="retirer">✕</button></div>`).join('')}
+        <div class="sva-ajout"><button ${x.A(p.ajouter)} class="mko-pied-btn">+ Ajouter une demande</button></div></div>
+      <div class="sva-sect"><h3>Un mot pour ${esc(P.consultant)}</h3><span class="sva-int">interne</span><span class="mini">facultatif</span></div>
+      <textarea class="mko-inp sv-ta" rows="2" ${x.I(p.setNote)} placeholder="Le contexte, ce qu’il faut savoir avant d’entrer">${esc(p.note)}</textarea>
+      <div class="sva-act"><button ${x.A(P.continuer)} class="cx-btn prim sva-lg" ${P.busy ? 'disabled' : ''}>${P.busy ? 'Enregistrement…' : 'Continuer : l’envoi →'}</button><button ${x.A(P.enregistrer)} class="cx-btn" ${P.busy ? 'disabled' : ''}>Finir plus tard</button><span class="sva-aide">Rien ne part avant l’étape 4.</span></div>`;
+  }
+  if (P.cle === 'envoi') {
+    return tete + `<div class="sva-liste">${P.recap.map(r => `<div class="sva-ln"><span class="sva-di">${ic(r.ic)}</span><span><b>${esc(r.t)}</b><small class="${r.ko ? 'ko' : ''}">${esc(r.s)}</small></span><span></span></div>`).join('')}</div>
+      ${P.sansAdresse ? '<div class="ko" style="margin-top:8px;font-size:12px">Aucune adresse pour le franchisé : réglez-la dans Qui fait quoi.</div>' : ''}
+      <div class="sva-act"><button ${x.A(P.envoyer)} class="cx-btn prim sva-lg" ${P.busy ? 'disabled' : ''}>${P.busy ? 'Envoi…' : esc(P.libelle) + ' →'}</button>${P.odjMaintenant ? `<button ${x.A(P.odjMaintenant)} class="cx-btn" ${P.busy ? 'disabled' : ''}>Envoyer l’ordre du jour maintenant</button>` : ''}</div>`;
+  }
+  if (P.cle === 'tablette') {
+    return tete.replace('class="sva-lead"', `class="sva-lead${P.ko ? ' ko' : ''}"`) + `<div class="sva-act">${P.suite ? `<button ${x.A(P.suite)} class="cx-btn prim sva-lg">Adapter le rapport →</button>` : ''}<button ${x.A(P.tablette)} class="cx-btn">Ouvrir la visite sur tablette</button></div>`;
+  }
+  if (P.cle === 'rapport') { return tete + tplRapport(P.rap, x); }
+  return tete + tplCorrections(P.corrections || [], P.points || [], x);
 }
 
-const carteVisite = (x, esc, k) => `<button ${x.A(k.ouvrir)} class="sv-carte${k.on ? ' on' : ''}"><span class="t"><i class="gc-feu ${esc(k.feu)}"></i>${esc(k.court)}${k.inopinee ? ' <span class="gc-pill">inopinée</span>' : ''}</span>
-    <span class="l">${esc(k.l1)}</span><span class="l mu">${esc(k.l2)}</span>${k.ech ? `<span class="e ${k.cls}">${esc(k.ech)}</span>` : ''}</button>`;
-
-function tplEnsemble(s, x){
+/* La fiche vivante. */
+function ficheHtml(F, x){
   const { esc } = x;
-  const pipe = `<div class="sv-pipe">${s.colonnes.map(col => `<div class="col"><div class="ch"><b>${esc(col.nom)}</b><span class="n">${col.n}</span><span class="ou">${esc(col.ou)}</span></div>
-      ${col.cartes.length ? col.cartes.map(k => carteVisite(x, esc, k)).join('') : '<div class="mko-mu sv-vide">—</div>'}</div>`).join('')}</div>`;
-  const tab = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Les franchisés</span><span class="mko-mini">un clic ouvre la fiche franchisé</span></div><div style="overflow-x:auto"><table class="mko-tab sv-tab">
-      <thead><tr><th>Magasin</th><th>Dernière visite</th><th>Dernier rapport</th><th>Points ouverts</th><th>Prochaine visite</th><th>Cadre du mois</th><th class="n">Scoring</th></tr></thead>
-      <tbody>${s.franchises.map(f => `<tr class="cl" ${x.A(f.ouvrir)}><td class="nom"><i class="gc-feu ${esc(f.feu)}"></i>${esc(f.court)}<small>${esc(f.sous)}</small></td>
-        <td>${esc(f.derniere)}<small>${esc(f.derniereSous)}</small></td>
-        <td>${f.rapportCls ? `<span class="gc-pill ${f.rapportCls}">${esc(f.rapport)}</span>` : esc(f.rapport)}<small>${esc(f.rapportSous)}</small></td>
-        <td class="${f.pointsCls}">${esc(f.points)}<small>${esc(f.pointsSous)}</small></td>
-        <td>${esc(f.prochaine)}<small>${esc(f.prochaineSous)}</small></td>
-        <td>${esc(f.cadre)}<small>${esc(f.cadreSous)}</small></td><td class="n">${esc(f.scoring)}</td></tr>`).join('')}</tbody></table></div></div>`;
-  return pipe + tab;
+  const puces = F.puces.map(p => typeof p === 'string' ? `<span>${esc(p)}</span>` : `<span class="${p.neuf ? 'neuf' : ''}">${esc(p.t)}</span>`).join('');
+  const dest = F.dest.length ? `<div class="sva-fsec"><h4>Qui reçoit quoi</h4>${F.dest.map(d => `<div class="sva-dest${d.off ? ' off' : ''}"><span class="sva-di ${d.ic}">${ic(d.ic)}</span><span><b>${esc(d.qui)}</b><small class="${d.ko ? 'ko' : ''}">${esc(d.quoi)}</small></span><span class="q">${esc(d.quand || '')}</span></div>`).join('')}</div>` : '';
+  let odj = '';
+  if (F.odj && F.odj.texte) {
+    let t = esc(F.odj.texte);
+    (F.odj.sujets || []).filter(Boolean).forEach(su => { const e = esc(su); if (e && t.includes(e)) { t = t.split(e).join('<mark>' + e + '</mark>'); } });
+    odj = `<div class="sva-fsec"><h4>L’ordre du jour, tel qu’il partira<span class="lang">${esc(F.odj.langue || '')}</span></h4><div class="sva-mail"><b>${esc(F.odj.sujet)}</b><pre>${t}</pre></div></div>`;
+  }
+  const suite = F.suite.length ? `<div class="sva-fsec"><h4>Et ensuite</h4>${F.suite.map(l => `<div class="sva-tl${l.fait ? ' fait' : ''}${l.cur ? ' cur' : ''}"><i></i><b>${esc(l.quand)}</b><span>${esc(l.quoi)}</span></div>`).join('')}</div>` : '';
+  return `<div class="sva-fiche"><div class="sva-fh"><div class="sva-fk">Fiche de la visite<em>se remplit à chaque étape</em></div><div class="sva-ft">${esc(F.titre)}</div><div class="sva-fs">${esc(F.sous)}</div>${puces ? `<div class="sva-fb">${puces}</div>` : ''}</div>
+    ${dest}${odj}${suite}<div class="sva-fpied">${ic('ok')}${esc(F.pied)}</div></div>`;
 }
 
-function tplPreparer(s, x){
+/* L'étape 5 : le brouillon de la tablette, relu au bureau, puis envoyé. */
+function tplRapport(r, x){
   const { esc } = x;
-  const liste = `<div class="sv-liste">${s.prepListe.length ? s.prepListe.map(k => carteVisite(x, esc, k)).join('') : '<div class="mko-carte mko-corps mko-mu">Aucune visite à préparer sur les trois semaines qui viennent.</div>'}</div>`;
-  const p = s.prep;
-  if (!p) { return `<div class="sv-cote">${liste}<div></div></div>`; }
-  if (p.chargement) { return `<div class="sv-cote">${liste}${attente(esc, 'Assemblage du dossier de visite…')}</div>`; }
-  if (p.indispo) { return `<div class="sv-cote">${liste}${panne(esc, p.indispo)}</div>`; }
-  const dossier = carte('Le dossier de visite — assemblé tout seul', 'cochez ce qui part sur la tablette',
-    p.dossier.map(b => `<div class="sv-bloc${b.inclus ? '' : ' off'}"><div class="h">${bascule(x, b.inclus, b.basculer)}<b>${esc(b.titre)}</b>${b.interne ? '<span class="gc-pill">interne</span>' : ''}${b.alerte ? `<span class="gc-pill ko">${esc(b.alerte)}</span>` : ''}</div>
-      ${b.lignes.length ? `<ul>${b.lignes.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : `<div class="mko-mu">${esc(b.motif || 'rien à signaler')}</div>`}</div>`).join(''));
-  const tablette = carte('Ce que la tablette emporte', '',
-    `<div class="gc-form sv-f2"><div class="f"><label>Type de visite</label>${sel(x, esc, p.setType, p.types)}<small>${esc(p.typeSous)}</small></div>
-      <div class="f"><label>Le franchisé</label>${duo(x, esc, { nom: 'Annoncée', on: p.annoncee, fn: p.annoncer }, { nom: 'Inopinée', on: !p.annoncee, fn: p.inopiner })}<small>${p.annoncee ? 'il reçoit l’ordre du jour et voit la visite sur sa page' : 'il n’est pas prévenu, la visite n’apparaît pas sur sa page'}</small></div></div>
-    <div class="gc-mod"><b>Demandé par le bureau</b><span>en tête de la checklist · coché = dans l’ordre du jour</span></div>
-    ${p.points.map(q => `<div class="sv-pt"><input type="checkbox" ${q.odj ? 'checked' : ''} ${x.C(q.basculerOdj)} title="dans l’ordre du jour"><input class="mko-inp" value="${esc(q.libelle)}" ${x.I(q.setLib)} placeholder="Ce que le consultant doit regarder"><span class="mko-mu">${esc(q.source)}</span><button ${x.A(q.retirer)} class="mko-pied-btn" title="retirer">✕</button></div>`).join('')}
-    <button ${x.A(p.ajouter)} class="mko-pied-btn" style="margin-top:6px">+ Ajouter un point</button>
-    <div class="f sv-f1"><label>Note pour le consultant (interne)</label><textarea class="mko-inp sv-ta" rows="2" ${x.I(p.setNote)} placeholder="Le contexte, ce qu’il faut savoir avant d’entrer">${esc(p.note)}</textarea></div>`);
-  const odj = carte('L’ordre du jour au franchisé', p.annoncee ? esc(p.langue) : 'inopinée',
-    `<div class="${p.sansAdresse ? 'ko' : ''}" style="font-size:12.5px">${esc(p.odj)}${p.sansAdresse ? ' Aucune adresse : réglez-la dans Qui fait quoi.' : ''}</div>
-    ${p.annoncee ? `<button ${x.A(p.odjBasculer)} class="gc-lien" style="margin-top:6px">${p.odjOuvert ? 'Masquer le courriel' : 'Voir le courriel'}</button>
-      ${p.odjOuvert ? `<div class="sv-mail"><b>${esc(p.odjSujet)}</b><pre>${esc(p.odjTexte)}</pre></div>` : ''}` : ''}`);
-  return `<div class="sv-cote">${liste}<div class="sv-pile"><div class="sv-titre"><b>${esc(p.titre)}</b><span>${esc(p.roles)}</span>${p.envoyee ? `<span class="ok">${esc(p.envoyee)}</span>` : ''}</div>
-    <div class="cx-deux">${dossier}<div class="sv-pile">${tablette}${odj}</div></div>
-    <div class="sv-pied"><button ${x.A(p.enregistrer)} class="cx-btn" ${p.busy ? 'disabled' : ''}>Enregistrer</button>
-      ${p.odjMaintenant ? `<button ${x.A(p.odjMaintenant)} class="cx-btn" ${p.busy ? 'disabled' : ''}>Envoyer l’ordre du jour maintenant</button>` : ''}
-      <button ${x.A(p.envoyer)} class="cx-btn prim" ${p.busy ? 'disabled' : ''}>${p.busy ? 'Envoi…' : 'Envoyer sur la tablette'}</button></div></div></div>`;
-}
-
-function tplAdapter(s, x){
-  const { esc } = x;
-  const liste = `<div class="sv-liste">${s.rapListe.length ? s.rapListe.map(k => carteVisite(x, esc, k)).join('') : '<div class="mko-carte mko-corps mko-mu">Aucun rapport à adapter : les brouillons arrivent ici quand le consultant termine une visite.</div>'}</div>`;
-  const r = s.rap;
-  if (!r) { return `<div class="sv-cote">${liste}<div></div></div>`; }
-  if (r.chargement) { return `<div class="sv-cote">${liste}${attente(esc, 'Lecture du brouillon…')}</div>`; }
-  if (r.indispo) { return `<div class="sv-cote">${liste}${panne(esc, r.indispo)}</div>`; }
+  if (!r || r.chargement) { return '<div class="mko-mu">Lecture du brouillon…</div>'; }
+  if (r.indispo) { return `<div class="ko">${esc(r.indispo)}</div>`; }
   const ro = r.envoye ? 'readonly' : '';
-  const puces = (l, multi) => `<div class="cx-puces">${l.map(o => `<button ${r.envoye ? '' : x.A(o.choisir)} class="cx-pu${o.on ? ' on' : ''}"${r.envoye ? ' disabled' : ''}>${esc(o.nom != null ? o.nom : o.n)}</button>`).join('')}</div>`;
-  const champ = (lab, val, fn, rows, aide) => `<div class="f sv-f1"><label>${lab}</label><textarea class="mko-inp sv-ta" rows="${rows}" ${ro} ${x.I(fn)}>${esc(val)}</textarea>${aide ? `<small>${aide}</small>` : ''}</div>`;
+  const puces = l => `<div class="cx-puces">${l.map(o => `<button ${r.envoye ? '' : x.A(o.choisir)} class="cx-pu${o.on ? ' on' : ''}"${r.envoye ? ' disabled' : ''}>${esc(o.nom != null ? o.nom : o.n)}</button>`).join('')}</div>`;
+  const champ = (lab, val, fn, rows) => `<div class="f sv-f1"><label>${lab}</label><textarea class="mko-inp sv-ta" rows="${rows}" ${ro} ${x.I(fn)}>${esc(val)}</textarea></div>`;
   const texte = carte('Le rapport, partie par partie', r.langueFr ? 'en français' : 'rédigez en ' + esc(r.langue.toLowerCase()) + ' : le franchisé le lit tel quel',
     `${champ('En une phrase', r.phrase, r.setPhrase, 2)}${champ('Ce qui va bien', r.positif, r.setPositif, 2)}
     <div class="gc-form sv-f2"><div class="f"><label>Ressenti</label>${puces(r.sentiment)}</div><div class="f"><label>Exécution</label>${puces(r.execution)}</div><div class="f"><label>Clients</label>${puces(r.clients)}</div></div>
@@ -118,32 +136,29 @@ function tplAdapter(s, x){
     r.photos.length ? `<div class="sv-photos">${r.photos.map(p => `<button ${x.A(p.basculer)} class="sv-ph${p.inclus ? ' on' : ''}"${p.basculer ? '' : ' disabled'}><img src="${esc(p.src)}" alt="" loading="lazy"><span>${esc(p.genre)}</span></button>`).join('')}</div>` : '<div class="mko-mu">Aucune photo prise pendant la visite.</div>');
   const ck = carte('La checklist', esc(r.checklist), r.ecarts.length ? `<ul class="sv-ul">${r.ecarts.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : '<div class="mko-mu">Aucun écart relevé.</div>');
   const envoi = carte('L’envoi', esc(r.statut),
-    `<div class="sv-kv"><span>À</span><b class="${r.a ? '' : 'ko'}">${esc(r.a || 'aucune adresse — réglez-la dans Qui fait quoi')}</b><span>D’où</span><b>${esc(r.source || '—')}</b><span>Langue</span><b>${esc(r.langue)}</b><span>En copie</span><b>${esc(r.copies)}</b><span>Adapte</span><b>${esc(r.adapte || '—')}</b><span>Envoie</span><b>${esc(r.envoie || '—')}</b></div>
+    `<div class="sv-kv"><span>À</span><b class="${r.a ? '' : 'ko'}">${esc(r.a || 'aucune adresse — réglez-la dans Qui fait quoi')}</b><span>Langue</span><b>${esc(r.langue)}</b><span>En copie</span><b>${esc(r.copies)}</b><span>Envoie</span><b>${esc(r.envoie || '—')}</b></div>
     ${r.delai ? `<div class="${r.delaiKo ? 'ko' : 'att'}" style="font-weight:600;font-size:12.5px;margin-top:8px">${esc(r.delai)}</div>` : ''}
     ${!r.smtp ? '<div class="gc-pill att" style="margin-top:8px">SMTP non configuré : le rapport ira sur la page du franchisé, sans courriel</div>' : ''}
-    ${r.dernier ? `<div class="mko-mu" style="margin-top:8px">${esc(r.dernier)}</div>` : ''}
-    <div class="sv-mail"><b>${esc(r.sujet)}</b><pre>${esc(r.texte)}</pre></div>`);
-  return `<div class="sv-cote">${liste}<div class="sv-pile"><div class="sv-titre"><b>${esc(r.titre)}</b><span>${esc(r.statut)}</span></div>
-    <div class="cx-deux"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${photos}${ck}</div></div>
-    <div class="sv-pied"><button ${x.A(r.voir)} class="cx-btn">Voir le rapport</button>
+    ${r.dernier ? `<div class="mko-mu" style="margin-top:8px">${esc(r.dernier)}</div>` : ''}`);
+  return `<div class="sva-rap"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${photos}${ck}</div></div>
+    <div class="sva-act"><button ${x.A(r.voir)} class="cx-btn">Voir le rapport</button>
       ${r.envoye ? `<button ${x.A(r.renvoyer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Renvoyer le courriel</button>`
-        : `<button ${x.A(r.enregistrer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Enregistrer</button><button ${x.A(r.envoyer)} class="cx-btn prim" ${r.busy ? 'disabled' : ''}>${r.busy ? 'Envoi…' : 'Envoyer au franchisé'}</button>`}</div></div></div>`;
+        : `<button ${x.A(r.envoyer)} class="cx-btn prim sva-lg" ${r.busy ? 'disabled' : ''}>${r.busy ? 'Envoi…' : 'Envoyer au franchisé →'}</button><button ${x.A(r.enregistrer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Enregistrer</button>`}</div>`;
 }
 
-function tplPoints(s, x){
+/* L'étape 6 : les photos de correction du magasin, puis ses points encore ouverts. */
+function tplCorrections(corrections, points, x){
   const { esc } = x;
-  const corr = carte('Les corrections à valider', 'la photo du franchisé, à côté de celle de la visite',
-    s.corrections.length ? '<div class="sv-corrs">' + s.corrections.map(p => `<div class="sv-corr"><div class="h"><span class="gc-st ${p.priorite === 'P0' ? 'p0' : ''}">${esc(p.priorite)}</span><b>${esc(p.titre)}</b><span class="${p.horsDelai ? 'ko' : 'mko-mu'}">${esc(p.recu)}</span></div>
+  const corr = corrections.length ? '<div class="sv-corrs">' + corrections.map(p => `<div class="sv-corr"><div class="h"><span class="gc-st ${p.priorite === 'P0' ? 'p0' : ''}">${esc(p.priorite)}</span><b>${esc(p.titre)}</b><span class="${p.horsDelai ? 'ko' : 'mko-mu'}">${esc(p.recu)}</span></div>
       <div class="sv-av"><figure>${p.avant ? `<img src="${esc(p.avant)}" alt="">` : '<div class="sv-noimg">pas de photo</div>'}<figcaption>${esc(p.avantLib)}</figcaption></figure><figure>${p.apres ? `<img src="${esc(p.apres)}" alt="">` : '<div class="sv-noimg">pas de photo</div>'}<figcaption>${esc(p.apresLib)}</figcaption></figure></div>
       ${p.commentaire ? `<div class="sv-com">« ${esc(p.commentaire)} »</div>` : ''}<div class="mko-mu">${esc(p.valide)}</div>
       ${p.rep ? `<div class="sv-rep"><input class="mko-inp" placeholder="Ce qui ne va pas encore" value="${esc(p.rep.retour)}" ${x.I(p.rep.setRetour)}><input type="date" class="mko-inp" style="width:150px" value="${esc(p.rep.echeance)}" ${x.C(p.rep.setEcheance)}><button ${x.A(p.rep.renvoyer)} class="cx-btn prim">Renvoyer au franchisé</button><button ${x.A(p.rep.annuler)} class="mko-pied-btn">Annuler</button></div>`
-        : `<div class="sv-pied"><button ${x.A(p.reprendre)} class="cx-btn">À reprendre</button><button ${x.A(p.accepter)} class="cx-btn prim">Accepter</button></div>`}</div>`).join('') + '</div>'
-      : '<div class="mko-mu">Aucune photo de correction en attente.</div>');
-  const tous = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Tous les points ouverts</span><span class="mko-mini">les escaladés, puis par urgence</span></div><div style="overflow-x:auto"><table class="mko-tab sv-tab">
-      <thead><tr><th>Prio</th><th>Magasin</th><th>Point</th><th>Échéance</th><th>Statut</th></tr></thead>
-      <tbody>${s.points.length ? s.points.map(p => `<tr><td><span class="gc-st ${p.priorite === 'P0' ? 'p0' : ''}">${esc(p.priorite)}</span></td><td class="nom">${esc(p.court)}</td><td>${esc(p.titre)}<small>${esc(p.sous)}</small></td>
-        <td>${esc(p.echeance)}${p.retard ? `<small class="ko">${esc(p.retard)}</small>` : ''}</td><td><span class="gc-pill ${p.statutCls}">${esc(p.statut)}</span></td></tr>`).join('') : '<tr><td colspan="5" class="mu">Aucun point ouvert.</td></tr>'}</tbody></table></div></div>`;
-  return `<div class="sv-pile">${corr}${tous}</div>`;
+        : `<div class="sv-pied"><button ${x.A(p.reprendre)} class="cx-btn">À reprendre</button><button ${x.A(p.accepter)} class="cx-btn prim">Accepter</button></div>`}</div>`).join('') + '</div>' : '';
+  const tous = `<div class="sva-sect"><h3>Les points encore ouverts</h3><span class="mini">les escaladés, puis par urgence</span></div><div style="overflow-x:auto"><table class="mko-tab sv-tab">
+      <thead><tr><th>Prio</th><th>Point</th><th>Échéance</th><th>Statut</th></tr></thead>
+      <tbody>${points.length ? points.map(p => `<tr><td><span class="gc-st ${p.priorite === 'P0' ? 'p0' : ''}">${esc(p.priorite)}</span></td><td>${esc(p.titre)}<small>${esc(p.sous)}</small></td>
+        <td>${esc(p.echeance)}${p.retard ? `<small class="ko">${esc(p.retard)}</small>` : ''}</td><td><span class="gc-pill ${p.statutCls}">${esc(p.statut)}</span></td></tr>`).join('') : '<tr><td colspan="4" class="mu">Aucun point ouvert.</td></tr>'}</tbody></table></div>`;
+  return corr + tous;
 }
 
 /* --- 2. Visite sur tablette ---------------------------------------------------------- */

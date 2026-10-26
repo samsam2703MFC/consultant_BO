@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Créer une visite — maquette B</title>
+<!-- Maquette B (26/10/2026) · #/franchises refait en assistant conversationnel : une question à la fois, les réponses
+     s'empilent sur un fil, les étapes à venir attendent en pointillé. Montrée à l'étape 3 « Le dossier ». Données d'exemple. -->
+<style>
+/* ---- Base commune aux trois maquettes : jetons du cockpit, coque, rail, contrôles ---- */
+:root {
+  --rouge: #8D1D2C; --rouge-pale: #F6E9EA; --rouge-trait: rgba(141, 29, 44, 0.35);
+  --abricot: #F2C9A0; --abricot-pale: #FCF1E4;
+  --beige: #EAE4DC; --beige-2: #F4EFE8; --rail: #F7F3EE; --blanc: #FFFFFF;
+  --encre: #222222; --gris: #666666; --gris-2: #8C857E;
+  --trait: rgba(34, 34, 34, 0.10); --trait-2: rgba(34, 34, 34, 0.18);
+  --ok: #2D7A3E; --ok-bg: #E6F2E9; --att: #B26A00; --att-bg: #FBEFE0;
+  --ko: #C0182B; --ko-bg: #F7E4E6; --info: #3D5A8A; --info-bg: #E6ECF5;
+  --vio: #5B3D9E; --vio-bg: #EEE6FA;
+  --f-ui: 'Gotham', 'Helvetica Neue', Arial, sans-serif;
+  --f-titre: 'Vank', 'Gotham', 'Arial Narrow', sans-serif;
+  color-scheme: light;
+}
+/* Polices du design system du cockpit (public/assets/ds/fonts), lues dans le dépôt ; sinon Helvetica / Arial. */
+@font-face { font-family: 'Gotham'; font-weight: 300; font-display: swap; src: url('../../../public/assets/ds/fonts/Gotham_Light.otf') format('opentype'); }
+@font-face { font-family: 'Gotham'; font-weight: 400; font-display: swap; src: url('../../../public/assets/ds/fonts/Gotham_Regular_New.otf') format('opentype'); }
+@font-face { font-family: 'Gotham'; font-weight: 500; font-display: swap; src: url('../../../public/assets/ds/fonts/Gotham_Medium.otf') format('opentype'); }
+@font-face { font-family: 'Gotham'; font-weight: 600; font-display: swap; src: url('../../../public/assets/ds/fonts/Gotham_Regular.otf') format('opentype'); }
+@font-face { font-family: 'Gotham'; font-weight: 700; font-display: swap; src: url('../../../public/assets/ds/fonts/Gotham_Black.otf') format('opentype'); }
+@font-face { font-family: 'Vank'; font-weight: 400; font-display: swap; src: url('../../../public/assets/ds/fonts/GC_Vank.ttf') format('truetype'); }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--beige); color: var(--encre); }
+body { font-family: var(--f-ui); font-size: 13px; font-weight: 300; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+b, strong { font-weight: 600; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; text-decoration: none; cursor: pointer; }
+p { margin: 0; }
+h1, h2, h3 { font-weight: 400; margin: 0; text-wrap: balance; }
+.ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ---- coque ---- */
+.app { display: flex; min-height: 100vh; }
+.rail { width: 236px; flex: 0 0 236px; background: var(--rail); border-right: 0.5px solid var(--trait); padding: 20px 12px 18px; display: flex; flex-direction: column; gap: 14px; }
+.rail .logo img { width: 148px; display: block; }
+.rail .pr { font: 600 9.5px var(--f-ui); letter-spacing: 0.11em; text-transform: uppercase; color: var(--gris); margin-top: 7px; }
+.rail .cherche { background: var(--beige-2); border: 0.5px solid var(--trait-2); border-radius: 9px; height: 30px; display: flex; align-items: center; padding: 0 10px; color: var(--gris); font-size: 11.5px; font-weight: 500; }
+.rail nav { display: flex; flex-direction: column; gap: 14px; }
+.rail .sec { display: flex; flex-direction: column; gap: 1px; }
+.rail .sec > b { font: 700 9.5px var(--f-ui); letter-spacing: 0.09em; text-transform: uppercase; padding: 0 8px 5px; }
+.rail .it { display: block; padding: 5px 8px; border-radius: 7px; font-weight: 300; font-size: 12.5px; }
+.rail .it.ouvert { font-weight: 500; }
+.rail .sous { margin: 2px 0 4px 12px; padding-left: 8px; border-left: 1px solid var(--trait-2); display: flex; flex-direction: column; gap: 1px; }
+.rail .sub { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; padding: 5px 8px; border-radius: 7px; font-size: 12px; font-weight: 300; }
+.rail .sub small { flex-basis: 100%; font-size: 10px; color: var(--gris); font-weight: 300; }
+.rail .sub.on { background: var(--rouge-pale); color: var(--rouge); font-weight: 500; }
+.rail .bdg { margin-left: auto; min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--rouge); color: #fff; font-size: 9.5px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
+.rail .moi { margin-top: auto; display: flex; align-items: center; gap: 9px; border-top: 0.5px solid var(--trait); padding: 14px 6px 0; }
+.rail .av { width: 30px; height: 30px; border-radius: 50%; background: var(--rouge); color: #fff; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.rail .moi b { display: block; font-size: 12px; }
+.rail .moi small { font-size: 10.5px; color: var(--gris); }
+
+.main { flex: 1; min-width: 0; padding: 24px 32px 48px; }
+.fil { font: 600 9.5px var(--f-ui); letter-spacing: 0.09em; text-transform: uppercase; color: var(--gris); }
+h1 { font: 400 30px/1.1 var(--f-titre); margin-top: 5px; }
+.chapo { color: var(--gris); font-size: 12.5px; margin-top: 6px; max-width: 600px; }
+.maq { display: inline-flex; gap: 6px; align-items: center; background: var(--abricot-pale); border: 0.5px solid #EBC9A4; color: #7a4a1a; border-radius: 999px; padding: 3px 10px; font-size: 10.5px; font-weight: 500; margin-top: 10px; }
+
+/* ---- contrôles ---- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 9px; border: 0.5px solid var(--trait-2); background: var(--blanc); font-weight: 600; font-size: 12.5px; white-space: nowrap; color: var(--encre); }
+.btn.prim { background: var(--rouge); border-color: var(--rouge); color: #fff; box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08), 0 4px 14px rgba(141, 29, 44, 0.22); }
+.btn.lg { height: 42px; padding: 0 22px; font-size: 13.5px; border-radius: 10px; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--gris); }
+.btn.off { opacity: 0.45; box-shadow: none; }
+.lien { color: var(--rouge); font-weight: 600; font-size: 11.5px; background: none; border: none; padding: 0; }
+.pill { display: inline-flex; align-items: center; gap: 4px; font: 600 9px var(--f-ui); letter-spacing: 0.07em; text-transform: uppercase; border-radius: 6px; padding: 3px 6px; background: var(--beige-2); color: #555; white-space: nowrap; line-height: 1.1; }
+.pill.vio { background: var(--vio-bg); color: var(--vio); }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.att { background: var(--att-bg); color: var(--att); }
+.pill.ko { background: var(--ko-bg); color: var(--ko); }
+.pill.info { background: var(--info-bg); color: var(--info); }
+.pill.rouge { background: var(--rouge); color: #fff; }
+.prio { font: 700 9px var(--f-ui); border-radius: 5px; padding: 2px 5px; letter-spacing: 0.03em; display: inline-block; line-height: 1.2; vertical-align: 1px; }
+.prio.p0 { background: var(--ko); color: #fff; }
+.prio.p1 { background: #F4D58D; color: #6b4a00; }
+.prio.p2 { background: #E8E3DD; color: #444; }
+.feu { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; background: #bbb; }
+.feu.r { background: var(--ko); } .feu.o { background: #D97706; } .feu.v { background: var(--ok); }
+.pt { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex: none; background: #B8B0A8; }
+.pt.att { background: #D97706; } .pt.info { background: #4B74B5; } .pt.ko { background: var(--ko); }
+.sw { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 500; color: var(--gris); white-space: nowrap; }
+.sw i { position: relative; width: 28px; height: 16px; border-radius: 999px; background: #CFC8C1; flex: none; }
+.sw i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }
+.sw.on { color: var(--encre); } .sw.on i { background: var(--ok); } .sw.on i::after { left: 14px; }
+.cb { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid rgba(34, 34, 34, 0.28); background: #fff; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.cb.on { background: var(--rouge); border-color: var(--rouge); }
+.cb.on::after { content: ""; width: 9px; height: 5px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: translateY(-1px) rotate(-45deg); }
+.rad { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid rgba(34, 34, 34, 0.28); background: #fff; flex: none; display: inline-flex; align-items: center; justify-content: center; }
+.rad.on { border-color: var(--rouge); }
+.rad.on::after { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--rouge); }
+.ph { position: relative; aspect-ratio: 4 / 3; border-radius: 8px; background: linear-gradient(140deg, #D8CCBF, #B7A592); overflow: hidden; display: flex; align-items: center; justify-content: center; color: rgba(255, 255, 255, 0.85); }
+.ph.b { background: linear-gradient(140deg, #CFC3B2, #9C8B78); }
+.ph.c { background: linear-gradient(140deg, #E2D3C2, #C49F84); }
+.ph span { position: absolute; left: 5px; bottom: 5px; font: 600 9px var(--f-ui); background: rgba(0, 0, 0, 0.5); color: #fff; border-radius: 4px; padding: 1px 5px; }
+.ph.off { opacity: 0.35; }
+.ph.on { outline: 2px solid var(--ok); outline-offset: -2px; }
+.ph .ic { width: 22px; height: 22px; }
+.pied { margin-top: 26px; padding-top: 12px; border-top: 0.5px solid var(--trait-2); font-size: 11px; color: var(--gris); }
+
+/* ================= Maquette B — le fil, des cartes qui s'empilent ================= */
+.b-tete { max-width: 820px; margin: 0 auto; }
+.b-tete h1 { font-size: 32px; }
+.fil-pill { position: sticky; top: 10px; z-index: 5; max-width: 820px; margin: 18px auto 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(6px); border: 0.5px solid var(--trait); border-radius: 999px; padding: 7px 8px 7px 16px; display: flex; align-items: center; gap: 0; box-shadow: 0 6px 20px rgba(34, 34, 34, 0.07); font-size: 12px; }
+.fil-pill > span { padding: 0 11px; border-left: 0.5px solid var(--trait-2); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.fil-pill > span:first-child { border-left: none; padding-left: 0; }
+.fil-pill .ic { width: 14px; height: 14px; color: var(--rouge); }
+.fil-pill .prog { margin-left: auto; border-left: none; gap: 9px; color: var(--gris); }
+.fil-pill .barre { width: 120px; height: 6px; border-radius: 999px; background: var(--beige-2); overflow: hidden; display: block; }
+.fil-pill .barre i { display: block; height: 100%; width: 42%; background: var(--rouge); border-radius: 999px; }
+.fil-pill .prog b { color: var(--encre); }
+.fil-pill .btn { height: 30px; padding: 0 12px; font-size: 11.5px; border-radius: 999px; }
+
+.conv { position: relative; max-width: 820px; margin: 22px auto 0; padding-left: 52px; }
+/* le fil : un segment par étape, vert après une réponse, pointillé vers ce qui reste à faire */
+.tour::before { content: ""; position: absolute; left: -35px; top: 24px; bottom: -22px; width: 2px; background: var(--ok); }
+.tour:last-child::before { display: none; }
+.tour.cur::before, .tour.avenir::before { background: repeating-linear-gradient(transparent 0 5px, rgba(34, 34, 34, 0.22) 5px 10px); }
+.b-rep { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--gris); margin: 0 0 14px; }
+.b-rep .ic { width: 14px; height: 14px; }
+.b-rep a { display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.55); border: 0.5px solid var(--trait); border-radius: 999px; padding: 3px 10px 3px 8px; color: var(--encre); font-weight: 400; }
+.b-rep a b { font-weight: 600; }
+
+.tour { position: relative; margin-bottom: 10px; }
+.tour > .dot { position: absolute; left: -52px; top: 6px; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; background: #fff; border: 1.5px solid var(--trait-2); color: var(--gris); z-index: 1; }
+.tour.fait > .dot { background: var(--ok); border-color: var(--ok); color: #fff; }
+.tour.sous > .dot { left: -43px; top: 12px; width: 18px; height: 18px; border-width: 0; background: var(--ok); }
+.tour.sous > .dot::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+.tour.cur > .dot { background: var(--rouge); border-color: var(--rouge); color: #fff; box-shadow: 0 0 0 6px rgba(141, 29, 44, 0.12); top: 18px; }
+.tour.avenir > .dot { background: var(--beige); border-style: dashed; }
+.tour.tab > .dot .ic { width: 17px; height: 17px; }
+
+/* tour répondu : la question à gauche, la réponse en bulle à droite */
+.rep-l { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 14px; background: rgba(255, 255, 255, 0.55); border: 0.5px solid var(--trait); border-radius: 14px; padding: 10px 12px 10px 16px; }
+.rep-l .q { font-size: 13px; color: #555; }
+.rep-l .r { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.bulle { background: var(--rouge-pale); color: var(--rouge); font-weight: 600; font-size: 13px; border-radius: 14px 14px 4px 14px; padding: 7px 13px; white-space: nowrap; }
+.bulle.vert { background: var(--ok-bg); color: var(--ok); }
+.rep-l .mod { color: var(--gris-2); display: inline-flex; padding: 4px; border-radius: 6px; }
+.rep-l .mod .ic { width: 14px; height: 14px; }
+.rep-l .ctx { grid-column: 1 / 3; font-size: 11.5px; color: var(--gris); text-align: right; padding-right: 30px; }
+.tour.sous .rep-l { margin-left: 0; }
+
+/* la carte en cours */
+.carte-cur { background: #fff; border: 0.5px solid var(--trait); border-radius: 18px; padding: 22px 24px 20px; box-shadow: 0 14px 40px rgba(34, 34, 34, 0.09); position: relative; }
+.carte-cur::before { content: ""; position: absolute; left: -1px; top: 22px; bottom: 22px; width: 3px; border-radius: 3px; background: var(--rouge); }
+.etq { font: 600 9.5px var(--f-ui); letter-spacing: 0.09em; text-transform: uppercase; color: var(--rouge); }
+.qq { font: 400 27px/1.15 var(--f-titre); margin-top: 5px; }
+.voix { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; color: #444; margin-top: 8px; max-width: 640px; }
+.voix .ic { color: var(--rouge); margin-top: 1px; width: 15px; height: 15px; }
+.qq2 { display: flex; align-items: baseline; gap: 10px; font: 400 19px/1.2 var(--f-titre); margin-top: 24px; padding-top: 18px; border-top: 0.5px solid var(--trait); }
+.qq2 .opt { font: 500 11px var(--f-ui); color: var(--gris); }
+.tuiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.tu { border: 0.5px solid var(--trait-2); border-radius: 13px; padding: 11px 12px 12px; display: flex; flex-direction: column; gap: 5px; background: #fff; }
+.tu .th { display: flex; align-items: flex-start; gap: 8px; }
+.tu .th b { font-size: 12.5px; line-height: 1.3; }
+.tu .th .sw { margin-left: auto; }
+.tu p { font-size: 11.5px; color: #555; line-height: 1.4; }
+.tu .src { font-size: 10px; color: var(--gris-2); margin-top: auto; }
+.tu.on { border-color: rgba(45, 122, 62, 0.45); box-shadow: 0 0 0 1px rgba(45, 122, 62, 0.12) inset; }
+.tu.off { border-style: dashed; background: var(--beige-2); }
+.tu.off b, .tu.off p { opacity: 0.5; }
+.tu.off .src { color: var(--att); font-weight: 500; }
+.tu.int { background: linear-gradient(160deg, #F6F1FD, #fff 60%); border-color: rgba(91, 61, 158, 0.3); }
+.tu .prio { margin-right: 2px; }
+.dems { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.dm { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto 18px; gap: 12px; align-items: center; border: 0.5px solid var(--trait-2); border-radius: 13px; padding: 10px 12px; }
+.dm .nb { width: 24px; height: 24px; border-radius: 50%; background: var(--rouge-pale); color: var(--rouge); font-weight: 600; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+.dm b { display: block; font-size: 13px; }
+.dm small { font-size: 11px; color: var(--gris); }
+.dm .x { color: var(--gris-2); font-size: 12px; }
+.tg { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 11px; font-size: 11px; font-weight: 600; white-space: nowrap; border: 0.5px solid transparent; }
+.tg .ic { width: 13px; height: 13px; }
+.tg.lu { background: var(--abricot-pale); color: #8a5320; border-color: #EBC9A4; }
+.tg.int { background: var(--vio-bg); color: var(--vio); }
+.suggs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; font-size: 11.5px; color: var(--gris); }
+.chip { display: inline-flex; align-items: center; gap: 4px; border: 0.5px dashed var(--rouge-trait); color: var(--rouge); background: #fff; border-radius: 999px; padding: 4px 11px; font-size: 11.5px; font-weight: 500; }
+.chip.libre { border-style: solid; border-color: var(--trait-2); color: var(--encre); }
+.ta { margin-top: 10px; border: 0.5px solid var(--trait-2); border-radius: 12px; padding: 10px 13px; min-height: 54px; font-size: 12.5px; line-height: 1.5; background: #FDFBF8; }
+.b-act { display: flex; align-items: center; gap: 10px; margin-top: 22px; padding-top: 16px; border-top: 0.5px solid var(--trait); }
+.b-act .aide { margin-left: auto; font-size: 11.5px; color: var(--gris); display: inline-flex; gap: 6px; align-items: center; }
+.b-act .aide .ic { width: 14px; height: 14px; }
+.franchise-voit { margin-top: 12px; display: flex; gap: 10px; align-items: flex-start; background: var(--abricot-pale); border-radius: 12px; padding: 10px 13px; font-size: 12px; color: #6b4420; }
+.franchise-voit .ic { margin-top: 1px; }
+
+/* les étapes à venir */
+.gh { border: 1px dashed rgba(34, 34, 34, 0.22); border-radius: 14px; padding: 11px 16px; font-size: 12.5px; color: var(--gris); background: rgba(255, 255, 255, 0.25); }
+.gh b { color: #444; }
+.gh .q { font: 400 16px var(--f-titre); color: #555; }
+.tour.avenir.tab .gh { background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0 10px, rgba(255, 255, 255, 0.1) 10px 20px); }
+
+/* autres moments */
+.autres { margin-top: 46px; max-width: 1140px; }
+.autres > h2 { font: 400 21px var(--f-titre); }
+.autres > p { color: var(--gris); font-size: 12px; margin-top: 3px; }
+.etats { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; align-items: start; }
+.etat { margin: 0; }
+.etat figcaption { font-size: 12px; color: var(--gris); margin-bottom: 7px; }
+.etat figcaption b { color: var(--encre); }
+.cadre { background: var(--beige); border: 0.5px solid var(--trait-2); border-radius: 16px; padding: 16px 16px 8px; }
+.cadre .conv { margin-top: 0; padding-left: 44px; }
+.cadre .tour::before { left: -31px; top: 20px; }
+.cadre .tour > .dot { left: -44px; width: 28px; height: 28px; font-size: 11.5px; }
+.cadre .tour.cur > .dot { top: 16px; }
+.cadre .carte-cur { padding: 16px 16px 14px; border-radius: 15px; }
+.cadre .qq { font-size: 21px; }
+.cadre .voix { font-size: 12px; }
+.cadre .b-act { margin-top: 14px; padding-top: 12px; }
+.cadre .rep-l { padding: 8px 10px 8px 12px; }
+.cadre .rep-l .q { font-size: 12px; }
+.cadre .bulle { font-size: 12px; padding: 5px 10px; }
+.cadre .gh { padding: 8px 12px; }
+.cadre .gh .q { font-size: 14px; }
+.choix { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.choix button { text-align: left; background: #fff; border: 0.5px solid var(--trait-2); border-radius: 13px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.choix button b { display: flex; align-items: center; gap: 7px; font-size: 14px; }
+.choix button small { font-size: 11px; color: var(--gris); }
+.choix button em { font-style: normal; font-size: 11px; font-weight: 600; }
+.choix .ko { color: var(--ko); } .choix .att { color: var(--att); } .choix .mu { color: var(--gris); font-weight: 400; }
+.cadre .dm { grid-template-columns: auto minmax(0, 1fr) auto; padding: 8px 10px; gap: 9px; }
+.cadre .dm b { font-size: 12px; }
+.cadre .tg { padding: 4px 9px; font-size: 10.5px; }
+.mphotos { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 10px; }
+
+/* étape 2, en grand */
+.etat.large { margin: 14px 0 18px; }
+.etat.large .conv { max-width: 760px; }
+.types { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.types button { text-align: left; background: #fff; border: 0.5px solid var(--trait-2); border-radius: 13px; padding: 10px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; }
+.types button b { font-size: 14px; }
+.types button small { grid-column: 1; font-size: 11px; color: var(--gris); }
+.types button .pill { grid-row: 1 / 3; grid-column: 2; }
+.types button.on { border: 1.5px solid var(--rouge); background: #FFFAFA; }
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="rail" aria-label="Menu du cockpit">
+  <div class="logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAsQAAAB5CAYAAAA+njcBAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAABAhpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ1dWlkOjVEMjA4OTI0OTNCRkRCMTE5MTRBODU5MEQzMTUwOEM4IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjZDQzlBQjQ2ODE5RjExRjBCOEFEOTU0RjVGOEI2RTNEIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjZDQzlBQjQ1ODE5RjExRjBCOEFEOTU0RjVGOEI2RTNEIiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIElsbHVzdHJhdG9yIENDIDIzLjAgKFdpbmRvd3MpIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6OTI3YmFiYjktMDc0ZC1lNjQ4LTkzNWUtMGQ4ZGM2YjgyMDZmIiBzdFJlZjpkb2N1bWVudElEPSJhZG9iZTpk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" alt="L’Atelier — sucré, salé, à emporter"><div class="pr">Pilotage réseau</div></div>
+  <div class="cherche">Rechercher partout…</div>
+  <nav>
+    <div class="sec"><b>Pilotage</b><a class="it">Résultat</a><a class="it">Dashboard magasin ↗</a></div>
+    <div class="sec"><b>Franchisés · évaluation et suivi</b>
+      <a class="it">Fiche &amp; scoring</a>
+      <a class="it ouvert">▾ Suivi des franchisés</a>
+      <div class="sous">
+        <a class="sub on">Visites<span class="bdg">3</span><small>créer, préparer, suivre</small></a>
+        <a class="sub">Visite sur tablette</a>
+        <a class="sub">Client mystère</a>
+        <a class="sub">Page du franchisé</a>
+        <a class="sub">Qui fait quoi</a>
+      </div>
+      <a class="it">▸ Budget</a>
+      <a class="it">▸ Suivi journalier et opérations</a>
+    </div>
+    <div class="sec"><b>Magasins</b><a class="it">Analyse magasin</a><a class="it">Invendus et poubelle</a><a class="it">Inventaires</a><a class="it">Scouting — où ouvrir</a></div>
+    <div class="sec"><b>Produits</b><a class="it">Catalogue</a><a class="it">Comptoir · planogramme</a></div>
+    <div class="sec"><b>ERP franchisé</b><a class="it">Prospection ↗</a><a class="it">Fidélité</a></div>
+  </nav>
+  <div class="moi"><span class="av">SV</span><div><b>Sam V.</b><small>CEO · consultant</small></div></div>
+</aside>
+
+<main class="main">
+  <div class="b-tete">
+    <div class="fil">Franchisés · évaluation et suivi › Suivi des franchisés › Visites</div>
+    <h1>Créer une visite</h1>
+    <p class="chapo">Une question à la fois. Vos réponses restent au-dessus, on peut toujours revenir sur l’une d’elles.</p>
+    <span class="maq">Maquette B · le fil de questions · lundi 26/10/2026 · données d’exemple</span>
+  </div>
+
+  <div class="fil-pill" aria-label="Votre visite">
+    <span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M5 9.5v10h14v-10M9.5 19.5v-5h5v5"/></svg><b>Halle</b></span>
+    <span>Régulière · annoncée</span>
+    <span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>jeu. 29/10 · 09:30</span>
+    <span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>Pierre B.</span>
+    <span class="prog"><span class="barre"><i></i></span><b>étape 3</b> sur 6</span>
+  </div>
+
+  <div class="conv">
+    <p class="b-rep"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4.5h4.5"/></svg> À reprendre :
+      <a><span class="pt att"></span><b>Corbais</b> rapport à adapter</a>
+      <a><span class="pt info"></span><b>Sombreffe</b> 2 corrections</a>
+      <a><span class="pt"></span><b>Gosselies</b> dossier à finir</a></p>
+
+    <div class="tour fait"><span class="dot"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+      <div class="rep-l"><span class="q">Quel magasin allez-vous visiter&nbsp;?</span><span class="r"><span class="bulle">Halle</span><a class="mod" title="Modifier"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></a></span>
+        <span class="ctx">son consultant est Pierre B. · le franchisé lit ses courriels en néerlandais</span></div></div>
+    <div class="tour fait sous"><span class="dot"></span>
+      <div class="rep-l"><span class="q">Quel genre de visite&nbsp;?</span><span class="r"><span class="bulle">Régulière</span><a class="mod" title="Modifier"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></a></span>
+        <span class="ctx">1 h 30 · checklist de 24 points</span></div></div>
+    <div class="tour fait sous"><span class="dot"></span>
+      <div class="rep-l"><span class="q">Le franchisé est-il prévenu&nbsp;?</span><span class="r"><span class="bulle">Oui, visite annoncée</span><a class="mod" title="Modifier"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></a></span>
+        <span class="ctx">il reçoit l’ordre du jour deux jours avant, mardi 27/10 à 08:00</span></div></div>
+    <div class="tour fait sous"><span class="dot"></span>
+      <div class="rep-l"><span class="q">Quand, et qui y va&nbsp;?</span><span class="r"><span class="bulle">Jeudi 29/10 à 09:30 · Pierre B.</span><a class="mod" title="Modifier"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></a></span>
+        <span class="ctx">jusqu’à 11:00 · Pierre n’a rien d’autre ce matin-là</span></div></div>
+
+    <div class="tour cur"><span class="dot">3</span>
+      <div class="carte-cur">
+        <span class="etq">Étape 3 sur 6 · le dossier</span>
+        <div class="qq">Que doit emporter Pierre sur la tablette&nbsp;?</div>
+        <p class="voix"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg><span>Le dossier de Halle est prêt : il s’est rassemblé tout seul à partir de sa fiche. Touchez une carte pour la retirer. Si tout vous va, passez directement à la suite.</span></p>
+        <div class="tuiles">
+          <div class="tu on"><div class="th"><b>Santé du magasin</b><span class="sw on"><i></i></span></div><p>CA d’octobre à 96 % du budget · invendus 3,8 % du CA · Google 4,3</p><span class="src">fiche franchisé</span></div>
+          <div class="tu on"><div class="th"><b>3 points encore ouverts</b><span class="sw on"><i></i></span></div><p><span class="prio p0">P0</span> vitrine salée à 7 °C, en retard · <span class="prio p1">P1</span> comptoir viennoiserie · <span class="prio p2">P2</span> prix des tartes</p><span class="src">plans d’action</span></div>
+          <div class="tu on"><div class="th"><b>Tâches et contrôles photo</b><span class="sw on"><i></i></span></div><p>78 % des tâches rendues en octobre · obligatoires manquées 3 jours</p><span class="src">tâches du mois</span></div>
+          <div class="tu on"><div class="th"><b>Scoring du trimestre</b><span class="sw on"><i></i></span></div><p>Q3 : 15,8 / 20, en hausse de 1,7 sur Q2</p><span class="src">scoring</span></div>
+          <div class="tu off"><div class="th"><b>Client mystère et comptoir</b><span class="sw"><i></i></span></div><p>Passage du 15/09 : 68 / 80 · planogramme tenu à 86 %</p><span class="src">retiré : déjà vu le 21/10</span></div>
+          <div class="tu int on"><div class="th"><b>Météo du franchisé</b><span class="sw on"><i></i></span></div><p>06/10 : moral 3 / 5 · « de l’aide pour recruter le week-end »</p><span class="src"><span class="pill vio"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> interne</span> jamais montrée au franchisé</span></div>
+        </div>
+
+        <div class="qq2">Que doit-il regarder en priorité&nbsp;?</div>
+        <p class="voix"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg><span>Vos demandes ouvrent sa checklist. Touchez l’étiquette pour choisir si le franchisé la lit à l’avance.</span></p>
+        <div class="dems">
+          <div class="dm"><span class="nb">1</span><div><b>Contrôler la vitrine salée sur place</b><small>vient du point P0 du 21/10</small></div><span class="tg lu"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg> le franchisé le lit à l’avance</span><span class="x">✕</span></div>
+          <div class="dm"><span class="nb">2</span><div><b>Relire le P&amp;L de septembre : food cost à 40,3 %</b><small>ajouté par vous</small></div><span class="tg lu"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg> le franchisé le lit à l’avance</span><span class="x">✕</span></div>
+          <div class="dm"><span class="nb">3</span><div><b>Parler du recrutement du week-end</b><small>suite de la météo du 06/10</small></div><span class="tg int"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> entre vous et Pierre</span><span class="x">✕</span></div>
+        </div>
+        <div class="suggs">Ajouter : <span class="chip">+ PLV de novembre posée</span><span class="chip">+ Recuisson de 15 h</span><span class="chip">+ Fiche allergènes du comptoir</span><span class="chip libre"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg> Écrire une demande</span></div>
+
+        <div class="qq2">Un mot pour Pierre&nbsp;? <span class="opt">facultatif · le franchisé ne le voit jamais</span></div>
+        <div class="ta">Nouvelle équipe du matin depuis le 05/10. Commencer par la vitrine, avant le coup de feu de 10 h.</div>
+        <div class="franchise-voit"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg><span><b>Mardi 27/10 à 08:00</b>, le franchisé de Halle recevra l’ordre du jour en néerlandais : le jour, l’heure, Pierre et les 2 demandes marquées « lu à l’avance ». Rien d’autre.</span></div>
+
+        <div class="b-act">
+          <button class="btn prim lg">C’est prêt : passer à l’envoi <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="btn ghost">Je finirai plus tard</button>
+          <span class="aide"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg> Rien ne part encore.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tour avenir"><span class="dot">4</span><div class="gh"><span class="q">Envoyer</span> · sur la tablette de Pierre, et l’ordre du jour au franchisé de Halle</div></div>
+    <div class="tour avenir tab"><span class="dot"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="2.5" width="13" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></span><div class="gh"><b>Jeudi 29/10, la visite</b> se fait sur la tablette. Rien à faire ici : le brouillon revient tout seul quand Pierre termine.</div></div>
+    <div class="tour avenir"><span class="dot">5</span><div class="gh"><span class="q">Le rapport</span> · relire, choisir ce qui part, l’envoyer avant samedi 31/10 à 11:00</div></div>
+    <div class="tour avenir"><span class="dot">6</span><div class="gh"><span class="q">Les corrections</span> · accepter ou renvoyer les photos du franchisé</div></div>
+  </div>
+
+  <section class="autres">
+    <h2>Le même fil, à d’autres moments</h2>
+    <p>Pas de tableau de bord : la page s’ouvre sur la première question ; une visite en cours se rouvre sur la question qui l’attend.</p>
+    <figure class="etat large">
+      <figcaption><b>La question 2</b> — le type de visite ; la suivante (« le franchisé est-il prévenu ? ») arrive déjà répondue</figcaption>
+      <div class="cadre">
+        <div class="conv">
+          <div class="tour fait"><span class="dot"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><div class="rep-l"><span class="q">Quel magasin allez-vous visiter&nbsp;?</span><span class="r"><span class="bulle">Halle</span><a class="mod"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></a></span></div></div>
+          <div class="tour cur"><span class="dot">2</span>
+            <div class="carte-cur">
+              <span class="etq">Étape 2 sur 6 · la visite</span>
+              <div class="qq">Quel genre de visite&nbsp;?</div>
+              <div class="types">
+                <button class="on"><b>Régulière</b><small>1 h 30 · checklist de 24 points</small><span class="pill ok">annoncée</span></button>
+                <button><b>Contrôle flash</b><small>30 min · 8 points clés</small><span class="pill">inopinée</span></button>
+                <button><b>Suivi de plan d’action</b><small>1 h · la checklist reprend les 3 points ouverts</small><span class="pill ok">annoncée</span></button>
+                <button><b>Revisite</b><small>45 min · les non-conformes du 21/10</small><span class="pill">inopinée</span></button>
+              </div>
+              <p class="voix"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg><span>« Annoncée » : le franchisé reçoit l’ordre du jour et voit la visite sur sa page. « Inopinée » : rien ne part. Vous pourrez changer juste après.</span></p>
+            </div></div>
+          <div class="tour avenir"><span class="dot">·</span><div class="gh"><span class="q">Le franchisé est-il prévenu&nbsp;?</span> · déjà répondu par le type, à confirmer</div></div>
+          <div class="tour avenir"><span class="dot">·</span><div class="gh"><span class="q">Quand, et qui y va&nbsp;?</span> · Pierre B., responsable de Halle, proposé d’office</div></div>
+        </div>
+      </div>
+    </figure>
+    <div class="etats">
+      <figure class="etat">
+        <figcaption><b>En arrivant sur #/franchises</b> — une seule question</figcaption>
+        <div class="cadre">
+          <div class="conv">
+            <p class="b-rep"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4.5h4.5"/></svg> À reprendre : <a><span class="pt att"></span><b>Corbais</b></a><a><span class="pt info"></span><b>Sombreffe</b></a><a><span class="pt"></span><b>Gosselies</b></a></p>
+            <div class="tour cur"><span class="dot">1</span>
+              <div class="carte-cur">
+                <span class="etq">Étape 1 sur 6 · le magasin</span>
+                <div class="qq">Bonjour Sam. Quel magasin allez-vous visiter&nbsp;?</div>
+                <div class="choix">
+                  <button><b><span class="feu r"></span>Halle</b><small>Pierre B. · vu le 21/10</small><em class="ko">un P0 en retard · rien de prévu</em></button>
+                  <button><b><span class="feu o"></span>Gosselies</b><small>Stefano B. · vu le 19/10</small><em class="att">ven. 30/10 · dossier à finir</em></button>
+                  <button><b><span class="feu v"></span>Corbais</b><small>Loic V. · vu ce matin</small><em class="mu">rien de prévu</em></button>
+                  <button><b><span class="feu o"></span>Sombreffe</b><small>Szymon M. · vu le 15/10</small><em class="mu">prochaine : mer. 04/11</em></button>
+                </div>
+                <p class="voix"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg><span>Le consultant et la langue du franchisé suivront le magasin.</span></p>
+              </div>
+            </div>
+            <div class="tour avenir"><span class="dot">2</span><div class="gh"><span class="q">Quelle visite, quand, avec qui&nbsp;?</span></div></div>
+            <div class="tour avenir"><span class="dot">3</span><div class="gh"><span class="q">Que doit emporter le consultant&nbsp;?</span></div></div>
+            <div class="tour avenir"><span class="dot">4</span><div class="gh"><span class="q">On envoie&nbsp;?</span></div></div>
+          </div>
+        </div>
+      </figure>
+      <figure class="etat">
+        <figcaption><b>Quand le rapport revient</b> — « Corbais » rouvre le fil à la question 5</figcaption>
+        <div class="cadre">
+          <div class="conv">
+            <div class="tour fait"><span class="dot"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><div class="rep-l"><span class="q">Corbais · Régulière · Loic V.</span><span class="r"><span class="bulle">préparée, envoyée le 23/10</span></span></div></div>
+            <div class="tour fait tab"><span class="dot"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="2.5" width="13" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></span><div class="rep-l"><span class="q">La visite de ce matin</span><span class="r"><span class="bulle vert">faite · 09:02 → 10:31 · signée</span></span><span class="ctx">brouillon reçu à 11:42</span></div></div>
+            <div class="tour cur"><span class="dot">5</span>
+              <div class="carte-cur">
+                <span class="etq">Étape 5 sur 6 · le rapport</span>
+                <div class="qq">Qu’est-ce qui part chez le franchisé de Corbais&nbsp;?</div>
+                <p class="voix"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>Loic propose 3 points et 6 photos. Il reste <b>47 h</b> : à envoyer avant mercredi 28/10 à 11:42.</span></p>
+                <div class="dems">
+                  <div class="dm"><span class="prio p1">P1</span><div><b>Fiche allergènes du comptoir à jour</b><small>pour le 02/11</small></div><span class="tg lu"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg> part chez Corbais</span></div>
+                  <div class="dm"><span class="prio p2">P2</span><div><b>Étiquettes de prix des macarons</b><small>pour le 06/11</small></div><span class="tg lu"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg> part chez Corbais</span></div>
+                  <div class="dm"><span class="prio p2">P2</span><div><b>Corbais pilote de la gamme d’hiver</b><small>idée de Loic</small></div><span class="tg int"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> reste au bureau</span></div>
+                </div>
+                <div class="mphotos"><div class="ph on"><span>vitrine</span></div><div class="ph b on"><span>comptoir</span></div><div class="ph c on"><span>allergènes</span></div><div class="ph on"><span>prix</span></div><div class="ph b off"><span>réserve</span></div><div class="ph c off"><span>équipe</span></div></div>
+                <div class="b-act"><button class="btn prim">Envoyer à Corbais <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button><button class="btn"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg> Voir le rapport</button></div>
+              </div>
+            </div>
+            <div class="tour avenir"><span class="dot">6</span><div class="gh"><span class="q">Les corrections</span> · ses photos arriveront ici</div></div>
+          </div>
+        </div>
+      </figure>
+    </div>
+  </section>
+  <div class="pied">Maquette B · magasins réels, consultants et chiffres d’exemple · rien n’est branché. Mêmes données que l’écran actuel : <code>/suivi/preparation</code>, <code>PUT /suivi/preparation/{id}</code>, <code>/suivi/rapport</code>, <code>POST /visites</code>.</div>
+</main>
+</div>
+</body>
+</html>
