@@ -17,7 +17,12 @@
   // ?embed=1 : la page servie dans le cockpit (Gestion de production) — sans entête, sans onglets ;
   // seule la vue Production y vit, le sous-onglet vient du rail (?onglet=plan|suivi|params).
   const EMBED = q.get('embed') === '1';
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
+  // ?embed=promos (26/10/2026, maquette A de docs/maquettes/promotions-cockpit) : l'assistant des promotions, seul, dans
+  // le cockpit (Promotions › Édition) — le magasin s'y choisit. Le dashboard du magasin ne crée plus rien : son onglet
+  // Promotions se lit (la liste, où elles sont utilisées, le coefficient). ?ouvrir= : nouvelle (défaut), bon, p21
+  // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
+  const EMBED_PM = q.get('embed') === 'promos';
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -204,6 +209,7 @@
     const u = new URL(location.href);
     u.searchParams.set('shop', S.shop); u.searchParams.set('vue', S.vue); u.searchParams.set('date', S.date);
     if (EMBED) { u.searchParams.set('onglet', S.ppOnglet); }
+    if (EMBED_PM) { u.searchParams.delete('date'); u.searchParams.delete('ouvrir'); }
     if (estMobile() && S.vue === 'jour') { u.searchParams.set('mo', S.mo); } else { u.searchParams.delete('mo'); }
     history.replaceState(null, '', u.toString());
   }
@@ -606,7 +612,7 @@
    * dessous, puis des cartes ouvertes qu'un seul défilement parcourt. */
   const MOB_MAX = 560;
   function estMobile() {
-    if (EMBED) { return false; }
+    if (EMBED || EMBED_PM) { return false; }
     const f = new URLSearchParams(location.search).get('mobile');
     if (f === '1') { return true; }
     if (f === '0') { return false; }
@@ -3177,6 +3183,8 @@
   }
 
   /* --- Promotions du magasin (17/10/2026) -----------------------------------------------------------------
+   * L'onglet Promotions se LIT depuis le 26/10/2026 : l'assistant vit au cockpit (Promotions › Édition, ?embed=promos —
+   * voir EMBED_PM), le magasin n'a plus ni « + Nouvelle promotion » ni actions d'écriture.
    * L'onglet Promotions : la liste, toute lue au panel (18/10/2026, plus de copie au cockpit) — celles de la marque
    * qui touchent le magasin, et celles du magasin (les promotions du panel réservées à lui seul : actives = en caisse,
    * inactives = brouillons) —, un sélecteur de statut et de sorte, et l'assistant « X achetés + Y », calqué sur le
@@ -3410,6 +3418,8 @@
       else if (l.etat === 'en_caisse') { actions = it('data-pmedit', l.id, 'Modifier') + dup; }
       else { actions = dup; }
     } else if (l.sorte === 'xy') { actions = it('data-pmdup', 'panel:' + l.id, 'Dupliquer en promotion du magasin'); }
+    // Le dashboard se lit (26/10/2026) : de ces actions, il ne garde que les codes du bon ; les autres sont au cockpit.
+    if (!EMBED_PM) { actions = d && d.bon ? it('data-pmbonvoir', l.id, 'Voir les codes du bon') : ''; }
     return {
       nom: `<b>${esc(l.nom)}</b>${d && d.bon ? ' <span class="pm-chip a" title="déclenchée par un bon">bon</span>' : ''}`,
       bon: d && d.bon ? `<button class="pm-lien" data-pmbonvoir="${esc(l.id)}">codes</button>` : mu('—'),
@@ -3465,9 +3475,8 @@
       : (S.pmRelErr ? 'relecture du panel impossible : ' + esc(S.pmRelErr) : (P && P.lu ? 'relu au panel ' + (P.luJour && P.luJour !== AUJ ? 'le ' + esc(P.luJour.slice(8, 10) + '/' + P.luJour.slice(5, 7)) + ' ' : '') + 'à ' + esc(P.lu) : ''));
     let h = `<div class="pm-tete"><div><div class="db-mini">Dashboard magasin › Promotions</div><div class="pm-titre">Promotions du magasin</div>
       <div class="db-mini pm-relu">${relu}${S.pmRelecture ? '' : ` <button class="pm-lien" data-pmrelire="1">↻ relire le panel</button>`}</div></div><span style="flex:1"></span>
-      <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
-      <button class="db-btn pm-gros" data-pmnewbon="1" title="un bon et la promotion qu’il déclenche, dans le même assistant">+ Nouveau bon</button>
-      <button class="db-btn prim pm-gros" data-pmnew="1">+ Nouvelle promotion</button></div>`;
+      <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div></div>
+      <div class="pm-lecture">Lecture seule : les promotions se créent et se modifient au cockpit, dans <b>Promotions › Édition</b>.</div>`;
     if (S.pmMsg) { h += `<div class="pm-ok">${S.pmMsg}<button class="pm-x" data-pmmsg="1" aria-label="fermer">✕</button></div>`; }
     if (S.pmBonV) { h += rendPmBonCodes(); }
     if (S.err[k]) { return h + `<div class="db-err">Promotions : ${esc(S.err[k])}</div>`; }
@@ -3484,7 +3493,7 @@
       <input class="pm-in pm-cherche" type="search" placeholder="Chercher une promotion…" value="${esc(S.pmQ || '')}" data-pmq="1">
       <span class="pm-colsw"><button class="db-btn" data-pmcols="1" aria-expanded="${!!S.pmColsOuv}">Colonnes ▾</button>${S.pmColsOuv ? `<div class="pm-menu pm-cols"><div class="db-lab">Colonnes affichées</div>${PM_COLS.map(c => `<label><input type="checkbox" data-pmcol="${c[0]}"${pmColsVues().includes(c[0]) ? ' checked' : ''}${c[0] === 'nom' ? ' disabled' : ''}> ${c[1]}</label>`).join('')}<button class="pm-lien" data-pmcolsraz="1">Revenir aux colonnes par défaut</button></div>` : ''}</span></div>`;
     if (!vues.length) {
-      h += `<div class="pm-vide">${f[0] === 'actives' ? 'Aucune promotion en caisse aujourd’hui dans ce magasin.' : 'Rien ici.'} <button class="db-btn" data-pmnew="1">+ Nouvelle promotion</button></div>`;
+      h += `<div class="pm-vide">${f[0] === 'actives' ? 'Aucune promotion en caisse aujourd’hui dans ce magasin.' : 'Rien ici.'}</div>`;
     } else {
       const cols = PM_COLS.filter(c => pmColsVues().includes(c[0]));
       h += `<div class="pm-large"><table class="pm-tab pm-tab2"><thead><tr>${cols.map(c => `<th class="${c[2]}"${c[4] ? ` title="${esc(c[4])}"` : ''}>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody>${vues.map(l => {
@@ -4043,7 +4052,7 @@
     if (V.charge) { return h + '<div class="db-mini">Lecture du bon au panel…</div></div>'; }
     if (V.err || !B) { return h + `<div class="db-err">Bon illisible : ${esc(V.err || 'réponse vide')}</div></div>`; }
     const st = B.actif ? ['Actif', 'ok'] : (B.statut === 'DRAFT' ? ['Brouillon', 'b'] : ['Hors service', 'b']);
-    const bascule = V.statutPromo === 'en_caisse' || B.actif
+    const bascule = !EMBED_PM ? '' : V.statutPromo === 'en_caisse' || B.actif
       ? `<button class="db-btn" data-pmbonact="${B.actif ? 0 : 1}"${V.envoi ? ' disabled' : ''}>${V.envoi ? '…' : (B.actif ? 'Mettre le bon hors service' : 'Réactiver le bon')}</button>`
       : '<span class="db-mini">s’active avec la promotion</span>';
     h += `<div class="pm-bon-tete"><span class="pm-chip ${st[1]}">${st[0]}</span><span class="db-mini">n° ${esc(B.campagne)} au panel · ${esc(pmBonCibleLib(B.cible).toLowerCase())} · ${B.utilisations} utilisation${B.utilisations > 1 ? 's' : ''}${B.actif && !B.complete ? ' · <span class="ko">incomplet au panel : ' + esc((B.manque || []).join(', ')) + '</span>' : ''}</span>
@@ -4158,9 +4167,9 @@
     const prec = pv ? `<button class="db-btn pm-gros" data-pmet="${pv}">‹ Retour : ${esc(PM_ETAPES[pv - 1].toLowerCase())}</button>` : '<span></span>';
     const suiv = sv ? `<button class="db-btn prim pm-gros" data-pmet="${sv}">Suivant : ${esc(PM_ETAPES[sv - 1].toLowerCase())} ›</button>`
       : `<span class="pm-boutons">${W.enCaisse ? '' : `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''} title="écrite au panel, inactive : elle ne passe pas en caisse">Garder en brouillon</button>`}<button class="db-btn prim pm-gros" data-pmsave="envoyer"${W.envoi ? ' disabled' : ''}>${W.envoi ? 'Enregistrement…' : (W.enCaisse ? 'Enregistrer les changements ›' : 'Enregistrer la promotion ›')}</button></span>`;
-    return `<div class="pm-tete"><div><div class="db-mini"><button class="pm-lien" data-pmfermer="1">‹ Promotions du magasin</button></div><div class="pm-titre">${W.ordre && !W.d.id ? 'Nouveau bon et sa promotion « X achetés + Y »' : (W.d.id ? 'Modifier' : 'Nouvelle') + ' promotion « X achetés + Y »' + (W.d.bon.on ? ' · par bon' : '')}</div></div><span style="flex:1"></span>
+    return `<div class="pm-tete"><div><div class="db-mini"><button class="pm-lien" data-pmfermer="1">‹ ${EMBED_PM ? 'Tableau d’analyse' : 'Promotions du magasin'}</button></div><div class="pm-titre">${W.ordre && !W.d.id ? 'Nouveau bon et sa promotion « X achetés + Y »' : (W.d.id ? 'Modifier' : 'Nouvelle') + ' promotion « X achetés + Y »' + (W.d.bon.on ? ' · par bon' : '')}</div></div><span style="flex:1"></span>
         ${W.d.id ? '' : `<div class="pm-f"><span class="db-lab">Remplir un exemple</span><span class="pm-seg">${PM_DUREES.map(([k, lib]) => `<button type="button" data-pmexemple="${k}"${pmProduits() ? '' : ' disabled title="lecture des produits du magasin…"'}>${lib}</button>`).join('')}</span></div>`}
-        <div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>
+        ${pmMagasinChamp(W)}
         ${e < PM_FIN && !W.enCaisse ? `<button class="db-btn pm-gros" data-pmsave="brouillon"${W.envoi ? ' disabled' : ''} title="écrite au panel, inactive : elle ne passe pas en caisse">Garder en brouillon</button>` : ''}</div>
       ${W.enCaisse ? `<div class="pm-warn" style="margin-bottom:10px">En caisse${W.enCaisse !== true ? ' (promotion n° ' + esc(W.enCaisse) + ' au panel)' : ''} : les changements partent au panel sur la même promotion — mise inactive le temps de la relecture, puis réactivée. Pour garder l’actuelle telle quelle, dupliquez-la plutôt.</div>` : ''}
       ${W.exempleErr ? `<div class="pm-warn" style="margin-bottom:10px">${esc(W.exempleErr)}</div>` : ''}
@@ -4215,6 +4224,7 @@
             : `Pas en caisse : « ${esc(dm.nom)} » est au panel (promotion n° ${esc(dm.panelId)}), inactive — ${esc(j.panelErreur || 'le panel ne l’a pas activée')}. Reprenez-la dans les brouillons.`);
         S.pmF = action === 'envoyer' && !j.panelErreur && dm.statut === 'en_caisse' ? 'actives' : 'brouillons';
         S.pmW = null; lireAux(clePM(), cheminPM(), true);
+        pmSignaler('enregistree', { statut: dm.statut || null, id: dm.id || null, shop: S.shop });
       })
       .catch(e => { W.erreurs = [e.message]; })
       .finally(() => { W.envoi = false; rendre(); });
@@ -4235,6 +4245,71 @@
     if (src === 'mag') { const d = (P.demandes || []).find(o => o.id === id); if (d) { const c = pmDepuis(pmNommer(d)); c.id = null; c.nom = d.nom + ' (copie)'; c.shops = [+S.shop]; const n = pmNouvelle(); c.du = n.du; c.au = n.au; pmOuvrir(c, 1); } }
     else { const r = (P.panel || []).find(o => String(o.id) === id); if (r) { pmOuvrir(pmDuPanel(r), 1); } }
   }
+  /* --- Au cockpit (?embed=promos, 26/10/2026) : l'assistant seul, le magasin au choix ------------------------------------
+   * Le cockpit (Promotions › Édition) charge cette page dans un cadre et lui dit quoi ouvrir (?ouvrir=). Elle lui répond
+   * par messages : enregistrée (son tableau et ses badges se relisent), magasin changé, revenir au tableau, remonter en
+   * haut quand l'étape change. La hauteur, le cockpit la lit lui-même (même origine). */
+  const PM_OUVRIR = EMBED_PM ? (q.get('ouvrir') || 'nouvelle') : '';
+  function pmSignaler(type, data) {
+    if (!EMBED_PM || window.parent === window) { return; }
+    try { window.parent.postMessage(Object.assign({ source: 'atelier-promos', type }, data || {}), location.origin); } catch (e) { /* hors du cockpit */ }
+  }
+  /** Le champ Magasin de l'entête : au cockpit, une liste — une promotion enregistrée reste à son magasin ; au dashboard, le sien. */
+  function pmMagasinChamp(W) {
+    if (!EMBED_PM) { return `<div class="pm-f"><span class="db-lab">Magasin</span><div class="pm-in ro pm-mag"><b>${esc(nomShop())}</b></div></div>`; }
+    const fixe = !!(W && W.d.id), L = S.stores.length ? S.stores : [{ id: S.shop, nom: nomShop() }];
+    return `<div class="pm-f"><span class="db-lab">Magasin</span><select class="pm-in pm-mag" data-pmshop="1"${fixe ? ' disabled title="une promotion enregistrée reste à son magasin : dupliquez-la pour un autre"' : ''}>${L.map(o => `<option value="${esc(o.id)}"${String(o.id) === String(S.shop) ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></div>`;
+  }
+  /** Un autre magasin : ses promotions, ses prix et coûts (le coefficient se recalcule) ; la promotion en cours le suit. */
+  function pmChangerMagasin(id) {
+    if (!id || String(id) === String(S.shop)) { return; }
+    S.shop = String(id); S.pmBonV = null; urlMaj();
+    const W = S.pmW;
+    // Les clients d'un bon sont ceux du magasin : ils ne suivent pas.
+    if (W && !W.d.id) { W.d.shops = [+S.shop]; W.erreurs = null; if (W.d.bon && Array.isArray(W.d.bon.clients)) { W.d.bon.clients = []; } }
+    lireAux(clePM(), cheminPM(), false); lireAux(clePMP(), cheminPMP(), false);
+    pmSignaler('magasin', { shop: S.shop });
+    rendre();
+  }
+  /** Ce que l'adresse demande d'ouvrir, une fois la liste du magasin lue. */
+  function pmOuvrirDemande() {
+    const o = PM_OUVRIR, P = S.aux[clePM()] || {};
+    if (o === 'bon') { const n = pmNouvelle(); n.bon = pmBonDe({ cible: 'code' }); pmOuvrir(n, 5); S.pmW.ordre = [5, 1, 2, 3, 4, 6, 7]; rendre(); return; }
+    if (o.indexOf('dup:') === 0) { pmDupliquer(o.slice(4)); if (S.pmW) { return; } }
+    else if (o.indexOf('codes:') === 0) { pmBonVoir(o.slice(6)); return; }
+    else if (/^p\d+$/.test(o)) {
+      const d = (P.demandes || []).find(x => x.id === o);
+      if (d) { pmOuvrir(pmDepuis(pmNommer(d)), PM_FIN); S.pmW.enCaisse = d.statut === 'en_caisse' ? (d.panelId || true) : null; if (d.bon) { pmBonCharger(S.pmW, d.id); } rendre(); return; }
+    }
+    if (o !== 'nouvelle') { S.pmMsg = 'Promotion introuvable dans ce magasin : une nouvelle s’ouvre.'; }
+    const m = S.pmMsg;
+    pmOuvrir(pmNouvelle(), 1);
+    S.pmW.exempleErr = m || null; rendre();
+  }
+  function rendPmEmbed() {
+    const k = clePM();
+    if (!S.pmOuvert) {
+      const pret = PM_OUVRIR === 'nouvelle' || PM_OUVRIR === 'bon' || (S.aux[k] && (S.aux[clePMP()] || S.err[clePMP()]));
+      if (S.err[k] && !pret) { return `<div class="db-err">Promotions du magasin : ${esc(S.err[k])}</div>`; }
+      if (pret) { S.pmOuvert = true; setTimeout(pmOuvrirDemande, 0); }
+      return squelette(3);
+    }
+    // Une autre étape : le cockpit remonte en haut du cadre (l'assistant, lui, n'a pas de défilement à lui).
+    const et = S.pmW ? S.pmW.etape : 0;
+    if (et !== S.pmEtapeVue) { S.pmEtapeVue = et; setTimeout(() => pmSignaler('haut'), 0); }
+    // Une promotion ouverte et pas enregistrée : le cockpit demandera avant d'en ouvrir une autre.
+    if (!!S.pmW !== S.pmEtatDit) { S.pmEtatDit = !!S.pmW; setTimeout(() => pmSignaler('etat', { ouvert: !!S.pmW }), 0); }
+    if (S.pmW) { return rendPmAssistant(); }
+    // Rien d'ouvert : enregistrée, quittée, ou les codes d'un bon.
+    let h = `<div class="pm-tete"><div><div class="db-mini"><button class="pm-lien" data-pmtableau="1">‹ Tableau d’analyse</button></div><div class="pm-titre">Promotions « X achetés + Y »</div></div><span style="flex:1"></span>
+      ${pmMagasinChamp(null)}
+      <button class="db-btn pm-gros" data-pmnewbon="1" title="un bon et la promotion qu’il déclenche, dans le même assistant">+ Nouveau bon</button>
+      <button class="db-btn prim pm-gros" data-pmnew="1">+ Nouvelle promotion</button></div>`;
+    if (S.pmMsg) { h += `<div class="pm-ok"><span>${S.pmMsg}</span><button class="pm-lien" data-pmtableau="1">Voir dans le Tableau d’analyse</button><button class="pm-x" data-pmmsg="1" aria-label="fermer">✕</button></div>`; }
+    if (S.pmBonV) { h += rendPmBonCodes(); }
+    if (!S.pmMsg && !S.pmBonV) { h += '<div class="db-card"><div class="pm-vide">Choisissez le magasin, puis une nouvelle promotion ou un nouveau bon. Un brouillon ou une promotion en caisse se reprend depuis le Tableau d’analyse (⋯).</div></div>'; }
+    return h;
+  }
   function pmBrancher() {
     const on = (sel, ev, fn) => $.querySelectorAll(sel).forEach(el => el.addEventListener(ev, e => fn(el, e)));
     on('[data-pmf-st]', 'click', el => { S.pmF = el.dataset.pmfSt; rendre(); });
@@ -4249,6 +4324,8 @@
     on('[data-pmbonact]', 'click', el => pmBonBasculer(el.dataset.pmbonact === '1'));
     on('[data-pmboncopier]', 'click', () => pmBonCopier());
     on('[data-pmrelire]', 'click', () => pmRelire());
+    on('[data-pmshop]', 'change', el => pmChangerMagasin(el.value));
+    on('[data-pmtableau]', 'click', () => pmSignaler('tableau'));
     on('[data-pmedit]', 'click', el => {
       const d = ((S.aux[clePM()] || {}).demandes || []).find(o => o.id === el.dataset.pmedit);
       if (d) { pmOuvrir(pmDepuis(pmNommer(d)), PM_FIN); S.pmW.enCaisse = d.statut === 'en_caisse' ? (d.panelId || true) : null; if (d.bon) { pmBonCharger(S.pmW, d.id); } rendre(); }
@@ -4284,7 +4361,7 @@
     }
     if (!S.pmW) { return; }
     const W = S.pmW, d = W.d;
-    on('[data-pmfermer]', 'click', () => { if (window.confirm('Quitter sans enregistrer ?')) { S.pmW = null; rendre(); } });
+    on('[data-pmfermer]', 'click', () => { if (window.confirm('Quitter sans enregistrer ?')) { S.pmW = null; if (EMBED_PM) { pmSignaler('tableau'); } rendre(); } });
     pmBrancherEtapes($);
     on('[data-pmsave]', 'click', el => pmEnregistrer(el.dataset.pmsave));
     on('[data-pmf]', 'input', el => {
@@ -4389,6 +4466,7 @@
     // Sur ordinateur, plus d'onglet Jour (10/10/2026) : Opérationnel montre toute la journée, en plus complet.
     if (S.vue === 'reclamation' || S.vue === 'jour') { S.vue = 'ops'; urlMaj(); charger(false); return; }
     if (EMBED) { const g = ppGarder(); $.classList.remove('mob'); document.body.classList.add('pp-emb'); $.innerHTML = rendProduction(); brancher(); ppRestaurer(g); return; }
+    if (EMBED_PM) { const g = pmGarder(); $.classList.remove('mob'); document.body.classList.add('pm-emb'); $.innerHTML = rendPmEmbed(); brancher(); pmRestaurer(g); return; }
     $.classList.remove('mob');
     let h = '';
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
@@ -7615,7 +7693,7 @@
   /* --- départ ------------------------------------------------------------- */
   // Sur ordinateur, une adresse ?vue=jour ouvre Opérationnel (10/10/2026) : la lecture part tout de suite sur la bonne vue.
   if (S.vue === 'jour' && !estMobile()) { S.vue = 'ops'; }
-  pushEtatLire().then(() => rendre()).catch(() => {});
+  if (!EMBED_PM) { pushEtatLire().then(() => rendre()).catch(() => {}); }
   lire('/stores?statut=tous').then(l => { S.stores = (Array.isArray(l) ? l : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: s.id, nom: s.nom || s.name })); rendre(); }).catch(() => {});
   urlMaj();
   charger(false);
