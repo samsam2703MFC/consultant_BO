@@ -74,7 +74,7 @@ try {
         && $pdo->query('SELECT CONCAT(cpl, "/", lpp, "/", cpp) FROM final_product WHERE id = 20')->fetchColumn() === '12/8/90', 'Załadunek : niepełna warstwa dozwolona i zapisana');
 
     // --- Wagi produktów BDO : pełne gramy jak w Karcie
-    $products = new ProductService(new FinalProductRepository($pdo));
+    $products = new ProductService(new FinalProductRepository($pdo), new \App\Repositories\Utils\RecordHistoryRepository($pdo));
     $weights = new ProductWeightAuditService(new FinalProductRepository($pdo), $products);
     expectLot3($refused(fn() => $weights->updateWeight(20, '12,5'), 'liczba całkowita'), 'BDO : 12,5 g odrzucone (kolumna INT)');
     expectLot3($weights->updateWeight(20, '260')['unit_weight_g'] === 260.0, 'BDO : 260 g zapisane');

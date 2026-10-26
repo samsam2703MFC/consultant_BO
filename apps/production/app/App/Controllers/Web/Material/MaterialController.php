@@ -83,15 +83,16 @@ class MaterialController extends BaseController
         $data['row'] = $this->materialService->getById($id);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $success = $this->handleAction(function () use ($id) {
+            $result = $this->handleAction(function () use ($id) {
                 $this->materialService->delete($id);
                 return true;
             }, default: false);
 
-            if ($success) {
+            if (!empty($result['ok'])) {
                 header('Location: ' . ROOT . '/materials/all?category=' . (int) $data['row']['id_category']);
                 exit;
             }
+            $this->errors[] = $result['error'] ?? 'Nie udało się usunąć surowca.';
         }
 
         $this->view("material/material/delete", $data);

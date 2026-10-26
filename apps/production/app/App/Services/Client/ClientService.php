@@ -8,6 +8,7 @@ use App\Repositories\Client\ClientRepository;
 use App\Repositories\Client\Order\OrderProductRepository;
 use App\Repositories\Client\Order\OrderRepository;
 use App\Repositories\Product\Price\PriceListRepository;
+use App\Repositories\Utils\RecordHistoryRepository;
 use App\Services\Client\Vies\ViesClient;
 use App\Services\Client\Vies\ViesUnavailableException;
 use InvalidArgumentException;
@@ -23,7 +24,8 @@ class ClientService
         ClientRepository $clientRepository,
         TransactionManager $transactionManager,
         PriceListRepository $priceListRepository,
-        ViesClient $viesClient
+        ViesClient $viesClient,
+        private RecordHistoryRepository $history
     )
     {
         $this->clientRepository = $clientRepository;
@@ -145,8 +147,13 @@ class ClientService
         return $data;
     }
 
+    /** Klient z historią (zamówienia, dokumenty, palety) nie jest usuwany : dokumenty zostałyby bez klienta. */
     public function delete($id)
     {
+        if ($used = $this->history->customer((int) $id)) {
+            throw new CustomException('Klient ma historię (' . RecordHistoryRepository::describe($used)
+                . ') i nie może zostać usunięty. Ustaw go jako nieaktywnego na liście klientów.', 'errors', 409);
+        }
         return $this->clientRepository->delete($id);
     }
 

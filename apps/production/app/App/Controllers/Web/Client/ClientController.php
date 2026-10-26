@@ -120,11 +120,12 @@ class ClientController extends BaseController
         $data['row'] = $this->clientService->getById($id);
 
         if ($_SERVER['REQUEST_METHOD'] == "POST") {
-            $this->handleAction(function () use ($id) {
+            $result = $this->handleAction(function () use ($id) {
                 $this->clientService->delete($id);
                 header('Location: ' . ROOT . '/clients');
                 exit;
             }, default: false);
+            $this->errors[] = $result['error'] ?? 'Nie udało się usunąć klienta.';
         }
 
         $this->view("client/client/delete", $data);

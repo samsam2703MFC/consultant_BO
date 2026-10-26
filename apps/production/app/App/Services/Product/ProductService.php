@@ -2,12 +2,14 @@
 namespace App\Services\Product;
 
 use App\Domain\Product\ProductLogistics;
+use App\Exceptions\CustomException;
 use App\Repositories\Product\FinalProductRepository;
+use App\Repositories\Utils\RecordHistoryRepository;
 
 class ProductService {
     private FinalProductRepository $finalProductRepository;
 
-    public function __construct(FinalProductRepository $finalProductRepository) {
+    public function __construct(FinalProductRepository $finalProductRepository, private RecordHistoryRepository $history) {
         $this->finalProductRepository = $finalProductRepository;
     }
 
@@ -91,8 +93,13 @@ class ProductService {
         return $result;
     }
 
+    /** Produkt z historią (zamówienia, dokumenty, magazyn) nie jest usuwany : linie dokumentów zostałyby bez produktu. */
     public function delete($id)
     {
+        if ($used = $this->history->product((int) $id)) {
+            throw new CustomException('Produkt ma historię (' . RecordHistoryRepository::describe($used)
+                . ') i nie może zostać usunięty. Odznacz « Aktywny » w Karcie produktu, aby go ukryć.', 'errors', 409);
+        }
         return $this->finalProductRepository->delete($id);
     }
 

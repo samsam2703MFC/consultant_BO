@@ -557,8 +557,11 @@ check($s === 200 && array_column($b['data'], 'id') === [$planId], 'direction rea
 // --- P4 : ordonnancement du plan validé, opérations, charge
 [$s, $b] = $call('POST', "/planning/plans/{$plan2['data']['id']}/schedule", null, $access);
 check($s === 409 && $b['description'] === 'PLAN_NOT_VALIDATED', 'only a validated plan is scheduled');
-// Échéances décalées d'un jour : le test ne dépend pas de l'heure à laquelle il tourne (shift de jour 06:00–14:00).
-$pdo->exec("UPDATE n_prod_order SET due_at = due_at + INTERVAL 1 DAY WHERE id_plan = {$planId}");
+// Échéances décalées jusqu'au prochain jour ouvré : le test ne dépend ni de l'heure ni du jour où il tourne
+// (shift de jour 06:00–14:00, du lundi au samedi : pas d'équipe le dimanche).
+$shiftDays = 1;
+while ((int) date('N', strtotime("+{$shiftDays} days")) === 7) $shiftDays++;
+$pdo->exec("UPDATE n_prod_order SET due_at = due_at + INTERVAL {$shiftDays} DAY WHERE id_plan = {$planId}");
 [$s, $b] = $call('POST', "/planning/plans/{$planId}/schedule", null, $access);
 check($s === 200 && $b['data']['operations'] > 0, 'plan scheduled');
 $conflicts = array_column($b['data']['conflicts'], 'reason', 'code');
@@ -606,12 +609,17 @@ check($s === 422 && in_array('start:IN_PAST', $codes($b), true), 'no move into t
 [$s, $b] = $call('PATCH', "/planning/operations/{$semiOp['id']}", ['workstation_id' => 9999], $lead);
 check($s === 422 && $codes($b) === ['workstation_id:REFERENCE_NOT_FOUND'], 'unknown workstation');
 $semiFirst = $pdo->query("SELECT * FROM n_prod_operation WHERE id_order = {$orders['SEMI']['id']} ORDER BY planned_start LIMIT 1")->fetch();
-[$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", ['start' => $at($semiFirst['planned_start'], -60)], $lead);
-check($s === 200 && $b['data']['start'] === $at($semiFirst['planned_start'], -60) . ':00' && $b['data']['locked'] === true
-    && strtotime($b['data']['end']) - strtotime($b['data']['start']) === strtotime($semiFirst['planned_end']) - strtotime($semiFirst['planned_start']), 'moved one hour earlier, duration kept, locked');
+// Une heure plus tôt, ou le créneau libre le plus proche : planifiée tôt dans la journée, -60 min tomberait dans le passé.
+$moved = null;
+foreach ([-60, 60, -30, 30, -15, 15] as $offset) {
+    [$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", ['start' => $at($semiFirst['planned_start'], $offset)], $lead);
+    if ($s === 200) { $moved = $offset; break; }
+}
+check($moved !== null && $b['data']['start'] === $at($semiFirst['planned_start'], $moved) . ':00' && $b['data']['locked'] === true
+    && strtotime($b['data']['end']) - strtotime($b['data']['start']) === strtotime($semiFirst['planned_end']) - strtotime($semiFirst['planned_start']), 'moved (an hour earlier or the nearest free slot), duration kept, locked');
 check($pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE entity = 'operation' AND action = 'move'")->fetchColumn() == 1, 'move recorded in the audit log');
 [$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", ['locked' => false], $lead);
-check($s === 200 && $b['data']['locked'] === false && $b['data']['start'] === $at($semiFirst['planned_start'], -60) . ':00', 'unlock without moving');
+check($s === 200 && $b['data']['locked'] === false && $b['data']['start'] === $at($semiFirst['planned_start'], (int) $moved) . ':00', 'unlock without moving');
 [$s, $b] = $call('PATCH', "/planning/operations/{$semiFirst['id']}", [], $lead);
 check($s === 422, 'nothing to change');
 [$s, $b] = $call('PATCH', '/planning/operations/999999', ['locked' => true], $lead);
@@ -629,8 +637,14 @@ $pdo->exec("INSERT INTO final_product (id, name, id_category, weight, ppc, ppb, 
 $pdo->exec("INSERT INTO n_prod_item (id, item_type, id_final_product) VALUES (50, 'product', 502)");
 $pdo->exec("INSERT INTO n_prod_product_settings (id_item, mode, stock_max, batch_multiple, id_primary_group, status) VALUES (50, 'MTS', 100000, 10, 1, 'validated')");
 $pdo->exec("INSERT INTO n_prod_routing_step (id_item, step_no, name_pl, name_fr, id_workstation, variable_time_s, capacity_per_pass, operators_required) VALUES (50, 1, 'Formowanie', 'Façonnage', 94, 30, 1000, 2)");
+// Premier jour ouvré à partir de demain, puis exactement 5 jours ouvrés (shifts du lundi au samedi : le samedi,
+// demain est un dimanche sans équipe ; le dimanche, du lundi au samedi il y en aurait 6).
 $wFrom = date('Y-m-d', strtotime('+1 day'));
-$wTo = date('Y-m-d', strtotime('+6 days'));
+while ((int) date('N', strtotime($wFrom)) === 7) $wFrom = date('Y-m-d', strtotime($wFrom . ' +1 day'));
+for ($wTo = $wFrom, $workdays = 1; $workdays < 5; ) {
+    $wTo = date('Y-m-d', strtotime($wTo . ' +1 day'));
+    if ((int) date('N', strtotime($wTo)) !== 7) $workdays++;
+}
 $before = $pdo->query("SELECT id, planned_start, planned_end, id_workstation FROM n_prod_operation ORDER BY id")->fetchAll();
 [$s, $opt] = $call('GET', "/planning/optimizer?from={$wFrom}&to={$wTo}", null, $lead);
 check($s === 200 && $opt['data']['summary']['before']['green'] < $opt['data']['summary']['after']['green'], 'optimizer proposes more shifts in the green band');

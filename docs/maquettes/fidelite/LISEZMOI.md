@@ -5,6 +5,11 @@
 > `docs/contrat-api.md`), écran `public/assets/js/fidelite-vals.js` + `fidelite-tpl.js` +
 > `assets/css/fidelite.css`, rail **ERP franchisé › Fidélité** (`#/fidelity`). Les règles s'enregistrent
 > pour de vrai ; l'analyse des clients tourne sur un jeu d'essai tant que `ceo_fid_visite` est vide.
+>
+> **Écriture épurée, à la manière d'Apple** (24/10/2026, demande de Sam) : des listes groupées comme les
+> Réglages (une ligne par règle : titre court, résumé en clair, interrupteur ; un clic l'ouvre pour la
+> modifier), un contrôle segmenté Programme / Clients, une barre flottante pour publier, des chiffres grands et
+> légers, une seule couleur d'accent. Captures : `code-programme.jpg`, `code-clients.jpg`.
 
 Demande du 24/10/2026 : un module **fidélité** dans l'ERP, page `/fidelity` —
 les cartes de fidélité, les points, les bons et les cadeaux du client, ce qui

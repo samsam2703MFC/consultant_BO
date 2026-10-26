@@ -1,8 +1,10 @@
 <?php
 namespace App\Services\Material;
 
+use App\Exceptions\CustomException;
 use App\Repositories\Material\MaterialRepository;
 use App\Repositories\Material\NutritionRepository;
+use App\Repositories\Utils\RecordHistoryRepository;
 
 class MaterialService
 {
@@ -28,7 +30,8 @@ class MaterialService
 
     public function __construct(
         MaterialRepository $materialRepository,
-        private NutritionRepository $nutritionRepository
+        private NutritionRepository $nutritionRepository,
+        private RecordHistoryRepository $history
     )
     {
         $this->materialRepository = $materialRepository;
@@ -177,8 +180,13 @@ class MaterialService
         return $this->materialRepository->update($id, ['is_part_of_package' => $isPartOfPackage]);
     }
 
+    /** Surowiec użyty w recepturach, zamówieniach lub fakturach nie jest usuwany (receptury straciłyby składnik). */
     public function delete($id)
     {
+        if ($used = $this->history->material((int) $id)) {
+            throw new CustomException('Surowiec jest używany (' . RecordHistoryRepository::describe($used)
+                . ') i nie może zostać usunięty.', 'errors', 409);
+        }
         return $this->materialRepository->delete($id);
     }
 

@@ -86,15 +86,17 @@ class ProductController extends BaseController
         $data['row'] = $this->productService->first($id);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $success = $this->handleAction(function () use ($id) {
+            $result = $this->handleAction(function () use ($id) {
                 $this->productService->delete($id);
                 return true;
             }, default: false);
 
-            if ($success) {
+            // handleAction zwraca zawsze tablicę : sukces tylko przy ok (wcześniej błąd też przekierowywał).
+            if (!empty($result['ok'])) {
                 header('Location: ' . ROOT . '/workshop/products#/?erp=all&category=' . (int) ($data['row']['id_category'] ?? 0));
                 exit;
             }
+            $this->errors[] = $result['error'] ?? 'Nie udało się usunąć produktu.';
         }
 
         $this->view("product/product/delete", $data);
