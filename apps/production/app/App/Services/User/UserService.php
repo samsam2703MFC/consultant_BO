@@ -15,8 +15,8 @@ class UserService
         $this->userRepository = $userRepository;
     }
 
-    /** $passwordRequired = false przy edycji: puste hasło = bez zmiany. */
-    public function validate($data, bool $passwordRequired = true)
+    /** $passwordRequired = false przy edycji: puste hasło = bez zmiany ; $exceptId = edytowany użytkownik (login unikalny). */
+    public function validate($data, bool $passwordRequired = true, ?int $exceptId = null)
     {
         $errors = [];
 
@@ -48,9 +48,17 @@ class UserService
         {
             $errors['login'] = "Login jest wymagany";
         }
+        else if($this->loginTaken((string) $data['login'], $exceptId))
+        {
+            $errors['login'] = "Ten login ma już inny użytkownik";
+        }
         if($passwordRequired && empty($data['password']))
         {
             $errors['password'] = "Hasło jest wymagane";
+        }
+        else if($passwordRequired && mb_strlen((string) $data['password']) < 8)
+        {
+            $errors['password'] = "Hasło : co najmniej 8 znaków";
         }
         if(empty($data['permission']) || $data['permission'] === "-1")
         {
@@ -58,6 +66,12 @@ class UserService
         }
 
         return $errors;
+    }
+
+    public function loginTaken(string $login, ?int $exceptId = null): bool
+    {
+        $row = $this->userRepository->first(['login' => trim($login)]);
+        return !empty($row) && (int) ($row['id'] ?? 0) !== (int) $exceptId;
     }
 
     public function getAll()

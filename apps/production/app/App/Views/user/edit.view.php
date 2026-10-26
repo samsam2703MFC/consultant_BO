@@ -34,6 +34,17 @@
                     </div>
 
                     <?php if (!empty($row)): ?>
+                        <?php if (!empty($created)):
+                            $todo = [['Karta użytkownika : zadania stanowiska', ROOT . '/organization/users/' . (int) $row['id']], ['Uprawnienia stanowisk', ROOT . '/organization/access'], ['Skrzynka pocztowa', ROOT . '/mail/settings']];
+                            ?>
+                            <div class="at-note at-note-safe mb-3" role="status">
+                                <i class="bi bi-check-circle"></i>
+                                <div><strong>Użytkownik utworzony.</strong> Konto, stanowisko i dostęp są zapisane ; osoba może się zalogować.
+                                    <?php if (!empty($created['problems'])): ?><div class="text-danger mt-1"><?= implode('<br>', array_map('htmlspecialchars', $created['problems'])) ?></div><?php endif; ?>
+                                    <div class="mt-1">Do uzupełnienia : <?= implode(' · ', array_map(fn($t) => '<a href="' . htmlspecialchars($t[1]) . '">' . htmlspecialchars($t[0]) . '</a>', $todo)) ?></div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                         <form method="POST">
                             <div class="row">
                                 <div class="col-2"></div>
