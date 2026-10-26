@@ -2525,6 +2525,17 @@ Tests : `php bin/tests_bons.php` (un panel en doublure qui refuse comme le vrai,
 compris : les trois distributions, l'ordre d'écriture, changement de distribution, clients ajoutés et retirés,
 brouillon, promotion ou bon refusés, bascule, un autre magasin).
 
+**Vérifié contre l'ERP réel le 24/10/2026** (`tools/essai_bon_dashboard.php`, workflow `essai-bon-dashboard.yml`, accord
+de Sam). L'essai passe par les routes en ligne : 16 vérifications sur 16.
+- Le brouillon : promotion n° 37 INACTIVE en `VOUCHER_ONLY`, campagne #10 SHARED rattachée en DRAFT, code généré.
+- « Voir les codes » rend la même campagne et le même code.
+- L'envoi en caisse : promotion et campagne ACTIVE, `configuration_complete`, la même campagne.
+- `/vouchers/validate` accepte le code au magasin 4.
+- La bascule : hors service, le code est refusé (`valid: false`) ; réactivé, il est de nouveau accepté.
+
+Le ménage a supprimé la promotion par le cockpit. Il reste la campagne #10, détachée et en DRAFT : l'API ne supprime
+pas les campagnes.
+
 ### `GET /exploitation/offres` — ce que les promotions et les bundles rapportent
 
     ?shop=4&date=2026-10-02&periode=7      un magasin, les 7 derniers jours
