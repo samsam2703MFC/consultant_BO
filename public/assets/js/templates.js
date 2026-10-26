@@ -82,7 +82,7 @@ export function render(c, x){
                Auparavant l'inverse se lisait : le titre en 10 px gris passait
                DERRIÈRE ses propres items en 13 px noir, et la section semblait
                moins importante que son contenu. -->
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">${esc(g.titre)}</div>
+          ${g.titre ? `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text);padding:0 10px 7px">${esc(g.titre)}</div>` : ''}
           ${g.items.map(n => navBtn(n, x)).join('')}
         </div>`).join('')}
     </nav>

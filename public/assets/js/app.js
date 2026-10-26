@@ -1522,10 +1522,11 @@ class App {
       // Les promotions (26/10/2026, maquette A de docs/maquettes/promotions-cockpit) : sorties du dashboard magasin, qui
       // ne fait plus que les lire. L'Édition (l'assistant du dashboard, le magasin au choix) et le Tableau d'analyse
       // (toutes les promotions de tous les magasins). Les badges, une fois lues : les brouillons à reprendre, les
-      // promotions en caisse sous le repère ×2.
-      ['Promotions', [
+      // promotions en caisse sous le repère ×2. Un menu à part (Sam, 26/10/2026) : une seule entrée repliable,
+      // « ▸ Promotions », hors des sections — une section sans titre.
+      ['', [{ sub: 'Promotions', children: [
         ['promoEdition', 'Édition', promosBadges(this).brouillons],
-        ['promoTableau', 'Tableau d’analyse', promosBadges(this).sousRepere]]],
+        ['promoTableau', 'Tableau d’analyse', promosBadges(this).sousRepere]] }]],
       // Ce que la marque investit (projets, fonds) et ce qu'elle met en avant
       // (campagnes) : le fonds finance les campagnes, l'un ne se lit pas sans
       // l'autre — les deux anciennes sections n'en font qu'une.
@@ -7921,7 +7922,7 @@ class App {
         }
       };
       if (Array.isArray(it)) { push(it[0], it[1], g[0]); }
-      else { (it.children || []).forEach(c => push(c[0], c[1], g[0] + ' · ' + it.sub, c[4])); }
+      else { (it.children || []).forEach(c => push(c[0], c[1], [g[0], it.sub].filter(Boolean).join(' · '), c[4])); }
     }));
     // Les écrans tenus en onglets d'une entrée (Scoring, Prix × volume, Dans le temps dans le Catalogue, 18/10/2026) :
     // trouvables par leur nom, sous l'entrée qui les tient — une fois chacun.
@@ -14372,7 +14373,7 @@ class App {
     // liste de ce qui existe. Il ne suffit pas : voir HORS_RAIL juste après.
     const noms = {}, famille = {};
     (this._navDef || []).forEach(g => (g[1] || []).forEach(it => {
-      if (it && it.sub) { (it.children || []).forEach(ch => { noms[ch[0]] = ch[1]; famille[ch[0]] = g[0] + ' › ' + it.sub; }); }
+      if (it && it.sub) { (it.children || []).forEach(ch => { noms[ch[0]] = ch[1]; famille[ch[0]] = [g[0], it.sub].filter(Boolean).join(' › '); }); }
       else if (it) { noms[it[0]] = it[1]; famille[it[0]] = g[0]; }
     }));
     /* Le rail n'est pas l'inventaire complet. Des écrans gardent une ADRESSE
