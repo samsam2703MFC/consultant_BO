@@ -1407,6 +1407,22 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .at-page-tab:hover { background: var(--at-primary-soft); color: var(--at-primary); }
 .at-page-tab.active { background: var(--at-primary); color: #fff; }
 @media (max-width: 576px) { .at-page-tabs { flex-wrap: nowrap; overflow-x: auto; } .at-page-tabs-title { display: none; } }
+/* Dzień wysyłki : 7 etapów dnia (AppExtension::shippingDaySteps) pod zakładkami grupy */
+.at-day-steps { margin: -6px 0 14px; padding: 10px 12px; border-radius: var(--at-radius-lg); background: var(--at-bg-2); border: 1px solid var(--at-line); }
+.at-day-steps-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 8px; font-size: .9rem; }
+.at-day-steps-head span { color: var(--at-muted); }
+.at-day-steps ol { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.at-day-step a { display: flex; flex-direction: column; gap: 2px; height: 100%; padding: 7px 9px; border-radius: var(--at-radius); background: var(--at-surface); border: 1px solid var(--at-line); color: var(--at-text); text-decoration: none; font-size: .8rem; line-height: 1.25; }
+.at-day-step a:hover { border-color: var(--at-primary); }
+.at-day-step.is-here a { border-color: var(--at-primary); box-shadow: inset 0 0 0 1px var(--at-primary); }
+.at-day-step-n { font-weight: 600; color: var(--at-muted); }
+.at-day-step-label { font-weight: 600; }
+.at-day-step-detail { color: var(--at-muted); }
+.at-day-step.is-done .at-day-step-n { color: var(--at-success); }
+.at-day-step.is-current .at-day-step-n { color: var(--at-primary); }
+.at-day-step.is-warn .at-day-step-n, .at-day-step.is-warn .at-day-step-detail { color: var(--at-warning); }
+@media (max-width: 1200px) { .at-day-steps ol { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 576px) { .at-day-steps ol { display: flex; overflow-x: auto; } .at-day-step { flex: 0 0 150px; } }
 .tfb-stock-sum { margin-bottom: 16px; }
 .tfb-stock-sum .card-header h5 { font-size: 16px; }
 .tfb-stock-sumtable td, .tfb-stock-sumtable th { white-space: nowrap; }

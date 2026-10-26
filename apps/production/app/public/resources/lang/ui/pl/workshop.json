@@ -278,6 +278,8 @@
   "st.recalc_confirm": "Przeliczyć stany min./maks. {n} produktów na magazynie ze sprzedaży?",
   "st.recalc_done": "Przeliczono stany {n} produktów.",
   "view.levels": "Stan magazynu",
+  "view.stock_title": "Zapas MTS",
+  "view.warehouse_subtitle": "Magazyn produktów gotowych : stan dziś, zamówienia, min. i maks., zapas MTS (kartony, palety, wartość) — ruchy w zakładce obok.",
   "lv.mode_MTS": "Na magazyn (MTS)",
   "lv.mode_MTO": "Na zamówienie (MTO)",
   "lv.mode_all": "Wszystkie",

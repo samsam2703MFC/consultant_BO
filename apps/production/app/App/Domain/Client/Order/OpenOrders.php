@@ -7,6 +7,8 @@ namespace App\Domain\Client\Order;
  * Jedna definicja zamówienia otwartego dla Dzisiaj, Stanów magazynowych, kart produktów, planowania, Rentowności,
  * logistyki, reklamacji i e-maili :
  *  - otwarte = nowe (status 1) i jeszcze bez WDT ; « Tak, wysłano » (status 3) i « Nie » (status 5) zamykają zamówienie ;
+ *    Wyślij dzień przestawia zamówienia dnia na « W transporcie » (3), potwierdzenie kierowcy na « Zrealizowane » (2) ;
+ *  - lista zamówień (Oczekujące) = otwarte ; Archiwum zamówień = zamknięte (closedSql), bez historycznego statusu 4 ;
  *  - ilości (produkcja, magazyn, palety, wartość) bez zamówień GRATIS — nie są skanowane ani paletyzowane ;
  *  - dni wysyłki : wszystkie zamówienia otwarte (także gratisy, które jadą z dostawą).
  */
@@ -16,6 +18,20 @@ final class OpenOrders
     public static function sql(string $alias = 'co'): string
     {
         return "{$alias}.status = " . CustomerOrderStatus::PENDING . " AND {$alias}.id_wdt IS NULL";
+    }
+
+    /** Zamówienia zamknięte (Archiwum zamówień) : zrealizowane, wysłane, zarchiwizowane i « Oczekujące » już z WDT. */
+    public static function closedSql(string $alias = 'co'): string
+    {
+        return "({$alias}.status IN (" . implode(', ', CustomerOrderStatus::archivalValues()) . ") OR ({$alias}.status = "
+            . CustomerOrderStatus::PENDING . " AND {$alias}.id_wdt IS NOT NULL))";
+    }
+
+    /** Status pokazywany : « Oczekujące » z WDT (wysłane przed automatycznym statusem Wyślij dzień) = « W transporcie ». */
+    public static function effectiveStatusSql(string $alias = 'co'): string
+    {
+        return "CASE WHEN {$alias}.status = " . CustomerOrderStatus::PENDING . " AND {$alias}.id_wdt IS NOT NULL THEN "
+            . CustomerOrderStatus::IN_TRANSIT . " ELSE {$alias}.status END";
     }
 
     /** Zamówienia otwarte liczone w ilościach : bez gratisów. */

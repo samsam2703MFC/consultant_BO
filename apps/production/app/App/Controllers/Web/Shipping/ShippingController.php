@@ -87,7 +87,7 @@ class ShippingController extends BaseController
             return $this->json(['message' => implode(", ", $this->errors) ?: 'Nie udało się utworzyć dokumentów wysyłki'], 500);
         }
 
-        return $this->json(['id' => $idShippingLog]);
+        return $this->json(['id' => $idShippingLog, 'shop_notices' => $this->shippingService->lastShopNotices()]);
     }
 
     public function ajaxNewComplaint()

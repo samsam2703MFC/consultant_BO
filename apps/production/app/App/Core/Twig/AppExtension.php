@@ -23,8 +23,10 @@ class AppExtension extends AbstractExtension
             // nowy adres po każdym wdrożeniu — inaczej stary skrypt spotyka nowe etykiety (klucze zamiast tekstów).
             new TwigFunction('asset_v', [ self::class, 'assetVersion' ]),
             // Zakładki grupy stron (BDO, PPWR, zwroty, archiwum) nad nagłówkiem ; lista grup dla railu i wyszukiwarki.
-            new TwigFunction('page_tabs_html', fn() => \App\Core\Web\PageTabs::html(ROOT), ['is_safe' => ['html']]),
+            new TwigFunction('page_tabs_html', fn(mixed $date = null) => \App\Core\Web\PageTabs::html(ROOT, null, is_string($date) ? $date : null), ['is_safe' => ['html']]),
             new TwigFunction('page_tab_groups', fn() => \App\Core\Web\PageTabs::GROUPS),
+            // Dzień wysyłki : 7 etapów dnia nad zakładkami tej grupy (Załadunek, Wyślij dzień, Dokumenty, Powiadomienia, Potwierdzenia).
+            new TwigFunction('shipping_day_steps', [self::class, 'shippingDaySteps'], ['is_safe' => ['html']]),
             // Uprawnienia stanowisk : czy użytkownik widzi stronę ; prefiksy stron z widocznością dla railu i wyszukiwarki.
             new TwigFunction('can_see', fn(string $path) => \App\Core\Web\PageAccess::visible($path)),
             new TwigFunction('rail_access', fn() => (object) \App\Core\Web\PageAccess::$rail),
@@ -37,6 +39,36 @@ class AppExtension extends AbstractExtension
                 return count(array_intersect($required, $perms)) > 0;
             }),
         ];
+    }
+
+    /** Pasek etapów dnia wysyłki (ShippingDayService) dla dnia strony ; pusty poza zakładkami « Dzień wysyłki » albo przy błędzie. */
+    public static function shippingDaySteps(mixed $pageDate = null): string
+    {
+        $group = \App\Core\Web\PageTabs::forPath(\App\Core\Web\PageTabs::currentPath());
+        $container = GlobalRegistry::get('container');
+        if (($group['key'] ?? null) !== 'shipping_day' || $container === null) return '';
+        try {
+            // dzień pokazany przez stronę (każda ma swój domyślny), inaczej ?date=, inaczej najbliższy dzień wysyłki
+            $date = is_string($pageDate) && $pageDate !== '' ? $pageDate : (string) ($_GET['date'] ?? '');
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !strtotime($date)) $date = $container->get(\App\Services\Logistics\LogisticsService::class)->defaultDate();
+            $day = $container->get(\App\Services\Logistics\ShippingDayService::class)->steps($date);
+        } catch (\Throwable $e) {
+            return '';
+        }
+        $e = fn(string $v) => htmlspecialchars($v, ENT_QUOTES);
+        $icons = ['done' => 'bi-check-circle-fill', 'current' => 'bi-circle-half', 'warn' => 'bi-exclamation-triangle-fill', 'todo' => 'bi-circle'];
+        $states = ['done' => 'gotowe', 'current' => 'w toku', 'warn' => 'do sprawdzenia', 'todo' => 'do zrobienia'];
+        $path = \App\Core\Web\PageTabs::currentPath();
+        $items = '';
+        foreach ($day['steps'] as $s) {
+            $here = strtok($s['url'], '?') === $path;
+            $items .= '<li class="at-day-step is-' . $e($s['state']) . ($here ? ' is-here' : '') . '"><a href="' . $e(ROOT . $s['url']) . '"' . ($here ? ' aria-current="step"' : '') . '>'
+                . '<span class="at-day-step-n"><i class="bi ' . $icons[$s['state']] . '" aria-hidden="true"></i> ' . (int) $s['n'] . '</span>'
+                . '<span class="at-day-step-label">' . $e($s['label']) . '</span>'
+                . '<span class="at-day-step-detail">' . $e($s['detail']) . '<span class="visually-hidden"> — ' . $states[$s['state']] . '</span></span></a></li>';
+        }
+        return '<nav class="at-day-steps" aria-label="Dzień wysyłki ' . $e(day_label_pl($day['date'])) . '"><div class="at-day-steps-head"><strong>Dzień wysyłki : ' . $e(day_label_pl($day['date']))
+            . '</strong> <span>' . (int) $day['customers'] . ' klientów · etapy dnia po kolei</span></div><ol>' . $items . '</ol></nav>';
     }
 
     /** Najnowsza data zmiany skryptów modułu, arkuszy stylów i etykiet (raz na żądanie). */

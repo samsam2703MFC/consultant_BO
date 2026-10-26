@@ -129,7 +129,8 @@ foreach (["'/communication/distribution'", '/ajax/communication/distribution/cel
     expectDist(str_contains($routes, $route), "trasa $route");
 }
 $sidebar = file_get_contents("$root/App/Views/page_components/sidebar.twig");
-expectDist(str_contains($sidebar, '/communication/distribution') && str_contains($sidebar, '/logistics/documents') && !str_contains($sidebar, 'Automatyczne e-maile</a>'), 'menu : Dystrybucja dokumentów, Dokumenty dostawy');
+$tabs = file_get_contents("$root/App/Core/Web/PageTabs.php");   // Dokumenty dostawy : zakładka « Dzień wysyłki » (audyt 2, N2)
+expectDist(str_contains($tabs, "'/communication/distribution'") && str_contains($tabs, "'/logistics/documents'") && !str_contains($sidebar, 'Automatyczne e-maile</a>'), 'menu : Dystrybucja dokumentów, Dokumenty dostawy');
 $shipping = file_get_contents("$root/App/Services/Shipping/ShippingDocumentService.php");
 expectDist(str_contains($shipping, '$this->distribution->paperCopies('), 'fichier de livraison : papier selon la distribution');
 $migration = file_get_contents("$root/migrations/tfb/066_document_distribution.sql");

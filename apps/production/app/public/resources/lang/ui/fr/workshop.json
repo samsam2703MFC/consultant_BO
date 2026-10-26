@@ -278,6 +278,8 @@
   "st.recalc_confirm": "Recalculer les stocks min./max. de {n} produits sur stock depuis les ventes ?",
   "st.recalc_done": "Stocks recalculés pour {n} produits.",
   "view.levels": "Niveau de stock",
+  "view.stock_title": "Stock MTS",
+  "view.warehouse_subtitle": "Stock de produits finis : état du jour, commandes, min. et max., stock MTS (cartons, palettes, valeur) — mouvements dans l’onglet voisin.",
   "lv.mode_MTS": "Sur stock (MTS)",
   "lv.mode_MTO": "À la commande (MTO)",
   "lv.mode_all": "Tous",

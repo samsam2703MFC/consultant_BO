@@ -84,11 +84,13 @@
                     <li><i class="bi bi-arrow-left-right"></i><span><strong>Dokument różnic</strong><small>zamówione kontra wysłane</small></span></li>
                     <li><i class="bi bi-clipboard-check"></i><span><strong>Ewidencja opakowań</strong><small>migawka BDO / PPWR tej wysyłki</small></span></li>
                     <li><i class="bi bi-check2-square"></i><span><strong>Palety „dokumenty wygenerowane”</strong><small>dzień klienta znika z listy gotowych</small></span></li>
+                    <li><i class="bi bi-send-check"></i><span><strong>Zamówienia dnia : « W transporcie »</strong><small>bez « Oznacz jako wysłane » ; « Zrealizowane », gdy kierowca potwierdzi dostawę na tablecie</small></span></li>
+                    <li><i class="bi bi-shop"></i><span><strong>Powiadomienie sklepu franczyzy</strong><small>« wysłane » z towarem z WDT — do kolejki, wysyłka w ciągu 5 minut (Stan wysyłek)</small></span></li>
                 </ul>
 
                 <div class="at-note at-note-safe">
-                    <i class="bi bi-shield-check"></i><strong>Tworzenie dokumentów niczego nie wysyła na zewnątrz.</strong>
-                    Nie wysyła faktur do KSeF i nie powiadamia franczyzy o wysyłce. Po sprawdzeniu dokumentów wyślesz wszystkie WDT dnia
+                    <i class="bi bi-shield-check"></i><strong>Tworzenie dokumentów nie wysyła faktur do KSeF.</strong>
+                    Jedyne, co wychodzi samo, to powiadomienie « wysłane » do sklepów franczyzy (kolejka, ponów w Stan wysyłek). Po sprawdzeniu dokumentów wyślesz wszystkie WDT dnia
                     do KSeF jednym przyciskiem na końcu kreatora (z potwierdzeniem) albo pojedynczo na stronie <a href="{{ root }}/shipments">Wysyłki i dokumenty</a>.
                     Statusy KSeF odświeżają się same co 5 minut ; WDT niewysłane lub odrzucone są w <a href="{{ root }}/client-orders/queue?rule=ksef">Do obsłużenia</a>.
                     <ul>
@@ -453,7 +455,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!r) stateHtml = '<span class="at-run-state text-muted"><i class="bi bi-hourglass"></i> Czeka</span>';
         else if (r.status === 'running') stateHtml = '<span class="at-run-state"><span class="spinner-border" role="status"></span> Tworzenie dokumentów…</span>';
         else if (r.status === 'ok') {
-            stateHtml = '<span class="at-run-state at-run-ok"><i class="bi bi-check-circle-fill"></i> Utworzono · wysyłka #' + r.id + '</span>';
+            const queued = (r.notices || []).filter((n) => n.status === 'queued').length;
+            const noticeErr = (r.notices || []).filter((n) => n.status === 'error');
+            stateHtml = '<span class="at-run-state at-run-ok"><i class="bi bi-check-circle-fill"></i> Utworzono · wysyłka #' + r.id + '</span>' +
+                '<span class="at-run-msg">Zamówienia : « W transporcie »' + (queued ? ' · powiadomienie sklepu w kolejce' : '') +
+                (noticeErr.length ? ' · <span class="text-danger">sklep bez powiadomienia (' + esc(noticeErr[0].code || 'błąd') + ')</span>' : '') + '</span>';
             action = '<button type="button" class="btn btn-sm btn-primary" data-pdf="' + r.id + '"><i class="bi bi-file-earmark-arrow-down"></i> Dokumenty (PDF)</button>';
         } else if (r.status === 'unknown') {
             stateHtml = '<span class="at-run-state text-warning"><i class="bi bi-question-circle-fill"></i> Odpowiedź nieczytelna</span><span class="at-run-msg">Sprawdź na liście „Wysyłki i dokumenty”, czy dokumenty powstały, zanim spróbujesz ponownie.</span>';
@@ -490,7 +496,7 @@ document.addEventListener('DOMContentLoaded', function () {
             renderRun();
             return;
         }
-        if (res.ok && res.id) c.result = { status: 'ok', id: +res.id };
+        if (res.ok && res.id) c.result = { status: 'ok', id: +res.id, notices: Array.isArray(res.shop_notices) ? res.shop_notices : [] };
         else if (res.ok) c.result = { status: 'unknown' };
         else c.result = { status: 'fail', message: explain(res) };
         renderRun();
@@ -521,6 +527,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const ok = state.runList.filter((c) => c.result && c.result.status === 'ok');
         const fail = state.runList.filter((c) => c.result && c.result.status === 'fail');
         const unknown = state.runList.filter((c) => c.result && c.result.status === 'unknown');
+        const queuedAll = ok.reduce((n, c) => n + (c.result.notices || []).filter((x) => x.status === 'queued').length, 0);
         document.getElementById('swRunLead').textContent = 'Gotowe.';
         const done = document.getElementById('swRunDone');
         done.hidden = false;
@@ -528,7 +535,9 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div class="at-note ' + (fail.length || unknown.length ? 'at-note-warn' : 'at-note-safe') + '"><i class="bi ' + (fail.length ? 'bi-exclamation-triangle' : 'bi-check-circle') + '"></i>' +
             '<strong>Utworzono dokumenty dla ' + ok.length + ' z ' + state.runList.length + ' ' + (state.runList.length === 1 ? 'klienta' : 'klientów') + '.</strong>' +
             (fail.length ? ' Bez dokumentów: ' + esc(fail.map((c) => c.company).join(', ')) + '.' : '') +
-            ' Nic nie zostało wysłane do KSeF ani do franczyzy.</div>' +
+            (ok.length ? ' Zamówienia tych klientów mają status « W transporcie » ; « Zrealizowane » po potwierdzeniu kierowcy.' : '') +
+            (queuedAll ? ' Powiadomienia sklepów franczyzy w kolejce : ' + queuedAll + ' (wysyłka w ciągu 5 minut, Stan wysyłek).' : '') +
+            ' Nic nie zostało wysłane do KSeF.</div>' +
             '<div class="d-flex flex-wrap gap-2">' +
             (ok.length ? '<button type="button" class="btn btn-primary" id="swAllPdf"><i class="bi bi-file-earmark-arrow-down"></i> Pobierz wszystkie dokumenty (' + ok.length + ' PDF)</button>' : '') +
             (ok.length ? '<button type="button" class="btn btn-outline-primary" id="swKsef"><i class="bi bi-cloud-upload"></i> Wyślij WDT dnia do KSeF (' + ok.length + ')</button>' : '') +

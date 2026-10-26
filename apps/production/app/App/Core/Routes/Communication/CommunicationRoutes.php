@@ -4,7 +4,7 @@ return function (RouteCollector $r) {
     $controller = App\Controllers\Web\Communication\CommunicationController::class;
     $automation = App\Controllers\Web\Communication\MailAutomationController::class;
     // « Automatyczne e-maile » : zastąpione tabelą « Dystrybucja dokumentów » (historia wysyłek w zakładce)
-    $r->addRoute('GET', '/communication/automations', ['redirect' => '/communication/distribution?tab=history']);
+    $r->addRoute('GET', '/communication/automations', ['redirect' => '/communication/distribution']);
     $distribution = App\Controllers\Web\Communication\DocumentDistributionController::class;
     $r->addRoute('GET', '/communication/distribution', ['controller' => $distribution, 'method' => 'index']);
     $r->addRoute('PUT', '/ajax/communication/distribution/cell', ['controller' => $distribution, 'method' => 'saveCell']);

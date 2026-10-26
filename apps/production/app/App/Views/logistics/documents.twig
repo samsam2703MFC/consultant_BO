@@ -76,7 +76,7 @@
                 </div>
             </div>
         {% endfor %}
-        <p class="text-muted small">Stan e-maili : <a href="{{ root }}/communication/distribution?tab=history">Historia wysyłek</a>. Na serwerze testowym e-maile są tylko zapisywane, nie wysyłane.</p>
+        <p class="text-muted small">Stan e-maili : <a href="{{ root }}/communication/messages">Historia wiadomości</a> (wysłane) · <a href="{{ root }}/communication/outbox?source=automation&amp;filter=all">Stan wysyłek</a> (błędy, pominięte). Na serwerze testowym e-maile są tylko zapisywane, nie wysyłane.</p>
     {% else %}
         <p class="at-empty">Brak wysyłek w tym dniu.</p>
     {% endif %}

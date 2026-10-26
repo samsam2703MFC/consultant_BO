@@ -44,8 +44,11 @@
     }
 
     function header(extra) {
+        // Magazyn (/workshop/stock, /workshop/stock/mts) : tytuł widoku magazynu zamiast « Karty produktów ».
+        const title = startView ? t(startView === 'stock' ? 'view.stock_title' : 'view.levels') : t('title');
+        const subtitle = startView ? t('view.warehouse_subtitle') : t('subtitle');
         return `<div class="tfb-head">
-            <div><h3>${esc(t('title'))}</h3><p class="text-muted mb-0">${esc(t('subtitle'))}</p></div>
+            <div><h3>${esc(title)}</h3><p class="text-muted mb-0">${esc(subtitle)}</p></div>
             <div class="tfb-head-actions">${extra || ''}<button type="button" class="btn btn-outline-secondary btn-sm" data-lang-switch>${esc(t('lang_switch'))}</button></div>
         </div>`;
     }
@@ -250,13 +253,17 @@
     }
 
 
-    // Widok listy : karty albo zapasy wg kategorii.
+    // Widok listy : karty albo kategorie ; stan magazynu i zapas MTS to zakładki « Magazyn » (/workshop/stock, /workshop/stock/mts).
+    // Na stronach Magazynu (data-start-view) zakładki strony zastępują ten pasek.
+    const startView = el.dataset.startView || '';
     function viewTabs(current) {
+        if (startView) return '';
+        const root = el.dataset.root || '';
         return `<ul class="nav nav-pills tfb-view-tabs mb-3">
             <li class="nav-item"><a class="nav-link ${current === 'list' ? 'active' : ''}" href="#/"><i class="bi bi-list-ul"></i> ${esc(t('view.list'))}</a></li>
-            <li class="nav-item"><a class="nav-link ${current === 'stock' ? 'active' : ''}" href="#/stock"><i class="bi bi-boxes"></i> ${esc(t('view.stock'))}</a></li>
-            <li class="nav-item"><a class="nav-link ${current === 'levels' ? 'active' : ''}" href="#/levels"><i class="bi bi-bar-chart-line"></i> ${esc(t('view.levels'))}</a></li>
-            <li class="nav-item"><a class="nav-link ${current === 'categories' ? 'active' : ''}" href="#/categories"><i class="bi bi-tags"></i> ${esc(t('view.categories'))}</a></li></ul>`;
+            <li class="nav-item"><a class="nav-link ${current === 'categories' ? 'active' : ''}" href="#/categories"><i class="bi bi-tags"></i> ${esc(t('view.categories'))}</a></li>
+            <li class="nav-item"><a class="nav-link" href="${esc(root)}/workshop/stock"><i class="bi bi-bar-chart-line"></i> ${esc(t('view.levels'))}</a></li>
+            <li class="nav-item"><a class="nav-link" href="${esc(root)}/workshop/stock/mts"><i class="bi bi-boxes"></i> ${esc(t('view.stock'))}</a></li></ul>`;
     }
 
     // --- Kategorie i marże (dawna strona /product-categories) : nazwa, marża docelowa, produkty aktywne / nieaktywne ;
@@ -1353,7 +1360,7 @@
 
     // --- Routage par ancre -----------------------------------------------------------
     async function route() {
-        const hash = location.hash.replace(/^#/, '') || '/';
+        const hash = location.hash.replace(/^#/, '') || (startView ? '/' + startView : '/');
         const path = hash.split('?')[0];
         el.setAttribute('aria-busy', 'true');
         // Lista wczytywana od nowa po powrocie z innego widoku (zmiany w karcie, w zapasach).

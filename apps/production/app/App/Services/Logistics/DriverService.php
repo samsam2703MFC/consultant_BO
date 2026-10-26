@@ -11,6 +11,7 @@ use App\Exceptions\CustomException;
 use App\Repositories\Logistics\DeliveryRepository;
 use App\Repositories\Workshop\ExecutionRepository;
 use App\Repositories\Workshop\ParamRepository;
+use App\Services\Client\Order\OrderFulfilmentService;
 use App\Services\Notification\AppNotificationService;
 use App\Services\Shipping\ShippingDocumentService;
 use App\Services\Utils\DocumentLabels;
@@ -46,6 +47,7 @@ final class DriverService
         private AppNotificationService $notifications,
         private ShippingDocumentService $documents,
         private CustomerDeliveryInfoService $deliveryInfo,
+        private OrderFulfilmentService $fulfilment,
     ) {
     }
 
@@ -186,6 +188,14 @@ final class DriverService
             if ($photo) $this->deliveries->replaceMedia($id, 'photo', $photo[0], $photo[1]);
             return $id;
         });
+        // Livraison confirmée : commandes de ce client pour ce jour « Zrealizowane » (P1) ; n'empêche jamais l'enregistrement.
+        if ($status === 'delivered') {
+            try {
+                $this->fulfilment->markDelivered($date, $customerId, 'Tablet kierowcy : dostarczono (' . ($data['receiver_name'] ?? '') . ')');
+            } catch (\Throwable $e) {
+                error_log('driver stop: order status not updated: ' . $e->getMessage());
+            }
+        }
         if ($status === 'problem') {
             $reason = self::REASON_LABELS[$data['reason']][0];
             $this->notifications->publish('delivery_problem', 'warning', 'Problem w dostawie',

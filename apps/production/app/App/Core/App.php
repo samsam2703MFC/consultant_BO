@@ -39,6 +39,7 @@ class App
         $tContainer = microtime(true);
         $container = require __DIR__ . '/bootstrap.php';
         erp_timing('container', $tContainer);
+        \App\Core\Helpers\GlobalRegistry::set('container', $container);   // widoki : pasek etapów Dzień wysyłki (AppExtension)
 
         // Pobieranie URI z `$_GET['url']` lub domyślnie "/"
         $uri = isset($_GET['url']) ? '/' . trim($_GET['url'], '/') : '/';

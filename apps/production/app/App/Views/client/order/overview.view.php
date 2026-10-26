@@ -252,17 +252,11 @@
                                                                 <?php endif; ?>
                                                             </button>
                                                         <?php endif; ?>
-                                                        <?php if ($pending[$i]['integrated_customer'] == 1): ?>
-                                                            <button type="button" role="menuitem" onclick="updateStatusAndNotify(<?= $pending[$i]['id'] ?>, this)"
-                                                                    data-at-confirm="Oznaczyć zamówienie jako wysłane i powiadomić klienta?" data-at-confirm-ok="Oznacz i powiadom">
-                                                                <i class="bi bi-check2-all"></i>Oznacz jako wysłane i powiadom
-                                                            </button>
-                                                        <?php else: ?>
-                                                            <button type="button" role="menuitem" onclick="updateStatus(<?= $pending[$i]['id'] ?>, this)"
-                                                                    data-at-confirm="Oznaczyć zamówienie jako wysłane?" data-at-confirm-ok="Oznacz">
-                                                                <i class="bi bi-check2-circle"></i>Oznacz jako wysłane
-                                                            </button>
-                                                        <?php endif; ?>
+                                                        <?php /* Wyślij dzień oznacza zamówienia dnia jako wysłane i powiadamia sklep ; tu : wysyłka poza kreatorem (bez WDT). */ ?>
+                                                        <button type="button" role="menuitem" onclick="updateStatus(<?= $pending[$i]['id'] ?>, this)"
+                                                                data-at-confirm="<?= $pending[$i]['integrated_customer'] == 1 ? 'Oznaczyć zamówienie jako wysłane bez dokumentów? Sklep klienta dostaje powiadomienie tylko z Wyślij dzień (WDT).' : 'Oznaczyć zamówienie jako wysłane?' ?>" data-at-confirm-ok="Oznacz">
+                                                            <i class="bi bi-check2-circle"></i>Oznacz jako wysłane
+                                                        </button>
                                                         <button type="button" role="menuitem" onclick="archiveOrder(<?= $pending[$i]['id'] ?>, this)"><i class="bi bi-archive"></i>Archiwizuj…</button>
                                                     </div>
                                                 </div>
@@ -629,32 +623,6 @@
             btn.disabled = false;
         })
         .catch(err => { showSnack(false, err.error); btn.disabled = false; });
-    }
-
-    function updateStatusAndNotify(id_order, btn) {
-        const data = {
-            "id_order": id_order,
-            "status": 3
-        }
-
-        api(`/ajax/client-orders/${id_order}/notify-integrated`, {
-            method: 'PATCH',
-            data
-        })
-            .then(data => {
-
-                if (data.ok) {
-                    showSnack(data.ok)
-                    btn.closest('tr')?.remove();
-                } else {
-                    showSnack(data.ok, data.error)
-                }
-            })
-            .catch(res => {
-                console.log(res)
-                showSnack(false, res.error)
-            });
-
     }
 
 </script>
