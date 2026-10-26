@@ -1,5 +1,14 @@
 # Maquettes « Promotions au cockpit » (26/10/2026)
 
+> **Construit le 26/10/2026 : la forme A**, avec un onglet en lecture seule dans le dashboard (« A, garde un onglet
+> lecture seule dans le dashboard »). Le rail du cockpit a la section Promotions : **Édition** (`#/promotions/edition`,
+> l'assistant du dashboard dans un cadre — `dashboard/?embed=promos` —, le magasin choisi dans son entête) et **Tableau
+> d'analyse** (`#/promotions`, `GET /promotions/reseau`, `src/promos_reseau.php`, `public/assets/js/promotions-*.js`). Le
+> dashboard du magasin lit ses promotions sans les créer ni les modifier ; l'onglet Promotions d'Analyse magasin est
+> retiré. Réponses aux questions : une promotion à la fois, pour un magasin (la question 3 tombe avec A) ; l'Édition
+> n'écrit que les promotions d'un magasin, comme l'assistant d'avant ; pas de rôle (l'API a un mot de passe commun).
+> Détail dans `docs/contrat-api.md` (26/10/2026). La maquette reste ici comme référence.
+
 Demande : sortir le module de création des promotions du dashboard du franchisé (onglet Promotions,
 `public/dashboard/dashboard.js`, l'assistant « X achetés + Y ») et le mettre dans le rail du cockpit, **un menu à lui
 avec deux sous-menus : Édition (le formulaire actuel) et Tableau d'analyse (toutes les promotions de tous les

@@ -2166,6 +2166,8 @@ Sous « Ventes par catégorie », la carte « À compléter pour des chiffres ju
 
 **L'e-mail « pointages suspects » de fin de journée (20/10/2026, demandé par Sam).** Une vendeuse seule au comptoir qui ne s'identifie pas à la caisse encaisse au compte de la session ouverte. Le dashboard laisse chaque ticket où il est ; le soir, le magasin reçoit le constat. Un cas = au moins 3 tickets encaissés au compte de quelqu'un qui n'est pas en poste à cette minute (parti, pas encore arrivé, pas au planning comme « Caisse 2 », ou sans vendeur) pendant qu'une seule personne était en vente (poste vente, caisse ou comptoir ; tout le monde si le planning ne dit pas de poste) ; dix minutes de grâce autour d'un poste ; deux personnes en vente = pas de cas. La phrase : « X (planning 13:00–18:30) était la seule personne en vente, mais n'a pas pointé à la caisse : de 13:12 à 18:09, 34 tickets (392,10 €) ont été encaissés au compte de Y, dont le poste se terminait à 13:00 » (« n'a pas toujours pointé » si elle a quelques tickets à son nom pendant ce temps). Une ligne du reporting (code `pointages-suspects`, quotidien, 21 h, par magasin) : carnet de la ligne, sinon celui de l'affiche du mois ; les destinataires réseau de la ligne reçoivent un récapitulatif de tous les magasins concernés. Un magasin n'est servi qu'une fois par jour (`psMailEnvoyes`) ; pas de planning ou pas de tickets lus = rien. « Générer » montre le récapitulatif sans rien envoyer. Le planning vient de `/exploitation/jour` (identifiant et horaires de chacun), les tickets de `/shops/{id}/transactions?date=` (vendeur et minute). `src/pointages_mail.php`, `bin/tests_pointages.php`.
 
+**Promotions : la création sort du dashboard magasin, section Promotions au rail du cockpit (26/10/2026, maquette A de `docs/maquettes/promotions-cockpit`, choisie par Sam).** Le rail a une section **Promotions** entre Produits et Marque & marketing, deux entrées : **Édition** (`#/promotions/edition?shop=4`) et **Tableau d'analyse** (`#/promotions`). L'Édition charge l'assistant « X achetés + Y » du dashboard tel quel, dans un cadre (`dashboard/?embed=promos&shop=4&ouvrir=…` : `nouvelle`, `bon`, `p21` pour reprendre ou modifier, `dup:mag:p21`, `dup:panel:12`, `codes:p21`) ; le magasin s'y choisit dans l'entête (une promotion enregistrée reste à son magasin), le cadre écrit au panel par les mêmes routes (`/exploitation/promos-magasin…`) et prévient le cockpit par `postMessage` (`enregistree`, `magasin`, `tableau`, `haut`, `etat`). Le Tableau d'analyse lit `GET /promotions/reseau` (ci-dessous). Le **dashboard du magasin ne crée plus rien** : son onglet Promotions se lit — la liste, « Où les promotions sont utilisées », le coefficient, les codes d'un bon — sans « + Nouvelle promotion », « + Nouveau bon », ni Reprendre, Modifier, Dupliquer, Supprimer, ni la bascule du bon. L'onglet Promotions d'Analyse magasin (lecture seule) est retiré : `#/promotions` ouvre le Tableau d'analyse. L'API ne distingue pas qui écrit (un mot de passe commun) : la règle vit dans les écrans.
+
 **Promotions du magasin : le panel relu à l'ouverture de l'onglet (21/10/2026, demandé par Sam).** Une promotion créée ou changée directement au panel ne se voyait dans l'onglet qu'après les dix minutes de la lecture gardée. À chaque ouverture de l'onglet, la liste gardée s'affiche d'abord, puis le dashboard relit le panel (`GET /exploitation/promos-magasin?shop=&frais=1`) et remplace la liste dès que la relecture arrive (jamais par une lecture plus ancienne : `luTs`). En tête : « relu au panel à HH:MM » et un bouton « ↻ relire le panel ». La réponse porte `lu` (HH:MM), `luTs`, `luJour`. Une relecture demandée se contente d'une lecture de moins de 20 secondes (`PV_RELU_RECENT`) : deux onglets ouverts ensemble ne relisent pas deux fois le panel. Les fiches que la liste du panel ne rend pas se lisent ensemble, quatre de front (`ErpApi::getParallele`, qui refait le jeton sur un 401 et ne relance que les requêtes refusées), au lieu d'une à une — mesuré sur un faux panel à 0,3 s la fiche : 12 fiches en 1,2 s au lieu de 3,6 s.
 
 **Promotions : la structure de l'API du panel (21/10/2026, demandé par Sam).** La documentation publique du panel (Swagger : `https://atelierby.tfbuddy.com/api/documentation/`, spécification `…/api/documentation/api.php`, OpenAPI 3, 933 routes) décrit les « Buy X Get Y » ainsi : `trigger` et `reward` portent `quantity`, `product_ids`, `category_ids`, `excluded_product_ids` ; une cible produit est un entier **ou `{id_product, id_product_portion}`** — la portion d'un produit se vise par son numéro ; une catégorie ne porte pas de portion ; `category_targets` / `portion_scope` n'y figurent plus. Une promotion se modifie par **`PATCH …/{id}`** (pas de PUT documenté). `status` : `DRAFT`, `ACTIVE`, `INACTIVE` (le cockpit garde `INACTIVE` pour ses brouillons) ; nouveaux : `activation_mode: VOUCHER_ONLY`, `voucher_campaign_id`. Le cockpit suit : (1) une portion visée part produit par produit, `product_ids: [{id_product, id_product_portion}]`, et une catégorie choisie avec une portion part en ses produits du magasin qui ont cette portion (hors exclusions) — `category_ids` vide ; un produit choisi sans cette portion au panel se dit (422) avant tout envoi ; (2) les portions de chaque produit se lisent à `/products/{id}/portions` (compte admin, sinon consultant ; type `ONE_QUARTER`/`ONE_HALF`, fraction 0,25/0,5 ou libellé « 1/4 »), sinon dans la table `product_portion`, et se gardent un jour (`pmPortions`) ; (3) modifier et activer : `PATCH` (corps complet), `PUT` en repli si le panel répond 404/405 ; (4) la relecture compare les produits avec leur portion (« 12:77 ») et reconnaît la portion d'une promotion relue par le numéro de ses portions (½, ¼ dans l'assistant). La sonde `GET /ventes/promos/sonde-portions?shop=4&q=tarte` lit aussi `/products/{id}/portions` et `/shops/{magasin}/products/{id}/portions/prices`, et dit ce que le cockpit en retient (`retenu`).
@@ -2426,11 +2428,35 @@ prend alors la place (`catalogueCouts()` : la moyenne des magasins du compte, si
 `source: "reseau"`, et l'assistant le dit. Un produit sans coût nulle part, ou sans prix, n'est pas chiffré et se nomme
 (`sansCout`, `sansPrix`) ; à l'enregistrement, il sort de la promotion (`exclusAuto`).
 
-Côté marque — la console, **Magasins › Analyse magasin › Promotions** (`#/promotions`) : `GET /promos-magasin[?statut=en_caisse|brouillon]`
-— lecture seule, au panel : les promotions réservées à un seul magasin (même forme que `demandes`, la plus récente
+Côté marque, jusqu'au 26/10/2026 — la console, Magasins › Analyse magasin › Promotions : `GET /promos-magasin[?statut=en_caisse|brouillon]`
+(la route reste ; l'écran est remplacé par le Tableau d'analyse, `GET /promotions/reseau` ci-dessous) — lecture seule, au panel : les promotions réservées à un seul magasin (même forme que `demandes`, la plus récente
 d'abord, avec `coef` : le coefficient du lot aux prix et coûts d'aujourd'hui), `noms` (les noms courts des magasins),
 `erreurPanel` et `regles`. L'écran trie par statut (En caisse, Brouillons, Toutes), montre la règle, le magasin, la
 période, le coefficient et son cas le plus serré, et ouvre le dashboard de chaque magasin sur son onglet Promotions.
+
+`GET /promotions/reseau?jours=30` (7 | 30, `&frais=1` : les règles du panel relues) — le **Tableau d'analyse** du cockpit
+(26/10/2026, `src/promos_reseau.php`) : toutes les promotions du panel, celles de la marque et celles réservées à un magasin,
+et ce qu'elles ont fait dans les tickets déjà lus de chaque magasin ouvert (`svP…` : les tickets à remise, reconnus par
+`pvTicket`, comme l'onglet Promotions des ventes). Lecture seule ; le cockpit la demande avec `_cache=300`.
+
+```
+{ jours: 30, du: "2026-09-27", au: "2026-10-26",
+  promos: [{ id: 21, src: "mag" | "marque", shop: 4 | null, shops: [4] | null (tout le réseau), nom, type: "xy" | "bundle",
+             etat: "en_caisse" | "a_venir" | "brouillon" | "inactive" | "terminee", du: "2026-10-14 00:00", au,
+             texte: "2 achetés, le 3e offert", canaux: null | ["comptoir"] | ["webshop"], seuil, bon: bool, creneaux,
+             repetable, maxParTicket, coef: { lot: 2.99, magasin, x, y } | null,
+             fois, tickets, v (ventes : ce que le client paie pour les pièces en promotion), r (remise), web (fois au webshop),
+             parMagasin: { "4": { fois, v, r } } (la marque seulement) }],
+  magasins: [{ id, nom, ca (ventes des jours lus), lus, sans (jours pas lus), commandes (commandes du webshop lues) }],
+  total: { fois, tickets, v, r, web, ca }, nonReconnue: { fois, r },
+  lu: "10:42", luTs, luJour, erreurPanel, regles: { coefMin: 2 } }
+```
+
+L'état : une promotion du magasin active au panel est en caisse (inactive : brouillon) ; celle de la marque suit
+`pmEtatPanel` ; une période passée la termine, une période à venir l'annonce. Une promotion terminée avant la fenêtre et
+sans effet dedans n'y est pas. Le coefficient se calcule pour les « X + Y » pas terminées, sur leurs magasins (tout le
+réseau : les magasins ouverts). Un ticket encaissé d'une commande du webshop (`coCommandes`, sa transaction) compte au
+webshop. Tests : `php bin/tests_promos_reseau.php`.
 
 Les règles du magasin, imposées au serveur :
 

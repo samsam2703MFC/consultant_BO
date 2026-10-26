@@ -102,6 +102,7 @@ require __DIR__ . '/../../src/grands_prix.php';
 require __DIR__ . '/../../src/promos_magasin.php';
 require __DIR__ . '/../../src/promos_bons.php';
 require __DIR__ . '/../../src/promos_doc.php';
+require __DIR__ . '/../../src/promos_reseau.php';
 require __DIR__ . '/../../src/sms.php';
 require __DIR__ . '/../../src/recurrence_pwa.php';
 require __DIR__ . '/../../src/leviers.php';
@@ -268,6 +269,8 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/promos-magasin/clients' => ep_promos_magasin_clients(),
             $path === '/exploitation/promos-magasin/bon' => ep_promos_magasin_bon(),
             $path === '/promos-magasin'                => ep_promos_magasin_marque(),
+            // Le Tableau d'analyse (26/10/2026) : toutes les promotions de tous les magasins, et ce qu'elles ont fait.
+            $path === '/promotions/reseau'             => ep_promotions_reseau(),
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
             $path === '/exploitation/bundles/sonde'    => ep_bundles_sonde(),
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
