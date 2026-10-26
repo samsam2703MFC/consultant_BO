@@ -120,7 +120,7 @@ function ep_exploitation_periode(): array
 function vpLu(int $sid, string $j): ?array
 {
     $pro = [2 => 450.0, 3 => 100.0, 4 => 200.0][$sid] ?? null;
-    return $pro === null ? null : ['ca' => 1000.0, 't' => [['10:00', 'c1', $pro, 1, 0]]];
+    return $pro === null ? null : ['ca' => 1000.0, 't' => [['10:00', 'c1', $pro, 1, 0]], 'sansTva' => ['tickets' => 1, 'ca' => $sid === 3 ? 50.0 : 0.0]];
 }
 function coCommandes(int $sid, string $depuis): ?array
 {
@@ -230,6 +230,7 @@ verifie('une précommande comptoir et une commande d’aujourd’hui ne comptent
 verifie('la part B2B : 45 %, au-dessus du plafond de 40 %', $C['magasin']['parts']['b2b'] === round(450.0 * $N / $tot * 100, 1) && $C['b2bStatut'] === 'au-dessus' && $C['b2bMax'] === 40.0, json_encode([$C['magasin']['parts'], $C['b2bStatut']]));
 verifie('le reste du réseau : Gosselies seul (Halle, webshop muet, en sort)', $C['reste']['magasins'] === 1 && $C['reste']['parts']['b2b'] === 10.0 && $C['reste']['parts']['comptoir'] === 90.0, json_encode($C['reste']));
 $C4 = vkCanaux(4, $MOIS);
+verifie('les clients pro sans TVA valide restent au comptoir, chiffrés à part', $C['reste']['proSansTva'] === round(50.0 * $N) && $C['reste']['b2bAvecSansTva'] === 15.0 && $C['reste']['parts']['comptoir'] === 90.0, json_encode($C['reste']));
 verifie('Halle, webshop muet : pas de structure plutôt qu’une structure fausse', $C4['magasin'] === null && $C4['webshop'] === false && str_contains((string) $C4['motif'], 'webshop'));
 $p = vkCanauxParts(['caisse' => 1000.0, 'b2b' => 380.0, 'cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0]);
 verifie('les parts d’un cumul : 62 % comptoir, 38 % B2B', $p['parts']['comptoir'] === 62.0 && $p['parts']['b2b'] === 38.0);

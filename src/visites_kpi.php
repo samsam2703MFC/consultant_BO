@@ -191,7 +191,10 @@ function vkStructure(int $sid, array $mois): array
  *  - comptoir = le reste de la caisse, moins les commandes du webshop encaissées en caisse (déjà dans un ticket) ;
  *  - click & collect et livraison bureau = les commandes du webshop (coCommandes), retirées ou livrées ces jours-là.
  * Total = comptoir + B2B + click & collect + livraison. Le reste du réseau se compte de même, magasin par magasin,
- * ceux dont le webshop a répondu. La part B2B se lit face à son plafond (réglage `b2bMax` des visites, 40 %).
+ * ceux dont le webshop a répondu. La part B2B se lit face à son plafond (réglage `b2bMax` des visites, 40 %). Les
+ * tickets des clients marqués pro au panel SANS TVA valide restent au comptoir (la règle des clients pro du cockpit) :
+ * `proSansTva` les chiffre, `b2bAvecSansTva` dit la part B2B s'ils comptaient (mesuré le 26/10/2026 à Corbais :
+ * 206 tickets, 19 585 € sur trente jours, quand le B2B à TVA valide était nul).
  */
 function vkCanaux(int $sid, array $mois): array
 {
@@ -212,18 +215,20 @@ function vkCanaux(int $sid, array $mois): array
             if (!empty($c['encaissee'])) { $x['enc'] += (float) $c['montant']; }
             $w[$j] = $x;
         }
-        $t = ['caisse' => 0.0, 'b2b' => 0.0, 'cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0, 'lus' => 0];
+        $t = ['caisse' => 0.0, 'b2b' => 0.0, 'sansTva' => 0.0, 'cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0, 'lus' => 0];
         foreach ($jours as $j) {
             $b = function_exists('vpLu') ? vpLu($s, $j) : null;
             if ($b === null) { continue; }
             $t['lus']++; $t['caisse'] += (float) ($b['ca'] ?? 0);
             foreach ((array) ($b['t'] ?? []) as $tk) { $t['b2b'] += (float) ($tk[2] ?? 0); }
+            // Les clients marqués pro au panel sans TVA valide : comptés au comptoir (la règle du cockpit), montrés à part.
+            $t['sansTva'] += (float) ($b['sansTva']['ca'] ?? 0);
             if (isset($w[$j])) { $t['cc'] += $w[$j]['cc']; $t['liv'] += $w[$j]['liv']; $t['enc'] += $w[$j]['enc']; }
         }
         $par[$s] = $t;
     }
     $ici = $par[$sid] ?? ['lus' => 0];
-    $reste = ['caisse' => 0.0, 'b2b' => 0.0, 'cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0, 'lus' => 0]; $autres = 0;
+    $reste = ['caisse' => 0.0, 'b2b' => 0.0, 'sansTva' => 0.0, 'cc' => 0.0, 'liv' => 0.0, 'enc' => 0.0, 'lus' => 0]; $autres = 0;
     foreach ($par as $s => $t) {
         if ($s === $sid || !$web[$s] || $t['lus'] === 0) { continue; }
         foreach ($reste as $k => $v) { $reste[$k] = $v + $t[$k]; }
@@ -245,8 +250,11 @@ function vkCanauxParts(array $t): ?array
     $ca = ['comptoir' => max(0.0, $t['caisse'] - $t['b2b'] - $t['enc']), 'b2b' => $t['b2b'], 'cc' => $t['cc'], 'liv' => $t['liv']];
     $total = array_sum($ca);
     if ($total <= 0) { return null; }
+    $sansTva = (float) ($t['sansTva'] ?? 0);
     return ['ca' => array_map(static fn (float $v): float => round($v), $ca), 'total' => round($total),
-        'parts' => array_map(static fn (float $v): float => round($v / $total * 100, 1), $ca)];
+        'parts' => array_map(static fn (float $v): float => round($v / $total * 100, 1), $ca),
+        // Dans le comptoir : les tickets des clients marqués pro sans TVA valide ; la part B2B s'ils comptaient.
+        'proSansTva' => round($sansTva), 'b2bAvecSansTva' => round(($ca['b2b'] + $sansTva) / $total * 100, 1)];
 }
 
 /* --- Les tâches du magasin, mois par mois (26/10/2026, demande de Sam) ----------------------------- */
