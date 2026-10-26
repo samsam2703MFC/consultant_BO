@@ -491,6 +491,33 @@ final class ManagerService
         ];
     }
 
+    /**
+     * Zamknięcie miesiąca (krok 7) : wpisy kierownika produkcji za miesiąc — wskaźniki, którym brakuje wpisu ręcznego
+     * (bez danych ERP : braki, a bez tabletów straty i nadgodziny), wpisy niezweryfikowane (wpisane przez osobę na
+     * stanowisku) i liczba zapisanych działań na następny miesiąc. Odczyt bez kontekstu API (strona ERP).
+     */
+    public function monthEntries(string $month): array
+    {
+        $month = $this->checkMonth($month);
+        $this->measured = [];
+        $from = $month . '-01';
+        $plan = $this->repo->plan((int) substr($month, 0, 4));
+        $values = $this->measure($from, min(date('Y-m-t', strtotime($from)), date('Y-m-d')), $plan);
+        $labels = $this->uiLabels('pl');
+        $missing = [];
+        $unverified = [];
+        foreach (ManagerIndicators::INDICATORS as $code => $def) {
+            $m = $values[$code];
+            $name = $labels['ind.' . $code] ?? $code;
+            if (in_array($m['missing'], ['MANUAL_ENTRY_MISSING', 'NO_TABLET_DATA', 'NO_CLOCK_DATA'], true)) {
+                $missing[] = ['code' => $code, 'name' => $name, 'reason' => $labels['missing.' . $m['missing']] ?? $m['missing']];
+            }
+            if ($m['unverified']) $unverified[] = ['code' => $code, 'name' => $name];
+        }
+        return ['month' => $month, 'plan' => $plan !== null, 'holder' => $plan['holder_name'] ?? null,
+            'missing' => $missing, 'unverified' => $unverified, 'actions' => count($this->repo->actions($month))];
+    }
+
     private function valueText(array $labels, string $unit, float $v): string
     {
         $n = number_format($v, $unit === 'eur_carton' ? 2 : 1, ',', ' ');

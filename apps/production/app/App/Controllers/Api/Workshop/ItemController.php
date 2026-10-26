@@ -47,6 +47,16 @@ final class ItemController
         return new ApiResult($this->items->stockOverview($group !== null && ctype_digit($group) ? (int) $group : null, (string) ($request->query('erp') ?? 'active')));
     }
 
+    public function stockSuggestions(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->items->stockSuggestions());
+    }
+
+    public function applyStockSuggestions(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->items->applyStockSuggestions($request->body(), $request->context));
+    }
+
     public function stockSuggestion(ApiRequest $request): ApiResult
     {
         return new ApiResult($this->items->stockSuggestion($request->id()));

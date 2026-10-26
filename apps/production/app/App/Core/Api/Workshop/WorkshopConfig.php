@@ -37,6 +37,21 @@ final class WorkshopConfig
         return rtrim($base, '/');
     }
 
+    /**
+     * Base de l'API pour les pages web du module (data-api-base) : l'API publique quand elle est sur un autre hôte ou
+     * chemin, sinon la racine de l'ERP (même origine, pas de CORS), suivie du préfixe /api/v1/production.
+     */
+    public function webApiBase(string $root): string
+    {
+        $base = $this->apiBaseUrl();
+        $root = rtrim($root, '/');
+        if ($base === '' || strcasecmp((string) parse_url($base, PHP_URL_HOST), (string) parse_url($root, PHP_URL_HOST)) === 0
+            && (string) parse_url($base, PHP_URL_PATH) === (string) parse_url($root, PHP_URL_PATH)) {
+            $base = $root;
+        }
+        return $base . \App\Core\Routes\Api\WorkshopApiRoutes::PREFIX;
+    }
+
     /** @return list<string> */
     public function corsOrigins(): array
     {

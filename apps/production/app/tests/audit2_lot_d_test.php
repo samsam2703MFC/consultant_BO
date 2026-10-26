@@ -198,6 +198,58 @@ try {
     $months->unlockMonth(21);
     expectLotD($pdo->query('SELECT locked_at FROM cost_month WHERE id = 21')->fetchColumn() === null, 'unlock clears the lock stamp');
 
+    // --- P14 : kreator « Zamknięcie miesiąca »
+    $mc = App\Services\Production\Cost\MonthCloseService::class;
+    expectLotD($mc::label('2026-09') === 'wrzesień 2026' && $mc::labelGenitive('2026-07') === 'lipca 2026' && $mc::defaultMonth('2026-10-26') === '2026-09', 'month labels and default month');
+    try { $mc::parse(date('Y-m', strtotime('first day of next month'))); expectLotD(false, 'future month refused'); }
+    catch (App\Exceptions\CustomException $e) { expectLotD($e->getCode() === 422, 'a month not started yet is refused'); }
+    $close = $container->get($mc);
+    $curYm = sprintf('%04d-%02d', $cur[0], $cur[1]);
+    $prevYm = sprintf('%04d-%02d', $prev[0], $prev[1]);
+    $old = date('Y-m', strtotime('first day of -6 month'));
+    $monthsBefore = (int) $pdo->query('SELECT COUNT(*) FROM cost_month')->fetchColumn();
+    $st = $close->status($old);
+    expectLotD(!$st['exists'] && $st['steps']['cartons']['state'] === 'todo' && $st['steps']['staff']['state'] === 'todo' && count($st['months']) === 12
+        && (int) $pdo->query('SELECT COUNT(*) FROM cost_month')->fetchColumn() === $monthsBefore, 'status of a month not started : nothing created');
+    $started = $close->start($old);
+    $st = $close->status($old);
+    expectLotD($st['exists'] && $st['month_id'] === $started['month_id'] && $st['steps']['staff']['count'] === 3 && $st['steps']['staff']['state'] === 'done'
+        && abs($st['steps']['staff']['total'] - 7000 - 4200 - 5000) < 0.01, 'start : staff of the list with budget costs');
+    // Koszty stałe i logistyka : kopia z ostatniego miesiąca, który je ma ; nigdy dwa razy ; nie do miesiąca zamkniętego.
+    $pdo->exec("INSERT INTO cost_logistics_type (id, code, name) VALUES (1, 'truck', 'Transport')");
+    $pdo->exec("INSERT INTO cost_month_fixed_cost (month_id, name, amount, category, service_month, posting_month) VALUES (20, 'Leasing', 1000, 'GENERAL', '{$prevYm}', '{$prevYm}'), (20, 'Biuro', 250.5, 'OFFICE', NULL, NULL)");
+    $pdo->exec("INSERT INTO cost_month_logistics (month_id, logistics_type_id, amount, note) VALUES (20, 1, 800, 'paliwo')");
+    $copy = $close->copyCategory($curYm, 'fixed');
+    $fixed = $pdo->query('SELECT name, amount, service_month, posting_month FROM cost_month_fixed_cost WHERE month_id = 21 ORDER BY name')->fetchAll();
+    expectLotD($copy['copied'] === 2 && $copy['from'] === $prevYm && abs($copy['total'] - 1250.5) < 0.01 && $fixed[0]['service_month'] === $curYm && $fixed[1]['posting_month'] === $curYm, 'fixed costs copied with the service month of the target');
+    try { $close->copyCategory($curYm, 'fixed'); expectLotD(false, 'second copy refused'); }
+    catch (App\Exceptions\CustomException $e) { expectLotD($e->getCode() === 409, 'no duplicate copy'); }
+    try { $close->copyCategory($old, 'logistics'); expectLotD(false, 'no older month'); }
+    catch (App\Exceptions\CustomException $e) { expectLotD($e->getCode() === 404, 'nothing to copy before the first month with costs'); }
+    try { $close->copyCategory($curYm, 'rent'); expectLotD(false, 'unknown category'); }
+    catch (App\Exceptions\CustomException $e) { expectLotD($e->getCode() === 422, 'unknown category refused'); }
+    $months->lockMonth(21, 1);
+    try { $close->copyCategory($curYm, 'logistics'); expectLotD(false, 'locked month'); }
+    catch (App\Exceptions\CustomException $e) { expectLotD($e->getCode() === 409 && str_contains($e->getMessage(), 'zamknięty'), 'no copy into a locked month'); }
+    try { $close->start($curYm); expectLotD(false, 'start locked'); }
+    catch (App\Exceptions\CustomException $e) { expectLotD($e->getCode() === 409, 'no budget sync into a locked month'); }
+    $st = $close->status($curYm);
+    expectLotD($st['locked'] && $st['locked_by'] === 'Anna K.' && $st['steps']['fixed']['state'] === 'warn' && $st['steps']['fixed']['fixed']['count'] === 2
+        && $st['steps']['fixed']['logistics']['source']['ym'] === $prevYm && $st['steps']['fixed']['logistics']['source']['label_gen'] !== ''
+        && $st['steps']['close']['state'] === 'warn' && $st['steps']['close']['sent_ok'] === 0, 'locked month : fixed done, logistics missing, report not sent yet');
+    // Kartony z WDT zapisane ze źródłem WDT (migracja 095).
+    $sections = $container->get(App\Repositories\Production\Cost\CostMonthSectionRepository::class);
+    $sections->upsert($started['month_id'], 1, 120, 'WDT');
+    $sections->upsert($started['month_id'], 1, 120, 'whatever');
+    $src = $pdo->query("SELECT source FROM cost_month_section WHERE month_id = {$started['month_id']}")->fetchColumn();
+    $sections->upsert($started['month_id'], 1, 120, 'wdt');
+    expectLotD($src === 'AUTO' && $pdo->query("SELECT source FROM cost_month_section WHERE month_id = {$started['month_id']}")->fetchColumn() === 'WDT', 'carton source WDT is kept, unknown → AUTO');
+    $st = $close->status($old);
+    expectLotD($st['steps']['cartons']['total'] === 120 && $st['steps']['cartons']['sources'] === ['WDT'], 'cartons step reads the saved WDT cartons');
+    // Inwentaryzacja : arkusz z dzisiaj liczy się dla bieżącego miesiąca (koniec miesiąca ± okno), nie dla starego.
+    $inventory = $close->status($curYm)['steps']['inventory'];
+    expectLotD(($inventory['state'] === 'done') === (date('Y-m-d') >= date('Y-m-d', strtotime(date('Y-m-t') . ' -7 days'))) && $close->status($old)['steps']['inventory']['state'] === 'warn', 'inventory window around the month end');
+
     echo "audit2_lot_d_test: OK\n";
 } finally {
     $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");

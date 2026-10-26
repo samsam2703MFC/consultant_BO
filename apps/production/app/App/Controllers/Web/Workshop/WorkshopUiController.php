@@ -148,12 +148,6 @@ class WorkshopUiController extends BaseController
      */
     private function apiBase(): string
     {
-        $base = rtrim($this->config->apiBaseUrl(), '/');
-        $root = rtrim(ROOT, '/');
-        if ($base === '' || strcasecmp((string) parse_url($base, PHP_URL_HOST), (string) parse_url($root, PHP_URL_HOST)) === 0
-            && (string) parse_url($base, PHP_URL_PATH) === (string) parse_url($root, PHP_URL_PATH)) {
-            $base = $root;
-        }
-        return $base . WorkshopApiRoutes::PREFIX;
+        return $this->config->webApiBase(ROOT);
     }
 }

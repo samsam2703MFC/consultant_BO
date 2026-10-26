@@ -2976,6 +2976,139 @@
                 "x-permission": "prod.products.read"
             }
         },
+        "/produits/stock-suggestions": {
+            "get": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Stany ze sprzedaży wszystkich MTS / Stocks depuis les ventes de tous les MTS",
+                "operationId": "getStockSuggestions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/StockSuggestions"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Produits sur stock (MTS) avec ventes : stocks min./max. de la fiche face à la proposition (stock.suggest_weeks semaines de WDT, min = stock.suggest_min_weeks, max = stock.suggest_max_weeks semaines, cartons entiers) ; changes = fiches dont les stocks diffèrent de la proposition, plus grand écart d'abord. MTS sans ventes comptés à part (no_sales). Rien n'est enregistré (assistant « Zamknięcie miesiąca », étape 6).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.read"
+            }
+        },
+        "/produits/stock-suggestions/apply": {
+            "post": {
+                "tags": [
+                    "produits"
+                ],
+                "summary": "Przelicz stany wszystkich MTS / Recalculer les stocks de tous les MTS",
+                "operationId": "applyStockSuggestions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/StockSuggestionsApplied"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Enregistre la proposition sur chaque fiche MTS avec ventes (ids = fiches choisies, vide = toutes) : mêmes règles et même journal que PATCH /produits/items/{id}/settings (date du calcul, stock minimum de l'ERP). Une fiche refusée (droits du groupe, validation) est listée dans failed, les autres sont enregistrées.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockSuggestionsApplyInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.write"
+            }
+        },
         "/produits/items/{id}": {
             "get": {
                 "tags": [
@@ -15655,6 +15788,145 @@
                     "stock_all_value_eur": {
                         "type": "number",
                         "description": "leur valeur au prix moyen de vente"
+                    }
+                }
+            },
+            "StockSuggestionChange": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "ppc": {
+                        "type": "integer"
+                    },
+                    "weekly_cartons": {
+                        "type": "number"
+                    },
+                    "stock_calc_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "old_min_cartons": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "old_max_cartons": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "new_min_cartons": {
+                        "type": "integer"
+                    },
+                    "new_max_cartons": {
+                        "type": "integer"
+                    },
+                    "changed": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "StockSuggestions": {
+                "type": "object",
+                "properties": {
+                    "params": {
+                        "type": "object",
+                        "properties": {
+                            "weeks": {
+                                "type": "integer"
+                            },
+                            "min_weeks": {
+                                "type": "number"
+                            },
+                            "max_weeks": {
+                                "type": "number"
+                            },
+                            "from": {
+                                "type": "string",
+                                "format": "date"
+                            },
+                            "to": {
+                                "type": "string",
+                                "format": "date"
+                            }
+                        }
+                    },
+                    "eligible": {
+                        "type": "integer"
+                    },
+                    "unchanged": {
+                        "type": "integer"
+                    },
+                    "no_sales": {
+                        "type": "integer"
+                    },
+                    "never_calculated": {
+                        "type": "integer"
+                    },
+                    "oldest_calc_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "latest_calc_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "changes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockSuggestionChange"
+                        }
+                    }
+                }
+            },
+            "StockSuggestionsApplyInput": {
+                "type": "object",
+                "properties": {
+                    "ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "description": "vide ou absent = toutes les fiches MTS avec ventes"
+                    }
+                }
+            },
+            "StockSuggestionsApplied": {
+                "type": "object",
+                "properties": {
+                    "applied": {
+                        "type": "integer"
+                    },
+                    "calculated_at": {
+                        "type": "string"
+                    },
+                    "failed": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "code": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },

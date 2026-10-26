@@ -358,6 +358,67 @@ final class ItemService
 
     public function updateSettings(int $id, array $input, ApiContext $context): array
     {
+        $this->writeSettings($id, $input, $context);
+        return $this->get($id, $context);
+    }
+
+    /**
+     * Stany min. / maks. ze sprzedaży dla wszystkich produktów na magazynie (MTS) : propozycja (stock.suggest_*
+     * tygodni WDT) obok stanów karty. Produkty MTS bez sprzedaży (propozycja maks. 0) pomijane. Nic nie zapisuje.
+     * Lista « zmiany » = produkty, których stany karty różnią się od propozycji (największa zmiana najpierw).
+     */
+    public function stockSuggestions(): array
+    {
+        $overview = $this->stockOverview(null);
+        $eligible = [];
+        $noSales = 0;
+        foreach ($overview['categories'] as $cat) {
+            foreach ($cat['items'] as $i) {
+                if ($i['mode'] !== 'MTS' || $i['id'] === null) continue;
+                if (!$i['ppc'] || $i['suggested_max_cartons'] <= 0) { $noSales++; continue; }
+                $eligible[] = ['id' => $i['id'], 'name' => $i['name'], 'category' => $cat['name'], 'group_id' => $i['group_id'], 'ppc' => $i['ppc'],
+                    'weekly_cartons' => $i['weekly_cartons'], 'stock_calc_at' => $i['stock_calc_at'],
+                    'old_min_cartons' => $i['stock_min_cartons'], 'old_max_cartons' => $i['stock_max_cartons'],
+                    'new_min_cartons' => $i['suggested_min_cartons'], 'new_max_cartons' => $i['suggested_max_cartons'],
+                    'changed' => $i['stock_min'] === null || $i['stock_max'] === null
+                        || abs($i['stock_min'] - $i['suggested_min_cartons'] * $i['ppc']) > 1e-6 || abs($i['stock_max'] - $i['suggested_max_cartons'] * $i['ppc']) > 1e-6];
+            }
+        }
+        $changes = array_values(array_filter($eligible, fn($e) => $e['changed']));
+        usort($changes, fn($a, $b) => [abs($b['new_max_cartons'] - (float) $b['old_max_cartons']), $a['name']] <=> [abs($a['new_max_cartons'] - (float) $a['old_max_cartons']), $b['name']]);
+        $dates = array_filter(array_column($eligible, 'stock_calc_at'));
+        return ['params' => $overview['params'], 'eligible' => count($eligible), 'unchanged' => count($eligible) - count($changes), 'no_sales' => $noSales,
+            'oldest_calc_at' => $dates && count($dates) === count($eligible) ? min($dates) : null, 'latest_calc_at' => $dates ? max($dates) : null,
+            'never_calculated' => count($eligible) - count($dates), 'changes' => $changes];
+    }
+
+    /**
+     * « Przelicz stany » : stany min. / maks. ze sprzedaży zapisane na kartach (te same reguły i dziennik co zmiana
+     * na karcie : data obliczenia, minimum ERP). $ids = wybrane karty, puste = wszystkie produkty MTS ze sprzedażą.
+     * Karta bez uprawnienia albo z błędem jest pomijana i zgłaszana, reszta się zapisuje.
+     */
+    public function applyStockSuggestions(array $input, ApiContext $context): array
+    {
+        $ids = array_values(array_unique(array_map('intval', array_filter((array) ($input['ids'] ?? []), fn($v) => is_numeric($v)))));
+        $applied = 0;
+        $failed = [];
+        $eligible = [];
+        foreach ($this->stockOverview(null)['categories'] as $cat) foreach ($cat['items'] as $i) {
+            if ($i['mode'] === 'MTS' && $i['id'] !== null && $i['ppc'] && $i['suggested_max_cartons'] > 0 && (!$ids || in_array($i['id'], $ids, true))) $eligible[] = $i;
+        }
+        foreach ($eligible as $i) {
+            try {
+                $this->writeSettings($i['id'], ['stock_min' => $i['suggested_min_cartons'] * $i['ppc'], 'stock_max' => $i['suggested_max_cartons'] * $i['ppc'], 'stock_calculated' => true], $context);
+                $applied++;
+            } catch (ApiException $e) {
+                $failed[] = ['id' => $i['id'], 'name' => $i['name'], 'code' => $e->getMessage()];
+            }
+        }
+        return ['applied' => $applied, 'failed' => $failed, 'calculated_at' => date('Y-m-d H:i:s')];
+    }
+
+    private function writeSettings(int $id, array $input, ApiContext $context): void
+    {
         $row = $this->load($id);
         $this->requireWrite($row, $context);
         $v = (new Validator($input, true))->only(self::SETTINGS_FIELDS)
@@ -411,7 +472,6 @@ final class ItemService
             }
             $this->audit->record($context, 'update', 'item_settings', $id, $row, $data);
         });
-        return $this->get($id, $context);
     }
 
     /**

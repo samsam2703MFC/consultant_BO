@@ -51,6 +51,7 @@ $logisticsCosts = $logistics_costs ?? [];
             <div class="col-12 col-md-6 order-md-2 order-first">
                 <div class="d-flex gap-2 justify-content-md-end flex-wrap">
                     <a class="btn btn-outline-secondary" href="<?= ROOT ?>/cost-calculator">← Wróć</a>
+                    <a class="btn btn-outline-primary" href="<?= ROOT ?>/month-close/<?= htmlspecialchars((string) $ym, ENT_QUOTES) ?>" title="Kreator 8 kroków : kartony, personel, media, koszty stałe, inwentaryzacja, przeliczenia, kierownik, zamknięcie i raport"><i class="bi bi-calendar2-check me-1"></i>Zamknięcie miesiąca</a>
                     <?php if (!$isLocked): ?>
                         <button class="btn btn-secondary" onclick="copyPrev()">Skopiuj z poprzedniego</button>
                         <button class="btn btn-primary" onclick="syncCartons()">Synchronizuj kartony (AUTO)</button>
