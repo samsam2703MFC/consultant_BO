@@ -22,7 +22,8 @@ class SemiProductService
         private TransactionManager $transactionManager,
         private FlattenedRecipeService $flattenedRecipeService,
         private RecipeCostRecalculationService $recipeCostRecalculationService,
-        private FlattenedRecipeRecipeRepository $flattenedRecipeRecipeRepository
+        private FlattenedRecipeRecipeRepository $flattenedRecipeRecipeRepository,
+        private RecipeVersionService $recipeVersionService
     )
     {
     }
@@ -58,6 +59,8 @@ class SemiProductService
 
     public function update($idSemiProduct, $data)
     {
+        // wersja receptury sprzed zmiany (składniki są zastępowane w transakcji)
+        $this->recipeVersionService->changing((int) $idSemiProduct);
         $resp = $this->transactionManager->execute(function () use ($idSemiProduct, $data) {
 
             $updateData = [

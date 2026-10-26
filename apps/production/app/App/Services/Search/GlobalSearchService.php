@@ -72,7 +72,7 @@ class GlobalSearchService
                 'sub'   => implode(' · ', array_filter([
                     (self::RECIPE_KIND[(int) $r['id_type']] ?? self::RECIPE_KIND[3])[0],
                     $r['producer'] ? 'przygotowuje ' . $r['producer'] : null,
-                    'kalkulacja',
+                    'kalkulacja i historia wersji',
                 ])),
                 'url'   => (self::RECIPE_KIND[(int) $r['id_type']] ?? self::RECIPE_KIND[3])[1] . '/' . (int) $r['id'] . '/calculation',
             ], $this->repository->recipes($pattern, $exact, $n))],

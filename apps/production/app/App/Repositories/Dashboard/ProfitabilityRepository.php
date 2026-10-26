@@ -143,6 +143,18 @@ final class ProfitabilityRepository extends WorkshopRepository
         return $this->all("SELECT recipe_id, material_id, quantity FROM flattened_recipe_ingredient WHERE recipe_id IN ({$in})", $ids);
     }
 
+    /**
+     * Versions datées des recettes (n_recipe_version), les plus anciennes d'abord : la composition en vigueur à
+     * la fin d'un mois passé valorise ce mois (valid_from NULL = version de départ, avant le suivi).
+     */
+    public function recipeVersions(array $recipeIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $recipeIds))));
+        if (!$ids) return [];
+        $in = implode(', ', array_fill(0, count($ids), '?'));
+        return $this->all("SELECT id_recipe, version_no, valid_from, ingredients FROM n_recipe_version WHERE id_recipe IN ({$in}) ORDER BY id_recipe, version_no", $ids);
+    }
+
     /** Matières : nom, unité, catégorie (NULL si la catégorie n'existe plus), fournisseur actuel, prix unitaire actuel (PLN). */
     public function materialCatalog(): array
     {

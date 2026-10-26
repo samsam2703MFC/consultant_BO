@@ -5,6 +5,7 @@ namespace App\Controllers\Web\Recipe;
 use App\Services\Recipe\RecipeCalculationViewService;
 use App\Core\Route;
 use App\Core\Web\BaseController;
+use App\Exceptions\CustomException;
 use App\Repositories\Product\FinalProductRepository;
 use App\Services\Material\MaterialService;
 use App\Services\Product\ProductService;
@@ -199,7 +200,14 @@ class RecipeController extends BaseController
 
     public function calculation($id)
     {
-        $this->view('recipe/calculation', $this->calculationView->build((int) $id, 'product'));
+        try {
+            $data = $this->calculationView->build((int) $id, 'product');
+        } catch (CustomException $e) {
+            http_response_code(404);
+            echo 'Nie znaleziono receptury.';
+            return;
+        }
+        $this->view('recipe/calculation', $data);
     }
 
 

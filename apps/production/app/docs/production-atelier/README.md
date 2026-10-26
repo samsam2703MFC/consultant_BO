@@ -183,6 +183,12 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 - Délais réglables : Ustawienia › Pozostałe › « Alerty i terminy » (et feuille Parametry du tableau à remplir).
 - Un mois ouvert dans le calculateur mais encore vide n'est plus pris pour 0 € de coûts : la rentabilité reprend le dernier mois saisi et le signale.
 
+## Versions de recette « en vigueur depuis » (26/10/2026)
+
+- Chaque modification de composition (recette, ou półprodukt / kompozycja qu'elle contient) crée une version datée de la recette : composition, liste aplatie des matières, coût du jour. Toutes les recettes existantes ont une version de départ (« depuis toujours »), créée par la tâche périodique.
+- La rentabilité (Rentowność, rapport mensuel, production des groupes) valorise un mois passé avec la composition en vigueur à la fin de ce mois et les prix matières de l'époque — et non plus avec la composition actuelle. Le mois courant utilise la composition actuelle.
+- Page « Historia » (bouton dans la kalkulacja d'une recette, `/recipes/{id}/history`) : versions et ce qui a changé (matières, półprodukty, rendement, étapes ; liste aplatie), coût matières sur 12 mois avec la version en vigueur, et l'écart de chaque mois séparé en effet prix et effet composition.
+
 ## Points ouverts (données réelles à fournir)
 
 Les écrans existent ; ce qui manque, ce sont les données réelles de l'atelier (la copie de test tourne sur une démo réaliste).

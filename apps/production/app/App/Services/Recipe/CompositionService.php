@@ -19,7 +19,8 @@ class CompositionService
         private TransactionManager $transactionManager,
         private FlattenedRecipeService $flattenedRecipeService,
         private RecipeCostRecalculationService $recipeCostRecalculationService,
-        private FlattenedRecipeRecipeRepository $flattenedRecipeRecipeRepository
+        private FlattenedRecipeRecipeRepository $flattenedRecipeRecipeRepository,
+        private RecipeVersionService $recipeVersionService
     )
     {
     }
@@ -53,6 +54,8 @@ class CompositionService
 
     public function update($idComposition, $data)
     {
+        // wersja receptury sprzed zmiany (składniki są zastępowane w transakcji)
+        $this->recipeVersionService->changing((int) $idComposition);
         $resp = $this->transactionManager->execute(function () use ($idComposition, $data) {
 
             $updateData = [

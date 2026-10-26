@@ -1,7 +1,7 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 086, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 086 ; compatible MySQL 8.
+-- 001 → 087, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 087 ; compatible MySQL 8.
 -- Modifications des tables d'origine : voir docs/db/README.md (colonne customer.communication_lang, nettoyage 074 → 080).
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `n_activity_click` (
@@ -1544,6 +1544,26 @@ CREATE TABLE `n_recipe_producer` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id_recipe`),
   KEY `idx_tfb_recipe_producer_group` (`id_group`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_recipe_version` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_recipe` int(11) NOT NULL,
+  `version_no` int(11) NOT NULL,
+  `valid_from` datetime DEFAULT NULL COMMENT 'NULL = version de départ (avant le suivi)',
+  `source` enum('baseline','create','edit','component') NOT NULL DEFAULT 'edit',
+  `note` varchar(255) DEFAULT NULL,
+  `content_hash` char(64) NOT NULL,
+  `composition` longtext NOT NULL COMMENT 'JSON : rendement, unité, matières, półprodukty, préparations',
+  `ingredients` longtext NOT NULL COMMENT 'JSON : [[material_id, quantité]] (flattened_recipe_ingredient)',
+  `material_cost` decimal(12,4) DEFAULT NULL COMMENT 'PLN, prix des matières au moment de la version',
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_n_recipe_version_no` (`id_recipe`,`version_no`),
+  KEY `idx_n_recipe_version_valid` (`id_recipe`,`valid_from`),
+  KEY `fk_n_recipe_version_user` (`created_by`),
+  CONSTRAINT `fk_n_recipe_version_recipe` FOREIGN KEY (`id_recipe`) REFERENCES `product_recipe` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_n_recipe_version_user` FOREIGN KEY (`created_by`) REFERENCES `user` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_schema_migration` (
   `version` char(3) NOT NULL,

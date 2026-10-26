@@ -23,8 +23,8 @@ class RecipeService
         private ProductService                     $productService,
         private FlattenedRecipeService $flattenedRecipeService,
         private RecipeCostRecalculationService $recipeCostRecalculationService,
-        private PredefinedRecipeLabelService $predefinedRecipeLabelService
-
+        private PredefinedRecipeLabelService $predefinedRecipeLabelService,
+        private RecipeVersionService $recipeVersionService
     )
     {
     }
@@ -344,6 +344,8 @@ class RecipeService
 
     public function update($id, $data)
     {
+        // wersja receptury sprzed zmiany (składniki są zastępowane w transakcji)
+        $this->recipeVersionService->changing((int) $id);
         $resp = $this->transactionManager->execute(function () use ($id, $data) {
 
             $resDelete = $this->productRecipeConnectionRepository->delete($id, 'parent_recipe_id');

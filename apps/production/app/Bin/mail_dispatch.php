@@ -6,7 +6,8 @@ declare(strict_types=1);
  * expéditions, WDT, factures, proformas) en messages en file selon les règles actives
  * (Komunikacja › Automatyczne e-maile), met en file le rapport mensuel de direction (une fois par
  * mois, si des destinataires sont configurés), publie les alertes d'échéances dans la cloche (réclamations sans
- * décision, essais de nouveaux produits en retard, coûts du mois non saisis), puis passe la file d'envoi.
+ * décision, essais de nouveaux produits en retard, coûts du mois non saisis), crée la version de départ des recettes
+ * qui n'en ont pas encore (versions « en vigueur depuis »), puis passe la file d'envoi.
  *   php Bin/mail_dispatch.php        à lancer par cron toutes les 5 minutes
  * L'envoi réel dépend de MAIL_DELIVERY_MODE (.env) : live, redirect ou log_only.
  */
@@ -38,8 +39,15 @@ try {
         fwrite(STDERR, 'mail_dispatch alerts: ' . $e->getMessage() . PHP_EOL);
         $alerts = ['error' => $e->getMessage()];
     }
+    // Versions de recette : version de départ des recettes sans historique (rattrapage, à part aussi).
+    try {
+        $recipeVersions = $container->get(App\Services\Recipe\RecipeVersionService::class)->backfill();
+    } catch (Throwable $e) {
+        fwrite(STDERR, 'mail_dispatch recipe versions: ' . $e->getMessage() . PHP_EOL);
+        $recipeVersions = ['error' => $e->getMessage()];
+    }
     $delivery = $container->get(App\Services\Communication\CommunicationEmailDeliveryWorker::class)->processDue(50);
-    echo json_encode(['dispatch' => $dispatch, 'monthly_report' => $report, 'alerts' => $alerts, 'delivery' => $delivery], JSON_UNESCAPED_UNICODE) . PHP_EOL;
+    echo json_encode(['dispatch' => $dispatch, 'monthly_report' => $report, 'alerts' => $alerts, 'recipe_versions' => $recipeVersions, 'delivery' => $delivery], JSON_UNESCAPED_UNICODE) . PHP_EOL;
 } catch (Throwable $e) {
     fwrite(STDERR, 'mail_dispatch: ' . $e->getMessage() . PHP_EOL);
     exit(1);
