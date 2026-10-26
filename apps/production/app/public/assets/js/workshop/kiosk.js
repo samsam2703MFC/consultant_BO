@@ -1492,7 +1492,8 @@
                 <label>${esc(t('lot_best_before'))}<input name="bb" type="date" value="${esc(g.best_before || '')}"></label>
                 ${canScan() ? `<button type="button" class="kiosk-btn is-small is-primary" data-scan>${icon('scan-line')} ${esc(t('lot_scan'))}</button>` : ''}
                 <label class="kiosk-btn is-small kiosk-photo">${icon('camera')} ${esc(t('lot_photo'))}<input type="file" accept="image/*" capture="environment" data-photo hidden></label>
-                ${g.last && g.last.lot_number !== g.lot_number ? `<button type="button" class="kiosk-btn is-small" data-same>${esc(t('lot_same', {lot: g.last.lot_number}))}</button>` : ''}
+                ${(g.received || []).filter(r => r.lot_number !== g.lot_number).map((r, k) => `<button type="button" class="kiosk-btn is-small" data-fefo="${k}">${esc(t('lot_received', {lot: r.lot_number, date: r.best_before ? r.best_before.split('-').reverse().join('.') : '—'}))}</button>`).join('')}
+                ${g.last && g.last.lot_number !== g.lot_number && !(g.received || []).some(r => r.lot_number === g.last.lot_number) ? `<button type="button" class="kiosk-btn is-small" data-same>${esc(t('lot_same', {lot: g.last.lot_number}))}</button>` : ''}
                 <button type="button" class="kiosk-btn is-primary is-small" data-save-lot>${esc(t('lot_save'))}</button></div>
             <div class="kiosk-ocr" data-ocr hidden></div>` : ''}</article>`;
         const ingredients = b.ingredients.filter(g => !g.packaging);
@@ -1517,6 +1518,12 @@
             const m = Number(card.dataset.material);
             const g = b.ingredients.find(x => x.material_id === m);
             card.addEventListener('input', resetIdle);
+            card.querySelectorAll('[data-fefo]').forEach(btn => btn.addEventListener('click', () => {
+                const r = (g.received || []).filter(x => x.lot_number !== g.lot_number)[Number(btn.dataset.fefo)];
+                if (!r) return;
+                card.querySelector('[name=lot]').value = r.lot_number;
+                card.querySelector('[name=bb]').value = r.best_before || '';
+            }));
             card.querySelector('[data-same]')?.addEventListener('click', () => {
                 card.querySelector('[name=lot]').value = g.last.lot_number;
                 if (g.last.best_before) card.querySelector('[name=bb]').value = g.last.best_before;

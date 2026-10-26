@@ -101,7 +101,8 @@
         'nouvelle': 'nowy nowe', 'nouvel': 'nowy', 'vehicule': 'pojazd pojazdy', 'vehicules': 'pojazdy pojazd', 'salarie': 'pracownik pracownicy', 'salaries': 'pracownicy pracownik',
         'proforma': 'proforma proformy', 'gratuit': 'gratis', 'conformite': 'zgodnosc', 'belgique': 'belgii belgia', 'onglet': 'zakladki', 'onglets': 'zakladki',
         'instruction': 'instrukcja kroki', 'instructions': 'instrukcja kroki', 'fenetre': 'oknie okno', 'lancer': 'wprowadz wprowadzony', 'introduire': 'wprowadz',
-        'compte': 'uzytkownik konto', 'comptes': 'uzytkownicy', 'identifiant': 'login', 'acces': 'uprawnienia dostep', 'droits': 'uprawnienia'
+        'compte': 'uzytkownik konto', 'comptes': 'uzytkownicy', 'identifiant': 'login', 'acces': 'uprawnienia dostep', 'droits': 'uprawnienia',
+        'receptionner': 'przyjecie przyjmij dostawy', 'receptionne': 'przyjecie przyjete', 'nonconformite': 'niezgodnosc nc', 'nonconformites': 'niezgodnosci nc', 'abime': 'problem niezgodnosc uszkodzony', 'casse': 'problem uszkodzony'
     };
 
     var menu = null;

@@ -41,7 +41,7 @@ final class OpenApiSupply
             'POST /supply/orders/{id:\d+}/send' => ['tag' => $t, 'id' => 'sendSupplierOrder', 'summary' => 'Wyślij mailem albo oznacz jako wysłane / Envoyer par e-mail ou marquer envoyée', 'body' => 'SupplierOrderSendInput', 'response' => 'SupplierOrder', 'errors' => [400, 404, 409, 422],
                 'description' => "E-mail mis en file (modèle supplier_order, PL ou FR, CSV joint) ; manual = commande passée autrement (téléphone, magasin). PO_NO_LINES, PO_NO_EMAIL (422)."],
             'POST /supply/orders/{id:\d+}/receive' => ['tag' => $t, 'id' => 'receiveSupplierOrder', 'summary' => 'Przyjęcie dostawy / Réception', 'body' => 'SupplierOrderReceiveInput', 'response' => 'SupplierOrder', 'errors' => [400, 404, 409, 422],
-                'description' => 'Quantité et prix réels par ligne (prix par défaut : prix commandé) ; reçue en partie ou en totalité. PO_NOT_RECEIVABLE (409) : commande non envoyée, reçue ou annulée.'],
+                'description' => 'Quantité et prix réels par ligne (prix par défaut : prix commandé), lot et date limite ; un problème signalé crée une non-conformité fournisseur liée à la réception. Reçue en partie ou en totalité. PO_NOT_RECEIVABLE (409) : commande non envoyée, reçue ou annulée.'],
             'POST /supply/orders/{id:\d+}/cancel' => ['tag' => $t, 'id' => 'cancelSupplierOrder', 'summary' => 'Anuluj zamówienie / Annuler la commande', 'response' => 'SupplierOrder', 'errors' => [404, 409]],
             'DELETE /supply/orders/{id:\d+}' => ['tag' => $t, 'id' => 'deleteSupplierOrder', 'summary' => 'Usuń szkic / Supprimer le brouillon', 'response' => 'SupplierOrderDeleted', 'errors' => [404, 409]],
             'GET /supply/invoices' => ['tag' => $t, 'id' => 'listPurchaseInvoices', 'summary' => 'Faktury zakupowe do kontroli / Factures d\'achat à contrôler', 'response' => 'PurchaseInvoices', 'errors' => [422],
@@ -168,7 +168,8 @@ final class OpenApiSupply
                     'received_qty' => $num, 'remaining' => $num, 'received_value' => $nNum, 'last_price' => $nNum, 'last_day' => $nDate,
                     'price_gap_pct' => ['type' => 'number', 'nullable' => true, 'description' => 'dernier prix reçu vs prix commandé (%)'], 'qty_gap_pct' => $nNum,
                 ]]],
-                'receipts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['line_id' => ['type' => 'integer'], 'raw_material_id' => ['type' => 'integer'], 'received_on' => $date, 'quantity' => $num, 'unit_price' => $nNum]]],
+                'receipts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['line_id' => ['type' => 'integer'], 'raw_material_id' => ['type' => 'integer'], 'received_on' => $date, 'quantity' => $num, 'unit_price' => $nNum,
+                    'lot_number' => $nStr, 'best_before' => $nDate, 'nc_id' => ['type' => 'integer', 'nullable' => true, 'description' => 'non-conformité créée à la réception']]]],
             ]],
             'SupplierOrderInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
                 'delivery_date' => $nDate, 'language' => ['type' => 'string', 'enum' => ['pl', 'fr']], 'email_to' => $nStr, 'note' => $nStr, 'save_supplier_email' => ['type' => 'boolean'],
@@ -180,6 +181,11 @@ final class OpenApiSupply
                 'received_on' => ['type' => 'string', 'format' => 'date', 'description' => 'défaut : aujourd\'hui'],
                 'lines' => ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['id', 'quantity'], 'properties' => [
                     'id' => ['type' => 'integer', 'description' => 'ligne de la commande'], 'quantity' => ['type' => 'number', 'minimum' => 0], 'unit_price' => ['type' => 'number', 'nullable' => true],
+                    'lot_number' => ['type' => 'string', 'maxLength' => 64, 'nullable' => true, 'description' => 'lot du fournisseur (enregistré en majuscules)'], 'best_before' => $nDate,
+                ]]],
+                'problems' => ['type' => 'array', 'description' => 'une non-conformité fournisseur (source supplier_delivery) par ligne signalée', 'items' => ['type' => 'object', 'required' => ['line_id', 'description'], 'properties' => [
+                    'line_id' => ['type' => 'integer'], 'description' => ['type' => 'string', 'maxLength' => 5000], 'severity' => ['type' => 'string', 'enum' => ['minor', 'major', 'critical']],
+                    'quantity' => ['type' => 'number', 'nullable' => true, 'description' => 'quantité concernée, unité de base'],
                 ]]],
             ]],
             'SupplierOrderDeleted' => ['type' => 'object', 'properties' => ['deleted' => ['type' => 'boolean'], 'id' => ['type' => 'integer']]],

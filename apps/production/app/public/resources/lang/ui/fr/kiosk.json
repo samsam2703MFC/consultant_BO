@@ -431,5 +431,6 @@
   "home_more_dev": "+ {n} dans l’onglet Nouveaux produits",
   "home_dock": "Raccourcis",
   "home_dock_badge": "Badge",
-  "home_dock_phone": "Téléphone"
+  "home_dock_phone": "Téléphone",
+  "lot_received": "Livraison : {lot} (DLC {date})"
 }

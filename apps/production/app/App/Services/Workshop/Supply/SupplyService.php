@@ -43,6 +43,7 @@ final class SupplyService
         private MaterialCostRepository $company,
         private TransactionManager $tx,
         private AuditTrail $audit,
+        private \App\Services\Purchasing\NcService $nc,
     ) {
     }
 
@@ -283,7 +284,8 @@ final class SupplyService
         return $this->presentSummary($this->repo->orderSummary($id) ?? $o) + [
             'supplier_email' => $o['supplier_email'], 'supplier_phone' => $o['supplier_phone'], 'note' => $o['note'],
             'lines' => $lines, 'receipts' => array_map(fn($r) => ['line_id' => (int) $r['id_po_line'], 'raw_material_id' => (int) $r['id_raw_material'], 'received_on' => $r['received_on'],
-                'quantity' => (float) $r['quantity'], 'unit_price' => $r['unit_price'] !== null ? (float) $r['unit_price'] : null], $this->repo->receipts($id)),
+                'quantity' => (float) $r['quantity'], 'unit_price' => $r['unit_price'] !== null ? (float) $r['unit_price'] : null,
+                'lot_number' => $r['lot_number'] ?? null, 'best_before' => $r['best_before'] ?? null, 'nc_id' => isset($r['id_nc']) ? (int) $r['id_nc'] : null], $this->repo->receipts($id)),
             'can_edit' => $o['status'] === 'draft' && $context->can('prod.supply.write'),
             'can_receive' => in_array($o['status'], ['sent', 'partial'], true) && $context->can('prod.supply.write'),
         ];
@@ -364,7 +366,7 @@ final class SupplyService
     {
         $o = $this->load($id);
         if (!in_array($o['status'], ['sent', 'partial'], true)) throw new ApiException('PO_NOT_RECEIVABLE', 409, [], ['status' => $o['status']]);
-        $v = (new Validator($body))->only(['received_on', 'lines'])->date('received_on', false, false);
+        $v = (new Validator($body))->only(['received_on', 'lines', 'problems'])->date('received_on', false, false);
         $day = $v->value('received_on') ?? date('Y-m-d');
         if (!$v->hasError('received_on') && $day > date('Y-m-d')) $v->add('received_on', 'IN_FUTURE');
         $own = [];
@@ -380,12 +382,37 @@ final class SupplyService
             if ($qty < 0 || $qty > self::MAX_QTY) { $v->add("lines.$i.quantity", 'OUT_OF_RANGE', ['min' => 0, 'max' => self::MAX_QTY]); continue; }
             $price = $r['unit_price'] ?? null;
             if ($price !== null && ((!is_int($price) && !is_float($price)) || $price <= 0)) { $v->add("lines.$i.unit_price", 'GREATER_THAN', ['min' => 0]); continue; }
-            if ($qty > 0) $clean[] = ['id' => $lineId, 'quantity' => (float) $qty, 'unit_price' => $price !== null ? (float) $price : ($own[$lineId]['unit_price'] !== null ? (float) $own[$lineId]['unit_price'] : null)];
+            // Partia i data ważności (opcjonalne) : wpisane raz przy przyjęciu, tablet je podpowiada.
+            $lot = isset($r['lot_number']) && is_string($r['lot_number']) ? (preg_replace('/\s+/u', ' ', mb_strtoupper(trim($r['lot_number']))) ?: null) : null;
+            if ($lot !== null && mb_strlen($lot) > 64) { $v->add("lines.$i.lot_number", 'TOO_LONG', ['max' => 64]); continue; }
+            $bb = isset($r['best_before']) && is_string($r['best_before']) && $r['best_before'] !== '' ? $r['best_before'] : null;
+            if ($bb !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $bb)) { $v->add("lines.$i.best_before", 'INVALID_DATE'); continue; }
+            if ($qty > 0) $clean[] = ['id' => $lineId, 'quantity' => (float) $qty, 'unit_price' => $price !== null ? (float) $price : ($own[$lineId]['unit_price'] !== null ? (float) $own[$lineId]['unit_price'] : null),
+                'lot_number' => $lot, 'best_before' => $bb];
+        }
+        // Problem przy przyjęciu (asystent, krok 4) : niezgodność dostawcy wypełniona z linii (dostawca, surowiec, ilość).
+        $problems = [];
+        foreach (is_array($body['problems'] ?? null) ? array_values($body['problems']) : [] as $i => $pb) {
+            $lineId = is_array($pb) ? ($pb['line_id'] ?? null) : null;
+            $desc = is_array($pb) ? trim((string) ($pb['description'] ?? '')) : '';
+            if (!is_int($lineId) || !isset($own[$lineId])) { $v->add("problems.$i.line_id", 'REFERENCE_NOT_FOUND', ['id' => is_scalar($lineId) ? (string) $lineId : '?']); continue; }
+            if ($desc === '' || mb_strlen($desc) > 5000) { $v->add("problems.$i.description", 'REQUIRED'); continue; }
+            $sev = in_array($pb['severity'] ?? 'minor', ['minor', 'major', 'critical'], true) ? $pb['severity'] ?? 'minor' : 'minor';
+            $pq = $pb['quantity'] ?? null;
+            $problems[$lineId] = ['description' => $desc, 'severity' => $sev, 'quantity' => is_int($pq) || is_float($pq) ? (float) $pq : null];
         }
         $v->throwIfInvalid();
         if (!$clean) throw ApiException::validation([['field' => 'lines', 'code' => 'REQUIRED', 'params' => []]]);
-        $this->tx->execute(function () use ($id, $o, $day, $clean, $context) {
-            foreach ($clean as $c) $this->repo->addReceipt($c['id'], $day, $c['quantity'], $c['unit_price'], $context->userId);
+        $this->tx->execute(function () use ($id, $o, $day, $clean, $problems, $own, $context) {
+            $receiptOf = [];
+            foreach ($clean as $c) $receiptOf[$c['id']] = $this->repo->addReceipt($c['id'], $day, $c['quantity'], $c['unit_price'], $context->userId, $c['lot_number'], $c['best_before']);
+            foreach ($problems as $lineId => $pb) {
+                $line = $own[$lineId];
+                $ncId = $this->nc->save(['reported_at' => $day, 'source' => 'supplier_delivery', 'supplier_id' => (int) $o['id_supplier'], 'material_id' => (int) $line['id_raw_material'],
+                    'description' => mb_substr('Przyjęcie ' . $o['code'] . ' (' . $line['name'] . ') : ' . $pb['description'], 0, 5000), 'severity' => $pb['severity'],
+                    'quantity' => $pb['quantity'], 'unit' => $line['unit'] ?? null, 'status' => 'open'], null, $context->userId);
+                if (isset($receiptOf[$lineId])) $this->repo->linkReceiptNc($receiptOf[$lineId], $ncId);
+            }
             $done = true;
             foreach ($this->repo->lines($id) as $l) if ((float) $l['received_qty'] < (float) $l['quantity'] - 1e-6) $done = false;
             $status = $done ? 'received' : 'partial';

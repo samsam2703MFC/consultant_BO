@@ -7809,7 +7809,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Quantité et prix réels par ligne (prix par défaut : prix commandé) ; reçue en partie ou en totalité. PO_NOT_RECEIVABLE (409) : commande non envoyée, reçue ou annulée.",
+                "description": "Quantité et prix réels par ligne (prix par défaut : prix commandé), lot et date limite ; un problème signalé crée une non-conformité fournisseur liée à la réception. Reçue en partie ou en totalité. PO_NOT_RECEIVABLE (409) : commande non envoyée, reçue ou annulée.",
                 "parameters": [
                     {
                         "name": "id",
@@ -11653,7 +11653,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Enregistre qui valide et quand, avec le résumé (prévu, produit, pertes par produit). Revalider remplace le résumé ; closed.changed = lots ou pertes modifiés depuis. 409 DAY_NOTHING_TO_CLOSE, OUTPUT_LOCKED.",
+                "description": "Enregistre qui valide et quand, avec le résumé (prévu, produit, pertes par produit). Revalider remplace le résumé ; closed.changed = lots ou pertes modifiés depuis. gaps (production du jour) = productions sans tous leurs lots matières (lots) ou sans contrôle qualité (qc) : la validation exige alors une note (422 DAY_GAPS_NOTE_REQUIRED, details lots / qc). 409 DAY_NOTHING_TO_CLOSE, OUTPUT_LOCKED.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -14845,7 +14845,7 @@
                     },
                     "shelf_life": {
                         "type": "integer",
-                        "minimum": 0,
+                        "minimum": 1,
                         "maximum": 3650
                     },
                     "stock_minimum": {
@@ -23600,6 +23600,20 @@
                                 "unit_price": {
                                     "type": "number",
                                     "nullable": true
+                                },
+                                "lot_number": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "best_before": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "nc_id": {
+                                    "type": "integer",
+                                    "nullable": true,
+                                    "description": "non-conformité créée à la réception"
                                 }
                             }
                         }
@@ -23732,6 +23746,50 @@
                                 "unit_price": {
                                     "type": "number",
                                     "nullable": true
+                                },
+                                "lot_number": {
+                                    "type": "string",
+                                    "maxLength": 64,
+                                    "nullable": true,
+                                    "description": "lot du fournisseur (enregistré en majuscules)"
+                                },
+                                "best_before": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "problems": {
+                        "type": "array",
+                        "description": "une non-conformité fournisseur (source supplier_delivery) par ligne signalée",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "line_id",
+                                "description"
+                            ],
+                            "properties": {
+                                "line_id": {
+                                    "type": "integer"
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "maxLength": 5000
+                                },
+                                "severity": {
+                                    "type": "string",
+                                    "enum": [
+                                        "minor",
+                                        "major",
+                                        "critical"
+                                    ]
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "quantité concernée, unité de base"
                                 }
                             }
                         }

@@ -48,5 +48,6 @@
   "weekday_count": "{day} : {n} dostaw",
   "deliveries_n": "{n} dni dostaw",
   "no_history": "brak historii dostaw",
-  "no_suppliers": "Brak dostawców dla tego wyszukiwania."
+  "no_suppliers": "Brak dostawców dla tego wyszukiwania.",
+  "receive": "Przyjmij dostawę"
 }

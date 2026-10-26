@@ -337,10 +337,17 @@ final class SupplyRepository extends WorkshopRepository
         $this->db->prepare('DELETE FROM n_po_line WHERE id_po = ?')->execute([$orderId]);
     }
 
-    public function addReceipt(int $lineId, string $day, float $quantity, ?float $unitPrice, ?int $userId): void
+    /** Przyjęcie linii ; partia i data ważności (asystent « Przyjęcie dostawy ») — podpowiedź dla tabletu (FEFO). */
+    public function addReceipt(int $lineId, string $day, float $quantity, ?float $unitPrice, ?int $userId, ?string $lot = null, ?string $bestBefore = null): int
     {
-        $this->db->prepare('INSERT INTO n_po_receipt (id_po_line, received_on, quantity, unit_price, created_by) VALUES (?, ?, ?, ?, ?)')
-            ->execute([$lineId, $day, $quantity, $unitPrice, $userId]);
+        $this->db->prepare('INSERT INTO n_po_receipt (id_po_line, received_on, quantity, unit_price, lot_number, best_before, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$lineId, $day, $quantity, $unitPrice, $lot, $bestBefore, $userId]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function linkReceiptNc(int $receiptId, int $ncId): void
+    {
+        $this->db->prepare('UPDATE n_po_receipt SET id_nc = ? WHERE id = ?')->execute([$ncId, $receiptId]);
     }
 
     public function delete(int $id): void

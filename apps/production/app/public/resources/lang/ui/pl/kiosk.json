@@ -431,5 +431,6 @@
   "home_more_dev": "+ {n} w zakładce Nowe produkty",
   "home_dock": "Skróty",
   "home_dock_badge": "Identyfikator",
-  "home_dock_phone": "Telefon"
+  "home_dock_phone": "Telefon",
+  "lot_received": "Z dostawy : {lot} (do {date})"
 }

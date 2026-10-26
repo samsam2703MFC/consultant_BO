@@ -48,6 +48,7 @@
             weeks: Math.min(4, Math.max(1, Number(p.get('weeks')) || 1)),
             status: STATUSES.includes(p.get('status')) ? p.get('status') : 'open',
             order: Number(p.get('order')) || null,
+            receive: p.get('receive') === '1',
             kind: ['all', 'raw', 'pack'].includes(p.get('kind')) ? p.get('kind') : 'all',
             only: p.get('only') !== '0',
             inv: p.get('inv') === 'map' ? 'map' : Number(p.get('inv')) || null,
@@ -79,6 +80,8 @@
             if (state.tab === 'needs') data.needs = await api.get(`/supply/needs?date=${state.date}&weeks=${state.weeks}`);
             if (state.tab === 'orders' || !data.orders) data.orders = await api.get(`/supply/orders?status=${state.status}`);
             if (state.tab === 'orders' && state.order) data.order = await api.get(`/supply/orders/${state.order}`);
+            // Z « Dostawy surowców » (przycisk Przyjmij) : zamówienie otwiera się od razu w asystencie przyjęcia.
+            if (state.receive && data.order) { receiving = !!data.order.can_receive; state.receive = false; }
             if (state.tab === 'stock') data.materials = await api.get('/supply/materials');
             if (state.tab === 'invoices') {
                 if (state.inv === 'map') data.mappings = await api.get('/supply/mappings');
@@ -359,17 +362,37 @@
                 <div class="small text-muted">${esc(t('mail.to'))} : <strong>${esc(data.preview.recipient || t('no_email'))}</strong></div>
                 <div class="small text-muted">${esc(t('mail.subject'))} : <strong>${esc(data.preview.subject)}</strong></div>
                 <pre class="tfb-supply-mail-body mb-0">${esc(data.preview.body)}</pre><div class="small text-muted mt-1">${esc(t('mail.csv'))}</div></div></div>` : '';
-        const receive = receiving && o.can_receive ? `<div class="card tfb-supply-receive"><div class="card-header d-flex flex-wrap gap-2 align-items-center"><h5 class="mb-0">${esc(t('receive_title'))}</h5>
-                <input class="form-control form-control-sm" type="date" data-received-on value="${todayIso}" max="${todayIso}" style="width:auto"></div>
-                <div class="card-body pt-0"><table class="table table-sm align-middle mb-2"><thead><tr><th>${esc(t('col.material'))}</th><th class="text-end">${esc(t('col.remaining'))}</th><th>${esc(t('col.received_now'))}</th><th>${esc(t('col.real_price'))}</th></tr></thead>
+        // Asystent « Przyjęcie dostawy » (audyt 2, P12) : 1 Dostawa → 2 Ilości (zamówione) → 3 Partie i daty ważności →
+        // 4 Problem ? (niezgodność dostawcy wypełniona) → 5 Zatwierdź. Kroki przełączane w przeglądarce, zapis na końcu.
+        const rsteps = ['rs.delivery', 'rs.qty', 'rs.lots', 'rs.problem', 'rs.confirm'];
+        const receive = receiving && o.can_receive ? `<div class="card tfb-supply-receive" data-receive>
+                <div class="card-header"><h5 class="mb-2">${esc(t('receive_title'))} · ${esc(o.code)}</h5>
+                    <ol class="at-steps at-steps-compact mb-0">${rsteps.map((k, i) => `<li data-rtab="${i}" class="${i === 0 ? 'is-active' : ''}"><span>${esc(t(k))}</span></li>`).join('')}</ol></div>
+                <div class="card-body pt-2">
+                <section data-rstep="0"><p class="text-muted mb-2">${esc(t('rs.delivery_help', {supplier: o.supplier.name}))}</p>
+                    <label class="form-label">${esc(t('rs.date'))} <input class="form-control form-control-sm d-inline-block ms-2" type="date" data-received-on value="${todayIso}" max="${todayIso}" style="width:auto"></label>
+                    <ul class="small mb-0">${o.lines.filter(l => l.remaining > 0).map(l => `<li>${esc(l.name)} — ${esc(q(l, l.remaining))}</li>`).join('') || `<li>${esc(t('rs.nothing_left'))}</li>`}</ul></section>
+                <section data-rstep="1" hidden><table class="table table-sm align-middle mb-2"><thead><tr><th>${esc(t('col.material'))}</th><th class="text-end">${esc(t('col.remaining'))}</th><th>${esc(t('col.received_now'))}</th><th>${esc(t('col.real_price'))}</th></tr></thead>
                 <tbody>${o.lines.map(l => `<tr data-rline="${l.id}"><td>${esc(l.name)}</td><td class="text-end">${esc(q(l, l.remaining))}</td>
                     <td><div class="input-group input-group-sm tfb-supply-qty"><input class="form-control text-end" inputmode="decimal" data-rqty value="${esc(toInput(l, l.remaining))}"><span class="input-group-text">${esc(l.unit)}</span></div></td>
-                    <td><div class="input-group input-group-sm tfb-supply-qty"><input class="form-control text-end" inputmode="decimal" data-rprice value="${l.unit_price === null ? '' : esc(String(Math.round(l.unit_price * l.factor * 10000) / 10000).replace('.', ','))}"><span class="input-group-text">zł/${esc(l.unit)}</span></div></td></tr>`).join('')}</tbody></table>
-                <button type="button" class="btn btn-sm btn-primary" data-act="save-receipt">${esc(t('act.save_receipt'))}</button>
-                <button type="button" class="btn btn-sm btn-link" data-act="close-receipt">${esc(t('act.close'))}</button></div></div>` : '';
+                    <td><div class="input-group input-group-sm tfb-supply-qty"><input class="form-control text-end" inputmode="decimal" data-rprice value="${l.unit_price === null ? '' : esc(String(Math.round(l.unit_price * l.factor * 10000) / 10000).replace('.', ','))}"><span class="input-group-text">zł/${esc(l.unit)}</span></div></td></tr>`).join('')}</tbody></table></section>
+                <section data-rstep="2" hidden><p class="text-muted mb-2">${esc(t('rs.lots_help'))}</p><table class="table table-sm align-middle mb-2"><thead><tr><th>${esc(t('col.material'))}</th><th>${esc(t('rs.lot'))}</th><th>${esc(t('rs.best_before'))}</th></tr></thead>
+                <tbody>${o.lines.map(l => `<tr data-lotline="${l.id}"><td>${esc(l.name)}</td><td><input class="form-control form-control-sm" data-rlot maxlength="64" autocapitalize="characters"></td>
+                    <td><input class="form-control form-control-sm" type="date" data-rbb min="${todayIso}"></td></tr>`).join('')}</tbody></table></section>
+                <section data-rstep="3" hidden><p class="text-muted mb-2">${esc(t('rs.problem_help'))}</p>
+                    ${o.lines.map(l => `<div class="tfb-supply-problem" data-pline="${l.id}"><label class="form-check"><input class="form-check-input" type="checkbox" data-pon> <span class="form-check-label">${esc(l.name)}</span></label>
+                        <div class="row g-2 mb-2" data-pfields hidden><div class="col-12 col-md-6"><input class="form-control form-control-sm" data-pdesc maxlength="5000" placeholder="${esc(t('rs.problem_desc'))}"></div>
+                        <div class="col-6 col-md-3"><select class="form-select form-select-sm" data-psev><option value="minor">${esc(t('rs.sev.minor'))}</option><option value="major">${esc(t('rs.sev.major'))}</option><option value="critical">${esc(t('rs.sev.critical'))}</option></select></div>
+                        <div class="col-6 col-md-3"><div class="input-group input-group-sm"><input class="form-control text-end" inputmode="decimal" data-pqty placeholder="${esc(t('rs.problem_qty'))}"><span class="input-group-text">${esc(l.unit)}</span></div></div></div></div>`).join('')}</section>
+                <section data-rstep="4" hidden><div data-rsummary></div></section>
+                <div class="d-flex flex-wrap gap-2 mt-2 align-items-center">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-rback hidden>‹ ${esc(t('rs.back'))}</button>
+                    <button type="button" class="btn btn-sm btn-link" data-act="close-receipt">${esc(t('act.close'))}</button>
+                    <button type="button" class="btn btn-sm btn-primary ms-auto" data-rnext>${esc(t('rs.next'))} ›</button>
+                    <button type="button" class="btn btn-sm btn-success ms-auto" data-act="save-receipt" hidden>${esc(t('act.save_receipt'))}</button></div></div></div>` : '';
         const receipts = o.receipts.length ? `<div class="small text-muted mt-2">${esc(t('receipts'))} : ${o.receipts.map(r => {
             const l = o.lines.find(x => x.id === r.line_id);
-            return `${esc(day(r.received_on))} ${esc(l ? l.name : '')} ${esc(l ? q(l, r.quantity) : '')}${r.unit_price !== null && l ? ' @ ' + esc(unitPrice(l, r.unit_price)) : ''}`;
+            return `${esc(day(r.received_on))} ${esc(l ? l.name : '')} ${esc(l ? q(l, r.quantity) : '')}${r.unit_price !== null && l ? ' @ ' + esc(unitPrice(l, r.unit_price)) : ''}${r.lot_number ? ' · ' + esc(t('rs.lot')) + ' ' + esc(r.lot_number) + (r.best_before ? ' (' + esc(day(r.best_before)) + ')' : '') : ''}${r.nc_id ? ' · <a href="' + esc(api.root) + '/purchasing/nc">NC</a>' : ''}`;
         }).join(' · ')}</div>` : '';
         return `<p><a href="#tab=orders" data-back>‹ ${esc(t('back_orders'))}</a></p>
             <div class="card"><div class="card-header d-flex flex-wrap align-items-center gap-2"><h5 class="mb-0">${esc(o.code)} · ${esc(o.supplier.name)}</h5>${badge(o.status)}
@@ -398,6 +421,58 @@
                 if (btn) btn.disabled = false;
             }
         };
+        // Asystent przyjęcia : dane z kroków (ilości, ceny, partie, problemy) ; null = błąd pokazany.
+        const receiptBody = () => {
+            const box = el.querySelector('[data-receive]');
+            if (!box) return null;
+            const lines = [];
+            for (const tr of box.querySelectorAll('tr[data-rline]')) {
+                const l = o.lines.find(x => x.id === Number(tr.dataset.rline));
+                const v = ui.num(tr.querySelector('[data-rqty]').value);
+                const p = ui.num(tr.querySelector('[data-rprice]').value);
+                if (v === null || v === 0) continue;
+                if (typeof v !== 'number' || v < 0 || (p !== null && (typeof p !== 'number' || p <= 0))) { ui.notify(false, t('qty_invalid', {list: l.name})); return null; }
+                const lt = box.querySelector(`tr[data-lotline="${l.id}"]`);
+                lines.push({id: l.id, quantity: Math.round(v * l.factor * 1000) / 1000, unit_price: p === null ? null : p / l.factor,
+                    lot_number: lt.querySelector('[data-rlot]').value.trim().replace(/\s+/g, ' ').toUpperCase() || null, best_before: lt.querySelector('[data-rbb]').value || null});
+            }
+            if (!lines.length) { ui.notify(false, t('nothing_received')); return null; }
+            const problems = [];
+            for (const pb of box.querySelectorAll('[data-pline]')) {
+                if (!pb.querySelector('[data-pon]').checked) continue;
+                const l = o.lines.find(x => x.id === Number(pb.dataset.pline));
+                const desc = pb.querySelector('[data-pdesc]').value.trim();
+                if (!desc) { ui.notify(false, t('rs.problem_missing', {name: l.name})); return null; }
+                const pq = ui.num(pb.querySelector('[data-pqty]').value);
+                problems.push({line_id: l.id, description: desc, severity: pb.querySelector('[data-psev]').value, quantity: typeof pq === 'number' && pq > 0 ? Math.round(pq * l.factor * 1000) / 1000 : null});
+            }
+            return {received_on: box.querySelector('[data-received-on]').value || todayIso, lines, problems};
+        };
+        const bindReceive = () => {
+            const box = el.querySelector('[data-receive]');
+            if (!box) return;
+            let step = 0;
+            const last = 4;
+            const show = (k) => {
+                step = Math.max(0, Math.min(last, k));
+                box.querySelectorAll('[data-rstep]').forEach(sct => { sct.hidden = Number(sct.dataset.rstep) !== step; });
+                box.querySelectorAll('[data-rtab]').forEach(tb => { const n = Number(tb.dataset.rtab); tb.classList.toggle('is-active', n === step); tb.classList.toggle('is-done', n < step); });
+                box.querySelector('[data-rback]').hidden = step === 0;
+                box.querySelector('[data-rnext]').hidden = step === last;
+                box.querySelector('[data-act="save-receipt"]').hidden = step !== last;
+                if (step === last) {
+                    const body = receiptBody();
+                    if (!body) { show(1); return; }
+                    box.querySelector('[data-rsummary]').innerHTML = `<p class="mb-1">${esc(t('rs.summary', {date: day(body.received_on), n: body.lines.length}))}</p>
+                        <ul class="small mb-1">${body.lines.map(x => { const l = o.lines.find(y => y.id === x.id); return `<li>${esc(l.name)} : ${esc(q(l, x.quantity))}${x.lot_number ? ' · ' + esc(t('rs.lot')) + ' ' + esc(x.lot_number) : ' · <span class="text-warning">' + esc(t('rs.no_lot')) + '</span>'}${x.best_before ? ' (' + esc(day(x.best_before)) + ')' : ''}</li>`; }).join('')}</ul>
+                        ${body.problems.length ? `<p class="text-danger mb-0">${esc(t('rs.summary_nc', {n: body.problems.length}))}</p>` : ''}`;
+                }
+            };
+            box.querySelector('[data-rnext]').addEventListener('click', () => show(step + 1));
+            box.querySelector('[data-rback]').addEventListener('click', () => show(step - 1));
+            box.querySelectorAll('[data-pon]').forEach(c => c.addEventListener('change', () => { c.closest('[data-pline]').querySelector('[data-pfields]').hidden = !c.checked; }));
+        };
+        bindReceive();
         const head = el.querySelector('[data-head]');
         head?.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -442,18 +517,10 @@
             if (act === 'receive') { receiving = true; draw(); el.querySelector('.tfb-supply-receive')?.scrollIntoView({block: 'center'}); return; }
             if (act === 'close-receipt') { receiving = false; draw(); return; }
             if (act === 'save-receipt') {
-                const lines = [];
-                for (const tr of el.querySelectorAll('tr[data-rline]')) {
-                    const l = o.lines.find(x => x.id === Number(tr.dataset.rline));
-                    const v = ui.num(tr.querySelector('[data-rqty]').value);
-                    const p = ui.num(tr.querySelector('[data-rprice]').value);
-                    if (v === null || v === 0) continue;
-                    if (typeof v !== 'number' || v < 0 || (p !== null && (typeof p !== 'number' || p <= 0))) { ui.notify(false, t('qty_invalid', {list: l.name})); return; }
-                    lines.push({id: l.id, quantity: Math.round(v * l.factor * 1000) / 1000, unit_price: p === null ? null : p / l.factor});
-                }
-                if (!lines.length) { ui.notify(false, t('nothing_received')); return; }
-                receiving = false;
-                return run(b, () => api.post(`/supply/orders/${o.id}/receive`, {received_on: el.querySelector('[data-received-on]').value || todayIso, lines}), t('received_ok'));
+                const body = receiptBody();
+                if (!body) return;
+                // Asystent zamyka się dopiero po zapisie : przy błędzie wpisane ilości, partie i problemy zostają.
+                return run(b, async () => { const res = await api.post(`/supply/orders/${o.id}/receive`, body); receiving = false; return res; }, body.problems.length ? t('rs.received_nc', {n: body.problems.length}) : t('received_ok'));
             }
         }));
     }

@@ -72,6 +72,7 @@
             <div class="tfb-dlv-meta">${code}${withDate && o.planned_date ? ` · ${esc(t('planned', {date: dm(o.planned_date)}))}` : ''}${o.state === 'received' && o.received_on ? ` · ${esc(t('received_on', {date: dm(o.received_on)}))}` : ''}
                 ${o.supplier.phone ? ` · <a href="tel:${esc(o.supplier.phone.replace(/\s+/g, ''))}">${esc(o.supplier.phone)}</a>` : ''}</div>
             <ul class="tfb-dlv-lines">${shown.map(line).join('')}</ul>
+            ${data.can_order && o.state !== 'received' ? `<a class="btn btn-sm btn-outline-primary mt-1" href="${esc(api.root)}/workshop/supply#tab=orders&order=${o.order_id}&receive=1"><i class="bi bi-box-arrow-in-down"></i> ${esc(t('receive'))}</a>` : ''}
             ${more > 0 ? `<details class="tfb-dlv-more"><summary>${esc(t('more_lines', {n: more}))}</summary><ul class="tfb-dlv-lines">${o.lines.slice(MAX_LINES).map(line).join('')}</ul></details>` : ''}
         </article>`;
     }
