@@ -521,8 +521,10 @@ perf_diag() {
   ls "$ini"/conf.d/ 2>/dev/null | grep -q opcache && ocmod="chargé"
   log "PHP ${APV:-?} (Apache) : module OPcache ${ocmod} ; réglages : ${oc:-valeurs par défaut}."
   log "Swap : $(free -m 2>/dev/null | awk '/^Swap:/ {print $3 " / " $2 " Mo utilisés"}')."
+  # Mémoire par programme (somme des processus, Mo) : qui occupe la RAM d'un serveur à 1 Go.
+  log "Mémoire par programme : $(ps -eo rss=,comm= 2>/dev/null | awk '{m[$2] += $1} END {for (c in m) printf "%d %s\n", m[c] / 1024, c}' | sort -rn | head -6 | awk '{printf "%s %s Mo ; ", $2, $1}')"
   local my
-  my="$("${ADMIN[@]}" -N -e "SELECT CONCAT('MySQL ', @@version, ' : buffer pool ', ROUND(@@innodb_buffer_pool_size/1048576), ' Mo, tmp_table ', ROUND(@@tmp_table_size/1048576), ' Mo, flush_log_at_trx_commit ', @@innodb_flush_log_at_trx_commit, ', base ${ERP_DB_NAME} ', (SELECT ROUND(SUM(data_length + index_length)/1048576) FROM information_schema.tables WHERE table_schema = '${ERP_DB_NAME}'), ' Mo, toutes les bases ', (SELECT ROUND(SUM(data_length + index_length)/1048576) FROM information_schema.tables), ' Mo')" 2>/dev/null || true)"
+  my="$("${ADMIN[@]}" -N -e "SELECT CONCAT('MySQL ', @@version, ' : buffer pool ', ROUND(@@innodb_buffer_pool_size/1048576), ' Mo, tmp_table ', ROUND(@@tmp_table_size/1048576), ' Mo, flush_log_at_trx_commit ', @@innodb_flush_log_at_trx_commit, ', performance_schema ', @@performance_schema, ', max_connections ', @@max_connections, ', base ${ERP_DB_NAME} ', (SELECT ROUND(SUM(data_length + index_length)/1048576) FROM information_schema.tables WHERE table_schema = '${ERP_DB_NAME}'), ' Mo, toutes les bases ', (SELECT ROUND(SUM(data_length + index_length)/1048576) FROM information_schema.tables), ' Mo')" 2>/dev/null || true)"
   [[ -n "$my" ]] && log "$my"
   # Temps SQL pur (sans PHP) de trois agrégats lourds : ventes WDT 18 mois par mois et produit, stock par état,
   # registre des mouvements — pour séparer le coût de la base de celui du calcul PHP.
