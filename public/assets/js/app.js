@@ -1081,7 +1081,7 @@ class App {
       ficheFranchise: ['Fiche & scoring', 'Par franchisé : le scoring du trimestre en tête, puis ce que les données disent chaque jour et ce que le consultant constate sur place. Le réseau : le classement et le benchmark dans une seule table.'],
       controlesQualite: ['Contrôles qualité du mois', ''],
       inventaires: ['Entre deux inventaires', 'Par magasin, entre deux inventaires : ce qui est sorti du stock (compté au début + livré − compté à la fin) face à ce que la caisse et la poubelle expliquent, ramené aux matières par les recettes. La justesse des ventes en %, matière par matière, jour par jour et inventaire par inventaire.'],
-      suiviTableau: ['Suivi des franchisés · tableau de bord', 'Sur l’ordinateur, ce qui se fait avant et après la visite : préparer le dossier et l’ordre du jour, relire le brouillon de la tablette, envoyer le rapport au franchisé, valider ses photos de correction. Les visites passent de colonne en colonne, du dossier au rapport lu.'],
+      suiviTableau: ['Suivi des franchisés · visites', ''],
       suiviTablette: ['Visite sur tablette', 'L’application du consultant en visite (controle/), la même hors ligne : photo du jour, dossier du bureau, checklist du type, contrôles photo, points à travailler, météo du franchisé, signature. À la fin, le brouillon part au bureau.'],
       suiviMsp: ['Client mystère', 'Les passages du client mystère, magasin par magasin : la note, les rubriques sur 20, le passage précédent et ce qui a suivi. Un seul encodage par passage, rangé dans son trimestre : il nourrit le feu, le scoring, la visite suivante et la page du franchisé.'],
       suiviFranchise: ['Page du franchisé', 'La page que le franchisé ouvre avec son lien, sans mot de passe : ses points à travailler et l’envoi de sa photo de correction, ses chiffres de chaque jour, ses rapports de visite, sa prochaine visite annoncée, le journal. L’aperçu ne marque rien comme lu.'],
@@ -1466,7 +1466,7 @@ class App {
         // de bord du bureau (préparer, adapter et envoyer les rapports, valider les corrections), l'application
         // en visite (controle/), le client mystère, la page que voit le franchisé, et qui fait quoi.
         { sub: 'Suivi des franchisés', children: [
-          ['suiviTableau', 'Tableau de bord', (S.svT && S.svT.d && S.svT.d.kpis) ? (S.svT.d.kpis.aAdapter || 0) + (S.svT.d.kpis.corrections || 0) : 0],
+          ['suiviTableau', 'Visites', (S.svT && S.svT.d && S.svT.d.kpis) ? (S.svT.d.kpis.aAdapter || 0) + (S.svT.d.kpis.corrections || 0) : 0],
           ['suiviTablette', 'Visite sur tablette', 0],
           ['suiviMsp', 'Client mystère', 0],
           ['suiviFranchise', 'Page du franchisé', 0],

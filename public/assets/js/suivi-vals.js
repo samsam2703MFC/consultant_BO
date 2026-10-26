@@ -24,6 +24,7 @@ const nf = (n, dd) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { mi
 const pl = (n, u, p) => nf(n) + ' ' + u + (n > 1 ? (p || 's') : '');
 const duree = h => h == null ? '' : (Math.abs(h) < 1 ? Math.round(Math.abs(h) * 60) + ' min' : nf(Math.abs(h), Math.abs(h) < 10 ? 1 : 0) + ' h');
 const racine = () => API_BASE.replace(/api\/cockpit\/?$/, '');
+const fin = t => /\.$/.test(String(t)) ? String(t) : t + '.';
 
 /* --- lectures et messages ------------------------------------------------------------ */
 function charge(app, cle, path, force){
@@ -39,110 +40,243 @@ function lu(app, cle, path){ const b = app.state[cle]; return b && b.path === pa
 function message(app, txt, ko){ app.setState({ svMsg: { txt, ko: !!ko } }); setTimeout(() => { if (app.state.svMsg && app.state.svMsg.txt === txt) { app.setState({ svMsg: null }); } }, 8000); }
 function relireTableau(app){ const t = app.state.svT; if (t && t.path) { charge(app, 'svT', t.path, true); } }
 
-/* --- 1. Tableau de bord ---------------------------------------------------------------- */
+/* --- 1. Visites : l'assistant (26/10/2026, maquette C choisie par Sam) ------------------------------
+ * Une seule page, sans tableau de bord : on arrive sur « Créer une visite ». À gauche, les étapes en accordéon —
+ * avant la visite (1 le magasin, 2 la visite, 3 le dossier, 4 l'envoi), pendant (la tablette), après (5 le rapport,
+ * 6 les corrections) ; celles qui sont faites se replient sur une ligne, l'étape en cours s'ouvre. À droite, la fiche
+ * de la visite se remplit à chaque choix : qui reçoit quoi, l'ordre du jour tel qu'il partira, la suite. Chaque visite
+ * qui attend quelque chose du bureau garde son onglet (dossier à finir, sur la tablette, rapport à adapter,
+ * corrections). Mêmes routes qu'avant : /suivi/tableau, POST /visites, PUT /visites/{id}, /suivi/preparation,
+ * /suivi/rapport, PUT /plans/{id}. */
+const ETAPES = [['magasin', 'Le magasin', 'avant'], ['visite', 'La visite', 'avant'], ['dossier', 'Le dossier', 'avant'], ['envoi', 'L’envoi', 'avant'],
+  ['tablette', 'La visite sur place', 'pendant'], ['rapport', 'Le rapport', 'apres'], ['corrections', 'Les corrections', 'apres']];
+const NUMERO = { magasin: 1, visite: 2, dossier: 3, envoi: 4, tablette: null, rapport: 5, corrections: 6 };
+const typeSous = t => t ? t.duree + ' min · ' + (t.dynamique === 'plans' ? 'checklist : les plans ouverts' : t.dynamique === 'ko' ? 'checklist : les non-conformes de la dernière visite' : 'checklist de ' + pl(t.points, 'point')) : '';
+
 export function valsSvTableau(app, common){
   const S = app.state;
-  const onglet = S.svOnglet || 'ensemble';
-  const cons = S.svCons || ''; const sem = S.svSem || 0;
-  const path = '/suivi/tableau?consultant=' + encodeURIComponent(cons) + '&semaine=' + sem;
+  const path = '/suivi/tableau?consultant=&semaine=0';
   charge(app, 'svT', path, false);
   const d = lu(app, 'svT', path);
-  const sv = { onglet, msg: S.svMsg || null, chargement: !d, indispo: d && d.error ? 'Le tableau de bord ne répond pas : ' + d.error : null };
-  const K = d && !d.error ? d.kpis : null;
-  sv.onglets = [['ensemble', 'Vue d’ensemble'], ['preparer', 'Préparer'], ['adapter', 'Adapter et envoyer'], ['points', 'Points et corrections']]
-    .map(([v, nom]) => ({ nom, on: onglet === v, badge: K ? ({ preparer: K.aPreparer, adapter: K.aAdapter, points: K.corrections }[v] || 0) : 0, choisir: () => app.setState({ svOnglet: v }) }));
-  sv.consultants = [{ v: '', nom: 'Tous les consultants', on: !cons }].concat(((d && d.consultants) || []).map(c => ({ v: c.id, nom: c.nom, on: c.id === cons })));
-  sv.setCons = e => app.setState({ svCons: e.target.value });
-  sv.semPrec = () => app.setState({ svSem: sem - 1 }); sv.semSuiv = () => app.setState({ svSem: sem + 1 });
-  sv.semLib = d && d.semaine ? 'semaine du ' + fmtD(d.semaine.du) + ' au ' + fmtD(d.semaine.au) : 'semaine';
-  sv.relire = () => { charge(app, 'svT', path, true); if (S.svPrep && S.svPrep.path) { charge(app, 'svPrep', S.svPrep.path, true); } if (S.svRap && S.svRap.path) { charge(app, 'svRap', S.svRap.path, true); } };
-  sv.planifier = () => app.setState({ svPlanif: { shop: '', type: 'reguliere', consultant: cons, date: plusJours(auj(), 1), heure: '09:00', duree: '', annoncee: null } });
-  sv.lu = d && d.lu ? 'relu à ' + d.lu.slice(11, 16) : '';
-  if (!K) { common.sv = sv; return; }
-  const D = d.delais;
-  sv.kpis = [
-    ['Visites cette semaine', nf(K.visitesSemaine), K.aPreparer + ' à préparer · ' + K.surTablette + ' sur la tablette'],
-    ['Rapports à adapter', nf(K.aAdapter), K.urgent ? K.urgentTxt : 'à envoyer sous ' + D.rapportHeures + ' h après la visite', K.urgent ? 'ko' : (K.aAdapter ? 'att' : '')],
-    ['Rapports envoyés · ' + MOIS[new Date().getMonth()], nf(K.envoyesMois), K.envoyesMois ? K.lusMois + ' lu' + (K.lusMois > 1 ? 's' : '') + ' par le franchisé' : 'aucun ce mois-ci'],
-    ['Points ouverts chez les franchisés', nf(K.points), K.p0 + ' P0 · ' + K.retard + ' en retard', K.p0 || K.retard ? 'att' : ''],
-    ['Corrections à valider', nf(K.corrections), 'photos envoyées par les franchisés', K.corrections ? 'att' : '']
-  ];
-  const carte = (c, et) => {
-    let ech = '', cls = '';
-    if (et === 'preparer') { ech = (c.prepRetard ? 'dossier attendu le ' + fmtDJ(c.prepDu) + ', en retard' : 'dossier attendu le ' + fmtDJ(c.prepDu)); cls = c.prepRetard ? 'ko' : 'att'; }
-    if (et === 'tablette') { ech = c.nonFaite ? 'date passée, pas encore faite' : c.statut === 'en_cours' ? 'visite en cours' : (c.prepEnvoyeeLe ? 'dossier envoyé le ' + fmtDJ(c.prepEnvoyeeLe) : 'sans dossier du bureau'); cls = c.nonFaite ? 'ko' : 'ok'; }
-    if (et === 'adapter') { const dl = c.delai; ech = dl ? (dl.depasse ? 'délai dépassé de ' + duree(dl.resteH) : 'à envoyer avant ' + fmtDH(dl.limite)) : ''; cls = dl && (dl.depasse || dl.resteH < 12) ? 'ko' : 'att'; }
-    if (et === 'envoye') { ech = c.luLe ? 'lu le ' + fmtDJ(c.luLe) : (c.relanceLe ? 'pas encore lu · relancé le ' + fmtDJ(c.relanceLe) : 'pas encore lu'); cls = c.luLe ? 'ok' : 'ko'; }
-    const sous = et === 'preparer' ? (c.dossier.points ? pl(c.dossier.points, 'point') + ' du bureau' : 'dossier assemblé tout seul')
-      : et === 'adapter' ? 'brouillon du ' + fmtDH(c.termineLe) + ' · ' + (c.proposes ? pl(c.proposes, 'point') + ' proposé' + (c.proposes > 1 ? 's' : '') : 'aucun point proposé')
-      : et === 'envoye' ? 'envoyé le ' + fmtDJ(c.envoyeLe) + ' · ' + (c.ouverts ? pl(c.ouverts, 'point') + ' ouvert' + (c.ouverts > 1 ? 's' : '') : 'aucun point ouvert') : (c.odjEnvoyeLe ? 'ordre du jour envoyé le ' + fmtDJ(c.odjEnvoyeLe) : (c.annoncee ? 'ordre du jour pas encore parti' : 'inopinée : personne n’est prévenu'));
-    return { id: c.id, court: c.court, feu: c.feu, l1: c.typeNom + ' · ' + fmtDJ(c.le) + ' · ' + c.h, l2: (c.consultantNom || 'consultant à choisir') + ' · ' + sous, ech, cls, inopinee: !c.annoncee,
-      on: (et === 'preparer' || et === 'tablette') ? String(S.svPrepId) === String(c.id) : String(S.svRapId) === String(c.id),
-      ouvrir: et === 'preparer' ? () => app.setState({ svOnglet: 'preparer', svPrepId: c.id, svPrepF: null })
-        : et === 'tablette' ? (c.statut === 'en_cours' || c.nonFaite ? () => app.setState({ screen: 'suiviTablette', svTabCons: c.consultant }) : () => app.setState({ svOnglet: 'preparer', svPrepId: c.id, svPrepF: null }))
-        : () => app.setState({ svOnglet: 'adapter', svRapId: c.id, svRapF: null }) };
-  };
-  sv.colonnes = [['preparer', 'À préparer', 'ordinateur'], ['tablette', 'Sur la tablette', 'en visite'], ['adapter', 'Rapport à adapter', 'ordinateur'], ['envoye', 'Envoyé', '30 derniers jours']]
-    .map(([k, nom, ou]) => ({ nom, ou, n: d.cartes[k].length, cartes: d.cartes[k].map(c => carte(c, k)) }));
-  sv.franchises = d.franchises.map(f => ({ court: f.court, feu: f.feu, sous: (f.responsable || 'sans consultant responsable') + (f.due ? ' · ' + f.due : ''),
-    derniere: f.derniere ? fmtD(f.derniere.le) + ' · ' + f.derniere.typeNom.toLowerCase() : '—', derniereSous: f.derniere ? f.derniere.checklist.ok + ' / ' + f.derniere.checklist.total + ' conformes' : 'jamais visitée',
-    rapport: f.rapport ? (f.rapport.statut === 'brouillon' ? 'à adapter' : (f.rapport.luLe ? 'lu' : 'pas lu')) : '—', rapportCls: f.rapport ? (f.rapport.statut === 'brouillon' ? 'att' : (f.rapport.luLe ? 'ok' : 'ko')) : '',
-    rapportSous: f.rapport ? (f.rapport.statut === 'envoye' ? 'envoyé le ' + fmtD(f.rapport.envoyeLe) : 'visite du ' + fmtD(f.rapport.le)) : '',
-    points: String(f.points.n) + (f.points.p0 ? ' · ' + f.points.p0 + ' P0' : ''), pointsCls: f.points.p0 || f.points.retard ? 'ko' : '',
-    pointsSous: [f.points.attente ? pl(f.points.attente, 'photo') + ' à valider' : '', f.points.retard ? f.points.retard + ' en retard' : '', f.points.escalade ? 'escaladé' : ''].filter(Boolean).join(' · '),
-    prochaine: f.prochaine ? fmtDJ(f.prochaine.le) + ' · ' + f.prochaine.h : 'rien de planifié', prochaineSous: f.prochaine ? f.prochaine.consultant + (f.prochaine.annoncee === false ? ' · inopinée' : '') : '',
-    cadre: f.cadre.attendu ? f.cadre.faites + ' / ' + f.cadre.attendu : '—', cadreSous: f.cadre.planifiees ? f.cadre.planifiees + ' planifiée' + (f.cadre.planifiees > 1 ? 's' : '') : '',
-    scoring: f.scoring && f.scoring.total != null ? nf(f.scoring.total, 1) + ' / ' + f.scoring.sur : '—',
-    ouvrir: () => app.setState({ screen: 'ficheFranchise', ffShop: f.id, ffShopChoisi: true, ffOnglet: 'sante' }) }));
-  if (onglet === 'preparer') {
-    const liste = d.cartes.preparer.concat(d.cartes.tablette.filter(c => c.statut !== 'en_cours' && !c.nonFaite));
-    const id = S.svPrepId && liste.some(c => String(c.id) === String(S.svPrepId)) ? S.svPrepId : (liste[0] || {}).id;
-    sv.prepListe = liste.map(c => Object.assign(carte(c, c.prepEnvoyeeLe ? 'tablette' : 'preparer'), { on: String(c.id) === String(id), ouvrir: () => app.setState({ svPrepId: c.id, svPrepF: null }) }));
-    if (id) { prepVals(app, sv, id); }
-  }
-  if (onglet === 'adapter') {
-    const liste = d.cartes.adapter.concat(d.cartes.envoye);
-    const id = S.svRapId && liste.some(c => String(c.id) === String(S.svRapId)) ? S.svRapId : (d.cartes.adapter[0] || d.cartes.envoye[0] || {}).id;
-    sv.rapListe = liste.map(c => Object.assign(carte(c, c.envoyeLe ? 'envoye' : 'adapter'), { on: String(c.id) === String(id), ouvrir: () => app.setState({ svRapId: c.id, svRapF: null }) }));
-    if (id) { rapVals(app, sv, id); }
-  }
-  if (onglet === 'points') { pointsVals(app, sv, d); }
+  const sv = { msg: S.svMsg || null, chargement: !d, indispo: d && d.error ? 'Les visites ne se lisent pas : ' + d.error : null };
   sv.apercu = S.svApercu || null; sv.fermerApercu = () => app.setState({ svApercu: null });
-  if (S.svPlanif) { planifVals(app, sv, d); }
   common.sv = sv;
+  if (!d || d.error) { return; }
+  const shops = d.franchises || []; const types = (d.types || []).filter(t => t.actif !== false);
+  const shopDe = id => shops.find(f => String(f.id) === String(id)) || null;
+  const consNom = id => ((d.consultants || []).find(c => c.id === id) || {}).nom || '';
+  // Les visites qui attendent le bureau : chacune son onglet, la plus pressée d'abord.
+  const corrPar = {}; (d.corrections || []).forEach(p => { (corrPar[p.shop] = corrPar[p.shop] || []).push(p); });
+  const attente = [];
+  d.cartes.adapter.forEach(c => attente.push({ id: c.id, court: c.court, quoi: 'rapport à adapter', echeance: c.delai ? (c.delai.depasse ? 'délai dépassé' : 'avant ' + fmtDH(c.delai.limite)) : '', urgent: !!(c.delai && (c.delai.depasse || c.delai.resteH < 12)), pt: 'att', pas: 'rapport' }));
+  Object.keys(corrPar).forEach(shop => { const l = corrPar[shop]; const vid = l.find(p => p.visite_id) ? l.find(p => p.visite_id).visite_id : null;
+    if (vid) { attente.push({ id: vid, court: l[0].court, quoi: pl(l.length, 'correction'), echeance: '', urgent: l.some(p => p.horsDelai), pt: 'info', pas: 'corrections' }); } });
+  d.cartes.preparer.forEach(c => attente.push({ id: c.id, court: c.court, quoi: c.prepRetard ? 'dossier en retard' : 'dossier à finir', echeance: 'visite ' + fmtDJ(c.le) + ' ' + c.h, urgent: !!c.prepRetard, pt: c.prepRetard ? 'ko' : '', pas: 'dossier' }));
+  d.cartes.tablette.filter(c => c.nonFaite || c.statut === 'en_cours').forEach(c => attente.push({ id: c.id, court: c.court, quoi: c.statut === 'en_cours' ? 'en visite' : 'pas encore faite', echeance: fmtDJ(c.le), urgent: !!c.nonFaite, pt: c.nonFaite ? 'ko' : 'ok', pas: 'tablette' }));
+  const vus = {}; const tabs = attente.filter(a => { const k = String(a.id); if (vus[k]) { return false; } vus[k] = true; return true; });
+  const sel = S.svSel && (S.svSel.kind === 'nouvelle' || tabs.some(t => String(t.id) === String(S.svSel.id)) || S.svSel.garde) ? S.svSel : { kind: 'nouvelle' };
+  const N = S.svNouv || {};
+  // Une visite ouverte reste ouverte, même quand elle change d'étape et quitte la liste de ce qui attend.
+  const ouvrir = (s, pas) => app.setState({ svSel: s.kind === 'visite' ? Object.assign({ garde: true }, s) : s, svPas: pas || null, svPrepF: null, svRapF: null, svVisF: null, svRep: null });
+  sv.onglets = [];
+  if (sel.kind === 'nouvelle' || N.shop) {
+    const nf2 = shopDe(N.shop);
+    sv.onglets.push({ nom: 'Nouvelle visite', court: nf2 ? nf2.court : '', quoi: 'étape ' + (N.shop ? 2 : 1) + ' / 6', on: sel.kind === 'nouvelle', pt: 'rouge', ouvrir: () => ouvrir({ kind: 'nouvelle' }) });
+  }
+  const MAX = 5;
+  if (sel.kind === 'visite' && !tabs.slice(0, MAX).some(t => String(t.id) === String(sel.id))) {
+    const ET = { preparer: 'dossier à finir', tablette: 'sur la tablette', adapter: 'rapport à adapter', envoye: 'rapport envoyé' };
+    let c = null, et = '';
+    Object.keys(d.cartes).forEach(k => { const x = d.cartes[k].find(y => String(y.id) === String(sel.id)); if (x && !c) { c = x; et = k; } });
+    sv.onglets.push({ court: c ? c.court : 'Visite', quoi: c ? ET[et] : '', on: true, pt: '', ouvrir: () => {} });
+  }
+  tabs.slice(0, MAX).forEach(t => sv.onglets.push({ nom: '', court: t.court, quoi: t.quoi, echeance: t.echeance, urgent: t.urgent, pt: t.pt, on: sel.kind === 'visite' && String(sel.id) === String(t.id), ouvrir: () => ouvrir({ kind: 'visite', id: t.id }, t.pas) }));
+  sv.autres = tabs.length > MAX ? [{ v: '', nom: '+ ' + (tabs.length - MAX) + ' autre' + (tabs.length - MAX > 1 ? 's' : ''), on: true }].concat(tabs.slice(MAX).map(t => ({ v: String(t.id), nom: t.court + ' · ' + t.quoi, on: false }))) : null;
+  sv.setAutre = e => { const t = tabs.find(x => String(x.id) === e.target.value); if (t) { ouvrir({ kind: 'visite', id: t.id, garde: true }, t.pas); } };
+  sv.creer = { on: sel.kind === 'nouvelle' && !N.shop, ouvrir: () => app.setState({ svSel: { kind: 'nouvelle' }, svNouv: null, svPas: null }) };
+  sv.relire = () => { charge(app, 'svT', path, true); if (S.svPrep && S.svPrep.path) { charge(app, 'svPrep', S.svPrep.path, true); } if (S.svRap && S.svRap.path) { charge(app, 'svRap', S.svRap.path, true); } };
+  sv.lu = d.lu ? 'relu à ' + d.lu.slice(11, 16) : '';
+  if (sel.kind === 'nouvelle') { nouvelleVals(app, sv, d, { shopDe, types, consNom }); }
+  else { visiteVals(app, sv, d, sel.id, { shopDe, types, consNom, corrPar }); }
 }
 
-/* Planifier une visite (Gestion consultant est retiré de la console depuis le 18/10/2026) : le type charge sa
- * checklist, ses tâches et sa durée ; annoncée ou inopinée suit le type, modifiable. POST /visites. */
-function planifVals(app, sv, d){
-  const S = app.state; const F = S.svPlanif;
-  const maj = patch => app.setState({ svPlanif: Object.assign({}, F, patch) });
-  const mags = app.open().map(m => ({ id: String(m.id), court: String(m.nom).split(' - ').pop() }));
-  const types = (d.types || []).filter(t => t.actif !== false);
-  const t = types.find(x => x.code === F.type) || types[0] || null;
-  const annoncee = F.annoncee != null ? F.annoncee : (t ? t.annoncee !== false : true);
-  const consNom = ((d.consultants || []).find(c => c.id === F.consultant) || {}).nom || '';
-  sv.planif = {
-    magasins: [{ v: '', nom: 'Choisir le magasin', on: !F.shop }].concat(mags.map(m => ({ v: m.id, nom: m.court, on: m.id === F.shop }))), setShop: e => maj({ shop: e.target.value }),
-    types: types.map(x => ({ v: x.code, nom: x.nom + (x.annoncee === false ? ' · inopinée' : ''), on: t && x.code === t.code })), setType: e => maj({ type: e.target.value, annoncee: null, duree: '' }),
-    typeInfo: t ? t.duree + ' min · ' + (t.dynamique === 'plans' ? 'checklist : les plans ouverts' : t.dynamique === 'ko' ? 'checklist : les non-conformes de la dernière visite' : pl(t.points, 'point')) : '',
-    consultants: [{ v: '', nom: 'Choisir le consultant', on: !F.consultant }].concat((d.consultants || []).map(c => ({ v: c.id, nom: c.nom, on: c.id === F.consultant }))), setCons: e => maj({ consultant: e.target.value }),
-    date: F.date, setDate: e => maj({ date: e.target.value }), heure: F.heure, setHeure: e => maj({ heure: e.target.value }),
-    duree: F.duree || (t ? t.duree : 90), setDuree: e => maj({ duree: e.target.value }),
-    annoncee, annoncer: () => maj({ annoncee: true }), inopiner: () => maj({ annoncee: false }),
-    busy: !!S.svBusy, fermer: () => app.setState({ svPlanif: null }),
-    envoyer: () => {
-      if (!F.shop || !F.consultant || !F.date) { message(app, 'Choisissez le magasin, le consultant et la date.', true); return; }
-      app.setState({ svBusy: true });
-      app.api('POST', '/visites', { client_id: 'sv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), shop: F.shop, consultant: F.consultant, consultant_nom: consNom,
-        type: t ? t.code : 'reguliere', prevu_le: F.date, debut_h: F.heure || '09:00', duree_min: Number(F.duree || (t ? t.duree : 90)), motif: 'reguliere', annoncee, qui: 'Cockpit' }).then(r => {
-        const ok = r && r.ok !== false && !r.error; const su = (r && r.suite) || {};
-        app.setState({ svBusy: false, svPlanif: ok ? null : app.state.svPlanif });
-        message(app, ok ? 'Visite planifiée le ' + fmtDJ(F.date) + ' à ' + (F.heure || '09:00') + ' (' + (annoncee ? 'annoncée' : 'inopinée') + ')' + (su.taches ? ' · ' + pl(su.taches, 'tâche') + ' du type dans la liste du consultant' : '')
-          + (su.invitation && su.invitation.envoye ? ' · invitation envoyée à ' + su.invitation.a : '') + '.' : 'Refusé : ' + ((r && r.error) || 'sans réponse'), !ok);
-        relireTableau(app);
-      });
-    } };
+/* La pile d'étapes : l'état de chacune (fait, en cours, à venir), sa ligne repliée, l'étape ouverte. */
+function etapesDe(app, faits, lignes, defaut, ouvrables){
+  const S = app.state;
+  const ouverte = S.svPas && ouvrables.includes(S.svPas) ? S.svPas : defaut;
+  return ETAPES.map(([cle, nom, phase], i) => ({ cle, nom, phase, n: NUMERO[cle], der: i === ETAPES.length - 1,
+    etat: cle === ouverte ? 'cur' : (faits[cle] ? 'fait' : 'avenir'), titre: (lignes[cle] || [])[0] || nom, sous: (lignes[cle] || [])[1] || '',
+    modifier: cle !== ouverte && ouvrables.includes(cle) ? () => app.setState({ svPas: cle }) : null }));
+}
+
+/* Une nouvelle visite : le magasin, puis la visite (type, annoncée, date, consultant) — créée au bout de l'étape 2. */
+function nouvelleVals(app, sv, d, h){
+  const S = app.state; const N = S.svNouv || {};
+  const maj = patch => app.setState({ svNouv: Object.assign({}, N, patch) });
+  const f = h.shopDe(N.shop);
+  const t = h.types.find(x => x.code === N.type) || h.types.find(x => x.code === 'reguliere') || h.types[0] || null;
+  const annoncee = N.annoncee != null ? N.annoncee : (t ? t.annoncee !== false : true);
+  const cons = N.consultant != null ? N.consultant : (f ? f.responsableId || '' : '');
+  const date = N.date || plusJours(auj(), 3); const heure = N.heure || '09:30'; const duree = Number(N.duree || (t ? t.duree : 90));
+  const faits = { magasin: !!f };
+  const lignes = { magasin: f ? [f.court, (f.responsable ? 'consultant ' + f.responsable : 'sans consultant responsable') + ' · courriels en ' + String(f.langueNom || 'français').toLowerCase()] : null,
+    visite: ['La visite', 'le type, annoncée ou inopinée, le jour et qui y va'], dossier: ['Le dossier', 'ce qui part sur la tablette, vos demandes'], envoi: ['L’envoi', 'sur la tablette, et l’ordre du jour au franchisé'],
+    tablette: ['La visite sur place', 'sur la tablette du consultant : rien à faire ici'], rapport: ['Le rapport', 'à adapter et envoyer sous ' + d.delais.rapportHeures + ' h'], corrections: ['Les corrections', 'les photos du franchisé, à valider'] };
+  sv.etapes = etapesDe(app, faits, lignes, f ? 'visite' : 'magasin', f ? ['magasin', 'visite'] : ['magasin']);
+  sv.titre = 'Créer une visite';
+  sv.chapo = 'À gauche, une étape à la fois. À droite, la fiche de la visite se remplit au fur et à mesure : qui reçoit quoi, ce que lira le franchisé, ce qui se passe ensuite.';
+  const ouverte = sv.etapes.find(e => e.etat === 'cur').cle;
+  if (ouverte === 'magasin') {
+    sv.pas = { cle: 'magasin', question: 'Quel magasin allez-vous visiter ?', lead: 'Le feu, la dernière visite et les points ouverts aident à choisir. Le consultant responsable et la langue du franchisé suivent.',
+      magasins: d.franchises.map(x => ({ court: x.court, feu: x.feu, on: String(x.id) === String(N.shop), l1: (x.responsable || 'sans consultant') + (x.due ? ' · ' + x.due : ''),
+        derniere: x.derniere ? 'vu le ' + fmtD(x.derniere.le) + ' · ' + x.derniere.checklist.ok + ' / ' + x.derniere.checklist.total + ' conformes' : 'jamais visité',
+        points: x.points.n ? pl(x.points.n, 'point') + ' ouvert' + (x.points.n > 1 ? 's' : '') + (x.points.p0 ? ' · ' + x.points.p0 + ' P0' : '') : 'aucun point ouvert', pointsKo: !!(x.points.p0 || x.points.retard),
+        prochaine: x.prochaine ? 'prochaine visite ' + fmtDJ(x.prochaine.le) : '',
+        choisir: () => app.setState({ svNouv: { shop: String(x.id) }, svPas: 'visite' }) })) };
+  } else {
+    sv.pas = { cle: 'visite', nouvelle: true, question: 'Quelle visite, quand, et qui y va ?', lead: 'Le type charge sa checklist, ses tâches et sa durée. Annoncée, le franchisé reçoit l’ordre du jour ; inopinée, il n’est pas prévenu.',
+      types: h.types.map(x => ({ nom: x.nom, sous: typeSous(x), defaut: x.annoncee === false ? 'inopinée d’office' : 'annoncée d’office', on: t && x.code === t.code, choisir: () => maj({ type: x.code, annoncee: null, duree: '' }) })),
+      annoncee, annoncer: () => maj({ annoncee: true }), inopiner: () => maj({ annoncee: false }),
+      annonceeSous: annoncee ? 'il reçoit l’ordre du jour ' + d.delais.prepJours + ' jours avant et voit la visite sur sa page' : 'il n’est pas prévenu : la visite n’apparaît pas sur sa page',
+      date, setDate: e => maj({ date: e.target.value }), heure, setHeure: e => maj({ heure: e.target.value }), duree, setDuree: e => maj({ duree: e.target.value }),
+      consultants: [{ v: '', nom: 'Choisir le consultant', on: !cons }].concat((d.consultants || []).map(c => ({ v: c.id, nom: c.nom + (f && c.id === f.responsableId ? ' · responsable' : ''), on: c.id === cons }))),
+      setCons: e => maj({ consultant: e.target.value }), busy: !!S.svBusy,
+      action: 'Créer la visite et préparer le dossier',
+      valider: () => {
+        if (!cons) { message(app, 'Choisissez le consultant qui fera la visite.', true); return; }
+        app.setState({ svBusy: true });
+        app.api('POST', '/visites', { client_id: 'sv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), shop: N.shop, consultant: cons, consultant_nom: h.consNom(cons),
+          type: t ? t.code : 'reguliere', prevu_le: date, debut_h: heure, duree_min: duree, motif: 'reguliere', annoncee, qui: 'Cockpit' }).then(r => {
+          const ok = r && r.ok !== false && !r.error && r.visite; const su = (r && r.suite) || {};
+          app.setState({ svBusy: false });
+          if (!ok) { message(app, 'Refusé : ' + ((r && r.error) || 'sans réponse'), true); return; }
+          message(app, 'Visite créée : ' + (f ? f.court : '') + ', ' + fmtDJ(date) + ' à ' + heure + (su.taches ? ' · ' + pl(su.taches, 'tâche') + ' dans la liste du consultant' : '') + (su.invitation && su.invitation.envoye ? ' · invitation envoyée à ' + su.invitation.a : '') + '.');
+          app.setState({ svNouv: null, svSel: { kind: 'visite', id: r.visite.id, garde: true }, svPas: 'dossier', svPrepF: null });
+          relireTableau(app);
+        });
+      } };
+  }
+  // La fiche : ce qu'on sait déjà.
+  sv.fiche = { titre: f ? f.court + (t && ouverte === 'visite' ? ' · ' + t.nom : '') : 'Nouvelle visite', sous: f && ouverte === 'visite' ? fmtDJ(date) + ' · ' + heure + ' – ' + finH(heure, duree) + (cons ? ' · ' + h.consNom(cons) : '') : 'choisissez le magasin',
+    puces: f && ouverte === 'visite' ? [annoncee ? 'annoncée' : 'inopinée', duree + ' min' + (t && t.points ? ' · ' + t.points + ' points' : ''), { t: 'à créer', neuf: true }] : [],
+    dest: f ? [
+      { ic: 'tab', qui: (cons ? h.consNom(cons) : 'Le consultant') + ', sur sa tablette', quoi: 'le dossier du magasin et vos demandes, en tête de sa checklist', quand: 'à l’envoi · étape 4' },
+      annoncee ? { ic: 'mail', qui: 'Le franchisé de ' + f.court + ', courriel et sa page', quoi: 'l’ordre du jour en ' + String(f.langueNom || 'français').toLowerCase() + ' : le jour, l’heure, le consultant, les sujets', quand: d.delais.prepJours + ' j avant' }
+        : { ic: 'mail', qui: 'Le franchisé de ' + f.court, quoi: 'rien : la visite est inopinée, elle n’apparaît pas sur sa page', quand: '', off: true },
+      { ic: 'lock', qui: 'Le bureau et le consultant seulement', quoi: 'la météo du franchisé, votre mot au consultant, les demandes internes', quand: '' }] : [],
+    odj: null, suite: f && ouverte === 'visite' ? suiteDe(d, { annoncee, date, heure, consultant: h.consNom(cons) }) : [],
+    pied: f ? (ouverte === 'visite' ? 'Magasin choisi · reste la visite' : 'Magasin choisi') : 'Rien n’est créé tant que la visite n’est pas validée à l’étape 2.' };
+}
+
+/* Le calendrier de la visite, du dossier au rapport. */
+function suiteDe(d, v){
+  const l = [];
+  if (v.annoncee) { l.push({ quand: v.odjLe ? fmtDH(v.odjLe) : fmtDJ(plusJours(v.date, -d.delais.prepJours)) + ' · 08:00', quoi: v.odjLe ? 'l’ordre du jour est parti' : 'l’ordre du jour part tout seul', fait: !!v.odjLe }); }
+  l.push({ quand: fmtDJ(v.date) + ' · ' + v.heure, quoi: 'la visite, sur la tablette de ' + (v.consultant || 'du consultant'), cur: true, fait: !!v.faite });
+  l.push({ quand: v.rapportLe ? fmtDH(v.rapportLe) : 'sous ' + d.delais.rapportHeures + ' h', quoi: v.rapportLe ? 'rapport envoyé' : 'dernier délai pour le rapport', fait: !!v.rapportLe });
+  l.push({ quand: 'ensuite', quoi: 'ses photos de correction, à valider' });
+  return l;
+}
+
+/* Une visite qui existe : le dossier (/suivi/preparation), puis le rapport (/suivi/rapport) et les corrections. */
+function visiteVals(app, sv, d, id, h){
+  const S = app.state;
+  const pathP = '/suivi/preparation?visite=' + id;
+  charge(app, 'svPrep', pathP, false);
+  const P = lu(app, 'svPrep', pathP);
+  if (!P) { sv.pasChargement = 'Lecture de la visite…'; return; }
+  if (P.error) { sv.indispo = 'La visite ne se lit pas : ' + P.error; return; }
+  const v = P.visite; const f = h.shopDe(v.shop) || { court: P.magasin.court, langueNom: P.odj.langueNom };
+  prepVals(app, sv, id);
+  const p = sv.prep; const F = S.svPrepF && String(S.svPrepF.id) === String(id) ? S.svPrepF : null;
+  const t = P.types.find(x => x.code === (F ? F.type : v.type)) || P.type;
+  const faite = v.statut === 'terminee'; const envoyeeLe = P.tablette.envoyeeLe;
+  const rapportEnvoye = v.rapportStatut === 'envoye' || !!v.rapportEnvoyeLe;
+  const corr = (h.corrPar[String(v.shop)] || []);
+  const inclus = p.dossier.filter(b => b.inclus); const internes = p.dossier.filter(b => b.inclus && b.interne);
+  const dem = p.points.filter(q => (q.libelle || '').trim()); const demOdj = dem.filter(q => q.odj);
+  const faits = { magasin: true, visite: true, dossier: !!envoyeeLe || faite, envoi: !!envoyeeLe || faite, tablette: faite, rapport: rapportEnvoye, corrections: rapportEnvoye && !corr.length };
+  const consN = v.consultantNom || 'le consultant';
+  const lignes = {
+    magasin: [f.court, (f.responsable ? 'consultant ' + f.responsable + ' · ' : '') + 'courriels en ' + String(f.langueNom || P.odj.langueNom || 'français').toLowerCase()],
+    visite: [(t ? t.nom : 'Visite') + ' · ' + (p.annoncee ? 'annoncée' : 'inopinée') + ' · ' + fmtDJ(v.prevu_le) + ', ' + v.debut_h + ' – ' + finH(v.debut_h, v.duree_min) + ' · ' + consN, typeSous(t) + (p.annoncee ? ' · le franchisé est prévenu ' + d.delais.prepJours + ' jours avant' : ' · personne n’est prévenu')],
+    dossier: [inclus.length + ' bloc' + (inclus.length > 1 ? 's' : '') + ' sur ' + p.dossier.length + ' partent · ' + pl(dem.length, 'demande'), p.note ? '« ' + p.note.slice(0, 90) + (p.note.length > 90 ? '…' : '') + ' »' : 'aucun mot pour le consultant'],
+    envoi: envoyeeLe ? ['Envoyé sur la tablette de ' + consN + ' le ' + fmtDH(envoyeeLe), P.odj.envoyeLe ? 'ordre du jour envoyé le ' + fmtDH(P.odj.envoyeLe) : (p.annoncee ? 'ordre du jour : ' + (P.odj.auto ? 'part le ' + fmtDJ(P.odj.prevuLe) : 'à envoyer à la main') : 'inopinée : rien au franchisé')]
+      : ['Sur la tablette de ' + consN + (p.annoncee ? ', et l’ordre du jour au franchisé' : ''), 'un seul bouton ; l’ordre du jour peut aussi partir tout seul'],
+    tablette: ['La visite sur la tablette de ' + consN, faite ? 'faite le ' + fmtDH(v.termine_a) : (v.statut === 'en_cours' ? 'en cours depuis ' + fmtDH(v.commence_a) : fmtDJ(v.prevu_le) + ' à ' + v.debut_h)],
+    rapport: ['Le rapport', rapportEnvoye ? 'envoyé' + (v.rapportEnvoyeLe ? ' le ' + fmtDH(v.rapportEnvoyeLe) : '') : (faite ? 'brouillon de la tablette, à adapter et envoyer' : 'à adapter et envoyer sous ' + d.delais.rapportHeures + ' h après la visite')],
+    corrections: ['Les corrections', corr.length ? pl(corr.length, 'photo') + ' à valider' : (rapportEnvoye ? 'aucune photo en attente' : 'les photos du franchisé, après le rapport')] };
+  const defaut = !faits.dossier ? 'dossier' : !faits.tablette ? 'tablette' : !faits.rapport ? 'rapport' : 'corrections';
+  const ouvrables = ['visite', 'dossier', 'envoi', 'tablette'].concat(faite ? ['rapport', 'corrections'] : []);
+  sv.etapes = etapesDe(app, faits, lignes, defaut, faite ? ['rapport', 'corrections', 'tablette'] : ouvrables);
+  sv.titre = f.court + ' · ' + (t ? t.nom : 'visite');
+  sv.chapo = 'La visite du ' + fmtDJ(v.prevu_le) + ' à ' + v.debut_h + ' avec ' + fin(consN) + ' Reprenez là où elle en est ; une étape faite se rouvre d’un clic.';
+  const ouverte = sv.etapes.find(e => e.etat === 'cur').cle;
+  const enregistrerVisite = (G, puis) => {
+    app.setState({ svBusy: true });
+    app.api('PUT', '/visites/' + id, { prevu_le: G.date, debut_h: G.heure, duree_min: Number(G.duree), consultant: G.consultant, type: G.type, annoncee: G.annoncee, qui: 'Cockpit' }).then(r => {
+      const ok = r && r.ok !== false && !r.error;
+      app.setState({ svBusy: false, svVisF: ok ? null : app.state.svVisF, svPrepF: ok ? null : app.state.svPrepF, svPas: ok ? puis : app.state.svPas });
+      message(app, ok ? 'Visite mise à jour.' : 'Refusé : ' + ((r && r.error) || 'sans réponse'), !ok);
+      if (ok) { charge(app, 'svPrep', pathP, true); relireTableau(app); }
+    });
+  };
+  if (ouverte === 'visite') {
+    const G = S.svVisF && String(S.svVisF.id) === String(id) ? S.svVisF : { id, type: v.type, annoncee: P.annoncee, date: v.prevu_le, heure: v.debut_h, duree: v.duree_min, consultant: v.consultant };
+    const maj = patch => app.setState({ svVisF: Object.assign({}, G, patch) });
+    const tG = P.types.find(x => x.code === G.type) || t;
+    sv.pas = { cle: 'visite', question: 'Quelle visite, quand, et qui y va ?', lead: 'Changer le jour prévient l’agenda du consultant ; changer le type recharge sa checklist.',
+      types: P.types.filter(x => x.actif !== false).map(x => ({ nom: x.nom, sous: typeSous(x), defaut: x.annoncee === false ? 'inopinée d’office' : 'annoncée d’office', on: tG && x.code === tG.code, choisir: () => maj({ type: x.code, annoncee: x.annoncee !== false }) })),
+      annoncee: !!G.annoncee, annoncer: () => maj({ annoncee: true }), inopiner: () => maj({ annoncee: false }),
+      annonceeSous: G.annoncee ? 'il reçoit l’ordre du jour et voit la visite sur sa page' : 'il n’est pas prévenu : la visite n’apparaît pas sur sa page',
+      date: G.date, setDate: e => maj({ date: e.target.value }), heure: G.heure, setHeure: e => maj({ heure: e.target.value }), duree: G.duree, setDuree: e => maj({ duree: e.target.value }),
+      consultants: (d.consultants || []).map(c => ({ v: c.id, nom: c.nom, on: c.id === G.consultant })), setCons: e => maj({ consultant: e.target.value }),
+      busy: !!S.svBusy, action: 'Enregistrer et revenir au dossier', valider: () => enregistrerVisite(G, 'dossier') };
+  } else if (ouverte === 'dossier') {
+    sv.pas = { cle: 'dossier', question: 'Que doit emporter ' + (v.consultantNom || 'le consultant') + ' sur la tablette ?', lead: 'Tout s’est assemblé seul depuis la fiche de ' + f.court + '. Décochez ce qui ne doit pas partir, ajoutez vos demandes : la fiche à droite suit chaque choix.',
+      prep: p, consultant: v.consultantNom || 'le consultant', busy: !!S.svBusy,
+      continuer: () => prepSauver(app, id, prepForm(app, id, P), false, false, 'envoi'), enregistrer: p.enregistrer };
+  } else if (ouverte === 'envoi') {
+    sv.pas = { cle: 'envoi', question: envoyeeLe ? 'Le dossier est sur la tablette' : 'Tout est prêt : on envoie ?', lead: envoyeeLe ? 'Envoyé le ' + fmtDH(envoyeeLe) + '. Un nouvel envoi remplace le dossier sur la tablette.' : 'Un seul bouton : le dossier part sur la tablette de ' + fin(consN) + (p.annoncee ? ' L’ordre du jour part tout seul au franchisé, ou maintenant si vous préférez.' : ''),
+      recap: [{ ic: 'tab', t: 'Sur la tablette de ' + consN, s: inclus.length + ' bloc' + (inclus.length > 1 ? 's' : '') + ' du dossier · ' + pl(dem.length, 'demande') + ' en tête de sa checklist' + (p.note ? ' · votre mot' : '') },
+        { ic: 'mail', t: p.annoncee ? 'Au franchisé de ' + f.court : 'Au franchisé : rien', s: p.odj, ko: !!p.sansAdresse }],
+      sansAdresse: p.sansAdresse, odjMaintenant: p.odjMaintenant, busy: !!S.svBusy,
+      envoyer: p.envoyer, libelle: envoyeeLe ? 'Renvoyer le dossier sur la tablette' : 'Envoyer sur la tablette' };
+  } else if (ouverte === 'tablette') {
+    const nonFaite = ['planifiee', 'confirmee'].includes(v.statut) && v.prevu_le < auj();
+    sv.pas = { cle: 'tablette', question: faite ? 'La visite est faite' : (v.statut === 'en_cours' ? 'La visite est en cours' : 'Rien à faire ici pendant la visite'),
+      lead: faite ? 'Le brouillon du rapport est revenu de la tablette le ' + fmtDH(v.termine_a) + '. Il attend à l’étape 5.'
+        : v.statut === 'en_cours' ? consN + ' contrôle ' + f.court + ' depuis ' + fmtDH(v.commence_a) + '. Le brouillon du rapport reviendra tout seul.'
+        : nonFaite ? 'La date est passée et la visite n’a pas été faite. Reprogrammez-la à l’étape 2, ou ouvrez la tablette du consultant.'
+        : consN + ' ouvrira la visite sur sa tablette le ' + fmtDJ(v.prevu_le) + ' à ' + v.debut_h + '. Le brouillon du rapport reviendra tout seul ici.',
+      ko: nonFaite, tablette: () => app.setState({ screen: 'suiviTablette', svTabCons: v.consultant }), suite: faite ? () => app.setState({ svPas: 'rapport' }) : null };
+  } else if (ouverte === 'rapport') {
+    rapVals(app, sv, id);
+    sv.pas = { cle: 'rapport', question: rapportEnvoye ? 'Le rapport est parti' : 'Adapter le rapport et l’envoyer', lead: rapportEnvoye ? 'Il est sur la page du franchisé ; vous pouvez le relire ou renvoyer le courriel.' : 'Le brouillon de la tablette, relu au bureau : choisissez ce qui part au franchisé, ce qui reste interne, puis envoyez.', rap: sv.rap };
+  } else {
+    sv.pas = { cle: 'corrections', question: corr.length ? 'Les photos de correction de ' + f.court : 'Aucune correction en attente', lead: corr.length ? 'La photo du franchisé, à côté de celle de la visite : acceptez, ou renvoyez avec un nouveau délai.' : 'Les photos du franchisé arriveront ici, une par point ouvert.' };
+    pointsVals(app, sv, { corrections: corr, points: (d.points || []).filter(q => String(q.shop) === String(v.shop)) });
+    sv.pas.corrections = sv.corrections; sv.pas.points = sv.points;
+  }
+  // La fiche vivante.
+  const rapLe = v.rapportEnvoyeLe || null;
+  sv.fiche = { titre: f.court + ' · ' + (t ? t.nom : ''), sous: fmtDJ(v.prevu_le) + ' · ' + v.debut_h + ' – ' + finH(v.debut_h, v.duree_min) + ' · ' + consN,
+    puces: [p.annoncee ? 'annoncée' : 'inopinée', v.duree_min + ' min' + (t && t.points ? ' · ' + t.points + ' points' : ''),
+      { t: rapportEnvoye ? 'rapport envoyé' : faite ? 'rapport à adapter' : envoyeeLe ? 'sur la tablette' : 'dossier en cours', neuf: true }],
+    dest: [
+      { ic: 'tab', qui: consN + ', sur sa tablette', quoi: 'le dossier (' + inclus.length + ' bloc' + (inclus.length > 1 ? 's' : '') + '), ' + pl(dem.length, 'demande') + ' en tête de sa checklist' + (p.note ? ', votre mot' : ''), quand: envoyeeLe ? 'envoyé ' + fmtD(envoyeeLe) : 'à l’envoi · étape 4' },
+      p.annoncee ? { ic: 'mail', qui: 'Le franchisé de ' + f.court + ', courriel et sa page', quoi: 'l’ordre du jour en ' + String(P.odj.langueNom || 'français').toLowerCase() + ' : le jour, l’heure, ' + consN + (demOdj.length ? ' et ' + pl(demOdj.length, 'sujet') : ''), quand: P.odj.envoyeLe ? 'envoyé ' + fmtD(P.odj.envoyeLe) : (P.odj.auto ? fmtDJ(P.odj.prevuLe) : 'à la main'), ko: !!p.sansAdresse }
+        : { ic: 'mail', qui: 'Le franchisé de ' + f.court, quoi: 'rien : la visite est inopinée, elle n’apparaît pas sur sa page', quand: '', off: true },
+      { ic: 'lock', qui: 'Le bureau et ' + consN + ' seulement', quoi: [internes.map(b => b.titre.toLowerCase()).join(', '), p.note ? 'votre mot' : '', dem.length - demOdj.length ? pl(dem.length - demOdj.length, 'demande') + ' interne' + (dem.length - demOdj.length > 1 ? 's' : '') : ''].filter(Boolean).join(', ') || 'rien de plus', quand: '' }],
+    odj: p.annoncee ? { sujet: P.odj.sujet, texte: P.odj.texte, langue: P.odj.langueNom, sujets: demOdj.map(q => q.libelle) } : null,
+    suite: suiteDe(d, { annoncee: p.annoncee, date: v.prevu_le, heure: v.debut_h, consultant: consN, odjLe: P.odj.envoyeLe, faite, rapportLe: rapLe }),
+    pied: rapportEnvoye ? 'Rapport envoyé' + (corr.length ? ' · ' + pl(corr.length, 'correction') + ' à valider' : '') : faite ? 'Visite faite · reste le rapport' : envoyeeLe ? 'Dossier sur la tablette · la visite suit' : 'Magasin, visite' + (inclus.length ? ' et dossier' : '') + ' prêts · reste l’envoi' };
+}
+/* Le formulaire du dossier tel qu'il est à l'écran (repris de prepVals). */
+function prepForm(app, id, d){
+  const S = app.state;
+  return S.svPrepF && String(S.svPrepF.id) === String(id) ? S.svPrepF
+    : { id, blocs: Object.fromEntries(d.dossier.map(b => [b.cle, !!b.inclus])), points: d.prep.points.map(p => ({ libelle: p.libelle, odj: p.odj, source: p.source })), annoncee: d.annoncee, type: d.visite.type, note: d.prep.note || '' };
 }
 
 /* Préparer : le dossier, ce que la tablette emportera, l'ordre du jour. */
@@ -182,12 +316,13 @@ function prepVals(app, sv, id){
   };
 }
 function finH(h, min){ const [a, b] = String(h || '09:00').split(':').map(Number); const t = a * 60 + b + Number(min || 0); return String(Math.floor(t / 60) % 24).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); }
-function prepSauver(app, id, F, envoyer, odj){
+function prepSauver(app, id, F, envoyer, odj, puis){
   app.setState({ svBusy: true });
   app.api('PUT', '/suivi/preparation/' + id, { blocs: F.blocs, points: F.points.filter(p => (p.libelle || '').trim()), annoncee: F.annoncee, type: F.type, note: F.note, envoyer, odj, qui: 'Cockpit' }).then(r => {
     const ok = r && r.ok !== false && !r.error && r.visite;
-    app.setState({ svBusy: false, svPrepF: ok ? null : app.state.svPrepF, svPrep: ok ? { path: '/suivi/preparation?visite=' + id, chargement: false, d: r } : app.state.svPrep });
-    let t = ok ? (envoyer ? 'Dossier envoyé sur la tablette de ' + (r.visite.consultantNom || 'consultant') + '.' : 'Préparation enregistrée.') : 'Refusé : ' + ((r && r.error) || 'sans réponse');
+    app.setState({ svBusy: false, svPrepF: ok ? null : app.state.svPrepF, svPrep: ok ? { path: '/suivi/preparation?visite=' + id, chargement: false, d: r } : app.state.svPrep,
+      svPas: ok ? (puis || (envoyer ? 'tablette' : app.state.svPas)) : app.state.svPas });
+    let t = ok ? (envoyer ? 'Dossier envoyé sur la tablette de ' + fin(r.visite.consultantNom || 'consultant') : 'Préparation enregistrée.') : 'Refusé : ' + ((r && r.error) || 'sans réponse');
     if (ok && r.odjEnvoi) { t += r.odjEnvoi.envoye ? ' Ordre du jour envoyé à ' + r.odjEnvoi.a + '.' : ' Ordre du jour non envoyé : ' + r.odjEnvoi.motif + '.'; }
     message(app, t, !ok || !!(r.odjEnvoi && !r.odjEnvoi.envoye));
     relireTableau(app);

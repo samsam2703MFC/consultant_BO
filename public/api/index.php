@@ -29,6 +29,7 @@ require __DIR__ . '/../../src/newsletter_envoi.php';
 require __DIR__ . '/../../src/fidelite.php';
 require __DIR__ . '/../../src/prospection.php';
 require __DIR__ . '/../../src/visites.php';
+require __DIR__ . '/../../src/visites_kpi.php';
 require __DIR__ . '/../../src/visites_conformite.php';
 require __DIR__ . '/../../src/visites_cadre.php';
 require __DIR__ . '/../../src/franchises.php';
@@ -521,6 +522,7 @@ function route(string $method, string $path): mixed
             $path === '/suivi/regles'                  => ep_suivi_regles(),
             $path === '/suivi/lien'                    => ep_suivi_lien(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
+            preg_match('#^/visites/kpi/(\d{1,10})$#', $path, $m) === 1 => ep_visites_kpi($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
             $path === '/marketing/social/regles'   => ep_fb_regles(),
             $path === '/marketing/social/posts'                => ep_fb_posts(),
