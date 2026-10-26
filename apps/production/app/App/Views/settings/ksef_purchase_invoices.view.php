@@ -7,7 +7,10 @@ $root = rtrim(ROOT, '/');
 <?php $this->view('page_components/header'); ?>
 <div class="page-heading">
     <div class="page-title">
-        <h3>Faktury zakupowe KSeF</h3>
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <h3>Faktury zakupowe KSeF — podgląd</h3>
+            <a class="btn btn-primary" href="<?= ROOT ?>/workshop/supply#tab=invoices"><i class="bi bi-clipboard-check"></i> Kontrola i przyjęcie faktur (Zaopatrzenie › Faktury)</a>
+        </div>
         <p class="text-subtitle text-muted">Dokumenty są pobierane na żywo z KSeF i nie są zapisywane w aplikacji.<?php if (!empty($manual_purchases)): ?> Dawne dostawy wpisane ręcznie : <a href="<?= ROOT ?>/purchases">archiwum (<?= (int) $manual_purchases ?>)</a>.<?php endif; ?></p>
     </div>
 
@@ -72,7 +75,7 @@ $root = rtrim(ROOT, '/');
     function row(invoice) {
         const number = invoice.ksefNumber || '';
         const xmlUrl = root + '/settings/ksef/purchase-invoices/' + encodeURIComponent(number);
-        return `<tr><td><div>${esc(seller(invoice).name || '—')}</div><small class="text-muted">${esc(seller(invoice).nip || '—')}</small></td><td>${esc(invoice.invoiceNumber)}</td><td><small>${esc(number)}</small></td><td>${esc(date(invoice.issueDate))}</td><td>${esc(date(invoice.invoicingDate))}</td><td class="text-end text-nowrap">${money(invoice.netAmount, invoice.currency)}</td><td class="text-end text-nowrap">${money(invoice.vatAmount, 'PLN')}</td><td class="text-end text-nowrap">${money(invoice.grossAmount, invoice.currency)}</td><td class="text-nowrap"><button class="btn btn-sm btn-outline-primary" type="button" data-ksef-pdf data-ksef-number="${esc(number)}" data-ksef-acquisition="${esc(invoice.acquisitionDate || '')}" data-ksef-qr="${esc(invoice.qrUrl || '')}" title="Wygeneruj PDF oficjalną biblioteką MF"><i class="bi bi-file-earmark-pdf"></i> PDF</button> <a class="btn btn-sm btn-outline-secondary" href="${xmlUrl}" title="Pobierz XML z KSeF"><i class="bi bi-filetype-xml"></i> XML</a></td></tr>`;
+        return `<tr><td><div>${esc(seller(invoice).name || '—')}</div><small class="text-muted">${esc(seller(invoice).nip || '—')}</small></td><td>${esc(invoice.invoiceNumber)}${invoice.inControl ? '<br><a class="badge bg-success text-decoration-none" href="' + root + '/workshop/supply#tab=invoices">w kontroli faktur ✓</a>' : ''}</td><td><small>${esc(number)}</small></td><td>${esc(date(invoice.issueDate))}</td><td>${esc(date(invoice.invoicingDate))}</td><td class="text-end text-nowrap">${money(invoice.netAmount, invoice.currency)}</td><td class="text-end text-nowrap">${money(invoice.vatAmount, 'PLN')}</td><td class="text-end text-nowrap">${money(invoice.grossAmount, invoice.currency)}</td><td class="text-nowrap"><button class="btn btn-sm btn-outline-primary" type="button" data-ksef-pdf data-ksef-number="${esc(number)}" data-ksef-acquisition="${esc(invoice.acquisitionDate || '')}" data-ksef-qr="${esc(invoice.qrUrl || '')}" title="Wygeneruj PDF oficjalną biblioteką MF"><i class="bi bi-file-earmark-pdf"></i> PDF</button> <a class="btn btn-sm btn-outline-secondary" href="${xmlUrl}" title="Pobierz XML z KSeF"><i class="bi bi-filetype-xml"></i> XML</a></td></tr>`;
     }
 
     async function downloadOfficialPdf(button) {

@@ -19,6 +19,7 @@
          data-materials="{{ materials|json_encode }}"
          data-semi="{{ semiProducts|json_encode }}"
          data-ranges="{{ logisticsRanges|json_encode }}"
+         data-shelf-life="{{ shelfLife|json_encode }}"
          data-preparations="{{ preparations|json_encode }}">
 
     <ol class="at-steps at-steps-compact" aria-label="Kroki kreatora">
@@ -87,23 +88,24 @@
             {# --- 2. Opakowanie i waga ------------------------------------------------- #}
             <div class="at-step" data-step="2" hidden>
                 <h4 class="at-step-title">Opakowanie, paleta i waga</h4>
-                <p class="at-step-lead">Liczby całkowite większe od zera — ta sama walidacja co Karta produktu. Stan minimalny jest opcjonalny.</p>
+                <p class="at-step-lead">Liczby całkowite większe od zera — ta sama walidacja co Karta produktu. Opakowanie : 0 albo puste = bez opakowania. Stan minimalny jest opcjonalny.</p>
                 <div class="row g-3">
                     {% set fields = [
                         ['weight', 'Waga produktu (g)', 'Waga jednej sztuki'],
                         ['shelf_life', 'Przydatność do spożycia (dni)', ''],
                         ['stock_minimum', 'Minimalny stan magazynowy (kartony, opcjonalnie)', 'Puste = na zamówienie (MTO) ; podany = na zapas (MTS)'],
-                        ['ppb', 'Sztuk w opakowaniu', ''],
-                        ['bpc', 'Opakowań w kartonie', ''],
+                        ['ppb', 'Sztuk w opakowaniu', '0 = bez opakowania'],
+                        ['bpc', 'Opakowań w kartonie', '0 = bez opakowania'],
                         ['ppc', 'Sztuk w kartonie', ''],
                         ['cpl', 'Kartonów na warstwie palety', ''],
                         ['lpp', 'Warstw na palecie', ''],
                         ['cpp', 'Kartonów na palecie', '']
                     ] %}
                     {% for f in fields %}
+                        {% set optional = f[0] in ['stock_minimum', 'ppb', 'bpc'] %}
                         <div class="col-12 col-sm-6 col-lg-4">
                             <label class="form-label" for="pw_{{ f[0] }}">{{ f[1] }}</label>
-                            <input class="form-control" type="number" min="{{ f[0] == 'stock_minimum' ? 0 : 1 }}" step="1" inputmode="numeric" id="pw_{{ f[0] }}" data-field="{{ f[0] }}"{{ f[0] == 'stock_minimum' ? '' : ' required' }}>
+                            <input class="form-control" type="number" min="{{ optional ? 0 : 1 }}" step="1" inputmode="numeric" id="pw_{{ f[0] }}" data-field="{{ f[0] }}"{{ optional ? '' : ' required' }}>
                             <div class="invalid-feedback"></div>
                             <small class="at-run-msg" data-hint="{{ f[0] }}">{{ f[2] }}</small>
                         </div>
@@ -195,8 +197,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const MATERIALS = JSON.parse(box.dataset.materials || '[]');
     const SEMI = JSON.parse(box.dataset.semi || '[]');
     const PREPS = JSON.parse(box.dataset.preparations || '[]');
-    // pole => [min, max] Karty produktu ; nowy produkt : wszystkie > 0 ; przydatność 1–3650 dni ; minimum opcjonalne
-    const RANGES = Object.assign(JSON.parse(box.dataset.ranges || '{}'), { shelf_life: [1, 3650], stock_minimum: [0, 1000000] });
+    // pole => [min, max] Karty produktu ; nowy produkt : > 0 poza opakowaniem (0 = bez) ; przydatność 1–3650 dni ; minimum opcjonalne
+    const RANGES = Object.assign(JSON.parse(box.dataset.ranges || '{}'), { shelf_life: JSON.parse(box.dataset.shelfLife || '[1, 3650]'), stock_minimum: [0, 1000000] });
+    const OPTIONAL = ['stock_minimum', 'ppb', 'bpc'];
     const backBtn = box.querySelector('[data-wizard-back]');
     const nextBtn = box.querySelector('[data-wizard-next]');
     const hint = document.getElementById('prodHint');
@@ -283,8 +286,8 @@ document.addEventListener('DOMContentLoaded', function () {
             NUMERIC.forEach((f) => {
                 const v = val(f);
                 const [min, max] = RANGES[f] || [1, 999999999];
-                const lo = f === 'stock_minimum' ? 0 : Math.max(1, min);
-                if (!v) { if (f !== 'stock_minimum') errors[f] = 'Pole wymagane'; }
+                const lo = OPTIONAL.includes(f) ? 0 : Math.max(1, min);
+                if (!v) { if (!OPTIONAL.includes(f)) errors[f] = 'Pole wymagane'; }
                 else if (!/^\d+$/.test(v) || +v < lo || +v > max) errors[f] = 'Liczba całkowita od ' + lo + ' do ' + max;
                 markError(f, errors[f]);
             });

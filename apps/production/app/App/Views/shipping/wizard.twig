@@ -87,9 +87,10 @@
                 </ul>
 
                 <div class="at-note at-note-safe">
-                    <i class="bi bi-shield-check"></i><strong>Kreator niczego nie wysyła na zewnątrz.</strong>
-                    Nie wysyła faktur do KSeF i nie powiadamia franczyzy o wysyłce. Fakturę WDT do KSeF wysyłasz osobno,
-                    po sprawdzeniu dokumentów, na stronie <a href="{{ root }}/shipments">Wysyłki i dokumenty</a>.
+                    <i class="bi bi-shield-check"></i><strong>Tworzenie dokumentów niczego nie wysyła na zewnątrz.</strong>
+                    Nie wysyła faktur do KSeF i nie powiadamia franczyzy o wysyłce. Po sprawdzeniu dokumentów wyślesz wszystkie WDT dnia
+                    do KSeF jednym przyciskiem na końcu kreatora (z potwierdzeniem) albo pojedynczo na stronie <a href="{{ root }}/shipments">Wysyłki i dokumenty</a>.
+                    Statusy KSeF odświeżają się same co 5 minut ; WDT niewysłane lub odrzucone są w <a href="{{ root }}/client-orders/queue?rule=ksef">Do obsłużenia</a>.
                     <ul>
                         <li>Dla klientów franczyzowych ceny na WDT są odczytywane z cennika franczyzy — tak samo jak w trybie klasycznym; to tylko odczyt cennika.</li>
                         <li>Dokumenty powstają kolejno, osobno dla każdego klienta: błąd u jednego klienta nie cofa dokumentów pozostałych.</li>
@@ -530,10 +531,36 @@ document.addEventListener('DOMContentLoaded', function () {
             ' Nic nie zostało wysłane do KSeF ani do franczyzy.</div>' +
             '<div class="d-flex flex-wrap gap-2">' +
             (ok.length ? '<button type="button" class="btn btn-primary" id="swAllPdf"><i class="bi bi-file-earmark-arrow-down"></i> Pobierz wszystkie dokumenty (' + ok.length + ' PDF)</button>' : '') +
+            (ok.length ? '<button type="button" class="btn btn-outline-primary" id="swKsef"><i class="bi bi-cloud-upload"></i> Wyślij WDT dnia do KSeF (' + ok.length + ')</button>' : '') +
             (fail.length ? '<button type="button" class="btn btn-outline-dark" id="swRetry"><i class="bi bi-arrow-repeat"></i> Ponów nieudane (' + fail.length + ')</button>' : '') +
             '<a class="btn btn-outline-dark" href="' + window.API_BASE_URL + '/shipments">Wysyłki i dokumenty</a>' +
             '<a class="btn btn-outline-dark" href="' + window.API_BASE_URL + '/shipping/wizard">Następny dzień</a>' +
-            '</div>';
+            '</div><div id="swKsefResult" class="mt-2" aria-live="polite"></div>';
+    }
+
+    // KSeF : toutes les WDT créées dans ce passage, une par une (même envoi que « Wyślij KSeF » sur Wysyłki).
+    async function sendKsef(btn) {
+        const list = state.runList.filter((x) => x.result && x.result.status === 'ok');
+        if (!list.length || !confirm('Wysłać do KSeF faktury WDT dla ' + list.length + ' ' + (list.length === 1 ? 'wysyłki' : 'wysyłek') + ' ? Faktury przyjęte przez KSeF nie mogą być zmienione.')) return;
+        btn.disabled = true;
+        const out = document.getElementById('swKsefResult');
+        const lines = [];
+        for (const c of list) {
+            lines.push('<div data-ksef-row="' + c.result.id + '"><span class="spinner-border spinner-border-sm"></span> ' + esc(c.company) + '</div>');
+        }
+        out.innerHTML = lines.join('');
+        let sent = 0;
+        for (const c of list) {
+            let res;
+            try { res = await api('/ajax/shipments/' + c.result.id + '/ksef/send', { method: 'POST', data: {} }); }
+            catch (err) { res = { ok: false, message: 'brak połączenia z serwerem' }; }
+            if (res.ok && res.data && res.data.ok) sent++;
+            out.querySelector('[data-ksef-row="' + c.result.id + '"]').innerHTML = (res.ok && res.data && res.data.ok
+                ? '<i class="bi bi-check-circle-fill text-success"></i> ' + esc(c.company) + ' — przekazano do KSeF'
+                : '<i class="bi bi-x-circle-fill text-danger"></i> ' + esc(c.company) + ' — ' + esc((res.data && res.data.message) || res.message || 'błąd'));
+        }
+        out.insertAdjacentHTML('beforeend', '<p class="at-run-msg mt-1">Przekazano ' + sent + ' z ' + list.length + '. Statusy (przyjęta / odrzucona) odświeżą się same w ciągu kilku minut.</p>');
+        btn.disabled = sent === list.length;
     }
 
     document.getElementById('swRun').addEventListener('click', (e) => {
@@ -542,6 +569,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     document.getElementById('swRunDone').addEventListener('click', async (e) => {
         if (e.target.closest('#swRetry')) { await runAll(true); return; }
+        const ksef = e.target.closest('#swKsef');
+        if (ksef) { await sendKsef(ksef); return; }
         const all = e.target.closest('#swAllPdf');
         if (!all) return;
         all.disabled = true;

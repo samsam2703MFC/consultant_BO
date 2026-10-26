@@ -499,15 +499,26 @@ final class InvoiceService
         $inv = $this->open($id);
         if ($inv['id_po'] === null) return $this->receiveWithoutOrder($inv, $context);
         $po = [];
-        foreach ($this->supply->lines((int) $inv['id_po']) as $pl) $po[(int) $pl['id_raw_material']] = (int) $pl['id'];
+        $already = [];
+        foreach ($this->supply->lines((int) $inv['id_po']) as $pl) {
+            $po[(int) $pl['id_raw_material']] = (int) $pl['id'];
+            $already[(int) $pl['id_raw_material']] = (float) ($pl['received_qty'] ?? 0);
+        }
+        // Pas de double réception : ce qui est déjà reçu sur la commande (page Dostawy ou facture précédente) est déduit.
         $lines = [];
+        $mapped = false;
         foreach ($this->repo->lines($id) as $l) {
             if ($l['id_raw_material'] === null || !isset($po[(int) $l['id_raw_material']])) continue;
+            $mapped = true;
+            $mid = (int) $l['id_raw_material'];
             $qty = (float) $l['quantity'] * (float) ($l['factor'] ?: 1);
             $net = $l['net_value'] !== null ? (float) $l['net_value'] : null;
-            $lines[] = ['id' => $po[(int) $l['id_raw_material']], 'quantity' => round($qty, 3), 'unit_price' => $net !== null && $qty > 0 ? $net / $qty : null];
+            $left = $qty - $already[$mid];
+            $already[$mid] = max(0.0, $already[$mid] - $qty);
+            if ($left <= 0.0005) continue;
+            $lines[] = ['id' => $po[$mid], 'quantity' => round($left, 3), 'unit_price' => $net !== null && $qty > 0 ? $net / $qty : null];
         }
-        if (!$lines) throw new ApiException('INVOICE_NOTHING_TO_RECEIVE', 422);
+        if (!$lines) throw $mapped ? new ApiException('INVOICE_ALREADY_RECEIVED', 409) : new ApiException('INVOICE_NOTHING_TO_RECEIVE', 422);
         $day = $inv['issue_date'] && $inv['issue_date'] <= date('Y-m-d') ? $inv['issue_date'] : date('Y-m-d');
         $this->orders->receive((int) $inv['id_po'], ['received_on' => $day, 'lines' => $lines], $context);
         return $this->detail($id, $context);

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Services\Workshop\Referentiel;
 
+use App\Domain\Params\ParamRules;
+
 use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
 use App\Core\TransactionManager;
@@ -319,6 +321,13 @@ final class DataSheetService
             }
         }
         unset($row);
+        // Règles entre paramètres (alerte urgente ≥ alerte…) sur l'état final du fichier, comme la page Pozostałe.
+        $fileValues = [];
+        foreach ($rows as $row) {
+            $code = $row['cells']['code'] ?? null;
+            if (isset($current[$code]) && array_key_exists('value', $row['cells']) && $row['cells']['value'] !== null) $fileValues[$code] = (string) $row['cells']['value'];
+        }
+        $orderErrors = ParamRules::orderErrors($fileValues, fn($c) => $this->paramRepo->findByCode($c)['value'] ?? null);
         return $this->importRows('params', $rows, fn($row) => $row['cells']['code'] ?? null,
             fn($key) => $current[$key] ?? throw new ApiException('DATA_SHEET_UNKNOWN_PARAM', 422, [], ['code' => (string) $key]),
             function (array $body) use ($canWrite) {
@@ -326,7 +335,9 @@ final class DataSheetService
                 return ['value' => $body['value'] ?? null];
             },
             fn(array $body) => null,
-            fn(int $id, array $body, string $key) => $this->params->update($key, $body, $context), $context, ['code']);
+            fn(int $id, array $body, string $key) => isset($orderErrors[$key])
+                ? throw ApiException::validation([['field' => 'value', 'code' => $orderErrors[$key][0], 'params' => []]])
+                : $this->params->update($key, $body, $context, false), $context, ['code']);
     }
 
     /**

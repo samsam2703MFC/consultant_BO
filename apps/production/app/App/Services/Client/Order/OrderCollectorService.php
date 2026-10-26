@@ -4,6 +4,7 @@ namespace App\Services\Client\Order;
 
 use App\Exceptions\CustomException;
 use App\Repositories\Client\ClientRepository;
+use App\Repositories\Client\Order\OrderCollectIssueRepository;
 use App\Repositories\Client\Order\OrderRepository;
 use App\Repositories\Document\Proforma\ProformaOutboxRepository;
 use App\Services\Document\ProformaService;
@@ -15,7 +16,8 @@ class OrderCollectorService
         private ClientRepository $clientRepository,
         private OrderService     $orderService,
         private ProformaService  $proformaService,
-        private ProformaOutboxRepository $proformaOutboxRepository
+        private ProformaOutboxRepository $proformaOutboxRepository,
+        private OrderCollectIssueRepository $issues,
     )
     {
     }
@@ -26,36 +28,7 @@ class OrderCollectorService
         if (empty($franchiseeClients)) {
             return;
         }
-
-        foreach ($franchiseeClients as $franchiseeClient) {
-            $credentials = json_decode($franchiseeClient['credentials'] ?? '', true) ?? [];
-            $secretHex = $credentials['secret'] ?? null;
-            $webhookBaseUrl = $credentials['webhooks_base_url'] ?? null;
-
-            if (!$webhookBaseUrl || !filter_var($webhookBaseUrl, FILTER_VALIDATE_URL)) {
-                error_log(date('Y-m-d H:i:s') . '[order_collector] missing or invalid webhook_base_url for client id=' . $franchiseeClient['id']);
-                continue;
-            }
-            if (!$secretHex || !preg_match('/^[0-9a-f]{64}$/i', $secretHex)) {
-                error_log(date('Y-m-d H:i:s') . '[order_collector] missing or invalid secret for client id=' . $franchiseeClient['id']);
-                continue;
-            }
-
-            // Skąd shopUid? Najlepiej z kolumny klienta:
-            $shopUid = $franchiseeClient['franchisee_uid'] ?? null;
-
-            if (!$shopUid) {
-                // bez shop_uid nie jedziemy dalej
-                error_log(date('Y-m-d H:i:s') . '[order_collector] missing shop_uid for client id=' . $franchiseeClient['id']);
-                continue;
-            }
-
-            try {
-                $this->collectFromClient($shopUid, $webhookBaseUrl, $secretHex, $limit);
-            } catch (\Throwable $e) {
-                error_log(date('Y-m-d H:i:s') . '[order_collector] collect error for ' . $shopUid . ': ' . $e->getMessage());
-            }
-        }
+        $this->collectAll($franchiseeClients, 'order_collector', $limit);
     }
 
     public function runManualCollector(int $limit = 50)
@@ -64,43 +37,45 @@ class OrderCollectorService
         if (empty($franchiseeClients)) {
             throw new CustomException("MISSING_FRANCHISE", 'errors', 500);
         }
+        $this->collectAll($franchiseeClients, 'order_manual_collector', $limit);
+        return true;
+    }
 
+    /**
+     * Boutiques une par une : une boutique mal configurée ou qui ne répond pas n'arrête pas les autres. Chaque échec
+     * va dans le journal du serveur ET dans Stan wysyłek (n_order_collect_issue) ; il se ferme seul au prochain succès.
+     */
+    private function collectAll(array $franchiseeClients, string $tag, int $limit): void
+    {
         foreach ($franchiseeClients as $franchiseeClient) {
+            $clientId = (int) $franchiseeClient['id'];
             $credentials = json_decode($franchiseeClient['credentials'] ?? '', true) ?? [];
             $secretHex = $credentials['secret'] ?? null;
             $webhookBaseUrl = $credentials['webhooks_base_url'] ?? null;
+            $shopUid = (string) ($franchiseeClient['franchisee_uid'] ?? '');
 
-            if (!$webhookBaseUrl || !filter_var($webhookBaseUrl, FILTER_VALIDATE_URL)) {
-                error_log(date('Y-m-d H:i:s') . '[order_manual_collector] missing or invalid webhook_base_url for client id=' . $franchiseeClient['id']);
-                continue;
-            }
-            if (!$secretHex || !preg_match('/^[0-9a-f]{64}$/i', $secretHex)) {
-                error_log(date('Y-m-d H:i:s') . '[order_manual_collector] missing or invalid secret for client id=' . $franchiseeClient['id']);
-                continue;
-            }
-
-            // Skąd shopUid? Najlepiej z kolumny klienta:
-            $shopUid = $franchiseeClient['franchisee_uid'] ?? null;
-
-            if (!$shopUid) {
-                // bez shop_uid nie jedziemy dalej
-                error_log(date('Y-m-d H:i:s') . '[order_manual_collector] missing shop_uid for client id=' . $franchiseeClient['id']);
+            $config = match (true) {
+                !$webhookBaseUrl || !filter_var($webhookBaseUrl, FILTER_VALIDATE_URL) => ['missing or invalid webhook_base_url', 'Brak adresu webhooków sklepu w karcie klienta — zamówienia nie są pobierane.'],
+                !$secretHex || !preg_match('/^[0-9a-f]{64}$/i', $secretHex) => ['missing or invalid secret', 'Brak lub zły klucz sklepu w karcie klienta — zamówienia nie są pobierane.'],
+                $shopUid === '' => ['missing shop_uid', 'Brak identyfikatora sklepu (franchisee_uid) — zamówienia nie są pobierane.'],
+                default => null,
+            };
+            if ($config !== null) {
+                error_log(date('Y-m-d H:i:s') . '[' . $tag . '] ' . $config[0] . ' for client id=' . $clientId);
+                $this->issues->record('config', $shopUid, $clientId, null, $config[1]);
                 continue;
             }
 
             try {
-                $this->collectFromClient($shopUid, $webhookBaseUrl, $secretHex, $limit);
+                $this->collectFromClient($shopUid, $webhookBaseUrl, $secretHex, $limit, $clientId);
             } catch (\Throwable $e) {
-                //throw new CustomException("Error", 'errors', 500);
-                error_log(date('Y-m-d H:i:s') . '[order_manual_collector] collect error for ' . $shopUid . ': ' . $e->getMessage());
+                error_log(date('Y-m-d H:i:s') . '[' . $tag . '] collect error for ' . $shopUid . ': ' . $e->getMessage());
+                $this->issues->record('pull', $shopUid, $clientId, null, 'Błąd pobierania zamówień : ' . $e->getMessage());
             }
         }
-
-        return true;
     }
 
-
-    public function collectFromClient(string $shopUid, string $baseUrl, ?string $secretHex, int $limit = 50): bool
+    public function collectFromClient(string $shopUid, string $baseUrl, ?string $secretHex, int $limit = 50, ?int $clientId = null): bool
     {
         if (!$baseUrl || !filter_var($baseUrl, FILTER_VALIDATE_URL)) {
             throw new CustomException("MISSING_CLIENT_CREDENTIALS", 'errors', 500);
@@ -128,8 +103,11 @@ class OrderCollectorService
 
         if ($curlErr || $code < 200 || $code >= 300) {
             error_log(date('Y-m-d H:i:s') . '[order_collector] pull failed code=' . $code . ' err=' . $curlErr . ' url=' . $pullUrl);
+            $this->issues->record('pull', $shopUid, $clientId, null, 'Sklep nie odpowiada na pobieranie zamówień : ' . ($curlErr ?: 'HTTP ' . $code));
             return false;
         }
+        // La boutique répond : ses erreurs de configuration et de récupération sont réglées.
+        $this->issues->close(['config', 'pull'], $shopUid);
 
         $resp = json_decode($body, true) ?: [];
         $items = $resp['items'] ?? [];
@@ -154,6 +132,7 @@ class OrderCollectorService
                 if ($orderKey) {
                     $failKeys[] = $orderKey;
                     $failReasons[$orderKey] = 'bad-row-shape';
+                    $this->issues->record('import', $shopUid, $clientId, (string) $orderKey, 'Zamówienie ' . $orderKey . ' odrzucone : nieprawidłowe dane od sklepu.');
                 }
                 continue;
             }
@@ -173,10 +152,12 @@ class OrderCollectorService
                     'secret' => $secretHex
                 ]);
                 $doneKeys[] = $orderKey;
+                $this->issues->close(['import'], $shopUid, (string) $orderKey);
             } catch (\Throwable $e) {
                 $failKeys[] = $orderKey;
                 $failReasons[$orderKey] = substr(preg_replace('/\s+/', ' ', $e->getMessage()), 0, 200);
                 error_log(date('Y-m-d H:i:s') . '[order_collector] import failed for ' . $orderKey . ': ' . $e->getMessage());
+                $this->issues->record('import', $shopUid, $clientId, (string) $orderKey, 'Zamówienie ' . $orderKey . ' nie zostało zaimportowane : ' . $failReasons[$orderKey]);
                 continue;
             }
         }

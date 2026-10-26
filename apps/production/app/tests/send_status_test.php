@@ -60,7 +60,7 @@ try {
                  'product_recipe_prepare_instruction_connection', 'test_product', 'test_product_status', 'test_product_type', 'test_product_stage',
                  'test_product_changelog', 'complaint', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'palets_delivery', 'document_cmr', 'document_wz',
                  'shipment_log', 'app_notification', 'outbox', 'webhook_outbox_shipments', 'cron_notification_outbox', 'cron_runs',
-                 'document_proforma', 'document_invoice'] as $table) {
+                 'document_proforma', 'document_invoice', 'customer_order_changelog'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -185,6 +185,38 @@ try {
     $status->resolve('email', 5, 'stara wiadomość, nieaktualna', 1);
     $status->retry('email', 5, 1);
     expectSs($q("SELECT status FROM communication_message WHERE id = 5")['status'] === 'queued', 'a resolved error can still be sent again');
+
+    // --- Boutiques : récupération, import, produit inconnu (n_order_collect_issue) ; domówienia → boutique
+    $issues = new App\Repositories\Client\Order\OrderCollectIssueRepository($pdo);
+    $issues->record('pull', 'SHOP-A', 51, null, 'Sklep nie odpowiada na pobieranie zamówień : HTTP 500');
+    $issues->record('pull', 'SHOP-A', 51, null, 'Sklep nie odpowiada na pobieranie zamówień : HTTP 502');
+    $issues->record('unknown_product', 'SHOP-A', 51, 'ORD-7', 'Zamówienie ORD-7 : produkt SKU 999 nie istnieje w ERP', 99, '999');
+    $issues->record('import', 'SHOP-A', 51, 'ORD-8', 'Zamówienie ORD-8 nie zostało zaimportowane : CLIENT_NOT_FOUND');
+    $pdo->exec("INSERT INTO customer_order (id, id_customer, reference, invoice_num, status, order_description, expected_shipping_date, create_order_date, order_type, supplement_push_status, supplement_push_at)
+        VALUES (98, 51, 'D-1', '', 1, '', '2026-10-27', '2026-10-25 08:00:00', 'SUPPLEMENT', 'failed', '2026-10-25 08:00:05')");
+    $pdo->exec("INSERT INTO customer_order_changelog (id_order, action_type, source, changed_fields) VALUES (98, 'update', 'system', '{\"after\":{\"supplement_push_status\":\"failed\"},\"reason\":\"missing_webhook_base_url\"}')");
+    $shops = $status->overview('todo', 'shops', null, new DateTimeImmutable());
+    $sb = [];
+    foreach ($shops['items'] as $i) $sb[$i['kind']] = $i;
+    expectSs(count($shops['items']) === 3 && $sb['pull']['attempts'] === 2 && $sb['pull']['error'] === 'Sklep nie odpowiada na pobieranie zamówień : HTTP 502'
+        && $sb['pull']['customer'] === 'Klient A' && !$sb['pull']['can_retry'] && $sb['pull']['can_resolve'], 'shops: one line per case, repeats counted, last message ; no retry (polled every minute)');
+    expectSs($sb['unknown_product']['url'] === '/client-orders/99/edit' && $sb['unknown_product']['kind_label'] === 'Sklep : nieznany produkt' && $sb['unknown_product']['what'] === 'Zamówienie ORD-7',
+        'unknown product: opens the order to add the line by hand');
+    refusedSs(fn() => $status->retry('shops', (int) $sb['pull']['id'], 1), 409, 'shops: retry refused');
+    $issues->close(['config', 'pull'], 'SHOP-A');
+    $issues->close(['import'], 'SHOP-A', 'ORD-8');
+    expectSs(array_column($status->overview('todo', 'shops', null, new DateTimeImmutable())['items'], 'kind') === ['unknown_product'], 'shop answers again / order imported: cases closed');
+    $issues->record('pull', 'SHOP-A', 51, null, 'HTTP 503');
+    expectSs((int) $pdo->query("SELECT occurrences FROM n_order_collect_issue WHERE kind = 'pull'")->fetchColumn() === 1, 'closed case that comes back starts again');
+    $status->resolve('shops', (int) $sb['unknown_product']['id'], 'pozycja dodana ręcznie', 1);
+    expectSs(!in_array('unknown_product', array_column($status->overview('todo', 'shops', null, new DateTimeImmutable())['items'], 'kind'), true), 'resolved shop case leaves the list');
+    $sup = $status->overview('todo', 'supplement', 0, $now);
+    expectSs(count($sup['items']) === 1 && $sup['items'][0]['what'] === 'Domówienie #98', 'failed supplement listed');
+    expectSs($sup['items'][0]['error'] === 'missing_webhook_base_url' && $sup['items'][0]['url'] === '/client-orders/98/edit' && $sup['items'][0]['can_retry'], 'supplement: reason from the changelog');
+    $status->retry('supplement', 98, 1);
+    $d = $pdo->query("SELECT supplement_push_status AS s, supplement_push_at >= NOW() - INTERVAL 1 MINUTE AS fresh FROM customer_order WHERE id = 98")->fetch();
+    expectSs($d['s'] === 'pending' && (int) $d['fresh'] === 1, 'supplement requeued: pushed once by the 5-minute task');
+    refusedSs(fn() => $status->retry('supplement', 98, 1), 409, 'supplement already requeued');
 
     // --- Dzisiaj et nettoyage des messages
     $todo = $status->todo($now);

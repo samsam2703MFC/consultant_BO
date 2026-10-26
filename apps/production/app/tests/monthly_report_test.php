@@ -183,8 +183,13 @@ try {
     $settings = $reports->saveSettings(['recipients' => 'dir@x.test,  ', 'send_day' => 4, 'lang' => 'pl'], null);
     expectRep($settings === ['recipients' => 'dir@x.test', 'send_day' => 4, 'lang' => 'pl'], 'settings saved');
     expectRep(str_starts_with($reports->autoSend(new DateTimeImmutable('2026-10-03'))['skipped'], 'before day'), 'auto send waits for the day');
+    $pdo->exec("DELETE FROM cost_month WHERE year = 2026 AND month = 9");
+    expectRep(str_starts_with($reports->autoSend(new DateTimeImmutable('2026-10-05'))['skipped'], 'month not closed'), 'auto send waits for the month to be closed (costs)');
+    $pdo->exec("INSERT INTO cost_month (year, month, status) VALUES (2026, 9, 'OPEN')");
+    expectRep(str_starts_with($reports->autoSend(new DateTimeImmutable('2026-10-05'))['skipped'], 'month not closed'), 'open cost month : still waiting');
+    $pdo->exec("UPDATE cost_month SET status = 'LOCKED' WHERE year = 2026 AND month = 9");
     $auto = $reports->autoSend(new DateTimeImmutable('2026-10-05'));
-    expectRep(($auto['month'] ?? null) === '2026-09' && $auto['queued'] === 1, 'auto send previous month');
+    expectRep(($auto['month'] ?? null) === '2026-09' && $auto['queued'] === 1, 'auto send previous month once closed');
     expectRep(str_starts_with($reports->autoSend(new DateTimeImmutable('2026-10-06'))['skipped'], 'already sent'), 'auto send once a month');
     expectRep((int) $pdo->query("SELECT COUNT(*) FROM communication_message WHERE created_by = 'monthly-report:2026-09'")->fetchColumn() === 1, 'one automatic message');
 

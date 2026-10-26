@@ -24,6 +24,12 @@ final class ProductLogistics
         'cpp' => [0, 10000],
     ];
 
+    /** Pola wymagane (> 0) dla nowego produktu : wszystko poza opakowaniem (0 = bez opakowania, jak w Karcie). */
+    public const REQUIRED_NEW = ['weight', 'ppc', 'cpl', 'lpp', 'cpp'];
+
+    /** Przydatność do spożycia (dni) : wymagana wszędzie (nowy produkt, Karta, API) w tym zakresie. */
+    public const SHELF_LIFE = [1, 3650];
+
     public const LABELS = [
         'weight' => 'Waga produktu (g)',
         'ppc' => 'Sztuk w kartonie',

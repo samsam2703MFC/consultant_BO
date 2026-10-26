@@ -775,7 +775,7 @@
                 <span class="form-text">${esc(t('p.section_help'))}</span></label>
             <label>${esc(t('p.label_type'))}<select class="form-select" name="label_type" data-field="label_type">
                 ${state.erp.label_types.map(v => `<option value="${v}" ${v === e.label_type ? 'selected' : ''}>${esc(t('p.label_type.' + v))}</option>`).join('')}</select></label>
-            <label>${esc(t('p.shelf_life'))}<input class="form-control" name="shelf_life" data-field="shelf_life" inputmode="numeric" value="${e.shelf_life ?? ''}"></label>
+            <label>${esc(t('p.shelf_life'))}<input class="form-control" name="shelf_life" data-field="shelf_life" type="number" min="1" max="3650" step="1" inputmode="numeric" required value="${e.shelf_life ?? ''}"></label>
             <p class="form-text tfb-full">${esc(t('p.help'))}</p>
             ${nav(1)}</form>
             ${item.final_product_id ? '<section class="tfb-media" data-media></section>' : ''}`;
@@ -902,8 +902,8 @@
 
     function stepMode(body, item) {
         const s = item.settings;
-        // Produkt z kartonem : stany min. / maks. w kartonach lub sztukach (zapis w sztukach) ; pokrycia nie ma
-        // w kreatorze, partia produkcyjna jest w kroku « Etapy i czasy ».
+        // Produkt z kartonem : stany min. / maks. i partia w kartonach lub sztukach (zapis w sztukach) ; pokrycia nie ma
+        // w kreatorze. Partia produkcyjna podawana tu, przed stanami (ta sama wartość co w « Etapy i czasy »).
         const ppc = item.item_type === 'product' && item.erp && item.erp.ppc > 0 ? item.erp.ppc : 0;
         const PAIRED = ['stock_min', 'stock_max'];
         const cartons = (v) => v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? '' : String(Math.round(Number(v) / ppc * 100) / 100).replace('.', ',');
@@ -914,7 +914,14 @@
                 <input class="form-control" name="${f}" data-field="${f}" inputmode="numeric" value="${s[f] ?? ''}" aria-label="${esc(t('f.' + f))} — ${esc(t('m.pieces'))}">
                 <span class="input-group-text">${esc(t('m.pieces'))}</span></div></label>`
             : `<label>${esc(t('f.' + f))}<input class="form-control" name="${f}" data-field="${f}" inputmode="decimal" value="${s[f] ?? ''}"></label>`;
+        const batchField = `<label class="tfb-full">${esc(t('f.batch_multiple'))}<div class="input-group tfb-qty-pair">
+                ${ppc ? `<input class="form-control" name="batch_multiple_cartons" inputmode="decimal" value="${cartons(s.batch_multiple)}" aria-label="${esc(t('f.batch_multiple'))} — ${esc(t('m.cartons'))}">
+                <span class="input-group-text">${esc(t('m.cartons'))}</span>` : ''}
+                <input class="form-control" name="batch_multiple" data-field="batch_multiple" inputmode="decimal" value="${s.batch_multiple ?? ''}" placeholder="—" aria-label="${esc(t('f.batch_multiple'))} — ${esc(item.base_unit)}">
+                <span class="input-group-text">${esc(item.base_unit)}</span></div>
+                <span class="form-text d-block">${esc(t('r.batch_help'))}</span></label>`;
         body.innerHTML = `<form class="tfb-form" data-form>
+            ${batchField}
             <div class="tfb-full tfb-mode" data-field="mode">
                 <span class="tfb-mode-label" data-mode-label="MTO">${esc(t('mode.MTO'))}</span>
                 <label class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" name="mts" aria-label="${esc(t('f.mode'))}: ${esc(t('mode.MTS'))}" ${s.mode === 'MTS' ? 'checked' : ''}></label>
@@ -935,25 +942,26 @@
         const form = body.querySelector('[data-form]');
         // Kartony ↔ sztuki : zmiana jednego pola przelicza drugie.
         const fillCartons = (f) => { if (ppc && form[f + '_cartons']) form[f + '_cartons'].value = cartons(ui.num(form[f].value)); };
-        if (ppc) PAIRED.forEach(f => {
+        if (ppc) [...PAIRED, 'batch_multiple'].forEach(f => {
             form[f + '_cartons'].addEventListener('input', () => { const c = ui.num(form[f + '_cartons'].value); if (c === null || typeof c === 'number') form[f].value = c === null ? '' : Math.round(c * ppc); });
             form[f].addEventListener('input', () => fillCartons(f));
         });
-        // Partie produkcyjne (krok « Etapy i czasy ») : ile partii brakuje do stanu min. (w górę) i ile pełnych
+        const batchValue = () => { const v = ui.num(form.batch_multiple.value); return typeof v === 'number' && v > 0 ? v : null; };
+        // Partie produkcyjne (pole powyżej) : ile partii brakuje do stanu min. (w górę) i ile pełnych
         // partii mieści się do stanu maks. — od stanu dostępnego (stan − zamówienia + w produkcji), jak « Stan magazynu ».
         const drawBatches = () => {
             const box = form.querySelector('[data-batch-calc]');
             if (!box) return;
-            const b = s.batch_multiple;
+            const b = batchValue();
             const f = (v, d) => ui.fmt(v, d ?? 0, api.lang);
             const title = `<div class="tfb-batch-calc-title"><i class="bi bi-boxes"></i> ${esc(t('m.batch_title'))}</div>`;
             if (!b) {
-                box.innerHTML = title + `<div>${esc(t('m.batch_none'))} <a href="#/item/${item.id}/6">${esc(t('m.batch_set'))}</a></div>`;
+                box.innerHTML = title + `<div>${esc(t('m.batch_none'))}</div>`;
                 return;
             }
             const bc = b / ppc;
             const st = item.stock;
-            const lines = [`<strong>${esc(t('m.batch_size', {qty: f(b), unit: item.base_unit, cartons: f(bc, 1)}))}</strong> · <a href="#/item/${item.id}/6">${esc(t('m.batch_change'))}</a>`];
+            const lines = [`<strong>${esc(t('m.batch_size', {qty: f(b), unit: item.base_unit, cartons: f(bc, 1)}))}</strong>`];
             const min = form.mts.checked ? ui.num(form.stock_min.value) : null;
             const max = form.mts.checked ? ui.num(form.stock_max.value) : null;
             const stocks = typeof min === 'number' || typeof max === 'number';
@@ -1015,6 +1023,7 @@
             e.preventDefault();
             const data = {mode: form.mts.checked ? 'MTS' : 'MTO', never_frozen: form.never_frozen.checked};
             for (const f of PAIRED) data[f] = ui.num(form[f].value);
+            data.batch_multiple = form.batch_multiple.value.trim() === '' ? null : ui.num(form.batch_multiple.value);
             if (calculated) data.stock_calculated = true;
             saveSettings(form, data, 5);
         });
@@ -1068,6 +1077,8 @@
     function stepRouting(body, item) {
         let steps = item.routing.map(s => ({...s, alternatives: s.alternatives.map(a => ({...a}))}));
         const delayFilter = (w) => ['fermentation', 'froid', 'surgelation'].includes(w.type);
+        // Wszystkie czasy etapu w minutach (stały, oczekiwanie, mycie) ; tylko kadencja na sztukę w sekundach.
+        const toMin = (sec) => sec === null || sec === undefined || sec === '' ? sec : Math.round(Number(sec) / 60 * 100) / 100;
         // Partia produkcyjna (np. pistolet : 1300 szt. naraz) : plan proponuje pełne partie, tydzień rozkłada je w całości.
         let batch = item.settings.batch_multiple ?? null;
         const ppc = item.item_type === 'product' && item.erp && item.erp.ppc > 0 ? item.erp.ppc : 0;
@@ -1097,11 +1108,16 @@
             const c = cobotOf(a.workstation_id);
             if (!c) return '';
             // Puste : kadencja jak w etapie (zapis po stronie serwera).
-            const input = (k, label, mode) => `<label>${esc(label)}<input class="form-control form-control-sm" inputmode="${mode}" data-alt="${k}" data-alt-ws="${a.workstation_id}"
-                data-field="steps.${i}.alternatives.${j}.${k}" value="${a[k] ?? ''}" placeholder="${esc(String(s[k] ?? ''))}"></label>`;
+            // Czas stały w minutach (jak etap), zapis w sekundach.
+            const input = (k, label, mode) => {
+                const min = k === 'fixed_time_s';
+                const shown = (v) => min ? toMin(v) : v;
+                return `<label>${esc(label)}<input class="form-control form-control-sm" inputmode="${mode}" data-alt="${min ? 'fixed_min' : k}" data-alt-ws="${a.workstation_id}"
+                data-field="steps.${i}.alternatives.${j}.${k}" value="${shown(a[k]) ?? ''}" placeholder="${esc(String(shown(s[k]) ?? ''))}"></label>`;
+            };
             return `<div class="tfb-cobot" data-cobot="${a.workstation_id}"><div class="tfb-cobot-head">🤖 <strong>${esc(c.name)}</strong>
                     <span class="badge bg-light text-dark">${esc(t('r.cobot_share', {share: ui.fmt(c.operator_share, 2, api.lang), n: ui.fmt(1 / c.operator_share, 1, api.lang)}))}</span></div>
-                <div class="tfb-step-grid">${input('fixed_time_s', t('r.fixed'), 'numeric')}${input('variable_time_s', t('r.variable'), 'decimal')}${input('capacity_per_pass', t('r.capacity'), 'decimal')}</div>
+                <div class="tfb-step-grid">${input('fixed_time_s', t('r.fixed'), 'decimal')}${input('variable_time_s', t('r.variable'), 'decimal')}${input('capacity_per_pass', t('r.capacity'), 'decimal')}</div>
                 <p class="form-text mb-0" data-cobot-compare>${esc(compare(s, a))}</p><p class="form-text mb-0">${esc(t('r.cobot_help'))}</p></div>`;
         };
         const draw = () => {
@@ -1127,7 +1143,7 @@
                     <div class="tfb-step-grid">
                         <label>${esc(t('r.workstation'))}${s.workstation_id ? ` <span class="badge bg-light text-dark">${esc(t('ws.' + wsType(s.workstation_id)))}</span>` : ''}<select class="form-select form-select-sm" data-k="workstation_id" data-field="steps.${i}.workstation_id"><option value="">—</option>${wsOptions(s.workstation_id)}</select></label>
                         ${TEMPERATURE_TYPES.includes(wsType(s.workstation_id)) ? `<label>${esc(t('r.temperature'))}<input class="form-control form-control-sm" inputmode="decimal" data-k="temperature_c" data-field="steps.${i}.temperature_c" value="${s.temperature_c ?? ''}"></label>` : ''}
-                        <label>${esc(t('r.fixed'))}<input class="form-control form-control-sm" inputmode="numeric" data-k="fixed_time_s" data-field="steps.${i}.fixed_time_s" value="${s.fixed_time_s ?? 0}"></label>
+                        <label>${esc(t('r.fixed'))}<input class="form-control form-control-sm" inputmode="decimal" data-k="fixed_min" data-field="steps.${i}.fixed_time_s" value="${toMin(s.fixed_time_s) ?? 0}"></label>
                         <label>${esc(t('r.variable'))}<input class="form-control form-control-sm" inputmode="decimal" data-k="variable_time_s" data-field="steps.${i}.variable_time_s" value="${s.variable_time_s ?? 0}"></label>
                         <label>${esc(t('r.capacity'))}<input class="form-control form-control-sm" inputmode="decimal" data-k="capacity_per_pass" data-field="steps.${i}.capacity_per_pass" value="${s.capacity_per_pass ?? ''}"></label>
                         <label>${esc(t('r.operators'))}<input class="form-control form-control-sm" inputmode="decimal" data-k="operators_required" data-field="steps.${i}.operators_required" value="${s.operators_required ?? 1}"></label>
@@ -1169,7 +1185,9 @@
                 const s = steps[Number(card.dataset.index)];
                 card.querySelectorAll('[data-alt]').forEach(input => {
                     const a = s.alternatives.find(x => x.workstation_id === Number(input.dataset.altWs));
-                    if (a) a[input.dataset.alt] = input.value.trim() === '' ? undefined : ui.num(input.value);
+                    if (!a) return;
+                    if (input.dataset.alt === 'fixed_min') a.fixed_time_s = input.value.trim() === '' ? undefined : Math.round(ui.num(input.value) * 60);
+                    else a[input.dataset.alt] = input.value.trim() === '' ? undefined : ui.num(input.value);
                 });
                 card.querySelectorAll('[data-k]').forEach(input => {
                     const k = input.dataset.k;
@@ -1178,6 +1196,8 @@
                         s.alternatives = chosen.map(id => s.alternatives.find(a => a.workstation_id === id) || {workstation_id: id});
                     } else if (k === 'workstation_id' || k === 'delay_workstation_id') {
                         s[k] = input.value ? Number(input.value) : null;
+                    } else if (k === 'fixed_min') {
+                        s.fixed_time_s = input.value === '' ? 0 : Math.round(ui.num(input.value) * 60);
                     } else if (k === 'delay_min') {
                         s.delay_after_s = input.value === '' ? 0 : Math.round(ui.num(input.value) * 60);
                     } else if (k === 'cleaning_min') {
@@ -1252,7 +1272,7 @@
                 <button class="btn btn-sm btn-outline-primary">${esc(t('t.compute'))}</button></form><div data-custom></div>
             <h5 class="mt-4">${esc(t('t.studies'))}</h5>
             ${item.routing.map(s => `<details class="tfb-study" data-step="${s.id}"><summary><strong>${s.step_no}. ${esc(s.name)}</strong>
-                <span class="text-muted">${esc(s.workstation.name)} · ${s.fixed_time_s} ${esc(t('unit.s'))} ${esc(t('t.component.fixed'))} · ${ui.fmt(s.variable_time_s, 3, api.lang)} ${esc(t('unit.s'))} ${esc(t('t.component.variable'))}</span></summary>
+                <span class="text-muted">${esc(s.workstation.name)} · ${ui.fmt((s.fixed_time_s || 0) / 60, 2, api.lang)} ${esc(t('unit.min'))} ${esc(t('t.component.fixed'))} · ${ui.fmt(s.variable_time_s, 3, api.lang)} ${esc(t('unit.s'))} ${esc(t('t.component.variable'))}</span></summary>
                 <div data-study-body>${esc(t('loading'))}</div></details>`).join('')}
             ${nav(7, false)}`;
         productionSummary(body.querySelector('[data-summary]'), item);

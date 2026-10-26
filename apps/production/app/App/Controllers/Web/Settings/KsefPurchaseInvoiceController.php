@@ -9,7 +9,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class KsefPurchaseInvoiceController extends BaseController
 {
-    public function __construct(private KsefPurchaseInvoiceService $invoices, private \App\Repositories\Material\Purchase\DocumentRepository $manualPurchases)
+    public function __construct(private KsefPurchaseInvoiceService $invoices, private \App\Repositories\Material\Purchase\DocumentRepository $manualPurchases,
+        private \App\Repositories\Workshop\InvoiceRepository $control)
     {
     }
 
@@ -21,7 +22,11 @@ final class KsefPurchaseInvoiceController extends BaseController
     public function ajaxList(): Response
     {
         try {
-            return $this->json(['ok' => true] + $this->invoices->list($this->getJson(Request::createFromGlobals())));
+            $list = $this->invoices->list($this->getJson(Request::createFromGlobals()));
+            // Une seule chaîne d'achat : les factures déjà importées dans la kontrola faktur (Zaopatrzenie › Faktury) sont marquées.
+            $imported = array_flip($this->control->importedKsef(array_values(array_filter(array_map(fn($i) => $i['ksefNumber'] ?? null, $list['invoices'] ?? [])))));
+            foreach ($list['invoices'] ?? [] as $k => $i) $list['invoices'][$k]['inControl'] = isset($imported[$i['ksefNumber'] ?? '']);
+            return $this->json(['ok' => true] + $list);
         } catch (\Throwable $exception) {
             return $this->json(['ok' => false, 'message' => $exception->getMessage()], 422);
         }

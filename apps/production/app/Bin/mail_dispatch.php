@@ -7,7 +7,9 @@ declare(strict_types=1);
  * (Komunikacja › Automatyczne e-maile), met en file le rapport mensuel de direction (une fois par
  * mois, si des destinataires sont configurés), publie les alertes d'échéances dans la cloche (réclamations sans
  * décision, essais de nouveaux produits en retard, coûts du mois non saisis), crée la version de départ des recettes
- * qui n'en ont pas encore (versions « en vigueur depuis »), alimente la file des écarts d'expédition, puis passe la file d'envoi.
+ * qui n'en ont pas encore (versions « en vigueur depuis »), alimente la file des écarts d'expédition, rafraîchit les
+ * statuts KSeF en attente (si un token KSeF est configuré : l'e-mail « après acceptation KSeF » part sans ouvrir
+ * Wysyłki), renvoie les domówienia remises en file (Stan wysyłek, « Ponów »), puis passe la file d'envoi.
  *   php Bin/mail_dispatch.php        à lancer par cron toutes les 5 minutes
  * L'envoi réel dépend de MAIL_DELIVERY_MODE (.env) : live, redirect ou log_only.
  */
@@ -24,6 +26,13 @@ if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
 }
 
 try {
+    // Statuts KSeF (factures envoyées en attente de réponse, UPO) : en premier : une WDT acceptée déclenche son e-mail dans le même passage.
+    try {
+        $ksef = $container->get(App\Services\Ksef\KsefSubmissionService::class)->refreshPendingStatusesIfConfigured();
+    } catch (Throwable $e) {
+        fwrite(STDERR, 'mail_dispatch ksef: ' . $e->getMessage() . PHP_EOL);
+        $ksef = ['error' => $e->getMessage()];
+    }
     $dispatch = $container->get(App\Services\Communication\MailAutomationService::class)->dispatch();
     // Raport miesięczny zarządu : raz w miesiącu za poprzedni miesiąc (błąd raportu nie zatrzymuje wysyłki kolejki).
     try {
@@ -53,8 +62,15 @@ try {
         fwrite(STDERR, 'mail_dispatch recipe versions: ' . $e->getMessage() . PHP_EOL);
         $recipeVersions = ['error' => $e->getMessage()];
     }
+    // Domówienia remises en file depuis Stan wysyłek : une tentative de plus (à part aussi).
+    try {
+        $supplements = $container->get(App\Services\Client\Order\OrderSupplementPusherService::class)->pushRequeued();
+    } catch (Throwable $e) {
+        fwrite(STDERR, 'mail_dispatch supplements: ' . $e->getMessage() . PHP_EOL);
+        $supplements = ['error' => $e->getMessage()];
+    }
     $delivery = $container->get(App\Services\Communication\CommunicationEmailDeliveryWorker::class)->processDue(50);
-    echo json_encode(['dispatch' => $dispatch, 'monthly_report' => $report, 'alerts' => $alerts, 'recipe_versions' => $recipeVersions, 'shipping_issues' => $shippingIssues, 'delivery' => $delivery], JSON_UNESCAPED_UNICODE) . PHP_EOL;
+    echo json_encode(['dispatch' => $dispatch, 'monthly_report' => $report, 'alerts' => $alerts, 'recipe_versions' => $recipeVersions, 'shipping_issues' => $shippingIssues, 'ksef' => $ksef, 'supplements' => $supplements, 'delivery' => $delivery], JSON_UNESCAPED_UNICODE) . PHP_EOL;
 } catch (Throwable $e) {
     fwrite(STDERR, 'mail_dispatch: ' . $e->getMessage() . PHP_EOL);
     exit(1);

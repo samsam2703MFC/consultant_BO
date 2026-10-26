@@ -2,6 +2,8 @@
 
 namespace App\Controllers\Web\Settings;
 
+use App\Domain\Params\ParamRules;
+
 use App\Core\Web\BaseController;
 use App\Repositories\Workshop\ParamRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -10,23 +12,19 @@ use Symfony\Component\HttpFoundation\Request;
 /** Ustawienia › Pozostałe : operacje na recepturach i parametry ogólne (zapasy produktów na magazynie, alerty i terminy). */
 class SettingsController extends BaseController
 {
-    /** Parametry zapasów (n_prod_param) : kod => [min, maks, liczba całkowita]. */
-    private const STOCK_PARAMS = [
-        'stock.suggest_weeks' => [1, 52, true],
-        'stock.suggest_min_weeks' => [0, 26, false],
-        'stock.suggest_max_weeks' => [0.5, 52, false],
-    ];
+    /** Parametry zapasów (n_prod_param) : kod => domyślnie ; zakresy w App\Domain\Params\ParamRules (jedna reguła). */
+    private const STOCK_PARAMS = ['stock.suggest_weeks' => '6', 'stock.suggest_min_weeks' => '1', 'stock.suggest_max_weeks' => '3'];
 
-    /** Alerty i terminy w dzwonku (n_prod_param) : kod => [min, maks, domyślnie]. */
+    /** Alerty i terminy w dzwonku (n_prod_param) : kod => domyślnie ; zakresy w ParamRules. */
     private const ALERT_PARAMS = [
-        'alerts.complaint_days' => [1, 60, '3'],
-        'alerts.complaint_escalate_days' => [1, 90, '7'],
-        'alerts.cost_due_day' => [1, 28, '10'],
-        'shipping_issue.decision_days' => [1, 30, '3'],
-        'shipping_issue.min_amount' => [0, 1000, '1'],
-        'shipping_issue.lookback_days' => [7, 365, '45'],
-        'send_status.stuck_minutes' => [5, 1440, '30'],
-        'send_status.lookback_days' => [1, 365, '30'],
+        'alerts.complaint_days' => '3',
+        'alerts.complaint_escalate_days' => '7',
+        'alerts.cost_due_day' => '10',
+        'shipping_issue.decision_days' => '3',
+        'shipping_issue.min_amount' => '1',
+        'shipping_issue.lookback_days' => '45',
+        'send_status.stuck_minutes' => '30',
+        'send_status.lookback_days' => '30',
     ];
 
     public function __construct(private ParamRepository $params)
@@ -36,9 +34,9 @@ class SettingsController extends BaseController
     public function index()
     {
         $stock = [];
-        foreach (array_keys(self::STOCK_PARAMS) as $code) $stock[$code] = $this->params->get($code, ['stock.suggest_weeks' => '6', 'stock.suggest_min_weeks' => '1', 'stock.suggest_max_weeks' => '3'][$code]);
+        foreach (self::STOCK_PARAMS as $code => $default) $stock[$code] = $this->params->get($code, $default);
         $alerts = [];
-        foreach (self::ALERT_PARAMS as $code => [, , $default]) $alerts[$code] = $this->params->get($code, $default);
+        foreach (self::ALERT_PARAMS as $code => $default) $alerts[$code] = $this->params->get($code, $default);
         $this->view('settings/settings', ['stock_params' => $stock, 'alert_params' => $alerts]);
     }
 
@@ -48,17 +46,13 @@ class SettingsController extends BaseController
         $data = $this->getJson(Request::createFromGlobals());
         $values = [];
         $errors = [];
-        foreach (self::ALERT_PARAMS as $code => [$min, $max]) {
+        foreach (array_keys(self::ALERT_PARAMS) as $code) {
             $raw = trim((string) ($data[$code] ?? ''));
-            if (!ctype_digit($raw) || (int) $raw < $min || (int) $raw > $max) {
-                $errors[$code] = "Liczba całkowita od {$min} do {$max}.";
-                continue;
-            }
+            if (($error = ParamRules::rangeError($code, $raw)) !== null) { $errors[$code] = $error; continue; }
             $values[$code] = (string) (int) $raw;
         }
-        if (!$errors && (int) $values['alerts.complaint_escalate_days'] < (int) $values['alerts.complaint_days']) {
-            $errors['alerts.complaint_escalate_days'] = 'Alert pilny nie może być wcześniej niż zwykły.';
-        }
+        // Mêmes règles que l'API et l'import Excel (App\Domain\Params\ParamRules).
+        if (!$errors) foreach (ParamRules::orderErrors($values, fn($c) => $this->params->get($c, '')) as $code => [, $message]) $errors[$code] = $message;
         if ($errors) return $this->json(['ok' => false, 'errors' => $errors, 'error' => implode(' ', $errors)], 422);
         $userId = user('id');
         foreach ($values as $code => $value) $this->params->setValue($code, $value, $userId ? (int) $userId : null);
@@ -71,17 +65,13 @@ class SettingsController extends BaseController
         $data = $this->getJson(Request::createFromGlobals());
         $values = [];
         $errors = [];
-        foreach (self::STOCK_PARAMS as $code => [$min, $max, $int]) {
+        foreach (array_keys(self::STOCK_PARAMS) as $code) {
+            $int = ParamRules::RANGES[$code][2];
             $raw = str_replace(',', '.', trim((string) ($data[$code] ?? '')));
-            if (!is_numeric($raw) || ($int && (string) (int) $raw !== $raw) || (float) $raw < $min || (float) $raw > $max) {
-                $errors[$code] = "Wartość od {$min} do {$max}" . ($int ? ' (liczba całkowita)' : '') . '.';
-                continue;
-            }
+            if (($error = ParamRules::rangeError($code, $raw)) !== null) { $errors[$code] = $error; continue; }
             $values[$code] = $int ? (string) (int) $raw : rtrim(rtrim(number_format((float) $raw, 2, '.', ''), '0'), '.');
         }
-        if (!$errors && (float) $values['stock.suggest_max_weeks'] < (float) $values['stock.suggest_min_weeks']) {
-            $errors['stock.suggest_max_weeks'] = 'Zapas maksymalny nie może być mniejszy niż minimalny.';
-        }
+        if (!$errors) foreach (ParamRules::orderErrors($values, fn($c) => $this->params->get($c, '')) as $code => [, $message]) $errors[$code] = $message;
         if ($errors) return $this->json(['ok' => false, 'errors' => $errors, 'error' => implode(' ', $errors)], 422);
         $userId = user('id');
         foreach ($values as $code => $value) $this->params->setValue($code, $value, $userId ? (int) $userId : null);

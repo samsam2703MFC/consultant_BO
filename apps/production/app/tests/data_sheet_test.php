@@ -189,6 +189,30 @@ try {
     expectSheet($s === 422 && $b['description'] === 'DATA_SHEET_INVALID_FILE' && str_contains($b['message'], 'Fichier illisible'), 'unreadable file');
     [$s, $b] = $call('POST', '/referentiels/data-sheet/preview', [], $manager);
     expectSheet($s === 422 && $b['errors'][0]['field'] === 'file', 'file is required');
+
+    // --- Mêmes règles que la page Ustawienia › Pozostałe (ParamRules) : alerte urgente ≥ alerte, bornes connues
+    [$s, $b] = $call('GET', '/referentiels/data-sheet', null, $direction);
+    $book = $load($b['data']['content_base64']);
+    $paramSheet = $book->getSheetByName('Parametry (paramètres)');
+    foreach ($paramSheet->toArray(null, false, false, true) as $n => $row) {
+        if ($row['A'] === 'alerts.complaint_days') $paramSheet->setCellValue('D' . $n, 9);
+        if ($row['A'] === 'alerts.complaint_escalate_days') $paramSheet->setCellValue('D' . $n, 5);
+        if ($row['A'] === 'shipping_issue.lookback_days') $paramSheet->setCellValue('D' . $n, 2);
+    }
+    [$s, $b] = $call('POST', '/referentiels/data-sheet/preview', ['file' => $save($book)], $manager);
+    $rows = $byKey($b['data']);
+    expectSheet($b['data']['error_count'] === 2 && $rows['params:alerts.complaint_escalate_days']['errors'] && $rows['params:shipping_issue.lookback_days']['errors']
+        && !$rows['params:alerts.complaint_days']['errors'], 'import: urgent alert before the normal alert and out-of-range value refused, like the settings page');
+    foreach ($paramSheet->toArray(null, false, false, true) as $n => $row) {
+        if ($row['A'] === 'alerts.complaint_escalate_days') $paramSheet->setCellValue('D' . $n, 12);
+        if ($row['A'] === 'shipping_issue.lookback_days') $paramSheet->setCellValue('D' . $n, 45);
+    }
+    [$s, $b] = $call('POST', '/referentiels/data-sheet/preview', ['file' => $save($book)], $manager);
+    expectSheet($b['data']['error_count'] === 0, 'import: both alert days changed together in the right order accepted (final state of the file)');
+    [$s, $b] = $call('PATCH', '/referentiels/params/alerts.complaint_escalate_days', ['value' => 1], $manager);
+    expectSheet($s === 422 && $b['errors'][0]['code'] === 'PARAM_ESCALATE_BEFORE_ALERT', 'API: same order rule');
+    [$s, $b] = $call('PATCH', '/referentiels/params/alerts.cost_due_day', ['value' => 40], $manager);
+    expectSheet($s === 422 && $b['errors'][0]['code'] === 'OUT_OF_RANGE', 'API: same ranges');
 } finally {
     $pdo->exec("DROP DATABASE IF EXISTS {$testDb}");
 }

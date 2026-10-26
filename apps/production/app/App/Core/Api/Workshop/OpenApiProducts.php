@@ -141,7 +141,7 @@ final class OpenApiProducts
             ]],
             'ItemProductInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
                 'name' => ['type' => 'string', 'maxLength' => 255], 'category_id' => ['type' => 'integer', 'minimum' => 1], 'section_id' => ['type' => 'integer', 'minimum' => 1],
-                'label_type' => ['type' => 'integer', 'enum' => ItemService::LABEL_TYPES], 'shelf_life' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 3650],
+                'label_type' => ['type' => 'integer', 'enum' => ItemService::LABEL_TYPES], 'shelf_life' => ['type' => 'integer', 'minimum' => \App\Domain\Product\ProductLogistics::SHELF_LIFE[0], 'maximum' => \App\Domain\Product\ProductLogistics::SHELF_LIFE[1]],
                 'stock_minimum' => ['type' => 'integer', 'minimum' => 0, 'description' => 'cartons (liste de production ERP)'],
             ]],
             'StockOverview' => ['type' => 'object', 'properties' => [

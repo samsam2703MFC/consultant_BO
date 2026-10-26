@@ -87,6 +87,7 @@
 
     // Ikony Lucide (lucide.dev, licencja ISC) wbudowane w skrypt : linia, bez emoji, działają offline.
     const ICONS = {
+        'moon': '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />',
         'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />',
         'list-ordered': '<path d="M10 12h11" /><path d="M10 18h11" /><path d="M10 6h11" /><path d="M4 10h2" /><path d="M4 6h1v4" /><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />',
         'clock': '<circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />',
@@ -732,7 +733,9 @@
             try { drawProduction(await api('PATCH', `/kiosk/waste/${b.dataset.wasteCancel}`, {cancelled: true}, true), me, t('waste_cancelled')); }
             catch (err) { b.disabled = false; toast(err.message, true); }
         }));
-        el.querySelector('[data-close-day]')?.addEventListener('click', () => renderClose(day, me));
+        el.querySelector('[data-close-day]')?.addEventListener('click', () => renderEndDay(day, me, 1));
+        // Retour d'une action ouverte depuis l'assistant « Koniec dnia » (lots, NC, perte) : on reprend à son étape.
+        if (resumeEndDay) { const back = resumeEndDay; resumeEndDay = null; renderEndDay(day, me, back); }
         const go = el.querySelector('[data-other-go]');
         if (go) go.addEventListener('click', () => { const v = Number(el.querySelector('[data-other]').value); if (v) renderNewBatch(find(v)); });
     }
@@ -788,27 +791,108 @@
         });
     }
 
-    // Zatwierdzenie dnia : podsumowanie na produkt (plan, zrobione, straty, dobre), braki wobec planu, notatka zespołu.
-    function renderClose(day, me) {
+    // Koniec dnia : assistant en 6 étapes — 1 productions sans tous leurs lots matières → 2 sans contrôle qualité (OK
+    // en un geste ou NC) → 3 pertes → 4 machines encore en marche → 5 validation (note obligatoire s'il reste des
+    // manques) → 6 sortie (questions et signature, comme d'habitude). Une action ouverte depuis une étape (lots, NC,
+    // perte) revient à cette étape (resumeEndDay).
+    let resumeEndDay = null;
+    const EOD_STEPS = 6;
+    async function renderEndDay(day, me, step) {
         resetIdle();
-        const short = day.items.filter(i => i.planned !== null && i.produced + 1e-6 < i.planned);
-        el.innerHTML = header() + `<section class="kiosk-card"><h2>${esc(t('day_close_title', {group: day.group.name}))}</h2>
-            <p class="kiosk-muted">${esc(t('day_close_help'))}</p>
-            <table class="kiosk-table"><thead><tr><th>${esc(t('day_col_product'))}</th><th>${esc(t('day_col_planned'))}</th><th>${esc(t('day_col_done'))}</th><th>${esc(t('day_col_waste'))}</th><th>${esc(t('day_col_good'))}</th></tr></thead>
-            <tbody>${day.items.map(i => `<tr class="${i.planned !== null && i.produced + 1e-6 < i.planned ? 'is-short' : ''}"><td>${esc(i.name)}</td><td>${i.planned !== null ? esc(qty(i.planned, i)) : '—'}</td>
-                <td>${esc(qty(i.produced, i))}</td><td>${i.waste ? esc(qty(i.waste, i)) : '—'}</td><td><strong>${esc(qty(i.good, i))}</strong></td></tr>`).join('')}</tbody></table>
-            ${short.length ? `<p class="kiosk-error">${icon('triangle-alert', 'is-sm')} ${esc(t('day_short', {n: short.length}))}</p>` : ''}
-            <form class="kiosk-form" data-close-form><label class="is-wide">${esc(t('day_note'))}<input name="note" maxlength="255" value="${esc(day.closed && day.closed.note || '')}"></label></form>
-            <p class="kiosk-error" data-error></p>
-            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-cancel>${esc(t('cancel'))}</button>
-                <button type="button" class="kiosk-btn is-primary" data-save>${icon('check')} ${esc(t('day_confirm'))}</button></div></section>`;
-        el.querySelector('[data-close-form]').addEventListener('input', resetIdle);
-        el.querySelector('[data-cancel]').addEventListener('click', () => drawProduction(day, me));
-        el.querySelector('[data-save]').addEventListener('click', async (e) => {
+        longIdle = true;
+        const steps = Array.from({length: EOD_STEPS}, (_, k) => k + 1);
+        const bar = `<ol class="kiosk-eod-steps">${steps.map(n => `<li class="${n === step ? 'is-on' : (n < step ? 'is-done' : '')}"><span>${n}</span>${esc(t('eod_step_' + n))}</li>`).join('')}</ol>`;
+        const batchesById = {};
+        day.items.forEach(i => i.batches.forEach(b => { batchesById[b.id] = {...b, item: i}; }));
+        const nav = (back, next, nextLabel) => `<div class="kiosk-row is-end">
+            <button type="button" class="kiosk-btn" data-eod-back>${esc(back ? t('back') : t('cancel'))}</button>
+            ${next ? `<button type="button" class="kiosk-btn is-primary" data-eod-next>${esc(nextLabel || t('eod_next'))}</button>` : ''}</div>`;
+        let body = '';
+        let q = null, mach = null;
+        if (step === 1) {
+            const rows = day.gaps.lots.map(id => batchesById[id]).filter(Boolean);
+            body = `<p class="kiosk-muted">${esc(t('eod_lots_help'))}</p>` + (rows.length ? `<ul class="kiosk-qc">${rows.map(b => `<li class="kiosk-qc-row">
+                <div><strong>${esc(b.item.name)}</strong> · ${esc(b.lot_code)}<div class="kiosk-muted">${esc(t('prod_lots', {done: b.lots_done ?? 0, total: b.lots_total ?? 0}))} · ${esc(hhmm(b.created_at))}</div></div>
+                <button type="button" class="kiosk-btn is-ok" data-eod-lots="${b.id}">${icon('pencil')} ${esc(t('eod_fill'))}</button></li>`).join('')}</ul>`
+                : `<p class="kiosk-status">${icon('circle-check', 'is-sm')} ${esc(t('eod_lots_ok'))}</p>`);
+        } else if (step === 2) {
+            try { q = await api('GET', '/kiosk/quality', undefined, true); } catch (err) { toast(err.message, true); return; }
+            const todo = q.batches.filter(b => !b.qc);
+            body = `<p class="kiosk-muted">${esc(t('eod_qc_help'))}</p>` + (todo.length ? `<ul class="kiosk-qc">${todo.map(b => `<li class="kiosk-qc-row">
+                <div><strong>${esc(b.name)}</strong> · ${esc(b.lot_code)}<div class="kiosk-muted">${esc(qty(b.quantity, b))} · ${esc(hhmm(b.created_at))}</div></div>
+                <div class="kiosk-qc-actions"><button type="button" class="kiosk-btn is-ok" data-eod-qc-ok="${b.id}">${icon('check')} ${esc(t('qc_ok'))}</button>
+                <button type="button" class="kiosk-btn is-danger-soft is-small" data-eod-qc-nc="${b.id}">${icon('x')} ${esc(t('qc_nc'))}</button></div></li>`).join('')}</ul>`
+                : `<p class="kiosk-status">${icon('circle-check', 'is-sm')} ${esc(t('eod_qc_ok'))}</p>`);
+        } else if (step === 3) {
+            const withGood = day.items.filter(i => i.good > 0);
+            const lost = day.items.filter(i => i.waste > 0);
+            body = `<p class="kiosk-muted">${esc(t('eod_waste_help'))}</p>` + (lost.length ? `<table class="kiosk-table"><tbody>${lost.map(i => `<tr><td>${esc(i.name)}</td><td><strong>${esc(qty(i.waste, i))}</strong></td>
+                <td class="kiosk-muted">${esc(i.wastes.filter(w => !w.cancelled).map(w => t('waste_' + w.reason)).join(', '))}</td></tr>`).join('')}</tbody></table>`
+                : `<p class="kiosk-status">${esc(t('eod_waste_none'))}</p>`)
+                + (withGood.length ? `<div class="kiosk-row">${withGood.map(i => `<button type="button" class="kiosk-btn is-danger-soft is-small" data-eod-waste="${i.item_id}">− ${esc(i.name)}</button>`).join('')}</div>` : '');
+        } else if (step === 4) {
+            try { mach = await api('GET', '/kiosk/machines', undefined, true); } catch (err) { mach = {machines: []}; }
+            const on = mach.machines.filter(m => m.state);
+            body = `<p class="kiosk-muted">${esc(t('eod_mach_help'))}</p>` + (on.length ? `<ul class="kiosk-qc">${on.map(m => `<li class="kiosk-qc-row">
+                <div><strong>${esc(m.name)}</strong><div class="kiosk-muted">${m.state.state === 'run' ? esc(t('mach_running', {time: hhmm(m.state.since)})) : esc(t('mach_stopped', {reason: t('reason.' + m.state.reason), time: hhmm(m.state.since)}))}</div></div>
+                <button type="button" class="kiosk-btn" data-eod-off="${m.id}">${icon('square')} ${esc(t('mach_off'))}</button></li>`).join('')}</ul>`
+                : `<p class="kiosk-status">${icon('circle-check', 'is-sm')} ${esc(t('eod_mach_ok'))}</p>`);
+        } else if (step === 5) {
+            const short = day.items.filter(i => i.planned !== null && i.produced + 1e-6 < i.planned);
+            const gaps = day.gaps.lots.length || day.gaps.qc.length;
+            body = `<p class="kiosk-muted">${esc(t('day_close_help'))}</p>
+                <table class="kiosk-table"><thead><tr><th>${esc(t('day_col_product'))}</th><th>${esc(t('day_col_planned'))}</th><th>${esc(t('day_col_done'))}</th><th>${esc(t('day_col_waste'))}</th><th>${esc(t('day_col_good'))}</th></tr></thead>
+                <tbody>${day.items.map(i => `<tr class="${i.planned !== null && i.produced + 1e-6 < i.planned ? 'is-short' : ''}"><td>${esc(i.name)}</td><td>${i.planned !== null ? esc(qty(i.planned, i)) : '—'}</td>
+                    <td>${esc(qty(i.produced, i))}</td><td>${i.waste ? esc(qty(i.waste, i)) : '—'}</td><td><strong>${esc(qty(i.good, i))}</strong></td></tr>`).join('')}</tbody></table>
+                ${short.length ? `<p class="kiosk-error">${icon('triangle-alert', 'is-sm')} ${esc(t('day_short', {n: short.length}))}</p>` : ''}
+                ${gaps ? `<p class="kiosk-error">${icon('triangle-alert', 'is-sm')} ${esc(t('eod_gaps', {lots: day.gaps.lots.length, qc: day.gaps.qc.length}))}</p>` : ''}
+                <form class="kiosk-form" data-close-form><label class="is-wide">${esc(t(gaps ? 'eod_note_required' : 'day_note'))}<input name="note" maxlength="255" value="${esc(day.closed && day.closed.note || '')}" ${gaps ? 'required' : ''}></label></form>
+                <p class="kiosk-error" data-error></p>`;
+        } else {
+            body = `<p class="kiosk-status">${icon('circle-check', 'is-sm')} ${esc(t('eod_done'))}</p>
+                ${me && me.clocked_in ? `<p class="kiosk-muted">${esc(t('eod_exit_help'))}</p>
+                <button type="button" class="kiosk-btn kiosk-big is-danger" data-eod-exit><span class="kiosk-big-icon">${icon('log-out')}</span>${esc(t('clock_out'))}</button>` : ''}
+                <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-eod-production>${esc(t('eod_back_production'))}</button></div>`;
+        }
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-eod"><h2>${icon('moon')} ${esc(t('eod_title', {group: day.group.name}))}</h2>${bar}
+            <h3 class="kiosk-eod-step">${esc(t('eod_step_' + step))}</h3>${body}
+            ${step < 5 ? nav(step > 1, true) : (step === 5 ? nav(true, true, t('day_confirm')) : '')}</section>`;
+        const go = (n) => renderEndDay(day, me, n);
+        const reload = async (n) => {
+            try { day = await api('GET', '/kiosk/production', undefined, true); } catch (err) { toast(err.message, true); return; }
+            go(n);
+        };
+        el.querySelector('[data-eod-back]')?.addEventListener('click', () => step > 1 ? go(step - 1) : drawProduction(day, me));
+        el.querySelector('[data-eod-production]')?.addEventListener('click', () => renderProduction());
+        el.querySelectorAll('[data-eod-lots]').forEach(b => b.addEventListener('click', () => { resumeEndDay = 1; renderBatch(Number(b.dataset.eodLots)); }));
+        el.querySelectorAll('[data-eod-qc-ok]').forEach(b => b.addEventListener('click', async () => {
+            b.disabled = true;
+            try { await api('POST', `/kiosk/quality/batches/${b.dataset.eodQcOk}`, {result: 'ok'}, true); toast(t('qc_saved_ok')); reload(2); }
+            catch (err) { b.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
+        }));
+        el.querySelectorAll('[data-eod-qc-nc]').forEach(b => b.addEventListener('click', () => { resumeEndDay = 2; renderNcForm(q, q.batches.find(x => x.id === Number(b.dataset.eodQcNc))); }));
+        el.querySelectorAll('[data-eod-waste]').forEach(b => b.addEventListener('click', () => { resumeEndDay = 3; renderWaste(day.items.find(i => i.item_id === Number(b.dataset.eodWaste))); }));
+        el.querySelectorAll('[data-eod-off]').forEach(b => b.addEventListener('click', async () => {
+            const m = mach.machines.find(x => x.id === Number(b.dataset.eodOff));
+            if (!window.confirm(t('mach_off_confirm', {name: m.name}))) return;
+            b.disabled = true;
+            try { await api('POST', `/kiosk/machines/${m.id}/state`, {state: 'off', client_uuid: uuid()}, true); toast(t('mach_saved_off', {name: m.name})); go(4); }
+            catch (err) { b.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
+        }));
+        el.querySelector('[data-close-form]')?.addEventListener('input', resetIdle);
+        el.querySelector('[data-eod-exit]')?.addEventListener('click', (e) => {
+            if ((me.questions?.out || []).length) renderQuestions(me.questions.out, 'out');
+            else clockTap(e.currentTarget, 'out', []);
+        });
+        el.querySelector('[data-eod-next]')?.addEventListener('click', async (e) => {
+            if (step < 5) return step === 1 || step === 2 ? reload(step + 1) : go(step + 1);
+            const note = el.querySelector('[name=note]').value.trim();
+            if ((day.gaps.lots.length || day.gaps.qc.length) && !note) { el.querySelector('[data-error]').textContent = t('eod_note_missing'); el.querySelector('[name=note]').focus(); return; }
             e.target.disabled = true;
             try {
-                const r = await api('POST', '/kiosk/production/close', {date: day.date, note: el.querySelector('[name=note]').value.trim() || null}, true);
-                drawProduction(r, me, t('day_closed_done'));
+                day = await api('POST', '/kiosk/production/close', {date: day.date, note: note || null}, true);
+                toast(t('day_closed_done'));
+                go(6);
             } catch (err) { e.target.disabled = false; el.querySelector('[data-error]').textContent = err.offline ? t('offline_retry') : err.message; }
         });
     }
@@ -1282,6 +1366,8 @@
 
     // --- Kontrola jakości : każda partia dnia OK albo niezgodność (rejestr niezgodności ERP) -------------
     async function renderQuality(message) {
+        // Retour d'une non-conformité ouverte depuis « Koniec dnia » : reprise de l'assistant (via la production du jour).
+        if (resumeEndDay) return renderProduction(message);
         longIdle = true;
         resetIdle();
         let q;

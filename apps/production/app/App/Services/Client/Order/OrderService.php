@@ -57,6 +57,7 @@ class OrderService
         OrderChangelogRepository $orderChangelogRepository,
         private PickingListAuditService $pickingListAuditService,
         private AppNotificationService $appNotificationService,
+        private \App\Repositories\Client\Order\OrderCollectIssueRepository $collectIssues,
     )
     {
         $this->orderRepository = $orderRepository;
@@ -150,7 +151,13 @@ class OrderService
                 //$product = $this->finalProductCustomerPriceRepository->getByClientAndProduct($client['id'], $orderProduct['sku']);
                 $product = $this->productRepository->first(['id' => $orderProduct['sku']]);
 
+                // Produit inconnu : la ligne reste hors commande (comme avant) mais le cas va dans Stan wysyłek.
                 if (!isset($product) || empty($product)) {
+                    $sku = (string) ($orderProduct['sku'] ?? '');
+                    $this->collectIssues->record('unknown_product', (string) $data['franchisee_uid'], (int) $client['id'], (string) $data['order_key'],
+                        'Zamówienie ' . $data['order_key'] . ' : produkt SKU ' . ($sku !== '' ? $sku : '?') . (isset($orderProduct['name']) ? ' (' . $orderProduct['name'] . ')' : '')
+                        . ' nie istnieje w ERP — pozycja pominięta (' . (int) ($orderProduct['pack_quantity'] ?? 0) . ' kart.). Dodaj ją ręcznie do zamówienia.',
+                        (int) $idOrder, $sku);
                     continue;
                 }
 

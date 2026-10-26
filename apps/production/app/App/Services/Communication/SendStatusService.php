@@ -23,11 +23,15 @@ final class SendStatusService
         'shipment' => ['label' => 'Sklepy franczyzy (wysyłki)', 'icon' => 'bi-truck', 'worker' => 'Bin/shipments_retry.php'],
         'automation' => ['label' => 'E-maile automatyczne (reguły)', 'icon' => 'bi-lightning-charge', 'worker' => 'Bin/mail_dispatch.php'],
         'monitoring' => ['label' => 'Monitoring zadań (Discord)', 'icon' => 'bi-activity', 'worker' => 'Bin/cron_discord_notification_worker.php'],
+        'shops' => ['label' => 'Zamówienia ze sklepów (pobieranie)', 'icon' => 'bi-cloud-download', 'worker' => 'Bin/monitored_poller.php'],
+        'supplement' => ['label' => 'Domówienia → sklep', 'icon' => 'bi-cart-plus', 'worker' => 'Bin/mail_dispatch.php'],
     ];
     public const FILTERS = ['todo' => 'Do obsłużenia', 'error' => 'Błędy', 'stuck' => 'Czeka', 'resolved' => 'Rozwiązane'];
     private const KINDS = [
         'proforma.upload' => 'Proforma → sklep (plik PDF)', 'proforma.notify' => 'Proforma → sklep (powiadomienie)',
         'complaint.update' => 'Reklamacja → sklep (decyzja)', 'shipment.sent' => 'Wysyłka → sklep', 'cron.notify' => 'Powiadomienie o zadaniu',
+        'config' => 'Sklep : konfiguracja', 'pull' => 'Sklep : pobieranie zamówień', 'import' => 'Sklep : zamówienie odrzucone',
+        'unknown_product' => 'Sklep : nieznany produkt', 'supplement.push' => 'Domówienie → sklep',
     ];
     private const ERROR_HINTS = [
         'callback_failed' => ' — sklep nie przyjął powiadomienia (adres albo klucz sklepu)', 'UPDATE_FAILED' => ' — sklep odrzucił aktualizację',
@@ -94,6 +98,9 @@ final class SendStatusService
     public function retry(string $source, int $id, ?int $userId): array
     {
         $this->assertSource($source);
+        if ($source === 'shops') {
+            throw new CustomException('Sklep jest odpytywany automatycznie co minutę — popraw przyczynę (karta klienta, produkt) albo oznacz jako rozwiązane.', 'errors', 409);
+        }
         $this->repo->inTransaction(function () use ($source, $id, $userId) {
             $ok = $source === 'automation' ? $this->forgetDispatch($id) : $this->repo->requeue($source, $id);
             if (!$ok) {
@@ -102,8 +109,8 @@ final class SendStatusService
             }
             $this->repo->record($source, $id, 'retry', null, $userId);
         });
-        return ['message' => $source === 'automation'
-            ? 'Reguła rozpatrzy ten przypadek ponownie przy następnym przebiegu (co 5 minut).'
+        return ['message' => in_array($source, ['automation', 'supplement'], true)
+            ? ($source === 'automation' ? 'Reguła rozpatrzy ten przypadek ponownie przy następnym przebiegu (co 5 minut).' : 'Domówienie zostanie wysłane do sklepu przy następnym przebiegu (co 5 minut).')
             : 'Pozycja wróciła do kolejki : jedna próba więcej przy następnym przebiegu zadania planowanego.'];
     }
 
@@ -205,6 +212,26 @@ final class SendStatusService
             ], $now);
         }
 
+        foreach ($this->repo->shops($since) as $c) {
+            $out[] = $this->item('shops', $c, [
+                'kind_label' => self::KINDS[$c['kind']] ?? self::humanize((string) $c['kind']),
+                'what' => trim(($c['order_key'] ? 'Zamówienie ' . $c['order_key'] : '') . ((int) $c['attempts'] > 1 ? ' · ' . (int) $c['attempts'] . '× od ' . date('d.m H:i', strtotime((string) $c['created_at'])) : '')),
+                'customer' => $c['customer'], 'customer_id' => $c['id_customer'] ? (int) $c['id_customer'] : null,
+                'url' => $c['id_order'] ? '/client-orders/' . (int) $c['id_order'] . '/edit' : ($c['id_customer'] ? '/clients/' . (int) $c['id_customer'] . '/edit' : null),
+                'error_state' => true,
+            ], $now);
+        }
+
+        foreach ($this->repo->supplements($since, $stuckBefore) as $d) {
+            $log = json_decode((string) $d['error'], true);
+            $d['error'] = is_array($log) ? (string) ($log['reason'] ?? '') : '';
+            $out[] = $this->item('supplement', $d, [
+                'kind_label' => self::KINDS['supplement.push'], 'what' => 'Domówienie #' . (int) $d['id'] . ($d['order_key'] ? ' · ' . $d['order_key'] : ''),
+                'customer' => $d['customer'], 'customer_id' => $d['id_customer'] ? (int) $d['id_customer'] : null,
+                'url' => '/client-orders/' . (int) $d['id'] . '/edit', 'error_state' => $d['status'] === 'failed',
+            ], $now);
+        }
+
         // État « rozwiązane » : la dernière action sur une erreur est « resolve ».
         foreach (array_keys(self::SOURCES) as $src) {
             $ids = array_column(array_filter($out, fn($i) => $i['source'] === $src), 'id');
@@ -213,7 +240,9 @@ final class SendStatusService
                 if ($i['source'] !== $src || !isset($actions[$i['id']])) continue;
                 $a = $actions[$i['id']];
                 $i['last_action'] = ['action' => $a['action'], 'reason' => $a['reason'], 'user' => $a['user_name'], 'at' => $a['created_at']];
-                if ($i['state'] === 'error' && $a['action'] === 'resolve') {
+                // Boutiques : un cas classé qui se reproduit après le classement revient dans la liste.
+                $again = $src === 'shops' && strtotime((string) $i['last_at']) > strtotime((string) $a['created_at']);
+                if ($i['state'] === 'error' && $a['action'] === 'resolve' && !$again) {
                     $i['state'] = 'resolved';
                     $i['can_resolve'] = false;
                 }
@@ -237,7 +266,7 @@ final class SendStatusService
             'created_at' => $row['created_at'], 'last_at' => (string) $row['last_at'],
             'waiting_minutes' => !$error && $next ? max(0, (int) floor(($now->getTimestamp() - strtotime((string) $next)) / 60)) : null,
             'customer' => $extra['customer'] ?? null, 'customer_id' => $extra['customer_id'] ?? null, 'recipient' => $extra['recipient'] ?? null,
-            'can_retry' => $error, 'can_resolve' => $error, 'last_action' => null,
+            'can_retry' => $error && $source !== 'shops', 'can_resolve' => $error, 'last_action' => null,
         ];
     }
 

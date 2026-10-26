@@ -57,10 +57,11 @@
                                     <label class="form-label" for="id_current_supplier">
                                         Dostawca
                                     </label>
-                                    <select class="form-select" name="id_current_supplier" id="id_current_supplier">
+                                    <select class="form-select" name="id_current_supplier" id="id_current_supplier" required>
+                                        <option value="">Wybierz dostawcę…</option>
                                         <?php if(!empty($suppliers)): ?>
                                             <?php foreach($suppliers as $supplier): ?>
-                                                <option value="<?=$supplier['id']?>" <?=old_select('id_supplier', $supplier['id'])?> ><?=$supplier['name']?></option>
+                                                <option value="<?=$supplier['id']?>" <?=old_select('id_current_supplier', $supplier['id'])?> ><?=$supplier['name']?></option>
                                             <?php endforeach; ?>
                                         <?php endif; ?>
                                     </select>

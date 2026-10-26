@@ -178,14 +178,15 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                         </tfoot>
                     </table>
 
-                    <h5 class="mt-4">Przygotowanie <small class="text-muted fw-normal">czynności i czas (sekundy)</small></h5>
+                    <h5 class="mt-4">Przygotowanie <small class="text-muted fw-normal">czynności i czas (minuty, jak w Karcie produktu)</small></h5>
                     <table class="table table-sm align-middle" data-rows="preparation_type" style="max-width: 720px">
-                        <thead><tr><th>Czynność</th><th style="width:180px">Czas [s]</th><th style="width:60px"></th></tr></thead>
+                        <thead><tr><th>Czynność</th><th style="width:180px">Czas [min]</th><th style="width:60px"></th></tr></thead>
                         <tbody>
                         <?php foreach (($old['preparation_type'] ?? []) as $item): ?>
                             <tr>
                                 <td><input type="text" class="form-control form-control-sm" name="preparation_type[<?= (int) $item['id_preparation'] ?>][name]" value="<?= $e($item['name']) ?>"></td>
-                                <td><input type="number" class="form-control form-control-sm" name="preparation_type[<?= (int) $item['id_preparation'] ?>][duration_second]" value="<?= $e($item['duration_second']) ?>">
+                                <td><input type="number" min="0" step="0.5" class="form-control form-control-sm" data-minutes value="<?= $e(round(((float) $item['duration_second']) / 60, 2)) ?>" aria-label="Czas w minutach">
+                                    <input type="hidden" name="preparation_type[<?= (int) $item['id_preparation'] ?>][duration_second]" value="<?= $e($item['duration_second']) ?>">
                                     <input type="hidden" name="preparation_type[<?= (int) $item['id_preparation'] ?>][id_preparation]" value="<?= (int) $item['id_preparation'] ?>"></td>
                                 <td><button class="btn btn-sm btn-outline-danger" type="button" data-remove aria-label="Usuń">×</button></td>
                             </tr>
@@ -199,7 +200,7 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                                         <option value="<?= (int) $type['id'] ?>"><?= $e($type['name']) ?></option>
                                     <?php endforeach; ?>
                                 </select></td>
-                                <td><input type="number" min="0" class="form-control form-control-sm" placeholder="0" aria-label="Czas w sekundach"></td>
+                                <td><input type="number" min="0" step="0.5" class="form-control form-control-sm" placeholder="0" aria-label="Czas w minutach"></td>
                                 <td><button class="btn btn-sm btn-success" type="button" data-add-row>Dodaj</button></td>
                             </tr>
                         </tfoot>
@@ -226,11 +227,18 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
     (function () {
         const form = document.getElementById('recipeForm');
         const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+        // Czas czynności wpisywany w minutach (jak w Karcie i kreatorze), zapisywany w sekundach (duration_second).
+        const toSeconds = (min) => { const m = parseFloat(String(min ?? '').replace(',', '.')); return m >= 0 ? Math.round(m * 60) : ''; };
+        form.addEventListener('input', (e) => {
+            const m = e.target.closest('[data-minutes]');
+            if (m) m.nextElementSibling.value = toSeconds(m.value);
+        });
         const removeBtn = '<button class="btn btn-sm btn-outline-danger" type="button" data-remove aria-label="Usuń">×</button>';
         const rowHtml = {
             preparation_type: (id, name, qty) =>
                 `<td><input type="text" class="form-control form-control-sm" name="preparation_type[${id}][name]" value="${esc(name)}"></td>
-                 <td><input type="number" class="form-control form-control-sm" name="preparation_type[${id}][duration_second]" value="${esc(qty)}">
+                 <td><input type="number" min="0" step="0.5" class="form-control form-control-sm" data-minutes value="${esc(qty)}" aria-label="Czas w minutach">
+                     <input type="hidden" name="preparation_type[${id}][duration_second]" value="${toSeconds(qty)}">
                      <input type="hidden" name="preparation_type[${id}][id_preparation]" value="${id}"></td><td>${removeBtn}</td>`,
             default: (key, id, name, qty) =>
                 `<td>${esc(name)}<input type="hidden" name="${key}[${id}][id]" value="${id}"><input type="hidden" name="${key}[${id}][name]" value="${esc(name)}"></td>
