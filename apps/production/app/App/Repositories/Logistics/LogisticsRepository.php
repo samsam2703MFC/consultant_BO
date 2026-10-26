@@ -21,7 +21,7 @@ final class LogisticsRepository extends WorkshopRepository
             'SELECT cv.id, cv.id_carrier, c.name AS carrier, c.active AS carrier_active, cv.regis_num,
                     TRIM(CONCAT(cv.driver_name, " ", cv.driver_surname)) AS driver, cv.driver_phone,
                     v.pallet_places, v.max_load_kg, TIME_FORMAT(v.departure_time, "%H:%i") AS departure_time,
-                    COALESCE(v.active, 0) AS active, v.notes, v.id_carrier_vehicle IS NOT NULL AS configured
+                    COALESCE(v.active, 0) AS active, v.notes, v.id_carrier_vehicle IS NOT NULL AS configured, v.id_driver
              FROM carrier_vehicle cv JOIN carrier c ON c.id = cv.id_carrier
              LEFT JOIN n_vehicle v ON v.id_carrier_vehicle = cv.id
              ORDER BY COALESCE(v.active, 0) DESC, c.name, cv.regis_num'
@@ -61,6 +61,12 @@ final class LogisticsRepository extends WorkshopRepository
             implode(', ', array_map(fn($c) => "{$c} = VALUES({$c})", $columns))
         );
         $this->db->prepare($sql)->execute(['id' => $vehicleId] + $data);
+    }
+
+    /** Kierowca pojazdu spośród pracowników (n_prod_employee) ; wiersz n_vehicle już istnieje (addVehicle). */
+    public function setVehicleDriver(int $vehicleId, ?int $driverId, ?int $userId): void
+    {
+        $this->db->prepare('UPDATE n_vehicle SET id_driver = ?, updated_by = ? WHERE id_carrier_vehicle = ?')->execute([$driverId, $userId, $vehicleId]);
     }
 
     /** Dni wysyłki z zamówieniami (bez zarchiwizowanych) od podanej daty. */

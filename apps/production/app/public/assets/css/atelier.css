@@ -813,6 +813,8 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-steps-summary { display: grid; grid-template-columns: minmax(160px, 34%) 1fr; gap: 2px 12px; margin: 0; font-size: 13px; }
 .at-steps-summary dt { font-weight: 500; color: var(--at-muted); }
 .at-steps-summary dd { margin: 0; overflow-wrap: anywhere; }
+.at-check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 16px; }
+tr.at-row-new > td { background: rgba(46, 125, 79, 0.07); }
 /* Choix en cartes (bouton radio ou case masqués) */
 .at-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .at-choice {

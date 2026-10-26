@@ -269,6 +269,12 @@ final class PositionRepository extends WorkshopRepository
     }
 
     /** @return list<array{id:int,code:string,name_pl:string,name_fr:string}> grupy produkcji */
+    public function idByCode(string $code): ?int
+    {
+        $id = $this->all('SELECT id FROM n_position WHERE code = ?', [$code])[0]['id'] ?? null;
+        return $id === null ? null : (int) $id;
+    }
+
     public function groups(): array
     {
         return $this->all('SELECT id, code, name_pl, name_fr FROM n_prod_group ORDER BY sort_order, id');

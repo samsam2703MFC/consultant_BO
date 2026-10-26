@@ -4,6 +4,7 @@ namespace App\Controllers\Web\Logistics;
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Services\Logistics\LogisticsService;
+use App\Services\Logistics\VehicleCreationService;
 use Symfony\Component\HttpFoundation\Request;
 
 /** Logistyka : klienci dnia na trasach i pojazdach, palety i waga, trasy, pojazdy z pojemnością, lista załadunku. */
@@ -11,7 +12,7 @@ class LogisticsController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private LogisticsService $logistics, private \App\Services\Logistics\DriverService $driver) {}
+    public function __construct(private LogisticsService $logistics, private \App\Services\Logistics\DriverService $driver, private VehicleCreationService $vehicleCreation) {}
 
     public function day()
     {
@@ -51,7 +52,11 @@ class LogisticsController extends BaseController
 
     public function vehicles()
     {
-        $data = $this->logistics->vehicles();
+        $data = $this->logistics->vehicles() + $this->vehicleCreation->choices();
+        if (($_SESSION['vehicle_created']['id'] ?? null) === (int) ($_GET['created'] ?? 0)) {
+            $data['created'] = $_SESSION['vehicle_created'];
+            unset($_SESSION['vehicle_created']);
+        }
         // « Dodaj pojazd » z listy przewoźnika : przewoźnik wybrany od razu.
         $data['preselect_carrier'] = (int) ($_GET['carrier'] ?? 0);
         $this->view('logistics/vehicles', $data);
@@ -117,8 +122,9 @@ class LogisticsController extends BaseController
     public function addVehicle()
     {
         try {
-            $id = $this->logistics->addVehicle($this->getJson(Request::createFromGlobals()), $this->userId());
-            return $this->json(['message' => 'Dodano pojazd.', 'data' => ['id' => $id]], 201);
+            $result = $this->vehicleCreation->create($this->getJson(Request::createFromGlobals()), $this->userId());
+            $_SESSION['vehicle_created'] = $result;
+            return $this->json(['message' => 'Dodano pojazd.', 'data' => $result], 201);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }

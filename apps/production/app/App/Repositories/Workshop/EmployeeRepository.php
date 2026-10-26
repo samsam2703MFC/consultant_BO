@@ -32,6 +32,13 @@ final class EmployeeRepository extends WorkshopRepository
         return $this->all(self::SELECT . ' WHERE pe.id = ?', [$productionEmployeeId])[0] ?? null;
     }
 
+    /** Profil pracowni (n_prod_employee.id) z imieniem, nazwiskiem i stanowiskiem. */
+    public function byProfile(int $profileId): ?array
+    {
+        return $this->all('SELECT e.id AS profile_id, pe.id AS production_employee_id, pe.name, pe.surname, e.id_position, e.active
+             FROM n_prod_employee e JOIN production_employee pe ON pe.id = e.id_production_employee WHERE e.id = ?', [$profileId])[0] ?? null;
+    }
+
     public function panelIdTaken(int $panelId, int $exceptProductionEmployeeId): bool
     {
         return (bool) $this->all('SELECT 1 FROM n_prod_employee WHERE panel_employee_id = ? AND id_production_employee <> ?', [$panelId, $exceptProductionEmployeeId]);
