@@ -124,6 +124,14 @@
                         <label class="form-label" for="apIssueBack">Kolejka różnic : ostatnie (dni)</label>
                         <input class="form-control" id="apIssueBack" name="shipping_issue.lookback_days" inputmode="numeric" value="<?= htmlspecialchars((string) ($ap['shipping_issue.lookback_days'] ?? '45')) ?>">
                     </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="apSendStuck">Stan wysyłek : « czeka » po (minutach)</label>
+                        <input class="form-control" id="apSendStuck" name="send_status.stuck_minutes" inputmode="numeric" value="<?= htmlspecialchars((string) ($ap['send_status.stuck_minutes'] ?? '30')) ?>">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="apSendBack">Stan wysyłek : błędy z ostatnich (dni)</label>
+                        <input class="form-control" id="apSendBack" name="send_status.lookback_days" inputmode="numeric" value="<?= htmlspecialchars((string) ($ap['send_status.lookback_days'] ?? '30')) ?>">
+                    </div>
                     <div class="col-12 col-md-3 d-grid">
                         <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Zapisz alerty</button>
                     </div>

@@ -37,6 +37,11 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/communication/messages', ['controller' => $controller, 'method' => 'messages']);
     $r->addRoute('POST', '/ajax/communication/messages/{id:\\d+}/send-now', ['controller' => $controller, 'method' => 'sendMessageNow']);
     $r->addRoute('GET', '/communication/messages/{id:\\d+}', ['controller' => $controller, 'method' => 'message']);
+    // Stan wysyłek : błędy i kolejki (e-maile, sklepy franczyzy, e-maile automatyczne, monitoring) — ponów jedną pozycję, rozwiązane z powodem
+    $sendStatus = App\Controllers\Web\Communication\SendStatusController::class;
+    $r->addRoute('GET', '/communication/outbox', ['controller' => $sendStatus, 'method' => 'index']);
+    $r->addRoute('POST', '/ajax/communication/outbox/{source:[a-z]+}/{id:\\d+}/retry', ['controller' => $sendStatus, 'method' => 'retry']);
+    $r->addRoute('POST', '/ajax/communication/outbox/{source:[a-z]+}/{id:\\d+}/resolve', ['controller' => $sendStatus, 'method' => 'resolve']);
     $r->addRoute('GET', '/communication/payment-reminders', ['controller' => $controller, 'method' => 'reminder']);
     $r->addRoute('GET', '/ajax/communication/differences/{idDifference:\\d+}/compose', ['controller' => $controller, 'method' => 'ajaxComposeReminder']);
     $r->addRoute('POST', '/ajax/communication/payment-reminders/draft', ['controller' => $controller, 'method' => 'saveReminderDraft']);

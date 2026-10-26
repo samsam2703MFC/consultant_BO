@@ -202,6 +202,13 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 - Fiche produit (`/workshop/stock-movements/{id}`) : jour par jour, entrées avec numéros de lot, sorties par client (client de la dernière palette du carton), solde ; lots en stock maintenant, date limite la plus proche d'abord (FEFO), périmés en rouge.
 - Hors périmètre pour l'instant : inventaire physique (comptage et ajustement).
 
+## Stan wysyłek — console des envois (26/10/2026)
+
+- Komunikacja › « Stan wysyłek » (`/communication/outbox`, onglet à côté de Dystrybucja dokumentów et Historia wiadomości) : une tuile par file — e-mails aux clients, envois aux boutiques franchisées (proformas PDF + avis, décisions de réclamation), avis d'expédition aux boutiques, e-mails automatiques des règles, notifications de surveillance (Discord) — avec le nombre d'erreurs, ce qui attend et la date du dernier envoi réussi (une file qui ne réussit plus rien = tâche planifiée arrêtée ou accès refusé).
+- Liste « Do obsłużenia » : « Błąd » = toutes les tentatives faites ; « Czeka » = en file plus de 30 min après son heure. Pour chaque position : document (proforma, WDT, facture, commande, réclamation), client, destinataire, erreur lisible (les erreurs AWS sont résumées, sans compte ni utilisateur IAM ; jetons et signatures masqués), tentatives, lien vers la source.
+- « Ponów » : une seule position, une seule tentative de plus, envoyée par la tâche planifiée habituelle (pas de « tout renvoyer », rien n'est envoyé depuis la page). « Rozwiązane… » : classe une erreur avec un motif obligatoire (journal : qui, quand, pourquoi) ; elle reste visible dans le filtre « Rozwiązane » et peut encore être renvoyée.
+- Dzisiaj › « Do zrobienia » (Administracja) : nombre d'envois à vérifier.
+
 ## Points ouverts (données réelles à fournir)
 
 Les écrans existent ; ce qui manque, ce sont les données réelles de l'atelier (la copie de test tourne sur une démo réaliste).

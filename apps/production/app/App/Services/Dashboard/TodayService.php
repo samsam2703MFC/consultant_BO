@@ -4,13 +4,14 @@ namespace App\Services\Dashboard;
 
 use App\Repositories\Dashboard\TodayRepository;
 use App\Services\Notification\DeadlineAlertService;
+use App\Services\Communication\SendStatusService;
 
 /**
  * Strona „Dzisiaj”: co wysyłamy, co trzeba wyprodukować i co czeka na decyzję.
  */
 class TodayService
 {
-    public function __construct(private TodayRepository $repository, private DeadlineAlertService $alerts) {}
+    public function __construct(private TodayRepository $repository, private DeadlineAlertService $alerts, private SendStatusService $sends) {}
 
     public function overview(): array
     {
@@ -86,14 +87,20 @@ class TodayService
         return $todo;
     }
 
-    /** Échéances : essais de nouveaux produits en retard, lancements à faire, coûts du mois manquants (sans bloquer la page). */
+    /**
+     * Échéances (essais de nouveaux produits en retard, lancements à faire, coûts du mois manquants) et envois en
+     * erreur ou bloqués (Stan wysyłek) — sans bloquer la page si l'une des sources échoue.
+     */
     private function alertTodo(): array
     {
-        try {
-            return $this->alerts->todo();
-        } catch (\Throwable) {
-            return [];
+        $items = [];
+        foreach ([fn() => $this->alerts->todo(), fn() => $this->sends->todo()] as $source) {
+            try {
+                $items = array_merge($items, $source());
+            } catch (\Throwable) {
+            }
         }
+        return $items;
     }
 
     /** Lista „Do zrobienia”: tylko to, co wymaga ruchu; każda pozycja prowadzi do właściwej strony. */
