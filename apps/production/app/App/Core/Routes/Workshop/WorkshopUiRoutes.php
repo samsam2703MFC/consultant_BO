@@ -16,6 +16,11 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/workshop/workstations', ['controller' => $c, 'method' => 'workstations']);
     $r->addRoute('GET', '/workshop/data-sheet', ['controller' => $c, 'method' => 'dataSheet']);
     $r->addRoute('GET', '/workshop/timesheet', ['controller' => $c, 'method' => 'timesheet']);
+    // Ruchy magazynowe produktów gotowych (przyjęcia, wydania, saldo, rozbieżności) — z kartonów, bez drugiego wpisywania
+    $ledger = App\Controllers\Web\Workshop\StockLedgerController::class;
+    $r->addRoute('GET', '/workshop/stock-movements', ['controller' => $ledger, 'method' => 'index']);
+    $r->addRoute('GET', '/workshop/stock-movements.csv', ['controller' => $ledger, 'method' => 'csv']);
+    $r->addRoute('GET', '/workshop/stock-movements/{id:\d+}', ['controller' => $ledger, 'method' => 'product']);
     $r->addRoute('GET', '/workshop/traceability', ['controller' => App\Controllers\Web\Workshop\TraceabilityController::class, 'method' => 'index']);
     $r->addRoute('GET', '/workshop/traceability/photo/{id:\d+}', ['controller' => App\Controllers\Web\Workshop\TraceabilityController::class, 'method' => 'photo']);
     $r->addRoute('GET', '/kiosk', ['controller' => $c, 'method' => 'kiosk']);

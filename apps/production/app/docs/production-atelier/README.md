@@ -195,6 +195,13 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 - Tablette chauffeur : le chauffeur choisit son nom dans une liste (personnes au poste « Kierowca-dostawca » ; toutes les personnes actives tant qu'aucun poste n'est saisi) et tape son PIN, comme sur la tablette de groupe. La session dure la tournée (12 h) ; le nom enregistré sur la tournée, les arrêts et les photos est celui de la personne identifiée. Le PIN se donne dans Tablet produkcji › Osoby.
 - QR code de la tournée : Logistyka › Dostawy (un par véhicule et par jour) et en haut du rapport PDF de la tournée. Sur la tablette, « Skanuj QR trasy » ouvre ce véhicule et ce jour (caméra : https nécessaire).
 
+## Ruchy magazynowe — registre des mouvements des produits finis (26/10/2026)
+
+- Produkcja › « Ruchy magazynowe » (`/workshop/stock-movements`) : par produit, stock au début de la période, entrées (cartons étiquetés, `carton_stock.date_add`), sorties (cartons expédiés, date de la palette), stock à la fin et valeur (cartons × coût matières du carton de la fiche produit, zł). Reconstruit depuis les cartons scannés, sans double saisie ; même règle que le stock d'un jour du module Kierownik produkcji. Filtres : période (ce mois, mois précédent, 7 jours, cette année ; 400 jours au plus), catégorie, nom ; export CSV (Excel).
+- Écarts signalés : cartons périmés encore en stock (date limite passée), palettes qui devaient partir (date de livraison passée) et cartons encore dessus, dates incohérentes (palette datée avant l'étiquette) — colonne « Różnica » quand le solde ne suit pas les mouvements.
+- Fiche produit (`/workshop/stock-movements/{id}`) : jour par jour, entrées avec numéros de lot, sorties par client (client de la dernière palette du carton), solde ; lots en stock maintenant, date limite la plus proche d'abord (FEFO), périmés en rouge.
+- Hors périmètre pour l'instant : inventaire physique (comptage et ajustement).
+
 ## Points ouverts (données réelles à fournir)
 
 Les écrans existent ; ce qui manque, ce sont les données réelles de l'atelier (la copie de test tourne sur une démo réaliste).

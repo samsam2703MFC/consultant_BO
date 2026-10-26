@@ -45,7 +45,7 @@
     var ALIASES = {
         'marge': 'marza', 'prix': 'ceny cennik', 'cout': 'koszt', 'couts': 'koszty', 'vente': 'sprzedaz', 'ventes': 'sprzedaz',
         'commande': 'zamowienia', 'commandes': 'zamowienia', 'client': 'klienci klient', 'clients': 'klienci klient', 'franchise': 'franczyza',
-        'produit': 'produkt produkty', 'produits': 'produkty', 'fiche': 'karty', 'recette': 'receptura receptury', 'recettes': 'receptury',
+        'produit': 'produkt produkty', 'produits': 'produkty produkt', 'fiche': 'karty', 'recette': 'receptura receptury', 'recettes': 'receptury',
         'matiere': 'surowce', 'matieres': 'surowce', 'fournisseur': 'dostawcy dostawy', 'fournisseurs': 'dostawcy dostawy', 'achat': 'zakupy', 'achats': 'zakupy',
         'facture': 'faktury proforma', 'factures': 'faktury', 'livraison': 'wysylka dostawy', 'livraisons': 'dostawy wysylka', 'arrivage': 'dostawy', 'arrivages': 'dostawy', 'approvisionnement': 'dostawy zaopatrzenie', 'expedition': 'wysylka', 'camion': 'ciezarowki pojazdy',
         'camions': 'ciezarowki pojazdy', 'tournee': 'trasy', 'tournees': 'trasy', 'chargement': 'zaladunek', 'transporteur': 'przewoznicy',
@@ -81,7 +81,11 @@
         'modifications': 'zmiany', 'composition': 'sklad kompozycje', 'compositions': 'kompozycje sklad',
         'ecart': 'roznice roznica', 'ecarts': 'roznice', 'difference': 'roznice roznica', 'differences': 'roznice', 'remboursement': 'zwrot roznice',
         'rembourser': 'zwrot roznice', 'manquant': 'brak roznice problem', 'manquants': 'brak roznice', 'litige': 'roznice problem', 'litiges': 'roznice problemy',
-        'decision': 'decyzja decyzji', 'decisions': 'decyzja', 'responsable': 'odpowiedzialny', 'qr': 'kod qr', 'pin': 'pin', 'scanner': 'skanuj', 'scan': 'skanuj'
+        'decision': 'decyzja decyzji', 'decisions': 'decyzja', 'responsable': 'odpowiedzialny', 'qr': 'kod qr', 'pin': 'pin', 'scanner': 'skanuj', 'scan': 'skanuj',
+        'mouvement': 'ruchy magazynowe', 'mouvements': 'ruchy magazynowe', 'registre': 'ruchy magazynowe', 'entree': 'przyjecia magazynowe', 'entrees': 'przyjecia magazynowe',
+        'sortie': 'wydania magazynowe', 'sorties': 'wydania magazynowe', 'perime': 'przeterminowane', 'perimes': 'przeterminowane', 'peremption': 'przeterminowane daty waznosci',
+        'dlc': 'daty waznosci przeterminowane', 'lot': 'partie partia', 'lots': 'partie', 'fefo': 'fefo partie', 'carton': 'kartony', 'cartons': 'kartony',
+        'magasin': 'magazyn magazynowe', 'solde': 'stan saldo', 'valeur': 'wartosc', 'fini': 'gotowe gotowych', 'finis': 'gotowe gotowych', 'finies': 'gotowe gotowych'
     };
 
     var menu = null;
