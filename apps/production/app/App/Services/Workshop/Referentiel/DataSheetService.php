@@ -42,6 +42,9 @@ final class DataSheetService
         'week.fte_hours',
         'shift.night_staff_ratio',
         'logistics.default_pallet_places',
+        'alerts.complaint_days',
+        'alerts.complaint_escalate_days',
+        'alerts.cost_due_day',
     ];
     private const MAX_BYTES = 2_000_000;
     /** Lignes préparées pour la saisie (listes déroulantes, colonnes en texte). */

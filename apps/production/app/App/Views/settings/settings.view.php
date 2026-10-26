@@ -91,10 +91,53 @@
             </div>
         </div>
 
+        <?php $ap = $alert_params ?? []; ?>
+        <div class="card" id="alert-params">
+            <div class="card-header">
+                <h4 class="card-title mb-0">Alerty i terminy (dzwonek)</h4>
+                <p class="text-muted small mb-0">Sprawdzane co kilka minut ; każdy alert pojawia się w dzwonku raz, te same punkty są w « Do zrobienia » na stronie Dzisiaj.
+                    Także : zaległe testy nowych produktów (data minęła) i minięty termin wprowadzenia.</p>
+            </div>
+            <div class="card-body">
+                <form class="row g-3 align-items-end" id="alertParamsForm">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="apComplaint">Reklamacja bez decyzji : alert po (dniach)</label>
+                        <input class="form-control" id="apComplaint" name="alerts.complaint_days" inputmode="numeric" value="<?= htmlspecialchars((string) ($ap['alerts.complaint_days'] ?? '3')) ?>">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="apEscalate">Alert pilny (czerwony) po (dniach)</label>
+                        <input class="form-control" id="apEscalate" name="alerts.complaint_escalate_days" inputmode="numeric" value="<?= htmlspecialchars((string) ($ap['alerts.complaint_escalate_days'] ?? '7')) ?>">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="apCost">Koszty poprzedniego miesiąca wprowadzone do (dnia miesiąca)</label>
+                        <input class="form-control" id="apCost" name="alerts.cost_due_day" inputmode="numeric" value="<?= htmlspecialchars((string) ($ap['alerts.cost_due_day'] ?? '10')) ?>">
+                    </div>
+                    <div class="col-12 col-md-3 d-grid">
+                        <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i> Zapisz alerty</button>
+                    </div>
+                    <div class="col-12 form-text">Brak kosztów miesiąca (personel w kalkulatorze kosztów) : rentowność, wynik grup i raport miesięczny liczą go na kosztach z ostatniego wprowadzonego miesiąca.</div>
+                </form>
+            </div>
+        </div>
+
     </section>
 </div>
 
 <script>
+    // Alerty i terminy (n_prod_param) : reklamacje bez decyzji, dzień miesiąca na koszty.
+    document.getElementById('alertParamsForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const form = e.target;
+        const body = {};
+        new FormData(form).forEach((v, k) => { body[k] = v; });
+        form.querySelectorAll('.is-invalid').forEach(i => i.classList.remove('is-invalid'));
+        const res = await fetch('<?= ROOT ?>/ajax/settings/alert-params', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}, body: JSON.stringify(body)});
+        const json = await res.json().catch(() => ({}));
+        Object.keys(json.errors || {}).forEach(k => { const i = form.querySelector('[name="' + k + '"]'); if (i) i.classList.add('is-invalid'); });
+        const msg = json.message || json.error || 'Błąd zapisu.';
+        if (typeof Swal !== 'undefined') Swal.fire({icon: json.ok ? 'success' : 'error', text: msg}); else alert(msg);
+    });
+
     // Parametry zapasów MTS (n_prod_param) : tygodnie min. / maks. i okres średniej sprzedaży.
     document.getElementById('stockParamsForm').addEventListener('submit', async function (e) {
         e.preventDefault();

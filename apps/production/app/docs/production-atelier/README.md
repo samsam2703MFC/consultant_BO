@@ -176,6 +176,13 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 - **Accueil de la tablette, UX inspirée d'Apple, design system L'Atelier** (mêmes jetons que l'ERP : rouge rubis, beige, abricot, Gotham, titres en Vank, cartes blanches bordées, libellés en petites capitales ; aussi pour tous les écrans de la tablette et la tablette chauffeur) : l'heure en grand sur fond beige, widgets — équipe (initiales dans les tons de la maison, anneau vert pour les présents), « Dziś produkujemy » (produits, heures, livraisons du jour), « Nowe produkty » (anneau de progression par produit et prochaine action ; toucher un produit puis son nom et son PIN ouvre directement la fiche), QR du téléphone, livraisons — et un dock en bas (badge, NFC, semaine, téléphone). Tablette de bureau : QR en grand et noms.
 - API : `GET /kiosk/development/summary` (accueil, jeton de la tablette), `POST /kiosk/development/{id}/trials`, `POST /kiosk/development/{id}/recipe` (personne identifiée). Rapport mensuel : étape et essais de chaque produit en développement.
 
+## Alertes et échéances (26/10/2026)
+
+- Toutes les 5 minutes (`Bin/mail_dispatch.php`), la cloche de l'ERP reçoit une alerte — une seule fois par cas — pour : une réclamation sans décision depuis plus de 3 jours (rouge après 7), un essai de nouveau produit planifié dont la date est passée, un nouveau produit dont la date visée est passée sans lancement, et chaque mois sans coûts saisis (personnel dans le calculateur de coûts) à partir du 10 du mois suivant (rentabilité et rapport calculés sur une estimation).
+- Page Dzisiaj, « Do zrobienia » : essais en retard et nouveaux produits à lancer (Kierownik produkcji), mois sans coûts (Administracja), en plus des réclamations.
+- Délais réglables : Ustawienia › Pozostałe › « Alerty i terminy » (et feuille Parametry du tableau à remplir).
+- Un mois ouvert dans le calculateur mais encore vide n'est plus pris pour 0 € de coûts : la rentabilité reprend le dernier mois saisi et le signale.
+
 ## Points ouverts (données réelles à fournir)
 
 Les écrans existent ; ce qui manque, ce sont les données réelles de l'atelier (la copie de test tourne sur une démo réaliste).

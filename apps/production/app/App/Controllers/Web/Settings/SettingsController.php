@@ -7,7 +7,7 @@ use App\Repositories\Workshop\ParamRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
-/** Ustawienia › Pozostałe : operacje na recepturach i parametry ogólne (zapasy produktów na magazynie). */
+/** Ustawienia › Pozostałe : operacje na recepturach i parametry ogólne (zapasy produktów na magazynie, alerty i terminy). */
 class SettingsController extends BaseController
 {
     /** Parametry zapasów (n_prod_param) : kod => [min, maks, liczba całkowita]. */
@@ -15,6 +15,13 @@ class SettingsController extends BaseController
         'stock.suggest_weeks' => [1, 52, true],
         'stock.suggest_min_weeks' => [0, 26, false],
         'stock.suggest_max_weeks' => [0.5, 52, false],
+    ];
+
+    /** Alerty i terminy w dzwonku (n_prod_param) : kod => [min, maks, domyślnie]. */
+    private const ALERT_PARAMS = [
+        'alerts.complaint_days' => [1, 60, '3'],
+        'alerts.complaint_escalate_days' => [1, 90, '7'],
+        'alerts.cost_due_day' => [1, 28, '10'],
     ];
 
     public function __construct(private ParamRepository $params)
@@ -25,7 +32,32 @@ class SettingsController extends BaseController
     {
         $stock = [];
         foreach (array_keys(self::STOCK_PARAMS) as $code) $stock[$code] = $this->params->get($code, ['stock.suggest_weeks' => '6', 'stock.suggest_min_weeks' => '1', 'stock.suggest_max_weeks' => '3'][$code]);
-        $this->view('settings/settings', ['stock_params' => $stock]);
+        $alerts = [];
+        foreach (self::ALERT_PARAMS as $code => [, , $default]) $alerts[$code] = $this->params->get($code, $default);
+        $this->view('settings/settings', ['stock_params' => $stock, 'alert_params' => $alerts]);
+    }
+
+    /** POST /ajax/settings/alert-params : reklamacja bez decyzji (alert, alert pilny), dzień miesiąca na koszty poprzedniego miesiąca. */
+    public function saveAlertParams(): JsonResponse
+    {
+        $data = $this->getJson(Request::createFromGlobals());
+        $values = [];
+        $errors = [];
+        foreach (self::ALERT_PARAMS as $code => [$min, $max]) {
+            $raw = trim((string) ($data[$code] ?? ''));
+            if (!ctype_digit($raw) || (int) $raw < $min || (int) $raw > $max) {
+                $errors[$code] = "Liczba całkowita od {$min} do {$max}.";
+                continue;
+            }
+            $values[$code] = (string) (int) $raw;
+        }
+        if (!$errors && (int) $values['alerts.complaint_escalate_days'] < (int) $values['alerts.complaint_days']) {
+            $errors['alerts.complaint_escalate_days'] = 'Alert pilny nie może być wcześniej niż zwykły.';
+        }
+        if ($errors) return $this->json(['ok' => false, 'errors' => $errors, 'error' => implode(' ', $errors)], 422);
+        $userId = user('id');
+        foreach ($values as $code => $value) $this->params->setValue($code, $value, $userId ? (int) $userId : null);
+        return $this->json(['ok' => true, 'values' => $values, 'message' => 'Zapisano alerty i terminy.']);
     }
 
     /** POST /ajax/settings/stock-params : tygodnie sprzedaży liczone i tygodnie zapasu min. / maks. */

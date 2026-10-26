@@ -73,7 +73,9 @@
         'annuel': 'roku rok', 'annee': 'roku rok', 'lancement': 'wprowadzone nowe wprowadzenie',
         'crm': 'nowe produkty etapy crm', 'essai': 'test testy', 'essais': 'testy test', 'etape': 'etapy etap', 'etapes': 'etapy', 'suivi': 'etapy sledzenie',
         'valider': 'zatwierdzenie zatwierdzona', 'validation': 'zatwierdzenie zatwierdzona', 'lance': 'wprowadzone wprowadzony', 'lances': 'wprowadzone',
-        'pipeline': 'etapy', 'prototype': 'test nowe', 'degustation': 'test', 'accueil': 'ekran glowny', 'ipad': 'tablet ekran'
+        'pipeline': 'etapy', 'prototype': 'test nowe', 'degustation': 'test', 'accueil': 'ekran glowny', 'ipad': 'tablet ekran',
+        'alerte': 'alerty dzwonek', 'alertes': 'alerty dzwonek', 'echeance': 'terminy termin', 'echeances': 'terminy', 'retard': 'zalegle terminy alerty',
+        'retards': 'zalegle terminy', 'rappel': 'alerty terminy', 'rappels': 'alerty terminy', 'cloche': 'dzwonek alerty', 'notification': 'dzwonek alerty', 'notifications': 'dzwonek alerty'
     };
 
     var menu = null;
