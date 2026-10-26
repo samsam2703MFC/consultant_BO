@@ -28,6 +28,17 @@ final class WeekController
         return new ApiResult($this->teams->pdf((string) $request->query('date', date('Y-m-d')), $this->group($request), $request->context));
     }
 
+    /** Lista dnia z planu tygodnia (P18) : bloki zespołów i zapotrzebowanie surowców jednego dnia. */
+    public function teamDay(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->teams->dayList((string) $request->query('date', date('Y-m-d')), $request->context));
+    }
+
+    public function teamDayPdf(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->teams->dayListPdf((string) $request->query('date', date('Y-m-d')), $request->context));
+    }
+
     private function group(ApiRequest $request): ?int
     {
         $raw = $request->query('group_id');

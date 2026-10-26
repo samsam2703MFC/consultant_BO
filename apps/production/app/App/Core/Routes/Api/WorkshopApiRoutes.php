@@ -118,6 +118,8 @@ final class WorkshopApiRoutes
             ['GET', '/planning/sheet', WeekController::class, 'sheet', 'prod.plan.read'],
             ['GET', '/planning/team-sheet', WeekController::class, 'teamSheet', 'prod.plan.read'],
             ['GET', '/planning/team-sheet/pdf', WeekController::class, 'teamSheetPdf', 'prod.plan.read'],
+            ['GET', '/planning/team-sheet/day', WeekController::class, 'teamDay', 'prod.plan.read'],
+            ['GET', '/planning/team-sheet/day/pdf', WeekController::class, 'teamDayPdf', 'prod.plan.read'],
             // Kierownik produkcji : karta stanowiska, cele, raport miesięczny, premia, rozmowa, audyt kompetencji.
             ['GET', '/manager/plan', ManagerController::class, 'plan', 'prod.manager.read'],
             ['PUT', '/manager/plan', ManagerController::class, 'savePlan', 'prod.manager.write'],

@@ -63,7 +63,7 @@
   "need": "potrzeba tygodnia : {qty}",
   "need_help": "Na dniach leży więcej niż potrzeba tygodnia (stałe partie 📌, pełne partie) — zespół robi to, co zaplanowano na dni.",
   "lists_title": "Listy dnia (PDF)",
-  "lists_summary": "lista produkcyjna na sekcje, zapotrzebowanie materiałowe, zwroty — według dni wysyłki zamówień",
+  "lists_summary": "z planu tygodnia (jak tablet) : lista dnia i zapotrzebowanie surowców ; dawne listy z zamówień ; zwroty",
   "lists_help": "Dni wysyłki z oczekującymi zamówieniami (maks. {max}) — pierwszy wybrany dzień jest dniem produkcji, kolejne są pokazane do wglądu.",
   "lists_none": "Brak oczekujących zamówień — lista produkcyjna i zapotrzebowanie nie mają czego pokazać.",
   "lists_orders": "{n} zam. · {kg} kg",
@@ -77,5 +77,10 @@
   "lists_error": "Serwer odpowiedział kodem {code}.",
   "lists_safe": "Nic nie jest zapisywane : listy są tylko liczone i pobierane jako PDF.",
   "supply_next": "Zamów surowce ›",
-  "supply_help": "Plan gotowy : zapotrzebowanie surowców i opakowań tego tygodnia, zamówienia u dostawców"
+  "supply_help": "Plan gotowy : zapotrzebowanie surowców i opakowań tego tygodnia, zamówienia u dostawców",
+  "plan_day_title": "Lista dnia z planu tygodnia",
+  "plan_day_help": "bloki zespołów tego dnia (jak tablet) i zapotrzebowanie surowców i opakowań dnia — jedno obliczenie z tablicy tygodnia.",
+  "plan_day_blocks": "bloków : {n}",
+  "plan_day_pdf": "Lista dnia z planu (PDF)",
+  "lists_orders_title": "Dawne listy z zamówień (według dni wysyłki)"
 }

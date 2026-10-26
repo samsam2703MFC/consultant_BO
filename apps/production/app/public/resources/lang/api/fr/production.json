@@ -535,6 +535,15 @@
     "weekday_5": "ven.",
     "weekday_6": "sam.",
     "weekday_7": "dim.",
-    "team_sheet_need": "besoin de la semaine : {qty}"
+    "team_sheet_need": "besoin de la semaine : {qty}",
+    "day_list_title": "Liste de production du {date}",
+    "day_list_file": "liste_du_jour",
+    "day_list_source": "Depuis le plan de la semaine (tableau de la semaine) — comme la tablette de l'équipe",
+    "day_list_empty": "Aucune production planifiée ce jour.",
+    "day_list_col_time": "Heure",
+    "day_list_col_qty": "Quantité",
+    "day_list_materials": "Besoins en matières et emballages du jour",
+    "day_list_col_need": "Besoin",
+    "day_list_no_recipe": "Sans recette ou sans pièces par carton (hors besoins) : {list}"
   }
 }

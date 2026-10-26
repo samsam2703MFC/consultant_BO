@@ -535,6 +535,15 @@
     "weekday_5": "pt.",
     "weekday_6": "sob.",
     "weekday_7": "niedz.",
-    "team_sheet_need": "potrzeba tygodnia : {qty}"
+    "team_sheet_need": "potrzeba tygodnia : {qty}",
+    "day_list_title": "Lista produkcyjna dnia {date}",
+    "day_list_file": "lista_dnia",
+    "day_list_source": "Z planu tygodnia (tablica tygodnia) — tak jak tablet zespołu",
+    "day_list_empty": "Brak produkcji zaplanowanej tego dnia.",
+    "day_list_col_time": "Godz.",
+    "day_list_col_qty": "Ilość",
+    "day_list_materials": "Zapotrzebowanie surowców i opakowań dnia",
+    "day_list_col_need": "Potrzeba",
+    "day_list_no_recipe": "Bez receptury lub bez sztuk w kartonie (pominięte w zapotrzebowaniu) : {list}"
   }
 }

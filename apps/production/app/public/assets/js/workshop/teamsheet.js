@@ -34,7 +34,7 @@
     let data = null;
     let tablet = false;
     // Listy dnia (PDF) : dni wysyłki z oczekującymi zamówieniami, wczytywane przy pierwszym otwarciu.
-    const lists = {open: !!state.lists, days: null, max: 4, picked: new Set(), stockMin: false, complaints: null};
+    const lists = {open: !!state.lists, days: null, max: 4, picked: new Set(), stockMin: false, complaints: null, planDay: null};
 
     // Adresse : #date=…&group=…&lists=… ; ?date=… (anciens liens « Planuj produkcję ») = jour d'expédition des listes.
     function readHash() {
@@ -82,7 +82,39 @@
     function listsCard() {
         return `<details class="card tfb-team-lists" data-lists ${lists.open ? 'open' : ''}><summary class="card-header"><i class="bi bi-file-earmark-pdf"></i>
                 <strong>${esc(t('lists_title'))}</strong> <span class="small text-muted">${esc(t('lists_summary'))}</span></summary>
-            <div class="card-body">${lists.days === null ? `<p class="text-muted mb-0">${esc(t('loading'))}</p>` : listsBody()}</div></details>`;
+            <div class="card-body">${planDayBlock()}${lists.days === null ? `<p class="text-muted mb-0">${esc(t('loading'))}</p>` : listsBody()}</div></details>`;
+    }
+
+    // Lista dnia z planu tygodnia (P18) : te same bloki co tablet zespołu i zapotrzebowanie surowców dnia — jedna
+    // odpowiedź na « co produkujemy ». Dawne listy z zamówień (dni wysyłki) zostają niżej.
+    function planDayBlock() {
+        const days = data.days || [];
+        if (!days.length) return '';
+        const weekday = (iso) => t('weekday_' + (new Date(iso + 'T12:00:00').getDay() || 7));
+        const pick = days.some(d => d.date === lists.planDay) ? lists.planDay : (days.find(d => d.today) || days[0]).date;
+        lists.planDay = pick;
+        const blocks = (date) => data.teams.reduce((a, tm) => a + ((tm.days.find(x => x.date === date) || {blocks: []}).blocks.length), 0);
+        return `<div class="tfb-plan-day mb-3"><p class="small mb-2"><strong>${esc(t('plan_day_title'))}</strong> — ${esc(t('plan_day_help'))}</p>
+            <div class="tfb-list-days">${days.map(d => `<label class="tfb-list-day ${d.date === pick ? 'is-on' : ''}"><input class="form-check-input" type="radio" name="plan-day" data-plan-day="${esc(d.date)}" ${d.date === pick ? 'checked' : ''}>
+                <span><strong>${esc(weekday(d.date))} ${esc(day(d.date))}</strong><small>${esc(t('plan_day_blocks', {n: blocks(d.date)}))}</small></span></label>`).join('')}</div>
+            <button type="button" class="btn btn-sm btn-primary mt-2" data-plan-pdf ${blocks(pick) ? '' : 'disabled'}><i class="bi bi-list-check"></i> ${esc(t('plan_day_pdf'))}</button></div>
+            <p class="small fw-semibold mb-1">${esc(t('lists_orders_title'))}</p>`;
+    }
+
+    async function planDayPdf(btn) {
+        btn.disabled = true;
+        try {
+            const f = await api.get(`/planning/team-sheet/day/pdf?date=${lists.planDay}`);
+            const bin = atob(f.content_base64);
+            const bytes = new Uint8Array(bin.length);
+            for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
+            download(new Blob([bytes], {type: 'application/pdf'}), f.filename);
+            ui.notify(true, t('pdf_ready', {name: f.filename}));
+        } catch (err) {
+            ui.notify(false, errText(err));
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     function listsBody() {
@@ -278,6 +310,8 @@
         }));
         el.querySelector('[data-list-stock]')?.addEventListener('change', (e) => { lists.stockMin = e.target.checked; });
         el.querySelectorAll('[data-list-pdf]').forEach(b => b.addEventListener('click', () => listPdf(b.dataset.listPdf, b)));
+        el.querySelectorAll('[data-plan-day]').forEach(c => c.addEventListener('change', () => { lists.planDay = c.dataset.planDay; draw(); }));
+        el.querySelector('[data-plan-pdf]')?.addEventListener('click', (e) => planDayPdf(e.currentTarget));
     }
 
     el.addEventListener('click', async (e) => {

@@ -90,6 +90,107 @@ final class TeamSheetService
         return ['filename' => $tr->text('team_sheet_file') . '_' . $data['week_start'] . $slug . '.pdf', 'content_base64' => base64_encode($pdf->Output('', 'S'))];
     }
 
+    /**
+     * Lista dnia z planu tygodnia (P18, jak tablet) : jeden dzień produkcji — bloki każdego zespołu (godzina, produkt,
+     * ilość, kartony, partie, godziny) i zapotrzebowanie surowców i opakowań tego dnia (receptura × zaplanowane kartony,
+     * ta sama reguła co zapotrzebowanie w Zakupach). Jedna odpowiedź na « co produkujemy ».
+     */
+    public function dayList(string $date, ApiContext $context): array
+    {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || strtotime($date) === false) throw ApiException::validation([['field' => 'date', 'code' => 'INVALID_DATE', 'params' => []]]);
+        $data = $this->build($date, null, $context);
+        $lang = $context->translator->lang();
+        $recipes = $this->supply->recipes();
+        $teams = [];
+        $need = [];
+        $usedBy = [];
+        $noRecipe = [];
+        foreach ($data['teams'] as $team) {
+            $d = array_values(array_filter($team['days'], fn($x) => $x['date'] === $date))[0] ?? null;
+            if (!$d || !$d['blocks']) continue;
+            $rows = array_column($team['products'], null, 'item_id');
+            foreach ($d['blocks'] as $b) {
+                $row = $rows[$b['item_id']] ?? null;
+                // Półprodukty : ich surowce są już w recepturach produktów (jak w zapotrzebowaniu Zakupów).
+                if (($row['item_type'] ?? 'product') !== 'product') continue;
+                if (!$row || !$row['ppc'] || !isset($recipes[$b['item_id']])) { $noRecipe[$b['item_id']] = $b['name']; continue; }
+                foreach ($recipes[$b['item_id']] as $ing) {
+                    $need[$ing['material_id']] = ($need[$ing['material_id']] ?? 0.0) + $b['quantity'] / $row['ppc'] * $ing['quantity'];
+                    $usedBy[$ing['material_id']][$b['item_id']] = $b['name'];
+                }
+            }
+            $teams[] = ['id' => $team['id'], 'name' => $team['name'], 'color' => $team['color'], 'people' => $d['people'], 'available_h' => $d['available_h'],
+                'hours' => round(array_sum(array_column($d['blocks'], 'hours')), 2), 'blocks' => $d['blocks']];
+        }
+        $materials = [];
+        foreach ($need ? $this->supply->materials(array_keys($need)) : [] as $m) {
+            $unit = CostOptimizationService::displayUnit($m['unit']);
+            $materials[] = ['id' => (int) $m['id'], 'name' => $lang === 'fr' && $m['name_fr'] ? $m['name_fr'] : $m['name'], 'packaging' => (bool) $m['packaging'],
+                'quantity' => round($need[(int) $m['id']], 3), 'unit' => $unit['label'], 'factor' => $unit['factor'], 'products' => array_values($usedBy[(int) $m['id']] ?? [])];
+        }
+        usort($materials, fn($a, $b) => [$a['packaging'], mb_strtolower($a['name'])] <=> [$b['packaging'], mb_strtolower($b['name'])]);
+        return ['date' => $date, 'week_start' => $data['week_start'], 'week_end' => $data['week_end'], 'iso_week' => $data['iso_week'],
+            'teams' => $teams, 'materials' => $materials, 'no_recipe' => array_values($noRecipe), 'generated_at' => date('Y-m-d H:i')];
+    }
+
+    /** Lista dnia z planu jako PDF (A4 pionowo) : zespoły (bloki dnia), potem zapotrzebowanie surowców dnia. */
+    public function dayListPdf(string $date, ApiContext $context): array
+    {
+        $data = $this->dayList($date, $context);
+        $tr = $context->translator;
+        $lang = $tr->lang();
+        $title = $tr->text('day_list_title', ['date' => $this->fullDay($date)]);
+        $week = $tr->text('team_sheet_week', ['week' => $data['iso_week'], 'from' => $this->day($data['week_start']), 'to' => $this->day($data['week_end'])]);
+        $pdf = new TCPDFService('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->SetCreator('TFB');
+        $pdf->SetTitle($title);
+        $pdf->brandPage($title, ['orientation' => 'P', 'ref' => $week, 'lang' => $lang]);
+        $pdf->brandHeader($title, [[trim($tr->text('team_sheet_printed', ['at' => ''])), $this->fullDay(substr($data['generated_at'], 0, 10)) . ' ' . substr($data['generated_at'], 11)]],
+            $week . "\n" . $tr->text('day_list_source'));
+        $write = function (string $heading, string $html) use ($pdf) {
+            $pdf->brandSection($heading);
+            $pdf->SetFont(TCPDFService::TABLE_FONT, '', 8);
+            $pdf->SetTextColorArray(TCPDFService::INK);
+            $pdf->writeHTML($html, true, false, true, false, '');
+            $pdf->SetY($pdf->GetY() + 3);
+        };
+        $th = fn(string $w, string $label, string $align = 'left') => '<td width="' . $w . '" align="' . $align . '" style="' . self::HEAD . '"><b>' . $this->e($label) . '</b></td>';
+        $td = fn(string $w, string $html, string $align = 'left', string $extra = '') => '<td width="' . $w . '" align="' . $align . '" style="' . self::CELL . $extra . '">' . $html . '</td>';
+        if (!$data['teams']) $pdf->brandText($tr->text('day_list_empty'));
+        foreach ($data['teams'] as $team) {
+            $rows = '';
+            foreach ($team['blocks'] as $b) {
+                $rows .= '<tr>' . $td('10%', $this->e($b['time'] ?? '—'))
+                    . $td('40%', '<b>' . $this->e($b['name']) . '</b>' . ($b['late'] ? ' <span style="color:#b00020">' . $this->e($tr->text('team_sheet_late')) . '</span>' : ''))
+                    . $td('16%', $this->e($this->qty($b['quantity'], $b['unit'], $b['factor'])), 'right')
+                    . $td('12%', $b['cartons'] ? $this->n($b['cartons'], 1) : '—', 'right')
+                    . $td('11%', $b['batches'] ? $this->n($b['batches'], 2) : '—', 'right')
+                    . $td('11%', $this->n($b['hours'], 1) . ' h', 'right') . '</tr>';
+            }
+            $head = '<tr>' . $th('10%', $tr->text('day_list_col_time')) . $th('40%', $tr->text('team_sheet_col_product')) . $th('16%', $tr->text('day_list_col_qty'), 'right')
+                . $th('12%', $tr->text('team_sheet_cartons'), 'right') . $th('11%', $tr->text('team_sheet_batches'), 'right') . $th('11%', 'h', 'right') . '</tr>';
+            $write(($team['name'] ?? $tr->text('team_sheet_no_group')) . ' · ' . $tr->text('team_sheet_day_hours', ['people' => $team['people'], 'required' => $this->n($team['hours'], 1), 'available' => $this->n($team['available_h'], 1)]),
+                '<table cellpadding="3">' . $head . $rows . '</table>');
+        }
+        if ($data['materials']) {
+            $rows = '';
+            foreach ($data['materials'] as $m) {
+                $rows .= '<tr>' . $td('38%', '<b>' . $this->e($m['name']) . '</b>') . $td('17%', $this->e($this->qty($m['quantity'], $m['unit'], $m['factor'])), 'right')
+                    . $td('45%', $this->e(implode(', ', array_slice($m['products'], 0, 4)) . (count($m['products']) > 4 ? '…' : '')), 'left', ';color:' . self::MUTED) . '</tr>';
+            }
+            $write($tr->text('day_list_materials'), '<table cellpadding="3"><tr>' . $th('38%', $tr->text('team_sheet_col_material')) . $th('17%', $tr->text('day_list_col_need'), 'right')
+                . $th('45%', $tr->text('team_sheet_col_for')) . '</tr>' . $rows . '</table>');
+        }
+        if ($data['no_recipe']) $pdf->brandText($tr->text('day_list_no_recipe', ['list' => implode(', ', $data['no_recipe'])]));
+        $pdf->brandSignatures([$tr->text('team_sheet_signature')]);
+        return ['filename' => $tr->text('day_list_file') . '_' . $date . '.pdf', 'content_base64' => base64_encode($pdf->Output('', 'S'))];
+    }
+
+    private function fullDay(string $iso): string
+    {
+        return substr($iso, 8, 2) . '.' . substr($iso, 5, 2) . '.' . substr($iso, 0, 4);
+    }
+
     private function team(array $info, array $lane, array $products, array $week, array $recipes, array $deliveries): array
     {
         $days = [];

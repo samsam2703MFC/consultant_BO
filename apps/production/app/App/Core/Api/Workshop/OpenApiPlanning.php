@@ -64,6 +64,11 @@ final class OpenApiPlanning
             'GET /planning/team-sheet/pdf' => ['tag' => $t, 'id' => 'getTeamSheetPdf', 'summary' => 'Plan zespołów — PDF do druku / Plan des équipes — PDF à imprimer', 'response' => 'DocumentFile', 'errors' => [404, 422],
                 'query' => ['date' => ['type' => 'string', 'format' => 'date'], 'group_id' => ['type' => 'integer']],
                 'description' => 'A4 paysage, une équipe par page, dans la langue de la requête. PDF en base64.'],
+            'GET /planning/team-sheet/day' => ['tag' => $t, 'id' => 'getTeamDayList', 'summary' => 'Lista dnia z planu tygodnia / Liste du jour depuis le plan de la semaine', 'response' => 'TeamDayList', 'errors' => [422],
+                'query' => ['date' => ['type' => 'string', 'format' => 'date', 'description' => 'jour de production (défaut : aujourd\'hui)']],
+                'description' => "Blocs du jour de chaque équipe (comme la tablette) et besoins en matières et emballages du jour (recette × cartons planifiés, même règle que Zaopatrzenie)."],
+            'GET /planning/team-sheet/day/pdf' => ['tag' => $t, 'id' => 'getTeamDayListPdf', 'summary' => 'Lista dnia z planu — PDF / Liste du jour — PDF', 'response' => 'DocumentFile', 'errors' => [422],
+                'query' => ['date' => ['type' => 'string', 'format' => 'date']], 'description' => 'A4 portrait : équipes puis besoins en matières du jour. PDF en base64.'],
             'POST /planning/week/move' => ['tag' => $t, 'id' => 'moveWeekProduct', 'summary' => 'Przenieś produkt na dzień / Déplacer un produit sur un jour', 'body' => 'WeekMoveInput', 'response' => 'Week', 'errors' => [400, 403, 422],
                 'description' => "from / to null = « À répartir ». quantity absente = tout le bloc. Jamais vers un jour passé (DAY_IN_PAST) ni hors semaine (DAY_NOT_IN_WEEK). Un bloc après l'échéance de la commande est signalé (late), pas refusé. "
                     . "À l'ordonnancement, un OF finit au plus tard le dernier jour où son produit est placé (MTS : ce jour devient l'échéance)."],
@@ -267,6 +272,14 @@ final class OpenApiPlanning
             'WeekTimeInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['date', 'item_id', 'day'], 'properties' => [
                 'date' => ['type' => 'string', 'format' => 'date'], 'item_id' => ['type' => 'integer'], 'day' => ['type' => 'string', 'format' => 'date'],
                 'time' => ['type' => 'string', 'nullable' => true, 'pattern' => '^([01]\\d|2[0-3]):[0-5]\\d$', 'description' => 'HH:MM ; null = sans heure'],
+            ]],
+            'TeamDayList' => ['type' => 'object', 'properties' => [
+                'date' => ['type' => 'string', 'format' => 'date'], 'week_start' => ['type' => 'string', 'format' => 'date'], 'week_end' => ['type' => 'string', 'format' => 'date'], 'iso_week' => $int,
+                'teams' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => ['type' => 'integer', 'nullable' => true], 'name' => ['type' => 'string', 'nullable' => true],
+                    'people' => $int, 'available_h' => ['type' => 'number'], 'hours' => ['type' => 'number'], 'blocks' => ['type' => 'array', 'items' => ['type' => 'object']]]]],
+                'materials' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => ['type' => 'string'], 'packaging' => ['type' => 'boolean'],
+                    'quantity' => ['type' => 'number', 'description' => 'unité de base'], 'unit' => ['type' => 'string'], 'factor' => ['type' => 'number'], 'products' => ['type' => 'array', 'items' => ['type' => 'string']]]]],
+                'no_recipe' => ['type' => 'array', 'items' => ['type' => 'string']], 'generated_at' => ['type' => 'string'],
             ]],
             'TeamSheet' => ['type' => 'object', 'properties' => [
                 'week_start' => ['type' => 'string', 'format' => 'date'], 'week_end' => ['type' => 'string', 'format' => 'date'], 'iso_week' => $int, 'today' => ['type' => 'string', 'format' => 'date'],

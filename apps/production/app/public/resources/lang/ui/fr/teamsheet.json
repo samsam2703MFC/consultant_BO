@@ -63,7 +63,7 @@
   "need": "besoin de la semaine : {qty}",
   "need_help": "Les jours portent plus que le besoin de la semaine (lots fixes 📌, lots complets) — l'équipe fait ce qui est planifié sur les jours.",
   "lists_title": "Listes du jour (PDF)",
-  "lists_summary": "liste de production par section, besoin en matières, retours — d'après les jours d'expédition des commandes",
+  "lists_summary": "depuis le plan de la semaine (comme la tablette) : liste du jour et besoins en matières ; anciennes listes depuis les commandes ; retours",
   "lists_help": "Jours d'expédition des commandes en attente ({max} max.) — le premier jour choisi est le jour de production, les suivants sont indiqués pour information.",
   "lists_none": "Aucune commande en attente — la liste de production et le besoin en matières sont vides.",
   "lists_orders": "{n} cde · {kg} kg",
@@ -77,5 +77,10 @@
   "lists_error": "Le serveur a répondu avec le code {code}.",
   "lists_safe": "Rien n'est enregistré : les listes sont seulement calculées et téléchargées en PDF.",
   "supply_next": "Commander les matières ›",
-  "supply_help": "Plan prêt : besoins en matières et emballages de la semaine, commandes fournisseurs"
+  "supply_help": "Plan prêt : besoins en matières et emballages de la semaine, commandes fournisseurs",
+  "plan_day_title": "Liste du jour depuis le plan de la semaine",
+  "plan_day_help": "blocs des équipes ce jour-là (comme la tablette) et besoins en matières et emballages du jour — un seul calcul, depuis le tableau de la semaine.",
+  "plan_day_blocks": "blocs : {n}",
+  "plan_day_pdf": "Liste du jour depuis le plan (PDF)",
+  "lists_orders_title": "Anciennes listes depuis les commandes (par jour d’expédition)"
 }
