@@ -36,9 +36,9 @@
                     <button class="btn btn-outline-secondary btn-sm" type="button" onclick="loadOrdersFromFranchise()">
                         <i class="bi bi-cloud-download me-1"></i>Pobierz zamówienia
                     </button>
-                    <button class="btn btn-primary btn-sm" type="button" onclick="runClientPickerModal()">
+                    <a class="btn btn-primary btn-sm" href="<?= ROOT ?>/client-orders/new">
                         <i class="bi bi-plus-lg me-1"></i>Nowe zamówienie
-                    </button>
+                    </a>
                 </div>
             </div>
 
@@ -295,54 +295,9 @@
 </div>
 
 
-<!-- Modal: wybór klienta -->
-<div class="modal fade" id="clientPickerModal" tabindex="-1" aria-labelledby="clientPickerModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="clientPickerModalLabel">
-                    <i class="bi bi-person-plus me-2 text-primary"></i>Nowe zamówienie
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <label for="clientSelect" class="form-label text-muted small fw-semibold">Wybierz klienta</label>
-                <select class="form-select" id="clientSelect">
-                    <option value="" selected disabled>— wybierz klienta —</option>
-                    <?php foreach ($clients as $client): ?>
-                        <option value="<?= $client['id'] ?>"><?= htmlspecialchars($client['company']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                    <i class="bi bi-x me-1"></i>Anuluj
-                </button>
-                <button type="button" class="btn btn-primary" onclick="moveToOrderCreator()">
-                    <i class="bi bi-arrow-right-circle me-1"></i>Stwórz zamówienie
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <?php $this->view("page_components/footer"); ?>
 
 <script>
-    function runClientPickerModal(){
-        const modal = document.getElementById('clientPickerModal');
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-    }
-
-    function moveToOrderCreator(){
-        const clientId = document.getElementById('clientSelect').value;
-        if(clientId){
-            window.location.href = `<?= ROOT ?>/clients/${clientId}/orders/create`;
-        }else{
-            alert("Nie wybrano klienta");
-        }
-    }
 
     function togglePending(source) {
         checkboxes = document.getElementsByName('order[]');

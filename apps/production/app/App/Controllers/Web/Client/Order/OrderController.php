@@ -9,6 +9,7 @@ use App\Core\Route;
 use App\Core\Web\BaseController;
 use App\Services\Client\ClientService;
 use App\Services\Client\Order\OrderCollectorService;
+use App\Services\Client\Order\OrderCreationService;
 use App\Services\Client\Order\OrderSupplementPusherService;
 use App\Services\Client\Order\OrderService;
 use App\Services\Client\Order\OrderTimelineService;
@@ -30,7 +31,8 @@ class OrderController extends BaseController
         private ClientProductPriceService $clientProductPriceService,
         private ExternalPriceListService $externalPriceListService,
         private OrderSupplementPusherService $supplementPusherService,
-        private OrderTimelineService $orderTimelineService
+        private OrderTimelineService $orderTimelineService,
+        private OrderCreationService $creation
     )
     {
     }
@@ -59,7 +61,6 @@ class OrderController extends BaseController
 
         $data['pending']     = $pending;
         $data['batchCounts'] = $batchCounts;
-        $data['clients']     = $this->clientService->getAll();
         $data['orderStatusCodes'] = [
             'in_transit' => CustomerOrderStatus::IN_TRANSIT,
             'archived' => CustomerOrderStatus::ARCHIVED,
@@ -159,10 +160,25 @@ class OrderController extends BaseController
 //        $this->view("client/order/new", $data);
 //    }
 
+    /** Kreator « Nowe zamówienie », krok 1 : klient, typ (standardowe, domówienie, gratis), data i komentarz. */
+    public function newOrderWizard()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                header('Location: ' . $this->creation->productsUrl($_POST));
+                exit;
+            } catch (CustomException $e) {
+                $this->errors[] = $e->getMessage();
+            }
+        }
+        $this->view('client/order/wizard_start', $this->creation->start());
+    }
+
     #[Route('GET', '/clients/{id:\d+}/orders/create')]
     public function createOrderForClient($id)
     {
         $data['client'] = $this->clientService->getById($id);
+        $data['prefill'] = $this->creation->prefill($_GET);
 
         $data['client_type'] = "standard";
         if(!is_null($data['client']['franchisee_uid'])){
@@ -191,7 +207,9 @@ class OrderController extends BaseController
                     if (!empty($_POST['order_type']) && $_POST['order_type'] === 'SUPPLEMENT' && $newOrderId) {
                         $this->supplementPusherService->push((int)$newOrderId);
                     }
-                    header('Location: ' . ROOT . '/client-orders');
+                    // Kreator : proforma od razu, potem zamówienie (krok 3 i 4 : podgląd, wysyłka), nie lista.
+                    $_SESSION['order_created'] = $this->creation->afterCreate((int) $newOrderId);
+                    header('Location: ' . ROOT . '/client-orders/' . (int) $newOrderId . '/edit');
                     exit;
                 }, default: false);
 
@@ -215,6 +233,10 @@ class OrderController extends BaseController
         $data['row_products'] = $this->orderService->getProducts($id);
         $data['proforma_context'] = $this->orderService->getProformaContext($data['row'], $data['row_products']);
         $data['timeline'] = $this->orderTimelineService->forOrder((int) $id);
+        if (($_SESSION['order_created']['id'] ?? null) === (int) $id) {
+            $data['created'] = $_SESSION['order_created'] + $this->creation->sending((int) $data['row']['id_customer'], $_SESSION['order_created']['proforma_id']);
+            unset($_SESSION['order_created']);
+        }
         $data['client_type'] = "standard";
         if(!is_null($data['client']['franchisee_uid'])){
             $data['client_type'] = "franchisee";

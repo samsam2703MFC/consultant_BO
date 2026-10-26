@@ -831,6 +831,8 @@ tr.at-row-new > td { background: rgba(46, 125, 79, 0.07); }
 .at-choice small { color: var(--at-muted); font-size: 12px; }
 .at-choice .at-choice-tick { position: absolute; top: 10px; right: 12px; color: var(--at-primary); opacity: 0; }
 .at-choice.is-checked .at-choice-tick { opacity: 1; }
+.at-choice.is-disabled { opacity: .5; cursor: not-allowed; }
+.at-choice.is-disabled:hover { border-color: var(--at-line-2); }
 /* Encadrés d'information */
 .at-note { margin: 0 0 12px; padding: 12px 14px; border-radius: var(--at-radius); border-left: 3px solid var(--at-line-2); background: var(--at-bg-2); font-size: 12.5px; }
 .at-note > .bi { margin-right: 6px; }

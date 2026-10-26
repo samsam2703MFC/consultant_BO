@@ -216,6 +216,12 @@ class OrderService
         });
     }
 
+    /** Proforma wystawiona od razu dla zamówienia wpisanego ręcznie (kreator « Nowe zamówienie ») ; zwraca jej id. */
+    public function issueProforma(int $idOrder): int
+    {
+        return (int) $this->proformaService->insertFromOrder($idOrder);
+    }
+
     public function insertNewOrder($data)
     {
         return $this->transactionManager->execute(function () use ($data) {
