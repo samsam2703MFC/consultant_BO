@@ -177,5 +177,34 @@ verifie('néerlandais livré : seulement là où le français est celui d’orig
 verifie('un libellé néerlandais posé n’est pas remplacé', viAvecNl([['id' => 'hygiene', 'points' => [['ref' => 'sol', 'libelle' => 'Sol zone production propre', 'libelle_nl' => 'Eigen']]]])[0]['points'][0]['libelle_nl'] === 'Eigen');
 verifie('libellé dans la langue, repli sur le français', viLibelle(['libelle' => 'A', 'libelle_nl' => 'B'], 'nl') === 'B' && viLibelle(['libelle' => 'A'], 'nl') === 'A');
 
+// --- Le score de la visite (26/10/2026, maquette A) ----------------------------------------------------------
+echo "\nScore de la visite\n";
+verifie('question : compte par défaut, poids 1 ; le texte libre ne compte jamais', viPointNormalise(['ref' => 'a', 'libelle' => 'A'])['score'] === true
+    && viPointNormalise(['ref' => 'a', 'libelle' => 'A'])['poids'] === 1 && viPointNormalise(['ref' => 't', 'libelle' => 'T', 'type' => 'texte', 'score' => true])['score'] === false);
+verifie('poids hors de 1 à 3 : ramené à 1 ; « ne compte pas » gardé', viPointNormalise(['ref' => 'a', 'libelle' => 'A', 'poids' => 7])['poids'] === 1
+    && viPointNormalise(['ref' => 'a', 'libelle' => 'A', 'poids' => '3'])['poids'] === 3 && viPointNormalise(['ref' => 'a', 'libelle' => 'A', 'score' => false])['score'] === false);
+$cl = [['id' => 'hygiene', 'nom' => 'Hygiène', 'nom_nl' => 'Hygiëne', 'points' => [
+    ['ref' => 'sol', 'type' => 'etat', 'score' => true, 'poids' => 1], ['ref' => 'frigo', 'type' => 'nombre', 'score' => true, 'poids' => 3],
+    ['ref' => 'impression', 'type' => 'note', 'score' => true, 'poids' => 1], ['ref' => 'dit', 'type' => 'texte', 'score' => false, 'poids' => 1],
+    ['ref' => 'decor', 'type' => 'etat', 'score' => false, 'poids' => 1]]],
+    ['id' => 'planogramme', 'nom' => 'Planogramme', 'points' => [['ref' => 'pains', 'type' => 'pct', 'score' => true, 'poids' => 1]]],
+    ['id' => 'produit', 'nom' => 'Produit', 'points' => [['ref' => 'pain', 'type' => 'etat']]]];
+$pts = [['module' => 'hygiene', 'ref' => 'sol', 'etat' => 'ok'], ['module' => 'hygiene', 'ref' => 'frigo', 'etat' => 'ko', 'reponse' => 6],
+    ['module' => 'hygiene', 'ref' => 'impression', 'etat' => 'ok', 'note' => 4], ['module' => 'hygiene', 'ref' => 'dit', 'etat' => 'ok', 'reponse' => 'x'],
+    ['module' => 'hygiene', 'ref' => 'decor', 'etat' => 'ko'], ['module' => 'planogramme', 'ref' => 'pains', 'etat' => 'ok', 'valeur' => 80],
+    ['module' => 'produit', 'ref' => 'pain', 'etat' => 'na'], ['module' => 'produit', 'ref' => 'oblig_1', 'etat' => 'ok'], ['module' => 'produit', 'ref' => 'oblig_2', 'etat' => 'ok'],
+    ['module' => 'produit', 'ref' => 'oblig_3', 'etat' => 'ko'], ['module' => 'produit', 'ref' => 'oblig_4', 'etat' => ''], ['module' => 'xp', 'ref' => 'lev_xp', 'etat' => 'ok']];
+$sc = viScore($cl, $pts);
+$mods = array_column($sc['modules'], 'score', 'id');
+// hygiène : sol 1×1 + frigo 3×0 + note 4 → 0,75 ; sur 5 de poids : 1,75 / 5 = 35
+verifie('module : poids, écart à zéro, note au prorata, texte et « ne compte pas » écartés', $mods['hygiene'] === 35, json_encode($sc['modules']));
+verifie('pourcentage : sa valeur (80 % → 80)', $mods['planogramme'] === 80);
+verifie('obligatoires : une question, la part de ceux qui sont là (2 sur 3) ; N/A écarté', $mods['produit'] === 67);
+verifie('question hors checklist (les leviers) : poids 1, nom livré', $mods['xp'] === 100 && $sc['modules'][3]['nom'] === 'Expérience client');
+// total : hygiène 1,75 / 5 + plano 0,8 / 1 + produit 0,667 / 1 + xp 1 / 1 = 4,217 / 8 = 53
+verifie('total pondéré sur 100, questions comptées', $sc['score'] === 53 && $sc['n'] === 6, json_encode(['score' => $sc['score'], 'n' => $sc['n']]));
+verifie('modules dans l’ordre de la checklist, puis les autres', array_column($sc['modules'], 'id') === ['hygiene', 'planogramme', 'produit', 'xp']);
+verifie('rien de noté : pas de score', viScore($cl, [['module' => 'hygiene', 'ref' => 'dit', 'etat' => 'ok']]) === ['score' => null, 'n' => 0, 'modules' => []]);
+
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);

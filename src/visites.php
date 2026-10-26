@@ -213,6 +213,10 @@ function ensureVisites(): void
     $sansReponse = true;
     try { $sansReponse = Db::row("SHOW COLUMNS FROM con_visite_point LIKE 'reponse'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
     if ($sansReponse) { try { Db::exec('ALTER TABLE con_visite_point ADD COLUMN reponse TEXT NULL AFTER causes'); } catch (Throwable $e) { /* déjà là */ } }
+    // Le score de la visite, figé quand elle se termine (26/10/2026) : changer un poids ne réécrit pas l'historique.
+    $sansScore = true;
+    try { $sansScore = Db::row("SHOW COLUMNS FROM con_visite LIKE 'score'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    if ($sansScore) { try { Db::exec('ALTER TABLE con_visite ADD COLUMN score TEXT NULL'); } catch (Throwable $e) { /* déjà là */ } }
     // Le jeton de l'horloge : lu en base par bin/visites_cron.sh à chaque appel.
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
         ['visitesJeton', json_encode(bin2hex(random_bytes(24)))]);
@@ -448,6 +452,8 @@ function viVisiteLigne(array $v): array
         'diagnostic' => $v['diagnostic'] ?? null, 'reco' => $v['reco'] ?? null,
         'type' => (string) (($v['type_code'] ?? '') ?: 'reguliere'), 'ics_seq' => (int) ($v['ics_seq'] ?? 0),
         'maj_le' => $v['maj_le'],
+        // Le score figé à la fin de la visite (viScoreFiger) : la tablette le compare à celui de la visite en cours, avant de signer.
+        'score' => !empty($v['score']) ? (json_decode((string) $v['score'], true) ?: null) : null,
         // Le suivi des franchisés : annoncée ou inopinée, la préparation envoyée sur la tablette, le rapport.
         'annoncee' => function_exists('suAnnoncee') ? suAnnoncee($v) : true,
         'prep' => !empty($v['prep_envoyee_le']) && function_exists('suPrep') ? suPrep($v) : null, 'prepEnvoyeeLe' => $v['prep_envoyee_le'] ?? null,
@@ -983,10 +989,61 @@ function wr_visites_put(string $id): array
     if (($b['statut'] ?? '') === 'terminee') {
         journalAdd($v['consultant_nom'] ?: 'Consultant', 'Visite', null, 'Visite terminée : ' . (viMagasins()[(string) $v['shop_id']]['court'] ?? $v['shop_id'])
             . (!empty($b['reco']) ? ' — ' . mb_substr((string) $b['reco'], 0, 160) : ''));
+        viScoreFiger((int) $v['id']);
         // Le brouillon du rapport part au bureau : c'est lui qui l'adapte et l'envoie (suivi.php).
         if ($v['statut'] !== 'terminee' && function_exists('suApresTerminee')) { suApresTerminee($v); $apres = Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']]); }
     }
     return ['ok' => true, 'visite' => viVisiteLigne($apres ?? Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']])), 'suite' => $suite];
+}
+
+/** La checklist d'une visite : celle de son type, la standard pour la régulière (vcTypes). */
+function viChecklistVisite(array $v): array
+{
+    $code = (string) (($v['type_code'] ?? '') ?: 'reguliere');
+    foreach (function_exists('vcTypes') ? vcTypes() : [] as $t) { if (($t['code'] ?? '') === $code) { return (array) ($t['checklist'] ?? []); } }
+    return viChecklist();
+}
+
+/** Une visite de suivi de plan ou une revisite ne porte qu'une partie des questions : pas de score, pas de comparaison. */
+function viTypeDynamique(array $v): bool
+{
+    $code = (string) (($v['type_code'] ?? '') ?: 'reguliere');
+    foreach (function_exists('vcTypes') ? vcTypes() : [] as $t) { if (($t['code'] ?? '') === $code) { return !empty($t['dynamique']); } }
+    return false;
+}
+
+/** Le score d'une visite : figé s'il l'a été, sinon calculé ; null pour un suivi ou une revisite. */
+function viScoreVisite(array $v, bool $fige = true): ?array
+{
+    if (viTypeDynamique($v)) { return null; }
+    if ($fige && !empty($v['score']) && is_array($x = json_decode((string) $v['score'], true))) { return $x; }
+    $pts = array_map('viPointLigne', Db::rows('SELECT * FROM con_visite_point WHERE visite_id = ?', [(int) $v['id']]));
+    $s = viScore(viChecklistVisite($v), $pts);
+    return $s['score'] === null ? null : $s;
+}
+
+/** Fige le score d'une visite terminée (à la fin, et quand une réponse arrive ensuite). */
+function viScoreFiger(int $id): void
+{
+    $v = Db::row('SELECT * FROM con_visite WHERE id = ?', [$id]);
+    if ($v === null) { return; }
+    $s = viScoreVisite($v, false);
+    Db::exec('UPDATE con_visite SET score = ? WHERE id = ?', [$s ? json_encode($s + ['le' => date('Y-m-d H:i')], JSON_UNESCAPED_UNICODE) : null, $id]);
+}
+
+/**
+ * La visite terminée d'avant, du même type (une visite d'hygiène se compare à la dernière visite d'hygiène, pas à un
+ * bilan : ce ne sont pas les mêmes questions), avec son score.
+ */
+function viScorePrecedent(array $v): ?array
+{
+    $code = (string) (($v['type_code'] ?? '') ?: 'reguliere');
+    foreach (Db::rows('SELECT * FROM con_visite WHERE shop_id = ? AND statut = \'terminee\' AND id <> ? AND prevu_le <= ? AND COALESCE(NULLIF(type_code, \'\'), \'reguliere\') = ?
+        ORDER BY prevu_le DESC, id DESC LIMIT 12', [(string) $v['shop_id'], (int) $v['id'], (string) $v['prevu_le'], $code]) as $x) {
+        $s = viScoreVisite($x);
+        if ($s !== null) { return ['id' => (int) $x['id'], 'le' => (string) $x['prevu_le'], 'score' => $s]; }
+    }
+    return null;
 }
 
 /** PUT /visites/{id}/points — un lot de points de checklist (idempotent). */
@@ -1015,6 +1072,8 @@ function wr_visites_points_put(string $id): array
         $n++;
     }
     Db::exec('UPDATE con_visite SET maj_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $v['id']]);
+    // Une réponse arrivée après la fin (la file hors ligne) : le score figé se recalcule.
+    if ($v['statut'] === 'terminee') { viScoreFiger((int) $v['id']); }
     return ['ok' => true, 'points' => $n,
         'liste' => array_map('viPointLigne', Db::rows('SELECT * FROM con_visite_point WHERE visite_id = ?', [(int) $v['id']]))];
 }

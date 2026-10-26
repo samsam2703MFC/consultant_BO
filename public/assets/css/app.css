@@ -1564,3 +1564,10 @@ a.cx-btn,a.mko-pied-btn{display:inline-flex;align-items:center;text-decoration:n
 @media (max-width:760px){.ss-ep{grid-template-columns:60px minmax(0,1fr)}.ss-ep span{grid-column:2}}
 .ss-intro{margin-bottom:12px;font-size:12.5px;line-height:1.55}
 .ss-chips{display:flex;flex-wrap:wrap}
+/* Le score de la visite dans le rapport (26/10/2026, maquette A). */
+.sv-sc{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.sv-sc b{font:400 38px/1 var(--font-display);color:var(--color-primary)}.sv-sc span{color:var(--color-text-muted);font-size:13px}
+.sv-sc em{font-style:normal;font-size:12px;color:var(--color-text-muted);margin-left:8px}.sv-sc i{font-style:normal;font-weight:700;font-size:12.5px}
+.sv-sc i.ok,.sv-scm em.ok{color:#2d7a3e}.sv-sc i.ko,.sv-scm em.ko{color:#C0182B}.sv-sc i.mu,.sv-scm em.mu{color:var(--color-text-muted)}
+.sv-scb{background:var(--color-background-secondary);border-radius:4px;height:8px;overflow:hidden;margin:8px 0 4px}.sv-scb i{display:block;height:8px;background:var(--color-primary)}
+.sv-scb i.ok{background:#2d7a3e}.sv-scb i.att{background:#D97706}.sv-scb i.ko{background:#C0182B}
+.sv-scm{display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr) 32px 34px;gap:2px 10px;align-items:center;font-size:12px;margin-top:6px}.sv-scm .sv-scb{margin:0}.sv-scm b{text-align:right}.sv-scm em{font-style:normal;font-weight:700;font-size:11px;text-align:right}

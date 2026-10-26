@@ -430,6 +430,7 @@ function rapVals(app, sv, id){
     ecarts: d.checklist.ecarts.map(e => e.libelle + (e.reponse ? ' : ' + e.reponse : '') + (e.commentaire ? ' — ' + e.commentaire : '')),
     nInclus: inclus.length, nInternes: d.plans.length - inclus.length,
     budget: budgetDe(v.budgetCa),
+    score: scoreVals(d.score),
     a: d.envoi.a, source: d.envoi.source, copies: d.envoi.copies.map(x => x.nom + (x.email ? '' : ' (sans adresse)')).join(', ') || 'personne',
     envoie: d.roles.envoieNom, adapte: d.roles.adapteNom, smtp: d.envoi.smtp,
     dernier: d.envoi.dernier ? (d.envoi.dernier.envoye ? 'Dernier courriel : envoyé à ' + d.envoi.dernier.a + ' (' + (d.envoi.dernier.langue || '') + ')' + (d.envoi.dernier.pdf ? ', PDF joint' : ', sans PDF (moteur PDF muet)') + '.' : 'Dernier courriel non parti : ' + d.envoi.dernier.motif + '.') : null,
@@ -439,6 +440,17 @@ function rapVals(app, sv, id){
     renvoyer: envoye ? () => rapRenvoyer(app, id) : null,
     voir: () => { app.setState({ svApercu: { chargement: true, titre: 'Le rapport tel que le franchisé le reçoit' } }); readOne('/suivi/rapport/apercu?visite=' + id).then(r => app.setState({ svApercu: { titre: 'Le rapport tel que le franchisé le reçoit · ' + ((r && r.langue) || '').toUpperCase(), html: r && r.html ? r.html : '<p>Aperçu indisponible.</p>' } })); }
   };
+}
+/** Le score de la visite (maquette A) et l'écart à la précédente comparable, module par module. */
+function scoreVals(sc){
+  if (!sc || !sc.actuel || sc.actuel.score == null) { return null; }
+  const a = sc.actuel, p = sc.precedent ? sc.precedent.score : null;
+  const avant = {}; ((p && p.modules) || []).forEach(m => { avant[m.id] = m.score; });
+  const ec = d => d == null ? null : { txt: (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d), cls: d > 0 ? 'ok' : d < 0 ? 'ko' : 'mu' };
+  const ton = x => x >= 85 ? 'ok' : x >= 70 ? 'att' : 'ko';
+  return { score: a.score, n: a.n, ton: ton(a.score),
+    prec: p ? 'visite du ' + fmtD(sc.precedent.le) + ' : ' + p.score : 'première visite notée', ecart: p ? ec(a.score - p.score) : null,
+    modules: a.modules.map(m => ({ nom: m.nom, score: m.score, ton: ton(m.score), ecart: avant[m.id] != null ? ec(m.score - avant[m.id]) : null })) };
 }
 /** Le CA sous le budget, noté à la tablette avec le franchisé : les écarts, le pourquoi, ses trois pistes et l'échéance. */
 function budgetDe(bc){
