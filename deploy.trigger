@@ -1092,3 +1092,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T20:06:48Z visites : toute la tablette en néerlandais (FR | NL)
 2026-10-26T20:26:01Z production : lot E P5 P6 P7 P8
 2026-10-26T20:54:34Z production : tablette validation du plan, pertes photos, Magazyn grupy
+2026-10-26T21:26:02Z production : lot E fin — menu Sprzedaż, Ustawienia, faktura z zamówienia, ceny ze źródłem, dokąd poszła partia
