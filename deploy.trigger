@@ -1066,3 +1066,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26 tablette : tâches faites sur demandées par mois, tâches sous 4
 2026-10-26T14:12:38Z écarts d'expédition (088), chauffeur liste + PIN, QR tournée
 2026-10-26T14:20:12Z recherche écarts d'expédition
+2026-10-26 tablette : photo et repères du contrôleur sur les tâches sous 4

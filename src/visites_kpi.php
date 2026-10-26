@@ -184,7 +184,8 @@ function vkStructure(int $sid, array $mois): array
  *    relevé quotidien du panel, `ceo_tache_jour`, journées révolues : le mois en cours s'arrête à hier), les notes du
  *    contrôle qualité (`mac_task_review`) : combien notées, combien sous le seuil (4), la moyenne ;
  *  - `taches[]` : pour le mois choisi (d'office le mois en cours, ou le précédent s'il n'a encore rien), les tâches
- *    notées sous le seuil ou refusées, avec la note, le commentaire et le nom du contrôleur (ep_pwa_tasks_nc).
+ *    notées sous le seuil ou refusées, avec la note, le commentaire et le nom du contrôleur (ep_pwa_tasks_nc) ; la
+ *    tablette lit la photo et les repères de chacune à /pwa/tasks/detail (taskId, jour).
  * Tout se lit dans la base du cockpit : rien au panel, rien à garder en cache.
  */
 function ep_visites_taches(string $shop): array
@@ -226,7 +227,7 @@ function ep_visites_taches(string $shop): array
     }
     $fin = $choisi === $courant ? date('Y-m-d') : date('Y-m-t', strtotime($choisi . '-01'));
     $nc = vkAvecGet(['shop' => (string) $sid, 'du' => $choisi . '-01', 'au' => $fin, 'date' => ''], 'ep_pwa_tasks_nc');
-    $taches = array_map(static fn (array $t): array => ['jour' => $t['jour'], 'tache' => $t['tache'], 'note' => $t['note'], 'commentaire' => $t['comment'],
+    $taches = array_map(static fn (array $t): array => ['taskId' => (string) $t['taskId'], 'jour' => $t['jour'], 'tache' => $t['tache'], 'note' => $t['note'], 'commentaire' => $t['comment'],
         'controleur' => $t['consultant'], 'releveeLe' => $t['releveeLe'], 'recidive' => $t['recidive'], 'suite' => $t['suite']], (array) ($nc['nc'] ?? []));
     return ['shop' => (string) $sid, 'seuil' => $seuil, 'mois' => $mois, 'choisi' => $choisi, 'choisiLab' => vkMoisLab($choisi), 'taches' => $taches,
         'indispo' => !empty($nc['indispo']),
