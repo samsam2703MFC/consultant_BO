@@ -58,3 +58,8 @@
 .driver-check.is-done { background: var(--k-ok-50); color: var(--k-ok); }
 @media (max-width: 600px) { .driver-info dl { grid-template-columns: 1fr; } }
 .driver-info [hidden] { display: none !important; }
+/* Kierowca : lista + PIN, nazwisko w nagłówku, skaner QR trasy */
+.driver-login .driver-person { width: 100%; max-width: 420px; }
+.driver-who { font-weight: 600; font-size: 15px; }
+.driver-name strong { font-size: 17px; color: var(--k-text); }
+.driver-scan video { width: 100%; max-height: 60vh; border-radius: var(--k-radius); background: #000; object-fit: cover; }

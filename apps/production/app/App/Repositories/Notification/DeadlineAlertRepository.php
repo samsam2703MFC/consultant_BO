@@ -26,6 +26,24 @@ final class DeadlineAlertRepository extends WorkshopRepository
             ORDER BY c.acceptance_timestamp, c.id", [$before]);
     }
 
+    /** Écarts d'expédition sans décision dont l'échéance est avant $today (file Wysyłki › Różnice i problemy dostaw). */
+    public function lateShippingIssues(string $today): array
+    {
+        return $this->all("SELECT i.id, i.source, i.opened_on, i.due_on, c.company AS customer, s.reason, COALESCE(NULLIF(u.displayed_name, ''), u.login) AS owner
+            FROM n_shipping_issue i
+            LEFT JOIN customer c ON c.id = i.id_customer
+            LEFT JOIN n_delivery_stop s ON s.id = i.id_delivery_stop
+            LEFT JOIN user u ON u.id = i.id_owner
+            WHERE i.status = 'open' AND i.due_on < ?
+            ORDER BY i.due_on, i.id", [$today]);
+    }
+
+    /** Écarts d'expédition pas encore clos : à décider et en cours. */
+    public function openShippingIssues(): array
+    {
+        return $this->all("SELECT status, COUNT(*) AS n FROM n_shipping_issue WHERE status IN ('open', 'decided') GROUP BY status");
+    }
+
     /** Essais planifiés au bureau dont la date est avant $today, produit toujours en développement. */
     public function lateTrials(string $today): array
     {

@@ -84,5 +84,20 @@
   "pallet_numbers": "Numéros de palettes",
   "pallets_estimated": "estimation d’après les cartons",
   "instructions": "Consignes de livraison",
-  "show_secret": "Afficher"
+  "show_secret": "Afficher",
+  "who_title": "Qui conduit ?",
+  "who_help": "Choisissez votre nom dans la liste et tapez votre PIN (le même que sur la tablette de l’atelier).",
+  "choose_driver": "Choisir le chauffeur",
+  "no_pin": "pas de PIN (le responsable le donne dans l’ERP)",
+  "no_drivers": "Aucun chauffeur dans la liste — ajoutez une personne au poste « Chauffeur-livreur » dans l’ERP.",
+  "erase": "Effacer",
+  "hello": "Bonjour, {name}",
+  "logout": "Déconnexion",
+  "logout_queue": "{n} enregistrement(s) en attente — ils partiront après la connexion. Se déconnecter ?",
+  "session_ended": "Session terminée — choisissez votre nom et tapez votre PIN.",
+  "scan_tour": "Scanner le QR de la tournée",
+  "scan_tour_help": "Visez le QR code de la tournée dans l’ERP (Logistyka › Dostawy ou feuille de tournée).",
+  "scan_tour_wrong": "Ce n’est pas un QR de tournée — scannez celui de l’ERP (Logistyka › Dostawy).",
+  "scan_unavailable": "Caméra indisponible — choisissez le véhicule dans la liste.",
+  "tour_opened": "Tournée ouverte depuis le QR code."
 }

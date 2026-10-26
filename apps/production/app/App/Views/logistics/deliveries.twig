@@ -24,7 +24,8 @@
         <div><div class="at-sub">Dostarczono</div><strong class="fs-4 text-success">{{ totals.delivered }}</strong></div>
         <div><div class="at-sub">Problemy</div><strong class="fs-4 {{ totals.problems ? 'text-danger' : '' }}">{{ totals.problems }}</strong></div>
         <div><div class="at-sub">Bez potwierdzenia</div><strong class="fs-4">{{ totals.customers - totals.delivered - totals.problems }}</strong></div>
-        <p class="at-sub mb-0 ms-auto align-self-center" style="max-width: 420px">Tablet kierowcy : Produkcja › Tablet produkcji › Zarządzanie › Tablety → « Tablet kierowcy » z pojazdem, potem strona /driver na tablecie.</p>
+        <p class="at-sub mb-0 ms-auto align-self-center" style="max-width: 420px">Tablet kierowcy : Produkcja › Tablet produkcji › Zarządzanie › Tablety → « Tablet kierowcy » z pojazdem, potem strona /driver na tablecie.
+            Kierowca wybiera się z listy (stanowisko « Kierowca-dostawca ») i wpisuje swój PIN ; « Skanuj QR trasy » + kod QR pojazdu poniżej otwiera trasę.</p>
     </div></div>
 
     {% macro stopRow(r, root) %}
@@ -58,7 +59,9 @@
                 <div class="at-sub">Wyjazd planowany {{ t.departure }}{% if t.started_at %} · start {{ t.started_at|date('H:i') }}{% endif %}{% if t.finished_at %} · koniec {{ t.finished_at|date('d.m H:i') }}{% endif %}</div></div>
             <div class="d-flex flex-wrap gap-2 align-items-center"><span class="badge bg-success">{{ t.delivered }}/{{ t.rows|length }} dostarczono</span>{% if t.arrived %} <span class="badge bg-info text-dark">{{ t.arrived }} na miejscu</span>{% endif %}{% if t.problems %} <span class="badge bg-danger">{{ t.problems }} problem(y)</span>{% endif %}
                 <a class="btn btn-sm btn-outline-primary" href="{{ root }}/logistics/deliveries/report.pdf?date={{ date }}&vehicle={{ t.id }}" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> Raport trasy</a>
-                <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/logistics/deliveries/report.pdf?date={{ date }}&vehicle={{ t.id }}&lang=fr" target="_blank" rel="noopener">FR</a></div>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/logistics/deliveries/report.pdf?date={{ date }}&vehicle={{ t.id }}&lang=fr" target="_blank" rel="noopener">FR</a>
+                <figure class="at-tour-qr" title="Tablet kierowcy : po zalogowaniu (lista + PIN) « Skanuj QR trasy » otwiera ten pojazd i ten dzień">{{ t.tour_qr|raw }}
+                    <figcaption>QR trasy<br><span class="at-sub">tablet kierowcy</span></figcaption></figure></div>
         </div>
         <div class="card-body pt-0"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
             <thead><tr><th>Klient</th><th class="text-end">Palety plan</th><th>Status</th><th>Odbiorca / uwagi</th><th class="text-end">Dostarczone</th><th class="text-end">Zwrócone EUR</th><th>Podpis, zdjęcia przed / po</th><th></th></tr></thead>

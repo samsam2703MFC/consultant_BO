@@ -5,6 +5,8 @@
  * start i koniec trasy ; przyjazd (zdjęcia przed rozładunkiem z datą i godziną na zdjęciu) ; « Dostarczono »
  * (zdjęcia po rozładunku, odbiorca, podpis, palety oddane i zwrócone) albo « Problem » (przyczyna, notatka, zdjęcie) ;
  * raport PDF trasy i klienta. Bez sieci zapisy i zdjęcia czekają w kolejce i wysyłają się same po powrocie sieci.
+ * Kierowca wybiera się z listy i wpisuje swój PIN (jak na tablecie pracowni) ; sesja trwa trasę (driver.session_hours).
+ * Kod QR trasy z ERP (Logistyka › Dostawy) otwiera pojazd i dzień : skan w aplikacji albo link …/driver?date=…&vehicle=….
  */
 (function () {
     'use strict';
@@ -17,7 +19,7 @@
     const DEVICE_KEY = 'tfb.kiosk.device';
     const LANG_KEY = 'tfb.lang';
     const QUEUE_KEY = 'tfb.driver.queue';
-    const NAME_KEY = 'tfb.driver.name';
+    const SESSION_KEY = 'tfb.driver.session';
     const VEHICLE_KEY = 'tfb.driver.vehicle';
     const store = {
         get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
@@ -30,7 +32,11 @@
     let data = null;
     // Dzień w adresie (?date=RRRR-MM-DD) : np. logistyka sprawdza wczorajszą trasę.
     let date = (new URLSearchParams(location.search).get('date') || '').match(/^\d{4}-\d{2}-\d{2}$/) ? new URLSearchParams(location.search).get('date') : null;
-    let vehicle = Number(store.get(VEHICLE_KEY)) || null;
+    let vehicle = Number(new URLSearchParams(location.search).get('vehicle')) || Number(store.get(VEHICLE_KEY)) || null;
+    // Kierowca zalogowany (lista + PIN) : {token, id, name, exp}.
+    let session = null;
+    try { session = JSON.parse(store.get(SESSION_KEY) || 'null'); } catch (e) { session = null; }
+    if (session && (!session.token || !session.exp || session.exp < Date.now())) session = null;
     let queue = [];
     try { queue = JSON.parse(store.get(QUEUE_KEY) || '[]') || []; } catch (e) { queue = []; }
     let flushing = false;
@@ -73,6 +79,7 @@
 
     async function api(method, path, body) {
         const headers = {'Accept': 'application/json', 'Accept-Language': lang, 'X-Device-Token': device || ''};
+        if (session) headers['X-Employee-Token'] = session.token;
         if (body !== undefined) headers['Content-Type'] = 'application/json';
         let res;
         try {
@@ -89,6 +96,7 @@
         err.status = res.status;
         if (err.code === 'DEVICE_UNAUTHENTICATED') { paired = false; renderPairing(err.message); }
         if (err.code === 'DEVICE_NOT_DRIVER') location.replace(root + '/kiosk');
+        if (err.code === 'EMPLOYEE_UNAUTHENTICATED' || err.code === 'EMPLOYEE_SESSION_EXPIRED') { setSession(null); renderLogin(err.message); }
         throw err;
     }
 
@@ -97,8 +105,57 @@
         return `<header class="kiosk-head"><div class="kiosk-brand"><div class="kiosk-logo">LA</div><div><h1>${esc(t('title'))}</h1>
                 <p class="kiosk-muted">${esc(data && data.vehicle ? data.vehicle.label + (data.vehicle.carrier && data.vehicle.carrier !== data.vehicle.label ? ' · ' + data.vehicle.carrier : '') : t('subtitle'))}</p></div></div>
             <div class="kiosk-head-tools">${pending ? `<span class="driver-queue" title="${esc(t('queue_help'))}">${esc(t('queue', {n: pending}))}</span>` : ''}
-                ${paired ? `<button type="button" class="kiosk-chip" data-refresh aria-label="${esc(t('refresh'))}">↻</button>` : ''}
-                <button type="button" class="kiosk-chip" data-lang>${esc(t('lang_switch'))}</button></div></header>`;
+                ${paired && session ? `<button type="button" class="kiosk-chip" data-refresh aria-label="${esc(t('refresh'))}">↻</button>` : ''}
+                <button type="button" class="kiosk-chip" data-lang>${esc(t('lang_switch'))}</button>
+                ${session ? `<span class="driver-who">${esc(session.name)}</span><button type="button" class="kiosk-chip" data-logout>${esc(t('logout'))}</button>` : ''}</div></header>`;
+    }
+
+    function setSession(value) {
+        session = value;
+        store.set(SESSION_KEY, value ? JSON.stringify(value) : null);
+    }
+
+    // --- Kierowca : lista + PIN (jak na tablecie pracowni) -------------------------------------------------
+    async function renderLogin(message) {
+        if (!paired) return renderPairing();
+        setSession(null);
+        let people = [];
+        try { people = await api('GET', '/kiosk/people'); } catch (err) { if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_DRIVER') return; message = message || err.message; }
+        let pin = '';
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-pin driver-login"><h2>${esc(t('who_title'))}</h2><p class="kiosk-muted">${esc(t('who_help'))}</p>
+            <select class="driver-vehicle driver-person" data-person aria-label="${esc(t('choose_driver'))}"><option value="">${esc(t('choose_driver'))}</option>
+                ${people.map(p => `<option value="${p.id}" ${p.has_pin ? '' : 'disabled'}>${esc(p.name)}${p.has_pin ? '' : ' — ' + esc(t('no_pin'))}</option>`).join('')}</select>
+            <div class="kiosk-dots" data-dots aria-hidden="true"></div><p class="kiosk-error" data-error>${esc(message || (people.length ? '' : t('no_drivers')))}</p>
+            <div class="kiosk-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => `<button type="button" class="kiosk-btn" data-digit="${d}">${d}</button>`).join('')}
+                <button type="button" class="kiosk-btn" data-back aria-label="${esc(t('erase'))}">⌫</button><button type="button" class="kiosk-btn" data-digit="0">0</button>
+                <button type="button" class="kiosk-btn is-primary" data-ok>OK</button></div></section>`;
+        const select = el.querySelector('[data-person]');
+        const error = el.querySelector('[data-error]');
+        const dots = () => { el.querySelector('[data-dots]').innerHTML = Array.from({length: Math.max(4, pin.length)}, (_, i) => `<span class="${i < pin.length ? 'is-on' : ''}"></span>`).join(''); };
+        dots();
+        const submit = async (ok) => {
+            if (!select.value) { error.textContent = t('choose_driver'); return; }
+            if (pin.length < 4) return;
+            ok.disabled = true;
+            try {
+                const r = await api('POST', '/kiosk/identify', {employee_id: Number(select.value), pin});
+                setSession({token: r.employee_token, id: r.employee.id, name: r.employee.name, exp: Date.now() + r.expires_in * 1000});
+                toast(t('hello', {name: r.employee.name}));
+                load().then(flush);
+            } catch (err) {
+                pin = ''; dots(); ok.disabled = false;
+                error.textContent = err.message;
+            }
+        };
+        el.querySelector('.kiosk-pad').addEventListener('click', (e) => {
+            const b = e.target.closest('button');
+            if (!b) return;
+            if (b.dataset.digit !== undefined && pin.length < 6) pin += b.dataset.digit;
+            if (b.hasAttribute('data-back')) pin = pin.slice(0, -1);
+            dots();
+            if (b.hasAttribute('data-ok')) submit(b);
+        });
+        select.addEventListener('change', () => { error.textContent = ''; });
     }
 
     // --- Parowanie -------------------------------------------------------------------------------------
@@ -125,6 +182,7 @@
     // --- Dzień ---------------------------------------------------------------------------------------------
     async function load() {
         if (!paired) return renderPairing();
+        if (!session) return renderLogin();
         const q = new URLSearchParams();
         if (date) q.set('date', date);
         if (vehicle) q.set('vehicle_id', String(vehicle));
@@ -135,7 +193,7 @@
             if (vehicle) store.set(VEHICLE_KEY, String(vehicle));
             render();
         } catch (err) {
-            if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_DRIVER') return;
+            if (['DEVICE_UNAUTHENTICATED', 'DEVICE_NOT_DRIVER', 'EMPLOYEE_UNAUTHENTICATED', 'EMPLOYEE_SESSION_EXPIRED'].includes(err.code)) return;
             el.innerHTML = header() + `<section class="kiosk-card"><p class="kiosk-error">${esc(err.message)}</p>
                 <div class="kiosk-row"><button type="button" class="kiosk-btn is-primary" data-retry>${esc(t('retry'))}</button></div></section>`;
             el.querySelector('[data-retry]').addEventListener('click', load);
@@ -163,20 +221,20 @@
         const d = data;
         const run = d.run || {};
         const v = d.vehicle;
-        const name = store.get(NAME_KEY) || (run.driver_name ?? (v && v.driver) ?? '');
         const runCard = v ? `<section class="kiosk-card driver-run">
                 <div class="driver-run-main"><div><h2>${esc(v.label)}</h2><p class="kiosk-muted">${esc(t('run_summary', {stops: d.counts.stops, pallets: fmt(v.pallets, 0), kg: fmt(v.weight_kg, 0)}))}
                     ${v.departure ? ' · ' + esc(t('departure', {time: v.departure})) : ''}</p></div>
                     <div class="driver-progress"><strong>${d.counts.delivered}/${d.counts.stops}</strong><span class="kiosk-muted">${esc(t('delivered_count'))}</span>
                     ${d.counts.problem ? `<span class="driver-state is-problem">${esc(t('problems', {n: d.counts.problem}))}</span>` : ''}</div></div>
-                <div class="driver-run-actions"><label class="driver-name">${esc(t('driver_name'))}<input data-driver-name value="${esc(name)}" maxlength="100" autocomplete="name"></label>
+                <div class="driver-run-actions"><span class="driver-name">${esc(t('driver_name'))}<strong>${esc(session ? session.name : (run.driver_name || ''))}</strong></span>
                     ${!run.started_at ? `<button type="button" class="kiosk-btn is-primary" data-run="start">${esc(t('start_run'))}</button>`
                         : !run.finished_at ? `<span class="kiosk-muted">${esc(t('started', {time: hhmm(run.started_at)}))}</span><button type="button" class="kiosk-btn" data-run="finish">${esc(t('finish_run'))}</button>`
                         : `<span class="driver-state is-ok">${esc(t('finished', {from: hhmm(run.started_at), to: hhmm(run.finished_at)}))}</span>`}
                     <button type="button" class="kiosk-btn" data-docs>${esc(t('documents'))}</button>
                     <button type="button" class="kiosk-btn" data-report>${esc(t('report_pdf'))}</button></div></section>` : '';
         const choose = `<section class="driver-choose">
-                <div class="driver-days">${d.dates.map(x => `<button type="button" class="kiosk-chip ${x === d.date ? 'is-active' : ''}" data-date="${x}">${esc(dayLabel(x))}</button>`).join('')}</div>
+                <div class="driver-days">${d.dates.map(x => `<button type="button" class="kiosk-chip ${x === d.date ? 'is-active' : ''}" data-date="${x}">${esc(dayLabel(x))}</button>`).join('')}
+                    <button type="button" class="kiosk-chip" data-scan-tour>▣ ${esc(t('scan_tour'))}</button></div>
                 ${d.vehicles.length > 1 || !v ? `<select class="driver-vehicle" data-vehicle aria-label="${esc(t('vehicle'))}"><option value="">${esc(t('choose_vehicle'))}</option>
                     ${d.vehicles.map(x => `<option value="${x.id}" ${v && x.id === v.id ? 'selected' : ''}>${esc(x.label)} · ${esc(t('vehicle_stops', {n: x.customers, pallets: fmt(x.pallets, 0)}))}</option>`).join('')}</select>` : ''}
             </section>`;
@@ -209,13 +267,13 @@
         el.querySelectorAll('[data-date]').forEach(b => b.addEventListener('click', () => { date = b.dataset.date; load(); }));
         const vs = el.querySelector('[data-vehicle]');
         if (vs) vs.addEventListener('change', () => { vehicle = Number(vs.value) || null; store.set(VEHICLE_KEY, vehicle ? String(vehicle) : null); load(); });
-        const nameInput = el.querySelector('[data-driver-name]');
-        if (nameInput) nameInput.addEventListener('change', () => store.set(NAME_KEY, nameInput.value.trim() || null));
+        const scanTour = el.querySelector('[data-scan-tour]');
+        if (scanTour) scanTour.addEventListener('click', openTourScan);
         el.querySelectorAll('[data-run]').forEach(b => b.addEventListener('click', async () => {
             if (b.dataset.run === 'finish' && !window.confirm(t('finish_confirm'))) return;
             b.disabled = true;
             try {
-                await api('POST', '/driver/run', {date, vehicle_id: vehicle, action: b.dataset.run, driver_name: (nameInput && nameInput.value.trim()) || null});
+                await api('POST', '/driver/run', {date, vehicle_id: vehicle, action: b.dataset.run});
                 toast(t(b.dataset.run === 'start' ? 'run_started' : 'run_finished'));
                 load();
             } catch (err) { b.disabled = false; toast(err.message, true); }
@@ -312,9 +370,7 @@
         let shot;
         try { shot = await stampPhoto(file, s.name + ' · ' + t(kind === 'before' ? 'stamp_before' : 'stamp_after')); } catch (e) { toast(t('photo_error'), true); return false; }
         const pos = await position();
-        const nameInput = el.querySelector('[data-driver-name]');
-        const body = Object.assign({date, customer_id: s.customer_id, vehicle_id: vehicle, kind, client_uuid: uuid(),
-            driver_name: (nameInput && nameInput.value.trim()) || store.get(NAME_KEY) || null}, shot, pos || {});
+        const body = Object.assign({date, customer_id: s.customer_id, vehicle_id: vehicle, kind, client_uuid: uuid()}, shot, pos || {});
         try {
             const r = await api('POST', PHOTO_PATH, body);
             s.photos = s.photos || {before: [], after: []};
@@ -335,6 +391,84 @@
     }
 
     // --- Dostawa / problem ------------------------------------------------------------------------------
+    // --- Kod QR trasy (ERP › Logistyka › Dostawy) : …/driver?date=RRRR-MM-DD&vehicle=ID ------------------------
+    function applyTourCode(text) {
+        let u;
+        try { u = new URL(text, location.href); } catch (e) { return false; }
+        const v = Number(u.searchParams.get('vehicle'));
+        const d = u.searchParams.get('date') || '';
+        if (!/\/driver\/?$/.test(u.pathname) || !v) return false;
+        vehicle = v;
+        store.set(VEHICLE_KEY, String(v));
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) date = d;
+        return true;
+    }
+
+    /** Odczyt QR z wideo : BarcodeDetector (Android, Chrome), inaczej jsQR (iPad, Safari). */
+    async function qrDecoder() {
+        if ('BarcodeDetector' in window) {
+            try {
+                if ((await window.BarcodeDetector.getSupportedFormats()).includes('qr_code')) {
+                    const detector = new window.BarcodeDetector({formats: ['qr_code']});
+                    return async (video) => { const r = await detector.detect(video); return r.length ? r[0].rawValue : null; };
+                }
+            } catch (e) { /* jsQR poniżej */ }
+        }
+        if (!window.jsQR) {
+            await new Promise((resolve, reject) => {
+                const sc = document.createElement('script');
+                sc.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+                sc.onload = resolve; sc.onerror = reject;
+                document.head.appendChild(sc);
+            });
+        }
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', {willReadFrequently: true});
+        return async (video) => {
+            if (!video.videoWidth) return null;
+            const scale = Math.min(1, 800 / video.videoWidth);
+            canvas.width = Math.round(video.videoWidth * scale);
+            canvas.height = Math.round(video.videoHeight * scale);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const r = window.jsQR(img.data, img.width, img.height, {inversionAttempts: 'dontInvert'});
+            return r ? r.data : null;
+        };
+    }
+
+    async function openTourScan() {
+        const box = sheet(t('scan_tour'), `<div class="driver-scan"><video data-video autoplay playsinline muted></video></div>
+            <p class="kiosk-muted" data-scan-msg>${esc(t('scan_tour_help'))}</p>
+            <div class="kiosk-row"><button type="button" class="kiosk-btn" data-close>${esc(t('cancel'))}</button></div>`);
+        const msg = box.querySelector('[data-scan-msg]');
+        let stream = null;
+        let timer = null;
+        let done = false;
+        const stop = () => { done = true; window.clearTimeout(timer); if (stream) stream.getTracks().forEach(tr => tr.stop()); };
+        // Zamknięcie arkusza (Anuluj, tło) : kamera wyłączona.
+        new MutationObserver((_, obs) => { if (!document.body.contains(box)) { stop(); obs.disconnect(); } }).observe(document.body, {childList: true});
+        if (!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { msg.textContent = t('scan_unavailable'); return; }
+        let decode;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}}, audio: false});
+            decode = await qrDecoder();
+        } catch (e) { stop(); msg.textContent = t('scan_unavailable'); return; }
+        if (done) { stop(); return; }
+        const video = box.querySelector('[data-video]');
+        video.srcObject = stream;
+        const tick = async () => {
+            if (done) return;
+            let text = null;
+            try { text = await decode(video); } catch (e) { text = null; }
+            if (text) {
+                if (applyTourCode(text)) { stop(); box.remove(); toast(t('tour_opened')); load(); return; }
+                msg.textContent = t('scan_tour_wrong');
+            }
+            timer = window.setTimeout(tick, 350);
+        };
+        tick();
+    }
+
     function sheet(title, inner) {
         const box = document.createElement('div');
         box.className = 'driver-sheet';
@@ -454,9 +588,7 @@
         let photo = null;
         try { photo = await readPhoto(box); } catch (e) { photo = null; }
         const pos = await position();
-        const nameInput = el.querySelector('[data-driver-name]');
-        const body = Object.assign({date, customer_id: s.customer_id, vehicle_id: vehicle, recorded_at: nowLocal(), client_uuid: uuid(),
-            driver_name: (nameInput && nameInput.value.trim()) || store.get(NAME_KEY) || null, photo}, fields, pos || {});
+        const body = Object.assign({date, customer_id: s.customer_id, vehicle_id: vehicle, recorded_at: nowLocal(), client_uuid: uuid(), photo}, fields, pos || {});
         try {
             await api('POST', STOP_PATH, body);
             box.remove();
@@ -480,7 +612,7 @@
     }
 
     async function flush() {
-        if (flushing || !queue.length || !paired) return;
+        if (flushing || !queue.length || !paired || !session) return;
         flushing = true;
         let sent = 0;
         try {
@@ -510,10 +642,17 @@
             paired ? load() : renderPairing();
         }
         if (e.target.closest('[data-refresh]')) { flush(); load(); }
+        if (e.target.closest('[data-logout]')) {
+            if (queue.length && !window.confirm(t('logout_queue', {n: queue.length}))) return;
+            setSession(null);
+            renderLogin();
+        }
     });
     window.addEventListener('online', flush);
     window.setInterval(flush, 30000);
-    window.setInterval(() => { if (!document.querySelector('.driver-sheet') && paired && navigator.onLine) load(); }, 300000);
+    window.setInterval(() => { if (!document.querySelector('.driver-sheet') && paired && session && navigator.onLine) load(); }, 300000);
+    // Koniec sesji (trasa skończona, kolejny dzień) : znów lista + PIN.
+    window.setInterval(() => { if (session && session.exp < Date.now()) { setSession(null); renderLogin(t('session_ended')); } }, 60000);
 
     loadLabels().then(() => { paired ? load().then(flush) : renderPairing(); });
 })();

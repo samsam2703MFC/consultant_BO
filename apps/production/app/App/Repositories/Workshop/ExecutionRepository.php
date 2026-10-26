@@ -70,13 +70,17 @@ final class ExecutionRepository extends WorkshopRepository
     }
 
     /** Personnes actives d'un groupe (ou toutes), avec leur état d'identifiant et de pointage. */
-    public function people(?int $groupId): array
+    public function people(?int $groupId, ?string $positionCode = null): array
     {
         $params = [];
         $where = '';
         if ($groupId !== null) {
             $where = ' AND (e.id_primary_group = ? OR e.id IN (SELECT m.id_employee FROM n_prod_team_member m JOIN n_prod_team t ON t.id = m.id_team WHERE t.id_group = ? AND t.active = 1))';
             $params = [$groupId, $groupId];
+        }
+        if ($positionCode !== null) {
+            $where .= ' AND e.id_position IN (SELECT p.id FROM n_position p WHERE p.code = ?)';
+            $params[] = $positionCode;
         }
         return $this->all(
             "SELECT e.id, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name, e.id_primary_group,

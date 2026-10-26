@@ -7,7 +7,7 @@ Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y 
 
 ## Installer / intégrer
 
-Sur une base ERP d'origine (copie de production) : `php Bin/tfb_migrate.php apply` depuis `apps/production/app`. Les migrations `migrations/tfb/001 → 087` créent les tables (`tfb_` puis renommées `n_` par la 069), posent les données de départ (paramètres, rôles, modèles d'e-mails, questions du pointage…) et sont enregistrées dans `n_schema_migration` (une migration déjà appliquée ne peut plus être modifiée). `docs/db/n_schema.sql` donne le schéma final des tables `n_` en un seul fichier, pour lecture.
+Sur une base ERP d'origine (copie de production) : `php Bin/tfb_migrate.php apply` depuis `apps/production/app`. Les migrations `migrations/tfb/001 → 088` créent les tables (`tfb_` puis renommées `n_` par la 069), posent les données de départ (paramètres, rôles, modèles d'e-mails, questions du pointage…) et sont enregistrées dans `n_schema_migration` (une migration déjà appliquée ne peut plus être modifiée). `docs/db/n_schema.sql` donne le schéma final des tables `n_` en un seul fichier, pour lecture.
 
 ## Ce que le développement change dans les tables d'origine
 
@@ -42,6 +42,10 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 ### Tablette chauffeur (migration 082, 26/10/2026)
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
+
+### File des écarts d'expédition (migration 088, 26/10/2026)
+
+`n_shipping_issue` : un écart à régler avec le client — `source` `difference` (`id_difference` → `document_order_shipping_difference`, CASCADE, unique : différence proforma payée ↔ WDT d'au moins `shipping_issue.min_amount` €, avec au moins une ligne payée) ou `delivery` (`id_delivery_stop` → `n_delivery_stop` au statut `problem`, CASCADE, unique). `id_customer` (SET NULL), `opened_on` (date du document / de la livraison), `due_on` (entrée dans la file + `shipping_issue.decision_days`), `id_owner` (utilisateur ERP, SET NULL ; par défaut le premier utilisateur au poste ADMINISTRACJA pour les différences, LOGISTYKA pour les livraisons), `status` (`open` → `decided` → `done`), `decision` (`refund`, `credit_next`, `collect`, `resend`, `redeliver`, `complaint`, `correction`, `waive`), `note`, `decided_by` / `decided_at`, `closed_by` / `closed_at`. Le montant n'est pas copié : il est relu dans les lignes du document de différences. Alimentée par `Bin/mail_dispatch.php` et à l'ouverture de la page (`shipping_issue.lookback_days` derniers jours). Paramètres : `shipping_issue.decision_days` (3), `shipping_issue.min_amount` (1 €), `shipping_issue.lookback_days` (45). Tablette chauffeur : paramètre `driver.session_hours` (12 par défaut, sans ligne en base) pour la durée de la session après le PIN.
 
 ### Versions de recette « en vigueur depuis » (migration 087, 26/10/2026)
 

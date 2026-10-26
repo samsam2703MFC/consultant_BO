@@ -189,6 +189,12 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 - La rentabilité (Rentowność, rapport mensuel, production des groupes) valorise un mois passé avec la composition en vigueur à la fin de ce mois et les prix matières de l'époque — et non plus avec la composition actuelle. Le mois courant utilise la composition actuelle.
 - Page « Historia » (bouton dans la kalkulacja d'une recette, `/recipes/{id}/history`) : versions et ce qui a changé (matières, półprodukty, rendement, étapes ; liste aplatie), coût matières sur 12 mois avec la version en vigueur, et l'écart de chaque mois séparé en effet prix et effet composition.
 
+## Écarts d'expédition, chauffeur avec PIN, QR de la tournée (26/10/2026)
+
+- Wysyłki › « Różnice i problemy dostaw » (`/shipments/differences`) : chaque différence entre une proforma payée et le WDT (remboursement au client ou dopłata) et chaque problème signalé par le chauffeur devient une ligne avec un responsable, une décision (remboursement, déduction sur la prochaine commande, dopłata, renvoi des produits, nouvelle livraison, réclamation, correction, sans suite — note obligatoire pour les deux derniers), une échéance et un statut (à décider → en cours → clos). Tuiles : montants à rembourser / à encaisser. Alerte dans la cloche et « Do zrobienia » (Dzisiaj) quand la décision dépasse l'échéance. Les différences sans proforma payée (paiement sur facture) ne sont pas dans la file.
+- Tablette chauffeur : le chauffeur choisit son nom dans une liste (personnes au poste « Kierowca-dostawca » ; toutes les personnes actives tant qu'aucun poste n'est saisi) et tape son PIN, comme sur la tablette de groupe. La session dure la tournée (12 h) ; le nom enregistré sur la tournée, les arrêts et les photos est celui de la personne identifiée. Le PIN se donne dans Tablet produkcji › Osoby.
+- QR code de la tournée : Logistyka › Dostawy (un par véhicule et par jour) et en haut du rapport PDF de la tournée. Sur la tablette, « Skanuj QR trasy » ouvre ce véhicule et ce jour (caméra : https nécessaire).
+
 ## Points ouverts (données réelles à fournir)
 
 Les écrans existent ; ce qui manque, ce sont les données réelles de l'atelier (la copie de test tourne sur une démo réaliste).

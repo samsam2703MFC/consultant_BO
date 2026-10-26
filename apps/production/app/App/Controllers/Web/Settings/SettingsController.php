@@ -22,6 +22,9 @@ class SettingsController extends BaseController
         'alerts.complaint_days' => [1, 60, '3'],
         'alerts.complaint_escalate_days' => [1, 90, '7'],
         'alerts.cost_due_day' => [1, 28, '10'],
+        'shipping_issue.decision_days' => [1, 30, '3'],
+        'shipping_issue.min_amount' => [0, 1000, '1'],
+        'shipping_issue.lookback_days' => [7, 365, '45'],
     ];
 
     public function __construct(private ParamRepository $params)

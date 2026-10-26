@@ -45,6 +45,9 @@ final class DataSheetService
         'alerts.complaint_days',
         'alerts.complaint_escalate_days',
         'alerts.cost_due_day',
+        'shipping_issue.decision_days',
+        'shipping_issue.min_amount',
+        'shipping_issue.lookback_days',
     ];
     private const MAX_BYTES = 2_000_000;
     /** Lignes préparées pour la saisie (listes déroulantes, colonnes en texte). */
