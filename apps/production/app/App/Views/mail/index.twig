@@ -1,12 +1,12 @@
 {% extends "layouts/base.twig" %}
 
-{% block title %}{{ mail_page == 'settings' ? 'Moja skrzynka e-mail' : 'Poczta' }}{% endblock %}
+{% block title %}{{ mail_page == 'settings' ? 'Moja skrzynka' : 'Poczta' }}{% endblock %}
 
 {% block page_heading %}
     <div class="page-heading">
         <div class="page-title d-flex flex-wrap align-items-end gap-3">
             <div class="me-auto">
-                <h3>{{ mail_page == 'settings' ? 'Moja skrzynka e-mail' : 'Poczta' }}</h3>
+                <h3>{{ mail_page == 'settings' ? 'Moja skrzynka' : 'Poczta' }}</h3>
                 <p class="text-subtitle text-muted mb-0">{{ mail_page == 'settings'
                     ? 'Twoja własna skrzynka w ERP : odbiór (IMAP) i wysyłka (SMTP) z Twojego adresu. Hasło jest zaszyfrowane i nie jest nigdzie pokazywane.'
                     : 'Twoja skrzynka w ERP : odebrane, wysłane, odpowiedzi do klientów i dostawców.' }}</p>

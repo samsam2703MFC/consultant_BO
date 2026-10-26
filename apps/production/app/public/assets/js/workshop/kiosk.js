@@ -108,6 +108,12 @@
         'clapperboard': '<path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /><path d="m6.2 5.3 3.1 3.9" /><path d="m12.4 3.4 3.1 4" /><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />',
         'notebook-pen': '<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4" /><path d="M2 6h4" /><path d="M2 10h4" /><path d="M2 14h4" /><path d="M2 18h4" /><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" />',
         'search': '<circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />',
+        'warehouse': '<path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z" /><path d="M6 18h12" /><path d="M6 14h12" /><rect width="12" height="12" x="6" y="10" />',
+        'clipboard-check': '<rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" />',
+        'layout-grid': '<rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" />',
+        'chevron-right': '<path d="m9 18 6-6-6-6" />',
+        'plus': '<path d="M5 12h14" /><path d="M12 5v14" />',
+        'minus': '<path d="M5 12h14" />',
         'trash-2': '<path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" />',
         'flame': '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />',
         'package-x': '<path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14" /><path d="m7.5 4.27 9 5.15" /><polyline points="3.29 7 12 12 20.71 7" /><line x1="12" x2="12" y1="22" y2="12" /><path d="m17 13 5 5m-5 0 5-5" />',
@@ -472,7 +478,7 @@
     }
 
     // --- Menu osoby : Czas pracy / Produkcja / Kontrola jakości / Receptury ---------------------------
-    const TABS = [['clock', 'clock', 'tab_clock'], ['production', 'package', 'tab_production'], ['quality', 'shield-check', 'tab_quality'], ['recipes', 'book-open', 'tab_recipes'], ['machines', 'bot', 'tab_machines'], ['dev', 'flask-conical', 'tab_dev']];
+    const TABS = [['clock', 'clock', 'tab_clock'], ['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['recipes', 'book-open', 'tab_recipes'], ['machines', 'bot', 'tab_machines'], ['dev', 'flask-conical', 'tab_dev']];
     const personHeader = () => header();
     function tabs(active) {
         if (session) session.tab = active;
@@ -485,6 +491,7 @@
         if (k === 'recipes') return renderRecipes(message);
         if (k === 'machines') return renderMachines(message);
         if (k === 'dev') return renderDev(message);
+        if (k === 'stock') return renderStock(message);
         return k === 'production' ? renderProduction(message) : (k === 'quality' ? renderQuality(message) : renderMe(message));
     }
 
@@ -794,123 +801,412 @@
         });
     }
 
+    // Accueil Produkcja : carte du plan (→ page de validation), plan du jour et pertes, raccourcis (encoder sans plan,
+    // stock du groupe, liste de production), puis les lots du jour (numéros de lots matières) et les livraisons.
     function drawProduction(day, me, message) {
-        const others = day.catalog.filter(c => !day.items.some(i => i.item_id === c.item_id));
         const tot = day.totals || {};
         const closed = day.closed;
-        el.innerHTML = personHeader() + tabs('production') + `
-            <section class="kiosk-card kiosk-dayhead ${closed && !closed.changed ? 'is-closed' : ''}"><div><h2>${esc(t('prod_title', {group: day.group.name}))}</h2>
-                <p class="kiosk-muted">${esc(t('prod_help'))}</p>
-                <p class="kiosk-status">${tot.planned ? esc(t('day_plan_done', {done: tot.planned_done, total: tot.planned})) + ' · ' : ''}${esc(t('day_waste', {q: fmt(tot.waste || 0), pct: tot.waste_pct === null || tot.waste_pct === undefined ? '0' : fmt(tot.waste_pct)}))}</p>
-                ${closed ? `<p class="kiosk-dayhead-state">${closed.changed ? icon('triangle-alert', 'is-sm') + ' ' + esc(t('day_changed')) : icon('circle-check', 'is-sm') + ' ' + esc(t('day_closed', {time: hhmm(closed.at), name: closed.employee || ''}))}${closed.note ? ' · ' + esc(closed.note) : ''}</p>` : ''}</div>
-                ${day.editable && day.items.length ? `<button type="button" class="kiosk-btn ${closed && !closed.changed ? '' : 'is-primary'}" data-close-day>${icon('check')} ${esc(t(closed ? 'day_close_again' : 'day_close'))}</button>` : ''}</section>
-            <div class="kiosk-prod">${day.items.length ? day.items.map(i => {
-                const left = i.planned !== null ? Math.max(0, Math.round((i.planned - i.produced) * 1000) / 1000) : null;
-                const pct = i.planned ? Math.min(100, Math.round(i.produced / i.planned * 100)) : null;
-                const live = i.wastes.filter(w => !w.cancelled);
-                return `<article class="kiosk-card kiosk-prod-item ${left === 0 ? 'is-done' : ''}" data-item="${i.item_id}">
-                    <div class="kiosk-prod-head"><div><h3>${esc(i.name)}</h3>
-                        <div class="kiosk-muted">${i.planned !== null ? esc(t('prod_planned', {q: qty(i.planned, i)})) + ' · ' : ''}${esc(t('prod_done', {q: qty(i.produced, i)}))}${i.waste ? ' · ' + esc(t('prod_waste', {q: qty(i.waste, i)})) + ' · <strong>' + esc(t('prod_good', {q: qty(i.good, i)})) + '</strong>' : ''}</div></div>
-                        ${day.editable ? `<div class="kiosk-prod-actions">
-                            ${left ? `<button type="button" class="kiosk-btn is-ok" data-as-planned="${i.item_id}">${icon('check')} ${esc(t('prod_as_planned', {q: qty(left, i)}))}</button>` : ''}
-                            <button type="button" class="kiosk-btn ${left ? '' : 'is-ok'}" data-new="${i.item_id}">＋ ${esc(t('prod_batch'))}</button>
-                            ${i.good > 0 ? `<button type="button" class="kiosk-btn is-danger-soft" data-waste="${i.item_id}">− ${esc(t('waste_add'))}</button>` : ''}</div>` : ''}</div>
-                    ${pct !== null ? `<div class="kiosk-bar"><span style="width:${pct}%"></span></div>` : ''}
-                    ${batchTiles(i)}
-                    ${i.batches.length ? `<ul class="kiosk-batches">${i.batches.map(b => `<li class="${b.cancelled ? 'is-cancelled' : ''}">
-                        <button type="button" class="kiosk-batch" data-batch="${b.id}"><strong>${esc(b.lot_code)}</strong>
-                        <span>${esc(qty(b.quantity, i))}</span><span class="kiosk-muted">${esc(hhmm(b.created_at))}${b.employee ? ' · ' + esc(b.employee) : ''}</span>
-                        <span class="kiosk-lots ${b.cancelled ? '' : (b.lots_total && b.lots_done >= b.lots_total ? 'is-ok' : 'is-todo')}">${b.cancelled ? esc(t('prod_cancelled')) : esc(t('prod_lots', {done: b.lots_done ?? 0, total: b.lots_total ?? 0}))}</span></button></li>`).join('')}</ul>` : ''}
-                    ${live.length ? `<ul class="kiosk-wastes">${live.map(w => `<li class="kiosk-waste"><span>${icon('trash-2', 'is-sm')} <strong>${esc(qty(w.quantity, i))}</strong> · ${esc(t('waste_' + w.reason))}${w.note ? ' — ' + esc(w.note) : ''}</span>
-                        <span class="kiosk-muted">${w.lot_code ? esc(w.lot_code) + ' · ' : ''}${esc(hhmm(w.created_at))}${w.employee ? ' · ' + esc(w.employee) : ''}</span>
-                        ${w.editable ? `<button type="button" class="kiosk-btn is-small" data-waste-cancel="${w.id}" aria-label="${esc(t('waste_cancel'))}">${icon('x')}</button>` : ''}</li>`).join('')}</ul>` : ''}
-                </article>`;
-            }).join('') : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('prod_nothing'))}</p></section>`}</div>
-            ${day.editable && others.length ? `<section class="kiosk-card"><h2>${esc(t('prod_other'))}</h2><div class="kiosk-row">
-                <select class="kiosk-select" data-other><option value="">—</option>${others.map(c => `<option value="${c.item_id}">${esc(c.name)}</option>`).join('')}</select>
-                <button type="button" class="kiosk-btn is-ok" data-other-go>＋ ${esc(t('prod_batch'))}</button></div></section>` : ''}
+        const locked = !!(closed && closed.locked);
+        const planned = day.items.filter(i => i.planned !== null);
+        const lines = day.items.filter(i => i.line).length;
+        const lost = day.items.filter(i => i.waste > 0);
+        const pct = planned.length ? Math.round(planned.filter(i => i.line || i.produced + 1e-6 >= i.planned).length / planned.length * 100) : 0;
+        const plannedCartons = planned.reduce((a, i) => a + (i.ppc ? i.planned / i.ppc : 0), 0);
+        const head = planned.length
+            ? `<section class="kiosk-card kv-plan ${locked ? 'is-closed' : ''}" data-open-validate role="button" tabindex="0">
+                <span class="kv-plan-icon">${icon(locked ? 'circle-check' : 'clipboard-check')}</span>
+                <div class="kv-plan-body"><h2>${esc(t(locked ? 'kv_plan_closed_title' : 'kv_plan_title'))}</h2>
+                    <p class="kiosk-muted">${esc(t('kv_plan_meta', {n: planned.length, cartons: fmt(Math.round(plannedCartons)), done: lines, total: day.items.length}))}${tot.waste ? ' · ' + esc(t('day_waste', {q: fmt(tot.waste), pct: fmt(tot.waste_pct ?? 0)})) : ''}</p>
+                    ${locked ? `<p class="kiosk-dayhead-state">${icon('circle-check', 'is-sm')} ${esc(t('day_closed', {time: hhmm(closed.at), name: closed.employee || ''}))}${closed.note ? ' · ' + esc(closed.note) : ''}</p>` : `<div class="kiosk-bar"><span style="width:${pct}%"></span></div>`}</div>
+                <button type="button" class="kiosk-btn ${locked ? '' : 'is-primary'} kv-plan-go" data-open-validate>${esc(t(locked ? 'kv_plan_view' : 'kv_plan_go'))} ${icon('chevron-right')}</button></section>`
+            : `<section class="kiosk-card kv-plan is-empty ${locked ? 'is-closed' : ''}"><span class="kv-plan-icon">${icon('layout-grid')}</span>
+                <div class="kv-plan-body"><h2>${esc(t(locked ? 'kv_plan_closed_title' : 'kv_noplan_title'))}</h2><p class="kiosk-muted">${esc(t(locked ? 'kv_locked_help' : 'kv_noplan_help'))}</p></div>
+                <button type="button" class="kiosk-btn ${locked ? '' : 'is-primary'} kv-plan-go" data-open-encode>${esc(t(locked ? 'kv_plan_view' : 'kv_encode'))} ${icon('chevron-right')}</button></section>`;
+        const planList = planned.length ? `<section class="kiosk-card"><h2 class="kv-h">${esc(t('kv_plan_day'))}</h2><ul class="kv-list">${planned.map(i => {
+            const done = i.line ? i.line.produced : i.produced;
+            const cls = i.line ? 'is-ok' : (done > 0 ? 'is-warn' : '');
+            return `<li><span>${i.line ? icon('circle-check', 'is-sm') + ' ' : ''}${esc(i.name)}</span><span class="kiosk-pill ${cls}">${esc(cq(done, i, true))} / ${esc(cq(i.planned, i))}</span></li>`;
+        }).join('')}${day.items.filter(i => i.planned === null).map(i => `<li><span>${esc(i.name)}</span><span class="kiosk-pill is-warn">${esc(t('kv_off_plan_q', {q: cq(i.produced, i)}))}</span></li>`).join('')}</ul></section>` : '';
+        const lostList = `<section class="kiosk-card"><h2 class="kv-h">${esc(t('kv_waste_today'))}</h2>${lost.length ? `<ul class="kv-list">${lost.flatMap(i => i.wastes.filter(w => !w.cancelled).map(w =>
+            `<li><span>${esc(i.name)} · ${esc(t('waste_' + w.reason))}</span><span class="kiosk-pill is-danger">${esc(fmt(w.quantity))} ${esc(i.unit)}${w.photos && w.photos.length ? ' · ' + w.photos.length + ' ' + icon('camera', 'is-sm') : ''}</span></li>`)).join('')}</ul>`
+            : `<p class="kiosk-muted">${esc(t('kv_waste_none'))}</p>`}<p class="kiosk-muted kv-small">${esc(t(day.waste_photo && day.waste_photo.required ? 'kv_waste_rule_photo' : 'kv_waste_rule'))}</p></section>`;
+        const batches = day.items.filter(i => i.batches.length);
+        el.innerHTML = personHeader() + tabs('production') + head + `
+            <div class="kv-grid2">${planList || lostList}${planList ? lostList : ''}</div>
+            <div class="kv-shortcuts">
+                <button type="button" class="kv-shortcut" data-open-encode><span class="kv-shortcut-icon">${icon('layout-grid')}</span><strong>${esc(t('kv_encode'))}</strong><span>${esc(t('kv_encode_help'))}</span></button>
+                <button type="button" class="kv-shortcut" data-open-stock="stock"><span class="kv-shortcut-icon">${icon('warehouse')}</span><strong>${esc(t('kv_stock'))}</strong><span>${esc(t('kv_stock_help'))}</span></button>
+                <button type="button" class="kv-shortcut" data-open-stock="list"><span class="kv-shortcut-icon">${icon('list-ordered')}</span><strong>${esc(t('kv_list'))}</strong><span>${esc(t('kv_list_help'))}</span></button>
+            </div>
+            ${batches.length ? `<h2 class="kv-section">${esc(t('kv_batches_title'))}</h2><p class="kiosk-muted kv-small">${esc(t('kv_batches_help'))}</p>
+            <div class="kiosk-prod">${batches.map(i => `<article class="kiosk-card kiosk-prod-item" data-item="${i.item_id}">
+                <div class="kiosk-prod-head"><div><h3>${esc(i.name)}</h3><div class="kiosk-muted">${esc(t('prod_done', {q: qty(i.produced, i)}))}${i.waste ? ' · ' + esc(t('prod_waste', {q: qty(i.waste, i)})) : ''}</div></div>
+                    ${day.editable ? `<div class="kiosk-prod-actions"><button type="button" class="kiosk-btn is-small" data-new="${i.item_id}">＋ ${esc(t('prod_batch'))}</button></div>` : ''}</div>
+                ${batchTiles(i)}
+                <ul class="kiosk-batches">${i.batches.map(b => `<li class="${b.cancelled ? 'is-cancelled' : ''}">
+                    <button type="button" class="kiosk-batch" data-batch="${b.id}"><strong>${esc(b.lot_code)}</strong>
+                    <span>${esc(qty(b.quantity, i))}</span><span class="kiosk-muted">${esc(hhmm(b.created_at))}${b.employee ? ' · ' + esc(b.employee) : ''}</span>
+                    <span class="kiosk-lots ${b.cancelled ? '' : (b.lots_total && b.lots_done >= b.lots_total ? 'is-ok' : 'is-todo')}">${b.cancelled ? esc(t('prod_cancelled')) : esc(t('prod_lots', {done: b.lots_done ?? 0, total: b.lots_total ?? 0}))}</span></button></li>`).join('')}</ul>
+            </article>`).join('')}</div>` : ''}
+            ${day.editable && day.items.length ? `<div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-close-day>${icon('moon')} ${esc(t('kv_end_day'))}</button></div>` : ''}
             ${deliveriesCard()}
             ${operationsCard(me)}`;
         if (message) toast(message);
         const find = (id) => day.items.find(i => i.item_id === id) || day.catalog.find(c => c.item_id === id);
         bindOperations(me);
+        el.querySelectorAll('[data-open-validate]').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); renderLines(day, me, 'plan'); }));
+        el.querySelector('section[data-open-validate]')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') renderLines(day, me, 'plan'); });
+        el.querySelectorAll('[data-open-encode]').forEach(b => b.addEventListener('click', () => renderLines(day, me, 'encode')));
+        el.querySelectorAll('[data-open-stock]').forEach(b => b.addEventListener('click', () => { if (session) session.stockView = b.dataset.openStock; openTab('stock'); }));
         el.querySelectorAll('[data-receive-order]').forEach(b => b.addEventListener('click', () => renderReceive(Number(b.dataset.receiveOrder))));
         el.querySelectorAll('[data-new]').forEach(b => b.addEventListener('click', () => renderNewBatch(find(Number(b.dataset.new)))));
         el.querySelectorAll('[data-batch]').forEach(b => b.addEventListener('click', () => renderBatch(Number(b.dataset.batch))));
-        el.querySelectorAll('[data-waste]').forEach(b => b.addEventListener('click', () => renderWaste(find(Number(b.dataset.waste)))));
-        // Zrobione według planu : jedna partia z resztą planu (numery partii surowców potem, jak przy każdej partii).
-        el.querySelectorAll('[data-as-planned]').forEach(b => b.addEventListener('click', async () => {
-            const i = find(Number(b.dataset.asPlanned));
-            const left = Math.max(0, Math.round((i.planned - i.produced) * 1000) / 1000);
-            if (!left || !window.confirm(t('prod_as_planned_confirm', {name: i.name, q: qty(left, i)}))) return;
-            b.disabled = true;
-            try {
-                const r = await api('POST', '/kiosk/production', {item_id: i.item_id, quantity: left, client_uuid: uuid()}, true);
-                renderProduction(t('prod_saved_plan', {lot: r.lot_code, q: qty(left, i)}));
-            } catch (err) { b.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
-        }));
-        el.querySelectorAll('[data-waste-cancel]').forEach(b => b.addEventListener('click', async () => {
-            if (!window.confirm(t('waste_cancel_confirm'))) return;
-            b.disabled = true;
-            try { drawProduction(await api('PATCH', `/kiosk/waste/${b.dataset.wasteCancel}`, {cancelled: true}, true), me, t('waste_cancelled')); }
-            catch (err) { b.disabled = false; toast(err.message, true); }
-        }));
         el.querySelector('[data-close-day]')?.addEventListener('click', () => renderEndDay(day, me, 1));
         // Retour d'une action ouverte depuis l'assistant « Koniec dnia » (lots, NC, perte) : on reprend à son étape.
         if (resumeEndDay) { const back = resumeEndDay; resumeEndDay = null; renderEndDay(day, me, back); }
-        const go = el.querySelector('[data-other-go]');
-        if (go) go.addEventListener('click', () => { const v = Number(el.querySelector('[data-other]').value); if (v) renderNewBatch(find(v)); });
     }
 
-    // Strata : ilość (kartony + sztuki), powód, opcjonalnie partia i notatka (« inne » : notatka wymagana).
+    // Quantité en cartons (fiche avec pièces par carton) sinon dans l'unité de la fiche.
+    const cq = (q, item, bare) => {
+        if (q === null || q === undefined) return '—';
+        return item.ppc ? (bare ? fmt(Math.round(q / item.ppc * 100) / 100) : `${fmt(Math.round(q / item.ppc * 100) / 100)} ${t('prod_cartons_short')}`) : (bare ? fmt(q) : `${fmt(q)} ${item.unit}`);
+    };
+    const r3 = (v) => Math.round(v * 1000) / 1000;
+
+    // Perte : l'ancien formulaire séparé est remplacé par la ligne de validation (quantité, motif, photos).
     function renderWaste(item) {
+        api('GET', '/kiosk/production', undefined, true).then(day => renderLines(day, null, 'plan', item.item_id)).catch(err => toast(err.message, true));
+    }
+
+    // --- Validation de la production du jour : une ligne par produit (fait | perte + photos + motif) ---------------
+    // mode « plan » : lignes du plan (+ produits hors plan) ; mode « encode » : catégories → produits en boutons, et
+    // les mêmes lignes à droite. Lignes gardées dans vstate (saisies non validées) le temps de la visite.
+    let vstate = null;
+    function lineState(i) {
+        return {
+            id: i.item_id, produced: i.line ? i.line.produced : (i.planned !== null ? Math.max(i.planned, i.produced) : i.produced),
+            waste: 0, reason: null, wasteNote: '', note: i.line && i.line.note ? i.line.note : '', photos: [], editing: !i.line, error: '', uuid: null, busy: false,
+        };
+    }
+    function renderLines(day, me, mode, focus) {
         resetIdle();
-        let reason = null;
-        const icons = {quality: 'search', burnt: 'flame', damaged: 'package-x', samples: 'flask-conical', other: 'pencil'};
-        const batches = (item.batches || []).filter(b => !b.cancelled);
-        el.innerHTML = header() + `<section class="kiosk-card"><h2>${esc(t('waste_title', {name: item.name}))}</h2>
-            <p class="kiosk-muted">${esc(t('waste_help', {q: qty(item.good, item)}))}</p>
-            <form class="kiosk-form" data-waste-form>
-                ${item.ppc ? `<label>${esc(t('prod_cartons', {ppc: item.ppc}))}<input name="cartons" inputmode="numeric"></label>
-                    <label>${esc(t('prod_loose', {unit: item.unit}))}<input name="loose" inputmode="decimal"></label>`
-                    : `<label>${esc(t('prod_quantity', {unit: item.unit}))}<input name="loose" inputmode="decimal"></label>`}
-                <p class="kiosk-status is-wide" data-total></p>
-                <div class="is-wide"><span class="kiosk-muted">${esc(t('waste_reason'))}</span><div class="kiosk-reasons" data-reasons>${['quality', 'burnt', 'damaged', 'samples', 'other'].map(k =>
-                    `<button type="button" class="kiosk-btn kiosk-reason" data-reason="${k}">${icon(icons[k])} ${esc(t('waste_' + k))}</button>`).join('')}</div></div>
-                ${batches.length ? `<label>${esc(t('waste_batch'))}<select class="kiosk-select" name="output_id"><option value="">${esc(t('waste_no_batch'))}</option>
-                    ${batches.map(b => `<option value="${b.id}">${esc(b.lot_code)} · ${esc(qty(b.quantity, item))}</option>`).join('')}</select></label>` : ''}
-                <label class="is-wide">${esc(t('waste_note'))}<input name="note" maxlength="255"></label>
-            </form><p class="kiosk-error" data-error></p>
-            <div class="kiosk-row is-end"><button type="button" class="kiosk-btn" data-cancel>${esc(t('cancel'))}</button>
-                <button type="button" class="kiosk-btn is-danger" data-save>${esc(t('waste_save'))}</button></div></section>`;
-        const form = el.querySelector('[data-waste-form]');
-        const num = (v) => { const n = Number(String(v || '').replace(',', '.').replace(/\s/g, '')); return Number.isFinite(n) ? n : NaN; };
-        const total = () => (item.ppc ? num(form.cartons.value) * item.ppc : 0) + num(form.loose.value);
-        const show = () => { const q = total(); el.querySelector('[data-total]').textContent = Number.isFinite(q) && q > 0 ? t('prod_total', {q: qty(q, item)}) : ''; };
-        form.addEventListener('input', () => { resetIdle(); show(); });
-        el.querySelector('[data-reasons]').addEventListener('click', (e) => {
-            const b = e.target.closest('[data-reason]');
-            if (!b) return;
-            reason = b.dataset.reason;
-            el.querySelectorAll('[data-reason]').forEach(x => x.classList.toggle('is-primary', x === b));
-            if (reason === 'other') form.note.focus();
+        longIdle = true;
+        if (!vstate || vstate.date !== day.date) vstate = {date: day.date, lines: {}, added: [], cat: null, closeNote: '', closeError: '', gaps: false};
+        vstate.mode = mode;
+        vstate.me = me || vstate.me;
+        const locked = !!(day.closed && day.closed.locked);
+        const items = () => {
+            const ids = new Set();
+            const list = [];
+            day.items.forEach(i => { if (i.planned !== null || i.produced > 0 || i.line || i.waste > 0) { ids.add(i.item_id); list.push(i); } });
+            vstate.added.forEach(id => { if (!ids.has(id)) { const c = day.catalog.find(x => x.item_id === id); if (c) list.push({...c, planned: null, produced: 0, waste: 0, good: 0, batches: [], wastes: [], line: null}); } });
+            return list;
+        };
+        items().forEach(i => { if (!vstate.lines[i.item_id]) vstate.lines[i.item_id] = lineState(i); });
+        const all = items();
+        const done = all.filter(i => i.line && !vstate.lines[i.item_id].editing).length;
+        const sumCartons = (f) => all.reduce((a, i) => a + (i.ppc ? f(i) / i.ppc : 0), 0);
+        const plannedCartons = sumCartons(i => i.planned || 0);
+        const producedCartons = sumCartons(i => vstate.lines[i.item_id].produced || 0);
+        const wasteQ = all.reduce((a, i) => a + i.waste + (vstate.lines[i.item_id].waste || 0), 0);
+        const producedQ = all.reduce((a, i) => a + (vstate.lines[i.item_id].produced || 0), 0);
+        const lineHtml = (i) => drawLine(day, i, vstate.lines[i.item_id], locked);
+        const back = `<button type="button" class="kiosk-btn is-small kv-back" data-kv-back>${icon('chevron-left')} ${esc(t(mode === 'encode' && vstate.from === 'plan' ? 'kv_back_validate' : 'tab_production'))}</button>`;
+        const lockedNote = locked ? `<p class="kiosk-status kv-locked">${icon('circle-check', 'is-sm')} ${esc(t('day_closed', {time: hhmm(day.closed.at), name: day.closed.employee || ''}))} — ${esc(t('kv_locked_help'))}</p>` : '';
+        const closeBox = vstate.gaps ? `<section class="kiosk-card kv-closebox"><p class="kiosk-error">${icon('triangle-alert', 'is-sm')} ${esc(vstate.closeError)}</p>
+            <label class="kv-field">${esc(t('eod_note_required'))}<input name="close_note" maxlength="255" value="${esc(vstate.closeNote)}"></label>
+            <div class="kiosk-row"><button type="button" class="kiosk-btn" data-kv-eod>${icon('moon')} ${esc(t('kv_end_day'))}</button>
+            <button type="button" class="kiosk-btn is-primary" data-kv-close-note>${icon('check')} ${esc(t('day_confirm'))}</button></div></section>` : '';
+        const foot = `<div class="kv-foot"><div class="kv-sum"><div><span class="kiosk-muted">${esc(t('day_col_done'))}</span><strong>${esc(fmt(Math.round(producedCartons * 10) / 10))}${plannedCartons ? ' / ' + esc(fmt(Math.round(plannedCartons * 10) / 10)) : ''} ${esc(t('prod_cartons_short'))}</strong></div>
+            <div><span class="kiosk-muted">${esc(t('day_col_waste'))}</span><strong class="${wasteQ ? 'kv-danger' : ''}">${esc(fmt(wasteQ))}${producedQ ? ' · ' + esc(fmt(Math.round(wasteQ / producedQ * 1000) / 10)) + ' %' : ''}</strong></div>
+            <div><span class="kiosk-muted">${esc(t('kv_validated'))}</span><strong>${done} / ${all.length}</strong></div></div>
+            ${locked ? '' : `${mode === 'plan' ? `<button type="button" class="kiosk-btn" data-kv-encode>＋ ${esc(t('kv_off_plan'))}</button>` : ''}
+            <button type="button" class="kiosk-btn is-primary" data-kv-all ${all.length ? '' : 'disabled'}>${icon('check')} ${esc(t('kv_validate_day'))}</button>`}</div>`;
+        let body;
+        if (mode === 'encode') {
+            const cats = day.categories.length ? day.categories : [{id: null, name: null, count: day.catalog.length}];
+            if (vstate.cat === null || !cats.some(c => String(c.id) === String(vstate.cat))) vstate.cat = String(cats[0].id);
+            const inList = new Set(all.map(i => i.item_id));
+            const prods = day.catalog.filter(c => String(c.category_id) === vstate.cat);
+            body = `<div class="kv-crumb">${back}<div><h2>${esc(t('kv_encode_title'))}</h2><p class="kiosk-muted">${esc(t('kv_encode_page_help'))}</p></div></div>${lockedNote}
+                <div class="kv-encode">
+                    <nav class="kv-cats">${cats.map(c => `<button type="button" class="kv-cat ${String(c.id) === vstate.cat ? 'is-on' : ''}" data-kv-cat="${c.id}">${esc(c.name || t('kv_cat_other'))}<span>${c.count}</span></button>`).join('')}</nav>
+                    <div class="kv-prods">${prods.map(c => `<button type="button" class="kv-prod ${inList.has(c.item_id) ? 'is-added' : ''}" data-kv-add="${c.item_id}" ${locked ? 'disabled' : ''}>
+                        <strong>${esc(c.name)}</strong><small>${inList.has(c.item_id) ? icon('check', 'is-sm') + ' ' + esc(t('kv_in_list')) + ' · ' : ''}${c.ppc ? esc(t('kv_ppc', {n: c.ppc})) : esc(c.unit)}</small></button>`).join('') || `<p class="kiosk-muted">${esc(t('kv_cat_empty'))}</p>`}</div>
+                    <section class="kiosk-card kv-panel"><h2>${esc(t('kv_day_lines'))}</h2><p class="kiosk-muted kv-small">${esc(t('kv_day_lines_help', {n: all.length}))}</p>
+                        <div class="kv-lines is-compact">${all.map(lineHtml).join('') || `<p class="kiosk-muted">${esc(t('kv_pick_product'))}</p>`}</div></section>
+                </div>${closeBox}${foot}`;
+        } else {
+            body = `<div class="kv-crumb">${back}<div><h2>${esc(t('kv_validate_title', {date: dateFmt(day.date)}))}</h2><p class="kiosk-muted">${esc(t('kv_validate_help'))}</p></div></div>${lockedNote}
+                <div class="kv-vhead"><span>${esc(t('kv_col_product'))}</span><span>${esc(t('day_col_done'))}</span><span>${esc(t('kv_col_waste'))}</span><span></span></div>
+                <div class="kv-lines">${all.map(lineHtml).join('') || `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('kv_nothing'))}</p></section>`}</div>${closeBox}${foot}`;
+        }
+        el.innerHTML = header(null, true) + body;
+        bindLines(day, mode, all);
+        if (focus) el.querySelector(`[data-line="${focus}"]`)?.scrollIntoView({block: 'center'});
+    }
+
+    function drawLine(day, i, L, locked) {
+        const unitDone = i.ppc ? t('prod_cartons_short') : i.unit;
+        const shortQ = i.planned !== null ? r3(i.planned - L.produced) : 0;
+        const editing = L.editing && !locked;
+        const live = i.wastes.filter(w => !w.cancelled);
+        const wastes = live.length ? `<ul class="kv-wastes">${live.map(w => `<li>${icon('trash-2', 'is-sm')} ${esc(fmt(w.quantity))} ${esc(i.unit)} · ${esc(t('waste_' + w.reason))}${w.photos && w.photos.length ? ` · ${w.photos.length} ${icon('camera', 'is-sm')}` : ''}${w.note ? ' — ' + esc(w.note) : ''}</li>`).join('')}</ul>` : '';
+        const planMeta = i.planned !== null ? t('kv_plan_q', {q: cq(i.planned, i)}) + (i.ppc ? ' · ' + fmt(i.planned) + ' ' + i.unit : '') : t('kv_off_plan_short');
+        if (!editing) {
+            const ok = !!i.line;
+            return `<article class="kiosk-card kv-line ${ok ? 'is-ok' : ''}" data-line="${i.item_id}">
+                <div class="kv-prod-name"><h3>${esc(i.name)}</h3><p class="kiosk-muted">${esc(planMeta)}</p>${i.line && i.line.corrected_by ? `<p class="kiosk-muted kv-small">${icon('pencil', 'is-sm')} ${esc(t('kv_corrected', {name: i.line.corrected_by}))}</p>` : ''}</div>
+                <div class="kv-col"><span class="kv-lbl">${esc(t('day_col_done'))}</span><strong class="kv-big">${esc(cq(ok ? i.line.produced : i.produced, i))}</strong>
+                    ${ok && i.line.note ? `<p class="kiosk-muted kv-small">${esc(i.line.note)}</p>` : ''}</div>
+                <div class="kv-col"><span class="kv-lbl">${esc(t('kv_col_waste'))}</span>${wastes || `<span class="kiosk-muted">—</span>`}</div>
+                <div class="kv-end">${ok ? `<span class="kv-check is-ok" title="${esc(t('kv_line_ok', {name: i.line.employee || '', time: hhmm(i.line.validated_at)}))}">${icon('check')}</span>` : ''}
+                    ${!locked && day.editable ? `<button type="button" class="kv-edit" data-kv-edit="${i.item_id}" aria-label="${esc(t('kv_edit'))}" title="${esc(t('kv_edit'))}">${icon('pencil')}</button>` : ''}
+</div>
+            </article>`;
+        }
+        const reasons = ['quality', 'burnt', 'damaged', 'samples', 'other'];
+        const photoRequired = !!(day.waste_photo && day.waste_photo.required);
+        const needPhoto = L.waste > 0 && photoRequired && !L.photos.length;
+        const doneVal = i.ppc ? Math.round(L.produced / i.ppc * 100) / 100 : r3(L.produced);
+        return `<article class="kiosk-card kv-line is-edit ${shortQ > 1e-6 ? 'is-short' : ''}" data-line="${i.item_id}">
+            <div class="kv-prod-name"><h3>${esc(i.name)}</h3><p class="kiosk-muted">${esc(planMeta)}${i.produced > 0 ? ' · ' + esc(t('kv_recorded', {q: cq(i.produced, i)})) : ''}</p></div>
+            <div class="kv-col"><span class="kv-lbl">${esc(t('day_col_done'))}</span>
+                <div class="kv-step"><button type="button" data-kv-step="produced" data-d="-1" aria-label="−">${icon('minus')}</button>
+                    <input class="kv-num" data-kv-field="produced" inputmode="decimal" value="${esc(String(doneVal).replace('.', ','))}" aria-label="${esc(t('day_col_done'))}">
+                    <button type="button" data-kv-step="produced" data-d="1" aria-label="+">${icon('plus')}</button><small>${esc(unitDone)}</small></div>
+                ${i.planned !== null ? (shortQ > 1e-6 ? `<p class="kv-hint is-warn">${esc(t('kv_short', {q: cq(shortQ, i)}))}</p>
+                    <input class="kv-text" data-kv-field="note" maxlength="255" placeholder="${esc(t('kv_short_reason'))}" value="${esc(L.note)}">`
+                    : (Math.abs(shortQ) < 1e-6 ? `<p class="kv-hint is-ok">${icon('check', 'is-sm')} ${esc(t('kv_as_planned'))}</p>` : `<p class="kv-hint">${esc(t('kv_over', {q: cq(-shortQ, i)}))}</p>`)) : ''}</div>
+            <div class="kv-col"><span class="kv-lbl">${esc(t('kv_col_waste'))} (${esc(i.unit)})</span>
+                <div class="kv-waste"><div class="kv-step ${L.waste > 0 ? 'is-waste' : ''}"><button type="button" data-kv-step="waste" data-d="-1" aria-label="−">${icon('minus')}</button>
+                    <input class="kv-num" data-kv-field="waste" inputmode="decimal" value="${esc(String(r3(L.waste)).replace('.', ','))}" aria-label="${esc(t('kv_col_waste'))}">
+                    <button type="button" data-kv-step="waste" data-d="1" aria-label="+">${icon('plus')}</button></div>
+                    <div class="kv-photos">${L.photos.map((p, k) => `<span class="kv-thumb"><img src="${p.src}" alt=""><button type="button" data-kv-unphoto="${k}" aria-label="${esc(t('kv_photo_remove'))}">${icon('x', 'is-sm')}</button></span>`).join('')}
+                        ${L.photos.length < (day.waste_photo ? day.waste_photo.max : 4) ? `<label class="kv-cam ${needPhoto ? 'is-required' : ''}" aria-label="${esc(t('kv_photo_add'))}">${L.busy ? '…' : icon('camera')}<input type="file" accept="image/*" capture="environment" data-kv-photo hidden></label>` : ''}</div></div>
+                ${L.waste > 0 ? `<div class="kv-reasons">${reasons.map(k => `<button type="button" class="kv-chip ${L.reason === k ? 'is-on' : ''}" data-kv-reason="${k}">${esc(t('waste_' + k))}</button>`).join('')}</div>
+                    ${L.reason === 'other' ? `<input class="kv-text" data-kv-field="wasteNote" maxlength="255" placeholder="${esc(t('waste_note'))}" value="${esc(L.wasteNote)}">` : ''}
+                    ${needPhoto ? `<p class="kv-hint is-bad">${icon('triangle-alert', 'is-sm')} ${esc(t('kv_photo_required'))}</p>` : ''}` : ''}
+                ${wastes}</div>
+            <div class="kv-end"><button type="button" class="kv-check" data-kv-ok="${i.item_id}" aria-label="${esc(t('kv_validate_line'))}" ${L.busy ? 'disabled' : ''}>${icon('check')}</button></div>
+            ${L.error ? `<p class="kiosk-error kv-line-error">${esc(L.error)}</p>` : ''}
+        </article>`;
+    }
+
+    // Photo de perte : réduite (1280 px, JPEG) puis envoyée tout de suite ; l'identifiant part avec la ligne.
+    async function wastePhoto(file) {
+        const bitmap = await loadImage(file);
+        const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(bitmap.width * scale);
+        canvas.height = Math.round(bitmap.height * scale);
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        const src = canvas.toDataURL('image/jpeg', 0.72);
+        const r = await api('POST', '/kiosk/photos', {photo: src}, true);
+        return {id: r.id, src};
+    }
+
+    function lineCheck(day, i, L) {
+        if (i.planned !== null && L.produced + 1e-6 < i.planned && !L.note.trim()) return t('kv_short_reason_required');
+        if (L.waste > 0 && !L.reason) return t('waste_reason_required');
+        if (L.waste > 0 && L.reason === 'other' && !L.wasteNote.trim()) return t('waste_note_required');
+        if (L.waste > 0 && day.waste_photo && day.waste_photo.required && !L.photos.length) return t('kv_photo_required');
+        if (i.waste + L.waste > L.produced + 1e-6) return t('kv_waste_over');
+        return '';
+    }
+
+    async function sendLine(day, i, L) {
+        L.uuid = L.uuid || uuid();
+        const body = {date: day.date, item_id: i.item_id, produced: r3(L.produced), note: L.note.trim() || null, client_uuid: L.uuid};
+        if (L.waste > 0) Object.assign(body, {waste_quantity: r3(L.waste), waste_reason: L.reason, waste_note: L.wasteNote.trim() || null, photo_ids: L.photos.map(p => p.id)});
+        return api('POST', '/kiosk/production/lines', body, true);
+    }
+
+    function bindLines(day, mode, all) {
+        const redraw = (focus) => renderLines(day, vstate.me, vstate.mode, focus);
+        const byId = (id) => all.find(i => i.item_id === Number(id));
+        el.querySelector('[data-kv-back]')?.addEventListener('click', () => {
+            if (mode === 'encode' && vstate.from === 'plan') { vstate.from = null; return renderLines(day, vstate.me, 'plan'); }
+            renderProduction();
         });
-        const id = uuid();
-        el.querySelector('[data-cancel]').addEventListener('click', () => renderProduction());
-        el.querySelector('[data-save]').addEventListener('click', async (e) => {
-            const q = total();
-            const error = el.querySelector('[data-error]');
-            if (!Number.isFinite(q) || q <= 0) { error.textContent = t('prod_qty_required'); return; }
-            if (!reason) { error.textContent = t('waste_reason_required'); return; }
-            if (reason === 'other' && !form.note.value.trim()) { error.textContent = t('waste_note_required'); form.note.focus(); return; }
-            e.target.disabled = true;
+        el.querySelector('[data-kv-encode]')?.addEventListener('click', () => { vstate.from = 'plan'; renderLines(day, vstate.me, 'encode'); });
+        el.querySelectorAll('[data-kv-cat]').forEach(b => b.addEventListener('click', () => { vstate.cat = String(b.dataset.kvCat); redraw(); }));
+        el.querySelectorAll('[data-kv-add]').forEach(b => b.addEventListener('click', () => {
+            const id = Number(b.dataset.kvAdd);
+            if (!vstate.added.includes(id) && !all.some(i => i.item_id === id)) vstate.added.push(id);
+            redraw(id);
+        }));
+        el.querySelectorAll('[data-line]').forEach(card => {
+            const i = byId(card.dataset.line);
+            const L = vstate.lines[i.item_id];
+            card.addEventListener('click', async (e) => {
+                resetIdle();
+                const step = e.target.closest('[data-kv-step]');
+                if (step) {
+                    const f = step.dataset.kvStep;
+                    const unit = f === 'produced' && i.ppc ? i.ppc : 1;
+                    L[f] = Math.max(0, r3(L[f] + Number(step.dataset.d) * unit));
+                    if (f === 'waste' && L.waste === 0) L.reason = null;
+                    L.error = '';
+                    return redraw(i.item_id);
+                }
+                const reason = e.target.closest('[data-kv-reason]');
+                if (reason) { L.reason = reason.dataset.kvReason; L.error = ''; return redraw(i.item_id); }
+                const un = e.target.closest('[data-kv-unphoto]');
+                if (un) { L.photos.splice(Number(un.dataset.kvUnphoto), 1); return redraw(i.item_id); }
+                if (e.target.closest('[data-kv-edit]')) { L.editing = true; return redraw(i.item_id); }
+                const ok = e.target.closest('[data-kv-ok]');
+                if (ok) {
+                    L.error = lineCheck(day, i, L);
+                    if (L.error) return redraw(i.item_id);
+                    L.busy = true;
+                    ok.disabled = true;
+                    try {
+                        day = await sendLine(day, i, L);
+                        const fresh = day.items.find(x => x.item_id === i.item_id);
+                        vstate.lines[i.item_id] = fresh ? lineState(fresh) : lineState(i);
+                        vstate.added = vstate.added.filter(x => x !== i.item_id);
+                        toast(t('kv_line_saved', {name: i.name}));
+                    } catch (err) { L.busy = false; L.error = err.offline ? t('offline_retry') : err.message; }
+                    return renderLines(day, vstate.me, vstate.mode, i.item_id);
+                }
+            });
+            card.addEventListener('change', async (e) => {
+                const input = e.target.closest('[data-kv-photo]');
+                if (input && input.files && input.files[0]) {
+                    L.busy = true;
+                    redraw(i.item_id);
+                    try { L.photos.push(await wastePhoto(input.files[0])); L.error = ''; }
+                    catch (err) { L.error = err.offline ? t('offline_retry') : (err.message || t('photo_error')); }
+                    L.busy = false;
+                    return redraw(i.item_id);
+                }
+                const field = e.target.closest('[data-kv-field]');
+                if (!field) return;
+                const f = field.dataset.kvField;
+                if (f === 'produced' || f === 'waste') {
+                    const n = Number(String(field.value).replace(',', '.').replace(/\s/g, ''));
+                    if (Number.isFinite(n) && n >= 0) L[f] = r3(f === 'produced' && i.ppc ? n * i.ppc : n);
+                    if (f === 'waste' && L.waste === 0) L.reason = null;
+                    L.error = '';
+                    return redraw(i.item_id);
+                }
+                L[f] = field.value;
+            });
+            card.addEventListener('input', (e) => {
+                resetIdle();
+                const field = e.target.closest('[data-kv-field="note"], [data-kv-field="wasteNote"]');
+                if (field) L[field.dataset.kvField] = field.value;
+            });
+        });
+        el.querySelector('[name=close_note]')?.addEventListener('input', (e) => { vstate.closeNote = e.target.value; resetIdle(); });
+        el.querySelector('[data-kv-eod]')?.addEventListener('click', () => renderEndDay(day, vstate.me, 1));
+        const close = async (btn) => {
+            btn.disabled = true;
             try {
-                const body = {item_id: item.item_id, quantity: Math.round(q * 1000) / 1000, reason, note: form.note.value.trim() || null, client_uuid: id};
-                if (form.output_id && form.output_id.value) body.output_id = Number(form.output_id.value);
-                await api('POST', '/kiosk/waste', body, true);
-                renderProduction(t('waste_saved', {q: qty(q, item)}));
-            } catch (err) { e.target.disabled = false; error.textContent = err.offline ? t('offline_retry') : err.message; }
+                await api('POST', '/kiosk/production/close', {date: day.date, note: vstate.closeNote.trim() || null}, true);
+                vstate = null;
+                renderProduction(t('day_closed_done'));
+            } catch (err) {
+                btn.disabled = false;
+                if (err.code === 'DAY_GAPS_NOTE_REQUIRED') { vstate.gaps = true; vstate.closeError = err.message; return redraw(); }
+                toast(err.offline ? t('offline_retry') : err.message, true);
+            }
+        };
+        el.querySelector('[data-kv-close-note]')?.addEventListener('click', (e) => {
+            if (!vstate.closeNote.trim()) { el.querySelector('[name=close_note]').focus(); return; }
+            close(e.currentTarget);
         });
+        // Valider la journée : les lignes pas encore validées partent une par une (contrôles locaux d'abord), puis la journée.
+        el.querySelector('[data-kv-all]')?.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            const todo = all.filter(i => !i.line || vstate.lines[i.item_id].editing);
+            for (const i of todo) {
+                const L = vstate.lines[i.item_id];
+                L.error = lineCheck(day, i, L);
+                if (L.error) { toast(t('kv_fix_line', {name: i.name}), true); return redraw(i.item_id); }
+            }
+            btn.disabled = true;
+            for (const i of todo) {
+                const L = vstate.lines[i.item_id];
+                try {
+                    day = await sendLine(day, i, L);
+                    const fresh = day.items.find(x => x.item_id === i.item_id);
+                    vstate.lines[i.item_id] = fresh ? lineState(fresh) : lineState(i);
+                    vstate.added = vstate.added.filter(x => x !== i.item_id);
+                } catch (err) {
+                    L.error = err.offline ? t('offline_retry') : err.message;
+                    return renderLines(day, vstate.me, vstate.mode, i.item_id);
+                }
+            }
+            close(btn);
+        });
+    }
+
+    // --- Magazyn grupy : stan, min. / maks., ile wolno jeszcze zrobić ; lista produkcji tygodnia ------------------
+    async function renderStock(message) {
+        longIdle = true;
+        resetIdle();
+        const view = (session && session.stockView) || 'stock';
+        const head = (title, sub) => `<div class="kv-crumb is-split"><div><h2>${esc(title)}</h2><p class="kiosk-muted">${esc(sub)}</p></div>
+            <div class="kv-switch" role="tablist"><button type="button" class="${view === 'stock' ? 'is-on' : ''}" data-kv-view="stock">${icon('warehouse', 'is-sm')} ${esc(t('kv_stock_view'))}</button>
+            <button type="button" class="${view === 'list' ? 'is-on' : ''}" data-kv-view="list">${icon('list-ordered', 'is-sm')} ${esc(t('kv_list'))}</button></div></div>`;
+        const tile = (label, value, sub, cls) => `<div class="kv-tile ${cls || ''}"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(sub)}</small></div>`;
+        let body = '';
+        try {
+            if (view === 'stock') {
+                const s = await api('GET', '/kiosk/stock', undefined, true);
+                const T = s.totals;
+                const c = (v) => v === null || v === undefined ? '—' : fmt(v);
+                const rows = s.items.map(r => {
+                    const max = r.max_cartons || Math.max(r.min_cartons || 0, r.stock_cartons, 1);
+                    const w = Math.min(100, Math.round(r.stock_cartons / max * 100));
+                    const m = r.min_cartons !== null && r.max_cartons ? Math.min(100, Math.round(r.min_cartons / r.max_cartons * 100)) : null;
+                    const cap = r.below_min ? t('kv_cap_below') : (r.mode !== 'MTS' ? t('kv_cap_mto') : (r.no_max ? t('kv_cap_nomax') : (r.allowed_cartons === 0 ? t('kv_cap_full') : '')));
+                    return `<tr class="${r.below_min ? 'is-low' : ''}"><td><strong>${esc(r.name)}</strong><div class="kv-cap">${esc(r.category || '')}${r.today_cartons ? ' · ' + esc(t('kv_today_done', {q: fmt(r.today_cartons)})) : ''}${r.next_shipping ? ' · ' + esc(t('kv_next_ship', {date: dateFmt(r.next_shipping).slice(0, 5)})) : ''}</div></td>
+                        <td class="n">${c(r.stock_cartons)}</td><td class="n">${c(r.ordered_cartons)}</td><td class="n">${c(r.min_cartons)}</td><td class="n">${c(r.max_cartons)}</td>
+                        <td>${r.max_cartons ? `<div class="kv-gauge"><i class="${r.below_min ? 'is-low' : ''}" style="width:${w}%"></i>${m !== null ? `<b style="left:${m}%"></b>` : ''}</div>` : `<span class="kiosk-muted kv-small">${esc(t(r.mode === 'MTS' ? 'kv_no_max' : 'kv_cap_mto'))}</span>`}</td>
+                        <td class="n">${r.mode !== 'MTS' && !r.allowed_cartons ? '<span class="kiosk-muted">—</span>' : `<span class="kv-max">${esc(fmt(r.allowed_cartons))} ${esc(t('prod_cartons_short'))}</span>${cap && r.mode === 'MTS' ? `<div class="kv-cap">${esc(cap)}</div>` : (r.mode !== 'MTS' ? `<div class="kv-cap">${esc(t('kv_cap_orders'))}</div>` : '')}`}</td></tr>`;
+                }).join('');
+                body = head(t('kv_stock_title', {group: s.group ? s.group.name : ''}), t('kv_stock_sub'))
+                    + `<div class="kv-tiles">${tile(t('kv_tile_products'), fmt(T.products), t('kv_tile_mts', {n: T.mts}))}${tile(t('kv_tile_below'), fmt(T.below_min), t('kv_tile_below_sub'), T.below_min ? 'is-danger' : '')}
+                        ${tile(t('kv_tile_allowed'), fmt(T.allowed_cartons) + ' ' + t('prod_cartons_short'), t('kv_tile_allowed_sub'))}${tile(t('kv_tile_ordered'), fmt(T.ordered_cartons) + ' ' + t('prod_cartons_short'), t('kv_tile_ordered_sub'))}</div>
+                    <section class="kiosk-card kv-tablecard">${rows ? `<div class="kiosk-table-wrap"><table class="kv-table"><thead><tr><th>${esc(t('kv_col_name'))}</th><th class="n">${esc(t('kv_col_stock'))}</th><th class="n">${esc(t('kv_col_ordered'))}</th>
+                        <th class="n">${esc(t('kv_col_min'))}</th><th class="n">${esc(t('kv_col_max'))}</th><th>${esc(t('kv_col_gauge'))}</th><th class="n">${esc(t('kv_col_allowed'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
+                        <div class="kv-legend"><span><i class="is-low"></i>${esc(t('kv_leg_below'))}</span><span><i></i>${esc(t('kv_leg_ok'))}</span><span><i class="is-min"></i>${esc(t('kv_leg_min'))}</span><span>${esc(t('kv_leg_full'))}</span></div>`
+                        : `<p class="kiosk-muted">${esc(t('kv_stock_empty'))}</p>`}</section>`;
+            } else {
+                const [w, day] = await Promise.all([api('GET', '/kiosk/week'), api('GET', '/kiosk/production', undefined, true).catch(() => null)]);
+                const team = w.teams[0] || {days: [], name: ''};
+                const byItem = {};
+                (day ? day.items : []).forEach(i => { byItem[i.item_id] = i; });
+                const cartons = (b) => b.cartons !== null && b.cartons !== undefined ? b.cartons : null;
+                const all = team.days.flatMap(d => d.blocks);
+                const total = all.reduce((a, b) => a + (cartons(b) || 0), 0);
+                const ratio = (b, k) => b.quantity > 0 ? (b[k] || 0) / b.quantity : 0;
+                const toOrders = all.reduce((a, b) => a + (cartons(b) || 0) * ratio(b, 'direct_qty'), 0);
+                const toStock = all.reduce((a, b) => a + (cartons(b) || 0) * ratio(b, 'stock_qty'), 0);
+                const doneToday = (day ? day.items : []).reduce((a, i) => a + (i.ppc ? (i.line ? i.line.produced : i.produced) / i.ppc : 0), 0);
+                body = head(t('kv_list_title', {group: team.name || ''}), t('kv_list_sub', {from: dm(w.week_start), to: dm(w.week_end)}))
+                    + `<div class="kv-tiles">${tile(t('kv_tile_week'), fmt(Math.round(total)) + ' ' + t('prod_cartons_short'), t('kv_tile_week_sub', {n: all.length}))}
+                        ${tile(t('kv_tile_today'), fmt(Math.round(doneToday * 10) / 10) + ' ' + t('prod_cartons_short'), t('kv_tile_today_sub'))}
+                        ${tile(t('kv_tile_orders'), fmt(Math.round(toOrders)) + ' ' + t('prod_cartons_short'), t('kv_tile_orders_sub'))}
+                        ${tile(t('kv_tile_stock'), fmt(Math.round(toStock)) + ' ' + t('prod_cartons_short'), t('kv_tile_stock_sub'))}</div>`
+                    + (team.days.filter(d => d.blocks.length).map(d => `<section class="kiosk-card kv-day ${d.today ? 'is-today' : ''}"><h2>${esc(t('weekday_long_' + d.weekday))} ${esc(dm(d.date))} ${d.today ? `<span class="kiosk-pill is-warn">${esc(t('kv_today'))}</span>` : ''}
+                        <span class="kiosk-muted kv-day-total">${esc(fmt(Math.round(d.blocks.reduce((a, b) => a + (cartons(b) || 0), 0))))} ${esc(t('prod_cartons_short'))}</span></h2>
+                        <table class="kv-table"><tbody>${d.blocks.map(b => {
+                            const i = d.today ? byItem[b.item_id] : null;
+                            const doneQ = i ? (i.line ? i.line.produced : i.produced) : null;
+                            const src = [b.direct_qty > 0 ? t('kv_src_orders') : null, b.stock_qty > 0 ? t('kv_src_stock') : null].filter(Boolean).join(' + ');
+                            const amount = cartons(b) !== null ? `${fmt(cartons(b))} ${t('prod_cartons_short')}` : wq(b.quantity, b.unit, b.factor);
+                            return `<tr><td class="kv-w"><strong>${esc(b.name)}</strong>${b.late ? ` <span class="kiosk-tag is-late">${esc(t('week_late'))}</span>` : ''}</td><td class="kiosk-muted">${esc(src)}${b.time ? ' · ' + esc(b.time) : ''}</td>
+                                <td class="n">${doneQ !== null && i ? `<span class="kiosk-pill ${i.line ? 'is-ok' : (doneQ > 0 ? 'is-warn' : '')}">${esc(cq(doneQ, i, true))} / ${esc(amount)}</span>` : esc(amount)}</td></tr>`;
+                        }).join('')}</tbody></table></section>`).join('') || `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('week_team_empty'))}</p></section>`);
+            }
+        } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        el.innerHTML = personHeader() + tabs('stock') + body;
+        if (message) toast(message);
+        el.querySelectorAll('[data-kv-view]').forEach(b => b.addEventListener('click', () => { if (session) session.stockView = b.dataset.kvView; renderStock(); }));
     }
 
     // Koniec dnia : assistant en 6 étapes — 1 productions sans tous leurs lots matières → 2 sans contrôle qualité (OK

@@ -15,7 +15,11 @@
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <button class="btn btn-primary" type="button" data-toggle-new><i class="bi bi-plus-lg"></i> Nowy produkt</button>
-            <a class="btn btn-outline-secondary" href="{{ root }}/test-products"><i class="bi bi-list"></i> Lista produktów testowych</a>
+            {# Etapy i lista na jednej zakładce Produktów : przełącznik (audyt 2, N7). #}
+            <div class="btn-group" role="group" aria-label="Widok">
+                <a class="btn btn-primary" href="{{ root }}/test-products/pipeline" aria-current="page"><i class="bi bi-kanban"></i> Etapy</a>
+                <a class="btn btn-outline-primary" href="{{ root }}/test-products"><i class="bi bi-list"></i> Lista</a>
+            </div>
         </div>
     </div>
 {% endblock %}

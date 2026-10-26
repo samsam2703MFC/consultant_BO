@@ -24,6 +24,9 @@ final class ParamRules
         'send_status.stuck_minutes' => [5, 1440, true],
         'send_status.lookback_days' => [1, 365, true],
         'reminders.auto_levels' => [0, 2, true],
+        'kiosk.waste_photo_required' => [0, 1, true],
+        'kiosk.waste_photo_max' => [1, 8, true],
+        'trace.label_days' => [0, 7, true],
     ];
 
     /** [code bas, code haut, code d'erreur API, message ERP] : la valeur haute ne peut pas être inférieure à la basse. */

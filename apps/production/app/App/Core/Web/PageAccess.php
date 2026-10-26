@@ -12,7 +12,7 @@ namespace App\Core\Web;
  */
 final class PageAccess
 {
-    public const SECTIONS = ['Analiza', 'Produkcja', 'Zakupy', 'Produkt', 'Zamówienia', 'Finanse', 'Logistyka', 'Administracja'];
+    public const SECTIONS = ['Analiza', 'Produkcja', 'Zakupy', 'Produkt', 'Sprzedaż', 'Logistyka', 'Administracja'];
 
     /** klucz => [etykieta, sekcja, prefiksy ścieżek, tylko administrator] */
     public const PAGES = [
@@ -21,7 +21,7 @@ final class PageAccess
         'margins' => ['Marże i koszty (marże, koszty produktu i działów, kalkulator, zamknięcie miesiąca)', 'Analiza', ['/finances', '/cost-calculator', '/month-close'], false],
         'production' => ['Produkcja (arkusz, plan tygodnia, plan zespołów, stany, ruchy magazynowe, partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
             ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock-movements', '/workshop/traceability', '/production', '/purchasing/nc', '/workshop/workstations', '/workshop/data-sheet'], false],
-        'tablet' => ['Tablet produkcji : zarządzanie (tablety, PIN, czas pracy)', 'Produkcja', ['/workshop/execution', '/workshop/timesheet'], false],
+        'tablet' => ['Tablet produkcji : zarządzanie (tablety, PIN, czas pracy, zatwierdzenia produkcji)', 'Produkcja', ['/workshop/execution', '/workshop/timesheet', '/workshop/production-days'], false],
         'supply' => ['Zaopatrzenie (zapotrzebowanie, zamówienia, faktury, stan)', 'Zakupy', ['/workshop/supply'], false],
         'purchasing' => ['Koszty surowców, oferty i zapytania', 'Zakupy', ['/purchasing'], false],
         'supplier_prices' => ['Ceny surowców i dostawcy', 'Zakupy', ['/materials/prices', '/material-suppliers'], false],
@@ -33,26 +33,26 @@ final class PageAccess
         'materials' => ['Surowce (kategorie, wartości odżywcze)', 'Produkt', ['/material-categories', '/materials'], false],
         'bdo' => ['Opakowania BDO', 'Produkt', ['/audits'], false],
         'ppwr' => ['PPWR', 'Produkt', ['/ppwr'], false],
-        'orders' => ['Zamówienia klientów', 'Zamówienia', ['/client-orders'], false],
-        'clients' => ['Klienci', 'Zamówienia', ['/clients'], false],
-        'price_lists' => ['Cennik ogólny', 'Zamówienia', ['/price-lists'], false],
-        'franchise' => ['Franczyza', 'Zamówienia', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints'], false],
-        'invoices' => ['Proformy i faktury', 'Finanse', ['/proforma-documents', '/invoice-documents'], false],
-        'reminders' => ['Przypomnienia płatności (proformy 1–5, dopłaty różnic)', 'Finanse', ['/communication/payment-reminders', '/communication/compose/reminder'], false],
-        'client_volume' => ['Klienci : wolumen i marża (N / N-1, marża, należności)', 'Finanse', ['/finances/clients'], false],
-        'returns' => ['Zwroty', 'Zamówienia', ['/client-complaints'], false],
-        'communication' => ['Komunikacja (dystrybucja dokumentów i e-maile automatyczne, wzory dokumentów i e-maili, wiadomości)', 'Zamówienia', ['/communication'], false],
+        'orders' => ['Zamówienia klientów', 'Sprzedaż', ['/client-orders'], false],
+        'clients' => ['Klienci', 'Sprzedaż', ['/clients'], false],
+        'price_lists' => ['Cennik ogólny', 'Sprzedaż', ['/price-lists'], false],
+        'franchise' => ['Franczyza', 'Sprzedaż', ['/client-franchise-networks', '/franchise-products', '/franchise-complaints'], false],
+        'invoices' => ['Proformy i faktury', 'Sprzedaż', ['/proforma-documents', '/invoice-documents'], false],
+        'reminders' => ['Przypomnienia płatności (proformy 1–5, dopłaty różnic)', 'Sprzedaż', ['/communication/payment-reminders', '/communication/compose/reminder'], false],
+        'client_volume' => ['Klienci : wolumen i marża (N / N-1, marża, należności)', 'Sprzedaż', ['/finances/clients'], false],
+        'returns' => ['Zwroty', 'Sprzedaż', ['/client-complaints'], false],
+        'communication' => ['Komunikacja (dystrybucja dokumentów i e-maile automatyczne, wzory dokumentów i e-maili, wiadomości)', 'Sprzedaż', ['/communication'], false],
         'logistics' => ['Logistyka (tydzień, załadunek dnia, dokumenty dostawy, trasy i pojazdy)', 'Logistyka', ['/logistics'], false],
         'shipping' => ['Wysyłka (wyślij dzień, wysyłki i dokumenty, przewoźnicy)', 'Logistyka', ['/shipping', '/shipments', '/shipping-transport-documents', '/shipping-documents', '/product-carriers'], false],
         'archive' => ['Archiwum list kompletacyjnych', 'Logistyka', ['/archive'], false],
-        'positions' => ['Stanowiska i zadania, protokoły', 'Administracja', ['/organization', '/task-forms'], false],
+        'positions' => ['Funkcje i zadania, protokoły', 'Administracja', ['/organization', '/task-forms'], false],
         'settings' => ['Ustawienia (użytkownicy, aliasy, języki, e-mail, KSeF, licznik stron, inne)', 'Administracja',
             ['/users', '/aliases', '/settings', '/communication/email-settings', '/other-settings'], false],
-        'devices' => ['Dostęp API (urządzenia)', 'Administracja', ['/devices'], false],
+        'devices' => ['Urządzenia (dostęp API)', 'Administracja', ['/devices'], false],
         'manager' => ['Kierownik produkcji : stanowisko, cele, raport, premia, rozmowa, audyt', 'Administracja', ['/workshop/manager'], true],
-        'access' => ['Uprawnienia stanowisk', 'Administracja', ['/organization/access'], true],
+        'access' => ['Uprawnienia funkcji', 'Administracja', ['/organization/access'], true],
         'activity' => ['Aktywność w ERP (sesje, strony, kliknięcia, koszt czasu)', 'Administracja', ['/organization/activity'], true],
-        'panel_api' => ['Konto API panelu (ceny w sklepach franczyzy)', 'Administracja', ['/settings/panel-api'], true],
+        'panel_api' => ['API cen w sklepach (konto panelu franczyzy)', 'Administracja', ['/settings/panel-api'], true],
     ];
 
     /** Strony startowe do wyboru dla stanowiska (logo, logowanie) : Dzisiaj dla produkcji, Rentowność dla kierownictwa. */

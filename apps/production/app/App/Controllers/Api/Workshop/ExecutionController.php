@@ -11,6 +11,7 @@ use App\Services\Workshop\Execution\DevProductService;
 use App\Services\Workshop\Execution\ExecutionService;
 use App\Services\Workshop\Execution\KioskAuthService;
 use App\Services\Workshop\Execution\KioskRecipeService;
+use App\Services\Workshop\Execution\KioskStockService;
 use App\Services\Workshop\Execution\KpiService;
 use App\Services\Workshop\Execution\OeeService;
 use App\Services\Workshop\Execution\OutputService;
@@ -37,6 +38,7 @@ final class ExecutionController
         private DevProductService $dev,
         private ClockQuestionService $questions,
         private SupplyService $supply,
+        private KioskStockService $stock,
     ) {
     }
 
@@ -118,6 +120,25 @@ final class ExecutionController
     public function recordWaste(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->recordWaste($request->body(), $request->context), 201); }
     public function updateWaste(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->updateWaste($request->id(), $request->body(), $request->context)); }
     public function closeDay(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->closeDay($request->body(), $request->context)); }
+    public function validateLine(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->validateLine($request->body(), $request->context)); }
+    public function uploadPhoto(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->uploadPhoto($request->body(), $request->context), 201); }
+    public function stock(ApiRequest $request): ApiResult { return new ApiResult($this->stock->group($request->context)); }
+
+    // Kierownik produkcji (ERP) : dni z tabletów, poprawki po zatwierdzeniu
+    public function days(ApiRequest $request): ApiResult { return ApiResult::list($this->outputs->recentDays((int) ($request->query('days') ?? 14))); }
+    public function dayDetail(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->dayOf($request->id('group'), $this->dateVar($request), $request->context->translator->lang())); }
+    public function correctLine(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->outputs->correctLine($this->dateVar($request), $request->id('group'), $request->id('item'), $request->body(), $request->context));
+    }
+    public function cancelWaste(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->cancelWasteByManager($request->id(), $request->context)); }
+
+    private function dateVar(ApiRequest $request): string
+    {
+        $d = (string) ($request->vars['date'] ?? '');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) || strtotime($d) === false) throw new ApiException('ROUTE_NOT_FOUND', 404);
+        return $d;
+    }
     public function recipes(ApiRequest $request): ApiResult { return new ApiResult($this->recipes->list($request->context, $request->query('date'))); }
     public function recipe(ApiRequest $request): ApiResult { return new ApiResult($this->recipes->recipe($request->id(), $request->context, $request->query('date'))); }
     public function component(ApiRequest $request): ApiResult { return new ApiResult($this->recipes->component($request->id(), $request->context)); }

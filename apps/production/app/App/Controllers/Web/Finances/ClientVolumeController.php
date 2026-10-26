@@ -4,7 +4,7 @@ namespace App\Controllers\Web\Finances;
 use App\Core\Web\BaseController;
 use App\Services\Finances\ClientVolumeService;
 
-/** Finanse › Klienci : wolumen i marża (miesiące, N-1, marża po surowcach i po koszcie pełnym, alerty). */
+/** Sprzedaż › Klienci : wolumen i marża (miesiące, N-1, marża po surowcach i po koszcie pełnym, alerty). */
 class ClientVolumeController extends BaseController
 {
     public function __construct(private ClientVolumeService $volumes) {}

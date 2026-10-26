@@ -19,7 +19,7 @@
                     <button class="btn btn-sm btn-outline-primary" type="button" data-be-sync><i class="bi bi-arrow-repeat me-1"></i> Synchronizuj ceny w sklepach</button>
                 {% endif %}
                 {% if be.is_admin %}
-                    <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/settings/panel-api"><i class="bi bi-key me-1"></i> Konto API panelu</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/settings/panel-api"><i class="bi bi-key me-1"></i> API cen w sklepach</a>
                 {% endif %}
             </div>
         </div>
@@ -37,8 +37,8 @@
         {% if not be.configured %}
             <div class="alert alert-warning mt-2 mb-0 py-2 small">
                 <i class="bi bi-exclamation-triangle me-1"></i>
-                Konto API panelu nie jest skonfigurowane — brak cen w sklepach.
-                {% if be.is_admin %}<a href="{{ root }}/settings/panel-api">Wpisz konto konsultanta</a>.{% else %}Poproś administratora o wpisanie konta (Ustawienia → Konto API panelu).{% endif %}
+                API cen w sklepach nie jest skonfigurowane — brak cen w sklepach.
+                {% if be.is_admin %}<a href="{{ root }}/settings/panel-api">Wpisz konto konsultanta</a>.{% else %}Poproś administratora o wpisanie konta (Ustawienia → API cen w sklepach).{% endif %}
             </div>
         {% elseif not be.synced %}
             <div class="alert alert-info mt-2 mb-0 py-2 small"><i class="bi bi-info-circle me-1"></i> Konto skonfigurowane, ceny jeszcze nie pobrane — kliknij « Synchronizuj ceny w sklepach ».</div>

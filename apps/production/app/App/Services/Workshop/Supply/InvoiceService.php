@@ -573,7 +573,7 @@ final class InvoiceService
             // Kartoteka : cena za opakowanie (2 miejsca) ÷ opakowanie w całych jednostkach bazowych.
             if ($supplier === null || !$m['id_unit'] || $packPrice <= 0 || abs($package - round($package)) > 1e-9) { $skipped[] = $m['name']; continue; }
             $this->prices->update($mid, ['id_raw_material' => $mid, 'id_current_supplier' => $supplier, 'package_size_in_base_unit' => (int) round($package),
-                'id_unit' => (int) $m['id_unit'], 'pack_price' => $packPrice]);
+                'id_unit' => (int) $m['id_unit'], 'pack_price' => $packPrice], 'invoice', $context->userId);
             $unit = CostOptimizationService::displayUnit($m['unit']);
             $changes[] = ['raw_material_id' => $mid, 'name' => $m['name'], 'unit' => $unit['label'], 'factor' => $unit['factor'],
                 'old_price' => $m['price_per_unit'] !== null ? (float) $m['price_per_unit'] : null, 'new_price' => round($packPrice / round($package), 5)];

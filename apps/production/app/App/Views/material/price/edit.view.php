@@ -3,13 +3,13 @@
     <div class="page-title">
         <div class="row">
             <div class="col-12 col-md-6 order-md-1 order-last">
-                <h3>Surowiec</h3>
+                <h3>Ceny surowców</h3>
             </div>
             <div class="col-12 col-md-6 order-md-2 order-first">
                 <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item"><a href="<?=ROOT?>/dashboard">Dashboard</a></li>
-                        <li class="breadcrumb-item active" aria-current="page">Surowiec
+                        <li class="breadcrumb-item active" aria-current="page">Ceny surowców
                         </li>
                     </ol>
                 </nav>
@@ -20,6 +20,13 @@
         <div class="card">
             <div class="card-header">
                 <h4 class="card-title">Lista zmian cen</h4>
+                <p class="text-muted small mb-0">
+                    <?php if ($manual_edit ?? true): ?>
+                        Cena zmienia się normalnie przez <a href="<?= ROOT ?>/purchasing/offers">ofertę</a>, fakturę zakupową albo zapytanie ofertowe ; « Nowa cena » to zmiana ręczna — każda zmiana zostaje w historii ze źródłem.
+                    <?php else: ?>
+                        Tylko do odczytu : cena surowca zmienia się przez <a href="<?= ROOT ?>/purchasing/offers">ofertę</a>, fakturę zakupową albo zapytanie ofertowe (parametr <code>prices.manual_edit</code> w Ustawieniach).
+                    <?php endif; ?>
+                </p>
             </div>
             <div class="card-body">
                 <div class="row mt-4">
@@ -43,13 +50,17 @@
                             <?php if (!empty($rows)): ?>
                                 <?php foreach ($rows as $row): ?>
                                     <tr id="material_<?= $row['id'] ?>">
-                                        <td><?= $row['name'] ?></td>
-                                        <td><?= $row['supplier_name'] ?></td>
+                                        <td><?= htmlspecialchars((string) $row['name']) ?></td>
+                                        <td><?= htmlspecialchars((string) $row['supplier_name']) ?></td>
                                         <td><?= $row['package_size_in_base_unit'] ?> <?= $row['unit_name'] ?></td>
                                         <td><span><?= $row['pack_price'] ?></span> zł</td>
                                         <td><span><?= $row['price_per_1000'] ?></span> zł</td>
-                                        <td>
-                                            <button class="btn btn-warning btn-open-price-modal"
+                                        <td class="text-nowrap">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary btn-price-history"
+                                                    data-name="<?= htmlspecialchars($row['name'], ENT_QUOTES) ?>"
+                                                    data-id="<?= (int)$row['id'] ?>">Historia</button>
+                                            <?php if ($manual_edit ?? true): ?>
+                                            <button class="btn btn-sm btn-warning btn-open-price-modal"
                                                     data-name="<?= htmlspecialchars($row['name'], ENT_QUOTES) ?>"
                                                     data-id="<?= (int)$row['id'] ?>"
                                                     data-supplier="<?= (int)$row['id_current_supplier'] ?>"
@@ -57,6 +68,7 @@
                                                     data-unit="<?= (int)$row['id_unit'] ?>">
                                                 Nowa cena
                                             </button>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -149,6 +161,18 @@
     </div>
 </div>
 
+<div class="modal fade" id="priceHistoryModal" tabindex="-1" aria-labelledby="priceHistoryTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="priceHistoryTitle">Historia cen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+            </div>
+            <div class="modal-body" id="priceHistoryBody"></div>
+        </div>
+    </div>
+</div>
+
 <?php $this->view("page_components/footer"); ?>
 
 <script type="text/javascript">
@@ -176,8 +200,31 @@
 
 
     const newPriceModal = new bootstrap.Modal(document.getElementById("newPriceModal"), {});
+    const historyModal = new bootstrap.Modal(document.getElementById("priceHistoryModal"), {});
+    const PRICE_SOURCES = {manual: 'ręcznie (Ceny surowców)', offer: 'oferta', invoice: 'faktura zakupowa', 'new': 'nowy surowiec'};
+    const escHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+
+    async function showPriceHistory(name, id) {
+        document.getElementById('priceHistoryTitle').textContent = 'Historia cen : ' + name;
+        const body = document.getElementById('priceHistoryBody');
+        body.innerHTML = '<p class="text-muted mb-0">Wczytywanie…</p>';
+        historyModal.show();
+        const resp = await api(`/ajax/materials/${id}/price-history`);
+        const rows = (resp && resp.ok && resp.rows) || [];
+        if (!resp || !resp.ok) { body.innerHTML = '<p class="text-danger mb-0">Nie udało się wczytać historii.</p>'; return; }
+        if (!rows.length) { body.innerHTML = '<p class="text-muted mb-0">Brak zapisanych zmian ceny.</p>'; return; }
+        const nf = (v, d) => Number(v).toLocaleString('pl-PL', {minimumFractionDigits: d, maximumFractionDigits: d});
+        body.innerHTML = `<div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr>
+            <th>Data</th><th>Dostawca</th><th class="text-end">Opakowanie</th><th class="text-end">Cena opak.</th><th class="text-end">Cena 1000 j.</th><th>Źródło</th></tr></thead><tbody>${rows.map(r => `<tr>
+            <td class="text-nowrap">${escHtml(String(r.timestamp).slice(0, 16))}</td><td>${escHtml(r.supplier || '—')}</td>
+            <td class="text-end">${nf(r.package_size_in_base_unit, 0)}</td><td class="text-end text-nowrap">${nf(r.pack_price, 2)} zł</td>
+            <td class="text-end text-nowrap">${Number(r.package_size_in_base_unit) > 0 ? nf(1000 * r.pack_price / r.package_size_in_base_unit, 2) + ' zł' : '—'}</td>
+            <td>${r.source ? escHtml(PRICE_SOURCES[r.source] || r.source) : '<span class="text-muted">—</span>'}${r.user_name ? `<div class="small text-muted">${escHtml(r.user_name)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+    }
 
     document.getElementById('id_materials_table').addEventListener('click', function (e) {
+        const hist = e.target.closest('.btn-price-history');
+        if (hist) { showPriceHistory(hist.dataset.name, hist.dataset.id); return; }
         const btn = e.target.closest('.btn-open-price-modal');
         if (!btn) return;
         runNewPriceModal(

@@ -10,9 +10,10 @@ final class OutputRepository extends WorkshopRepository
     protected array $writable = ['work_date', 'id_group', 'id_item', 'quantity', 'lot_code', 'id_employee', 'id_device', 'client_uuid', 'note', 'cancelled_at', 'cancelled_by'];
 
     private const ITEM = "SELECT i.id, i.item_type, i.base_unit, i.id_final_product, COALESCE(i.id_recipe, fp.id_recipe) AS id_recipe,
-            COALESCE(fp.name, pr.name) AS name, fp.ppc, s.id_primary_group, s.batch_multiple
+            COALESCE(fp.name, pr.name) AS name, fp.ppc, s.id_primary_group, s.batch_multiple, fp.id_category, cp.name AS category
         FROM n_prod_item i
         LEFT JOIN final_product fp ON fp.id = i.id_final_product
+        LEFT JOIN category_product cp ON cp.id = fp.id_category
         LEFT JOIN product_recipe pr ON pr.id = i.id_recipe
         LEFT JOIN n_prod_product_settings s ON s.id_item = i.id";
 
@@ -238,6 +239,91 @@ final class OutputRepository extends WorkshopRepository
         return (int) $this->db->lastInsertId();
     }
 
+    // --- Zatwierdzenie dnia linia po linii (n_prod_day_line) i zdjęcia strat (n_prod_waste_photo) ----------------
+
+    /** Zdjęcie zrobione na tablecie, jeszcze nieprzypięte do straty ani do partii surowca. */
+    public function freePhoto(int $id): ?array
+    {
+        return $this->all('SELECT p.id, p.id_device, p.created_at FROM n_prod_lot_photo p
+                           WHERE p.id = ? AND NOT EXISTS (SELECT 1 FROM n_prod_waste_photo wp WHERE wp.id_photo = p.id)
+                             AND NOT EXISTS (SELECT 1 FROM n_prod_output_lot l WHERE l.id_photo = p.id)', [$id])[0] ?? null;
+    }
+
+    public function attachWastePhotos(int $wasteId, array $photoIds): void
+    {
+        $st = $this->db->prepare('INSERT IGNORE INTO n_prod_waste_photo (id_waste, id_photo) VALUES (?, ?)');
+        foreach ($photoIds as $p) $st->execute([$wasteId, (int) $p]);
+    }
+
+    /** @return array<int, list<int>> strata => zdjęcia */
+    public function wastePhotos(array $wasteIds): array
+    {
+        if (!$wasteIds) return [];
+        $in = implode(',', array_map('intval', $wasteIds));
+        $out = [];
+        foreach ($this->all("SELECT id_waste, id_photo FROM n_prod_waste_photo WHERE id_waste IN ({$in}) ORDER BY id_photo") as $r) $out[(int) $r['id_waste']][] = (int) $r['id_photo'];
+        return $out;
+    }
+
+    /** @return array<int, array> karta => linia zatwierdzona dnia */
+    public function dayLines(string $day, int $groupId): array
+    {
+        $out = [];
+        foreach ($this->all("SELECT l.*, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name, COALESCE(NULLIF(u.displayed_name, ''), u.login) AS corrected_name
+                             FROM n_prod_day_line l
+                             LEFT JOIN n_prod_employee e ON e.id = l.id_employee
+                             LEFT JOIN production_employee pe ON pe.id = e.id_production_employee
+                             LEFT JOIN user u ON u.id = l.corrected_by
+                             WHERE l.work_date = ? AND l.id_group = ?", [$day, $groupId]) as $r) $out[(int) $r['id_item']] = $r;
+        return $out;
+    }
+
+    public function saveDayLine(array $l): void
+    {
+        $this->db->prepare('INSERT INTO n_prod_day_line (work_date, id_group, id_item, planned, produced, waste, note, id_employee, id_device, validated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                            ON DUPLICATE KEY UPDATE planned = VALUES(planned), produced = VALUES(produced), waste = VALUES(waste), note = VALUES(note),
+                                id_employee = VALUES(id_employee), id_device = VALUES(id_device), validated_at = NOW()')
+            ->execute([$l['work_date'], $l['id_group'], $l['id_item'], $l['planned'], $l['produced'], $l['waste'], $l['note'], $l['id_employee'], $l['id_device']]);
+    }
+
+    /** Poprawka kierownika z ERP : nowe ilości linii (linia powstaje, jeśli zespół jej nie zatwierdził). */
+    public function correctDayLine(string $day, int $groupId, int $itemId, ?float $planned, float $produced, float $waste, int $userId): void
+    {
+        $this->db->prepare('INSERT INTO n_prod_day_line (work_date, id_group, id_item, planned, produced, waste, corrected_by, corrected_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                            ON DUPLICATE KEY UPDATE planned = VALUES(planned), produced = VALUES(produced), waste = VALUES(waste),
+                                corrected_by = VALUES(corrected_by), corrected_at = NOW()')
+            ->execute([$day, $groupId, $itemId, $planned, $produced, $waste, $userId]);
+    }
+
+    /** Podsumowanie zatwierdzenia po poprawce kierownika (data i osoba zatwierdzenia bez zmian). */
+    public function updateCloseSummary(string $day, int $groupId, string $summary): void
+    {
+        $this->db->prepare('UPDATE n_prod_day_close SET summary = ? WHERE work_date = ? AND id_group = ?')->execute([$summary, $day, $groupId]);
+    }
+
+    /** Partie dnia produktu (nieanulowane), najnowsze najpierw : zmniejszenie ilości przy zatwierdzeniu. */
+    public function liveBatches(string $day, int $groupId, int $itemId): array
+    {
+        return $this->all('SELECT * FROM n_prod_output WHERE work_date = ? AND id_group = ? AND id_item = ? AND cancelled_at IS NULL ORDER BY created_at DESC, id DESC',
+            [$day, $groupId, $itemId]);
+    }
+
+    /** Dni grup z tabletów do poprawki w ERP : produkcja, straty, zatwierdzenie (ostatnie dni). */
+    public function recentDays(string $from, string $to): array
+    {
+        return $this->all("SELECT d.work_date, d.id_group, g.name_pl AS group_name, c.closed_at,
+                                  (SELECT COUNT(DISTINCT o.id_item) FROM n_prod_output o WHERE o.work_date = d.work_date AND o.id_group = d.id_group AND o.cancelled_at IS NULL) AS products,
+                                  (SELECT COUNT(*) FROM n_prod_day_line l WHERE l.work_date = d.work_date AND l.id_group = d.id_group) AS lines_validated
+                           FROM (SELECT work_date, id_group FROM n_prod_output WHERE work_date BETWEEN ? AND ?
+                                 UNION SELECT work_date, id_group FROM n_prod_waste WHERE work_date BETWEEN ? AND ?
+                                 UNION SELECT work_date, id_group FROM n_prod_day_close WHERE work_date BETWEEN ? AND ?) d
+                           JOIN n_prod_group g ON g.id = d.id_group
+                           LEFT JOIN n_prod_day_close c ON c.work_date = d.work_date AND c.id_group = d.id_group
+                           ORDER BY d.work_date DESC, g.sort_order, g.name_pl", [$from, $to, $from, $to, $from, $to]);
+    }
+
     public function photo(int $id): ?array
     {
         return $this->all('SELECT id, mime, image, created_at FROM n_prod_lot_photo WHERE id = ?', [$id])[0] ?? null;
@@ -258,7 +344,7 @@ final class OutputRepository extends WorkshopRepository
             $like = '%' . addcslashes($search, '\\%_') . '%';
             array_push($params, $like, $like, $like, $like);
         }
-        return $this->all("SELECT o.*, COALESCE(fp.name, pr.name) AS item_name, i.base_unit, fp.ppc, g.name_pl AS group_name,
+        return $this->all("SELECT o.*, COALESCE(fp.name, pr.name) AS item_name, i.base_unit, i.id_final_product, fp.ppc, g.name_pl AS group_name,
                                   TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name, d.name AS device_name
                            FROM n_prod_output o
                            JOIN n_prod_item i ON i.id = o.id_item
@@ -283,5 +369,33 @@ final class OutputRepository extends WorkshopRepository
             $out[(int) $r['id_output']][] = $r;
         }
         return $out;
+    }
+
+    /**
+     * Audyt 2, P22 : dokąd poszły kartony produktu oklejone w dniach [od, do] (etykiety kartonów z systemu magazynu,
+     * carton_stock) — palety, klienci, data dostawy, numery WZ. Etykieta kartonu nie niesie numeru partii z tabletu :
+     * powiązanie partii = ten sam produkt i dzień etykiety (prawdopodobne).
+     *
+     * @param list<int> $productIds
+     * @return list<array> id_product, date_add, status, id_customer, customer, delivery_date, cartons, pallets, wz
+     */
+    public function cartonsShipped(array $productIds, string $from, string $to): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $productIds))));
+        if (!$ids) return [];
+        $in = implode(',', $ids);
+        return $this->all("SELECT cs.id_product, cs.date_add, cs.status, pd.id_customer, c.company AS customer, pd.delivery_date,
+                COUNT(DISTINCT cs.id_carton) AS cartons, COUNT(DISTINCT pd.id_palet) AS pallets,
+                (SELECT GROUP_CONCAT(DISTINCT w.doc_num ORDER BY w.doc_num SEPARATOR ', ') FROM document_wz w
+                    JOIN document_wz_product wp ON wp.id_document_wz = w.id AND wp.id_product = cs.id_product
+                    WHERE pd.id_customer IS NOT NULL AND w.id_customer = pd.id_customer
+                      AND w.established_date BETWEEN pd.delivery_date - INTERVAL 2 DAY AND pd.delivery_date + INTERVAL 1 DAY) AS wz
+            FROM carton_stock cs
+            LEFT JOIN carton_pallet_connection cpc ON cpc.id_carton = cs.id_carton
+            LEFT JOIN palets_delivery pd ON pd.id_palet = cpc.id_palet
+            LEFT JOIN customer c ON c.id = pd.id_customer
+            WHERE cs.id_product IN ({$in}) AND cs.date_add BETWEEN ? AND ?
+            GROUP BY cs.id_product, cs.date_add, cs.status, pd.id_customer, c.company, pd.delivery_date
+            ORDER BY pd.delivery_date, c.company", [$from, $to]);
     }
 }

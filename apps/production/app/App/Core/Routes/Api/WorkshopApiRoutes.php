@@ -190,6 +190,11 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/clocks', ExecutionController::class, 'addClock', 'prod.employees.write'],
             ['GET', '/execution/kpis', ExecutionController::class, 'kpis', 'prod.kpis.read'],
             ['GET', '/execution/cockpit', ExecutionController::class, 'cockpit', 'prod.kpis.read'],
+            // Dni z tabletów w ERP : kierownik produkcji poprawia ilości i straty po zatwierdzeniu przez zespół.
+            ['GET', '/execution/days', ExecutionController::class, 'days', 'prod.plan.validate'],
+            ['GET', '/execution/days/{date:\d{4}-\d{2}-\d{2}}/{group:\d+}', ExecutionController::class, 'dayDetail', 'prod.plan.validate'],
+            ['PATCH', '/execution/days/{date:\d{4}-\d{2}-\d{2}}/{group:\d+}/items/{item:\d+}', ExecutionController::class, 'correctLine', 'prod.plan.validate'],
+            ['PATCH', '/execution/waste/{id:\d+}', ExecutionController::class, 'cancelWaste', 'prod.plan.validate'],
             ['POST', '/kiosk/pair', ExecutionController::class, 'pair', null],
             ['GET', '/kiosk/device', ExecutionController::class, 'device', 'kiosk'],
             ['GET', '/kiosk/people', ExecutionController::class, 'people', 'kiosk'],
@@ -211,6 +216,11 @@ final class WorkshopApiRoutes
             ['PATCH', '/kiosk/production/{id:\d+}', ExecutionController::class, 'updateOutput', 'kiosk_employee'],
             ['PUT', '/kiosk/production/{id:\d+}/lots/{material:\d+}', ExecutionController::class, 'outputLot', 'kiosk_employee'],
             ['POST', '/kiosk/production/close', ExecutionController::class, 'closeDay', 'kiosk_employee'],
+            // Zatwierdzenie linii dnia (plan → zrobione, strata ze zdjęciami na tej samej linii) ; zdjęcia strat od razu.
+            ['POST', '/kiosk/production/lines', ExecutionController::class, 'validateLine', 'kiosk_employee'],
+            ['POST', '/kiosk/photos', ExecutionController::class, 'uploadPhoto', 'kiosk_employee'],
+            // Magazyn grupy : stan, min. / maks., ile wolno jeszcze wyprodukować (formuła Stanu magazynu ERP).
+            ['GET', '/kiosk/stock', ExecutionController::class, 'stock', 'kiosk_employee'],
             ['POST', '/kiosk/waste', ExecutionController::class, 'recordWaste', 'kiosk_employee'],
             ['PATCH', '/kiosk/waste/{id:\d+}', ExecutionController::class, 'updateWaste', 'kiosk_employee'],
             ['GET', '/kiosk/recipes', ExecutionController::class, 'recipes', 'kiosk_employee'],

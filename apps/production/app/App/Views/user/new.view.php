@@ -122,7 +122,7 @@
             const p = preview[pos.value || '0'] || { home: 'Dzisiaj', home_path: '/today', sections: {} };
             if (home && syncHome) home.value = p.home_path;
             if (role && role.value === 'prod_admin') {
-                box.innerHTML = '<div class="at-note at-note-safe"><i class="bi bi-shield-check"></i><div><strong>Administrator produkcji</strong> : widzi wszystkie strony, także Uprawnienia stanowisk i moduł kierownika ; strona startowa Rentowność.</div></div>';
+                box.innerHTML = '<div class="at-note at-note-safe"><i class="bi bi-shield-check"></i><div><strong>Administrator produkcji</strong> : widzi wszystkie strony, także Uprawnienia funkcji i moduł kierownika ; strona startowa Rentowność.</div></div>';
                 return;
             }
             const sections = Object.entries(p.sections);

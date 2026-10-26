@@ -35,7 +35,7 @@
 
                     <?php if (!empty($row)): ?>
                         <?php if (!empty($created)):
-                            $todo = [['Karta użytkownika : zadania stanowiska', ROOT . '/organization/users/' . (int) $row['id']], ['Uprawnienia stanowisk', ROOT . '/organization/access'], ['Skrzynka pocztowa', ROOT . '/mail/settings']];
+                            $todo = [['Karta użytkownika : zadania stanowiska', ROOT . '/organization/users/' . (int) $row['id']], ['Uprawnienia funkcji', ROOT . '/organization/access'], ['Skrzynka pocztowa', ROOT . '/mail/settings']];
                             ?>
                             <div class="at-note at-note-safe mb-3" role="status">
                                 <i class="bi bi-check-circle"></i>

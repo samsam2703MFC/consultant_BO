@@ -933,25 +933,92 @@ check($s === 201 && $wasteOf($pd)['good'] == 105.0, 'second waste without a batc
 check($s === 200 && $wasteOf($pd)['good'] == 108.0 && $wasteOf($pd)['wastes'][1]['cancelled'], 'waste cancelled, good quantity back');
 [$s, $b] = $kiosk('PATCH', "/kiosk/waste/{$extra}", ['cancelled' => true], $device, $emp);
 check($s === 409 && $b['description'] === 'WASTE_CANCELLED', 'a cancelled waste stays cancelled');
-check($pd['data']['closed'] === null, 'day not validated yet');
+check($pd['data']['closed'] === null && $pd['data']['editable'], 'day not validated yet');
+check(is_array($pd['data']['categories']) && array_sum(array_column($pd['data']['categories'], 'count')) === count($pd['data']['catalog'])
+    && $pd['data']['waste_photo'] === ['required' => true, 'max' => 4], 'group cards by category (buttons « Zakoduj produkcję »), waste photo rule');
+// --- Zatwierdzenie linii dnia : plan → zrobione, strata (ilość, powód, zdjęcie) na tej samej linii
+[$s, $b] = $kiosk('POST', '/kiosk/photos', ['photo' => 'data:image/jpeg;base64,AAAA'], $device, $emp);
+check($s === 422 && $codes($b) === ['photo:INVALID_PHOTO'], 'waste photo must be an image');
+[$s, $ph] = $kiosk('POST', '/kiosk/photos', ['photo' => 'data:image/jpeg;base64,' . base64_encode($jpeg)], $device, $emp);
+$photoId = (int) ($ph['data']['id'] ?? 0);
+check($s === 201 && $photoId > 0 && $ph['data']['bytes'] === strlen($jpeg), 'waste photo stored at once (id for the line)');
+[$s, $b] = $kiosk('POST', '/kiosk/production/lines', ['item_id' => $croissant, 'produced' => 100], $device, $emp);
+check($s === 422 && $codes($b) === ['note:LINE_SHORT_NOTE_REQUIRED'], 'less than the plan needs a reason');
+[$s, $b] = $kiosk('POST', '/kiosk/production/lines', ['item_id' => $croissant, 'produced' => 150, 'waste_quantity' => 6, 'waste_reason' => 'damaged'], $device, $emp);
+check($s === 422 && $codes($b) === ['photo_ids:WASTE_PHOTO_REQUIRED'], 'waste on the line needs a photo');
+[$s, $b] = $kiosk('POST', '/kiosk/production/lines', ['item_id' => $croissant, 'produced' => 150, 'waste_quantity' => 6, 'waste_reason' => 'damaged', 'photo_ids' => [999999]], $device, $emp);
+check($s === 422 && $codes($b) === ['photo_ids:WASTE_PHOTO_INVALID'], 'only a photo taken on this tablet and not used yet');
+$lUuid = '7d3e4f50-6172-4c8d-ae9f-1a2b3c4d5e6f';
+$lineBody = ['item_id' => $croissant, 'produced' => 150, 'waste_quantity' => 6, 'waste_reason' => 'damaged', 'photo_ids' => [$photoId], 'client_uuid' => $lUuid];
+[$s, $pd] = $kiosk('POST', '/kiosk/production/lines', $lineBody, $device, $emp);
+$row = $wasteOf($pd);
+$live = array_values(array_filter($row['batches'] ?? [], fn($b) => !$b['cancelled']));
+$lineWaste = array_values(array_filter($row['wastes'] ?? [], fn($w) => $w['reason'] === 'damaged' && !$w['cancelled']))[0] ?? null;
+check($s === 200 && $row['produced'] == 150.0 && count($live) === 2 && $live[1]['quantity'] == 30.0 && $row['waste'] == 18.0 && $lineWaste && $lineWaste['photos'] === [$photoId]
+    && $row['line']['produced'] == 150.0 && $row['line']['waste'] == 18.0 && $row['line']['employee'] !== null, 'line validated: missing 30 as a new batch, waste with its photo on the same line');
+[$s, $pd] = $kiosk('POST', '/kiosk/production/lines', $lineBody, $device, $emp);
+check($s === 200 && $pd['data']['replayed'] && $wasteOf($pd)['waste'] == 18.0, 'replayed line (offline tablet): waste recorded once');
+[$s, $b] = $kiosk('POST', '/kiosk/production/lines', ['item_id' => $croissant, 'produced' => 150, 'waste_quantity' => 1, 'waste_reason' => 'quality', 'photo_ids' => [$photoId]], $device, $emp);
+check($s === 422 && $codes($b) === ['photo_ids:WASTE_PHOTO_INVALID'], 'a photo is used once');
+[$s, $pd] = $kiosk('POST', '/kiosk/production/lines', ['item_id' => $croissant, 'produced' => 130], $device, $emp);
+$row = $wasteOf($pd);
+$live = array_values(array_filter($row['batches'], fn($b) => !$b['cancelled']));
+check($s === 200 && $row['produced'] == 130.0 && $live[1]['quantity'] == 10.0 && $row['line']['produced'] == 130.0, 'line corrected down: the newest batch reduced');
+[$s, $b] = $kiosk('POST', '/kiosk/production/lines', ['item_id' => $croissant, 'produced' => 10, 'note' => 'awaria pieca'], $device, $emp);
+check($s === 409 && $b['description'] === 'WASTE_EXCEEDS_PRODUCED', 'produced never below the waste of the day');
+// --- Zatwierdzenie dnia : potem tablet tylko czyta (poprawki : kierownik w ERP)
+[$s, $b] = $kiosk('POST', '/kiosk/production/close', [], $device, $emp);
+check($s === 422 && $b['description'] === 'DAY_GAPS_NOTE_REQUIRED', 'gaps: validation without a note refused');
+check(count($pd['data']['gaps']['qc']) > 0, 'day gaps: productions without quality check listed');
 [$s, $pd] = $kiosk('POST', '/kiosk/production/close', ['note' => 'Piec 2 za gorący'], $device, $emp);
 $close = $pdo->query('SELECT * FROM n_prod_day_close WHERE work_date = CURDATE() AND id_group = 1')->fetch();
 $sum = array_column(json_decode((string) ($close['summary'] ?? '[]'), true), null, 'item_id');
 check($s === 200 && $pd['data']['closed']['employee'] !== null && $pd['data']['closed']['note'] === 'Piec 2 za gorący' && !$pd['data']['closed']['changed']
-    && $close && (int) $close['id_employee'] > 0 && $sum[$croissant]['produced'] == 120 && $sum[$croissant]['waste'] == 12, 'team validates the day (who, when, summary per product)');
-[$s, $pd] = $kiosk('POST', '/kiosk/waste', ['item_id' => $croissant, 'quantity' => 2, 'reason' => 'damaged'], $device, $emp);
-check($s === 201 && $pd['data']['closed']['changed'], 'change after the validation shown');
-$gaps = $pd['data']['gaps'];
-check(isset($gaps['lots'], $gaps['qc']) && count($gaps['qc']) > 0, 'day gaps: productions without quality check listed');
-[$s, $b] = $kiosk('POST', '/kiosk/production/close', [], $device, $emp);
-check($s === 422 && $b['description'] === 'DAY_GAPS_NOTE_REQUIRED', 'gaps: validation without a note refused');
-[$s, $pd] = $kiosk('POST', '/kiosk/production/close', ['note' => 'kontrola po południu'], $device, $emp);
-check($s === 200 && !$pd['data']['closed']['changed'] && $pd['data']['closed']['note'] === 'kontrola po południu'
-    && (int) $pdo->query('SELECT COUNT(*) FROM n_prod_day_close WHERE work_date = CURDATE() AND id_group = 1')->fetchColumn() === 1, 'validated again: one record per day and group');
+    && $close && (int) $close['id_employee'] > 0 && $sum[$croissant]['produced'] == 130 && $sum[$croissant]['waste'] == 18, 'team validates the day (who, when, summary per product)');
+check(!$pd['data']['editable'] && $pd['data']['closed']['locked'], 'validated day locked on the tablet');
+[$s, $b] = $kiosk('POST', '/kiosk/waste', ['item_id' => $croissant, 'quantity' => 2, 'reason' => 'damaged'], $device, $emp);
+check($s === 409 && $b['description'] === 'DAY_CLOSED', 'no waste after the validation');
+[$s, $b] = $kiosk('POST', '/kiosk/production/lines', ['item_id' => $croissant, 'produced' => 140], $device, $emp);
+check($s === 409 && $b['description'] === 'DAY_CLOSED', 'no line change after the validation');
+[$s, $b] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 5], $device, $emp);
+check($s === 409 && $b['description'] === 'DAY_CLOSED', 'no new batch after the validation');
+[$s, $b] = $kiosk('POST', '/kiosk/production/close', ['note' => 'jeszcze raz'], $device, $emp);
+check($s === 409 && $b['description'] === 'DAY_CLOSED'
+    && (int) $pdo->query('SELECT COUNT(*) FROM n_prod_day_close WHERE work_date = CURDATE() AND id_group = 1')->fetchColumn() === 1, 'validated once: one record per day and group');
+[$s, $b] = $kiosk('PUT', "/kiosk/production/{$batchId}/lots/901", ['lot_number' => 'M-77'], $device, $emp);
+check($s === 200 && $b['data']['lots_done'] === 2, 'material lots still filled in after the validation (traceability)');
 [$s, $b] = $kiosk('POST', '/kiosk/production/close', ['date' => date('Y-m-d', strtotime('-5 days'))], $device, $emp);
 check($s === 409 && $b['description'] === 'OUTPUT_LOCKED', 'old days are not validated on the tablet');
+// --- Magazyn grupy : stan, min. / maks., ile wolno jeszcze zrobić (formuła Stanu magazynu)
+[$s, $st] = $kiosk('GET', '/kiosk/stock', null, $device, $emp);
+$stRow = array_values(array_filter($st['data']['items'] ?? [], fn($r) => $r['item_id'] === $croissant))[0] ?? null;
+check($s === 200 && isset($st['data']['totals']['allowed_cartons'], $st['data']['totals']['below_min'])
+    && ($stRow === null || abs($stRow['today_cartons'] - round(112 / 60, 1)) < 0.001), 'group stock: same formula as Stan magazynu, good of today deducted');
+// --- Kierownik produkcji w ERP : dni z tabletów, poprawka ilości i anulowanie straty po zatwierdzeniu
+[, $ml] = $call('POST', '/auth/login', ['login' => 'manager', 'password' => 'Secret-123']);
+$mt = $ml['data']['access_token'];
+[$s, $dl] = $call('GET', '/execution/days', null, $mt);
+$todayRow = array_values(array_filter($dl['data'] ?? [], fn($r) => $r['date'] === date('Y-m-d') && $r['group']['id'] === 1))[0] ?? null;
+check($s === 200 && $todayRow && $todayRow['closed_at'] !== null && $todayRow['lines_validated'] === 1, 'ERP: days of the tablets with their validation');
+[$s, $dd] = $call('GET', '/execution/days/' . date('Y-m-d') . '/1', null, $mt);
+$row = $wasteOf($dd);
+check($s === 200 && $row['line']['produced'] == 130.0 && $lineWaste['photos'] === [$photoId], 'ERP: day of a group as on the tablet (lines, waste photos)');
+[$s, $dd] = $call('PATCH', '/execution/days/' . date('Y-m-d') . '/1/items/' . $croissant, ['produced' => 140], $mt);
+$row = $wasteOf($dd);
+$close = $pdo->query('SELECT summary, id_employee FROM n_prod_day_close WHERE work_date = CURDATE() AND id_group = 1')->fetch();
+$sum = array_column(json_decode((string) $close['summary'], true), null, 'item_id');
+check($s === 200 && $row['produced'] == 140.0 && $row['line']['corrected_by'] !== null && !$dd['data']['closed']['changed'] && $dd['data']['closed']['locked']
+    && $sum[$croissant]['produced'] == 140 && (int) $close['id_employee'] > 0, 'ERP correction after the validation: summary recalculated, day stays validated');
+$damaged = $lineWaste['id'];
+[$s, $dd] = $call('PATCH', '/execution/waste/' . $damaged, null, $mt);
+$row = $wasteOf($dd);
+check($s === 200 && $row['waste'] == 12.0 && $row['line']['waste'] == 12.0 && !$dd['data']['closed']['changed'], 'ERP: waste cancelled by the manager, line and summary updated');
+[$s, $b] = $call('PATCH', '/execution/waste/' . $damaged, null, $mt);
+check($s === 409 && $b['description'] === 'WASTE_CANCELLED', 'ERP: a cancelled waste stays cancelled');
+[$s, $b] = $call('PATCH', '/execution/days/' . date('Y-m-d', strtotime('+3 days')) . '/1/items/' . $croissant, ['produced' => 1], $mt);
+check($s === 404, 'ERP: no correction of a future day');
 $weekGood = (new \App\Repositories\Workshop\WeekRepository($pdo))->produced(date('Y-m-d'), date('Y-m-d'));
-check(abs(($weekGood[$croissant] ?? 0) - (120 + 5 - 12 - 2)) < 0.001, 'week progress counts good quantity (produced − waste)');
+check(abs(($weekGood[$croissant] ?? 0) - (140 + 5 - 12)) < 0.001, 'week progress counts good quantity (produced − waste)');
 // --- Nowe produkty na tablecie : produkty testowe pokazane grupie (bez działu = wszystkie grupy), karta z filmem, zdjęciami, etapami
 $pdo->exec("INSERT INTO test_product_status (id, name) VALUES (1, 'Propozycja') ON DUPLICATE KEY UPDATE name = name");
 $pdo->exec("INSERT INTO test_product_type (id, name) VALUES (1, 'Produkt') ON DUPLICATE KEY UPDATE name = name");
@@ -1756,6 +1823,8 @@ if (trim((string) shell_exec('command -v pdftotext'))) {
     check($s === 200 && abs((float) $mat['price_per_unit'] - 3.5) < 1e-6 && (int) $mat['id_current_supplier'] === 61 && ($ip['data']['imported_prices'][0]['new_price'] ?? null) == 3.5
         && (int) $pdo->query('SELECT COUNT(*) FROM raw_material_price_changelog WHERE id_raw_material = 902')->fetchColumn() === $logBefore + 1 && $ip['data']['prices_imported_at'] !== null,
         'invoice prices imported into the material file (price per unit, supplier, price history)');
+    $logRow = $pdo->query('SELECT source, id_user FROM raw_material_price_changelog WHERE id_raw_material = 902 ORDER BY timestamp DESC, id DESC LIMIT 1')->fetch();
+    check($logRow['source'] === 'invoice' && $logRow['id_user'] !== null, 'price history : source « invoice » and the ERP user who imported (audit 2, P21)');
     [$s, $b] = $call('POST', "/supply/invoices/{$pid}/prices", ['line_ids' => [999999]], $access);
     check($s === 422 && $b['description'] === 'INVOICE_NO_PRICES', 'no mapped line chosen → nothing to import');
     // Przeliczenie receptur po zmianie ceny spłaszcza recepturę z tabel receptur (w danych testowych niepełnych) : stan wyjściowy.

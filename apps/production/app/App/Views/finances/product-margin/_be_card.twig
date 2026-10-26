@@ -65,7 +65,7 @@
                     </table>
                 {% endif %}
                 <p class="at-be-sub mt-2 mb-0"><i class="bi bi-shop me-1"></i>API panelu — cena pratiquée w kasie{% if be.synced %}, pobrana {{ be.synced.started_at|date('d.m.Y H:i') }}{% endif %}.
-                    {% if not be.configured %}Konto API panelu nie jest skonfigurowane{% if be.is_admin %} — <a href="{{ root }}/settings/panel-api">wpisz konto</a>{% endif %}.{% endif %}</p>
+                    {% if not be.configured %}API cen w sklepach nie jest skonfigurowane{% if be.is_admin %} — <a href="{{ root }}/settings/panel-api">wpisz konto</a>{% endif %}.{% endif %}</p>
             </div>
         </div>
     </div>

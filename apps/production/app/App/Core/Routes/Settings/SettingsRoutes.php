@@ -3,6 +3,12 @@ use FastRoute\RouteCollector;
 
 return function(RouteCollector $r) {
 
+    // Ustawienia : hub z kartami (audyt 2, N6).
+    $r->addRoute('GET', '/settings', [
+        'controller' => App\Controllers\Web\Settings\SettingsHubController::class,
+        'method'     => 'index'
+    ]);
+
     $r->addRoute('GET', '/other-settings', [
         'controller' => App\Controllers\Web\Settings\SettingsController::class,
         'method'     => 'index'

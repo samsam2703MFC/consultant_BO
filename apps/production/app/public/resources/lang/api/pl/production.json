@@ -100,7 +100,8 @@
     "DEVICE_NOT_DRIVER": "Ten tablet nie jest tabletem kierowcy — zmień tryb tabletu w zarządzaniu tabletami.",
     "DEV_TRIAL_NOT_ALLOWED": "Na etapie „{stage}” nie robi się już testu — produkt jest wprowadzany w biurze.",
     "DEV_RECIPE_NOT_READY": "Recepturę zatwierdza się po udanym teście 2 (etap teraz: „{stage}”).",
-    "DEV_RECIPE_MISSING": "Produkt nie ma jeszcze receptury w ERP — biuro musi ją wybrać przed zatwierdzeniem."
+    "DEV_RECIPE_MISSING": "Produkt nie ma jeszcze receptury w ERP — biuro musi ją wybrać przed zatwierdzeniem.",
+    "DAY_CLOSED": "Produkcja tego dnia jest już zatwierdzona — poprawki tylko w ERP (kierownik produkcji)."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -195,7 +196,13 @@
     "POSITION_CYCLE": "Pole „{field}”: stanowisko nie może podlegać samemu sobie ani swojemu podwładnemu.",
     "DRIVER_CUSTOMER_NOT_PLANNED": "Klient {id} nie ma dostawy w tym dniu.",
     "DRIVER_DATE_OUT_OF_RANGE": "Pole „{field}”: dzień wysyłki od tygodnia wstecz do jutra.",
-    "DRIVER_PHOTO_LIMIT": "Pole „{field}”: najwyżej {max} zdjęć tego rodzaju u klienta."
+    "DRIVER_PHOTO_LIMIT": "Pole „{field}”: najwyżej {max} zdjęć tego rodzaju u klienta.",
+    "LINE_SHORT_NOTE_REQUIRED": "Zrobiono mniej niż plan ({planned}) — wpisz powód.",
+    "WASTE_PHOTO_REQUIRED": "Zrób zdjęcie straty.",
+    "WASTE_PHOTO_TOO_MANY": "Najwyżej {max} zdjęcia na stratę.",
+    "WASTE_PHOTO_INVALID": "Zdjęcie nie pochodzi z tego tabletu albo jest już użyte — zrób je jeszcze raz.",
+    "WASTE_QTY_REQUIRED": "Podaj ilość straty do zdjęć.",
+    "INVALID_LIST": "Nieprawidłowa lista."
   },
   "fields": {
     "code": "kod",
@@ -461,7 +468,12 @@
     "recorded_at": "godzina zapisu",
     "driver_name": "kierowca",
     "taken_at": "godzina zdjęcia",
-    "photos": "zdjęcia"
+    "photos": "zdjęcia",
+    "photo_ids": "zdjęcia straty",
+    "waste_quantity": "ilość straty",
+    "waste_reason": "powód straty",
+    "waste_note": "notatka straty",
+    "produced": "zrobione"
   },
   "entities": {
     "test_product": "produkt testowy",

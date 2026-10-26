@@ -103,8 +103,8 @@ try {
     $issues = $container->get(ShippingIssueService::class);
 
     // --- Alimentation : une seule fois, filtres (proforma payée, seuil, ancienneté)
-    expectSi($issues->sync() === ['differences' => 2, 'deliveries' => 1], 'sync: 2 differences (paid proforma, above 1 €, recent) + 1 delivery problem');
-    expectSi($issues->sync() === ['differences' => 0, 'deliveries' => 0], 'sync is idempotent');
+    expectSi($issues->sync() === ['differences' => 2, 'deliveries' => 1, 'closed' => 0], 'sync: 2 differences (paid proforma, above 1 €, recent) + 1 delivery problem');
+    expectSi($issues->sync() === ['differences' => 0, 'deliveries' => 0, 'closed' => 0], 'sync is idempotent');
     $view = $issues->overview('open', false, 1);
     $byKind = array_column($view['items'], null, 'kind');
     expectSi(count($view['items']) === 3 && isset($byKind['refund'], $byKind['collect'], $byKind['delivery']), 'three open cases: refund, collect, delivery');

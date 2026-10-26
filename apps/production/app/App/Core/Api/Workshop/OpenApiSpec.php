@@ -21,7 +21,8 @@ final class OpenApiSpec
             if ($doc === null) {
                 throw new \LogicException("Undocumented route {$method} {$path}");
             }
-            $openPath = preg_replace('/\{(\w+):[^}]+\}/', '{$1}', $path);
+            // Wzorce z kwantyfikatorami ({date:\d{4}-\d{2}-\d{2}}) : nawiasy zagnieżdżone.
+            $openPath = preg_replace('/\{(\w+):(?:[^{}]|\{[^{}]*\})+\}/', '{$1}', $path);
             $operation = [
                 'tags' => [$doc['tag']],
                 'summary' => $doc['summary'],
@@ -30,10 +31,14 @@ final class OpenApiSpec
             ];
             if (!empty($doc['description'])) $operation['description'] = $doc['description'];
             $parameters = [];
-            if (preg_match_all('/\{(\w+)(?::[^}]+)?\}/', $path, $m)) {
+            if (preg_match_all('/\{(\w+)(?::(?:[^{}]|\{[^{}]*\})+)?\}/', $path, $m)) {
                 foreach ($m[1] as $name) {
                     $parameters[] = ['name' => $name, 'in' => 'path', 'required' => true,
-                        'schema' => $name === 'code' ? ['type' => 'string', 'example' => 'load.target_pct'] : ['type' => 'integer', 'minimum' => 1]];
+                        'schema' => match ($name) {
+                            'code' => ['type' => 'string', 'example' => 'load.target_pct'],
+                            'date' => ['type' => 'string', 'format' => 'date'],
+                            default => ['type' => 'integer', 'minimum' => 1],
+                        }];
                 }
             }
             foreach ($doc['query'] ?? [] as $name => $schema) {

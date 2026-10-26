@@ -4,13 +4,18 @@
     <div class="page-title">
         <div class="row">
             <div class="col-12 col-md-6 order-md-1 order-last">
-                <h3>Produkt testowy</h3>
+                <h3>Nowe produkty</h3>
+                <?php // Etapy (pipeline) i lista na jednej zakładce Produktów : przełącznik (audyt 2, N7). ?>
+                <div class="btn-group btn-group-sm mt-1" role="group" aria-label="Widok">
+                    <a class="btn btn-outline-primary" href="<?=ROOT?>/test-products/pipeline"><i class="bi bi-kanban"></i> Etapy</a>
+                    <a class="btn btn-primary" href="<?=ROOT?>/test-products" aria-current="page"><i class="bi bi-list"></i> Lista</a>
+                </div>
             </div>
             <div class="col-12 col-md-6 order-md-2 order-first">
                 <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item"><a href="<?=ROOT?>/dashboard">Dashboard</a></li>
-                        <li class="breadcrumb-item active" aria-current="page">Produkt testowy
+                        <li class="breadcrumb-item active" aria-current="page">Nowe produkty
                         </li>
                     </ol>
                 </nav>

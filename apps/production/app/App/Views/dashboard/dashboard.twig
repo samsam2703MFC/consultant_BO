@@ -77,7 +77,7 @@
                 <div class="card-body pt-0">
                     {% if not member or not member.id_position %}
                         <p class="at-empty mb-2">Nie masz przypisanego stanowiska — przypisz je, aby widzieć tu swoje zadania.</p>
-                        <a class="btn btn-sm btn-outline-primary" href="{{ root }}/organization/positions">Stanowiska i zadania</a>
+                        <a class="btn btn-sm btn-outline-primary" href="{{ root }}/organization/positions">Funkcje i zadania</a>
                     {% elseif my_tasks %}
                         <ul class="at-tasks at-tasks-compact">
                         {% for it in my_tasks %}
