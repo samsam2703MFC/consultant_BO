@@ -311,6 +311,13 @@ function suL(string $k, string $l): string
         'du' => ['fr' => 'Visite du', 'nl' => 'Bezoek van', 'en' => 'Visit of', 'de' => 'Besuch vom'],
         'avec' => ['fr' => 'avec', 'nl' => 'met', 'en' => 'with', 'de' => 'mit'],
         'conformes' => ['fr' => 'points conformes', 'nl' => 'punten in orde', 'en' => 'points compliant', 'de' => 'Punkte in Ordnung'],
+        'score' => ['fr' => 'Score de la visite', 'nl' => 'Score van het bezoek', 'en' => 'Visit score', 'de' => 'Besuchsbewertung'],
+        'score_prec' => ['fr' => 'visite précédente', 'nl' => 'vorig bezoek', 'en' => 'previous visit', 'de' => 'letzter Besuch'],
+        'score_premier' => ['fr' => 'première visite notée', 'nl' => 'eerste gescoorde bezoek', 'en' => 'first scored visit', 'de' => 'erster bewerteter Besuch'],
+        'score_regle' => ['fr' => 'Chaque point conforme compte selon son poids. Ne comptent pas : les réponses N/A, le texte libre, les questions hors score.',
+            'nl' => 'Elk punt in orde telt volgens zijn gewicht. Tellen niet mee: N.v.t.-antwoorden, vrije tekst, vragen buiten de score.',
+            'en' => 'Each compliant point counts according to its weight. Not counted: N/A answers, free text, questions outside the score.',
+            'de' => 'Jeder Punkt in Ordnung zählt nach seinem Gewicht. Nicht gezählt: N/A-Antworten, Freitext, Fragen ohne Bewertung.'],
         'positif' => ['fr' => 'Ce qui va bien', 'nl' => 'Wat goed gaat', 'en' => 'What is going well', 'de' => 'Was gut läuft'],
         'vu' => ['fr' => 'Vu sur place', 'nl' => 'Ter plaatse gezien', 'en' => 'Seen on site', 'de' => 'Vor Ort gesehen'],
         'probleme' => ['fr' => 'Le vrai problème', 'nl' => 'Het echte probleem', 'en' => 'The real issue', 'de' => 'Das eigentliche Problem'],
@@ -826,6 +833,8 @@ function suRapportVue(array $v): array
     return ['visite' => viVisiteLigne($v), 'magasin' => viMagasins()[$shop] ?? ['id' => $shop, 'court' => $shop],
         'typeNom' => suTypeNom((string) (($v['type_code'] ?? '') ?: 'reguliere'), 'fr'), 'statut' => $v['rapport_statut'] ?? null,
         'delai' => suRapportDelai($v), 'contenu' => $contenu, 'checklist' => $ck, 'plans' => $plans, 'photos' => suRapportPhotos($v, $r),
+        // Le score (26/10/2026) : la visite et la précédente comparable. Visible ici et dans le rapport, pas sur la tablette (sauf avant de signer).
+        'score' => suScore($v),
         'causesDiag' => viCausesDiag(), 'roles' => $roles,
         'envoi' => ['a' => $ad['email'], 'source' => $ad['source'], 'langue' => $l, 'langueNom' => SU_LANGUES[$l], 'copies' => $copies,
             'envoyeLe' => $v['rapport_envoye_le'] ?? null, 'envoyePar' => $v['rapport_envoye_par'] ?? null, 'luLe' => $v['rapport_lu_le'] ?? null,
@@ -949,6 +958,48 @@ function ep_suivi_rapport_apercu(): array
 }
 
 /** Le rapport en HTML (PDF et aperçu) : ce que le franchisé reçoit, sans rien d'interne. */
+/** Le score d'une visite et celui de la précédente comparable (viScoreVisite) ; null pour un suivi ou une revisite. */
+function suScore(array $v): ?array
+{
+    if (!function_exists('viScoreVisite')) { return null; }
+    $a = viScoreVisite($v);
+    if ($a === null) { return null; }
+    return ['actuel' => $a, 'precedent' => viScorePrecedent($v)];
+}
+
+/** Le bloc du score dans le rapport : le chiffre sur 100, sa barre, l'écart à la visite précédente, chaque module. */
+function suScoreHtml(?array $sc, string $l, callable $e): string
+{
+    if ($sc === null || ($sc['actuel']['score'] ?? null) === null) { return ''; }
+    $a = $sc['actuel']; $p = $sc['precedent']['score'] ?? null;
+    $coul = static fn (int $x): string => $x >= 85 ? '#2d7a3e' : ($x >= 70 ? '#D97706' : '#C0182B');
+    $ecart = static function (?int $d): string {
+        if ($d === null) { return ''; }
+        $c = $d > 0 ? '#2d7a3e' : ($d < 0 ? '#C0182B' : '#888');
+        return '<span style="color:' . $c . ';font-weight:700">' . ($d > 0 ? '+' : ($d < 0 ? '−' : '±')) . abs($d) . '</span>';
+    };
+    $barre = static fn (int $x, string $c, int $h): string => '<div style="background:#EFE9E1;border-radius:4px;height:' . $h . 'px;overflow:hidden"><div style="background:' . $c . ';width:' . max(0, min(100, $x)) . '%;height:' . $h . 'px"></div></div>';
+    $avant = [];
+    foreach ((array) ($p['modules'] ?? []) as $m) { $avant[$m['id']] = (int) $m['score']; }
+    $prec = $p !== null
+        ? $e(suL('score_prec', $l)) . ' (' . date('d/m', strtotime((string) $sc['precedent']['le'])) . ') : ' . (int) $p['score'] . ' · ' . $ecart((int) $a['score'] - (int) $p['score'])
+        : $e(suL('score_premier', $l));
+    $lignes = '';
+    foreach ($a['modules'] as $m) {
+        $nom = $l === 'nl' && ($m['nom_nl'] ?? '') !== '' ? $m['nom_nl'] : $m['nom'];
+        $d = isset($avant[$m['id']]) ? (int) $m['score'] - $avant[$m['id']] : null;
+        $lignes .= '<tr><td style="padding:3px 10px 3px 0;white-space:nowrap">' . $e($nom) . '</td><td style="width:100%;padding:3px 0">' . $barre((int) $m['score'], $coul((int) $m['score']), 8) . '</td>'
+            . '<td style="padding:3px 0 3px 10px;text-align:right;font-weight:700">' . (int) $m['score'] . '</td><td style="padding:3px 0 3px 8px;text-align:right;font-size:11px;white-space:nowrap">' . $ecart($d) . '</td></tr>';
+    }
+    return '<div style="margin:0 0 14px;padding:12px 14px;border:1px solid #EAE3DA;border-radius:10px">'
+        . '<div style="font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 4px">' . $e(suL('score', $l)) . '</div>'
+        . '<div style="margin:0 0 6px"><span style="font-family:Georgia,serif;font-size:34px;color:#8D1D2C">' . (int) $a['score'] . '</span><span style="color:#888"> / 100</span>'
+        . '<span style="color:#666;font-size:12px;margin-left:12px">' . $prec . '</span></div>'
+        . $barre((int) $a['score'], '#8D1D2C', 8)
+        . '<table style="border-collapse:collapse;width:100%;margin-top:10px;font-size:12px">' . $lignes . '</table>'
+        . '<div style="color:#888;font-size:10.5px;margin-top:6px">' . $e(suL('score_regle', $l)) . '</div></div>';
+}
+
 function suRapportHtml(array $v, string $l): string
 {
     $e = static fn ($s): string => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
@@ -963,6 +1014,7 @@ function suRapportHtml(array $v, string $l): string
         . '<div style="color:#666;margin:0 0 14px">' . $e(suL('du', $l) . ' ' . suDateLongue((string) $v['prevu_le'], $l) . ' · ' . suTypeNom((string) (($v['type_code'] ?? '') ?: 'reguliere'), $l) . ' · ' . suL('avec', $l) . ' ' . $v['consultant_nom'])
         . ' · ' . $ck['ok'] . ' / ' . $ck['total'] . ' ' . $e(suL('conformes', $l)) . '</div>'
         . '<p style="font-size:14px;margin:0 0 14px"><b>' . $e($c['phrase']) . '</b></p>';
+    $h .= suScoreHtml(suScore($v), $l, $e);
     $sec = static fn (string $t, string $corps): string => '<div style="margin:0 0 12px"><div style="font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 3px">' . htmlspecialchars($t, ENT_QUOTES, 'UTF-8') . '</div>' . $corps . '</div>';
     if ($c['positif'] !== '') { $h .= $sec(suL('positif', $l), '<div>' . nl2br($e($c['positif'])) . '</div>'); }
     $vu = [];

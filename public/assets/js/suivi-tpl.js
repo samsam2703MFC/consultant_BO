@@ -158,13 +158,19 @@ function tplRapport(r, x){
     `${B.pourquoi ? `<div class="f sv-f1"><label>Pourquoi · noté avec le franchisé</label><div class="sv-com">${esc(B.pourquoi)}</div></div>` : ''}
     ${B.pistes.length ? `<div class="f sv-f1"><label>Ses trois pistes de développement · ${esc(B.horizon)} ${esc(B.echeance)}</label><ol class="sv-ul">${B.pistes.map(p => `<li>${esc(p)}</li>`).join('')}</ol></div>` : ''}
     ${B.complet ? '' : '<div class="gc-pill att">incomplet à la tablette</div>'}<div class="mko-mu">Dans le rapport tel quel ; les pistes sont aussi parmi les points proposés.</div>`) : '';
+  const S = r.score;
+  const score = S ? carte('Le score de la visite', 'dans le rapport · la tablette ne le montre qu’avant la signature',
+    `<div class="sv-sc"><b>${esc(S.score)}</b><span>/ 100</span><em>${esc(S.prec)}</em>${S.ecart ? `<i class="${esc(S.ecart.cls)}">${esc(S.ecart.txt)}</i>` : ''}</div>
+    <div class="sv-scb"><i class="${esc(S.ton)}" style="width:${Math.max(0, Math.min(100, S.score))}%"></i></div>
+    <div class="sv-scm">${S.modules.map(m => `<span>${esc(m.nom)}</span><div class="sv-scb"><i class="${esc(m.ton)}" style="width:${m.score}%"></i></div><b>${esc(m.score)}</b><em class="${m.ecart ? esc(m.ecart.cls) : ''}">${m.ecart ? esc(m.ecart.txt) : ''}</em>`).join('')}</div>
+    <div class="mko-mu" style="margin-top:6px">Sur ${esc(S.n)} questions notées : chaque point conforme compte selon son poids (Réglages › Checklist). Hors score : N/A, texte libre, questions qui ne comptent pas.</div>`) : '';
   const ck = carte('La checklist', esc(r.checklist), r.ecarts.length ? `<ul class="sv-ul">${r.ecarts.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : '<div class="mko-mu">Aucun écart relevé.</div>');
   const envoi = carte('L’envoi', esc(r.statut),
     `<div class="sv-kv"><span>À</span><b class="${r.a ? '' : 'ko'}">${esc(r.a || 'aucune adresse — réglez-la dans Qui fait quoi')}</b><span>Langue</span><b>${esc(r.langue)}</b><span>En copie</span><b>${esc(r.copies)}</b><span>Envoie</span><b>${esc(r.envoie || '—')}</b></div>
     ${r.delai ? `<div class="${r.delaiKo ? 'ko' : 'att'}" style="font-weight:600;font-size:12.5px;margin-top:8px">${esc(r.delai)}</div>` : ''}
     ${!r.smtp ? '<div class="gc-pill att" style="margin-top:8px">SMTP non configuré : le rapport ira sur la page du franchisé, sans courriel</div>' : ''}
     ${r.dernier ? `<div class="mko-mu" style="margin-top:8px">${esc(r.dernier)}</div>` : ''}`);
-  return `<div class="sva-rap"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${budget}${photos}${ck}</div></div>
+  return `<div class="sva-rap"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${score}${budget}${photos}${ck}</div></div>
     <div class="sva-act"><button ${x.A(r.voir)} class="cx-btn">Voir le rapport</button>
       ${r.envoye ? `<button ${x.A(r.renvoyer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Renvoyer le courriel</button>`
         : `<button ${x.A(r.envoyer)} class="cx-btn prim sva-lg" ${r.busy ? 'disabled' : ''}>${r.busy ? 'Envoi…' : 'Envoyer au franchisé →'}</button><button ${x.A(r.enregistrer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Enregistrer</button>`}</div>`;

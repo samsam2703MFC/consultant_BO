@@ -48,7 +48,10 @@ function viPointNormalise(mixed $p): ?array
     if ($ref === '' || $lib === '') { return null; }
     $type = (string) ($p['type'] ?? '');
     if (!isset(VI_TYPES_REPONSE[$type])) { $type = !empty($p['pct']) ? 'pct' : 'etat'; }
-    $out = ['ref' => mb_substr($ref, 0, 60), 'libelle' => $lib, 'photo' => !empty($p['photo']), 'pct' => $type === 'pct', 'type' => $type];
+    $out = ['ref' => mb_substr($ref, 0, 60), 'libelle' => $lib, 'photo' => !empty($p['photo']), 'pct' => $type === 'pct', 'type' => $type,
+        // Le score (maquette A, 26/10/2026) : compte ou pas, et son poids ×1 ×2 ×3. Le texte libre ne compte jamais.
+        'score' => $type !== 'texte' && (!array_key_exists('score', $p) || (bool) $p['score']),
+        'poids' => in_array((int) ($p['poids'] ?? 1), [1, 2, 3], true) ? (int) ($p['poids'] ?? 1) : 1];
     foreach (['libelle_nl' => 190, 'aide' => 240, 'aide_nl' => 240] as $k => $n) {
         $x = mb_substr(trim((string) ($p[$k] ?? '')), 0, $n);
         if ($x !== '') { $out[$k] = $x; }
@@ -240,3 +243,83 @@ function viAvecNl(array $cl): array
     unset($m);
     return $cl;
 }
+
+/*
+ * Le score de la visite (26/10/2026, Sam : « un scoring visible seulement sur le rapport », maquette A, « avec la
+ * comparaison avant signature entre la visite précédente et la visite actuelle »). Sur 100 :
+ *   Σ poids × réussite / Σ poids, sur les questions qui comptent et qui ont une réponse.
+ * Réussite : 1 si conforme (OK, Oui, un choix ou un nombre conformes), 0 si écart ; une note de 1 à 5 au prorata
+ * ((note − 1) / 4), un pourcentage pour sa valeur. Hors score : le texte libre, une question réglée « ne compte pas »,
+ * une réponse N/A, une question sans réponse. Les produits obligatoires (oblig_…) comptent ensemble pour une question
+ * de leur module : la part de ceux qui sont là. Une question inconnue de la checklist (les leviers, les demandes du
+ * bureau) compte avec un poids de 1.
+ * Le calcul part des réponses enregistrées et lit la checklist pour le type, le poids et le nom des modules : la
+ * tablette fait exactement le même (visites.js, scoreDe) — les deux doivent rester identiques.
+ */
+const VI_MODULES_HORS = ['xp' => ['Expérience client', 'Klantbeleving'], 'leviers' => ['Les leviers', 'De hefbomen'],
+    'bureau' => ['Demandé par le bureau', 'Gevraagd door het kantoor'], 'exterieur' => ['L’extérieur', 'De buitenkant']];
+
+/** La réussite d'une réponse entre 0 et 1, ou null : elle ne compte pas. */
+function viReussite(array $def, array $p): ?float
+{
+    $type = (string) ($def['type'] ?? (!empty($def['pct']) ? 'pct' : 'etat'));
+    if ($type === 'texte' || (array_key_exists('score', $def) && !$def['score'])) { return null; }
+    $etat = (string) ($p['etat'] ?? '');
+    if ($etat === 'na') { return null; }
+    $note = $p['note'] ?? null; $val = $p['valeur'] ?? null;
+    if ($type === 'note' && $note !== null) { return max(0.0, min(1.0, ((int) $note - 1) / 4)); }
+    if ($type === 'pct' && $val !== null) { return max(0.0, min(1.0, (float) $val / 100)); }
+    if ($etat === 'ok') { return 1.0; }
+    if ($etat === 'ko') { return 0.0; }
+    if ($note !== null) { return max(0.0, min(1.0, ((int) $note - 1) / 4)); }
+    return null;
+}
+
+/**
+ * Le score d'une visite : sa checklist (modules et questions) et ses réponses (viPointLigne).
+ * @return array{score: ?int, n: int, modules: list<array{id: string, nom: string, nom_nl: string, score: int, n: int}>}
+ */
+function viScore(array $checklist, array $points): array
+{
+    $defs = []; $noms = []; $ordre = [];
+    foreach ($checklist as $m) {
+        if (!is_array($m)) { continue; }
+        $id = (string) ($m['id'] ?? '');
+        if ($id === '') { continue; }
+        $noms[$id] = [(string) ($m['nom'] ?? $id), (string) ($m['nom_nl'] ?? '')];
+        $ordre[] = $id;
+        foreach ((array) ($m['points'] ?? []) as $pt) { if (is_array($pt) && isset($pt['ref'])) { $defs[(string) $pt['ref']] = $pt; } }
+    }
+    $par = []; $obl = [];
+    foreach ($points as $p) {
+        $ref = (string) ($p['ref'] ?? ''); $mod = (string) ($p['module'] ?? '');
+        if ($ref === '' || $mod === '') { continue; }
+        if (str_starts_with($ref, 'oblig_')) {
+            $e = (string) ($p['etat'] ?? '');
+            if ($e === 'ok' || $e === 'ko') { $obl[$mod][$e] = ($obl[$mod][$e] ?? 0) + 1; }
+            continue;
+        }
+        $def = $defs[$ref] ?? [];
+        $r = viReussite($def, $p);
+        if ($r === null) { continue; }
+        $w = in_array((int) ($def['poids'] ?? 1), [1, 2, 3], true) ? (int) ($def['poids'] ?? 1) : 1;
+        $par[$mod][] = [$w, $r];
+    }
+    foreach ($obl as $mod => $c) {
+        $n = ($c['ok'] ?? 0) + ($c['ko'] ?? 0);
+        if ($n > 0) { $par[$mod][] = [1, ($c['ok'] ?? 0) / $n]; }
+    }
+    $somme = static function (array $l): array { $w = 0; $x = 0.0; foreach ($l as [$a, $b]) { $w += $a; $x += $a * $b; } return [$w, $x]; };
+    $modules = []; $tous = [];
+    foreach (array_values(array_unique(array_merge($ordre, array_keys($par)))) as $id) {
+        if (empty($par[$id])) { continue; }
+        [$w, $x] = $somme($par[$id]);
+        $nom = $noms[$id] ?? VI_MODULES_HORS[$id] ?? [$id, ''];
+        $modules[] = ['id' => $id, 'nom' => $nom[0], 'nom_nl' => $nom[1], 'score' => (int) round($x / $w * 100), 'n' => count($par[$id])];
+        $tous = array_merge($tous, $par[$id]);
+    }
+    if (!$tous) { return ['score' => null, 'n' => 0, 'modules' => []]; }
+    [$w, $x] = $somme($tous);
+    return ['score' => (int) round($x / $w * 100), 'n' => count($tous), 'modules' => $modules];
+}
+
