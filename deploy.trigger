@@ -1057,3 +1057,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T11:51:48Z tablette chauffeur photos consignes
 2026-10-26T11:58:14Z produkty rapport annee
 2026-10-26 nouveaux produits CRM, essais tablette, accueil iPad (085)
+2026-10-26 tablette : design system L'Atelier, UX Apple
