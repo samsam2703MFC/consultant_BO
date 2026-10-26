@@ -254,6 +254,21 @@ final class DevProductService
         return $this->sheet($id);
     }
 
+    /**
+     * « Wprowadź » (audyt 2, lot C) : dane produktu testowego do kreatora produktu — nazwa, kategoria, dział, etykieta
+     * i receptura testu (bez ponownego wpisywania) ; null, gdy test już wprowadzony.
+     * @return array{test_id:int, name:string, id_category:?int, id_section:?int, label_type:int, id_recipe:?int, recipe_name:?string}|null
+     */
+    public function launchPrefill(int $id): ?array
+    {
+        $p = $this->repo->product($id);
+        if (!$p || $p['stage'] === 'launched') return null;
+        $raw = $this->repo->testProductRaw($id);
+        return ['test_id' => $id, 'name' => (string) $p['name'], 'id_category' => isset($raw['id_category']) ? (int) $raw['id_category'] : null,
+            'id_section' => $p['id_section'] !== null ? (int) $p['id_section'] : null, 'label_type' => (int) ($raw['label_type'] ?? 0),
+            'id_recipe' => $p['id_recipe'] !== null ? (int) $p['id_recipe'] : null, 'recipe_name' => $p['recipe_name']];
+    }
+
     public function trialPhoto(int $photoId): ?array
     {
         return $this->repo->trialPhoto($photoId);

@@ -20,7 +20,13 @@
          data-semi="{{ semiProducts|json_encode }}"
          data-ranges="{{ logisticsRanges|json_encode }}"
          data-shelf-life="{{ shelfLife|json_encode }}"
-         data-preparations="{{ preparations|json_encode }}">
+         data-preparations="{{ preparations|json_encode }}"
+         data-from-test="{{ from_test|json_encode }}">
+    {% if from_test %}
+        <div class="at-note at-note-safe mb-3"><i class="bi bi-rocket-takeoff"></i>
+            <strong>Wprowadzenie produktu testowego « {{ from_test.name }} ».</strong> Nazwa, kategoria, dział, etykieta{{ from_test.recipe_name ? ' i receptura « ' ~ from_test.recipe_name ~ ' »' : '' }} są już wpisane z testu — uzupełnij opakowanie i sprawdź.
+            Po zapisie test przechodzi na etap « Wprowadzony » i jest powiązany z nowym produktem.</div>
+    {% endif %}
 
     <ol class="at-steps at-steps-compact" aria-label="Kroki kreatora">
         <li data-step-tab="1"><span>Produkt</span></li>
@@ -535,7 +541,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 product: product,
                 materials: state.lines.filter((l) => l.type === 'material').map((l) => ({ id: l.id, quantity: l.quantity })),
                 semi_products: state.lines.filter((l) => l.type === 'semi_product').map((l) => ({ id: l.id, quantity: l.quantity })),
-                preparations: state.preps.map((p) => ({ id: p.id, duration_second: Math.round(p.minutes * 60) }))
+                preparations: state.preps.map((p) => ({ id: p.id, duration_second: Math.round(p.minutes * 60) })),
+                from_test: FROM_TEST ? FROM_TEST.test_id : null
             }
         });
         if (res.ok && res.redirect) {
@@ -552,6 +559,25 @@ document.addEventListener('DOMContentLoaded', function () {
             show(Math.min.apply(null, steps));
         }
         setHint(res.message || 'Nie udało się zapisać (kod ' + res.status + '). Nic nie zostało zapisane.', true);
+    }
+
+    // « Wprowadź » z produktu testowego : pola i receptura testu (bez ponownego wpisywania).
+    const FROM_TEST = JSON.parse(box.dataset.fromTest || 'null');
+    if (FROM_TEST) {
+        field('name').value = FROM_TEST.name || '';
+        if (FROM_TEST.id_category) field('id_category').value = String(FROM_TEST.id_category);
+        if (FROM_TEST.id_section) field('id_section').value = String(FROM_TEST.id_section);
+        box.querySelectorAll('[data-field="label_type"]').forEach((r) => {
+            r.checked = String(r.value) === String(FROM_TEST.label_type || 0);
+            r.closest('.at-choice').classList.toggle('is-checked', r.checked);
+        });
+        [['material', FROM_TEST.materials || [], MATERIALS], ['semi_product', FROM_TEST.semi_products || [], SEMI]].forEach(([type, rows, list]) => {
+            rows.forEach((r) => {
+                const item = list.find((x) => +x.id === +r.id);
+                if (item && !state.lines.some((l) => l.type === type && +l.id === +r.id)) state.lines.push({ type, id: +r.id, name: item.name, unit: item.unit_name, quantity: +r.quantity, price: null });
+            });
+        });
+        if (state.lines.length) scheduleCost();
     }
 
     renderLines();
