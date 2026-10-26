@@ -182,11 +182,15 @@ final class ProfitabilityRepository extends WorkshopRepository
         );
     }
 
-    /** @return array<string,int> 'YYYY-MM' => id du mois de coûts */
+    /**
+     * @return array<string,int> 'YYYY-MM' => id du mois de coûts. Seulement les mois saisis (au moins un salaire compté) :
+     * un mois ouvert dans le calculateur mais encore vide est remplacé par le dernier mois saisi (estimation signalée).
+     */
     public function costMonths(): array
     {
         $out = [];
-        foreach ($this->all('SELECT id, year, month FROM cost_month ORDER BY year, month') as $m) {
+        foreach ($this->all('SELECT m.id, m.year, m.month FROM cost_month m
+                WHERE EXISTS (SELECT 1 FROM cost_month_employee e WHERE e.month_id = m.id AND e.is_included = 1) ORDER BY m.year, m.month') as $m) {
             $out[sprintf('%04d-%02d', $m['year'], $m['month'])] = (int) $m['id'];
         }
         return $out;

@@ -13,6 +13,11 @@ return function(RouteCollector $r) {
         'method'     => 'saveStockParams'
     ]);
 
+    $r->addRoute('POST', '/ajax/settings/alert-params', [
+        'controller' => App\Controllers\Web\Settings\SettingsController::class,
+        'method'     => 'saveAlertParams'
+    ]);
+
     $r->addRoute('GET', '/settings/ksef', [
         'controller' => App\Controllers\Web\Settings\KsefSettingsController::class,
         'method' => 'index'

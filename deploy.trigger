@@ -1058,4 +1058,6 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T11:58:14Z produkty rapport annee
 2026-10-26 nouveaux produits CRM, essais tablette, accueil iPad (085)
 2026-10-26 tablette : design system L'Atelier, UX Apple
+2026-10-26 alertes et échéances (086)
 2026-10-26T12:52:22Z tablette KPI et santé du magasin (CA/ETP, N-1, structure des ventes)
+2026-10-26 tablette : carte Année et six leviers du dashboard, étape des leviers, produits obligatoires

@@ -3,13 +3,14 @@
 namespace App\Services\Dashboard;
 
 use App\Repositories\Dashboard\TodayRepository;
+use App\Services\Notification\DeadlineAlertService;
 
 /**
  * Strona „Dzisiaj”: co wysyłamy, co trzeba wyprodukować i co czeka na decyzję.
  */
 class TodayService
 {
-    public function __construct(private TodayRepository $repository) {}
+    public function __construct(private TodayRepository $repository, private DeadlineAlertService $alerts) {}
 
     public function overview(): array
     {
@@ -55,7 +56,7 @@ class TodayService
                 'unpaid' => (int) ($proformas['unpaid'] ?? 0),
                 'not_sent' => (int) ($proformas['not_sent'] ?? 0),
             ],
-            'todo' => $this->todo($days, $complaints, $proformas, $readyPallets, $belowMinimum, $withoutRecipe, $complaintAgeDays),
+            'todo' => array_merge($this->todo($days, $complaints, $proformas, $readyPallets, $belowMinimum, $withoutRecipe, $complaintAgeDays), $this->alertTodo()),
             'latest' => $this->repository->getLatestOrders(),
         ];
     }
@@ -83,6 +84,16 @@ class TodayService
         unset($item);
         usort($todo, fn($a, $b) => [$a['mine'] ? 0 : 1, $a['order']] <=> [$b['mine'] ? 0 : 1, $b['order']]);
         return $todo;
+    }
+
+    /** Échéances : essais de nouveaux produits en retard, lancements à faire, coûts du mois manquants (sans bloquer la page). */
+    private function alertTodo(): array
+    {
+        try {
+            return $this->alerts->todo();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /** Lista „Do zrobienia”: tylko to, co wymaga ruchu; każda pozycja prowadzi do właściwej strony. */

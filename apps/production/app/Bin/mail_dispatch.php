@@ -5,7 +5,8 @@ declare(strict_types=1);
  * E-mails automatiques : transforme les nouveaux événements (commandes, livraisons prévues,
  * expéditions, WDT, factures, proformas) en messages en file selon les règles actives
  * (Komunikacja › Automatyczne e-maile), met en file le rapport mensuel de direction (une fois par
- * mois, si des destinataires sont configurés), puis passe la file d'envoi.
+ * mois, si des destinataires sont configurés), publie les alertes d'échéances dans la cloche (réclamations sans
+ * décision, essais de nouveaux produits en retard, coûts du mois non saisis), puis passe la file d'envoi.
  *   php Bin/mail_dispatch.php        à lancer par cron toutes les 5 minutes
  * L'envoi réel dépend de MAIL_DELIVERY_MODE (.env) : live, redirect ou log_only.
  */
@@ -30,8 +31,15 @@ try {
         fwrite(STDERR, 'mail_dispatch monthly report: ' . $e->getMessage() . PHP_EOL);
         $report = ['error' => $e->getMessage()];
     }
+    // Alertes et échéances dans la cloche (réclamations sans décision, essais en retard, coûts du mois) : à part aussi.
+    try {
+        $alerts = $container->get(App\Services\Notification\DeadlineAlertService::class)->run();
+    } catch (Throwable $e) {
+        fwrite(STDERR, 'mail_dispatch alerts: ' . $e->getMessage() . PHP_EOL);
+        $alerts = ['error' => $e->getMessage()];
+    }
     $delivery = $container->get(App\Services\Communication\CommunicationEmailDeliveryWorker::class)->processDue(50);
-    echo json_encode(['dispatch' => $dispatch, 'monthly_report' => $report, 'delivery' => $delivery], JSON_UNESCAPED_UNICODE) . PHP_EOL;
+    echo json_encode(['dispatch' => $dispatch, 'monthly_report' => $report, 'alerts' => $alerts, 'delivery' => $delivery], JSON_UNESCAPED_UNICODE) . PHP_EOL;
 } catch (Throwable $e) {
     fwrite(STDERR, 'mail_dispatch: ' . $e->getMessage() . PHP_EOL);
     exit(1);
