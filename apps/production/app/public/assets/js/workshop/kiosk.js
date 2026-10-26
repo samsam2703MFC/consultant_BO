@@ -131,10 +131,10 @@
     };
     const icon = (name, cls) => `<svg class="k-ico ${cls || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
 
-    // Avatar : initiales et teinte stable par nom.
+    // Avatar : initiales et ton de la maison (rubis, abricot, ambre, encre, beige) stable par nom.
     const initials = (name) => String(name || '?').trim().split(/\s+/).slice(0, 2).map(w => w.charAt(0)).join('').toUpperCase() || '?';
     const hue = (name) => [...String(name || '')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
-    const avatar = (name, cls) => `<span class="kiosk-avatar ${cls || ''}" style="--hue:${hue(name)}" aria-hidden="true">${esc(initials(name))}</span>`;
+    const avatar = (name, cls) => `<span class="kiosk-avatar is-tone-${hue(name) % 5} ${cls || ''}" aria-hidden="true">${esc(initials(name))}</span>`;
 
     // En-tête : retour (lead) éventuel, marque et date, heure, langue ; personne connectée et sortie.
     // nav = menu en bas aussi sur un écran de détail (partie, recette, nouveau produit).
@@ -216,7 +216,7 @@
         const office = !deviceInfo.group_id;
         const now = new Date();
         const widgetHead = (ic, cls, title, extra) => `<header class="kiosk-widget-head"><span class="kiosk-widget-icon ${cls}">${icon(ic)}</span><h2>${title}</h2>${extra || ''}</header>`;
-        const peopleWidget = `<section class="kiosk-widget is-team" data-team-widget>${widgetHead('users', 'is-green', esc(t(office ? 'office_people' : 'home_people_title')), '<span class="kiosk-widget-meta" data-present></span>')}
+        const peopleWidget = `<section class="kiosk-widget is-team" data-team-widget>${widgetHead('users', 'is-soft', esc(t(office ? 'office_people' : 'home_people_title')), '<span class="kiosk-widget-meta" data-present></span>')}
                 <div class="kiosk-apps" data-people><p class="kiosk-muted">${esc(t('loading'))}</p></div>
                 <p class="kiosk-widget-hint" data-team-hint>${esc(t('home_team_hint'))}</p></section>`;
         const qrWidget = `<section class="kiosk-widget is-qr" data-qr-card hidden><canvas data-qr width="220" height="220" role="img" aria-label="${esc(t('qr_title'))}"></canvas>
@@ -230,17 +230,17 @@
                 <div class="kiosk-ipad-date">${esc(now.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'long', day: 'numeric', month: 'long'}))}</div>
                 <p class="kiosk-ipad-greet" data-hero-title>${esc(t(office ? 'office_hero' : 'home_title'))}</p></section>
             <div class="kiosk-widgets">${office ? qrWidget + peopleWidget : `${peopleWidget}
-                <section class="kiosk-widget is-today" data-today>${widgetHead('calendar-days', 'is-orange', esc(t('home_today_title')), `<button type="button" class="kiosk-widget-link" data-week-open>${esc(t('home_week_all'))} ›</button>`)}
+                <section class="kiosk-widget is-today" data-today>${widgetHead('calendar-days', 'is-abricot', esc(t('home_today_title')), `<button type="button" class="kiosk-widget-link" data-week-open>${esc(t('home_week_all'))} ›</button>`)}
                     <div class="kiosk-widget-stats" data-stats></div><div data-today-list><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>
-                <section class="kiosk-widget is-dev" data-dev-widget hidden>${widgetHead('flask-conical', 'is-purple', esc(t('home_dev_title')), '<span class="kiosk-widget-meta" data-dev-count></span>')}
+                <section class="kiosk-widget is-dev" data-dev-widget hidden>${widgetHead('flask-conical', 'is-ruby', esc(t('home_dev_title')), '<span class="kiosk-widget-meta" data-dev-count></span>')}
                     <div class="kiosk-dev-minis" data-dev-list></div></section>
                 ${qrWidget}
-                <section class="kiosk-widget is-deliveries" data-deliveries hidden>${widgetHead('truck', 'is-blue', esc(t('home_deliveries_title')))}<div data-delivery-list></div></section>`}</div>
+                <section class="kiosk-widget is-deliveries" data-deliveries hidden>${widgetHead('truck', 'is-soft', esc(t('home_deliveries_title')))}<div data-delivery-list></div></section>`}</div>
             <nav class="kiosk-dock" aria-label="${esc(t('home_dock'))}">
-                ${dockApp('data-dock-badge', 'id-card', 'is-red', t('home_dock_badge'))}
-                ${'NDEFReader' in window ? dockApp('data-nfc', 'nfc', 'is-blue', t('nfc')) : ''}
-                ${office ? '' : dockApp('data-week-open', 'calendar-days', 'is-orange', t('home_week_all'))}
-                ${dockApp('data-dock-qr', 'smartphone', 'is-dark', t('home_dock_phone'))}
+                ${dockApp('data-dock-badge', 'id-card', 'is-ruby', t('home_dock_badge'))}
+                ${'NDEFReader' in window ? dockApp('data-nfc', 'nfc', 'is-ink', t('nfc')) : ''}
+                ${office ? '' : dockApp('data-week-open', 'calendar-days', 'is-abricot', t('home_week_all'))}
+                ${dockApp('data-dock-qr', 'smartphone', 'is-soft', t('home_dock_phone'))}
             </nav>
             <input class="kiosk-badge-input" data-badge autocomplete="off" aria-label="${esc(t('badge'))}"></div>`;
         const badge = el.querySelector('[data-badge]');
