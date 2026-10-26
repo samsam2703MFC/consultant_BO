@@ -44,7 +44,7 @@
     // Słowa francuskie i potoczne → słowa z menu (UI po polsku).
     var ALIASES = {
         'marge': 'marza', 'prix': 'ceny cennik', 'cout': 'koszt', 'couts': 'koszty', 'vente': 'sprzedaz', 'ventes': 'sprzedaz',
-        'commande': 'zamowienia', 'commandes': 'zamowienia', 'client': 'klienci', 'clients': 'klienci', 'franchise': 'franczyza',
+        'commande': 'zamowienia', 'commandes': 'zamowienia', 'client': 'klienci klient', 'clients': 'klienci klient', 'franchise': 'franczyza',
         'produit': 'produkt produkty', 'produits': 'produkty', 'fiche': 'karty', 'recette': 'receptura receptury', 'recettes': 'receptury',
         'matiere': 'surowce', 'matieres': 'surowce', 'fournisseur': 'dostawcy dostawy', 'fournisseurs': 'dostawcy dostawy', 'achat': 'zakupy', 'achats': 'zakupy',
         'facture': 'faktury proforma', 'factures': 'faktury', 'livraison': 'wysylka dostawy', 'livraisons': 'dostawy wysylka', 'arrivage': 'dostawy', 'arrivages': 'dostawy', 'approvisionnement': 'dostawy zaopatrzenie', 'expedition': 'wysylka', 'camion': 'ciezarowki pojazdy',
