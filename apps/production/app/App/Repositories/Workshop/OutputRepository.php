@@ -344,7 +344,7 @@ final class OutputRepository extends WorkshopRepository
             $like = '%' . addcslashes($search, '\\%_') . '%';
             array_push($params, $like, $like, $like, $like);
         }
-        return $this->all("SELECT o.*, COALESCE(fp.name, pr.name) AS item_name, i.base_unit, fp.ppc, g.name_pl AS group_name,
+        return $this->all("SELECT o.*, COALESCE(fp.name, pr.name) AS item_name, i.base_unit, i.id_final_product, fp.ppc, g.name_pl AS group_name,
                                   TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name, d.name AS device_name
                            FROM n_prod_output o
                            JOIN n_prod_item i ON i.id = o.id_item
@@ -369,5 +369,33 @@ final class OutputRepository extends WorkshopRepository
             $out[(int) $r['id_output']][] = $r;
         }
         return $out;
+    }
+
+    /**
+     * Audyt 2, P22 : dokąd poszły kartony produktu oklejone w dniach [od, do] (etykiety kartonów z systemu magazynu,
+     * carton_stock) — palety, klienci, data dostawy, numery WZ. Etykieta kartonu nie niesie numeru partii z tabletu :
+     * powiązanie partii = ten sam produkt i dzień etykiety (prawdopodobne).
+     *
+     * @param list<int> $productIds
+     * @return list<array> id_product, date_add, status, id_customer, customer, delivery_date, cartons, pallets, wz
+     */
+    public function cartonsShipped(array $productIds, string $from, string $to): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $productIds))));
+        if (!$ids) return [];
+        $in = implode(',', $ids);
+        return $this->all("SELECT cs.id_product, cs.date_add, cs.status, pd.id_customer, c.company AS customer, pd.delivery_date,
+                COUNT(DISTINCT cs.id_carton) AS cartons, COUNT(DISTINCT pd.id_palet) AS pallets,
+                (SELECT GROUP_CONCAT(DISTINCT w.doc_num ORDER BY w.doc_num SEPARATOR ', ') FROM document_wz w
+                    JOIN document_wz_product wp ON wp.id_document_wz = w.id AND wp.id_product = cs.id_product
+                    WHERE pd.id_customer IS NOT NULL AND w.id_customer = pd.id_customer
+                      AND w.established_date BETWEEN pd.delivery_date - INTERVAL 2 DAY AND pd.delivery_date + INTERVAL 1 DAY) AS wz
+            FROM carton_stock cs
+            LEFT JOIN carton_pallet_connection cpc ON cpc.id_carton = cs.id_carton
+            LEFT JOIN palets_delivery pd ON pd.id_palet = cpc.id_palet
+            LEFT JOIN customer c ON c.id = pd.id_customer
+            WHERE cs.id_product IN ({$in}) AND cs.date_add BETWEEN ? AND ?
+            GROUP BY cs.id_product, cs.date_add, cs.status, pd.id_customer, c.company, pd.delivery_date
+            ORDER BY pd.delivery_date, c.company", [$from, $to]);
     }
 }

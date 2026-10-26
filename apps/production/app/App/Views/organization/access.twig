@@ -1,15 +1,15 @@
 {% extends "layouts/base.twig" %}
 
-{% block title %}Uprawnienia stanowisk{% endblock %}
+{% block title %}Uprawnienia funkcji{% endblock %}
 
 {% block page_heading %}
     <div class="page-heading at-profit-head">
         <div class="page-title">
-            <h3>Uprawnienia stanowisk</h3>
+            <h3>Uprawnienia funkcji</h3>
             <p class="text-subtitle text-muted">Które strony ERP widzi każde stanowisko. Zmiana zapisuje się od razu ; strony bez dostępu znikają z menu i wyszukiwarki, a adres pokazuje « Brak dostępu ». Dzisiaj i Moje zadania widzą wszyscy.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a class="btn btn-outline-primary" href="{{ root }}/organization/positions"><i class="bi bi-diagram-3"></i> Stanowiska i zadania</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/organization/positions"><i class="bi bi-diagram-3"></i> Funkcje i zadania</a>
         </div>
     </div>
 {% endblock %}
@@ -20,7 +20,7 @@
         <div class="card-body">
             <p class="mb-1"><i class="bi bi-shield-check"></i> <strong>Administrator</strong> (rola « administrator produkcji ») widzi wszystkie strony, także te oznaczone 🔒 :
                 {% for a in admins %}<span class="at-chip"><i class="bi bi-person"></i> {{ a.name }}</span>{% else %}<span class="at-sub">nikt — konto « admin » jest administratorem.</span>{% endfor %}</p>
-            <p class="at-sub mb-0">Stanowisko użytkownika ustawiasz w « Stanowiska i zadania » ; użytkownik bez stanowiska widzi strony z kolumny « Bez stanowiska ».</p>
+            <p class="at-sub mb-0">Stanowisko użytkownika ustawiasz w « Funkcje i zadania » ; użytkownik bez stanowiska widzi strony z kolumny « Bez stanowiska ».</p>
         </div>
     </div>
 

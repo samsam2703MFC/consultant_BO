@@ -44,23 +44,23 @@
     // Słowa francuskie i potoczne → słowa z menu (UI po polsku).
     var ALIASES = {
         'marge': 'marza', 'prix': 'ceny cennik', 'cout': 'koszt', 'couts': 'koszty', 'vente': 'sprzedaz', 'ventes': 'sprzedaz',
-        'commande': 'zamowienia', 'commandes': 'zamowienia', 'client': 'klienci klient', 'clients': 'klienci klient', 'franchise': 'franczyza',
+        'commande': 'zamowienia zamowienie', 'commandes': 'zamowienia', 'client': 'klienci klient', 'clients': 'klienci klient', 'franchise': 'franczyza',
         'produit': 'produkt produkty', 'produits': 'produkty produkt', 'fiche': 'karty', 'recette': 'receptura receptury', 'recettes': 'receptury',
-        'matiere': 'surowce surowca surowiec', 'matieres': 'surowce surowcow', 'fournisseur': 'dostawcy dostawy', 'fournisseurs': 'dostawcy dostawy', 'achat': 'zakupy', 'achats': 'zakupy',
-        'facture': 'faktury proforma', 'factures': 'faktury', 'livraison': 'wysylka dostawy', 'livraisons': 'dostawy wysylka', 'arrivage': 'dostawy', 'arrivages': 'dostawy', 'approvisionnement': 'dostawy zaopatrzenie', 'expedition': 'wysylka', 'camion': 'ciezarowki pojazdy',
+        'matiere': 'surowce surowca surowiec', 'matieres': 'surowce surowcow surowca', 'fournisseur': 'dostawcy dostawy', 'fournisseurs': 'dostawcy dostawy', 'achat': 'zakupy', 'achats': 'zakupy',
+        'facture': 'faktury proforma faktura', 'factures': 'faktury', 'livraison': 'wysylka dostawy', 'livraisons': 'dostawy wysylka', 'arrivage': 'dostawy', 'arrivages': 'dostawy', 'approvisionnement': 'dostawy zaopatrzenie', 'expedition': 'wysylka', 'camion': 'ciezarowki pojazdy',
         'camions': 'ciezarowki pojazdy', 'tournee': 'trasy', 'tournees': 'trasy', 'chargement': 'zaladunek', 'transporteur': 'przewoznicy',
         'stock': 'magazynu magazynowe stan magazyn', 'stocks': 'magazynu magazynowe', 'inventaire': 'magazynu inwentaryzacja', 'couverture': 'magazynu pokrycie', 'emballage': 'opakowania', 'emballages': 'opakowania', 'production': 'produkcja', 'planning': 'planowanie gantt',
         'equipe': 'zespol', 'personnel': 'pracownicy personelu', 'employe': 'pracownicy', 'employes': 'pracownicy', 'tablette': 'tablet tablety',
         'pointage': 'czas pracy', 'competences': 'kompetencje', 'prime': 'premie', 'primes': 'premie', 'tache': 'zadania', 'taches': 'zadania',
-        'reclamation': 'reklamacje', 'reclamations': 'reklamacje', 'retour': 'zwroty', 'retours': 'zwroty', 'parametres': 'ustawienia',
-        'reglages': 'ustawienia', 'utilisateur': 'uzytkownicy', 'utilisateurs': 'uzytkownicy', 'compteur': 'licznik', 'appareil': 'urzadzenia',
+        'reclamation': 'reklamacje', 'reclamations': 'reklamacje', 'retour': 'zwroty', 'retours': 'zwroty', 'parametres': 'ustawienia parametry',
+        'reglages': 'ustawienia parametry', 'utilisateur': 'uzytkownicy', 'utilisateurs': 'uzytkownicy', 'compteur': 'licznik', 'appareil': 'urzadzenia',
         'appareils': 'urzadzenia', 'rentabilite': 'rentownosc', 'tableau': 'dashboard tabela', 'aujourdhui': 'dzisiaj', 'logistique': 'logistyka',
         'finances': 'finanse', 'analyse': 'analiza', 'langues': 'jezyki', 'poids': 'wagi', 'nutrition': 'odzywcze', 'archives': 'archiwum',
         'question': 'pytania', 'questions': 'pytania', 'tenue': 'pytania odziez', 'hygiene': 'higiena pytania', 'heures': 'godziny',
         'badge': 'identyfikatory', 'badges': 'identyfikatory', 'telephone': 'telefony', 'distribution': 'dystrybucja',
         'document': 'dokumenty', 'documents': 'dokumenty', 'calcul': 'kalkulacja kalkulator', 'cmr': 'cmr dokumenty', 'imprimer': 'drukuj dokumenty druk',
         'mail': 'poczta skrzynka', 'mails': 'poczta skrzynka e-maile', 'email': 'poczta skrzynka e-maile', 'courriel': 'poczta', 'boite': 'poczta skrzynka', 'reception': 'poczta dostawy przyjecie', 'envoyes': 'wyslane niewyslane',
-        'messagerie': 'poczta', 'groupe': 'grupy grup grupa zespol', 'groupes': 'grupy grup', 'semaine': 'tydzien tygodni', 'qui': 'kto', 'livre': 'dostarcza dostawy', 'livrent': 'dostarcza dostawy', 'quoi': 'co', 'quand': 'kiedy', 'hebdomadaire': 'tydzien', 'hebdo': 'tydzien', 'cobot': 'coboty cobot', 'cobots': 'coboty cobot', 'photo': 'zdjecia zdjecie', 'photos': 'zdjecia zdjecie',
+        'messagerie': 'poczta', 'groupe': 'grupy grup grupa zespol', 'groupes': 'grupy grup', 'semaine': 'tydzien tygodni', 'qui': 'kto', 'livre': 'dostarcza dostawy dokad', 'livrent': 'dostarcza dostawy', 'quoi': 'co', 'quand': 'kiedy', 'hebdomadaire': 'tydzien', 'hebdo': 'tydzien', 'cobot': 'coboty cobot', 'cobots': 'coboty cobot', 'photo': 'zdjecia zdjecie', 'photos': 'zdjecia zdjecie',
         'remplir': 'wypelnienia', 'importer': 'import', 'xlsx': 'excel', 'donnees': 'dane tabela', 'capacite': 'pojemnosc pojemnosci', 'capacites': 'pojemnosci',
         'machine': 'stanowiska maszyny', 'machines': 'stanowiska maszyny', 'poste': 'stanowiska', 'postes': 'stanowiska', 'four': 'stanowiska piece', 'fours': 'stanowiska piece',
         'horaire': 'zmiany godziny', 'horaires': 'zmiany godziny', 'shift': 'zmiany', 'shifts': 'zmiany', 'effectif': 'obsada', 'effectifs': 'obsada', 'equipes': 'zespol zespolow obsada',
@@ -75,7 +75,7 @@
         'valider': 'zatwierdzenie zatwierdzona zatwierdz', 'validation': 'zatwierdzenie zatwierdzona zatwierdzenia', 'lance': 'wprowadzone wprowadzony', 'lances': 'wprowadzone',
         'pipeline': 'etapy', 'prototype': 'test nowe', 'degustation': 'test', 'accueil': 'ekran glowny', 'ipad': 'tablet ekran',
         'alerte': 'alerty dzwonek', 'alertes': 'alerty dzwonek', 'echeance': 'terminy termin', 'echeances': 'terminy', 'retard': 'zalegle terminy termin alerty',
-        'retards': 'zalegle terminy termin', 'rappel': 'alerty terminy przypomnienie', 'rappels': 'alerty terminy przypomnienia', 'cloche': 'dzwonek alerty', 'notification': 'dzwonek alerty', 'notifications': 'dzwonek alerty',
+        'retards': 'zalegle terminy termin', 'rappel': 'alerty terminy przypomnienie wycofanie', 'rappels': 'alerty terminy przypomnienia', 'cloche': 'dzwonek alerty', 'notification': 'dzwonek alerty', 'notifications': 'dzwonek alerty',
         'historique': 'historia wersje', 'historiques': 'historia', 'version': 'wersje wersja', 'versions': 'wersje', 'evolution': 'historia koszt miesiac',
         'vigueur': 'obowiazuje', 'depuis': 'obowiazuje', 'changement': 'zmiany zmiana', 'changements': 'zmiany', 'modification': 'zmiany edycja',
         'modifications': 'zmiany', 'composition': 'sklad kompozycje', 'compositions': 'kompozycje sklad',
@@ -107,12 +107,12 @@
         'commander': 'zamow zamowienia', 'apres': 'po', 'planification': 'planowanie planowaniu plan',
         'feuille': 'arkusz', 'semaines': 'tyg tygodni', 'clic': 'kliknieciem', 'masse': 'wszystkie', 'compter': 'policzone liczenia', 'max': 'maks maksymalne', 'salaire': 'wynagrodzenie koszt pracodawcy', 'salaires': 'wynagrodzenie koszt pracodawcy', 'paie': 'wynagrodzenie placy', 'verrouiller': 'zamkniety zamknij', 'verrouille': 'zamkniety zamrozony', 'fige': 'zamrozony', 'modifier': 'zmien zmiana edycja korekta', 'calculateur': 'kalkulator', 'budget': 'budzet budzetu budzecie', 'liste': 'lista listy', 'listes': 'listy lista', 'jour': 'dnia dzien dzis', 'besoin': 'zapotrzebowanie potrzeba', 'besoins': 'zapotrzebowanie potrzeba',
         'cloture': 'zamkniecie miesiaca', 'cloturer': 'zamknij zamkniecie miesiaca', 'clore': 'zamknij zamkniecie', 'fermer': 'zamknij zamkniecie', 'fermeture': 'zamkniecie miesiaca',
-        'medias': 'media', 'media': 'media', 'electricite': 'media', 'fixes': 'stale', 'fixe': 'stale', 'copier': 'kopiuj', 'precedent': 'poprzedniego', 'inventorier': 'inwentaryzacja arkusz', 'automatique': 'automatyczne automat automatycznie', 'automatiques': 'automatyczne automat', 'paye': 'oplacona oplacone', 'payee': 'oplacona oplacone', 'payees': 'oplacone', 'remplacement': 'zastepcze', 'remplacements': 'zastepcze', 'relivrer': 'ponowna dostawa', 'frise': 'os statusu', 'rebut': 'straty strata odpady', 'rebuts': 'straty strata odpady', 'dechet': 'straty odpady', 'dechets': 'straty odpady', 'encoder': 'zakoduj', 'encodage': 'zakoduj', 'correction': 'poprawka poprawki', 'corriger': 'popraw poprawka', 'maximum': 'maks maksimum', 'autorise': 'wolno maksimum'
+        'medias': 'media', 'media': 'media', 'electricite': 'media', 'fixes': 'stale', 'fixe': 'stale', 'copier': 'kopiuj', 'precedent': 'poprzedniego', 'inventorier': 'inwentaryzacja arkusz', 'automatique': 'automatyczne automat automatycznie', 'automatiques': 'automatyczne automat', 'paye': 'oplacona oplacone', 'payee': 'oplacona oplacone', 'payees': 'oplacone', 'remplacement': 'zastepcze', 'remplacements': 'zastepcze', 'relivrer': 'ponowna dostawa', 'frise': 'os statusu', 'rebut': 'straty strata odpady', 'rebuts': 'straty strata odpady', 'dechet': 'straty odpady', 'dechets': 'straty odpady', 'encoder': 'zakoduj', 'encodage': 'zakoduj', 'correction': 'poprawka poprawki', 'corriger': 'popraw poprawka', 'maximum': 'maks maksimum', 'autorise': 'wolno maksimum', 'reglage': 'ustawienia parametry', 'parametre': 'parametry parametr ustawienia', 'configuration': 'ustawienia parametry', 'tracabilite': 'identyfikowalnosc partie dokad', 'retrait': 'wycofanie', 'source': 'zrodlo', 'origine': 'zrodlo', 'lecture': 'odczytu', 'offre': 'oferta oferte oferty', 'ou': 'dokad', 'destination': 'dokad klienci', 'expedie': 'wyslane dokad', 'parti': 'dokad wyslane partie', 'partis': 'dokad wyslane'
     };
 
     var menu = null;
     // Słowa łączące (FR, PL) pomijane w zapytaniu : « preuve de livraison », « plan na tydzień ».
-    var STOP = { 'a': 1, 'non': 1, 'de': 1, 'du': 1, 'des': 1, 'la': 1, 'le': 1, 'les': 1, 'et': 1, 'au': 1, 'aux': 1, 'en': 1, 'pour': 1, 'par': 1, 'un': 1, 'une': 1, 'na': 1, 'do': 1, 'od': 1, 'ze': 1 };
+    var STOP = { 'a': 1, 'non': 1, 'de': 1, 'du': 1, 'des': 1, 'la': 1, 'le': 1, 'les': 1, 'et': 1, 'au': 1, 'aux': 1, 'en': 1, 'pour': 1, 'par': 1, 'un': 1, 'une': 1, 'na': 1, 'do': 1, 'od': 1, 'ze': 1, 'est': 1, 'sont': 1 };
 
     function menuIndex() {
         if (menu) return menu;

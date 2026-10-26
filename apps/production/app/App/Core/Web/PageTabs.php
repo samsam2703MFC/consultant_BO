@@ -16,6 +16,11 @@ final class PageTabs
         // (druk, tablet) z listami dnia (PDF), dostawy surowców (kto dostarcza co i kiedy), partie, śledzenie produkcji (plan / zrobione / straty), jakość, stanowiska i coboty,
         // tabela do wypełnienia (Excel : dane rzeczywiste pracowni → import).
         // Tablet produkcji i jego zarządzanie : osobna pozycja w railu pod Produkcją.
+        // Wynik grup : miesiąc (wynik i produkcja grup) i tydzień (rentowność grup) na jednej pozycji (audyt 2, N7).
+        'group_results' => ['label' => 'Wynik grup', 'section' => 'Analiza', 'icon' => 'bi-bar-chart-steps', 'tabs' => [
+            ['/dashboard/results', 'Miesiąc : wynik i produkcja grup', 'bi-bar-chart-steps'],
+            ['/dashboard/groups', 'Tydzień : rentowność grup', 'bi-calendar-week'],
+        ]],
         'production' => ['label' => 'Produkcja', 'section' => 'Produkcja', 'icon' => 'bi-gear-wide-connected', 'tabs' => [
             ['/workshop/sheet', 'Arkusz tygodnia', 'bi-table'],
             ['/workshop/gantt', 'Plan tygodnia', 'bi-calendar-week'],
@@ -24,7 +29,7 @@ final class PageTabs
             ['/workshop/traceability', 'Partie i identyfikowalność', 'bi-upc-scan'],
             ['/production/follow-up', 'Śledzenie produkcji', 'bi-graph-up-arrow'],
             ['/purchasing/nc', 'Niezgodności', 'bi-exclamation-octagon'],
-            ['/workshop/workstations', 'Stanowiska i coboty', 'bi-robot'],
+            ['/workshop/workstations', 'Stanowiska robocze i coboty', 'bi-robot'],
             ['/workshop/data-sheet', 'Tabela do wypełnienia', 'bi-file-earmark-spreadsheet'],
         ]],
         // Magazyn produktów gotowych : stan dziś (zamówienia, min., maks., do produkcji), zapas MTS (kartony, palety, wartość),
@@ -41,8 +46,8 @@ final class PageTabs
             ['/recipes', 'Receptury', 'bi-journal-text'],
             ['/semi-products', 'Półprodukty', 'bi-diagram-2'],
             ['/compositions', 'Kompozycje', 'bi-layers'],
-            ['/test-products/pipeline', 'Nowe produkty : etapy', 'bi-kanban'],
-            ['/test-products', 'Produkty w rozwoju (lista)', 'bi-clipboard-data'],
+            // Produkty w rozwoju : etapy (pipeline) i lista na jednej zakładce, przełącznik na stronie (N7).
+            ['/test-products', 'Nowe produkty (etapy i lista)', 'bi-kanban'],
         ]],
         // Opakowania : BDO (wagi, dane, raporty) i PPWR (rejestr, kartony sprzedażowe, raporty) — jedna pozycja w railu.
         'packaging' => ['label' => 'Opakowania BDO + PPWR', 'section' => 'Produkt', 'icon' => 'bi-recycle', 'tabs' => [
@@ -54,17 +59,17 @@ final class PageTabs
             ['/ppwr/reports', 'Raporty PPWR', 'bi-file-earmark-text'],
         ]],
         // Komunikacja : kto dostaje jakie dokumenty, historia wiadomości, stan wysyłek (błędy, kolejki, ponów jedną pozycję)
-        'communication' => ['label' => 'Komunikacja', 'section' => 'Zamówienia', 'icon' => 'bi-envelope', 'tabs' => [
+        'communication' => ['label' => 'Komunikacja', 'section' => 'Sprzedaż', 'icon' => 'bi-envelope', 'tabs' => [
             ['/communication/distribution', 'Dystrybucja dokumentów', 'bi-diagram-3'],
             ['/communication/messages', 'Historia wiadomości', 'bi-envelope-open'],
             ['/communication/outbox', 'Stan wysyłek', 'bi-send-exclamation'],
         ]],
         // Wzory wydruków PDF (przykłady w językach klientów) i szablony e-maili
-        'templates' => ['label' => 'Wzory dokumentów i e-maili', 'section' => 'Ustawienia › Klienci', 'icon' => 'bi-file-earmark-richtext', 'tabs' => [
+        'templates' => ['label' => 'Wzory dokumentów i e-maili', 'section' => 'Ustawienia › Ustawienia', 'icon' => 'bi-file-earmark-richtext', 'tabs' => [
             ['/communication/document-templates', 'Dokumenty PDF', 'bi-file-earmark-pdf'],
             ['/communication/templates', 'Szablony e-mail', 'bi-envelope-paper'],
         ]],
-        'returns' => ['label' => 'Zwroty', 'section' => 'Zamówienia', 'icon' => 'bi-arrow-counterclockwise', 'tabs' => [
+        'returns' => ['label' => 'Zwroty', 'section' => 'Sprzedaż', 'icon' => 'bi-arrow-counterclockwise', 'tabs' => [
             ['/client-complaints/to-ship', 'Do wysłania', 'bi-box-arrow-up'],
             ['/client-complaints/pending-products', 'Oczekujące produkty', 'bi-hourglass-split'],
             ['/client-complaints/pending-shipment', 'Oczekujące zwroty (wysyłka)', 'bi-truck'],
@@ -86,6 +91,11 @@ final class PageTabs
             ['/shipments', 'Wysyłki i dokumenty', 'bi-truck'],
             ['/shipments/differences', 'Różnice i problemy dostaw', 'bi-exclamation-diamond'],
             ['/archive/documents/picking-lists', 'Archiwum list kompletacyjnych', 'bi-list-check'],
+        ]],
+        // Aktywność w ERP i licznik stron : jedna pozycja w Administracji (N7).
+        'usage' => ['label' => 'Aktywność i licznik stron', 'section' => 'Administracja', 'icon' => 'bi-activity', 'tabs' => [
+            ['/organization/activity', 'Aktywność w ERP', 'bi-activity'],
+            ['/settings/page-usage', 'Licznik stron', 'bi-bar-chart'],
         ]],
     ];
 

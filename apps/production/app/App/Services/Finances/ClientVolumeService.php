@@ -10,7 +10,7 @@ use App\Services\Communication\PaymentReminderContextService;
 use App\Services\Production\Cost\SectionUnitCostService;
 
 /**
- * Finanse › Klienci : wolumen i marża. Sprzedaż WDT (ta sama definicja co Analiza sprzedaży i Rentowność) klient po
+ * Sprzedaż › Klienci : wolumen i marża. Sprzedaż WDT (ta sama definicja co Analiza sprzedaży i Rentowność) klient po
  * kliencie i miesiąc po miesiącu, porównanie z tym samym okresem roku poprzedniego (N-1), marża po surowcach (koszt
  * receptury z karty produktu) i po koszcie pełnym (dział, koszty ogólne, logistyka — kalkulator kosztów), średnia
  * cena kartonu (efekt ceny), nieopłacone proformy i dopłaty różnic, alerty.

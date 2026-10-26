@@ -20,7 +20,8 @@ class MaterialController extends BaseController
         private MaterialSupplierService $materialSupplierService,
         private UnitService             $unitService,
         private AllergenService $allergenService,
-        private MaterialCreationService $creation
+        private MaterialCreationService $creation,
+        private \App\Services\Material\MaterialPriceService $priceService
     )
     {
     }
@@ -41,6 +42,7 @@ class MaterialController extends BaseController
             if ($this->materialService->validate($_POST, true)) {
                 $result = $this->handleAction(function () {
                     $id = (int) $this->materialService->insert($_POST);
+                    if ($id > 0) $this->priceService->logInitial($id, $_POST);
                     // Kreator : alergeny i zaopatrzenie, potem karta surowca (nie lista) z tym, czego brakuje.
                     $_SESSION['material_created'] = ['id' => $id, 'problems' => $this->creation->complete($id, $_POST, user('id') ? (int) user('id') : null)];
                     header('Location: ' . ROOT . '/materials/' . $id . '/edit');

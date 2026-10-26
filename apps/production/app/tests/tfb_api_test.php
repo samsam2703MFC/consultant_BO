@@ -1823,6 +1823,8 @@ if (trim((string) shell_exec('command -v pdftotext'))) {
     check($s === 200 && abs((float) $mat['price_per_unit'] - 3.5) < 1e-6 && (int) $mat['id_current_supplier'] === 61 && ($ip['data']['imported_prices'][0]['new_price'] ?? null) == 3.5
         && (int) $pdo->query('SELECT COUNT(*) FROM raw_material_price_changelog WHERE id_raw_material = 902')->fetchColumn() === $logBefore + 1 && $ip['data']['prices_imported_at'] !== null,
         'invoice prices imported into the material file (price per unit, supplier, price history)');
+    $logRow = $pdo->query('SELECT source, id_user FROM raw_material_price_changelog WHERE id_raw_material = 902 ORDER BY timestamp DESC, id DESC LIMIT 1')->fetch();
+    check($logRow['source'] === 'invoice' && $logRow['id_user'] !== null, 'price history : source « invoice » and the ERP user who imported (audit 2, P21)');
     [$s, $b] = $call('POST', "/supply/invoices/{$pid}/prices", ['line_ids' => [999999]], $access);
     check($s === 422 && $b['description'] === 'INVOICE_NO_PRICES', 'no mapped line chosen → nothing to import');
     // Przeliczenie receptur po zmianie ceny spłaszcza recepturę z tabel receptur (w danych testowych niepełnych) : stan wyjściowy.

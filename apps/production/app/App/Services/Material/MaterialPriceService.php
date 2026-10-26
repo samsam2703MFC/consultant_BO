@@ -55,9 +55,12 @@ class MaterialPriceService
         return false;
     }
 
-    public function update($idMaterial, $data)
+    /** Źródła zmiany ceny (P21) : Ceny surowców, oferta, faktura zakupowa, nowy surowiec. */
+    public const SOURCES = ['manual', 'offer', 'invoice', 'new'];
+
+    public function update($idMaterial, $data, string $source = 'manual', ?int $userId = null)
     {
-        $result = $this->transactionManager->execute(function () use ($idMaterial, $data) {
+        $result = $this->transactionManager->execute(function () use ($idMaterial, $data, $source, $userId) {
             if ($data['package_size_in_base_unit'] == 0) {
                 $data['price_per_unit'] = 0;
             } else {
@@ -69,6 +72,8 @@ class MaterialPriceService
             $log_data['id_raw_material'] = $data['id_raw_material'];
             $log_data['pack_price'] = $data['pack_price'];
             $log_data['package_size_in_base_unit'] = $data['package_size_in_base_unit'];
+            $log_data['source'] = in_array($source, self::SOURCES, true) ? $source : 'manual';
+            $log_data['id_user'] = $userId ?? self::currentUserId();
 
             unset($data['pack_price']);
 
@@ -97,4 +102,27 @@ class MaterialPriceService
         return $result;
     }
 
+
+    /** Zalogowany użytkownik ERP ; null w API modułu i skryptach (tam helper user() nie jest załadowany). */
+    private static function currentUserId(): ?int
+    {
+        if (!function_exists('user')) return null;
+        $id = user('id');
+        return $id ? (int) $id : null;
+    }
+
+    /** Cena ustalona przy tworzeniu surowca : pierwszy wpis historii (źródło « new »). */
+    public function logInitial(int $idMaterial, array $data): void
+    {
+        if (empty($data['id_current_supplier']) || empty($data['pack_price']) || empty($data['package_size_in_base_unit'])) return;
+        $this->materialPriceChangelogRepository->insert([
+            'id_supplier' => (int) $data['id_current_supplier'], 'id_raw_material' => $idMaterial, 'pack_price' => $data['pack_price'],
+            'package_size_in_base_unit' => $data['package_size_in_base_unit'], 'source' => 'new', 'id_user' => self::currentUserId(),
+        ]);
+    }
+
+    public function history(int $idMaterial): array
+    {
+        return $this->materialPriceChangelogRepository->history($idMaterial);
+    }
 }

@@ -117,6 +117,24 @@
         </div>
         <?php endif; ?>
 
+        <?php // P10 : wypełnij fakturę z zamówienia albo z WZ klienta (linie, kartony, ceny z cennika klienta). ?>
+        <div class="card mb-3"><div class="card-body py-3">
+            <form method="GET" class="d-flex flex-wrap align-items-end gap-2">
+                <div><label class="form-label small mb-1" for="prefillOrder">Wypełnij z zamówienia</label>
+                    <select class="form-select form-select-sm" id="prefillOrder" name="order"><option value="">—</option>
+                        <?php foreach (($recent_orders ?? []) as $o): ?><option value="<?= (int) $o['id'] ?>" <?= (int) ($_GET['order'] ?? 0) === (int) $o['id'] ? 'selected' : '' ?>>#<?= (int) $o['id'] ?><?= $o['reference'] ? ' · ' . htmlspecialchars($o['reference'], ENT_QUOTES, 'UTF-8') : '' ?><?= $o['expected_shipping_date'] ? ' · ' . htmlspecialchars(date('d.m.Y', strtotime($o['expected_shipping_date'])), ENT_QUOTES, 'UTF-8') : '' ?></option><?php endforeach; ?>
+                    </select></div>
+                <div><label class="form-label small mb-1" for="prefillWz">albo z WZ</label>
+                    <select class="form-select form-select-sm" id="prefillWz" name="wz"><option value="">—</option>
+                        <?php foreach (($recent_wz ?? []) as $w): ?><option value="<?= (int) $w['id'] ?>" <?= (int) ($_GET['wz'] ?? 0) === (int) $w['id'] ? 'selected' : '' ?>><?= htmlspecialchars($w['doc_num'], ENT_QUOTES, 'UTF-8') ?><?= $w['established_date'] ? ' · ' . htmlspecialchars(date('d.m.Y', strtotime($w['established_date'])), ENT_QUOTES, 'UTF-8') : '' ?></option><?php endforeach; ?>
+                    </select></div>
+                <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-magic"></i> Wypełnij linie</button>
+            </form>
+            <?php if (!empty($prefill_label)): ?>
+                <div class="alert alert-light-primary small mt-2 mb-0"><i class="bi bi-info-circle"></i> Linie z <?= htmlspecialchars($prefill_label, ENT_QUOTES, 'UTF-8') ?> : sprawdź ilości i ceny przed zapisem<?= !empty($prefill_missing_price) ? ' — ' . (int) $prefill_missing_price . ' produkt(y) bez ceny w cenniku klienta (cena z zamówienia albo 0)' : '' ?>.</div>
+            <?php endif; ?>
+        </div></div>
+
         <div class="card">
 
             <div class="card-body">
@@ -144,10 +162,10 @@
                                                        value="<?= $old_product['id'] ?>">
                                             </td>
                                             <td>
-                                                <?= $old_product['product_name'] ?>
+                                                <?= htmlspecialchars((string) $old_product['product_name'], ENT_QUOTES, 'UTF-8') ?>
                                                 <input type="hidden"
-                                                       name="invoice_product[<?= $old_product['id'] ?>][product_name]"
-                                                       value="<?= $old_product['product_name'] ?>">
+                                                       name="invoice_product[<?= (int) $old_product['id'] ?>][product_name]"
+                                                       value="<?= htmlspecialchars((string) $old_product['product_name'], ENT_QUOTES, 'UTF-8') ?>">
                                             </td>
                                             <td>
                                                 <input type="text" class="form-control"

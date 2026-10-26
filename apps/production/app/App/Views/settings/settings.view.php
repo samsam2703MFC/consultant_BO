@@ -357,4 +357,14 @@
     }
 </script>
 
+<?php // Wszystkie parametry (audyt 2, N6) : ekran dla parametrów bez własnej strony — API modułu (te same reguły co import Excel). ?>
+<div class="card mt-4" id="params"><div class="card-body">
+    <h4 class="card-title mb-1">Wszystkie parametry</h4>
+    <p class="text-muted small">Każdy parametr modułu produkcji : wartość, jednostka, opis, wartość domyślna. Zmiana zapisuje się od razu (te same zakresy co API i import tabeli Excel) ; parametry JSON tylko do odczytu.</p>
+    <input type="search" class="form-control form-control-sm mb-2" id="paramFilter" placeholder="Szukaj parametru (kod lub opis)" style="max-width:360px">
+    <div id="allParams" data-root="<?= ROOT ?>" data-api-base="<?= htmlspecialchars((string) ($api_base ?? ''), ENT_QUOTES, 'UTF-8') ?>" data-user="<?= (int) user('id') ?>" data-labels="workshop"><p class="text-muted mb-0">Wczytywanie…</p></div>
+</div></div>
+<script src="<?= ROOT ?>/assets/js/workshop/api.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>
+<script src="<?= ROOT ?>/assets/js/pages/all-params.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>
+
 <?php $this->view("page_components/footer"); ?>

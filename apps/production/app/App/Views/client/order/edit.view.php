@@ -378,6 +378,10 @@
                                     <a href="<?=ROOT?>/client-orders" role="button" class="btn btn-secondary btn-lg">
                                         <i class="bi bi-arrow-left"></i> Anuluj
                                     </a>
+                                    <?php // P10 : faktura « inna » z linii tego zamówienia (ceny z cennika klienta, do sprawdzenia przed zapisem). ?>
+                                    <a href="<?=ROOT?>/clients/<?= (int) $client['id'] ?>/invoices/create?order=<?= (int) $row['id'] ?>" class="btn btn-outline-primary btn-lg float-end">
+                                        <i class="bi bi-receipt-cutoff"></i> Faktura (inna) z zamówienia
+                                    </a>
                                 </div>
                             </div>
 

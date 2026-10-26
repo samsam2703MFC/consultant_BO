@@ -93,20 +93,20 @@
             tr.querySelector('[data-save]').addEventListener('click', async (e) => {
                 const btn = e.currentTarget;
                 const v = Number(tr.querySelector('[data-produced]').value);
-                if (!Number.isFinite(v) || v < 0) { at.notify(false, 'Podaj ilość zrobioną (0 lub więcej).'); return; }
+                if (!Number.isFinite(v) || v < 0) { ui.notify(false, 'Podaj ilość zrobioną (0 lub więcej).'); return; }
                 if (!window.confirm('Zapisać poprawioną ilość zrobioną ? Partie dnia zostaną dopasowane, podsumowanie zatwierdzenia przeliczone.')) return;
                 btn.disabled = true;
                 try {
                     drawDay(await api.patch(`/execution/days/${current.date}/${current.group}/items/${tr.dataset.item}`, {produced: v}));
-                    at.notify(true, 'Poprawka zapisana.');
+                    ui.notify(true, 'Poprawka zapisana.');
                     loadListQuiet();
-                } catch (err) { btn.disabled = false; at.notify(false, err.message); }
+                } catch (err) { btn.disabled = false; ui.notify(false, err.message); }
             });
             tr.querySelectorAll('[data-cancel-waste]').forEach(b => b.addEventListener('click', async () => {
                 if (!window.confirm('Anulować tę stratę ? Linia i podsumowanie zatwierdzenia zostaną przeliczone.')) return;
                 b.disabled = true;
-                try { drawDay(await api.patch(`/execution/waste/${b.dataset.cancelWaste}`, {})); at.notify(true, 'Strata anulowana.'); }
-                catch (err) { b.disabled = false; at.notify(false, err.message); }
+                try { drawDay(await api.patch(`/execution/waste/${b.dataset.cancelWaste}`, {})); ui.notify(true, 'Strata anulowana.'); }
+                catch (err) { b.disabled = false; ui.notify(false, err.message); }
             }));
         });
     }

@@ -6,6 +6,9 @@ declare(strict_types=1);
  *    niveau, écart entre niveaux, pas de proforma de plus de 90 jours ; « Opłacone » en lot.
  *  - P7 décisions d'écart exécutables : dosłanie / ponowna dostawa → domówienie pré-remplie (GRATIS, commande d'origine),
  *    reliée à l'écart et close à sa WDT ; przekazanie do reklamacji → non-conformité client (une seule).
+ *  - P21 prix des matières : chaque changement garde sa source (manual, offer, invoice, new) ; historique par matière.
+ *  - P22 traçabilité : un lot de la tablette → cartons du produit étiquetés le jour (+ trace.label_days) → palettes →
+ *    clients et WZ ; rappel par numéro de lot de matière.
  *  - P8 retours : une liste (réclamations sans décision, remplacements à préparer / à expédier, cartons de retour),
  *    « Wysłane » posé au WZ du client pour les remplacements emballés, réclamations et remplacements dans Do obsłużenia.
  *
@@ -52,7 +55,8 @@ try {
                  'product_recipe_preparation_step', 'product_recipe_prepare_instruction_connection', 'test_product', 'test_product_status', 'test_product_type',
                  'test_product_stage', 'test_product_changelog', 'complaint', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'palets_delivery',
                  'document_cmr', 'document_wz', 'shipment_log', 'app_notification', 'outbox', 'webhook_outbox_shipments', 'cron_notification_outbox', 'cron_runs',
-                 'document_proforma', 'document_invoice', 'cost_month_section', 'cost_logistics_type', 'document_proforma_product', 'ksef_submission', 'complaint_product_to_send_log', 'complaint_product_pending', 'carton_stock_complaint'] as $table) {
+                 'document_proforma', 'document_invoice', 'cost_month_section', 'cost_logistics_type', 'document_proforma_product', 'ksef_submission', 'complaint_product_to_send_log', 'complaint_product_pending', 'carton_stock_complaint',
+                 'carton_pallet_connection', 'document_wz_product'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -181,6 +185,42 @@ try {
         && $complaintItem['positions'] === ['ADMINISTRACJA', 'JAKOSC'], 'complaints and replacements in Do obsłużenia (complaint overdue after 3 days)');
     expectLotE($returns->markShippedWithWz(10, date('Y-m-d')) === 1
         && $pdo->query('SELECT GROUP_CONCAT(status ORDER BY id) FROM complaint_product_to_send_log')->fetchColumn() === '2,0,1,2', 'WZ of the client : packed replacement shipped, unpacked and other clients unchanged');
+
+    // --- P21 : source des prix des matières
+    $pdo->exec("INSERT INTO supplier (id, name, phone, email) VALUES (5, 'Młyn', '', 'mlyn@example.invalid')");
+    $pdo->exec("INSERT INTO raw_material (id, name, id_current_supplier, package_size_in_base_unit, id_unit, price_per_unit) VALUES (300, 'Mąka', 5, 25000, 1, 0.002)");
+    $prices = $container->get(App\Services\Material\MaterialPriceService::class);
+    $prices->logInitial(300, ['id_current_supplier' => 5, 'pack_price' => 50, 'package_size_in_base_unit' => 25000]);
+    $prices->update(300, ['id_raw_material' => 300, 'id_current_supplier' => 5, 'package_size_in_base_unit' => 25000, 'id_unit' => 1, 'pack_price' => 55], 'offer');
+    $prices->update(300, ['id_raw_material' => 300, 'id_current_supplier' => 5, 'package_size_in_base_unit' => 25000, 'id_unit' => 1, 'pack_price' => 54], 'bogus');
+    $hist = $prices->history(300);
+    expectLotE(count($hist) === 3 && array_count_values(array_column($hist, 'source')) == ['new' => 1, 'offer' => 1, 'manual' => 1]
+        && $hist[0]['supplier'] === 'Młyn', 'price history : new, offer, unknown source stored as manual, supplier name');
+    expectLotE(abs((float) $pdo->query('SELECT price_per_unit FROM raw_material WHERE id = 300')->fetchColumn() - 54 / 25000) < 1e-9, 'last price applied');
+    expectLotE($params->get('prices.manual_edit', '') === '1', 'manual price edits stay allowed by default');
+
+    // --- P22 : lot de production → clients
+    $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, active) VALUES (50, 'TST', 'Test', 'Test', 1)");
+    $pdo->exec("INSERT INTO n_prod_item (id, item_type, id_final_product, base_unit) VALUES (60, 'product', 100, 'szt')");
+    $pdo->exec("INSERT INTO n_prod_output (id, work_date, id_group, id_item, quantity, lot_code) VALUES (70, '2026-03-02', 50, 60, 200, '260302-TST-01')");
+    $pdo->exec("INSERT INTO n_prod_output_lot (id_output, id_material, quantity, lot_number) VALUES (70, 300, 1, 'MK-4711')");
+    $pdo->exec("INSERT INTO carton_stock (id_carton, batch_number, id_product, expiration_date, status, date_add, date_pallet) VALUES
+        (1, 1, 100, '2026-09-01', 3, '2026-03-02', '2026-03-04'), (2, 1, 100, '2026-09-01', 3, '2026-03-03', '2026-03-04'), (3, 1, 100, '2026-09-01', 2, '2026-03-02', '2026-03-05'),
+        (4, 1, 100, '2026-09-01', 1, '2026-03-02', NULL), (5, 1, 100, '2026-09-01', 3, '2026-03-05', '2026-03-06'), (6, 1, 101, '2026-09-01', 3, '2026-03-02', '2026-03-04')");
+    $pdo->exec("INSERT INTO palets_delivery (id_palet, client, delivery_date, status, id_customer) VALUES (1, 'Sklep A', '2026-03-04', 3, 10), (2, 'Sklep B', '2026-03-05', 2, 11)");
+    $pdo->exec("INSERT INTO carton_pallet_connection (id_palet, id_carton) VALUES (1, 1), (1, 2), (2, 3), (1, 5), (1, 6)");
+    $pdo->exec("INSERT INTO document_wz (id, doc_num, id_customer, established_date) VALUES (40, 'WZ-0040', 10, '2026-03-04')");
+    $pdo->exec("INSERT INTO document_wz_product (id_document_wz, id_product, name, quantity) VALUES (40, 100, 'Croissant', 2)");
+    $outputs = $container->get(App\Repositories\Workshop\OutputRepository::class);
+    $trace = $outputs->trace('2026-03-01', '2026-03-03', null, 'MK-4711');
+    expectLotE(count($trace) === 1 && (int) $trace[0]['id_final_product'] === 100, 'material lot finds the production lot');
+    $rows = $outputs->cartonsShipped([100], '2026-03-02', '2026-03-03');
+    $byCustomer = [];
+    foreach ($rows as $r) $byCustomer[$r['customer'] ?? '-'] = ($byCustomer[$r['customer'] ?? '-'] ?? 0) + (int) $r['cartons'];
+    ksort($byCustomer);
+    expectLotE($byCustomer === ['-' => 1, 'Sklep A' => 2, 'Sklep B' => 1], 'cartons of the product labelled that day and the next : 2 shipped to A, 1 on a pallet for B, 1 in stock (not the 05.03 carton, not the other product)');
+    $wz = array_values(array_unique(array_filter(array_column($rows, 'wz'))));
+    expectLotE($wz === ['WZ-0040'], 'delivery note of the customer found');
 
     echo "audit2_lot_e_test: OK\n";
 } finally {

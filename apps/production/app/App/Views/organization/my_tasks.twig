@@ -28,7 +28,7 @@
     {% if not member or not member.id_position %}
         <div class="card"><div class="card-body">
             <p class="at-empty mb-2">Nie masz jeszcze przypisanego stanowiska, więc nie ma zadań do pokazania.</p>
-            <a class="btn btn-primary" href="{{ root }}/organization/positions">Stanowiska i zadania</a>
+            <a class="btn btn-primary" href="{{ root }}/organization/positions">Funkcje i zadania</a>
         </div></div>
     {% else %}
         {% include 'page_components/ajax_helpers.twig' %}

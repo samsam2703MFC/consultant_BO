@@ -956,13 +956,13 @@
         if (!editing) {
             const ok = !!i.line;
             return `<article class="kiosk-card kv-line ${ok ? 'is-ok' : ''}" data-line="${i.item_id}">
-                <div class="kv-prod-name"><h3>${esc(i.name)}</h3><p class="kiosk-muted">${esc(planMeta)}</p></div>
+                <div class="kv-prod-name"><h3>${esc(i.name)}</h3><p class="kiosk-muted">${esc(planMeta)}</p>${i.line && i.line.corrected_by ? `<p class="kiosk-muted kv-small">${icon('pencil', 'is-sm')} ${esc(t('kv_corrected', {name: i.line.corrected_by}))}</p>` : ''}</div>
                 <div class="kv-col"><span class="kv-lbl">${esc(t('day_col_done'))}</span><strong class="kv-big">${esc(cq(ok ? i.line.produced : i.produced, i))}</strong>
                     ${ok && i.line.note ? `<p class="kiosk-muted kv-small">${esc(i.line.note)}</p>` : ''}</div>
                 <div class="kv-col"><span class="kv-lbl">${esc(t('kv_col_waste'))}</span>${wastes || `<span class="kiosk-muted">—</span>`}</div>
                 <div class="kv-end">${ok ? `<span class="kv-check is-ok" title="${esc(t('kv_line_ok', {name: i.line.employee || '', time: hhmm(i.line.validated_at)}))}">${icon('check')}</span>` : ''}
-                    ${!locked && day.editable ? `<button type="button" class="kiosk-btn is-small" data-kv-edit="${i.item_id}">${icon('pencil')} ${esc(t('kv_edit'))}</button>` : ''}
-                    ${i.line && i.line.corrected_by ? `<small class="kiosk-muted">${esc(t('kv_corrected', {name: i.line.corrected_by}))}</small>` : ''}</div>
+                    ${!locked && day.editable ? `<button type="button" class="kv-edit" data-kv-edit="${i.item_id}" aria-label="${esc(t('kv_edit'))}" title="${esc(t('kv_edit'))}">${icon('pencil')}</button>` : ''}
+</div>
             </article>`;
         }
         const reasons = ['quality', 'burnt', 'damaged', 'samples', 'other'];

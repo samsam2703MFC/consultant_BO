@@ -108,7 +108,7 @@ final class OfferService
             'package_size_in_base_unit' => (int) round((float) $offer['pack_size_base']),
             'id_unit' => (int) $material['id_unit'],
             'pack_price' => (float) $offer['pack_price'],
-        ]);
+        ], 'offer');
         if (!$ok) {
             throw new CustomException('Nie udało się zastosować ceny.', 'errors', 500);
         }

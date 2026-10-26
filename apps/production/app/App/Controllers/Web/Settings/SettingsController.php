@@ -27,7 +27,7 @@ class SettingsController extends BaseController
         'send_status.lookback_days' => '30',
     ];
 
-    public function __construct(private ParamRepository $params)
+    public function __construct(private ParamRepository $params, private \App\Core\Api\Workshop\WorkshopConfig $config)
     {
     }
 
@@ -37,7 +37,7 @@ class SettingsController extends BaseController
         foreach (self::STOCK_PARAMS as $code => $default) $stock[$code] = $this->params->get($code, $default);
         $alerts = [];
         foreach (self::ALERT_PARAMS as $code => $default) $alerts[$code] = $this->params->get($code, $default);
-        $this->view('settings/settings', ['stock_params' => $stock, 'alert_params' => $alerts]);
+        $this->view('settings/settings', ['stock_params' => $stock, 'alert_params' => $alerts, 'api_base' => $this->config->webApiBase(ROOT)]);
     }
 
     /** POST /ajax/settings/alert-params : reklamacja bez decyzji (alert, alert pilny), dzień miesiąca na koszty poprzedniego miesiąca. */
