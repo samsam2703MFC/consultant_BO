@@ -153,6 +153,11 @@ class TodayService
                 ['proforma_stale', 'warning', 'bi-arrow-repeat', 'proforma nieaktualna (zamówienie zmienione)', 'proformy nieaktualne (zamówienie zmienione)', 'proform nieaktualnych (zamówienie zmienione)', ['ADMINISTRACJA']],
                 ['proforma_not_sent', 'info', 'bi-envelope', 'proforma niewysłana do klienta', 'proformy niewysłane do klienta', 'proform niewysłanych do klienta', ['ADMINISTRACJA']],
                 ['reminder_due', 'info', 'bi-bell', 'przypomnienie o płatności do wysłania', 'przypomnienia o płatności do wysłania', 'przypomnień o płatności do wysłania', ['ADMINISTRACJA']],
+                // Zakupy (P20)
+                ['po_late', 'danger', 'bi-truck', 'dostawa surowców po terminie', 'dostawy surowców po terminie', 'dostaw surowców po terminie', ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
+                ['po_draft', 'warning', 'bi-cart3', 'zamówienie u dostawcy niewysłane', 'zamówienia u dostawców niewysłane', 'zamówień u dostawców niewysłanych', ['ZAKUPY']],
+                ['invoice_unlinked', 'warning', 'bi-receipt', 'faktura zakupowa do przypisania', 'faktury zakupowe do przypisania', 'faktur zakupowych do przypisania', ['ZAKUPY', 'ADMINISTRACJA']],
+                ['inventory_old', 'info', 'bi-clipboard-check', 'inwentaryzacja surowców > 30 dni', 'inwentaryzacje surowców > 30 dni', 'inwentaryzacji surowców > 30 dni', ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
             ] as [$rule, $tone, $icon, $one, $few, $many, $positions]) {
                 if (!$queue[$rule]) continue;
                 $items[] = ['tone' => $tone, 'icon' => $icon, 'count' => $queue[$rule], 'one' => $one, 'few' => $few, 'many' => $many,

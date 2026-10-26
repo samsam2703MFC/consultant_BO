@@ -58,7 +58,7 @@
         <div class="card-body table-responsive">
             {% if items %}
             <table class="oq-table" data-at-table data-at-table-size="50">
-                <thead><tr><th>Termin</th><th>Sprawa</th><th>Klient</th><th>Co</th><th>Kto</th><th></th></tr></thead>
+                <thead><tr><th>Termin</th><th>Sprawa</th><th>Klient / dostawca</th><th>Co</th><th>Kto</th><th></th></tr></thead>
                 <tbody>
                 {% for i in items %}
                     <tr class="{{ i.mine ? 'is-mine' }}">

@@ -9,6 +9,8 @@ declare(strict_types=1);
  *  - P17 une seule fiche salaire : coût saisi dans le Budżet personelu, reporté aux mois ouverts à partir du mois courant
  *    (pas aux mois passés, ni aux corrections du mois, ni aux mois fermés) ; mois fermé = figé (aucun ajout, retrait,
  *    copie ni « Pobierz z budżetu »), date et auteur du verrouillage ;
+ *  - P20 compteurs achats (Do obsłużenia, Dzisiaj) : brouillon non envoyé, livraison en retard, facture à rapprocher,
+ *    inventaire de plus de 30 jours ;
  *  - P19 inventaire en masse : un enregistrement pour toute la feuille (une ligne fausse bloque tout) ; min/max 1–2 semaines
  *    seulement pour les matières consommées.
  *
@@ -66,7 +68,7 @@ try {
                  'product_recipe_preparation_step', 'product_recipe_prepare_instruction_connection', 'test_product', 'test_product_status', 'test_product_type',
                  'test_product_stage', 'test_product_changelog', 'complaint', 'final_product_ppwr_sales_packaging', 'carton_dimension', 'palets_delivery',
                  'document_cmr', 'document_wz', 'shipment_log', 'app_notification', 'outbox', 'webhook_outbox_shipments', 'cron_notification_outbox', 'cron_runs',
-                 'document_proforma', 'document_invoice', 'cost_month_section', 'cost_logistics_type'] as $table) {
+                 'document_proforma', 'document_invoice', 'cost_month_section', 'cost_logistics_type', 'document_proforma_product', 'ksef_submission'] as $table) {
         $pdo->exec("CREATE TABLE {$testDb}.{$table} LIKE {$source}.{$table}");
     }
     $pdo->exec("USE {$testDb}");
@@ -144,6 +146,19 @@ try {
     expectLotD((int) $pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE entity = 'material_inventory'")->fetchColumn() === 1, 'one audit entry for the inventory');
     $limits = $supply->suggestLimits(['ids' => [41, 42]], $office);
     expectLotD($limits['updated'] === 0 && $limits['skipped'] === 2 && (int) $pdo->query('SELECT COUNT(*) FROM n_mp_supply')->fetchColumn() === 0, 'no consumption: limits unchanged');
+
+    // --- P20 : achats dans Do obsłużenia
+    $queueSvc = $container->get(App\Services\Client\Order\OrderQueueService::class);
+    $pdo->exec("INSERT INTO n_po (code, id_supplier, status, delivery_date, created_at) VALUES ('ZD-T-1', 7, 'draft', NULL, NOW() - INTERVAL 2 DAY), ('ZD-T-2', 8, 'sent', CURDATE() - INTERVAL 3 DAY, NOW())");
+    $pdo->exec("INSERT INTO n_inv (source, id_supplier, number, issue_date, currency, total_net, total_gross, status) VALUES ('pdf', 7, 'FV/1/2026', CURDATE() - INTERVAL 10 DAY, 'PLN', 100, 123, 'open')");
+    $pdo->exec("INSERT INTO n_mp_supply (id_raw_material, supply_mode) VALUES (41, 'stock')");
+    $pdo->exec("UPDATE n_mp_count SET count_date = CURDATE() - INTERVAL 40 DAY WHERE id_raw_material = 41");
+    $q = $queueSvc->overview(null, 'all', false, null);
+    $byRule = fn(string $r) => array_values(array_filter($q['items'], fn($i) => $i['rule'] === $r));
+    expectLotD($q['counts']['po_draft'] === 1 && $q['counts']['po_late'] >= 1 && $q['counts']['invoice_unlinked'] === 1 && $q['counts']['inventory_old'] === 1, 'purchase rules counted');
+    expectLotD($byRule('po_draft')[0]['days'] < 0 && str_contains($byRule('po_late')[0]['actions'][0]['url'], 'receive=1') && $byRule('invoice_unlinked')[0]['days'] < 0
+        && $byRule('inventory_old')[0]['positions'] === ['ZAKUPY', 'KIEROWNIK_PRODUKCJI'], 'overdue drafts and invoices, receive link, buyer in charge');
+    $pdo->exec("DELETE FROM n_inv"); $pdo->exec("DELETE FROM n_mp_supply"); $pdo->exec("DELETE FROM n_po WHERE code LIKE 'ZD-T-%'");
 
     // --- P17 : Budżet personelu = seule source du coût pracodawcy, mois fermé figé
     $cur = [(int) date('Y'), (int) date('n')];

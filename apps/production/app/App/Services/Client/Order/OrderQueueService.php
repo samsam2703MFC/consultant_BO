@@ -30,6 +30,11 @@ final class OrderQueueService
         'shipping_issue' => ['label' => 'Różnica / problem dostawy', 'icon' => 'bi-exclamation-diamond', 'positions' => ['ADMINISTRACJA', 'LOGISTYKA']],
         'send_error' => ['label' => 'E-mail do klienta nie wyszedł', 'icon' => 'bi-send-exclamation', 'positions' => ['ADMINISTRACJA']],
         'ksef' => ['label' => 'WDT do KSeF', 'icon' => 'bi-cloud-upload', 'positions' => ['ADMINISTRACJA', 'LOGISTYKA']],
+        // Zakupy (P20) : nic nie czeka bez wiedzy działu zakupów.
+        'po_draft' => ['label' => 'Zamówienie u dostawcy niewysłane', 'icon' => 'bi-cart3', 'positions' => ['ZAKUPY']],
+        'po_late' => ['label' => 'Dostawa surowców po terminie', 'icon' => 'bi-truck', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
+        'invoice_unlinked' => ['label' => 'Faktura zakupowa do przypisania', 'icon' => 'bi-receipt', 'positions' => ['ZAKUPY', 'ADMINISTRACJA']],
+        'inventory_old' => ['label' => 'Inwentaryzacja surowców > 30 dni', 'icon' => 'bi-clipboard-check', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
     ];
     public const WHEN = ['all' => 'Wszystko', 'overdue' => 'Po terminie', 'today' => 'Do dziś', 'week' => 'Do 7 dni'];
     /** Palettes prêtes : comme Dzisiaj, les 14 derniers jours. */
@@ -37,6 +42,9 @@ final class OrderQueueService
     /** KSeF : WDT des 60 derniers jours ; « en attente » = sans réponse depuis plus de 60 minutes (rafraîchi toutes les 5 min). */
     private const KSEF_DAYS = 60;
     private const KSEF_STUCK_MINUTES = 60;
+    /** Zakupy : brouillon à envoyer dans la journée, facture à contrôler sous 7 jours, inventaire tous les 30 jours. */
+    private const INVOICE_DAYS = 7;
+    private const INVENTORY_DAYS = 30;
     private const KSEF_LABELS = ['ready' => 'przygotowana, niewysłana', 'failed' => 'błąd wysyłki', 'rejected' => 'odrzucona przez KSeF',
         'submitted' => 'bez odpowiedzi KSeF', 'processing' => 'bez odpowiedzi KSeF'];
 
@@ -208,6 +216,51 @@ final class OrderQueueService
                 'detail' => $status === null ? 'nie wysłana do KSeF' : (self::KSEF_LABELS[$status] ?? $status) . ($waiting && $k['submitted_at'] ? ' od ' . date('d.m H:i', strtotime((string) $k['submitted_at'])) : ''),
                 'note' => in_array($status, ['failed', 'rejected'], true) && $k['error_message'] ? mb_substr((string) $k['error_message'], 0, 160) : null,
             ], $actions);
+        }
+
+        foreach ($this->repo->poDrafts() as $p) {
+            $id = (int) $p['id'];
+            $out[] = $this->item('po_draft', 'po:' . $id, date('Y-m-d', strtotime($p['created_on'] . ' +1 day')), [
+                'customer' => $p['supplier'], 'customer_id' => null, 'supplier' => true,
+                'title' => 'Zamówienie ' . $p['code'] . ' (szkic) · pozycji : ' . (int) $p['line_count'],
+                'detail' => $p['delivery_date'] ? 'dostawa ' . date('d.m.Y', strtotime((string) $p['delivery_date'])) : 'bez daty dostawy',
+                'note' => 'utworzone ' . date('d.m.Y', strtotime((string) $p['created_on'])),
+            ], [
+                ['label' => 'Sprawdź i wyślij', 'url' => '/workshop/supply#tab=orders&order=' . $id, 'primary' => true],
+            ]);
+        }
+        foreach ($this->repo->poLate($today) as $p) {
+            $id = (int) $p['id'];
+            $out[] = $this->item('po_late', 'po:' . $id, $p['delivery_date'], [
+                'customer' => $p['supplier'], 'customer_id' => null, 'supplier' => true,
+                'title' => 'Zamówienie ' . $p['code'] . ' · dostawa ' . date('d.m.Y', strtotime((string) $p['delivery_date'])),
+                'detail' => $p['status'] === 'partial' ? 'przyjęte częściowo' : 'nieprzyjęte',
+            ], [
+                ['label' => 'Przyjmij dostawę', 'url' => '/workshop/supply#tab=orders&order=' . $id . '&receive=1', 'primary' => true],
+                ['label' => 'Dostawy surowców', 'url' => '/workshop/deliveries'],
+            ]);
+        }
+        foreach ($this->repo->invoicesToLink() as $inv) {
+            $id = (int) $inv['id'];
+            $out[] = $this->item('invoice_unlinked', 'invoice:' . $id, $inv['issue_date'] ? date('Y-m-d', strtotime($inv['issue_date'] . ' +' . self::INVOICE_DAYS . ' days')) : null, [
+                'customer' => $inv['supplier'], 'customer_id' => null, 'supplier' => true,
+                'title' => 'Faktura ' . $inv['number'] . ($inv['issue_date'] ? ' z ' . date('d.m.Y', strtotime((string) $inv['issue_date'])) : ''),
+                'detail' => number_format((float) $inv['total_net'], 2, ',', ' ') . ' ' . ($inv['currency'] ?: 'PLN') . ' netto',
+                'note' => trim(($inv['id_po'] === null ? 'bez zamówienia' : '') . ((int) $inv['unmapped'] ? ($inv['id_po'] === null ? ' · ' : '') . 'pozycje bez surowca : ' . (int) $inv['unmapped'] : '')),
+            ], [
+                ['label' => 'Kontrola faktury', 'url' => '/workshop/supply#tab=invoices&inv=' . $id, 'primary' => true],
+            ]);
+        }
+        $stale = $this->repo->staleInventory($now->modify('-' . self::INVENTORY_DAYS . ' days')->format('Y-m-d'));
+        if ((int) ($stale['materials'] ?? 0) > 0) {
+            $oldest = $stale['oldest'] ?? null;
+            $out[] = $this->item('inventory_old', 'inventory', (int) $stale['never'] > 0 || $oldest === null ? $today : date('Y-m-d', strtotime($oldest . ' +' . self::INVENTORY_DAYS . ' days')), [
+                'customer' => null, 'customer_id' => null,
+                'title' => 'Surowce na stan bez inwentaryzacji od ' . self::INVENTORY_DAYS . ' dni : ' . (int) $stale['materials'],
+                'detail' => (int) $stale['never'] ? 'nigdy nieliczone : ' . (int) $stale['never'] : 'najstarsza inwentaryzacja ' . date('d.m.Y', strtotime((string) $oldest)),
+            ], [
+                ['label' => 'Inwentaryzacja (arkusz)', 'url' => '/workshop/supply#tab=stock', 'primary' => true],
+            ]);
         }
         return $out;
     }

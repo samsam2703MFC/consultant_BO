@@ -15,6 +15,43 @@ final class OrderQueueRepository extends WorkshopRepository
 {
     protected string $table = 'customer_order';
 
+    // --- Achats (P20) : commandes fournisseurs, factures d'achat, inventaire des matières ---------------------------
+
+    /** Commandes fournisseurs en brouillon (pas encore envoyées). */
+    public function poDrafts(): array
+    {
+        return $this->all("SELECT p.id, p.code, s.name AS supplier, p.delivery_date, DATE(p.created_at) AS created_on, COUNT(l.id) AS line_count
+                           FROM n_po p JOIN supplier s ON s.id = p.id_supplier LEFT JOIN n_po_line l ON l.id_po = p.id
+                           WHERE p.status = 'draft' GROUP BY p.id ORDER BY p.created_at");
+    }
+
+    /** Commandes envoyées (ou reçues en partie) dont la date de livraison est passée. */
+    public function poLate(string $today): array
+    {
+        return $this->all("SELECT p.id, p.code, p.status, s.name AS supplier, p.delivery_date FROM n_po p JOIN supplier s ON s.id = p.id_supplier
+                           WHERE p.status IN ('sent', 'partial') AND p.delivery_date IS NOT NULL AND p.delivery_date < ? ORDER BY p.delivery_date", [$today]);
+    }
+
+    /** Factures d'achat ouvertes sans commande liée ou avec des lignes non reliées à une matière. */
+    public function invoicesToLink(): array
+    {
+        return $this->all("SELECT i.id, i.number, i.issue_date, COALESCE(s.name, i.seller_name) AS supplier, i.total_net, i.currency, i.id_po,
+                                  (SELECT COUNT(*) FROM n_inv_line l WHERE l.id_inv = i.id AND l.id_raw_material IS NULL) AS unmapped
+                           FROM n_inv i LEFT JOIN supplier s ON s.id = i.id_supplier
+                           WHERE i.status = 'open' AND (i.id_po IS NULL OR EXISTS (SELECT 1 FROM n_inv_line l WHERE l.id_inv = i.id AND l.id_raw_material IS NULL))
+                           ORDER BY i.issue_date, i.id");
+    }
+
+    /** Matières gérées sur stock dont le dernier comptage date d'avant $cutoff (ou jamais comptées). */
+    public function staleInventory(string $cutoff): array
+    {
+        return $this->all("SELECT COUNT(*) AS materials, SUM(t.last_count IS NULL) AS never, MIN(t.last_count) AS oldest
+                           FROM (SELECT sp.id_raw_material, MAX(c.count_date) AS last_count FROM n_mp_supply sp
+                                 LEFT JOIN n_mp_count c ON c.id_raw_material = sp.id_raw_material
+                                 WHERE sp.supply_mode = 'stock' GROUP BY sp.id_raw_material) t
+                           WHERE t.last_count IS NULL OR t.last_count < ?", [$cutoff])[0] ?? ['materials' => 0];
+    }
+
     /** Commandes ouvertes avec client, cartons et proforma (numéro, statut, envoi, montant). */
     public function openOrders(): array
     {
