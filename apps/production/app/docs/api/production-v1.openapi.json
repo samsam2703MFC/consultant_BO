@@ -7113,6 +7113,158 @@
                 "x-permission": "prod.supply.write"
             }
         },
+        "/supply/materials/counts": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Inwentaryzacja magazynu (arkusz) / Inventaire de toutes les matières",
+                "operationId": "countSupplyMaterials",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplyCountsResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Toutes les quantités comptées de la feuille en un enregistrement (unité de base, même date) ; une ligne en erreur bloque l'ensemble.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplyCountsInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/materials/limits": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Min./maks. 1–2 tyg. / Min./max. 1–2 semaines",
+                "operationId": "suggestSupplyLimits",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplyLimitsResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Pour les matières choisies avec une consommation sur 4 semaines : mode « sur stock », min. = 1 semaine, max. = 2 semaines (arrondis aux emballages entiers).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SupplyLimitsInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
         "/supply/orders": {
             "get": {
                 "tags": [
@@ -23244,6 +23396,97 @@
                         "nullable": true
                     }
                 }
+            },
+            "SupplyCountsInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "counts"
+                ],
+                "properties": {
+                    "count_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "défaut : aujourd'hui"
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "counts": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "id",
+                                "quantity"
+                            ],
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "minimum": 0
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "SupplyCountsResult": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/SupplyMaterials"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "saved": {
+                                "type": "integer"
+                            },
+                            "count_date": {
+                                "type": "string",
+                                "format": "date"
+                            }
+                        }
+                    }
+                ]
+            },
+            "SupplyLimitsInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "ids"
+                ],
+                "properties": {
+                    "ids": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            },
+            "SupplyLimitsResult": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/SupplyMaterials"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "updated": {
+                                "type": "integer"
+                            },
+                            "skipped": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                ]
             },
             "SupplierDeliveries": {
                 "type": "object",

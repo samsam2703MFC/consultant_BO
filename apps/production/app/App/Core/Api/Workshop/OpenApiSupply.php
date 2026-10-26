@@ -24,6 +24,10 @@ final class OpenApiSupply
             'PATCH /supply/materials/{id:\d+}' => ['tag' => $t, 'id' => 'saveSupplyMaterial', 'summary' => 'Tryb i stany surowca / Mode et stocks d\'une matière', 'body' => 'SupplyMaterialInput', 'response' => 'SupplyMaterial', 'errors' => [400, 404, 422]],
             'POST /supply/materials/{id:\d+}/count' => ['tag' => $t, 'id' => 'countSupplyMaterial', 'summary' => 'Inwentaryzacja surowca / Inventaire d\'une matière', 'body' => 'SupplyCountInput', 'response' => 'SupplyMaterial', 'ok' => 201, 'errors' => [400, 404, 422],
                 'description' => 'Stock compté en fin de journée (unité de base) ; la consommation et les réceptions comptent à partir du lendemain.'],
+            'POST /supply/materials/counts' => ['tag' => $t, 'id' => 'countSupplyMaterials', 'summary' => 'Inwentaryzacja magazynu (arkusz) / Inventaire de toutes les matières', 'body' => 'SupplyCountsInput', 'response' => 'SupplyCountsResult', 'ok' => 201, 'errors' => [400, 422],
+                'description' => "Toutes les quantités comptées de la feuille en un enregistrement (unité de base, même date) ; une ligne en erreur bloque l'ensemble."],
+            'POST /supply/materials/limits' => ['tag' => $t, 'id' => 'suggestSupplyLimits', 'summary' => 'Min./maks. 1–2 tyg. / Min./max. 1–2 semaines', 'body' => 'SupplyLimitsInput', 'response' => 'SupplyLimitsResult', 'errors' => [400, 422],
+                'description' => "Pour les matières choisies avec une consommation sur 4 semaines : mode « sur stock », min. = 1 semaine, max. = 2 semaines (arrondis aux emballages entiers)."],
             'GET /supply/deliveries' => ['tag' => $t, 'id' => 'getSupplierDeliveries', 'summary' => 'Dostawy surowców : kto, co, kiedy / Livraisons de matières : qui, quoi, quand', 'response' => 'SupplierDeliveries', 'errors' => [422],
                 'query' => ['date' => ['type' => 'string', 'format' => 'date', 'description' => 'un jour de la semaine de production (défaut : aujourd\'hui)']],
                 'description' => "Semaine de production (week.start_day) : commandes envoyées par jour de livraison — state expected, partial, late (date dépassée), received (au jour de la réception) ; "
@@ -133,6 +137,13 @@ final class OpenApiSupply
             'SupplyCountInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['quantity'], 'properties' => [
                 'quantity' => ['type' => 'number', 'minimum' => 0], 'count_date' => ['type' => 'string', 'format' => 'date', 'description' => 'défaut : aujourd\'hui'], 'note' => $nStr,
             ]],
+            'SupplyCountsInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['counts'], 'properties' => [
+                'count_date' => ['type' => 'string', 'format' => 'date', 'description' => 'défaut : aujourd\'hui'], 'note' => $nStr,
+                'counts' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'object', 'required' => ['id', 'quantity'], 'properties' => ['id' => ['type' => 'integer'], 'quantity' => ['type' => 'number', 'minimum' => 0]]]],
+            ]],
+            'SupplyCountsResult' => ['allOf' => [['$ref' => '#/components/schemas/SupplyMaterials'], ['type' => 'object', 'properties' => ['saved' => ['type' => 'integer'], 'count_date' => ['type' => 'string', 'format' => 'date']]]]],
+            'SupplyLimitsInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['ids'], 'properties' => ['ids' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'integer']]]],
+            'SupplyLimitsResult' => ['allOf' => [['$ref' => '#/components/schemas/SupplyMaterials'], ['type' => 'object', 'properties' => ['updated' => ['type' => 'integer'], 'skipped' => ['type' => 'integer']]]]],
             'SupplierDeliveries' => ['type' => 'object', 'properties' => [
                 'week_start' => $date, 'week_end' => $date, 'iso_week' => ['type' => 'integer'], 'today' => $date, 'history_days' => ['type' => 'integer'],
                 'days' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['date' => $date, 'weekday' => ['type' => 'integer', 'description' => '1 = lundi … 7 = dimanche'],

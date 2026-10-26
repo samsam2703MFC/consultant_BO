@@ -5,7 +5,9 @@ declare(strict_types=1);
  *  - P12 réception : lot (majuscules) et DLC par ligne, problème → non-conformité fournisseur liée à la réception,
  *    tablette : salarié enregistré, prix toujours celui de la commande, lots reçus proposés en FEFO ;
  *  - P15 commandes en lot : jour de livraison = premier jour habituel du fournisseur (fiche, sinon historique),
- *    langue de la fiche fournisseur.
+ *    langue de la fiche fournisseur ;
+ *  - P19 inventaire en masse : un enregistrement pour toute la feuille (une ligne fausse bloque tout) ; min/max 1–2 semaines
+ *    seulement pour les matières consommées.
  *
  *   php tests/audit2_lot_d_test.php
  *
@@ -127,6 +129,18 @@ try {
     $pdo->exec("INSERT INTO n_po_receipt (id_po_line, received_on, quantity, lot_number, best_before) VALUES ({$line}, CURDATE(), 1, 'OLD', '2000-01-01'), ({$line}, CURDATE(), 1, 'SOON', '2098-01-01')");
     $lots = $container->get(OutputRepository::class)->receivedLots([41, 42]);
     expectLotD(array_column($lots[41], 'lot_number') === ['SOON', 'L-26/10 A'] && array_column($lots[42], 'lot_number') === ['M-1'], 'FEFO: nearest DLC first, expired lot hidden');
+
+    // --- P19 : inventaire de toute la feuille, min/max groupé
+    try { $supply->addCounts(['counts' => [['id' => 41, 'quantity' => 5000], ['id' => 999, 'quantity' => 1]]], $office); expectLotD(false, 'unknown material refused'); }
+    catch (ApiException $e) { expectLotD($e->httpStatus() === 422 && (int) $pdo->query('SELECT COUNT(*) FROM n_mp_count')->fetchColumn() === 0, 'one wrong line: nothing saved'); }
+    try { $supply->addCounts(['counts' => [['id' => 41, 'quantity' => -1]]], $office); expectLotD(false, 'negative refused'); }
+    catch (ApiException $e) { expectLotD($e->httpStatus() === 422, 'negative count refused'); }
+    $inv = $supply->addCounts(['count_date' => date('Y-m-d'), 'note' => 'Inwentaryzacja', 'counts' => [['id' => 41, 'quantity' => 5000], ['id' => 42, 'quantity' => 0]]], $office);
+    $counts = $pdo->query('SELECT id_raw_material, quantity, note FROM n_mp_count ORDER BY id_raw_material')->fetchAll();
+    expectLotD($inv['saved'] === 2 && count($counts) === 2 && (float) $counts[0]['quantity'] === 5000.0 && (float) $counts[1]['quantity'] === 0.0 && $counts[0]['note'] === 'Inwentaryzacja', 'whole sheet saved at once (zero included)');
+    expectLotD((int) $pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE entity = 'material_inventory'")->fetchColumn() === 1, 'one audit entry for the inventory');
+    $limits = $supply->suggestLimits(['ids' => [41, 42]], $office);
+    expectLotD($limits['updated'] === 0 && $limits['skipped'] === 2 && (int) $pdo->query('SELECT COUNT(*) FROM n_mp_supply')->fetchColumn() === 0, 'no consumption: limits unchanged');
 
     echo "audit2_lot_d_test: OK\n";
 } finally {

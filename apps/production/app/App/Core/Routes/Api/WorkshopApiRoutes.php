@@ -141,6 +141,8 @@ final class WorkshopApiRoutes
             ['GET', '/supply/materials', SupplyController::class, 'materials', 'prod.supply.read'],
             ['PATCH', '/supply/materials/{id:\d+}', SupplyController::class, 'saveMaterial', 'prod.supply.write'],
             ['POST', '/supply/materials/{id:\d+}/count', SupplyController::class, 'addCount', 'prod.supply.write'],
+            ['POST', '/supply/materials/counts', SupplyController::class, 'addCounts', 'prod.supply.write'],
+            ['POST', '/supply/materials/limits', SupplyController::class, 'suggestLimits', 'prod.supply.write'],
             ['GET', '/supply/orders', SupplyController::class, 'orders', 'prod.supply.read'],
             ['POST', '/supply/orders', SupplyController::class, 'createOrders', 'prod.supply.write'],
             ['GET', '/supply/orders/{id:\d+}', SupplyController::class, 'order', 'prod.supply.read'],

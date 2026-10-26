@@ -53,7 +53,7 @@
             only: p.get('only') !== '0',
             inv: p.get('inv') === 'map' ? 'map' : Number(p.get('inv')) || null,
             istatus: ['open', 'accepted', 'disputed', 'all'].includes(p.get('ist')) ? p.get('ist') : 'open',
-            search: '', stockMode: 'all', used: true,
+            search: '', stockMode: 'all', used: true, inventory: false,
         };
     }
     function writeHash() {
@@ -592,18 +592,108 @@
     }
 
     // --- Surowce i stany ----------------------------------------------------------------------------------------------
+    const stockRows = () => data.materials.rows.filter(r => kindOk(r) && searchOk(r) && (state.stockMode === 'all' || r.mode === state.stockMode)
+        && (!state.used || r.weekly_use > 0 || r.stock !== null || r.on_order > 0 || r.mode === 'stock'));
+
+    // Inwentaryzacja całego magazynu : arkusz do wydruku (kategoria, surowiec, stan w systemie, miejsce na wpis),
+    // potem wszystkie policzone ilości wpisane naraz i jeden zapis (pozycje bez wpisu zostają bez zmian).
+    function drawInventory() {
+        const rows = stockRows();
+        const groups = [];
+        rows.forEach(r => { const k = r.category || t('inv_sheet.no_category'); let g = groups.find(x => x.k === k); if (!g) groups.push(g = {k, rows: []}); g.rows.push(r); });
+        return `<div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-inv-back>‹ ${esc(t('inv_sheet.back'))}</button>
+                ${kindButtons()}
+                <label class="small d-flex align-items-center gap-1 m-0">${esc(t('inv_sheet.date'))} <input type="date" class="form-control form-control-sm" data-inv-date value="${todayIso}" max="${todayIso}" style="width:auto"></label>
+                <input class="form-control form-control-sm" style="max-width:220px" data-inv-note maxlength="255" placeholder="${esc(t('inv_sheet.note'))}">
+                <button type="button" class="btn btn-sm btn-outline-primary ms-auto" data-inv-print><i class="bi bi-printer"></i> ${esc(t('inv_sheet.print'))}</button>
+                <button type="button" class="btn btn-sm btn-primary" data-inv-save ${data.materials.can_write ? '' : 'disabled'}><i class="bi bi-check2-all"></i> ${esc(t('inv_sheet.save'))} <span data-inv-n>(0)</span></button></div></div>
+            <p class="small text-muted mb-2">${esc(t('inv_sheet.help', {n: rows.length}))}</p>
+            <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm align-middle mb-0 tfb-supply-table tfb-inv-sheet">
+                <thead><tr><th>${esc(t('col.material'))}</th><th class="text-end">${esc(t('inv_sheet.system'))}</th><th>${esc(t('inv_sheet.counted'))}</th><th class="text-end">${esc(t('inv_sheet.diff'))}</th></tr></thead>
+                <tbody>${groups.map(g => `<tr class="table-light"><th colspan="4">${esc(g.k)} <span class="text-muted small">(${g.rows.length})</span></th></tr>${g.rows.map(r => `<tr data-inv="${r.id}">
+                    <td><strong>${esc(r.name)}</strong>${r.count_date ? `<div class="small text-muted">${esc(t('inv_sheet.last', {date: day(r.count_date)}))}</div>` : ''}</td>
+                    <td class="text-end">${r.stock !== null ? esc(q(r, r.stock)) : '—'}</td>
+                    <td><div class="input-group input-group-sm tfb-supply-qty"><input class="form-control text-end" inputmode="decimal" data-inv-qty placeholder="—" aria-label="${esc(t('inv_sheet.counted'))} ${esc(r.name)}"><span class="input-group-text">${esc(r.unit)}</span></div></td>
+                    <td class="text-end" data-inv-diff>—</td></tr>`).join('')}`).join('')
+                    || `<tr><td colspan="4" class="text-muted">${esc(t('empty_materials'))}</td></tr>`}</tbody></table></div></div></div>`;
+    }
+
+    function bindInventory() {
+        el.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { state.kind = b.dataset.kind; writeHash(); draw(); }));
+        el.querySelector('[data-inv-back]').addEventListener('click', () => { state.inventory = false; draw(); });
+        const rowOf = (tr) => data.materials.rows.find(x => x.id === Number(tr.dataset.inv));
+        const filled = () => [...el.querySelectorAll('tr[data-inv]')].filter(tr => tr.querySelector('[data-inv-qty]').value.trim() !== '');
+        const refresh = () => {
+            filled().forEach(tr => {
+                const r = rowOf(tr);
+                const v = ui.num(tr.querySelector('[data-inv-qty]').value);
+                const cell = tr.querySelector('[data-inv-diff]');
+                if (typeof v !== 'number' || v < 0) { cell.innerHTML = `<span class="text-danger">${esc(t('count_invalid'))}</span>`; return; }
+                const diff = v * r.factor - (r.stock ?? 0);
+                cell.innerHTML = r.stock === null ? '—' : `<span class="${Math.abs(diff) < 1e-6 ? 'text-muted' : (diff < 0 ? 'text-danger' : 'text-success')}">${diff > 0 ? '+' : ''}${esc(q(r, diff))}</span>`;
+            });
+            el.querySelectorAll('tr[data-inv]').forEach(tr => { if (tr.querySelector('[data-inv-qty]').value.trim() === '') tr.querySelector('[data-inv-diff]').textContent = '—'; });
+            el.querySelector('[data-inv-n]').textContent = `(${filled().length})`;
+        };
+        el.querySelector('.tfb-inv-sheet')?.addEventListener('input', refresh);
+        // Enter = następna pozycja (liczenie z arkuszem w ręku).
+        el.querySelectorAll('[data-inv-qty]').forEach((input, i, all) => input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); all[i + 1]?.focus(); } }));
+        el.querySelector('[data-inv-print]').addEventListener('click', () => {
+            const rows = stockRows();
+            const w = window.open('', '_blank');
+            if (!w) { ui.notify(false, t('inv_sheet.popup')); return; }
+            const groups = [];
+            rows.forEach(r => { const k = r.category || t('inv_sheet.no_category'); let g = groups.find(x => x.k === k); if (!g) groups.push(g = {k, rows: []}); g.rows.push(r); });
+            w.document.write(`<!doctype html><html lang="${api.lang}"><head><meta charset="utf-8"><title>${esc(t('inv_sheet.title'))}</title><style>
+                body{font:12px/1.35 Arial,sans-serif;margin:16mm 12mm;color:#222} h1{font-size:17px;color:#8D1D2C;margin:0 0 4px} p{margin:0 0 10px;color:#555}
+                table{width:100%;border-collapse:collapse} th,td{border:0.5px solid #bbb;padding:4px 6px;text-align:left} th{background:#8D1D2C;color:#fff}
+                tr.g td{background:#F8ECEE;font-weight:bold;color:#8D1D2C} td.n{text-align:right;white-space:nowrap} td.box{width:28%} @page{size:A4;margin:10mm}</style></head><body>
+                <h1>${esc(t('inv_sheet.title'))}</h1><p>${esc(t('inv_sheet.print_sub', {date: fullDay(el.querySelector('[data-inv-date]').value || todayIso), n: rows.length}))}</p>
+                <table><thead><tr><th>${esc(t('col.material'))}</th><th>${esc(t('inv_sheet.unit'))}</th><th>${esc(t('inv_sheet.system'))}</th><th>${esc(t('inv_sheet.counted'))}</th></tr></thead><tbody>
+                ${groups.map(g => `<tr class="g"><td colspan="4">${esc(g.k)}</td></tr>${g.rows.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.unit)}</td><td class="n">${r.stock !== null ? esc(q(r, r.stock)) : '—'}</td><td class="box"></td></tr>`).join('')}`).join('')}
+                </tbody></table></body></html>`);
+            w.document.close();
+            w.focus();
+            w.print();
+        });
+        el.querySelector('[data-inv-save]').addEventListener('click', async (e) => {
+            const counts = [];
+            for (const tr of filled()) {
+                const r = rowOf(tr);
+                const v = ui.num(tr.querySelector('[data-inv-qty]').value);
+                if (typeof v !== 'number' || v < 0) { ui.notify(false, t('qty_invalid', {list: r.name})); tr.querySelector('[data-inv-qty]').focus(); return; }
+                counts.push({id: r.id, quantity: Math.round(v * r.factor * 1000) / 1000});
+            }
+            if (!counts.length) { ui.notify(false, t('inv_sheet.nothing')); return; }
+            const date = el.querySelector('[data-inv-date]').value || todayIso;
+            if (!window.confirm(t('inv_sheet.confirm', {n: counts.length, date: fullDay(date)}))) return;
+            e.currentTarget.disabled = true;
+            try {
+                const res = await api.post('/supply/materials/counts', {count_date: date, note: el.querySelector('[data-inv-note]').value.trim() || null, counts});
+                data.materials = res;
+                state.inventory = false;
+                ui.notify(true, t('inv_sheet.saved', {n: res.saved}));
+                draw();
+            } catch (err) { ui.notify(false, errText(err)); e.currentTarget.disabled = false; }
+        });
+    }
+
     function drawStock() {
+        if (state.inventory) return drawInventory();
         const d = data.materials;
         const editable = d.can_write;
-        const rows = d.rows.filter(r => kindOk(r) && searchOk(r) && (state.stockMode === 'all' || r.mode === state.stockMode)
-            && (!state.used || r.weekly_use > 0 || r.stock !== null || r.on_order > 0 || r.mode === 'stock'));
+        const rows = stockRows();
+        const suggestable = rows.filter(r => r.weekly_use > 0);
         const minmax = (r, field) => `<div class="input-group input-group-sm tfb-supply-qty"><input class="form-control text-end" inputmode="decimal" data-limit="${field}" value="${esc(toInput(r, r[field]))}" placeholder="—" ${editable ? '' : 'disabled'}
             aria-label="${esc(t('col.' + field))}"><span class="input-group-text">${esc(r.unit)}</span></div>`;
         return `<div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">
                 ${kindButtons()}
                 <div class="btn-group btn-group-sm" role="group">${['all', 'stock', 'order'].map(m => `<button type="button" class="btn ${state.stockMode === m ? 'btn-primary' : 'btn-outline-primary'}" data-smode="${m}">${esc(t('smode.' + m))}</button>`).join('')}</div>
                 <label class="form-check form-switch m-0 small"><input class="form-check-input" type="checkbox" data-used ${state.used ? 'checked' : ''}> ${esc(t('only_used'))}</label>
-                <input class="form-control form-control-sm ms-auto" style="max-width:220px" data-search value="${esc(state.search)}" placeholder="${esc(t('search'))}"></div></div>
+                <input class="form-control form-control-sm ms-auto" style="max-width:220px" data-search value="${esc(state.search)}" placeholder="${esc(t('search'))}">
+                ${editable ? `<button type="button" class="btn btn-sm btn-outline-primary" data-inventory><i class="bi bi-clipboard-check"></i> ${esc(t('inv_sheet.open'))}</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-suggest-all ${suggestable.length ? '' : 'disabled'} title="${esc(t('suggest_all_help'))}"><i class="bi bi-magic"></i> ${esc(t('suggest_all', {n: suggestable.length}))}</button>` : ''}</div></div>
             <p class="small text-muted mb-2">${esc(t('stock_help', {weeks: d.use_weeks}))}</p>
             <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm align-middle mb-0 tfb-supply-table">
                 <thead><tr><th>${esc(t('col.material'))}</th><th class="text-center">${esc(t('col.mode'))}</th><th class="text-end">${esc(t('col.weekly_use'))}</th>
@@ -624,6 +714,19 @@
     }
 
     function bindStock() {
+        if (state.inventory) return bindInventory();
+        el.querySelector('[data-inventory]')?.addEventListener('click', () => { state.inventory = true; draw(); window.scrollTo(0, 0); });
+        el.querySelector('[data-suggest-all]')?.addEventListener('click', async (e) => {
+            const ids = stockRows().filter(r => r.weekly_use > 0).map(r => r.id);
+            if (!ids.length || !window.confirm(t('suggest_all_confirm', {n: ids.length}))) return;
+            e.currentTarget.disabled = true;
+            try {
+                const res = await api.post('/supply/materials/limits', {ids});
+                data.materials = res;
+                ui.notify(true, t('suggest_all_done', {n: res.updated, skipped: res.skipped}));
+                draw();
+            } catch (err) { ui.notify(false, errText(err)); e.currentTarget.disabled = false; }
+        });
         el.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { state.kind = b.dataset.kind; writeHash(); draw(); }));
         el.querySelectorAll('[data-smode]').forEach(b => b.addEventListener('click', () => { state.stockMode = b.dataset.smode; draw(); }));
         el.querySelector('[data-used]').addEventListener('change', (e) => { state.used = e.target.checked; draw(); });

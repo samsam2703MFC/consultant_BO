@@ -58,7 +58,7 @@
         'finances': 'finanse', 'analyse': 'analiza', 'langues': 'jezyki', 'poids': 'wagi', 'nutrition': 'odzywcze', 'archives': 'archiwum',
         'question': 'pytania', 'questions': 'pytania', 'tenue': 'pytania odziez', 'hygiene': 'higiena pytania', 'heures': 'godziny',
         'badge': 'identyfikatory', 'badges': 'identyfikatory', 'telephone': 'telefony', 'distribution': 'dystrybucja',
-        'document': 'dokumenty', 'documents': 'dokumenty', 'calcul': 'kalkulacja kalkulator', 'cmr': 'cmr dokumenty', 'imprimer': 'drukuj dokumenty',
+        'document': 'dokumenty', 'documents': 'dokumenty', 'calcul': 'kalkulacja kalkulator', 'cmr': 'cmr dokumenty', 'imprimer': 'drukuj dokumenty druk',
         'mail': 'poczta skrzynka', 'mails': 'poczta skrzynka e-maile', 'email': 'poczta skrzynka e-maile', 'courriel': 'poczta', 'boite': 'poczta skrzynka', 'reception': 'poczta dostawy przyjecie', 'envoyes': 'wyslane niewyslane',
         'messagerie': 'poczta', 'groupe': 'grupy grup', 'groupes': 'grupy grup', 'semaine': 'tydzien tygodni', 'qui': 'kto', 'livre': 'dostarcza dostawy', 'livrent': 'dostarcza dostawy', 'quoi': 'co', 'quand': 'kiedy', 'hebdomadaire': 'tydzien', 'hebdo': 'tydzien', 'cobot': 'coboty cobot', 'cobots': 'coboty cobot', 'photo': 'zdjecia', 'photos': 'zdjecia',
         'remplir': 'wypelnienia', 'importer': 'import', 'xlsx': 'excel', 'donnees': 'dane tabela', 'capacite': 'pojemnosc pojemnosci', 'capacites': 'pojemnosci',
@@ -104,7 +104,8 @@
         'compte': 'uzytkownik konto', 'comptes': 'uzytkownicy', 'identifiant': 'login', 'acces': 'uprawnienia dostep', 'droits': 'uprawnienia',
         'receptionner': 'przyjecie przyjmij dostawy', 'receptionne': 'przyjecie przyjete', 'nonconformite': 'niezgodnosc nc', 'nonconformites': 'niezgodnosci nc', 'abime': 'problem niezgodnosc uszkodzony', 'casse': 'problem uszkodzony',
         'envoyer': 'wyslij wyslane', 'tout': 'wszystkie', 'tous': 'wszystkie', 'toutes': 'wszystkie', 'habituel': 'zwykly zwykle', 'langue': 'jezyk',
-        'commander': 'zamow zamowienia', 'apres': 'po', 'planification': 'planowanie planowaniu plan'
+        'commander': 'zamow zamowienia', 'apres': 'po', 'planification': 'planowanie planowaniu plan',
+        'feuille': 'arkusz', 'semaines': 'tyg tygodni', 'clic': 'kliknieciem', 'masse': 'wszystkie', 'compter': 'policzone liczenia', 'max': 'maks maksymalne'
     };
 
     var menu = null;

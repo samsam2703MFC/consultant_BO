@@ -210,6 +210,61 @@ final class SupplyService
         return $this->material($id, $context);
     }
 
+    /**
+     * Inwentaryzacja całego magazynu jednym zapisem : wszystkie policzone ilości z arkusza (jednostka bazowa), jedna data.
+     * Pozycje bez wpisu pomija się ; jedna pozycja z błędem zatrzymuje cały zapis.
+     */
+    public function addCounts(array $body, ApiContext $context): array
+    {
+        $v = (new Validator($body))->only(['count_date', 'note', 'counts'])->date('count_date', false, false)->string('note', 255, false, true);
+        $day = $v->value('count_date') ?? date('Y-m-d');
+        if (!$v->hasError('count_date') && $day > date('Y-m-d')) $v->add('count_date', 'IN_FUTURE');
+        $rows = $body['counts'] ?? null;
+        $clean = [];
+        if (!is_array($rows) || !$rows) $v->add('counts', 'REQUIRED');
+        else {
+            $known = array_flip(array_map(fn($m) => (int) $m['id'], $this->repo->materials(array_map(fn($r) => (int) (is_array($r) ? ($r['id'] ?? 0) : 0), $rows))));
+            foreach (array_values($rows) as $i => $r) {
+                $id = is_array($r) ? ($r['id'] ?? null) : null;
+                $qty = is_array($r) ? ($r['quantity'] ?? null) : null;
+                if (!is_int($id) || !isset($known[$id])) { $v->add("counts.$i.id", 'REFERENCE_NOT_FOUND', ['id' => is_scalar($id) ? (string) $id : '?']); continue; }
+                if ((!is_int($qty) && !is_float($qty)) || $qty < 0 || $qty > self::MAX_QTY) { $v->add("counts.$i.quantity", 'OUT_OF_RANGE', ['min' => 0, 'max' => self::MAX_QTY]); continue; }
+                $clean[$id] = (float) $qty;
+            }
+        }
+        $v->throwIfInvalid();
+        $note = $v->value('note');
+        $this->tx->execute(function () use ($clean, $day, $note, $context) {
+            foreach ($clean as $id => $qty) $this->repo->addCount($id, $day, $qty, $note, $context->userId);
+            $this->audit->record($context, 'create', 'material_inventory', $day, null, ['count_date' => $day, 'materials' => count($clean)]);
+        });
+        return ['saved' => count($clean), 'count_date' => $day] + $this->materials($context);
+    }
+
+    /**
+     * Min./maks. « 1–2 tyg. » jednym kliknięciem : min. = zużycie 1 tygodnia, maks. = 2 tygodni (w górę do pełnych opakowań),
+     * tryb « na stan ». Tylko surowce ze zużyciem w ostatnich 4 tygodniach.
+     */
+    public function suggestLimits(array $body, ApiContext $context): array
+    {
+        $ids = $body['ids'] ?? null;
+        if (!is_array($ids) || !$ids || array_filter($ids, fn($x) => !is_int($x))) throw ApiException::validation([['field' => 'ids', 'code' => 'REQUIRED', 'params' => []]]);
+        $wanted = array_flip($ids);
+        $rows = array_filter($this->materials($context)['rows'], fn($r) => isset($wanted[$r['id']]) && $r['weekly_use'] > 0);
+        $up = fn(array $r, float $v) => $r['package_size'] ? ceil($v / $r['package_size'] - 1e-9) * $r['package_size'] : ceil($v);
+        $changed = [];
+        $this->tx->execute(function () use ($rows, $up, $context, &$changed) {
+            foreach ($rows as $r) {
+                $data = ['supply_mode' => 'stock', 'stock_min' => $up($r, $r['weekly_use']), 'stock_max' => $up($r, 2 * $r['weekly_use'])];
+                if ($r['mode'] === 'stock' && $r['stock_min'] !== null && abs($r['stock_min'] - $data['stock_min']) < 1e-6 && $r['stock_max'] !== null && abs($r['stock_max'] - $data['stock_max']) < 1e-6) continue;
+                $this->repo->saveSupply($r['id'], $data + ['updated_by' => $context->userId]);
+                $changed[] = $r['id'];
+            }
+            if ($changed) $this->audit->record($context, 'update', 'material_supply_limits', null, null, ['materials' => count($changed), 'rule' => '1-2 weeks']);
+        });
+        return ['updated' => count($changed), 'skipped' => count($ids) - count($changed)] + $this->materials($context);
+    }
+
     private function material(int $id, ApiContext $context): array
     {
         $m = $this->repo->materials([$id])[0];
