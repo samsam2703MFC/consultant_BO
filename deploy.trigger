@@ -1090,3 +1090,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T19:12:19Z production : lot D P20 compteurs achats, P18 liste du jour depuis le plan
 2026-10-26T19:45:25Z production : lot D P14 (Zamknięcie miesiąca)
 2026-10-26T20:06:48Z visites : toute la tablette en néerlandais (FR | NL)
+2026-10-26T20:26:01Z production : lot E P5 P6 P7 P8
