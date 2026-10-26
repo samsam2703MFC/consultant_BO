@@ -1,7 +1,7 @@
 # Maquettes « Promotions au cockpit » (26/10/2026)
 
 > **Construit le 26/10/2026 : la forme A**, avec un onglet en lecture seule dans le dashboard (« A, garde un onglet
-> lecture seule dans le dashboard »). Le rail du cockpit a la section Promotions : **Édition** (`#/promotions/edition`,
+> lecture seule dans le dashboard »). Le rail du cockpit a un menu à part, une entrée repliable « ▸ Promotions » hors des sections (demande de Sam, même jour) : **Édition** (`#/promotions/edition`,
 > l'assistant du dashboard dans un cadre — `dashboard/?embed=promos` —, le magasin choisi dans son entête) et **Tableau
 > d'analyse** (`#/promotions`, `GET /promotions/reseau`, `src/promos_reseau.php`, `public/assets/js/promotions-*.js`). Le
 > dashboard du magasin lit ses promotions sans les créer ni les modifier ; l'onglet Promotions d'Analyse magasin est
