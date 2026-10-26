@@ -1,7 +1,7 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 081, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 081 ; compatible MySQL 8.
+-- 001 → 082, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 082 ; compatible MySQL 8.
 -- Modifications des tables d'origine : voir docs/db/README.md (colonne customer.communication_lang, nettoyage 074 → 080).
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `n_activity_click` (
@@ -81,6 +81,17 @@ CREATE TABLE `n_customer_space` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id_customer`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_delivery_media` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_stop` int(11) NOT NULL,
+  `kind` enum('signature','photo') NOT NULL,
+  `mime` varchar(40) NOT NULL,
+  `content` mediumblob NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_n_delivery_media_stop` (`id_stop`),
+  CONSTRAINT `fk_n_delivery_media_stop` FOREIGN KEY (`id_stop`) REFERENCES `n_delivery_stop` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_delivery_notice` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `ship_date` date NOT NULL,
@@ -100,6 +111,41 @@ CREATE TABLE `n_delivery_notice` (
   KEY `idx_delivery_notice_day` (`ship_date`,`id_customer`),
   KEY `idx_n_delivery_notice_customer` (`id_customer`),
   KEY `idx_n_delivery_notice_message` (`id_message`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_delivery_run` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ship_date` date NOT NULL,
+  `id_carrier_vehicle` int(11) NOT NULL,
+  `driver_name` varchar(100) DEFAULT NULL,
+  `started_at` datetime DEFAULT NULL,
+  `finished_at` datetime DEFAULT NULL,
+  `id_device` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_n_delivery_run` (`ship_date`,`id_carrier_vehicle`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_delivery_stop` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ship_date` date NOT NULL,
+  `id_customer` int(11) NOT NULL,
+  `id_carrier_vehicle` int(11) DEFAULT NULL,
+  `status` enum('delivered','problem') NOT NULL,
+  `reason` enum('closed','refused','damaged','missing','late','other') DEFAULT NULL,
+  `receiver_name` varchar(100) DEFAULT NULL,
+  `pallets_delivered` int(11) DEFAULT NULL,
+  `pallets_returned` int(11) DEFAULT NULL,
+  `note` varchar(500) DEFAULT NULL,
+  `lat` decimal(9,6) DEFAULT NULL,
+  `lng` decimal(9,6) DEFAULT NULL,
+  `recorded_at` datetime NOT NULL,
+  `driver_name` varchar(100) DEFAULT NULL,
+  `id_device` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_n_delivery_stop` (`ship_date`,`id_customer`),
+  KEY `idx_n_delivery_stop_vehicle` (`id_carrier_vehicle`,`ship_date`),
+  KEY `idx_n_delivery_stop_recorded` (`recorded_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_dev_product` (
   `id_test_product` int(11) NOT NULL,
@@ -751,6 +797,8 @@ CREATE TABLE `n_prod_device` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `id_group` int(11) DEFAULT NULL COMMENT 'Grupa, przy której stoi tablet (lista osób i operacji)',
+  `mode` enum('atelier','driver') NOT NULL DEFAULT 'atelier',
+  `id_carrier_vehicle` int(11) DEFAULT NULL,
   `token_hash` char(64) DEFAULT NULL,
   `pairing_code_hash` char(64) DEFAULT NULL,
   `pairing_expires_at` datetime DEFAULT NULL,

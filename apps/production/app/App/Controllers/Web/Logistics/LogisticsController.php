@@ -11,7 +11,7 @@ class LogisticsController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private LogisticsService $logistics) {}
+    public function __construct(private LogisticsService $logistics, private \App\Services\Logistics\DriverService $driver) {}
 
     public function day()
     {
@@ -24,6 +24,8 @@ class LogisticsController extends BaseController
         // view() nadpisuje „warnings” : ostrzeżenia dnia idą jako „notices”.
         $data['notices'] = $data['warnings'];
         unset($data['warnings']);
+        // Tablet kierowcy : dostarczono / problem u klienta.
+        $data['delivery'] = $this->driver->statuses($data['date']);
         $this->view('logistics/day', $data);
     }
 

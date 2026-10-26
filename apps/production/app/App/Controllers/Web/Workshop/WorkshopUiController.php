@@ -83,6 +83,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/kiosk', ['api_base' => $this->apiBase()]);
     }
 
+    /** Tablet kierowcy (PWA) : trasa dnia i potwierdzenia dostaw ; sama powłoka, dane przez API z tokenem tabletu. */
+    public function driver()
+    {
+        $this->view('workshop/driver', ['api_base' => $this->apiBase()]);
+    }
+
     /** Telefon : wejście / wyjście po zeskanowaniu kodu QR z tabletu (strona publiczna, dane przez API). */
     public function kioskScan()
     {

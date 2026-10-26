@@ -40,6 +40,7 @@ final class ExecutionController
 
     // Responsable
     public function devices(ApiRequest $request): ApiResult { return ApiResult::list($this->kiosk->devices()); }
+    public function vehicles(ApiRequest $request): ApiResult { return ApiResult::list($this->kiosk->vehicles()); }
     public function createDevice(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->createDevice($request->body(), $request->context), 201); }
     public function updateDevice(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->updateDevice($request->id(), $request->body(), $request->context)); }
     public function credentials(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->setCredentials($request->id(), $request->body(), $request->context)); }

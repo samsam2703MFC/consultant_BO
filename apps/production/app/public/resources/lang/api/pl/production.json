@@ -94,7 +94,8 @@
     "DATA_SHEET_UNKNOWN_SHIFT": "Nieznany kod zmiany « {code} » (kody w arkuszu Zmiany).",
     "DATA_SHEET_DUPLICATE_ROW": "« {key} » występuje już w wierszu {row}.",
     "DATA_SHEET_UNKNOWN_PARAM": "Parametr « {code} » nie należy do tej tabeli.",
-    "DATA_SHEET_TOUR_NOT_FOUND": "Nie ma trasy nr {id} — usuń numer, aby dodać nową trasę."
+    "DATA_SHEET_TOUR_NOT_FOUND": "Nie ma trasy nr {id} — usuń numer, aby dodać nową trasę.",
+    "DEVICE_NOT_DRIVER": "Ten tablet nie jest tabletem kierowcy — zmień tryb tabletu w zarządzaniu tabletami."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -158,8 +159,8 @@
     "INVALID_PIN": "PIN to 4 do 6 cyfr.",
     "BADGE_TAKEN": "Ten identyfikator ma już inna osoba.",
     "PAIRING_CODE_INVALID": "Nieprawidłowy lub wygasły kod parowania.",
-    "INVALID_IMAGE": "Podpis musi być obrazem PNG.",
-    "IMAGE_TOO_LARGE": "Obraz podpisu jest za duży (maks. {max_kb} KB).",
+    "INVALID_IMAGE": "Pole „{field}” musi być obrazem (PNG albo JPEG).",
+    "IMAGE_TOO_LARGE": "Pole „{field}”: obraz jest za duży (maks. {max_kb} KB).",
     "SIGNATURE_REF_INVALID": "Podpis nie odnosi się do Twojego wpisu.",
     "INVALID_UUID": "Nieprawidłowy identyfikator UUID.",
     "INVALID_MONTH": "Miesiąc w formacie RRRR-MM.",
@@ -184,7 +185,9 @@
     "INCOMPLETE": "Brakuje odpowiedzi : {missing}.",
     "INVALID_FILE": "Plik musi być fakturą PDF albo XML KSeF (FA).",
     "FILE_TOO_LARGE": "Plik jest za duży (maks. {max_kb} KB).",
-    "POSITION_CYCLE": "Pole „{field}”: stanowisko nie może podlegać samemu sobie ani swojemu podwładnemu."
+    "POSITION_CYCLE": "Pole „{field}”: stanowisko nie może podlegać samemu sobie ani swojemu podwładnemu.",
+    "DRIVER_CUSTOMER_NOT_PLANNED": "Klient {id} nie ma dostawy w tym dniu.",
+    "DRIVER_DATE_OUT_OF_RANGE": "Pole „{field}”: dzień wysyłki od tygodnia wstecz do jutra."
   },
   "fields": {
     "code": "kod",
@@ -439,7 +442,16 @@
     "safety_pl": "higiena i bezpieczeństwo (PL)",
     "safety_fr": "higiena i bezpieczeństwo (FR)",
     "relations_pl": "współpraca (PL)",
-    "relations_fr": "współpraca (FR)"
+    "relations_fr": "współpraca (FR)",
+    "customer_id": "klient",
+    "vehicle_id": "pojazd",
+    "receiver_name": "odbiorca",
+    "signature": "podpis",
+    "reason": "przyczyna",
+    "pallets_delivered": "palety dostarczone",
+    "pallets_returned": "palety zwrócone",
+    "recorded_at": "godzina zapisu",
+    "driver_name": "kierowca"
   },
   "entities": {
     "test_product": "produkt testowy",

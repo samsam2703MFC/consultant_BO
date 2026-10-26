@@ -31,6 +31,7 @@ final class KioskAuthService
 {
     public const AUDIENCE = 'tfb-kiosk';
     public const QR_AUDIENCE = 'tfb-clock-qr';
+    public const MODES = ['atelier', 'driver'];
     private const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
     public function __construct(
@@ -72,6 +73,7 @@ final class KioskAuthService
     {
         return array_map(fn($d) => [
             'id' => (int) $d['id'], 'name' => $d['name'], 'group_id' => $d['id_group'] !== null ? (int) $d['id_group'] : null,
+            'mode' => $d['mode'] ?? 'atelier', 'vehicle_id' => $d['id_carrier_vehicle'] !== null ? (int) $d['id_carrier_vehicle'] : null, 'vehicle_label' => $d['vehicle_label'] ?? null,
             'active' => (bool) $d['active'], 'paired' => (bool) $d['paired'], 'last_seen_at' => $d['last_seen_at'],
             'pairing_pending' => $d['pairing_expires_at'] !== null && $d['pairing_expires_at'] > date('Y-m-d H:i:s'),
         ], $this->repo->devices());
@@ -80,8 +82,10 @@ final class KioskAuthService
     /** Nouvelle tablette, ou nouvel appairage (l'ancien jeton est révoqué) : le code n'est rendu qu'une fois. */
     public function createDevice(array $body, ApiContext $context, ?int $id = null): array
     {
-        $v = (new Validator($body))->only(['name', 'group_id', 'active'])
-            ->string('name', 100, $id === null)->integer('group_id', false, 1, null, true)->boolean('active');
+        $v = (new Validator($body))->only(['name', 'group_id', 'mode', 'vehicle_id', 'active'])
+            ->string('name', 100, $id === null)->integer('group_id', false, 1, null, true)->choice('mode', self::MODES, false)
+            ->integer('vehicle_id', false, 1, null, true)->boolean('active');
+        $this->checkVehicle($v);
         $v->throwIfInvalid();
         $c = $v->clean();
         if ($id !== null && $this->repo->find($id) === null) throw ApiException::notFound('device', $id);
@@ -92,6 +96,7 @@ final class KioskAuthService
             'pairing_code_hash' => hash('sha256', $code), 'pairing_expires_at' => date('Y-m-d H:i:s', time() + $ttl * 60), 'token_hash' => null,
         ];
         if (array_key_exists('group_id', $c)) $data['id_group'] = $c['group_id'];
+        $data = array_merge($data, $this->modeData($c));
         $this->tx->execute(function () use (&$id, $data, $context) {
             if ($id === null) {
                 $id = $this->repo->insert($data + ['created_by' => $context->userId, 'active' => 1]);
@@ -111,11 +116,14 @@ final class KioskAuthService
             return $this->createDevice($body, $context, $id);
         }
         $device = $this->repo->find($id) ?? throw ApiException::notFound('device', $id);
-        $v = (new Validator($body))->only(['name', 'group_id', 'active'])->string('name', 100, false)->integer('group_id', false, 1, null, true)->boolean('active');
+        $v = (new Validator($body))->only(['name', 'group_id', 'mode', 'vehicle_id', 'active'])->string('name', 100, false)->integer('group_id', false, 1, null, true)
+            ->choice('mode', self::MODES, false)->integer('vehicle_id', false, 1, null, true)->boolean('active');
+        $this->checkVehicle($v);
         $v->throwIfInvalid();
         $c = $v->clean();
         $data = array_intersect_key($c, array_flip(['name', 'active']));
         if (array_key_exists('group_id', $c)) $data['id_group'] = $c['group_id'];
+        $data = array_merge($data, $this->modeData($c));
         if (isset($data['active'])) $data['active'] = $data['active'] ? 1 : 0;
         $this->repo->update($id, $data);
         $this->audit->record($context, 'update', 'device', $id, ['active' => (bool) $device['active']], $data);
@@ -166,14 +174,41 @@ final class KioskAuthService
         if ($device === null || !(int) $device['active']) throw ApiException::validation([['field' => 'code', 'code' => 'PAIRING_CODE_INVALID', 'params' => []]]);
         $token = bin2hex(random_bytes(32));
         $this->repo->update((int) $device['id'], ['token_hash' => hash('sha256', $token), 'pairing_code_hash' => null, 'pairing_expires_at' => null, 'last_seen_at' => date('Y-m-d H:i:s')]);
-        return ['device_token' => $token, 'device' => ['id' => (int) $device['id'], 'name' => $device['name'], 'group_id' => $device['id_group'] !== null ? (int) $device['id_group'] : null]];
+        return ['device_token' => $token, 'device' => ['id' => (int) $device['id'], 'name' => $device['name'], 'group_id' => $device['id_group'] !== null ? (int) $device['id_group'] : null,
+            'mode' => $device['mode'] ?? 'atelier']];
     }
 
     /** Tablette appairée (jeton en en-tête ou en cookie) : nom et groupe — la tablette vérifie au démarrage qu'elle est appairée. */
     public function device(ApiContext $context): array
     {
         $d = $this->repo->find((int) $context->deviceId);
-        return ['id' => (int) $context->deviceId, 'name' => $d['name'] ?? null, 'group_id' => $context->deviceGroupId];
+        return ['id' => (int) $context->deviceId, 'name' => $d['name'] ?? null, 'group_id' => $context->deviceGroupId, 'mode' => $d['mode'] ?? 'atelier',
+            'vehicle_id' => isset($d['id_carrier_vehicle']) ? (int) $d['id_carrier_vehicle'] : null];
+    }
+
+    /** Pojazdy do wyboru dla tabletu kierowcy (zarządzanie tabletami). */
+    public function vehicles(): array
+    {
+        return array_map(fn($v) => ['id' => (int) $v['id'], 'label' => trim((string) $v['regis_num']) !== '' ? $v['regis_num'] : (string) $v['carrier'],
+            'carrier' => $v['carrier'], 'driver' => $v['driver'] !== '' ? $v['driver'] : null], $this->repo->vehicleChoices());
+    }
+
+    private function checkVehicle(Validator $v): void
+    {
+        if ($v->value('vehicle_id') !== null && !$this->repo->vehicleExists((int) $v->value('vehicle_id'))) {
+            $v->add('vehicle_id', 'REFERENCE_NOT_FOUND', ['id' => $v->value('vehicle_id')]);
+        }
+    }
+
+    /** Tryb tabletu : pracownia (grupa) albo kierowca (pojazd domyślny ; bez grupy). */
+    private function modeData(array $c): array
+    {
+        $data = [];
+        if (array_key_exists('mode', $c)) $data['mode'] = $c['mode'];
+        if (array_key_exists('vehicle_id', $c)) $data['id_carrier_vehicle'] = $c['vehicle_id'];
+        if (($c['mode'] ?? null) === 'driver') $data['id_group'] = null;
+        if (($c['mode'] ?? null) === 'atelier') $data['id_carrier_vehicle'] = null;
+        return $data;
     }
 
     /** Personnes proposées sur la tablette (groupe de la tablette), pour s'identifier en touchant son nom. */

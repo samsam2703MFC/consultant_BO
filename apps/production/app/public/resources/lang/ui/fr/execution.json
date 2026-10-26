@@ -100,5 +100,11 @@
   "q.none": "Aucune question : entrée et sortie en un geste.",
   "q.add_title": "Nouvelle question",
   "q.add": "Ajouter la question",
-  "q.help": "À l'entrée / à la sortie (téléphone après avoir scanné le QR de la tablette du bureau, ou tablette de l'équipe), la personne touche chaque point puis valide « OK, je valide ». Sans confirmation d'une question obligatoire, le pointage n'est pas enregistré. Les réponses figurent sur la feuille d'heures (impression)."
+  "q.help": "À l'entrée / à la sortie (téléphone après avoir scanné le QR de la tablette du bureau, ou tablette de l'équipe), la personne touche chaque point puis valide « OK, je valide ». Sans confirmation d'une question obligatoire, le pointage n'est pas enregistré. Les réponses figurent sur la feuille d'heures (impression).",
+  "device_mode": "Type de tablette",
+  "mode_atelier": "Tablette atelier (groupe)",
+  "mode_driver": "Tablette chauffeur",
+  "vehicle": "Véhicule",
+  "no_vehicle": "— le chauffeur choisit le véhicule —",
+  "driver_help": "Tablette chauffeur : ouvrez la page /driver sur la tablette (ou /kiosk — redirection) et saisissez le code. Le chauffeur voit la tournée du jour de son véhicule, confirme les livraisons (réceptionnaire, signature, photo, palettes) et signale les problèmes ; tout arrive dans Logistyka › Dostawy."
 }

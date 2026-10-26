@@ -30,6 +30,7 @@ final class RecordHistoryRepository
         'faktury' => 'SELECT COUNT(*) FROM document_invoice WHERE id_customer = ?',
         'palety' => 'SELECT COUNT(*) FROM palets_delivery WHERE id_customer = ?',
         'reklamacje' => 'SELECT COUNT(*) FROM complaint WHERE id_customer = ?',
+        'dostawy (tablet kierowcy)' => 'SELECT COUNT(*) FROM n_delivery_stop WHERE id_customer = ?',
     ];
 
     private const MATERIAL = [

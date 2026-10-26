@@ -94,7 +94,8 @@
     "DATA_SHEET_UNKNOWN_SHIFT": "Code de shift inconnu « {code} » (codes dans la feuille Zmiany).",
     "DATA_SHEET_DUPLICATE_ROW": "« {key} » figure déjà à la ligne {row}.",
     "DATA_SHEET_UNKNOWN_PARAM": "Le paramètre « {code} » ne fait pas partie de ce tableau.",
-    "DATA_SHEET_TOUR_NOT_FOUND": "La tournée n° {id} n’existe pas — effacez le numéro pour ajouter une nouvelle tournée."
+    "DATA_SHEET_TOUR_NOT_FOUND": "La tournée n° {id} n’existe pas — effacez le numéro pour ajouter une nouvelle tournée.",
+    "DEVICE_NOT_DRIVER": "Cette tablette n’est pas une tablette chauffeur — changez son mode dans la gestion des tablettes."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -158,8 +159,8 @@
     "INVALID_PIN": "Le PIN fait 4 à 6 chiffres.",
     "BADGE_TAKEN": "Ce badge est déjà attribué à une autre personne.",
     "PAIRING_CODE_INVALID": "Code d'appairage invalide ou expiré.",
-    "INVALID_IMAGE": "La signature doit être une image PNG.",
-    "IMAGE_TOO_LARGE": "Image de signature trop grande ({max_kb} Ko max.).",
+    "INVALID_IMAGE": "Le champ « {field} » doit être une image (PNG ou JPEG).",
+    "IMAGE_TOO_LARGE": "Champ « {field} » : image trop grande ({max_kb} Ko max.).",
     "SIGNATURE_REF_INVALID": "La signature ne porte pas sur une de vos entrées.",
     "INVALID_UUID": "Identifiant UUID invalide.",
     "INVALID_MONTH": "Mois au format AAAA-MM.",
@@ -184,7 +185,9 @@
     "INCOMPLETE": "Réponses manquantes : {missing}.",
     "INVALID_FILE": "Le fichier doit être une facture PDF ou XML KSeF (FA).",
     "FILE_TOO_LARGE": "Fichier trop volumineux (max. {max_kb} Ko).",
-    "POSITION_CYCLE": "Champ « {field} » : un poste ne peut pas dépendre de lui-même ni d’un poste qui lui est rattaché."
+    "POSITION_CYCLE": "Champ « {field} » : un poste ne peut pas dépendre de lui-même ni d’un poste qui lui est rattaché.",
+    "DRIVER_CUSTOMER_NOT_PLANNED": "Le client {id} n’a pas de livraison ce jour-là.",
+    "DRIVER_DATE_OUT_OF_RANGE": "Champ « {field} » : jour d’expédition d’une semaine en arrière à demain."
   },
   "fields": {
     "code": "code",
@@ -439,7 +442,16 @@
     "safety_pl": "hygiène et sécurité (PL)",
     "safety_fr": "hygiène et sécurité (FR)",
     "relations_pl": "relations (PL)",
-    "relations_fr": "relations (FR)"
+    "relations_fr": "relations (FR)",
+    "customer_id": "client",
+    "vehicle_id": "véhicule",
+    "receiver_name": "réceptionnaire",
+    "signature": "signature",
+    "reason": "raison",
+    "pallets_delivered": "palettes livrées",
+    "pallets_returned": "palettes rendues",
+    "recorded_at": "heure d’enregistrement",
+    "driver_name": "chauffeur"
   },
   "entities": {
     "test_product": "produit test",

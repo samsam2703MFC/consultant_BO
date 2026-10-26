@@ -12,6 +12,11 @@ return function(RouteCollector $r) {
     $d = App\Controllers\Web\Logistics\DeliveryDocumentsController::class;
     $r->addRoute('GET', '/logistics/documents', ['controller' => $d, 'method' => 'index']);
     $r->addRoute('GET', '/ajax/logistics/documents/day.pdf', ['controller' => $d, 'method' => 'dayPdf']);
+    // Dostawy : potwierdzenia z tabletu kierowcy (odbiorca, podpis, zdjęcie, palety), PDF potwierdzenia.
+    $p = App\Controllers\Web\Logistics\DeliveryProofController::class;
+    $r->addRoute('GET', '/logistics/deliveries', ['controller' => $p, 'method' => 'index']);
+    $r->addRoute('GET', '/logistics/deliveries/{id:\d+}/proof.pdf', ['controller' => $p, 'method' => 'proof']);
+    $r->addRoute('GET', '/logistics/deliveries/media/{id:\d+}', ['controller' => $p, 'method' => 'media']);
     $n = App\Controllers\Web\Logistics\DeliveryNoticeController::class;
     $r->addRoute('GET', '/logistics/notices', ['controller' => $n, 'method' => 'index']);
     $r->addRoute('POST', '/ajax/logistics/notices/preview', ['controller' => $n, 'method' => 'preview']);

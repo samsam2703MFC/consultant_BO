@@ -64,7 +64,7 @@
         'remplir': 'wypelnienia', 'importer': 'import', 'xlsx': 'excel', 'donnees': 'dane tabela', 'capacite': 'pojemnosc pojemnosci', 'capacites': 'pojemnosci',
         'machine': 'stanowiska maszyny', 'machines': 'stanowiska maszyny', 'poste': 'stanowiska', 'postes': 'stanowiska', 'four': 'stanowiska piece', 'fours': 'stanowiska piece',
         'horaire': 'zmiany godziny', 'horaires': 'zmiany godziny', 'shift': 'zmiany', 'shifts': 'zmiany', 'effectif': 'obsada', 'effectifs': 'obsada', 'equipes': 'zespol zespolow obsada',
-        'fiches': 'karty', 'mission': 'cel karty', 'missions': 'cel karty', 'responsabilites': 'obowiazki karty', 'competence': 'kompetencje', 'organigramme': 'stanowiska przelozony', 'boulanger': 'piekarz piekarnia', 'patissier': 'cukiernik cukiernia', 'chauffeur': 'kierowca kierowcy', 'chauffeurs': 'kierowcy kierowca', 'surgelateur': 'zamrazarki', 'congelateur': 'zamrazarki', 'surgelation': 'zamrazarki', 'depart': 'wyjazdu', 'departs': 'wyjazdu'
+        'fiches': 'karty', 'mission': 'cel karty', 'missions': 'cel karty', 'responsabilites': 'obowiazki karty', 'competence': 'kompetencje', 'organigramme': 'stanowiska przelozony', 'boulanger': 'piekarz piekarnia', 'patissier': 'cukiernik cukiernia', 'chauffeur': 'kierowca kierowcy', 'chauffeurs': 'kierowcy kierowca', 'preuve': 'potwierdzenie potwierdzenia', 'confirmation': 'potwierdzenie potwierdzenia', 'signature': 'podpis', 'probleme': 'problemy problem', 'incident': 'problemy problem', 'palette': 'palety', 'palettes': 'palety', 'surgelateur': 'zamrazarki', 'congelateur': 'zamrazarki', 'surgelation': 'zamrazarki', 'depart': 'wyjazdu', 'departs': 'wyjazdu'
     };
 
     var menu = null;

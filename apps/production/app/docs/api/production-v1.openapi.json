@@ -9639,6 +9639,76 @@
                 "x-permission": "prod.employees.write"
             }
         },
+        "/kiosk/devices/vehicles": {
+            "get": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Pojazdy dla tabletu kierowcy / Véhicules pour la tablette chauffeur",
+                "operationId": "listDeviceVehicles",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/DriverVehicleChoice"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.employees.write"
+            }
+        },
         "/kiosk/devices/{id}": {
             "patch": {
                 "tags": [
@@ -12563,6 +12633,294 @@
                         "schema": {
                             "type": "string",
                             "example": "https://erp.example/production"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/driver/day": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Tablet kierowcy : trasa dnia / Tablette chauffeur : tournée du jour",
+                "operationId": "driverDay",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DriverDay"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Tablette en mode « driver » seulement (DEVICE_NOT_DRIVER, 403). Arrêts dans l'ordre de déchargement du chargement du jour : adresse (lieu de livraison du dernier CMR sinon facturation), téléphone, palettes, cartons, poids, documents du jour, état enregistré.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "jour d'expédition (défaut : tournée ouverte d'hier, sinon aujourd'hui)"
+                        }
+                    },
+                    {
+                        "name": "vehicle_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "défaut : véhicule de la tablette"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/driver/run": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Start / koniec trasy / Départ / fin de tournée",
+                "operationId": "driverRun",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DriverRun"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DriverRunInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/driver/stops": {
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Dostawa potwierdzona albo problem / Livraison confirmée ou problème",
+                "operationId": "driverStop",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DriverStopResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Un enregistrement par client et jour d'expédition (un nouvel envoi le remplace : file d'attente hors ligne). delivered : réceptionnaire et signature PNG obligatoires ; problem : raison obligatoire, notification dans la cloche de l'ERP.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DriverStopInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/driver/documents": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Dokumenty dnia dla kierowców (PDF) / Documents du jour pour les chauffeurs (PDF)",
+                "operationId": "driverDocuments",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DocumentFile"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
                         }
                     },
                     {
@@ -17213,6 +17571,21 @@
                         "type": "integer",
                         "nullable": true
                     },
+                    "mode": {
+                        "type": "string",
+                        "enum": [
+                            "atelier",
+                            "driver"
+                        ]
+                    },
+                    "vehicle_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "vehicle_label": {
+                        "type": "string",
+                        "nullable": true
+                    },
                     "active": {
                         "type": "boolean"
                     },
@@ -17242,6 +17615,18 @@
                     "group_id": {
                         "type": "integer",
                         "nullable": true
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": [
+                            "atelier",
+                            "driver"
+                        ],
+                        "description": "driver : tablette chauffeur (sans groupe)"
+                    },
+                    "vehicle_id": {
+                        "type": "integer",
+                        "nullable": true
                     }
                 }
             },
@@ -17257,11 +17642,364 @@
                         "type": "integer",
                         "nullable": true
                     },
+                    "mode": {
+                        "type": "string",
+                        "enum": [
+                            "atelier",
+                            "driver"
+                        ]
+                    },
+                    "vehicle_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
                     "active": {
                         "type": "boolean"
                     },
                     "new_pairing_code": {
                         "type": "boolean"
+                    }
+                }
+            },
+            "DriverVehicleChoice": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "carrier": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "driver": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "DriverRunInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "vehicle_id",
+                    "action"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "vehicle_id": {
+                        "type": "integer"
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "start",
+                            "finish"
+                        ]
+                    },
+                    "driver_name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true
+                    }
+                }
+            },
+            "DriverRun": {
+                "type": "object",
+                "properties": {
+                    "driver_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "finished_at": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "DriverStopInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "date",
+                    "customer_id",
+                    "status"
+                ],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "customer_id": {
+                        "type": "integer"
+                    },
+                    "vehicle_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "delivered",
+                            "problem"
+                        ]
+                    },
+                    "reason": {
+                        "type": "string",
+                        "enum": [
+                            "closed",
+                            "refused",
+                            "damaged",
+                            "missing",
+                            "late",
+                            "other"
+                        ],
+                        "nullable": true
+                    },
+                    "receiver_name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true
+                    },
+                    "pallets_delivered": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "pallets_returned": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true
+                    },
+                    "signature": {
+                        "type": "string",
+                        "description": "data:image/png;base64,…",
+                        "nullable": true
+                    },
+                    "photo": {
+                        "type": "string",
+                        "description": "data:image/jpeg;base64,… (driver.photo_max_kb)",
+                        "nullable": true
+                    },
+                    "lat": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "lng": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "recorded_at": {
+                        "type": "string",
+                        "example": "2026-10-26 21:35:00",
+                        "nullable": true
+                    },
+                    "driver_name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "nullable": true
+                    }
+                }
+            },
+            "DriverStopResult": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "customer_id": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "recorded_at": {
+                        "type": "string"
+                    }
+                }
+            },
+            "DriverDay": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "dates": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "device": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "vehicle_id": {
+                                "type": "integer",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "vehicles": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "label": {
+                                    "type": "string"
+                                },
+                                "carrier": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "customers": {
+                                    "type": "integer"
+                                },
+                                "pallets": {
+                                    "type": "integer"
+                                },
+                                "departure": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "vehicle": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "run": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DriverRun"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "stops": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "n": {
+                                    "type": "integer"
+                                },
+                                "customer_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "address": {
+                                    "type": "string"
+                                },
+                                "phone": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "pallets": {
+                                    "type": "integer"
+                                },
+                                "cartons": {
+                                    "type": "number"
+                                },
+                                "weight_kg": {
+                                    "type": "number"
+                                },
+                                "scanned": {
+                                    "type": "integer"
+                                },
+                                "documents": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "type": {
+                                                "type": "string"
+                                            },
+                                            "num": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "delivered",
+                                        "problem"
+                                    ],
+                                    "nullable": true
+                                },
+                                "recorded_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "receiver_name": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "reason": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "counts": {
+                        "type": "object",
+                        "properties": {
+                            "stops": {
+                                "type": "integer"
+                            },
+                            "delivered": {
+                                "type": "integer"
+                            },
+                            "problem": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "string"
+                                },
+                                "label": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -18724,6 +19462,17 @@
                         "nullable": true
                     },
                     "group_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": [
+                            "atelier",
+                            "driver"
+                        ]
+                    },
+                    "vehicle_id": {
                         "type": "integer",
                         "nullable": true
                     }

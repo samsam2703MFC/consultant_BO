@@ -20,5 +20,6 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/workshop/traceability/photo/{id:\d+}', ['controller' => App\Controllers\Web\Workshop\TraceabilityController::class, 'method' => 'photo']);
     $r->addRoute('GET', '/kiosk', ['controller' => $c, 'method' => 'kiosk']);
     $r->addRoute('GET', '/kiosk/scan', ['controller' => $c, 'method' => 'kioskScan']);
+    $r->addRoute('GET', '/driver', ['controller' => $c, 'method' => 'driver']);
     $r->addRoute('POST', '/ajax/workshop/token', ['controller' => $c, 'method' => 'token']);
 };

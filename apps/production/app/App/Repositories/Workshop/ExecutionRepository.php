@@ -7,15 +7,28 @@ namespace App\Repositories\Workshop;
 final class ExecutionRepository extends WorkshopRepository
 {
     protected string $table = 'n_prod_device';
-    protected array $writable = ['name', 'id_group', 'token_hash', 'pairing_code_hash', 'pairing_expires_at', 'active', 'last_seen_at', 'created_by'];
+    protected array $writable = ['name', 'id_group', 'mode', 'id_carrier_vehicle', 'token_hash', 'pairing_code_hash', 'pairing_expires_at', 'active', 'last_seen_at', 'created_by'];
 
     // --- Tablettes -------------------------------------------------------------------------------
 
     public function devices(): array
     {
-        return $this->all('SELECT d.id, d.name, d.id_group, g.name_pl AS group_pl, g.name_fr AS group_fr, d.active, d.last_seen_at, d.created_at,
-                                  d.token_hash IS NOT NULL AS paired, d.pairing_expires_at
-                           FROM n_prod_device d LEFT JOIN n_prod_group g ON g.id = d.id_group ORDER BY d.active DESC, d.name');
+        return $this->all('SELECT d.id, d.name, d.id_group, d.mode, d.id_carrier_vehicle, cv.regis_num AS vehicle_label, g.name_pl AS group_pl, g.name_fr AS group_fr,
+                                  d.active, d.last_seen_at, d.created_at, d.token_hash IS NOT NULL AS paired, d.pairing_expires_at
+                           FROM n_prod_device d LEFT JOIN n_prod_group g ON g.id = d.id_group LEFT JOIN carrier_vehicle cv ON cv.id = d.id_carrier_vehicle
+                           ORDER BY d.active DESC, d.name');
+    }
+
+    /** Pojazdy do wyboru dla tabletu kierowcy. */
+    public function vehicleChoices(): array
+    {
+        return $this->all("SELECT cv.id, cv.regis_num, ca.name AS carrier, TRIM(CONCAT(COALESCE(cv.driver_name, ''), ' ', COALESCE(cv.driver_surname, ''))) AS driver
+                           FROM carrier_vehicle cv LEFT JOIN carrier ca ON ca.id = cv.id_carrier ORDER BY ca.name, cv.regis_num");
+    }
+
+    public function vehicleExists(int $id): bool
+    {
+        return (bool) $this->all('SELECT 1 FROM carrier_vehicle WHERE id = ?', [$id]);
     }
 
     public function deviceByToken(string $hash): ?array

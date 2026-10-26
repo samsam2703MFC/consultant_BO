@@ -100,5 +100,11 @@
   "q.none": "Brak pytań : wejście i wyjście jednym dotknięciem.",
   "q.add_title": "Nowe pytanie",
   "q.add": "Dodaj pytanie",
-  "q.help": "Przy wejściu / wyjściu (telefon po zeskanowaniu kodu QR z tabletu w biurze albo tablet zespołu) osoba dotyka każdego punktu i zatwierdza « OK, zatwierdzam ». Bez potwierdzenia pytania obowiązkowego wejście / wyjście nie jest zapisywane. Odpowiedzi są widoczne na karcie czasu pracy (druk)."
+  "q.help": "Przy wejściu / wyjściu (telefon po zeskanowaniu kodu QR z tabletu w biurze albo tablet zespołu) osoba dotyka każdego punktu i zatwierdza « OK, zatwierdzam ». Bez potwierdzenia pytania obowiązkowego wejście / wyjście nie jest zapisywane. Odpowiedzi są widoczne na karcie czasu pracy (druk).",
+  "device_mode": "Rodzaj tabletu",
+  "mode_atelier": "Tablet pracowni (grupa)",
+  "mode_driver": "Tablet kierowcy",
+  "vehicle": "Pojazd",
+  "no_vehicle": "— pojazd wybiera kierowca —",
+  "driver_help": "Tablet kierowcy : otwórz na tablecie stronę /driver (albo /kiosk — przekierowanie) i wpisz kod. Kierowca widzi trasę dnia swojego pojazdu, potwierdza dostawy (odbiorca, podpis, zdjęcie, palety) i zgłasza problemy ; wszystko w Logistyka › Dostawy."
 }

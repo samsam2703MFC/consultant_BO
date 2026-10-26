@@ -187,6 +187,7 @@
                 deviceInfo = null;
                 store.set(DEVICE_KEY, device);
                 persist();
+                if (r.device.mode === 'driver') { location.replace(root + '/driver'); return; }
                 toast(t('paired', {name: r.device.name}));
                 location.hash === '#week' ? renderWeek(null, true) : renderHome();
             } catch (err) { el.querySelector('[data-error]').textContent = err.message; }
@@ -204,6 +205,8 @@
         if (deviceInfo === null) {
             try { deviceInfo = await api('GET', '/kiosk/device'); } catch (err) { deviceInfo = {group_id: null}; }
         }
+        // Tablet kierowcy : własna strona (trasa dnia, potwierdzenia dostaw).
+        if (deviceInfo.mode === 'driver') { location.replace(root + '/driver'); return; }
         const office = !deviceInfo.group_id;
         const peopleCard = `<section class="kiosk-card kiosk-home-people"><div class="kiosk-home-title"><h2>${esc(t(office ? 'office_people' : 'home_people_title'))}</h2></div><div class="kiosk-people" data-people><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>`;
         const qrCard = `<section class="kiosk-card kiosk-qr ${office ? 'is-office' : ''}" data-qr-card hidden><canvas data-qr width="220" height="220" role="img" aria-label="${esc(t('qr_title'))}"></canvas>

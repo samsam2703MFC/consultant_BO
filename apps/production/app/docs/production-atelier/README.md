@@ -147,6 +147,11 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 - toute l'API référentiels, avec les messages en polonais et en français ;
 - le journal des écritures.
 
+## Tablette chauffeur et fiches de poste (26/10/2026)
+
+- **Tablette chauffeur** (`/driver`, PWA) : une tablette appairée comme celle de l'atelier, en mode « Tablet kierowcy » avec son véhicule (Produkcja › Tablet produkcji › Zarządzanie › Tablety). Le chauffeur voit la tournée du jour de son véhicule (clients dans l'ordre de déchargement du chargement du jour, adresse, téléphone, palettes, cartons, documents WZ / CMR / WDT, itinéraire), démarre et termine la tournée, confirme chaque livraison (réceptionnaire, signature, photo, palettes livrées et rendues) ou signale un problème (fermé, refus, casse, manquant, retard) — notification dans la cloche. Sans réseau, l'enregistrement attend sur la tablette et part tout seul. ERP : Logistyka › Dostawy (tournées, arrêts, signatures, photos, PDF de preuve PL / FR) et pastille livré / problème sur le chargement du jour. API : `/driver/day`, `/driver/run`, `/driver/stops`, `/driver/documents`.
+- **Fiches de poste** : Administracja › Stanowiska i zadania › « Karta stanowiska » pour chaque poste, bureau et atelier (mission, responsabilités, compétences, exigences, conditions, indicateurs, hygiène et sécurité), PL / FR, version à valider, salariés rattachés, PDF.
+
 ## Points ouverts (données réelles à fournir)
 
 Les écrans existent ; ce qui manque, ce sont les données réelles de l'atelier (la copie de test tourne sur une démo réaliste).

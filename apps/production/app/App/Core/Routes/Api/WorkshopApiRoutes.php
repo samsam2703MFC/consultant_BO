@@ -6,6 +6,7 @@ namespace App\Core\Routes\Api;
 use App\Controllers\Api\Workshop\AuthController;
 use App\Controllers\Api\Workshop\DataSheetController;
 use App\Controllers\Api\Workshop\DeliveryController;
+use App\Controllers\Api\Workshop\DriverController;
 use App\Controllers\Api\Workshop\EmployeeController;
 use App\Controllers\Api\Workshop\ExecutionController;
 use App\Controllers\Api\Workshop\GroupController;
@@ -173,6 +174,7 @@ final class WorkshopApiRoutes
             ['POST', '/planning/week/clear', WeekController::class, 'clear', 'prod.gantt.move'],
 
             ['GET', '/kiosk/devices', ExecutionController::class, 'devices', 'prod.employees.write'],
+            ['GET', '/kiosk/devices/vehicles', ExecutionController::class, 'vehicles', 'prod.employees.write'],
             ['POST', '/kiosk/devices', ExecutionController::class, 'createDevice', 'prod.employees.write'],
             ['PATCH', '/kiosk/devices/{id:\d+}', ExecutionController::class, 'updateDevice', 'prod.employees.write'],
             ['PUT', '/kiosk/employees/{id:\d+}/credentials', ExecutionController::class, 'credentials', 'prod.employees.write'],
@@ -214,6 +216,11 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/quality/batches/{id:\d+}', ExecutionController::class, 'qualityCheck', 'kiosk_employee'],
             ['POST', '/kiosk/quality/reports', ExecutionController::class, 'qualityReport', 'kiosk_employee'],
             ['GET', '/kiosk/qr', ExecutionController::class, 'qr', 'kiosk'],
+            // Tablet kierowcy (tablet w trybie « driver ») : trasa dnia, potwierdzenia dostaw, dokumenty.
+            ['GET', '/driver/day', DriverController::class, 'day', 'kiosk'],
+            ['POST', '/driver/run', DriverController::class, 'run', 'kiosk'],
+            ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk'],
+            ['GET', '/driver/documents', DriverController::class, 'documents', 'kiosk'],
             ['GET', '/kiosk/phone/people', ExecutionController::class, 'phonePeople', 'qr'],
             ['POST', '/kiosk/phone/enroll', ExecutionController::class, 'enrollPhone', 'qr'],
             ['GET', '/kiosk/phone/me', ExecutionController::class, 'phoneMe', 'phone'],
