@@ -520,9 +520,24 @@ perf_diag() {
   oc="$(grep -hsE '^\s*opcache\.(enable|memory_consumption|validate_timestamps|revalidate_freq|max_accelerated_files)\s*=' "$ini/php.ini" "$ini"/conf.d/*.ini 2>/dev/null | tr -s ' ' | paste -sd ';' - || true)"
   ls "$ini"/conf.d/ 2>/dev/null | grep -q opcache && ocmod="chargé"
   log "PHP ${APV:-?} (Apache) : module OPcache ${ocmod} ; réglages : ${oc:-valeurs par défaut}."
+  log "Swap : $(free -m 2>/dev/null | awk '/^Swap:/ {print $3 " / " $2 " Mo utilisés"}')."
   local my
-  my="$("${ADMIN[@]}" -N -e "SELECT CONCAT('MySQL ', @@version, ' : buffer pool ', ROUND(@@innodb_buffer_pool_size/1048576), ' Mo, tmp_table ', ROUND(@@tmp_table_size/1048576), ' Mo, flush_log_at_trx_commit ', @@innodb_flush_log_at_trx_commit, ', base ${DB_NAME} ', (SELECT ROUND(SUM(data_length + index_length)/1048576) FROM information_schema.tables WHERE table_schema = '${DB_NAME}'), ' Mo')" 2>/dev/null || true)"
+  my="$("${ADMIN[@]}" -N -e "SELECT CONCAT('MySQL ', @@version, ' : buffer pool ', ROUND(@@innodb_buffer_pool_size/1048576), ' Mo, tmp_table ', ROUND(@@tmp_table_size/1048576), ' Mo, flush_log_at_trx_commit ', @@innodb_flush_log_at_trx_commit, ', base ${ERP_DB_NAME} ', (SELECT ROUND(SUM(data_length + index_length)/1048576) FROM information_schema.tables WHERE table_schema = '${ERP_DB_NAME}'), ' Mo, toutes les bases ', (SELECT ROUND(SUM(data_length + index_length)/1048576) FROM information_schema.tables), ' Mo')" 2>/dev/null || true)"
   [[ -n "$my" ]] && log "$my"
+  # Temps SQL pur (sans PHP) de trois agrégats lourds : ventes WDT 18 mois par mois et produit, stock par état,
+  # registre des mouvements — pour séparer le coût de la base de celui du calcul PHP.
+  local q t0 label out=""
+  for label in ventes stock registre; do
+    case "$label" in
+      ventes) q="SELECT LEFT(w.established_date, 7) AS ym, p.id_product, SUM(p.quantity), MAX(CAST(p.name AS CHAR(255))) FROM document_wdt w JOIN document_wdt_product p ON p.id_document_wdt = w.id WHERE w.established_date >= CURDATE() - INTERVAL 18 MONTH GROUP BY ym, p.id_product" ;;
+      stock) q="SELECT id_product, COUNT(*) FROM carton_stock WHERE status IN (1, 2) GROUP BY id_product" ;;
+      registre) q="SELECT id_product, SUM(date_add < CURDATE() - INTERVAL 30 DAY), SUM(status = 3 AND date_pallet >= CURDATE() - INTERVAL 30 DAY) FROM carton_stock GROUP BY id_product" ;;
+    esac
+    t0="$(date +%s%N)"
+    "${ADMIN[@]}" -N "${ERP_DB_NAME}" -e "$q" >/dev/null 2>&1 || true
+    out+=" ${label} $(( ($(date +%s%N) - t0) / 1000000 )) ms ;"
+  done
+  log "Temps SQL pur :${out%;}"
   if [[ -n "$ERP_ENTREE_LIBRE" ]]; then
     local jar p t out=""
     jar="$(mktemp)"
