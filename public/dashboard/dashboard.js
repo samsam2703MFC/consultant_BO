@@ -100,7 +100,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900 };
+  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -134,6 +134,8 @@
       lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
       lireAux(clePerf(), cheminPerf(), force);
       lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
+      // L'année mois par mois face à l'an passé (24/10/2026) : clients, panier, articles — une lecture, vue Année seulement.
+      if (S.vue === 'annee') { lireAux(cleAn12(), cheminAn12(), force); }
       rendre(); return;
     }
     // Le Résultat et les ventes d'abord : le navigateur n'ouvre que six connexions vers le serveur
@@ -5979,6 +5981,134 @@
     return carte(corps, 'S' + W[0].iso + ' → S' + der.iso + ' · ' + (D.source || ''));
   }
 
+  /**
+   * L'année, mois par mois, face à l'an passé (24/10/2026, la carte de Cockpit › Résultat › Année pour le magasin,
+   * demande de Sam) : la courbe de l'exercice en trait plein, celle de l'an passé en pointillé sur les douze mois — les
+   * mois à venir sont les mois à battre —, la bande bleue au-dessus du N-1, orange en dessous, l'écart de chaque mois et
+   * trois tuiles. Le sélecteur à trois positions des douze semaines : clients, panier moyen, articles par client.
+   * Le mois en cours : les clients se prolongent au rythme de ses jours servis (pointillé, point creux), le panier et
+   * les articles se lisent à date ; son écart compare toujours aux mêmes jours de l'an passé (`n1`). L'an passé se trace
+   * sur le mois civil entier (`n1Mois`). Un mois d'ouverture, partiel, n'est pas relié.
+   */
+  function cleAn12() { return 'an12|' + S.shop + '|' + annee(); }
+  function cheminAn12() { return '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&vue=annee&date=' + annee() + '-12-31&articles=1'; }
+  function rendAnneeMesures() {
+    const Y = annee();
+    const AN_MESURES = {
+      clients: { nom: 'Clients', titre: 'clients', unite: 'clients du mois', v: x => x && x.tickets > 0 ? x.tickets : null, f: v => fN(v),
+        cumul: L => ({ a: L.reduce((t, x) => t + x.tickets, 0), b: 1 }) },
+      panier: { nom: 'Panier moyen', titre: 'panier moyen', unite: 'panier moyen du mois', v: x => x && x.tickets > 0 ? x.ca / x.tickets : null, f: v => fU(v),
+        cumul: L => ({ a: L.reduce((t, x) => t + x.ca, 0), b: L.reduce((t, x) => t + x.tickets, 0) }) },
+      articles: { nom: 'Articles par client', titre: 'articles par client', unite: 'articles par client du mois',
+        v: x => x && x.tickets > 0 && x.articles > 0 ? x.articles / x.tickets : null, f: v => nf(v, 2),
+        cumul: L => ({ a: L.reduce((t, x) => t + x.articles, 0), b: L.reduce((t, x) => t + x.tickets, 0) }) }
+    };
+    if (!AN_MESURES[S.anm]) { let m = null; try { m = localStorage.getItem('db.anm'); } catch (e) { /* navigation privée */ } S.anm = AN_MESURES[m] ? m : 'clients'; }
+    const mk = S.anm, M = AN_MESURES[mk], D = S.aux[cleAn12()];
+    const bascule = `<span class="db-ong db-ong-p">${Object.entries(AN_MESURES).map(([k, x]) => `<button type="button" data-anm="${k}" class="${k === mk ? 'on' : ''}" aria-pressed="${k === mk}">${x.nom}</button>`).join('')}</span>`;
+    const carte = (corps, sous) => `<div class="db-card"><div class="ct" style="flex-wrap:wrap;gap:8px"><span class="db-lab">${Y}, mois par mois — ${M.titre}, face à ${Y - 1}</span>${bascule}${sous ? `<span class="db-mini" style="margin-left:auto">${esc(sous)}</span>` : ''}</div><div style="padding:12px 16px 14px">${corps}</div></div>`;
+    if (!D) { return carte(`<div class="db-note">${S.err[cleAn12()] ? esc(S.err[cleAn12()]) : 'Lecture des douze mois…'}</div>`); }
+    const pc = (a, b) => b ? 100 * a / b : 0;
+    // Le signe se lit sur la valeur arrondie : −0,3 % s'écrit « 0 % », pas « −0 % ».
+    const sg = v => { const r = Math.round(v); return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r); };
+    const HAUT = '#2E6DB4', BAS = '#C0632B';
+    const col = v => v >= 3 ? HAUT : (v <= -3 ? BAS : '#8b8177');
+    const MO = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+    const T = Array.isArray(D.semaines) ? D.semaines.slice(0, 12) : [];
+    if (!T.length) { return carte(`<div class="db-note">Aucun mois lu pour ce magasin.</div>`); }
+    const jm = i => new Date(Y, i + 1, 0).getDate();
+    // Un mois d'ouverture : le premier mois vendu de la série, partiel, sans vente avant lui dans l'année. En janvier, seul
+    // un magasin sans aucune vente l'an passé est dit en ouverture (une fermeture d'un magasin installé reste comparée).
+    const sansN1 = !T.some(w => w.n1 || w.n1Mois);
+    const ouvDe = (get, y, janvier) => { const i = T.findIndex(w => get(w)); return i >= 0 && (i > 0 || janvier) && (get(T[i]).jours || 0) < new Date(y, i + 1, 0).getDate() - 2 ? i : -1; };
+    const iOuv = ouvDe(w => w.source ? w : null, Y, sansN1), iOuv1 = ouvDe(w => w.n1Mois || w.n1, Y - 1, false);
+    const n1m = w => w.n1Mois || (!w.enCours && !w.futur ? w.n1 : null);
+    // Ce qu'on trace : N (le mois en cours prolongé pour les clients), N-1 sur le mois entier ; l'écart sur `n1`, à date.
+    const vT = (w, i) => { if (w.futur || !w.source || i === iOuv) { return null; } const v = M.v(w); return v != null && mk === 'clients' && w.enCours && w.joursServis ? v / w.joursServis * jm(i) : v; };
+    const v1T = (w, i) => i === iOuv1 ? null : M.v(n1m(w));
+    const ecart = (w, i) => { if (w.futur || !w.source || !w.n1 || i === iOuv || i === iOuv1) { return null; } const n = M.v(w), n1 = M.v(w.n1); return n != null && n1 ? pc(n - n1, n1) : null; };
+    if (!T.some((w, i) => vT(w, i) != null)) {
+      return carte(`<div class="db-note">${mk === 'articles' ? 'Le panel ne rend pas les articles vendus pour ce magasin sur ces mois.' : 'Aucun mois lu pour ce magasin.'}</div>`);
+    }
+    const avecN1 = T.some((w, i) => v1T(w, i) != null);
+    const vals = [];
+    T.forEach((w, i) => { const a = vT(w, i), b = v1T(w, i); if (a != null) { vals.push(a); } if (b != null) { vals.push(b); } });
+    const mn = Math.min(...vals), mx = Math.max(...vals), et = mx - mn;
+    const lo = mn - Math.max(et * 0.5, mn * 0.02), hi = mx + Math.max(et * 0.18, mx * 0.01) || 1;
+    const Wd = 1000, Hh = 200, ml = 30, mr = 30, mt = 26, mb = 30;
+    const X = i => (ml + i * (Wd - ml - mr) / 11).toFixed(1);
+    const Yp = y => (mt + (hi - y) / (hi - lo || 1) * (Hh - mt - mb)).toFixed(1);
+    const ft = 'font-family:var(--font-ui)';
+    const iEc = T.findIndex(w => w.enCours);
+    let svg = `<svg viewBox="0 0 ${Wd} ${Hh}" preserveAspectRatio="xMinYMin meet" class="db-s6c">`;
+    if (iEc >= 0) { const w = (Wd - ml - mr) / 11; svg += `<rect x="${(+X(iEc) - w / 2).toFixed(1)}" y="${mt - 12}" width="${w.toFixed(1)}" height="${Hh - mb - mt + 12}" fill="#8D1D2C" fill-opacity="0.045" rx="4"/>`; }
+    [1, 2].forEach(k => { const y = Yp(lo + (hi - lo) * k / 3); svg += `<line x1="${ml}" x2="${Wd - mr}" y1="${y}" y2="${y}" stroke="rgba(34,34,34,.10)"/>`; });
+    // La bande entre les deux courbes, mois par mois (pas vers le mois en cours prolongé).
+    for (let i = 0; i < 11; i++) {
+      const a = vT(T[i], i), b = vT(T[i + 1], i + 1), a1 = v1T(T[i], i), b1 = v1T(T[i + 1], i + 1);
+      if (a == null || b == null || a1 == null || b1 == null || (mk === 'clients' && T[i + 1].enCours)) { continue; }
+      svg += `<polygon points="${X(i)},${Yp(a)} ${X(i + 1)},${Yp(b)} ${X(i + 1)},${Yp(b1)} ${X(i)},${Yp(a1)}" fill="${a + b >= a1 + b1 ? HAUT : BAS}" fill-opacity="0.14"/>`;
+    }
+    const seg = (get, garde) => { const out = []; let cur = []; T.forEach((w, i) => { const v = get(w, i); if (v != null && garde(w)) { cur.push(X(i) + ',' + Yp(v)); } else { if (cur.length) { out.push(cur); } cur = []; } }); if (cur.length) { out.push(cur); } return out; };
+    seg(v1T, () => true).forEach(s => { if (s.length > 1) { svg += `<polyline points="${s.join(' ')}" fill="none" stroke="#b9b1a6" stroke-width="2" stroke-dasharray="5 4"/>`; } });
+    const projete = mk === 'clients';
+    seg(vT, w => !(projete && w.enCours)).forEach(s => { if (s.length > 1) { svg += `<polyline points="${s.join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="2.5"/>`; } });
+    if (iEc > 0 && vT(T[iEc], iEc) != null && vT(T[iEc - 1], iEc - 1) != null) {
+      svg += `<line x1="${X(iEc - 1)}" y1="${Yp(vT(T[iEc - 1], iEc - 1))}" x2="${X(iEc)}" y2="${Yp(vT(T[iEc], iEc))}" stroke="#8D1D2C" stroke-width="2.2" ${projete ? 'stroke-dasharray="2 4"' : ''} stroke-linecap="round"/>`;
+    }
+    T.forEach((w, i) => {
+      const n = vT(w, i), n1 = v1T(w, i), up = n1 == null || n == null || n >= n1;
+      if (n1 != null) { svg += `<circle cx="${X(i)}" cy="${Yp(n1)}" r="3.5" fill="#fff" stroke="#b9b1a6" stroke-width="2"/><text x="${X(i)}" y="${(+Yp(n1) + (up ? 16 : -9)).toFixed(1)}" font-size="10" text-anchor="middle" fill="#666" style="${ft}">${M.f(n1)}</text>`; }
+      if (n != null) {
+        svg += w.enCours ? `<circle cx="${X(i)}" cy="${Yp(n)}" r="4.4" fill="#fff" stroke="#8D1D2C" stroke-width="2"/>` : `<circle cx="${X(i)}" cy="${Yp(n)}" r="4" fill="#8D1D2C"/>`;
+        svg += `<text x="${X(i)}" y="${(+Yp(n) + (up ? -9 : 16)).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${M.f(n)}</text>`;
+      }
+      svg += `<text x="${X(i)}" y="${Hh - 8}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${w.enCours ? '#8D1D2C' : (w.futur ? '#a8a197' : '#222')}" style="${ft}">${MO[i]}${w.enCours ? ' · ' + w.joursServis + ' j' : ''}</text>`;
+    });
+    svg += '</svg>';
+    const chips = T.map((w, i) => {
+      const e = ecart(w, i), n = w.futur || !w.source ? null : M.v(w), n1 = w.n1 ? M.v(w.n1) : null, nm = M.v(n1m(w));
+      const titre = w.futur ? (nm != null ? (Y - 1) + ' : ' + M.f(nm) + ' — le mois à battre' : 'à venir')
+        : (n != null ? M.f(n) + ' · ' + fN(w.tickets) + ' clients · ' + fK(w.ca) + (w.enCours ? ' · en ' + w.joursServis + ' j' : '') : 'pas de vente lue')
+          + (n1 != null ? ' · ' + (Y - 1) + (w.enCours ? ' aux mêmes jours' : '') + ' : ' + M.f(n1) : ' · pas de N-1')
+          + (i === iOuv || i === iOuv1 ? ' · mois d’ouverture, pas d’écart' : '');
+      const pas1 = w.futur ? '<em style="background:transparent;color:var(--color-text-muted)">à venir</em>'
+        : (i === iOuv || i === iOuv1 ? '<em style="background:#c9c2b8">ouv.</em>'
+        : (avecN1 ? `<em style="background:${e == null ? '#c9c2b8' : col(e)}">${e == null ? '—' : sg(e) + ' %'}</em>` : `<em class="sans">${n != null ? M.f(n) : '—'}</em>`));
+      // Sans N-1, la valeur du mois est dans la pastille : elle ne se répète pas sous le nom du mois.
+      const sous = w.enCours ? 'en cours' : (w.futur ? (nm != null ? M.f(nm) : '') : (!avecN1 ? '' : (n != null ? M.f(n) : '—')));
+      return `<div class="ch" title="${esc(titre)}"><span><b>${MO[i]}</b><span>${sous}</span></span>${pas1}</div>`;
+    }).join('');
+    // L'année à date : clients, la somme ; panier et articles, le rapport des sommes — sur les mois comparables.
+    const comp = T.filter((w, i) => ecart(w, i) != null);
+    const cN = M.cumul(comp), c1 = M.cumul(comp.map(w => w.n1));
+    const gN = cN.b ? cN.a / cN.b : null, g1 = c1.b ? c1.a / c1.b : null;
+    const eT = comp.length && g1 ? pc(gN - g1, g1) : null;
+    const lus = T.filter((w, i) => !w.futur && w.source && M.v(w) != null), cT = M.cumul(lus), gT = cT.b ? cT.a / cT.b : null;
+    const plage = comp.length ? MO[T.indexOf(comp[0])] + ' → ' + MO[T.indexOf(comp[comp.length - 1])] : '';
+    const ec = iEc >= 0 ? T[iEc] : null, clos = T.filter((w, i) => !w.futur && !w.enCours && vT(w, i) != null);
+    let tCur;
+    if (ec && ec.source) {
+      const n = M.v(ec), e = ecart(ec, iEc), j = ec.joursServis || 0;
+      tCur = tuile(MO[iEc].replace(/\.$/, '') + ' en cours', n != null ? M.f(n) : '—', (e != null ? sg(e) + ' % vs ' + (Y - 1) + ' aux mêmes jours · ' : '') + j + ' jour' + (j > 1 ? 's' : '') + ' servi' + (j > 1 ? 's' : ''), e == null ? '' : (e >= 0 ? 'bon' : 'vif'));
+    } else if (clos.length) {
+      const w = clos[clos.length - 1], i = T.indexOf(w), e = ecart(w, i);
+      tCur = tuile('Dernier mois · ' + MO[i], M.f(M.v(w)), e != null ? sg(e) + ' % vs ' + (Y - 1) : '', e == null ? '' : (e >= 0 ? 'bon' : 'vif'));
+    } else { tCur = tuile('Mois en cours', '—', ''); }
+    const meilleur = clos.reduce((a, w) => !a || M.v(w) > M.v(a) ? w : a, null);
+    const tuiles = [
+      eT != null ? tuile(Y + ' vs ' + (Y - 1), sg(eT) + ' %', M.f(gN) + ' contre ' + M.f(g1) + (plage ? ' · ' + plage : ''), eT >= 0 ? 'bon' : 'vif')
+        : tuile(String(Y), gT != null ? M.f(gT) : '—', esc(D.n1Motif || 'pas de N-1')),
+      tCur,
+      tuile(mk === 'clients' ? 'Meilleur mois' : 'Mois le plus haut', meilleur ? M.f(M.v(meilleur)) : '—', meilleur ? MO[T.indexOf(meilleur)] + ' ' + Y : '')
+    ].join('');
+    const corps = `<div class="db-s6"><div>${svg}
+        <div class="db-axe" style="padding:4px 0 0;justify-content:flex-start;gap:14px;flex-wrap:wrap"><span><i class="c" style="background:#8D1D2C;border-radius:50%"></i>${esc(M.unite)}${projete && ec ? ' (le mois en cours prolongé au rythme de ses jours)' : ''}</span>${avecN1 ? `<span><i class="c" style="background:#b9b1a6;border-radius:50%"></i>même mois en ${Y - 1} (pointillé, mois entier)</span><span><i class="c" style="background:${HAUT};opacity:.35"></i>au-dessus du N-1</span><span><i class="c" style="background:${BAS};opacity:.35"></i>en dessous</span>` : ''}</div>
+        <div class="db-s6ch">${chips}</div></div>
+      <div class="db-s6t">${tuiles}</div></div>`;
+    return carte(corps, (D.source || '').replace(/ · N-1 = .*$/, '') + ' · écart du mois en cours aux mêmes jours de ' + (Y - 1));
+  }
+
   /* Le résultat net jour par jour du mois en cours — les cases de l'analyse rentabilité. */
   function rendRentab() {
     if (S.date.slice(0, 7) !== AUJ.slice(0, 7)) { return `<div class="db-note" style="padding:0 0 12px">La heatmap de rentabilité ne se lit que sur le mois en cours (P&amp;L quotidien du panel).</div>`; }
@@ -7346,6 +7476,9 @@
       }
       h += tableauTrimestres(plan, Y);
     } else if (plan) { h += `<div class="db-alerte">${esc(plan.error || 'Pas de plan pour ce magasin.')}</div>`; }
+    // --- le trafic de l'année face à l'an passé (24/10/2026)
+    h += `<div class="db-sec">Le trafic — ${Y} face à ${Y - 1}<small>clients, panier moyen, articles par client, mois par mois</small></div>`;
+    h += rendAnneeMesures();
     // --- la heatmap des mois
     h += `<div class="db-sec">Les mois — ${Y - 1} et ${Y}<small>CA du mois et atteinte du budget, magasin seul</small></div>`;
     if (!perf && !S.err[clePerf()]) { h += squelette(2); }
@@ -7610,6 +7743,8 @@
     $.querySelectorAll('[data-eqferme]').forEach(b => b.addEventListener('click', () => { S.eqOuvert = false; S.eqSel = null; S.eqDeplie = null; rendre(); }));
     // Les douze semaines : clients, panier moyen ou articles par client (gardé pour la prochaine visite).
     $.querySelectorAll('[data-s12m]').forEach(b => b.addEventListener('click', () => { S.s12m = b.dataset.s12m; try { localStorage.setItem('db.s12m', S.s12m); } catch (e) { /* navigation privée */ } rendre(); }));
+    // L'année face à l'an passé : la même bascule, gardée à part (24/10/2026).
+    $.querySelectorAll('[data-anm]').forEach(b => b.addEventListener('click', () => { S.anm = b.dataset.anm; try { localStorage.setItem('db.anm', S.anm); } catch (e) { /* navigation privée */ } rendre(); }));
     $.querySelectorAll('[data-vdrop]').forEach(b => b.addEventListener('click', () => { S.valoOuvert = !S.valoOuvert; rendre(); }));
     $.querySelectorAll('[data-stdrop]').forEach(b => b.addEventListener('click', () => { S.stockOuvert = !S.stockOuvert; rendre(); }));
     $.querySelectorAll('[data-notedrop]').forEach(b => b.addEventListener('click', () => { S.noteOuvert = !S.noteOuvert; rendre(); }));
