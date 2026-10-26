@@ -3,7 +3,7 @@
  * także przy słabej sieci. Zawsze najpierw sieć (nowa wersja po wdrożeniu), pamięć tylko awaryjnie.
  * API nie jest buforowane : dane i zapisy zawsze idą do serwera (zapis rejestrowany raz dzięki client_uuid).
  */
-const CACHE = 'tfb-kiosk-v2';
+const CACHE = 'tfb-kiosk-v3';
 const BASE = new URL('./', self.location).pathname;
 const SHELL = ['kiosk', 'assets/css/kiosk.css', 'assets/js/workshop/kiosk.js', 'resources/lang/ui/pl/kiosk.json', 'resources/lang/ui/fr/kiosk.json',
     'assets/kiosk/icon-192.png', 'assets/kiosk/icon-512.png', 'assets/kiosk/manifest.webmanifest'].map(p => BASE + p);
