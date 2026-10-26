@@ -1201,6 +1201,9 @@
         + (this.toast ? `<div class="toast">${esc(this.toast)}</div>` : '')
         + (this.voir ? `<div class="voir" data-a="fermer-voir"><img src="${esc(this.voir.src)}" alt=""><div class="txt">${esc(this.voir.txt)}</div></div>` : '')
         + (this.cqV ? this.cqLoupe() : '') + (this.tmV ? this.tmLoupe() : '');
+      // La tablette en néerlandais (26/10/2026) : visites-nl.js relit l'écran rendu et le traduit.
+      const lng = tab ? this.lngTab() : 'fr'; vi.setAttribute('lang', lng);
+      if (lng === 'nl' && window.VI_NL) { window.VI_NL.traduire(vi); }
       vi.querySelectorAll('.db-cqpiste').forEach((e, i) => { if (pistes[i]) { e.scrollLeft = pistes[i]; } });
       vi.querySelectorAll('canvas[data-sig]').forEach(sc => { const d = this.form[sc.dataset.sig]; if (d) { const im = new Image(); im.onload = () => sc.getContext('2d').drawImage(im, 0, 0); im.src = d; } });
       if (focus) { const el = this.host.querySelector(`[data-f="${focus.f.replace(/"/g, '\\"')}"]`); if (el) { el.focus(); try { if (focus.pos != null && el.setSelectionRange) { el.setSelectionRange(focus.pos, focus.pos); } } catch (e) { /* select */ } } }
@@ -1645,10 +1648,29 @@
       try { const x = localStorage.getItem('vi.lng.' + k); if (x === 'fr' || x === 'nl') { return x; } } catch (e) { /* privé */ }
       return v && (this.D.langues || {})[v.shop] === 'nl' ? 'nl' : 'fr';
     }
+    /** La langue de la tablette (26/10/2026) : dans une visite, celle de la visite (le magasin, ou le choix d'un toucher) ;
+     * ailleurs, la dernière choisie en tête. Hors tablette, le français. */
+    lngTab() {
+      if (!this.o.tablette) { return 'fr'; }
+      const v = this.visiteEcran();
+      if (v) { return this.lngDe(v); }
+      if (this.lngG) { return this.lngG; }
+      try { const x = localStorage.getItem('vi.lng'); if (x === 'fr' || x === 'nl') { return x; } } catch (e) { /* privé */ }
+      return 'fr';
+    }
+    /** La visite de l'écran ouvert, s'il en montre une. */
+    visiteEcran() { return ['controle', 'fiche', 'checklist', 'review'].includes(this.v) ? this.visite(this.p) : null; }
+    /** Un texte hors écran (une question à confirmer) dans la langue de la tablette. */
+    tr(s) { return this.lngTab() === 'nl' && window.VI_NL ? window.VI_NL.t(s) : s; }
+    /** La bascule FR | NL de la tablette, en tête de chaque écran. */
+    lngTabTog() {
+      const l = this.lngTab(); const v = this.visiteEcran();
+      return `<span class="lng" data-nt>${['fr', 'nl'].map(x => `<button data-a="lng" data-v="${v ? esc(v.id) : '*'}|${x}" class="${l === x ? 'on' : ''}">${x.toUpperCase()}</button>`).join('')}</span>`;
+    }
     /** La bascule FR | NL de la checklist, en tête d'une étape de module. */
     lngTog(v) {
       const l = this.lngDe(v);
-      return `<span class="lng">${['fr', 'nl'].map(x => `<button data-a="lng" data-v="${esc(v.id)}|${x}" class="${l === x ? 'on' : ''}">${x.toUpperCase()}</button>`).join('')}</span>`;
+      return `<span class="lng" data-nt>${['fr', 'nl'].map(x => `<button data-a="lng" data-v="${esc(v.id)}|${x}" class="${l === x ? 'on' : ''}">${x.toUpperCase()}</button>`).join('')}</span>`;
     }
     /** La définition d'une question, pour lire ses choix et ses bornes au moment d'y répondre. */
     ptDef(vid, module, ref) {
@@ -1938,6 +1960,7 @@
       const ini = this.role === 'consultant' && this.moi ? (this.consultantNom(this.moi) || '?').split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase() : 'C';
       return `<div class="tb-top">${o.retour ? '<button class="tb-ret" data-a="go" data-v="shops">‹ Contrôles</button>' : `<img src="${esc((this.o.racine || '') + 'assets/img/logo.png')}" alt="L’Atelier by">`}<span class="sep"></span>`
         + `<div style="min-width:0"><div class="t">${esc(o.titre)}</div>${o.sous ? `<div class="d">${o.sous}</div>` : ''}</div><span style="flex:1"></span>${o.droite || ''}`
+        + this.lngTabTog()
         + `<button class="tb-ch ${this.enLigne ? '' : 'off'}" data-a="sync"><i></i>${this.enLigne ? 'en ligne' : 'hors ligne'}${n ? ' · ' + n + ' à envoyer' : ''}</button>`
         + `<button class="tb-av" data-a="go" data-v="reglages" title="Réglages">${esc(ini)}</button></div>`;
     }
@@ -2034,7 +2057,7 @@
         return (j ? `<i class="l ${etapes[ici.idx[j - 1]].fait ? 'fait' : ''}"></i>` : '') + `<button data-a="etape" data-v="${i}" class="${st}"><span class="n">${x.fait && i !== cur ? '✓' : j + 1}</span><span class="t"><b>${esc(x.court)}</b><small>${esc(x.module && /^\d+ \/ \d+$/.test(x.etat) ? x.etat + ' vus' : x.etat)}</small></span>${x.ko ? `<em>${x.ko}</em>` : ''}</button>`; }).join('')}</div>` : '';
       const pos = ici.idx.indexOf(cur) + 1;
       return this.tabTop({ titre: 'Contrôle · ' + b.court, sous: esc(fmtDJ(v.prevu_le) + (v.commence_a ? ' · commencé à ' + fmtH(v.commence_a) : '') + ' · ' + this.typeNom(v.type)), retour: true, droite: prog })
-        + `<div class="tb-main tb-ctl">${['planifiee', 'confirmee'].includes(v.statut) ? `<div class="card alerte tb-dem"><div><b>Visite pas encore démarrée</b><div class="sm mu">prévue ${esc(fmtDJ(v.prevu_le))} à ${esc(v.debut_h || '')} — ouverte depuis le cockpit ou son QR code</div></div><span style="flex:1"></span><button class="btn p" data-a="demarrer" data-v="${esc(v.id)}">▶ Démarrer la visite</button></div>` : ''}${sous}<div class="tb-h"><div><div class="cap" style="margin:0">${ORD.findIndex(x => x[0] === ici.k) + 1} · ${esc(ici.nom)} · étape ${pos} sur ${ici.idx.length}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span>${e.module ? this.lngTog(v) : ''}<div class="tb-pills">${pills}</div></div>`
+        + `<div class="tb-main tb-ctl">${['planifiee', 'confirmee'].includes(v.statut) ? `<div class="card alerte tb-dem"><div><b>Visite pas encore démarrée</b><div class="sm mu">prévue ${esc(fmtDJ(v.prevu_le))} à ${esc(v.debut_h || '')} — ouverte depuis le cockpit ou son QR code</div></div><span style="flex:1"></span><button class="btn p" data-a="demarrer" data-v="${esc(v.id)}">▶ Démarrer la visite</button></div>` : ''}${sous}<div class="tb-h"><div><div class="cap" style="margin:0">${ORD.findIndex(x => x[0] === ici.k) + 1} · ${esc(ici.nom)} · étape ${pos} sur ${ici.idx.length}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
         + `<div class="tb-step">${e.html()}</div>${nav}</div>` + barre;
     }
     v_historique() {
@@ -2268,7 +2291,7 @@
       if (a === 'form') { const val = parts.length > 1 ? (isNaN(parts[1]) ? parts[1] : Number(parts[1])) : true; this.form[parts[0]] = (parts[0] === 'execution' || parts[0] === 'clients') && this.form[parts[0]] === val ? '' : val; this.rendre(); return; }
       if (a === 'planifier') { this.planifier(); return; }
       if (a === 'reprog') { const f = this.form; this.ecrire({ method: 'PUT', path: '/visites/' + encodeURIComponent(v), body: { prevu_le: f.prevu_le, debut_h: f.debut_h, qui: this.qui() }, apres: 'visite' }); const vis = this.visite(v); if (vis) { if (f.prevu_le) { vis.prevu_le = f.prevu_le; } if (f.debut_h) { vis.debut_h = f.debut_h; } } this.form = {}; this.dire('Visite reprogrammée.'); return; }
-      if (a === 'annuler') { if (!confirm('Annuler cette visite ?')) { return; } this.majVisite(v, { statut: 'annulee' }); this.go('agenda'); return; }
+      if (a === 'annuler') { if (!confirm(this.tr('Annuler cette visite ?'))) { return; } this.majVisite(v, { statut: 'annulee' }); this.go('agenda'); return; }
       if (a === 'confirmer') { this.majVisite(v, { statut: 'confirmee' }); this.dire('Visite confirmée.'); return; }
       if (a === 'demarrer') { const vis = this.visite(v); if (vis && vis.statut !== 'en_cours') { this.majVisite(v, { statut: 'en_cours' }); const b = this.boutique(vis.shop); if (b) { b.visiteEnCours = vis.id; } } if (vis) { this.chargerBoutique(vis.shop); this.go('controle', vis.id); } else { this.go('agenda'); } return; }
       if (a === 'demarrer-ici') { this.form = { shop: v, prevu_le: auj(), debut_h: maintenant().slice(11), duree_min: 60, motif: 'asap' }; this.planifier(true); return; }
@@ -2279,7 +2302,13 @@
       if (a === 'tab-vue') { this.tabVue = v; try { localStorage.setItem('vi.tabVue', v); } catch (e) { /* privé */ } this.rendre(); return; }
       if (a === 'mois') { this.mois = v === '0' ? 0 : this.mois + Number(v); this.rendre(); return; }
       if (a === 'etat') { const cyc = { '': 'ok', ok: 'ko', ko: 'na', na: '' }; const p = this.point(parts[0], parts[1], parts[2]); p.etat = cyc[p.etat || ''] || ''; this.point_save(parts[0], p); return; }
-      if (a === 'lng') { this.lngV = this.lngV || {}; this.lngV[parts[0]] = parts[1] === 'nl' ? 'nl' : 'fr'; try { localStorage.setItem('vi.lng.' + parts[0], this.lngV[parts[0]]); } catch (e) { /* privé */ } this.rendre(); return; }
+      if (a === 'lng') {
+        const l = parts[1] === 'nl' ? 'nl' : 'fr';
+        if (parts[0] !== '*') { this.lngV = this.lngV || {}; this.lngV[parts[0]] = l; try { localStorage.setItem('vi.lng.' + parts[0], l); } catch (e) { /* privé */ } }
+        // La tablette garde la dernière langue choisie pour ses écrans hors visite.
+        if (this.o.tablette) { this.lngG = l; try { localStorage.setItem('vi.lng', l); } catch (e) { /* privé */ } }
+        this.rendre(); return;
+      }
       // Les réponses génériques : la note pose toujours l'état, un choix ou des choix aussi (src/visites_questions.php).
       if (a === 'note-q') { const p = this.point(parts[0], parts[1], parts[2]); p.note = p.note === Number(parts[3]) ? null : Number(parts[3]); p.etat = p.note == null ? '' : (p.note <= 2 ? 'ko' : 'ok'); this.point_save(parts[0], p); return; }
       if (a === 'rep-ch' || a === 'rep-mu') {
