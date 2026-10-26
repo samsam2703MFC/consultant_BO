@@ -1096,3 +1096,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T21:28:46Z cockpit : livraison sans couper les requêtes en cours (reload), écritures rejouées une fois
 2026-10-26T21:54:11Z production : audit performance base (index, requêtes, diagnostic serveur)
 2026-10-26T22:04:17Z production : diagnostic performance complété (MySQL, SQL pur)
+2026-10-26T22:10:43Z production : diagnostic mémoire par programme
