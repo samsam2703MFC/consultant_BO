@@ -2439,6 +2439,14 @@ période, le coefficient et son cas le plus serré, et ouvre le dashboard de cha
 et ce qu'elles ont fait dans les tickets déjà lus de chaque magasin ouvert (`svP…` : les tickets à remise, reconnus par
 `pvTicket`, comme l'onglet Promotions des ventes). Lecture seule ; le cockpit la demande avec `_cache=300`.
 
+Le Tableau d'analyse a deux vues (26/10/2026, maquette A avec le détail de C de `docs/maquettes/promotions-utilisation`,
+choisie par Sam) : **Qui utilise quoi**, par défaut — une ligne par promotion utilisée sur la période ou en caisse, une
+colonne par magasin ; la case dit ce que la promotion pèse dans le CA du magasin (`v` du magasin ÷ son `ca` ; ou dans le
+CA général, `÷ total.ca`, en €, en fois), « 0 » en caisse sans vente, « · » pas dans ce magasin ; à droite son % du CA
+général ; sous la matrice la carte de chaque magasin (ses promotions, barres à la même échelle), un clic sur un magasin
+y mène — et **Toutes les promotions (liste)**, la liste d'avant. Tout se calcule au cockpit avec `parMagasin` et `ca` :
+la route ne change pas.
+
 ```
 { jours: 30, du: "2026-09-27", au: "2026-10-26",
   promos: [{ id: 21, src: "mag" | "marque", shop: 4 | null, shops: [4] | null (tout le réseau), nom, type: "xy" | "bundle",

@@ -56,3 +56,46 @@
 .ptb-pill{display:inline-flex;gap:4px;padding:6px 10px;border-radius:8px;border:none;background:var(--color-background-secondary);font:500 12px var(--font-ui);color:var(--color-text);cursor:pointer}
 .ptb-pill:hover{background:#efe6da}
 .ptb-cadre{min-height:480px}
+/* « Qui utilise quoi » (26/10/2026) : la matrice promotions × magasins et les cartes des magasins. Une seule teinte, du
+   clair au foncé (celle des maquettes, validée) ; les deux plus claires portent un texte encre, les autres du blanc. */
+.ptb-barre .ptb-ong{margin-right:6px}
+.ptb-kpis.q{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ptb-kpi .v.t{font:700 17px var(--font-ui);line-height:1.5;margin-top:6px}
+.ptb-chip.m{background:#f3e3e6;color:var(--color-primary)}
+.ptb-mx{padding:0 12px 4px}
+.ptb-mx table{border-collapse:separate;border-spacing:3px;width:100%;font-size:12px}
+.ptb-mx th{font:600 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);text-align:left;padding:8px 4px;vertical-align:bottom;white-space:nowrap}
+.ptb-mx td{padding:0;vertical-align:middle}
+.ptb-mx .r{text-align:right;padding-right:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ptb-mx tbody td{border-bottom:.5px solid #f1ebe3}
+.ptb-mx tfoot td{padding-top:10px;border-top:1px solid var(--color-border-tertiary)}
+.ptb-mn{min-width:220px;padding:5px 8px 5px 2px!important;line-height:1.35}.ptb-mn div{margin-top:2px}
+th.ptb-mc,td.ptb-mc{width:76px;min-width:64px;text-align:center}
+td.ptb-mc.on b{color:var(--color-primary)}
+.ptb-mh{display:flex;flex-direction:column;align-items:center;width:100%;border:none;background:none;border-radius:7px;padding:4px 2px;cursor:pointer;font:700 11.5px var(--font-ui);color:var(--color-text)}
+.ptb-mh small{font:500 10px var(--font-ui);color:var(--color-text-muted)}
+.ptb-mh:hover,.ptb-mh.on{background:#f6ece9;color:var(--color-primary)}
+.ptb-cv{display:flex;align-items:center;justify-content:center;height:32px;border-radius:4px;font-weight:700;font-variant-numeric:tabular-nums;color:#222;white-space:nowrap}
+.ptb-cv.k0{background:#d9a3ad}.ptb-cv.k1{background:#c27583}.ptb-cv.k2{background:#a8495a;color:#fff}.ptb-cv.k3{background:#8d1d2c;color:#fff}.ptb-cv.k4{background:#5e0f1b;color:#fff}.ptb-cv.kx{background:#ece5db;color:#6b625a}
+.ptb-cv.on{outline:2px solid #222;outline-offset:1px}
+.ptb-non{display:flex;align-items:center;justify-content:center;height:32px;color:#c9bfb3;font-size:18px}
+.ptb-zero{display:flex;align-items:center;justify-content:center;height:32px;box-sizing:border-box;border:1.5px dashed #8a5a13;border-radius:4px;color:#8a5a13;font-weight:700}
+.ptb-mg{min-width:180px}
+.ptb-bar{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:12px}.ptb-bar .t{flex:1;min-width:0}.ptb-bar em{display:block;height:12px;border-radius:0 4px 4px 0;background:var(--color-primary);min-width:2px}.ptb-bar b{flex:0 0 54px}
+.ptb-leg{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 16px 4px;font-size:11px;color:#6b625a}
+.ptb-leg .ptb-cv{display:inline-block;width:18px;height:12px;border-radius:3px}
+.ptb-leg .ptb-non,.ptb-leg .ptb-zero{display:inline-flex;height:16px;width:22px;font-size:12px}.ptb-leg .ptb-non{margin-left:10px}
+.ptb-mtitre{font-family:var(--font-display);font-size:19px;margin:6px 2px 0}.ptb-mtitre .ptb-mu{font-family:var(--font-ui);margin-left:8px}
+.ptb-mcg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:1250px){.ptb-mcg{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px){.ptb-mcg,.ptb-kpis.q{grid-template-columns:minmax(0,1fr)}}
+.ptb-mcarte{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;scroll-margin-top:16px}
+.ptb-mcarte.on{box-shadow:0 0 0 2px var(--color-primary)}
+.ptb-mct{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.ptb-mct b{font-family:var(--font-display);font-weight:400;font-size:20px}
+.ptb-mcv{font-family:var(--font-display);font-size:30px;margin:2px 0}.ptb-mcv small{font-family:var(--font-ui);font-size:12px;color:var(--color-text-muted)}
+.ptb-mcl{border-top:.5px solid var(--color-border-tertiary);margin-top:8px;padding-top:6px}
+.ptb-mcr{display:grid;grid-template-columns:minmax(0,1fr) 90px 52px;gap:8px;align-items:center;padding:4px 0;font-size:12px;line-height:1.3}
+.ptb-mcr b{text-align:right;font-variant-numeric:tabular-nums}
+.ptb-mcb{display:block;height:10px;background:#f1ebe3;border-radius:0 4px 4px 0}.ptb-mcb em{display:block;height:10px;background:var(--color-primary);border-radius:0 4px 4px 0;min-width:2px}
+.ptb-mcr.o>span:first-child{color:#6b625a}.ptb-mc0{grid-column:2/4;color:#8a5a13;font-size:11px;font-weight:600;text-align:right}
+.ptb-mcarte .ptb-lien{margin-top:8px}
