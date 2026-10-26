@@ -1052,3 +1052,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T09:57Z Dashboard magasin, vue Année : le trafic de l'année face à l'an passé
 2026-10-26T10:19:47Z atelier : tableau à remplir (Excel) → import des données réelles
 2026-10-26T10:49:47Z atelier : fiches de poste (bureau et atelier, PL / FR, PDF)
+2026-10-26T11:07:26Z atelier : tablette chauffeur (tournée, livraisons, problèmes, Logistyka › Dostawy)
