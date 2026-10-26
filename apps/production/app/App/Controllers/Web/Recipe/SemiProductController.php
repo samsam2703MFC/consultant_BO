@@ -82,6 +82,12 @@ class SemiProductController extends BaseController
 
                 if ($newId) {
                     $this->saveExtras((int) $newId, true);
+                    // Okno z kreatora produktu (krok « Receptura ») : półprodukt wraca do kreatora, okno się zamyka.
+                    if (!empty($_GET['popup'])) {
+                        unset($_SESSION['recipe_saved']);
+                        $this->view('recipe/semi_product/popup_done', ['semi' => ['id' => (int) $newId, 'name' => trim((string) ($dataToInsert['name'] ?? '')), 'unit_name' => 'szt']]);
+                        return;
+                    }
                     header('Location: ' . ROOT . ($forProduct
                         ? '/recipes/new?' . http_build_query(['product' => $productId, 'add_sfp' => (int) $newId])
                         : '/semi-products/' . $newId . '/calculation'));

@@ -31,7 +31,8 @@
         <li class="at-step-later" title="Po zapisie, w karcie produktu"><span>Tryb i zapasy</span></li>
         <li class="at-step-later" title="Po zapisie, w karcie produktu"><span>Grupa i wypiek</span></li>
         <li class="at-step-later" title="Po zapisie, w karcie produktu"><span>Etapy i czasy</span></li>
-        <li class="at-step-later" title="Po zapisie, w karcie produktu"><span>Zatwierdzenie</span></li>
+        <li class="at-step-later" title="Po zapisie, w karcie produktu"><span>Kontrola czasów</span></li>
+        <li class="at-step-later" title="Po zapisie, w karcie produktu : cena standardowa, ceny klientów, PPWR, Belgia"><span>Ceny i zatwierdzenie</span></li>
     </ol>
 
     <div class="card">
@@ -143,6 +144,7 @@
                             </div>
                             <button type="button" class="btn btn-outline-primary" id="pwAddSemi"><i class="bi bi-plus"></i> Dodaj</button>
                         </div>
+                        <button type="button" class="btn btn-link px-0 mt-1" id="pwNewSemi"><i class="bi bi-window-plus"></i> Nowy półprodukt (w oknie — wraca tutaj)</button>
                     </div>
                 </div>
                 <div id="pwLines" class="mt-3"></div>
@@ -174,7 +176,7 @@
                 <div class="at-note at-note-safe">
                     <i class="bi bi-shield-check"></i><strong>Produkt i receptura powstaną razem, w jednej transakcji.</strong>
                     Jeśli zapis receptury (lub jej spłaszczenie, etykieta czy przeliczenie kosztu) się nie uda, produkt też nie zostanie utworzony — nic nie zostanie zapisane.
-                    Po zapisie kreator przechodzi do karty produktu: logistyka kartonu i palety, produkcja na zamówienie czy na stan, grupa i wypiek, etapy pracy z czasami (Gantt), zatwierdzenie. Kalkulacja receptury jest dostępna w kroku „Receptura”.
+                    Po zapisie kreator przechodzi do karty produktu: logistyka kartonu i palety, produkcja na zamówienie czy na stan, grupa i wypiek, etapy pracy z czasami (Gantt), ceny (standardowa, klientów, PPWR, Belgia) i zatwierdzenie. Kalkulacja receptury jest dostępna w kroku „Receptura”.
                 </div>
             </div>
 
@@ -237,6 +239,22 @@ document.addEventListener('DOMContentLoaded', function () {
     const matChoices = choices(matSel, materialHtml, 'Wybierz surowiec…');
     const semiChoices = choices(semiSel, semiHtml, 'Wybierz półprodukt…');
     document.getElementById('pwPrep').innerHTML = '<option value="">Wybierz…</option>' + PREPS.map((p) => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('');
+
+    // Nowy półprodukt w osobnym oknie (formularz półproduktu w trzech zakładkach) : po zapisie wraca na listę i jest wybrany.
+    document.getElementById('pwNewSemi').addEventListener('click', () => {
+        window.open('{{ root }}/semi-products/new?popup=1', 'pw_semi', 'width=1180,height=860');
+    });
+    window.addEventListener('message', (e) => {
+        if (e.origin !== window.location.origin || !e.data || e.data.type !== 'semi-created') return;
+        const s = e.data.semi;
+        if (!SEMI.some((x) => +x.id === +s.id)) SEMI.push(s);
+        const label = s.name + ' (' + s.unit_name + ')';
+        if (semiChoices) semiChoices.setChoices([{ value: String(s.id), label: label, selected: true }], 'value', 'label', false);
+        else { semiSel.insertAdjacentHTML('beforeend', '<option value="' + s.id + '">' + esc(label) + '</option>'); semiSel.value = String(s.id); }
+        semiSel.dispatchEvent(new Event('change'));
+        setHint('Półprodukt « ' + s.name + ' » utworzony — podaj ilość i kliknij « Dodaj ».');
+        document.getElementById('pwSemiQty').focus();
+    });
 
     matSel.addEventListener('change', () => {
         const m = MATERIALS.find((x) => +x.id === +matSel.value);
