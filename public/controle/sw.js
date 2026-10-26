@@ -3,9 +3,10 @@
  * (visites.js), jamais ici ; l'API n'est jamais mise en cache par le worker. Portée : /controle/. */
 'use strict';
 
-const VERSION = 'controle-v2';
-// Les cartes du dashboard magasin (l'année face à l'an passé, les six leviers) : leur script et leur style.
-const COQUILLE = ['./', 'index.html', 'manifest.json', '../assets/js/visites.js', '../assets/js/cartes-magasin.js', '../assets/ds/global.css', '../assets/css/controles-photo.css',
+const VERSION = 'controle-v3';
+// Les cartes du dashboard magasin (l'année face à l'an passé, les six leviers) : leur script et leur style ;
+// la traduction néerlandaise de la tablette (visites-nl.js).
+const COQUILLE = ['./', 'index.html', 'manifest.json', '../assets/js/visites.js', '../assets/js/visites-nl.js', '../assets/js/cartes-magasin.js', '../assets/ds/global.css', '../assets/css/controles-photo.css',
   '../assets/css/cartes-magasin.css', '../assets/img/logo.png'];
 
 self.addEventListener('install', e => {
