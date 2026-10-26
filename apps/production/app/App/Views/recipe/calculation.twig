@@ -67,6 +67,19 @@
         {% endfor %}
     </ul>
 
+    {% if saved is defined and saved %}
+        <div class="at-note at-note-safe mb-3" role="status">
+            <i class="bi bi-check-circle"></i>
+            <div><strong>{{ saved.new ? (kind == 'product' ? 'Receptura utworzona.' : (kind == 'semi' ? 'Półprodukt utworzony.' : 'Kompozycja utworzona.')) : 'Zapisano.' }}</strong> Skład, przygotowanie, instrukcja i kompetencje są zapisane ; koszt poniżej.
+                {% if saved.problems %}<div class="text-danger mt-1">{% for p in saved.problems %}{{ p }}{% if not loop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+                {% if saved.new %}<div class="mt-1">Do uzupełnienia :
+                    {% if missing %}<a href="{{ root }}/materials/{{ missing[0].id }}/edit">ceny surowców bez ceny ({{ missing|length }})</a> · {% endif %}
+                    <a href="{{ root }}/recipes/{{ recipe.id }}/preparation-steps">zdjęcia i kolejność kroków</a>
+                    {% if kind == 'product' and product %} · <a href="{{ root }}/workshop/products#/product/{{ product.id }}">karta produktu « {{ product.name }} » (grupa, wypiek, cena)</a>{% elseif kind != 'product' %} · <a href="{{ root }}/recipes">użyj w recepturze produktu</a>{% endif %}</div>{% endif %}
+            </div>
+        </div>
+    {% endif %}
+
     {% if missing or cycles or stored_differs %}
         <div class="alert alert-warning py-2">
             {% if missing %}<div><i class="bi bi-exclamation-triangle"></i> <strong>Brak ceny : {{ missing|length }} {{ missing|length == 1 ? 'surowiec' : 'surowce/ów' }}</strong> — koszt jest zaniżony :

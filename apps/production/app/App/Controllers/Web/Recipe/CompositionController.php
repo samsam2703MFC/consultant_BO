@@ -33,7 +33,8 @@ class CompositionController extends BaseController
         RecipeService      $recipeService,
         private RecipeCostRecalculationService $recipeCostRecalculationService,
         private RecipeCalculationViewService $calculationView,
-        private RecipeProducerRepository $producers
+        private RecipeProducerRepository $producers,
+        private \App\Services\Recipe\RecipeExtrasService $extras
     )
     {
         $this->compositionService = $compositionService;
@@ -64,7 +65,7 @@ class CompositionController extends BaseController
                 $newId = $this->compositionService->insert($dataToInsert);
 
                 if ($newId) {
-
+                    $this->saveExtras((int) $newId, true);
                     header('Location: ' . ROOT . '/compositions/' . $newId . '/calculation');
                     exit;
                 }
@@ -73,6 +74,7 @@ class CompositionController extends BaseController
             }
         }
 
+        $data += $this->extras->formData(null, 'composition', $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : null);
         $this->view("recipe/composition/new", $data);
     }
 
@@ -100,13 +102,14 @@ class CompositionController extends BaseController
                 $res = $this->compositionService->update($id, $dataToUpdate);
 
                 if ($res) {
-
+                    $this->saveExtras((int) $id, false);
                     header('Location: ' . ROOT . '/compositions/' . $id . '/calculation');
                     exit;
                 }
             }
         }
 
+        $data += $this->extras->formData((int) $id, 'composition', $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : null);
         $this->view("recipe/composition/edit", $data);
     }
 
@@ -138,8 +141,16 @@ class CompositionController extends BaseController
             echo 'Nie znaleziono receptury.';
             return;
         }
+        if (($_SESSION['recipe_saved']['id'] ?? null) === (int) $id) {
+            $data['saved'] = $_SESSION['recipe_saved'];
+            unset($_SESSION['recipe_saved']);
+        }
         $this->view('recipe/calculation', $data);
     }
 
-
+    /** Zakładki Przygotowanie i Grupa i kompetencje (instrukcja, kompetencje, grupa) po zapisie składu ; wynik na kalkulacji. */
+    private function saveExtras(int $recipeId, bool $isNew): void
+    {
+        $_SESSION['recipe_saved'] = ['id' => $recipeId, 'new' => $isNew, 'problems' => $this->extras->save($recipeId, $_POST, $isNew, user('id') ? (int) user('id') : null)];
+    }
 }

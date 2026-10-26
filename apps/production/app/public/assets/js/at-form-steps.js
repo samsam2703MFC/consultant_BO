@@ -5,6 +5,7 @@
  * zapisu ([data-at-steps-submit] albo pierwszy przycisk submit) tylko na ostatnim kroku. Krok « Podsumowanie »
  * (<section data-step data-at-steps-summary>) zbiera wpisane wartości. Po błędzie serwera formularz otwiera krok
  * z pierwszym błędnym polem ([data-at-steps-error="nazwa_pola"] albo .is-invalid), inaczej pierwszy krok.
+ * Tryb zakładek ([data-at-steps-free], np. karta receptury) : wszystkie kroki dostępne od razu, zapis z każdego kroku.
  */
 (function () {
     'use strict';
@@ -50,8 +51,9 @@
         const back = nav.querySelector('[data-at-back]');
         const next = nav.querySelector('[data-at-next]');
         const hint = nav.querySelector('[data-at-hint]');
+        const free = form.hasAttribute('data-at-steps-free');
         let current = 0;
-        let reached = 0;
+        let reached = free ? steps.length - 1 : 0;
 
         function summary(section) {
             const rows = [];
@@ -79,7 +81,7 @@
             const last = current === steps.length - 1;
             back.hidden = current === 0;
             next.hidden = last;
-            if (submit) submit.hidden = !last;
+            if (submit) submit.hidden = !last && !free;
             hint.textContent = 'Krok ' + (current + 1) + ' z ' + steps.length;
             hint.classList.remove('is-error');
             if (steps[current].hasAttribute('data-at-steps-summary')) summary(steps[current]);
