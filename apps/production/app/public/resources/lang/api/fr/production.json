@@ -183,7 +183,8 @@
     "NOT_PINNED": "Ce produit n'a pas de lot fixe ce jour de la semaine.",
     "INCOMPLETE": "Réponses manquantes : {missing}.",
     "INVALID_FILE": "Le fichier doit être une facture PDF ou XML KSeF (FA).",
-    "FILE_TOO_LARGE": "Fichier trop volumineux (max. {max_kb} Ko)."
+    "FILE_TOO_LARGE": "Fichier trop volumineux (max. {max_kb} Ko).",
+    "POSITION_CYCLE": "Champ « {field} » : un poste ne peut pas dépendre de lui-même ni d’un poste qui lui est rattaché."
   },
   "fields": {
     "code": "code",
@@ -420,7 +421,25 @@
     "factor": "facteur",
     "remember": "mémoriser",
     "net_value": "valeur nette",
-    "vat_rate": "taux de TVA"
+    "vat_rate": "taux de TVA",
+    "reports_to_id": "responsable",
+    "employee_ids": "salariés",
+    "mission_pl": "mission (PL)",
+    "mission_fr": "mission (FR)",
+    "responsibilities_pl": "responsabilités (PL)",
+    "responsibilities_fr": "responsabilités (FR)",
+    "skills_pl": "compétences (PL)",
+    "skills_fr": "compétences (FR)",
+    "requirements_pl": "exigences (PL)",
+    "requirements_fr": "exigences (FR)",
+    "conditions_pl": "conditions de travail (PL)",
+    "conditions_fr": "conditions de travail (FR)",
+    "indicators_pl": "indicateurs (PL)",
+    "indicators_fr": "indicateurs (FR)",
+    "safety_pl": "hygiène et sécurité (PL)",
+    "safety_fr": "hygiène et sécurité (FR)",
+    "relations_pl": "relations (PL)",
+    "relations_fr": "relations (FR)"
   },
   "entities": {
     "test_product": "produit test",

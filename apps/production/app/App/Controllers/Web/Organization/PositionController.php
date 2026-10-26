@@ -3,16 +3,18 @@ namespace App\Controllers\Web\Organization;
 
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
+use App\Services\Organization\PositionSheetService;
 use App\Services\Organization\PositionTaskService;
 use App\Services\Organization\TaskFormService;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
-/** Stanowiska i zadania użytkowników ERP, karta użytkownika, „Moje zadania”. */
+/** Stanowiska i zadania użytkowników ERP, karty stanowisk (fiches de poste), karta użytkownika, „Moje zadania”. */
 class PositionController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private PositionTaskService $service)
+    public function __construct(private PositionTaskService $service, private PositionSheetService $sheets)
     {
     }
 
@@ -110,6 +112,53 @@ class PositionController extends BaseController
         try {
             $this->service->setModuleRole((int) $id, $this->getJson(Request::createFromGlobals()), $this->userId());
             return $this->json(['message' => 'Zapisano rolę w module produkcji.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    /** Karta stanowiska : treść PL / FR, przełożony, osoby, zadania, strony ERP ; edycja dla tych, którzy widzą stronę. */
+    public function sheet($id)
+    {
+        $this->view('organization/position_sheet', ['sheet' => $this->sheets->sheet((int) $id)] + $this->sheets->choices());
+    }
+
+    public function sheetPdf($id)
+    {
+        $lang = (string) ($_GET['lang'] ?? 'both');
+        $file = $this->sheets->pdf((int) $id, in_array($lang, ['pl', 'fr', 'both'], true) ? $lang : 'both');
+        return new Response($file['content'], 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $file['filename'] . '"',
+            'Content-Length' => strlen($file['content']),
+        ]);
+    }
+
+    public function saveSheet($id)
+    {
+        try {
+            $this->sheets->save((int) $id, $this->getJson(Request::createFromGlobals()), $this->userId());
+            return $this->json(['message' => 'Zapisano kartę stanowiska.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    public function validateSheet($id)
+    {
+        try {
+            $this->sheets->validate((int) $id, $this->userId());
+            return $this->json(['message' => 'Karta stanowiska zatwierdzona.']);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
+    public function sheetEmployees($id)
+    {
+        try {
+            $n = $this->sheets->setEmployees((int) $id, $this->getJson(Request::createFromGlobals()));
+            return $this->json(['message' => "Zapisano pracowników na stanowisku ({$n})."]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }

@@ -6,6 +6,12 @@ return function (RouteCollector $r) {
 
     $r->addRoute('GET', '/organization/positions', ['controller' => $c, 'method' => 'positions']);
     $r->addRoute('GET', '/organization/users/{id:\d+}', ['controller' => $c, 'method' => 'userSheet']);
+    // Karty stanowisk (fiches de poste) : widok, edycja, zatwierdzenie, pracownicy produkcji, PDF.
+    $r->addRoute('GET', '/organization/positions/{id:\d+}', ['controller' => $c, 'method' => 'sheet']);
+    $r->addRoute('GET', '/organization/positions/{id:\d+}/sheet.pdf', ['controller' => $c, 'method' => 'sheetPdf']);
+    $r->addRoute('PUT', '/ajax/organization/positions/{id:\d+}/sheet', ['controller' => $c, 'method' => 'saveSheet']);
+    $r->addRoute('POST', '/ajax/organization/positions/{id:\d+}/sheet/validate', ['controller' => $c, 'method' => 'validateSheet']);
+    $r->addRoute('PUT', '/ajax/organization/positions/{id:\d+}/employees', ['controller' => $c, 'method' => 'sheetEmployees']);
     // Uprawnienia stanowisk : które strony widzi każde stanowisko (tylko administrator).
     $r->addRoute('GET', '/organization/access', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'index']);
     $r->addRoute('PUT', '/ajax/organization/access/{id:\d+}', ['controller' => App\Controllers\Web\Organization\PageAccessController::class, 'method' => 'save']);

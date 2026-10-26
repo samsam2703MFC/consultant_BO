@@ -146,4 +146,16 @@ class GlobalSearchRepository extends BaseRepository
                 LIMIT " . (int) $limit;
         return $this->query($sql, $this->like($pattern, 4)) ?: [];
     }
+
+    /** Karty stanowisk (fiches de poste) : nazwa PL / FR, kod, cel i obowiązki. */
+    public function positions(string $pattern, int $limit): array
+    {
+        $sql = "SELECT p.id, p.code, p.name_pl, p.name_fr, p.kind, s.validated_at, s.id_position AS has_sheet
+                FROM n_position p LEFT JOIN n_position_sheet s ON s.id_position = p.id
+                WHERE p.name_pl LIKE :t1 OR p.name_fr LIKE :t2 OR p.code LIKE :t3 OR s.mission_pl LIKE :t4 OR s.mission_fr LIKE :t5
+                   OR s.responsibilities_pl LIKE :t6 OR s.responsibilities_fr LIKE :t7
+                ORDER BY p.active DESC, (p.name_pl LIKE :t8 OR p.name_fr LIKE :t9) DESC, p.sort_order
+                LIMIT " . (int) $limit;
+        return $this->query($sql, $this->like($pattern, 9)) ?: [];
+    }
 }

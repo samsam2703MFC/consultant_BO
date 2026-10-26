@@ -101,6 +101,12 @@ class GlobalSearchService
                 'url'   => '/production-employees/' . (int) $r['id'] . '/edit',
             ], $this->repository->employees($pattern, $n))],
 
+            ['type' => 'positions', 'label' => 'Karty stanowisk', 'icon' => 'bi-file-earmark-person', 'items' => array_map(fn($r) => [
+                'title' => $r['name_pl'] . ' · ' . $r['name_fr'],
+                'sub'   => ($r['kind'] === 'atelier' ? 'pracownia' : 'biuro') . ' · ' . ($r['has_sheet'] ? ($r['validated_at'] ? 'karta zatwierdzona' : 'karta do zatwierdzenia') : 'karta pusta'),
+                'url'   => '/organization/positions/' . (int) $r['id'],
+            ], $this->repository->positions($pattern, $n))],
+
             // Poczta : tylko własna skrzynka zalogowanego (indeks pełnotekstowy : temat, nadawca, adresaci, treść).
             ['type' => 'mail', 'label' => 'Poczta', 'icon' => 'bi-envelope', 'items' => $userId ? array_map(fn($r) => [
                 'title' => $r['subject'] ?: '(bez tematu)',

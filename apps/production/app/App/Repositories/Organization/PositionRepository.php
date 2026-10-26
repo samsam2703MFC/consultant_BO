@@ -7,15 +7,19 @@ use App\Repositories\Workshop\WorkshopRepository;
 final class PositionRepository extends WorkshopRepository
 {
     protected string $table = 'n_position';
-    protected array $writable = ['code', 'name_pl', 'name_fr', 'description', 'sort_order', 'active'];
+    protected array $writable = ['code', 'name_pl', 'name_fr', 'description', 'kind', 'id_group', 'id_reports_to', 'sort_order', 'active'];
+    /** Pola karty stanowiska (n_position_sheet), każde w wersji _pl i _fr. */
+    public const SHEET_FIELDS = ['mission', 'responsibilities', 'skills', 'requirements', 'conditions', 'indicators', 'safety', 'relations'];
     private const TASK_COLUMNS = ['id_position', 'id_category', 'title_pl', 'title_fr', 'frequency', 'due_weekday', 'link_path', 'form_code', 'sort_order', 'active'];
 
     public function positions(): array
     {
         return $this->all(
-            'SELECT p.*, (SELECT COUNT(*) FROM n_position_task t WHERE t.id_position = p.id AND t.active = 1) AS task_count,
-                    (SELECT COUNT(*) FROM n_user_position up WHERE up.id_position = p.id) AS user_count
-             FROM n_position p ORDER BY p.active DESC, p.sort_order, p.name_pl'
+            "SELECT p.*, (SELECT COUNT(*) FROM n_position_task t WHERE t.id_position = p.id AND t.active = 1) AS task_count,
+                    (SELECT COUNT(*) FROM n_user_position up WHERE up.id_position = p.id) AS user_count,
+                    (SELECT COUNT(*) FROM n_prod_employee e WHERE e.id_position = p.id) AS employee_count,
+                    COALESCE((SELECT IF(s.validated_at IS NULL, 'draft', 'validated') FROM n_position_sheet s WHERE s.id_position = p.id), 'empty') AS sheet_state
+             FROM n_position p ORDER BY p.active DESC, p.kind = 'atelier', p.sort_order, p.name_pl"
         );
     }
 
@@ -200,5 +204,84 @@ final class PositionRepository extends WorkshopRepository
              ORDER BY o.done_at DESC, o.id DESC LIMIT " . max(1, min(200, $limit)),
             [$positionId]
         );
+    }
+
+    /** Karta stanowiska (null, gdy jeszcze nie wypełniona). */
+    public function sheet(int $positionId): ?array
+    {
+        return $this->all(
+            'SELECT s.*, vu.displayed_name AS validated_by_name, uu.displayed_name AS updated_by_name
+             FROM n_position_sheet s LEFT JOIN user vu ON vu.id = s.validated_by LEFT JOIN user uu ON uu.id = s.updated_by
+             WHERE s.id_position = ?',
+            [$positionId]
+        )[0] ?? null;
+    }
+
+    /** Zapis treści karty : nowa wersja, zatwierdzenie do ponowienia. */
+    public function saveSheet(int $positionId, array $texts, ?int $userId): void
+    {
+        $columns = array_keys($texts);
+        $this->db->prepare(sprintf(
+            'INSERT INTO n_position_sheet (id_position, %s, updated_by) VALUES (?, %s, ?)
+             ON DUPLICATE KEY UPDATE %s, updated_by = VALUES(updated_by), version = version + 1, validated_at = NULL, validated_by = NULL',
+            implode(', ', $columns), implode(', ', array_fill(0, count($columns), '?')),
+            implode(', ', array_map(fn($c) => "{$c} = VALUES({$c})", $columns))
+        ))->execute([$positionId, ...array_values($texts), $userId]);
+    }
+
+    public function validateSheet(int $positionId, ?int $userId): void
+    {
+        $this->db->prepare('UPDATE n_position_sheet SET validated_at = NOW(), validated_by = ? WHERE id_position = ?')->execute([$userId, $positionId]);
+    }
+
+    /** Pracownicy produkcji (z profilem lub bez) i ich stanowisko. */
+    public function employees(): array
+    {
+        return $this->all(
+            'SELECT pe.id AS production_employee_id, pe.name, pe.surname, e.id AS profile_id, e.id_position, e.id_primary_group,
+                    COALESCE(e.active, 1) AS active
+             FROM production_employee pe LEFT JOIN n_prod_employee e ON e.id_production_employee = pe.id
+             ORDER BY pe.surname, pe.name'
+        );
+    }
+
+    /** Stanowisko pracowników produkcji : podani pracownicy dostają stanowisko, pozostali je tracą. */
+    public function setEmployees(int $positionId, array $productionEmployeeIds, ?int $groupId): void
+    {
+        $this->db->prepare('UPDATE n_prod_employee SET id_position = NULL WHERE id_position = ?')->execute([$positionId]);
+        $find = $this->db->prepare('SELECT id FROM n_prod_employee WHERE id_production_employee = ?');
+        $create = $this->db->prepare('INSERT INTO n_prod_employee (id_production_employee, id_primary_group) VALUES (?, ?)');
+        $set = $this->db->prepare('UPDATE n_prod_employee SET id_position = ? WHERE id = ?');
+        foreach ($productionEmployeeIds as $peId) {
+            $find->execute([$peId]);
+            $profile = $find->fetchColumn();
+            if ($profile === false) {
+                $create->execute([$peId, $groupId]);
+                $profile = $this->db->lastInsertId();
+            }
+            $set->execute([$positionId, (int) $profile]);
+        }
+    }
+
+    public function productionEmployeeExists(int $id): bool
+    {
+        return (bool) $this->all('SELECT 1 FROM production_employee WHERE id = ?', [$id]);
+    }
+
+    /** @return list<array{id:int,code:string,name_pl:string,name_fr:string}> grupy produkcji */
+    public function groups(): array
+    {
+        return $this->all('SELECT id, code, name_pl, name_fr FROM n_prod_group ORDER BY sort_order, id');
+    }
+
+    public function groupExists(int $id): bool
+    {
+        return (bool) $this->all('SELECT 1 FROM n_prod_group WHERE id = ?', [$id]);
+    }
+
+    /** @return list<string> klucze stron ERP przyznanych stanowisku */
+    public function pageGrants(int $positionId): array
+    {
+        return array_column($this->all('SELECT page_key FROM n_page_access WHERE id_position = ? ORDER BY page_key', [$positionId]), 'page_key');
     }
 }

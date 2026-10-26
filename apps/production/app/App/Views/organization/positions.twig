@@ -6,7 +6,7 @@
     <div class="page-heading at-profit-head">
         <div class="page-title">
             <h3>Stanowiska i zadania</h3>
-            <p class="text-subtitle text-muted">Kto za co odpowiada: stanowisko każdego użytkownika ERP i jego zadania cykliczne w kategoriach (ceny, marże, upload, produkcja, zebrania…), także z formularzem (protokół zebrania)</p>
+            <p class="text-subtitle text-muted">Kto za co odpowiada: karta stanowiska (biuro i pracownia), stanowisko każdego użytkownika ERP i jego zadania cykliczne w kategoriach (ceny, marże, upload, produkcja, zebrania…), także z formularzem (protokół zebrania)</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a class="btn btn-outline-primary" href="{{ root }}/my-tasks"><i class="bi bi-check2-square"></i> Moje zadania</a>
@@ -26,6 +26,7 @@
                     <label class="at-purch-label">Kod <span class="text-danger">*</span><input class="form-control" name="code" required maxlength="32" placeholder="np. MAGAZYN"></label>
                     <label class="at-purch-label">Nazwa (PL) <span class="text-danger">*</span><input class="form-control" name="name_pl" required maxlength="100"></label>
                     <label class="at-purch-label">Nazwa (FR) <span class="text-danger">*</span><input class="form-control" name="name_fr" required maxlength="100"></label>
+                    <label class="at-purch-label">Rodzaj<select class="form-select" name="kind"><option value="erp">Biuro (użytkownicy ERP)</option><option value="atelier">Pracownia (produkcja, kierowcy)</option></select></label>
                     <label class="at-purch-label at-purch-wide">Opis<input class="form-control" name="description" maxlength="500"></label>
                     <div class="at-purch-actions"><span></span><button class="btn btn-primary" type="submit">Utwórz</button></div>
                 </form>
@@ -93,12 +94,17 @@
     <div class="card {{ p.active ? '' : 'at-inactive' }}">
         <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
             <div>
-                <h4 class="card-title mb-1">{{ p.name_pl }} <span class="at-sub">{{ p.name_fr }} · {{ p.code }}{{ p.active ? '' : ' · nieaktywne' }}</span></h4>
+                <h4 class="card-title mb-1">{{ p.name_pl }} <span class="at-sub">{{ p.name_fr }} · {{ p.code }} · {{ p.kind == 'atelier' ? 'pracownia' : 'biuro' }}{{ p.active ? '' : ' · nieaktywne' }}</span></h4>
                 <div class="at-chips">
-                    {% for u in p.users %}<a class="at-chip" href="{{ root }}/organization/users/{{ u.id }}"><i class="bi bi-person"></i> {{ u.displayed_name ?: u.login }}</a>{% else %}<span class="at-sub">Nikt nie ma tego stanowiska.</span>{% endfor %}
+                    {% for u in p.users %}<a class="at-chip" href="{{ root }}/organization/users/{{ u.id }}"><i class="bi bi-person"></i> {{ u.displayed_name ?: u.login }}</a>{% endfor %}
+                    {% if p.employee_count %}<a class="at-chip" href="{{ root }}/organization/positions/{{ p.id }}"><i class="bi bi-people"></i> {{ p.employee_count }} os. w produkcji</a>{% endif %}
+                    {% if not p.users and not p.employee_count %}<span class="at-sub">Nikt nie ma tego stanowiska.</span>{% endif %}
                 </div>
             </div>
-            <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-position-active="{{ p.id }}" {{ p.active ? 'checked' : '' }}> aktywne</label>
+            <div class="d-flex gap-2 align-items-center">
+                <a class="btn btn-sm {{ p.sheet_state == 'validated' ? 'btn-outline-primary' : 'btn-primary' }}" href="{{ root }}/organization/positions/{{ p.id }}"><i class="bi bi-file-earmark-person"></i> Karta stanowiska{{ p.sheet_state == 'empty' ? ' (pusta)' : (p.sheet_state == 'draft' ? ' (do zatwierdzenia)' : '') }}</a>
+                <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-position-active="{{ p.id }}" {{ p.active ? 'checked' : '' }}> aktywne</label>
+            </div>
         </div>
         <div class="card-body pt-0">
             {% if p.tasks %}

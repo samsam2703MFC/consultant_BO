@@ -172,11 +172,12 @@ final class PositionTaskService
     public function savePosition(array $input, ?int $id): int
     {
         $current = $id === null ? null : ($this->positions->find($id) ?? throw new CustomException('Nie znaleziono stanowiska.', 'errors', 404));
-        $v = (new Validator($input, $current !== null))->only(['code', 'name_pl', 'name_fr', 'description', 'sort_order', 'active'])
+        $v = (new Validator($input, $current !== null))->only(['code', 'name_pl', 'name_fr', 'description', 'kind', 'sort_order', 'active'])
             ->code('code', $current === null)
             ->string('name_pl', 100, $current === null)
             ->string('name_fr', 100, $current === null)
             ->string('description', 500, false, true)
+            ->choice('kind', array_keys(PositionSheetService::KINDS), false)
             ->integer('sort_order', false, 0, 10000)
             ->boolean('active');
         $v->throwIfInvalid();

@@ -38,6 +38,7 @@ class DocumentSampleService
         'technical_card' => ['Karta techniczna produktu', 'Produkcja i magazyn', [], 'Składniki, alergeny, czasy, etapy i kompetencje.', '/workshop/products', null],
         'stock_state' => ['Stan magazynowy', 'Produkcja i magazyn', [], 'Zapas wyrobów gotowych w kartonach i jego wartość (koszt surowców).', '/stock', '/ajax/stock/stock-state'],
         'products_without_recipe' => ['Produkty bez receptury', 'Produkcja i magazyn', [], 'Produkty do uzupełnienia według działu i kategorii.', '/recipes', '/ajax/recipes/products-without-recipe/pdf'],
+        'position_sheet' => ['Karta stanowiska (fiche de poste)', 'Organizacja', [], 'Cel, obowiązki, kompetencje, wymagania, warunki, wskaźniki, higiena i bezpieczeństwo, osoby — PL i FR, z podpisami pracownika i przełożonego. Druk z karty stanowiska.', '/organization/positions', null],
     ];
 
     private const SAMPLE_PRODUCTS = [

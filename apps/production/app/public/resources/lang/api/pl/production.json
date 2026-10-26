@@ -183,7 +183,8 @@
     "NOT_PINNED": "Ten produkt nie ma stałej partii w ten dzień tygodnia.",
     "INCOMPLETE": "Brakuje odpowiedzi : {missing}.",
     "INVALID_FILE": "Plik musi być fakturą PDF albo XML KSeF (FA).",
-    "FILE_TOO_LARGE": "Plik jest za duży (maks. {max_kb} KB)."
+    "FILE_TOO_LARGE": "Plik jest za duży (maks. {max_kb} KB).",
+    "POSITION_CYCLE": "Pole „{field}”: stanowisko nie może podlegać samemu sobie ani swojemu podwładnemu."
   },
   "fields": {
     "code": "kod",
@@ -420,7 +421,25 @@
     "factor": "przelicznik",
     "remember": "zapamiętaj",
     "net_value": "wartość netto",
-    "vat_rate": "stawka VAT"
+    "vat_rate": "stawka VAT",
+    "reports_to_id": "przełożony",
+    "employee_ids": "pracownicy",
+    "mission_pl": "cel stanowiska (PL)",
+    "mission_fr": "cel stanowiska (FR)",
+    "responsibilities_pl": "obowiązki (PL)",
+    "responsibilities_fr": "obowiązki (FR)",
+    "skills_pl": "kompetencje (PL)",
+    "skills_fr": "kompetencje (FR)",
+    "requirements_pl": "wymagania (PL)",
+    "requirements_fr": "wymagania (FR)",
+    "conditions_pl": "warunki pracy (PL)",
+    "conditions_fr": "warunki pracy (FR)",
+    "indicators_pl": "wskaźniki (PL)",
+    "indicators_fr": "wskaźniki (FR)",
+    "safety_pl": "higiena i bezpieczeństwo (PL)",
+    "safety_fr": "higiena i bezpieczeństwo (FR)",
+    "relations_pl": "współpraca (PL)",
+    "relations_fr": "współpraca (FR)"
   },
   "entities": {
     "test_product": "produkt testowy",

@@ -1,7 +1,7 @@
 -- Schéma des tables ajoutées pendant le développement (préfixe n_), base « erp ».
 -- RÉFÉRENCE seulement : le chemin d'installation est « php Bin/tfb_migrate.php apply » (migrations/tfb,
--- 001 → 080, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
--- Généré depuis la base de développement (MariaDB 10.11) après la migration 080 ; compatible MySQL 8.
+-- 001 → 081, avec les données de départ : paramètres, rôles, modèles d'e-mails, questions du pointage…).
+-- Généré depuis la base de développement (MariaDB 10.11) après la migration 081 ; compatible MySQL 8.
 -- Modifications des tables d'origine : voir docs/db/README.md (colonne customer.communication_lang, nettoyage 074 → 080).
 SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE `n_activity_click` (
@@ -558,10 +558,43 @@ CREATE TABLE `n_position` (
   `name_pl` varchar(100) NOT NULL,
   `name_fr` varchar(100) NOT NULL,
   `description` varchar(500) DEFAULT NULL,
+  `kind` enum('erp','atelier') NOT NULL DEFAULT 'erp',
+  `id_group` int(11) DEFAULT NULL,
+  `id_reports_to` int(11) DEFAULT NULL,
   `sort_order` int(11) NOT NULL DEFAULT 0,
   `active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_tfb_position_code` (`code`)
+  UNIQUE KEY `uq_tfb_position_code` (`code`),
+  KEY `fk_n_position_reports_to` (`id_reports_to`),
+  KEY `fk_n_position_group` (`id_group`),
+  CONSTRAINT `fk_n_position_group` FOREIGN KEY (`id_group`) REFERENCES `n_prod_group` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_n_position_reports_to` FOREIGN KEY (`id_reports_to`) REFERENCES `n_position` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `n_position_sheet` (
+  `id_position` int(11) NOT NULL,
+  `mission_pl` text DEFAULT NULL,
+  `mission_fr` text DEFAULT NULL,
+  `responsibilities_pl` text DEFAULT NULL,
+  `responsibilities_fr` text DEFAULT NULL,
+  `skills_pl` text DEFAULT NULL,
+  `skills_fr` text DEFAULT NULL,
+  `requirements_pl` text DEFAULT NULL,
+  `requirements_fr` text DEFAULT NULL,
+  `conditions_pl` text DEFAULT NULL,
+  `conditions_fr` text DEFAULT NULL,
+  `indicators_pl` text DEFAULT NULL,
+  `indicators_fr` text DEFAULT NULL,
+  `safety_pl` text DEFAULT NULL,
+  `safety_fr` text DEFAULT NULL,
+  `relations_pl` text DEFAULT NULL,
+  `relations_fr` text DEFAULT NULL,
+  `version` int(11) NOT NULL DEFAULT 1,
+  `validated_at` datetime DEFAULT NULL,
+  `validated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `updated_by` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id_position`),
+  CONSTRAINT `fk_n_position_sheet_position` FOREIGN KEY (`id_position`) REFERENCES `n_position` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `n_position_home` (
   `id_position` int(11) NOT NULL COMMENT '0 = bez stanowiska',
@@ -736,6 +769,7 @@ CREATE TABLE `n_prod_employee` (
   `id_production_employee` int(11) NOT NULL,
   `panel_employee_id` int(11) DEFAULT NULL,
   `id_primary_group` int(11) DEFAULT NULL,
+  `id_position` int(11) DEFAULT NULL,
   `level_order` int(11) DEFAULT NULL,
   `level_name` varchar(100) DEFAULT NULL,
   `level_synced_at` datetime DEFAULT NULL,
@@ -747,6 +781,8 @@ CREATE TABLE `n_prod_employee` (
   UNIQUE KEY `uq_tfb_employee_erp` (`id_production_employee`),
   UNIQUE KEY `uq_tfb_employee_panel` (`panel_employee_id`),
   KEY `fk_tfb_employee_group` (`id_primary_group`),
+  KEY `fk_n_prod_employee_position` (`id_position`),
+  CONSTRAINT `fk_n_prod_employee_position` FOREIGN KEY (`id_position`) REFERENCES `n_position` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_tfb_employee_erp` FOREIGN KEY (`id_production_employee`) REFERENCES `production_employee` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_tfb_employee_group` FOREIGN KEY (`id_primary_group`) REFERENCES `n_prod_group` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
