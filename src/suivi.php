@@ -741,12 +741,20 @@ function suChecklistBilan(array $v): array
 {
     $seuil = (int) viSeuils()['planoOrange'];
     $pts = array_map('viPointLigne', Db::rows('SELECT * FROM con_visite_point WHERE visite_id = ?', [(int) $v['id']]));
+    // Les questions de la visite (son type, sinon la liste standard) : la réponse d'un choix se lit par son libellé.
+    $defs = [];
+    $code = (string) (($v['type_code'] ?? '') ?: 'reguliere');
+    foreach (function_exists('vcTypes') ? vcTypes() : [] as $t) {
+        if (($t['code'] ?? '') !== $code) { continue; }
+        foreach ((array) ($t['checklist'] ?? []) as $m) { foreach ((array) ($m['points'] ?? []) as $pt) { if (isset($pt['ref'])) { $defs[$pt['ref']] = $pt; } } }
+    }
     $ok = 0; $ko = 0; $na = 0; $ecarts = [];
     foreach ($pts as $p) {
         $fait = $p['etat'] !== '' || $p['note'] !== null || $p['valeur'] !== null;
         if ($p['etat'] === 'na') { $na++; continue; }
         $nc = $p['etat'] === 'ko' || ($p['note'] !== null && $p['note'] <= 2) || ($p['valeur'] !== null && $p['valeur'] < $seuil);
-        if ($nc) { $ko++; $ecarts[] = ['ref' => $p['ref'], 'module' => $p['module'], 'libelle' => $p['libelle'], 'note' => $p['note'], 'valeur' => $p['valeur'], 'commentaire' => $p['commentaire']]; }
+        if ($nc) { $ko++; $ecarts[] = ['ref' => $p['ref'], 'module' => $p['module'], 'libelle' => $p['libelle'], 'note' => $p['note'], 'valeur' => $p['valeur'], 'commentaire' => $p['commentaire'],
+            'reponse' => function_exists('viReponseTexte') ? viReponseTexte($defs[$p['ref']] ?? [], $p['reponse'] ?? null) : '']; }
         elseif ($fait) { $ok++; }
     }
     return ['total' => $ok + $ko, 'ok' => $ok, 'ko' => $ko, 'na' => $na, 'ecarts' => $ecarts];

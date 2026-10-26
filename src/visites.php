@@ -108,6 +108,7 @@ function ensureVisites(): void
         valeur SMALLINT NULL,
         commentaire TEXT NULL,
         causes TEXT NULL,
+        reponse TEXT NULL,
         maj_le DATETIME NOT NULL,
         UNIQUE KEY u_point (visite_id, point_ref)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
@@ -208,6 +209,10 @@ function ensureVisites(): void
     $sansMeteo = true;
     try { $sansMeteo = Db::row("SHOW COLUMNS FROM con_visite LIKE 'meteo'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
     if ($sansMeteo) { try { Db::exec('ALTER TABLE con_visite ADD COLUMN meteo TINYINT NULL'); } catch (Throwable $e) { /* déjà là */ } }
+    // La réponse d'une question générique (26/10/2026, src/visites_questions.php) : le choix, les choix, le nombre, le texte.
+    $sansReponse = true;
+    try { $sansReponse = Db::row("SHOW COLUMNS FROM con_visite_point LIKE 'reponse'") === null; } catch (Throwable $e) { /* pas MySQL : on tente l'ajout */ }
+    if ($sansReponse) { try { Db::exec('ALTER TABLE con_visite_point ADD COLUMN reponse TEXT NULL AFTER causes'); } catch (Throwable $e) { /* déjà là */ } }
     // Le jeton de l'horloge : lu en base par bin/visites_cron.sh à chaque appel.
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = value',
         ['visitesJeton', json_encode(bin2hex(random_bytes(24)))]);
@@ -272,7 +277,11 @@ function viCausesPlano(): array
 function viChecklist(): array
 {
     $c = setting('visitesChecklist', null);
-    return is_array($c) && $c ? $c : viChecklistDefaut();
+    $cl = is_array($c) && $c ? $c : viChecklistDefaut();
+    // Chaque question avec son type (l'ancien `pct` en devient un), et le néerlandais livré là où il manque.
+    $out = [];
+    foreach ($cl as $m) { if (is_array($m) && ($m['id'] ?? '') !== '') { $out[] = viModuleNormalise($m, (string) $m['id']); } }
+    return viAvecNl($out);
 }
 
 function viSeuilsDefaut(): array
@@ -473,7 +482,8 @@ function viPointLigne(array $p): array
 {
     return ['visite_id' => (int) $p['visite_id'], 'module' => $p['module'], 'ref' => $p['point_ref'], 'libelle' => $p['libelle'],
         'etat' => $p['etat'], 'note' => $p['note'] !== null ? (int) $p['note'] : null, 'valeur' => $p['valeur'] !== null ? (int) $p['valeur'] : null,
-        'commentaire' => $p['commentaire'], 'causes' => $p['causes'] ? (json_decode((string) $p['causes'], true) ?: []) : [], 'maj_le' => $p['maj_le']];
+        'commentaire' => $p['commentaire'], 'causes' => $p['causes'] ? (json_decode((string) $p['causes'], true) ?: []) : [],
+        'reponse' => isset($p['reponse']) && $p['reponse'] !== null && $p['reponse'] !== '' ? json_decode((string) $p['reponse'], true) : null, 'maj_le' => $p['maj_le']];
 }
 
 function viPhotoLigne(array $p): array
@@ -800,6 +810,9 @@ function ep_visites_app(): array
         'visites' => $visites, 'points' => $points, 'photos' => $photos, 'plans' => $e['plans'],
         'msp' => $e['msp'], 'equipe' => $e['equipe'], 'checklist' => viChecklist(), 'types' => $types, 'cadre' => function_exists('vcCadre') ? vcCadre() : [], 'taches' => $taches,
         'causes' => viCausesPlano(), 'causesDiag' => viCausesDiag(), 'seuils' => viSeuils(),
+        // Bilingue (26/10/2026) : la langue de chaque magasin (Qui fait quoi, sinon sa région) ouvre la checklist en FR ou en NL.
+        'langues' => function_exists('suLangue') ? (object) array_map(static fn ($id) => suLangue((string) $id), array_combine(array_keys($mags), array_keys($mags)) ?: []) : (object) [],
+        'typesReponse' => VI_TYPES_REPONSE,
         'frequence' => setting('visitesFrequence', []) ?: (object) [],
         'reseau' => viReseau($e['boutiques']),
         // Le délai d'envoi du rapport par le bureau, que la fin de visite annonce (suivi.php).
@@ -994,11 +1007,11 @@ function wr_visites_points_put(string $id): array
         $note = isset($p['note']) && (int) $p['note'] >= 1 && (int) $p['note'] <= 5 ? (int) $p['note'] : null;
         $valeur = isset($p['valeur']) && $p['valeur'] !== '' && $p['valeur'] !== null ? max(0, min(100, (int) $p['valeur'])) : null;
         $causes = is_array($p['causes'] ?? null) ? array_values(array_intersect(array_map('strval', $p['causes']), array_keys(viCausesPlano()))) : [];
-        Db::exec('INSERT INTO con_visite_point (visite_id, module, point_ref, libelle, etat, note, valeur, commentaire, causes, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?)
+        Db::exec('INSERT INTO con_visite_point (visite_id, module, point_ref, libelle, etat, note, valeur, commentaire, causes, reponse, maj_le) VALUES (?,?,?,?,?,?,?,?,?,?,?)
                   ON DUPLICATE KEY UPDATE module = VALUES(module), libelle = VALUES(libelle), etat = VALUES(etat), note = VALUES(note), valeur = VALUES(valeur),
-                  commentaire = VALUES(commentaire), causes = VALUES(causes), maj_le = VALUES(maj_le)',
+                  commentaire = VALUES(commentaire), causes = VALUES(causes), reponse = VALUES(reponse), maj_le = VALUES(maj_le)',
             [(int) $v['id'], $module, mb_substr($ref, 0, 60), mb_substr((string) ($p['libelle'] ?? ''), 0, 190), $etat, $note, $valeur,
-             mb_substr((string) ($p['commentaire'] ?? ''), 0, 1000) ?: null, $causes ? json_encode($causes) : null, date('Y-m-d H:i:s')]);
+             mb_substr((string) ($p['commentaire'] ?? ''), 0, 1000) ?: null, $causes ? json_encode($causes) : null, viReponseNormalise($p['reponse'] ?? null), date('Y-m-d H:i:s')]);
         $n++;
     }
     Db::exec('UPDATE con_visite SET maj_le = ? WHERE id = ?', [date('Y-m-d H:i:s'), (int) $v['id']]);
@@ -1245,16 +1258,10 @@ function wr_visites_reglages_put(): array
     if (isset($b['checklist'])) {
         $cl = [];
         foreach (is_array($b['checklist']) ? $b['checklist'] : [] as $m) {
-            $id = in_array($m['id'] ?? '', VI_MODULES, true) ? $m['id'] : null;
+            $id = is_array($m) && in_array($m['id'] ?? '', VI_MODULES, true) ? $m['id'] : null;
             if ($id === null) { continue; }
-            $pts = [];
-            foreach (is_array($m['points'] ?? null) ? $m['points'] : [] as $p) {
-                $ref = preg_replace('/[^\w-]/', '', (string) ($p['ref'] ?? ''));
-                $lib = mb_substr(trim((string) ($p['libelle'] ?? '')), 0, 190);
-                if ($ref === '' || $lib === '') { continue; }
-                $pts[] = ['ref' => mb_substr($ref, 0, 60), 'libelle' => $lib, 'photo' => !empty($p['photo']), 'pct' => !empty($p['pct'])];
-            }
-            $cl[] = ['id' => $id, 'nom' => mb_substr(trim((string) ($m['nom'] ?? $id)), 0, 60), 'points' => $pts];
+            // Type de réponse, choix, bornes, libellés FR et NL : src/visites_questions.php.
+            $cl[] = viModuleNormalise($m, $id);
         }
         viSettingSet('visitesChecklist', $cl ?: viChecklistDefaut());
     }
