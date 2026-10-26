@@ -1,5 +1,8 @@
 # Maquettes « Tableau d'analyse des promotions, plus visuel » (26/10/2026)
 
+> **Écartées le 26/10/2026** (« aucun, recommence ») : la question est quelle promotion est utilisée dans quel
+> magasin, et son % du CA général. Suite dans `docs/maquettes/promotions-utilisation`.
+
 Demande (sur `#/promotions` en ligne) : « ce n'est pas très visuel, je ne sais pas quel magasin en vend combien par
 jour, quel est le volume par rapport au CA ». Trois ou quatre propositions en captures, on décide ensuite.
 
