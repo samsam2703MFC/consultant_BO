@@ -15,6 +15,8 @@
  */
 (function () {
   'use strict';
+  // L'adresse de ce script : les modules du graphique de l'année (Résultat › Année) se chargent à côté.
+  const ICI = (document.currentScript && document.currentScript.src) || '';
 
   const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const FEU = { vert: '🟢', orange: '🟡', rouge: '🔴' };
@@ -955,9 +957,46 @@
       if (K.erreur || K.error) { return cap('KPI et santé du magasin') + `<div class="card sm mu">Les chiffres du magasin n’ont pas pu être lus. <button class="chip" data-a="sante-relire" data-v="${esc(shop)}">Relire</button></div>`; }
       if (K.indispo) { return cap('KPI et santé du magasin') + `<div class="card sm mu">${esc(K.motif || 'indisponible')}</div>`; }
       return cap('CA par ETP') + this.caEtpHtml(K.caEtp)
-        + cap('L’année face à l’an passé') + this.anneeHtml(K.annee, shop)
+        + cap('L’année face à l’an passé') + this.graphAnneeHtml(K.annee, shop)
         + cap('Structure des ventes face au réseau') + this.structureHtml(K.structure, shop)
         + `<div class="xs mu" style="margin:2px 2px 0">Lu le ${fmtD(K.lu)} à ${esc(String(K.lu || '').slice(11, 16))}${(K.manques || []).length ? ' · relu dans quelques minutes : ' + esc(K.manques.join(', ')) + ' incomplet' : ''}.</div>`;
+    }
+    /**
+     * Le graphique de Résultat › Année, tel quel (26/10/2026) : les modules du cockpit (clients-annee-vals.js et
+     * clients-annee-tpl.js), chargés une fois, avec ce qu'ils attendent de l'application — l'état (la mesure, le
+     * magasin, le périmètre), le relevé de l'année et les noms courts. Le relevé arrive avec les KPI (`annee.ventes`,
+     * la réponse de /ventes/reseau?vue=annee&articles=1) : rien de plus à lire, et il se garde hors ligne. Le magasin
+     * visité est choisi d'office ; les puces gardent le réseau et les autres magasins. Sans les modules (hors ligne
+     * avant leur premier chargement), les trois tuiles et le mois par mois en secours.
+     */
+    chargerClan() {
+      if (this._clanMod) { return; }
+      this._clanMod = { chargement: true };
+      // api.js (que lit le graphique pour « Relire ») déduit son adresse de la page : sous controle/, on la lui donne.
+      if (!window.COCKPIT_API_BASE) { window.COCKPIT_API_BASE = new URL(this.o.apiBase || 'api/cockpit', location.href).pathname.replace(/\/$/, ''); }
+      const base = ICI || new URL((this.o.racine || '') + 'assets/js/visites.js', location.href).href;
+      Promise.all([import(new URL('clients-annee-vals.js', base).href), import(new URL('clients-annee-tpl.js', base).href)])
+        .then(([v, t]) => { this._clanMod = { vals: v.valsClientsAnnee, tpl: t.tplClientsAnnee }; })
+        .catch(() => { this._clanMod = { erreur: true }; })
+        .finally(() => this.rendre());
+    }
+    graphAnneeHtml(A, shop) {
+      if (!A || !A.ventes) { return this.anneeHtml(A, shop); }
+      this.chargerClan();
+      const M = this._clanMod;
+      if (M.erreur) { return this.anneeHtml(A, shop); }
+      if (M.chargement) { return '<div class="card sm mu">Préparation du graphique de l’année…</div>'; }
+      const an = Number(String(A.au || '').slice(0, 4)) || new Date().getFullYear();
+      const G = this._clan || (this._clan = {});
+      if (!G[shop] || G[shop].ventes !== A.ventes) {
+        const st = { clAnSel: String(shop), clAnMesure: 'clients', clAnPerim: 'tous' };
+        const D = { clAn: { [an]: A.ventes, [an + ':ar']: A.ventes }, stores: (this.D.boutiques || []).map(b => ({ id: String(b.id), zone: b.court })) };
+        G[shop] = { ventes: A.ventes, app: { state: st, D, exo: () => an, setState: o => { Object.assign(st, o); this.rendre(); } } };
+      }
+      const common = {}; const h = {}; let n = 0;
+      M.vals(G[shop].app, common, [String(shop)]);
+      this._clanH = h;
+      return M.tpl(common.clAn, { esc, A: fn => { if (!fn) { return ''; } const k = 'c' + (n++); h[k] = fn; return `data-a="clan" data-v="${k}"`; } });
     }
     /** L'écart en pastille : vert dès +3 %, rouge dès −3 % (les pastilles de Résultat › Année) ; `pts` pour des points de part. */
     ecartPill(e, pts) {
@@ -1536,6 +1575,7 @@
       if (a === 'sem') { this.sem = v === '0' ? 0 : this.sem + Number(v); this.rendre(); return; }
       if (a === 'tache') { const t = (this.D.taches || []).find(x => String(x.id) === parts[0]); if (t) { t.statut = parts[1]; t.attente = true; } this.ecrire({ method: 'PUT', path: '/consultants/taches/' + parts[0], body: { statut: parts[1] }, apres: 'tache' }); return; }
       if (a === 'drop') { this.ouvert[v] = !this.ouvert[v]; this.rendre(); return; }
+      if (a === 'clan') { const f = (this._clanH || {})[v]; if (f) { f(); } return; }
       if (a === 'sante-relire') { delete this.KS[v]; this.chargerSante(v); this.rendre(); return; }
       if (a === 'sync') { this.rejouer(); return; }
       if (a === 'recharger') { this.recharger(); return; }
