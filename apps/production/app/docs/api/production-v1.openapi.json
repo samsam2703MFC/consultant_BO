@@ -2316,6 +2316,218 @@
                 "x-permission": "prod.params.write"
             }
         },
+        "/referentiels/data-sheet": {
+            "get": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Tabela do wypełnienia (Excel) / Tableau à remplir (Excel)",
+                "operationId": "exportDataSheet",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DataSheetFile"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Classeur .xlsx pré-rempli avec les données actuelles : postes et capacités, shifts, équipes et effectifs, tournées et heures de départ, paramètres (dont cold.freezer_capacity_cartons). Fichier en base64.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.read"
+            }
+        },
+        "/referentiels/data-sheet/preview": {
+            "post": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Podgląd importu tabeli / Aperçu de l'import du tableau",
+                "operationId": "previewDataSheet",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DataSheetResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Chaque ligne passe par les contrôles habituels dans une transaction annulée : create, update, unchanged ou error (messages). Rien n'est enregistré.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DataSheetInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.write"
+            }
+        },
+        "/referentiels/data-sheet/apply": {
+            "post": {
+                "tags": [
+                    "referentiels"
+                ],
+                "summary": "Zastosuj tabelę / Appliquer le tableau",
+                "operationId": "applyDataSheet",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DataSheetResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Tout ou rien : enregistré seulement si aucune ligne n'est en erreur (applied = true). Une ligne absente du fichier n'est jamais supprimée ; les paramètres demandent prod.params.write.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DataSheetInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.referentiels.write"
+            }
+        },
         "/produits/items": {
             "get": {
                 "tags": [
@@ -23555,6 +23767,141 @@
                 "properties": {
                     "value": {
                         "description": "nombre, texte, booléen, heure HH:MM ou JSON selon value_type"
+                    }
+                }
+            },
+            "DataSheetFile": {
+                "type": "object",
+                "properties": {
+                    "filename": {
+                        "type": "string",
+                        "example": "tabela-pracowni-2026-10-26.xlsx"
+                    },
+                    "mime": {
+                        "type": "string"
+                    },
+                    "content_base64": {
+                        "type": "string",
+                        "format": "byte"
+                    }
+                }
+            },
+            "DataSheetInput": {
+                "type": "object",
+                "required": [
+                    "file"
+                ],
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "byte",
+                        "description": "classeur .xlsx en base64 (2 Mo max.)"
+                    }
+                }
+            },
+            "DataSheetResult": {
+                "type": "object",
+                "properties": {
+                    "applied": {
+                        "type": "boolean"
+                    },
+                    "change_count": {
+                        "type": "integer"
+                    },
+                    "error_count": {
+                        "type": "integer"
+                    },
+                    "summary": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                                "create": {
+                                    "type": "integer"
+                                },
+                                "update": {
+                                    "type": "integer"
+                                },
+                                "unchanged": {
+                                    "type": "integer"
+                                },
+                                "error": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "sheets": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "key": {
+                                    "type": "string"
+                                },
+                                "title": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "sheet": {
+                                    "type": "string",
+                                    "enum": [
+                                        "workstations",
+                                        "shifts",
+                                        "teams",
+                                        "tours",
+                                        "params"
+                                    ]
+                                },
+                                "row": {
+                                    "type": "integer"
+                                },
+                                "key": {
+                                    "type": "string"
+                                },
+                                "action": {
+                                    "type": "string",
+                                    "enum": [
+                                        "create",
+                                        "update",
+                                        "unchanged",
+                                        "error"
+                                    ]
+                                },
+                                "changes": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "field": {
+                                                "type": "string"
+                                            },
+                                            "before": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "after": {
+                                                "type": "string",
+                                                "nullable": true
+                                            }
+                                        }
+                                    }
+                                },
+                                "errors": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

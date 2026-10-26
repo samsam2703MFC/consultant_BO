@@ -85,7 +85,16 @@
     "PDF_TEXT_UNAVAILABLE": "Lecture du texte PDF impossible sur le serveur (pdftotext) — saisissez les lignes ou importez le XML KSeF.",
     "INVOICE_NO_SUPPLIER": "La facture n'a pas de fournisseur — choisissez-le pour réceptionner les quantités.",
     "INVOICE_NO_PRICES": "Aucune ligne reliée avec un prix — aucun prix à mettre à jour.",
-    "PDF_SCANNED": "PDF sans texte (scan) — lisez les pages par OCR (champ ocr_text) ou saisissez les lignes."
+    "PDF_SCANNED": "PDF sans texte (scan) — lisez les pages par OCR (champ ocr_text) ou saisissez les lignes.",
+    "DATA_SHEET_INVALID_FILE": "Fichier illisible — envoyez le fichier .xlsx téléchargé depuis cette page.",
+    "DATA_SHEET_TOO_LARGE": "Le fichier est trop lourd ({max} max.).",
+    "DATA_SHEET_NO_SHEET": "Le fichier ne contient aucune feuille à importer (Stanowiska, Zmiany, Zespoły, Trasy, Parametry).",
+    "DATA_SHEET_MISSING_COLUMN": "Feuille « {sheet} » : colonne « {column} » absente.",
+    "DATA_SHEET_UNKNOWN_GROUP": "Code de groupe inconnu « {code} » (codes dans la feuille Grupy).",
+    "DATA_SHEET_UNKNOWN_SHIFT": "Code de shift inconnu « {code} » (codes dans la feuille Zmiany).",
+    "DATA_SHEET_DUPLICATE_ROW": "« {key} » figure déjà à la ligne {row}.",
+    "DATA_SHEET_UNKNOWN_PARAM": "Le paramètre « {code} » ne fait pas partie de ce tableau.",
+    "DATA_SHEET_TOUR_NOT_FOUND": "La tournée n° {id} n’existe pas — effacez le numéro pour ajouter une nouvelle tournée."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -440,7 +449,8 @@
     "purchase_invoice": "facture d’achat",
     "purchase_invoice_line": "ligne de facture",
     "purchase_invoice_mapping": "correspondance de nom",
-    "invoice_file": "fichier de la facture"
+    "invoice_file": "fichier de la facture",
+    "tour": "tournée"
   },
   "documents": {
     "team_sheet_title": "Plan de l'équipe",

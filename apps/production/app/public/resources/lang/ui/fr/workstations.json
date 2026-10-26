@@ -56,5 +56,6 @@
   "unit.litre": "l",
   "col_oee": "TRS",
   "oee_on": "sur la tablette",
-  "f.oee": "TRS sur la tablette du groupe (marche / arrêts)"
+  "f.oee": "TRS sur la tablette du groupe (marche / arrêts)",
+  "data_sheet": "Tableau à remplir (Excel)"
 }

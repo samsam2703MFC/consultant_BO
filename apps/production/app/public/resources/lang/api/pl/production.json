@@ -85,7 +85,16 @@
     "PDF_TEXT_UNAVAILABLE": "Nie można odczytać tekstu PDF na serwerze (pdftotext) — wpisz linie ręcznie lub zaimportuj XML KSeF.",
     "INVOICE_NO_SUPPLIER": "Faktura nie ma dostawcy — wybierz dostawcę, aby przyjąć ilości.",
     "INVOICE_NO_PRICES": "Brak przypisanych pozycji z ceną — nie ma cen do zaktualizowania.",
-    "PDF_SCANNED": "PDF bez tekstu (skan) — odczytaj strony OCR (pole ocr_text) albo wpisz linie ręcznie."
+    "PDF_SCANNED": "PDF bez tekstu (skan) — odczytaj strony OCR (pole ocr_text) albo wpisz linie ręcznie.",
+    "DATA_SHEET_INVALID_FILE": "Nie można odczytać pliku — wyślij plik .xlsx pobrany z tej strony.",
+    "DATA_SHEET_TOO_LARGE": "Plik jest za duży (maks. {max}).",
+    "DATA_SHEET_NO_SHEET": "W pliku nie ma żadnego arkusza do importu (Stanowiska, Zmiany, Zespoły, Trasy, Parametry).",
+    "DATA_SHEET_MISSING_COLUMN": "Arkusz « {sheet} » : brak kolumny « {column} ».",
+    "DATA_SHEET_UNKNOWN_GROUP": "Nieznany kod grupy « {code} » (kody w arkuszu Grupy).",
+    "DATA_SHEET_UNKNOWN_SHIFT": "Nieznany kod zmiany « {code} » (kody w arkuszu Zmiany).",
+    "DATA_SHEET_DUPLICATE_ROW": "« {key} » występuje już w wierszu {row}.",
+    "DATA_SHEET_UNKNOWN_PARAM": "Parametr « {code} » nie należy do tej tabeli.",
+    "DATA_SHEET_TOUR_NOT_FOUND": "Nie ma trasy nr {id} — usuń numer, aby dodać nową trasę."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -440,7 +449,8 @@
     "purchase_invoice": "faktura zakupowa",
     "purchase_invoice_line": "linia faktury",
     "purchase_invoice_mapping": "przypisanie nazwy",
-    "invoice_file": "plik faktury"
+    "invoice_file": "plik faktury",
+    "tour": "trasa"
   },
   "documents": {
     "team_sheet_title": "Plan zespołu",

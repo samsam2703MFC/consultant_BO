@@ -81,9 +81,12 @@ try {
     expectTf(str_contains((string) failsWith(fn() => $tasks->setStatus($occ, ['status' => 'done'], $userId)), 'protokołem'), 'a form task is done only through its form');
 
     // --- Śledzenie produkcji : plan, partie, straty, zatwierdzony dzień (grupa 1, poprzedni tydzień)
-    $item = (int) $pdo->query("SELECT i.id FROM n_prod_item i JOIN n_prod_product_settings s ON s.id_item = i.id WHERE i.item_type = 'product' AND s.id_primary_group = 1 ORDER BY i.id LIMIT 1")->fetchColumn();
     $d1 = $monday->modify('-7 days')->format('Y-m-d');
     $d2 = $monday->modify('-6 days')->format('Y-m-d');
+    // Produit sans lot ni perte ces deux jours-là (la base locale peut contenir une vraie production).
+    $item = (int) $pdo->query("SELECT i.id FROM n_prod_item i JOIN n_prod_product_settings s ON s.id_item = i.id WHERE i.item_type = 'product' AND s.id_primary_group = 1
+        AND NOT EXISTS (SELECT 1 FROM n_prod_output o WHERE o.id_item = i.id AND o.work_date IN ('{$d1}', '{$d2}'))
+        AND NOT EXISTS (SELECT 1 FROM n_prod_waste w WHERE w.id_item = i.id AND w.work_date IN ('{$d1}', '{$d2}')) ORDER BY i.id LIMIT 1")->fetchColumn();
     $slotKeys = [$item, $d1, $d2];
     $slotBackup = $pdo->query("SELECT * FROM n_prod_week_slot WHERE id_item = {$item} AND work_date IN ('{$d1}', '{$d2}')")->fetchAll(PDO::FETCH_ASSOC);
     $pdo->exec("DELETE FROM n_prod_week_slot WHERE id_item = {$item} AND work_date IN ('{$d1}', '{$d2}')");

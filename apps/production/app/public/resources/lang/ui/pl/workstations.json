@@ -56,5 +56,6 @@
   "unit.litre": "l",
   "col_oee": "TRS",
   "oee_on": "na tablecie",
-  "f.oee": "TRS na tablecie grupy (praca / postoje)"
+  "f.oee": "TRS na tablecie grupy (praca / postoje)",
+  "data_sheet": "Tabela do wypełnienia (Excel)"
 }

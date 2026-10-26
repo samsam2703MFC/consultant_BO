@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Core\Routes\Api;
 
 use App\Controllers\Api\Workshop\AuthController;
+use App\Controllers\Api\Workshop\DataSheetController;
 use App\Controllers\Api\Workshop\DeliveryController;
 use App\Controllers\Api\Workshop\EmployeeController;
 use App\Controllers\Api\Workshop\ExecutionController;
@@ -71,6 +72,11 @@ final class WorkshopApiRoutes
             ['GET', '/referentiels/params', ParamController::class, 'list', $read],
             ['GET', '/referentiels/params/{code:[a-z0-9_.]+}', ParamController::class, 'get', $read],
             ['PATCH', '/referentiels/params/{code:[a-z0-9_.]+}', ParamController::class, 'update', 'prod.params.write'],
+
+            // Tableau à remplir : données réelles de l'atelier (postes, shifts, équipes, tournées, paramètres).
+            ['GET', '/referentiels/data-sheet', DataSheetController::class, 'export', $read],
+            ['POST', '/referentiels/data-sheet/preview', DataSheetController::class, 'preview', $write],
+            ['POST', '/referentiels/data-sheet/apply', DataSheetController::class, 'apply', $write],
 
             ['GET', '/produits/items', ItemController::class, 'list', 'prod.products.read'],
             ['POST', '/produits/items', ItemController::class, 'create', 'prod.products.write'],

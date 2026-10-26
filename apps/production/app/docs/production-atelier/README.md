@@ -150,6 +150,12 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 ## Points ouverts (données réelles à fournir)
 
 Les écrans existent ; ce qui manque, ce sont les données réelles de l'atelier (la copie de test tourne sur une démo réaliste).
+Les points 1 à 4 se remplissent en une fois avec le **tableau à remplir** : Produkcja › Tabela do wypełnienia
+(`/workshop/data-sheet`). On télécharge un Excel pré-rempli (feuilles Stanowiska, Zmiany, Zespoły, Trasy, Parametry, avec
+listes de choix et mode d'emploi PL / FR), on le complète hors ERP, puis on le renvoie : aperçu ligne par ligne (nouveau,
+modifié, inchangé, erreur), puis « Zastosuj » enregistre tout ou rien par les services habituels (mêmes contrôles, journal).
+Une ligne retirée du fichier n'est jamais supprimée. API : `GET /referentiels/data-sheet`, `POST /referentiels/data-sheet/preview`
+et `/apply` (`DataSheetService`).
 
 1. Liste réelle des machines, robots, fours, chambres de pousse et froid, avec leurs capacités : Produkcja › Stanowiska i coboty (25 postes de démonstration aujourd'hui).
 2. Heures de départ des camions par tournée : Logistyka › Trasy (champ heure de départ).

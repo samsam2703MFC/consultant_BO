@@ -60,6 +60,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/workstations', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
+    /** Tabela do wypełnienia : plik Excel z danymi pracowni (stanowiska, zmiany, zespoły, trasy, parametry) i jego import. */
+    public function dataSheet()
+    {
+        $this->view('workshop/data_sheet', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
+    }
+
     public function gantt()
     {
         $this->view('workshop/gantt', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);

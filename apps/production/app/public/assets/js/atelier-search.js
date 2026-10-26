@@ -54,13 +54,17 @@
         'pointage': 'czas pracy', 'competences': 'kompetencje', 'prime': 'premie', 'primes': 'premie', 'tache': 'zadania', 'taches': 'zadania',
         'reclamation': 'reklamacje', 'reclamations': 'reklamacje', 'retour': 'zwroty', 'retours': 'zwroty', 'parametres': 'ustawienia',
         'reglages': 'ustawienia', 'utilisateur': 'uzytkownicy', 'utilisateurs': 'uzytkownicy', 'compteur': 'licznik', 'appareil': 'urzadzenia',
-        'appareils': 'urzadzenia', 'rentabilite': 'rentownosc', 'tableau': 'dashboard', 'aujourdhui': 'dzisiaj', 'logistique': 'logistyka',
+        'appareils': 'urzadzenia', 'rentabilite': 'rentownosc', 'tableau': 'dashboard tabela', 'aujourdhui': 'dzisiaj', 'logistique': 'logistyka',
         'finances': 'finanse', 'analyse': 'analiza', 'langues': 'jezyki', 'poids': 'wagi', 'nutrition': 'odzywcze', 'archives': 'archiwum',
         'question': 'pytania', 'questions': 'pytania', 'tenue': 'pytania odziez', 'hygiene': 'higiena pytania', 'heures': 'godziny',
         'badge': 'identyfikatory', 'badges': 'identyfikatory', 'telephone': 'telefony', 'distribution': 'dystrybucja',
         'document': 'dokumenty', 'documents': 'dokumenty', 'calcul': 'kalkulacja kalkulator', 'cmr': 'cmr dokumenty', 'imprimer': 'drukuj dokumenty',
         'mail': 'poczta skrzynka', 'mails': 'poczta skrzynka', 'email': 'poczta skrzynka', 'courriel': 'poczta', 'boite': 'poczta skrzynka', 'reception': 'poczta dostawy', 'envoyes': 'wyslane',
-        'messagerie': 'poczta', 'groupe': 'grupy grup', 'groupes': 'grupy grup', 'semaine': 'tydzien tygodni', 'qui': 'kto', 'livre': 'dostarcza dostawy', 'livrent': 'dostarcza dostawy', 'quoi': 'co', 'quand': 'kiedy', 'hebdomadaire': 'tydzien', 'hebdo': 'tydzien', 'cobot': 'coboty cobot', 'cobots': 'coboty cobot', 'photo': 'zdjecia', 'photos': 'zdjecia'
+        'messagerie': 'poczta', 'groupe': 'grupy grup', 'groupes': 'grupy grup', 'semaine': 'tydzien tygodni', 'qui': 'kto', 'livre': 'dostarcza dostawy', 'livrent': 'dostarcza dostawy', 'quoi': 'co', 'quand': 'kiedy', 'hebdomadaire': 'tydzien', 'hebdo': 'tydzien', 'cobot': 'coboty cobot', 'cobots': 'coboty cobot', 'photo': 'zdjecia', 'photos': 'zdjecia',
+        'remplir': 'wypelnienia', 'importer': 'import', 'xlsx': 'excel', 'donnees': 'dane tabela', 'capacite': 'pojemnosc pojemnosci', 'capacites': 'pojemnosci',
+        'machine': 'stanowiska maszyny', 'machines': 'stanowiska maszyny', 'poste': 'stanowiska', 'postes': 'stanowiska', 'four': 'stanowiska piece', 'fours': 'stanowiska piece',
+        'horaire': 'zmiany godziny', 'horaires': 'zmiany godziny', 'shift': 'zmiany', 'shifts': 'zmiany', 'effectif': 'obsada', 'effectifs': 'obsada', 'equipes': 'zespol zespolow obsada',
+        'surgelateur': 'zamrazarki', 'congelateur': 'zamrazarki', 'surgelation': 'zamrazarki', 'depart': 'wyjazdu', 'departs': 'wyjazdu'
     };
 
     var menu = null;

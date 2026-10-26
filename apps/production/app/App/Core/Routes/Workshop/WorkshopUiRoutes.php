@@ -14,6 +14,7 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/workshop/team-sheet', ['controller' => $c, 'method' => 'teamSheet']);
     $r->addRoute('GET', '/workshop/execution', ['controller' => $c, 'method' => 'execution']);
     $r->addRoute('GET', '/workshop/workstations', ['controller' => $c, 'method' => 'workstations']);
+    $r->addRoute('GET', '/workshop/data-sheet', ['controller' => $c, 'method' => 'dataSheet']);
     $r->addRoute('GET', '/workshop/timesheet', ['controller' => $c, 'method' => 'timesheet']);
     $r->addRoute('GET', '/workshop/traceability', ['controller' => App\Controllers\Web\Workshop\TraceabilityController::class, 'method' => 'index']);
     $r->addRoute('GET', '/workshop/traceability/photo/{id:\d+}', ['controller' => App\Controllers\Web\Workshop\TraceabilityController::class, 'method' => 'photo']);

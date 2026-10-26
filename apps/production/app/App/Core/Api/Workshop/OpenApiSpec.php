@@ -157,6 +157,12 @@ final class OpenApiSpec
             'GET /referentiels/params' => ['tag' => 'referentiels', 'id' => 'listParams', 'summary' => 'Parametry [PARAM] / Paramètres [PARAM]', 'response' => 'Param', 'list' => true],
             'GET /referentiels/params/{code:[a-z0-9_.]+}' => ['tag' => 'referentiels', 'id' => 'getParam', 'summary' => 'Parametr / Paramètre', 'response' => 'Param', 'errors' => [404]],
             'PATCH /referentiels/params/{code:[a-z0-9_.]+}' => ['tag' => 'referentiels', 'id' => 'updateParam', 'summary' => 'Zmień wartość parametru / Modifier un paramètre', 'body' => 'ParamInput', 'response' => 'Param', 'errors' => [400, 404, 422]],
+            'GET /referentiels/data-sheet' => ['tag' => 'referentiels', 'id' => 'exportDataSheet', 'summary' => 'Tabela do wypełnienia (Excel) / Tableau à remplir (Excel)', 'response' => 'DataSheetFile',
+                'description' => "Classeur .xlsx pré-rempli avec les données actuelles : postes et capacités, shifts, équipes et effectifs, tournées et heures de départ, paramètres (dont cold.freezer_capacity_cartons). Fichier en base64."],
+            'POST /referentiels/data-sheet/preview' => ['tag' => 'referentiels', 'id' => 'previewDataSheet', 'summary' => 'Podgląd importu tabeli / Aperçu de l\'import du tableau', 'body' => 'DataSheetInput', 'response' => 'DataSheetResult', 'errors' => [400, 422],
+                'description' => "Chaque ligne passe par les contrôles habituels dans une transaction annulée : create, update, unchanged ou error (messages). Rien n'est enregistré."],
+            'POST /referentiels/data-sheet/apply' => ['tag' => 'referentiels', 'id' => 'applyDataSheet', 'summary' => 'Zastosuj tabelę / Appliquer le tableau', 'body' => 'DataSheetInput', 'response' => 'DataSheetResult', 'errors' => [400, 422],
+                'description' => "Tout ou rien : enregistré seulement si aucune ligne n'est en erreur (applied = true). Une ligne absente du fichier n'est jamais supprimée ; les paramètres demandent prod.params.write."],
         ];
     }
 
@@ -316,6 +322,28 @@ final class OpenApiSpec
                 ]],
                 'ParamInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['value'], 'properties' => [
                     'value' => ['description' => 'nombre, texte, booléen, heure HH:MM ou JSON selon value_type'],
+                ]],
+                'DataSheetFile' => ['type' => 'object', 'properties' => [
+                    'filename' => ['type' => 'string', 'example' => 'tabela-pracowni-2026-10-26.xlsx'], 'mime' => ['type' => 'string'],
+                    'content_base64' => ['type' => 'string', 'format' => 'byte'],
+                ]],
+                'DataSheetInput' => ['type' => 'object', 'required' => ['file'], 'properties' => [
+                    'file' => ['type' => 'string', 'format' => 'byte', 'description' => 'classeur .xlsx en base64 (2 Mo max.)'],
+                ]],
+                'DataSheetResult' => ['type' => 'object', 'properties' => [
+                    'applied' => ['type' => 'boolean'], 'change_count' => ['type' => 'integer'], 'error_count' => ['type' => 'integer'],
+                    'summary' => ['type' => 'object', 'additionalProperties' => ['type' => 'object', 'properties' => [
+                        'create' => ['type' => 'integer'], 'update' => ['type' => 'integer'], 'unchanged' => ['type' => 'integer'], 'error' => ['type' => 'integer'],
+                    ]]],
+                    'sheets' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['key' => ['type' => 'string'], 'title' => ['type' => 'string']]]],
+                    'rows' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                        'sheet' => ['type' => 'string', 'enum' => ['workstations', 'shifts', 'teams', 'tours', 'params']], 'row' => ['type' => 'integer'],
+                        'key' => ['type' => 'string'], 'action' => ['type' => 'string', 'enum' => ['create', 'update', 'unchanged', 'error']],
+                        'changes' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                            'field' => ['type' => 'string'], 'before' => ['type' => 'string', 'nullable' => true], 'after' => ['type' => 'string', 'nullable' => true],
+                        ]]],
+                        'errors' => ['type' => 'array', 'items' => ['type' => 'string']],
+                    ]]],
                 ]],
             ],
         ];

@@ -31,6 +31,7 @@
     const head = () => `<div class="tfb-head"><div><h3>${esc(t('title'))}</h3><p class="text-muted mb-0">${esc(t('subtitle'))}</p></div>
         <div class="tfb-head-actions">${canWrite ? `<button type="button" class="btn btn-primary btn-sm" data-new="cobot"><i class="bi bi-robot"></i> ${esc(t('new_cobot'))}</button>
             <button type="button" class="btn btn-outline-primary btn-sm" data-new="station"><i class="bi bi-plus"></i> ${esc(t('new_station'))}</button>` : ''}
+            <a class="btn btn-outline-secondary btn-sm" href="${esc(api.root)}/workshop/data-sheet"><i class="bi bi-file-earmark-spreadsheet"></i> ${esc(t('data_sheet'))}</a>
             <button type="button" class="btn btn-outline-secondary btn-sm" data-lang-switch>${esc(t('lang_switch'))}</button></div></div>`;
 
     async function load() {
