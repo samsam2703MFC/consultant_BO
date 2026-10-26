@@ -1119,7 +1119,10 @@ function ep_suivi_tableau(): array
         $pp = array_values(array_filter($plans, static fn ($p) => $p['shop'] === $sid));
         $cad = array_values(array_filter($attendu, static fn ($l) => $l['shop'] === $sid && $l['par'] === 'mois'));
         $s = $scPar[$sid] ?? null; $roles = suMagasinRegle($sid, $regles);
+        // Le consultant responsable et la langue des courriels : l'assistant de « Visites » les propose d'office (26/10/2026).
+        $lg = suLangue($sid, $roles);
         $franchises[] = ['id' => $sid, 'court' => $b['court'], 'feu' => $b['feu'], 'motifs' => array_slice($b['motifs'], 0, 3), 'due' => $b['due'], 'responsable' => $roles['responsableNom'],
+            'responsableId' => $roles['responsable'], 'langue' => $lg, 'langueNom' => SU_LANGUES[$lg] ?? $lg,
             'derniere' => $der ? ['id' => (int) $der['id'], 'le' => $der['prevu_le'], 'typeNom' => suTypeNom((string) (($der['type_code'] ?? '') ?: 'reguliere'), 'fr'), 'checklist' => suChecklistBilan($der)] : null,
             'rapport' => $derRap ? ['id' => (int) $derRap['id'], 'le' => $derRap['prevu_le'], 'statut' => $derRap['rapport_statut'], 'envoyeLe' => $derRap['rapport_envoye_le'], 'luLe' => $derRap['rapport_lu_le']] : null,
             'points' => ['n' => count($pp), 'p0' => count(array_filter($pp, static fn ($p) => $p['priorite'] === 'P0')), 'attente' => count(array_filter($pp, static fn ($p) => $p['statut'] === 'attente')),
