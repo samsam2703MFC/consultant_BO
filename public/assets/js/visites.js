@@ -332,8 +332,11 @@
 .vi.tab .tb-cal .v.terminee{background:#E6F2E9;color:#2d7a3e}
 .vi.tab .tb-cal .v.confirmee{background:#FBEFE0;color:#7a4a00}
 .vi.tab .tb-nav{display:flex;gap:10px;margin-top:18px}
-.vi.tab .tb-nav .tb-b{flex:0 0 auto}
-.vi.tab .tb-nav .tb-b.p{flex:1}
+.vi.tab .tb-nav{align-items:flex-end}.vi.tab .tb-nav .tb-b{flex:0 0 auto}
+.vi.tab .tb-suiv{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.vi.tab .tb-nav .tb-b.p{flex:0 0 auto;min-width:260px;display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right}
+.vi.tab .tb-nav .tb-b.p small{font:600 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.vi.tab .tb-nav .tb-b.p.bloque{background:var(--color-background-secondary);border-color:var(--color-border-secondary);color:var(--color-text-muted);cursor:not-allowed}
 .vi.tab .tb-ctl{padding-bottom:132px}
 .vi.tab .tb-pills{display:flex;gap:6px;flex-wrap:wrap}
 .vi.tab .tb-pills span{font:700 10.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted)}
@@ -1693,15 +1696,54 @@
       const mt = meteoDe(f.meteo);
       etapes.push({ tps: 'fin', ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne'), fait: !!(mt || f.mt_ok), html: () => this.meteoHtml(f) + this.meteoDetailHtml(v) });
       etapes.push({ tps: 'fin', ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig && f.sigC ? 'signée des deux' : f.sig || f.sigC ? '1 signature sur 2' : 'signatures, envoi au bureau', fait: false, html: () => this.finHtml(v) });
+      // Ce qui reste à remplir dans chaque étape qui peut l'être (26/10/2026) : « Suivant » refuse tant qu'il en reste
+      // (réglage etapeBloque) ; les photos, la checklist et les contrôles du jour passent d'eux-mêmes à l'étape
+      // suivante une fois remplis (réglage etapeAuto). Les étapes à lire, le constat, les pistes, la météo et la fin
+      // ne passent jamais seuls ; les étapes à lire ne bloquent jamais.
+      etapes.forEach(e => {
+        if (e.fait || e.lu) { return; }
+        if (e.module && e.n && e.n.total > 0) { const r = e.n.total - e.n.faits; e.manque = r + ' point' + (r > 1 ? 's' : '') + ' à remplir'; e.auto = true; }
+        else if (e.ic === 'photo') { e.manque = e.tps === 'ext' ? (2 - nExt) + ' photo' + (2 - nExt > 1 ? 's' : '') + ' à prendre' : 'la photo à prendre'; e.auto = true; }
+        else if (e.ic === 'controles' && cq && cq.aNoter) { e.manque = cq.aNoter + ' contrôle' + (cq.aNoter > 1 ? 's' : '') + ' à noter'; e.auto = true; }
+        else if (e.pistes) { e.manque = 'le pourquoi, les trois pistes et l’horizon'; }
+        else if (e.revue) { e.manque = 'ce que vous avez vu et la recommandation'; }
+        else if (e.ic === 'meteo') { e.manque = 'la météo du franchisé'; }
+      });
+      etapes.forEach(e => { if (e.fait) { e.auto = true; } });
       const cle = 'et:' + v.id;
       let cur = this.ouvert[cle]; if (cur == null) { cur = etapes.findIndex(e => !e.fait); if (cur < 0) { cur = etapes.length - 1; } }
       cur = Math.max(0, Math.min(etapes.length - 1, cur));
       this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), chiffres: etapes.findIndex(e => e.chiffres), pistes: etapes.findIndex(e => e.pistes), visite: v.id, cur, lus: etapes.map(e => e.lu || null) };
       const faits = etapes.filter(e => e.fait).length;
+      this.etapeAutoSuivre(v, etapes, cur);
       if (this.o.tablette) { return this.tabControle(v, b, etapes, cur, faits); }
       return this.hd('Contrôle — ' + b.court, fmtDJ(v.prevu_le) + (v.commence_a ? ' · depuis ' + fmtH(v.commence_a) : '') + ' · ' + esc(v.consultantNom || ''), 'fiche/' + v.id, `<span class="pill">${cur + 1} / ${etapes.length}</span>`)
         + `<div class="bar" style="margin:2px 0 12px"><i style="width:${Math.round(faits / etapes.length * 100)}%"></i></div>`
         + etapes.map((e, i) => (i === 0 || etapes[i - 1].tps !== e.tps ? `<div class="cap">${TEMPS.findIndex(x => x[0] === e.tps) + 1} · ${esc((TEMPS.find(x => x[0] === e.tps) || ['', ''])[1])}</div>` : '') + `<div class="et ${i === cur ? 'on' : ''} ${e.fait ? 'ok' : ''}" id="et-${i}"><div class="et-h" data-a="etape" data-v="${i}"><span class="num">${e.fait ? '✓' : i + 1}</span><b>${esc(e.titre)}</b><span class="sp"></span><span class="xs mu">${esc(e.etat)}</span></div>${i === cur ? `<div class="et-c">${e.html()}${i < etapes.length - 1 ? `<div class="btns"><button class="btn p w" data-a="etape" data-v="${i + 1}">Suivant ›</button><button class="btn" data-a="etape" data-v="${i - 1}" ${i === 0 ? 'disabled' : ''}>‹</button></div>` : ''}</div>` : ''}</div>`).join('');
+    }
+    /** Aller à une étape du contrôle : marquer lue celle qu'on quitte, garder la review, défiler en haut. */
+    allerEtape(n) {
+      const E = this._etapes; if (!E) { return; }
+      const vis = this.visite(E.visite); const vers = Math.max(0, Math.min(E.n - 1, n));
+      if (E.lus && E.lus[E.cur]) { this.ouvert[E.lus[E.cur]] = true; }
+      if (E.cur === E.chiffres) { this.ouvert['lu:' + E.visite] = true; }
+      if (E.cur === E.revue && vers !== E.revue && vis) { this.sauverReview(vis); }
+      this.ouvert[E.cle] = vers; this.rendre();
+      if (this.o.tablette) { window.scrollTo(0, 0); return; }
+      const el = document.getElementById('et-' + vers); if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
+    }
+    /**
+     * Le passage automatique (réglage etapeAuto) : l'étape ouverte vient d'être remplie pendant qu'on y était — la
+     * dernière photo, le dernier point — : la suivante s'ouvre une seconde plus tard, sauf si l'on touche l'écran d'ici là.
+     */
+    etapeAutoSuivre(v, etapes, cur) {
+      const e = etapes[cur]; const A = this._auto; const S = this.D.seuils || {};
+      this._etapes.manque = e.manque || null;
+      if (S.etapeAuto !== false && A && A.visite === v.id && A.cur === cur && !A.fait && e.fait && e.auto && cur < etapes.length - 1) {
+        if (this._autoT) { clearTimeout(this._autoT); }
+        this._autoT = setTimeout(() => { this._autoT = null; const E = this._etapes; if (this.v === 'controle' && E && E.visite === v.id && E.cur === cur) { this.dire('Étape remplie : la suite.'); this.allerEtape(cur + 1); } }, 1200);
+      }
+      this._auto = { visite: v.id, cur, fait: !!e.fait };
     }
     /* --- la tablette (12/10/2026) --------------------------------------------------------------
      * L'accueil n'a pas de barre : la liste des boutiques avec leur date de contrôle, ou l'agenda en
@@ -1796,7 +1838,10 @@
       let pills = '';
       if (e.module && e.n) { const reste = e.n.total - e.n.faits; pills = `<span class="ok">${e.n.faits} / ${e.n.total} vus</span>${e.ko ? `<span class="ko">${e.ko} écart${e.ko > 1 ? 's' : ''}</span>` : ''}${reste ? `<span>${reste} à voir</span>` : ''}`; }
       const prec = cur > 0 ? etapes[cur - 1] : null; const suiv = cur < n - 1 ? etapes[cur + 1] : null;
-      const nav = `<div class="tb-nav"><button class="tb-b" data-a="etape" data-v="${cur - 1}" ${prec ? '' : 'disabled'}>‹ ${esc(prec ? prec.court : 'Début')}</button>${suiv ? `<button class="tb-b p" data-a="etape" data-v="${cur + 1}">${esc(suiv.tps !== e.tps ? (TEMPS.find(x => x[0] === suiv.tps) || ['', suiv.court])[1] + ' · ' + suiv.court : suiv.court)} ›</button>` : ''}</div>`;
+      const S = this.D.seuils || {}; const bloque = S.etapeBloque !== false && !!e.manque;
+      const nomSuiv = suiv ? (suiv.tps !== e.tps ? (TEMPS.find(x => x[0] === suiv.tps) || ['', suiv.court])[1] + ' · ' + suiv.court : suiv.court) : '';
+      const nav = `<div class="tb-nav"><button class="tb-b" data-a="etape" data-v="${cur - 1}" ${prec ? '' : 'disabled'}>‹ ${esc(prec ? prec.court : 'Début')}</button><span class="sp"></span>`
+        + (suiv ? `<div class="tb-suiv">${e.manque ? `<span class="xs ${bloque ? 'dn' : 'mu'}">Reste : ${esc(e.manque)}</span>` : ''}<button class="tb-b p ${bloque ? 'bloque' : ''}" data-a="${bloque ? 'etape-bloque' : 'etape'}" data-v="${cur + 1}"><small>Suivant</small>${esc(nomSuiv)} ›</button></div>` : '') + '</div>';
       // La barre du bas : les six temps. Un temps ouvre sa première étape pas encore faite.
       const temps = TEMPS.map(([k, nom]) => { const idx = etapes.map((x, i) => x.tps === k ? i : -1).filter(i => i >= 0); return { k, nom, idx, faits: idx.filter(i => etapes[i].fait).length, ko: idx.reduce((a, i) => etapes[i].ko === '!' ? '!' : (a === '!' ? a : a + (Number(etapes[i].ko) || 0)), 0) }; }).filter(x => x.idx.length);
       const ici = temps.find(x => x.k === e.tps) || temps[0];
@@ -1946,6 +1991,7 @@
         + '<div class="card sm mu">La checklist ci-dessous est celle de la visite régulière.</div>'
         + `<div class="cap">Checklist (${f.checklist.reduce((a, m) => a + m.points.length, 0)} points)</div>${f.checklist.map((m, mi) => `<div class="card"><div class="row"><b>${esc(m.nom)}</b><span class="sp"></span><button class="chip" data-a="cl-add" data-v="${mi}">+ point</button></div>${m.points.map((p, pi) => `<div class="row" style="margin-top:6px"><input type="text" data-f="cl|${mi}|${pi}|libelle" value="${esc(p.libelle)}" style="flex:1"><button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|photo" title="photo attendue">📷</button>${m.id === 'planogramme' ? `<button class="chip ${p.pct ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|pct" title="saisie en %">%</button>` : ''}<button class="chip ko" data-a="cl-del" data-v="${mi}|${pi}">×</button></div>`).join('')}</div>`).join('')}
           <div class="cap">Feu tricolore</div><div class="card"><div class="l2">${num('p0Jours', 'P0 ouvert plus de (jours) → rouge')}${num('escaladeJours', 'Échéance dépassée de (jours) → escalade auto')}${num('googleCible', 'Cible Google')}${num('googleRouge', 'Sous la cible de (points) → rouge')}${num('planoOrange', 'Planogramme sous (%) → orange')}${num('planoRouge', 'Planogramme sous (%) → rouge')}${num('mspAlerte', 'Rubrique MSP sous (/20) → rouge')}${num('caOrange', 'CA sous l’objectif de (%) → orange, et à justifier à la visite')}${num('b2bMax', 'Part B2B du CA au plus (%)')}</div><div class="act"><button class="chip ${f.seuils.caSeul ? 'on' : ''}" data-a="se-tog" data-v="caSeul">Le CA seul peut colorer le feu</button></div></div>
+          <div class="cap">Contrôle guidé</div><div class="card"><div class="act"><button class="chip ${f.seuils.etapeAuto !== false ? 'on' : ''}" data-a="se-tog" data-v="etapeAuto">Une étape remplie passe d’elle-même à la suivante</button><button class="chip ${f.seuils.etapeBloque !== false ? 'on' : ''}" data-a="se-tog" data-v="etapeBloque">« Suivant » bloqué tant que l’étape n’est pas remplie</button></div><div class="xs mu" style="margin-top:6px">Passent d’elles-mêmes : les photos, la checklist, les contrôles du jour (un toucher dans la seconde annule). Ne bloquent jamais : les étapes à lire (dossier, KPI, tâches, points). La barre du bas et les étapes en tête restent libres.</div></div>
           <div class="cap">Fréquence de visite (jours)</div><div class="card"><div class="l2">${D.boutiques.map(b => `<div class="champ"><label>${esc(b.court)}</label><input type="number" data-f="fq|${esc(b.id)}" value="${esc(f.frequence[b.id] || '')}" placeholder="${esc(s.visiteJours || 7)}"></div>`).join('')}</div></div>
           <div class="cap">Horloge et mails</div><div class="card"><div class="l2"><div class="champ"><label>Rappel J-1 à</label><input type="time" data-f="se|rappelJ1" value="${esc(f.seuils.rappelJ1)}"></div><div class="champ"><label>Rappel jour J à</label><input type="time" data-f="se|rappelJour" value="${esc(f.seuils.rappelJour)}"></div><div class="champ"><label>Synthèse à</label><input type="time" data-f="se|syntheseHeure" value="${esc(f.seuils.syntheseHeure)}"></div><div class="champ"><label>Adresse de la synthèse</label><input type="email" data-f="se|mailSynthese" value="${esc(f.seuils.mailSynthese || '')}" placeholder="—"></div></div>
             <div class="act"><button class="chip ${f.seuils.mails ? 'on' : ''}" data-a="se-tog" data-v="mails">Les mails partent (rappels aux consultants, synthèse)${R && !R.smtp ? ' — SMTP non configuré' : ''}</button></div>
@@ -1957,6 +2003,8 @@
 
     /* --- événements --------------------------------------------------------- */
     clic(e) {
+      // Un toucher annule le passage automatique à l'étape suivante en attente.
+      if (this._autoT) { clearTimeout(this._autoT); this._autoT = null; }
       // Les boutons des cartes du dashboard magasin (cartes-magasin.js) : la mesure de l'année, la vue des leviers.
       const cm = e.target.closest('[data-anm],[data-levvue]');
       if (cm && this.host.contains(cm)) { if (cm.dataset.anm) { this.anm = cm.dataset.anm; } else if (!cm.disabled) { this.levVue = cm.dataset.levvue; } this.rendre(); return; }
@@ -2002,7 +2050,8 @@
       if (a === 'note') { const p = this.point(parts[0], parts[1], parts[2]); p.note = p.note === Number(parts[3]) ? null : Number(parts[3]); if (p.note != null && !p.etat) { p.etat = p.note <= 2 ? 'ko' : 'ok'; } this.point_save(parts[0], p); return; }
       if (a === 'cause') { const p = this.point(parts[0], parts[1], parts[2]); p.causes = p.causes || []; const i = p.causes.indexOf(parts[3]); if (i >= 0) { p.causes.splice(i, 1); } else { p.causes.push(parts[3]); } this.point_save(parts[0], p); return; }
       if (a === 'cause-diag') { const c = this.form.causes || (this.form.causes = []); const i = c.indexOf(v); if (i >= 0) { c.splice(i, 1); } else { c.push(v); } this.rendre(); return; }
-      if (a === 'etape') { const E = this._etapes; if (!E) { return; } const vis = this.visite(E.visite); const vers = Math.max(0, Math.min(E.n - 1, Number(v))); if (E.lus && E.lus[E.cur]) { this.ouvert[E.lus[E.cur]] = true; } if (E.cur === E.chiffres) { this.ouvert['lu:' + E.visite] = true; } if (E.cur === E.revue && vers !== E.revue && vis) { this.sauverReview(vis); } this.ouvert[E.cle] = vers; this.rendre(); if (this.o.tablette) { window.scrollTo(0, 0); return; } const el = document.getElementById('et-' + vers); if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } return; }
+      if (a === 'etape') { this.allerEtape(Number(v)); return; }
+      if (a === 'etape-bloque') { const E = this._etapes; this.dire('Avant de continuer : ' + ((E && E.manque) || 'cette étape n’est pas remplie') + '.'); return; }
       if (a === 'pa') { const i = Number(parts[0]); if (this.form.pa && this.form.pa[i]) { this.form.pa[i][parts[1]] = parts[2]; this.rendre(); } return; }
       if (a === 'pa-del') { this.form.pa.splice(Number(v), 1); this.rendre(); return; }
       if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), 3) }); this.rendre(); return; }
@@ -2023,6 +2072,7 @@
       if (a === 'tick') { fetch(this.api('/visites/tick'), { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{"force":true}' }).then(r => r.json()).then(j => { const f = j.fait || {}; this.dire('Horloge : ' + (f.escalades || 0) + ' escalade(s), ' + (f.rappelsJ1 || 0) + ' rappel(s) J-1, ' + (f.rappelsJour || 0) + ' du jour' + (f.synthese ? ', synthèse' : '') + (f.mails ? ', ' + f.mails + ' mail(s)' : '') + '.'); this.R = null; this.rendre(); }).catch(() => this.dire('Horloge injoignable.')); return; }
     }
     saisie(e) {
+      if (this._autoT) { clearTimeout(this._autoT); this._autoT = null; }
       const el = e.target; const f = el.dataset && el.dataset.f; if (!f) { return; }
       const parts = f.split('|');
       if (parts[0] === 'form') { this.form[parts[1]] = el.value; return; }

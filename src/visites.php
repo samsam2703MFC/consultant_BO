@@ -288,6 +288,8 @@ function viSeuilsDefaut(): array
         'caSeul' => false,     // …seulement si ce réglage est vrai (sinon le CA colore la carte)
         'mspAlerte' => 12,     // une rubrique MSP sous ce score /20 : rouge
         'b2bMax' => 40,        // la part B2B du CA au plus (%), lue à la visite (structure du CA par canal)
+        'etapeAuto' => true,   // contrôle guidé : une étape remplie (photos, checklist, contrôles du jour) passe d'elle-même à la suivante
+        'etapeBloque' => true, // contrôle guidé : « Suivant » refuse tant que l'étape n'est pas remplie (les étapes à lire ne bloquent jamais)
         'visiteJours' => 7,    // fréquence de visite par défaut
         'rappelJ1' => '18:00',
         'rappelJour' => '07:00',
