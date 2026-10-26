@@ -79,11 +79,27 @@
 .vi .kpi>div{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:10px 12px}
 .vi .kc .k{margin-top:4px}
 .vi .or{color:#B26A00}
-.vi .tb-sous{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
-.vi .tb-sous button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:6px 12px;font:600 12px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
-.vi .tb-sous button.fait{color:#2d7a3e;border-color:#BFDCC6;background:#F0F7F2}
-.vi .tb-sous button.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
-.vi .tb-sous button i{font-style:normal;background:#C0182B;color:#fff;border-radius:999px;padding:0 6px;margin-left:3px;font-size:10.5px}
+.vi .pnl{margin-top:14px;padding-top:12px;border-top:.5px solid var(--color-border-tertiary)}
+.vi .pnl-t{margin:6px 0 4px}.vi .pnl-t td.r,.vi .pnl-t th.r{text-align:right}.vi .pnl-t tr.net td{border-top:1px solid var(--color-border-secondary);font-weight:700}
+/* Partout sur la tablette (26/10/2026, demande de Sam) : des rectangles aux coins arrondis, répartis sur toute la largeur.
+   Les étapes du temps en cours : l'assistant horizontal de la maquette A. */
+.vi .tb-sous{display:flex;align-items:center;margin:0 0 16px}
+.vi .tb-sous button{position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--color-border-secondary);background:var(--color-surface);cursor:pointer;text-align:left;font-family:var(--font-ui)}
+.vi .tb-sous .n{flex:none;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font:700 13px var(--font-ui);background:var(--color-background-secondary);color:var(--color-text-muted)}
+.vi .tb-sous .t{min-width:0;display:flex;flex-direction:column}
+.vi .tb-sous b{font:700 13.5px/1.2 var(--font-ui);color:var(--color-text);overflow-wrap:break-word}
+.vi .tb-sous small{font:600 11px var(--font-ui);color:var(--color-text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vi .tb-sous button.on{background:var(--color-primary);border-color:var(--color-primary)}.vi .tb-sous button.on b,.vi .tb-sous button.on small{color:#fff}.vi .tb-sous button.on .n{background:rgba(255,255,255,.22);color:#fff}
+.vi .tb-sous button.fait{border-color:#BFDCC6;background:#F0F7F2}.vi .tb-sous button.fait .n{background:#2d7a3e;color:#fff}.vi .tb-sous button.fait small{color:#2d7a3e}
+.vi .tb-sous button em{position:absolute;top:-7px;right:-5px;font:700 10.5px/18px var(--font-ui);font-style:normal;min-width:18px;height:18px;padding:0 5px;border-radius:5px;background:#C0182B;color:#fff;text-align:center}
+.vi .tb-sous i.l{flex:0 0 14px;height:2px;background:var(--color-border-secondary)}.vi .tb-sous i.l.fait{background:#2d7a3e}
+.vi .tb-sous.serre{align-items:stretch}.vi .tb-sous.serre i.l{align-self:center}.vi .tb-sous.serre button{flex-direction:column;justify-content:flex-start;align-items:flex-start;padding:8px 9px;gap:5px}.vi .tb-sous.serre .n{width:24px;height:24px;font-size:11.5px}.vi .tb-sous.serre b{font-size:12px;overflow-wrap:normal}.vi .tb-sous.serre i.l{flex-basis:8px}
+@media (max-width:760px){.vi .tb-sous{flex-wrap:wrap;gap:6px}.vi .tb-sous i.l{display:none}.vi .tb-sous button{flex:1 1 140px}}
+.vi .onglets{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}.vi .onglets button{border-radius:10px;text-align:center}
+.vi .tm-n{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);flex:1 1 100%;width:100%;margin:8px 0 0;border-radius:10px;padding:3px}.vi .tm-n button{border-radius:8px;padding:6px 10px}
+.vi .act .chip{flex:1 1 auto;text-align:center}
+.vi .chip{border-radius:8px}
+
 .vi .cx-j{position:relative;height:9px;border-radius:5px;background:var(--color-background-secondary);margin-top:6px}
 .vi .cx-j i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#2d7a3e}.vi .cx-j i.dn{background:#C0182B}.vi .cx-j i.or{background:#E0A526}
 .vi .cx-j em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--color-text)}
@@ -316,8 +332,11 @@
 .vi.tab .tb-cal .v.terminee{background:#E6F2E9;color:#2d7a3e}
 .vi.tab .tb-cal .v.confirmee{background:#FBEFE0;color:#7a4a00}
 .vi.tab .tb-nav{display:flex;gap:10px;margin-top:18px}
-.vi.tab .tb-nav .tb-b{flex:0 0 auto}
-.vi.tab .tb-nav .tb-b.p{flex:1}
+.vi.tab .tb-nav{align-items:flex-end}.vi.tab .tb-nav .tb-b{flex:0 0 auto}
+.vi.tab .tb-suiv{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.vi.tab .tb-nav .tb-b.p{flex:0 0 auto;min-width:260px;display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right}
+.vi.tab .tb-nav .tb-b.p small{font:600 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.vi.tab .tb-nav .tb-b.p.bloque{background:var(--color-background-secondary);border-color:var(--color-border-secondary);color:var(--color-text-muted);cursor:not-allowed}
 .vi.tab .tb-ctl{padding-bottom:132px}
 .vi.tab .tb-pills{display:flex;gap:6px;flex-wrap:wrap}
 .vi.tab .tb-pills span{font:700 10.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted)}
@@ -996,7 +1015,7 @@
           <div class="xs mu" style="margin-top:3px">${t.controleur ? 'Contrôle qualité : ' + esc(t.controleur) : 'Contrôle qualité'}${t.releveeLe ? ' · le ' + fmtD(t.releveeLe) + ' ' + esc(String(t.releveeLe).slice(11, 16)) : ''}${t.recidive ? ' · <span class="dn">' + t.recidive + ' jours non conformes sur 7</span>' : ''}${t.suite ? ' · re-notée ' + t.suite.note + '/5 le ' + fmtD(t.suite.jour) + (t.suite.conforme ? ' <span class="up">✓</span>' : '') : ' · pas encore re-notée'}</div></div></div>`; }).join('')
         : `<div class="sm mu">Aucune tâche notée sous ${D.seuil} en ${esc(D.choisiLab)}.</div>`;
       return `<div class="cap">Les derniers mois — tâches faites sur demandées</div>
-        <div class="card"><div class="row" style="margin-bottom:6px"><span class="xs mu">Touchez un mois pour voir ses tâches sous ${D.seuil}</span><span class="tm-n">${[6, 12].map(k => `<button class="${this.tmN === k ? 'on' : ''}" data-a="tm-n" data-v="${k}">${k} mois</button>`).join('')}</span></div>
+        <div class="card"><div class="row" style="margin-bottom:6px;flex-wrap:wrap"><span class="xs mu">Touchez un mois pour voir ses tâches sous ${D.seuil}</span><span class="tm-n">${[6, 12].map(k => `<button class="${this.tmN === k ? 'on' : ''}" data-a="tm-n" data-v="${k}">${k} mois</button>`).join('')}</span></div>
           <div style="overflow-x:auto"><table class="tm-t"><tr><th>Mois</th><th>Faites / demandées</th><th>Notées</th><th>Sous ${D.seuil}</th><th>Moyenne</th></tr>${lignes}</table></div>
           <div class="xs mu" style="margin-top:6px">${esc(D.source || '')}</div></div>
         <div class="cap">Les tâches notées sous ${D.seuil} — ${esc(D.choisiLab)}${nc.length ? ' · ' + nc.length : ''}</div><div class="card">${D.indispo ? '<div class="sm mu">Les notes du contrôle qualité ne se lisent pas.</div>' : liste}</div>`;
@@ -1189,10 +1208,10 @@
       if (!B || B.chargement) { return cap + '<div class="card sm mu">Lecture du CA et du budget de la semaine, du mois, du trimestre et de l’année…</div>'; }
       if (B.indispo) { return cap + `<div class="card sm mu">${esc(B.motif || 'indisponible')}</div>`; }
       if (B.erreur || B.error || !B.periodes) { return cap + `<div class="card sm mu">Le CA face au budget n’a pas pu être lu. <button class="chip" data-a="sante-relire" data-v="${esc(shop)}">Relire</button></div>`; }
-      const P = B.periodes; const ORD = ['semaine', 'mois', 'trimestre', 'annee']; const NOM = { semaine: 'Semaine', mois: 'Mois', trimestre: 'Trimestre', annee: 'Année' };
+      const P = B.periodes; const ORD = ['jour', 'semaine', 'mois', 'trimestre', 'annee'].filter(k => P[k]); const NOM = { jour: 'Jour', semaine: 'Semaine', mois: 'Mois', trimestre: 'Trimestre', annee: 'Année' };
       const vue = P[this.vbVue] ? this.vbVue : ((B.sous || [])[0] || 'mois');
       const cls = st => st === 'sous' ? 'dn' : st === 'proche' ? 'or' : st === 'ok' ? 'up' : 'mu';
-      const tabs = `<div class="vb-tabs" role="tablist">${ORD.map(k => { const x = P[k] || {}; return `<button role="tab" aria-selected="${k === vue}" class="${k === vue ? 'on' : ''}" data-a="vb-vue" data-v="${k}"><span>${NOM[k]}</span><b class="${cls(x.statut)}">${x.ecartPct != null ? vbPct(x.ecartPct) : '—'}</b></button>`; }).join('')}</div>`;
+      const tabs = `<div class="vb-tabs" role="tablist" style="grid-template-columns:repeat(${ORD.length},minmax(0,1fr))">${ORD.map(k => { const x = P[k] || {}; return `<button role="tab" aria-selected="${k === vue}" class="${k === vue ? 'on' : ''}" data-a="vb-vue" data-v="${k}"><span>${NOM[k]}</span><b class="${cls(x.statut)}">${x.ecartPct != null ? vbPct(x.ecartPct) : '—'}</b></button>`; }).join('')}</div>`;
       const x = P[vue];
       const SRC = { budget: 'budget validé', theorique: 'CA théorique de l’étude', mixte: 'budget validé et CA théorique' };
       const arr = B.arrete ? fmtDJ(B.arrete) : '';
@@ -1213,8 +1232,24 @@
       // Le formulaire (pourquoi, trois pistes) se remplit au développement ; ici, l'appel à y aller.
       const E = this._etapes; const sousB = (B.sous || []).length;
       const renvoi = sousB ? `<div class="card ${this.vbExige(v) === 'fait' ? '' : 'alerte'} sm"><b class="${this.vbExige(v) === 'fait' ? 'up' : 'dn'}">CA à plus de ${String(B.seuil).replace('.', ',')} % sous le budget</b> — ${this.vbExige(v) === 'fait' ? 'le pourquoi et les trois pistes sont notés.' : 'le pourquoi et les trois pistes du franchisé se notent ensemble au développement.'}${E && E.pistes >= 0 ? ` <button class="chip" data-a="etape" data-v="${E.pistes}">${this.vbExige(v) === 'fait' ? 'Revoir' : 'Y aller'}</button>` : ''}</div>` : '';
-      return cap + `<div class="card vb">${tabs}<div class="vb-c">${corps}</div></div>` + renvoi
+      return cap + `<div class="card vb">${tabs}<div class="vb-c">${corps}${this.pnlHtml(x.pnl, B.seuilsPnl || {}, B.arrete)}</div></div>` + renvoi
         + `<div class="xs mu" style="margin:2px 2px 10px">${esc(B.source || '')}${(B.manques || []).length ? ' · relu dans quelques minutes : ' + esc(B.manques.join(', ')) : ''}.</div>`;
+    }
+    /**
+     * Le mini P&L de l'étendue (26/10/2026) : le CA, le coût matière, la marge brute, les invendus (jour, semaine, mois),
+     * le personnel, les frais généraux et le résultat net, en euros et en % du CA, face aux seuils de la Table KPI.
+     */
+    pnlHtml(P, S, arrete) {
+      if (!P) { return '<div class="xs mu" style="margin-top:10px">Mini P&L indisponible sur cette étendue.</div>'; }
+      const p1 = x => x == null ? '—' : String(x).replace('.', ',') + ' %';
+      const L = [['CA', P.ca, 100, null], ['Coût matière', P.coutMatiere, P.coutMatierePct, S.food], ['Marge brute', P.margeBrute, P.margeBrutePct, null],
+        P.avecInvendus ? ['Invendus', P.invendus, P.invendusPct, null] : null, ['Personnel', P.labour, P.labourPct, S.labour], ['Frais généraux', P.overhead, P.overheadPct, S.overhead],
+        ['Résultat net', P.net, P.netPct, null]].filter(Boolean);
+      const rows = L.map(([lab, v, pc, seuil], i) => { const net = i === L.length - 1; const ko = seuil != null && pc != null && pc > seuil;
+        return `<tr class="${net ? 'net' : ''}"><td>${lab}</td><td class="r"><b class="${net && v != null ? (v < 0 ? 'dn' : 'up') : ''}">${eur(v)}</b></td><td class="r ${ko ? 'dn' : net && pc != null ? (pc < 0 ? 'dn' : 'up') : 'mu'}">${lab === 'CA' ? '' : p1(pc)}</td><td class="r xs mu">${seuil != null ? '≤ ' + p1(seuil) : ''}</td></tr>`; }).join('');
+      return `<div class="pnl"><div class="row"><b class="sm">Mini P&L</b><span class="xs mu">du ${fmtD(P.du)} au ${fmtD(P.au)}${P.mois ? ' · ' + P.mois + ' mois' : ''}</span></div>
+        <table class="tbl pnl-t"><tr><th></th><th class="r">€</th><th class="r">% du CA</th><th class="r">seuil</th></tr>${rows}</table>
+        <div class="xs mu">${P.avecInvendus ? 'Tel que Résultat le calcule : net = marge brute − invendus − personnel − frais généraux' : 'Mois clos au P&L mensuel du panel (sans les invendus, qu’il ne porte pas), le mois en cours à Résultat'}${arrete && P.au > arrete ? ' · à date, aujourd’hui compris (le budget s’arrête à la veille)' : ''}${P.motif ? ' · ' + esc(P.motif) : ''}.</div></div>`;
     }
     /** 'manque' : une étendue à plus du seuil sous le budget et le formulaire incomplet ; 'fait' : complet ; null : rien à justifier (ou pas encore lu). */
     vbExige(v) {
@@ -1661,15 +1696,54 @@
       const mt = meteoDe(f.meteo);
       etapes.push({ tps: 'fin', ic: 'meteo', court: 'Météo', titre: 'Météo du franchisé', etat: mt ? mt[2] + (f.mt_ok ? ' · détail enregistré' : '') : (f.mt_ok ? 'détail enregistré' : 'interne'), fait: !!(mt || f.mt_ok), html: () => this.meteoHtml(f) + this.meteoDetailHtml(v) });
       etapes.push({ tps: 'fin', ic: 'fin', court: 'Fin', titre: 'Fin de visite', etat: f.sig && f.sigC ? 'signée des deux' : f.sig || f.sigC ? '1 signature sur 2' : 'signatures, envoi au bureau', fait: false, html: () => this.finHtml(v) });
+      // Ce qui reste à remplir dans chaque étape qui peut l'être (26/10/2026) : « Suivant » refuse tant qu'il en reste
+      // (réglage etapeBloque) ; les photos, la checklist et les contrôles du jour passent d'eux-mêmes à l'étape
+      // suivante une fois remplis (réglage etapeAuto). Les étapes à lire, le constat, les pistes, la météo et la fin
+      // ne passent jamais seuls ; les étapes à lire ne bloquent jamais.
+      etapes.forEach(e => {
+        if (e.fait || e.lu) { return; }
+        if (e.module && e.n && e.n.total > 0) { const r = e.n.total - e.n.faits; e.manque = r + ' point' + (r > 1 ? 's' : '') + ' à remplir'; e.auto = true; }
+        else if (e.ic === 'photo') { e.manque = e.tps === 'ext' ? (2 - nExt) + ' photo' + (2 - nExt > 1 ? 's' : '') + ' à prendre' : 'la photo à prendre'; e.auto = true; }
+        else if (e.ic === 'controles' && cq && cq.aNoter) { e.manque = cq.aNoter + ' contrôle' + (cq.aNoter > 1 ? 's' : '') + ' à noter'; e.auto = true; }
+        else if (e.pistes) { e.manque = 'le pourquoi, les trois pistes et l’horizon'; }
+        else if (e.revue) { e.manque = 'ce que vous avez vu et la recommandation'; }
+        else if (e.ic === 'meteo') { e.manque = 'la météo du franchisé'; }
+      });
+      etapes.forEach(e => { if (e.fait) { e.auto = true; } });
       const cle = 'et:' + v.id;
       let cur = this.ouvert[cle]; if (cur == null) { cur = etapes.findIndex(e => !e.fait); if (cur < 0) { cur = etapes.length - 1; } }
       cur = Math.max(0, Math.min(etapes.length - 1, cur));
       this._etapes = { cle, n: etapes.length, revue: etapes.findIndex(e => e.revue), chiffres: etapes.findIndex(e => e.chiffres), pistes: etapes.findIndex(e => e.pistes), visite: v.id, cur, lus: etapes.map(e => e.lu || null) };
       const faits = etapes.filter(e => e.fait).length;
+      this.etapeAutoSuivre(v, etapes, cur);
       if (this.o.tablette) { return this.tabControle(v, b, etapes, cur, faits); }
       return this.hd('Contrôle — ' + b.court, fmtDJ(v.prevu_le) + (v.commence_a ? ' · depuis ' + fmtH(v.commence_a) : '') + ' · ' + esc(v.consultantNom || ''), 'fiche/' + v.id, `<span class="pill">${cur + 1} / ${etapes.length}</span>`)
         + `<div class="bar" style="margin:2px 0 12px"><i style="width:${Math.round(faits / etapes.length * 100)}%"></i></div>`
         + etapes.map((e, i) => (i === 0 || etapes[i - 1].tps !== e.tps ? `<div class="cap">${TEMPS.findIndex(x => x[0] === e.tps) + 1} · ${esc((TEMPS.find(x => x[0] === e.tps) || ['', ''])[1])}</div>` : '') + `<div class="et ${i === cur ? 'on' : ''} ${e.fait ? 'ok' : ''}" id="et-${i}"><div class="et-h" data-a="etape" data-v="${i}"><span class="num">${e.fait ? '✓' : i + 1}</span><b>${esc(e.titre)}</b><span class="sp"></span><span class="xs mu">${esc(e.etat)}</span></div>${i === cur ? `<div class="et-c">${e.html()}${i < etapes.length - 1 ? `<div class="btns"><button class="btn p w" data-a="etape" data-v="${i + 1}">Suivant ›</button><button class="btn" data-a="etape" data-v="${i - 1}" ${i === 0 ? 'disabled' : ''}>‹</button></div>` : ''}</div>` : ''}</div>`).join('');
+    }
+    /** Aller à une étape du contrôle : marquer lue celle qu'on quitte, garder la review, défiler en haut. */
+    allerEtape(n) {
+      const E = this._etapes; if (!E) { return; }
+      const vis = this.visite(E.visite); const vers = Math.max(0, Math.min(E.n - 1, n));
+      if (E.lus && E.lus[E.cur]) { this.ouvert[E.lus[E.cur]] = true; }
+      if (E.cur === E.chiffres) { this.ouvert['lu:' + E.visite] = true; }
+      if (E.cur === E.revue && vers !== E.revue && vis) { this.sauverReview(vis); }
+      this.ouvert[E.cle] = vers; this.rendre();
+      if (this.o.tablette) { window.scrollTo(0, 0); return; }
+      const el = document.getElementById('et-' + vers); if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
+    }
+    /**
+     * Le passage automatique (réglage etapeAuto) : l'étape ouverte vient d'être remplie pendant qu'on y était — la
+     * dernière photo, le dernier point — : la suivante s'ouvre une seconde plus tard, sauf si l'on touche l'écran d'ici là.
+     */
+    etapeAutoSuivre(v, etapes, cur) {
+      const e = etapes[cur]; const A = this._auto; const S = this.D.seuils || {};
+      this._etapes.manque = e.manque || null;
+      if (S.etapeAuto !== false && A && A.visite === v.id && A.cur === cur && !A.fait && e.fait && e.auto && cur < etapes.length - 1) {
+        if (this._autoT) { clearTimeout(this._autoT); }
+        this._autoT = setTimeout(() => { this._autoT = null; const E = this._etapes; if (this.v === 'controle' && E && E.visite === v.id && E.cur === cur) { this.dire('Étape remplie : la suite.'); this.allerEtape(cur + 1); } }, 1200);
+      }
+      this._auto = { visite: v.id, cur, fait: !!e.fait };
     }
     /* --- la tablette (12/10/2026) --------------------------------------------------------------
      * L'accueil n'a pas de barre : la liste des boutiques avec leur date de contrôle, ou l'agenda en
@@ -1764,14 +1838,20 @@
       let pills = '';
       if (e.module && e.n) { const reste = e.n.total - e.n.faits; pills = `<span class="ok">${e.n.faits} / ${e.n.total} vus</span>${e.ko ? `<span class="ko">${e.ko} écart${e.ko > 1 ? 's' : ''}</span>` : ''}${reste ? `<span>${reste} à voir</span>` : ''}`; }
       const prec = cur > 0 ? etapes[cur - 1] : null; const suiv = cur < n - 1 ? etapes[cur + 1] : null;
-      const nav = `<div class="tb-nav"><button class="tb-b" data-a="etape" data-v="${cur - 1}" ${prec ? '' : 'disabled'}>‹ ${esc(prec ? prec.court : 'Début')}</button>${suiv ? `<button class="tb-b p" data-a="etape" data-v="${cur + 1}">${esc(suiv.tps !== e.tps ? (TEMPS.find(x => x[0] === suiv.tps) || ['', suiv.court])[1] + ' · ' + suiv.court : suiv.court)} ›</button>` : ''}</div>`;
+      const S = this.D.seuils || {}; const bloque = S.etapeBloque !== false && !!e.manque;
+      const nomSuiv = suiv ? (suiv.tps !== e.tps ? (TEMPS.find(x => x[0] === suiv.tps) || ['', suiv.court])[1] + ' · ' + suiv.court : suiv.court) : '';
+      const nav = `<div class="tb-nav"><button class="tb-b" data-a="etape" data-v="${cur - 1}" ${prec ? '' : 'disabled'}>‹ ${esc(prec ? prec.court : 'Début')}</button><span class="sp"></span>`
+        + (suiv ? `<div class="tb-suiv">${e.manque ? `<span class="xs ${bloque ? 'dn' : 'mu'}">Reste : ${esc(e.manque)}</span>` : ''}<button class="tb-b p ${bloque ? 'bloque' : ''}" data-a="${bloque ? 'etape-bloque' : 'etape'}" data-v="${cur + 1}"><small>Suivant</small>${esc(nomSuiv)} ›</button></div>` : '') + '</div>';
       // La barre du bas : les six temps. Un temps ouvre sa première étape pas encore faite.
       const temps = TEMPS.map(([k, nom]) => { const idx = etapes.map((x, i) => x.tps === k ? i : -1).filter(i => i >= 0); return { k, nom, idx, faits: idx.filter(i => etapes[i].fait).length, ko: idx.reduce((a, i) => etapes[i].ko === '!' ? '!' : (a === '!' ? a : a + (Number(etapes[i].ko) || 0)), 0) }; }).filter(x => x.idx.length);
       const ici = temps.find(x => x.k === e.tps) || temps[0];
       const barre = `<div class="tb-bar" style="grid-template-columns:repeat(${temps.length},minmax(0,1fr))">` + temps.map((x, ti) => { const vers = x.idx.find(i => !etapes[i].fait); const tout = x.faits === x.idx.length;
         return `<button data-a="etape" data-v="${vers != null ? vers : x.idx[0]}" class="${x === ici ? 'on' : tout ? 'fait' : ''}"><span class="ic"><svg viewBox="0 0 24 24">${TAB_IC['t_' + x.k] || TAB_IC.liste}</svg>${tout && x !== ici ? '<span class="ok">✓</span>' : ''}${x.ko ? `<span class="ko">${x.ko}</span>` : ''}</span><span class="lb">${ti + 1} · ${esc(x.nom)}</span><span class="es">${x.faits} / ${x.idx.length}</span></button>`; }).join('') + '</div>';
       // En tête du temps en cours : ses étapes, d'un toucher.
-      const sous = ici.idx.length > 1 ? `<div class="tb-sous">${ici.idx.map(i => { const x = etapes[i]; return `<button data-a="etape" data-v="${i}" class="${i === cur ? 'on' : x.fait ? 'fait' : ''}">${x.fait && i !== cur ? '✓ ' : ''}${esc(x.court)}${x.ko ? ` <i>${x.ko}</i>` : ''}</button>`; }).join('')}</div>` : '';
+      // Les étapes du temps en cours, en assistant horizontal (maquette A choisie par Sam, 26/10/2026) : numérotées,
+      // reliées par un trait, la faite en vert, l'étape ouverte pleine.
+      const sous = ici.idx.length > 1 ? `<div class="tb-sous ${ici.idx.length > 5 ? 'serre' : ''}">${ici.idx.map((i, j) => { const x = etapes[i]; const st = i === cur ? 'on' : x.fait ? 'fait' : '';
+        return (j ? `<i class="l ${etapes[ici.idx[j - 1]].fait ? 'fait' : ''}"></i>` : '') + `<button data-a="etape" data-v="${i}" class="${st}"><span class="n">${x.fait && i !== cur ? '✓' : j + 1}</span><span class="t"><b>${esc(x.court)}</b><small>${esc(x.module && /^\d+ \/ \d+$/.test(x.etat) ? x.etat + ' vus' : x.etat)}</small></span>${x.ko ? `<em>${x.ko}</em>` : ''}</button>`; }).join('')}</div>` : '';
       const pos = ici.idx.indexOf(cur) + 1;
       return this.tabTop({ titre: 'Contrôle · ' + b.court, sous: esc(fmtDJ(v.prevu_le) + (v.commence_a ? ' · commencé à ' + fmtH(v.commence_a) : '') + ' · ' + this.typeNom(v.type)), retour: true, droite: prog })
         + `<div class="tb-main tb-ctl">${['planifiee', 'confirmee'].includes(v.statut) ? `<div class="card alerte tb-dem"><div><b>Visite pas encore démarrée</b><div class="sm mu">prévue ${esc(fmtDJ(v.prevu_le))} à ${esc(v.debut_h || '')} — ouverte depuis le cockpit ou son QR code</div></div><span style="flex:1"></span><button class="btn p" data-a="demarrer" data-v="${esc(v.id)}">▶ Démarrer la visite</button></div>` : ''}${sous}<div class="tb-h"><div><div class="cap" style="margin:0">${TEMPS.findIndex(x => x[0] === ici.k) + 1} · ${esc(ici.nom)} · étape ${pos} sur ${ici.idx.length}${e.module ? ' · checklist' : ''}</div><h1>${esc(e.titre)}</h1></div><span style="flex:1"></span><div class="tb-pills">${pills}</div></div>`
@@ -1911,6 +1991,7 @@
         + '<div class="card sm mu">La checklist ci-dessous est celle de la visite régulière.</div>'
         + `<div class="cap">Checklist (${f.checklist.reduce((a, m) => a + m.points.length, 0)} points)</div>${f.checklist.map((m, mi) => `<div class="card"><div class="row"><b>${esc(m.nom)}</b><span class="sp"></span><button class="chip" data-a="cl-add" data-v="${mi}">+ point</button></div>${m.points.map((p, pi) => `<div class="row" style="margin-top:6px"><input type="text" data-f="cl|${mi}|${pi}|libelle" value="${esc(p.libelle)}" style="flex:1"><button class="chip ${p.photo ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|photo" title="photo attendue">📷</button>${m.id === 'planogramme' ? `<button class="chip ${p.pct ? 'on' : ''}" data-a="cl-tog" data-v="${mi}|${pi}|pct" title="saisie en %">%</button>` : ''}<button class="chip ko" data-a="cl-del" data-v="${mi}|${pi}">×</button></div>`).join('')}</div>`).join('')}
           <div class="cap">Feu tricolore</div><div class="card"><div class="l2">${num('p0Jours', 'P0 ouvert plus de (jours) → rouge')}${num('escaladeJours', 'Échéance dépassée de (jours) → escalade auto')}${num('googleCible', 'Cible Google')}${num('googleRouge', 'Sous la cible de (points) → rouge')}${num('planoOrange', 'Planogramme sous (%) → orange')}${num('planoRouge', 'Planogramme sous (%) → rouge')}${num('mspAlerte', 'Rubrique MSP sous (/20) → rouge')}${num('caOrange', 'CA sous l’objectif de (%) → orange, et à justifier à la visite')}${num('b2bMax', 'Part B2B du CA au plus (%)')}</div><div class="act"><button class="chip ${f.seuils.caSeul ? 'on' : ''}" data-a="se-tog" data-v="caSeul">Le CA seul peut colorer le feu</button></div></div>
+          <div class="cap">Contrôle guidé</div><div class="card"><div class="act"><button class="chip ${f.seuils.etapeAuto !== false ? 'on' : ''}" data-a="se-tog" data-v="etapeAuto">Une étape remplie passe d’elle-même à la suivante</button><button class="chip ${f.seuils.etapeBloque !== false ? 'on' : ''}" data-a="se-tog" data-v="etapeBloque">« Suivant » bloqué tant que l’étape n’est pas remplie</button></div><div class="xs mu" style="margin-top:6px">Passent d’elles-mêmes : les photos, la checklist, les contrôles du jour (un toucher dans la seconde annule). Ne bloquent jamais : les étapes à lire (dossier, KPI, tâches, points). La barre du bas et les étapes en tête restent libres.</div></div>
           <div class="cap">Fréquence de visite (jours)</div><div class="card"><div class="l2">${D.boutiques.map(b => `<div class="champ"><label>${esc(b.court)}</label><input type="number" data-f="fq|${esc(b.id)}" value="${esc(f.frequence[b.id] || '')}" placeholder="${esc(s.visiteJours || 7)}"></div>`).join('')}</div></div>
           <div class="cap">Horloge et mails</div><div class="card"><div class="l2"><div class="champ"><label>Rappel J-1 à</label><input type="time" data-f="se|rappelJ1" value="${esc(f.seuils.rappelJ1)}"></div><div class="champ"><label>Rappel jour J à</label><input type="time" data-f="se|rappelJour" value="${esc(f.seuils.rappelJour)}"></div><div class="champ"><label>Synthèse à</label><input type="time" data-f="se|syntheseHeure" value="${esc(f.seuils.syntheseHeure)}"></div><div class="champ"><label>Adresse de la synthèse</label><input type="email" data-f="se|mailSynthese" value="${esc(f.seuils.mailSynthese || '')}" placeholder="—"></div></div>
             <div class="act"><button class="chip ${f.seuils.mails ? 'on' : ''}" data-a="se-tog" data-v="mails">Les mails partent (rappels aux consultants, synthèse)${R && !R.smtp ? ' — SMTP non configuré' : ''}</button></div>
@@ -1922,6 +2003,8 @@
 
     /* --- événements --------------------------------------------------------- */
     clic(e) {
+      // Un toucher annule le passage automatique à l'étape suivante en attente.
+      if (this._autoT) { clearTimeout(this._autoT); this._autoT = null; }
       // Les boutons des cartes du dashboard magasin (cartes-magasin.js) : la mesure de l'année, la vue des leviers.
       const cm = e.target.closest('[data-anm],[data-levvue]');
       if (cm && this.host.contains(cm)) { if (cm.dataset.anm) { this.anm = cm.dataset.anm; } else if (!cm.disabled) { this.levVue = cm.dataset.levvue; } this.rendre(); return; }
@@ -1967,7 +2050,8 @@
       if (a === 'note') { const p = this.point(parts[0], parts[1], parts[2]); p.note = p.note === Number(parts[3]) ? null : Number(parts[3]); if (p.note != null && !p.etat) { p.etat = p.note <= 2 ? 'ko' : 'ok'; } this.point_save(parts[0], p); return; }
       if (a === 'cause') { const p = this.point(parts[0], parts[1], parts[2]); p.causes = p.causes || []; const i = p.causes.indexOf(parts[3]); if (i >= 0) { p.causes.splice(i, 1); } else { p.causes.push(parts[3]); } this.point_save(parts[0], p); return; }
       if (a === 'cause-diag') { const c = this.form.causes || (this.form.causes = []); const i = c.indexOf(v); if (i >= 0) { c.splice(i, 1); } else { c.push(v); } this.rendre(); return; }
-      if (a === 'etape') { const E = this._etapes; if (!E) { return; } const vis = this.visite(E.visite); const vers = Math.max(0, Math.min(E.n - 1, Number(v))); if (E.lus && E.lus[E.cur]) { this.ouvert[E.lus[E.cur]] = true; } if (E.cur === E.chiffres) { this.ouvert['lu:' + E.visite] = true; } if (E.cur === E.revue && vers !== E.revue && vis) { this.sauverReview(vis); } this.ouvert[E.cle] = vers; this.rendre(); if (this.o.tablette) { window.scrollTo(0, 0); return; } const el = document.getElementById('et-' + vers); if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } return; }
+      if (a === 'etape') { this.allerEtape(Number(v)); return; }
+      if (a === 'etape-bloque') { const E = this._etapes; this.dire('Avant de continuer : ' + ((E && E.manque) || 'cette étape n’est pas remplie') + '.'); return; }
       if (a === 'pa') { const i = Number(parts[0]); if (this.form.pa && this.form.pa[i]) { this.form.pa[i][parts[1]] = parts[2]; this.rendre(); } return; }
       if (a === 'pa-del') { this.form.pa.splice(Number(v), 1); this.rendre(); return; }
       if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), 3) }); this.rendre(); return; }
@@ -1988,6 +2072,7 @@
       if (a === 'tick') { fetch(this.api('/visites/tick'), { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{"force":true}' }).then(r => r.json()).then(j => { const f = j.fait || {}; this.dire('Horloge : ' + (f.escalades || 0) + ' escalade(s), ' + (f.rappelsJ1 || 0) + ' rappel(s) J-1, ' + (f.rappelsJour || 0) + ' du jour' + (f.synthese ? ', synthèse' : '') + (f.mails ? ', ' + f.mails + ' mail(s)' : '') + '.'); this.R = null; this.rendre(); }).catch(() => this.dire('Horloge injoignable.')); return; }
     }
     saisie(e) {
+      if (this._autoT) { clearTimeout(this._autoT); this._autoT = null; }
       const el = e.target; const f = el.dataset && el.dataset.f; if (!f) { return; }
       const parts = f.split('|');
       if (parts[0] === 'form') { this.form[parts[1]] = el.value; return; }
