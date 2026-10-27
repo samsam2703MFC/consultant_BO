@@ -187,6 +187,10 @@
 .vi .notes button.on{background:var(--color-text);color:#fff}.vi .notes button.bad{background:#C0182B;color:#fff}
 .vi .act{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
 .vi .chip{font:600 11px var(--font-ui);padding:5px 9px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer}
+/* La photo d'un point de checklist : la vignette elle-même (27/10/2026, « je ne vois pas la photo »), l'heure dessus ; un toucher l'agrandit. */
+.vi .ph-v{flex:none;width:72px;height:54px;padding:0;border-radius:8px;border:.5px solid var(--color-border-secondary);background:#d8cfc3 center/cover no-repeat;position:relative;cursor:pointer}
+.vi .ph-v small{position:absolute;left:4px;bottom:3px;font:600 9.5px var(--font-ui);background:rgba(0,0,0,.55);color:#fff;padding:1px 5px;border-radius:5px}
+.vi.tab .ph-v{width:104px;height:78px;border-radius:10px}
 .vi .chip.on{background:var(--color-text);color:#fff;border-color:var(--color-text)}
 .vi .chip.ko{border-color:#C0182B;color:#C0182B}
 .vi .bar{height:6px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden;margin-top:4px}
@@ -1733,7 +1737,7 @@
             const aide = libDe({ libelle: pt.aide, libelle_nl: pt.aide_nl }, l);
             const lib = `<b${tab ? '' : ' class="sm"'} style="flex:1">${esc(libDe(pt, l))}${aide ? `<small class="aide">${esc(aide)}</small>` : ''}</b>`;
             const photoBtn = pt.photo || phs.length ? `<button class="chip" data-a="photo" data-v="point|${esc(v.shop)}|${esc(v.id)}|${esc(pt.ref)}">📷 ${phs.length ? phs.length + ' ' + (phs.length > 1 ? T.photos : T.photo.toLowerCase()) : T.photo}</button>` : '';
-            const act = `<div class="act">${photoBtn}${phs.map(x => `<button class="chip" data-a="voir" data-v="${esc(x.client_id || x.id)}">${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</button>`).join('')}
+            const act = `<div class="act">${photoBtn}${phs.map(x => `<button class="ph-v" data-a="voir" data-v="${esc(x.client_id || x.id)}" style="background-image:url('${esc(this.photoSrc(x))}')"><small>${fmtH(x.prise_a)}${x.attente ? ' ⏳' : ''}</small></button>`).join('')}
               ${pt.pct ? Object.keys(causes).map(c => `<button class="chip ${(p.causes || []).includes(c) ? 'on' : ''}" data-a="cause" data-v="${k}|${c}">${esc(causes[c])}</button>`).join('') : ''}
               ${t === 'texte' ? '' : `<input type="text" data-f="comm|${k}" value="${esc(p.commentaire || '')}" placeholder="${T.rem}" style="flex:1;${tab ? 'min-width:180px;padding:6px 10px' : 'min-width:120px;padding:5px 8px;font-size:12px'}">`}</div>`;
             if (tab) { return `<div class="pt t ${p.etat === 'ko' ? 'ko' : ''}"><div class="l1">${lib}${ligne}</div>${dessous}${act}</div>`; }
