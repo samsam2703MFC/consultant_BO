@@ -1217,8 +1217,23 @@
         draw();
         el.querySelector('[data-back]').addEventListener('click', back);
         const body = el.querySelector('[data-or-body]');
+        let batch = null;
+        const id = uuid();
+        // Zatwierdź (przycisk albo dotknięcie składnika) : partia z ilością do zrobienia, potem numer partii składnika.
+        const go = async (material, btn) => {
+            if (batch) return renderBatch(batch.id, null, null, material);
+            const q = toMake();
+            if (!window.confirm(t('or_confirm', {q: fmt(q), u: ppc ? r.unit : (r.basis === 'kg' ? 'kg' : r.unit), name: i.name}))) return;
+            if (btn) btn.disabled = true;
+            try {
+                batch = await api('POST', '/kiosk/production', {item_id: i.item_id, quantity: Math.round(q * 1000) / 1000, client_uuid: id}, true);
+                renderBatch(batch.id, t('or_saved', {lot: batch.lot_code}), batch, material);
+            } catch (err) { if (btn) btn.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
+        };
         body.addEventListener('click', (e) => {
             resetIdle();
+            const line = e.target.closest('[data-mat]');
+            if (line) return go(Number(line.dataset.mat), null);
             const step = e.target.closest('[data-or-step]');
             if (step) { st.cartons = Math.max(1, st.cartons + Number(step.dataset.orStep)); return draw(); }
             const loss = e.target.closest('[data-or-loss]');
@@ -1230,16 +1245,7 @@
             if (e.target.matches('[data-or-qty]')) { const v = n(e.target.value); if (Number.isFinite(v) && v > 0) st.qty = v; return draw(); }
             if (e.target.matches('[data-or-loss-custom]')) { const v = n(e.target.value); if (Number.isFinite(v) && v >= 0 && v <= 50) st.loss = v; return draw(); }
         });
-        const id = uuid();
-        el.querySelector('[data-or-go]').addEventListener('click', async (e) => {
-            const q = toMake();
-            if (!window.confirm(t('or_confirm', {q: fmt(q), u: ppc ? r.unit : (r.basis === 'kg' ? 'kg' : r.unit), name: i.name}))) return;
-            e.currentTarget.disabled = true;
-            try {
-                const b = await api('POST', '/kiosk/production', {item_id: i.item_id, quantity: Math.round(q * 1000) / 1000, client_uuid: id}, true);
-                renderBatch(b.id, t('or_saved', {lot: b.lot_code}), b);
-            } catch (err) { e.currentTarget.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
-        });
+        el.querySelector('[data-or-go]').addEventListener('click', (e) => go(null, e.currentTarget));
     }
 
     function drawLine(day, i, L, locked) {
@@ -1665,7 +1671,7 @@
 
     // Grupa, która przygotowuje półprodukt (inna grupa : wyróżniona).
     const producerBadge = (p) => p ? `<span class="kiosk-rec-group ${p.other ? 'is-other' : ''}" style="--g:${esc(p.color || '#8D1D2C')}">${icon('users', 'is-sm')} ${esc(p.other ? t('rec_made_by', {group: p.name}) : t('rec_made_here', {group: p.name}))}</span>` : '';
-    const lineRow = (l, f) => `<li><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`;
+    const lineRow = (l, f) => `<li ${l.material_id ? `data-mat="${l.material_id}"` : ''}><span>${esc(l.name)}</span><span class="kiosk-rec-q">${esc(measure(l.quantity * f, l.unit))}</span></li>`;
 
     // Półprodukt / kompozycja : karta z ilością, grupą, etapami przygotowania i składnikami (zagnieżdżone półprodukty niżej).
     // Przygotowuje inna grupa : karta zwinięta, bo grupa bierze gotowe.
@@ -2206,7 +2212,7 @@
     }
 
     // Partia : surowce i opakowania z receptury, numer partii (wpisany, « jak ostatnio » albo OCR ze zdjęcia etykiety).
-    async function renderBatch(id, message, preloaded) {
+    async function renderBatch(id, message, preloaded, focus) {
         stopScan();
         longIdle = true;
         resetIdle();
@@ -2214,10 +2220,14 @@
         if (!b) { try { b = await api('GET', `/kiosk/production/${id}`, undefined, true); } catch (err) { if (!err.code) toast(err.message, true); return; } }
         const pending = {}; // materiał => {photo, ocr}
         const item = b.item || {unit: '', ppc: null, name: ''};
-        const row = (g) => `<article class="kiosk-card kiosk-lot ${g.lot_number ? 'is-ok' : ''}" data-material="${g.material_id}">
-            <div class="kiosk-lot-head"><div><h3>${esc(g.name)}</h3><span class="kiosk-muted">${g.quantity !== null ? esc(amount(g.quantity) + ' ' + (g.unit || '')) : esc(amount(g.per_unit) + ' ' + (g.unit || '') + ' / ' + t('prod_per_recipe'))}</span></div>
+        // Jedna linia = jeden składnik : dotknięcie otwiera numer partii (ręcznie, zdjęcie worka z OCR, skan) ; otwarta jest
+        // wskazana linia, inaczej pierwszy składnik bez numeru partii.
+        const order = [...b.ingredients.filter(g => !g.packaging), ...b.ingredients.filter(g => g.packaging)];
+        const open = b.editable ? (focus !== undefined && focus !== null ? focus : (order.find(g => !g.lot_number) || {}).material_id ?? null) : null;
+        const row = (g) => `<article class="kiosk-card kiosk-lot ${g.lot_number ? 'is-ok' : ''} ${open === g.material_id ? 'is-open' : ''}" data-material="${g.material_id}">
+            <div class="kiosk-lot-head" ${b.editable ? 'data-lot-toggle role="button" tabindex="0"' : ''}><div><h3>${esc(g.name)}</h3><span class="kiosk-muted">${g.quantity !== null ? esc(amount(g.quantity) + ' ' + (g.unit || '')) : esc(amount(g.per_unit) + ' ' + (g.unit || '') + ' / ' + t('prod_per_recipe'))}</span></div>
                 <span class="kiosk-lot-state">${g.lot_number ? icon('circle-check', 'is-sm') + ' ' + esc(g.lot_number) + (g.photo ? ' ' + icon('camera', 'is-sm') : '') : esc(t('lot_missing'))}</span></div>
-            ${b.editable ? `<div class="kiosk-lot-fields">
+            ${b.editable ? `<div class="kiosk-lot-body" ${open === g.material_id ? '' : 'hidden'}><div class="kiosk-lot-fields">
                 <label>${esc(t('lot_number'))}<input name="lot" autocomplete="off" autocapitalize="characters" maxlength="64" value="${esc(g.lot_number || '')}"></label>
                 <label>${esc(t('lot_best_before'))}<input name="bb" type="date" value="${esc(g.best_before || '')}"></label>
                 ${canScan() ? `<button type="button" class="kiosk-btn is-small is-primary" data-scan>${icon('scan-line')} ${esc(t('lot_scan'))}</button>` : ''}
@@ -2225,7 +2235,7 @@
                 ${(g.received || []).filter(r => r.lot_number !== g.lot_number).map((r, k) => `<button type="button" class="kiosk-btn is-small" data-fefo="${k}">${esc(t('lot_received', {lot: r.lot_number, date: r.best_before ? r.best_before.split('-').reverse().join('.') : '—'}))}</button>`).join('')}
                 ${g.last && g.last.lot_number !== g.lot_number && !(g.received || []).some(r => r.lot_number === g.last.lot_number) ? `<button type="button" class="kiosk-btn is-small" data-same>${esc(t('lot_same', {lot: g.last.lot_number}))}</button>` : ''}
                 <button type="button" class="kiosk-btn is-primary is-small" data-save-lot>${esc(t('lot_save'))}</button></div>
-            <div class="kiosk-ocr" data-ocr hidden></div>` : ''}</article>`;
+            <div class="kiosk-ocr" data-ocr hidden></div></div>` : ''}</article>`;
         const ingredients = b.ingredients.filter(g => !g.packaging);
         const packaging = b.ingredients.filter(g => g.packaging);
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-back>‹ ${esc(t('back'))}</button>`, true) + `
@@ -2235,8 +2245,16 @@
                 ${b.editable ? `<button type="button" class="kiosk-btn is-small is-danger-soft" data-cancel-batch>${esc(t('prod_cancel'))}</button>` : ''}</section>
             ${b.ingredients.length ? '' : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('prod_no_recipe'))}</p></section>`}
             ${ingredients.length ? `<h2 class="kiosk-section">${esc(t('lot_ingredients'))}</h2>${ingredients.map(row).join('')}` : ''}
-            ${packaging.length ? `<details class="kiosk-section" ${packaging.some(g => g.lot_number) ? 'open' : ''}><summary>${esc(t('lot_packaging', {n: packaging.length}))}</summary>${packaging.map(row).join('')}</details>` : ''}`;
+            ${packaging.length ? `<details class="kiosk-section" ${packaging.some(g => g.lot_number || g.material_id === open) ? 'open' : ''}><summary>${esc(t('lot_packaging', {n: packaging.length}))}</summary>${packaging.map(row).join('')}</details>` : ''}`;
         if (message) toast(message);
+        if (open !== null) el.querySelector(`[data-material="${open}"]`)?.scrollIntoView({block: 'center'});
+        el.querySelectorAll('[data-lot-toggle]').forEach(h => h.addEventListener('click', () => {
+            const card = h.closest('[data-material]');
+            const was = card.classList.contains('is-open');
+            el.querySelectorAll('.kiosk-lot.is-open').forEach(c => { c.classList.remove('is-open'); c.querySelector('.kiosk-lot-body').hidden = true; });
+            if (!was) { card.classList.add('is-open'); card.querySelector('.kiosk-lot-body').hidden = false; card.scrollIntoView({block: 'center', behavior: 'smooth'}); }
+            resetIdle();
+        }));
         el.querySelector('[data-back]').addEventListener('click', () => { stopScan(); renderProduction(); });
         el.querySelector('[data-cancel-batch]')?.addEventListener('click', async (e) => {
             if (!window.confirm(t('prod_cancel_confirm', {lot: b.lot_code}))) return;
@@ -2274,10 +2292,12 @@
                 if (!lot && !p.photo) { toast(t('lot_required'), true); return; }
                 e.target.disabled = true;
                 try {
-                    const scroll = window.scrollY;
                     const r = await api('PUT', `/kiosk/production/${b.id}/lots/${m}`, {lot_number: lot || null, best_before: bb, ...(p.photo ? {photo: p.photo} : {}), ...(p.ocr ? {ocr_text: p.ocr} : {})}, true);
-                    await renderBatch(b.id, t('lot_saved', {name: g.name}), r);
-                    window.scrollTo(0, scroll);
+                    // Następny składnik bez numeru partii otwiera się sam (po kolei : składniki, potem opakowania).
+                    const fresh = [...r.ingredients.filter(x => !x.packaging), ...r.ingredients.filter(x => x.packaging)];
+                    const at = fresh.findIndex(x => x.material_id === m);
+                    const next = [...fresh.slice(at + 1), ...fresh.slice(0, at)].find(x => !x.lot_number);
+                    await renderBatch(b.id, t('lot_saved', {name: g.name}), r, next ? next.material_id : -1);
                 } catch (err) { e.target.disabled = false; toast(err.message, true); }
             });
         });
