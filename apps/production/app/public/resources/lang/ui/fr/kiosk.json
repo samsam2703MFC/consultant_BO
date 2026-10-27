@@ -617,6 +617,7 @@
   "or_ingredients": "Ingrédients",
   "or_packaging": "Emballages (pour la commande)",
   "or_packaging_help": "La perte s'applique aux ingrédients ; les emballages exactement pour la commande.",
+  "or_packaging_toggle": "Emballages ({n})",
   "or_validate": "Valider et saisir les lots",
   "or_validate_help": "Saisissez les numéros de lot des matières directement sur les lignes (à la main, photo du sac avec lecture OCR ou scan). « Zatwierdź » enregistre la partie avec ces numéros ; ceux qui manquent se complètent sur la partie.",
   "or_confirm": "Valider la partie : {q} {u} — {name} ? Ensuite les numéros de lot des ingrédients.",

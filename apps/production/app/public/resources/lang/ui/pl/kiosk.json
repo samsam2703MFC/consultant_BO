@@ -617,6 +617,7 @@
   "or_ingredients": "Składniki",
   "or_packaging": "Opakowania (na zamówienie)",
   "or_packaging_help": "Strata dotyczy składników ; opakowania dokładnie na zamówienie.",
+  "or_packaging_toggle": "Opakowania ({n})",
   "or_validate": "Zatwierdź i wpisz partie",
   "or_validate_help": "Numery partii surowców wpisz od razu na liniach (ręcznie, zdjęcie worka z odczytem OCR albo skan). « Zatwierdź » zapisuje partię produkcji z wpisanymi numerami ; brakujące uzupełnisz w partii.",
   "or_confirm": "Zatwierdzić partię : {q} {u} — {name} ? Potem numery partii składników.",

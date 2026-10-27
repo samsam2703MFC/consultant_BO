@@ -1313,6 +1313,7 @@
             cartons: ppc && !pieces ? (ordered > 0 ? ordered : (i.planned ? Math.max(1, Math.ceil(i.planned / ppc - 1e-9)) : 1)) : null,
             qty: pieces ? opts.pieces : (ppc ? null : (i.planned || (r.basis === 'kg' ? r.recipe_yield : 1) || 1)),
             loss: Number(day.recipe_loss_pct ?? 2),
+            pack: false, // opakowania ukryte domyślnie : składniki na całą szerokość
         };
         const back = opts.back || (() => renderLines(day, vstate.me, vstate.mode, i.item_id));
         const base = () => ppc && !pieces ? st.cartons * ppc : st.qty;
@@ -1363,12 +1364,13 @@
                     <div class="or-col or-make"><span class="kv-lbl">${esc(t('or_to_make'))}</span><strong>${esc(fmt(make))} ${esc(ppc ? r.unit : (r.basis === 'kg' ? 'kg' : (r.basis === 'recipe' ? t('or_recipes') : r.unit)))}</strong>
                         ${ppc ? `<small class="kiosk-muted">${esc(cartonsOf(make, {ppc, unit: r.unit}))}</small>` : ''}</div>
                 </section>
-                <div class="or-grid">
-                    <section class="kiosk-card"><h2 class="or-h">${esc(t('or_ingredients'))} <span class="or-lots" data-or-lots></span></h2>
+                <div class="or-grid ${pack.length && st.pack ? '' : 'is-single'}">
+                    <section class="kiosk-card"><div class="or-h"><h2>${esc(t('or_ingredients'))}</h2><span class="or-lots" data-or-lots></span>
+                        ${pack.length ? `<button type="button" class="or-packbtn ${st.pack ? 'is-on' : ''}" data-or-pack aria-pressed="${st.pack}">${icon('package', 'is-sm')} ${esc(t('or_packaging_toggle', {n: pack.length}))}<span class="or-sw" aria-hidden="true"></span></button>` : ''}</div>
                         ${subs.map(l => recBlock(l, fI, 0, lots)).join('')}
                         ${mats.length ? `<ul class="kiosk-rec-lines">${mats.map(l => lineRow(l, fI, lots)).join('')}</ul>` : ''}
                         ${!subs.length && !mats.length ? `<p class="kiosk-muted">${esc(t('rec_no_tree'))}</p>` : ''}</section>
-                    ${pack.length ? `<section class="kiosk-card"><h2>${esc(t('or_packaging'))}</h2><ul class="kiosk-rec-lines">${pack.map(l => lineRow(l, fP)).join('')}</ul>
+                    ${pack.length && st.pack ? `<section class="kiosk-card"><h2>${esc(t('or_packaging'))}</h2><ul class="kiosk-rec-lines">${pack.map(l => lineRow(l, fP)).join('')}</ul>
                         <p class="kiosk-muted kv-small">${esc(t('or_packaging_help'))}</p></section>` : ''}
                 </div>`;
             count();
@@ -1450,6 +1452,7 @@
             if (pstep) { st.qty = Math.max(ppc, st.qty + Number(pstep.dataset.orPstep) * ppc); return draw(); }
             const loss = e.target.closest('[data-or-loss]');
             if (loss) { st.loss = Number(loss.dataset.orLoss); return draw(); }
+            if (e.target.closest('[data-or-pack]')) { st.pack = !st.pack; return draw(); }
         });
         body.addEventListener('change', (e) => {
             const n = (v) => Number(String(v).replace(',', '.').replace(/\s/g, ''));
