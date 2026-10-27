@@ -890,7 +890,8 @@
     // Wynik « Zatwierdź fakturę » : co zrobiono (ceny, stan, akceptacja).
     const processedText = (p) => [p.prices ? t('inv.done.prices', {n: p.prices}) : null, p.stock ? t('inv.done.stock') : null, p.accepted ? t('inv.done.accepted') : null]
         .filter(Boolean).join(' · ') + (p.prices_skipped && p.prices_skipped.length ? ' ' + t('inv.prices_skipped', {list: p.prices_skipped.join(', ')}) : '')
-        + (p.prices_kept && p.prices_kept.length ? ' ' + t('inv.prices_kept', {list: p.prices_kept.join(', ')}) : '');
+        + (p.prices_kept && p.prices_kept.length ? ' ' + t('inv.prices_kept', {list: p.prices_kept.join(', ')}) : '')
+        + (p.prices_held && p.prices_held.length ? ' ' + t('inv.prices_held', {list: p.prices_held.join(', ')}) : '');
 
     function bindInvoices() {
         const d = data.invoices;
@@ -1337,7 +1338,7 @@
         if (i.can_import_prices) buttons.push(`<button type="button" class="btn btn-sm btn-primary" data-iact="prices"><i class="bi bi-tags"></i> ${esc(t('inv.act.prices', {n: rows.length}))}</button>`);
         if (i.can_receive) buttons.push(`<button type="button" class="btn btn-sm btn-outline-primary" data-iact="receive" title="${esc(t('inv.act.receive_help'))}"><i class="bi bi-box-arrow-in-down"></i> ${esc(t(i.receive_mode === 'order' ? 'inv.act.receive' : 'inv.act.stock'))}</button>`);
         return `<div class="card tfb-inv-import mb-2"><div class="card-body">
-            <h6 class="tfb-team-title mb-1">${esc(t('inv.import_title'))}</h6><p class="small text-muted mb-2">${esc(t('inv.import_help'))}</p>
+            <h6 class="tfb-team-title mb-1">${esc(t('inv.import_title'))}</h6><p class="small text-muted mb-2">${esc(t('inv.import_help'))} ${esc(i.auto && i.auto.cost_max_months ? t('inv.import_max', {n: i.auto.cost_max_months}) : t('inv.import_max_never'))}</p>
             <div class="table-responsive"><table class="table table-sm align-middle mb-2"><thead><tr><th>${esc(t('inv.col.material'))}</th><th class="text-end">${esc(t('col.quantity'))}</th>
                 <th class="text-end">${esc(t('inv.col.invoice_price'))}</th><th class="text-end">${esc(t('inv.col.catalog_price'))}</th><th class="text-end">${esc(t('inv.col.diff'))}</th></tr></thead>
                 <tbody>${rows.join('')}</tbody></table></div>
@@ -1649,12 +1650,13 @@
                 <input class="form-control form-control-sm ms-auto" style="max-width:240px" data-search value="${esc(state.search)}" placeholder="${esc(t('search'))}"></div></div>
             <p class="small text-muted mb-2">${esc(t('prices.help'))}</p>
             <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
-                <thead><tr><th>${esc(t('col.material'))}</th><th class="text-end">${esc(t('prices.col.last'))}</th><th>${esc(t('col.supplier'))}</th><th>${esc(t('inv.col.date'))}</th>
+                <thead><tr><th>${esc(t('col.material'))}</th><th class="text-end" title="${esc(t('prices.col.base_help'))}">${esc(t('prices.col.base'))}</th><th class="text-end">${esc(t('prices.col.last'))}</th><th>${esc(t('col.supplier'))}</th><th>${esc(t('inv.col.date'))}</th>
                     <th class="text-end">${esc(t('prices.col.change'))}</th><th class="text-end">${esc(t('prices.col.min'))}</th><th class="text-end">${esc(t('prices.col.max'))}</th>
                     <th class="text-end">${esc(t('prices.col.suppliers'))}</th><th></th></tr></thead>
                 <tbody>${rows.map(r => `<tr data-ph-row="${r.raw_material_id}" class="tfb-supply-click">
                     <td><strong>${esc(r.name)}</strong></td>
-                    <td class="text-end text-nowrap"><strong>${esc(per(r, r.last.price))}</strong></td>
+                    <td class="text-end text-nowrap"><strong>${r.catalog_price ? esc(per(r, r.catalog_price)) : '—'}</strong></td>
+                    <td class="text-end text-nowrap">${esc(per(r, r.last.price))}</td>
                     <td>${esc(r.last.supplier || '—')}<div class="small text-muted">${esc(t('prices.kind.' + r.last.kind))}${r.last.ref && r.last.kind !== 'catalog' ? ' ' + esc(r.last.ref) : ''}</div></td>
                     <td class="text-nowrap">${esc(fullDay(r.last.day))}</td>
                     <td class="text-end text-nowrap ${ch(r.change_pct)}">${r.change_pct === null ? '—' : esc(pct(r.change_pct))}${r.previous ? `<div class="small text-muted">${esc(t('prices.was', {price: per(r, r.previous.price)}))}</div>` : ''}</td>
@@ -1662,7 +1664,7 @@
                     <td class="text-end text-nowrap">${esc(per(r, r.max.price))}<div class="small text-muted">${esc(r.max.supplier || '—')}</div></td>
                     <td class="text-end">${r.suppliers}</td>
                     <td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary text-nowrap" data-ph-row="${r.raw_material_id}"><i class="bi bi-graph-up"></i> ${esc(t('prices.history'))}</button></td></tr>`).join('')
-                    || `<tr><td colspan="9" class="text-muted">${esc(t('prices.empty'))}</td></tr>`}</tbody></table></div></div></div>`;
+                    || `<tr><td colspan="10" class="text-muted">${esc(t('prices.empty'))}</td></tr>`}</tbody></table></div></div></div>`;
     }
 
     function bindPrices() {

@@ -89,7 +89,9 @@ final class OpenApiSupply
                 'description' => 'Quantités et prix nets de la facture enregistrés comme réception de la commande liée (lignes reliées à ses matières). Sans commande : une commande « reçue » est créée depuis la facture (les quantités entrent dans le stock) et liée à elle. INVOICE_NO_SUPPLIER, INVOICE_NOTHING_TO_RECEIVE (422).'],
             'POST /supply/invoices/{id:\d+}/prices' => ['tag' => $t, 'id' => 'importInvoicePrices', 'summary' => 'Ostatnie ceny z faktury do surowców / Derniers prix de la facture vers les matières', 'body' => 'InvoicePricesInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 409, 422],
                 'description' => "Prix net de la facture par unité de base (moyenne pondérée si plusieurs lignes d'une matière) → prix de la fiche matière, fournisseur de la facture comme fournisseur courant ; historique des prix et recalcul des coûts des recettes (comme la mise à jour manuelle). line_ids : lignes choisies (défaut : toutes les lignes reliées). "
-                    . "INVOICE_PRICE_UP_PENDING (409) : hausse au-dessus du prix de base sans décision ; décision keep : matière laissée au prix de base (kept). Réponse : la facture + imported_prices (ancien / nouveau prix) + skipped + kept."],
+                    . "INVOICE_PRICE_UP_PENDING (409) : hausse au-dessus du prix de base sans décision ; décision keep : matière laissée au prix de base (kept). "
+                    . "Le prix de base (coût des recettes) est le plus haut prix validé : un prix plus bas ne le fait pas baisser (held) ; avec prices.cost_max_months = N > 0, "
+                    . "un prix de base de plus de N mois devient le plus haut prix validé de la période (factures acceptées, offres acceptées). Réponse : la facture + imported_prices (ancien / nouveau prix) + skipped + kept + held."],
             'DELETE /supply/invoices/{id:\d+}' => ['tag' => $t, 'id' => 'deletePurchaseInvoice', 'summary' => 'Usuń fakturę (otwartą) / Supprimer la facture (ouverte)', 'response' => 'SupplierOrderDeleted', 'errors' => [404, 409]],
             'GET /supply/mappings' => ['tag' => $t, 'id' => 'listInvoiceMappings', 'summary' => 'Przypisania nazw dostawców / Correspondances des noms fournisseurs', 'response' => 'InvoiceMappings'],
             'DELETE /supply/mappings/{id:\d+}' => ['tag' => $t, 'id' => 'deleteInvoiceMapping', 'summary' => 'Usuń przypisanie / Supprimer la correspondance', 'response' => 'SupplierOrderDeleted', 'errors' => [404]],
@@ -113,8 +115,9 @@ final class OpenApiSupply
             'warnings' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['gaps', 'price_jump', 'total_mismatch']]], 'unmapped' => ['type' => 'integer'],
             'price_ups' => ['type' => 'integer', 'description' => 'matières au-dessus du prix de base sans décision (bloquant : price_up)'],
         ]];
-        $auto = ['type' => 'object', 'description' => 'paramètres supply.invoice_auto_prices / _full, supply.invoice_price_alert_pct et supply.invoice_price_up_pct', 'properties' => [
-            'prices' => ['type' => 'boolean'], 'full' => ['type' => 'boolean'], 'price_alert_pct' => $num, 'price_up_pct' => $num]];
+        $auto = ['type' => 'object', 'description' => 'paramètres supply.invoice_auto_prices / _full, supply.invoice_price_alert_pct, supply.invoice_price_up_pct et prices.cost_max_months', 'properties' => [
+            'prices' => ['type' => 'boolean'], 'full' => ['type' => 'boolean'], 'price_alert_pct' => $num, 'price_up_pct' => $num,
+            'cost_max_months' => ['type' => 'integer', 'description' => '0 : un prix plus bas ne fait jamais baisser le prix de base ; N : seulement un prix de base de plus de N mois']]];
         $nDate = ['type' => 'string', 'format' => 'date', 'nullable' => true];
         $supplier = ['type' => 'object', 'nullable' => true, 'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'email' => $nStr]];
         $material = [
@@ -259,7 +262,9 @@ final class OpenApiSupply
                     'decision' => ['type' => 'string', 'enum' => InvoiceService::PRICE_DECISIONS, 'nullable' => true], 'decided_by' => $nStr, 'decided_at' => $nStr,
                 ]]],
                 'processed' => ['type' => 'object', 'description' => 'POST …/process seulement', 'properties' => ['prices' => ['type' => 'integer'], 'prices_skipped' => ['type' => 'array', 'items' => ['type' => 'string']],
-                    'prices_kept' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'matières laissées au prix de base (décision keep)'], 'stock' => ['type' => 'boolean'], 'accepted' => ['type' => 'boolean']]],
+                    'prices_kept' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'matières laissées au prix de base (décision keep)'],
+                    'prices_held' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'prix plus bas : le prix de base reste le plus haut prix validé'],
+                    'stock' => ['type' => 'boolean'], 'accepted' => ['type' => 'boolean']]],
                 'decided' => ['type' => 'integer', 'description' => 'POST …/price-decisions seulement'],
                 'auto_processed' => ['type' => 'object', 'nullable' => true, 'description' => 'upload : traitement automatique effectué (facture entièrement reconnue)', 'additionalProperties' => true],
             ]],

@@ -9688,7 +9688,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Prix net de la facture par unité de base (moyenne pondérée si plusieurs lignes d'une matière) → prix de la fiche matière, fournisseur de la facture comme fournisseur courant ; historique des prix et recalcul des coûts des recettes (comme la mise à jour manuelle). line_ids : lignes choisies (défaut : toutes les lignes reliées). INVOICE_PRICE_UP_PENDING (409) : hausse au-dessus du prix de base sans décision ; décision keep : matière laissée au prix de base (kept). Réponse : la facture + imported_prices (ancien / nouveau prix) + skipped + kept.",
+                "description": "Prix net de la facture par unité de base (moyenne pondérée si plusieurs lignes d'une matière) → prix de la fiche matière, fournisseur de la facture comme fournisseur courant ; historique des prix et recalcul des coûts des recettes (comme la mise à jour manuelle). line_ids : lignes choisies (défaut : toutes les lignes reliées). INVOICE_PRICE_UP_PENDING (409) : hausse au-dessus du prix de base sans décision ; décision keep : matière laissée au prix de base (kept). Le prix de base (coût des recettes) est le plus haut prix validé : un prix plus bas ne le fait pas baisser (held) ; avec prices.cost_max_months = N > 0, un prix de base de plus de N mois devient le plus haut prix validé de la période (factures acceptées, offres acceptées). Réponse : la facture + imported_prices (ancien / nouveau prix) + skipped + kept + held.",
                 "parameters": [
                     {
                         "name": "id",
@@ -27105,7 +27105,7 @@
                     },
                     "auto": {
                         "type": "object",
-                        "description": "paramètres supply.invoice_auto_prices / _full, supply.invoice_price_alert_pct et supply.invoice_price_up_pct",
+                        "description": "paramètres supply.invoice_auto_prices / _full, supply.invoice_price_alert_pct, supply.invoice_price_up_pct et prices.cost_max_months",
                         "properties": {
                             "prices": {
                                 "type": "boolean"
@@ -27118,6 +27118,10 @@
                             },
                             "price_up_pct": {
                                 "type": "number"
+                            },
+                            "cost_max_months": {
+                                "type": "integer",
+                                "description": "0 : un prix plus bas ne fait jamais baisser le prix de base ; N : seulement un prix de base de plus de N mois"
                             }
                         }
                     }
@@ -27424,7 +27428,7 @@
                     },
                     "auto": {
                         "type": "object",
-                        "description": "paramètres supply.invoice_auto_prices / _full, supply.invoice_price_alert_pct et supply.invoice_price_up_pct",
+                        "description": "paramètres supply.invoice_auto_prices / _full, supply.invoice_price_alert_pct, supply.invoice_price_up_pct et prices.cost_max_months",
                         "properties": {
                             "prices": {
                                 "type": "boolean"
@@ -27437,6 +27441,10 @@
                             },
                             "price_up_pct": {
                                 "type": "number"
+                            },
+                            "cost_max_months": {
+                                "type": "integer",
+                                "description": "0 : un prix plus bas ne fait jamais baisser le prix de base ; N : seulement un prix de base de plus de N mois"
                             }
                         }
                     },
@@ -27545,6 +27553,13 @@
                                     "type": "string"
                                 },
                                 "description": "matières laissées au prix de base (décision keep)"
+                            },
+                            "prices_held": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "description": "prix plus bas : le prix de base reste le plus haut prix validé"
                             },
                             "stock": {
                                 "type": "boolean"

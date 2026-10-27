@@ -1841,9 +1841,18 @@ if (trim((string) shell_exec('command -v pdftotext'))) {
     $logBefore = (int) $pdo->query('SELECT COUNT(*) FROM raw_material_price_changelog WHERE id_raw_material = 902')->fetchColumn();
     [$s, $ip] = $call('POST', "/supply/invoices/{$pid}/prices", [], $access);
     $mat = $pdo->query('SELECT price_per_unit, id_current_supplier FROM raw_material WHERE id = 902')->fetch();
-    check($s === 200 && abs((float) $mat['price_per_unit'] - 3.5) < 1e-6 && (int) $mat['id_current_supplier'] === 61 && ($ip['data']['imported_prices'][0]['new_price'] ?? null) == 3.5
-        && (int) $pdo->query('SELECT COUNT(*) FROM raw_material_price_changelog WHERE id_raw_material = 902')->fetchColumn() === $logBefore + 1 && $ip['data']['prices_imported_at'] !== null,
-        'invoice prices imported into the material file (price per unit, supplier, price history)');
+    check($s === 200 && abs((float) $mat['price_per_unit'] - 3.7) < 1e-6 && $ip['data']['imported_prices'] === [] && $ip['data']['held'] === ['Karton 60']
+        && (int) $pdo->query('SELECT COUNT(*) FROM raw_material_price_changelog WHERE id_raw_material = 902')->fetchColumn() === $logBefore && $ip['data']['prices_imported_at'] !== null,
+        'lower invoice price (3,50 < 3,70): the base price of the recipes stays the highest validated one, nothing logged');
+    // Cena bazowa niższa (3,40) : 3,50 z faktury to podwyżka — po zatwierdzeniu trafia do kartoteki.
+    $pdo->exec('UPDATE raw_material SET price_per_unit = 3.4 WHERE id = 902');
+    [$s, $b] = $call('POST', "/supply/invoices/{$pid}/prices", [], $access);
+    $call('POST', "/supply/invoices/{$pid}/price-decisions", ['decision' => 'accept'], $access);
+    [$s2, $ip] = $call('POST', "/supply/invoices/{$pid}/prices", [], $access);
+    $mat = $pdo->query('SELECT price_per_unit, id_current_supplier FROM raw_material WHERE id = 902')->fetch();
+    check($s === 409 && $b['description'] === 'INVOICE_PRICE_UP_PENDING' && $s2 === 200 && abs((float) $mat['price_per_unit'] - 3.5) < 1e-6 && (int) $mat['id_current_supplier'] === 61
+        && ($ip['data']['imported_prices'][0]['new_price'] ?? null) == 3.5 && (int) $pdo->query('SELECT COUNT(*) FROM raw_material_price_changelog WHERE id_raw_material = 902')->fetchColumn() === $logBefore + 1,
+        'higher invoice price imported after the decision (price per unit, supplier, price history)');
     $logRow = $pdo->query('SELECT source, id_user FROM raw_material_price_changelog WHERE id_raw_material = 902 ORDER BY timestamp DESC, id DESC LIMIT 1')->fetch();
     check($logRow['source'] === 'invoice' && $logRow['id_user'] !== null, 'price history : source « invoice » and the ERP user who imported (audit 2, P21)');
     [$s, $b] = $call('POST', "/supply/invoices/{$pid}/prices", ['line_ids' => [999999]], $access);
@@ -1997,7 +2006,7 @@ check($s === 200 && $q1['data']['decided'] === 1 && $q1['data']['price_ups'][0][
 $stock900 = (float) $pdo->query('SELECT COALESCE(SUM(r.quantity), 0) FROM n_po_receipt r JOIN n_po_line l ON l.id = r.id_po_line WHERE l.id_raw_material = 900')->fetchColumn();
 [$s, $q1] = $call('POST', "/supply/invoices/{$q1id}/process", [], $access);
 $received = (float) $pdo->query('SELECT COALESCE(SUM(r.quantity), 0) FROM n_po_receipt r JOIN n_po_line l ON l.id = r.id_po_line WHERE l.id_raw_material = 900')->fetchColumn() - $stock900;
-check($s === 200 && $q1['data']['status'] === 'accepted' && $q1['data']['processed'] === ['prices' => 1, 'prices_skipped' => [], 'prices_kept' => [], 'stock' => true, 'accepted' => true]
+check($s === 200 && $q1['data']['status'] === 'accepted' && $q1['data']['processed'] === ['prices' => 1, 'prices_skipped' => [], 'prices_kept' => [], 'prices_held' => [], 'stock' => true, 'accepted' => true]
     && abs((float) $pdo->query('SELECT price_per_unit FROM raw_material WHERE id = 900')->fetchColumn() - 0.004) < 1e-9 && abs($received - 50000) < 0.01
     && $q1['data']['order']['status'] === 'received' && $q1['data']['ready'] === null,
     'Zatwierdź fakturę (after the price decision): price 4 zł/kg into the file, 50 kg into stock (received order created), invoice accepted — one click');
@@ -2018,7 +2027,7 @@ $call('PATCH', '/referentiels/params/supply.invoice_auto_prices', ['value' => tr
 check($s === 201 && $q4['data']['auto_processed'] === null && $q4['data']['prices_imported_at'] === null && $q4['data']['ready']['ok'] === true, 'automatic prices off: invoice waits, ready');
 [$s, $lst] = $call('GET', '/supply/invoices', null, $access);
 $readyIds = array_column(array_filter($lst['data']['invoices'] ?? [], fn($i) => $i['ready']['ok'] ?? false), 'id');
-check($s === 200 && in_array($q2id, $readyIds, true) && in_array($q4['data']['id'], $readyIds, true) && $lst['data']['auto'] === ['prices' => true, 'full' => false, 'price_alert_pct' => 15.0, 'price_up_pct' => 0.0],
+check($s === 200 && in_array($q2id, $readyIds, true) && in_array($q4['data']['id'], $readyIds, true) && $lst['data']['auto'] === ['prices' => true, 'full' => false, 'price_alert_pct' => 15.0, 'price_up_pct' => 0.0, 'cost_max_months' => 0],
     'invoice list: ready invoices flagged, automatic mode shown');
 [$s, $pr] = $call('POST', '/supply/invoices/process-ready', [], $access);
 $doneIds = array_column($pr['data']['processed'] ?? [], 'id');
@@ -2073,6 +2082,23 @@ $call('POST', "/supply/invoices/{$q7['data']['id']}/price-decisions", ['decision
 [$s, $q7] = $call('PUT', "/supply/invoices/{$q7['data']['id']}/lines/{$q7line}/map", ['raw_material_id' => 900, 'factor' => 25000, 'remember' => false], $access);
 check($s === 200 && $q7['data']['price_ups'][0]['decision'] === null && $q7['data']['ready']['blockers'] === ['price_up'], 'a new mapping or factor cancels the price decision');
 $call('DELETE', "/supply/invoices/{$q7['data']['id']}", null, $access);
+// Koszt receptur po najwyższej zatwierdzonej cenie : niższa cena nie obniża ceny bazowej (młodszej niż prices.cost_max_months).
+$base900 = fn() => (float) $pdo->query('SELECT price_per_unit FROM raw_material WHERE id = 900')->fetchColumn();
+$log900 = fn() => (int) $pdo->query('SELECT COUNT(*) FROM raw_material_price_changelog WHERE id_raw_material = 900')->fetchColumn();
+$logs = $log900();
+[$s, $q8] = $call('POST', '/supply/invoices/upload', ['filename' => 'FV-1207.xml', 'content_base64' => base64_encode($faAt('FV/1207/10/2026', 1, 95.0))], $access);
+check($s === 201 && ($q8['data']['auto_processed']['prices'] ?? null) === 0 && count($q8['data']['auto_processed']['prices_held'] ?? []) === 1 && $q8['data']['prices_imported_at'] !== null
+    && abs($base900() - 0.00404) < 1e-9 && $log900() === $logs && $q8['data']['auto']['cost_max_months'] === 0,
+    'lower invoice price (3,80 zł/kg): base price of the recipes stays the highest validated one (4,04 zł/kg), no change logged');
+$pdo->exec("UPDATE raw_material_price_changelog SET timestamp = timestamp - INTERVAL 13 MONTH WHERE id_raw_material = 900");
+[$s, $q8b] = $call('POST', '/supply/invoices/upload', ['filename' => 'FV-1209.xml', 'content_base64' => base64_encode($faAt('FV/1209/10/2026', 1, 93.0))], $access);
+check(count($q8b['data']['auto_processed']['prices_held'] ?? []) === 1 && abs($base900() - 0.00404) < 1e-9, 'prices.cost_max_months = 0 (default): even an old base price is never lowered automatically');
+$call('PATCH', '/referentiels/params/prices.cost_max_months', ['value' => 12], $access);
+$pdo->exec("UPDATE n_inv SET issue_date = issue_date - INTERVAL 13 MONTH WHERE id <> {$q8['data']['id']} AND id IN (SELECT id_inv FROM n_inv_line WHERE id_raw_material = 900)");
+[$s, $q9] = $call('POST', '/supply/invoices/upload', ['filename' => 'FV-1208.xml', 'content_base64' => base64_encode($faAt('FV/1208/10/2026', 1, 94.0))], $access);
+$call('PATCH', '/referentiels/params/prices.cost_max_months', ['value' => 0], $access);
+check($s === 201 && ($q9['data']['auto_processed']['prices'] ?? null) === 1 && abs($base900() - 0.0038) < 1e-9 && $log900() === $logs + 1,
+    'prices.cost_max_months = 12 and a base price older than 12 months: a lower price brings it down to the highest validated price of the period (3,80 zł/kg, not the latest 3,76)');
 $pdo->prepare('UPDATE raw_material SET price_per_unit = ?, id_current_supplier = ? WHERE id = 900')->execute([$price900['price_per_unit'], $price900['id_current_supplier']]);
 
 // Journal, en-têtes, JSON invalide, OpenAPI public

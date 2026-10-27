@@ -5,6 +5,7 @@ use App\Core\TransactionManager;
 use App\Exceptions\CustomException;
 use App\Repositories\Material\MaterialRepository;
 use App\Repositories\Material\Price\MaterialPriceChangelogRepository;
+use App\Repositories\Workshop\ParamRepository;
 use App\Services\Recipe\RecipeCostRecalculationService;
 
 class MaterialPriceService
@@ -15,6 +16,7 @@ class MaterialPriceService
         private TransactionManager $transactionManager,
         private MaterialRepository $materialRepository,
         private RecipeCostRecalculationService $recipeCostRecalculationService,
+        private ParamRepository $params,
     )
     { }
 
@@ -102,6 +104,52 @@ class MaterialPriceService
         return $result;
     }
 
+
+    /**
+     * Cena zatwierdzona z faktury zakupowej albo z zaakceptowanej oferty (27/10/2026) : cena bazowa — z niej liczony koszt
+     * receptur — to najwyższa zatwierdzona cena, nie najnowsza. Wyższa cena (podwyżka zatwierdzona na fakturze, oferta
+     * zaakceptowana) zostaje ceną bazową ; niższa jej nie obniża (prices.cost_max_months = 0, domyślnie). Z N > 0 cena bazowa
+     * starsza niż N miesięcy spada do najwyższej zatwierdzonej ceny z tego okresu (faktury, oferty), nie wyżej niż obecna.
+     * Dostawca ceny zostaje bieżącym dostawcą także bez zmiany ceny bazowej. Ręczna zmiana w Ceny surowców (update, źródło manual)
+     * ustawia cenę bazową wprost.
+     * @return array{applied: bool, held: bool, price: float, previous: float}
+     */
+    public function applyValidated(int $idMaterial, array $data, string $source, ?int $userId = null): array
+    {
+        $package = (float) $data['package_size_in_base_unit'];
+        $new = $package > 0 ? round((float) $data['pack_price'] / $package, 5) : 0.0;
+        $material = $this->materialRepository->getById($idMaterial) ?: [];
+        $current = (float) ($material['price_per_unit'] ?? 0);
+        if ($new <= 0 || $current <= 0 || $new >= $current - 1e-9) {
+            $this->update($idMaterial, $data, $source, $userId);
+            return ['applied' => true, 'held' => false, 'price' => $new, 'previous' => $current];
+        }
+        $months = max(0, (int) $this->params->get('prices.cost_max_months', '0'));
+        $since = date('Y-m-d', strtotime("-{$months} months"));
+        $last = $this->materialPriceChangelogRepository->lastChange($idMaterial);
+        if ($months === 0 || ($last !== null && substr((string) $last['timestamp'], 0, 10) >= $since)) {
+            $this->holdBase($idMaterial, $data);
+            return ['applied' => false, 'held' => true, 'price' => $current, 'previous' => $current];
+        }
+        // Cena bazowa starsza niż okres : najwyższa zatwierdzona cena z okresu (w cenie kartoteki : opakowanie, 2 miejsca).
+        $best = ['price' => $new, 'id_supplier' => (int) $data['id_current_supplier']];
+        foreach ($this->materialPriceChangelogRepository->validatedPrices($idMaterial, $since) as $p) {
+            $price = round(round($p['price'] * $package, 2) / $package, 5);
+            if ($price > $best['price'] && $price <= $current + 1e-9) $best = ['price' => $price, 'id_supplier' => $p['id_supplier'] ?? $best['id_supplier']];
+        }
+        if ($best['price'] >= $current - 1e-9) {
+            $this->holdBase($idMaterial, $data);
+            return ['applied' => false, 'held' => true, 'price' => $current, 'previous' => $current];
+        }
+        $this->update($idMaterial, ['pack_price' => round($best['price'] * $package, 2), 'id_current_supplier' => $best['id_supplier']] + $data, $source, $userId);
+        return ['applied' => true, 'held' => false, 'price' => $best['price'], 'previous' => $current];
+    }
+
+    /** Cena bazowa bez zmian (bez historii, bez przeliczenia receptur) ; dostawca faktury / zwycięskiej oferty zostaje bieżącym (zamówienia). */
+    private function holdBase(int $idMaterial, array $data): void
+    {
+        if (!empty($data['id_current_supplier'])) $this->materialRepository->update($idMaterial, ['id_current_supplier' => (int) $data['id_current_supplier']]);
+    }
 
     /** Zalogowany użytkownik ERP ; null w API modułu i skryptach (tam helper user() nie jest załadowany). */
     private static function currentUserId(): ?int

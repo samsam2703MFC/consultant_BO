@@ -278,7 +278,7 @@
   "inv.mappings_empty": "Brak przypisań — powstają przy kontroli pierwszej faktury dostawcy.",
   "inv.confirm_unmap": "Usunąć przypisanie « {name} » → {material} ?",
   "inv.import_title": "Import do kartoteki surowców",
-  "inv.import_help": "Ceny : cena netto z faktury na jednostkę surowca zastępuje cenę w kartotece (z historią cen, koszty receptur przeliczone). Ilości : przyjęcie na stan — do zamówienia albo, bez zamówienia, przez zamówienie utworzone z faktury.",
+  "inv.import_help": "Ceny : wyższa cena z faktury (po zatwierdzeniu podwyżki) zostaje ceną bazową w kartotece (z historią cen, koszty receptur przeliczone) ; niższa jej nie obniża. Ilości : przyjęcie na stan — do zamówienia albo, bez zamówienia, przez zamówienie utworzone z faktury.",
   "inv.col.invoice_price": "Cena z faktury",
   "inv.col.catalog_price": "Cena w kartotece",
   "inv.col.diff": "Różnica",
@@ -422,7 +422,7 @@
   "inv.ref.best": "najtaniej (12 mies.) {price} · {supplier}",
   "prices.history": "historia cen",
   "prices.months": "{n} mies.",
-  "prices.help": "Cena za kg (l, szt) każdego surowca : z faktur zakupowych, przyjęć z ceną i zmian w kartotece (oferta, faktura, ręcznie). Kliknij wiersz : wykres według dostawcy.",
+  "prices.help": "Cena za kg (l, szt) każdego surowca : z faktur zakupowych, przyjęć z ceną i zmian w kartotece (oferta, faktura, ręcznie). Cena bazowa (koszt receptur) = najwyższa zatwierdzona cena, nie ostatnia. Kliknij wiersz : wykres według dostawcy.",
   "prices.col.last": "Ostatnia cena",
   "prices.col.change": "Zmiana",
   "prices.col.min": "Najtaniej",
@@ -457,5 +457,10 @@
   "inv.price_up.confirm_all": "Zatwierdzić nową cenę bazową dla {n} surowców? Koszty receptur zostaną przeliczone przy zatwierdzeniu faktury.",
   "inv.price_up.accept_ok": "Nowa cena bazowa zatwierdzona ({n}).",
   "inv.price_up.keep_ok": "Cena bazowa bez zmian ({n}).",
-  "inv.prices_kept": "Cena bazowa bez zmian : {list}."
+  "inv.prices_kept": "Cena bazowa bez zmian : {list}.",
+  "inv.prices_held": "Cena bazowa zostaje (najwyższa zatwierdzona cena, niższa cena jej nie obniża) : {list}.",
+  "inv.import_max": "Koszt receptur liczony po najwyższej zatwierdzonej cenie : niższa cena nie obniża ceny bazowej młodszej niż {n} mies.",
+  "inv.import_max_never": "Koszt receptur liczony po najwyższej zatwierdzonej cenie : niższa cena nie obniża ceny bazowej (zmiana tylko ręcznie w Ceny surowców).",
+  "prices.col.base": "Cena bazowa (koszt)",
+  "prices.col.base_help": "Cena z kartoteki, z której liczony jest koszt receptur : najwyższa zatwierdzona cena (podwyżki zatwierdzone, faktury i oferty zaakceptowane), nie ostatnia."
 }

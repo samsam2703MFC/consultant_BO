@@ -109,7 +109,8 @@ try {
     $result = $tenders->award($tenderId, [$item['id'] => $best['id']], true);
     expectPurch($result['applied'] === [$material['name']] && $result['notified'] === 2, 'award applied and result e-mails queued');
     $after = $pdo->query("SELECT price_per_unit, id_current_supplier FROM raw_material WHERE id = {$materialId}")->fetch(PDO::FETCH_ASSOC);
-    expectPurch((int) $after['id_current_supplier'] === $supplierIds[0] && abs((float) $after['price_per_unit'] * 1000 - $currentKg * 0.9) < 0.05, 'material price and supplier updated');
+    // Koszt receptur po najwyższej zatwierdzonej cenie (27/10/2026) : tańsza oferta nie obniża ceny bazowej, zwycięzca zostaje bieżącym dostawcą.
+    expectPurch((int) $after['id_current_supplier'] === $supplierIds[0] && abs((float) $after['price_per_unit'] * 1000 - $currentKg) < 0.05, 'winner becomes the current supplier, base price kept (highest validated)');
     $statuses = $pdo->query("SELECT id_supplier, status FROM n_mp_offer WHERE id_tender = {$tenderId}")->fetchAll(PDO::FETCH_KEY_PAIR);
     expectPurch($statuses[$supplierIds[0]] === 'accepted' && $statuses[$supplierIds[1]] === 'rejected', 'winner accepted, other refused');
     expectPurch($pdo->query("SELECT status FROM n_tender WHERE id = {$tenderId}")->fetchColumn() === 'awarded', 'tender closed');

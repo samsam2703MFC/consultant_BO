@@ -278,7 +278,7 @@
   "inv.mappings_empty": "Aucune correspondance — elles se créent au contrôle de la première facture d'un fournisseur.",
   "inv.confirm_unmap": "Supprimer la correspondance « {name} » → {material} ?",
   "inv.import_title": "Import vers les fiches matières",
-  "inv.import_help": "Prix : le prix net de la facture par unité de matière remplace le prix de la fiche (avec historique des prix, coûts des recettes recalculés). Quantités : entrée en stock — dans la commande, ou sans commande via une commande créée depuis la facture.",
+  "inv.import_help": "Prix : un prix plus haut sur la facture (hausse validée) devient le prix de base de la fiche (historique, coût des recettes recalculé) ; un prix plus bas ne le fait pas baisser. Quantités : réception en stock — sur la commande ou, sans commande, par une commande créée depuis la facture.",
   "inv.col.invoice_price": "Prix facture",
   "inv.col.catalog_price": "Prix fiche",
   "inv.col.diff": "Écart",
@@ -422,7 +422,7 @@
   "inv.ref.best": "le moins cher (12 mois) {price} · {supplier}",
   "prices.history": "historique des prix",
   "prices.months": "{n} mois",
-  "prices.help": "Prix au kg (l, pièce) de chaque matière : factures d’achat, réceptions avec prix et changements de la fiche (offre, facture, manuel). Cliquez une ligne : graphique par fournisseur.",
+  "prices.help": "Prix au kg (l, pièce) de chaque matière : factures d’achat, réceptions avec prix et changements de la fiche (offre, facture, manuel). Prix de base (coût des recettes) = plus haut prix validé, pas le dernier. Cliquez une ligne : graphique par fournisseur.",
   "prices.col.last": "Dernier prix",
   "prices.col.change": "Variation",
   "prices.col.min": "Le moins cher",
@@ -457,5 +457,10 @@
   "inv.price_up.confirm_all": "Valider le nouveau prix de base pour {n} matières ? Le coût des recettes sera recalculé à la validation de la facture.",
   "inv.price_up.accept_ok": "Nouveau prix de base validé ({n}).",
   "inv.price_up.keep_ok": "Prix de base inchangé ({n}).",
-  "inv.prices_kept": "Prix de base inchangé : {list}."
+  "inv.prices_kept": "Prix de base inchangé : {list}.",
+  "inv.prices_held": "Prix de base conservé (plus haut prix validé, un prix plus bas ne le fait pas baisser) : {list}.",
+  "inv.import_max": "Coût des recettes au plus haut prix validé : un prix plus bas ne fait pas baisser un prix de base de moins de {n} mois.",
+  "inv.import_max_never": "Coût des recettes au plus haut prix validé : un prix plus bas ne fait pas baisser le prix de base (changement seulement à la main dans Ceny surowców).",
+  "prices.col.base": "Prix de base (coût)",
+  "prices.col.base_help": "Prix de la fiche matière utilisé pour le coût des recettes : le plus haut prix validé (hausses validées, factures et offres acceptées), pas le dernier."
 }

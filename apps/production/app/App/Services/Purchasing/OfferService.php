@@ -102,16 +102,14 @@ final class OfferService
             throw new CustomException('Ta oferta została już rozpatrzona.', 'errors', 409);
         }
         $material = $this->costs->material((int) $offer['id_raw_material']) ?? throw new CustomException('Nie znaleziono surowca.', 'errors', 404);
-        $ok = $this->prices->update((int) $offer['id_raw_material'], [
+        // Cena bazowa = najwyższa zatwierdzona cena : tańsza oferta nie obniża ceny bazowej (koszt receptur), jest tylko zaakceptowana.
+        $this->prices->applyValidated((int) $offer['id_raw_material'], [
             'id_raw_material' => (int) $offer['id_raw_material'],
             'id_current_supplier' => (int) $offer['id_supplier'],
             'package_size_in_base_unit' => (int) round((float) $offer['pack_size_base']),
             'id_unit' => (int) $material['id_unit'],
             'pack_price' => (float) $offer['pack_price'],
         ], 'offer');
-        if (!$ok) {
-            throw new CustomException('Nie udało się zastosować ceny.', 'errors', 500);
-        }
         $this->offers->setStatus($id, 'accepted');
     }
 

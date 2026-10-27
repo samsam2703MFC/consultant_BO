@@ -252,7 +252,8 @@ final class InvoiceService
     private function autoMode(): array
     {
         $full = $this->params->get('supply.invoice_auto_full', '0') === '1';
-        return ['prices' => $full || $this->params->get('supply.invoice_auto_prices', '1') === '1', 'full' => $full, 'price_alert_pct' => $this->alertPct(), 'price_up_pct' => $this->upPct()];
+        return ['prices' => $full || $this->params->get('supply.invoice_auto_prices', '1') === '1', 'full' => $full, 'price_alert_pct' => $this->alertPct(), 'price_up_pct' => $this->upPct(),
+            'cost_max_months' => max(0, (int) $this->params->get('prices.cost_max_months', '0'))];
     }
 
     // --- Import ---------------------------------------------------------------------------------------------------
@@ -687,7 +688,7 @@ final class InvoiceService
         if (in_array('price_up', $ready['blockers'], true)) throw new ApiException('INVOICE_PRICE_UP_PENDING', 409, [], ['n' => $ready['price_ups']]);
         if ($ready['warnings'] && !$force) throw new ApiException('INVOICE_NEEDS_CONFIRMATION', 409, [], ['warnings' => implode(', ', $ready['warnings'])]);
         return $this->tx->execute(function () use ($id, $inv, $control, $steps, $force, $context, $action, $ready) {
-            $out = ['prices' => 0, 'prices_skipped' => [], 'prices_kept' => [], 'stock' => false, 'accepted' => false];
+            $out = ['prices' => 0, 'prices_skipped' => [], 'prices_kept' => [], 'prices_held' => [], 'stock' => false, 'accepted' => false];
             // Linie bez ceny, ilości już przyjęte albo spoza zamówienia : krok pominięty, reszta wykonana.
             if (in_array('prices', $steps, true) && $inv['prices_imported_at'] === null) {
                 try {
@@ -695,6 +696,7 @@ final class InvoiceService
                     $out['prices'] = count($p['changes']);
                     $out['prices_skipped'] = $p['skipped'];
                     $out['prices_kept'] = $p['kept'];
+                    $out['prices_held'] = $p['held'];
                 } catch (ApiException $e) {
                     if ($e->errorCode() !== 'INVOICE_NO_PRICES') throw $e;
                 }
@@ -882,7 +884,7 @@ final class InvoiceService
         $v->throwIfInvalid();
         $rows = array_filter($this->repo->lines($id), fn($l) => $wanted === null || in_array((int) $l['id'], $wanted, true));
         $res = $this->applyPrices($inv, $rows, $context);
-        return $this->detail($id, $context) + ['imported_prices' => $res['changes'], 'skipped' => $res['skipped'], 'kept' => $res['kept']];
+        return $this->detail($id, $context) + ['imported_prices' => $res['changes'], 'skipped' => $res['skipped'], 'kept' => $res['kept'], 'held' => $res['held']];
     }
 
     /** @return array{changes: list<array>, skipped: list<string>} */
@@ -898,6 +900,7 @@ final class InvoiceService
         $changes = [];
         $skipped = [];
         $kept = [];
+        $held = [];
         foreach ($lines as $mid => $l) {
             $m = $this->repo->material($mid);
             if (($ups[$mid]['decision'] ?? null) === 'keep') { $kept[] = $m['name']; continue; }
@@ -906,17 +909,19 @@ final class InvoiceService
             $packPrice = round($l['price'] * $package, 2);
             // Kartoteka : cena za opakowanie (2 miejsca) ÷ opakowanie w całych jednostkach bazowych.
             if ($supplier === null || !$m['id_unit'] || $packPrice <= 0 || abs($package - round($package)) > 1e-9) { $skipped[] = $m['name']; continue; }
-            $this->prices->update($mid, ['id_raw_material' => $mid, 'id_current_supplier' => $supplier, 'package_size_in_base_unit' => (int) round($package),
+            // Cena bazowa = najwyższa zatwierdzona cena : niższa cena z faktury jej nie obniża (held).
+            $res = $this->prices->applyValidated($mid, ['id_raw_material' => $mid, 'id_current_supplier' => $supplier, 'package_size_in_base_unit' => (int) round($package),
                 'id_unit' => (int) $m['id_unit'], 'pack_price' => $packPrice], 'invoice', $context->userId);
+            if ($res['held']) { $held[] = $m['name']; continue; }
             $unit = CostOptimizationService::displayUnit($m['unit']);
             $changes[] = ['raw_material_id' => $mid, 'name' => $m['name'], 'unit' => $unit['label'], 'factor' => $unit['factor'],
-                'old_price' => $m['price_per_unit'] !== null ? (float) $m['price_per_unit'] : null, 'new_price' => round($packPrice / round($package), 5)];
+                'old_price' => $m['price_per_unit'] !== null ? (float) $m['price_per_unit'] : null, 'new_price' => $res['price']];
         }
-        if ($changes) {
+        if ($changes || $held || $kept) {
             $this->repo->update($id, ['prices_imported_at' => date('Y-m-d H:i:s'), 'prices_imported_by' => $context->userId]);
             $this->audit->record($context, 'import_prices', 'purchase_invoice', $id, null, ['materials' => array_map(fn($c) => [$c['raw_material_id'], $c['old_price'], $c['new_price']], $changes)]);
         }
-        return ['changes' => $changes, 'skipped' => $skipped, 'kept' => $kept];
+        return ['changes' => $changes, 'skipped' => $skipped, 'kept' => $kept, 'held' => $held];
     }
 
     /** Linie przypisane według surowca : ilość w jednostkach bazowych i cena netto za jednostkę bazową (ważona). */
