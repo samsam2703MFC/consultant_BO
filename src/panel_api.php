@@ -281,6 +281,37 @@ final class PanelApi
         return [true, $res];
     }
 
+    /**
+     * OPTIONS sur une route : les verbes qu'elle accepte (en-tête Allow), sans
+     * rien écrire — même sonde que ErpApi::options().
+     *
+     * @return array{code:int, allow:?string}
+     */
+    public static function options(string $path): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return ['code' => 0, 'allow' => null]; }
+        $allow = null;
+        $ch = curl_init(self::config()['base'] . $path);
+        curl_setopt_array($ch, [
+            CURLOPT_CUSTOMREQUEST  => 'OPTIONS',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => ['Accept: application/json', 'Authorization: Bearer ' . $tok],
+            CURLOPT_TIMEOUT        => 10,
+            CURLOPT_CONNECTTIMEOUT => 6,
+            CURLOPT_HEADERFUNCTION => static function ($c, string $l) use (&$allow): int {
+                // Allow seul : l'en-tête CORS Access-Control-Allow-Methods est
+                // souvent global à l'API et annoncerait POST partout.
+                if (preg_match('/^allow:\s*(.+)$/i', trim($l), $m)) { $allow = trim($m[1]); }
+                return strlen($l);
+            },
+        ]);
+        curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return ['code' => $code, 'allow' => $allow];
+    }
+
     /** Même chose qu'un POST, avec le verbe demandé (PUT, PATCH). */
     public static function envoi(string $methode, string $path, array $body): array
     {

@@ -188,6 +188,7 @@ export function render(c, x){
   ${c.repPrev ? tplRepPrev(c, x) : ''}
   ${c.eqRep ? tplEqRep(c, x) : ''}
   ${c.pdWaste ? tplPerteMagasins(c, x) : ''}
+  ${c.pdImport ? tplImportProduits(c, x) : ''}
   ${c.pdDet ? tplScoringDetail(c, x) : ''}
   ${c.userPanel ? tplUserPanel(c, x) : ''}
   ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
@@ -3011,6 +3012,8 @@ function tplProduits(c, x){
       ${c.pdFournEtat ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.pdFournEtat)}</span>` : ''}
       <button ${x.A(c.pdBasculerSansVente)} title="${c.pdSansVente} référence(s) au catalogue sans aucune vente sur la période" style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 12px;background:${c.pdMasquerSansVente ? 'var(--color-text)' : 'var(--color-surface)'};color:${c.pdMasquerSansVente ? 'var(--color-surface)' : 'var(--color-text)'};font-family:var(--font-ui);font-size:12px;cursor:pointer">${c.pdMasquerSansVente ? 'Sans vente masquées' : 'Masquer les sans vente'} (${c.pdSansVente})</button>
       <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.pdAffichees)} références · pondération ${c.pdPond}</span>
+      <!-- Encoder de nouvelles références : un PDF lu, relu, puis créé chez TFBuddy. -->
+      <button ${x.A(c.pdOuvrirImport)} title="Lire un catalogue, une fiche technique ou une liste de prix en PDF, relire les produits trouvés, puis les créer dans TFBuddy" style="margin-left:auto;border:0.5px solid var(--color-primary);border-radius:999px;padding:6px 14px;background:var(--color-surface);color:var(--color-primary);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">＋ Nouveaux produits (PDF)</button>
     </div>
     <!-- Les seuils d'arbitrage, modifiables ici : garder au-dessus, effacer en
          dessous, modifier entre les deux. Ils s'enregistrent avec le réglage
@@ -8490,6 +8493,111 @@ function tplScoring(c, x){
       <span style="font-size:11.5px;color:var(--color-text-muted);align-self:center">${esc(c.scAuto || '')}</span>
       <button ${x.A(c.scSave)} style="border:none;border-radius:999px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:pointer">Enregistrer</button>
     </div>
+  </div>`;
+}
+
+/* --- Nouveaux produits depuis un PDF ----------------------------------------
+   Trois bandeaux dans l'ordre du geste : déposer le PDF, relire les lignes
+   (seules les cochées partiront), créer chez TFBuddy. La route de création
+   est dite en toutes lettres, vérifiée ou non : on sait où l'on écrit. */
+function tplImportProduits(c, x){
+  const { esc } = x;
+  const m = c.pdImport;
+  const CAP = 'font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-text-muted)';
+  const BOX = 'background:var(--color-background-secondary);border-radius:10px;padding:12px 14px';
+  const INP = 'font-family:var(--font-ui);font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 7px;background:var(--color-surface);color:var(--color-text);box-sizing:border-box';
+  const TDp = 'padding:7px 6px;border-top:0.5px solid var(--color-border-tertiary);vertical-align:top';
+  const btn = (fn, txt, primaire) => `<button ${x.A(fn)} ${fn ? '' : 'disabled'} style="border:${primaire ? 'none' : '0.5px solid var(--color-border-secondary)'};border-radius:999px;padding:8px 16px;background:${primaire ? (fn ? 'var(--color-primary)' : 'var(--color-border-secondary)') : 'var(--color-surface)'};color:${primaire ? '#fff' : 'var(--color-text)'};font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${fn ? 'pointer' : 'default'};white-space:nowrap">${txt}</button>`;
+  const alerte = (t, rouge) => `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:${rouge ? 'rgba(141,29,44,0.08)' : '#e6f2e8'};color:${rouge ? '#8D1D2C' : '#2d7a3e'};font-size:12px;line-height:1.5;text-wrap:pretty">${esc(t)}</div>`;
+  return `
+  <div ${x.A(m.close)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
+  <div data-scroll="pi-import" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(1180px,94vw);max-height:90vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:24px 26px;box-sizing:border-box">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+      <div>
+        <div style="${CAP}">Nouveaux produits</div>
+        <div style="font-family:var(--font-display);font-size:20px;margin-top:3px">Encoder depuis un PDF</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin-top:3px">Le PDF est lu par Claude, vous relisez, puis les lignes cochées sont créées dans TFBuddy.</div>
+      </div>
+      <button ${x.A(m.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">✕</button>
+    </div>
+    ${m.chargement ? `<div style="padding:24px;text-align:center;font-size:12.5px;color:var(--color-text-muted)">Lecture de l’état…</div>` : `
+    ${m.injoignable ? alerte('API du cockpit injoignable : la lecture et la création demandent le serveur.', true) : ''}
+
+    <div style="margin-top:16px">
+      <div style="${CAP};margin-bottom:6px">1 · Le PDF</div>
+      ${m.iaOk ? '' : alerte('La lecture du PDF demande la clé Anthropic : Paramètres › IA.', true)}
+      ${m.lecture
+        ? `<div class="sq-drop" style="cursor:default"><b>Lecture de « ${esc(m.lecture)} »…</b>une à deux minutes pour un long catalogue — rien n’est créé à cette étape</div>`
+        : `<label class="sq-drop"><b>${m.fichier ? 'Lire un autre PDF' : 'Choisir le PDF'}</b>catalogue fournisseur, fiche technique ou liste de prix · 8 Mo au plus${m.modele ? ' · lu par ' + esc(m.modele) : ''}<input type="file" accept="application/pdf,.pdf" ${x.C(m.deposer)} style="display:none"></label>`}
+    </div>
+    ${m.err ? alerte(m.err, true) : ''}
+    ${m.info ? alerte(m.info, false) : ''}
+
+    ${m.fichier ? `
+    <div style="margin-top:18px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <div style="${CAP}">2 · Relire — ${esc(m.fichier)}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(m.resume)}</div>
+      </div>
+      <div style="overflow-x:auto;border:0.5px solid var(--color-border-tertiary);border-radius:10px">
+      <table style="width:100%;min-width:1040px;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="text-align:left">
+          <th style="${TH2};width:28px;text-align:center"><input type="checkbox" ${m.tout ? 'checked' : ''} ${m.basculerTout ? x.C(m.basculerTout) : 'disabled'} title="Tout cocher / décocher"></th>
+          <th style="${TH2}">Nom</th><th style="${TH2}">Catégorie</th><th style="${TH2};text-align:right">Prix TTC</th><th style="${TH2}">TVA</th>
+          <th style="${TH2}">Poids · parts</th><th style="${TH2}">Allergènes lus</th><th style="${TH2}">Lecture</th><th style="${TH2}">État</th>
+        </tr></thead>
+        <tbody>
+        ${m.lignes.map(l => `<tr style="${l.cree ? 'opacity:.62' : ''}">
+          <td style="${TDp};text-align:center"><input type="checkbox" ${l.coche ? 'checked' : ''} ${l.cocher ? x.C(l.cocher) : 'disabled'}></td>
+          <td style="${TDp};min-width:200px">${l.cree ? `<span style="font-weight:500">${esc(l.nom)}</span>` : `<input value="${esc(l.nom)}" ${x.C(l.setNom)} style="${INP};width:100%;font-weight:500">`}${l.nomNl ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">NL : ${esc(l.nomNl)}</div>` : ''}</td>
+          <td style="${TDp};min-width:160px">${l.cree ? esc(l.catNom) : `<select ${x.C(l.setCat)} style="${INP};width:100%;${l.catManque ? 'border-color:#C17A2A' : ''}">${l.catOpts.map(o => `<option value="${esc(o.v)}"${o.v === l.cat ? ' selected' : ''}>${esc(o.n)}</option>`).join('')}</select>`}${l.catLue ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">PDF : ${esc(l.catLue)}</div>` : ''}</td>
+          <td style="${TDp};text-align:right;white-space:nowrap">${l.cree ? esc(l.prix) + ' €' : `<input value="${esc(l.prix)}" ${x.C(l.setPrix)} inputmode="decimal" style="${INP};width:72px;text-align:right"> €`}</td>
+          <td style="${TDp};white-space:nowrap">${l.cree ? (l.tva ? esc(l.tva) + ' %' : '') : `<select ${x.C(l.setTva)} style="${INP}">${['', '6', '12', '21'].map(t => `<option value="${t}"${t === l.tva ? ' selected' : ''}>${t ? t + ' %' : '—'}</option>`).join('')}</select>`}</td>
+          <td style="${TDp};font-size:11.5px;color:var(--color-text-muted);white-space:nowrap">${esc(l.poids)}</td>
+          <td style="${TDp};font-size:11.5px;color:var(--color-text-muted);max-width:150px">${esc(l.allergenes)}</td>
+          <td style="${TDp};font-size:11.5px;max-width:190px">${l.conf ? `<span style="color:${l.confCol};font-weight:600">${esc(l.conf)}</span>` : ''}${l.lecture ? `<div style="color:var(--color-text-muted);margin-top:2px;text-wrap:pretty">${esc(l.lecture)}</div>` : ''}</td>
+          <td style="${TDp};font-size:11.5px;max-width:200px" title="${esc(l.etatTitre)}">${l.etat ? `<span style="color:${l.etatCol};font-weight:600">${esc(l.etat)}</span>` : ''}${l.etatTitre ? `<div style="color:var(--color-text-muted);margin-top:2px;text-wrap:pretty">${esc(l.etatTitre)}</div>` : ''}</td>
+        </tr>`).join('')}
+        ${m.lignes.length ? '' : `<tr><td colspan="9" style="padding:18px;font-size:12.5px;color:var(--color-text-muted)">Aucun produit de vente relevé dans ce document.</td></tr>`}
+        </tbody>
+      </table>
+      </div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.5;text-wrap:pretty">Un nom déjà au catalogue est décoché d’office. Nom et catégorie sont obligatoires ; le prix HT se déduit du TTC et de la TVA. Allergènes : seulement ceux écrits dans le PDF — au panel, ils se recalculent ensuite depuis la recette.</div>
+    </div>
+
+    <div style="margin-top:18px">
+      <div style="${CAP};margin-bottom:6px">3 · Créer dans TFBuddy</div>
+      <div style="${BOX};display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="font-size:12.5px;flex:1;min-width:260px">${m.destTxt
+          ? `<b>${esc(m.destTxt)}</b> <span style="font-size:11.5px;color:${m.destVerifiee ? '#2d7a3e' : '#b8671a'}">${m.destVerifiee ? '✓ POST annoncé par TFBuddy' : 'non vérifiée — le premier envoi servira d’essai'}</span>`
+          : (m.aucunCompte ? '<span style="color:#8D1D2C">Aucun compte TFBuddy configuré : Paramètres › compte admin ERP ou compte consultant.</span>' : 'Route de création pas encore choisie : vérifiez l’API.')}</div>
+        ${btn(m.sonder, m.sondeChargement ? 'Vérification…' : 'Vérifier l’API', false)}
+      </div>
+      ${m.sondeErreur ? alerte('Vérification impossible : aucun compte TFBuddy configuré, ou API injoignable.', true) : ''}
+      ${m.sonde ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">${m.sonde.map(s2 => `
+        <div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:500">${esc(s2.nom)} <span style="font-weight:400;font-size:11.5px;color:var(--color-text-muted)">${esc(s2.base)}</span></div>
+          <table style="border-collapse:collapse;font-size:12px;margin-top:6px">
+            ${s2.routes.map(r => `<tr>
+              <td style="padding:3px 14px 3px 0;font-family:monospace">OPTIONS ${esc(r.route)}</td>
+              <td style="padding:3px 14px 3px 0;color:var(--color-text-muted)">${esc(r.code)}</td>
+              <td style="padding:3px 14px 3px 0;color:var(--color-text-muted)">${r.allow ? 'Allow : ' + esc(r.allow) : ''}</td>
+              <td style="padding:3px 14px 3px 0">POST : <b style="color:${r.postCol}">${r.post}</b></td>
+              <td style="padding:3px 0">${r.choisie ? '<span style="font-size:11.5px;color:#2d7a3e;font-weight:600">✓ choisie</span>' : (r.choisir ? `<button ${x.A(r.choisir)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:3px 10px;background:var(--color-surface);font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Utiliser</button>` : '')}</td>
+            </tr>`).join('')}
+          </table>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">${s2.lus ? 'Champs envoyés (lus sur une fiche existante) : ' + esc(s2.champs) : 'Fiche existante illisible avec ce compte — seuls nom, catégorie, prix et actif partiront.'}</div>
+        </div>`).join('')}
+        <div style="font-size:11.5px;color:var(--color-text-muted)">La vérification n’écrit rien : elle demande à chaque route les verbes qu’elle accepte (OPTIONS) et lit une fiche existante pour les noms de champs.</div>
+      </div>` : ''}
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px">
+        <label style="font-size:12.5px;display:flex;align-items:center;gap:7px;cursor:pointer"><input type="checkbox" ${m.actifs ? 'checked' : ''} ${x.C(m.setActifs)}> Créer actifs <span style="color:var(--color-text-muted)">(sinon inactifs, à activer au panel une fois la recette posée)</span></label>
+        <span style="flex:1"></span>
+        ${btn(m.csv, '⇩ CSV', false)}
+        ${btn(m.creer, m.creation ? 'Création…' : 'Créer ' + m.nCreer + ' produit' + (m.nCreer > 1 ? 's' : '') + ' dans TFBuddy', true)}
+      </div>
+    </div>` : ''}
+    `}
   </div>`;
 }
 

@@ -215,10 +215,65 @@ final class Anthropic
         return ['erreur' => 'le modèle n’a pas rendu de verdict structuré'];
     }
 
-    /** POST /v1/messages. La clé part en en-tête, jamais dans une URL ni un log. */
-    private static function http(array $corps, string $cle): array
+    /**
+     * Les produits d'un PDF (catalogue, fiche technique, liste de prix), en JSON
+     * CONTRAINT par un schéma (`output_config.format`) : la réponse se décode
+     * toujours, et le schéma ne dépend pas du modèle choisi dans Paramètres — un
+     * outil forcé (`tool_choice`) est refusé par les modèles les plus récents.
+     *
+     * Le modèle LIT ; il ne crée rien. L'appelant ramène chaque catégorie au
+     * référentiel et un humain relit chaque ligne avant toute création.
+     *
+     * @param string $system  consignes de lecture
+     * @param string $texte   la demande, avec les catégories du réseau
+     * @param array  $schema  le schéma JSON de la réponse
+     * @return array  la réponse décodée (+ `modele`), ou ['erreur' => …]
+     */
+    public static function lirePdf(string $pdf, string $system, string $texte, array $schema): array
     {
-        $ch = curl_init('https://api.anthropic.com/v1/messages');
+        $c = self::config();
+        if ($c['cle'] === '') { return ['erreur' => 'clé Anthropic absente — Paramètres › IA']; }
+        $corps = [
+            'model' => $c['modele'],
+            // Un catalogue de soixante références tient sous 12 000 jetons ; la
+            // marge évite qu'un long document soit coupé au milieu d'une ligne.
+            'max_tokens' => 16000,
+            'system' => $system,
+            'messages' => [['role' => 'user', 'content' => [
+                ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf',
+                    'data' => base64_encode($pdf)]],
+                ['type' => 'text', 'text' => $texte],
+            ]]],
+            'output_config' => ['format' => ['type' => 'json_schema', 'schema' => $schema]],
+        ];
+        [$code, $rep] = self::http($corps, $c['cle'], 300);
+        if ($code < 200 || $code >= 300) {
+            $det = is_array($rep) ? (string) ($rep['error']['message'] ?? json_encode($rep, JSON_UNESCAPED_UNICODE)) : (string) self::$lastError;
+            return ['erreur' => 'API Anthropic → HTTP ' . $code . ($det !== '' ? ' : ' . substr($det, 0, 240) : '')];
+        }
+        $arret = (string) ($rep['stop_reason'] ?? '');
+        if ($arret === 'refusal') { return ['erreur' => 'le modèle a refusé de lire ce document']; }
+        if ($arret === 'max_tokens') {
+            return ['erreur' => 'document trop long pour une lecture : coupez le PDF en plusieurs parties (moins de produits par fichier)'];
+        }
+        $txt = '';
+        foreach (($rep['content'] ?? []) as $b) {
+            if (($b['type'] ?? '') === 'text') { $txt .= (string) ($b['text'] ?? ''); }
+        }
+        $j = json_decode($txt, true);
+        if (!is_array($j)) { return ['erreur' => 'réponse non exploitable du modèle']; }
+        return $j + ['modele' => (string) ($rep['model'] ?? $c['modele'])];
+    }
+
+    /**
+     * POST /v1/messages. La clé part en en-tête, jamais dans une URL ni un log.
+     * ANTHROPIC_BASE_URL (la variable des SDK officiels) redirige l'appel —
+     * pour un proxy d'entreprise, ou un banc d'essai sans clé.
+     */
+    private static function http(array $corps, string $cle, int $timeout = 90): array
+    {
+        $base = rtrim((string) (getenv('ANTHROPIC_BASE_URL') ?: 'https://api.anthropic.com'), '/');
+        $ch = curl_init($base . '/v1/messages');
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
             CURLOPT_RETURNTRANSFER => true,
@@ -228,7 +283,7 @@ final class Anthropic
                 'anthropic-version: 2023-06-01',
             ],
             CURLOPT_POSTFIELDS     => json_encode($corps, JSON_UNESCAPED_UNICODE),
-            CURLOPT_TIMEOUT        => 90,
+            CURLOPT_TIMEOUT        => $timeout,
             CURLOPT_CONNECTTIMEOUT => 10,
         ]);
         $raw = curl_exec($ch);

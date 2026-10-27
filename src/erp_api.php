@@ -206,4 +206,55 @@ final class ErpApi
         }
         return $res['data'] ?? $res;
     }
+
+    /**
+     * Écriture authentifiée (POST, PUT, PATCH). Rend [code HTTP, corps décodé] :
+     * l'appelant a besoin du CODE — un 404 dit que la route n'existe pas, un 422
+     * que la ligne est refusée — là où un simple succès/échec les confondrait.
+     */
+    public static function envoi(string $methode, string $path, array $body): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return [0, null]; }
+        $url = self::config()['base'] . $path;
+        [$code, $res] = self::http($methode, $url, $body, $tok);
+        if ($code === 401) {
+            $tok = self::token(true);
+            if ($tok === null) { return [0, null]; }
+            [$code, $res] = self::http($methode, $url, $body, $tok);
+        }
+        return [$code, $res];
+    }
+
+    /**
+     * OPTIONS sur une route : les verbes qu'elle accepte (en-tête Allow), sans
+     * rien écrire. C'est la seule façon de savoir qu'une route de création
+     * existe sans risquer de créer quoi que ce soit.
+     *
+     * @return array{code:int, allow:?string}
+     */
+    public static function options(string $path): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return ['code' => 0, 'allow' => null]; }
+        $allow = null;
+        $ch = curl_init(self::config()['base'] . $path);
+        curl_setopt_array($ch, [
+            CURLOPT_CUSTOMREQUEST  => 'OPTIONS',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => ['Accept: application/json', 'Authorization: Bearer ' . $tok],
+            CURLOPT_TIMEOUT        => 10,
+            CURLOPT_CONNECTTIMEOUT => 6,
+            CURLOPT_HEADERFUNCTION => static function ($c, string $l) use (&$allow): int {
+                // Allow seul : l'en-tête CORS Access-Control-Allow-Methods est
+                // souvent global à l'API et annoncerait POST partout.
+                if (preg_match('/^allow:\s*(.+)$/i', trim($l), $m)) { $allow = trim($m[1]); }
+                return strlen($l);
+            },
+        ]);
+        curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return ['code' => $code, 'allow' => $allow];
+    }
 }

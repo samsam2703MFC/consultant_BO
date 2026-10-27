@@ -2985,3 +2985,38 @@ coefMedian, coefMin, coefMax, zones}], groupes: [{nom, n, nChiffres, coefMedian,
 triés par groupe, catégorie, nom ; les produits inactifs sont écartés sauf `inactifs=1`. `prixCible` et `prixObjectif` : le prix
 TTC de la pièce qui atteindrait la cible de sa catégorie, ou l'objectif du réseau, aux 5 centimes supérieurs. Relu à chaque
 appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. `sonde=1` rend les premières lignes brutes.
+
+### `/produits/import/*` — encoder de nouveaux produits à partir d'un PDF, puis les créer dans TFBuddy (27/10/2026)
+
+Écran Produits (Gamme · scoring), bouton « ＋ Nouveaux produits (PDF) ». Trois temps, un humain entre chacun ; module
+`src/produits_import.php`, brouillons dans `ceo_produit_import` (créée au premier appel).
+
+- `GET /produits/import` → `{ia, comptes: {erp, panel}, destination, routes, maxOctets, categories: [{id, nom}], dernier}` :
+  le dernier brouillon (même forme que `import` ci-dessous), pour reprendre une relecture interrompue.
+- `POST /produits/import/pdf` `{nom, fichier: "data:application/pdf;base64,…"}` (8 Mo au plus) : le PDF part à l'API
+  Anthropic (clé de Paramètres › IA, modèle réglé, réponse en JSON contraint par schéma — `output_config.format`). Chaque
+  `categorieId` est ramené aux catégories ACTIVES de `/product-categories` (une catégorie inventée devient null) ; un nom
+  déjà au catalogue (`/products`, comparaison sans casse ni accents) ou répété dans le document est décoché. Réponse
+  `{ok, import: {id, fichier, octets, modele, document: {type, fournisseur, remarque}, le, n, nCrees, categories,
+  allergenesNoms, lignes: [{cle, nom, nomNl, categorieId, categorieLue, prixTtc, prixHt, tva, poids, poidsG, portions,
+  description, allergenes, conservation, ean, page, confiance, remarque, existe, creer, statut, tfbId, message}]}}`.
+  Rien n'est créé chez TFBuddy. 422 fichier non PDF ou trop lourd, 503 sans clé Anthropic, 502 lecture refusée ou
+  document trop long (`stop_reason` `max_tokens`).
+- `PUT /produits/import/{id}` `{lignes}` : les corrections de l'écran. Le suivi (`statut`, `tfbId`, `message`, `existe`)
+  reste celui du serveur ; une ligne créée ne se modifie plus.
+- `GET /produits/import/sonde` : quelle route de création accepte un POST, avec quel compte (admin ERP, consultant).
+  **N'écrit rien** : `OPTIONS` sur `/products`, `/admin/products`, `/consultant/products` (en-tête `Allow` seul — le
+  `Access-Control-Allow-Methods` du CORS est global), puis lecture d'une fiche existante (`/products/{id}`) pour les noms
+  de champs. Réponse `{comptes: [{compte, nom, base, routes: [{route, code, allow, post: true|false|null}], champs,
+  envoyes}], proposition, destination}` ; `proposition` quand une seule route annonce POST.
+- `PUT /produits/import/destination` `{compte: erp|panel, route, verifiee}` → réglage `produitImport`.
+- `POST /produits/import/{id}/creer` `{actifs}` : POST de chaque ligne cochée et pas encore créée, une à une. La fiche ne
+  porte que des champs présents dans la fiche lue (`name`, `id_category`, `suggested_sale_price`, `single_weight`,
+  `is_divisible`, `portion_size`, `allergene`, `is_active`… — gardés 24 h dans `produitImportModele`) ; sans fiche lue,
+  `name`, `id_category`, `suggested_sale_price`, `is_active` seulement. Une ligne créée garde l'id rendu et n'est plus
+  renvoyée. Arrêt net sur 401/403/404/405/5xx (la même réponse attendrait toutes les lignes) et après trois 422 de suite
+  sans une création. Réponse `{ok, crees, refuses, arret, import}` ; une ligne de journal (kind `Produits`).
+
+**À confirmer chez TFBuddy** : aucune écriture produit n'avait été mesurée avant ce module — la route et les champs
+ci-dessus sont ceux que l'API rend en lecture. La vérification dit si la route existe ; le premier envoi dit si la
+fiche convient (le message d'un 422 est affiché sur la ligne).

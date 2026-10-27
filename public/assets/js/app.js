@@ -4077,6 +4077,118 @@ class App {
       .then(d => this.setState(s => (s.pdWaste && s.pdWaste.id === id)
         ? { pdWaste: Object.assign({}, s.pdWaste, { chargement: false, d: d || null }) } : {}));
   }
+  /* --- Nouveaux produits depuis un PDF ---------------------------------------
+   * Trois temps : le serveur fait lire le PDF par Claude, on relit ici, on crée
+   * chez TFBuddy. Rien ne part sans le bouton « Créer ». Chaque correction
+   * s'enregistre dans le brouillon du serveur : refermer la fenêtre, ou
+   * recharger la page, ne perd rien. */
+  piOuvrir(){
+    this.setState({ piOuvert: true, piErr: '', piInfo: '' });
+    readOne('/produits/import').then(d => this.setState(s => ({ piEtat: d || { injoignable: true },
+      piImp: s.piImp || (d && d.dernier) || null })));
+  }
+  piDeposer(e){
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) { return; }
+    const max = (this.state.piEtat && this.state.piEtat.maxOctets) || 8 * 1024 * 1024;
+    if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) { this.setState({ piErr: 'Seuls les PDF sont acceptés.' }); return; }
+    if (f.size > max) {
+      this.setState({ piErr: 'PDF trop lourd (' + (f.size / 1048576).toFixed(1).replace('.', ',') + ' Mo) : 8 Mo au plus — coupez-le en plusieurs fichiers.' });
+      return;
+    }
+    const r = new FileReader();
+    r.onload = () => {
+      this.setState({ piLecture: f.name, piErr: '', piInfo: '' });
+      write(this.source, 'POST', '/produits/import/pdf', { nom: f.name, fichier: String(r.result) }).then(rep => {
+        if (!rep.ok || !rep.import) {
+          this.setState({ piLecture: '', piErr: rep.ok ? 'API indisponible : la lecture demande le serveur.' : (rep.error || 'Lecture refusée.') });
+          return;
+        }
+        const n = rep.import.n;
+        this.setState({ piLecture: '', piImp: rep.import,
+          piInfo: n ? n + ' produit(s) relevé(s). Relisez chaque ligne avant de créer.' : 'Aucun produit de vente trouvé dans ce PDF.' });
+      });
+    };
+    r.onerror = () => this.setState({ piErr: 'Fichier illisible.' });
+    r.readAsDataURL(f);
+  }
+  /* Une correction : appliquée tout de suite à l'écran, enregistrée un instant
+     après. Le serveur rend la ligne normalisée (prix HT recalculé…) ; on ne la
+     reprend que si rien n'a été retouché entre-temps. */
+  piMaj(cle, patch){
+    this._piV = (this._piV || 0) + 1;
+    // Sans clé : toutes les lignes pas encore créées (la case « tout cocher »).
+    const vise = l => cle === null ? l.statut !== 'cree' : l.cle === cle;
+    this.setState(s => ({ piImp: Object.assign({}, s.piImp,
+      { lignes: s.piImp.lignes.map(l => vise(l) ? Object.assign({}, l, patch) : l) }) }));
+    clearTimeout(this._piT);
+    this._piT = setTimeout(() => this.piSauver(), 600);
+    this._piAttente = true;
+  }
+  piSauver(){
+    clearTimeout(this._piT);
+    this._piAttente = false;
+    const imp = this.state.piImp;
+    if (!imp) { return Promise.resolve({ ok: true }); }
+    const v = this._piV;
+    return write(this.source, 'PUT', '/produits/import/' + imp.id, { lignes: imp.lignes }).then(r => {
+      if (!r.ok) { this.setState({ piErr: 'Correction non enregistrée — ' + (r.error || 'refus du serveur') }); }
+      else if (r.import && v === this._piV) { this.setState({ piImp: r.import }); }
+      return r;
+    });
+  }
+  piSonder(){
+    this.setState({ piSonde: { chargement: true, d: null } });
+    readOne('/produits/import/sonde').then(d => this.setState({ piSonde: { chargement: false, d } }));
+  }
+  piChoisir(compte, route, verifiee){
+    write(this.source, 'PUT', '/produits/import/destination', { compte, route, verifiee }).then(r => {
+      if (!r.ok) { this.setState({ piErr: r.error || 'Choix non enregistré.' }); return; }
+      this.setState(s => ({ piEtat: Object.assign({}, s.piEtat, { destination: r.destination }) }));
+    });
+  }
+  piCreer(){
+    const S = this.state, imp = S.piImp, dest = S.piEtat && S.piEtat.destination;
+    if (!imp || !dest) { return; }
+    const n = imp.lignes.filter(l => l.creer && l.statut !== 'cree').length;
+    const qui = dest.compte === 'erp' ? 'compte admin ERP' : 'compte consultant';
+    if (!window.confirm('Créer ' + n + ' produit(s) dans TFBuddy (' + qui + ', POST ' + dest.route + ')'
+      + (S.piActifs ? ', ACTIFS tout de suite ?' : ', inactifs ?'))) { return; }
+    this.setState({ piCreation: true, piErr: '', piInfo: '' });
+    this.piSauver().then(r0 => {
+      if (!r0.ok) { this.setState({ piCreation: false }); return null; }
+      return write(this.source, 'POST', '/produits/import/' + imp.id + '/creer', { actifs: !!S.piActifs }).then(r => {
+        if (!r.ok || !r.import) { this.setState({ piCreation: false, piErr: r.error || 'Création refusée.' }); return; }
+        this.setState({ piCreation: false, piImp: r.import,
+          piInfo: r.crees + ' produit(s) créé(s)' + (r.refuses ? ', ' + r.refuses + ' refusé(s) — le motif est dans la colonne État' : '') + '.',
+          piErr: r.arret ? 'Arrêt : ' + r.arret : '' });
+        if (r.crees) { this.notify(r.crees + ' produit(s) créé(s) dans TFBuddy'); }
+      });
+    });
+  }
+  /* Le brouillon en CSV (séparateur « ; », virgule décimale : Excel belge) —
+     pour encoder à la main si l'API ne crée pas encore de produit. */
+  piCsv(){
+    const imp = this.state.piImp;
+    if (!imp) { return; }
+    const cats = {}; (imp.categories || []).forEach(c => { cats[c.id] = c.nom; });
+    const al = imp.allergenesNoms || {};
+    const num = v => v == null || v === '' ? '' : String(v).replace('.', ',');
+    const cel = v => { const s = v == null ? '' : String(v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const tete = ['Nom', 'Nom NL', 'Catégorie', 'Rubrique du PDF', 'Prix TTC', 'TVA %', 'Prix HT', 'Poids', 'Parts', 'Allergènes',
+      'Conservation', 'EAN', 'Description', 'Page', 'Lecture', 'Remarque', 'État'];
+    const lignes = imp.lignes.map(l => [l.nom, l.nomNl, cats[l.categorieId] || '', l.categorieLue, num(l.prixTtc), num(l.tva),
+      num(l.prixHt), l.poids, l.portions, (l.allergenes || []).map(a => al[a] || a).join(', '), l.conservation, l.ean,
+      l.description, l.page, l.confiance, l.remarque,
+      l.statut === 'cree' ? 'créé' + (l.tfbId ? ' #' + l.tfbId : '') : (l.statut === 'refuse' ? 'refusé : ' + (l.message || '') : (l.existe ? 'déjà au catalogue' : ''))]);
+    const csv = '﻿' + [tete].concat(lignes).map(r => r.map(cel).join(';')).join('\r\n');
+    const u = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = u; a.download = String(imp.fichier || 'produits').replace(/\.pdf$/i, '') + '-produits.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 60000);
+  }
   /**
    * Ouvre la fiche d'une référence et charge son CA et sa marge par période
    * (mois affiché, trimestre, année dernière). Chargés À L'OUVERTURE, pas
@@ -12947,6 +13059,80 @@ class App {
         close: () => this.setState({ pdWaste: null }),
       };
     } else { common.pdWaste = false; }
+    // --- fenêtre « nouveaux produits depuis un PDF »
+    common.pdOuvrirImport = () => this.piOuvrir();
+    if (S.piOuvert) {
+      const E = S.piEtat, imp = S.piImp;
+      const cats = (imp && imp.categories) || (E && E.categories) || [];
+      const al = (imp && imp.allergenesNoms) || {};
+      const dest = E && E.destination;
+      const lignes = imp ? imp.lignes : [];
+      const ouvertes = lignes.filter(l => l.statut !== 'cree');
+      const nCreer = ouvertes.filter(l => l.creer).length;
+      const so = S.piSonde, sd = so && so.d;
+      const comptes = E && E.comptes ? E.comptes : {};
+      common.pdImport = {
+        chargement: !E,
+        injoignable: !!(E && E.injoignable),
+        iaOk: !!(E && E.ia && E.ia.configure),
+        modele: (imp && imp.modele) || (E && E.ia && E.ia.modele) || '',
+        lecture: S.piLecture || '', err: S.piErr || '', info: S.piInfo || '',
+        deposer: S.piLecture ? null : e => this.piDeposer(e),
+        fichier: imp ? imp.fichier : '',
+        resume: imp ? (imp.n + ' produit(s) · ' + imp.nCrees + ' créé(s) · lu le ' + this.fDA(String(imp.le).slice(0, 10)) + ' ' + String(imp.le).slice(11, 16)
+          + (imp.document && imp.document.type ? ' · ' + imp.document.type : '') + (imp.document && imp.document.fournisseur ? ' · ' + imp.document.fournisseur : '')) : '',
+        tout: ouvertes.length > 0 && ouvertes.every(l => l.creer),
+        basculerTout: ouvertes.length ? e => this.piMaj(null, { creer: e.target.checked }) : null,
+        lignes: lignes.map(l => {
+          const cree = l.statut === 'cree';
+          return {
+            cree, nom: l.nom || '', nomNl: l.nomNl || '',
+            coche: !!l.creer, cocher: cree ? null : e => this.piMaj(l.cle, { creer: e.target.checked }),
+            setNom: cree ? null : e => this.piMaj(l.cle, { nom: e.target.value }),
+            cat: l.categorieId == null ? '' : String(l.categorieId),
+            catOpts: [{ v: '', n: '— à choisir —' }].concat(cats.map(c => ({ v: String(c.id), n: c.nom }))),
+            catNom: (cats.find(c => c.id === l.categorieId) || {}).nom || '',
+            catLue: l.categorieLue || '', catManque: l.categorieId == null,
+            setCat: cree ? null : e => this.piMaj(l.cle, { categorieId: e.target.value ? +e.target.value : null }),
+            prix: l.prixTtc == null ? '' : String(l.prixTtc).replace('.', ','),
+            // Un prix TTC retouché : le HT se recalcule au serveur, d'après la TVA.
+            setPrix: cree ? null : e => this.piMaj(l.cle, { prixTtc: e.target.value, prixHt: null }),
+            tva: l.tva == null ? '' : String(+String(l.tva).replace(',', '.')),
+            setTva: cree ? null : e => this.piMaj(l.cle, { tva: e.target.value || null, prixHt: l.prixTtc != null ? null : l.prixHt }),
+            poids: [l.poids, l.portions ? l.portions + ' parts' : ''].filter(Boolean).join(' · '),
+            allergenes: (l.allergenes || []).map(a => al[a] || a).join(', '),
+            conf: l.confiance || '',
+            confCol: l.confiance === 'faible' ? '#8D1D2C' : (l.confiance === 'moyenne' ? '#b8671a' : '#2d7a3e'),
+            lecture: [l.page ? 'p. ' + l.page : '', l.remarque || ''].filter(Boolean).join(' · '),
+            etat: cree ? 'Créé' + (l.tfbId != null ? ' #' + l.tfbId : '') : (l.statut === 'refuse' ? 'Refusé' : (l.existe ? 'Déjà au catalogue' : '')),
+            etatCol: cree ? '#2d7a3e' : (l.statut === 'refuse' ? '#8D1D2C' : '#b8671a'),
+            etatTitre: l.message || (l.existe ? 'Au catalogue sous « ' + l.existe.nom + ' » (#' + l.existe.id + ')' : ''),
+          };
+        }),
+        aucunCompte: !!E && !comptes.erp && !comptes.panel,
+        destTxt: dest ? (dest.compte === 'erp' ? 'Compte admin ERP' : 'Compte consultant') + ' · POST ' + dest.route : '',
+        destVerifiee: !!(dest && dest.verifiee),
+        sonder: so && so.chargement ? null : () => this.piSonder(),
+        sondeChargement: !!(so && so.chargement),
+        sondeErreur: !!(so && !so.chargement && !sd),
+        sonde: sd ? sd.comptes.map(c => ({
+          nom: c.nom, base: c.base,
+          champs: (c.envoyes || []).join(', '), lus: (c.champs || []).length,
+          routes: c.routes.map(r => ({
+            route: r.route, code: r.code ? 'HTTP ' + r.code : 'sans réponse', allow: r.allow || '',
+            post: r.post === true ? 'oui' : (r.post === false ? 'non' : '?'),
+            postCol: r.post === true ? '#2d7a3e' : (r.post === false ? 'var(--color-text-muted)' : '#b8671a'),
+            choisie: !!(dest && dest.compte === c.compte && dest.route === r.route),
+            choisir: r.post === false ? null : () => this.piChoisir(c.compte, r.route, r.post === true),
+          })),
+        })) : null,
+        actifs: !!S.piActifs, setActifs: e => this.setState({ piActifs: e.target.checked }),
+        nCreer, creation: !!S.piCreation,
+        creer: nCreer && dest && !S.piCreation ? () => this.piCreer() : null,
+        csv: lignes.length ? () => this.piCsv() : null,
+        close: () => { if (this._piAttente) { this.piSauver(); } this.setState({ piOuvert: false, piSonde: null }); },
+      };
+    } else { common.pdImport = false; }
     common.pdNote = 'Score sur 100 = moyenne pondérée de quatre notes : volume vendu, marge nette, taux de perte et présence au comptoir (pondération dans Paramètres — ' + common.pdPond + '). '
       + 'Positions par CA — sur la gamme entière et dans la catégorie. Le reste (score décomposé, CA et marge du mois, du trimestre et de l’année dernière, profil, tendance) : cliquez la référence.'
       + (manque.length ? ' Critère(s) sans donnée aujourd’hui, donc EXCLUS du calcul (le score est repondéré sur les critères disponibles, il n’est pas pénalisé) : ' + manque.join(' ; ') + '.' : '');

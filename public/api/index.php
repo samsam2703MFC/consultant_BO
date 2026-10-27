@@ -54,6 +54,7 @@ require __DIR__ . '/../../src/matiere_fiche.php';
 require __DIR__ . '/../../src/pnl_mois.php';
 require __DIR__ . '/../../src/dossiers_fichiers.php';
 require __DIR__ . '/../../src/produits_coef.php';
+require __DIR__ . '/../../src/produits_import.php';
 require __DIR__ . '/../../src/dossier.php';
 require __DIR__ . '/../../src/ca_mail.php';
 require __DIR__ . '/../../src/mkt_brief.php';
@@ -347,6 +348,8 @@ function route(string $method, string $path): mixed
             $path === '/produits/utilisation/jamais.pdf' => ep_prod_utilisation_jamais_pdf(),
             $path === '/produits/utilisation/jamais'   => ep_prod_utilisation_jamais(),
             $path === '/produits/manque'              => ep_prod_manque(),
+            $path === '/produits/import'              => ep_produits_import(),
+            $path === '/produits/import/sonde'        => ep_produits_import_sonde(),
             $path === '/magasin/analyse'              => ep_mag_analyse(),
             $path === '/magasin/analyse.pdf'          => ep_mag_analyse_pdf(),
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
@@ -480,6 +483,11 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/necessaire$#', $path, $m)) { return wr_prod_necessaire($m[1]); }
     if ($method === 'POST' && $path === '/products/arbitrage.pdf') { return wr_prod_arbitrage_pdf(); }
     if ($method === 'POST' && $path === '/products/categorie.pdf') { return wr_prod_categorie_pdf(); }
+    // Nouveaux produits depuis un PDF : lecture (Claude), relecture, création chez TFBuddy.
+    if ($method === 'POST' && $path === '/produits/import/pdf') { return wr_produits_import_pdf(); }
+    if ($method === 'PUT' && $path === '/produits/import/destination') { return wr_produits_import_destination(); }
+    if ($method === 'PUT' && preg_match('#^/produits/import/(\d+)$#', $path, $m)) { return wr_produits_import_maj((int) $m[1]); }
+    if ($method === 'POST' && preg_match('#^/produits/import/(\d+)/creer$#', $path, $m)) { return wr_produits_import_creer((int) $m[1]); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }
     if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }
