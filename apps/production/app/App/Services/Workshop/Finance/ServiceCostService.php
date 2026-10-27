@@ -99,7 +99,9 @@ final class ServiceCostService
         $missingCount = array_sum(array_map(fn($c) => count($c['missing']), $categories));
         $noAmount = count(array_filter(array_merge(...array_column($categories, 'invoices') ?: [[]]), fn($r) => $r['cost_amount'] === null));
         $over = $ym < date('Y-m');
-        $blockers = array_values(array_filter([$openCount ? 'open' : null, $missingCount ? 'missing' : null, $noAmount ? 'no_amount' : null, !$over ? 'not_over' : null,
+        // Mois sans aucune facture de service ni « pas ce mois-ci » : rien à clôturer (pas de mois vide dans le calculateur).
+        $empty = !array_filter($categories, fn($c) => $c['count'] > 0 || $c['marked']);
+        $blockers = array_values(array_filter([$empty ? 'empty' : null, $openCount ? 'open' : null, $missingCount ? 'missing' : null, $noAmount ? 'no_amount' : null, !$over ? 'not_over' : null,
             $calc && $calc['status'] === 'LOCKED' ? 'cost_month_locked' : null]));
         return [
             'month' => $ym, 'label' => self::label($ym), 'prev_month' => $prev, 'prev_label' => self::label($prev), 'next_month' => $ym < date('Y-m') ? self::shift($ym, 1) : null,
@@ -343,6 +345,7 @@ final class ServiceCostService
         if ($view['blockers']) {
             if (in_array('cost_month_locked', $view['blockers'], true)) throw new ApiException('COST_MONTH_LOCKED', 409, [], ['month' => $ym]);
             if ($view['blockers'] === ['not_over']) throw new ApiException('SERVICE_MONTH_NOT_OVER', 409, [], ['month' => $ym]);
+            if (in_array('empty', $view['blockers'], true)) throw new ApiException('SERVICE_MONTH_EMPTY', 409, [], ['month' => $ym]);
             throw new ApiException('SERVICE_MONTH_INCOMPLETE', 409, [], ['open' => $view['totals']['open'], 'missing' => $view['totals']['missing'], 'no_amount' => $view['totals']['no_amount']]);
         }
         $cats = $this->categories->all();

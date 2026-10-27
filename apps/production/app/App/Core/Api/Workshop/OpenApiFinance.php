@@ -50,7 +50,7 @@ final class OpenApiFinance
             'POST /finance/months/{ym:\d{4}-\d{2}}/accept-all' => ['tag' => $t, 'id' => 'acceptServiceMonth', 'summary' => 'Zatwierdź wszystkie faktury miesiąca / Valider toutes les factures du mois', 'response' => 'ServiceMonth', 'errors' => [409, 422],
                 'description' => 'Factures à vérifier avec catégorie et montant PLN ; les autres restent (left). ' . $month],
             'POST /finance/months/{ym:\d{4}-\d{2}}/close' => ['tag' => $t, 'id' => 'closeServiceMonth', 'summary' => 'Zamknij miesiąc → kalkulator kosztów / Clôturer → calculateur de coûts', 'response' => 'ServiceMonth', 'errors' => [409, 422],
-                'description' => "Mois terminé (SERVICE_MONTH_NOT_OVER, 409), tout validé, rien de manquant (SERVICE_MONTH_INCOMPLETE, 409). Totaux écrits dans le calculateur de coûts (mois créé s'il manque) : coûts fixes (une ligne par fournisseur), médias (montant du média), logistique (une ligne par type) ; "
+                'description' => "Mois terminé (SERVICE_MONTH_NOT_OVER, 409), au moins une facture ou « pas ce mois-ci » (SERVICE_MONTH_EMPTY, 409), tout validé, rien de manquant (SERVICE_MONTH_INCOMPLETE, 409). Totaux écrits dans le calculateur de coûts (mois créé s'il manque) : coûts fixes (une ligne par fournisseur), médias (montant du média), logistique (une ligne par type) ; "
                     . "les lignes manuelles de ces catégories sont remplacées et gardées pour la réouverture. COST_MONTH_LOCKED (409) : mois du calculateur fermé. Réponse : le mois + pushed."],
             'POST /finance/months/{ym:\d{4}-\d{2}}/reopen' => ['tag' => $t, 'id' => 'reopenServiceMonth', 'summary' => 'Otwórz miesiąc usług / Rouvrir le mois des services', 'response' => 'ServiceMonth', 'errors' => [409, 422],
                 'description' => 'Lignes écrites depuis les factures retirées du calculateur, lignes manuelles rétablies. SERVICE_MONTH_OPEN (409) : pas clôturé ; COST_MONTH_LOCKED (409).'],
@@ -96,7 +96,7 @@ final class OpenApiFinance
                     'missing' => ['type' => 'array', 'items' => $free], 'marked' => ['type' => 'array', 'items' => $free], 'state' => ['type' => 'string', 'enum' => ['open', 'missing', 'done', 'none', 'empty']],
                     'calc' => ['type' => 'object', 'nullable' => true, 'additionalProperties' => true], 'pushed' => $nNum]]],
                 'progress' => $free, 'totals' => $free, 'can_close' => ['type' => 'boolean'],
-                'blockers' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['open', 'missing', 'no_amount', 'not_over', 'cost_month_locked']]],
+                'blockers' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['empty', 'open', 'missing', 'no_amount', 'not_over', 'cost_month_locked']]],
                 'months' => ['type' => 'array', 'items' => $free], 'category_list' => ['type' => 'array', 'items' => $free], 'without_month' => ['type' => 'integer'],
                 'pushed' => ['type' => 'array', 'items' => $free], 'accepted' => ['type' => 'integer'], 'left' => ['type' => 'integer'], 'can_write' => ['type' => 'boolean']]],
             'ServiceCostInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['seller_name', 'issue_date', 'cost_category', 'total_net'], 'properties' => [

@@ -10945,7 +10945,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Mois terminé (SERVICE_MONTH_NOT_OVER, 409), tout validé, rien de manquant (SERVICE_MONTH_INCOMPLETE, 409). Totaux écrits dans le calculateur de coûts (mois créé s'il manque) : coûts fixes (une ligne par fournisseur), médias (montant du média), logistique (une ligne par type) ; les lignes manuelles de ces catégories sont remplacées et gardées pour la réouverture. COST_MONTH_LOCKED (409) : mois du calculateur fermé. Réponse : le mois + pushed.",
+                "description": "Mois terminé (SERVICE_MONTH_NOT_OVER, 409), au moins une facture ou « pas ce mois-ci » (SERVICE_MONTH_EMPTY, 409), tout validé, rien de manquant (SERVICE_MONTH_INCOMPLETE, 409). Totaux écrits dans le calculateur de coûts (mois créé s'il manque) : coûts fixes (une ligne par fournisseur), médias (montant du média), logistique (une ligne par type) ; les lignes manuelles de ces catégories sont remplacées et gardées pour la réouverture. COST_MONTH_LOCKED (409) : mois du calculateur fermé. Réponse : le mois + pushed.",
                 "parameters": [
                     {
                         "name": "ym",
@@ -31666,6 +31666,7 @@
                         "items": {
                             "type": "string",
                             "enum": [
+                                "empty",
                                 "open",
                                 "missing",
                                 "no_amount",

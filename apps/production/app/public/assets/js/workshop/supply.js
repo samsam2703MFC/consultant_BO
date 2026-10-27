@@ -889,7 +889,7 @@
                 <tbody>${d.invoices.map(i => `<tr data-open-inv="${i.id}" class="tfb-supply-click">
                     <td><a href="#tab=invoices&inv=${i.id}"><strong>${esc(i.number || t('inv.no_number'))}</strong></a><div class="small text-muted">${esc(t('inv.source.' + i.source))}</div></td>
                     <td>${i.supplier ? esc(i.supplier.name) : `${esc(i.seller_name || '—')}<div class="small text-warning">${esc(t('inv.no_supplier'))}</div>`}</td>
-                    <td>${esc(fullDay(i.issue_date))}</td><td class="text-end">${esc(cur(i.total_net, i.currency))}</td>
+                    <td class="text-nowrap">${esc(fullDay(i.issue_date))}</td><td class="text-end text-nowrap tfb-num">${esc(cur(i.total_net, i.currency))}</td>
                     <td>${i.order ? esc(i.order.code) : '—'}</td>
                     <td>${ctrlBadge(i.control)}${i.control.lines ? `<div class="small text-muted">${esc(t('inv.mapped_n', {mapped: i.control.mapped, lines: i.control.lines}))}</div>` : ''}</td>
                     <td>${invBadge(i.status)}</td><td>${i.service_guess && w ? serviceHint(i) : nextStep(i, w)}</td></tr>`).join('')

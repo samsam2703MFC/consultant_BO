@@ -119,7 +119,8 @@
     "SERVICE_MONTH_NOT_OVER": "Miesiąc {month} jeszcze trwa — koszty usług zamyka się po jego końcu.",
     "SERVICE_MONTH_INCOMPLETE": "Miesiąca nie można zamknąć : do sprawdzenia {open}, brakuje {missing}, bez kwoty PLN {no_amount}.",
     "COST_MONTH_LOCKED": "Miesiąc {month} jest zamknięty w kalkulatorze kosztów — otwórz go tam najpierw.",
-    "SERVICE_NOT_MANUAL": "Usunąć można tylko koszt wpisany ręcznie — fakturę z KSeF odrzuć w Zaopatrzeniu."
+    "SERVICE_NOT_MANUAL": "Usunąć można tylko koszt wpisany ręcznie — fakturę z KSeF odrzuć w Zaopatrzeniu.",
+    "SERVICE_MONTH_EMPTY": "Miesiąc {month} nie ma faktur usług — nie ma czego zamknąć."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",

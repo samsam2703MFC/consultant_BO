@@ -225,6 +225,9 @@ try {
     $tel3 = array_values(array_filter($v3['categories'], fn($c) => $c['code'] === 'fixed:TELECOM'))[0];
     expectFin($tel3['state'] === 'missing' && $tel3['missing'][0]['seller_name'] === 'Orange Polska S.A.' && $tel3['missing'][0]['prev_amount'] === 250.0, 'Orange expected in M3 (was in M2)');
     expectFin(in_array('missing', $v3['blockers'], true) && in_array('not_over', $v3['blockers'], true), 'missing cost and running month block the close');
+    $m0 = date('Y-m', strtotime('first day of -5 month'));
+    expectFin(in_array('empty', $services->month($m0, $ctx)['blockers'], true), 'month without service invoices: nothing to close');
+    expectFinError(fn() => $services->close($m0, $ctx), 'SERVICE_MONTH_EMPTY', 'empty month refused');
     $v3 = $services->mark(['month' => $m3, 'cost_category' => 'fixed:TELECOM', 'seller_key' => $tel3['missing'][0]['seller_key'], 'none' => true], $ctx);
     $tel3 = array_values(array_filter($v3['categories'], fn($c) => $c['code'] === 'fixed:TELECOM'))[0];
     expectFin($tel3['state'] === 'none' && !$tel3['missing'] && count($tel3['marked']) === 1, '« nie w tym miesiącu » clears the missing cost');

@@ -118,7 +118,7 @@
             ${!ups.items.length ? `<p class="text-muted small mb-0">${esc(t('fin.ws.ups_done'))}</p>` : ''}`;
         return `<a class="tfb-fin-month ${sm.closed ? 'is-done' : ''}" href="${api.root}/finances/costs#m=${esc(sm.month)}">
                 <i class="bi ${sm.closed ? 'bi-check-circle' : 'bi-calendar2-range'}"></i>
-                <span>${esc(t(sm.closed ? 'fin.ws.month_closed' : 'fin.ws.month_open', {month: sm.label, done: sm.progress.done, total: sm.progress.total}))}</span>
+                <span>${esc(t(sm.closed ? 'fin.ws.month_closed' : sm.progress.total ? 'fin.ws.month_open' : 'fin.ws.month_empty', {month: sm.label, done: sm.progress.done, total: sm.progress.total}))}</span>
                 ${!sm.closed && (sm.open || sm.missing) ? `<span class="small text-muted">${esc(t('fin.ws.month_todo', {open: sm.open, missing: sm.missing}))}</span>` : ''}<span class="ms-auto">›</span></a>
             <div class="tfb-fin-steps">
                 ${step(1, t('fin.ws.step1'), map.lines_total + map.suspects.length, mapBody)}

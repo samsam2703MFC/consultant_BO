@@ -119,7 +119,8 @@
     "SERVICE_MONTH_NOT_OVER": "Le mois {month} n’est pas terminé — les coûts de services se clôturent après sa fin.",
     "SERVICE_MONTH_INCOMPLETE": "Mois impossible à clôturer : à vérifier {open}, manquants {missing}, sans montant PLN {no_amount}.",
     "COST_MONTH_LOCKED": "Le mois {month} est fermé dans le calculateur de coûts — rouvrez-le d’abord.",
-    "SERVICE_NOT_MANUAL": "Seul un coût saisi à la main se supprime — une facture KSeF se rejette dans Zaopatrzenie."
+    "SERVICE_NOT_MANUAL": "Seul un coût saisi à la main se supprime — une facture KSeF se rejette dans Zaopatrzenie.",
+    "SERVICE_MONTH_EMPTY": "Le mois {month} n’a aucune facture de service — rien à clôturer."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",

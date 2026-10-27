@@ -639,5 +639,7 @@
   "fin.costs.closed_ok": "{month} clôturé — {n} catégories dans le calculateur de coûts.",
   "fin.costs.confirm_reopen": "Rouvrir {month} ? Les montants des factures quittent le calculateur, les montants manuels reviennent.",
   "fin.costs.reopened": "Mois rouvert.",
-  "fin.costs.chip_none": "aucune facture"
+  "fin.costs.chip_none": "aucune facture",
+  "fin.ws.month_empty": "Coûts de services de {month} : aucune facture de service — envoyez-les depuis Zaopatrzenie (« → Finances »)",
+  "fin.costs.block.empty": "aucune facture de service ce mois-ci"
 }

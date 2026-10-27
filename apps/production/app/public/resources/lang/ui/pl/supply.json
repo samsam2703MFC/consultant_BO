@@ -639,5 +639,7 @@
   "fin.costs.closed_ok": "{month} zamknięty — {n} kategorii w kalkulatorze kosztów.",
   "fin.costs.confirm_reopen": "Otworzyć {month} ? Kwoty z faktur znikną z kalkulatora, ręczne wrócą.",
   "fin.costs.reopened": "Miesiąc otwarty.",
-  "fin.costs.chip_none": "brak faktur"
+  "fin.costs.chip_none": "brak faktur",
+  "fin.ws.month_empty": "Koszty usług za {month} : brak faktur usług — przenieś je z Zaopatrzenia (« → Finanse »)",
+  "fin.costs.block.empty": "brak faktur usług w tym miesiącu"
 }
