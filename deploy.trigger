@@ -1106,3 +1106,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-27T09:06:45Z tablettes ERP : production générique, bascule, chauffeur, bureau
 2026-10-27T09:35:19Z production : tablette de bureau, PIN et signature sans téléphone, type de tablette
 2026-10-27T09:57:55Z production : factures d'achat, hausse au-dessus du prix de base à valider
+2026-10-27T10:12:42Z production : prix de revient au plus haut prix validé
