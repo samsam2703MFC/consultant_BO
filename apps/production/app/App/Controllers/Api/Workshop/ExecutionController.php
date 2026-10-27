@@ -81,6 +81,7 @@ final class ExecutionController
     public function pair(ApiRequest $request): ApiResult { $r = $this->kiosk->pair($request->body()); return new ApiResult($r, 200, null, $r['device_token']); }
     public function device(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->device($request->context)); }
     public function people(ApiRequest $request): ApiResult { return ApiResult::list($this->kiosk->people($request->context)); }
+    public function groups(ApiRequest $request): ApiResult { return ApiResult::list($this->kiosk->groups($request->context)); }
     public function identify(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->identify($request->body(), $request->context)); }
     public function refresh(ApiRequest $request): ApiResult { return new ApiResult($this->kiosk->refresh($request->context)); }
     public function me(ApiRequest $request): ApiResult { return new ApiResult($this->execution->me($request->context)); }

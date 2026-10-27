@@ -22,6 +22,12 @@ final class DriverController
             $vehicle !== null && ctype_digit($vehicle) ? (int) $vehicle : null));
     }
 
+    /** Tournées du jour, avant l'identification du chauffeur : la tablette les propose en premier (tournée → chauffeur → PIN). */
+    public function tours(ApiRequest $request): ApiResult
+    {
+        return new ApiResult($this->driver->tours($request->context, $this->date($request, false)));
+    }
+
     public function run(ApiRequest $request): ApiResult
     {
         return new ApiResult($this->driver->run($request->context, $request->body()));

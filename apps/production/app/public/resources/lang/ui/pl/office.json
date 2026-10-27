@@ -38,5 +38,6 @@
   "hello": "Dzień dobry, {name}!",
   "bye": "Do widzenia, {name}!",
   "done_back": "Powrót do ekranu startowego…",
-  "ok": "OK"
+  "ok": "OK",
+  "no_section": "Bez działu"
 }

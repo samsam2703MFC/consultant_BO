@@ -11804,6 +11804,74 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
+                "description": "Tablette de groupe : son groupe ; tablette générique : le groupe touché (en-tête X-Kiosk-Group) ; tablette chauffeur : tout le personnel, les chauffeurs (driver) en tête.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/groups": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Grupy do wyboru / Groupes à choisir",
+                "operationId": "kioskGroups",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/KioskGroup"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Tablette générique (atelier sans groupe) : groupe → personne → PIN. Le groupe touché part ensuite dans l'en-tête X-Kiosk-Group, puis dans le jeton de la personne : la production suit ce groupe.",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -14698,6 +14766,75 @@
                         "schema": {
                             "type": "string",
                             "example": "2026-10-27 07:58:12"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": []
+                    }
+                ]
+            }
+        },
+        "/driver/tours": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Tablet kierowcy : trasy dnia przed logowaniem / Tablette chauffeur : tournées du jour avant l'identification",
+                "operationId": "driverTours",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/DriverTours"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Tablette en mode « driver » (jeton de la tablette, sans personne) : la tournée se choisit d'abord, puis le chauffeur et son PIN.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "jour d'expédition (défaut : comme /driver/day)"
                         }
                     },
                     {
@@ -20807,6 +20944,72 @@
                     },
                     "clocked_in": {
                         "type": "boolean"
+                    },
+                    "driver": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "KioskGroup": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "color": {
+                        "type": "string"
+                    },
+                    "people": {
+                        "type": "integer"
+                    },
+                    "present": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "DriverTours": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string"
+                    },
+                    "dates": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "default_vehicle_id": {
+                        "type": "integer"
+                    },
+                    "tours": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "label": {
+                                    "type": "string"
+                                },
+                                "carrier": {
+                                    "type": "string"
+                                },
+                                "customers": {
+                                    "type": "integer"
+                                },
+                                "pallets": {
+                                    "type": "number"
+                                },
+                                "departure": {
+                                    "type": "string"
+                                }
+                            }
+                        }
                     }
                 }
             },

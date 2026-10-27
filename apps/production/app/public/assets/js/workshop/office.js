@@ -131,7 +131,8 @@
         if (!paired) return renderPairing();
         clearTimers();
         try {
-            sections = await api('GET', '/kiosk/office/sections');
+            // Tout le personnel : les personnes sans dział forment la section 0, nommée ici (« Bez działu » / « Sans service »).
+            sections = (await api('GET', '/kiosk/office/sections')).map(x => x.name ? x : {...x, name: t('no_section')});
         } catch (err) {
             if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_OFFICE') return;
             el.innerHTML = header() + `<section class="kiosk-card"><p class="kiosk-error">${esc(err.message)}</p>

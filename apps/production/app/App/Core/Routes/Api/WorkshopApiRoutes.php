@@ -204,6 +204,8 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/pair', ExecutionController::class, 'pair', null],
             ['GET', '/kiosk/device', ExecutionController::class, 'device', 'kiosk'],
             ['GET', '/kiosk/people', ExecutionController::class, 'people', 'kiosk'],
+            // Tablette générique (atelier sans groupe) : groupe → personne → PIN ; le groupe touché part en X-Kiosk-Group.
+            ['GET', '/kiosk/groups', ExecutionController::class, 'groups', 'kiosk'],
             ['POST', '/kiosk/identify', ExecutionController::class, 'identify', 'kiosk'],
             ['GET', '/kiosk/me', ExecutionController::class, 'me', 'kiosk_employee'],
             ['POST', '/kiosk/refresh', ExecutionController::class, 'refresh', 'kiosk_employee'],
@@ -250,6 +252,8 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/office/status', ExecutionController::class, 'officeStatus', 'kiosk'],
             // Tablet kierowcy (tablet w trybie « driver ») : trasa dnia, potwierdzenia dostaw, dokumenty — po wybraniu
             // kierowcy z listy i jego PIN-ie (/kiosk/people, /kiosk/identify), jak na tablecie pracowni.
+            // Tournées du jour avant l'identification : tournée → chauffeur → PIN (27/10/2026).
+            ['GET', '/driver/tours', DriverController::class, 'tours', 'kiosk'],
             ['GET', '/driver/day', DriverController::class, 'day', 'kiosk_employee'],
             ['POST', '/driver/run', DriverController::class, 'run', 'kiosk_employee'],
             ['POST', '/driver/stops', DriverController::class, 'stop', 'kiosk_employee'],

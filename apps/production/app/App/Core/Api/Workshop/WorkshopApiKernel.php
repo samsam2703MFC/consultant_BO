@@ -86,12 +86,15 @@ final class WorkshopApiKernel
             $cookie = trim((string) $request->cookies->get(self::DEVICE_COOKIE, ''));
             $employee = $permission === 'kiosk_employee' ? trim((string) $request->headers->get('X-Employee-Token', '')) : null;
             $deviceToken = $header !== '' ? $header : $cookie;
+            // Tablette générique (sans groupe) : le groupe touché à l'accueil (en-tête X-Kiosk-Group) ; une tablette de groupe l'ignore.
+            $chosen = trim((string) $request->headers->get('X-Kiosk-Group', ''));
+            $chosenGroup = ctype_digit($chosen) && (int) $chosen > 0 ? (int) $chosen : null;
             try {
-                $context = $this->kiosk->context($deviceToken, $employee, $context->requestId, $context->translator);
+                $context = $this->kiosk->context($deviceToken, $employee, $context->requestId, $context->translator, $chosenGroup);
             } catch (ApiException $e) {
                 if ($e->errorCode() !== 'DEVICE_UNAUTHENTICATED' || $cookie === '' || $cookie === $deviceToken) throw $e;
                 $deviceToken = $cookie;
-                $context = $this->kiosk->context($deviceToken, $employee, $context->requestId, $context->translator);
+                $context = $this->kiosk->context($deviceToken, $employee, $context->requestId, $context->translator, $chosenGroup);
             }
         } elseif ($permission === 'qr' || $permission === 'phone') {
             // Téléphone personnel (pointage par QR code) : QR frais de la tablette, et pour pointer le jeton du téléphone.
@@ -178,7 +181,7 @@ final class WorkshopApiKernel
         $response->headers->set('Access-Control-Allow-Origin', $origin);
         $response->headers->set('Vary', 'Origin');
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, X-Access-Token, X-Device-Token, X-Employee-Token, X-Qr-Token, X-Phone-Token, Content-Type, Accept-Language');
+        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, X-Access-Token, X-Device-Token, X-Employee-Token, X-Kiosk-Group, X-Qr-Token, X-Phone-Token, Content-Type, Accept-Language');
         $response->headers->set('Access-Control-Expose-Headers', 'X-Request-Id, Content-Language');
         $response->headers->set('Access-Control-Max-Age', '600');
     }

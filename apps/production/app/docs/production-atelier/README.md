@@ -223,6 +223,13 @@ php tests/tfb_api_test.php    # bout en bout sur une base jetable erp_tfb_test
 - Filtres : échéance (tout, en retard, jusqu'à aujourd'hui, 7 jours), règle, « Moje » (poste de l'utilisateur dans Stanowiska). La lecture ne modifie rien : un cas disparaît quand il est réglé.
 - Dzisiaj › « Do zrobienia » compte les commandes, proformas, rappels et documents avec cette file (mêmes chiffres) et ouvre la file filtrée sur la règle.
 
+## Tablettes : production générique, bascule entre présents, chauffeur, bureau (27/10/2026)
+
+- **Tablette de production générique** : une tablette en mode atelier **sans groupe** (Tablet produkcji › Zarządzanie › Tablety) propose d'abord les groupes de production actifs (nom PL / FR, couleur, présents sur le total) ; on touche son groupe, puis son nom, puis on tape son PIN, et l'on entre dans la production **de ce groupe** (plan, recettes, stock, qualité, TRS, nouveaux produits). Le groupe touché reste sur la tablette (rangée de groupes au-dessus de l'équipe pour en changer) ; il part dans l'en-tête `X-Kiosk-Group` avant l'identification, puis dans le jeton de la personne (claim `grp`) — tous les services du groupe fonctionnent sans changement. Une tablette rattachée à un groupe garde ce groupe (l'en-tête est ignoré) ; badge passé avant de choisir un groupe : groupe principal de la personne. Membres d'un groupe : groupe principal ou équipe active du groupe. API : `GET /kiosk/groups`.
+- **Changer de personne** (en-tête, toute tablette de production) : les personnes du groupe **en poste** (hors celle connectée ; sans PIN grisées), un toucher puis le PIN → on reprend au même onglet avec la nouvelle personne ; « Annuler » revient à la personne connectée.
+- **Tablette chauffeur** : avant le PIN, liste déroulante des **tournées** du jour (véhicule, transporteur, heure de départ, clients, palettes ; proposée : la dernière choisie ou le QR, sinon le véhicule de la tablette), puis **chauffeur** dans la liste de tout le personnel, les chauffeurs (poste Kierowca) en tête, puis PIN. La tournée choisie devient le véhicule de la journée. API : `GET /driver/tours`.
+- **Tablette de bureau (pointage)** : tout le personnel actif de l'entreprise, y compris les personnes sans service (section « Sans service » en fin de liste).
+
 ## Points ouverts (données réelles à fournir)
 
 Les écrans existent ; ce qui manque, ce sont les données réelles de l'atelier (la copie de test tourne sur une démo réaliste).
