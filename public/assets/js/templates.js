@@ -3012,8 +3012,8 @@ function tplProduits(c, x){
       ${c.pdFournEtat ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.pdFournEtat)}</span>` : ''}
       <button ${x.A(c.pdBasculerSansVente)} title="${c.pdSansVente} référence(s) au catalogue sans aucune vente sur la période" style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 12px;background:${c.pdMasquerSansVente ? 'var(--color-text)' : 'var(--color-surface)'};color:${c.pdMasquerSansVente ? 'var(--color-surface)' : 'var(--color-text)'};font-family:var(--font-ui);font-size:12px;cursor:pointer">${c.pdMasquerSansVente ? 'Sans vente masquées' : 'Masquer les sans vente'} (${c.pdSansVente})</button>
       <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.pdAffichees)} références · pondération ${c.pdPond}</span>
-      <!-- Encoder de nouvelles références : un PDF lu, relu, puis créé chez TFBuddy. -->
-      <button ${x.A(c.pdOuvrirImport)} title="Lire un catalogue, une fiche technique ou une liste de prix en PDF, relire les produits trouvés, puis les créer dans TFBuddy" style="margin-left:auto;border:0.5px solid var(--color-primary);border-radius:999px;padding:6px 14px;background:var(--color-surface);color:var(--color-primary);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">＋ Nouveaux produits (PDF)</button>
+      <!-- L'épicerie depuis le tarif PDF d'un fournisseur : l'assistant en cinq étapes. -->
+      <button ${x.A(c.pdOuvrirImport)} title="Scanner le tarif d’un fournisseur d’épicerie : un assistant encode fournisseur, articles, matières et produits de vente, les fait valider, puis les crée dans TFBuddy" style="margin-left:auto;border:0.5px solid var(--color-primary);border-radius:999px;padding:6px 14px;background:var(--color-surface);color:var(--color-primary);font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer">＋ Épicerie depuis un PDF</button>
     </div>
     <!-- Les seuils d'arbitrage, modifiables ici : garder au-dessus, effacer en
          dessous, modifier entre les deux. Ils s'enregistrent avec le réglage
@@ -8496,10 +8496,10 @@ function tplScoring(c, x){
   </div>`;
 }
 
-/* --- Nouveaux produits depuis un PDF ----------------------------------------
-   Trois bandeaux dans l'ordre du geste : déposer le PDF, relire les lignes
-   (seules les cochées partiront), créer chez TFBuddy. La route de création
-   est dite en toutes lettres, vérifiée ou non : on sait où l'on écrit. */
+/* --- Épicerie depuis le PDF d'un fournisseur : l'assistant en cinq étapes ----
+   Document → Fournisseur → Articles & matières → Produits de vente →
+   Validation. Chaque étape porte le nombre de points bloquants qui la
+   concernent ; la validation n'est possible qu'à zéro, et fige l'encodage. */
 function tplImportProduits(c, x){
   const { esc } = x;
   const m = c.pdImport;
@@ -8507,98 +8507,168 @@ function tplImportProduits(c, x){
   const BOX = 'background:var(--color-background-secondary);border-radius:10px;padding:12px 14px';
   const INP = 'font-family:var(--font-ui);font-size:12.5px;border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 7px;background:var(--color-surface);color:var(--color-text);box-sizing:border-box';
   const TDp = 'padding:7px 6px;border-top:0.5px solid var(--color-border-tertiary);vertical-align:top';
-  const btn = (fn, txt, primaire) => `<button ${x.A(fn)} ${fn ? '' : 'disabled'} style="border:${primaire ? 'none' : '0.5px solid var(--color-border-secondary)'};border-radius:999px;padding:8px 16px;background:${primaire ? (fn ? 'var(--color-primary)' : 'var(--color-border-secondary)') : 'var(--color-surface)'};color:${primaire ? '#fff' : 'var(--color-text)'};font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${fn ? 'pointer' : 'default'};white-space:nowrap">${txt}</button>`;
-  const alerte = (t, rouge) => `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:${rouge ? 'rgba(141,29,44,0.08)' : '#e6f2e8'};color:${rouge ? '#8D1D2C' : '#2d7a3e'};font-size:12px;line-height:1.5;text-wrap:pretty">${esc(t)}</div>`;
+  const MU = 'font-size:11px;color:var(--color-text-muted);margin-top:2px';
+  const ORANGE = 'border-color:#C17A2A';
+  const btn = (fn, txt, primaire) => `<button ${x.A(fn)} ${fn ? '' : 'disabled'} style="border:${primaire ? 'none' : '0.5px solid var(--color-border-secondary)'};border-radius:999px;padding:8px 16px;background:${primaire ? (fn ? 'var(--color-primary)' : 'var(--color-border-secondary)') : 'var(--color-surface)'};color:${primaire ? '#fff' : (fn ? 'var(--color-text)' : 'var(--color-text-muted)')};font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${fn ? 'pointer' : 'default'};white-space:nowrap">${txt}</button>`;
+  const alerte = (t, ton) => `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:${ton === 'ko' ? 'rgba(141,29,44,0.08)' : (ton === 'att' ? '#FBEFE0' : '#e6f2e8')};color:${ton === 'ko' ? '#8D1D2C' : (ton === 'att' ? '#8a5a13' : '#2d7a3e')};font-size:12px;line-height:1.5;text-wrap:pretty">${esc(t)}</div>`;
+  const sel = (fn, opts, val, extra) => `<select ${x.C(fn)} style="${INP};${extra || ''}">${opts.map(o => `<option value="${esc(o.v)}"${o.v === val ? ' selected' : ''}>${esc(o.n)}</option>`).join('')}</select>`;
+  const tvaSel = (fn, val) => sel(fn, ['', '6', '12', '21'].map(t => ({ v: t, n: t ? t + ' %' : '—' })), val, val ? '' : ORANGE);
+  const caseInclure = l => `<input type="checkbox" ${l.inclus ? 'checked' : ''} ${l.inclure ? x.C(l.inclure) : 'disabled'}>`;
+  const erreurs = l => l.erreurs.length && l.inclus ? `<div style="font-size:11px;color:#8D1D2C;margin-top:3px">${l.erreurs.map(esc).join('<br>')}</div>` : '';
+
+  const stepper = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:16px">${m.etapes.map(e => `
+    <button ${x.A(e.aller)} ${e.aller ? '' : 'disabled'} style="display:flex;align-items:center;gap:8px;border:0.5px solid ${e.actif ? 'var(--color-primary)' : 'var(--color-border-secondary)'};border-radius:999px;padding:6px 13px 6px 6px;background:${e.actif ? 'var(--color-primary)' : 'var(--color-surface)'};color:${e.actif ? '#fff' : 'var(--color-text)'};font-family:var(--font-ui);font-size:12.5px;font-weight:500;cursor:${e.aller ? 'pointer' : 'default'};opacity:${e.aller ? 1 : .5}">
+      <span style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;background:${e.actif ? 'rgba(255,255,255,.22)' : (e.bloquants ? '#8D1D2C' : (e.fait ? '#2d7a3e' : 'var(--color-background-secondary)'))};color:${e.actif || e.bloquants || e.fait ? '#fff' : 'var(--color-text-muted)'}">${e.bloquants && !e.actif ? e.bloquants : (e.fait ? '✓' : e.n)}</span>${esc(e.nom)}</button>`).join('')}</div>`;
+
+  // 1 · le document
+  const etape1 = `
+    ${m.iaOk ? '' : alerte('La lecture du PDF demande la clé Anthropic : Paramètres › IA.', 'ko')}
+    ${m.lecture
+      ? `<div class="sq-drop" style="cursor:default"><b>Lecture de « ${esc(m.lecture)} »…</b>une à deux minutes pour un long tarif — rien n’est créé à cette étape</div>`
+      : `<label class="sq-drop"><b>${m.fichier ? 'Lire un autre PDF' : 'Choisir le PDF du fournisseur'}</b>tarif, catalogue ou offre de prix — un PDF scanné convient · 8 Mo au plus${m.modele ? ' · lu par ' + esc(m.modele) : ''}<input type="file" accept="application/pdf,.pdf" ${x.C(m.deposer)} style="display:none"></label>`}
+    ${m.fichier ? `<div style="${BOX};margin-top:10px;font-size:12.5px"><b>${esc(m.fichier)}</b> — ${esc(m.resume)}</div>` : ''}`;
+
+  // 2 · le fournisseur
+  const F = m.four;
+  const etape2 = !F ? '' : `
+    <div style="display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:14px;align-items:start">
+      <div style="${BOX};font-size:12.5px;line-height:1.6">
+        <div style="${CAP};margin-bottom:6px">Lu dans le PDF</div>
+        ${['nom', 'tva', 'adresse', 'ville', 'email', 'telephone', 'web'].filter(k => F.lu[k]).map(k => `<div>${k === 'nom' ? '<b>' + esc(F.lu[k]) + '</b>' : esc(F.lu[k])}</div>`).join('') || '<div style="color:var(--color-text-muted)">Aucun émetteur reconnu.</div>'}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <label style="display:flex;gap:10px;align-items:flex-start;border:0.5px solid ${F.existant ? 'var(--color-primary)' : 'var(--color-border-secondary)'};border-radius:10px;padding:10px 12px;cursor:pointer">
+          <input type="radio" name="pi-four" ${F.existant ? 'checked' : ''} ${F.choisirExistant ? x.C(F.choisirExistant) : 'disabled'} style="margin-top:3px">
+          <span style="flex:1"><b style="font-size:12.5px">Fournisseur existant dans TFBuddy</b>
+            <div style="margin-top:6px">${F.existant ? sel(F.setId, F.options, F.id, 'width:100%' + (F.id ? '' : ';' + ORANGE)) : `<span style="${MU}">reconnu par son n° de TVA ou son nom quand il existe</span>`}</div></span>
+        </label>
+        <label style="display:flex;gap:10px;align-items:flex-start;border:0.5px solid ${!F.existant ? 'var(--color-primary)' : 'var(--color-border-secondary)'};border-radius:10px;padding:10px 12px;cursor:pointer">
+          <input type="radio" name="pi-four" ${!F.existant ? 'checked' : ''} ${F.choisirNouveau ? x.C(F.choisirNouveau) : 'disabled'} style="margin-top:3px">
+          <span style="flex:1"><b style="font-size:12.5px">Nouveau fournisseur, à créer</b>
+            ${!F.existant ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">${F.champs.map(ch => `<label style="font-size:11px;color:var(--color-text-muted)">${esc(ch.lib)}<input value="${esc(ch.val)}" ${ch.set ? x.C(ch.set) : 'disabled'} style="${INP};width:100%;margin-top:3px;${ch.lib === 'Nom' && !ch.val ? ORANGE : ''}"></label>`).join('')}</div>` : ''}</span>
+        </label>
+        <label style="font-size:12.5px;display:flex;align-items:center;gap:10px">Prix du tarif valables à partir du <input type="date" value="${esc(F.tarifDu)}" ${F.setTarifDu ? x.C(F.setTarifDu) : 'disabled'} style="${INP}"></label>
+      </div>
+    </div>`;
+
+  // 3 · articles & matières
+  const etape3 = `
+    <div style="overflow-x:auto;border:0.5px solid var(--color-border-tertiary);border-radius:10px">
+    <table style="width:100%;min-width:1120px;border-collapse:collapse;font-size:12.5px">
+      <thead><tr style="text-align:left">
+        <th style="${TH2};width:28px;text-align:center"><input type="checkbox" ${m.tout ? 'checked' : ''} ${m.basculerTout ? x.C(m.basculerTout) : 'disabled'} title="Tout cocher / décocher"></th>
+        <th style="${TH2}">Article du fournisseur</th><th style="${TH2};text-align:right">Unités / colis</th><th style="${TH2};text-align:right">Prix colis HT</th>
+        <th style="${TH2};text-align:right">Coût pièce HT</th><th style="${TH2}">TVA achat</th><th style="${TH2}">Matière</th><th style="${TH2}">Lecture</th>
+      </tr></thead>
+      <tbody>${m.lignes.map(l => `<tr style="${l.inclus ? '' : 'opacity:.5'}">
+        <td style="${TDp};text-align:center">${caseInclure(l)}</td>
+        <td style="${TDp};min-width:210px"><b style="font-weight:500">${esc(l.art)}</b><div style="${MU}">${[l.ref ? 'réf. ' + esc(l.ref) : '', l.ean ? 'EAN ' + esc(l.ean) : '', esc(l.contenance)].filter(Boolean).join(' · ')}</div>${erreurs(l)}</td>
+        <td style="${TDp};text-align:right">${l.ro ? esc(l.unites) : `<input value="${esc(l.unites)}" ${x.C(l.setUnites)} inputmode="numeric" style="${INP};width:52px;text-align:right;${l.unites || l.prixUnitLu ? '' : ORANGE}">`}</td>
+        <td style="${TDp};text-align:right;white-space:nowrap">${l.ro ? esc(l.prixColis) + ' €' : `<input value="${esc(l.prixColis)}" ${x.C(l.setPrixColis)} inputmode="decimal" style="${INP};width:74px;text-align:right;${l.prixColis || l.prixUnitLu ? '' : ORANGE}"> €`}${l.prixUnitLu ? `<div style="${MU}">${esc(l.prixUnitLu)} l’unité (PDF)</div>` : ''}</td>
+        <td style="${TDp};text-align:right;font-weight:600;white-space:nowrap">${esc(l.cout)}</td>
+        <td style="${TDp}">${l.ro ? (l.tvaAchat ? esc(l.tvaAchat) + ' %' : '') : tvaSel(l.setTvaAchat, l.tvaAchat)}</td>
+        <td style="${TDp};min-width:240px">
+          ${l.ro ? `<span>${l.matNouvelle ? esc(l.matNom) + ' <span style="color:var(--color-text-muted)">(nouvelle)</span>' : esc(l.matOpts[1] ? l.matOpts[1].n : l.matNom)}</span>${l.matNouvelle && l.matCatNom ? `<div style="${MU}">${esc(l.matCatNom)}</div>` : ''}`
+            : `${sel(l.setMatMode, l.matOpts, l.matMode, 'width:100%')}${l.matVia ? `<div style="${MU};color:#2d7a3e">${esc(l.matVia)}</div>` : ''}
+               ${l.matNouvelle ? `<input value="${esc(l.matNom)}" ${x.C(l.setMatNom)} placeholder="nom de la matière" style="${INP};width:100%;margin-top:5px">${sel(l.setMatCat, l.matCatOpts, l.matCat, 'width:100%;margin-top:5px' + (l.matCatManque && l.inclus ? ';' + ORANGE : ''))}` : ''}`}
+        </td>
+        <td style="${TDp};font-size:11.5px;max-width:190px">${l.conf ? `<span style="color:${l.confCol};font-weight:600">${esc(l.conf)}</span>` : ''}${l.lecture ? `<div style="color:var(--color-text-muted);margin-top:2px;text-wrap:pretty">${esc(l.lecture)}</div>` : ''}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">Coût pièce = prix du colis ÷ unités par colis. Une matière déjà connue de TFBuddy (même référence chez ce fournisseur, ou même nom) est reprise : choisissez « Nouvelle matière » pour en créer une autre.</div>`;
+
+  // 4 · produits de vente
+  const etape4 = `
+    <div style="overflow-x:auto;border:0.5px solid var(--color-border-tertiary);border-radius:10px">
+    <table style="width:100%;min-width:1120px;border-collapse:collapse;font-size:12.5px">
+      <thead><tr style="text-align:left">
+        <th style="${TH2};width:28px;text-align:center"><input type="checkbox" ${m.tout ? 'checked' : ''} ${m.basculerTout ? x.C(m.basculerTout) : 'disabled'} title="Tout cocher / décocher"></th>
+        <th style="${TH2}">Produit de vente</th><th style="${TH2}">Catégorie</th><th style="${TH2}">TVA</th><th style="${TH2};text-align:right">Prix TTC</th>
+        <th style="${TH2};text-align:right">Coût pièce HT</th><th style="${TH2};text-align:right">Coefficient</th><th style="${TH2}">Prix pour la cible</th><th style="${TH2}">État</th>
+      </tr></thead>
+      <tbody>${m.lignes.map(l => `<tr style="${l.inclus ? '' : 'opacity:.5'}">
+        <td style="${TDp};text-align:center">${caseInclure(l)}</td>
+        <td style="${TDp};min-width:220px">${l.ro ? `<b style="font-weight:500">${esc(l.prodNom)}</b>` : `<input value="${esc(l.prodNom)}" ${x.C(l.setProdNom)} style="${INP};width:100%;font-weight:500">`}
+          ${l.existe ? `<div style="font-size:11px;color:#b8671a;margin-top:3px">${esc(l.existe)}</div>` : ''}${l.allergenes ? `<div style="${MU}">Allergènes : ${esc(l.allergenes)}</div>` : ''}</td>
+        <td style="${TDp};min-width:190px">${l.ro ? esc(l.prodCatNom) : sel(l.setProdCat, l.prodCatOpts, l.prodCat, 'width:100%' + (l.prodCatManque && l.inclus ? ';' + ORANGE : ''))}</td>
+        <td style="${TDp}">${l.ro ? (l.tva ? esc(l.tva) + ' %' : '') : tvaSel(l.setTva, l.tva)}</td>
+        <td style="${TDp};text-align:right;white-space:nowrap">${l.ro ? esc(l.prix) + ' €' : `<input value="${esc(l.prix)}" ${x.C(l.setPrix)} inputmode="decimal" style="${INP};width:70px;text-align:right;${l.prix ? '' : ORANGE}"> €`}${l.pvc ? `<div style="${MU}">conseillé ${esc(l.pvc)}</div>` : ''}</td>
+        <td style="${TDp};text-align:right;white-space:nowrap">${esc(l.cout)}</td>
+        <td style="${TDp};text-align:right;white-space:nowrap"><b style="color:${l.coefCol}">${esc(l.coef)}</b><div style="${MU}">${esc(l.marge)}${l.cible ? ' · cible ' + esc(l.cible) : ''}</div></td>
+        <td style="${TDp};white-space:nowrap">${l.prixCible ? (l.appliquerCible ? `<button ${x.A(l.appliquerCible)} title="Appliquer le prix qui atteint la cible de la catégorie" style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:3px 10px;background:var(--color-surface);font-family:var(--font-ui);font-size:11.5px;cursor:pointer">→ ${esc(l.prixCible)}</button>` : esc(l.prixCible)) : ''}</td>
+        <td style="${TDp};font-size:11.5px;max-width:190px" title="${esc(l.etatTitre)}">${l.etat ? `<b style="color:${l.etatCol}">${esc(l.etat)}</b><div style="${MU};text-wrap:pretty">${esc(l.etatTitre)}</div>` : ''}${erreurs(l)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">Coefficient = prix de vente HT ÷ coût d’achat de la pièce. Vert : à la cible de la catégorie ou au-dessus ; orange : sous la cible ; rouge : marge brute sous 40 %. Chaque produit aura pour recette 1 × sa matière.</div>`;
+
+  // 5 · validation
+  const etape5 = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px">${m.recap.map(k => `
+      <div style="${BOX}"><div style="${CAP}">${esc(k.k)}</div><div style="font-size:19px;font-weight:500;margin-top:4px;line-height:1.15">${esc(k.v)}</div><div style="${MU}">${esc(k.s)}</div></div>`).join('')}</div>
+    <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><div style="${CAP};margin-bottom:6px;color:#8D1D2C">Bloquants · ${m.bloquants.length}</div>
+        ${m.bloquants.length ? m.bloquants.map(b => `<div style="display:flex;gap:8px;align-items:baseline;font-size:12px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary)"><span style="flex:1;color:#8D1D2C">${esc(b.texte)}</span><button ${x.A(b.aller)} style="border:none;background:none;color:var(--color-primary);font-family:var(--font-ui);font-size:11.5px;cursor:pointer;white-space:nowrap">étape ${b.etape} →</button></div>`).join('') : '<div style="font-size:12px;color:#2d7a3e">Aucun : l’encodage peut être validé.</div>'}</div>
+      <div><div style="${CAP};margin-bottom:6px;color:#8a5a13">À regarder · ${m.avertissements.length}</div>
+        ${m.avertissements.length ? m.avertissements.map(b => `<div style="display:flex;gap:8px;align-items:baseline;font-size:12px;padding:6px 0;border-top:0.5px solid var(--color-border-tertiary)"><span style="flex:1">${esc(b.texte)}</span><button ${x.A(b.aller)} style="border:none;background:none;color:var(--color-primary);font-family:var(--font-ui);font-size:11.5px;cursor:pointer;white-space:nowrap">étape ${b.etape} →</button></div>`).join('') : '<div style="font-size:12px;color:var(--color-text-muted)">Rien à signaler.</div>'}</div>
+    </div>
+    <div style="${BOX};margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      ${m.fige ? `<span style="font-size:13px;color:#2d7a3e;font-weight:600;flex:1">✓ ${esc(m.valideTxt)}</span>${btn(m.rouvrir, 'Rouvrir pour corriger', false)}`
+        : `<span style="font-size:12.5px;flex:1">${m.bloquants.length ? 'Corrigez les points bloquants pour pouvoir valider.' : 'Validé, l’encodage est signé à votre nom (' + esc(m.signataire) + ') et ne se modifie plus sans être rouvert.'}</span>${btn(m.valider, '✓ Valider l’encodage', true)}`}
+    </div>
+    <div style="margin-top:16px">
+      <div style="${CAP};margin-bottom:6px">Créer dans TFBuddy</div>
+      <div style="${BOX};display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="font-size:12.5px;flex:1;min-width:260px">${m.destTxt
+          ? `<b>${esc(m.destTxt)}</b> <span style="font-size:11.5px;color:${m.destVerifiee ? '#2d7a3e' : '#b8671a'}">${m.destVerifiee ? '✓ POST annoncé par TFBuddy' : 'non vérifiée'}</span>`
+          : (m.aucunCompte ? '<span style="color:#8D1D2C">Aucun compte TFBuddy configuré : Paramètres › compte admin ERP.</span>' : 'Une seule route crée la chaîne complète : POST /products/resale. Vérifiez si TFBuddy l’a ouverte.')}</div>
+        ${btn(m.sonder, m.sondeChargement ? 'Vérification…' : 'Vérifier l’API', false)}
+      </div>
+      ${m.sondeErreur ? alerte('Vérification impossible : aucun compte TFBuddy configuré, ou API injoignable.', 'ko') : ''}
+      ${m.sondeSansPost ? alerte('TFBuddy n’accepte pas encore la création : POST /products/resale n’existe pas (fournisseurs, matières et produits sont en lecture seule). La demande est rédigée en français, anglais et polonais. En attendant, « ⇩ CSV » donne l’encodage validé à saisir dans TFBuddy.', 'att') : ''}
+      ${m.sonde ? `<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px">${m.sonde.map(s2 => `
+        <div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:10px 12px">
+          <div style="font-size:12.5px;font-weight:500">${esc(s2.nom)} <span style="font-weight:400;font-size:11px;color:var(--color-text-muted)">${esc(s2.base)}</span></div>
+          <table style="border-collapse:collapse;font-size:11.5px;margin-top:6px;width:100%">
+            ${s2.routes.map(r => `<tr>
+              <td style="padding:3px 10px 3px 0;font-family:monospace">${esc(r.route)}</td>
+              <td style="padding:3px 10px 3px 0;color:var(--color-text-muted)">${esc(r.allow || r.code)}</td>
+              <td style="padding:3px 10px 3px 0;white-space:nowrap">POST : <b style="color:${r.postCol}">${r.post}</b></td>
+              <td style="padding:3px 0;text-align:right">${r.choisie ? '<span style="color:#2d7a3e;font-weight:600">✓ choisie</span>' : (r.choisir ? `<button ${x.A(r.choisir)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:2px 9px;background:var(--color-surface);font-family:var(--font-ui);font-size:11px;cursor:pointer">Utiliser</button>` : '')}</td>
+            </tr>`).join('')}
+          </table>
+        </div>`).join('')}</div>` : ''}
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px">
+        <label style="font-size:12.5px;display:flex;align-items:center;gap:7px;cursor:pointer"><input type="checkbox" ${m.actifs ? 'checked' : ''} ${x.C(m.setActifs)}> Produits actifs tout de suite <span style="color:var(--color-text-muted)">(sinon inactifs, à activer au panel)</span></label>
+        <span style="flex:1"></span>
+        ${btn(m.csv, '⇩ CSV', false)}
+        <span title="${esc(m.creerPourquoi)}">${btn(m.creer, m.creation ? 'Création…' : 'Créer ' + m.nCreer + ' article' + (m.nCreer > 1 ? 's' : '') + ' dans TFBuddy', true)}</span>
+      </div>
+      ${!m.creer && m.creerPourquoi && !m.creation ? `<div style="font-size:11.5px;color:var(--color-text-muted);text-align:right;margin-top:4px">${esc(m.creerPourquoi)}</div>` : ''}
+    </div>`;
+
+  const corps = [etape1, etape2, etape3, etape4, etape5][m.etape - 1];
   return `
   <div ${x.A(m.close)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
-  <div data-scroll="pi-import" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(1180px,94vw);max-height:90vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:24px 26px;box-sizing:border-box">
+  <div data-scroll="pi-import" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(1240px,96vw);max-height:92vh;overflow-y:auto;background:var(--color-surface);border-radius:14px;z-index:81;box-shadow:0 24px 60px rgba(34,34,34,0.25);padding:22px 26px;box-sizing:border-box">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
       <div>
-        <div style="${CAP}">Nouveaux produits</div>
-        <div style="font-family:var(--font-display);font-size:20px;margin-top:3px">Encoder depuis un PDF</div>
-        <div style="font-size:12px;color:var(--color-text-muted);margin-top:3px">Le PDF est lu par Claude, vous relisez, puis les lignes cochées sont créées dans TFBuddy.</div>
+        <div style="${CAP}">Épicerie · nouveaux articles</div>
+        <div style="font-family:var(--font-display);font-size:20px;margin-top:3px">Encoder le tarif d’un fournisseur</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin-top:3px">Chaque article devient fournisseur → article → prix → matière → recette → produit de vente. Rien n’est créé avant la validation.</div>
       </div>
       <button ${x.A(m.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">✕</button>
     </div>
     ${m.chargement ? `<div style="padding:24px;text-align:center;font-size:12.5px;color:var(--color-text-muted)">Lecture de l’état…</div>` : `
-    ${m.injoignable ? alerte('API du cockpit injoignable : la lecture et la création demandent le serveur.', true) : ''}
-
-    <div style="margin-top:16px">
-      <div style="${CAP};margin-bottom:6px">1 · Le PDF</div>
-      ${m.iaOk ? '' : alerte('La lecture du PDF demande la clé Anthropic : Paramètres › IA.', true)}
-      ${m.lecture
-        ? `<div class="sq-drop" style="cursor:default"><b>Lecture de « ${esc(m.lecture)} »…</b>une à deux minutes pour un long catalogue — rien n’est créé à cette étape</div>`
-        : `<label class="sq-drop"><b>${m.fichier ? 'Lire un autre PDF' : 'Choisir le PDF'}</b>catalogue fournisseur, fiche technique ou liste de prix · 8 Mo au plus${m.modele ? ' · lu par ' + esc(m.modele) : ''}<input type="file" accept="application/pdf,.pdf" ${x.C(m.deposer)} style="display:none"></label>`}
-    </div>
-    ${m.err ? alerte(m.err, true) : ''}
-    ${m.info ? alerte(m.info, false) : ''}
-
-    ${m.fichier ? `
-    <div style="margin-top:18px">
-      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px">
-        <div style="${CAP}">2 · Relire — ${esc(m.fichier)}</div>
-        <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(m.resume)}</div>
-      </div>
-      <div style="overflow-x:auto;border:0.5px solid var(--color-border-tertiary);border-radius:10px">
-      <table style="width:100%;min-width:1040px;border-collapse:collapse;font-size:12.5px">
-        <thead><tr style="text-align:left">
-          <th style="${TH2};width:28px;text-align:center"><input type="checkbox" ${m.tout ? 'checked' : ''} ${m.basculerTout ? x.C(m.basculerTout) : 'disabled'} title="Tout cocher / décocher"></th>
-          <th style="${TH2}">Nom</th><th style="${TH2}">Catégorie</th><th style="${TH2};text-align:right">Prix TTC</th><th style="${TH2}">TVA</th>
-          <th style="${TH2}">Poids · parts</th><th style="${TH2}">Allergènes lus</th><th style="${TH2}">Lecture</th><th style="${TH2}">État</th>
-        </tr></thead>
-        <tbody>
-        ${m.lignes.map(l => `<tr style="${l.cree ? 'opacity:.62' : ''}">
-          <td style="${TDp};text-align:center"><input type="checkbox" ${l.coche ? 'checked' : ''} ${l.cocher ? x.C(l.cocher) : 'disabled'}></td>
-          <td style="${TDp};min-width:200px">${l.cree ? `<span style="font-weight:500">${esc(l.nom)}</span>` : `<input value="${esc(l.nom)}" ${x.C(l.setNom)} style="${INP};width:100%;font-weight:500">`}${l.nomNl ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">NL : ${esc(l.nomNl)}</div>` : ''}</td>
-          <td style="${TDp};min-width:160px">${l.cree ? esc(l.catNom) : `<select ${x.C(l.setCat)} style="${INP};width:100%;${l.catManque ? 'border-color:#C17A2A' : ''}">${l.catOpts.map(o => `<option value="${esc(o.v)}"${o.v === l.cat ? ' selected' : ''}>${esc(o.n)}</option>`).join('')}</select>`}${l.catLue ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">PDF : ${esc(l.catLue)}</div>` : ''}</td>
-          <td style="${TDp};text-align:right;white-space:nowrap">${l.cree ? esc(l.prix) + ' €' : `<input value="${esc(l.prix)}" ${x.C(l.setPrix)} inputmode="decimal" style="${INP};width:72px;text-align:right"> €`}</td>
-          <td style="${TDp};white-space:nowrap">${l.cree ? (l.tva ? esc(l.tva) + ' %' : '') : `<select ${x.C(l.setTva)} style="${INP}">${['', '6', '12', '21'].map(t => `<option value="${t}"${t === l.tva ? ' selected' : ''}>${t ? t + ' %' : '—'}</option>`).join('')}</select>`}</td>
-          <td style="${TDp};font-size:11.5px;color:var(--color-text-muted);white-space:nowrap">${esc(l.poids)}</td>
-          <td style="${TDp};font-size:11.5px;color:var(--color-text-muted);max-width:150px">${esc(l.allergenes)}</td>
-          <td style="${TDp};font-size:11.5px;max-width:190px">${l.conf ? `<span style="color:${l.confCol};font-weight:600">${esc(l.conf)}</span>` : ''}${l.lecture ? `<div style="color:var(--color-text-muted);margin-top:2px;text-wrap:pretty">${esc(l.lecture)}</div>` : ''}</td>
-          <td style="${TDp};font-size:11.5px;max-width:200px" title="${esc(l.etatTitre)}">${l.etat ? `<span style="color:${l.etatCol};font-weight:600">${esc(l.etat)}</span>` : ''}${l.etatTitre ? `<div style="color:var(--color-text-muted);margin-top:2px;text-wrap:pretty">${esc(l.etatTitre)}</div>` : ''}</td>
-        </tr>`).join('')}
-        ${m.lignes.length ? '' : `<tr><td colspan="9" style="padding:18px;font-size:12.5px;color:var(--color-text-muted)">Aucun produit de vente relevé dans ce document.</td></tr>`}
-        </tbody>
-      </table>
-      </div>
-      <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.5;text-wrap:pretty">Un nom déjà au catalogue est décoché d’office. Nom et catégorie sont obligatoires ; le prix HT se déduit du TTC et de la TVA. Allergènes : seulement ceux écrits dans le PDF — au panel, ils se recalculent ensuite depuis la recette.</div>
-    </div>
-
-    <div style="margin-top:18px">
-      <div style="${CAP};margin-bottom:6px">3 · Créer dans TFBuddy</div>
-      <div style="${BOX};display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <div style="font-size:12.5px;flex:1;min-width:260px">${m.destTxt
-          ? `<b>${esc(m.destTxt)}</b> <span style="font-size:11.5px;color:${m.destVerifiee ? '#2d7a3e' : '#b8671a'}">${m.destVerifiee ? '✓ POST annoncé par TFBuddy' : 'non vérifiée — le premier envoi servira d’essai'}</span>`
-          : (m.aucunCompte ? '<span style="color:#8D1D2C">Aucun compte TFBuddy configuré : Paramètres › compte admin ERP ou compte consultant.</span>' : 'Route de création pas encore choisie : vérifiez l’API.')}</div>
-        ${btn(m.sonder, m.sondeChargement ? 'Vérification…' : 'Vérifier l’API', false)}
-      </div>
-      ${m.sondeErreur ? alerte('Vérification impossible : aucun compte TFBuddy configuré, ou API injoignable.', true) : ''}
-      ${m.sondeSansPost ? alerte('TFBuddy n\u2019accepte pas encore la création de produit par l\u2019API : aucune route n\u2019annonce POST. En attendant, « \u21e9 CSV » donne la liste relue à encoder dans TFBuddy ; la création s\u2019activera ici dès qu\u2019ils ouvriront POST /api/v1/products.', true) : ''}
-      ${m.sonde ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">${m.sonde.map(s2 => `
-        <div style="border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:10px 12px">
-          <div style="font-size:12.5px;font-weight:500">${esc(s2.nom)} <span style="font-weight:400;font-size:11.5px;color:var(--color-text-muted)">${esc(s2.base)}</span></div>
-          <table style="border-collapse:collapse;font-size:12px;margin-top:6px">
-            ${s2.routes.map(r => `<tr>
-              <td style="padding:3px 14px 3px 0;font-family:monospace">OPTIONS ${esc(r.route)}</td>
-              <td style="padding:3px 14px 3px 0;color:var(--color-text-muted)">${esc(r.code)}</td>
-              <td style="padding:3px 14px 3px 0;color:var(--color-text-muted)">${r.allow ? 'Allow : ' + esc(r.allow) : ''}</td>
-              <td style="padding:3px 14px 3px 0">POST : <b style="color:${r.postCol}">${r.post}</b></td>
-              <td style="padding:3px 0">${r.choisie ? '<span style="font-size:11.5px;color:#2d7a3e;font-weight:600">✓ choisie</span>' : (r.choisir ? `<button ${x.A(r.choisir)} style="border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:3px 10px;background:var(--color-surface);font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Utiliser</button>` : '')}</td>
-            </tr>`).join('')}
-          </table>
-          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">${s2.lus ? 'Champs envoyés (lus sur une fiche existante) : ' + esc(s2.champs) : 'Fiche existante illisible avec ce compte — seuls nom, catégorie, prix et actif partiront.'}</div>
-        </div>`).join('')}
-        <div style="font-size:11.5px;color:var(--color-text-muted)">La vérification n’écrit rien : elle demande à chaque route les verbes qu’elle accepte (OPTIONS) et lit une fiche existante pour les noms de champs.</div>
-      </div>` : ''}
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px">
-        <label style="font-size:12.5px;display:flex;align-items:center;gap:7px;cursor:pointer"><input type="checkbox" ${m.actifs ? 'checked' : ''} ${x.C(m.setActifs)}> Créer actifs <span style="color:var(--color-text-muted)">(sinon inactifs, à activer au panel une fois la recette posée)</span></label>
-        <span style="flex:1"></span>
-        ${btn(m.csv, '⇩ CSV', false)}
-        ${btn(m.creer, m.creation ? 'Création…' : 'Créer ' + m.nCreer + ' produit' + (m.nCreer > 1 ? 's' : '') + ' dans TFBuddy', true)}
-      </div>
-    </div>` : ''}
-    `}
+    ${stepper}
+    ${m.injoignable ? alerte('API du cockpit injoignable : la lecture et la création demandent le serveur.', 'ko') : ''}
+    ${m.fige && m.etape < 5 ? alerte(m.valideTxt + ' — encodage figé ; « Rouvrir » à l’étape 5 pour le corriger.', 'ok') : ''}
+    ${m.err ? alerte(m.err, 'ko') : ''}
+    ${m.info ? alerte(m.info, 'ok') : ''}
+    <div style="margin-top:14px">${corps}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary)">
+      ${m.precedent ? btn(m.precedent, '← Précédent', false) : '<span></span>'}
+      ${m.suivant ? btn(m.suivant, 'Suivant →', true) : '<span></span>'}
+    </div>`}
   </div>`;
 }
 

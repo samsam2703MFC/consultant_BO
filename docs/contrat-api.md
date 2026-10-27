@@ -2986,39 +2986,43 @@ triés par groupe, catégorie, nom ; les produits inactifs sont écartés sauf `
 TTC de la pièce qui atteindrait la cible de sa catégorie, ou l'objectif du réseau, aux 5 centimes supérieurs. Relu à chaque
 appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. `sonde=1` rend les premières lignes brutes.
 
-### `/produits/import/*` — encoder de nouveaux produits à partir d'un PDF, puis les créer dans TFBuddy (27/10/2026)
+### `/produits/import/*` — l'épicerie depuis le PDF d'un fournisseur : assistant, validation, création dans TFBuddy (27/10/2026)
 
-Écran Produits (Gamme · scoring), bouton « ＋ Nouveaux produits (PDF) ». Trois temps, un humain entre chacun ; module
-`src/produits_import.php`, brouillons dans `ceo_produit_import` (créée au premier appel).
+Écran Produits (Gamme · scoring), bouton « ＋ Épicerie depuis un PDF ». Le tarif d'un fournisseur (scanné ou non) devient,
+article par article, la chaîne de TFBuddy : fournisseur → article du catalogue fournisseur (réf., colis, prix) → matière →
+recette (1 × la matière) → produit de vente. Assistant en cinq étapes (document, fournisseur, articles & matières,
+produits de vente, validation) ; module `src/produits_import.php`, brouillons dans `ceo_epicerie_import` (créée au
+premier appel ; `status` brouillon | valide, `validated_by`, `validated_at`).
 
-- `GET /produits/import` → `{ia, comptes: {erp, panel}, destination, routes, maxOctets, categories: [{id, nom}], dernier}` :
-  le dernier brouillon (même forme que `import` ci-dessous), pour reprendre une relecture interrompue.
-- `POST /produits/import/pdf` `{nom, fichier: "data:application/pdf;base64,…"}` (8 Mo au plus) : le PDF part à l'API
-  Anthropic (clé de Paramètres › IA, modèle réglé, réponse en JSON contraint par schéma — `output_config.format`). Chaque
-  `categorieId` est ramené aux catégories ACTIVES de `/product-categories` (une catégorie inventée devient null) ; un nom
-  déjà au catalogue (`/products`, comparaison sans casse ni accents) ou répété dans le document est décoché. Réponse
-  `{ok, import: {id, fichier, octets, modele, document: {type, fournisseur, remarque}, le, n, nCrees, categories,
-  allergenesNoms, lignes: [{cle, nom, nomNl, categorieId, categorieLue, prixTtc, prixHt, tva, poids, poidsG, portions,
-  description, allergenes, conservation, ean, page, confiance, remarque, existe, creer, statut, tfbId, message}]}}`.
-  Rien n'est créé chez TFBuddy. 422 fichier non PDF ou trop lourd, 503 sans clé Anthropic, 502 lecture refusée ou
-  document trop long (`stop_reason` `max_tokens`).
-- `PUT /produits/import/{id}` `{lignes}` : les corrections de l'écran. Le suivi (`statut`, `tfbId`, `message`, `existe`)
-  reste celui du serveur ; une ligne créée ne se modifie plus.
-- `GET /produits/import/sonde` : quelle route de création accepte un POST, avec quel compte (admin ERP, consultant).
-  **N'écrit rien** : `OPTIONS` sur `/products`, `/admin/products`, `/consultant/products` (en-tête `Allow` seul — le
-  `Access-Control-Allow-Methods` du CORS est global), puis lecture d'une fiche existante (`/products/{id}`) pour les noms
-  de champs. Réponse `{comptes: [{compte, nom, base, routes: [{route, code, allow, post: true|false|null}], champs,
-  envoyes}], proposition, destination}` ; `proposition` quand une seule route annonce POST.
-- `PUT /produits/import/destination` `{compte: erp|panel, route, verifiee}` → réglage `produitImport`.
-- `POST /produits/import/{id}/creer` `{actifs}` : POST de chaque ligne cochée et pas encore créée, une à une. La fiche ne
-  porte que des champs présents dans la fiche lue (`name`, `id_category`, `suggested_sale_price`, `single_weight`,
-  `is_divisible`, `portion_size`, `allergene`, `is_active`… — gardés 24 h dans `produitImportModele`) ; sans fiche lue,
-  `name`, `id_category`, `suggested_sale_price`, `is_active` seulement. Une ligne créée garde l'id rendu et n'est plus
-  renvoyée. Arrêt net sur 401/403/404/405/5xx (la même réponse attendrait toutes les lignes) et après trois 422 de suite
-  sans une création. Réponse `{ok, crees, refuses, arret, import}` ; une ligne de journal (kind `Produits`).
+- `GET /produits/import` → `{ia, comptes: {erp, panel}, destination, maxOctets, refs, dernier}`. `refs` : `catsProduit
+  [{id, nom, cible}]` (catégories actives de `/product-categories`, `cible` = `price_coefficient`), `catsMatiere [{id, nom}]`
+  (`/material-categories`), `fournisseurs [{id, nom, ville}]` (`/material-suppliers`). `dernier` : le dernier brouillon.
+- `POST /produits/import/pdf` `{nom, fichier: "data:application/pdf;base64,…"}` (8 Mo au plus) : lecture par l'API
+  Anthropic (clé de Paramètres › IA, JSON contraint par schéma — `output_config.format`). Rapprochements : le
+  fournisseur par n° de TVA puis par nom ; la matière par la référence du catalogue de ce fournisseur
+  (`/material-suppliers/{id}/catalog-mappings`, `catalog_product_sku` → `material_id`), puis par nom (`/materials`) ; le
+  produit par nom (`/products`, sans casse, accents ni espace entre nombre et unité) — un produit déjà vendu, ou répété dans
+  le document, est décoché. Sans prix conseillé, le prix proposé est celui qui atteint la cible de la catégorie (aux 5
+  centimes supérieurs). Réponse `{ok, import}` ; `import` = `{id, fichier, octets, modele, document, le, statut, validePar,
+  valideLe, fournisseur: {mode: existant|nouveau, id, idCree, nom, tva, email, telephone, adresse, ville, web, tarifDu, lu},
+  lignes: [{cle, inclure, page, confiance, remarque, article: {nom, nomNl, marque, ref, ean, contenance, poidsG, unites,
+  prixColisHt, prixUnitaireHt, tva, pvc, allergenes, conservation, categorieLue}, coutHt, matiere: {id, via, nom, cat,
+  trouvee}, produit: {id, nom, cat, tva, prixTtc, existe}, chiffres: {prixHt, coef, cible, prixCible, margePct, zone},
+  statut, ids, message}], controles: {bloquants: [{etape, cle, texte}], avertissements: [...]}, recap, refs,
+  allergenesNoms}`. Coût pièce = prix du colis ÷ unités par colis (à défaut le prix unitaire écrit) ; coefficient = prix de
+  vente HT ÷ coût pièce ; zone `ko` sous × 1,67 (marge < 40 %), `att` sous la cible, `ok` au-delà. Rien n'est créé.
+- `PUT /produits/import/{id}` `{fournisseur?, lignes?}` : les corrections de l'assistant ; 409 sur un encodage validé.
+- `POST /produits/import/{id}/valider` `{par}` : 422 tant qu'il reste un bloquant (fournisseur absent, coût, matière
+  nouvelle sans nom ou catégorie, produit sans nom, catégorie, prix ou TVA, produit déjà au catalogue) ; sinon l'encodage
+  est signé et figé. `POST /produits/import/{id}/rouvrir` le repasse en brouillon, sauf si un article est déjà créé (409).
+- `GET /produits/import/sonde` : `OPTIONS` (en-tête `Allow` seul) sur `/products/resale`, `/products`, `/materials`,
+  `/material-suppliers`, avec chaque compte ; **n'écrit rien**. `PUT /produits/import/destination` `{compte, verifiee}`.
+- `POST /produits/import/{id}/creer` `{actifs}` : un encodage **validé** part ligne par ligne par `POST /products/resale`
+  (corps : `docs/spec-api-panel.md` §7.2 ; `client_ref` = `ep{id}-{cle}`) ; une ligne créée garde les ids rendus et n'est
+  plus renvoyée ; un fournisseur créé par la première ligne sert aux suivantes. Arrêt net sur 401/403/404/405/5xx et après
+  trois 422 de suite sans création. Réponse `{ok, crees, refuses, arret, import}` ; journal (kind `Épicerie`).
 
-**Constaté le 27/10/2026 dans le Swagger de TFBuddy : aucune route de création de produit** — la section *Products* ne
-porte que des GET. Tant que `POST /products` n'existe pas, la vérification répond « POST : non » partout, l'écran le dit,
-et l'export CSV du brouillon sert à encoder à la main. La demande est rédigée dans `docs/spec-api-panel.md` §7 ; dès que
-la route existe, la création s'active sans changement de code. Le premier envoi dira si la fiche convient (le message
-d'un 422 est affiché sur la ligne).
+**Constaté le 27/10/2026 dans le Swagger de TFBuddy : fournisseurs, matières, catégories et produits sont en lecture
+seule.** `POST /products/resale` n'existe pas encore : la vérification le dit et l'export CSV de l'encodage validé sert à
+saisir à la main. La demande est rédigée dans `docs/spec-api-panel.md` §7 et, autonome, en français, anglais et polonais
+dans `docs/demande-tfbuddy-epicerie/`.

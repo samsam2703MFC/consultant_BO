@@ -299,25 +299,28 @@ installée sur les tablettes : il ne change plus de nom.
   `.htaccess` (qui fait de même en production : sans cela le shell du cockpit
   partait en 200 à la place d'un morceau de script ou d'une image).
 
-## Nouveaux produits depuis un PDF
+## Épicerie depuis le PDF d'un fournisseur
 
-Écran **Produits** (Gamme · scoring), bouton « ＋ Nouveaux produits (PDF) » : un catalogue fournisseur, une fiche
-technique ou une liste de prix devient des fiches produit dans TFBuddy, en trois temps.
+Écran **Produits** (Gamme · scoring), bouton « ＋ Épicerie depuis un PDF ». Le réseau revend en épicerie des articles
+achetés tels quels ; dans TFBuddy, chacun est une chaîne : **fournisseur → article du catalogue fournisseur (réf., colis,
+prix) → matière → recette (1 × la matière) → produit de vente**. On scanne le tarif du fournisseur, un assistant en cinq
+étapes l'encode et le fait valider :
 
-1. **Lire** : le PDF part à Claude **côté serveur** (clé de Paramètres › IA, jamais dans le navigateur). La réponse est un
-   JSON contraint par schéma ; les catégories sont ramenées au référentiel du réseau, un nom déjà au catalogue est
-   signalé et décoché.
-2. **Relire** : nom, catégorie, prix TTC et TVA se corrigent dans le tableau ; chaque correction s'enregistre dans le
-   brouillon (`ceo_produit_import`). Un CSV du brouillon sert à encoder à la main si l'API ne crée pas.
-3. **Créer** : POST ligne par ligne sur la route de création de TFBuddy, avec le compte admin ERP ou consultant. Les
-   produits partent **inactifs** par défaut (à activer au panel une fois la recette posée). Recliquer ne crée pas de
-   doublon.
+1. **Document** : le PDF part à Claude **côté serveur** (clé de Paramètres › IA) ; réponse en JSON contraint par schéma.
+2. **Fournisseur** : celui du PDF, reconnu dans TFBuddy par son n° de TVA ou son nom, sinon à créer ; date du tarif.
+3. **Articles & matières** : colis, prix d'achat, coût de la pièce ; matière existante (même référence chez ce
+   fournisseur, ou même nom) ou nouvelle, avec sa catégorie matière.
+4. **Produits de vente** : nom, catégorie, TVA, prix ; le coefficient face à la cible de la catégorie, et le prix qui
+   l'atteindrait en un clic.
+5. **Validation** : contrôles bloquants et avertissements ; la validation est signée et fige l'encodage (« Rouvrir »
+   tant que rien n'est créé).
 
-**Au 27/10/2026, TFBuddy n'expose aucune route de création de produit** (Swagger : section *Products* en lecture seule).
-« Vérifier l'API » le constate — en `OPTIONS`, **sans rien écrire** — et l'écran propose alors le CSV. La demande à
-TFBuddy est rédigée dans `docs/spec-api-panel.md` §7 ; dès que `POST /products` existe, la création s'active, avec une
-fiche qui ne porte que des champs que l'API rend elle-même. Maquette : `docs/maquettes/import-produits-pdf/`.
-Détail : `docs/contrat-api.md`, section `/produits/import/*`.
+Puis la création, ligne par ligne, par **une route atomique `POST /products/resale`**. **Au 27/10/2026 elle n'existe pas** :
+le Swagger de TFBuddy ne porte que des lectures sur fournisseurs, matières et produits. « Vérifier l'API » le constate —
+en `OPTIONS`, **sans rien écrire** — et l'export CSV donne l'encodage validé à saisir à la main. La demande à TFBuddy :
+`docs/spec-api-panel.md` §7, et à transmettre telle quelle en français, anglais et polonais dans
+`docs/demande-tfbuddy-epicerie/`. Maquette : `docs/maquettes/epicerie-pdf/`. Détail : `docs/contrat-api.md`, section
+`/produits/import/*`.
 
 ## Scouting commercial
 

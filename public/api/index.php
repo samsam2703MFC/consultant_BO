@@ -483,11 +483,13 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/necessaire$#', $path, $m)) { return wr_prod_necessaire($m[1]); }
     if ($method === 'POST' && $path === '/products/arbitrage.pdf') { return wr_prod_arbitrage_pdf(); }
     if ($method === 'POST' && $path === '/products/categorie.pdf') { return wr_prod_categorie_pdf(); }
-    // Nouveaux produits depuis un PDF : lecture (Claude), relecture, création chez TFBuddy.
+    // Épicerie depuis le PDF d'un fournisseur : lecture (Claude), assistant, validation, création chez TFBuddy.
     if ($method === 'POST' && $path === '/produits/import/pdf') { return wr_produits_import_pdf(); }
     if ($method === 'PUT' && $path === '/produits/import/destination') { return wr_produits_import_destination(); }
     if ($method === 'PUT' && preg_match('#^/produits/import/(\d+)$#', $path, $m)) { return wr_produits_import_maj((int) $m[1]); }
     if ($method === 'POST' && preg_match('#^/produits/import/(\d+)/creer$#', $path, $m)) { return wr_produits_import_creer((int) $m[1]); }
+    if ($method === 'POST' && preg_match('#^/produits/import/(\d+)/valider$#', $path, $m)) { return wr_produits_import_valider((int) $m[1]); }
+    if ($method === 'POST' && preg_match('#^/produits/import/(\d+)/rouvrir$#', $path, $m)) { return wr_produits_import_rouvrir((int) $m[1]); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }
     if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }

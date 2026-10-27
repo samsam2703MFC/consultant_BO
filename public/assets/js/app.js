@@ -4077,15 +4077,18 @@ class App {
       .then(d => this.setState(s => (s.pdWaste && s.pdWaste.id === id)
         ? { pdWaste: Object.assign({}, s.pdWaste, { chargement: false, d: d || null }) } : {}));
   }
-  /* --- Nouveaux produits depuis un PDF ---------------------------------------
-   * Trois temps : le serveur fait lire le PDF par Claude, on relit ici, on crée
-   * chez TFBuddy. Rien ne part sans le bouton « Créer ». Chaque correction
-   * s'enregistre dans le brouillon du serveur : refermer la fenêtre, ou
-   * recharger la page, ne perd rien. */
+  /* --- Épicerie depuis le PDF d'un fournisseur ------------------------------
+   * Un assistant en cinq étapes : document, fournisseur, articles & matières,
+   * produits de vente, validation. Le serveur lit le PDF (Claude), rapproche
+   * de TFBuddy et tient les contrôles ; l'écran ne fait que montrer et
+   * corriger. Chaque correction s'enregistre dans le brouillon du serveur :
+   * fermer la fenêtre, ou recharger la page, ne perd rien. */
   piOuvrir(){
     this.setState({ piOuvert: true, piErr: '', piInfo: '' });
-    readOne('/produits/import').then(d => this.setState(s => ({ piEtat: d || { injoignable: true },
-      piImp: s.piImp || (d && d.dernier) || null })));
+    readOne('/produits/import').then(d => this.setState(s => {
+      const imp = s.piImp || (d && d.dernier) || null;
+      return { piEtat: d || { injoignable: true }, piImp: imp, piEtape: s.piEtape || (imp ? 2 : 1) };
+    }));
   }
   piDeposer(e){
     const f = e.target.files && e.target.files[0];
@@ -4105,45 +4108,72 @@ class App {
           this.setState({ piLecture: '', piErr: rep.ok ? 'API indisponible : la lecture demande le serveur.' : (rep.error || 'Lecture refusée.') });
           return;
         }
-        const n = rep.import.n;
-        this.setState({ piLecture: '', piImp: rep.import,
-          piInfo: n ? n + ' produit(s) relevé(s). Relisez chaque ligne avant de créer.' : 'Aucun produit de vente trouvé dans ce PDF.' });
+        const n = rep.import.recap.n;
+        this.setState({ piLecture: '', piImp: rep.import, piSonde: null, piEtape: n ? 2 : 1,
+          piInfo: n ? n + ' article(s) lu(s). Vérifiez le fournisseur, puis chaque article.' : 'Aucun article trouvé dans ce PDF.' });
       });
     };
     r.onerror = () => this.setState({ piErr: 'Fichier illisible.' });
     r.readAsDataURL(f);
   }
   /* Une correction : appliquée tout de suite à l'écran, enregistrée un instant
-     après. Le serveur rend la ligne normalisée (prix HT recalculé…) ; on ne la
-     reprend que si rien n'a été retouché entre-temps. */
-  piMaj(cle, patch){
-    this._piV = (this._piV || 0) + 1;
-    // Sans clé : toutes les lignes pas encore créées (la case « tout cocher »).
+     après. `groupe` vise une partie de la ligne (article, matiere, produit),
+     ou la ligne elle-même ; sans clé, toutes les lignes pas encore créées. */
+  piMaj(cle, groupe, patch){
     const vise = l => cle === null ? l.statut !== 'cree' : l.cle === cle;
-    this.setState(s => ({ piImp: Object.assign({}, s.piImp,
-      { lignes: s.piImp.lignes.map(l => vise(l) ? Object.assign({}, l, patch) : l) }) }));
+    const maj = l => groupe ? Object.assign({}, l, { [groupe]: Object.assign({}, l[groupe], patch) }) : Object.assign({}, l, patch);
+    this.piModifier(imp => ({ lignes: imp.lignes.map(l => vise(l) ? maj(l) : l) }));
+  }
+  piMajFournisseur(patch){
+    this.piModifier(imp => ({ fournisseur: Object.assign({}, imp.fournisseur, patch) }));
+  }
+  /* Le serveur rend le brouillon recalculé (coût, coefficient, contrôles) ; on
+     ne le reprend que si rien n'a été retouché entre-temps. */
+  piModifier(fn){
+    this._piV = (this._piV || 0) + 1;
+    this.setState(s => ({ piImp: Object.assign({}, s.piImp, fn(s.piImp)) }));
     clearTimeout(this._piT);
-    this._piT = setTimeout(() => this.piSauver(), 600);
+    this._piT = setTimeout(() => this.piSauver(), 500);
     this._piAttente = true;
   }
   piSauver(){
     clearTimeout(this._piT);
     this._piAttente = false;
     const imp = this.state.piImp;
-    if (!imp) { return Promise.resolve({ ok: true }); }
+    if (!imp || imp.statut === 'valide') { return Promise.resolve({ ok: true }); }
     const v = this._piV;
-    return write(this.source, 'PUT', '/produits/import/' + imp.id, { lignes: imp.lignes }).then(r => {
+    return write(this.source, 'PUT', '/produits/import/' + imp.id, { fournisseur: imp.fournisseur, lignes: imp.lignes }).then(r => {
       if (!r.ok) { this.setState({ piErr: 'Correction non enregistrée — ' + (r.error || 'refus du serveur') }); }
       else if (r.import && v === this._piV) { this.setState({ piImp: r.import }); }
       return r;
+    });
+  }
+  piValider(){
+    const imp = this.state.piImp;
+    if (!imp) { return; }
+    const par = (this.meta && this.meta.utilisateur && this.meta.utilisateur.nom) || 'CEO';
+    this.setState({ piErr: '', piInfo: '' });
+    this.piSauver().then(() => write(this.source, 'POST', '/produits/import/' + imp.id + '/valider', { par })).then(r => {
+      if (r.import) { this.setState({ piImp: r.import }); }
+      if (!r.ok) { this.setState({ piErr: r.error || 'Validation refusée.' }); return; }
+      this.setState({ piInfo: 'Encodage validé par ' + par + '. Il ne se modifie plus sans être rouvert.' });
+      this.notify('Encodage épicerie validé');
+    });
+  }
+  piRouvrir(){
+    const imp = this.state.piImp;
+    if (!imp || !window.confirm('Rouvrir l’encodage pour le corriger ? Il faudra le valider à nouveau.')) { return; }
+    write(this.source, 'POST', '/produits/import/' + imp.id + '/rouvrir', {}).then(r => {
+      if (!r.ok) { this.setState({ piErr: r.error || 'Impossible de rouvrir.' }); return; }
+      this.setState({ piImp: r.import, piInfo: 'Encodage rouvert.', piErr: '' });
     });
   }
   piSonder(){
     this.setState({ piSonde: { chargement: true, d: null } });
     readOne('/produits/import/sonde').then(d => this.setState({ piSonde: { chargement: false, d } }));
   }
-  piChoisir(compte, route, verifiee){
-    write(this.source, 'PUT', '/produits/import/destination', { compte, route, verifiee }).then(r => {
+  piChoisir(compte, verifiee){
+    write(this.source, 'PUT', '/produits/import/destination', { compte, verifiee }).then(r => {
       if (!r.ok) { this.setState({ piErr: r.error || 'Choix non enregistré.' }); return; }
       this.setState(s => ({ piEtat: Object.assign({}, s.piEtat, { destination: r.destination }) }));
     });
@@ -4151,41 +4181,42 @@ class App {
   piCreer(){
     const S = this.state, imp = S.piImp, dest = S.piEtat && S.piEtat.destination;
     if (!imp || !dest) { return; }
-    const n = imp.lignes.filter(l => l.creer && l.statut !== 'cree').length;
-    const qui = dest.compte === 'erp' ? 'compte admin ERP' : 'compte consultant';
-    if (!window.confirm('Créer ' + n + ' produit(s) dans TFBuddy (' + qui + ', POST ' + dest.route + ')'
-      + (S.piActifs ? ', ACTIFS tout de suite ?' : ', inactifs ?'))) { return; }
+    const n = imp.lignes.filter(l => l.inclure && l.statut !== 'cree').length;
+    if (!window.confirm('Créer ' + n + ' article(s) dans TFBuddy — fournisseur, article, prix, matière, recette et produit — avec le '
+      + (dest.compte === 'erp' ? 'compte admin ERP' : 'compte consultant') + (S.piActifs ? ', produits ACTIFS tout de suite ?' : ', produits inactifs ?'))) { return; }
     this.setState({ piCreation: true, piErr: '', piInfo: '' });
-    this.piSauver().then(r0 => {
-      if (!r0.ok) { this.setState({ piCreation: false }); return null; }
-      return write(this.source, 'POST', '/produits/import/' + imp.id + '/creer', { actifs: !!S.piActifs }).then(r => {
-        if (!r.ok || !r.import) { this.setState({ piCreation: false, piErr: r.error || 'Création refusée.' }); return; }
-        this.setState({ piCreation: false, piImp: r.import,
-          piInfo: r.crees + ' produit(s) créé(s)' + (r.refuses ? ', ' + r.refuses + ' refusé(s) — le motif est dans la colonne État' : '') + '.',
-          piErr: r.arret ? 'Arrêt : ' + r.arret : '' });
-        if (r.crees) { this.notify(r.crees + ' produit(s) créé(s) dans TFBuddy'); }
-      });
+    write(this.source, 'POST', '/produits/import/' + imp.id + '/creer', { actifs: !!S.piActifs }).then(r => {
+      if (!r.ok || !r.import) { this.setState({ piCreation: false, piErr: r.error || 'Création refusée.' }); return; }
+      this.setState({ piCreation: false, piImp: r.import,
+        piInfo: r.crees + ' article(s) créé(s) dans TFBuddy' + (r.refuses ? ', ' + r.refuses + ' refusé(s) — le motif est sur la ligne' : '') + '.',
+        piErr: r.arret ? 'Arrêt : ' + r.arret : '' });
+      if (r.crees) { this.notify(r.crees + ' article(s) créé(s) dans TFBuddy'); }
     });
   }
-  /* Le brouillon en CSV (séparateur « ; », virgule décimale : Excel belge) —
-     pour encoder à la main si l'API ne crée pas encore de produit. */
+  /* L'encodage en CSV (séparateur « ; », virgule décimale : Excel belge) — la
+     chaîne complète, pour encoder à la main tant que TFBuddy n'a pas la route. */
   piCsv(){
     const imp = this.state.piImp;
     if (!imp) { return; }
-    const cats = {}; (imp.categories || []).forEach(c => { cats[c.id] = c.nom; });
+    const R = imp.refs || {};
+    const nom = (liste, id) => ((liste || []).find(x => x.id === id) || {}).nom || '';
     const al = imp.allergenesNoms || {};
+    const f = imp.fournisseur || {};
+    const fourn = f.mode === 'existant' ? nom(R.fournisseurs, f.id) + ' (#' + f.id + ')' : (f.nom || '') + ' (nouveau)';
     const num = v => v == null || v === '' ? '' : String(v).replace('.', ',');
     const cel = v => { const s = v == null ? '' : String(v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-    const tete = ['Nom', 'Nom NL', 'Catégorie', 'Rubrique du PDF', 'Prix TTC', 'TVA %', 'Prix HT', 'Poids', 'Parts', 'Allergènes',
-      'Conservation', 'EAN', 'Description', 'Page', 'Lecture', 'Remarque', 'État'];
-    const lignes = imp.lignes.map(l => [l.nom, l.nomNl, cats[l.categorieId] || '', l.categorieLue, num(l.prixTtc), num(l.tva),
-      num(l.prixHt), l.poids, l.portions, (l.allergenes || []).map(a => al[a] || a).join(', '), l.conservation, l.ean,
-      l.description, l.page, l.confiance, l.remarque,
-      l.statut === 'cree' ? 'créé' + (l.tfbId ? ' #' + l.tfbId : '') : (l.statut === 'refuse' ? 'refusé : ' + (l.message || '') : (l.existe ? 'déjà au catalogue' : ''))]);
+    const tete = ['Fournisseur', 'Prix valables du', 'Réf. fournisseur', 'Article', 'EAN', 'Contenance', 'Unités par colis', 'Prix colis HT',
+      'Coût pièce HT', 'TVA achat %', 'Matière', 'Matière existante', 'Catégorie matière', 'Produit', 'Catégorie produit', 'TVA vente %',
+      'Prix TTC', 'Coefficient', 'Cible', 'Prix conseillé TTC', 'Allergènes', 'Inclus', 'État'];
+    const lignes = imp.lignes.map(l => [fourn, f.tarifDu || '', l.article.ref, l.article.nom, l.article.ean, l.article.contenance, l.article.unites,
+      num(l.article.prixColisHt), num(l.coutHt), num(l.article.tva), l.matiere.nom, l.matiere.id ? '#' + l.matiere.id : '', nom(R.catsMatiere, l.matiere.cat),
+      l.produit.nom, nom(R.catsProduit, l.produit.cat), num(l.produit.tva), num(l.produit.prixTtc), num(l.chiffres && l.chiffres.coef),
+      num(l.chiffres && l.chiffres.cible), num(l.article.pvc), (l.article.allergenes || []).map(a => al[a] || a).join(', '), l.inclure ? 'oui' : 'non',
+      l.statut === 'cree' ? 'créé' : (l.statut === 'refuse' ? 'refusé : ' + (l.message || '') : (imp.statut === 'valide' ? 'validé' : 'brouillon'))]);
     const csv = '﻿' + [tete].concat(lignes).map(r => r.map(cel).join(';')).join('\r\n');
     const u = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
-    a.href = u; a.download = String(imp.fichier || 'produits').replace(/\.pdf$/i, '') + '-produits.csv';
+    a.href = u; a.download = String(imp.fichier || 'epicerie').replace(/\.pdf$/i, '') + '-encodage.csv';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(u), 60000);
   }
@@ -13059,78 +13090,148 @@ class App {
         close: () => this.setState({ pdWaste: null }),
       };
     } else { common.pdWaste = false; }
-    // --- fenêtre « nouveaux produits depuis un PDF »
+    // --- assistant « épicerie depuis le PDF d'un fournisseur »
     common.pdOuvrirImport = () => this.piOuvrir();
     if (S.piOuvert) {
       const E = S.piEtat, imp = S.piImp;
-      const cats = (imp && imp.categories) || (E && E.categories) || [];
+      const R = (imp && imp.refs) || (E && E.refs) || { catsProduit: [], catsMatiere: [], fournisseurs: [] };
       const al = (imp && imp.allergenesNoms) || {};
-      const dest = E && E.destination;
+      const fige = !!(imp && imp.statut === 'valide');
       const lignes = imp ? imp.lignes : [];
       const ouvertes = lignes.filter(l => l.statut !== 'cree');
-      const nCreer = ouvertes.filter(l => l.creer).length;
+      const ctl = imp ? imp.controles : { bloquants: [], avertissements: [] };
+      const dest = E && E.destination;
       const so = S.piSonde, sd = so && so.d;
       const comptes = E && E.comptes ? E.comptes : {};
+      const etape = imp ? (S.piEtape || 2) : 1;
+      const eur = v => v == null ? '' : Number(v).toFixed(2).replace('.', ',') + ' €';
+      const eur4 = v => v == null ? '' : (Math.round(Number(v) * 100) / 100).toFixed(2).replace('.', ',') + ' €';
+      const nb = v => v == null ? '' : String(v).replace('.', ',');
+      const opt = (liste, vide) => [{ v: '', n: vide }].concat(liste.map(x => ({ v: String(x.id), n: x.nom + (x.cible ? ' · cible × ' + nb(x.cible.toFixed(2)) : '') })));
+      const ZONE = { ok: '#2d7a3e', att: '#b8671a', ko: '#8D1D2C', mu: 'var(--color-text-muted)' };
+      const parLigne = {};
+      ctl.bloquants.forEach(b => { if (b.cle) { (parLigne[b.cle] = parLigne[b.cle] || []).push(b.texte); } });
+      const aller = n => () => { if (this._piAttente) { this.piSauver(); } this.setState({ piEtape: n, piInfo: '' }); };
+      const f = imp ? imp.fournisseur : null;
+      const inclus = lignes.filter(l => l.inclure);
+      const coefs = inclus.map(l => l.chiffres && l.chiffres.coef).filter(v => v != null).sort((a, b) => a - b);
+      const median = coefs.length ? coefs[Math.floor(coefs.length / 2)] : null;
+      const nCreer = ouvertes.filter(l => l.inclure).length;
       common.pdImport = {
         chargement: !E,
         injoignable: !!(E && E.injoignable),
         iaOk: !!(E && E.ia && E.ia.configure),
         modele: (imp && imp.modele) || (E && E.ia && E.ia.modele) || '',
         lecture: S.piLecture || '', err: S.piErr || '', info: S.piInfo || '',
+        fige, etape,
+        etapes: ['Document', 'Fournisseur', 'Articles & matières', 'Produits de vente', 'Validation'].map((nom, i) => {
+          const n = i + 1;
+          const bl = ctl.bloquants.filter(b => b.etape === n).length;
+          return { n, nom, actif: n === etape, bloquants: bl, fait: !!imp && n < etape && !bl,
+            aller: (n === 1 || imp) ? aller(n) : null };
+        }),
+        precedent: etape > 1 ? aller(etape - 1) : null,
+        suivant: imp && etape < 5 ? aller(etape + 1) : null,
         deposer: S.piLecture ? null : e => this.piDeposer(e),
         fichier: imp ? imp.fichier : '',
-        resume: imp ? (imp.n + ' produit(s) · ' + imp.nCrees + ' créé(s) · lu le ' + this.fDA(String(imp.le).slice(0, 10)) + ' ' + String(imp.le).slice(11, 16)
-          + (imp.document && imp.document.type ? ' · ' + imp.document.type : '') + (imp.document && imp.document.fournisseur ? ' · ' + imp.document.fournisseur : '')) : '',
-        tout: ouvertes.length > 0 && ouvertes.every(l => l.creer),
-        basculerTout: ouvertes.length ? e => this.piMaj(null, { creer: e.target.checked }) : null,
+        resume: imp ? (imp.recap.n + ' article(s) lu(s) le ' + this.fDA(String(imp.le).slice(0, 10)) + ' à ' + String(imp.le).slice(11, 16)
+          + (imp.document && imp.document.type ? ' · ' + imp.document.type : '')) : '',
+        // --- 2. fournisseur
+        four: f ? {
+          lu: f.lu || {}, mode: f.mode, existant: f.mode === 'existant',
+          choisirExistant: fige ? null : () => this.piMajFournisseur({ mode: 'existant', id: f.id || (R.fournisseurs[0] || {}).id || null }),
+          choisirNouveau: fige ? null : () => this.piMajFournisseur({ mode: 'nouveau' }),
+          id: f.id == null ? '' : String(f.id),
+          options: opt(R.fournisseurs.map(x => ({ id: x.id, nom: x.nom + (x.ville ? ' — ' + x.ville : '') })), '— choisir —'),
+          setId: fige ? null : e => this.piMajFournisseur({ id: e.target.value ? +e.target.value : null }),
+          champs: [['nom', 'Nom'], ['tva', 'N° de TVA'], ['email', 'E-mail commandes'], ['telephone', 'Téléphone'], ['adresse', 'Adresse'], ['ville', 'Ville'], ['web', 'Site']]
+            .map(([k, lib]) => ({ lib, val: f[k] || '', set: fige ? null : e => this.piMajFournisseur({ [k]: e.target.value }) })),
+          tarifDu: f.tarifDu || '', setTarifDu: fige ? null : e => this.piMajFournisseur({ tarifDu: e.target.value || null }),
+          nomExistant: f.mode === 'existant' ? ((R.fournisseurs.find(x => x.id === f.id) || {}).nom || '') : '',
+        } : null,
+        // --- 3 et 4. les lignes
+        tout: ouvertes.length > 0 && ouvertes.every(l => l.inclure),
+        basculerTout: fige || !ouvertes.length ? null : e => this.piMaj(null, null, { inclure: e.target.checked }),
         lignes: lignes.map(l => {
-          const cree = l.statut === 'cree';
+          const cree = l.statut === 'cree', ro = fige || cree;
+          const c = l.chiffres || {};
+          const a = l.article, m = l.matiere, p = l.produit;
           return {
-            cree, nom: l.nom || '', nomNl: l.nomNl || '',
-            coche: !!l.creer, cocher: cree ? null : e => this.piMaj(l.cle, { creer: e.target.checked }),
-            setNom: cree ? null : e => this.piMaj(l.cle, { nom: e.target.value }),
-            cat: l.categorieId == null ? '' : String(l.categorieId),
-            catOpts: [{ v: '', n: '— à choisir —' }].concat(cats.map(c => ({ v: String(c.id), n: c.nom }))),
-            catNom: (cats.find(c => c.id === l.categorieId) || {}).nom || '',
-            catLue: l.categorieLue || '', catManque: l.categorieId == null,
-            setCat: cree ? null : e => this.piMaj(l.cle, { categorieId: e.target.value ? +e.target.value : null }),
-            prix: l.prixTtc == null ? '' : String(l.prixTtc).replace('.', ','),
-            // Un prix TTC retouché : le HT se recalcule au serveur, d'après la TVA.
-            setPrix: cree ? null : e => this.piMaj(l.cle, { prixTtc: e.target.value, prixHt: null }),
-            tva: l.tva == null ? '' : String(+String(l.tva).replace(',', '.')),
-            setTva: cree ? null : e => this.piMaj(l.cle, { tva: e.target.value || null, prixHt: l.prixTtc != null ? null : l.prixHt }),
-            poids: [l.poids, l.portions ? l.portions + ' parts' : ''].filter(Boolean).join(' · '),
-            allergenes: (l.allergenes || []).map(a => al[a] || a).join(', '),
-            conf: l.confiance || '',
-            confCol: l.confiance === 'faible' ? '#8D1D2C' : (l.confiance === 'moyenne' ? '#b8671a' : '#2d7a3e'),
+            cle: l.cle, cree, ro, inclus: !!l.inclure, erreurs: parLigne[l.cle] || [],
+            inclure: ro ? null : e => this.piMaj(l.cle, null, { inclure: e.target.checked }),
+            art: a.nom, ref: a.ref || '', ean: a.ean || '', contenance: a.contenance || '',
+            unites: a.unites == null ? '' : String(a.unites), setUnites: ro ? null : e => this.piMaj(l.cle, 'article', { unites: e.target.value }),
+            prixColis: a.prixColisHt == null ? '' : nb(a.prixColisHt), setPrixColis: ro ? null : e => this.piMaj(l.cle, 'article', { prixColisHt: e.target.value }),
+            prixUnitLu: a.prixColisHt == null && a.prixUnitaireHt != null ? eur(a.prixUnitaireHt) : '',
+            cout: eur4(l.coutHt),
+            tvaAchat: a.tva == null ? '' : String(+a.tva), setTvaAchat: ro ? null : e => this.piMaj(l.cle, 'article', { tva: e.target.value || null }),
+            conf: l.confiance || '', confCol: l.confiance === 'faible' ? '#8D1D2C' : (l.confiance === 'moyenne' ? '#b8671a' : '#2d7a3e'),
             lecture: [l.page ? 'p. ' + l.page : '', l.remarque || ''].filter(Boolean).join(' · '),
-            etat: cree ? 'Créé' + (l.tfbId != null ? ' #' + l.tfbId : '') : (l.statut === 'refuse' ? 'Refusé' : (l.existe ? 'Déjà au catalogue' : '')),
-            etatCol: cree ? '#2d7a3e' : (l.statut === 'refuse' ? '#8D1D2C' : '#b8671a'),
-            etatTitre: l.message || (l.existe ? 'Au catalogue sous « ' + l.existe.nom + ' » (#' + l.existe.id + ')' : ''),
+            // la matière
+            matMode: m.id ? String(m.id) : '',
+            matOpts: [{ v: '', n: 'Nouvelle matière' }].concat(m.trouvee ? [{ v: String(m.trouvee.id), n: 'Existante : ' + m.trouvee.nom + ' (#' + m.trouvee.id + ')' }] : []),
+            matVia: m.id ? (m.via === 'ref' ? 'rapprochée par la réf. fournisseur' : (m.via === 'nom' ? 'rapprochée par le nom' : '')) : '',
+            setMatMode: ro ? null : e => this.piMaj(l.cle, 'matiere', { id: e.target.value ? +e.target.value : null, via: e.target.value ? (m.trouvee || {}).via : null }),
+            matNouvelle: !m.id, matNom: m.nom, setMatNom: ro ? null : e => this.piMaj(l.cle, 'matiere', { nom: e.target.value }),
+            matCat: m.cat == null ? '' : String(m.cat), matCatOpts: opt(R.catsMatiere, '— catégorie matière —'),
+            matCatNom: ((R.catsMatiere.find(x => x.id === m.cat)) || {}).nom || '', matCatManque: !m.id && m.cat == null,
+            setMatCat: ro ? null : e => this.piMaj(l.cle, 'matiere', { cat: e.target.value ? +e.target.value : null }),
+            // le produit
+            prodNom: p.nom, setProdNom: ro ? null : e => this.piMaj(l.cle, 'produit', { nom: e.target.value }),
+            existe: p.existe ? 'Déjà au catalogue : « ' + p.existe.nom + ' » (#' + p.existe.id + ')' : '',
+            prodCat: p.cat == null ? '' : String(p.cat), prodCatOpts: opt(R.catsProduit, '— catégorie de vente —'),
+            prodCatNom: ((R.catsProduit.find(x => x.id === p.cat)) || {}).nom || '', prodCatManque: p.cat == null,
+            setProdCat: ro ? null : e => this.piMaj(l.cle, 'produit', { cat: e.target.value ? +e.target.value : null }),
+            tva: p.tva == null ? '' : String(+p.tva), setTva: ro ? null : e => this.piMaj(l.cle, 'produit', { tva: e.target.value || null }),
+            prix: p.prixTtc == null ? '' : nb(p.prixTtc.toFixed ? p.prixTtc.toFixed(2) : p.prixTtc),
+            setPrix: ro ? null : e => this.piMaj(l.cle, 'produit', { prixTtc: e.target.value }),
+            pvc: a.pvc != null ? eur(a.pvc) : '',
+            coef: c.coef == null ? '—' : '× ' + nb(c.coef.toFixed(2)), coefCol: ZONE[c.zone || 'mu'],
+            marge: c.margePct == null ? '' : 'marge ' + c.margePct + ' %',
+            cible: c.cible == null ? '' : '× ' + nb(c.cible.toFixed(2)),
+            prixCible: c.prixCible == null || (p.prixTtc != null && Math.abs(c.prixCible - p.prixTtc) < 0.005) ? '' : eur(c.prixCible),
+            appliquerCible: ro || c.prixCible == null ? null : () => this.piMaj(l.cle, 'produit', { prixTtc: c.prixCible }),
+            allergenes: (a.allergenes || []).map(x => al[x] || x).join(', '),
+            etat: cree ? 'Créé' + (l.ids && l.ids.produit ? ' · produit #' + l.ids.produit : '') : (l.statut === 'refuse' ? 'Refusé' : ''),
+            etatCol: cree ? '#2d7a3e' : '#8D1D2C', etatTitre: l.message || '',
           };
         }),
+        // --- 5. validation
+        recap: imp ? [
+          { k: 'Fournisseur', v: f.mode === 'existant' ? ((R.fournisseurs.find(x => x.id === f.id) || {}).nom || '—') : (f.nom || '—'),
+            s: f.mode === 'existant' ? 'existant dans TFBuddy (#' + f.id + ')' : 'nouveau, sera créé' },
+          { k: 'Articles', v: String(imp.recap.inclus), s: 'cochés sur ' + imp.recap.n + ' lus' + (f.tarifDu ? ' · prix au ' + this.fDA(f.tarifDu) : '') },
+          { k: 'Matières', v: String(imp.recap.matieresNouvelles), s: 'nouvelles · ' + imp.recap.matieresExistantes + ' existante(s) reprise(s)' },
+          { k: 'Produits de vente', v: String(imp.recap.inclus), s: 'chacun avec sa recette : 1 × sa matière' },
+          { k: 'Coefficient médian', v: median == null ? '—' : '× ' + nb(median.toFixed(2)), s: 'prix HT ÷ coût d’achat de la pièce' },
+        ] : [],
+        bloquants: ctl.bloquants.map(b => ({ texte: b.texte, etape: b.etape, aller: aller(b.etape) })),
+        avertissements: ctl.avertissements.map(b => ({ texte: b.texte, etape: b.etape, aller: aller(b.etape) })),
+        valider: !fige && imp && !ctl.bloquants.length ? () => this.piValider() : null,
+        signataire: (this.meta && this.meta.utilisateur && this.meta.utilisateur.nom) || 'CEO',
+        valideTxt: fige ? 'Validé par ' + (imp.validePar || '—') + ' le ' + this.fDA(String(imp.valideLe).slice(0, 10)) + ' à ' + String(imp.valideLe).slice(11, 16) : '',
+        rouvrir: fige && !imp.recap.crees ? () => this.piRouvrir() : null,
         aucunCompte: !!E && !comptes.erp && !comptes.panel,
         destTxt: dest ? (dest.compte === 'erp' ? 'Compte admin ERP' : 'Compte consultant') + ' · POST ' + dest.route : '',
         destVerifiee: !!(dest && dest.verifiee),
         sonder: so && so.chargement ? null : () => this.piSonder(),
         sondeChargement: !!(so && so.chargement),
         sondeErreur: !!(so && !so.chargement && !sd),
-        // Aucune route n'annonce POST : TFBuddy ne crée pas de produit par l'API.
-        sondeSansPost: !!(sd && !sd.comptes.some(c => c.routes.some(r => r.post === true))),
-        sonde: sd ? sd.comptes.map(c => ({
-          nom: c.nom, base: c.base,
-          champs: (c.envoyes || []).join(', '), lus: (c.champs || []).length,
-          routes: c.routes.map(r => ({
+        sondeSansPost: !!(sd && !sd.proposition),
+        sonde: sd ? sd.comptes.map(c2 => ({
+          nom: c2.nom, base: c2.base,
+          routes: c2.routes.map(r => ({
             route: r.route, code: r.code ? 'HTTP ' + r.code : 'sans réponse', allow: r.allow || '',
             post: r.post === true ? 'oui' : (r.post === false ? 'non' : '?'),
             postCol: r.post === true ? '#2d7a3e' : (r.post === false ? 'var(--color-text-muted)' : '#b8671a'),
-            choisie: !!(dest && dest.compte === c.compte && dest.route === r.route),
-            choisir: r.post === false ? null : () => this.piChoisir(c.compte, r.route, r.post === true),
+            choisie: !!(dest && dest.compte === c2.compte && r.route === sd.route),
+            choisir: r.route === sd.route && r.post !== false ? () => this.piChoisir(c2.compte, r.post === true) : null,
           })),
         })) : null,
         actifs: !!S.piActifs, setActifs: e => this.setState({ piActifs: e.target.checked }),
         nCreer, creation: !!S.piCreation,
-        creer: nCreer && dest && !S.piCreation ? () => this.piCreer() : null,
+        creer: fige && nCreer && dest && !S.piCreation ? () => this.piCreer() : null,
+        creerPourquoi: !fige ? 'validez d’abord l’encodage' : (!dest ? 'vérifiez l’API et choisissez le compte' : (!nCreer ? 'tout est déjà créé' : '')),
         csv: lignes.length ? () => this.piCsv() : null,
         close: () => { if (this._piAttente) { this.piSauver(); } this.setState({ piOuvert: false, piSonde: null }); },
       };
