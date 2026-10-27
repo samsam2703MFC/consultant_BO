@@ -755,6 +755,8 @@ function suChecklistBilan(array $v): array
         if (($t['code'] ?? '') !== $code) { continue; }
         foreach ((array) ($t['checklist'] ?? []) as $m) { foreach ((array) ($m['points'] ?? []) as $pt) { if (isset($pt['ref'])) { $defs[$pt['ref']] = $pt; } } }
     }
+    // Les photos du jour ont leur question, quel que soit le type (src/visites_questions.php, viPhotosNormalise).
+    if (function_exists('viPhotos')) { foreach (viPhotos()['points'] as $pt) { $defs[$pt['ref']] = $pt; } }
     $ok = 0; $ko = 0; $na = 0; $ecarts = [];
     foreach ($pts as $p) {
         $fait = $p['etat'] !== '' || $p['note'] !== null || $p['valeur'] !== null;
