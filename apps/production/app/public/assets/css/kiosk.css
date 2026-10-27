@@ -783,17 +783,29 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .kiosk-confirm-sign .kiosk-sign { height: 200px; }
 .kiosk-phone .kiosk-confirm-sign .kiosk-sign { height: 180px; }
 
-/* Tablette générique (27/10/2026) : groupes en grandes tuiles, rangée de groupes au-dessus de l'équipe, bascule entre présents. */
-.kiosk-group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-top: 14px; }
-.kiosk-group-tile { --g: var(--k-primary); border: 1px solid var(--k-line); border-left: 8px solid var(--g); border-radius: var(--k-radius-lg); background: var(--k-surface); color: var(--k-text);
-  min-height: 110px; padding: 18px 16px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 6px; text-align: left; font: inherit; cursor: pointer; }
-.kiosk-group-tile:active { background: var(--k-fill); }
-.kiosk-group-name { font-family: var(--k-font-display); font-size: 1.35rem; line-height: 1.15; }
-.kiosk-group-tile small, .kiosk-group-chip small { color: var(--k-muted); font-size: .8rem; }
-.kiosk-groupbar { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 10px; }
-.kiosk-group-chip { --g: var(--k-primary); flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--k-line-2); border-radius: var(--k-radius, 12px); background: var(--k-surface);
-  color: var(--k-text); min-height: 48px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; }
-.kiosk-group-chip small { margin-left: 2px; }
+/* Tablette générique (maquette 2, 28/10/2026) : groupes en onglets, présents à gauche, PIN à droite ; groupe en cours dans l'en-tête. */
+.kg-groups { display: flex; gap: 6px; padding: 6px; margin-bottom: 16px; background: var(--k-fill); border-radius: var(--k-radius-lg); overflow-x: auto; }
+.kg-group { --g: var(--k-primary); flex: 1 0 auto; display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 10px 16px; border: 0; border-radius: var(--k-radius);
+  background: transparent; color: var(--k-text); font: inherit; text-align: left; cursor: pointer; }
+.kg-group.is-on { background: var(--k-surface); box-shadow: inset 0 0 0 3px var(--g), var(--k-shadow); }
+.kg-dot { width: 14px; height: 14px; border-radius: 4px; background: var(--g); flex: none; }
+.kg-gtext { display: flex; flex-direction: column; line-height: 1.25; }
+.kg-gtext strong { font-size: 1.05rem; }
+.kg-gtext small { color: var(--k-muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.kg-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); gap: 16px; align-items: start; }
+.kg-list { display: grid; gap: 10px; margin-top: 12px; }
+.kg-person { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 10px 14px; border: 1px solid var(--k-line); border-radius: var(--k-radius-lg);
+  background: var(--k-surface); color: var(--k-text); font: inherit; text-align: left; cursor: pointer; }
+.kg-person strong { display: block; font-size: 1.1rem; }
+.kg-person small { color: var(--k-muted); font-variant-numeric: tabular-nums; }
+.kg-person.is-off { opacity: .55; }
+.kg-person.is-picked { border-color: var(--k-primary); box-shadow: inset 0 0 0 2px var(--k-primary); background: var(--k-primary-50); }
+.kg-pin { position: sticky; top: 12px; margin: 0; max-width: none; gap: 8px; padding-top: 16px; padding-bottom: 14px; }
+.kg-pin h2 { font-size: 22px; }
+.kg-pin .kiosk-pad { gap: 10px; max-width: 300px; }
+.kg-pin .kiosk-pad .kiosk-btn { width: 66px; min-height: 66px; font-size: 26px; }
+.kg-chip { --g: var(--k-primary); display: inline-flex; align-items: center; gap: 8px; box-shadow: inset 0 0 0 2px var(--g); }
+@media (max-width: 860px) { .kg-main { grid-template-columns: minmax(0, 1fr); } .kg-pin { position: static; } }
 .kiosk-other-person { grid-column: 1 / -1; justify-self: center; margin-top: 4px; }
 /* Receptura na zamówienie (makieta 1) : zamówienie, strata, do zrobienia ; składniki i opakowania. */
 .kv-recipe-btn { margin-top: 8px; border: 1px solid var(--k-line-2); background: var(--k-surface); color: var(--k-primary); border-radius: var(--k-radius); padding: 7px 12px; font: inherit; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
@@ -821,12 +833,6 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 /* Zrobione en pièces : équivalent en cartons sous le compteur. */
 .kv-cartons { margin: 6px 0 0; font-size: 17px; font-weight: 600; color: var(--k-primary); font-variant-numeric: tabular-nums; }
 .kv-cartons .kiosk-muted { font-size: 14px; font-weight: 500; }
-/* Tablette de production (27/10/2026) : tous les groupes au-dessus des cartes, sur plusieurs lignes ; toucher = ?team=N. */
-.kiosk-groupbar.is-top { flex-wrap: wrap; justify-content: center; overflow: visible; padding: 0; }
-.kiosk-group-chip.is-on { border-color: var(--g); background: var(--g); color: #fff; }
-.kiosk-group-chip.is-on small { color: rgba(255, 255, 255, .85); }
-.kiosk-group-chip.is-on .kiosk-group-dot { background: #fff; }
-.kiosk-group-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--g); }
 .kiosk-switch .kiosk-apps { margin: 14px 0; }
 .kiosk-app-person:disabled { opacity: .45; }
 

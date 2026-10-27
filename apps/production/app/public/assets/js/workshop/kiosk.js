@@ -36,6 +36,7 @@
         return v > 0 ? v : null;
     };
     let group = urlTeam() || Number(store.get(GROUP_KEY)) || null; // groupe choisi : en-tête X-Kiosk-Group
+    let groupList = []; // groupes de l'accueil (nom, couleur) : bouton du groupe dans l'en-tête de la tablette générique
     let longIdle = false; // ekrany produkcji / partii : zdjęcia i wpisywanie trwają dłużej
     let busy = false; // aparat lub OCR w toku : bez wylogowania
     let idleTimer = null;
@@ -165,6 +166,7 @@
                 <p class="kiosk-muted">${esc(new Date().toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'long', day: 'numeric', month: 'long'}))}</p></div></div>
             <div class="kiosk-head-tools"><span class="kiosk-clock" data-clock>${new Date().toTimeString().slice(0, 5)}</span>
                 <button type="button" class="kiosk-chip" data-lang><span class="kiosk-lang-long">${esc(t('lang_switch'))}</span><span class="kiosk-lang-short" aria-hidden="true">${lang === 'pl' ? 'FR' : 'PL'}</span></button>
+                ${session && deviceInfo && deviceInfo.generic ? groupChip() : ''}
                 ${session ? `<button type="button" class="kiosk-btn is-small kiosk-icon-btn" data-switch aria-label="${esc(t('switch_person'))}">${icon('users')}<span class="kiosk-btn-label">${esc(t('switch_person'))}</span></button>
                 <span class="kiosk-who">${avatar(session.name)}<span class="kiosk-who-name">${esc(session.name)}</span></span>
                 <button type="button" class="kiosk-btn is-small kiosk-icon-btn" data-logout aria-label="${esc(t('logout'))}">${icon('log-out')}<span class="kiosk-btn-label">${esc(t('logout'))}</span></button>` : ''}</div></header>`
@@ -244,9 +246,10 @@
         let groups = [];
         try { groups = await api('GET', '/kiosk/groups'); } catch (err) { groups = []; }
         if (!el.isConnected) return;
+        groupList = groups;
         if (group && groups.length && !groups.some(g => g.id === group)) setGroup(null);
         groupBonus = groups.some(g => g.id === deviceInfo.group_id && g.bonus);
-        if (generic && !group) return renderGroups(groups);
+        if (generic) return renderGeneric(groups);
         const office = !generic && !deviceInfo.group_id;
         const now = new Date();
         const widgetHead = (ic, cls, title, extra) => `<header class="kiosk-widget-head"><span class="kiosk-widget-icon ${cls}">${icon(ic)}</span><h2>${title}</h2>${extra || ''}</header>`;
@@ -409,13 +412,67 @@
         } catch (e) { /* adresse inchangée */ }
     }
 
-    // Tablette générique : les groupes de production en grand ; un toucher → les personnes du groupe → PIN.
-    function renderGroups(groups) {
-        el.innerHTML = header() + `<section class="kiosk-card kiosk-groups"><h2>${esc(t('groups_title'))}</h2><p class="kiosk-muted">${esc(t('groups_help'))}</p>
-            <div class="kiosk-group-grid">${groups.length ? groups.map(g => `<button type="button" class="kiosk-group-tile" data-group="${g.id}" style="--g:${/^#[0-9a-f]{6}$/i.test(g.color || '') ? g.color : '#8D1D2C'}">
-                <span class="kiosk-group-name">${esc(g.name)}</span><small>${esc(t('group_present', {n: g.present, total: g.people}))}</small></button>`).join('')
-                : `<p class="kiosk-muted">${esc(t('groups_none'))}</p>`}</div></section>`;
-        el.querySelectorAll('[data-group]').forEach(b => b.addEventListener('click', () => { setGroup(Number(b.dataset.group)); renderHome(); }));
+    const groupColor = (c) => /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#8D1D2C';
+    // En-tête de la tablette générique : le groupe en cours ; toucher → fin de session, retour aux onglets des groupes.
+    function groupChip() {
+        const g = groupList.find(x => x.id === group);
+        return g ? `<button type="button" class="kiosk-btn is-small kg-chip" data-change-group style="--g:${groupColor(g.color)}" aria-label="${esc(t('kg_change_group'))}">
+            <span class="kg-dot" aria-hidden="true"></span>${esc(g.name)} ▾</button>` : '';
+    }
+
+    // Tablette générique (maquette 2, 28/10/2026) : un seul écran — les groupes en onglets (le dernier groupe reste choisi),
+    // les présents du groupe à gauche, le PIN à droite ; PIN pour tout le monde. « Inna osoba » : tout le groupe.
+    const pinIdle = () => `<span class="kiosk-badge-icon">${icon('id-card')}</span><h2>${esc(t('kg_pin_idle'))}</h2><p class="kiosk-muted">${esc(t('kg_pin_idle_help'))}</p>`;
+    async function renderGeneric(groups) {
+        if (!groups.length) { el.innerHTML = header() + `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('groups_none'))}</p></section>`; return; }
+        if (!groups.some(g => g.id === group)) setGroup(groups[0].id);
+        const g = groups.find(x => x.id === group);
+        el.innerHTML = header() + `<nav class="kg-groups" role="tablist" aria-label="${esc(t('groups_title'))}">${groups.map(x => `<button type="button" role="tab" aria-selected="${x.id === group}"
+                class="kg-group ${x.id === group ? 'is-on' : ''}" data-kg-group="${x.id}" style="--g:${groupColor(x.color)}"><span class="kg-dot" aria-hidden="true"></span>
+                <span class="kg-gtext"><strong>${esc(x.name)}</strong><small>${esc(t('group_present', {n: x.present, total: x.people}))}</small></span></button>`).join('')}</nav>
+            <div class="kg-main"><section class="kiosk-card kg-people"><h2>${esc(t('kg_who', {group: g.name}))}</h2><p class="kiosk-muted" data-kg-sub>${esc(t('kg_present_help'))}</p>
+                <div class="kg-list" data-kg-list><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>
+                <section class="kiosk-card kiosk-pin kg-pin" data-kg-pin>${pinIdle()}</section></div>
+            <input class="kiosk-badge-input" data-badge autocomplete="off" aria-label="${esc(t('badge'))}">`;
+        pinKeys = null;
+        const badge = el.querySelector('[data-badge]');
+        badge.focus({preventScroll: true});
+        badge.addEventListener('keydown', (e) => { if (e.key === 'Enter' && badge.value.trim()) { e.preventDefault(); const v = badge.value.trim(); badge.value = ''; renderPin({badge: v}); } });
+        el.querySelector('.kg-groups').addEventListener('click', (e) => {
+            const b = e.target.closest('[data-kg-group]');
+            if (b && Number(b.dataset.kgGroup) !== group) { setGroup(Number(b.dataset.kgGroup)); renderGeneric(groups); }
+        });
+        let people = [];
+        try { people = await api('GET', '/kiosk/people'); } catch (err) { if (!err.code) toast(err.message, true); }
+        const list = el.querySelector('[data-kg-list]');
+        if (!list || group !== g.id) return; // autre groupe touché pendant le chargement
+        const pinBox = el.querySelector('[data-kg-pin]');
+        let all = false;
+        let picked = null;
+        const draw = () => {
+            const shown = all ? [...people].sort((a, b) => Number(b.clocked_in) - Number(a.clocked_in)) : people.filter(p => p.clocked_in);
+            list.innerHTML = (shown.length ? shown.map(p => `<button type="button" class="kg-person ${p.clocked_in ? '' : 'is-off'} ${picked === p.id ? 'is-picked' : ''}" data-kg-person="${p.id}">
+                    ${avatar(p.name, 'is-app')}<span><strong>${esc(p.name)}</strong><small>${esc(p.clocked_in ? (p.since ? t('kg_since', {time: p.since}) : t('home_on_shift')) : (p.has_pin ? t('absent') : t('home_no_pin_short')))}</small></span></button>`).join('')
+                : `<p class="kiosk-widget-empty">${esc(t(people.length ? 'home_nobody_in' : 'nobody'))}</p>`)
+                + (all || people.every(p => p.clocked_in) ? '' : `<button type="button" class="kiosk-link" data-kg-all>${esc(t('home_other_person'))}</button>`);
+        };
+        const pick = (p) => {
+            picked = p.id;
+            draw();
+            mountPin(pinBox, {employee_id: p.id, name: p.name, sub: t('kg_pin_sub', {group: g.name})}, () => { picked = null; pinKeys = null; pinBox.innerHTML = pinIdle(); draw(); });
+            // PIN commencé puis abandonné : l'accueil revient au bout de 30 s.
+            window.clearTimeout(idleTimer);
+            idleTimer = window.setTimeout(() => { if (!session) renderHome(); }, 30000);
+        };
+        const present = people.filter(p => p.clocked_in);
+        draw();
+        if (present.length === 1) pick(present[0]);
+        list.addEventListener('click', (e) => {
+            if (e.target.closest('[data-kg-all]')) { all = true; el.querySelector('[data-kg-sub]').textContent = t('kg_all_help'); draw(); return; }
+            const b = e.target.closest('[data-kg-person]');
+            const p = b && people.find(x => x.id === Number(b.dataset.kgPerson));
+            if (p) pick(p);
+        });
     }
 
     // Changer de personne sans quitter l'écran (27/10/2026) : les présents du groupe, un toucher → PIN → même onglet.
@@ -561,14 +618,9 @@
         if (bar && (s.machines || s.dev)) bar.outerHTML = tabs(s.tab || 'production');
     }
 
-    // Présent du groupe (entré au bureau) : un toucher suffit ; sinon (absent, paramètre coupé) le PIN.
-    async function tapLogin(who) {
-        try {
-            startSession(await api('POST', '/kiosk/identify', {employee_id: who.employee_id}), who);
-        } catch (err) {
-            if (err.code === 'EMPLOYEE_NOT_PRESENT') toast(err.message, true);
-            renderPin(who);
-        }
+    // PIN pour tout le monde (28/10/2026) : toucher un présent ouvre le PIN (accueil, widgets, « Zmień osobę »).
+    function tapLogin(who) {
+        renderPin(who);
     }
 
     // Menu du bas de l'accueil : le même que celui d'une personne ; toucher → « qui ? » (ou directement le seul présent).
@@ -592,43 +644,51 @@
         teamWidget.scrollIntoView({behavior: 'smooth', block: 'nearest'});
     });
 
-    function renderPin(who) {
+    // Clavier PIN (écran PIN et panneau de la tablette générique) : un seul écouteur clavier, pour le clavier affiché.
+    let pinKeys = null;
+    document.addEventListener('keydown', (e) => {
+        if (!pinKeys || !el.querySelector('.kiosk-pad')) return;
+        if (/^\d$/.test(e.key)) pinKeys.add(e.key);
+        if (e.key === 'Backspace') pinKeys.back();
+        if (e.key === 'Enter') pinKeys.submit();
+    });
+    function mountPin(box, who, onCancel) {
         let pin = '';
-        el.innerHTML = header() + `<section class="kiosk-card kiosk-pin">${who.name ? avatar(who.name, 'is-lg') : `<span class="kiosk-badge-icon">${icon('id-card')}</span>`}<h2>${esc(who.name || t('badge_read'))}</h2><p class="kiosk-muted">${esc(t('pin_help'))}</p>
+        box.innerHTML = `${who.name ? avatar(who.name, 'is-lg') : `<span class="kiosk-badge-icon">${icon('id-card')}</span>`}<h2>${esc(who.name || t('badge_read'))}</h2><p class="kiosk-muted">${esc(who.sub || t('pin_help'))}</p>
             <div class="kiosk-dots" data-dots aria-hidden="true"></div><p class="kiosk-error" data-error></p>
             <div class="kiosk-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => `<button type="button" class="kiosk-btn" data-digit="${d}">${d}</button>`).join('')}
                 <button type="button" class="kiosk-btn" data-back aria-label="${esc(t('erase'))}">${icon('delete')}</button><button type="button" class="kiosk-btn" data-digit="0">0</button>
                 <button type="button" class="kiosk-btn is-primary" data-ok>OK</button></div>
-            <button type="button" class="kiosk-link" data-cancel>${esc(t('cancel'))}</button></section>`;
-        const dots = () => { el.querySelector('[data-dots]').innerHTML = Array.from({length: Math.max(4, pin.length)}, (_, i) => `<span class="${i < pin.length ? 'is-on' : ''}"></span>`).join(''); };
+            <button type="button" class="kiosk-link" data-cancel>${esc(t('cancel'))}</button>`;
+        const dots = () => { box.querySelector('[data-dots]').innerHTML = Array.from({length: Math.max(4, pin.length)}, (_, i) => `<span class="${i < pin.length ? 'is-on' : ''}"></span>`).join(''); };
         dots();
         const submit = async () => {
             if (pin.length < 4) return;
-            const ok = el.querySelector('[data-ok]');
+            const ok = box.querySelector('[data-ok]');
             ok.disabled = true;
             try {
                 startSession(await api('POST', '/kiosk/identify', {...(who.badge ? {badge: who.badge} : {employee_id: who.employee_id}), pin}), who);
             } catch (err) {
                 pin = ''; dots(); ok.disabled = false;
-                el.querySelector('[data-error]').textContent = err.message;
+                box.querySelector('[data-error]').textContent = err.message;
             }
         };
-        el.querySelector('.kiosk-pad').addEventListener('click', (e) => {
+        const keys = {add: (d) => { if (pin.length < 6) { pin += d; dots(); } }, back: () => { pin = pin.slice(0, -1); dots(); }, submit};
+        pinKeys = keys;
+        box.querySelector('.kiosk-pad').addEventListener('click', (e) => {
             const b = e.target.closest('button');
             if (!b) return;
-            if (b.dataset.digit !== undefined && pin.length < 6) pin += b.dataset.digit;
-            if (b.hasAttribute('data-back')) pin = pin.slice(0, -1);
-            dots();
+            if (b.dataset.digit !== undefined) keys.add(b.dataset.digit);
+            if (b.hasAttribute('data-back')) keys.back();
             if (b.hasAttribute('data-ok')) submit();
         });
-        document.addEventListener('keydown', function keys(e) {
-            if (!el.querySelector('.kiosk-pad')) { document.removeEventListener('keydown', keys); return; }
-            if (/^\d$/.test(e.key) && pin.length < 6) { pin += e.key; dots(); }
-            if (e.key === 'Backspace') { pin = pin.slice(0, -1); dots(); }
-            if (e.key === 'Enter') submit();
-        });
+        box.querySelector('[data-cancel]').addEventListener('click', onCancel);
+    }
+
+    function renderPin(who) {
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-pin" data-pin-box></section>`;
         // Bascule annulée : retour à l'onglet de la personne encore connectée.
-        el.querySelector('[data-cancel]').addEventListener('click', () => (who.tab && session ? openTab(who.tab) : renderHome()));
+        mountPin(el.querySelector('[data-pin-box]'), who, () => (who.tab && session ? openTab(who.tab) : renderHome()));
         window.clearTimeout(idleTimer);
         idleTimer = window.setTimeout(() => (who.tab && session ? logout(t('idle_logout')) : renderHome()), 30000);
     }
@@ -2930,6 +2990,7 @@
         if (tab && session) { stopScan(); openTab(tab.dataset.tab); return; }
         if (e.target.closest('[data-logout]')) logout();
         if (e.target.closest('[data-switch]') && session) { stopScan(); renderSwitch(); }
+        if (e.target.closest('[data-change-group]') && session) { stopScan(); logout(); }
     });
     // Espace réservé au menu fixe en bas (toast au-dessus du menu).
     new MutationObserver(() => el.classList.toggle('has-nav', !!el.querySelector('.kiosk-tabs'))).observe(el, {childList: true});

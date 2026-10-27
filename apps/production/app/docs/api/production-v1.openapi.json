@@ -21797,6 +21797,11 @@
                     "clocked_in": {
                         "type": "boolean"
                     },
+                    "since": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "heure d'entrée du jour (G:i)"
+                    },
                     "driver": {
                         "type": "boolean"
                     }

@@ -255,7 +255,9 @@ final class KioskAuthService
         } else {
             $rows = $this->repo->people($context->deviceGroupId);
         }
+        // since : heure d'entrée du jour (tablette générique : « w pracy od 6:02 »).
         return array_map(fn($p) => ['id' => (int) $p['id'], 'name' => $p['name'], 'has_pin' => (bool) $p['has_pin'], 'clocked_in' => $p['clocked_in_at'] !== null,
+            'since' => $p['clocked_in_at'] !== null ? date('G:i', strtotime((string) $p['clocked_in_at'])) : null,
             'driver' => isset($drivers[(int) $p['id']])], $rows);
     }
 
