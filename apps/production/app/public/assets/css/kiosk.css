@@ -791,6 +791,19 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
   color: var(--k-text); min-height: 48px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; }
 .kiosk-group-chip small { margin-left: 2px; }
 .kiosk-other-person { grid-column: 1 / -1; justify-self: center; margin-top: 4px; }
+/* Receptura na zamówienie (makieta 1) : zamówienie, strata, do zrobienia ; składniki i opakowania. */
+.kv-recipe-btn { margin-top: 8px; border: 1px solid var(--k-line-2); background: var(--k-surface); color: var(--k-primary); border-radius: var(--k-radius); padding: 7px 12px; font: inherit; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.or-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.or-title h2 { margin: 0 0 6px; font-size: 26px; }
+.or-pill { display: inline-block; padding: 4px 12px; border-radius: 999px; background: var(--k-primary-50); color: var(--k-primary); font-weight: 600; font-size: 14px; }
+.or-head { display: grid; grid-template-columns: auto 1fr auto; gap: 28px; align-items: start; }
+.or-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.or-calc { margin: 0; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.or-make strong { font-size: 34px; line-height: 1.1; color: var(--k-primary); font-variant-numeric: tabular-nums; }
+.or-custom input { width: 56px; border: 0; background: transparent; font: inherit; text-align: right; }
+.or-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start; }
+.or-foot { text-align: center; margin: 12px 0 0; }
+@media (max-width: 820px) { .or-head, .or-grid { grid-template-columns: 1fr; } }
 /* Zrobione en pièces : équivalent en cartons sous le compteur. */
 .kv-cartons { margin: 6px 0 0; font-size: 17px; font-weight: 600; color: var(--k-primary); font-variant-numeric: tabular-nums; }
 .kv-cartons .kiosk-muted { font-size: 14px; font-weight: 500; }

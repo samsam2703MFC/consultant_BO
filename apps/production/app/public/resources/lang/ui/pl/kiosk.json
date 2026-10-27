@@ -604,5 +604,21 @@
   "home_tab_who": "« {tab} » : kto ? Dotknij swojego zdjęcia.",
   "home_week_short": "Tydz.",
   "kv_cartons_eq": "= {c} kart.",
-  "kv_cartons_rest": "= {c} kart. + {r} {u}"
+  "kv_cartons_rest": "= {c} kart. + {r} {u}",
+  "or_open": "Receptura",
+  "or_title": "Receptura na zamówienie",
+  "or_order": "Zamówienie",
+  "or_calc": "{c} kart. × {ppc} = {q} {u}",
+  "or_ordered": "zamówione przez klientów : {c} kart.",
+  "or_loss": "Strata produkcyjna",
+  "or_other": "inna",
+  "or_to_make": "Do zrobienia",
+  "or_recipes": "receptur",
+  "or_ingredients": "Składniki",
+  "or_packaging": "Opakowania (na zamówienie)",
+  "or_packaging_help": "Strata dotyczy składników ; opakowania dokładnie na zamówienie.",
+  "or_validate": "Zatwierdź i wpisz partie",
+  "or_validate_help": "Zatwierdź : powstaje partia produkcji z ilością do zrobienia, potem dla każdego składnika numer partii — zdjęcie worka (odczyt OCR), skan albo ręcznie.",
+  "or_confirm": "Zatwierdzić partię : {q} {u} — {name} ? Potem numery partii składników.",
+  "or_saved": "Partia {lot} zapisana — wpisz numery partii składników."
 }

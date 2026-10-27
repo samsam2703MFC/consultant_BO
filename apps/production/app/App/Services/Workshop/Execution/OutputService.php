@@ -114,6 +114,8 @@ final class OutputService
             ],
             'waste_reasons' => self::WASTE_REASONS,
             'waste_photo' => ['required' => $this->photoRequired(), 'max' => $this->photoMax()],
+            // Receptura na zamówienie (27/10/2026) : domyślna strata produkcyjna w % (0, 2, 5 albo inna na tablecie).
+            'recipe_loss_pct' => $this->recipeLossPct(),
             'categories' => array_values($categories),
             'catalog' => array_values($catalog),
             'ordered' => $this->ordered($productItems, $catalog, $day),
@@ -525,6 +527,11 @@ final class OutputService
     private function photoRequired(): bool
     {
         return (string) $this->params->get('kiosk.waste_photo_required', '1') === '1';
+    }
+
+    private function recipeLossPct(): float
+    {
+        return max(0.0, min(50.0, (float) str_replace(',', '.', $this->params->get('kiosk.recipe_loss_pct', '2'))));
     }
 
     private function photoMax(): int

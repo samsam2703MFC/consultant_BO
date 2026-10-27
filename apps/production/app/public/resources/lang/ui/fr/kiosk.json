@@ -604,5 +604,21 @@
   "home_tab_who": "« {tab} » : qui ? Touchez votre photo.",
   "home_week_short": "Sem.",
   "kv_cartons_eq": "= {c} cart.",
-  "kv_cartons_rest": "= {c} cart. + {r} {u}"
+  "kv_cartons_rest": "= {c} cart. + {r} {u}",
+  "or_open": "Recette",
+  "or_title": "Recette sur commande",
+  "or_order": "Commande",
+  "or_calc": "{c} cart. × {ppc} = {q} {u}",
+  "or_ordered": "commandé par les clients : {c} cart.",
+  "or_loss": "Perte de production",
+  "or_other": "autre",
+  "or_to_make": "À faire",
+  "or_recipes": "recettes",
+  "or_ingredients": "Ingrédients",
+  "or_packaging": "Emballages (pour la commande)",
+  "or_packaging_help": "La perte s'applique aux ingrédients ; les emballages exactement pour la commande.",
+  "or_validate": "Valider et saisir les lots",
+  "or_validate_help": "Valider : la partie de production est créée avec la quantité à faire, puis pour chaque ingrédient le numéro de lot — photo du sac (lecture OCR), scan ou à la main.",
+  "or_confirm": "Valider la partie : {q} {u} — {name} ? Ensuite les numéros de lot des ingrédients.",
+  "or_saved": "Partie {lot} enregistrée — saisissez les numéros de lot des ingrédients."
 }

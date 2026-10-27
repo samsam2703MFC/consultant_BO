@@ -869,6 +869,7 @@ check($s === 401 && $b['description'] === 'EMPLOYEE_UNAUTHENTICATED', 'productio
 check($s === 200 && $b['data']['employee']['id'] === $jan && $b['data']['employee_token'] !== $emp && $b['data']['expires_in'] === 120, 'person session prolonged while working');
 $emp = $b['data']['employee_token'];
 [$s, $pd] = $kiosk('GET', '/kiosk/production', null, $device, $emp);
+check($s === 200 && abs($pd['data']['recipe_loss_pct'] - 2.0) < 1e-9, 'day payload: default production loss for the order recipe (kiosk.recipe_loss_pct = 2)');
 $row = array_values(array_filter($pd['data']['items'] ?? [], fn($i) => $i['item_id'] === $croissant))[0] ?? null;
 check($s === 200 && $pd['data']['group']['id'] === 1 && $row && $row['planned'] == 120.0 && $row['produced'] == 0.0 && $row['ppc'] === 60
     && in_array($croissant, array_column($pd['data']['catalog'], 'item_id'), true), 'production of the day: planned from the week Gantt, group catalog');

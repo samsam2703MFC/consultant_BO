@@ -22106,6 +22106,10 @@
                             }
                         }
                     },
+                    "recipe_loss_pct": {
+                        "type": "number",
+                        "description": "kiosk.recipe_loss_pct : perte de production proposée dans « Receptura na zamówienie » (0–50 %)"
+                    },
                     "categories": {
                         "type": "array",
                         "items": {

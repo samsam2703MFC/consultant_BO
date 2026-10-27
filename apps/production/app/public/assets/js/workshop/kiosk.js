@@ -1152,6 +1152,96 @@
             <p class="kiosk-muted kv-small">${icon('search', 'is-sm')} ${esc(t('kv_search_help'))}</p>`;
     }
 
+    const recipeBtn = (i) => i.has_recipe === false ? '' : `<button type="button" class="kv-recipe-btn" data-kv-recipe="${i.item_id}">${icon('book-open', 'is-sm')} ${esc(t('or_open'))}</button>`;
+
+    // Receptura na zamówienie (27/10/2026, makieta 1) : zamówione kartony × sztuki w kartonie + strata produkcyjna
+    // (0 / 2 / 5 % albo inna) → sztuki do zrobienia i składniki ; opakowania na zamówienie (bez straty).
+    // « Zatwierdź » : partia z ilością do zrobienia, potem numer partii każdego składnika (zdjęcie worka, OCR albo ręcznie).
+    async function renderOrderRecipe(day, i) {
+        longIdle = true;
+        resetIdle();
+        let r;
+        try { r = await api('GET', `/kiosk/recipes/${i.item_id}`, undefined, true); } catch (err) { toast(err.message, true); return; }
+        const ppc = r.basis === 'carton' ? r.ppc : null;
+        const ordered = (day.ordered || []).filter(o => o.item_id === i.item_id).reduce((s, o) => s + (Number(o.cartons) || 0), 0);
+        const st = {
+            cartons: ppc ? (ordered > 0 ? ordered : (i.planned ? Math.max(1, Math.ceil(i.planned / ppc - 1e-9)) : 1)) : null,
+            qty: ppc ? null : (i.planned || (r.basis === 'kg' ? r.recipe_yield : 1) || 1),
+            loss: Number(day.recipe_loss_pct ?? 2),
+        };
+        const back = () => renderLines(day, vstate.me, vstate.mode, i.item_id);
+        const base = () => ppc ? st.cartons * ppc : st.qty;
+        const toMake = () => {
+            const q = base() * (1 + st.loss / 100);
+            return ppc || r.unit === 'szt' ? Math.ceil(q - 1e-9) : Math.round(q * 1000) / 1000;
+        };
+        // Mnożnik drzewa : karton (sztuki ÷ sztuki w kartonie), kg albo liczba receptur.
+        const fOf = (q) => ppc ? q / ppc : q;
+        const draw = () => {
+            const make = toMake();
+            const fI = fOf(make);
+            const fP = fOf(base());
+            const subs = r.tree.lines.filter(l => l.kind === 'recipe');
+            const mats = r.tree.lines.filter(l => l.kind === 'material' && !l.packaging);
+            const pack = r.tree.lines.filter(l => l.kind === 'material' && l.packaging);
+            const lossChip = (v) => `<button type="button" class="kv-chip ${Math.abs(st.loss - v) < 1e-9 ? 'is-on' : ''}" data-or-loss="${v}">${v ? '+' + fmt(v) : '0'} %</button>`;
+            const custom = ![0, 2, 5].some(v => Math.abs(st.loss - v) < 1e-9);
+            el.querySelector('[data-or-body]').innerHTML = `
+                <section class="kiosk-card or-head">
+                    <div class="or-col"><span class="kv-lbl">${esc(t('or_order'))}</span>
+                        ${ppc ? `<div class="kv-step"><button type="button" data-or-step="-1" aria-label="−">${icon('minus')}</button><input class="kv-num" data-or-cartons inputmode="numeric" value="${st.cartons}">
+                            <button type="button" data-or-step="1" aria-label="+">${icon('plus')}</button><small>${esc(t('prod_cartons_short'))}</small></div>
+                            <p class="or-calc">${esc(t('or_calc', {c: fmt(st.cartons), ppc, q: fmt(base()), u: r.unit}))}</p>`
+                        : `<div class="kv-step"><input class="kv-num" data-or-qty inputmode="decimal" value="${String(st.qty).replace('.', ',')}"><small>${esc(r.basis === 'kg' ? 'kg' : (r.basis === 'recipe' ? t('or_recipes') : r.unit))}</small></div>`}
+                        ${ordered > 0 ? `<p class="kiosk-muted kv-small">${esc(t('or_ordered', {c: fmt(ordered)}))}</p>` : ''}</div>
+                    <div class="or-col"><span class="kv-lbl">${esc(t('or_loss'))}</span>
+                        <div class="kv-reasons">${lossChip(0)}${lossChip(2)}${lossChip(5)}
+                            <label class="kv-chip or-custom ${custom ? 'is-on' : ''}">${esc(t('or_other'))} <input data-or-loss-custom inputmode="decimal" value="${custom ? String(st.loss).replace('.', ',') : ''}" placeholder="%"></label></div></div>
+                    <div class="or-col or-make"><span class="kv-lbl">${esc(t('or_to_make'))}</span><strong>${esc(fmt(make))} ${esc(ppc ? r.unit : (r.basis === 'kg' ? 'kg' : (r.basis === 'recipe' ? t('or_recipes') : r.unit)))}</strong>
+                        ${ppc ? `<small class="kiosk-muted">${esc(cartonsOf(make, {ppc, unit: r.unit}))}</small>` : ''}</div>
+                </section>
+                <div class="or-grid">
+                    <section class="kiosk-card"><h2>${esc(t('or_ingredients'))}</h2>
+                        ${subs.map(l => recBlock(l, fI, 0)).join('')}
+                        ${mats.length ? `<ul class="kiosk-rec-lines">${mats.map(l => lineRow(l, fI)).join('')}</ul>` : ''}
+                        ${!subs.length && !mats.length ? `<p class="kiosk-muted">${esc(t('rec_no_tree'))}</p>` : ''}</section>
+                    ${pack.length ? `<section class="kiosk-card"><h2>${esc(t('or_packaging'))}</h2><ul class="kiosk-rec-lines">${pack.map(l => lineRow(l, fP)).join('')}</ul>
+                        <p class="kiosk-muted kv-small">${esc(t('or_packaging_help'))}</p></section>` : ''}
+                </div>`;
+        };
+        el.innerHTML = header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-back>‹ ${esc(t('back'))}</button>`, true) + `
+            <section class="kiosk-card or-title"><div><h2>${esc(i.name)}</h2><span class="or-pill">${esc(t('or_title'))}</span></div>
+                <button type="button" class="kiosk-btn is-primary" data-or-go>${icon('check')} ${esc(t('or_validate'))}</button></section>
+            <div data-or-body></div>
+            <p class="kiosk-muted or-foot">${esc(t('or_validate_help'))}</p>`;
+        draw();
+        el.querySelector('[data-back]').addEventListener('click', back);
+        const body = el.querySelector('[data-or-body]');
+        body.addEventListener('click', (e) => {
+            resetIdle();
+            const step = e.target.closest('[data-or-step]');
+            if (step) { st.cartons = Math.max(1, st.cartons + Number(step.dataset.orStep)); return draw(); }
+            const loss = e.target.closest('[data-or-loss]');
+            if (loss) { st.loss = Number(loss.dataset.orLoss); return draw(); }
+        });
+        body.addEventListener('change', (e) => {
+            const n = (v) => Number(String(v).replace(',', '.').replace(/\s/g, ''));
+            if (e.target.matches('[data-or-cartons]')) { const v = Math.round(n(e.target.value)); if (Number.isFinite(v) && v > 0) st.cartons = v; return draw(); }
+            if (e.target.matches('[data-or-qty]')) { const v = n(e.target.value); if (Number.isFinite(v) && v > 0) st.qty = v; return draw(); }
+            if (e.target.matches('[data-or-loss-custom]')) { const v = n(e.target.value); if (Number.isFinite(v) && v >= 0 && v <= 50) st.loss = v; return draw(); }
+        });
+        const id = uuid();
+        el.querySelector('[data-or-go]').addEventListener('click', async (e) => {
+            const q = toMake();
+            if (!window.confirm(t('or_confirm', {q: fmt(q), u: ppc ? r.unit : (r.basis === 'kg' ? 'kg' : r.unit), name: i.name}))) return;
+            e.currentTarget.disabled = true;
+            try {
+                const b = await api('POST', '/kiosk/production', {item_id: i.item_id, quantity: Math.round(q * 1000) / 1000, client_uuid: id}, true);
+                renderBatch(b.id, t('or_saved', {lot: b.lot_code}), b);
+            } catch (err) { e.currentTarget.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
+        });
+    }
+
     function drawLine(day, i, L, locked) {
         const unitDone = i.unit;
         const shortQ = i.planned !== null ? r3(i.planned - L.produced) : 0;
@@ -1162,7 +1252,7 @@
         if (!editing) {
             const ok = !!i.line;
             return `<article class="kiosk-card kv-line ${ok ? 'is-ok' : ''}" data-line="${i.item_id}">
-                <div class="kv-prod-name"><h3>${esc(i.name)}</h3><p class="kiosk-muted">${esc(planMeta)}</p>${i.line && i.line.corrected_by ? `<p class="kiosk-muted kv-small">${icon('pencil', 'is-sm')} ${esc(t('kv_corrected', {name: i.line.corrected_by}))}</p>` : ''}</div>
+                <div class="kv-prod-name"><h3>${esc(i.name)}</h3><p class="kiosk-muted">${esc(planMeta)}</p>${recipeBtn(i)}${i.line && i.line.corrected_by ? `<p class="kiosk-muted kv-small">${icon('pencil', 'is-sm')} ${esc(t('kv_corrected', {name: i.line.corrected_by}))}</p>` : ''}</div>
                 <div class="kv-col"><span class="kv-lbl">${esc(t('day_col_done'))}</span><strong class="kv-big">${esc(fmt(ok ? i.line.produced : i.produced))} ${esc(i.unit)}</strong>
                     ${i.ppc && (ok ? i.line.produced : i.produced) > 0 ? `<p class="kv-cartons">${esc(cartonsOf(ok ? i.line.produced : i.produced, i))}</p>` : ''}
                     ${ok && i.line.note ? `<p class="kiosk-muted kv-small">${esc(i.line.note)}</p>` : ''}</div>
@@ -1177,7 +1267,7 @@
         const needPhoto = L.waste > 0 && photoRequired && !L.photos.length;
         const doneVal = r3(L.produced);
         return `<article class="kiosk-card kv-line is-edit ${shortQ > 1e-6 ? 'is-short' : ''}" data-line="${i.item_id}">
-            <div class="kv-prod-name"><h3>${esc(i.name)}</h3><p class="kiosk-muted">${esc(planMeta)}${i.produced > 0 ? ' · ' + esc(t('kv_recorded', {q: cq(i.produced, i)})) : ''}</p></div>
+            <div class="kv-prod-name"><h3>${esc(i.name)}</h3><p class="kiosk-muted">${esc(planMeta)}${i.produced > 0 ? ' · ' + esc(t('kv_recorded', {q: cq(i.produced, i)})) : ''}</p>${recipeBtn(i)}</div>
             <div class="kv-col"><span class="kv-lbl">${esc(t('day_col_done'))}</span>
                 <div class="kv-step"><button type="button" data-kv-step="produced" data-d="-1" aria-label="−">${icon('minus')}</button>
                     <input class="kv-num" data-kv-field="produced" inputmode="decimal" value="${esc(String(doneVal).replace('.', ','))}" aria-label="${esc(t('day_col_done'))}">
@@ -1266,6 +1356,7 @@
                     L.error = '';
                     return redraw(i.item_id);
                 }
+                if (e.target.closest('[data-kv-recipe]')) return renderOrderRecipe(day, i);
                 const reason = e.target.closest('[data-kv-reason]');
                 if (reason) { L.reason = reason.dataset.kvReason; L.error = ''; return redraw(i.item_id); }
                 const un = e.target.closest('[data-kv-unphoto]');

@@ -306,6 +306,7 @@ final class OpenApiExecution
                     'locked' => ['type' => 'boolean', 'description' => 'jour validé : la tablette ne change plus quantités ni pertes (corrections dans l\'ERP)']]],
                 'waste_reasons' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['quality', 'burnt', 'damaged', 'samples', 'other']]],
                 'waste_photo' => ['type' => 'object', 'properties' => ['required' => $bool, 'max' => $int]],
+                'recipe_loss_pct' => ['type' => 'number', 'description' => 'kiosk.recipe_loss_pct : perte de production proposée dans « Receptura na zamówienie » (0–50 %)'],
                 'categories' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => $nInt, 'name' => $nStr, 'count' => $int]]],
                 'catalog' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/OutputItem']],
                 'ordered' => ['type' => 'array', 'description' => 'produits du groupe commandés par les clients (commandes ouvertes, expédition depuis 7 jours de retard jusqu\'à ordered_to) : boutons de « Zakoduj produkcję », expédition la plus proche d\'abord ; les autres produits par la recherche',
