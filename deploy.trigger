@@ -1099,3 +1099,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-26T22:10:43Z production : diagnostic mémoire par programme
 2026-10-27T07:01:40Z production : tablette de bureau (service → nom → QR personnel validé au téléphone)
 2026-10-27T07:10:26Z production : tablette de bureau, libellé d'appairage
+2026-10-27T07:29:22Z production : section Tablety, plan des tablettes, signature obligatoire entrée / sortie
