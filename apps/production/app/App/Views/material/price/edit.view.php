@@ -161,20 +161,9 @@
     </div>
 </div>
 
-<div class="modal fade" id="priceHistoryModal" tabindex="-1" aria-labelledby="priceHistoryTitle" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="priceHistoryTitle">Historia cen</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
-            </div>
-            <div class="modal-body" id="priceHistoryBody"></div>
-        </div>
-    </div>
-</div>
-
 <?php $this->view("page_components/footer"); ?>
 
+<script src="<?= ROOT ?>/assets/js/workshop/price-history.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>"></script>
 <script type="text/javascript">
 
     function searchInTable(input_value) {
@@ -200,26 +189,14 @@
 
 
     const newPriceModal = new bootstrap.Modal(document.getElementById("newPriceModal"), {});
-    const historyModal = new bootstrap.Modal(document.getElementById("priceHistoryModal"), {});
-    const PRICE_SOURCES = {manual: 'ręcznie (Ceny surowców)', offer: 'oferta', invoice: 'faktura zakupowa', 'new': 'nowy surowiec'};
-    const escHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
-    async function showPriceHistory(name, id) {
-        document.getElementById('priceHistoryTitle').textContent = 'Historia cen : ' + name;
-        const body = document.getElementById('priceHistoryBody');
-        body.innerHTML = '<p class="text-muted mb-0">Wczytywanie…</p>';
-        historyModal.show();
-        const resp = await api(`/ajax/materials/${id}/price-history`);
-        const rows = (resp && resp.ok && resp.rows) || [];
-        if (!resp || !resp.ok) { body.innerHTML = '<p class="text-danger mb-0">Nie udało się wczytać historii.</p>'; return; }
-        if (!rows.length) { body.innerHTML = '<p class="text-muted mb-0">Brak zapisanych zmian ceny.</p>'; return; }
-        const nf = (v, d) => Number(v).toLocaleString('pl-PL', {minimumFractionDigits: d, maximumFractionDigits: d});
-        body.innerHTML = `<div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr>
-            <th>Data</th><th>Dostawca</th><th class="text-end">Opakowanie</th><th class="text-end">Cena opak.</th><th class="text-end">Cena 1000 j.</th><th>Źródło</th></tr></thead><tbody>${rows.map(r => `<tr>
-            <td class="text-nowrap">${escHtml(String(r.timestamp).slice(0, 16))}</td><td>${escHtml(r.supplier || '—')}</td>
-            <td class="text-end">${nf(r.package_size_in_base_unit, 0)}</td><td class="text-end text-nowrap">${nf(r.pack_price, 2)} zł</td>
-            <td class="text-end text-nowrap">${Number(r.package_size_in_base_unit) > 0 ? nf(1000 * r.pack_price / r.package_size_in_base_unit, 2) + ' zł' : '—'}</td>
-            <td>${r.source ? escHtml(PRICE_SOURCES[r.source] || r.source) : '<span class="text-muted">—</span>'}${r.user_name ? `<div class="small text-muted">${escHtml(r.user_name)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+    // Historia cen za kg według dostawcy (wspólny widok z Zaopatrzeniem : wykres, dostawcy, wszystkie zmiany z osobą).
+    function showPriceHistory(name, id) {
+        window.TfbPriceHistory.open({title: 'Historia cen : ' + name, lang: 'pl', months: 24, load: async (m) => {
+            const resp = await api(`/ajax/materials/${id}/price-history?months=${m}`);
+            if (!resp || !resp.ok || !resp.history) throw new Error('history');
+            return resp.history;
+        }});
     }
 
     document.getElementById('id_materials_table').addEventListener('click', function (e) {

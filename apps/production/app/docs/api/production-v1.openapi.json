@@ -8579,6 +8579,139 @@
                 "x-permission": "prod.supply.write"
             }
         },
+        "/supply/invoices/ksef/sync": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Pobierz nowe z KSeF (jedno kliknięcie) / Récupérer les nouvelles factures KSeF",
+                "operationId": "syncKsefPurchaseInvoices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/KsefSyncResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Recherche depuis la dernière facture KSeF importée (− 7 jours ; sinon 30 jours, au plus 89 jours) jusqu'à aujourd'hui, import de toutes les nouvelles (50 max), traitement automatique des factures entièrement reconnues. KSEF_UNAVAILABLE (422).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/invoices/process-ready": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zatwierdź gotowe faktury / Valider les factures prêtes",
+                "operationId": "processReadyPurchaseInvoices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceProcessReadyResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Toutes les factures ouvertes sans blocage ni avertissement (fournisseur connu, toutes les lignes reliées, sans écart, sans hausse de prix, totaux cohérents) : comme POST /supply/invoices/{id}/process.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvoiceProcessInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
         "/supply/invoices/upload": {
             "post": {
                 "tags": [
@@ -9153,6 +9286,188 @@
                 "x-permission": "prod.supply.write"
             }
         },
+        "/supply/invoices/{id}/map": {
+            "put": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Przypisz wszystkie linie / Relier toutes les lignes",
+                "operationId": "mapPurchaseInvoiceLines",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Plusieurs lignes en un appel (matière + facteur) ; facteur absent : unités, poids lu dans le nom (« WOREK 25KG » → 25 000 g) ou conditionnement de la matière. remember (défaut true) : mémorisé pour le fournisseur.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvoiceLinesMapInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/invoices/{id}/process": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zatwierdź fakturę (ceny, stan, akceptacja) / Valider la facture (prix, stock, acceptation)",
+                "operationId": "processPurchaseInvoice",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PurchaseInvoice"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "En un clic et tout ou rien : prix vers les fiches matières (si pas encore importés), quantités en stock (si pas encore reçues : commande liée ou commande « reçue » créée), acceptation. prices / stock / accept (défaut true) choisissent les étapes. INVOICE_NO_LINES, INVOICE_UNMAPPED, INVOICE_NO_SUPPLIER (422) ; INVOICE_NEEDS_CONFIRMATION (409) : écarts avec la commande, hausse de prix au-delà de supply.invoice_price_alert_pct ou total différent — renvoyer avec force = true. Réponse : la facture + processed.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvoiceProcessInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
         "/supply/invoices/{id}/decision": {
             "post": {
                 "tags": [
@@ -9537,6 +9852,176 @@
                     }
                 ],
                 "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/prices": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Historia cen surowców (za kg) / Historique des prix des matières (au kg)",
+                "operationId": "listMaterialPriceHistory",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MaterialPriceOverview"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Par matière ayant un prix sur la période : dernier prix et fournisseur, variation vs le prix précédent, min. et max. avec leur fournisseur, nombre de fournisseurs. Prix en zł par unité de base (g, ml, szt) ; factor = unités de base dans l'unité affichée (kg = 1000). Sources : factures d'achat, réceptions avec prix (commandes sans facture), changements de la fiche matière.",
+                "parameters": [
+                    {
+                        "name": "months",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                3,
+                                6,
+                                12,
+                                24,
+                                36
+                            ],
+                            "description": "défaut : 12"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/materials/{id}/prices": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Historia cen surowca według dostawcy / Historique des prix d'une matière par fournisseur",
+                "operationId": "getMaterialPriceHistory",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/MaterialPriceHistory"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Points (date, fournisseur, prix, quantité, facture / commande / source) pour le graphique, résumé par fournisseur (dernier, min., max., moyenne pondérée par la quantité, variation), fournisseur le moins cher sur 12 mois.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "months",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                3,
+                                6,
+                                12,
+                                24,
+                                36
+                            ],
+                            "description": "défaut : 24"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
             }
         },
         "/planning/week/move": {
@@ -26232,6 +26717,45 @@
                                         },
                                         "total_mismatch": {
                                             "type": "boolean"
+                                        },
+                                        "price_jumps": {
+                                            "type": "integer",
+                                            "description": "lignes dont le prix au kg s'écarte de la fiche matière de plus de supply.invoice_price_alert_pct (drapeau price_jump)"
+                                        }
+                                    }
+                                },
+                                "ready": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "description": "factures ouvertes : ok = prête pour « Valider la facture » et l'automatique",
+                                    "properties": {
+                                        "ok": {
+                                            "type": "boolean"
+                                        },
+                                        "blockers": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "no_lines",
+                                                    "unmapped",
+                                                    "no_supplier"
+                                                ]
+                                            }
+                                        },
+                                        "warnings": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "gaps",
+                                                    "price_jump",
+                                                    "total_mismatch"
+                                                ]
+                                            }
+                                        },
+                                        "unmapped": {
+                                            "type": "integer"
                                         }
                                     }
                                 }
@@ -26240,6 +26764,21 @@
                     },
                     "can_write": {
                         "type": "boolean"
+                    },
+                    "auto": {
+                        "type": "object",
+                        "description": "paramètres supply.invoice_auto_prices / _full et supply.invoice_price_alert_pct",
+                        "properties": {
+                            "prices": {
+                                "type": "boolean"
+                            },
+                            "full": {
+                                "type": "boolean"
+                            },
+                            "price_alert_pct": {
+                                "type": "number"
+                            }
+                        }
                     }
                 }
             },
@@ -26379,6 +26918,10 @@
                             },
                             "total_mismatch": {
                                 "type": "boolean"
+                            },
+                            "price_jumps": {
+                                "type": "integer",
+                                "description": "lignes dont le prix au kg s'écarte de la fiche matière de plus de supply.invoice_price_alert_pct (drapeau price_jump)"
                             }
                         }
                     },
@@ -26489,6 +27032,105 @@
                     },
                     "can_receive": {
                         "type": "boolean"
+                    },
+                    "ready": {
+                        "type": "object",
+                        "nullable": true,
+                        "description": "factures ouvertes : ok = prête pour « Valider la facture » et l'automatique",
+                        "properties": {
+                            "ok": {
+                                "type": "boolean"
+                            },
+                            "blockers": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "no_lines",
+                                        "unmapped",
+                                        "no_supplier"
+                                    ]
+                                }
+                            },
+                            "warnings": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "gaps",
+                                        "price_jump",
+                                        "total_mismatch"
+                                    ]
+                                }
+                            },
+                            "unmapped": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "auto": {
+                        "type": "object",
+                        "description": "paramètres supply.invoice_auto_prices / _full et supply.invoice_price_alert_pct",
+                        "properties": {
+                            "prices": {
+                                "type": "boolean"
+                            },
+                            "full": {
+                                "type": "boolean"
+                            },
+                            "price_alert_pct": {
+                                "type": "number"
+                            }
+                        }
+                    },
+                    "price_refs": {
+                        "type": "object",
+                        "description": "par matière (id) : prix précédent (hors cette facture) et fournisseur le moins cher sur 12 mois",
+                        "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                                "previous": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "additionalProperties": true
+                                },
+                                "best": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "additionalProperties": true
+                                },
+                                "suppliers": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "processed": {
+                        "type": "object",
+                        "description": "POST …/process seulement",
+                        "properties": {
+                            "prices": {
+                                "type": "integer"
+                            },
+                            "prices_skipped": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "stock": {
+                                "type": "boolean"
+                            },
+                            "accepted": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "auto_processed": {
+                        "type": "object",
+                        "nullable": true,
+                        "description": "upload : traitement automatique effectué (facture entièrement reconnue)",
+                        "additionalProperties": true
                     }
                 }
             },
@@ -26731,6 +27373,283 @@
                         "type": "array",
                         "items": {
                             "type": "integer"
+                        }
+                    }
+                }
+            },
+            "InvoiceLinesMapInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "lines"
+                ],
+                "properties": {
+                    "lines": {
+                        "type": "array",
+                        "maxItems": 300,
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "line_id",
+                                "raw_material_id"
+                            ],
+                            "properties": {
+                                "line_id": {
+                                    "type": "integer"
+                                },
+                                "raw_material_id": {
+                                    "type": "integer"
+                                },
+                                "factor": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "unités de base par unité de facture ; absent : déduit"
+                                }
+                            }
+                        }
+                    },
+                    "remember": {
+                        "type": "boolean",
+                        "description": "défaut true"
+                    }
+                }
+            },
+            "InvoiceProcessInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "prices": {
+                        "type": "boolean",
+                        "description": "prix vers les fiches matières (défaut true)"
+                    },
+                    "stock": {
+                        "type": "boolean",
+                        "description": "quantités en stock (défaut true)"
+                    },
+                    "accept": {
+                        "type": "boolean",
+                        "description": "accepter la facture (défaut true)"
+                    },
+                    "force": {
+                        "type": "boolean",
+                        "description": "valider malgré les avertissements (facture seule)"
+                    }
+                }
+            },
+            "InvoiceProcessReadyResult": {
+                "type": "object",
+                "properties": {
+                    "processed": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "errors": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "number": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "code": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "left": {
+                        "type": "integer",
+                        "description": "factures ouvertes restantes (à relier ou à confirmer)"
+                    }
+                }
+            },
+            "KsefSyncResult": {
+                "type": "object",
+                "properties": {
+                    "from": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "to": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "found": {
+                        "type": "integer"
+                    },
+                    "more": {
+                        "type": "integer",
+                        "description": "nouvelles factures au-delà de 50 (cliquer encore)"
+                    },
+                    "imported": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "skipped": {
+                        "type": "integer"
+                    },
+                    "errors": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "auto": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "MaterialPriceOverview": {
+                "type": "object",
+                "properties": {
+                    "months": {
+                        "type": "integer"
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "raw_material_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "base_unit": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "factor": {
+                                    "type": "number"
+                                },
+                                "packaging": {
+                                    "type": "boolean"
+                                },
+                                "catalog_price": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "current_supplier": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "last": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                },
+                                "previous": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "additionalProperties": true
+                                },
+                                "change_pct": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "min": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                },
+                                "max": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                },
+                                "suppliers": {
+                                    "type": "integer"
+                                },
+                                "points": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "MaterialPriceHistory": {
+                "type": "object",
+                "properties": {
+                    "material": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "months": {
+                        "type": "integer"
+                    },
+                    "suppliers": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "best": {
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": true
+                    },
+                    "points": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                        "invoice",
+                                        "receipt",
+                                        "catalog"
+                                    ]
+                                },
+                                "day": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "supplier_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "supplier": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "price": {
+                                    "type": "number"
+                                },
+                                "qty": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "ref": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "invoice_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "user": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "qui a changé la fiche (points catalog)"
+                                }
+                            }
                         }
                     }
                 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Core\Api\Workshop;
 
 use App\Services\Workshop\Supply\InvoiceService;
+use App\Services\Workshop\Supply\PriceHistoryService;
 use App\Services\Workshop\Supply\SupplyService;
 
 /** Documentation OpenAPI de l'approvisionnement : besoins en matières et emballages, stocks, commandes fournisseurs, réceptions. */
@@ -55,6 +56,10 @@ final class OpenApiSupply
                 'description' => "Lecture seule dans KSeF (acheteur, date d'émission, < 3 mois) ; rien n'est enregistré. KSEF_UNAVAILABLE (422) : KSeF non configuré ou indisponible."],
             'POST /supply/invoices/ksef/import' => ['tag' => $t, 'id' => 'importKsefPurchaseInvoices', 'summary' => 'Import faktur z KSeF / Import de factures KSeF', 'body' => 'KsefImportInput', 'response' => 'KsefImportResult', 'ok' => 201, 'errors' => [400, 422],
                 'description' => 'XML de chaque facture (FA) lu dans KSeF, lignes et fournisseur ; correspondances mémorisées appliquées ; factures déjà importées ignorées.'],
+            'POST /supply/invoices/ksef/sync' => ['tag' => $t, 'id' => 'syncKsefPurchaseInvoices', 'summary' => 'Pobierz nowe z KSeF (jedno kliknięcie) / Récupérer les nouvelles factures KSeF', 'response' => 'KsefSyncResult', 'errors' => [422],
+                'description' => "Recherche depuis la dernière facture KSeF importée (− 7 jours ; sinon 30 jours, au plus 89 jours) jusqu'à aujourd'hui, import de toutes les nouvelles (50 max), traitement automatique des factures entièrement reconnues. KSEF_UNAVAILABLE (422)."],
+            'POST /supply/invoices/process-ready' => ['tag' => $t, 'id' => 'processReadyPurchaseInvoices', 'summary' => 'Zatwierdź gotowe faktury / Valider les factures prêtes', 'body' => 'InvoiceProcessInput', 'response' => 'InvoiceProcessReadyResult',
+                'description' => 'Toutes les factures ouvertes sans blocage ni avertissement (fournisseur connu, toutes les lignes reliées, sans écart, sans hausse de prix, totaux cohérents) : comme POST /supply/invoices/{id}/process.'],
             'POST /supply/invoices/upload' => ['tag' => $t, 'id' => 'uploadPurchaseInvoice', 'summary' => 'Faktura z pliku (XML KSeF, PDF, skan, zdjęcie) / Facture depuis un fichier', 'body' => 'InvoiceUploadInput', 'response' => 'PurchaseInvoice', 'ok' => 201, 'errors' => [400, 409, 422],
                 'description' => "XML FA : lecture complète. PDF : texte (pdftotext), lignes reconnues quand quantité × prix = valeur ; le reste se complète à la main. "
                     . "Scan ou photo (JPEG, PNG, WebP, ou PDF sans texte) : texte OCR lu par le client dans ocr_text, mêmes règles, source « ocr » ; "
@@ -69,6 +74,11 @@ final class OpenApiSupply
                 'description' => 'Factures PDF ou saisies seulement (INVOICE_LINES_READ_ONLY pour KSeF / XML).'],
             'PUT /supply/invoices/{id:\d+}/lines/{lineId:\d+}/map' => ['tag' => $t, 'id' => 'mapPurchaseInvoiceLine', 'summary' => 'Przypisz nazwę dostawcy do surowca / Relier le nom du fournisseur à une matière', 'body' => 'InvoiceLineMapInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 409, 422],
                 'description' => 'factor = unités de base de la matière par unité de facture (ex. sac de 25 kg, matière en g : 25000). remember (défaut true) : mémorisé pour ce fournisseur et appliqué aux lignes identiques.'],
+            'PUT /supply/invoices/{id:\d+}/map' => ['tag' => $t, 'id' => 'mapPurchaseInvoiceLines', 'summary' => 'Przypisz wszystkie linie / Relier toutes les lignes', 'body' => 'InvoiceLinesMapInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 409, 422],
+                'description' => 'Plusieurs lignes en un appel (matière + facteur) ; facteur absent : unités, poids lu dans le nom (« WOREK 25KG » → 25 000 g) ou conditionnement de la matière. remember (défaut true) : mémorisé pour le fournisseur.'],
+            'POST /supply/invoices/{id:\d+}/process' => ['tag' => $t, 'id' => 'processPurchaseInvoice', 'summary' => 'Zatwierdź fakturę (ceny, stan, akceptacja) / Valider la facture (prix, stock, acceptation)', 'body' => 'InvoiceProcessInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 409, 422],
+                'description' => "En un clic et tout ou rien : prix vers les fiches matières (si pas encore importés), quantités en stock (si pas encore reçues : commande liée ou commande « reçue » créée), acceptation. prices / stock / accept (défaut true) choisissent les étapes. "
+                    . "INVOICE_NO_LINES, INVOICE_UNMAPPED, INVOICE_NO_SUPPLIER (422) ; INVOICE_NEEDS_CONFIRMATION (409) : écarts avec la commande, hausse de prix au-delà de supply.invoice_price_alert_pct ou total différent — renvoyer avec force = true. Réponse : la facture + processed."],
             'POST /supply/invoices/{id:\d+}/decision' => ['tag' => $t, 'id' => 'decidePurchaseInvoice', 'summary' => 'Zaakceptuj / reklamacja / Accepter / contester', 'body' => 'InvoiceDecisionInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 422]],
             'POST /supply/invoices/{id:\d+}/receive' => ['tag' => $t, 'id' => 'receiveFromPurchaseInvoice', 'summary' => 'Przyjęcie dostawy wg faktury / Réception d\'après la facture', 'response' => 'PurchaseInvoice', 'errors' => [404, 409, 422],
                 'description' => 'Quantités et prix nets de la facture enregistrés comme réception de la commande liée (lignes reliées à ses matières). Sans commande : une commande « reçue » est créée depuis la facture (les quantités entrent dans le stock) et liée à elle. INVOICE_NO_SUPPLIER, INVOICE_NOTHING_TO_RECEIVE (422).'],
@@ -77,6 +87,12 @@ final class OpenApiSupply
             'DELETE /supply/invoices/{id:\d+}' => ['tag' => $t, 'id' => 'deletePurchaseInvoice', 'summary' => 'Usuń fakturę (otwartą) / Supprimer la facture (ouverte)', 'response' => 'SupplierOrderDeleted', 'errors' => [404, 409]],
             'GET /supply/mappings' => ['tag' => $t, 'id' => 'listInvoiceMappings', 'summary' => 'Przypisania nazw dostawców / Correspondances des noms fournisseurs', 'response' => 'InvoiceMappings'],
             'DELETE /supply/mappings/{id:\d+}' => ['tag' => $t, 'id' => 'deleteInvoiceMapping', 'summary' => 'Usuń przypisanie / Supprimer la correspondance', 'response' => 'SupplierOrderDeleted', 'errors' => [404]],
+            'GET /supply/prices' => ['tag' => $t, 'id' => 'listMaterialPriceHistory', 'summary' => 'Historia cen surowców (za kg) / Historique des prix des matières (au kg)', 'response' => 'MaterialPriceOverview', 'errors' => [422],
+                'query' => ['months' => ['type' => 'integer', 'enum' => PriceHistoryService::MONTHS, 'description' => 'défaut : 12']],
+                'description' => "Par matière ayant un prix sur la période : dernier prix et fournisseur, variation vs le prix précédent, min. et max. avec leur fournisseur, nombre de fournisseurs. Prix en zł par unité de base (g, ml, szt) ; factor = unités de base dans l'unité affichée (kg = 1000). Sources : factures d'achat, réceptions avec prix (commandes sans facture), changements de la fiche matière."],
+            'GET /supply/materials/{id:\d+}/prices' => ['tag' => $t, 'id' => 'getMaterialPriceHistory', 'summary' => 'Historia cen surowca według dostawcy / Historique des prix d\'une matière par fournisseur', 'response' => 'MaterialPriceHistory', 'errors' => [404, 422],
+                'query' => ['months' => ['type' => 'integer', 'enum' => PriceHistoryService::MONTHS, 'description' => 'défaut : 24']],
+                'description' => "Points (date, fournisseur, prix, quantité, facture / commande / source) pour le graphique, résumé par fournisseur (dernier, min., max., moyenne pondérée par la quantité, variation), fournisseur le moins cher sur 12 mois."],
         ];
     }
 
@@ -86,6 +102,12 @@ final class OpenApiSupply
         $nNum = ['type' => 'number', 'nullable' => true];
         $nStr = ['type' => 'string', 'nullable' => true];
         $date = ['type' => 'string', 'format' => 'date'];
+        $ready = ['type' => 'object', 'nullable' => true, 'description' => 'factures ouvertes : ok = prête pour « Valider la facture » et l\'automatique', 'properties' => [
+            'ok' => ['type' => 'boolean'], 'blockers' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['no_lines', 'unmapped', 'no_supplier']]],
+            'warnings' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['gaps', 'price_jump', 'total_mismatch']]], 'unmapped' => ['type' => 'integer'],
+        ]];
+        $auto = ['type' => 'object', 'description' => 'paramètres supply.invoice_auto_prices / _full et supply.invoice_price_alert_pct', 'properties' => [
+            'prices' => ['type' => 'boolean'], 'full' => ['type' => 'boolean'], 'price_alert_pct' => $num]];
         $nDate = ['type' => 'string', 'format' => 'date', 'nullable' => true];
         $supplier = ['type' => 'object', 'nullable' => true, 'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'email' => $nStr]];
         $material = [
@@ -114,6 +136,7 @@ final class OpenApiSupply
         $control = ['type' => 'object', 'properties' => [
             'state' => ['type' => 'string', 'enum' => ['no_lines', 'unmapped', 'no_order', 'gaps', 'clean']], 'lines' => ['type' => 'integer'], 'mapped' => ['type' => 'integer'],
             'issues' => ['type' => 'integer'], 'value_gap' => $num, 'lines_net' => $num, 'total_mismatch' => ['type' => 'boolean'],
+            'price_jumps' => ['type' => 'integer', 'description' => 'lignes dont le prix au kg s\'écarte de la fiche matière de plus de supply.invoice_price_alert_pct (drapeau price_jump)'],
         ]];
         $lines = ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['raw_material_id', 'quantity'], 'properties' => [
             'raw_material_id' => ['type' => 'integer'], 'quantity' => ['type' => 'number', 'description' => 'unité de base, > 0'], 'unit_price' => ['type' => 'number', 'nullable' => true, 'description' => 'défaut : prix catalogue'],
@@ -204,7 +227,7 @@ final class OpenApiSupply
             ]],
             'SupplierOrderDeleted' => ['type' => 'object', 'properties' => ['deleted' => ['type' => 'boolean'], 'id' => ['type' => 'integer']]],
             'InvoiceFile' => ['type' => 'object', 'properties' => ['filename' => ['type' => 'string'], 'mime' => ['type' => 'string'], 'size' => ['type' => 'integer'], 'content_base64' => ['type' => 'string']]],
-            'PurchaseInvoices' => ['type' => 'object', 'properties' => ['invoices' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => $invoice + ['control' => $control]]], 'can_write' => ['type' => 'boolean']]],
+            'PurchaseInvoices' => ['type' => 'object', 'properties' => ['invoices' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => $invoice + ['control' => $control, 'ready' => $ready]]], 'can_write' => ['type' => 'boolean'], 'auto' => $auto]],
             'PurchaseInvoice' => ['type' => 'object', 'properties' => $invoice + [
                 'note' => $nStr, 'decided_at' => $nStr, 'control' => $control, 'text' => ['type' => 'string', 'nullable' => true, 'description' => 'texte lu dans le PDF'],
                 'lines' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
@@ -215,6 +238,12 @@ final class OpenApiSupply
                 ]]],
                 'orders' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]], 'suppliers' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]],
                 'can_write' => ['type' => 'boolean'], 'editable' => ['type' => 'boolean'], 'lines_editable' => ['type' => 'boolean'], 'can_receive' => ['type' => 'boolean'],
+                'ready' => $ready, 'auto' => $auto,
+                'price_refs' => ['type' => 'object', 'description' => 'par matière (id) : prix précédent (hors cette facture) et fournisseur le moins cher sur 12 mois', 'additionalProperties' => ['type' => 'object', 'properties' => [
+                    'previous' => ['type' => 'object', 'nullable' => true, 'additionalProperties' => true], 'best' => ['type' => 'object', 'nullable' => true, 'additionalProperties' => true], 'suppliers' => ['type' => 'integer'],
+                ]]],
+                'processed' => ['type' => 'object', 'description' => 'POST …/process seulement', 'properties' => ['prices' => ['type' => 'integer'], 'prices_skipped' => ['type' => 'array', 'items' => ['type' => 'string']], 'stock' => ['type' => 'boolean'], 'accepted' => ['type' => 'boolean']]],
+                'auto_processed' => ['type' => 'object', 'nullable' => true, 'description' => 'upload : traitement automatique effectué (facture entièrement reconnue)', 'additionalProperties' => true],
             ]],
             'KsefSearchInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['from', 'to'], 'properties' => ['from' => $date, 'to' => $date]],
             'KsefSearchResult' => ['type' => 'object', 'properties' => ['invoices' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
@@ -238,6 +267,39 @@ final class OpenApiSupply
                 'remember' => ['type' => 'boolean', 'description' => 'défaut true'],
             ]],
             'InvoicePricesInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => ['line_ids' => ['type' => 'array', 'items' => ['type' => 'integer']]]],
+            'InvoiceLinesMapInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['lines'], 'properties' => [
+                'lines' => ['type' => 'array', 'maxItems' => 300, 'items' => ['type' => 'object', 'required' => ['line_id', 'raw_material_id'], 'properties' => [
+                    'line_id' => ['type' => 'integer'], 'raw_material_id' => ['type' => 'integer'], 'factor' => ['type' => 'number', 'nullable' => true, 'description' => 'unités de base par unité de facture ; absent : déduit'],
+                ]]], 'remember' => ['type' => 'boolean', 'description' => 'défaut true'],
+            ]],
+            'InvoiceProcessInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => [
+                'prices' => ['type' => 'boolean', 'description' => 'prix vers les fiches matières (défaut true)'], 'stock' => ['type' => 'boolean', 'description' => 'quantités en stock (défaut true)'],
+                'accept' => ['type' => 'boolean', 'description' => 'accepter la facture (défaut true)'], 'force' => ['type' => 'boolean', 'description' => 'valider malgré les avertissements (facture seule)'],
+            ]],
+            'InvoiceProcessReadyResult' => ['type' => 'object', 'properties' => [
+                'processed' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]],
+                'errors' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => ['type' => 'integer'], 'number' => $nStr, 'code' => ['type' => 'string']]]],
+                'left' => ['type' => 'integer', 'description' => 'factures ouvertes restantes (à relier ou à confirmer)'],
+            ]],
+            'KsefSyncResult' => ['type' => 'object', 'properties' => [
+                'from' => $date, 'to' => $date, 'found' => ['type' => 'integer'], 'more' => ['type' => 'integer', 'description' => 'nouvelles factures au-delà de 50 (cliquer encore)'],
+                'imported' => ['type' => 'array', 'items' => ['type' => 'integer']], 'skipped' => ['type' => 'integer'],
+                'errors' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]], 'auto' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]],
+            ]],
+            'MaterialPriceOverview' => ['type' => 'object', 'properties' => ['months' => ['type' => 'integer'], 'rows' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                'raw_material_id' => ['type' => 'integer'], 'name' => ['type' => 'string'], 'base_unit' => ['type' => 'string'], 'unit' => ['type' => 'string'], 'factor' => $num, 'packaging' => ['type' => 'boolean'],
+                'catalog_price' => $nNum, 'current_supplier' => $nStr, 'last' => ['type' => 'object', 'additionalProperties' => true], 'previous' => ['type' => 'object', 'nullable' => true, 'additionalProperties' => true],
+                'change_pct' => $nNum, 'min' => ['type' => 'object', 'additionalProperties' => true], 'max' => ['type' => 'object', 'additionalProperties' => true], 'suppliers' => ['type' => 'integer'], 'points' => ['type' => 'integer'],
+            ]]]]],
+            'MaterialPriceHistory' => ['type' => 'object', 'properties' => [
+                'material' => ['type' => 'object', 'additionalProperties' => true], 'months' => ['type' => 'integer'],
+                'suppliers' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => true]], 'best' => ['type' => 'object', 'nullable' => true, 'additionalProperties' => true],
+                'points' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'kind' => ['type' => 'string', 'enum' => ['invoice', 'receipt', 'catalog']], 'day' => $date, 'supplier_id' => ['type' => 'integer', 'nullable' => true], 'supplier' => $nStr,
+                    'price' => $num, 'qty' => $nNum, 'ref' => $nStr, 'invoice_id' => ['type' => 'integer', 'nullable' => true],
+                    'user' => ['type' => 'string', 'nullable' => true, 'description' => 'qui a changé la fiche (points catalog)'],
+                ]]],
+            ]],
             'InvoiceDecisionInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['status'], 'properties' => ['status' => ['type' => 'string', 'enum' => InvoiceService::STATUSES], 'note' => $nStr]],
             'InvoiceMappings' => ['type' => 'object', 'properties' => ['mappings' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                 'id' => ['type' => 'integer'], 'supplier_key' => ['type' => 'string'], 'supplier' => $nStr, 'supplier_name' => ['type' => 'string'], 'supplier_unit' => $nStr,

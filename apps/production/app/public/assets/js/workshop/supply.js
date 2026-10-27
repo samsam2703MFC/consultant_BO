@@ -5,7 +5,9 @@
  * réceptions avec quantités et prix réels. Tout passe par l'API /supply/… ; les quantités de l'API sont en unité
  * de base (g, ml, szt), affichées en unité lisible (kg, l) avec factor. Onglet Factures : contrôle des factures
  * d'achat (KSeF, XML, PDF, scan ou photo lus par OCR dans le navigateur) contre les commandes et réceptions, noms du
- * fournisseur reliés à nos matières.
+ * fournisseur reliés à nos matières — en boutons rapides : « Pobierz nowe z KSeF », « Przypisz wszystkie » (seulement les
+ * lignes inconnues), « Zatwierdź fakturę » (prix + stock + acceptation), « Zatwierdź gotowe ». Onglet Ceny i dostawcy :
+ * historique des prix au kg par matière et par fournisseur (price-history.js).
  */
 (async function () {
     'use strict';
@@ -22,7 +24,8 @@
     }
     const t = (k, p) => api.t(k, p);
     const n = (v, d) => v === null || v === undefined ? '—' : ui.fmt(v, d ?? 1, api.lang);
-    const TABS = ['needs', 'orders', 'invoices', 'stock'];
+    const TABS = ['needs', 'orders', 'invoices', 'prices', 'stock'];
+    const PMONTHS = [3, 6, 12, 24, 36];
     const STATUSES = ['open', 'draft', 'sent', 'partial', 'received', 'cancelled', 'all'];
     const iso = (d) => d.toISOString().slice(0, 10);
     const todayIso = iso(new Date());
@@ -37,7 +40,7 @@
     const badge = (status) => `<span class="badge tfb-po-${status}">${esc(t('status.' + status))}</span>`;
 
     let state = readHash();
-    const data = {needs: null, orders: null, materials: null, order: null, preview: null, invoices: null, invoice: null, mappings: null};
+    const data = {needs: null, orders: null, materials: null, order: null, preview: null, invoices: null, invoice: null, mappings: null, prices: null};
     let receiving = false;
 
     function readHash() {
@@ -53,6 +56,7 @@
             only: p.get('only') !== '0',
             inv: p.get('inv') === 'map' ? 'map' : Number(p.get('inv')) || null,
             istatus: ['open', 'accepted', 'disputed', 'all'].includes(p.get('ist')) ? p.get('ist') : 'open',
+            pmonths: PMONTHS.includes(Number(p.get('pm'))) ? Number(p.get('pm')) : 12,
             // #tab=stock&inventory=1 : arkusz inwentaryzacji od razu (kreator « Zamknięcie miesiąca », krok 5).
             search: '', stockMode: 'all', used: true, inventory: p.get('tab') === 'stock' && p.get('inventory') === '1',
         };
@@ -61,6 +65,7 @@
         const p = new URLSearchParams({tab: state.tab, date: state.date, weeks: state.weeks, status: state.status, kind: state.kind, only: state.only ? '1' : '0'});
         if (state.order) p.set('order', state.order);
         if (state.tab === 'invoices') { p.set('ist', state.istatus); if (state.inv) p.set('inv', state.inv); }
+        if (state.tab === 'prices') p.set('pm', state.pmonths);
         history.replaceState(null, '', '#' + p.toString());
     }
 
@@ -84,6 +89,7 @@
             // Z « Dostawy surowców » (przycisk Przyjmij) : zamówienie otwiera się od razu w asystencie przyjęcia.
             if (state.receive && data.order) { receiving = !!data.order.can_receive; state.receive = false; }
             if (state.tab === 'stock') data.materials = await api.get('/supply/materials');
+            if (state.tab === 'prices') data.prices = await api.get(`/supply/prices?months=${state.pmonths}`);
             if (state.tab === 'invoices') {
                 if (state.inv === 'map') data.mappings = await api.get('/supply/mappings');
                 else if (state.inv) {
@@ -103,12 +109,13 @@
     function draw() {
         const y = window.scrollY;
         const invoices = () => state.inv === 'map' ? drawMappings() : state.inv && data.invoice ? drawInvoice() : drawInvoices();
-        const body = state.tab === 'needs' ? drawNeeds() : state.tab === 'stock' ? drawStock() : state.tab === 'invoices' ? invoices()
+        const body = state.tab === 'needs' ? drawNeeds() : state.tab === 'stock' ? drawStock() : state.tab === 'prices' ? drawPrices() : state.tab === 'invoices' ? invoices()
             : (state.order && data.order ? drawOrder() : data.batch ? drawBatch() : drawOrders());
         el.innerHTML = shell(body);
         bindShell();
         if (state.tab === 'needs') bindNeeds();
         else if (state.tab === 'stock') bindStock();
+        else if (state.tab === 'prices') bindPrices();
         else if (state.tab === 'invoices') (state.inv === 'map' ? bindMappings : state.inv && data.invoice ? bindInvoice : bindInvoices)();
         else if (state.order && data.order) bindOrder();
         else if (data.batch) bindBatch();
@@ -778,7 +785,7 @@
     const STATE_CLS = {clean: 'bg-success', gaps: 'bg-danger', unmapped: 'bg-warning text-dark', no_order: 'bg-secondary', no_lines: 'bg-light text-dark'};
     const ALERT_CLS = {clean: 'alert-success', gaps: 'alert-danger', unmapped: 'alert-warning', no_order: 'alert-secondary', no_lines: 'alert-warning'};
     const FLAG_CLS = {unmapped: 'bg-warning text-dark', not_in_order: 'bg-danger', qty_over_received: 'bg-danger', qty_over_ordered: 'bg-danger',
-        qty_under_received: 'bg-warning text-dark', price_over: 'bg-danger', price_under: 'bg-success'};
+        qty_under_received: 'bg-warning text-dark', price_over: 'bg-danger', price_under: 'bg-success', price_jump: 'bg-warning text-dark'};
     const BAD_FLAGS = ['not_in_order', 'qty_over_received', 'qty_over_ordered', 'price_over'];
     const disp = (base) => base === 'g' ? {unit: 'kg', factor: 1000} : base === 'ml' ? {unit: 'l', factor: 1000} : {unit: base || 'szt', factor: 1};
     const fullDay = (s) => s ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : '—';
@@ -789,6 +796,19 @@
         + (c.state === 'gaps' && Math.abs(c.value_gap) >= 0.01 ? ` <span class="small ${c.value_gap > 0 ? 'text-danger' : 'text-success'}">${esc(signed(c.value_gap, money))}</span>` : '');
     const invBadge = (s) => `<span class="badge tfb-inv-${s}">${esc(t('inv.status.' + s))}</span>`;
     const iv = {ksefOpen: false, ksef: null, from: null, to: null, editLines: false, editLine: null, file: null, showFile: false};
+    // Historia cen surowca (okno) : wykres i dostawcy, ceny za kg.
+    const openHistory = (id, name) => window.TfbPriceHistory && window.TfbPriceHistory.open({title: name, lang: api.lang, months: 24,
+        load: (m) => api.get(`/supply/materials/${id}/prices?months=${m}`)});
+    // Następny krok faktury (lista) : zatwierdź jednym kliknięciem, przypisz, wybierz dostawcę albo sprawdź.
+    function nextStep(i, w) {
+        if (i.status !== 'open' || !i.ready) return '';
+        const r = i.ready;
+        if (r.ok) return w ? `<button type="button" class="btn btn-sm btn-success text-nowrap" data-quick-process="${i.id}"><i class="bi bi-check2-all"></i> ${esc(t('inv.act.process_short'))}</button>` : '';
+        if (r.blockers.includes('no_supplier')) return `<span class="badge bg-warning text-dark">${esc(t('inv.next.supplier'))}</span>`;
+        if (r.blockers.includes('unmapped')) return `<span class="badge bg-warning text-dark">${esc(t('inv.next.map', {n: r.unmapped}))}</span>`;
+        if (r.blockers.length) return `<span class="badge bg-light text-dark">${esc(t('inv.next.lines'))}</span>`;
+        return `<span class="badge bg-warning text-dark" title="${esc(r.warnings.map(x => t('inv.warn.' + x)).join(' · '))}">${esc(t('inv.next.check'))}</span>`;
+    }
 
     function resetInvoice() {
         iv.editLines = false;
@@ -815,6 +835,7 @@
     function drawInvoices() {
         const d = data.invoices;
         const w = d.can_write;
+        const ready = d.invoices.filter(i => i.status === 'open' && i.ready && i.ready.ok).length;
         if (!iv.from) { iv.from = addDays(todayIso.slice(0, 8) + '01', -1).slice(0, 8) + '01'; iv.to = todayIso; }
         const ksef = iv.ksefOpen ? `<div class="card tfb-inv-ksef"><div class="card-body">
                 <form class="d-flex flex-wrap gap-2 align-items-end" data-ksef-form>
@@ -825,25 +846,28 @@
                 ${iv.ksef ? ksefTable() : ''}</div></div>` : '';
         return `<div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">
                 <div class="btn-group btn-group-sm" role="group">${ISTATUSES.map(s => `<button type="button" class="btn ${state.istatus === s ? 'btn-primary' : 'btn-outline-primary'}" data-istatus="${s}">${esc(t('inv.filter.' + s))}</button>`).join('')}</div>
-                ${w ? `<button type="button" class="btn btn-sm ${iv.ksefOpen ? 'btn-secondary' : 'btn-outline-primary'}" data-ksef-toggle><i class="bi bi-cloud-download"></i> ${esc(t('inv.from_ksef'))}</button>
+                ${w ? `<button type="button" class="btn btn-sm btn-primary" data-ksef-sync title="${esc(t('inv.ksef_sync_help'))}"><i class="bi bi-cloud-download"></i> ${esc(t('inv.ksef_sync'))}</button>
+                <button type="button" class="btn btn-sm ${iv.ksefOpen ? 'btn-secondary' : 'btn-outline-primary'}" data-ksef-toggle><i class="bi bi-calendar-range"></i> ${esc(t('inv.from_ksef'))}</button>
                 <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-upload"></i> ${esc(t('inv.upload'))}<input type="file" class="d-none" accept=".pdf,.xml,application/pdf,application/xml,text/xml,image/*" data-upload></label>
                 <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-camera"></i> ${esc(t('inv.photo'))}<input type="file" class="d-none" accept="image/*" capture="environment" data-upload></label>
-                <span class="small text-muted" data-ocr-status></span>` : ''}
+                <span class="small text-muted" data-ocr-status></span>
+                ${ready ? `<button type="button" class="btn btn-sm btn-success" data-process-ready><i class="bi bi-check2-all"></i> ${esc(t('inv.act.process_ready', {n: ready}))}</button>` : ''}` : ''}
                 <a class="btn btn-sm btn-outline-secondary ms-auto" href="${api.root}/settings/ksef/purchase-invoices"><i class="bi bi-eye"></i> ${esc(t('inv.ksef_viewer'))}</a>
                 <a href="#tab=invoices&inv=map" class="btn btn-sm btn-link ms-auto" data-mappings><i class="bi bi-arrow-left-right"></i> ${esc(t('inv.mappings'))}</a></div></div>
             ${ksef}
-            <p class="small text-muted mb-2">${esc(t('inv.help'))}</p>
+            <p class="small text-muted mb-2">${esc(t('inv.help'))} ${esc(d.auto && d.auto.prices ? t(d.auto.full ? 'inv.auto_full' : 'inv.auto_prices', {pct: n(d.auto.price_alert_pct, 0)}) : t('inv.auto_off'))}
+                <a href="${api.root}/other-settings#params">${esc(t('inv.auto_settings'))}</a></p>
             <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
                 <thead><tr><th>${esc(t('inv.col.number'))}</th><th>${esc(t('col.supplier'))}</th><th>${esc(t('inv.col.date'))}</th><th class="text-end">${esc(t('inv.col.net'))}</th>
-                    <th>${esc(t('inv.col.order'))}</th><th>${esc(t('inv.col.control'))}</th><th>${esc(t('col.status'))}</th></tr></thead>
+                    <th>${esc(t('inv.col.order'))}</th><th>${esc(t('inv.col.control'))}</th><th>${esc(t('col.status'))}</th><th>${esc(t('inv.col.next'))}</th></tr></thead>
                 <tbody>${d.invoices.map(i => `<tr data-open-inv="${i.id}" class="tfb-supply-click">
                     <td><a href="#tab=invoices&inv=${i.id}"><strong>${esc(i.number || t('inv.no_number'))}</strong></a><div class="small text-muted">${esc(t('inv.source.' + i.source))}</div></td>
                     <td>${i.supplier ? esc(i.supplier.name) : `${esc(i.seller_name || '—')}<div class="small text-warning">${esc(t('inv.no_supplier'))}</div>`}</td>
                     <td>${esc(fullDay(i.issue_date))}</td><td class="text-end">${esc(cur(i.total_net, i.currency))}</td>
                     <td>${i.order ? esc(i.order.code) : '—'}</td>
                     <td>${ctrlBadge(i.control)}${i.control.lines ? `<div class="small text-muted">${esc(t('inv.mapped_n', {mapped: i.control.mapped, lines: i.control.lines}))}</div>` : ''}</td>
-                    <td>${invBadge(i.status)}</td></tr>`).join('')
-                    || `<tr><td colspan="7" class="text-muted">${esc(t('inv.empty'))}</td></tr>`}</tbody></table></div></div></div>`;
+                    <td>${invBadge(i.status)}</td><td>${nextStep(i, w)}</td></tr>`).join('')
+                    || `<tr><td colspan="8" class="text-muted">${esc(t('inv.empty'))}</td></tr>`}</tbody></table></div></div></div>`;
     }
 
     function ksefTable() {
@@ -861,10 +885,54 @@
             <button type="button" class="btn btn-sm btn-primary" data-ksef-import ${fresh ? '' : 'disabled'}><i class="bi bi-cloud-download"></i> ${esc(t('inv.ksef_import'))}</button>`;
     }
 
+    // Wynik « Zatwierdź fakturę » : co zrobiono (ceny, stan, akceptacja).
+    const processedText = (p) => [p.prices ? t('inv.done.prices', {n: p.prices}) : null, p.stock ? t('inv.done.stock') : null, p.accepted ? t('inv.done.accepted') : null]
+        .filter(Boolean).join(' · ') + (p.prices_skipped && p.prices_skipped.length ? ' ' + t('inv.prices_skipped', {list: p.prices_skipped.join(', ')}) : '');
+
     function bindInvoices() {
+        const d = data.invoices;
         el.querySelectorAll('[data-istatus]').forEach(b => b.addEventListener('click', () => { state.istatus = b.dataset.istatus; load(); }));
         el.querySelector('[data-mappings]').addEventListener('click', (e) => { e.preventDefault(); openInvoice('map'); });
-        el.querySelectorAll('tr[data-open-inv]').forEach(tr => tr.addEventListener('click', (e) => { e.preventDefault(); openInvoice(Number(tr.dataset.openInv)); }));
+        el.querySelectorAll('tr[data-open-inv]').forEach(tr => tr.addEventListener('click', (e) => {
+            if (e.target.closest('[data-quick-process]')) return;
+            e.preventDefault();
+            openInvoice(Number(tr.dataset.openInv));
+        }));
+        // Jedno kliknięcie : nowe faktury z KSeF (od ostatniej pobranej), gotowe faktury, jedna faktura z listy.
+        el.querySelector('[data-ksef-sync]')?.addEventListener('click', async (e) => {
+            const b = e.currentTarget;
+            b.disabled = true;
+            b.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${esc(t('inv.ksef_syncing'))}`;
+            try {
+                const res = await api.post('/supply/invoices/ksef/sync', {});
+                ui.notify(!res.errors.length, t('inv.ksef_synced', {n: res.imported.length, found: res.found, from: fullDay(res.from), to: fullDay(res.to)})
+                    + (res.auto.length ? ' ' + t('inv.auto_done_n', {n: res.auto.length}) : '') + (res.more ? ' ' + t('inv.ksef_more', {n: res.more}) : '')
+                    + (res.errors.length ? ' ' + t('inv.ksef_errors', {list: res.errors.map(x => x.ksef_number).join(', ')}) : ''));
+                if (res.imported.length === 1 && !res.auto.length) return openInvoice(res.imported[0]);
+                load();
+            } catch (err) { ui.notify(false, errText(err)); load(); }
+        });
+        el.querySelector('[data-process-ready]')?.addEventListener('click', async (e) => {
+            const n = d.invoices.filter(i => i.status === 'open' && i.ready && i.ready.ok).length;
+            if (!window.confirm(t('inv.confirm_ready', {n}))) return;
+            e.currentTarget.disabled = true;
+            try {
+                const res = await api.post('/supply/invoices/process-ready', {});
+                ui.notify(!res.errors.length, t('inv.ready_done', {n: res.processed.length, left: res.left}));
+            } catch (err) { ui.notify(false, errText(err)); }
+            load();
+        });
+        el.querySelectorAll('[data-quick-process]').forEach(b => b.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const inv = d.invoices.find(x => x.id === Number(b.dataset.quickProcess));
+            if (!window.confirm(t('inv.confirm_process', {number: inv.number || t('inv.no_number')}))) return;
+            b.disabled = true;
+            try {
+                const res = await api.post(`/supply/invoices/${inv.id}/process`, {});
+                ui.notify(true, processedText(res.processed));
+            } catch (err) { ui.notify(false, errText(err)); }
+            load();
+        }));
         el.querySelector('[data-ksef-toggle]')?.addEventListener('click', () => { iv.ksefOpen = !iv.ksefOpen; draw(); });
         const form = el.querySelector('[data-ksef-form]');
         form?.addEventListener('submit', async (e) => {
@@ -925,7 +993,8 @@
                 body.ocr_text = await ocrRead(await pdfPages(file));
                 res = await api.post('/supply/invoices/upload', body);
             }
-            ui.notify(true, t(res.source === 'ocr' ? 'inv.uploaded_ocr' : 'inv.uploaded', {number: res.number || file.name, n: res.lines.length}));
+            ui.notify(true, t(res.source === 'ocr' ? 'inv.uploaded_ocr' : 'inv.uploaded', {number: res.number || file.name, n: res.lines.length})
+                + (res.auto_processed ? ' ' + t('inv.auto_done') + ' ' + processedText(res.auto_processed) : ''));
             openInvoice(res.id, res);
         } catch (err) {
             ui.notify(false, err.ocr ? t('inv.ocr.failed') : errText(err));
@@ -1150,14 +1219,58 @@
                     <div class="col-md-2"><label class="form-label small mb-0">${esc(t('inv.totals'))}</label><div>${esc(cur(i.total_net, i.currency))}
                         <span class="small text-muted">· ${esc(t('inv.gross', {v: cur(i.total_gross, i.currency)}))}</span></div></div></div>
                 ${i.source === 'ocr' && edit ? `<div class="alert alert-warning py-2 small mb-2"><i class="bi bi-eye"></i> ${esc(t('inv.ocr.check'))}</div>` : ''}
+                ${steps(i)}
                 <div class="alert ${ALERT_CLS[c.state] || 'alert-secondary'} py-2 small mb-2">${esc(summary)}
+                    ${c.price_jumps ? `<div>${esc(t('inv.sum.price_jumps', {n: c.price_jumps, pct: n(i.auto.price_alert_pct, 0)}))}</div>` : ''}
                     ${c.total_mismatch ? `<div>${esc(t('inv.sum.total_mismatch', {lines: cur(c.lines_net, i.currency), total: cur(i.total_net, i.currency)}))}</div>` : ''}</div>
+                ${iv.editLines ? '' : quickAction(i)}
                 ${lines}
                 ${iv.editLines ? '' : importBox(i)}
                 ${i.note ? `<div class="small mb-2"><strong>${esc(t('f.note'))} :</strong> ${esc(i.note)}</div>` : ''}
                 ${i.text ? `<details class="tfb-inv-text mb-2"><summary class="small">${esc(t(i.source === 'ocr' ? 'inv.ocr_text' : 'inv.pdf_text'))}</summary><pre>${esc(i.text)}</pre></details>` : ''}
                 <div class="d-flex flex-wrap gap-2 mt-2">${actions.join('')}</div></div></div>
             ${viewer}`;
+    }
+
+    // Kroki faktury (pas) : dostawca → przypisanie (tylko nowe nazwy) → kontrola → ceny + stan + akceptacja.
+    function steps(i) {
+        const c = i.control;
+        const r = i.ready || {blockers: [], warnings: [], unmapped: 0};
+        const closed = i.status !== 'open';
+        const items = [
+            ['supplier', closed || !!i.supplier, i.supplier ? i.supplier.name : t('inv.step.supplier_todo')],
+            ['map', closed || (c.lines > 0 && c.mapped === c.lines), c.lines && c.mapped < c.lines ? t('inv.next.map', {n: c.lines - c.mapped}) : t('inv.step.map_done', {n: c.lines})],
+            ['check', closed || (c.lines > 0 && c.mapped === c.lines && !r.warnings.length), c.mapped < c.lines ? t('inv.step.check_wait')
+                : r.warnings.length ? r.warnings.map(x => t('inv.warn.' + x)).join(' · ') : (c.state === 'no_order' ? t('inv.state.no_order') : t('inv.state.clean'))],
+            ['done', i.status === 'accepted', i.status === 'accepted' ? t('inv.status.accepted') : i.status === 'disputed' ? t('inv.status.disputed') : t('inv.step.done_todo')],
+        ];
+        const current = items.findIndex(x => !x[1]);
+        return `<ol class="tfb-inv-steps" aria-label="${esc(t('inv.steps'))}">${items.map(([k, done, sub], idx) => {
+            const warn = k === 'check' && r.warnings.length && !closed;
+            return `<li class="${done ? 'is-done' : ''} ${idx === current ? 'is-current' : ''} ${warn ? 'is-warn' : ''}"><span class="tfb-inv-step-n">${done ? '<i class="bi bi-check-lg"></i>' : idx + 1}</span>
+                <span><strong>${esc(t('inv.step.' + k))}</strong><small>${esc(sub)}</small></span></li>`;
+        }).join('')}</ol>`;
+    }
+
+    // Jeden przycisk na stan faktury : przypisz wszystkie (tylko nowe nazwy) albo zatwierdź (ceny + stan + akceptacja).
+    function quickAction(i) {
+        if (!i.editable || !i.ready) return '';
+        const r = i.ready;
+        if (r.blockers.includes('no_lines')) return '';
+        if (r.blockers.includes('unmapped')) {
+            return `<div class="tfb-inv-quick"><button type="button" class="btn btn-primary" data-map-all><i class="bi bi-link-45deg"></i> ${esc(t('inv.act.map_all', {n: r.unmapped}))}</button>
+                <span class="small text-muted">${esc(t('inv.map_all_help'))}</span></div>`;
+        }
+        if (r.blockers.includes('no_supplier')) return `<div class="tfb-inv-quick"><span class="small text-warning"><i class="bi bi-arrow-up"></i> ${esc(t('inv.next.supplier_help'))}</span></div>`;
+        const opt = (k, on, enabled, label) => `<label class="form-check form-check-inline small mb-0"><input class="form-check-input" type="checkbox" data-step="${k}" ${on ? 'checked' : ''} ${enabled ? '' : 'disabled'}> ${esc(label)}</label>`;
+        const pricesDone = !!i.prices_imported_at;
+        return `<div class="tfb-inv-quick ${r.warnings.length ? 'is-warn' : ''}">
+            <button type="button" class="btn btn-success" data-process><i class="bi bi-check2-all"></i> ${esc(t('inv.act.process'))}</button>
+            <span class="d-inline-flex flex-wrap gap-1 align-items-center">
+                ${opt('prices', !pricesDone, !pricesDone, pricesDone ? t('inv.step_opt.prices_done') : t('inv.step_opt.prices'))}
+                ${opt('stock', i.can_receive, i.can_receive, i.can_receive ? t(i.receive_mode === 'order' ? 'inv.step_opt.stock_order' : 'inv.step_opt.stock') : t('inv.step_opt.stock_none'))}
+                ${opt('accept', true, true, t('inv.step_opt.accept'))}</span>
+            ${r.warnings.length ? `<div class="small text-warning w-100"><i class="bi bi-exclamation-triangle"></i> ${esc(t('inv.warn_confirm', {list: r.warnings.map(x => t('inv.warn.' + x)).join(' · ')}))}</div>` : ''}</div>`;
     }
 
     // Import do kartoteki : cena z faktury (netto na jednostkę surowca, ważona przy kilku liniach) wobec ceny w kartotece ;
@@ -1209,13 +1322,24 @@
             <td class="text-end text-nowrap">${esc(unitPrice(u, k.price_base))}
                 ${k.order_price !== null ? `<div class="small text-muted">${esc(t('inv.order_price', {price: unitPrice(u, k.order_price)}))}</div>`
                     : k.catalog_price !== null ? `<div class="small text-muted">${esc(t('catalog', {price: unitPrice(u, k.catalog_price)}))}${k.catalog_gap_pct ? ' · ' + esc(pct(k.catalog_gap_pct)) : ''}</div>` : ''}
-                ${k.price_gap_pct ? `<div class="small ${k.flags.includes('price_over') ? 'text-danger' : k.flags.includes('price_under') ? 'text-success' : 'text-muted'}">${esc(pct(k.price_gap_pct))}${k.value_gap ? ' · ' + esc(signed(k.value_gap, money)) : ''}</div>` : ''}</td>`;
-        return `<tr data-iline="${l.id}" class="${k.flags.some(f => BAD_FLAGS.includes(f)) ? 'table-danger' : ''}">
+                ${k.price_gap_pct ? `<div class="small ${k.flags.includes('price_over') ? 'text-danger' : k.flags.includes('price_under') ? 'text-success' : 'text-muted'}">${esc(pct(k.price_gap_pct))}${k.value_gap ? ' · ' + esc(signed(k.value_gap, money)) : ''}</div>` : ''}
+                ${priceRefs(m, u, k.price_base)}</td>`;
+        return `<tr data-iline="${l.id}" class="${k.flags.some(f => BAD_FLAGS.includes(f)) ? 'table-danger' : k.flags.includes('price_jump') ? 'table-warning' : ''}">
             <td><strong>${esc(l.name)}</strong>${l.code ? `<div class="small text-muted">${esc(l.code)}</div>` : ''}</td>
             <td class="text-end text-nowrap">${esc(n(l.quantity, 3))} ${esc(l.unit || '')}</td>
             <td class="text-end text-nowrap">${l.unit_price !== null ? esc(n(l.unit_price, 4)) : '—'}</td>
             <td class="text-end text-nowrap">${esc(money(l.net_value))}${l.vat_rate ? `<div class="small text-muted">VAT ${esc(l.vat_rate)}${/^\d+$/.test(l.vat_rate) ? ' %' : ''}</div>` : ''}</td>
             <td class="tfb-inv-map">${mapping}</td>${ours}<td>${flags}</td></tr>`;
+    }
+
+    // Historia ceny w linii : poprzednia cena (spoza tej faktury) i najtańszy dostawca z 12 miesięcy, link do wykresu.
+    function priceRefs(m, u, price) {
+        const ref = data.invoice.price_refs && data.invoice.price_refs[m.id];
+        const parts = [];
+        if (ref && ref.previous) parts.push(t('inv.ref.previous', {price: unitPrice(u, ref.previous.price), supplier: ref.previous.supplier || '—', day: fullDay(ref.previous.day)}));
+        if (ref && ref.best && ref.suppliers > 1 && price !== null && ref.best.price < price * 0.995) parts.push(t('inv.ref.best', {price: unitPrice(u, ref.best.price), supplier: ref.best.supplier || '—'}));
+        return `<div class="small text-muted tfb-inv-ref">${parts.map(x => `<div>${esc(x)}</div>`).join('')}
+            <button type="button" class="btn btn-link btn-sm p-0" data-ph-mat="${m.id}"><i class="bi bi-graph-up"></i> ${esc(t('prices.history'))}</button></div>`;
     }
 
     // Wybór surowca : podpowiedzi (nazwa, zamówienie, dostawca), potem wszystkie surowce ; przelicznik w jednostce wyświetlanej (kg, l).
@@ -1324,6 +1448,46 @@
             form.querySelector('[data-map-cancel]')?.addEventListener('click', () => { iv.editLine = null; draw(); });
         });
         el.querySelectorAll('[data-edit-map]').forEach(b => b.addEventListener('click', () => { iv.editLine = Number(b.dataset.editMap); showInvoice(i); }));
+        el.querySelectorAll('[data-ph-mat]').forEach(b => b.addEventListener('click', () => {
+            const l = i.lines.find(x => x.material && x.material.id === Number(b.dataset.phMat));
+            openHistory(Number(b.dataset.phMat), l ? l.material.name : '');
+        }));
+        // « Przypisz wszystkie » : surowiec i przelicznik z formularzy linii (podpowiedź wybrana od razu), zapamiętane dla dostawcy.
+        el.querySelector('[data-map-all]')?.addEventListener('click', (e) => {
+            const lines = [];
+            let missing = 0;
+            let bad = false;
+            el.querySelectorAll('[data-mapform]').forEach(form => {
+                const l = i.lines.find(x => x.id === Number(form.dataset.mapform));
+                if (!l || l.material) return;
+                const id = Number(form.querySelector('[data-map-mat]').value) || null;
+                if (!id) { missing++; return; }
+                const factor = form.querySelector('[data-map-factor]');
+                const f = ui.num(factor.value);
+                if (f !== null && (typeof f !== 'number' || f <= 0)) { bad = true; return; }
+                lines.push({line_id: l.id, raw_material_id: id, ...(f !== null ? {factor: Math.round(f * Number(factor.dataset.scale || 1) * 10000) / 10000} : {})});
+            });
+            if (bad) { ui.notify(false, t('inv.factor_invalid')); return; }
+            if (!lines.length) { ui.notify(false, t('inv.map_all_none')); return; }
+            run(e.currentTarget, () => api.put(`/supply/invoices/${i.id}/map`, {lines, remember: true}), t('inv.map_all_ok', {n: lines.length}) + (missing ? ' ' + t('inv.map_all_missing', {n: missing}) : ''));
+        });
+        // « Zatwierdź fakturę » : wybrane kroki ; ostrzeżenia (rozbieżności, skok ceny, suma) — potwierdzenie i force.
+        el.querySelector('[data-process]')?.addEventListener('click', async (e) => {
+            const b = e.currentTarget;
+            const body = {};
+            el.querySelectorAll('[data-step]').forEach(c => { body[c.dataset.step] = c.checked && !c.disabled; });
+            if (!body.prices && !body.stock && !body.accept) { ui.notify(false, t('inv.step_none')); return; }
+            if (i.ready.warnings.length) {
+                if (!window.confirm(t('inv.confirm_process_warn', {list: i.ready.warnings.map(x => t('inv.warn.' + x)).join(', ')}))) return;
+                body.force = true;
+            }
+            b.disabled = true;
+            try {
+                const res = await api.post(`/supply/invoices/${i.id}/process`, body);
+                ui.notify(true, processedText(res.processed) || t('saved'));
+                await showInvoice(res);
+            } catch (err) { ui.notify(false, errText(err)); b.disabled = false; }
+        });
         el.querySelectorAll('[data-e-remove]').forEach(b => b.addEventListener('click', () => b.closest('tr').remove()));
         el.querySelectorAll('[data-iact]').forEach(b => b.addEventListener('click', async () => {
             const act = b.dataset.iact;
@@ -1421,6 +1585,45 @@
     async function ensureMaterials() {
         if (data.materials) return;
         try { data.materials = await api.get('/supply/materials'); } catch (err) { ui.notify(false, errText(err)); }
+    }
+
+    // Ceny i dostawcy : ostatnia cena za kg każdego surowca, zmiana, najtańsza i najdroższa w okresie — wykres po kliknięciu.
+    function drawPrices() {
+        const d = data.prices;
+        const s = state.search.toLowerCase();
+        const rows = d.rows.filter(r => (state.kind === 'all' || (state.kind === 'pack') === r.packaging)
+            && (!s || r.name.toLowerCase().includes(s) || (r.last.supplier || '').toLowerCase().includes(s)));
+        const per = (r, p) => unitPrice({unit: r.unit, factor: r.factor}, p);
+        const ch = (v) => v === null ? 'text-muted' : v > 0.05 ? 'text-danger' : v < -0.05 ? 'text-success' : 'text-muted';
+        return `<div class="card tfb-supply-bar"><div class="card-body d-flex flex-wrap gap-2 align-items-center">${kindButtons()}
+                <div class="btn-group btn-group-sm" role="group">${PMONTHS.map(m => `<button type="button" class="btn ${state.pmonths === m ? 'btn-primary' : 'btn-outline-primary'}" data-pmonths="${m}">${esc(t('prices.months', {n: m}))}</button>`).join('')}</div>
+                <input class="form-control form-control-sm ms-auto" style="max-width:240px" data-search value="${esc(state.search)}" placeholder="${esc(t('search'))}"></div></div>
+            <p class="small text-muted mb-2">${esc(t('prices.help'))}</p>
+            <div class="card"><div class="card-body pt-3"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
+                <thead><tr><th>${esc(t('col.material'))}</th><th class="text-end">${esc(t('prices.col.last'))}</th><th>${esc(t('col.supplier'))}</th><th>${esc(t('inv.col.date'))}</th>
+                    <th class="text-end">${esc(t('prices.col.change'))}</th><th class="text-end">${esc(t('prices.col.min'))}</th><th class="text-end">${esc(t('prices.col.max'))}</th>
+                    <th class="text-end">${esc(t('prices.col.suppliers'))}</th><th></th></tr></thead>
+                <tbody>${rows.map(r => `<tr data-ph-row="${r.raw_material_id}" class="tfb-supply-click">
+                    <td><strong>${esc(r.name)}</strong></td>
+                    <td class="text-end text-nowrap"><strong>${esc(per(r, r.last.price))}</strong></td>
+                    <td>${esc(r.last.supplier || '—')}<div class="small text-muted">${esc(t('prices.kind.' + r.last.kind))}${r.last.ref && r.last.kind !== 'catalog' ? ' ' + esc(r.last.ref) : ''}</div></td>
+                    <td class="text-nowrap">${esc(fullDay(r.last.day))}</td>
+                    <td class="text-end text-nowrap ${ch(r.change_pct)}">${r.change_pct === null ? '—' : esc(pct(r.change_pct))}${r.previous ? `<div class="small text-muted">${esc(t('prices.was', {price: per(r, r.previous.price)}))}</div>` : ''}</td>
+                    <td class="text-end text-nowrap">${esc(per(r, r.min.price))}<div class="small text-muted">${esc(r.min.supplier || '—')}</div></td>
+                    <td class="text-end text-nowrap">${esc(per(r, r.max.price))}<div class="small text-muted">${esc(r.max.supplier || '—')}</div></td>
+                    <td class="text-end">${r.suppliers}</td>
+                    <td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary text-nowrap" data-ph-row="${r.raw_material_id}"><i class="bi bi-graph-up"></i> ${esc(t('prices.history'))}</button></td></tr>`).join('')
+                    || `<tr><td colspan="9" class="text-muted">${esc(t('prices.empty'))}</td></tr>`}</tbody></table></div></div></div>`;
+    }
+
+    function bindPrices() {
+        bindSearch();
+        el.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { state.kind = b.dataset.kind; writeHash(); draw(); }));
+        el.querySelectorAll('[data-pmonths]').forEach(b => b.addEventListener('click', () => { state.pmonths = Number(b.dataset.pmonths); load(); }));
+        el.querySelectorAll('tr[data-ph-row]').forEach(tr => tr.addEventListener('click', () => {
+            const r = data.prices.rows.find(x => x.raw_material_id === Number(tr.dataset.phRow));
+            if (r) openHistory(r.raw_material_id, r.name);
+        }));
     }
 
     function drawMappings() {

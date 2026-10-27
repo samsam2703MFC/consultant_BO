@@ -230,13 +230,23 @@ final class InvoiceParser
 
     /**
      * Przelicznik domyślny : ile jednostek bazowych surowca (g, ml, szt) w jednostce faktury — kg→g 1000, l→ml 1000,
-     * opakowanie → opakowanie surowca ; do poprawienia przy przypisaniu.
+     * sztuka / opakowanie z wagą w nazwie (« WOREK 25KG », « 10x1kg », « 0,5 L ») → ta waga, inaczej opakowanie
+     * surowca ; do poprawienia przy przypisaniu.
      */
-    public static function defaultFactor(?string $invoiceUnit, ?string $baseUnit, ?float $packageSize): float
+    public static function defaultFactor(?string $invoiceUnit, ?string $baseUnit, ?float $packageSize, ?string $lineName = null): float
     {
         $u = self::unit($invoiceUnit);
         $b = mb_strtolower((string) $baseUnit);
         $pack = $packageSize && $packageSize > 0 ? $packageSize : null;
+        $named = ($u === null || $u === 'szt' || in_array($u, self::PACKAGE_UNITS, true)) && $lineName !== null ? self::packSize($lineName) : null;
+        if ($named !== null) {
+            $inBase = match (true) {
+                $named[1] === 'g' && $b === 'g', $named[1] === 'ml' && $b === 'ml' => $named[0],
+                $named[1] === 'g' && $b === 'kg', $named[1] === 'ml' && $b === 'l' => $named[0] / 1000,
+                default => null,
+            };
+            if ($inBase !== null && $inBase > 0) return round($inBase, 4);
+        }
         return match (true) {
             $u === 'kg' && $b === 'g', $u === 'l' && $b === 'ml' => 1000.0,
             $u === 't' && $b === 'g' => 1000000.0,
@@ -250,12 +260,35 @@ final class InvoiceParser
     }
 
     /**
-     * Podobieństwo nazw 0…1 : wspólne słowa (≥ 3 znaki lub liczby) do mniejszego zbioru. Wymiary « 590 x 390 x 210 »
+     * Waga / objętość opakowania w nazwie linii : « WOREK 25KG » → [25000, 'g'], « 10x1kg » → [10000, 'g'],
+     * « DROZDZE 0,5KG » → [500, 'g'], « 1L » → [1000, 'ml'] ; ostatnia w nazwie ; null gdy brak.
+     * @return array{0: float, 1: 'g'|'ml'}|null
+     */
+    public static function packSize(string $name): ?array
+    {
+        $s = self::fold(mb_strtolower($name));
+        if (!preg_match_all('/(?<![\p{L}\d.,])(?:(\d{1,3})\s*[x×*]\s*)?(\d+(?:[.,]\d+)?)\s*(kg|dag|gr|g|ml|l)(?![\p{L}\d])/u', $s, $m, PREG_SET_ORDER)) return null;
+        $last = end($m);
+        $qty = (float) str_replace(',', '.', $last[2]) * ($last[1] !== '' ? (int) $last[1] : 1);
+        [$k, $unit] = match ($last[3]) { 'kg' => [1000, 'g'], 'dag' => [10, 'g'], 'gr', 'g' => [1, 'g'], 'l' => [1000, 'ml'], 'ml' => [1, 'ml'] };
+        return $qty > 0 ? [round($qty * $k, 4), $unit] : null;
+    }
+
+    /** Bez polskich (i francuskich) znaków diakrytycznych : porównanie nazw z faktur pisanych bez ogonków. */
+    private static function fold(string $s): string
+    {
+        return strtr($s, ['ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n', 'ó' => 'o', 'ś' => 's', 'ź' => 'z', 'ż' => 'z',
+            'à' => 'a', 'â' => 'a', 'ç' => 'c', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e', 'î' => 'i', 'ï' => 'i', 'ô' => 'o', 'ù' => 'u', 'û' => 'u', 'ü' => 'u', 'ö' => 'o', 'ä' => 'a']);
+    }
+
+    /**
+     * Podobieństwo nazw 0…1 : wspólne słowa (≥ 3 znaki lub liczby) do mniejszego zbioru, bez polskich znaków
+     * (« MASLO » = « Masło », faktury często bez ogonków). Wymiary « 590 x 390 x 210 »
      * = « 590x390x210 » ; słowa z cyframi muszą być równe (bez dopasowania początku : 590x290 ≠ 590x390).
      */
     public static function similarity(string $a, string $b): float
     {
-        $words = fn(string $s) => array_values(array_unique(array_filter(explode(' ', self::nameKey(preg_replace('/(\d)\s*[x×*]\s*(?=\d)/u', '$1x', mb_strtolower($s)))),
+        $words = fn(string $s) => array_values(array_unique(array_filter(explode(' ', self::nameKey(preg_replace('/(\d)\s*[x×*]\s*(?=\d)/u', '$1x', self::fold(mb_strtolower($s))))),
             fn($w) => mb_strlen($w) >= 3 || ctype_digit($w))));
         [$x, $y] = [$words($a), $words($b)];
         if (!$x || !$y) return 0.0;

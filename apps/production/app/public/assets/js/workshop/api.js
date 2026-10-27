@@ -163,7 +163,8 @@
         esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c])); },
         notify(ok, message) {
             if (!ok && leaving) return;
-            (typeof window.showSnack === 'function') ? window.showSnack(ok, message) : window.alert(message);
+            // showSnack(ok, message d'erreur, message de succès) : le texte vaut pour les deux cas (sinon un succès n'affiche que « Sukces »).
+            (typeof window.showSnack === 'function') ? window.showSnack(ok, message, message) : window.alert(message);
         },
         /** Erreurs de champ de l'API posées sous les champs [data-field="chemin"] ; renvoie celles sans champ. */
         fieldErrors(container, err) {

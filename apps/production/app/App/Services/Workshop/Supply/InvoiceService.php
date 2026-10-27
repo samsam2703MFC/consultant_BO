@@ -8,6 +8,7 @@ use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\Validator;
 use App\Core\TransactionManager;
 use App\Repositories\Workshop\InvoiceRepository;
+use App\Repositories\Workshop\ParamRepository;
 use App\Repositories\Workshop\SupplyRepository;
 use App\Services\Material\MaterialPriceService;
 use App\Services\Purchasing\CostOptimizationService;
@@ -19,7 +20,9 @@ use App\Services\Workshop\Referentiel\AuditTrail;
  * reszta wpisywana ręcznie. Nazwy dostawcy przypisywane do naszych surowców z przelicznikiem (jednostki bazowe
  * surowca na jednostkę faktury) — zapamiętane na dostawcę (NIP albo dostawca ERP), stosowane do kolejnych faktur. Porównanie z zamówieniem :
  * ilość fakturowana vs przyjęta (albo zamówiona), cena vs cena zamówienia (tolerancje 1 % ilości, 0,5 % ceny),
- * pozycje spoza zamówienia, suma linii vs suma faktury. Decyzja : zaakceptowana albo reklamacja.
+ * pozycje spoza zamówienia, suma linii vs suma faktury, skok ceny wobec kartoteki. Decyzja : zaakceptowana albo reklamacja.
+ * « Zatwierdź fakturę » : ceny + ilości na stan + akceptacja jednym kliknięciem ; faktura w pełni rozpoznana
+ * (dostawca, zapamiętane przypisania, bez rozbieżności) przetwarzana automatycznie przy imporcie (parametry supply.invoice_auto_*).
  */
 final class InvoiceService
 {
@@ -29,6 +32,9 @@ final class InvoiceService
     private const EDITABLE_SOURCES = ['pdf', 'ocr', 'manual'];
     private const QTY_TOL = 0.01;
     private const PRICE_TOL = 0.005;
+    /** Kroki « Zatwierdź fakturę » (domyślnie wszystkie). */
+    private const STEPS = ['prices', 'stock', 'accept'];
+    private ?float $alertPct = null;
 
     public function __construct(
         private InvoiceRepository $repo,
@@ -38,6 +44,8 @@ final class InvoiceService
         private TransactionManager $tx,
         private AuditTrail $audit,
         private MaterialPriceService $prices,
+        private ParamRepository $params,
+        private PriceHistoryService $history,
     ) {
     }
 
@@ -48,9 +56,9 @@ final class InvoiceService
         if (!in_array($status, ['all', ...self::STATUSES], true)) throw ApiException::validation([['field' => 'status', 'code' => 'INVALID_CHOICE', 'params' => ['allowed' => 'all, ' . implode(', ', self::STATUSES)]]]);
         $rows = array_map(function ($i) {
             $control = $this->control($i, $this->repo->lines((int) $i['id']));
-            return $this->summary($i) + ['control' => $control['summary']];
+            return $this->summary($i) + ['control' => $control['summary'], 'ready' => $i['status'] === 'open' ? $this->readiness($i, $control) : null];
         }, $this->repo->invoices($status === 'all' ? null : $status));
-        return ['invoices' => $rows, 'can_write' => $context->can('prod.supply.write')];
+        return ['invoices' => $rows, 'can_write' => $context->can('prod.supply.write'), 'auto' => $this->autoMode()];
     }
 
     public function detail(int $id, ApiContext $context): array
@@ -68,17 +76,20 @@ final class InvoiceService
             if ($l['id_raw_material'] === null) $row['suggestions'] = $this->suggest($l, $i, $materials, $orderMaterials, $lang);
             $out[] = $row;
         }
+        $mapped = array_values(array_unique(array_filter(array_map(fn($l) => $l['id_raw_material'] !== null ? (int) $l['id_raw_material'] : null, $lines))));
         return $this->summary($i) + [
             'note' => $i['note'], 'decided_at' => $i['decided_at'],
             'lines' => $out, 'control' => $control['summary'],
+            'ready' => $i['status'] === 'open' ? $this->readiness($i, $control) : null, 'auto' => $this->autoMode(),
+            // Historia cen : poprzednia cena i najtańszy dostawca z 12 miesięcy dla każdego surowca faktury.
+            'price_refs' => (object) $this->history->refs($mapped, $id),
             'orders' => $i['id_supplier'] ? $this->candidates((int) $i['id_supplier'], $lines) : [],
             'suppliers' => $i['status'] === 'open' ? $this->supplierChoices($i) : [],
             'text' => in_array($i['source'], ['pdf', 'ocr'], true) ? $this->repo->fileText($id) : null,
             'can_write' => $context->can('prod.supply.write'), 'editable' => $i['status'] === 'open' && $context->can('prod.supply.write'),
             'lines_editable' => in_array($i['source'], self::EDITABLE_SOURCES, true) && $i['status'] === 'open' && $context->can('prod.supply.write'),
             // Ilości : do zamówienia (wysłane / częściowo przyjęte) albo — bez zamówienia — przez zamówienie utworzone z faktury.
-            'can_receive' => $i['status'] === 'open' && $context->can('prod.supply.write') && $control['summary']['mapped'] > 0
-                && ($i['id_po'] !== null ? in_array($i['po_status'], ['sent', 'partial'], true) : $i['id_supplier'] !== null),
+            'can_receive' => $context->can('prod.supply.write') && $this->canReceive($i, $control),
             'receive_mode' => $i['id_po'] !== null ? 'order' : 'invoice',
             'can_import_prices' => $i['status'] !== 'disputed' && $context->can('prod.supply.write') && $control['summary']['mapped'] > 0,
             'prices_imported_at' => $i['prices_imported_at'],
@@ -96,6 +107,7 @@ final class InvoiceService
         $out = [];
         $issues = 0;
         $mapped = 0;
+        $jumps = 0;
         $gap = 0.0;
         $sum = 0.0;
         foreach ($lines as $l) {
@@ -116,6 +128,8 @@ final class InvoiceService
                 $catalog = $l['catalog_price'] !== null && (float) $l['catalog_price'] > 0 ? (float) $l['catalog_price'] : null;
                 $c['catalog_price'] = $catalog;
                 if ($catalog !== null && $priceBase !== null) $c['catalog_gap_pct'] = round(($priceBase - $catalog) / $catalog * 100, 2);
+                // Skok ceny wobec kartoteki : zły przelicznik albo prawdziwa podwyżka — do sprawdzenia przed zatwierdzeniem.
+                if ($c['catalog_gap_pct'] !== null && abs($c['catalog_gap_pct']) > $this->alertPct()) { $flags[] = 'price_jump'; $jumps++; }
                 if ($inv['id_po']) {
                     $pl = $po[(int) $l['id_raw_material']] ?? null;
                     if ($pl === null) $flags[] = 'not_in_order';
@@ -149,7 +163,45 @@ final class InvoiceService
         $totalMismatch = $inv['total_net'] !== null && $lines && abs((float) $inv['total_net'] - $sum) > 0.05;
         $state = !$lines ? 'no_lines' : ($mapped < count($lines) ? 'unmapped' : (!$inv['id_po'] ? 'no_order' : ($issues > 0 || $totalMismatch ? 'gaps' : 'clean')));
         return ['lines' => $out, 'summary' => ['state' => $state, 'lines' => count($lines), 'mapped' => $mapped, 'issues' => $issues, 'value_gap' => round($gap, 2),
-            'lines_net' => round($sum, 2), 'total_mismatch' => $totalMismatch]];
+            'lines_net' => round($sum, 2), 'total_mismatch' => $totalMismatch, 'price_jumps' => $jumps]];
+    }
+
+    /**
+     * Gotowość do « Zatwierdź fakturę » : blokady — brak linii, linie bez surowca, brak dostawcy ; ostrzeżenia (do potwierdzenia) —
+     * rozbieżności z zamówieniem, skok ceny wobec kartoteki (> supply.invoice_price_alert_pct), suma linii ≠ suma faktury.
+     * ok = bez blokad i bez ostrzeżeń (wtedy także przetwarzanie automatyczne).
+     */
+    private function readiness(array $inv, array $control): array
+    {
+        $s = $control['summary'];
+        $blockers = [];
+        if ($s['lines'] === 0) $blockers[] = 'no_lines';
+        if ($s['mapped'] < $s['lines']) $blockers[] = 'unmapped';
+        if ($inv['id_supplier'] === null) $blockers[] = 'no_supplier';
+        $warnings = [];
+        if ($s['issues'] > 0 && $s['mapped'] === $s['lines']) $warnings[] = 'gaps';
+        if ($s['price_jumps'] > 0) $warnings[] = 'price_jump';
+        if ($s['total_mismatch']) $warnings[] = 'total_mismatch';
+        return ['ok' => !$blockers && !$warnings, 'blockers' => $blockers, 'warnings' => $warnings, 'unmapped' => $s['lines'] - $s['mapped']];
+    }
+
+    /** Ilości na stan : do zamówienia (wysłane / częściowo przyjęte) albo — bez zamówienia — przez zamówienie utworzone z faktury. */
+    private function canReceive(array $inv, array $control): bool
+    {
+        return $inv['status'] === 'open' && $control['summary']['mapped'] > 0
+            && ($inv['id_po'] !== null ? in_array($inv['po_status'], ['sent', 'partial'], true) : $inv['id_supplier'] !== null);
+    }
+
+    private function alertPct(): float
+    {
+        return $this->alertPct ??= max(1.0, (float) str_replace(',', '.', $this->params->get('supply.invoice_price_alert_pct', '15')));
+    }
+
+    /** Parametry automatu : prices — ceny do kartoteki przy imporcie ; full — także ilości na stan i akceptacja. */
+    private function autoMode(): array
+    {
+        $full = $this->params->get('supply.invoice_auto_full', '0') === '1';
+        return ['prices' => $full || $this->params->get('supply.invoice_auto_prices', '1') === '1', 'full' => $full, 'price_alert_pct' => $this->alertPct()];
     }
 
     // --- Import ---------------------------------------------------------------------------------------------------
@@ -181,6 +233,7 @@ final class InvoiceService
         $imported = [];
         $skipped = 0;
         $errors = [];
+        $auto = [];
         foreach (array_unique($numbers) as $n) {
             if ($this->repo->findDuplicate($n, null, null) !== null) { $skipped++; continue; }
             try {
@@ -188,12 +241,29 @@ final class InvoiceService
                 $parsed = InvoiceParser::ksefXml($xml);
                 $dup = $this->repo->findDuplicate(null, $parsed['seller_nip'], $parsed['number']);
                 if ($dup !== null) { $skipped++; continue; }
-                $imported[] = $this->create($parsed, 'ksef', $n, ['filename' => $n . '.xml', 'mime' => 'application/xml', 'content' => $xml, 'text' => null], $context);
+                $id = $this->create($parsed, 'ksef', $n, ['filename' => $n . '.xml', 'mime' => 'application/xml', 'content' => $xml, 'text' => null], $context);
+                $imported[] = $id;
+                if ($done = $this->autoProcess($id, $context)) $auto[] = ['id' => $id, 'number' => $parsed['number']] + $done;
             } catch (\Throwable $e) {
                 $errors[] = ['ksef_number' => $n, 'message' => $e instanceof \InvalidArgumentException ? 'NOT_KSEF_XML' : mb_substr($e->getMessage(), 0, 300)];
             }
         }
-        return ['imported' => $imported, 'skipped' => $skipped, 'errors' => $errors];
+        return ['imported' => $imported, 'skipped' => $skipped, 'errors' => $errors, 'auto' => $auto];
+    }
+
+    /**
+     * « Pobierz nowe z KSeF » jednym kliknięciem : od ostatniej zaimportowanej faktury KSeF (− 7 dni ; inaczej 30 dni,
+     * najwyżej 89 dni wstecz) do dziś, import wszystkich nowych (do 50) z przetwarzaniem automatycznym.
+     */
+    public function ksefSync(ApiContext $context): array
+    {
+        $to = date('Y-m-d');
+        $last = $this->repo->lastKsefIssueDate();
+        $from = max($last !== null ? date('Y-m-d', strtotime($last . ' -7 days')) : date('Y-m-d', strtotime('-30 days')), date('Y-m-d', strtotime('-89 days')));
+        $found = $this->ksefSearch(['from' => $from, 'to' => $to], $context)['invoices'];
+        $fresh = array_column(array_filter($found, fn($r) => !$r['imported']), 'ksef_number');
+        $result = $fresh ? $this->ksefImport(['ksef_numbers' => array_slice($fresh, 0, 50)], $context) : ['imported' => [], 'skipped' => 0, 'errors' => [], 'auto' => []];
+        return ['from' => $from, 'to' => $to, 'found' => count($found), 'more' => max(0, count($fresh) - 50)] + $result;
     }
 
     /**
@@ -245,7 +315,8 @@ final class InvoiceService
         $dup = $this->repo->findDuplicate(null, $parsed['seller_nip'], $parsed['number']);
         if ($dup !== null) throw new ApiException('INVOICE_EXISTS', 409, [], ['id' => $dup]);
         $id = $this->create($parsed, $source, null, $file, $context);
-        return $this->detail($id, $context);
+        $auto = $this->autoProcess($id, $context);
+        return $this->detail($id, $context) + ['auto_processed' => $auto];
     }
 
     /** Zdjęcie (JPEG, PNG, WebP) po sygnaturze pliku ; inaczej null. */
@@ -365,7 +436,7 @@ final class InvoiceService
         }
         usort($scored, fn($a, $b) => $b[0] <=> $a[0]);
         return array_map(fn($x) => ['raw_material_id' => (int) $x[1]['id'], 'name' => $lang === 'fr' && $x[1]['name_fr'] ? $x[1]['name_fr'] : $x[1]['name'], 'score' => round($x[0], 2),
-            'base_unit' => $x[1]['unit'] ?: 'szt', 'factor' => InvoiceParser::defaultFactor($l['unit'], $x[1]['unit'], $x[1]['package_size'] !== null ? (float) $x[1]['package_size'] : null)],
+            'base_unit' => $x[1]['unit'] ?: 'szt', 'factor' => InvoiceParser::defaultFactor($l['unit'], $x[1]['unit'], $x[1]['package_size'] !== null ? (float) $x[1]['package_size'] : null, (string) $l['name'])],
             array_slice($scored, 0, 5));
     }
 
@@ -455,9 +526,9 @@ final class InvoiceService
         $material = $mid !== null && !$v->hasError('raw_material_id') ? $this->repo->material((int) $mid) : null;
         if ($mid !== null && !$v->hasError('raw_material_id') && $material === null) $v->add('raw_material_id', 'REFERENCE_NOT_FOUND', ['id' => (string) $mid]);
         $v->throwIfInvalid();
-        // Bez przelicznika : domyślny z jednostek (kg → g = 1000 ; worek, karton… = opakowanie dostawcy).
+        // Bez przelicznika : domyślny z jednostek (kg → g = 1000), z wagi w nazwie (« WOREK 25KG ») albo opakowanie surowca.
         $factor = $mid === null ? null : (float) ($v->value('factor')
-            ?? InvoiceParser::defaultFactor($line['unit'], $material['unit'], $material['package_size'] !== null ? (float) $material['package_size'] : null));
+            ?? InvoiceParser::defaultFactor($line['unit'], $material['unit'], $material['package_size'] !== null ? (float) $material['package_size'] : null, (string) $line['name']));
         $remember = $v->value('remember') !== false;
         $keys = $this->supplierKeys($inv);
         $this->tx->execute(function () use ($id, $line, $mid, $factor, $remember, $keys, $inv, $context) {
@@ -478,6 +549,139 @@ final class InvoiceService
         return $this->detail($id, $context);
     }
 
+    /**
+     * « Przypisz wszystkie » : kilka linii naraz (surowiec + przelicznik), zapamiętane dla dostawcy — jedno kliknięcie
+     * zamiast linia po linii ; przelicznik pominięty = domyślny (jednostki, waga w nazwie, opakowanie).
+     */
+    public function mapLines(int $id, array $body, ApiContext $context): array
+    {
+        $inv = $this->open($id);
+        $v = (new Validator($body))->only(['lines', 'remember'])->boolean('remember');
+        $rows = $body['lines'] ?? null;
+        $clean = [];
+        if (!is_array($rows) || !$rows) $v->add('lines', 'REQUIRED');
+        elseif (count($rows) > 300) $v->add('lines', 'TOO_MANY', ['max' => 300]);
+        else foreach (array_values($rows) as $k => $r) {
+            $lineId = is_array($r) ? ($r['line_id'] ?? null) : null;
+            $mid = is_array($r) ? ($r['raw_material_id'] ?? null) : null;
+            $factor = is_array($r) ? ($r['factor'] ?? null) : null;
+            $line = is_int($lineId) ? $this->repo->line($id, $lineId) : null;
+            if ($line === null) { $v->add("lines.$k.line_id", 'REFERENCE_NOT_FOUND', ['id' => (string) json_encode($lineId)]); continue; }
+            $material = is_int($mid) ? $this->repo->material($mid) : null;
+            if ($material === null) { $v->add("lines.$k.raw_material_id", 'REFERENCE_NOT_FOUND', ['id' => (string) json_encode($mid)]); continue; }
+            if ($factor !== null && ((!is_int($factor) && !is_float($factor)) || $factor <= 0 || $factor > 10_000_000)) { $v->add("lines.$k.factor", 'GREATER_THAN', ['min' => 0]); continue; }
+            $clean[] = [$line, $mid, (float) ($factor ?? InvoiceParser::defaultFactor($line['unit'], $material['unit'], $material['package_size'] !== null ? (float) $material['package_size'] : null, (string) $line['name']))];
+        }
+        $v->throwIfInvalid();
+        $remember = $v->value('remember') !== false;
+        $keys = $this->supplierKeys($inv);
+        $this->tx->execute(function () use ($id, $inv, $clean, $remember, $keys, $context) {
+            foreach ($clean as [$line, $mid, $factor]) {
+                $this->repo->mapLine((int) $line['id'], $mid, $factor);
+                if ($remember && $keys) {
+                    $this->repo->saveMapping($keys[0], $inv['id_supplier'] !== null ? (int) $inv['id_supplier'] : null, InvoiceParser::nameKey($line['name']), InvoiceParser::unitKey($line['unit']),
+                        $line['name'], $line['unit'], $mid, $factor, $context->userId);
+                }
+            }
+            $this->autoLink($id);
+            $this->audit->record($context, 'map_all', 'purchase_invoice', $id, null, ['lines' => array_map(fn($x) => [(int) $x[0]['id'], $x[1], $x[2]], $clean), 'remember' => $remember]);
+        });
+        return $this->detail($id, $context);
+    }
+
+    /**
+     * « Zatwierdź fakturę » jednym kliknięciem : ceny do kartoteki (jeśli jeszcze nie), ilości na stan (jeśli jeszcze nie
+     * przyjęte i jest dokąd), akceptacja — wszystko albo nic. prices / stock / accept (domyślnie true) wybierają kroki.
+     * Blokady : INVOICE_NO_LINES, INVOICE_UNMAPPED, INVOICE_NO_SUPPLIER (422) ; ostrzeżenia bez force : INVOICE_NEEDS_CONFIRMATION (409).
+     */
+    public function process(int $id, array $body, ApiContext $context): array
+    {
+        $v = (new Validator($body))->only(['prices', 'stock', 'accept', 'force'])->boolean('prices')->boolean('stock')->boolean('accept')->boolean('force');
+        $v->throwIfInvalid();
+        $steps = array_values(array_filter(self::STEPS, fn($s) => $v->value($s) !== false));
+        $done = $this->runProcess($id, $steps, $v->value('force') === true, $context, 'process');
+        return $this->detail($id, $context) + ['processed' => $done];
+    }
+
+    /** « Zatwierdź gotowe » : wszystkie otwarte faktury bez blokad i ostrzeżeń, każda jak « Zatwierdź fakturę ». */
+    public function processReady(array $body, ApiContext $context): array
+    {
+        $v = (new Validator($body))->only(['prices', 'stock', 'accept'])->boolean('prices')->boolean('stock')->boolean('accept');
+        $v->throwIfInvalid();
+        $steps = array_values(array_filter(self::STEPS, fn($s) => $v->value($s) !== false));
+        $done = [];
+        $errors = [];
+        $left = 0;
+        foreach ($this->repo->invoices('open') as $inv) {
+            if (!$this->readiness($inv, $this->control($inv, $this->repo->lines((int) $inv['id'])))['ok']) { $left++; continue; }
+            try {
+                $done[] = ['id' => (int) $inv['id'], 'number' => $inv['number']] + $this->runProcess((int) $inv['id'], $steps, false, $context, 'process');
+            } catch (ApiException $e) {
+                $errors[] = ['id' => (int) $inv['id'], 'number' => $inv['number'], 'code' => $e->errorCode()];
+                $left++;
+            }
+        }
+        return ['processed' => $done, 'errors' => $errors, 'left' => $left];
+    }
+
+    /** @param list<string> $steps */
+    private function runProcess(int $id, array $steps, bool $force, ApiContext $context, string $action): array
+    {
+        $inv = $this->open($id);
+        $control = $this->control($inv, $this->repo->lines($id));
+        $ready = $this->readiness($inv, $control);
+        if (in_array('no_lines', $ready['blockers'], true)) throw new ApiException('INVOICE_NO_LINES', 422);
+        if (in_array('unmapped', $ready['blockers'], true)) throw new ApiException('INVOICE_UNMAPPED', 422, [], ['n' => $ready['unmapped']]);
+        if (in_array('no_supplier', $ready['blockers'], true)) throw new ApiException('INVOICE_NO_SUPPLIER', 422);
+        if ($ready['warnings'] && !$force) throw new ApiException('INVOICE_NEEDS_CONFIRMATION', 409, [], ['warnings' => implode(', ', $ready['warnings'])]);
+        return $this->tx->execute(function () use ($id, $inv, $control, $steps, $force, $context, $action, $ready) {
+            $out = ['prices' => 0, 'prices_skipped' => [], 'stock' => false, 'accepted' => false];
+            // Linie bez ceny, ilości już przyjęte albo spoza zamówienia : krok pominięty, reszta wykonana.
+            if (in_array('prices', $steps, true) && $inv['prices_imported_at'] === null) {
+                try {
+                    $p = $this->applyPrices($inv, $this->repo->lines($id), $context);
+                    $out['prices'] = count($p['changes']);
+                    $out['prices_skipped'] = $p['skipped'];
+                } catch (ApiException $e) {
+                    if ($e->errorCode() !== 'INVOICE_NO_PRICES') throw $e;
+                }
+            }
+            if (in_array('stock', $steps, true) && $this->canReceive($inv, $control)) {
+                try {
+                    $this->applyReceive($inv, $context);
+                    $out['stock'] = true;
+                } catch (ApiException $e) {
+                    if (!in_array($e->errorCode(), ['INVOICE_ALREADY_RECEIVED', 'INVOICE_NOTHING_TO_RECEIVE'], true)) throw $e;
+                }
+            }
+            if (in_array('accept', $steps, true)) {
+                $this->repo->update($id, ['status' => 'accepted', 'decided_by' => $context->userId, 'decided_at' => date('Y-m-d H:i:s')]);
+                $out['accepted'] = true;
+            }
+            $this->audit->record($context, $action, 'purchase_invoice', $id, ['status' => $inv['status']], $out + ['steps' => $steps, 'force' => $force, 'warnings' => $ready['warnings']]);
+            return $out;
+        });
+    }
+
+    /**
+     * Automatycznie po imporcie (KSeF, plik) — tylko faktura w pełni rozpoznana : dostawca znany, wszystkie linie
+     * z zapamiętanych przypisań, bez rozbieżności, skoku ceny i różnicy sum. supply.invoice_auto_prices (1) : ceny do kartoteki ;
+     * supply.invoice_auto_full (0) : także ilości na stan i akceptacja. Błąd nie przerywa importu (faktura czeka na « Zatwierdź »).
+     */
+    private function autoProcess(int $id, ApiContext $context): ?array
+    {
+        $mode = $this->autoMode();
+        if (!$mode['prices']) return null;
+        $inv = $this->repo->invoice($id);
+        if ($inv === null || !$this->readiness($inv, $this->control($inv, $this->repo->lines($id)))['ok']) return null;
+        try {
+            return $this->runProcess($id, $mode['full'] ? self::STEPS : ['prices'], false, $context, 'auto_process');
+        } catch (\Throwable $e) {
+            error_log('[invoice auto] #' . $id . ' ' . $e->getMessage());
+            return null;
+        }
+    }
+
     public function decide(int $id, array $body, ApiContext $context): array
     {
         $inv = $this->load($id);
@@ -496,8 +700,14 @@ final class InvoiceService
     /** Przyjęcie dostawy wg faktury : ilości i ceny netto z faktury do zamówienia (linie przypisane do jego surowców). */
     public function receive(int $id, ApiContext $context): array
     {
-        $inv = $this->open($id);
-        if ($inv['id_po'] === null) return $this->receiveWithoutOrder($inv, $context);
+        $this->applyReceive($this->open($id), $context);
+        return $this->detail($id, $context);
+    }
+
+    private function applyReceive(array $inv, ApiContext $context): void
+    {
+        $id = (int) $inv['id'];
+        if ($inv['id_po'] === null) { $this->receiveWithoutOrder($inv, $context); return; }
         $po = [];
         $already = [];
         foreach ($this->supply->lines((int) $inv['id_po']) as $pl) {
@@ -521,14 +731,13 @@ final class InvoiceService
         if (!$lines) throw $mapped ? new ApiException('INVOICE_ALREADY_RECEIVED', 409) : new ApiException('INVOICE_NOTHING_TO_RECEIVE', 422);
         $day = $inv['issue_date'] && $inv['issue_date'] <= date('Y-m-d') ? $inv['issue_date'] : date('Y-m-d');
         $this->orders->receive((int) $inv['id_po'], ['received_on' => $day, 'lines' => $lines], $context);
-        return $this->detail($id, $context);
     }
 
     /**
      * Bez zamówienia : zamówienie « przyjęte » utworzone z faktury (linie przypisane, ilość × przelicznik, cena netto
      * na jednostkę bazową) — ilości wchodzą na stan jak każde przyjęcie ; faktura zostaje z nim powiązana.
      */
-    private function receiveWithoutOrder(array $inv, ApiContext $context): array
+    private function receiveWithoutOrder(array $inv, ApiContext $context): void
     {
         if ($inv['id_supplier'] === null) throw new ApiException('INVOICE_NO_SUPPLIER', 422);
         $lines = $this->materialLines($this->repo->lines((int) $inv['id']));
@@ -544,7 +753,6 @@ final class InvoiceService
             $this->repo->update((int) $inv['id'], ['id_po' => $po]);
             $this->audit->record($context, 'receive', 'purchase_invoice', (int) $inv['id'], null, ['order_id' => $po, 'lines' => count($lines), 'received_on' => $day]);
         });
-        return $this->detail((int) $inv['id'], $context);
     }
 
     /**
@@ -561,6 +769,14 @@ final class InvoiceService
         if ($wanted !== null && (!is_array($wanted) || array_filter($wanted, fn($x) => !is_int($x)))) $v->add('line_ids', 'NOT_ARRAY');
         $v->throwIfInvalid();
         $rows = array_filter($this->repo->lines($id), fn($l) => $wanted === null || in_array((int) $l['id'], $wanted, true));
+        $res = $this->applyPrices($inv, $rows, $context);
+        return $this->detail($id, $context) + ['imported_prices' => $res['changes'], 'skipped' => $res['skipped']];
+    }
+
+    /** @return array{changes: list<array>, skipped: list<string>} */
+    private function applyPrices(array $inv, array $rows, ApiContext $context): array
+    {
+        $id = (int) $inv['id'];
         $lines = array_filter($this->materialLines($rows), fn($l) => $l['price'] !== null && $l['price'] > 0);
         if (!$lines) throw new ApiException('INVOICE_NO_PRICES', 422);
         $changes = [];
@@ -582,7 +798,7 @@ final class InvoiceService
             $this->repo->update($id, ['prices_imported_at' => date('Y-m-d H:i:s'), 'prices_imported_by' => $context->userId]);
             $this->audit->record($context, 'import_prices', 'purchase_invoice', $id, null, ['materials' => array_map(fn($c) => [$c['raw_material_id'], $c['old_price'], $c['new_price']], $changes)]);
         }
-        return $this->detail($id, $context) + ['imported_prices' => $changes, 'skipped' => $skipped];
+        return ['changes' => $changes, 'skipped' => $skipped];
     }
 
     /** Linie przypisane według surowca : ilość w jednostkach bazowych i cena netto za jednostkę bazową (ważona). */

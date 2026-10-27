@@ -372,6 +372,13 @@ check(InvoiceParser::defaultFactor('kg', 'g', null) == 1000 && InvoiceParser::de
     && InvoiceParser::defaultFactor('l', 'ml', null) == 1000, 'default factor: kg → g, bag → package size, same unit → 1');
 check(InvoiceParser::nameKey('  MĄKA  pszenna, T-65 ') === 'mąka pszenna t 65' && InvoiceParser::unitKey('Szt.') === 'szt' && InvoiceParser::unitKey('opak.') === 'op', 'name and unit keys for supplier mappings');
 check(InvoiceParser::similarity('MĄKA PSZENNA T-65 WOREK 25KG', 'Mąka T65') > InvoiceParser::similarity('MĄKA PSZENNA T-65 WOREK 25KG', 'Masło'), 'name similarity ranks the right material first');
+check(InvoiceParser::packSize('MAKA PSZENNA T65 WOREK 25KG') === [25000.0, 'g'] && InvoiceParser::packSize('DROZDZE 0,5KG') === [500.0, 'g'] && InvoiceParser::packSize('Cukier 10x1kg') === [10000.0, 'g']
+    && InvoiceParser::packSize('Śmietana 36% 1L') === [1000.0, 'ml'] && InvoiceParser::packSize('MASLO EXTRA 82% BLOK') === null && InvoiceParser::packSize('Folia 450') === null,
+    'pack size read in the invoice line name (25KG, 0,5KG, 10x1kg, 1L ; 82 % or 450 are not weights)');
+check(InvoiceParser::defaultFactor('szt', 'g', 1000, 'MAKA WOREK 25KG') == 25000 && InvoiceParser::defaultFactor('szt', 'ml', null, 'Śmietana 1L') == 1000
+    && InvoiceParser::defaultFactor('kg', 'g', null, 'MASLO 10KG') == 1000 && InvoiceParser::defaultFactor('szt', 'szt', null, 'Jajka 30 szt') == 1,
+    'default factor: weight in the name wins over the material package (piece = 25 kg bag), invoice in kg stays kg → g');
+check(InvoiceParser::similarity('MASLO EXTRA 82% BLOK', 'Masło') === 1.0 && InvoiceParser::similarity('DROZDZE PIEKARSKIE', 'Drożdże') === 1.0, 'names compared without Polish accents (invoices often without them)');
 check(InvoiceParser::similarity('Karton klapowy 590x390x210', 'Karton 590 x 390 x 210') === 1.0 && InvoiceParser::similarity('Karton klapowy 590x390x210', 'karton 590x290x340') === 0.5,
     'dimensions: « 590 x 390 x 210 » = « 590x390x210 », other sizes do not match');
 

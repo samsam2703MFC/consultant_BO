@@ -13,6 +13,7 @@ use App\Services\Material\MaterialSupplierService;
 use App\Services\Recipe\RecipeCostRecalculationService;
 use App\Services\Product\Category\ProductCategoryService;
 use App\Services\Utils\UnitService;
+use App\Services\Workshop\Supply\PriceHistoryService;
 use Symfony\Component\HttpFoundation\Request;
 
 class PriceController extends BaseController
@@ -24,7 +25,8 @@ class PriceController extends BaseController
         private MaterialSupplierService $materialSupplierService,
         private UnitService             $unitService,
         private RecipeCostRecalculationService $recipeCostRecalculationService,
-        private ParamRepository $params
+        private ParamRepository $params,
+        private PriceHistoryService $priceHistory,
     )
     {}
 
@@ -66,11 +68,17 @@ class PriceController extends BaseController
         return $this->handleAjaxResponse($result, 'Cena zaktualizowana, koszty receptur przeliczone', 'Nie udało się zaktualizować ceny');
     }
 
-    /** Historia cen surowca ze źródłem zmiany (P21). */
+    /** Historia cen surowca ze źródłem zmiany (P21) + za kg według dostawcy (wykres : faktury, przyjęcia, kartoteka). */
     #[Route('GET', '/ajax/materials/{idMaterial:\d+}/price-history')]
     public function ajaxPriceHistory($idMaterial)
     {
-        return $this->json(['rows' => $this->materialPriceService->history((int) $idMaterial)]);
+        $months = (int) ($_GET['months'] ?? 24);
+        try {
+            $history = $this->priceHistory->material((int) $idMaterial, in_array($months, PriceHistoryService::MONTHS, true) ? $months : 24, 'pl');
+        } catch (\App\Core\Api\Workshop\ApiException) {
+            $history = null;
+        }
+        return $this->json(['rows' => $this->materialPriceService->history((int) $idMaterial), 'history' => $history]);
     }
 
     #[Route('POST', '/ajax/materials/{idMaterial:\d+}/recalculate-related-recipe-costs')]

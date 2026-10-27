@@ -6,11 +6,15 @@ namespace App\Controllers\Api\Workshop;
 use App\Core\Api\Workshop\ApiRequest;
 use App\Core\Api\Workshop\ApiResult;
 use App\Services\Workshop\Supply\InvoiceService;
+use App\Services\Workshop\Supply\PriceHistoryService;
 
-/** Kontrola faktur zakupowych : import (KSeF, XML, PDF), linie, przypisania nazw dostawcy, porównanie z zamówieniem, decyzja. */
+/**
+ * Kontrola faktur zakupowych : import (KSeF, XML, PDF), linie, przypisania nazw dostawcy, porównanie z zamówieniem, decyzja ;
+ * « Zatwierdź fakturę » jednym kliknięciem ; historia cen surowców za kg według dostawcy.
+ */
 final class InvoiceController
 {
-    public function __construct(private InvoiceService $invoices)
+    public function __construct(private InvoiceService $invoices, private PriceHistoryService $history)
     {
     }
 
@@ -29,4 +33,10 @@ final class InvoiceController
     public function delete(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->delete($request->id(), $request->context)); }
     public function mappings(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->mappings($request->context)); }
     public function deleteMapping(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->deleteMapping($request->id(), $request->context)); }
+    public function mapLines(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->mapLines($request->id(), $request->body(), $request->context)); }
+    public function process(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->process($request->id(), $request->body(), $request->context)); }
+    public function processReady(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->processReady($request->body(), $request->context)); }
+    public function ksefSync(ApiRequest $request): ApiResult { return new ApiResult($this->invoices->ksefSync($request->context)); }
+    public function prices(ApiRequest $request): ApiResult { return new ApiResult($this->history->overview((int) $request->query('months', '12'), $request->context->translator->lang())); }
+    public function materialPrices(ApiRequest $request): ApiResult { return new ApiResult($this->history->material($request->id(), (int) $request->query('months', '24'), $request->context->translator->lang())); }
 }

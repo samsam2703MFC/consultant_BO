@@ -49,6 +49,12 @@ final class InvoiceRepository extends WorkshopRepository
         return null;
     }
 
+    /** Data wystawienia ostatniej faktury pobranej z KSeF (start « Pobierz nowe z KSeF »). */
+    public function lastKsefIssueDate(): ?string
+    {
+        return $this->all("SELECT MAX(issue_date) AS d FROM n_inv WHERE source = 'ksef'")[0]['d'] ?? null;
+    }
+
     /** @return list<string> numery KSeF już zaimportowane */
     public function importedKsef(array $numbers): array
     {
