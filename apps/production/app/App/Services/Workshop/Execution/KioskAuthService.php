@@ -285,7 +285,7 @@ final class KioskAuthService
             && $this->repo->activePhones($body['employee_id']) > 0) {
             throw new ApiException('OFFICE_USE_PHONE', 409);
         }
-        $employee = $this->authenticateEmployee($body, (int) $context->deviceId, $context);
+        $employee = $this->presentByTap($body, $device, $context) ?? $this->authenticateEmployee($body, (int) $context->deviceId, $context);
         // Tablette générique : le groupe touché à l'accueil, à défaut le groupe principal de la personne (badge).
         return $this->employeeToken($employee, (int) $context->deviceId, $context->deviceGroupId
             ?? (isset($employee['id_primary_group']) && $employee['id_primary_group'] !== null ? (int) $employee['id_primary_group'] : null));
@@ -474,6 +474,24 @@ final class KioskAuthService
             throw $lock ? new ApiException('EMPLOYEE_LOCKED', 423, [], ['until' => substr($lock, 11, 5)]) : new ApiException('PIN_INVALID', 401, [], ['left' => $max - $failed]);
         }
         if ((int) $cred['failed_attempts'] > 0) $this->repo->saveCredential($employeeId, ['failed_attempts' => 0, 'locked_until' => null]);
+        return $employee;
+    }
+
+    /**
+     * Tablette de production (27/10/2026) : l'entrée se fait au bureau (QR téléphone ou PIN + signature) ; ici la personne
+     * présente du groupe touche son nom, sans PIN (kiosk.production_tap_present = 1). Absente : EMPLOYEE_NOT_PRESENT ;
+     * paramètre coupé, badge ou PIN fourni : le chemin habituel (PIN).
+     */
+    private function presentByTap(array $body, ?array $device, ApiContext $context): ?array
+    {
+        if (array_key_exists('pin', $body) || isset($body['badge']) || !is_int($body['employee_id'] ?? null)) return null;
+        if (($device['mode'] ?? 'atelier') !== 'atelier' || $this->params->get('kiosk.production_tap_present', '1') !== '1') return null;
+        $id = $body['employee_id'];
+        $employee = $this->repo->employee($id);
+        if ($employee === null || !(int) $employee['active']) throw new ApiException('BADGE_UNKNOWN', 401);
+        $present = array_filter($this->repo->people($context->deviceGroupId), fn($p) => (int) $p['id'] === $id && $p['clocked_in_at'] !== null);
+        if (!$present) throw new ApiException('EMPLOYEE_NOT_PRESENT', 409);
+        $this->audit->record($context, 'tap_present', 'employee', $id, null, ['device_id' => (int) $context->deviceId]);
         return $employee;
     }
 

@@ -38,6 +38,7 @@
     "EMPLOYEE_UNAUTHENTICATED": "Identifiez-vous avec votre badge ou votre nom et votre PIN.",
     "EMPLOYEE_SESSION_EXPIRED": "Session expirée — identifiez-vous à nouveau.",
     "BADGE_UNKNOWN": "Badge inconnu.",
+    "EMPLOYEE_NOT_PRESENT": "Faites d'abord votre entrée sur la tablette de bureau — puis touchez votre nom ici.",
     "PIN_NOT_SET": "Vous n'avez pas encore de PIN — demandez-le à votre responsable.",
     "PIN_INVALID": "PIN erroné (essais restants : {left}).",
     "EMPLOYEE_LOCKED": "Trop de PIN erronés — bloqué jusqu'à {until}.",

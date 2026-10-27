@@ -577,7 +577,7 @@
   "sign_out_here": "Podpisz się palcem w ramce : potwierdzam dzisiejsze godziny pracy.",
   "switch_person": "Zmień osobę",
   "switch_title": "Kto teraz wprowadza dane?",
-  "switch_help": "Osoby z grupy obecne w pracy. Dotknij swojego nazwiska i wpisz PIN : wracasz do tego samego ekranu.",
+  "switch_help": "Osoby z grupy obecne w pracy. Dotknij swojego nazwiska : wracasz do tego samego ekranu.",
   "switch_none": "Nikt inny z grupy nie jest obecny.",
   "groups_title": "Wybierz swoją grupę",
   "groups_help": "Dotknij swojej grupy, potem nazwiska i wpisz PIN.",
@@ -593,6 +593,14 @@
   "kv_search_help": "Brakuje produktu ? Wpisz kilka liter nazwy w polu wyszukiwania.",
   "home_stock_all": "Cały magazyn",
   "home_stock_line": "stan {stock} · min. {min} kart.",
-  "home_stock_who": "Kto otwiera magazyn ? Dotknij swojego zdjęcia i wpisz PIN.",
-  "home_stock_line_nomin": "stan {stock} kart."
+  "home_stock_who": "Kto otwiera magazyn ? Dotknij swojego zdjęcia.",
+  "home_stock_line_nomin": "stan {stock} kart.",
+  "home_tap_title": "Dotknij swojego zdjęcia",
+  "home_greet_tap": "Zespół {team} — dotknij swojego zdjęcia",
+  "home_tap_hint": "Osoby obecne (wejście na tablecie biurowym). Dotknij swojego zdjęcia : otwiera się menu.",
+  "home_tap_office": "Nikogo jeszcze nie ma. Wejście : tablet biurowy.",
+  "home_nobody_in": "Nikt z grupy nie wszedł jeszcze na tablecie biurowym.",
+  "home_other_person": "Inna osoba (PIN)",
+  "home_tab_who": "« {tab} » : kto ? Dotknij swojego zdjęcia.",
+  "home_week_short": "Tydz."
 }

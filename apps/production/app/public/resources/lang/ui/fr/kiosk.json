@@ -577,7 +577,7 @@
   "sign_out_here": "Signez avec le doigt dans le cadre : je confirme mes heures de travail du jour.",
   "switch_person": "Changer de personne",
   "switch_title": "Qui encode maintenant ?",
-  "switch_help": "Les personnes du groupe en poste. Touchez votre nom puis tapez votre PIN : vous reprenez au même écran.",
+  "switch_help": "Personnes du groupe présentes au travail. Touchez votre nom : vous revenez au même écran.",
   "switch_none": "Personne d’autre du groupe n’est en poste.",
   "groups_title": "Choisissez votre groupe",
   "groups_help": "Touchez votre groupe, puis votre nom et votre PIN.",
@@ -593,6 +593,14 @@
   "kv_search_help": "Un produit manque ? Tapez quelques lettres de son nom dans la recherche.",
   "home_stock_all": "Tout le stock",
   "home_stock_line": "stock {stock} · min. {min} cart.",
-  "home_stock_who": "Qui ouvre le stock ? Touchez votre photo et tapez votre PIN.",
-  "home_stock_line_nomin": "stock {stock} cart."
+  "home_stock_who": "Qui ouvre le stock ? Touchez votre photo.",
+  "home_stock_line_nomin": "stock {stock} cart.",
+  "home_tap_title": "Touchez votre photo",
+  "home_greet_tap": "Équipe {team} — touchez votre photo",
+  "home_tap_hint": "Personnes présentes (entrée sur la tablette de bureau). Touchez votre photo : le menu s'ouvre.",
+  "home_tap_office": "Personne n'est encore là. Entrée : tablette de bureau.",
+  "home_nobody_in": "Personne du groupe n'est encore entré sur la tablette de bureau.",
+  "home_other_person": "Autre personne (PIN)",
+  "home_tab_who": "« {tab} » : qui ? Touchez votre photo.",
+  "home_week_short": "Sem."
 }

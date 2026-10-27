@@ -43,6 +43,13 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
 
+### Tablette de production : un toucher pour les présents (migration 109, 27/10/2026)
+
+- Paramètre `kiosk.production_tap_present` (1) : sur la tablette de production (`/tablet/production?team=N`), une personne
+  du groupe dont l'entrée est en cours (faite sur la tablette de bureau) touche son nom et arrive au menu sans PIN
+  (`POST /kiosk/identify` avec `employee_id` seul ; absente : `EMPLOYEE_NOT_PRESENT`). 0 = PIN comme avant.
+- Chaque entrée sans PIN est écrite au journal (`n_prod_audit_log`, action `tap_present`).
+
 ### Factures d'achat de correction (migration 108, 27/10/2026)
 
 `n_inv.is_correction` (0/1) : facture de correction — KSeF `Fa/RodzajFaktury` KOR, KOR_ZAL ou KOR_ROZ, PDF « faktura korygująca », ou total net négatif ; les factures déjà importées sont marquées depuis le fichier conservé (`n_inv_file`). Ses lignes « avant correction » (`StanPrzed`) ne sont pas des achats : une facture de correction ne propose aucune hausse à valider, n'est jamais traitée automatiquement (avertissement `correction`, acceptation après confirmation), ne change ni le prix de base (409 `INVOICE_CORRECTION` pour l'import des prix), ni le stock (409 pour la réception), et n'entre ni dans l'historique des prix ni dans les prix validés. Une correction de stock ou de prix se fait à la main.

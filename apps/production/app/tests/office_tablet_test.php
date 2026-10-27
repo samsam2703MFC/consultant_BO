@@ -289,6 +289,22 @@ try {
     expectOff($s === 200 && $idK['data']['group_id'] === 2, 'PIN on the chosen group: session in that group');
     [$s, $rf] = $call('POST', '/kiosk/refresh', null, $atelier + ['X-Employee-Token' => $idK['data']['employee_token']]);
     expectOff($s === 200 && $rf['data']['group_id'] === 2, 'the session keeps the chosen group (token), even without the header');
+    // --- Tablette de production : présent du groupe (entrée faite au bureau) → un toucher sans PIN ; sinon refus ou PIN
+    [$s, $tp] = $call('POST', '/kiosk/identify', ['employee_id' => 80], $atelier);
+    expectOff($s === 200 && $tp['data']['employee']['id'] === 80 && $tp['data']['group_id'] === 1, 'present person of the group: tap without PIN on the production tablet');
+    [$s, $b] = $call('POST', '/kiosk/identify', ['employee_id' => $kinga], $tarty, 'fr');
+    expectOff($s === 409 && $b['description'] === 'EMPLOYEE_NOT_PRESENT' && str_contains($b['message'], 'bureau'), 'absent person: entry on the office tablet first');
+    [$s] = $call('POST', '/kiosk/identify', ['employee_id' => 80], $tarty);
+    expectOff($s === 409, 'present person of another group: not on this team tablet');
+    [$s, $b] = $call('POST', '/kiosk/identify', ['employee_id' => 80], $office);
+    expectOff($s === 422 && in_array('pin:REQUIRED', $codes($b), true), 'office tablet: PIN still required');
+    [$s] = $call('PATCH', '/referentiels/params/kiosk.production_tap_present', ['value' => false], $manager);
+    if ($s === 200) {
+        [$s, $b] = $call('POST', '/kiosk/identify', ['employee_id' => 80], $atelier);
+        expectOff($s === 422 && in_array('pin:REQUIRED', $codes($b), true), 'kiosk.production_tap_present = 0: PIN as before');
+        $call('PATCH', '/referentiels/params/kiosk.production_tap_present', ['value' => true], $manager);
+    }
+    expectOff((int) $pdo->query("SELECT COUNT(*) FROM n_prod_audit_log WHERE action = 'tap_present' AND entity_id = '80'")->fetchColumn() >= 1, 'tap login written to the audit log');
     [$s, $b] = $call('GET', '/kiosk/stock', null, $tarty);
     expectOff($s === 200 && is_array($b['data']['items']) && isset($b['data']['totals']['below_min']), 'group stock readable on the home screen without a PIN (chosen group)');
     [, $tq] = $call('GET', '/kiosk/qr?base=' . rawurlencode($base), null, $tarty);

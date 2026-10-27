@@ -74,7 +74,8 @@ final class OpenApiExecution
                 'description' => "Tablette de production (générique ou de groupe, 27/10/2026) : tous les groupes actifs, own = le groupe de la tablette. Le groupe touché (ou ?team=N dans l'adresse) part dans l'en-tête X-Kiosk-Group, puis dans le jeton de la personne : la production suit ce groupe."],
             'POST /kiosk/identify' => ['tag' => 'kiosk', 'id' => 'identify', 'summary' => 'Identyfikacja: identyfikator lub osoba + PIN / Identification : badge ou personne + PIN', 'body' => 'IdentifyInput', 'response' => 'EmployeeToken', 'errors' => [400, 401, 403, 409, 422, 423],
                 'description' => "Jeton court (kiosk.employee_token_ttl_s) lié à la tablette, à envoyer dans X-Employee-Token. Blocage après kiosk.pin_max_attempts PIN erronés (423). "
-                    . "Tablette de bureau : PIN + signature pour les personnes sans téléphone enregistré ; avec un téléphone, OFFICE_USE_PHONE (409) sauf kiosk.office_pin_all = 1."],
+                    . "Tablette de bureau : PIN + signature pour les personnes sans téléphone enregistré ; avec un téléphone, OFFICE_USE_PHONE (409) sauf kiosk.office_pin_all = 1. "
+                    . "Tablette de production : employee_id sans pin pour une personne présente du groupe (entrée faite au bureau, kiosk.production_tap_present = 1) ; absente : EMPLOYEE_NOT_PRESENT (409). PIN obligatoire partout ailleurs (et pour enregistrer un téléphone)."],
             'POST /kiosk/refresh' => ['tag' => 'kiosk', 'id' => 'refreshEmployee', 'summary' => 'Przedłuż sesję osoby / Prolonger la session de la personne', 'response' => 'EmployeeToken', 'errors' => [401],
                 'description' => "Nouveau jeton (kiosk.employee_token_ttl_s) tant que l'ancien est valide : la tablette prolonge la session pendant la saisie des lots ; l'inactivité déconnecte toujours."],
             'GET /kiosk/me' => ['tag' => 'kiosk', 'id' => 'kioskMe', 'summary' => 'Ja: pointowanie i operacje / Moi : pointage et opérations', 'response' => 'KioskMe', 'errors' => [401]],
@@ -231,7 +232,7 @@ final class OpenApiExecution
             'KioskGroup' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => $str, 'color' => $str, 'people' => $int, 'present' => $int, 'own' => $bool]],
             'DriverTours' => ['type' => 'object', 'properties' => ['date' => $str, 'dates' => ['type' => 'array', 'items' => $str], 'default_vehicle_id' => $int,
                 'tours' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['id' => $int, 'label' => $str, 'carrier' => $str, 'customers' => $int, 'pallets' => $num, 'departure' => $str]]]]],
-            'IdentifyInput' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['pin'], 'properties' => ['badge' => $str, 'employee_id' => $int, 'pin' => ['type' => 'string', 'pattern' => '^\d{4,6}$']]],
+            'IdentifyInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => ['badge' => $str, 'employee_id' => $int, 'pin' => ['type' => 'string', 'pattern' => '^\d{4,6}$']]],
             'EmployeeToken' => ['type' => 'object', 'properties' => ['employee_token' => $str, 'expires_in' => $int, 'employee' => ['type' => 'object', 'properties' => ['id' => $int, 'name' => $str]]]],
             'Clock' => ['type' => 'object', 'properties' => ['id' => $int, 'clock_in' => $dt, 'clock_out' => $nStr, 'hours' => $num]],
             'ClockInput' => ['type' => 'object', 'additionalProperties' => false, 'properties' => ['direction' => ['type' => 'string', 'enum' => ['in', 'out']], 'client_uuid' => ['type' => 'string', 'format' => 'uuid'],

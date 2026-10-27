@@ -257,7 +257,7 @@
                 <button type="button" class="kiosk-chip is-glass" data-lang><span class="kiosk-lang-long">${esc(t('lang_switch'))}</span><span class="kiosk-lang-short" aria-hidden="true">${lang === 'pl' ? 'FR' : 'PL'}</span></button></div>
             <section class="kiosk-ipad-hero"><div class="kiosk-ipad-time" data-clock>${now.toTimeString().slice(0, 5)}</div>
                 <div class="kiosk-ipad-date">${esc(now.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'long', day: 'numeric', month: 'long'}))}</div>
-                <p class="kiosk-ipad-greet" data-hero-title>${esc(t(office ? 'office_hero' : 'home_title'))}</p></section>
+                <p class="kiosk-ipad-greet" data-hero-title>${esc(t(office ? 'office_hero' : 'home_tap_title'))}</p></section>
             <div class="kiosk-widgets">${office ? qrWidget + peopleWidget : `${peopleWidget}
                 <section class="kiosk-widget is-today" data-today>${widgetHead('calendar-days', 'is-abricot', esc(t('home_today_title')), `<button type="button" class="kiosk-widget-link" data-week-open>${esc(t('home_week_all'))} ›</button>`)}
                     <div class="kiosk-widget-stats" data-stats></div><div data-today-list><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>
@@ -265,22 +265,20 @@
                     <div class="kiosk-widget-stats" data-stock-stats></div><div data-stock-list></div></section>
                 <section class="kiosk-widget is-dev" data-dev-widget hidden>${widgetHead('flask-conical', 'is-ruby', esc(t('home_dev_title')), '<span class="kiosk-widget-meta" data-dev-count></span>')}
                     <div class="kiosk-dev-minis" data-dev-list></div></section>
-                ${qrWidget}
                 <section class="kiosk-widget is-deliveries" data-deliveries hidden>${widgetHead('truck', 'is-soft', esc(t('home_deliveries_title')))}<div data-delivery-list></div></section>`}</div>
-            <nav class="kiosk-dock" aria-label="${esc(t('home_dock'))}">
+            ${office ? `<nav class="kiosk-dock" aria-label="${esc(t('home_dock'))}">
                 ${dockApp('data-dock-badge', 'id-card', 'is-ruby', t('home_dock_badge'))}
                 ${'NDEFReader' in window ? dockApp('data-nfc', 'nfc', 'is-ink', t('nfc')) : ''}
-                ${office ? '' : dockApp('data-week-open', 'calendar-days', 'is-abricot', t('home_week_all'))}
                 ${dockApp('data-dock-qr', 'smartphone', 'is-soft', t('home_dock_phone'))}
-            </nav>
+            </nav>` : homeMenu()}
             <input class="kiosk-badge-input" data-badge autocomplete="off" aria-label="${esc(t('badge'))}"></div>`;
         const badge = el.querySelector('[data-badge]');
         const focusBadge = () => { if (document.activeElement !== badge && !el.querySelector('input:not([data-badge])')) badge.focus({preventScroll: true}); };
         focusBadge();
         badge.addEventListener('keydown', (e) => { if (e.key === 'Enter' && badge.value.trim()) { e.preventDefault(); const v = badge.value.trim(); badge.value = ''; renderPin({badge: v}); } });
         el.addEventListener('click', focusBadge, {once: true});
-        el.querySelector('[data-dock-badge]').addEventListener('click', () => { toast(t('badge_hint')); badge.focus({preventScroll: true}); });
-        el.querySelector('[data-dock-qr]').addEventListener('click', () => {
+        el.querySelector('[data-dock-badge]')?.addEventListener('click', () => { toast(t('badge_hint')); badge.focus({preventScroll: true}); });
+        el.querySelector('[data-dock-qr]')?.addEventListener('click', () => {
             const card = el.querySelector('[data-qr-card]');
             if (card && !card.hidden) { card.scrollIntoView({behavior: 'smooth', block: 'center'}); card.classList.remove('is-flash'); void card.offsetWidth; card.classList.add('is-flash'); }
             else toast(t('home_qr_help'));
@@ -296,7 +294,7 @@
         });
         el.querySelectorAll('[data-week-open]').forEach(b => b.addEventListener('click', () => renderWeek(null, false)));
         el.querySelectorAll('[data-group]').forEach(b => b.addEventListener('click', () => { setGroup(Number(b.dataset.group)); renderHome(); }));
-        drawQr();
+        if (office) drawQr();
         const [people, w, dev, stock] = await Promise.all([
             api('GET', '/kiosk/people').catch((err) => { if (!err.code) toast(err.message, true); return null; }),
             office ? Promise.resolve(null) : api('GET', '/kiosk/week').catch(() => null),
@@ -306,13 +304,29 @@
         const box = el.querySelector('[data-people]');
         if (!box) return;
         const list = people || [];
-        const present = list.filter(p => p.clocked_in).length;
-        box.innerHTML = list.length ? list.map(p => `<button type="button" class="kiosk-app-person ${p.clocked_in ? 'is-in' : ''} ${p.has_pin ? '' : 'is-nopin'}" data-person="${p.id}" data-name="${esc(p.name)}">
+        const present = list.filter(p => p.clocked_in);
+        // Tablette de production (27/10/2026) : l'entrée se fait au bureau ; ici seulement les présents du groupe,
+        // un toucher → le menu (sans PIN). « Inna osoba (PIN) » : tout le groupe, avec PIN (responsable, oubli d'entrée).
+        const personBtn = (p, withPin) => `<button type="button" class="kiosk-app-person ${p.clocked_in ? 'is-in' : ''} ${p.has_pin || !withPin ? '' : 'is-nopin'}" data-person="${p.id}" data-name="${esc(p.name)}" data-pin="${withPin ? 1 : ''}">
                 ${avatar(p.name, 'is-app')}<span class="kiosk-app-name">${esc(p.name)}</span>
-                <small>${esc(p.clocked_in ? t('home_on_shift') : (p.has_pin ? t('absent') : t('home_no_pin_short')))}</small></button>`).join('') : `<p class="kiosk-muted">${esc(t('nobody'))}</p>`;
-        box.addEventListener('click', (e) => { const b = e.target.closest('[data-person]'); if (b) renderPin({employee_id: Number(b.dataset.person), name: b.dataset.name}); });
-        el.querySelector('[data-present]').textContent = t('home_present_of', {n: present, total: list.length});
+                <small>${esc(p.clocked_in ? t('home_on_shift') : (p.has_pin ? t('absent') : t('home_no_pin_short')))}</small></button>`;
+        const drawPeople = (all) => {
+            const shown = office || all ? list : present;
+            box.innerHTML = (shown.length ? shown.map(p => personBtn(p, office || all)).join('') : `<p class="kiosk-widget-empty">${esc(t(list.length ? 'home_nobody_in' : 'nobody'))}</p>`)
+                + (office || all || !list.length ? '' : `<button type="button" class="kiosk-link kiosk-other-person" data-other-person>${esc(t('home_other_person'))}</button>`);
+        };
+        drawPeople(false);
+        homePresent = present;
+        box.addEventListener('click', (e) => {
+            if (e.target.closest('[data-other-person]')) { drawPeople(true); el.querySelector('[data-team-hint]').textContent = t('home_team_hint'); return; }
+            const b = e.target.closest('[data-person]');
+            if (!b) return;
+            if (b.dataset.pin) renderPin({employee_id: Number(b.dataset.person), name: b.dataset.name});
+            else tapLogin({employee_id: Number(b.dataset.person), name: b.dataset.name});
+        });
+        el.querySelector('[data-present]').textContent = t('home_present_of', {n: present.length, total: list.length});
         if (office) return;
+        el.querySelector('[data-team-hint]').textContent = t(present.length ? 'home_tap_hint' : 'home_tap_office');
         const team = w && w.teams && w.teams[0];
         const day = team ? (team.days.find(d => d.today) || null) : null;
         const blocks = day ? day.blocks : [];
@@ -323,7 +337,7 @@
             + stat(String(deliveries.length), t('home_deliveries'), deliveries.length ? 'is-info' : '');
         if (team && team.name) {
             el.querySelector('[data-team-name]').textContent = t('home_team', {team: team.name});
-            el.querySelector('[data-hero-title]').textContent = t('home_greet', {team: team.name});
+            el.querySelector('[data-hero-title]').textContent = t('home_greet_tap', {team: team.name});
         }
         const todayBox = el.querySelector('[data-today-list]');
         const shown = blocks.slice(0, 5);
@@ -347,6 +361,7 @@
                 <span class="kiosk-today-name">${esc(r.name)}</span><span class="kiosk-today-qty">${esc(r.min_cartons === null ? t('home_stock_line_nomin', {stock: fmt(r.stock_cartons)}) : t('home_stock_line', {stock: fmt(r.stock_cartons), min: fmt(r.min_cartons)}))}</span></li>`).join('')}</ul>`;
             el.querySelector('[data-stock-open]').addEventListener('click', () => {
                 afterLogin = 'stock';
+                if (homePresent.length === 1) { tapLogin({employee_id: homePresent[0].id, name: homePresent[0].name}); return; }
                 const teamWidget = el.querySelector('[data-team-widget]');
                 teamWidget.classList.remove('is-pick'); void teamWidget.offsetWidth; teamWidget.classList.add('is-pick');
                 el.querySelector('[data-team-hint]').textContent = t('home_stock_who');
@@ -400,17 +415,17 @@
 
     // Changer de personne sans quitter l'écran (27/10/2026) : les présents du groupe, un toucher → PIN → même onglet.
     async function renderSwitch() {
-        const back = session ? session.tab || 'clock' : 'clock';
+        const back = session ? session.tab || 'production' : 'production';
         let people = [];
         try { people = await api('GET', '/kiosk/people', undefined, true); } catch (err) { if (!err.code) toast(err.message, true); }
         const others = people.filter(p => p.clocked_in && (!session || p.id !== session.id));
         el.innerHTML = header() + `<section class="kiosk-card kiosk-switch"><h2>${esc(t('switch_title'))}</h2><p class="kiosk-muted">${esc(t('switch_help'))}</p>
-            <div class="kiosk-apps">${others.length ? others.map(p => `<button type="button" class="kiosk-app-person is-in ${p.has_pin ? '' : 'is-nopin'}" data-person="${p.id}" data-name="${esc(p.name)}" ${p.has_pin ? '' : 'disabled'}>
-                ${avatar(p.name, 'is-app')}<span class="kiosk-app-name">${esc(p.name)}</span><small>${esc(p.has_pin ? t('home_on_shift') : t('home_no_pin_short'))}</small></button>`).join('')
+            <div class="kiosk-apps">${others.length ? others.map(p => `<button type="button" class="kiosk-app-person is-in" data-person="${p.id}" data-name="${esc(p.name)}">
+                ${avatar(p.name, 'is-app')}<span class="kiosk-app-name">${esc(p.name)}</span><small>${esc(t('home_on_shift'))}</small></button>`).join('')
                 : `<p class="kiosk-muted">${esc(t('switch_none'))}</p>`}</div>
             <button type="button" class="kiosk-link" data-switch-cancel>${esc(t('cancel'))}</button></section>`;
         el.querySelector('[data-switch-cancel]').addEventListener('click', () => openTab(back));
-        el.querySelector('.kiosk-apps').addEventListener('click', (e) => { const b = e.target.closest('[data-person]'); if (b && !b.disabled) renderPin({employee_id: Number(b.dataset.person), name: b.dataset.name, tab: back}); });
+        el.querySelector('.kiosk-apps').addEventListener('click', (e) => { const b = e.target.closest('[data-person]'); if (b && !b.disabled) tapLogin({employee_id: Number(b.dataset.person), name: b.dataset.name, tab: back}); });
         resetIdle();
     }
 
@@ -514,6 +529,63 @@
     }
 
     // --- PIN -------------------------------------------------------------------------------------------
+    // Session ouverte (PIN, badge ou toucher d'un présent) : l'onglet demandé, sinon Produkcja (l'entrée se fait au bureau).
+    function startSession(r, who) {
+        const prev = session;
+        session = {token: r.employee_token, id: r.employee.id, name: r.employee.name, exp: Date.now() + r.expires_in * 1000, group: r.group_id || null};
+        // Badge passé avant de toucher un groupe : la tablette générique suit le groupe principal de la personne.
+        if (deviceInfo && deviceInfo.generic && !group && r.group_id) setGroup(r.group_id);
+        // Bascule entre présents : l'onglet où l'on encodait, avec ce que la tablette sait déjà du groupe.
+        if (who.tab && prev) { session.machines = prev.machines; session.dev = prev.dev; openTab(who.tab); return; }
+        loadTabExtras();
+        const target = afterLogin;
+        afterLogin = null;
+        // Widget « Nouveaux produits » : directement la fiche du produit touché ; menu du bas : l'onglet touché.
+        if (typeof target === 'number') { session.dev = 1; session.tab = 'dev'; renderDevProduct(target); return; }
+        openTab(target || 'production');
+    }
+
+    // Onglets Maszyny et Nowe produkty : seulement si le groupe a des machines TRS / des produits montrés sur la tablette.
+    async function loadTabExtras() {
+        const s = session;
+        const [machines, dev] = await Promise.all([api('GET', '/kiosk/machines', undefined, true).catch(() => null), api('GET', '/kiosk/development', undefined, true).catch(() => null)]);
+        if (session !== s || !s) return;
+        s.machines = machines ? machines.machines.length : 0;
+        s.dev = dev ? dev.products.length : 0;
+        const bar = el.querySelector('.kiosk-tabs:not(.is-home)');
+        if (bar && (s.machines || s.dev)) bar.outerHTML = tabs(s.tab || 'production');
+    }
+
+    // Présent du groupe (entré au bureau) : un toucher suffit ; sinon (absent, paramètre coupé) le PIN.
+    async function tapLogin(who) {
+        try {
+            startSession(await api('POST', '/kiosk/identify', {employee_id: who.employee_id}), who);
+        } catch (err) {
+            if (err.code === 'EMPLOYEE_NOT_PRESENT') toast(err.message, true);
+            renderPin(who);
+        }
+    }
+
+    // Menu du bas de l'accueil : le même que celui d'une personne ; toucher → « qui ? » (ou directement le seul présent).
+    function homeMenu() {
+        const items = [['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['recipes', 'book-open', 'tab_recipes']];
+        return `<nav class="kiosk-tabs is-home" aria-label="${esc(t('tabs'))}">${items.map(([k, ic, label]) => `<button type="button" class="kiosk-tab" data-home-tab="${k}">
+            <span class="kiosk-tab-icon">${icon(ic)}</span><span class="kiosk-tab-label">${esc(t(label))}</span><span class="kiosk-tab-short" aria-hidden="true">${esc(t(label + '_short'))}</span></button>`).join('')}
+            <button type="button" class="kiosk-tab" data-week-open><span class="kiosk-tab-icon">${icon('calendar-days')}</span><span class="kiosk-tab-label">${esc(t('home_week_all'))}</span><span class="kiosk-tab-short" aria-hidden="true">${esc(t('home_week_short'))}</span></button></nav>`;
+    }
+    let homePresent = [];
+    el.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-home-tab]');
+        if (!b || session) return;
+        afterLogin = b.dataset.homeTab;
+        if (homePresent.length === 1) { tapLogin({employee_id: homePresent[0].id, name: homePresent[0].name}); return; }
+        const teamWidget = el.querySelector('[data-team-widget]');
+        if (!teamWidget) return;
+        teamWidget.classList.remove('is-pick'); void teamWidget.offsetWidth; teamWidget.classList.add('is-pick');
+        el.querySelector('[data-team-hint]').textContent = t(homePresent.length ? 'home_tab_who' : 'home_tap_office', {tab: b.querySelector('.kiosk-tab-label').textContent});
+        teamWidget.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    });
+
     function renderPin(who) {
         let pin = '';
         el.innerHTML = header() + `<section class="kiosk-card kiosk-pin">${who.name ? avatar(who.name, 'is-lg') : `<span class="kiosk-badge-icon">${icon('id-card')}</span>`}<h2>${esc(who.name || t('badge_read'))}</h2><p class="kiosk-muted">${esc(t('pin_help'))}</p>
@@ -529,16 +601,7 @@
             const ok = el.querySelector('[data-ok]');
             ok.disabled = true;
             try {
-                const r = await api('POST', '/kiosk/identify', {...(who.badge ? {badge: who.badge} : {employee_id: who.employee_id}), pin});
-                const prev = session;
-                session = {token: r.employee_token, id: r.employee.id, name: r.employee.name, exp: Date.now() + r.expires_in * 1000, group: r.group_id || null};
-                // Badge passé avant de toucher un groupe : la tablette générique suit le groupe principal de la personne.
-                if (deviceInfo && deviceInfo.generic && !group && r.group_id) setGroup(r.group_id);
-                // Bascule entre présents : l'onglet où l'on encodait, avec ce que la tablette sait déjà du groupe.
-                if (who.tab && prev) { session.machines = prev.machines; session.dev = prev.dev; openTab(who.tab); return; }
-                // Widget « Nouveaux produits » : directement la fiche du produit touché.
-                if (afterLogin === 'stock') { afterLogin = null; session.tab = 'stock'; renderStock(); }
-                else if (afterLogin) { const id = afterLogin; afterLogin = null; session.dev = 1; session.tab = 'dev'; renderDevProduct(id); } else renderMe();
+                startSession(await api('POST', '/kiosk/identify', {...(who.badge ? {badge: who.badge} : {employee_id: who.employee_id}), pin}), who);
             } catch (err) {
                 pin = ''; dots(); ok.disabled = false;
                 el.querySelector('[data-error]').textContent = err.message;
@@ -570,7 +633,8 @@
     function tabs(active) {
         if (session) session.tab = active;
         // Zakładki Maszyny (TRS) i Nowe produkty tylko, gdy grupa tabletu ma maszyny z TRS / produkty pokazane na tablecie.
-        const shown = ([k]) => (k !== 'machines' || (session && session.machines > 0)) && (k !== 'dev' || (session && session.dev > 0));
+        const shown = ([k]) => (k !== 'machines' || (session && session.machines > 0)) && (k !== 'dev' || (session && session.dev > 0))
+            && (k !== 'clock' || !(deviceInfo && deviceInfo.mode === 'atelier'));
         return `<nav class="kiosk-tabs" role="tablist" aria-label="${esc(t('tabs'))}">${TABS.filter(shown).map(([k, ic, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
             role="tab" aria-selected="${k === active}" data-tab="${k}"><span class="kiosk-tab-icon">${icon(ic)}</span><span class="kiosk-tab-label">${esc(t(label))}</span><span class="kiosk-tab-short" aria-hidden="true">${esc(t(label + '_short'))}</span></button>`).join('')}</nav>`;
     }

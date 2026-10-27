@@ -12030,7 +12030,7 @@
                         "$ref": "#/components/responses/Error500"
                     }
                 },
-                "description": "Jeton court (kiosk.employee_token_ttl_s) lié à la tablette, à envoyer dans X-Employee-Token. Blocage après kiosk.pin_max_attempts PIN erronés (423). Tablette de bureau : PIN + signature pour les personnes sans téléphone enregistré ; avec un téléphone, OFFICE_USE_PHONE (409) sauf kiosk.office_pin_all = 1.",
+                "description": "Jeton court (kiosk.employee_token_ttl_s) lié à la tablette, à envoyer dans X-Employee-Token. Blocage après kiosk.pin_max_attempts PIN erronés (423). Tablette de bureau : PIN + signature pour les personnes sans téléphone enregistré ; avec un téléphone, OFFICE_USE_PHONE (409) sauf kiosk.office_pin_all = 1. Tablette de production : employee_id sans pin pour une personne présente du groupe (entrée faite au bureau, kiosk.production_tap_present = 1) ; absente : EMPLOYEE_NOT_PRESENT (409). PIN obligatoire partout ailleurs (et pour enregistrer un téléphone).",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/Lang"
@@ -16210,7 +16210,7 @@
                 }
             },
             "Error409": {
-                "description": "DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS / PLAN_NOT_EDITABLE / PLAN_OVERLAP / PLAN_NOT_VALIDATED / OPERATION_NOT_MOVABLE / PIN_NOT_SET / CLOCK_ALREADY_IN / CLOCK_NOT_IN / NOT_CLOCKED_IN / OPERATION_NOT_STARTABLE / OPERATION_NOT_IN_PROGRESS",
+                "description": "DUPLICATE_CODE / ITEM_EXISTS / NOT_ENOUGH_MEASUREMENTS / PLAN_NOT_EDITABLE / PLAN_OVERLAP / PLAN_NOT_VALIDATED / OPERATION_NOT_MOVABLE / PIN_NOT_SET / EMPLOYEE_NOT_PRESENT / CLOCK_ALREADY_IN / CLOCK_NOT_IN / NOT_CLOCKED_IN / OPERATION_NOT_STARTABLE / OPERATION_NOT_IN_PROGRESS",
                 "content": {
                     "application/json": {
                         "schema": {
@@ -21109,9 +21109,6 @@
             "IdentifyInput": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                    "pin"
-                ],
                 "properties": {
                     "badge": {
                         "type": "string"
