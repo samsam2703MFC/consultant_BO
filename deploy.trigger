@@ -1111,3 +1111,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-10-27T11:34:28Z production : tablette de bureau, tous les groupes et toutes les personnes
 2026-10-27T13:09:16Z production : tablette de bureau, groupes en rectangles arrondis
 2026-10-27T13:24:36Z production : adresses /tablet/production?team=N, changer de groupe sur la tablette, /tablet/office sans renvoi
+2026-10-27T13:44:55Z production : tablette de production d'une équipe (sans barre des groupes), carte Magazyn grupy, tuiles agrandies
