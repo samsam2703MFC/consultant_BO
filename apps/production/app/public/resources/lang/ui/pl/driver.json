@@ -86,7 +86,7 @@
   "instructions": "Instrukcje dostawy",
   "show_secret": "Pokaż",
   "who_title": "Kto prowadzi ?",
-  "who_help": "Wybierz swoje nazwisko z listy i wpisz swój PIN (ten sam co na tablecie pracowni).",
+  "who_help": "Wybierz trasę, potem swoje nazwisko z listy i wpisz swój PIN (ten sam co na tablecie pracowni).",
   "choose_driver": "Wybierz kierowcę",
   "no_pin": "brak PIN-u (kierownik nadaje go w ERP)",
   "no_drivers": "Brak kierowców na liście — dodaj pracownika ze stanowiskiem « Kierowca-dostawca » w ERP.",
@@ -99,5 +99,11 @@
   "scan_tour_help": "Skieruj aparat na kod QR trasy z ERP (Logistyka › Dostawy albo wydruk trasy).",
   "scan_tour_wrong": "To nie jest kod QR trasy — zeskanuj kod z ERP (Logistyka › Dostawy).",
   "scan_unavailable": "Aparat niedostępny — wybierz pojazd z listy.",
-  "tour_opened": "Otwarto trasę z kodu QR."
+  "tour_opened": "Otwarto trasę z kodu QR.",
+  "tour": "Trasa",
+  "choose_tour": "Wybierz trasę",
+  "no_tours": "Brak tras zaplanowanych na ten dzień",
+  "driver": "Kierowca",
+  "drivers_group": "Kierowcy",
+  "others_group": "Pozostałe osoby"
 }

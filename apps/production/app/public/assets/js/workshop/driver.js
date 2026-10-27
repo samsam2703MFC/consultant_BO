@@ -115,31 +115,48 @@
         store.set(SESSION_KEY, value ? JSON.stringify(value) : null);
     }
 
-    // --- Kierowca : lista + PIN (jak na tablecie pracowni) -------------------------------------------------
+    // --- Tournée → kierowca (cały personel, kierowcy na górze) → PIN (27/10/2026) ---------------------------
     async function renderLogin(message) {
         if (!paired) return renderPairing();
         setSession(null);
         let people = [];
-        try { people = await api('GET', '/kiosk/people'); } catch (err) { if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_DRIVER') return; message = message || err.message; }
+        let day = {tours: [], default_vehicle_id: null};
+        try {
+            [people, day] = await Promise.all([api('GET', '/kiosk/people'),
+                api('GET', '/driver/tours' + (date ? '?date=' + encodeURIComponent(date) : '')).catch(() => ({tours: [], default_vehicle_id: null}))]);
+        } catch (err) { if (err.code === 'DEVICE_UNAUTHENTICATED' || err.code === 'DEVICE_NOT_DRIVER') return; message = message || err.message; }
+        const tours = day.tours || [];
+        // Tournée proposée : celle de la tablette (dernier choix, QR), sinon celle du véhicule de la tablette, sinon la seule du jour.
+        const preset = [vehicle, day.default_vehicle_id].find(id => id && tours.some(x => x.id === id)) || (tours.length === 1 ? tours[0].id : null);
+        const option = (p) => `<option value="${p.id}" ${p.has_pin ? '' : 'disabled'}>${esc(p.name)}${p.has_pin ? '' : ' — ' + esc(t('no_pin'))}</option>`;
+        const drivers = people.filter(p => p.driver);
+        const others = people.filter(p => !p.driver);
         let pin = '';
         el.innerHTML = header() + `<section class="kiosk-card kiosk-pin driver-login"><h2>${esc(t('who_title'))}</h2><p class="kiosk-muted">${esc(t('who_help'))}</p>
-            <select class="driver-vehicle driver-person" data-person aria-label="${esc(t('choose_driver'))}"><option value="">${esc(t('choose_driver'))}</option>
-                ${people.map(p => `<option value="${p.id}" ${p.has_pin ? '' : 'disabled'}>${esc(p.name)}${p.has_pin ? '' : ' — ' + esc(t('no_pin'))}</option>`).join('')}</select>
+            <label class="driver-field"><span>${esc(t('tour'))}</span><select class="driver-vehicle driver-person" data-tour aria-label="${esc(t('choose_tour'))}"><option value="">${esc(tours.length ? t('choose_tour') : t('no_tours'))}</option>
+                ${tours.map(x => `<option value="${x.id}" ${x.id === preset ? 'selected' : ''}>${esc(x.label)}${x.carrier && x.carrier !== x.label ? ' · ' + esc(x.carrier) : ''}${x.departure ? ' · ' + esc(String(x.departure).slice(0, 5)) : ''} — ${esc(t('vehicle_stops', {n: x.customers, pallets: fmt(x.pallets, 0)}))}</option>`).join('')}</select></label>
+            <label class="driver-field"><span>${esc(t('driver'))}</span><select class="driver-vehicle driver-person" data-person aria-label="${esc(t('choose_driver'))}"><option value="">${esc(t('choose_driver'))}</option>
+                ${drivers.length && others.length ? `<optgroup label="${esc(t('drivers_group'))}">${drivers.map(option).join('')}</optgroup><optgroup label="${esc(t('others_group'))}">${others.map(option).join('')}</optgroup>`
+                    : people.map(option).join('')}</select></label>
             <div class="kiosk-dots" data-dots aria-hidden="true"></div><p class="kiosk-error" data-error>${esc(message || (people.length ? '' : t('no_drivers')))}</p>
             <div class="kiosk-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => `<button type="button" class="kiosk-btn" data-digit="${d}">${d}</button>`).join('')}
                 <button type="button" class="kiosk-btn" data-back aria-label="${esc(t('erase'))}">⌫</button><button type="button" class="kiosk-btn" data-digit="0">0</button>
                 <button type="button" class="kiosk-btn is-primary" data-ok>OK</button></div></section>`;
         const select = el.querySelector('[data-person]');
+        const tourSelect = el.querySelector('[data-tour]');
         const error = el.querySelector('[data-error]');
         const dots = () => { el.querySelector('[data-dots]').innerHTML = Array.from({length: Math.max(4, pin.length)}, (_, i) => `<span class="${i < pin.length ? 'is-on' : ''}"></span>`).join(''); };
         dots();
         const submit = async (ok) => {
+            if (tours.length && !tourSelect.value) { error.textContent = t('choose_tour'); return; }
             if (!select.value) { error.textContent = t('choose_driver'); return; }
             if (pin.length < 4) return;
             ok.disabled = true;
             try {
                 const r = await api('POST', '/kiosk/identify', {employee_id: Number(select.value), pin});
                 setSession({token: r.employee_token, id: r.employee.id, name: r.employee.name, exp: Date.now() + r.expires_in * 1000});
+                // La tournée choisie devient le véhicule de la journée (comme le QR de la tournée).
+                if (tourSelect.value) { vehicle = Number(tourSelect.value); store.set(VEHICLE_KEY, String(vehicle)); }
                 toast(t('hello', {name: r.employee.name}));
                 load().then(flush);
             } catch (err) {
@@ -156,6 +173,7 @@
             if (b.hasAttribute('data-ok')) submit(b);
         });
         select.addEventListener('change', () => { error.textContent = ''; });
+        tourSelect.addEventListener('change', () => { error.textContent = ''; });
     }
 
     // --- Parowanie -------------------------------------------------------------------------------------

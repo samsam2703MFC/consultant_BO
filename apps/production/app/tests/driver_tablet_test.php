@@ -121,7 +121,9 @@ try {
     [$s] = $call('PUT', '/kiosk/employees/80/credentials', ['pin' => '2468'], $manager);
     $call('PUT', '/kiosk/employees/81/credentials', ['pin' => '1357'], $manager);
     [, $b] = $call('GET', '/kiosk/people', null, $driver);
-    expectDrv($s === 200 && count($b['data']) === 1 && $b['data'][0]['name'] === 'Jan Kowal' && $b['data'][0]['has_pin'] === true, 'driver tablet lists the drivers (position) with their PIN state');
+    // 27/10/2026 : tout le personnel, les chauffeurs (poste Kierowca) en tête et marqués.
+    expectDrv($s === 200 && count($b['data']) === 2 && $b['data'][0]['name'] === 'Jan Kowal' && $b['data'][0]['has_pin'] === true
+        && $b['data'][0]['driver'] === true && $b['data'][1]['driver'] === false, 'driver tablet lists the drivers (position) first with their PIN state, then everybody');
     [$s, $b] = $call('GET', '/driver/day', null, $driver);
     expectDrv($s === 401 && $b['description'] === 'EMPLOYEE_UNAUTHENTICATED', 'driver day needs the driver (list + PIN)');
     [$s, $b] = $call('POST', '/kiosk/identify', ['employee_id' => 80, 'pin' => '9999'], $driver);

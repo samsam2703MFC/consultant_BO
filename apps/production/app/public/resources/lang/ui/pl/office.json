@@ -52,5 +52,6 @@
   "sign_out_here": "Podpisz się palcem w ramce : potwierdzam dzisiejsze godziny pracy.",
   "signature": "Podpis",
   "clear": "Wyczyść",
-  "confirm_ok": "OK, zatwierdzam"
+  "confirm_ok": "OK, zatwierdzam",
+  "no_section": "Bez działu"
 }

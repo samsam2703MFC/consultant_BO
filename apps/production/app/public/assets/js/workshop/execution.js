@@ -100,7 +100,7 @@
         const where = (d) => d.mode === 'driver'
             ? `<select class="form-select form-select-sm d-inline-block w-auto" style="max-width:250px" data-vehicle aria-label="${esc(t('vehicle'))}">${vehicleOptions(d.vehicle_id)}</select>`
             : d.mode === 'office' ? `<span class="small text-muted">${esc(t('office_all'))}</span>`
-            : `<select class="form-select form-select-sm d-inline-block w-auto" style="max-width:220px" data-dev-group aria-label="${esc(t('group'))}">${groupOptions(d.group_id, t('no_group'))}</select>`;
+            : `<select class="form-select form-select-sm d-inline-block w-auto" style="max-width:220px" data-dev-group aria-label="${esc(t('group'))}">${groupOptions(d.group_id, t('device_generic'))}</select>`;
         // Plan tabletów : 1 tablet biurowy (wejście / wyjście), 1 tablet kierowcy, 1 tablet na każdą grupę produkcji ;
         // brakujący tablet tworzy się jednym kliknięciem (kod parowania), sparowany pokazuje stan i ostatnie połączenie.
         const state = (d) => !d ? `<span class="badge bg-danger-subtle text-danger-emphasis">${esc(t('plan_missing'))}</span>`
@@ -125,7 +125,7 @@
         body.innerHTML = plan + `<div class="card"><div class="card-body">
             <form class="tfb-filters" data-add-device><input class="form-control form-control-sm" name="name" data-field="name" placeholder="${esc(t('device_name'))}" required maxlength="100">
                 <select class="form-select form-select-sm" name="mode" data-field="mode" aria-label="${esc(t('device_mode'))}"><option value="atelier">${esc(t('mode_atelier'))}</option><option value="driver">${esc(t('mode_driver'))}</option><option value="office">${esc(t('mode_office'))}</option></select>
-                <select class="form-select form-select-sm" name="group_id" data-field="group_id">${groupOptions(null, t('no_group'))}</select>
+                <select class="form-select form-select-sm" name="group_id" data-field="group_id">${groupOptions(null, t('device_generic'))}</select>
                 <select class="form-select form-select-sm" name="vehicle_id" data-field="vehicle_id" hidden aria-label="${esc(t('vehicle'))}">${vehicleOptions(null)}</select>
                 <button class="btn btn-sm btn-primary">${esc(t('add_device'))}</button></form>
             <div data-code></div>

@@ -52,5 +52,6 @@
   "sign_out_here": "Signez avec le doigt dans le cadre : je confirme mes heures de travail du jour.",
   "signature": "Signature",
   "clear": "Effacer",
-  "confirm_ok": "OK, je valide"
+  "confirm_ok": "OK, je valide",
+  "no_section": "Sans service"
 }

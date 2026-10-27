@@ -39,6 +39,7 @@
   "kpi_help": "Punktualność: start ±30 min od planu. Wydajność: godziny normatywne ÷ przepracowane na operacjach zakończonych. Wykorzystanie: godziny na operacjach ÷ obecność. Obecność: wejście–wyjście ÷ godziny planowane.",
   "device_name": "Nazwa tabletu, np. Tablet Piekarnia",
   "no_group": "— bez grupy —",
+  "device_generic": "— wszystkie grupy (wybór grupy na tablecie) —",
   "add_device": "Dodaj tablet",
   "device": "Tablet",
   "state": "Stan",

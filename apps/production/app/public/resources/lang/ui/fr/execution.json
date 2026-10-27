@@ -39,6 +39,7 @@
   "kpi_help": "Ponctualité : démarrage à ±30 min du plan. Efficience : heures standard ÷ heures passées sur les opérations terminées. Utilisation : heures sur opérations ÷ présence. Présence : pointage ÷ heures planifiées.",
   "device_name": "Nom de la tablette, ex. Tablette Boulangerie",
   "no_group": "— sans groupe —",
+  "device_generic": "— tous les groupes (choix du groupe sur la tablette) —",
   "add_device": "Ajouter une tablette",
   "device": "Tablette",
   "state": "État",
