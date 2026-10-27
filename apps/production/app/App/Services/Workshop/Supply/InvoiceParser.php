@@ -26,7 +26,10 @@ final class InvoiceParser
 
     // --- XML KSeF -------------------------------------------------------------------------------------------------
 
-    /** @return array{number:?string, issue_date:?string, currency:string, seller_nip:?string, seller_name:?string, buyer_nip:?string, total_net:?float, total_gross:?float, lines:list<array>} */
+    /** Rodzaje faktur korygujących KSeF : linie « przed korektą » to nie zakupy (ceny, stan). */
+    public const CORRECTION_KINDS = ['KOR', 'KOR_ZAL', 'KOR_ROZ'];
+
+    /** @return array{number:?string, issue_date:?string, currency:string, seller_nip:?string, seller_name:?string, buyer_nip:?string, total_net:?float, total_gross:?float, correction:bool, lines:list<array>} */
     public static function ksefXml(string $xml): array
     {
         $doc = new \DOMDocument();
@@ -66,7 +69,7 @@ final class InvoiceParser
             'seller_nip' => self::nip($text('Podmiot1/DaneIdentyfikacyjne/NIP')), 'seller_name' => $text('Podmiot1/DaneIdentyfikacyjne/Nazwa'),
             'buyer_nip' => self::nip($text('Podmiot2/DaneIdentyfikacyjne/NIP')),
             'total_net' => $totalNet !== null ? round($totalNet, 2) : (array_sum(array_map(fn($l) => (float) ($l['net_value'] ?? 0), $lines)) ?: null),
-            'total_gross' => $num($text('Fa/P_15')), 'lines' => $lines,
+            'total_gross' => $num($text('Fa/P_15')), 'correction' => in_array(strtoupper((string) $text('Fa/RodzajFaktury')), self::CORRECTION_KINDS, true), 'lines' => $lines,
         ];
     }
 
@@ -108,7 +111,8 @@ final class InvoiceParser
         }
         $currency = preg_match('/\bEUR\b/u', $text) && !preg_match('/\bPLN\b|\bz[łl]\b/u', $text) ? 'EUR' : 'PLN';
         return ['number' => $number, 'issue_date' => $date, 'currency' => $currency, 'seller_nip' => $nips[0] ?? null, 'seller_name' => $seller, 'buyer_nip' => $own,
-            'total_net' => $lines ? round(array_sum(array_column($lines, 'net_value')), 2) : null, 'total_gross' => $gross, 'lines' => $lines];
+            'total_net' => $lines ? round(array_sum(array_column($lines, 'net_value')), 2) : null, 'total_gross' => $gross,
+            'correction' => (bool) preg_match('/faktura\s+korygując/iu', $text), 'lines' => $lines];
     }
 
     /** Czy PDF ma tekst (inaczej skan : obraz bez warstwy tekstu). */

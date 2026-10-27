@@ -86,10 +86,10 @@ final class OpenApiSupply
                     . "raw_material_ids : matières choisies (défaut : toutes celles sans décision). Qui et quand sont gardés ; une nouvelle correspondance, un autre facteur ou un prix plus haut annulent la décision. INVOICE_NO_PRICE_UP (409) : rien à décider ; INVOICE_CLOSED (409). Réponse : la facture + decided."],
             'POST /supply/invoices/{id:\d+}/decision' => ['tag' => $t, 'id' => 'decidePurchaseInvoice', 'summary' => 'Zaakceptuj / reklamacja / Accepter / contester', 'body' => 'InvoiceDecisionInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 422]],
             'POST /supply/invoices/{id:\d+}/receive' => ['tag' => $t, 'id' => 'receiveFromPurchaseInvoice', 'summary' => 'Przyjęcie dostawy wg faktury / Réception d\'après la facture', 'response' => 'PurchaseInvoice', 'errors' => [404, 409, 422],
-                'description' => 'Quantités et prix nets de la facture enregistrés comme réception de la commande liée (lignes reliées à ses matières). Sans commande : une commande « reçue » est créée depuis la facture (les quantités entrent dans le stock) et liée à elle. INVOICE_NO_SUPPLIER, INVOICE_NOTHING_TO_RECEIVE (422).'],
+                'description' => 'Quantités et prix nets de la facture enregistrés comme réception de la commande liée (lignes reliées à ses matières). Sans commande : une commande « reçue » est créée depuis la facture (les quantités entrent dans le stock) et liée à elle. INVOICE_NO_SUPPLIER, INVOICE_NOTHING_TO_RECEIVE (422) ; INVOICE_CORRECTION (409) : facture de correction, stock inchangé.'],
             'POST /supply/invoices/{id:\d+}/prices' => ['tag' => $t, 'id' => 'importInvoicePrices', 'summary' => 'Ostatnie ceny z faktury do surowców / Derniers prix de la facture vers les matières', 'body' => 'InvoicePricesInput', 'response' => 'PurchaseInvoice', 'errors' => [400, 404, 409, 422],
                 'description' => "Prix net de la facture par unité de base (moyenne pondérée si plusieurs lignes d'une matière) → prix de la fiche matière, fournisseur de la facture comme fournisseur courant ; historique des prix et recalcul des coûts des recettes (comme la mise à jour manuelle). line_ids : lignes choisies (défaut : toutes les lignes reliées). "
-                    . "INVOICE_PRICE_UP_PENDING (409) : hausse au-dessus du prix de base sans décision ; décision keep : matière laissée au prix de base (kept). "
+                    . "INVOICE_PRICE_UP_PENDING (409) : hausse au-dessus du prix de base sans décision ; INVOICE_CORRECTION (409) : facture de correction ; décision keep : matière laissée au prix de base (kept). "
                     . "Le prix de base (coût des recettes) est le plus haut prix validé : un prix plus bas ne le fait pas baisser (held) ; avec prices.cost_max_months = N > 0, "
                     . "un prix de base de plus de N mois devient le plus haut prix validé de la période (factures acceptées, offres acceptées). Réponse : la facture + imported_prices (ancien / nouveau prix) + skipped + kept + held."],
             'DELETE /supply/invoices/{id:\d+}' => ['tag' => $t, 'id' => 'deletePurchaseInvoice', 'summary' => 'Usuń fakturę (otwartą) / Supprimer la facture (ouverte)', 'response' => 'SupplierOrderDeleted', 'errors' => [404, 409]],
@@ -112,7 +112,7 @@ final class OpenApiSupply
         $date = ['type' => 'string', 'format' => 'date'];
         $ready = ['type' => 'object', 'nullable' => true, 'description' => 'factures ouvertes : ok = prête pour « Valider la facture » et l\'automatique', 'properties' => [
             'ok' => ['type' => 'boolean'], 'blockers' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['no_lines', 'unmapped', 'no_supplier', 'price_up']]],
-            'warnings' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['gaps', 'price_jump', 'total_mismatch']]], 'unmapped' => ['type' => 'integer'],
+            'warnings' => ['type' => 'array', 'items' => ['type' => 'string', 'enum' => ['gaps', 'price_jump', 'total_mismatch', 'correction']]], 'unmapped' => ['type' => 'integer'],
             'price_ups' => ['type' => 'integer', 'description' => 'matières au-dessus du prix de base sans décision (bloquant : price_up)'],
         ]];
         $auto = ['type' => 'object', 'description' => 'paramètres supply.invoice_auto_prices / _full, supply.invoice_price_alert_pct, supply.invoice_price_up_pct et prices.cost_max_months', 'properties' => [
@@ -138,6 +138,7 @@ final class OpenApiSupply
         $invoice = [
             'id' => ['type' => 'integer'], 'source' => ['type' => 'string', 'enum' => ['ksef', 'xml', 'pdf', 'manual', 'ocr']], 'ksef_number' => $nStr, 'number' => $nStr, 'issue_date' => $nDate,
             'seller_nip' => $nStr, 'seller_name' => $nStr, 'supplier' => ['type' => 'object', 'nullable' => true, 'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string']]],
+            'is_correction' => ['type' => 'boolean', 'description' => 'facture de correction (KSeF KOR, « faktura korygująca », total négatif) : ni prix de base, ni historique des prix, ni stock ; avertissement correction'],
             'currency' => ['type' => 'string'], 'total_net' => $nNum, 'total_gross' => $nNum,
             'order' => ['type' => 'object', 'nullable' => true, 'properties' => ['id' => ['type' => 'integer'], 'code' => ['type' => 'string'], 'status' => ['type' => 'string']]],
             'status' => ['type' => 'string', 'enum' => InvoiceService::STATUSES], 'file' => ['type' => 'object', 'nullable' => true, 'properties' => ['filename' => ['type' => 'string'], 'mime' => ['type' => 'string']]],

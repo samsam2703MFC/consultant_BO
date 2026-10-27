@@ -1212,7 +1212,7 @@
                 <iframe src="${iv.file.url}" title="${esc(iv.file.name)}"></iframe></div>` : '';
         return `<p><a href="#tab=invoices" data-back-inv>‹ ${esc(t('inv.back'))}</a></p>
             <div class="card"><div class="card-header d-flex flex-wrap align-items-center gap-2">
-                <h5 class="mb-0">${esc(i.number || t('inv.no_number'))} · ${esc(i.supplier ? i.supplier.name : (i.seller_name || '—'))}</h5>${invBadge(i.status)} ${ctrlBadge(c)}
+                <h5 class="mb-0">${esc(i.number || t('inv.no_number'))} · ${esc(i.supplier ? i.supplier.name : (i.seller_name || '—'))}</h5>${invBadge(i.status)} ${ctrlBadge(c)}${i.is_correction ? ` <span class="badge bg-dark">${esc(t('inv.correction'))}</span>` : ''}
                 <span class="small text-muted ms-auto">${esc(t('inv.source.' + i.source))} · ${esc(fullDay(i.issue_date))}${i.seller_nip ? ' · NIP ' + esc(i.seller_nip) : ''}</span>${file}</div>
               <div class="card-body">
                 <div class="row g-2 mb-2" data-inv-head>
@@ -1223,6 +1223,7 @@
                     <div class="col-md-2"><label class="form-label small mb-0">${esc(t('inv.totals'))}</label><div>${esc(cur(i.total_net, i.currency))}
                         <span class="small text-muted">· ${esc(t('inv.gross', {v: cur(i.total_gross, i.currency)}))}</span></div></div></div>
                 ${i.source === 'ocr' && edit ? `<div class="alert alert-warning py-2 small mb-2"><i class="bi bi-eye"></i> ${esc(t('inv.ocr.check'))}</div>` : ''}
+                ${i.is_correction ? `<div class="alert alert-secondary py-2 small mb-2"><i class="bi bi-arrow-counterclockwise"></i> ${esc(t('inv.correction_help'))}</div>` : ''}
                 ${steps(i)}
                 <div class="alert ${ALERT_CLS[c.state] || 'alert-secondary'} py-2 small mb-2">${esc(summary)}
                     ${c.price_jumps ? `<div>${esc(t('inv.sum.price_jumps', {n: c.price_jumps, pct: n(i.auto.price_alert_pct, 0)}))}</div>` : ''}

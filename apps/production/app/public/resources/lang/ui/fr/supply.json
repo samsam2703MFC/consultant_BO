@@ -462,5 +462,8 @@
   "inv.import_max": "Coût des recettes au plus haut prix validé : un prix plus bas ne fait pas baisser un prix de base de moins de {n} mois.",
   "inv.import_max_never": "Coût des recettes au plus haut prix validé : un prix plus bas ne fait pas baisser le prix de base (changement seulement à la main dans Ceny surowców).",
   "prices.col.base": "Prix de base (coût)",
-  "prices.col.base_help": "Prix de la fiche matière utilisé pour le coût des recettes : le plus haut prix validé (hausses validées, factures et offres acceptées), pas le dernier."
+  "prices.col.base_help": "Prix de la fiche matière utilisé pour le coût des recettes : le plus haut prix validé (hausses validées, factures et offres acceptées), pas le dernier.",
+  "inv.correction": "correction",
+  "inv.warn.correction": "facture de correction (prix et stock inchangés)",
+  "inv.correction_help": "Facture de correction : les lignes avant correction ne sont pas des achats. Elle ne change ni les prix de base des matières, ni l’historique des prix, ni le stock — acceptez-la après contrôle ; une éventuelle correction de stock ou de prix se fait à la main."
 }

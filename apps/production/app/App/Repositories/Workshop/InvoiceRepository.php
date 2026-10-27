@@ -10,7 +10,7 @@ namespace App\Repositories\Workshop;
 final class InvoiceRepository extends WorkshopRepository
 {
     protected string $table = 'n_inv';
-    protected array $writable = ['source', 'ksef_number', 'id_supplier', 'seller_nip', 'seller_name', 'number', 'issue_date', 'currency', 'total_net', 'total_gross',
+    protected array $writable = ['source', 'ksef_number', 'id_supplier', 'seller_nip', 'seller_name', 'number', 'issue_date', 'currency', 'total_net', 'total_gross', 'is_correction',
         'id_po', 'status', 'note', 'decided_by', 'decided_at', 'prices_imported_at', 'prices_imported_by', 'created_by'];
 
     public function invoices(?string $status): array

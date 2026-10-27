@@ -462,5 +462,8 @@
   "inv.import_max": "Koszt receptur liczony po najwyższej zatwierdzonej cenie : niższa cena nie obniża ceny bazowej młodszej niż {n} mies.",
   "inv.import_max_never": "Koszt receptur liczony po najwyższej zatwierdzonej cenie : niższa cena nie obniża ceny bazowej (zmiana tylko ręcznie w Ceny surowców).",
   "prices.col.base": "Cena bazowa (koszt)",
-  "prices.col.base_help": "Cena z kartoteki, z której liczony jest koszt receptur : najwyższa zatwierdzona cena (podwyżki zatwierdzone, faktury i oferty zaakceptowane), nie ostatnia."
+  "prices.col.base_help": "Cena z kartoteki, z której liczony jest koszt receptur : najwyższa zatwierdzona cena (podwyżki zatwierdzone, faktury i oferty zaakceptowane), nie ostatnia.",
+  "inv.correction": "korekta",
+  "inv.warn.correction": "faktura korygująca (ceny i stan bez zmian)",
+  "inv.correction_help": "Faktura korygująca : linie przed korektą to nie zakupy. Nie zmienia cen bazowych surowców, historii cen ani stanu — po sprawdzeniu zaakceptuj ; ewentualną zmianę stanu lub ceny wprowadź ręcznie."
 }

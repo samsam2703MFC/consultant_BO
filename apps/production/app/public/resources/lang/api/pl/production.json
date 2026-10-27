@@ -93,6 +93,7 @@
     "INVOICE_NO_PRICES": "Brak przypisanych pozycji z ceną — nie ma cen do zaktualizowania.",
     "INVOICE_PRICE_UP_PENDING": "Cena surowca na fakturze jest wyższa niż cena bazowa (kalkulacja receptur) : {n} poz. do zatwierdzenia — nowa cena bazowa albo cena bez zmian.",
     "INVOICE_NO_PRICE_UP": "Na tej fakturze nie ma podwyżek cen do zatwierdzenia.",
+    "INVOICE_CORRECTION": "Faktura korygująca : nie zmienia cen bazowych surowców ani stanu — popraw ręcznie, jeśli trzeba.",
     "PDF_SCANNED": "PDF bez tekstu (skan) — odczytaj strony OCR (pole ocr_text) albo wpisz linie ręcznie.",
     "DATA_SHEET_INVALID_FILE": "Nie można odczytać pliku — wyślij plik .xlsx pobrany z tej strony.",
     "DATA_SHEET_TOO_LARGE": "Plik jest za duży (maks. {max}).",

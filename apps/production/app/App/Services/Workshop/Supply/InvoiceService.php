@@ -84,7 +84,7 @@ final class InvoiceService
             'ready' => $i['status'] === 'open' ? $this->readiness($i, $control) : null, 'auto' => $this->autoMode(),
             // Historia cen : poprzednia cena i najtańszy dostawca z 12 miesięcy dla każdego surowca faktury.
             'price_refs' => (object) $this->history->refs($mapped, $id),
-            'price_ups' => $this->presentUps($this->priceUps($lines), $lines, $lang),
+            'price_ups' => $this->presentUps($this->priceUps($lines, !empty($i['is_correction'])), $lines, $lang),
             'orders' => $i['id_supplier'] ? $this->candidates((int) $i['id_supplier'], $lines) : [],
             'suppliers' => $i['status'] === 'open' ? $this->supplierChoices($i) : [],
             'text' => in_array($i['source'], ['pdf', 'ocr'], true) ? $this->repo->fileText($id) : null,
@@ -93,7 +93,7 @@ final class InvoiceService
             // Ilości : do zamówienia (wysłane / częściowo przyjęte) albo — bez zamówienia — przez zamówienie utworzone z faktury.
             'can_receive' => $context->can('prod.supply.write') && $this->canReceive($i, $control),
             'receive_mode' => $i['id_po'] !== null ? 'order' : 'invoice',
-            'can_import_prices' => $i['status'] !== 'disputed' && $context->can('prod.supply.write') && $control['summary']['mapped'] > 0,
+            'can_import_prices' => $i['status'] !== 'disputed' && empty($i['is_correction']) && $context->can('prod.supply.write') && $control['summary']['mapped'] > 0,
             'prices_imported_at' => $i['prices_imported_at'],
         ];
     }
@@ -112,7 +112,7 @@ final class InvoiceService
         $jumps = 0;
         $gap = 0.0;
         $sum = 0.0;
-        $ups = $this->priceUps($lines);
+        $ups = $this->priceUps($lines, !empty($inv['is_correction']));
         foreach ($lines as $l) {
             $flags = [];
             $net = $l['net_value'] !== null ? (float) $l['net_value'] : ($l['unit_price'] !== null ? (float) $l['unit_price'] * (float) $l['quantity'] : null);
@@ -181,8 +181,9 @@ final class InvoiceService
      * od zatwierdzenia ; nowe przypisanie albo przelicznik ją kasuje.
      * @return array<int, array{price: float, catalog: float, new_catalog: float, qty: float, decision: ?string, by: ?string, at: ?string}>
      */
-    private function priceUps(array $lines): array
+    private function priceUps(array $lines, bool $correction = false): array
     {
+        if ($correction) return [];
         $byMaterial = [];
         foreach ($lines as $l) if ($l['id_raw_material'] !== null) $byMaterial[(int) $l['id_raw_material']][] = $l;
         $out = [];
@@ -233,13 +234,15 @@ final class InvoiceService
         if ($s['issues'] > 0 && $s['mapped'] === $s['lines']) $warnings[] = 'gaps';
         if ($s['price_jumps'] > 0) $warnings[] = 'price_jump';
         if ($s['total_mismatch']) $warnings[] = 'total_mismatch';
+        // Faktura korygująca : akceptacja po potwierdzeniu (nigdy automatycznie), ceny i stan bez zmian.
+        if (!empty($inv['is_correction'])) $warnings[] = 'correction';
         return ['ok' => !$blockers && !$warnings, 'blockers' => $blockers, 'warnings' => $warnings, 'unmapped' => $s['lines'] - $s['mapped'], 'price_ups' => $s['price_ups'] ?? 0];
     }
 
     /** Ilości na stan : do zamówienia (wysłane / częściowo przyjęte) albo — bez zamówienia — przez zamówienie utworzone z faktury. */
     private function canReceive(array $inv, array $control): bool
     {
-        return $inv['status'] === 'open' && $control['summary']['mapped'] > 0
+        return $inv['status'] === 'open' && empty($inv['is_correction']) && $control['summary']['mapped'] > 0
             && ($inv['id_po'] !== null ? in_array($inv['po_status'], ['sent', 'partial'], true) : $inv['id_supplier'] !== null);
     }
 
@@ -416,6 +419,8 @@ final class InvoiceService
             $id = $this->repo->insert(['source' => $source, 'ksef_number' => $ksefNumber, 'id_supplier' => $supplierId, 'seller_nip' => $p['seller_nip'],
                 'seller_name' => $p['seller_name'] !== null ? mb_substr($p['seller_name'], 0, 255) : null, 'number' => $p['number'] !== null ? mb_substr($p['number'], 0, 80) : null,
                 'issue_date' => $p['issue_date'], 'currency' => $p['currency'] ?: 'PLN', 'total_net' => $p['total_net'], 'total_gross' => $p['total_gross'],
+                // Faktura korygująca : linie « przed korektą » to nie zakupy — bez cen i stanu.
+                'is_correction' => !empty($p['correction']) || ($p['total_net'] !== null && (float) $p['total_net'] < 0) ? 1 : 0,
                 'status' => 'open', 'created_by' => $context->userId]);
             $this->repo->saveFile($id, $file['filename'], $file['mime'], $file['content'], $file['text']);
             if ($supplierId !== null && $p['seller_nip']) $this->repo->rememberSupplier($p['seller_nip'], $supplierId);
@@ -698,7 +703,7 @@ final class InvoiceService
                     $out['prices_kept'] = $p['kept'];
                     $out['prices_held'] = $p['held'];
                 } catch (ApiException $e) {
-                    if ($e->errorCode() !== 'INVOICE_NO_PRICES') throw $e;
+                    if (!in_array($e->errorCode(), ['INVOICE_NO_PRICES', 'INVOICE_CORRECTION'], true)) throw $e;
                 }
             }
             if (in_array('stock', $steps, true) && $this->canReceive($inv, $control)) {
@@ -744,12 +749,12 @@ final class InvoiceService
      */
     public function decidePrices(int $id, array $body, ApiContext $context): array
     {
-        $this->open($id);
+        $inv = $this->open($id);
         $v = (new Validator($body))->only(['decision', 'raw_material_ids'])->choice('decision', self::PRICE_DECISIONS);
         $ids = $body['raw_material_ids'] ?? null;
         if ($ids !== null && (!is_array($ids) || !$ids || array_filter($ids, fn($x) => !is_int($x)))) $v->add('raw_material_ids', 'NOT_ARRAY');
         $v->throwIfInvalid();
-        $ups = $this->priceUps($this->repo->lines($id));
+        $ups = $this->priceUps($this->repo->lines($id), !empty($inv['is_correction']));
         $chosen = $ids === null ? array_keys(array_filter($ups, fn($u) => $u['decision'] === null)) : array_values(array_unique($ids));
         $unknown = array_values(array_filter($chosen, fn($mid) => !isset($ups[$mid])));
         if ($unknown) throw ApiException::validation([['field' => 'raw_material_ids', 'code' => 'INVALID_CHOICE', 'params' => ['allowed' => implode(', ', array_keys($ups)) ?: '—']]]);
@@ -768,7 +773,7 @@ final class InvoiceService
     {
         $out = [];
         foreach ($this->repo->invoices('open') as $inv) {
-            $n = count(array_filter($this->priceUps($this->repo->lines((int) $inv['id'])), fn($u) => $u['decision'] === null));
+            $n = count(array_filter($this->priceUps($this->repo->lines((int) $inv['id']), !empty($inv['is_correction'])), fn($u) => $u['decision'] === null));
             if ($n > 0) $out[] = ['id' => (int) $inv['id'], 'number' => $inv['number'], 'issue_date' => $inv['issue_date'],
                 'supplier' => trim((string) ($inv['supplier_name'] ?? '')) ?: $inv['seller_name'], 'total_net' => $inv['total_net'], 'currency' => $inv['currency'], 'materials' => $n];
         }
@@ -814,7 +819,9 @@ final class InvoiceService
     /** Przyjęcie dostawy wg faktury : ilości i ceny netto z faktury do zamówienia (linie przypisane do jego surowców). */
     public function receive(int $id, ApiContext $context): array
     {
-        $this->applyReceive($this->open($id), $context);
+        $inv = $this->open($id);
+        if (!empty($inv['is_correction'])) throw new ApiException('INVOICE_CORRECTION', 409);
+        $this->applyReceive($inv, $context);
         return $this->detail($id, $context);
     }
 
@@ -891,6 +898,7 @@ final class InvoiceService
     private function applyPrices(array $inv, array $rows, ApiContext $context): array
     {
         $id = (int) $inv['id'];
+        if (!empty($inv['is_correction'])) throw new ApiException('INVOICE_CORRECTION', 409);
         $lines = array_filter($this->materialLines($rows), fn($l) => $l['price'] !== null && $l['price'] > 0);
         if (!$lines) throw new ApiException('INVOICE_NO_PRICES', 422);
         // Podwyżka ponad cenę bazową : tylko po decyzji ; « keep » = cena bazowa bez zmian.
@@ -995,7 +1003,7 @@ final class InvoiceService
     {
         return [
             'id' => (int) $i['id'], 'source' => $i['source'], 'ksef_number' => $i['ksef_number'], 'number' => $i['number'], 'issue_date' => $i['issue_date'],
-            'seller_nip' => $i['seller_nip'], 'seller_name' => $i['seller_name'],
+            'seller_nip' => $i['seller_nip'], 'seller_name' => $i['seller_name'], 'is_correction' => !empty($i['is_correction']),
             'supplier' => $i['id_supplier'] !== null ? ['id' => (int) $i['id_supplier'], 'name' => trim((string) ($i['supplier_name'] ?? ''))] : null,
             'currency' => $i['currency'], 'total_net' => $i['total_net'] !== null ? (float) $i['total_net'] : null, 'total_gross' => $i['total_gross'] !== null ? (float) $i['total_gross'] : null,
             'order' => $i['id_po'] !== null ? ['id' => (int) $i['id_po'], 'code' => $i['po_code'], 'status' => $i['po_status']] : null,

@@ -93,6 +93,7 @@
     "INVOICE_NO_PRICES": "Aucune ligne reliée avec un prix — aucun prix à mettre à jour.",
     "INVOICE_PRICE_UP_PENDING": "Prix d'une matière au-dessus du prix de base (calcul des recettes) : {n} à valider — nouveau prix de base ou prix inchangé.",
     "INVOICE_NO_PRICE_UP": "Aucune hausse de prix à valider sur cette facture.",
+    "INVOICE_CORRECTION": "Facture de correction : elle ne change ni les prix de base des matières ni le stock — à corriger à la main si besoin.",
     "PDF_SCANNED": "PDF sans texte (scan) — lisez les pages par OCR (champ ocr_text) ou saisissez les lignes.",
     "DATA_SHEET_INVALID_FILE": "Fichier illisible — envoyez le fichier .xlsx téléchargé depuis cette page.",
     "DATA_SHEET_TOO_LARGE": "Le fichier est trop lourd ({max} max.).",

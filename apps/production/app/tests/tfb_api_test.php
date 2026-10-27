@@ -2099,6 +2099,24 @@ $pdo->exec("UPDATE n_inv SET issue_date = issue_date - INTERVAL 13 MONTH WHERE i
 $call('PATCH', '/referentiels/params/prices.cost_max_months', ['value' => 0], $access);
 check($s === 201 && ($q9['data']['auto_processed']['prices'] ?? null) === 1 && abs($base900() - 0.0038) < 1e-9 && $log900() === $logs + 1,
     'prices.cost_max_months = 12 and a base price older than 12 months: a lower price brings it down to the highest validated price of the period (3,80 zł/kg, not the latest 3,76)');
+// Faktura korygująca (KSeF KOR) : linia « przed korektą » to nie zakup — bez cen, bez historii cen, bez stanu.
+$kor = '<?xml version="1.0" encoding="UTF-8"?><Faktura xmlns="http://crd.gov.pl/wzor/2025/06/25/13775/"><Podmiot1><DaneIdentyfikacyjne><NIP>5260250274</NIP><Nazwa>Młyn test Sp. z o.o.</Nazwa></DaneIdentyfikacyjne></Podmiot1>'
+    . '<Fa><KodWaluty>PLN</KodWaluty><P_1>2026-10-22</P_1><P_2>KOR/1/10/2026</P_2><P_13_3>-120.00</P_13_3><P_15>-126.00</P_15><RodzajFaktury>KOR</RodzajFaktury>'
+    . '<FaWiersz><NrWierszaFa>1</NrWierszaFa><P_7>MĄKA PSZENNA T-65 WOREK 25KG</P_7><P_8A>szt</P_8A><P_8B>1</P_8B><P_9A>120.00</P_9A><P_11>120.00</P_11><P_12>5</P_12><StanPrzed>1</StanPrzed></FaWiersz>'
+    . '<FaWiersz><NrWierszaFa>2</NrWierszaFa><P_7>MĄKA PSZENNA T-65 WOREK 25KG</P_7><P_8A>szt</P_8A><P_8B>0</P_8B><P_9A>120.00</P_9A><P_11>0.00</P_11><P_12>5</P_12></FaWiersz></Fa></Faktura>';
+$baseBefore = $base900();
+[$s, $k] = $call('POST', '/supply/invoices/upload', ['filename' => 'KOR-1.xml', 'content_base64' => base64_encode($kor)], $access);
+$kid = $k['data']['id'] ?? 0;
+check($s === 201 && $k['data']['is_correction'] === true && $k['data']['price_ups'] === [] && in_array('correction', $k['data']['ready']['warnings'], true) && $k['data']['auto_processed'] === null
+    && $k['data']['can_receive'] === false && $k['data']['can_import_prices'] === false, 'correction invoice (KOR): recognised, no price increase to validate, never processed automatically');
+[$s, $b] = $call('POST', "/supply/invoices/{$kid}/prices", [], $access);
+[$s2, $b2] = $call('POST', "/supply/invoices/{$kid}/receive", null, $access);
+[$s3, $k] = $call('POST', "/supply/invoices/{$kid}/process", ['force' => true], $access);
+[, $h] = $call('GET', '/supply/materials/900/prices?months=12', null, $access);
+check($s === 409 && $b['description'] === 'INVOICE_CORRECTION' && $s2 === 409 && $b2['description'] === 'INVOICE_CORRECTION' && $s3 === 200 && $k['data']['status'] === 'accepted'
+    && $k['data']['processed']['prices'] === 0 && $k['data']['processed']['stock'] === false && abs($base900() - $baseBefore) < 1e-9
+    && !array_filter($h['data']['points'] ?? [], fn($p) => ($p['ref'] ?? '') === 'KOR/1/10/2026'),
+    'correction invoice: accepted after confirmation, base price, price history and stock unchanged');
 $pdo->prepare('UPDATE raw_material SET price_per_unit = ?, id_current_supplier = ? WHERE id = 900')->execute([$price900['price_per_unit'], $price900['id_current_supplier']]);
 
 // Journal, en-têtes, JSON invalide, OpenAPI public
