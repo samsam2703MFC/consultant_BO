@@ -260,6 +260,39 @@ try {
         expectOff($olaRow['pin_allowed'] === true && $s2 === 200, 'kiosk.office_pin_all = 1: PIN + signature for everyone');
     }
 
+    // --- Tablet grupy bierze inną grupę (27/10/2026) : adres /tablet/production?team=N → nagłówek X-Kiosk-Group
+    $pdo->exec("SET SESSION sql_mode = ''");
+    $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (21, 'Kinga', 'Tarta', 0, 1)");
+    $pdo->exec("UPDATE n_prod_group SET active = 1 WHERE id = 2");
+    $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, active) VALUES (99, 'OLD_T', 'Stara', 'Ancienne', 0)");
+    $pdo->exec("INSERT INTO n_prod_employee (id_production_employee, id_primary_group, active) VALUES (21, 2, 1)");
+    $kinga = (int) $pdo->lastInsertId();
+    $pdo->exec("SET SESSION sql_mode = @mode");
+    $call('PUT', "/kiosk/employees/{$kinga}/credentials", ['pin' => '1357'], $manager);
+    [, $b] = $call('GET', '/kiosk/device', null, $atelier);
+    expectOff($b['data']['group_id'] === 1 && $b['data']['home_group_id'] === 1 && $b['data']['generic'] === false, 'group tablet: its own group by default');
+    [$s, $b] = $call('GET', '/kiosk/groups', null, $atelier);
+    $gr = array_column($b['data'], null, 'id');
+    expectOff($s === 200 && isset($gr[1], $gr[2]) && !isset($gr[99]) && $gr[1]['own'] === true && $gr[2]['own'] === false, 'group tablet lists every active group, its own marked');
+    $tarty = $atelier + ['X-Kiosk-Group' => '2'];
+    [, $b] = $call('GET', '/kiosk/device', null, $tarty);
+    expectOff($b['data']['group_id'] === 2 && $b['data']['home_group_id'] === 1, 'team in the address: the group tablet takes the other group');
+    [, $b] = $call('GET', '/kiosk/people', null, $tarty);
+    expectOff(array_column($b['data'], 'id') === [$kinga], 'people of the chosen group');
+    [, $b] = $call('GET', '/kiosk/people', null, $atelier);
+    expectOff(in_array(80, array_column($b['data'], 'id'), true) && !in_array($kinga, array_column($b['data'], 'id'), true), 'without a team: people of its own group');
+    [, $b] = $call('GET', '/kiosk/device', null, $atelier + ['X-Kiosk-Group' => '99']);
+    expectOff($b['data']['group_id'] === 1, 'inactive group ignored: own group');
+    [, $b] = $call('GET', '/kiosk/device', null, $driverDev + ['X-Kiosk-Group' => '2']);
+    expectOff($b['data']['group_id'] === null, 'driver tablet ignores the team');
+    [$s, $idK] = $call('POST', '/kiosk/identify', ['employee_id' => $kinga, 'pin' => '1357'], $tarty);
+    expectOff($s === 200 && $idK['data']['group_id'] === 2, 'PIN on the chosen group: session in that group');
+    [$s, $rf] = $call('POST', '/kiosk/refresh', null, $atelier + ['X-Employee-Token' => $idK['data']['employee_token']]);
+    expectOff($s === 200 && $rf['data']['group_id'] === 2, 'the session keeps the chosen group (token), even without the header');
+    [, $tq] = $call('GET', '/kiosk/qr?base=' . rawurlencode($base), null, $tarty);
+    [$s, $b] = $call('GET', '/kiosk/phone/people', null, ['X-Qr-Token' => $tokenOf($tq['data'])]);
+    expectOff($s === 200 && array_column($b['data'], 'id') === [$kinga], 'phone QR shown for the chosen group: its people');
+
     // --- Zmiana trybu : tablet pracowni → biuro (grupa usunięta)
     [$s, $b] = $call('PATCH', "/kiosk/devices/{$atelierId}", ['mode' => 'office'], $manager);
     $row = $pdo->query("SELECT mode, id_group FROM n_prod_device WHERE id = {$atelierId}")->fetch();

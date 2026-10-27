@@ -29,7 +29,13 @@
     // le stockage local, le cookie suffit : la tablette reste appairée ; le jeton n'est jamais effacé par le client.
     let paired = !!device;
     let session = null; // {token, name, id, exp}
-    let group = Number(store.get(GROUP_KEY)) || null; // groupe choisi (tablette générique) : en-tête X-Kiosk-Group
+    // Équipe dans l'adresse (27/10/2026) : /tablet/production?team=3 (aussi ?team-3) ; sans elle, le groupe de la tablette.
+    const urlTeam = () => {
+        const q = new URLSearchParams(location.search);
+        const v = Number(q.get('team')) || Number(([...q.keys()].find(k => /^team-\d+$/.test(k)) || '').slice(5));
+        return v > 0 ? v : null;
+    };
+    let group = urlTeam() || Number(store.get(GROUP_KEY)) || null; // groupe choisi : en-tête X-Kiosk-Group
     let longIdle = false; // ekrany produkcji / partii : zdjęcia i wpisywanie trwają dłużej
     let busy = false; // aparat lub OCR w toku : bez wylogowania
     let idleTimer = null;
@@ -225,24 +231,23 @@
         // Rodzaj tabletu odczytany przy każdym powrocie : zmiana w ERP (np. tablet grupy → biurowy) działa bez nowego parowania.
         try { deviceInfo = await api('GET', '/kiosk/device'); } catch (err) { if (deviceInfo === null) deviceInfo = {group_id: null}; }
         // Tablet kierowcy i tablet biurowy : własna strona (trasa dnia ; dział → nazwisko → osobisty kod QR).
-        if (deviceInfo.mode === 'driver' || deviceInfo.mode === 'office') { location.replace(root + '/' + deviceInfo.mode); return; }
-        // Tablet pracowni otwarty w biurze na /office : ekran biurowy zostaje jego stroną startową (przycisk « Tablet produkcji » cofa).
-        if (store.get('tfb.kiosk.home') === 'office') { location.replace(root + '/office'); return; }
-        // Tablette générique (27/10/2026) : groupe → personne → PIN, puis la production du groupe choisi.
+        if (deviceInfo.mode === 'driver' || deviceInfo.mode === 'office') { location.replace(root + '/tablet/' + deviceInfo.mode); return; }
+        store.set('tfb.kiosk.home', null); // dawne przekierowanie na ekran biurowy : adres mówi teraz, co pokazać
+        // Tablette générique : groupe → personne → PIN ; tablette de groupe : son groupe, ou l'équipe de l'adresse (?team=N).
         const generic = !!deviceInfo.generic;
+        const own = deviceInfo.home_group_id || null;
+        if (own && !urlTeam()) group = null;
         let groups = [];
-        if (generic) {
-            try { groups = await api('GET', '/kiosk/groups'); } catch (err) { groups = []; }
-            if (!el.isConnected) return;
-            if (group && !groups.some(g => g.id === group)) setGroup(null);
-            if (!group) return renderGroups(groups);
-        }
+        try { groups = await api('GET', '/kiosk/groups'); } catch (err) { groups = []; }
+        if (!el.isConnected) return;
+        if (group && groups.length && !groups.some(g => g.id === group)) setGroup(null);
+        if (generic && !group) return renderGroups(groups);
         const office = !generic && !deviceInfo.group_id;
         const now = new Date();
         const widgetHead = (ic, cls, title, extra) => `<header class="kiosk-widget-head"><span class="kiosk-widget-icon ${cls}">${icon(ic)}</span><h2>${title}</h2>${extra || ''}</header>`;
-        const groupBar = generic ? `<nav class="kiosk-groupbar" aria-label="${esc(t('groups_title'))}">${groups.map(g => `<button type="button" class="kiosk-group-chip ${g.id === group ? 'is-on' : ''}" data-group="${g.id}" style="--g:${/^#[0-9a-f]{6}$/i.test(g.color || '') ? g.color : '#8D1D2C'}">
+        const groupBar = groups.length > 1 ? `<nav class="kiosk-groupbar is-top" aria-label="${esc(t('groups_title'))}">${groups.map(g => `<button type="button" class="kiosk-group-chip ${g.id === (group || own) ? 'is-on' : ''}" data-group="${g.id}" style="--g:${/^#[0-9a-f]{6}$/i.test(g.color || '') ? g.color : '#8D1D2C'}">
                 <span class="kiosk-group-dot"></span>${esc(g.name)}<small>${esc(t('group_present', {n: g.present, total: g.people}))}</small></button>`).join('')}</nav>` : '';
-        const peopleWidget = `<section class="kiosk-widget is-team" data-team-widget>${widgetHead('users', 'is-soft', esc(t(office ? 'office_people' : 'home_people_title')), '<span class="kiosk-widget-meta" data-present></span>')}${groupBar}
+        const peopleWidget = `<section class="kiosk-widget is-team" data-team-widget>${widgetHead('users', 'is-soft', esc(t(office ? 'office_people' : 'home_people_title')), '<span class="kiosk-widget-meta" data-present></span>')}
                 <div class="kiosk-apps" data-people><p class="kiosk-muted">${esc(t('loading'))}</p></div>
                 <p class="kiosk-widget-hint" data-team-hint>${esc(t('home_team_hint'))}</p></section>`;
         const qrWidget = `<section class="kiosk-widget is-qr" data-qr-card hidden><canvas data-qr width="220" height="220" role="img" aria-label="${esc(t('qr_title'))}"></canvas>
@@ -255,6 +260,7 @@
             <section class="kiosk-ipad-hero"><div class="kiosk-ipad-time" data-clock>${now.toTimeString().slice(0, 5)}</div>
                 <div class="kiosk-ipad-date">${esc(now.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'long', day: 'numeric', month: 'long'}))}</div>
                 <p class="kiosk-ipad-greet" data-hero-title>${esc(t(office ? 'office_hero' : 'home_title'))}</p></section>
+            ${groupBar}
             <div class="kiosk-widgets">${office ? qrWidget + peopleWidget : `${peopleWidget}
                 <section class="kiosk-widget is-today" data-today>${widgetHead('calendar-days', 'is-abricot', esc(t('home_today_title')), `<button type="button" class="kiosk-widget-link" data-week-open>${esc(t('home_week_all'))} ›</button>`)}
                     <div class="kiosk-widget-stats" data-stats></div><div data-today-list><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>
@@ -357,6 +363,14 @@
     function setGroup(id) {
         group = id || null;
         store.set(GROUP_KEY, group ? String(group) : null);
+        // L'adresse suit l'équipe touchée : /tablet/production?team=N (lien à garder ou à installer).
+        try {
+            const u = new URL(location.href);
+            [...u.searchParams.keys()].filter(k => k === 'team' || /^team-\d+$/.test(k)).forEach(k => u.searchParams.delete(k));
+            if (group) u.searchParams.set('team', String(group));
+            if (u.pathname.endsWith('/kiosk')) u.pathname = root + '/tablet/production';
+            history.replaceState(null, '', u.pathname + u.search + u.hash);
+        } catch (e) { /* adresse inchangée */ }
     }
 
     // Tablette générique : les groupes de production en grand ; un toucher → les personnes du groupe → PIN.

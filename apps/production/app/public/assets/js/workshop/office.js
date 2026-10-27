@@ -98,7 +98,7 @@
         if (err.code === 'DEVICE_UNAUTHENTICATED') { paired = false; clearTimers(); renderPairing(err.message); }
         // Tablet pracowni albo kierowcy : jego własna strona (/kiosk przekierowuje tablet kierowcy na /driver).
         // Tablet kierowcy : jego trasa (każdy inny tablet otwiera ekran biurowy).
-        if (err.code === 'DEVICE_NOT_OFFICE') { store.set(HOME_KEY, null); location.replace(root + '/driver'); }
+        if (err.code === 'DEVICE_NOT_OFFICE') { store.set(HOME_KEY, null); location.replace(root + '/tablet/driver'); }
         throw err;
     }
 
@@ -125,7 +125,7 @@
                 paired = true;
                 store.set(DEVICE_KEY, device);
                 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (err) { /* non pris en charge */ }
-                if (r.device.mode === 'driver') { location.replace(root + '/driver'); return; }
+                if (r.device.mode === 'driver') { location.replace(root + '/tablet/driver'); return; }
                 deviceInfo = null;
                 toast(t('paired', {name: r.device.name}));
                 renderHome();
@@ -142,8 +142,6 @@
         clearTimers();
         try {
             if (deviceInfo === null) deviceInfo = await api('GET', '/kiosk/device');
-            // Tablet grupy otwarty w biurze : ekran biurowy zostaje stroną startową tego tabletu (do odwołania przyciskiem).
-            if (deviceInfo.mode === 'atelier') store.set(HOME_KEY, 'office');
             // Tout le personnel : les personnes sans dział forment la section 0, nommée ici (« Bez działu » / « Sans service »).
             sections = (await api('GET', '/kiosk/office/sections')).map(x => x.name ? x : {...x, name: t('no_section')});
         } catch (err) {
@@ -198,7 +196,7 @@
             el.querySelector('.office-groupbar').scrollIntoView({block: 'start', behavior: 'smooth'});
         });
         search.addEventListener('input', draw);
-        el.querySelector('[data-to-production]')?.addEventListener('click', () => { store.set(HOME_KEY, null); location.replace(root + '/kiosk'); });
+        el.querySelector('[data-to-production]')?.addEventListener('click', () => { store.set(HOME_KEY, null); location.replace(root + '/tablet/production'); });
         // Stan obecności odświeżany co minutę, gdy nikt nie szuka.
         timers.push(window.setInterval(() => { if (!search.value && document.activeElement !== search) renderHome(); }, 60000));
     }
@@ -414,7 +412,8 @@
             const res = await fetch(base + '/kiosk/device', {headers: {'Accept': 'application/json', 'Accept-Language': lang}, credentials: 'same-origin'});
             const json = await res.json().catch(() => null);
             paired = res.ok;
-            if (paired && json && json.data && json.data.mode && json.data.mode !== 'office') { location.replace(root + (json.data.mode === 'driver' ? '/driver' : '/kiosk')); return; }
+            // Seule la tablette chauffeur part ailleurs ; une tablette de production reste sur l'écran bureau (27/10/2026).
+            if (paired && json && json.data && json.data.mode === 'driver') { location.replace(root + '/tablet/driver'); return; }
         } catch (e) { /* hors ligne : écran d'appairage */ }
     }
     Promise.all([loadLabels(), detectPairing()]).then(renderHome);

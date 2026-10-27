@@ -95,7 +95,7 @@
         err.code = json.description;
         err.status = res.status;
         if (err.code === 'DEVICE_UNAUTHENTICATED') { paired = false; renderPairing(err.message); }
-        if (err.code === 'DEVICE_NOT_DRIVER') location.replace(root + '/kiosk');
+        if (err.code === 'DEVICE_NOT_DRIVER') location.replace(root + '/tablet/production');
         if (err.code === 'EMPLOYEE_UNAUTHENTICATED' || err.code === 'EMPLOYEE_SESSION_EXPIRED') { setSession(null); renderLogin(err.message); }
         throw err;
     }
@@ -189,7 +189,7 @@
                 device = r.device_token;
                 paired = true;
                 store.set(DEVICE_KEY, device);
-                if (r.device.mode !== 'driver') { location.replace(root + (r.device.mode === 'office' ? '/office' : '/kiosk')); return; }
+                if (r.device.mode !== 'driver') { location.replace(root + (r.device.mode === 'office' ? '/tablet/office' : '/tablet/production')); return; }
                 toast(t('paired', {name: r.device.name}));
                 load();
             } catch (err) { el.querySelector('[data-error]').textContent = err.message; }

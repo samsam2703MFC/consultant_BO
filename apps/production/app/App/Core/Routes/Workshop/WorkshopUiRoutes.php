@@ -27,6 +27,10 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/workshop/stock-movements/{id:\d+}', ['controller' => $ledger, 'method' => 'product']);
     $r->addRoute('GET', '/workshop/traceability', ['controller' => App\Controllers\Web\Workshop\TraceabilityController::class, 'method' => 'index']);
     $r->addRoute('GET', '/workshop/traceability/photo/{id:\d+}', ['controller' => App\Controllers\Web\Workshop\TraceabilityController::class, 'method' => 'photo']);
+    // Tablety (27/10/2026) : /tablet/production?team=N, /tablet/office, /tablet/driver ; dawne /kiosk, /office, /driver nadal działają.
+    $r->addRoute('GET', '/tablet/production', ['controller' => $c, 'method' => 'kiosk']);
+    $r->addRoute('GET', '/tablet/office', ['controller' => $c, 'method' => 'office']);
+    $r->addRoute('GET', '/tablet/driver', ['controller' => $c, 'method' => 'driver']);
     $r->addRoute('GET', '/kiosk', ['controller' => $c, 'method' => 'kiosk']);
     $r->addRoute('GET', '/kiosk/scan', ['controller' => $c, 'method' => 'kioskScan']);
     $r->addRoute('GET', '/driver', ['controller' => $c, 'method' => 'driver']);

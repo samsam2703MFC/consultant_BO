@@ -23,7 +23,7 @@
     // PWA : tablet grupy instalowany jako aplikacja (ikona na ekranie, pełny ekran) ; powłoka w pamięci podręcznej.
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
-            navigator.serviceWorker.register('{{ root }}/kiosk-sw.js', {scope: '{{ root }}/kiosk'}).catch(function () { /* bez PWA tablet działa jak strona */ });
+            navigator.serviceWorker.register('{{ root }}/kiosk-sw.js', {scope: location.pathname.indexOf('/tablet/') >= 0 ? '{{ root }}/tablet/' : '{{ root }}/kiosk'}).catch(function () { /* bez PWA tablet działa jak strona */ });
         });
     }
 </script>

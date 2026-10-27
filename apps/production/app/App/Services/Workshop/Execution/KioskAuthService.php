@@ -78,13 +78,16 @@ final class KioskAuthService
             deviceId: (int) $device['id'], employeeId: $employeeId, deviceGroupId: $this->groupOf($device, $tokenGroup, $chosenGroup));
     }
 
-    /** Le groupe d'un appel : celui de la tablette, sinon (tablette générique) celui du jeton, sinon celui touché à l'accueil. */
+    /**
+     * Le groupe d'un appel : celui du jeton, sinon celui touché à l'accueil, sinon celui de la tablette. Une tablette de
+     * production liée à un groupe peut aussi prendre un autre groupe (27/10/2026) ; chauffeur et bureau gardent le leur.
+     */
     private function groupOf(array $device, ?int $tokenGroup, ?int $chosenGroup): ?int
     {
-        if ($device['id_group'] !== null) return (int) $device['id_group'];
-        if (($device['mode'] ?? 'atelier') !== 'atelier') return null;
+        $own = $device['id_group'] !== null ? (int) $device['id_group'] : null;
+        if (($device['mode'] ?? 'atelier') !== 'atelier') return $own;
         if ($tokenGroup !== null) return $tokenGroup;
-        return $chosenGroup !== null && $this->repo->groupActive($chosenGroup) ? $chosenGroup : null;
+        return $chosenGroup !== null && $chosenGroup !== $own && $this->repo->groupActive($chosenGroup) ? $chosenGroup : $own;
     }
 
     // --- Responsable : tablettes et identifiants ----------------------------------------------------
@@ -204,7 +207,9 @@ final class KioskAuthService
         $d = $this->repo->find((int) $context->deviceId);
         $mode = $d['mode'] ?? 'atelier';
         // generic : tablette de production sans groupe — groupe → personne → PIN, puis la production du groupe choisi.
+        // home_group_id : le groupe de la tablette (group_id peut être un autre groupe touché à l'accueil).
         return ['id' => (int) $context->deviceId, 'name' => $d['name'] ?? null, 'group_id' => $context->deviceGroupId, 'mode' => $mode,
+            'home_group_id' => isset($d['id_group']) && $d['id_group'] !== null ? (int) $d['id_group'] : null,
             'generic' => $mode === 'atelier' && ($d['id_group'] ?? null) === null,
             'vehicle_id' => isset($d['id_carrier_vehicle']) ? (int) $d['id_carrier_vehicle'] : null];
     }
@@ -255,8 +260,8 @@ final class KioskAuthService
     }
 
     /**
-     * Groupes de production proposés à l'accueil d'une tablette générique (27/10/2026) : nom dans la langue de la tablette,
-     * couleur, personnes et présents. Une tablette de groupe ne propose que le sien.
+     * Groupes de production proposés à l'accueil d'une tablette de production (27/10/2026) : nom dans la langue de la tablette,
+     * couleur, personnes et présents ; own = le groupe de la tablette (une tablette de groupe peut en prendre un autre).
      */
     public function groups(ApiContext $context): array
     {
@@ -265,9 +270,8 @@ final class KioskAuthService
         $fr = $context->translator->lang() === 'fr';
         $out = [];
         foreach ($this->repo->kioskGroups() as $g) {
-            if ($fixed !== null && (int) $g['id'] !== $fixed) continue;
             $out[] = ['id' => (int) $g['id'], 'name' => $fr && trim((string) $g['name_fr']) !== '' ? $g['name_fr'] : $g['name_pl'],
-                'color' => $g['color'], 'people' => (int) $g['people'], 'present' => (int) $g['present']];
+                'color' => $g['color'], 'people' => (int) $g['people'], 'present' => (int) $g['present'], 'own' => (int) $g['id'] === $fixed];
         }
         return $out;
     }
@@ -302,8 +306,9 @@ final class KioskAuthService
     {
         $now = time();
         $device = $this->repo->find($deviceId);
-        // Tablette générique : le groupe choisi voyage dans le jeton (claim grp), la tablette de groupe n'en a pas besoin.
-        $claimGroup = ($device['mode'] ?? 'atelier') === 'atelier' && ($device['id_group'] ?? null) === null && $groupId !== null ? ['grp' => $groupId] : [];
+        // Groupe touché à l'accueil (tablette générique, ou tablette de groupe sur un autre groupe) : il voyage dans le jeton (claim grp).
+        $own = ($device['id_group'] ?? null) !== null ? (int) $device['id_group'] : null;
+        $claimGroup = ($device['mode'] ?? 'atelier') === 'atelier' && $groupId !== null && $groupId !== $own ? ['grp' => $groupId] : [];
         // Tablette chauffeur : la session dure la tournée (driver.session_hours) ; atelier : jeton court prolongé en activité.
         $ttl = ($device['mode'] ?? 'atelier') === 'driver'
             ? max(1, min(24, (int) $this->params->get('driver.session_hours', '12'))) * 3600
@@ -313,7 +318,7 @@ final class KioskAuthService
                 'iat' => $now, 'nbf' => $now, 'exp' => $now + $ttl, 'jti' => bin2hex(random_bytes(8))] + $claimGroup),
             'expires_in' => $ttl,
             'employee' => ['id' => (int) $employee['id'], 'name' => $employee['name']],
-            'group_id' => $claimGroup['grp'] ?? (($device['id_group'] ?? null) !== null ? (int) $device['id_group'] : null),
+            'group_id' => $claimGroup['grp'] ?? $own,
         ];
     }
 
@@ -326,7 +331,10 @@ final class KioskAuthService
     public function qr(ApiContext $context, string $base): array
     {
         $ttl = max(20, (int) $this->params->get('kiosk.qr_ttl_s', '90'));
-        return $this->qrPayload(['dev' => (int) $context->deviceId], $base, $ttl)
+        // Tablette de groupe sur un autre groupe : le téléphone propose les personnes de ce groupe-là (claim grp).
+        $own = $this->repo->find((int) $context->deviceId)['id_group'] ?? null;
+        $grp = $own !== null && $context->deviceGroupId !== null && $context->deviceGroupId !== (int) $own ? ['grp' => $context->deviceGroupId] : [];
+        return $this->qrPayload(['dev' => (int) $context->deviceId] + $grp, $base, $ttl)
             + ['refresh_s' => max(5, min($ttl - 10, (int) $this->params->get('kiosk.qr_refresh_s', '20')))];
     }
 
@@ -360,10 +368,10 @@ final class KioskAuthService
     /** Contexte d'un appel avec un QR frais de la tablette (preuve de présence sur place). */
     public function qrContext(string $qr, string $requestId, Translator $translator): ApiContext
     {
-        [$device, $qrEmployee] = $this->deviceFromQr($qr);
+        [$device, $qrEmployee, $qrGroup] = $this->deviceFromQr($qr);
         // QR personnel (tablette de bureau) : la personne du QR porte le contexte (liste et enregistrement limités à elle).
         return new ApiContext($requestId, $translator, null, [], ['prod.kiosk' => true], [],
-            deviceId: (int) $device['id'], employeeId: $qrEmployee, deviceGroupId: $device['id_group'] !== null ? (int) $device['id_group'] : null);
+            deviceId: (int) $device['id'], employeeId: $qrEmployee, deviceGroupId: $qrGroup ?? ($device['id_group'] !== null ? (int) $device['id_group'] : null));
     }
 
     /** Appel d'un téléphone enregistré, avec un QR frais de la tablette. */
@@ -430,7 +438,8 @@ final class KioskAuthService
         if ($device === null || !(int) $device['active'] || $device['token_hash'] === null) throw new ApiException('QR_INVALID', 401);
         // QR personnel : valable seulement le jour où il a été affiché.
         if (isset($claims['day']) && $claims['day'] !== date('Y-m-d')) throw new ApiException('QR_EXPIRED', 401);
-        return [$device, isset($claims['emp']) ? (int) $claims['emp'] : null];
+        $group = isset($claims['grp']) && (int) $claims['grp'] > 0 && $this->repo->groupActive((int) $claims['grp']) ? (int) $claims['grp'] : null;
+        return [$device, isset($claims['emp']) ? (int) $claims['emp'] : null, $group];
     }
 
     /** Le QR personnel d'une autre personne : refus avec son nom (le téléphone n'est pas le sien). */

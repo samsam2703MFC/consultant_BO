@@ -32,7 +32,7 @@
 
     function frame(body) {
         el.innerHTML = `<div class="tfb-head"><div><h3>${esc(t('title'))}</h3><p class="text-muted mb-0">${esc(t('subtitle'))}</p></div>
-            <div class="tfb-head-actions"><a class="btn btn-outline-primary btn-sm" href="${esc(api.root)}/kiosk" target="_blank" rel="noopener">${esc(t('open_kiosk'))}</a>
+            <div class="tfb-head-actions"><a class="btn btn-outline-primary btn-sm" href="${esc(api.root)}/tablet/production" target="_blank" rel="noopener">${esc(t('open_kiosk'))}</a>
             <button type="button" class="btn btn-outline-secondary btn-sm" data-lang-switch>${esc(t('lang_switch'))}</button></div></div>
             <ul class="nav nav-tabs mb-3" role="tablist">${tabs.map(k => `<li class="nav-item"><a class="nav-link ${k === tab ? 'active' : ''}" href="#${k}" data-tab="${k}">${esc(t('tab.' + k))}</a></li>`).join('')}</ul>
             <div data-body>${body || `<p class="text-muted">${esc(t('loading'))}</p>`}</div>`;
@@ -110,16 +110,16 @@
         // Kilka tabletów tego samego rodzaju : aktywny i sparowany, ostatnio połączony.
         const pick = (filter) => list.filter(filter).sort((a, b) => (b.active - a.active) || (b.paired - a.paired) || String(b.last_seen_at || '').localeCompare(String(a.last_seen_at || '')))[0];
         const planRows = [
-            {kind: t('plan_office'), d: pick(x => x.mode === 'office'), mode: 'office', name: t('plan_office_name'), page: '/office'},
-            {kind: t('plan_driver'), d: pick(x => x.mode === 'driver'), mode: 'driver', name: t('plan_driver_name'), page: '/driver'},
-            ...groups.filter(g => g.active !== false).map(g => ({kind: t('plan_group', {group: g.name}), d: pick(x => (x.mode || 'atelier') === 'atelier' && x.group_id === g.id), mode: 'atelier', group: g.id, name: t('plan_group_name', {group: g.name}), page: '/kiosk'})),
+            {kind: t('plan_office'), d: pick(x => x.mode === 'office'), mode: 'office', name: t('plan_office_name'), page: '/tablet/office'},
+            {kind: t('plan_driver'), d: pick(x => x.mode === 'driver'), mode: 'driver', name: t('plan_driver_name'), page: '/tablet/driver'},
+            ...groups.filter(g => g.active !== false).map(g => ({kind: t('plan_group', {group: g.name}), d: pick(x => (x.mode || 'atelier') === 'atelier' && x.group_id === g.id), mode: 'atelier', group: g.id, name: t('plan_group_name', {group: g.name}), page: '/tablet/production?team=' + g.id})),
         ];
         const missing = planRows.filter(r => !r.d).length;
         const plan = `<div class="card mb-3"><div class="card-body"><div class="d-flex flex-wrap align-items-center gap-2 mb-2"><h5 class="mb-0">${esc(t('plan_title'))}</h5>
                 <span class="text-muted small">${esc(missing ? t('plan_missing_count', {n: missing}) : t('plan_complete'))}</span></div>
             <div class="table-responsive"><table class="table table-sm mb-0 align-middle"><thead><tr><th>${esc(t('plan_kind'))}</th><th>${esc(t('device'))}</th><th>${esc(t('state'))}</th><th>${esc(t('plan_page'))}</th><th></th></tr></thead>
             <tbody>${planRows.map((r, i) => `<tr><td>${esc(r.kind)}</td><td>${r.d ? `<strong>${esc(r.d.name)}</strong>` : '<span class="text-muted">—</span>'}</td><td>${state(r.d)}</td>
-                <td><code>${esc(r.page)}</code></td>
+                <td><a href="${esc(api.root + r.page)}" target="_blank" rel="noopener"><code>${esc(r.page)}</code></a></td>
                 <td class="text-end">${r.d ? '' : `<button type="button" class="btn btn-sm btn-primary" data-plan-create="${i}">${esc(t('plan_create'))}</button>`}</td></tr>`).join('')}</tbody></table></div>
             <p class="at-profit-note mb-0">${esc(t('plan_help'))}</p></div></div>`;
         body.innerHTML = plan + `<div class="card"><div class="card-body">
