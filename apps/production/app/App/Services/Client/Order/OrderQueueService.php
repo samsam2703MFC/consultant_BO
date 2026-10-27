@@ -36,6 +36,10 @@ final class OrderQueueService
         'invoice_unlinked' => ['label' => 'Faktura zakupowa do przypisania', 'icon' => 'bi-receipt', 'positions' => ['ZAKUPY', 'ADMINISTRACJA']],
         'invoice_price_up' => ['label' => 'Podwyżka ceny surowca do zatwierdzenia', 'icon' => 'bi-graph-up-arrow', 'positions' => ['ZAKUPY', 'ADMINISTRACJA', 'KIEROWNIK_PRODUKCJI']],
         'inventory_old' => ['label' => 'Inwentaryzacja surowców > 30 dni', 'icon' => 'bi-clipboard-check', 'positions' => ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
+        // Zakupy tygodnia : szkic niewysłany, oferty do decyzji (termin : odpowiedź dostawców), pozycje z mniej niż 3 dostawcami.
+        'buy_round' => ['label' => 'Zakupy tygodnia niewysłane', 'icon' => 'bi-basket2', 'positions' => ['ZAKUPY']],
+        'buy_offers' => ['label' => 'Oferty dostawców do decyzji', 'icon' => 'bi-star', 'positions' => ['ZAKUPY']],
+        'buy_suppliers' => ['label' => 'Pozycje z mniej niż 3 dostawcami', 'icon' => 'bi-people', 'positions' => ['ZAKUPY']],
         // Finanse (27/10/2026) : faktury usług do sprawdzenia, miesiąc kosztów usług do zamknięcia (finance.service_due_day).
         'service_open' => ['label' => 'Faktura usługi do sprawdzenia', 'icon' => 'bi-receipt-cutoff', 'positions' => ['ADMINISTRACJA']],
         'service_month' => ['label' => 'Koszty usług miesiąca do zamknięcia', 'icon' => 'bi-calendar2-range', 'positions' => ['ADMINISTRACJA']],
@@ -64,6 +68,8 @@ final class OrderQueueService
         private \App\Repositories\Workshop\ParamRepository $params,
         // Faktury z podwyżką ceny ponad cenę bazową bez decyzji (ta sama reguła co na fakturze) ; brak = pomijane.
         private ?\App\Services\Workshop\Supply\InvoiceService $invoices = null,
+        // Zakupy tygodnia (zakupy otwarte, pozycje z mniej niż 3 dostawcami) ; brak = pomijane.
+        private ?\App\Services\Workshop\Supply\BuyService $buy = null,
     ) {}
 
     /**
@@ -116,7 +122,8 @@ final class OrderQueueService
     public function counts(?DateTimeImmutable $now = null): array
     {
         $counts = array_fill_keys(array_keys(self::RULES), 0);
-        foreach ($this->items($now ?? new DateTimeImmutable()) as $i) $counts[$i['rule']]++;
+        // Pozycja zbiorcza (pozycje z mniej niż 3 dostawcami) liczy się swoją liczbą.
+        foreach ($this->items($now ?? new DateTimeImmutable()) as $i) $counts[$i['rule']] += $i['weight'] ?? 1;
         return $counts;
     }
 
@@ -303,6 +310,39 @@ final class OrderQueueService
                 'detail' => (int) $stale['never'] ? 'nigdy nieliczone : ' . (int) $stale['never'] : 'najstarsza inwentaryzacja ' . date('d.m.Y', strtotime((string) $oldest)),
             ], [
                 ['label' => 'Inwentaryzacja (arkusz)', 'url' => '/workshop/supply#tab=stock', 'primary' => true],
+            ]);
+        }
+
+        $buy = $this->buy?->queue();
+        foreach ($buy['rounds'] ?? [] as $r) {
+            $id = (int) $r['id'];
+            $week = 'tydzień od ' . date('d.m.Y', strtotime((string) $r['week_start']));
+            if ($r['status'] === 'draft') {
+                $out[] = $this->item('buy_round', 'round:' . $id, $today, [
+                    'customer' => 'Zakupy tygodnia', 'customer_id' => null, 'supplier' => true,
+                    'title' => 'Zakupy ' . $r['code'] . ' : szkic niewysłany', 'detail' => 'pozycji : ' . $r['line_count'] . ' · ' . $week,
+                ], [
+                    ['label' => 'Dokończ i wyślij', 'url' => '/workshop/buy', 'primary' => true],
+                ]);
+            } elseif ($r['ordered'] < $r['line_count']) {
+                $out[] = $this->item('buy_offers', 'round:' . $id, $r['reply_by'] ? substr((string) $r['reply_by'], 0, 10) : $today, [
+                    'customer' => 'Zakupy tygodnia', 'customer_id' => null, 'supplier' => true,
+                    'title' => 'Zakupy ' . $r['code'] . ' : odpowiedziało ' . $r['responded'] . ' z ' . $r['requests'] . ' dostawców (' . $r['offers'] . ' ofert)',
+                    'detail' => 'zamówione ' . $r['ordered'] . ' z ' . $r['line_count'] . ' pozycji · ' . $week,
+                    'note' => $r['reply_by'] ? 'odpowiedź do ' . date('d.m.Y H:i', strtotime((string) $r['reply_by'])) : null,
+                ], [
+                    ['label' => 'Oferty', 'url' => '/workshop/buy#tab=offers', 'primary' => true],
+                ]);
+            }
+        }
+        if (($buy['missing'] ?? 0) > 0) {
+            $out[] = $this->item('buy_suppliers', 'suppliers', null, [
+                'customer' => null, 'customer_id' => null, 'weight' => (int) $buy['missing'],
+                'title' => 'Znajdź dostawców : ' . (int) $buy['missing'] . ' pozycji ma mniej niż 3 dostawców',
+                'detail' => implode(', ', $buy['examples']) . ((int) $buy['missing'] > count($buy['examples']) ? '…' : ''),
+                'note' => 'cel : 3 dostawców na pozycję → porównanie cen',
+            ], [
+                ['label' => 'Dostawcy pozycji', 'url' => '/workshop/buy#tab=suppliers', 'primary' => true],
             ]);
         }
 

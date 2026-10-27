@@ -159,6 +159,10 @@ class TodayService
                 ['invoice_unlinked', 'warning', 'bi-receipt', 'faktura zakupowa do przypisania', 'faktury zakupowe do przypisania', 'faktur zakupowych do przypisania', ['ZAKUPY', 'ADMINISTRACJA']],
                 ['invoice_price_up', 'warning', 'bi-graph-up-arrow', 'faktura z podwyżką ceny do zatwierdzenia', 'faktury z podwyżką ceny do zatwierdzenia', 'faktur z podwyżką ceny do zatwierdzenia', ['ZAKUPY', 'ADMINISTRACJA', 'KIEROWNIK_PRODUKCJI']],
                 ['inventory_old', 'info', 'bi-clipboard-check', 'inwentaryzacja surowców > 30 dni', 'inwentaryzacje surowców > 30 dni', 'inwentaryzacji surowców > 30 dni', ['ZAKUPY', 'KIEROWNIK_PRODUKCJI']],
+                // Zakupy tygodnia
+                ['buy_round', 'warning', 'bi-basket2', 'zakupy tygodnia niewysłane', 'zakupy tygodnia niewysłane', 'zakupów tygodnia niewysłanych', ['ZAKUPY']],
+                ['buy_offers', 'warning', 'bi-star', 'zakupy z ofertami do decyzji', 'zakupy z ofertami do decyzji', 'zakupów z ofertami do decyzji', ['ZAKUPY']],
+                ['buy_suppliers', 'info', 'bi-people', 'pozycja z mniej niż 3 dostawcami', 'pozycje z mniej niż 3 dostawcami', 'pozycji z mniej niż 3 dostawcami', ['ZAKUPY']],
                 // Finanse : faktury usług do sprawdzenia, miesiąc kosztów usług do zamknięcia.
                 ['service_open', 'warning', 'bi-receipt-cutoff', 'faktura usługi do sprawdzenia', 'faktury usług do sprawdzenia', 'faktur usług do sprawdzenia', ['ADMINISTRACJA']],
                 ['service_month', 'warning', 'bi-calendar2-range', 'miesiąc kosztów usług do zamknięcia', 'miesiące kosztów usług do zamknięcia', 'miesięcy kosztów usług do zamknięcia', ['ADMINISTRACJA']],

@@ -54,6 +54,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/supply', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
+    /** Zakupy tygodnia : co kupić na uzupełnienie stanów, zapytania ofertowe do 1–3 dostawców, oferty z minimum, wyniki operatora. */
+    public function buy()
+    {
+        $this->view('workshop/buy', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
+    }
+
     /** Finanse › Faktury i koszty : przypisz nowe pozycje, zatwierdź faktury, sprawdź wzrosty cen (stanowisko Administracja i fakturowanie). */
     public function financeInvoices()
     {

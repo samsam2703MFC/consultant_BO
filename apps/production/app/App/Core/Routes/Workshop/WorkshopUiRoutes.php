@@ -13,6 +13,12 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/workshop/sheet', ['controller' => $c, 'method' => 'sheet']);
     $r->addRoute('GET', '/workshop/manager', ['controller' => $c, 'method' => 'manager']);
     $r->addRoute('GET', '/workshop/supply', ['controller' => $c, 'method' => 'supply']);
+    // Zakupy tygodnia : kreator w 3 krokach (co kupić → komu i jak → wyślij), oferty, wyniki, dostawcy pozycji.
+    $r->addRoute('GET', '/workshop/buy', ['controller' => $c, 'method' => 'buy']);
+    // Link dostawcy z zapytania ofertowego : bez logowania (token w adresie), ceny i minimum zamówienia.
+    $offer = App\Controllers\Web\Supply\OfferController::class;
+    $r->addRoute('GET', '/offer/{token:[a-f0-9]{48}}', ['controller' => $offer, 'method' => 'show']);
+    $r->addRoute('POST', '/offer/{token:[a-f0-9]{48}}', ['controller' => $offer, 'method' => 'submit']);
     // Finanse (Administracja i fakturowanie) : faktury i koszty (przypisz, zatwierdź, wzrosty cen), koszty usług miesiąca.
     $r->addRoute('GET', '/finances/invoices', ['controller' => $c, 'method' => 'financeInvoices']);
     $r->addRoute('GET', '/finances/costs', ['controller' => $c, 'method' => 'financeCosts']);

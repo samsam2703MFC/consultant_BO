@@ -17,7 +17,7 @@ final class OpenApiSpec
     {
         $paths = [];
         foreach (WorkshopApiRoutes::routes() as [$method, $path, , , $permission]) {
-            $doc = (self::operations() + OpenApiProducts::operations() + OpenApiPlanning::operations() + OpenApiExecution::operations() + OpenApiManager::operations() + OpenApiSupply::operations() + OpenApiFinance::operations())[$method . ' ' . $path] ?? null;
+            $doc = (self::operations() + OpenApiProducts::operations() + OpenApiPlanning::operations() + OpenApiExecution::operations() + OpenApiManager::operations() + OpenApiSupply::operations() + OpenApiFinance::operations() + OpenApiBuy::operations())[$method . ' ' . $path] ?? null;
             if ($doc === null) {
                 throw new \LogicException("Undocumented route {$method} {$path}");
             }
@@ -201,7 +201,7 @@ final class OpenApiSpec
                 'Lang' => ['name' => 'lang', 'in' => 'query', 'required' => false, 'description' => 'Język komunikatów / Langue des messages (sinon Accept-Language)', 'schema' => ['type' => 'string', 'enum' => ['pl', 'fr']]],
             ],
             'responses' => $errorResponses,
-            'schemas' => OpenApiProducts::schemas() + OpenApiPlanning::schemas() + OpenApiExecution::schemas() + OpenApiManager::schemas() + OpenApiSupply::schemas() + OpenApiFinance::schemas() + [
+            'schemas' => OpenApiProducts::schemas() + OpenApiPlanning::schemas() + OpenApiExecution::schemas() + OpenApiManager::schemas() + OpenApiSupply::schemas() + OpenApiFinance::schemas() + OpenApiBuy::schemas() + [
                 'Error' => ['type' => 'object', 'required' => ['status', 'description', 'message', 'request_id'], 'properties' => [
                     'status' => ['type' => 'string', 'enum' => ['error']],
                     'description' => ['type' => 'string', 'example' => 'VALIDATION_FAILED'],

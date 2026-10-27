@@ -107,7 +107,7 @@ try {
     // --- Une ligne par cas
     $o = $queue->overview(null, 'all', false, 1, $now);
     expectOq($o['counts'] === ['late_shipping' => 1, 'no_proforma' => 1, 'proforma_stale' => 1, 'proforma_not_sent' => 1, 'reminder_due' => 2,
-        'documents_ready' => 1, 'shipping_issue' => 1, 'send_error' => 1, 'ksef' => 0, 'po_draft' => 0, 'po_late' => 0, 'invoice_unlinked' => 0, 'invoice_price_up' => 0, 'inventory_old' => 0, 'service_open' => 0, 'service_month' => 0, 'complaint_open' => 0, 'return_to_ship' => 0], 'one case per rule ; closed order, order with WDT, paid and free proformas left out');
+        'documents_ready' => 1, 'shipping_issue' => 1, 'send_error' => 1, 'ksef' => 0, 'po_draft' => 0, 'po_late' => 0, 'invoice_unlinked' => 0, 'invoice_price_up' => 0, 'inventory_old' => 0, 'buy_round' => 0, 'buy_offers' => 0, 'buy_suppliers' => 0, 'service_open' => 0, 'service_month' => 0, 'complaint_open' => 0, 'return_to_ship' => 0], 'one case per rule ; closed order, order with WDT, paid and free proformas left out');
     $by = [];
     foreach ($o['items'] as $i) $by[$i['key']] = $i;
     expectOq(array_keys($by) === ['reminder_due:proforma:205', 'reminder_due:proforma:202', 'late_shipping:order:101', 'no_proforma:order:101',

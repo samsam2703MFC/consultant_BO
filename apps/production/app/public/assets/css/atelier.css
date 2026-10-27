@@ -2141,3 +2141,98 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-fin-table .tfb-fin-marked { opacity: .72; }
 .tfb-fin-table td .btn { min-height: 34px; }
 .tfb-fin-seller { font-weight: 500; }
+
+/* --- Zakupy tygodnia (kreator 3 kroki, oferty, wyniki, dostawcy pozycji) --- */
+.tfb-buy-tabs button { min-height: 44px; }
+.tfb-buy-tabn { display: inline-block; min-width: 22px; padding: 1px 6px; border-radius: 6px; background: var(--at-bg); font-size: .75rem; color: var(--at-text); }
+.tfb-buy-tabs button.is-on .tfb-buy-tabn { background: var(--at-primary-soft); color: var(--at-primary); }
+.tfb-buy-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-bottom: 14px; }
+.tfb-buy-bar .tfb-buy-safety { margin-left: auto; }
+.tfb-buy-safety { display: flex; align-items: center; gap: 10px; }
+.tfb-buy-safety button, .tfb-buy-weeks button, .tfb-buy-seg button { min-height: 44px; padding: 8px 16px; }
+.tfb-buy-stepper { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.tfb-buy-bar .tfb-buy-stepper { margin-bottom: 0; }
+.tfb-buy-step { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px 6px 8px; border: 1px solid var(--at-line); border-radius: 10px; background: var(--at-surface); color: var(--at-muted); font-weight: 600; }
+.tfb-buy-step-n { width: 28px; height: 28px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; background: var(--at-bg-2); }
+.tfb-buy-step.is-on { border-color: var(--at-primary); color: var(--at-primary); box-shadow: 0 0 0 1px var(--at-primary) inset; }
+.tfb-buy-step.is-on .tfb-buy-step-n { background: var(--at-primary); color: #fff; }
+.tfb-buy-step.is-done { color: var(--at-success); }
+.tfb-buy-step.is-done .tfb-buy-step-n { background: var(--at-success); color: #fff; }
+.tfb-buy-step-sep { color: var(--at-line-2); }
+.tfb-buy-card { margin-bottom: 14px; border-radius: var(--at-radius-lg); }
+.tfb-buy-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+.tfb-buy-card-head h5 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.tfb-buy-circle { width: 24px; height: 24px; border: 2px solid currentColor; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; }
+.tfb-buy-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 1199px) { .tfb-buy-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tfb-buy-tile { padding: 10px 12px; border: 1px solid var(--at-line); border-radius: 10px; background: var(--at-bg-2); }
+.tfb-buy-tile-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; }
+.tfb-buy-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--at-muted); font-weight: 500; white-space: nowrap; }
+.tfb-buy-table td { padding-top: 10px; padding-bottom: 10px; }
+.tfb-buy-table tr.is-off td { color: var(--at-muted); }
+.tfb-buy-table tr.is-ordered td { background: rgba(46, 125, 79, 0.04); }
+.tfb-buy-check { width: 52px; }
+.tfb-buy-box { width: 28px; height: 28px; flex: 0 0 28px; border: 2px solid var(--at-line-2); border-radius: 7px; background: var(--at-surface); display: inline-flex; align-items: center; justify-content: center; color: #fff; padding: 0; }
+button.tfb-buy-box { min-width: 44px; min-height: 44px; border-width: 8px; border-color: transparent; box-shadow: 0 0 0 2px var(--at-line-2) inset; background-clip: padding-box; }
+.tfb-buy-box.is-on { background: var(--at-primary); }
+button.tfb-buy-box.is-on { box-shadow: none; background: var(--at-primary); background-clip: padding-box; }
+.tfb-buy-box.is-off { opacity: .4; }
+.tfb-buy-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-top: 12px; }
+.card-body.tfb-buy-foot { margin-top: 0; }
+.tfb-buy-foot-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tfb-buy-foot .btn-lg { min-height: 48px; }
+.tfb-buy-ok { background: rgba(46, 125, 79, 0.12); color: var(--at-success); border-radius: 6px; }
+.tfb-buy-warn { background: rgba(193, 122, 42, 0.14); color: var(--at-warning); border-radius: 6px; }
+.tfb-buy-bad { background: rgba(196, 30, 58, 0.10); color: var(--at-danger); border-radius: 6px; }
+.tfb-buy-muted { background: var(--at-bg-2); color: var(--at-muted); border-radius: 6px; }
+.tfb-buy-lang { background: var(--at-bg-2); color: var(--at-muted); border-radius: 6px; }
+.tfb-buy-two { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; align-items: start; }
+@media (max-width: 1199px) { .tfb-buy-two { grid-template-columns: 1fr; } }
+.tfb-buy-sline { padding: 10px 0; border-top: 1px solid var(--at-line); }
+.tfb-buy-sline-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.tfb-buy-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tfb-buy-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 4px 12px 4px 4px; border: 1px solid var(--at-line-2); border-radius: 10px; background: var(--at-surface); color: var(--at-text); }
+.tfb-buy-chip.is-on { border-color: var(--at-primary); box-shadow: 0 0 0 1px var(--at-primary) inset; }
+.tfb-buy-chip.is-new { border-style: dashed; }
+.tfb-buy-chip.is-add { border-style: dashed; color: var(--at-primary); font-weight: 600; padding-left: 12px; }
+.tfb-buy-chip.is-plain { padding-left: 12px; }
+.tfb-buy-chip:disabled { opacity: .55; }
+.tfb-buy-chip .tfb-buy-box { width: 22px; height: 22px; flex-basis: 22px; border-radius: 6px; margin-left: 4px; }
+.tfb-buy-addbox { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tfb-buy-addbox select { min-height: 44px; min-width: 220px; width: auto; }
+.tfb-buy-label { margin: 14px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--at-muted); }
+.tfb-buy-date { width: auto; min-height: 44px; }
+.tfb-buy-date.is-on { border-color: var(--at-primary); box-shadow: 0 0 0 1px var(--at-primary) inset; }
+.tfb-buy-checkline { display: flex; align-items: center; gap: 6px; }
+.tfb-buy-mail { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 2.6fr); gap: 14px; align-items: start; }
+@media (max-width: 991px) { .tfb-buy-mail { grid-template-columns: 1fr; } }
+.tfb-buy-req { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; margin-bottom: 8px; padding: 8px 12px; border: 1px solid var(--at-line); border-radius: 10px; background: var(--at-surface); text-align: left; }
+.tfb-buy-req.is-on { border-color: var(--at-primary); box-shadow: 0 0 0 1px var(--at-primary) inset; }
+.tfb-buy-mailhead { padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--at-line); line-height: 1.7; }
+.tfb-buy-mailbody { white-space: pre-wrap; font-family: inherit; font-size: .95rem; margin: 0 0 10px; }
+.tfb-buy-offers { display: flex; flex-wrap: wrap; gap: 6px; }
+.tfb-buy-offer { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 44px; padding: 6px 10px; border: 1px solid var(--at-line-2); border-radius: 10px; background: var(--at-surface); color: var(--at-text); font-size: .9rem; }
+.tfb-buy-offer.is-best { border-color: var(--at-success); background: rgba(46, 125, 79, 0.05); }
+.tfb-buy-offer.is-on { box-shadow: 0 0 0 2px var(--at-primary) inset; border-color: var(--at-primary); }
+.tfb-buy-offer.is-waiting { color: var(--at-muted); border-style: dashed; }
+.tfb-buy-offer.is-add { border-style: dashed; color: var(--at-primary); font-weight: 600; }
+.tfb-buy-offer.is-last { color: var(--at-muted); }
+.tfb-buy-min { padding: 1px 6px; border-radius: 6px; background: var(--at-bg-2); font-size: .78rem; font-weight: 600; color: var(--at-muted); }
+.tfb-buy-min.is-bad { background: rgba(196, 30, 58, 0.10); color: var(--at-danger); }
+.tfb-buy-save { color: var(--at-success); font-weight: 600; }
+.tfb-buy-big { font-size: 1.35rem; }
+.tfb-buy-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; margin-bottom: 8px; border-radius: 10px; background: rgba(242, 201, 160, 0.35); }
+.tfb-buy-hint strong:first-child { color: var(--at-on-abricot); }
+.tfb-buy-hint .btn { min-height: 40px; margin-left: auto; }
+.tfb-buy-oform { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding: 8px; border-radius: 10px; background: var(--at-bg-2); }
+.tfb-buy-oform .form-control, .tfb-buy-oform .form-select { width: auto; min-width: 110px; min-height: 40px; }
+.tfb-buy-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+.tfb-buy-kpi { padding: 12px 14px; border: 1px solid var(--at-line); border-radius: 10px; }
+.tfb-buy-kpi-v { font-size: 26px; font-weight: 600; line-height: 1.2; }
+.tfb-buy-kpi.is-ok .tfb-buy-kpi-v { color: var(--at-success); }
+.tfb-buy-months { margin-top: 12px; }
+.tfb-buy-month { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 8px; margin-bottom: 4px; }
+.tfb-buy-month-bar { display: block; height: 8px; border-radius: 4px; background: var(--at-success); min-width: 2px; }
+.tfb-buy-total td { font-weight: 600; border-top: 2px solid var(--at-line-2); }
+.tfb-buy-res { display: grid; grid-template-columns: minmax(0, 560px); }
+.tfb-buy-table td .btn { min-height: 44px; }

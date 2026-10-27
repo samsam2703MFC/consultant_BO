@@ -112,6 +112,23 @@ final class PriceHistoryService
      * qty (jedn. bazowe, zakupy), ref (numer faktury / zamówienia, źródło zmiany w kartotece), user (kto zmienił kartotekę).
      * @return array<int, list<array>>
      */
+    /**
+     * Zakupy tygodnia : ostatnia cena (za jednostkę bazową) każdego dostawcy każdej pozycji z $months miesięcy.
+     * @return array<int, array<int, array{price:float, day:string, supplier:?string}>> surowiec → dostawca → ostatnia cena
+     */
+    public function lastBySupplier(array $materialIds, int $months = 24): array
+    {
+        if (!$materialIds) return [];
+        $out = [];
+        foreach ($this->points($materialIds, date('Y-m-d', strtotime("-{$months} months"))) as $mid => $pts) {
+            foreach ($pts as $p) {
+                if ($p['supplier_id'] === null || $p['price'] <= 0) continue;
+                $out[$mid][$p['supplier_id']] = ['price' => $p['price'], 'day' => $p['day'], 'supplier' => $p['supplier']];
+            }
+        }
+        return $out;
+    }
+
     private function points(?array $materialIds, string $since, int $excludeInvoice = 0): array
     {
         $out = [];

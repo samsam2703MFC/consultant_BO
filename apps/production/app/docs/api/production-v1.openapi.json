@@ -8353,6 +8353,1141 @@
                 "x-permission": "prod.supply.write"
             }
         },
+        "/supply/buy/week": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zakupy tygodnia : co kupić / Achats de la semaine : quoi acheter",
+                "operationId": "getBuyWeek",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyWeek"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Semaine de production : produits à faire (commandes + réapprovisionnement des stocks, en cartons) ; achats de la semaine s'il y en a (round), sinon proposition : besoin × (1 + réserve) contre stock + en commande, mode stock (jusqu'au max quand on passe sous le min) ou commande, arrondi aux emballages entiers ; dernier prix le moins cher et son fournisseur ; arrivée au prochain jour de livraison habituel. Quantités en unité de base (g, ml, szt) ; unit / factor donnent l'unité affichée (kg, l…) ; prix par unité de base.",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "un jour de la semaine de production (défaut : dans 7 jours)"
+                        }
+                    },
+                    {
+                        "name": "safety",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                5,
+                                10
+                            ],
+                            "description": "réserve en % du besoin (défaut 5)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/buy/rounds": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Krok 1 : utwórz zakupy tygodnia / Étape 1 : créer les achats",
+                "operationId": "createBuyRound",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyRound"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Brouillon avec les lignes choisies ; conditions par défaut : paiement 7 jours, livraison chez nous, réponse sous buy.reply_hours heures. BUY_ROUND_EXISTS (409) : achats déjà ouverts pour la semaine. Quantités en unité de base (g, ml, szt) ; unit / factor donnent l'unité affichée (kg, l…) ; prix par unité de base.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BuyRoundCreateInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/buy/rounds/{id}": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zakupy : pozycje, zapytania, oferty / Achats : lignes, demandes, offres",
+                "operationId": "getBuyRound",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyRound"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Par ligne : fournisseurs demandés (ou fournisseurs de la ligne, 3 au plus), candidats (fournisseurs de la ligne, historique de prix, même catégorie), offres triées par prix, best_offer_id = la moins chère dont le minimum de commande est atteint, hint = la moins chère sous le minimum (quantité pour l'atteindre, semaines couvertes, gain), décision et commande fournisseur.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            },
+            "patch": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Krok 1–2 : pozycje, dostawcy (1–3), warunki / Lignes, fournisseurs (1 à 3), conditions",
+                "operationId": "updateBuyRound",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyRound"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Brouillon seulement (BUY_ROUND_NOT_DRAFT, 409). suppliers : {id de ligne → 1 à 3 fournisseurs} — une demande par fournisseur avec ses lignes (le lien reste le même). Conditions : paiement 7 / 14 / 30 jours ou proforma, livraison ou enlèvement, livraison au plus tard, réponse avant, prix pour le double de la quantité.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BuyRoundUpdateInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            },
+            "delete": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Usuń szkic zakupów / Supprimer le brouillon",
+                "operationId": "deleteBuyRound",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SupplierOrderDeleted"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/buy/rounds/{id}/preview": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Krok 3 : podgląd e-maila do dostawcy / Aperçu du mail au fournisseur",
+                "operationId": "previewBuyRequest",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyPreview"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Modèle buy_request dans la langue du fournisseur (pl, fr, nl, en ; repli pl) : ses lignes seulement, conditions, lien pour saisir les prix sans compte.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "supplier",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "fournisseur de la demande"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/buy/rounds/{id}/send": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Krok 3 : wyślij zapytania / Envoyer les demandes",
+                "operationId": "sendBuyRound",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyRound"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Un e-mail par fournisseur (file de la Communication). BUY_NO_LINES, BUY_LINE_NO_SUPPLIER (une ligne sans fournisseur), BUY_SUPPLIER_NO_EMAIL (422). Les fournisseurs demandés deviennent fournisseurs de la ligne (jusqu'à 3).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/buy/rounds/{id}/remind": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Przypomnij dostawcom bez odpowiedzi / Relancer les fournisseurs sans réponse",
+                "operationId": "remindBuyRound",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyRound"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Même lien ; reminded = nombre de relances. BUY_ROUND_NOT_SENT (409).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/buy/rounds/{id}/offers": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Wpisz ofertę (e-mail, telefon) / Saisir une offre",
+                "operationId": "addBuyOffer",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyRound"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Prix par unité affichée (zł/kg…), minimum de commande (quantité dans l'unité affichée, montant en zł ou texte, ex. « 1 paleta »), date de livraison. Une offre par fournisseur et ligne (une nouvelle saisie la corrige). BUY_LINE_ORDERED : ligne déjà commandée.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BuyOfferInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/buy/rounds/{id}/order": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zamów u wybranych / Commander chez les retenus",
+                "operationId": "orderBuyRound",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyOrderResult"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Par ligne : offer_id (ou null = dernier fournisseur au dernier prix) et quantité. Une commande fournisseur par fournisseur (conditions dans la note) envoyée par e-mail (modèle supplier_order) ; sans adresse elle reste en brouillon dans Zamówienia. Décision : gain = (dernier prix − prix) × quantité. BUY_BELOW_MINIMUM (409) : quantité sous le minimum de l'offre ; BUY_NO_PRICE (422).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BuyOrderInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/buy/rounds/{id}/close": {
+            "post": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Zakończ zakupy / Clôturer les achats",
+                "operationId": "closeBuyRound",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyRound"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Le lien des fournisseurs se ferme ; les lignes non commandées restent sans décision.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
+        "/supply/buy/results": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Wyniki zakupów : operator i zespół / Résultats : opérateur et équipe",
+                "operationId": "getBuyResults",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyResults"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Achats envoyés, e-mails (demandes, relances, commandes), offres, décisions, réussies (moins cher que le dernier prix), gain, marge (gain ÷ ventes WDT en zł, en points), heures dans l'assistant (enregistreur d'activité) × coût horaire (Aktywność) = coût, ROI = gain ÷ coût. team : toute l'équipe avec la permission prod.finance.read (directeur de site).",
+                "parameters": [
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "month",
+                                "quarter",
+                                "year"
+                            ],
+                            "description": "défaut : month (mois, trimestre, année en cours)"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/buy/suppliers": {
+            "get": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Dostawcy pozycji (1–3) / Fournisseurs par article (1 à 3)",
+                "operationId": "listBuyMaterialSuppliers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyMaterialSuppliers"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Articles consommés les buy.supplier_weeks dernières semaines, avec leurs fournisseurs (le moins fourni d'abord) et les fournisseurs actifs.",
+                "parameters": [
+                    {
+                        "name": "missing",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "0",
+                                "1"
+                            ],
+                            "description": "1 : seulement les articles avec moins de 3 fournisseurs"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.read"
+            }
+        },
+        "/supply/buy/materials/{id}/suppliers": {
+            "put": {
+                "tags": [
+                    "supply"
+                ],
+                "summary": "Ustaw dostawców pozycji / Fournisseurs de l'article",
+                "operationId": "saveBuyMaterialSuppliers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BuyMaterialSuppliersSaved"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "1 à 3 fournisseurs actifs, dans l'ordre (BUY_LINE_SUPPLIERS).",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BuyMaterialSuppliersInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.supply.write"
+            }
+        },
         "/supply/invoices": {
             "get": {
                 "tags": [
@@ -31843,6 +32978,1129 @@
                             "accepted",
                             "open"
                         ]
+                    }
+                }
+            },
+            "BuyWeek": {
+                "type": "object",
+                "properties": {
+                    "week": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "weeks": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    },
+                    "missing_suppliers": {
+                        "type": "integer",
+                        "description": "articles consommés avec moins de 3 fournisseurs"
+                    },
+                    "products": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "to_produce": {
+                                    "type": "number"
+                                },
+                                "stock": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "min": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "refill": {
+                                    "type": "number"
+                                },
+                                "orders": {
+                                    "type": "number"
+                                }
+                            },
+                            "description": "en cartons"
+                        }
+                    },
+                    "round": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/BuyRound"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "proposal": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "safety_pct": {
+                                "type": "integer"
+                            },
+                            "totals": {
+                                "type": "object",
+                                "additionalProperties": true
+                            },
+                            "lines": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "material": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        },
+                                        "need": {
+                                            "type": "number"
+                                        },
+                                        "stock": {
+                                            "type": "number",
+                                            "nullable": true
+                                        },
+                                        "on_order": {
+                                            "type": "number"
+                                        },
+                                        "quantity": {
+                                            "type": "number"
+                                        },
+                                        "packages": {
+                                            "type": "integer",
+                                            "nullable": true
+                                        },
+                                        "package_size": {
+                                            "type": "number",
+                                            "nullable": true
+                                        },
+                                        "last": {
+                                            "type": "object",
+                                            "nullable": true,
+                                            "properties": {
+                                                "price": {
+                                                    "type": "number"
+                                                },
+                                                "supplier_id": {
+                                                    "type": "integer"
+                                                },
+                                                "supplier": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "day": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        },
+                                        "selected": {
+                                            "type": "boolean"
+                                        },
+                                        "value": {
+                                            "type": "number",
+                                            "nullable": true
+                                        },
+                                        "arrives": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "BuyRound": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "ZT-2026-44"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "sent",
+                            "ordered",
+                            "closed"
+                        ]
+                    },
+                    "week_start": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "week_end": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "safety_pct": {
+                        "type": "integer",
+                        "enum": [
+                            0,
+                            5,
+                            10
+                        ]
+                    },
+                    "pay_terms": {
+                        "type": "string",
+                        "enum": [
+                            "7",
+                            "14",
+                            "30",
+                            "proforma"
+                        ]
+                    },
+                    "delivery": {
+                        "type": "string",
+                        "enum": [
+                            "delivery",
+                            "pickup"
+                        ]
+                    },
+                    "deliver_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "reply_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "ask_double": {
+                        "type": "boolean"
+                    },
+                    "user": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "sent_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "ordered_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "closed_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "material": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "unit": {
+                                            "type": "string"
+                                        },
+                                        "factor": {
+                                            "type": "number"
+                                        },
+                                        "base_unit": {
+                                            "type": "string"
+                                        },
+                                        "packaging": {
+                                            "type": "boolean"
+                                        },
+                                        "category": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                },
+                                "need": {
+                                    "type": "number"
+                                },
+                                "stock": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "on_order": {
+                                    "type": "number"
+                                },
+                                "quantity": {
+                                    "type": "number"
+                                },
+                                "package_size": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "packages": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "last": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "price": {
+                                            "type": "number"
+                                        },
+                                        "supplier": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "active": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "nullable": true
+                                        },
+                                        "day": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                },
+                                "suppliers": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "email": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "active": {
+                                                "type": "boolean"
+                                            }
+                                        }
+                                    }
+                                },
+                                "assigned": {
+                                    "type": "integer",
+                                    "description": "fournisseurs de l'article (objectif 3)"
+                                },
+                                "candidates": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "email": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "active": {
+                                                "type": "boolean"
+                                            },
+                                            "last_price": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "last_day": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "source": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "assigned",
+                                                    "history",
+                                                    "category"
+                                                ]
+                                            }
+                                        }
+                                    }
+                                },
+                                "offers": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "integer"
+                                            },
+                                            "supplier": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "email": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "active": {
+                                                        "type": "boolean"
+                                                    }
+                                                }
+                                            },
+                                            "price": {
+                                                "type": "number"
+                                            },
+                                            "price_double": {
+                                                "type": "number",
+                                                "nullable": true
+                                            },
+                                            "min_qty": {
+                                                "type": "number",
+                                                "nullable": true,
+                                                "description": "unité affichée"
+                                            },
+                                            "min_value": {
+                                                "type": "number",
+                                                "nullable": true,
+                                                "description": "zł"
+                                            },
+                                            "min_note": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "delivery_date": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "note": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "received",
+                                                    "accepted",
+                                                    "rejected"
+                                                ]
+                                            },
+                                            "manual": {
+                                                "type": "boolean"
+                                            },
+                                            "below_min": {
+                                                "type": "boolean"
+                                            },
+                                            "min_quantity": {
+                                                "type": "number",
+                                                "nullable": true,
+                                                "description": "quantité pour atteindre le minimum (emballages entiers)"
+                                            }
+                                        }
+                                    }
+                                },
+                                "best_offer_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "hint": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                        "offer_id": {
+                                            "type": "integer"
+                                        },
+                                        "quantity": {
+                                            "type": "number",
+                                            "nullable": true
+                                        },
+                                        "extra": {
+                                            "type": "number",
+                                            "nullable": true
+                                        },
+                                        "weeks": {
+                                            "type": "number",
+                                            "nullable": true
+                                        },
+                                        "saving": {
+                                            "type": "number",
+                                            "nullable": true
+                                        }
+                                    }
+                                },
+                                "saving": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "order": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "additionalProperties": true
+                                }
+                            }
+                        }
+                    },
+                    "requests": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "supplier": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "email": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "active": {
+                                            "type": "boolean"
+                                        }
+                                    }
+                                },
+                                "email": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "language": {
+                                    "type": "string"
+                                },
+                                "lines": {
+                                    "type": "integer"
+                                },
+                                "sent_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "opened_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "responded_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "reminded_at": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "link": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "totals": {
+                        "type": "object",
+                        "properties": {
+                            "lines": {
+                                "type": "integer"
+                            },
+                            "value": {
+                                "type": "number"
+                            },
+                            "potential": {
+                                "type": "number"
+                            },
+                            "savings": {
+                                "type": "number"
+                            },
+                            "ordered": {
+                                "type": "integer"
+                            },
+                            "with_offers": {
+                                "type": "integer"
+                            },
+                            "requests": {
+                                "type": "integer"
+                            },
+                            "responded": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    },
+                    "reminded": {
+                        "type": "integer",
+                        "description": "POST …/remind seulement"
+                    }
+                }
+            },
+            "BuyRoundCreateInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "week_start",
+                    "lines"
+                ],
+                "properties": {
+                    "week_start": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "un jour de la semaine de production"
+                    },
+                    "safety_pct": {
+                        "type": "integer",
+                        "enum": [
+                            0,
+                            5,
+                            10
+                        ]
+                    },
+                    "lines": {
+                        "type": "array",
+                        "maxItems": 200,
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "material_id",
+                                "quantity"
+                            ],
+                            "properties": {
+                                "material_id": {
+                                    "type": "integer"
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "description": "unité de base"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "BuyRoundUpdateInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "safety_pct": {
+                        "type": "integer",
+                        "enum": [
+                            0,
+                            5,
+                            10
+                        ]
+                    },
+                    "lines": {
+                        "type": "array",
+                        "maxItems": 200,
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "material_id",
+                                "quantity"
+                            ],
+                            "properties": {
+                                "material_id": {
+                                    "type": "integer"
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "description": "unité de base"
+                                }
+                            }
+                        }
+                    },
+                    "pay_terms": {
+                        "type": "string",
+                        "enum": [
+                            "7",
+                            "14",
+                            "30",
+                            "proforma"
+                        ]
+                    },
+                    "delivery": {
+                        "type": "string",
+                        "enum": [
+                            "delivery",
+                            "pickup"
+                        ]
+                    },
+                    "deliver_by": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "reply_by": {
+                        "type": "string",
+                        "example": "2026-10-28 12:00"
+                    },
+                    "ask_double": {
+                        "type": "boolean"
+                    },
+                    "suppliers": {
+                        "type": "object",
+                        "description": "id de ligne → 1 à 3 id de fournisseurs",
+                        "additionalProperties": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 3,
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                }
+            },
+            "BuyPreview": {
+                "type": "object",
+                "properties": {
+                    "supplier": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "recipient": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "subject": {
+                        "type": "string"
+                    },
+                    "body": {
+                        "type": "string"
+                    },
+                    "link": {
+                        "type": "string"
+                    },
+                    "template_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                }
+            },
+            "BuyOfferInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "line_id",
+                    "supplier_id",
+                    "price"
+                ],
+                "properties": {
+                    "line_id": {
+                        "type": "integer"
+                    },
+                    "supplier_id": {
+                        "type": "integer"
+                    },
+                    "price": {
+                        "type": "number",
+                        "exclusiveMinimum": true,
+                        "minimum": 0,
+                        "description": "zł par unité affichée (kg, l, szt)"
+                    },
+                    "price_double": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "zł par unité affichée pour le double de la quantité"
+                    },
+                    "min_qty": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "minimum de commande, unité affichée"
+                    },
+                    "min_value": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "minimum de commande, zł"
+                    },
+                    "min_note": {
+                        "type": "string",
+                        "maxLength": 60,
+                        "nullable": true,
+                        "example": "1 paleta"
+                    },
+                    "delivery_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true
+                    }
+                }
+            },
+            "BuyOrderInput": {
+                "type": "object",
+                "required": [
+                    "lines"
+                ],
+                "properties": {
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "line_id",
+                                "quantity"
+                            ],
+                            "properties": {
+                                "line_id": {
+                                    "type": "integer"
+                                },
+                                "offer_id": {
+                                    "type": "integer",
+                                    "nullable": true,
+                                    "description": "null : dernier fournisseur au dernier prix"
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "description": "unité de base"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "BuyOrderResult": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/BuyRound"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "orders": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "supplier": {
+                                            "type": "string"
+                                        },
+                                        "sent": {
+                                            "type": "boolean",
+                                            "description": "false : sans adresse e-mail, brouillon dans Zamówienia"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "BuyResults": {
+                "type": "object",
+                "properties": {
+                    "period": {
+                        "type": "string",
+                        "enum": [
+                            "month",
+                            "quarter",
+                            "year"
+                        ]
+                    },
+                    "from": {
+                        "type": "string"
+                    },
+                    "to": {
+                        "type": "string"
+                    },
+                    "revenue": {
+                        "type": "number"
+                    },
+                    "me": {
+                        "type": "object",
+                        "properties": {
+                            "user": {
+                                "type": "object",
+                                "additionalProperties": true
+                            },
+                            "rounds": {
+                                "type": "integer"
+                            },
+                            "emails": {
+                                "type": "integer"
+                            },
+                            "offers": {
+                                "type": "integer"
+                            },
+                            "decisions": {
+                                "type": "integer"
+                            },
+                            "successful": {
+                                "type": "integer"
+                            },
+                            "savings": {
+                                "type": "number"
+                            },
+                            "margin_pp": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "hours": {
+                                "type": "number"
+                            },
+                            "hourly_cost": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "cost": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "roi": {
+                                "type": "number",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "team": {
+                        "type": "array",
+                        "nullable": true,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "user": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                },
+                                "rounds": {
+                                    "type": "integer"
+                                },
+                                "emails": {
+                                    "type": "integer"
+                                },
+                                "offers": {
+                                    "type": "integer"
+                                },
+                                "decisions": {
+                                    "type": "integer"
+                                },
+                                "successful": {
+                                    "type": "integer"
+                                },
+                                "savings": {
+                                    "type": "number"
+                                },
+                                "margin_pp": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "hours": {
+                                    "type": "number"
+                                },
+                                "hourly_cost": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "cost": {
+                                    "type": "number",
+                                    "nullable": true
+                                },
+                                "roi": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    },
+                    "team_total": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "nullable": true
+                    },
+                    "months": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "month": {
+                                    "type": "string"
+                                },
+                                "savings": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    },
+                    "year_savings": {
+                        "type": "number"
+                    }
+                }
+            },
+            "BuyMaterialSuppliers": {
+                "type": "object",
+                "properties": {
+                    "weeks": {
+                        "type": "integer"
+                    },
+                    "missing": {
+                        "type": "integer"
+                    },
+                    "max": {
+                        "type": "integer"
+                    },
+                    "can_write": {
+                        "type": "boolean"
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "category": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "packaging": {
+                                    "type": "boolean"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "factor": {
+                                    "type": "number"
+                                },
+                                "weekly_use": {
+                                    "type": "number"
+                                },
+                                "suppliers": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "email": {
+                                                "type": "string",
+                                                "nullable": true
+                                            },
+                                            "active": {
+                                                "type": "boolean"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "suppliers": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "email": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "BuyMaterialSuppliersInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "supplier_ids"
+                ],
+                "properties": {
+                    "supplier_ids": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 3,
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            },
+            "BuyMaterialSuppliersSaved": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "suppliers": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "email": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "active": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
                     }
                 }
             },

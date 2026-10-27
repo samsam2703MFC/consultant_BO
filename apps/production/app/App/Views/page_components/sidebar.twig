@@ -140,6 +140,14 @@
                     </a>
                 </li>
 
+                {# Zakupy tygodnia : kreator w 3 krokach (co kupić → komu i jak → wyślij), oferty z minimum zamówienia, wyniki operatora i zespołu. #}
+                <li class="sidebar-item">
+                    <a href="{{ root }}/workshop/buy" class="sidebar-link">
+                        <i class="bi bi-basket2"></i>
+                        <span>Zakupy tygodnia</span>
+                    </a>
+                </li>
+
                 {# Finanse (stanowisko Administracja i fakturowanie) : faktury i koszty + koszty usług miesiąca (PageTabs « finance ») #}
                 {% set g = page_tab_groups().finance %}
                 <li class="sidebar-item">
@@ -526,6 +534,11 @@
                 <li><a href="{{ root }}/shipments/differences" data-where="Logistyka › Wysyłki i dokumenty"><i class="bi bi-exclamation-octagon"></i> Niezgodność klienta (NC) z różnicy wysyłki albo problemu dostawy — jedno kliknięcie, termin 7 dni</a></li>
                 <li><a href="{{ root }}/client-complaints/to-ship" data-where="Sprzedaż › Zwroty › Do wysłania"><i class="bi bi-box-arrow-up"></i> Produkty zastępcze do wysłania (reklamacje uznane) : klient, produkt, ilość — « Wysłane » samo po WZ, przypomnienie w kreatorze Wyślij dzień</a></li>
                 <li><a href="{{ root }}/client-orders" data-where="Sprzedaż › Zamówienia klientów"><i class="bi bi-signpost-split"></i> Oś statusu zamówienia z akcją na każdym kroku : wystaw proformę, wyślij proformę, listy produkcyjne, wyślij dzień, dostarczone, różnica, oznacz jako opłaconą</a></li>
+                <li><a href="{{ root }}/workshop/buy" data-where="Zakupy › Zakupy tygodnia"><i class="bi bi-basket2"></i> Cotygodniowe zakupy surowców i opakowań na uzupełnienie stanów (kreator 3 kroki : co kupić, komu i jak, wyślij) — zapas +5 % / +10 %</a></li>
+                <li><a href="{{ root }}/workshop/buy" data-where="Zakupy › Zakupy tygodnia"><i class="bi bi-envelope-paper"></i> Zapytanie ofertowe do dostawców (1 do 3 na pozycję) : płatność 7 / 14 / 30 dni albo proforma, dostawa albo odbiór, cena za podwójną ilość, link do wpisania cen bez logowania</a></li>
+                <li><a href="{{ root }}/workshop/buy#tab=offers" data-where="Zakupy › Zakupy tygodnia"><i class="bi bi-star"></i> Oferty dostawców : najtańsza zaznaczona, minimum zamówienia (ilość, kwota, paleta), oferta wpisana ręcznie, zamów u najtańszych, przypomnienie</a></li>
+                <li><a href="{{ root }}/workshop/buy#tab=results" data-where="Zakupy › Zakupy tygodnia"><i class="bi bi-graph-up-arrow"></i> Wyniki zakupów operatora i zespołu (dyrektor zakładu) : udane zakupy, oszczędność, marża, czas, zwrot (ROI) — miesiąc, kwartał, rok</a></li>
+                <li><a href="{{ root }}/workshop/buy#tab=suppliers" data-where="Zakupy › Zakupy tygodnia"><i class="bi bi-people"></i> Dostawcy pozycji : 1 do 3 dostawców na surowiec, pozycje z mniej niż 3 dostawcami (znajdź dostawców)</a></li>
                 <li><a href="{{ root }}/workshop/supply#tab=stock&inventory=1" data-where="Zakupy › Zaopatrzenie › Surowce i stany"><i class="bi bi-clipboard-check"></i> Arkusz inwentaryzacji surowców na koniec miesiąca (otwórz od razu)</a></li>
                 <li><a href="{{ root }}/cost-calculator" data-where="Analiza › Marże i koszty › Kalkulator kosztów"><i class="bi bi-arrow-repeat"></i> Kalkulator kosztów : « Pobierz z budżetu » (koszty pracowników miesiąca), korekta miesiąca, zamknięty miesiąc zamrożony</a></li>
                 <li><a href="{{ root }}/workshop/supply#tab=stock" data-where="Zakupy › Zaopatrzenie › Surowce i stany"><i class="bi bi-clipboard-check"></i> Inwentaryzacja surowców i opakowań (arkusz do druku, wszystkie policzone ilości, jeden zapis, różnice)</a></li>

@@ -22,7 +22,8 @@ $builder->addDefinitions([
     App\Services\Workshop\Supply\KsefInvoiceSource::class => get(App\Services\Workshop\Supply\KsefPurchaseSource::class),
     // Kolejka « Do obsłużenia » : faktury z podwyżką ceny ponad cenę bazową (parametr opcjonalny — autowiring go pomija).
     App\Services\Client\Order\OrderQueueService::class => autowire()
-        ->constructorParameter('invoices', get(App\Services\Workshop\Supply\InvoiceService::class)),
+        ->constructorParameter('invoices', get(App\Services\Workshop\Supply\InvoiceService::class))
+        ->constructorParameter('buy', get(App\Services\Workshop\Supply\BuyService::class)),
     // SMS do klientów (logistyka) : bez skonfigurowanego dostawcy tylko zapis w historii.
     App\Services\Logistics\Sms\SmsTransport::class => get(App\Services\Logistics\Sms\LogOnlySmsTransport::class),
 

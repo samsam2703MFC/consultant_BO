@@ -48,8 +48,10 @@ class App
 
         // Bez zalogowania dostępne są tylko logowanie (GET/POST /), wylogowanie i ekran tabletu
         // produkcji (/kiosk, /kiosk/scan telefonu : sama powłoka, dane wyłącznie przez API z tokenem tabletu
-        // albo kodem QR z tabletu), tablet kierowcy (/driver) i tablet biurowy (/office) : dane przez API z tokenem tabletu.
-        if (empty($_SESSION['USER']) && !in_array($uri, ['/', '/logout', '/kiosk', '/kiosk/scan', '/driver', '/office', '/tablet/production', '/tablet/office', '/tablet/driver'], true)) {
+        // albo kodem QR z tabletu), tablet kierowcy (/driver) i tablet biurowy (/office) : dane przez API z tokenem tabletu ;
+        // link dostawcy z zapytania ofertowego (/offer/{token}) : formularz cen, token z e-maila.
+        if (empty($_SESSION['USER']) && !in_array($uri, ['/', '/logout', '/kiosk', '/kiosk/scan', '/driver', '/office', '/tablet/production', '/tablet/office', '/tablet/driver'], true)
+            && !preg_match('#^/offer/[a-f0-9]{48}$#', $uri)) {
             if (str_starts_with($uri, '/ajax/')) {
                 http_response_code(401);
                 header('Content-Type: application/json');

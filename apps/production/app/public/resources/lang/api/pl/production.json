@@ -120,7 +120,17 @@
     "SERVICE_MONTH_INCOMPLETE": "Miesiąca nie można zamknąć : do sprawdzenia {open}, brakuje {missing}, bez kwoty PLN {no_amount}.",
     "COST_MONTH_LOCKED": "Miesiąc {month} jest zamknięty w kalkulatorze kosztów — otwórz go tam najpierw.",
     "SERVICE_NOT_MANUAL": "Usunąć można tylko koszt wpisany ręcznie — fakturę z KSeF odrzuć w Zaopatrzeniu.",
-    "SERVICE_MONTH_EMPTY": "Miesiąc {month} nie ma faktur usług — nie ma czego zamknąć."
+    "SERVICE_MONTH_EMPTY": "Miesiąc {month} nie ma faktur usług — nie ma czego zamknąć.",
+    "BUY_ROUND_EXISTS": "Zakupy tego tygodnia już są otwarte ({code}) — otwórz je zamiast tworzyć nowe.",
+    "BUY_ROUND_NOT_DRAFT": "Zakupy zostały już wysłane (status : {status}) — pozycji i dostawców nie można już zmienić.",
+    "BUY_ROUND_NOT_SENT": "Zapytania nie zostały jeszcze wysłane albo zakupy są zakończone (status : {status}).",
+    "BUY_NO_LINES": "Brak pozycji do kupienia — zaznacz co najmniej jedną pozycję.",
+    "BUY_LINE_NO_SUPPLIER": "Pozycje bez dostawcy : {materials} — wybierz od 1 do 3 dostawców na pozycję.",
+    "BUY_SUPPLIER_NO_EMAIL": "Dostawcy bez adresu e-mail : {suppliers} — wpisz adres na karcie dostawcy albo wybierz innego.",
+    "BUY_BELOW_MINIMUM": "{material} : ilość poniżej minimum zamówienia oferty ({minimum}) — zwiększ ilość albo wybierz inną ofertę.",
+    "BUY_NO_TEMPLATE": "Brak szablonu e-maila « buy_request » — dodaj go w Komunikacji → Szablony.",
+    "BUY_LINK_UNKNOWN": "Link jest nieprawidłowy.",
+    "BUY_LINK_EXPIRED": "Termin odpowiedzi minął — link jest zamknięty."
   },
   "field_errors": {
     "REQUIRED": "Pole „{field}” jest wymagane.",
@@ -225,7 +235,11 @@
     "WASTE_QTY_REQUIRED": "Podaj ilość straty do zdjęć.",
     "INVALID_LIST": "Nieprawidłowa lista.",
     "NO_SELLER_NIP": "Faktura bez NIP sprzedawcy — reguła « zawsze dla dostawcy » niemożliwa.",
-    "INVALID_NIP": "Nieprawidłowy NIP (cyfry, opcjonalnie kod kraju)."
+    "INVALID_NIP": "Nieprawidłowy NIP (cyfry, opcjonalnie kod kraju).",
+    "BUY_LINE_SUPPLIERS": "Pole „{field}”: od {min} do {max} dostawców na pozycję.",
+    "BUY_LINE_ORDERED": "Pole „{field}”: ta pozycja jest już zamówiona.",
+    "BUY_NO_PRICE": "Pole „{field}”: {material} nie ma oferty ani ostatniej ceny — wybierz ofertę.",
+    "BUY_DATE_PAST": "Pole „{field}”: data nie może być w przeszłości."
   },
   "fields": {
     "code": "kod",
@@ -507,7 +521,20 @@
     "seller_name": "sprzedawca",
     "seller_nip": "NIP sprzedawcy",
     "total_net": "kwota netto",
-    "total_gross": "kwota brutto"
+    "total_gross": "kwota brutto",
+    "safety_pct": "zapas",
+    "pay_terms": "płatność",
+    "delivery": "dostawa",
+    "deliver_by": "dostawa najpóźniej",
+    "reply_by": "odpowiedź do",
+    "ask_double": "cena za podwójną ilość",
+    "suppliers": "dostawcy",
+    "price_double": "cena za podwójną ilość",
+    "min_qty": "minimum zamówienia (ilość)",
+    "min_value": "minimum zamówienia (zł)",
+    "min_note": "minimum zamówienia (opis)",
+    "line_id": "pozycja",
+    "offer_id": "oferta"
   },
   "entities": {
     "test_product": "produkt testowy",
@@ -540,7 +567,9 @@
     "tour": "trasa",
     "purchase_invoice_rule": "reguła dostawcy",
     "service_invoice": "faktura usługi",
-    "service_month": "miesiąc kosztów usług"
+    "service_month": "miesiąc kosztów usług",
+    "buy_round": "zakupy tygodnia",
+    "supplier": "dostawca"
   },
   "documents": {
     "team_sheet_title": "Plan zespołu",

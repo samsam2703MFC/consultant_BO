@@ -31,6 +31,8 @@ use App\Services\Workshop\Referentiel\AuditTrail;
 final class SupplyService
 {
     public const MODES = ['order', 'stock'];
+    /** Arkusze tygodnia użyte przez ostatnie needs() — Zakupy tygodnia pokazują z nich produkty do uzupełnienia. */
+    private array $lastSheets = [];
     public const STATUSES = ['draft', 'sent', 'partial', 'received', 'cancelled'];
     private const MAX_QTY = 1_000_000_000;
 
@@ -54,12 +56,14 @@ final class SupplyService
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || strtotime($date) === false) throw ApiException::validation([['field' => 'date', 'code' => 'INVALID_DATE', 'params' => []]]);
         if ($weeks < 1 || $weeks > 4) throw ApiException::validation([['field' => 'weeks', 'code' => 'OUT_OF_RANGE', 'params' => ['min' => 1, 'max' => 4]]]);
         $recipes = $this->repo->recipes();
+        $this->lastSheets = [];
         $need = [];
         $products = [];
         $noRecipe = [];
         $periods = [];
         for ($w = 0; $w < $weeks; $w++) {
             $sheet = $this->week->sheet(date('Y-m-d', strtotime($date . ' +' . (7 * $w) . ' days')), $context);
+            $this->lastSheets[$w] = $sheet;
             $periods[] = ['week_start' => $sheet['week_start'], 'week_end' => $sheet['week_end'], 'iso_week' => $sheet['iso_week']];
             foreach ($sheet['rows'] as $r) {
                 if ($r['item_type'] !== 'product' || $r['to_produce'] <= 0) continue;
@@ -100,6 +104,12 @@ final class SupplyService
             ],
             'can_write' => $context->can('prod.supply.write'),
         ];
+    }
+
+    /** @return list<array> arkusze tygodnia ostatniego needs() */
+    public function lastSheets(): array
+    {
+        return array_values($this->lastSheets);
     }
 
     /**

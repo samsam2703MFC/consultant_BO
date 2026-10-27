@@ -22,7 +22,7 @@ final class PageAccess
         'production' => ['Produkcja (arkusz, plan tygodnia, plan zespołów, stany, ruchy magazynowe, partie, śledzenie, niezgodności, stanowiska, tabela do wypełnienia)', 'Produkcja',
             ['/workshop/sheet', '/workshop/gantt', '/workshop/team-sheet', '/stock', '/workshop/stock-movements', '/workshop/traceability', '/production', '/purchasing/nc', '/workshop/workstations', '/workshop/data-sheet'], false],
         'tablet' => ['Tablety : zarządzanie (tablety, PIN, czas pracy, zatwierdzenia produkcji)', 'Tablety', ['/workshop/execution', '/workshop/timesheet', '/workshop/production-days'], false],
-        'supply' => ['Zaopatrzenie (zapotrzebowanie, zamówienia, faktury, stan)', 'Zakupy', ['/workshop/supply'], false],
+        'supply' => ['Zaopatrzenie (zapotrzebowanie, zakupy tygodnia, zamówienia, faktury, stan)', 'Zakupy', ['/workshop/supply', '/workshop/buy'], false],
         'purchasing' => ['Koszty surowców, oferty i zapytania', 'Zakupy', ['/purchasing'], false],
         'supplier_prices' => ['Ceny surowców i dostawcy', 'Zakupy', ['/materials/prices', '/material-suppliers'], false],
         'ksef_purchases' => ['Faktury zakupowe KSeF (pobieranie) i archiwum dostaw', 'Zakupy', ['/settings/ksef/purchase-invoices', '/purchases'], false],

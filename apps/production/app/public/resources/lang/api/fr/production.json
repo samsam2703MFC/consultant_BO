@@ -120,7 +120,17 @@
     "SERVICE_MONTH_INCOMPLETE": "Mois impossible à clôturer : à vérifier {open}, manquants {missing}, sans montant PLN {no_amount}.",
     "COST_MONTH_LOCKED": "Le mois {month} est fermé dans le calculateur de coûts — rouvrez-le d’abord.",
     "SERVICE_NOT_MANUAL": "Seul un coût saisi à la main se supprime — une facture KSeF se rejette dans Zaopatrzenie.",
-    "SERVICE_MONTH_EMPTY": "Le mois {month} n’a aucune facture de service — rien à clôturer."
+    "SERVICE_MONTH_EMPTY": "Le mois {month} n’a aucune facture de service — rien à clôturer.",
+    "BUY_ROUND_EXISTS": "Les achats de cette semaine sont déjà ouverts ({code}) — ouvrez-les au lieu d'en créer de nouveaux.",
+    "BUY_ROUND_NOT_DRAFT": "Les achats sont déjà envoyés (statut : {status}) — les lignes et les fournisseurs ne se modifient plus.",
+    "BUY_ROUND_NOT_SENT": "Les demandes ne sont pas encore envoyées ou les achats sont clôturés (statut : {status}).",
+    "BUY_NO_LINES": "Aucune ligne à acheter — cochez au moins une ligne.",
+    "BUY_LINE_NO_SUPPLIER": "Lignes sans fournisseur : {materials} — choisissez 1 à 3 fournisseurs par ligne.",
+    "BUY_SUPPLIER_NO_EMAIL": "Fournisseurs sans adresse e-mail : {suppliers} — ajoutez l'adresse sur la fiche fournisseur ou choisissez-en un autre.",
+    "BUY_BELOW_MINIMUM": "{material} : quantité sous le minimum de commande de l'offre ({minimum}) — augmentez la quantité ou choisissez une autre offre.",
+    "BUY_NO_TEMPLATE": "Modèle d'e-mail « buy_request » manquant — ajoutez-le dans Communication → Modèles.",
+    "BUY_LINK_UNKNOWN": "Ce lien n'est pas valable.",
+    "BUY_LINK_EXPIRED": "Le délai de réponse est passé — le lien est fermé."
   },
   "field_errors": {
     "REQUIRED": "Le champ « {field} » est obligatoire.",
@@ -225,7 +235,11 @@
     "WASTE_QTY_REQUIRED": "Indiquez la quantité perdue pour ces photos.",
     "INVALID_LIST": "Liste invalide.",
     "NO_SELLER_NIP": "Facture sans NIP du vendeur — règle « toujours pour ce fournisseur » impossible.",
-    "INVALID_NIP": "NIP invalide (chiffres, code pays facultatif)."
+    "INVALID_NIP": "NIP invalide (chiffres, code pays facultatif).",
+    "BUY_LINE_SUPPLIERS": "Champ « {field} » : de {min} à {max} fournisseurs par ligne.",
+    "BUY_LINE_ORDERED": "Champ « {field} » : cette ligne est déjà commandée.",
+    "BUY_NO_PRICE": "Champ « {field} » : {material} n'a ni offre ni dernier prix — choisissez une offre.",
+    "BUY_DATE_PAST": "Champ « {field} » : la date ne peut pas être dans le passé."
   },
   "fields": {
     "code": "code",
@@ -507,7 +521,20 @@
     "seller_name": "vendeur",
     "seller_nip": "NIP du vendeur",
     "total_net": "montant net",
-    "total_gross": "montant brut"
+    "total_gross": "montant brut",
+    "safety_pct": "réserve",
+    "pay_terms": "paiement",
+    "delivery": "livraison",
+    "deliver_by": "livraison au plus tard",
+    "reply_by": "réponse avant",
+    "ask_double": "prix pour le double",
+    "suppliers": "fournisseurs",
+    "price_double": "prix pour le double",
+    "min_qty": "minimum de commande (quantité)",
+    "min_value": "minimum de commande (zł)",
+    "min_note": "minimum de commande (texte)",
+    "line_id": "ligne",
+    "offer_id": "offre"
   },
   "entities": {
     "test_product": "produit test",
@@ -540,7 +567,9 @@
     "tour": "tournée",
     "purchase_invoice_rule": "règle fournisseur",
     "service_invoice": "facture de service",
-    "service_month": "mois des coûts de services"
+    "service_month": "mois des coûts de services",
+    "buy_round": "achats de la semaine",
+    "supplier": "fournisseur"
   },
   "documents": {
     "team_sheet_title": "Plan de l'équipe",

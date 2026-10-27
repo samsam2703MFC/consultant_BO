@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Core\Routes\Api;
 
 use App\Controllers\Api\Workshop\AuthController;
+use App\Controllers\Api\Workshop\BuyController;
 use App\Controllers\Api\Workshop\DataSheetController;
 use App\Controllers\Api\Workshop\DeliveryController;
 use App\Controllers\Api\Workshop\DriverController;
@@ -159,6 +160,21 @@ final class WorkshopApiRoutes
             ['POST', '/supply/orders/{id:\d+}/cancel', SupplyController::class, 'cancel', 'prod.supply.write'],
             ['DELETE', '/supply/orders/{id:\d+}', SupplyController::class, 'delete', 'prod.supply.write'],
             // Kontrola faktur zakupowych : KSeF / XML / PDF, przypisania nazw dostawcy, porównanie z zamówieniem.
+            // Zakupy tygodnia : co kupić, zapytania ofertowe (1–3 dostawców na pozycję), oferty z minimum zamówienia, zamówienie, wyniki.
+            ['GET', '/supply/buy/week', BuyController::class, 'week', 'prod.supply.read'],
+            ['POST', '/supply/buy/rounds', BuyController::class, 'create', 'prod.supply.write'],
+            ['GET', '/supply/buy/rounds/{id:\d+}', BuyController::class, 'detail', 'prod.supply.read'],
+            ['PATCH', '/supply/buy/rounds/{id:\d+}', BuyController::class, 'update', 'prod.supply.write'],
+            ['DELETE', '/supply/buy/rounds/{id:\d+}', BuyController::class, 'delete', 'prod.supply.write'],
+            ['GET', '/supply/buy/rounds/{id:\d+}/preview', BuyController::class, 'preview', 'prod.supply.read'],
+            ['POST', '/supply/buy/rounds/{id:\d+}/send', BuyController::class, 'send', 'prod.supply.write'],
+            ['POST', '/supply/buy/rounds/{id:\d+}/remind', BuyController::class, 'remind', 'prod.supply.write'],
+            ['POST', '/supply/buy/rounds/{id:\d+}/offers', BuyController::class, 'addOffer', 'prod.supply.write'],
+            ['POST', '/supply/buy/rounds/{id:\d+}/order', BuyController::class, 'order', 'prod.supply.write'],
+            ['POST', '/supply/buy/rounds/{id:\d+}/close', BuyController::class, 'close', 'prod.supply.write'],
+            ['GET', '/supply/buy/results', BuyController::class, 'results', 'prod.supply.read'],
+            ['GET', '/supply/buy/suppliers', BuyController::class, 'suppliers', 'prod.supply.read'],
+            ['PUT', '/supply/buy/materials/{id:\d+}/suppliers', BuyController::class, 'saveSuppliers', 'prod.supply.write'],
             ['GET', '/supply/invoices', InvoiceController::class, 'list', 'prod.supply.read'],
             ['POST', '/supply/invoices/ksef/search', InvoiceController::class, 'ksefSearch', 'prod.supply.read'],
             ['POST', '/supply/invoices/ksef/import', InvoiceController::class, 'ksefImport', 'prod.supply.write'],

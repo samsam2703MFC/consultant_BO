@@ -45,6 +45,7 @@ class CommunicationService
         'price_list' => 'Nowy cennik klienta (automatyczne, po zmianie cen)',
         'monthly_report' => 'Raport miesięczny : podsumowanie sprzedaży i cel obrotu (automatyczne)',
         'management_report' => 'Raport miesięczny zarządu : rentowność, marża, reklamacje (PDF, wewnętrzny)',
+        'buy_request' => 'Zakupy tygodnia : zapytanie ofertowe do dostawcy (pozycje, warunki, link do cen)',
     ];
 
     public function __construct(

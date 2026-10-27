@@ -3,7 +3,7 @@
 Une seule base, **`erp`** (serveur de test : l'ancienne base `erp_production` y a été déplacée le 24/10/2026 par `deploy/server.sh`, données gardées).
 
 - **121 tables d'origine** de l'ERP SL Food : noms inchangés (131 avant le nettoyage du 24/10/2026, qui a supprimé les 10 copies de sauvegarde).
-- **116 tables ajoutées** pendant le développement : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
+- **147 tables ajoutées** pendant le développement (27/10/2026) : toutes préfixées **`n_`** (« nouveau »), jusqu'à la migration 069 elles s'appelaient `tfb_…`. Elles se reconnaissent d'un coup d'œil pour l'intégration.
 
 ## Installer / intégrer
 
@@ -16,7 +16,7 @@ Sur une base ERP d'origine (copie de production) : `php Bin/tfb_migrate.php appl
 | `customer` | colonne ajoutée `communication_lang CHAR(2)` (langue des e-mails / SMS : pl, fr, nl, en), remplie d'après la langue des documents et le pays | 060 |
 | `document_wdt` | index `idx_document_wdt_established` (`established_date`) | 019 |
 | `document_wdt_product` | index `idx_document_wdt_product_document` (`id_document_wdt`) | 019 |
-| `communication_template` | 84 modèles d'e-mails ajoutés (logistique, factures, proforma, rappels, avis de livraison, distribution ; fr, nl, pl) | 006, 061–066 |
+| `communication_template` | 84 modèles d'e-mails ajoutés (logistique, factures, proforma, rappels, avis de livraison, distribution ; fr, nl, pl) ; 4 modèles `buy_request` (demande d'offre des achats de la semaine : pl, fr, nl, en) | 006, 061–066, 118 |
 | `final_product` | `stock_minimum` aligné sur le stock min. des fiches MTS ; `pre_calculated_raw_price_per_carton` = coût de la recette | 034, 057 |
 | `raw_material` | catégories inexistantes corrigées (matières rattachées à une catégorie existante) | 021 |
 | `document_proforma` | statut `archived` pour les proformas de plus de 90 jours sans paiement ni annulation | 072 |
@@ -42,6 +42,30 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 ### Tablette chauffeur (migration 082, 26/10/2026)
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
+
+### Achats de la semaine : demandes d'offres, offres avec minimum, gains (migration 118, 27/10/2026)
+
+- `n_material_supplier` : fournisseurs d'un article (matière ou emballage), **1 à 3** (`sort`, `source` : `history` = rempli
+  d'après le fournisseur actuel, les factures, commandes et offres des 24 derniers mois ; `manual` ; `round` = fournisseur
+  demandé dans un achat). Moins de 3 fournisseurs sur un article consommé ces `buy.supplier_weeks` semaines = tâche
+  « trouver des fournisseurs » (Zakupy, Do obsłużenia).
+- `n_buy_round` : achats d'une semaine de production (code `ZT-AAAA-SS`, statut `draft` → `sent` → `ordered` → `closed`,
+  réserve 0 / 5 / 10 %, paiement 7 / 14 / 30 jours ou proforma, livraison ou enlèvement, livraison au plus tard, réponse
+  avant, prix pour le double, opérateur). `n_buy_line` : article à acheter (besoin, stock, en commande, quantité en
+  emballages entiers, dernier prix le moins cher et son fournisseur), en unité de base.
+- `n_buy_request` / `n_buy_request_line` : demande à un fournisseur avec seulement ses articles, langue, e-mail (file de la
+  Communication, modèle `buy_request`), lien sans compte (`token`, 48 caractères hexadécimaux, `/offer/{token}`, valable
+  jusqu'à la date de réponse + `buy.link_days` jours), ouverture, réponse, relances.
+- `n_mp_offer` reçoit `source = weekly`, `id_buy_line`, `price_double_base` (prix pour le double), `min_value` (minimum en
+  zł) et `min_note` (minimum en texte, ex. « 1 paleta ») à côté de `min_order_qty` (minimum en unité affichée), et
+  `delivery_date`.
+- `n_buy_order` : décision par article (offre ou dernier fournisseur, quantité, prix, dernier prix, **gain** = (dernier prix −
+  prix) × quantité, commande fournisseur `n_po`, opérateur) — source des résultats (mois / trimestre / année) : achats
+  réussis, gain, marge (gain ÷ ventes WDT en zł), temps dans l'assistant (`n_activity_view`, route `/workshop/buy`) × coût
+  horaire (`n_user_cost`) → retour.
+- Tâches du poste ZAKUPY : achats de la semaine (lundi) et fournisseurs par article (mercredi). Paramètres
+  `buy.reply_hours`, `buy.link_days`, `buy.supplier_weeks`. Pages : Zakupy › Zakupy tygodnia (`/workshop/buy`) ; page
+  fournisseur sans compte `/offer/{token}`.
 
 ### Poczta : traducteur DeepL et pieds de mail (migration 117, 27/10/2026)
 
