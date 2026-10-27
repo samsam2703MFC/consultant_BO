@@ -1,5 +1,13 @@
 # Résultat › Jour : cliquer un magasin ouvre son dashboard
 
+**Statut : maquette A retenue et codée le 27/10/2026**, avec trois choix.
+Le dashboard s'ouvre dans un **nouvel onglet**, en vue **`ops`**, et
+**seulement sur l'onglet Jour** : les lignes de Semaine et Mois ne changent pas.
+Le code est dans `public/assets/js/app.js` (`valsResultatJour`, `ouvrir` et
+`deplier` des lignes), dans `public/assets/js/templates.js` (`tplResultatJour`)
+et dans `public/assets/css/app.css` (bloc « la ligne ouvre le dashboard du
+magasin »). La maquette B reste ici pour mémoire.
+
 Demande du 27/10/2026 : « au clic sur la ligne du magasin, je dois être redirigé
 sur le dashboard avec l'id magasin » —
 `…/dashboard/?shop=4&vue=ops&date=2026-10-27`.
@@ -52,15 +60,12 @@ L'écran actuel ne change pas, mais la ligne seule ne mène pas au dashboard.
 - La ligne Réseau et les lignes d'un magasin fermé ne mènent nulle part, ou
   au dashboard sans chiffres pour un magasin fermé (à trancher).
 
-## À trancher
+## Tranché le 27/10/2026
 
-- **A ou B.**
-- Même onglet (A) ou nouvel onglet (B) : chaque option peut prendre l'autre
-  comportement.
-- `vue=ops` (Opérationnel) ou `vue=jour` (le compte du jour, plus proche de
-  l'écran Résultat) ?
-- Le même clic sur les lignes des onglets **Semaine** et **Mois** : par exemple
-  `vue=semaine` / `vue=mois` à la date regardée ?
+- **A.**
+- **Nouvel onglet**, comme « Dashboard magasin ↗ » du menu.
+- **`vue=ops`**.
+- **Onglet Jour seulement** : Semaine et Mois gardent leur clic actuel.
 
 ## Regénérer les captures
 

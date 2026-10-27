@@ -8011,9 +8011,10 @@ class App {
   /* --- planogramme : le comptoir, ses emplacements, ses consignes ------------ */
 
   /* --- résultat du jour ------------------------------------------------------
-   * Une journée, tous les magasins, un compte de résultat par ligne. Ouvrir une
-   * ligne déplie le détail du magasin : cascade du résultat, ventilation par
-   * catégorie, indicateurs de vente et place du jour dans le mois.
+   * Une journée, tous les magasins, un compte de résultat par ligne. Cliquer une
+   * ligne ouvre le dashboard du magasin (nouvel onglet) ; le ▸ devant le nom
+   * déplie ici son détail : cascade du résultat, ventilation par catégorie,
+   * indicateurs de vente et place du jour dans le mois.
    *
    * Lecture paresseuse et cache PAR DATE : reculer d'un jour puis revenir ne
    * redemande rien au panel — chaque date coûte une volée d'appels.
@@ -10323,8 +10324,16 @@ class App {
         // Objectif passé : la ligne le porte, l'écran s'en sert pour le feu.
         avecObjectif: !!m.ouvert && m.objectifAtteinte != null,
         atteint: !!m.ouvert && m.objectifAtteinte != null && m.objectifAtteinte >= 1,
-        // Une ligne fermée reste cliquable : le détail dira pourquoi elle l'est.
-        ouvrir: () => this.setState({ rjSel: actif ? null : m.shopId }),
+        // La ligne ouvre le DASHBOARD du magasin, vue Opérationnel, à la date
+        // regardée, dans un nouvel onglet (demande du 27/10/2026, maquette A de
+        // docs/maquettes/resultat-vers-dashboard). Adresse relative, comme
+        // « Dashboard magasin ↗ » du menu : elle suit le cockpit où qu'il soit servi.
+        ouvrir: () => window.open('dashboard/?shop=' + encodeURIComponent(m.shopId) + '&vue=ops&date=' + jour, '_blank', 'noopener'),
+        dashTitre: 'Ouvrir le dashboard de ' + m.magasin + ' — opérationnel du ' + this.fD(jour) + ', nouvel onglet',
+        // Le compte de résultat du magasin se déplie au ▸ devant le nom. Une
+        // ligne fermée le garde : le détail dira pourquoi elle l'est.
+        deplier: () => this.setState({ rjSel: actif ? null : m.shopId }),
+        deplierTitre: actif ? 'Replier le compte de résultat' : 'Compte de résultat du jour, sous le tableau',
         // Cliquer la sparkline ouvre la MODALE du CA heure par heure — la
         // délégation prend le data-h le plus proche, la ligne ne bascule pas.
         voirHeures: (m.heures || []).some(h2 => h2.ca > 0)

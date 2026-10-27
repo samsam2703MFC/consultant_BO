@@ -308,6 +308,24 @@ button.rj-on .rj-ok { background: rgba(255,255,255,.92); color: var(--color-prim
    boulanger du coin qui s'est déclaré une enseigne. */
 .wz-t .mq { display: block; font: 400 9.5px var(--font-ui); color: var(--color-text-muted); font-style: normal; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* --- Résultat › Jour : la ligne ouvre le dashboard du magasin ----------------
+   Au survol, un filet rubis à gauche, le nom souligné, la flèche allumée en
+   bout de ligne. Le ▸ devant le nom est un vrai bouton (il déplie le compte de
+   résultat), la mini-courbe ouvre ses heures : sur eux, la ligne ne promet pas
+   le dashboard. */
+.rj-ligne:hover > td:first-child { box-shadow: inset 3px 0 0 var(--color-primary); }
+.rj-ligne:hover .rj-nom { color: var(--color-primary); text-decoration: underline; text-underline-offset: 3px; }
+.rj-go { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+  border-radius: 50%; padding-bottom: 2px; font-size: 19px; line-height: 1; color: var(--color-border-secondary); }
+.rj-ligne:hover .rj-go { background: var(--color-primary); color: #fff; font-size: 17px; }
+.rj-ligne:has(.rj-chev:hover, .rj-heures:hover) .rj-go { background: none; color: var(--color-border-secondary); font-size: 19px; }
+.rj-ligne:has(.rj-chev:hover, .rj-heures:hover) .rj-nom { color: inherit; text-decoration: none; }
+.rj-chev { display: inline-flex; align-items: center; justify-content: center; width: 19px; height: 19px;
+  padding: 0; margin-right: 8px; vertical-align: 1px; border: 0.5px solid var(--color-border-secondary);
+  border-radius: 6px; background: var(--color-surface); font-family: var(--font-ui); font-size: 8.5px;
+  color: var(--color-text-muted); cursor: pointer; }
+.rj-chev:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
 /* --- Résultat : l'objectif passé -------------------------------------------
    Un petit feu sur la ligne du magasin, une pluie de papiers quand c'est tout
    le réseau. Décoratif et sans pointeur : le tableau reste lisible dessous, et
