@@ -1,0 +1,177 @@
+{% extends "layouts/base.twig" %}
+
+{% set p = sheet.position %}
+{% block title %}Karta stanowiska · {{ p.name_pl }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Karta stanowiska : {{ p.name_pl }}</h3>
+            <p class="text-subtitle text-muted">Fiche de poste : {{ p.name_fr }} · {{ p.code }} · {{ p.kind_label[0] }}{{ p.group ? ' · ' ~ p.group.name_pl : '' }}{{ p.active ? '' : ' · nieaktywne' }}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/organization/positions"><i class="bi bi-arrow-left"></i> Stanowiska</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/organization/positions/{{ p.id }}/sheet.pdf?lang=pl" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF PL</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/organization/positions/{{ p.id }}/sheet.pdf?lang=fr" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF FR</a>
+            <button type="button" class="btn btn-primary" data-edit-toggle><i class="bi bi-pencil"></i> Edytuj kartę</button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-org at-sheet">
+    <div class="card">
+        <div class="card-body d-flex flex-wrap gap-3 align-items-center justify-content-between">
+            <div>
+                {% if not sheet.filled %}
+                    <span class="badge bg-warning text-dark">Karta pusta — do wypełnienia</span>
+                {% elseif sheet.validated_at %}
+                    <span class="badge bg-success">Wersja {{ sheet.version }} · zatwierdzona {{ sheet.validated_at|date('d.m.Y') }}{{ sheet.validated_by_name ? ' (' ~ sheet.validated_by_name ~ ')' : '' }}</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">Wersja {{ sheet.version }} · do zatwierdzenia</span>
+                {% endif %}
+                {% if sheet.updated_at %}<span class="at-sub ms-2">Zmiana : {{ sheet.updated_at|date('d.m.Y H:i') }}{{ sheet.updated_by_name ? ' · ' ~ sheet.updated_by_name : '' }}</span>{% endif %}
+            </div>
+            {% if sheet.filled and not sheet.validated_at %}
+                <button type="button" class="btn btn-success btn-sm" data-validate><i class="bi bi-check2-circle"></i> Zatwierdź wersję {{ sheet.version }}</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Organizacja · Organisation</h4></div>
+        <div class="card-body pt-0">
+            <form id="sheetMeta" class="at-purch-form">
+                <label class="at-purch-label">Rodzaj · Type
+                    <select class="form-select" name="kind">{% for k, l in kinds %}<option value="{{ k }}" {{ p.kind == k ? 'selected' : '' }}>{{ l[0] }} · {{ l[1] }}</option>{% endfor %}</select></label>
+                <label class="at-purch-label">Grupa produkcji · Groupe
+                    <select class="form-select" name="group_id" data-nullable><option value="">— brak —</option>{% for g in groups %}<option value="{{ g.id }}" {{ p.id_group == g.id ? 'selected' : '' }}>{{ g.name_pl }}</option>{% endfor %}</select></label>
+                <label class="at-purch-label">Przełożony · Responsable
+                    <select class="form-select" name="reports_to_id" data-nullable><option value="">— dyrekcja —</option>{% for o in positions %}{% if o.id != p.id %}<option value="{{ o.id }}" {{ p.id_reports_to == o.id ? 'selected' : '' }}>{{ o.name_pl }}</option>{% endif %}{% endfor %}</select></label>
+                <div class="at-purch-actions"><span></span><button class="btn btn-primary" type="submit">Zapisz</button></div>
+            </form>
+            <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                    <div class="at-sub mb-1">Podległe stanowiska · Postes rattachés</div>
+                    <div class="at-chips">{% for s in sheet.subordinates %}<a class="at-chip" href="{{ root }}/organization/positions/{{ s.id }}">{{ s.name_pl }}</a>{% else %}<span class="at-sub">—</span>{% endfor %}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="at-sub mb-1">Użytkownicy ERP · Utilisateurs ERP</div>
+                    <div class="at-chips">{% for u in sheet.users %}<a class="at-chip" href="{{ root }}/organization/users/{{ u.id }}"><i class="bi bi-person"></i> {{ u.displayed_name ?: u.login }}</a>{% else %}<span class="at-sub">—</span>{% endfor %}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Pracownicy produkcji na stanowisku · Salariés de l’atelier</h4>
+            <p class="at-sub mb-0">Zaznacz osoby, które pracują na tym stanowisku (np. piekarze, kierowcy). Osoba ma jedno stanowisko.</p></div>
+        <div class="card-body pt-0">
+            <form id="sheetEmployees">
+                <input type="search" class="form-control form-control-sm mb-2" placeholder="Szukaj osoby…" data-employee-filter aria-label="Szukaj osoby" style="max-width: 280px">
+                <div class="at-sheet-people">
+                    {% for e in employees %}
+                        <label class="form-check" data-name="{{ (e.surname ~ ' ' ~ e.name)|lower }}">
+                            <input class="form-check-input" type="checkbox" name="employee_ids[]" value="{{ e.production_employee_id }}" {{ e.id_position == p.id ? 'checked' : '' }}>
+                            {{ e.surname }} {{ e.name }}{% if e.id_position and e.id_position != p.id %}<span class="at-sub"> · inne stanowisko</span>{% endif %}
+                        </label>
+                    {% else %}
+                        <span class="at-sub">Brak pracowników produkcji w ERP.</span>
+                    {% endfor %}
+                </div>
+                <div class="mt-2"><button class="btn btn-primary btn-sm" type="submit">Zapisz osoby ({{ sheet.employees|length }})</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between flex-wrap gap-2 align-items-center">
+            <h4 class="card-title mb-0">Treść karty · Contenu de la fiche</h4>
+            {% if sheet.manager_module %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}/workshop/manager"><i class="bi bi-person-badge"></i> Pełna karta z celami i premią</a>{% endif %}
+        </div>
+        <div class="card-body pt-0">
+            <div data-view>
+                {% for field, l in labels %}
+                    {% set t = sheet.texts[field] %}
+                    <h5 class="at-sheet-title">{{ l[0] }} <span class="at-sub">· {{ l[1] }}</span></h5>
+                    <div class="row g-3 mb-3">
+                        {% for lang in ['pl', 'fr'] %}
+                        <div class="col-md-6">
+                            {% if t[lang] is empty %}<span class="at-sub">—</span>
+                            {% elseif field == 'mission' %}<p class="mb-0">{{ t[lang]|join(' ') }}</p>
+                            {% else %}<ul class="mb-0">{% for line in t[lang] %}<li>{{ line }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+            <form id="sheetTexts" data-edit hidden>
+                <p class="at-sub">Jedna linia = jeden punkt. Zapis tworzy nową wersję karty do zatwierdzenia. · Une ligne = un point.</p>
+                {% for field, l in labels %}
+                    <h5 class="at-sheet-title">{{ l[0] }} <span class="at-sub">· {{ l[1] }}</span></h5>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><textarea class="form-control" name="{{ field }}_pl" rows="{{ field == 'mission' ? 3 : 5 }}" maxlength="4000" data-nullable aria-label="{{ l[0] }} (PL)">{{ sheet.texts[field].pl_raw }}</textarea></div>
+                        <div class="col-md-6"><textarea class="form-control" name="{{ field }}_fr" rows="{{ field == 'mission' ? 3 : 5 }}" maxlength="4000" data-nullable aria-label="{{ l[1] }} (FR)">{{ sheet.texts[field].fr_raw }}</textarea></div>
+                    </div>
+                {% endfor %}
+                <div class="d-flex gap-2"><button class="btn btn-primary" type="submit">Zapisz kartę</button><button class="btn btn-outline-secondary" type="button" data-edit-toggle>Anuluj</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h4 class="card-title">Zadania cykliczne · Tâches récurrentes</h4><p class="at-sub mb-0">Z listy « Moje zadania » — edycja na stronie Stanowiska i zadania.</p></div>
+                <div class="card-body pt-0">
+                    {% for task in sheet.tasks %}
+                        <div class="d-flex justify-content-between gap-2 border-bottom py-1"><span>{{ task.title_pl }}</span><span class="at-sub text-nowrap">{{ task.frequency[0] }}</span></div>
+                    {% else %}<span class="at-sub">Brak zadań cyklicznych.</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h4 class="card-title">Strony ERP stanowiska · Pages de l’ERP</h4><p class="at-sub mb-0">Uprawnienia funkcji (administrator).</p></div>
+                <div class="card-body pt-0">
+                    <div class="at-chips">{% for page in sheet.pages %}<span class="at-chip">{{ page }}</span>{% else %}<span class="at-sub">{{ p.kind == 'atelier' ? 'Stanowisko pracowni : tablet produkcji lub tablet kierowcy.' : 'Brak przypisanych stron.' }}</span>{% endfor %}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const id = {{ p.id }};
+    const reload = (res) => { at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd')); if (res.ok) setTimeout(() => location.reload(), 600); };
+    document.querySelectorAll('[data-edit-toggle]').forEach(b => b.addEventListener('click', () => {
+        const form = document.querySelector('[data-edit]');
+        form.hidden = !form.hidden;
+        document.querySelector('[data-view]').hidden = !form.hidden;
+        if (!form.hidden) form.scrollIntoView({behavior: 'smooth', block: 'start'});
+    }));
+    const submit = (formId, url, method) => {
+        const form = document.getElementById(formId);
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            at.clearErrors(form);
+            at.send(url, method, at.formData(form)).then(res => res.ok ? reload(res) : at.showErrors(form, res));
+        });
+    };
+    submit('sheetMeta', `/ajax/organization/positions/${id}/sheet`, 'PUT');
+    submit('sheetTexts', `/ajax/organization/positions/${id}/sheet`, 'PUT');
+    submit('sheetEmployees', `/ajax/organization/positions/${id}/employees`, 'PUT');
+    const validate = document.querySelector('[data-validate]');
+    if (validate) validate.addEventListener('click', () => at.send(`/ajax/organization/positions/${id}/sheet/validate`, 'POST', {}).then(reload));
+    const filter = document.querySelector('[data-employee-filter]');
+    if (filter) filter.addEventListener('input', () => {
+        const q = filter.value.trim().toLowerCase();
+        document.querySelectorAll('.at-sheet-people [data-name]').forEach(l => { l.hidden = q !== '' && !l.dataset.name.includes(q); });
+    });
+})();
+</script>
+{% endblock %}

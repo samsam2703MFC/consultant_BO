@@ -204,6 +204,10 @@ function vcConformiteMagasin(int $sid, int $jours = 30): array
                 'auComptoir' => isset($comptoir['refs'][$p['ref']])];
         }
         usort($manquantes, static fn ($a, $b) => ($b['auComptoir'] <=> $a['auComptoir']) ?: strcmp($a['nom'], $b['nom']));
+        // Toutes les obligatoires exigées (26/10/2026) : la tablette les reprend dans le module Produit, une par une, avec
+        // un Oui / Non du consultant ; `vue` dit si la caisse l'a vendue sur la fenêtre (null : pas d'identifiant de caisse).
+        $assort['toutes'] = array_map(static fn ($p) => ['ref' => (string) $p['ref'], 'nom' => (string) $p['nom'],
+            'vue' => $p['pwa'] === null ? null : isset($vendues[$p['pwa']]), 'auComptoir' => isset($comptoir['refs'][$p['ref']])], $obl);
         $assort['manquantes'] = count($manquantes);
         $assort['liste'] = array_slice($manquantes, 0, 40);
         $assort['sansIdentifiant'] = $sansId;

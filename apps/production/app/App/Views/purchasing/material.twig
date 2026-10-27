@@ -1,0 +1,184 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ m.name }} · koszty{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>{{ m.name }}</h3>
+            <p class="text-subtitle text-muted">
+                <a href="{{ root }}/purchasing">Koszty surowców</a> ·
+                {{ m.price|number_format(2, ',', ' ') }} zł/{{ m.unit }} · {{ m.supplier ?: 'brak dostawcy' }} ·
+                opakowanie {{ m.pack_size|number_format(2, ',', ' ') }} {{ m.unit }}
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/purchasing/offers?material={{ m.id }}"><i class="bi bi-plus"></i> Oferta</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/purchasing/tenders?materials={{ m.id }}"><i class="bi bi-envelope"></i> Zapytanie ofertowe</a>
+            <a class="btn btn-outline-secondary" href="{{ root }}/materials/prices">Ceny surowców</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-purch">
+    <div class="at-tiles">
+        <div class="at-tile">
+            <span class="at-tile-label">Zużycie ({{ m.months }} mies.)</span>
+            <strong class="at-tile-value">{{ m.qty|number_format(0, ',', ' ') }} {{ m.unit }}</strong>
+        </div>
+        <div class="at-tile">
+            <span class="at-tile-label">Wydatki</span>
+            <strong class="at-tile-value">{{ m.spend|currency(0) }}</strong>
+        </div>
+        <div class="at-tile">
+            <span class="at-tile-label">Produkty z tym surowcem</span>
+            <strong class="at-tile-value">{{ m.products|length }}</strong>
+        </div>
+        <div class="at-tile {{ m.offers ? 'at-tile-ok' : '' }}">
+            <span class="at-tile-label">Ważne oferty</span>
+            <strong class="at-tile-value">{{ m.offers|length }}</strong>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 col-xl-6">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Co jeśli cena się zmieni?</h4></div>
+                <div class="card-body pt-0">
+                    <form id="simulate" class="d-flex gap-2 align-items-end flex-wrap">
+                        <label class="at-purch-label">Nowa cena
+                            <span class="input-group"><input class="form-control" name="price" inputmode="decimal" required value="{{ (m.price * 1.1)|number_format(2, ',', '') }}"><span class="input-group-text">zł/{{ m.unit }}</span></span>
+                        </label>
+                        <button class="btn btn-primary">Przelicz</button>
+                    </form>
+                    <div id="simulateResult" class="mt-3" hidden>
+                        <p class="mb-2">Roczny wpływ: <strong data-annual></strong></p>
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead><tr><th>Produkt</th><th class="text-end">Kartony</th><th class="text-end">Zmiana / karton</th><th class="text-end">Zmiana kosztu</th><th class="text-end">Zmiana / szt.</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Ważne oferty</h4></div>
+                <div class="card-body pt-0">
+                    {% if m.offers %}
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead><tr><th>Dostawca</th><th class="text-end">Cena</th><th class="text-end">Opakowanie</th><th>Ważna do</th><th class="text-end">Oszczędność / rok</th><th></th></tr></thead>
+                            <tbody>
+                            {% for o in m.offers %}
+                                <tr>
+                                    <td>{{ o.supplier }}<div class="at-sub">{{ o.lead_time_days is not null ? 'dostawa ' ~ o.lead_time_days ~ ' dni' : '' }}{{ o.min_order_qty ? ' · min. ' ~ o.min_order_qty|number_format(0, ',', ' ') : '' }}</div></td>
+                                    <td class="text-end"><strong>{{ o.price|number_format(2, ',', ' ') }} zł/{{ m.unit }}</strong><div class="at-sub">{{ o.pack_price|currency }} / opak.</div></td>
+                                    <td class="text-end">{{ o.pack_size|number_format(2, ',', ' ') }} {{ m.unit }}</td>
+                                    <td>{{ o.valid_to ? o.valid_to|date('d.m.Y') : '—' }}</td>
+                                    <td class="text-end">{{ o.saving > 0 ? o.saving|currency(0) : '—' }}</td>
+                                    <td class="text-end text-nowrap">
+                                        <button class="btn btn-sm btn-primary" data-offer-action="apply" data-id="{{ o.id }}" title="Ustaw jako aktualną cenę">Zastosuj</button>
+                                        <button class="btn btn-sm btn-outline-secondary" data-offer-action="reject" data-id="{{ o.id }}">Odrzuć</button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <p class="at-empty">Brak ważnych ofert. <a href="{{ root }}/purchasing/offers?material={{ m.id }}">Dodaj ofertę</a> albo <a href="{{ root }}/purchasing/tenders?materials={{ m.id }}">zapytaj dostawców</a>.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Historia cen</h4></div>
+                <div class="card-body pt-0">
+                    {% if m.history %}
+                    <div class="table-responsive at-scroll-400">
+                        <table class="table table-sm mb-0">
+                            <thead><tr><th>Data</th><th>Dostawca</th><th class="text-end">Cena opak.</th><th class="text-end">Opak.</th><th class="text-end">Cena</th></tr></thead>
+                            <tbody>
+                            {% for h in m.history|reverse %}
+                                <tr>
+                                    <td>{{ h.date|date('d.m.Y') }}</td>
+                                    <td>{{ h.supplier ?: '—' }}</td>
+                                    <td class="text-end">{{ h.pack_price|currency }}</td>
+                                    <td class="text-end">{{ h.pack_size|number_format(2, ',', ' ') }} {{ m.unit }}</td>
+                                    <td class="text-end"><strong>{{ h.price|number_format(2, ',', ' ') }} zł/{{ m.unit }}</strong></td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}<p class="at-empty">Brak historii cen.</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Produkty z tym surowcem</h4></div>
+                <div class="card-body pt-0">
+                    {% if m.products %}
+                    <div class="table-responsive at-scroll-400">
+                        <table class="table table-sm mb-0">
+                            <thead><tr><th>Produkt</th><th class="text-end">Kartony ({{ m.months }} mies.)</th><th class="text-end">Koszt surowca / karton</th><th class="text-end">Udział w koszcie</th></tr></thead>
+                            <tbody>
+                            {% for p in m.products %}
+                                <tr>
+                                    <td>{{ p.name }}</td>
+                                    <td class="text-end">{{ p.cartons|number_format(0, ',', ' ') }}</td>
+                                    <td class="text-end">{{ p.material_cost_per_carton|currency }}</td>
+                                    <td class="text-end">{{ p.share_pct|pct }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}<p class="at-empty">Żaden aktywny produkt nie używa tego surowca.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const id = {{ m.id }};
+    const fmt = (n, d = 2) => Number(n).toLocaleString('pl-PL', {minimumFractionDigits: d, maximumFractionDigits: d});
+    document.getElementById('simulate').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const price = e.target.price.value.replace(',', '.');
+        fetch(`${at.root}/ajax/purchasing/materials/${id}/simulate?price=${encodeURIComponent(price)}`, {credentials: 'same-origin', headers: {Accept: 'application/json'}})
+            .then(r => r.json().then(b => ({ok: r.ok, ...b}))).then(res => {
+                if (!res.ok) return at.notify(false, res.message);
+                const box = document.getElementById('simulateResult');
+                box.hidden = false;
+                const delta = res.data.annual_delta;
+                box.querySelector('[data-annual]').textContent = (delta > 0 ? '+' : '') + fmt(delta, 0) + ' zł';
+                box.querySelector('[data-annual]').className = delta > 0 ? 'text-danger' : 'text-success';
+                box.querySelector('tbody').innerHTML = res.data.products.map(p => `<tr>
+                    <td>${at.esc(p.name)}</td><td class="text-end">${fmt(p.cartons, 0)}</td>
+                    <td class="text-end">${fmt(p.delta_per_carton)} zł</td>
+                    <td class="text-end">${p.delta_pct === null ? '—' : (p.delta_pct > 0 ? '+' : '') + fmt(p.delta_pct, 1) + ' %'}</td>
+                    <td class="text-end">${p.delta_per_piece === null ? '—' : fmt(p.delta_per_piece, 3) + ' zł'}</td></tr>`).join('');
+            });
+    });
+    document.querySelectorAll('[data-offer-action]').forEach(b => b.addEventListener('click', () => {
+        const apply = b.dataset.offerAction === 'apply';
+        if (apply && !window.confirm('Ustawić tę ofertę jako aktualną cenę surowca? Koszty receptur zostaną przeliczone.')) return;
+        at.send(`/ajax/purchasing/offers/${b.dataset.id}/${b.dataset.offerAction}`, 'POST', {}).then(res => {
+            at.notify(res.ok, res.message);
+            if (res.ok) window.setTimeout(() => window.location.reload(), 600);
+        });
+    }));
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Kierownik produkcji · Responsable production{% endblock %}
+
+{% block content %}
+<section class="section tfb">
+    <div id="tfbManager" class="tfb-app" data-root="{{ root }}" data-api-base="{{ api_base }}" data-user="{{ session_user }}" data-labels="manager" aria-live="polite">
+        <p class="text-muted">Wczytywanie… / Chargement…</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/workshop/api.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/workshop/manager.js?v={{ asset_v() }}"></script>
+{% endblock %}

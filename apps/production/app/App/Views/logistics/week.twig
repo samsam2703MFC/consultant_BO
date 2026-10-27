@@ -1,0 +1,133 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Logistyka tygodnia {{ iso_week }}{% endblock %}
+
+{% set t = totals %}
+{% macro fill_class(pct, over) %}{{ over or (pct is not null and pct > 100) ? 'is-over' : (pct is null ? 'is-unknown' : (pct >= 85 ? 'is-full' : (pct >= 50 ? 'is-mid' : 'is-low'))) }}{% endmacro %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Logistyka tygodnia</h3>
+            <p class="text-subtitle text-muted">Ciężarówki dzień po dniu: palety na pojeździe i wypełnienie miejsc paletowych</p>
+        </div>
+        <div class="at-logi-week-nav">
+            <a class="btn btn-outline-primary" href="{{ root }}/logistics/week?date={{ prev }}" aria-label="Poprzedni tydzień">‹</a>
+            <span class="at-logi-week-label">Tydzień {{ iso_week }} · {{ week_start|date('d.m') }} – {{ week_end|date('d.m') }}</span>
+            <a class="btn btn-outline-primary" href="{{ root }}/logistics/week?date={{ next }}" aria-label="Następny tydzień">›</a>
+            {% if not (today >= week_start and today <= week_end) %}<a class="btn btn-outline-secondary" href="{{ root }}/logistics/week">Ten tydzień</a>{% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{% import _self as m %}
+<section class="section at-logi-week">
+    <div class="at-tiles">
+        <div class="at-tile">
+            <span class="at-tile-label"><i class="bi bi-stack"></i> Palety w tygodniu</span>
+            <strong class="at-tile-value">{{ t.pallets|number_format(0, ',', ' ') }}</strong>
+            <span class="at-tile-meta">{{ t.customers|plural_pl('wysyłka do klienta', 'wysyłki do klientów', 'wysyłek do klientów') }}</span>
+        </div>
+        <div class="at-tile">
+            <span class="at-tile-label"><i class="bi bi-truck"></i> Kursy</span>
+            <strong class="at-tile-value">{{ t.runs }}</strong>
+            <span class="at-tile-meta">{{ trucks|length|plural_pl('pojazd', 'pojazdy', 'pojazdów') }} · {{ t.places|number_format(0, ',', ' ') }} miejsc paletowych</span>
+        </div>
+        <div class="at-tile {{ t.fill_pct is null ? '' : (t.fill_pct >= 85 ? 'at-tile-ok' : (t.fill_pct > 100 ? 'at-tile-danger' : 'at-tile-warn')) }}">
+            <span class="at-tile-label"><i class="bi bi-speedometer2"></i> Średnie wypełnienie</span>
+            <strong class="at-tile-value">{{ t.fill_pct is null ? '—' : t.fill_pct|number_format(0, ',', ' ') ~ ' %' }}</strong>
+            <span class="at-tile-meta">{{ t.loaded|number_format(0, ',', ' ') }} palet na {{ t.places|number_format(0, ',', ' ') }} miejscach</span>
+        </div>
+        <div class="at-tile {{ t.unassigned ? 'at-tile-danger' : 'at-tile-ok' }}">
+            <span class="at-tile-label"><i class="bi bi-exclamation-triangle"></i> Bez pojazdu</span>
+            <strong class="at-tile-value">{{ t.unassigned|number_format(0, ',', ' ') }} pal.</strong>
+            <span class="at-tile-meta">{{ t.unassigned_customers ? t.unassigned_customers|plural_pl('klient', 'klientów', 'klientów') ~ ' do przydzielenia' : 'wszyscy klienci mają pojazd' }}</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Ciężarówki i wypełnienie</h4>
+            <ul class="at-logi-legend">
+                <li><span class="at-logi-sample is-low"></span>&lt; 50 %</li>
+                <li><span class="at-logi-sample is-mid"></span>50–85 %</li>
+                <li><span class="at-logi-sample is-full"></span>85–100 %</li>
+                <li><span class="at-logi-sample is-over"></span>przeładowany</li>
+            </ul>
+        </div>
+        <div class="card-body pt-0">
+            <div class="table-responsive at-logi-scroll">
+                <table class="table mb-0 at-logi-week-table">
+                    <thead>
+                        <tr>
+                            <th class="at-logi-name">Pojazd</th>
+                            {% for d in days %}
+                                <th class="{{ d.date == today ? 'is-today' : '' }}">
+                                    <a href="{{ root }}/logistics?date={{ d.date }}">{{ d.date|day_pl|split(',')|first }} {{ d.date|date('d.m') }}</a>
+                                    <div class="at-sub">{{ d.customers ? d.customers|plural_pl('klient', 'klientów', 'klientów') ~ ' · ' ~ d.pallets|number_format(0, ',', ' ') ~ ' pal.' : 'brak wysyłek' }}</div>
+                                </th>
+                            {% endfor %}
+                            <th class="text-end at-logi-sum">Tydzień</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for v in trucks %}
+                        <tr>
+                            <th class="at-logi-name" scope="row">
+                                <strong>{{ v.label }}</strong>
+                                <div class="at-sub">{{ v.carrier }}{{ v.places ? ' · ' ~ v.places ~ ' miejsc' : ' · pojemność nieznana' }}</div>
+                            </th>
+                            {% for d in days %}
+                                {% set c = v.days[d.date] ?? null %}
+                                <td class="{{ d.date == today ? 'is-today' : '' }}">
+                                    {% if c %}
+                                        <a class="at-logi-cell {{ m.fill_class(c.fill_pct, c.over)|trim }}" href="{{ root }}/logistics?date={{ d.date }}" title="{{ c.customers|join(', ') }} · wyjazd {{ c.departure|slice(0, 5) }}{{ c.weight_kg ? ' · ' ~ c.weight_kg|number_format(0, ',', ' ') ~ ' kg' : '' }}">
+                                            <span class="at-logi-bar"><span style="width: {{ min(100, c.fill_pct ?? 0)|round(1) }}%"></span></span>
+                                            <span class="at-logi-value"><strong>{{ c.pallets|number_format(0, ',', ' ') }}{{ c.places ? ' / ' ~ c.places : '' }} pal.</strong> {{ c.fill_pct is null ? '' : c.fill_pct|number_format(0, ',', ' ') ~ ' %' }}</span>
+                                            <span class="at-sub">{{ c.customers|length|plural_pl('klient', 'klientów', 'klientów') }} · {{ c.departure|slice(0, 5) }}</span>
+                                        </a>
+                                    {% else %}
+                                        <span class="at-sub">—</span>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-end at-logi-sum">
+                                <strong>{{ v.pallets|number_format(0, ',', ' ') }} pal.</strong>
+                                <div class="at-sub">{{ v.days|length|plural_pl('kurs', 'kursy', 'kursów') }}{{ v.fill_pct is null ? '' : ' · ' ~ v.fill_pct|number_format(0, ',', ' ') ~ ' %' }}</div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="{{ days|length + 2 }}" class="at-empty">Brak pojazdów z przydzielonymi klientami w tym tygodniu — przydziel klientów do tras w <a href="{{ root }}/logistics">Załadunku dnia</a>.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="at-logi-unassigned">
+                            <th class="at-logi-name" scope="row">Bez pojazdu</th>
+                            {% for d in days %}
+                                <td class="{{ d.date == today ? 'is-today' : '' }}">
+                                    {% if d.unassigned.customers %}<a class="text-danger" href="{{ root }}/logistics?date={{ d.date }}"><strong>{{ d.unassigned.pallets|number_format(0, ',', ' ') }} pal.</strong></a><div class="at-sub">{{ d.unassigned.customers|plural_pl('klient', 'klientów', 'klientów') }}</div>{% else %}<span class="at-sub">—</span>{% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-end at-logi-sum">{{ t.unassigned ? t.unassigned|number_format(0, ',', ' ') ~ ' pal.' : '—' }}</td>
+                        </tr>
+                        <tr class="at-profit-total">
+                            <th class="at-logi-name" scope="row">Razem</th>
+                            {% for d in days %}
+                                <td class="{{ d.date == today ? 'is-today' : '' }}">
+                                    {% if d.trucks %}
+                                        <strong>{{ d.loaded|number_format(0, ',', ' ') }} / {{ d.places|number_format(0, ',', ' ') }} pal.</strong>
+                                        <div class="at-sub">{{ d.trucks|plural_pl('pojazd', 'pojazdy', 'pojazdów') }}{{ d.fill_pct is null ? '' : ' · ' ~ d.fill_pct|number_format(0, ',', ' ') ~ ' %' }}</div>
+                                    {% else %}<span class="at-sub">—</span>{% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-end at-logi-sum"><strong>{{ t.fill_pct is null ? '—' : t.fill_pct|number_format(0, ',', ' ') ~ ' %' }}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="at-profit-note mb-0">Palety klienta liczone z zamówień dnia (kartony ÷ kartony na paletę z karty produktu, reszty na paletach mieszanych), pojazd z trasy klienta albo przydzielony na dzień w <a href="{{ root }}/logistics">Załadunku dnia</a>. Wypełnienie = palety ÷ miejsca paletowe pojazdu (<a href="{{ root }}/logistics/vehicles">Pojazdy i pojemność</a>). Kliknij dzień, aby zmienić przydział.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

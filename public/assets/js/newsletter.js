@@ -9,7 +9,8 @@
  * donné par l'hôte : l'écran « Newsletter » du cockpit monte la marque,
  * « Newsletter magasin » le magasin choisi.
  *
- *   CockpitNewsletter.mount(host, { role, apiBase, imgDir, notify })
+ *   CockpitNewsletter.mount(host, { role, apiBase, imgDir, notify, campagne })
+ *   (campagne : l'id de la campagne marketing à laquelle rattacher la newsletter créée)
  *
  * Données : GET /newsletter?role=… ; écritures POST /newsletter/campagnes,
  * POST /newsletter/segments, PUT /newsletter/magasins/{id}, POST /newsletter/test.
@@ -312,7 +313,7 @@
     }
     charger() {
       const s = this.s; s.chargement = true; s.err = '';
-      return lire(this.base, '/newsletter?role=' + encodeURIComponent(this.role())).then(d => {
+      return lire(this.base, '/marketing/newsletter?role=' + encodeURIComponent(this.role())).then(d => {
         s.data = d || {}; s.chargement = false;
         const segs = this.segmentsVisibles();
         if (!segs.find(x => x.id === s.segmentId)) { const first = segs.find(x => x.src === s.sourceId) || segs[0]; if (first) { s.segmentId = first.id; s.sourceId = first.src; } }
@@ -380,7 +381,7 @@
       if (focK) { const e = this.el.querySelector('[data-f="' + focK + '"]'); if (e) { e.focus(); if (sel && e.setSelectionRange) { try { e.setSelectionRange(sel[0], sel[1]); } catch (x) { /* type sans sélection */ } } } }
       if (scT) { const s2 = this.el.querySelector('.nl-cand'); if (s2) s2.scrollTop = scT; }
     }
-    pill(label, bg, color, border) { return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;padding:4px 10px;border-radius:999px;white-space:nowrap;background:${bg};color:${color};border:0.5px solid ${border}">${esc(label)}</span>`; }
+    pill(label, bg, color, border) { return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;padding:4px 10px;border-radius:8px;white-space:nowrap;background:${bg};color:${color};border:0.5px solid ${border}">${esc(label)}</span>`; }
     statusPill(status) {
       const t = this.t();
       const S = { sent: [t.st_sent, BG2, 'var(--color-text)', 'var(--color-border-tertiary)'], live: [t.st_live, SEC, ON, SEC], sched: [t.st_sched, 'transparent', P, P], draft: [t.st_draft, 'transparent', MUTED, 'var(--color-border-secondary)'] }[status] || [status, 'transparent', MUTED, 'var(--color-border-secondary)'];
@@ -411,16 +412,16 @@
             <span style="font-family:var(--font-display);font-size:16px;color:${P}">L'Atelier By</span>
             <span style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:${MUTED}">Newsletter · ${isBrand ? esc(t.roleBrandShort) : esc(this.nomShop(this.role()))}</span>
           </div>
-          <div style="display:flex;gap:4px">${tabs.map(([id, label]) => `<button data-a="view" data-v="${id}" style="border:none;background:${tabOn(id) ? BG2 : 'transparent'};color:${tabOn(id) ? P : 'var(--color-text)'};font-family:var(--font-ui);font-size:13px;font-weight:500;padding:7px 12px;border-radius:999px;cursor:pointer">${esc(label)}</button>`).join('')}</div>
+          <div style="display:flex;gap:4px">${tabs.map(([id, label]) => `<button data-a="view" data-v="${id}" style="border:none;background:${tabOn(id) ? BG2 : 'transparent'};color:${tabOn(id) ? P : 'var(--color-text)'};font-family:var(--font-ui);font-size:13px;font-weight:500;padding:7px 12px;border-radius:8px;cursor:pointer">${esc(label)}</button>`).join('')}</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <span style="font-size:12px;color:${MUTED};border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:5px 10px">${isBrand ? esc(t.roleBrand) : esc(t.viewShop + this.nomShop(this.role()))}</span>
-          <div style="display:flex;gap:2px;border:0.5px solid var(--color-border-secondary);border-radius:999px;padding:2px">${LANG_KEYS.map(k => `<button data-a="lang" data-v="${k}" style="border:none;background:${s.lang === k ? P : 'transparent'};color:${s.lang === k ? '#fff' : MUTED};font-family:var(--font-ui);font-size:11px;font-weight:500;padding:4px 9px;border-radius:999px;cursor:pointer;letter-spacing:0.04em">${k.toUpperCase()}</button>`).join('')}</div>
+          <span style="font-size:12px;color:${MUTED};border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 10px">${isBrand ? esc(t.roleBrand) : esc(t.viewShop + this.nomShop(this.role()))}</span>
+          <div style="display:flex;gap:2px;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:2px">${LANG_KEYS.map(k => `<button data-a="lang" data-v="${k}" style="border:none;background:${s.lang === k ? P : 'transparent'};color:${s.lang === k ? '#fff' : MUTED};font-family:var(--font-ui);font-size:11px;font-weight:500;padding:4px 9px;border-radius:8px;cursor:pointer;letter-spacing:0.04em">${k.toUpperCase()}</button>`).join('')}</div>
           ${canSend ? this.btnP('wizard', esc(t.newCampaign)) : `<span style="font-size:12px;color:${MUTED};border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 12px">${esc(t.sendDisabled)}</span>`}
         </div>
       </div>
       ${d.test ? `<div style="margin-top:8px;font-size:11.5px;color:${ON};background:${SEC};border-radius:8px;padding:6px 12px;display:inline-block">Mode test — aucun envoi ne part${d.reel ? '' : ' ; les bases et leurs comptes sont un jeu d’essai tant qu’aucun contact n’est importé'}.${isBrand ? ' Paramètres → Envois pour dispatcher.' : ''}</div>` : `<div style="margin-top:8px;font-size:11.5px;color:${GREEN};background:#E6F2E9;border-radius:8px;padding:6px 12px;display:inline-block">Envois dispatchés — les campagnes programmées partent par l’horloge, par lots de 100 par minute.</div>`}
-      ${s.toast ? `<div style="position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--color-text);color:#fff;border-radius:999px;padding:9px 16px;font-size:12.5px;z-index:50">${esc(s.toast)}</div>` : ''}
+      ${s.toast ? `<div style="position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--color-text);color:#fff;border-radius:8px;padding:9px 16px;font-size:12.5px;z-index:50">${esc(s.toast)}</div>` : ''}
       <div class="nl-body">
         ${view === 'dashboard' ? this.vDashboard() : view === 'wizard' ? this.vWizard() : view === 'templates' ? this.vTemplates() : view === 'retro' ? this.vRetro() : this.vSettings()}
       </div>`;
@@ -444,7 +445,7 @@
           <div><div style="font-size:13px;font-weight:500">${esc(this.L(src.name))}</div><div style="font-size:11px;color:${MUTED};margin-top:1px">${src.reel ? 'contacts importés' : esc(src.table) + ' · jeu d’essai'}</div></div>
           <div style="text-align:right"><div style="font-size:18px;font-weight:300">${fmt(src.count)}</div><div style="font-size:11px;color:${MUTED}">${fmt(src.optin)} ${esc(t.optin)}</div></div>
         </div>`).join('')}</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">${filtres.map(([id, label, n]) => { const on = s.modeFilter === id; return `<button data-a="filtre" data-v="${id}" style="display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;background:${on ? P : 'transparent'};color:${on ? '#fff' : 'var(--color-text)'};border:0.5px solid ${on ? P : 'var(--color-border-secondary)'}">${esc(label)} <span style="font-weight:400;opacity:0.7">${n}</span></button>`; }).join('')}</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">${filtres.map(([id, label, n]) => { const on = s.modeFilter === id; return `<button data-a="filtre" data-v="${id}" style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;background:${on ? P : 'transparent'};color:${on ? '#fff' : 'var(--color-text)'};border:0.5px solid ${on ? P : 'var(--color-border-secondary)'}">${esc(label)} <span style="font-weight:400;opacity:0.7">${n}</span></button>`; }).join('')}</div>
       <div class="nl-scroll" style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px"><div>
         <div class="nl-tbl h"><div>${esc(t.colName)}</div><div>${esc(t.colDate)}</div><div>${esc(t.colSegment)}</div><div>${esc(t.colStatus)}</div><div>${esc(t.colOpen)}</div><div>${esc(t.colClick)}</div><div>${esc(t.colVouchers)}</div></div>
         ${rows.length ? rows.map(c => this.rowCampagne(c)).join('') : `<div style="padding:22px 20px;font-size:13px;color:${MUTED}">Aucune campagne.</div>`}
@@ -454,7 +455,7 @@
     rowCampagne(c) {
       const t = this.t(), st = this.stats(c), seg = this.segById(c.segment);
       const pills = [];
-      const pillM = (label, bg, color, border) => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:500;letter-spacing:0.04em;padding:2px 8px;border-radius:999px;background:${bg};color:${color};border:0.5px solid ${border}">${esc(label)}</span>`;
+      const pillM = (label, bg, color, border) => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:500;letter-spacing:0.04em;padding:2px 8px;border-radius:8px;background:${bg};color:${color};border:0.5px solid ${border}">${esc(label)}</span>`;
       if (c.channel === 'email' || c.channel === 'both') pills.push(pillM(t.chEmail, 'transparent', MUTED, 'var(--color-border-secondary)'));
       if (c.channel === 'sms' || c.channel === 'both') pills.push(pillM('SMS', 'transparent', MUTED, 'var(--color-border-secondary)'));
       pills.push(c.sendMode === 'auto' ? pillM(`${t.pillAuto} · ${t['tr_' + c.trigger] || c.trigger}`, SEC, ON, SEC) : pillM(t.pillManual, BG2, MUTED, 'var(--color-border-tertiary)'));
@@ -472,7 +473,7 @@
           <div>${this.statusPill(c.status)}</div>
           <div style="font-size:13px">${st.openPct != null ? st.openPct + ' %' : '—'}</div>
           <div style="font-size:13px">${st.clickPct != null ? st.clickPct + ' %' : '—'}</div>
-          <div>${c.maxVouchers ? `<div style="font-size:12px;margin-bottom:4px">${st.vouchers} / ${c.maxVouchers}</div><div style="height:4px;border-radius:999px;background:${BG2};overflow:hidden"><div style="height:100%;width:${Math.min(100, Math.round(100 * st.vouchers / c.maxVouchers))}%;background:${P}"></div></div>` : `<span style="color:${MUTED}">—</span>`}</div>
+          <div>${c.maxVouchers ? `<div style="font-size:12px;margin-bottom:4px">${st.vouchers} / ${c.maxVouchers}</div><div style="height:4px;border-radius:8px;background:${BG2};overflow:hidden"><div style="height:100%;width:${Math.min(100, Math.round(100 * st.vouchers / c.maxVouchers))}%;background:${P}"></div></div>` : `<span style="color:${MUTED}">—</span>`}</div>
         </div>`;
     }
 
@@ -501,10 +502,10 @@
     step1() {
       const s = this.s, t = this.t(), d = this.data();
       const segs = this.segmentsVisibles();
-      const chips = (d.sources || []).map(x => { const on = x.id === s.sourceId; return `<button data-a="source" data-v="${esc(x.id)}" style="display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;background:${on ? P : 'transparent'};color:${on ? '#fff' : 'var(--color-text)'};border:0.5px solid ${on ? P : 'var(--color-border-secondary)'}">${esc(this.L(x.name))} <span style="font-weight:400;opacity:0.75">${fmt(x.optin)}</span></button>`; }).join('');
+      const chips = (d.sources || []).map(x => { const on = x.id === s.sourceId; return `<button data-a="source" data-v="${esc(x.id)}" style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:7px 14px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;background:${on ? P : 'transparent'};color:${on ? '#fff' : 'var(--color-text)'};border:0.5px solid ${on ? P : 'var(--color-border-secondary)'}">${esc(this.L(x.name))} <span style="font-weight:400;opacity:0.75">${fmt(x.optin)}</span></button>`; }).join('');
       const rows = segs.filter(x => x.src === s.sourceId).map(x => { const on = x.id === s.segmentId; return `<button data-a="segment" data-v="${esc(x.id)}" style="display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '0.5px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 16px;cursor:pointer;font-family:var(--font-ui)"><span><span style="display:block;font-size:14px;font-weight:500;color:var(--color-text)">${esc(this.L(x.name))}</span><span style="display:block;font-size:12px;color:${MUTED};margin-top:1px">${esc(this.L(x.rule))}${x.reel === false ? ' · essai' : ''}</span></span><span style="font-size:14px;font-weight:500;color:${P};white-space:nowrap">${fmt(x.count)} <span style="font-weight:400;color:${MUTED};font-size:12px">${esc(t.recipients)}</span></span></button>`; }).join('');
       const seg = this.segById(s.segmentId), total = seg.split.reduce((a, b) => a + b, 0) || 1;
-      const langRows = LANG_KEYS.map((k, i) => { const on = s.sendLangs.includes(k), n = seg.split[i] || 0, pct = Math.round(100 * n / total) + '%'; return `<button data-a="lang-toggle" data-v="${k}" style="display:flex;flex-direction:column;gap:6px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '0.5px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 14px;cursor:pointer;font-family:var(--font-ui)"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:13px;font-weight:500;color:var(--color-text)">${esc(t['lang_' + k])}</span><span style="width:16px;height:16px;border-radius:50%;border:1.5px solid ${on ? P : 'var(--color-border-secondary)'};background:${on ? P : 'transparent'};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px">${on ? '✓' : ''}</span></span><span style="font-size:18px;font-weight:300;color:${P}">${fmt(n)} <span style="font-size:12px;color:${MUTED}">· ${pct}</span></span><span style="height:4px;border-radius:999px;background:${BG2};overflow:hidden;display:block"><span style="display:block;height:100%;width:${pct};background:${P}"></span></span></button>`; }).join('');
+      const langRows = LANG_KEYS.map((k, i) => { const on = s.sendLangs.includes(k), n = seg.split[i] || 0, pct = Math.round(100 * n / total) + '%'; return `<button data-a="lang-toggle" data-v="${k}" style="display:flex;flex-direction:column;gap:6px;text-align:left;background:${on ? BG2 : SURF};border:${on ? `1.5px solid ${P}` : '0.5px solid var(--color-border-tertiary)'};border-radius:8px;padding:12px 14px;cursor:pointer;font-family:var(--font-ui)"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:13px;font-weight:500;color:var(--color-text)">${esc(t['lang_' + k])}</span><span style="width:16px;height:16px;border-radius:50%;border:1.5px solid ${on ? P : 'var(--color-border-secondary)'};background:${on ? P : 'transparent'};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px">${on ? '✓' : ''}</span></span><span style="font-size:18px;font-weight:300;color:${P}">${fmt(n)} <span style="font-size:12px;color:${MUTED}">· ${pct}</span></span><span style="height:4px;border-radius:8px;background:${BG2};overflow:hidden;display:block"><span style="display:block;height:100%;width:${pct};background:${P}"></span></span></button>`; }).join('');
       const langSummary = s.sendLangs.length ? `${fmt(this.langTotal())} ${t.recipients} · ${LANG_KEYS.filter(k => s.sendLangs.includes(k)).map(k => k.toUpperCase()).join(' + ')}` : t.langNone;
       return `
       ${this.h2(t.s1Title, t.s1Sub)}
@@ -556,7 +557,7 @@
     step3() {
       const s = this.s, t = this.t(), el = this.editLang(), seg = this.segById(s.segmentId);
       const subject = this.subject(), body = this.body(), sms = this.sms();
-      const tabBtn = (a, v, on, label) => `<button data-a="${a}" data-v="${v}" style="border:0.5px solid ${on ? P : 'var(--color-border-secondary)'};background:${on ? P : 'transparent'};color:${on ? '#fff' : MUTED};font-family:var(--font-ui);font-size:12px;font-weight:500;padding:5px 12px;border-radius:999px;cursor:pointer">${label}</button>`;
+      const tabBtn = (a, v, on, label) => `<button data-a="${a}" data-v="${v}" style="border:0.5px solid ${on ? P : 'var(--color-border-secondary)'};background:${on ? P : 'transparent'};color:${on ? '#fff' : MUTED};font-family:var(--font-ui);font-size:12px;font-weight:500;padding:5px 12px;border-radius:8px;cursor:pointer">${label}</button>`;
       const hasSms = s.channel !== 'email';
       const smsOptin = Math.round(this.langTotal() * 0.61);
       return `${this.h2(t.s3Title, t.s3Sub)}
@@ -617,7 +618,7 @@
             ${this.LL(tp.headline) ? `<div style="font-family:var(--font-display);font-size:22px;line-height:1.2;color:${P};margin-bottom:10px">${esc(this.LL(tp.headline))}</div>` : ''}
             <div style="font-size:14px;line-height:1.6;white-space:pre-wrap">${esc(b.previewBody)}</div>
             <div style="margin-top:18px"><span style="display:inline-block;background:${P};color:#fff;border-radius:8px;padding:11px 18px;font-size:13px;font-weight:500">${esc(this.LL(tp.cta))}</span></div>
-            ${tp.badge ? `<div style="margin-top:18px;display:inline-flex;align-items:center;gap:8px;background:${SEC};color:${ON};border-radius:999px;padding:5px 12px;font-size:11px;font-weight:500"><span style="width:6px;height:6px;border-radius:50%;background:${ON}"></span>${esc(t.badge3)}</div>` : ''}
+            ${tp.badge ? `<div style="margin-top:18px;display:inline-flex;align-items:center;gap:8px;background:${SEC};color:${ON};border-radius:8px;padding:5px 12px;font-size:11px;font-weight:500"><span style="width:6px;height:6px;border-radius:50%;background:${ON}"></span>${esc(t.badge3)}</div>` : ''}
           </div>
           <div style="padding:14px 24px 18px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:${MUTED};line-height:1.7"><div>${esc(t.footWebshop)} · ${esc(t.footShop)} · ${esc(t.footSupport)}</div><div>${esc(t.footHours)}</div><div style="margin-top:4px;text-decoration:underline">${esc(t.unsubscribe)}</div></div>
         </div>
@@ -641,7 +642,7 @@
               <div style="font-family:var(--font-display);font-size:20px;line-height:1.2;color:${P};margin-bottom:8px">${esc(this.L(x.headline))}</div>
               <div style="font-size:13px;line-height:1.6;white-space:pre-wrap">${esc(this.L(x.body).replace('{{prénom}}', 'Marie').replace('{{code_promo}}', 'K7M2DIAM'))}</div>
               <div style="margin-top:16px"><span style="display:inline-block;background:${P};color:#fff;border-radius:8px;padding:10px 16px;font-size:12px;font-weight:500">${esc(this.L(x.cta))}</span></div>
-              ${x.badge ? `<div style="margin-top:16px;display:inline-flex;align-items:center;gap:8px;background:${SEC};color:${ON};border-radius:999px;padding:5px 12px;font-size:11px;font-weight:500"><span style="width:6px;height:6px;border-radius:50%;background:${ON}"></span>${esc(t.badge3)}</div>` : ''}
+              ${x.badge ? `<div style="margin-top:16px;display:inline-flex;align-items:center;gap:8px;background:${SEC};color:${ON};border-radius:8px;padding:5px 12px;font-size:11px;font-weight:500"><span style="width:6px;height:6px;border-radius:50%;background:${ON}"></span>${esc(t.badge3)}</div>` : ''}
             </div>
             <div style="padding:12px 20px 16px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:${MUTED};line-height:1.7"><div>${esc(t.footWebshop)} · ${esc(t.footShop)} · ${esc(t.footSupport)}</div><div>${esc(t.footHours)}</div><div style="margin-top:4px;text-decoration:underline">${esc(t.unsubscribe)}</div></div>
           </div>
@@ -682,7 +683,7 @@
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px">${kpis.map(k => `<div style="background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px">${this.cap(esc(k[0]))}<div style="font-size:30px;font-weight:300;margin-top:6px;color:${k[4]}">${k[1]}</div><div style="font-size:12px;color:${MUTED};margin-top:2px">${esc(k[2])}</div><div style="font-size:12px;margin-top:10px;color:${k[3][1]}">${esc(k[3][0])}</div></div>`).join('')}</div>
       <div style="margin-top:20px;background:${SURF};border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:22px 24px">
         ${this.cap(esc(t.funnel) + (prev ? ' · ' + esc(t.vsPrev) + ' ' + esc(prev.name) : ''), 'margin-bottom:14px')}
-        <div style="display:flex;flex-direction:column;gap:10px">${funnel.map(f => `<div style="display:grid;grid-template-columns:130px 1fr 60px;gap:14px;align-items:center;font-size:13px"><div style="color:${MUTED}">${esc(f[0])}</div><div style="height:10px;border-radius:999px;background:${BG2};overflow:hidden;position:relative"><div style="height:100%;width:${f[2]}%;background:${f[4]};border-radius:999px"></div>${f[3] != null ? `<div style="position:absolute;top:0;bottom:0;left:${f[3]}%;width:1.5px;background:var(--color-text)"></div>` : ''}</div><div style="text-align:right;font-weight:500">${f[1]}</div></div>`).join('')}</div>
+        <div style="display:flex;flex-direction:column;gap:10px">${funnel.map(f => `<div style="display:grid;grid-template-columns:130px 1fr 60px;gap:14px;align-items:center;font-size:13px"><div style="color:${MUTED}">${esc(f[0])}</div><div style="height:10px;border-radius:8px;background:${BG2};overflow:hidden;position:relative"><div style="height:100%;width:${f[2]}%;background:${f[4]};border-radius:8px"></div>${f[3] != null ? `<div style="position:absolute;top:0;bottom:0;left:${f[3]}%;width:1.5px;background:var(--color-text)"></div>` : ''}</div><div style="text-align:right;font-weight:500">${f[1]}</div></div>`).join('')}</div>
         <div style="font-size:11px;color:${MUTED};margin-top:12px">${esc(t.funnelLegend)}</div>
       </div>`;
     }
@@ -759,16 +760,16 @@
       if (e.target.closest('input,select,textarea,a')) return;
       const a = b.dataset.a, v = b.dataset.v, s = this.s, t = this.t();
       if (a === 'view') this.go(v);
-      else if (a === 'envoyer') { if (!confirm('Envoyer cette campagne maintenant ?')) return; ecrire(this.base, 'POST', '/newsletter/campagnes/' + v + '/envoyer', { role: this.role() }).then(r => { const h = r && r.horloge; this.notify(h && h.motif ? 'Programmée pour maintenant — ' + h.motif + '.' : 'C’est parti : l’horloge envoie par lots de 100 par minute.'); return this.charger(); }).catch(err => this.notify(err.message)); }
+      else if (a === 'envoyer') { if (!confirm('Envoyer cette campagne maintenant ?')) return; ecrire(this.base, 'POST', '/marketing/newsletter/campagnes/' + v + '/envoyer', { role: this.role() }).then(r => { const h = r && r.horloge; this.notify(h && h.motif ? 'Programmée pour maintenant — ' + h.motif + '.' : 'C’est parti : l’horloge envoie par lots de 100 par minute.'); return this.charger(); }).catch(err => this.notify(err.message)); }
       else if (a === 'dispatch') { const on = !this.data().dispatch; if (on && !confirm('Dispatcher : les campagnes programmées partiront VRAIMENT vers les clients. Continuer ?')) return; this.putReglages({ dispatch: on }); }
-      else if (a === 'tick') { s.tick = 'en cours'; this.render(); ecrire(this.base, 'POST', '/newsletter/tick', { role: this.role() }).then(r => { s.tick = r; this.notify(r.motif ? 'Horloge passée — ' + r.motif : 'Horloge passée : ' + (r.campagnes || []).length + ' campagne(s) traitée(s).'); return this.charger(); }).catch(err => { s.tick = null; this.notify(err.message); }); }
-      else if (a === 'import') { const i = s.imp; if (!i.csv.trim()) { this.notify('Collez un CSV avec une ligne d’en-tête.'); return; } s.busy = true; this.render(); ecrire(this.base, 'POST', '/newsletter/contacts/import', { role: this.role(), source: i.source, shop: i.shop, lot: i.lot, csv: i.csv }).then(r => { s.busy = false; s.imp.csv = ''; this.notify(`Importé : ${r.nouveaux} nouveaux, ${r.misAJour} mis à jour, ${r.ignores} ignorés (lot ${r.lot}).`); return this.charger(); }).catch(err => { s.busy = false; this.notify(err.message); this.render(); }); }
-      else if (a === 'lotdel') { if (!confirm('Retirer le lot « ' + v + ' » et tous ses contacts ?')) return; ecrire(this.base, 'DELETE', '/newsletter/contacts/lots/' + encodeURIComponent(v) + '?role=' + encodeURIComponent(this.role())).then(r => { this.notify(r.retires + ' contact(s) retiré(s).'); return this.charger(); }).catch(err => this.notify(err.message)); }
+      else if (a === 'tick') { s.tick = 'en cours'; this.render(); ecrire(this.base, 'POST', '/marketing/newsletter/tick', { role: this.role() }).then(r => { s.tick = r; this.notify(r.motif ? 'Horloge passée — ' + r.motif : 'Horloge passée : ' + (r.campagnes || []).length + ' campagne(s) traitée(s).'); return this.charger(); }).catch(err => { s.tick = null; this.notify(err.message); }); }
+      else if (a === 'import') { const i = s.imp; if (!i.csv.trim()) { this.notify('Collez un CSV avec une ligne d’en-tête.'); return; } s.busy = true; this.render(); ecrire(this.base, 'POST', '/marketing/newsletter/contacts/import', { role: this.role(), source: i.source, shop: i.shop, lot: i.lot, csv: i.csv }).then(r => { s.busy = false; s.imp.csv = ''; this.notify(`Importé : ${r.nouveaux} nouveaux, ${r.misAJour} mis à jour, ${r.ignores} ignorés (lot ${r.lot}).`); return this.charger(); }).catch(err => { s.busy = false; this.notify(err.message); this.render(); }); }
+      else if (a === 'lotdel') { if (!confirm('Retirer le lot « ' + v + ' » et tous ses contacts ?')) return; ecrire(this.base, 'DELETE', '/marketing/newsletter/contacts/lots/' + encodeURIComponent(v) + '?role=' + encodeURIComponent(this.role())).then(r => { this.notify(r.retires + ' contact(s) retiré(s).'); return this.charger(); }).catch(err => this.notify(err.message)); }
       else if (a === 'lang') { s.lang = v; this.persist(); this.render(); }
       else if (a === 'wizard') this.go('wizard', { step: 1 });
       else if (a === 'filtre') { s.modeFilter = v; this.render(); }
       else if (a === 'retro') { if (e.target.closest('[data-a="retirer"]')) return; this.go('retro', { retroId: v }); }
-      else if (a === 'retirer') { if (!confirm('Retirer cette campagne ?')) return; ecrire(this.base, 'DELETE', '/newsletter/campagnes/' + v + '?role=' + encodeURIComponent(this.role())).then(() => this.charger()).catch(err => this.notify(err.message)); }
+      else if (a === 'retirer') { if (!confirm('Retirer cette campagne ?')) return; ecrire(this.base, 'DELETE', '/marketing/newsletter/campagnes/' + v + '?role=' + encodeURIComponent(this.role())).then(() => this.charger()).catch(err => this.notify(err.message)); }
       else if (a === 'source') { const first = this.segmentsVisibles().find(x => x.src === v); s.sourceId = v; if (first) s.segmentId = first.id; this.render(); }
       else if (a === 'segment') { s.segmentId = v; this.render(); }
       else if (a === 'segform') { s.segForm = true; this.render(); }
@@ -782,7 +783,7 @@
       else if (a === 'wrap') { const el = this.editLang(); const body = this.body(); s.bodies[el] = body + (v === '**' ? ' **gras**' : ' _italique_'); this.render(); }
       else if (a === 'mode') { s.sendMode = v; this.render(); }
       else if (a === 'sender') { s.senderId = v; this.render(); }
-      else if (a === 'test') { const tp = this.tpl(); ecrire(this.base, 'POST', '/newsletter/test', { role: this.role(), subject: this.subject(), body: this.body(), headline: this.LL(tp.headline), cta: this.LL(tp.cta), templateId: tp.id, lang: this.editLang(), sender: this.sender().id, voucher: !!s.maxVouchers }).then(r => { s.testSent = true; this.notify(r && r.simule ? 'Test non envoyé (' + (r.motif || 'simulé') + ').' : (r.ok ? 'Test envoyé à ' + r.adresses + ' adresse(s).' : 'Test refusé par le SMTP : ' + (r.erreur || ''))); this.render(); }).catch(err => this.notify(err.message)); }
+      else if (a === 'test') { const tp = this.tpl(); ecrire(this.base, 'POST', '/marketing/newsletter/test', { role: this.role(), subject: this.subject(), body: this.body(), headline: this.LL(tp.headline), cta: this.LL(tp.cta), templateId: tp.id, lang: this.editLang(), sender: this.sender().id, voucher: !!s.maxVouchers }).then(r => { s.testSent = true; this.notify(r && r.simule ? 'Test non envoyé (' + (r.motif || 'simulé') + ').' : (r.ok ? 'Test envoyé à ' + r.adresses + ' adresse(s).' : 'Test refusé par le SMTP : ' + (r.erreur || ''))); this.render(); }).catch(err => this.notify(err.message)); }
       else if (a === 'prev') { s.step = Math.max(1, s.step - 1); this.render(); }
       else if (a === 'next') this.nextStep();
       else if (a === 'dupAB') { const c = (this.data().campagnes || []).find(x => String(x.id) === String(v)); if (!c) return; const subj = (c.subjects && (c.subjects.fr || '')) || ''; this.go('wizard', { step: 3, templateId: TEMPLATES.some(z => z.id === c.templateId) ? c.templateId : 'gagne', segmentId: c.segment, sourceId: c.src, subjects: { fr: subj + ' (B)' }, bodies: {}, channel: c.channel === 'sms' ? 'email' : c.channel }); }
@@ -824,11 +825,11 @@
       this.render();
     }
     putReglages(patch) {
-      ecrire(this.base, 'PUT', '/newsletter/reglages', Object.assign({ role: this.role() }, patch)).then(r => { if (r && r.reglages) { this.data().reglages = r.reglages; this.data().dispatch = r.reglages.dispatch; this.data().test = !r.reglages.dispatch; } this.render(); })
+      ecrire(this.base, 'PUT', '/marketing/newsletter/reglages', Object.assign({ role: this.role() }, patch)).then(r => { if (r && r.reglages) { this.data().reglages = r.reglages; this.data().dispatch = r.reglages.dispatch; this.data().test = !r.reglages.dispatch; } this.render(); })
         .catch(err => { this.notify(err.message); this.render(); });
     }
     putShop(id, patch) {
-      ecrire(this.base, 'PUT', '/newsletter/magasins/' + encodeURIComponent(id), Object.assign({ role: this.role() }, patch)).then(r => {
+      ecrire(this.base, 'PUT', '/marketing/newsletter/magasins/' + encodeURIComponent(id), Object.assign({ role: this.role() }, patch)).then(r => {
         if (r && r.magasin) { const ms = this.magasins(); const i = ms.findIndex(x => x.id === id); if (i >= 0) ms[i] = r.magasin; if (this.data().moi && this.data().moi.id === id) { this.data().moi = r.magasin; this.data().canSend = r.magasin.canSend; } }
         this.render();
       }).catch(err => { this.notify(err.message); this.charger(); });
@@ -841,7 +842,7 @@
       if (s.segProduct !== 'all') parts.push(`${t.segRuleProduct} = ${s.segProduct}`);
       parts.push(String(t['p' + s.segPeriod.replace('dormant45', 'Dormant')] || '').toLowerCase());
       const mb = parseFloat(s.segMinBasket); if (mb > 0) parts.push(`${t.segRuleBasket} ${mb} €`);
-      ecrire(this.base, 'POST', '/newsletter/segments', { role: this.role(), name: s.segName.trim(), src: s.sourceId, shop: s.segShop === 'all' ? '' : s.segShop, product: s.segProduct === 'all' ? '' : s.segProduct, period: s.segPeriod, minBasket: mb > 0 ? mb : '', count: this.segEstimate(), rule: parts.join(' · ') })
+      ecrire(this.base, 'POST', '/marketing/newsletter/segments', { role: this.role(), name: s.segName.trim(), src: s.sourceId, shop: s.segShop === 'all' ? '' : s.segShop, product: s.segProduct === 'all' ? '' : s.segProduct, period: s.segPeriod, minBasket: mb > 0 ? mb : '', count: this.segEstimate(), rule: parts.join(' · ') })
         .then(r => { if (r && r.segment) { this.data().segments.unshift(r.segment); s.segmentId = r.segment.id; } Object.assign(s, { segForm: false, segName: '', segShop: 'all', segProduct: 'all', segPeriod: '365', segMinBasket: '' }); this.render(); })
         .catch(err => this.notify(err.message));
     }
@@ -854,7 +855,7 @@
       const par = (obj, dflt) => { const o = {}; s.sendLangs.forEach(l => { o[l] = obj[l] ?? (dflt ? (dflt[l] ?? dflt.fr ?? '') : ''); }); return o; };
       const nom = this.L(tp.name) + ' — ' + (seg.shop ? this.nomShop(seg.shop) : 'Réseau');
       s.busy = true; this.render();
-      ecrire(this.base, 'POST', '/newsletter/campagnes', { role: this.role(), name: nom, segment: seg.id, langs: s.sendLangs, templateId: tp.id, channel: s.channel,
+      ecrire(this.base, 'POST', '/marketing/newsletter/campagnes', { role: this.role(), campagne: this.opts.campagne || null, name: nom, segment: seg.id, langs: s.sendLangs, templateId: tp.id, channel: s.channel,
         subjects: par(s.subjects, tp.subject), bodies: par(s.bodies, tp.body), sms: s.channel === 'email' ? {} : par(s.smsTexts, tp.sms), headlines: par({}, tp.headline), ctas: par({}, tp.cta),
         sendMode: s.sendMode, trigger: s.trigger, date: s.date, time: s.time, maxVouchers: s.maxVouchers, sender: this.sender().id, testSent: s.testSent })
         .then(r => {
@@ -877,6 +878,9 @@
       let h = hotes.get(host);
       if (!h) { h = new NL(host, opts); hotes.set(host, h); }
       else if (opts && opts.role != null) h.setRole(opts.role);
+      // La campagne marketing à laquelle rattacher la prochaine newsletter (portail Marketing) :
+      // posée ou retirée à chaque montage, jamais héritée d'un montage précédent.
+      if (h && opts) { h.opts.campagne = opts.campagne || null; }
       h.mount(host);
       return h;
     },

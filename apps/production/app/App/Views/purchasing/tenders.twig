@@ -1,0 +1,105 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Zapytania ofertowe{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Zapytania ofertowe</h3>
+            <p class="text-subtitle text-muted"><a href="{{ root }}/purchasing">Koszty surowców</a> · krótka lista surowców, e-mail do wybranych dostawców, porównanie odpowiedzi</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{% set statusLabels = {draft: 'szkic', sent: 'wysłane', awarded: 'rozstrzygnięte', cancelled: 'anulowane'} %}
+<section class="section at-purch">
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Nowe zapytanie</h4></div>
+        <div class="card-body pt-0">
+            <form id="tenderForm" class="at-purch-form">
+                <label class="at-purch-label at-purch-wide">Tytuł <span class="text-danger">*</span><input class="form-control" name="title" maxlength="200" required placeholder="np. Masło i mąka — IV kwartał"></label>
+                <label class="at-purch-label">Termin odpowiedzi<input class="form-control" type="date" name="reply_deadline" value="{{ 'now'|date_modify('+7 days')|date('Y-m-d') }}"></label>
+                <label class="at-purch-label">Język e-maila
+                    <select class="form-select" name="language"><option value="pl">polski</option><option value="fr">français</option></select>
+                </label>
+                <label class="at-purch-label at-purch-wide">Uwagi dla dostawców<textarea class="form-control" name="intro" rows="2" maxlength="2000" placeholder="np. dostawy co tydzień, płatność 30 dni"></textarea></label>
+
+                <fieldset class="at-purch-pick" data-field="material_ids">
+                    <legend>Surowce <span class="text-danger">*</span> <span class="at-sub" data-count>0</span></legend>
+                    <input type="search" class="form-control form-control-sm" placeholder="Szukaj…" data-filter>
+                    <div class="at-purch-list">
+                        {% for r in materials %}
+                            <label data-name="{{ (r.name ~ ' ' ~ r.supplier)|lower }}"><input type="checkbox" class="form-check-input" name="material_ids[]" value="{{ r.id }}">
+                                {{ r.name }} <span class="at-sub">{{ r.spend > 0 ? r.spend|currency(0) ~ '/rok' : '' }}</span></label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                <fieldset class="at-purch-pick" data-field="supplier_ids">
+                    <legend>Dostawcy <span class="text-danger">*</span> <span class="at-sub" data-count>0</span></legend>
+                    <input type="search" class="form-control form-control-sm" placeholder="Szukaj…" data-filter>
+                    <div class="at-purch-list">
+                        {% for s in suppliers %}
+                            {% set hasMail = s.email and '@' in s.email %}
+                            <label data-name="{{ s.name|lower }}" class="{{ hasMail ? '' : 'at-disabled' }}" title="{{ hasMail ? s.email : 'Brak adresu e-mail dostawcy' }}"><input type="checkbox" class="form-check-input" name="supplier_ids[]" value="{{ s.id }}" {{ hasMail ? '' : 'disabled' }}>
+                                {{ s.name }} <span class="at-sub">{{ hasMail ? s.email : 'brak e-maila' }}</span></label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                <div class="at-purch-actions"><span class="at-sub">Zapotrzebowanie roczne każdego surowca jest dopisywane automatycznie (z zamówień).</span><button type="submit" class="btn btn-primary">Utwórz zapytanie</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Zapytania</h4></div>
+        <div class="card-body pt-0">
+            {% if tenders %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead><tr><th>Numer</th><th>Tytuł</th><th class="text-end">Surowce</th><th class="text-end">Odpowiedzi</th><th>Termin</th><th>Status</th></tr></thead>
+                    <tbody>
+                    {% for t in tenders %}
+                        <tr>
+                            <td><a href="{{ root }}/purchasing/tenders/{{ t.id }}"><strong>{{ t.code }}</strong></a></td>
+                            <td>{{ t.title }}</td>
+                            <td class="text-end">{{ t.item_count }}</td>
+                            <td class="text-end">{{ t.responded_count }} / {{ t.supplier_count }}</td>
+                            <td>{{ t.reply_deadline ? t.reply_deadline|date('d.m.Y') : '—' }}</td>
+                            <td><span class="badge {{ t.status == 'awarded' ? 'bg-success' : (t.status == 'sent' ? 'bg-info' : 'bg-secondary') }}">{{ statusLabels[t.status] ?? t.status }}</span></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p class="at-empty">Brak zapytań. Zaznacz surowce powyżej (albo w <a href="{{ root }}/purchasing">kosztach surowców</a>) i wybierz dostawców.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const form = document.getElementById('tenderForm');
+    const preset = (new URLSearchParams(window.location.search).get('materials') || '').split(',').filter(Boolean);
+    form.querySelectorAll('[name="material_ids[]"]').forEach(b => { if (preset.includes(b.value)) b.checked = true; });
+    form.querySelectorAll('.at-purch-pick').forEach(box => {
+        const count = () => box.querySelector('[data-count]').textContent = box.querySelectorAll('input[type=checkbox]:checked').length;
+        box.addEventListener('change', count);
+        count();
+        box.querySelector('[data-filter]').addEventListener('input', (e) => {
+            const q = e.target.value.trim().toLowerCase();
+            box.querySelectorAll('label[data-name]').forEach(l => l.hidden = q !== '' && !l.dataset.name.includes(q) && !l.querySelector('input').checked);
+        });
+    });
+    // Zaznaczone surowce na górę listy.
+    const list = form.querySelector('[data-field="material_ids"] .at-purch-list');
+    [...list.querySelectorAll('label')].filter(l => l.querySelector('input').checked).reverse().forEach(l => list.prepend(l));
+    at.bindForm(form, '/ajax/purchasing/tenders', 'POST', (res) => window.location.href = `${at.root}/purchasing/tenders/${res.id}`);
+})();
+</script>
+{% endblock %}

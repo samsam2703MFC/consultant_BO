@@ -1,0 +1,649 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Wyślij dzień{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title d-flex flex-wrap align-items-end justify-content-between gap-2">
+            <div>
+                <h3>Wyślij dzień</h3>
+                <p class="text-subtitle text-muted mb-0">Dokumenty wysyłki dla wszystkich klientów jednego dnia: WZ, CMR, WDT i różnice.</p>
+            </div>
+            <span class="d-flex flex-wrap gap-3">
+                <a class="at-link" href="{{ root }}/logistics{{ selected_date ? '?date=' ~ selected_date : '' }}"><i class="bi bi-truck"></i> Załadunek: pojazdy i palety</a>
+                
+            </span>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-wizard" id="shipWizard"
+         data-carriers="{{ carriers|json_encode }}"
+         data-replacements="{{ (replacements ?: {})|json_encode }}"
+         data-selected-date="{{ selected_date }}">
+
+    <ol class="at-steps" aria-label="Kroki kreatora">
+        <li data-step-tab="1"><span>Data wysyłki</span></li>
+        <li data-step-tab="2"><span>Klienci i palety</span></li>
+        <li data-step-tab="3"><span>Przewoźnik</span></li>
+        <li data-step-tab="4"><span>Podsumowanie</span></li>
+        <li data-step-tab="5"><span>Dokumenty</span></li>
+    </ol>
+
+    <div class="card">
+        <div class="card-body">
+
+            {# --- 1. Data ------------------------------------------------------------ #}
+            <div class="at-step" data-step="1">
+                <h4 class="at-step-title">Który dzień wysyłamy?</h4>
+                <p class="at-step-lead">Dni, dla których palety są skompletowane i czekają na dokumenty.</p>
+                {% if requested_date and not selected_date %}
+                    <div class="at-note at-note-warn"><i class="bi bi-exclamation-triangle"></i>Dla dnia {{ requested_date|day_pl }} nie ma palet gotowych do dokumentów (kompletowanie może jeszcze trwać).</div>
+                {% endif %}
+                {% if dates %}
+                    <div class="at-choices" role="radiogroup" aria-label="Data wysyłki">
+                        {% for d in dates %}
+                            <label class="at-choice{{ d.date == selected_date ? ' is-checked' : '' }}">
+                                <input type="radio" name="ship_date" value="{{ d.date }}" {{ d.date == selected_date ? 'checked' : '' }}>
+                                <i class="bi bi-check-circle-fill at-choice-tick" aria-hidden="true"></i>
+                                <strong>{{ d.date|day_pl }}</strong>
+                                <small>{{ d.clients|plural_pl('klient', 'klientów', 'klientów') }} · {{ d.pallets|plural_pl('paleta', 'palety', 'palet') }}</small>
+                            </label>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="at-empty"><i class="bi bi-check2-circle"></i> Brak palet gotowych do dokumentów. Gdy kompletowanie się zakończy, dzień pojawi się tutaj.</p>
+                {% endif %}
+            </div>
+
+            {# --- 2. Klienci --------------------------------------------------------- #}
+            <div class="at-step" data-step="2" hidden>
+                <h4 class="at-step-title">Klienci dnia <span data-ship-date-label></span></h4>
+                <p class="at-step-lead">Porównanie zamówionych i zeskanowanych kartonów. Odznacz klienta, którego nie wysyłasz w tym przebiegu.</p>
+                <div id="swClients"></div>
+            </div>
+
+            {# --- 3. Przewoźnik ------------------------------------------------------- #}
+            <div class="at-step" data-step="3" hidden>
+                <h4 class="at-step-title">Przewoźnik i pojazd</h4>
+                <p class="at-step-lead">Podpowiadamy przewoźnika i pojazd z ostatniego listu CMR klienta. Przewoźnik dodatkowy jest opcjonalny.</p>
+                <div id="swCarriers"></div>
+            </div>
+
+            {# --- 4. Podsumowanie ----------------------------------------------------- #}
+            <div class="at-step" data-step="4" hidden>
+                <h4 class="at-step-title">Podsumowanie</h4>
+                <p class="at-step-lead">Sprawdź przed utworzeniem dokumentów.</p>
+                <div id="swSummary"></div>
+
+                <h4 class="at-step-title mt-3">Co zostanie utworzone dla każdego klienta</h4>
+                <ul class="at-creates">
+                    <li><i class="bi bi-box-seam"></i><span><strong>WZ — wydanie zewnętrzne</strong><small>z kartonów zeskanowanych na paletach klienta</small></span></li>
+                    <li><i class="bi bi-truck"></i><span><strong>CMR — list przewozowy</strong><small>z wybranym przewoźnikiem i pojazdem</small></span></li>
+                    <li><i class="bi bi-receipt"></i><span><strong>WDT — faktura</strong><small>zamówienia klienta z tego dnia zostaną z nią powiązane</small></span></li>
+                    <li><i class="bi bi-arrow-left-right"></i><span><strong>Dokument różnic</strong><small>zamówione kontra wysłane</small></span></li>
+                    <li><i class="bi bi-clipboard-check"></i><span><strong>Ewidencja opakowań</strong><small>migawka BDO / PPWR tej wysyłki</small></span></li>
+                    <li><i class="bi bi-check2-square"></i><span><strong>Palety „dokumenty wygenerowane”</strong><small>dzień klienta znika z listy gotowych</small></span></li>
+                    <li><i class="bi bi-send-check"></i><span><strong>Zamówienia dnia : « W transporcie »</strong><small>bez « Oznacz jako wysłane » ; « Zrealizowane », gdy kierowca potwierdzi dostawę na tablecie</small></span></li>
+                    <li><i class="bi bi-shop"></i><span><strong>Powiadomienie sklepu franczyzy</strong><small>« wysłane » z towarem z WDT — do kolejki, wysyłka w ciągu 5 minut (Stan wysyłek)</small></span></li>
+                </ul>
+
+                <div class="at-note at-note-safe">
+                    <i class="bi bi-shield-check"></i><strong>Tworzenie dokumentów nie wysyła faktur do KSeF.</strong>
+                    Jedyne, co wychodzi samo, to powiadomienie « wysłane » do sklepów franczyzy (kolejka, ponów w Stan wysyłek). Po sprawdzeniu dokumentów wyślesz wszystkie WDT dnia
+                    do KSeF jednym przyciskiem na końcu kreatora (z potwierdzeniem) albo pojedynczo na stronie <a href="{{ root }}/shipments">Wysyłki i dokumenty</a>.
+                    Statusy KSeF odświeżają się same co 5 minut ; WDT niewysłane lub odrzucone są w <a href="{{ root }}/client-orders/queue?rule=ksef">Do obsłużenia</a>.
+                    <ul>
+                        <li>Dla klientów franczyzowych ceny na WDT są odczytywane z cennika franczyzy — tak samo jak w trybie klasycznym; to tylko odczyt cennika.</li>
+                        <li>Dokumenty powstają kolejno, osobno dla każdego klienta: błąd u jednego klienta nie cofa dokumentów pozostałych.</li>
+                    </ul>
+                </div>
+
+                <label class="at-confirm">
+                    <input type="checkbox" class="form-check-input" id="swConfirm">
+                    <span id="swConfirmLabel">Potwierdzam: utwórz dokumenty.</span>
+                </label>
+            </div>
+
+            {# --- 5. Tworzenie ---------------------------------------------------------- #}
+            <div class="at-step" data-step="5" hidden>
+                <h4 class="at-step-title">Tworzenie dokumentów</h4>
+                <p class="at-step-lead" id="swRunLead">Nie zamykaj strony, dopóki wszyscy klienci nie zostaną obsłużeni.</p>
+                <div id="swRun"></div>
+                <div id="swRunDone" hidden></div>
+            </div>
+
+            <div class="at-wizard-nav">
+                <button type="button" class="btn btn-outline-dark" data-wizard-back hidden><i class="bi bi-arrow-left"></i> Wstecz</button>
+                <span class="at-wizard-hint" id="swHint" aria-live="polite"></span>
+                <button type="button" class="btn btn-primary at-next" data-wizard-next>Dalej <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    {# --- Zwroty : WZ + CMR dla zwrotów (dawniej tylko w formularzu klasycznym) ------------ #}
+    <div class="card mt-3" id="swReturns">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h4 class="card-title mb-0"><i class="bi bi-arrow-counterclockwise"></i> Zwroty: WZ + CMR</h4>
+            <a class="at-link" href="{{ root }}/client-complaints/shipping-documents">Dokumenty zwrotów <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <div class="card-body">
+            {% if complaint_dates %}
+                <div class="row g-2 align-items-end">
+                    <div class="col-6 col-lg-2"><label class="form-label small" for="rtDate">Data wysyłki zwrotu</label>
+                        <select class="form-select form-select-sm" id="rtDate"><option value="">Wybierz…</option>
+                            {% for d in complaint_dates %}<option value="{{ d }}">{{ d|day_pl }}</option>{% endfor %}</select></div>
+                    <div class="col-6 col-lg-3"><label class="form-label small" for="rtClient">Klient</label>
+                        <select class="form-select form-select-sm" id="rtClient" disabled><option value="">—</option></select></div>
+                    <div class="col-6 col-lg-2"><label class="form-label small" for="rtCarrier">Przewoźnik</label>
+                        <select class="form-select form-select-sm" id="rtCarrier" data-vehicles="rtVehicle"></select></div>
+                    <div class="col-6 col-lg-1"><label class="form-label small" for="rtVehicle">Pojazd</label>
+                        <select class="form-select form-select-sm" id="rtVehicle" disabled><option value="">—</option></select></div>
+                    <div class="col-6 col-lg-2"><label class="form-label small" for="rtCarrierSec">Przewoźnik dodatkowy</label>
+                        <select class="form-select form-select-sm" id="rtCarrierSec" data-vehicles="rtVehicleSec"></select></div>
+                    <div class="col-6 col-lg-1"><label class="form-label small" for="rtVehicleSec">Pojazd</label>
+                        <select class="form-select form-select-sm" id="rtVehicleSec" disabled><option value="">—</option></select></div>
+                    <div class="col-12 col-lg-1 d-grid"><button type="button" class="btn btn-sm btn-primary" id="rtCreate">Utwórz</button></div>
+                </div>
+                <p class="at-run-msg mt-2 mb-0" id="rtMsg" aria-live="polite">Zwroty czekające na wysyłkę : WZ i CMR bez WDT (bez faktury), PDF pobiera się od razu.</p>
+            {% else %}
+                <p class="at-empty mb-0"><i class="bi bi-check2-circle"></i> Brak zwrotów czekających na wysyłkę.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    'use strict';
+
+    const box = document.getElementById('shipWizard');
+    const CARRIERS = JSON.parse(box.dataset.carriers || '[]');
+    // P8 : zamienniki z reklamacji klienta (spakowane wychodzą z jego WZ i dostają « Wysłane » automatycznie).
+    const REPLACEMENTS = JSON.parse(box.dataset.replacements || '{}');
+    const replacementsNote = (id) => {
+        const list = REPLACEMENTS[id] || [];
+        if (!list.length) return '';
+        return '<span class="at-run-msg"><i class="bi bi-box-arrow-up"></i> Zamienniki z reklamacji : ' + list.map((r) => esc(r.product) + ' ×' + r.cartons + (r.packed ? ' (spakowany — wyjdzie z tym WZ)' : ' (do spakowania)')).join(', ') + '</span>';
+    };
+    const backBtn = box.querySelector('[data-wizard-back]');
+    const nextBtn = box.querySelector('[data-wizard-next]');
+    const hint = document.getElementById('swHint');
+
+    const state = { step: 1, date: box.dataset.selectedDate || '', clients: [], loadedFor: '', running: false, planned: {}, plannedFor: '' };
+    const vehicles = {};   // id przewoźnika -> Promise<[{id, regis_num}]>
+
+    const ERRORS = {
+        INVALID_WEBHOOK_URL: 'brak adresu cennika franczyzy w danych klienta',
+        INVALID_SECRET: 'brak klucza cennika franczyzy w danych klienta',
+        POLLING_PRICELIST_ERROR: 'nie udało się odczytać cennika franczyzy',
+        MISSING_CLIENT_CREDENTIALS: 'brak danych dostępowych franczyzy',
+        CLIENT_NOT_INTEGRATED: 'klient nie jest połączony z franczyzą',
+        INSERT_WZ_FAILED: 'nie udało się utworzyć WZ',
+        INSERT_WZ_PRODUCT_FAILED: 'brak zeskanowanych kartonów na paletach klienta',
+        INSERT_CMR_FAILED: 'nie udało się utworzyć CMR',
+        INSERT_WDT_FAILED: 'nie udało się utworzyć faktury WDT',
+        INSERT_WDT_PRODUCT_FAILED: 'nie udało się zapisać pozycji WDT',
+        UPDATE_ORDER_FAILED: 'brak zamówień klienta na ten dzień',
+        UPDATE_PALET_DELIVERY_FAILED: 'nie udało się oznaczyć palet'
+    };
+
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const dayPl = (iso) => {
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+        if (!m) return iso || '';
+        const names = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+        return names[new Date(+m[1], m[2] - 1, +m[3]).getDay()] + ', ' + m[3] + '.' + m[2] + '.' + m[1];
+    };
+    const explain = (res) => {
+        const raw = Array.isArray(res.message) ? res.message.join(', ') : (res.message || res.error || '');
+        const code = (raw.match(/[A-Z][A-Z_]{5,}/) || [])[0];
+        if (code && ERRORS[code]) return ERRORS[code] + ' (' + code + ')';
+        if (raw) return raw.replace(/^Nieoczekiwany błąd:\s*/, '');
+        return 'serwer odpowiedział kodem ' + res.status;
+    };
+    const setHint = (text, error) => { hint.textContent = text || ''; hint.classList.toggle('is-error', !!error); };
+    const included = () => state.clients.filter((c) => c.include);
+    const carrierName = (id) => (CARRIERS.find((c) => c.id === +id) || {}).name || '';
+
+    function vehiclesOf(idCarrier) {
+        if (!idCarrier) return Promise.resolve([]);
+        if (!vehicles[idCarrier]) {
+            vehicles[idCarrier] = api('/ajax/product-carriers/' + idCarrier + '/vehicles')
+                .then((r) => (r.ok && Array.isArray(r.data) ? r.data : []))
+                .catch(() => []);
+        }
+        return vehicles[idCarrier];
+    }
+
+    /* --- Kroki ------------------------------------------------------------ */
+    function show(step) {
+        state.step = step;
+        box.querySelectorAll('[data-step]').forEach((p) => { p.hidden = +p.dataset.step !== step; });
+        box.querySelectorAll('[data-step-tab]').forEach((t) => {
+            const n = +t.dataset.stepTab;
+            t.classList.toggle('is-active', n === step);
+            t.classList.toggle('is-done', n < step);
+            if (n === step) t.setAttribute('aria-current', 'step'); else t.removeAttribute('aria-current');
+        });
+        backBtn.hidden = step === 1 || step === 5;
+        nextBtn.hidden = step === 5;
+        box.querySelector('.at-wizard-nav').hidden = step === 5;
+        nextBtn.innerHTML = step === 4
+            ? '<i class="bi bi-file-earmark-plus"></i> Utwórz dokumenty (' + included().length + ')'
+            : 'Dalej <i class="bi bi-arrow-right"></i>';
+        nextBtn.classList.toggle('btn-success', step === 4);
+        nextBtn.classList.toggle('btn-primary', step !== 4);
+        nextBtn.disabled = step === 4 && !document.getElementById('swConfirm').checked;
+        box.querySelectorAll('[data-ship-date-label]').forEach((el) => { el.textContent = dayPl(state.date); });
+        setHint('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    backBtn.addEventListener('click', () => { if (!state.running) show(state.step - 1); });
+    nextBtn.addEventListener('click', async () => {
+        nextBtn.disabled = true;
+        try {
+            if (state.step === 1) await toClients();
+            else if (state.step === 2) await toCarriers();
+            else if (state.step === 3) toSummary();
+            else if (state.step === 4) await runAll();
+        } finally {
+            if (state.step !== 4) nextBtn.disabled = false;
+            else nextBtn.disabled = !document.getElementById('swConfirm').checked;
+        }
+    });
+
+    /* --- 1. Data ------------------------------------------------------------- */
+    box.querySelectorAll('input[name="ship_date"]').forEach((r) => r.addEventListener('change', () => {
+        state.date = r.value;
+        box.querySelectorAll('.at-choice').forEach((c) => c.classList.toggle('is-checked', c.contains(r)));
+    }));
+
+    /* --- 2. Klienci i kompletność ---------------------------------------------- */
+    async function toClients() {
+        if (!state.date) { setHint('Wybierz dzień wysyłki.', true); return; }
+        if (state.loadedFor !== state.date) {
+            setHint('Wczytywanie klientów…');
+            const res = await api('/ajax/shipments/clients', { data: { shipping_date: state.date } });
+            if (!res.ok || !Array.isArray(res.data) || !res.data.length) {
+                setHint('Brak klientów z paletami gotowymi na ten dzień.', true);
+                return;
+            }
+            state.clients = res.data.map((c) => ({ id: +c.id_customer, company: c.company, include: true, pending: null, carrier: null, last: undefined, result: null }));
+            state.loadedFor = state.date;
+            await Promise.all(state.clients.map(async (c) => {
+                const p = await api('/ajax/shipments/pending-products', { data: { client_id: c.id, shipping_date: state.date } });
+                c.pending = p.ok ? p.data : { products: [], has_pallets: false, all_complete: false, other_dates: [], error: true };
+                c.include = !!c.pending.has_pallets;
+            }));
+        }
+        renderClients();
+        show(2);
+    }
+
+    function completeness(c) {
+        const p = c.pending || {};
+        if (p.error) return { cls: 'at-pill-danger', text: 'Błąd odczytu' };
+        if (!p.has_pallets) return { cls: 'at-pill-danger', text: 'Brak palet' };
+        if (p.all_complete) return { cls: 'at-pill-ok', text: 'Kompletne' };
+        const missing = p.products.filter((x) => +x.quantity_diff > 0).length;
+        const extra = p.products.filter((x) => +x.quantity_diff < 0).length;
+        const parts = [];
+        if (missing) parts.push(missing + ' z brakami');
+        if (extra) parts.push(extra + ' z nadmiarem');
+        return { cls: 'at-pill-warn', text: 'Rozbieżności: ' + parts.join(', ') };
+    }
+
+    function renderClients() {
+        const rows = state.clients.map((c) => {
+            const st = completeness(c);
+            const p = c.pending || { products: [], other_dates: [] };
+            const ordered = p.products.reduce((s, x) => s + (+x.quantity_ordered || 0), 0);
+            const scanned = p.products.reduce((s, x) => s + (+x.quantity_scanned || 0), 0);
+            const other = (p.other_dates || []).map((d) => dayPl(d.shipping_date) + ' (' + d.order_count + ' zam.)').join(', ');
+            const products = p.products.map((x) => {
+                const diff = +x.quantity_diff;
+                const label = diff === 0 ? '<span class="at-run-ok">OK</span>'
+                    : (diff > 0 ? '<span class="at-run-fail">brak ' + diff + '</span>' : '<span class="text-warning">nadmiar ' + Math.abs(diff) + '</span>');
+                return '<tr><td>' + esc(x.product_name) + '</td><td class="text-end">' + esc(x.quantity_ordered) + '</td><td class="text-end">' + esc(x.quantity_scanned) + '</td><td class="text-end">' + label + '</td></tr>';
+            }).join('');
+            return '<tr data-client="' + c.id + '">' +
+                '<td style="width:36px"><input type="checkbox" class="form-check-input" data-include="' + c.id + '"' + (c.include ? ' checked' : '') + (p.has_pallets ? '' : ' disabled') + ' aria-label="Wysyłaj: ' + esc(c.company) + '"></td>' +
+                '<td><strong>' + esc(c.company) + '</strong>' + (other ? '<span class="at-run-msg text-warning"><i class="bi bi-calendar-event"></i> Inne aktywne zamówienia: ' + esc(other) + '</span>' : '') + replacementsNote(c.id) + '</td>' +
+                '<td class="text-end">' + ordered + '</td><td class="text-end">' + scanned + '</td>' +
+                '<td><span class="at-pill ' + st.cls + '">' + esc(st.text) + '</span></td>' +
+                '<td class="text-end">' + (p.products.length ? '<button type="button" class="at-link-btn" data-products="' + c.id + '">Produkty (' + p.products.length + ')</button>' : '') + '</td>' +
+                '</tr>' +
+                (p.products.length ? '<tr data-products-row="' + c.id + '" hidden><td></td><td colspan="5"><div class="at-sub-table"><table class="table table-sm"><thead><tr><th>Produkt</th><th class="text-end">Zamówione</th><th class="text-end">Zeskanowane</th><th class="text-end">Różnica</th></tr></thead><tbody>' + products + '</tbody></table></div></td></tr>' : '');
+        }).join('');
+        document.getElementById('swClients').innerHTML =
+            '<div class="table-responsive"><table class="table"><thead><tr><th></th><th>Klient</th><th class="text-end">Zamówione kartony</th><th class="text-end">Zeskanowane</th><th>Kompletność</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+
+    document.getElementById('swClients').addEventListener('change', (e) => {
+        const id = +e.target.dataset.include;
+        const c = state.clients.find((x) => x.id === id);
+        if (c) c.include = e.target.checked;
+    });
+    document.getElementById('swClients').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-products]');
+        if (!b) return;
+        const row = box.querySelector('[data-products-row="' + b.dataset.products + '"]');
+        row.hidden = !row.hidden;
+        b.textContent = (row.hidden ? 'Produkty' : 'Ukryj produkty') + ' (' + row.querySelectorAll('tbody tr').length + ')';
+    });
+
+    /* --- 3. Przewoźnik -------------------------------------------------------- */
+    async function toCarriers() {
+        const list = included();
+        if (!list.length) { setHint('Zaznacz co najmniej jednego klienta.', true); return; }
+        setHint('Wczytywanie przewoźników…');
+        // Pojazd z « Załadunek dnia » (przydział dnia lub trasa) ma pierwszeństwo przed ostatnim CMR klienta.
+        if (state.plannedFor !== state.date) {
+            const p = await api('/ajax/shipments/planned-vehicles', { data: { date: state.date } });
+            state.planned = p.ok ? (p.data || {}) : {};
+            state.plannedFor = state.date;
+        }
+        await Promise.all(list.map(async (c) => {
+            if (c.last === undefined) {
+                const r = await api('/ajax/shipments/last-carrier', { data: { client_id: c.id } });
+                c.last = r.ok ? (r.data || null) : null;   // api() rozpakowuje {data: …}
+            }
+            c.planned = state.planned[c.id] && carrierName(state.planned[c.id].id_carrier) ? state.planned[c.id] : null;
+            if (!c.carrier) {
+                const l = c.last;
+                const p = c.planned;
+                c.carrier = {
+                    id_carrier: p ? p.id_carrier : (l && carrierName(l.id_carrier) ? l.id_carrier : ''),
+                    id_vehicle: p ? p.id_vehicle : (l ? (l.id_carrier_vehicle || '') : ''),
+                    id_carrier_sec: l && l.id_carrier_sec && carrierName(l.id_carrier_sec) ? l.id_carrier_sec : '',
+                    id_sec_vehicle: l ? (l.id_carrier_sec_vehicle || '') : ''
+                };
+            }
+        }));
+        await renderCarriers();
+        show(3);
+    }
+
+    const carrierOptions = (selected, emptyLabel) => '<option value="">' + emptyLabel + '</option>' +
+        CARRIERS.map((c) => '<option value="' + c.id + '"' + (+selected === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
+
+    async function vehicleOptions(idCarrier, selected) {
+        if (!idCarrier) return { html: '<option value="">—</option>', value: '' };
+        const list = await vehiclesOf(idCarrier);
+        if (!list.length) return { html: '<option value="">Brak pojazdów</option>', value: '' };
+        const value = list.some((v) => +v.id === +selected) ? +selected : +list[0].id;
+        return { html: list.map((v) => '<option value="' + v.id + '"' + (+v.id === value ? ' selected' : '') + '>' + esc(v.regis_num) + '</option>').join(''), value: value };
+    }
+
+    async function renderCarriers() {
+        const list = included();
+        const rows = await Promise.all(list.map(async (c) => {
+            const v1 = await vehicleOptions(c.carrier.id_carrier, c.carrier.id_vehicle);
+            const v2 = await vehicleOptions(c.carrier.id_carrier_sec, c.carrier.id_sec_vehicle);
+            c.carrier.id_vehicle = v1.value;
+            c.carrier.id_sec_vehicle = v2.value;
+            const l = c.last;
+            const p = c.planned;
+            const lastTxt = (p ? 'Załadunek dnia: ' + esc(p.carrier_name) + ' · ' + esc(p.regis_num) + (p.source === 'tour' ? ' (trasa)' : p.source === 'day' ? ' (przydział dnia)' : '') + '<br>' : '') +
+                (l ? 'Ostatnio: ' + esc(l.carrier_name) + (l.regis_num ? ' · ' + esc(l.regis_num) : '') + ' (' + esc(dayPl(l.established_date)) + ')' : (p ? '' : 'Brak wcześniejszego CMR — wybierz przewoźnika.'));
+            return '<tr data-carrier-row="' + c.id + '">' +
+                '<td><strong>' + esc(c.company) + '</strong><span class="at-run-msg">' + lastTxt + '</span></td>' +
+                '<td><select class="form-select form-select-sm" data-field="id_carrier" aria-label="Przewoźnik: ' + esc(c.company) + '">' + carrierOptions(c.carrier.id_carrier, 'Wybierz…') + '</select></td>' +
+                '<td><select class="form-select form-select-sm" data-field="id_vehicle" aria-label="Pojazd: ' + esc(c.company) + '"' + (c.carrier.id_carrier ? '' : ' disabled') + '>' + v1.html + '</select></td>' +
+                '<td><select class="form-select form-select-sm" data-field="id_carrier_sec" aria-label="Przewoźnik dodatkowy: ' + esc(c.company) + '">' + carrierOptions(c.carrier.id_carrier_sec, '— brak —') + '</select></td>' +
+                '<td><select class="form-select form-select-sm" data-field="id_sec_vehicle" aria-label="Pojazd dodatkowy: ' + esc(c.company) + '"' + (c.carrier.id_carrier_sec ? '' : ' disabled') + '>' + v2.html + '</select></td>' +
+                '</tr>';
+        }));
+        document.getElementById('swCarriers').innerHTML =
+            (list.length > 1 ? '<div class="d-flex justify-content-end mb-2"><button type="button" class="btn btn-sm btn-outline-dark" id="swCopyFirst"><i class="bi bi-files"></i> Ustaw jak u pierwszego klienta dla wszystkich</button></div>' : '') +
+            '<div class="table-responsive"><table class="table"><thead><tr><th>Klient</th><th>Przewoźnik</th><th>Pojazd</th><th>Przewoźnik dodatkowy</th><th>Pojazd dodatkowy</th></tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
+    }
+
+    document.getElementById('swCarriers').addEventListener('change', async (e) => {
+        const sel = e.target.closest('select[data-field]');
+        if (!sel) return;
+        const row = sel.closest('[data-carrier-row]');
+        const c = state.clients.find((x) => x.id === +row.dataset.carrierRow);
+        c.carrier[sel.dataset.field] = sel.value ? +sel.value : '';
+        if (sel.dataset.field === 'id_carrier' || sel.dataset.field === 'id_carrier_sec') {
+            const vField = sel.dataset.field === 'id_carrier' ? 'id_vehicle' : 'id_sec_vehicle';
+            const vSel = row.querySelector('[data-field="' + vField + '"]');
+            const v = await vehicleOptions(sel.value, '');
+            vSel.innerHTML = v.html;
+            vSel.disabled = !sel.value;
+            c.carrier[vField] = v.value;
+        }
+    });
+    document.getElementById('swCarriers').addEventListener('click', async (e) => {
+        if (!e.target.closest('#swCopyFirst')) return;
+        const list = included();
+        const first = Object.assign({}, list[0].carrier);
+        list.slice(1).forEach((c) => { c.carrier = Object.assign({}, first); });
+        await renderCarriers();
+        setHint('Ustawiono przewoźnika i pojazd pierwszego klienta dla wszystkich.');
+    });
+
+    /* --- 4. Podsumowanie ------------------------------------------------------ */
+    function toSummary() {
+        const list = included();
+        const bad = list.filter((c) => !c.carrier.id_carrier || !c.carrier.id_vehicle || (c.carrier.id_carrier_sec && !c.carrier.id_sec_vehicle));
+        if (bad.length) {
+            setHint('Wybierz przewoźnika i pojazd dla: ' + bad.map((c) => c.company).join(', ') + '.', true);
+            return;
+        }
+        const regis = (sel) => (sel && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '');
+        const rows = list.map((c) => {
+            const row = box.querySelector('[data-carrier-row="' + c.id + '"]');
+            const st = completeness(c);
+            const sec = c.carrier.id_carrier_sec ? '<span class="at-run-msg">+ ' + esc(carrierName(c.carrier.id_carrier_sec)) + ' · ' + esc(regis(row.querySelector('[data-field="id_sec_vehicle"]'))) + '</span>' : '';
+            return '<tr><td><strong>' + esc(c.company) + '</strong></td>' +
+                '<td>' + esc(carrierName(c.carrier.id_carrier)) + ' · ' + esc(regis(row.querySelector('[data-field="id_vehicle"]'))) + sec + '</td>' +
+                '<td><span class="at-pill ' + st.cls + '">' + esc(st.text) + '</span></td></tr>';
+        }).join('');
+        const skipped = state.clients.filter((c) => !c.include);
+        document.getElementById('swSummary').innerHTML =
+            '<div class="table-responsive"><table class="table"><thead><tr><th>Klient</th><th>Przewoźnik · pojazd</th><th>Kompletność palet</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+            (list.some((c) => !(c.pending && c.pending.all_complete)) ? '<div class="at-note at-note-warn"><i class="bi bi-exclamation-triangle"></i>U części klientów zeskanowane kartony różnią się od zamówienia. Dokumenty powstaną z tego, co jest na paletach, a różnice trafią do dokumentu różnic.</div>' : '') +
+            (skipped.length ? '<p class="at-run-msg">Pominięci w tym przebiegu: ' + esc(skipped.map((c) => c.company).join(', ')) + '.</p>' : '');
+        document.getElementById('swConfirm').checked = false;
+        document.getElementById('swConfirmLabel').textContent = 'Potwierdzam: utwórz dokumenty dla ' + list.length + ' ' + (list.length === 1 ? 'klienta' : 'klientów') + ' na ' + dayPl(state.date) + '.';
+        show(4);
+    }
+    document.getElementById('swConfirm').addEventListener('change', (e) => { if (state.step === 4) nextBtn.disabled = !e.target.checked; });
+
+    /* --- 5. Tworzenie, klient po kliencie ------------------------------------------ */
+    function runRow(c) {
+        const r = c.result;
+        let stateHtml, action = '';
+        if (!r) stateHtml = '<span class="at-run-state text-muted"><i class="bi bi-hourglass"></i> Czeka</span>';
+        else if (r.status === 'running') stateHtml = '<span class="at-run-state"><span class="spinner-border" role="status"></span> Tworzenie dokumentów…</span>';
+        else if (r.status === 'ok') {
+            const queued = (r.notices || []).filter((n) => n.status === 'queued').length;
+            const noticeErr = (r.notices || []).filter((n) => n.status === 'error');
+            stateHtml = '<span class="at-run-state at-run-ok"><i class="bi bi-check-circle-fill"></i> Utworzono · wysyłka #' + r.id + '</span>' +
+                '<span class="at-run-msg">Zamówienia : « W transporcie »' + (queued ? ' · powiadomienie sklepu w kolejce' : '') +
+                (noticeErr.length ? ' · <span class="text-danger">sklep bez powiadomienia (' + esc(noticeErr[0].code || 'błąd') + ')</span>' : '') + '</span>';
+            action = '<button type="button" class="btn btn-sm btn-primary" data-pdf="' + r.id + '"><i class="bi bi-file-earmark-arrow-down"></i> Dokumenty (PDF)</button>';
+        } else if (r.status === 'unknown') {
+            stateHtml = '<span class="at-run-state text-warning"><i class="bi bi-question-circle-fill"></i> Odpowiedź nieczytelna</span><span class="at-run-msg">Sprawdź na liście „Wysyłki i dokumenty”, czy dokumenty powstały, zanim spróbujesz ponownie.</span>';
+        } else {
+            stateHtml = '<span class="at-run-state at-run-fail"><i class="bi bi-x-circle-fill"></i> Błąd — dokumenty nie powstały</span><span class="at-run-msg">' + esc(r.message) + '</span>';
+        }
+        return '<tr data-run="' + c.id + '"><td><strong>' + esc(c.company) + '</strong></td><td>' + stateHtml + '</td><td class="text-end">' + action + '</td></tr>';
+    }
+
+    function renderRun() {
+        document.getElementById('swRun').innerHTML =
+            '<div class="table-responsive"><table class="table"><thead><tr><th>Klient</th><th>Stan</th><th class="text-end">Dokumenty</th></tr></thead><tbody>' +
+            state.runList.map(runRow).join('') + '</tbody></table></div>';
+    }
+
+    async function runOne(c) {
+        c.result = { status: 'running' };
+        renderRun();
+        let res;
+        try {
+            res = await api('/ajax/shipments', {
+                method: 'POST',
+                data: {
+                    shipping_date: state.date,
+                    id_customer: c.id,
+                    id_carrier: c.carrier.id_carrier,
+                    id_carrier_vehicle: c.carrier.id_vehicle,
+                    id_carrier_sec: c.carrier.id_carrier_sec || '-1',
+                    id_carrier_sec_vehicle: c.carrier.id_carrier_sec ? c.carrier.id_sec_vehicle : ''
+                }
+            });
+        } catch (err) {
+            c.result = { status: 'fail', message: 'brak połączenia z serwerem' };
+            renderRun();
+            return;
+        }
+        if (res.ok && res.id) c.result = { status: 'ok', id: +res.id, notices: Array.isArray(res.shop_notices) ? res.shop_notices : [] };
+        else if (res.ok) c.result = { status: 'unknown' };
+        else c.result = { status: 'fail', message: explain(res) };
+        renderRun();
+    }
+
+    async function runAll(retry) {
+        if (state.running) return;
+        if (!retry && !document.getElementById('swConfirm').checked) return;
+        state.running = true;
+        if (!retry) {
+            state.runList = included();
+            state.runList.forEach((c) => { c.result = null; });
+            show(5);
+        }
+        const queue = retry ? state.runList.filter((c) => c.result && c.result.status === 'fail') : state.runList;
+        queue.forEach((c) => { c.result = null; });
+        document.getElementById('swRunDone').hidden = true;
+        document.getElementById('swRunLead').textContent = 'Nie zamykaj strony, dopóki wszyscy klienci nie zostaną obsłużeni.';
+        renderRun();
+        for (const c of queue) {
+            await runOne(c);   // kolejno: jedna wysyłka naraz
+        }
+        state.running = false;
+        renderDone();
+    }
+
+    function renderDone() {
+        const ok = state.runList.filter((c) => c.result && c.result.status === 'ok');
+        const fail = state.runList.filter((c) => c.result && c.result.status === 'fail');
+        const unknown = state.runList.filter((c) => c.result && c.result.status === 'unknown');
+        const queuedAll = ok.reduce((n, c) => n + (c.result.notices || []).filter((x) => x.status === 'queued').length, 0);
+        document.getElementById('swRunLead').textContent = 'Gotowe.';
+        const done = document.getElementById('swRunDone');
+        done.hidden = false;
+        done.innerHTML =
+            '<div class="at-note ' + (fail.length || unknown.length ? 'at-note-warn' : 'at-note-safe') + '"><i class="bi ' + (fail.length ? 'bi-exclamation-triangle' : 'bi-check-circle') + '"></i>' +
+            '<strong>Utworzono dokumenty dla ' + ok.length + ' z ' + state.runList.length + ' ' + (state.runList.length === 1 ? 'klienta' : 'klientów') + '.</strong>' +
+            (fail.length ? ' Bez dokumentów: ' + esc(fail.map((c) => c.company).join(', ')) + '.' : '') +
+            (ok.length ? ' Zamówienia tych klientów mają status « W transporcie » ; « Zrealizowane » po potwierdzeniu kierowcy.' : '') +
+            (queuedAll ? ' Powiadomienia sklepów franczyzy w kolejce : ' + queuedAll + ' (wysyłka w ciągu 5 minut, Stan wysyłek).' : '') +
+            ' Nic nie zostało wysłane do KSeF.</div>' +
+            '<div class="d-flex flex-wrap gap-2">' +
+            (ok.length ? '<button type="button" class="btn btn-primary" id="swAllPdf"><i class="bi bi-file-earmark-arrow-down"></i> Pobierz wszystkie dokumenty (' + ok.length + ' PDF)</button>' : '') +
+            (ok.length ? '<button type="button" class="btn btn-outline-primary" id="swKsef"><i class="bi bi-cloud-upload"></i> Wyślij WDT dnia do KSeF (' + ok.length + ')</button>' : '') +
+            (fail.length ? '<button type="button" class="btn btn-outline-dark" id="swRetry"><i class="bi bi-arrow-repeat"></i> Ponów nieudane (' + fail.length + ')</button>' : '') +
+            '<a class="btn btn-outline-dark" href="' + window.API_BASE_URL + '/shipments">Wysyłki i dokumenty</a>' +
+            '<a class="btn btn-outline-dark" href="' + window.API_BASE_URL + '/shipping/wizard">Następny dzień</a>' +
+            '</div><div id="swKsefResult" class="mt-2" aria-live="polite"></div>';
+    }
+
+    // KSeF : toutes les WDT créées dans ce passage, une par une (même envoi que « Wyślij KSeF » sur Wysyłki).
+    async function sendKsef(btn) {
+        const list = state.runList.filter((x) => x.result && x.result.status === 'ok');
+        if (!list.length || !confirm('Wysłać do KSeF faktury WDT dla ' + list.length + ' ' + (list.length === 1 ? 'wysyłki' : 'wysyłek') + ' ? Faktury przyjęte przez KSeF nie mogą być zmienione.')) return;
+        btn.disabled = true;
+        const out = document.getElementById('swKsefResult');
+        const lines = [];
+        for (const c of list) {
+            lines.push('<div data-ksef-row="' + c.result.id + '"><span class="spinner-border spinner-border-sm"></span> ' + esc(c.company) + '</div>');
+        }
+        out.innerHTML = lines.join('');
+        let sent = 0;
+        for (const c of list) {
+            let res;
+            try { res = await api('/ajax/shipments/' + c.result.id + '/ksef/send', { method: 'POST', data: {} }); }
+            catch (err) { res = { ok: false, message: 'brak połączenia z serwerem' }; }
+            if (res.ok && res.data && res.data.ok) sent++;
+            out.querySelector('[data-ksef-row="' + c.result.id + '"]').innerHTML = (res.ok && res.data && res.data.ok
+                ? '<i class="bi bi-check-circle-fill text-success"></i> ' + esc(c.company) + ' — przekazano do KSeF'
+                : '<i class="bi bi-x-circle-fill text-danger"></i> ' + esc(c.company) + ' — ' + esc((res.data && res.data.message) || res.message || 'błąd'));
+        }
+        out.insertAdjacentHTML('beforeend', '<p class="at-run-msg mt-1">Przekazano ' + sent + ' z ' + list.length + '. Statusy (przyjęta / odrzucona) odświeżą się same w ciągu kilku minut.</p>');
+        btn.disabled = sent === list.length;
+    }
+
+    document.getElementById('swRun').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-pdf]');
+        if (b) downloadPDF('/ajax/shipments/' + b.dataset.pdf + '/documents/grouped');
+    });
+    document.getElementById('swRunDone').addEventListener('click', async (e) => {
+        if (e.target.closest('#swRetry')) { await runAll(true); return; }
+        const ksef = e.target.closest('#swKsef');
+        if (ksef) { await sendKsef(ksef); return; }
+        const all = e.target.closest('#swAllPdf');
+        if (!all) return;
+        all.disabled = true;
+        for (const c of state.runList.filter((x) => x.result && x.result.status === 'ok')) {
+            await downloadPDF('/ajax/shipments/' + c.result.id + '/documents/grouped');
+        }
+        all.disabled = false;
+    });
+    window.addEventListener('beforeunload', (e) => { if (state.running) { e.preventDefault(); e.returnValue = ''; } });
+
+    show(1);
+
+    /* --- Zwroty : WZ + CMR (POST /ajax/complaints, jak w formularzu klasycznym) ------------- */
+    const rt = document.getElementById('rtDate');
+    if (rt) {
+        const $ = (id) => document.getElementById(id);
+        const msg = (t, err) => { $('rtMsg').textContent = t; $('rtMsg').classList.toggle('text-danger', !!err); };
+        $('rtCarrier').innerHTML = carrierOptions('', 'Wybierz…');
+        $('rtCarrierSec').innerHTML = carrierOptions('', '— brak —');
+        rt.addEventListener('change', async () => {
+            const sel = $('rtClient');
+            sel.disabled = true;
+            sel.innerHTML = '<option value="">—</option>';
+            if (!rt.value) return;
+            const r = await api('/ajax/complaints/clients', { data: { date: rt.value } });
+            const list = r.ok && Array.isArray(r.data) ? r.data : [];
+            sel.innerHTML = list.map((c) => '<option value="' + c.id_customer + '">' + esc(c.company) + '</option>').join('') || '<option value="">Brak klientów</option>';
+            sel.disabled = !list.length;
+        });
+        ['rtCarrier', 'rtCarrierSec'].forEach((id) => $(id).addEventListener('change', async (e) => {
+            const target = $(e.target.dataset.vehicles);
+            const v = await vehicleOptions(e.target.value ? +e.target.value : '', '');
+            target.innerHTML = v.html;
+            target.disabled = !e.target.value;
+        }));
+        $('rtCreate').addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            if (!rt.value || !$('rtClient').value) { msg('Wybierz datę i klienta zwrotu.', true); return; }
+            if (!$('rtCarrier').value || !$('rtVehicle').value) { msg('Wybierz przewoźnika i pojazd.', true); return; }
+            btn.disabled = true;
+            msg('Tworzenie WZ i CMR zwrotu…');
+            const r = await api('/ajax/complaints', { method: 'POST', data: {
+                shipping_date: rt.value, id_customer: $('rtClient').value,
+                id_carrier: $('rtCarrier').value, id_carrier_vehicle: $('rtVehicle').value,
+                id_carrier_sec: $('rtCarrierSec').value || '-1', id_carrier_sec_vehicle: $('rtCarrierSec').value ? $('rtVehicleSec').value : ''
+            } });
+            if (r.ok && r.id) {
+                msg('Dokumenty zwrotu utworzone (#' + r.id + '), pobieranie PDF…');
+                await downloadPDF('/ajax/complaints/' + r.id + '/documents/grouped');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                msg('Nie udało się: ' + explain(r), true);
+                btn.disabled = false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

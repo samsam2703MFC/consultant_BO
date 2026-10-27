@@ -1,0 +1,6 @@
+{ "reseau": { "taux": 36.5, "faites": 19, "total": 52, "magasinsClos": 0, "magasins": 4 },
+  "magasins": [
+    { "nom": "Atelier by Max & Sandra - Gosselies", "taux": 76.9, "faites": 10, "total": 13, "obligatoiresManquees": 3 },
+    { "nom": "Atelier by - Halle", "taux": 69.2, "faites": 9, "total": 13, "obligatoiresManquees": 4 },
+    { "nom": "Atelier by Berlo - Corbais", "taux": 0, "faites": 0, "total": 13, "obligatoiresManquees": 13 },
+    { "nom": "Atelier by Harmonie - Sombreffe", "taux": 0, "faites": 0, "total": 13, "obligatoiresManquees": 13 } ] }

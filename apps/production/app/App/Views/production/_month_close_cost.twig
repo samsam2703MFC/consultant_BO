@@ -1,0 +1,18 @@
+{# Kreator « Zamknięcie miesiąca » : jedna kategoria kosztów (media, koszty stałe, logistyka) — suma miesiąca albo kopia
+   z ostatniego miesiąca, który ją ma. Zmienne : c (count, total, source), category, anchor, what. #}
+<div class="mc-cost">
+    {% if c.count %}
+        <p class="mc-line"><i class="bi bi-check-circle text-success"></i> {{ c.count|plural_pl('pozycja', 'pozycje', 'pozycji') }} · {{ c.total|pln }}
+            {% if c.source %}<span class="text-muted">· {{ c.source.label }} : {{ c.source.total|pln }}</span>{% endif %}</p>
+    {% elseif c.source %}
+        <p class="mc-line">Brak wpisów. Ostatni miesiąc z kosztami : {{ c.source.label }} — {{ c.source.count|plural_pl('pozycja', 'pozycje', 'pozycji') }} · {{ c.source.total|pln }}.</p>
+    {% else %}
+        <p class="mc-line">Brak wpisów i brak wcześniejszego miesiąca do skopiowania.</p>
+    {% endif %}
+    <div class="mc-actions">
+        {% if not c.count and c.source %}
+            <button type="button" class="btn btn-sm btn-primary" data-mc-action="copy" data-category="{{ category }}" {{ editable ? '' : 'disabled' }}><i class="bi bi-files"></i> Kopiuj {{ what }} z {{ c.source.label_gen }}</button>
+        {% endif %}
+        <a class="at-link" href="{{ root }}/cost-calculator/{{ mc.month }}#{{ anchor }}">{{ c.count ? 'Popraw' : 'Wpisz' }} w kalkulatorze <i class="bi bi-arrow-right"></i></a>
+    </div>
+</div>

@@ -1,0 +1,64 @@
+{# Tablica zadań stanowiska : zaległe, potem okres bieżący według kategorii (częstotliwość przy zadaniu). #}
+{% macro item(task, o, root, overdue = false, frequency = null) %}
+    <li class="at-task {{ o ? 'is-' ~ o.status : '' }} {{ overdue ? 'is-overdue' : '' }}" {% if o %}data-occurrence="{{ o.id }}"{% endif %}>
+        <div class="at-task-main">
+            <strong>{{ task.title_pl }}</strong>{% if task.form_code %} <span class="badge bg-light text-dark border"><i class="bi bi-journal-text"></i> protokół</span>{% endif %}
+            <div class="at-sub">
+                {% if frequency %}{{ frequency }}{% if task.frequency == 'weekly' and task.due_weekday %} ({{ ['', 'pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.', 'niedz.'][task.due_weekday] }}){% endif %} · {% endif %}
+                {% if overdue %}zaległe · termin {{ o.due_date|date('d.m.Y') }} ({{ o.period_key }}){% elseif o %}termin {{ o.due_date|date('d.m') }}{% else %}dziś dzień wolny{% endif %}
+                {% if o and o.status != 'open' %} · {{ o.status == 'done' ? 'zrobione' : 'pominięte' }}{{ o.done_by_name ? ' przez ' ~ o.done_by_name : '' }}{{ o.done_at ? ', ' ~ o.done_at|date('d.m H:i') : '' }}{% endif %}
+                {% if o and o.note %} · „{{ o.note }}”{% endif %}
+            </div>
+        </div>
+        <div class="at-task-actions">
+            {% if task.link_path %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}{{ task.link_path }}">Otwórz</a>{% endif %}
+            {% if o %}
+                {% if task.form_code %}
+                    {% if o.form_status == 'final' %}
+                        <a class="btn btn-sm btn-outline-success" href="{{ root }}/task-forms/{{ o.form_id }}"><i class="bi bi-journal-check"></i> Protokół</a>
+                    {% else %}
+                        <a class="btn btn-sm btn-primary" href="{{ root }}/my-tasks/{{ o.id }}/form"><i class="bi bi-journal-text"></i> {{ o.form_status == 'draft' ? 'Dokończ protokół' : 'Wypełnij protokół' }}</a>
+                    {% endif %}
+                    {% if o.status == 'open' %}<button class="btn btn-sm btn-outline-secondary" data-status="skipped">Pomiń</button>{% elseif o.status == 'skipped' %}<button class="btn btn-sm btn-outline-secondary" data-status="open">Cofnij</button>{% endif %}
+                {% elseif o.status == 'open' %}
+                    <button class="btn btn-sm btn-primary" data-status="done"><i class="bi bi-check"></i> Zrobione</button>
+                    <button class="btn btn-sm btn-outline-secondary" data-status="skipped">Pomiń</button>
+                {% else %}
+                    <button class="btn btn-sm btn-outline-secondary" data-status="open">Cofnij</button>
+                {% endif %}
+            {% endif %}
+        </div>
+    </li>
+{% endmacro %}
+
+{% if overdue %}
+    <div class="card at-task-card">
+        <div class="card-header"><h4 class="card-title text-danger">Zaległe ({{ overdue|length }})</h4></div>
+        <div class="card-body pt-0"><ul class="at-tasks">{% for o in overdue %}{{ _self.item(o.task, o, root, true) }}{% endfor %}</ul></div>
+    </div>
+{% endif %}
+{% for code, g in groups %}
+    <div class="card at-task-card" data-category="{{ code }}">
+        <div class="card-header d-flex justify-content-between align-items-center gap-2"><h4 class="card-title mb-0"><i class="bi {{ g.icon }}"></i> {{ g.label }}</h4>
+            {% if g.open %}<span class="badge bg-info">do zrobienia {{ g.open }}</span>{% else %}<span class="badge bg-success"><i class="bi bi-check"></i></span>{% endif %}</div>
+        <div class="card-body pt-0"><ul class="at-tasks">{% for it in g.items %}{{ _self.item(it.task, it.occurrence, root, false, it.frequency) }}{% endfor %}</ul></div>
+    </div>
+{% endfor %}
+
+<script>
+(() => {
+    document.querySelectorAll('[data-occurrence] [data-status]').forEach(button => button.addEventListener('click', () => {
+        const li = button.closest('[data-occurrence]');
+        const status = button.dataset.status;
+        let note = null;
+        if (status === 'skipped') {
+            note = window.prompt('Dlaczego pomijasz to zadanie?');
+            if (!note) return;
+        }
+        at.send(`/ajax/my-tasks/${li.dataset.occurrence}`, 'PATCH', {status, note}).then(res => {
+            at.notify(res.ok, res.message);
+            if (res.ok) window.setTimeout(() => window.location.reload(), 400);
+        });
+    }));
+})();
+</script>

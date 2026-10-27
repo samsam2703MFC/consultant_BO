@@ -1,0 +1,33 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Ustawienia{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Ustawienia</h3>
+            <p class="text-subtitle text-muted mb-0">Wszystkie ustawienia na jednej stronie, po dziedzinach. Klienci są też w Sprzedaży, dostawcy w Zakupach ; każdą stronę znajdziesz w wyszukiwarce.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="st-hub">
+        {% for title, card in cards %}
+            {% set links = card[2]|filter(l => can_see(l[0]|split('?')|first|split('#')|first)) %}
+            {% if links|length %}
+            <div class="card st-card"><div class="card-body">
+                <div class="st-card-head"><span class="st-card-icon"><i class="bi {{ card[0] }}"></i></span>
+                    <div><h5 class="m-0">{{ title }}</h5><p class="text-muted small mb-0">{{ card[1] }}</p></div></div>
+                <ul class="st-links">
+                    {% for l in links %}
+                        <li><a href="{{ root }}{{ l[0] }}"><i class="bi {{ l[2] }}"></i><span><strong>{{ l[1] }}</strong><small>{{ l[3] }}</small></span><i class="bi bi-chevron-right st-go"></i></a></li>
+                    {% endfor %}
+                </ul>
+            </div></div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

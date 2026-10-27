@@ -12,8 +12,12 @@ require __DIR__ . '/../../src/writes.php';
 require __DIR__ . '/../../src/mkt_types.php';
 require __DIR__ . '/../../src/fbcontrole.php';
 require __DIR__ . '/../../src/meta_graph.php';
+require __DIR__ . '/../../src/linkedin_api.php';
+require __DIR__ . '/../../src/social_publication.php';
 require __DIR__ . '/../../src/brand_guard.php';
 require __DIR__ . '/../../src/installer.php';
+require __DIR__ . '/../../src/marketing_tables.php';
+require __DIR__ . '/../../src/con_tables.php';
 require __DIR__ . '/../../src/auth.php';
 require __DIR__ . '/../../src/panel_api.php';
 require __DIR__ . '/../../src/erp_api.php';
@@ -23,11 +27,16 @@ require __DIR__ . '/../../src/scouting_osm.php';
 require __DIR__ . '/../../src/scouting_dossier.php';
 require __DIR__ . '/../../src/newsletter.php';
 require __DIR__ . '/../../src/newsletter_envoi.php';
+require __DIR__ . '/../../src/fidelite.php';
 require __DIR__ . '/../../src/prospection.php';
+require __DIR__ . '/../../src/visites_questions.php';
 require __DIR__ . '/../../src/visites.php';
+require __DIR__ . '/../../src/visites_kpi.php';
 require __DIR__ . '/../../src/visites_conformite.php';
 require __DIR__ . '/../../src/visites_cadre.php';
 require __DIR__ . '/../../src/franchises.php';
+require __DIR__ . '/../../src/suivi.php';
+require __DIR__ . '/../../src/suivi_sources.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
 require __DIR__ . '/../../src/push.php';
@@ -36,7 +45,9 @@ require __DIR__ . '/../../src/resultat_pdf.php';
 require __DIR__ . '/../../src/plan.php';
 require __DIR__ . '/../../src/plan_pdf.php';
 require __DIR__ . '/../../src/stats_ventes.php';
+require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
+require __DIR__ . '/../../src/inventaires.php';
 require __DIR__ . '/../../src/notes_jour.php';
 require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
@@ -59,9 +70,10 @@ require __DIR__ . '/../../src/ca_mail.php';
 require __DIR__ . '/../../src/mkt_brief.php';
 require __DIR__ . '/../../src/mkt_annexes.php';
 require __DIR__ . '/../../src/mkt_agences.php';
+require __DIR__ . '/../../src/marketing_hub.php';
+require __DIR__ . '/../../src/marketing_sources.php';
 require __DIR__ . '/../../src/prod_utilisation.php';
 require __DIR__ . '/../../src/prod_manque.php';
-require __DIR__ . '/../../src/analyse_magasin.php';
 require __DIR__ . '/../../src/ventes.php';
 require __DIR__ . '/../../src/commandes.php';
 require __DIR__ . '/../../src/canaux_offres.php';
@@ -75,11 +87,28 @@ require __DIR__ . '/../../src/cadence.php';
 require __DIR__ . '/../../src/connecteurs.php';
 require __DIR__ . '/../../src/mesure.php';
 require __DIR__ . '/../../src/taches_suivi.php';
+require __DIR__ . '/../../src/cq_mail.php';
+require __DIR__ . '/../../src/pointages_mail.php';
+require __DIR__ . '/../../src/documents.php';
+require __DIR__ . '/../../src/ca_net_mois.php';
+require __DIR__ . '/../../src/controles_qualite.php';
 require __DIR__ . '/../../src/kpi_table.php';
 require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
+require __DIR__ . '/../../src/motivation.php';
 require __DIR__ . '/../../src/primes.php';
+require __DIR__ . '/../../src/primes_app.php';
+require __DIR__ . '/../../src/primes_b2b.php';
+require __DIR__ . '/../../src/api_module.php';
+require __DIR__ . '/../../src/grands_prix.php';
+require __DIR__ . '/../../src/promos_magasin.php';
+require __DIR__ . '/../../src/promos_bons.php';
+require __DIR__ . '/../../src/promos_doc.php';
+require __DIR__ . '/../../src/promos_reseau.php';
+require __DIR__ . '/../../src/sms.php';
+require __DIR__ . '/../../src/recurrence_pwa.php';
+require __DIR__ . '/../../src/leviers.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -89,6 +118,9 @@ $method = $_SERVER['REQUEST_METHOD'];
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '/';
 $path = preg_replace('#^.*?/api/cockpit#', '', $uri) ?: '/';
 $path = rtrim($path, '/') ?: '/';
+// Les API du portail Marketing sont rangées sous /marketing ; les anciennes adresses
+// (mails déjà envoyés, cron, écrans en cache) y sont ramenées ici (src/marketing_tables.php).
+$path = marCheminCanonique($path);
 
 $tInstall = $tCharge;
 try {
@@ -102,9 +134,14 @@ try {
         echo ep_ca_mail_apercu();
         exit;
     }                      // tables + seed + secret au premier appel
+    // Un document d'un franchisé (22/10/2026) sort tel quel (PDF, image, Word…), pas en JSON.
+    if ($method === 'GET' && $path === '/franchises/documents/fichier') {
+        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        ep_franchises_document_fichier();   // sort le fichier, puis exit
+    }
     // Le suivi des newsletters (pixel d'ouverture, clic, désinscription) est
     // ouvert au monde : c'est le client, depuis sa boîte mail, qui l'appelle.
-    if ($method === 'GET' && preg_match('#^/newsletter/(o|c|u)/([a-f0-9]{32})$#', $path, $m)) {
+    if ($method === 'GET' && preg_match('#^/marketing/newsletter/(o|c|u)/([a-f0-9]{32})$#', $path, $m)) {
         nlSuivi($m[1], $m[2]);   // sort en gif, redirection ou HTML, puis exit
     }
 
@@ -129,6 +166,13 @@ try {
         $out = ep_ventes_moi_jeton();
         tempsServeur($tCharge, $tInstall);
         echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    // La page du franchisé (suivi/) n'a pas de session du cockpit : le jeton du magasin est sa clé (src/suivi.php).
+    if (str_starts_with($path, '/suivi/franchise') && ($pub = suRoutePublique($method, $path)) !== null) {
+        tempsServeur($tCharge, $tInstall);
+        echo json_encode($pub, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
 
@@ -207,6 +251,7 @@ function route(string $method, string $path): mixed
             $path === '/referentiels/project-templates' => ep_project_templates(),
             $path === '/stores'                        => ep_stores(),
             $path === '/stores/perf'                   => ep_perf(),
+            $path === '/leviers/magasins'              => ep_leviers_magasins(),
             $path === '/stores/budgets'                => ep_budgets(),
             $path === '/stores/budget-notes'           => ep_budget_notes(),
             $path === '/exploitation/notes'            => ep_notes_jour(),
@@ -220,6 +265,15 @@ function route(string $method, string $path): mixed
             $path === '/promo'                         => ep_promos(),
             $path === '/exploitation/promos'           => ep_promos_magasin(),
             $path === '/exploitation/canaux'           => ep_exploitation_canaux(),
+            $path === '/exploitation/canaux-mois'      => ep_exploitation_canaux_mois(),
+            $path === '/exploitation/promos-magasin'   => ep_promos_magasin_demandes(),
+            $path === '/exploitation/promos-magasin/produits' => ep_promos_magasin_produits(),
+            $path === '/exploitation/promos-magasin/canaux' => ep_promos_magasin_canaux(),
+            $path === '/exploitation/promos-magasin/clients' => ep_promos_magasin_clients(),
+            $path === '/exploitation/promos-magasin/bon' => ep_promos_magasin_bon(),
+            $path === '/promos-magasin'                => ep_promos_magasin_marque(),
+            // Le Tableau d'analyse (26/10/2026) : toutes les promotions de tous les magasins, et ce qu'elles ont fait.
+            $path === '/promotions/reseau'             => ep_promotions_reseau(),
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
             $path === '/exploitation/bundles/sonde'    => ep_bundles_sonde(),
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
@@ -234,6 +288,7 @@ function route(string $method, string $path): mixed
             $path === '/production/flux/commandes'     => ep_production_flux_commandes(),
             $path === '/production/flux/fours'         => ep_production_flux_fours(),
             $path === '/exploitation/invendus/sonde'   => ep_exploitation_invendus_sonde(),
+            $path === '/exploitation/couts/sonde'      => ep_couts_sonde(),
             $path === '/exploitation/invendus/detail'  => ep_exploitation_invendus_detail(),
             $path === '/exploitation/invendus/actions' => ep_exploitation_invendus_actions(),
             $path === '/equipe/remarques'              => ep_equipe_remarques(),
@@ -243,10 +298,10 @@ function route(string $method, string $path): mixed
             $path === '/stores/etp'                    => ep_stores_etp(),
             $path === '/stores/kpis-annuels'           => ep_stores_kpis_annuels(),
             $path === '/exploitation'                  => ep_exploitation(),
-            $path === '/exploitation/magasin'          => ep_exploitation_magasin(),
             $path === '/exploitation/reseau'           => ep_exploitation_reseau(),
             $path === '/exploitation/rentabilite'      => ep_exploitation_rentabilite(),
             $path === '/exploitation/jour'             => ep_exploitation_jour(),
+            $path === '/exploitation/equipe-heures'    => ep_exploitation_equipe_heures(),
             $path === '/exploitation/ponderation-jours' => ep_ponderation_jours(),
             $path === '/exploitation/periode'          => ep_exploitation_periode(),
             $path === '/exploitation/mois.pdf'         => ep_exploitation_mois_pdf(),
@@ -268,6 +323,7 @@ function route(string $method, string $path): mixed
             $path === '/analyse/produits/jours'        => ep_analyse_produits_jours(),
             $path === '/analyse/produits/magasin'      => ep_analyse_produit_magasin(),
             $path === '/analyse/categories/magasin'    => ep_analyse_categorie_magasin(),
+            $path === '/analyse/categories/journee'    => ep_analyse_categorie_journee(),
             $path === '/analyse/produits/recette'      => ep_analyse_produit_recette(),
             $path === '/analyse/matieres/fiche'        => ep_analyse_matiere_fiche(),
             $path === '/analyse/pnl/mois'              => ep_analyse_pnl_mois(),
@@ -279,9 +335,15 @@ function route(string $method, string $path): mixed
             $path === '/rapports/cron'                 => ep_rapports_cron(),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
             preg_match('#^/rapports/run/(\d+)/pdf$#', $path, $m) === 1 => ep_rapport_run_pdf((int) $m[1]),
-            $path === '/reputation'                    => ep_reputation(),
-            $path === '/reputation/recherche'          => ep_reputation_recherche(),
+            $path === '/marketing/avis'                    => ep_reputation(),
+            $path === '/marketing/avis/recherche'          => ep_reputation_recherche(),
             $path === '/marketing'                     => ep_mkt(),
+            // Le module Marketing (/marketing) : tous les canaux en une lecture.
+            $path === '/marketing/hub'                 => ep_marketing_hub(),
+            // Ses API (TFBuddy, locales, extérieures) et ses tables, lues dans le code.
+            $path === '/marketing/sources'             => ep_marketing_sources(),
+            $path === '/marketing/publication/etat'    => ep_social_etat(),
+            $path === '/marketing/publication/cron'    => ep_social_cron(),
             // Le calendrier des campagnes posé sur la courbe du budget, et le
             // détail magasin par magasin de la campagne regardée.
             $path === '/marketing/budget-campagnes'    => ep_budget_campagnes(),
@@ -319,7 +381,6 @@ function route(string $method, string $path): mixed
             $path === '/production/periodes'           => ep_prod_periodes(),
             $path === '/production/saisons'            => ep_prod_saisons(),
             $path === '/production/periode/produits'   => ep_prod_periode_produits(),
-            $path === '/production/suivi'              => ep_prod_suivi(),
             $path === '/production/produit/fiche'      => ep_prod_produit_fiche(),
             // La tablette des vendeuses (public/tablette/) : son book de données, tiré du catalogue.
             $path === '/tablette/book'                 => ep_tablette_book(),
@@ -347,11 +408,10 @@ function route(string $method, string $path): mixed
             $path === '/produits/utilisation/jamais.pdf' => ep_prod_utilisation_jamais_pdf(),
             $path === '/produits/utilisation/jamais'   => ep_prod_utilisation_jamais(),
             $path === '/produits/manque'              => ep_prod_manque(),
-            $path === '/magasin/analyse'              => ep_mag_analyse(),
-            $path === '/magasin/analyse.pdf'          => ep_mag_analyse_pdf(),
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
             $path === '/ventes/clients/sonde'         => ep_ventes_clients_sonde(),
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
+            $path === '/ventes/tickets'               => ep_ventes_tickets(),
             $path === '/ventes/mensuel'              => ep_ventes_mensuel(),
             $path === '/ventes/stock'                => ep_ventes_stock(),
             $path === '/ventes/commandes'            => ep_ventes_commandes(),
@@ -361,6 +421,10 @@ function route(string $method, string $path): mixed
             $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
+            $path === '/stock/inventaires/sonde'      => ep_stock_inventaires_sonde(),
+            $path === '/stock/inventaires'            => ep_stock_inventaires(),
+            $path === '/stock/inventaires/ecart'      => ep_stock_inventaires_ecart(),
+            $path === '/stock/inventaires/releve'     => ep_stock_inventaires_releve(),
             $path === '/ventes/reseau'                => ep_ventes_reseau(),
             $path === '/ventes/notifications'         => ep_stats_notifications(),
             $path === '/ventes/record'                => ep_stats_record(),
@@ -371,6 +435,20 @@ function route(string $method, string $path): mixed
             $path === '/ventes/moi'                   => ep_ventes_moi(),
             $path === '/ventes/primes-reglages'       => ep_primes_reglages(),
             $path === '/ventes/primes-mois'           => ep_primes_mois(),
+            $path === '/ventes/primes-equipe'         => ep_primes_equipe(),
+            $path === '/ventes/primes-annee'          => ep_primes_annee(),
+            $path === '/ventes/primes-api'            => ep_primes_api(),
+            $path === '/ventes/primes-promos'         => ep_primes_promos(),
+            $path === '/ventes/primes-catalogue'      => ep_primes_catalogue(),
+            $path === '/ventes/primes-promos/sonde'   => ep_primes_promos_sonde(),
+            $path === '/ventes/promos/sonde-fiche'    => ep_promos_sonde_fiche(),
+            $path === '/ventes/promos/sonde-portions' => ep_promos_sonde_portions(),
+            $path === '/ventes/promos/sonde-commandes' => ep_promos_sonde_commandes(),
+            $path === '/ventes/promos/sonde-champs'   => ep_promos_sonde_champs(),
+            $path === '/ventes/promos/documentation' => ep_promos_documentation(),
+            $path === '/ventes/primes-reference'      => ep_primes_reference(),
+            $path === '/ventes/primes-moyennes'       => ep_primes_moyennes(),
+            $path === '/ventes/grands-prix'           => ep_grands_prix(),
             $path === '/ventes/cross'                 => ep_ventes_cross(),
             $path === '/ventes/affiche.pdf'           => ep_ventes_affiche(),
             $path === '/ventes/explication.pdf'        => ep_ventes_explication_pdf(),
@@ -407,6 +485,7 @@ function route(string $method, string $path): mixed
             $path === '/pwa/tasks/heatmap/detail'      => ep_taches_heatmap_detail(),
             $path === '/pwa/tasks/detail'              => ep_pwa_task_detail(),
             $path === '/pwa/tasks/photos'              => ep_pwa_tasks_photos(),
+            $path === '/controles/qualite'             => ep_controles_qualite(),
             $path === '/pwa/tasks/nc'                  => ep_pwa_tasks_nc(),
             $path === '/pwa/waste/debug'               => ep_pwa_waste_debug(),
             $path === '/pwa/tasks/sonde'               => ep_pwa_tasks_sonde(),
@@ -418,9 +497,11 @@ function route(string $method, string $path): mixed
             $path === '/scouting/reseau'               => ep_scouting_reseau(),
             $path === '/scouting/etude'                => ep_scouting_etude(),
             $path === '/scouting/demarchage'            => ep_scouting_demarchage(),
-            $path === '/newsletter'                    => ep_newsletter(),
-            $path === '/newsletter/cron'               => ep_newsletter_cron(),
-            $path === '/newsletter/contacts/lots'      => ep_newsletter_lots(),
+            $path === '/marketing/newsletter'                    => ep_newsletter(),
+            $path === '/fidelite'                      => ep_fidelite(),
+            $path === '/fidelite/clients'              => ep_fidelite_clients(),
+            $path === '/marketing/newsletter/cron'               => ep_newsletter_cron(),
+            $path === '/marketing/newsletter/contacts/lots'      => ep_newsletter_lots(),
             $path === '/prospection/offres'            => ep_prospection_offres(),
             preg_match('#^/prospection/(\d{1,10})$#', $path, $m) === 1 => ep_prospection($m[1]),
             $path === '/visites/app'                   => ep_visites_app(),
@@ -433,12 +514,27 @@ function route(string $method, string $path): mixed
             $path === '/consultants/gestion'           => ep_consultants_gestion(),
             $path === '/franchises'                    => ep_franchises(),
             $path === '/franchises/fiche'              => ep_franchises_fiche(),
+            $path === '/franchises/documents'          => ep_franchises_documents(),
+            $path === '/franchises/documents/mail-materiel' => ep_franchises_mail_materiel(),
+            $path === '/rapports/ca-net'               => ep_rapports_ca_net(),
             $path === '/consultants/checklists'        => ep_consultants_checklists(),
             $path === '/franchises/meteo'              => ep_franchises_meteo(),
+            // Suivi des franchisés : tableau de bord, préparation, rapport, client mystère, qui fait quoi, lien de la page.
+            $path === '/suivi/tableau'                 => ep_suivi_tableau(),
+            $path === '/suivi/preparation'             => ep_suivi_preparation(),
+            $path === '/suivi/rapport'                 => ep_suivi_rapport(),
+            $path === '/suivi/rapport/apercu'          => ep_suivi_rapport_apercu(),
+            $path === '/suivi/msp'                     => ep_suivi_msp(),
+            $path === '/suivi/regles'                  => ep_suivi_regles(),
+            $path === '/suivi/lien'                    => ep_suivi_lien(),
+            $path === '/suivi/sources'                 => ep_suivi_sources(),
             preg_match('#^/visites/boutique/(\d{1,10})$#', $path, $m) === 1 => ep_visites_boutique($m[1]),
+            preg_match('#^/visites/kpi/(\d{1,10})$#', $path, $m) === 1 => ep_visites_kpi($m[1]),
+            preg_match('#^/visites/taches/(\d{1,10})$#', $path, $m) === 1 => ep_visites_taches($m[1]),
+            preg_match('#^/visites/budget/(\d{1,10})$#', $path, $m) === 1 => ep_visites_budget($m[1]),
             preg_match('#^/scouting/tiles/(\d{1,3})$#', $path, $m) === 1 => ep_scouting_tile((int) $m[1]),
-            $path === '/referentiels/facebook-regles'   => ep_fb_regles(),
-            $path === '/facebook/posts'                => ep_fb_posts(),
+            $path === '/marketing/social/regles'   => ep_fb_regles(),
+            $path === '/marketing/social/posts'                => ep_fb_posts(),
             $path === '/marketing/brand-guard/checks'  => ep_bg_checks(),
             $path === '/marketing/brand-guard/rules'   => ep_bg_rules(),
             $path === '/marketing/brand-guard/pages'   => ep_bg_pages(),
@@ -462,11 +558,13 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/production/flux/vie') { return wr_production_flux_vie(); }
     if ($method === 'POST' && $path === '/production/flux/fours/simuler') { return wr_production_flux_fours_simuler(); }
     if ($method === 'POST' && $path === '/exploitation/ponderation-jours') { return wr_ponderation_jours(); }
+    if ($method === 'POST' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin(); }
+    if ($method === 'DELETE' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin_retirer(); }
+    if ($method === 'POST' && $path === '/exploitation/promos-magasin/bon') { return wr_promos_magasin_bon(); }
     if ($method === 'POST' && $path === '/plan/engagement') { return wr_plan_engagement(); }
     if ($method === 'POST' && $path === '/plan/action') { return wr_plan_action(); }
     if ($method === 'POST' && $path === '/plan/trimestre') { return wr_plan_trimestre(); }
     if ($method === 'POST' && $path === '/plan/revue') { return wr_plan_revue(); }
-    if ($method === 'PUT' && $path === '/taches/maitrise') { return wr_taches_maitrise(); }
     if ($method === 'POST' && $path === '/kpi-table') { return wr_kpi_table(); }
     if ($method === 'POST' && $path === '/kpi-table/fiche') { return wr_kpi_fiche(); }
     if ($method === 'POST' && $path === '/kpi-table/collecte') { return wr_kpi_collecte(); }
@@ -477,9 +575,9 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ventes/stats-moisson') { return wr_stats_ventes_moisson(); }
     if ($method === 'POST' && $path === '/ventes/crois-moisson') { return wr_pv_crois_moisson(); }
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/revue$#', $path, $m)) { return wr_prod_revue($m[1]); }
-    if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/necessaire$#', $path, $m)) { return wr_prod_necessaire($m[1]); }
     if ($method === 'POST' && $path === '/products/arbitrage.pdf') { return wr_prod_arbitrage_pdf(); }
     if ($method === 'POST' && $path === '/products/categorie.pdf') { return wr_prod_categorie_pdf(); }
+    if ($method === 'POST' && $path === '/products/pareto.pdf') { return wr_prod_pareto_pdf(); }
     if ($method === 'POST' && $path === '/pwa/tasks/validate') { return wr_pwa_task_validate(); }
     if ($method === 'POST' && $path === '/pwa/tasks/review') { return wr_pwa_task_review(); }
     if ($method === 'PUT'  && $path === '/pwa/tasks/annotation') { return wr_pwa_annotation(); }
@@ -540,10 +638,11 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/ventes/cross-primes') { return wr_ventes_cross_primes(); }
     if ($method === 'POST' && $path === '/ventes/cross-paliers') { return wr_ventes_cross_paliers(); }
     if ($method === 'POST' && $path === '/ventes/primes-montants') { return wr_ventes_primes_montants(); }
-    if ($method === 'POST' && $path === '/ventes/prime-magasin') { return wr_prime_magasin(); }
     if ($method === 'POST' && $path === '/ventes/croisees') { return wr_croisees(); }
-    if ($method === 'POST' && $path === '/ventes/concours') { return wr_concours(); }
-    if ($method === 'POST' && $path === '/ventes/prime-google') { return wr_prime_google(); }
+    if ($method === 'POST' && $path === '/ventes/primes-app') { return wr_primes_app(); }
+    if ($method === 'POST' && $path === '/ventes/primes-icone') { return wr_primes_icone(); }
+    if ($method === 'POST' && $path === '/ventes/grands-prix') { return wr_grands_prix(); }
+    if ($method === 'POST' && $path === '/ventes/grands-prix/retirer') { return wr_grands_prix_retirer(); }
     if ($method === 'POST' && $path === '/croisements/combo') { return wr_croisement_combo(); }
     if ($method === 'PATCH' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_patch((int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/croisements/combo/(\d+)$#', $path, $m)) { return wr_croisement_combo_suppr((int) $m[1]); }
@@ -581,8 +680,14 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/rapports/(\d+)/envoyer$#', $path, $m)) { return wr_rapport_envoyer((int) $m[1]); }
     // --- dossiers déposés dans docs/dossiers/ : envoi en pièces jointes (SMTP du cockpit)
     if ($method === 'POST' && $path === '/dossiers/fichiers/envoyer') { return wr_dossiers_envoyer(); }
-    if ($method === 'POST' && $path === '/reputation/sync') { return wr_reputation_sync(); }
-    if ($method === 'PUT' && preg_match('#^/reputation/([\w-]+)/fiche$#', $path, $m)) { return wr_reputation_fiche($m[1]); }
+    // Les documents d'un franchisé (22/10/2026) : dépôt en multipart, retrait.
+    if ($method === 'POST' && $path === '/franchises/documents') { return wr_franchises_documents(); }
+    // Le CA net d'un mois, tous les magasins, par e-mail (22/10/2026).
+    if ($method === 'POST' && $path === '/rapports/ca-net/envoyer') { return wr_rapports_ca_net_envoyer(); }
+    if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
+    if ($method === 'POST' && $path === '/franchises/documents/mail-materiel') { return wr_franchises_mail_materiel(); }
+    if ($method === 'POST' && $path === '/marketing/avis/sync') { return wr_reputation_sync(); }
+    if ($method === 'PUT' && preg_match('#^/marketing/avis/([\w-]+)/fiche$#', $path, $m)) { return wr_reputation_fiche($m[1]); }
     if ($method === 'PUT' && $path === '/parametres/google-cle') { return wr_google_compte(); }
     if ($method === 'POST' && preg_match('#^/marketing/campagne/(\d+)/note$#', $path, $m)) { return wr_mkt_brief_envoyer((int) $m[1]); }
     if ($method === 'PUT' && $path === '/marketing/note-config') { return wr_mkt_brief_config(); }
@@ -642,17 +747,19 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/scouting/candidates') { return wr_scouting_candidate_post(); }
     if ($method === 'POST' && $path === '/scouting/dossier.pdf') { return wr_scouting_dossier_pdf(); }
     // --- newsletter & campagnes (mode test : aucun envoi ne part)
-    if ($method === 'POST' && $path === '/newsletter/campagnes') { return wr_newsletter_campagne_post(); }
-    if ($method === 'DELETE' && preg_match('#^/newsletter/campagnes/(\d+)$#', $path, $m)) { return wr_newsletter_campagne_delete((int) $m[1]); }
-    if ($method === 'POST' && $path === '/newsletter/segments') { return wr_newsletter_segment_post(); }
-    if ($method === 'PUT' && preg_match('#^/newsletter/magasins/(brand|\d{1,10})$#', $path, $m)) { return wr_newsletter_magasin_put($m[1]); }
-    if ($method === 'POST' && $path === '/newsletter/test') { return wr_newsletter_test_post(); }
-    if ($method === 'POST' && preg_match('#^/newsletter/campagnes/(\d+)/envoyer$#', $path, $m)) { return wr_newsletter_campagne_envoyer((int) $m[1]); }
-    if ($method === 'POST' && $path === '/newsletter/contacts/import') { return wr_newsletter_contacts_import(); }
-    if ($method === 'DELETE' && preg_match('#^/newsletter/contacts/lots/([\w.-]{1,40})$#', $path, $m)) { return wr_newsletter_lot_delete($m[1]); }
-    if ($method === 'PUT' && $path === '/newsletter/reglages') { return wr_newsletter_reglages(); }
-    if ($method === 'POST' && $path === '/newsletter/tick') { return wr_newsletter_tick(); }
-    if ($method === 'POST' && preg_match('#^/newsletter/vouchers/([A-Za-z0-9]{4,12})/utiliser$#', $path, $m)) { return wr_newsletter_voucher_utiliser($m[1]); }
+    // --- fidélité : les règles du programme, publiées en un envoi
+    if ($method === 'POST' && $path === '/fidelite/regles') { return wr_fidelite_regles_post(); }
+    if ($method === 'POST' && $path === '/marketing/newsletter/campagnes') { return wr_newsletter_campagne_post(); }
+    if ($method === 'DELETE' && preg_match('#^/marketing/newsletter/campagnes/(\d+)$#', $path, $m)) { return wr_newsletter_campagne_delete((int) $m[1]); }
+    if ($method === 'POST' && $path === '/marketing/newsletter/segments') { return wr_newsletter_segment_post(); }
+    if ($method === 'PUT' && preg_match('#^/marketing/newsletter/magasins/(brand|\d{1,10})$#', $path, $m)) { return wr_newsletter_magasin_put($m[1]); }
+    if ($method === 'POST' && $path === '/marketing/newsletter/test') { return wr_newsletter_test_post(); }
+    if ($method === 'POST' && preg_match('#^/marketing/newsletter/campagnes/(\d+)/envoyer$#', $path, $m)) { return wr_newsletter_campagne_envoyer((int) $m[1]); }
+    if ($method === 'POST' && $path === '/marketing/newsletter/contacts/import') { return wr_newsletter_contacts_import(); }
+    if ($method === 'DELETE' && preg_match('#^/marketing/newsletter/contacts/lots/([\w.-]{1,40})$#', $path, $m)) { return wr_newsletter_lot_delete($m[1]); }
+    if ($method === 'PUT' && $path === '/marketing/newsletter/reglages') { return wr_newsletter_reglages(); }
+    if ($method === 'POST' && $path === '/marketing/newsletter/tick') { return wr_newsletter_tick(); }
+    if ($method === 'POST' && preg_match('#^/marketing/newsletter/vouchers/([A-Za-z0-9]{4,12})/utiliser$#', $path, $m)) { return wr_newsletter_voucher_utiliser($m[1]); }
     if ($method === 'PUT' && $path === '/prospection/offres') { return wr_prospection_offres_put(); }
     if ($method === 'PUT' && preg_match('#^/prospection/(\d{1,10})$#', $path, $m)) { return wr_prospection_put($m[1]); }
     // --- visites terrain (application consultant, franchisé, admin)
@@ -667,6 +774,14 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/visites/photos') { return wr_visites_photos_post(); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})/points$#', $path, $m)) { return wr_visites_points_put($m[1]); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})$#', $path, $m)) { return wr_visites_put($m[1]); }
+    if ($method === 'PUT' && preg_match('#^/suivi/preparation/([\w-]{1,40})$#', $path, $m)) { return wr_suivi_preparation($m[1]); }
+    if ($method === 'PUT' && preg_match('#^/suivi/rapport/([\w-]{1,40})$#', $path, $m)) { return wr_suivi_rapport($m[1]); }
+    if ($method === 'POST' && preg_match('#^/suivi/rapport/([\w-]{1,40})/envoyer$#', $path, $m)) { return wr_suivi_rapport_envoyer($m[1]); }
+    if ($method === 'POST' && $path === '/suivi/msp') { return wr_suivi_msp(); }
+    if ($method === 'PUT' && $path === '/suivi/regles') { return wr_suivi_regles(); }
+    if ($method === 'POST' && $path === '/suivi/modeles/apercu') { return wr_suivi_modeles_apercu(); }
+    if ($method === 'POST' && $path === '/suivi/modeles/essai') { return wr_suivi_modeles_essai(); }
+    if ($method === 'POST' && $path === '/suivi/lien/envoyer') { return wr_suivi_lien_envoyer(); }
     if ($method === 'POST' && $path === '/plans') { return wr_plans_post(); }
     if ($method === 'PUT' && preg_match('#^/plans/([\w-]{1,40})$#', $path, $m)) { return wr_plans_put($m[1]); }
     if ($method === 'POST' && $path === '/msp') { return wr_msp_post(); }
@@ -676,13 +791,23 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && preg_match('#^/scouting/candidates/(\d+)$#', $path, $m)) { return wr_scouting_candidate_delete((int) $m[1]); }
     if ($method === 'PUT' && $path === '/scouting/populations') { return wr_scouting_populations_put(); }
     if ($method === 'PUT' && $path === '/scouting/references') { return wr_scouting_references_put(); }
-    if ($method === 'POST' && $path === '/facebook/posts') { return wr_fb_post_create(); }
+    if ($method === 'POST' && $path === '/marketing/social/posts') { return wr_fb_post_create(); }
+    // Les réglages du portail, à son adresse : les règles de l'agent et la note Google visée
+    // (le même enregistrement que PUT /parametres/{clé}, qui reste valable).
+    if ($method === 'PUT' && $path === '/marketing/social/regles') { return wr_param_put('fbControle'); }
+    if ($method === 'PUT' && $path === '/marketing/avis/cible') { return wr_param_put('reputationCible'); }
+    // La publication (étape 4 du flux) : un post validé part sur Facebook, Instagram, LinkedIn.
+    if ($method === 'POST' && preg_match('#^/marketing/social/posts/([\w-]+)/publier$#', $path, $m)) { return wr_social_publier($m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/marketing/social/posts/([\w-]+)/publier$#', $path, $m)) { return wr_social_annuler($m[1]); }
+    if ($method === 'PUT' && $path === '/marketing/publication/reglages') { return wr_social_reglages(); }
+    if ($method === 'POST' && $path === '/marketing/publication/tester') { return wr_social_tester(); }
+    if ($method === 'POST' && $path === '/marketing/publication/media') { return wr_social_media(); }
     if ($method === 'POST' && $path === '/marketing/brand-guard/checks') { return wr_bg_check(); }
     if ($method === 'PUT' && $path === '/marketing/brand-guard/rules') { return wr_bg_rules_put(); }
     if ($method === 'PUT' && $path === '/marketing/brand-guard/pages') { return wr_bg_pages_put(); }
-    if ($method === 'POST' && preg_match('#^/facebook/posts/([\w-]+)/controle$#', $path, $m)) { return wr_fb_controle($m[1]); }
-    if ($method === 'PATCH' && preg_match('#^/facebook/posts/([\w-]+)$#', $path, $m)) { return wr_fb_decision($m[1]); }
-    if ($method === 'PATCH' && preg_match('#^/facebook/posts/([\w-]+)/ecarts/(\d+)$#', $path, $m)) { return wr_fb_ecart_patch($m[1], (int) $m[2]); }
+    if ($method === 'POST' && preg_match('#^/marketing/social/posts/([\w-]+)/controle$#', $path, $m)) { return wr_fb_controle($m[1]); }
+    if ($method === 'PATCH' && preg_match('#^/marketing/social/posts/([\w-]+)$#', $path, $m)) { return wr_fb_decision($m[1]); }
+    if ($method === 'PATCH' && preg_match('#^/marketing/social/posts/([\w-]+)/ecarts/(\d+)$#', $path, $m)) { return wr_fb_ecart_patch($m[1], (int) $m[2]); }
 
     return notFound();
 }

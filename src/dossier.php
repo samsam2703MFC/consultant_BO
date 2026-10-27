@@ -153,7 +153,7 @@ function dossierProduits(int $sid, string $du, string $au): array
 
 /**
  * Les tâches boutique NOTÉES pour CE magasin sur la fenêtre — la même source
- * que le Contrôle des tâches et le rapport hebdomadaire : `ceo_tache_jour`,
+ * que le Contrôle des tâches et le rapport hebdomadaire : `con_tache_jour`,
  * la relève quotidienne du panel (ep_pwa_tasks), pas les tâches de projet
  * consultant (`ceo_project_task`), qui sont une tout autre affaire.
  *
@@ -167,14 +167,14 @@ function dossierTaches(int $sid, string $du, string $au): array
     $rows = []; $attendues = 0; $faites = 0;
     try {
         $rows = Db::rows(
-            'SELECT jour, id_task, nom, note, commentaire, fait_le, fait_par FROM ceo_tache_jour'
+            'SELECT jour, id_task, nom, note, commentaire, fait_le, fait_par FROM con_tache_jour'
             . ' WHERE id_shop = ? AND jour BETWEEN ? AND ? AND note IS NOT NULL'
             . ' ORDER BY note ASC, jour DESC',
             [$sid, $du, $au]);
         // L'exécution brute, notée ou pas : un magasin qui ne fait AUCUNE tâche
         // n'a évidemment aucune note — sans ce compte, la page laisserait
         // croire à un défaut de relève là où il n'y a que du travail non fait.
-        $c = Db::row('SELECT COUNT(*) AS t, SUM(fait) AS f FROM ceo_tache_jour'
+        $c = Db::row('SELECT COUNT(*) AS t, SUM(fait) AS f FROM con_tache_jour'
             . ' WHERE id_shop = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]);
         $attendues = (int) ($c['t'] ?? 0);
         $faites = (int) ($c['f'] ?? 0);

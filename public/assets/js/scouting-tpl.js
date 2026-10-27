@@ -485,6 +485,21 @@ export const DOSS_CSS = `
 .sc-doss .hyp{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
 .sc-doss .hyp div{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:.5px solid #EAE3D8;font-size:11px}
 .sc-doss .hyp div span{color:#7a736a}
+/* le plan d'expansion : une feuille par province */
+.sc-doss + .sc-doss{margin-top:18px}
+.sc-doss .hd .t small{display:block;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#8D1D2C;font-weight:600}
+.sc-doss .duo{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.sc-doss .k2{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#7a736a;margin:2px 0 6px}
+.sc-doss table.notes td{vertical-align:middle}
+.sc-doss table.notes td:nth-child(n+3){white-space:nowrap}
+.sc-doss table.plan{font-size:11px}
+.sc-doss table.plan td.com{min-width:108px}
+.sc-doss td.bar{width:30%}
+.sc-doss td.bar i{display:block;height:7px;border-radius:4px;background:#d8cfc3}
+.sc-doss td.bar i.s{background:#e6dfd5}.sc-doss td.bar i.c{background:#c17a2a}.sc-doss td.bar i.f{background:#8D1D2C}
+.sc-doss .tag{display:inline-block;font-size:9px;font-weight:600;border-radius:8px;padding:0 6px;background:#EEE9E1;color:#5f574f;margin-left:6px;vertical-align:1px}
+.sc-doss .lien{border:0;background:none;padding:0;font:inherit;font-weight:600;color:#221E1A;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:#d8cfc3;text-underline-offset:3px}
+.sc-doss .lien:hover{color:#8D1D2C;text-decoration-color:#8D1D2C}
 `;
 export const DOSS_PRINT = `
 @page{size:A4;margin:14mm 15mm 18mm}
@@ -492,6 +507,8 @@ body{margin:0;background:#fff}
 .sc-doss{box-shadow:none;width:auto;max-width:none;padding:0}
 .sc-doss h3{page-break-after:avoid}
 .sc-doss tr,.sc-doss .q>div,.sc-doss .note{page-break-inside:avoid}
+.sc-doss + .sc-doss{margin-top:0}
+.sc-doss.saut{page-break-before:always}
 `;
 
 // Les sections de l'étude de marché locale : en attente tant qu'OpenStreetMap
@@ -598,7 +615,7 @@ export function dossierPage(d, esc, logo){
     </table>
     ${d.reseauNote ? `<div class="legende" style="color:#221E1A">${esc(d.reseauNote)}</div>` : ''}
     <div class="legende">${tr('Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.',
-      'Alles incl. btw. Het geplande (het plan): de realistische geplande jaaromzet ingevoerd in “Magasins du réseau”, anders die van de marktstudie — gedeeld door 52 voor de week, door 12 voor de maand. Het werkelijke: de omzet incl. btw uit de maandelijkse P&L van het panel, aangevuld met de kassaverkopen (brutobedragen na kortingen) voor de maanden zonder P&L — gemiddelde van de beschikbare afgesloten maanden (maximaal twaalf), herleid naar de week en geëxtrapoleerd naar twaalf maanden voor het jaar. Het jaardoel: de trede van de fase (70, 80, 90 of 100 % van het plan). Werkelijk / doel, uitgelicht, is het verschil dat telt; werkelijk / plan toont de weg die nog rest.')}</div>
+      'Alles incl. btw. Het geplande (het plan): de realistische geplande jaaromzet ingevoerd in “Magasins du réseau”, anders die van de marktstudie — gedeeld door 52 voor de week, door 12 voor de maand. Het werkelijke: de omzet incl. btw uit de maandelijkse P&L van het panel, aangevuld met de kassaverkopen (brutobedragen na kortingen) voor de maanden zonder P&L — gemiddelde van de beschikbare afgesloten maanden (maximaal twaalf), herleid naar de week en geëxtrapoleerd naar twaalf maanden voor het jaar. Het jaardoel: de trede van de fase (70, 80, 90 of 100% van het plan). Werkelijk / doel, uitgelicht, is het verschil dat telt; werkelijk / plan toont de weg die nog rest.')}</div>
     ${d.notes.map(n => `<div class="note">${esc(n)}</div>`).join('')}
 
     <h3>${tr('Les hypothèses au moment de l\'édition', 'De aannames op het moment van opmaak')}</h3>
@@ -653,7 +670,9 @@ function renderDossier(c, x){
     <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto">
       <div class="t-section-title" style="font-size:16px">Dossier d'implantation</div>
       <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(d.commune)} · ${esc(d.zone)} · ${d.etude ? 'la fiche et l’étude de marché locale, mises en page' : d.etudeAttente && !/indisponible|niet beschikbaar/.test(d.etudeAttente) ? 'étude locale en cours…' : 'les chiffres de la fiche, mis en page'}</div>
-      <div class="sc-ech sc-lang" title="Langue du dossier : la page, le PDF, l’impression et le CSV la suivent">${d.langues.map(l => `<button ${x.A(l.pick)} type="button"${l.on ? ' class="on"' : ''} title="${esc(l.tip)}" aria-pressed="${l.on}">${esc(l.label)}</button>`).join('')}</div>
+      <div class="sc-seg" role="group" aria-label="Langue du dossier" title="La langue du dossier : la page, le PDF, l’impression et le CSV la suivent">
+        ${d.langues.map(l => `<button ${x.A(l.go)} class="${l.on ? 'on' : ''}" title="${esc(l.nom)}">${esc(l.code.toUpperCase())}</button>`).join('')}
+      </div>
       <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy ? ';opacity:.6' : ''}">${d.busy ? (d.busyTxt || 'PDF en cours…') : 'Télécharger le PDF'}</button>
       <button ${x.A(d.csv)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Exporter les tableaux (CSV)</button>
       <button ${x.A(d.imprimer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Imprimer</button>
@@ -668,74 +687,264 @@ function renderDossier(c, x){
 }
 
 
-/* --- Le plan d'expansion : le Top 5 par province, mis en plan ------------- */
-export function planPage(d, esc, logo, x){
-  const tuile = t => `<div><div class="k">${esc(t[0])}</div><div class="v">${esc(t[1])}</div>${t[2] ? `<div class="s">${esc(t[2])}</div>` : ''}</div>`;
-  const nf = n => Math.round(n).toLocaleString('fr-BE');
-  const eur = n => nf(n) + ' €';
-  return `
-  <div class="sc-doss">
+/* --- Le plan d'expansion : la synthèse, puis une page par province ---------
+ * Une page = une feuille .sc-doss. `quoi` : « synthese », le code d'une
+ * province, ou « tout » (l'impression : la synthèse, chaque province sur sa
+ * feuille, puis la méthode). `fin` : la méthode, les hypothèses et les sources
+ * suivent la page d'une province imprimée seule. Tout le texte vient de d.t,
+ * la langue du plan (scouting-plan-i18n.js). */
+export function planPage(d, esc, logo, x, quoi, fin){
+  const t = d.t, f = t.f, C = t.col, H = t.h;
+  quoi = quoi || 'synthese';
+  const tuile = q => `<div><div class="k">${esc(q[0])}</div><div class="v">${esc(q[1])}</div>${q[2] ? `<div class="s">${esc(q[2])}</div>` : ''}</div>`;
+  const tete = (titre, sous, total, totalLib, sur) => `
     <div class="hd">
       ${logo ? `<img src="${esc(logo)}" alt="">` : ''}
-      <div class="t"><b>${esc(d.titre)}</b><span>édité le ${esc(d.date)} · ${d.N} par province au plus${d.seuil ? ' · score ≥ ' + esc(d.minScore) : ' · sans score minimum'}${d.caMinTxt ? esc(d.caMinTxt) : ''}${d.minutes ? ' · ' + d.minutes + ' min de voiture au moins entre elles' : ''}</span></div>
-      <div class="sc"><b style="font-size:24px">${eur(d.total)}</b><span>CA annuel estimé</span></div>
-    </div>
-
-    <h3>Ce que le plan peut dégager</h3>
-    <div class="q">${d.resume.map(tuile).join('')}</div>
-
-    <h3>Où ouvrir</h3>
-    ${d.carte ? `<img class="carte" src="${d.carte}" alt="">` : `<div class="attente">Carte en cours d’assemblage…</div>`}
-    <div class="legende">${esc(d.carteNote)}</div>
-
-    ${d.provinces.map(p => `
-    <h3>${esc(p.nom)} <span class="ch">${esc(p.detail)}</span></h3>
-    ${p.lignes.length ? `
-    <table class="plan"><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Arrondis&shy;sement</th><th>Score</th><th>Ménages</th><th>Concur&shy;rents</th><th class="l">Chaînes</th><th>Emprise</th><th>CA estimé TTC</th><th>€/m²</th></tr>
-      ${p.lignes.map(l => `<tr><td class="l mut">${l.num}</td><td class="l com"><b>${esc(l.commune)}</b>${x && l.dossier ? `<button ${x.A(l.dossier)} class="btn-secondary" style="padding:1px 6px;font-size:9.5px;margin-left:6px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button>` : ''}${l.voisinTxt ? `<div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3">${esc(l.voisinTxt)}</div>` : ''}</td><td class="l mut">${esc(l.arr)}</td><td class="${l.score >= d.minScore ? 'ok' : 'acc'}"><b>${l.score}</b></td><td>${nf(l.hh)}</td><td>${l.n}${l.forts ? ' <span class="acc">(' + l.forts + ' fort' + (l.forts > 1 ? 's' : '') + ')</span>' : ''}</td><td class="l mut">${esc(l.chaines || '—')}</td><td>${(l.emprise * 100).toFixed(1).replace('.', ',')} %</td><td class="n"><b>${eur(l.ca)}</b></td><td class="mut n">${eur(l.m2)}</td></tr>`).join('')}
-      <tr class="tot"><td colspan="4" class="l">${p.lignes.length} ouverture${p.lignes.length > 1 ? 's' : ''}</td><td>${nf(p.lignes.reduce((a, l) => a + l.hh, 0))}</td><td colspan="3"></td><td class="n">${eur(p.sousTotal)}</td><td></td></tr>
-    </table>` : '<p class="mut" style="font-size:11.5px">Aucune zone hors des rayons d’exclusion dans cette province' + (d.seuil ? ', au-dessus du score ' + esc(d.minScore) : '') + '.</p>'}`).join('')}
-
-    <h3>Les dix meilleures, toutes provinces</h3>
-    <table><tr><th class="l">#</th><th class="l">Commune</th><th class="l">Province</th><th>Score</th><th>CA estimé</th></tr>
-      ${d.classement.map(l => `<tr><td class="l mut">${l.num}</td><td class="l"><b>${esc(l.commune)}</b></td><td class="l mut">${esc(l.prov)}</td><td>${l.score}</td><td class="n"><b>${eur(l.ca)}</b></td></tr>`).join('')}
-    </table>
-
-    <div class="note"><b>Méthode.</b> ${esc(d.methode)}</div>
-    <h3>Les hypothèses au moment de l'édition</h3>
+      <div class="t">${sur ? `<small>${esc(sur)}</small>` : ''}<b>${esc(titre)}</b><span>${esc(sous)}</span></div>
+      <div class="sc"><b style="font-size:24px">${esc(total)}</b><span>${esc(totalLib)}</span></div>
+    </div>`;
+  const methode = () => `
+    <div class="note"><b>${esc(H.methode)}</b> ${esc(d.methode)}</div>
+    <h3>${esc(H.hypotheses)}</h3>
     <div class="hyp">${d.hypotheses.map(r => `<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b></div>`).join('')}</div>
-    <div class="note"><b>Sources.</b> ${esc(d.sources)}</div>
+    <div class="note"><b>${esc(H.sources)}</b> ${esc(d.sources)}</div>`;
+  const ouvertures = (p, vide) => p.lignes.length ? `
+    <table class="plan"><tr><th class="l">${C.num}</th><th class="l">${C.commune}</th><th class="l">${C.arr}</th><th>${C.score}</th><th>${C.menages}</th><th>${C.concurrents}</th><th class="l">${C.chaines}</th><th>${C.emprise}</th><th>${C.caTtc}</th><th>${C.m2}</th></tr>
+      ${p.lignes.map(l => `<tr><td class="l mut">${l.num}</td><td class="l com"><b>${esc(l.commune)}</b>${x && l.dossier ? `<button ${x.A(l.dossier)} class="btn-secondary" style="padding:1px 6px;font-size:9.5px;margin-left:6px;vertical-align:middle" title="Ouvrir le dossier d'implantation de cette ville — à imprimer ou à télécharger">Dossier</button>` : ''}${l.voisinTxt ? `<div class="mut" style="font-size:9.5px;font-weight:400;line-height:1.3">${esc(l.voisinTxt)}</div>` : ''}</td><td class="l mut">${esc(l.arr)}</td><td class="${l.score >= d.minScore ? 'ok' : 'acc'}"><b>${l.score}</b></td><td>${f.nf(l.hh)}</td><td>${l.n}${l.forts ? ' <span class="acc">' + esc(t.fort(l.forts)) + '</span>' : ''}</td><td class="l mut">${esc(l.chaines || '—')}</td><td>${f.pct(l.emprise * 100)}</td><td class="n"><b>${f.eur(l.ca)}</b></td><td class="mut n">${f.eur(l.m2)}</td></tr>`).join('')}
+      <tr class="tot"><td colspan="4" class="l">${esc(t.nOuv(p.lignes.length))}</td><td>${f.nf(p.lignes.reduce((a, l) => a + l.hh, 0))}</td><td colspan="3"></td><td class="n">${f.eur(p.sousTotal)}</td><td></td></tr>
+    </table>` : `<p class="mut" style="font-size:11.5px">${esc(vide)}</p>`;
+
+  const synthese = avecFin => {
+    const forts = d.parProvince.reduce((a, r) => a + r.forts, 0), mags = d.parProvince.reduce((a, r) => a + r.nMags, 0);
+    return `
+  <div class="sc-doss">
+    ${tete(d.titre, t.edite(d.date) + ' · ' + d.sousTitre, f.eur(d.total), t.caAnnuel)}
+    <h3>${esc(H.degager)}</h3>
+    <div class="q">${d.resume.map(tuile).join('')}</div>
+    <h3>${esc(H.ouOuvrir)}</h3>
+    ${d.carte ? `<img class="carte" src="${d.carte}" alt="">` : `<div class="attente">${esc(H.attenteCarte)}</div>`}
+    <div class="legende">${esc(d.carteNote)}</div>
+    <h3>${esc(H.parProvince)}</h3>
+    <table class="plan"><tr><th class="l">${C.province}</th><th>${C.ouvertures}</th><th>${C.menages}</th><th>${C.concurrents}</th><th>${C.forts}</th><th>${C.parPoint}</th><th>${C.reseau}</th><th>${C.caOuv}</th></tr>
+      ${d.parProvince.map(r => `<tr><td class="l">${x && r.aller ? `<button ${x.A(r.aller)} class="lien" title="Ouvrir la page de la province">${esc(r.nom)}</button>` : `<b>${esc(r.nom)}</b>`}</td><td>${r.nOuv}</td><td>${f.nf(r.hh)}</td><td>${f.nf(r.n)}</td><td>${f.nf(r.forts)}</td><td>${r.perShop ? f.nf(r.perShop) : '—'}</td><td>${r.nMags || '—'}</td><td class="n"><b>${r.nOuv ? f.eur(r.ca) : '—'}</b></td></tr>`).join('')}
+      <tr class="tot"><td class="l">${esc(t.total)}</td><td>${d.nPts}</td><td>${f.nf(d.selHh)}</td><td>${f.nf(d.selN)}</td><td>${f.nf(forts)}</td><td>${d.selDens ? f.nf(d.selDens) : '—'}</td><td>${mags || '—'}</td><td class="n">${f.eur(d.total)}</td></tr>
+    </table>
+    <h3>${esc(H.dixMeilleures)}</h3>
+    <table><tr><th class="l">${C.num}</th><th class="l">${C.commune}</th><th class="l">${C.province}</th><th>${C.score}</th><th>${C.ca}</th></tr>
+      ${d.classement.map(l => `<tr><td class="l mut">${l.num}</td><td class="l"><b>${esc(l.commune)}</b></td><td class="l mut">${esc(l.prov)}</td><td>${l.score}</td><td class="n"><b>${f.eur(l.ca)}</b></td></tr>`).join('')}
+    </table>
+    ${avecFin ? methode() : ''}
+  </div>`;
+  };
+
+  const provPage = (p, saut, avecFin) => {
+    const g = p.page, carte = d.cartes && d.cartes[p.code];
+    const barre = ['n', 's', 'c', 'f'];
+    return `
+  <div class="sc-doss${saut ? ' saut' : ''}">
+    ${tete(g.nom, t.pOuvRetenues(g.nOuv, d.date), f.eur(g.caOuv), t.pCaOuv, g.type)}
+    <div class="q" style="margin-top:14px">${g.tuiles.map(tuile).join('')}</div>
+    <h3>${esc(H.ouOuvrirProv(p))} <span class="ch">${esc(p.detail)}</span></h3>
+    ${carte ? `<img class="carte" src="${carte}" alt="">` : `<div class="attente">${esc(H.attenteCarte)}</div>`}
+    <div class="legende">${esc(g.carteNote)}</div>
+    ${ouvertures(p, t.aucuneZone(d.seuil ? d.minScore : ''))}
+    <h3>${esc(H.concurrence)}</h3>
+    <div class="duo">
+      <div>
+        <div class="k2">${esc(H.notes)}</div>
+        <table class="notes">${g.notes.map((r, i) => `<tr><td class="l">${esc(r[0])}</td><td class="bar"><i class="${barre[i]}" style="width:${Math.max(2, Math.round(r[3] * 100))}%"></i></td><td>${esc(r[1])}</td><td class="mut">${esc(r[2])}</td></tr>`).join('')}</table>
+        ${g.noteMoy ? `<div class="legende">${esc(g.noteMoy)}</div>` : ''}
+      </div>
+      <div>
+        <div class="k2">${esc(H.chaines)}</div>
+        ${g.marques.length ? `<table><tr><th class="l">${C.enseigne}</th><th>${C.points}</th></tr>${g.marques.map(m => `<tr><td class="l"><b>${esc(m[0])}</b></td><td>${esc(m[1])}</td></tr>`).join('')}</table>` : `<p class="mut" style="font-size:11.5px;margin:4px 0">${esc(t.aucuneChaine)}</p>`}
+      </div>
+    </div>
+    <div class="k2" style="margin-top:16px">${esc(H.plusForts)}</div>
+    ${g.top.length ? `<table><tr><th class="l">${C.num}</th><th class="l">${C.nom}</th><th class="l">${C.commune}</th><th>${C.note}</th><th>${C.avis}</th><th>${C.force}</th></tr>
+      ${g.top.map(r => `<tr><td class="l mut">${esc(r[0])}</td><td class="l"><b>${esc(r[1])}</b>${r[6] ? `<span class="tag">${esc(r[6])}</span>` : ''}</td><td class="l mut">${esc(r[2])}</td><td class="${r[7] ? 'acc' : ''}">${r[7] ? '<b>' + esc(r[3]) + '</b>' : esc(r[3])}</td><td>${esc(r[4])}</td><td>${esc(r[5])}</td></tr>`).join('')}
+    </table>` : `<p class="mut" style="font-size:11.5px">${esc(t.aucunConc)}</p>`}
+    <h3>${esc(H.parArr)}</h3>
+    <table class="plan"><tr><th class="l">${C.arrPlein}</th><th>${C.communes}</th><th>${C.menages}</th><th>${C.concurrents}</th><th>${C.forts}</th><th>${C.parPoint}</th><th>${C.noteMoy}</th><th>${C.ouvertures}</th><th>${C.ca}</th></tr>
+      ${g.arrs.map(r => `<tr><td class="l"><b>${esc(r[0])}</b></td>${r.slice(1, 8).map(v => `<td>${esc(v)}</td>`).join('')}<td class="n"><b>${esc(r[8])}</b></td></tr>`).join('')}
+      <tr class="tot"><td class="l">${esc(g.arrTot[0])}</td>${g.arrTot.slice(1, 8).map(v => `<td>${esc(v)}</td>`).join('')}<td class="n">${esc(g.arrTot[8])}</td></tr>
+    </table>
+    <h3>${esc(H.reseauProv(p))}</h3>
+    ${g.reseau.length ? `<table><tr><th class="l">${C.magasin}</th><th class="l">${C.ville}</th><th>${C.caReel}</th><th>${C.periode}</th></tr>
+      ${g.reseau.map(r => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="l mut">${esc(r[1])}</td><td class="n"><b>${esc(r[2])}</b></td><td class="mut">${esc(r[3])}</td></tr>`).join('')}
+    </table>` : `<p class="mut" style="font-size:11.5px">${esc(t.aucunReseau(p))}</p>`}
+    ${avecFin ? methode() : ''}
+  </div>`;
+  };
+
+  if (quoi === 'tout') return synthese(false) + d.provinces.map(p => provPage(p, true, false)).join('') + `<div class="sc-doss saut">${methode()}</div>`;
+  const p = quoi !== 'synthese' ? d.provinces.find(q => q.code === quoi) : null;
+  return p ? provPage(p, false, !!fin) : synthese(true);
+}
+
+// L'habillage de l'écran du plan (pas du document) : la liste des provinces,
+// les onglets, la modale des paramètres (le choix de la langue, .sc-seg, est
+// dans app.css : le dossier d'implantation s'en sert aussi).
+const PLAN_UI_CSS = `
+.sc-provliste{position:absolute;top:calc(100% + 6px);left:0;z-index:20;width:430px;max-height:70vh;overflow:auto;background:var(--color-surface);border:0.5px solid var(--color-border-secondary);border-radius:12px;box-shadow:0 16px 44px rgba(0,0,0,.2);padding:12px 12px 10px}
+.sc-provliste .rac{display:flex;flex-wrap:wrap;gap:5px;padding-bottom:10px;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:4px}
+.sc-provliste .rac button{border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);border-radius:999px;padding:3px 10px;font-family:var(--font-ui);font-size:11px;cursor:pointer;color:var(--color-text)}
+.sc-provliste .rac button.on{border-color:var(--color-primary);color:var(--color-primary);background:rgba(141,29,44,.06);font-weight:600}
+.sc-provliste .reg{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-text-muted);margin:10px 2px 2px}
+.sc-provliste .it{display:flex;align-items:center;gap:9px;padding:6px 6px;border-radius:7px;cursor:pointer}
+.sc-provliste .it:hover{background:var(--color-background-secondary)}
+.sc-provliste .it input{accent-color:var(--color-primary);margin:0}
+.sc-provliste .nm{flex:1;min-width:0;line-height:1.25}
+.sc-provliste .nm b{display:block;font-size:12.5px;font-weight:600}
+.sc-provliste .nm em{display:block;font-style:normal;color:var(--color-text-muted);font-size:10.5px}
+.sc-provliste .dt{font-size:10.5px;color:var(--color-text-muted);white-space:nowrap}
+.sc-provliste .pied{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:0.5px solid var(--color-border-tertiary);margin-top:8px;padding-top:9px;font-size:11px;color:var(--color-text-muted)}
+.sc-plan-res{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:7px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px}
+.sc-plan-res .chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);padding:2px 9px;color:var(--color-text)}
+.sc-plan-res .chip.arr{border-color:rgba(141,29,44,.4);color:var(--color-primary)}
+.sc-plan-res .chip button{border:0;background:none;padding:0;cursor:pointer;color:inherit;font-size:13px;line-height:1}
+.sc-plan-res .mod{border:0;background:none;padding:0 4px;font-family:var(--font-ui);font-size:11px;color:var(--color-primary);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.sc-plan-tabs{display:flex;gap:2px;padding:0 12px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);overflow-x:auto;flex:0 0 auto}
+.sc-plan-tabs button{border:0;border-bottom:2px solid transparent;background:transparent;padding:9px 11px 7px;font-family:var(--font-ui);font-size:12px;font-weight:500;cursor:pointer;color:var(--color-text-muted);white-space:nowrap}
+.sc-plan-tabs button span{display:inline-block;min-width:16px;font-size:10px;font-weight:600;border-radius:9px;padding:0 5px;margin-left:4px;background:var(--color-background-secondary);color:var(--color-text-muted)}
+.sc-plan-tabs button.on{color:var(--color-primary);border-bottom-color:var(--color-primary)}
+.sc-plan-tabs button.on span{background:rgba(141,29,44,.1);color:var(--color-primary)}
+.sc-plan-tabs button.vide{opacity:.6}
+.sc-pr-fond{position:absolute;inset:0;z-index:30;background:rgba(34,34,34,.38);display:flex;align-items:flex-start;justify-content:center;padding:48px 16px;overflow:auto;animation:fadeIn 140ms ease}
+.sc-pr{background:var(--color-surface);border-radius:14px;width:100%;max-width:680px;box-shadow:0 18px 50px rgba(0,0,0,.28);overflow:hidden}
+.sc-pr .hd{display:flex;align-items:flex-start;gap:14px;padding:16px 20px 12px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.sc-pr .hd > div{flex:1}
+.sc-pr .sous{font-size:11px;color:var(--color-text-muted);margin-top:3px;line-height:1.45}
+.sc-pr .x{border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--color-text-muted);padding:0 2px}
+.sc-pr .corps{display:grid;grid-template-columns:1fr 1fr;gap:4px 22px;padding:12px 20px 4px}
+.sc-pr section{padding:8px 0 10px}
+.sc-pr section.large{grid-column:1 / -1;border-top:0.5px solid var(--color-border-tertiary)}
+.sc-pr h4{margin:0 0 8px;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-text-muted);font-weight:600}
+.sc-pr .chp{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;margin-bottom:8px}
+.sc-pr .chp > span:first-child{display:inline-flex;align-items:center;color:var(--color-text);line-height:1.3}
+.sc-pr .chp select{width:auto;padding:6px 8px;border:0.5px solid var(--color-border-secondary);border-radius:6px;background:var(--color-background-secondary);font-family:var(--font-ui);font-size:12px;color:var(--color-text)}
+.sc-pr .in{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto}
+.sc-pr .in input{width:96px;padding:5px 7px;border:0.5px solid var(--color-border-secondary);border-radius:6px;background:var(--color-background-secondary);font-family:var(--font-ui);font-size:12px;color:var(--color-text);text-align:right;box-sizing:border-box}
+.sc-pr .in em{font-style:normal;font-size:11px;color:var(--color-text-muted);min-width:34px}
+.sc-pr .cb{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:8px;cursor:pointer}
+.sc-pr .cb input{accent-color:var(--color-primary);margin:0}
+.sc-pr .eteint{opacity:.45}
+.sc-pr .grille{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
+.sc-pr .note{font-size:10.5px;color:var(--color-text-muted);line-height:1.5;margin:4px 0 0}
+.sc-pr .seg2{display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden}
+.sc-pr .seg2 button{border:0;background:var(--color-surface);font-family:var(--font-ui);font-size:12px;padding:7px 16px;cursor:pointer;color:var(--color-text)}
+.sc-pr .seg2 button + button{border-left:0.5px solid var(--color-border-secondary)}
+.sc-pr .seg2 button.on{background:var(--color-primary);color:#fff;font-weight:600}
+.sc-pr .pied{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 16px;border-top:0.5px solid var(--color-border-tertiary)}
+`;
+
+const ROUE = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>';
+
+function provListe(ps, x, esc){
+  return `
+  <div ${x.A(ps.fermer)} style="position:fixed;inset:0;z-index:15"></div>
+  <div class="sc-provliste" role="dialog" aria-label="Provinces du plan">
+    <div class="rac">${ps.raccourcis.map(r => `<button ${x.A(r.go)} class="${r.on ? 'on' : ''}">${esc(r.nom)}</button>`).join('')}</div>
+    ${ps.groupes.map(g => `
+    <div class="reg">${esc(g.reg)}</div>
+    ${g.items.map(i => `
+    <label class="it">
+      <input type="checkbox"${i.on ? ' checked' : ''} ${x.C(i.toggle)}>
+      <span class="nm"><b>${esc(i.nom)}</b><em>${esc(i.nl)}</em></span>
+      <span class="dt">${esc(i.detail)}</span>
+    </label>`).join('')}`).join('')}
+    <div class="pied"><span>${ps.n} province${ps.n > 1 ? 's' : ''} sur ${ps.total} · ${esc(ps.communes)} communes · les mêmes que la carte</span><button ${x.A(ps.fermer)} class="btn-primary" style="padding:5px 14px;font-size:12px">OK</button></div>
+  </div>`;
+}
+
+function reglagesModale(r, x, esc){
+  const num = (ch, eteint) => `
+    <label class="chp${eteint ? ' eteint' : ''}"><span>${esc(ch.label)}${info(esc, ch.tip)}</span>
+      <span class="in"><input id="${ch.id}" type="text" inputmode="decimal" value="${esc(ch.v)}" placeholder="${esc(ch.placeholder)}" ${x.I(ch.set)} ${x.C(ch.set)}>${ch.unite ? `<em>${esc(ch.unite)}</em>` : '<em></em>'}</span></label>`;
+  return `
+  <div class="sc-pr-fond">
+    <div class="sc-pr" role="dialog" aria-modal="true" aria-label="Paramètres du plan d'expansion">
+      <div class="hd">
+        <div><div class="t-section-title" style="font-size:17px">Paramètres du plan d'expansion</div>
+          <div class="sous">Rien ne bouge avant « Appliquer » : le plan, ses cartes et les temps de route ne se recalculent qu’une fois.</div></div>
+        <button ${x.A(r.annuler)} class="x" aria-label="Fermer">×</button>
+      </div>
+      <div class="corps">
+        <section>
+          <h4>Les ouvertures</h4>
+          <label class="chp"><span>Ouvertures par province, au plus</span><select ${x.C(r.setN)}>${opts(r.nChoix, r.nVal)}</select></label>
+          <label class="cb"><input type="checkbox"${r.seuil ? ' checked' : ''} ${x.C(r.toggleSeuil)}>Seulement les zones au-dessus d’un score</label>
+          ${num(r.minScore, !r.seuil)}
+          ${num(r.caMin)}
+        </section>
+        <section>
+          <h4>L’espacement</h4>
+          <label class="chp"><span>Écart minimum entre deux ouvertures</span><select ${x.C(r.setEcart)}>${opts(r.ecartChoix, r.ecartVal)}</select></label>
+          <label class="cb${r.ecartVal === '0' ? ' eteint' : ''}"><input type="checkbox"${r.reseau ? ' checked' : ''} ${x.C(r.toggleReseau)}>Le même écart avec les magasins ouverts</label>
+          <label class="cb${r.ecartVal === '0' ? ' eteint' : ''}" title="Décoché : l’écart est estimé à vol d’oiseau, à 45 km/h de moyenne"><input type="checkbox"${r.route ? ' checked' : ''} ${x.C(r.toggleRoute)}>Temps de route réels (Valhalla, OpenStreetMap)</label>
+        </section>
+        <section class="large">
+          <h4>La concurrence et le modèle de CA</h4>
+          <div class="grille">${r.modele.map(ch => num(ch)).join('')}</div>
+          <p class="note">Ce sont les hypothèses de toute la carte du scouting : les changer ici les change aussi pour les zones candidates, la fiche et le dossier d’implantation.</p>
+        </section>
+        <section class="large">
+          <h4>La langue du document</h4>
+          <div class="seg2">${r.langues.map(l => `<button ${x.A(l.go)} class="${l.on ? 'on' : ''}">${esc(l.nom)}</button>`).join('')}</div>
+          <p class="note">L’écran du plan, l’impression, le PDF et le CSV sortent dans cette langue. Les noms des communes restent ceux d’OpenStreetMap — néerlandais en Flandre, français en Wallonie, bilingues à Bruxelles.</p>
+        </section>
+      </div>
+      <div class="pied">
+        <button ${x.A(r.annuler)} class="btn-secondary" style="padding:8px 14px;font-size:12px">Annuler</button>
+        <button ${x.A(r.appliquer)} class="btn-primary" style="padding:8px 18px;font-size:12px">Appliquer</button>
+      </div>
+    </div>
   </div>`;
 }
 
 function renderPlan(c, x){
   const { esc } = x;
-  const d = c.plan;
+  const d = c.plan, ps = d.provSel, btn = 'padding:7px 12px;font-size:12px;white-space:nowrap';
+  const att = d.enCours ? ';opacity:.6' : '';
   return `
   <div style="position:absolute;inset:0;z-index:1200;background:#EDE7DE;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto;flex-wrap:wrap">
+    <style>${PLAN_UI_CSS}</style>
+    <div style="position:relative;z-index:3;display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto;flex-wrap:wrap">
       <div class="t-section-title" style="font-size:16px">Plan d'expansion</div>
-      <div style="font-size:11px;color:var(--color-text-muted)">${d.enCours ? 'temps de route en cours…' : `${d.nPts} ouverture${d.nPts > 1 ? 's' : ''} · ${esc(d.total.toLocaleString ? Math.round(d.total).toLocaleString('fr-BE') : d.total)} € de CA annuel estimé`}</div>
-      <select ${x.C(d.setN)} style="${selCss};width:auto;padding:6px 8px;font-size:12px">${opts(d.nChoix, d.nVal)}</select>
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox"${d.seuilOn ? ' checked' : ''} ${x.C(d.toggleSeuil)} style="accent-color:var(--color-primary)">seulement au-dessus du score ${d.minScore}</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px" title="Seules les zones dont le CA annuel estimé atteint ce montant entrent dans le plan">CA annuel ≥ <input type="number" min="0" step="50000" placeholder="aucun minimum" value="${esc(d.caMinVal)}" ${x.C(d.setCaMin)} style="${selCss};width:132px;padding:5px 8px;font-size:12px"> €</label>
-      <select ${x.C(d.setEcart)} style="${selCss};width:auto;padding:6px 8px;font-size:12px">${opts(d.ecartChoix, d.ecartVal)}</select>
-      ${d.minutes ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox"${d.reseauOn ? ' checked' : ''} ${x.C(d.toggleReseau)} style="accent-color:var(--color-primary)">et des magasins ouverts</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer" title="Les minutes de voiture viennent du service de routage Valhalla sur OpenStreetMap ; décochée, l’écart est estimé à vol d’oiseau à 45 km/h"><input type="checkbox"${d.routeOn ? ' checked' : ''} ${x.C(d.toggleRoute)} style="accent-color:var(--color-primary)">temps de route réels</label>` : ''}
+      <div style="font-size:11px;color:var(--color-text-muted);white-space:nowrap">${d.enCours ? 'temps de route en cours…' : `${d.nPts} ouverture${d.nPts > 1 ? 's' : ''} · ${esc(Math.round(d.total).toLocaleString('fr-BE'))} €`}</div>
+      <div style="position:relative">
+        <button ${x.A(ps.toggle)} class="btn-secondary" style="${btn};display:inline-flex;align-items:center;gap:6px${ps.ouvert ? ';border-color:var(--color-primary);color:var(--color-primary)' : ''}" aria-expanded="${ps.ouvert ? 'true' : 'false'}">Provinces : <b style="font-weight:600">${esc(ps.label)}</b><span style="font-size:9px">▾</span></button>
+        ${ps.ouvert ? provListe(ps, x, esc) : ''}
+      </div>
+      <button ${x.A(d.ouvrirReglages)} class="btn-secondary" style="${btn};display:inline-flex;align-items:center;gap:6px">${ROUE}Paramètres</button>
+      <div class="sc-seg" role="group" aria-label="Langue du document" title="La langue du document : l’écran du plan, l’impression, le PDF et le CSV">
+        ${d.langues.map(l => `<button ${x.A(l.go)} class="${l.on ? 'on' : ''}" title="${esc(l.nom)}">${esc(l.code.toUpperCase())}</button>`).join('')}
+      </div>
       <div style="flex:1"></div>
-      <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy || d.enCours ? ';opacity:.6' : ''}">${d.busy ? 'PDF en cours…' : 'Télécharger le PDF'}</button>
-      <button ${x.A(d.csv)} class="btn-secondary" style="padding:7px 12px;font-size:12px${d.enCours ? ';opacity:.6' : ''}">Exporter (CSV)</button>
-      <button ${x.A(d.imprimer)} class="btn-secondary" style="padding:7px 12px;font-size:12px${d.enCours ? ';opacity:.6' : ''}">Imprimer</button>
-      <button ${x.A(d.fermer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Fermer</button>
+      <button ${x.A(d.pdf)} class="btn-primary" style="${btn}${d.busy || d.enCours ? ';opacity:.6' : ''}" title="Tout le plan : la synthèse, puis une page par province">${d.busy ? (d.cartesBusy ? 'Cartes ' + esc(d.cartesBusy) + '…' : 'PDF en cours…') : 'PDF du plan'}</button>
+      ${d.provCourante ? `<button ${x.A(d.provCourante.pdf)} class="btn-secondary" style="${btn};border-color:#1b5e20;color:#1b5e20${att}" title="La page de cette province seule, avec la méthode et les hypothèses">PDF ${esc(d.provCourante.nom)}</button>` : ''}
+      <button ${x.A(d.csv)} class="btn-secondary" style="${btn}${att}">CSV</button>
+      <button ${x.A(d.imprimer)} class="btn-secondary" style="${btn}${att}">Imprimer</button>
+      <button ${x.A(d.fermer)} class="btn-secondary" style="${btn}">Fermer</button>
+    </div>
+    <div class="sc-plan-res">
+      ${d.arrFiltre ? `<span class="chip arr">arrondissement de ${esc(d.arrFiltre.nom)} seul<button ${x.A(d.arrFiltre.retirer)} title="Revenir à tous les arrondissements" aria-label="Retirer">×</button></span>` : ''}
+      ${d.resumeReglages.map(r => `<span class="chip">${esc(r)}</span>`).join('')}
+      <button ${x.A(d.ouvrirReglages)} class="mod">modifier</button>
+    </div>
+    <div class="sc-plan-tabs" role="tablist">
+      ${d.onglets.map(o => `<button ${x.A(o.go)} role="tab" aria-selected="${o.on ? 'true' : 'false'}" class="${o.on ? 'on' : ''}${o.k !== 'synthese' && !o.n ? ' vide' : ''}">${esc(o.nom)}<span>${o.n}</span></button>`).join('')}
     </div>
     <div id="sc-plan" class="sc-scroll" style="flex:1;overflow:auto;padding:18px 16px 28px">
       <style>${DOSS_CSS}</style>
-      ${d.enCours ? `<div class="sc-doss sc-attente" style="text-align:center;padding:48px 24px">
+      ${d.aucuneProv ? `<div class="sc-doss" style="text-align:center;padding:48px 24px"><div class="t-section-title" style="font-size:16px">Aucune province cochée</div><div class="mut" style="font-size:12.5px;margin-top:10px">Ouvrez la liste « Provinces » et cochez celles du plan — une seule suffit pour un plan de province.</div></div>`
+        : d.enCours ? `<div class="sc-doss sc-attente" style="text-align:center;padding:48px 24px">
         <div class="t-section-title" style="font-size:16px">Temps de route en cours…</div>
         <div style="font-size:12.5px;margin-top:10px">${d.calc ? `${d.calc.examinees} zone${d.calc.examinees > 1 ? 's' : ''} examinée${d.calc.examinees > 1 ? 's' : ''} · ${d.calc.retenues} retenue${d.calc.retenues > 1 ? 's' : ''} · ${d.calc.appels} appel${d.calc.appels > 1 ? 's' : ''} au service de routage` : 'préparation'}</div>
         <div class="mut" style="font-size:11px;margin:16px auto 0;max-width:540px;line-height:1.5">Chaque zone candidate est comparée, en minutes de voiture, aux zones déjà retenues et aux magasins ouverts à moins de ${Math.round(d.cut)} km — service de routage Valhalla sur OpenStreetMap. Les trajets calculés restent sur ce poste : le prochain plan ira plus vite.</div>
-      </div>` : planPage(Object.assign({}, d, { carte: d.img }), esc, 'assets/img/logo.png', x)}
+      </div>` : planPage(Object.assign({}, d, { carte: d.img }), esc, 'assets/img/logo.png', x, d.onglet)}
     </div>
+    ${d.reglages ? reglagesModale(d.reglages, x, esc) : ''}
   </div>`;
 }
 

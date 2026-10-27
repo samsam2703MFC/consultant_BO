@@ -1,0 +1,99 @@
+{% extends "layouts/base.twig" %}
+
+{% set state_labels = {
+    'sent': ['Wysłane', 'at-pill-ok'],
+    'logged': ['Zarejestrowane (serwer testowy)', 'at-pill-muted'],
+    'queued': ['W kolejce', 'at-pill-warn'],
+    'failed': ['Błąd', 'at-pill-danger'],
+    'skipped': ['Pominięte', 'at-pill-warn'],
+    'pending': ['Czeka na moment', 'at-pill-muted'],
+    'ksef': ['Czeka na przyjęcie w KSeF', 'at-pill-muted'],
+    'off': ['Wysyłka wyłączona', 'at-pill-muted'],
+    'before': ['Sprzed włączenia wysyłki automatycznej', 'at-pill-muted'],
+    'no_address': ['Brak adresu w karcie klienta', 'at-pill-danger']
+} %}
+
+{% block title %}Dokumenty dostawy{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Dokumenty dostawy — {{ date|date('d.m.Y') }}</h3>
+            <p class="text-subtitle text-muted">Według « Dystrybucji dokumentów » : drukujesz tylko to, co jedzie z towarem ; resztę system wysyła sam we właściwym momencie.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.dl-total{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;background:#8D1D2C;color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:14px}
+.dl-total b{font-size:20px}
+.dl-day{display:grid;grid-template-columns:1.1fr 1fr 1.6fr auto;background:#fff;border:1px solid #eee;border-radius:12px;overflow:hidden;margin-bottom:10px}
+.dl-day>div{padding:12px 14px;border-right:1px solid #f0ebe7;font-size:13px}
+.dl-day>div:last-child{border-right:0;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.dl-day .t{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#8a817a;margin-bottom:4px}
+.dl-mail{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;margin-bottom:4px}
+@media (max-width: 900px){.dl-day{grid-template-columns:1fr}.dl-day>div{border-right:0;border-bottom:1px solid #f0ebe7}}
+</style>
+<section class="section">
+    <form class="d-flex flex-wrap align-items-center gap-2 mb-3" method="get">
+        <input type="date" name="date" class="form-control form-control-sm" style="width:170px" value="{{ date }}" onchange="this.form.submit()">
+        {% for d, n in days|slice(0, 8, true) %}
+            <a href="?date={{ d }}" class="btn btn-sm {{ d == date ? 'btn-dark' : 'btn-outline-secondary' }}">{{ d|date('d.m') }} <span class="opacity-75">({{ n }})</span></a>
+        {% endfor %}
+        <a href="{{ root }}/communication/distribution" class="ms-auto small">Ustawienia : Komunikacja › Dystrybucja dokumentów</a>
+    </form>
+
+    {% if shipments %}
+        <div class="dl-total">
+            {% set n = shipments|length %}
+            {% set few = (total_copies % 10) in [2, 3, 4] and (total_copies % 100) not in [12, 13, 14] %}
+            <span>Plik dla kierowców : <b>{{ total_copies }} {{ total_copies == 1 ? 'dokument' : (few ? 'dokumenty' : 'dokumentów') }}</b> (egzemplarze) ·
+                {{ n }} {{ n == 1 ? 'wysyłka' : ((n % 10) in [2, 3, 4] and (n % 100) not in [12, 13, 14] ? 'wysyłki' : 'wysyłek') }}</span>
+            <button type="button" class="btn btn-light btn-sm" id="dlPrintAll"><i class="bi bi-printer"></i> Drukuj wszystko dla kierowców</button>
+        </div>
+        {% for s in shipments %}
+            <div class="dl-day">
+                <div><div class="t">Klient</div><strong>{{ s.company }}</strong>
+                    <div class="text-muted small">Wysyłka #{{ s.id }}{% if s.wz_number %} · WZ {{ s.wz_number }}{% endif %}{% if s.wdt_number %} · WDT {{ s.wdt_number }}{% endif %}</div></div>
+                <div><div class="t">Papier dla kierowcy</div>
+                    {% if s.paper %}{% for p in s.paper %}{{ p.label }} ×{{ p.copies }}{{ not loop.last ? ', ' }}{% endfor %}
+                    {% else %}<span class="text-muted">nic — wszystko e-mailem</span>{% endif %}</div>
+                <div><div class="t">E-mail / SMS automatycznie</div>
+                    {% for m in s.mails %}
+                        <div class="dl-mail"><span>{{ m.label }} → {{ m.to ?? '' }}{% if m.sms %}{{ m.to ? ' + ' }}SMS{% endif %}</span>
+                            <span class="text-muted small">({{ m.moment }})</span>
+                            {% set st = state_labels[m.state] %}
+                            <span class="at-pill {{ st[1] }}" {% if m.reason %}title="{{ m.reason }}"{% endif %}>{{ st[0] }}</span>
+                            {% if m.id_message %}<a class="small" href="{{ root }}/communication/messages/{{ m.id_message }}">wiadomość</a>{% endif %}
+                        </div>
+                        {% if m.reason and m.state in ['skipped', 'failed'] %}<div class="text-muted small mb-1">{{ m.reason }}</div>{% endif %}
+                    {% else %}<span class="text-muted">brak</span>{% endfor %}
+                </div>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-dark" data-print="{{ s.id }}"><i class="bi bi-printer"></i> Drukuj</button>
+                    <button type="button" class="btn btn-sm btn-link p-0 small" data-print-all="{{ s.id }}" title="WZ ×3, CMR ×3, WDT, PPWR, różnice — jak dawniej">komplet</button>
+                </div>
+            </div>
+        {% endfor %}
+        <p class="text-muted small">Stan e-maili : <a href="{{ root }}/communication/messages">Historia wiadomości</a> (wysłane) · <a href="{{ root }}/communication/outbox?source=automation&amp;filter=all">Stan wysyłek</a> (błędy, pominięte). Na serwerze testowym e-maile są tylko zapisywane, nie wysyłane.</p>
+    {% else %}
+        <p class="at-empty">Brak wysyłek w tym dniu.</p>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const date = {{ date|json_encode|raw }};
+    document.getElementById('dlPrintAll')?.addEventListener('click', () => downloadPDF('/ajax/logistics/documents/day.pdf?date=' + encodeURIComponent(date)));
+    document.addEventListener('click', (e) => {
+        const one = e.target.closest('[data-print]');
+        const all = e.target.closest('[data-print-all]');
+        if (one) downloadPDF('/ajax/shipments/' + one.dataset.print + '/documents/grouped');
+        if (all) downloadPDF('/ajax/shipments/' + all.dataset.printAll + '/documents/grouped?all=1');
+    });
+})();
+</script>
+{% endblock %}
