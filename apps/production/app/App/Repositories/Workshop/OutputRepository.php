@@ -63,7 +63,8 @@ final class OutputRepository extends WorkshopRepository
     public function day(string $day, int $groupId): array
     {
         return $this->all("SELECT o.*, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS employee_name,
-                                  (SELECT COUNT(*) FROM n_prod_output_lot l WHERE l.id_output = o.id AND l.lot_number IS NOT NULL AND l.lot_number <> '') AS lots_done
+                                  (SELECT COUNT(*) FROM n_prod_output_lot l WHERE l.id_output = o.id AND l.lot_number IS NOT NULL AND l.lot_number <> '')
+                                  + (SELECT COUNT(*) FROM n_prod_output_component k WHERE k.id_output = o.id AND k.id_source_output IS NOT NULL) AS lots_done
                            FROM n_prod_output o
                            LEFT JOIN n_prod_employee e ON e.id = o.id_employee
                            LEFT JOIN production_employee pe ON pe.id = e.id_production_employee

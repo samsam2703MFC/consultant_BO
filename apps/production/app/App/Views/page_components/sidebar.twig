@@ -391,6 +391,13 @@
                     </a>
                 </li>
 
+                <li class="sidebar-item">
+                    <a href="{{ root }}/workshop/group-orders" class="sidebar-link">
+                        <i class="bi bi-arrow-left-right"></i>
+                        <span>Zamówienia między grupami</span>
+                    </a>
+                </li>
+
                 <li class="sidebar-title">Administracja</li>
 
                 {# Tylko administrator : moduł kierownika produkcji i uprawnienia stanowisk (link ukryty dla innych). #}
@@ -454,6 +461,13 @@
                 <li><a href="{{ root }}/dashboard/monthly" data-where="Analiza › Raport miesięczny"><i class="bi bi-envelope-paper"></i> Raport miesięczny zarządu : rentowność, marża, reklamacje, klienci, niezgodności, nowe produkty (w rozwoju i wprowadzone), tabela roku — PDF PL / FR i wysyłka e-mailem co miesiąc</a></li>
                 <li><a href="{{ root }}/test-products/pipeline" data-where="Produkt › Produkty › Nowe produkty (etapy i lista)"><i class="bi bi-kanban"></i> CRM nowych produktów : pomysł, test 1 (receptura i zdjęcia), test 2, receptura zatwierdzona na tablecie, wprowadzenie — testy planowane w biurze, potwierdzane na tablecie grupy bez ponownego wpisywania</a></li>
                 <li><a href="{{ root }}/test-products/pipeline" data-where="Produkt › Produkty › Nowe produkty (etapy i lista)"><i class="bi bi-tablet"></i> Nowe produkty na tablecie wybranej grupy : test ze zdjęciami, ilość, wynik (OK, do poprawy, nie), co zmienić, zatwierdzenie receptury</a></li>
+                <li><a href="{{ root }}/workshop/group-orders" data-where="Tablety › Zamówienia między grupami"><i class="bi bi-arrow-left-right"></i> Zamówienia między grupami : kompozycje (ciasto na tarty, ciasto francuskie…) zamawiane na tablecie u grupy, która je robi — na kiedy, ilość, partia, stan (commandes entre groupes)</a></li>
+                <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-arrow-left-right"></i> Tablet : zakładka « Zamówienia grup » — zamów kompozycję u innej grupy (ilość, dzień, godzina), moje zamówienia ; grupa robiąca : przyjmij, produkuj, gotowe</a></li>
+                <li><a href="{{ root }}/tablet/production" data-where="Tablety › Otwórz tablet › Tablet grupy produkcji"><i class="bi bi-box-arrow-in-down"></i> Tablet : partia produktu — kompozycja innej grupy = jedna linia z numerem partii tej grupy (bez jej surowców), zużyta w całości</a></li>
+                <li><a href="{{ root }}/recipes" data-where="Produkt › Produkty › Receptury"><i class="bi bi-people"></i> Receptura : która grupa robi kompozycję / półprodukt i z jakim wyprzedzeniem się ją zamawia (Kalkulacja › Kompozycje i półprodukty)</a></li>
+                <li><a href="{{ root }}/recipes" data-where="Produkt › Produkty › Receptury"><i class="bi bi-people"></i> Formularz receptury, zakładka Skład : kolumna « Robi grupa » przy każdej kompozycji / półprodukcie — zapis od razu, tablet zamawia u tej grupy</a></li>
+                <li><a href="{{ root }}/products/new-with-recipe" data-where="Produkt › Produkty"><i class="bi bi-people"></i> Kreator produktu, krok Receptura : « Robi grupa » dla każdego półproduktu (grupa, u której tablet zamawia kompozycję)</a></li>
+                <li><a href="{{ root }}/workshop/products" data-where="Produkt › Produkty › Karty produktów"><i class="bi bi-people"></i> Karta produktu, krok Receptura (straty składników) : « Robi grupa » i « Zamawianie » (ile dni wcześniej) dla kompozycji</a></li>
                 <li><a href="{{ root }}/workshop/production-days" data-where="Tablety › Zatwierdzenia produkcji"><i class="bi bi-clipboard-check"></i> Zatwierdzenia produkcji dnia z tabletów : zrobione wobec planu, straty ze zdjęciami i powodem, powód braku — poprawki kierownika po zatwierdzeniu</a></li>
                 <li><a href="{{ root }}/workshop/production-days" data-where="Tablety › Zatwierdzenia produkcji"><i class="bi bi-speedometer2"></i> Wydajność dnia grupy (rentowność dnia) : czas normatywny zrobionych sztuk ÷ czas pracy (odbicia − przerwa 15 min na osobę − sprzątanie), cel 85 %, osoby ze stanowiskiem, podział czasu na stanowiska</a></li>
                 <li><a href="{{ root }}/workshop/production-days" data-where="Tablety › Zatwierdzenia produkcji"><i class="bi bi-stars"></i> Sprzątanie dnia : bez, 15 albo 30 min × osoby obecne — odejmowane od czasu pracy we wskaźniku wydajności</a></li>

@@ -24,6 +24,14 @@
                             {% for g in groups %}<option value="{{ g.id }}" {{ producer and producer.id == g.id ? 'selected' }}>{{ g.name_pl }}</option>{% endfor %}
                         </select>
                     </label>
+                    {% set leads = [[0, 'ten sam dzień'], [1, '1 dzień przed'], [2, '2 dni przed'], [3, '3 dni przed'], [5, '5 dni przed'], [7, '7 dni przed']] %}
+                    <label class="d-inline-flex align-items-center gap-2 mt-2 ms-2 small" title="Z jakim wyprzedzeniem inne grupy zamawiają tę kompozycję na tablecie">
+                        <i class="bi bi-calendar-event"></i> Zamawianie
+                        <select class="form-select form-select-sm" style="width:auto" data-lead="{{ recipe.id }}" data-group-of="{{ recipe.id }}" {{ producer ? '' : 'disabled' }}>
+                            <option value="">—</option>
+                            {% for l in leads %}<option value="{{ l[0] }}" {{ producer and producer.lead_days is same as(l[0]) ? 'selected' }}>{{ l[1] }}</option>{% endfor %}
+                        </select>
+                    </label>
                 {% endif %}
             </div>
             <div class="d-flex flex-wrap gap-2">
@@ -56,6 +64,11 @@
 .rc-bar.rc-pack span i{background:#8a7fb8}
 .rc-bar b{font-weight:500;width:46px;text-align:right;font-variant-numeric:tabular-nums}
 .rc-tag{display:inline-block;font-size:10.5px;font-weight:600;border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+.rc-comp .rc-comp-sel{min-width:170px;min-height:38px}
+.rc-comp-sub{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted);margin:18px 0 6px}
+.rc-state{display:inline-block;font-size:12px;font-weight:600;border-radius:6px;padding:2px 8px;background:#f1ece6;color:#6b625b;white-space:nowrap}
+.rc-state-ordered{background:rgba(141,29,44,.08);color:var(--at-primary)}.rc-state-in_production,.rc-state-accepted{background:rgba(183,121,31,.14);color:#8a5a12}
+.rc-state-ready,.rc-state-picked{background:rgba(46,125,79,.12);color:var(--at-success)}
 .rc-tag-pack{background:#f1eefa;color:#5a3d99}.rc-tag-sub{background:#f6e9eb;color:#8D1D2C}.rc-tag-miss{background:#fde8e8;color:#b42318}
 .rc-split{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--at-bg-2);margin-top:4px}
 .rc-split i{display:block;height:100%}
@@ -115,6 +128,48 @@
                 <strong class="at-tile-value">{{ used_in|length }}</strong><span class="at-tile-meta">{{ used_in|length == 1 ? 'recepturze' : 'recepturach' }} (lista poniżej)</span></div>
         {% endif %}
     </div>
+
+    {% if components %}
+    {% set leads = [[0, 'ten sam dzień'], [1, '1 dzień przed'], [2, '2 dni przed'], [3, '3 dni przed'], [5, '5 dni przed'], [7, '7 dni przed']] %}
+    <div class="card rc-comp">
+        <div class="card-header"><h4 class="card-title mb-0">Kompozycje i półprodukty : która grupa je robi</h4>
+            <p class="text-muted small mb-0">{% if own_group %}Receptura grupy <strong>{{ own_group.name_pl }}</strong> · {% endif %}grupa robiąca inna niż grupa receptury : tablet pokazuje « Zamów u innej grupy », partia produktu bierze numer partii kompozycji (jej surowce liczą się w grupie robiącej : koszt, zużycie, śledzenie).</p></div>
+        <div class="card-body pt-0"><div class="table-responsive">
+            <table class="rc-table">
+                <thead><tr><th>Kompozycja / półprodukt</th><th class="n">Ilość</th><th>Rodzaj</th><th>Robi grupa</th><th>Zamawianie</th><th>Partia w produkcie</th></tr></thead>
+                <tbody>
+                {% for c in components %}
+                    <tr data-comp="{{ c.id }}">
+                        <td style="padding-left:{{ 10 + c.depth * 18 }}px"><a class="text-reset fw-semibold" href="{{ root }}{{ c.kind == 'semi' ? '/semi-products' : '/compositions' }}/{{ c.id }}/calculation">{{ c.name }}</a></td>
+                        <td class="n">{{ f.qty(c.qty) }} {{ c.unit }}</td>
+                        <td><span class="rc-tag rc-tag-sub" style="margin-left:0">{{ c.kind == 'composition' ? 'kompozycja' : 'półprodukt' }}</span></td>
+                        <td><select class="form-select form-select-sm rc-comp-sel" data-producer="{{ c.id }}" aria-label="Robi grupa : {{ c.name }}">
+                            <option value="">— nie ustawiono</option>
+                            {% for g in groups %}<option value="{{ g.id }}" {{ c.producer and c.producer.id == g.id ? 'selected' }}>{{ g.name_pl }}{{ own_group and own_group.id == g.id ? ' (ta grupa)' }}</option>{% endfor %}
+                        </select></td>
+                        <td><select class="form-select form-select-sm rc-comp-sel" data-lead="{{ c.id }}" aria-label="Zamawianie : {{ c.name }}" {{ c.producer ? '' : 'disabled' }}>
+                            <option value="">—</option>
+                            {% for l in leads %}<option value="{{ l[0] }}" {{ c.producer and c.producer.lead_days is same as(l[0]) ? 'selected' }}>{{ l[1] }}</option>{% endfor %}
+                        </select></td>
+                        <td class="text-muted" data-comp-lot>{{ c.other ? 'numer partii ' ~ c.producer.name_pl : (c.producer ? 'surowce w partii' : '—') }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table></div>
+            <h5 class="rc-comp-sub">Zamówienia między grupami · {{ 'now'|date_modify('-1 day')|date('d.m') }} – {{ 'now'|date_modify('+6 days')|date('d.m') }}</h5>
+            {% if group_orders %}
+            <div class="table-responsive"><table class="rc-table">
+                <thead><tr><th>Na kiedy</th><th>Kompozycja</th><th>Dla</th><th>Robi</th><th class="n">Ilość</th><th>Partia</th><th>Stan</th></tr></thead>
+                <tbody>{% for o in group_orders %}
+                    <tr><td class="text-nowrap">{{ o.due_at|date('d.m H:i') }}</td><td class="fw-semibold">{{ o.recipe.name }}</td><td>{{ o.from.name }}</td><td>{{ o.to.name }}</td>
+                        <td class="n">{{ f.qty(o.quantity) }} {{ o.unit }}</td><td>{{ o.batch ? o.batch.lot_code : '—' }}</td>
+                        <td><span class="rc-state rc-state-{{ o.status }}">{{ {'ordered': 'zamówione', 'accepted': 'przyjęte', 'in_production': 'w produkcji', 'ready': 'gotowe', 'picked': 'odebrane ' ~ (o.picked_quantity ? f.qty(o.picked_quantity) ~ ' ' ~ o.unit : ''), 'cancelled': 'anulowane'}[o.status] }}</span></td></tr>
+                {% endfor %}</tbody></table></div>
+            {% else %}<p class="text-muted small mb-0">Brak zamówień na te kompozycje w tym okresie (zamawia się na tablecie grupy : zakładka « Zamówienia grup »).</p>{% endif %}
+            <p class="small mb-0 mt-2"><a href="{{ root }}/workshop/group-orders"><i class="bi bi-arrow-right"></i> Wszystkie zamówienia między grupami</a></p>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="card">
         <div class="card-header d-flex flex-wrap align-items-center gap-2">
@@ -212,12 +267,17 @@
         const open = b.dataset.expand === '1';
         rows.forEach(r => { r.hidden = !open && r.dataset.parent !== ''; r.classList.toggle('rc-open', open && r.classList.contains('rc-sub')); });
     }));
-    document.querySelector('[data-producer]')?.addEventListener('change', (e) => {
-        fetch({{ root|json_encode|raw }} + '/ajax/recipes/' + e.target.dataset.producer + '/producer', {
+    // Grupa robiąca i wyprzedzenie zamówienia (nagłówek i tabela kompozycji) : zapis od razu, karta półproduktu grupy.
+    const saveProducer = (id) => {
+        const group = document.querySelector(`[data-producer="${id}"]`);
+        const lead = document.querySelector(`[data-lead="${id}"]`);
+        if (lead) lead.disabled = !group.value;
+        return fetch({{ root|json_encode|raw }} + '/ajax/recipes/' + id + '/producer', {
             method: 'PUT', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-            body: JSON.stringify({group_id: e.target.value || null}),
+            body: JSON.stringify({group_id: group.value || null, ...(lead ? {lead_days: group.value ? (lead.value === '' ? null : Number(lead.value)) : null} : {})}),
         }).then(r => r.json().then(b => showSnack(r.ok, b.message || 'Błąd')));
-    });
+    };
+    document.querySelectorAll('[data-producer], [data-lead]').forEach(sel => sel.addEventListener('change', () => saveProducer(sel.dataset.producer || sel.dataset.lead)));
     document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
         document.querySelectorAll('[data-view]').forEach(x => x.classList.toggle('active', x === b));
         document.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('d-none', p.dataset.pane !== b.dataset.view));

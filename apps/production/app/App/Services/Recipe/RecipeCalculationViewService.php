@@ -4,6 +4,7 @@ namespace App\Services\Recipe;
 use App\Exceptions\CustomException;
 use App\Repositories\Product\Recipe\RecipeRepository;
 use App\Repositories\Workshop\RecipeProducerRepository;
+use App\Services\Workshop\Execution\GroupOrderService;
 
 /**
  * Strona « Kalkulacja » receptury (produkt gotowy, półprodukt, kompozycja) : koszt surowców całej receptury
@@ -23,7 +24,7 @@ final class RecipeCalculationViewService
     /** Różnica (zł) między kosztem zapisanym (karta produktu, marże) a bieżącym wyliczeniem, od której ostrzegamy. */
     public const STORED_TOLERANCE = 0.05;
 
-    public function __construct(private RecipeRepository $recipes, private RecipeProducerRepository $producers) {}
+    public function __construct(private RecipeRepository $recipes, private RecipeProducerRepository $producers, private GroupOrderService $groupOrders) {}
 
     public function build(int $id, string $kind): array
     {
@@ -85,7 +86,12 @@ final class RecipeCalculationViewService
             'missing' => array_values(array_filter($materials, fn($m) => $m['missing'])),
             'cycles' => array_values(array_filter($rows, fn($r) => $r['cycle'])),
             'producer' => $kind !== 'product' ? ($producers[$id] ?? null) : null,
-            'groups' => $kind !== 'product' ? $this->producers->groups() : [],
+            'groups' => $this->producers->groups(),
+            // Makieta 4 : kompozycje i półprodukty receptury — grupa robiąca, wyprzedzenie zamówienia, partia w produkcie ;
+            // zamówienia między grupami na te kompozycje (wczoraj → za 6 dni).
+            'own_group' => $ownGroup = ($kind === 'product' ? $this->producers->productGroup($id) : ($producers[$id] ?? null)),
+            'components' => $components = self::components($rows, $ownGroup['id'] ?? null),
+            'group_orders' => $components ? $this->groupOrders->between(date('Y-m-d', strtotime('-1 day')), date('Y-m-d', strtotime('+6 days')), null, 'pl', array_column($components, 'id')) : [],
             'used_in' => array_map(fn($u) => ['id' => (int) $u['id'], 'name' => (string) $u['name'],
                 'url' => (self::KINDS[self::TYPE_KIND[(int) $u['id_type']] ?? 'product']['base']) . '/' . (int) $u['id'] . '/calculation'], $context['used_in']),
         ];
@@ -101,6 +107,18 @@ final class RecipeCalculationViewService
      * Drzewo składników jako wiersze tabeli : poziom, klucz rodzica (zwijanie), ilość, cena jednostkowa, koszt, udział.
      * Pozycje danego poziomu od najdroższej.
      */
+    /** Podreceptury (unikalne, kolejność drzewa) z grupą robiącą ; other = robi inna grupa niż grupa receptury. */
+    private static function components(array $rows, ?int $ownGroup): array
+    {
+        $out = [];
+        foreach ($rows as $r) {
+            if (!$r['sub'] || isset($out[$r['id']])) continue;
+            $out[$r['id']] = ['id' => $r['id'], 'name' => $r['name'], 'kind' => $r['kind'], 'qty' => $r['qty'], 'unit' => $r['unit'], 'depth' => $r['depth'],
+                'producer' => $r['producer'], 'other' => $r['producer'] !== null && $ownGroup !== null && $r['producer']['id'] !== $ownGroup];
+        }
+        return array_values($out);
+    }
+
     public static function rows(array $elements, float $total, int $depth = 0, string $parent = ''): array
     {
         usort($elements, fn($a, $b) => ((float) ($b['price_for_required_quantity'] ?? 0)) <=> ((float) ($a['price_for_required_quantity'] ?? 0)));

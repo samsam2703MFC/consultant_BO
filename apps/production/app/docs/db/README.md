@@ -43,6 +43,23 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 `n_prod_device` reçoit `mode` (`atelier` / `driver`) et `id_carrier_vehicle` (véhicule par défaut d'une tablette chauffeur). `n_delivery_run` : départ et fin de tournée d'un véhicule un jour d'expédition (chauffeur). `n_delivery_stop` : un enregistrement par client et jour d'expédition — `delivered` (réceptionnaire, palettes livrées et rendues) ou `problem` (raison : fermé, refus, casse, manquant, retard, autre), note, position, heure. `n_delivery_media` : signature (PNG) et photo (JPEG) d'un arrêt. Paramètre `driver.photo_max_kb`. Pages : `/driver` (tablette), Logistyka › Dostawy (`/logistics/deliveries`, PDF de preuve de livraison).
 
+### Compositions faites par un autre groupe (migration 114, 27/10/2026)
+
+- `n_recipe_producer.lead_days` : délai de commande de la composition (jours avant le besoin, 0 = le jour même ; NULL = sans
+  délai). Le groupe qui fait la composition et ce délai se règlent au même endroit partout (une seule règle,
+  `CompositionProducerService`) : formulaire de recette (onglet Skład, colonne « Robi grupa »), Kalkulacja › Kompozycje i
+  półprodukty, kreator produktu (étape Receptura), Karta produktu (étape Receptura : `PUT /produits/items/{id}/bom-losses`
+  avec `producer_group_id` / `lead_days`). Choisir un groupe crée la fiche « półprodukt » de ce groupe (`n_prod_item` semi,
+  groupe principal = groupe qui fait) ; retirer le groupe supprime cette fiche si elle n'a encore aucun historique.
+- `n_group_order` : commande d'une composition par un groupe au groupe qui la fait (quantité, jour et heure) — `ordered`,
+  `accepted`, `in_production` (partie du groupe qui fait : `id_output`), `ready`, `picked` (partie du produit qui l'a
+  utilisée : `id_picked_output`, `picked_quantity`), `cancelled`. Tablette : onglet « Zamówienia grup » (`/kiosk/group-orders`) ;
+  ERP : Tablety › Zamówienia między grupami (`GET /execution/group-orders`).
+- `n_prod_output_component` : partie d'un produit ↔ partie de la composition faite par l'autre groupe (une ligne au lieu des
+  matières de la composition, entièrement utilisée ; `PUT /kiosk/production/{id}/components/{recipe}`).
+- Fiche « półprodukt » créée pour chaque composition déjà liée à un groupe. Paramètres `group_orders.days_ahead` (5) et
+  `group_orders.hours` (heures proposées sur la tablette).
+
 ### Rendement du jour d'un groupe (migration 113, 27/10/2026)
 
 - `n_prod_day_cleaning` (`work_date`, `id_group`) : nettoyage du jour choisi par le responsable dans Tablety › Zatwierdzenia

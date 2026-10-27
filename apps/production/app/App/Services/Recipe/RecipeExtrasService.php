@@ -6,6 +6,7 @@ namespace App\Services\Recipe;
 use App\Core\TransactionManager;
 use App\Repositories\Product\Recipe\PreparationStepRepository;
 use App\Repositories\Workshop\RecipeProducerRepository;
+use App\Services\Workshop\Product\CompositionProducerService;
 
 /**
  * Formularz receptury w trzech zakładkach (audyt 2, lot C) : Skład · Przygotowanie · Grupa i kompetencje — od razu przy
@@ -19,6 +20,7 @@ final class RecipeExtrasService
         private PreparationStepRepository $steps,
         private RecipeCompetencyService $competencies,
         private RecipeProducerRepository $producers,
+        private CompositionProducerService $compositions,
         private TransactionManager $transactions,
     ) {
     }
@@ -34,8 +36,10 @@ final class RecipeExtrasService
             'competency_list' => $this->competencies->getAll() ?: [],
             'competency_ids' => $post !== null && isset($post['competencies_present']) ? array_map('intval', (array) ($post['competency_ids'] ?? [])) : $assigned,
         ];
+        // Kompozycje w składzie : grupa robiąca każdej (lista w zakładce Skład, zapis od razu).
+        $data['producer_groups'] = $this->producers->groups();
+        $data['child_producers'] = $this->producers->groupMap();
         if ($kind !== 'product') {
-            $data['producer_groups'] = $this->producers->groups();
             $data['producer'] = $recipeId ? ($this->producers->forRecipes([$recipeId])[$recipeId] ?? null) : null;
             $data['producer_new'] = $post['producer_group_id'] ?? '';
         }
@@ -75,7 +79,7 @@ final class RecipeExtrasService
         $group = trim((string) ($input['producer_group_id'] ?? ''));
         if ($isNew && $group !== '' && ctype_digit($group)) {
             try {
-                if ($this->producers->isComponent($recipeId) && $this->producers->groupExists((int) $group)) $this->producers->set($recipeId, (int) $group, $userId);
+                if ($this->producers->isComponent($recipeId) && $this->producers->groupExists((int) $group)) $this->compositions->set($recipeId, (int) $group, $userId);
                 else $problems[] = 'Grupa : nieznana grupa albo to nie półprodukt / kompozycja.';
             } catch (\Throwable $e) {
                 $problems[] = 'Grupa : ' . $e->getMessage();

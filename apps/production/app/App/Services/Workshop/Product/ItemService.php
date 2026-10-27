@@ -12,6 +12,7 @@ use App\Core\TransactionManager;
 use App\Repositories\Workshop\GroupRepository;
 use App\Repositories\Workshop\ItemRepository;
 use App\Repositories\Workshop\ParamRepository;
+use App\Repositories\Workshop\RecipeProducerRepository;
 use App\Services\Workshop\Referentiel\AuditTrail;
 
 /**
@@ -54,6 +55,8 @@ final class ItemService
         private ParamRepository $params,
         private TransactionManager $tx,
         private AuditTrail $audit,
+        private RecipeProducerRepository $producers,
+        private CompositionProducerService $compositions,
     ) {
     }
 
@@ -295,6 +298,9 @@ final class ItemService
                 'quantity' => (float) $b['quantity'],
                 'unit' => $b['unit'],
                 'loss_pct' => (float) $b['loss_pct'],
+                // Kompozycja : grupa, która ją robi (tablet zamawia u niej) i wyprzedzenie zamówienia (dni).
+                'producer_group_id' => $b['producer_id'] === null ? null : (int) $b['producer_id'],
+                'lead_days' => $b['lead_days'] === null ? null : (int) $b['lead_days'],
             ], $this->items->bom($recipeId)) : [],
             'durations' => array_map(fn($q) => $this->durationOf($steps, (float) $q), array_values(array_filter($samples, 'is_numeric'))),
             'checklist' => $this->checklist($row, $steps),
@@ -466,6 +472,11 @@ final class ItemService
         $erpMin = $this->erpStockMinimum($row, $mode, $min, $v->provided('mode'));
         $this->tx->execute(function () use ($id, $data, $row, $context, $erpMin) {
             $this->items->saveSettings($id, $data);
+            // Półprodukt : grupa główna karty = grupa robiąca kompozycję (jedno źródło prawdy z recepturą i tabletem).
+            if ($row['item_type'] === 'semi' && $row['id_recipe'] !== null && !empty($data['id_primary_group'])
+                && (int) $data['id_primary_group'] !== (int) ($row['id_primary_group'] ?? 0) && $this->producers->isComponent((int) $row['id_recipe'])) {
+                $this->producers->set((int) $row['id_recipe'], (int) $data['id_primary_group'], $context->userId);
+            }
             if ($erpMin !== null && $erpMin !== (int) $row['stock_minimum']) {
                 $this->items->updateErpProduct((int) $row['id_final_product'], ['stock_minimum' => $erpMin]);
                 $this->audit->record($context, 'update', 'item_erp', $id, ['stock_minimum' => (int) $row['stock_minimum']], ['stock_minimum' => $erpMin]);
@@ -655,24 +666,46 @@ final class ItemService
             $outer->throwIfInvalid();
         }
         $known = [];
-        foreach ($recipeId ? $this->items->bom($recipeId) : [] as $b) $known[$b['child_kind'] . ':' . $b['child_id']] = true;
+        $current = [];
+        foreach ($recipeId ? $this->items->bom($recipeId) : [] as $b) {
+            $known[$b['child_kind'] . ':' . $b['child_id']] = true;
+            if ($b['producer_id'] !== null) $current[(int) $b['child_id']] = (int) $b['producer_id'];
+        }
         $errors = [];
         $rows = [];
+        $producers = [];
         foreach ($raw as $i => $lossInput) {
-            $v = (new Validator(is_array($lossInput) ? $lossInput : []))->only(['child_kind', 'child_id', 'loss_pct'])
+            $v = (new Validator(is_array($lossInput) ? $lossInput : []))->only(['child_kind', 'child_id', 'loss_pct', 'producer_group_id', 'lead_days'])
                 ->choice('child_kind', ['material', 'recipe'])
                 ->integer('child_id', true, 1)
-                ->decimal('loss_pct', true, 0, 99.99);
+                ->decimal('loss_pct', true, 0, 99.99)
+                ->integer('producer_group_id', false, 1, null, true)
+                ->integer('lead_days', false, 0, CompositionProducerService::LEAD_MAX, true);
             if (!$v->hasError('child_kind') && !$v->hasError('child_id') && !isset($known[$v->value('child_kind') . ':' . $v->value('child_id')])) {
                 $v->add('child_id', 'NOT_IN_BOM', ['id' => $v->value('child_id')]);
             }
+            // Grupa robiąca / wyprzedzenie : tylko kompozycja (półprodukt) receptury, aktywna grupa.
+            $setsProducer = $v->provided('producer_group_id') || $v->provided('lead_days');
+            if ($setsProducer && !$v->hasError('child_id') && !$v->hasError('producer_group_id')) {
+                $group = $v->value('producer_group_id');
+                if ($v->value('child_kind') !== 'recipe' || !$this->producers->isComponent((int) $v->value('child_id'))) $v->add('producer_group_id', 'NOT_COMPOSITION');
+                elseif ($group !== null && !$this->producers->groupExists((int) $group)) $v->add('producer_group_id', 'NOT_FOUND', ['id' => $group]);
+            }
             foreach ($v->errors() as $err) $errors[] = ['field' => "losses.{$i}.{$err['field']}"] + $err;
             $rows[] = [$v->value('child_kind'), (int) $v->value('child_id'), (float) $v->value('loss_pct')];
+            if ($setsProducer) {
+                // Bez producer_group_id : grupa bez zmian (tylko wyprzedzenie).
+                $group = $v->provided('producer_group_id') ? $v->value('producer_group_id') : ($current[(int) $v->value('child_id')] ?? null);
+                $producers[] = [(int) $v->value('child_id'), $group === null ? null : (int) $group,
+                    $v->provided('lead_days') ? ($v->value('lead_days') === null ? null : (int) $v->value('lead_days')) : false];
+            }
         }
         if ($errors) throw ApiException::validation($errors);
-        $this->tx->execute(function () use ($recipeId, $rows, $id, $context) {
+        $this->tx->execute(function () use ($recipeId, $rows, $producers, $id, $context) {
             foreach ($rows as [$kind, $childId, $pct]) $this->items->saveBomLoss($recipeId, $kind, $childId, $pct, $context->userId);
-            $this->audit->record($context, 'update', 'item_bom_losses', $id, null, ['recipe_id' => $recipeId, 'losses' => $rows]);
+            foreach ($producers as [$childId, $group, $lead]) $this->compositions->apply($childId, $group, $context->userId, $lead);
+            $this->audit->record($context, 'update', 'item_bom_losses', $id, null, ['recipe_id' => $recipeId, 'losses' => $rows,
+                'producers' => array_map(fn($p) => ['recipe_id' => $p[0], 'group_id' => $p[1], 'lead_days' => $p[2] === false ? 'unchanged' : $p[2]], $producers)]);
         });
         return $this->get($id, $context);
     }

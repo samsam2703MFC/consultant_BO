@@ -26,7 +26,8 @@ class ProductRecipeWizardController extends BaseController
         private MaterialService            $materialService,
         private SemiProductService         $semiProductService,
         private PreparationService         $preparationService,
-        private \App\Services\Workshop\Execution\DevProductService $dev
+        private \App\Services\Workshop\Execution\DevProductService $dev,
+        private \App\Repositories\Workshop\RecipeProducerRepository $producers
     )
     {
     }
@@ -44,6 +45,9 @@ class ProductRecipeWizardController extends BaseController
             'materials'    => $pick($this->materialService->getAll(), ['id', 'name', 'unit_name', 'category_name']),
             'semiProducts' => $pick($this->semiProductService->getAll(), ['id', 'name', 'unit_name']),
             'preparations' => $pick($this->preparationService->getPreparationTypes(), ['id', 'name']),
+            // Półprodukt : która grupa go robi (to samo ustawienie co receptura i kalkulacja, tablet zamawia u niej).
+            'producerGroups' => $pick($this->producers->groups(), ['id', 'name_pl', 'color']),
+            'producerMap'  => (object) $this->producers->groupMap(),
             'preset_category' => (int) ($_GET['category'] ?? 0),
             // « Wprowadź » produktu testowego : kreator wypełniony danymi i recepturą testu.
             'from_test' => $this->testPrefill((int) ($_GET['from_test'] ?? 0)),

@@ -98,6 +98,12 @@ class WorkshopUiController extends BaseController
         $this->view('workshop/production_days', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
     }
 
+    /** Tablety › Zamówienia między grupami : kompozycje zamawiane u grupy, która je robi (makieta 4). */
+    public function groupOrders()
+    {
+        $this->view('workshop/group_orders', ['api_base' => $this->apiBase(), 'session_user' => (int) user('id')]);
+    }
+
     /** Ekran tabletu (bez logowania do ERP : tablet ma własny token, osoba identyfikator + PIN). */
     public function kiosk()
     {

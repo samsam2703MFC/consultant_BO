@@ -105,6 +105,8 @@ final class OpenApiProducts
                 'bom' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                     'child_kind' => ['type' => 'string', 'enum' => ['material', 'recipe']], 'child_id' => ['type' => 'integer'], 'name' => ['type' => 'string'],
                     'quantity' => ['type' => 'number'], 'unit' => ['type' => 'string', 'nullable' => true], 'loss_pct' => ['type' => 'number'],
+                    'producer_group_id' => ['type' => 'integer', 'nullable' => true, 'description' => 'composition : groupe qui la fabrique (la tablette commande chez lui)'],
+                    'lead_days' => ['type' => 'integer', 'nullable' => true, 'description' => 'composition : délai de commande en jours (0 = le jour même)'],
                 ]]],
                 'durations' => ['type' => 'array', 'description' => 'quantités de timing.sample_quantities', 'items' => ['$ref' => '#/components/schemas/Duration']],
                 'checklist' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
@@ -266,6 +268,8 @@ final class OpenApiProducts
                 'losses' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['child_kind', 'child_id', 'loss_pct'], 'properties' => [
                     'child_kind' => ['type' => 'string', 'enum' => ['material', 'recipe']], 'child_id' => ['type' => 'integer'],
                     'loss_pct' => ['type' => 'number', 'minimum' => 0, 'maximum' => 99.99],
+                    'producer_group_id' => ['type' => 'integer', 'nullable' => true, 'minimum' => 1, 'description' => 'composition seulement : groupe qui la fabrique (null = aucun) ; absent = inchangé'],
+                    'lead_days' => ['type' => 'integer', 'nullable' => true, 'minimum' => 0, 'maximum' => 14, 'description' => 'composition seulement : délai de commande en jours ; absent = inchangé'],
                 ]]],
             ]],
             'Duration' => ['type' => 'object', 'properties' => [

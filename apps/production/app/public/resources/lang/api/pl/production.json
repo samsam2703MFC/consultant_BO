@@ -156,6 +156,7 @@
     "SAME_AS_MAIN_WORKSTATION": "Stanowisko alternatywne nie może być stanowiskiem głównym.",
     "TOO_MANY": "Pole „{field}”: najwyżej {max} pozycji.",
     "NOT_IN_BOM": "Pozycja {id} nie należy do receptury artykułu.",
+    "NOT_COMPOSITION": "Grupę robiącą i wyprzedzenie ustawia się tylko dla półproduktu albo kompozycji receptury.",
     "ROUTING_EMPTY": "Marszruta nie ma żadnego etapu.",
     "NOT_STEP_WORKSTATION": "To stanowisko nie należy do etapu (ani jako alternatywa).",
     "IN_FUTURE": "Pole „{field}” nie może być w przyszłości.",

@@ -918,3 +918,40 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .or-lotbtn.is-on { background: var(--k-ok-50); color: var(--k-ok); }
 .or-lotline .kiosk-ocr { grid-column: 1 / -1; }
 @media (max-width: 1000px) { .kiosk-rec-lines > li.or-lotline { grid-template-columns: minmax(0, 1fr) minmax(90px, auto); } .or-lotline .or-lotfield { grid-column: 1 / -1; } }
+
+/* Zamówienia między grupami (27/10/2026, makiety 1–3) : lista grupy robiącej, zakładka « Zamówienia grup », kompozycja w partii */
+.go-list { display: grid; gap: 10px; margin-bottom: 18px; }
+.go-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 14px 16px; border-left: 4px solid var(--k-warn); }
+.go-row.is-ok { border-left-color: var(--k-ok); }
+.go-row.is-progress { border-left-color: var(--k-primary); }
+.go-row h3 { margin: 0 0 4px; font-size: 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.go-row p { margin: 0; }
+.go-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.go-actions .kiosk-btn { min-height: 48px; }
+.go-state { font-weight: 600; color: var(--k-muted); white-space: nowrap; }
+.go-row.is-ok .go-state { color: var(--k-ok); }
+.kiosk-tag.is-for { background: var(--k-warn-50); color: #8a5a12; }
+.go-banner { display: flex; align-items: center; gap: 8px; background: var(--k-warn-50); color: #6b4510; border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; font-weight: 600; }
+.go-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 18px; }
+.go-form { display: grid; gap: 10px; }
+.go-form .kv-lbl { margin-top: 4px; }
+.go-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.go-chips .kv-chip { min-height: 48px; }
+.go-mine table { width: 100%; }
+.go-mine td, .go-mine th { vertical-align: middle; }
+.go-nowrap { white-space: nowrap; }
+.go-pill { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 13px; font-weight: 600; background: var(--k-fill); color: var(--k-muted); white-space: nowrap; }
+.go-pill.is-ok { background: var(--k-ok-50); color: var(--k-ok); }
+.go-pill.is-progress { background: var(--k-warn-50); color: #8a5a12; }
+.go-pill.is-new { background: var(--k-primary-50); color: var(--k-primary); }
+.go-comp { border: 2px solid var(--k-primary); }
+.go-comp.is-ok { border-color: var(--k-ok); }
+.go-comp-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.go-comp-head h3 { margin: 0 0 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.go-cands { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin: 12px 0 6px; }
+.go-cand { text-align: left; min-height: 64px; border: 1px solid var(--k-line-2); border-radius: 10px; background: #fff; padding: 10px 14px; display: grid; gap: 2px; font: inherit; color: var(--k-text); }
+.go-cand strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.go-cand small { color: var(--k-muted); }
+.go-cand.is-on { border: 2px solid var(--k-primary); background: var(--k-primary-50); }
+@media (max-width: 900px) { .go-grid { grid-template-columns: minmax(0, 1fr); } .go-row { grid-template-columns: minmax(0, 1fr); } .go-actions { justify-content: flex-start; } }
+.go-row h3 .kiosk-tag, .go-comp-head h3 .kiosk-tag { margin-top: 0; font-size: 13px; padding: 3px 9px; }

@@ -11814,6 +11814,103 @@
                 "x-permission": "prod.plan.validate"
             }
         },
+        "/execution/group-orders": {
+            "get": {
+                "tags": [
+                    "execution"
+                ],
+                "summary": "Zamówienia między grupami (ERP) / Commandes entre groupes (ERP)",
+                "operationId": "listGroupOrders",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/GroupOrder"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Commandes de compositions entre groupes sur la période (défaut : hier à J+6), groupe qui commande ou qui fait.",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "group_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    },
+                    {
+                        "accessTokenHeader": []
+                    }
+                ],
+                "x-permission": "prod.products.read"
+            }
+        },
         "/execution/days/{date}/{group}/cleaning": {
             "put": {
                 "tags": [
@@ -13430,6 +13527,325 @@
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/OutputLotInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/production/{id}/components/{recipe}": {
+            "put": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Partia kompozycji innej grupy / Lot de la composition d'un autre groupe",
+                "operationId": "outputComponent",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/OutputBatch"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Composition faite par un autre groupe (components du lot) : son lot (partie du groupe qui la fait, candidates) au lieu de ses matières ; source_output_id null = retirer. La composition est considérée entièrement utilisée : la commande entre groupes de ce lot passe à « picked ». 422 COMPONENT_BATCH_MISMATCH.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "recipe",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OutputComponentInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/group-orders": {
+            "get": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zamówienia między grupami / Commandes entre groupes",
+                "operationId": "kioskGroupOrders",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/GroupOrders"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "orderables : compositions des recettes du groupe faites par un autre groupe (délai lead_days, earliest) ; mine : commandes du groupe ; incoming : commandes des autres groupes à faire ; days (group_orders.days_ahead) et hours (group_orders.hours) proposés.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Zamów u innej grupy / Commander à un autre groupe",
+                "operationId": "createGroupOrder",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/GroupOrders"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Composition commandable par le groupe (sinon 422 NOT_ORDERABLE), jour dans group_orders.days_ahead (DUE_OUT_OF_RANGE), heure pas déjà passée (DUE_IN_PAST). client_uuid : rejouable.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupOrderInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "deviceToken": [],
+                        "employeeToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/group-orders/{id}": {
+            "patch": {
+                "tags": [
+                    "kiosk"
+                ],
+                "summary": "Przyjmij, gotowe, anuluj / Accepter, prêt, annuler",
+                "operationId": "updateGroupOrder",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/GroupOrders"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/Error400"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "accept (groupe qui fait, commande « ordered ») ; ready (groupe qui fait, avec output_id ou la partie liée par « Produkuj » ; 409 ORDER_WITHOUT_BATCH) ; cancel (l'un ou l'autre groupe, avant la production). 403 ORDER_NOT_YOURS, 409 ORDER_STATUS.",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GroupOrderAction"
                             }
                         }
                     }
@@ -16915,6 +17331,16 @@
                                         },
                                         "loss_pct": {
                                             "type": "number"
+                                        },
+                                        "producer_group_id": {
+                                            "type": "integer",
+                                            "nullable": true,
+                                            "description": "composition : groupe qui la fabrique (la tablette commande chez lui)"
+                                        },
+                                        "lead_days": {
+                                            "type": "integer",
+                                            "nullable": true,
+                                            "description": "composition : délai de commande en jours (0 = le jour même)"
                                         }
                                     }
                                 }
@@ -18189,6 +18615,19 @@
                                     "type": "number",
                                     "minimum": 0,
                                     "maximum": 99.99
+                                },
+                                "producer_group_id": {
+                                    "type": "integer",
+                                    "nullable": true,
+                                    "minimum": 1,
+                                    "description": "composition seulement : groupe qui la fabrique (null = aucun) ; absent = inchangé"
+                                },
+                                "lead_days": {
+                                    "type": "integer",
+                                    "nullable": true,
+                                    "minimum": 0,
+                                    "maximum": 14,
+                                    "description": "composition seulement : délai de commande en jours ; absent = inchangé"
                                 }
                             }
                         }
@@ -24128,6 +24567,295 @@
                     "client_uuid": {
                         "type": "string",
                         "format": "uuid"
+                    },
+                    "group_order_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "« Produkuj » : commande d'un autre groupe faite par ce lot (status in_production)"
+                    }
+                }
+            },
+            "OutputComponentInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "source_output_id"
+                ],
+                "properties": {
+                    "source_output_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                }
+            },
+            "GroupOrderInput": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "recipe_id",
+                    "quantity",
+                    "date",
+                    "time"
+                ],
+                "properties": {
+                    "recipe_id": {
+                        "type": "integer"
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "time": {
+                        "type": "string",
+                        "example": "08:00"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    },
+                    "client_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "GroupOrderAction": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "action"
+                ],
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "accept",
+                            "ready",
+                            "cancel"
+                        ]
+                    },
+                    "output_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    }
+                }
+            },
+            "GroupOrder": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "recipe": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "item_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "from": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "color": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "to": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "color": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "quantity": {
+                        "type": "number"
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "due_at": {
+                        "type": "string",
+                        "example": "2026-10-20 06:02:00"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "ordered",
+                            "accepted",
+                            "in_production",
+                            "ready",
+                            "picked",
+                            "cancelled"
+                        ]
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "ordered_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "example": "2026-10-20 06:02:00"
+                    },
+                    "accepted_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "ready_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "picked_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "batch": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "lot_code": {
+                                "type": "string"
+                            },
+                            "quantity": {
+                                "type": "number",
+                                "nullable": true
+                            },
+                            "created_at": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "picked_quantity": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "picked_lot": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "GroupOrders": {
+                "type": "object",
+                "properties": {
+                    "group_id": {
+                        "type": "integer"
+                    },
+                    "days": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    "hours": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "orderables": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "recipe_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "unit": {
+                                    "type": "string"
+                                },
+                                "item_id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "lead_days": {
+                                    "type": "integer",
+                                    "nullable": true
+                                },
+                                "earliest": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "producer": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "color": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "mine": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GroupOrder"
+                        }
+                    },
+                    "incoming": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GroupOrder"
+                        }
+                    },
+                    "created_id": {
+                        "type": "integer"
+                    },
+                    "replayed": {
+                        "type": "boolean"
                     }
                 }
             },
@@ -24243,6 +24971,101 @@
                                                 "best_before": {
                                                     "type": "string",
                                                     "nullable": true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "components": {
+                                "type": "array",
+                                "description": "Compositions faites par un autre groupe : une ligne avec son lot (leurs matières ne sont pas dans ingredients)",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "recipe_id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "quantity": {
+                                            "type": "number",
+                                            "nullable": true
+                                        },
+                                        "unit": {
+                                            "type": "string"
+                                        },
+                                        "producer": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "color": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                }
+                                            }
+                                        },
+                                        "source": {
+                                            "type": "object",
+                                            "nullable": true,
+                                            "properties": {
+                                                "output_id": {
+                                                    "type": "integer"
+                                                },
+                                                "lot_code": {
+                                                    "type": "string"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                }
+                                            }
+                                        },
+                                        "candidates": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "output_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "lot_code": {
+                                                        "type": "string"
+                                                    },
+                                                    "quantity": {
+                                                        "type": "number"
+                                                    },
+                                                    "date": {
+                                                        "type": "string"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string"
+                                                    },
+                                                    "employee": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "order": {
+                                                        "type": "object",
+                                                        "nullable": true,
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "status": {
+                                                                "type": "string"
+                                                            },
+                                                            "due_at": {
+                                                                "type": "string"
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }

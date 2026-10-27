@@ -378,6 +378,22 @@ check($s === 422, 'quantity must be a number');
 check($s === 422 && $codes($b) === ['losses.0.child_id:NOT_IN_BOM'], 'loss only on a BOM line');
 [$s, $b] = $call('PUT', "/produits/items/{$itemId}/bom-losses", ['losses' => [['child_kind' => 'material', 'child_id' => 901, 'loss_pct' => 3.5], ['child_kind' => 'recipe', 'child_id' => 701, 'loss_pct' => 1]]], $access);
 check($s === 200 && array_column($b['data']['bom'], 'loss_pct') === [1.0, 3.5], 'BOM losses saved');
+// Kompozycja : grupa robiąca i wyprzedzenie w karcie (krok Receptura) — to samo ustawienie co receptura, kalkulacja i tablet
+$g2 = (int) $pdo->query('SELECT id FROM n_prod_group WHERE active = 1 AND id <> 1 ORDER BY id LIMIT 1')->fetchColumn();
+$bomLine = fn(array $b) => array_column($b['data']['bom'] ?? [], null, 'child_id')[701] ?? null;
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/bom-losses", ['losses' => [['child_kind' => 'material', 'child_id' => 901, 'loss_pct' => 3.5, 'producer_group_id' => $g2]]], $access);
+check($s === 422 && $codes($b) === ['losses.0.producer_group_id:NOT_COMPOSITION'], 'producing group only for a composition of the recipe');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/bom-losses", ['losses' => [['child_kind' => 'recipe', 'child_id' => 701, 'loss_pct' => 1, 'lead_days' => 20]]], $access);
+check($s === 422 && $codes($b) === ['losses.0.lead_days:OUT_OF_RANGE'], 'order lead time from 0 to 14 days');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/bom-losses", ['losses' => [['child_kind' => 'recipe', 'child_id' => 701, 'loss_pct' => 1, 'producer_group_id' => $g2, 'lead_days' => 1]]], $access);
+$semiCard = $pdo->query('SELECT i.item_type, s.id_primary_group FROM n_prod_item i JOIN n_prod_product_settings s ON s.id_item = i.id WHERE i.id_recipe = 701')->fetch();
+check($s === 200 && $bomLine($b)['producer_group_id'] === $g2 && $bomLine($b)['lead_days'] === 1 && $bomLine($b)['loss_pct'] == 1.0
+    && $semiCard && $semiCard['item_type'] === 'semi' && (int) $semiCard['id_primary_group'] === $g2, 'composition made by another group: semi-finished card of that group');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/bom-losses", ['losses' => [['child_kind' => 'recipe', 'child_id' => 701, 'loss_pct' => 1, 'lead_days' => 2]]], $access);
+check($s === 200 && $bomLine($b)['producer_group_id'] === $g2 && $bomLine($b)['lead_days'] === 2, 'lead time alone: producing group unchanged');
+[$s, $b] = $call('PUT', "/produits/items/{$itemId}/bom-losses", ['losses' => [['child_kind' => 'recipe', 'child_id' => 701, 'loss_pct' => 1, 'producer_group_id' => null]]], $access);
+check($s === 200 && $bomLine($b)['producer_group_id'] === null && (int) $pdo->query('SELECT COUNT(*) FROM n_prod_item WHERE id_recipe = 701')->fetchColumn() === 0
+    && (int) $pdo->query('SELECT COUNT(*) FROM n_recipe_producer WHERE id_recipe = 701')->fetchColumn() === 0, 'group removed: the unused semi-finished card goes away');
 
 [$s, $b] = $call('PATCH', "/produits/items/{$itemId}/settings", ['bake_state' => 'roasted'], $access);
 check($s === 422 && $codes($b) === ['bake_state:INVALID_CHOICE'], 'baking state is none, par_baked or baked');
@@ -886,6 +902,42 @@ check($s === 201 && $batch['data']['lot_code'] === $prefix . '01' && $batch['dat
 [$s, $b] = $kiosk('POST', '/kiosk/production', ['item_id' => $croissant, 'quantity' => 120, 'client_uuid' => $outUuid], $device, $emp);
 check($s === 201 && $b['data']['replayed'] && $b['data']['id'] === $batch['data']['id'], 'replayed batch (offline tablet) recorded once');
 $batchId = $batch['data']['id'];
+// --- Kompozycja innej grupy (makiety 1–4) : tablet grupy 1 zamawia ciasto francuskie u grupy, która je robi ;
+//     partia produktu : jedna linia kompozycji z numerem partii tej grupy. Stan przywrócony na końcu.
+$producerBefore = $pdo->query('SELECT id_group, lead_days FROM n_recipe_producer WHERE id_recipe = 701')->fetch() ?: null;
+$pdo->exec('INSERT INTO flattened_recipe_recipe (recipe_id, subrecipe_id) VALUES (700, 701)');
+$pdo->exec("INSERT INTO n_recipe_producer (id_recipe, id_group, lead_days) VALUES (701, {$g2}, 1) ON DUPLICATE KEY UPDATE id_group = {$g2}, lead_days = 1");
+[$s, $go] = $kiosk('GET', '/kiosk/group-orders', null, $device, $emp);
+$orderable = array_column($go['data']['orderables'] ?? [], null, 'recipe_id')[701] ?? null;
+check($s === 200 && $orderable && $orderable['producer']['id'] === $g2 && $orderable['lead_days'] === 1 && $orderable['unit'] === 'kg'
+    && $orderable['earliest'] === date('Y-m-d', strtotime('+1 day')) && count($go['data']['days']) === 6, 'tablet: composition of another group can be ordered (kg, lead time, 5 days ahead)');
+$tomorrow = date('Y-m-d', strtotime('+1 day'));
+[$s, $b] = $kiosk('POST', '/kiosk/group-orders', ['recipe_id' => 701, 'quantity' => 30, 'date' => date('Y-m-d', strtotime('+30 days')), 'time' => '08:00'], $device, $emp);
+check($s === 422 && $codes($b) === ['date:DUE_OUT_OF_RANGE'], 'order day within group_orders.days_ahead');
+[$s, $b] = $kiosk('POST', '/kiosk/group-orders', ['recipe_id' => 700, 'quantity' => 30, 'date' => $tomorrow, 'time' => '08:00'], $device, $emp);
+check($s === 422 && $codes($b) === ['recipe_id:NOT_ORDERABLE'], 'only compositions made by another group');
+$goUuid = '7c1d2e3f-4a5b-4c6d-8e7f-901a2b3c4d5e';
+[$s, $go] = $kiosk('POST', '/kiosk/group-orders', ['recipe_id' => 701, 'quantity' => 30, 'date' => $tomorrow, 'time' => '08:00', 'client_uuid' => $goUuid], $device, $emp);
+$mine = $go['data']['mine'][0] ?? null;
+check($s === 201 && $mine && $mine['id'] === $go['data']['created_id'] && $mine['status'] === 'ordered' && $mine['quantity'] == 30.0 && $mine['unit'] === 'kg'
+    && $mine['to']['id'] === $g2 && $mine['from']['id'] === 1 && $mine['due_at'] === $tomorrow . ' 08:00:00', 'tablet: order placed with the producing group (day and hour)');
+[$s, $b] = $kiosk('POST', '/kiosk/group-orders', ['recipe_id' => 701, 'quantity' => 30, 'date' => $tomorrow, 'time' => '08:00', 'client_uuid' => $goUuid], $device, $emp);
+check($s === 201 && !empty($b['data']['replayed']) && (int) $pdo->query('SELECT COUNT(*) FROM n_group_order')->fetchColumn() === 1, 'replayed order (offline tablet) recorded once');
+[$s, $erpOrders] = $call('GET', '/execution/group-orders?from=' . date('Y-m-d') . '&to=' . $tomorrow, null, $access);
+check($s === 200 && count($erpOrders['data']) === 1 && $erpOrders['data'][0]['recipe']['id'] === 701, 'ERP: orders between groups of the period');
+[$s, $b] = $kiosk('PATCH', '/kiosk/group-orders/' . $mine['id'], ['action' => 'accept'], $device, $emp);
+check($s === 409 && $b['description'] === 'ORDER_STATUS', 'only the producing group accepts an order');
+[$s, $pb] = $kiosk('GET', "/kiosk/production/{$batchId}", null, $device, $emp);
+$comp = array_column($pb['data']['components'] ?? [], null, 'recipe_id')[701] ?? null;
+check($s === 200 && $comp && $comp['producer']['id'] === $g2, 'batch: composition of another group = one line (lot of that group)');
+[$s, $b] = $kiosk('PUT', "/kiosk/production/{$batchId}/components/701", ['source_output_id' => $batchId], $device, $emp);
+check($s === 422, 'composition lot must be a batch of the producing group');
+[$s, $go] = $kiosk('PATCH', '/kiosk/group-orders/' . $mine['id'], ['action' => 'cancel', 'note' => 'test'], $device, $emp);
+check($s === 200 && $go['data']['mine'][0]['status'] === 'cancelled', 'tablet: order cancelled before production');
+$pdo->exec('DELETE FROM n_group_order');
+$pdo->exec('DELETE FROM flattened_recipe_recipe WHERE recipe_id = 700 AND subrecipe_id = 701');
+$pdo->exec($producerBefore ? "UPDATE n_recipe_producer SET id_group = {$producerBefore['id_group']}, lead_days = " . ($producerBefore['lead_days'] ?? 'NULL') . ' WHERE id_recipe = 701'
+    : 'DELETE FROM n_recipe_producer WHERE id_recipe = 701');
 $jpg = imagecreatetruecolor(200, 80);
 imagefill($jpg, 0, 0, imagecolorallocate($jpg, 255, 255, 255));
 imagestring($jpg, 5, 10, 30, 'LOT L2310-A', imagecolorallocate($jpg, 0, 0, 0));

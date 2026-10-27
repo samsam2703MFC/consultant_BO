@@ -17,6 +17,7 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/workshop/team-sheet', ['controller' => $c, 'method' => 'teamSheet']);
     $r->addRoute('GET', '/workshop/execution', ['controller' => $c, 'method' => 'execution']);
     $r->addRoute('GET', '/workshop/production-days', ['controller' => $c, 'method' => 'productionDays']);
+    $r->addRoute('GET', '/workshop/group-orders', ['controller' => $c, 'method' => 'groupOrders']);
     $r->addRoute('GET', '/workshop/workstations', ['controller' => $c, 'method' => 'workstations']);
     $r->addRoute('GET', '/workshop/data-sheet', ['controller' => $c, 'method' => 'dataSheet']);
     $r->addRoute('GET', '/workshop/timesheet', ['controller' => $c, 'method' => 'timesheet']);

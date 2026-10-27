@@ -21,6 +21,8 @@
          data-ranges="{{ logisticsRanges|json_encode }}"
          data-shelf-life="{{ shelfLife|json_encode }}"
          data-preparations="{{ preparations|json_encode }}"
+         data-groups="{{ producerGroups|json_encode }}"
+         data-producers="{{ producerMap|json_encode }}"
          data-from-test="{{ from_test|json_encode }}">
     {% if from_test %}
         <div class="at-note at-note-safe mb-3"><i class="bi bi-rocket-takeoff"></i>
@@ -205,6 +207,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const MATERIALS = JSON.parse(box.dataset.materials || '[]');
     const SEMI = JSON.parse(box.dataset.semi || '[]');
     const PREPS = JSON.parse(box.dataset.preparations || '[]');
+    const GROUPS = JSON.parse(box.dataset.groups || '[]');
+    const PRODUCERS = JSON.parse(box.dataset.producers || '{}');
     // pole => [min, max] Karty produktu ; nowy produkt : > 0 poza opakowaniem (0 = bez) ; przydatność 1–3650 dni ; minimum opcjonalne
     const RANGES = Object.assign(JSON.parse(box.dataset.ranges || '{}'), { shelf_life: JSON.parse(box.dataset.shelfLife || '[1, 3650]'), stock_minimum: [0, 1000000] });
     const OPTIONAL = ['stock_minimum', 'ppb', 'bpc'];
@@ -408,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function () {
         el.innerHTML = '<div class="table-responsive"><table class="table"><thead><tr><th>Składnik</th><th>Rodzaj</th><th style="width:150px">Ilość</th><th class="text-end">Koszt</th><th></th></tr></thead><tbody>' +
             state.lines.map((l, i) => '<tr>' +
                 '<td>' + esc(l.name) + '</td>' +
-                '<td><span class="at-pill ' + (l.type === 'material' ? '' : 'at-pill-warn') + '">' + (l.type === 'material' ? 'surowiec' : 'półprodukt') + '</span></td>' +
+                '<td><span class="at-pill ' + (l.type === 'material' ? '' : 'at-pill-warn') + '">' + (l.type === 'material' ? 'surowiec' : 'półprodukt') + '</span>' + (l.type === 'material' ? '' : producerSelect(l)) + '</td>' +
                 '<td><div class="input-group input-group-sm"><input class="form-control" type="number" min="1" step="1" value="' + esc(l.quantity) + '" data-line="' + i + '" aria-label="Ilość: ' + esc(l.name) + '"><span class="input-group-text">' + esc(l.unit) + '</span></div></td>' +
                 '<td class="text-end">' + (l.price === null ? '<span class="text-muted">…</span>' : zl(l.price)) + '</td>' +
                 '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-dark" data-remove="' + i + '" aria-label="Usuń: ' + esc(l.name) + '"><i class="bi bi-x"></i></button></td>' +
@@ -417,6 +421,22 @@ document.addEventListener('DOMContentLoaded', function () {
             '<td class="text-end"><strong>' + (total === null ? '…' : zl(total)) + '</strong><span class="at-run-msg">na 1 szt.</span></td><td></td></tr></tfoot></table></div>';
     }
 
+    // Półprodukt : grupa, która go robi — zapis od razu (dla wszystkich produktów z tym półproduktem ; tablet zamawia u niej).
+    function producerSelect(l) {
+        const cur = PRODUCERS[l.id] || '';
+        return '<select class="form-select form-select-sm mt-1" data-producer-of="' + l.id + '" title="Robi grupa : tablet innej grupy zamawia u niej, partia produktu bierze jej numer partii" aria-label="Robi grupa: ' + esc(l.name) + '">' +
+            '<option value="">Robi grupa — nie ustawiono</option>' +
+            GROUPS.map((g) => '<option value="' + g.id + '"' + (+cur === +g.id ? ' selected' : '') + '>Robi grupa : ' + esc(g.name_pl) + '</option>').join('') + '</select>';
+    }
+    document.getElementById('pwLines').addEventListener('change', async (e) => {
+        const sel = e.target.closest('[data-producer-of]');
+        if (!sel) return;
+        const id = +sel.dataset.producerOf;
+        const res = await api('/ajax/recipes/' + id + '/producer', { method: 'PUT', data: { group_id: sel.value ? +sel.value : null } });
+        if (!res.ok) { sel.value = PRODUCERS[id] || ''; setHint((res.data && res.data.message) || 'Nie udało się zapisać grupy.', true); return; }
+        if (sel.value) PRODUCERS[id] = +sel.value; else delete PRODUCERS[id];
+        setHint(sel.value ? 'Zapisano : « ' + sel.closest('tr').cells[0].textContent + ' » robi grupa ' + sel.options[sel.selectedIndex].text.replace('Robi grupa : ', '') + '.' : 'Grupa zdjęta.');
+    });
     document.getElementById('pwLines').addEventListener('input', (e) => {
         const i = e.target.dataset.line;
         if (i === undefined) return;

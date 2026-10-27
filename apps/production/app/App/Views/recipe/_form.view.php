@@ -139,8 +139,8 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                     </table>
 
                     <h5 class="mt-4"><?= $sub['title'] ?></h5>
-                    <table class="table table-sm align-middle" data-rows="<?= $sub['key'] ?>">
-                        <thead><tr><th>Nazwa</th><th style="width:180px">Ilość</th><th style="width:60px"></th></tr></thead>
+                    <table class="table table-sm align-middle" data-rows="<?= $sub['key'] ?>" data-child-groups>
+                        <thead><tr><th>Nazwa</th><th style="width:180px">Ilość</th><th style="width:220px" title="Grupa, która robi tę kompozycję : tablet innej grupy zamawia ją u niej, partia produktu bierze jej numer partii">Robi grupa</th><th style="width:60px"></th></tr></thead>
                         <tbody>
                         <?php foreach (($old[$sub['key']] ?? []) as $item): ?>
                             <tr<?= !empty($item['added']) ? ' class="table-success" data-added' : '' ?>>
@@ -148,6 +148,10 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                                     <input type="hidden" name="<?= $sub['key'] ?>[<?= (int) $item['id'] ?>][id]" value="<?= (int) $item['id'] ?>">
                                     <input type="hidden" name="<?= $sub['key'] ?>[<?= (int) $item['id'] ?>][name]" value="<?= $e($item['name']) ?>"></td>
                                 <td><input type="number" step="any" class="form-control form-control-sm" name="<?= $sub['key'] ?>[<?= (int) $item['id'] ?>][quantity]" value="<?= $e($item['quantity']) ?>"<?= !empty($item['added']) ? ' min="1" required autofocus aria-label="Ilość nowego półproduktu"' : '' ?>></td>
+                                <td><select class="form-select form-select-sm" data-child-producer="<?= (int) $item['id'] ?>" aria-label="Robi grupa : <?= $e($item['name']) ?>">
+                                    <option value="">— nie ustawiono</option>
+                                    <?php foreach (($producer_groups ?? []) as $g): ?><option value="<?= (int) $g['id'] ?>" <?= (($child_producers ?? [])[(int) $item['id']] ?? null) === (int) $g['id'] ? 'selected' : '' ?>><?= $e($g['name_pl']) ?></option><?php endforeach; ?>
+                                </select></td>
                                 <td><button class="btn btn-sm btn-outline-danger" type="button" data-remove aria-label="Usuń">×</button></td>
                             </tr>
                         <?php endforeach; ?>
@@ -162,6 +166,7 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                                     <?php endforeach; ?>
                                 </select></td>
                                 <td><input type="number" step="any" class="form-control form-control-sm" placeholder="Ilość" aria-label="Ilość"></td>
+                                <td></td>
                                 <td><button class="btn btn-sm btn-success" type="button" data-add-row>Dodaj</button></td>
                             </tr>
                         </tfoot>
@@ -275,15 +280,20 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
             if (m) m.nextElementSibling.value = toSeconds(m.value);
         });
         const removeBtn = '<button class="btn btn-sm btn-outline-danger" type="button" data-remove aria-label="Usuń">×</button>';
+        // Kompozycje : grupa robiąca (lista grup i obecne ustawienia), także dla dodanych wierszy.
+        const childGroups = <?= json_encode(array_map(fn($g) => ['id' => (int) $g['id'], 'name' => (string) $g['name_pl']], $producer_groups ?? []), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
+        const childMap = <?= json_encode((object) ($child_producers ?? [])) ?>;
+        const childSelect = (id, name) => `<td><select class="form-select form-select-sm" data-child-producer="${id}" aria-label="Robi grupa : ${esc(name)}"><option value="">— nie ustawiono</option>`
+            + childGroups.map(g => `<option value="${g.id}"${childMap[id] === g.id ? ' selected' : ''}>${esc(g.name)}</option>`).join('') + '</select></td>';
         const rowHtml = {
             preparation_type: (id, name, qty) =>
                 `<td><input type="text" class="form-control form-control-sm" name="preparation_type[${id}][name]" value="${esc(name)}"></td>
                  <td><input type="number" min="0" step="0.5" class="form-control form-control-sm" data-minutes value="${esc(qty)}" aria-label="Czas w minutach">
                      <input type="hidden" name="preparation_type[${id}][duration_second]" value="${toSeconds(qty)}">
                      <input type="hidden" name="preparation_type[${id}][id_preparation]" value="${id}"></td><td>${removeBtn}</td>`,
-            default: (key, id, name, qty) =>
+            default: (key, id, name, qty, child) =>
                 `<td>${esc(name)}<input type="hidden" name="${key}[${id}][id]" value="${id}"><input type="hidden" name="${key}[${id}][name]" value="${esc(name)}"></td>
-                 <td><input type="number" step="any" class="form-control form-control-sm" name="${key}[${id}][quantity]" value="${esc(qty)}"></td><td>${removeBtn}</td>`,
+                 <td><input type="number" step="any" class="form-control form-control-sm" name="${key}[${id}][quantity]" value="${esc(qty)}"></td>${child ? childSelect(id, name) : ''}<td>${removeBtn}</td>`,
         };
         form.addEventListener('click', (e) => {
             if (e.target.closest('[data-remove]')) { e.target.closest('tr').remove(); return; }
@@ -302,7 +312,7 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                 return;
             }
             const tr = document.createElement('tr');
-            tr.innerHTML = key === 'preparation_type' ? rowHtml.preparation_type(id, name, qty.value) : rowHtml.default(key, id, name, qty.value);
+            tr.innerHTML = key === 'preparation_type' ? rowHtml.preparation_type(id, name, qty.value) : rowHtml.default(key, id, name, qty.value, table.hasAttribute('data-child-groups'));
             table.tBodies[0].appendChild(tr);
             qty.value = '';
             if (!select.classList.contains('choices')) select.selectedIndex = 0;
@@ -313,6 +323,19 @@ $added = array_values(array_filter((array) ($old[$sub['key']] ?? []), fn($item) 
                 method: 'PUT', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
                 body: JSON.stringify({group_id: e.target.value || null}),
             }).then(r => r.json().then(b => showSnack(r.ok, b.message || 'Błąd')));
+        });
+        // Kompozycja w składzie : która grupa ją robi (tablet zamawia u niej) — zapis od razu, karta półproduktu tej grupy.
+        form.addEventListener('change', (e) => {
+            const sel = e.target.closest('[data-child-producer]');
+            if (!sel) return;
+            const id = parseInt(sel.dataset.childProducer, 10);
+            fetch('<?= ROOT ?>/ajax/recipes/' + id + '/producer', {
+                method: 'PUT', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+                body: JSON.stringify({group_id: sel.value || null}),
+            }).then(r => r.json().then(b => {
+                if (r.ok) { if (sel.value) childMap[id] = parseInt(sel.value, 10); else delete childMap[id]; }
+                showSnack(r.ok, b.message || 'Błąd');
+            }));
         });
     })();
 </script>

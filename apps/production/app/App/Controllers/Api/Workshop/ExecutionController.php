@@ -9,6 +9,7 @@ use App\Core\Api\Workshop\ApiResult;
 use App\Services\Workshop\Execution\ClockQuestionService;
 use App\Services\Workshop\Execution\DayEfficiencyService;
 use App\Services\Workshop\Execution\DevProductService;
+use App\Services\Workshop\Execution\GroupOrderService;
 use App\Services\Workshop\Execution\ExecutionService;
 use App\Services\Workshop\Execution\KioskAuthService;
 use App\Services\Workshop\Execution\KioskRecipeService;
@@ -45,6 +46,7 @@ final class ExecutionController
         private OfficeClockService $office,
         private TeamBonusService $bonus,
         private DayEfficiencyService $efficiency,
+        private GroupOrderService $groupOrders,
     ) {
     }
 
@@ -132,6 +134,20 @@ final class ExecutionController
     public function output(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->batch($request->id(), $request->context)); }
     public function updateOutput(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->update($request->id(), $request->body(), $request->context)); }
     public function outputLot(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->setLot($request->id(), $request->id('material'), $request->body(), $request->context)); }
+    public function outputComponent(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->setComponent($request->id(), $request->id('recipe'), $request->body(), $request->context)); }
+    // Zamówienia między grupami : tablet (zamów, przyjmij, gotowe, anuluj) i ERP (lista okresu).
+    public function groupOrders(ApiRequest $request): ApiResult { return new ApiResult($this->groupOrders->kiosk($request->context)); }
+    public function createGroupOrder(ApiRequest $request): ApiResult { return new ApiResult($this->groupOrders->create($request->body(), $request->context), 201); }
+    public function updateGroupOrder(ApiRequest $request): ApiResult { return new ApiResult($this->groupOrders->act($request->id(), $request->body(), $request->context)); }
+    public function groupOrdersBetween(ApiRequest $request): ApiResult
+    {
+        $from = (string) ($request->query('from') ?? date('Y-m-d', strtotime('-1 day')));
+        $to = (string) ($request->query('to') ?? date('Y-m-d', strtotime('+6 days')));
+        foreach (['from' => $from, 'to' => $to] as $k => $d) {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) || strtotime($d) === false) throw ApiException::validation([['field' => $k, 'code' => 'INVALID_DATE']]);
+        }
+        return ApiResult::list($this->groupOrders->between($from, $to, $this->intFilter($request, 'group_id'), $request->context->translator->lang()));
+    }
     // Straty dnia i zatwierdzenie dnia przez zespół ; receptury grupy.
     public function recordWaste(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->recordWaste($request->body(), $request->context), 201); }
     public function updateWaste(ApiRequest $request): ApiResult { return new ApiResult($this->outputs->updateWaste($request->id(), $request->body(), $request->context)); }

@@ -104,6 +104,7 @@
         'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />',
         'list-ordered': '<path d="M10 12h11" /><path d="M10 18h11" /><path d="M10 6h11" /><path d="M4 10h2" /><path d="M4 6h1v4" /><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />',
         'clock': '<circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />',
+        'handshake': '<path d="m11 17 2 2a1 1 0 1 0 3-3" /><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4" /><path d="m21 3 1 11h-2" /><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3" /><path d="M3 4h8" />',
         'info': '<circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />',
         'package': '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /><path d="M12 22V12" /><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" /><path d="m7.5 4.27 9 5.15" />',
         'shield-check': '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" />',
@@ -633,13 +634,14 @@
     }
 
     // --- Menu osoby : Czas pracy / Produkcja / Kontrola jakości / Receptury ---------------------------
-    const TABS = [['clock', 'clock', 'tab_clock'], ['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['recipes', 'book-open', 'tab_recipes'], ['machines', 'bot', 'tab_machines'], ['dev', 'flask-conical', 'tab_dev'], ['bonus', 'trophy', 'tab_bonus']];
+    const TABS = [['clock', 'clock', 'tab_clock'], ['production', 'package', 'tab_production'], ['stock', 'warehouse', 'tab_stock'], ['quality', 'shield-check', 'tab_quality'], ['recipes', 'book-open', 'tab_recipes'], ['machines', 'bot', 'tab_machines'], ['dev', 'flask-conical', 'tab_dev'], ['orders', 'handshake', 'tab_orders'], ['bonus', 'trophy', 'tab_bonus']];
     const personHeader = () => header();
     function tabs(active) {
         if (session) session.tab = active;
         // Zakładki Maszyny (TRS) i Nowe produkty tylko, gdy grupa tabletu ma maszyny z TRS / produkty pokazane na tablecie.
         const shown = ([k]) => (k !== 'machines' || (session && session.machines > 0)) && (k !== 'dev' || (session && session.dev > 0))
-            && (k !== 'clock' || !(deviceInfo && deviceInfo.mode === 'atelier')) && (k !== 'bonus' || (session && session.bonus));
+            && (k !== 'clock' || !(deviceInfo && deviceInfo.mode === 'atelier')) && (k !== 'bonus' || (session && session.bonus))
+            && (k !== 'orders' || (session && session.orders));
         return `<nav class="kiosk-tabs" role="tablist" aria-label="${esc(t('tabs'))}">${TABS.filter(shown).map(([k, ic, label]) => `<button type="button" class="kiosk-tab ${k === active ? 'is-active' : ''}"
             role="tab" aria-selected="${k === active}" data-tab="${k}"><span class="kiosk-tab-icon">${icon(ic)}</span><span class="kiosk-tab-label">${esc(t(label))}</span><span class="kiosk-tab-short" aria-hidden="true">${esc(t(label + '_short'))}</span></button>`).join('')}</nav>`;
     }
@@ -649,6 +651,7 @@
         if (k === 'dev') return renderDev(message);
         if (k === 'stock') return renderStock(message);
         if (k === 'bonus') return renderBonus(message);
+        if (k === 'orders') return renderGroupOrders(message);
         return k === 'production' ? renderProduction(message) : (k === 'quality' ? renderQuality(message) : renderMe(message));
     }
 
@@ -847,10 +850,11 @@
     // validation de la production (assistant « Koniec dnia »).
     let flow = null; // {day, me, week, stock}
     async function loadFlow() {
-        const [day, me, w, stock] = await Promise.all([api('GET', '/kiosk/production', undefined, true), api('GET', '/kiosk/me', undefined, true).catch(() => null),
-            api('GET', '/kiosk/week').catch(() => null), api('GET', '/kiosk/stock').catch(() => null)]);
+        const [day, me, w, stock, orders] = await Promise.all([api('GET', '/kiosk/production', undefined, true), api('GET', '/kiosk/me', undefined, true).catch(() => null),
+            api('GET', '/kiosk/week').catch(() => null), api('GET', '/kiosk/stock').catch(() => null), api('GET', '/kiosk/group-orders', undefined, true).catch(() => null)]);
         prodWeek = w && w.teams && w.teams[0] ? {today: w.today, deliveries: w.teams[0].deliveries || []} : null;
-        flow = {day, me, week: w, stock};
+        flow = {day, me, week: w, stock, orders};
+        if (session) session.orders = !!(orders && (orders.orderables.length || orders.incoming.length || orders.mine.length));
         return flow;
     }
     // Une ligne par produit : liste de la semaine (commandes + stock), commandes au-delà du stock, production du jour.
@@ -896,10 +900,13 @@
 
     // Produit : ce qu'il faut (semaine, commandes, stock, maximum), la production du jour (lots, fin), puis « combien de
     // pièces ? » → recette (% de perte) → partie et lots des ingrédients.
-    async function renderFlowItem(id, message) {
+    async function renderFlowItem(id, message, opts) {
         longIdle = true;
         resetIdle();
+        opts = opts || {};
         try { await loadFlow(); } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        // « Produkuj » z zamówienia innej grupy : ilość zamówienia, partia powiązana z zamówieniem.
+        const gorder = opts.order || null;
         const day = flow.day;
         const r = flowRows(day, id);
         const i = r.item, d = r.today, s = r.stock;
@@ -914,7 +921,7 @@
             if (s && s.orders_over_stock_cartons > 0 && i.ppc) return s.orders_over_stock_cartons * i.ppc;
             return step;
         };
-        const st = (session && session.flowQ && session.flowQ[id]) || {q: Math.max(step, Math.ceil(propose() / step - 1e-9) * step)};
+        const st = gorder ? {q: r3(gorder.quantity)} : ((session && session.flowQ && session.flowQ[id]) || {q: Math.max(step, Math.ceil(propose() / step - 1e-9) * step)});
         const tile = (label, value, sub, cls) => `<div class="kv-tile ${cls || ''}"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(sub)}</small></div>`;
         const kart = (c) => `${fmt(c)} ${t('prod_cartons_short')}`;
         const over = (q) => allowed !== null && q > allowed + 1e-6;
@@ -929,6 +936,7 @@
             ${!locked && day.editable ? `<button type="button" class="kiosk-btn is-primary" data-kf-finish>${icon('check')} ${esc(t(d.line ? 'kf_finish_again' : 'kf_finish'))}</button>` : ''}</section>` : '';
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-back>‹ ${esc(t('kf_back'))}</button>`, true) + `
             <section class="kiosk-card or-title"><div><h2>${esc(i.name)}</h2><span class="or-pill">${esc([i.category, i.ppc ? t('kv_ppc', {n: i.ppc}) : i.unit].filter(Boolean).join(' · '))}</span></div></section>
+            ${gorder ? `<p class="kv-hint go-banner">${icon('handshake', 'is-sm')} <span>${esc(t('go_banner', {q: fmt(gorder.quantity) + ' ' + gorder.unit, group: gorder.from.name, due: dueTxt(gorder.due_at)}))}</span></p>` : ''}
             <div class="kv-tiles">
                 ${tile(t('kf_info_week'), r.week ? cq(r.week.need, i) : '—', r.week ? t('kf_info_week_sub', {o: cq(r.week.direct || 0, i), s: cq(r.week.stock || 0, i)}) : t('kf_info_week_none'))}
                 ${tile(t('kf_info_orders'), s ? kart(s.ordered_cartons) : '—', s && s.orders_over_stock_cartons > 0 ? t('kf_info_orders_sub', {q: fmt(s.orders_over_stock_cartons), date: s.next_shipping ? dm(s.next_shipping) : '—'}) : t('kf_info_orders_ok'), s && s.orders_over_stock_cartons > 0 ? 'is-danger' : '')}
@@ -970,12 +978,12 @@
             if (q === null) { input.focus(); return; }
             st.q = q;
             keep();
-            if (i.has_recipe !== false) return renderOrderRecipe(day, i, {pieces: q, allowed, back: () => renderFlowItem(id)});
+            if (i.has_recipe !== false) return renderOrderRecipe(day, i, {pieces: q, allowed, back: () => renderFlowItem(id, null, opts), groupOrderId: gorder ? gorder.id : null});
             // Sans recette : la partie directement (pas de lots d'ingrédients).
             if (!window.confirm(t('or_confirm', {q: fmt(q), u: i.unit, name: i.name}))) return;
             e.currentTarget.disabled = true;
             try {
-                const b = await api('POST', '/kiosk/production', {item_id: id, quantity: q, client_uuid: uuid()}, true);
+                const b = await api('POST', '/kiosk/production', {item_id: id, quantity: q, client_uuid: uuid(), ...(gorder ? {group_order_id: gorder.id} : {})}, true);
                 if (session && session.flowQ) delete session.flowQ[id];
                 renderFlowItem(id, t('or_saved', {lot: b.lot_code}));
             } catch (err) { e.currentTarget.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
@@ -1153,6 +1161,7 @@
                 <div class="kv-plan-body"><h2>${esc(t('kf_day_title'))}</h2><p class="kiosk-muted">${esc(t('kf_day_meta', {c: fmt(Math.round(doneCartons * 10) / 10), done: lines, total: day.items.length}))}${tot.waste ? ' · ' + esc(t('day_waste', {q: fmt(tot.waste), pct: fmt(tot.waste_pct ?? 0)})) : ''}</p>
                     ${locked ? `<p class="kiosk-dayhead-state">${icon('circle-check', 'is-sm')} ${esc(t('day_closed', {time: hhmm(closed.at), name: closed.employee || ''}))}${closed.note ? ' · ' + esc(closed.note) : ''}</p>` : ''}</div>
                 ${!locked && day.editable && day.items.length ? `<button type="button" class="kiosk-btn is-primary" data-close-day>${icon('moon')} ${esc(t('kf_end_day'))}</button>` : ''}</section>
+            ${incomingCard(flow && flow.orders, locked)}
             <h2 class="kv-section">${esc(t('kf_list_title'))}</h2>
             <div class="kf-list">${rows.map(flowRow).join('') || `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('kf_empty'))}</p></section>`}</div>
             ${locked ? '' : `<section class="kiosk-card kf-other"><h2>${esc(t('kf_other'))}</h2><label class="kv-search">${icon('search', 'is-sm')}<input type="search" data-kf-search placeholder="${esc(t('kv_search_ph', {n: day.catalog.length}))}" autocomplete="off" enterkeyhint="search"></label>
@@ -1180,8 +1189,128 @@
         el.querySelectorAll('[data-open-stock]').forEach(b => b.addEventListener('click', () => { if (session) session.stockView = b.dataset.openStock; openTab('stock'); }));
         el.querySelectorAll('[data-receive-order]').forEach(b => b.addEventListener('click', () => renderReceive(Number(b.dataset.receiveOrder))));
         el.querySelector('[data-close-day]')?.addEventListener('click', () => renderEndDay(day, me, 1));
+        bindIncoming(() => renderProduction());
         // Retour d'une action ouverte depuis l'assistant « Koniec dnia » (lots, NC, perte) : on reprend à son étape.
         if (resumeEndDay) { const back = resumeEndDay; resumeEndDay = null; renderEndDay(day, me, back); }
+    }
+
+    // --- Zamówienia między grupami (27/10/2026, makiety 2 i 3) ------------------------------------------------
+    // Grupa robiąca widzi zamówienia innych grup na liście do produkcji : przyjmij, produkuj (ilość zamówienia →
+    // receptura → partia powiązana z zamówieniem), gotowe ; grupa zamawiająca zamawia w zakładce « Zamówienia grup ».
+    const dueTxt = (at) => {
+        const d = String(at).slice(0, 10), h = String(at).slice(11, 16);
+        const today = new Date().toISOString().slice(0, 10);
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+        return `${d === today ? t('go_today') : (d === tomorrow ? t('go_tomorrow') : dayTag(d))} · ${h}`;
+    };
+    const whenTxt = (at) => {
+        if (!at) return '';
+        const d = String(at).slice(0, 10);
+        const today = new Date().toISOString().slice(0, 10);
+        const yday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        return `${d === today ? t('go_today') : (d === yday ? t('go_yesterday') : dm(d))} ${hhmm(at)}`;
+    };
+    const goState = (o) => {
+        if (o.status === 'picked') return {cls: 'is-ok', txt: t('go_st_picked', {q: fmt(o.picked_quantity ?? o.quantity) + ' ' + o.unit})};
+        if (o.status === 'ready') return {cls: 'is-ok', txt: t('go_st_ready', {lot: o.batch ? o.batch.lot_code : ''})};
+        if (o.status === 'in_production') return {cls: 'is-progress', txt: t('go_st_in_production')};
+        if (o.status === 'accepted') return {cls: 'is-progress', txt: t('go_st_accepted')};
+        if (o.status === 'cancelled') return {cls: 'is-off', txt: t('go_st_cancelled')};
+        return {cls: 'is-new', txt: t('go_st_ordered')};
+    };
+    function incomingCard(orders, locked) {
+        const rows = orders ? orders.incoming.filter(o => o.status !== 'cancelled') : [];
+        if (!rows.length) return '';
+        return `<h2 class="kv-section">${esc(t('go_incoming_title'))}</h2><div class="go-list">${rows.map(o => {
+            const st = goState(o);
+            const acts = locked ? '' : (o.status === 'ordered' ? `<button type="button" class="kiosk-btn" data-go-accept="${o.id}">${esc(t('go_accept'))}</button>` : '')
+                + (['ordered', 'accepted'].includes(o.status) && o.item_id ? `<button type="button" class="kiosk-btn is-primary" data-go-make="${o.id}">${esc(t('go_make'))}</button>` : '')
+                + (o.status === 'in_production' ? `<button type="button" class="kiosk-btn is-primary" data-go-ready="${o.id}">${icon('check')} ${esc(t('go_ready'))}</button>` : '');
+            return `<div class="kiosk-card go-row ${st.cls}"><div class="go-main"><h3>${esc(o.recipe.name)} <span class="kiosk-tag is-for">${esc(t('go_for', {group: o.from.name}))}</span>
+                <span class="kiosk-tag ${['ordered', 'accepted'].includes(o.status) ? 'is-late' : ''}">${esc(dueTxt(o.due_at))}</span></h3>
+                <p class="kiosk-muted">${esc(fmt(o.quantity) + ' ' + o.unit)}${o.batch ? ' · ' + esc(t('go_batch', {lot: o.batch.lot_code})) : ''}${o.ordered_by ? ' · ' + esc(t('go_ordered_by', {name: o.ordered_by, when: whenTxt(o.created_at)})) : ''}</p></div>
+                ${acts ? `<div class="go-actions">${acts}</div>` : `<span class="go-state">${st.cls === 'is-ok' ? icon('circle-check', 'is-sm') + ' ' : ''}${esc(st.txt)}</span>`}</div>`;
+        }).join('')}</div>`;
+    }
+    function bindIncoming(after) {
+        const orders = flow && flow.orders;
+        const find = (id) => orders ? orders.incoming.find(o => o.id === Number(id)) : null;
+        const act = async (btn, id, action) => {
+            btn.disabled = true;
+            try { const r = await api('PATCH', `/kiosk/group-orders/${id}`, {action}, true); if (flow) flow.orders = r; toast(t('go_done_' + action)); after(); }
+            catch (err) { btn.disabled = false; toast(err.message, true); }
+        };
+        el.querySelectorAll('[data-go-accept]').forEach(b => b.addEventListener('click', () => act(b, b.dataset.goAccept, 'accept')));
+        el.querySelectorAll('[data-go-ready]').forEach(b => b.addEventListener('click', () => act(b, b.dataset.goReady, 'ready')));
+        el.querySelectorAll('[data-go-make]').forEach(b => b.addEventListener('click', () => { const o = find(b.dataset.goMake); if (o) renderFlowItem(o.item_id, null, {order: o}); }));
+    }
+
+    // Zakładka « Zamówienia grup » (makieta 2) : kompozycja robiona przez inną grupę — ilość, dzień, godzina → zamów ;
+    // moje zamówienia ze stanem ; poniżej zamówienia innych grup dla nas.
+    let goDraft = null;
+    async function renderGroupOrders(message) {
+        longIdle = true;
+        resetIdle();
+        let o;
+        try { o = await api('GET', '/kiosk/group-orders', undefined, true); } catch (err) { if (!err.code || err.code === 'DEVICE_WITHOUT_GROUP') toast(err.message, true); return; }
+        if (flow) flow.orders = o;
+        if (session) session.orders = !!(o.orderables.length || o.incoming.length || o.mine.length);
+        const d = goDraft = goDraft && o.orderables.some(x => x.recipe_id === goDraft.recipe) ? goDraft : {recipe: o.orderables[0] ? o.orderables[0].recipe_id : null, q: 10, date: null, time: null};
+        const pick = () => o.orderables.find(x => x.recipe_id === d.recipe) || null;
+        if (!d.date || !o.days.includes(d.date)) d.date = (pick() && o.days.find(x => x >= pick().earliest)) || o.days[1] || o.days[0];
+        if (!d.time || !o.hours.includes(d.time)) d.time = o.hours[1] || o.hours[0];
+        const draw = () => {
+            const c = pick();
+            const short = c && d.date < c.earliest;
+            const mine = o.mine.filter(x => x.status !== 'cancelled' || x.due_at.slice(0, 10) >= o.days[0]);
+            el.innerHTML = personHeader() + tabs('orders') + `
+                <div class="kv-crumb"><div><h2>${esc(t('go_title'))}</h2><p class="kiosk-muted">${esc(t('go_sub'))}</p></div></div>
+                <div class="go-grid">
+                <section class="kiosk-card go-form">${o.orderables.length ? `
+                    <span class="kv-lbl">${esc(t('go_composition'))}</span>
+                    <div class="go-chips">${o.orderables.map(x => `<button type="button" class="kv-chip ${x.recipe_id === d.recipe ? 'is-on' : ''}" data-go-recipe="${x.recipe_id}">${esc(x.name)} · ${esc(x.producer.name)}</button>`).join('')}</div>
+                    <span class="kv-lbl">${esc(t('go_quantity'))}</span>
+                    <div class="kv-step is-lg"><button type="button" data-go-step="-1" aria-label="−">${icon('minus')}</button><input class="kv-num" data-go-q inputmode="decimal" value="${esc(String(d.q).replace('.', ','))}">
+                        <button type="button" data-go-step="1" aria-label="+">${icon('plus')}</button><small>${esc(c ? c.unit : '')}</small></div>
+                    <span class="kv-lbl">${esc(t('go_when'))}</span>
+                    <div class="go-chips">${o.days.map((x, k) => `<button type="button" class="kv-chip ${x === d.date ? 'is-on' : ''}" data-go-date="${x}">${esc(k === 0 ? t('go_today') : (k === 1 ? t('go_tomorrow') + ' · ' + dayTag(x) : dayTag(x)))}</button>`).join('')}</div>
+                    <div class="go-chips">${o.hours.map(h => `<button type="button" class="kv-chip ${h === d.time ? 'is-on' : ''}" data-go-time="${h}">${esc(h)}</button>`).join('')}</div>
+                    ${short ? `<p class="kv-hint is-bad">${icon('triangle-alert', 'is-sm')} ${esc(t('go_short', {n: c.lead_days}))}</p>` : (c && c.lead_days ? `<p class="kiosk-muted kv-small">${esc(t('go_lead', {n: c.lead_days}))}</p>` : '')}
+                    <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-primary" data-go-order>${esc(t('go_order_at', {group: c ? c.producer.name : ''}))} ${icon('chevron-right')}</button></div>`
+                    : `<p class="kiosk-muted">${esc(t('go_none'))}</p>`}</section>
+                <section class="kiosk-card go-mine"><h2>${esc(t('go_mine'))}</h2>${mine.length ? `<table class="kiosk-table"><thead><tr><th>${esc(t('go_composition'))}</th><th class="is-num">${esc(t('go_quantity'))}</th><th>${esc(t('go_due'))}</th><th>${esc(t('go_state'))}</th></tr></thead><tbody>
+                    ${mine.map(x => { const stt = goState(x); return `<tr><td><strong>${esc(x.recipe.name)}</strong><div class="kiosk-muted">${esc(x.to.name)}</div></td><td class="is-num">${esc(fmt(x.quantity) + ' ' + x.unit)}</td>
+                        <td class="go-nowrap">${esc(dueTxt(x.due_at))}</td><td><span class="go-pill ${stt.cls}">${esc(stt.txt)}</span>${['ordered', 'accepted'].includes(x.status) ? ` <button type="button" class="kiosk-btn is-small is-danger-soft" data-go-cancel="${x.id}">${esc(t('go_cancel'))}</button>` : ''}</td></tr>`; }).join('')}</tbody></table>`
+                    : `<p class="kiosk-muted">${esc(t('go_mine_none'))}</p>`}
+                    <p class="kiosk-muted kv-small">${esc(t('go_mine_help'))}</p></section>
+                </div>
+                ${incomingCard(o, false)}`;
+            el.querySelectorAll('[data-go-recipe]').forEach(b => b.addEventListener('click', () => { d.recipe = Number(b.dataset.goRecipe); const c2 = pick(); if (c2 && d.date < c2.earliest) d.date = o.days.find(x => x >= c2.earliest) || d.date; draw(); }));
+            el.querySelectorAll('[data-go-date]').forEach(b => b.addEventListener('click', () => { d.date = b.dataset.goDate; draw(); }));
+            el.querySelectorAll('[data-go-time]').forEach(b => b.addEventListener('click', () => { d.time = b.dataset.goTime; draw(); }));
+            const qIn = el.querySelector('[data-go-q]');
+            const readQ = () => { const n = Number(String(qIn.value).replace(',', '.').replace(/\s/g, '')); return Number.isFinite(n) && n > 0 ? r3(n) : null; };
+            qIn?.addEventListener('input', () => { resetIdle(); const n = readQ(); if (n !== null) d.q = n; });
+            el.querySelectorAll('[data-go-step]').forEach(b => b.addEventListener('click', () => { d.q = Math.max(1, r3((readQ() ?? d.q) + Number(b.dataset.goStep))); qIn.value = String(d.q).replace('.', ','); }));
+            el.querySelector('[data-go-order]')?.addEventListener('click', async (e) => {
+                const c2 = pick();
+                const q = readQ();
+                if (!c2 || q === null) { qIn?.focus(); return; }
+                if (!window.confirm(t('go_confirm', {q: fmt(q) + ' ' + c2.unit, name: c2.name, group: c2.producer.name, due: dueTxt(d.date + ' ' + d.time)}))) return;
+                e.currentTarget.disabled = true;
+                try { o = await api('POST', '/kiosk/group-orders', {recipe_id: c2.recipe_id, quantity: q, date: d.date, time: d.time, client_uuid: uuid()}, true); if (flow) flow.orders = o; toast(t('go_ordered_ok', {group: c2.producer.name})); draw(); }
+                catch (err) { e.currentTarget.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); }
+            });
+            el.querySelectorAll('[data-go-cancel]').forEach(b => b.addEventListener('click', async () => {
+                if (!window.confirm(t('go_cancel_confirm'))) return;
+                b.disabled = true;
+                try { o = await api('PATCH', `/kiosk/group-orders/${b.dataset.goCancel}`, {action: 'cancel'}, true); if (flow) flow.orders = o; toast(t('go_done_cancel')); draw(); }
+                catch (err) { b.disabled = false; toast(err.message, true); }
+            }));
+            bindIncoming(() => renderGroupOrders());
+        };
+        draw();
+        if (message) toast(message);
     }
 
     // Quantité en cartons (fiche avec pièces par carton) sinon dans l'unité de la fiche.
@@ -1426,7 +1555,8 @@
             if (!window.confirm(t('or_confirm', {q: fmt(q), u: ppc ? r.unit : (r.basis === 'kg' ? 'kg' : r.unit), name: i.name}))) return;
             if (btn) btn.disabled = true;
             try {
-                batch = await api('POST', '/kiosk/production', {item_id: i.item_id, quantity: Math.round(q * 1000) / 1000, client_uuid: id}, true);
+                batch = await api('POST', '/kiosk/production', {item_id: i.item_id, quantity: Math.round(q * 1000) / 1000, client_uuid: id,
+                    ...(opts.groupOrderId ? {group_order_id: opts.groupOrderId} : {})}, true);
                 if (session && session.flowQ) delete session.flowQ[i.item_id];
             } catch (err) { if (btn) btn.disabled = false; toast(err.offline ? t('offline_retry') : err.message, true); return; }
             // Lots saisis sur les lignes : enregistrés un par un ; un échec n'arrête pas les autres (à compléter sur la partie).
@@ -2487,14 +2617,25 @@
             <div class="kiosk-ocr" data-ocr hidden></div></div>` : ''}</article>`;
         const ingredients = b.ingredients.filter(g => !g.packaging);
         const packaging = b.ingredients.filter(g => g.packaging);
+        // Kompozycje robione przez inną grupę (makieta 1) : jedna linia z numerem partii tej grupy, bez jej surowców.
+        const comps = b.components || [];
+        const compCard = (c) => `<article class="kiosk-card go-comp ${c.source ? 'is-ok' : ''}" data-comp="${c.recipe_id}">
+            <div class="go-comp-head"><div><h3>${esc(c.name)} <span class="kiosk-tag is-for">${esc(t('go_made_by', {group: c.producer.name}))}</span></h3>
+                <span class="kiosk-muted">${c.quantity !== null ? esc(fmt(c.quantity) + ' ' + c.unit) : ''}</span></div>
+                <span class="kiosk-lot-state">${c.source ? icon('circle-check', 'is-sm') + ' ' + esc(c.source.lot_code) : esc(t('go_pick_batch'))}</span></div>
+            ${b.editable && !b.cancelled ? (c.candidates.length ? `<div class="go-cands">${c.candidates.map(x => `<button type="button" class="go-cand ${c.source && c.source.output_id === x.output_id ? 'is-on' : ''}" data-cand="${x.output_id}">
+                <strong>${esc(x.lot_code)} · ${esc(fmt(x.quantity) + ' ' + c.unit)}</strong><small>${esc(whenTxt(x.created_at))}${x.employee ? ' · ' + esc(x.employee) : ''}${x.order ? ' · ' + esc(t('go_for_us')) : ''}</small></button>`).join('')}</div>`
+                : `<p class="kiosk-muted">${esc(t('go_no_batches', {group: c.producer.name}))}</p>`) : ''}
+            <p class="kiosk-muted kv-small">${esc(t('go_comp_help', {group: c.producer.name}))}</p></article>`;
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small kiosk-back" data-back>‹ ${esc(t('back'))}</button>`, true) + `
             <section class="kiosk-card kiosk-batch-head ${b.cancelled ? 'is-cancelled' : ''}"><div><h2>${esc(item.name)}</h2>
                 <p class="kiosk-status">${esc(t('prod_batch_line', {lot: b.lot_code, q: qty(b.quantity, item)}))}${b.cancelled ? ' · ' + esc(t('prod_cancelled')) : ''}</p>
                 <p class="kiosk-muted">${esc(t('prod_lots', {done: b.lots_done, total: b.lots_total}))}${b.employee ? ' · ' + esc(b.employee) : ''} · ${esc(hhmm(b.created_at))}</p></div>
                 ${b.editable ? `<div class="kf-batch-actions">${b.cancelled ? '' : `<button type="button" class="kiosk-btn is-primary" data-kf-finish>${icon('check')} ${esc(t('kf_finish_short'))}</button>`}
                     <button type="button" class="kiosk-btn is-small is-danger-soft" data-cancel-batch>${esc(t('prod_cancel'))}</button></div>` : ''}</section>
-            ${b.ingredients.length ? '' : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('prod_no_recipe'))}</p></section>`}
-            ${ingredients.length ? `<h2 class="kiosk-section">${esc(t('lot_ingredients'))}</h2>${ingredients.map(row).join('')}` : ''}
+            ${b.ingredients.length || comps.length ? '' : `<section class="kiosk-card"><p class="kiosk-muted">${esc(t('prod_no_recipe'))}</p></section>`}
+            ${comps.length ? `<h2 class="kiosk-section">${esc(t('go_from_other'))}</h2>${comps.map(compCard).join('')}` : ''}
+            ${ingredients.length ? `<h2 class="kiosk-section">${esc(t(comps.length ? 'go_own_ingredients' : 'lot_ingredients'))}</h2>${ingredients.map(row).join('')}` : ''}
             ${packaging.length ? `<details class="kiosk-section" ${packaging.some(g => g.lot_number || g.material_id === open) ? 'open' : ''}><summary>${esc(t('lot_packaging', {n: packaging.length}))}</summary>${packaging.map(row).join('')}</details>` : ''}`;
         if (message) toast(message);
         if (open !== null) el.querySelector(`[data-material="${open}"]`)?.scrollIntoView({block: 'center'});
@@ -2507,6 +2648,15 @@
         }));
         el.querySelector('[data-back]').addEventListener('click', () => { stopScan(); if (resumeEndDay || !b.item_id) renderProduction(); else renderFlowItem(b.item_id); });
         el.querySelector('[data-kf-finish]')?.addEventListener('click', () => { stopScan(); finishItem(b.item_id); });
+        el.querySelectorAll('[data-comp] [data-cand]').forEach(btn => btn.addEventListener('click', async () => {
+            const recipe = Number(btn.closest('[data-comp]').dataset.comp);
+            const c = comps.find(x => x.recipe_id === recipe);
+            btn.disabled = true;
+            try {
+                const r = await api('PUT', `/kiosk/production/${b.id}/components/${recipe}`, {source_output_id: Number(btn.dataset.cand)}, true);
+                await renderBatch(b.id, t('go_comp_saved', {name: c ? c.name : '', lot: btn.querySelector('strong').textContent.split(' · ')[0]}), r, focus);
+            } catch (err) { btn.disabled = false; toast(err.message, true); }
+        }));
         el.querySelector('[data-cancel-batch]')?.addEventListener('click', async (e) => {
             if (!window.confirm(t('prod_cancel_confirm', {lot: b.lot_code}))) return;
             e.target.disabled = true;

@@ -204,6 +204,7 @@ final class WorkshopApiRoutes
             ['GET', '/execution/days/{date:\d{4}-\d{2}-\d{2}}/{group:\d+}', ExecutionController::class, 'dayDetail', 'prod.plan.validate'],
             ['PATCH', '/execution/days/{date:\d{4}-\d{2}-\d{2}}/{group:\d+}/items/{item:\d+}', ExecutionController::class, 'correctLine', 'prod.plan.validate'],
             ['GET', '/execution/days/{date:\d{4}-\d{2}-\d{2}}/{group:\d+}/efficiency', ExecutionController::class, 'dayEfficiency', 'prod.plan.validate'],
+            ['GET', '/execution/group-orders', ExecutionController::class, 'groupOrdersBetween', 'prod.products.read'],
             ['PUT', '/execution/days/{date:\d{4}-\d{2}-\d{2}}/{group:\d+}/cleaning', ExecutionController::class, 'dayCleaning', 'prod.plan.validate'],
             ['PATCH', '/execution/waste/{id:\d+}', ExecutionController::class, 'cancelWaste', 'prod.plan.validate'],
             ['POST', '/kiosk/pair', ExecutionController::class, 'pair', null],
@@ -228,6 +229,10 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/production/{id:\d+}', ExecutionController::class, 'output', 'kiosk_employee'],
             ['PATCH', '/kiosk/production/{id:\d+}', ExecutionController::class, 'updateOutput', 'kiosk_employee'],
             ['PUT', '/kiosk/production/{id:\d+}/lots/{material:\d+}', ExecutionController::class, 'outputLot', 'kiosk_employee'],
+            ['PUT', '/kiosk/production/{id:\d+}/components/{recipe:\d+}', ExecutionController::class, 'outputComponent', 'kiosk_employee'],
+            ['GET', '/kiosk/group-orders', ExecutionController::class, 'groupOrders', 'kiosk_employee'],
+            ['POST', '/kiosk/group-orders', ExecutionController::class, 'createGroupOrder', 'kiosk_employee'],
+            ['PATCH', '/kiosk/group-orders/{id:\d+}', ExecutionController::class, 'updateGroupOrder', 'kiosk_employee'],
             ['POST', '/kiosk/production/close', ExecutionController::class, 'closeDay', 'kiosk_employee'],
             // Zatwierdzenie linii dnia (plan → zrobione, strata ze zdjęciami na tej samej linii) ; zdjęcia strat od razu.
             ['POST', '/kiosk/production/lines', ExecutionController::class, 'validateLine', 'kiosk_employee'],

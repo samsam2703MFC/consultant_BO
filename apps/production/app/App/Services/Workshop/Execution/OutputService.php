@@ -8,6 +8,7 @@ use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\Validator;
 use App\Core\TransactionManager;
 use App\Repositories\Workshop\ExecutionRepository;
+use App\Repositories\Workshop\GroupOrderRepository;
 use App\Repositories\Workshop\GroupRepository;
 use App\Repositories\Workshop\OutputRepository;
 use App\Repositories\Workshop\ParamRepository;
@@ -35,6 +36,9 @@ final class OutputService
         private ParamRepository $params,
         private TransactionManager $tx,
         private AuditTrail $audit,
+        private CompositionCut $cut,
+        private GroupOrderRepository $orders,
+        private GroupOrderService $groupOrders,
     ) {
     }
 
@@ -75,7 +79,7 @@ final class OutputService
             $lost = array_values(array_filter($wastes, fn($w) => $w['item_id'] === $id));
             if ($mine) {
                 $item = $this->repo->item($id);
-                $total = $item && $item['id_recipe'] ? count($this->repo->recipe((int) $item['id_recipe'])) : 0;
+                $total = $item && $item['id_recipe'] ? $this->lotsTotal((int) $item['id_recipe'], $groupId) : 0;
                 $mine = array_map(fn($b) => $b + ['lots_total' => $total], $mine);
             }
             if (!isset($planned[$id]) && !$mine && !$lost && !isset($lines[$id])) continue;
@@ -370,9 +374,10 @@ final class OutputService
     public function record(array $body, ApiContext $context): array
     {
         $groupId = $this->groupId($context);
-        $v = (new Validator($body))->only(['item_id', 'quantity', 'date', 'note', 'client_uuid'])
+        $v = (new Validator($body))->only(['item_id', 'quantity', 'date', 'note', 'client_uuid', 'group_order_id'])
             ->integer('item_id', true, 1)->decimal('quantity', true, 0, 1000000, false, true)->date('date', false)
-            ->string('note', 255, false, true)->string('client_uuid', 36, false, true, '/^[0-9a-fA-F-]{36}$/', 'INVALID_UUID');
+            ->string('note', 255, false, true)->string('client_uuid', 36, false, true, '/^[0-9a-fA-F-]{36}$/', 'INVALID_UUID')
+            ->integer('group_order_id', false, 1, null, true);
         $v->throwIfInvalid();
         $c = $v->clean();
         if (!empty($c['client_uuid']) && ($done = $this->repo->byUuid($c['client_uuid'])) !== null) {
@@ -389,6 +394,8 @@ final class OutputService
                 'client_uuid' => $c['client_uuid'] ?? null, 'note' => $c['note'] ?? null,
             ]);
             $this->audit->record($context, 'create', 'output', $id, null, ['item_id' => (int) $item['id'], 'quantity' => (float) $c['quantity'], 'date' => $day]);
+            // « Produkuj » z zamówienia innej grupy : partia półproduktu powiązana z zamówieniem (w produkcji).
+            if (!empty($c['group_order_id'])) $this->groupOrders->linkBatch((int) $c['group_order_id'], $id, (int) $item['id'], $groupId, $context->employeeId);
             return $id;
         });
         return $this->batch($id, $context);
@@ -400,7 +407,9 @@ final class OutputService
         $o = $this->output($id, $context);
         $item = $this->repo->item((int) $o['id_item']);
         $lots = $this->repo->lots($id);
-        $recipe = $item && $item['id_recipe'] ? $this->repo->recipe((int) $item['id_recipe']) : [];
+        // Kompozycje robione przez inną grupę : jedna linia z partią tej grupy, bez ich surowców (makieta 1).
+        $cut = $item && $item['id_recipe'] ? $this->cut->of((int) $item['id_recipe'], (int) $o['id_group']) : ['cuts' => [], 'minus' => []];
+        $recipe = $item && $item['id_recipe'] ? CompositionCut::apply($this->repo->recipe((int) $item['id_recipe']), $cut['minus']) : [];
         $last = $this->repo->lastLots((int) $o['id_group'], array_map(fn($r) => (int) $r['material_id'], $recipe), $id);
         $received = $this->repo->receivedLots(array_map(fn($r) => (int) $r['material_id'], $recipe));
         $factor = $this->factor($item, (float) $o['quantity']);
@@ -419,14 +428,88 @@ final class OutputService
                 'received' => $received[$m] ?? [],
             ];
         }, $recipe);
+        $components = $this->components($o, $cut['cuts'], $factor, $fr);
         $row = $this->batchRow($o);
-        $row['lots_done'] = count(array_filter($ingredients, fn($i) => $i['lot_number'] !== null && $i['lot_number'] !== ''));
+        $row['lots_done'] = count(array_filter($ingredients, fn($i) => $i['lot_number'] !== null && $i['lot_number'] !== ''))
+            + count(array_filter($components, fn($c) => $c['source'] !== null));
         return $row + [
-            'lots_total' => count($ingredients),
+            'lots_total' => count($ingredients) + count($components),
+            'components' => $components,
             'item' => $item ? $this->itemRow($item) : null,
             'basis' => $factor === null ? 'recipe' : 'batch',
             'ingredients' => $ingredients,
         ];
+    }
+
+    /**
+     * Partia produktu : partia kompozycji grupy robiącej (albo brak — source_output_id null). Kompozycja zużyta w całości :
+     * zamówienie grupy z tą partią — odebrane.
+     */
+    public function setComponent(int $id, int $recipeId, array $body, ApiContext $context): array
+    {
+        $o = $this->output($id, $context);
+        $v = (new Validator($body, true))->only(['source_output_id'])->integer('source_output_id', true, 1, null, true);
+        $v->throwIfInvalid();
+        $sourceId = $v->value('source_output_id');
+        $item = $this->repo->item((int) $o['id_item']);
+        $cut = $item && $item['id_recipe'] ? $this->cut->of((int) $item['id_recipe'], (int) $o['id_group']) : ['cuts' => []];
+        $component = array_values(array_filter($cut['cuts'], fn($c) => $c['recipe_id'] === $recipeId))[0] ?? throw ApiException::notFound('component', $recipeId);
+        if ($sourceId !== null) {
+            $source = $this->orders->output((int) $sourceId);
+            $semi = $this->orders->itemForRecipe($recipeId);
+            if ($source === null || $source['cancelled_at'] !== null || (int) $source['id_group'] !== $component['producer']['id'] || $semi === null || (int) $source['id_item'] !== $semi) {
+                throw ApiException::validation([['field' => 'source_output_id', 'code' => 'COMPONENT_BATCH_MISMATCH']]);
+            }
+        }
+        [$quantity, $unit] = self::componentQuantity($component, $this->factor($item, (float) $o['quantity']));
+        $this->tx->execute(function () use ($id, $recipeId, $sourceId, $quantity, $unit, $o, $context) {
+            $this->orders->saveComponent($id, $recipeId, $sourceId !== null ? (int) $sourceId : null, $quantity, $unit, $context->employeeId);
+            if ($sourceId !== null) $this->groupOrders->markPicked((int) $sourceId, $id, (int) $o['id_group'], $quantity);
+            $this->audit->record($context, 'update', 'output_component', $id, null, ['recipe_id' => $recipeId, 'source_output_id' => $sourceId]);
+        });
+        return $this->batch($id, $context);
+    }
+
+    /** Liczba numerów partii partii produktu : surowce po odcięciu kompozycji innych grup + te kompozycje. */
+    private function lotsTotal(int $recipeId, int $groupId): int
+    {
+        $cut = $this->cut->of($recipeId, $groupId);
+        return count(CompositionCut::apply($this->repo->recipe($recipeId), $cut['minus'])) + count($cut['cuts']);
+    }
+
+    /** Kompozycje innych grup w partii : potrzebna ilość, wybrana partia, partie grupy robiącej z ostatnich dni. */
+    private function components(array $o, array $cuts, ?float $factor, bool $fr): array
+    {
+        if (!$cuts) return [];
+        $chosen = $this->orders->components((int) $o['id']);
+        $since = date('Y-m-d', strtotime((string) $o['work_date'] . ' -3 days'));
+        return array_map(function ($c) use ($o, $factor, $fr, $chosen, $since) {
+            [$quantity, $unit] = self::componentQuantity($c, $factor);
+            $semi = $this->orders->itemForRecipe($c['recipe_id']);
+            $orders = [];
+            foreach ($this->groupOrders->openFor((int) $o['id_group'], $c['recipe_id'], $fr) as $r) if ($r['batch']) $orders[$r['batch']['id']] = $r;
+            $pick = $chosen[$c['recipe_id']] ?? null;
+            return [
+                'recipe_id' => $c['recipe_id'], 'name' => $c['name'], 'quantity' => $quantity, 'unit' => $unit,
+                'producer' => ['id' => $c['producer']['id'], 'name' => $fr && $c['producer']['name_fr'] ? $c['producer']['name_fr'] : $c['producer']['name_pl'], 'color' => $c['producer']['color']],
+                'source' => $pick !== null && $pick['id_source_output'] !== null ? ['output_id' => (int) $pick['id_source_output'], 'lot_code' => $pick['lot_code'], 'created_at' => $pick['created_at']] : null,
+                'candidates' => $semi === null ? [] : array_map(fn($b) => [
+                    'output_id' => (int) $b['id'], 'lot_code' => $b['lot_code'], 'quantity' => (float) $b['quantity'], 'date' => $b['work_date'],
+                    'created_at' => $b['created_at'], 'employee' => $b['employee_name'] ?: null,
+                    'order' => isset($orders[(int) $b['id']]) ? ['id' => $orders[(int) $b['id']]['id'], 'status' => $orders[(int) $b['id']]['status'], 'due_at' => $orders[(int) $b['id']]['due_at']] : null,
+                ], $this->orders->sourceBatches($semi, $c['producer']['id'], $since)),
+            ];
+        }, $cuts);
+    }
+
+    /** @return array{0: ?float, 1: string} ilość kompozycji w partii (g → kg, ml → l) */
+    private static function componentQuantity(array $c, ?float $factor): array
+    {
+        $unit = $c['unit'];
+        if ($factor === null) return [null, in_array($unit, ['g', 'ml'], true) ? ($unit === 'g' ? 'kg' : 'l') : $unit];
+        $q = $c['quantity'] * $factor;
+        if ($unit === 'g' || $unit === 'ml') return [round($q / 1000, 3), $unit === 'g' ? 'kg' : 'l'];
+        return [round($q, 3), $unit];
     }
 
     /** Poprawa ilości / notatki albo anulowanie partii (tylko w dniach edycji). */

@@ -1064,18 +1064,34 @@
             body.innerHTML = `${recipeLinks(item)}${item.recipe_id ? `<p class="text-muted">${esc(t('bom.empty'))}</p>` : ''}${nav(3, false)}`;
             return;
         }
+        // Kompozycja : która grupa ją robi i z jakim wyprzedzeniem się ją zamawia (tablet innej grupy zamawia u niej).
+        const comp = item.bom.some(b => b.child_kind === 'recipe');
+        const leads = [0, 1, 2, 3, 5, 7];
+        const producerCells = (b, i) => b.child_kind !== 'recipe' ? '<td></td><td></td>' : `
+                <td><select class="form-select form-select-sm" data-field="losses.${i}.producer_group_id" aria-label="${esc(t('bom.producer'))} : ${esc(b.name)}">
+                    <option value="">${esc(t('bom.producer_none'))}</option>${state.groups.map(g => `<option value="${g.id}" ${b.producer_group_id === g.id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select></td>
+                <td><select class="form-select form-select-sm" data-field="losses.${i}.lead_days" aria-label="${esc(t('bom.lead'))} : ${esc(b.name)}">
+                    <option value="">—</option>${[...new Set([...leads, ...(b.lead_days === null ? [] : [b.lead_days])])].sort((x, y) => x - y).map(d => `<option value="${d}" ${b.lead_days === d ? 'selected' : ''}>${esc(t(d === 0 ? 'bom.lead_same_day' : (d === 1 ? 'bom.lead_one_day' : 'bom.lead_days'), {n: d}))}</option>`).join('')}</select></td>`;
         body.innerHTML = `${recipeLinks(item)}<form data-form><div class="table-responsive"><table class="table">
-            <thead><tr><th>${esc(t('bom.component'))}</th><th class="text-end">${esc(t('bom.quantity'))}</th><th style="width:140px">${esc(t('bom.loss'))}</th></tr></thead>
+            <thead><tr><th>${esc(t('bom.component'))}</th><th class="text-end">${esc(t('bom.quantity'))}</th><th style="width:140px">${esc(t('bom.loss'))}</th>${comp ? `<th style="width:200px" title="${esc(t('bom.producer_help'))}">${esc(t('bom.producer'))}</th><th style="width:170px">${esc(t('bom.lead'))}</th>` : ''}</tr></thead>
             <tbody>${item.bom.map((b, i) => `<tr data-row="${i}">
                 <td>${esc(b.name)} <span class="text-muted">(${esc(t('bom.kind.' + b.child_kind))})</span></td>
                 <td class="text-end">${ui.fmt(b.quantity, 3, api.lang)} ${esc(b.unit || '')}</td>
-                <td><input class="form-control form-control-sm" inputmode="decimal" data-field="losses.${i}.loss_pct" value="${b.loss_pct}"></td></tr>`).join('')}</tbody>
-            </table></div>${nav(3)}</form>`;
+                <td><input class="form-control form-control-sm" inputmode="decimal" data-field="losses.${i}.loss_pct" value="${b.loss_pct}"></td>${comp ? producerCells(b, i) : ''}</tr>`).join('')}</tbody>
+            </table></div>${comp ? `<p class="text-muted small mb-2">${esc(t('bom.producer_help'))}</p>` : ''}${nav(3)}</form>`;
         const form = body.querySelector('[data-form]');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             ui.clearErrors(form);
-            const losses = item.bom.map((b, i) => ({child_kind: b.child_kind, child_id: b.child_id, loss_pct: ui.num(form.querySelector(`[data-field="losses.${i}.loss_pct"]`).value) ?? 0}));
+            const losses = item.bom.map((b, i) => {
+                const row = {child_kind: b.child_kind, child_id: b.child_id, loss_pct: ui.num(form.querySelector(`[data-field="losses.${i}.loss_pct"]`).value) ?? 0};
+                const g = form.querySelector(`[data-field="losses.${i}.producer_group_id"]`);
+                const l = form.querySelector(`[data-field="losses.${i}.lead_days"]`);
+                // Tylko zmienione : grupa robiąca / wyprzedzenie (jedno ustawienie dla wszystkich produktów z tą kompozycją).
+                if (g && (g.value ? Number(g.value) : null) !== b.producer_group_id) row.producer_group_id = g.value ? Number(g.value) : null;
+                if (l && (l.value === '' ? null : Number(l.value)) !== b.lead_days) row.lead_days = l.value === '' ? null : Number(l.value);
+                return row;
+            });
             try {
                 await api.put(`/produits/items/${item.id}/bom-losses`, {losses});
                 await saveSettings(form, {}, 4);

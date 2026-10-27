@@ -355,9 +355,11 @@ final class ItemRepository extends WorkshopRepository
         return $this->all(
             "SELECT CASE WHEN c.child_recipe_id IS NOT NULL THEN 'recipe' ELSE 'material' END AS child_kind,
                     COALESCE(c.child_recipe_id, c.child_ingredient_id) AS child_id,
-                    COALESCE(sub.name, rm.name) AS name, c.quantity, u.name AS unit, COALESCE(l.loss_pct, 0) AS loss_pct
+                    COALESCE(sub.name, rm.name) AS name, c.quantity, u.name AS unit, COALESCE(l.loss_pct, 0) AS loss_pct,
+                    rp.id_group AS producer_id, rp.lead_days
              FROM product_recipe_connection c
              LEFT JOIN product_recipe sub ON sub.id = c.child_recipe_id
+             LEFT JOIN n_recipe_producer rp ON rp.id_recipe = c.child_recipe_id
              LEFT JOIN raw_material rm ON rm.id = c.child_ingredient_id
              LEFT JOIN unit u ON u.id = COALESCE(sub.id_unit, rm.id_unit)
              LEFT JOIN n_prod_bom_loss l ON l.parent_recipe_id = c.parent_recipe_id

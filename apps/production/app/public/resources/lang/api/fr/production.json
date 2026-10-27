@@ -156,6 +156,7 @@
     "SAME_AS_MAIN_WORKSTATION": "Le poste alternatif ne peut pas être le poste principal.",
     "TOO_MANY": "Champ « {field} » : {max} éléments au maximum.",
     "NOT_IN_BOM": "L'élément {id} ne fait pas partie de la nomenclature de l'article.",
+    "NOT_COMPOSITION": "Le groupe qui fabrique et le délai se règlent seulement pour un semi-fini ou une composition de la recette.",
     "ROUTING_EMPTY": "La gamme ne contient aucune étape.",
     "NOT_STEP_WORKSTATION": "Ce poste n'appartient pas à l'étape (ni comme alternative).",
     "IN_FUTURE": "Le champ « {field} » ne peut pas être dans le futur.",
