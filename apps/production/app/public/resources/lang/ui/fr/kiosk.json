@@ -602,5 +602,7 @@
   "home_nobody_in": "Personne du groupe n'est encore entré sur la tablette de bureau.",
   "home_other_person": "Autre personne (PIN)",
   "home_tab_who": "« {tab} » : qui ? Touchez votre photo.",
-  "home_week_short": "Sem."
+  "home_week_short": "Sem.",
+  "kv_cartons_eq": "= {c} cart.",
+  "kv_cartons_rest": "= {c} cart. + {r} {u}"
 }

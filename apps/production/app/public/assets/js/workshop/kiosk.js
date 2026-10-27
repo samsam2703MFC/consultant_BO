@@ -1054,6 +1054,13 @@
         return item.ppc ? (bare ? fmt(Math.round(q / item.ppc * 100) / 100) : `${fmt(Math.round(q / item.ppc * 100) / 100)} ${t('prod_cartons_short')}`) : (bare ? fmt(q) : `${fmt(q)} ${item.unit}`);
     };
     const r3 = (v) => Math.round(v * 1000) / 1000;
+    // « Zrobione » en pièces (27/10/2026) : combien de cartons ça fait — cartons pleins + pièces restantes.
+    const cartonsOf = (q, item) => {
+        if (!item.ppc || !(q > 0)) return '';
+        const full = Math.floor(q / item.ppc + 1e-9);
+        const rest = r3(q - full * item.ppc);
+        return rest > 1e-6 ? t('kv_cartons_rest', {c: fmt(full), r: fmt(rest), u: item.unit}) : t('kv_cartons_eq', {c: fmt(full)});
+    };
 
     // Perte : l'ancien formulaire séparé est remplacé par la ligne de validation (quantité, motif, photos).
     function renderWaste(item) {
@@ -1146,7 +1153,7 @@
     }
 
     function drawLine(day, i, L, locked) {
-        const unitDone = i.ppc ? t('prod_cartons_short') : i.unit;
+        const unitDone = i.unit;
         const shortQ = i.planned !== null ? r3(i.planned - L.produced) : 0;
         const editing = L.editing && !locked;
         const live = i.wastes.filter(w => !w.cancelled);
@@ -1156,7 +1163,8 @@
             const ok = !!i.line;
             return `<article class="kiosk-card kv-line ${ok ? 'is-ok' : ''}" data-line="${i.item_id}">
                 <div class="kv-prod-name"><h3>${esc(i.name)}</h3><p class="kiosk-muted">${esc(planMeta)}</p>${i.line && i.line.corrected_by ? `<p class="kiosk-muted kv-small">${icon('pencil', 'is-sm')} ${esc(t('kv_corrected', {name: i.line.corrected_by}))}</p>` : ''}</div>
-                <div class="kv-col"><span class="kv-lbl">${esc(t('day_col_done'))}</span><strong class="kv-big">${esc(cq(ok ? i.line.produced : i.produced, i))}</strong>
+                <div class="kv-col"><span class="kv-lbl">${esc(t('day_col_done'))}</span><strong class="kv-big">${esc(fmt(ok ? i.line.produced : i.produced))} ${esc(i.unit)}</strong>
+                    ${i.ppc && (ok ? i.line.produced : i.produced) > 0 ? `<p class="kv-cartons">${esc(cartonsOf(ok ? i.line.produced : i.produced, i))}</p>` : ''}
                     ${ok && i.line.note ? `<p class="kiosk-muted kv-small">${esc(i.line.note)}</p>` : ''}</div>
                 <div class="kv-col"><span class="kv-lbl">${esc(t('kv_col_waste'))}</span>${wastes || `<span class="kiosk-muted">—</span>`}</div>
                 <div class="kv-end">${ok ? `<span class="kv-check is-ok" title="${esc(t('kv_line_ok', {name: i.line.employee || '', time: hhmm(i.line.validated_at)}))}">${icon('check')}</span>` : ''}
@@ -1167,13 +1175,14 @@
         const reasons = ['quality', 'burnt', 'damaged', 'samples', 'other'];
         const photoRequired = !!(day.waste_photo && day.waste_photo.required);
         const needPhoto = L.waste > 0 && photoRequired && !L.photos.length;
-        const doneVal = i.ppc ? Math.round(L.produced / i.ppc * 100) / 100 : r3(L.produced);
+        const doneVal = r3(L.produced);
         return `<article class="kiosk-card kv-line is-edit ${shortQ > 1e-6 ? 'is-short' : ''}" data-line="${i.item_id}">
             <div class="kv-prod-name"><h3>${esc(i.name)}</h3><p class="kiosk-muted">${esc(planMeta)}${i.produced > 0 ? ' · ' + esc(t('kv_recorded', {q: cq(i.produced, i)})) : ''}</p></div>
             <div class="kv-col"><span class="kv-lbl">${esc(t('day_col_done'))}</span>
                 <div class="kv-step"><button type="button" data-kv-step="produced" data-d="-1" aria-label="−">${icon('minus')}</button>
                     <input class="kv-num" data-kv-field="produced" inputmode="decimal" value="${esc(String(doneVal).replace('.', ','))}" aria-label="${esc(t('day_col_done'))}">
                     <button type="button" data-kv-step="produced" data-d="1" aria-label="+">${icon('plus')}</button><small>${esc(unitDone)}</small></div>
+                ${i.ppc ? `<p class="kv-cartons" data-kv-cartons>${esc(cartonsOf(L.produced, i) || t('kv_cartons_eq', {c: 0}))} <span class="kiosk-muted">· ${esc(t('kv_ppc', {n: i.ppc}))}</span></p>` : ''}
                 ${i.planned !== null ? (shortQ > 1e-6 ? `<p class="kv-hint is-warn">${esc(t('kv_short', {q: cq(shortQ, i)}))}</p>
                     <input class="kv-text" data-kv-field="note" maxlength="255" placeholder="${esc(t('kv_short_reason'))}" value="${esc(L.note)}">`
                     : (Math.abs(shortQ) < 1e-6 ? `<p class="kv-hint is-ok">${icon('check', 'is-sm')} ${esc(t('kv_as_planned'))}</p>` : `<p class="kv-hint">${esc(t('kv_over', {q: cq(-shortQ, i)}))}</p>`)) : ''}</div>
@@ -1293,7 +1302,7 @@
                 const f = field.dataset.kvField;
                 if (f === 'produced' || f === 'waste') {
                     const n = Number(String(field.value).replace(',', '.').replace(/\s/g, ''));
-                    if (Number.isFinite(n) && n >= 0) L[f] = r3(f === 'produced' && i.ppc ? n * i.ppc : n);
+                    if (Number.isFinite(n) && n >= 0) L[f] = r3(n);
                     if (f === 'waste' && L.waste === 0) L.reason = null;
                     L.error = '';
                     return redraw(i.item_id);
@@ -1302,6 +1311,14 @@
             });
             card.addEventListener('input', (e) => {
                 resetIdle();
+                // Pièces tapées : les cartons se mettent à jour pendant la frappe.
+                const done = e.target.closest('[data-kv-field="produced"]');
+                const box = card.querySelector('[data-kv-cartons]');
+                if (done && box) {
+                    const n = Number(String(done.value).replace(',', '.').replace(/\s/g, ''));
+                    box.firstChild.textContent = (Number.isFinite(n) && n > 0 ? cartonsOf(n, i) : '') || t('kv_cartons_eq', {c: 0});
+                    box.firstChild.textContent += ' ';
+                }
                 const field = e.target.closest('[data-kv-field="note"], [data-kv-field="wasteNote"]');
                 if (field) L[field.dataset.kvField] = field.value;
             });
