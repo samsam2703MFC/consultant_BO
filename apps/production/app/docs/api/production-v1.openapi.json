@@ -13461,8 +13461,7 @@
                 ],
                 "security": [
                     {
-                        "deviceToken": [],
-                        "employeeToken": []
+                        "deviceToken": []
                     }
                 ]
             }

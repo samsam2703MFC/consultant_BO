@@ -229,7 +229,8 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/production/lines', ExecutionController::class, 'validateLine', 'kiosk_employee'],
             ['POST', '/kiosk/photos', ExecutionController::class, 'uploadPhoto', 'kiosk_employee'],
             // Magazyn grupy : stan, min. / maks., ile wolno jeszcze wyprodukować (formuła Stanu magazynu ERP).
-            ['GET', '/kiosk/stock', ExecutionController::class, 'stock', 'kiosk_employee'],
+            // Stan magazynu grupy : też na ekranie głównym tabletu (bez PIN) — dane grupy, nie osoby.
+            ['GET', '/kiosk/stock', ExecutionController::class, 'stock', 'kiosk'],
             ['POST', '/kiosk/waste', ExecutionController::class, 'recordWaste', 'kiosk_employee'],
             ['PATCH', '/kiosk/waste/{id:\d+}', ExecutionController::class, 'updateWaste', 'kiosk_employee'],
             ['GET', '/kiosk/recipes', ExecutionController::class, 'recipes', 'kiosk_employee'],

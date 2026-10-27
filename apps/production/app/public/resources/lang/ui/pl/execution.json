@@ -55,7 +55,7 @@
   "pairing_code": "Kod parowania — wpisz go na tablecie (ekran /tablet/production, /tablet/office albo /tablet/driver):",
   "code_valid": "ważny do {until}, jednorazowy",
   "repair_confirm": "Nowy kod unieważni obecne parowanie tego tabletu. Kontynuować?",
-  "device_help": "Tablet grupy otwiera adres /tablet/production?team=N (N = numer grupy, linki w planie tabletów) i jest parowany kodem. Inną grupę wybiera się na samym tablecie (pasek grup) — adres się zmienia. Zgubiony tablet: zablokuj go albo wygeneruj nowy kod.",
+  "device_help": "Tablet grupy otwiera adres /tablet/production?team=N (N = numer grupy, linki w planie tabletów) i jest parowany kodem. Inna grupa = inny adres (?team=N). Zgubiony tablet: zablokuj go albo wygeneruj nowy kod.",
   "person": "Osoba",
   "badge": "Identyfikator (NFC / QR)",
   "pin": "PIN",

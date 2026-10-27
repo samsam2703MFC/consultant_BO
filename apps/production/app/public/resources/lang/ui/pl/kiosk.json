@@ -590,5 +590,9 @@
   "kv_search_ph": "Szukaj produktu (wszystkie {n} produkty grupy)…",
   "kv_search_found": "Wyniki wyszukiwania : {n}",
   "kv_search_none": "Brak produktu o tej nazwie w grupie.",
-  "kv_search_help": "Brakuje produktu ? Wpisz kilka liter nazwy w polu wyszukiwania."
+  "kv_search_help": "Brakuje produktu ? Wpisz kilka liter nazwy w polu wyszukiwania.",
+  "home_stock_all": "Cały magazyn",
+  "home_stock_line": "stan {stock} · min. {min} kart.",
+  "home_stock_who": "Kto otwiera magazyn ? Dotknij swojego zdjęcia i wpisz PIN.",
+  "home_stock_line_nomin": "stan {stock} kart."
 }

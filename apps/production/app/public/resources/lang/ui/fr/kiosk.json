@@ -590,5 +590,9 @@
   "kv_search_ph": "Chercher un produit (les {n} produits du groupe)…",
   "kv_search_found": "Résultats : {n}",
   "kv_search_none": "Aucun produit de ce nom dans le groupe.",
-  "kv_search_help": "Un produit manque ? Tapez quelques lettres de son nom dans la recherche."
+  "kv_search_help": "Un produit manque ? Tapez quelques lettres de son nom dans la recherche.",
+  "home_stock_all": "Tout le stock",
+  "home_stock_line": "stock {stock} · min. {min} cart.",
+  "home_stock_who": "Qui ouvre le stock ? Touchez votre photo et tapez votre PIN.",
+  "home_stock_line_nomin": "stock {stock} cart."
 }

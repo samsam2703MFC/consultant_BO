@@ -55,7 +55,7 @@
   "pairing_code": "Code d'appairage — à saisir sur la tablette (écran /tablet/production, /tablet/office ou /tablet/driver) :",
   "code_valid": "valable jusqu'à {until}, usage unique",
   "repair_confirm": "Un nouveau code annule l'appairage actuel de la tablette. Continuer ?",
-  "device_help": "La tablette de groupe ouvre l'adresse /tablet/production?team=N (N = numéro du groupe, liens dans le plan des tablettes) et s'appaire avec le code. Un autre groupe se choisit sur la tablette (barre des groupes) — l'adresse suit. Tablette perdue : bloquez-la ou générez un nouveau code.",
+  "device_help": "La tablette de groupe ouvre l'adresse /tablet/production?team=N (N = numéro du groupe, liens dans le plan des tablettes) et s'appaire avec le code. Un autre groupe = une autre adresse (?team=N). Tablette perdue : bloquez-la ou générez un nouveau code.",
   "person": "Personne",
   "badge": "Badge (NFC / QR)",
   "pin": "PIN",

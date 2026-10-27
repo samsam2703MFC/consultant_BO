@@ -223,7 +223,7 @@
     // semaine). Tablette sans groupe (bureau) : le QR en grand et les noms. Un nouveau produit touché : la personne
     // choisit son nom, tape son PIN et arrive directement sur la fiche du produit.
     let deviceInfo = null;
-    let afterLogin = null; // id produit à ouvrir après le PIN (widget « Nouveaux produits »)
+    let afterLogin = null; // après le PIN : id produit (widget « Nouveaux produits ») ou 'stock' (widget « Magazyn grupy »)
     async function renderHome() {
         if (!paired) return renderPairing();
         stopWeek();
@@ -245,8 +245,6 @@
         const office = !generic && !deviceInfo.group_id;
         const now = new Date();
         const widgetHead = (ic, cls, title, extra) => `<header class="kiosk-widget-head"><span class="kiosk-widget-icon ${cls}">${icon(ic)}</span><h2>${title}</h2>${extra || ''}</header>`;
-        const groupBar = groups.length > 1 ? `<nav class="kiosk-groupbar is-top" aria-label="${esc(t('groups_title'))}">${groups.map(g => `<button type="button" class="kiosk-group-chip ${g.id === (group || own) ? 'is-on' : ''}" data-group="${g.id}" style="--g:${/^#[0-9a-f]{6}$/i.test(g.color || '') ? g.color : '#8D1D2C'}">
-                <span class="kiosk-group-dot"></span>${esc(g.name)}<small>${esc(t('group_present', {n: g.present, total: g.people}))}</small></button>`).join('')}</nav>` : '';
         const peopleWidget = `<section class="kiosk-widget is-team" data-team-widget>${widgetHead('users', 'is-soft', esc(t(office ? 'office_people' : 'home_people_title')), '<span class="kiosk-widget-meta" data-present></span>')}
                 <div class="kiosk-apps" data-people><p class="kiosk-muted">${esc(t('loading'))}</p></div>
                 <p class="kiosk-widget-hint" data-team-hint>${esc(t('home_team_hint'))}</p></section>`;
@@ -260,10 +258,11 @@
             <section class="kiosk-ipad-hero"><div class="kiosk-ipad-time" data-clock>${now.toTimeString().slice(0, 5)}</div>
                 <div class="kiosk-ipad-date">${esc(now.toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'long', day: 'numeric', month: 'long'}))}</div>
                 <p class="kiosk-ipad-greet" data-hero-title>${esc(t(office ? 'office_hero' : 'home_title'))}</p></section>
-            ${groupBar}
             <div class="kiosk-widgets">${office ? qrWidget + peopleWidget : `${peopleWidget}
                 <section class="kiosk-widget is-today" data-today>${widgetHead('calendar-days', 'is-abricot', esc(t('home_today_title')), `<button type="button" class="kiosk-widget-link" data-week-open>${esc(t('home_week_all'))} ›</button>`)}
                     <div class="kiosk-widget-stats" data-stats></div><div data-today-list><p class="kiosk-muted">${esc(t('loading'))}</p></div></section>
+                <section class="kiosk-widget is-stock" data-stock-widget hidden>${widgetHead('warehouse', 'is-soft', esc(t('kv_stock')), `<button type="button" class="kiosk-widget-link" data-stock-open>${esc(t('home_stock_all'))} ›</button>`)}
+                    <div class="kiosk-widget-stats" data-stock-stats></div><div data-stock-list></div></section>
                 <section class="kiosk-widget is-dev" data-dev-widget hidden>${widgetHead('flask-conical', 'is-ruby', esc(t('home_dev_title')), '<span class="kiosk-widget-meta" data-dev-count></span>')}
                     <div class="kiosk-dev-minis" data-dev-list></div></section>
                 ${qrWidget}
@@ -298,10 +297,11 @@
         el.querySelectorAll('[data-week-open]').forEach(b => b.addEventListener('click', () => renderWeek(null, false)));
         el.querySelectorAll('[data-group]').forEach(b => b.addEventListener('click', () => { setGroup(Number(b.dataset.group)); renderHome(); }));
         drawQr();
-        const [people, w, dev] = await Promise.all([
+        const [people, w, dev, stock] = await Promise.all([
             api('GET', '/kiosk/people').catch((err) => { if (!err.code) toast(err.message, true); return null; }),
             office ? Promise.resolve(null) : api('GET', '/kiosk/week').catch(() => null),
             office ? Promise.resolve(null) : api('GET', '/kiosk/development/summary').catch(() => null),
+            office ? Promise.resolve(null) : api('GET', '/kiosk/stock').catch(() => null),
         ]);
         const box = el.querySelector('[data-people]');
         if (!box) return;
@@ -336,6 +336,22 @@
             el.querySelector('[data-deliveries]').hidden = false;
             el.querySelector('[data-delivery-list]').innerHTML = deliveries.map(d => `<div class="kiosk-delivery"><strong>${esc(d.supplier || '—')}</strong>
                 <span class="kiosk-muted">${esc(d.materials.slice(0, 4).join(', '))}${d.materials.length > 4 ? '…' : ''}</span></div>`).join('');
+        }
+        // Stock du groupe (27/10/2026) : sous le minimum d'abord ; « Tout le stock » → nom + PIN → onglet Magazyn grupy.
+        if (stock && stock.items && stock.items.length) {
+            const T = stock.totals;
+            el.querySelector('[data-stock-widget]').hidden = false;
+            el.querySelector('[data-stock-stats]').innerHTML = stat(String(T.below_min), t('kv_tile_below'), T.below_min ? 'is-danger' : '')
+                + stat(fmt(T.allowed_cartons) + ' ' + t('prod_cartons_short'), t('kv_tile_allowed')) + stat(String(T.products), t('kv_tile_products'));
+            el.querySelector('[data-stock-list]').innerHTML = `<ul class="kiosk-today-list is-untimed">${stock.items.slice(0, 4).map(r => `<li class="${r.below_min ? 'is-low' : ''}">
+                <span class="kiosk-today-name">${esc(r.name)}</span><span class="kiosk-today-qty">${esc(r.min_cartons === null ? t('home_stock_line_nomin', {stock: fmt(r.stock_cartons)}) : t('home_stock_line', {stock: fmt(r.stock_cartons), min: fmt(r.min_cartons)}))}</span></li>`).join('')}</ul>`;
+            el.querySelector('[data-stock-open]').addEventListener('click', () => {
+                afterLogin = 'stock';
+                const teamWidget = el.querySelector('[data-team-widget]');
+                teamWidget.classList.remove('is-pick'); void teamWidget.offsetWidth; teamWidget.classList.add('is-pick');
+                el.querySelector('[data-team-hint]').textContent = t('home_stock_who');
+                teamWidget.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+            });
         }
         // Nouveaux produits du groupe : étape (anneau de progression) et prochaine action ; toucher → nom + PIN → fiche.
         const products = (dev && dev.products) || [];
@@ -521,7 +537,8 @@
                 // Bascule entre présents : l'onglet où l'on encodait, avec ce que la tablette sait déjà du groupe.
                 if (who.tab && prev) { session.machines = prev.machines; session.dev = prev.dev; openTab(who.tab); return; }
                 // Widget « Nouveaux produits » : directement la fiche du produit touché.
-                if (afterLogin) { const id = afterLogin; afterLogin = null; session.dev = 1; session.tab = 'dev'; renderDevProduct(id); } else renderMe();
+                if (afterLogin === 'stock') { afterLogin = null; session.tab = 'stock'; renderStock(); }
+                else if (afterLogin) { const id = afterLogin; afterLogin = null; session.dev = 1; session.tab = 'dev'; renderDevProduct(id); } else renderMe();
             } catch (err) {
                 pin = ''; dots(); ok.disabled = false;
                 el.querySelector('[data-error]').textContent = err.message;

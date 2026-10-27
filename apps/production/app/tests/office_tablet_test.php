@@ -289,6 +289,8 @@ try {
     expectOff($s === 200 && $idK['data']['group_id'] === 2, 'PIN on the chosen group: session in that group');
     [$s, $rf] = $call('POST', '/kiosk/refresh', null, $atelier + ['X-Employee-Token' => $idK['data']['employee_token']]);
     expectOff($s === 200 && $rf['data']['group_id'] === 2, 'the session keeps the chosen group (token), even without the header');
+    [$s, $b] = $call('GET', '/kiosk/stock', null, $tarty);
+    expectOff($s === 200 && is_array($b['data']['items']) && isset($b['data']['totals']['below_min']), 'group stock readable on the home screen without a PIN (chosen group)');
     [, $tq] = $call('GET', '/kiosk/qr?base=' . rawurlencode($base), null, $tarty);
     [$s, $b] = $call('GET', '/kiosk/phone/people', null, ['X-Qr-Token' => $tokenOf($tq['data'])]);
     expectOff($s === 200 && array_column($b['data'], 'id') === [$kinga], 'phone QR shown for the chosen group: its people');
