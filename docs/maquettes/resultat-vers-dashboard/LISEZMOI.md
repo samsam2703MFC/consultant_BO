@@ -57,8 +57,8 @@ L'écran actuel ne change pas, mais la ligne seule ne mène pas au dashboard.
   relative à la racine du cockpit, comme l'entrée du menu (`ext:dashboard/`).
   Elle marche donc sous `/consulant_bo/` comme en local. Si l'on recule de
   quelques jours avec ◂, on arrive sur le dashboard de ce jour-là.
-- La ligne Réseau et les lignes d'un magasin fermé ne mènent nulle part, ou
-  au dashboard sans chiffres pour un magasin fermé (à trancher).
+- La ligne Réseau ne mène nulle part. La ligne d'un magasin fermé ouvre son
+  dashboard comme les autres ; le motif de fermeture reste écrit sous le nom.
 
 ## Tranché le 27/10/2026
 
