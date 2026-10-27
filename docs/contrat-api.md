@@ -3037,4 +3037,5 @@ disponibilité** ; nom et ingrédients en français et en néerlandais ; allerg�
 **Constaté le 27/10/2026 dans le Swagger de TFBuddy : fournisseurs, matières, catégories, périodes et produits sont en
 lecture seule.** `POST /products/resale` n'existe pas encore : la vérification le dit et l'export CSV de l'encodage validé
 (chaîne complète, fiche FR/NL comprise) sert à saisir à la main. La demande, autonome : `docs/demande-tfbuddy-epicerie/`
-(français, anglais, polonais).
+— adaptation du Swagger en français, anglais, polonais, et `openapi-ecritures-epicerie.yaml` (OpenAPI 3.0.3, validé ;
+les corps de `POST /produits/import/{id}/creer` y sont conformes).

@@ -545,10 +545,12 @@ Par dépendance, pas par difficulté :
 
 ---
 
-## 7. Encoder l'épicerie : fournisseur, matière, prix, produit (demande du 27/10/2026, v2)
+## 7. Encoder l'épicerie : fournisseur, matière, prix, produit (demande du 27/10/2026, v3)
 
-**La demande complète, autonome, à transmettre telle quelle : `docs/demande-tfbuddy-epicerie/`** — en français
-(`demande-fr.md`), anglais (`demande-en.md`) et polonais (`demande-pl.md`). Elle fait foi ; ce qui suit la résume.
+**La demande complète, autonome, à transmettre telle quelle : `docs/demande-tfbuddy-epicerie/`** — une demande
+d'adaptation du Swagger en français (`demande-fr.md`), anglais (`demande-en.md`) et polonais (`demande-pl.md`), et le
+fichier **`openapi-ecritures-epicerie.yaml`** (OpenAPI 3.0.3 validé, 14 opérations rangées dans les sections et
+contrôleurs du Swagger TFBuddy) à intégrer tel quel. Ils font foi ; ce qui suit les résume.
 
 Le cockpit scanne le tarif d'un fournisseur d'épicerie ; un assistant encode et fait valider, article par article, la
 chaîne fournisseur → article du catalogue fournisseur (réf., EAN, colis, prix) → matière (allergènes) → recette

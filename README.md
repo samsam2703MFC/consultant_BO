@@ -322,7 +322,8 @@ un assistant en six étapes l'encode et le fait valider :
 Puis la création, ligne par ligne, par **une route atomique `POST /products/resale`**. **Au 27/10/2026 elle n'existe pas** :
 le Swagger de TFBuddy ne porte que des lectures sur fournisseurs, matières, périodes et produits. « Vérifier l'API » le
 constate — en `OPTIONS`, **sans rien écrire** — et l'export CSV donne l'encodage validé à saisir à la main. La demande à
-TFBuddy, à transmettre telle quelle en français, anglais et polonais : `docs/demande-tfbuddy-epicerie/`. Maquette :
+TFBuddy — adaptation de leur Swagger, en français, anglais et polonais, avec le fichier OpenAPI 3 à intégrer
+(`openapi-ecritures-epicerie.yaml`, validé, 14 opérations) : `docs/demande-tfbuddy-epicerie/`. Maquette :
 `docs/maquettes/epicerie-pdf/`. Détail : `docs/contrat-api.md`, section `/produits/import/*`.
 
 ## Scouting commercial
