@@ -497,21 +497,22 @@ body{margin:0;background:#fff}
 // Les sections de l'étude de marché locale : en attente tant qu'OpenStreetMap
 // n'a pas répondu, puis cinq tableaux.
 function etudeLocale(d, esc){
-  if (!d.etude) return d.etudeAttente ? `<h3>L'étude de marché locale</h3><div class="attente">${esc(d.etudeAttente)}</div>` : '';
+  const tr = (fr, nl) => d.lang === 'nl' ? nl : fr;
+  if (!d.etude) return d.etudeAttente ? `<h3>${tr('L\'étude de marché locale', 'De lokale marktstudie')}</h3><div class="attente">${esc(d.etudeAttente)}</div>` : '';
   const table = (titre, rows, tetes, vide, note, gauche) => `
     <h3>${titre}</h3>
     ${rows.length ? `<table><tr>${tetes.map((t, i) => `<th${i < (gauche || 2) ? ' class="l"' : ''}${i === tetes.length - 1 && gauche === 1 ? ' class="l" style="padding-left:12px"' : ''}>${esc(t)}</th>`).join('')}</tr>
       ${rows.map(r => `<tr>${r.map((c, i) => `<td class="${i === 0 ? 'l' : (gauche === 1 ? (i === r.length - 1 ? 'l mut' : 'n') : (i === 1 ? 'l mut' : 'n'))}"${gauche === 1 && i === r.length - 1 ? ' style="padding-left:12px"' : ''}>${i === 0 ? '<b>' + esc(c) + '</b>' : esc(c)}</td>`).join('')}</tr>`).join('')}
     </table>${note ? `<div class="legende">${esc(note)}</div>` : ''}` : `<p class="mut" style="font-size:11.5px">${esc(vide)}</p>`}`;
-  const bandes = ['Genre', '< 1 km', '< 2 km', '< 3 km', 'Dans le rayon', 'Le plus proche'];
-  return table('La concurrence indirecte', d.indirecte, bandes, 'Ni supermarché, ni sandwicherie, ni salon de thé relevés dans le rayon.', d.indirecteNote, 1)
-    + `<h3>Le tissu économique</h3>
-    <table><tr><th class="l">Famille</th><th>Entreprises</th><th class="l" style="padding-left:18px">Ce qu'on y compte</th></tr>
+  const bandes = [tr('Genre', 'Soort'), '< 1 km', '< 2 km', '< 3 km', tr('Dans le rayon', 'Binnen de straal'), tr('Le plus proche', 'Dichtstbijzijnde')];
+  return table(tr('La concurrence indirecte', 'De indirecte concurrentie'), d.indirecte, bandes, tr('Ni supermarché, ni sandwicherie, ni salon de thé relevés dans le rayon.', 'Geen supermarkt, broodjeszaak of theesalon gevonden binnen de straal.'), d.indirecteNote, 1)
+    + `<h3>${tr('Le tissu économique', 'Het economisch weefsel')}</h3>
+    <table><tr><th class="l">${tr('Famille', 'Familie')}</th><th>${tr('Entreprises', 'Bedrijven')}</th><th class="l" style="padding-left:18px">${tr('Ce qu\'on y compte', 'Wat er meetelt')}</th></tr>
       ${d.tissu.map(r => `<tr><td class="l">${esc(r[0])}</td><td class="n"><b>${esc(r[1])}</b></td><td class="l mut" style="padding-left:18px">${esc(r[2])}</td></tr>`).join('')}
     </table>`
-    + table('Les zonings et parcs d\'activité', d.zonings, ['Zone', 'Genre', 'Distance', 'Surface', 'Entreprises'], 'Aucun zoning ni parc d’activité cartographié dans le rayon.')
-    + table('Les écoles', d.ecoles, ['Niveau', '< 1 km', '< 2 km', '< 3 km', 'Dans le rayon', 'La plus proche'], 'Aucune école cartographiée dans le rayon.', d.ecolesNote, 1)
-    + table('Les générateurs de flux', d.flux, bandes, 'Ni gare, ni hôpital, ni administration, ni centre sportif relevés dans le rayon.', d.fluxNote, 1)
+    + table(tr('Les zonings et parcs d\'activité', 'Bedrijventerreinen en bedrijvenparken'), d.zonings, ['Zone', tr('Genre', 'Soort'), tr('Distance', 'Afstand'), tr('Surface', 'Oppervlakte'), tr('Entreprises', 'Bedrijven')], tr('Aucun zoning ni parc d’activité cartographié dans le rayon.', 'Geen bedrijventerrein of bedrijvenpark in kaart gebracht binnen de straal.'))
+    + table(tr('Les écoles', 'De scholen'), d.ecoles, ['Niveau', '< 1 km', '< 2 km', '< 3 km', tr('Dans le rayon', 'Binnen de straal'), tr('La plus proche', 'Dichtstbijzijnde')], tr('Aucune école cartographiée dans le rayon.', 'Geen school in kaart gebracht binnen de straal.'), d.ecolesNote, 1)
+    + table(tr('Les générateurs de flux', 'De publiekstrekkers'), d.flux, bandes, tr('Ni gare, ni hôpital, ni administration, ni centre sportif relevés dans le rayon.', 'Geen station, ziekenhuis, administratie of sportcentrum gevonden binnen de straal.'), d.fluxNote, 1)
     + (d.etudeNote ? `<div class="note">${esc(d.etudeNote)}</div>` : '');
 }
 
@@ -519,27 +520,29 @@ function etudeLocale(d, esc){
 // en trois lignes, puis le CA prévu avec la montée en charge et, si la caisse
 // du réseau a rendu un panier moyen, les clients par jour.
 function enBref(d, esc){
+  const tr = (fr, nl) => d.lang === 'nl' ? nl : fr;
   const rows = d.garde && d.garde.length ? d.garde : [];
   const kv = d.gardeLignes || [];
-  const cols = d.gardeCols || ['5 min en voiture', '10 min en voiture', 'Zone étudiée'];
+  const cols = d.gardeCols || [tr('5 min en voiture', '5 min met de auto'), tr('10 min en voiture', '10 min met de auto'), tr('Zone étudiée', 'Bestudeerde zone')];
   const t1 = rows.length || kv.length ? `<table class="garde">
     ${rows.length ? `<tr><th class="l"></th><th class="v5">${esc(cols[0])}</th><th class="v10">${esc(cols[1])}</th><th>${esc(cols[2])}</th></tr>
       ${rows.map(r => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="n v5"><b>${esc(r[1])}</b></td><td class="n v10"><b>${esc(r[2])}</b></td><td class="n">${esc(r[3])}</td></tr>`).join('')}` : ''}
     ${kv.map(r => `<tr class="kv"><td class="l"><b>${esc(r[0])}</b></td><td class="l" colspan="3"><b>${esc(r[1])}</b>${r[2] ? ` <span class="mut">· ${esc(r[2])}</span>` : ''}</td></tr>`).join('')}
   </table>` : '';
-  const t2 = d.rampe && d.rampe.length ? `<table class="rampe"><tr><th class="l">CA prévu TTC · montée en charge</th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Clients / jour</th></tr>
+  const t2 = d.rampe && d.rampe.length ? `<table class="rampe"><tr><th class="l">${tr('CA prévu TTC · montée en charge', 'Geplande omzet incl. btw · aanloop')}</th><th>${tr('Par semaine', 'Per week')}</th><th>${tr('Par mois', 'Per maand')}</th><th>${tr('Sur l\'année', 'Op jaarbasis')}</th><th>${tr('Clients / jour', 'Klanten / dag')}</th></tr>
       ${d.rampe.map((r, i) => `<tr${i === d.rampe.length - 1 ? ' class="tot"' : ''}><td class="l">${esc(r[0])}</td><td class="n">${esc(r[1])}</td><td class="n">${esc(r[2])}</td><td class="n"><b>${esc(r[3])}</b></td><td class="n">${esc(r[4])}</td></tr>`).join('')}
     </table>${d.rampeNote ? `<div class="legende">${esc(d.rampeNote)}</div>` : ''}` : '';
   if (!t1 && !t2) return '';
-  return `<h3>En bref</h3>${!rows.length && d.gardeAttente ? `<div class="attente ligne">${esc(d.gardeAttente)}</div>` : ''}${t1}${t2}`;
+  return `<h3>${tr('En bref', 'In het kort')}</h3>${!rows.length && d.gardeAttente ? `<div class="attente ligne">${esc(d.gardeAttente)}</div>` : ''}${t1}${t2}`;
 }
 
 export function dossierPage(d, esc, logo){
+  const tr = (fr, nl) => d.lang === 'nl' ? nl : fr;
   const tuile = t => `<div><div class="k">${esc(t[0])}</div><div class="v">${esc(t[1])}</div>${t[2] ? `<div class="s">${esc(t[2])}</div>` : ''}</div>`;
   return `
   <div class="sc-doss">
     <div class="hd hdd">
-      <div class="hd1">${logo ? `<img src="${esc(logo)}" alt="">` : '<b class="marque">L’Atelier by</b>'}<span class="ed">Étude d’implantation<br>éditée le ${esc(d.date)}</span></div>
+      <div class="hd1">${logo ? `<img src="${esc(logo)}" alt="">` : '<b class="marque">L’Atelier by</b>'}<span class="ed">${tr('Étude d’implantation<br>éditée le ', 'Vestigingsstudie<br>opgemaakt op ')}${esc(d.date)}</span></div>
       <div class="hd2">
         <div class="t"><b>${esc(d.titre)}</b><span>${esc(d.geo)}</span>${d.zone ? `<em>${esc(d.zone)}</em>` : ''}</div>
         <div class="sc"><b>${esc(d.score)}</b><span>score / 100</span></div>
@@ -547,61 +550,62 @@ export function dossierPage(d, esc, logo){
     </div>
     <div class="verdict" style="background:${d.verdictOk ? '#E3EFE6' : '#F6E4E7'}"><b style="color:${d.verdictOk ? '#2d7a3e' : '#8D1D2C'}">${esc(d.verdict)}</b><span>${esc(d.verdictNote)}</span></div>
 
-    <h3>Situation</h3>
-    ${d.carte ? `<img class="carte" src="${d.carte}" alt="">` : `<div class="attente">${d.carteAttente || 'Carte en cours d’assemblage…'}</div>`}
+    <h3>${tr('Situation', 'Ligging')}</h3>
+    ${d.carte ? `<img class="carte" src="${d.carte}" alt="">` : `<div class="attente">${d.carteAttente || tr('Carte en cours d’assemblage…', 'Kaart wordt samengesteld…')}</div>`}
     <div class="legende">${esc(d.carteNote)}</div>
     ${enBref(d, esc)}
 
-    <h3>L'essentiel</h3>
+    <h3>${tr('L\'essentiel', 'Kerncijfers')}</h3>
     <div class="q">${d.essentiel.map(tuile).join('')}</div>
 
-    <h3>Le marché</h3>
-    <table><tr><th class="l">Mesure</th><th>Valeur</th><th class="l" style="padding-left:18px">Source · calcul</th></tr>
+    <h3>${tr('Le marché', 'De markt')}</h3>
+    <table><tr><th class="l">${tr('Mesure', 'Maatstaf')}</th><th>${tr('Valeur', 'Waarde')}</th><th class="l" style="padding-left:18px">${tr('Source · calcul', 'Bron · berekening')}</th></tr>
       ${d.marche.map(r => `<tr><td class="l">${esc(r[0])}</td><td class="n"><b>${esc(r[1])}</b></td><td class="l mut" style="padding-left:18px">${esc(r[2])}</td></tr>`).join('')}
     </table>
-    ${d.estimations && d.estimations.length ? `<h3>Deux estimations</h3>
-    <table><tr><th class="l">Mesure</th><th>${esc(d.estimationsCols[0])}</th><th class="v5">${esc(d.estimationsCols[1])}</th><th class="l" style="padding-left:18px">${esc(d.estimationsCols[2])}</th></tr>
+    ${d.estimations && d.estimations.length ? `<h3>${tr('Deux estimations', 'Twee ramingen')}</h3>
+    <table><tr><th class="l">${tr('Mesure', 'Maatstaf')}</th><th>${esc(d.estimationsCols[0])}</th><th class="v5">${esc(d.estimationsCols[1])}</th><th class="l" style="padding-left:18px">${esc(d.estimationsCols[2])}</th></tr>
       ${d.estimations.map(r => `<tr><td class="l">${esc(r[0])}</td><td class="n">${esc(r[1])}</td><td class="n v5"><b>${esc(r[2])}</b></td><td class="l mut" style="padding-left:18px">${esc(r[3])}</td></tr>`).join('')}
     </table>${d.estimationsNote ? `<div class="note">${esc(d.estimationsNote)}</div>` : ''}` : d.estimationsNote ? `<div class="attente ligne">${esc(d.estimationsNote)}</div>` : ''}
 
-    <h3>La concurrence, en détail${d.chaines ? ` <span class="ch">chaînes : ${esc(d.chaines)}</span>` : ''}</h3>
+    <h3>${tr('La concurrence, en détail', 'De concurrentie in detail')}${d.chaines ? ` <span class="ch">${tr('chaînes : ', 'ketens: ')}${esc(d.chaines)}</span>` : ''}</h3>
     ${d.concurrenceNote ? `<div class="note" style="color:inherit">${esc(d.concurrenceNote)}</div>` : ''}
     ${d.ecartesNote ? `<div class="note">${esc(d.ecartesNote)}</div>` : ''}
     ${d.cartes.length ? d.cartes.map((c, i) => { const r = c.ligne, f = c.fiche; return `
     <div class="ccard${r[6] ? ' fort' : ''}">
-      <div class="chead"><span class="num">${i + 1}</span><b>${esc(r[0])}</b>${r[7] ? `<span class="ch">chaîne ${esc(r[7])}</span>` : ''}<span class="mut">${esc(r[1])}</span>
-        <span class="chiffres"><span>${esc(r[2])}</span><span title="note Google / 5">${r[3] === '—' ? 'sans note' : esc(r[3]) + ' ★'}</span><span>${esc(r[4])}</span><span>force ${esc(r[5])}</span><span class="${r[6] ? 'acc' : 'mut'}">${r[6] ? 'concurrent fort' : 'concurrent'}</span></span></div>
-      ${f ? `<div class="cbody">${f.photo ? `<div class="gphoto"><img src="${f.photo}" alt="">${f.photoAuteur ? `<div class="gcred">photo : ${esc(f.photoAuteur)}</div>` : ''}</div>` : ''}
-        <div class="gtxt">${f.avis.length ? f.avis.map(a => `<div class="gavis"><b>${esc(a[1])} ★</b> <span class="mut">${esc(a[0])} · ${esc(a[2])}</span>${a[3] ? ' — ' + esc(a[3]) : ''}</div>`).join('') : '<div class="mut" style="font-size:11px">Aucun avis rendu par Google.</div>'}${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener" class="mut" style="font-size:10px">fiche Google ↗</a>` : ''}</div>
+      <div class="chead"><span class="num">${i + 1}</span><b>${esc(r[0])}</b>${r[7] ? `<span class="ch">${tr('chaîne', 'keten')} ${esc(r[7])}</span>` : ''}<span class="mut">${esc(r[1])}</span>
+        <span class="chiffres"><span>${esc(r[2])}</span><span title="${tr('note Google / 5', 'Google-score / 5')}">${r[3] === '—' ? tr('sans note', 'zonder score') : esc(r[3]) + ' ★'}</span><span>${esc(r[4])}</span><span>${tr('force', 'sterkte')} ${esc(r[5])}</span><span class="${r[6] ? 'acc' : 'mut'}">${r[6] ? tr('concurrent fort', 'sterke concurrent') : 'concurrent'}</span></span></div>
+      ${f ? `<div class="cbody">${f.photo ? `<div class="gphoto"><img src="${f.photo}" alt="">${f.photoAuteur ? `<div class="gcred">${tr('photo : ', 'foto: ')}${esc(f.photoAuteur)}</div>` : ''}</div>` : ''}
+        <div class="gtxt">${f.avis.length ? f.avis.map(a => `<div class="gavis"><b>${esc(a[1])} ★</b> <span class="mut">${esc(a[0])} · ${esc(a[2])}</span>${a[3] ? ' — ' + esc(a[3]) : ''}</div>`).join('') : `<div class="mut" style="font-size:11px">${tr('Aucun avis rendu par Google.', 'Geen reviews teruggegeven door Google.')}</div>`}${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener" class="mut" style="font-size:10px">${tr('fiche Google', 'Google-profiel')} ↗</a>` : ''}</div>
       </div>` : ''}
-    </div>`; }).join('') + (d.googleNote ? `<div class="note">${esc(d.googleNote)}</div>` : '') + (d.googleAttente ? `<div class="attente">${esc(d.googleAttente)}</div>` : '') : '<p class="ok">Aucune boulangerie ni pâtisserie relevée dans la zone.</p>'}
-    ${(d.terrain && d.terrain.length) || (d.fluxMesures && d.fluxMesures.length) ? `<h3>Le relevé terrain</h3>
+    </div>`; }).join('') + (d.googleNote ? `<div class="note">${esc(d.googleNote)}</div>` : '') + (d.googleAttente ? `<div class="attente">${esc(d.googleAttente)}</div>` : '') : `<p class="ok">${tr('Aucune boulangerie ni pâtisserie relevée dans la zone.', 'Geen bakkerij of banketbakkerij gevonden in de zone.')}</p>`}
+    ${(d.terrain && d.terrain.length) || (d.fluxMesures && d.fluxMesures.length) ? `<h3>${tr('Le relevé terrain', 'De terreinverkenning')}</h3>
     ${d.terrain.length ? `<table>${d.terrain.map(r => `<tr><td class="l" style="width:120px"><b>${esc(r[0])}</b></td><td class="l">${esc(r[1])}</td></tr>`).join('')}</table>` : ''}
-    ${d.fluxMesures.length ? `<table><tr><th class="l">Axe</th><th>Véhicules / jour</th><th class="l" style="padding-left:12px">Sens</th><th class="l" style="padding-left:12px">Source · date</th></tr>
+    ${d.fluxMesures.length ? `<table><tr><th class="l">${tr('Axe', 'As')}</th><th>${tr('Véhicules / jour', 'Voertuigen / dag')}</th><th class="l" style="padding-left:12px">${tr('Sens', 'Richting')}</th><th class="l" style="padding-left:12px">${tr('Source · date', 'Bron · datum')}</th></tr>
       ${d.fluxMesures.map(r => `<tr><td class="l"><b>${esc(r[0])}</b></td><td class="n">${esc(r[1])}</td><td class="l mut" style="padding-left:12px">${esc(r[2])}</td><td class="l mut" style="padding-left:12px">${esc(r[3])}</td></tr>`).join('')}
     </table>` : ''}
     ${d.terrainNote ? `<div class="note">${esc(d.terrainNote)}</div>` : ''}` : ''}
     ${etudeLocale(d, esc)}
 
-    <h3>Le réseau : prévu et réel</h3>
-    ${d.montee ? `<div class="motfin" style="margin:0 0 12px;font-size:12.5px"><div class="k">La montée en charge</div>${esc(d.montee)}
+    <h3>${tr('Le réseau : prévu et réel', 'Het netwerk: gepland en werkelijk')}</h3>
+    ${d.montee ? `<div class="motfin" style="margin:0 0 12px;font-size:12.5px"><div class="k">${tr('La montée en charge', 'De aanloop')}</div>${esc(d.montee)}
       <table class="mini"><tr><th class="l"></th>${d.monteeCols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>
-        ${d.monteeRows.map((r, i) => `<tr><td class="l${i ? '' : ' ok'}">${esc(r[0])}</td>${[1, 2, 3, 4].map(k => `<td class="n${+r[5] === k ? ' cur' : ''}">${esc(r[k])}${+r[5] === k ? '<small>en cours</small>' : ''}</td>`).join('')}</tr>`).join('')}
+        ${d.monteeRows.map((r, i) => `<tr><td class="l${i ? '' : ' ok'}">${esc(r[0])}</td>${[1, 2, 3, 4].map(k => `<td class="n${+r[5] === k ? ' cur' : ''}">${esc(r[k])}${+r[5] === k ? `<small>${tr('en cours', 'lopend')}</small>` : ''}</td>`).join('')}</tr>`).join('')}
       </table></div>` : ''}
-    <table class="plan reseau"><tr><th class="l">Magasin</th><th class="l"></th><th>Par semaine</th><th>Par mois</th><th>Sur l'année</th><th>Cible de l'année</th><th>Réel / cible</th><th>Réel / plan</th></tr>
-      ${d.reseau.map((r, i) => { const reel = r[2] !== '—' || r[4] !== '—' || r[6] !== '—', sp = reel ? ' rowspan="2"' : ''; return `<tr class="${reel ? 'p' : 'seul'}"><td class="l"${sp}><b>${esc(r[0])}</b></td><td class="l mut">prévu</td>${[1, 3, 5].map(k => `<td class="n${i ? '' : ' ok'}">${esc(r[k])}</td>`).join('')}
+    <table class="plan reseau"><tr><th class="l">${tr('Magasin', 'Winkel')}</th><th class="l"></th><th>${tr('Par semaine', 'Per week')}</th><th>${tr('Par mois', 'Per maand')}</th><th>${tr('Sur l\'année', 'Op jaarbasis')}</th><th>${tr('Cible de l\'année', 'Jaardoel')}</th><th>${tr('Réel / cible', 'Werkelijk / doel')}</th><th>${tr('Réel / plan', 'Werkelijk / plan')}</th></tr>
+      ${d.reseau.map((r, i) => { const reel = r[2] !== '—' || r[4] !== '—' || r[6] !== '—', sp = reel ? ' rowspan="2"' : ''; return `<tr class="${reel ? 'p' : 'seul'}"><td class="l"${sp}><b>${esc(r[0])}</b></td><td class="l mut">${tr('prévu', 'gepland')}</td>${[1, 3, 5].map(k => `<td class="n${i ? '' : ' ok'}">${esc(r[k])}</td>`).join('')}
         <td class="n"${sp}><b>${esc(r[7])}</b></td><td class="n"${sp}><span class="hl${r[10] ? ' ' + r[10] : ''}">${esc(r[8])}</span></td><td class="n mut"${sp}>${esc(r[9])}</td></tr>${reel ? `
-        <tr class="r"><td class="l mut">réel</td>${[2, 4, 6].map(k => `<td class="n"><b>${esc(r[k])}</b></td>`).join('')}</tr>` : ''}`; }).join('')}
+        <tr class="r"><td class="l mut">${tr('réel', 'werkelijk')}</td>${[2, 4, 6].map(k => `<td class="n"><b>${esc(r[k])}</b></td>`).join('')}</tr>` : ''}`; }).join('')}
     </table>
     ${d.reseauNote ? `<div class="legende" style="color:#221E1A">${esc(d.reseauNote)}</div>` : ''}
-    <div class="legende">Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.</div>
+    <div class="legende">${tr('Tout est TTC. Le prévu (le plan) : le CA annuel prévu réaliste saisi dans « Magasins du réseau », sinon celui de l’étude de marché — divisé par 52 pour la semaine, par 12 pour le mois. Le réel : les ventes TTC du P&L mensuel du panel, complétées par les ventes caisse (montants bruts après remises) pour les mois sans P&L — moyenne des mois clos disponibles (douze au plus), ramenée à la semaine, et projetée sur douze mois pour l’année. La cible de l’année : le palier de la phase (70, 80, 90 ou 100 % du plan). Réel / cible, en évidence, est l’écart qui compte ; réel / plan dit le chemin qui reste.',
+      'Alles incl. btw. Het geplande (het plan): de realistische geplande jaaromzet ingevoerd in “Magasins du réseau”, anders die van de marktstudie — gedeeld door 52 voor de week, door 12 voor de maand. Het werkelijke: de omzet incl. btw uit de maandelijkse P&L van het panel, aangevuld met de kassaverkopen (brutobedragen na kortingen) voor de maanden zonder P&L — gemiddelde van de beschikbare afgesloten maanden (maximaal twaalf), herleid naar de week en geëxtrapoleerd naar twaalf maanden voor het jaar. Het jaardoel: de trede van de fase (70, 80, 90 of 100 % van het plan). Werkelijk / doel, uitgelicht, is het verschil dat telt; werkelijk / plan toont de weg die nog rest.')}</div>
     ${d.notes.map(n => `<div class="note">${esc(n)}</div>`).join('')}
 
-    <h3>Les hypothèses au moment de l'édition</h3>
+    <h3>${tr('Les hypothèses au moment de l\'édition', 'De aannames op het moment van opmaak')}</h3>
     <div class="hyp">${d.hypotheses.map(r => `<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b></div>`).join('')}</div>
-    <div class="note"><b>Sources.</b> ${esc(d.sources)}</div>
-    ${d.motOutil ? `<div class="note" style="color:inherit"><b>L’outil repère, l’étude confirme.</b> ${esc(d.motOutil)}</div>` : ''}
-    ${d.motFin ? `<div class="motfin"><div class="k">À lire avant de signer</div>${esc(d.motFin)}</div>` : ''}
+    <div class="note"><b>${tr('Sources.', 'Bronnen.')}</b> ${esc(d.sources)}</div>
+    ${d.motOutil ? `<div class="note" style="color:inherit"><b>${tr('L’outil repère, l’étude confirme.', 'De tool spoort op, de studie bevestigt.')}</b> ${esc(d.motOutil)}</div>` : ''}
+    ${d.motFin ? `<div class="motfin"><div class="k">${tr('À lire avant de signer', 'Te lezen vóór ondertekening')}</div>${esc(d.motFin)}</div>` : ''}
   </div>`;
 }
 
@@ -648,7 +652,8 @@ function renderDossier(c, x){
   <div style="position:absolute;inset:0;z-index:1200;background:#EDE7DE;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-surface);border-bottom:0.5px solid var(--color-border-tertiary);flex:0 0 auto">
       <div class="t-section-title" style="font-size:16px">Dossier d'implantation</div>
-      <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(d.commune)} · ${esc(d.zone)} · ${d.etude ? 'la fiche et l’étude de marché locale, mises en page' : d.etudeAttente && !/indisponible/.test(d.etudeAttente) ? 'étude locale en cours…' : 'les chiffres de la fiche, mis en page'}</div>
+      <div style="font-size:11px;color:var(--color-text-muted);flex:1">${esc(d.commune)} · ${esc(d.zone)} · ${d.etude ? 'la fiche et l’étude de marché locale, mises en page' : d.etudeAttente && !/indisponible|niet beschikbaar/.test(d.etudeAttente) ? 'étude locale en cours…' : 'les chiffres de la fiche, mis en page'}</div>
+      <div class="sc-ech sc-lang" title="Langue du dossier : la page, le PDF, l’impression et le CSV la suivent">${d.langues.map(l => `<button ${x.A(l.pick)} type="button"${l.on ? ' class="on"' : ''} title="${esc(l.tip)}" aria-pressed="${l.on}">${esc(l.label)}</button>`).join('')}</div>
       <button ${x.A(d.pdf)} class="btn-primary" style="padding:7px 12px;font-size:12px${d.busy ? ';opacity:.6' : ''}">${d.busy ? (d.busyTxt || 'PDF en cours…') : 'Télécharger le PDF'}</button>
       <button ${x.A(d.csv)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Exporter les tableaux (CSV)</button>
       <button ${x.A(d.imprimer)} class="btn-secondary" style="padding:7px 12px;font-size:12px">Imprimer</button>

@@ -2554,8 +2554,10 @@ function rapPdfPiedHtml(array $meta): string
     $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
     $F = "font-family:Helvetica,Arial,sans-serif";
     $logo = rapLogoDataUri();
-    $dates = 'Généré le ' . $e($meta['genere'] ?? date('d/m/Y à H:i'))
-        . (($meta['envoye'] ?? '') !== '' ? ' · envoyé le ' . $e($meta['envoye']) : '');
+    // un dossier d'implantation peut partir en néerlandais : son pied aussi
+    $nl = ($meta['lang'] ?? '') === 'nl';
+    $dates = ($nl ? 'Gegenereerd op ' : 'Généré le ') . $e($meta['genere'] ?? date('d/m/Y à H:i'))
+        . (($meta['envoye'] ?? '') !== '' ? ($nl ? ' · verzonden op ' : ' · envoyé le ') . $e($meta['envoye']) : '');
     // Un rapport composé porte souvent le magasin DANS son nom (« … —
     // Gosselies ») : le pied l'écrivait alors deux fois. Le magasin reste à
     // gauche, le nom du rapport perd ce qui fait doublon.

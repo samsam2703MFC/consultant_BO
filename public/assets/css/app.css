@@ -254,6 +254,9 @@ button.rj-on .rj-ok { background: rgba(255,255,255,.92); color: var(--color-prim
 .sc-ech button:last-child { border-right: 0; }
 .sc-ech button:hover { color: var(--color-text); }
 .sc-ech button.on { background: var(--color-primary); color: #fff; font-weight: 600; }
+/* la langue du dossier d'implantation, dans sa barre : FR | NL */
+.sc-ech.sc-lang { grid-template-columns: repeat(2, 1fr); margin-bottom: 0; flex: 0 0 auto; }
+.sc-ech.sc-lang button { padding: 6px 11px; font-size: 12px; }
 .sc-theme button.loin span { color: var(--color-text-muted); }
 .sc-theme button.loin small { font-size: 10px; color: var(--color-text-muted); font-weight: 400; }
 .sc-rang { border: .5px solid var(--color-border-tertiary); border-radius: 9px; overflow: hidden; background: var(--color-surface); }
